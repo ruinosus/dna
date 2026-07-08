@@ -52,8 +52,9 @@ ALLOWLIST: dict[str, frozenset[str]] = {
         {"aapl"}
     ),
     # The SDLC story that SPECIFIES this guard — its description necessarily
-    # names the forbidden tokens and the AAPL allowlist.
-    "scopes/dna-development/.dna/dna-development/stories/s-public-ci.yaml": frozenset(
+    # names the forbidden tokens and the AAPL allowlist. (The repo's own SDLC
+    # scope lives at .dna/dna-development since s-sdlc-git-symbiosis.)
+    ".dna/dna-development/stories/s-public-ci.yaml": frozenset(
         {"avanade", "cockpit", "aap", "aapl"}
     ),
 }
