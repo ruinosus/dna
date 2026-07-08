@@ -50,7 +50,7 @@ export function asciiTree(mi: ManifestInstance): string {
         // Use KindPort.asciiIcon + graphMeta for kind-specific labels
         const depKp = mi.kindFor(kind);
         const depIcon = depKp?.asciiIcon ?? "";
-        const depDoc = mi.one(kind, depName);
+        const depDoc = mi._one(kind, depName);
         const depMeta = depDoc ? (depKp?.graphMeta?.(depDoc) ?? {}) : {};
         let label: string;
         if ((depMeta as Record<string, unknown>).severity) {

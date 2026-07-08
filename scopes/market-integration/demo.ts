@@ -21,7 +21,7 @@ console.log("=".repeat(60));
 console.log("MARKET INTEGRATION DEMO — REAL CONTENT");
 console.log("=".repeat(60));
 
-const skills = mi.all("Skill");
+const skills = mi.documents.filter((d) => d.kind === "Skill");
 console.log(`\nSkills found: ${skills.length}`);
 for (const s of skills) {
   const spec = s.spec as Record<string, unknown>;
@@ -31,7 +31,7 @@ for (const s of skills) {
   console.log(`    references: ${n("references")}, scripts: ${n("scripts")}, assets: ${n("assets")}`);
 }
 
-const souls = mi.all("Soul");
+const souls = mi.documents.filter((d) => d.kind === "Soul");
 console.log(`\nSouls found: ${souls.length}`);
 for (const soul of souls) {
   const spec = soul.spec as Record<string, unknown>;
@@ -44,7 +44,7 @@ for (const soul of souls) {
   console.log(`  ${label} — ${files.join(", ")}`);
 }
 
-const contexts = mi.all("AgentDefinition");
+const contexts = mi.documents.filter((d) => d.kind === "AgentDefinition");
 console.log(`\nAgent definitions (AGENTS.md): ${contexts.length}`);
 
 console.log(`\n${"=".repeat(60)}`);

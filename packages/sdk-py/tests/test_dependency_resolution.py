@@ -130,18 +130,18 @@ class TestMultiKindDependencyResolution:
         return mi
 
     def test_skills_resolved(self, env):
-        skills = env.all("Skill")
+        skills = [d for d in env.documents if d.kind == "Skill"]
         names = [s.name for s in skills]
         assert "tdd" in names
         assert "debugging" in names
 
     def test_soul_resolved(self, env):
-        souls = env.all("Soul")
+        souls = [d for d in env.documents if d.kind == "Soul"]
         names = [s.name for s in souls]
         assert "expert" in names
 
     def test_guardrail_resolved(self, env):
-        guardrails = env.all("Guardrail")
+        guardrails = [d for d in env.documents if d.kind == "Guardrail"]
         names = [g.name for g in guardrails]
         assert "safety" in names
 
@@ -186,7 +186,7 @@ class TestCachePreventsReResolution:
 
         # First call — populates cache
         mi1 = kernel.instance("my-app")
-        assert len(mi1.all("Skill")) == 2
+        assert len([d for d in mi1.documents if d.kind == "Skill"]) == 2
 
         # Delete the remote to prove cache is used
         import shutil
@@ -194,9 +194,9 @@ class TestCachePreventsReResolution:
 
         # Second call — should still work from cache
         mi2 = kernel.instance("my-app")
-        assert len(mi2.all("Skill")) == 2
-        assert len(mi2.all("Soul")) == 1
-        assert len(mi2.all("Guardrail")) == 1
+        assert len([d for d in mi2.documents if d.kind == "Skill"]) == 2
+        assert len([d for d in mi2.documents if d.kind == "Soul"]) == 1
+        assert len([d for d in mi2.documents if d.kind == "Guardrail"]) == 1
 
 
 class TestLockfileIncludesAllResolvedKinds:

@@ -62,6 +62,26 @@ function hookScriptExecAllowed(): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// Deprecation plumbing (s-blessed-query-surface)
+// ---------------------------------------------------------------------------
+
+/** Methods that already fired their once-per-process deprecation warning. */
+const _deprecationWarned = new Set<string>();
+
+/** `console.warn` a deprecation message once per method per process —
+ *  mirror of the Python `DeprecationWarning` on the same members. */
+function warnDeprecatedOnce(method: string, message: string): void {
+  if (_deprecationWarned.has(method)) return;
+  _deprecationWarned.add(method);
+  console.warn(message);
+}
+
+/** @internal Test hook — reset the once-per-process deprecation state. */
+export function _resetDeprecationWarnings(): void {
+  _deprecationWarned.clear();
+}
+
+// ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
@@ -155,11 +175,55 @@ export class ManifestInstance {
 
   // -- Query ----------------------------------------------------------------
 
+  /**
+   * Return all docs of `kind`.
+   *
+   * @deprecated Will be removed in 1.0 — filter `mi.documents`
+   * (e.g. `mi.documents.filter((d) => d.kind === kind)`) or use
+   * `kernel.query(scope, kind)` for indexed/record-plane reads.
+   * (s-blessed-query-surface)
+   */
   all(kind: string): Document[] {
+    warnDeprecatedOnce(
+      "all",
+      "ManifestInstance.all() is deprecated and will be removed in 1.0 — " +
+        "filter mi.documents (e.g. `mi.documents.filter((d) => d.kind === " +
+        "kind)`) or use `kernel.query(scope, kind)` for " +
+        "indexed/record-plane reads.",
+    );
+    return this._all(kind);
+  }
+
+  /** @internal Non-warning twin of `all()` — used by the SDK's own
+   *  collaborators (`applyHooks`, `ReportBuilder`, viz). External
+   *  callers use the blessed surface (`mi.documents` / `kernel.query`). */
+  _all(kind: string): Document[] {
     return this.documents.filter((d) => d.kind === kind);
   }
 
+  /**
+   * Lookup a single doc by (kind, name).
+   *
+   * @deprecated Will be removed in 1.0 — search `mi.documents`
+   * (e.g. `mi.documents.find((d) => d.kind === kind && d.name === name) ??
+   * null`) or use `kernel.query(scope, kind)` with a filter for
+   * indexed/record-plane reads. (s-blessed-query-surface)
+   */
   one(kind: string, name: string): Document | null {
+    warnDeprecatedOnce(
+      "one",
+      "ManifestInstance.one() is deprecated and will be removed in 1.0 — " +
+        "search mi.documents (e.g. `mi.documents.find((d) => d.kind === " +
+        "kind && d.name === name) ?? null`) or use `kernel.query(scope, " +
+        "kind)` with a filter for indexed/record-plane reads.",
+    );
+    return this._one(kind, name);
+  }
+
+  /** @internal Non-warning twin of `one()` — used by the SDK's own
+   *  collaborators (`readSpec*`, `readMetadata`). External callers use
+   *  the blessed surface (`mi.documents` / `kernel.query`). */
+  _one(kind: string, name: string): Document | null {
     return (
       this.documents.find((d) => d.kind === kind && d.name === name) ?? null
     );
@@ -230,7 +294,7 @@ export class ManifestInstance {
   // -- Spec-access sugar (mirrors Python mi.read_spec) ---------------------
 
   readSpec(kind: string, name: string, field: string): unknown {
-    const doc = this.one(kind, name);
+    const doc = this._one(kind, name);
     if (!doc) {
       throw new Error(`${kind}/${name}: document not found in manifest`);
     }
@@ -238,19 +302,19 @@ export class ManifestInstance {
   }
 
   readSpecString(kind: string, name: string, field: string): string | undefined {
-    const doc = this.one(kind, name);
+    const doc = this._one(kind, name);
     if (!doc) throw new Error(`${kind}/${name}: document not found in manifest`);
     return readSpecString(doc, field);
   }
 
   readSpecStringArray(kind: string, name: string, field: string): string[] {
-    const doc = this.one(kind, name);
+    const doc = this._one(kind, name);
     if (!doc) throw new Error(`${kind}/${name}: document not found in manifest`);
     return readSpecStringArray(doc, field);
   }
 
   readMetadata(kind: string, name: string, field: string): unknown {
-    const doc = this.one(kind, name);
+    const doc = this._one(kind, name);
     if (!doc) throw new Error(`${kind}/${name}: document not found in manifest`);
     return (doc.metadata as Record<string, unknown>)[field];
   }
@@ -317,7 +381,7 @@ export class ManifestInstance {
   }
 
   get(kind?: string): Array<{ kind: string; name: string; apiVersion: string }> {
-    const docs = kind != null ? this.all(kind) : this.documents;
+    const docs = kind != null ? this._all(kind) : this.documents;
     return docs.map((d) => ({
       kind: d.kind,
       name: d.name,
@@ -433,7 +497,7 @@ export class ManifestInstance {
     const kernel = this._kernel as { hooks?: { use(h: string, fn: (ctx: any) => any): void; on(h: string, fn: (ctx: any) => void): void } } | null;
     if (!kernel?.hooks) return;
 
-    const hooks = this.all("Hook");
+    const hooks = this._all("Hook");
     for (const doc of hooks) {
       const spec = doc.spec as Record<string, unknown>;
       const target = spec.target as string;
@@ -497,7 +561,7 @@ export class ManifestInstance {
     }
 
     // -- SafetyPolicy input enforcement ----------------------------------------
-    const policies = this.all("SafetyPolicy");
+    const policies = this._all("SafetyPolicy");
     for (const doc of policies) {
       const spec = doc.spec as Record<string, unknown>;
       const scope = spec.scope as string;

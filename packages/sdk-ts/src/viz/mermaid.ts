@@ -83,7 +83,7 @@ export function dependencyTreeMermaid(mi: ManifestInstance): string {
         if (!declaredNodes.has(depNid)) {
           // Use kp.graphMeta (or summary fallback) for kind-specific labels
           const depKp = mi.kindFor(depKind);
-          const depDoc = mi.one(depKind, depName);
+          const depDoc = mi._one(depKind, depName);
           const meta = (depKp && depDoc)
             ? (depKp.graphMeta?.(depDoc) ?? depKp.summary(depDoc) ?? {})
             : {};

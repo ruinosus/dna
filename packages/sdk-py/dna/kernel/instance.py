@@ -112,9 +112,11 @@ class ManifestInstance:
             warnings.warn(
                 f"ManifestInstance.documents accessed in lazy mode for "
                 f"scope={self.scope!r} — forcing full scope load. "
-                f"Prefer mi.one(kind, name) or mi.all(kind) which stay "
-                f"lazy and indexed. To force eager loading at construct "
-                f"time, pass lazy=False to Kernel.instance_async.",
+                f"Prefer `await kernel.query(scope, kind)` / "
+                f"`await kernel.get_document(scope, kind, name)` which "
+                f"stay lazy and indexed. To force eager loading at "
+                f"construct time, pass lazy=False to "
+                f"Kernel.instance_async.",
                 DeprecationWarning, stacklevel=2,
             )
             self._materialize_full()
@@ -246,14 +248,28 @@ class ManifestInstance:
         return plane_fn(kind) == "record"
 
     def all(self, kind: str) -> list[Document]:
-        """Return all docs of ``kind`` — SYNC, DEPRECATED.
+        """Return all docs of ``kind`` — DEPRECATED, will be removed in 1.0.
 
-        f-mi-class-extinction (2026-05-14): emits DeprecationWarning so
-        remaining callsites become visible during the migration sweep.
-        Prefer ``await mi.all_async(kind)`` from async contexts or
-        ``await kernel.query(scope, kind)`` directly (the latter avoids
-        loading the entire MI shell). The MI class itself is scheduled
-        for removal in s-mi-class-death.
+        s-blessed-query-surface: the blessed query surface is
+        ``mi.documents`` (in-memory, filter by ``d.kind``) plus
+        ``kernel.query(scope, kind)`` for indexed / record-plane reads.
+        This method survives as a warning shim until 1.0.
+        """
+        import warnings
+        warnings.warn(
+            "ManifestInstance.all() is deprecated and will be removed in "
+            "1.0 — filter mi.documents (e.g. `[d for d in mi.documents "
+            "if d.kind == kind]`) or use `await kernel.query(scope, kind)` "
+            "for indexed/record-plane reads.",
+            DeprecationWarning, stacklevel=2,
+        )
+        return self._all(kind)
+
+    def _all(self, kind: str) -> list[Document]:
+        """Internal, non-warning twin of :py:meth:`all` — used by the
+        SDK's own collaborators (``apply_hooks``, ``ReportBuilder``,
+        ``get``). External callers use the blessed surface
+        (``mi.documents`` / ``kernel.query``); see ``all()``.
 
         Lazy mode: when the kind isn't already materialized (bootstrap
         kinds are always present), delegate to ``kernel.query`` and
@@ -262,14 +278,6 @@ class ManifestInstance:
 
         Eager mode: walks ``self.documents`` (back-compat, O(N)).
         """
-        import warnings
-        warnings.warn(
-            "ManifestInstance.all() is deprecated — use "
-            "`await mi.all_async(kind)` or `await kernel.query(scope, kind)` "
-            "directly. Scheduled for removal in s-mi-class-death "
-            "(f-mi-class-extinction).",
-            DeprecationWarning, stacklevel=2,
-        )
         # two-planes F2.5 — plane="record" reads ALWAYS delegate to the
         # kernel record plane (never the materialization, which excludes
         # records post-Task-2). Sync-on-loop callers RAISE via the
@@ -489,12 +497,31 @@ class ManifestInstance:
         return _parse(raw) if _parse else None
 
     def one(self, kind: str, name: str) -> Document | None:
-        """Lookup single doc by (kind, name) — SYNC, DEPRECATED.
+        """Lookup single doc by (kind, name) — DEPRECATED, will be
+        removed in 1.0.
 
-        f-mi-class-extinction (2026-05-14): emits DeprecationWarning so
-        remaining callsites become visible during the migration sweep.
-        Prefer ``await mi.one_async(kind, name)`` from async contexts
-        or ``await kernel.get_document(scope, kind, name)`` directly.
+        s-blessed-query-surface: the blessed query surface is
+        ``mi.documents`` (in-memory, search by ``d.kind``/``d.name``)
+        plus ``kernel.get_document(scope, kind, name)`` for indexed /
+        record-plane reads. This method survives as a warning shim
+        until 1.0.
+        """
+        import warnings
+        warnings.warn(
+            "ManifestInstance.one() is deprecated and will be removed in "
+            "1.0 — search mi.documents (e.g. `next((d for d in "
+            "mi.documents if d.kind == kind and d.name == name), None)`) "
+            "or use `await kernel.get_document(scope, kind, name)` for "
+            "indexed/record-plane reads.",
+            DeprecationWarning, stacklevel=2,
+        )
+        return self._one(kind, name)
+
+    def _one(self, kind: str, name: str) -> Document | None:
+        """Internal, non-warning twin of :py:meth:`one` — used by the
+        SDK's own collaborators (``read_spec``/``read_metadata``).
+        External callers use the blessed surface (``mi.documents`` /
+        ``kernel.get_document``); see ``one()``.
 
         Lazy mode: hits bootstrap docs first (in-memory), then delegates
         to ``kernel.get_document`` (L2-cached, ~5ms) — never forces
@@ -502,15 +529,6 @@ class ManifestInstance:
 
         Eager mode: walks ``self._documents`` (back-compat).
         """
-        import warnings
-        warnings.warn(
-            "ManifestInstance.one() is deprecated — use "
-            "`await mi.one_async(kind, name)` or "
-            "`await kernel.get_document(scope, kind, name)` directly. "
-            "Scheduled for removal in s-mi-class-death "
-            "(f-mi-class-extinction).",
-            DeprecationWarning, stacklevel=2,
-        )
         # two-planes F2.5 — record reads delegate to the kernel record
         # plane (see ``all`` — same contract: sync-on-loop RAISES, no
         # eager fallback; migrate to `await kernel.get_document`).
@@ -591,14 +609,14 @@ class ManifestInstance:
 
     def read_spec(self, kind: str, name: str, field: str, *, default: Any = None) -> Any:
         """Read a single field from ``document.spec``."""
-        doc = self.one(kind, name)
+        doc = self._one(kind, name)
         if doc is None:
             raise KeyError(f"{kind}/{name}: document not found in manifest")
         return doc.spec.get(field, default)
 
     def read_metadata(self, kind: str, name: str, field: str, *, default: Any = None) -> Any:
         """Same contract as ``read_spec`` but reads from ``document.metadata``."""
-        doc = self.one(kind, name)
+        doc = self._one(kind, name)
         if doc is None:
             raise KeyError(f"{kind}/{name}: document not found in manifest")
         return doc.metadata.get(field, default)
@@ -684,7 +702,7 @@ class ManifestInstance:
         return self.composition.iter_doc_deps(doc)
 
     def get(self, kind: str | None = None) -> list[dict[str, Any]]:
-        docs = self.documents if kind is None else self.all(kind)
+        docs = self.documents if kind is None else self._all(kind)
         return [
             {"kind": d.kind, "name": d.name, "apiVersion": d.api_version}
             for d in docs
@@ -941,7 +959,7 @@ class ManifestInstance:
         if not self._kernel or not hasattr(self._kernel, "hooks"):
             return
 
-        hooks = self.all("Hook")
+        hooks = self._all("Hook")
         for doc in hooks:
             spec = doc.spec
             target = spec.get("target", "")
@@ -998,7 +1016,7 @@ class ManifestInstance:
                             warnings.warn(f"Hook {doc.name}: script compilation failed: {e}")
 
         # -- SafetyPolicy input enforcement -----------------------------------
-        policies = self.all("SafetyPolicy")
+        policies = self._all("SafetyPolicy")
         for doc in policies:
             spec = doc.spec
             scope = spec.get("scope", "both")

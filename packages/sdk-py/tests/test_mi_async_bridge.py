@@ -155,7 +155,8 @@ async def test_all_async_eager_mode_walks_self_documents():
 
 
 def test_sync_all_emits_deprecation_warning():
-    """Sync mi.all() emits DeprecationWarning so migration sweep is visible."""
+    """Sync mi.all() emits DeprecationWarning pointing at the blessed
+    surface (s-blessed-query-surface)."""
     mi = ManifestInstance(scope="t", documents=[], kinds={}, lazy=False)
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter("always")
@@ -163,13 +164,15 @@ def test_sync_all_emits_deprecation_warning():
     assert any(
         issubclass(item.category, DeprecationWarning)
         and "all()" in str(item.message)
-        and "all_async" in str(item.message)
+        and "mi.documents" in str(item.message)
+        and "kernel.query" in str(item.message)
         for item in w
     ), f"expected DeprecationWarning for mi.all(); got {[str(x.message) for x in w]}"
 
 
 def test_sync_one_emits_deprecation_warning():
-    """Sync mi.one() emits DeprecationWarning."""
+    """Sync mi.one() emits DeprecationWarning pointing at the blessed
+    surface (s-blessed-query-surface)."""
     mi = ManifestInstance(scope="t", documents=[], kinds={}, lazy=False)
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter("always")
@@ -177,18 +180,18 @@ def test_sync_one_emits_deprecation_warning():
     assert any(
         issubclass(item.category, DeprecationWarning)
         and "one()" in str(item.message)
-        and "one_async" in str(item.message)
+        and "mi.documents" in str(item.message)
+        and "kernel.get_document" in str(item.message)
         for item in w
     ), f"expected DeprecationWarning for mi.one(); got {[str(x.message) for x in w]}"
 
 
-def test_deprecation_message_references_extinction_feature():
-    """Warning message must reference the extinction Feature so engineers
-    grep'ing for context find the migration plan."""
+def test_deprecation_message_states_removal_release():
+    """Warning message must state the removal release (1.0) so callers
+    know the shim's lifetime (s-blessed-query-surface)."""
     mi = ManifestInstance(scope="t", documents=[], kinds={}, lazy=False)
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter("always")
         mi.all("Story")
     msgs = [str(item.message) for item in w if issubclass(item.category, DeprecationWarning)]
-    assert any("f-mi-class-extinction" in m for m in msgs)
-    assert any("s-mi-class-death" in m for m in msgs)
+    assert any("will be removed in 1.0" in m for m in msgs)

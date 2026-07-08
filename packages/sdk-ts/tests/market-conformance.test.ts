@@ -52,7 +52,7 @@ function splitFrontmatter(text: string): [Record<string, unknown>, string] {
 describe("real marketplace Skills (agentskills.io/v1)", () => {
   test("scan finds the real skills, typed, owner namespace untouched", async () => {
     const { mi } = await instance(MARKET_BASE, "market-demo");
-    const skills = mi.all("Skill");
+    const skills = mi.documents.filter((d) => d.kind === "Skill");
     const names = new Set(skills.map((s: any) => s.name));
     expect(skills.length).toBeGreaterThanOrEqual(3);
     for (const n of ["xlsx", "docx", "pdf", "pptx"]) expect(names.has(n)).toBe(true);
@@ -69,7 +69,7 @@ describe("real marketplace Skills (agentskills.io/v1)", () => {
     const scopeDir = join(MARKET_BASE, "market-demo");
     let identical = 0;
     let fmStyle = 0;
-    for (const s of mi.all("Skill")) {
+    for (const s of mi.documents.filter((d) => d.kind === "Skill")) {
       const files = emittedFiles(k, "market-demo", s);
       expect(files[`skills/${s.name}/SKILL.md`]).toBeDefined();
       for (const [rel, content] of Object.entries(files)) {
@@ -88,7 +88,7 @@ describe("real marketplace Skills (agentskills.io/v1)", () => {
     const { k, mi } = await instance(MARKET_BASE, "market-demo");
     const scopeDir = join(MARKET_BASE, "market-demo");
     for (const name of SKILL_FM_STYLE_ALLOWLIST) {
-      const doc = mi.one("Skill", name)!;
+      const doc = (mi.documents.find((d) => d.kind === "Skill" && d.name === name) ?? null)!;
       const emitted = emittedFiles(k, "market-demo", doc)[`skills/${name}/SKILL.md`];
       const disk = readFileSync(join(scopeDir, "skills", name, "SKILL.md"), "utf-8");
       const [fmE, bodyE] = splitFrontmatter(emitted);
@@ -104,7 +104,7 @@ describe("real marketplace Skills (agentskills.io/v1)", () => {
     const writer = new SkillWriter(nodeFS);
     const subjects = [...SKILL_FM_STYLE_ALLOWLIST, "algorithmic-art"];
     for (const name of subjects) {
-      const doc = mi.one("Skill", name)!;
+      const doc = (mi.documents.find((d) => d.kind === "Skill" && d.name === name) ?? null)!;
       const files1: Record<string, string> = {};
       for (const f of writer.serialize(doc.raw as Record<string, unknown>)) {
         files1[f.relativePath] = f.content ?? "";
@@ -126,7 +126,7 @@ describe("real marketplace Skills (agentskills.io/v1)", () => {
 describe("real AGENTS.md — openai/codex (agents.md/v1)", () => {
   test("scope-root AGENTS.md scans, types, and round-trips byte-identical", async () => {
     const { k, mi } = await instance(FIXTURE_BASE, "market-conformance");
-    const doc = mi.one("AgentDefinition", "market-conformance");
+    const doc = (mi.documents.find((d) => d.kind === "AgentDefinition" && d.name === "market-conformance") ?? null);
     expect(doc).toBeTruthy();
     expect((doc!.raw as any).apiVersion).toBe("agents.md/v1");
     expect(doc!.typed).toBeTruthy();
@@ -138,7 +138,7 @@ describe("real AGENTS.md — openai/codex (agents.md/v1)", () => {
 
   test("market-demo scope-root AGENTS.md round-trips too", async () => {
     const { k, mi } = await instance(MARKET_BASE, "market-demo");
-    const doc = mi.one("AgentDefinition", "market-demo");
+    const doc = (mi.documents.find((d) => d.kind === "AgentDefinition" && d.name === "market-demo") ?? null);
     expect(doc).toBeTruthy();
     const emitted = emittedFiles(k, "market-demo", doc)["AGENTS.md"];
     const disk = readFileSync(join(MARKET_BASE, "market-demo/AGENTS.md"), "utf-8");
@@ -152,7 +152,7 @@ describe("real Souls — soulspec.org/v1", () => {
     // soul_json) — identity_content/heartbeat_content travel on doc.raw
     // only (soulspec canonical refactor). The write path is raw-based.
     const { mi } = await instance(FIXTURE_BASE, "market-conformance");
-    const soul = mi.one("Soul", "starter");
+    const soul = (mi.documents.find((d) => d.kind === "Soul" && d.name === "starter") ?? null);
     expect(soul).toBeTruthy();
     expect((soul!.raw as any).apiVersion).toBe("soulspec.org/v1");
     expect(soul!.typed).toBeTruthy();
@@ -164,7 +164,7 @@ describe("real Souls — soulspec.org/v1", () => {
 
   test("IDENTITY.md + HEARTBEAT.md round-trip byte-identical", async () => {
     const { k, mi } = await instance(FIXTURE_BASE, "market-conformance");
-    const soul = mi.one("Soul", "starter")!;
+    const soul = (mi.documents.find((d) => d.kind === "Soul" && d.name === "starter") ?? null)!;
     const files = emittedFiles(k, "market-conformance", soul);
     const base = join(FIXTURE_BASE, "market-conformance/souls/starter");
     for (const fname of ["IDENTITY.md", "HEARTBEAT.md"]) {
@@ -174,7 +174,7 @@ describe("real Souls — soulspec.org/v1", () => {
 
   test("SOUL.md normalization is confined (N1 + N2 + N4)", async () => {
     const { k, mi } = await instance(FIXTURE_BASE, "market-conformance");
-    const soul = mi.one("Soul", "starter")!;
+    const soul = (mi.documents.find((d) => d.kind === "Soul" && d.name === "starter") ?? null)!;
     const emitted = emittedFiles(k, "market-conformance", soul)["souls/starter/SOUL.md"];
     const disk = readFileSync(
       join(FIXTURE_BASE, "market-conformance/souls/starter/SOUL.md"), "utf-8");
@@ -186,7 +186,7 @@ describe("real Souls — soulspec.org/v1", () => {
 
   test("brad (real community persona) round-trips byte-identical", async () => {
     const { k, mi } = await instance(MARKET_BASE, "market-demo");
-    const soul = mi.one("Soul", "brad")!;
+    const soul = (mi.documents.find((d) => d.kind === "Soul" && d.name === "brad") ?? null)!;
     const files = emittedFiles(k, "market-demo", soul);
     const base = join(MARKET_BASE, "market-demo/souls/brad");
     for (const fname of ["SOUL.md", "STYLE.md", "AGENTS.md"]) {
@@ -196,7 +196,7 @@ describe("real Souls — soulspec.org/v1", () => {
 
   test("soul.json canonical re-emit (N3): content-equal, unicode kept", async () => {
     const { k, mi } = await instance(MARKET_BASE, "market-demo");
-    const soul = mi.one("Soul", "brad")!;
+    const soul = (mi.documents.find((d) => d.kind === "Soul" && d.name === "brad") ?? null)!;
     const emitted = emittedFiles(k, "market-demo", soul)["souls/brad/soul.json"];
     const disk = readFileSync(join(MARKET_BASE, "market-demo/souls/brad/soul.json"), "utf-8");
     expect(JSON.parse(emitted)).toEqual(JSON.parse(disk));

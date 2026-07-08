@@ -328,7 +328,7 @@ class TestDeferredGenericRegistration:
         k.load(CustomExt())
 
         mi = k.instance("mod")
-        docs = mi.all("CustomThing")
+        docs = [d for d in mi.documents if d.kind == "CustomThing"]
         assert len(docs) == 1
         assert docs[0].name == "my-custom"
         assert docs[0].spec.get("items") == ["Item A", "Item B"]

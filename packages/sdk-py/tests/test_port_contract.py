@@ -301,7 +301,7 @@ async def test_skill_bundle_round_trip(source_with_kernel):
 
     # Re-read via fresh mi (forces reload from source, not in-memory cache)
     mi = await k.instance_async("contract-test")
-    skills = list(mi.all("Skill"))
+    skills = list([d for d in mi.documents if d.kind == "Skill"])
     assert len(skills) == 1
     sk = skills[0]
     assert sk.name == "contract-skill"

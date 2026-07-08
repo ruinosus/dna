@@ -68,7 +68,7 @@ class ReportBuilder:
         and per-case table.
         """
         # two-planes F2.5: record → delega via query (caller off-loop, ver topo).
-        runs = self._mi.all("EvalRun")
+        runs = self._mi._all("EvalRun")
         if suite:
             runs = [r for r in runs if r.spec.get("suite") == suite]
 
@@ -133,7 +133,7 @@ class ReportBuilder:
         Filters out findings with severity below *min_severity*.
         """
         # two-planes F2.5: record → delega via query (caller off-loop, ver topo).
-        findings = self._mi.all("Finding")
+        findings = self._mi._all("Finding")
         min_level = _SEVERITY_ORDER.get(min_severity, 3)
 
         # Filter by min_severity
@@ -180,7 +180,7 @@ class ReportBuilder:
         """Generate a manifest of all evidence documents."""
         # two-planes F2.5: Evidence é plane=record (verificado, extensão
         # evidence) → delega via query (caller off-loop, ver topo).
-        evidence = self._mi.all("Evidence")
+        evidence = self._mi._all("Evidence")
 
         md = _frontmatter("evidence_manifest", self._mi.scope)
         md += "# Evidence Manifest\n\n"
@@ -220,7 +220,7 @@ class ReportBuilder:
             return md
 
         # two-planes F2.5: record → delega via query (caller off-loop, ver topo).
-        findings = self._mi.all("Finding")
+        findings = self._mi._all("Finding")
 
         md += "| Severity | Count | Regulatory Articles |\n"
         md += "|----------|-------|--------------------|\n"

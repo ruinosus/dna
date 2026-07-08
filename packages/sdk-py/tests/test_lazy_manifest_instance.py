@@ -5,7 +5,8 @@ Epic e-production-viable-kernel).
 
 Three test classes:
   - **Construction**: lazy mode wires correctly, bootstrap docs only.
-  - **Lazy access**: one() / all() delegate to kernel without forcing
+  - **Lazy access**: _one() / _all() (internal twins of the deprecated
+    one()/all() shims — s-blessed-query-surface) delegate to kernel without forcing
     full materialization.
   - **Back-compat**: eager mode (lazy=False) behavior unchanged; the
     documents property still works; access in lazy mode warns +
@@ -94,7 +95,7 @@ class TestLazyAccess:
             kernel=kernel,
             lazy=True,
         )
-        doc = mi.one("Genome", "demo")
+        doc = mi._one("Genome", "demo")
         assert doc is not None
         assert doc.kind == "Genome"
 
@@ -109,7 +110,7 @@ class TestLazyAccess:
             kernel=kernel,
             lazy=True,
         )
-        pkgs = mi.all("Genome")
+        pkgs = mi._all("Genome")
         assert len(pkgs) == 1
         assert pkgs[0].name == "demo"
 
@@ -144,7 +145,7 @@ class TestLazyAccess:
             kernel=kernel,
             lazy=True,
         )
-        doc = mi.one("Story", "s-foo")
+        doc = mi._one("Story", "s-foo")
         assert doc is not None
         assert doc.kind == "Story"
         assert doc.spec["title"] == "Hello"
@@ -173,7 +174,7 @@ class TestLazyAccess:
             kernel=kernel,
             lazy=True,
         )
-        stories = mi.all("Story")
+        stories = mi._all("Story")
         assert len(stories) == 3
         assert {s.name for s in stories} == {"s-0", "s-1", "s-2"}
 
@@ -199,9 +200,9 @@ class TestLazyAccess:
             kernel=kernel,
             lazy=True,
         )
-        mi.all("Story")
-        mi.all("Story")
-        mi.all("Story")
+        mi._all("Story")
+        mi._all("Story")
+        mi._all("Story")
         assert call_count["n"] == 1
 
     @pytest.mark.asyncio
@@ -219,7 +220,7 @@ class TestLazyAccess:
             kernel=kernel,
             lazy=True,
         )
-        assert mi.one("Story", "nonexistent") is None
+        assert mi._one("Story", "nonexistent") is None
 
 
 # ---------------------------------------------------------------------------

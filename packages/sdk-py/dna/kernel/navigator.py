@@ -24,7 +24,7 @@ class Navigator:
 
         Equivalent to ``mi.describe(kind, name)``.
         """
-        doc = self._host.one(kind, name)
+        doc = self._host._one(kind, name)
         if not doc:
             return f"{kind}/{name} not found"
 
@@ -52,7 +52,7 @@ class Navigator:
         kinds = self._host.list_kinds()
         lines = [f"Scope: {self._host.scope}", f"Kinds: {len(kinds)}"]
         for k in kinds:
-            docs = self._host.all(k)
+            docs = self._host._all(k)
             lines.append(f"  {k}: {len(docs)} ({', '.join(d.name for d in docs)})")
         return "\n".join(lines)
 
@@ -64,7 +64,7 @@ class Navigator:
         kinds_data: dict[str, Any] = {}
 
         for kind_name in self._host.list_kinds():
-            docs = self._host.all(kind_name)
+            docs = self._host._all(kind_name)
             doc_entries = []
 
             for doc in docs:
@@ -151,7 +151,7 @@ class Navigator:
         else:
             return "EXTRACTED"  # opaque value, can't validate but is declared
         for n in names:
-            if host.one(kind_name, n) is None:
+            if host._one(kind_name, n) is None:
                 return "AMBIGUOUS"
         return "EXTRACTED"
 
@@ -160,7 +160,7 @@ class Navigator:
 
         Equivalent to ``mi.render_doc(kind, name)``.
         """
-        doc = self._host.one(kind, name)
+        doc = self._host._one(kind, name)
         if doc is None:
             return []
         kp = self._host._kinds.get((doc.api_version, doc.kind))

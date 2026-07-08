@@ -590,6 +590,228 @@
       ]
     }
   },
+  "blessed_query_surface": {
+    "$comment": "s-blessed-query-surface — THE public read/query surface of the SDK, pre-1.0. `blessed` members are the ONE documented way to read manifest data (docs/ + README + examples teach ONLY these). `deprecated` members still work but warn — Py `DeprecationWarning`, TS `@deprecated` JSDoc + one console.warn per process — always naming the exact replacement, and are removed in 1.0. `public_surface` is the EXACT set of public members on an instantiated ManifestInstance per side: adding/removing/renaming ANY public MI member without editing this fixture turns the suite red, so public-surface changes are conscious decisions. Executors: packages/sdk-py/tests/test_blessed_query_surface.py + packages/sdk-ts/tests/blessed-query-surface.test.ts.",
+    "ManifestInstance": {
+      "blessed": [
+        {
+          "py": "documents",
+          "ts": "documents",
+          "note": "canonical in-memory read — filter/find by d.kind / d.name; what QUICK-START, READMEs and examples teach"
+        },
+        {
+          "py": "root",
+          "ts": "root"
+        },
+        {
+          "py": "default_agent",
+          "ts": "defaultAgent"
+        },
+        {
+          "py": "find_agent",
+          "ts": "findAgent"
+        },
+        {
+          "py": "build_prompt",
+          "ts": "buildPrompt"
+        },
+        {
+          "py": "build_prompt_async",
+          "ts": null,
+          "justification": "Py sync/async split — TS buildPrompt is already async; Py needs an explicit async twin so event-loop callers keep pool-based sources loop-bound."
+        },
+        {
+          "py": "resolve",
+          "ts": "resolve"
+        },
+        {
+          "py": "resolve_async",
+          "ts": null,
+          "justification": "Py sync/async split — TS resolve is sync over in-memory layers; the Py async twin exists for the same loop-binding reason as build_prompt_async."
+        },
+        {
+          "py": "all_async",
+          "ts": null,
+          "justification": "Py-only async bridge returning parsed Documents — record-plane, tenant and inheritance aware. TS has no lazy/record MI split; TS callers use mi.documents or kernel.query."
+        },
+        {
+          "py": "one_async",
+          "ts": null,
+          "justification": "single-doc twin of all_async — delegates to kernel.get_document (L2-cached)."
+        }
+      ],
+      "deprecated": [
+        {
+          "py": "all",
+          "ts": "all",
+          "replacement": "mi.documents (filter by d.kind) or kernel.query(scope, kind)",
+          "removal": "1.0"
+        },
+        {
+          "py": "one",
+          "ts": "one",
+          "replacement": "mi.documents (find by d.kind + d.name); Py also kernel.get_document(scope, kind, name), TS kernel.query with a filter",
+          "removal": "1.0"
+        }
+      ],
+      "public_surface": {
+        "py": [
+          "all",
+          "all_async",
+          "all_where",
+          "apply_hooks",
+          "ascii_tree",
+          "build_prompt",
+          "build_prompt_async",
+          "composition",
+          "composition_result",
+          "consumers_of",
+          "default_agent",
+          "dependency_tree",
+          "dependency_tree_mermaid",
+          "describe",
+          "documents",
+          "er_diagram_mermaid",
+          "export_diagrams_md",
+          "find_agent",
+          "generate_lock",
+          "get",
+          "health",
+          "impact",
+          "inventory",
+          "is_root_doc",
+          "iter_doc_deps",
+          "kind_catalog_mermaid",
+          "kind_for",
+          "kind_for_alias",
+          "list_kinds",
+          "lock",
+          "matrix",
+          "matrix_markdown",
+          "mindmap_mermaid",
+          "nav",
+          "one",
+          "one_async",
+          "pie_chart_mermaid",
+          "profile_for",
+          "prompt",
+          "quadrant_mermaid",
+          "read_metadata",
+          "read_spec",
+          "read_spec_list",
+          "ref",
+          "ref_async",
+          "render_doc",
+          "reports",
+          "resolve",
+          "resolve_async",
+          "resolve_errors",
+          "root",
+          "sankey_mermaid",
+          "scope",
+          "summary",
+          "timeline_mermaid"
+        ],
+        "ts": [
+          "all",
+          "allKinds",
+          "allWhere",
+          "applyHooks",
+          "asciiTree",
+          "buildPrompt",
+          "c4ComponentMermaid",
+          "composition",
+          "compositionFlowchartMermaid",
+          "compositionResult",
+          "consumersOf",
+          "defaultAgent",
+          "dependencyTree",
+          "dependencyTreeMermaid",
+          "describe",
+          "documents",
+          "erDiagramMermaid",
+          "erModel",
+          "exportDiagramsMd",
+          "findAgent",
+          "generateLock",
+          "get",
+          "health",
+          "impact",
+          "inventory",
+          "isRootDoc",
+          "iterDocDeps",
+          "kindCatalogMermaid",
+          "kindFor",
+          "kindForAlias",
+          "listKinds",
+          "lock",
+          "matrix",
+          "matrixMarkdown",
+          "mindmapMermaid",
+          "nav",
+          "one",
+          "pieChartMermaid",
+          "profileFor",
+          "prompt",
+          "quadrantMermaid",
+          "readMetadata",
+          "readSpec",
+          "readSpecString",
+          "readSpecStringArray",
+          "ref",
+          "renderDoc",
+          "reports",
+          "resolve",
+          "resolveErrors",
+          "root",
+          "sankeyMermaid",
+          "scope",
+          "summary",
+          "timelineMermaid"
+        ]
+      }
+    },
+    "Kernel": {
+      "blessed": [
+        {
+          "py": "instance",
+          "ts": "instance",
+          "note": "entry point — loads/returns the scope's ManifestInstance"
+        },
+        {
+          "py": "instance_async",
+          "ts": null,
+          "justification": "Py sync/async split — TS instance() is already async."
+        },
+        {
+          "py": "query",
+          "ts": "query",
+          "note": "indexed / record-plane read — push-down to the source, raw rows"
+        },
+        {
+          "py": "count",
+          "ts": "count",
+          "note": "aggregation twin of query"
+        },
+        {
+          "py": "get_document",
+          "ts": null,
+          "justification": "TS kernel has no getDocument — TS single-doc reads go through mi.documents or kernel.query with a filter; port when a TS caller needs the L2-cached single-doc read."
+        },
+        {
+          "py": "query_list_sync",
+          "ts": null,
+          "justification": "Py-only loop-safety wrapper returning parsed Documents for sync callers (CLI, workers). TS is async-native — no sync bridge needed."
+        },
+        {
+          "py": "get_document_sync",
+          "ts": null,
+          "justification": "single-doc twin of query_list_sync."
+        }
+      ],
+      "deprecated": []
+    }
+  },
   "hook_names": {
     "$comment": "s-dna-typed-hook-names — the shared HookRegistry hook-name vocabulary. Py: HookName Literal + KNOWN_HOOK_NAMES (dna/kernel/hooks.py); TS: HookName union + KNOWN_HOOK_NAMES (src/kernel/hooks.ts). Executors: packages/sdk-py/tests/test_hook_names.py + packages/sdk-ts/tests/hook-names.test.ts — vocabulary drift turns both suites red. Names are identical on both sides (event names are wire vocabulary, not API casing).",
     "names": [

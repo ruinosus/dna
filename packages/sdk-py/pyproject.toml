@@ -77,6 +77,14 @@ testpaths = ["tests"]
 # job limit. Heavy-but-real tests override with @pytest.mark.timeout(N). The CI
 # workflow also passes --timeout=120 as a backstop. See tests/conftest.py.
 timeout = 120
+# s-blessed-query-surface ratchet: the SDK's own code/tests must never call
+# the deprecated MI query shims (mi.all/mi.one) or trip the lazy-materialize
+# warning — those DeprecationWarnings (all prefixed "ManifestInstance") fail
+# the suite. Tests that deliberately exercise the shims capture the warning
+# (pytest.warns / warnings.catch_warnings), which bypasses this filter.
+filterwarnings = [
+    "error:ManifestInstance:DeprecationWarning",
+]
 markers = [
     "requires_postgres: skip unless a Postgres DSN is set (tests/conftest.py)",
     "requires_network: skip unless outbound network is available (tests/conftest.py)",
