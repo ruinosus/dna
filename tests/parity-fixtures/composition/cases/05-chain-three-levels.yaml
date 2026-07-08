@@ -1,0 +1,36 @@
+id: 05-chain-three-levels
+title: Three-level chain (child -> mid -> _lib) — closest ancestor wins
+notes: |
+  child declares parent_scope=mid; mid declares parent_scope=_lib.
+  Theme/shared exists in mid AND _lib -> mid wins (closer to caller).
+  Expected pins the full 3-scope chain order in provenance.steps.
+target:
+  scope: child
+  kind: Theme
+  name: shared
+  tenant: null
+tree:
+  scopes:
+    _lib:
+      - apiVersion: github.com/ruinosus/dna/v1
+        kind: Genome
+        metadata: {name: _lib}
+        spec: {}
+      - apiVersion: github.com/ruinosus/dna/test/v1
+        kind: Theme
+        metadata: {name: shared}
+        spec: {color: from-root}
+    mid:
+      - apiVersion: github.com/ruinosus/dna/v1
+        kind: Genome
+        metadata: {name: mid}
+        spec: {parent_scope: _lib}
+      - apiVersion: github.com/ruinosus/dna/test/v1
+        kind: Theme
+        metadata: {name: shared}
+        spec: {color: from-mid}
+    child:
+      - apiVersion: github.com/ruinosus/dna/v1
+        kind: Genome
+        metadata: {name: child}
+        spec: {parent_scope: mid}

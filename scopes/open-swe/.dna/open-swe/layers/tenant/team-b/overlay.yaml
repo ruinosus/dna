@@ -1,0 +1,23 @@
+# Overlay do tenant: Flight Centre (team-b)
+# Sobrescreve partes do módulo open-swe para o contexto do cliente
+
+apiVersion: github.com/ruinosus/dna/v1
+kind: ModuleOverlay
+metadata:
+  name: open-swe
+  tenant: team-b
+
+spec:
+  # agents: open → pode adicionar agentes novos
+  # (swe-agent e reviewer-agent continuam, acrescenta o reissue-agent)
+
+  # skills: open → pode adicionar skills específicas do cliente
+  skills:
+    - pr-review        # mantém da base
+    - branch-naming    # mantém da base
+    - reissue-workflow # específico do Flight Centre
+
+  # budget: override — cliente tem budget maior
+  budget:
+    daily_usd: 50.0
+    monthly_usd: 1000.0

@@ -1,0 +1,27 @@
+id: 01-inherit-simple
+title: Simple _lib -> scope inheritance (default override_full rule, V1 fallback)
+notes: |
+  app declares a Genome with no parent_scope -> V1 back-compat escalates to
+  _lib. Theme/brand exists only in _lib -> inherited wholesale
+  (default rule: enabled / override_full / field_level).
+target:
+  scope: app
+  kind: Theme
+  name: brand
+  tenant: null
+tree:
+  scopes:
+    _lib:
+      - apiVersion: github.com/ruinosus/dna/v1
+        kind: Genome
+        metadata: {name: _lib}
+        spec: {}
+      - apiVersion: github.com/ruinosus/dna/test/v1
+        kind: Theme
+        metadata: {name: brand}
+        spec: {color: blue, radius: 4}
+    app:
+      - apiVersion: github.com/ruinosus/dna/v1
+        kind: Genome
+        metadata: {name: app}
+        spec: {}

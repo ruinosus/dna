@@ -1,0 +1,24 @@
+id: 13-no-package-v1-fallback
+title: Scope with NO Genome doc — V1 fallback still escalates to _lib
+notes: |
+  app's directory exists but holds no Genome at all. The chain walk finds
+  no parent_scope -> V1 back-compat escalates to _lib anyway (fail-soft:
+  a missing Genome must not break inheritance). Theme/brand resolves from
+  _lib.
+target:
+  scope: app
+  kind: Theme
+  name: brand
+  tenant: null
+tree:
+  scopes:
+    _lib:
+      - apiVersion: github.com/ruinosus/dna/v1
+        kind: Genome
+        metadata: {name: _lib}
+        spec: {}
+      - apiVersion: github.com/ruinosus/dna/test/v1
+        kind: Theme
+        metadata: {name: brand}
+        spec: {color: blue}
+    app: []

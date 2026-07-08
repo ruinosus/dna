@@ -1,0 +1,21 @@
+{
+  "specVersion": "0.4",
+  "name": "brad",
+  "displayName": "Brad",
+  "version": "1.3.0",
+  "description": "Formal, competent development partner — results over conversation",
+  "author": {
+    "name": "clawsouls",
+    "github": "clawsouls"
+  },
+  "category": "work/engineering",
+  "license": "Apache-2.0",
+  "tags": ["developer", "formal", "professional"],
+  "files": {
+    "soul": "SOUL.md",
+    "style": "STYLE.md",
+    "agents": "AGENTS.md",
+    "identity": "IDENTITY.md",
+    "heartbeat": "HEARTBEAT.md"
+  }
+}

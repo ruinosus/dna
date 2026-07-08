@@ -1,0 +1,8 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: Agent
+metadata:
+  name: conductor
+  description: Composition probe — flattens the real market content into one prompt
+spec:
+  instruction: You are the conductor agent for the market-conformance scope.
+  soul: starter

@@ -1,0 +1,59 @@
+{
+  "chain": [
+    [
+      "child",
+      null
+    ],
+    [
+      "mid",
+      null
+    ],
+    [
+      "_lib",
+      null
+    ]
+  ],
+  "resolved": {
+    "contributions_by_field": {},
+    "doc": {
+      "apiVersion": "github.com/ruinosus/dna/test/v1",
+      "kind": "Theme",
+      "metadata": {
+        "name": "shared"
+      },
+      "spec": {
+        "color": "from-mid"
+      }
+    },
+    "is_inherited": true,
+    "provenance": {
+      "effective_layer": {
+        "scope": "mid",
+        "tenant": null
+      },
+      "steps": [
+        {
+          "contributed": false,
+          "found": false,
+          "scope": "child",
+          "tenant": null,
+          "version_sha": null
+        },
+        {
+          "contributed": true,
+          "found": true,
+          "scope": "mid",
+          "tenant": null,
+          "version_sha": null
+        },
+        {
+          "contributed": false,
+          "found": true,
+          "scope": "_lib",
+          "tenant": null,
+          "version_sha": null
+        }
+      ]
+    }
+  }
+}

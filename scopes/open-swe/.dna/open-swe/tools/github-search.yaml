@@ -1,0 +1,42 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: Tool
+metadata:
+  name: github-search
+  description: Search GitHub code and repositories for examples and references.
+spec:
+  type: http
+  endpoint: https://api.github.com/search/code
+  method: GET
+  input_schema:
+    type: object
+    required:
+      - q
+    properties:
+      q:
+        type: string
+        description: GitHub code search query (e.g. "use-case language:typescript repo:foo/bar")
+      per_page:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 10
+  output_schema:
+    type: object
+    properties:
+      total_count: { type: integer }
+      items:
+        type: array
+        items:
+          type: object
+          properties:
+            name: { type: string }
+            path: { type: string }
+            html_url: { type: string }
+  auth_type: bearer
+  auth_env_var: GITHUB_TOKEN
+  read_only: true
+  requires_confirmation: false
+  tags:
+    - github
+    - search
+    - read-only

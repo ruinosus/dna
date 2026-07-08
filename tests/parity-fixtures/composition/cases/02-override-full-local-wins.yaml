@@ -1,0 +1,31 @@
+id: 02-override-full-local-wins
+title: Local doc wins WHOLESALE over parent (override_full — no field merge)
+notes: |
+  Theme/brand exists in app AND _lib. Default merge is override_full ->
+  the local doc is returned as-is; _lib's extra field `size` must NOT leak
+  into the merged spec. _lib layer is found but NOT contributing.
+target:
+  scope: app
+  kind: Theme
+  name: brand
+  tenant: null
+tree:
+  scopes:
+    _lib:
+      - apiVersion: github.com/ruinosus/dna/v1
+        kind: Genome
+        metadata: {name: _lib}
+        spec: {}
+      - apiVersion: github.com/ruinosus/dna/test/v1
+        kind: Theme
+        metadata: {name: brand}
+        spec: {color: blue, size: 10}
+    app:
+      - apiVersion: github.com/ruinosus/dna/v1
+        kind: Genome
+        metadata: {name: app}
+        spec: {}
+      - apiVersion: github.com/ruinosus/dna/test/v1
+        kind: Theme
+        metadata: {name: brand}
+        spec: {color: red}

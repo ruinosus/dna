@@ -1,0 +1,18 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: Guardrail
+metadata:
+  name: code-quality
+  description: Code quality standards that the SWE agent must follow when writing
+    code
+spec:
+  rules:
+  - Never commit code without corresponding tests
+  - Never disable or skip existing tests to make new code pass
+  - Never introduce TODO or FIXME comments without linking to a tracking issue
+  - "Never hardcode secrets, API keys, or credentials \u2014 use environment variables"
+  - Never use wildcard imports (e.g., from module import *)
+  - Never suppress linter warnings without a justifying inline comment
+  - Always follow the repository's existing naming conventions and code style
+  - "Always handle errors explicitly \u2014 never use bare except or empty catch blocks"
+  severity: warn
+  scope: output

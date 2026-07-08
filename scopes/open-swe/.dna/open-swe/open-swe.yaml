@@ -1,0 +1,13 @@
+apiVersion: agents.md/v1
+kind: AgentDefinition
+metadata:
+  name: open-swe
+spec:
+  content: "# Open SWE \u2014 Agent Context\n\nThis module provides autonomous software\
+    \ engineering agents for the Helix platform.\n\n## Agents\n\n- **swe-agent**:\
+    \ Primary coding agent. Reads GitHub issues, creates branches, implements solutions,\
+    \ and opens PRs.\n- **reviewer-agent**: Code review specialist. Reviews PRs and\
+    \ provides structured feedback (BLOCKER/SUGGESTION/PRAISE/QUESTION).\n\n## Conventions\n\
+    \n- Never push directly to `main` or `develop`\n- Use conventional commits format\n\
+    - Branch pattern: `feat/<issue-id>-<slug>`\n- Always include tests with implementations\n\
+    \n## Repository\n\nhttps://github.com/acme/helix\n"

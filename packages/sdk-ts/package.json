@@ -1,0 +1,31 @@
+{
+  "name": "@dna/sdk",
+  "version": "3.0.0-alpha",
+  "description": "DNA \u2014 Domain Notation of Anything (TypeScript SDK)",
+  "type": "module",
+  "main": "src/index.ts",
+  "files": [
+    "src/**/*.ts",
+    "src/extensions/*/templates/**",
+    "src/extensions/*/kinds/**"
+  ],
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@types/pg": "^8.20.0",
+    "ajv": "^8.18.0",
+    "js-sha256": "^0.11.1",
+    "js-yaml": "^4.1.0",
+    "mustache": "^4.2.0",
+    "pg": "^8.20.0",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/mustache": "^4.2.5",
+    "bun-types": "^1.3.0",
+    "typescript": "^5.5.0"
+  }
+}

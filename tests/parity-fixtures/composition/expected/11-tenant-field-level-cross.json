@@ -1,0 +1,79 @@
+{
+  "chain": [
+    [
+      "app",
+      "acme"
+    ],
+    [
+      "app",
+      null
+    ],
+    [
+      "_lib",
+      "acme"
+    ],
+    [
+      "_lib",
+      null
+    ]
+  ],
+  "resolved": {
+    "contributions_by_field": {
+      "spec.model": "app",
+      "spec.persona": "_lib",
+      "spec.temperature": "app"
+    },
+    "doc": {
+      "apiVersion": "github.com/ruinosus/dna/test/v1",
+      "kind": "Agent",
+      "metadata": {
+        "labels": {
+          "layer": "acme-overlay"
+        },
+        "name": "helper"
+      },
+      "spec": {
+        "model": "local-model",
+        "persona": "lib-persona",
+        "temperature": 0.9
+      }
+    },
+    "is_inherited": false,
+    "provenance": {
+      "effective_layer": {
+        "scope": "app",
+        "tenant": "acme"
+      },
+      "steps": [
+        {
+          "contributed": true,
+          "found": true,
+          "scope": "app",
+          "tenant": "acme",
+          "version_sha": null
+        },
+        {
+          "contributed": true,
+          "found": true,
+          "scope": "app",
+          "tenant": null,
+          "version_sha": null
+        },
+        {
+          "contributed": true,
+          "found": true,
+          "scope": "_lib",
+          "tenant": "acme",
+          "version_sha": null
+        },
+        {
+          "contributed": true,
+          "found": true,
+          "scope": "_lib",
+          "tenant": null,
+          "version_sha": null
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,22 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: Genome
+metadata:
+  description: Agente autônomo de software engineering — lê issues, cria branches,
+    abre PRs
+  labels:
+    domain: engineering
+    tier: advanced
+  name: open-swe
+spec:
+  budget:
+    alert_threshold: 0.8
+    daily_usd: 25
+    monthly_usd: 500
+  default_agent: swe-agent
+  default_llm: azure/gpt-4o
+  owner: helix-team
+  repository: https://github.com/acme/helix
+  tags:
+  - sdlc
+  - automation
+  - coding

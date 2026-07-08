@@ -1,0 +1,51 @@
+id: 11-tenant-field-level-cross
+title: field_level + tenant overlay — three origins in one merged spec
+notes: |
+  Agent/helper with field_level merge and tenant=acme.
+  Overlay contributes `temperature`, app base contributes `model`,
+  _lib contributes `persona`. Expected pins the cross-layer
+  contributions_by_field AND the FS tenant-fallback: the (_lib, acme)
+  layer (no overlay) returns the _lib BASE doc (found=true, contributes
+  the same fields as (_lib, null) — origin stays `_lib`). Primary =
+  (app, acme) -> envelope/metadata from the overlay doc.
+target:
+  scope: app
+  kind: Agent
+  name: helper
+  tenant: acme
+tree:
+  scopes:
+    _lib:
+      - apiVersion: github.com/ruinosus/dna/v1
+        kind: Genome
+        metadata: {name: _lib}
+        spec: {}
+      - apiVersion: github.com/ruinosus/dna/test/v1
+        kind: Agent
+        metadata: {name: helper}
+        spec: {model: lib-model, persona: lib-persona}
+    app:
+      - apiVersion: github.com/ruinosus/dna/v1
+        kind: Genome
+        metadata: {name: app}
+        spec: {}
+      - apiVersion: github.com/ruinosus/dna/policy/v1
+        kind: LayerPolicy
+        metadata: {name: composition}
+        spec:
+          composition_rules:
+            Agent:
+              scope_inheritance: enabled
+              merge_strategy: field_level
+              tenant_overlay: field_level
+      - apiVersion: github.com/ruinosus/dna/test/v1
+        kind: Agent
+        metadata: {name: helper}
+        spec: {model: local-model}
+  tenants:
+    acme:
+      app:
+        - apiVersion: github.com/ruinosus/dna/test/v1
+          kind: Agent
+          metadata: {name: helper, labels: {layer: acme-overlay}}
+          spec: {temperature: 0.9}

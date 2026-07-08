@@ -1,0 +1,42 @@
+id: 03-field-level-merge
+title: field_level merge via LayerPolicy — per-field shadowing + fields_by_origin
+notes: |
+  app's LayerPolicy declares Agent merge_strategy=field_level.
+  Local overrides `model`; `persona` is inherited from _lib. Expected pins
+  contributions_by_field ({spec.model: app, spec.persona: _lib}) and that
+  BOTH layers are marked contributed=true. Envelope/metadata come from the
+  primary (highest-priority hit = app).
+target:
+  scope: app
+  kind: Agent
+  name: jarvis
+  tenant: null
+tree:
+  scopes:
+    _lib:
+      - apiVersion: github.com/ruinosus/dna/v1
+        kind: Genome
+        metadata: {name: _lib}
+        spec: {}
+      - apiVersion: github.com/ruinosus/dna/test/v1
+        kind: Agent
+        metadata: {name: jarvis, labels: {origin: platform}}
+        spec: {model: gpt-5, persona: jarvis-style}
+    app:
+      - apiVersion: github.com/ruinosus/dna/v1
+        kind: Genome
+        metadata: {name: app}
+        spec: {}
+      - apiVersion: github.com/ruinosus/dna/policy/v1
+        kind: LayerPolicy
+        metadata: {name: composition}
+        spec:
+          composition_rules:
+            Agent:
+              scope_inheritance: enabled
+              merge_strategy: field_level
+              tenant_overlay: field_level
+      - apiVersion: github.com/ruinosus/dna/test/v1
+        kind: Agent
+        metadata: {name: jarvis}
+        spec: {model: gpt-5.4}

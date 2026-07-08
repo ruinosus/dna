@@ -1,0 +1,48 @@
+{
+  "chain": [
+    [
+      "a",
+      null
+    ],
+    [
+      "b",
+      null
+    ]
+  ],
+  "resolved": {
+    "contributions_by_field": {},
+    "doc": {
+      "apiVersion": "github.com/ruinosus/dna/test/v1",
+      "kind": "LottieAsset",
+      "metadata": {
+        "name": "X"
+      },
+      "spec": {
+        "variant": "idle"
+      }
+    },
+    "is_inherited": true,
+    "provenance": {
+      "effective_layer": {
+        "scope": "b",
+        "tenant": null
+      },
+      "steps": [
+        {
+          "contributed": false,
+          "found": false,
+          "scope": "a",
+          "tenant": null,
+          "version_sha": null
+        },
+        {
+          "contributed": true,
+          "found": true,
+          "scope": "b",
+          "tenant": null,
+          "version_sha": null
+        }
+      ]
+    }
+  }
+}

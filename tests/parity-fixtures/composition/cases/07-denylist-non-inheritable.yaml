@@ -1,0 +1,29 @@
+id: 07-denylist-non-inheritable
+title: Denylist Kind (Story) never inherits — parent hit is invisible
+notes: |
+  Story is in DEFAULT_NON_INHERITABLE_KINDS_V1 -> default rule is
+  scope_inheritance=disabled. Story/S1 exists in _lib but the resolver
+  must NOT walk the chain: local-only layer list, doc=null.
+  (The frozen top-level `chain` is the RAW computeResolutionChain walk —
+  it still escalates; the resolver ignores it for disabled Kinds.)
+target:
+  scope: app
+  kind: Story
+  name: S1
+  tenant: null
+tree:
+  scopes:
+    _lib:
+      - apiVersion: github.com/ruinosus/dna/v1
+        kind: Genome
+        metadata: {name: _lib}
+        spec: {}
+      - apiVersion: github.com/ruinosus/dna/sdlc/v1
+        kind: Story
+        metadata: {name: S1}
+        spec: {title: in platform}
+    app:
+      - apiVersion: github.com/ruinosus/dna/v1
+        kind: Genome
+        metadata: {name: app}
+        spec: {}

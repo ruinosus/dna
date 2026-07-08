@@ -1,0 +1,27 @@
+id: 06-cycle-guard
+title: parent_scope cycle (a -> b -> a) terminates — each scope visited once
+notes: |
+  Explicit cyclic parents. The visited-set guard must terminate the walk
+  with chain [a, b] (no infinite loop, no V1 _lib escalation — parents are
+  explicit). LottieAsset/X lives in b -> resolved as inherited from b.
+target:
+  scope: a
+  kind: LottieAsset
+  name: X
+  tenant: null
+tree:
+  scopes:
+    a:
+      - apiVersion: github.com/ruinosus/dna/v1
+        kind: Genome
+        metadata: {name: a}
+        spec: {parent_scope: b}
+    b:
+      - apiVersion: github.com/ruinosus/dna/v1
+        kind: Genome
+        metadata: {name: b}
+        spec: {parent_scope: a}
+      - apiVersion: github.com/ruinosus/dna/test/v1
+        kind: LottieAsset
+        metadata: {name: X}
+        spec: {variant: idle}

@@ -1,0 +1,23 @@
+id: 08-bootstrap-local-only
+title: Bootstrap Kind (Genome) bypasses inheritance — single local layer
+notes: |
+  Resolving app's own Genome: bootstrap Kinds never inherit and never
+  overlay. Expected pins the single-step provenance
+  [(app, null, found=true, contributed=true)] and is_inherited=false.
+target:
+  scope: app
+  kind: Genome
+  name: app
+  tenant: null
+tree:
+  scopes:
+    _lib:
+      - apiVersion: github.com/ruinosus/dna/v1
+        kind: Genome
+        metadata: {name: _lib}
+        spec: {}
+    app:
+      - apiVersion: github.com/ruinosus/dna/v1
+        kind: Genome
+        metadata: {name: app}
+        spec: {description: the app scope}

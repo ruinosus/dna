@@ -1,0 +1,8 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: Actor
+metadata:
+  name: developer
+  description: "Senior software developer persona — focuses on code quality and best practices"
+spec:
+  focus: implementation
+  style: technical
