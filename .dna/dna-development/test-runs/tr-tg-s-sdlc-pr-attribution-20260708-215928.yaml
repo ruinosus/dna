@@ -1,0 +1,14 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-sdlc-pr-attribution-20260708-215928
+spec:
+  guide_ref: tg-s-sdlc-pr-attribution
+  outcome: pass
+  verifies:
+  - Story/s-sdlc-pr-attribution
+  executed_by: claude-code
+  executed_at: '2026-07-08T21:59:28+00:00'
+  evidence:
+  - "ci:pr5-6-of-6,selfapp:pr5-criado-pelo-proprio-story-pr,test:test_story_pr_cli.py-18-novos-zero-rede,check:footer-renderizado,check:commit-carimbado-1e9f572,kaizen:brand-guard-pegou-narra\xE7\
+    \xE3o-do-orquestrador"

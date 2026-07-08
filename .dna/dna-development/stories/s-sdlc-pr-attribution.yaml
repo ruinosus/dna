@@ -13,7 +13,7 @@ spec:
     \ da story, n\xE3o o contr\xE1rio. Fallback: 'dna sdlc pr-footer <s-x>' que s\xF3\
     \ emite o footer pra colar. Completa a symbiosis: commit carimbado (hook) + PR\
     \ assinado (este) + timeline materializa ambos."
-  status: review
+  status: done
   feature: f-dna-1.0-readiness
   priority: medium
   labels:
@@ -22,14 +22,21 @@ spec:
   reporter: claude-code
   business_value: 400
   acceptance_criteria:
-  - "dna sdlc story pr cria PR real com footer + Work-Item; footer configur\xE1vel;\
-    \ docs na se\xE7\xE3o Your git log is your SDLC"
+  - text: "dna sdlc story pr cria PR real com footer + Work-Item; footer configur\xE1\
+      vel; docs na se\xE7\xE3o Your git log is your SDLC"
+    done: true
+    done_at: '2026-07-08T21:59:29+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - "PR merged; usado no pr\xF3prio PR que o implementa (self-aplica\xE7\xE3o)"
+  - text: "PR merged; usado no pr\xF3prio PR que o implementa (self-aplica\xE7\xE3\
+      o)"
+    done: true
+    done_at: '2026-07-08T21:59:29+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-08T21:37:34+00:00'
-  updated_at: '2026-07-08T21:55:30+00:00'
+  updated_at: '2026-07-08T21:59:30+00:00'
   timeline:
   - at: '2026-07-08T21:37:34+00:00'
     actor: claude-code
@@ -102,8 +109,48 @@ spec:
       \ sdk-ts). Gates locais tamb\xE9m verdes: cli 245 passed (18 novos), sdk-py\
       \ 2722 passed, bun 1214 + typecheck. Aguardando merge do Barna (done-on-merge)."
     commit_ref: ea717205d2e362c560894ee65f08875139cf3873
+  - at: '2026-07-08T21:59:28+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-sdlc-pr-attribution
+    summary: TestGuide tg-s-sdlc-pr-attribution (smoke)
+  - at: '2026-07-08T21:59:29+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-sdlc-pr-attribution-20260708-215928
+    summary: "TestRun tr-tg-s-sdlc-pr-attribution-20260708-215928 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-08T21:59:30+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #5 merged (6/6; criado pelo pr\xF3prio dna sdlc story pr \u2014 self-aplica\xE7\
+      \xE3o provada). story pr + pr-footer + timeline pr_opened; b\xF4nus PRs-no-show\
+      \ rejeitado com raz\xE3o t\xE9cnica documentada (search API flaky/rate-limited;\
+      \ o loop j\xE1 fecha determin\xEDstico via trailer no squash). Extra: story\
+      \ groom --title. Guard pegou token literal na timeline do gate (redigido)."
+  - at: '2026-07-08T21:59:30+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: f81a5da6485bdc53415bbc390ba6c7592e4f3c9b
   produces:
   - kind: Plan
     name: plan-s-sdlc-pr-attribution
     role: implementation
     at: '2026-07-08T21:40:16+00:00'
+  - kind: TestGuide
+    name: tg-s-sdlc-pr-attribution
+    role: test-guide
+    at: '2026-07-08T21:59:28+00:00'
+  - kind: TestRun
+    name: tr-tg-s-sdlc-pr-attribution-20260708-215928
+    role: test-run
+    at: '2026-07-08T21:59:29+00:00'
+  closed_at: '2026-07-08T21:59:29+00:00'
