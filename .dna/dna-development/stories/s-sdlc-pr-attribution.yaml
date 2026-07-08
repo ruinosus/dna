@@ -1,0 +1,39 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-sdlc-pr-attribution
+spec:
+  title: "Ideia Barna (2026-07-08): assim como o Claude Code assina PRs com '\U0001F916\
+    \ Generated w"
+  description: "Ideia Barna (2026-07-08): assim como o Claude Code assina PRs com\
+    \ '\U0001F916 Generated with Claude Code', o DNA assina os seus \u2014 footer\
+    \ de atribui\xE7\xE3o no BODY do PR: '\U0001F9EC Tracked with DNA SDLC \u2014\
+    \ Work-Item: Story/<s-x>' (+ link pro repo/doc). Shape: comando 'dna sdlc story\
+    \ pr <s-x>' que roda gh pr create com title/body pr\xE9-preenchidos da story (title,\
+    \ description, AC como checklist, footer de atribui\xE7\xE3o) \u2014 o PR nasce\
+    \ da story, n\xE3o o contr\xE1rio. Fallback: 'dna sdlc pr-footer <s-x>' que s\xF3\
+    \ emite o footer pra colar. Completa a symbiosis: commit carimbado (hook) + PR\
+    \ assinado (este) + timeline materializa ambos."
+  status: todo
+  feature: f-dna-1.0-readiness
+  priority: medium
+  labels:
+  - cli
+  - sdlc-tracking
+  reporter: claude-code
+  business_value: 400
+  acceptance_criteria:
+  - "dna sdlc story pr cria PR real com footer + Work-Item; footer configur\xE1vel;\
+    \ docs na se\xE7\xE3o Your git log is your SDLC"
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - "PR merged; usado no pr\xF3prio PR que o implementa (self-aplica\xE7\xE3o)"
+  definition_of_done_source: cli-create
+  created_at: '2026-07-08T21:37:34+00:00'
+  updated_at: '2026-07-08T21:37:34+00:00'
+  timeline:
+  - at: '2026-07-08T21:37:34+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo

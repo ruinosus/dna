@@ -15,7 +15,7 @@ spec:
     \ \u2192 .dna/dna-development na raiz (o repo \xC9 o projeto; elimina o nome duplicado),\
     \ DNA_SOURCE_URL default j\xE1 resolve ./.dna. Docs: se\xE7\xE3o 'your git log\
     \ is your SDLC' no README/guia."
-  status: review
+  status: done
   feature: f-dna-1.0-readiness
   priority: medium
   labels:
@@ -26,15 +26,21 @@ spec:
   reporter: claude-code
   business_value: 500
   acceptance_criteria:
-  - Hook instala com 1 comando e carimba Work-Item+coautores em commit real; story
-    show lista commits pelo trailer; scope na raiz .dna/dna-development com CLI funcionando
-    sem env var (default ./.dna); CI 6/6 verde
+  - text: Hook instala com 1 comando e carimba Work-Item+coautores em commit real;
+      story show lista commits pelo trailer; scope na raiz .dna/dna-development com
+      CLI funcionando sem env var (default ./.dna); CI 6/6 verde
+    done: true
+    done_at: '2026-07-08T21:37:32+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - "PR merged; conven\xE7\xE3o documentada"
+  - text: "PR merged; conven\xE7\xE3o documentada"
+    done: true
+    done_at: '2026-07-08T21:37:32+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-08T19:49:03+00:00'
-  updated_at: '2026-07-08T21:32:05+00:00'
+  updated_at: '2026-07-08T21:37:33+00:00'
   timeline:
   - at: '2026-07-08T19:49:03+00:00'
     actor: claude-code
@@ -120,8 +126,48 @@ spec:
     source: cli
     from: in-progress
     to: review
+  - at: '2026-07-08T21:37:31+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-sdlc-git-symbiosis
+    summary: TestGuide tg-s-sdlc-git-symbiosis (smoke)
+  - at: '2026-07-08T21:37:32+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-sdlc-git-symbiosis-20260708-213732
+    summary: "TestRun tr-tg-s-sdlc-git-symbiosis-20260708-213732 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-08T21:37:33+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #4 merged (6/6). Trailers Work-Item + Co-Authored-By dna-sdlc[bot];\
+      \ hook prepare-commit-msg + hooks install/uninstall/status; story show ganhou\
+      \ Commits (trailer-grep) e story commits virou view mesclada; scope movido pra\
+      \ .dna/dna-development na raiz (nome duplicado morto, CLI sem env var); self-aplicado:\
+      \ os commits da story sa\xEDram carimbados pelo pr\xF3prio sistema."
+  - at: '2026-07-08T21:37:33+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: f6996f54e166a740842014776d81d7aea5ca97e2
   produces:
   - kind: Plan
     name: plan-s-sdlc-git-symbiosis
     role: implementation
     at: '2026-07-08T21:07:27+00:00'
+  - kind: TestGuide
+    name: tg-s-sdlc-git-symbiosis
+    role: test-guide
+    at: '2026-07-08T21:37:31+00:00'
+  - kind: TestRun
+    name: tr-tg-s-sdlc-git-symbiosis-20260708-213732
+    role: test-run
+    at: '2026-07-08T21:37:32+00:00'
+  closed_at: '2026-07-08T21:37:32+00:00'

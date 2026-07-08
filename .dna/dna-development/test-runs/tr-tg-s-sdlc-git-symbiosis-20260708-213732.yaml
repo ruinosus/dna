@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-sdlc-git-symbiosis-20260708-213732
+spec:
+  guide_ref: tg-s-sdlc-git-symbiosis
+  outcome: pass
+  verifies:
+  - Story/s-sdlc-git-symbiosis
+  executed_by: claude-code
+  executed_at: '2026-07-08T21:37:32+00:00'
+  evidence:
+  - ci:pr4-6-of-6-green-3-heads,test:cli-227-pass-29-novos,prova:self-aplicacao-commits-carimbados-Work-Item+dna-sdlc-bot,check:hook-paridade-byte-identica,check:scope-na-raiz-cli-sem-env-var,kaizen:fixture-DNA_ACTIVE_STORY_PATH-anti-vazamento
