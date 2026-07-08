@@ -41,6 +41,18 @@ COAUTHOR_TRAILER = "Co-Authored-By"
 DEFAULT_SDLC_COAUTHOR = "dna-sdlc[bot] <dna-sdlc[bot]@users.noreply.github.com>"
 COAUTHOR_ENV = "DNA_SDLC_COAUTHOR"
 
+#: PR-side twin of the commit trailer (s-sdlc-pr-attribution): the same way
+#: Claude Code signs its PRs, DNA signs the PRs born from its Stories. The
+#: footer goes at the END of the PR body, after a ``---`` rule, and carries
+#: the machine-readable ``Work-Item: <Kind>/<name>`` reference. Override the
+#: whole line via ``$DNA_SDLC_PR_FOOTER`` — a ``{work_item}`` placeholder in
+#: the override is substituted; a literal string is used as-is.
+DEFAULT_PR_FOOTER_TEMPLATE = (
+    "\U0001f9ec Tracked with [DNA SDLC](https://github.com/ruinosus/dna) — "
+    f"{WORK_ITEM_TRAILER}: {{work_item}}"
+)
+PR_FOOTER_ENV = "DNA_SDLC_PR_FOOTER"
+
 #: Repo-relative hooks dir that ``dna sdlc hooks install`` points
 #: ``core.hooksPath`` at. Versioned in-repo so the hook ships with the clone.
 HOOKS_DIR = "scripts/git-hooks"
@@ -65,6 +77,26 @@ def trailer_lines(kind: str, name: str) -> list[str]:
         f"{WORK_ITEM_TRAILER}: {work_item_ref(kind, name)}",
         f"{COAUTHOR_TRAILER}: {sdlc_coauthor()}",
     ]
+
+
+def pr_footer(kind: str, name: str) -> str:
+    """The one-line PR attribution footer for a work item.
+
+    ``$DNA_SDLC_PR_FOOTER`` overrides the template; an override without a
+    ``{work_item}`` placeholder is emitted verbatim (some hosts want a
+    fixed banner), and a malformed format string falls back to verbatim
+    too — the footer must never crash PR creation.
+    """
+    template = os.environ.get(PR_FOOTER_ENV, "").strip() or DEFAULT_PR_FOOTER_TEMPLATE
+    try:
+        return template.format(work_item=work_item_ref(kind, name))
+    except (KeyError, IndexError, ValueError):
+        return template
+
+
+def pr_footer_block(kind: str, name: str) -> str:
+    """The footer as it appears at the end of a PR body: ``---`` + footer."""
+    return f"---\n{pr_footer(kind, name)}"
 
 
 def hook_source_path() -> Path:

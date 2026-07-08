@@ -1852,6 +1852,9 @@ def cmd_story_show(name: str, as_json: bool, scope: str) -> None:
 
 @story_group.command("groom")
 @click.argument("name")
+@click.option("--title", default=None,
+              help="Retitle the Story (e.g. a cli-create title that came in "
+                   "truncated/desc-shaped — `story pr` builds the PR title from it).")
 @click.option("--priority", type=click.Choice(VALID_PRIORITIES), default=None)
 @click.option("--labels", default=None, help="Comma-separated. Replaces existing.")
 @click.option("--reporter", default=None)
@@ -1867,7 +1870,7 @@ def cmd_story_show(name: str, as_json: bool, scope: str) -> None:
 @click.option("--dod-source", "dod_source", default=None)
 @_scope_option
 def cmd_story_groom(
-    name: str, priority: str | None, labels: str | None,
+    name: str, title: str | None, priority: str | None, labels: str | None,
     reporter: str | None, sprint_ref: str | None,
     business_value: int | None, release_target: str | None,
     acceptance_criteria: tuple[str, ...], definition_of_done: tuple[str, ...],
@@ -1880,6 +1883,8 @@ def cmd_story_groom(
     updated_at, which we skip when nothing else changed).
     """
     extras: dict[str, Any] = {}
+    if title:
+        extras["title"] = title
     if priority:
         extras["priority"] = priority
     labels_list = _csv(labels)
