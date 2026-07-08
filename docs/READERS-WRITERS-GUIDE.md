@@ -400,7 +400,7 @@ k = Kernel()
 k.load(ConfigExtension())
 # ...
 mi = k.instance("my-module")
-configs = mi.all("Config")
+configs = [d for d in mi.documents if d.kind == "Config"]
 for c in configs:
     print(f"{c.name}: region={c.spec.region}, replicas={c.spec.max_replicas}")
 ```

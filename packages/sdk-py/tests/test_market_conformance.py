@@ -97,7 +97,7 @@ def _split_frontmatter(text: str) -> tuple[dict, str]:
 class TestRealSkills:
     def test_scan_finds_the_real_marketplace_skills_typed(self, market):
         _, mi = market
-        skills = mi.all("Skill")
+        skills = [d for d in mi.documents if d.kind == "Skill"]
         names = {s.name for s in skills}
         assert len(skills) >= 3, "AC floor: at least 3 real Skills"
         assert {"xlsx", "docx", "pdf", "pptx"} <= names
@@ -116,7 +116,7 @@ class TestRealSkills:
         k, mi = market
         scope_dir = MARKET_BASE / "market-demo"
         checked = fm_style = 0
-        for s in mi.all("Skill"):
+        for s in [d for d in mi.documents if d.kind == "Skill"]:
             files = _emitted_files(k, "market-demo", s)
             assert "skills/%s/SKILL.md" % s.name in files
             for rel, content in files.items():
@@ -141,7 +141,7 @@ class TestRealSkills:
         k, mi = market
         scope_dir = MARKET_BASE / "market-demo"
         for name in sorted(SKILL_FM_STYLE_ALLOWLIST):
-            doc = mi.one("Skill", name)
+            doc = next((d for d in mi.documents if d.kind == "Skill" and d.name == name), None)
             emitted = _emitted_files(k, "market-demo", doc)[f"skills/{name}/SKILL.md"]
             disk = (scope_dir / "skills" / name / "SKILL.md").read_text()
             fm_e, body_e = _split_frontmatter(emitted)
@@ -156,7 +156,7 @@ class TestRealSkills:
         k, mi = market
         reader, writer = SkillReader(), SkillWriter()
         for name in sorted(SKILL_FM_STYLE_ALLOWLIST) + ["algorithmic-art"]:
-            doc = mi.one("Skill", name)
+            doc = next((d for d in mi.documents if d.kind == "Skill" and d.name == name), None)
             files1 = {f["relativePath"]: f["content"] for f in writer.serialize(doc.raw)}
             bundle_dir = tmp_path / name
             for rel, content in files1.items():
@@ -171,7 +171,7 @@ class TestRealSkills:
         """Documented contract: binary bundle entries (fonts, images) are not
         surfaced in spec and not re-emitted — the writer never touches them."""
         k, mi = market
-        doc = mi.one("Skill", "canvas-design")
+        doc = next((d for d in mi.documents if d.kind == "Skill" and d.name == "canvas-design"), None)
         files = _emitted_files(k, "market-demo", doc)
         assert not any(rel.endswith((".ttf", ".png", ".pdf")) for rel in files)
         on_disk = list((MARKET_BASE / "market-demo/skills/canvas-design").rglob("*.ttf"))
@@ -186,7 +186,7 @@ class TestRealSkills:
 class TestRealAgentsMd:
     def test_scan_typed_and_byte_roundtrip(self, fixture_scope):
         k, mi = fixture_scope
-        doc = mi.one("AgentDefinition", "market-conformance")
+        doc = next((d for d in mi.documents if d.kind == "AgentDefinition" and d.name == "market-conformance"), None)
         assert doc is not None, "scope-root AGENTS.md must scan as a document"
         assert doc.raw.get("apiVersion") == "agents.md/v1"
         assert doc.typed is not None
@@ -199,7 +199,7 @@ class TestRealAgentsMd:
 
     def test_market_demo_agentsmd_roundtrip(self, market):
         k, mi = market
-        doc = mi.one("AgentDefinition", "market-demo")
+        doc = next((d for d in mi.documents if d.kind == "AgentDefinition" and d.name == "market-demo"), None)
         assert doc is not None
         emitted = _emitted_files(k, "market-demo", doc)["AGENTS.md"]
         disk = (MARKET_BASE / "market-demo" / "AGENTS.md").read_bytes()
@@ -218,7 +218,7 @@ class TestRealSouls:
         only (soulspec canonical refactor). The write path is raw-based, so
         the bundle files still round-trip (next test)."""
         _, mi = fixture_scope
-        soul = mi.one("Soul", "starter")
+        soul = next((d for d in mi.documents if d.kind == "Soul" and d.name == "starter"), None)
         assert soul is not None
         assert soul.raw.get("apiVersion") == "soulspec.org/v1"
         assert soul.typed is not None
@@ -231,7 +231,7 @@ class TestRealSouls:
         """IDENTITY.md + HEARTBEAT.md — the native soulspec bundle files —
         must round-trip byte-identical (they carry authored frontmatter)."""
         k, mi = fixture_scope
-        soul = mi.one("Soul", "starter")
+        soul = next((d for d in mi.documents if d.kind == "Soul" and d.name == "starter"), None)
         files = _emitted_files(k, "market-conformance", soul)
         base = FIXTURE_BASE / "market-conformance/souls/starter"
         for fname in ("IDENTITY.md", "HEARTBEAT.md"):
@@ -243,7 +243,7 @@ class TestRealSouls:
         after the closing ``---``. Frontmatter keys/values and the body are
         preserved exactly."""
         k, mi = fixture_scope
-        soul = mi.one("Soul", "starter")
+        soul = next((d for d in mi.documents if d.kind == "Soul" and d.name == "starter"), None)
         emitted = _emitted_files(k, "market-conformance", soul)["souls/starter/SOUL.md"]
         disk = (FIXTURE_BASE / "market-conformance/souls/starter/SOUL.md").read_text()
         fm_e, body_e = _split_frontmatter(emitted)
@@ -258,7 +258,7 @@ class TestRealSouls:
         byte-identical. In particular the parse-time DERIVED description must
         NOT leak into frontmatter that never existed on disk."""
         k, mi = market
-        soul = mi.one("Soul", "brad")
+        soul = next((d for d in mi.documents if d.kind == "Soul" and d.name == "brad"), None)
         files = _emitted_files(k, "market-demo", soul)
         base = MARKET_BASE / "market-demo/souls/brad"
         for fname in ("SOUL.md", "STYLE.md", "AGENTS.md"):
@@ -270,7 +270,7 @@ class TestRealSouls:
         """N3: soul.json re-emits as canonical JSON — content-equal, unicode
         preserved (no \\uXXXX escapes), stable under re-emit."""
         k, mi = market
-        soul = mi.one("Soul", "brad")
+        soul = next((d for d in mi.documents if d.kind == "Soul" and d.name == "brad"), None)
         emitted = _emitted_files(k, "market-demo", soul)["souls/brad/soul.json"]
         disk = (MARKET_BASE / "market-demo/souls/brad/soul.json").read_text()
         assert json.loads(emitted) == json.loads(disk)

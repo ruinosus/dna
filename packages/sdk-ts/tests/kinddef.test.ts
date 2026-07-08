@@ -205,7 +205,7 @@ describe("3.3 KindDefinitionExtension", () => {
     k.cache(new FilesystemCache(join(tmp, ".dna")));
 
     const mi = await k.instance("demo");
-    const kinddefs = mi.all("KindDefinition");
+    const kinddefs = mi.documents.filter((d) => d.kind === "KindDefinition");
     expect(kinddefs.length).toBe(1);
     expect(kinddefs[0].name).toBe("recipe");
   });
@@ -243,7 +243,7 @@ describe("3.4 Two-phase loading", () => {
     expect(k._kinds.has(key)).toBe(true);
     expect((k._kinds.get(key) as unknown as { __declarative__?: boolean }).__declarative__).toBe(true);
 
-    const recipes = mi.all("Recipe");
+    const recipes = mi.documents.filter((d) => d.kind === "Recipe");
     expect(recipes.length).toBe(1);
     const doc = recipes[0];
     expect(doc.name).toBe("pasta");
@@ -292,7 +292,7 @@ describe("3.5 Conflict resolution", () => {
     expect(soulPort.alias).toBe("soulspec-soul");
 
     expect(events.some((e) => e.kind === "Soul")).toBe(true);
-    expect(mi.all("KindDefinition").length).toBe(1);
+    expect(mi.documents.filter((d) => d.kind === "KindDefinition").length).toBe(1);
   });
 });
 
@@ -340,7 +340,7 @@ describe("3.6 Round-trip", () => {
     k2.cache(new FilesystemCache(join(tmp, ".dna")));
     const mi2 = await k2.instance("demo");
 
-    const recipes = mi2.all("Recipe");
+    const recipes = mi2.documents.filter((d) => d.kind === "Recipe");
     expect(recipes.length).toBe(1);
     const reloaded = recipes[0];
     expect(reloaded.name).toBe("bread");

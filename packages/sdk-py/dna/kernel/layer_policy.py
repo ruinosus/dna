@@ -90,7 +90,7 @@ class LayerPolicyEnforcer:
         # written (last match wins, matching mi.all iteration order).
         policy_str = "open"
         try:
-            layer_policy_docs = mi_base.all("LayerPolicy")
+            layer_policy_docs = mi_base._all("LayerPolicy")
         except Exception as e:  # noqa: BLE001
             # fail-soft: unreadable LayerPolicy docs → OPEN (same posture as
             # the missing-base-MI guard above) — logged, never silent.
@@ -129,7 +129,7 @@ class LayerPolicyEnforcer:
                 f"{alias} is LOCKED in layer '{layer_id}' per LayerPolicy docs"
             )
         if policy == LayerPolicy.RESTRICTED:
-            existing = mi_base.one(kind, name)
+            existing = mi_base._one(kind, name)
             if existing is None:
                 raise LayerPolicyViolationError(
                     f"{alias} in layer '{layer_id}' is RESTRICTED — "

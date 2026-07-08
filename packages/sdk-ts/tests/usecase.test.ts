@@ -91,7 +91,7 @@ describe("UseCase filesystem load", () => {
     k.load(new HelixExtension());
 
     const mi = await k.instance("mod");
-    const ucs = mi.all("UseCase");
+    const ucs = mi.documents.filter((d) => d.kind === "UseCase");
     expect(ucs.length).toBe(1);
     expect(ucs[0]!.name).toBe("checkout");
     expect(ucs[0]!.spec.primary_actor).toBe("shopper");

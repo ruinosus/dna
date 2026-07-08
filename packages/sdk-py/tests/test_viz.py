@@ -68,7 +68,7 @@ class TestVizHealthParity:
 
     def test_impact_parity(self):
         # Find a skill to test impact on
-        skills = self.mi.all("Skill")
+        skills = [d for d in self.mi.documents if d.kind == "Skill"]
         if skills:
             s = skills[0]
             assert impact(self.mi, s.kind, s.name) == self.mi.impact(s.kind, s.name)

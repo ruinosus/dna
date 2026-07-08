@@ -72,14 +72,14 @@ class TestFlatten:
 
 class TestMI:
     def test_all_skills(self, mi):
-        assert len(mi.all("Skill")) == 6
+        assert len([d for d in mi.documents if d.kind == "Skill"]) == 6
 
     def test_one(self, mi):
-        doc = mi.one("Agent", "swe-agent")
+        doc = next((d for d in mi.documents if d.kind == "Agent" and d.name == "swe-agent"), None)
         assert doc is not None and doc.kind == "Agent"
 
     def test_one_missing(self, mi):
-        assert mi.one("Skill", "nope") is None
+        assert next((d for d in mi.documents if d.kind == "Skill" and d.name == "nope"), None) is None
 
     def test_root_is_module(self, mi):
         assert mi.root is not None and mi.root.kind == "Genome"
@@ -281,8 +281,8 @@ class TestCustomKinds:
         doc = Document.from_raw({"apiVersion": "x/v1", "kind": "Pipeline", "metadata": {"name": "etl"}, "spec": {"stages": 3}})
         mi = ManifestInstance(scope="test", documents=[doc], kinds=k._kinds)
 
-        assert len(mi.all("Pipeline")) == 1
-        assert mi.one("Pipeline", "etl") is not None
+        assert len([d for d in mi.documents if d.kind == "Pipeline"]) == 1
+        assert next((d for d in mi.documents if d.kind == "Pipeline" and d.name == "etl"), None) is not None
         assert "Pipeline" in mi.list_kinds()
 
 
@@ -312,7 +312,7 @@ class TestOriginChain:
     def test_bundle_docs_have_local_origin(self, mi):
         """open-swe ships its soul as a local bundle (no external deps),
         so every doc — including the soul — carries the 'local' origin."""
-        swe_soul = mi.one("Soul", "swe-soul")
+        swe_soul = next((d for d in mi.documents if d.kind == "Soul" and d.name == "swe-soul"), None)
         assert swe_soul is not None
         assert swe_soul.origin == "local"
 
@@ -370,7 +370,7 @@ class TestBuildPromptFilters:
     def test_enabled_skills_filters(self, mi):
         full = mi.build_prompt(agent="swe-agent")
         # Get first skill name from swe-agent's agent spec
-        swe = mi.one("Agent", "swe-agent")
+        swe = next((d for d in mi.documents if d.kind == "Agent" and d.name == "swe-agent"), None)
         skills = swe.spec.get("skills", [])
         if skills:
             filtered = mi.build_prompt(agent="swe-agent", enabled_skills=[skills[0]])

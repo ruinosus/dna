@@ -16,13 +16,13 @@ describe("v3 integration — open-swe fixture", () => {
     expect(mi.root).not.toBeNull();
     expect(mi.root!.kind).toBe("Genome");
     expect(mi.root!.name).toBe("open-swe");
-    expect(mi.all("Skill").length).toBeGreaterThan(0);
-    expect(mi.all("Agent").length).toBeGreaterThan(0);
+    expect(mi.documents.filter((d) => d.kind === "Skill").length).toBeGreaterThan(0);
+    expect(mi.documents.filter((d) => d.kind === "Agent").length).toBeGreaterThan(0);
   });
 
   test("loads skills via SkillReader", async () => {
     const mi = await quickInstance("open-swe", BASE_DIR);
-    const skills = mi.all("Skill");
+    const skills = mi.documents.filter((d) => d.kind === "Skill");
     const names = skills.map((s) => s.name).sort();
     expect(names).toContain("pr-review");
     expect(names).toContain("branch-naming");
@@ -31,7 +31,7 @@ describe("v3 integration — open-swe fixture", () => {
 
   test("loads souls via SoulReader", async () => {
     const mi = await quickInstance("open-swe", BASE_DIR);
-    const souls = mi.all("Soul");
+    const souls = mi.documents.filter((d) => d.kind === "Soul");
     expect(souls.length).toBeGreaterThan(0);
     expect(souls[0].name).toBe("swe-soul");
     // Verify soul_content was read
@@ -42,7 +42,7 @@ describe("v3 integration — open-swe fixture", () => {
 
   test("loads agents from YAML", async () => {
     const mi = await quickInstance("open-swe", BASE_DIR);
-    const agents = mi.all("Agent");
+    const agents = mi.documents.filter((d) => d.kind === "Agent");
     const names = agents.map((a) => a.name).sort();
     expect(names).toContain("swe-agent");
     expect(names).toContain("reviewer-agent");
@@ -100,7 +100,7 @@ describe("v3 integration — open-swe fixture", () => {
 
   test("one returns specific document", async () => {
     const mi = await quickInstance("open-swe", BASE_DIR);
-    const skill = mi.one("Skill", "pr-review");
+    const skill = (mi.documents.find((d) => d.kind === "Skill" && d.name === "pr-review") ?? null);
     expect(skill).not.toBeNull();
     expect(skill!.kind).toBe("Skill");
     expect(skill!.apiVersion).toBe("agentskills.io/v1");
@@ -123,7 +123,7 @@ describe("v3 integration — open-swe fixture", () => {
 
   test("skill has instruction from SKILL.md body", async () => {
     const mi = await quickInstance("open-swe", BASE_DIR);
-    const skill = mi.one("Skill", "pr-review");
+    const skill = (mi.documents.find((d) => d.kind === "Skill" && d.name === "pr-review") ?? null);
     expect(skill).not.toBeNull();
     const spec = skill!.spec;
     expect(typeof spec.instruction).toBe("string");
@@ -132,7 +132,7 @@ describe("v3 integration — open-swe fixture", () => {
 
   test("skill has references subdirectory loaded", async () => {
     const mi = await quickInstance("open-swe", BASE_DIR);
-    const skill = mi.one("Skill", "pr-review");
+    const skill = (mi.documents.find((d) => d.kind === "Skill" && d.name === "pr-review") ?? null);
     expect(skill).not.toBeNull();
     const spec = skill!.spec;
     // pr-review has a references/ subdirectory

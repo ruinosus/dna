@@ -90,7 +90,7 @@ describe("viz module parity", () => {
 
   test("impact", async () => {
     // Test with a skill that exists in the fixture
-    const skills = mi.all("Skill");
+    const skills = mi.documents.filter((d) => d.kind === "Skill");
     if (skills.length > 0) {
       const skill = skills[0];
       expect(impact(mi, skill.kind, skill.name)).toEqual(mi.impact(skill.kind, skill.name));

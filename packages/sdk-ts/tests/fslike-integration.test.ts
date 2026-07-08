@@ -117,20 +117,20 @@ describe("FSLike integration — full kernel with in-memory FS", () => {
     expect(mi.documents.length).toBeGreaterThanOrEqual(4);
     expect(mi.root?.name).toBe("demo");
 
-    const agent = mi.one("Agent", "swe");
+    const agent = (mi.documents.find((d) => d.kind === "Agent" && d.name === "swe") ?? null);
     expect(agent).not.toBeNull();
     expect(agent!.spec.instruction).toContain("software engineer");
     expect(agent!.spec.model).toBe("gpt-4o");
 
-    const skill = mi.one("Skill", "code-review");
+    const skill = (mi.documents.find((d) => d.kind === "Skill" && d.name === "code-review") ?? null);
     expect(skill).not.toBeNull();
     expect(skill!.spec.instruction).toContain("Review the code");
 
-    const soul = mi.one("Soul", "swe-soul");
+    const soul = (mi.documents.find((d) => d.kind === "Soul" && d.name === "swe-soul") ?? null);
     expect(soul).not.toBeNull();
     expect(soul!.spec.soul_content).toContain("engineer");
 
-    const guardrail = mi.one("Guardrail", "safe-output");
+    const guardrail = (mi.documents.find((d) => d.kind === "Guardrail" && d.name === "safe-output") ?? null);
     expect(guardrail).not.toBeNull();
     expect(guardrail!.spec.rules).toContain("Never output secrets");
   });

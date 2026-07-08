@@ -20,15 +20,17 @@ class _FakeDoc:
 
 
 class _FakeMI:
-    """Fake base MI: `all('LayerPolicy')` → policy docs; `one(kind,name)` → doc."""
+    """Fake base MI: `_all('LayerPolicy')` → policy docs; `_one(kind,name)` → doc
+    (the enforcer consumes the MI internal non-deprecated twins —
+    s-blessed-query-surface)."""
     def __init__(self, policies_for_layer=None, existing=None):
         self._lp = policies_for_layer or []
         self._existing = existing
 
-    def all(self, kind):
+    def _all(self, kind):
         return self._lp if kind == "LayerPolicy" else []
 
-    def one(self, kind, name):
+    def _one(self, kind, name):
         return self._existing
 
 

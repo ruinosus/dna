@@ -220,7 +220,7 @@ class TestKindDefinitionExtension:
         k.cache(FilesystemCache(tmp_path / ".dna"))
 
         mi = k.instance("demo")
-        kinddefs = mi.all("KindDefinition")
+        kinddefs = [d for d in mi.documents if d.kind == "KindDefinition"]
         assert len(kinddefs) == 1
         assert kinddefs[0].name == "recipe"
 
@@ -267,7 +267,7 @@ class TestTwoPhaseLoading:
         assert key in k._kinds
         assert getattr(k._kinds[key], "__declarative__", False)
 
-        recipes = mi.all("Recipe")
+        recipes = [d for d in mi.documents if d.kind == "Recipe"]
         assert len(recipes) == 1
         doc = recipes[0]
         assert doc.name == "pasta"
@@ -328,7 +328,7 @@ class TestConflictResolution:
         )
 
         # KindDefinition doc still loaded fine
-        assert len(mi.all("KindDefinition")) == 1
+        assert len([d for d in mi.documents if d.kind == "KindDefinition"]) == 1
 
 
 # ---------------------------------------------------------------------------
@@ -382,7 +382,7 @@ class TestRoundTrip:
         k2.cache(FilesystemCache(tmp_path / ".dna"))
         mi2 = await k2.instance_async("demo")
 
-        recipes = mi2.all("Recipe")
+        recipes = [d for d in mi2.documents if d.kind == "Recipe"]
         assert len(recipes) == 1
         reloaded = recipes[0]
         assert reloaded.name == "bread"

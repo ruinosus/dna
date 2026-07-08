@@ -179,7 +179,7 @@ describe("SkillWriter.serialize", () => {
 describe("Kernel.serializeDocument", () => {
   test("serializes Agent with agents/ prefix", async () => {
     const mi = await quickInstance("open-swe", BASE_DIR);
-    const sweAgent = mi.one("Agent", "swe-agent");
+    const sweAgent = (mi.documents.find((d) => d.kind === "Agent" && d.name === "swe-agent") ?? null);
     expect(sweAgent).not.toBeNull();
     const k = (mi as any)._kernel as Kernel;
     const result = k.serializeDocument("open-swe", "Agent", "swe-agent", sweAgent!.raw);
@@ -200,7 +200,7 @@ describe("Kernel.serializeDocument", () => {
 
   test("serializes Skill with skills/ prefix", async () => {
     const mi = await quickInstance("open-swe", BASE_DIR);
-    const skills = mi.all("Skill");
+    const skills = mi.documents.filter((d) => d.kind === "Skill");
     if (skills.length === 0) return; // skip if no skills
     const skill = skills[0];
     const k = (mi as any)._kernel as Kernel;
@@ -210,7 +210,7 @@ describe("Kernel.serializeDocument", () => {
 
   test("serializes Soul with souls/ prefix + companions", async () => {
     const mi = await quickInstance("open-swe", BASE_DIR);
-    const souls = mi.all("Soul");
+    const souls = mi.documents.filter((d) => d.kind === "Soul");
     if (souls.length === 0) return;
     const soul = souls[0];
     const k = (mi as any)._kernel as Kernel;
@@ -242,7 +242,7 @@ describe("Kernel.writeDocument", () => {
     const k = (mi as any)._kernel as Kernel;
     k.writableSource(ws as any);
 
-    const sweAgent = mi.one("Agent", "swe-agent");
+    const sweAgent = (mi.documents.find((d) => d.kind === "Agent" && d.name === "swe-agent") ?? null);
     const version = await k.writeDocument("open-swe", "Agent", "swe-agent", sweAgent!.raw);
 
     expect(version).toBe("v1");

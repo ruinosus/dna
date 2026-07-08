@@ -6,7 +6,7 @@
  * v1.0 — `Document<SpecT>` generic typing. Consumers can declare
  * spec type at the call site without a runtime cost:
  *
- *     const doc: Document<AssetSpec> = mi.one("Asset", "x");
+ *     const doc = mi.documents.find((d) => d.kind === "Asset" && d.name === "x") as Document<AssetSpec>;
  *     doc.spec.summary?.byte_count;  // type-checker validated
  *
  * Bare `Document` defaults to `Record<string, unknown>` so existing

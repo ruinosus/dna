@@ -27,8 +27,9 @@ cd packages/sdk-py && uv sync
 
 A new Kind `Hello`, persisted as YAML files at
 `<scope>/hellos/<name>.yaml`. The Kind has 3 spec fields: `greeting`,
-`recipient`, `created_at`. After this, `mi.all("Hello")` returns your
-Hello docs, and `mi.one("Hello", "world")` fetches the named one.
+`recipient`, `created_at`. After this, your Hello docs show up in `mi.documents`
+(`[d for d in mi.documents if d.kind == "Hello"]`) and via
+`kernel.query(scope, "Hello")`.
 
 > **Record-style Kinds don't need a class at all.** If your Kind is plain
 > data (no custom parse/compose behavior), write a `*.kind.yaml`
@@ -259,7 +260,7 @@ class HelloKind:
 Consumers access via `doc.typed`:
 
 ```python
-doc = mi.one("Hello", "world")
+doc = next(d for d in mi.documents if d.kind == "Hello" and d.name == "world")
 hello: TypedHello = doc.typed
 print(hello.spec.greeting)  # type: str ✅ (mypy/pyright happy)
 ```
@@ -284,7 +285,7 @@ Consumers cast at the boundary:
 from typing import cast
 from dna.extensions.hello import HelloSpec
 
-doc = mi.one("Hello", "world")
+doc = next(d for d in mi.documents if d.kind == "Hello" and d.name == "world")
 spec = cast(HelloSpec, doc.spec)
 print(spec["greeting"])  # type-checker knows this is str
 ```
@@ -305,9 +306,9 @@ SpecDict still works for both attribute and key access.
 | Symptom | Cause | Fix |
 |---|---|---|
 | `KindRegistrationError: BUNDLE storage already registered` | Two bundle Kinds use the same `(container, marker)` pair (e.g. both `MANIFEST.md`). | Pick distinct containers. If sharing is intentional, set `marker_shared_allowed = True` on BOTH Kinds AND have their Reader.detect() distinguish at read time. |
-| `mi.all("MyKind")` returns empty after write | Writer ran but adapter didn't auto-publish (SQL adapters use draft → publish flow). | Call `await source.publish(scope, kind, name)` after `save_document`. The kernel's high-level write path doesn't auto-publish — that's deliberate to support draft workflows. |
+| New docs of `MyKind` missing from `mi.documents` after write | Writer ran but adapter didn't auto-publish (SQL adapters use draft → publish flow). | Call `await source.publish(scope, kind, name)` after `save_document`. The kernel's high-level write path doesn't auto-publish — that's deliberate to support draft workflows. |
 | `NotImplementedError: Source adapter X does not implement BundleEntryReadable` | Custom adapter missing `fetch_bundle_entry`. | Implement the method per the `BundleEntryReadable` Protocol in `dna.kernel.capabilities`. |
-| Kind shows up as `kind=None` in mi.all queries | `parse()` returned a non-dict, or model class is wrong. | Return `raw` directly OR a typed model; the universal `Document` wrapper handles both. |
+| Kind shows up as `kind=None` in `mi.documents` / `kernel.query` results | `parse()` returned a non-dict, or model class is wrong. | Return `raw` directly OR a typed model; the universal `Document` wrapper handles both. |
 
 ## Reference reading
 

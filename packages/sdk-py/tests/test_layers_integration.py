@@ -128,7 +128,7 @@ class TestOverlayMerge:
         )
 
         mi = await kernel.instance_async("test-mod", layers={"tenant": "alpha"})
-        brad = mi.one("Agent", "brad")
+        brad = next((d for d in mi.documents if d.kind == "Agent" and d.name == "brad"), None)
 
         assert brad is not None
         assert "compliance" in brad.spec.get("instruction", "").lower()
@@ -176,9 +176,9 @@ class TestTenantIsolation:
         mi_alpha = await kernel.instance_async("test-mod", layers={"tenant": "alpha"})
         mi_beta = await kernel.instance_async("test-mod", layers={"tenant": "beta"})
 
-        base_instr = mi_base.one("Agent", "brad").spec.get("instruction", "")
-        alpha_instr = mi_alpha.one("Agent", "brad").spec.get("instruction", "")
-        beta_instr = mi_beta.one("Agent", "brad").spec.get("instruction", "")
+        base_instr = next((d for d in mi_base.documents if d.kind == "Agent" and d.name == "brad"), None).spec.get("instruction", "")
+        alpha_instr = next((d for d in mi_alpha.documents if d.kind == "Agent" and d.name == "brad"), None).spec.get("instruction", "")
+        beta_instr = next((d for d in mi_beta.documents if d.kind == "Agent" and d.name == "brad"), None).spec.get("instruction", "")
 
         assert "base architect" in base_instr.lower()
         assert "compliance" in alpha_instr.lower()
@@ -224,7 +224,7 @@ class TestEditPropagation:
             _overlay_agent("Focus on compliance."),
         )
         mi1 = await kernel.instance_async("test-mod", layers={"tenant": "alpha"})
-        assert "compliance" in mi1.one("Agent", "brad").spec.get("instruction", "").lower()
+        assert "compliance" in next((d for d in mi1.documents if d.kind == "Agent" and d.name == "brad"), None).spec.get("instruction", "").lower()
 
         # Edit overlay in-place
         await source.save_layer_document(
@@ -233,7 +233,7 @@ class TestEditPropagation:
             _overlay_agent("Pirata do código. Arrr!"),
         )
         mi2 = await kernel.instance_async("test-mod", layers={"tenant": "alpha"})
-        assert "pirata" in mi2.one("Agent", "brad").spec.get("instruction", "").lower()
+        assert "pirata" in next((d for d in mi2.documents if d.kind == "Agent" and d.name == "brad"), None).spec.get("instruction", "").lower()
 
     @pytest.mark.asyncio
     async def test_edit_does_not_affect_base(self, sqlite_env):
@@ -246,7 +246,7 @@ class TestEditPropagation:
         )
 
         mi_base = await kernel.instance_async("test-mod")
-        assert "base architect" in mi_base.one("Agent", "brad").spec.get("instruction", "").lower()
+        assert "base architect" in next((d for d in mi_base.documents if d.kind == "Agent" and d.name == "brad"), None).spec.get("instruction", "").lower()
 
     @pytest.mark.asyncio
     async def test_edit_does_not_affect_other_tenant(self, sqlite_env):
@@ -271,7 +271,7 @@ class TestEditPropagation:
         )
 
         mi_beta = await kernel.instance_async("test-mod", layers={"tenant": "beta"})
-        assert "ship fast" in mi_beta.one("Agent", "brad").spec.get("instruction", "").lower()
+        assert "ship fast" in next((d for d in mi_beta.documents if d.kind == "Agent" and d.name == "brad"), None).spec.get("instruction", "").lower()
 
 
 # ---------------------------------------------------------------------------
@@ -320,7 +320,7 @@ class TestPolicyRestricted:
         )
 
         mi = await kernel.instance_async("test-mod", layers={"tenant": "alpha"})
-        instr = mi.one("Agent", "brad").spec.get("instruction", "")
+        instr = next((d for d in mi.documents if d.kind == "Agent" and d.name == "brad"), None).spec.get("instruction", "")
         assert "overridden" in instr.lower()
 
     @pytest.mark.asyncio
@@ -334,7 +334,7 @@ class TestPolicyRestricted:
         )
 
         mi = await kernel.instance_async("test-mod", layers={"tenant": "alpha"})
-        brad_spec = mi.one("Agent", "brad").spec
+        brad_spec = next((d for d in mi.documents if d.kind == "Agent" and d.name == "brad"), None).spec
         assert brad_spec.get("tone") is None
 
 
@@ -388,7 +388,7 @@ class TestPolicyLocked:
         )
 
         mi = await kernel.instance_async("test-mod", layers={"tenant": "alpha"})
-        instr = mi.one("Agent", "brad").spec.get("instruction", "")
+        instr = next((d for d in mi.documents if d.kind == "Agent" and d.name == "brad"), None).spec.get("instruction", "")
         assert "base architect" in instr.lower()
 
     @pytest.mark.asyncio

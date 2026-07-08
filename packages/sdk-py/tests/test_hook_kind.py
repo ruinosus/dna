@@ -56,7 +56,7 @@ class TestHookKind:
         )
 
         mi = Kernel.quick("test", base_dir=str(tmp_path / ".dna"))
-        hook_docs = mi.all("Hook")
+        hook_docs = [d for d in mi.documents if d.kind == "Hook"]
         assert len(hook_docs) == 1
         assert hook_docs[0].name == "inject-env"
 
@@ -101,7 +101,7 @@ class TestHookKind:
         )
 
         mi = Kernel.quick("test", base_dir=str(tmp_path / ".dna"))
-        hook_docs = mi.all("Hook")
+        hook_docs = [d for d in mi.documents if d.kind == "Hook"]
         assert len(hook_docs) == 1
         doc = hook_docs[0]
         assert doc.spec.get("target") == "post_build_prompt"
@@ -140,7 +140,7 @@ class TestHookKind:
             )
 
         mi = Kernel.quick("test", base_dir=str(tmp_path / ".dna"))
-        hook_docs = mi.all("Hook")
+        hook_docs = [d for d in mi.documents if d.kind == "Hook"]
         assert len(hook_docs) == 2
 
         mi.apply_hooks()
