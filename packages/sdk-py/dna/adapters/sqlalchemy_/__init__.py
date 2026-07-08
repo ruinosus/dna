@@ -1,10 +1,12 @@
-"""SPIKE (i-216) — SqlAlchemySource: SQLAlchemy Core 2.x async prototype.
+"""SqlAlchemySource — one SQL adapter, two dialects, same tables.
 
-NOT production code. This package exists to answer, with evidence, whether
-SQLAlchemy Core should unify the SQLite + Postgres SQL adapters
-(e-dna-public-extraction). Requires the optional ``sqlalchemy-spike`` extra
-(``pip install dna-sdk[sqlalchemy-spike]``); nothing in the default
-install imports it.
+Production adapter (promoted from the i-216 spike by
+``s-sqlalchemy-source-production``): SQLAlchemy Core 2.x async over
+aiosqlite OR asyncpg, bound to the EXACT tables + migrations the raw
+``SqliteSource`` / ``PostgresSource`` own — switching adapters is pure
+instantiation, zero data migration. Requires the optional ``sql`` extra
+(``pip install dna-sdk[sql]``); nothing in the default install imports
+sqlalchemy. See docs/PORT-CONTRACT.md § "Using the SQLAlchemy adapter".
 """
 from .source import SqlAlchemySource
 

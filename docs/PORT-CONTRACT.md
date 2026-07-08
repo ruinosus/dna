@@ -2,7 +2,8 @@
 
 The contract every adapter that implements `WritableSourcePort` must
 honor. Verified by `packages/sdk-py/tests/test_port_contract.py`, parametrized
-over `[FilesystemWritableSource, SqliteSource, PostgresSource]`.
+over `[FilesystemWritableSource, SqliteSource, PostgresSource,
+SqlAlchemySource[sqlite], SqlAlchemySource[postgres]]`.
 
 A new adapter is considered **production-ready** only when its row in
 the contract test suite is fully green (all tests pass or skip
@@ -57,10 +58,78 @@ method — the contract test then skips the case.
 
 | Capability | Adapter coverage today |
 |---|---|
-| Per-tenant layer overlay | Filesystem ✓, Postgres ✓, SQLite ✓ (Phase 2c) |
-| Versioning + immutable releases | Filesystem ✓, Postgres ✓ (Phase 10), SQLite ✓ |
+| Per-tenant layer overlay | Filesystem ✓, Postgres ✓, SQLite ✓ (Phase 2c), SQLAlchemy ✓ (sqlite dialect inherits the i-092 PK debt) |
+| Versioning + immutable releases | Filesystem ✓, Postgres ✓ (Phase 10), SQLite ✓, SQLAlchemy ✓ |
 | Lockfile install/update flow | Filesystem ✓, Postgres ✓ (Phase 10), SQLite (partial) |
-| Cross-process cache invalidation (LISTEN/NOTIFY) | Postgres ✓ (Phase 15.1); FS uses in-process events; SQLite is single-process |
+| Cross-process cache invalidation (LISTEN/NOTIFY) | Postgres ✓ (Phase 15.1), SQLAlchemy[postgres] ✓ (same outbox/channel); FS uses in-process events; SQLite is single-process |
+
+## Using the SQLAlchemy adapter (s-sqlalchemy-source-production)
+
+`SqlAlchemySource` (`dna/adapters/sqlalchemy_/`) is ONE adapter over
+SQLAlchemy Core 2.x async that speaks BOTH SQL dialects and binds to the
+**exact same tables and migrations** the raw adapters own:
+
+| dialect | driver | tables | control table |
+|---|---|---|---|
+| `sqlite+aiosqlite` | aiosqlite | `documents` / `versions` / `bundle_entries` / `layer_documents` | `schema_migrations` |
+| `postgresql+asyncpg` | asyncpg | `{schema}.dna_documents` / `dna_versions` / `dna_bundle_entries` / `dna_layer_documents` / `dna_outbox` / `dna_versions_seq` | `{schema}.dna_schema_migrations` |
+
+Because the storage is byte-identical, **switching between a raw adapter
+and the SQLAlchemy adapter is pure instantiation — zero data migration,
+in either direction**. A DB touched by one is indistinguishable from a DB
+touched by the other.
+
+### Install
+
+```bash
+pip install "dna-sdk[sql]"   # sqlalchemy[asyncio] + aiosqlite + asyncpg
+```
+
+Nothing in the default install imports sqlalchemy (guard:
+`tests/test_sqlalchemy_source.py::test_default_import_never_pulls_sqlalchemy`).
+
+### Wiring
+
+```python
+from dna.adapters.sqlalchemy_ import SqlAlchemySource
+from dna.kernel import Kernel
+
+# SQLite — drop-in replacement for SqliteSource(db_path=...):
+src = SqlAlchemySource("sqlite+aiosqlite:///path/to.db")
+
+# Postgres — drop-in replacement for PostgresSource(pool, schema=...):
+src = SqlAlchemySource(
+    "postgresql+asyncpg://user:pass@host:5432/db", schema="public",
+)
+
+await src.connect()               # runs the dialect's migrations (idempotent)
+kernel = Kernel.auto(source=src)  # or kernel.source(src) on an existing kernel
+```
+
+### Behavior parity notes
+
+- **Eventbus (pg dialect):** every write emits the Phase 15.1 outbox row
+  + `dna_versions_seq` checkpoint + `pg_notify('kernel_writes', …)` in
+  the same transaction as the data write. The payload is produced by the
+  raw `PostgresSource`'s builder (imported), so `PostgresEventBus`
+  subscribers work unchanged. `supports_cross_process_invalidation` is
+  `True` on pg, `False` on sqlite.
+- **View cache:** `load_all`/`load_layer(tenant)` are memoized per
+  (scope, tenant) with deep-copy returns — same as raw PG — and
+  invalidated on local writes AND via `kernel.on_write` (attach_kernel).
+- **Auto-publish:** like raw PG (and unlike raw SQLite), `save_document`
+  is the publish point — the doc is visible in `load_all` immediately;
+  `publish()` remains available for the explicit draft→publish flow.
+- **Known inherited limit:** the sqlite dialect inherits i-092 (documents
+  PK lacks `tenant` → a tenant overlay publish clobbers the base row) —
+  it binds to the existing schema by design. The pg dialect passes the
+  same case (tenant-aware PK): schema debt, not adapter debt.
+- **Perf (bench: `packages/sdk-py/scripts/bench_sources.py`):** sqlite
+  gains pooling for free (save ~5×, load_all/query ~3-100× faster than
+  the raw per-connection adapter). On pg, reads are parity-or-better;
+  writes/queries carry ~1-1.6 ms of Core statement-construction overhead
+  per operation (save 7.7 vs 6.1 ms/doc, query 2.3 vs 1.4 ms) —
+  documented, acceptable for the config-plane write path.
 
 ## Running the suite
 
@@ -179,11 +248,11 @@ Rules of the kit:
 
 ### 5. Add your adapter to the in-repo matrix
 
-`python/tests/test_source_conformance_kit.py` runs the kit over ALL
-in-repo adapters (FS read-only, FS writable, Composite, SQLite,
-Postgres, AsyncSourceAdapter, S3-via-moto). A new in-repo adapter adds a
-factory there; known divergences get an explicit `xfail`/`skip` with an
-Issue id — never a silent green.
+`packages/sdk-py/tests/test_source_conformance_kit.py` runs the kit over
+ALL in-repo adapters (FS read-only, FS writable, Composite, SQLite,
+Postgres, AsyncSourceAdapter, S3-via-moto, SqlAlchemySource × both
+dialects). A new in-repo adapter adds a factory there; known divergences
+get an explicit `xfail`/`skip` with an Issue id — never a silent green.
 
 ## Schema migrations (SQL-backed adapters, s-dna-migration-contract)
 
