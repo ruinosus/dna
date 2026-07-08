@@ -1,0 +1,16 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-blessed-query-surface
+spec:
+  title: 'Plano: s-blessed-query-surface'
+  date: '2026-07-08'
+  status: accepted
+  story_ref: s-blessed-query-surface
+  journey_phase: plan
+  body: "Inventariar as superf\xEDcies de query (mi.documents vs mi.all/one deprecated\
+    \ vs kernel.query) nos 2 SDKs; decidir o conjunto blessed pr\xE9-1.0; docs 100%\
+    \ na superf\xEDcie blessed; deprecations com guidance clara e prazo; testes de\
+    \ paridade da superf\xEDcie. Worktree dna-wt-blessed; PR com CI 6/6."
+  created_at: '2026-07-08T19:47:00+00:00'
+  updated_at: '2026-07-08T19:47:00+00:00'
