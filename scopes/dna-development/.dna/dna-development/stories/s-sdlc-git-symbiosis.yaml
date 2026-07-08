@@ -34,10 +34,25 @@ spec:
   - "PR merged; conven\xE7\xE3o documentada"
   definition_of_done_source: cli-create
   created_at: '2026-07-08T19:49:03+00:00'
-  updated_at: '2026-07-08T19:49:03+00:00'
+  updated_at: '2026-07-08T19:50:25+00:00'
   timeline:
   - at: '2026-07-08T19:49:03+00:00'
     actor: claude-code
     type: status_change
     source: cli
     to: todo
+  - at: '2026-07-08T19:50:25+00:00'
+    actor: claude-code
+    type: decision
+    source: cli
+    summary: "CORRE\xC7\xC3O DE DESENHO (Barna): o coautor \xE9 O PR\xD3PRIO dna sdlc\
+      \ como identidade de ferramenta \u2014 'Co-Authored-By: dna-sdlc[bot] <dna-sdlc[bot]@users.noreply.github.com>'\
+      \ (conven\xE7\xE3o de bot do GitHub, configur\xE1vel) \u2014 N\xC3O coautores\
+      \ derivados de participants. Sem\xE2ntica: selo de proveni\xEAncia do M\xC9\
+      TODO ('este commit nasceu sob governan\xE7a de story: tem plano, timeline, test-gate').\
+      \ Autoria humana/agente continua no author normal + trailers pr\xF3prios (ex.:\
+      \ Claude). Hook: story ativa \u2192 carimba Work-Item + assinatura do sistema;\
+      \ sem story ativa \u2192 sem carimbo (aus\xEAncia tamb\xE9m \xE9 sinal). Resto\
+      \ do desenho mant\xE9m (hook prepare-commit-msg + active-story.txt + volta via\
+      \ git log --grep + layout do scope na raiz)."
+    commit_ref: e0dcf12f5c758a02203e97b4e33bc9f9b5d32b8c
