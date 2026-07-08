@@ -13,12 +13,20 @@ adapter:
   5. PostgresSource               (skips when DATABASE_URL unset)
   6. AsyncSourceAdapter(sync src) (transparent-proxy semantics for real)
   7. AsyncSourceAdapter(S3Source) (moto in-process fake S3; skips w/o moto)
+  8. SqlAlchemySource[sqlite]     (skips when the `sql` extra is absent)
+  9. SqlAlchemySource[postgres]   (skips w/o `sql` extra or DATABASE_URL)
 
 Known, tracked divergences (documented — not silently green):
   - sqlite × tenant_overlay_shadows_base → strict xfail (i-092: SQLite
     publish() ignores tenant, the overlay draft clobbers the base row).
   - postgres × bundle_entry_round_trip → skip (i-093: PG
-    write_bundle_entry hangs under the asyncpg test pool).
+    write_bundle_entry hangs under the asyncpg test pool — the
+    SqlAlchemySource[postgres] row PASSES this case, evidence i-093 is a
+    raw-pool artifact).
+  - sqlalchemy-sqlite × tenant_overlay_shadows_base → strict xfail: the
+    adapter binds to the EXISTING SQLite schema, whose documents PK lacks
+    tenant — the same i-092 schema debt (the pg dialect passes: same
+    logic, tenant-aware PK).
 """
 from __future__ import annotations
 
@@ -219,6 +227,71 @@ async def _s3_moto_factory():
     return AsyncSourceAdapter(inner), cleanup
 
 
+async def _sqlalchemy_sqlite_factory():
+    """SqlAlchemySource over aiosqlite — same tables as SqliteSource
+    (s-sqlalchemy-source-production). Skips when the `sql` extra is
+    absent (sqlalchemy is never a default dependency)."""
+    try:
+        import sqlalchemy  # noqa: F401
+    except ImportError:
+        pytest.skip("`sql` extra not installed — skipping SqlAlchemySource")
+
+    from dna.adapters.sqlalchemy_ import SqlAlchemySource
+    from dna.kernel import Kernel
+
+    fd, tmp = tempfile.mkstemp(prefix="dna-kit-sa-", suffix=".db")
+    os.close(fd)
+    src = SqlAlchemySource(f"sqlite+aiosqlite:///{tmp}")
+    await src.connect()
+    Kernel.auto(source=src)
+
+    async def cleanup() -> None:
+        await src.close()
+        try:
+            os.unlink(tmp)
+        except FileNotFoundError:
+            pass
+
+    return src, cleanup
+
+
+async def _sqlalchemy_postgres_factory():
+    """SqlAlchemySource over asyncpg — same tables as PostgresSource,
+    one throwaway schema per factory build."""
+    try:
+        import sqlalchemy  # noqa: F401
+    except ImportError:
+        pytest.skip("`sql` extra not installed — skipping SqlAlchemySource")
+    dsn = os.environ.get("DATABASE_URL")
+    if not dsn:
+        pytest.skip("DATABASE_URL not set — skipping SqlAlchemySource[postgres]")
+
+    import asyncpg
+    from dna.adapters.sqlalchemy_ import SqlAlchemySource
+    from dna.kernel import Kernel
+
+    schema = f"dna_kit_sa_{uuid.uuid4().hex[:12]}"
+    conn = await asyncpg.connect(dsn)
+    await conn.execute(f"CREATE SCHEMA {schema}")
+    await conn.close()
+
+    sa_url = dsn.replace("postgresql://", "postgresql+asyncpg://", 1)
+    src = SqlAlchemySource(sa_url, schema=schema)
+    await src.connect()
+    Kernel.auto(source=src)
+
+    async def cleanup() -> None:
+        import contextlib
+        with contextlib.suppress(Exception):
+            await src.close()
+        with contextlib.suppress(Exception):
+            c = await asyncpg.connect(dsn)
+            await c.execute(f"DROP SCHEMA IF EXISTS {schema} CASCADE")
+            await c.close()
+
+    return src, cleanup
+
+
 _FACTORIES: dict[str, Any] = {
     "fs-readonly": _fs_readonly_factory,
     "fs-writable": _fs_writable_factory,
@@ -227,6 +300,8 @@ _FACTORIES: dict[str, Any] = {
     "postgres": _postgres_factory,
     "async-adapter": _async_adapter_factory,
     "s3-via-async-adapter": _s3_moto_factory,
+    "sqlalchemy-sqlite": _sqlalchemy_sqlite_factory,
+    "sqlalchemy-postgres": _sqlalchemy_postgres_factory,
 }
 
 # (adapter id, case name) → mark; tracked divergences stay CI-visible.
@@ -238,6 +313,13 @@ _KNOWN = {
     ),
     ("postgres", "bundle_entry_round_trip"): pytest.mark.skip(
         reason="i-093: PG write_bundle_entry hangs under the asyncpg test pool",
+    ),
+    ("sqlalchemy-sqlite", "tenant_overlay_shadows_base"): pytest.mark.xfail(
+        reason="i-092 (inherited schema debt, not a Core limitation): the "
+               "SQLite documents PK is (scope, kind, name) without tenant — "
+               "an overlay publish clobbers the base row. The pg dialect "
+               "passes with the same logic (tenant-aware PK).",
+        strict=True,
     ),
 }
 
