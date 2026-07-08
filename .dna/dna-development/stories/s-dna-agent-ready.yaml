@@ -3,8 +3,8 @@ kind: Story
 metadata:
   name: s-dna-agent-ready
 spec:
-  title: "Tornar o repo agent-ready (ideia Barna 2026-07-08): (1) AGENTS.md na raiz\
-    \ \u2014 inst"
+  title: 'Agent-ready repo: root AGENTS.md (live agents.md/v1) + CLAUDE.md + dna-sdlc-cli
+    skill + Claude Code plugin'
   description: "Tornar o repo agent-ready (ideia Barna 2026-07-08): (1) AGENTS.md\
     \ na raiz \u2014 instru\xE7\xE3o pra qualquer coding agent E inst\xE2ncia viva\
     \ do Kind agents.md/v1 que o pr\xF3prio repo parseia (dogfood da market fidelity\
@@ -24,16 +24,30 @@ spec:
   reporter: claude-code
   business_value: 600
   acceptance_criteria:
-  - "AGENTS.md parse\xE1vel pelo pr\xF3prio SDK (teste: scan acha o Kind agents.md/v1\
-    \ na raiz ou fixture equivalente); CLAUDE.md com build/test/SDLC protocol corretos\
-    \ copy-paste; skill dna-sdlc-cli cobre o ciclo completo incl. hooks e story pr;\
-    \ marketplace.json v\xE1lido; CI 6/6"
+  - text: "AGENTS.md parse\xE1vel pelo pr\xF3prio SDK (teste: scan acha o Kind agents.md/v1\
+      \ na raiz ou fixture equivalente); CLAUDE.md com build/test/SDLC protocol corretos\
+      \ copy-paste; skill dna-sdlc-cli cobre o ciclo completo incl. hooks e story\
+      \ pr; marketplace.json v\xE1lido; CI 6/6"
+    done: true
+    done_at: '2026-07-08T22:32:55+00:00'
+    done_by: claude-code
+    evidence: 'PR #6 (commit e75a3b1): test_agents_md_root.py 5/5 prova o scan/parse/round-trip
+      do AGENTS.md raiz; AGENTS.md traz build/test copiados do CI; skill cobre create/start/comment/check/test-guide/test-run/pr/review/done
+      + hooks (todos verificados via --help); claude plugin validate --strict OK;
+      CI 6/6 acompanhado no PR'
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - PR merged (via dna sdlc story pr, assinado); documentado no README
+  - text: PR merged (via dna sdlc story pr, assinado); documentado no README
+    done: true
+    done_at: '2026-07-08T22:32:55+00:00'
+    done_by: claude-code
+    evidence: 'PR #6 (commit e75a3b1): test_agents_md_root.py 5/5 prova o scan/parse/round-trip
+      do AGENTS.md raiz; AGENTS.md traz build/test copiados do CI; skill cobre create/start/comment/check/test-guide/test-run/pr/review/done
+      + hooks (todos verificados via --help); claude plugin validate --strict OK;
+      CI 6/6 acompanhado no PR'
   definition_of_done_source: cli-create
   created_at: '2026-07-08T22:18:32+00:00'
-  updated_at: '2026-07-08T22:32:13+00:00'
+  updated_at: '2026-07-08T22:32:55+00:00'
   timeline:
   - at: '2026-07-08T22:18:32+00:00'
     actor: claude-code
@@ -106,6 +120,24 @@ spec:
     source: cli
     from: in-progress
     to: review
+  - at: '2026-07-08T22:32:55+00:00'
+    actor: claude-code
+    type: groom
+    source: cli
+    fields:
+      title: 'Agent-ready repo: root AGENTS.md (live agents.md/v1) + CLAUDE.md + dna-sdlc-cli
+        skill + Claude Code plugin'
+  - at: '2026-07-08T22:32:55+00:00'
+    actor: claude-code
+    type: checklist_check
+    source: cli
+    marked_ac: 1
+    marked_dod: 1
+    evidence: 'PR #6 (commit e75a3b1): test_agents_md_root.py 5/5 prova o scan/parse/round-trip
+      do AGENTS.md raiz; AGENTS.md traz build/test copiados do CI; skill cobre create/start/comment/check/test-guide/test-run/pr/review/done
+      + hooks (todos verificados via --help); claude plugin validate --strict OK;
+      CI 6/6 acompanhado no PR'
+    by: claude-code
   produces:
   - kind: Plan
     name: plan-s-dna-agent-ready
