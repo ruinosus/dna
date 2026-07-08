@@ -8,7 +8,7 @@ spec:
   description: 'Decide and enforce the blessed public query surface before 1.0: mi.documents
     (warning-free) vs deprecated mi.all()/mi.one() still shown in docs. One canonical
     surface, docs aligned, deprecations with clear timelines.'
-  status: in-progress
+  status: review
   feature: f-dna-1.0-readiness
   priority: medium
   labels:
@@ -23,7 +23,7 @@ spec:
   - PR merged
   definition_of_done_source: cli-create
   created_at: '2026-07-08T18:27:49+00:00'
-  updated_at: '2026-07-08T19:53:18+00:00'
+  updated_at: '2026-07-08T20:28:26+00:00'
   timeline:
   - at: '2026-07-08T18:27:49+00:00'
     actor: claude-code
@@ -57,6 +57,27 @@ spec:
       \ ganha se\xE7\xE3o blessed_query_surface + executor test nos 2 lados; (6) ratchet\
       \ pytest filterwarnings error:ManifestInstance."
     commit_ref: 3ab6f0b1e8b77623195248396df8f6f3076260ab
+  - at: '2026-07-08T20:28:03+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "BUILD done + PR: https://github.com/ruinosus/dna/pull/3 \u2014 6/6 checks\
+      \ do CI real VERDES (brand-guard, cli, gitleaks, postgres, sdk-py, sdk-ts).\
+      \ Shims Py/TS com guidance 1.0, g\xEAmeos _all/_one, colaboradores migrados\
+      \ (b\xF4nus: enforcer LayerPolicy tinha fail-soft engolindo AttributeError\u2192\
+      OPEN, pego por teste), docs 100% blessed (tabela can\xF4nica em KIND-DATA-ACCESS),\
+      \ ~133+47 callsites de teste migrados, ratchet filterwarnings=error:ManifestInstance,\
+      \ fixture \xA7 blessed_query_surface (blessed/deprecated/public_surface 55/55)\
+      \ + executores nos 2 lados. Re-runs locais inst\xE1veis por disco 100% cheio\
+      \ (ENOSPC da m\xE1quina, alheio \xE0 story) \u2014 valida\xE7\xE3o autoritativa\
+      \ \xE9 o CI verde. N\xC3O mergeado."
+    commit_ref: 3ab6f0b1e8b77623195248396df8f6f3076260ab
+  - at: '2026-07-08T20:28:26+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
   produces:
   - kind: Plan
     name: plan-s-blessed-query-surface
