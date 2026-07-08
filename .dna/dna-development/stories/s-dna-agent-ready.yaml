@@ -1,0 +1,53 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-dna-agent-ready
+spec:
+  title: "Tornar o repo agent-ready (ideia Barna 2026-07-08): (1) AGENTS.md na raiz\
+    \ \u2014 inst"
+  description: "Tornar o repo agent-ready (ideia Barna 2026-07-08): (1) AGENTS.md\
+    \ na raiz \u2014 instru\xE7\xE3o pra qualquer coding agent E inst\xE2ncia viva\
+    \ do Kind agents.md/v1 que o pr\xF3prio repo parseia (dogfood da market fidelity\
+    \ na porta de entrada); (2) CLAUDE.md raiz apontando pro AGENTS.md + espec\xED\
+    ficos de Claude Code (skill, hooks install); (3) .claude/skills/dna-sdlc-cli/\
+    \ \u2014 skill ensinando o workflow: story-first, narra\xE7\xE3o, test-gate, story\
+    \ pr, trailers; (4) plugin Claude Code (marketplace.json) entregando a skill a\
+    \ quem clona. Espelha o que o aap-sdk-v3 tem (12 skills + plugin + CLAUDE.md),\
+    \ adaptado e enxuto pro DNA."
+  status: in-progress
+  feature: f-dna-1.0-readiness
+  priority: high
+  labels:
+  - docs
+  - cli
+  - meta
+  reporter: claude-code
+  business_value: 600
+  acceptance_criteria:
+  - "AGENTS.md parse\xE1vel pelo pr\xF3prio SDK (teste: scan acha o Kind agents.md/v1\
+    \ na raiz ou fixture equivalente); CLAUDE.md com build/test/SDLC protocol corretos\
+    \ copy-paste; skill dna-sdlc-cli cobre o ciclo completo incl. hooks e story pr;\
+    \ marketplace.json v\xE1lido; CI 6/6"
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - PR merged (via dna sdlc story pr, assinado); documentado no README
+  definition_of_done_source: cli-create
+  created_at: '2026-07-08T22:18:32+00:00'
+  updated_at: '2026-07-08T22:18:34+00:00'
+  timeline:
+  - at: '2026-07-08T22:18:32+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-08T22:18:34+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  produces:
+  - kind: Plan
+    name: plan-s-dna-agent-ready
+    role: implementation
+    at: '2026-07-08T22:18:34+00:00'
