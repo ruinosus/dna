@@ -22,10 +22,24 @@ spec:
   - Repo public; announcement optional
   definition_of_done_source: cli-create
   created_at: '2026-07-08T18:27:50+00:00'
-  updated_at: '2026-07-08T18:27:50+00:00'
+  updated_at: '2026-07-08T21:38:00+00:00'
   timeline:
   - at: '2026-07-08T18:27:50+00:00'
     actor: claude-code
     type: status_change
     source: cli
     to: todo
+  - at: '2026-07-08T21:38:00+00:00'
+    actor: claude-code
+    type: decision
+    source: cli
+    summary: "ITEM NOVO NO CHECKLIST (achado 2026-07-08): metadados de commit tinham\
+      \ 27 identidades jefferson.barnabe@avanade.com (gitconfig global da m\xE1quina;\
+      \ brand-guard varre arquivos, n\xE3o commits). Mitigado daqui pra frente: config\
+      \ local do repo = ruinosus <3090620+ruinosus@users.noreply.github.com> + squash-merge\
+      \ lava PRs. PENDENTE pr\xE9-p\xFAblico: (1) rewrite da hist\xF3ria (filter-branch/filter-repo\
+      \ trocando o e-mail; requer aprova\xE7\xE3o expl\xEDcita do Barna \u2014 for\xE7\
+      a SHAs novos, commit-refs antigos nas timelines dangleiam, aceit\xE1vel); (2)\
+      \ estender o guard: job de CI que valida author/committer emails do range do\
+      \ PR contra denylist corporativa."
+    commit_ref: 967845cbbbb233fde46fc393581f58002a31b581
