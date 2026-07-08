@@ -8,7 +8,7 @@ spec:
   description: 'Decide and enforce the blessed public query surface before 1.0: mi.documents
     (warning-free) vs deprecated mi.all()/mi.one() still shown in docs. One canonical
     surface, docs aligned, deprecations with clear timelines.'
-  status: review
+  status: done
   feature: f-dna-1.0-readiness
   priority: medium
   labels:
@@ -17,13 +17,20 @@ spec:
   reporter: claude-code
   business_value: 400
   acceptance_criteria:
-  - Docs show only the blessed surface; deprecated methods emit guidance; parity Py/TS
+  - text: Docs show only the blessed surface; deprecated methods emit guidance; parity
+      Py/TS
+    done: true
+    done_at: '2026-07-08T21:05:02+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - PR merged
+  - text: PR merged
+    done: true
+    done_at: '2026-07-08T21:05:02+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-08T18:27:49+00:00'
-  updated_at: '2026-07-08T20:28:26+00:00'
+  updated_at: '2026-07-08T21:05:03+00:00'
   timeline:
   - at: '2026-07-08T18:27:49+00:00'
     actor: claude-code
@@ -78,8 +85,48 @@ spec:
     source: cli
     from: in-progress
     to: review
+  - at: '2026-07-08T21:05:01+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-blessed-query-surface
+    summary: TestGuide tg-s-blessed-query-surface (smoke)
+  - at: '2026-07-08T21:05:02+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-blessed-query-surface-20260708-210502
+    summary: "TestRun tr-tg-s-blessed-query-surface-20260708-210502 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-08T21:05:03+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #3 merged (6/6 CI real em 2 heads). Superf\xEDcie blessed decidida\
+      \ e travada na fixture (55 membros p\xFAblicos pinados por lado); mi.all/one\
+      \ deprecated nos 2 SDKs com substitui\xE7\xE3o na mensagem + ratchet filterwarnings=error;\
+      \ docs 100% blessed; bug real de LayerPolicy fail-soft achado e corrigido de\
+      \ brinde."
+  - at: '2026-07-08T21:05:03+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: 386266b704d6e5b7ef04a9fb6364b0167d102e6e
   produces:
   - kind: Plan
     name: plan-s-blessed-query-surface
     role: implementation
     at: '2026-07-08T19:47:00+00:00'
+  - kind: TestGuide
+    name: tg-s-blessed-query-surface
+    role: test-guide
+    at: '2026-07-08T21:05:01+00:00'
+  - kind: TestRun
+    name: tr-tg-s-blessed-query-surface-20260708-210502
+    role: test-run
+    at: '2026-07-08T21:05:02+00:00'
+  closed_at: '2026-07-08T21:05:02+00:00'
