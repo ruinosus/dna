@@ -1,0 +1,24 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Feature
+metadata:
+  name: f-dna-1.0-readiness
+spec:
+  title: "DNA 1.0 readiness \u2014 production adapter, blessed API, public CI, go-public\
+    \ gate"
+  description: First feature tracked inside the DNA repo itself (dogfood since day
+    one). Covers the path from private extracted core to a public 1.0-ready SDK.
+  status: discovery
+  reporter: claude-code
+  priority: high
+  labels:
+  - sdk
+  - meta
+  business_value: 800
+  created_at: '2026-07-08T18:27:48+00:00'
+  updated_at: '2026-07-08T18:27:48+00:00'
+  timeline:
+  - at: '2026-07-08T18:27:48+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: discovery

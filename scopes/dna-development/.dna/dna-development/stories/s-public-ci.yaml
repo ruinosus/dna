@@ -1,0 +1,35 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-public-ci
+spec:
+  title: 'GitHub Actions for this repo: pytest (sdk-py + cli) + bun test + typecheck
+    + bra'
+  description: 'GitHub Actions for this repo: pytest (sdk-py + cli) + bun test + typecheck
+    + brand grep-guard (avanade|cockpit|aap tokens; allowlist: ''aapl'' ticker in
+    the real xlsx skill fixture) + secret scan (gitleaks). Demos that clone external
+    repos must be offline-safe in CI. De-noise ajv ''unknown format'' warnings (strict:false
+    parity with Py).'
+  status: todo
+  feature: f-dna-1.0-readiness
+  priority: high
+  labels:
+  - infra
+  - tests
+  reporter: claude-code
+  business_value: 600
+  acceptance_criteria:
+  - CI green on main; guard fails on planted brand token; gitleaks wired; ajv warnings
+    gone
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - Workflows merged and green
+  definition_of_done_source: cli-create
+  created_at: '2026-07-08T18:27:50+00:00'
+  updated_at: '2026-07-08T18:27:50+00:00'
+  timeline:
+  - at: '2026-07-08T18:27:50+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
