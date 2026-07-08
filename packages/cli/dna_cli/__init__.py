@@ -60,6 +60,9 @@ main.add_command(sdlc_cmd.sdlc)
 # Importing testkit_cmd registers `sdlc test-guide` + `sdlc test-run` on the
 # sdlc group via its decorators (TESTS as first-class SDLC).
 from dna_cli import testkit_cmd as _testkit_cmd  # noqa: E402,F401
+# Importing hooks_cmd registers `sdlc hooks install|uninstall|status` — the
+# git↔SDLC symbiosis wiring (Work-Item trailers via prepare-commit-msg).
+from dna_cli import hooks_cmd as _hooks_cmd  # noqa: E402,F401
 main.add_command(source_cmd.source)
 
 

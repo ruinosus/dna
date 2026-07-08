@@ -20,6 +20,26 @@ def runner():
     return CliRunner()
 
 
+@pytest.fixture(autouse=True)
+def _isolated_active_story(monkeypatch, tmp_path):
+    """Point the active-story pointer at a per-test tmp file (autouse).
+
+    ``dna sdlc story start`` writes ``.dna/active-story.txt`` at the
+    enclosing REPO root even when the kernel session is faked — without
+    this isolation, running the CLI suite repoints the developer's real
+    active story, and with the git↔SDLC prepare-commit-msg hook installed
+    that mis-stamps their next commits' ``Work-Item:`` trailer. Bit us
+    live during s-sdlc-git-symbiosis: a ``story start s-noted`` test leaked
+    into (and at one point got committed to) the repo pointer.
+
+    Tests that need full control (the hook/hooks-CLI suites drive real
+    tmp git repos) simply ``monkeypatch.delenv(DNA_ACTIVE_STORY_PATH)``.
+    """
+    monkeypatch.setenv(
+        "DNA_ACTIVE_STORY_PATH", str(tmp_path / "test-active-story.txt"),
+    )
+
+
 @pytest.fixture
 def isolated_keyring(monkeypatch, tmp_path):
     """Point DeviceCodeCredentials cache at a tmp dir + isolate keyring.

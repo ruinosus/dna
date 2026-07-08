@@ -31,6 +31,7 @@ from typing import Any
 
 import click
 
+from dna_cli import _git_symbiosis as _gitsym
 from dna_cli._active_story import (
     clear_if_matches as _active_story_clear_if_matches,
     write_active_story as _active_story_write,
@@ -1709,12 +1710,16 @@ def cmd_kaizen_resolve(name: str, scope: str) -> None:
 @click.option("--json", "as_json", is_flag=True)
 @_scope_option
 def cmd_story_commits(name: str, as_json: bool, scope: str) -> None:
-    """List distinct commits referenced in a Story's timeline.
+    """List every commit tied to a Story — trailers + timeline, merged.
 
     Closes the rastreabilidade loop: "que commits fecharam Story X?"
-    Reads ``spec.timeline[].commit_ref`` (auto-stamped by `story done`
-    when run inside a git working tree) + ``spec.timeline[].session_ref``
-    (linkback to the AgentSession that produced each commit).
+    Two sources, deduped by sha (trailer wins — it carries the subject):
+
+    - ``git log --grep "Work-Item: Story/<name>"`` — commits stamped by
+      the prepare-commit-msg hook (``dna sdlc hooks install``). This is
+      the zero-bookkeeping path; fail-soft when git/repo is unavailable.
+    - ``spec.timeline[].commit_ref`` (auto-stamped by `story done`) +
+      ``spec.timeline[].session_ref`` (linkback to the AgentSession).
     """
     with dna_session(scope) as s:
         story = s.get_doc("Story", name)
@@ -1724,17 +1729,29 @@ def cmd_story_commits(name: str, as_json: bool, scope: str) -> None:
         timeline = spec.get("timeline", []) or []
         seen: set[str] = set()
         rows: list[dict[str, Any]] = []
+        # 1) commits stamped with the Work-Item trailer (source of truth).
+        for c in _gitsym.commits_for_work_item("Story", name) or []:
+            seen.add(c["full_sha"])
+            rows.append({
+                "sha": c["sha"],
+                "full_sha": c["full_sha"],
+                "source": "trailer",
+                "at": c["date"],
+                "summary": c["subject"][:80],
+                "session_ref": "",
+            })
+        # 2) commit_refs recorded in the timeline (manual / story-done stamp).
         for ev in timeline:
             if not isinstance(ev, dict):
                 continue
             sha = (ev.get("commit_ref") or "").strip()
-            if not sha or sha in seen:
+            if not sha or sha in seen or any(f.startswith(sha) for f in seen):
                 continue
             seen.add(sha)
             rows.append({
                 "sha": sha[:8],
                 "full_sha": sha,
-                "type": ev.get("type", ""),
+                "source": f"timeline:{ev.get('type', '')}",
                 "at": ev.get("at", ""),
                 "summary": (ev.get("summary") or "")[:80],
                 "session_ref": ev.get("session_ref", "") or "",
@@ -1743,9 +1760,12 @@ def cmd_story_commits(name: str, as_json: bool, scope: str) -> None:
     if as_json:
         print_json(rows)
     elif not rows:
-        click.echo(f"Story/{name}: no commits referenced in timeline yet")
+        click.echo(
+            f"Story/{name}: no commits found (no 'Work-Item: Story/{name}' "
+            f"trailer in git log, no commit_ref in timeline)"
+        )
     else:
-        print_table(rows, ["sha", "type", "at", "summary", "session_ref"])
+        print_table(rows, ["sha", "source", "at", "summary", "session_ref"])
 
 
 @story_group.command("show")
@@ -1819,6 +1839,15 @@ def cmd_story_show(name: str, as_json: bool, scope: str) -> None:
                 at = (ev.get("at") or "")[:19]
                 body = (ev.get("summary") or ev.get("body") or "")[:100]
                 click.echo(f"  · {at} [{ev.get('type', '')}] {body}")
+
+        # Commits stamped with the Work-Item trailer (prepare-commit-msg hook,
+        # `dna sdlc hooks install`). git log --grep does the bookkeeping;
+        # fail-soft (None) when git / a repo isn't available.
+        commits = _gitsym.commits_for_work_item("Story", name)
+        if commits:
+            click.secho(f"\nCommits ({len(commits)}, via Work-Item trailer)", fg="yellow")
+            for c in commits:
+                click.echo(f"  {c['sha']}  {c['date']}  {c['subject']}")
 
 
 @story_group.command("groom")
