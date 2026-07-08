@@ -106,10 +106,73 @@ async def _build_postgres_source() -> tuple[Any, Callable[[], Awaitable[None]]]:
     return src, cleanup
 
 
+async def _build_sqlalchemy_sqlite_source() -> tuple[Any, Callable[[], Awaitable[None]]]:
+    """SqlAlchemySource[sqlite] — same tables as SqliteSource
+    (s-sqlalchemy-source-production). Skips without the `sql` extra."""
+    try:
+        import sqlalchemy  # noqa: F401
+    except ImportError:
+        pytest.skip("`sql` extra not installed — skipping SqlAlchemySource")
+
+    from dna.adapters.sqlalchemy_ import SqlAlchemySource
+
+    fd, tmp = tempfile.mkstemp(prefix="dna-port-contract-sa-", suffix=".db")
+    os.close(fd)
+    src = SqlAlchemySource(f"sqlite+aiosqlite:///{tmp}")
+    await src.connect()
+
+    async def cleanup() -> None:
+        await src.close()
+        try:
+            os.unlink(tmp)
+        except FileNotFoundError:
+            pass
+
+    return src, cleanup
+
+
+async def _build_sqlalchemy_postgres_source() -> tuple[Any, Callable[[], Awaitable[None]]]:
+    """SqlAlchemySource[postgres] — same tables as PostgresSource.
+    Skips without the `sql` extra or ``DATABASE_URL``."""
+    try:
+        import sqlalchemy  # noqa: F401
+    except ImportError:
+        pytest.skip("`sql` extra not installed — skipping SqlAlchemySource")
+    dsn = os.environ.get("DATABASE_URL")
+    if not dsn:
+        pytest.skip("DATABASE_URL not set — skipping SqlAlchemySource[postgres]")
+
+    import asyncpg
+    from dna.adapters.sqlalchemy_ import SqlAlchemySource
+
+    schema = f"dna_port_contract_sa_{os.getpid()}_{id(asyncio):x}"
+    conn = await asyncpg.connect(dsn)
+    await conn.execute(f"DROP SCHEMA IF EXISTS {schema} CASCADE")
+    await conn.execute(f"CREATE SCHEMA {schema}")
+    await conn.close()
+
+    src = SqlAlchemySource(
+        dsn.replace("postgresql://", "postgresql+asyncpg://", 1), schema=schema,
+    )
+    await src.connect()
+
+    async def cleanup() -> None:
+        try:
+            cleanup_conn = await asyncpg.connect(dsn)
+            await cleanup_conn.execute(f"DROP SCHEMA IF EXISTS {schema} CASCADE")
+            await cleanup_conn.close()
+        finally:
+            await src.close()
+
+    return src, cleanup
+
+
 _source_factories = [
     pytest.param(_build_fs_source, id="filesystem"),
     pytest.param(_build_sqlite_source, id="sqlite"),
     pytest.param(_build_postgres_source, id="postgres"),
+    pytest.param(_build_sqlalchemy_sqlite_source, id="sqlalchemy-sqlite"),
+    pytest.param(_build_sqlalchemy_postgres_source, id="sqlalchemy-postgres"),
 ]
 
 

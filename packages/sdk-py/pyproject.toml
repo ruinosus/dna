@@ -22,12 +22,16 @@ redis = ["redis>=5.0"]
 s3 = ["boto3>=1.28"]
 tools = ["langchain-core>=1.4,<2"]
 safety-ml = ["presidio-analyzer>=2.2", "presidio-anonymizer>=2.2", "spacy>=3.7", "detoxify>=0.5"]
-# SPIKE i-216 — SqlAlchemySource prototype (adapters/sqlalchemy_). Spike
-# extra ONLY: nothing in the default install imports sqlalchemy, and the
-# spike test module importorskips without it. Remove with the spike if the
-# prototype is discarded.
-sqlalchemy-spike = ["sqlalchemy[asyncio]>=2"]
-all = ["dna-sdk[postgres,sqlite,redis,s3]"]
+# s-sqlalchemy-source-production — SqlAlchemySource (adapters/sqlalchemy_):
+# ONE adapter, both SQL dialects, SAME tables as the raw adapters (switching
+# is pure instantiation — see docs/PORT-CONTRACT.md § "Using the SQLAlchemy
+# adapter"). Decision: engine + BOTH async drivers ride together (via the
+# existing sqlite/postgres extras) — the drivers are tiny and a single extra
+# keeps `pip install dna-sdk[sql]` a complete story on either dialect.
+# Nothing in the default install imports sqlalchemy (guard:
+# tests/test_sqlalchemy_source.py::test_default_import_never_pulls_sqlalchemy).
+sql = ["sqlalchemy[asyncio]>=2", "dna-sdk[sqlite,postgres]"]
+all = ["dna-sdk[postgres,sqlite,redis,s3,sql]"]
 dev = [
     "pytest>=7.0",
     "pytest-asyncio>=0.23",

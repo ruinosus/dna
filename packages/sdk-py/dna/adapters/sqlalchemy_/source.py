@@ -1,38 +1,68 @@
-"""SPIKE (i-216) — SqlAlchemySource: ONE adapter, TWO dialects, SAME tables.
+"""SqlAlchemySource — ONE adapter, TWO dialects, SAME tables (production).
 
-SQLAlchemy Core 2.x async prototype that implements SourcePort +
-WritableSourcePort against the EXISTING adapter schemas:
+SQLAlchemy Core 2.x async implementation of SourcePort + WritableSourcePort
+against the EXISTING adapter schemas (promoted from the i-216 spike by
+``s-sqlalchemy-source-production``):
 
   - sqlite  (aiosqlite):  ``documents`` / ``versions`` / ``bundle_entries``
     / ``layer_documents`` — byte-compatible with ``SqliteSource`` DBs,
     including the ``schema_migrations`` control table.
   - postgresql (asyncpg): ``{schema}.dna_documents`` / ``dna_versions`` /
-    ``dna_bundle_entries`` / ``dna_layer_documents`` — byte-compatible with
-    ``PostgresSource`` schemas, including ``dna_schema_migrations``.
+    ``dna_bundle_entries`` / ``dna_layer_documents`` / ``dna_outbox`` /
+    ``dna_versions_seq`` — byte-compatible with ``PostgresSource`` schemas,
+    including ``dna_schema_migrations``.
 
-The spike REUSES each dialect's existing migration payloads (it invents no
-schema); the shared forward-only runner (``adapters/_migrations.py``)
+The adapter REUSES each dialect's existing migration payloads (it invents
+no schema); the shared forward-only runner (``adapters/_migrations.py``)
 applies them, so a DB touched by this adapter is indistinguishable from
-one touched by the raw adapters.
+one touched by the raw adapters — **switching adapters is pure
+instantiation, zero data migration** (see docs/PORT-CONTRACT.md §
+"Using the SQLAlchemy adapter").
+
+Production behaviors (each mirrors the raw adapter that pioneered it):
+
+  - **PG eventbus as a dialect strategy** (:class:`_PgOutboxEmitter`):
+    every write on the postgresql dialect appends to ``dna_outbox``,
+    checkpoints ``dna_versions_seq`` and fires ``pg_notify`` on
+    ``KERNEL_EVENTBUS_CHANNEL`` **inside the same transaction** as the
+    data write — Phase 15.1 semantics. The NOTIFY payload is built by the
+    SAME ``_build_notify_payload`` the raw ``PostgresSource`` uses
+    (imported, not copied), so payload parity is byte-exact by
+    construction. SQLite gets :class:`_NullEventEmitter` (no bus — H2).
+  - **Memo-cached ``_load_view``** (dialect-agnostic): the canonical
+    (scope, tenant) view is memoized with a single-flight lock and served
+    as deep copies (s-query-loadview-cache semantics). Invalidation is a
+    superset of the raw PG adapter's: local writes through THIS source
+    invalidate directly, and ``attach_kernel`` additionally wires
+    ``kernel.on_write`` so kernel-path + cross-process (EventBus) writes
+    invalidate too.
+  - **FrontmatterParseWarning net** in ``_load_view`` / ``load_one``:
+    a bundle marker with corrupt YAML frontmatter falls back to the
+    canonical ``documents.content`` row instead of silently serving an
+    anemic spec (D-B hardening, mirrors raw PG).
+  - **``spec.source_files`` net** in ``save_document`` (kind-agnostic,
+    s-sync-s3): carried bundle entries persist for every bundle kind
+    whose writer doesn't consume them itself.
+  - **Auto-publish**: ``save_document`` UPSERTs ``documents`` in the same
+    transaction (the raw-PG contract — ``kernel.write_document`` treats
+    save as the publish point and never calls ``publish()``).
+  - **Genome catalog + layer surfaces**: ``list_module_versions`` /
+    ``get_module_version`` / ``deprecate_module_version`` and
+    ``save_layer_document`` / ``delete_layer_document`` / ``list_layers``
+    / ``list_tenants`` — full parity with the raw adapters.
 
 Honesty markers: every place the two dialects could NOT be expressed as
-one Core construct is tagged with ``# [dialect]`` — ``grep -c "\\[dialect\\]"``
-is the H1/H3/H4 evidence the spike report cites. Deliberate scope cuts
-(time-boxed prototype, NOT production):
-
-  - No outbox / pg_notify / eventbus emission (H2 — stays out regardless).
-  - No ``_load_view`` memo cache, no FrontmatterParseWarning fallback,
-    no ``spec.source_files`` net, no Module-catalog surface
-    (``list_module_versions`` / ``deprecate_module_version``), no
-    ``list_layers`` / ``save_layer_document``.
-  - SQLite dialect inherits i-092 (documents PK lacks ``tenant`` → a
-    tenant overlay publish clobbers the base row). Schema limitation,
-    not a Core limitation.
+one Core construct is tagged ``# [dialect]``. Known inherited limitation:
+the SQLite ``documents`` PK lacks ``tenant`` (i-092) — a tenant overlay
+publish clobbers the base row. Schema debt, not a Core limitation (the
+conformance matrix carries the strict xfail).
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
+import os
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
@@ -40,6 +70,13 @@ import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 from dna.kernel.protocols import WritableSourcePort
+
+# Single source of truth for the Phase 15.1 event contract — importing
+# (instead of copying) the payload builder + channel name from the raw
+# Postgres adapter guarantees byte-exact NOTIFY parity by construction.
+# (`adapters/postgres/source.py` has no hard asyncpg dependency at import
+# time, so this import stays safe without the `postgres` extra.)
+from ..postgres.source import KERNEL_EVENTBUS_CHANNEL, _build_notify_payload
 
 if TYPE_CHECKING:
     from dna.kernel.capabilities import SourceCapabilities
@@ -59,6 +96,77 @@ def _doc_name(raw: dict) -> str | None:
     return meta.get("name") or raw.get("name")
 
 
+class _NullEventEmitter:
+    """SQLite dialect: no cross-process bus (H2) — emission is a no-op."""
+
+    async def emit(self, conn: Any, **event: Any) -> None:
+        return None
+
+
+class _PgOutboxEmitter:
+    """Postgres dialect strategy — Phase 15.1 outbox + LISTEN/NOTIFY.
+
+    Emits the KernelEventBus event atomically with the caller's data
+    write (the caller passes the open ``engine.begin()`` connection).
+    Three operations, same transaction — identical to
+    ``PostgresSource._emit_outbox``:
+
+      1. INSERT into ``dna_outbox`` (durable, FIFO event log).
+      2. UPSERT ``dna_versions_seq`` (per-(scope, tenant) checkpoint).
+      3. ``pg_notify`` on :data:`KERNEL_EVENTBUS_CHANNEL`.
+
+    The payload is produced by the raw adapter's ``_build_notify_payload``
+    (imported), so ``PostgresEventBus`` subscribers can't tell which
+    adapter produced the event.
+    """
+
+    def __init__(self, source: "SqlAlchemySource") -> None:
+        self._src = source
+
+    async def emit(
+        self,
+        conn: Any,
+        *,
+        scope: str,
+        tenant: str,
+        kind: str,
+        name: str,
+        op: str,
+        doc_version: int,
+        actor: str | None = None,
+        cause: str | None = None,
+        write_class: str = "substantive",
+    ) -> int:
+        src = self._src
+        actor_val = actor if actor is not None else src._default_actor
+        cause_val = cause if cause is not None else src._default_cause
+
+        outbox_id: int = (await conn.execute(
+            src.outbox.insert().returning(src.outbox.c.id).values(
+                scope=scope, tenant=tenant, kind=kind, name=name,
+                op=op, doc_version=doc_version,
+                actor=actor_val, cause=cause_val,
+            )
+        )).scalar_one()
+        ins = src._upsert(src.versions_seq).values(
+            scope=scope, tenant=tenant,
+            last_id=outbox_id, last_at=sa.func.now(),
+        )
+        await conn.execute(ins.on_conflict_do_update(
+            index_elements=["scope", "tenant"],
+            set_={"last_id": ins.excluded.last_id,
+                  "last_at": ins.excluded.last_at},
+        ))
+        payload = _build_notify_payload(
+            outbox_id, scope, tenant, kind, name, op, doc_version,
+            actor_val, write_class,
+        )
+        await conn.execute(
+            sa.select(sa.func.pg_notify(KERNEL_EVENTBUS_CHANNEL, payload))
+        )
+        return outbox_id
+
+
 class SqlAlchemySource(WritableSourcePort):
     """WritableSourcePort over SQLAlchemy Core async (aiosqlite | asyncpg).
 
@@ -70,8 +178,9 @@ class SqlAlchemySource(WritableSourcePort):
     """
 
     supports_readers: bool = False
-    # H2 — the prototype emits no outbox/pg_notify even on Postgres; a
-    # promoted version would keep the eventbus as a PG-only mixin anyway.
+    # Instance-level on __init__: True on the postgresql dialect (the
+    # outbox emitter propagates writes cross-process, Phase 15.1),
+    # False on sqlite. Class default kept for introspection safety.
     supports_cross_process_invalidation: bool = False
 
     def __init__(
@@ -92,7 +201,23 @@ class SqlAlchemySource(WritableSourcePort):
         self._writers = writers or []
         self._readers = readers or []
         self._kernel: object | None = None
+        # Phase 15.1 — actor/cause defaults for outbox attribution (set at
+        # __init__ so direct callers that bypass Kernel.auto are covered).
+        self._default_actor: str | None = os.environ.get("USER") or "system"
+        self._default_cause: str | None = None
+        # Perf (s-query-loadview-cache parity): memoize _load_view per
+        # (scope, tenant) with a single-flight lock; deep copies out.
+        self._view_cache: dict[tuple[str, str], list[dict[str, Any]]] = {}
+        self._view_locks: dict[tuple[str, str], asyncio.Lock] = {}
+        self._view_invalidation_wired = False
         self._build_tables()
+        # [dialect] eventbus emission is a pg-only strategy (H2): the
+        # outbox/NOTIFY machinery is Postgres infrastructure; sqlite has
+        # no cross-process bus and gets the no-op emitter.
+        self._events: _PgOutboxEmitter | _NullEventEmitter = (
+            _PgOutboxEmitter(self) if self._is_pg else _NullEventEmitter()
+        )
+        self.supports_cross_process_invalidation = self._is_pg
 
     # ------------------------------------------------------------------
     # Table metadata — SAME tables the raw adapters own
@@ -136,6 +261,25 @@ class SqlAlchemySource(WritableSourcePort):
             sa.Column("name", sa.Text), sa.Column("content", sa.Text),
             sa.Column("updated_at", sa.Text),
         )
+        if self._is_pg:
+            # [dialect] Phase 15.1 eventbus tables exist only in the pg
+            # schema (migration v5) — the sqlite dialect has no bus.
+            self.outbox = sa.Table(
+                f"{p}outbox", md,
+                sa.Column("id", sa.BigInteger, primary_key=True),
+                sa.Column("occurred_at", sa.DateTime(timezone=True)),
+                sa.Column("scope", sa.Text), sa.Column("tenant", sa.Text),
+                sa.Column("kind", sa.Text), sa.Column("name", sa.Text),
+                sa.Column("op", sa.Text), sa.Column("doc_version", sa.Integer),
+                sa.Column("actor", sa.Text), sa.Column("cause", sa.Text),
+            )
+            self.versions_seq = sa.Table(
+                f"{p}versions_seq", md,
+                sa.Column("scope", sa.Text, primary_key=True),
+                sa.Column("tenant", sa.Text, primary_key=True),
+                sa.Column("last_id", sa.BigInteger),
+                sa.Column("last_at", sa.DateTime(timezone=True)),
+            )
 
     # ------------------------------------------------------------------
     # Dialect seams (each is [dialect] evidence)
@@ -326,10 +470,41 @@ class SqlAlchemySource(WritableSourcePort):
                 f"attach_kernel requires a Kernel instance; got {type(kernel).__name__}"
             )
         self._kernel = kernel
+        # Wire view-cache invalidation onto the kernel's on_write bus —
+        # fires for kernel-path writes AND cross-process writes (EventBus
+        # pg_notify → kernel.invalidate → observer fan-out). Local writes
+        # through THIS source invalidate directly (see save_document);
+        # this wiring covers everything else. Guarded so idempotent
+        # attach_kernel calls don't stack observers.
+        if not self._view_invalidation_wired:
+            try:
+                kernel.on_write(  # type: ignore[attr-defined]
+                    lambda scope, kind, name, op: self.invalidate_view(scope)
+                )
+                self._view_invalidation_wired = True
+            except Exception:  # noqa: BLE001 — best-effort; never block attach
+                pass
         if not self._writers:
             self._writers = list(kernel._writers)
         if not self._readers:
             self._readers = list(kernel._readers)
+
+    def _live_readers(self) -> list:
+        """Kernel's live readers list (s-composition-and-nav-lazy):
+        ``self._readers`` is a snapshot captured at attach_kernel time,
+        BEFORE extensions register their generic bundle readers — prefer
+        the kernel's current list when attached."""
+        if getattr(self, "_kernel", None) is not None:
+            return list(getattr(self._kernel, "_readers", []))
+        return list(getattr(self, "_readers", None) or [])
+
+    def _reader_can_produce(self, kind: str, live_readers: list | None = None) -> bool:
+        """Bundle-override gate shared by ``query()`` (and, via
+        ``count_via_query``, ``count()``): True when a registered reader
+        can produce ``kind`` — bundle docs may masquerade as this kind and
+        pure SQL push-down would diverge from ``load_all`` semantics."""
+        readers = self._live_readers() if live_readers is None else live_readers
+        return any(getattr(r, "_kind", None) == kind for r in readers)
 
     # ------------------------------------------------------------------
     # SourcePort (read)
@@ -369,6 +544,71 @@ class SqlAlchemySource(WritableSourcePort):
     async def _load_view(
         self, scope: str, *, tenant: str | None, readers: list | None,
     ) -> list[dict[str, Any]]:
+        """Cached front for :meth:`_load_view_uncached`.
+
+        Memoizes the canonical (scope, tenant) view and returns DEEP
+        COPIES so callers may mutate rows without corrupting the cache.
+        A single-flight lock collapses a concurrent first-hit burst into
+        one compute (s-query-loadview-cache). Invalidated by local writes
+        (save/publish/delete on this source) and by ``kernel.on_write``
+        (attach_kernel) for kernel-path + cross-process writes.
+
+        ``readers`` affects output but is NOT part of the key: readers
+        are registered once at boot and stable thereafter.
+        """
+        key = (scope, tenant or "")
+        cached = self._view_cache.get(key)
+        if cached is None:
+            lock = self._view_locks.setdefault(key, asyncio.Lock())
+            async with lock:
+                cached = self._view_cache.get(key)  # re-check under lock
+                if cached is None:
+                    cached = await self._load_view_uncached(
+                        scope, tenant=tenant, readers=readers,
+                    )
+                    self._view_cache[key] = cached
+        # Deep copy (rows are JSON-origin dicts) so mutation by callers
+        # never leaks back into the cache.
+        return [json.loads(json.dumps(d)) for d in cached]
+
+    def invalidate_view(self, scope: str | None = None) -> None:
+        """Drop cached views. ``scope=None`` clears all; otherwise only
+        entries for that scope (every tenant). Best-effort, never raises."""
+        try:
+            if scope is None:
+                self._view_cache.clear()
+                return
+            for k in [k for k in self._view_cache if k[0] == scope]:
+                self._view_cache.pop(k, None)
+        except Exception:  # noqa: BLE001
+            pass
+
+    @staticmethod
+    def _read_with_frontmatter_net(reader: Any, handle: Any, canonical: str) -> dict:
+        """Reader.read with the FrontmatterParseWarning fallback (D-B
+        hardening, mirrors raw PG): when the bundle marker has corrupt
+        YAML frontmatter the reader warns and returns an anemic spec —
+        surface the warning ONCE but serve the canonical ``content`` row
+        instead of letting the broken marker silently wipe the doc."""
+        import warnings as _w
+
+        from dna.kernel.generic_rw import FrontmatterParseWarning
+
+        with _w.catch_warnings(record=True) as caught:
+            _w.simplefilter("always", FrontmatterParseWarning)
+            doc_from_marker = reader.read(handle)
+        parse_failed = any(
+            issubclass(w.category, FrontmatterParseWarning) for w in caught
+        )
+        if parse_failed:
+            for w in caught:
+                _w.warn_explicit(str(w.message), w.category, w.filename, w.lineno)
+            return json.loads(canonical)
+        return doc_from_marker
+
+    async def _load_view_uncached(
+        self, scope: str, *, tenant: str | None, readers: list | None,
+    ) -> list[dict[str, Any]]:
         """2-query scope view (docs + bundle entries) with reader resolution.
 
         This whole method is dialect-FREE — the biggest unification win:
@@ -379,6 +619,9 @@ class SqlAlchemySource(WritableSourcePort):
             if r not in effective_readers:
                 effective_readers.append(r)
         d, b = self.documents, self.bundle_entries
+        entry_cols = [b.c.kind, b.c.name, b.c.entry_path, b.c.content]
+        if self._is_pg:
+            entry_cols.append(b.c.content_binary)  # [dialect]
         async with self._engine.connect() as conn:
             doc_rows = (await conn.execute(
                 sa.select(d.c.kind, d.c.name, d.c.content).where(
@@ -387,14 +630,16 @@ class SqlAlchemySource(WritableSourcePort):
                 )
             )).all()
             entry_rows = (await conn.execute(
-                sa.select(b.c.kind, b.c.name, b.c.entry_path, b.c.content).where(
+                sa.select(*entry_cols).where(
                     b.c.scope == scope,
                     b.c.tenant == (tenant or ""),  # bundle sentinel is '' on BOTH
                 )
             )).all()
         entries_by_key: dict[tuple[str, str], dict[str, Any]] = {}
         for e in entry_rows:
-            entries_by_key.setdefault((e.kind, e.name), {})[e.entry_path] = e.content
+            cb = e.content_binary if self._is_pg else None
+            val: str | bytes = bytes(cb) if cb else e.content
+            entries_by_key.setdefault((e.kind, e.name), {})[e.entry_path] = val
 
         from dna.kernel.bundle_handle import DictBundleHandle
         out: list[dict[str, Any]] = []
@@ -405,10 +650,13 @@ class SqlAlchemySource(WritableSourcePort):
                 matched = False
                 for reader in effective_readers:
                     try:
-                        if reader.detect(handle):
-                            out.append(reader.read(handle))
-                            matched = True
-                            break
+                        if not reader.detect(handle):
+                            continue
+                        out.append(self._read_with_frontmatter_net(
+                            reader, handle, r.content,
+                        ))
+                        matched = True
+                        break
                     except Exception:  # noqa: BLE001
                         continue
                 if matched:
@@ -470,6 +718,9 @@ class SqlAlchemySource(WritableSourcePort):
             if r not in effective_readers:
                 effective_readers.append(r)
         d, b = self.documents, self.bundle_entries
+        entry_cols = [b.c.entry_path, b.c.content]
+        if self._is_pg:
+            entry_cols.append(b.c.content_binary)  # [dialect]
         tenant_candidates: list[str | None] = [tenant, None] if tenant else [None]
         async with self._engine.connect() as conn:
             for t in tenant_candidates:
@@ -482,23 +733,42 @@ class SqlAlchemySource(WritableSourcePort):
                 if row is None:
                     continue
                 erows = (await conn.execute(
-                    sa.select(b.c.entry_path, b.c.content).where(
+                    sa.select(*entry_cols).where(
                         b.c.scope == scope, b.c.kind == kind, b.c.name == name,
                         b.c.tenant == (t or ""),
                     )
                 )).all()
-                entries = {e.entry_path: e.content for e in erows}
+                entries: dict[str, str | bytes] = {}
+                for e in erows:
+                    cb = e.content_binary if self._is_pg else None
+                    entries[e.entry_path] = bytes(cb) if cb else e.content
                 if entries and effective_readers:
                     from dna.kernel.bundle_handle import DictBundleHandle
                     handle = DictBundleHandle(name, entries)
                     for reader in effective_readers:
                         try:
-                            if reader.detect(handle):
-                                return reader.read(handle)
+                            if not reader.detect(handle):
+                                continue
+                            return self._read_with_frontmatter_net(
+                                reader, handle, row.content,
+                            )
                         except Exception:  # noqa: BLE001
                             continue
                 return json.loads(row.content)
         return None
+
+    async def list_tenants(self, scope: str | None = None) -> list[str]:
+        """Distinct non-base tenants observed in documents (optionally
+        narrowed to one scope) — parity with FS + raw PG."""
+        d = self.documents
+        # Non-base predicate covers BOTH sentinels (pg '' / sqlite NULL).
+        pred = sa.and_(d.c.tenant.isnot(None), d.c.tenant != "")
+        stmt = sa.select(d.c.tenant).distinct().where(pred).order_by(d.c.tenant)
+        if scope is not None:
+            stmt = stmt.where(d.c.scope == scope)
+        async with self._engine.connect() as conn:
+            rows = (await conn.execute(stmt)).all()
+        return [r.tenant for r in rows]
 
     # ------------------------------------------------------------------
     # query / count push-down
@@ -549,11 +819,42 @@ class SqlAlchemySource(WritableSourcePort):
         order_by=None, tenant=None,
     ):
         from dna.kernel.protocols import (
-            QueryError, _apply_order_by, _project_doc,
+            QueryError, _apply_order_by, _match_filter, _project_doc,
         )
         if filter is not None and not isinstance(filter, dict):
             raise QueryError(f"filter must be dict, got {type(filter).__name__}")
         d = self.documents
+
+        # Slow-path (bundle-override guard, parity with raw PG): when a
+        # registered reader can produce this kind, bundle docs may
+        # masquerade as it and pure SQL push-down would diverge from
+        # load_all — route through the (cached) view + Python filter.
+        _live_readers = self._live_readers()
+        if self._reader_can_produce(kind, _live_readers):
+            base_docs = await self._load_view(
+                scope, tenant=None, readers=_live_readers,
+            )
+            if tenant:
+                overlay_docs = await self._load_view(
+                    scope, tenant=tenant, readers=_live_readers,
+                )
+                shadow = {(x.get("kind"), _doc_name(x)) for x in overlay_docs}
+                raw_docs = [
+                    x for x in base_docs
+                    if (x.get("kind"), _doc_name(x)) not in shadow
+                ] + overlay_docs
+            else:
+                raw_docs = base_docs
+            kind_docs = [x for x in raw_docs if x.get("kind") == kind]
+            if filter:
+                kind_docs = [x for x in kind_docs if _match_filter(x, filter)]
+            if order_by:
+                kind_docs = _apply_order_by(kind_docs, order_by)
+            start = offset or 0
+            end = (start + limit) if limit is not None else None
+            for doc in kind_docs[start:end]:
+                yield _project_doc(doc, projection) if projection else doc
+            return
 
         async def _fetch_one_tenant(conn, t: str | None) -> list[dict[str, Any]]:
             stmt = sa.select(d.c.content).where(
@@ -590,6 +891,47 @@ class SqlAlchemySource(WritableSourcePort):
                 if limit is not None:
                     docs = docs[: int(limit)]
 
+            # Fast-path bundle-override exclusion (parity with raw PG):
+            # docs whose bundle entries are detected by a reader that
+            # produces a DIFFERENT kind must be excluded — load_all hands
+            # them out under the reader-output kind only.
+            names_to_drop: set[str] = set()
+            if docs and _live_readers:
+                b = self.bundle_entries
+                names = [_doc_name(x) or "" for x in docs]
+                erows = (await conn.execute(
+                    sa.select(b.c.name, b.c.entry_path, b.c.content).where(
+                        b.c.scope == scope, b.c.tenant == (tenant or ""),
+                        b.c.kind == kind, b.c.name.in_(names),
+                    )
+                )).all()
+                if erows:
+                    from dna.kernel.bundle_handle import DictBundleHandle
+                    entries_by_name: dict[str, dict[str, str]] = {}
+                    for e in erows:
+                        entries_by_name.setdefault(e.name, {})[e.entry_path] = e.content
+                    for name, entries in entries_by_name.items():
+                        handle = DictBundleHandle(name, entries)
+                        for reader in _live_readers:
+                            try:
+                                if reader.detect(handle):
+                                    produced = getattr(reader, "_kind", None)
+                                    if produced and produced != kind:
+                                        names_to_drop.add(name)
+                                    break
+                            except Exception:  # noqa: BLE001
+                                continue
+        if names_to_drop:
+            docs = [x for x in docs if _doc_name(x) not in names_to_drop]
+            # Re-apply order_by + limit after the drop (SQL ordering on
+            # the pre-drop set doesn't survive it).
+            if order_by:
+                docs = _apply_order_by(docs, order_by)
+            if offset:
+                docs = docs[int(offset):]
+            if limit is not None:
+                docs = docs[: int(limit)]
+
         for doc in docs:
             yield _project_doc(doc, projection) if projection else doc
 
@@ -597,6 +939,8 @@ class SqlAlchemySource(WritableSourcePort):
         self, scope: str, kind: str, *,
         filter=None, group_by=None, tenant=None,
     ) -> dict[str, Any]:
+        # Rides this adapter's query() via the shared aggregation helper —
+        # inherits the bundle-override slow-path automatically.
         from dna.kernel.query_fallback import count_via_query
         return await count_via_query(
             self, scope, kind, filter=filter, group_by=group_by, tenant=tenant,
@@ -615,15 +959,32 @@ class SqlAlchemySource(WritableSourcePort):
         write_class: str = "substantive",
         version_retention: int | None = None,
     ) -> str:
-        _ = write_class  # no eventbus in the prototype (H2)
         if layer is not None:
             if layer[0] == "tenant" and tenant is None:
                 tenant = layer[1]
             elif layer[0] != "tenant":
                 raise NotImplementedError(
-                    f"SqlAlchemySource does not support non-tenant layers "
-                    f"(got layer={layer!r})."
+                    f"SqlAlchemySource does not support non-tenant layers in "
+                    f"save_document (got layer={layer!r}). "
+                    "Use save_layer_document directly."
                 )
+        tenant_val = tenant or ""
+
+        # s-sync-s3 — KIND-AGNOSTIC source_files net (mirrors raw PG). Pop
+        # spec.source_files BEFORE the writer runs (keeps stored content
+        # bloat-free) and merge its entries after; writers that consume
+        # source_files themselves leave nothing here — never double-writes.
+        _net_text: dict[str, str] = {}
+        _net_binary: dict[str, bytes] = {}
+        _net_spec = raw.get("spec")
+        if isinstance(_net_spec, dict) and _net_spec.get("source_files"):
+            from dna.kernel.writer_helpers import pop_source_files_as_entries
+            for _e in pop_source_files_as_entries(_net_spec, kind):
+                if "content_bytes" in _e:
+                    _net_binary[_e["relativePath"]] = _e["content_bytes"]
+                else:
+                    _net_text[_e["relativePath"]] = _e["content"]
+
         # Writers → bundle entries (text vs bytes split; pure Python,
         # identical logic to both raw adapters).
         bundle_text: dict[str, str] | None = None
@@ -642,7 +1003,18 @@ class SqlAlchemySource(WritableSourcePort):
                         bundle_text[e] = handle.read_text(e)
                 break
 
-        v = self.versions
+        # Merge the carried source_files net (authored bytes win on conflict
+        # — same rule as raw PG).
+        if _net_text or _net_binary:
+            if bundle_text is None:
+                bundle_text = {}
+            if bundle_bin is None:
+                bundle_bin = {}
+            bundle_text.update(_net_text)
+            bundle_bin.update(_net_binary)
+
+        content = json.dumps(raw)  # source_files already popped → no bloat
+        d, v = self.documents, self.versions
         doc_tenant = self._doc_tenant(tenant)
         spec_version = None
         if kind == "Genome":
@@ -671,7 +1043,7 @@ class SqlAlchemySource(WritableSourcePort):
                 )
             )).scalar_one() + 1
             await conn.execute(v.insert().values(
-                scope=scope, kind=kind, name=name, content=json.dumps(raw),
+                scope=scope, kind=kind, name=name, content=content,
                 version=next_version, is_draft=True, author=author,
                 created_at=_now(), tenant=doc_tenant, semver=spec_version,
             ))
@@ -683,9 +1055,32 @@ class SqlAlchemySource(WritableSourcePort):
                 ))
             if bundle_text is not None or bundle_bin is not None:
                 await self._replace_bundle_entries(
-                    conn, scope, kind, name, tenant or "",
+                    conn, scope, kind, name, tenant_val,
                     bundle_text or {}, bundle_bin or {},
                 )
+            # Auto-publish — UPSERT into documents in the same transaction.
+            # save_document is the publish point (raw-PG contract):
+            # kernel.write_document never calls publish(), so a draft-only
+            # save would leave kernel writes invisible.
+            ins = self._upsert(d).values(
+                scope=scope, kind=kind, name=name, content=content,
+                version=next_version, updated_at=_now(), tenant=doc_tenant,
+            )
+            await conn.execute(ins.on_conflict_do_update(
+                index_elements=self._doc_conflict_cols(),
+                set_={
+                    "content": ins.excluded.content,
+                    "version": ins.excluded.version,
+                    "updated_at": ins.excluded.updated_at,
+                },
+            ))
+            # Eventbus (pg dialect only) — same transaction as the write.
+            await self._events.emit(
+                conn, scope=scope, tenant=tenant_val, kind=kind, name=name,
+                op="write", doc_version=next_version, actor=author,
+                write_class=write_class,
+            )
+        self.invalidate_view(scope)
         return str(next_version)
 
     async def _replace_bundle_entries(
@@ -693,27 +1088,49 @@ class SqlAlchemySource(WritableSourcePort):
         text_entries: dict[str, str], bin_entries: dict[str, bytes],
     ) -> None:
         b = self.bundle_entries
-        await conn.execute(b.delete().where(
+        key = [
             b.c.scope == scope, b.c.kind == kind, b.c.name == name,
             b.c.tenant == tenant_val,
-        ))
+        ]
+        if self._is_pg:
+            # [dialect] preserve-binary semantics (raw-PG parity,
+            # Phase 16-pre): writers can't round-trip binary blobs, so a
+            # spec edit must NOT wipe them — delete only TEXT rows plus
+            # the paths being re-written.
+            cond = b.c.content_binary.is_(None)
+            new_paths = list(text_entries.keys()) + list(bin_entries.keys())
+            if new_paths:
+                cond = sa.or_(cond, b.c.entry_path.in_(new_paths))
+            await conn.execute(b.delete().where(*key, cond))
+        else:
+            # [dialect] sqlite has one flexible-affinity column — full
+            # replace, exactly like the raw SqliteSource.
+            await conn.execute(b.delete().where(*key))
         ts = _now()
         for entry_path, body in {**text_entries, **bin_entries}.items():
             values: dict[str, Any] = dict(
                 scope=scope, kind=kind, name=name, entry_path=entry_path,
                 updated_at=ts, tenant=tenant_val,
             )
+            set_: dict[str, Any] = {"updated_at": ts}
             if self._is_pg and isinstance(body, bytes):
                 # [dialect] pg routes bytes to content_binary.
                 values.update(content="", content_binary=body)
+                set_["content_binary"] = body
             else:
                 values.update(content=body)
-            await conn.execute(b.insert().values(**values))
+                set_["content"] = body
+            ins = self._upsert(b).values(**values)
+            await conn.execute(ins.on_conflict_do_update(
+                index_elements=["scope", "kind", "name", "entry_path", "tenant"],
+                set_=set_,
+            ))
 
     async def publish(
         self, scope: str, kind: str, name: str, *, tenant: str | None = None,
     ) -> str:
         v, d = self.versions, self.documents
+        tenant_val = tenant or ""
         async with self._engine.begin() as conn:
             row = (await conn.execute(
                 sa.select(v.c.id, v.c.content, v.c.version).where(
@@ -740,6 +1157,11 @@ class SqlAlchemySource(WritableSourcePort):
             await conn.execute(
                 v.update().where(v.c.id == row.id).values(is_draft=False)
             )
+            await self._events.emit(
+                conn, scope=scope, tenant=tenant_val, kind=kind, name=name,
+                op="write", doc_version=row.version,
+            )
+        self.invalidate_view(scope)
         return str(row.version)
 
     async def delete_document(
@@ -753,10 +1175,12 @@ class SqlAlchemySource(WritableSourcePort):
                 tenant = layer[1]
             elif layer[0] != "tenant":
                 raise NotImplementedError(
-                    f"SqlAlchemySource does not support non-tenant layers "
-                    f"(got layer={layer!r})."
+                    f"SqlAlchemySource does not support non-tenant layers in "
+                    f"delete_document (got layer={layer!r}). "
+                    "Use delete_layer_document directly."
                 )
         d, v, b = self.documents, self.versions, self.bundle_entries
+        tenant_val = tenant or ""
         async with self._engine.begin() as conn:
             key = lambda t: [  # noqa: E731
                 t.c.scope == scope, t.c.kind == kind, t.c.name == name,
@@ -773,13 +1197,76 @@ class SqlAlchemySource(WritableSourcePort):
             await conn.execute(v.delete().where(
                 *key(v), self._tenant_where(v.c.tenant, tenant)))
             await conn.execute(b.delete().where(
-                *key(b), b.c.tenant == (tenant or "")))
+                *key(b), b.c.tenant == tenant_val))
+            # doc_version=0 is the documented sentinel for delete.
+            await self._events.emit(
+                conn, scope=scope, tenant=tenant_val, kind=kind, name=name,
+                op="delete", doc_version=0,
+            )
+        self.invalidate_view(scope)
 
     async def save_manifest(self, scope: str, manifest: dict) -> str:
         kind = manifest.get("kind") or "Genome"
         return await self.save_document(
             scope, kind, manifest.get("metadata", {}).get("name", scope), manifest,
         )
+
+    # ------------------------------------------------------------------
+    # Layer operations (non-tenant layers → legacy layer_documents table)
+    # ------------------------------------------------------------------
+
+    async def save_layer_document(
+        self, scope: str, layer_id: str, layer_value: str,
+        kind: str, name: str, raw: dict,
+    ) -> None:
+        # Tenant overlays live in documents.tenant (Phase 8a) — route
+        # through save_document so save+load round-trip (raw-PG parity).
+        if layer_id == "tenant":
+            return await self.save_document(
+                scope, kind, name, raw, tenant=layer_value,
+            )
+        ld = self.layer_documents
+        ins = self._upsert(ld).values(
+            scope=scope, layer_id=layer_id, layer_value=layer_value,
+            kind=kind, name=name, content=json.dumps(raw), updated_at=_now(),
+        )
+        async with self._engine.begin() as conn:
+            await conn.execute(ins.on_conflict_do_update(
+                index_elements=["scope", "layer_id", "layer_value", "kind", "name"],
+                set_={
+                    "content": ins.excluded.content,
+                    "updated_at": ins.excluded.updated_at,
+                },
+            ))
+
+    async def delete_layer_document(
+        self, scope: str, layer_id: str, layer_value: str,
+        kind: str, name: str,
+    ) -> None:
+        ld = self.layer_documents
+        async with self._engine.begin() as conn:
+            await conn.execute(ld.delete().where(
+                ld.c.scope == scope, ld.c.layer_id == layer_id,
+                ld.c.layer_value == layer_value,
+                ld.c.kind == kind, ld.c.name == name,
+            ))
+
+    async def list_layers(self, scope: str) -> list[dict[str, str]]:
+        """Legacy layer_documents entries merged with the tenant overlays
+        observed in documents.tenant (raw-PG parity)."""
+        ld = self.layer_documents
+        async with self._engine.connect() as conn:
+            legacy = (await conn.execute(
+                sa.select(ld.c.layer_id, ld.c.layer_value).distinct().where(
+                    ld.c.scope == scope,
+                )
+            )).all()
+        tenants = await self.list_tenants(scope)
+        out = [{"layer_id": r.layer_id, "layer_value": r.layer_value}
+               for r in legacy]
+        out.extend({"layer_id": "tenant", "layer_value": t} for t in tenants)
+        out.sort(key=lambda x: (x["layer_id"], x["layer_value"]))
+        return out
 
     # ------------------------------------------------------------------
     # Versions / drafts / scopes
@@ -837,6 +1324,112 @@ class SqlAlchemySource(WritableSourcePort):
                 sa.select(d.c.scope).distinct().order_by(d.c.scope)
             )).all()
         return [r.scope for r in rows]
+
+    # ------------------------------------------------------------------
+    # Phase 10g — Genome catalog version surface (raw-adapter parity)
+    # ------------------------------------------------------------------
+
+    async def list_module_versions(
+        self, scope: str, *, tenant: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """Semver releases of the scope Genome published to (scope, tenant).
+
+        Each entry: ``{version, deprecated, deprecated_message,
+        published_at}``, sorted by created_at ASC. Rows with
+        ``semver IS NULL`` (unversioned publishes) never enter the
+        catalog timeline. Dialect-FREE — one Core body replaces the two
+        divergent raw copies.
+        """
+        v = self.versions
+        stmt = sa.select(v.c.semver, v.c.content, v.c.created_at).where(
+            v.c.scope == scope, v.c.kind == "Genome", v.c.name == scope,
+            self._tenant_where(v.c.tenant, tenant),
+            v.c.semver.isnot(None),
+        ).order_by(v.c.created_at.asc())
+        async with self._engine.connect() as conn:
+            rows = (await conn.execute(stmt)).all()
+        out: list[dict[str, Any]] = []
+        for r in rows:
+            try:
+                spec = json.loads(r.content).get("spec") or {}
+            except Exception:  # noqa: BLE001
+                spec = {}
+            out.append({
+                "version": r.semver,
+                "deprecated": bool(spec.get("deprecated", False)),
+                "deprecated_message": spec.get("deprecated_message"),
+                "published_at": r.created_at,
+            })
+        return out
+
+    async def get_module_version(
+        self, scope: str, version: str, *, tenant: str | None = None,
+    ) -> dict[str, Any] | None:
+        """The frozen Genome manifest for ``scope@version`` (exact archive
+        row — no tenant fallback, by design)."""
+        v = self.versions
+        async with self._engine.connect() as conn:
+            row = (await conn.execute(
+                sa.select(v.c.content).where(
+                    v.c.scope == scope, v.c.kind == "Genome", v.c.name == scope,
+                    self._tenant_where(v.c.tenant, tenant),
+                    v.c.semver == version,
+                ).limit(1)
+            )).first()
+        if row is None:
+            return None
+        try:
+            return json.loads(row.content)
+        except Exception:  # noqa: BLE001
+            return None
+
+    async def deprecate_module_version(
+        self, scope: str, version: str, *,
+        tenant: str | None = None, message: str | None = None,
+    ) -> bool:
+        """Flip ``spec.deprecated=true`` on the archived row in-place;
+        mirror to the latest ``documents`` pointer when it matches."""
+        v, d = self.versions, self.documents
+        async with self._engine.begin() as conn:
+            row = (await conn.execute(
+                sa.select(v.c.content).where(
+                    v.c.scope == scope, v.c.kind == "Genome", v.c.name == scope,
+                    self._tenant_where(v.c.tenant, tenant),
+                    v.c.semver == version,
+                ).limit(1)
+            )).first()
+            if row is None:
+                return False
+            raw = json.loads(row.content)
+            spec = raw.setdefault("spec", {})
+            spec["deprecated"] = True
+            if message:
+                spec["deprecated_message"] = message
+            new_content = json.dumps(raw)
+            await conn.execute(v.update().where(
+                v.c.scope == scope, v.c.kind == "Genome", v.c.name == scope,
+                self._tenant_where(v.c.tenant, tenant),
+                v.c.semver == version,
+            ).values(content=new_content))
+            latest = (await conn.execute(
+                sa.select(d.c.content).where(
+                    d.c.scope == scope, d.c.kind == "Genome", d.c.name == scope,
+                    self._tenant_where(d.c.tenant, tenant),
+                )
+            )).first()
+            if latest is not None:
+                try:
+                    cur_spec = json.loads(latest.content).get("spec") or {}
+                    if cur_spec.get("version") == version:
+                        await conn.execute(d.update().where(
+                            d.c.scope == scope, d.c.kind == "Genome",
+                            d.c.name == scope,
+                            self._tenant_where(d.c.tenant, tenant),
+                        ).values(content=new_content))
+                except Exception:  # noqa: BLE001
+                    pass
+        self.invalidate_view(scope)
+        return True
 
     # ------------------------------------------------------------------
     # Bundle entries
@@ -907,6 +1500,7 @@ class SqlAlchemySource(WritableSourcePort):
                 index_elements=["scope", "kind", "name", "entry_path", "tenant"],
                 set_=set_,
             ))
+        self.invalidate_view(scope)
 
     # ------------------------------------------------------------------
     # Capabilities

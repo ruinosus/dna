@@ -8,10 +8,42 @@ spec:
   status: accepted
   story_ref: s-sqlalchemy-source-production
   journey_phase: plan
-  body: 'Promote adapters/sqlalchemy_ prototype: pg eventbus (LISTEN/NOTIFY) as dialect
-    mixin on the same tx; memo-cache/_load_view parity; FrontmatterParseWarning fallback;
-    source_files net; extra ''sql'' packaging (not default); switch flag documented.
-    Judge = conformance matrix both dialects + benchmark. Work on branch in a git
-    worktree of this repo; PR to ruinosus/dna.'
-  created_at: '2026-07-08T18:52:06+00:00'
-  updated_at: '2026-07-08T18:52:06+00:00'
+  body: "# Plan \u2014 s-sqlalchemy-source-production\n\nPromote `adapters/sqlalchemy_`\
+    \ (spike i-216 upstream) to production, closing every deliberate spike cut that\
+    \ applies in the DNA repo.\n\n## 1. PG eventbus as a dialect strategy (H2 accepted,\
+    \ not a reason for 2 adapters)\n- `_PgOutboxEmitter` / `_NullEmitter` strategy\
+    \ picked at `__init__` by dialect.\n- Emits INSERT `dna_outbox` RETURNING id +\
+    \ UPSERT `dna_versions_seq` + `pg_notify('kernel_writes', payload)` **inside the\
+    \ same `engine.begin()` transaction** as the data write \u2014 exactly what `PostgresSource._emit_outbox`\
+    \ does.\n- Payload byte-parity guaranteed by construction: import `_build_notify_payload`\
+    \ + `KERNEL_EVENTBUS_CHANNEL` from `adapters/postgres/source.py` (single source\
+    \ of truth).\n- `supports_cross_process_invalidation` becomes instance-level:\
+    \ True on pg, False on sqlite.\n- Wire into save_document (actor=author, write_class),\
+    \ publish, delete_document (doc_version=0).\n\n## 2. Memo-cache `_load_view` parity\
+    \ (dialect-agnostic)\n- Same design as PG raw: `_view_cache[(scope, tenant)]`\
+    \ + single-flight lock + deep-copy returns + `invalidate_view(scope)` wired to\
+    \ `kernel.on_write` in `attach_kernel`.\n\n## 3. Spike cuts closed\n- FrontmatterParseWarning\
+    \ fallback in `_load_view` + `load_one` (canonical JSON row wins over anemic marker\
+    \ parse).\n- `spec.source_files` net in save_document (`pop_source_files_as_entries`,\
+    \ text+binary).\n- Preserve-binary bundle semantics on pg (DELETE only text rows),\
+    \ full-replace on sqlite (schema has no content_binary) \u2014 mirrors each raw\
+    \ adapter.\n- Genome catalog surface: list_module_versions / get_module_version\
+    \ / deprecate_module_version (dialect-agnostic Core).\n- Layer surface: save_layer_document\
+    \ / delete_layer_document / list_layers / list_tenants.\n- Bundle-override slow-path\
+    \ in `query` (`_reader_can_produce` \u2192 `_load_view` route) \u2014 count inherits\
+    \ via count_via_query.\n\n## 4. Packaging\n- Extra `sqlalchemy-spike` \u2192 `sql\
+    \ = [\"sqlalchemy[asyncio]>=2\", \"dna-sdk[sqlite,postgres]\"]` (drivers ride\
+    \ the existing extras); added to `all`.\n- Guard test: fresh-interpreter import\
+    \ of dna + Kernel.auto never pulls sqlalchemy.\n\n## 5. Matrix + bench + docs\n\
+    - SA\xD72 dialects promoted into the canonical `test_source_conformance_kit.py`\
+    \ matrix (spike mirror file absorbed); only xfail = sqlite tenant-PK (i-092 schema\
+    \ debt).\n- New `tests/test_sqlalchemy_source.py` covering the production additions\
+    \ (eventbus tx parity, memo-cache, frontmatter fallback, source_files net, catalog).\n\
+    - Port bench \u2192 `packages/sdk-py/scripts/bench_sources.py`; publish numbers\
+    \ in the PR.\n- PORT-CONTRACT.md gains \"Using the SQLAlchemy adapter\" (same\
+    \ tables \u21D2 switch = instantiation flag, zero migration).\n\n## Gates\nsdk-py\
+    \ full 0 failed (with and without `sql` extra) \xB7 SA matrix 2 dialects zero\
+    \ fail (pg via disposable `dna_ci_test` DB) \xB7 sdk-ts untouched green \xB7 cli\
+    \ tests green.\n"
+  created_at: '2026-07-08T19:00:42+00:00'
+  updated_at: '2026-07-08T19:00:42+00:00'
