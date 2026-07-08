@@ -1,12 +1,22 @@
 /**
  * v3 Kernel Protocols — the 5 ports + shared types.
  *
- * 1:1 parity with Python dna.v3.kernel.protocols.
+ * Parity with Python dna.kernel.protocols is SURFACE-TRACKED, not
+ * assumed (s-dna-port-surface-parity): every port's member list — and every
+ * INTENTIONAL asymmetry, with its justification — lives in the shared
+ * fixture `tests/parity-fixtures/port-surface-parity.json`, enforced by
+ * `tests/port-surface-parity.test.ts` (via the keyof-bound PORT_SURFACE
+ * manifest in `./port-surface.ts`) and by the Python twin
+ * `packages/sdk-py/tests/test_port_surface_parity.py` (real Protocol
+ * introspection). Adding/removing a member on either side without updating
+ * the fixture turns the suites red.
  */
 
 import type { BundleHandle } from "./bundle-handle.js";
 import type { Document } from "./document.js";
 import type { PreviewBlock } from "./preview.js";
+import type { HookContext, HookRegistry, VetoHandler } from "./hooks.js";
+import type { CompositionProfile } from "./composition-resolver.js";
 
 export type { BundleHandle };
 
@@ -639,6 +649,28 @@ export interface SourcePort {
   ): Promise<Record<string, unknown>[]>;
 
   /**
+   * Release adapter-held resources (connection pools, file handles, …).
+   * Mirror of the Py `SourcePort.close` (a SOURCE_PORT_CORE_MEMBERS entry
+   * behind the Py boot gate). OPTIONAL on the TS interface — the kernel
+   * treats a missing `close` as a no-op: `FilesystemSource` implements a
+   * documented no-op (nothing to release), `PostgresSource` ends its
+   * owned pool.
+   */
+  close?(): Promise<void>;
+
+  /**
+   * OPTIONAL L1 granular access — `[kind, name]` refs of every doc in
+   * the scope, metadata only (no bundle entries, no parse). Mirror of
+   * the Py `SourcePort.list_doc_refs`. `opts.kind` filters; tenant is
+   * the union of base + overlay with the overlay shadowing base.
+   * Declared via `SourceCapabilities.granularList`
+   * (s-dna-port-surface-parity closed this TS gap).
+   */
+  listDocRefs?(scope: string, opts?: {
+    kind?: string | null; tenant?: string | null;
+  }): Promise<Array<[string, string]>>;
+
+  /**
    * Two-planes F2 — OPTIONAL record-plane reads. The Kernel consults the
    * declared capabilities (`sourceCapabilities(src).queryPushdown`,
    * s-sourceport-contract-cleanup) and raises a clear capability error
@@ -738,10 +770,13 @@ export interface ReaderPort {
   detect(bundle: BundleHandle): boolean | Promise<boolean>;
   read(bundle: BundleHandle): Record<string, unknown> | Promise<Record<string, unknown>>;
 
-  /** Optional: declares the container this Reader's Kind is rooted
-   *  at (e.g. `"skills"`). Lets the kernel scanner route bundles to
-   *  the right Reader without trying every reader's `detect()` on
-   *  every subdir — H3 container-aware routing. */
+  /** Container this Reader's Kind is rooted at (e.g. `"skills"`), or
+   *  undefined for unscoped readers (tried as fallback in every
+   *  container). Lets the scanner route bundles to the right Reader
+   *  without trying every reader's `detect()` on every subdir — H3
+   *  container-aware routing. Formal port member since
+   *  s-dna-rw-roundtrip-suite (the scanner previously duck-typed it);
+   *  Python twin: `ReaderPort._owner_container` (default None). */
   readonly _ownerContainer?: string;
 }
 
@@ -796,6 +831,26 @@ export interface WritableSourcePort extends SourcePort {
   listVersions?(
     scope: string, kind: string, name: string,
   ): Promise<Array<{ id: string }>>;
+
+  /**
+   * Optional single-version fetch (the `Versionable` capability;
+   * `PostgresSource` implements it). Mirror of the Py
+   * `WritableSourcePort.get_version`.
+   */
+  getVersion?(
+    scope: string, kind: string, name: string, versionId: string,
+  ): Promise<Record<string, unknown>>;
+
+  /**
+   * Optional draft→published promotion. Mirror of the Py
+   * `WritableSourcePort.publish`. The TS PG adapter is a documented
+   * single-step no-op (writes go live immediately; no draft state) —
+   * adapters with a real draft store return the published version id.
+   * The Py-only `save_manifest` / `load_drafts` / `list_scopes` half is
+   * a JUSTIFIED asymmetry — see
+   * tests/parity-fixtures/port-surface-parity.json.
+   */
+  publish?(scope: string, kind: string, name: string): Promise<string>;
 }
 
 /** Writes a raw dict back to a bundle directory. Inverse of ReaderPort.
@@ -804,11 +859,21 @@ export interface WritableSourcePort extends SourcePort {
  * (was: filesystem path string). Adapters provide the right handle
  * for their backend; the writer's job is purely to format files into
  * `bundle.writeText/writeBytes` calls.
+ *
+ * s-dna-rw-roundtrip-suite: `serialize` is REQUIRED — part of the
+ * contract (it was load-bearing but optional: `kernel.serializeDocument`
+ * consumed it behind a presence check, so a conforming writer could
+ * silently miss it and only fail at emission time). `write` and
+ * `serialize` must stay COHERENT: `write(bundle, raw)` must produce
+ * exactly the entries `serialize(raw)` returns. The round-trip
+ * conformance suite enforces this for every registered pair.
+ * Python twin: `WriterPort.serialize` returning
+ * `[{relativePath, content | content_bytes}]`.
  */
 export interface WriterPort {
   canWrite(raw: Record<string, unknown>): boolean;
   write(bundle: BundleHandle, raw: Record<string, unknown>): void | Promise<void>;
-  serialize?(raw: Record<string, unknown>): SerializedFile[];
+  serialize(raw: Record<string, unknown>): SerializedFile[];
 }
 
 /** WHO — identity + composition role. */
@@ -900,6 +965,134 @@ export interface KindPort {
   graphMeta?(doc: Document): Record<string, unknown> | null;
 }
 
+// ---------------------------------------------------------------------------
+// Tool port — TS twin of the Py ToolPort/ToolDefinition
+// (s-dna-tool-decorator 2026-05-24; ported by s-dna-port-surface-parity).
+//
+// DNA discovery metadata for an invocable agent tool. The Python side wraps
+// langchain's StructuredTool via the @dna_tool decorator; the TS SDK has no
+// langchain runtime, so `getCallable()` returns whatever framework-native
+// invocable the registrant provided (a plain function is fine). Extensions
+// register via `kernel.tool(td)` (see ExtensionHost); consumers query via
+// `kernel.getTools({ group })` — pure metadata, no execution path.
+// ---------------------------------------------------------------------------
+
+/**
+ * An invocable tool exposed to agents. This port carries the DNA discovery
+ * metadata (group, hitl, scope); the underlying callable stays framework-
+ * native and is never wrapped or serialized.
+ */
+export interface ToolPort {
+  readonly name: string;
+  /** Tool group (cognitive | manifest | code | docs | web | write | eval |
+   *  eval_lab | …). `null` = registered but not group-filterable (rare). */
+  readonly group: string | null;
+  /** Full docstring / long description. */
+  readonly description: string;
+  /** First paragraph of the description. */
+  readonly summary: string;
+  /** JSON Schema of the tool's arguments (best-effort; may be `{}`). */
+  readonly argsSchema: Record<string, unknown>;
+  /** Write tool that needs a HumanInTheLoop interrupt at the root graph. */
+  readonly hitl: boolean;
+  /** Layer-policy hint — "tenant" respects tenant overlay, "global"
+   *  doesn't. Reserved for future use. */
+  readonly scope: string | null;
+  /** Module file name that defined the tool (best-effort). */
+  readonly source: string;
+  /** Return the underlying invocable (framework-native tool or function). */
+  getCallable(): unknown;
+}
+
+/**
+ * Concrete ToolPort implementation, stored in the kernel's ToolRegistry.
+ * Twin of the Py `ToolDefinition` dataclass — the `callable` init field
+ * holds the framework-native invocable; `getCallable()` is the canonical
+ * accessor (never serialize or wrap-replace it).
+ */
+export class ToolDefinition implements ToolPort {
+  readonly name: string;
+  readonly group: string | null;
+  readonly description: string;
+  readonly summary: string;
+  readonly argsSchema: Record<string, unknown>;
+  readonly hitl: boolean;
+  readonly scope: string | null;
+  readonly source: string;
+  private readonly _callable: unknown;
+
+  constructor(init: {
+    name: string;
+    group?: string | null;
+    description?: string;
+    summary?: string;
+    argsSchema?: Record<string, unknown>;
+    hitl?: boolean;
+    scope?: string | null;
+    source?: string;
+    callable?: unknown;
+  }) {
+    this.name = init.name;
+    this.group = init.group ?? null;
+    this.description = init.description ?? "";
+    this.summary = init.summary ?? "";
+    this.argsSchema = init.argsSchema ?? {};
+    this.hitl = init.hitl ?? false;
+    this.scope = init.scope ?? null;
+    this.source = init.source ?? "";
+    this._callable = init.callable ?? null;
+  }
+
+  getCallable(): unknown {
+    return this._callable;
+  }
+}
+
+/**
+ * The registration-time surface the Kernel offers to `Extension.register()`.
+ *
+ * This is the *explicit contract* of what an extension may call while it is
+ * being loaded (s-dna-extension-host-contract). It is a narrow slice of the
+ * Kernel — the registration vocabulary — NOT the whole Kernel API. Derived
+ * from actual usage across every builtin extension:
+ *
+ * - `kind(kp)`              — register a KindPort (identity + composition)
+ * - `kindFromDescriptor()`  — register a record Kind from a
+ *                             `kinds/*.kind.yaml` descriptor (F3 — Kinds as
+ *                             data). Pair with `loadDescriptors()` from
+ *                             `./descriptor-loader.js`.
+ * - `reader(r)`             — register a ReaderPort (detect/scan a format)
+ * - `writer(w)`             — register a WriterPort (write a format)
+ * - `on(hook, fn)`          — subscribe to an event (e.g. `post_save`)
+ * - `onVeto(hook, fn)`      — register a veto listener (e.g. `pre_save`
+ *                             write guards — throwing vetoes the operation)
+ * - `tool(td)`              — register a ToolDefinition (DNA tool discovery
+ *                             metadata; queried via `kernel.getTools()`)
+ * - `compositionProfile()`  — register orchestrator kind wiring
+ * - `hooks`                 — the HookRegistry itself, for advanced listener
+ *                             management (`kernel.hooks.onVeto(..., {key})`)
+ *
+ * The real `Kernel` satisfies this interface structurally (statically
+ * asserted in `tests/extension-host-contract.test.ts`). Py twin:
+ * `ExtensionHost` in `dna/kernel/protocols.py`.
+ */
+export interface ExtensionHost {
+  /** The HookRegistry the `on`/`onVeto` conveniences delegate to. */
+  readonly hooks: HookRegistry;
+  kind(kp: KindPort): void;
+  kindFromDescriptor(raw: Record<string, unknown>): KindPort;
+  reader(r: ReaderPort): void;
+  writer(w: WriterPort): void;
+  on(hook: string, fn: (ctx: HookContext) => void): void;
+  onVeto(
+    hook: string,
+    fn: VetoHandler,
+    opts?: { priority?: number; key?: string },
+  ): void;
+  tool(td: ToolDefinition): void;
+  compositionProfile(profile: CompositionProfile): void;
+}
+
 /**
  * Registers kinds, readers, and writers on the Kernel.
  *
@@ -914,7 +1107,14 @@ export interface KindPort {
 export interface Extension {
   readonly name: string;
   readonly version: string;
-  register(kernel: unknown): void;
+  /**
+   * Wire the extension into the kernel. `kernel.load(ext)` fail-loud
+   * validates the whole contract first (`name` non-empty string,
+   * `version` string, `register` callable → `ExtensionLoadError`
+   * otherwise), then calls `register()` with the registration-time
+   * host slice — see {@link ExtensionHost} for the exact vocabulary.
+   */
+  register(kernel: ExtensionHost): void;
   /** Optional — return the file-tree scaffolds this extension ships. */
   templates?(): Template[];
 }

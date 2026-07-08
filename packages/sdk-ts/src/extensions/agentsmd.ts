@@ -11,7 +11,7 @@ import type { BundleHandle } from "../kernel/bundle-handle.js";
 import { KindBase } from "../kernel/kind_base.js";
 import type { FSLike } from "../kernel/fs.js";
 import { AgentDefinitionSchema, AgentDefinitionSpecSchema, zodSpecToJsonSchema } from "../kernel/models.js";
-import type { Extension, KindPort, ReaderPort, SerializedFile, WriterPort } from "../kernel/protocols.js";
+import type { ExtensionHost, Extension, ReaderPort, SerializedFile, WriterPort } from "../kernel/protocols.js";
 import { SD } from "../kernel/protocols.js";
 
 // ---------------------------------------------------------------------------
@@ -177,14 +177,9 @@ export class AgentsMdExtension implements Extension {
 
   constructor(private fs: FSLike = nodeFS) {}
 
-  register(kernel: unknown): void {
-    const k = kernel as {
-      kind(kp: KindPort): void;
-      reader(r: ReaderPort): void;
-      writer(w: WriterPort): void;
-    };
-    k.kind(new AgentDefinitionKind());
-    k.reader(new AgentDefinitionReader(this.fs));
-    k.writer(new AgentDefinitionWriter(this.fs));
+  register(kernel: ExtensionHost): void {
+    kernel.kind(new AgentDefinitionKind());
+    kernel.reader(new AgentDefinitionReader(this.fs));
+    kernel.writer(new AgentDefinitionWriter(this.fs));
   }
 }

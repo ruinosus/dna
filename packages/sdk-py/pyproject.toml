@@ -26,6 +26,9 @@ dev = [
     "pytest-timeout>=2.0",
     "httpx>=0.24",
     "dna-sdk[all]",
+    # s-dna-source-conformance-kit — in-process fake S3 so S3Source enters
+    # the source-conformance matrix for real (not skip-forever).
+    "moto>=5.0",
 ]
 
 [project.entry-points."dna.extensions"]

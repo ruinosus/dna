@@ -15,7 +15,7 @@
  * MCP client) is Python-only by design (spec §3).
  */
 
-import type { Extension, KindPort } from "../kernel/protocols.js";
+import type { ExtensionHost, Extension } from "../kernel/protocols.js";
 import { KindBase } from "../kernel/kind_base.js";
 import { SD } from "../kernel/protocols.js";
 import type { Document } from "../kernel/document.js";
@@ -185,8 +185,7 @@ export class FederationExtension implements Extension {
   readonly name = "federation";
   readonly version = "1.0.0";
 
-  register(kernel: unknown): void {
-    const k = kernel as { kind(kp: KindPort): void };
-    k.kind(new MCPFederationKind());
+  register(kernel: ExtensionHost): void {
+    kernel.kind(new MCPFederationKind());
   }
 }

@@ -11,6 +11,7 @@ import yaml
 
 from dna.adapters.filesystem.source import FilesystemSource
 from dna.kernel.bundle_handle import FilesystemBundleHandle
+from dna.kernel.protocols import WritableSourcePort
 
 if TYPE_CHECKING:
     from dna.kernel import Kernel
@@ -59,7 +60,7 @@ def _validate_tenant_path(tenant: str | None) -> None:
         )
 
 
-class FilesystemWritableSource(FilesystemSource):
+class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
     """WritableSourcePort backed by local .dna/ directories.
 
     Write-through: every save goes directly to disk. No draft stage,

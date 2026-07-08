@@ -99,7 +99,10 @@ class TestListDocuments:
     @pytest.mark.asyncio
     async def test_fallback_when_source_lacks_granular(self):
         """SourcePort without list_doc_refs falls back to load_all + filter."""
-        src = MagicMock(spec=["load_all"])
+        src = MagicMock(spec=[  # core surface for the boot gate; NO granular members
+            "load_all", "load_bootstrap_docs", "resolve_ref",
+            "load_layer", "close", "supports_readers",
+        ])
         src.load_all = AsyncMock(return_value=[
             {"kind": "Story", "metadata": {"name": "s-old"}},
             {"kind": "Feature", "metadata": {"name": "f-old"}},
@@ -138,7 +141,10 @@ class TestGetDocument:
 
     @pytest.mark.asyncio
     async def test_fallback_when_source_lacks_granular(self):
-        src = MagicMock(spec=["load_all"])
+        src = MagicMock(spec=[  # core surface for the boot gate; NO granular members
+            "load_all", "load_bootstrap_docs", "resolve_ref",
+            "load_layer", "close", "supports_readers",
+        ])
         src.load_all = AsyncMock(return_value=[
             {"kind": "Story", "metadata": {"name": "s-1"}, "spec": {"x": 1}},
         ])

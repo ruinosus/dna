@@ -31,7 +31,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from dna.kernel.protocols import StorageDescriptor
+from dna.kernel.protocols import ExtensionHost, StorageDescriptor
 from dna.kernel.kind_base import KindBase
 
 _API_VERSION = "github.com/ruinosus/dna/federation/v1"
@@ -207,5 +207,5 @@ class FederationExtension:
     name = "federation"
     version = "1.0.0"
 
-    def register(self, kernel: Any) -> None:
+    def register(self, kernel: ExtensionHost) -> None:
         kernel.kind(MCPFederationKind())

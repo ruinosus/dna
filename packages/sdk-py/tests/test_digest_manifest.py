@@ -14,11 +14,27 @@ from dna.kernel import Kernel
 
 class _FakeSource:
     """Minimal SourcePort surface for digest_manifest: a layer of resolved
-    raw docs + per-doc bundle entries."""
+    raw docs + per-doc bundle entries. Carries the full CORE SourcePort
+    surface so it passes the kernel.source() boot gate
+    (s-dna-source-conformance-kit)."""
+
+    supports_readers = False
 
     def __init__(self, docs, entries):
         self._docs = docs
         self._entries = entries
+
+    async def load_bootstrap_docs(self, scope, *, tenant=None):
+        return []
+
+    async def load_all(self, scope, readers=None):
+        return list(self._docs)
+
+    async def resolve_ref(self, scope, ref):
+        return ref
+
+    async def close(self):
+        return None
 
     async def load_layer(self, scope, layer_id, layer_value, readers=None):
         return list(self._docs)

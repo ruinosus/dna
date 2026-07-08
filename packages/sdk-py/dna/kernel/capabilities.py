@@ -284,9 +284,19 @@ def _has_own_query(source: object) -> bool:
     return fn is not SourcePort.query
 
 
+def _has_method(source: object, name: str) -> bool:
+    """Dynamic method-presence probe. Deliberately ``getattr`` (NOT
+    ``isinstance`` against the capability Protocols): since Python 3.12,
+    runtime Protocol checks use ``inspect.getattr_static``, which is blind
+    to ``__getattr__``-based proxies (``AsyncSourceAdapter``). Dynamic
+    getattr sees the surface the kernel will actually call — for plain
+    adapter classes the two probes are equivalent."""
+    return callable(getattr(source, name, None))
+
+
 def derive_capabilities(source: object, *, label: str) -> SourceCapabilities:
     """Build a :class:`SourceCapabilities` for ``source`` by introspecting
-    which capability Protocols it satisfies + probing write signatures.
+    which capability-Protocol methods it exposes + probing write signatures.
 
     s-sourceport-contract-cleanup: this is now the *oracle*, not the
     production path — in-repo adapters declare literals and the
@@ -300,14 +310,14 @@ def derive_capabilities(source: object, *, label: str) -> SourceCapabilities:
     delete_kwargs = frozenset(DELETE_OPTIONAL_KWARGS & delete_params)
     return SourceCapabilities(
         source=label,
-        drafts=isinstance(source, Draftable),
-        versions=isinstance(source, Versionable),
-        layers=isinstance(source, Layered),
-        bundle_read=isinstance(source, BundleEntryReadable),
-        bundle_write=isinstance(source, BundleEntryWritable),
-        kernel_attachable=isinstance(source, KernelAttachable),
-        granular_list=callable(getattr(source, "list_doc_refs", None)),
-        granular_one=callable(getattr(source, "load_one", None)),
+        drafts=_has_method(source, "load_drafts") and _has_method(source, "publish"),
+        versions=_has_method(source, "get_version"),
+        layers=_has_method(source, "load_layer"),
+        bundle_read=_has_method(source, "fetch_bundle_entry"),
+        bundle_write=_has_method(source, "write_bundle_entry"),
+        kernel_attachable=_has_method(source, "attach_kernel"),
+        granular_list=_has_method(source, "list_doc_refs"),
+        granular_one=_has_method(source, "load_one"),
         query_pushdown=_has_own_query(source),
         tenant_layer_writes=("tenant" in write_kwargs and "layer" in write_kwargs),
         write_kwargs=write_kwargs,

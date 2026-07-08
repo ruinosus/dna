@@ -91,3 +91,96 @@ confidence to ship the SDK.
 4. If a test fails, fix the adapter, NOT the test. The test encodes
    the contract; mutating it amounts to lying about what the adapter
    supports.
+
+## Writing a Source adapter (s-dna-source-conformance-kit)
+
+The end-to-end recipe for a NEW Source adapter — the conformance kit is
+your safety net at every step.
+
+### 1. Declare the contract in the class statement
+
+Python adapters subclass the port Protocol explicitly (chosen pattern —
+readable, statically checkable, mirrors the TS `implements` clause):
+
+```python
+from dna.kernel.protocols import SourcePort, WritableSourcePort
+
+class MyReadOnlySource(SourcePort): ...
+class MySource(WritableSourcePort): ...
+```
+
+Caveat to keep straight: inheriting a Protocol makes `isinstance` pass
+*nominally* and inherits the Protocol's no-op method stubs — it cannot
+prove behavior. That's the kit's job (below). The one deliberate
+exception is `AsyncSourceAdapter`: it's a transparent `__getattr__`
+proxy that mirrors whatever it wraps, so inheriting would both shadow
+the forwarding and overclaim; its conformance is structural.
+
+If your storage client is synchronous (like `S3Source`/boto3), keep the
+adapter sync and hand the kernel `AsyncSourceAdapter(your_source)` —
+never the raw sync object.
+
+### 2. Declare `capabilities()` honestly
+
+Return a literal `SourceCapabilities` (see `kernel/capabilities.py`).
+The kit's `capabilities_declared_honestly` case asserts your declaration
+matches the reflection oracle (`derive_capabilities`) — a declaration
+that overclaims or underclaims fails.
+
+### 3. Pass the boot gate
+
+`kernel.source(src)` validates the CORE surface by name
+(`supports_readers`, `load_bootstrap_docs`, `load_all`, `resolve_ref`,
+`load_layer`, `close`) and raises `SourceRegistrationError` naming
+what's missing. The capability-mediated members (`list_doc_refs`,
+`load_one`, `query`, `count`) may be absent — the kernel serves them via
+`load_all` fallbacks and logs a warning; implement them for production
+workloads. **The gate checks NAMES only** (`runtime_checkable`
+semantics) — passing it does not mean the adapter works.
+
+For test doubles: subclass `dna.testing.CoreSourceStub` so your
+fake passes the gate without hand-rolling the core surface.
+
+### 4. Run the conformance kit — the real safety net
+
+The kit ships in the package (`dna.testing`), not in this
+repo's tests — external adapter authors run the exact same battery:
+
+```python
+import pytest
+from dna.testing import source_conformance_suite, FIXTURE_SCOPE, fixture_docs
+
+async def my_factory():
+    src = MySource(...)          # fresh instance, isolated env
+    async def cleanup():
+        await src.close()
+    return src, cleanup
+
+CASES = source_conformance_suite(my_factory)
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("case", CASES, ids=lambda c: c.name)
+async def test_my_source_conformance(case):
+    await case.run()
+```
+
+Rules of the kit:
+
+- The factory is called once PER CASE (fresh adapter each time) and owns
+  the environment: temp dirs / schemas, kernel wiring
+  (`Kernel.auto(source=src)`) if the adapter needs it, and — for
+  READ-ONLY adapters — pre-seeding `fixture_docs()` under
+  `FIXTURE_SCOPE` in the native storage. Writable adapters are seeded by
+  the kit through their own `save_document`/`publish` (part of the test).
+- Cases are capability-aware: they SKIP (`CaseNotApplicable`) what you
+  don't declare and FAIL what you declare but don't honor.
+- Non-pytest consumption: `await run_source_conformance(my_factory)`
+  returns a `ConformanceReport` (`.ok`, `.failed`, `.raise_if_failed()`).
+
+### 5. Add your adapter to the in-repo matrix
+
+`python/tests/test_source_conformance_kit.py` runs the kit over ALL
+in-repo adapters (FS read-only, FS writable, Composite, SQLite,
+Postgres, AsyncSourceAdapter, S3-via-moto). A new in-repo adapter adds a
+factory there; known divergences get an explicit `xfail`/`skip` with an
+Issue id — never a silent green.

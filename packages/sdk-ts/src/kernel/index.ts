@@ -30,9 +30,11 @@ import {
   type SerializedFile,
   type SerializedDocument,
   type WritableSourcePort,
+  type ToolDefinition,
   LayerPolicyViolationError,
   validateTenantSlug,
 } from "./protocols.js";
+import { ToolRegistry } from "./tool-registry.js";
 import {
   type Template,
   type MaterializeOptions,
@@ -200,6 +202,10 @@ export class Kernel {
   /** Extensions that successfully registered, in load() order. Used by
    *  listTemplates() to aggregate scaffolds from every loaded extension. */
   private _extensions: Extension[] = [];
+  /** Tool-definition registry (s-dna-port-surface-parity — TS twin of the
+   *  Py `Kernel._toolreg`). Tools are global (not tenant-scoped), so one
+   *  registry is safely shared across withTenant shallow copies. */
+  private _toolreg = new ToolRegistry();
   /** Composition-V2 engine (Phase 17 — s-ts-composition-v2-port). Holds a
    *  back-ref to this kernel; the kernel keeps the public methods
    *  (resolveDocument / computeResolutionChain / personalizeDocument /
@@ -845,6 +851,14 @@ export class Kernel {
     return Object.freeze([...this._writers]);
   }
 
+  /** ReaderPorts registered via reader(r). Frozen snapshot — mirror of
+   *  activeWriters (s-dna-rw-roundtrip-suite: the round-trip conformance
+   *  suite enumerates registered pairs through this surface).
+   *  Parity: python Kernel.active_readers. */
+  get activeReaders(): readonly ReaderPort[] {
+    return Object.freeze([...this._readers]);
+  }
+
   cache(c: CachePort): void {
     this._cache = c;
   }
@@ -875,12 +889,15 @@ export class Kernel {
 
   writer(w: WriterPort): void {
     // H1 — structural conformance check (mirror of reader()).
+    // serialize is part of the contract since s-dna-rw-roundtrip-suite.
     if (typeof (w as { canWrite?: unknown })?.canWrite !== "function" ||
-        typeof (w as { write?: unknown })?.write !== "function") {
+        typeof (w as { write?: unknown })?.write !== "function" ||
+        typeof (w as { serialize?: unknown })?.serialize !== "function") {
       throw new WriterRegistrationError(
         `Writer ${(w as { constructor?: { name?: string } })?.constructor?.name ?? typeof w} ` +
-        `does not satisfy WriterPort interface (missing canWrite/write ` +
-        `methods). See typescript/src/kernel/protocols.ts.`,
+        `does not satisfy WriterPort interface (missing canWrite/write/` +
+        `serialize methods — serialize is part of the contract since ` +
+        `s-dna-rw-roundtrip-suite). See typescript/src/kernel/protocols.ts.`,
       );
     }
     if (this._writers.some((existing) => existing.constructor === w.constructor)) {
@@ -923,6 +940,40 @@ export class Kernel {
    *  HelixExtension) during register(). */
   compositionProfile(profile: CompositionProfile): void {
     this._profiles.push(profile);
+  }
+
+  // -- Tools (s-dna-port-surface-parity — Py twin: s-dna-tool-decorator) ----
+  // Analogous to `.kind()` — extensions register tool definitions via
+  // `kernel.tool(td)` inside register(); consumers query via
+  // `kernel.getTools({ group })`. Pure metadata layer — the execution path
+  // stays framework-native (`td.getCallable()`).
+
+  /** Register a tool definition (delegates to the ToolRegistry;
+   *  last-write-wins on same name). Py twin: `Kernel.tool`. */
+  tool(td: ToolDefinition): void {
+    this._toolreg.register(td);
+  }
+
+  /** Return a tool definition by name, or `null` if unknown.
+   *  Py twin: `Kernel.get_tool`. */
+  getTool(name: string): ToolDefinition | null {
+    return this._toolreg.get(name);
+  }
+
+  /** Return registered tool definitions, optionally filtered by group(s)
+   *  (`groups: ["read"]` expands the umbrella alias).
+   *  Py twin: `Kernel.get_tools`. */
+  getTools(opts: {
+    group?: string | null;
+    groups?: Iterable<string> | null;
+  } = {}): ToolDefinition[] {
+    return this._toolreg.getMany(opts);
+  }
+
+  /** Reverse-build `{group: [toolNames…]}` from the registry.
+   *  Py twin: `Kernel.list_tool_groups`. */
+  listToolGroups(): Record<string, string[]> {
+    return this._toolreg.groups();
   }
 
   /** Canonical dep_filter target resolution (s-alias-generated-not-typed).
@@ -969,6 +1020,26 @@ export class Kernel {
         `Extension ${(ext as { constructor?: { name?: string } })?.constructor?.name ?? typeof ext} ` +
         `has no callable register() method. Extensions must implement ` +
         `\`register(kernel)\` per the Extension interface.`,
+      );
+    }
+    // s-dna-extension-host-contract — validate the WHOLE Extension
+    // contract fail-loud, not just register(). name identifies the
+    // extension in logs / alias-owner generation; version identifies it
+    // in diagnostics. Py twin: Kernel.load().
+    const extName = (ext as { name?: unknown }).name;
+    if (typeof extName !== "string" || extName.trim() === "") {
+      throw new ExtensionLoadError(
+        `Extension ${(ext as { constructor?: { name?: string } })?.constructor?.name ?? typeof ext} ` +
+        `has no valid \`name\` (got ${JSON.stringify(extName)}). Extensions ` +
+        `must declare \`name: string\` (non-empty) per the Extension interface.`,
+      );
+    }
+    const extVersion = (ext as { version?: unknown }).version;
+    if (typeof extVersion !== "string" || extVersion.trim() === "") {
+      throw new ExtensionLoadError(
+        `Extension ${JSON.stringify(extName)} has no valid \`version\` ` +
+        `(got ${JSON.stringify(extVersion)}). Extensions must declare ` +
+        `\`version: string\` per the Extension interface.`,
       );
     }
     try {
@@ -1139,12 +1210,14 @@ export class Kernel {
     if (!kp) throw new Error(`Unknown kind: ${kind}`);
     const sd = kp.storage;
 
-    // Find Writer with serialize()
-    const writer = this._writers.find(w => w.canWrite(raw) && w.serialize);
+    // serialize() is part of the WriterPort contract (enforced at
+    // registration since s-dna-rw-roundtrip-suite) — the first writer
+    // that claims the kind serializes.
+    const writer = this._writers.find(w => w.canWrite(raw));
 
     let rawFiles: SerializedFile[];
 
-    if (writer?.serialize) {
+    if (writer) {
       rawFiles = writer.serialize(raw);
     } else if (sd.pattern === "yaml") {
       rawFiles = [{ relativePath: `${name}.yaml`, content: yaml.dump(raw, { flowLevel: -1, sortKeys: false }) }];
@@ -1168,10 +1241,14 @@ export class Kernel {
       ? (sd.container ? `${sd.container}/${name}/` : `${name}/`)
       : "";
 
+    // Preserve the entry payload as-is: text entries carry `content`,
+    // binary ones `contentBytes` (the WriterPort serialize contract).
     return {
       files: rawFiles.map(f => ({
         relativePath: `${prefix}${f.relativePath}`,
-        content: f.content,
+        ...(f.contentBytes !== undefined
+          ? { contentBytes: f.contentBytes }
+          : { content: f.content }),
       })),
     };
   }

@@ -59,6 +59,7 @@ export type {
   WriterPort,
   KindPort,
   Extension,
+  ExtensionHost,
   CompositionResult,
   CacheItem,
   ResolvedItem,
@@ -76,7 +77,17 @@ export type {
   SourceCountOpts,
   RecordStorePort,
   RecordSearchProvider,
+  // Tool port (s-dna-port-surface-parity — TS twin of the Py ToolPort)
+  ToolPort,
 } from "./kernel/protocols.js";
+export { ToolDefinition } from "./kernel/protocols.js";
+export {
+  ToolRegistry,
+  READ_UMBRELLA_GROUPS,
+  expandGroupAliases,
+} from "./kernel/tool-registry.js";
+// Port-surface parity manifest (keyof-bound; see port-surface.ts)
+export { PORT_SURFACE } from "./kernel/port-surface.js";
 export {
   LayerPolicy,
   LayerPolicyViolationError,

@@ -30,12 +30,13 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from dna.adapters.filesystem.writable import FilesystemWritableSource
+from dna.kernel.protocols import WritableSourcePort
 
 if TYPE_CHECKING:
     from dna.kernel.capabilities import SourceCapabilities
 
 
-class CompositeFilesystemSource:
+class CompositeFilesystemSource(WritableSourcePort):
     """Multi-base ``WritableSourcePort`` over N ``FilesystemWritableSource``."""
 
     def __init__(

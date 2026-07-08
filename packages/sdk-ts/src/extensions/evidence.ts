@@ -9,12 +9,12 @@
  * machinery handles serialization. 1:1 parity with Python.
  */
 
-import type { Extension, KindPort } from "../kernel/protocols.js";
+import type { Extension, ExtensionHost } from "../kernel/protocols.js";
 import { KindBase } from "../kernel/kind_base.js";
 import { SD } from "../kernel/protocols.js";
 import type { Document } from "../kernel/document.js";
-import type { HookContext } from "../kernel/hooks.js";
 import { makeEvidenceCaptureHandler } from "../kernel/evidence-capture.js";
+import type { EvidenceCaptureHost } from "../kernel/evidence-capture.js";
 // shouldCapture is generic policy-evaluation logic that now lives in the
 // kernel (s-invert-evidence-capture-dep) so the microkernel's evidence-capture
 // handler needs no extension import. Re-exported here as the extension's
@@ -86,40 +86,23 @@ export class EvidenceExtension implements Extension {
   readonly name = "evidence";
   readonly version = "1.0.0";
 
-  register(kernel: unknown): void {
-    const k = kernel as {
-      kind(kp: KindPort): void;
-      on?(hook: string, fn: (ctx: HookContext) => void): void;
-      instance?(scope: string): { all(kind: string): { spec: Record<string, unknown> }[] };
-      writeDocument?(
-        scope: string,
-        kind: string,
-        name: string,
-        raw: Record<string, unknown>,
-        options?: { skipHooks?: boolean; author?: string },
-      ): Promise<void>;
-    };
-    k.kind(new EvidencePolicyKind());
+  register(kernel: ExtensionHost): void {
+    kernel.kind(new EvidencePolicyKind());
     // F3 lote-3: builtin record Kinds as descriptors (Evidence) —
     // kinds/*.kind.yaml package data through the same funnel as per-scope
     // KindDefinitions (plane lint + digest idempotency + conflict marker).
-    const kd = kernel as { kindFromDescriptor(raw: Record<string, unknown>): KindPort };
     for (const raw of loadDescriptors(import.meta.url, "evidence/kinds")) {
-      kd.kindFromDescriptor(raw);
+      kernel.kindFromDescriptor(raw);
     }
 
-    // Register evidence capture handler when the kernel supports hooks + write
-    if (typeof k.on === "function" && typeof k.instance === "function" && typeof k.writeDocument === "function") {
-      k.on("post_save", makeEvidenceCaptureHandler(k as {
-        instance(scope: string): { all(kind: string): { spec: Record<string, unknown> }[] };
-        writeDocument(
-          scope: string,
-          kind: string,
-          name: string,
-          raw: Record<string, unknown>,
-          options?: { skipHooks?: boolean; author?: string },
-        ): Promise<void>;
-      }));
+    // Register the evidence auto-capture handler when the host also
+    // exposes the RUNTIME capabilities the handler closes over
+    // (instance + writeDocument — the full Kernel does; a bare
+    // ExtensionHost slice need not). Feature-test, then narrow to the
+    // handler's own declared host contract.
+    const cap = kernel as ExtensionHost & Partial<EvidenceCaptureHost>;
+    if (typeof cap.instance === "function" && typeof cap.writeDocument === "function") {
+      kernel.on("post_save", makeEvidenceCaptureHandler(cap as ExtensionHost & EvidenceCaptureHost));
     }
   }
 }

@@ -10,7 +10,7 @@ import type { BundleHandle } from "../kernel/bundle-handle.js";
 import { KindBase } from "../kernel/kind_base.js";
 import type { FSLike } from "../kernel/fs.js";
 import { GuardrailSchema, GuardrailSpecSchema, zodSpecToJsonSchema } from "../kernel/models.js";
-import type { Extension, KindPort, ReaderPort, WriterPort } from "../kernel/protocols.js";
+import type { ExtensionHost, Extension, ReaderPort, SerializedFile, WriterPort } from "../kernel/protocols.js";
 import { SD } from "../kernel/protocols.js";
 
 // ---------------------------------------------------------------------------
@@ -186,12 +186,13 @@ export class GuardrailWriter implements WriterPort {
     return raw.kind === "Guardrail";
   }
 
-  write(bundle: BundleHandle, raw: Record<string, unknown>): void { const path = bundle.path ?? "";
-    this.fs.mkdir(path);
+  /** Shared by write()/serialize() so the two surfaces cannot drift
+   *  (s-dna-rw-roundtrip-suite). */
+  private entries(raw: Record<string, unknown>, defaultName: string): SerializedFile[] {
     const spec = (raw.spec as Record<string, unknown>) ?? {};
     const meta = (raw.metadata as Record<string, unknown>) ?? {};
 
-    const name = (meta.name as string) || path.split("/").pop() || "";
+    const name = (meta.name as string) || defaultName;
     const description = (meta.description as string) ?? "";
     const severity = (spec.severity as string) ?? "warn";
     const scope = (spec.scope as string) ?? "both";
@@ -215,7 +216,18 @@ export class GuardrailWriter implements WriterPort {
       ? `---\n${frontmatter}\n---\n\n${body}\n`
       : `---\n${frontmatter}\n---\n`;
 
-    this.fs.writeFile(`${path}/GUARDRAIL.md`, content);
+    return [{ relativePath: "GUARDRAIL.md", content }];
+  }
+
+  serialize(raw: Record<string, unknown>): SerializedFile[] {
+    return this.entries(raw, "");
+  }
+
+  write(bundle: BundleHandle, raw: Record<string, unknown>): void { const path = bundle.path ?? "";
+    this.fs.mkdir(path);
+    for (const f of this.entries(raw, path.split("/").pop() || "")) {
+      this.fs.writeFile(`${path}/${f.relativePath}`, f.content ?? "");
+    }
   }
 }
 
@@ -229,14 +241,9 @@ export class GuardrailExtension implements Extension {
 
   constructor(private fs: FSLike = nodeFS) {}
 
-  register(kernel: unknown): void {
-    const k = kernel as {
-      kind(kp: KindPort): void;
-      reader(r: ReaderPort): void;
-      writer(w: WriterPort): void;
-    };
-    k.kind(new GuardrailKind());
-    k.reader(new GuardrailReader(this.fs));
-    k.writer(new GuardrailWriter(this.fs));
+  register(kernel: ExtensionHost): void {
+    kernel.kind(new GuardrailKind());
+    kernel.reader(new GuardrailReader(this.fs));
+    kernel.writer(new GuardrailWriter(this.fs));
   }
 }

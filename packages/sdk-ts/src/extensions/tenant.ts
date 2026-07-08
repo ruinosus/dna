@@ -9,7 +9,7 @@
  */
 import yaml from "js-yaml";
 
-import type { Extension, ReaderPort, SerializedFile, WriterPort, KindPort } from "../kernel/protocols.js";
+import type { ExtensionHost, Extension, ReaderPort, SerializedFile, WriterPort } from "../kernel/protocols.js";
 import { KindBase } from "../kernel/kind_base.js";
 import { SD, TenantScope } from "../kernel/protocols.js";
 import type { BundleHandle } from "../kernel/bundle-handle.js";
@@ -302,7 +302,7 @@ class TenantMembershipWriter implements WriterPort {
 export class TenantExtension implements Extension {
   name = "tenant";
   version = "1.0.0";
-  register(kernel: { kind: (k: KindPort) => void; reader: (r: ReaderPort) => void; writer: (w: WriterPort) => void }) {
+  register(kernel: ExtensionHost) {
     kernel.kind(new TenantKind());
     kernel.reader(new TenantReader());
     kernel.writer(new TenantWriter());

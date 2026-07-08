@@ -9,7 +9,7 @@
  * 1:1 parity with Python.
  */
 
-import type { Extension, KindPort } from "../kernel/protocols.js";
+import type { ExtensionHost, Extension, KindPort } from "../kernel/protocols.js";
 import { KindBase } from "../kernel/kind_base.js";
 import { SD } from "../kernel/protocols.js";
 import type { Document } from "../kernel/document.js";
@@ -83,8 +83,7 @@ export class CollabExtension implements Extension {
   readonly name = "collab";
   readonly version = "1.0.0";
 
-  register(kernel: unknown): void {
-    const k = kernel as { kind(kp: KindPort): void };
-    k.kind(new CommentKind());
+  register(kernel: ExtensionHost): void {
+    kernel.kind(new CommentKind());
   }
 }

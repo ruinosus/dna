@@ -10,7 +10,7 @@ from typing import Any
 from dna.kernel.kind_base import KindBase
 from dna.kernel.models import TypedSkill
 from dna.kernel.preview import PreviewBlock
-from dna.kernel.protocols import StorageDescriptor
+from dna.kernel.protocols import ExtensionHost, StorageDescriptor, ReaderPort, WriterPort
 from dna.kernel.bundle_handle import BundleHandle
 
 # Reuse the shared schema builder from helix extension
@@ -105,7 +105,7 @@ class SkillKind(KindBase):
         ]
 
 
-class SkillReader:
+class SkillReader(ReaderPort):
     """Detects and reads SKILL.md bundles."""
 
     def detect(self, bundle: BundleHandle) -> bool:
@@ -225,7 +225,7 @@ class SkillReader:
         return {}
 
 
-class SkillWriter:
+class SkillWriter(WriterPort):
     """Writes a Skill raw dict back to a SKILL.md bundle directory."""
 
     def can_write(self, raw: dict) -> bool:
@@ -308,7 +308,7 @@ class AgentSkillsExtension:
     name = "agentskills"
     version = "1.0.0"
 
-    def register(self, kernel: Any) -> None:
+    def register(self, kernel: ExtensionHost) -> None:
         kernel.kind(SkillKind())
         kernel.reader(SkillReader())
         kernel.writer(SkillWriter())

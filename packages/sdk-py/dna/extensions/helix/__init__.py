@@ -16,7 +16,7 @@ from dna.kernel.models import (
     AgentSpec,
 )
 from dna.kernel.preview import PreviewBlock
-from dna.kernel.protocols import StorageDescriptor
+from dna.kernel.protocols import ExtensionHost, StorageDescriptor, ReaderPort, WriterPort
 from dna.kernel.bundle_handle import BundleHandle
 
 
@@ -761,7 +761,7 @@ def _resolve_instruction_file(bundle: BundleHandle, rel: str) -> str:
     return bundle.read_text(normalized)
 
 
-class AgentReader:
+class AgentReader(ReaderPort):
     """Detects and reads AGENT.md bundles."""
 
     def detect(self, bundle: BundleHandle) -> bool:
@@ -848,18 +848,24 @@ class AgentReader:
         return yaml.safe_load(match.group(1)) or {}
 
 
-class AgentWriter:
-    """Writes a Agent raw dict back to an AGENT.md bundle directory."""
+class AgentWriter(WriterPort):
+    """Writes a Agent raw dict back to an AGENT.md bundle directory.
+
+    ``write`` delegates to ``serialize`` (via ``_entries``) so both
+    surfaces cannot drift — the WriterPort coherence contract enforced by
+    the round-trip conformance suite (s-dna-rw-roundtrip-suite).
+    """
 
     def can_write(self, raw: dict) -> bool:
         return raw.get("kind") == "Agent"
 
-    def write(self, bundle: BundleHandle, raw: dict) -> None:
+    def _entries(self, raw: dict, default_name: str) -> list[dict[str, Any]]:
         spec = raw.get("spec", {})
         meta = raw.get("metadata", {})
+        entries: list[dict[str, Any]] = []
 
         fm: dict[str, Any] = {}
-        fm["name"] = meta.get("name", bundle.name)
+        fm["name"] = meta.get("name", default_name)
         if meta.get("description"):
             fm["description"] = meta["description"]
         if meta.get("labels"):
@@ -875,7 +881,10 @@ class AgentWriter:
             body = ""
         else:
             body = spec.get("instruction", "")
-        bundle.write_text("AGENT.md", f"---\n{frontmatter}---\n\n{body}")
+        entries.append({
+            "relativePath": "AGENT.md",
+            "content": f"---\n{frontmatter}---\n\n{body}",
+        })
 
         # s-sync-s3 — emit the instruction_file FRAGMENT so the bundle is
         # self-contained in ANY source. Previously the writer left body="" and
@@ -893,34 +902,56 @@ class AgentWriter:
                 frag = spec.get("instruction")
             if frag is not None:
                 if isinstance(frag, (bytes, bytearray)):
-                    bundle.write_bytes(instruction_file, bytes(frag))
+                    entries.append({
+                        "relativePath": instruction_file,
+                        "content_bytes": bytes(frag),
+                    })
                 else:
-                    bundle.write_text(instruction_file, frag)
+                    entries.append({
+                        "relativePath": instruction_file, "content": frag,
+                    })
 
         # s-sync-s3 — persist any remaining carried bundle entries (binary
-        # assets like fonts/images, scripts/, references/). Text via write_text,
-        # binary via write_bytes; the marker + instruction_file are already done.
+        # assets like fonts/images, scripts/, references/). Text as content,
+        # binary as content_bytes; the marker + instruction_file are already done.
         for rel, content in source_files.items():
             if rel in ("AGENT.md", instruction_file):
                 continue
             if isinstance(content, (bytes, bytearray)):
-                bundle.write_bytes(rel, bytes(content))
+                entries.append({
+                    "relativePath": rel, "content_bytes": bytes(content),
+                })
             else:
-                bundle.write_text(rel, content)
+                entries.append({"relativePath": rel, "content": content})
 
         for dir_name in ("scripts", "references", "assets"):
             files = spec.get(dir_name, {})
             if isinstance(files, dict) and files:
                 for fname, fcontent in files.items():
-                    bundle.write_text(f"{dir_name}/{fname}", fcontent)
+                    entries.append({
+                        "relativePath": f"{dir_name}/{fname}", "content": fcontent,
+                    })
 
         for dir_name, dir_files in spec.get("extras", {}).items():
             if isinstance(dir_files, dict):
                 for fname, fcontent in dir_files.items():
-                    bundle.write_text(f"{dir_name}/{fname}", fcontent)
+                    entries.append({
+                        "relativePath": f"{dir_name}/{fname}", "content": fcontent,
+                    })
 
         for fname, fcontent in spec.get("root_files", {}).items():
-            bundle.write_text(fname, fcontent)
+            entries.append({"relativePath": fname, "content": fcontent})
+
+        return entries
+
+    def serialize(self, raw: dict) -> list[dict[str, Any]]:
+        """Twin of typescript AgentWriter.serialize — name falls back to
+        ``""`` (no bundle context here; write() uses the bundle name)."""
+        return self._entries(raw, "")
+
+    def write(self, bundle: BundleHandle, raw: dict) -> None:
+        from dna.kernel.writer_helpers import write_entries_to_handle
+        write_entries_to_handle(bundle, self._entries(raw, bundle.name))
 
 
 from dna.kernel.composition_resolver import (
@@ -993,7 +1024,7 @@ class HelixExtension:
     name = "helix"
     version = "1.0.0"
 
-    def register(self, kernel: Any) -> None:
+    def register(self, kernel: ExtensionHost) -> None:
         # Phase 16 cleanup — ModuleKind class deleted. GenomeKind is
         # the canonical root identity Kind. Externally authored
         # manifests with ``kind: Module`` no longer parse — they need

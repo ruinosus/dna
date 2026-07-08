@@ -27,7 +27,7 @@ from __future__ import annotations
 from typing import Any
 
 from dna.kernel.descriptor_loader import load_descriptors
-from dna.kernel.protocols import StorageDescriptor
+from dna.kernel.protocols import ExtensionHost, StorageDescriptor
 from dna.kernel.kind_base import KindBase
 from dna.kernel.protocols import TenantScope
 
@@ -119,7 +119,7 @@ class AuditExtension:
     name = "audit"
     version = "1.0.0"
 
-    def register(self, kernel: Any) -> None:
+    def register(self, kernel: ExtensionHost) -> None:
         kernel.kind(UserRoleAssignmentKind())
         # expr batch A: AuditLog as a descriptor — kinds/*.kind.yaml package
         # data registered through the SAME funnel as per-scope KindDefinitions

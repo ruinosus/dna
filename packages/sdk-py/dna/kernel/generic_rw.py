@@ -12,7 +12,12 @@ from typing import Any
 
 import yaml
 
-from dna.kernel.protocols import BodyMode, StorageDescriptor
+from dna.kernel.protocols import (
+    BodyMode,
+    ReaderPort,
+    StorageDescriptor,
+    WriterPort,
+)
 from dna.kernel.bundle_handle import BundleHandle
 
 # Fields that belong in metadata rather than spec
@@ -246,7 +251,7 @@ def _build_body(value: Any, body_as: BodyMode) -> str:
     return str(value) if value is not None else ""
 
 
-class GenericBundleReader:
+class GenericBundleReader(ReaderPort):
     """ReaderPort implementation auto-generated from a StorageDescriptor.
 
     Reads BUNDLE-layout directories by parsing a marker file's YAML frontmatter
@@ -319,7 +324,7 @@ class GenericBundleReader:
         }
 
 
-class GenericBundleWriter:
+class GenericBundleWriter(WriterPort):
     """WriterPort implementation auto-generated from a StorageDescriptor.
 
     Writes BUNDLE-layout directories by serialising metadata + spec back into
@@ -419,7 +424,7 @@ def _parse_marker_envelope(text: str) -> tuple[dict[str, Any], str]:
     return {}, text
 
 
-class MarkdownBundleReader:
+class MarkdownBundleReader(ReaderPort):
     """Shared ReaderPort for the "envelope-or-flat" single-marker convention.
 
     Replaces ~10 copy-pasted hand-rolled readers (s-markdown-bundle-reader-helper).
@@ -454,8 +459,9 @@ class MarkdownBundleReader:
         self._kind = kind
         self._api_version = api_version
         self._strict_api_prefix = strict_api_prefix
-        if owner_container is not None:
-            self._owner_container = owner_container
+        # _owner_container is a formal ReaderPort member; the Protocol
+        # base provides the None default, so assign unconditionally.
+        self._owner_container = owner_container
 
     def detect(self, bundle: BundleHandle) -> bool:
         if self._strict_api_prefix is None:

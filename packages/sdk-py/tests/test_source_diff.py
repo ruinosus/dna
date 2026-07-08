@@ -7,6 +7,7 @@ from __future__ import annotations
 import asyncio
 
 from dna.kernel import Kernel
+from dna.testing import CoreSourceStub
 
 
 # ───────────────────────── pure diff_manifests ─────────────────────────
@@ -33,7 +34,7 @@ def test_diff_is_sorted_and_stable():
 
 # ───────────────────── cross-source via digest_manifest ─────────────────
 
-class _FakeSource:
+class _FakeSource(CoreSourceStub):
     def __init__(self, docs, entries=None):
         self._docs = docs
         self._entries = entries or {}

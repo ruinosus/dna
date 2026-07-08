@@ -30,6 +30,7 @@ import type {
   LayerPolicy,
 } from "../kernel/protocols.js";
 import { SD } from "../kernel/protocols.js";
+import type { ExtensionHost } from "../kernel/protocols.js";
 import type { Document } from "../kernel/document.js";
 import type { PreviewBlock } from "../kernel/preview.js";
 
@@ -186,14 +187,9 @@ export class KindDefinitionExtension implements Extension {
 
   constructor(private fs: FSLike = nodeFS) {}
 
-  register(kernel: unknown): void {
-    const k = kernel as {
-      kind(kp: KindPort): void;
-      reader(r: ReaderPort): void;
-      writer(w: WriterPort): void;
-    };
-    k.kind(new KindDefinitionKind());
-    k.reader(new KindDefinitionReader(this.fs));
-    k.writer(new KindDefinitionWriter(this.fs));
+  register(kernel: ExtensionHost): void {
+    kernel.kind(new KindDefinitionKind());
+    kernel.reader(new KindDefinitionReader(this.fs));
+    kernel.writer(new KindDefinitionWriter(this.fs));
   }
 }

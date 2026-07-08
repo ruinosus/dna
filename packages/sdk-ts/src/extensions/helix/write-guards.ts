@@ -24,6 +24,7 @@
 
 import type { PreSaveContext } from "../../kernel/hooks.js";
 import { TenantNotAllowed } from "../../kernel/protocols.js";
+import type { ExtensionHost } from "../../kernel/protocols.js";
 import { DEFAULT_BASE_SCOPE } from "../../kernel/index.js";
 
 const KIND = "Agent";
@@ -59,6 +60,15 @@ export function platformAgentForkGuard(ctx: PreSaveContext): void {
  * target Kind; validate the contract at write time (fail early), not at
  * runtime (feat/kind-writer-pilot, Task 2).
  */
+/** The Kernel helper the Kind-Writer guard delegates to at WRITE time.
+ *  `PreSaveContext.kernel` is typed `unknown` (the hook context crosses
+ *  module boundaries); this named contract is the guard's narrowing —
+ *  the generic slot↔schema validation stays a kernel helper, the
+ *  TRIGGER is Helix-owned. */
+interface KindWriterValidatorHost {
+  _validateKindWriter(spec: Record<string, unknown>): void;
+}
+
 export function kindWriterContractGuard(ctx: PreSaveContext): void {
   if (ctx.kind !== KIND || !ctx.raw || typeof ctx.raw !== "object") return;
   const spec = ctx.raw.spec;
@@ -70,26 +80,20 @@ export function kindWriterContractGuard(ctx: PreSaveContext): void {
   ) {
     // The contract logic is generic (validates against the Kind registry)
     // so it stays a kernel helper; the TRIGGER is Helix-owned.
-    (ctx.kernel as {
-      _validateKindWriter(spec: Record<string, unknown>): void;
-    })._validateKindWriter(spec as Record<string, unknown>);
+    (ctx.kernel as KindWriterValidatorHost)._validateKindWriter(
+      spec as Record<string, unknown>,
+    );
   }
 }
 
 /**
  * Wire the Helix write guards as `pre_save` veto hooks. Keys make the
  * registration idempotent (re-loading the extension onto a shared
- * HookRegistry replaces instead of stacking duplicates).
+ * HookRegistry replaces instead of stacking duplicates). Takes the
+ * `ExtensionHost` slice (s-dna-extension-host-contract) — registration
+ * goes through `kernel.hooks.onVeto` for the `key` idempotency.
  */
-export function registerWriteGuards(kernel: {
-  hooks: {
-    onVeto(
-      hook: string,
-      fn: (ctx: PreSaveContext) => void | Promise<void>,
-      opts?: { priority?: number; key?: string },
-    ): void;
-  };
-}): void {
+export function registerWriteGuards(kernel: ExtensionHost): void {
   kernel.hooks.onVeto("pre_save", platformAgentForkGuard, {
     priority: PRIORITY_FORK_GUARD, key: "helix.platform-agent-fork-guard",
   });

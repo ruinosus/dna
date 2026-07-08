@@ -11,7 +11,7 @@ import yaml
 from dna.kernel.kind_base import KindBase
 from dna.kernel.models import TypedSoul
 from dna.kernel.preview import PreviewBlock
-from dna.kernel.protocols import StorageDescriptor
+from dna.kernel.protocols import ExtensionHost, StorageDescriptor, ReaderPort, WriterPort
 from dna.kernel.bundle_handle import BundleHandle
 
 from dna.extensions.helix import _schema_from_model
@@ -163,7 +163,7 @@ class SoulKind(KindBase):
         return blocks
 
 
-class SoulReader:
+class SoulReader(ReaderPort):
     """Detects and reads SOUL.md or soul.json bundles."""
 
     def detect(self, bundle: BundleHandle) -> bool:
@@ -211,7 +211,7 @@ class SoulReader:
         }
 
 
-class SoulWriter:
+class SoulWriter(WriterPort):
     """Writes a Soul raw dict back to a bundle directory."""
 
     def can_write(self, raw: dict) -> bool:
@@ -293,7 +293,7 @@ class SoulSpecExtension:
     name = "soulspec"
     version = "1.0.0"
 
-    def register(self, kernel: Any) -> None:
+    def register(self, kernel: ExtensionHost) -> None:
         kernel.kind(SoulKind())
         kernel.reader(SoulReader())
         kernel.writer(SoulWriter())

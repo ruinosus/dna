@@ -13,7 +13,7 @@ from __future__ import annotations
 from typing import Any
 
 from dna.kernel.descriptor_loader import load_descriptors
-from dna.kernel.protocols import StorageDescriptor
+from dna.kernel.protocols import ExtensionHost, StorageDescriptor
 from dna.kernel.kind_base import KindBase
 # should_capture is generic policy-evaluation logic that now lives in the
 # kernel (s-invert-evidence-capture-dep) so the microkernel's evidence-capture
@@ -95,7 +95,7 @@ class EvidenceExtension:
     name = "evidence"
     version = "1.0.0"
 
-    def register(self, kernel: Any) -> None:
+    def register(self, kernel: ExtensionHost) -> None:
         kernel.kind(EvidencePolicyKind())
         # F3 lote-3: builtin record Kinds as descriptors (Evidence) —
         # kinds/*.kind.yaml package data through the same funnel as

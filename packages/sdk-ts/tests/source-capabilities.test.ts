@@ -86,19 +86,21 @@ describe("sourceCapabilities accessor", () => {
 });
 
 describe("adapter expectations pinned", () => {
-  test("filesystem: in-memory query core + loadOne; no write surface", () => {
+  test("filesystem: in-memory query core + granular reads; no write surface", () => {
     const caps = fsSource().capabilities();
     expect(caps.queryPushdown).toBe(true);
     expect(caps.granularOne).toBe(true);
-    expect(caps.granularList).toBe(false); // TS FS has no listDocRefs yet
+    expect(caps.granularList).toBe(true); // listDocRefs (s-dna-port-surface-parity)
     expect(caps.drafts).toBe(false);
   });
 
-  test("postgres: write half + versions/bundle-read; query is Py-only", () => {
+  test("postgres: write half + versions/bundle-read + listDocRefs; query is Py-only", () => {
     const caps = pgSource().capabilities();
     expect(caps.queryPushdown).toBe(false); // F2: PG TS has no push-down
     expect(caps.versions).toBe(true);
     expect(caps.bundleRead).toBe(true);
     expect(caps.kernelAttachable).toBe(true);
+    expect(caps.granularList).toBe(true); // listDocRefs (s-dna-port-surface-parity)
+    expect(caps.granularOne).toBe(false); // loadOne stays Py-only this phase
   });
 });

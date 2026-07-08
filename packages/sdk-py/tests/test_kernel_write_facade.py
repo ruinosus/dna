@@ -14,6 +14,7 @@ from dna.kernel import (
     NotWritableError,
     PreviewResult,
 )
+from dna.kernel.protocols import WriterPort
 
 
 def test_not_writable_error_is_runtime_error():
@@ -52,12 +53,15 @@ def test_active_writers_is_empty_tuple_by_default():
 def test_active_writers_reflects_writer_setter():
     k = Kernel()
 
-    class StubWriter:
+    class StubWriter(WriterPort):
         def can_write(self, raw):
             return True
 
         def write(self, path, raw):
             pass
+
+        def serialize(self, raw):
+            return []
 
     w = StubWriter()
     k.writer(w)
@@ -69,12 +73,15 @@ def test_active_writers_is_a_tuple_not_the_internal_list():
     the kernel's internal writer list."""
     k = Kernel()
 
-    class StubWriter:
+    class StubWriter(WriterPort):
         def can_write(self, raw):
             return True
 
         def write(self, path, raw):
             pass
+
+        def serialize(self, raw):
+            return []
 
     k.writer(StubWriter())
     got = k.active_writers

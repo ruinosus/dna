@@ -16,7 +16,7 @@ import yaml
 from dna.kernel.models import TypedKindDefinition
 from dna.kernel.kind_base import KindBase
 from dna.kernel.preview import PreviewBlock
-from dna.kernel.protocols import StorageDescriptor
+from dna.kernel.protocols import ExtensionHost, StorageDescriptor, ReaderPort, WriterPort
 from dna.kernel.bundle_handle import BundleHandle
 
 from dna.extensions.helix import _schema_from_model
@@ -100,7 +100,7 @@ class KindDefinitionKind(KindBase):
         ]
 
 
-class KindDefinitionReader:
+class KindDefinitionReader(ReaderPort):
     """Bundle reader for ``kinds/<name>/KIND.yaml``.
 
     A tiny dedicated reader keeps KIND.yaml as *plain YAML* (not
@@ -124,7 +124,7 @@ class KindDefinitionReader:
         return doc
 
 
-class KindDefinitionWriter:
+class KindDefinitionWriter(WriterPort):
     """Writer for KindDefinition bundles — plain YAML, no frontmatter."""
 
     _kind = TypedKindDefinition.KIND
@@ -153,7 +153,7 @@ class KindDefinitionExtension:
     name = "kinddef"
     version = "1.0.0"
 
-    def register(self, kernel: Any) -> None:
+    def register(self, kernel: ExtensionHost) -> None:
         kernel.kind(KindDefinitionKind())
         kernel.reader(KindDefinitionReader())
         kernel.writer(KindDefinitionWriter())

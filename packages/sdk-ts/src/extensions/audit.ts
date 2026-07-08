@@ -17,7 +17,7 @@
  * UserRoleAssignment is TENANTED (the KindBase default) with no reader/writer
  * (plain YAML).
  */
-import type { Extension, KindPort } from "../kernel/protocols.js";
+import type { ExtensionHost, Extension } from "../kernel/protocols.js";
 import { KindBase } from "../kernel/kind_base.js";
 import { SD } from "../kernel/protocols.js";
 import { loadDescriptors } from "../kernel/descriptor-loader.js";
@@ -81,16 +81,12 @@ export class AuditExtension implements Extension {
   readonly name = "audit";
   readonly version = "1.0.0";
 
-  register(kernel: unknown): void {
-    const k = kernel as {
-      kind(kp: KindPort): void;
-      kindFromDescriptor(raw: Record<string, unknown>): KindPort;
-    };
-    k.kind(new UserRoleAssignmentKind());
+  register(kernel: ExtensionHost): void {
+    kernel.kind(new UserRoleAssignmentKind());
     // expr batch A: AuditLog as a descriptor — kinds/*.kind.yaml package data
     // registered through the SAME funnel as per-scope KindDefinitions.
     for (const raw of loadDescriptors(import.meta.url, "audit/kinds")) {
-      k.kindFromDescriptor(raw);
+      kernel.kindFromDescriptor(raw);
     }
   }
 }

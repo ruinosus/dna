@@ -132,11 +132,10 @@ class BundleIO:
 
         from dna.kernel.protocols import StoragePattern
 
-        writer = None
-        for w in k._writers:
-            if w.can_write(raw) and hasattr(w, "serialize"):
-                writer = w
-                break
+        # serialize() is part of the WriterPort contract (enforced at
+        # registration since s-dna-rw-roundtrip-suite) — no capability
+        # probing needed: the first writer that claims the kind serializes.
+        writer = next((w for w in k._writers if w.can_write(raw)), None)
 
         if writer:
             raw_files = writer.serialize(raw)
@@ -161,9 +160,15 @@ class BundleIO:
         else:
             prefix = ""
 
-        return {
-            "files": [
-                {"relativePath": f"{prefix}{f['relativePath']}", "content": f["content"]}
-                for f in raw_files
-            ]
-        }
+        # Preserve the entry payload key as-is: text entries carry
+        # ``content``, binary ones ``content_bytes`` (the WriterPort
+        # serialize contract — see writer_helpers.pop_source_files_as_entries).
+        files = []
+        for f in raw_files:
+            entry: dict = {"relativePath": f"{prefix}{f['relativePath']}"}
+            if "content_bytes" in f:
+                entry["content_bytes"] = f["content_bytes"]
+            else:
+                entry["content"] = f["content"]
+            files.append(entry)
+        return {"files": files}
