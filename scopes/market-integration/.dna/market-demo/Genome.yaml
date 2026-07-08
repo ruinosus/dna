@@ -1,0 +1,20 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: Genome
+metadata:
+  name: market-demo
+  description: Proves SDK can read real market content (Anthropic skills, SoulSpec
+    souls, agents.md)
+  labels:
+    domain: integration
+    tier: demo
+spec:
+  dependencies:
+  - source: github:anthropics/skills/skills@main
+    skills:
+    - frontend-design
+    - mcp-builder
+    - claude-api
+  - source: github:jbaruch/superpowers
+    skills:
+    - brainstorming
+    - writing-plans

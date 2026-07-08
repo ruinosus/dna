@@ -1,0 +1,35 @@
+id: 12-layerpolicy-disable-inheritance
+title: LayerPolicy disables inheritance for a normally-inheritable Kind
+notes: |
+  app's LayerPolicy declares Theme scope_inheritance=disabled. Theme/brand
+  exists only in _lib -> the resolver must NOT escalate: local-only layer
+  list, doc=null. Proves LayerPolicy.composition_rules wins over the
+  inherit-by-default denylist default.
+target:
+  scope: app
+  kind: Theme
+  name: brand
+  tenant: null
+tree:
+  scopes:
+    _lib:
+      - apiVersion: github.com/ruinosus/dna/v1
+        kind: Genome
+        metadata: {name: _lib}
+        spec: {}
+      - apiVersion: github.com/ruinosus/dna/test/v1
+        kind: Theme
+        metadata: {name: brand}
+        spec: {color: blue}
+    app:
+      - apiVersion: github.com/ruinosus/dna/v1
+        kind: Genome
+        metadata: {name: app}
+        spec: {}
+      - apiVersion: github.com/ruinosus/dna/policy/v1
+        kind: LayerPolicy
+        metadata: {name: composition}
+        spec:
+          composition_rules:
+            Theme:
+              scope_inheritance: disabled

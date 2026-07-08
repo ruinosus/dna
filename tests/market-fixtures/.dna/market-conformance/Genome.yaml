@@ -1,0 +1,10 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: Genome
+metadata:
+  name: market-conformance
+  description: F3 market-fidelity conformance fixtures — real market artifacts, no adaptation
+  labels:
+    domain: conformance
+    tier: test
+spec:
+  default_agent: conductor

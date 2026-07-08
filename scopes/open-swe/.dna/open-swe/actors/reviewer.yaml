@@ -1,0 +1,8 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: Actor
+metadata:
+  name: reviewer
+  description: "Code review specialist persona — focuses on quality gates and feedback"
+spec:
+  focus: review
+  style: constructive

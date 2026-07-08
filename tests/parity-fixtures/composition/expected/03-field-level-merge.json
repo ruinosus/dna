@@ -1,0 +1,52 @@
+{
+  "chain": [
+    [
+      "app",
+      null
+    ],
+    [
+      "_lib",
+      null
+    ]
+  ],
+  "resolved": {
+    "contributions_by_field": {
+      "spec.model": "app",
+      "spec.persona": "_lib"
+    },
+    "doc": {
+      "apiVersion": "github.com/ruinosus/dna/test/v1",
+      "kind": "Agent",
+      "metadata": {
+        "name": "jarvis"
+      },
+      "spec": {
+        "model": "gpt-5.4",
+        "persona": "jarvis-style"
+      }
+    },
+    "is_inherited": false,
+    "provenance": {
+      "effective_layer": {
+        "scope": "app",
+        "tenant": null
+      },
+      "steps": [
+        {
+          "contributed": true,
+          "found": true,
+          "scope": "app",
+          "tenant": null,
+          "version_sha": null
+        },
+        {
+          "contributed": true,
+          "found": true,
+          "scope": "_lib",
+          "tenant": null,
+          "version_sha": null
+        }
+      ]
+    }
+  }
+}

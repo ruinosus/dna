@@ -1,0 +1,148 @@
+# AuditLog — immutable record of a role-gated HTTP endpoint invocation
+# (record plane, runtime artifact; written by emit_audit() from gated handlers).
+#
+# expr batch A (plan 2026-06-11-descriptor-expressiveness, Chunk 3): the
+# twin AuditLogKind classes (Py+TS) were DELETED — this descriptor is the
+# single source. First builtin Kind to carry the new D2 `ui:` descriptor
+# field (StudioUIMetadata reconstructed by DeclarativeKindPort and served
+# by kinds-api's /kinds/manifest verbatim — the class's `ui` block).
+# PARITY-CRITICAL package data: the byte-identical mirror lives at
+# packages/sdk-{py,ts}/{dna/extensions,src/extensions}/audit/kinds/
+# audit-log.kind.yaml (tests/test_descriptor_hash_parity.py enforces).
+# Equivalence with the extinct class frozen in
+# tests/test_expr_batch_a_equivalence.py.
+#
+# tenant_scope: tenanted is DECLARED — the class set scope=TenantScope.TENANTED
+# explicitly (each tenant sees only their own audit trail; platform admins
+# query cross-tenant). This is NOT the permissive-undeclared case.
+apiVersion: github.com/ruinosus/dna/core/v1
+kind: KindDefinition
+metadata:
+  name: audit-log
+spec:
+  target_api_version: github.com/ruinosus/dna/audit/v1
+  target_kind: AuditLog
+  alias: audit-auditlog
+  origin: github.com/ruinosus/dna/audit
+  tenant_scope: tenanted
+  plane: record
+  prompt_target: false
+  flatten_in_context: false
+  prompt_target_priority: 0
+  is_runtime_artifact: true
+  storage:
+    type: yaml
+    container: audit-log
+  schema:
+    type: object
+    required:
+    - actor
+    - roles
+    - operation
+    - outcome
+    - captured_at
+    additionalProperties: true
+    properties:
+      actor:
+        type: string
+        description: Identity that made the request. From claims.email > claims.sub.
+          'dev-user' in dev-bypass, 'test-user' in test-header mode.
+      roles:
+        type: array
+        items:
+          type: string
+        description: Roles claimed at request time (from JWT or DNA_DEV_ROLES). Snapshot
+          — does NOT reflect later role revocations.
+      operation:
+        type: string
+        description: HTTP method + path template, e.g. 'PUT /scopes/{scope}/docs/Agent/{name}'
+          or 'POST /assessments/{name}/run'.
+      target_kind:
+        type: string
+        description: Kind of doc affected (when applicable). Null for non-doc ops like
+          POST /sync/replicate.
+      target_name:
+        type: string
+        description: Name of doc affected, when applicable.
+      target_scope:
+        type: string
+        description: Scope of doc affected, when applicable.
+      target_tenant:
+        type:
+        - string
+        - 'null'
+        description: Tenant the operation routed to (claims.tenant + overrides resolved).
+          Null = base layer write.
+      outcome:
+        type: string
+        enum:
+        - success
+        - denied
+        - error
+        description: 'success = decorator + handler ran clean. denied = 403 from require_role.
+          error = handler raised (500/422/...).'
+      captured_at:
+        type: string
+        format: date-time
+        description: UTC ISO-8601 timestamp.
+      request_id:
+        type: string
+        description: Correlation ID (UUIDv4) — joins logs.
+      remote_ip:
+        type: string
+        description: Best-effort client IP (X-Forwarded-For aware).
+      user_agent:
+        type: string
+        description: HTTP User-Agent header.
+      detail:
+        type: object
+        description: 'Free-form context: which required roles failed, body size, durations,
+          errors. Defensive about PII — don''t include request bodies verbatim.'
+  # Curated list-endpoint projection. The extinct Py class declared NO
+  # summary() (KindBase whole-spec echo); the TS class returned null. Both
+  # are replaced by this curated projection (intentional delta — precedent
+  # VoiceEpisode/SynthesizerState in F3 lote-3). The manifest does NOT carry
+  # summary, so this choice is manifest-neutral.
+  summary:
+    actor: ''
+    operation: ''
+    outcome: ''
+    target_kind: ''
+    captured_at: ''
+  # P2L2 — AuditLog is Govern-mode (compliance + tenant-admin only). Sidebar
+  # entry visible to those roles. Read-only — no create/edit exposed in UI
+  # (writes happen via emit_audit() from gated handlers).
+  ui:
+    mode: govern
+    label:
+      en: Audit Log
+      pt-BR: Trilha de Auditoria
+    icon: 🔒
+    description:
+      en: Forensic trail of every role-gated mutation.
+      pt-BR: Trilha forense de toda mutação com role.
+    breadcrumb:
+    - Govern
+    - Audit Log
+    routes:
+      list: docs/AuditLog
+      detail: docs/AuditLog/:name
+    permissions:
+      list:
+      - compliance
+      - tenant-admin
+      detail:
+      - compliance
+      - tenant-admin
+    in_sidebar: true
+    display_order: 40
+  graph_style:
+    fill: '#475569'
+    stroke: '#334155'
+    text_color: '#fff'
+  ascii_icon: 🔍
+  display_label: Audit Log
+  docs: Immutable record of a role-gated HTTP endpoint invocation. Captures actor,
+    roles claimed, operation, target Kind/name, scope/tenant, request_id, outcome,
+    and timestamp. Used by compliance auditors + admins to answer 'who did what when'
+    without parsing application logs.

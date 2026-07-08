@@ -1,0 +1,40 @@
+id: 04-tenant-overlay
+title: Tenant overlay wins over base (default rule, override_full)
+notes: |
+  Theme/brand has a base doc in app AND an acme overlay under
+  tenants/acme/scopes/app/. Resolving with tenant=acme -> the (app, acme)
+  layer wins wholesale. ALSO pins the filesystem-source tenant fallback:
+  the (_lib, acme) layer, having no overlay, falls back to the _lib BASE
+  doc (found=true) — Python FS `load_one` semantics, frozen here.
+target:
+  scope: app
+  kind: Theme
+  name: brand
+  tenant: acme
+tree:
+  scopes:
+    _lib:
+      - apiVersion: github.com/ruinosus/dna/v1
+        kind: Genome
+        metadata: {name: _lib}
+        spec: {}
+      - apiVersion: github.com/ruinosus/dna/test/v1
+        kind: Theme
+        metadata: {name: brand}
+        spec: {color: gray}
+    app:
+      - apiVersion: github.com/ruinosus/dna/v1
+        kind: Genome
+        metadata: {name: app}
+        spec: {}
+      - apiVersion: github.com/ruinosus/dna/test/v1
+        kind: Theme
+        metadata: {name: brand}
+        spec: {color: red}
+  tenants:
+    acme:
+      app:
+        - apiVersion: github.com/ruinosus/dna/test/v1
+          kind: Theme
+          metadata: {name: brand}
+          spec: {color: acme-purple}

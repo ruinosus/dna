@@ -1,0 +1,41 @@
+{
+  "chain": [
+    [
+      "app",
+      null
+    ],
+    [
+      "_lib",
+      null
+    ]
+  ],
+  "resolved": {
+    "contributions_by_field": {},
+    "doc": {
+      "apiVersion": "github.com/ruinosus/dna/v1",
+      "kind": "Genome",
+      "metadata": {
+        "name": "app"
+      },
+      "spec": {
+        "description": "the app scope"
+      }
+    },
+    "is_inherited": false,
+    "provenance": {
+      "effective_layer": {
+        "scope": "app",
+        "tenant": null
+      },
+      "steps": [
+        {
+          "contributed": true,
+          "found": true,
+          "scope": "app",
+          "tenant": null,
+          "version_sha": null
+        }
+      ]
+    }
+  }
+}

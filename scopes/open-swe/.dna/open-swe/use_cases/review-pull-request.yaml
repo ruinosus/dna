@@ -1,0 +1,30 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: UseCase
+metadata:
+  name: review-pull-request
+  description: Review a pull request end-to-end with actionable feedback.
+spec:
+  primary_actor: reviewer
+  supporting_actors:
+    - developer
+  agents:
+    - reviewer-agent
+  preconditions:
+    - A pull request exists and has a green CI pipeline.
+    - The PR branch is up to date with the base branch.
+  main_flow:
+    - Reviewer asks the agent to review PR #<n>.
+    - Agent fetches the PR diff via the github-search tool (resolves files changed).
+    - Agent groups changes by file/module and identifies touch points.
+    - Agent evaluates each change against the project's code-quality and review-ethics guardrails.
+    - Agent drafts a review with blocking issues, optional suggestions, and praise for good work.
+    - Reviewer edits the draft and posts the review.
+  alternate_flows:
+    - name: failing-ci
+      steps:
+        - If CI is red, agent refuses to review until the author fixes it.
+  postconditions:
+    - PR has a substantive review comment with clear blocking vs optional feedback.
+  success_criteria:
+    - Every blocking comment references a specific line.
+    - Review respects the review-ethics guardrail (no personal remarks).

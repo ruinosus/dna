@@ -1,0 +1,49 @@
+{
+  "chain": [
+    [
+      "app",
+      null
+    ],
+    [
+      "_lib",
+      null
+    ]
+  ],
+  "resolved": {
+    "contributions_by_field": {},
+    "doc": {
+      "apiVersion": "github.com/ruinosus/dna/test/v1",
+      "kind": "Theme",
+      "metadata": {
+        "name": "brand"
+      },
+      "spec": {
+        "color": "blue",
+        "radius": 4
+      }
+    },
+    "is_inherited": true,
+    "provenance": {
+      "effective_layer": {
+        "scope": "_lib",
+        "tenant": null
+      },
+      "steps": [
+        {
+          "contributed": false,
+          "found": false,
+          "scope": "app",
+          "tenant": null,
+          "version_sha": null
+        },
+        {
+          "contributed": true,
+          "found": true,
+          "scope": "_lib",
+          "tenant": null,
+          "version_sha": null
+        }
+      ]
+    }
+  }
+}

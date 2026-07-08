@@ -1,0 +1,14 @@
+{
+  "specVersion": "0.4",
+  "name": "swe-soul",
+  "displayName": "Software Engineering Soul",
+  "description": "Values and principles of an autonomous software engineering team",
+  "version": "1.0.0",
+  "tags": ["engineering", "sdlc", "automation"],
+  "compatibility": {
+    "frameworks": ["claude-code", "cursor"]
+  },
+  "files": {
+    "soul": "SOUL.md"
+  }
+}

@@ -1,0 +1,507 @@
+"""TenantExtension — first-class lifecycle for DNA tenants.
+
+Story `s-tenant-lifecycle-phase-a-kind-crud` (2026-05-25).
+
+Pre-existing state of tenants in the codebase was half-baked:
+  * dna_documents.tenant column persists per-doc tenant binding.
+  * /tenants GET listed observed tenants from that column.
+  * TenantSwitcher in Studio let users pick between allowed tenants.
+
+But there was NO identity for the tenant itself — no Tenant kind, no
+ownership, no provisioning flow, no audit trail of creation/suspension.
+Today's session surfaced concrete consequences:
+  * dev-tenant vs acme split caused 700+ docs to be invisible.
+  * Stale __base__ + globex rows lingered in PG for weeks.
+  * No way to ask "who owns tenant X? when was it created?"
+
+This extension closes the gap by introducing the Tenant Kind, stored
+GLOBAL (tenant column empty) in the special _lib scope. All
+lifecycle operations flow through standard kernel CRUD — list/get/create
+/update/delete inherit auditing, observers, EventBus invalidation.
+
+Phase A scope (this commit): just the Kind + reader/writer + register.
+Routes (POST /tenants helpers, member management) land in Phase B.
+"""
+from __future__ import annotations
+
+import re
+from typing import Any
+
+import yaml
+
+from dna.kernel.kind_base import KindBase
+from dna.kernel.protocols import StorageDescriptor, SYSTEM_SCOPE, TenantScope
+from dna.kernel.bundle_handle import BundleHandle
+
+
+_API_VERSION = "github.com/ruinosus/dna/tenant/v1"
+_ORIGIN = "github.com/ruinosus/dna/tenant"
+
+# The scope where Tenant docs live — the runtime system scope (model
+# registry, voice policy, tenant identity). Special underscore-prefix
+# convention (same as _audit, _legacy). Doesn't need provisioning —
+# kernel auto-creates on first write. Tracks the canonical SYSTEM_SCOPE
+# (the shared library scope, renamed _platform→_lib in f-platform-rename-lib).
+PLATFORM_SCOPE = SYSTEM_SCOPE
+
+# Per the Phase-1 tenant-first-class spec, slug must match the same
+# rules as runtime tenant claims: lowercase, 1-253 chars, no reserved
+# strings.
+_SLUG_RE = re.compile(r"^[a-z0-9-]{1,253}$")
+_RESERVED_SLUGS = frozenset({"_global", "_legacy", "_system", SYSTEM_SCOPE, ""})
+
+
+def _parse_frontmatter(text: str) -> tuple[dict[str, Any], str]:
+    match = re.match(r"^---\n(.*?)---\n?(.*)$", text, re.DOTALL)
+    if not match:
+        return {}, text
+    try:
+        parsed = yaml.safe_load(match.group(1)) or {}
+        if isinstance(parsed, dict):
+            return parsed, match.group(2).lstrip("\n")
+    except Exception:  # noqa: BLE001
+        pass
+    return {}, text
+
+
+class TenantKind(KindBase):
+    api_version = _API_VERSION
+    scope = TenantScope.GLOBAL  # The Tenant kind is itself global — no tenant overlay.
+    kind = "Tenant"
+    alias = "tenant-tenant"  # s-kind-alias-convention-fix: <owner>-<kind>, no bare names
+    model = dict
+    origin = _ORIGIN
+    storage = StorageDescriptor.bundle("tenants", "TENANT.md")
+    graph_style = {"fill": "#0EA5E9", "stroke": "#0369A1", "text_color": "#fff"}
+    ascii_icon = "🏢"
+    display_label = "Tenants"
+    is_prompt_target = False
+    flatten_in_context = False
+    docs = (
+        "A Tenant is the identity of an organization/team/individual that "
+        "owns scopes and the documents within them. Stored as bundle "
+        "(TENANT.md frontmatter = spec) under the special `_lib` scope. "
+        "Slug rules match the runtime tenant claim format ([a-z0-9-]{1,253}). "
+        "Created by platform admins via POST /tenants. Suspended via PATCH; "
+        "soft-deleted via DELETE (status=deleted, 30d grace period before "
+        "physical purge by background cron). Member management lives in "
+        "Phase B (separate TenantMembership kind)."
+    )
+
+    def schema(self) -> dict[str, Any] | None:
+        return {
+            "type": "object",
+            "required": ["slug", "display_name", "owner_email", "status"],
+            "additionalProperties": True,
+            "properties": {
+                "slug": {
+                    "type": "string",
+                    "pattern": r"^[a-z0-9-]{1,253}$",
+                    "description": (
+                        "Tenant identity. Used as the value of "
+                        "dna_documents.tenant for every doc owned by this "
+                        "tenant. Must match the runtime tenant claim format."
+                    ),
+                },
+                "display_name": {
+                    "type": "string",
+                    "minLength": 1, "maxLength": 200,
+                    "description": "Human-readable name shown in Studio.",
+                },
+                "owner_email": {
+                    "type": "string", "format": "email",
+                    "description": (
+                        "Email of the human that provisioned this tenant. "
+                        "First member of the tenant by default."
+                    ),
+                },
+                "status": {
+                    "type": "string",
+                    "enum": ["active", "suspended", "deleted"],
+                    "default": "active",
+                    "description": (
+                        "Lifecycle state. `deleted` is soft — docs stay in "
+                        "PG until the purge cron runs (~30d later)."
+                    ),
+                },
+                "plan": {
+                    "type": "string",
+                    "enum": ["free", "pro", "enterprise"],
+                    "default": "free",
+                    "description": "Billing/feature tier.",
+                },
+                "created_at": {
+                    "type": "string", "format": "date-time",
+                    "description": "ISO timestamp when the Tenant was provisioned.",
+                },
+                "suspended_at": {"type": "string", "format": "date-time"},
+                "deleted_at": {
+                    "type": "string", "format": "date-time",
+                    "description": "Set on soft-delete. Cron purges ~30d later.",
+                },
+                "member_count_cached": {
+                    "type": "integer", "minimum": 0, "default": 0,
+                    "description": (
+                        "Denormalized count. Refreshed by membership "
+                        "mutations (Phase B). Eventually-consistent."
+                    ),
+                },
+                "metadata": {
+                    "type": "object", "additionalProperties": True,
+                    "description": (
+                        "Free-form metadata (region, lgpd_consent, "
+                        "billing_account_id, etc). Forward-compatible."
+                    ),
+                },
+            },
+        }
+
+    def describe(self, doc: Any) -> str | None:
+        spec = getattr(doc, "spec", None) or {}
+        if not isinstance(spec, dict):
+            spec = dict(spec) if spec else {}
+        name = spec.get("display_name") or spec.get("slug", "?")
+        status = spec.get("status", "?")
+        plan = spec.get("plan", "?")
+        return f"{name} [{status} · {plan}]"
+
+    def summary(self, doc: Any) -> dict[str, Any] | None:
+        spec = getattr(doc, "spec", None) or {}
+        if not isinstance(spec, dict):
+            spec = dict(spec) if spec else {}
+        return {
+            "slug": spec.get("slug", ""),
+            "display_name": spec.get("display_name", ""),
+            "status": spec.get("status", "active"),
+            "plan": spec.get("plan", "free"),
+            "member_count": spec.get("member_count_cached", 0),
+        }
+
+
+class TenantReader:
+    """Detects + parses TENANT.md bundles under _lib/tenants/<slug>/."""
+
+    def detect(self, bundle: BundleHandle) -> bool:
+        if not bundle.exists("TENANT.md"):
+            return False
+        try:
+            fm, _ = _parse_frontmatter(bundle.read_text("TENANT.md"))
+        except Exception:  # noqa: BLE001
+            return False
+        return isinstance(fm, dict) and fm.get("apiVersion") == _API_VERSION
+
+    def read(self, bundle: BundleHandle) -> dict[str, Any]:
+        text = bundle.read_text("TENANT.md")
+        fm, _body = _parse_frontmatter(text)
+        if isinstance(fm, dict) and "spec" in fm:
+            metadata = fm.get("metadata") or {}
+            metadata.setdefault("name", bundle.name)
+            return {
+                "apiVersion": fm.get("apiVersion", _API_VERSION),
+                "kind": fm.get("kind", "Tenant"),
+                "metadata": metadata,
+                "spec": fm.get("spec") or {},
+            }
+        # Flat frontmatter fallback — every field at the root.
+        name = fm.pop("name", bundle.name)
+        return {
+            "apiVersion": _API_VERSION,
+            "kind": "Tenant",
+            "metadata": {"name": name},
+            "spec": fm,
+        }
+
+
+class TenantWriter:
+    """Serialize a Tenant raw dict to a TENANT.md bundle."""
+
+    def can_write(self, raw: dict) -> bool:
+        return raw.get("kind") == "Tenant"
+
+    def serialize(self, raw: dict) -> list[dict]:
+        spec = raw.get("spec", {}) or {}
+        if not isinstance(spec, dict):
+            spec = dict(spec) if spec else {}
+        # L3 (s-writer-binary-entries) — let optional source_files
+        # ride along. Unlikely needed for Tenant but kept for symmetry.
+        from dna.kernel.writer_helpers import pop_source_files_as_entries
+        extra_entries = pop_source_files_as_entries(spec, "Tenant")
+        meta = dict(raw.get("metadata", {}) or {})
+        clean_spec = {k: v for k, v in spec.items() if v is not None and v != "" and v != [] and v != {}}
+        clean_meta = {k: v for k, v in meta.items() if v is not None}
+        envelope = {
+            "apiVersion": raw.get("apiVersion", _API_VERSION),
+            "kind": raw.get("kind", "Tenant"),
+            "metadata": clean_meta,
+            "spec": clean_spec,
+        }
+        fm_yaml = yaml.safe_dump(
+            envelope, default_flow_style=False, sort_keys=False,
+            allow_unicode=True, width=100,
+        ).rstrip("\n")
+        slug = clean_spec.get("slug", "?")
+        display = clean_spec.get("display_name", "?")
+        status = clean_spec.get("status", "active")
+        plan = clean_spec.get("plan", "free")
+        body = (
+            f"# Tenant — {display} (`{slug}`)\n\n"
+            f"**Status:** {status} · **Plan:** {plan}\n\n"
+            f"Owner: `{clean_spec.get('owner_email', '?')}` · "
+            f"Created: `{clean_spec.get('created_at', '?')}`\n\n"
+            f"All DNA documents that carry `dna_documents.tenant = {slug!r}` "
+            f"belong to this Tenant. Lifecycle managed by platform admins via "
+            f"`POST /tenants`, `PATCH /tenants/{{slug}}`, `DELETE /tenants/{{slug}}`."
+        )
+        return [
+            {"relativePath": "TENANT.md", "content": f"---\n{fm_yaml}\n---\n\n{body}"},
+            *extra_entries,
+        ]
+
+    def write(self, bundle: BundleHandle, raw: dict) -> None:
+        from dna.kernel.writer_helpers import write_entries_to_handle
+        write_entries_to_handle(bundle, self.serialize(raw))
+
+
+class TenantMembershipKind(KindBase):
+    """Membership link between a Tenant and a user.
+
+    Composite identity: name = "{tenant_slug}-{user_id_hash}". Stored
+    in _lib under container `tenant-memberships`. Phase B (Story
+    s-tenant-lifecycle-phase-b-routes-membership).
+
+    Why a separate Kind (not embedded in Tenant.spec.members[]):
+      - Members grow unbounded; embedding bloats every Tenant write.
+      - Membership writes (invite/remove) shouldn't trigger Tenant
+        cache invalidation across the platform.
+      - Future: per-member audit (joined_at, last_active, role
+        history) lives naturally as a doc.
+    """
+    api_version = _API_VERSION
+    scope = TenantScope.GLOBAL
+    kind = "TenantMembership"
+    alias = "tenant-membership"
+    model = dict
+    origin = _ORIGIN
+    storage = StorageDescriptor.bundle("tenant-memberships", "MEMBERSHIP.md")
+    graph_style = {"fill": "#8B5CF6", "stroke": "#5B21B6", "text_color": "#fff"}
+    ascii_icon = "👥"
+    display_label = "Tenant Memberships"
+    is_prompt_target = False
+    flatten_in_context = False
+    docs = (
+        "Links a user to a Tenant with a role. One row per (tenant, user) "
+        "pair. Created when an admin invites a member via POST "
+        "/tenants/{slug}/members. Deleted by DELETE on same path. Tenant."
+        "spec.member_count_cached is updated by the route handler on each "
+        "mutation (eventually-consistent)."
+    )
+
+    def schema(self) -> dict[str, Any] | None:
+        return {
+            "type": "object",
+            "required": ["tenant_slug", "user_email", "role", "joined_at"],
+            "additionalProperties": True,
+            "properties": {
+                "tenant_slug": {
+                    "type": "string",
+                    "pattern": r"^[a-z0-9-]{1,253}$",
+                    "description": "Slug of the Tenant this user belongs to.",
+                },
+                "user_email": {
+                    "type": "string", "format": "email",
+                    "description": "Email identity of the user.",
+                },
+                "user_id": {
+                    "type": "string",
+                    "description": (
+                        "Stable user identifier from the IdP (Clerk sub, "
+                        "OIDC sub, etc). May be absent for invites pending "
+                        "first login — in that case user_email is the key."
+                    ),
+                },
+                "role": {
+                    "type": "string",
+                    "enum": ["owner", "admin", "member", "viewer"],
+                    "default": "member",
+                    "description": (
+                        "Per-tenant role. `owner` is the user who provisioned "
+                        "the tenant (set by POST /tenants). `admin` can "
+                        "manage members + tenant settings. `member` can "
+                        "read/write scope docs. `viewer` is read-only."
+                    ),
+                },
+                "joined_at": {
+                    "type": "string", "format": "date-time",
+                    "description": "ISO timestamp when the membership was created.",
+                },
+                "invited_by": {
+                    "type": "string", "format": "email",
+                    "description": "Email of the admin who invited this member.",
+                },
+                "status": {
+                    "type": "string",
+                    "enum": ["active", "pending", "revoked"],
+                    "default": "active",
+                    "description": (
+                        "`pending` for invites awaiting first login; "
+                        "`active` after first login (route handler "
+                        "transitions); `revoked` after admin removes."
+                    ),
+                },
+                # L3 (s-studio-nav-L3-role-driven-views, 2026-05-25)
+                "view_preset": {
+                    "type": "string",
+                    "description": (
+                        "Optional override of Studio's auto-detected "
+                        "view. When set, the UI renders the curated "
+                        "menu/mode-tab subset matching this preset "
+                        "instead of deriving from the user's roles. "
+                        "Lets a power-user temporarily 'see as' a "
+                        "consumer/educator. Auto-detect from roles is "
+                        "the default when this is null. Values follow "
+                        "the same vocabulary as Role (consumer, "
+                        "maker, qa, po, pm, architect, tech-lead, "
+                        "compliance, power-user, tenant-admin, "
+                        "tenant-owner, platform-admin) — pick the "
+                        "single most-relevant intent."
+                    ),
+                },
+            },
+        }
+
+    def describe(self, doc: Any) -> str | None:
+        spec = getattr(doc, "spec", None) or {}
+        if not isinstance(spec, dict):
+            spec = dict(spec) if spec else {}
+        return f"{spec.get('user_email', '?')} @ {spec.get('tenant_slug', '?')} [{spec.get('role', '?')}]"
+
+    def summary(self, doc: Any) -> dict[str, Any] | None:
+        spec = getattr(doc, "spec", None) or {}
+        if not isinstance(spec, dict):
+            spec = dict(spec) if spec else {}
+        return {
+            "tenant_slug": spec.get("tenant_slug", ""),
+            "user_email": spec.get("user_email", ""),
+            "role": spec.get("role", "member"),
+            "status": spec.get("status", "active"),
+        }
+
+
+class TenantMembershipReader:
+    def detect(self, bundle: BundleHandle) -> bool:
+        if not bundle.exists("MEMBERSHIP.md"):
+            return False
+        try:
+            fm, _ = _parse_frontmatter(bundle.read_text("MEMBERSHIP.md"))
+        except Exception:  # noqa: BLE001
+            return False
+        return (
+            isinstance(fm, dict)
+            and fm.get("apiVersion") == _API_VERSION
+            and fm.get("kind") == "TenantMembership"
+        )
+
+    def read(self, bundle: BundleHandle) -> dict[str, Any]:
+        text = bundle.read_text("MEMBERSHIP.md")
+        fm, _body = _parse_frontmatter(text)
+        if isinstance(fm, dict) and "spec" in fm:
+            metadata = fm.get("metadata") or {}
+            metadata.setdefault("name", bundle.name)
+            return {
+                "apiVersion": fm.get("apiVersion", _API_VERSION),
+                "kind": fm.get("kind", "TenantMembership"),
+                "metadata": metadata,
+                "spec": fm.get("spec") or {},
+            }
+        name = fm.pop("name", bundle.name)
+        return {
+            "apiVersion": _API_VERSION,
+            "kind": "TenantMembership",
+            "metadata": {"name": name},
+            "spec": fm,
+        }
+
+
+class TenantMembershipWriter:
+    def can_write(self, raw: dict) -> bool:
+        return raw.get("kind") == "TenantMembership"
+
+    def serialize(self, raw: dict) -> list[dict]:
+        spec = raw.get("spec", {}) or {}
+        if not isinstance(spec, dict):
+            spec = dict(spec) if spec else {}
+        from dna.kernel.writer_helpers import pop_source_files_as_entries
+        extra_entries = pop_source_files_as_entries(spec, "TenantMembership")
+        meta = dict(raw.get("metadata", {}) or {})
+        clean_spec = {k: v for k, v in spec.items() if v is not None and v != "" and v != [] and v != {}}
+        clean_meta = {k: v for k, v in meta.items() if v is not None}
+        envelope = {
+            "apiVersion": raw.get("apiVersion", _API_VERSION),
+            "kind": raw.get("kind", "TenantMembership"),
+            "metadata": clean_meta,
+            "spec": clean_spec,
+        }
+        fm_yaml = yaml.safe_dump(
+            envelope, default_flow_style=False, sort_keys=False,
+            allow_unicode=True, width=100,
+        ).rstrip("\n")
+        user_email = clean_spec.get("user_email", "?")
+        tenant_slug = clean_spec.get("tenant_slug", "?")
+        role = clean_spec.get("role", "member")
+        body = (
+            f"# Membership — `{user_email}` @ `{tenant_slug}`\n\n"
+            f"**Role:** {role} · **Status:** {clean_spec.get('status', 'active')}\n\n"
+            f"Joined: `{clean_spec.get('joined_at', '?')}` · "
+            f"Invited by: `{clean_spec.get('invited_by', '(self-provisioned)')}`"
+        )
+        return [
+            {"relativePath": "MEMBERSHIP.md", "content": f"---\n{fm_yaml}\n---\n\n{body}"},
+            *extra_entries,
+        ]
+
+    def write(self, bundle: BundleHandle, raw: dict) -> None:
+        from dna.kernel.writer_helpers import write_entries_to_handle
+        write_entries_to_handle(bundle, self.serialize(raw))
+
+
+def make_membership_name(tenant_slug: str, user_email: str) -> str:
+    """Stable composite name for a (tenant, user) pair.
+
+    Format: `{slug}--{email-slugified}`. Double-hyphen separator avoids
+    collision with email-local-part hyphens. Email is lowercased +
+    @-and-dot replaced. Deterministic so a re-invite of the same user
+    updates the same doc.
+    """
+    email_part = user_email.strip().lower().replace("@", "-at-").replace(".", "-")
+    email_part = re.sub(r"[^a-z0-9-]", "-", email_part).strip("-")
+    return f"{tenant_slug}--{email_part}"
+
+
+class TenantExtension:
+    name = "tenant"
+    version = "1.0.0"
+
+    def register(self, kernel: Any) -> None:
+        kernel.kind(TenantKind())
+        kernel.reader(TenantReader())
+        kernel.writer(TenantWriter())
+        kernel.kind(TenantMembershipKind())
+        kernel.reader(TenantMembershipReader())
+        kernel.writer(TenantMembershipWriter())
+
+
+def validate_slug(slug: str) -> None:
+    """Slug pre-flight. Raises ValueError on bad input.
+
+    Callers (POST /tenants handler, backfill scripts, CLI) use this
+    BEFORE writing through the kernel so they get a structured error
+    instead of a generic schema-validation 422.
+    """
+    if slug in _RESERVED_SLUGS:
+        raise ValueError(
+            f"slug {slug!r} is reserved (one of {sorted(_RESERVED_SLUGS)})"
+        )
+    if not _SLUG_RE.match(slug):
+        raise ValueError(
+            f"slug {slug!r} must match [a-z0-9-]{{1,253}}"
+        )

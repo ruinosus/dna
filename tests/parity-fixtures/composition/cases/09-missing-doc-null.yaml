@@ -1,0 +1,23 @@
+id: 09-missing-doc-null
+title: Doc absent in EVERY layer — null doc, full miss provenance
+notes: |
+  Theme/ghost exists nowhere. Expected pins doc=null, is_inherited=false,
+  effective_layer=null and every chain step found=false/contributed=false
+  (the layers consulted are still recorded).
+target:
+  scope: app
+  kind: Theme
+  name: ghost
+  tenant: null
+tree:
+  scopes:
+    _lib:
+      - apiVersion: github.com/ruinosus/dna/v1
+        kind: Genome
+        metadata: {name: _lib}
+        spec: {}
+    app:
+      - apiVersion: github.com/ruinosus/dna/v1
+        kind: Genome
+        metadata: {name: app}
+        spec: {}

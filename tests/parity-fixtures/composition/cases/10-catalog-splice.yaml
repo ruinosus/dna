@@ -1,0 +1,42 @@
+id: 10-catalog-splice
+title: Catalog tier splice — Local > Catalog > Base (mandatory package)
+notes: |
+  pkg-extra is a mandatory platform package (spec.mandatory=true, no
+  owner_tenant) -> it joins the Catalog scope set for every tenant
+  (including tenant=null) and is spliced between the local scope and the
+  first parent. Theme/catalog-thing exists in pkg-extra AND _lib but not
+  in app -> the Catalog layer wins over Base.
+skip_ts: >-
+  TS kernel has no catalog machinery yet (Genome scan + tenant lockfile —
+  tracked as i-185); Kernel._catalogScopes returns [] so the Catalog tier
+  contributes no layers on TS. Py-only until i-185 lands.
+target:
+  scope: app
+  kind: Theme
+  name: catalog-thing
+  tenant: null
+tree:
+  scopes:
+    _lib:
+      - apiVersion: github.com/ruinosus/dna/v1
+        kind: Genome
+        metadata: {name: _lib}
+        spec: {}
+      - apiVersion: github.com/ruinosus/dna/test/v1
+        kind: Theme
+        metadata: {name: catalog-thing}
+        spec: {color: from-base}
+    app:
+      - apiVersion: github.com/ruinosus/dna/v1
+        kind: Genome
+        metadata: {name: app}
+        spec: {}
+    pkg-extra:
+      - apiVersion: github.com/ruinosus/dna/v1
+        kind: Genome
+        metadata: {name: pkg-extra}
+        spec: {mandatory: true}
+      - apiVersion: github.com/ruinosus/dna/test/v1
+        kind: Theme
+        metadata: {name: catalog-thing}
+        spec: {color: from-catalog}

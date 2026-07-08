@@ -1,0 +1,70 @@
+{
+  "chain": [
+    [
+      "app",
+      "acme"
+    ],
+    [
+      "app",
+      null
+    ],
+    [
+      "_lib",
+      "acme"
+    ],
+    [
+      "_lib",
+      null
+    ]
+  ],
+  "resolved": {
+    "contributions_by_field": {},
+    "doc": {
+      "apiVersion": "github.com/ruinosus/dna/test/v1",
+      "kind": "Theme",
+      "metadata": {
+        "name": "brand"
+      },
+      "spec": {
+        "color": "acme-purple"
+      }
+    },
+    "is_inherited": false,
+    "provenance": {
+      "effective_layer": {
+        "scope": "app",
+        "tenant": "acme"
+      },
+      "steps": [
+        {
+          "contributed": true,
+          "found": true,
+          "scope": "app",
+          "tenant": "acme",
+          "version_sha": null
+        },
+        {
+          "contributed": false,
+          "found": true,
+          "scope": "app",
+          "tenant": null,
+          "version_sha": null
+        },
+        {
+          "contributed": false,
+          "found": true,
+          "scope": "_lib",
+          "tenant": "acme",
+          "version_sha": null
+        },
+        {
+          "contributed": false,
+          "found": true,
+          "scope": "_lib",
+          "tenant": null,
+          "version_sha": null
+        }
+      ]
+    }
+  }
+}
