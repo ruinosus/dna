@@ -15,10 +15,24 @@ spec:
     \ it constructs PostgresWritableSource(None)."
   type: bug
   severity: medium
-  status: open
+  status: resolved
   timeline:
   - at: '2026-07-08T19:35:16+00:00'
     actor: claude-code
     type: status_change
     source: cli
     to: open
+  - at: '2026-07-08T19:43:50+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'DEDUP: o import quebrado (dna.adapters.postgres.writable inexistente)
+      foi CORRIGIDO no PR #1 pelo agente do CI (test_sourceport_granular reescrito
+      com PostgresSource real). Esta issue fica como registro; resolvendo.'
+  - at: '2026-07-08T19:43:51+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: open
+    to: resolved
+  closed_at: '2026-07-08T19:43:51+00:00'

@@ -11,7 +11,7 @@ spec:
     memo-cache/_load_view parity, FrontmatterParseWarning fallback, source_files net,
     optional extra ''sql'' (not default), zero-downtime switch via source flag (same
     tables/migrations).'
-  status: review
+  status: done
   feature: f-dna-1.0-readiness
   priority: high
   labels:
@@ -21,15 +21,21 @@ spec:
   reporter: claude-code
   business_value: 700
   acceptance_criteria:
-  - Full conformance matrix green on both dialects (no xfail beyond the schema-level
-    tenant PK); benchmark parity-or-better documented; extra 'sql' packaging; switch
-    flag documented
+  - text: Full conformance matrix green on both dialects (no xfail beyond the schema-level
+      tenant PK); benchmark parity-or-better documented; extra 'sql' packaging; switch
+      flag documented
+    done: true
+    done_at: '2026-07-08T19:43:36+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - PR merged in ruinosus/dna; adapters guide updated
+  - text: PR merged in ruinosus/dna; adapters guide updated
+    done: true
+    done_at: '2026-07-08T19:43:36+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-08T18:27:49+00:00'
-  updated_at: '2026-07-08T19:38:46+00:00'
+  updated_at: '2026-07-08T19:43:37+00:00'
   timeline:
   - at: '2026-07-08T18:27:49+00:00'
     actor: claude-code
@@ -124,8 +130,50 @@ spec:
     source: cli
     from: in-progress
     to: review
+  - at: '2026-07-08T19:43:35+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-sqlalchemy-source-production
+    summary: TestGuide tg-s-sqlalchemy-source-production (smoke)
+  - at: '2026-07-08T19:43:36+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-sqlalchemy-source-production-20260708-194335
+    summary: "TestRun tr-tg-s-sqlalchemy-source-production-20260708-194335 \u2192\
+      \ pass"
+    outcome: pass
+  - at: '2026-07-08T19:43:37+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #2 merged (6/6 CI real). SqlAlchemySource \xE9 produ\xE7\xE3o: eventbus\
+      \ pg como strategy por dialeto (payload byte-id\xEAntico ao cru, mesma tx),\
+      \ memo-cache superset, todos os cortes do spike fechados, extra sql, matriz\
+      \ can\xF4nica 142/0 (xfail s\xF3 i-092 schema). Regress\xF5es honestas documentadas:\
+      \ pg save +1.6ms / query +0.9ms (Core statement build). Issues pr\xE9-existentes\
+      \ do pg cru: dedup pendente (i-001 duplicado entre os 2 agentes)."
+  - at: '2026-07-08T19:43:37+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: eb68854ec3b414ff4e99b4e7fb42e878b0e6bb08
   produces:
   - kind: Plan
     name: plan-s-sqlalchemy-source-production
     role: implementation
     at: '2026-07-08T19:00:43+00:00'
+  - kind: TestGuide
+    name: tg-s-sqlalchemy-source-production
+    role: test-guide
+    at: '2026-07-08T19:43:35+00:00'
+  - kind: TestRun
+    name: tr-tg-s-sqlalchemy-source-production-20260708-194335
+    role: test-run
+    at: '2026-07-08T19:43:36+00:00'
+  closed_at: '2026-07-08T19:43:36+00:00'
