@@ -1,0 +1,127 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-sdlc-git-symbiosis
+spec:
+  title: "Fechar o ciclo git\u2194SDLC (ideia Barna 2026-07-08): (1) conven\xE7\xE3\
+    o de trailer 'Work"
+  description: "Fechar o ciclo git\u2194SDLC (ideia Barna 2026-07-08): (1) conven\xE7\
+    \xE3o de trailer 'Work-Item: <Kind>/<name>' + Co-Authored-By derivado dos participants\
+    \ da story; (2) hook prepare-commit-msg versionado (scripts/git-hooks/) + comando\
+    \ 'dna sdlc hooks install', alimentado pelo .dna/active-story.txt que o story\
+    \ start j\xE1 grava; (3) caminho de volta: timeline materializa commits via git\
+    \ log --grep do trailer (show/sync-commits), matando o --commit-ref manual; (4)\
+    \ JUNTO: simplificar o layout do scope do pr\xF3prio repo \u2014 mover scopes/dna-development/.dna/dna-development\
+    \ \u2192 .dna/dna-development na raiz (o repo \xC9 o projeto; elimina o nome duplicado),\
+    \ DNA_SOURCE_URL default j\xE1 resolve ./.dna. Docs: se\xE7\xE3o 'your git log\
+    \ is your SDLC' no README/guia."
+  status: review
+  feature: f-dna-1.0-readiness
+  priority: medium
+  labels:
+  - sdk
+  - cli
+  - sdlc-tracking
+  - meta
+  reporter: claude-code
+  business_value: 500
+  acceptance_criteria:
+  - Hook instala com 1 comando e carimba Work-Item+coautores em commit real; story
+    show lista commits pelo trailer; scope na raiz .dna/dna-development com CLI funcionando
+    sem env var (default ./.dna); CI 6/6 verde
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - "PR merged; conven\xE7\xE3o documentada"
+  definition_of_done_source: cli-create
+  created_at: '2026-07-08T19:49:03+00:00'
+  updated_at: '2026-07-08T21:32:05+00:00'
+  timeline:
+  - at: '2026-07-08T19:49:03+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-08T19:50:25+00:00'
+    actor: claude-code
+    type: decision
+    source: cli
+    summary: "CORRE\xC7\xC3O DE DESENHO (Barna): o coautor \xE9 O PR\xD3PRIO dna sdlc\
+      \ como identidade de ferramenta \u2014 'Co-Authored-By: dna-sdlc[bot] <dna-sdlc[bot]@users.noreply.github.com>'\
+      \ (conven\xE7\xE3o de bot do GitHub, configur\xE1vel) \u2014 N\xC3O coautores\
+      \ derivados de participants. Sem\xE2ntica: selo de proveni\xEAncia do M\xC9\
+      TODO ('este commit nasceu sob governan\xE7a de story: tem plano, timeline, test-gate').\
+      \ Autoria humana/agente continua no author normal + trailers pr\xF3prios (ex.:\
+      \ Claude). Hook: story ativa \u2192 carimba Work-Item + assinatura do sistema;\
+      \ sem story ativa \u2192 sem carimbo (aus\xEAncia tamb\xE9m \xE9 sinal). Resto\
+      \ do desenho mant\xE9m (hook prepare-commit-msg + active-story.txt + volta via\
+      \ git log --grep + layout do scope na raiz)."
+    commit_ref: e0dcf12f5c758a02203e97b4e33bc9f9b5d32b8c
+  - at: '2026-07-08T21:07:27+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-08T21:12:31+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Executor iniciando no worktree dna-wt-symb. Formato do active-story.txt\
+      \ confirmado: '<scope>:<story-name>' single-line (packages/cli/dna_cli/_active_story.py).\
+      \ Achado: .dna/active-story.txt est\xE1 TRACKED no git (commit adf683c) mas\
+      \ o pr\xF3prio m\xF3dulo o define como estado per-workstation gitignored \u2014\
+      \ vou corrigir (gitignore + rm --cached) junto do bloco D. Ordem de ataque:\
+      \ A/B (m\xF3dulo _git_symbiosis + hook prepare-commit-msg python3 stdlib + dna\
+      \ sdlc hooks install/uninstall/status) \u2192 C (story show se\xE7\xE3o Commits\
+      \ + story commits mesclando trailer-grep com timeline) \u2192 D (git mv do scope\
+      \ pra .dna/ na raiz + brand_guard allowlist) \u2192 E (README 'Your git log\
+      \ is your SDLC' + self-aplica\xE7\xE3o)."
+    commit_ref: adf683c3b698322a625f63b184a590053583688e
+  - at: '2026-07-08T21:24:56+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Blocos A-E implementados (note: este comment j\xE1 roda com o layout\
+      \ novo \u2014 DNA_SOURCE_URL default ./.dna da raiz, sem env var). Decis\xF5\
+      es: (1) hook em python3 stdlib (env shebang, zero deps) usando git interpret-trailers\
+      \ --if-exists addIfDifferent \u2014 idempotente e respeita bloco de coment\xE1\
+      rios; skip em merge/squash/commit(amend) e mensagem vazia; fail-soft sempre\
+      \ exit 0. (2) can\xF4nico empacotado em dna_cli/data/git-hooks/ + c\xF3pia versionada\
+      \ em scripts/git-hooks/ com teste de paridade byte-id\xEAntico (hooks install\
+      \ materializa o hook em repos de terceiros). (3) caminho de volta: story show\
+      \ ganha se\xE7\xE3o Commits (trailer-grep, fail-soft) E story commits vira a\
+      \ view mesclada trailer+timeline com dedup \u2014 sem comando standalone novo.\
+      \ (4) doc no README ('Your git log is your SDLC'). ACHADO KAIZEN durante self-aplica\xE7\
+      \xE3o: testes de story start (test_focus_gates_cli) gravavam o pointer REAL\
+      \ do repo (foi assim que 's-noted' vazou e o pointer chegou a ser commitado\
+      \ em adf683c) \u2014 fix: fixture autouse DNA_ACTIVE_STORY_PATH no conftest\
+      \ + pointer untracked/gitignored como o pr\xF3prio m\xF3dulo prometia. Gates\
+      \ locais: cli 227 pass, sdk-py 2701 pass/0 fail, ts 1214 pass + typecheck, brand_guard\
+      \ clean. Agora: commits finais com o hook ativo (self-aplica\xE7\xE3o)."
+    commit_ref: adf683c3b698322a625f63b184a590053583688e
+  - at: '2026-07-08T21:26:41+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR aberto: https://github.com/ruinosus/dna/pull/4 (3 commits, os 2 primeiros\
+      \ auto-carimbados pelo hook \u2014 self-aplica\xE7\xE3o provada; 1cd1451 e e24e6ee\
+      \ carregam 'Work-Item: Story/s-sdlc-git-symbiosis' + Co-Authored-By dna-sdlc[bot]).\
+      \ Aguardando os 6 checks do CI."
+    commit_ref: 5f1b3449b87b02b23a72a1d49d6d9f14ae7aee84
+  - at: '2026-07-08T21:32:05+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "CI 6/6 verde no head 37ea545 (cli, sdk-py, postgres, sdk-ts, brand-guard,\
+      \ gitleaks). Aguardando merge \u2014 done on merge."
+  - at: '2026-07-08T21:32:05+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
+  produces:
+  - kind: Plan
+    name: plan-s-sdlc-git-symbiosis
+    role: implementation
+    at: '2026-07-08T21:07:27+00:00'

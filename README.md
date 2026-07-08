@@ -170,18 +170,61 @@ Market Kinds (theirs — native format, byte-faithful):
 | `Soul` | `soulspec.org/v1` | `SOUL.md` + companions |
 | `AgentDefinition` | `agents.md/v1` | `AGENTS.md` |
 
+## Your git log is your SDLC
+
+This repo tracks its own lifecycle as DNA documents (`dna sdlc` — the
+project's Stories/Features/Issues live in [`.dna/dna-development/`](.dna/dna-development/):
+the repo IS the project, so its scope sits at the root, right where the
+CLI's default source `./.dna` resolves). The git side of that loop is
+closed by a versioned `prepare-commit-msg` hook:
+
+```bash
+dna sdlc hooks install        # one-time per clone → git config core.hooksPath scripts/git-hooks
+dna sdlc story start s-my-story --plan "..."
+git commit -m "feat: the actual work"   # ← stamped automatically
+```
+
+While a Story is active (`.dna/active-story.txt`, written by `story start`),
+every commit is stamped with two trailers — a machine-readable link to the
+work item, and the **dna sdlc tool identity** as co-author (a provenance
+seal: "this commit was born under story governance — it has a plan, a
+timeline, a test gate"; override via `DNA_SDLC_COAUTHOR`):
+
+```
+commit 3f2a9c1…
+Author: You <you@example.com>
+
+    feat(cli): stamp Work-Item trailers on commit
+
+    Work-Item: Story/s-my-story
+    Co-Authored-By: dna-sdlc[bot] <dna-sdlc[bot]@users.noreply.github.com>
+```
+
+No active Story → no stamp: absence is signal too. Merges, squashes and
+amends are never rewritten. The way back needs no bookkeeping:
+`dna sdlc story show s-my-story` lists the Story's commits via
+`git log --grep "Work-Item: Story/s-my-story"`, and
+`dna sdlc story commits s-my-story` merges that with commits recorded in
+the Story timeline. `dna sdlc hooks status` shows the wiring;
+`hooks uninstall` reverts to `.git/hooks`. Note that `install` makes
+`scripts/git-hooks/` the clone's *only* hooks dir — keep personal hooks
+there too, or wire the script by hand.
+
 ## Repository layout
 
 ```
 dna/
 ├── packages/
 │   ├── sdk-py/          # Python SDK — kernel + adapters + extensions (import dna)
-│   └── sdk-ts/          # TypeScript SDK — 1:1 twin (@dna/sdk)
+│   ├── sdk-ts/          # TypeScript SDK — 1:1 twin (@dna/sdk)
+│   └── cli/             # `dna` binary — document CRUD + declarative SDLC (dna sdlc)
 ├── docs/                # Quick start, Kinds guide, Kind authoring, port contract
 ├── examples/
 │   └── hello-genome/    # Minimal runnable scope (Genome + Agent + real Skill)
 ├── scopes/              # Fixture scopes, incl. 31 real marketplace skills
+├── scripts/             # Repo guards + versioned git hooks (git-hooks/)
 ├── tests/               # Shared cross-SDK fixtures (parity + market conformance)
+├── .dna/                # This repo's own SDLC scope (dna-development) — see above
 └── LICENSE              # MIT
 ```
 

@@ -1,0 +1,132 @@
+#!/usr/bin/env python3
+"""prepare-commit-msg — DNA git↔SDLC symbiosis hook (s-sdlc-git-symbiosis).
+
+Stamps every commit made while a Story is active with two trailers:
+
+    Work-Item: Story/<story-name>
+    Co-Authored-By: dna-sdlc[bot] <dna-sdlc[bot]@users.noreply.github.com>
+
+The active Story comes from `.dna/active-story.txt` at the repo root
+(single line, `<scope>:<story-name>` — written by `dna sdlc story start`,
+cleared by `story done|block|cancel`). No active Story → no stamp:
+absence is signal too. The co-author is the dna sdlc TOOL identity (a
+provenance seal: "this commit was born under story governance"), not a
+human co-author; override it with $DNA_SDLC_COAUTHOR.
+
+Rules:
+  - zero dependencies: python3 + git only (runs without any venv);
+  - idempotent: never duplicates a trailer already present
+    (`git interpret-trailers --if-exists addIfDifferent`);
+  - respects merge/squash/amend messages (2nd hook arg in
+    {merge, squash, commit}) and empty messages: no stamp;
+  - fail-soft: any unexpected error exits 0 — never blocks a commit.
+
+Install: `dna sdlc hooks install`  (→ git config core.hooksPath scripts/git-hooks)
+
+Keep in sync with packages/cli/dna_cli/_git_symbiosis.py — the CLI test
+suite asserts the constants below match, and that the repo copy at
+scripts/git-hooks/prepare-commit-msg is byte-identical to the packaged
+copy in dna_cli/data/git-hooks/.
+"""
+from __future__ import annotations
+
+import os
+import subprocess
+import sys
+
+WORK_ITEM_TRAILER = "Work-Item"
+COAUTHOR_TRAILER = "Co-Authored-By"
+DEFAULT_SDLC_COAUTHOR = "dna-sdlc[bot] <dna-sdlc[bot]@users.noreply.github.com>"
+COAUTHOR_ENV = "DNA_SDLC_COAUTHOR"
+
+ACTIVE_STORY_FILE = ".dna/active-story.txt"
+
+# 2nd hook argument values that must NEVER be stamped: merges, squashes and
+# amend/-c/-C reuse an existing message that was (or wasn't) stamped when it
+# was born — rewriting it here would be surprising.
+SKIP_SOURCES = {"merge", "squash", "commit"}
+
+
+def _git(args, cwd=None):
+    """Run git; return stdout or None on any failure (fail-soft)."""
+    try:
+        proc = subprocess.run(
+            ["git"] + list(args),
+            capture_output=True, text=True, timeout=10, cwd=cwd,
+        )
+    except Exception:
+        return None
+    if proc.returncode != 0:
+        return None
+    return proc.stdout
+
+
+def read_active_story(repo_root):
+    """Parse `.dna/active-story.txt` → (scope, name) or None."""
+    path = os.path.join(repo_root, ACTIVE_STORY_FILE)
+    try:
+        with open(path, encoding="utf-8") as fh:
+            raw = fh.read().strip()
+    except OSError:
+        return None
+    if not raw or ":" not in raw:
+        return None
+    scope, _, name = raw.partition(":")
+    scope, name = scope.strip(), name.strip()
+    if not scope or not name:
+        return None
+    return scope, name
+
+
+def message_is_empty(msg_file):
+    """True when the message has no content outside comment lines."""
+    try:
+        with open(msg_file, encoding="utf-8") as fh:
+            text = fh.read()
+    except OSError:
+        return True
+    comment_char = (_git(["config", "--get", "core.commentchar"]) or "#").strip() or "#"
+    if comment_char == "auto":
+        comment_char = "#"
+    for line in text.splitlines():
+        if line.strip() and not line.startswith(comment_char):
+            return False
+    return True
+
+
+def stamp(msg_file, trailers):
+    """Append trailers idempotently via git interpret-trailers."""
+    args = ["interpret-trailers", "--in-place", "--if-exists", "addIfDifferent"]
+    for t in trailers:
+        args += ["--trailer", t]
+    args.append(msg_file)
+    return _git(args) is not None
+
+
+def main(argv):
+    if len(argv) < 2:
+        return 0
+    msg_file = argv[1]
+    source = argv[2] if len(argv) > 2 else ""
+    if source in SKIP_SOURCES:
+        return 0
+    root = (_git(["rev-parse", "--show-toplevel"]) or "").strip() or os.getcwd()
+    active = read_active_story(root)
+    if active is None:
+        return 0  # no active story — absence is signal
+    if message_is_empty(msg_file):
+        return 0  # don't turn an aborted (empty) commit into a non-empty one
+    _scope, name = active
+    coauthor = os.environ.get(COAUTHOR_ENV, "").strip() or DEFAULT_SDLC_COAUTHOR
+    stamp(msg_file, [
+        "%s: Story/%s" % (WORK_ITEM_TRAILER, name),
+        "%s: %s" % (COAUTHOR_TRAILER, coauthor),
+    ])
+    return 0  # fail-soft: never block the commit
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main(sys.argv))
+    except Exception:
+        sys.exit(0)  # fail-soft by contract
