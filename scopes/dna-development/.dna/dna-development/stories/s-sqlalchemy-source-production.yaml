@@ -1,0 +1,38 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-sqlalchemy-source-production
+spec:
+  title: 'Promote the SqlAlchemySource prototype (adapters/sqlalchemy_, spike upstream:
+    39'
+  description: 'Promote the SqlAlchemySource prototype (adapters/sqlalchemy_, spike
+    upstream: 39 PASS + 1 xfail on the conformance matrix, -67% LOC vs raw adapters)
+    to production: pg eventbus (LISTEN/NOTIFY) as dialect mixin on the same transaction,
+    memo-cache/_load_view parity, FrontmatterParseWarning fallback, source_files net,
+    optional extra ''sql'' (not default), zero-downtime switch via source flag (same
+    tables/migrations).'
+  status: todo
+  feature: f-dna-1.0-readiness
+  priority: high
+  labels:
+  - sdk
+  - python
+  - postgres
+  reporter: claude-code
+  business_value: 700
+  acceptance_criteria:
+  - Full conformance matrix green on both dialects (no xfail beyond the schema-level
+    tenant PK); benchmark parity-or-better documented; extra 'sql' packaging; switch
+    flag documented
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - PR merged in ruinosus/dna; adapters guide updated
+  definition_of_done_source: cli-create
+  created_at: '2026-07-08T18:27:49+00:00'
+  updated_at: '2026-07-08T18:27:49+00:00'
+  timeline:
+  - at: '2026-07-08T18:27:49+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
