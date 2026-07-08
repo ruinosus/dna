@@ -23,7 +23,7 @@ spec:
   - PR merged
   definition_of_done_source: cli-create
   created_at: '2026-07-08T18:27:49+00:00'
-  updated_at: '2026-07-08T19:47:00+00:00'
+  updated_at: '2026-07-08T19:53:18+00:00'
   timeline:
   - at: '2026-07-08T18:27:49+00:00'
     actor: claude-code
@@ -36,6 +36,27 @@ spec:
     source: cli
     from: todo
     to: in-progress
+  - at: '2026-07-08T19:53:18+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Invent\xE1rio fechado. Py: mi.all/one J\xC1 deprecated (warnings herdados\
+      \ do projeto-m\xE3e, mensagens apontam s-mi-class-death/all_async \u2014 vou\
+      \ reescrever p/ guidance DNA '1.0'); mi.documents/root/default_agent/find_agent/build_prompt(_async)/resolve(_async)/all_async/one_async\
+      \ + kernel.query/count/get_document(+sync wrappers). TS: all/one SEM deprecation;\
+      \ sem async twins; kernel.query/count existem, SEM getDocument. Docs: KIND-AUTHORING/KINDS-GUIDE/KIND-DATA-ACCESS/PORT-CONTRACT/READERS-WRITERS\
+      \ ensinam mi.all/one; QUICK-START/READMEs/hello-genome j\xE1 ensinam mi.documents;\
+      \ demo.ts usa mi.all x3. Testes: ~133 callsites Py + ~47 TS. Decis\xE3o blessed:\
+      \ mi.documents + kernel.query/count + mi.build_prompt + mi.root/default_agent/find_agent\
+      \ + mi.resolve (Py-only justificados: *_async, kernel.get_document, *_sync wrappers).\
+      \ Deprecated: mi.all/one nos 2 lados, msg 'will be removed in 1.0' + substitui\xE7\
+      \xE3o exata. Plano: (1) Py _all/_one internos sem warning + reword msgs; (2)\
+      \ TS @deprecated JSDoc + console.warn once + _all/_one internos (reports/evidence-capture/index/applyHooks\
+      \ migram); (3) docs 100% blessed + demo.ts; (4) migrar testes (comprehensions)\
+      \ exceto suites que TESTAM o deprecated (pytest.warns); (5) fixture port-surface-parity.json\
+      \ ganha se\xE7\xE3o blessed_query_surface + executor test nos 2 lados; (6) ratchet\
+      \ pytest filterwarnings error:ManifestInstance."
+    commit_ref: 3ab6f0b1e8b77623195248396df8f6f3076260ab
   produces:
   - kind: Plan
     name: plan-s-blessed-query-surface
