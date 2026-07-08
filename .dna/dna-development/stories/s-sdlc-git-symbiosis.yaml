@@ -15,7 +15,7 @@ spec:
     \ \u2192 .dna/dna-development na raiz (o repo \xC9 o projeto; elimina o nome duplicado),\
     \ DNA_SOURCE_URL default j\xE1 resolve ./.dna. Docs: se\xE7\xE3o 'your git log\
     \ is your SDLC' no README/guia."
-  status: in-progress
+  status: review
   feature: f-dna-1.0-readiness
   priority: medium
   labels:
@@ -34,7 +34,7 @@ spec:
   - "PR merged; conven\xE7\xE3o documentada"
   definition_of_done_source: cli-create
   created_at: '2026-07-08T19:49:03+00:00'
-  updated_at: '2026-07-08T21:26:41+00:00'
+  updated_at: '2026-07-08T21:32:05+00:00'
   timeline:
   - at: '2026-07-08T19:49:03+00:00'
     actor: claude-code
@@ -108,6 +108,18 @@ spec:
       \ carregam 'Work-Item: Story/s-sdlc-git-symbiosis' + Co-Authored-By dna-sdlc[bot]).\
       \ Aguardando os 6 checks do CI."
     commit_ref: 5f1b3449b87b02b23a72a1d49d6d9f14ae7aee84
+  - at: '2026-07-08T21:32:05+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "CI 6/6 verde no head 37ea545 (cli, sdk-py, postgres, sdk-ts, brand-guard,\
+      \ gitleaks). Aguardando merge \u2014 done on merge."
+  - at: '2026-07-08T21:32:05+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
   produces:
   - kind: Plan
     name: plan-s-sdlc-git-symbiosis
