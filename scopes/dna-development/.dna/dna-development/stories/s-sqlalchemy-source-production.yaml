@@ -11,7 +11,7 @@ spec:
     memo-cache/_load_view parity, FrontmatterParseWarning fallback, source_files net,
     optional extra ''sql'' (not default), zero-downtime switch via source flag (same
     tables/migrations).'
-  status: in-progress
+  status: review
   feature: f-dna-1.0-readiness
   priority: high
   labels:
@@ -29,7 +29,7 @@ spec:
   - PR merged in ruinosus/dna; adapters guide updated
   definition_of_done_source: cli-create
   created_at: '2026-07-08T18:27:49+00:00'
-  updated_at: '2026-07-08T19:36:38+00:00'
+  updated_at: '2026-07-08T19:38:46+00:00'
   timeline:
   - at: '2026-07-08T18:27:49+00:00'
     actor: claude-code
@@ -110,6 +110,20 @@ spec:
       \ sqlite, cru e SA). (3) sdk-ts intocado: 1203 tests 0 fail + tsc limpo. (4)\
       \ cli: 198 passed. Partindo pra commits + PR."
     commit_ref: ee2d2a320be157bd5445ebfd81a8f1b6cb579c34
+  - at: '2026-07-08T19:38:45+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR aberto: https://github.com/ruinosus/dna/pull/2 (3 commits: feat adapter+packaging+docs+bench\
+      \ / test matrizes+14 novos / chore sdlc). Todos os 4 gates verdes; regress\xF5\
+      es de bench documentadas no PR; i-001/i-002 filadas pro d\xE9bito pr\xE9-existente\
+      \ encontrado no gating."
+  - at: '2026-07-08T19:38:46+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
   produces:
   - kind: Plan
     name: plan-s-sqlalchemy-source-production
