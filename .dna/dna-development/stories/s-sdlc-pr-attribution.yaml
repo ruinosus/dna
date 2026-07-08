@@ -14,7 +14,7 @@ spec:
     \ da story, n\xE3o o contr\xE1rio. Fallback: 'dna sdlc pr-footer <s-x>' que s\xF3\
     \ emite o footer pra colar. Completa a symbiosis: commit carimbado (hook) + PR\
     \ assinado (este) + timeline materializa ambos."
-  status: todo
+  status: in-progress
   feature: f-dna-1.0-readiness
   priority: medium
   labels:
@@ -30,10 +30,21 @@ spec:
   - "PR merged; usado no pr\xF3prio PR que o implementa (self-aplica\xE7\xE3o)"
   definition_of_done_source: cli-create
   created_at: '2026-07-08T21:37:34+00:00'
-  updated_at: '2026-07-08T21:37:34+00:00'
+  updated_at: '2026-07-08T21:40:16+00:00'
   timeline:
   - at: '2026-07-08T21:37:34+00:00'
     actor: claude-code
     type: status_change
     source: cli
     to: todo
+  - at: '2026-07-08T21:40:16+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  produces:
+  - kind: Plan
+    name: plan-s-sdlc-pr-attribution
+    role: implementation
+    at: '2026-07-08T21:40:16+00:00'

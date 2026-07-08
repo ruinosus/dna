@@ -22,7 +22,7 @@ spec:
   - Repo public; announcement optional
   definition_of_done_source: cli-create
   created_at: '2026-07-08T18:27:50+00:00'
-  updated_at: '2026-07-08T21:38:00+00:00'
+  updated_at: '2026-07-08T21:40:16+00:00'
   timeline:
   - at: '2026-07-08T18:27:50+00:00'
     actor: claude-code
@@ -43,3 +43,13 @@ spec:
       \ estender o guard: job de CI que valida author/committer emails do range do\
       \ PR contra denylist corporativa."
     commit_ref: 967845cbbbb233fde46fc393581f58002a31b581
+  - at: '2026-07-08T21:40:16+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Checklist update: hist\xF3ria REESCRITA e verificada limpa (2026-07-08)\
+      \ \u2014 git log --all em todas as refs: s\xF3 ruinosus-noreply + noreply@github.com,\
+      \ zero avanade; backups do filter-branch expurgados; remoto s\xF3 com main.\
+      \ Resta do item: o job de CI validando e-mails de commit do range do PR (denylist\
+      \ corporativa)."
+    commit_ref: 120c348df290cd14cac3ed55cd5e3ffcdb63bfe7

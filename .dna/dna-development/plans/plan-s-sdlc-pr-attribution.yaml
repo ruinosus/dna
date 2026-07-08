@@ -1,0 +1,17 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-sdlc-pr-attribution
+spec:
+  title: 'Plano: s-sdlc-pr-attribution'
+  date: '2026-07-08'
+  status: accepted
+  story_ref: s-sdlc-pr-attribution
+  journey_phase: plan
+  body: "Comando dna sdlc story pr <s-x>: gh pr create com title da story, body =\
+    \ description + AC como checklist + footer '\U0001F9EC Tracked with DNA SDLC \u2014\
+    \ Work-Item: Story/<s-x>' (configur\xE1vel); fallback pr-footer que s\xF3 emite\
+    \ o bloco; docs na se\xE7\xE3o Your git log is your SDLC; self-aplica\xE7\xE3\
+    o: o PR da story nasce pelo comando."
+  created_at: '2026-07-08T21:40:15+00:00'
+  updated_at: '2026-07-08T21:40:15+00:00'
