@@ -1,0 +1,17 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-sqlalchemy-source-production
+spec:
+  title: 'Plano: s-sqlalchemy-source-production'
+  date: '2026-07-08'
+  status: accepted
+  story_ref: s-sqlalchemy-source-production
+  journey_phase: plan
+  body: 'Promote adapters/sqlalchemy_ prototype: pg eventbus (LISTEN/NOTIFY) as dialect
+    mixin on the same tx; memo-cache/_load_view parity; FrontmatterParseWarning fallback;
+    source_files net; extra ''sql'' packaging (not default); switch flag documented.
+    Judge = conformance matrix both dialects + benchmark. Work on branch in a git
+    worktree of this repo; PR to ruinosus/dna.'
+  created_at: '2026-07-08T18:52:06+00:00'
+  updated_at: '2026-07-08T18:52:06+00:00'

@@ -10,7 +10,7 @@ spec:
     the real xlsx skill fixture) + secret scan (gitleaks). Demos that clone external
     repos must be offline-safe in CI. De-noise ajv ''unknown format'' warnings (strict:false
     parity with Py).'
-  status: review
+  status: done
   feature: f-dna-1.0-readiness
   priority: high
   labels:
@@ -19,14 +19,20 @@ spec:
   reporter: claude-code
   business_value: 600
   acceptance_criteria:
-  - CI green on main; guard fails on planted brand token; gitleaks wired; ajv warnings
-    gone
+  - text: CI green on main; guard fails on planted brand token; gitleaks wired; ajv
+      warnings gone
+    done: true
+    done_at: '2026-07-08T19:33:13+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - Workflows merged and green
+  - text: Workflows merged and green
+    done: true
+    done_at: '2026-07-08T19:33:13+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-08T18:27:50+00:00'
-  updated_at: '2026-07-08T19:31:48+00:00'
+  updated_at: '2026-07-08T19:33:14+00:00'
   timeline:
   - at: '2026-07-08T18:27:50+00:00'
     actor: claude-code
@@ -99,8 +105,47 @@ spec:
       \ da action (403 no token de pull_request). PR pronto pra merge \u2014 done\
       \ on merge."
     commit_ref: 7f1495dbdda5ef92d0b2b2a29130c32052503149
+  - at: '2026-07-08T19:33:13+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-public-ci
+    summary: TestGuide tg-s-public-ci (smoke)
+  - at: '2026-07-08T19:33:13+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-public-ci-20260708-193313
+    summary: "TestRun tr-tg-s-public-ci-20260708-193313 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-08T19:33:14+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #1 merged (primeiro PR do repo). 6/6 checks verdes no runner real.\
+      \ Incidente valioso: runner pegou floor de Python desonesto (TypeVar default=PEP\
+      \ 696 exige 3.13; requires-python corrigido) + gitleaks action sem perms de\
+      \ PR (bin\xE1rio pinado). CI \xE9 o gate daqui pra frente."
+  - at: '2026-07-08T19:33:14+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: 682ad08d08212ef61ed805c592c42d206f070a1e
   produces:
   - kind: Plan
     name: plan-s-public-ci
     role: implementation
     at: '2026-07-08T18:58:55+00:00'
+  - kind: TestGuide
+    name: tg-s-public-ci
+    role: test-guide
+    at: '2026-07-08T19:33:13+00:00'
+  - kind: TestRun
+    name: tr-tg-s-public-ci-20260708-193313
+    role: test-run
+    at: '2026-07-08T19:33:13+00:00'
+  closed_at: '2026-07-08T19:33:13+00:00'

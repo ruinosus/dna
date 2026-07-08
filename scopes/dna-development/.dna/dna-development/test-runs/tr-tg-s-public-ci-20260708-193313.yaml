@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-public-ci-20260708-193313
+spec:
+  guide_ref: tg-s-public-ci
+  outcome: pass
+  verifies:
+  - Story/s-public-ci
+  executed_by: claude-code
+  executed_at: '2026-07-08T19:33:13+00:00'
+  evidence:
+  - ci:github-actions-6-of-6-checks-green-run-real,check:brand-guard-self-test,check:gitleaks-8-commits-no-leaks,check:ajv-14262-to-0-warnings,suite:sdk-py-2653-0-py313,suite:cli-198-0
