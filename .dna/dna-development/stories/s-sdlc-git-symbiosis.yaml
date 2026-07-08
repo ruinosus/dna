@@ -34,7 +34,7 @@ spec:
   - "PR merged; conven\xE7\xE3o documentada"
   definition_of_done_source: cli-create
   created_at: '2026-07-08T19:49:03+00:00'
-  updated_at: '2026-07-08T21:07:27+00:00'
+  updated_at: '2026-07-08T21:24:56+00:00'
   timeline:
   - at: '2026-07-08T19:49:03+00:00'
     actor: claude-code
@@ -62,6 +62,43 @@ spec:
     source: cli
     from: todo
     to: in-progress
+  - at: '2026-07-08T21:12:31+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Executor iniciando no worktree dna-wt-symb. Formato do active-story.txt\
+      \ confirmado: '<scope>:<story-name>' single-line (packages/cli/dna_cli/_active_story.py).\
+      \ Achado: .dna/active-story.txt est\xE1 TRACKED no git (commit adf683c) mas\
+      \ o pr\xF3prio m\xF3dulo o define como estado per-workstation gitignored \u2014\
+      \ vou corrigir (gitignore + rm --cached) junto do bloco D. Ordem de ataque:\
+      \ A/B (m\xF3dulo _git_symbiosis + hook prepare-commit-msg python3 stdlib + dna\
+      \ sdlc hooks install/uninstall/status) \u2192 C (story show se\xE7\xE3o Commits\
+      \ + story commits mesclando trailer-grep com timeline) \u2192 D (git mv do scope\
+      \ pra .dna/ na raiz + brand_guard allowlist) \u2192 E (README 'Your git log\
+      \ is your SDLC' + self-aplica\xE7\xE3o)."
+    commit_ref: adf683c3b698322a625f63b184a590053583688e
+  - at: '2026-07-08T21:24:56+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Blocos A-E implementados (note: este comment j\xE1 roda com o layout\
+      \ novo \u2014 DNA_SOURCE_URL default ./.dna da raiz, sem env var). Decis\xF5\
+      es: (1) hook em python3 stdlib (env shebang, zero deps) usando git interpret-trailers\
+      \ --if-exists addIfDifferent \u2014 idempotente e respeita bloco de coment\xE1\
+      rios; skip em merge/squash/commit(amend) e mensagem vazia; fail-soft sempre\
+      \ exit 0. (2) can\xF4nico empacotado em dna_cli/data/git-hooks/ + c\xF3pia versionada\
+      \ em scripts/git-hooks/ com teste de paridade byte-id\xEAntico (hooks install\
+      \ materializa o hook em repos de terceiros). (3) caminho de volta: story show\
+      \ ganha se\xE7\xE3o Commits (trailer-grep, fail-soft) E story commits vira a\
+      \ view mesclada trailer+timeline com dedup \u2014 sem comando standalone novo.\
+      \ (4) doc no README ('Your git log is your SDLC'). ACHADO KAIZEN durante self-aplica\xE7\
+      \xE3o: testes de story start (test_focus_gates_cli) gravavam o pointer REAL\
+      \ do repo (foi assim que 's-noted' vazou e o pointer chegou a ser commitado\
+      \ em adf683c) \u2014 fix: fixture autouse DNA_ACTIVE_STORY_PATH no conftest\
+      \ + pointer untracked/gitignored como o pr\xF3prio m\xF3dulo prometia. Gates\
+      \ locais: cli 227 pass, sdk-py 2701 pass/0 fail, ts 1214 pass + typecheck, brand_guard\
+      \ clean. Agora: commits finais com o hook ativo (self-aplica\xE7\xE3o)."
+    commit_ref: adf683c3b698322a625f63b184a590053583688e
   produces:
   - kind: Plan
     name: plan-s-sdlc-git-symbiosis
