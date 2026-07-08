@@ -1,0 +1,24 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-001-pg-writable-module-missing
+spec:
+  description: "tests/test_sourceport_granular.py::TestPostgresGranular imports PostgresWritableSource\
+    \ from dna.adapters.postgres.writable, but the DNA repo's postgres adapter package\
+    \ only ships __init__/source/eventbus \u2014 the writable module never traveled\
+    \ in the extraction. Gated by requires_postgres, so the 2 tests FAIL (ModuleNotFoundError)\
+    \ whenever any pg DSN env is set and silently skip otherwise. Reproduced on base\
+    \ commit ee2d2a3 (pre-existing; found while gating s-sqlalchemy-source-production).\
+    \ Fix: port the module or rewrite the tests against PostgresSource. Bonus smell:\
+    \ the class reads DNA_PG_TEST_URL specifically while conftest gates on any of\
+    \ DATABASE_URL/DNA_PG_TEST_URL/DNA_PG_TEST_DSN \u2014 with only DATABASE_URL set\
+    \ it constructs PostgresWritableSource(None)."
+  type: bug
+  severity: medium
+  status: open
+  timeline:
+  - at: '2026-07-08T19:35:16+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

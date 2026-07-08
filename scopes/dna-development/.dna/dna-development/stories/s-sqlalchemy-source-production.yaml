@@ -29,21 +29,89 @@ spec:
   - PR merged in ruinosus/dna; adapters guide updated
   definition_of_done_source: cli-create
   created_at: '2026-07-08T18:27:49+00:00'
-  updated_at: '2026-07-08T18:52:07+00:00'
+  updated_at: '2026-07-08T19:36:38+00:00'
   timeline:
   - at: '2026-07-08T18:27:49+00:00'
     actor: claude-code
     type: status_change
     source: cli
     to: todo
-  - at: '2026-07-08T18:52:07+00:00'
+  - at: '2026-07-08T19:00:43+00:00'
     actor: claude-code
     type: status_change
     source: cli
     from: todo
     to: in-progress
+  - at: '2026-07-08T19:00:57+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Kickoff no worktree dna-wt-sqla (branch feat/s-sqlalchemy-source-production).\
+      \ Baseline verde: sdk-py 2693 passed; matriz spike+kit com DATABASE_URL (db\
+      \ descart\xE1vel dna_ci_test no PG dev :5434) = 142 passed / 2 xfail. Investiguei\
+      \ o mecanismo do eventbus cru: PostgresSource._emit_outbox = INSERT dna_outbox\
+      \ RETURNING id + UPSERT dna_versions_seq + pg_notify('kernel_writes', payload)\
+      \ na MESMA transa\xE7\xE3o do write; payload constru\xEDdo por _build_notify_payload\
+      \ (puro). Decis\xE3o: o SqlAlchemySource vai IMPORTAR _build_notify_payload/KERNEL_EVENTBUS_CHANNEL\
+      \ do adapter cru \u2014 parity byte-a-byte por constru\xE7\xE3o, n\xE3o por\
+      \ c\xF3pia."
+    commit_ref: ee2d2a320be157bd5445ebfd81a8f1b6cb579c34
+  - at: '2026-07-08T19:14:03+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Core implementado (adapters/sqlalchemy_/source.py ~935\u2192~1300 loc):\
+      \ (1) eventbus pg como strategy de dialeto (_PgOutboxEmitter/_NullEventEmitter)\
+      \ \u2014 outbox+versions_seq+pg_notify na MESMA tx do write, payload importado\
+      \ do adapter cru (parity byte-a-byte por constru\xE7\xE3o, provada por teste\
+      \ LISTEN ao vivo); (2) memo-cache _load_view dialeto-agn\xF3stico com single-flight\
+      \ + deep-copy + invalida\xE7\xE3o SUPERSET do cru (writes locais invalidam direto\
+      \ + on_write via attach_kernel); (3) cortes fechados: FrontmatterParseWarning\
+      \ net, source_files net, preserve-binary pg, cat\xE1logo Genome (list/get/deprecate_module_versions),\
+      \ save/delete_layer_document, list_layers, list_tenants, slow-path bundle-override\
+      \ no query; (4) DECIS\xC3O: save_document agora AUTO-PUBLICA (upsert documents\
+      \ na mesma tx) \u2014 kernel.write_document nunca chama publish(); o cru pg\
+      \ j\xE1 fazia isso, o spike (fluxo draft-only estilo sqlite) deixaria writes\
+      \ do kernel invis\xEDveis. Matriz can\xF4nica: SA promovido pro test_source_conformance_kit\
+      \ (9 adapters), spike mirror deletado \u2014 142 passed/2 xfail (s\xF3 tenant-PK\
+      \ sqlite). Packaging: extra sql = sqlalchemy[asyncio]>=2 + drivers via extras\
+      \ sqlite/postgres; guard test de import default. +14 testes novos (test_sqlalchemy_source.py)\
+      \ incluindo atomicidade do outbox (write vetado n\xE3o emite evento)."
+    commit_ref: ee2d2a320be157bd5445ebfd81a8f1b6cb579c34
+  - at: '2026-07-08T19:26:34+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Benchmark re-rodado (scripts/bench_sources.py, portado do spike; pg\
+      \ via db descart\xE1vel dna_ci_test): sqlite SA domina tudo (save 1.95 vs 9.29\
+      \ ms/doc, load_all 0.52 vs 67.5ms, query 0.72 vs 2.15ms \u2014 pooling de gra\xE7\
+      a); pg reads paridade-ou-melhor (load_all 0.65 vs 1.79ms, ambos com memo-cache\
+      \ agora), REGRESS\xD5ES documentadas no pg write/query: save 7.69 vs 6.08 ms/doc\
+      \ e query 2.26 vs 1.37ms (~1ms de constru\xE7\xE3o de statement do Core por\
+      \ opera\xE7\xE3o \u2014 agora apples-to-apples porque o SA emite outbox+notify\
+      \ igual ao cru). Gates parciais: sdk-ts 1203 tests 0 fail + typecheck ok; cli\
+      \ 198 passed. Suite full serial rodando em background. Achado pr\xE9-existente\
+      \ (n\xE3o meu): TestPostgresGranular usa DNA_PG_TEST_URL e quebra quando s\xF3\
+      \ DATABASE_URL est\xE1 setada; e test_postgres_source usa schema fixo dna_test_v3\
+      \ que racha sob xdist \u2014 rodei o gate serial com as duas envs."
+    commit_ref: ee2d2a320be157bd5445ebfd81a8f1b6cb579c34
+  - at: '2026-07-08T19:36:38+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Gates fechados: (1) sdk-py full com extra sql: 2713 passed / 0 failed\
+      \ (modo CI, sem pg); com DATABASE_URL: 2831 passed e os \xDANICOS 3 vermelhos\
+      \ s\xE3o pr\xE9-existentes \u2014 provei rodando no commit base ee2d2a3 num\
+      \ worktree descart\xE1vel e filei i-001-pg-writable-module-missing (m\xF3dulo\
+      \ nunca viajou na extra\xE7\xE3o) + i-002-pg-atomicity-test-pool-hang (classe\
+      \ i-093 do pool cru); (1b) sem extra sql: venv limpo sem sqlalchemy \u2192 SA\
+      \ rows skippam graciosamente, guard de import passa, 0 failed. (2) Matriz kit\
+      \ can\xF4nico 9 adapters \xD7 ~20 casos: 142 passed / 2 xfail (s\xF3 tenant-PK\
+      \ sqlite, cru e SA). (3) sdk-ts intocado: 1203 tests 0 fail + tsc limpo. (4)\
+      \ cli: 198 passed. Partindo pra commits + PR."
+    commit_ref: ee2d2a320be157bd5445ebfd81a8f1b6cb579c34
   produces:
   - kind: Plan
     name: plan-s-sqlalchemy-source-production
     role: implementation
-    at: '2026-07-08T18:52:07+00:00'
+    at: '2026-07-08T19:00:43+00:00'

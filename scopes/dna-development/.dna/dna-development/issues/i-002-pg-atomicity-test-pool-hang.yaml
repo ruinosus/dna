@@ -1,0 +1,21 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-002-pg-atomicity-test-pool-hang
+spec:
+  description: "tests/test_postgres_source.py::TestPhase15_1OutboxWrites::test_write_atomicity_no_partial_state\
+    \ times out (pytest-timeout 120s) with 'Pool.close() is taking over 60 seconds'\
+    \ \u2014 the raw PostgresSource asyncpg-pool-under-test hang class documented\
+    \ upstream as i-093 (the new SqlAlchemySource passes the equivalent scenarios\
+    \ under the SQLAlchemy pool, evidence it's a raw-pool artifact). Reproduced on\
+    \ base commit ee2d2a3 with DATABASE_URL set (pre-existing; found while gating\
+    \ s-sqlalchemy-source-production)."
+  type: bug
+  severity: medium
+  status: open
+  timeline:
+  - at: '2026-07-08T19:35:17+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
