@@ -47,7 +47,7 @@ spec:
       CI 6/6 acompanhado no PR'
   definition_of_done_source: cli-create
   created_at: '2026-07-08T22:18:32+00:00'
-  updated_at: '2026-07-08T22:32:55+00:00'
+  updated_at: '2026-07-08T22:33:13+00:00'
   timeline:
   - at: '2026-07-08T22:18:32+00:00'
     actor: claude-code
@@ -138,6 +138,16 @@ spec:
       + hooks (todos verificados via --help); claude plugin validate --strict OK;
       CI 6/6 acompanhado no PR'
     by: claude-code
+  - at: '2026-07-08T22:33:13+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Polish: t\xEDtulo da story regroomed (vinha truncado do cli-create)\
+      \ + PR #6 title sincronizado; AC/DoD checados com evid\xEAncia via story check\
+      \ --all. TestGuide tg-s-dna-agent-ready (7 passos) + TestRun pass registrados.\
+      \ CI parcial: brand-guard, cli e gitleaks verdes; aguardando sdk-py, postgres\
+      \ e sdk-ts."
+    commit_ref: d54da75ae15d988191d0ac19c9395f4355029d38
   produces:
   - kind: Plan
     name: plan-s-dna-agent-ready
