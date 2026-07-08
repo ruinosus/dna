@@ -1,0 +1,107 @@
+# ArchiveProposal — pruning proposal (record plane). Always a *proposal*,
+# never an execution: user (or Veto Hook) approves before the target moves
+# to _forgotten/. Reversible via `dna sdlc forget undo`.
+#
+# F3 lote-2 (spec 2026-06-10-kinds-descriptor-f3): synthesized from this
+# descriptor; the hand-written class twins were deleted. PARITY-CRITICAL
+# package data — byte-identical mirror under packages/sdk-{py,ts};
+# tests/test_descriptor_hash_parity.py enforces. Equivalence vs the extinct
+# class frozen in tests/test_lote2_descriptor_equivalence.py (golden:
+# tests/goldens/lote2/ArchiveProposal.golden.json). Deltas intencionais (semântica
+# canônica = port): summary curado substitui o eco whole-spec do KindBase
+# default (list endpoints não usam kp.summary()); parse valida contra o
+# schema (classe era pass-through); to_card morto não migrado.
+apiVersion: github.com/ruinosus/dna/core/v1
+kind: KindDefinition
+metadata:
+  name: archive-proposal
+spec:
+  target_api_version: github.com/ruinosus/dna/sdlc/v1
+  target_kind: ArchiveProposal
+  alias: sdlc-archive-proposal
+  origin: github.com/ruinosus/dna/sdlc
+  tenant_scope: global
+  plane: record
+  prompt_target: false
+  flatten_in_context: false
+  prompt_target_priority: 0
+  storage:
+    type: bundle
+    container: archive-proposals
+    marker: ARCHIVE_PROPOSAL.md
+    body_field: body
+  schema:
+    type: object
+    required:
+    - target_kind
+    - target_name
+    - reason
+    - evidence
+    - proposed_by
+    - status
+    - review_deadline
+    properties:
+      target_kind:
+        type: string
+        description: Any Kind name (e.g. 'Plan', 'Story', 'Issue', 'Spec'). Self-references
+          rejected at execution time.
+      target_name:
+        type: string
+        description: Slug of the doc being proposed for forgetting.
+      reason:
+        type: string
+        enum:
+        - orphan
+        - superseded
+        - stale
+        - contradicted
+        - duplicate
+        description: Why prune. orphan = no inbound refs; superseded = newer doc replaces;
+          stale = no touch beyond threshold; contradicted = newer doc disagrees; duplicate
+          = identical.
+      evidence:
+        type: string
+        description: Plain-text justification. E.g. 'Unreferenced by any WorkflowEvent.methodology_artifact
+          in 91 entries scanned. Last touch 73 days ago.'
+      proposed_at:
+        type: string
+        format: date-time
+        description: Auto-stamped on creation.
+      proposed_by:
+        type: string
+        description: Oracle slug (typically 'cleanup-suggestions') or 'user'.
+      status:
+        type: string
+        enum:
+        - proposed
+        - approved
+        - vetoed
+        - executed
+        description: proposed → approved → executed (moves target to _forgotten/)
+          OR proposed → vetoed (target stays).
+      review_deadline:
+        type: string
+        format: date-time
+        description: 'Spec §15: default proposed_at + 14d. Stale proposals past this
+          date should be re-evaluated (not auto-vetoed).'
+      reviewer:
+        type: string
+        description: Auto-stamped on approve/veto. Username or 'system'.
+      reviewer_note:
+        type: string
+        description: Optional note explaining approval/veto reasoning.
+  summary:
+    target_kind: ''
+    target_name: ''
+    reason: ''
+    status: ''
+  embed:
+  - reason
+  - target_kind
+  - target_name
+  graph_style:
+    fill: '#94A3B8'
+    stroke: '#475569'
+    text_color: '#fff'
+  ascii_icon: 🪦
+  display_label: Arquivamento

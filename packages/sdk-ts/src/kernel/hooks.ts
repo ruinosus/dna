@@ -40,6 +40,38 @@
 // Types
 // ---------------------------------------------------------------------------
 
+/**
+ * The full vocabulary of hook names the SDK itself emits/consumes
+ * (s-dna-typed-hook-names). Py twin: `HookName` / `KNOWN_HOOK_NAMES` in
+ * dna/kernel/hooks.py. Both sides are locked to the shared fixture
+ * `tests/parity-fixtures/port-surface-parity.json` (section `hook_names`)
+ * by tests/hook-names.test.ts + tests/test_hook_names.py — vocabulary
+ * drift turns both suites red. Add a name HERE + fixture + Py, never ad hoc.
+ */
+export const KNOWN_HOOK_NAMES = [
+  "pre_build_prompt",
+  "post_build_prompt",
+  "pre_save",
+  "post_save",
+  "post_delete",
+  "kinddef_conflict",
+  "parse_error",
+  "extension_error",
+] as const;
+
+export type HookName = (typeof KNOWN_HOOK_NAMES)[number];
+
+/**
+ * Parameter type for hook-name arguments: the known vocabulary (with editor
+ * autocomplete) plus arbitrary strings for back-compat (custom hooks stay
+ * legal — they warn at runtime, never break). A misspelled builtin name
+ * like `on("pre_saev", fn)` used to compile, run, and never fire, silently;
+ * the registry now console.warns once per (registry, name).
+ */
+export type HookNameArg = HookName | (string & {});
+
+const KNOWN_HOOK_SET: ReadonlySet<string> = new Set(KNOWN_HOOK_NAMES);
+
 export interface HookContext {
   scope: string;
   agent?: string;
@@ -96,9 +128,29 @@ export class HookRegistry {
    *  mis-wired listener is visible instead of an invisible no-op. */
   private _asyncSkipWarned: Set<string> = new Set();
   readonly skippedAsyncEmits: Map<string, number> = new Map();
+  /** s-dna-typed-hook-names — unknown-name warn-once tracking (per
+   *  registry, per name; same posture as _asyncSkipWarned). */
+  private _unknownHookWarned: Set<string> = new Set();
+
+  /** Warn (once per registry+name) on a name outside `HookName`.
+   *  Fail-loud, NOT fail-closed: custom hook names keep working
+   *  (back-compat / third-party channels), but a typo of a builtin name —
+   *  the listener that never fires — is now visible. Py twin semantics:
+   *  `UnknownHookNameWarning`. */
+  private _checkHookName(hook: string): void {
+    if (KNOWN_HOOK_SET.has(hook) || this._unknownHookWarned.has(hook)) return;
+    this._unknownHookWarned.add(hook);
+    console.warn(
+      `unknown hook name ${JSON.stringify(hook)} — known: ` +
+      `${JSON.stringify([...KNOWN_HOOK_NAMES].sort())}. A listener on (or ` +
+      `emit of) a misspelled hook never fires; custom names still work ` +
+      `(warning only).`,
+    );
+  }
 
   /** Register middleware. Called in order, each receives output of previous. */
-  use(hook: string, fn: Middleware): void {
+  use(hook: HookNameArg, fn: Middleware): void {
+    this._checkHookName(hook);
     const list = this._middleware.get(hook) ?? [];
     list.push(fn);
     this._middleware.set(hook, list);
@@ -111,7 +163,8 @@ export class HookRegistry {
    * Async functions are routed to the async channel — callers using `emit`
    * (sync) skip them; `emitAsync` runs both.
    */
-  on(hook: string, fn: EventHandler | AsyncEventHandler): void {
+  on(hook: HookNameArg, fn: EventHandler | AsyncEventHandler): void {
+    this._checkHookName(hook);
     // AsyncFunction detection: works for `async function`. For regular
     // functions that happen to return Promises, prefer `onAsync` explicitly.
     if ((fn as Function).constructor?.name === "AsyncFunction") {
@@ -128,14 +181,16 @@ export class HookRegistry {
   /** Explicit async-only registration. Prefer `on()` — this is here for
    *  symmetry and for non-`async function` callables (arrow with Promise
    *  body, partials) where AsyncFunction detection returns false. */
-  onAsync(hook: string, fn: AsyncEventHandler): void {
+  onAsync(hook: HookNameArg, fn: AsyncEventHandler): void {
+    this._checkHookName(hook);
     const list = this._asyncEvents.get(hook) ?? [];
     list.push(fn);
     this._asyncEvents.set(hook, list);
   }
 
   /** Run middleware chain. Returns modified context. */
-  runMiddleware(hook: string, ctx: HookContext): HookContext {
+  runMiddleware(hook: HookNameArg, ctx: HookContext): HookContext {
+    this._checkHookName(hook);
     for (const fn of this._middleware.get(hook) ?? []) {
       ctx = fn(ctx);
     }
@@ -153,7 +208,8 @@ export class HookRegistry {
    * - `strict: true`: throw instead — for emit sites where skipping a
    *   listener would be a bug, not lost telemetry.
    */
-  emit(hook: string, ctx: HookContext, opts?: { strict?: boolean }): void {
+  emit(hook: HookNameArg, ctx: HookContext, opts?: { strict?: boolean }): void {
+    this._checkHookName(hook);
     for (const fn of this._events.get(hook) ?? []) {
       try {
         fn(ctx);
@@ -193,7 +249,8 @@ export class HookRegistry {
    * Use from async call sites (kernel.writeDocument, kernel.deleteDocument).
    * Errors in any listener are logged and do NOT prevent other listeners.
    */
-  async emitAsync(hook: string, ctx: HookContext): Promise<void> {
+  async emitAsync(hook: HookNameArg, ctx: HookContext): Promise<void> {
+    this._checkHookName(hook);
     for (const fn of this._events.get(hook) ?? []) {
       try {
         fn(ctx);
@@ -223,10 +280,11 @@ export class HookRegistry {
    * listener instead of stacking a duplicate.
    */
   onVeto(
-    hook: string,
+    hook: HookNameArg,
     fn: VetoHandler,
     opts?: { priority?: number; key?: string },
   ): void {
+    this._checkHookName(hook);
     const listeners = this._veto.get(hook) ?? [];
     const key = opts?.key ?? null;
     const filtered = key !== null
@@ -246,7 +304,8 @@ export class HookRegistry {
    * aborts the chain and propagates to the caller (the operation is
    * vetoed). Listeners may mutate `ctx` in place.
    */
-  async emitVeto(hook: string, ctx: PreSaveContext): Promise<void> {
+  async emitVeto(hook: HookNameArg, ctx: PreSaveContext): Promise<void> {
+    this._checkHookName(hook);
     for (const entry of this._veto.get(hook) ?? []) {
       await entry.fn(ctx);
     }

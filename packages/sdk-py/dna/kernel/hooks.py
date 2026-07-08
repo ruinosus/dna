@@ -53,22 +53,66 @@ ordered chain.
 `key` makes registration idempotent: re-registering the same key REPLACES
 the previous listener (extensions may be re-loaded onto a shared registry).
 
-Hook points:
-  - pre_build_prompt:  called before prompt rendering, can modify context
+Hook points (the ``HookName`` vocabulary, s-dna-typed-hook-names):
+  - pre_build_prompt:  middleware — before prompt rendering, can modify context
   - post_build_prompt: called after prompt rendering, receives final prompt
   - pre_save:          called before document save, can reject (veto channel;
                        emitted by kernel.write_document with PreSaveContext)
   - post_save:         called after document save  [fires via emit_async]
   - post_delete:       called after document delete [fires via emit_async]
+  - kinddef_conflict:  a KindDefinition collides with an existing Kind
+  - parse_error:       a document failed Kind-model validation at scan time
+  - extension_error:   an Extension.register() raised during kernel.load
+
+Names are typed (``HookName`` Literal) but NOT enforced: registering or
+emitting an unknown name stays legal (custom hooks, back-compat) and warns
+once per (registry, name) via ``UnknownHookNameWarning`` — a typo like
+``on("pre_saev", fn)`` used to compile, run, and never fire, silently.
 """
 from __future__ import annotations
 
 import inspect
 import logging
+import warnings
 from dataclasses import dataclass, field
-from typing import Any, Awaitable, Callable, Union
+from typing import Any, Awaitable, Callable, Literal, Union, get_args, overload
 
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Hook-name vocabulary (s-dna-typed-hook-names)
+# ---------------------------------------------------------------------------
+
+# The full vocabulary of hook names the SDK itself emits/consumes. TS twin:
+# ``HookName`` / ``KNOWN_HOOK_NAMES`` in src/kernel/hooks.ts. The two sides
+# are locked to the shared fixture ``tests/parity-fixtures/
+# port-surface-parity.json`` (section ``hook_names``) by
+# tests/test_hook_names.py + tests/hook-names.test.ts — vocabulary drift
+# turns both suites red. Add a name HERE + fixture + TS, never ad hoc.
+HookName = Literal[
+    "pre_build_prompt",
+    "post_build_prompt",
+    "pre_save",
+    "post_save",
+    "post_delete",
+    "kinddef_conflict",
+    "parse_error",
+    "extension_error",
+]
+
+#: Runtime mirror of the ``HookName`` Literal (single source: derived).
+KNOWN_HOOK_NAMES: tuple[str, ...] = get_args(HookName)
+_KNOWN_HOOK_SET = frozenset(KNOWN_HOOK_NAMES)
+
+
+class UnknownHookNameWarning(UserWarning):
+    """A hook was registered/emitted under a name outside ``HookName``.
+
+    Not an error — arbitrary names remain legal (third-party/custom hooks,
+    back-compat) — but a misspelled builtin name means the listener NEVER
+    fires (or the emit reaches nobody), so the mismatch is surfaced loudly
+    instead of silently."""
 
 
 @dataclass
@@ -109,8 +153,10 @@ MiddlewareFn = Callable[[HookContext], HookContext]
 EventFn = Callable[[HookContext], None]
 # Event (async): (HookContext) -> Awaitable[None]
 AsyncEventFn = Callable[[HookContext], Awaitable[None]]
-# Veto listener: sync or async; raising vetoes the operation.
-VetoFn = Callable[[Any], Union[None, Awaitable[None]]]
+# Veto listener: sync or async; raising vetoes the operation. The veto
+# channel is emitted with the typed ``PreSaveContext`` (write_pipeline) —
+# guards get real fields (scope/kind/name/raw/tenant/layer/kernel), not Any.
+VetoFn = Callable[[PreSaveContext], Union[None, Awaitable[None]]]
 
 
 class HookRegistry:
@@ -129,10 +175,41 @@ class HookRegistry:
         # mis-wired listener is visible instead of an invisible no-op.
         self._async_skip_warned: set[tuple[str, str]] = set()
         self.skipped_async_emits: dict[str, int] = {}
+        # s-dna-typed-hook-names — unknown-name warn-once tracking (per
+        # registry, per name; same posture as _async_skip_warned).
+        self._unknown_hook_warned: set[str] = set()
+
+    def _check_hook_name(self, hook: str) -> None:
+        """Warn (once per registry+name) on a name outside ``HookName``.
+
+        Fail-loud, NOT fail-closed: custom hook names keep working
+        (back-compat / third-party channels), but a typo of a builtin name
+        — the listener that never fires — is now visible."""
+        if hook in _KNOWN_HOOK_SET or hook in self._unknown_hook_warned:
+            return
+        self._unknown_hook_warned.add(hook)
+        warnings.warn(
+            f"unknown hook name {hook!r} — known: {sorted(KNOWN_HOOK_NAMES)}. "
+            f"A listener on (or emit of) a misspelled hook never fires; "
+            f"custom names still work (warning only).",
+            UnknownHookNameWarning,
+            stacklevel=3,
+        )
+
+    @overload
+    def use(self, hook: HookName, fn: MiddlewareFn) -> None: ...
+    @overload
+    def use(self, hook: str, fn: MiddlewareFn) -> None: ...
 
     def use(self, hook: str, fn: MiddlewareFn) -> None:
         """Register middleware. Called in order, each receives output of previous."""
+        self._check_hook_name(hook)
         self._middleware.setdefault(hook, []).append(fn)
+
+    @overload
+    def on(self, hook: HookName, fn: Union[EventFn, AsyncEventFn]) -> None: ...
+    @overload
+    def on(self, hook: str, fn: Union[EventFn, AsyncEventFn]) -> None: ...
 
     def on(self, hook: str, fn: Union[EventFn, AsyncEventFn]) -> None:
         """Register event subscriber. Fire-and-forget, errors logged but not raised.
@@ -142,10 +219,16 @@ class HookRegistry:
         that invoke ``emit`` (sync) will skip them; callers that invoke
         ``emit_async`` run both channels.
         """
+        self._check_hook_name(hook)
         if inspect.iscoroutinefunction(fn):
             self._async_events.setdefault(hook, []).append(fn)  # type: ignore[arg-type]
         else:
             self._events.setdefault(hook, []).append(fn)  # type: ignore[arg-type]
+
+    @overload
+    def on_async(self, hook: HookName, fn: AsyncEventFn) -> None: ...
+    @overload
+    def on_async(self, hook: str, fn: AsyncEventFn) -> None: ...
 
     def on_async(self, hook: str, fn: AsyncEventFn) -> None:
         """Explicit async-only registration.
@@ -154,13 +237,20 @@ class HookRegistry:
         and for lambdas / partials where ``iscoroutinefunction`` returns False
         incorrectly.
         """
+        self._check_hook_name(hook)
         self._async_events.setdefault(hook, []).append(fn)
 
     def run_middleware(self, hook: str, ctx: HookContext) -> HookContext:
         """Run middleware chain. Returns modified context."""
+        self._check_hook_name(hook)
         for fn in self._middleware.get(hook, []):
             ctx = fn(ctx)
         return ctx
+
+    @overload
+    def emit(self, hook: HookName, ctx: HookContext, *, strict: bool = ...) -> None: ...
+    @overload
+    def emit(self, hook: str, ctx: HookContext, *, strict: bool = ...) -> None: ...
 
     def emit(self, hook: str, ctx: HookContext, *, strict: bool = False) -> None:
         """Sync emit. Runs only sync listeners.
@@ -179,6 +269,7 @@ class HookRegistry:
         - ``strict=True``: raise RuntimeError instead — for emit sites
           where skipping a listener would be a bug, not lost telemetry.
         """
+        self._check_hook_name(hook)
         for fn in self._events.get(hook, []):
             try:
                 fn(ctx)
@@ -209,6 +300,11 @@ class HookRegistry:
                     hook, key[1], self.skipped_async_emits[hook],
                 )
 
+    @overload
+    async def emit_async(self, hook: HookName, ctx: HookContext) -> None: ...
+    @overload
+    async def emit_async(self, hook: str, ctx: HookContext) -> None: ...
+
     async def emit_async(self, hook: str, ctx: HookContext) -> None:
         """Async emit. Runs sync listeners inline, then awaits each async listener.
 
@@ -216,6 +312,7 @@ class HookRegistry:
         Errors in any listener are logged and do NOT prevent other listeners
         from running.
         """
+        self._check_hook_name(hook)
         # Sync listeners first (same behavior as emit()).
         for fn in self._events.get(hook, []):
             try:
@@ -232,6 +329,17 @@ class HookRegistry:
 
     # -- Veto channel (s-write-path-despecialize) -----------------------------
 
+    @overload
+    def on_veto(
+        self, hook: HookName, fn: VetoFn, *,
+        priority: int = ..., key: str | None = ...,
+    ) -> None: ...
+    @overload
+    def on_veto(
+        self, hook: str, fn: VetoFn, *,
+        priority: int = ..., key: str | None = ...,
+    ) -> None: ...
+
     def on_veto(
         self, hook: str, fn: VetoFn, *,
         priority: int = 0, key: str | None = None,
@@ -240,12 +348,14 @@ class HookRegistry:
 
         Listeners run in ascending ``priority`` (ties keep registration
         order). Raising from a listener PROPAGATES to the emitter — that is
-        the veto. Sync and async callables both work.
+        the veto. Sync and async callables both work; both receive the
+        typed ``PreSaveContext``.
 
         ``key`` (recommended: ``"<extension>.<rule>"``) makes registration
         idempotent — a second ``on_veto`` with the same key REPLACES the
         earlier listener instead of stacking a duplicate.
         """
+        self._check_hook_name(hook)
         listeners = self._veto.setdefault(hook, [])
         if key is not None:
             listeners[:] = [entry for entry in listeners if entry[2] != key]
@@ -253,13 +363,21 @@ class HookRegistry:
         listeners.append((priority, self._veto_seq, key, fn))
         listeners.sort(key=lambda entry: (entry[0], entry[1]))
 
-    async def emit_veto(self, hook: str, ctx: Any) -> None:
+    @overload
+    async def emit_veto(self, hook: HookName, ctx: PreSaveContext) -> None: ...
+    @overload
+    async def emit_veto(self, hook: str, ctx: PreSaveContext) -> None: ...
+
+    async def emit_veto(self, hook: str, ctx: PreSaveContext) -> None:
         """Run veto listeners for ``hook`` in priority order.
 
-        Unlike ``emit``/``emit_async``, exceptions are NOT swallowed — the
-        first raise aborts the chain and propagates to the caller (the
-        operation is vetoed). Listeners may mutate ``ctx`` in place.
+        ``ctx`` is the typed ``PreSaveContext`` (the write_pipeline builds
+        it — guards read real fields, not Any). Unlike
+        ``emit``/``emit_async``, exceptions are NOT swallowed — the first
+        raise aborts the chain and propagates to the caller (the operation
+        is vetoed). Listeners may mutate ``ctx`` in place.
         """
+        self._check_hook_name(hook)
         for _prio, _seq, _key, fn in self._veto.get(hook, []):
             result = fn(ctx)
             if inspect.isawaitable(result):

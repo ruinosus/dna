@@ -77,6 +77,11 @@ _INTROSPECTORS: dict[str, Callable[[], set[str]]] = {
     "ReaderPort": lambda: _protocol_members(P.ReaderPort),
     "WriterPort": lambda: _protocol_members(P.WriterPort),
     "KindPort": lambda: _protocol_members(P.KindPort),
+    # The optional presentation slice (s-dna-kindport-descriptor-schema):
+    # a typing-only capability Protocol — NOT runtime_checkable, NOT part
+    # of KindPort (the H1 isinstance gate must never require it). TS folds
+    # the same members into KindPort via `extends KindPresentation`.
+    "KindPresentation": lambda: _protocol_members(P.KindPresentation),
     "ToolPort": lambda: _protocol_members(P.ToolPort),
     "ExtensionHost": lambda: _protocol_members(P.ExtensionHost),
     "Extension": lambda: _protocol_members(P.Extension),

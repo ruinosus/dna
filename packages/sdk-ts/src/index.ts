@@ -49,8 +49,16 @@ export * from "./viz/index.js";
 
 // Opinionated bootstrap — extension wiring lives here, not in kernel/
 export { createKernelWithBuiltins, quickInstance, createRuntimeWithBuiltins, quickManifest } from "./bootstrap.js";
-export { HookRegistry } from "./kernel/hooks.js";
-export type { HookContext, Middleware, EventHandler } from "./kernel/hooks.js";
+export { HookRegistry, KNOWN_HOOK_NAMES } from "./kernel/hooks.js";
+export type {
+  HookContext,
+  HookName,
+  HookNameArg,
+  Middleware,
+  EventHandler,
+  PreSaveContext,
+  VetoHandler,
+} from "./kernel/hooks.js";
 export type {
   SourcePort,
   CachePort,
@@ -58,6 +66,7 @@ export type {
   ReaderPort,
   WriterPort,
   KindPort,
+  KindPresentation,
   Extension,
   ExtensionHost,
   CompositionResult,
@@ -156,6 +165,7 @@ export { CollabExtension } from "./extensions/collab.js";
 // never exported (external consumers couldn't import them) and 3 of them
 // (Community/Research/Sdlc) were loaded by no bootstrap at all. See bootstrap.ts.
 export { FederationExtension } from "./extensions/federation.js";
+export { SdlcExtension } from "./extensions/sdlc.js";
 export { DeclarativeKindPort, storageDictToDescriptor } from "./kernel/meta.js";
 export { KindDefinitionSchema, KindDefinitionSpecSchema, KIND_DEFINITION_API_VERSION, KIND_DEFINITION_KIND } from "./kernel/models.js";
 export type { TypedKindDefinition } from "./kernel/models.js";

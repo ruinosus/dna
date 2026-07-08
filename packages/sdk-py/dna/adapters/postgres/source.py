@@ -234,24 +234,35 @@ class PostgresSource(WritableSourcePort):
     # Migrations
     # ------------------------------------------------------------------
 
-    async def _run_migrations(self) -> None:
-        async with self._acquire_safe() as conn:
-            await conn.execute(f"""
-                CREATE TABLE IF NOT EXISTS {self._schema}.dna_schema_migrations (
-                    version INTEGER PRIMARY KEY,
-                    applied_at TEXT NOT NULL
+    async def _run_migrations(self) -> list[int]:
+        """Apply pending migrations via the shared forward-only runner
+        (``adapters/_migrations.py``). The control table keeps its
+        historical name + shape
+        (``{schema}.dna_schema_migrations(version, applied_at)``) — full
+        compat with DBs created before the helper existed."""
+        from .._migrations import run_migrations
+
+        async def ensure_control_table() -> None:
+            async with self._acquire_safe() as conn:
+                await conn.execute(f"""
+                    CREATE TABLE IF NOT EXISTS {self._schema}.dna_schema_migrations (
+                        version INTEGER PRIMARY KEY,
+                        applied_at TEXT NOT NULL
+                    )
+                """)
+
+        async def fetch_applied() -> list[int]:
+            async with self._acquire_safe() as conn:
+                rows = await conn.fetch(
+                    f"SELECT version FROM {self._schema}.dna_schema_migrations"
                 )
-            """)
+                return [row["version"] for row in rows]
 
-            rows = await conn.fetch(
-                f"SELECT version FROM {self._schema}.dna_schema_migrations"
-            )
-            applied = {row["version"] for row in rows}
-
-        for version, statements in sorted(_MIGRATIONS.items()):
-            if version in applied:
-                continue
-            logger.info("Applying Postgres migration v%d", version)
+        async def apply_version(version: int, statements: list[str]) -> None:
+            # Preserved Postgres semantics: ONE transaction per version
+            # wrapping every statement + the control-table record, on a
+            # fresh pooled connection; {schema} placeholder interpolated
+            # per statement (asyncpg can't multi-statement an execute).
             async with self._acquire_safe() as conn:
                 async with conn.transaction():
                     for stmt in statements:
@@ -261,6 +272,25 @@ class PostgresSource(WritableSourcePort):
                         "(version, applied_at) VALUES ($1, $2)",
                         version, _now(),
                     )
+
+        return await run_migrations(
+            _MIGRATIONS,
+            ensure_control_table=ensure_control_table,
+            fetch_applied=fetch_applied,
+            apply_version=apply_version,
+            dialect="Postgres",
+        )
+
+    async def run_schema_migrations(self) -> list[int]:
+        """Public migration entrypoint (also runs inside ``init()``).
+
+        Returns the versions applied by THIS call — ``[]`` on an
+        up-to-date schema (the idempotent re-boot contract the
+        conformance kit's ``schema_migrations_idempotent`` case
+        exercises)."""
+        applied = await self._run_migrations()
+        self._migrated = True
+        return applied
 
     # ------------------------------------------------------------------
     # SourcePort (read)

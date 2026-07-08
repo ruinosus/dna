@@ -259,7 +259,7 @@
         {
           "py": null,
           "ts": "docs",
-          "justification": "Prose docs attr — Py documents it in the KindPort docstring as optional/duck-typed (DOCS.md loader overrides at load time); TS declares the optional member."
+          "justification": "KindPresentation slice member — TS KindPort extends KindPresentation (keyof includes it, so the exhaustive manifest lists it here too); the Py twin lives on the KindPresentation capability Protocol, kept OFF the runtime_checkable KindPort so the H1 isinstance gate never requires it. Tracked as a py↔ts pair in the KindPresentation port below."
         },
         {
           "py": null,
@@ -284,27 +284,83 @@
         {
           "py": null,
           "ts": "preview",
-          "justification": "Studio preview blocks. Py deliberately keeps preview() OFF the Protocol body (docstring: 'consumers feature-test via hasattr') so existing extensions stay Protocol-compatible; TS marks it optional."
+          "justification": "KindPresentation slice member — see the docs entry above; paired in the KindPresentation port below."
         },
         {
           "py": null,
           "ts": "graphStyle",
-          "justification": "Rendering hint. Py documents graph_style/ascii_icon/display_label/graph_meta as optional duck-typed attrs in the KindPort docstring comment block; TS declares them as optional members. Same contract, different declaration idiom."
+          "justification": "KindPresentation slice member — see the docs entry above; paired in the KindPresentation port below."
         },
         {
           "py": null,
           "ts": "asciiIcon",
-          "justification": "Rendering hint — see graphStyle."
+          "justification": "KindPresentation slice member — see the docs entry above; paired in the KindPresentation port below."
         },
         {
           "py": null,
           "ts": "displayLabel",
-          "justification": "Rendering hint — see graphStyle."
+          "justification": "KindPresentation slice member — see the docs entry above; paired in the KindPresentation port below."
         },
         {
           "py": null,
           "ts": "graphMeta",
-          "justification": "Rendering hint — see graphStyle."
+          "justification": "KindPresentation slice member — see the docs entry above; paired in the KindPresentation port below."
+        },
+        {
+          "py": null,
+          "ts": "uiSchema",
+          "justification": "KindPresentation slice member — see the docs entry above; paired in the KindPresentation port below."
+        },
+        {
+          "py": null,
+          "ts": "descriptionFallbackField",
+          "justification": "KindPresentation slice member — see the docs entry above; paired in the KindPresentation port below."
+        },
+        {
+          "py": null,
+          "ts": "visibleInBackend",
+          "justification": "KindPresentation slice member (was read via `(kp as any).visibleInBackend` before s-dna-kindport-descriptor-schema declared it) — see the docs entry above; paired in the KindPresentation port below."
+        }
+      ]
+    },
+    "KindPresentation": {
+      "doc": "Optional presentation/UX capability of a Kind (s-dna-kindport-descriptor-schema). Py: typing-only capability Protocol (NOT runtime_checkable, NOT part of KindPort — the H1 isinstance gate must never require these; the is_runtime_artifact precedent). TS: interface that KindPort extends (native optional members). Every member is optional at runtime; KindBase carries the attribute defaults; consumers use typed access with a default (getattr(kp, name, None) / kp.member?.).",
+      "members": [
+        {
+          "py": "docs",
+          "ts": "docs"
+        },
+        {
+          "py": "description_fallback_field",
+          "ts": "descriptionFallbackField"
+        },
+        {
+          "py": "ui_schema",
+          "ts": "uiSchema"
+        },
+        {
+          "py": "graph_style",
+          "ts": "graphStyle"
+        },
+        {
+          "py": "ascii_icon",
+          "ts": "asciiIcon"
+        },
+        {
+          "py": "display_label",
+          "ts": "displayLabel"
+        },
+        {
+          "py": "visible_in_backend",
+          "ts": "visibleInBackend"
+        },
+        {
+          "py": "preview",
+          "ts": "preview"
+        },
+        {
+          "py": "graph_meta",
+          "ts": "graphMeta"
         }
       ]
     },
@@ -533,6 +589,19 @@
         }
       ]
     }
+  },
+  "hook_names": {
+    "$comment": "s-dna-typed-hook-names — the shared HookRegistry hook-name vocabulary. Py: HookName Literal + KNOWN_HOOK_NAMES (dna/kernel/hooks.py); TS: HookName union + KNOWN_HOOK_NAMES (src/kernel/hooks.ts). Executors: packages/sdk-py/tests/test_hook_names.py + packages/sdk-ts/tests/hook-names.test.ts — vocabulary drift turns both suites red. Names are identical on both sides (event names are wire vocabulary, not API casing).",
+    "names": [
+      "pre_build_prompt",
+      "post_build_prompt",
+      "pre_save",
+      "post_save",
+      "post_delete",
+      "kinddef_conflict",
+      "parse_error",
+      "extension_error"
+    ]
   },
   "excluded_surfaces": {
     "collaborator-ports": {

@@ -1,0 +1,129 @@
+# StatusReport — frozen snapshot of one Insight's run (record plane).
+# Append-only ledger: each run writes a new report; confidence ascends or
+# regresses as the project accumulates data. Schema mirrors AssessmentReport.
+#
+# F3 lote-2 (spec 2026-06-10-kinds-descriptor-f3): synthesized from this
+# descriptor; the hand-written class twins were deleted. PARITY-CRITICAL
+# package data — byte-identical mirror under packages/sdk-{py,ts};
+# tests/test_descriptor_hash_parity.py enforces. Equivalence vs the extinct
+# class frozen in tests/test_lote2_descriptor_equivalence.py (golden:
+# tests/goldens/lote2/StatusReport.golden.json). Deltas intencionais (semântica
+# canônica = port): summary curado substitui o eco whole-spec do KindBase
+# default (list endpoints não usam kp.summary()); parse valida contra o
+# schema (classe era pass-through); to_card morto não migrado.
+apiVersion: github.com/ruinosus/dna/core/v1
+kind: KindDefinition
+metadata:
+  name: status-report
+spec:
+  target_api_version: github.com/ruinosus/dna/sdlc/v1
+  target_kind: StatusReport
+  alias: sdlc-status-report
+  origin: github.com/ruinosus/dna/sdlc
+  tenant_scope: global
+  plane: record
+  prompt_target: false
+  flatten_in_context: false
+  prompt_target_priority: 0
+  storage:
+    type: yaml
+    container: status-reports
+  dep_filters:
+    insight: sdlc-insight
+  schema:
+    type: object
+    required:
+    - insight
+    - verdict
+    - confidence
+    properties:
+      insight:
+        type: string
+        description: Name of the Insight that produced this report.
+      question:
+        type: string
+        description: Echo of the oracle's question at run time.
+      verdict:
+        type: string
+        description: Human-readable answer (1-3 sentences pt-BR). Synthesized by the
+          LLM from the heuristic numbers.
+      confidence:
+        type: string
+        enum:
+        - certain
+        - guess
+        - insufficient
+        description: How firm the verdict is. `insufficient` = the heuristic didn't
+          have enough data — the LLM was NOT called and the verdict is a stock message.
+      rag_status:
+        type: string
+        enum:
+        - red
+        - amber
+        - green
+        description: PMO-standard RAG status (Red/Amber/Green) for executive dashboards.
+          Red = action needed; Amber = watch; Green = healthy. Optional — heuristics
+          that map metrics → RAG should populate this.
+      metrics:
+        type: object
+        description: Deterministic numbers the heuristic computed (cycle counts, frequencies,
+          averages). Free-form object — schema varies per oracle.
+      heuristic_explanation:
+        type: string
+        description: 'Plain-text walkthrough of HOW the heuristic computed the metrics
+          and decided the confidence. Transparency: a reader can audit the math.'
+      evidence_refs:
+        type: array
+        items:
+          type: string
+        description: Doc refs (Kind/name) cited as evidence for this verdict. Studio
+          renders these as navigable links.
+      generated_at:
+        type: string
+        format: date-time
+      generated_by:
+        type: string
+        description: Model + actor (e.g. 'claude-sonnet-4-6').
+      ascended_from:
+        type: string
+        enum:
+        - certain
+        - guess
+        - insufficient
+        - ''
+        description: If the previous verdict's confidence differs from this one, this
+          is the previous level. Empty string when it's the first verdict.
+      thresholds:
+        type: object
+        description: 'Self-describing thresholds the heuristic used (e.g. `to_certain:
+          ''pattern_freq > 0.9 AND n>=5''`). Lets the reader know what would change
+          the verdict.'
+      bumped_remembrances:
+        type: array
+        items:
+          type: string
+        description: 'Phase 2B (squishy-jumping-nebula): audit trail written by oracle_cue_hook
+          listing the LessonLearned slugs whose cue history was bumped because this
+          report cited them. Bidirectional pairing with LessonLearned.cues_history.
+          Empty when the run had nothing to bump (the field is omitted, not stored
+          as []).'
+      owner:
+        type: string
+        description: 'Slug reference to a Agent. When set, this StatusReport
+          is PRIVATE to that agent. When null, it is GENERAL. Phase: cognitive-reflection.'
+  summary:
+    insight: ''
+    verdict: ''
+    confidence: ''
+    generated_at: ''
+    owner: null
+  embed:
+  - verdict
+  - question
+  - heuristic_explanation
+  graph_style:
+    fill: '#A78BFA'
+    stroke: '#7C3AED'
+    text_color: '#fff'
+  ascii_icon: 📜
+  display_label: Insight Reports

@@ -1,0 +1,109 @@
+# PromptTemplate — versioned, overlayable user-prompt template
+# (record plane, GLOBAL scope; bundle storage, body = PROMPT.md after frontmatter).
+#
+# expr batch B (plan 2026-06-11-descriptor-expressiveness, Chunk 4): the twin
+# PromptTemplateKind classes (Py+TS) were DELETED — this descriptor is the
+# single source. It exercises FOUR descriptor fields the lote-3 skip flagged:
+#   - D2 summary: variables_count {count_of: variables}, body_length
+#     {count_of: body} (count_of over a STRING), default_locale plain.
+#   - D3 describe: {path: description}.
+#   - D4 ui_schema: pass-through Studio widget hints (the class's ui_schema).
+#   - D7 description_fallback_field: body.
+# The dead to_card (zero consumers) was NOT migrated.
+#
+# FIDELITY DELTA (port-canonical, pinned in the equivalence test): the class's
+# describe() returned `s.get("description") or None` (empty string → None);
+# the {path: description} projection returns "" verbatim. An empty-string
+# description is implausible (descriptions are human text).
+# PARITY-CRITICAL package data: byte-identical mirror at
+# packages/sdk-{py,ts}/{dna/extensions,src/extensions}/sdlc/kinds/
+# prompt-template.kind.yaml (test_descriptor_hash_parity enforces). Equivalence
+# frozen in tests/test_expr_batch_b_equivalence.py.
+apiVersion: github.com/ruinosus/dna/core/v1
+kind: KindDefinition
+metadata:
+  name: prompt-template
+spec:
+  target_api_version: github.com/ruinosus/dna/sdlc/v1
+  target_kind: PromptTemplate
+  alias: sdlc-prompt-template
+  origin: github.com/ruinosus/dna/sdlc
+  plane: record
+  prompt_target: false
+  flatten_in_context: false
+  prompt_target_priority: 0
+  is_runtime_artifact: false
+  storage:
+    type: bundle
+    container: prompts
+    marker: PROMPT.md
+    body_field: body
+  schema:
+    type: object
+    required:
+    - body
+    properties:
+      body:
+        type: string
+        description: Template text with {var} placeholders.
+      variables:
+        type: array
+        items:
+          type: string
+        default: []
+        description: Names of placeholders body expects.
+      description:
+        type: string
+      default_locale:
+        type: string
+      tags:
+        type: array
+        items:
+          type: string
+        default: []
+  # Authored projection — 1:1 with the extinct class summary(). body_length is
+  # count_of over a STRING (len(body or "")); variables_count over a list.
+  summary:
+    variables_count:
+      count_of: variables
+    body_length:
+      count_of: body
+    default_locale:
+      path: default_locale
+  # D3: the class's describe(doc) returned s.get("description") or None — the
+  # {path: …} projection returns the field as-is (or None). See the DELTA note.
+  describe:
+    path: description
+  # D7: the class declared description_fallback_field = "body".
+  description_fallback_field: body
+  # D4: Studio form widget hints — pass-through (the kernel does not interpret;
+  # the Studio form renderer owns the vocabulary). Verbatim from the class.
+  ui_schema:
+    body:
+      widget: markdown
+      label: Template body
+      help: Template with {placeholders}. Variables listed in frontmatter must match.
+      height: 320
+      order: 10
+    variables:
+      widget: list
+      label: Variables
+      help: Names of placeholders the body expects (e.g. scope, events_encoded).
+      order: 20
+    default_locale:
+      widget: text
+      label: Default locale
+      help: Optional. e.g. 'pt-br'. Caller may override.
+      order: 30
+  graph_style:
+    fill: '#0EA5E9'
+    stroke: '#0284C7'
+    text_color: '#fff'
+  ascii_icon: 📝
+  display_label: Prompt Templates
+  docs: A PromptTemplate is a versioned, overlayable user-prompt template owned by
+    the kernel — the declarative answer to 'where does the user prompt live?'. Callers
+    (typically Python helpers or HTTP endpoints) fetch the template by name and format()
+    it with per-call variables. Tenants can override the template body without touching
+    code. Templates can ship versioned with their consuming Kind (Narrative, StatusReport,
+    etc.) so prompt-engineering changes are reviewable diffs, not commits to call sites.

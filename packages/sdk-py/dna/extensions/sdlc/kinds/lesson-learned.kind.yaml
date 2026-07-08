@@ -1,0 +1,270 @@
+# LessonLearned — affective recall artifact (record plane; memory triad).
+#
+# Surfaces unbidden when the current cycle resembles a past one in the same
+# area. Authored by the Sage oracle during the deep-sleep ritual (mostly) or
+# manually. Body prose lives in the bundle marker (LESSON_LEARNED.md);
+# structured fields in the YAML frontmatter. Studio surface label is
+# enterprise pt-BR ("Lições Aprendidas" — s-sdlcv2-memorias-market-viz).
+#
+# F3 lote-1 (spec 2026-06-10-kinds-descriptor-f3): synthesized from this
+# descriptor; the twin LessonLearnedKind classes (Py+TS) were deleted.
+# PARITY-CRITICAL package data — byte-identical mirror under
+# packages/sdk-{py,ts}; tests/test_descriptor_hash_parity.py enforces.
+# O descriptor cura um drift real Py↔TS: a classe TS era strict e NÃO tinha
+# affect_reason/affect_evidence_refs/encoding extras — o canônico é a
+# superfície Py (o que kinds-api serve em produção). A classe Py tinha um
+# to_card morto (zero consumidores) — não migrado de propósito.
+# `embed:` substitui o branch hardcoded de source_text_for + a entrada no
+# frozenset legado EMBEDDABLE_KINDS (F3 D4) — mesmos campos, mesmo join.
+apiVersion: github.com/ruinosus/dna/core/v1
+kind: KindDefinition
+metadata:
+  name: lesson-learned
+spec:
+  target_api_version: github.com/ruinosus/dna/sdlc/v1
+  target_kind: LessonLearned
+  alias: sdlc-lesson-learned
+  origin: github.com/ruinosus/dna/sdlc
+  tenant_scope: global
+  plane: record
+  prompt_target: false
+  flatten_in_context: false
+  prompt_target_priority: 0
+  scope_inheritable: false
+  storage:
+    type: bundle
+    container: lessons-learned
+    marker: LESSON_LEARNED.md
+    body_field: body
+  schema:
+    type: object
+    required:
+    - area
+    - surface_when
+    - source_refs
+    - affect
+    - summary
+    properties:
+      area:
+        type: string
+        description: 'Scoped target: Feature/X, Epic/Y, or Roadmap/Z. The LessonLearned
+          surfaces when this area is touched.'
+      surface_when:
+        type: array
+        items:
+          type: string
+          enum:
+          - feature_touched
+          - cycle_open
+          - session_start
+          - oracle_consult
+        minItems: 1
+        description: Triggers that surface this LessonLearned. Mirrors how human
+          recall fires unbidden in context.
+      source_refs:
+        type: array
+        items:
+          type: string
+        minItems: 1
+        description: Pointers to source artifacts (Narrative/X, WorkflowEvent/Y,
+          etc.) that this memory derives from.
+      affect:
+        type: string
+        enum:
+        - triumph
+        - regret
+        - surprise
+        - wistful
+        - ominous
+        description: 'Emotional tone. Evocative palette (Spec §15 decision): triumph,
+          regret, surprise, wistful, ominous.'
+      affect_reason:
+        type: string
+        minLength: 20
+        description: Story s-remembrance-affect-reason-required. Concrete justification
+          for the chosen affect — names specific slugs/SHAs/AC counts/state. NOT
+          generic ('Story closed', 'shipped successfully'). Validator rejects writes
+          that lack reason OR have boilerplate. Required for high-stakes affects
+          (regret/ominous/surprise); optional for triumph/wistful but encouraged.
+      affect_evidence_refs:
+        type: array
+        items:
+          type: string
+        description: Concrete refs (rem-X, verdict-Y, Story/s-Z) that back the affect
+          choice. Required for high-stakes affects so the LLM's claim is auditable
+          against actual artifacts in the manifest.
+      summary:
+        type: string
+        maxLength: 280
+        description: 1-2 sentence 'Lembre-se de...' — the recalled essence.
+      relevance_decay_seed:
+        type: number
+        default: 0.95
+        description: Multiplicative decay factor applied per 24h. Default 0.95 (~30%
+          relevance after 14 days).
+      last_surfaced:
+        type: string
+        format: date-time
+        description: Auto-stamped on each surfacing; null until first surface.
+      surface_count:
+        type: integer
+        default: 0
+        description: Increments on each surface. Damps re-surfacing via scoring
+          formula in retrieval.py.
+      confidence_score:
+        type: number
+        default: 1.0
+        description: Semon engram intensity. Multiplies BM25 score in retrieval.
+          Bumps when homophonic LessonsLearned (same area) are filed — engrams reinforce
+          each other. Decays with surface_count for hygiene.
+      cues_history:
+        type: array
+        items:
+          type: object
+          properties:
+            at:
+              type: string
+              format: date-time
+            cue:
+              type: string
+            actor:
+              type: string
+        default: []
+        description: Semon ecforia trace. Each time the LessonLearned is surfaced
+          via remember(), the cue (query + actor + timestamp) is appended. History
+          of WHY this memory kept getting recalled.
+      revisions:
+        type: array
+        items:
+          type: object
+          properties:
+            at:
+              type: string
+              format: date-time
+            by:
+              type: string
+            delta:
+              type: string
+        default: []
+        description: Reconsolidation log (Nader 2000 / neo-Semon). Append-only when
+          a recall reawakens the engram and the consumer updates the summary.
+      tags:
+        type: array
+        items:
+          type: string
+        default: []
+      owner:
+        type: string
+        description: 'ATTRIBUTION: which agent authored this memory (e.g. claude-code,
+          jarvis). Orthogonal to scope + to tenant (tenant separates USERS, owner
+          separates AGENTS). Recall AUDIENCE is governed by `visibility`, NOT by
+          owner (s-agent-memory-phase-0-bridge, 2026-06-02 — supersedes the 2026-05-17
+          owner-implies-private semantics). When absent: an unowned/project lesson
+          (shared).'
+      visibility:
+        type: string
+        enum:
+        - shared
+        - private
+        - pinned
+        - archived
+        default: shared
+        description: 'Recall audience (the customization axis): shared = all agents
+          in scope recall it (cross-agent knowledge, default); private = only `owner`
+          recalls it (an agent''s raw working memory); pinned = always injected
+          into working memory at bootstrap, bypassing recall scoring (the Letta
+          ''memory block''); archived = retained + auditable but excluded from default
+          recall (soft-forget). Humans audit ALL regardless of visibility (audit
+          != recall). Phase 0 (2026-06-02).'
+      memory_type:
+        type: string
+        enum:
+        - episodic
+        - semantic
+        - procedural
+        description: 'CoALA taxonomy — ORTHOGONAL to the Semon EngramState (type
+          vs state): episodic = what happened (instance/sequence); semantic = a
+          generalized fact about the world/user; procedural = how to act (a skill/rule).
+          Absent = untyped (legacy).'
+      valid_from:
+        type: string
+        format: date-time
+        description: 'World-time validity start (Zep bi-temporal). Default: created_at.'
+      valid_to:
+        type: string
+        format: date-time
+        description: World-time validity end. Set when superseded/contradicted —
+          the memory is INVALIDATED, never hard-deleted. Default recall excludes
+          valid_to<now.
+      superseded_by_memory:
+        type: string
+        description: Name of the memory that invalidated this one (not `superseded_by`
+          — that's an ADR dep_filter token). Pairs with valid_to for point-in-time
+          audit.
+      encoding_context:
+        type: object
+        description: Snapshot of the conditions at engraphy. semon-recaller scores
+          ecphory candidates by partial-match against this dict.
+        properties:
+          area:
+            type: string
+          affect:
+            type: string
+          co_topics:
+            type: array
+            items:
+              type: string
+            description: Last 3-5 topic tags active at engraphy.
+          source_refs:
+            type: array
+            items:
+              type: string
+          time_of_day:
+            type: string
+            description: morning|afternoon|evening|night — coarse temporal cue.
+          day_of_week:
+            type: string
+          engraphed_by:
+            type: string
+            description: Agent slug that decided to engraph (semon-scribe by default).
+        additionalProperties: true
+      homophonic_links:
+        type: array
+        description: Semon homophony — engrams sharing substrate features. Each
+          link records target + resonance score + basis. semon-recaller propagates
+          a small strength boost (+0.02) to neighbors on ecphory (resonance).
+        items:
+          type: object
+          properties:
+            target_name:
+              type: string
+            resonance_score:
+              type: number
+              minimum: 0
+              maximum: 1
+            basis:
+              type: string
+              description: co-area | co-affect | co-temporal | semantic | manual
+          required:
+          - target_name
+        default: []
+  # Curated list/tree projection. DELTA INTENCIONAL vs a classe extinta: o
+  # KindBase default ecoava o spec INTEIRO no navigator — gordo demais. Os
+  # campos abaixo são a essência que a classe TS (summary) e o to_card morto
+  # já elegiam. List endpoints (/docs/{kind}) não usam summary() — payloads
+  # de produção inalterados (pinado no teste de equivalência).
+  summary:
+    area: ''
+    affect: ''
+    summary: ''
+    surface_count: 0
+    owner: null
+  embed:
+  - summary
+  - body
+  graph_style:
+    fill: '#FBBF24'
+    stroke: '#D97706'
+    text_color: '#fff'
+  ascii_icon: 💭
+  display_label: Lições Aprendidas

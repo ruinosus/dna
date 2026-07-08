@@ -29,9 +29,12 @@ import { KindDefinitionExtension } from "./extensions/kinddef.js";
 import { SafetyPolicyExtension } from "./extensions/safety.js";
 import { RecognizerExtension } from "./extensions/recognizer.js";
 import { FederationExtension } from "./extensions/federation.js";
+import { SdlcExtension } from "./extensions/sdlc.js";
 import { AuditExtension } from "./extensions/audit.js";
+import { LessonExtension } from "./extensions/lesson.js";
 import { TenantExtension } from "./extensions/tenant.js";
 import { EvidenceExtension } from "./extensions/evidence.js";
+import { TestkitExtension } from "./extensions/testkit.js";
 import type { Extension } from "./kernel/protocols.js";
 import type { ManifestInstance } from "./kernel/instance.js";
 
@@ -53,9 +56,12 @@ function loadBuiltins<T extends { load(ext: Extension): void }>(target: T): T {
     new SafetyPolicyExtension(),
     new RecognizerExtension(),
     new FederationExtension(),
+    new SdlcExtension(),
     new AuditExtension(),
+    new LessonExtension(),
     new TenantExtension(),
     new EvidenceExtension(),
+    new TestkitExtension(),
   ] as Extension[]) {
     target.load(ext);
   }

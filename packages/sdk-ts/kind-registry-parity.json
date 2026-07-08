@@ -19,11 +19,27 @@
   "helix-usecase",
   "helix-user-profile",
   "kinddef-kinddefinition",
+  "lesson-lesson",
   "policy-layer-policy",
   "presidio-recognizer",
+  "sdlc-agent-session",
+  "sdlc-bug",
+  "sdlc-epic",
+  "sdlc-feature",
+  "sdlc-initiative",
+  "sdlc-issue",
+  "sdlc-plan",
+  "sdlc-reference",
+  "sdlc-roadmap",
+  "sdlc-spec",
+  "sdlc-spike",
+  "sdlc-story",
+  "sdlc-task",
   "soulspec-soul",
   "tenant-membership",
-  "tenant-tenant"
+  "tenant-tenant",
+  "testkit-test-guide",
+  "testkit-test-run"
  ],
  "py_only_allowlist": [
   "collab-comment"

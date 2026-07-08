@@ -1,0 +1,253 @@
+{
+ "_doc": "FROZEN GOLDEN — captured 2026-06-10 from the live RetrospectiveKind class (pre-deletion), F3 lote-1. Deep-equaled against the descriptor-synthesized port in test_lote1_descriptor_equivalence.py.",
+ "dep_filters": {
+  "covers_epics": "sdlc-epic",
+  "covers_features": "sdlc-feature",
+  "covers_session": "sdlc-agent-session",
+  "covers_stories": "sdlc-story"
+ },
+ "flags": {
+  "flatten_in_context": false,
+  "is_overlayable": true,
+  "is_prompt_target": false,
+  "is_root": false,
+  "is_runtime_artifact": false,
+  "plane": "record",
+  "prompt_target_priority": 0,
+  "scope": "global",
+  "scope_inheritable": true,
+  "volatile_spec_fields": [
+   "created_at",
+   "updated_at",
+   "version"
+  ]
+ },
+ "identity": {
+  "alias": "sdlc-retrospective",
+  "api_version": "github.com/ruinosus/dna/sdlc/v1",
+  "ascii_icon": "🔄",
+  "display_label": "Retrospectives",
+  "docs": "A Retrospective captures lessons + action items from a period of work. Schema follows Atlassian 4 Ls (Loved/Loathed/Longed for/Learned) — what_went_well, what_didnt, action_items. Adopt for sprint retros, release retros, incident retros. For one architectural decision, use ADR. For one incident factual analysis, use Postmortem (Phase 3 — TBD).",
+  "graph_style": {
+   "fill": "#F59E0B",
+   "stroke": "#D97706",
+   "text_color": "#fff"
+  },
+  "kind": "Retrospective",
+  "origin": "github.com/ruinosus/dna/sdlc"
+ },
+ "schema": {
+  "properties": {
+   "action_items": {
+    "description": "Concrete next-steps surfaced by the retro.",
+    "items": {
+     "properties": {
+      "due": {
+       "format": "date",
+       "type": "string"
+      },
+      "owner": {
+       "type": "string"
+      },
+      "story_ref": {
+       "description": "Optional Story slug if turned into work.",
+       "type": "string"
+      },
+      "title": {
+       "type": "string"
+      }
+     },
+     "required": [
+      "title"
+     ],
+     "type": "object"
+    },
+    "type": "array"
+   },
+   "actor": {
+    "description": "Who wrote this retro (Actor name, 'claude-code', 'human', ...).",
+    "type": "string"
+   },
+   "auto_generated": {
+    "description": "true = LLM-generated draft; false = human-curated.",
+    "type": "boolean"
+   },
+   "body": {
+    "description": "Optional full markdown body (RETROSPECTIVE.md). Falls back from structured fields when present.",
+    "type": "string"
+   },
+   "covers_epics": {
+    "description": "Epic names this retro discusses.",
+    "items": {
+     "type": "string"
+    },
+    "type": "array"
+   },
+   "covers_features": {
+    "description": "Feature names this retro discusses.",
+    "items": {
+     "type": "string"
+    },
+    "type": "array"
+   },
+   "covers_session": {
+    "description": "AgentSession name (Karpathy pattern).",
+    "type": "string"
+   },
+   "covers_stories": {
+    "description": "Story names this retro discusses.",
+    "items": {
+     "type": "string"
+    },
+    "type": "array"
+   },
+   "created_at": {
+    "format": "date-time",
+    "type": "string"
+   },
+   "intent": {
+    "description": "What kind of retro this is. Drives Studio grouping — daily stack on timeline, releases pin as marquee, incidents surface in alert filter.",
+    "enum": [
+     "daily",
+     "weekly",
+     "sprint",
+     "release",
+     "incident",
+     "freeform"
+    ],
+    "type": "string"
+   },
+   "learned": {
+    "description": "Learned — insights surfaced during the period. Atlassian 4 Ls bucket #4. Feeds future ADRs.",
+    "items": {
+     "type": "string"
+    },
+    "type": "array"
+   },
+   "longed_for": {
+    "description": "Longed for — capabilities/conditions wished for but absent. Atlassian 4 Ls bucket #3.",
+    "items": {
+     "type": "string"
+    },
+    "type": "array"
+   },
+   "narrative_origin": {
+    "description": "When extracted from a Narrative during Phase 2.2 migration, this points to the source Narrative slug for provenance.",
+    "type": "string"
+   },
+   "open_items": {
+    "description": "Work that started but didn't close — carry-over to next period.",
+    "items": {
+     "properties": {
+      "blocker": {
+       "type": "string"
+      },
+      "owner": {
+       "type": "string"
+      },
+      "title": {
+       "type": "string"
+      }
+     },
+     "required": [
+      "title"
+     ],
+     "type": "object"
+    },
+    "type": "array"
+   },
+   "period_end": {
+    "description": "End of period covered.",
+    "format": "date-time",
+    "type": "string"
+   },
+   "period_start": {
+    "description": "Start of period covered (ISO-8601).",
+    "format": "date-time",
+    "type": "string"
+   },
+   "summary": {
+    "description": "Optional one-line tl;dr (shown above body in Studio card).",
+    "type": "string"
+   },
+   "tags": {
+    "description": "Free-form tags.",
+    "items": {
+     "type": "string"
+    },
+    "type": "array"
+   },
+   "title": {
+    "description": "Headline for this retrospective.",
+    "type": "string"
+   },
+   "updated_at": {
+    "format": "date-time",
+    "type": "string"
+   },
+   "what_didnt": {
+    "description": "Loathed / Lacked — things that didn't work or caused friction. Atlassian 4 Ls bucket #2.",
+    "items": {
+     "type": "string"
+    },
+    "type": "array"
+   },
+   "what_went_well": {
+    "description": "Loved / Liked — things that worked in this period. Atlassian 4 Ls bucket #1.",
+    "items": {
+     "type": "string"
+    },
+    "type": "array"
+   }
+  },
+  "required": [
+   "title",
+   "period_start",
+   "period_end"
+  ],
+  "type": "object"
+ },
+ "storage": {
+  "body_as": "text",
+  "body_field": "body",
+  "container": "retrospectives",
+  "marker": "RETROSPECTIVE.md",
+  "pattern": "bundle"
+ },
+ "summary_cases": {
+  "full": {
+   "out": {
+    "action_items": [
+     {
+      "title": "do X"
+     }
+    ],
+    "intent": "sprint",
+    "period_end": "2026-06-10T00:00:00Z",
+    "period_start": "2026-06-01T00:00:00Z",
+    "title": "Sprint 12 retro",
+    "what_went_well": [
+     "descriptors"
+    ]
+   },
+   "spec": {
+    "action_items": [
+     {
+      "title": "do X"
+     }
+    ],
+    "intent": "sprint",
+    "period_end": "2026-06-10T00:00:00Z",
+    "period_start": "2026-06-01T00:00:00Z",
+    "title": "Sprint 12 retro",
+    "what_went_well": [
+     "descriptors"
+    ]
+   }
+  },
+  "partial": {
+   "out": {},
+   "spec": {}
+  }
+ }
+}

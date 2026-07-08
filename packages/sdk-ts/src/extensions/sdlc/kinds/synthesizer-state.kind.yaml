@@ -1,0 +1,196 @@
+# SynthesizerState — persona contract for a dream-gen agent (record plane;
+# role + goal + backstory + method + voice_markers + memory_policy +
+# constitution + few-shots; read by the hybrid-topn engine — S2
+# dream-engines-v2). Bundle: dreamers/<slug>/SYNTHESIZER.md, body=backstory.
+#
+# F3 lote-3 (spec 2026-06-10-kinds-descriptor-f3): the twin
+# SynthesizerStateKind classes (Py+TS) were DELETED — this descriptor is
+# the single source. PARITY-CRITICAL package data: byte-identical mirror
+# under both runtimes' sdlc/kinds/ (tests/test_descriptor_hash_parity.py
+# enforces). Equivalence frozen in test_lote3_descriptor_equivalence.py
+# (golden: tests/goldens/lote3/SynthesizerState.golden.json).
+#
+# The DREAMER_METHODS enum was local to the extinct class (no other
+# consumer in either runtime) — frozen here as the single source.
+# summary is a curated projection (the dead to_card's elected fields:
+# role/method/linked_agent) replacing the KindBase whole-spec echo.
+apiVersion: github.com/ruinosus/dna/core/v1
+kind: KindDefinition
+metadata:
+  name: synthesizer-state
+spec:
+  target_api_version: github.com/ruinosus/dna/sdlc/v1
+  target_kind: SynthesizerState
+  alias: sdlc-synthesizer-state
+  origin: github.com/ruinosus/dna/sdlc
+  tenant_scope: global
+  plane: record
+  prompt_target: false
+  flatten_in_context: false
+  prompt_target_priority: 0
+  storage:
+    type: bundle
+    container: synthesizers
+    marker: SYNTHESIZER.md
+    body_field: backstory
+  schema:
+    type: object
+    required:
+    - role
+    - goal
+    - method
+    - voice_markers
+    properties:
+      role:
+        type: string
+        description: 'Short label for this dreamer. Usually matches a Agent
+          slug. Ex: ''scribe-engram'', ''oracle-risk'', ''narrative-historian''.'
+      goal:
+        type: string
+        description: 'What this dreamer is FOR. Ex: ''consolidate episódios em padrões
+          reutilizáveis'' (scribe), ''flag tail-risks antes que cristalizem em incidente''
+          (oracle-risk).'
+      backstory:
+        type: string
+        description: Narrative background (CrewAI pattern). 2-4 sentences. Anchors
+          voice + perspective. Stored as bundle body so it can grow long.
+      method:
+        type: string
+        enum:
+        - analogical
+        - causal
+        - surreal
+        - structural
+        - narrative
+        - counterfactual
+        - metaphorical
+        description: How this dreamer reasons. analogical = compare-and-contrast;
+          causal = chain of events; surreal = juxtaposition; structural = patterns/relations;
+          narrative = arc; counterfactual = 'what if'; metaphorical = imagistic
+          transfer.
+      voice_markers:
+        type: array
+        items:
+          type: string
+        minItems: 1
+        description: 'Words/structures/cadence that mark this dreamer''s voice.
+          Ex: [''vestígio'', ''arquivo subterrâneo'', ''frase nominal curta'', ''metáfora
+          geológica'']. Used by ranker for voice fingerprint match (anti-drift).'
+      non_goals:
+        type: array
+        items:
+          type: string
+        default: []
+        description: 'What this dreamer MUST NOT do. Used as explicit critic-pass
+          guardrails. Ex: ''never make diagnostic claims'', ''never name living
+          people in dreams''.'
+      memory_policy:
+        type: object
+        default: {}
+        properties:
+          areas:
+            type: array
+            items:
+              type: string
+            description: LessonLearned.area values to prioritize.
+          source_kinds:
+            type: array
+            items:
+              type: string
+            description: Doc Kinds to prefer as memory sources.
+          affects:
+            type: array
+            items:
+              type: string
+            description: LessonLearned.affect values to prioritize.
+          min_confidence_score:
+            type: number
+            minimum: 0.0
+            maximum: 1.0
+            default: 0.0
+        additionalProperties: true
+        description: Routing hints for memory retrieval. Hybrid- topn engine respects
+          these when assembling memory_subset. Empty dict = match-all.
+      dreamer_memory_stream_ref:
+        type:
+        - string
+        - 'null'
+        default: null
+        description: 'Reference to this dreamer''s persistent memory stream — coleção
+          dos SynthesisRuns anteriores deste dreamer (cross-session continuity).
+          Generative Agents (Park 2023) evidence: voz individuada emerge de memory
+          stream + reflexão, NÃO de voice_markers adjetivos. Hybrid-topn engine
+          deve injetar últimos N dreams + reflexões no prompt context. Format esperado:
+          ''<scope>/SynthesisRunCollection/<dreamer-slug>'' OR simples slug-name
+          resolvido contra um SynthesisRunCollection Kind (a definir). Cross-synth
+          ref: f-unique-voice-is-memory-not-prompt.'
+      constitution:
+        type: array
+        items:
+          type: string
+        default: []
+        description: 'Constitutional AI principles (DSI/Anthropic pattern). Ex:
+          [''ground every claim in source_event_ids'', ''mark speculation as such'',
+          ''prefer evidence over invention'']. Critic-pass evaluates dream output
+          against these.'
+      examples_positive:
+        type: array
+        items:
+          type: object
+          required:
+          - scenario
+          properties:
+            scenario:
+              type: string
+            symbol:
+              type: string
+            why_good:
+              type: string
+        default: []
+        description: 2-3 exemplary dreams in this dreamer's voice. Few-shot prompts
+          to anchor style.
+      examples_negative:
+        type: array
+        items:
+          type: object
+          required:
+          - scenario
+          - why_bad
+          properties:
+            scenario:
+              type: string
+            why_bad:
+              type: string
+        default: []
+        description: 2-3 anti-patterns. Critic-pass uses these as explicit negative
+          examples (what to avoid).
+      linked_agent:
+        type: string
+        description: 'Optional Agent slug this SynthesizerState pairs with
+          (1:1 — same persona, two surfaces: agent runs synchronous, dreamer runs
+          offline).'
+      drafted_at:
+        type: string
+        format: date-time
+      drafted_by:
+        type: string
+      tags:
+        type: array
+        items:
+          type: string
+        default: []
+  summary:
+    role: ''
+    method: ''
+    linked_agent: ''
+  graph_style:
+    fill: '#C4B5FD'
+    stroke: '#7C3AED'
+    text_color: '#1E1B4B'
+  ascii_icon: 🌙
+  display_label: Sintetizadores
+  docs: SynthesizerState = persona contract for a dream-gen agent. Declares role
+    + goal + backstory + method + voice_markers + non_goals + memory_policy + constitution
+    + examples. Read by hybrid-topn engine to drive voice + memory routing. Pairs
+    1:1 with a Agent (scribe-engram, oracle-risk, ...). Multiple co-exist;
+    SynthesisRunTriggerPolicy routes events.

@@ -138,40 +138,40 @@ describe("Document", () => {
 describe("HookRegistry", () => {
   test("middleware chains context", async () => {
     const reg = new HookRegistry();
-    reg.use("pre_build", (ctx: HookContext) => ({ ...ctx, data: { ...ctx.data, step: 1 } }));
-    reg.use("pre_build", (ctx: HookContext) => ({ ...ctx, data: { ...ctx.data, step: 2 } }));
+    reg.use("pre_build_prompt", (ctx: HookContext) => ({ ...ctx, data: { ...ctx.data, step: 1 } }));
+    reg.use("pre_build_prompt", (ctx: HookContext) => ({ ...ctx, data: { ...ctx.data, step: 2 } }));
 
-    const result = reg.runMiddleware("pre_build", { scope: "test", data: {} });
+    const result = reg.runMiddleware("pre_build_prompt", { scope: "test", data: {} });
     expect(result.data.step).toBe(2);
   });
 
   test("event fires without raising", async () => {
     const reg = new HookRegistry();
     const calls: string[] = [];
-    reg.on("post_build", (ctx: HookContext) => { calls.push(ctx.scope); });
+    reg.on("post_build_prompt", (ctx: HookContext) => { calls.push(ctx.scope); });
 
-    reg.emit("post_build", { scope: "hello", data: {} });
+    reg.emit("post_build_prompt", { scope: "hello", data: {} });
     expect(calls).toEqual(["hello"]);
   });
 
   test("event error is swallowed", async () => {
     const reg = new HookRegistry();
-    reg.on("danger", () => { throw new Error("boom"); });
-    reg.on("danger", () => { /* safe */ });
+    reg.on("parse_error", () => { throw new Error("boom"); });
+    reg.on("parse_error", () => { /* safe */ });
 
     // Should not throw
-    expect(() => reg.emit("danger", { scope: "x", data: {} })).not.toThrow();
+    expect(() => reg.emit("parse_error", { scope: "x", data: {} })).not.toThrow();
   });
 
   test("has() returns false for empty, true for registered", async () => {
     const reg = new HookRegistry();
     expect(reg.has("nope")).toBe(false);
 
-    reg.use("yes", (ctx: HookContext) => ctx);
-    expect(reg.has("yes")).toBe(true);
+    reg.use("pre_build_prompt", (ctx: HookContext) => ctx);
+    expect(reg.has("pre_build_prompt")).toBe(true);
 
-    reg.on("events", () => {});
-    expect(reg.has("events")).toBe(true);
+    reg.on("post_save", () => {});
+    expect(reg.has("post_save")).toBe(true);
   });
 });
 

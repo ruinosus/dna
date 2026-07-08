@@ -9,8 +9,8 @@ import { createKernelWithBuiltins } from "../src/bootstrap";
 // (s-kernel-kindport-classification-attrs) — read them off a kernel that has the
 // built-in Kinds registered.
 const LEDGER_AND_STRUCTURAL = [
-  "Milestone", 
-  "VibeSession", 
+  "Story", "Issue", "Feature", "Milestone", "Roadmap",
+  "Narrative", "VibeSession", "LessonLearned", "Plan",
   "Genome", "KindDefinition", "LayerPolicy",
 ];
 

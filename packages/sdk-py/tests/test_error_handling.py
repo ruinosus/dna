@@ -270,9 +270,9 @@ class TestHookErrors:
         def bad_middleware(ctx):
             raise ValueError("middleware boom")
 
-        hooks.use("test", bad_middleware)
+        hooks.use("pre_build_prompt", bad_middleware)
         with pytest.raises(ValueError, match="middleware boom"):
-            hooks.run_middleware("test", HookContext())
+            hooks.run_middleware("pre_build_prompt", HookContext())
 
     def test_event_error_logged(self, caplog):
         """Event errors are logged but NOT raised."""
@@ -283,9 +283,9 @@ class TestHookErrors:
         def bad_event(ctx):
             raise RuntimeError("event boom")
 
-        hooks.on("test", bad_event)
+        hooks.on("post_build_prompt", bad_event)
         with caplog.at_level(logging.WARNING):
-            hooks.emit("test", HookContext())  # Should not raise
+            hooks.emit("post_build_prompt", HookContext())  # Should not raise
 
         assert any("event boom" in r.message for r in caplog.records)
 
@@ -297,8 +297,8 @@ class TestHookErrors:
     def test_has_with_middleware(self):
         from dna.kernel.hooks import HookRegistry
         hooks = HookRegistry()
-        hooks.use("x", lambda ctx: ctx)
-        assert hooks.has("x") is True
+        hooks.use("pre_build_prompt", lambda ctx: ctx)
+        assert hooks.has("pre_build_prompt") is True
 
 
 # ── Parse error hook (GAP-27) ──

@@ -1192,10 +1192,22 @@ class TypedKindDefinition:
             raise ValueError(
                 f"TypedKindDefinition expects kind={cls.KIND!r}, got {kn!r}"
             )
-        return cls(
+        typed = cls(
             metadata=Metadata.from_raw(raw.get("metadata", {})),
             spec=KindDefinitionSpec.from_raw(raw.get("spec", {})),
         )
+        # s-dna-kindport-descriptor-schema: AFTER the hand-rolled checks
+        # (which own the didactic error messages), validate the effective
+        # envelope against the published JSON Schema
+        # (docs/schemas/kind-definition.schema.json) — the backstop that
+        # catches typo'd/unknown spec fields and wrong types the
+        # hand-rolled checks silently ignored. apiVersion/kind are folded
+        # in with their defaults so partial raws keep working.
+        from dna.kernel.kind_definition_schema import (
+            validate_kind_definition,
+        )
+        validate_kind_definition({**raw, "apiVersion": av, "kind": kn})
+        return typed
 
 
 # ---------------------------------------------------------------------------

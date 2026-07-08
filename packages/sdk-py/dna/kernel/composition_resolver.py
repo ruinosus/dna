@@ -151,7 +151,9 @@ def validate_refs(
         kp = kinds.get((doc.api_version, doc.kind))
         if not kp:
             continue
-        filters = kp.dep_filters() if hasattr(kp, "dep_filters") else None
+        # dep_filters is a REQUIRED KindPort member (H1-gated) — call it
+        # directly; no duck-typing needed for the core contract.
+        filters = kp.dep_filters()
         if not filters:
             continue
 
@@ -227,7 +229,8 @@ class CompositionEngine:
         source_kp = self._host._kinds.get((doc.api_version, doc.kind))
         if source_kp is None:
             return []
-        filters = source_kp.dep_filters() if hasattr(source_kp, "dep_filters") else None
+        # dep_filters is a REQUIRED KindPort member (H1-gated) — direct call.
+        filters = source_kp.dep_filters()
         if not filters:
             return []
 

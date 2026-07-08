@@ -1,0 +1,227 @@
+{
+  "_doc": "FROZEN GOLDEN — captured 2026-06-10 from the live WorkflowEventKind class (pre-deletion), F3 lote-1. Deep-equaled against the descriptor-synthesized port in test_lote1_descriptor_equivalence.py.",
+  "dep_filters": {
+    "parent_ref": "sdlc-spec|sdlc-plan|sdlc-story|sdlc-feature|sdlc-epic|sdlc-roadmap|sdlc-agent-session|sdlc-narrative",
+    "ref": "sdlc-spec|sdlc-plan|sdlc-story|sdlc-feature|sdlc-epic|sdlc-roadmap|sdlc-agent-session|sdlc-narrative",
+    "transitioned_from": "sdlc-workflow-event"
+  },
+  "flags": {
+    "flatten_in_context": false,
+    "is_overlayable": true,
+    "is_prompt_target": false,
+    "is_root": false,
+    "is_runtime_artifact": false,
+    "plane": "record",
+    "prompt_target_priority": 0,
+    "scope": "global",
+    "scope_inheritable": true,
+    "volatile_spec_fields": [
+      "created_at",
+      "updated_at",
+      "version"
+    ]
+  },
+  "identity": {
+    "alias": "sdlc-workflow-event",
+    "api_version": "github.com/ruinosus/dna/sdlc/v1",
+    "ascii_icon": "🧭",
+    "display_label": "Journey Entries",
+    "docs": "Append-only journey ledger. One entry per (artifact, phase) pair. Read together as a sequence, they form the trail from discover → reflect for a Roadmap/Epic/Feature. DNA's methodology-agnostic layer — Superpowers / BMAD / Spec Kit all map onto it via the `methodology` field.",
+    "graph_style": {
+      "fill": "#0EA5E9",
+      "stroke": "#0284C7",
+      "text_color": "#fff"
+    },
+    "kind": "WorkflowEvent",
+    "origin": "github.com/ruinosus/dna/sdlc"
+  },
+  "schema": {
+    "type": "object",
+    "required": [
+      "phase"
+    ],
+    "properties": {
+      "phase": {
+        "type": "string",
+        "enum": [
+          "discover",
+          "specify",
+          "plan",
+          "build",
+          "verify",
+          "reflect"
+        ],
+        "description": "Which of the five universal phases this entry represents."
+      },
+      "ref": {
+        "type": "string",
+        "description": "Doc this entry pins. Format: ``Kind/name`` (e.g. ``Spec/foo``, ``Plan/bar``, ``AgentSession/vs-baz``)."
+      },
+      "parent_ref": {
+        "type": "string",
+        "description": "Anchor doc grouping this entry with siblings. Typically ``Feature/<name>`` or ``Epic/<name>`` — everything in the journey of one Feature has the same parent_ref."
+      },
+      "transitioned_from": {
+        "type": "string",
+        "description": "Name of the previous WorkflowEvent in this trajectory (forms a linked list). Optional for the first entry of a trajectory."
+      },
+      "seed_from": {
+        "type": "string",
+        "description": "Name of the prior cycle's `reflect` WorkflowEvent that seeded this entry. Set on `discover` entries created via `dna sdlc journey close-cycle` — the ouroboros bite, where reflect's lessons literally feed into the next discover. Distinct from `transitioned_from`: that's the immediate predecessor across phases; this is the cross-cycle inheritance link."
+      },
+      "cycle_index": {
+        "type": "integer",
+        "minimum": 1,
+        "description": "1-based cycle number this entry belongs to. All entries within the same ouroboros loop share the same cycle_index. Incremented when `journey close-cycle` opens the next discover. Backend-explicit alternative to client-side heuristic cycle detection."
+      },
+      "closes_cycle": {
+        "type": "boolean",
+        "description": "True on a `reflect` entry that has been closed by `journey close-cycle` — marks the boundary where the next discover starts cycle N+1. Set automatically; client may use as the explicit cycle delimiter."
+      },
+      "started_at": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "ended_at": {
+        "type": "string",
+        "format": "date-time",
+        "description": "When the agent left this phase. Null while the phase is still active."
+      },
+      "methodology": {
+        "type": "string",
+        "enum": [
+          "superpowers",
+          "bmad",
+          "spec-kit",
+          "kiro",
+          "rfc",
+          "adr",
+          "ad-hoc",
+          "custom"
+        ],
+        "description": "Which methodology the agent followed in this phase. ``ad-hoc`` is honest — Studio renders it with a 'no methodology' badge so we can spot where we cut corners."
+      },
+      "methodology_artifact": {
+        "type": "string",
+        "description": "Repo-relative path or URL to the methodology's external artifact, when applicable. E.g. ``docs/superpowers/plans/foo-plan.md`` for the Superpowers writing-plans output, ``.specify/foo/plan.md`` for Spec Kit, etc."
+      },
+      "skipped_phases": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "enum": [
+            "discover",
+            "specify",
+            "plan",
+            "build",
+            "verify",
+            "reflect"
+          ]
+        },
+        "description": "Phases jumped over to get to this entry. E.g. discover → build means skipped ['specify', 'plan'] — Studio shows them in muted strikethrough so the trajectory stays honest."
+      },
+      "actor": {
+        "type": "string",
+        "description": "Who recorded the transition."
+      },
+      "summary": {
+        "type": "string",
+        "description": "1-2 sentence note about what happened in this phase. Optional — rendered as the entry's tooltip in Studio."
+      },
+      "tags": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "artifact_kind": {
+        "type": "string",
+        "description": "Back-compat (deprecated): legacy Kind half of ``ref``."
+      },
+      "artifact_name": {
+        "type": "string",
+        "description": "Back-compat (deprecated): legacy name half of ``ref``."
+      },
+      "auto_emitted_by": {
+        "type": "string",
+        "description": "Back-compat (deprecated): legacy form of ``actor``."
+      },
+      "timestamp": {
+        "type": "string",
+        "description": "Back-compat (deprecated): legacy form of ``created_at``."
+      },
+      "decision_text": {
+        "type": "string",
+        "description": "Back-compat (deprecated): free-text decision on the entry."
+      },
+      "rationale": {
+        "type": "string",
+        "description": "Back-compat (deprecated): free-text rationale on the entry."
+      },
+      "owner": {
+        "type": "string",
+        "description": "Back-compat (deprecated): legacy owner of the entry."
+      },
+      "feature_ref": {
+        "type": "string",
+        "description": "Back-compat (deprecated): legacy form of ``parent_ref`` (Feature)."
+      },
+      "epic_ref": {
+        "type": "string",
+        "description": "Back-compat (deprecated): legacy form of ``parent_ref`` (Epic)."
+      },
+      "decisions": {
+        "type": "string",
+        "description": "Back-compat (deprecated): legacy decisions note on the entry."
+      }
+    },
+    "additionalProperties": false
+  },
+  "storage": {
+    "body_as": null,
+    "body_field": null,
+    "container": "journey",
+    "marker": null,
+    "pattern": "yaml"
+  },
+  "summary_cases": {
+    "full": {
+      "out": {
+        "ended_at": "2026-06-10T13:00:00Z",
+        "methodology": "superpowers",
+        "parent_ref": "Feature/f-y",
+        "phase": "build",
+        "ref": "Story/s-x",
+        "started_at": "2026-06-10T12:00:00Z"
+      },
+      "spec": {
+        "actor": "claude-code",
+        "ended_at": "2026-06-10T13:00:00Z",
+        "methodology": "superpowers",
+        "parent_ref": "Feature/f-y",
+        "phase": "build",
+        "ref": "Story/s-x",
+        "started_at": "2026-06-10T12:00:00Z",
+        "summary": "built the thing",
+        "tags": [
+          "f3"
+        ]
+      }
+    },
+    "partial": {
+      "out": {
+        "ended_at": null,
+        "methodology": null,
+        "parent_ref": null,
+        "phase": null,
+        "ref": null,
+        "started_at": null
+      },
+      "spec": {}
+    }
+  }
+}

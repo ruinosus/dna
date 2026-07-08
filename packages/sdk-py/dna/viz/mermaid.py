@@ -232,7 +232,8 @@ def composition_flowchart_mermaid(mi: ManifestInstance) -> str:
         kp = kinds.get((dep_doc.api_version, dep_doc.kind))
         if not kp or getattr(kp, "is_root", False) or getattr(kp, "is_prompt_target", False):
             continue
-        filters = kp.dep_filters() if hasattr(kp, "dep_filters") else None
+        # dep_filters is a REQUIRED KindPort member (H1-gated) — direct call.
+        filters = kp.dep_filters()
         if not filters:
             continue
         src = node_id_for(dep_doc.kind, dep_doc.name)

@@ -1,0 +1,128 @@
+{
+ "_doc": "FROZEN GOLDEN \u2014 captured 2026-06-11 from the live InsightKind class (pre-deletion), F3 lote-2. Deep-equaled against the descriptor-synthesized port in test_lote2_descriptor_equivalence.py.",
+ "dep_filters": {},
+ "flags": {
+  "flatten_in_context": false,
+  "is_overlayable": true,
+  "is_prompt_target": false,
+  "is_root": false,
+  "is_runtime_artifact": false,
+  "plane": "record",
+  "prompt_target_priority": 0,
+  "scope": "global",
+  "scope_inheritable": true,
+  "volatile_spec_fields": [
+   "created_at",
+   "updated_at",
+   "version"
+  ]
+ },
+ "identity": {
+  "alias": "sdlc-insight",
+  "api_version": "github.com/ruinosus/dna/sdlc/v1",
+  "ascii_icon": "\ud83d\udd2e",
+  "display_label": "Insights",
+  "docs": "An Insight binds a perpetual question to a target UA (oracle-X). The UA owns the persona + heuristics + LLM selection. The runner iterates active Insights and dispatches each to its target_ua, which emits an StatusReport via create_status_report tool.",
+  "graph_style": {
+   "fill": "#7C3AED",
+   "stroke": "#5B21B6",
+   "text_color": "#fff"
+  },
+  "kind": "Insight",
+  "origin": "github.com/ruinosus/dna/sdlc"
+ },
+ "schema": {
+  "properties": {
+   "active": {
+    "default": true,
+    "description": "False to disable without deleting.",
+    "type": "boolean"
+   },
+   "cadence_hours": {
+    "default": 24,
+    "description": "How often the runner re-dispatches the target_ua. 0 disables auto-run (manual only via /agent endpoint).",
+    "minimum": 0,
+    "type": "integer"
+   },
+   "description": {
+    "description": "Optional 1-2 sentence human description of what this oracle answers. The INSIGHT.md body.",
+    "type": "string"
+   },
+   "evidence_kinds": {
+    "description": "Hint of which Kinds the target_ua should read. Informational \u2014 the UA itself decides via its tools.",
+    "items": {
+     "type": "string"
+    },
+    "type": "array"
+   },
+   "icon": {
+    "description": "Single emoji shown next to the oracle.",
+    "type": "string"
+   },
+   "question": {
+    "description": "The perpetual question this oracle pursues.",
+    "type": "string"
+   },
+   "tags": {
+    "items": {
+     "type": "string"
+    },
+    "type": "array"
+   },
+   "target_ua": {
+    "description": "Slug of the Agent that runs this oracle (e.g. 'oracle-health'). The UA owns the persona, tools, and LLM config \u2014 Insight only points.",
+    "type": "string"
+   }
+  },
+  "required": [
+   "question",
+   "target_ua"
+  ],
+  "type": "object"
+ },
+ "storage": {
+  "body_as": "text",
+  "body_field": "description",
+  "container": "insights",
+  "marker": "INSIGHT.md",
+  "pattern": "bundle"
+ },
+ "summary_cases": {
+  "full": {
+   "out": {
+    "active": true,
+    "cadence_hours": 24,
+    "description": "Weekly pulse on stories/issues hygiene.",
+    "evidence_kinds": [
+     "Story",
+     "Issue"
+    ],
+    "icon": "\ud83e\ude7a",
+    "question": "Is the SDLC ledger healthy this week?",
+    "tags": [
+     "health"
+    ],
+    "target_ua": "oracle-health"
+   },
+   "spec": {
+    "active": true,
+    "cadence_hours": 24,
+    "description": "Weekly pulse on stories/issues hygiene.",
+    "evidence_kinds": [
+     "Story",
+     "Issue"
+    ],
+    "icon": "\ud83e\ude7a",
+    "question": "Is the SDLC ledger healthy this week?",
+    "tags": [
+     "health"
+    ],
+    "target_ua": "oracle-health"
+   }
+  },
+  "partial": {
+   "out": {},
+   "spec": {}
+  }
+ }
+}

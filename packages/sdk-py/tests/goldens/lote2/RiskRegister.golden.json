@@ -1,0 +1,285 @@
+{
+ "_doc": "FROZEN GOLDEN \u2014 captured 2026-06-11 from the live RiskRegisterKind class (pre-deletion), F3 lote-2. Deep-equaled against the descriptor-synthesized port in test_lote2_descriptor_equivalence.py.",
+ "dep_filters": {
+  "owner": "helix-actor",
+  "related_epics": "sdlc-epic",
+  "related_features": "sdlc-feature"
+ },
+ "flags": {
+  "flatten_in_context": false,
+  "is_overlayable": true,
+  "is_prompt_target": false,
+  "is_root": false,
+  "is_runtime_artifact": false,
+  "plane": "record",
+  "prompt_target_priority": 0,
+  "scope": "global",
+  "scope_inheritable": true,
+  "volatile_spec_fields": [
+   "created_at",
+   "updated_at",
+   "version"
+  ]
+ },
+ "identity": {
+  "alias": "sdlc-risk-register",
+  "api_version": "github.com/ruinosus/dna/sdlc/v1",
+  "ascii_icon": "\u26a0\ufe0f",
+  "display_label": "Risks",
+  "docs": "One risk entry per RiskRegister doc. PMBOK 7 + ISO 31000:2018 compliant schema: cause\u2192event\u2192consequence description, category, likelihood \u00d7 impact scoring, mitigation actions, residual score, owner, status lifecycle. Studio aggregates all RiskRegister docs into a heatmap.",
+  "graph_style": {
+   "fill": "#EAB308",
+   "stroke": "#A16207",
+   "text_color": "#fff"
+  },
+  "kind": "RiskRegister",
+  "origin": "github.com/ruinosus/dna/sdlc"
+ },
+ "schema": {
+  "properties": {
+   "body": {
+    "type": "string"
+   },
+   "category": {
+    "description": "PMBOK 7 categorization.",
+    "enum": [
+     "strategic",
+     "operational",
+     "financial",
+     "compliance",
+     "reputational",
+     "cyber",
+     "ESG"
+    ],
+    "type": "string"
+   },
+   "created_at": {
+    "format": "date-time",
+    "type": "string"
+   },
+   "description": {
+    "description": "Risk in cause\u2192event\u2192consequence format. ISO 31000 convention: 'If <cause>, then <event> may occur, resulting in <consequence>'.",
+    "type": "string"
+   },
+   "impact": {
+    "description": "1=negligible, 5=catastrophic.",
+    "maximum": 5,
+    "minimum": 1,
+    "type": "integer"
+   },
+   "inherent_score": {
+    "description": "likelihood \u00d7 impact (auto-derivable).",
+    "maximum": 25,
+    "minimum": 1,
+    "type": "integer"
+   },
+   "last_reviewed": {
+    "format": "date",
+    "type": "string"
+   },
+   "likelihood": {
+    "description": "1=rare, 5=almost certain.",
+    "maximum": 5,
+    "minimum": 1,
+    "type": "integer"
+   },
+   "mitigation_actions": {
+    "items": {
+     "properties": {
+      "action": {
+       "type": "string"
+      },
+      "due": {
+       "format": "date",
+       "type": "string"
+      },
+      "owner": {
+       "type": "string"
+      },
+      "status": {
+       "enum": [
+        "todo",
+        "in-progress",
+        "done"
+       ],
+       "type": "string"
+      },
+      "story_ref": {
+       "type": "string"
+      }
+     },
+     "required": [
+      "action"
+     ],
+     "type": "object"
+    },
+    "type": "array"
+   },
+   "next_review_due": {
+    "format": "date",
+    "type": "string"
+   },
+   "owner": {
+    "description": "Actor name accountable for monitoring/mitigation.",
+    "type": "string"
+   },
+   "related_epics": {
+    "items": {
+     "type": "string"
+    },
+    "type": "array"
+   },
+   "related_features": {
+    "items": {
+     "type": "string"
+    },
+    "type": "array"
+   },
+   "residual_impact": {
+    "maximum": 5,
+    "minimum": 1,
+    "type": "integer"
+   },
+   "residual_likelihood": {
+    "description": "Likelihood after mitigation.",
+    "maximum": 5,
+    "minimum": 1,
+    "type": "integer"
+   },
+   "residual_score": {
+    "maximum": 25,
+    "minimum": 1,
+    "type": "integer"
+   },
+   "response": {
+    "description": "Strategy: avoid|transfer|mitigate|accept.",
+    "enum": [
+     "avoid",
+     "transfer",
+     "mitigate",
+     "accept"
+    ],
+    "type": "string"
+   },
+   "status": {
+    "description": "Lifecycle: identified \u2192 assessed \u2192 mitigated \u2192 (realized = risk happened) \u2192 closed.",
+    "enum": [
+     "identified",
+     "assessed",
+     "mitigated",
+     "realized",
+     "closed"
+    ],
+    "type": "string"
+   },
+   "tags": {
+    "items": {
+     "type": "string"
+    },
+    "type": "array"
+   },
+   "title": {
+    "description": "Short risk name (used as doc name typically).",
+    "type": "string"
+   },
+   "updated_at": {
+    "format": "date-time",
+    "type": "string"
+   }
+  },
+  "required": [
+   "description",
+   "category",
+   "likelihood",
+   "impact",
+   "owner",
+   "status"
+  ],
+  "type": "object"
+ },
+ "storage": {
+  "body_as": "text",
+  "body_field": "body",
+  "container": "risks",
+  "marker": "RISK.md",
+  "pattern": "bundle"
+ },
+ "summary_cases": {
+  "full": {
+   "out": {
+    "body": "Risk notes.",
+    "category": "operational",
+    "description": "If shared schema helpers evolve, then frozen descriptor copies may drift, resulting in parse rejections.",
+    "impact": 3,
+    "inherent_score": 6,
+    "last_reviewed": "2026-06-11",
+    "likelihood": 2,
+    "mitigation_actions": [
+     {
+      "action": "skip kinds using live shared helpers",
+      "due": "2026-06-11",
+      "owner": "claude-code",
+      "status": "done",
+      "story_ref": "s-kinds-descriptor-lote2"
+     }
+    ],
+    "next_review_due": "2026-09-11",
+    "owner": "barna",
+    "related_epics": [
+     "e-kernel"
+    ],
+    "related_features": [
+     "f-kinds-two-planes"
+    ],
+    "residual_impact": 2,
+    "residual_likelihood": 1,
+    "residual_score": 2,
+    "response": "mitigate",
+    "status": "mitigated",
+    "tags": [
+     "kernel"
+    ],
+    "title": "Descriptor/schema fork drift"
+   },
+   "spec": {
+    "body": "Risk notes.",
+    "category": "operational",
+    "description": "If shared schema helpers evolve, then frozen descriptor copies may drift, resulting in parse rejections.",
+    "impact": 3,
+    "inherent_score": 6,
+    "last_reviewed": "2026-06-11",
+    "likelihood": 2,
+    "mitigation_actions": [
+     {
+      "action": "skip kinds using live shared helpers",
+      "due": "2026-06-11",
+      "owner": "claude-code",
+      "status": "done",
+      "story_ref": "s-kinds-descriptor-lote2"
+     }
+    ],
+    "next_review_due": "2026-09-11",
+    "owner": "barna",
+    "related_epics": [
+     "e-kernel"
+    ],
+    "related_features": [
+     "f-kinds-two-planes"
+    ],
+    "residual_impact": 2,
+    "residual_likelihood": 1,
+    "residual_score": 2,
+    "response": "mitigate",
+    "status": "mitigated",
+    "tags": [
+     "kernel"
+    ],
+    "title": "Descriptor/schema fork drift"
+   }
+  },
+  "partial": {
+   "out": {},
+   "spec": {}
+  }
+ }
+}

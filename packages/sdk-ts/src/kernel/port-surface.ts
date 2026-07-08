@@ -25,6 +25,7 @@ import type {
   Extension,
   ExtensionHost,
   KindPort,
+  KindPresentation,
   ReaderPort,
   RecordSearchProvider,
   ResolverPort,
@@ -111,13 +112,27 @@ export const PORT_SURFACE: Readonly<Record<string, readonly string[]>> = {
     "write",
     "serialize",
   ]),
+  // The optional presentation slice KindPort extends. Py twin: the
+  // KindPresentation capability Protocol (typing-only, kept OFF the
+  // runtime_checkable KindPort so the H1 isinstance gate never requires
+  // these members) — s-dna-kindport-descriptor-schema.
+  KindPresentation: keysOf<KindPresentation>()([
+    "docs",
+    "descriptionFallbackField",
+    "uiSchema",
+    "graphStyle",
+    "asciiIcon",
+    "displayLabel",
+    "visibleInBackend",
+    "preview",
+    "graphMeta",
+  ]),
   KindPort: keysOf<KindPort>()([
     "apiVersion",
     "kind",
     "alias",
     "origin",
     "scope",
-    "docs",
     "isRoot",
     "isPromptTarget",
     "promptTargetPriority",
@@ -137,10 +152,16 @@ export const PORT_SURFACE: Readonly<Record<string, readonly string[]>> = {
     "promptTemplate",
     "schema",
     "dependencies",
-    "preview",
+    // Inherited KindPresentation slice (keyof includes extends-members;
+    // the exhaustive binder requires listing them here too).
+    "docs",
+    "descriptionFallbackField",
+    "uiSchema",
     "graphStyle",
     "asciiIcon",
     "displayLabel",
+    "visibleInBackend",
+    "preview",
     "graphMeta",
   ]),
   ToolPort: keysOf<ToolPort>()([

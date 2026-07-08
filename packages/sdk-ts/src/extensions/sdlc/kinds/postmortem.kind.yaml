@@ -1,0 +1,168 @@
+# Postmortem — blameless incident analysis per Google SRE (record plane).
+# Factual: the incident HAPPENED (timeline + root cause + action items).
+# Distinct from PreMortem (hypothetical) and Retrospective (period summary).
+#
+# F3 lote-2 (spec 2026-06-10-kinds-descriptor-f3): synthesized from this
+# descriptor; the hand-written class twins were deleted. PARITY-CRITICAL
+# package data — byte-identical mirror under packages/sdk-{py,ts};
+# tests/test_descriptor_hash_parity.py enforces. Equivalence vs the extinct
+# class frozen in tests/test_lote2_descriptor_equivalence.py (golden:
+# tests/goldens/lote2/Postmortem.golden.json). Deltas intencionais (semântica
+# canônica = port): summary curado substitui o eco whole-spec do KindBase
+# default (list endpoints não usam kp.summary()); parse valida contra o
+# schema (classe era pass-through); to_card morto não migrado.
+apiVersion: github.com/ruinosus/dna/core/v1
+kind: KindDefinition
+metadata:
+  name: postmortem
+spec:
+  target_api_version: github.com/ruinosus/dna/sdlc/v1
+  target_kind: Postmortem
+  alias: sdlc-postmortem
+  origin: github.com/ruinosus/dna/sdlc
+  tenant_scope: global
+  plane: record
+  prompt_target: false
+  flatten_in_context: false
+  prompt_target_priority: 0
+  storage:
+    type: bundle
+    container: postmortems
+    marker: POSTMORTEM.md
+    body_field: body
+  dep_filters:
+    related_stories: sdlc-story
+    related_features: sdlc-feature
+  schema:
+    type: object
+    required:
+    - title
+    - incident_at
+    - severity
+    - root_cause
+    properties:
+      title:
+        type: string
+        description: Short incident headline.
+      incident_at:
+        type: string
+        format: date-time
+        description: When incident started.
+      resolved_at:
+        type: string
+        format: date-time
+        description: When incident was mitigated.
+      severity:
+        type: string
+        enum:
+        - sev1
+        - sev2
+        - sev3
+        - sev4
+        - sev5
+        description: Incident severity (sev1=full outage, sev5=cosmetic).
+      blameless:
+        type: boolean
+        default: true
+        description: Google SRE requirement — should always be true.
+      impact:
+        type: string
+        description: Customer-facing impact in plain language (downtime, errors, etc.).
+      timeline:
+        type: array
+        items:
+          type: object
+          required:
+          - at
+          - event
+          properties:
+            at:
+              type: string
+              format: date-time
+            event:
+              type: string
+            actor:
+              type: string
+        description: Chronological event log.
+      root_cause:
+        type: string
+        description: Primary cause (1-3 paragraphs).
+      contributing_factors:
+        type: array
+        items:
+          type: string
+        description: Secondary factors that worsened the incident.
+      what_went_well:
+        type: array
+        items:
+          type: string
+        description: Detection / response things that worked.
+      what_went_wrong:
+        type: array
+        items:
+          type: string
+        description: Detection / response things that didn't work.
+      action_items:
+        type: array
+        items:
+          type: object
+          required:
+          - title
+          properties:
+            title:
+              type: string
+            owner:
+              type: string
+            due:
+              type: string
+              format: date
+            story_ref:
+              type: string
+            status:
+              type: string
+              enum:
+              - todo
+              - in-progress
+              - done
+        description: Concrete follow-ups to prevent recurrence.
+      lessons_learned:
+        type: array
+        items:
+          type: string
+        description: Insights that generalize beyond this incident.
+      related_stories:
+        type: array
+        items:
+          type: string
+        description: Story slugs related to root cause or action items.
+      related_features:
+        type: array
+        items:
+          type: string
+      tags:
+        type: array
+        items:
+          type: string
+      body:
+        type: string
+      created_at:
+        type: string
+        format: date-time
+      updated_at:
+        type: string
+        format: date-time
+  summary:
+    title: ''
+    severity: ''
+    incident_at: ''
+    resolved_at: ''
+  graph_style:
+    fill: '#DC2626'
+    stroke: '#991B1B'
+    text_color: '#fff'
+  ascii_icon: 🚨
+  display_label: Postmortems
+  docs: 'A Postmortem captures a factual analysis of an incident that happened — timeline,
+    root cause, contributing factors, action items, lessons learned. Google SRE convention:
+    blameless. Distinct from PreMortem (hypothetical) and Retrospective (recurring
+    period summary).'

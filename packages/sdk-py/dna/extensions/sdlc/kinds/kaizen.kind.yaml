@@ -1,0 +1,106 @@
+# Kaizen — a continuous-improvement observation, first-class (record plane).
+#
+# The kaizen discipline (skill .claude/skills/kaizen): while working on ANY
+# task, noticing something improvable — a code smell, flow friction, a
+# repeated manual step, something hardcoded, a missing test/doc — and
+# flagging it WITHOUT derailing the current task. Historically these lived
+# only as `kaizen` timeline events on work items (`dna sdlc kaizen <wi>
+# --body`) — visible in the FOCUS feed but not queryable/searchable as docs.
+#
+# s-kaizen-kind: each observation is ALSO a Kaizen doc, so the backlog of
+# noticed-but-not-yet-routed improvements is queryable (kernel.query),
+# embeddable (semantic search), and auditable. Arc: observed (noticed) →
+# routed (an Issue/Story tracks the fix) → resolved (fix shipped).
+#
+# F3 P2 pilot (spec 2026-06-10-kinds-descriptor-f3): first builtin Kind
+# expressed as a descriptor instead of twin Py/TS classes. PARITY-CRITICAL
+# package data — the byte-identical mirror lives at
+# packages/sdk-{py,ts}/{dna/extensions,src/extensions}/sdlc/kinds/
+# kaizen.kind.yaml; edit one side, copy to the other byte-for-byte
+# (tests/test_descriptor_hash_parity.py enforces).
+apiVersion: github.com/ruinosus/dna/core/v1
+kind: KindDefinition
+metadata:
+  name: kaizen
+spec:
+  target_api_version: github.com/ruinosus/dna/sdlc/v1
+  target_kind: Kaizen
+  alias: sdlc-kaizen
+  origin: github.com/ruinosus/dna/sdlc
+  # SDLC primitives are project-level, not per-tenant.
+  tenant_scope: global
+  # Record plane — pure typed document: cacheless writes, never composes
+  # into agent prompts.
+  plane: record
+  prompt_target: false
+  flatten_in_context: false
+  prompt_target_priority: 0
+  storage:
+    type: yaml
+    container: kaizens
+  # `work_item` is intentionally NOT here: it's a polymorphic "Kind/slug"
+  # string (Story/s-x, Issue/i-1, Spike/...) and dep_filters can only
+  # target ONE kind. `issue` is the routed-fix tracker and is an Issue
+  # slug by convention.
+  dep_filters:
+    issue: sdlc-issue
+  schema:
+    type: object
+    required: [body, status]
+    properties:
+      body:
+        type: string
+        description: The kaizen observation (what could be better).
+      work_item:
+        type: string
+        description: "Kind/slug of the work item where this was observed (polymorphic — Story/Spike/Issue)."
+      issue:
+        type: string
+        description: Issue/Story slug tracking the fix.
+      status:
+        type: string
+        enum: [observed, routed, resolved]
+        default: observed
+        description: "Observation arc: observed (flagged) → routed (fix tracked in `issue`) → resolved (fix shipped)."
+      actor:
+        type: string
+        description: Who flagged it.
+      labels:
+        type: array
+        items:
+          type: string
+        description: Free-form theme tags (weighted into semantic-search source text).
+      created_at:
+        type: string
+        format: date-time
+      updated_at:
+        type: string
+        format: date-time
+    # Strict (s-strict-schema-lint ratchet): new Kinds ship
+    # additionalProperties:false — schema is a contract.
+    additionalProperties: false
+  # List-endpoint projection ({field: default}).
+  summary:
+    status: observed
+    work_item: ""
+    issue: ""
+    actor: ""
+    labels: []
+  # Embedding source text (D4 derivation): essence is the observation body
+  # + labels (free-form tags like "dx", "hardcoded"). work_item/issue are
+  # slugs, not topical signal — found via refs, not embedding.
+  embed: [body, labels]
+  graph_style:
+    fill: "#10B981"
+    stroke: "#047857"
+    text_color: "#fff"
+  ascii_icon: "♻️"
+  display_label: Kaizens
+  docs: >-
+    A Kaizen is a continuous-improvement observation noticed while
+    working on something else — a smell, friction, a manual step, a
+    missing test — captured as a first-class doc WITHOUT derailing
+    the task at hand. Arc: observed → routed (an Issue/Story tracks
+    the fix) → resolved (fix shipped). Twin of the `kaizen` timeline
+    event on the originating work item (which carries a ref back to
+    this doc).

@@ -1,0 +1,184 @@
+{
+ "_doc": "FROZEN GOLDEN \u2014 captured 2026-06-11 from the live ChangelogKind class (pre-deletion), F3 lote-2. Deep-equaled against the descriptor-synthesized port in test_lote2_descriptor_equivalence.py.",
+ "dep_filters": {},
+ "flags": {
+  "flatten_in_context": false,
+  "is_overlayable": true,
+  "is_prompt_target": false,
+  "is_root": false,
+  "is_runtime_artifact": false,
+  "plane": "record",
+  "prompt_target_priority": 0,
+  "scope": "global",
+  "scope_inheritable": true,
+  "volatile_spec_fields": [
+   "created_at",
+   "updated_at",
+   "version"
+  ]
+ },
+ "identity": {
+  "alias": "sdlc-changelog",
+  "api_version": "github.com/ruinosus/dna/sdlc/v1",
+  "ascii_icon": "\ud83d\udccb",
+  "display_label": "Changelogs",
+  "docs": "A Changelog records release notes per semver version per Keep a Changelog 1.1.0 convention. Six sections: Added, Changed, Deprecated, Removed, Fixed, Security. Latest entry at top (reverse chronological). [Unreleased] section tracks work in flight.",
+  "graph_style": {
+   "fill": "#84CC16",
+   "stroke": "#65A30D",
+   "text_color": "#fff"
+  },
+  "kind": "Changelog",
+  "origin": "github.com/ruinosus/dna/sdlc"
+ },
+ "schema": {
+  "properties": {
+   "body": {
+    "description": "Optional full markdown CHANGELOG.md.",
+    "type": "string"
+   },
+   "created_at": {
+    "format": "date-time",
+    "type": "string"
+   },
+   "description": {
+    "type": "string"
+   },
+   "title": {
+    "description": "Project name typically.",
+    "type": "string"
+   },
+   "updated_at": {
+    "format": "date-time",
+    "type": "string"
+   },
+   "versions": {
+    "description": "Reverse-chronological list of versions.",
+    "items": {
+     "properties": {
+      "added": {
+       "description": "New features.",
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      },
+      "changed": {
+       "description": "Changes in existing functionality.",
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      },
+      "date": {
+       "format": "date",
+       "type": "string"
+      },
+      "deprecated": {
+       "description": "Soon-to-be removed.",
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      },
+      "fixed": {
+       "description": "Bug fixes.",
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      },
+      "removed": {
+       "description": "Removed in this version.",
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      },
+      "security": {
+       "description": "Vulnerability fixes.",
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      },
+      "version": {
+       "description": "SemVer 2.0 (e.g. '1.4.2') or '[Unreleased]'.",
+       "type": "string"
+      }
+     },
+     "required": [
+      "version"
+     ],
+     "type": "object"
+    },
+    "type": "array"
+   }
+  },
+  "required": [
+   "title"
+  ],
+  "type": "object"
+ },
+ "storage": {
+  "body_as": "text",
+  "body_field": "body",
+  "container": "changelogs",
+  "marker": "CHANGELOG.md",
+  "pattern": "bundle"
+ },
+ "summary_cases": {
+  "full": {
+   "out": {
+    "body": "# Changelog\nFull markdown.",
+    "description": "Keep a Changelog 1.1.0 ledger.",
+    "title": "DNA SDK",
+    "versions": [
+     {
+      "added": [
+       "F3 lote-2 descriptors"
+      ],
+      "version": "[Unreleased]"
+     },
+     {
+      "added": [
+       "Kaizen Kind"
+      ],
+      "date": "2026-06-10",
+      "fixed": [
+       "record-MI drift"
+      ],
+      "version": "1.13.0"
+     }
+    ]
+   },
+   "spec": {
+    "body": "# Changelog\nFull markdown.",
+    "description": "Keep a Changelog 1.1.0 ledger.",
+    "title": "DNA SDK",
+    "versions": [
+     {
+      "added": [
+       "F3 lote-2 descriptors"
+      ],
+      "version": "[Unreleased]"
+     },
+     {
+      "added": [
+       "Kaizen Kind"
+      ],
+      "date": "2026-06-10",
+      "fixed": [
+       "record-MI drift"
+      ],
+      "version": "1.13.0"
+     }
+    ]
+   }
+  },
+  "partial": {
+   "out": {},
+   "spec": {}
+  }
+ }
+}

@@ -1,0 +1,204 @@
+# PatternInsight — output of a dream-interp engine (record plane).
+#
+# Schema is loose by design: each framework produces different structured
+# output (Hill = exploration/insight/action; Jung = amplifications/
+# archetypes; Gestalt = identifications). `framework` discriminates;
+# multiple interpretations per SynthesisRun coexist (polyphonic engines).
+#
+# F3 lote-1 (spec 2026-06-10-kinds-descriptor-f3): synthesized from this
+# descriptor; the PatternInsightKind class (Py) was deleted. This kind was
+# Py-ONLY before F3 — the descriptor gives TS the kind for free
+# (kind-registry-parity.json: moved py_only_allowlist → ts_aliases).
+# PARITY-CRITICAL package data — byte-identical mirror under
+# packages/sdk-{py,ts}; tests/test_descriptor_hash_parity.py enforces.
+# A classe tinha um to_card morto (zero consumidores) — não migrado.
+apiVersion: github.com/ruinosus/dna/core/v1
+kind: KindDefinition
+metadata:
+  name: pattern-insight
+spec:
+  target_api_version: github.com/ruinosus/dna/cognitive/v1
+  target_kind: PatternInsight
+  alias: cognitive-pattern-insight
+  origin: github.com/ruinosus/dna/cognitive
+  tenant_scope: global
+  plane: record
+  prompt_target: false
+  flatten_in_context: false
+  prompt_target_priority: 0
+  storage:
+    type: bundle
+    container: pattern-insights
+    marker: PATTERN_INSIGHT.md
+    body_field: body
+  dep_filters:
+    dream_ref: sdlc-synthesis-run
+  schema:
+    type: object
+    required:
+    - dream_ref
+    - framework
+    - engine
+    - summary
+    properties:
+      dream_ref:
+        type: string
+        description: Slug of the SynthesisRun being interpreted.
+      framework:
+        type: string
+        enum:
+        - hill
+        - jung
+        - gestalt
+        - pattern
+        - freudian
+        - other
+        description: Interpretation school applied.
+      engine:
+        type: string
+        description: Engine name from registry (e.g. 'hill-interp').
+      engine_params:
+        type: object
+        default: {}
+        description: Params passed to the engine.
+      summary:
+        type: string
+        maxLength: 800
+        description: 1-3 sentence overview of the interpretation.
+      exploration:
+        type: object
+        description: 'Hill: stage 1 — re-reading, associations, trigger, affect
+          layer.'
+        properties:
+          re_reading:
+            type: string
+          associations:
+            type: array
+            items:
+              type: object
+              properties:
+                fragment:
+                  type: string
+                amplifies_to:
+                  type: array
+                  items:
+                    type: string
+          trigger:
+            type: string
+          affect_layer:
+            type: string
+      insight:
+        type: object
+        description: 'Hill: stage 2 — what does the dream MEAN? Level in {waking,
+          phenomenological, past, parts-of-self}.'
+        properties:
+          level:
+            type: string
+            enum:
+            - waking
+            - phenomenological
+            - past
+            - parts-of-self
+          statement:
+            type: string
+            maxLength: 1500
+          questions:
+            type: array
+            items:
+              type: string
+      action:
+        type: object
+        description: 'Hill: stage 3 — what would you DO differently? May propose
+          concrete docs (ArchiveProposal, Story, PreMortem) for HITL approval.'
+        properties:
+          propose:
+            type: array
+            items:
+              type: object
+              properties:
+                kind:
+                  type: string
+                name:
+                  type: string
+                reason:
+                  type: string
+          follow_up:
+            type: string
+      amplifications:
+        type: array
+        items:
+          type: object
+          properties:
+            symbol:
+              type: string
+            archetype:
+              type: string
+            amplifies_to:
+              type: array
+              items:
+                type: string
+        description: 'Jung: each symbol expanded by association.'
+      individuation_question:
+        type: string
+        description: 'Jung: integration question opening reflection.'
+      identifications:
+        type: array
+        items:
+          type: object
+          properties:
+            element:
+              type: string
+            i_am_voice:
+              type: string
+        description: 'Gestalt: voice of each element as the dreamer.'
+      drafted_at:
+        type: string
+        format: date-time
+      generated_by:
+        type: string
+      tags:
+        type: array
+        items:
+          type: string
+        default: []
+      owner:
+        type: string
+        description: 'Slug reference to a Agent. When set, this PatternInsight
+          is PRIVATE to that agent. When null, it is GENERAL. Phase: cognitive-reflection.'
+      lens:
+        type: string
+        description: 'Perspectiva da interpretação. Valores convencionais: ''hill'',
+          ''jung'', ''gestalt'', ''pattern'', um slug de Agent (ex: ''jarvis'',
+          ''architect''), ou ''synthesis-by-<agent>'' pra meta-synthesis. Pode coincidir
+          com framework — lens é o ponto de vista, framework é a metodologia. Phase:
+          cognitive-reflection.'
+      synthesizes:
+        type: array
+        items:
+          type: string
+        default: []
+        description: 'PatternInsight IDs (names/slugs) que esta interpretação sintetiza.
+          Vazia pra interpretações de 1ª camada (hill, jung, agent-interp). Não-vazia
+          pra synthesis engines (agent-synthesis) que lêem N interps + SynthesisRun
+          e produzem leitura final. Phase: cognitive-reflection.'
+  # Curated list/tree projection (essência que o to_card morto elegia).
+  # DELTA INTENCIONAL: a classe ecoava o spec inteiro (KindBase default);
+  # list endpoints não usam summary() — produção inalterada.
+  summary:
+    dream_ref: ''
+    framework: ''
+    engine: ''
+    summary: ''
+    owner: null
+    lens: null
+    synthesizes: []
+  graph_style:
+    fill: '#F472B6'
+    stroke: '#BE185D'
+    text_color: '#fff'
+  ascii_icon: 💭
+  display_label: Pattern Insights
+  docs: PatternInsight = output of a dream-interp engine. Multiple interpretations
+    per SynthesisRun OK — engines are complementary lenses, not exclusive. Hill
+    engine produces exploration/insight/action structure; Jung produces amplifications
+    + archetypes; Gestalt produces identifications.

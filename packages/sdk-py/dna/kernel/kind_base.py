@@ -130,13 +130,22 @@ class KindBase:
     # covers still-class Kinds as well as descriptor-synthesized ports.
     embed_fields: list[str] | None = None
 
-    # ---- Optional rendering hints (duck-typed by Studio) -----------
+    # ---- Optional presentation surface (KindPresentation) ----------
+    # Typed home: dna.kernel.protocols.KindPresentation — the
+    # capability Protocol for the optional UX/rendering members. These
+    # defaults let any KindBase subclass opt in field-by-field.
+    # (`preview()`/`graph_meta()` deliberately have NO default here:
+    # their ABSENCE is meaningful — consumers fall back to the generic
+    # renderer when getattr(kp, "preview", None) is None.)
     docs: str | None = None
     description_fallback_field: str | None = None
     graph_style: dict | None = None
     ascii_icon: str | None = None
     display_label: str | None = None
     ui_schema: dict | None = None
+    # Explicit backend-visibility override; None → the storage-pattern
+    # default (see protocols.resolve_visible_in_backend).
+    visible_in_backend: bool | None = None
 
     # ---- Studio UI manifest metadata (Phase 2 — 2026-05-16) ---------
     # When populated, Studio's `GET /kinds/manifest` serializes this

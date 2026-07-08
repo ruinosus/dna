@@ -6,7 +6,10 @@ import logging
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, overload
+
+if TYPE_CHECKING:  # typed hook-name vocabulary (s-dna-typed-hook-names)
+    from dna.kernel.hooks import HookName
 
 from dna.kernel.document import Document
 from dna.kernel.errors import (
@@ -23,7 +26,9 @@ from dna.kernel.protocols import (
     CachePort, DEFAULT_BASE_SCOPE, Extension,
     EXTENSIONS_ENTRY_POINT_GROUP,  # noqa: F401 — re-exported for historical `from dna.kernel import EXTENSIONS_ENTRY_POINT_GROUP` importers (boot recipe moved to kernel_bootstrap, s-kernel-decomp-f4)
     ExtensionHost,  # noqa: F401 — re-exported registration-time host slice (s-dna-extension-host-contract)
-    KindPort, ReaderPort,
+    KindPort,
+    KindPresentation,  # noqa: F401 — re-exported optional presentation capability (s-dna-kindport-descriptor-schema)
+    ReaderPort,
     ResolverPort, SourcePort, StorageDescriptor, StoragePattern,
     SYSTEM_SCOPE, Template, ToolDefinition, WritableSourcePort, WriterPort,
 )
@@ -493,14 +498,38 @@ class Kernel:
     # here (the pipeline reaches it via the WriteHost Protocol).
 
     # -- Registration ---------------------------------------------------------
+    # Hook names are typed (``HookName`` Literal, s-dna-typed-hook-names) with
+    # a ``str`` overload for back-compat custom names; the HookRegistry warns
+    # (``UnknownHookNameWarning``) on names outside the vocabulary.
+
+    @overload
+    def use(self, hook: "HookName", fn: Any) -> None: ...
+    @overload
+    def use(self, hook: str, fn: Any) -> None: ...
 
     def use(self, hook: str, fn: Any) -> None:
         """Register middleware on a hook point (e.g., 'pre_build_prompt')."""
         self.hooks.use(hook, fn)
 
+    @overload
+    def on(self, hook: "HookName", fn: Any) -> None: ...
+    @overload
+    def on(self, hook: str, fn: Any) -> None: ...
+
     def on(self, hook: str, fn: Any) -> None:
         """Register event subscriber (e.g., 'post_save')."""
         self.hooks.on(hook, fn)
+
+    @overload
+    def on_veto(
+        self, hook: "HookName", fn: Any, *,
+        priority: int = ..., key: str | None = ...,
+    ) -> None: ...
+    @overload
+    def on_veto(
+        self, hook: str, fn: Any, *,
+        priority: int = ..., key: str | None = ...,
+    ) -> None: ...
 
     def on_veto(
         self, hook: str, fn: Any, *,

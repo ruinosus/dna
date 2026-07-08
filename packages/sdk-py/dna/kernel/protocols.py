@@ -20,6 +20,7 @@ from dna.kernel.bundle_handle import BundleHandle  # noqa: F401  re-exported for
 
 if TYPE_CHECKING:
     from dna.kernel.capabilities import SourceCapabilities
+    from dna.kernel.preview import PreviewBlock
 
 
 # ---------------------------------------------------------------------------
@@ -1025,7 +1026,10 @@ def default_visible_in_backend(storage: "StorageDescriptor | None") -> bool:
 
 
 def resolve_visible_in_backend(kp) -> bool:
-    """Read visible_in_backend, falling back to default_visible_in_backend(storage)."""
+    """Read ``KindPresentation.visible_in_backend``, falling back to
+    ``default_visible_in_backend(storage)``. Typed access with a default —
+    ``visible_in_backend`` is an optional capability member, so plain
+    KindPort implementations without it resolve to the storage default."""
     explicit = getattr(kp, "visible_in_backend", None)
     if explicit is not None:
         return bool(explicit)
@@ -1036,34 +1040,24 @@ def resolve_visible_in_backend(kp) -> bool:
 class KindPort(Protocol):
     """WHO — identity + composition role.
 
-    Optional attributes (read by the kernel at load time, not required
-    by the Protocol check):
+    This runtime_checkable Protocol lists ONLY the core contract every
+    Kind must provide — it is exactly what the H1 registration gate
+    (``kernel.kind`` → ``isinstance(k, KindPort)``) enforces.
 
-    - ``docs: str | None`` — prose explanation of what this kind IS at
-      the concept level. Surfaced by the harness `describe_kind` tool
-      for "what is a Soul?" style questions. When an extension ships a
-      ``DOCS.md`` file alongside its package, the kernel's
-      ``_load_kind_docs`` loader overrides this attribute at load time.
-    - ``description_fallback_field: str | None`` — name of the spec
-      field to derive metadata.description from when none was
-      declared. See ``Kernel._fill_derived_description``.
-    - ``ui_schema: dict[str, dict] | None`` — per-field UI hints that
-      tell consumers (e.g. the Tauri Studio) how to render each spec
-      field. Keyed by spec field name. Each entry may declare:
+    The optional presentation/UX surface (``docs``, ``ui_schema``,
+    ``graph_style``, ``ascii_icon``, ``display_label``,
+    ``description_fallback_field``, ``visible_in_backend``,
+    ``preview()``, ``graph_meta()``) lives on the separate
+    ``KindPresentation`` capability Protocol below — declared there so
+    it is typed + documented, but NEVER required by the isinstance
+    check (s-dna-kindport-descriptor-schema).
 
-        - ``widget`` (str): one of ``text | textarea | markdown |
-          markdown-toc | code | select | checkbox | list-markdown |
-          tags | readonly``
-        - ``label`` (str): human-friendly label
-        - ``help`` (str): help text shown next to the field
-        - ``language`` (str): for ``code`` widget, CodeMirror language
-        - ``height`` (int): editor height in px
-        - ``order`` (int): render order (lower first; default 0)
-
-      When absent, consumers should infer the widget from the value
-      type. Missing fields are rendered with the default widget for
-      their Python type (str → textarea, bool → checkbox, etc.).
-      See ``docs/KIND-UI-HINTS.md`` for the full contract.
+    .. warning:: do NOT add optional members to THIS Protocol body.
+       ``runtime_checkable`` isinstance checks member PRESENCE — a new
+       member here silently breaks registration of every third-party
+       Kind that doesn't declare it (the ``is_runtime_artifact``
+       precedent — see test_port_contract.py). Optional surface goes
+       on ``KindPresentation`` (or a new capability Protocol) instead.
     """
 
     api_version: str
@@ -1119,28 +1113,77 @@ class KindPort(Protocol):
 
     def prompt_template(self) -> str | None: ...
 
-    # Optional: returns renderable blocks for the Studio's preview pane.
-    # Each extension implements this for its own kinds. When not present,
-    # the kernel falls back to generic_spec_dump from preview.py.
-    # Not declared on the Protocol body so existing extensions stay
-    # Protocol-compatible without changes; consumers feature-test via
-    # hasattr(kp, "preview").
 
-    # -- Rendering hints (all optional, duck-typed) ------------------------
-    #
-    # graph_style: dict | None
-    #   {"fill": "#F97316", "stroke": "#EA580C", "text_color": "#fff"}
-    #   Colors for mermaid diagrams, graph nodes, and other visualizations.
-    #
-    # ascii_icon: str | None
-    #   Single emoji or character for ASCII tree / compact views.
-    #
-    # display_label: str | None
-    #   Human-friendly plural label (e.g. "Agents" for Agent).
-    #
-    # graph_meta(doc) -> dict | None
-    #   Per-doc annotations for graph rendering and health checks.
-    #   e.g. Guardrail returns {"severity": ..., "scope": ..., "rules": ...}.
+class KindPresentation(Protocol):
+    """Optional presentation/UX capability of a Kind (typing-only).
+
+    Every member here is OPTIONAL at runtime: a Kind that provides none
+    of them is still a perfectly valid ``KindPort`` (the H1 gate never
+    requires them). This Protocol exists so the ~9 attrs/methods that
+    used to live only in docstrings + ``hasattr`` duck-typing have an
+    explicit, typed home (s-dna-kindport-descriptor-schema).
+
+    Deliberately NOT ``@runtime_checkable`` and NOT part of
+    ``KindPort``: ``runtime_checkable`` Protocols check member PRESENCE,
+    so folding these into ``KindPort`` would make ``isinstance`` (the H1
+    registration gate) reject every minimal third-party Kind — exactly
+    the breakage the ``is_runtime_artifact`` addition caused once
+    (see test_port_contract.py).
+
+    Conventions:
+
+    - ``KindBase`` provides defaults for all ATTRIBUTE members (None),
+      so subclasses opt in field-by-field.
+    - ``preview``/``graph_meta`` have no KindBase default — ABSENCE is
+      meaningful (consumers fall back to the generic renderer).
+    - Consumers read via typed access with a default —
+      ``getattr(kp, "ascii_icon", None)`` /
+      ``fn = getattr(kp, "preview", None)`` — never ``hasattr``.
+    - TS twin: these are native optional members folded into the
+      ``KindPresentation`` interface that ``KindPort`` extends
+      (protocols.ts); the pairing is tracked in
+      ``tests/parity-fixtures/port-surface-parity.json``.
+
+    Members:
+
+    - ``docs`` — prose explanation of what this kind IS at the concept
+      level. Surfaced by the harness ``describe_kind`` tool. When an
+      extension ships a ``DOCS.md`` next to its package, the kernel's
+      ``_load_kind_docs`` loader overrides this attribute at load time.
+    - ``description_fallback_field`` — spec field to derive
+      metadata.description from when none was declared. See
+      ``Kernel._fill_derived_description``.
+    - ``ui_schema`` — per-field UI hints for Studio form rendering,
+      keyed by spec field name. Each entry may declare ``widget``
+      (``text | textarea | markdown | markdown-toc | code | select |
+      checkbox | list-markdown | tags | readonly``), ``label``,
+      ``help``, ``language`` (for ``code``), ``height`` (px), ``order``.
+      When absent, consumers infer the widget from the value type.
+      See ``docs/KIND-UI-HINTS.md`` for the full contract.
+    - ``graph_style`` — ``{"fill": "#F97316", "stroke": "#EA580C",
+      "text_color": "#fff"}`` colors for mermaid/graph visualizations.
+    - ``ascii_icon`` — single emoji/char for ASCII tree views.
+    - ``display_label`` — human-friendly plural label (e.g. "Agents").
+    - ``visible_in_backend`` — explicit backend-visibility override;
+      ``None`` falls back to ``default_visible_in_backend(storage)``
+      (see ``resolve_visible_in_backend``).
+    - ``preview(doc)`` — renderable blocks for the Studio's preview
+      pane; absent (or ``None`` result) → ``generic_spec_dump``.
+    - ``graph_meta(doc)`` — per-doc annotations for graph rendering and
+      health checks (e.g. Guardrail returns severity/scope/rules).
+    """
+
+    docs: str | None
+    description_fallback_field: str | None
+    ui_schema: dict[str, Any] | None
+    graph_style: dict[str, str] | None
+    ascii_icon: str | None
+    display_label: str | None
+    visible_in_backend: bool | None
+
+    def preview(self, doc: Any) -> "list[PreviewBlock] | None": ...
+
+    def graph_meta(self, doc: Any) -> dict[str, Any] | None: ...
 
 
 @runtime_checkable
@@ -1278,6 +1321,7 @@ __all__ = [
     "default_visible_in_backend",
     "resolve_visible_in_backend",
     "KindPort",
+    "KindPresentation",
     "ExtensionHost",
     "TemplateProvider",
     "Extension",

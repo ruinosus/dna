@@ -15,7 +15,7 @@
 import type { BundleHandle } from "./bundle-handle.js";
 import type { Document } from "./document.js";
 import type { PreviewBlock } from "./preview.js";
-import type { HookContext, HookRegistry, VetoHandler } from "./hooks.js";
+import type { HookContext, HookNameArg, HookRegistry, VetoHandler } from "./hooks.js";
 import type { CompositionProfile } from "./composition-resolver.js";
 
 export type { BundleHandle };
@@ -601,10 +601,10 @@ export function defaultVisibleInBackend(
 }
 
 export function resolveVisibleInBackend(kp: KindPort): boolean {
-  // Duck-typing on KindPort — third-party extensions may not extend a base
-  // class, so we read the optional field via `any` rather than extend the
-  // protocol with a required property.
-  const explicit = (kp as any).visibleInBackend;
+  // `visibleInBackend` is a declared optional member of the
+  // KindPresentation slice (s-dna-kindport-descriptor-schema) — typed
+  // access, no `as any`. Unset/null falls back to the storage default.
+  const explicit = kp.visibleInBackend;
   if (explicit !== undefined && explicit !== null) return Boolean(explicit);
   return defaultVisibleInBackend(kp.storage ?? null);
 }
@@ -876,8 +876,67 @@ export interface WriterPort {
   serialize(raw: Record<string, unknown>): SerializedFile[];
 }
 
-/** WHO — identity + composition role. */
-export interface KindPort {
+/**
+ * Optional presentation/UX capability of a Kind.
+ *
+ * Py twin: the `KindPresentation` capability Protocol in protocols.py —
+ * kept OFF Python's runtime_checkable `KindPort` so the H1 isinstance
+ * registration gate never requires these members on a minimal Kind
+ * (s-dna-kindport-descriptor-schema). TS interfaces express the same
+ * contract natively as optional members; `KindPort` extends this slice.
+ * The Py↔TS pairing is tracked in
+ * `tests/parity-fixtures/port-surface-parity.json` (KindPresentation port).
+ */
+export interface KindPresentation {
+  /** Canonical prose documentation. May be overridden at load time by a DOCS.md file
+   *  alongside the extension's source. Resolved prose is cached on `_resolvedDocs`. */
+  readonly docs?: string;
+
+  /** Spec field to derive metadata.description from when none was declared. */
+  readonly descriptionFallbackField?: string | null;
+
+  /** Per-field UI hints for Studio form rendering, keyed by spec field
+   *  name (widget/label/help/language/height/order — see
+   *  `docs/KIND-UI-HINTS.md`). When absent, consumers infer the widget
+   *  from the value type. */
+  readonly uiSchema?: Record<string, Record<string, unknown>>;
+
+  /** Colors for mermaid diagrams, graph nodes, and other visualizations. */
+  readonly graphStyle?: {
+    fill: string;
+    stroke: string;
+    textColor: string;
+  };
+  /** Single emoji or character for ASCII tree / compact views. */
+  readonly asciiIcon?: string;
+  /** Human-friendly plural label (e.g. "Agents" for Agent). */
+  readonly displayLabel?: string;
+
+  /** Explicit backend-visibility override; unset/null falls back to
+   *  `defaultVisibleInBackend(storage)` — see `resolveVisibleInBackend`. */
+  readonly visibleInBackend?: boolean | null;
+
+  /**
+   * Optional: returns renderable blocks for the Studio's preview pane.
+   * Each extension implements this for its own kinds. When undefined,
+   * the kernel falls back to `genericSpecDump` from preview.ts.
+   */
+  preview?(doc: Document): PreviewBlock[];
+
+  /** Per-doc annotations for graph rendering and health checks.
+   *  e.g. Guardrail returns {severity, scope, rules}.
+   *  Agent returns {model, soul, skills_count}. */
+  graphMeta?(doc: Document): Record<string, unknown> | null;
+}
+
+/** WHO — identity + composition role.
+ *
+ * Core contract + the optional `KindPresentation` slice. Python's twin
+ * keeps the two apart at runtime (`KindPort` runtime_checkable Protocol
+ * + `KindPresentation` typing-only capability); TS folds the optional
+ * slice in via `extends` — structural typing has no isinstance gate to
+ * protect. */
+export interface KindPort extends KindPresentation {
   readonly apiVersion: string;
   readonly kind: string;
   readonly alias: string;
@@ -890,9 +949,6 @@ export interface KindPort {
    * explicitly, flipping enforcement on per-Kind. See TenantScope.
    */
   readonly scope?: TenantScope;
-  /** Canonical prose documentation. May be overridden at load time by a DOCS.md file
-   *  alongside the extension's source. Resolved prose is cached on `_resolvedDocs`. */
-  readonly docs?: string;
 
   readonly isRoot: boolean;
   readonly isPromptTarget: boolean;
@@ -938,31 +994,6 @@ export interface KindPort {
   /** Which spec fields reference other kinds by alias.
    *  Clearer name for depFilters(). */
   dependencies?(): Record<string, string> | null;
-
-  /**
-   * Optional: returns renderable blocks for the Studio's preview pane.
-   * Each extension implements this for its own kinds. When undefined,
-   * the kernel falls back to `genericSpecDump` from preview.ts.
-   */
-  preview?(doc: Document): PreviewBlock[];
-
-  // -- Rendering hints (all optional) -------------------------------------
-
-  /** Colors for mermaid diagrams, graph nodes, and other visualizations. */
-  readonly graphStyle?: {
-    fill: string;
-    stroke: string;
-    textColor: string;
-  };
-  /** Single emoji or character for ASCII tree / compact views. */
-  readonly asciiIcon?: string;
-  /** Human-friendly plural label (e.g. "Agents" for Agent). */
-  readonly displayLabel?: string;
-
-  /** Per-doc annotations for graph rendering and health checks.
-   *  e.g. Guardrail returns {severity, scope, rules}.
-   *  Agent returns {model, soul, skills_count}. */
-  graphMeta?(doc: Document): Record<string, unknown> | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -1083,9 +1114,9 @@ export interface ExtensionHost {
   kindFromDescriptor(raw: Record<string, unknown>): KindPort;
   reader(r: ReaderPort): void;
   writer(w: WriterPort): void;
-  on(hook: string, fn: (ctx: HookContext) => void): void;
+  on(hook: HookNameArg, fn: (ctx: HookContext) => void): void;
   onVeto(
-    hook: string,
+    hook: HookNameArg,
     fn: VetoHandler,
     opts?: { priority?: number; key?: string },
   ): void;
