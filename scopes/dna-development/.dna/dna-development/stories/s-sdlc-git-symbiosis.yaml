@@ -15,7 +15,7 @@ spec:
     \ \u2192 .dna/dna-development na raiz (o repo \xC9 o projeto; elimina o nome duplicado),\
     \ DNA_SOURCE_URL default j\xE1 resolve ./.dna. Docs: se\xE7\xE3o 'your git log\
     \ is your SDLC' no README/guia."
-  status: todo
+  status: in-progress
   feature: f-dna-1.0-readiness
   priority: medium
   labels:
@@ -34,7 +34,7 @@ spec:
   - "PR merged; conven\xE7\xE3o documentada"
   definition_of_done_source: cli-create
   created_at: '2026-07-08T19:49:03+00:00'
-  updated_at: '2026-07-08T19:50:25+00:00'
+  updated_at: '2026-07-08T21:07:27+00:00'
   timeline:
   - at: '2026-07-08T19:49:03+00:00'
     actor: claude-code
@@ -56,3 +56,14 @@ spec:
       \ do desenho mant\xE9m (hook prepare-commit-msg + active-story.txt + volta via\
       \ git log --grep + layout do scope na raiz)."
     commit_ref: e0dcf12f5c758a02203e97b4e33bc9f9b5d32b8c
+  - at: '2026-07-08T21:07:27+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  produces:
+  - kind: Plan
+    name: plan-s-sdlc-git-symbiosis
+    role: implementation
+    at: '2026-07-08T21:07:27+00:00'
