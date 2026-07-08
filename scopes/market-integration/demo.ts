@@ -1,75 +1,53 @@
 /**
- * Proof of concept: SDK reads REAL market content without modification.
+ * Market-fidelity demo (TypeScript): the SDK reads REAL marketplace
+ * content without modification.
  *
- * Skills: from Anthropic (agentskills.io)
- * Souls: from SoulSpec (soulspec.org)
- * AGENTS.md: agents.md standard
+ * Skills: Anthropic marketplace + Superpowers collection (agentskills.io)
+ * Soul: soulspec.org  ·  AGENTS.md: agents.md
+ *
+ * Run (from the repo root):
+ *
+ *     cd packages/sdk-ts && bun install
+ *     bun run ../../scopes/market-integration/demo.ts
  */
-
+// In your own project this is: import { quickInstance } from "@dna/sdk";
+import { quickInstance } from "../../packages/sdk-ts/src/index.ts";
 import { resolve } from "node:path";
-import { Kernel } from "../../typescript/src/index.js";
 
 const baseDir = resolve(import.meta.dir, ".dna");
-const mi = Kernel.quick("market-demo", baseDir);
+const mi = await quickInstance("market-demo", baseDir);
 
 console.log("=".repeat(60));
-console.log("MARKET INTEGRATION DEMO");
+console.log("MARKET INTEGRATION DEMO — REAL CONTENT");
 console.log("=".repeat(60));
 
-// Skills (from Anthropic -- agentskills.io format)
 const skills = mi.all("Skill");
 console.log(`\nSkills found: ${skills.length}`);
 for (const s of skills) {
-  const meta = (s as any).metadata ?? {};
-  const spec = (s as any).spec ?? {};
-  const desc = (meta.description ?? "").slice(0, 80);
-  console.log(`  ${meta.name}: ${desc}...`);
-  console.log(`    license: ${spec.license ?? "?"}`);
-  console.log(`    references: ${(spec.references ?? []).length}, scripts: ${(spec.scripts ?? []).length}, assets: ${(spec.assets ?? []).length}`);
+  const spec = s.spec as Record<string, unknown>;
+  const desc = String(s.metadata?.description ?? "").slice(0, 72);
+  const n = (f: string) => Object.keys((spec[f] as object) ?? {}).length;
+  console.log(`  ${s.name}: ${desc}...`);
+  console.log(`    references: ${n("references")}, scripts: ${n("scripts")}, assets: ${n("assets")}`);
 }
 
-// Souls (from SoulSpec -- soulspec.org format)
 const souls = mi.all("Soul");
 console.log(`\nSouls found: ${souls.length}`);
 for (const soul of souls) {
-  const spec = (soul as any).spec ?? {};
-  const meta = (soul as any).metadata ?? {};
-  console.log(`  ${meta.name} (${spec.displayName ?? spec.display_name}) v${spec.version}`);
-  console.log(`    tags: ${JSON.stringify(spec.tags ?? [])}`);
-  console.log(`    soul: ${spec.soul_content ? "yes" : "no"}`);
-  console.log(`    identity: ${spec.identity_content ? "yes" : "no"}`);
-  console.log(`    style: ${spec.style_content ? "yes" : "no"}`);
-  console.log(`    agents: ${spec.agents_content ? "yes" : "no"}`);
-  console.log(`    heartbeat: ${spec.heartbeat_content ? "yes" : "no"}`);
-  console.log(`    examples: ${(spec.examples ?? []).length}`);
+  const spec = soul.spec as Record<string, unknown>;
+  const files = [
+    ["SOUL.md", "soul_content"], ["IDENTITY.md", "identity_content"],
+    ["STYLE.md", "style_content"], ["AGENTS.md", "agents_content"],
+    ["HEARTBEAT.md", "heartbeat_content"],
+  ].filter(([, f]) => spec[f]).map(([label]) => label);
+  const label = spec.display_name ? `${soul.name} (${spec.display_name})` : soul.name;
+  console.log(`  ${label} — ${files.join(", ")}`);
 }
 
-// AGENTS.md (agents.md format -- plain markdown)
-const contexts = mi.all("AgentContext");
-console.log(`\nAgent Contexts found: ${contexts.length}`);
-for (const ctx of contexts) {
-  const spec = (ctx as any).spec ?? {};
-  const meta = (ctx as any).metadata ?? {};
-  console.log(`  ${meta.name}: ${(spec.content ?? "").length} chars`);
-}
+const contexts = mi.all("AgentDefinition");
+console.log(`\nAgent definitions (AGENTS.md): ${contexts.length}`);
 
-// Build prompt (all together)
-const prompt = mi.buildPrompt();
-console.log(`\nPrompt built: ${prompt.length} chars`);
-console.log(`  Preview: ${prompt.slice(0, 200)}...`);
-
-// Describe all kinds
-console.log(`\nKernel.describe():`);
-const k = Kernel.auto();
-for (const entry of k.describe()) {
-  console.log(`  ${(entry.alias ?? "").padEnd(25)} ${entry.apiVersion.padEnd(20)} origin=${entry.origin ?? "?"}`);
-}
-
-// Module summary
-console.log(`\nModule summary:`);
-const summary = mi.summary();
-for (const [kindName, docs] of Object.entries((summary as any).documents ?? {})) {
-  console.log(`  ${kindName}: ${(docs as any[]).length} document(s)`);
-}
-
-console.log("\nALL MARKET CONTENT LOADED SUCCESSFULLY");
+console.log(`\n${"=".repeat(60)}`);
+console.log(`TOTAL: ${skills.length} skills + ${souls.length} souls + ${contexts.length} agent definitions`);
+console.log("ALL LOADED FROM REAL MARKET SOURCES — ZERO MODIFICATION");
+console.log("=".repeat(60));

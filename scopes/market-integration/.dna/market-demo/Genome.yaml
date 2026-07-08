@@ -14,7 +14,3 @@ spec:
     - frontend-design
     - mcp-builder
     - claude-api
-  - source: github:jbaruch/superpowers
-    skills:
-    - brainstorming
-    - writing-plans

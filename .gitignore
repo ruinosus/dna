@@ -11,3 +11,5 @@ coverage/
 .env
 .env.*
 !.env.example
+# resolver cache — created when a demo/example resolves github: deps
+.dna-cache/
