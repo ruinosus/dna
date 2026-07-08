@@ -36,7 +36,7 @@ Adding `MyCapability` is a 4-step process:
 | Operation | Acceptance |
 |---|---|
 | `save_document(scope, "Genome", scope, raw)` then `publish(...)` | The root Genome appears in `mi.root` after `kernel.instance_async(scope)`. |
-| `kernel.write_document(scope, "Skill", name, raw)` then `publish(...)` | Skill appears in `mi.all("Skill")`. Bundle entries (e.g. `SKILL.md`) persisted via the source's backing store. |
+| `kernel.write_document(scope, "Skill", name, raw)` then `publish(...)` | Skill appears in `mi.documents` / `kernel.query(scope, "Skill")`. Bundle entries (e.g. `SKILL.md`) persisted via the source's backing store. |
 | `kernel.fetch_bundle_entry_async(scope, kind, name, entry)` | Returns `bytes` for existing entries; `FileNotFoundError` for missing entries (consistent across all adapters). |
 
 ### Boot-time validation (kernel-level, propagates uniformly)

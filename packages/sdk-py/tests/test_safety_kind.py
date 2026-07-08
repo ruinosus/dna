@@ -171,7 +171,7 @@ class TestSafetyPolicyBundleRoundtrip:
         )
 
         mi = Kernel.quick("test", base_dir=str(tmp_path / ".dna"))
-        policy_docs = mi.all("SafetyPolicy")
+        policy_docs = [d for d in mi.documents if d.kind == "SafetyPolicy"]
         assert len(policy_docs) == 1
         doc = policy_docs[0]
         assert doc.name == "pii-brasil"

@@ -22,7 +22,7 @@ describe("Namespace API", () => {
     });
 
     test("prompt.build({ agent }) works", async () => {
-      const agents = mi.all("Agent");
+      const agents = mi.documents.filter((d) => d.kind === "Agent");
       if (agents.length > 0) {
         const name = agents[0].name;
         const old = await mi.buildPrompt({ agent: name });
@@ -40,7 +40,7 @@ describe("Namespace API", () => {
     });
 
     test("composition.consumersOf() works", async () => {
-      const skills = mi.all("Skill");
+      const skills = mi.documents.filter((d) => d.kind === "Skill");
       if (skills.length > 0) {
         const s = skills[0];
         const old = mi.consumersOf(s.kind, s.name);
@@ -58,7 +58,7 @@ describe("Namespace API", () => {
 
   describe("nav", () => {
     test("nav.describe() equals describe()", async () => {
-      const agents = mi.all("Agent");
+      const agents = mi.documents.filter((d) => d.kind === "Agent");
       if (agents.length > 0) {
         const a = agents[0];
         const old = mi.describe(a.kind, a.name);
@@ -82,7 +82,7 @@ describe("Namespace API", () => {
     });
 
     test("nav.renderDoc() equals renderDoc()", async () => {
-      const agents = mi.all("Agent");
+      const agents = mi.documents.filter((d) => d.kind === "Agent");
       if (agents.length > 0) {
         const a = agents[0];
         expect(mi.nav.renderDoc(a.kind, a.name)).toEqual(mi.renderDoc(a.kind, a.name));

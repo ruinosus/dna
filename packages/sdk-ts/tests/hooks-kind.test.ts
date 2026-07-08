@@ -138,7 +138,7 @@ describe("Hook Kind", () => {
     const mi = await k.instance("test");
 
     // Verify hook document was loaded
-    const hooks = mi.all("Hook");
+    const hooks = mi.documents.filter((d) => d.kind === "Hook");
     expect(hooks.length).toBe(1);
     expect(hooks[0].name).toBe("inject-env");
 
@@ -188,7 +188,7 @@ describe("Hook Kind", () => {
 
     const mi = await k.instance("test");
 
-    expect(mi.all("Hook").length).toBe(1);
+    expect(mi.documents.filter((d) => d.kind === "Hook").length).toBe(1);
 
     // Apply hooks
     mi.applyHooks();

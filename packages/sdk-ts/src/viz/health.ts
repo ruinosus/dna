@@ -70,7 +70,7 @@ export function healthReport(mi: ManifestInstance): Record<string, unknown> {
       // Count total docs of this slot's target kind
       const targetKp = mi.kindForAlias(slot.targetAlias);
       if (targetKp) {
-        const allOfKind = mi.all(targetKp.kind);
+        const allOfKind = mi._all(targetKp.kind);
         slotTotals[`${slot.name}_total`] = allOfKind.length;
 
         // For kinds with graphMeta returning severity, count rules
@@ -167,7 +167,7 @@ export function impact(mi: ManifestInstance, kind: string, name: string): Record
     }
   }
 
-  const doc = mi.one(kind, name);
+  const doc = mi._one(kind, name);
   return {
     kind,
     name,

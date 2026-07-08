@@ -88,21 +88,21 @@ class TestClaudeApiSkill:
 
     def test_instruction_from_skill_md(self, tmp_path):
         mi = _build(tmp_path, ["claude-api"])
-        skill = mi.one("Skill", "claude-api")
+        skill = next((d for d in mi.documents if d.kind == "Skill" and d.name == "claude-api"), None)
         assert skill is not None
         instruction = skill.spec.get("instruction", "")
         assert len(instruction) > 200
 
     def test_has_extras_subdirs(self, tmp_path):
         mi = _build(tmp_path, ["claude-api"])
-        skill = mi.one("Skill", "claude-api")
+        skill = next((d for d in mi.documents if d.kind == "Skill" and d.name == "claude-api"), None)
         extras = skill.spec.get("extras", {})
         # Should have python/, typescript/, shared/, etc.
         assert len(extras) > 0, f"Expected extras subdirs, got none. Spec keys: {list(skill.spec.keys())}"
 
     def test_python_subdir_files_present(self, tmp_path):
         mi = _build(tmp_path, ["claude-api"])
-        skill = mi.one("Skill", "claude-api")
+        skill = next((d for d in mi.documents if d.kind == "Skill" and d.name == "claude-api"), None)
         extras = skill.spec.get("extras", {})
         # python/ subdir should contain claude-api and agent-sdk docs
         python_files = extras.get("python", {})
@@ -110,14 +110,14 @@ class TestClaudeApiSkill:
 
     def test_shared_subdir_files_present(self, tmp_path):
         mi = _build(tmp_path, ["claude-api"])
-        skill = mi.one("Skill", "claude-api")
+        skill = next((d for d in mi.documents if d.kind == "Skill" and d.name == "claude-api"), None)
         extras = skill.spec.get("extras", {})
         shared_files = extras.get("shared", {})
         assert len(shared_files) > 0, f"Expected shared/ files. Extras keys: {list(extras.keys())}"
 
     def test_root_files_include_license(self, tmp_path):
         mi = _build(tmp_path, ["claude-api"])
-        skill = mi.one("Skill", "claude-api")
+        skill = next((d for d in mi.documents if d.kind == "Skill" and d.name == "claude-api"), None)
         root_files = skill.spec.get("root_files", {})
         assert "LICENSE.txt" in root_files
 
@@ -133,7 +133,7 @@ class TestPdfSkill:
 
     def test_scripts_present(self, tmp_path):
         mi = _build(tmp_path, ["pdf"])
-        skill = mi.one("Skill", "pdf")
+        skill = next((d for d in mi.documents if d.kind == "Skill" and d.name == "pdf"), None)
         scripts = skill.spec.get("scripts", {})
         # scripts may be dict (direct read) or list (after cache roundtrip)
         count = len(scripts)
@@ -141,7 +141,7 @@ class TestPdfSkill:
 
     def test_root_md_files_captured(self, tmp_path):
         mi = _build(tmp_path, ["pdf"])
-        skill = mi.one("Skill", "pdf")
+        skill = next((d for d in mi.documents if d.kind == "Skill" and d.name == "pdf"), None)
         root_files = skill.spec.get("root_files", {})
         # forms.md and reference.md are root-level files (not in scripts/ or reference/)
         root_keys = list(root_files.keys()) if isinstance(root_files, dict) else root_files
@@ -160,7 +160,7 @@ class TestMcpBuilderSkill:
 
     def test_reference_dir_captured(self, tmp_path):
         mi = _build(tmp_path, ["mcp-builder"])
-        skill = mi.one("Skill", "mcp-builder")
+        skill = next((d for d in mi.documents if d.kind == "Skill" and d.name == "mcp-builder"), None)
         # reference/ is a _KNOWN_DIR in SkillReader → goes to spec.references
         references = skill.spec.get("references", {})
         ref_count = len(references)
@@ -171,7 +171,7 @@ class TestMcpBuilderSkill:
 
     def test_scripts_dir_captured(self, tmp_path):
         mi = _build(tmp_path, ["mcp-builder"])
-        skill = mi.one("Skill", "mcp-builder")
+        skill = next((d for d in mi.documents if d.kind == "Skill" and d.name == "mcp-builder"), None)
         scripts = skill.spec.get("scripts", {})
         assert len(scripts) > 0
 
@@ -187,13 +187,13 @@ class TestWebappTestingSkill:
 
     def test_scripts_captured(self, tmp_path):
         mi = _build(tmp_path, ["webapp-testing"])
-        skill = mi.one("Skill", "webapp-testing")
+        skill = next((d for d in mi.documents if d.kind == "Skill" and d.name == "webapp-testing"), None)
         scripts = skill.spec.get("scripts", {})
         assert len(scripts) > 0
 
     def test_examples_in_extras(self, tmp_path):
         mi = _build(tmp_path, ["webapp-testing"])
-        skill = mi.one("Skill", "webapp-testing")
+        skill = next((d for d in mi.documents if d.kind == "Skill" and d.name == "webapp-testing"), None)
         extras = skill.spec.get("extras", {})
         # examples/ is not a known dir → should be in extras
         assert "examples" in extras, f"Expected examples/ in extras. Got: {list(extras.keys())}"
@@ -212,12 +212,12 @@ class TestAllComplexSkills:
 
     def test_all_five_resolved(self, tmp_path):
         mi = _build(tmp_path, ["frontend-design", "claude-api", "pdf", "mcp-builder", "webapp-testing"])
-        skills = mi.all("Skill")
+        skills = [d for d in mi.documents if d.kind == "Skill"]
         names = sorted(s.name for s in skills)
         assert names == ["claude-api", "frontend-design", "mcp-builder", "pdf", "webapp-testing"]
 
     def test_each_has_instruction(self, tmp_path):
         mi = _build(tmp_path, ["frontend-design", "claude-api", "pdf", "mcp-builder", "webapp-testing"])
-        for skill in mi.all("Skill"):
+        for skill in [d for d in mi.documents if d.kind == "Skill"]:
             instruction = skill.spec.get("instruction", "")
             assert len(instruction) > 50, f"Skill {skill.name} has short instruction: {len(instruction)} chars"

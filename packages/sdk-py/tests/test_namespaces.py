@@ -25,7 +25,7 @@ class TestNamespaces:
         assert new == old
 
     def test_prompt_build_with_agent(self):
-        agents = self.mi.all("Agent")
+        agents = [d for d in self.mi.documents if d.kind == "Agent"]
         if agents:
             name = agents[0].name
             old = self.mi.build_prompt(agent=name)
@@ -42,7 +42,7 @@ class TestNamespaces:
         assert new.warnings == old.warnings
 
     def test_composition_consumers_of(self):
-        skills = self.mi.all("Skill")
+        skills = [d for d in self.mi.documents if d.kind == "Skill"]
         if skills:
             s = skills[0]
             old = self.mi.consumers_of(s.kind, s.name)
@@ -55,7 +55,7 @@ class TestNamespaces:
         assert new == old
 
     def test_composition_iter_doc_deps(self):
-        agents = self.mi.all("Agent")
+        agents = [d for d in self.mi.documents if d.kind == "Agent"]
         if agents:
             a = agents[0]
             old = self.mi.iter_doc_deps(a)
@@ -65,7 +65,7 @@ class TestNamespaces:
     # -- Navigator ------------------------------------------------------------
 
     def test_nav_describe(self):
-        agents = self.mi.all("Agent")
+        agents = [d for d in self.mi.documents if d.kind == "Agent"]
         if agents:
             a = agents[0]
             assert self.mi.nav.describe(a.kind, a.name) == self.mi.describe(a.kind, a.name)
@@ -77,7 +77,7 @@ class TestNamespaces:
         assert self.mi.nav.inventory() == self.mi.inventory()
 
     def test_nav_render_doc(self):
-        agents = self.mi.all("Agent")
+        agents = [d for d in self.mi.documents if d.kind == "Agent"]
         if agents:
             a = agents[0]
             assert self.mi.nav.render_doc(a.kind, a.name) == self.mi.render_doc(a.kind, a.name)

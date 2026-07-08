@@ -456,7 +456,7 @@ class TestKernelSerializeDocument:
         from pathlib import Path
         base = Path(__file__).parent.parent.parent.parent / "scopes/open-swe/.dna"
         mi = Kernel.quick("open-swe", base_dir=str(base))
-        agent = mi.one("Agent", "swe-agent")
+        agent = next((d for d in mi.documents if d.kind == "Agent" and d.name == "swe-agent"), None)
         assert agent is not None
         k = mi._kernel
         result = k.serialize_document("open-swe", "Agent", "swe-agent", agent.raw)
@@ -494,7 +494,7 @@ class TestGuardrailGenericRoundtrip:
 
         k = Kernel.auto(source=FilesystemSource(str(tmp_path)))
         mi = k.instance("mod")
-        guards = mi.all("Guardrail")
+        guards = [d for d in mi.documents if d.kind == "Guardrail"]
         assert len(guards) == 1
         assert guards[0].name == "safety"
         assert guards[0].spec.get("rules") == ["No harm", "Be safe"]

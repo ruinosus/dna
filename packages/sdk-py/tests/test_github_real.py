@@ -88,7 +88,7 @@ class TestAnthropicSkills:
             {"kind": "Skill", "names": ["frontend-design"]},
         ])
         mi = k.instance("test-project")
-        skills = mi.all("Skill")
+        skills = [d for d in mi.documents if d.kind == "Skill"]
         names = [s.name for s in skills]
         assert "frontend-design" in names
 
@@ -97,7 +97,7 @@ class TestAnthropicSkills:
             {"kind": "Skill", "names": ["frontend-design"]},
         ])
         mi = k.instance("test-project")
-        skill = mi.one("Skill", "frontend-design")
+        skill = next((d for d in mi.documents if d.kind == "Skill" and d.name == "frontend-design"), None)
         assert skill is not None
         instruction = skill.spec.get("instruction", "")
         assert len(instruction) > 100  # Real skill has substantial content
@@ -107,7 +107,7 @@ class TestAnthropicSkills:
             {"kind": "Skill", "names": ["frontend-design", "claude-api", "pdf"]},
         ])
         mi = k.instance("test-project")
-        skills = mi.all("Skill")
+        skills = [d for d in mi.documents if d.kind == "Skill"]
         names = [s.name for s in skills]
         assert "frontend-design" in names
         assert "claude-api" in names
@@ -138,7 +138,7 @@ class TestSuperpowersSkills:
             {"kind": "Skill", "names": ["test-driven-development"]},
         ])
         mi = k.instance("test-project")
-        skill = mi.one("Skill", "test-driven-development")
+        skill = next((d for d in mi.documents if d.kind == "Skill" and d.name == "test-driven-development"), None)
         assert skill is not None
         assert len(skill.spec.get("instruction", "")) > 100
 
@@ -147,7 +147,7 @@ class TestSuperpowersSkills:
             {"kind": "Skill", "names": ["brainstorming", "systematic-debugging", "writing-plans"]},
         ])
         mi = k.instance("test-project")
-        skills = mi.all("Skill")
+        skills = [d for d in mi.documents if d.kind == "Skill"]
         names = [s.name for s in skills]
         assert "brainstorming" in names
         assert "systematic-debugging" in names
@@ -210,7 +210,7 @@ class TestMixedGitHubSources:
         mi = k.instance("mixed-project")
 
         # Skills from both repos present
-        skills = mi.all("Skill")
+        skills = [d for d in mi.documents if d.kind == "Skill"]
         names = [s.name for s in skills]
         assert "frontend-design" in names        # from anthropics/skills
         assert "test-driven-development" in names  # from obra/superpowers
@@ -265,7 +265,7 @@ class TestMixedGitHubSources:
         assert "full-stack developer" in prompt.lower()
         # Skills are in context but prompt length depends on agent's template
         # The key proof: skills were resolved and are queryable
-        skills = mi.all("Skill")
+        skills = [d for d in mi.documents if d.kind == "Skill"]
         names = [s.name for s in skills]
         assert "frontend-design" in names
         assert "test-driven-development" in names

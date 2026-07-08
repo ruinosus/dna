@@ -108,7 +108,7 @@ class TestUseCaseFilesystemLoad:
         k.load(HelixExtension())
 
         mi = k.instance("mod")
-        ucs = mi.all("UseCase")
+        ucs = [d for d in mi.documents if d.kind == "UseCase"]
         assert len(ucs) == 1
         assert ucs[0].name == "checkout"
         assert ucs[0].spec.get("primary_actor") == "shopper"

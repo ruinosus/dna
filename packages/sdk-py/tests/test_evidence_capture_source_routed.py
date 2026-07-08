@@ -75,7 +75,7 @@ def _make_kernel_no_evidence(base_dir) -> Kernel:
 
 @pytest.mark.asyncio
 async def test_evidence_written_via_source_not_path(tmp_path):
-    """After writing a doc, Evidence must appear via mi.all('Evidence'),
+    """After writing a doc, Evidence must appear via kernel.query('Evidence'),
     meaning it was routed through the Source — not written by Path.write_text
     to a path the kernel doesn't know about.
     """

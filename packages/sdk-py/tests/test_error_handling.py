@@ -214,7 +214,7 @@ class TestMIErrors:
 
     def test_one_missing_returns_none(self):
         mi = Kernel.quick("open-swe", base_dir=str(BASE_DIR))
-        assert mi.one("Genome", "ghost") is None
+        assert next((d for d in mi.documents if d.kind == "Genome" and d.name == "ghost"), None) is None
 
     def test_ref_empty_string(self):
         mi = Kernel.quick("open-swe", base_dir=str(BASE_DIR))

@@ -129,7 +129,7 @@ Converts the raw YAML dict into a typed model (dataclasses in Python, Zod
 in TypeScript). The typed model gives you autocomplete and validation:
 
 ```python
-agent_doc = mi.one("Agent", "brad")
+agent_doc = next(d for d in mi.documents if d.kind == "Agent" and d.name == "brad")
 agent_doc.spec.instruction   # typed access
 agent_doc.spec.skills        # ["brainstorming", "writing-plans"]
 agent_doc.spec.soul          # "brad"
@@ -211,7 +211,7 @@ class GuardrailKind:
 from dna.kernel import Kernel
 
 mi = Kernel.quick("my-scope")
-for g in mi.all("Guardrail"):
+for g in (d for d in mi.documents if d.kind == "Guardrail"):
     print(f"Rules: {g.spec.rules}, Severity: {g.spec.severity}")
 ```
 
@@ -263,7 +263,7 @@ spec:
 
 ```python
 prompt = mi.build_prompt(agent="brad")
-guardrail = mi.one("Guardrail", "safety")
+guardrail = next(d for d in mi.documents if d.kind == "Guardrail" and d.name == "safety")
 full_prompt = f"{prompt}\n\n## Safety Rules\n" + "\n".join(f"- {r}" for r in guardrail.spec.rules)
 ```
 
@@ -285,8 +285,8 @@ kernel.instance(scope)
     ├── Document.from_raw(raw)    ← Wrapped in Document
     └── ManifestInstance           ← Query API ready
             │
-            ├── mi.all("Guardrail")      ← Query by kind
-            ├── mi.one("Guardrail", "x") ← Query by kind+name
+            ├── mi.documents             ← Query (filter by d.kind/d.name)
+            ├── kernel.query(scope, k)   ← Indexed / record-plane query
             └── mi.build_prompt()        ← Template composition
 ```
 

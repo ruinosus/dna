@@ -53,7 +53,7 @@ export class ReportBuilder {
   /** Generate an eval summary report grouped by suite.
    *  If `suite` is given, only that suite is included. */
   evalSummary(suite?: string): string {
-    let runs = this._mi.all("EvalRun");
+    let runs = this._mi._all("EvalRun");
     if (suite) {
       runs = runs.filter(
         (r) => (r.spec as Record<string, unknown>).suite === suite,
@@ -134,7 +134,7 @@ export class ReportBuilder {
   /** Generate a findings summary grouped by severity.
    *  Filters out findings with severity below `minSeverity`. */
   findingsSummary(minSeverity: string = "low"): string {
-    const findings = this._mi.all("Finding");
+    const findings = this._mi._all("Finding");
     const minLevel = SEVERITY_ORDER[minSeverity] ?? 3;
 
     const filtered = findings.filter((f) => {
@@ -185,7 +185,7 @@ export class ReportBuilder {
 
   /** Generate a manifest of all evidence documents. */
   evidenceManifest(): string {
-    const evidence = this._mi.all("Evidence");
+    const evidence = this._mi._all("Evidence");
 
     let md = frontmatter("evidence_manifest", this._mi.scope);
     md += "# Evidence Manifest\n\n";
@@ -226,7 +226,7 @@ export class ReportBuilder {
       return md;
     }
 
-    const findings = this._mi.all("Finding");
+    const findings = this._mi._all("Finding");
 
     md += "| Severity | Count | Regulatory Articles |\n";
     md += "|----------|-------|--------------------|\n";

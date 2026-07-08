@@ -558,9 +558,9 @@ describe("v3 ManifestInstance", () => {
       Document.fromRaw({ apiVersion: "b/v1", kind: "B", metadata: { name: "b1" }, spec: {} }),
     ];
     const mi = new ManifestInstance({ scope: "test", documents: docs, kinds: new Map() });
-    expect(mi.all("A").length).toBe(1);
-    expect(mi.all("B").length).toBe(1);
-    expect(mi.all("C").length).toBe(0);
+    expect(mi.documents.filter((d) => d.kind === "A").length).toBe(1);
+    expect(mi.documents.filter((d) => d.kind === "B").length).toBe(1);
+    expect(mi.documents.filter((d) => d.kind === "C").length).toBe(0);
   });
 
   test("one returns doc or null", async () => {
@@ -569,10 +569,10 @@ describe("v3 ManifestInstance", () => {
       Document.fromRaw({ apiVersion: "a/v1", kind: "A", metadata: { name: "a2" }, spec: {} }),
     ];
     const mi = new ManifestInstance({ scope: "test", documents: docs, kinds: new Map() });
-    expect(mi.one("A", "a1")?.name).toBe("a1");
-    expect(mi.one("A", "a2")?.name).toBe("a2");
-    expect(mi.one("A", "a3")).toBeNull();
-    expect(mi.one("B", "a1")).toBeNull();
+    expect((mi.documents.find((d) => d.kind === "A" && d.name === "a1") ?? null)?.name).toBe("a1");
+    expect((mi.documents.find((d) => d.kind === "A" && d.name === "a2") ?? null)?.name).toBe("a2");
+    expect((mi.documents.find((d) => d.kind === "A" && d.name === "a3") ?? null)).toBeNull();
+    expect((mi.documents.find((d) => d.kind === "B" && d.name === "a1") ?? null)).toBeNull();
   });
 
   test("root finds isRoot kind", async () => {

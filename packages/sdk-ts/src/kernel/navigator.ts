@@ -25,7 +25,7 @@ export class Navigator {
    * Equivalent to `mi.describe(kind, name)`.
    */
   describe(kind: string, name: string): string {
-    const doc = this.host.one(kind, name);
+    const doc = this.host._one(kind, name);
     if (!doc) return `${kind}/${name} not found`;
 
     const kinds = (this.host as any)._kinds as Map<string, KindPort>;
@@ -55,7 +55,7 @@ export class Navigator {
     const kinds = this.host.listKinds();
     const lines = [`Scope: ${this.host.scope}`, `Kinds: ${kinds.length}`];
     for (const k of kinds) {
-      const docs = this.host.all(k);
+      const docs = this.host._all(k);
       lines.push(
         `  ${k}: ${docs.length} (${docs.map((d) => d.name).join(", ")})`,
       );
@@ -72,7 +72,7 @@ export class Navigator {
     const kindsData: Record<string, unknown> = {};
 
     for (const kindName of this.host.listKinds()) {
-      const docs = this.host.all(kindName);
+      const docs = this.host._all(kindName);
       const docEntries: Record<string, unknown>[] = [];
 
       for (const doc of docs) {
@@ -134,7 +134,7 @@ export class Navigator {
    * Equivalent to `mi.renderDoc(kind, name)`.
    */
   renderDoc(kind: string, name: string): PreviewBlock[] {
-    const doc = this.host.one(kind, name);
+    const doc = this.host._one(kind, name);
     if (!doc) return [];
     const kinds = (this.host as any)._kinds as Map<string, KindPort>;
     const kp = kinds.get(`${doc.apiVersion}\0${doc.kind}`);

@@ -1433,7 +1433,7 @@ export class Kernel {
     let policyStr = "open";
     let layerPolicyDocs: Document[] = [];
     try {
-      layerPolicyDocs = mi.all("LayerPolicy");
+      layerPolicyDocs = mi._all("LayerPolicy");
     } catch {
       layerPolicyDocs = [];
     }
@@ -1453,7 +1453,7 @@ export class Kernel {
       );
     }
     if (policyStr === "restricted") {
-      const existing = mi.one(kind, name);
+      const existing = mi._one(kind, name);
       if (!existing) {
         throw new LayerPolicyViolationError(
           `${alias} in layer '${layerId}' is RESTRICTED — ` +
@@ -1803,7 +1803,7 @@ export class Kernel {
     let rows: import("./document.js").Document[];
     try {
       const mi = await this.instance(MODEL_REGISTRY_SCOPE);
-      rows = mi.all("ModelProfile");
+      rows = mi._all("ModelProfile");
     } catch {
       return null;
     }
@@ -1840,7 +1840,7 @@ export class Kernel {
     let rows: import("./document.js").Document[];
     try {
       const mi = await this.instance(VOICE_POLICY_SCOPE);
-      rows = mi.all("VoicePolicy");
+      rows = mi._all("VoicePolicy");
     } catch {
       return null;
     }

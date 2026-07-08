@@ -126,13 +126,13 @@ export async function buildEvidenceDoc(opts: {
 
 /**
  * The runtime capabilities the evidence-capture handler needs from the
- * kernel it captures — a read surface (`instance().all()`) plus the write
+ * kernel it captures — a read surface (`instance()._all()`, the MI internal non-deprecated twin) plus the write
  * path. Narrower than the full Kernel on purpose; the EvidenceExtension
  * feature-tests these members before wiring the handler
  * (s-dna-extension-host-contract).
  */
 export interface EvidenceCaptureHost {
-  instance(scope: string): { all(kind: string): { spec: Record<string, unknown> }[] };
+  instance(scope: string): { _all(kind: string): { spec: Record<string, unknown> }[] };
   writeDocument(
     scope: string,
     kind: string,
@@ -158,7 +158,7 @@ export function makeEvidenceCaptureHandler(kernel: EvidenceCaptureHost) {
     if (kind === "Evidence") return;
 
     const mi = kernel.instance(ctx.scope);
-    const policies = mi.all("EvidencePolicy");
+    const policies = mi._all("EvidencePolicy");
     if (!policies.some((p) => shouldCapture(p.spec as Record<string, unknown>, eventType)))
       return;
 

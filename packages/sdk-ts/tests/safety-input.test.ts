@@ -226,7 +226,7 @@ describe("SafetyPolicy input enforcement", () => {
     const k = buildKernel(fs);
     const mi = await k.instance("test");
 
-    const policies = mi.all("SafetyPolicy");
+    const policies = mi.documents.filter((d) => d.kind === "SafetyPolicy");
     expect(policies.length).toBe(1);
     expect(policies[0].name).toBe("pii-br");
     expect((policies[0].spec as any).scope).toBe("both");
