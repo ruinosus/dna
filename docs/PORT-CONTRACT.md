@@ -1,7 +1,7 @@
 # Port Contract
 
 The contract every adapter that implements `WritableSourcePort` must
-honor. Verified by `python/tests/test_port_contract.py`, parametrized
+honor. Verified by `packages/sdk-py/tests/test_port_contract.py`, parametrized
 over `[FilesystemWritableSource, SqliteSource, PostgresSource]`.
 
 A new adapter is considered **production-ready** only when its row in
@@ -16,25 +16,25 @@ explicitly with a documented reason — never fail).
 |---|---|
 | **`KernelAttachable`** | `attach_kernel(kernel)` — accept post-init wiring of `_writers` + `_readers` from the kernel. Idempotent. Raises `TypeError` if `kernel` is not a `Kernel` instance. |
 | **`BundleEntryReadable`** | `fetch_bundle_entry(scope, container, name, entry, *, tenant) -> bytes \| Awaitable[bytes]`. Returns single bundle entry bytes; raises `FileNotFoundError` on miss. Honors tenant overlay. |
-| **`Versionable`** | `get_version(scope, kind, name, version_id) -> dict`. Per-Kind semver versioning (Phase 10 catalog flow). Adapters that don't support this should omit the method; the harness REST surface returns 501 instead of crashing. |
+| **`Versionable`** | `get_version(scope, kind, name, version_id) -> dict`. Per-Kind semver versioning (Phase 10 catalog flow). Adapters that don't support this should omit the method; callers should degrade gracefully (report the capability as unsupported) instead of crashing. |
 
 ### When to add a new capability
 
 Adding `MyCapability` is a 4-step process:
 
 1. Define `MyCapability(Protocol)` with `@runtime_checkable` in
-   `python/dna/kernel/capabilities.py`.
-2. Replace any `hasattr(adapter, "method")` in the kernel/harness
+   `packages/sdk-py/dna/kernel/capabilities.py`.
+2. Replace any `hasattr(adapter, "method")` in the kernel
    with `isinstance(adapter, MyCapability)`.
 3. Document the capability here.
-4. Cover it in `python/tests/test_port_contract.py` so adapters
+4. Cover it in `packages/sdk-py/tests/test_port_contract.py` so adapters
    either implement it or get explicitly skipped.
 
 ### Round-trip
 
 | Operation | Acceptance |
 |---|---|
-| `save_document(scope, "Module", scope, raw)` then `publish(...)` | Module appears in `mi.root` after `kernel.instance_async(scope)`. |
+| `save_document(scope, "Genome", scope, raw)` then `publish(...)` | The root Genome appears in `mi.root` after `kernel.instance_async(scope)`. |
 | `kernel.write_document(scope, "Skill", name, raw)` then `publish(...)` | Skill appears in `mi.all("Skill")`. Bundle entries (e.g. `SKILL.md`) persisted via the source's backing store. |
 | `kernel.fetch_bundle_entry_async(scope, kind, name, entry)` | Returns `bytes` for existing entries; `FileNotFoundError` for missing entries (consistent across all adapters). |
 
@@ -66,7 +66,7 @@ method — the contract test then skips the case.
 
 ```bash
 # Filesystem + SQLite (always available)
-cd python && uv run pytest tests/test_port_contract.py -v
+cd packages/sdk-py && uv run pytest tests/test_port_contract.py -v
 
 # Add Postgres (requires running DB)
 DATABASE_URL=postgresql://dna:dna@localhost:5432/dna \
@@ -84,7 +84,7 @@ confidence to ship the SDK.
 
 1. Implement `WritableSourcePort` (mandatory) + `KernelAttachable` +
    `BundleEntryReadable` (capability Protocols).
-2. Add a builder in `python/tests/test_port_contract.py` next to
+2. Add a builder in `packages/sdk-py/tests/test_port_contract.py` next to
    `_build_fs_source`, `_build_sqlite_source`, `_build_postgres_source`.
 3. Run `uv run pytest tests/test_port_contract.py -v` — every test
    should pass or skip explicitly.

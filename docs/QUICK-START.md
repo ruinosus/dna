@@ -1,43 +1,47 @@
 # Quick Start
 
-Get from zero to a working agent prompt in 5 minutes.
+Zero to a composed agent prompt in 5 minutes. If you'd rather read a
+finished scope, [`examples/hello-genome/`](../examples/hello-genome/) is
+this guide in runnable form.
 
 ## Prerequisites
 
-- **Python 3.9+** with [uv](https://docs.astral.sh/uv/) — or **Bun 1.0+** for TypeScript
+- **Python 3.10+** with [uv](https://docs.astral.sh/uv/) — or **Bun 1.0+** for TypeScript
 
 ## Step 1: Install
 
 ```bash
 # Python
-cd python && uv sync
+cd packages/sdk-py && uv sync
 
 # TypeScript
-cd typescript && bun install
+cd packages/sdk-ts && bun install
 ```
 
-## Step 2: Create a manifest
+## Step 2: Create a scope
 
-Create the following directory structure:
+A **scope** is a directory of manifests under `.dna/<scope-name>/`. Create:
 
 ```bash
 mkdir -p .dna/hello/agents .dna/hello/skills/greeting .dna/hello/souls/assistant
 ```
 
-### Module root
+### Scope root (Genome)
 
-**`.dna/hello/manifest.yaml`**
+Every scope is rooted by a `Genome` — its identity document.
+
+**`.dna/hello/Genome.yaml`**
 ```yaml
 apiVersion: github.com/ruinosus/dna/v1
-kind: Module
+kind: Genome
 metadata:
   name: hello
-  description: Hello World module
+  description: Hello World scope
 spec:
   default_agent: assistant
 ```
 
-### Agent definition
+### Agent
 
 **`.dna/hello/agents/assistant.yaml`**
 ```yaml
@@ -54,7 +58,7 @@ spec:
   soul: assistant
 ```
 
-### Skill bundle
+### Skill bundle (agentskills.io format)
 
 **`.dna/hello/skills/greeting/SKILL.md`**
 ```markdown
@@ -66,7 +70,7 @@ When a user says hello, greet them warmly and ask how you can help.
 Adapt your greeting to their language if possible.
 ```
 
-### Soul (personality)
+### Soul (soulspec.org format)
 
 **`.dna/hello/souls/assistant/SOUL.md`**
 ```markdown
@@ -82,47 +86,59 @@ Conversational but professional. Uses simple language.
 - Keep responses concise
 ```
 
-## Step 3: Load the manifest
+Note the namespaces: the Skill and the Soul are **market formats** — DNA
+reads them natively under their owners' apiVersions (`agentskills.io/v1`,
+`soulspec.org/v1`). Only `Genome` and `Agent` are DNA's own Kinds.
+
+## Step 3: Load the scope
 
 ### Python
 
 ```python
-from dna.kernel import Kernel
+from dna import Kernel
 
-# Load the manifest
 mi = Kernel.quick("hello", base_dir=".dna")
 
-# Query documents
-print(f"Module: {mi.scope}")
-print(f"Agents: {[a.name for a in mi.all('Agent')]}")
-print(f"Skills: {[s.name for s in mi.all('Skill')]}")
-print(f"Souls:  {[s.name for s in mi.all('Soul')]}")
-```
-
-**Expected output:**
-```
-Module: hello
-Agents: ['assistant']
-Skills: ['greeting']
-Souls:  ['assistant']
+print(f"scope: {mi.scope}")
+for d in mi.documents:
+    print(f"  {d.api_version:32s} {d.kind:8s} {d.name}")
 ```
 
 ### TypeScript
 
 ```typescript
-import { Kernel } from "dna-sdk";
+import { quickInstance } from "@dna/sdk";
 
-const mi = Kernel.quick("hello", ".dna");
+const mi = await quickInstance("hello", ".dna");
 
-console.log(`Module: ${mi.scope}`);
-console.log(`Agents: ${mi.all("Agent").map(a => a.name)}`);
-console.log(`Skills: ${mi.all("Skill").map(s => s.name)}`);
-console.log(`Souls:  ${mi.all("Soul").map(s => s.name)}`);
+console.log(`scope: ${mi.scope}`);
+for (const d of mi.documents) {
+  console.log(`  ${d.apiVersion.padEnd(32)} ${d.kind.padEnd(8)} ${d.name}`);
+}
 ```
+
+**Both print exactly:**
+```
+scope: hello
+  agentskills.io/v1                Skill    greeting
+  soulspec.org/v1                  Soul     assistant
+  github.com/ruinosus/dna/v1       Genome   hello
+  github.com/ruinosus/dna/v1       Agent    assistant
+```
+
+`Kernel.quick()` / `quickInstance()` auto-wire the filesystem source and
+cache, the default resolvers (`local:`, `github:`, `http(s):`), and every
+built-in extension.
+
+> You may see a log line about the `_lib` parent scope: every scope can
+> inherit shared documents from a sibling `.dna/_lib/` library scope.
+> Create the (empty) directory to silence it, or put shared agents/skills
+> there to actually use it.
 
 ## Step 4: Build a prompt
 
-The SDK composes the agent's instruction with its soul into a single system prompt:
+The SDK composes the agent's instruction with its soul (and any
+template-driven sections) into a single system prompt:
 
 ### Python
 
@@ -131,10 +147,18 @@ prompt = mi.build_prompt(agent="assistant")
 print(prompt)
 ```
 
-**Expected output:**
+### TypeScript
+
+```typescript
+const prompt = await mi.buildPrompt({ agent: "assistant" });
+console.log(prompt);
+```
+
+**Expected output (identical in both SDKs):**
 ```
 You are a helpful assistant named Alex.
 You help users with their questions clearly and concisely.
+
 
 ## Personality
 Friendly, approachable, and patient. Explains things clearly.
@@ -148,16 +172,11 @@ Conversational but professional. Uses simple language.
 - Keep responses concise
 ```
 
-### TypeScript
-
-```typescript
-const prompt = mi.buildPrompt({ agent: "assistant" });
-console.log(prompt);
-```
-
-The prompt is composed from:
-1. **Agent instruction** (`spec.instruction` from Agent)
-2. **Soul content** (`soul_content` from the Soul referenced by `spec.soul`)
+The composition is driven by the Kind system: the Agent's `spec.soul`
+reference selects the Soul via `dep_filters`, the Soul's
+`flatten_in_context` flag promotes `soul_content` into the template
+context, and the Agent's prompt template renders both. See
+[KINDS-GUIDE.md](KINDS-GUIDE.md) for the full model.
 
 ## Step 5: Use with your LLM
 
@@ -177,14 +196,15 @@ response = client.chat.completions.create(
 print(response.choices[0].message.content)
 ```
 
-That's it. Change the YAML/Markdown files to update behavior — no code changes, no redeploy.
+That's it. Change the YAML/Markdown files to update behavior — no code
+changes, no redeploy.
 
 ---
 
 ## Next Steps
 
-- **[API Reference (Python)](../python/dna/README.md)** — Full Kernel, ManifestInstance, Document API
-- **[API Reference (TypeScript)](../typescript/README.md)** — TypeScript equivalent
-- **[Architecture](ARCHITECTURE-REVIEW.md)** — Deep dive into the 5-port microkernel
-- **[Examples](../examples/)** — Real-world manifest fixtures
-- **[Layers](CENARIO-TESTE-LAYERS.md)** — Multi-tenant overlays
+- **[Kinds Guide](KINDS-GUIDE.md)** — the identity + composition model
+- **[Kind Authoring](KIND-AUTHORING.md)** — ship your own Kind in 30 minutes
+- **[Data Access](KIND-DATA-ACCESS.md)** — the unified way to read Document fields
+- **[examples/hello-genome](../examples/hello-genome/)** — this guide as a runnable scope with a real marketplace skill
+- **[scopes/market-integration](../scopes/market-integration/)** — 31 real marketplace skills loaded verbatim

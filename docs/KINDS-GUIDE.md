@@ -1,16 +1,17 @@
 # Kinds — The Identity System
 
-![Kind Composition](diagrams/kind-composition.drawio.png)
-
-> **Mermaid diagrams**: See [Kind Diagrams](diagrams/KIND-DIAGRAMS.md) for interactive diagrams — relationship map, prompt composition flow, kind catalog, and full architecture.
-
-Kinds are the core concept of the DNA SDK. Every document in a manifest has a **Kind** that determines what it is, how it's parsed, how it composes with other documents, and how it contributes to prompts.
+Kinds are the core concept of the DNA SDK. Every document in a manifest has
+a **Kind** that determines what it is, how it's parsed, how it composes
+with other documents, and how it contributes to prompts.
 
 ---
 
 ## What is a Kind?
 
-A Kind is a type of document in the manifest system. Think of it like a class in OOP — it defines the shape, behavior, and composition role of a document.
+A Kind is a type of document in the manifest system. Think of it like a
+class in OOP — it defines the shape, behavior, and composition role of a
+document. The pair `(apiVersion, kind)` identifies the type; the
+`apiVersion` namespace identifies **who owns the schema**.
 
 ```yaml
 # This document's Kind is "Agent"
@@ -24,22 +25,27 @@ spec:
   soul: brad
 ```
 
-## Built-in Kinds
+## Built-in Kinds (selection)
 
-| Kind | Extension | What it represents | Bundle format |
+| Kind | Extension | What it represents | Storage |
 |------|-----------|-------------------|---------------|
-| **Module** | HelixExtension | Root container for a manifest | `manifest.yaml` |
-| **Agent** | HelixExtension | Agent definition (instruction, skills, soul) | `agents/*.yaml` or `AGENT.md` |
-| **Persona** | HelixExtension | UI persona metadata | YAML |
-| **Skill** | AgentSkillsExtension | A capability with instructions | `skills/*/SKILL.md` |
-| **Soul** | SoulSpecExtension | Personality, tone, principles | `souls/*/SOUL.md` |
-| **AgentDefinition** | AgentsMdExtension | Standalone agent context | `AGENTS.md` |
-| **CopilotInstructions** | GitHubExtension | GitHub Copilot instructions | `.github/copilot-instructions.md` |
+| **Genome** | HelixExtension | Scope root: identity, default agent, dependencies | `Genome.yaml` |
+| **Agent** | HelixExtension | Agent definition (instruction, skills, soul) | `agents/*.yaml` |
+| **Actor** / **UseCase** / **Tool** | HelixExtension | Domain modeling + callable capabilities | YAML |
+| **Skill** | AgentSkillsExtension | A capability with instructions (market format, `agentskills.io/v1`) | `skills/*/SKILL.md` |
+| **Soul** | SoulSpecExtension | Personality, tone, principles (market format, `soulspec.org/v1`) | `souls/*/SOUL.md` |
+| **AgentDefinition** | AgentsMdExtension | Standalone agent context (market format, `agents.md/v1`) | `AGENTS.md` |
 | **Guardrail** | GuardrailExtension | Safety/compliance rules for agents | `guardrails/*/GUARDRAIL.md` |
+| **KindDefinition** | KindDefinitionExtension | A Kind that defines Kinds — register record Kinds as data | YAML |
+
+Run `Kernel.auto()` and inspect `k._kinds` (or `kernel.describe()`) for the
+full registered catalog — tenancy, audit, evidence, federation and safety
+Kinds ship as well.
 
 ## Kind Properties
 
-Every Kind is registered via a **KindPort** — a protocol that defines the Kind's identity and behavior. Here are the key properties:
+Every Kind is registered via a **KindPort** — a protocol that defines the
+Kind's identity and behavior. Here are the key properties:
 
 ### Identity
 
@@ -47,16 +53,18 @@ Every Kind is registered via a **KindPort** — a protocol that defines the Kind
 class AgentKind:
     api_version = "github.com/ruinosus/dna/v1"    # Namespace + version
     kind = "Agent"            # Type name
-    alias = "helix-agent"  # Globally unique alias
+    alias = "helix-agent"     # Globally unique alias
     origin = "github.com/ruinosus/dna"            # Where this kind comes from
 ```
 
-The **alias** is critical — it's used in dep_filters, Mustache templates, and cross-kind references. Convention: `<owner>-<kind>` (e.g., `soulspec-soul`, `agentskills-skill`).
+The **alias** is critical — it's used in dep_filters, Mustache templates,
+and cross-kind references. Convention: `<owner>-<kind>` (e.g.,
+`soulspec-soul`, `agentskills-skill`).
 
 ### Composition Role
 
 ```python
-    is_root = False              # Is this the root document? (only Module)
+    is_root = False              # Is this the root document? (only Genome)
     is_prompt_target = True      # Can build_prompt() target this kind?
     prompt_target_priority = 10  # Higher = preferred when names collide
     flatten_in_context = False   # Merge spec fields into template context?
@@ -64,7 +72,7 @@ The **alias** is critical — it's used in dep_filters, Mustache templates, and 
 
 | Property | What it controls |
 |----------|-----------------|
-| `is_root` | Only one kind can be root (Module). `mi.root` returns this. |
+| `is_root` | Only one kind can be root (Genome). `mi.root` returns this. |
 | `is_prompt_target` | `build_prompt(agent="brad")` only finds documents of target kinds. |
 | `prompt_target_priority` | When Agent "brad" and Soul "brad" both exist, the higher priority wins. Agent=10 beats Soul=1. |
 | `flatten_in_context` | Soul's `soul_content` is flattened into the Mustache context so templates can use `{{soul_content}}`. |
@@ -76,15 +84,19 @@ The **alias** is critical — it's used in dep_filters, Mustache templates, and 
         return {"soul": "soulspec-soul", "skills": "agentskills-skill"}
 ```
 
-This tells the prompt builder: "When building context for a Agent, filter `soulspec-soul` documents by the agent's `spec.soul` field, and filter `agentskills-skill` documents by `spec.skills`."
+This tells the prompt builder: "When building context for an Agent, filter
+`soulspec-soul` documents by the agent's `spec.soul` field, and filter
+`agentskills-skill` documents by `spec.skills`."
 
-Example: Agent brad has `soul: "brad"` and `skills: ["brainstorming"]`. The context will only include Soul "brad" and Skill "brainstorming" — not all souls and skills in the manifest.
+Example: Agent brad has `soul: "brad"` and `skills: ["brainstorming"]`. The
+context will only include Soul "brad" and Skill "brainstorming" — not all
+souls and skills in the manifest.
 
 ### Prompt Template
 
 ```python
     def prompt_template(self) -> str | None:
-        return "{{agent.instruction}}\n\n{{soul_content}}"
+        return "{{{agent.instruction}}}\n\n{{{soul_content}}}"
 ```
 
 The template cascade for `build_prompt()`:
@@ -93,7 +105,8 @@ The template cascade for `build_prompt()`:
 2. **Kind-level**: `prompt_template()` from the KindPort (shown above)
 3. **Fallback**: `agent.instruction` as plain text
 
-Templates use **Mustache** syntax. Available variables:
+Templates use **Mustache** syntax (triple braces = no HTML escaping —
+prompts are text, not HTML). Available variables:
 
 | Variable | Source |
 |----------|--------|
@@ -103,7 +116,7 @@ Templates use **Mustache** syntax. Available variables:
 | `{{soul_content}}` | From Soul (flattened via `flatten_in_context`) |
 | `{{content}}` | From AgentDefinition (flattened) |
 | `{{#agentskills-skill}}...{{/agentskills-skill}}` | Loop over filtered skills |
-| `{{metadata.name}}` | Module name |
+| `{{metadata.name}}` | Scope name |
 
 ### Parse
 
@@ -112,11 +125,12 @@ Templates use **Mustache** syntax. Available variables:
         return TypedAgent.from_raw(raw)
 ```
 
-Converts raw YAML dict into a typed model (Pydantic in Python, Zod in TypeScript). The typed model gives you autocomplete and validation:
+Converts the raw YAML dict into a typed model (dataclasses in Python, Zod
+in TypeScript). The typed model gives you autocomplete and validation:
 
 ```python
 agent_doc = mi.one("Agent", "brad")
-agent_doc.spec.instruction  # typed access
+agent_doc.spec.instruction   # typed access
 agent_doc.spec.skills        # ["brainstorming", "writing-plans"]
 agent_doc.spec.soul          # "brad"
 ```
@@ -125,12 +139,13 @@ agent_doc.spec.soul          # "brad"
 
 ## How Kinds Compose
 
-The power of Kinds is **composition**. A Agent doesn't contain a soul — it **references** one. The SDK composes them at prompt-build time.
+The power of Kinds is **composition**. An Agent doesn't contain a soul — it
+**references** one. The SDK composes them at prompt-build time.
 
 ```
-Agent "brad"              Soul "brad"
-├── instruction: "You are..."    ├── soul_content: "## Personality..."
-├── skills: [brainstorming]      └── (flatten_in_context=True)
+Agent "brad"                       Soul "brad"
+├── instruction: "You are..."      ├── soul_content: "## Personality..."
+├── skills: [brainstorming]        └── (flatten_in_context=True)
 └── soul: "brad" ──────────────────►
 
 build_prompt(agent="brad") renders:
@@ -145,23 +160,24 @@ build_prompt(agent="brad") renders:
 2. Builds Mustache context: `{ agent: { instruction, name }, soul_content, ... }`
 3. `dep_filters` restricts which Souls/Skills appear in context (only brad's soul, brad's skills)
 4. Soul has `flatten_in_context=True`, so `soul_content` is promoted to top-level context
-5. Template `{{agent.instruction}}\n\n{{soul_content}}` renders the final prompt
+5. The Agent's template renders the final prompt
 
 ---
 
 ## Creating a Custom Kind
 
-![Custom Kind Flow](diagrams/custom-kind-flow.drawio.png)
-
-You can create your own Kinds by implementing `KindPort` and registering them via an Extension.
+You can create your own Kinds by implementing `KindPort` and registering
+them via an Extension. `docs/KIND-AUTHORING.md` is the full step-by-step;
+what follows is the shape of it.
 
 ### Real-World Example: GuardrailKind
 
 The GuardrailKind is a fully implemented extension that ships with the SDK.
-Source: `dna/extensions/guardrails/` (Python) and `extensions/guardrails.ts` (TypeScript).
+Source: `packages/sdk-py/dna/extensions/guardrails/` (Python) and
+`packages/sdk-ts/src/extensions/guardrails.ts` (TypeScript).
 
 It demonstrates:
-- A custom KindPort with all 13 required members
+- A custom KindPort
 - A bundle format (`GUARDRAIL.md` with frontmatter + rules as markdown list items)
 - A ReaderPort that parses markdown list items into structured rules
 - A WriterPort that serializes back to `GUARDRAIL.md`
@@ -183,7 +199,7 @@ class GuardrailSpec:
 from dna.extensions.guardrails import GuardrailExtension
 
 class GuardrailKind:
-    api_version = "guardrails.io/v1"
+    api_version = "github.com/ruinosus/dna/v1"
     kind = "Guardrail"
     alias = "guardrails-guardrail"
     # ... (see source for full implementation)
@@ -194,9 +210,8 @@ class GuardrailKind:
 ```python
 from dna.kernel import Kernel
 
-mi = Kernel.quick("my-module")
-guardrails = mi.all("Guardrail")
-for g in guardrails:
+mi = Kernel.quick("my-scope")
+for g in mi.all("Guardrail"):
     print(f"Rules: {g.spec.rules}, Severity: {g.spec.severity}")
 ```
 
@@ -219,7 +234,7 @@ scope: both
 **5. Reference from an agent:**
 
 ```yaml
-# agents/my-agent/AGENT.md (frontmatter)
+# agents/my-agent.yaml (spec)
 guardrails:
   - safety
 ```
@@ -230,18 +245,13 @@ To include guardrails in agent prompts, either:
 
 **A. Use `flatten_in_context` + template override:**
 
-```python
-class GuardrailKind:
-    flatten_in_context = True  # Makes spec fields available in templates
-```
-
 ```yaml
 # On the Agent, override the prompt template:
 spec:
   promptTemplate: |
-    {{agent.instruction}}
+    {{{agent.instruction}}}
 
-    {{soul_content}}
+    {{{soul_content}}}
 
     ## Safety Rules
     {{#rules}}

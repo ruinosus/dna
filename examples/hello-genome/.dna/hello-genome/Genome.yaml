@@ -1,0 +1,7 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: Genome
+metadata:
+  name: hello-genome
+  description: Minimal DNA scope — one agent, one real marketplace skill
+spec:
+  default_agent: greeter
