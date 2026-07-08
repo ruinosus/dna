@@ -1,0 +1,9 @@
+{
+  "name": "dna",
+  "description": "DNA SDLC workflow for Claude Code — the dna-sdlc-cli skill: story-first tracking via `dna sdlc` (AC/DoD guard, plan gate, narration, test gate, Work-Item git trailers, story pr).",
+  "version": "0.1.0",
+  "author": {
+    "name": "DNA team"
+  },
+  "homepage": "https://github.com/ruinosus/dna"
+}

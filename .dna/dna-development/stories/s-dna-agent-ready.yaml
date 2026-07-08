@@ -12,7 +12,7 @@ spec:
     ficos de Claude Code (skill, hooks install); (3) .claude/skills/dna-sdlc-cli/\
     \ \u2014 skill ensinando o workflow: story-first, narra\xE7\xE3o, test-gate, story\
     \ pr, trailers; (4) plugin Claude Code (marketplace.json) entregando a skill a\
-    \ quem clona. Espelha o que o aap-sdk-v3 tem (12 skills + plugin + CLAUDE.md),\
+    \ quem clona. Espelha o que o repo-m\xE3e interno tem (12 skills + plugin + CLAUDE.md),\
     \ adaptado e enxuto pro DNA."
   status: in-progress
   feature: f-dna-1.0-readiness
@@ -33,7 +33,7 @@ spec:
   - PR merged (via dna sdlc story pr, assinado); documentado no README
   definition_of_done_source: cli-create
   created_at: '2026-07-08T22:18:32+00:00'
-  updated_at: '2026-07-08T22:18:34+00:00'
+  updated_at: '2026-07-08T22:30:28+00:00'
   timeline:
   - at: '2026-07-08T22:18:32+00:00'
     actor: claude-code
@@ -46,6 +46,32 @@ spec:
     source: cli
     from: todo
     to: in-progress
+  - at: '2026-07-08T22:23:23+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Worktree feat/s-dna-agent-ready montado; reconhecimento feito: dna sdlc\
+      \ --help completo dumpado (story create/start/comment/check/done/review/pr,\
+      \ hooks, test-guide/test-run, pr-footer), reader agentsmd lido, brand guard\
+      \ lido (tokens proibidos mapeados \u2014 nada de citar o repo-m\xE3e), plugin\
+      \ do repo-m\xE3e localizado. Agora vou escrever AGENTS.md raiz em ingl\xEAs."
+    commit_ref: 62d0529bf83b4b764d9d90a4dd8c6ee848a2fed0
+  - at: '2026-07-08T22:30:28+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Artefatos escritos: AGENTS.md raiz (EN, ~1.5 tela, inst\xE2ncia viva\
+      \ agents.md/v1), CLAUDE.md fino, skill .claude/skills/dna-sdlc-cli (port adaptado:\
+      \ cortei FS-mirror/replicas, busca sem\xE2ntica e session capture \u2014 verbos\
+      \ que n\xE3o existem no dna sdlc; adicionei hooks/test-gate/story pr/story check),\
+      \ plugin .claude-plugin/marketplace.json + .claude/.claude-plugin/plugin.json\
+      \ (claude plugin validate --strict OK), teste dogfood test_agents_md_root.py\
+      \ 5/5 (reader direto na raiz + scan via symlink + build_prompt + round-trip\
+      \ byte-identical), linha no README. Decis\xE3o: brand guard acusou o nome do\
+      \ repo-m\xE3e na story/plan pr\xE9-existentes \u2014 reformulei o texto (repo-m\xE3\
+      e interno) em vez de allowlistar, porque o leak era evit\xE1vel. Gates: cli\
+      \ 245 pass, bun 1208 pass + typecheck OK, brand guard clean; sdk-py full rodando."
+    commit_ref: 62d0529bf83b4b764d9d90a4dd8c6ee848a2fed0
   produces:
   - kind: Plan
     name: plan-s-dna-agent-ready

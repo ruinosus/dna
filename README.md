@@ -236,6 +236,11 @@ born from the story, not the other way around — and when it squash-merges,
 the landed commit carries the `Work-Item:` trailer, so `story show`
 lists it with zero bookkeeping.
 
+The repo is agent-ready: [`AGENTS.md`](AGENTS.md) is the entry point for any
+coding agent — and a live `agents.md/v1` instance the SDK itself parses —
+while Claude Code users get the `dna-sdlc-cli` skill via the bundled plugin
+(`.claude-plugin/marketplace.json`).
+
 ## Repository layout
 
 ```
