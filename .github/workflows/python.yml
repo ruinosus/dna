@@ -1,0 +1,96 @@
+# Python CI — sdk-py + cli test suites (s-public-ci).
+#
+# Jobs:
+#   sdk-py    — full pytest suite, NO external resources: requires_postgres /
+#               requires_llm skip (no DSN / key set) and requires_network is
+#               forced off via DNA_OFFLINE=1 so CI never clones external repos
+#               (tests/conftest.py is the single gating point).
+#   cli       — dna-cli pytest suite (path-dep on sdk-py).
+#   postgres  — ONLY the requires_postgres-marked tests, against a
+#               postgres:16 service container.
+name: python
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  # CI must never reach the network from tests — requires_network skips.
+  DNA_OFFLINE: "1"
+
+jobs:
+  sdk-py:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/sdk-py
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+          enable-cache: true
+          cache-dependency-glob: packages/sdk-py/pyproject.toml
+      - name: Install
+        run: |
+          uv venv
+          uv pip install -e ".[dev]"
+      - name: Test
+        run: uv run --no-project pytest tests -q --timeout=120 -p no:cacheprovider
+
+  cli:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/cli
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+          enable-cache: true
+          cache-dependency-glob: |
+            packages/cli/pyproject.toml
+            packages/sdk-py/pyproject.toml
+      - name: Install
+        run: |
+          uv venv
+          uv pip install -e ../sdk-py -e ".[dev]"
+      - name: Test
+        run: uv run --no-project pytest tests -q -p no:cacheprovider
+
+  postgres:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/sdk-py
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: dna
+          POSTGRES_PASSWORD: dna
+          POSTGRES_DB: dna_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U dna"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://dna:dna@localhost:5432/dna_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+          enable-cache: true
+          cache-dependency-glob: packages/sdk-py/pyproject.toml
+      - name: Install
+        run: |
+          uv venv
+          uv pip install -e ".[dev]"
+      - name: Test (requires_postgres only)
+        run: uv run --no-project pytest tests -q --timeout=120 -p no:cacheprovider -m requires_postgres

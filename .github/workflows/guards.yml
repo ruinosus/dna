@@ -1,0 +1,32 @@
+# Repo guards — brand grep-guard + secret scan (s-public-ci).
+#
+#   brand-guard — scripts/brand_guard.py (pure stdlib): fails on internal brand
+#                 tokens outside its explicit per-file allowlist. Runs its own
+#                 planted-token self-test first, then the real scan.
+#   gitleaks    — official gitleaks action over the full git history.
+name: guards
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  brand-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Self-test (planted tokens must fail)
+        run: python3 scripts/brand_guard.py --self-test
+      - name: Scan repo
+        run: python3 scripts/brand_guard.py
+
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

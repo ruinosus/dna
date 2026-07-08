@@ -48,6 +48,31 @@ export const DEFAULT_VOLATILE_SPEC_FIELDS: ReadonlySet<string> = new Set([
   "created_at",
 ]);
 
+/** JSON Schema `format` values that appear in real Kind schemas across the
+ *  repo (builtin kind descriptors, KindDefinition YAMLs, tests). ajv v8 ships
+ *  ZERO built-in formats, and the Python twin (`jsonschema`) treats `format`
+ *  as annotation-only by default — so parity is "formats never validate".
+ *  Registering each as `true` keeps exactly that semantics (always-valid
+ *  annotation) while silencing ajv's per-compile
+ *  `unknown format "X" ignored in schema` warning (s-public-ci).
+ *  NOTE: deliberately NOT ajv-formats — that would start rejecting values and
+ *  break Py↔TS validation parity. */
+export const SCHEMA_ANNOTATION_FORMATS: readonly string[] = [
+  "date-time",
+  "date",
+  "email",
+  "markdown",
+];
+
+/** Canonical Ajv factory for the SDK — every `new Ajv(...)` in the kernel
+ *  goes through here so options stay in one place. strict:false accepts the
+ *  lenient JSON Schema shapes users author in YAML. */
+export function createAjv(): Ajv {
+  const formats: Record<string, true> = {};
+  for (const f of SCHEMA_ANNOTATION_FORMATS) formats[f] = true;
+  return new Ajv({ strict: false, allErrors: true, formats });
+}
+
 /** Stable, sorted-key, compact JSON — twin of Python's
  *  `json.dumps(sort_keys=True, separators=(",",":"))`. Logically-equal objects
  *  serialize identically regardless of insertion order (s-sync-s1). */
@@ -187,7 +212,7 @@ export abstract class KindBase implements Omit<KindPort, "apiVersion" | "kind" |
     const schema = this.schema();
     if (!schema) return;
     if (this._parseValidator === undefined) {
-      this._parseAjv = new Ajv({ strict: false, allErrors: true });
+      this._parseAjv = createAjv();
       this._parseValidator = this._parseAjv.compile(schema);
     }
     if (!this._parseValidator) return;

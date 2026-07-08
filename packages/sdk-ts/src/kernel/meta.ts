@@ -3,7 +3,7 @@
  * TypedKindDefinition. 1:1 parity with Python dna.kernel.meta.
  */
 
-import Ajv from "ajv";
+import type Ajv from "ajv";
 import type { Document } from "./document.js";
 
 /** Convert HSL (h: 0-360, s: 0-100, l: 0-100) to a hex color string.
@@ -24,7 +24,7 @@ function hslToHex(h: number, s: number, l: number): string {
   const toHex = (v: number) => Math.round((v + m) * 255).toString(16).padStart(2, "0");
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
-import { DEFAULT_VOLATILE_SPEC_FIELDS } from "./kind_base.js";
+import { DEFAULT_VOLATILE_SPEC_FIELDS, createAjv } from "./kind_base.js";
 import { StudioUIMetadata, type StudioUIMetadataInit } from "./studio_ui.js";
 import type { TypedKindDefinition } from "./models.js";
 import type { PreviewBlock } from "./preview.js";
@@ -277,8 +277,9 @@ export class DeclarativeKindPort implements KindPort, DeclarativeMarker {
     this.displayLabel = (typeof rawSpec.display_label === "string" ? rawSpec.display_label : null) ?? (this.kind + "s");
 
     if (Object.keys(this.jsonSchema).length > 0) {
-      // strict:false to accept lenient JSON Schema shapes users author in YAML
-      this._ajv = new Ajv({ strict: false, allErrors: true });
+      // createAjv: strict:false to accept lenient JSON Schema shapes users
+      // author in YAML + annotation-only formats (Py jsonschema parity).
+      this._ajv = createAjv();
       this._validate = this._ajv.compile(this.jsonSchema);
     } else {
       this._ajv = null;
@@ -313,7 +314,7 @@ export class DeclarativeKindPort implements KindPort, DeclarativeMarker {
   ): void {
     const props =
       (jsonSchema.properties as Record<string, unknown> | undefined) ?? {};
-    const ajv = new Ajv({ strict: false, allErrors: true });
+    const ajv = createAjv();
     for (const [key, value] of Object.entries(specDefaults)) {
       if (!(key in props)) {
         throw new Error(

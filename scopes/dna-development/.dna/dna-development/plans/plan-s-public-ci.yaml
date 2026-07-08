@@ -1,0 +1,20 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-public-ci
+spec:
+  title: 'Plano: s-public-ci'
+  date: '2026-07-08'
+  status: accepted
+  story_ref: s-public-ci
+  journey_phase: plan
+  body: "1) workflows python.yml (sdk-py pytest base sem PG + job postgres service-container\
+    \ + cli pytest), typescript.yml (bun test + typecheck), guards.yml (brand guard\
+    \ + gitleaks). 2) scripts/brand_guard.py stdlib com allowlist expl\xEDcita por\
+    \ arquivo+token e --self-test. 3) DNA_OFFLINE=1 no conftest pra requires_network\
+    \ n\xE3o clonar repo externo em CI. 4) ajv de-noise: formats stub (date-time/date/email/markdown)\
+    \ via createAjv() em kind_base.ts, sem mudar sem\xE2ntica. 5) badges no README.\
+    \ Gates locais: yaml lint + guard verde/vermelho + suites py/cli/bun/typecheck\
+    \ completas."
+  created_at: '2026-07-08T18:58:54+00:00'
+  updated_at: '2026-07-08T18:58:54+00:00'

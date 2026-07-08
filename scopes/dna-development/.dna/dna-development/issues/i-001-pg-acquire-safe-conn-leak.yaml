@@ -1,0 +1,26 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-001-pg-acquire-safe-conn-leak
+spec:
+  description: "PostgresSource._acquire_safe (dna/adapters/postgres/source.py) leaks\
+    \ the pooled connection when the block raises anything OTHER than CancelledError/InterfaceError:\
+    \ the except clause only covers those two, and the else clause only runs on success\
+    \ \u2014 a generic exception (e.g. a writer/hook failure inside save_document)\
+    \ never releases the connection back to the pool. Symptom: Pool.close() hangs\
+    \ >60s (asyncpg 'unreleased connections' warning); found via test_postgres_source.py::TestPhase15_1OutboxWrites::test_write_atomicity_no_partial_state\
+    \ whose teardown times out against a live PG. Fix: release in a finally (terminate+discard\
+    \ only on the cancel/interface paths). Test is temporarily @pytest.mark.skip'ed\
+    \ referencing this issue (s-public-ci) \u2014 un-skip when fixed. NOTE: file is\
+    \ in the SqlAlchemySource agent work area (adapters/), hence not fixed by the\
+    \ CI story."
+  type: bug
+  severity: medium
+  status: open
+  owner: claude-code
+  timeline:
+  - at: '2026-07-08T19:17:48+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

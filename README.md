@@ -1,5 +1,9 @@
 # DNA — Domain Notation of Anything
 
+[![python](https://github.com/ruinosus/dna/actions/workflows/python.yml/badge.svg)](https://github.com/ruinosus/dna/actions/workflows/python.yml)
+[![typescript](https://github.com/ruinosus/dna/actions/workflows/typescript.yml/badge.svg)](https://github.com/ruinosus/dna/actions/workflows/typescript.yml)
+[![guards](https://github.com/ruinosus/dna/actions/workflows/guards.yml/badge.svg)](https://github.com/ruinosus/dna/actions/workflows/guards.yml)
+
 **Kubernetes CRDs, but for agentic behavior.**
 
 DNA is a declarative, typed notation for everything that participates in an
