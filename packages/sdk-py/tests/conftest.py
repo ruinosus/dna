@@ -47,7 +47,14 @@ _NETWORK_CACHE: bool | None = None
 
 
 def _network_available() -> bool:
-    """Real outbound network (probe github.com:443 once, cached)."""
+    """Real outbound network (probe github.com:443 once, cached).
+
+    ``DNA_OFFLINE=1`` forces False regardless of real connectivity — CI runners
+    DO have network, but CI must never clone external repos (s-public-ci), so
+    the workflows export DNA_OFFLINE=1 and ``requires_network`` tests skip with
+    an explicit reason."""
+    if os.environ.get("DNA_OFFLINE"):
+        return False
     global _NETWORK_CACHE
     if _NETWORK_CACHE is None:
         try:
@@ -65,7 +72,10 @@ _RESOURCES = {
         _postgres_available,
         "no Postgres DSN (DATABASE_URL / DNA_PG_TEST_URL / DNA_PG_TEST_DSN) set",
     ),
-    "requires_network": (_network_available, "no network / GitHub access"),
+    "requires_network": (
+        _network_available,
+        "no network / GitHub access (or DNA_OFFLINE=1 set)",
+    ),
     "requires_llm": (_llm_available, "no real OPENAI_API_KEY set"),
 }
 

@@ -24,7 +24,14 @@ from dna.adapters.filesystem.source import FilesystemSource
 from dna.adapters.sqlite.source import SqliteSource
 
 
-PG_TEST_URL = os.environ.get("DNA_PG_TEST_URL")
+# Same env-name fallback chain as the requires_postgres marker gate
+# (tests/conftest.py) — the marker passes when ANY of these is set, so the
+# test must accept any of them too (s-public-ci: CI sets DATABASE_URL).
+PG_TEST_URL = (
+    os.environ.get("DNA_PG_TEST_URL")
+    or os.environ.get("DNA_PG_TEST_DSN")
+    or os.environ.get("DATABASE_URL")
+)
 pg_skip = pytest.mark.requires_postgres
 
 
@@ -153,9 +160,10 @@ class TestPostgresGranular:
     @pytest.mark.asyncio
     async def test_list_doc_refs_basic(self):
         import secrets
-        from dna.adapters.postgres.writable import PostgresWritableSource
+        import asyncpg
+        from dna.adapters.postgres import PostgresSource
         scope = f"test-{secrets.token_hex(4)}"
-        src = PostgresWritableSource(PG_TEST_URL)
+        src = PostgresSource(await asyncpg.create_pool(PG_TEST_URL))
         try:
             await src.save_document(scope, "Story", "s-1", {
                 "apiVersion": "github.com/ruinosus/dna/sdlc/v1",
@@ -175,9 +183,10 @@ class TestPostgresGranular:
     @pytest.mark.asyncio
     async def test_load_one_round_trip(self):
         import secrets
-        from dna.adapters.postgres.writable import PostgresWritableSource
+        import asyncpg
+        from dna.adapters.postgres import PostgresSource
         scope = f"test-{secrets.token_hex(4)}"
-        src = PostgresWritableSource(PG_TEST_URL)
+        src = PostgresSource(await asyncpg.create_pool(PG_TEST_URL))
         try:
             raw = {
                 "apiVersion": "github.com/ruinosus/dna/sdlc/v1",
