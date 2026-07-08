@@ -10,13 +10,15 @@ from typing import TYPE_CHECKING, Any, AsyncIterator
 
 import aiosqlite
 
+from dna.kernel.protocols import WritableSourcePort
+
 if TYPE_CHECKING:
     from dna.kernel.capabilities import SourceCapabilities
 
 logger = logging.getLogger(__name__)
 
 
-class SqliteSource:
+class SqliteSource(WritableSourcePort):
     """WritableSourcePort implementation backed by a SQLite database.
 
     Supports drafts, versioning, and forward-only migrations.

@@ -11,7 +11,7 @@ import type { BundleHandle } from "../kernel/bundle-handle.js";
 import { KindBase } from "../kernel/kind_base.js";
 import type { FSLike } from "../kernel/fs.js";
 import { AgentSchema, ActorSchema, UseCaseSchema, ToolSchema, AgentSpecSchema, ActorSpecSchema, UseCaseSpecSchema, ToolSpecSchema, GenomeSchema, GenomeSpecSchema, LayerPolicySchema, LayerPolicySpecSchema, zodSpecToJsonSchema } from "../kernel/models.js";
-import type { Extension, KindPort, LayerPolicy, ReaderPort, SerializedFile, WriterPort } from "../kernel/protocols.js";
+import type { Extension, ExtensionHost, KindPort, LayerPolicy, ReaderPort, SerializedFile, WriterPort } from "../kernel/protocols.js";
 import { SD } from "../kernel/protocols.js";
 import type { Document } from "../kernel/document.js";
 import type { PreviewBlock } from "../kernel/preview.js";
@@ -1004,37 +1004,30 @@ export class HelixExtension implements Extension {
 
   constructor(private fs: FSLike = nodeFS) {}
 
-  register(kernel: unknown): void {
-    const k = kernel as {
-      kind(kp: KindPort): void;
-      reader(r: ReaderPort): void;
-      writer(w: WriterPort): void;
-      compositionProfile(p: CompositionProfile): void;
-      hooks: Parameters<typeof registerWriteGuards>[0]["hooks"];
-    };
+  register(kernel: ExtensionHost): void {
     // Phase 16 cleanup — ModuleKind class deleted. GenomeKind is the
     // canonical root identity Kind.
-    k.kind(new GenomeKind());
-    k.kind(new LayerPolicyKind());
-    k.kind(new AgentKind());
-    k.kind(new ToolKind());
-    k.kind(new ActorKind());
-    k.kind(new UseCaseKind());
+    kernel.kind(new GenomeKind());
+    kernel.kind(new LayerPolicyKind());
+    kernel.kind(new AgentKind());
+    kernel.kind(new ToolKind());
+    kernel.kind(new ActorKind());
+    kernel.kind(new UseCaseKind());
     // 2026-05-26 — absorbed from claude-code-templates catalog (MIT).
     // Setting rounds out the Claude-Code-customization primitives that
     // live alongside Skill / UA / Soul / Tool.
-    k.kind(new SettingKind());
-    k.kind(new ThemeKind());
-    k.kind(new UserProfileKind());
+    kernel.kind(new SettingKind());
+    kernel.kind(new ThemeKind());
+    kernel.kind(new UserProfileKind());
     // s-jarvis-canvas (2026-05-27) — shared whiteboard JARVIS ↔ user.
-    k.kind(new CanvasKind());
-    k.reader(new AgentReader(this.fs));
-    k.writer(new AgentWriter(this.fs));
-    k.compositionProfile(HELIX_PROFILE);
+    kernel.kind(new CanvasKind());
+    kernel.reader(new AgentReader(this.fs));
+    kernel.writer(new AgentWriter(this.fs));
+    kernel.compositionProfile(HELIX_PROFILE);
     // s-write-path-despecialize — Agent write rules (platform-agent
     // fork guard, Kind-Writer contract) are pre_save VETO hooks owned by
     // this extension, not kernel special-cases.
-    registerWriteGuards(k);
+    registerWriteGuards(kernel);
   }
 }
 

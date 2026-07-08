@@ -11,7 +11,7 @@ import type { BundleHandle } from "../kernel/bundle-handle.js";
 import { KindBase } from "../kernel/kind_base.js";
 import type { FSLike } from "../kernel/fs.js";
 import { SoulSchema, SoulSpecSchema, zodSpecToJsonSchema } from "../kernel/models.js";
-import type { Extension, KindPort, ReaderPort, SerializedFile, WriterPort } from "../kernel/protocols.js";
+import type { ExtensionHost, Extension, ReaderPort, SerializedFile, WriterPort } from "../kernel/protocols.js";
 import { SD } from "../kernel/protocols.js";
 
 // ---------------------------------------------------------------------------
@@ -299,14 +299,9 @@ export class SoulSpecExtension implements Extension {
 
   constructor(private fs: FSLike = nodeFS) {}
 
-  register(kernel: unknown): void {
-    const k = kernel as {
-      kind(kp: KindPort): void;
-      reader(r: ReaderPort): void;
-      writer(w: WriterPort): void;
-    };
-    k.kind(new SoulKind());
-    k.reader(new SoulReader(this.fs));
-    k.writer(new SoulWriter(this.fs));
+  register(kernel: ExtensionHost): void {
+    kernel.kind(new SoulKind());
+    kernel.reader(new SoulReader(this.fs));
+    kernel.writer(new SoulWriter(this.fs));
   }
 }

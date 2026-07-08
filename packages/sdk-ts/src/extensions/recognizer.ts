@@ -14,7 +14,7 @@ import type { BundleHandle } from "../kernel/bundle-handle.js";
 import { KindBase } from "../kernel/kind_base.js";
 import type { FSLike } from "../kernel/fs.js";
 import { RecognizerSchema, RecognizerSpecSchema, zodSpecToJsonSchema } from "../kernel/models.js";
-import type { Extension, KindPort, ReaderPort, SerializedFile, WriterPort } from "../kernel/protocols.js";
+import type { ExtensionHost, Extension, ReaderPort, SerializedFile, WriterPort } from "../kernel/protocols.js";
 import { SD } from "../kernel/protocols.js";
 import type { Document } from "../kernel/document.js";
 import type { PreviewBlock } from "../kernel/preview.js";
@@ -290,14 +290,9 @@ export class RecognizerExtension implements Extension {
 
   constructor(private fs: FSLike = nodeFS) {}
 
-  register(kernel: unknown): void {
-    const k = kernel as {
-      kind(kp: KindPort): void;
-      reader(r: ReaderPort): void;
-      writer(w: WriterPort): void;
-    };
-    k.kind(new RecognizerKind());
-    k.reader(new RecognizerReader(this.fs));
-    k.writer(new RecognizerWriter(this.fs));
+  register(kernel: ExtensionHost): void {
+    kernel.kind(new RecognizerKind());
+    kernel.reader(new RecognizerReader(this.fs));
+    kernel.writer(new RecognizerWriter(this.fs));
   }
 }

@@ -1,12 +1,17 @@
-"""S3Source — Read-only SourcePort backed by AWS S3.
+"""S3Source — Read-only SYNC source backed by AWS S3.
 
 Loads manifest documents from an S3 bucket. Each scope maps to a prefix
 in the bucket: `{prefix}/{scope}/manifest.yaml`, `{prefix}/{scope}/documents/*.yaml`.
 
-Usage:
+IMPORTANT — this adapter is SYNCHRONOUS (blocking boto3 calls). The
+kernel's SourcePort contract is async: hand it to the kernel through
+``AsyncSourceAdapter``, never directly (the kernel's boot gate rejects
+it raw, and ``await``-ing its sync methods would fail anyway):
+
+    from dna.adapters.async_adapter import AsyncSourceAdapter
     from dna.adapters.s3.source import S3Source
 
-    source = S3Source(bucket="my-manifests", prefix="dna")
+    source = AsyncSourceAdapter(S3Source(bucket="my-manifests", prefix="dna"))
     k = Kernel()
     k.source(source)
 
@@ -23,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 
 class S3Source:
-    """Read-only SourcePort backed by AWS S3."""
+    """Read-only sync source backed by AWS S3 (wrap in AsyncSourceAdapter)."""
 
     supports_readers: bool = False
 
@@ -105,6 +110,14 @@ class S3Source:
                     docs.append(doc)
 
         return docs
+
+    def close(self) -> None:
+        """Release the boto3 client (SourcePort lifecycle contract —
+        s-dna-source-conformance-kit). boto3 clients hold a urllib3
+        connection pool; modern botocore exposes ``close()``."""
+        close = getattr(self._s3, "close", None)
+        if callable(close):
+            close()
 
     def resolve_ref(self, scope: str, ref: str) -> str:
         """Resolve a file reference from S3."""

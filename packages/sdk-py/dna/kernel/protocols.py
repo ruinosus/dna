@@ -1,4 +1,14 @@
-"""v3 Kernel Protocols — the 5 ports + shared types."""
+"""v3 Kernel Protocols — the 5 ports + shared types.
+
+Py↔TS port-surface parity is SURFACE-TRACKED (s-dna-port-surface-parity):
+every port's member list — and every INTENTIONAL asymmetry, with its
+justification — lives in the shared fixture
+``tests/parity-fixtures/port-surface-parity.json``, enforced here by
+``tests/test_port_surface_parity.py`` (real Protocol introspection) and on
+the TS side by ``tests/port-surface-parity.test.ts`` (keyof-bound
+PORT_SURFACE manifest). Adding/removing a Protocol member without updating
+the fixture turns the suites red.
+"""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -791,7 +801,20 @@ class ReaderPort(Protocol):
     filesystem ``Path`` when FS-backed (``None`` otherwise) — escape
     hatch for code that genuinely needs Path semantics. New readers
     SHOULD use ``handle.read_text(...)`` / ``handle.iter_entries(...)``.
+
+    Implementations MUST inherit this Protocol explicitly
+    (``class MyReader(ReaderPort)``) — the same convention source
+    adapters follow (s-dna-source-conformance-kit). Inheriting also
+    provides the ``_owner_container`` default below.
     """
+
+    #: Optional container this Reader's Kind is rooted at (e.g.
+    #: ``"skills"``). Lets the scanner route bundles to the right Reader
+    #: without trying every reader's ``detect()`` on every subdir — H3
+    #: container-aware routing. ``None`` (the inherited default) means
+    #: "unscoped": the reader is tried as fallback in every container.
+    #: Formal port member since s-dna-rw-roundtrip-suite (was duck-typed).
+    _owner_container: str | None = None
 
     def detect(self, bundle: "BundleHandle") -> bool: ...
 
@@ -804,11 +827,44 @@ class WriterPort(Protocol):
 
     Phase 8 (PR1) — ``write`` receives a ``BundleHandle`` instead of
     ``Path``; same source-agnostic contract.
+
+    s-dna-rw-roundtrip-suite — ``serialize`` is part of the contract
+    (it was load-bearing but informal: ``kernel.serialize_document``
+    consumed it via ``hasattr``, so a Protocol-conforming writer could
+    silently miss it and only fail at emission time).
+
+    Implementations MUST inherit this Protocol explicitly
+    (``class MyWriter(WriterPort)``) and keep ``write`` and ``serialize``
+    COHERENT: ``write(bundle, raw)`` must produce exactly the entries
+    ``serialize(raw)`` returns (the canonical implementation is
+    ``write_entries_to_handle(bundle, self.serialize(raw))`` from
+    ``dna.kernel.writer_helpers``). The round-trip conformance
+    suite (``dna.testing.reader_writer_conformance_suite``)
+    enforces this equivalence for every registered pair.
     """
 
     def can_write(self, raw: dict) -> bool: ...
 
     def write(self, bundle: "BundleHandle", raw: dict) -> None: ...
+
+    def serialize(self, raw: dict) -> list[dict[str, Any]]:
+        """Return the bundle entries ``write`` would emit, WITHOUT writing.
+
+        Each entry is ``{"relativePath": str, "content": str}`` for text
+        payloads or ``{"relativePath": str, "content_bytes": bytes}`` for
+        binary ones (see ``writer_helpers.pop_source_files_as_entries``).
+        TS twin: ``WriterPort.serialize`` returning ``SerializedFile[]``.
+
+        The Protocol body raises on purpose: a writer that inherits
+        WriterPort without overriding ``serialize`` would otherwise
+        silently return ``None`` and only break at emission time — the
+        exact failure mode this member was formalized to kill.
+        """
+        raise NotImplementedError(
+            f"{type(self).__name__} inherits WriterPort but does not "
+            f"implement serialize() — it is part of the contract "
+            f"(s-dna-rw-roundtrip-suite)."
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -1088,11 +1144,97 @@ class KindPort(Protocol):
 
 
 @runtime_checkable
+class ExtensionHost(Protocol):
+    """The registration-time surface the Kernel offers to ``Extension.register()``.
+
+    This is the *explicit contract* of what an extension may call while it
+    is being loaded (``s-dna-extension-host-contract``). It is a narrow
+    slice of the Kernel — the registration vocabulary — NOT the whole
+    Kernel API. Deriving it from actual usage across every builtin
+    extension keeps it honest:
+
+    ========================  =================================================
+    Member                    What it registers
+    ========================  =================================================
+    ``kind(kp)``              a KindPort (identity + composition of a Kind)
+    ``kind_from_descriptor``  a record Kind from a ``kinds/*.kind.yaml``
+                              descriptor dict (F3 — Kinds as data). Pair it
+                              with ``dna.kernel.descriptor_loader.
+                              load_descriptors(package)`` to read the package
+                              data files.
+    ``reader(r)``             a ReaderPort (detect/scan a bundle format)
+    ``writer(w)``             a WriterPort (write a bundle format)
+    ``on(hook, fn)``          an event subscriber (e.g. ``post_save``)
+    ``on_veto(hook, fn)``     a veto listener (e.g. ``pre_save`` write guards
+                              — raising vetoes the operation)
+    ``tool(td)``              a ToolDefinition (``@dna_tool`` metadata;
+                              TS twin: ``kernel.tool(td)`` + the
+                              ToolRegistry, s-dna-port-surface-parity)
+    ``composition_profile``   a CompositionProfile (orchestrator kind wiring)
+    ``hooks``                 the HookRegistry itself, for advanced listener
+                              management (``kernel.hooks.on_veto(..., key=)``)
+    ========================  =================================================
+
+    The real ``Kernel`` satisfies this Protocol structurally (guarded by
+    ``tests/test_extension_host_contract.py``). TS twin:
+    ``ExtensionHost`` in ``src/kernel/protocols.ts``.
+    """
+
+    # The HookRegistry the ``on``/``on_veto`` conveniences delegate to.
+    # Typed loosely on purpose: protocols.py must not import the concrete
+    # registry at runtime. See ``dna.kernel.hooks.HookRegistry``.
+    @property
+    def hooks(self) -> Any: ...
+
+    def kind(self, k: KindPort) -> None: ...
+
+    def kind_from_descriptor(self, raw: dict[str, Any]) -> KindPort: ...
+
+    def reader(self, r: ReaderPort) -> None: ...
+
+    def writer(self, w: WriterPort) -> None: ...
+
+    def on(self, hook: str, fn: Any) -> None: ...
+
+    def on_veto(
+        self, hook: str, fn: Any, *,
+        priority: int = ..., key: str | None = ...,
+    ) -> None: ...
+
+    def tool(self, td: ToolDefinition) -> None: ...
+
+    def composition_profile(self, profile: Any) -> None: ...
+
+
+@runtime_checkable
+class TemplateProvider(Protocol):
+    """Optional Extension capability — ships scaffold file trees.
+
+    Kept OFF the ``Extension`` Protocol body so legacy extensions that
+    predate Phase 0 keep satisfying ``Extension`` without modification.
+    ``Kernel.list_templates()`` feature-tests each loaded extension
+    (``isinstance(ext, TemplateProvider)`` — or the historical
+    ``hasattr(ext, "templates")``) and aggregates the entries so UIs
+    (Studio, CLI) can offer ``scaffold()`` for any extension-shipped
+    file tree. See ``dna.kernel.templates.Template``.
+    """
+
+    def templates(self) -> list["Template"]: ...
+
+
+@runtime_checkable
 class Extension(Protocol):
     """Registers kinds, readers, and writers on the Kernel.
 
-    Optional capability (feature-tested via ``hasattr``, NOT a required
-    Protocol member so legacy extensions predating Phase 0 keep working):
+    ``kernel.load(ext)`` fail-loud validates the whole contract before
+    calling ``register()``: ``name`` must be a non-empty ``str``,
+    ``version`` a ``str``, ``register`` callable (``ExtensionLoadError``
+    otherwise). ``register()`` receives the registration-time host slice
+    — see :class:`ExtensionHost` for the exact vocabulary.
+
+    Optional capability (feature-tested, NOT a required Protocol member so
+    legacy extensions predating Phase 0 keep working) — see
+    :class:`TemplateProvider`:
 
         def templates(self) -> list[Template]: ...
 
@@ -1105,7 +1247,7 @@ class Extension(Protocol):
     name: str
     version: str
 
-    def register(self, kernel: Any) -> None: ...
+    def register(self, kernel: "ExtensionHost") -> None: ...
 
 
 # Re-export Template at the protocols surface so downstream code can do
@@ -1136,9 +1278,15 @@ __all__ = [
     "default_visible_in_backend",
     "resolve_visible_in_backend",
     "KindPort",
+    "ExtensionHost",
+    "TemplateProvider",
     "Extension",
     "WritableSourcePort",
     "Template",
+    "SOURCE_PORT_CORE_MEMBERS",
+    "SOURCE_PORT_FALLBACK_MEMBERS",
+    "missing_source_port_members",
+    "validate_source_port",
 ]
 
 
@@ -1195,6 +1343,86 @@ class WritableSourcePort(SourcePort, Protocol):
     # isinstance-derived ``SourceCapabilities`` (no I/O), uniformly sync across
     # every adapter. Callers read fixed dataclass fields, not a magic-string dict.
     def capabilities(self) -> "SourceCapabilities": ...
+
+
+# ---------------------------------------------------------------------------
+# SourcePort boot gate (s-dna-source-conformance-kit)
+# ---------------------------------------------------------------------------
+
+# The members every source MUST have for the kernel to function at all.
+SOURCE_PORT_CORE_MEMBERS: tuple[str, ...] = (
+    "supports_readers",
+    "load_bootstrap_docs",
+    "load_all",
+    "resolve_ref",
+    "load_layer",
+    "close",
+)
+
+# SourcePort members the kernel serves via fallbacks when the adapter
+# doesn't implement them (granular reads → iterate load_all; query/count →
+# ``dna.kernel.query_fallback``). Their absence is legitimate —
+# the adapter just declares ``granular_*=False`` / ``query_pushdown=False``
+# in its SourceCapabilities.
+SOURCE_PORT_FALLBACK_MEMBERS: tuple[str, ...] = (
+    "list_doc_refs",
+    "load_one",
+    "query",
+    "count",
+)
+
+
+def missing_source_port_members(source: Any) -> tuple[list[str], list[str]]:
+    """Return ``(missing_core, missing_fallback)`` member names of ``source``.
+
+    Name-presence only (``runtime_checkable`` semantics) — behavior is the
+    conformance kit's job (``dna.testing.source_conformance_suite``).
+    ``hasattr`` is intentional: proxy sources (``AsyncSourceAdapter``)
+    surface their wrapped source's members via ``__getattr__``.
+    """
+    core = [m for m in SOURCE_PORT_CORE_MEMBERS if not hasattr(source, m)]
+    fallback = [m for m in SOURCE_PORT_FALLBACK_MEMBERS if not hasattr(source, m)]
+    return core, fallback
+
+
+def validate_source_port(source: Any) -> None:
+    """Boot gate for ``kernel.source(src)`` — fail loud on a malformed source.
+
+    Raises :class:`dna.kernel.errors.SourceRegistrationError` when a
+    CORE member is missing; logs a warning when only capability-mediated
+    members are missing (the kernel serves those via fallbacks).
+
+    Scope of the guarantee: this checks NAMES only. A source can pass the
+    gate and still violate the contract behaviorally — the public testing
+    kit is the real safety net for adapter authors.
+    """
+    from dna.kernel.errors import SourceRegistrationError
+
+    pkg = __name__.split(".", 1)[0]
+    missing_core, missing_fallback = missing_source_port_members(source)
+    if missing_core:
+        raise SourceRegistrationError(
+            f"{type(source).__name__} does not satisfy the SourcePort "
+            f"contract — missing member(s): {', '.join(missing_core)}. "
+            f"Every source handed to kernel.source() must implement the "
+            f"core SourcePort surface (see docs/PORT-CONTRACT.md, section "
+            f"'Writing a Source adapter'). If this is a SYNC source (e.g. "
+            f"S3Source), wrap it: AsyncSourceAdapter(your_source). "
+            f"NOTE: this gate checks method NAMES only — run "
+            f"{pkg}.testing.source_conformance_suite(factory) to verify "
+            f"the adapter's actual behavior."
+        )
+    if missing_fallback:
+        import logging
+
+        logging.getLogger(__name__).warning(
+            "kernel.source: %s lacks optional SourcePort member(s) %s — "
+            "the kernel will serve them via load_all fallbacks (slower). "
+            "Implement them (and declare granular_*/query_pushdown in "
+            "SourceCapabilities) for production workloads; verify with "
+            "%s.testing.source_conformance_suite. See docs/PORT-CONTRACT.md.",
+            type(source).__name__, ", ".join(missing_fallback), pkg,
+        )
 
 
 # ---------------------------------------------------------------------------

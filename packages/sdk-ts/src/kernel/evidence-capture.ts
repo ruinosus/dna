@@ -125,13 +125,13 @@ export async function buildEvidenceDoc(opts: {
 // ---------------------------------------------------------------------------
 
 /**
- * Create a ``post_save`` handler that auto-captures Evidence documents.
- *
- * The handler inspects EvidencePolicy documents in the current scope to
- * decide whether to capture. Evidence documents themselves are skipped
- * to avoid infinite loops, and the resulting write uses ``skipHooks: true``.
+ * The runtime capabilities the evidence-capture handler needs from the
+ * kernel it captures — a read surface (`instance().all()`) plus the write
+ * path. Narrower than the full Kernel on purpose; the EvidenceExtension
+ * feature-tests these members before wiring the handler
+ * (s-dna-extension-host-contract).
  */
-export function makeEvidenceCaptureHandler(kernel: {
+export interface EvidenceCaptureHost {
   instance(scope: string): { all(kind: string): { spec: Record<string, unknown> }[] };
   writeDocument(
     scope: string,
@@ -140,7 +140,16 @@ export function makeEvidenceCaptureHandler(kernel: {
     raw: Record<string, unknown>,
     options?: { skipHooks?: boolean; author?: string },
   ): Promise<void>;
-}) {
+}
+
+/**
+ * Create a ``post_save`` handler that auto-captures Evidence documents.
+ *
+ * The handler inspects EvidencePolicy documents in the current scope to
+ * decide whether to capture. Evidence documents themselves are skipped
+ * to avoid infinite loops, and the resulting write uses ``skipHooks: true``.
+ */
+export function makeEvidenceCaptureHandler(kernel: EvidenceCaptureHost) {
   return (ctx: HookContext): void => {
     const { kind, name, data } = ctx;
     const eventType = (data.event_type as string) || "";

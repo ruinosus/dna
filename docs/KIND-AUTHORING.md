@@ -127,11 +127,14 @@ That's the Kind. Hello world.
 Same file, append:
 
 ```python
-class HelloExtension:
-    name = "hello"
-    version = "0.1.0"
+from dna.kernel.protocols import ExtensionHost
 
-    def register(self, kernel) -> None:
+
+class HelloExtension:
+    name = "hello"        # required — kernel.load() fail-loud validates it
+    version = "0.1.0"     # required — ditto
+
+    def register(self, kernel: ExtensionHost) -> None:
         kernel.kind(HelloKind())
         # No custom Reader/Writer needed for `yaml` storage —
         # the kernel auto-registers GenericYamlReader + GenericYamlWriter
@@ -139,6 +142,12 @@ class HelloExtension:
         # Kinds need explicit Reader+Writer because the bundle structure
         # is Kind-specific — see the guardrails extension as reference.)
 ```
+
+`ExtensionHost` is the explicit registration-time contract — everything an
+extension may call while loading (`kind`, `kind_from_descriptor`, `reader`,
+`writer`, `on`, `on_veto`, `tool`, `composition_profile`, `hooks`). The
+TypeScript twin is the `ExtensionHost` interface in
+`src/kernel/protocols.ts` (same surface, camelCase).
 
 ## Step 4 — Wire the entry-point
 

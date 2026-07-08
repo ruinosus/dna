@@ -12,7 +12,7 @@ from pathlib import Path
 from dna.kernel import Kernel
 from dna.kernel.document import Document
 from dna.kernel.kind_base import KindBase
-from dna.kernel.protocols import ResolveError, StorageDescriptor
+from dna.kernel.protocols import ReaderPort, ResolveError, StorageDescriptor
 from dna.adapters.filesystem import FilesystemSource
 
 
@@ -88,7 +88,7 @@ class TestFilesystemErrors:
     async def test_reader_error_logged_not_crash(self, tmp_path, caplog):
         """If a reader raises an exception during detect/read, it's logged and skipped."""
 
-        class BrokenReader:
+        class BrokenReader(ReaderPort):
             def detect(self, path):
                 raise RuntimeError("reader exploded")
 

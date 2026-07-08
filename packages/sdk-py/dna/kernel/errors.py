@@ -53,3 +53,15 @@ class ExtensionLoadError(KernelRegistrationError):
     time. Object missing ``register`` callable, or its ``register``
     raised an unexpected exception that wasn't routed through the
     ``extension_error`` hook."""
+
+
+class SourceRegistrationError(KernelRegistrationError):
+    """A source failed the SourcePort boot gate at ``kernel.source(src)``
+    time (s-dna-source-conformance-kit).
+
+    The gate checks that the CORE SourcePort surface exists BY NAME
+    (``runtime_checkable`` semantics — names only, not behavior). A
+    source that passes the gate can still misbehave; run the public
+    conformance kit (``dna.testing.source_conformance_suite``)
+    against your adapter to verify actual behavior. See
+    docs/PORT-CONTRACT.md."""

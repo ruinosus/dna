@@ -7,6 +7,7 @@ from __future__ import annotations
 import asyncio
 
 from dna.kernel import Kernel
+from dna.testing import CoreSourceStub
 
 
 def _agent(name, instruction):
@@ -15,7 +16,7 @@ def _agent(name, instruction):
             "spec": {"model": "m", "instruction": instruction}}
 
 
-class _FromSource:
+class _FromSource(CoreSourceStub):
     """Read source-of-truth: a fixed set of docs."""
     def __init__(self, docs):
         self._by_name = {d["metadata"]["name"]: d for d in docs}
@@ -30,7 +31,7 @@ class _FromSource:
         return {}  # inline agents — no fragments here
 
 
-class _ToSource:
+class _ToSource(CoreSourceStub):
     """Writable target that records writes and reflects them in its manifest."""
     def __init__(self, docs=None):
         self._by_name = {d["metadata"]["name"]: d for d in (docs or [])}

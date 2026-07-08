@@ -30,7 +30,7 @@ from typing import Any
 import yaml
 
 from dna.kernel.kind_base import KindBase
-from dna.kernel.protocols import StorageDescriptor, SYSTEM_SCOPE, TenantScope
+from dna.kernel.protocols import ExtensionHost, StorageDescriptor, SYSTEM_SCOPE, TenantScope, ReaderPort, WriterPort
 from dna.kernel.bundle_handle import BundleHandle
 
 
@@ -178,7 +178,7 @@ class TenantKind(KindBase):
         }
 
 
-class TenantReader:
+class TenantReader(ReaderPort):
     """Detects + parses TENANT.md bundles under _lib/tenants/<slug>/."""
 
     def detect(self, bundle: BundleHandle) -> bool:
@@ -212,7 +212,7 @@ class TenantReader:
         }
 
 
-class TenantWriter:
+class TenantWriter(WriterPort):
     """Serialize a Tenant raw dict to a TENANT.md bundle."""
 
     def can_write(self, raw: dict) -> bool:
@@ -387,7 +387,7 @@ class TenantMembershipKind(KindBase):
         }
 
 
-class TenantMembershipReader:
+class TenantMembershipReader(ReaderPort):
     def detect(self, bundle: BundleHandle) -> bool:
         if not bundle.exists("MEMBERSHIP.md"):
             return False
@@ -422,7 +422,7 @@ class TenantMembershipReader:
         }
 
 
-class TenantMembershipWriter:
+class TenantMembershipWriter(WriterPort):
     def can_write(self, raw: dict) -> bool:
         return raw.get("kind") == "TenantMembership"
 
@@ -481,7 +481,7 @@ class TenantExtension:
     name = "tenant"
     version = "1.0.0"
 
-    def register(self, kernel: Any) -> None:
+    def register(self, kernel: ExtensionHost) -> None:
         kernel.kind(TenantKind())
         kernel.reader(TenantReader())
         kernel.writer(TenantWriter())

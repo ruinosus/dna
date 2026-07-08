@@ -1,0 +1,549 @@
+{
+  "$comment": "s-dna-port-surface-parity — shared Py↔TS PORT SURFACE manifest. Each port lists its members as {py, ts} name pairs (snake_case ↔ camelCase). A member present on ONE side only sets the other side to null and MUST carry a non-empty `justification` — undocumented drift turns both suites red. Executors: packages/sdk-py/tests/test_port_surface_parity.py (introspects the real typing.Protocol members) and packages/sdk-ts/tests/port-surface-parity.test.ts (reads PORT_SURFACE from src/kernel/port-surface.ts, which is keyof-bound to the real interfaces so tsc fails on drift). Python is the semantic reference: close a gap by porting to TS, or justify it here — never by silence.",
+  "ports": {
+    "SourcePort": {
+      "doc": "WHERE — load documents from storage. Py: dna/kernel/protocols.py · TS: src/kernel/protocols.ts",
+      "members": [
+        {
+          "py": "supports_readers",
+          "ts": "supportsReaders"
+        },
+        {
+          "py": "load_bootstrap_docs",
+          "ts": "loadBootstrapDocs"
+        },
+        {
+          "py": "load_all",
+          "ts": "loadAll"
+        },
+        {
+          "py": "resolve_ref",
+          "ts": "resolveRef"
+        },
+        {
+          "py": "load_layer",
+          "ts": "loadLayer"
+        },
+        {
+          "py": "close",
+          "ts": "close",
+          "note": "Py lists close in SOURCE_PORT_CORE_MEMBERS (boot gate); TS declares it optional — the kernel treats a missing close as a no-op. FS adapters implement a documented no-op; PostgresSource ends its owned pool."
+        },
+        {
+          "py": "list_doc_refs",
+          "ts": "listDocRefs",
+          "note": "L1 granular read, capability-mediated on both sides (SourceCapabilities.granular_list / granularList)."
+        },
+        {
+          "py": "load_one",
+          "ts": "loadOne"
+        },
+        {
+          "py": "query",
+          "ts": "query"
+        },
+        {
+          "py": "count",
+          "ts": "count"
+        },
+        {
+          "py": null,
+          "ts": "capabilities",
+          "justification": "TS declares capabilities() on the READ port so read-only adapters (FilesystemSource TS has no write half) can declare explicitly; Py declares it on WritableSourcePort because every in-repo Py adapter is writable. Same contract, different attachment point — see the WritableSourcePort py-only twin entry."
+        }
+      ]
+    },
+    "WritableSourcePort": {
+      "doc": "SourcePort + write/versioning half. OWN members only (inherited SourcePort members are tracked above).",
+      "members": [
+        {
+          "py": "save_document",
+          "ts": "saveDocument"
+        },
+        {
+          "py": "delete_document",
+          "ts": "deleteDocument"
+        },
+        {
+          "py": "list_versions",
+          "ts": "listVersions"
+        },
+        {
+          "py": "get_version",
+          "ts": "getVersion"
+        },
+        {
+          "py": "publish",
+          "ts": "publish",
+          "note": "PG TS is a documented single-step no-op (no draft state); the member exists so Draftable-style flows type-check."
+        },
+        {
+          "py": "save_manifest",
+          "ts": null,
+          "justification": "Py-only: whole-manifest persistence backs the Py scope-seed/sync machinery (source_sync, dna doc apply). The TS SDK has no manifest-write pipeline — adding the member without the machinery would be a lying surface."
+        },
+        {
+          "py": "load_drafts",
+          "ts": null,
+          "justification": "Py-only: the draft→publish lifecycle (Draftable capability) exists only in the Py adapters. TS adapters declare drafts:false in SourceCapabilities; PG TS publish() is a documented single-step no-op."
+        },
+        {
+          "py": "list_scopes",
+          "ts": null,
+          "justification": "Py-only: consumed by the Catalog tier scan and scope enumeration endpoints (kinds-api), which are Py-only runtime surfaces. No TS consumer exists (composition parity case 10 is skip_ts for the same reason)."
+        },
+        {
+          "py": "capabilities",
+          "ts": null,
+          "justification": "Cross-attachment twin of the SourcePort ts-only `capabilities` entry: TS declares capabilities() on SourcePort (read-only adapters declare too); Py declares it here. One contract, tracked once per side."
+        }
+      ]
+    },
+    "CachePort": {
+      "doc": "WHERE — store/retrieve installed deps.",
+      "members": [
+        {
+          "py": "load_all",
+          "ts": "loadAll"
+        },
+        {
+          "py": "load_key",
+          "ts": "loadKey"
+        },
+        {
+          "py": "store",
+          "ts": "store"
+        },
+        {
+          "py": "has",
+          "ts": "has"
+        }
+      ]
+    },
+    "ResolverPort": {
+      "doc": "FROM — fetch external deps.",
+      "members": [
+        {
+          "py": "resolve",
+          "ts": "resolve"
+        },
+        {
+          "py": "cache_key",
+          "ts": "cacheKey"
+        }
+      ]
+    },
+    "ReaderPort": {
+      "doc": "Reads a bundle and produces a raw dict.",
+      "members": [
+        {
+          "py": "detect",
+          "ts": "detect"
+        },
+        {
+          "py": "read",
+          "ts": "read"
+        },
+        {
+          "py": "_owner_container",
+          "ts": "_ownerContainer"
+        }
+      ]
+    },
+    "WriterPort": {
+      "doc": "Writes a raw dict back to a bundle. Inverse of ReaderPort.",
+      "members": [
+        {
+          "py": "can_write",
+          "ts": "canWrite"
+        },
+        {
+          "py": "write",
+          "ts": "write"
+        },
+        {
+          "py": "serialize",
+          "ts": "serialize"
+        }
+      ]
+    },
+    "KindPort": {
+      "doc": "WHO — identity + composition role.",
+      "members": [
+        {
+          "py": "api_version",
+          "ts": "apiVersion"
+        },
+        {
+          "py": "kind",
+          "ts": "kind"
+        },
+        {
+          "py": "alias",
+          "ts": "alias"
+        },
+        {
+          "py": "origin",
+          "ts": "origin"
+        },
+        {
+          "py": "storage",
+          "ts": "storage"
+        },
+        {
+          "py": "is_root",
+          "ts": "isRoot"
+        },
+        {
+          "py": "is_prompt_target",
+          "ts": "isPromptTarget"
+        },
+        {
+          "py": "prompt_target_priority",
+          "ts": "promptTargetPriority"
+        },
+        {
+          "py": "flatten_in_context",
+          "ts": "flattenInContext"
+        },
+        {
+          "py": "is_runtime_artifact",
+          "ts": "isRuntimeArtifact"
+        },
+        {
+          "py": "dep_filters",
+          "ts": "depFilters"
+        },
+        {
+          "py": "dependencies",
+          "ts": "dependencies"
+        },
+        {
+          "py": "schema",
+          "ts": "schema"
+        },
+        {
+          "py": "get_default_agent_name",
+          "ts": "getDefaultAgentName"
+        },
+        {
+          "py": "get_layer_policies",
+          "ts": "getLayerPolicies"
+        },
+        {
+          "py": "parse",
+          "ts": "parse"
+        },
+        {
+          "py": "describe",
+          "ts": "describe"
+        },
+        {
+          "py": "summary",
+          "ts": "summary"
+        },
+        {
+          "py": "prompt_template",
+          "ts": "promptTemplate"
+        },
+        {
+          "py": "model",
+          "ts": null,
+          "justification": "Py-only: the Pydantic model class attribute drives Py's parse/validation. TS kinds hold their Zod schema internally and expose it via schema() — a `model` member would have no uniform TS meaning."
+        },
+        {
+          "py": null,
+          "ts": "scope",
+          "justification": "TenantScope declaration. Py documents it as an optional duck-typed attr (kernel getattr's it; kept off the Protocol so isinstance stays permissive for third-party Kinds); TS interfaces express optional members natively."
+        },
+        {
+          "py": null,
+          "ts": "docs",
+          "justification": "Prose docs attr — Py documents it in the KindPort docstring as optional/duck-typed (DOCS.md loader overrides at load time); TS declares the optional member."
+        },
+        {
+          "py": null,
+          "ts": "isSchemaAffecting",
+          "justification": "Kernel classification attr (s-kernel-kindport-classification-attrs). Py derives via getattr with defaults off KindBase; TS declares the optional member on the interface."
+        },
+        {
+          "py": null,
+          "ts": "isOverlayable",
+          "justification": "Same classification-attrs rationale as isSchemaAffecting."
+        },
+        {
+          "py": null,
+          "ts": "scopeInheritable",
+          "justification": "Same classification-attrs rationale as isSchemaAffecting."
+        },
+        {
+          "py": null,
+          "ts": "plane",
+          "justification": "Two-planes marker (record|composition). Py reads it duck-typed off descriptors/KindBase; TS declares the optional member."
+        },
+        {
+          "py": null,
+          "ts": "preview",
+          "justification": "Studio preview blocks. Py deliberately keeps preview() OFF the Protocol body (docstring: 'consumers feature-test via hasattr') so existing extensions stay Protocol-compatible; TS marks it optional."
+        },
+        {
+          "py": null,
+          "ts": "graphStyle",
+          "justification": "Rendering hint. Py documents graph_style/ascii_icon/display_label/graph_meta as optional duck-typed attrs in the KindPort docstring comment block; TS declares them as optional members. Same contract, different declaration idiom."
+        },
+        {
+          "py": null,
+          "ts": "asciiIcon",
+          "justification": "Rendering hint — see graphStyle."
+        },
+        {
+          "py": null,
+          "ts": "displayLabel",
+          "justification": "Rendering hint — see graphStyle."
+        },
+        {
+          "py": null,
+          "ts": "graphMeta",
+          "justification": "Rendering hint — see graphStyle."
+        }
+      ]
+    },
+    "ToolPort": {
+      "doc": "An invocable tool exposed to agents + DNA discovery metadata (s-dna-tool-decorator; TS twin landed with s-dna-port-surface-parity).",
+      "members": [
+        {
+          "py": "name",
+          "ts": "name"
+        },
+        {
+          "py": "group",
+          "ts": "group"
+        },
+        {
+          "py": "description",
+          "ts": "description"
+        },
+        {
+          "py": "summary",
+          "ts": "summary"
+        },
+        {
+          "py": "args_schema",
+          "ts": "argsSchema"
+        },
+        {
+          "py": "hitl",
+          "ts": "hitl"
+        },
+        {
+          "py": "scope",
+          "ts": "scope"
+        },
+        {
+          "py": "source",
+          "ts": "source"
+        },
+        {
+          "py": "get_callable",
+          "ts": "getCallable"
+        }
+      ]
+    },
+    "ExtensionHost": {
+      "doc": "The registration-time surface the Kernel offers to Extension.register() (s-dna-extension-host-contract).",
+      "members": [
+        {
+          "py": "hooks",
+          "ts": "hooks"
+        },
+        {
+          "py": "kind",
+          "ts": "kind"
+        },
+        {
+          "py": "kind_from_descriptor",
+          "ts": "kindFromDescriptor"
+        },
+        {
+          "py": "reader",
+          "ts": "reader"
+        },
+        {
+          "py": "writer",
+          "ts": "writer"
+        },
+        {
+          "py": "on",
+          "ts": "on"
+        },
+        {
+          "py": "on_veto",
+          "ts": "onVeto"
+        },
+        {
+          "py": "tool",
+          "ts": "tool"
+        },
+        {
+          "py": "composition_profile",
+          "ts": "compositionProfile"
+        }
+      ]
+    },
+    "Extension": {
+      "doc": "Registers kinds, readers, and writers on the Kernel.",
+      "members": [
+        {
+          "py": "name",
+          "ts": "name"
+        },
+        {
+          "py": "version",
+          "ts": "version"
+        },
+        {
+          "py": "register",
+          "ts": "register"
+        },
+        {
+          "py": null,
+          "ts": "templates",
+          "justification": "Py keeps templates() OFF the Extension Protocol (separate TemplateProvider Protocol, feature-tested) so legacy pre-Phase-0 extensions keep satisfying isinstance(ext, Extension); TS expresses the same back-compat with a native optional member. See the TemplateProvider py-only port."
+        }
+      ]
+    },
+    "TemplateProvider": {
+      "doc": "Optional Extension capability — ships scaffold file trees. Py-only Protocol; TS folds the member into Extension.templates?.",
+      "members": [
+        {
+          "py": "templates",
+          "ts": null,
+          "justification": "TS has no separate TemplateProvider interface: the optional Extension.templates? member IS the TS twin (tracked in the Extension port above). A second interface would add nothing in a structurally-typed language."
+        }
+      ]
+    },
+    "RecordSearchProvider": {
+      "doc": "Two-planes F2 — semantic search over record docs, registered on the kernel at app boot.",
+      "members": [
+        {
+          "py": "search",
+          "ts": "search"
+        }
+      ]
+    },
+    "SourceCapabilities": {
+      "doc": "Typed declaration of what a source adapter supports (s-sourceport-contract-cleanup). Members are dataclass fields (Py) / interface keys (TS).",
+      "members": [
+        {
+          "py": "source",
+          "ts": "source"
+        },
+        {
+          "py": "drafts",
+          "ts": "drafts"
+        },
+        {
+          "py": "versions",
+          "ts": "versions"
+        },
+        {
+          "py": "layers",
+          "ts": "layers"
+        },
+        {
+          "py": "bundle_read",
+          "ts": "bundleRead"
+        },
+        {
+          "py": "bundle_write",
+          "ts": "bundleWrite"
+        },
+        {
+          "py": "kernel_attachable",
+          "ts": "kernelAttachable"
+        },
+        {
+          "py": "granular_list",
+          "ts": "granularList"
+        },
+        {
+          "py": "granular_one",
+          "ts": "granularOne"
+        },
+        {
+          "py": "query_pushdown",
+          "ts": "queryPushdown"
+        },
+        {
+          "py": "tenant_layer_writes",
+          "ts": null,
+          "justification": "Python-signature concept: optional kwargs must be probed via inspect.signature, so Py declares which write kwargs an adapter accepts. The TS write surface is an options bag — nothing to probe (already documented in capabilities.ts)."
+        },
+        {
+          "py": "write_kwargs",
+          "ts": null,
+          "justification": "Same rationale as tenant_layer_writes — Py kwarg vocabulary declaration; meaningless in TS."
+        },
+        {
+          "py": "delete_kwargs",
+          "ts": null,
+          "justification": "Same rationale as tenant_layer_writes — Py kwarg vocabulary declaration; meaningless in TS."
+        }
+      ]
+    },
+    "CapabilityProtocols": {
+      "doc": "Exported optional-capability Protocols (Py capabilities.py) / interfaces (TS capabilities.ts). Members here are the PROTOCOL NAMES, not method names.",
+      "members": [
+        {
+          "py": "BundleEntryReadable",
+          "ts": "BundleEntryReadable"
+        },
+        {
+          "py": "KernelAttachable",
+          "ts": "KernelAttachable"
+        },
+        {
+          "py": "Versionable",
+          "ts": "Versionable"
+        },
+        {
+          "py": "BundleEntryWritable",
+          "ts": null,
+          "justification": "Py-only: no TS adapter has a bundle-WRITE path (every TS SourceCapabilities declares bundleWrite:false). The interface lands together with the first TS bundle-write implementation, not before."
+        },
+        {
+          "py": "Draftable",
+          "ts": null,
+          "justification": "Py-only: the draft store exists only in Py adapters (see WritableSourcePort.load_drafts justification)."
+        },
+        {
+          "py": "Layered",
+          "ts": null,
+          "justification": "Py-only: granular per-doc load_layer(scope, layer, kind, name) resolution consumed by the Py harness overlay reads; the TS SourcePort.loadLayer (whole-layer) covers the TS composition engine's needs."
+        },
+        {
+          "py": "TenantAware",
+          "ts": null,
+          "justification": "Documentation/static-typing Protocol for Python's kwarg-level write contract — TS options-bag writes need no kwarg protocol (same rationale as SourceCapabilities.write_kwargs)."
+        },
+        {
+          "py": "LayerAware",
+          "ts": null,
+          "justification": "Same rationale as TenantAware."
+        }
+      ]
+    }
+  },
+  "excluded_surfaces": {
+    "collaborator-ports": {
+      "py": "packages/sdk-py/dna/kernel/collaborator_ports.py",
+      "ts": "packages/sdk-ts/src/kernel/collaborator-ports.ts",
+      "justification": "Kernel INTERNALS, not public contract: these are the narrow mediator slices from the kernel-decomposition epic (e-kernel-decomposition). Each language decomposed its own god-object along its own seams (Py ~15 slices, TS 3) — forcing member parity here would couple internal refactors across languages for zero user-facing value."
+    },
+    "dna_tool-decorator": {
+      "py": "packages/sdk-py/dna/kernel/tools.py",
+      "ts": null,
+      "justification": "The @dna_tool decorator + pending-tools harvest is langchain glue (wraps langchain_core.tools.tool for langgraph/deepagents). The TS SDK has no langchain runtime; the portable part — ToolPort/ToolDefinition + ToolRegistry + kernel.tool()/getTools() and the read-umbrella group aliases — IS ported and surface-tracked above."
+    }
+  }
+}

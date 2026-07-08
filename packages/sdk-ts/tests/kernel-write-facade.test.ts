@@ -67,6 +67,7 @@ describe("accessors", () => {
     const w: WriterPort = {
       canWrite: () => true,
       write: () => {},
+      serialize: () => [],
     };
     k.writer(w);
     expect(k.activeWriters).toHaveLength(1);
@@ -78,6 +79,7 @@ describe("accessors", () => {
     const w: WriterPort = {
       canWrite: () => true,
       write: () => {},
+      serialize: () => [],
     };
     k.writer(w);
     const got = k.activeWriters;
@@ -87,6 +89,7 @@ describe("accessors", () => {
       (got as WriterPort[]).push({
         canWrite: () => false,
         write: () => {},
+        serialize: () => [],
       });
     }).toThrow();
   });

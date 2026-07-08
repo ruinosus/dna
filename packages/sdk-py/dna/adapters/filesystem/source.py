@@ -9,6 +9,7 @@ import aiofiles
 import yaml
 
 from dna.kernel.bundle_handle import FilesystemBundleHandle
+from dna.kernel.protocols import SourcePort
 
 if TYPE_CHECKING:
     from dna.kernel.capabilities import SourceCapabilities
@@ -16,8 +17,15 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class FilesystemSource:
-    """Loads manifest documents from .dna/<scope>/ directories."""
+class FilesystemSource(SourcePort):
+    """Loads manifest documents from .dna/<scope>/ directories.
+
+    Declares the contract explicitly (s-dna-source-conformance-kit): every
+    in-repo adapter subclasses its port Protocol so the relationship is
+    readable + statically checkable. NOTE: inheriting a Protocol makes
+    ``isinstance`` pass *nominally* — behavior is verified by the public
+    conformance kit (``dna.testing.source_conformance_suite``).
+    """
 
     # Kernel back-ref installed by the writable subclass's ``attach_kernel``
     # (KernelAttachable). The read-only base never gets one; declared here so
@@ -341,18 +349,17 @@ class FilesystemSource:
         # the alphabetically-first extension's reader silently captured
         # the other's bundles.
         #
-        # H3 fix: prefer readers whose ``_owner_container`` attribute
-        # matches the parent directory name. Readers without that
-        # attribute are tried only as fallback (preserves back-compat
-        # for the 19 existing extensions that don't set it).
+        # H3 fix: prefer readers whose ``_owner_container`` member matches
+        # the parent directory name. Unscoped readers (the None default —
+        # ``_owner_container`` is a formal ReaderPort member since
+        # s-dna-rw-roundtrip-suite, no longer duck-typed) are tried only
+        # as fallback.
         container = directory.name
         owned_readers = [
-            r for r in readers
-            if getattr(r, "_owner_container", None) == container
+            r for r in readers if r._owner_container == container
         ]
         global_readers = [
-            r for r in readers
-            if getattr(r, "_owner_container", None) is None
+            r for r in readers if r._owner_container is None
         ]
         # Order: container-owned first, then unscoped fallback. Readers
         # owned by a DIFFERENT container are skipped — they cannot

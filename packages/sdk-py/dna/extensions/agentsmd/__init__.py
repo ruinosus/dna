@@ -18,7 +18,7 @@ import yaml
 from dna.kernel.models import TypedAgentDefinition
 from dna.kernel.kind_base import KindBase
 from dna.kernel.preview import PreviewBlock
-from dna.kernel.protocols import StorageDescriptor
+from dna.kernel.protocols import ExtensionHost, StorageDescriptor, ReaderPort, WriterPort
 from dna.kernel.bundle_handle import BundleHandle
 
 from dna.extensions.helix import _schema_from_model
@@ -90,7 +90,7 @@ class AgentDefinitionKind(KindBase):
         return [PreviewBlock(kind="markdown", title="AGENTS.md", body=content)]
 
 
-class AgentDefinitionReader:
+class AgentDefinitionReader(ReaderPort):
     """Detects and reads standalone AGENTS.md files (not inside soul bundles).
 
     The agents.md standard uses AGENTS.md to define agent archetypes.
@@ -126,7 +126,7 @@ class AgentDefinitionReader:
         }
 
 
-class AgentDefinitionWriter:
+class AgentDefinitionWriter(WriterPort):
     """Writes an AgentDefinition raw dict back to AGENTS.md (with frontmatter).
 
     Byte-compat: when metadata contains only ``{name}`` (or is empty), emits
@@ -145,7 +145,8 @@ class AgentDefinitionWriter:
         Mirrors typescript/src/extensions/agentsmd.ts — keeps
         ``kernel.serialize_document`` on the WRITER path so authored
         frontmatter survives (the generic STANDALONE branch emits the body
-        field only, silently dropping authored metadata)."""
+        field only, silently dropping authored metadata). Upstreamed from
+        the DNA F3 market-fidelity surgery (s-dna-rw-roundtrip-suite)."""
         meta = dict(raw.get("metadata", {}))
         spec = raw.get("spec", {}) or {}
         body = spec.get("content", "") or ""
@@ -178,7 +179,7 @@ class AgentsMdExtension:
     name = "agentsmd"
     version = "1.0.0"
 
-    def register(self, kernel: Any) -> None:
+    def register(self, kernel: ExtensionHost) -> None:
         kernel.kind(AgentDefinitionKind())
         kernel.reader(AgentDefinitionReader())
         kernel.writer(AgentDefinitionWriter())

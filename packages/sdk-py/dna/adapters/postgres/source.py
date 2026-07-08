@@ -25,6 +25,8 @@ import re
 from datetime import datetime, timezone
 from typing import Any, TYPE_CHECKING
 
+from dna.kernel.protocols import WritableSourcePort
+
 if TYPE_CHECKING:
     import asyncpg
     from dna.kernel.capabilities import SourceCapabilities
@@ -82,7 +84,7 @@ def _build_notify_payload(
     )
 
 
-class PostgresSource:
+class PostgresSource(WritableSourcePort):
     """WritableSourcePort implementation backed by PostgreSQL (asyncpg)."""
 
     supports_readers: bool = False

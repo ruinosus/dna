@@ -130,8 +130,9 @@ export class FilesystemSource implements SourcePort {
   /**
    * Explicit contract declaration (s-sourceport-contract-cleanup) — kept
    * honest by the adapter conformance test (declaration == structural
-   * derivation). Read-only FS source: in-memory query/count + loadOne;
-   * no listDocRefs/bundle/write surface on the TS twin yet.
+   * derivation). Read-only FS source: in-memory query/count + the L1
+   * granular reads (loadOne + listDocRefs, s-dna-port-surface-parity);
+   * no bundle/write surface on the TS twin yet.
    */
   capabilities(): SourceCapabilities {
     return {
@@ -142,10 +143,62 @@ export class FilesystemSource implements SourcePort {
       bundleRead: false,
       bundleWrite: false,
       kernelAttachable: false,
-      granularList: false,
+      granularList: true,
       granularOne: true,
       queryPushdown: true,
     };
+  }
+
+  /**
+   * Documented NO-OP — the FS source holds no pooled resources (each read
+   * opens/closes its own file handles via fs/promises). The member exists
+   * for SourcePort surface parity with Python, where `close` is a
+   * SOURCE_PORT_CORE_MEMBERS boot-gate entry.
+   */
+  async close(): Promise<void> {
+    // nothing to release
+  }
+
+  /**
+   * L1 granular access — FS impl projects from `loadAll` (mirror of the
+   * Py `FilesystemSource.list_doc_refs`): `[kind, name]` refs only, no
+   * bundle rehydration. No perf gain over `loadAll` on FS, but keeps the
+   * SourcePort contract consistent across adapters (PG is where the gain
+   * lives). Tenant: union of base + overlay with the overlay shadowing
+   * base, same as the Py twin. Result sorted by (kind, name).
+   */
+  async listDocRefs(scope: string, opts?: {
+    kind?: string | null; tenant?: string | null;
+  }): Promise<Array<[string, string]>> {
+    const refOf = (d: Record<string, unknown>): [string, string] => {
+      const meta = d.metadata as Record<string, unknown> | undefined;
+      return [
+        typeof d.kind === "string" ? d.kind : "",
+        String(meta?.name ?? d.name ?? ""),
+      ];
+    };
+    let docs: Record<string, unknown>[];
+    if (opts?.tenant) {
+      const overlay = await this.loadLayer(scope, "tenant", opts.tenant);
+      const overlayKeys = new Set(overlay.map((d) => refOf(d).join("\0")));
+      const base = (await this.loadAll(scope)).filter(
+        (d) => !overlayKeys.has(refOf(d).join("\0")),
+      );
+      docs = [...overlay, ...base];
+    } else {
+      docs = await this.loadAll(scope);
+    }
+    const refs: Array<[string, string]> = [];
+    for (const d of docs) {
+      const [k, n] = refOf(d);
+      if (!k || !n) continue;
+      if (opts?.kind && k !== opts.kind) continue;
+      refs.push([k, n]);
+    }
+    refs.sort((a, b) =>
+      a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : a[1] < b[1] ? -1 : a[1] > b[1] ? 1 : 0,
+    );
+    return refs;
   }
 
   async resolveRef(scope: string, ref: string): Promise<string> {
@@ -317,16 +370,13 @@ export class FilesystemSource implements SourcePort {
     // alphabetically-first extension's reader silently captured the
     // other's bundles.
     //
-    // H3 fix: prefer readers whose `_ownerContainer` attribute matches
-    // the parent dir name. Readers without that attribute are tried
-    // only as fallback (preserves back-compat for existing extensions).
+    // H3 fix: prefer readers whose `_ownerContainer` member matches the
+    // parent dir name. Unscoped readers (undefined — a formal ReaderPort
+    // member since s-dna-rw-roundtrip-suite, no longer duck-typed) are
+    // tried only as fallback.
     const containerName = directory.split("/").filter(Boolean).pop() ?? "";
-    const ownedReaders = readers.filter((r) =>
-      (r as { _ownerContainer?: string })._ownerContainer === containerName,
-    );
-    const globalReaders = readers.filter((r) =>
-      (r as { _ownerContainer?: string })._ownerContainer == null,
-    );
+    const ownedReaders = readers.filter((r) => r._ownerContainer === containerName);
+    const globalReaders = readers.filter((r) => r._ownerContainer == null);
     const orderedReaders = [...ownedReaders, ...globalReaders];
 
     const entries = (await readdir(directory)).sort();

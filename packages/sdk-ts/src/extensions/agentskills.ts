@@ -9,7 +9,7 @@ import { deriveFirstLine } from "../kernel/_text.js";
 import { SkillSchema, SkillSpecSchema, zodSpecToJsonSchema } from "../kernel/models.js";
 import type { BundleHandle } from "../kernel/bundle-handle.js";
 import { KindBase } from "../kernel/kind_base.js";
-import type { Extension, KindPort, ReaderPort, SerializedFile, WriterPort } from "../kernel/protocols.js";
+import type { ExtensionHost, Extension, ReaderPort, SerializedFile, WriterPort } from "../kernel/protocols.js";
 import { SD } from "../kernel/protocols.js";
 import { nodeFS, readTextSafe, collectDir } from "../kernel/fs.js";
 import type { FSLike } from "../kernel/fs.js";
@@ -267,14 +267,9 @@ export class AgentSkillsExtension implements Extension {
 
   constructor(private fs: FSLike = nodeFS) {}
 
-  register(kernel: unknown): void {
-    const k = kernel as {
-      kind(kp: KindPort): void;
-      reader(r: ReaderPort): void;
-      writer(w: WriterPort): void;
-    };
-    k.kind(new SkillKind());
-    k.reader(new SkillReader(this.fs));
-    k.writer(new SkillWriter(this.fs));
+  register(kernel: ExtensionHost): void {
+    kernel.kind(new SkillKind());
+    kernel.reader(new SkillReader(this.fs));
+    kernel.writer(new SkillWriter(this.fs));
   }
 }

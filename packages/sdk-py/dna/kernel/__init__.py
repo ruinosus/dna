@@ -22,6 +22,7 @@ from dna.kernel.kind_registry import (
 from dna.kernel.protocols import (
     CachePort, DEFAULT_BASE_SCOPE, Extension,
     EXTENSIONS_ENTRY_POINT_GROUP,  # noqa: F401 — re-exported for historical `from dna.kernel import EXTENSIONS_ENTRY_POINT_GROUP` importers (boot recipe moved to kernel_bootstrap, s-kernel-decomp-f4)
+    ExtensionHost,  # noqa: F401 — re-exported registration-time host slice (s-dna-extension-host-contract)
     KindPort, ReaderPort,
     ResolverPort, SourcePort, StorageDescriptor, StoragePattern,
     SYSTEM_SCOPE, Template, ToolDefinition, WritableSourcePort, WriterPort,
@@ -510,6 +511,15 @@ class Kernel:
         self.hooks.on_veto(hook, fn, priority=priority, key=key)
 
     def source(self, source: SourcePort) -> None:
+        # s-dna-source-conformance-kit — boot gate: a malformed source used
+        # to pass registration silently and fail deep inside the first load.
+        # Fail loud HERE, with the missing members named. Names-only check
+        # (runtime_checkable semantics); behavior is verified by the public
+        # kit `dna.testing.source_conformance_suite`. Wrapper sources
+        # (AsyncSourceAdapter, Composite) are validated as the object handed
+        # to the kernel — which is exactly the surface the kernel calls.
+        from dna.kernel.protocols import validate_source_port
+        validate_source_port(source)
         self._source = source
         # s-composition-and-nav-lazy (2026-05-14): auto-attach so direct
         # kernel.source(s) callers (harness boot via rt.storage, tests,
@@ -757,6 +767,14 @@ class Kernel:
         the returned tuple has no effect on the Kernel's internal list.
         """
         return tuple(self._writers)
+
+    @property
+    def active_readers(self) -> tuple["ReaderPort", ...]:
+        """ReaderPorts registered via reader(r). Read-only view — mirror of
+        ``active_writers`` (s-dna-rw-roundtrip-suite: the round-trip
+        conformance kit enumerates registered pairs through this surface).
+        """
+        return tuple(self._readers)
 
     def _target_locator(self, scope: str, kind: str, name: str) -> "str | Path":
         """Stable human-readable locator for a document.
@@ -1288,7 +1306,9 @@ class Kernel:
         if not isinstance(r, ReaderPort):
             raise ReaderRegistrationError(
                 f"Reader {type(r).__name__} does not satisfy ReaderPort "
-                f"Protocol (missing detect/read methods or wrong signatures). "
+                f"Protocol (missing detect/read methods or the "
+                f"_owner_container member — inherit ReaderPort explicitly "
+                f"to get the None default). "
                 f"See dna.kernel.protocols.ReaderPort."
             )
         # Idempotent re-registration — same class is a no-op
@@ -1301,7 +1321,9 @@ class Kernel:
         if not isinstance(w, WriterPort):
             raise WriterRegistrationError(
                 f"Writer {type(w).__name__} does not satisfy WriterPort "
-                f"Protocol (missing can_write/write methods or wrong signatures). "
+                f"Protocol (missing can_write/write/serialize methods — "
+                f"serialize is part of the contract since "
+                f"s-dna-rw-roundtrip-suite). "
                 f"See dna.kernel.protocols.WriterPort."
             )
         if any(type(existing) is type(w) for existing in self._writers):
@@ -1395,6 +1417,25 @@ class Kernel:
                 f"Extension {type(ext).__name__} has no callable register() "
                 f"method. Extensions must implement `register(self, kernel)` "
                 f"per the Extension Protocol — check your entry-point target."
+            )
+        # s-dna-extension-host-contract — validate the WHOLE Extension
+        # contract fail-loud, not just register(). name identifies the
+        # extension in logs / alias-owner generation; version identifies
+        # it in diagnostics. A missing/blank value was previously accepted
+        # silently and surfaced later as `None` owners in aliases.
+        name = getattr(ext, "name", None)
+        if not isinstance(name, str) or not name.strip():
+            raise ExtensionLoadError(
+                f"Extension {type(ext).__name__} has no valid `name` "
+                f"(got {name!r}). Extensions must declare `name: str` "
+                f"(non-empty) per the Extension Protocol."
+            )
+        version = getattr(ext, "version", None)
+        if not isinstance(version, str) or not version.strip():
+            raise ExtensionLoadError(
+                f"Extension {name!r} ({type(ext).__name__}) has no valid "
+                f"`version` (got {version!r}). Extensions must declare "
+                f"`version: str` per the Extension Protocol."
             )
         try:
             # s-alias-generated-not-typed — owner context p/ geração de

@@ -185,35 +185,130 @@ Writers are the inverse of Readers — they serialize a raw dict back to a direc
 
 ## The Protocols
 
+Readers and writers operate on a `BundleHandle` — an abstraction over
+"where the bundle lives" (filesystem directory, Postgres bundle-entry rows,
+in-memory dict). The same reader works against any backend.
+
+Implementations MUST inherit the Protocol explicitly (Python) / declare
+`implements` (TypeScript) — the same convention source adapters follow.
+The kernel's registration gate (`kernel.reader(...)` / `kernel.writer(...)`)
+rejects objects that don't satisfy the port.
+
 ### ReaderPort
 
 ```python
 class ReaderPort(Protocol):
-    def detect(self, path: Path) -> bool:
-        """Does this directory contain a bundle I can read?"""
+    #: Optional container this Reader's Kind is rooted at (e.g. "skills").
+    #: The scanner tries container-owned readers first and unscoped readers
+    #: (the inherited None default) as fallback. Formal port member —
+    #: TS twin: `readonly _ownerContainer?: string`.
+    _owner_container: str | None = None
+
+    def detect(self, bundle: BundleHandle) -> bool:
+        """Does this bundle contain a marker I can read?"""
         ...
 
-    def read(self, path: Path) -> dict[str, Any]:
+    def read(self, bundle: BundleHandle) -> dict[str, Any]:
         """Read the bundle into a raw document dict."""
         ...
 ```
+
+> **Detect on your marker alone.** `detect()` must claim every bundle your
+> own writer emits — including a doc-level re-emit that carries only the
+> marker (heavy payloads travel as bundle entries, not through spec).
+> A reader that additionally requires a payload file will reject its own
+> writer's output and let a generic reader capture it with the wrong shape
+> (this was a live bug in GraphifyArtifact).
 
 ### WriterPort
 
 ```python
 class WriterPort(Protocol):
     def can_write(self, raw: dict) -> bool:
-        """Can I serialize this document?"""
+        """Do I own this document's kind?"""
         ...
 
-    def write(self, path: Path, raw: dict) -> None:
-        """Serialize the document to a directory."""
+    def write(self, bundle: BundleHandle, raw: dict) -> None:
+        """Persist the document into the bundle."""
+        ...
+
+    def serialize(self, raw: dict) -> list[dict[str, Any]]:
+        """The entries write() would emit, WITHOUT writing.
+
+        Text entry:   {"relativePath": str, "content": str}
+        Binary entry: {"relativePath": str, "content_bytes": bytes}
+        """
         ...
 ```
 
+`serialize` is **part of the contract** (since `s-dna-rw-roundtrip-suite`) —
+`kernel.serialize_document` (the HTTP/MCP preview + write paths) calls it on
+the first writer whose `can_write` claims the kind. **`write` and `serialize`
+must stay coherent**: the canonical implementation builds the entry list once
+and writes it through the shared helper:
+
+```python
+from dna.kernel.writer_helpers import write_entries_to_handle
+
+class MyWriter(WriterPort):
+    def serialize(self, raw: dict) -> list[dict]:
+        return [{"relativePath": "MY_KIND.md", "content": ...}]
+
+    def write(self, bundle: BundleHandle, raw: dict) -> None:
+        write_entries_to_handle(bundle, self.serialize(raw))
+```
+
+TypeScript twin: `serialize(raw): SerializedFile[]` (required member of
+`WriterPort` in `src/kernel/protocols.ts`; `SerializedFile` carries
+`content` or `contentBytes`).
+
 ---
 
-## Creating a Custom Reader/Writer
+## Writing a Reader/Writer — with the conformance suite as your net
+
+The round-trip invariant is the thesis of the notation: **the writer
+re-emits what the reader read, and emit→read→emit is a fixpoint** (the
+first write is the only normalization that ever happens). You don't hand-roll
+tests for that — the SDK ships a generic suite that enforces it for every
+registered pair:
+
+```python
+# tests/test_my_extension_rw.py
+import pytest
+from dna.kernel import Kernel
+from dna.testing import CaseNotApplicable, reader_writer_conformance_suite
+
+def _kernel():
+    k = Kernel()
+    k.load(MyExtension())
+    return k
+
+CASES = reader_writer_conformance_suite(
+    _kernel,
+    # Optional: per-kind fixture override when the synthetic default
+    # (metadata + body_field) doesn't satisfy your writer:
+    fixtures={"Config": {"apiVersion": "mycompany.io/v1", "kind": "Config",
+                         "metadata": {"name": "rw-fixture"},
+                         "spec": {"region": "us-east-1"}}},
+    # Optional: real bundles on disk gain fixpoint cases too:
+    real_bundle_roots=["tests/fixtures/my-scope"],
+)
+
+@pytest.mark.parametrize("case", CASES, ids=lambda c: c.name)
+def test_rw_conformance(case):
+    try:
+        case.run()
+    except CaseNotApplicable as skip:
+        pytest.skip(str(skip))
+```
+
+Per kind the suite generates: `serialize_shape` (well-formed entries),
+`write_serialize_coherent` (the two surfaces emit identical trees),
+`writer_output_readable` (a registered reader detects + reads back the same
+kind and name, container-aware) and `round_trip_fixpoint` (§2.1 idempotence).
+The in-repo wiring (`tests/test_rw_conformance_kit.py` + the TS mirror
+`tests/rw-conformance.test.ts`) runs it over the full builtin registration
+and the real marketplace bundles in `scopes/market-integration`.
 
 ### Example: `CONFIG.toml` bundle
 
@@ -235,49 +330,53 @@ features = ["caching", "metrics"]
 **1. Create a Reader**
 
 ```python
-from pathlib import Path
 from typing import Any
+from dna.kernel.bundle_handle import BundleHandle
+from dna.kernel.protocols import ReaderPort
 
-class ConfigReader:
+
+class ConfigReader(ReaderPort):
     """Detects and reads CONFIG.toml bundles."""
 
-    def detect(self, path: Path) -> bool:
-        return (path / "CONFIG.toml").exists()
+    def detect(self, bundle: BundleHandle) -> bool:
+        return bundle.exists("CONFIG.toml")
 
-    def read(self, path: Path) -> dict[str, Any]:
+    def read(self, bundle: BundleHandle) -> dict[str, Any]:
         import tomllib  # Python 3.11+ (or tomli for <3.11)
 
-        with open(path / "CONFIG.toml", "rb") as f:
-            data = tomllib.load(f)
-
+        data = tomllib.loads(bundle.read_text("CONFIG.toml"))
         return {
             "apiVersion": "mycompany.io/v1",
             "kind": "Config",
-            "metadata": data.get("metadata", {"name": path.name}),
+            "metadata": data.get("metadata", {"name": bundle.name}),
             "spec": data.get("spec", {}),
         }
 ```
 
-**2. Create a Writer**
+**2. Create a Writer** — build the entries once, share them between
+`serialize` and `write`:
 
 ```python
-class ConfigWriter:
+from dna.kernel.protocols import WriterPort
+from dna.kernel.writer_helpers import write_entries_to_handle
+
+
+class ConfigWriter(WriterPort):
     """Writes Config documents back to CONFIG.toml."""
 
     def can_write(self, raw: dict) -> bool:
         return raw.get("kind") == "Config"
 
-    def write(self, path: Path, raw: dict) -> None:
-        path.mkdir(parents=True, exist_ok=True)
-
-        # Build TOML content
+    def serialize(self, raw: dict) -> list[dict]:
         import tomli_w  # pip install tomli-w
         data = {
             "metadata": raw.get("metadata", {}),
             "spec": raw.get("spec", {}),
         }
-        with open(path / "CONFIG.toml", "wb") as f:
-            tomli_w.dump(data, f)
+        return [{"relativePath": "CONFIG.toml", "content": tomli_w.dumps(data)}]
+
+    def write(self, bundle: BundleHandle, raw: dict) -> None:
+        write_entries_to_handle(bundle, self.serialize(raw))
 ```
 
 **3. Register via Extension**
@@ -293,7 +392,8 @@ class ConfigExtension:
         kernel.writer(ConfigWriter())
 ```
 
-**4. Use it**
+**4. Use it** (and wire the conformance suite from the section above — that
+is your definition of done for the pair)
 
 ```python
 k = Kernel()
@@ -355,10 +455,13 @@ This structure is shared by SkillReader and AgentReader. SoulReader uses a simpl
 
 | Concept | What it does |
 |---------|-------------|
-| **ReaderPort** | Detects and reads bundle directories into raw dicts |
-| **WriterPort** | Serializes raw dicts back to bundle directories |
-| **detect(path)** | Returns True if the directory contains a recognized bundle |
-| **read(path)** | Parses the bundle into `{apiVersion, kind, metadata, spec}` |
+| **ReaderPort** | Detects and reads bundles into raw dicts |
+| **WriterPort** | Serializes raw dicts back to bundles |
+| **detect(bundle)** | Returns True if the bundle carries this Kind's marker |
+| **read(bundle)** | Parses the bundle into `{apiVersion, kind, metadata, spec}` |
+| **_owner_container** | Optional container the reader is scoped to (scanner routing) |
 | **can_write(raw)** | Returns True if the writer handles this document kind |
-| **write(path, raw)** | Creates/updates the bundle directory from the raw dict |
+| **write(bundle, raw)** | Creates/updates the bundle from the raw dict |
+| **serialize(raw)** | The entries write() would emit — REQUIRED, must match write() |
 | **supports_readers** | Source property — True for filesystem, False for databases |
+| **reader_writer_conformance_suite** | Ship-with-the-SDK net enforcing the round-trip invariant per pair |

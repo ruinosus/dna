@@ -6,7 +6,7 @@ from typing import Any
 from dna.kernel.models import TypedGuardrail
 from dna.kernel.kind_base import KindBase
 from dna.kernel.preview import PreviewBlock
-from dna.kernel.protocols import BodyMode, StorageDescriptor
+from dna.kernel.protocols import ExtensionHost, BodyMode, StorageDescriptor
 
 from dna.extensions.helix import _schema_from_model
 
@@ -131,5 +131,5 @@ class GuardrailExtension:
     name = "guardrails"
     version = "1.0.0"
 
-    def register(self, kernel: Any) -> None:
+    def register(self, kernel: ExtensionHost) -> None:
         kernel.kind(GuardrailKind())

@@ -98,8 +98,9 @@ export class PostgresSource implements WritableSourcePort {
   /**
    * Explicit contract declaration (s-sourceport-contract-cleanup) — kept
    * honest by the adapter conformance test. The TS PG adapter has the
-   * write half + versions/bundle-read; query/count push-down and the
-   * granular reads are Py-only this phase (F2.5+ candidates).
+   * write half + versions/bundle-read + the granular ref list
+   * (listDocRefs, s-dna-port-surface-parity); query/count push-down and
+   * loadOne are Py-only this phase (F2.5+ candidates).
    */
   capabilities(): SourceCapabilities {
     return {
@@ -110,7 +111,7 @@ export class PostgresSource implements WritableSourcePort {
       bundleRead: true,
       bundleWrite: false,
       kernelAttachable: true,
-      granularList: false,
+      granularList: true,
       granularOne: false,
       queryPushdown: false,
     };
@@ -272,6 +273,39 @@ export class PostgresSource implements WritableSourcePort {
 
   async resolveRef(_scope: string, ref: string): Promise<string> {
     return ref;
+  }
+
+  /**
+   * L1 granular access (s-dna-port-surface-parity — mirror of the Py
+   * `PostgresSource.list_doc_refs`): one indexed SELECT of `[kind, name]`
+   * refs, metadata only — no bundle entries, no reader rehydration. This
+   * is where the granular read actually pays off vs `loadAll` (which is
+   * an N+1 over bundle entries). Tenant: union of the base layer
+   * (`tenant=''`) with the overlay; refs are DISTINCT so an overlay
+   * shadow contributes a single entry.
+   */
+  async listDocRefs(scope: string, opts?: {
+    kind?: string | null; tenant?: string | null;
+  }): Promise<Array<[string, string]>> {
+    await this._runMigrations();
+    const params: unknown[] = [scope];
+    let tenantClause = "tenant=''";
+    if (opts?.tenant) {
+      params.push(opts.tenant);
+      tenantClause = `tenant IN ('', $${params.length})`;
+    }
+    let kindClause = "";
+    if (opts?.kind) {
+      params.push(opts.kind);
+      kindClause = ` AND kind=$${params.length}`;
+    }
+    const { rows } = await this._pool.query<{ kind: string; name: string }>(
+      `SELECT DISTINCT kind, name FROM "${this._schema}".dna_documents
+       WHERE scope=$1 AND ${tenantClause}${kindClause}
+       ORDER BY kind, name`,
+      params,
+    );
+    return rows.map((r) => [r.kind, r.name]);
   }
 
   async loadLayer(
