@@ -13,7 +13,7 @@ spec:
     \ da story, n\xE3o o contr\xE1rio. Fallback: 'dna sdlc pr-footer <s-x>' que s\xF3\
     \ emite o footer pra colar. Completa a symbiosis: commit carimbado (hook) + PR\
     \ assinado (este) + timeline materializa ambos."
-  status: in-progress
+  status: review
   feature: f-dna-1.0-readiness
   priority: medium
   labels:
@@ -29,7 +29,7 @@ spec:
   - "PR merged; usado no pr\xF3prio PR que o implementa (self-aplica\xE7\xE3o)"
   definition_of_done_source: cli-create
   created_at: '2026-07-08T21:37:34+00:00'
-  updated_at: '2026-07-08T21:50:40+00:00'
+  updated_at: '2026-07-08T21:53:01+00:00'
   timeline:
   - at: '2026-07-08T21:37:34+00:00'
     actor: claude-code
@@ -75,6 +75,25 @@ spec:
       \ e-mail citando o token literal) \u2014 redigi as 2 summaries no branch pra\
       \ destravar 6/6 verde; YAML validado."
     commit_ref: 92dd49b177f7e7adc0873c369a7444e850e87338
+  - at: '2026-07-08T21:52:37+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/5'
+    pr_url: https://github.com/ruinosus/dna/pull/5
+  - at: '2026-07-08T21:53:01+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #5 aberto PELO pr\xF3prio comando (self-aplica\xE7\xE3o do DoD):\
+      \ dna sdlc story pr s-sdlc-pr-attribution --base main \u2192 https://github.com/ruinosus/dna/pull/5.\
+      \ Aguardando 6/6 checks."
+  - at: '2026-07-08T21:53:01+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
   produces:
   - kind: Plan
     name: plan-s-sdlc-pr-attribution
