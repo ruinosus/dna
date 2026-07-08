@@ -107,3 +107,7 @@ def test_no_stale_allowlist_entries():
     )
 
 
+def test_at_least_one_kind_is_strict():
+    """Sanity: the strict path is real (sdlc-workflow-event ships strict)."""
+    strict, _, _ = _schema_strictness()
+    assert "sdlc-workflow-event" in strict

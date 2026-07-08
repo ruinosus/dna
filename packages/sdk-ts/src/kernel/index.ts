@@ -13,7 +13,7 @@ import {
   ReaderRegistrationError,
   WriterRegistrationError,
 } from "./errors.js";
-import { HookRegistry, type HookContext } from "./hooks.js";
+import { HookRegistry, type HookContext, type HookNameArg } from "./hooks.js";
 import { WritePipeline } from "./write-pipeline.js";
 import { ManifestInstance } from "./instance.js";
 import {
@@ -339,19 +339,22 @@ export class Kernel {
   // write/delete bodies, which now live in the pipeline.
 
   // -- Registration ---------------------------------------------------------
+  // Hook names are typed (`HookName` vocabulary + string back-compat,
+  // s-dna-typed-hook-names); the HookRegistry warns once per (registry,
+  // name) on names outside the vocabulary.
 
-  use(hook: string, fn: (ctx: HookContext) => HookContext): void {
+  use(hook: HookNameArg, fn: (ctx: HookContext) => HookContext): void {
     this.hooks.use(hook, fn);
   }
 
-  on(hook: string, fn: (ctx: HookContext) => void): void {
+  on(hook: HookNameArg, fn: (ctx: HookContext) => void): void {
     this.hooks.on(hook, fn);
   }
 
   /** Register a veto listener (e.g. 'pre_save') — throwing vetoes the
    *  operation. See HookRegistry.onVeto for priority/key semantics. */
   onVeto(
-    hook: string,
+    hook: HookNameArg,
     fn: import("./hooks.js").VetoHandler,
     opts?: { priority?: number; key?: string },
   ): void {

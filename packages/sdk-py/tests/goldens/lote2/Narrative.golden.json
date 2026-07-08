@@ -1,0 +1,288 @@
+{
+ "_doc": "FROZEN GOLDEN \u2014 captured 2026-06-11 from the live NarrativeKind class (pre-deletion), F3 lote-2. Deep-equaled against the descriptor-synthesized port in test_lote2_descriptor_equivalence.py.",
+ "dep_filters": {
+  "covers_epics": "sdlc-epic",
+  "covers_features": "sdlc-feature",
+  "covers_stories": "sdlc-story"
+ },
+ "flags": {
+  "flatten_in_context": false,
+  "is_overlayable": true,
+  "is_prompt_target": false,
+  "is_root": false,
+  "is_runtime_artifact": false,
+  "plane": "record",
+  "prompt_target_priority": 0,
+  "scope": "global",
+  "scope_inheritable": false,
+  "volatile_spec_fields": [
+   "created_at",
+   "updated_at",
+   "version"
+  ]
+ },
+ "identity": {
+  "alias": "sdlc-narrative",
+  "api_version": "github.com/ruinosus/dna/sdlc/v1",
+  "ascii_icon": "\ud83d\udcdc",
+  "display_label": "Narratives",
+  "docs": "A Narrative is a curated, human-readable summary of project activity. Stored as a NARRATIVE.md bundle with markdown body. Names usually encode the period (ISO date for daily, milestone slug for releases). Replaces ad-hoc 'what happened tonight?' chat scrolling \u2014 the agent stamps a Narrative at session end so future readers (CEO, customer, new-hire) can open one page and get the story.",
+  "graph_style": {
+   "fill": "#A78BFA",
+   "stroke": "#7C3AED",
+   "text_color": "#fff"
+  },
+  "kind": "Narrative",
+  "origin": "github.com/ruinosus/dna/sdlc"
+ },
+ "schema": {
+  "properties": {
+   "actor": {
+    "description": "Who wrote this narrative (Actor name, 'claude-code', 'human', etc.).",
+    "type": "string"
+   },
+   "author_intent": {
+    "description": "What kind of narrative this is. Drives how the morning panel groups multiple narratives \u2014 daily stack on the timeline, releases pin as marquee, retros surface in a 'lessons' filter.",
+    "enum": [
+     "daily",
+     "weekly",
+     "release",
+     "retro",
+     "incident",
+     "freeform"
+    ],
+    "type": "string"
+   },
+   "auto_generated": {
+    "description": "true = LLM-generated draft; false = human or agent-curated prose. Studio shows a small badge so readers know what they're reading.",
+    "type": "boolean"
+   },
+   "body": {
+    "description": "Markdown body of the narrative (lives in NARRATIVE.md). Free-form \u2014 paragraphs, bullets, links to Stories/Features/commits. Should read like a human update, not a log dump.",
+    "type": "string"
+   },
+   "covers_epics": {
+    "description": "Epic names this narrative discusses.",
+    "items": {
+     "type": "string"
+    },
+    "type": "array"
+   },
+   "covers_features": {
+    "description": "Feature names this narrative discusses.",
+    "items": {
+     "type": "string"
+    },
+    "type": "array"
+   },
+   "covers_session": {
+    "description": "AgentSession name this narrative was auto-derived from (Karpathy 'context ephemeral, files durable' pattern). Set by `dna sdlc session capture` when the post-capture narrative hook runs.",
+    "type": "string"
+   },
+   "covers_stories": {
+    "description": "Story names this narrative discusses.",
+    "items": {
+     "type": "string"
+    },
+    "type": "array"
+   },
+   "created_at": {
+    "format": "date-time",
+    "type": "string"
+   },
+   "decisions": {
+    "description": "Ratified decisions made during the period covered by this narrative. Each captures the WHY, not just the WHAT \u2014 the decision-extractor pattern.",
+    "items": {
+     "properties": {
+      "reason": {
+       "description": "Why \u2014 the tradeoff or driving constraint.",
+       "type": "string"
+      },
+      "summary": {
+       "description": "What was decided (1 sentence).",
+       "type": "string"
+      },
+      "trade_offs": {
+       "description": "Optional: what we gave up to make this choice.",
+       "type": "string"
+      }
+     },
+     "required": [
+      "summary"
+     ],
+     "type": "object"
+    },
+    "type": "array"
+   },
+   "journey_phase": {
+    "description": "Universal journey phase (discover \u2192 specify \u2192 plan \u2192 build \u2192 reflect). Additive layer over Story/Feature/Epic status, Spec phase, etc. Lets the journey ledger pin this doc to one of five universal phases compatible with Superpowers / BMAD / Spec Kit / Kiro.",
+    "enum": [
+     "discover",
+     "specify",
+     "plan",
+     "build",
+     "verify",
+     "reflect"
+    ],
+    "type": "string"
+   },
+   "open_items": {
+    "description": "Work that started but didn't close in this period. Studio's 'still open' section reads from this when present (otherwise computes heuristically from event diff).",
+    "items": {
+     "properties": {
+      "blocker": {
+       "type": "string"
+      },
+      "owner": {
+       "type": "string"
+      },
+      "title": {
+       "type": "string"
+      }
+     },
+     "required": [
+      "title"
+     ],
+     "type": "object"
+    },
+    "type": "array"
+   },
+   "paragraphs": {
+    "description": "Structured prose: list of past-tense paragraphs describing what shipped. Studio renders these as the hero block; falls back to `body` when empty.",
+    "items": {
+     "type": "string"
+    },
+    "type": "array"
+   },
+   "period_end": {
+    "description": "End of the period (often the moment the narrative was written).",
+    "format": "date-time",
+    "type": "string"
+   },
+   "period_start": {
+    "description": "Start of the period this narrative covers (ISO-8601).",
+    "format": "date-time",
+    "type": "string"
+   },
+   "summary": {
+    "description": "Optional one-line tl;dr. When present, the Studio card shows this above the body for scanning.",
+    "type": "string"
+   },
+   "tags": {
+    "description": "Free-form tags for filtering (daily, release, retro, ...).",
+    "items": {
+     "type": "string"
+    },
+    "type": "array"
+   },
+   "title": {
+    "description": "Headline for this narrative. Shown above the body.",
+    "type": "string"
+   },
+   "updated_at": {
+    "format": "date-time",
+    "type": "string"
+   }
+  },
+  "required": [
+   "title",
+   "body"
+  ],
+  "type": "object"
+ },
+ "storage": {
+  "body_as": "text",
+  "body_field": "body",
+  "container": "narratives",
+  "marker": "NARRATIVE.md",
+  "pattern": "bundle"
+ },
+ "summary_cases": {
+  "full": {
+   "out": {
+    "actor": "claude-code",
+    "author_intent": "daily",
+    "auto_generated": true,
+    "body": "We migrated eleven record kinds to descriptors.",
+    "covers_epics": [
+     "e-kernel"
+    ],
+    "covers_features": [
+     "f-kinds-two-planes"
+    ],
+    "covers_session": "vs-lote2",
+    "covers_stories": [
+     "s-kinds-descriptor-lote2"
+    ],
+    "decisions": [
+     {
+      "reason": "shared live schema helpers",
+      "summary": "Skip Spike"
+     }
+    ],
+    "journey_phase": "build",
+    "open_items": [
+     {
+      "owner": "barna",
+      "title": "F4 optional"
+     }
+    ],
+    "paragraphs": [
+     "Eleven kinds became data.",
+     "The ratchet shrank."
+    ],
+    "period_end": "2026-06-11T23:00:00Z",
+    "period_start": "2026-06-11T00:00:00Z",
+    "summary": "Eleven kinds became data.",
+    "tags": [
+     "daily"
+    ],
+    "title": "Tonight: descriptors lote-2"
+   },
+   "spec": {
+    "actor": "claude-code",
+    "author_intent": "daily",
+    "auto_generated": true,
+    "body": "We migrated eleven record kinds to descriptors.",
+    "covers_epics": [
+     "e-kernel"
+    ],
+    "covers_features": [
+     "f-kinds-two-planes"
+    ],
+    "covers_session": "vs-lote2",
+    "covers_stories": [
+     "s-kinds-descriptor-lote2"
+    ],
+    "decisions": [
+     {
+      "reason": "shared live schema helpers",
+      "summary": "Skip Spike"
+     }
+    ],
+    "journey_phase": "build",
+    "open_items": [
+     {
+      "owner": "barna",
+      "title": "F4 optional"
+     }
+    ],
+    "paragraphs": [
+     "Eleven kinds became data.",
+     "The ratchet shrank."
+    ],
+    "period_end": "2026-06-11T23:00:00Z",
+    "period_start": "2026-06-11T00:00:00Z",
+    "summary": "Eleven kinds became data.",
+    "tags": [
+     "daily"
+    ],
+    "title": "Tonight: descriptors lote-2"
+   }
+  },
+  "partial": {
+   "out": {},
+   "spec": {}
+  }
+ }
+}

@@ -47,10 +47,15 @@ def ascii_tree(mi: ManifestInstance) -> str:
                 dep_icon = getattr(dep_kp, "ascii_icon", "") or ""
                 dep_doc = mi._kernel.get_document_sync(mi.scope, kind, dep_name)
                 dep_meta = {}
-                if dep_doc and hasattr(dep_kp, "graph_meta") and callable(dep_kp.graph_meta):
-                    dep_meta = dep_kp.graph_meta(dep_doc) or {}
-                elif dep_doc and hasattr(dep_kp, "summary") and callable(dep_kp.summary):
-                    dep_meta = dep_kp.summary(dep_doc) or {}
+                # KindPresentation.graph_meta — optional capability member,
+                # typed access with default; summary is a core KindPort
+                # member but dep_kp may be None (unknown kind name).
+                graph_meta_fn = getattr(dep_kp, "graph_meta", None)
+                summary_fn = getattr(dep_kp, "summary", None)
+                if dep_doc and callable(graph_meta_fn):
+                    dep_meta = graph_meta_fn(dep_doc) or {}
+                elif dep_doc and callable(summary_fn):
+                    dep_meta = summary_fn(dep_doc) or {}
 
                 if dep_meta.get("severity"):
                     sev_icon = "\U0001f534" if dep_meta["severity"] == "error" else "\U0001f7e1"

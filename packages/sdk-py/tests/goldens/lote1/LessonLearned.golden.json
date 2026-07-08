@@ -1,0 +1,304 @@
+{
+ "_doc": "FROZEN GOLDEN — captured 2026-06-10 from the live LessonLearnedKind class (pre-deletion), F3 lote-1. Deep-equaled against the descriptor-synthesized port in test_lote1_descriptor_equivalence.py.",
+ "dep_filters": {},
+ "flags": {
+  "flatten_in_context": false,
+  "is_overlayable": true,
+  "is_prompt_target": false,
+  "is_root": false,
+  "is_runtime_artifact": false,
+  "plane": "record",
+  "prompt_target_priority": 0,
+  "scope": "global",
+  "scope_inheritable": false,
+  "volatile_spec_fields": [
+   "created_at",
+   "updated_at",
+   "version"
+  ]
+ },
+ "identity": {
+  "alias": "sdlc-lesson-learned",
+  "api_version": "github.com/ruinosus/dna/sdlc/v1",
+  "ascii_icon": "💭",
+  "display_label": "Lições Aprendidas",
+  "docs": null,
+  "graph_style": {
+   "fill": "#FBBF24",
+   "stroke": "#D97706",
+   "text_color": "#fff"
+  },
+  "kind": "LessonLearned",
+  "origin": "github.com/ruinosus/dna/sdlc"
+ },
+ "schema": {
+  "properties": {
+   "affect": {
+    "description": "Emotional tone. Evocative palette (Spec §15 decision): triumph, regret, surprise, wistful, ominous.",
+    "enum": [
+     "triumph",
+     "regret",
+     "surprise",
+     "wistful",
+     "ominous"
+    ],
+    "type": "string"
+   },
+   "affect_evidence_refs": {
+    "description": "Concrete refs (rem-X, verdict-Y, Story/s-Z) that back the affect choice. Required for high-stakes affects so the LLM's claim is auditable against actual artifacts in the manifest.",
+    "items": {
+     "type": "string"
+    },
+    "type": "array"
+   },
+   "affect_reason": {
+    "description": "Story s-remembrance-affect-reason-required. Concrete justification for the chosen affect — names specific slugs/SHAs/AC counts/state. NOT generic ('Story closed', 'shipped successfully'). Validator rejects writes that lack reason OR have boilerplate. Required for high-stakes affects (regret/ominous/surprise); optional for triumph/wistful but encouraged.",
+    "minLength": 20,
+    "type": "string"
+   },
+   "area": {
+    "description": "Scoped target: Feature/X, Epic/Y, or Roadmap/Z. The LessonLearned surfaces when this area is touched.",
+    "type": "string"
+   },
+   "confidence_score": {
+    "default": 1.0,
+    "description": "Semon engram intensity. Multiplies BM25 score in retrieval. Bumps when homophonic LessonsLearned (same area) are filed — engrams reinforce each other. Decays with surface_count for hygiene.",
+    "type": "number"
+   },
+   "cues_history": {
+    "default": [],
+    "description": "Semon ecforia trace. Each time the LessonLearned is surfaced via remember(), the cue (query + actor + timestamp) is appended. History of WHY this memory kept getting recalled.",
+    "items": {
+     "properties": {
+      "actor": {
+       "type": "string"
+      },
+      "at": {
+       "format": "date-time",
+       "type": "string"
+      },
+      "cue": {
+       "type": "string"
+      }
+     },
+     "type": "object"
+    },
+    "type": "array"
+   },
+   "encoding_context": {
+    "additionalProperties": true,
+    "description": "Snapshot of the conditions at engraphy. semon-recaller scores ecphory candidates by partial-match against this dict.",
+    "properties": {
+     "affect": {
+      "type": "string"
+     },
+     "area": {
+      "type": "string"
+     },
+     "co_topics": {
+      "description": "Last 3-5 topic tags active at engraphy.",
+      "items": {
+       "type": "string"
+      },
+      "type": "array"
+     },
+     "day_of_week": {
+      "type": "string"
+     },
+     "engraphed_by": {
+      "description": "Agent slug that decided to engraph (semon-scribe by default).",
+      "type": "string"
+     },
+     "source_refs": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array"
+     },
+     "time_of_day": {
+      "description": "morning|afternoon|evening|night — coarse temporal cue.",
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "homophonic_links": {
+    "default": [],
+    "description": "Semon homophony — engrams sharing substrate features. Each link records target + resonance score + basis. semon-recaller propagates a small strength boost (+0.02) to neighbors on ecphory (resonance).",
+    "items": {
+     "properties": {
+      "basis": {
+       "description": "co-area | co-affect | co-temporal | semantic | manual",
+       "type": "string"
+      },
+      "resonance_score": {
+       "maximum": 1,
+       "minimum": 0,
+       "type": "number"
+      },
+      "target_name": {
+       "type": "string"
+      }
+     },
+     "required": [
+      "target_name"
+     ],
+     "type": "object"
+    },
+    "type": "array"
+   },
+   "last_surfaced": {
+    "description": "Auto-stamped on each surfacing; null until first surface.",
+    "format": "date-time",
+    "type": "string"
+   },
+   "memory_type": {
+    "description": "CoALA taxonomy — ORTHOGONAL to the Semon EngramState (type vs state): episodic = what happened (instance/sequence); semantic = a generalized fact about the world/user; procedural = how to act (a skill/rule). Absent = untyped (legacy).",
+    "enum": [
+     "episodic",
+     "semantic",
+     "procedural"
+    ],
+    "type": "string"
+   },
+   "owner": {
+    "description": "ATTRIBUTION: which agent authored this memory (e.g. claude-code, jarvis). Orthogonal to scope + to tenant (tenant separates USERS, owner separates AGENTS). Recall AUDIENCE is governed by `visibility`, NOT by owner (s-agent-memory-phase-0-bridge, 2026-06-02 — supersedes the 2026-05-17 owner-implies-private semantics). When absent: an unowned/project lesson (shared).",
+    "type": "string"
+   },
+   "relevance_decay_seed": {
+    "default": 0.95,
+    "description": "Multiplicative decay factor applied per 24h. Default 0.95 (~30% relevance after 14 days).",
+    "type": "number"
+   },
+   "revisions": {
+    "default": [],
+    "description": "Reconsolidation log (Nader 2000 / neo-Semon). Append-only when a recall reawakens the engram and the consumer updates the summary.",
+    "items": {
+     "properties": {
+      "at": {
+       "format": "date-time",
+       "type": "string"
+      },
+      "by": {
+       "type": "string"
+      },
+      "delta": {
+       "type": "string"
+      }
+     },
+     "type": "object"
+    },
+    "type": "array"
+   },
+   "source_refs": {
+    "description": "Pointers to source artifacts (Narrative/X, WorkflowEvent/Y, etc.) that this memory derives from.",
+    "items": {
+     "type": "string"
+    },
+    "minItems": 1,
+    "type": "array"
+   },
+   "summary": {
+    "description": "1-2 sentence 'Lembre-se de...' — the recalled essence.",
+    "maxLength": 280,
+    "type": "string"
+   },
+   "superseded_by_memory": {
+    "description": "Name of the memory that invalidated this one (not `superseded_by` — that's an ADR dep_filter token). Pairs with valid_to for point-in-time audit.",
+    "type": "string"
+   },
+   "surface_count": {
+    "default": 0,
+    "description": "Increments on each surface. Damps re-surfacing via scoring formula in retrieval.py.",
+    "type": "integer"
+   },
+   "surface_when": {
+    "description": "Triggers that surface this LessonLearned. Mirrors how human recall fires unbidden in context.",
+    "items": {
+     "enum": [
+      "feature_touched",
+      "cycle_open",
+      "session_start",
+      "oracle_consult"
+     ],
+     "type": "string"
+    },
+    "minItems": 1,
+    "type": "array"
+   },
+   "tags": {
+    "default": [],
+    "items": {
+     "type": "string"
+    },
+    "type": "array"
+   },
+   "valid_from": {
+    "description": "World-time validity start (Zep bi-temporal). Default: created_at.",
+    "format": "date-time",
+    "type": "string"
+   },
+   "valid_to": {
+    "description": "World-time validity end. Set when superseded/contradicted — the memory is INVALIDATED, never hard-deleted. Default recall excludes valid_to<now.",
+    "format": "date-time",
+    "type": "string"
+   },
+   "visibility": {
+    "default": "shared",
+    "description": "Recall audience (the customization axis): shared = all agents in scope recall it (cross-agent knowledge, default); private = only `owner` recalls it (an agent's raw working memory); pinned = always injected into working memory at bootstrap, bypassing recall scoring (the Letta 'memory block'); archived = retained + auditable but excluded from default recall (soft-forget). Humans audit ALL regardless of visibility (audit != recall). Phase 0 (2026-06-02).",
+    "enum": [
+     "shared",
+     "private",
+     "pinned",
+     "archived"
+    ],
+    "type": "string"
+   }
+  },
+  "required": [
+   "area",
+   "surface_when",
+   "source_refs",
+   "affect",
+   "summary"
+  ],
+  "type": "object"
+ },
+ "storage": {
+  "body_as": "text",
+  "body_field": "body",
+  "container": "lessons-learned",
+  "marker": "LESSON_LEARNED.md",
+  "pattern": "bundle"
+ },
+ "summary_cases": {
+  "full": {
+   "out": {
+    "affect": "wistful",
+    "area": "Feature/f-cognitive-memory",
+    "source_refs": [
+     "Narrative/cycle-x"
+    ],
+    "summary": "Lembre-se daquele ciclo onde resolvemos com Spec real.",
+    "surface_when": [
+     "feature_touched"
+    ]
+   },
+   "spec": {
+    "affect": "wistful",
+    "area": "Feature/f-cognitive-memory",
+    "source_refs": [
+     "Narrative/cycle-x"
+    ],
+    "summary": "Lembre-se daquele ciclo onde resolvemos com Spec real.",
+    "surface_when": [
+     "feature_touched"
+    ]
+   }
+  },
+  "partial": {
+   "out": {},
+   "spec": {}
+  }
+ }
+}

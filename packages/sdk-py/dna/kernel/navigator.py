@@ -164,6 +164,11 @@ class Navigator:
         if doc is None:
             return []
         kp = self._host._kinds.get((doc.api_version, doc.kind))
-        if kp is not None and hasattr(kp, "preview") and callable(kp.preview):
-            return kp.preview(doc)
+        # KindPresentation.preview — optional capability member, typed
+        # access with default (absence/None result → generic fallback).
+        preview_fn = getattr(kp, "preview", None)
+        if callable(preview_fn):
+            blocks = preview_fn(doc)
+            if blocks is not None:
+                return blocks
         return generic_spec_dump(doc)

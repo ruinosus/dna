@@ -184,3 +184,86 @@ in-repo adapters (FS read-only, FS writable, Composite, SQLite,
 Postgres, AsyncSourceAdapter, S3-via-moto). A new in-repo adapter adds a
 factory there; known divergences get an explicit `xfail`/`skip` with an
 Issue id — never a silent green.
+
+## Schema migrations (SQL-backed adapters, s-dna-migration-contract)
+
+An adapter that owns SQL storage manages its own schema through the
+shared forward-only runner
+(`dna/adapters/_migrations.py::run_migrations`). The contract:
+
+- **Forward-only, numbered.** Migrations are a `Mapping[int, payload]`
+  keyed by positive integer version, applied in ascending numeric
+  order. **Downgrade is not supported** — recovery from a bad migration
+  is backup/re-seed, never a `down()` script.
+- **Append-only.** A migration that has ever shipped is frozen: never
+  edit an applied version's payload — append a new version that fixes
+  forward (see SQLite v8 rebuilding the v3 table, or Postgres v9
+  adding the column v-earlier forgot). The control table records what
+  ran; editing history would desynchronize every existing DB.
+- **Automatic upgrade on boot.** `SqliteSource.connect()` /
+  `PostgresSource.init()` run pending migrations before serving —
+  deploying new code upgrades the store, no separate migrate step.
+  Booting an up-to-date store applies nothing (idempotent re-boot).
+- **Control table per adapter, name/shape frozen.** SQLite:
+  `schema_migrations(version INTEGER PRIMARY KEY, applied_at TEXT)`.
+  Postgres: `{schema}.dna_schema_migrations(version, applied_at)`.
+  These predate the shared runner and MUST stay byte-compatible — a DB
+  created by any older release re-boots clean on current code
+  (locked by `tests/test_schema_migrations_contract.py`).
+- **Older binary vs newer store** doesn't crash: unknown recorded
+  versions are left untouched and logged as a warning.
+- **Atomicity is the adapter's.** The runner owns ordering/skip/
+  reporting; the adapter's `apply_version` callable owns "apply +
+  record" with its dialect's semantics — Postgres wraps each version's
+  statements + control-table insert in ONE transaction; SQLite runs
+  `executescript` (which self-commits) then records.
+
+### Adopting the runner in a third-party adapter
+
+Give the runner three async callables bound to your storage and expose
+the public entrypoint:
+
+```python
+from dna.adapters._migrations import run_migrations
+
+MIGRATIONS: dict[int, str] = {1: "CREATE TABLE ...", 2: "ALTER TABLE ..."}
+
+class MySource(WritableSourcePort):
+    async def run_schema_migrations(self) -> list[int]:
+        """Public entrypoint — also call it from your boot path."""
+        return await run_migrations(
+            MIGRATIONS,
+            ensure_control_table=self._ensure_control_table,  # CREATE TABLE IF NOT EXISTS my_control(version, applied_at)
+            fetch_applied=self._fetch_applied,                # -> versions already recorded
+            apply_version=self._apply_one,                    # apply payload + record version, atomically for YOUR dialect
+            dialect="MyStore",
+        )
+```
+
+The conformance kit picks the capability up by duck-typing (same
+pattern as `list_scopes`): an adapter exposing `run_schema_migrations()`
+gets the `schema_migrations_idempotent` case — after boot, a re-run
+must return `[]` (the control table survived in the backing store).
+Adapters without SQL storage simply don't implement the method and the
+case skips.
+
+### TypeScript parity (honest state)
+
+The TS SDK has **no SQLite adapter**; its `PostgresSource`
+(`packages/sdk-ts/src/adapters/postgres/`) keeps its **own** migration
+mechanism — `MIGRATIONS: Record<number, string[]>` in `migrations.ts` +
+an inline `_runMigrations()` in `source.ts`. The *algorithm* matches
+this contract 1:1 (same `dna_schema_migrations` control table, numbered
+forward-only, one transaction per version wrapping statements +
+record, `{schema}` placeholder, auto-run on first use); it has NOT been
+rewritten onto a shared helper because TS has a single SQL adapter —
+there is nothing to unify yet.
+
+**Known cross-language divergence (do not share a schema between the
+two SDKs):** the version *numbering streams* differ — e.g. Py v3 is the
+tenant column/PK migration while TS v3 is a different tenant variant,
+Py's `dna_documents.content` is `TEXT` vs TS `JSONB`, and TS ships only
+v1-v4 (no outbox/edges/hot-field-index migrations). Same control-table
+name + different meaning per number means pointing both SDKs at the
+SAME Postgres schema is unsupported: each would try to "complete" the
+other's history with conflicting DDL. One schema belongs to one SDK.

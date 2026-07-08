@@ -1,0 +1,253 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "kind-definition.schema.json",
+  "title": "KindDefinition",
+  "description": "Declarative Kind descriptor — the format of builtin `kinds/*.kind.yaml` package descriptors AND per-scope `kinds/<name>/KIND.yaml` documents (one format, one funnel). Canonical copy: docs/schemas/kind-definition.schema.json; a byte-identical runtime copy ships as sdk-py package data (dna/kernel/schemas/) and backs the validation in TypedKindDefinition.from_raw. Parity-critical: the Python hand-rolled validators (models.py KindDefinitionSpec.from_raw) and the TS Zod schema (models.ts KindDefinitionSpecSchema) must accept exactly what this schema accepts (guarded by test_kind_definition_schema.py / kind-definition-schema.test.ts). Editor autocomplete: put `# yaml-language-server: $schema=<path-to-this-file>` on the first line of a .kind.yaml.",
+  "type": "object",
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "properties": {
+    "apiVersion": {
+      "const": "github.com/ruinosus/dna/core/v1",
+      "description": "Envelope apiVersion of the KindDefinition meta-kind itself (NOT of the Kind being defined — that is spec.target_api_version)."
+    },
+    "kind": {
+      "const": "KindDefinition"
+    },
+    "metadata": {
+      "type": "object",
+      "required": ["name"],
+      "description": "Standard document metadata. `name` is the doc name (kebab-case Kind name by convention). Extra keys are tolerated (adapters may stamp).",
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "version": { "type": "string" },
+        "icon": { "type": "string" },
+        "group": { "type": "string" },
+        "labels": { "type": "object", "additionalProperties": { "type": "string" } }
+      },
+      "additionalProperties": true
+    },
+    "spec": {
+      "type": "object",
+      "required": ["target_api_version", "target_kind", "alias", "origin", "storage"],
+      "additionalProperties": false,
+      "properties": {
+        "target_api_version": {
+          "type": "string",
+          "minLength": 1,
+          "description": "apiVersion namespace of the Kind being DEFINED (globally unique), e.g. `github.com/ruinosus/dna/sdlc/v1`."
+        },
+        "target_kind": {
+          "type": "string",
+          "minLength": 1,
+          "description": "CamelCase name of the Kind being defined, e.g. `Kaizen`. Must be unique across api_versions (i-195)."
+        },
+        "alias": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Globally unique alias, convention `<owner>-<kebab(kind)>` (e.g. `sdlc-kaizen`). Used in dep_filters, templates and cross-kind refs — never bare Kind names."
+        },
+        "origin": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Registry namespace label of the owning extension/package, e.g. `github.com/ruinosus/dna/sdlc`."
+        },
+        "storage": {
+          "type": "object",
+          "required": ["type"],
+          "additionalProperties": false,
+          "description": "Where documents of this Kind live on disk (mirrors StorageDescriptor / storage_dict_to_descriptor).",
+          "properties": {
+            "type": {
+              "enum": ["bundle", "yaml", "root", "standalone"],
+              "description": "bundle = marker file + sibling files in a per-doc dir · yaml = one YAML per doc in a container dir · root = single file at scope root · standalone = single file at scope root with a parsed body."
+            },
+            "container": { "type": "string", "description": "Container directory (bundle/yaml). `dir` is an accepted alias." },
+            "dir": { "type": "string", "description": "Alias of `container`." },
+            "marker": { "type": "string", "description": "Marker filename (bundle: required, e.g. SKILL.md · root: optional, default manifest.yaml · standalone: accepted alias of `path`)." },
+            "path": { "type": "string", "description": "Standalone filename (e.g. AGENTS.md). `filename`/`marker` are accepted aliases." },
+            "filename": { "type": "string", "description": "Alias of `path` (standalone)." },
+            "body_as": {
+              "enum": ["text", "list", "sections"],
+              "description": "How the marker/standalone file body is parsed: raw text · markdown list → list[str] · H2 sections → dict[str, str]. Default text."
+            },
+            "body_field": { "type": "string", "description": "Spec field the parsed body lands in. Default `instruction` (bundle) / `content` (standalone)." }
+          },
+          "allOf": [
+            {
+              "if": { "required": ["type"], "properties": { "type": { "const": "bundle" } } },
+              "then": {
+                "required": ["marker"],
+                "anyOf": [{ "required": ["container"] }, { "required": ["dir"] }]
+              }
+            },
+            {
+              "if": { "required": ["type"], "properties": { "type": { "const": "yaml" } } },
+              "then": {
+                "anyOf": [{ "required": ["container"] }, { "required": ["dir"] }]
+              }
+            },
+            {
+              "if": { "required": ["type"], "properties": { "type": { "const": "standalone" } } },
+              "then": {
+                "anyOf": [{ "required": ["path"] }, { "required": ["filename"] }, { "required": ["marker"] }]
+              }
+            }
+          ]
+        },
+        "schema": {
+          "type": "object",
+          "description": "JSON Schema of the Kind's spec dict. Drives Studio form generation + validate_on_parse. New Kinds should ship `additionalProperties: false` (s-strict-schema-lint ratchet)."
+        },
+        "is_root": {
+          "type": "boolean",
+          "default": false,
+          "description": "True only for the scope-root identity Kind (one per scope)."
+        },
+        "prompt_target": {
+          "type": "boolean",
+          "default": false,
+          "description": "True if documents of this Kind compose into LLM prompts."
+        },
+        "flatten_in_context": {
+          "type": "boolean",
+          "default": false,
+          "description": "True flattens the spec dict into the prompt context."
+        },
+        "prompt_target_priority": {
+          "type": "integer",
+          "default": 5,
+          "description": "Ordering priority among prompt targets (lower first)."
+        },
+        "plane": {
+          "enum": ["composition", "record"],
+          "default": "composition",
+          "description": "composition = participates in agent composition (writes invalidate scope caches) · record = pure typed document (cacheless writes, never composes into prompts; cannot carry composition signals — the plane lint rejects contradictions)."
+        },
+        "tenant_scope": {
+          "enum": ["tenanted", "global"],
+          "description": "Tenant enforcement for this Kind. Undeclared = permissive (base + per-tenant override). Máxima: an inheritable default-of-`_lib` Kind must NEVER be tenanted."
+        },
+        "dep_filters": {
+          "type": ["object", "null"],
+          "additionalProperties": { "type": "string" },
+          "description": "Cross-Kind references: spec field → target Kind ALIAS (never a bare Kind name)."
+        },
+        "default_agent": {
+          "type": ["string", "null"],
+          "description": "Fixed Agent name returned by get_default_agent_name for every doc of this Kind."
+        },
+        "default_agent_field": {
+          "type": ["string", "null"],
+          "description": "Spec field whose value is returned VERBATIM by get_default_agent_name (descriptor-expressiveness D6)."
+        },
+        "schema_fragments": {
+          "type": ["array", "null"],
+          "items": { "type": "string" },
+          "description": "Namespaced schema fragment IDs merged into `schema` in order (e.g. [\"sdlc/workitem-common\"]). Python reference implementation only — the TS Zod schema does not consume it yet."
+        },
+        "workitem_common": {
+          "type": "boolean",
+          "default": false,
+          "description": "DEPRECATED back-compat shorthand for schema_fragments: [\"sdlc/workitem-common\"]. Python-only."
+        },
+        "summary": {
+          "anyOf": [
+            { "type": "object" },
+            { "type": "array", "items": { "type": "string" } },
+            { "type": "null" }
+          ],
+          "description": "List-endpoint projection. Dict form {field: default} passes through; list form [\"a\", \"b\"] is normalized with per-schema-type defaults (array→[], boolean→false, number/integer→null, else \"\")."
+        },
+        "embed": {
+          "type": ["array", "null"],
+          "items": { "type": "string" },
+          "description": "Spec fields composing the doc's embedding text (semantic search source, F3 D4)."
+        },
+        "is_runtime_artifact": {
+          "type": "boolean",
+          "default": false,
+          "description": "True for Kinds whose docs are PRODUCED by runtime workflows (eval runs, findings, ...) rather than authored — replication/seed/export tools skip them."
+        },
+        "scope_inheritable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Documents of this Kind inherit across scopes (false for per-scope ledgers + structural Kinds)."
+        },
+        "is_overlayable": {
+          "type": "boolean",
+          "default": true,
+          "description": "A tenant overlay may fork this Kind (false only for structural bootstrap Kinds)."
+        },
+        "volatile_spec_fields": {
+          "type": ["array", "null"],
+          "items": { "type": "string" },
+          "description": "Extra write-/runtime-stamped spec fields excluded from the canonical digest, unioned with the base set {updated_at, version, created_at}."
+        },
+        "docs": {
+          "type": ["string", "null"],
+          "description": "Prose explanation of what this Kind IS at the concept level (surfaced by describe_kind)."
+        },
+        "describe": {
+          "anyOf": [{ "type": "string" }, { "type": "object" }, { "type": "null" }],
+          "description": "Per-doc one-liner: a template string (\"{name} ({status})\") or a projection mapping ({\"path\": \"description\"}) (descriptor-expressiveness D3)."
+        },
+        "description_fallback_field": {
+          "type": ["string", "null"],
+          "description": "Spec field acting as the Studio card description fallback when metadata.description is absent (D7)."
+        },
+        "ui": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "description": "StudioUIMetadata mapping — generates Studio routes/sidebar/sitemap. Keys are validated strictly (⊆ StudioUIMetadata dataclass fields) by the hand-rolled check AND here (D1).",
+          "properties": {
+            "mode": { "type": ["string", "null"] },
+            "in_sidebar": { "type": "boolean" },
+            "display_order": { "type": "integer" },
+            "label": { "type": ["string", "object", "null"] },
+            "icon": { "type": ["string", "null"] },
+            "description": { "type": ["string", "object", "null"] },
+            "breadcrumb": { "type": ["array", "null"], "items": { "type": "string" } },
+            "routes": { "type": "object", "additionalProperties": { "type": "string" } },
+            "permissions": { "type": "object" },
+            "note": { "type": ["string", "null"] },
+            "feature_flag": { "type": ["string", "null"] }
+          }
+        },
+        "ui_schema": {
+          "type": ["object", "null"],
+          "description": "Per-field widget-hint bag (field → {widget, label, help, language, height, order, ...}). Deliberately permissive — an explicitly UI-owned bag (D4). See docs/KIND-UI-HINTS.md."
+        },
+        "spec_defaults": {
+          "type": ["object", "null"],
+          "description": "Shallow-merge defaults applied as {**spec_defaults, **spec} BEFORE schema validation in parse() (D5)."
+        },
+        "graph_style": {
+          "type": ["object", "null"],
+          "additionalProperties": { "type": "string" },
+          "description": "Colors for mermaid/graph visualizations, e.g. {fill, stroke, text_color}."
+        },
+        "ascii_icon": {
+          "type": ["string", "null"],
+          "description": "Single emoji or character for ASCII tree / compact views."
+        },
+        "display_label": {
+          "type": ["string", "null"],
+          "description": "Human-friendly plural label (e.g. \"Kaizens\")."
+        },
+        "updated_at": {
+          "type": "string",
+          "description": "Runtime-stamped volatile field (never authored) — allowed so write-stamped documents keep validating."
+        },
+        "created_at": {
+          "type": "string",
+          "description": "Runtime-stamped volatile field (never authored)."
+        },
+        "version": {
+          "type": ["string", "integer"],
+          "description": "Runtime-stamped volatile field (never authored)."
+        }
+      }
+    }
+  }
+}

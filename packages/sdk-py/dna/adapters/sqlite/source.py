@@ -110,30 +110,54 @@ class SqliteSource(WritableSourcePort):
     # Migrations
     # ------------------------------------------------------------------
 
-    async def _run_migrations(self, conn: aiosqlite.Connection) -> None:
+    async def _run_migrations(self, conn: aiosqlite.Connection) -> list[int]:
+        """Apply pending migrations via the shared forward-only runner
+        (``adapters/_migrations.py``). The control table keeps its
+        historical name + shape (``schema_migrations(version, applied_at)``)
+        — full compat with DBs created before the helper existed."""
         from .migrations import MIGRATIONS
+        from .._migrations import run_migrations
 
-        # Ensure schema_migrations table exists (bootstrap)
-        await conn.execute(
-            "CREATE TABLE IF NOT EXISTS schema_migrations "
-            "(version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL)"
-        )
-        await conn.commit()
+        async def ensure_control_table() -> None:
+            await conn.execute(
+                "CREATE TABLE IF NOT EXISTS schema_migrations "
+                "(version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL)"
+            )
+            await conn.commit()
 
-        cursor = await conn.execute("SELECT version FROM schema_migrations")
-        rows = await cursor.fetchall()
-        applied = {row["version"] for row in rows}
+        async def fetch_applied() -> list[int]:
+            cursor = await conn.execute("SELECT version FROM schema_migrations")
+            rows = await cursor.fetchall()
+            return [row["version"] for row in rows]
 
-        for version in sorted(MIGRATIONS):
-            if version in applied:
-                continue
-            logger.info("Applying migration v%d", version)
-            await conn.executescript(MIGRATIONS[version])
+        async def apply_version(version: int, script: str) -> None:
+            # Preserved SQLite semantics: one executescript per version
+            # (implicitly commits), then record + commit. Not a single
+            # wrapping transaction — executescript's own commit behavior
+            # forbids it and always has.
+            await conn.executescript(script)
             await conn.execute(
                 "INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)",
                 (version, _now()),
             )
             await conn.commit()
+
+        return await run_migrations(
+            MIGRATIONS,
+            ensure_control_table=ensure_control_table,
+            fetch_applied=fetch_applied,
+            apply_version=apply_version,
+            dialect="SQLite",
+        )
+
+    async def run_schema_migrations(self) -> list[int]:
+        """Public migration entrypoint (also runs inside ``connect()``).
+
+        Returns the versions applied by THIS call — ``[]`` on an
+        up-to-date DB (the idempotent re-boot contract the conformance
+        kit's ``schema_migrations_idempotent`` case exercises)."""
+        async with self._acquire() as conn:
+            return await self._run_migrations(conn)
 
     # ------------------------------------------------------------------
     # SourcePort (read)

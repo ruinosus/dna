@@ -28,20 +28,20 @@ def _ctx() -> HookContext:
 def test_emit_runs_sync_listeners_and_counts_async_skips(caplog):
     reg = HookRegistry()
     hits: list[str] = []
-    reg.on("h", lambda ctx: hits.append("sync"))
+    reg.on("post_build_prompt", lambda ctx: hits.append("sync"))
 
     async def async_listener(ctx):  # pragma: no cover — must NOT run
         hits.append("async")
 
-    reg.on("h", async_listener)
+    reg.on("post_build_prompt", async_listener)
 
     with caplog.at_level(logging.WARNING, logger="dna.kernel.hooks"):
-        reg.emit("h", _ctx())
-        reg.emit("h", _ctx())
+        reg.emit("post_build_prompt", _ctx())
+        reg.emit("post_build_prompt", _ctx())
 
     assert hits == ["sync", "sync"]
     # Counter: every skip counted (1 async listener × 2 emits).
-    assert reg.skipped_async_emits["h"] == 2
+    assert reg.skipped_async_emits["post_build_prompt"] == 2
     # Warning: once per (hook, listener), not per emit.
     warnings = [r for r in caplog.records if "SKIPPED" in r.getMessage()]
     assert len(warnings) == 1
@@ -57,14 +57,14 @@ def test_emit_warns_once_per_listener_not_per_hook(caplog):
     async def l2(ctx):  # pragma: no cover
         pass
 
-    reg.on("h", l1)
-    reg.on("h", l2)
+    reg.on("post_build_prompt", l1)
+    reg.on("post_build_prompt", l2)
     with caplog.at_level(logging.WARNING, logger="dna.kernel.hooks"):
-        reg.emit("h", _ctx())
-        reg.emit("h", _ctx())
+        reg.emit("post_build_prompt", _ctx())
+        reg.emit("post_build_prompt", _ctx())
     warnings = [r for r in caplog.records if "SKIPPED" in r.getMessage()]
     assert len(warnings) == 2  # one per listener, deduped across emits
-    assert reg.skipped_async_emits["h"] == 4
+    assert reg.skipped_async_emits["post_build_prompt"] == 4
 
 
 def test_emit_strict_raises_on_async_listeners():
@@ -73,16 +73,16 @@ def test_emit_strict_raises_on_async_listeners():
     async def async_listener(ctx):  # pragma: no cover
         pass
 
-    reg.on("h", async_listener)
+    reg.on("post_build_prompt", async_listener)
     with pytest.raises(RuntimeError, match="emit_async"):
-        reg.emit("h", _ctx(), strict=True)
+        reg.emit("post_build_prompt", _ctx(), strict=True)
 
 
 def test_emit_strict_is_noop_without_async_listeners():
     reg = HookRegistry()
     hits: list[str] = []
-    reg.on("h", lambda ctx: hits.append("sync"))
-    reg.emit("h", _ctx(), strict=True)
+    reg.on("post_build_prompt", lambda ctx: hits.append("sync"))
+    reg.emit("post_build_prompt", _ctx(), strict=True)
     assert hits == ["sync"]
 
 

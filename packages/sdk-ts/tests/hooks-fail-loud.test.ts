@@ -14,21 +14,21 @@ describe("HookRegistry fail-loud sync emit", () => {
   test("emit runs sync listeners and counts async skips", () => {
     const reg = new HookRegistry();
     const hits: string[] = [];
-    reg.on("h", () => { hits.push("sync"); });
-    reg.on("h", async function asyncListener() { hits.push("async"); });
+    reg.on("post_build_prompt", () => { hits.push("sync"); });
+    reg.on("post_build_prompt", async function asyncListener() { hits.push("async"); });
 
     const warns: string[] = [];
     const orig = console.warn;
     console.warn = (...args: unknown[]) => { warns.push(String(args[0])); };
     try {
-      reg.emit("h", ctx());
-      reg.emit("h", ctx());
+      reg.emit("post_build_prompt", ctx());
+      reg.emit("post_build_prompt", ctx());
     } finally {
       console.warn = orig;
     }
 
     expect(hits).toEqual(["sync", "sync"]);
-    expect(reg.skippedAsyncEmits.get("h")).toBe(2);
+    expect(reg.skippedAsyncEmits.get("post_build_prompt")).toBe(2);
     // Once per (hook, listener), not per emit.
     const skips = warns.filter((w) => w.includes("SKIPPED"));
     expect(skips.length).toBe(1);
@@ -37,15 +37,15 @@ describe("HookRegistry fail-loud sync emit", () => {
 
   test("strict emit throws on async listeners", () => {
     const reg = new HookRegistry();
-    reg.on("h", async function l1() {});
-    expect(() => reg.emit("h", ctx(), { strict: true })).toThrow(/emitAsync/);
+    reg.on("post_build_prompt", async function l1() {});
+    expect(() => reg.emit("post_build_prompt", ctx(), { strict: true })).toThrow(/emitAsync/);
   });
 
   test("strict emit is a no-op without async listeners", () => {
     const reg = new HookRegistry();
     const hits: string[] = [];
-    reg.on("h", () => { hits.push("sync"); });
-    reg.emit("h", ctx(), { strict: true });
+    reg.on("post_build_prompt", () => { hits.push("sync"); });
+    reg.emit("post_build_prompt", ctx(), { strict: true });
     expect(hits).toEqual(["sync"]);
   });
 });

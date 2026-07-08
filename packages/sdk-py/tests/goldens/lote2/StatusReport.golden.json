@@ -1,0 +1,187 @@
+{
+ "_doc": "FROZEN GOLDEN \u2014 captured 2026-06-11 from the live StatusReportKind class (pre-deletion), F3 lote-2. Deep-equaled against the descriptor-synthesized port in test_lote2_descriptor_equivalence.py.",
+ "dep_filters": {
+  "insight": "sdlc-insight"
+ },
+ "flags": {
+  "flatten_in_context": false,
+  "is_overlayable": true,
+  "is_prompt_target": false,
+  "is_root": false,
+  "is_runtime_artifact": false,
+  "plane": "record",
+  "prompt_target_priority": 0,
+  "scope": "global",
+  "scope_inheritable": true,
+  "volatile_spec_fields": [
+   "created_at",
+   "updated_at",
+   "version"
+  ]
+ },
+ "identity": {
+  "alias": "sdlc-status-report",
+  "api_version": "github.com/ruinosus/dna/sdlc/v1",
+  "ascii_icon": "\ud83d\udcdc",
+  "display_label": "Insight Reports",
+  "docs": null,
+  "graph_style": {
+   "fill": "#A78BFA",
+   "stroke": "#7C3AED",
+   "text_color": "#fff"
+  },
+  "kind": "StatusReport",
+  "origin": "github.com/ruinosus/dna/sdlc"
+ },
+ "schema": {
+  "properties": {
+   "ascended_from": {
+    "description": "If the previous verdict's confidence differs from this one, this is the previous level. Empty string when it's the first verdict.",
+    "enum": [
+     "certain",
+     "guess",
+     "insufficient",
+     ""
+    ],
+    "type": "string"
+   },
+   "bumped_remembrances": {
+    "description": "Phase 2B (squishy-jumping-nebula): audit trail written by oracle_cue_hook listing the LessonLearned slugs whose cue history was bumped because this report cited them. Bidirectional pairing with LessonLearned.cues_history. Empty when the run had nothing to bump (the field is omitted, not stored as []).",
+    "items": {
+     "type": "string"
+    },
+    "type": "array"
+   },
+   "confidence": {
+    "description": "How firm the verdict is. `insufficient` = the heuristic didn't have enough data \u2014 the LLM was NOT called and the verdict is a stock message.",
+    "enum": [
+     "certain",
+     "guess",
+     "insufficient"
+    ],
+    "type": "string"
+   },
+   "evidence_refs": {
+    "description": "Doc refs (Kind/name) cited as evidence for this verdict. Studio renders these as navigable links.",
+    "items": {
+     "type": "string"
+    },
+    "type": "array"
+   },
+   "generated_at": {
+    "format": "date-time",
+    "type": "string"
+   },
+   "generated_by": {
+    "description": "Model + actor (e.g. 'claude-sonnet-4-6').",
+    "type": "string"
+   },
+   "heuristic_explanation": {
+    "description": "Plain-text walkthrough of HOW the heuristic computed the metrics and decided the confidence. Transparency: a reader can audit the math.",
+    "type": "string"
+   },
+   "insight": {
+    "description": "Name of the Insight that produced this report.",
+    "type": "string"
+   },
+   "metrics": {
+    "description": "Deterministic numbers the heuristic computed (cycle counts, frequencies, averages). Free-form object \u2014 schema varies per oracle.",
+    "type": "object"
+   },
+   "owner": {
+    "description": "Slug reference to a Agent. When set, this StatusReport is PRIVATE to that agent. When null, it is GENERAL. Phase: cognitive-reflection.",
+    "type": "string"
+   },
+   "question": {
+    "description": "Echo of the oracle's question at run time.",
+    "type": "string"
+   },
+   "rag_status": {
+    "description": "PMO-standard RAG status (Red/Amber/Green) for executive dashboards. Red = action needed; Amber = watch; Green = healthy. Optional \u2014 heuristics that map metrics \u2192 RAG should populate this.",
+    "enum": [
+     "red",
+     "amber",
+     "green"
+    ],
+    "type": "string"
+   },
+   "thresholds": {
+    "description": "Self-describing thresholds the heuristic used (e.g. `to_certain: 'pattern_freq > 0.9 AND n>=5'`). Lets the reader know what would change the verdict.",
+    "type": "object"
+   },
+   "verdict": {
+    "description": "Human-readable answer (1-3 sentences pt-BR). Synthesized by the LLM from the heuristic numbers.",
+    "type": "string"
+   }
+  },
+  "required": [
+   "insight",
+   "verdict",
+   "confidence"
+  ],
+  "type": "object"
+ },
+ "storage": {
+  "container": "status-reports",
+  "marker": null,
+  "pattern": "yaml"
+ },
+ "summary_cases": {
+  "full": {
+   "out": {
+    "ascended_from": "guess",
+    "bumped_remembrances": [
+     "rem-ratchet-discipline"
+    ],
+    "confidence": "certain",
+    "evidence_refs": [
+     "Story/s-kinds-descriptor-lote2"
+    ],
+    "generated_at": "2026-06-11T00:00:00Z",
+    "generated_by": "claude-sonnet-4-6",
+    "heuristic_explanation": "closed/open ratio over the 7d window, threshold 0.8.",
+    "insight": "oracle-health",
+    "metrics": {
+     "closed": 9,
+     "open": 2
+    },
+    "owner": "oracle-health",
+    "question": "Is the SDLC ledger healthy this week?",
+    "rag_status": "green",
+    "thresholds": {
+     "to_certain": "ratio > 0.8 AND n>=5"
+    },
+    "verdict": "Saud\u00e1vel: 9 de 11 stories fecharam dentro do ciclo."
+   },
+   "spec": {
+    "ascended_from": "guess",
+    "bumped_remembrances": [
+     "rem-ratchet-discipline"
+    ],
+    "confidence": "certain",
+    "evidence_refs": [
+     "Story/s-kinds-descriptor-lote2"
+    ],
+    "generated_at": "2026-06-11T00:00:00Z",
+    "generated_by": "claude-sonnet-4-6",
+    "heuristic_explanation": "closed/open ratio over the 7d window, threshold 0.8.",
+    "insight": "oracle-health",
+    "metrics": {
+     "closed": 9,
+     "open": 2
+    },
+    "owner": "oracle-health",
+    "question": "Is the SDLC ledger healthy this week?",
+    "rag_status": "green",
+    "thresholds": {
+     "to_certain": "ratio > 0.8 AND n>=5"
+    },
+    "verdict": "Saud\u00e1vel: 9 de 11 stories fecharam dentro do ciclo."
+   }
+  },
+  "partial": {
+   "out": {},
+   "spec": {}
+  }
+ }
+}

@@ -1,0 +1,196 @@
+{
+ "_doc": "FROZEN GOLDEN \u2014 captured 2026-06-11 from the live SavedViewKind class (pre-deletion), F3 lote-2. Deep-equaled against the descriptor-synthesized port in test_lote2_descriptor_equivalence.py.",
+ "dep_filters": {
+  "owner": "helix-actor"
+ },
+ "flags": {
+  "flatten_in_context": false,
+  "is_overlayable": true,
+  "is_prompt_target": false,
+  "is_root": false,
+  "is_runtime_artifact": false,
+  "plane": "record",
+  "prompt_target_priority": 0,
+  "scope": "tenanted",
+  "scope_inheritable": true,
+  "volatile_spec_fields": [
+   "created_at",
+   "updated_at",
+   "version"
+  ]
+ },
+ "identity": {
+  "alias": "sdlc-saved-view",
+  "api_version": "github.com/ruinosus/dna/sdlc/v1",
+  "ascii_icon": "\ud83d\udd16",
+  "display_label": "Saved Views",
+  "docs": "Named view persisting filter + groupBy + sort + layout for a given Kind in a scope. Linear/Notion/Plane pattern \u2014 views as first-class entities (n\u00e3o s\u00f3 URL state). Load via ViewToolbar dropdown.",
+  "graph_style": {
+   "fill": "#06B6D4",
+   "stroke": "#0E7490",
+   "text_color": "#fff"
+  },
+  "kind": "SavedView",
+  "origin": "github.com/ruinosus/dna/sdlc"
+ },
+ "schema": {
+  "properties": {
+   "body": {
+    "type": "string"
+   },
+   "created_at": {
+    "format": "date-time",
+    "type": "string"
+   },
+   "description": {
+    "type": "string"
+   },
+   "filters": {
+    "additionalProperties": true,
+    "description": "Filter spec \u2014 map property \u2192 value. E.g. {feature: 'f-X', owner: 'alice', created_window: '7d'}.",
+    "type": "object"
+   },
+   "group_by": {
+    "description": "Property to group by (status|feature|owner|priority|sprint|...).",
+    "type": "string"
+   },
+   "is_default": {
+    "default": false,
+    "description": "Whether this view loads by default when opening the target Kind list.",
+    "type": "boolean"
+   },
+   "layout": {
+    "description": "Visual layout pra render (board=group-by-status, list=flat, ...).",
+    "enum": [
+     "board",
+     "list",
+     "tree",
+     "table",
+     "timeline",
+     "calendar",
+     "gallery"
+    ],
+    "type": "string"
+   },
+   "owner": {
+    "description": "Actor name (creator). Determines edit permission.",
+    "type": "string"
+   },
+   "sort_by": {
+    "description": "Property to sort by.",
+    "type": "string"
+   },
+   "sort_direction": {
+    "default": "asc",
+    "enum": [
+     "asc",
+     "desc"
+    ],
+    "type": "string"
+   },
+   "tags": {
+    "items": {
+     "type": "string"
+    },
+    "type": "array"
+   },
+   "target_kind": {
+    "description": "Kind name this view targets (Story, Bug, Spike, ...).",
+    "type": "string"
+   },
+   "title": {
+    "description": "Human label (e.g. 'My open Stories', 'This sprint blocked').",
+    "type": "string"
+   },
+   "updated_at": {
+    "format": "date-time",
+    "type": "string"
+   },
+   "visibility": {
+    "default": "private",
+    "enum": [
+     "private",
+     "team",
+     "shared"
+    ],
+    "type": "string"
+   },
+   "visible_columns": {
+    "description": "Subset of properties shown (table layout). Empty = show all default columns.",
+    "items": {
+     "type": "string"
+    },
+    "type": "array"
+   }
+  },
+  "required": [
+   "title",
+   "target_kind",
+   "layout"
+  ],
+  "type": "object"
+ },
+ "storage": {
+  "body_as": "text",
+  "body_field": "body",
+  "container": "saved-views",
+  "marker": "SAVED_VIEW.md",
+  "pattern": "bundle"
+ },
+ "summary_cases": {
+  "full": {
+   "out": {
+    "body": "Notes.",
+    "description": "Stories in flight, grouped by status.",
+    "filters": {
+     "owner": "barna",
+     "status": "in-progress"
+    },
+    "group_by": "status",
+    "is_default": false,
+    "layout": "board",
+    "owner": "barna",
+    "sort_by": "updated_at",
+    "sort_direction": "desc",
+    "tags": [
+     "sdlc"
+    ],
+    "target_kind": "Story",
+    "title": "My open Stories",
+    "visibility": "team",
+    "visible_columns": [
+     "title",
+     "owner"
+    ]
+   },
+   "spec": {
+    "body": "Notes.",
+    "description": "Stories in flight, grouped by status.",
+    "filters": {
+     "owner": "barna",
+     "status": "in-progress"
+    },
+    "group_by": "status",
+    "is_default": false,
+    "layout": "board",
+    "owner": "barna",
+    "sort_by": "updated_at",
+    "sort_direction": "desc",
+    "tags": [
+     "sdlc"
+    ],
+    "target_kind": "Story",
+    "title": "My open Stories",
+    "visibility": "team",
+    "visible_columns": [
+     "title",
+     "owner"
+    ]
+   }
+  },
+  "partial": {
+   "out": {},
+   "spec": {}
+  }
+ }
+}

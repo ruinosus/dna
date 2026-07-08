@@ -265,8 +265,13 @@ async def render_doc_async(
     if doc is None:
         return []
     kp = kernel._kinds.get((doc.api_version, doc.kind))
-    if kp is not None and hasattr(kp, "preview") and callable(kp.preview):
-        return kp.preview(doc)
+    # KindPresentation.preview — optional capability member, typed
+    # access with default (absence/None result → generic fallback).
+    preview_fn = getattr(kp, "preview", None)
+    if callable(preview_fn):
+        blocks = preview_fn(doc)
+        if blocks is not None:
+            return blocks
     return generic_spec_dump(doc)
 
 

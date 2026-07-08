@@ -14,8 +14,8 @@ const NEWLY_WIRED = [
   
   
   
-  
-  
+  "sdlc-roadmap",
+  "sdlc-epic",
   
   
   

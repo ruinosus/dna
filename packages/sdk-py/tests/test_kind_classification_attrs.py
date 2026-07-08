@@ -20,8 +20,8 @@ ORIG_SCHEMA_INVALIDATING = frozenset({
 })
 ORIG_NON_OVERLAYABLE = frozenset({"Genome", "KindDefinition", "LayerPolicy"})
 ORIG_NON_INHERITABLE = frozenset({
-    "Milestone", 
-    "VibeSession", 
+    "Story", "Issue", "Feature", "Milestone", "Roadmap",
+    "Narrative", "VibeSession", "LessonLearned", "Plan",
     "Genome", "KindDefinition", "LayerPolicy",
 })
 
@@ -49,6 +49,7 @@ def test_inheritable_denylist_membership_unchanged():
     # everything inherits by default EXCEPT the non-inheritable denylist
     assert "Agent" in inh
     assert "Skill" in inh
+    assert "Story" not in inh
     assert "Genome" not in inh
     assert "Milestone" not in inh  # legacy denylist name
 
@@ -76,3 +77,6 @@ def test_representative_kind_attributes():
     # schema-only Kind
     ua = kinds["Agent"]
     assert ua.is_schema_affecting and ua.is_overlayable and ua.scope_inheritable
+    # ledger Kind: non-inheritable only
+    story = kinds["Story"]
+    assert not story.is_schema_affecting and story.is_overlayable and not story.scope_inheritable

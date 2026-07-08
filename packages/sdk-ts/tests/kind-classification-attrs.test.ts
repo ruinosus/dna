@@ -13,8 +13,8 @@ import { SD } from "../src/kernel/protocols";
 
 const ORIG_NON_OVERLAYABLE = new Set(["Genome", "KindDefinition", "LayerPolicy"]);
 const ORIG_NON_INHERITABLE = new Set([
-  "Milestone", 
-  "VibeSession", 
+  "Story", "Issue", "Feature", "Milestone", "Roadmap",
+  "Narrative", "VibeSession", "LessonLearned", "Plan",
   "Genome", "KindDefinition", "LayerPolicy",
 ]);
 
@@ -37,6 +37,7 @@ describe("kind classification — derived equals original", () => {
     const k = createKernelWithBuiltins();
     expect(k.INHERITABLE_KINDS.has("Agent")).toBe(true);
     expect(k.INHERITABLE_KINDS.has("Skill")).toBe(true);
+    expect(k.INHERITABLE_KINDS.has("Story")).toBe(false);
     expect(k.INHERITABLE_KINDS.has("Genome")).toBe(false);
     expect(k.INHERITABLE_KINDS.has("Milestone")).toBe(false); // legacy denylist name
   });
@@ -74,5 +75,8 @@ describe("kind classification — attribute defaults + representatives", () => {
     expect(ua.isSchemaAffecting).toBe(true);
     expect(ua.isOverlayable ?? true).toBe(true);
     expect(ua.scopeInheritable ?? true).toBe(true);
+    const story = by.get("Story")!;
+    expect(story.isSchemaAffecting ?? false).toBe(false);
+    expect(story.scopeInheritable).toBe(false);
   });
 });

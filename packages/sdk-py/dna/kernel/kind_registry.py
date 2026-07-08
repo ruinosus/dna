@@ -138,10 +138,10 @@ EXPLICIT_ALIAS_ALLOWLIST: frozenset[str] = frozenset({
     "helix-canvas",
     "helix-setting", "helix-theme", "helix-user-profile",
     # sdlc (classes; os descriptors ficam fora do ratchet)
-    
-    
-    
-    
+    "sdlc-roadmap", "sdlc-epic", "sdlc-feature", "sdlc-story",
+    "sdlc-issue", "sdlc-bug", "sdlc-task", "sdlc-spike",
+    "sdlc-initiative", "sdlc-spec", "sdlc-plan", "sdlc-agent-session",
+    "sdlc-reference",
     # eval
     
     
@@ -161,11 +161,11 @@ EXPLICIT_ALIAS_ALLOWLIST: frozenset[str] = frozenset({
     
     
     
-    
+    "lesson-lesson",
     
     "tenant-tenant", "tenant-membership",
     "audit-userroleassignment", 
-    
+    "testkit-test-guide", "testkit-test-run",
     
 })
 

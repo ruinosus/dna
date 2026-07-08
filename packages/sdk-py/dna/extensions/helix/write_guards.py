@@ -21,7 +21,10 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from dna.kernel.hooks import PreSaveContext
 
 from dna.kernel.protocols import DEFAULT_BASE_SCOPE, TenantNotAllowed
 
@@ -35,7 +38,7 @@ PRIORITY_PROMPT_BUDGET = 20
 PRIORITY_KIND_WRITER = 30
 
 
-def platform_agent_fork_guard(ctx: Any) -> None:
+def platform_agent_fork_guard(ctx: PreSaveContext) -> None:
     """Block per-tenant overlays of ``_lib`` Agents.
 
     The `_lib` scope is the shared baseline (jarvis + the 12 transversais);
@@ -56,7 +59,7 @@ def platform_agent_fork_guard(ctx: Any) -> None:
         )
 
 
-async def prompt_budget_guard(ctx: Any) -> None:
+async def prompt_budget_guard(ctx: PreSaveContext) -> None:
     """Block over-cap VOICE Agent writes (prompt-budget enforcement).
 
     Forcing function for the JARVIS bug (over-cap persona silently degraded
@@ -118,7 +121,7 @@ async def prompt_budget_guard(ctx: Any) -> None:
             )
 
 
-def kind_writer_contract_guard(ctx: Any) -> None:
+def kind_writer_contract_guard(ctx: PreSaveContext) -> None:
     """Validate a Kind-Writer Agent's slot↔schema contract.
 
     A Agent that declares ``writes_kind`` is a Kind-Writer: it emits

@@ -131,10 +131,10 @@ export const EXPLICIT_ALIAS_ALLOWLIST: ReadonlySet<string> = new Set([
   "helix-canvas",
   "helix-setting", "helix-theme", "helix-user-profile",
   // sdlc (classes; descriptors are outside the ratchet)
-  
-  
-  
-  
+  "sdlc-roadmap", "sdlc-epic", "sdlc-feature", "sdlc-story",
+  "sdlc-issue", "sdlc-bug", "sdlc-task", "sdlc-spike",
+  "sdlc-initiative", "sdlc-spec", "sdlc-plan", "sdlc-agent-session",
+  "sdlc-reference",
   // eval
   
   
@@ -153,11 +153,11 @@ export const EXPLICIT_ALIAS_ALLOWLIST: ReadonlySet<string> = new Set([
   
   
   
-  
+  "lesson-lesson",
   
   "tenant-tenant", "tenant-membership",
   "audit-userroleassignment", 
-  
+  "testkit-test-guide", "testkit-test-run",
   
 ]);
 

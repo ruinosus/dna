@@ -1,0 +1,142 @@
+{
+ "_doc": "FROZEN GOLDEN \u2014 captured 2026-06-11 from the live ArchiveProposalKind class (pre-deletion), F3 lote-2. Deep-equaled against the descriptor-synthesized port in test_lote2_descriptor_equivalence.py.",
+ "dep_filters": {},
+ "flags": {
+  "flatten_in_context": false,
+  "is_overlayable": true,
+  "is_prompt_target": false,
+  "is_root": false,
+  "is_runtime_artifact": false,
+  "plane": "record",
+  "prompt_target_priority": 0,
+  "scope": "global",
+  "scope_inheritable": true,
+  "volatile_spec_fields": [
+   "created_at",
+   "updated_at",
+   "version"
+  ]
+ },
+ "identity": {
+  "alias": "sdlc-archive-proposal",
+  "api_version": "github.com/ruinosus/dna/sdlc/v1",
+  "ascii_icon": "\ud83e\udea6",
+  "display_label": "Arquivamento",
+  "docs": null,
+  "graph_style": {
+   "fill": "#94A3B8",
+   "stroke": "#475569",
+   "text_color": "#fff"
+  },
+  "kind": "ArchiveProposal",
+  "origin": "github.com/ruinosus/dna/sdlc"
+ },
+ "schema": {
+  "properties": {
+   "evidence": {
+    "description": "Plain-text justification. E.g. 'Unreferenced by any WorkflowEvent.methodology_artifact in 91 entries scanned. Last touch 73 days ago.'",
+    "type": "string"
+   },
+   "proposed_at": {
+    "description": "Auto-stamped on creation.",
+    "format": "date-time",
+    "type": "string"
+   },
+   "proposed_by": {
+    "description": "Oracle slug (typically 'cleanup-suggestions') or 'user'.",
+    "type": "string"
+   },
+   "reason": {
+    "description": "Why prune. orphan = no inbound refs; superseded = newer doc replaces; stale = no touch beyond threshold; contradicted = newer doc disagrees; duplicate = identical.",
+    "enum": [
+     "orphan",
+     "superseded",
+     "stale",
+     "contradicted",
+     "duplicate"
+    ],
+    "type": "string"
+   },
+   "review_deadline": {
+    "description": "Spec \u00a715: default proposed_at + 14d. Stale proposals past this date should be re-evaluated (not auto-vetoed).",
+    "format": "date-time",
+    "type": "string"
+   },
+   "reviewer": {
+    "description": "Auto-stamped on approve/veto. Username or 'system'.",
+    "type": "string"
+   },
+   "reviewer_note": {
+    "description": "Optional note explaining approval/veto reasoning.",
+    "type": "string"
+   },
+   "status": {
+    "description": "proposed \u2192 approved \u2192 executed (moves target to _forgotten/) OR proposed \u2192 vetoed (target stays).",
+    "enum": [
+     "proposed",
+     "approved",
+     "vetoed",
+     "executed"
+    ],
+    "type": "string"
+   },
+   "target_kind": {
+    "description": "Any Kind name (e.g. 'Plan', 'Story', 'Issue', 'Spec'). Self-references rejected at execution time.",
+    "type": "string"
+   },
+   "target_name": {
+    "description": "Slug of the doc being proposed for forgetting.",
+    "type": "string"
+   }
+  },
+  "required": [
+   "target_kind",
+   "target_name",
+   "reason",
+   "evidence",
+   "proposed_by",
+   "status",
+   "review_deadline"
+  ],
+  "type": "object"
+ },
+ "storage": {
+  "body_as": "text",
+  "body_field": "body",
+  "container": "archive-proposals",
+  "marker": "ARCHIVE_PROPOSAL.md",
+  "pattern": "bundle"
+ },
+ "summary_cases": {
+  "full": {
+   "out": {
+    "evidence": "Unreferenced in 91 WorkflowEvents scanned. Last touch 73 days ago.",
+    "proposed_at": "2026-06-01T12:00:00Z",
+    "proposed_by": "cleanup-suggestions",
+    "reason": "stale",
+    "review_deadline": "2026-06-15T12:00:00Z",
+    "reviewer": "barna",
+    "reviewer_note": "looks right",
+    "status": "proposed",
+    "target_kind": "Plan",
+    "target_name": "plan-old-approach"
+   },
+   "spec": {
+    "evidence": "Unreferenced in 91 WorkflowEvents scanned. Last touch 73 days ago.",
+    "proposed_at": "2026-06-01T12:00:00Z",
+    "proposed_by": "cleanup-suggestions",
+    "reason": "stale",
+    "review_deadline": "2026-06-15T12:00:00Z",
+    "reviewer": "barna",
+    "reviewer_note": "looks right",
+    "status": "proposed",
+    "target_kind": "Plan",
+    "target_name": "plan-old-approach"
+   }
+  },
+  "partial": {
+   "out": {},
+   "spec": {}
+  }
+ }
+}

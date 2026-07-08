@@ -507,6 +507,25 @@ async def _case_bundle_entry_round_trip(ctx: _Ctx) -> None:
         )
 
 
+async def _case_schema_migrations_idempotent(ctx: _Ctx) -> None:
+    """SQL-backed adapters (docs/PORT-CONTRACT.md § "Schema migrations"):
+    ``run_schema_migrations()`` returns the list of versions applied by
+    that call, and a SECOND run right after is a no-op (``[]``) — the
+    control table persisted in the backing store makes re-boot
+    idempotent. Adapters without persistent SQL storage don't expose the
+    method and skip."""
+    first = await _aw(ctx.source.run_schema_migrations())
+    assert isinstance(first, list) and all(isinstance(v, int) for v in first), (
+        f"run_schema_migrations must return list[int] of versions applied "
+        f"by the call, got {first!r}"
+    )
+    second = await _aw(ctx.source.run_schema_migrations())
+    assert second == [], (
+        f"re-running migrations on an up-to-date store must apply NOTHING "
+        f"(control table must record every applied version) — got {second!r}"
+    )
+
+
 # ---------------------------------------------------------------------------
 # requirement predicates — (human label, predicate over (_Ctx))
 # ---------------------------------------------------------------------------
@@ -554,6 +573,11 @@ _CASES: list[tuple[str, str, Callable[[_Ctx], Any], Callable[[_Ctx], bool]]] = [
     ("bundle_entry_round_trip", "capabilities.bundle_read + bundle_write",
      _case_bundle_entry_round_trip,
      lambda c: c.caps.bundle_read and c.caps.bundle_write),
+    # Duck-typed on the method (same pattern as list_scopes): SQL-backed
+    # adapters expose run_schema_migrations(); FS/S3/proxy sources don't.
+    ("schema_migrations_idempotent", "run_schema_migrations (SQL-backed schema)",
+     _case_schema_migrations_idempotent,
+     lambda c: callable(getattr(c.source, "run_schema_migrations", None))),
 ]
 
 
