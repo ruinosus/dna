@@ -10,7 +10,7 @@ spec:
     the real xlsx skill fixture) + secret scan (gitleaks). Demos that clone external
     repos must be offline-safe in CI. De-noise ajv ''unknown format'' warnings (strict:false
     parity with Py).'
-  status: in-progress
+  status: review
   feature: f-dna-1.0-readiness
   priority: high
   labels:
@@ -26,7 +26,7 @@ spec:
   - Workflows merged and green
   definition_of_done_source: cli-create
   created_at: '2026-07-08T18:27:50+00:00'
-  updated_at: '2026-07-08T19:21:00+00:00'
+  updated_at: '2026-07-08T19:23:01+00:00'
   timeline:
   - at: '2026-07-08T18:27:50+00:00'
     actor: claude-code
@@ -63,6 +63,17 @@ spec:
       \ + typecheck limpo, gitleaks hist\xF3rico+tree sem leaks (sem necessidade de\
       \ .gitleaks.toml), brand_guard verde."
     commit_ref: 3ab6f0b1e8b77623195248396df8f6f3076260ab
+  - at: '2026-07-08T19:23:00+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR https://github.com/ruinosus/dna/pull/1 aberto \u2014 done on merge"
+  - at: '2026-07-08T19:23:01+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
   produces:
   - kind: Plan
     name: plan-s-public-ci
