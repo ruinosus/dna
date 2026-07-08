@@ -3,8 +3,7 @@ kind: Story
 metadata:
   name: s-sdlc-pr-attribution
 spec:
-  title: "Ideia Barna (2026-07-08): assim como o Claude Code assina PRs com '\U0001F916\
-    \ Generated w"
+  title: "PR attribution \u2014 'dna sdlc story pr' assina PRs com footer Work-Item"
   description: "Ideia Barna (2026-07-08): assim como o Claude Code assina PRs com\
     \ '\U0001F916 Generated with Claude Code', o DNA assina os seus \u2014 footer\
     \ de atribui\xE7\xE3o no BODY do PR: '\U0001F9EC Tracked with DNA SDLC \u2014\
@@ -14,7 +13,7 @@ spec:
     \ da story, n\xE3o o contr\xE1rio. Fallback: 'dna sdlc pr-footer <s-x>' que s\xF3\
     \ emite o footer pra colar. Completa a symbiosis: commit carimbado (hook) + PR\
     \ assinado (este) + timeline materializa ambos."
-  status: in-progress
+  status: review
   feature: f-dna-1.0-readiness
   priority: medium
   labels:
@@ -30,7 +29,7 @@ spec:
   - "PR merged; usado no pr\xF3prio PR que o implementa (self-aplica\xE7\xE3o)"
   definition_of_done_source: cli-create
   created_at: '2026-07-08T21:37:34+00:00'
-  updated_at: '2026-07-08T21:40:16+00:00'
+  updated_at: '2026-07-08T21:55:30+00:00'
   timeline:
   - at: '2026-07-08T21:37:34+00:00'
     actor: claude-code
@@ -43,6 +42,66 @@ spec:
     source: cli
     from: todo
     to: in-progress
+  - at: '2026-07-08T21:45:06+00:00'
+    actor: claude-code
+    type: decision
+    source: cli
+    summary: "Plano em execu\xE7\xE3o: (1) footer de atribui\xE7\xE3o vira constante/template\
+      \ em _git_symbiosis.py (DNA_SDLC_PR_FOOTER override); (2) novo m\xF3dulo pr_cmd.py\
+      \ com 'story pr' (gh pr create com title=feat(<label>): <title> (<s-x>), body=description+AC\
+      \ checklist+footer; --base/--head/--draft/--dry-run) e 'sdlc pr-footer' (s\xF3\
+      \ o bloco, offline); (3) groom ganha --title (t\xEDtulo desta story veio truncado\
+      \ do cli-create e o PR nasce do t\xEDtulo da story); (4) README \xA7'Your git\
+      \ log is your SDLC' ganha o par\xE1grafo do PR; (5) testes CliRunner sem rede\
+      \ (--dry-run cobre a montagem). B\xF4nus PRs-no-show: decidi N\xC3O \u2014 gh\
+      \ search API \xE9 rate-limited + indexa\xE7\xE3o eventual + gateway j\xE1 documentado\
+      \ como flaky (i-133), e o loop j\xE1 fecha via trailer no squash-merge commit."
+    commit_ref: 92dd49b177f7e7adc0873c369a7444e850e87338
+  - at: '2026-07-08T21:50:40+00:00'
+    actor: claude-code
+    type: groom
+    source: cli
+    fields:
+      title: "PR attribution \u2014 'dna sdlc story pr' assina PRs com footer Work-Item"
+  - at: '2026-07-08T21:50:40+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Implementado: pr_cmd.py (story pr + pr-footer), footer template/env\
+      \ em _git_symbiosis.py, groom --title (t\xEDtulo desta story veio truncado do\
+      \ cli-create \u2014 regroomado com o pr\xF3prio flag novo), README \xA7symbiosis,\
+      \ 18 testes novos (CLI total 245 passed). Achado no gate: brand_guard j\xE1\
+      \ estava VERMELHO no main (timeline de s-go-public-gate narrou a higiene de\
+      \ e-mail citando o token literal) \u2014 redigi as 2 summaries no branch pra\
+      \ destravar 6/6 verde; YAML validado."
+    commit_ref: 92dd49b177f7e7adc0873c369a7444e850e87338
+  - at: '2026-07-08T21:52:37+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/5'
+    pr_url: https://github.com/ruinosus/dna/pull/5
+  - at: '2026-07-08T21:53:01+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #5 aberto PELO pr\xF3prio comando (self-aplica\xE7\xE3o do DoD):\
+      \ dna sdlc story pr s-sdlc-pr-attribution --base main \u2192 https://github.com/ruinosus/dna/pull/5.\
+      \ Aguardando 6/6 checks."
+  - at: '2026-07-08T21:53:01+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
+  - at: '2026-07-08T21:55:30+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #5 com 6/6 checks verdes (brand-guard, gitleaks, cli, sdk-py, postgres,\
+      \ sdk-ts). Gates locais tamb\xE9m verdes: cli 245 passed (18 novos), sdk-py\
+      \ 2722 passed, bun 1214 + typecheck. Aguardando merge do Barna (done-on-merge)."
+    commit_ref: ea717205d2e362c560894ee65f08875139cf3873
   produces:
   - kind: Plan
     name: plan-s-sdlc-pr-attribution

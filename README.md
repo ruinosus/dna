@@ -210,6 +210,32 @@ the Story timeline. `dna sdlc hooks status` shows the wiring;
 `scripts/git-hooks/` the clone's *only* hooks dir — keep personal hooks
 there too, or wire the script by hand.
 
+The same convention signs pull requests. Just as Claude Code signs the
+PRs it generates, DNA signs the PRs born from its Stories:
+
+```bash
+dna sdlc story pr s-my-story          # gh pr create, pre-filled FROM the story
+dna sdlc story pr s-my-story --dry-run   # print title + body, no gh call
+dna sdlc pr-footer s-my-story         # just the footer, for hand-made PRs
+```
+
+`story pr` assembles the whole PR from the Story document — title
+`feat(<first-label>): <story title> (<s-my-story>)`, body = the story
+description plus the acceptance criteria as a task-list checklist, and
+the attribution footer at the end (override the line via
+`$DNA_SDLC_PR_FOOTER`):
+
+```markdown
+---
+🧬 Tracked with [DNA SDLC](https://github.com/ruinosus/dna) — Work-Item: Story/s-my-story
+```
+
+`--base` / `--head` / `--draft` pass through to `gh`; on success the PR
+URL is stamped back onto the Story timeline (`pr_opened`). The PR is
+born from the story, not the other way around — and when it squash-merges,
+the landed commit carries the `Work-Item:` trailer, so `story show`
+lists it with zero bookkeeping.
+
 ## Repository layout
 
 ```

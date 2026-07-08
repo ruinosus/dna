@@ -34,7 +34,7 @@ spec:
     type: decision
     source: cli
     summary: "ITEM NOVO NO CHECKLIST (achado 2026-07-08): metadados de commit tinham\
-      \ 27 identidades jefferson.barnabe@avanade.com (gitconfig global da m\xE1quina;\
+      \ 27 identidades com o e-mail corporativo interno (gitconfig global da m\xE1quina;\
       \ brand-guard varre arquivos, n\xE3o commits). Mitigado daqui pra frente: config\
       \ local do repo = ruinosus <3090620+ruinosus@users.noreply.github.com> + squash-merge\
       \ lava PRs. PENDENTE pr\xE9-p\xFAblico: (1) rewrite da hist\xF3ria (filter-branch/filter-repo\
@@ -49,7 +49,7 @@ spec:
     source: cli
     summary: "Checklist update: hist\xF3ria REESCRITA e verificada limpa (2026-07-08)\
       \ \u2014 git log --all em todas as refs: s\xF3 ruinosus-noreply + noreply@github.com,\
-      \ zero avanade; backups do filter-branch expurgados; remoto s\xF3 com main.\
+      \ zero e-mail corporativo; backups do filter-branch expurgados; remoto s\xF3 com main.\
       \ Resta do item: o job de CI validando e-mails de commit do range do PR (denylist\
       \ corporativa)."
     commit_ref: 120c348df290cd14cac3ed55cd5e3ffcdb63bfe7

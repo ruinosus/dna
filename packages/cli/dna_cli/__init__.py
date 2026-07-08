@@ -63,6 +63,9 @@ from dna_cli import testkit_cmd as _testkit_cmd  # noqa: E402,F401
 # Importing hooks_cmd registers `sdlc hooks install|uninstall|status` — the
 # git↔SDLC symbiosis wiring (Work-Item trailers via prepare-commit-msg).
 from dna_cli import hooks_cmd as _hooks_cmd  # noqa: E402,F401
+# Importing pr_cmd registers `sdlc story pr` + `sdlc pr-footer` — the PR
+# half of the symbiosis (attribution footer, PR born from the Story).
+from dna_cli import pr_cmd as _pr_cmd  # noqa: E402,F401
 main.add_command(source_cmd.source)
 
 
