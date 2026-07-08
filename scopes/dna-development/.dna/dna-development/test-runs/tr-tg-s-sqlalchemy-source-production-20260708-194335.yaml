@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-sqlalchemy-source-production-20260708-194335
+spec:
+  guide_ref: tg-s-sqlalchemy-source-production
+  outcome: pass
+  verifies:
+  - Story/s-sqlalchemy-source-production
+  executed_by: claude-code
+  executed_at: '2026-07-08T19:43:35+00:00'
+  evidence:
+  - ci:pr2-6-of-6-checks-green,matrix:conformance-142-passed-2-xfail-so-i092,check:listen-notify-payload-byte-parity-live,check:atomicidade-write-vetado-zero-eventos,bench:packages/sdk-py/scripts/bench_sources.py,check:default-install-nunca-importa-sqlalchemy
