@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-blessed-query-surface-20260708-210502
+spec:
+  guide_ref: tg-s-blessed-query-surface
+  outcome: pass
+  verifies:
+  - Story/s-blessed-query-surface
+  executed_by: claude-code
+  executed_at: '2026-07-08T21:05:02+00:00'
+  evidence:
+  - ci:pr3-6-of-6-green-em-2-heads,test:test_blessed_query_surface.py,test:blessed-query-surface.test.ts,fixture:blessed_query_surface+public_surface-55-membros,check:ratchet-filterwarnings-error,check:docs-grep-limpo-mi.all-one
