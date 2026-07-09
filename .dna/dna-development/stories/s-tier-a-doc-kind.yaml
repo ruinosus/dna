@@ -1,0 +1,48 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-tier-a-doc-kind
+spec:
+  title: "Tier A: trazer o Doc Kind do upstream \u2014 fecha a degrada\xE7\xE3o conhecida\
+    \ do grupo dn"
+  description: "Tier A: trazer o Doc Kind do upstream \u2014 fecha a degrada\xE7\xE3\
+    o conhecida do grupo dna docs (o cli-tour documentou o workaround via KindDefinition\
+    \ manual; com o Kind nativo o grupo funciona out-of-the-box). Extension doc (497loc\
+    \ upstream, avaliar o que \xE9 core vs service) + paridade TS + prosa (atualizar\
+    \ o bloco do cli-tour removendo o workaround)."
+  status: in-progress
+  feature: f-dna-1.0-readiness
+  priority: medium
+  labels:
+  - sdk
+  - python
+  - typescript
+  - cli
+  reporter: claude-code
+  business_value: 400
+  acceptance_criteria:
+  - Doc Kind registrado; dna docs list/show funciona sem KindDefinition manual; cli-tour
+    atualizado; prosa/guard verdes; CI verde
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - PR merged
+  definition_of_done_source: cli-create
+  created_at: '2026-07-09T22:39:24+00:00'
+  updated_at: '2026-07-09T22:39:28+00:00'
+  timeline:
+  - at: '2026-07-09T22:39:24+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-09T22:39:28+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  produces:
+  - kind: Plan
+    name: plan-s-tier-a-doc-kind
+    role: implementation
+    at: '2026-07-09T22:39:28+00:00'
