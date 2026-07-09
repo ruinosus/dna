@@ -195,6 +195,29 @@ A Changelog records release notes per semver version per Keep a Changelog 1.1.0 
 | `recall` | object |  | Recall-tuning knobs for the ecphory engine (ex-RecallPolicy). |
 | `updated_at` | string |  |  |
 
+## Doc
+
+- **Alias:** `dna-doc`
+- **apiVersion:** `github.com/ruinosus/dna/doc/v1`
+- **Plane:** record
+
+A Doc is one page of in-product documentation. The marker is ``docs/<name>/DOC.md`` — YAML frontmatter (icon, subtitle, summary, order, locale, enabled, kind_of, category, tags) plus a markdown body that lands in ``spec.body``. The page title is ``metadata.description``. ``kind_of`` follows Diátaxis (tutorial/how_to/reference/explanation); ``category`` groups the sidebar; ``locale`` lets one corpus serve multiple languages. This is the Kind behind ``dna docs list/show``.
+
+**Spec fields**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `body` | string | yes | Markdown body of the page — the DOC.md content below the frontmatter. |
+| `category` | string \| null |  | Free-form sidebar grouping (e.g. "Getting started"). Null falls back to a flat list. |
+| `enabled` | boolean |  | If false, the page is hidden from listings. |
+| `icon` | string |  | Emoji or short string shown next to the title. |
+| `kind_of` | enum |  | Diátaxis classification (learning- / task- / information- / understanding-oriented). Null = uncategorized. |
+| `locale` | string |  | Content locale (e.g. pt-BR, en). ``dna docs`` filters on it. |
+| `order` | integer |  | Sort order in the sidebar (ascending). |
+| `subtitle` | string |  | One-line subtitle shown under the title. |
+| `summary` | string |  | 1-2 sentences for the topic header card / previews. |
+| `tags` | array |  | Free-form labels for filtering and search. |
+
 ## Epic
 
 - **Alias:** `sdlc-epic`
