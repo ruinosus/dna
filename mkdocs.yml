@@ -65,7 +65,9 @@ nav:
       - How to write a source adapter: guides/write-a-source-adapter.md
       - How to write a Reader/Writer: guides/readers-and-writers.md
       - Your git log is your SDLC: guides/sdlc.md
-  - Reference: reference/index.md
+  - Reference:
+      - reference/index.md
+      - Parity matrix — Python × TypeScript: reference/parity-matrix.md
 
 markdown_extensions:
   # Admonitions + collapsible blocks

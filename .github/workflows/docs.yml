@@ -36,6 +36,10 @@ jobs:
           python-version: "3.13"
       - name: Install docs deps
         run: pip install -r requirements-docs.txt
+      - name: Regenerate the parity matrix from the fixtures
+        # Keeps docs/reference/parity-matrix.md in lockstep with the CI parity
+        # fixtures every build, so the published matrix can never drift.
+        run: python scripts/gen_parity_matrix.py
       - name: Build (strict)
         run: mkdocs build --strict
       - name: Upload Pages artifact
