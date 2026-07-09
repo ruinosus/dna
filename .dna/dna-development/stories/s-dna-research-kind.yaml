@@ -1,0 +1,61 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-dna-research-kind
+spec:
+  title: "Trazer o Research Kind (s\xEDntese curada de N References com findings evidence-rat"
+  description: "Trazer o Research Kind (s\xEDntese curada de N References com findings\
+    \ evidence-rated + recommendations + citation graph) do AAP pro DNA \u2014 infraestrutura\
+    \ de conhecimento agent-facing, a resposta declarativa/curada do DNA ao problema\
+    \ OpenWiki/DeepWiki. Porta a extension research (Py 762loc + twin research.ts)\
+    \ + CLI 'dna research list/show/create', kernel-bound. Decis\xF5es ratificadas\
+    \ (Barna): (1) namespace github.com/ruinosus/dna/research/v1; (2) tenancy PERMISSIVA\
+    \ (research \xE9 conhecimento autorado do repo, n\xE3o dado per-cliente \u2014\
+    \ dna research create sem tenant obrigat\xF3rio); (3) recall sem\xE2ntico DEGRADA\
+    \ pra query lexical/estruturada (kernel.query) \u2014 servidor de embeddings n\xE3\
+    o viajou; recall via pgvector \xE9 futuro documentado. Reference companion j\xE1\
+    \ existe via extension sdlc. Engenharia: verificar ratchet F3 descriptor-vs-classe\
+    \ (prov\xE1vel classe com exce\xE7\xE3o registrada \u2014 tem l\xF3gica comput\xE1\
+    vel). Payoff imediato: capturar as 3 pesquisas de hoje (doc-frameworks, exemplar-repos,\
+    \ openwiki-analysis) como Research docs."
+  status: in-progress
+  feature: f-dna-1.0-readiness
+  priority: high
+  labels:
+  - sdk
+  - python
+  - typescript
+  - cli
+  - meta
+  reporter: claude-code
+  business_value: 600
+  acceptance_criteria:
+  - "Extension research registrada (Py+TS), Kind Research parse\xE1vel/grav\xE1vel;\
+    \ dna research list/show/create funciona no repo puro (filesystem, sem servi\xE7\
+    os) com tenancy permissiva; sources aponta pra Reference docs; recall degrada\
+    \ lexical sem crash; 3 pesquisas de hoje capturadas como Research reais com fontes;\
+    \ paridade Py\u2194TS verde; CI 7/7"
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - PR merged via dna sdlc story pr; posicionamento DNA-vs-OpenWiki documentado no
+    concepts; 3 Research docs no dna-development
+  definition_of_done_source: cli-create
+  created_at: '2026-07-09T12:33:41+00:00'
+  updated_at: '2026-07-09T12:33:43+00:00'
+  timeline:
+  - at: '2026-07-09T12:33:41+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-09T12:33:43+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  produces:
+  - kind: Plan
+    name: plan-s-dna-research-kind
+    role: implementation
+    at: '2026-07-09T12:33:43+00:00'

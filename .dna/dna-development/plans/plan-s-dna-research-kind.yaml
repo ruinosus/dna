@@ -1,0 +1,19 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-dna-research-kind
+spec:
+  title: 'Plano: s-dna-research-kind'
+  date: '2026-07-09'
+  status: accepted
+  story_ref: s-dna-research-kind
+  journey_phase: plan
+  body: "1) Portar packages/sdk-py/dna/extensions/research/ (do AAP cockpit_aap) +\
+    \ twin research.ts com rewrite research.aap/v1\u2192NS/research/v1 + tenancy permissiva;\
+    \ 2) verificar ratchet F3 (test_kinds_descriptor_ratchet) \u2014 classe c/ exce\xE7\
+    \xE3o ou descriptor; 3) CLI dna research (list/show/create) em packages/cli/dna_cli/research_cmd.py,\
+    \ kernel-bound, recall degrada lexical; 4) registrar entry-points Py + bootstrap\
+    \ TS; 5) gates full + brand_guard; 6) capturar as 3 pesquisas como Research docs;\
+    \ 7) PR via dna sdlc story pr. Worktree dna-wt-research."
+  created_at: '2026-07-09T12:33:43+00:00'
+  updated_at: '2026-07-09T12:33:43+00:00'
