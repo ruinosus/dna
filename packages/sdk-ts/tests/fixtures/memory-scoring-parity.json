@@ -1,0 +1,340 @@
+{
+  "_note": "Py<->TS parity for dna.memory pure scoring. Regenerate via packages/sdk-py/scripts/gen_memory_parity.py",
+  "ebbinghaus_retention": [
+    {
+      "stability_days": 15,
+      "days_since_recall": null,
+      "expected": 1.0
+    },
+    {
+      "stability_days": 15,
+      "days_since_recall": 0,
+      "expected": 1.0
+    },
+    {
+      "stability_days": 15,
+      "days_since_recall": 15,
+      "expected": 0.36787944117144233
+    },
+    {
+      "stability_days": 15,
+      "days_since_recall": 30,
+      "expected": 0.1353352832366127
+    },
+    {
+      "stability_days": 45,
+      "days_since_recall": 15,
+      "expected": 0.7165313105737893
+    },
+    {
+      "stability_days": 5,
+      "days_since_recall": 15,
+      "expected": 0.049787068367863944
+    },
+    {
+      "stability_days": 30,
+      "days_since_recall": 7,
+      "expected": 0.7918895663367816
+    }
+  ],
+  "currently_valid": [
+    {
+      "valid_to": null,
+      "now": "2026-07-09T15:00:00+00:00",
+      "expected": true
+    },
+    {
+      "valid_to": "",
+      "now": "2026-07-09T15:00:00+00:00",
+      "expected": true
+    },
+    {
+      "valid_to": "2099-01-01T00:00:00+00:00",
+      "now": "2026-07-09T15:00:00+00:00",
+      "expected": true
+    },
+    {
+      "valid_to": "2000-01-01T00:00:00+00:00",
+      "now": "2026-07-09T15:00:00+00:00",
+      "expected": false
+    },
+    {
+      "valid_to": "not-a-date",
+      "now": "2026-07-09T15:00:00+00:00",
+      "expected": true
+    },
+    {
+      "valid_to": "2026-07-09T14:59:59+00:00",
+      "now": "2026-07-09T15:00:00+00:00",
+      "expected": false
+    },
+    {
+      "valid_to": "2026-07-09T15:00:01+00:00",
+      "now": "2026-07-09T15:00:00+00:00",
+      "expected": true
+    }
+  ],
+  "stability_from_spec": [
+    {
+      "spec": {
+        "confidence_score": "faint"
+      },
+      "expected": 5.0
+    },
+    {
+      "spec": {
+        "confidence_score": "firm"
+      },
+      "expected": 15.0
+    },
+    {
+      "spec": {
+        "confidence_score": "burning"
+      },
+      "expected": 45.0
+    },
+    {
+      "spec": {
+        "confidence_score": 1.0
+      },
+      "expected": 5.0
+    },
+    {
+      "spec": {
+        "confidence_score": 5.0
+      },
+      "expected": 15.0
+    },
+    {
+      "spec": {
+        "confidence_score": 10.0
+      },
+      "expected": 45.0
+    },
+    {
+      "spec": {},
+      "expected": 15.0
+    },
+    {
+      "spec": {
+        "engram_stability_days": 100
+      },
+      "expected": 100.0
+    }
+  ],
+  "confidence_score_numeric": [
+    {
+      "spec": {
+        "confidence_score": 3.5
+      },
+      "expected": 3.5
+    },
+    {
+      "spec": {
+        "confidence_score": "firm"
+      },
+      "expected": 3.0
+    },
+    {
+      "spec": {
+        "confidence_score": "faint"
+      },
+      "expected": 1.0
+    },
+    {
+      "spec": {
+        "confidence_score": "burning"
+      },
+      "expected": 5.0
+    },
+    {
+      "spec": {},
+      "expected": 1.0
+    }
+  ],
+  "classify_memory_type": [
+    {
+      "spec": {
+        "summary": "always deep-copy the cache"
+      },
+      "expected": "procedural"
+    },
+    {
+      "spec": {
+        "summary": "nunca faça hard-delete"
+      },
+      "expected": "procedural"
+    },
+    {
+      "spec": {
+        "area": "Feature/x",
+        "summary": "shipped it"
+      },
+      "expected": "episodic"
+    },
+    {
+      "spec": {
+        "summary": "the sky tends to be blue"
+      },
+      "expected": "semantic"
+    },
+    {
+      "spec": {
+        "memory_type": "episodic",
+        "summary": "always"
+      },
+      "expected": "episodic"
+    }
+  ],
+  "time_of_day": [
+    {
+      "hour": 0,
+      "expected": "night"
+    },
+    {
+      "hour": 5,
+      "expected": "morning"
+    },
+    {
+      "hour": 8,
+      "expected": "morning"
+    },
+    {
+      "hour": 11,
+      "expected": "morning"
+    },
+    {
+      "hour": 12,
+      "expected": "afternoon"
+    },
+    {
+      "hour": 14,
+      "expected": "afternoon"
+    },
+    {
+      "hour": 17,
+      "expected": "afternoon"
+    },
+    {
+      "hour": 18,
+      "expected": "evening"
+    },
+    {
+      "hour": 20,
+      "expected": "evening"
+    },
+    {
+      "hour": 21,
+      "expected": "evening"
+    },
+    {
+      "hour": 22,
+      "expected": "night"
+    },
+    {
+      "hour": 23,
+      "expected": "night"
+    }
+  ],
+  "rank_memories": [
+    {
+      "memories": [
+        {
+          "name": "s-mem",
+          "spec": {
+            "area": "memory",
+            "summary": "vector embedding recall cognitive"
+          }
+        },
+        {
+          "name": "s-banana",
+          "spec": {
+            "area": "fruit",
+            "summary": "banana tropical yellow smoothie"
+          }
+        },
+        {
+          "name": "s-fusion",
+          "spec": {
+            "area": "search",
+            "summary": "hybrid fusion reciprocal rank"
+          }
+        }
+      ],
+      "query": "memory recall cognitive",
+      "now": "2026-07-09T15:00:00+00:00",
+      "expected_order": [
+        "s-mem"
+      ],
+      "expected_scores": {
+        "s-mem": 2.942487759035179
+      }
+    }
+  ],
+  "score_engram": [
+    {
+      "engram": {
+        "name": "e1",
+        "spec": {
+          "encoding_context": {
+            "area": "Feature/memory"
+          }
+        }
+      },
+      "cue_ctx": {
+        "area_inferred": "feature memory"
+      },
+      "expected_score": 0.55,
+      "expected_matched": [
+        "area"
+      ]
+    },
+    {
+      "engram": {
+        "name": "e2",
+        "spec": {
+          "summary": "reciprocal rank fusion beats single top"
+        }
+      },
+      "cue_ctx": {
+        "query": "rank fusion"
+      },
+      "expected_score": 0.55,
+      "expected_matched": [
+        "summary"
+      ]
+    },
+    {
+      "engram": {
+        "name": "e3",
+        "spec": {
+          "encoding_context": {
+            "area": "auth",
+            "co_topics": [
+              "login",
+              "oauth"
+            ]
+          },
+          "source_refs": [
+            "s-9"
+          ]
+        }
+      },
+      "cue_ctx": {
+        "query": "auth",
+        "co_topics": [
+          "login"
+        ],
+        "source_refs": [
+          "s-9"
+        ]
+      },
+      "expected_score": 0.8,
+      "expected_matched": [
+        "area",
+        "co_topics(1)",
+        "source_refs"
+      ]
+    }
+  ]
+}
