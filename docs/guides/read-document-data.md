@@ -1,4 +1,4 @@
-# Kind Data Access Pattern
+# How to read document data
 
 The DNA SDK has a unified way to read data from Documents of any kind.
 Follow it so your code doesn't break when kinds evolve, and so you

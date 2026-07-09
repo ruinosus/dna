@@ -13,6 +13,8 @@ coverage/
 !.env.example
 # resolver cache — created when a demo/example resolves github: deps
 .dna-cache/
+# MkDocs build output — the docs site is built in CI / on Pages, never committed
+site/
 # per-workstation pointer written by `dna sdlc story start` (read by the
 # prepare-commit-msg hook) — never source-of-truth, never committed
 .dna/active-story.txt

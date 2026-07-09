@@ -1,0 +1,89 @@
+# Docs CI — build the MkDocs site strictly, link-check it, and (on main)
+# publish it to GitHub Pages (s-docs-diataxis-site).
+#
+# Jobs:
+#   docs-build — install mkdocs-material (requirements-docs.txt) and run
+#                `mkdocs build --strict`, so a broken internal link, a
+#                missing nav file, or a dead anchor fails the PR. Uploads the
+#                built site as the Pages artifact (consumed by `deploy`).
+#   docs-links — lychee link-check over README.md + docs/. Runs OFFLINE:
+#                external URLs are not network-fetched (so a flaky site, a
+#                429, or a timeout can never red a PR — matching this repo's
+#                hermetic-CI stance in python.yml), while broken INTERNAL
+#                file links still fail. Mail links are excluded.
+#   deploy     — GitHub Pages, push-to-main only. Deliberately tolerant: it
+#                never runs on a PR, and Pages on a PRIVATE repo needs a paid
+#                plan (see the note on the job), so it is allowed to fail
+#                without failing the overall run until the repo goes public.
+
+name: docs
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  docs-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install docs deps
+        run: pip install -r requirements-docs.txt
+      - name: Build (strict)
+        run: mkdocs build --strict
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  docs-links:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Link check (lychee, offline)
+        uses: lycheeverse/lychee-action@v2
+        with:
+          # --offline: never touch the network — only local file links are
+          #   validated, so external 429/timeouts can't fail CI, but a broken
+          #   internal link does. --exclude-mail: ignore mailto: links.
+          args: >-
+            --offline
+            --exclude-mail
+            --no-progress
+            README.md
+            'docs/**/*.md'
+          fail: true
+          # Don't post an issue on failure — this is a PR gate, not a tracker.
+          jobSummary: true
+
+  # GitHub Pages deploy — main branch only.
+  #
+  # NOTE: GitHub Pages on a PRIVATE repository requires GitHub Pro / Team /
+  # Enterprise. Until this repo is public (or on a paid plan) with Pages
+  # enabled (Settings → Pages → Source: GitHub Actions), this job will fail
+  # at the `deploy-pages` step. It is gated to push-on-main (never runs on a
+  # PR) and marked continue-on-error so it CANNOT block merges in the
+  # meantime. Once Pages is enabled, drop `continue-on-error` to make the
+  # deploy a hard gate.
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: docs-build
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

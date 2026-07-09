@@ -1,0 +1,16 @@
+# Documentation site dependencies (s-docs-diataxis-site).
+#
+# The DNA docs site is built with MkDocs + the Material theme. This is the
+# ONLY thing the docs CI job (.github/workflows/docs.yml) installs — the SDK
+# itself is not needed to build the site, keeping the docs job fast and
+# hermetic.
+#
+#   pip install -r requirements-docs.txt
+#   mkdocs serve      # live preview at http://127.0.0.1:8000
+#   mkdocs build --strict
+#
+# NOTE: API-reference autogen (mkdocstrings for Python, TypeDoc for
+# TypeScript) and the parity matrix are a LATER wave and are deliberately
+# NOT pinned here yet — see docs/reference/index.md.
+
+mkdocs-material>=9.5,<10

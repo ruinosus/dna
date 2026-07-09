@@ -167,8 +167,8 @@ build_prompt(agent="brad") renders:
 ## Creating a Custom Kind
 
 You can create your own Kinds by implementing `KindPort` and registering
-them via an Extension. `docs/KIND-AUTHORING.md` is the full step-by-step;
-what follows is the shape of it.
+them via an Extension. [How to add a Kind](../guides/add-a-kind.md) is the
+full step-by-step; what follows is the shape of it.
 
 ### Real-World Example: GuardrailKind
 

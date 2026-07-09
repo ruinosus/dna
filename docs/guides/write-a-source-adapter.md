@@ -1,4 +1,4 @@
-# Port Contract
+# How to write a source adapter
 
 The contract every adapter that implements `WritableSourcePort` must
 honor. Verified by `packages/sdk-py/tests/test_port_contract.py`, parametrized
