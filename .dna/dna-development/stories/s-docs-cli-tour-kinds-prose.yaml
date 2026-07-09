@@ -17,7 +17,7 @@ spec:
     \ as entries correspondentes da allowlist do docs_coverage_guard (o guard imprime\
     \ NOTE de stale sozinho \u2014 a remo\xE7\xE3o \xE9 o DoD natural). 28 Kinds record-plane\
     \ do SDLC machinery ficam allowlistados de vez (long-tail interno, justificado)."
-  status: in-progress
+  status: review
   feature: f-dna-docs
   priority: medium
   labels:
@@ -25,15 +25,20 @@ spec:
   reporter: claude-code
   business_value: 400
   acceptance_criteria:
-  - "cli-tour cobre os grupos allowlistados com exemplos executados; cat\xE1logo dos\
-    \ 14 composition Kinds escrito; entries removidas da allowlist e guard verde SEM\
-    \ elas; build strict + coverage guard verdes"
+  - text: "cli-tour cobre os grupos allowlistados com exemplos executados; cat\xE1\
+      logo dos 14 composition Kinds escrito; entries removidas da allowlist e guard\
+      \ verde SEM elas; build strict + coverage guard verdes"
+    done: true
+    done_at: '2026-07-09T22:31:45+00:00'
+    done_by: claude-code
+    evidence: "PR #21 \u2014 cli-tour.md (6 grupos + exemplos executados), builtin-kinds.md\
+      \ (14 Kinds), allowlist 46->27, guard + build strict verdes (TestRun tr-tg-s-docs-cli-tour-kinds-prose-20260709-222944)"
   acceptance_criteria_source: cli-create
   definition_of_done:
   - PR merged via dna sdlc story pr
   definition_of_done_source: cli-create
   created_at: '2026-07-09T21:07:23+00:00'
-  updated_at: '2026-07-09T22:29:45+00:00'
+  updated_at: '2026-07-09T22:31:48+00:00'
   timeline:
   - at: '2026-07-09T21:07:23+00:00'
     actor: claude-code
@@ -75,6 +80,27 @@ spec:
     name: tr-tg-s-docs-cli-tour-kinds-prose-20260709-222944
     summary: "TestRun tr-tg-s-docs-cli-tour-kinds-prose-20260709-222944 \u2192 pass"
     outcome: pass
+  - at: '2026-07-09T22:31:13+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/21'
+    pr_url: https://github.com/ruinosus/dna/pull/21
+  - at: '2026-07-09T22:31:46+00:00'
+    actor: claude-code
+    type: checklist_check
+    source: cli
+    marked_ac: 1
+    marked_dod: 0
+    evidence: "PR #21 \u2014 cli-tour.md (6 grupos + exemplos executados), builtin-kinds.md\
+      \ (14 Kinds), allowlist 46->27, guard + build strict verdes (TestRun tr-tg-s-docs-cli-tour-kinds-prose-20260709-222944)"
+    by: claude-code
+  - at: '2026-07-09T22:31:48+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
   produces:
   - kind: Plan
     name: plan-s-docs-cli-tour-kinds-prose
