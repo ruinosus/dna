@@ -34,7 +34,7 @@ spec:
   - PR merged via dna sdlc story pr
   definition_of_done_source: cli-create
   created_at: '2026-07-09T20:52:10+00:00'
-  updated_at: '2026-07-09T20:52:14+00:00'
+  updated_at: '2026-07-09T21:00:55+00:00'
   timeline:
   - at: '2026-07-09T20:52:10+00:00'
     actor: claude-code
@@ -47,6 +47,29 @@ spec:
     source: cli
     from: todo
     to: in-progress
+  - at: '2026-07-09T21:00:55+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Guard escrito (scripts/docs_coverage_guard.py, estilo brand_guard: stdlib\
+      \ puro, allowlist justificada, self-test, --all report-only). Enumera 10 grupos\
+      \ CLI (Click tree, mecanismo do gen_cli_docs) + 63 Kinds (Kernel.auto(), mecanismo\
+      \ do gen_kinds_docs) = 73 itens vs 17 p\xE1ginas de prosa. Decis\xF5es de matching:\
+      \ CLI cobre s\xF3 men\xE7\xE3o invocation-shaped ('dna <group>', ci) \u2014\
+      \ palavra solta 'search'/'memory' N\xC3O conta (esconderia exatamente o gap\
+      \ motivador); Kind cobre nome exato case-SENSITIVE com plural tolerado, ou alias\
+      \ ci. README conta como prosa; docs/reference/** nunca (tautol\xF3gico). PROVA:\
+      \ --all acusa 51 gaps incluindo cli:search/recall/memory (o gap motivador).\
+      \ Allowlist: 3 tempor\xE1rias (irm\xE3 s-docs-search-memory-prose), 6 CLI gaps\
+      \ pr\xE9-existentes (achado!), 28 SDLC machinery, 14 composition-plane sem prosa\
+      \ (achado!). Self-test + guard real + brand_guard + mkdocs --strict todos verdes."
+    commit_ref: 7dc4c5db87c433451406e6234424d533f59811d9
+  - at: '2026-07-09T21:01:37+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/17'
+    pr_url: https://github.com/ruinosus/dna/pull/17
   produces:
   - kind: Plan
     name: plan-s-docs-coverage-guard

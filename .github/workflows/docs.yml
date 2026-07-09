@@ -73,6 +73,17 @@ jobs:
                  git --no-pager diff -- docs/reference/cli docs/reference/kinds docs/reference/parity-matrix.md; \
                  exit 1; }
           git --no-pager diff --stat -- docs/reference/typescript || true
+      # Prose-coverage guard (s-docs-coverage-guard): the drift guard above
+      # keeps the generated Reference honest; this keeps the PROSE honest.
+      # Every public CLI group + registered Kind must be mentioned in at
+      # least one hand-written page (docs/concepts|guides|getting-started or
+      # README) or carry a justified allowlist entry in the script. Runs
+      # after the generators (same SDK+CLI install) and before the build so
+      # a coverage gap fails fast with a didactic message.
+      - name: Docs prose-coverage guard
+        run: |
+          python scripts/docs_coverage_guard.py --self-test
+          python scripts/docs_coverage_guard.py
       - name: Build (strict)
         run: mkdocs build --strict
       - name: Upload Pages artifact
