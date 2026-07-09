@@ -117,6 +117,21 @@ Two properties of that design are the ones DNA borrows:
   computed by a controller and written back for you — hand-editing it is a
   category error.
 
+Side by side, the two pipelines mirror each other:
+
+```mermaid
+flowchart TB
+    subgraph k8s ["Kubernetes"]
+        direction LR
+        A1["CRD + resource spec<br/>(desired state)"] --> A2["controller<br/>reconciles"] --> A3["status<br/>(observed state)"]
+    end
+    subgraph dna ["DNA"]
+        direction LR
+        B1["Kind descriptor + document spec<br/>(authored intent)"] --> B2["kernel<br/>composes on read"] --> B3["composed prompt<br/>(observed behavior)"]
+    end
+    k8s ~~~ dna
+```
+
 ### spec is intent; behavior is the observed state
 
 DNA takes the second property literally.

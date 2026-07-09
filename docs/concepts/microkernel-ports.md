@@ -21,6 +21,32 @@ question:
 | **Reader/WriterPort** | How is a bundle format detected, scanned and written back? (`SKILL.md`, `SOUL.md`, `AGENTS.md`, YAML) |
 | **KindPort** | What is this Kind's identity, schema and composition role? |
 
+The whole topology in one picture — extensions register Kinds on top, the
+kernel mediates in the middle, adapters plug in underneath (the two
+search-plane ports are covered in [Search & memory](search-and-memory.md)):
+
+```mermaid
+flowchart TB
+    EXT["Extensions<br/>helix · agentskills · soulspec · guardrails · ..."] -->|"kernel.load(ext) registers Kinds"| K
+    K(["Kernel<br/>(mediator)"])
+    subgraph five ["The five ports"]
+        SRC[SourcePort]
+        CACHE[CachePort]
+        RES[ResolverPort]
+        RW["Reader / WriterPort"]
+        KIND[KindPort]
+    end
+    subgraph search ["Search plane"]
+        EMB[EmbeddingPort]
+        RSP[RecordSearchProvider]
+    end
+    K --> SRC & CACHE & RES & RW & KIND
+    K --> EMB & RSP
+    SRC -.- SA["fs · sqlite · postgres · sqlalchemy"]
+    RES -.- RA["local: · github: · http(s):"]
+    RSP -.- PA["sqlite-vec · pgvector"]
+```
+
 Because the core only ever talks to these interfaces, you can swap the
 storage backend, the fetch strategy, or the on-disk format without touching
 the composition logic — and you can add a Kind without touching the core at
