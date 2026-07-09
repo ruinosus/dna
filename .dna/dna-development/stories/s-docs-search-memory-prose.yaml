@@ -14,7 +14,7 @@ spec:
     \ esbo\xE7ado em agent-knowledge.md); guides/semantic-recall.md (como usar dna\
     \ recall/search/memory + registrar providers + extras); toque no getting-started\
     \ e no README (1 se\xE7\xE3o curta na landing). Consultar rsh-memory-similarity-evolution."
-  status: review
+  status: done
   feature: f-dna-docs
   priority: high
   labels:
@@ -33,10 +33,13 @@ spec:
       \ nav updated (Concepts + How-to guides). All 9 PR checks green."
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - PR merged via dna sdlc story pr
+  - text: PR merged via dna sdlc story pr
+    done: true
+    done_at: '2026-07-09T21:35:32+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-09T20:52:08+00:00'
-  updated_at: '2026-07-09T21:27:37+00:00'
+  updated_at: '2026-07-09T21:35:35+00:00'
   timeline:
   - at: '2026-07-09T20:52:08+00:00'
     actor: claude-code
@@ -65,8 +68,8 @@ spec:
       \ venv + 1 sequence diagram), first-kind next-steps bullet, README landing section,\
       \ mkdocs nav + mermaid superfence. Gates: brand_guard+self-test clean, mkdocs\
       \ build --strict green, diagrams confirmed rendering in-browser. One CI wrinkle:\
-      \ gitleaks false-positive (the concept's fake-embedder sentence matched\
-      \ generic-api-key) \u2014 reworded + amended + force-pushed; gitleaks now green."
+      \ gitleaks false-positive (the concept's fake-embedder sentence matched generic-api-key)\
+      \ \u2014 reworded + amended + force-pushed; gitleaks now green."
     commit_ref: ab9f741d4a81b1add3b5941cdf6ed6e7ec70a768
   - at: '2026-07-09T21:27:22+00:00'
     actor: claude-code
@@ -85,8 +88,48 @@ spec:
       \ mkdocs build --strict green in docs-build check; docs-links (lychee) green;\
       \ nav updated (Concepts + How-to guides). All 9 PR checks green."
     by: claude-code
+  - at: '2026-07-09T21:35:30+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-docs-search-memory-prose
+    summary: TestGuide tg-s-docs-search-memory-prose (smoke)
+  - at: '2026-07-09T21:35:32+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-docs-search-memory-prose-20260709-213531
+    summary: "TestRun tr-tg-s-docs-search-memory-prose-20260709-213531 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-09T21:35:33+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #18 merged. Concept search-and-memory + guide semantic-recall (exemplos\
+      \ reais executados) + toques README/getting-started + 3 diagramas Mermaid (render\
+      \ verificado em browser) + config superfences. Kaizen do agente: gitleaks escaneia\
+      \ HIST\xD3RIA \u2014 fix pr\xE9-merge exige rewrite (amend+force-with-lease),\
+      \ n\xE3o append; nunca citar string secret-looking em narra\xE7\xE3o/commit."
+  - at: '2026-07-09T21:35:35+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: 4b6b312a487a7e6cfec19387071d2b9332cf0c0c
   produces:
   - kind: Plan
     name: plan-s-docs-search-memory-prose
     role: implementation
     at: '2026-07-09T20:52:12+00:00'
+  - kind: TestGuide
+    name: tg-s-docs-search-memory-prose
+    role: test-guide
+    at: '2026-07-09T21:35:30+00:00'
+  - kind: TestRun
+    name: tr-tg-s-docs-search-memory-prose-20260709-213531
+    role: test-run
+    at: '2026-07-09T21:35:32+00:00'
+  closed_at: '2026-07-09T21:35:32+00:00'

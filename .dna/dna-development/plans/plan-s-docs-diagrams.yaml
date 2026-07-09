@@ -1,0 +1,17 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-docs-diagrams
+spec:
+  title: 'Plano: s-docs-diagrams'
+  date: '2026-07-09'
+  status: accepted
+  story_ref: s-docs-diagrams
+  journey_phase: plan
+  body: "7 diagramas Mermaid nas p\xE1ginas existentes (kernel+ports assinatura, anatomia\
+    \ Kind+composi\xE7\xE3o, CRD\u2194Kind, market-fidelity round-trip, tenancy overlay,\
+    \ ciclo SDLC+symbiosis, hero README); config superfences j\xE1 existe (PR #18);\
+    \ simples ~10 n\xF3s, tema claro/escuro; render verificado em browser. Worktree\
+    \ dna-wt-diagrams; PR via story pr."
+  created_at: '2026-07-09T21:39:32+00:00'
+  updated_at: '2026-07-09T21:39:32+00:00'

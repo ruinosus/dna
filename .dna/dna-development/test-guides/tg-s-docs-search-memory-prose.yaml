@@ -1,0 +1,19 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-s-docs-search-memory-prose
+spec:
+  description: Roteiro de teste de s-docs-search-memory-prose (derivado das acceptance_criteria).
+  kind_of_test: smoke
+  status: active
+  steps:
+  - action: 'No Studio, valide: Concept + guide novos; getting-started e README mencionam
+      a capability; mkdocs build --strict verde; lychee verde; nav atualizada'
+    where: "<rota/tela \u2014 ex. /scopes/:scope/...>"
+    expected: "<o que voc\xEA V\xCA quando est\xE1 certo (marque \u2717 S\xD3 se estiver\
+      \ quebrado)>"
+  verifies:
+  - Story/s-docs-search-memory-prose
+  created_at: '2026-07-09T21:35:29+00:00'
+  updated_at: '2026-07-09T21:35:29+00:00'
+  owner: claude-code

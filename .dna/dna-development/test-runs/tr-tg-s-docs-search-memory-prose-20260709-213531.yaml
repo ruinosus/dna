@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-docs-search-memory-prose-20260709-213531
+spec:
+  guide_ref: tg-s-docs-search-memory-prose
+  outcome: pass
+  verifies:
+  - Story/s-docs-search-memory-prose
+  executed_by: claude-code
+  executed_at: '2026-07-09T21:35:31+00:00'
+  evidence:
+  - ci:pr18-9-of-9,exemplos:executados-outputs-verbatim,diagramas:3-mermaid-render-verificado-browser,build:strict-verde,brand+gitleaks:limpos-pos-rewrite

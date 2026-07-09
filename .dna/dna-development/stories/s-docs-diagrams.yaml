@@ -22,7 +22,7 @@ spec:
     \ (que est\xE1 adicionando) \u2014 se ela n\xE3o tiver mergeado ainda, incluir\
     \ aqui com merge cuidadoso. Diagramas simples (~10 n\xF3s), sem cores custom,\
     \ leg\xEDveis no tema claro/escuro."
-  status: todo
+  status: in-progress
   feature: f-dna-docs
   priority: high
   labels:
@@ -38,10 +38,21 @@ spec:
   - PR merged via dna sdlc story pr
   definition_of_done_source: cli-create
   created_at: '2026-07-09T20:55:42+00:00'
-  updated_at: '2026-07-09T20:55:42+00:00'
+  updated_at: '2026-07-09T21:39:33+00:00'
   timeline:
   - at: '2026-07-09T20:55:42+00:00'
     actor: claude-code
     type: status_change
     source: cli
     to: todo
+  - at: '2026-07-09T21:39:33+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  produces:
+  - kind: Plan
+    name: plan-s-docs-diagrams
+    role: implementation
+    at: '2026-07-09T21:39:33+00:00'
