@@ -1,0 +1,36 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-search-pgvector
+spec:
+  title: "Adapter pgvector do RecordSearchProvider (escala) reusando o Postgres do\
+    \ DNA \u2014 p"
+  description: "Adapter pgvector do RecordSearchProvider (escala) reusando o Postgres\
+    \ do DNA \u2014 porta o RRF lib-puro do upstream; mesma interface do sqlite-vec,\
+    \ promove sem trocar contrato; DDL dono via migration contract. Passa o MESMO\
+    \ provider conformance kit. Depende de s-record-search-sqlite."
+  status: todo
+  feature: f-dna-search-memory
+  priority: medium
+  labels:
+  - sdk
+  - python
+  - postgres
+  - search
+  reporter: claude-code
+  business_value: 400
+  acceptance_criteria:
+  - PgRecordSearchProvider passa o conformance kit do provider; mesma interface; DDL
+    dono; CI verde (pg job)
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - PR merged
+  definition_of_done_source: cli-create
+  created_at: '2026-07-09T16:48:03+00:00'
+  updated_at: '2026-07-09T16:48:03+00:00'
+  timeline:
+  - at: '2026-07-09T16:48:03+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo

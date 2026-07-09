@@ -1,0 +1,16 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-embedding-port
+spec:
+  title: 'Plano: s-embedding-port'
+  date: '2026-07-09'
+  status: accepted
+  story_ref: s-embedding-port
+  journey_phase: plan
+  body: "EmbeddingPort Py+TS + fixture parity; adapter fake determin\xEDstico (CI\
+    \ floor) + ONNX all-MiniLM opt-in (fastembed Py + transformers.js TS, paridade\
+    \ por artefato, lazy-download); kernel.embed + register; extras opt-in; guard\
+    \ core-sem-deps-pesadas. Worktree dna-wt-embed; PR via story pr."
+  created_at: '2026-07-09T16:48:05+00:00'
+  updated_at: '2026-07-09T16:48:05+00:00'

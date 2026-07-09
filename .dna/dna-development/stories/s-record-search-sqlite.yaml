@@ -1,0 +1,40 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-record-search-sqlite
+spec:
+  title: "RecordSearchProvider impl embarc\xE1vel: sqlite-vec + FTS5(BM25) + RRF (Py+TS),\
+    \ con"
+  description: "RecordSearchProvider impl embarc\xE1vel: sqlite-vec + FTS5(BM25) +\
+    \ RRF (Py+TS), consumindo EmbeddingPort. Um .db por scope; d\xE1 DONO ao schema\
+    \ de embeddings (o d\xE9bito: DDL sem dono no upstream) via migration contract.\
+    \ Denso(sqlite-vec)+lexical(FTS5)+RRF(fun\xE7\xE3o pura). Plugado num conformance\
+    \ kit pr\xF3prio do provider (estilo source_conformance_suite). Wire: dna recall/search\
+    \ CLI + faz o recall do Research usar o provider (resolve i-004: deixa de ser\
+    \ lexical). Overlay/tenant-aware. Depende de s-embedding-port."
+  status: todo
+  feature: f-dna-search-memory
+  priority: high
+  labels:
+  - sdk
+  - python
+  - typescript
+  - search
+  reporter: claude-code
+  business_value: 600
+  acceptance_criteria:
+  - "RecordSearchProvider sqlite-vec+FTS5+RRF Py+TS; schema de embeddings com migra\xE7\
+    \xE3o dona; provider conformance suite verde; dna recall funciona offline end-to-end;\
+    \ Research recall usa o provider; CI verde"
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - PR merged via dna sdlc story pr
+  definition_of_done_source: cli-create
+  created_at: '2026-07-09T16:48:03+00:00'
+  updated_at: '2026-07-09T16:48:03+00:00'
+  timeline:
+  - at: '2026-07-09T16:48:03+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo

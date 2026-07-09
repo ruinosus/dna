@@ -22,7 +22,7 @@ spec:
   - Repo public; announcement optional
   definition_of_done_source: cli-create
   created_at: '2026-07-08T18:27:50+00:00'
-  updated_at: '2026-07-09T10:38:00+00:00'
+  updated_at: '2026-07-09T16:48:05+00:00'
   timeline:
   - at: '2026-07-08T18:27:50+00:00'
     actor: claude-code
@@ -75,3 +75,12 @@ spec:
       \ que resta nesta story \xE9 s\xF3 a DECIS\xC3O: revis\xE3o final do Barna no\
       \ repo + 'pode abrir' registrado aqui."
     commit_ref: 366b4f49852340450e98eb6fc5a41597046814aa
+  - at: '2026-07-09T16:48:05+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "BLOQUEADO por decis\xE3o do Barna (2026-07-09): go-public espera f-dna-search-memory\
+      \ (busca sem\xE2ntica + mem\xF3ria embarc\xE1vel) ficar pronto \u2014 o repo\
+      \ abre COM busca sem\xE2ntica funcionando. Checklist t\xE9cnico do gate segue\
+      \ completo; s\xF3 aguarda a feature."
+    commit_ref: c42368304ec4a306d3794c626eb4f1a6ee4a5b30
