@@ -34,12 +34,45 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.4"
       - name: Install docs deps
         run: pip install -r requirements-docs.txt
-      - name: Regenerate the parity matrix from the fixtures
-        # Keeps docs/reference/parity-matrix.md in lockstep with the CI parity
-        # fixtures every build, so the published matrix can never drift.
-        run: python scripts/gen_parity_matrix.py
+      # mkdocstrings renders the Python API inline from the `dna` package, and
+      # the CLI/Kinds/parity generators import it — so the SDK + CLI must be
+      # importable in the build env (they are NOT needed for the prose pages,
+      # only for the source-generated Reference quadrant).
+      - name: Install DNA SDK + CLI (source of the API reference)
+        run: pip install -e packages/sdk-py -e packages/cli
+      - name: Install TypeScript SDK deps (TypeDoc)
+        run: bun install --frozen-lockfile
+        working-directory: packages/sdk-ts
+      # Regenerate the whole source-derived Reference: the Py↔TS parity matrix
+      # (from the byte-parity fixtures), the CLI ref (Click tree), the Kinds ref
+      # (registered Kinds' schemas) and the TypeScript API (TypeDoc). The Python
+      # API is rendered inline by mkdocstrings at build time, so it has no
+      # committed artifact.
+      - name: Generate the reference from source
+        run: |
+          python scripts/gen_parity_matrix.py
+          python scripts/gen_cli_docs.py
+          python scripts/gen_kinds_docs.py
+          ( cd packages/sdk-ts && bun run docs:api )
+      # Drift guard (uv/Ruff model): the committed reference must equal a fresh
+      # regeneration. Scoped to the DETERMINISTIC Python generators (CLI, Kinds,
+      # parity matrix) — a stale commit there fails the PR. The TypeDoc output
+      # can vary slightly by toolchain across platforms, so it is regenerated
+      # fresh here for the actual build but not diff-gated (any drift is printed
+      # for visibility, never fatal).
+      - name: Fail if the generated reference is stale
+        run: |
+          git diff --exit-code -- \
+            docs/reference/cli docs/reference/kinds docs/reference/parity-matrix.md \
+            || { echo '::error::CLI/Kinds/parity reference is stale — re-run the generators and commit.'; \
+                 git --no-pager diff -- docs/reference/cli docs/reference/kinds docs/reference/parity-matrix.md; \
+                 exit 1; }
+          git --no-pager diff --stat -- docs/reference/typescript || true
       - name: Build (strict)
         run: mkdocs build --strict
       - name: Upload Pages artifact

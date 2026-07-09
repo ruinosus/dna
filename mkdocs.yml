@@ -65,9 +65,12 @@ nav:
       - How to write a source adapter: guides/write-a-source-adapter.md
       - How to write a Reader/Writer: guides/readers-and-writers.md
       - Your git log is your SDLC: guides/sdlc.md
-  - Reference:
-      - reference/index.md
-      - Parity matrix — Python × TypeScript: reference/parity-matrix.md
+  # Reference — GENERATED FROM SOURCE. The four API sub-references (Python via
+  # mkdocstrings, TypeScript via TypeDoc, CLI + Kinds via scripts/gen_*_docs.py)
+  # plus the Py↔TS parity matrix are wired through literate-nav: each generated
+  # subtree is discovered via `reference/SUMMARY.md` (the section spine) without
+  # this file having to hand-list every page (s-docs-api-reference).
+  - Reference: reference/
 
 markdown_extensions:
   # Admonitions + collapsible blocks
@@ -98,6 +101,33 @@ markdown_extensions:
 
 plugins:
   - search
+  # literate-nav — lets each generated reference subtree declare its own nav
+  # (SUMMARY.md) so the variable, source-generated file set is discovered
+  # without hand-listing every page in this file (s-docs-api-reference).
+  - literate-nav:
+      nav_file: SUMMARY.md
+  # mkdocstrings — renders the Python API reference INLINE from the `dna`
+  # package docstrings (`::: dna.kernel.Kernel`). Requires the `dna` SDK to be
+  # importable in the build env; the docs CI job installs it before building.
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          paths: [packages/sdk-py]
+          options:
+            show_root_heading: true
+            show_source: false
+            show_signature_annotations: true
+            separate_signature: true
+            # docstring_style: null — the DNA source docstrings are prose, not
+            # strict Google/Numpy sections; parsing them structurally makes
+            # griffe emit "Failed to get exception:description" warnings that
+            # `--strict` turns fatal. Rendering them as-is markdown keeps every
+            # word (the docstrings ARE the source of truth) without the noise.
+            docstring_style: null
+            merge_init_into_class: true
+            show_if_no_docstring: false
+            members_order: source
 
 # Make the build gate meaningful: with `mkdocs build --strict` these
 # warnings become hard errors, so a broken internal link or anchor fails CI.

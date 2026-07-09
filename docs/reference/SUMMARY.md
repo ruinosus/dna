@@ -1,0 +1,18 @@
+- [Reference](index.md)
+- Python API
+    - [Overview](python/index.md)
+    - [Kernel & Runtime](python/kernel.md)
+    - [Document & ManifestInstance](python/document.md)
+    - [Ports & protocols](python/ports.md)
+    - [Extensions](python/extensions.md)
+    - [Testing / conformance kit](python/testing.md)
+- TypeScript API
+    - [Overview](typescript/index.md)
+    - typescript/*.md
+- CLI
+    - [Overview](cli/index.md)
+    - cli/*.md
+- Kinds
+    - [Overview](kinds/index.md)
+    - kinds/*.md
+- [Parity matrix](parity-matrix.md)

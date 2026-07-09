@@ -1,16 +1,31 @@
-# Documentation site dependencies (s-docs-diataxis-site).
+# Documentation site dependencies (s-docs-diataxis-site + s-docs-api-reference).
 #
-# The DNA docs site is built with MkDocs + the Material theme. This is the
-# ONLY thing the docs CI job (.github/workflows/docs.yml) installs — the SDK
-# itself is not needed to build the site, keeping the docs job fast and
-# hermetic.
+# The DNA docs site is built with MkDocs + the Material theme.
 #
 #   pip install -r requirements-docs.txt
 #   mkdocs serve      # live preview at http://127.0.0.1:8000
 #   mkdocs build --strict
 #
-# NOTE: API-reference autogen (mkdocstrings for Python, TypeDoc for
-# TypeScript) and the parity matrix are a LATER wave and are deliberately
-# NOT pinned here yet — see docs/reference/index.md.
+# ── API reference (s-docs-api-reference) ──────────────────────────────
+# The Reference quadrant is GENERATED FROM SOURCE so it cannot drift:
+#
+#   - Python API  — mkdocstrings[python] renders the `dna` package
+#     docstrings inline (`::: dna.kernel.Kernel`). This means the `dna`
+#     SDK (packages/sdk-py) MUST be importable in the build environment
+#     — the docs CI job installs it before `mkdocs build`.
+#   - TypeScript API — TypeDoc (packages/sdk-ts, `bun run docs:api`)
+#     emits markdown into docs/reference/typescript/ from the TSDoc of
+#     the exported surface.
+#   - CLI — scripts/gen_cli_docs.py introspects the Click command tree.
+#   - Kinds — scripts/gen_kinds_docs.py introspects the registered Kinds.
+#
+# literate-nav lets the generated (variable) file trees be discovered by
+# the nav without hand-listing every page, while `mkdocs build --strict`
+# still fails on a genuinely broken link.
 
 mkdocs-material>=9.5,<10
+mkdocstrings[python]>=0.26,<0.30
+mkdocs-literate-nav>=0.6,<0.7
+# black — lets mkdocstrings pretty-print the separated Python signatures
+# (`separate_signature: true`); without it they render on one long line.
+black>=24,<26

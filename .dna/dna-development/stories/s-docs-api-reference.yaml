@@ -9,7 +9,7 @@ spec:
     \ pra Python (::: dna.kernel... inline) + TypeDoc\u2192markdown pra TS em /reference/typescript/,\
     \ docstrings/TSDoc como fonte \xFAnica. + reference do CLI dna gerada dos command\
     \ defs + reference dos Kinds do JSON Schema. Depende de s-docs-diataxis-site."
-  status: in-progress
+  status: review
   feature: f-dna-docs
   priority: high
   labels:
@@ -26,7 +26,7 @@ spec:
   - PR merged
   definition_of_done_source: cli-create
   created_at: '2026-07-09T13:54:01+00:00'
-  updated_at: '2026-07-09T14:57:32+00:00'
+  updated_at: '2026-07-09T15:36:48+00:00'
   timeline:
   - at: '2026-07-09T13:54:01+00:00'
     actor: claude-code
@@ -39,8 +39,57 @@ spec:
     source: cli
     from: todo
     to: in-progress
+  - at: '2026-07-09T15:26:14+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'Built the source-generated Reference quadrant: (1) Python API via mkdocstrings
+      inline (::: dna.kernel...), 6 authored stub pages over Kernel/Document/MI/ports/extensions/testing;
+      (2) TypeScript API via TypeDoc + typedoc-plugin-markdown from src/index.ts TSDoc
+      (168 pages, disableSources for cross-env determinism); (3) CLI ref generated
+      from the Click tree (scripts/gen_cli_docs.py, 8 group pages); (4) Kinds ref
+      from the live registered Kinds'' schemas (scripts/gen_kinds_docs.py). Py and
+      TS wired as sibling trees (never fused) via literate-nav. mkdocs build --strict
+      green with 0 warnings; generators idempotent+deterministic; docs.yml regenerates
+      + drift-guards before build. brand_guard clean.'
+    commit_ref: e2df023f6b6e45de7185843556a366e7980c1deb
+  - at: '2026-07-09T15:27:10+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-docs-api-reference
+    summary: TestGuide tg-s-docs-api-reference (manual)
+  - at: '2026-07-09T15:27:21+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-docs-api-reference-20260709-152720
+    summary: "TestRun tr-tg-s-docs-api-reference-20260709-152720 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-09T15:28:08+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/12'
+    pr_url: https://github.com/ruinosus/dna/pull/12
+  - at: '2026-07-09T15:36:48+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
   produces:
   - kind: Plan
     name: plan-s-docs-api-reference
     role: implementation
     at: '2026-07-09T14:57:32+00:00'
+  - kind: TestGuide
+    name: tg-s-docs-api-reference
+    role: test-guide
+    at: '2026-07-09T15:27:10+00:00'
+  - kind: TestRun
+    name: tr-tg-s-docs-api-reference-20260709-152720
+    role: test-run
+    at: '2026-07-09T15:27:21+00:00'
