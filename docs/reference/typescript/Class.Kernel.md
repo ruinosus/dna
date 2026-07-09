@@ -135,6 +135,39 @@ readonly [`WriterPort`](Interface.WriterPort.md)[]
 
 ***
 
+### embeddingDims
+
+#### Get Signature
+
+```ts
+get embeddingDims(): number;
+```
+
+Output dimensionality of the active embedding provider.
+
+##### Returns
+
+`number`
+
+***
+
+### embeddingModelId
+
+#### Get Signature
+
+```ts
+get embeddingModelId(): string;
+```
+
+Identity of the active embedding space (vectors from different `modelId`s
+ are NOT comparable).
+
+##### Returns
+
+`string`
+
+***
+
 ### INHERITABLE\_KINDS
 
 #### Get Signature
@@ -547,6 +580,30 @@ Summary dict for a registered kind, including resolved docs. Facade
 
 ***
 
+### embed()
+
+```ts
+embed(texts): Promise<number[][]>;
+```
+
+Embed texts into dense vectors (rec-embedding-port; TS twin of the Py
+`kernel.embed`). Uses the registered `EmbeddingPort` when present, else the
+deterministic zero-dep fake floor. Returns one `dims`-length vector per
+input, in order; empty input → empty array. Read the space via
+`embeddingDims` / `embeddingModelId`.
+
+#### Parameters
+
+| Parameter | Type |
+| ------ | ------ |
+| `texts` | `string`[] |
+
+#### Returns
+
+`Promise`\<`number`[][]\>
+
+***
+
 ### embeddableKinds()
 
 ```ts
@@ -561,6 +618,30 @@ F3 D4 (spec 2026-06-10-kinds-descriptor-f3): kind names whose port
 #### Returns
 
 `Set`\<`string`\>
+
+***
+
+### embeddingProvider()
+
+```ts
+embeddingProvider(provider): void;
+```
+
+Register the embedding provider (rec-embedding-port). One per kernel; later
+registration replaces (boot-time wiring). Sibling to
+`recordSearchProvider` — a real provider (ONNX all-MiniLM-L6-v2) registers
+itself at app boot; without one, `embed` uses the deterministic
+`FakeEmbeddingProvider` floor.
+
+#### Parameters
+
+| Parameter | Type |
+| ------ | ------ |
+| `provider` | [`EmbeddingPort`](Interface.EmbeddingPort.md) |
+
+#### Returns
+
+`void`
 
 ***
 

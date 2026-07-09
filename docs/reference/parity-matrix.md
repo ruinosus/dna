@@ -14,7 +14,7 @@ DNA ships a Python SDK and a TypeScript SDK that are **behaviorally identical**.
 - ⚠️ — intentionally absent on this side; the asymmetry is documented (see the Notes column). Undocumented drift reds the parity suite in CI.
 - ➖ — not applicable / shaped differently by design.
 
-**Summary:** **149** shared members across the tracked contracts, **39** documented asymmetries. Python is the semantic reference: a gap is closed by porting to TypeScript, or justified in the fixture — never by silence.
+**Summary:** **152** shared members across the tracked contracts, **39** documented asymmetries. Python is the semantic reference: a gap is closed by porting to TypeScript, or justified in the fixture — never by silence.
 
 ## Ports — the microkernel contract
 
@@ -209,6 +209,16 @@ Two-planes F2 — semantic search over record docs, registered on the kernel at 
 | Member | Python | TypeScript | Notes |
 |---|:---:|:---:|---|
 | `search` | ✅ | ✅ |  |
+
+### `EmbeddingPort`
+
+rec-embedding-port — text→dense-vector, sibling to RecordSearchProvider. Fake floor is zero-dep + bit-exact Py↔TS; ONNX all-MiniLM-L6-v2 is an opt-in extra. Py: dna/kernel/protocols.py · TS: src/kernel/protocols.ts
+
+| Member | Python | TypeScript | Notes |
+|---|:---:|:---:|---|
+| `model_id` | ✅ | ✅ |  |
+| `dims` | ✅ | ✅ |  |
+| `embed` | ✅ | ✅ |  |
 
 ### `SourceCapabilities`
 

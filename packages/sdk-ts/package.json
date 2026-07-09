@@ -31,6 +31,15 @@
     "typedoc-plugin-markdown": "^4.12.0",
     "typescript": "^5.5.0"
   },
+  "//peerDependencies": "rec-embedding-port — the REAL EmbeddingPort (ONNX all-MiniLM-L6-v2 via transformers.js). Optional: the default/CI floor is the zero-dep FakeEmbeddingProvider, and OnnxEmbeddingProvider dynamic-imports this only on first embed(). Never in the default bundle (guard: tests/embedding-import-isolation.test.ts).",
+  "peerDependencies": {
+    "@huggingface/transformers": "^3.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@huggingface/transformers": {
+      "optional": true
+    }
+  },
   "exports": {
     ".": "./src/index.ts"
   }

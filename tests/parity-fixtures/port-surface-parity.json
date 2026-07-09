@@ -487,6 +487,23 @@
         }
       ]
     },
+    "EmbeddingPort": {
+      "doc": "rec-embedding-port — text→dense-vector, sibling to RecordSearchProvider. Fake floor is zero-dep + bit-exact Py↔TS; ONNX all-MiniLM-L6-v2 is an opt-in extra. Py: dna/kernel/protocols.py · TS: src/kernel/protocols.ts",
+      "members": [
+        {
+          "py": "model_id",
+          "ts": "modelId"
+        },
+        {
+          "py": "dims",
+          "ts": "dims"
+        },
+        {
+          "py": "embed",
+          "ts": "embed"
+        }
+      ]
+    },
     "SourceCapabilities": {
       "doc": "Typed declaration of what a source adapter supports (s-sourceport-contract-cleanup). Members are dataclass fields (Py) / interface keys (TS).",
       "members": [

@@ -312,6 +312,12 @@ class Kernel:
         self._search_provider = None
         self._search_provider_warned: bool = False
 
+        # rec-embedding-port — the registered EmbeddingPort for kernel.embed().
+        # None = no real provider → the deterministic zero-dep FakeEmbeddingProvider
+        # (the offline/CI floor) is constructed lazily on first use. Shared by
+        # with_tenant shallow copies like _search_provider (boot-time wiring).
+        self._embedding_provider = None
+
         # Phase 3b ch1 (i-112) — the Catalog tier scope set, cached per tenant.
         # ``tenant → (stamped_at_monotonic, scopes)``. TTL = _GRANULAR_DOC_TTL
         # (60s) as a backstop; the authoritative refresh is the explicit
@@ -2062,6 +2068,42 @@ class Kernel:
         the failure-warning damper (new provider → fresh episode)."""
         self._search_provider = provider
         self._search_provider_warned = False
+
+    def embedding_provider(self, provider) -> None:
+        """Register the embedding provider (rec-embedding-port). One per kernel;
+        later registration replaces (boot-time wiring). Sibling to
+        ``record_search_provider`` — a real provider (ONNX all-MiniLM-L6-v2)
+        registers itself at app boot; without one, ``embed`` uses the
+        deterministic ``FakeEmbeddingProvider`` floor."""
+        self._embedding_provider = provider
+
+    def _resolve_embedding_provider(self):
+        """The registered provider, or a lazily-constructed fake (cached)."""
+        if self._embedding_provider is None:
+            from dna.kernel.embedding import FakeEmbeddingProvider
+            self._embedding_provider = FakeEmbeddingProvider()
+        return self._embedding_provider
+
+    async def embed(self, texts: list[str]) -> list[list[float]]:
+        """Embed texts into dense vectors (rec-embedding-port). Uses the
+        registered ``EmbeddingPort`` when present, else the deterministic
+        zero-dep fake floor. Returns one ``dims``-length vector per input, in
+        order; empty input → empty list. Read the space via
+        ``kernel.embedding_dims`` / ``kernel.embedding_model_id``."""
+        if not texts:
+            return []
+        return await self._resolve_embedding_provider().embed(list(texts))
+
+    @property
+    def embedding_dims(self) -> int:
+        """Output dimensionality of the active embedding provider."""
+        return self._resolve_embedding_provider().dims
+
+    @property
+    def embedding_model_id(self) -> str:
+        """Identity of the active embedding space (vectors from different
+        ``model_id``s are NOT comparable)."""
+        return self._resolve_embedding_provider().model_id
 
     async def search(
         self, scope: str, query_text: str, *,
