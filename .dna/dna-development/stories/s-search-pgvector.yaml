@@ -9,7 +9,7 @@ spec:
     \ do DNA \u2014 porta o RRF lib-puro do upstream; mesma interface do sqlite-vec,\
     \ promove sem trocar contrato; DDL dono via migration contract. Passa o MESMO\
     \ provider conformance kit. Depende de s-record-search-sqlite."
-  status: in-progress
+  status: review
   feature: f-dna-search-memory
   priority: medium
   labels:
@@ -27,7 +27,7 @@ spec:
   - PR merged
   definition_of_done_source: cli-create
   created_at: '2026-07-09T16:48:03+00:00'
-  updated_at: '2026-07-09T18:25:07+00:00'
+  updated_at: '2026-07-09T18:44:08+00:00'
   timeline:
   - at: '2026-07-09T16:48:03+00:00'
     actor: claude-code
@@ -40,6 +40,33 @@ spec:
     source: cli
     from: todo
     to: in-progress
+  - at: '2026-07-09T18:40:22+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/15'
+    pr_url: https://github.com/ruinosus/dna/pull/15
+  - at: '2026-07-09T18:44:06+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PgVecRecordSearchProvider implementado: dense (pgvector <=> cosine,\
+      \ IVFFlat) + lexical (tsvector generated col + ts_rank, GIN) + RRF reusado.\
+      \ DDL dono via build_pg_migrations + run_migrations (control table dna_search_migrations,\
+      \ CREATE EXTENSION vector como 1a statement, re-boot no-op). Overlay/tenant-aware\
+      \ espelhando o SqliteVec. Py-primary por design (assimetria justificada no m\xF3\
+      dulo + conformance-kit.md; paridade comportamental via o kit compartilhado +\
+      \ RRF bit-id\xEAntico). Conformance kit (8 casos) + idempot\xEAncia + identity-mismatch\
+      \ em test_pgvector_search_conformance.py, gated no DATABASE_URL. CI postgres\
+      \ job: imagem pgvector/pgvector:pg16 \u2014 rodou de verdade (68 passed). PR\
+      \ #15, todos os checks verdes."
+    commit_ref: f33c2205f5c1e0b0400f036483406b08e26cf99c
+  - at: '2026-07-09T18:44:08+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
   produces:
   - kind: Plan
     name: plan-s-search-pgvector

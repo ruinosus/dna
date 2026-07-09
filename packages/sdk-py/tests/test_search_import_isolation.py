@@ -42,3 +42,28 @@ def test_importing_rrf_is_cheap():
     )
     proc = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
     assert proc.returncode == 0, proc.stderr
+
+
+def test_default_import_and_lexical_search_never_pull_asyncpg():
+    """s-search-pgvector — the pgvector provider is an opt-in extra
+    (``dna-sdk[search-pgvector]``). Importing the SDK / adapters namespace /
+    booting a kernel must NEVER pull ``asyncpg`` (nor the pgvector adapter
+    module), mirroring the sqlite-vec isolation guard above."""
+    code = (
+        "import sys, asyncio\n"
+        "import dna\n"
+        "import dna.adapters\n"
+        "import dna.adapters.search\n"
+        "from dna.kernel import Kernel\n"
+        "k = Kernel.auto()\n"
+        "try:\n"
+        "    asyncio.run(k.search('nope', 'hello', kind='Story'))\n"
+        "except Exception:\n"
+        "    pass\n"
+        "assert 'asyncpg' not in sys.modules, \\\n"
+        "    'default import/lexical search pulled asyncpg'\n"
+        "assert 'dna.adapters.search.pgvector' not in sys.modules, \\\n"
+        "    'default import pulled the pgvector adapter module'\n"
+    )
+    proc = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+    assert proc.returncode == 0, proc.stderr

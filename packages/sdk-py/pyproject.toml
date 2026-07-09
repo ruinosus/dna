@@ -47,6 +47,16 @@ embed-onnx = ["fastembed>=0.3"]
 # tests/test_search_import_isolation.py). Install explicitly to use search:
 # pip install "dna-sdk[search-sqlite]".
 search-sqlite = ["sqlite-vec>=0.1.6"]
+# s-search-pgvector — the SCALE RecordSearchProvider (Postgres + pgvector +
+# tsvector + RRF). Reuses the `postgres` extra's asyncpg driver: pgvector needs
+# NO extra pip package (vectors ride as text literals over asyncpg; the `vector`
+# extension is a server-side install, present in `pgvector/pgvector:pg16` used by
+# the CI postgres job). Kept OUT of `all` (opt-in, and it needs a running
+# pgvector Postgres) but INCLUDED in `dev` so the provider conformance suite runs
+# for real in the CI postgres job. Nothing in the default install imports
+# dna.adapters.search.pgvector (guard: tests/test_search_import_isolation.py).
+# Install explicitly: pip install "dna-sdk[search-pgvector]".
+search-pgvector = ["dna-sdk[postgres]"]
 all = ["dna-sdk[postgres,sqlite,redis,s3,sql]"]
 dev = [
     "pytest>=7.0",
@@ -60,6 +70,10 @@ dev = [
     # in dev so tests/test_record_search_conformance.py runs the provider for
     # real (it importorskips only when the extra is genuinely absent).
     "dna-sdk[search-sqlite]",
+    # s-search-pgvector — asyncpg (via [postgres]) so the pgvector provider
+    # conformance suite runs for real in the CI postgres job (redundant with
+    # [all] but explicit, mirroring search-sqlite).
+    "dna-sdk[search-pgvector]",
     # s-dna-source-conformance-kit — in-process fake S3 so S3Source enters
     # the source-conformance matrix for real (not skip-forever).
     "moto>=5.0",
