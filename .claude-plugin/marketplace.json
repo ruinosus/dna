@@ -1,0 +1,24 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "dna",
+  "metadata": {
+    "description": "DNA — Domain Notation of Anything. Declarative, typed notation for agentic behavior. Plugin distribution surface for Claude Code.",
+    "version": "0.1.0"
+  },
+  "owner": {
+    "name": "DNA team"
+  },
+  "plugins": [
+    {
+      "name": "dna",
+      "version": "0.1.0",
+      "source": "./.claude",
+      "description": "The dna-sdlc-cli skill — story-first, in-repo SDLC tracking via the `dna sdlc` CLI (AC/DoD guard, plan gate, narration, test gate, Work-Item git trailers, story pr).",
+      "category": "agents",
+      "tags": ["agents", "yaml", "sdlc", "skills"],
+      "author": {
+        "name": "DNA team"
+      }
+    }
+  ]
+}

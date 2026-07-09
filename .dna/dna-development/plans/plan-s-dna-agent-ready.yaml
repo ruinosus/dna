@@ -9,9 +9,9 @@ spec:
   story_ref: s-dna-agent-ready
   journey_phase: plan
   body: "Escrever AGENTS.md (fonte de verdade agent-agn\xF3stica) + CLAUDE.md fino\
-    \ por cima; portar/adaptar aap-sdlc-cli \u2192 dna-sdlc-cli (vocabul\xE1rio dna,\
-    \ hooks, story pr, sem partes service-bound); marketplace.json m\xEDnimo v\xE1\
-    lido; teste de que o AGENTS.md raiz \xE9 parse\xE1vel pelo agentsmd reader; PR\
-    \ pelo pr\xF3prio story pr."
+    \ por cima; portar/adaptar a skill sdlc interna \u2192 dna-sdlc-cli (vocabul\xE1\
+    rio dna, hooks, story pr, sem partes service-bound); marketplace.json m\xEDnimo\
+    \ v\xE1lido; teste de que o AGENTS.md raiz \xE9 parse\xE1vel pelo agentsmd reader;\
+    \ PR pelo pr\xF3prio story pr."
   created_at: '2026-07-08T22:18:33+00:00'
   updated_at: '2026-07-08T22:18:33+00:00'

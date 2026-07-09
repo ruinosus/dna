@@ -1,0 +1,31 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-s-dna-agent-ready
+spec:
+  description: 'Agent-ready front door: root AGENTS.md parses via the SDK, skill commands
+    all exist, plugin manifests validate, full local gates green'
+  kind_of_test: regression
+  status: active
+  steps:
+  - action: cd packages/sdk-py && .venv/bin/pytest tests/test_agents_md_root.py -v
+    expected: "5 passed \u2014 reader detect/read on repo root, kernel scan (symlinked\
+      \ scope), build_prompt, byte-identical round-trip"
+  - action: cd packages/sdk-py && .venv/bin/pytest tests -q
+    expected: full suite 0 failed (2727 passed)
+  - action: cd packages/cli && uv run --no-project pytest tests -q
+    expected: 245 passed
+  - action: cd packages/sdk-ts && bun test && bun run typecheck
+    expected: 1208 pass, 0 fail; tsc clean
+  - action: python3 scripts/brand_guard.py
+    expected: clean (new AGENTS.md/CLAUDE.md/skill contain no forbidden tokens)
+  - action: claude plugin validate --strict . && claude plugin validate --strict ./.claude
+    expected: both manifests pass strict validation
+  - action: grep -c 'dna sdlc' .claude/skills/dna-sdlc-cli/SKILL.md; each cited subcommand
+      exists in dna sdlc --help
+    expected: no command taught by the skill is inexistent
+  verifies:
+  - Story/s-dna-agent-ready
+  created_at: '2026-07-08T22:31:45+00:00'
+  updated_at: '2026-07-08T22:31:45+00:00'
+  owner: claude-code
