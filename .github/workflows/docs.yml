@@ -37,6 +37,8 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: "1.3.4"
+      - name: Install docs deps
+        run: pip install -r requirements-docs.txt
       # mkdocstrings renders the Python API inline from the `dna` package, and
       # the CLI/Kinds/parity generators import it — so the SDK + CLI must be
       # importable in the build env (they are NOT needed for the prose pages,
