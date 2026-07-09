@@ -86,9 +86,6 @@ _KIND_GAP = (
 
 ALLOWLIST: dict[str, str] = {
     # -- TEMPORARY: sister story in flight (search/memory prose, #13-#16) ----
-    "cli:search": _SISTER,
-    "cli:recall": _SISTER,
-    "cli:memory": _SISTER,
     # -- pre-existing CLI prose gaps (findings, tracked for follow-up) -------
     "cli:doc": _CLI_GAP,      # document CRUD (list/show/create/edit/delete)
     "cli:docs": _CLI_GAP,     # in-product Doc corpus browser
@@ -105,7 +102,6 @@ ALLOWLIST: dict[str, str] = {
     "kind:Changelog": _SDLC_MACHINERY,
     "kind:CognitivePolicy": _SDLC_MACHINERY,
     "kind:Epic": _SDLC_MACHINERY,
-    "kind:Evidence": _SDLC_MACHINERY,
     "kind:Forecast": _SDLC_MACHINERY,
     "kind:Initiative": _SDLC_MACHINERY,
     "kind:Insight": _SDLC_MACHINERY,
