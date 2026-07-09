@@ -102,13 +102,30 @@ Story with a `Work-Item:` trailer — so tracing the work back is a `git log`
 query, not bookkeeping. The same convention signs the PRs.
 → **[The SDLC loop](https://ruinosus.github.io/dna/guides/sdlc/)**.
 
+## Semantic search & memory, embedded
+
+Every scope is semantically searchable, and agents get durable memory
+(`remember` / `recall` / `forget` / `consolidate`) — offline, inside the SDK.
+No vector database service, no embeddings API: sqlite-vec + FTS5 + RRF in one
+file per scope, with pgvector as the same-contract scale adapter.
+
+```console
+$ dna recall "reciprocal rank fusion" --kind Story -k 1
+
+🔎 hybrid (dense+lexical+RRF) · scope=dna-development · 'reciprocal rank fusion'
+   1. Story/s-search-pgvector  (0.0297)
+```
+
+→ **[Search & memory](https://ruinosus.github.io/dna/concepts/search-and-memory/)** (the model)
+· **[How to use semantic recall](https://ruinosus.github.io/dna/guides/semantic-recall/)** (the recipe).
+
 ## Documentation
 
 The full site is organized by [Diátaxis](https://diataxis.fr/):
 
 - **Tutorials** — [Your first Kind](https://ruinosus.github.io/dna/getting-started/first-kind/) · [Running the conformance kit](https://ruinosus.github.io/dna/getting-started/conformance-kit/)
-- **Concepts** — [The thesis](https://ruinosus.github.io/dna/concepts/thesis/) · [Kinds](https://ruinosus.github.io/dna/concepts/kinds/) · [Microkernel & ports](https://ruinosus.github.io/dna/concepts/microkernel-ports/) · [Market fidelity](https://ruinosus.github.io/dna/concepts/market-fidelity/) · [Tenancy & layers](https://ruinosus.github.io/dna/concepts/tenancy-layers/)
-- **How-to guides** — [Add a Kind](https://ruinosus.github.io/dna/guides/add-a-kind/) · [Read document data](https://ruinosus.github.io/dna/guides/read-document-data/) · [Write a source adapter](https://ruinosus.github.io/dna/guides/write-a-source-adapter/) · [Write a Reader/Writer](https://ruinosus.github.io/dna/guides/readers-and-writers/)
+- **Concepts** — [The thesis](https://ruinosus.github.io/dna/concepts/thesis/) · [Kinds](https://ruinosus.github.io/dna/concepts/kinds/) · [Microkernel & ports](https://ruinosus.github.io/dna/concepts/microkernel-ports/) · [Market fidelity](https://ruinosus.github.io/dna/concepts/market-fidelity/) · [Tenancy & layers](https://ruinosus.github.io/dna/concepts/tenancy-layers/) · [Search & memory](https://ruinosus.github.io/dna/concepts/search-and-memory/)
+- **How-to guides** — [Add a Kind](https://ruinosus.github.io/dna/guides/add-a-kind/) · [Read document data](https://ruinosus.github.io/dna/guides/read-document-data/) · [Write a source adapter](https://ruinosus.github.io/dna/guides/write-a-source-adapter/) · [Write a Reader/Writer](https://ruinosus.github.io/dna/guides/readers-and-writers/) · [Semantic recall & memory](https://ruinosus.github.io/dna/guides/semantic-recall/)
 - **Reference** — per-language API, CLI and parity matrix, generated from source *(coming soon)*
 
 Building the site locally:

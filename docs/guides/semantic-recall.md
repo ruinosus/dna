@@ -1,0 +1,249 @@
+# How to use semantic recall & memory
+
+Search a scope semantically and give an agent durable memory — offline, no
+server. This is the task recipe; the model behind it is in
+[Search & memory](../concepts/search-and-memory.md), and every flag is in the
+[`dna recall`](../reference/cli/recall.md) /
+[`dna search`](../reference/cli/search.md) /
+[`dna memory`](../reference/cli/memory.md) reference.
+
+All outputs below are real runs against
+[`examples/hello-genome`](https://github.com/ruinosus/dna/tree/main/examples/hello-genome)
+and this repo's own scope.
+
+## 1. Install the extra
+
+Semantic search is an opt-in extra — the core SDK never drags vector or ML
+dependencies:
+
+```bash
+pip install "dna-sdk[search-sqlite]"    # sqlite-vec + FTS5 + RRF (the embeddable default)
+pip install "dna-sdk[embed-onnx]"       # optional: real ONNX embeddings (all-MiniLM-L6-v2)
+pip install "dna-sdk[search-pgvector]"  # optional: Postgres + pgvector, for scale
+```
+
+!!! note "Working from the repo (pre-1.0)"
+    The packages are not on PyPI yet. From a clone, the `dev` extra already
+    includes `search-sqlite`:
+    `cd packages/sdk-py && uv venv && uv pip install -e ".[dev]" -e ../cli`.
+
+## 2. Search a scope: `dna recall`
+
+`dna recall` registers the sqlite-vec provider, indexes the scope's records
+on demand (idempotent — re-runs skip unchanged docs by text hash), and runs a
+hybrid dense + lexical + RRF search:
+
+```console
+$ dna recall "friendly assistant" --scope hello-genome --kind Agent -k 3
+
+🔎 hybrid (dense+lexical+RRF) · scope=hello-genome · 'friendly assistant'
+   1. Agent/greeter  (0.0328)
+      greeter You are Helio, a friendly assistant. Greet people warmly and answer…
+```
+
+`dna search` is the same command under a neutral name. Useful knobs:
+`--kind` (repeatable) restricts kinds, `--tenant` searches base ∪ overlay
+(overlay shadows base), `--json` emits machine-readable hits. The index
+lives in a `.dna-search/` directory beside your `.dna/` (override with
+`DNA_SEARCH_DIR`).
+
+What one search does end to end:
+
+```mermaid
+sequenceDiagram
+    participant CLI as dna recall
+    participant K as kernel.search
+    participant P as sqlite-vec provider
+    CLI->>P: index scope records (hash-skip)
+    CLI->>K: search(scope, query)
+    K->>P: dense KNN + FTS5 BM25
+    P->>P: RRF fusion
+    P-->>K: ranked hits
+    K-->>CLI: hits · degraded: false
+```
+
+### Without the extra: honest degradation
+
+Search is a read — it never raises on a missing dependency. Without
+`search-sqlite` you get the kernel's lexical token scan, clearly labeled:
+
+```console
+$ dna recall "friendly assistant" --scope hello-genome --kind Agent -k 3
+⚠ search-sqlite extra not installed — degrading to lexical scan (pip install 'dna-sdk[search-sqlite]' for semantic recall)
+
+🔎 lexical (degraded) · scope=hello-genome · 'friendly assistant'
+   1. Agent/greeter  (0.5000)
+```
+
+Same query, same top hit here — but the lexical scan only matches tokens, so
+paraphrased queries ("how do I welcome users") will miss what hybrid search
+finds.
+
+## 3. Give an agent memory: `dna memory`
+
+Memory is the record Kinds you already have (`LessonLearned`, `Research`,
+`Evidence`) plus four verbs. Write one:
+
+```console
+$ dna memory remember "Always deep-copy a doc's spec before mutating — the cache hands back a shared reference" \
+    --scope hello-genome --area Feature/kernel --affect regret \
+    --reason "Mutating the cached dict in place corrupted every later read in the same process" \
+    --tag cache
+
+🧠 remembered LessonLearned/rem-5d60593f38
+   Always deep-copy a doc's spec before mutating — the cache hands back a shared reference
+```
+
+That wrote a plain `LessonLearned` YAML into the scope (deterministically
+enriched: encoding context, memory type, `valid_from`) and indexed it.
+Recall it — hits are re-ranked by search score × Ebbinghaus retention ×
+affect, and each surfaced memory gets its cue recorded:
+
+```console
+$ dna memory recall "cache mutation" --scope hello-genome
+
+🧠 recall · hybrid (dense+lexical+RRF) · scope=hello-genome · 'cache mutation'
+   1. LessonLearned/rem-5d60593f38  (0.0426)  [retention 1.00]
+      rem-5d60593f38 Always deep-copy a doc's spec before mutating — the cache hands back…
+```
+
+Forgetting is bi-temporal demotion — the document stays, auditable, but
+stops surfacing:
+
+```console
+$ dna memory forget rem-5d60593f38 --scope hello-genome
+🕯  forgotten: LessonLearned/rem-5d60593f38 (valid_to=2026-07-09T20:59:11+00:00)
+   (retained + auditable — bi-temporal invalidation, not deleted)
+
+$ dna memory recall "cache mutation" --scope hello-genome
+
+🧠 recall · hybrid (dense+lexical+RRF) · scope=hello-genome · 'cache mutation'
+  (no memories)
+
+$ dna memory list --scope hello-genome --all
+name            state      affect  area            summary
+--------------  ---------  ------  --------------  ------------------------------------------------------------
+rem-5d60593f38  forgotten  regret  Feature/kernel  Always deep-copy a doc's spec before mutating — the cache ha
+```
+
+And `consolidate` is the deterministic maintenance pass — recompute
+retention, report stale memories (soft-forget them with `--apply`):
+
+```console
+$ dna memory consolidate --scope hello-genome
+
+🌙 consolidate · evaluated 0 · 0 stale · archived 0
+```
+
+## 4. Register providers programmatically
+
+The CLI wires the sqlite-vec provider for you; in your own code you register
+it on the kernel once, at boot. This script is runnable as-is next to a
+`.dna/` directory:
+
+```python
+import asyncio
+
+from dna import Kernel
+from dna.adapters.filesystem.writable import FilesystemWritableSource
+from dna.adapters.search.sqlite_vec import (
+    SqliteVecRecordSearchProvider,
+    document_text,
+)
+
+SCOPE = "hello-genome"
+
+
+async def main() -> None:
+    kernel = Kernel.auto(source=FilesystemWritableSource(".dna"))
+
+    # 1. Register the provider (one per kernel; boot-time wiring).
+    provider = SqliteVecRecordSearchProvider(kernel, db_dir=".dna-search")
+    kernel.record_search_provider(provider)
+
+    # 2. Index the records you want searchable (idempotent by text hash).
+    records = []
+    async for raw in kernel.query(SCOPE, "Agent"):
+        name = raw["metadata"]["name"]
+        records.append({
+            "scope": SCOPE, "kind": "Agent", "name": name,
+            "tenant": "", "text": document_text(raw), "title": name,
+        })
+    await provider.index(records)
+
+    # 3. Search — hybrid now, honest lexical fallback if the provider errors.
+    res = await kernel.search(SCOPE, "friendly assistant", k=3)
+    print("degraded:", res["degraded"])
+    for hit in res["hits"]:
+        print(f"  {hit['kind']}/{hit['name']}  {hit['score']:.4f}")
+
+
+asyncio.run(main())
+```
+
+```text
+degraded: False
+  Agent/greeter  0.0328
+```
+
+The memory verbs are the same surface one level up —
+`from dna.memory import remember, recall, forget, consolidate` — each an
+async function taking `(kernel, scope, ...)`.
+
+### Embeddings: the floor and the real thing
+
+With no embedding provider registered, `kernel.embed()` uses the
+deterministic hash-based fake — zero dependencies, bit-identical between
+Python and TypeScript, honest about not being semantic:
+
+```python
+kernel = Kernel.auto()
+print("model:", kernel.embedding_model_id, "| dims:", kernel.embedding_dims)
+[vec] = await kernel.embed(["reciprocal rank fusion"])
+print("non-zero dims:", sum(1 for v in vec if v))
+```
+
+```text
+model: dna-fake-hash-v1 | dims: 384
+non-zero dims: 3
+```
+
+For real semantic similarity, install the `embed-onnx` extra and register the
+ONNX provider — same 384 dims, so the swap changes nothing downstream. The
+model artifact is lazy-downloaded and cached on the first `embed()` call
+(never at install or import time):
+
+```python
+from dna.adapters.embedding.onnx import OnnxEmbeddingProvider
+
+kernel.embedding_provider(OnnxEmbeddingProvider())  # all-MiniLM-L6-v2
+```
+
+Rebuild the index after swapping providers: vectors from different
+`model_id`s are not comparable, so the store pins its embedding space and
+**refuses** to open under a different `(model_id, dims)` rather than mix
+them silently. Delete the `.dna-search/` store and re-index.
+
+### Scaling up: pgvector
+
+When one file per scope stops being enough, the `search-pgvector` extra
+provides `PgVecRecordSearchProvider` — same port, same RRF, same conformance
+suite, backed by the Postgres you already run for the source plane:
+
+```python
+from dna.adapters.search.pgvector import PgVecRecordSearchProvider
+
+provider = PgVecRecordSearchProvider(kernel, dsn="postgresql://dna@localhost/dna")
+kernel.record_search_provider(provider)
+```
+
+Nothing else in your code changes — that is the point of the port.
+
+## TypeScript
+
+The TS SDK ships the same surface: `kernel.embed` / `kernel.search`, the
+bit-identical fake embedder, `SqliteVecRecordSearchProvider`
+(`sqlite-vec` as an optional peer dependency), and
+`OnnxEmbeddingProvider` (`@huggingface/transformers` as an optional peer
+dependency, same ONNX artifact as Python). See the
+[parity matrix](../reference/parity-matrix.md) for the exact Py↔TS mapping.
