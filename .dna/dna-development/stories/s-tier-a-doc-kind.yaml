@@ -21,14 +21,20 @@ spec:
   reporter: claude-code
   business_value: 400
   acceptance_criteria:
-  - Doc Kind registrado; dna docs list/show funciona sem KindDefinition manual; cli-tour
-    atualizado; prosa/guard verdes; CI verde
+  - text: Doc Kind registrado; dna docs list/show funciona sem KindDefinition manual;
+      cli-tour atualizado; prosa/guard verdes; CI verde
+    done: true
+    done_at: '2026-07-09T23:12:00+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - PR merged
+  - text: PR merged
+    done: true
+    done_at: '2026-07-09T23:12:00+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-09T22:39:24+00:00'
-  updated_at: '2026-07-09T23:07:30+00:00'
+  updated_at: '2026-07-09T23:12:03+00:00'
   timeline:
   - at: '2026-07-09T22:39:24+00:00'
     actor: claude-code
@@ -93,6 +99,14 @@ spec:
       \ Testkit registrado: tg-s-tier-a-doc-kind (5 passos) + tr pass. N\xC3O vou\
       \ mergear \u2014 done-on-merge fica com o Barna."
     commit_ref: 29e4ef80f32d07c76aea5dc0891df14f6d910317
+  - at: '2026-07-09T23:12:03+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #22 merged (10/10; TestGuide/TestRun do agente). Doc Kind descriptor\
+      \ puro byte-par Py\u2194TS; dna docs out-of-the-box (e2e en/pt-BR pinado); cli-tour\
+      \ re-executado (workaround\u2192demo de extens\xE3o); strict-schema ratchet\
+      \ encolheu; subset service-bound cortado com nota honesta."
   produces:
   - kind: Plan
     name: plan-s-tier-a-doc-kind
