@@ -18,7 +18,7 @@ spec:
     \ descriptor-vs-classe (prov\xE1vel classe com exce\xE7\xE3o registrada \u2014\
     \ tem l\xF3gica comput\xE1vel). Payoff imediato: capturar as 3 pesquisas de hoje\
     \ (doc-frameworks, exemplar-repos, openwiki-analysis) como Research docs."
-  status: review
+  status: done
   feature: f-dna-1.0-readiness
   priority: high
   labels:
@@ -30,18 +30,24 @@ spec:
   reporter: claude-code
   business_value: 600
   acceptance_criteria:
-  - "Extension research registrada (Py+TS), Kind Research parse\xE1vel/grav\xE1vel;\
-    \ dna research list/show/create funciona no repo puro (filesystem, sem servi\xE7\
-    os) com tenancy permissiva; sources aponta pra Reference docs; recall degrada\
-    \ lexical sem crash; 3 pesquisas de hoje capturadas como Research reais com fontes;\
-    \ paridade Py\u2194TS verde; CI 7/7"
+  - text: "Extension research registrada (Py+TS), Kind Research parse\xE1vel/grav\xE1\
+      vel; dna research list/show/create funciona no repo puro (filesystem, sem servi\xE7\
+      os) com tenancy permissiva; sources aponta pra Reference docs; recall degrada\
+      \ lexical sem crash; 3 pesquisas de hoje capturadas como Research reais com\
+      \ fontes; paridade Py\u2194TS verde; CI 7/7"
+    done: true
+    done_at: '2026-07-09T13:10:42+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - PR merged via dna sdlc story pr; posicionamento DNA-vs-OpenWiki documentado no
-    concepts; 3 Research docs no dna-development
+  - text: PR merged via dna sdlc story pr; posicionamento DNA-vs-OpenWiki documentado
+      no concepts; 3 Research docs no dna-development
+    done: true
+    done_at: '2026-07-09T13:10:42+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-09T12:33:41+00:00'
-  updated_at: '2026-07-09T13:02:10+00:00'
+  updated_at: '2026-07-09T13:10:43+00:00'
   timeline:
   - at: '2026-07-09T12:33:41+00:00'
     actor: claude-code
@@ -77,8 +83,48 @@ spec:
       \ Gates locais verdes: sdk-py 2731 pass, cli 255, sdk-ts 1211 pass+typecheck,\
       \ brand_guard clean. PR #8."
     commit_ref: f50e0411679299221c3a41c618bbd85866b4937c
+  - at: '2026-07-09T13:10:40+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-dna-research-kind
+    summary: TestGuide tg-s-dna-research-kind (smoke)
+  - at: '2026-07-09T13:10:41+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-dna-research-kind-20260709-131041
+    summary: "TestRun tr-tg-s-dna-research-kind-20260709-131041 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-09T13:10:42+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #8 merged (7/7). Research Kind no DNA: extension Py+TS, CLI dna research,\
+      \ tenancy permissiva, alias gerado (research-research), Reference do sdlc reusado,\
+      \ recall degrada lexical. 3 pesquisas de hoje capturadas como Research reais\
+      \ com fontes \u2014 a resposta declarativa/curada do DNA ao OpenWiki. Concepts\
+      \ doc agent-knowledge criado."
+  - at: '2026-07-09T13:10:43+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: 5d892b5d94772f7e4fcf6852976c96cb8b98299c
   produces:
   - kind: Plan
     name: plan-s-dna-research-kind
     role: implementation
     at: '2026-07-09T12:33:43+00:00'
+  - kind: TestGuide
+    name: tg-s-dna-research-kind
+    role: test-guide
+    at: '2026-07-09T13:10:40+00:00'
+  - kind: TestRun
+    name: tr-tg-s-dna-research-kind-20260709-131041
+    role: test-run
+    at: '2026-07-09T13:10:41+00:00'
+  closed_at: '2026-07-09T13:10:42+00:00'

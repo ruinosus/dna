@@ -1,0 +1,25 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-003-story-desc-brand-guard-trap
+spec:
+  description: "Trap de processo recorrente (achado no PR #8): ao portar coisas do\
+    \ repo upstream, eu descrevo a story citando o nome do repo-m\xE3e (ex.: 'trazer\
+    \ X do <upstream>'), e esse texto vira YAML tracked em .dna/ \u2014 que o brand_guard\
+    \ varre. Resultado: a pr\xF3pria story de um port quebra o CI. Mitiga\xE7\xE3\
+    o de processo (n\xE3o de c\xF3digo): ao filar stories de port, referir 'upstream\
+    \ SDK' / 'the source project', nunca o nome proibido. Op\xE7\xE3o t\xE9cnica futura:\
+    \ brand_guard poderia ter allowlist de contexto pra descri\xE7\xF5es de story,\
+    \ MAS isso enfraquece o guard \u2014 prefiro a disciplina de escrita. Registrar\
+    \ aqui pra n\xE3o recorrer."
+  type: task
+  severity: low
+  status: open
+  owner: claude-code
+  related_feature: f-dna-1.0-readiness
+  timeline:
+  - at: '2026-07-09T13:11:11+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

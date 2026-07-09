@@ -1,0 +1,22 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-004-research-semantic-recall
+spec:
+  description: "Research Kind (PR #8) shipou com recall LEXICAL apenas (kernel.query)\
+    \ \u2014 o recall_research(topic) sem\xE2ntico do AAP dependia de pgvector/embeddings\
+    \ (cognitive-api, n\xE3o viajou). Futuro: quando/se o DNA ganhar um provider de\
+    \ embeddings plug\xE1vel (via SourcePort/ResolverPort ou um servi\xE7o opcional),\
+    \ religar o recall sem\xE2ntico. Hoje: dna research list/show + kernel.query cobrem\
+    \ o caso; busca por t\xF3pico \xE9 lexical. N\xE3o-bloqueante pr\xE9-1.0."
+  type: enhancement
+  severity: low
+  status: open
+  owner: claude-code
+  related_feature: f-dna-1.0-readiness
+  timeline:
+  - at: '2026-07-09T13:11:12+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

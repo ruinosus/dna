@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-dna-research-kind-20260709-131041
+spec:
+  guide_ref: tg-s-dna-research-kind
+  outcome: pass
+  verifies:
+  - Story/s-dna-research-kind
+  executed_by: claude-code
+  executed_at: '2026-07-09T13:10:41+00:00'
+  evidence:
+  - ci:pr8-7-of-7,test:test_research_cmd.py-10,suite:sdk-py-2731-0,suite:cli-255-0,suite:sdk-ts-1211-0,prova:dna-research-show-rsh-openwiki-analysis-full-render-repo-puro,check:3-research-docs-reais-com-fontes,check:tenancy-permissiva-sem-tenant,check:reference-sdlc-reusado

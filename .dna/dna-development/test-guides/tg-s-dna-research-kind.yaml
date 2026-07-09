@@ -1,0 +1,22 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-s-dna-research-kind
+spec:
+  description: Roteiro de teste de s-dna-research-kind (derivado das acceptance_criteria).
+  kind_of_test: smoke
+  status: active
+  steps:
+  - action: "No Studio, valide: Extension research registrada (Py+TS), Kind Research\
+      \ parse\xE1vel/grav\xE1vel; dna research list/show/create funciona no repo puro\
+      \ (filesystem, sem servi\xE7os) com tenancy permissiva; sources aponta pra Reference\
+      \ docs; recall degrada lexical sem crash; 3 pesquisas de hoje capturadas como\
+      \ Research reais com fontes; paridade Py\u2194TS verde; CI 7/7"
+    where: "<rota/tela \u2014 ex. /scopes/:scope/...>"
+    expected: "<o que voc\xEA V\xCA quando est\xE1 certo (marque \u2717 S\xD3 se estiver\
+      \ quebrado)>"
+  verifies:
+  - Story/s-dna-research-kind
+  created_at: '2026-07-09T13:10:39+00:00'
+  updated_at: '2026-07-09T13:10:39+00:00'
+  owner: claude-code
