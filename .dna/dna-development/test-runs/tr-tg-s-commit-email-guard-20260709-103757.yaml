@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-commit-email-guard-20260709-103757
+spec:
+  guide_ref: tg-s-commit-email-guard
+  outcome: pass
+  verifies:
+  - Story/s-commit-email-guard
+  executed_by: claude-code
+  executed_at: '2026-07-09T10:37:57+00:00'
+  evidence:
+  - ci:pr7-7-of-7-incl-job-novo,selftest:identidade-plantada-em-repo-git-temporario-capturada,check:historia-real-limpa,check:zero-literal-git-grep-0-tracked,check:guard-cobre-a-si-mesmo-sem-self-exclusion

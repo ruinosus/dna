@@ -11,7 +11,7 @@ spec:
     \ o buraco: brand_guard.py ganha modo --commits <range> validando author/committer\
     \ name+email contra a denylist; guards.yml ganha job commit-emails (PR: base..head;\
     \ push: HEAD); self-test do modo novo com repo git tempor\xE1rio."
-  status: in-progress
+  status: done
   feature: f-dna-1.0-readiness
   priority: high
   labels:
@@ -20,14 +20,20 @@ spec:
   reporter: claude-code
   business_value: 400
   acceptance_criteria:
-  - "guard falha em commit com e-mail corporativo plantado (self-test); job verde\
-    \ no CI; hist\xF3ria atual passa limpa"
+  - text: "guard falha em commit com e-mail corporativo plantado (self-test); job\
+      \ verde no CI; hist\xF3ria atual passa limpa"
+    done: true
+    done_at: '2026-07-09T10:37:58+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - PR merged via story pr
+  - text: PR merged via story pr
+    done: true
+    done_at: '2026-07-09T10:37:58+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-09T10:23:43+00:00'
-  updated_at: '2026-07-09T10:23:44+00:00'
+  updated_at: '2026-07-09T10:37:59+00:00'
   timeline:
   - at: '2026-07-09T10:23:43+00:00'
     actor: claude-code
@@ -40,8 +46,53 @@ spec:
     source: cli
     from: todo
     to: in-progress
+  - at: '2026-07-09T10:29:54+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/7'
+    pr_url: https://github.com/ruinosus/dna/pull/7
+  - at: '2026-07-09T10:37:57+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-commit-email-guard
+    summary: TestGuide tg-s-commit-email-guard (smoke)
+  - at: '2026-07-09T10:37:58+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-commit-email-guard-20260709-103757
+    summary: "TestRun tr-tg-s-commit-email-guard-20260709-103757 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-09T10:37:59+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #7 merged (7/7 \u2014 job commit-emails estreou verde). Guard de\
+      \ metadados de commit permanente + zero-literal hardening (achado do Barna:\
+      \ tokens base64, self-exclusion morta, story yaml redigida, git grep = 0). Checklist\
+      \ t\xE9cnico do s-go-public-gate: COMPLETO."
+  - at: '2026-07-09T10:37:59+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: done
+    commit_ref: 366b4f49852340450e98eb6fc5a41597046814aa
   produces:
   - kind: Plan
     name: plan-s-commit-email-guard
     role: implementation
     at: '2026-07-09T10:23:44+00:00'
+  - kind: TestGuide
+    name: tg-s-commit-email-guard
+    role: test-guide
+    at: '2026-07-09T10:37:57+00:00'
+  - kind: TestRun
+    name: tr-tg-s-commit-email-guard-20260709-103757
+    role: test-run
+    at: '2026-07-09T10:37:58+00:00'
+  closed_at: '2026-07-09T10:37:58+00:00'
