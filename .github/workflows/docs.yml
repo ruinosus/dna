@@ -52,10 +52,10 @@ jobs:
         with:
           # --offline: never touch the network — only local file links are
           #   validated, so external 429/timeouts can't fail CI, but a broken
-          #   internal link does. --exclude-mail: ignore mailto: links.
+          #   internal link does. (mailto: links are excluded by lychee's
+          #   default; --include-mail would be the opt-in.)
           args: >-
             --offline
-            --exclude-mail
             --no-progress
             README.md
             'docs/**/*.md'
