@@ -85,6 +85,12 @@ spec:
     name: tr-tg-source-diff-push-i006-20260709-234616
     summary: "TestRun tr-tg-source-diff-push-i006-20260709-234616 \u2192 pass"
     outcome: pass
+  - at: '2026-07-09T23:47:21+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/24'
+    pr_url: https://github.com/ruinosus/dna/pull/24
   produces:
   - kind: Plan
     name: plan-s-fix-source-diff-push
