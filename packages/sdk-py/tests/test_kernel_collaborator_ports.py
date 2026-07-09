@@ -191,11 +191,19 @@ def test_bundle_io_runs_on_narrow_fake():
 
 @pytest.mark.asyncio
 async def test_source_sync_runs_on_narrow_fake():
-    fake_src = types.SimpleNamespace(load_layer=_async_ret([]))
+    # i-006: the default (no-tenant) digest reads the BASE via load_all;
+    # load_layer is only consulted for explicit tenant overlays.
+    fake_src = types.SimpleNamespace(
+        load_all=_async_ret([]), load_layer=_async_ret([]),
+    )
     fake = _slice(**_kindlookup(), **_docstore())
     ss = SourceSync(fake)  # type: ignore[arg-type]
     manifest = await ss.digest_manifest("myscope", source=fake_src)
     assert manifest == {}
+    manifest_tenant = await ss.digest_manifest(
+        "myscope", tenant="acme", source=fake_src,
+    )
+    assert manifest_tenant == {}
     assert isinstance(fake, SourceSyncHost)
 
 

@@ -13,10 +13,15 @@ from dna.kernel import Kernel
 
 
 class _FakeSource:
-    """Minimal SourcePort surface for digest_manifest: a layer of resolved
-    raw docs + per-doc bundle entries. Carries the full CORE SourcePort
+    """Minimal SourcePort surface for digest_manifest: BASE docs served via
+    load_all + per-doc bundle entries. Carries the full CORE SourcePort
     surface so it passes the kernel.source() boot gate
-    (s-dna-source-conformance-kit)."""
+    (s-dna-source-conformance-kit).
+
+    i-006: load_layer honors layer_value like the real adapters do — it is
+    strictly an OVERLAY read and returns nothing here (no overlays declared).
+    The old fake returned the base docs for ANY layer_value, which masked
+    digest_manifest's '__base__' sentinel bug."""
 
     supports_readers = False
 
@@ -37,7 +42,7 @@ class _FakeSource:
         return None
 
     async def load_layer(self, scope, layer_id, layer_value, readers=None):
-        return list(self._docs)
+        return []  # overlay read — this fake has no overlays
 
     async def _load_bundle_entries(self, scope, kind, name, tenant):
         return dict(self._entries.get((kind, name), {}))

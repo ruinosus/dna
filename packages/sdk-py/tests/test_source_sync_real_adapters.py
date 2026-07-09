@@ -46,6 +46,7 @@ async def _sqlite_source(db_path, docs: list[dict], scope: str) -> SqliteSource:
     await src.connect()
     for d in docs:
         await src.save_document(scope, d["kind"], d["metadata"]["name"], d)
+        await src.publish(scope, d["kind"], d["metadata"]["name"])
     return src
 
 

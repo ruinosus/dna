@@ -245,6 +245,28 @@ async def _case_load_layer_unknown_is_empty(ctx: _Ctx) -> None:
     )
 
 
+async def _case_base_never_served_by_load_layer(ctx: _Ctx) -> None:
+    """i-006 — a source's BASE content is exposed via ``load_all``;
+    ``load_layer`` is strictly an OVERLAY read. No sentinel layer_value
+    (``"__base__"`` included) is magic: the base digest must come from the
+    same path the normal reader/scan uses. digest_manifest once assumed
+    ``load_layer(scope, "tenant", "__base__")`` returned the base, so
+    ``dna source diff/push`` digested {} on both sides and were no-ops."""
+    await ctx.seed_fixture()
+    base = await _aw(ctx.source.load_all(FIXTURE_SCOPE, None))
+    assert base, (
+        "the seeded fixture scope must surface its BASE docs via load_all — "
+        "that is the canonical base-read path"
+    )
+    overlay = await _aw(ctx.source.load_layer(
+        FIXTURE_SCOPE, "tenant", "__base__", None,
+    ))
+    assert not overlay, (
+        "load_layer must NOT serve base docs for the '__base__' sentinel "
+        f"(or any layer_value) — it is an overlay-only read; got {overlay!r}"
+    )
+
+
 async def _case_close_returns(ctx: _Ctx) -> None:
     result = await _aw(ctx.source.close())
     assert result is None, "close() must return None"
@@ -546,6 +568,8 @@ _CASES: list[tuple[str, str, Callable[[_Ctx], Any], Callable[[_Ctx], bool]]] = [
     ("load_all_round_trip", "always", _case_load_all_round_trip, _always),
     ("resolve_ref_returns_str", "always", _case_resolve_ref_returns_str, _always),
     ("load_layer_unknown_is_empty", "always", _case_load_layer_unknown_is_empty, _always),
+    ("base_never_served_by_load_layer", "always",
+     _case_base_never_served_by_load_layer, _always),
     ("close_returns_none", "always", _case_close_returns, _always),
     ("list_doc_refs_and_kind_filter", "capabilities.granular_list",
      _case_list_doc_refs, lambda c: c.caps.granular_list),

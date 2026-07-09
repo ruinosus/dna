@@ -35,11 +35,16 @@ def test_diff_is_sorted_and_stable():
 # ───────────────────── cross-source via digest_manifest ─────────────────
 
 class _FakeSource(CoreSourceStub):
+    """BASE docs live behind load_all, like the real adapters (i-006 — the
+    old fake served them from load_layer regardless of layer_value, which
+    masked the '__base__' sentinel bug). CoreSourceStub's load_layer stays
+    the honest overlay read: empty."""
+
     def __init__(self, docs, entries=None):
         self._docs = docs
         self._entries = entries or {}
 
-    async def load_layer(self, scope, lid, lv, readers=None):
+    async def load_all(self, scope, readers=None):
         return list(self._docs)
 
     async def _load_bundle_entries(self, scope, kind, name, tenant):
