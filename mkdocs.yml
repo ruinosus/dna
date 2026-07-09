@@ -54,6 +54,7 @@ nav:
       - concepts/index.md
       - The thesis — CRDs for agent behavior: concepts/thesis.md
       - Kinds — identity & composition: concepts/kinds.md
+      - The built-in Kinds — a catalog: concepts/builtin-kinds.md
       - Microkernel & the five ports: concepts/microkernel-ports.md
       - Market fidelity: concepts/market-fidelity.md
       - Tenancy & layers: concepts/tenancy-layers.md
@@ -61,6 +62,7 @@ nav:
       - Agent-facing knowledge: concepts/agent-knowledge.md
   - How-to guides:
       - guides/index.md
+      - A tour of the dna CLI: guides/cli-tour.md
       - How to add a Kind: guides/add-a-kind.md
       - How to read document data: guides/read-document-data.md
       - How to write a source adapter: guides/write-a-source-adapter.md

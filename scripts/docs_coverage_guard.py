@@ -65,34 +65,16 @@ PROSE_FILES = ("README.md",)
 # Keys are "cli:<group>" or "kind:<KindName>". EVERY entry needs an honest,
 # reviewable justification. Shrink-only by convention.
 
-_SISTER = (
-    "being documented in s-docs-search-memory-prose — REMOVE when it merges"
-)
-_CLI_GAP = (
-    "pre-existing prose gap, surfaced by this guard's first run "
-    "(s-docs-coverage-guard finding) — public CLI group that needs its own "
-    "prose story; REMOVE when that prose lands"
-)
 _SDLC_MACHINERY = (
     "SDLC dogfooding machinery (record plane) — reached via `dna sdlc`; the "
     "SDLC guide covers the core arc (Roadmap/Epic/Feature/Story/Issue/Task/"
     "Spec) and this long-tail Kind needs no standalone public prose"
 )
-_KIND_GAP = (
-    "public composition-plane Kind with no prose yet — pre-existing gap, "
-    "surfaced by this guard's first run (s-docs-coverage-guard finding); "
-    "REMOVE when its prose lands"
-)
 
 ALLOWLIST: dict[str, str] = {
-    # -- TEMPORARY: sister story in flight (search/memory prose, #13-#16) ----
-    # -- pre-existing CLI prose gaps (findings, tracked for follow-up) -------
-    "cli:doc": _CLI_GAP,      # document CRUD (list/show/create/edit/delete)
-    "cli:docs": _CLI_GAP,     # in-product Doc corpus browser
-    "cli:kind": _CLI_GAP,     # list + inspect registered Kinds
-    "cli:research": _CLI_GAP, # Research synthesis documents
-    "cli:scope": _CLI_GAP,    # list + inspect scopes
-    "cli:source": _CLI_GAP,   # source-level ops (replicas, introspection)
+    # No CLI entries: every `dna` command group has prose — the tour
+    # (docs/guides/cli-tour.md, s-docs-cli-tour-kinds-prose) plus the
+    # search/memory guide and the SDLC guide.
     # -- SDLC dogfooding machinery (record plane, long tail) -----------------
     "kind:ADR": _SDLC_MACHINERY,
     "kind:AgentSession": _SDLC_MACHINERY,
@@ -121,20 +103,9 @@ ALLOWLIST: dict[str, str] = {
     "kind:SynthesisRun": _SDLC_MACHINERY,
     "kind:SynthesizerState": _SDLC_MACHINERY,
     "kind:WorkflowEvent": _SDLC_MACHINERY,
-    # -- composition-plane Kinds without prose (findings, follow-up) ---------
-    "kind:Canvas": _KIND_GAP,
-    "kind:Comment": _KIND_GAP,
-    "kind:EvidencePolicy": _KIND_GAP,
-    "kind:Hook": _KIND_GAP,
-    "kind:Lesson": _KIND_GAP,
-    "kind:MCPFederation": _KIND_GAP,
-    "kind:Recognizer": _KIND_GAP,
-    "kind:SafetyPolicy": _KIND_GAP,
-    "kind:Setting": _KIND_GAP,
-    "kind:TestGuide": _KIND_GAP,
-    "kind:Theme": _KIND_GAP,
-    "kind:UserProfile": _KIND_GAP,
-    "kind:UserRoleAssignment": _KIND_GAP,
+    # No composition-plane entries: the 14 Kinds this guard's first run
+    # flagged are covered by the commented catalog
+    # (docs/concepts/builtin-kinds.md, s-docs-cli-tour-kinds-prose).
 }
 
 

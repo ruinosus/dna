@@ -1,0 +1,19 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-docs-cli-tour-kinds-prose-20260709-222944
+spec:
+  guide_ref: tg-s-docs-cli-tour-kinds-prose
+  outcome: pass
+  verifies:
+  - Story/s-docs-cli-tour-kinds-prose
+  executed_by: claude-code
+  executed_at: '2026-07-09T22:29:44+00:00'
+  notes: 'All 6 steps pass on feat/s-docs-cli-tour-kinds-prose: coverage guard clean
+    with allowlist 46->27 entries (0 cli, 0 composition kind gaps, 0 stale NOTEs);
+    self-tests OK; mkdocs build --strict green with both new nav entries; every cli-tour
+    console example executed for real against the repo scope + a scratch playground
+    (outputs pasted verbatim); builtin-kinds entries written from the extensions''
+    own docs=/docstrings; brand_guard clean. Side findings filed as i-006 (source
+    diff/push always in-sync on real adapters) and i-007 (scope detect looks for legacy
+    manifest.yaml).'

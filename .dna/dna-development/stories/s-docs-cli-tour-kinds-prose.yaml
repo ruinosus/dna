@@ -17,7 +17,7 @@ spec:
     \ as entries correspondentes da allowlist do docs_coverage_guard (o guard imprime\
     \ NOTE de stale sozinho \u2014 a remo\xE7\xE3o \xE9 o DoD natural). 28 Kinds record-plane\
     \ do SDLC machinery ficam allowlistados de vez (long-tail interno, justificado)."
-  status: in-progress
+  status: review
   feature: f-dna-docs
   priority: medium
   labels:
@@ -25,15 +25,20 @@ spec:
   reporter: claude-code
   business_value: 400
   acceptance_criteria:
-  - "cli-tour cobre os grupos allowlistados com exemplos executados; cat\xE1logo dos\
-    \ 14 composition Kinds escrito; entries removidas da allowlist e guard verde SEM\
-    \ elas; build strict + coverage guard verdes"
+  - text: "cli-tour cobre os grupos allowlistados com exemplos executados; cat\xE1\
+      logo dos 14 composition Kinds escrito; entries removidas da allowlist e guard\
+      \ verde SEM elas; build strict + coverage guard verdes"
+    done: true
+    done_at: '2026-07-09T22:31:45+00:00'
+    done_by: claude-code
+    evidence: "PR #21 \u2014 cli-tour.md (6 grupos + exemplos executados), builtin-kinds.md\
+      \ (14 Kinds), allowlist 46->27, guard + build strict verdes (TestRun tr-tg-s-docs-cli-tour-kinds-prose-20260709-222944)"
   acceptance_criteria_source: cli-create
   definition_of_done:
   - PR merged via dna sdlc story pr
   definition_of_done_source: cli-create
   created_at: '2026-07-09T21:07:23+00:00'
-  updated_at: '2026-07-09T22:07:05+00:00'
+  updated_at: '2026-07-09T22:34:49+00:00'
   timeline:
   - at: '2026-07-09T21:07:23+00:00'
     actor: claude-code
@@ -46,8 +51,78 @@ spec:
     source: cli
     from: todo
     to: in-progress
+  - at: '2026-07-09T22:22:15+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Setup done (worktree feat/s-docs-cli-tour-kinds-prose). Baseline guard:\
+      \ clean, 73 items, ALLOWLIST = 46 entries (6 CLI + 27 SDLC machinery + 13 composition\
+      \ Kinds; TestRun j\xE1 saiu no #20). Executei os 6 grupos CLI contra o repo\
+      \ + um playground scratch (o grupo 'dna docs' exige um scope docs com KindDefinition\
+      \ Doc \u2014 montado no playground). 2 bugs achados e arquivados no caminho:\
+      \ i-006-source-diff-push-base-layer-empty (diff/push sempre 'in sync' em adapter\
+      \ real) e i-007-scope-detect-legacy-manifest-marker (detect procura manifest.yaml\
+      \ legado). Agora: escrever guides/cli-tour.md + concepts/builtin-kinds.md e\
+      \ encolher a allowlist."
+    commit_ref: 3d4d7e1fd7cc7321a30d50c1c591deaf101a56c6
+  - at: '2026-07-09T22:29:25+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-docs-cli-tour-kinds-prose
+    summary: TestGuide tg-s-docs-cli-tour-kinds-prose (manual)
+  - at: '2026-07-09T22:29:45+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-docs-cli-tour-kinds-prose-20260709-222944
+    summary: "TestRun tr-tg-s-docs-cli-tour-kinds-prose-20260709-222944 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-09T22:31:13+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/21'
+    pr_url: https://github.com/ruinosus/dna/pull/21
+  - at: '2026-07-09T22:31:46+00:00'
+    actor: claude-code
+    type: checklist_check
+    source: cli
+    marked_ac: 1
+    marked_dod: 0
+    evidence: "PR #21 \u2014 cli-tour.md (6 grupos + exemplos executados), builtin-kinds.md\
+      \ (14 Kinds), allowlist 46->27, guard + build strict verdes (TestRun tr-tg-s-docs-cli-tour-kinds-prose-20260709-222944)"
+    by: claude-code
+  - at: '2026-07-09T22:31:48+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
+  - at: '2026-07-09T22:34:49+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #21 aberto e com os 9 checks verdes (deploy skipping = esperado,\
+      \ s\xF3 roda no main). Entregue: guides/cli-tour.md (6 grupos com exemplos executados\
+      \ de verdade + 4 grupos j\xE1 documentados linkados), concepts/builtin-kinds.md\
+      \ (14 Kinds em 6 fam\xEDlias, prosa a partir dos docs= reais das extensions),\
+      \ allowlist 46\u219227 (zero cli:*, zero kind:* composition; s\xF3 o long-tail\
+      \ SDLC machinery justificado), guard + self-tests + mkdocs --strict + brand_guard\
+      \ verdes, TestGuide/TestRun registrados. Aguardando merge (done-on-merge)."
+    commit_ref: f361e09c3ae2cc7026dd69532e46aa00da1a9cc3
   produces:
   - kind: Plan
     name: plan-s-docs-cli-tour-kinds-prose
     role: implementation
     at: '2026-07-09T22:07:05+00:00'
+  - kind: TestGuide
+    name: tg-s-docs-cli-tour-kinds-prose
+    role: test-guide
+    at: '2026-07-09T22:29:25+00:00'
+  - kind: TestRun
+    name: tr-tg-s-docs-cli-tour-kinds-prose-20260709-222944
+    role: test-run
+    at: '2026-07-09T22:29:45+00:00'
