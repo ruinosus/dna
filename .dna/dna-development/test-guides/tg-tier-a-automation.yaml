@@ -1,0 +1,33 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-tier-a-automation
+spec:
+  description: "Product smoke do Automation Kind: declarar automations via CLI real\
+    \ (dna doc apply) num scope limpo \u2014 o caminho feliz grava e \xE9 list\xE1\
+    vel; os caminhos inv\xE1lidos s\xE3o vetados no write com erro did\xE1tico; os\
+    \ query helpers do host leem o scope real."
+  kind_of_test: smoke
+  status: active
+  steps:
+  - action: "num dir vazio com .dna/smoke-scope/, criar nightly-report.yaml (Automation\
+      \ on.type=cron '0 3 * * 1-5', runner agent reporter, on: SEM aspas de prop\xF3\
+      sito) e rodar 'dna doc apply nightly-report.yaml --scope smoke-scope'"
+    expected: CREATED Automation/nightly-report, exit 0; o arquivo gravado em .dna/smoke-scope/automations/
+      carrega a chave 'on' COM aspas (trap YAML 1.1 curada pelo guard)
+  - action: aplicar bad-cron.yaml (on.type=cron, cron '61 * * * *')
+    expected: "write vetado, exit 1, mensagem 'invalid cron expression \u2026 61 out\
+      \ of range 0-59 for minute' com a gram\xE1tica esperada"
+  - action: aplicar bad-hook.yaml (on.type=hook, hook 'pre_saev')
+    expected: "write vetado, exit 1, mensagem 'not a kernel lifecycle hook' listando\
+      \ o vocabul\xE1rio KNOWN_HOOK_NAMES"
+  - action: 'python: Kernel.quick(''smoke-scope'') + automations_for(mi,''cron'')
+      e trigger_key'
+    expected: retorna [('nightly-report','0 3 * * 1-5')]; automations_for(mi,'hook')
+      vazio
+  - action: dna doc list Automation --scope smoke-scope
+    expected: "lista s\xF3 nightly-report (os inv\xE1lidos nunca persistiram)"
+  verifies:
+  - Story/s-tier-a-automation
+  created_at: '2026-07-09T23:56:00+00:00'
+  updated_at: '2026-07-09T23:56:00+00:00'

@@ -1,0 +1,23 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-008-write-path-schema-validation-gap
+spec:
+  description: "Descoberto no smoke de s-tier-a-automation: kernel.write_document\
+    \ N\xC3O valida o spec contra o schema do Kind \u2014 a valida\xE7\xE3o (DeclarativeKindPort.parse\
+    \ / validate_on_parse) s\xF3 roda no SCAN/read (canal parse_error). Um doc shape-quebrado\
+    \ persiste e explode depois, longe do autor. O Automation resolveu localmente\
+    \ (o guard pre_save roda port.parse no write), mas o gap \xE9 SIST\xCAMICO: vale\
+    \ pra todo Kind descriptor (Doc, ModelProfile, Kaizen, ...). Avaliar um passo\
+    \ gen\xE9rico de schema-validate no write_pipeline (opt-in por Kind ou padr\xE3\
+    o com escape hatch), com aten\xE7\xE3o a docs legados que hoje s\xF3 passam por\
+    \ serem lidos fail-soft."
+  type: enhancement
+  severity: medium
+  status: open
+  timeline:
+  - at: '2026-07-09T23:54:47+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

@@ -33,7 +33,7 @@ spec:
   - PR merged via dna sdlc story pr
   definition_of_done_source: cli-create
   created_at: '2026-07-09T23:20:07+00:00'
-  updated_at: '2026-07-09T23:20:10+00:00'
+  updated_at: '2026-07-09T23:56:40+00:00'
   timeline:
   - at: '2026-07-09T23:20:07+00:00'
     actor: claude-code
@@ -46,8 +46,90 @@ spec:
     source: cli
     from: todo
     to: in-progress
+  - at: '2026-07-09T23:31:43+00:00'
+    actor: claude-code
+    type: decision
+    source: cli
+    summary: "Design fechado ap\xF3s leitura do upstream (563loc) + conven\xE7\xF5\
+      es do repo: (1) Kind = DESCRIPTOR puro (kinds/automation.kind.yaml, precedente\
+      \ dna-doc/model-profile \u2014 ratchet pro\xEDbe classe nova de record); alias\
+      \ dna-automation, namespace github.com/ruinosus/dna/automation/v1, plane record,\
+      \ tenancy PERMISSIVA (tenant_scope ausente \u2014 m\xE1xima herd\xE1vel\u21D2\
+      nunca TENANTED; Automation J\xC1 est\xE1 em DEFAULT_INHERITABLE_KINDS_V1 desde\
+      \ s-automation-trio-extinction). (2) Triggers on.type: cron|hook|tool \u2014\
+      \ upstream 'event' vira 'hook' validado contra KNOWN_HOOK_NAMES do kernel (vocabul\xE1\
+      rio t\xEDpado j\xE1 existente); condition/shallow_scope e window_minutes N\xC3\
+      O viajam (conceitos do autopilot do produto upstream); runner kind agent|tool\
+      \ (engine n\xE3o existe no SDK p\xFAblico). (3) Valida\xE7\xE3o em 2 camadas:\
+      \ shape via JSON Schema estrito com allOf condicional (jsonschema Py / Ajv TS\
+      \ \u2014 ambos suportam) + write guard pre_save veto (padr\xE3o helix write_guards,\
+      \ priority 50) pra sem\xE2ntica: cron 5 campos parseado zero-dep + hook \u2208\
+      \ KNOWN_HOOK_NAMES. (4) Query helpers em m\xF3dulo (automations_for/trigger_key\
+      \ sobre instance.all \u2014 superf\xEDcie blessed; N\xC3O expande o kernel,\
+      \ coerente com de-especializa\xE7\xE3o). (5) Execu\xE7\xE3o = extension point\
+      \ s\xF3 em docs (builtin-kinds.md) com runner exemplo ~20 linhas."
+    commit_ref: cb1b318995bc4504d05e055312362f007ea5db4c
+  - at: '2026-07-09T23:44:02+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Implementa\xE7\xE3o completa: descriptor kinds/automation.kind.yaml\
+      \ (byte-id\xEAntico Py\u2194TS, sha256 183f68c8\u2026), extension Py (entry-point)\
+      \ + TS (loadBuiltins + index exports), write_guards (cron 5-field zero-dep +\
+      \ hook\u2208KNOWN_HOOK_NAMES, pre_save veto prio 50, key automation.trigger-guard),\
+      \ query helpers automations_for/trigger_key (m\xF3dulo, superf\xEDcie blessed).\
+      \ Testes: 41 passed Py (test_automation_extension.py), 35 pass TS (automation-extension.test.ts)\
+      \ + typecheck. Prosa: builtin-kinds.md nova se\xE7\xE3o 'Background automation'\
+      \ (Automation + extension point de execu\xE7\xE3o com runner ~20 linhas, paralelo\
+      \ com register_post_transition_hook). Reference regenerada: 66 Kinds; brand+coverage\
+      \ guards limpos SEM allowlist nova; mkdocs build --strict verde. Rodando agora\
+      \ as su\xEDtes completas (sdk-py full / sdk-ts full / cli)."
+    commit_ref: cb1b318995bc4504d05e055312362f007ea5db4c
+  - at: '2026-07-09T23:54:22+00:00'
+    actor: claude-code
+    type: decision
+    source: cli
+    summary: "SMOKE REAL pegou 2 gaps de verdade \u2014 corrigidos antes do PR: (1)\
+      \ armadilha YAML 1.1: PyYAML l\xEA 'on:' sem aspas como boolean True \u2014\
+      \ o doc gravava e perdia o trigger silenciosamente (explodia s\xF3 no scan com\
+      \ \"'on' is a required property\"); o guard agora NORMALIZA a chave True\u2192\
+      'on' in-place (contrato de muta\xE7\xE3o do canal veto) antes de validar; PyYAML\
+      \ emite 'on' com aspas no dump, round-trip seguro; js-yaml mant\xE9m string\
+      \ \u2014 TS sem trap (verificado). (2) o kernel s\xF3 valida schema no SCAN,\
+      \ n\xE3o no write \u2014 doc shape-quebrado persistia; o guard agora roda o\
+      \ parse validante do descriptor no write (veto com o autor presente). Smoke\
+      \ re-rodado via CLI real: apply v\xE1lido (on sem aspas) \u2192 CREATED + storage\
+      \ com 'on' quoted; cron '61 * * * *' \u2192 exit 1 vetado; hook 'pre_saev' \u2192\
+      \ exit 1 vetado listando vocabul\xE1rio; automations_for/trigger_key sobre o\
+      \ scope real OK. Testes: 43 Py + 36 TS. Vou registrar um kaizen/issue sobre\
+      \ o gap sist\xEAmico (write path n\xE3o valida schema pra Kinds descriptor em\
+      \ geral)."
+    commit_ref: cb1b318995bc4504d05e055312362f007ea5db4c
+  - at: '2026-07-09T23:56:01+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-tier-a-automation
+    summary: TestGuide tg-tier-a-automation (smoke)
+  - at: '2026-07-09T23:56:40+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-tier-a-automation-20260709-235639
+    summary: "TestRun tr-tg-tier-a-automation-20260709-235639 \u2192 pass"
+    outcome: pass
   produces:
   - kind: Plan
     name: plan-s-tier-a-automation
     role: implementation
     at: '2026-07-09T23:20:10+00:00'
+  - kind: TestGuide
+    name: tg-tier-a-automation
+    role: test-guide
+    at: '2026-07-09T23:56:01+00:00'
+  - kind: TestRun
+    name: tr-tg-tier-a-automation-20260709-235639
+    role: test-run
+    at: '2026-07-09T23:56:40+00:00'
