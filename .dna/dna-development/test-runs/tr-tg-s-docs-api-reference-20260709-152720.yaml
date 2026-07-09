@@ -1,0 +1,16 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-docs-api-reference-20260709-152720
+spec:
+  guide_ref: tg-s-docs-api-reference
+  outcome: pass
+  verifies:
+  - Story/s-docs-api-reference
+  executed_by: claude-code
+  executed_at: '2026-07-09T15:27:20+00:00'
+  notes: 'All 6 gates green locally: deps install; both Python generators --check
+    exit 0 (idempotent); TypeDoc deterministic (168 pages, hash-stable across two
+    runs); tsc --noEmit exit 0; mkdocs build --strict built in ~3s with 0 warnings
+    (6 Py + 168 TS + 8 CLI + 3 Kinds pages in nav); brand_guard --self-test + scan
+    clean.'
