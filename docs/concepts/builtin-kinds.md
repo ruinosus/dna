@@ -106,6 +106,52 @@ tools as first-class agent tools — zero code, zero deploy. Secrets never
 live in the doc: the auth block carries env-var *names*, read at connect
 time.
 
+## Model registry
+
+### ModelProfile
+
+A [`ModelProfile`](../reference/kinds/record.md#modelprofile)
+(`modelreg-model-profile`) records one LLM model's hard limits and
+capabilities — `instruction_token_cap`, `context_window`, `tools_cap`,
+`max_output_tokens`, modalities, cost — as first-class data instead of
+implicit knowledge scattered through code. Profiles are GLOBAL and live in
+the `_lib` scope (`model-profiles/<model_id>.yaml`); resolve one with
+`kernel.model_profile(id_or_alias)` (`modelProfile` in TypeScript), which
+matches `model_id` first and the `aliases` list second, regardless of the
+caller's scope.
+
+The registry exists for one contract: **never hardcode token caps**. The
+kernel's write path enforces it — when an Agent that declares a `model`
+(or a `voice_persona`) is written, the prompt-budget guard estimates the
+instruction's token count and compares it against the profile's
+`instruction_token_cap`. A *strict* model — a voice persona write, or any
+profile with `realtime: true` — over the cap **vetoes the write** with a
+didactic error; a chat model over the cap writes but warns loud; an Agent
+with no declared model, or a model with no profile, passes untouched
+(enforcement is opt-in: writing a profile with a cap arms the guard). The
+estimate is a deliberate over-count (chars ÷ 3.5), so the guard never
+under-blocks; `DNA_PROMPT_BUDGET_ENFORCE=0` is the ops kill-switch that
+downgrades the veto to a warning. This ports a lesson paid for in a real
+outage: a 17,269-token voice persona silently exceeded a realtime model's
+16,384-token session-instructions cap because the cap lived in nobody's
+code.
+
+```yaml
+# _lib/model-profiles/gpt-realtime-2.yaml
+apiVersion: github.com/ruinosus/dna/modelreg/v1
+kind: ModelProfile
+metadata:
+  name: gpt-realtime-2
+spec:
+  model_id: gpt-realtime-2
+  provider: openai
+  realtime: true            # strict: over-cap Agent writes are vetoed
+  context_window: 32768
+  instruction_token_cap: 16384
+  modalities: [text, audio]
+  aliases: [gpt-realtime-2-2026-05-07]
+```
+
 ## Preferences & personalization
 
 ### Setting

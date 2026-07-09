@@ -32,7 +32,7 @@ spec:
   - PR merged via dna sdlc story pr
   definition_of_done_source: cli-create
   created_at: '2026-07-09T22:39:23+00:00'
-  updated_at: '2026-07-09T22:39:26+00:00'
+  updated_at: '2026-07-09T23:02:22+00:00'
   timeline:
   - at: '2026-07-09T22:39:23+00:00'
     actor: claude-code
@@ -45,6 +45,34 @@ spec:
     source: cli
     from: todo
     to: in-progress
+  - at: '2026-07-09T23:02:07+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "build: shape decidido \u2014 ModelProfile como DESCRIPTOR (kinds/model-profile.kind.yaml,\
+      \ byte-id\xEAntico Py\u2194TS; ratchet F3 pro\xEDbe classe nova pra record Kind\
+      \ e todo o upstream \xE9 express\xE1vel via D2/D3: describe '{provider}/{model_id}',\
+      \ summary curado, ui govern). Alias modelreg-model-profile = exatamente a conven\xE7\
+      \xE3o <owner>-<kebab> gerada; allowlist de classe intocada. GLOBAL (registry\
+      \ base-only, sem override por tenant). Descoberta: o DNA J\xC1 tinha kernel.model_profile\
+      \ + prompt_budget.py + o guard voice-only no helix \u2014 o que faltava era\
+      \ o Kind (resolve retornava None \u2192 tudo fail-open) e os caminhos strict/warn."
+    commit_ref: 3565d3bb758a266de6e300f817b0afbae91fc09f
+  - at: '2026-07-09T23:02:22+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "build: guard estendido nos 3 caminhos \u2014 VETO (voice_persona OU\
+      \ profile realtime:true acima do instruction_token_cap; erro did\xE1tico com\
+      \ o contrato 'never hardcode caps'), WARN (chat com spec.model acima do cap;\
+      \ escreve mas loga alto), PASS (sem model/sem profile/sem cap/dentro do budget\
+      \ \u2014 enforcement opt-in por DADO). TS ganhou a m\xE1quina que faltava: src/kernel/prompt-budget.ts\
+      \ + promptBudgetGuard async no helix (priority 20, antes reservada) + Kernel._DEFAULT_REALTIME_MODEL\
+      \ (paridade). Testes: 9 py + 14 ts, todos os caminhos + registro do Kind + resolve\
+      \ id\u2192alias. Prosa: se\xE7\xE3o 'Model registry' em builtin-kinds.md + refer\xEA\
+      ncia regenerada; coverage guard verde SEM allowlist nova; brand_guard limpo;\
+      \ mkdocs --strict verde."
+    commit_ref: 3565d3bb758a266de6e300f817b0afbae91fc09f
   produces:
   - kind: Plan
     name: plan-s-tier-a-modelprofile

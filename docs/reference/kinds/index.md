@@ -106,6 +106,7 @@ Declarative Kind descriptor — the format of builtin `kinds/*.kind.yaml` packag
 | [Issue](record.md#issue) | `sdlc-issue` | `github.com/ruinosus/dna/sdlc/v1` |
 | [Kaizen](record.md#kaizen) | `sdlc-kaizen` | `github.com/ruinosus/dna/sdlc/v1` |
 | [LessonLearned](record.md#lessonlearned) | `sdlc-lesson-learned` | `github.com/ruinosus/dna/sdlc/v1` |
+| [ModelProfile](record.md#modelprofile) | `modelreg-model-profile` | `github.com/ruinosus/dna/modelreg/v1` |
 | [Narrative](record.md#narrative) | `sdlc-narrative` | `github.com/ruinosus/dna/sdlc/v1` |
 | [PatternInsight](record.md#patterninsight) | `cognitive-pattern-insight` | `github.com/ruinosus/dna/cognitive/v1` |
 | [Plan](record.md#plan) | `sdlc-plan` | `github.com/ruinosus/dna/sdlc/v1` |
