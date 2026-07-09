@@ -39,7 +39,7 @@ spec:
   - PR merged via dna sdlc story pr
   definition_of_done_source: cli-create
   created_at: '2026-07-09T22:39:23+00:00'
-  updated_at: '2026-07-09T23:06:09+00:00'
+  updated_at: '2026-07-09T23:09:00+00:00'
   timeline:
   - at: '2026-07-09T22:39:23+00:00'
     actor: claude-code
@@ -103,6 +103,25 @@ spec:
     source: cli
     from: in-progress
     to: review
+  - at: '2026-07-09T23:07:23+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "review: PR #23 aberto (base main), story em review, AC checado com evid\xEA\
+      ncia. TestGuide tg-s-tier-a-modelprofile + TestRun pass registrados. CI parcial:\
+      \ brand-guard/cli/commit-emails/docs-links/gitleaks/sdk-ts verdes; aguardando\
+      \ docs-build/postgres/sdk-py. N\xC3O mergear \u2014 coordena\xE7\xE3o com a\
+      \ story irm\xE3 s-tier-a-doc-kind (conflito esperado em builtin-kinds.md, resolve\
+      \ no merge)."
+    commit_ref: 8ed4abf95da58a216818832aa5684c79347de96b
+  - at: '2026-07-09T23:09:00+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #23 com TODOS os checks verdes: sdk-py, sdk-ts, cli, postgres, brand-guard,\
+      \ commit-emails, gitleaks, docs-build (coverage guard incluso), docs-links.\
+      \ Pronto pro merge do Barna (n\xE3o mergeio \u2014 coordena\xE7\xE3o Tier A)."
+    commit_ref: 8ed4abf95da58a216818832aa5684c79347de96b
   produces:
   - kind: Plan
     name: plan-s-tier-a-modelprofile
