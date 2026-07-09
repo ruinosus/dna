@@ -14,7 +14,7 @@ spec:
     \ (or adapters must map __base__ to base). Found while writing docs cli-tour (s-docs-cli-tour-kinds-prose)."
   type: bug
   severity: high
-  status: open
+  status: resolved
   owner: claude-code
   timeline:
   - at: '2026-07-09T22:21:25+00:00'
@@ -22,3 +22,34 @@ spec:
     type: status_change
     source: cli
     to: open
+  - at: '2026-07-09T23:46:33+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Fix na s-fix-source-diff-push: digest_manifest agora l\xEA a BASE via\
+      \ load_all (o mesmo caminho do reader/scan normal); tenant expl\xEDcito continua\
+      \ lendo o overlay via load_layer; scope ausente digesta {} (bootstrap de r\xE9\
+      plica). Duas pernas extras achadas pelos testes contra adapters reais: push_scope\
+      \ publica drafts em targets draft-staged (sqlite \u2014 sem isso o doc pushed\
+      \ ficava draft invis\xEDvel e nunca convergia) e _load_bundle_entries passa\
+      \ tenant= como keyword (kw-only no sqlite). Bonus: build_source_from_env do\
+      \ CLI mutilava fs://./x em /x absoluto (netloc descartado) \u2014 outro caminho\
+      \ p/ falso 'in sync', consertado + testado. Fakes des-mascarados (base atr\xE1\
+      s de load_all, load_layer overlay-only), 6 testes red\u2192green contra FS+sqlite\
+      \ reais, caso novo no conformance kit (base_never_served_by_load_layer, 7 adapters),\
+      \ cli-tour atualizado com o transcript real diff\u2192push\u2192re-diff. TestGuide\
+      \ tg-source-diff-push-i006 + TestRun pass."
+  - at: '2026-07-09T23:46:34+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: open
+    to: resolved
+  closed_at: '2026-07-09T23:46:34+00:00'
+  produces:
+  - kind: TestGuide
+    name: tg-source-diff-push-i006
+    at: '2026-07-09T23:46:46+00:00'
+  - kind: TestRun
+    name: tr-tg-source-diff-push-i006-20260709-234616
+    at: '2026-07-09T23:46:47+00:00'

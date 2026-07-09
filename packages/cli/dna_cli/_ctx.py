@@ -72,9 +72,15 @@ async def build_source_from_env(kernel: Any, *, _source_url: str | None = None) 
     if scheme in ("file", "fs", ""):
         from dna.adapters.filesystem.writable import FilesystemWritableSource
 
-        path = parsed.path if parsed.scheme else url
-        if parsed.netloc and not parsed.path:
-            path = parsed.netloc
+        # Join netloc + path (same rule as source_cmd._resolve_url_to_path):
+        # 'fs://./copy' parses as netloc='.', path='/copy' — dropping the
+        # netloc silently resolved to the ABSOLUTE '/copy', so `dna source
+        # diff fs://./copy` digested a nonexistent dir as {} and reported a
+        # bogus "in sync" (found while fixing i-006).
+        if parsed.scheme:
+            path = (parsed.netloc + parsed.path) if parsed.netloc else parsed.path
+        else:
+            path = url
         return FilesystemWritableSource(
             path,
             writers=list(getattr(kernel, "active_writers", []) or []),

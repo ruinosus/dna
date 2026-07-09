@@ -17,11 +17,13 @@ def _agent(name, instruction):
 
 
 class _FromSource(CoreSourceStub):
-    """Read source-of-truth: a fixed set of docs."""
+    """Read source-of-truth: a fixed set of BASE docs behind load_all
+    (i-006 — like the real adapters; the old fake served them from
+    load_layer regardless of layer_value, masking the '__base__' bug)."""
     def __init__(self, docs):
         self._by_name = {d["metadata"]["name"]: d for d in docs}
 
-    async def load_layer(self, scope, lid, lv, readers=None):
+    async def load_all(self, scope, readers=None):
         return list(self._by_name.values())
 
     async def load_one(self, scope, kind, name, readers=None, tenant=None):
@@ -38,7 +40,7 @@ class _ToSource(CoreSourceStub):
         self.writes = []
         self.deletes = []
 
-    async def load_layer(self, scope, lid, lv, readers=None):
+    async def load_all(self, scope, readers=None):
         return list(self._by_name.values())
 
     async def _load_bundle_entries(self, scope, kind, name, tenant):

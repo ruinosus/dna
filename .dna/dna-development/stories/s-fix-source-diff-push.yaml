@@ -11,7 +11,7 @@ spec:
     \ ler a BASE de verdade (load_all/caminho correto do reader), + testes contra\
     \ adapter REAL (fs e sqlite) que reproduzem o bug antes do fix (red\u2192green),\
     \ + caso no conformance kit se generalizar."
-  status: in-progress
+  status: review
   feature: f-dna-1.0-readiness
   priority: high
   labels:
@@ -29,7 +29,7 @@ spec:
   - PR merged
   definition_of_done_source: cli-create
   created_at: '2026-07-09T23:20:08+00:00'
-  updated_at: '2026-07-09T23:20:12+00:00'
+  updated_at: '2026-07-09T23:47:55+00:00'
   timeline:
   - at: '2026-07-09T23:20:08+00:00'
     actor: claude-code
@@ -42,8 +42,71 @@ spec:
     source: cli
     from: todo
     to: in-progress
+  - at: '2026-07-09T23:45:31+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Root cause confirmado em kernel/source_sync.py: digest_manifest lia\
+      \ a base via load_layer(scope,'tenant','__base__') \u2014 FS resolve isso p/\
+      \ tenants/__base__/scopes/<s> (nunca existe) e sqlite p/ layer_documents (overlay\
+      \ rows), ent\xE3o AMBOS os lados digestavam {} e diff/push eram no-ops por constru\xE7\
+      \xE3o. RED primeiro: 6 testes novos contra FilesystemSource+SqliteSource reais\
+      \ (test_source_sync_real_adapters.py), todos falhando com 'assert {}' antes\
+      \ do fix."
+    commit_ref: 3c50b05701013aea69fc07c7a1926982a99ebdf2
+  - at: '2026-07-09T23:45:32+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Fix em 3 pernas (todas expostas pelos adapters reais): (1) base via\
+      \ load_all (tenant expl\xEDcito continua load_layer overlay; scope ausente digesta\
+      \ {} p/ bootstrap de r\xE9plica); (2) push_scope publica drafts em targets draft-staged\
+      \ (sqlite) \u2014 mesmo padr\xE3o de sync/apply._save_and_publish; sem isso\
+      \ o doc pushed ficava draft invis\xEDvel e o push nunca convergia; (3) _load_bundle_entries\
+      \ com tenant= keyword (kw-only no sqlite, drift de assinatura latente). Bonus\
+      \ achado: fs://./copy era mutilado pelo build_source_from_env (netloc descartado\
+      \ \u2192 /copy absoluto \u2192 falso in-sync); consertado + testado. Fakes des-mascarados\
+      \ (base atr\xE1s de load_all) + caso novo no conformance kit base_never_served_by_load_layer\
+      \ rodando em 7 adapters. Gates: sdk-py 2834 passed/0 failed, cli 271 passed,\
+      \ sdk-ts 0 fail + typecheck ok, brand_guard clean, mkdocs --strict ok."
+    commit_ref: 3c50b05701013aea69fc07c7a1926982a99ebdf2
+  - at: '2026-07-09T23:45:54+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-source-diff-push-i006
+    summary: TestGuide tg-source-diff-push-i006 (smoke)
+  - at: '2026-07-09T23:46:17+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-source-diff-push-i006-20260709-234616
+    summary: "TestRun tr-tg-source-diff-push-i006-20260709-234616 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-09T23:47:21+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/24'
+    pr_url: https://github.com/ruinosus/dna/pull/24
+  - at: '2026-07-09T23:47:55+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
   produces:
   - kind: Plan
     name: plan-s-fix-source-diff-push
     role: implementation
     at: '2026-07-09T23:20:12+00:00'
+  - kind: TestGuide
+    name: tg-source-diff-push-i006
+    role: test-guide
+    at: '2026-07-09T23:45:54+00:00'
+  - kind: TestRun
+    name: tr-tg-source-diff-push-i006-20260709-234616
+    role: test-run
+    at: '2026-07-09T23:46:17+00:00'

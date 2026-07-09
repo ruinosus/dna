@@ -39,6 +39,14 @@ class SourceSync:
         bundle entries (so binary assets — fonts, images — are covered too).
         ``include(raw) -> bool`` optionally filters docs. ``source`` overrides
         the source read from (default: the kernel's registered one).
+
+        Layer semantics (i-006): no ``tenant`` → digest the BASE scope via
+        ``load_all`` (the same path the normal reader/scan uses); explicit
+        ``tenant`` → digest that tenant's OVERLAY via ``load_layer``. The old
+        ``load_layer(scope, "tenant", "__base__")`` read was a bug — real
+        adapters treat ``load_layer`` strictly as an overlay read, so the
+        ``"__base__"`` sentinel always digested ``{}`` and diff/push were
+        no-ops. A scope missing entirely in ``src`` digests to ``{}``.
         """
         import hashlib
         from types import SimpleNamespace
@@ -49,9 +57,17 @@ class SourceSync:
         if src is None:
             raise RuntimeError("digest_manifest needs a source")
 
-        raws = await src.load_layer(
-            scope, "tenant", tenant or "__base__", readers=k._readers,
-        )
+        if tenant:
+            raws = await src.load_layer(
+                scope, "tenant", tenant, readers=k._readers,
+            )
+        else:
+            try:
+                raws = await src.load_all(scope, readers=k._readers)
+            except FileNotFoundError:
+                # Scope absent in this source (e.g. diffing against an empty
+                # replica) — an empty manifest, so everything diffs as added.
+                raws = []
         kp_by_kind = {kp.kind: kp for kp in k._kinds.values()}
         _fallback = KindBase()
         entry_loader = getattr(src, "_load_bundle_entries", None)
@@ -81,9 +97,11 @@ class SourceSync:
                 entry_loader is not None and sd is not None
                 and getattr(sd, "pattern", None) == StoragePattern.BUNDLE
             ):
-                entries = await entry_loader(scope, kind, name, tenant or "")
+                # tenant is keyword-only on SqliteSource._load_bundle_entries
+                # (positional-or-kw on PG) — keyword keeps both happy (i-006).
+                entries = await entry_loader(scope, kind, name, tenant=tenant or "")
                 if not entries:
-                    entries = await entry_loader(scope, kind, name, "")
+                    entries = await entry_loader(scope, kind, name, tenant="")
                 parts: list[str] = []
                 for ep, payload in sorted((entries or {}).items()):
                     if ep == sd.marker:
@@ -151,6 +169,16 @@ class SourceSync:
 
         applied: list[tuple[str, str, str]] = []
         loader = getattr(k._source, "_load_bundle_entries", None)
+        # Draft-staged adapters (SQLite; PG's save auto-publishes but keeps
+        # the method) need an explicit publish or the pushed doc stays an
+        # invisible draft and the target never converges (i-006 push leg).
+        # Same pattern as sync/apply._save_and_publish + the conformance
+        # kit's ctx.publish: forward tenant only if the signature takes it.
+        publish = getattr(to_source, "publish", None)
+        publish_takes_tenant = False
+        if callable(publish):
+            import inspect
+            publish_takes_tenant = "tenant" in inspect.signature(publish).parameters
         for kind, name in diff["added"] + diff["changed"]:
             raw = await k._source.load_one(
                 scope, kind, name, readers=k._readers, tenant=tenant,
@@ -164,9 +192,9 @@ class SourceSync:
                 loader is not None and sd is not None
                 and getattr(sd, "pattern", None) == StoragePattern.BUNDLE
             ):
-                entries = await loader(scope, kind, name, tenant or "")
+                entries = await loader(scope, kind, name, tenant=tenant or "")
                 if not entries:
-                    entries = await loader(scope, kind, name, "")
+                    entries = await loader(scope, kind, name, tenant="")
                 src_files = {
                     ep: payload for ep, payload in (entries or {}).items()
                     if ep != sd.marker
@@ -174,6 +202,11 @@ class SourceSync:
                 if src_files:
                     raw.setdefault("spec", {})["source_files"] = src_files
             await to_source.save_document(scope, kind, name, raw, tenant=tenant)
+            if callable(publish):
+                if tenant is not None and publish_takes_tenant:
+                    await publish(scope, kind, name, tenant=tenant)
+                else:
+                    await publish(scope, kind, name)
             applied.append(("write", kind, name))
 
         if prune:

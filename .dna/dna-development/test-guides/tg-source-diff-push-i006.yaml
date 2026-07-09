@@ -1,0 +1,30 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-source-diff-push-i006
+spec:
+  description: Product smoke do dna source diff/push contra dois sources FS reais
+    divergentes na BASE (repro do i-006)
+  kind_of_test: smoke
+  status: active
+  steps:
+  - action: 'Montar playground: DNA_SOURCE_URL=fs://./scopes com scope demo (Genome
+      + 2 Agents: code-reviewer v2, release-notes) e ./copy stale (code-reviewer v1,
+      sem release-notes)'
+    expected: dois sources reais com base divergente prontos
+  - action: dna source diff fs://./copy --scope demo
+    expected: "reporta 'demo: 1 added \xB7 1 changed \xB7 0 removed' com 'A Agent/release-notes'\
+      \ e 'C Agent/code-reviewer' (N\xC3O 'in sync')"
+  - action: dna source push fs://./copy --scope demo
+    expected: '[DRY-RUN] ''would write 2 (1 added, 1 changed)'' sem tocar o disco'
+  - action: dna source push fs://./copy --scope demo --apply
+    expected: '[APPLIED] ''wrote 2''; copy ganha agents/release-notes/AGENT.md e agents/code-reviewer/AGENT.md
+      com a instruction v2'
+  - action: dna source diff fs://./copy --scope demo (re-diff)
+    expected: "'\u2714 in sync \u2014 demo matches fs://./copy (0 diffs)' \u2014 e\
+      \ in-sync porque os manifests batem, n\xE3o porque ambos s\xE3o {}"
+  verifies:
+  - Story/s-fix-source-diff-push
+  - Issue/i-006-source-diff-push-base-layer-empty
+  created_at: '2026-07-09T23:45:53+00:00'
+  updated_at: '2026-07-09T23:45:53+00:00'

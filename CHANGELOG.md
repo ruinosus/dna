@@ -55,4 +55,18 @@ baseline that the first tagged release will draw from.
 - **Community-health baseline** — this CHANGELOG, plus `CONTRIBUTING`,
   `SECURITY`, `CODE_OF_CONDUCT`, issue forms, and a PR template.
 
+### Fixed
+
+- **`dna source diff`/`push` were blind to base-layer content** (i-006).
+  `digest_manifest` read the base via `load_layer(scope, "tenant",
+  "__base__")`, which real adapters treat strictly as a tenant-overlay
+  read — both sides digested `{}` and every diff reported "in sync".
+  The base now digests through `load_all` (the canonical base-read
+  path); explicit `--tenant` overlays keep using `load_layer`. `push`
+  additionally publishes drafts on draft-staged targets (SQLite) so
+  pushed docs become visible, and relative `fs://./path` URLs resolve
+  correctly instead of silently pointing at an absolute path. The
+  source conformance kit now pins the contract: base content is served
+  by `load_all`, never by a `load_layer` sentinel.
+
 [Unreleased]: https://github.com/ruinosus/dna/commits/main
