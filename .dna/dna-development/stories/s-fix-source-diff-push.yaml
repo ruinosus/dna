@@ -11,7 +11,7 @@ spec:
     \ ler a BASE de verdade (load_all/caminho correto do reader), + testes contra\
     \ adapter REAL (fs e sqlite) que reproduzem o bug antes do fix (red\u2192green),\
     \ + caso no conformance kit se generalizar."
-  status: review
+  status: done
   feature: f-dna-1.0-readiness
   priority: high
   labels:
@@ -21,15 +21,21 @@ spec:
   reporter: claude-code
   business_value: 500
   acceptance_criteria:
-  - "diff/push detectam diverg\xEAncia real contra fs E sqlite (testes red\u2192green);\
-    \ fakes de teste corrigidos ou substitu\xEDdos por adapters reais; i-006 resolvido;\
-    \ CI verde"
+  - text: "diff/push detectam diverg\xEAncia real contra fs E sqlite (testes red\u2192\
+      green); fakes de teste corrigidos ou substitu\xEDdos por adapters reais; i-006\
+      \ resolvido; CI verde"
+    done: true
+    done_at: '2026-07-09T23:52:11+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - PR merged
+  - text: PR merged
+    done: true
+    done_at: '2026-07-09T23:52:11+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-09T23:20:08+00:00'
-  updated_at: '2026-07-09T23:47:55+00:00'
+  updated_at: '2026-07-09T23:52:16+00:00'
   timeline:
   - at: '2026-07-09T23:20:08+00:00'
     actor: claude-code
@@ -97,6 +103,23 @@ spec:
     source: cli
     from: in-progress
     to: review
+  - at: '2026-07-09T23:52:14+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #24 merged (9/9; TestGuide/TestRun --product do agente com smoke\
+      \ real diff\u2192push\u2192re-diff). Root cause confirmado (load_layer sentinel\
+      \ nunca era a base); fix exp\xF4s +3 bugs reais (push sem publish de drafts,\
+      \ kwarg drift, CLI mutilando fs://./path); caso permanente no conformance kit\
+      \ (base_never_served_by_load_layer, 7 adapters); i-006 resolvida; cli-tour com\
+      \ transcript real."
+  - at: '2026-07-09T23:52:16+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: d768916901d4c265eb113945b7a75f6948108856
   produces:
   - kind: Plan
     name: plan-s-fix-source-diff-push
@@ -110,3 +133,4 @@ spec:
     name: tr-tg-source-diff-push-i006-20260709-234616
     role: test-run
     at: '2026-07-09T23:46:17+00:00'
+  closed_at: '2026-07-09T23:52:11+00:00'
