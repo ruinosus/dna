@@ -12,7 +12,7 @@ spec:
     \ DETERMIN\xCDSTICO puro (ecforia/BM25/decay/encoding-context/CoALA) como extension\
     \ DNA; bi-temporalidade (valid_from/valid_to j\xE1 no schema). Deixa scribes LLM/schedulers\
     \ de fora. CLI dna memory. Depende de s-record-search-sqlite."
-  status: todo
+  status: in-progress
   feature: f-dna-search-memory
   priority: medium
   labels:
@@ -31,10 +31,21 @@ spec:
   - PR merged
   definition_of_done_source: cli-create
   created_at: '2026-07-09T16:48:04+00:00'
-  updated_at: '2026-07-09T16:48:04+00:00'
+  updated_at: '2026-07-09T18:25:08+00:00'
   timeline:
   - at: '2026-07-09T16:48:04+00:00'
     actor: claude-code
     type: status_change
     source: cli
     to: todo
+  - at: '2026-07-09T18:25:08+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  produces:
+  - kind: Plan
+    name: plan-s-memory-verbs
+    role: implementation
+    at: '2026-07-09T18:25:08+00:00'

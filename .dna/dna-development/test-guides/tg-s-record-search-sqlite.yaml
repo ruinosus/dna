@@ -1,0 +1,20 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-s-record-search-sqlite
+spec:
+  description: Roteiro de teste de s-record-search-sqlite (derivado das acceptance_criteria).
+  kind_of_test: smoke
+  status: active
+  steps:
+  - action: "No Studio, valide: RecordSearchProvider sqlite-vec+FTS5+RRF Py+TS; schema\
+      \ de embeddings com migra\xE7\xE3o dona; provider conformance suite verde; dna\
+      \ recall funciona offline end-to-end; Research recall usa o provider; CI verde"
+    where: "<rota/tela \u2014 ex. /scopes/:scope/...>"
+    expected: "<o que voc\xEA V\xCA quando est\xE1 certo (marque \u2717 S\xD3 se estiver\
+      \ quebrado)>"
+  verifies:
+  - Story/s-record-search-sqlite
+  created_at: '2026-07-09T18:24:40+00:00'
+  updated_at: '2026-07-09T18:24:40+00:00'
+  owner: claude-code

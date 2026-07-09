@@ -12,7 +12,7 @@ spec:
     \ kit pr\xF3prio do provider (estilo source_conformance_suite). Wire: dna recall/search\
     \ CLI + faz o recall do Research usar o provider (resolve i-004: deixa de ser\
     \ lexical). Overlay/tenant-aware. Depende de s-embedding-port."
-  status: review
+  status: done
   feature: f-dna-search-memory
   priority: high
   labels:
@@ -23,15 +23,21 @@ spec:
   reporter: claude-code
   business_value: 600
   acceptance_criteria:
-  - "RecordSearchProvider sqlite-vec+FTS5+RRF Py+TS; schema de embeddings com migra\xE7\
-    \xE3o dona; provider conformance suite verde; dna recall funciona offline end-to-end;\
-    \ Research recall usa o provider; CI verde"
+  - text: "RecordSearchProvider sqlite-vec+FTS5+RRF Py+TS; schema de embeddings com\
+      \ migra\xE7\xE3o dona; provider conformance suite verde; dna recall funciona\
+      \ offline end-to-end; Research recall usa o provider; CI verde"
+    done: true
+    done_at: '2026-07-09T18:24:43+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - PR merged via dna sdlc story pr
+  - text: PR merged via dna sdlc story pr
+    done: true
+    done_at: '2026-07-09T18:24:43+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-09T16:48:03+00:00'
-  updated_at: '2026-07-09T18:21:36+00:00'
+  updated_at: '2026-07-09T18:24:45+00:00'
   timeline:
   - at: '2026-07-09T16:48:03+00:00'
     actor: claude-code
@@ -100,8 +106,48 @@ spec:
       \ research recall roteando kernel.search (i-004 resolvido), extra opt-in search-sqlite\
       \ com guard de import, mkdocs --strict verde. N\xC3O mergeado (aguarda review)."
     commit_ref: 5d6e7d69894594644b07a05f855b2ae6027e9481
+  - at: '2026-07-09T18:24:41+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-record-search-sqlite
+    summary: TestGuide tg-s-record-search-sqlite (smoke)
+  - at: '2026-07-09T18:24:42+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-record-search-sqlite-20260709-182441
+    summary: "TestRun tr-tg-s-record-search-sqlite-20260709-182441 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-09T18:24:44+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #14 merged (10 checks). RecordSearchProvider sqlite-vec+FTS5+RRF\
+      \ (Py+TS), schema com migra\xE7\xE3o dona (paga o d\xE9bito do DDL), conformance\
+      \ kit do provider (8 casos, roda offline com fake embedder + sqlite-vec REAL\
+      \ no CI Linux), dna recall/search hybrid end-to-end, i-004 resolvido (Research\
+      \ recall usa o provider). Overlay/tenant-aware num .db por scope."
+  - at: '2026-07-09T18:24:45+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: aef00f76101934df57c365ad94ad02963cc323c2
   produces:
   - kind: Plan
     name: plan-s-record-search-sqlite
     role: implementation
     at: '2026-07-09T17:39:12+00:00'
+  - kind: TestGuide
+    name: tg-s-record-search-sqlite
+    role: test-guide
+    at: '2026-07-09T18:24:41+00:00'
+  - kind: TestRun
+    name: tr-tg-s-record-search-sqlite-20260709-182441
+    role: test-run
+    at: '2026-07-09T18:24:42+00:00'
+  closed_at: '2026-07-09T18:24:43+00:00'

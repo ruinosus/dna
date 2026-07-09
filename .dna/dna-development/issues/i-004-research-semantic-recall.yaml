@@ -11,7 +11,7 @@ spec:
     \ o caso; busca por t\xF3pico \xE9 lexical. N\xE3o-bloqueante pr\xE9-1.0."
   type: enhancement
   severity: low
-  status: open
+  status: resolved
   owner: claude-code
   related_feature: f-dna-1.0-readiness
   timeline:
@@ -20,3 +20,18 @@ spec:
     type: status_change
     source: cli
     to: open
+  - at: '2026-07-09T18:24:46+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "RESOLVIDO via s-record-search-sqlite (PR #14): o recall do Research\
+      \ agora roteia por kernel.search()/RecordSearchProvider (busca h\xEDbrida sqlite-vec+FTS5+RRF)\
+      \ quando o provider est\xE1 registrado, degradando lexical honesto sen\xE3o.\
+      \ N\xE3o \xE9 mais s\xF3 lexical."
+  - at: '2026-07-09T18:24:47+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: open
+    to: resolved
+  closed_at: '2026-07-09T18:24:47+00:00'

@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-record-search-sqlite-20260709-182441
+spec:
+  guide_ref: tg-s-record-search-sqlite
+  outcome: pass
+  verifies:
+  - Story/s-record-search-sqlite
+  executed_by: claude-code
+  executed_at: '2026-07-09T18:24:41+00:00'
+  evidence:
+  - ci:pr14-10-checks,provider:sqlite-vec+FTS5+RRF-py-ts,conformance:record_search_conformance_suite-8-casos-2-lados,proof:dna-recall-hybrid-rank1-offline,i-004:roteado-pro-provider,migration:schema-dono-idempotente,guard:import-default-nao-puxa-sqlite-vec

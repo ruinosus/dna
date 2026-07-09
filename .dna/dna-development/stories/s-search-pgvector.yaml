@@ -9,7 +9,7 @@ spec:
     \ do DNA \u2014 porta o RRF lib-puro do upstream; mesma interface do sqlite-vec,\
     \ promove sem trocar contrato; DDL dono via migration contract. Passa o MESMO\
     \ provider conformance kit. Depende de s-record-search-sqlite."
-  status: todo
+  status: in-progress
   feature: f-dna-search-memory
   priority: medium
   labels:
@@ -27,10 +27,21 @@ spec:
   - PR merged
   definition_of_done_source: cli-create
   created_at: '2026-07-09T16:48:03+00:00'
-  updated_at: '2026-07-09T16:48:03+00:00'
+  updated_at: '2026-07-09T18:25:07+00:00'
   timeline:
   - at: '2026-07-09T16:48:03+00:00'
     actor: claude-code
     type: status_change
     source: cli
     to: todo
+  - at: '2026-07-09T18:25:07+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  produces:
+  - kind: Plan
+    name: plan-s-search-pgvector
+    role: implementation
+    at: '2026-07-09T18:25:07+00:00'

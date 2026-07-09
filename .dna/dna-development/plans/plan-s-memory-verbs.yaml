@@ -1,0 +1,16 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-memory-verbs
+spec:
+  title: 'Plano: s-memory-verbs'
+  date: '2026-07-09'
+  status: accepted
+  story_ref: s-memory-verbs
+  journey_phase: plan
+  body: "Verbos remember/recall/forget/consolidate sobre Kinds (LessonLearned/Research/Evidence)\
+    \ via RecordSearchProvider; scoring determin\xEDstico puro (ecforia/BM25/decay/encoding-context/CoALA)\
+    \ portado como extension; bi-temporalidade wired; CLI dna memory; sem scribes\
+    \ LLM no core. Worktree dna-wt-memory; PR via story pr."
+  created_at: '2026-07-09T18:25:07+00:00'
+  updated_at: '2026-07-09T18:25:07+00:00'
