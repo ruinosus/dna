@@ -43,6 +43,14 @@ from dna.testing.rw_conformance import (
     default_fixture,
     reader_writer_conformance_suite,
 )
+from dna.testing.record_search_conformance import (
+    RecordSearchCase,
+    RecordSearchReport,
+    SearchCaseNotApplicable,
+    fixture_records,
+    record_search_conformance_suite,
+    run_record_search_conformance,
+)
 from dna.testing.stubs import CoreSourceStub
 
 __all__ = [
@@ -52,9 +60,15 @@ __all__ = [
     "ConformanceReport",
     "CoreSourceStub",
     "RWConformanceCase",
+    "RecordSearchCase",
+    "RecordSearchReport",
+    "SearchCaseNotApplicable",
     "default_fixture",
     "reader_writer_conformance_suite",
+    "record_search_conformance_suite",
+    "run_record_search_conformance",
     "fixture_docs",
+    "fixture_records",
     "run_source_conformance",
     "source_conformance_suite",
 ]
