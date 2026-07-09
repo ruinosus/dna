@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-docs-diataxis-site-20260709-145454
+spec:
+  guide_ref: tg-s-docs-diataxis-site
+  outcome: pass
+  verifies:
+  - Story/s-docs-diataxis-site
+  executed_by: claude-code
+  executed_at: '2026-07-09T14:54:54+00:00'
+  evidence:
+  - ci:pr10-9checks-verde+deploy-skip,check:mkdocs-build-strict-exit0,check:lychee-links-internos-ok,check:diataxis-reorg-6-guias-mapeados,check:thesis-primer-cloudevents-style,check:readme-landing-180-linhas
