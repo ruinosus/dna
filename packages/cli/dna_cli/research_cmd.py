@@ -16,9 +16,11 @@ Tenancy is PERMISSIVE — ``--tenant`` is OPTIONAL (Research is
 repo-authored knowledge, not per-client data). Omit it to write/read the
 base doc.
 
-Semantic recall (``recall_research``) has no embeddings server in this
-distribution; a future ``search`` sub-command would degrade to lexical
-``kernel.query`` over the Research catalog. Not shipped here.
+Semantic recall (``dna research recall``) routes through ``kernel.search()``
+(i-004 resolved, s-record-search-sqlite): with the ``search-sqlite`` extra it
+uses the embeddable RecordSearchProvider (dense sqlite-vec + lexical FTS5 + RRF,
+offline — no server); without it, it degrades honestly to the kernel's lexical
+scan.
 """
 from __future__ import annotations
 
@@ -251,3 +253,32 @@ def cmd_create(path: str, scope: str, tenant: str | None, status: str | None) ->
         s.run(s.kernel.write_document(scope, "Research", name, raw, tenant=tenant))
     suffix = f" (tenant={tenant})" if tenant else ""
     click.secho(f"{action} Research/{name}{suffix}", fg="green")
+
+
+@research.command("recall")
+@click.argument("query")
+@click.option("--scope", default="dna-development", help="Scope to search.")
+@click.option("--tenant", default=None, help="Tenant overlay (base ∪ overlay).")
+@click.option("-k", "--limit", "k", default=10, show_default=True, help="Max hits.")
+@click.option("--json", "as_json", is_flag=True, help="Machine-readable output.")
+@click.pass_context
+def cmd_recall(
+    ctx: click.Context, query: str, scope: str, tenant: str | None,
+    k: int, as_json: bool,
+) -> None:
+    """Semantic recall over the Research catalog (resolves i-004).
+
+    Previously lexical-only (no embeddings server travelled to this repo).
+    Now routes through ``kernel.search()``: when the ``search-sqlite`` extra is
+    installed it uses the registered RecordSearchProvider (dense sqlite-vec +
+    lexical FTS5 fused with RRF — real semantic recall); otherwise it degrades
+    HONESTLY to the kernel's lexical scan. Thin wrapper over ``dna recall
+    --kind Research`` so the two share one code path.
+    """
+    from dna_cli import recall_cmd
+
+    ctx.invoke(
+        recall_cmd.recall,
+        query=query, scope=scope, kinds=("Research",),
+        tenant=tenant, k=k, as_json=as_json,
+    )

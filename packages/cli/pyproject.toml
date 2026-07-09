@@ -18,6 +18,10 @@ dna = "dna_cli:main"
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0",
+    # search-sqlite extra so `dna recall`/`dna research recall` end-to-end tests
+    # (tests/test_recall_cmd.py) run the real provider offline in CI, instead of
+    # importorskip. Resolves against the path-installed dna-sdk.
+    "dna-sdk[search-sqlite]",
 ]
 
 [tool.pytest.ini_options]
