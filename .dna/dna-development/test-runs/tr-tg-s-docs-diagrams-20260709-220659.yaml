@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-docs-diagrams-20260709-220659
+spec:
+  guide_ref: tg-s-docs-diagrams
+  outcome: pass
+  verifies:
+  - Story/s-docs-diagrams
+  executed_by: claude-code
+  executed_at: '2026-07-09T22:06:59+00:00'
+  evidence:
+  - ci:pr20-10-of-10,render:playwright-light+dark-svg-confirmado,review:barna-aprovou-visualmente,build:strict-verde,bonus:kind-TestRun-allowlist-shrink
