@@ -1,0 +1,21 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-source-diff-push-i006-20260709-234616
+spec:
+  guide_ref: tg-source-diff-push-i006
+  outcome: pass
+  verifies:
+  - Story/s-fix-source-diff-push
+  - Issue/i-006-source-diff-push-base-layer-empty
+  executed_by: claude-code
+  executed_at: '2026-07-09T23:46:16+00:00'
+  notes: "Smoke executado end-to-end no worktree (scratchpad playground, CLI real\
+    \ do venv). Outputs reais: diff detectou 'demo: 1 added \xB7 1 changed \xB7 0\
+    \ removed' (A Agent/release-notes, C Agent/code-reviewer); push dry-run 'would\
+    \ write 2'; push --apply 'wrote 2' e o copy ganhou agents/{release-notes,code-reviewer}/AGENT.md\
+    \ com a instruction v2 (verificado no disco); re-diff '\u2714 in sync (0 diffs)'\
+    \ com manifests n\xE3o-vazios batendo. Mesmo transcript colado em docs/guides/cli-tour.md.\
+    \ Suites: sdk-py 2834 passed/0 failed (6 red\u2192green em test_source_sync_real_adapters.py),\
+    \ cli 271 passed (4 novos test_source_url_resolution.py), conformance kit base_never_served_by_load_layer\
+    \ PASS em 7 adapters."
