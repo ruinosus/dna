@@ -1,0 +1,25 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-005-docstring-coverage-gaps
+spec:
+  description: "Gaps de cobertura de docstring/TSDoc catalogados na gera\xE7\xE3o\
+    \ da API-ref (PR #12), n\xE3o inventados: Python \u2014 Kernel tem 6 m\xE9todos\
+    \ p\xFAblicos sem docstring (cache/load/reader/resolver/source/writer, os port-registers),\
+    \ ManifestInstance ~19 (helpers de viz: ascii_tree, *_mermaid, health, impact,\
+    \ matrix, list_kinds); Document coberto. TSDoc \u2014 14 tipos referenciados mas\
+    \ n\xE3o re-exportados de src/index.ts (Raw, TenantScope, PreviewResult, BuildPromptOpts,\
+    \ SourceCapabilities, KindLike...) geram broken-xref no TypeDoc: exportar ou marcar\
+    \ intentionallyNotExported. Preencher docstrings melhora a API-ref autogerada\
+    \ (a fonte \xE9 a verdade). N\xE3o-bloqueante."
+  type: task
+  severity: low
+  status: open
+  owner: claude-code
+  related_feature: f-dna-docs
+  timeline:
+  - at: '2026-07-09T16:01:06+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

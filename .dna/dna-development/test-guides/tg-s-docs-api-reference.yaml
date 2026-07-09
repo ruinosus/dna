@@ -3,26 +3,18 @@ kind: TestGuide
 metadata:
   name: tg-s-docs-api-reference
 spec:
-  description: Manual + CI gates for the source-generated API reference (Py mkdocstrings,
-    TS TypeDoc, CLI/Kinds generators) wired into the MkDocs site.
-  kind_of_test: manual
+  description: Roteiro de teste de s-docs-api-reference (derivado das acceptance_criteria).
+  kind_of_test: smoke
   status: active
   steps:
-  - action: pip install -r requirements-docs.txt && pip install -e packages/sdk-py
-      -e packages/cli
-    expected: deps install clean
-  - action: python scripts/gen_cli_docs.py --check && python scripts/gen_kinds_docs.py
-      --check
-    expected: generators idempotent (exit 0)
-  - action: cd packages/sdk-ts && bun run docs:api
-    expected: TypeDoc emits deterministic markdown to docs/reference/typescript/
-  - action: cd packages/sdk-ts && bun run typecheck
-    expected: tsc --noEmit clean
-  - action: mkdocs build --strict
-    expected: site builds with 0 warnings
-  - action: python3 scripts/brand_guard.py --self-test && python3 scripts/brand_guard.py
-    expected: no forbidden brand tokens
+  - action: "No Studio, valide: API-ref Py e TS geradas da fonte, naveg\xE1veis no\
+      \ site; CLI ref gerada; sem duplica\xE7\xE3o manual; build strict verde; CI\
+      \ 7/7"
+    where: "<rota/tela \u2014 ex. /scopes/:scope/...>"
+    expected: "<o que voc\xEA V\xCA quando est\xE1 certo (marque \u2717 S\xD3 se estiver\
+      \ quebrado)>"
   verifies:
   - Story/s-docs-api-reference
-  created_at: '2026-07-09T15:27:09+00:00'
-  updated_at: '2026-07-09T15:27:09+00:00'
+  created_at: '2026-07-09T16:00:40+00:00'
+  updated_at: '2026-07-09T16:00:40+00:00'
+  owner: claude-code

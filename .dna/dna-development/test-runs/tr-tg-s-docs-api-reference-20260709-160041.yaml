@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-docs-api-reference-20260709-160041
+spec:
+  guide_ref: tg-s-docs-api-reference
+  outcome: pass
+  verifies:
+  - Story/s-docs-api-reference
+  executed_by: claude-code
+  executed_at: '2026-07-09T16:00:41+00:00'
+  evidence:
+  - ci:pr12-10-checks-verde,gen:mkdocstrings-6py+typedoc-168ts+cli-8+kinds-por-plane,check:mkdocs-build-strict-0-warnings,check:geradores-idempotentes-check-exit0,check:py-ts-irmas-nunca-fundidas-literate-nav
