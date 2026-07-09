@@ -231,3 +231,12 @@ workflow.
   keep it `in-progress` / decompose into tracked child Stories.
 
 Welcome aboard — and thank you for helping keep behavior as data.
+
+### Secret-scanner hygiene (learned the hard way)
+
+CI runs gitleaks over the **full git history**, not just the diff. Two rules
+follow: never quote a secret-looking string (high-entropy text near words like
+`token` or `key`) in commit messages, story narration, or docs — describe it
+instead; and if the scanner flags something pre-merge, a follow-up fix commit
+is not enough — amend/reword and force-push with lease so the flagged blob
+leaves the branch history entirely.
