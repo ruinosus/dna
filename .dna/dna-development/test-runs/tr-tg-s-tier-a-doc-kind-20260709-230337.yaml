@@ -1,0 +1,17 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-tier-a-doc-kind-20260709-230337
+spec:
+  guide_ref: tg-s-tier-a-doc-kind
+  outcome: pass
+  verifies:
+  - Story/s-tier-a-doc-kind
+  executed_by: claude-code
+  executed_at: '2026-07-09T23:03:37+00:00'
+  notes: "Executado no worktree feat/s-tier-a-doc-kind. Prova out-of-the-box: dna\
+    \ docs list/show num playground com s\xF3 Genome+DOC.md bundles (en/pt-BR) \u2014\
+    \ sa\xEDda real com locale filter, title, kind_of, category e body. Suites: sdk-py\
+    \ 2812 passed/212 skipped/5 xfailed; cli 267 passed; TS 1258 pass/0 fail + typecheck.\
+    \ Guards: descriptor-hash-parity, ratchet, strict-schema (grandfather -1), kind-registry-parity,\
+    \ brand_guard, docs_coverage_guard, mkdocs --strict \u2014 todos verdes."
