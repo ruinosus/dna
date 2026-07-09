@@ -1,0 +1,54 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-docs-coverage-guard
+spec:
+  title: "Guard determin\xEDstico de COBERTURA de prosa (a resposta do DNA ao drift\
+    \ prosa-vs-"
+  description: "Guard determin\xEDstico de COBERTURA de prosa (a resposta do DNA ao\
+    \ drift prosa-vs-feature, insight Barna 2026-07-09): scripts/docs_coverage_guard.py\
+    \ enumera as fontes-de-verdade machine-readable (grupos do CLI via Click tree;\
+    \ Kinds p\xFAblicos via kernel; ports/verbos da superf\xEDcie blessed se couber)\
+    \ e exige que cada item seja mencionado em >=1 p\xE1gina de PROSA (docs/concepts|guides|getting-started,\
+    \ n\xE3o a reference autogerada). Allowlist expl\xEDcita por item com justificativa\
+    \ (estilo brand_guard). Self-test (planta um comando fake sem prosa \u2192 falha).\
+    \ Job no docs.yml. Ratchet: allowlist s\xF3 encolhe. No primeiro run DEVE acusar\
+    \ exatamente o gap de search/memory (self-valida\xE7\xE3o) \u2014 rode ANTES da\
+    \ story irm\xE3 mergear pra provar, mas o merge final passa verde (a irm\xE3 fecha\
+    \ o gap)."
+  status: in-progress
+  feature: f-dna-docs
+  priority: high
+  labels:
+  - docs
+  - infra
+  - tests
+  reporter: claude-code
+  business_value: 500
+  acceptance_criteria:
+  - "Guard enumera CLI+Kinds da fonte; falha com item p\xFAblico sem prosa; self-test\
+    \ verde; wired no CI; allowlist justificada; prova de que acusou o gap search/memory\
+    \ antes do fix"
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - PR merged via dna sdlc story pr
+  definition_of_done_source: cli-create
+  created_at: '2026-07-09T20:52:10+00:00'
+  updated_at: '2026-07-09T20:52:14+00:00'
+  timeline:
+  - at: '2026-07-09T20:52:10+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-09T20:52:14+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  produces:
+  - kind: Plan
+    name: plan-s-docs-coverage-guard
+    role: implementation
+    at: '2026-07-09T20:52:14+00:00'

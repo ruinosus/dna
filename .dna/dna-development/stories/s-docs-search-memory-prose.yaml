@@ -1,0 +1,49 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-docs-search-memory-prose
+spec:
+  title: 'A prosa (concepts/guides/getting-started/README) foi escrita no PR #10,
+    ANTES de'
+  description: "A prosa (concepts/guides/getting-started/README) foi escrita no PR\
+    \ #10, ANTES de search/memory (#13-#16) \u2014 a reference autogerada se manteve\
+    \ fresca (drift-guard funcionou), mas a prosa n\xE3o cobre a capability nova.\
+    \ Escrever: concepts/search-and-memory.md (EmbeddingPort + RecordSearchProvider,\
+    \ offline-first sqlite-vec+FTS5+RRF vs pgvector escala, verbos remember/recall/forget/consolidate,\
+    \ ecforia/decay, bi-temporalidade \u2014 e o posicionamento curado-vs-gerado j\xE1\
+    \ esbo\xE7ado em agent-knowledge.md); guides/semantic-recall.md (como usar dna\
+    \ recall/search/memory + registrar providers + extras); toque no getting-started\
+    \ e no README (1 se\xE7\xE3o curta na landing). Consultar rsh-memory-similarity-evolution."
+  status: in-progress
+  feature: f-dna-docs
+  priority: high
+  labels:
+  - docs
+  reporter: claude-code
+  business_value: 400
+  acceptance_criteria:
+  - Concept + guide novos; getting-started e README mencionam a capability; mkdocs
+    build --strict verde; lychee verde; nav atualizada
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - PR merged via dna sdlc story pr
+  definition_of_done_source: cli-create
+  created_at: '2026-07-09T20:52:08+00:00'
+  updated_at: '2026-07-09T20:52:12+00:00'
+  timeline:
+  - at: '2026-07-09T20:52:08+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-09T20:52:12+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  produces:
+  - kind: Plan
+    name: plan-s-docs-search-memory-prose
+    role: implementation
+    at: '2026-07-09T20:52:12+00:00'

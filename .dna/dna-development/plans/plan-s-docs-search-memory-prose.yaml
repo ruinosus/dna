@@ -1,0 +1,14 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-docs-search-memory-prose
+spec:
+  title: 'Plano: s-docs-search-memory-prose'
+  date: '2026-07-09'
+  status: accepted
+  story_ref: s-docs-search-memory-prose
+  journey_phase: plan
+  body: Consultar rsh-memory-similarity-evolution; escrever concept+guide+toques;
+    nav; build strict. Worktree dna-wt-prose; PR via story pr.
+  created_at: '2026-07-09T20:52:11+00:00'
+  updated_at: '2026-07-09T20:52:11+00:00'

@@ -1,0 +1,15 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-docs-coverage-guard
+spec:
+  title: 'Plano: s-docs-coverage-guard'
+  date: '2026-07-09'
+  status: accepted
+  story_ref: s-docs-coverage-guard
+  journey_phase: plan
+  body: "docs_coverage_guard.py (Click tree + kernel kinds \u2192 men\xE7\xE3o em\
+    \ prosa; allowlist justificada; self-test) + job no docs.yml; provar que acusa\
+    \ o gap search/memory pr\xE9-fix. Worktree dna-wt-covguard; PR via story pr."
+  created_at: '2026-07-09T20:52:12+00:00'
+  updated_at: '2026-07-09T20:52:12+00:00'
