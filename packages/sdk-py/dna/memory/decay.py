@@ -1,8 +1,8 @@
 """Ebbinghaus forgetting curve + bi-temporal validity — pure math.
 
 Ported (deterministic core only) from the upstream ``embeddings.decay``.
-Left behind: the ``AAP_RANKING_FORMULA`` env switch, the ACT-R activation
-variant (unused by the verbs), and the kernel-reading policy resolver.
+Left behind: the ranking-formula env switch, the ACT-R activation variant
+(unused by the verbs), and the kernel-reading policy resolver.
 
 Model: R(t) = e^(-t/S) where ``t`` = days since last recall, ``S`` =
 stability (days). Stability comes from the memory's ``confidence_score``

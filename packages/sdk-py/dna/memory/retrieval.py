@@ -1,7 +1,7 @@
 """BM25 memory ranking — the pure lexical scoring core.
 
 Ported (deterministic core only) from the upstream ``cognitive.retrieval``.
-Left behind: the ``AAP_SCORING_FORMULA`` env switch (genagents variant), the
+Left behind: the scoring-formula env switch (genagents variant), the
 ``ManifestInstance``-bound helpers, and the SynthesisRun/ArchiveProposal side
 sections (those are service surfaces).
 
