@@ -3,24 +3,18 @@ kind: TestGuide
 metadata:
   name: tg-s-docs-community-health
 spec:
-  description: 'Manual verification of the community-health baseline: brand guard,
-    YAML validity of issue forms, and content coverage of CONTRIBUTING/SECURITY.'
-  kind_of_test: manual
+  description: Roteiro de teste de s-docs-community-health (derivado das acceptance_criteria).
+  kind_of_test: smoke
   status: active
   steps:
-  - action: python3 scripts/brand_guard.py --self-test
-    expected: exits 0 (7 planted tokens caught)
-  - action: python3 scripts/brand_guard.py over new files
-    expected: no brand tokens in new content/paths
-  - action: yaml.safe_load over .github/ISSUE_TEMPLATE/*.yml
-    expected: all parse as valid YAML
-  - action: inspect CONTRIBUTING.md
-    expected: covers build/test py+ts+cli, dna.testing conformance kit, Py<->TS parity
-      gate, dna sdlc flow
-  - action: inspect SECURITY.md
-    expected: Private Vulnerability Reporting + pre-1.0 supported versions + manifest-as-injection
-      threat model
+  - action: 'No Studio, valide: GitHub Community Standards 100% verde; SECURITY com
+      PVR; CONTRIBUTING cobre paridade+conformance+CLI; issue forms YAML + PR template;
+      CHANGELOG Keep-a-Changelog; CI 7/7'
+    where: "<rota/tela \u2014 ex. /scopes/:scope/...>"
+    expected: "<o que voc\xEA V\xCA quando est\xE1 certo (marque \u2717 S\xD3 se estiver\
+      \ quebrado)>"
   verifies:
   - Story/s-docs-community-health
-  created_at: '2026-07-09T14:05:18+00:00'
-  updated_at: '2026-07-09T14:05:18+00:00'
+  created_at: '2026-07-09T14:57:11+00:00'
+  updated_at: '2026-07-09T14:57:11+00:00'
+  owner: claude-code

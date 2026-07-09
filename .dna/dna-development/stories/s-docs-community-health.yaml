@@ -14,7 +14,7 @@ spec:
     \ (bug + feature como YAML forms + config.yml apontando Discussions), .github/PULL_REQUEST_TEMPLATE.md\
     \ (checklist: testes, paridade Py\u2194TS, conformance kit, changelog). N\xC3\
     O tocar README nem docs/ (\xE9 da story do site)."
-  status: in-progress
+  status: done
   feature: f-dna-docs
   priority: high
   labels:
@@ -23,14 +23,21 @@ spec:
   reporter: claude-code
   business_value: 500
   acceptance_criteria:
-  - GitHub Community Standards 100% verde; SECURITY com PVR; CONTRIBUTING cobre paridade+conformance+CLI;
-    issue forms YAML + PR template; CHANGELOG Keep-a-Changelog; CI 7/7
+  - text: GitHub Community Standards 100% verde; SECURITY com PVR; CONTRIBUTING cobre
+      paridade+conformance+CLI; issue forms YAML + PR template; CHANGELOG Keep-a-Changelog;
+      CI 7/7
+    done: true
+    done_at: '2026-07-09T14:57:13+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - PR merged via dna sdlc story pr
+  - text: PR merged via dna sdlc story pr
+    done: true
+    done_at: '2026-07-09T14:57:13+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-09T13:54:00+00:00'
-  updated_at: '2026-07-09T14:05:35+00:00'
+  updated_at: '2026-07-09T14:57:15+00:00'
   timeline:
   - at: '2026-07-09T13:54:00+00:00'
     actor: claude-code
@@ -69,6 +76,36 @@ spec:
     name: tr-tg-s-docs-community-health-20260709-140535
     summary: "TestRun tr-tg-s-docs-community-health-20260709-140535 \u2192 pass"
     outcome: pass
+  - at: '2026-07-09T14:57:12+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-docs-community-health
+    summary: TestGuide tg-s-docs-community-health (smoke)
+  - at: '2026-07-09T14:57:13+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-docs-community-health-20260709-145712
+    summary: "TestRun tr-tg-s-docs-community-health-20260709-145712 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-09T14:57:14+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #9 merged (7/7 p\xF3s-rebase no main desbloqueado). Community Standards:\
+      \ CONTRIBUTING (contrato de paridade + conformance kit + fluxo dna sdlc), SECURITY\
+      \ (PVR + modelo de amea\xE7a de manifesto), CODE_OF_CONDUCT, CHANGELOG, issue\
+      \ forms + PR template + CODEOWNERS."
+  - at: '2026-07-09T14:57:15+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: done
+    commit_ref: fb86e4bdcb0a190d89f5eb119855c8ceda4814a4
   produces:
   - kind: Plan
     name: plan-s-docs-community-health
@@ -82,3 +119,8 @@ spec:
     name: tr-tg-s-docs-community-health-20260709-140535
     role: test-run
     at: '2026-07-09T14:05:35+00:00'
+  - kind: TestRun
+    name: tr-tg-s-docs-community-health-20260709-145712
+    role: test-run
+    at: '2026-07-09T14:57:13+00:00'
+  closed_at: '2026-07-09T14:57:13+00:00'

@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-docs-community-health-20260709-145712
+spec:
+  guide_ref: tg-s-docs-community-health
+  outcome: pass
+  verifies:
+  - Story/s-docs-community-health
+  executed_by: claude-code
+  executed_at: '2026-07-09T14:57:12+00:00'
+  evidence:
+  - ci:pr9-7-of-7-pos-rebase,check:CONTRIBUTING-paridade+conformance+sdlc,check:SECURITY-PVR+modelo-ameaca-manifesto,check:issue-forms-yaml+PR-template,check:CHANGELOG-keep-a-changelog,check:brand-guard-clean

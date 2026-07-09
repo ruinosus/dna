@@ -1,0 +1,16 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-docs-parity-matrix
+spec:
+  title: 'Plano: s-docs-parity-matrix'
+  date: '2026-07-09'
+  status: accepted
+  story_ref: s-docs-parity-matrix
+  journey_phase: plan
+  body: "Gerar p\xE1gina parity-matrix da fixture port-surface-parity + conformance\
+    \ kit: linhas=capabilities/Kinds/port-contracts, colunas=Py+TS, legenda +/-/N-A\
+    \ + justification das assimetrias. Script gerador + regenera no CI docs. Worktree\
+    \ dna-wt-matrix; PR via story pr."
+  created_at: '2026-07-09T14:57:32+00:00'
+  updated_at: '2026-07-09T14:57:32+00:00'

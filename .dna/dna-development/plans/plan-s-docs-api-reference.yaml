@@ -1,0 +1,16 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-docs-api-reference
+spec:
+  title: 'Plano: s-docs-api-reference'
+  date: '2026-07-09'
+  status: accepted
+  story_ref: s-docs-api-reference
+  journey_phase: plan
+  body: "mkdocstrings (Py) inline no site + TypeDoc\u2192markdown (TS) em /reference/typescript/\
+    \ + CLI ref gerada dos command defs do dna + Kinds ref do JSON Schema. Docstrings/TSDoc\
+    \ fonte \xFAnica. Wire na nav reservada. Worktree dna-wt-apiref; PR via story\
+    \ pr."
+  created_at: '2026-07-09T14:57:31+00:00'
+  updated_at: '2026-07-09T14:57:31+00:00'
