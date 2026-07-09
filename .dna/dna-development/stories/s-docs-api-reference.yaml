@@ -68,6 +68,12 @@ spec:
     name: tr-tg-s-docs-api-reference-20260709-152720
     summary: "TestRun tr-tg-s-docs-api-reference-20260709-152720 \u2192 pass"
     outcome: pass
+  - at: '2026-07-09T15:28:08+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/12'
+    pr_url: https://github.com/ruinosus/dna/pull/12
   produces:
   - kind: Plan
     name: plan-s-docs-api-reference
