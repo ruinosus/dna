@@ -160,6 +160,18 @@ guide is the promise.
 
 ## Domain content
 
+### Doc
+
+A [`Doc`](../reference/kinds/record.md#doc) (`dna-doc`) is one page of
+in-product documentation: a markdown body plus sidebar metadata (icon,
+order, locale, Diátaxis `kind_of`, free-form category), authored as a
+`docs/<name>/DOC.md` bundle and read back by `dna docs list/show` — so a
+DNA-based product serves its own help pages straight from the kernel. It
+is a record-plane Kind shipped as a pure descriptor (content as data, no
+port class), ported from the internal SDK's doc extension minus its
+product-specific help-center machinery (live data/diagram placeholders,
+landing-page curation, asset aggregation).
+
 ### Lesson
 
 A [`Lesson`](../reference/kinds/composition.md#lesson) (`lesson-lesson`)

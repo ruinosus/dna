@@ -98,6 +98,7 @@ testkit = "dna.extensions.testkit:TestkitExtension"
 tenant = "dna.extensions.tenant:TenantExtension"
 lesson = "dna.extensions.lesson:LessonExtension"
 research = "dna.extensions.research:ResearchExtension"
+doc = "dna.extensions.doc:DocExtension"
 
 [build-system]
 requires = ["hatchling"]

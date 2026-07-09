@@ -43,12 +43,14 @@ Commands:
 
 The examples below run in a small throwaway scope, so you can paste along
 without touching a real project. Create a playground directory with one
-scope named `docs` containing a `Genome` (the scope root), a
-[`KindDefinition`](../concepts/kinds.md) declaring a record Kind called
-`Doc`, and one `Doc` instance:
+scope named `docs` containing a `Genome` (the scope root), two pages of
+the built-in [`Doc` Kind](../concepts/builtin-kinds.md#doc) (one per
+locale), and a [`KindDefinition`](../concepts/kinds.md) declaring a custom
+Kind called `Snippet` — to show how you extend the type system with your
+own Kinds, no Python required:
 
 ```bash
-mkdir -p ~/dna-playground/.dna/{_lib,docs/kinds/doc,docs/docs}
+mkdir -p ~/dna-playground/.dna/{_lib,docs/docs/welcome,docs/docs/boas-vindas,docs/kinds/snippet,docs/snippets}
 cd ~/dna-playground
 export DNA_BASE_DIR=~/dna-playground/.dna
 
@@ -70,49 +72,71 @@ metadata:
 spec: {}
 EOF
 
-cat > .dna/docs/kinds/doc/KIND.yaml <<'EOF'
-apiVersion: github.com/ruinosus/dna/v1
+# A Doc is authored as a bundle: docs/<name>/DOC.md, YAML frontmatter +
+# markdown body. No KindDefinition needed — the Kind ships with the SDK.
+cat > .dna/docs/docs/welcome/DOC.md <<'EOF'
+---
+description: Welcome to the corpus
+icon: "👋"
+order: 1
+locale: en
+kind_of: tutorial
+category: Getting started
+---
+
+# Welcome
+
+This corpus is served in-product: agents and the UI read these pages
+through the kernel, so editing markdown updates the product help.
+EOF
+
+cat > .dna/docs/docs/boas-vindas/DOC.md <<'EOF'
+---
+description: Bem-vindo ao corpus
+icon: "👋"
+order: 1
+locale: pt-BR
+kind_of: tutorial
+category: Primeiros passos
+---
+
+# Bem-vindo
+
+Este corpus é servido dentro do produto: os agentes e a UI leem estas
+páginas pelo kernel.
+EOF
+
+cat > .dna/docs/kinds/snippet/KIND.yaml <<'EOF'
+apiVersion: github.com/ruinosus/dna/core/v1
 kind: KindDefinition
-metadata: { name: doc }
+metadata: { name: snippet }
 spec:
   target_api_version: example.com/docs/v1
-  target_kind: Doc
-  alias: docs-doc
+  target_kind: Snippet
+  alias: docs-snippet
   origin: example.com
-  docs: An in-product documentation page (markdown body + sidebar metadata).
+  docs: A reusable content snippet (markdown body + audience tag).
   schema:
     type: object
     required: [body]
-    additionalProperties: true
+    additionalProperties: false
     properties:
       body: { type: string }
-      icon: { type: string }
-      order: { type: integer }
-      locale: { type: string }
-      kind_of: { type: string }
-      category: { type: string }
+      audience: { type: string }
   storage:
     type: yaml
-    container: docs
+    container: snippets
 EOF
 
-cat > .dna/docs/docs/welcome.yaml <<'EOF'
+cat > .dna/docs/snippets/hello.yaml <<'EOF'
 apiVersion: example.com/docs/v1
-kind: Doc
+kind: Snippet
 metadata:
-  name: welcome
-  description: Welcome to the corpus
+  name: hello
+  description: Greeting snippet
 spec:
-  icon: "👋"
-  order: 1
-  locale: en
-  kind_of: guide
-  category: Getting started
-  body: |
-    # Welcome
-
-    This corpus is served in-product: agents and the UI read these pages
-    through the kernel, so editing YAML updates the product help.
+  audience: newcomers
+  body: Welcome! Everything in this playground is throwaway.
 EOF
 ```
 
@@ -135,19 +159,23 @@ docs
 
 $ dna scope tree docs
 
-Doc
-  • welcome
-
 Genome
   • docs
 
 KindDefinition
-  • doc
+  • snippet
+
+Snippet
+  • hello
 ```
 
-Note the two-phase load at work: the `KindDefinition` registered the `Doc`
-Kind, and the `welcome` document was then parsed as a first-class instance
-of it — no Python was written.
+Note the two-phase load at work: the `KindDefinition` registered the
+`Snippet` Kind, and the `hello` document was then parsed as a first-class
+instance of it — no Python was written. The two `Doc` pages are absent on
+purpose: `Doc` is a *record-plane* Kind (pure typed content that never
+composes into agent prompts), and the tree inventories the composition
+plane — records are reached with `dna doc list Doc --scope docs` and the
+[`dna docs`](#dna-docs-browse-the-in-product-doc-corpus) group below.
 
 ## `dna kind` — list and inspect registered Kinds
 
@@ -162,22 +190,22 @@ boundary will enforce.
 
 ```console
 $ dna kind list | wc -l
-      65
+      66
 
-$ dna kind list | grep -E '^(Genome|Agent|Skill|Soul|Comment|Guardrail) '
+$ dna kind list | grep -E '^(Genome|Agent|Doc|Skill|Soul|Comment) '
 Agent               (use describe)  (use describe)                           
 Comment             (use describe)  (use describe)                           
+Doc                 (use describe)  (use describe)                           
 Genome              (use describe)  (use describe)                           
-Guardrail           (use describe)  (use describe)                           
 Skill               (use describe)  (use describe)                           
 Soul                (use describe)  (use describe)                           
 
-$ dna kind describe Comment | head -8
+$ dna kind describe Doc | head -8
 {
-  "kind": "Comment",
-  "alias": "collab-comment",
-  "api_version": "github.com/ruinosus/dna/collab/v1",
-  "display_label": "Comments",
+  "kind": "Doc",
+  "alias": "dna-doc",
+  "api_version": "github.com/ruinosus/dna/doc/v1",
+  "display_label": "Docs",
   "schema": {
     "type": "object",
     "required": [
@@ -238,24 +266,37 @@ $ dna doc show Comment note-1 --scope docs
 [Reference →](../reference/cli/docs.md)
 
 Not to be confused with `dna doc` above: `dna docs` (plural) is a reader
-over one specific corpus — a scope named `docs` holding documents of a
-`Doc` Kind, the pattern a DNA-based product uses to serve its own help
-pages from the kernel (each page is markdown `body` + sidebar metadata:
-icon, order, locale, category). The playground's `KindDefinition` set up
-exactly that corpus, so:
+over one specific corpus — a scope named `docs` holding documents of the
+built-in [`Doc` Kind](../concepts/builtin-kinds.md#doc), the pattern a
+DNA-based product uses to serve its own help pages from the kernel. Each
+page is a `docs/<name>/DOC.md` bundle: a markdown body plus sidebar
+metadata (icon, order, locale, Diátaxis `kind_of`, category). It works
+out of the box — the two pages authored in the playground setup are
+already a corpus, one per locale:
 
 ```console
+$ dna docs list
+order  icon  name         title                kind_of   category        
+-----  ----  -----------  -------------------  --------  ----------------
+1      👋     boas-vindas  Bem-vindo ao corpus  tutorial  Primeiros passos
+
 $ dna docs list --locale en
-order  icon  name     title                  kind_of  category       
------  ----  -------  ---------------------  -------  ---------------
-1      👋     welcome  Welcome to the corpus  guide    Getting started
+order  icon  name     title                  kind_of   category       
+-----  ----  -------  ---------------------  --------  ---------------
+1      👋     welcome  Welcome to the corpus  tutorial  Getting started
 
 $ dna docs show welcome --locale en
 # Welcome
 
 This corpus is served in-product: agents and the UI read these pages
-through the kernel, so editing YAML updates the product help.
+through the kernel, so editing markdown updates the product help.
 ```
+
+The `Doc` schema is deliberately content-shaped (`dna kind describe Doc`
+shows the exact contract the write boundary enforces). If your product
+needs a *different* documentation shape, the `KindDefinition` route the
+playground used for `Snippet` works just as well for a custom docs Kind —
+it is an extension point now, not a prerequisite.
 
 ## `dna research` — curated Research syntheses
 

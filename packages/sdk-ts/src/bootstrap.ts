@@ -34,6 +34,7 @@ import { AuditExtension } from "./extensions/audit.js";
 import { LessonExtension } from "./extensions/lesson.js";
 import { TenantExtension } from "./extensions/tenant.js";
 import { EvidenceExtension } from "./extensions/evidence.js";
+import { DocExtension } from "./extensions/doc.js";
 import { ResearchExtension } from "./extensions/research.js";
 import { TestkitExtension } from "./extensions/testkit.js";
 import type { Extension } from "./kernel/protocols.js";
@@ -62,6 +63,7 @@ function loadBuiltins<T extends { load(ext: Extension): void }>(target: T): T {
     new LessonExtension(),
     new TenantExtension(),
     new EvidenceExtension(),
+    new DocExtension(),
     new ResearchExtension(),
     new TestkitExtension(),
   ] as Extension[]) {

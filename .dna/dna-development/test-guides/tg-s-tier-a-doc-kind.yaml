@@ -1,0 +1,32 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-s-tier-a-doc-kind
+spec:
+  description: "Doc Kind nativo (descriptor) \u2014 dna docs funciona out-of-the-box,\
+    \ guards e suites verdes"
+  kind_of_test: regression
+  status: active
+  steps:
+  - action: Boot Kernel.auto() e inspecionar o registro do Doc
+    expected: 'Doc registrado do descriptor builtin: alias dna-doc, plane record,
+      __declarative__, storage bundle docs/DOC.md com body_field=body, schema strict
+      (additionalProperties: false)'
+  - action: Criar scope docs com Genome + 2 bundles DOC.md (en/pt-BR), SEM KindDefinition,
+      e rodar dna docs list/show
+    expected: "list filtra por locale (default pt-BR; --locale en mostra welcome)\
+      \ com title/kind_of/category; show imprime o body markdown \u2014 nenhum KindDefinition\
+      \ manual necess\xE1rio"
+  - action: Rodar pytest sdk-py completo + pytest cli completo + bun test + tsc --noEmit
+    expected: sdk-py 2812 passed/0 failed; cli 267 passed (5 novos em test_docs_cmd.py);
+      TS 1258 pass/0 fail incl. doc-extension.test.ts; typecheck limpo
+  - action: 'Rodar os guards: descriptor hash parity, ratchet de descriptors, strict-schema
+      lint (dna-doc removido do grandfather), kind-registry parity, brand_guard, docs_coverage_guard'
+    expected: todos verdes sem allowlist nova (o grandfather ENCOLHEU)
+  - action: Regenerar reference (parity/cli/kinds) e mkdocs build --strict
+    expected: Doc aparece em reference/kinds/record.md; cli-tour usa o caminho nativo;
+      build estrito verde
+  verifies:
+  - Story/s-tier-a-doc-kind
+  created_at: '2026-07-09T23:03:21+00:00'
+  updated_at: '2026-07-09T23:03:21+00:00'
