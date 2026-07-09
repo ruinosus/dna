@@ -38,6 +38,15 @@ sql = ["sqlalchemy[asyncio]>=2", "dna-sdk[sqlite,postgres]"]
 # (guard: tests/test_embedding_import_isolation.py). Install explicitly to use
 # real embeddings: pip install "dna-sdk[embed-onnx]".
 embed-onnx = ["fastembed>=0.3"]
+# rec-embeddable-provider — the embeddable RecordSearchProvider (sqlite-vec +
+# FTS5 + RRF). sqlite-vec is a small, zero-dependency C extension (bundled by
+# the pip package, loads anywhere SQLite runs) — the OFFLINE search floor, not
+# a heavy dep. Kept OUT of `all` (opt-in per the story) but INCLUDED in `dev`
+# so the provider conformance suite runs for real in CI with no server. Nothing
+# in the default install imports sqlite_vec (guard:
+# tests/test_search_import_isolation.py). Install explicitly to use search:
+# pip install "dna-sdk[search-sqlite]".
+search-sqlite = ["sqlite-vec>=0.1.6"]
 all = ["dna-sdk[postgres,sqlite,redis,s3,sql]"]
 dev = [
     "pytest>=7.0",
@@ -47,6 +56,10 @@ dev = [
     "pytest-timeout>=2.0",
     "httpx>=0.24",
     "dna-sdk[all]",
+    # search-sqlite is the offline CI floor for the search plane — install it
+    # in dev so tests/test_record_search_conformance.py runs the provider for
+    # real (it importorskips only when the extra is genuinely absent).
+    "dna-sdk[search-sqlite]",
     # s-dna-source-conformance-kit — in-process fake S3 so S3Source enters
     # the source-conformance matrix for real (not skip-forever).
     "moto>=5.0",

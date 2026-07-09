@@ -73,6 +73,52 @@ Postgres cases skip cleanly when `DATABASE_URL` is unset. The full recipe
 for authoring a new adapter against this kit is [How to write a source
 adapter](../guides/write-a-source-adapter.md).
 
+## The record-search conformance kit
+
+`RecordSearchProvider` is the search plane's port: the kernel ships it with an
+honest lexical fallback, and any real implementation must pass one shared
+behavioral battery — `record_search_conformance_suite` (Python) /
+`recordSearchConformanceSuite` (TypeScript). It runs a provider through its OWN
+`index` / `search` / `delete` surface and asserts relative ranking, kind and
+tenant filtering (overlay shadows base), the `k` limit, idempotent re-indexing,
+and empty-query handling. The same suite that grades the embeddable sqlite-vec
+provider today will grade a pgvector provider tomorrow.
+
+The default provider — `SqliteVecRecordSearchProvider` — is **embeddable and
+offline**: one SQLite file per scope, dense KNN via the
+[sqlite-vec](https://github.com/asg017/sqlite-vec) `vec0` virtual table, lexical
+BM25 via FTS5, fused with Reciprocal Rank Fusion (a pure, Py↔TS-identical
+function). Its store schema is owned by a numbered migration, and it embeds
+through `kernel.embed()` — the deterministic `FakeEmbeddingProvider` floor by
+default, so the whole suite runs in CI with no network and no model download.
+
+sqlite-vec is a loadable C extension delivered as an **opt-in extra**:
+
+=== "Python"
+
+    ```bash
+    pip install "dna-sdk[search-sqlite]"    # brings the `sqlite-vec` package
+    cd packages/sdk-py && uv run pytest tests/test_record_search_conformance.py -v
+    ```
+
+    The extension is loaded per connection via the `sqlite-vec` package
+    (`enable_load_extension` + `sqlite_vec.load`); the conformance test
+    `importorskip`s when the extra is absent.
+
+=== "TypeScript"
+
+    ```bash
+    cd packages/sdk-ts && bun add sqlite-vec && bun test record-search-conformance
+    ```
+
+    The driver (`src/adapters/search/driver.ts`) loads the extension through
+    `bun:sqlite` (test runner) or `node:sqlite` (Node ≥22.5, `allowExtension`).
+    On **macOS under Bun**, Apple's system SQLite disables extension loading, so
+    set `DNA_SQLITE_LIB` to a libsqlite3 that permits it (e.g. Homebrew's
+    `/opt/homebrew/opt/sqlite/lib/libsqlite3.dylib`) or install `sqlite`; on
+    Linux, Bun's bundled SQLite already allows it. When no runtime can load the
+    extension the suite skips with a clear reason.
+
 ## Cross-SDK parity
 
 Parity between the Python and TypeScript SDKs is enforced by **shared

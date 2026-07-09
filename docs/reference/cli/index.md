@@ -16,3 +16,5 @@ These pages are **generated from the Click command definitions** by
 | [`dna scope`](scope.md) | List + inspect scopes (manifest modules). |
 | [`dna kind`](kind.md) | List + inspect registered Kinds. |
 | [`dna source`](source.md) | Source-level operations: declarative replicas, introspection. |
+| [`dna recall`](recall.md) | Hybrid semantic search (dense + lexical + RRF) over the scope's records. |
+| [`dna search`](search.md) | Alias of ``dna recall`` (neutral naming). |
