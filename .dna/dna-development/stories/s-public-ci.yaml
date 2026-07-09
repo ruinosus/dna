@@ -6,7 +6,7 @@ spec:
   title: 'GitHub Actions for this repo: pytest (sdk-py + cli) + bun test + typecheck
     + bra'
   description: 'GitHub Actions for this repo: pytest (sdk-py + cli) + bun test + typecheck
-    + brand grep-guard (avanade|cockpit|aap tokens; allowlist: ''aapl'' ticker in
+    + brand grep-guard (internal brand tokens (redacted; see scripts/brand_guard.py); allowlist: a stock ticker in
     the real xlsx skill fixture) + secret scan (gitleaks). Demos that clone external
     repos must be offline-safe in CI. De-noise ajv ''unknown format'' warnings (strict:false
     parity with Py).'
@@ -53,9 +53,9 @@ spec:
       \ base sem PG + job postgres com service postgres:16 rodando s\xF3 -m requires_postgres\
       \ + job cli), typescript.yml (bun test + tsc), guards.yml (brand_guard self-test+scan,\
       \ gitleaks). (2) scripts/brand_guard.py stdlib: allowlist expl\xEDcita por arquivo+palavra\
-      \ (AAPL no xlsx SKILL.md; a pr\xF3pria story s-public-ci); self-test com 7 tokens\
+      \ (ticker no xlsx SKILL.md); self-test com 7 tokens\
       \ plantados. Nota: usei \\baap prefix-boundary (o \\baap\\b da spec N\xC3O pega\
-      \ AAPL \u2014 allowlist ficaria morta). (3) DNA_OFFLINE=1 no conftest for\xE7\
+      \ o ticker \u2014 allowlist ficaria morta). (3) DNA_OFFLINE=1 no conftest for\xE7\
       a requires_network a skipar em CI (runner TEM rede; test_github_real clonaria\
       \ anthropics/skills). demo.py do market \xE9 100% local (fixtures commitados)\
       \ \u2014 nada a mudar. (4) ajv de-noise: createAjv() em kind_base.ts com formats\
