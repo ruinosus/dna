@@ -764,6 +764,34 @@ class RecordSearchProvider(Protocol):
 
 
 @runtime_checkable
+class EmbeddingPort(Protocol):
+    """Sibling port to ``RecordSearchProvider`` (rsh-memory-similarity-evolution
+    → rec-embedding-port): turn text into dense vectors so the search plane can
+    do real similarity instead of the lexical fallback. The kernel core gains
+    NO ML deps — a real provider (ONNX all-MiniLM-L6-v2 via fastembed, an opt-in
+    ``embed-onnx`` extra) registers itself on the kernel at app boot; when none
+    is registered, ``kernel.embed()`` uses the deterministic hash-based
+    ``FakeEmbeddingProvider`` (the zero-dep offline floor that runs in CI).
+
+    Parity: the FAKE is bit-exact Py↔TS by construction (integer feature-hashing
+    + IEEE-754 ops — see ``dna.kernel.embedding``); a real ONNX provider is
+    parity-by-artifact (same model id, cosine ≈ 1 across runtimes).
+
+    Contract:
+      - ``embed(texts)`` returns one vector per input text, each of length
+        ``dims``, in input order. Empty input → empty list.
+      - ``dims`` is the fixed output dimensionality (same for every vector).
+      - ``model_id`` identifies the embedding space; vectors from providers
+        with different ``model_id`` are NOT comparable.
+    """
+
+    model_id: str
+    dims: int
+
+    async def embed(self, texts: list[str]) -> list[list[float]]: ...
+
+
+@runtime_checkable
 class CachePort(Protocol):
     """WHERE — store/retrieve installed deps."""
 

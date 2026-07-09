@@ -87,6 +87,7 @@ _INTROSPECTORS: dict[str, Callable[[], set[str]]] = {
     "Extension": lambda: _protocol_members(P.Extension),
     "TemplateProvider": lambda: _protocol_members(P.TemplateProvider),
     "RecordSearchProvider": lambda: _protocol_members(P.RecordSearchProvider),
+    "EmbeddingPort": lambda: _protocol_members(P.EmbeddingPort),
     "SourceCapabilities": lambda: {
         f.name for f in dataclasses.fields(caps_mod.SourceCapabilities)
     },

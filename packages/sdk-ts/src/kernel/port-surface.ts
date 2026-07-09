@@ -22,6 +22,7 @@
 
 import type {
   CachePort,
+  EmbeddingPort,
   Extension,
   ExtensionHost,
   KindPort,
@@ -194,6 +195,11 @@ export const PORT_SURFACE: Readonly<Record<string, readonly string[]>> = {
   ]),
   RecordSearchProvider: keysOf<RecordSearchProvider>()([
     "search",
+  ]),
+  EmbeddingPort: keysOf<EmbeddingPort>()([
+    "modelId",
+    "dims",
+    "embed",
   ]),
   SourceCapabilities: keysOf<SourceCapabilities>()([
     "source",

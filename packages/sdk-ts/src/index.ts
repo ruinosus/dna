@@ -86,10 +86,19 @@ export type {
   SourceCountOpts,
   RecordStorePort,
   RecordSearchProvider,
+  // rec-embedding-port — text→dense-vector, sibling to RecordSearchProvider
+  EmbeddingPort,
   // Tool port (s-dna-port-surface-parity — TS twin of the Py ToolPort)
   ToolPort,
 } from "./kernel/protocols.js";
 export { ToolDefinition } from "./kernel/protocols.js";
+// rec-embedding-port — zero-dep deterministic embedding floor (the default).
+export {
+  FakeEmbeddingProvider,
+  fakeEmbedOne,
+  FAKE_EMBEDDING_DIMS,
+  FAKE_EMBEDDING_MODEL_ID,
+} from "./kernel/embedding.js";
 export {
   ToolRegistry,
   READ_UMBRELLA_GROUPS,

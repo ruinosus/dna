@@ -15,6 +15,7 @@ import {
 } from "./errors.js";
 import { HookRegistry, type HookContext, type HookNameArg } from "./hooks.js";
 import { WritePipeline } from "./write-pipeline.js";
+import { FakeEmbeddingProvider } from "./embedding.js";
 import { ManifestInstance } from "./instance.js";
 import {
   type CacheItem,
@@ -231,6 +232,12 @@ export class Kernel {
   private _searchProvider: import("./protocols.js").RecordSearchProvider | null = null;
   /** Damper: warn once per provider-failure episode, then debug. */
   private _searchProviderWarned = false;
+  /**
+   * rec-embedding-port — pluggable embedding provider (see embed()). null = no
+   * real provider → the deterministic zero-dep FakeEmbeddingProvider (offline/CI
+   * floor) is constructed lazily on first use.
+   */
+  private _embeddingProvider: import("./protocols.js").EmbeddingPort | null = null;
 
   /**
    * Tenant binding (Phase 1 — tenant-as-first-class).
@@ -505,6 +512,50 @@ export class Kernel {
         });
     }
     return { total, groups };
+  }
+
+  /**
+   * Register the embedding provider (rec-embedding-port). One per kernel; later
+   * registration replaces (boot-time wiring). Sibling to
+   * `recordSearchProvider` — a real provider (ONNX all-MiniLM-L6-v2) registers
+   * itself at app boot; without one, `embed` uses the deterministic
+   * `FakeEmbeddingProvider` floor.
+   */
+  embeddingProvider(provider: import("./protocols.js").EmbeddingPort): void {
+    this._embeddingProvider = provider;
+  }
+
+  /** The registered embedding provider, or a lazily-constructed fake (cached).
+   *  The fake is zero-dep core (js-sha256, already a dependency) so it is a
+   *  static import — no ML deps enter the graph. */
+  private _resolveEmbeddingProvider(): import("./protocols.js").EmbeddingPort {
+    if (this._embeddingProvider === null) {
+      this._embeddingProvider = new FakeEmbeddingProvider();
+    }
+    return this._embeddingProvider;
+  }
+
+  /**
+   * Embed texts into dense vectors (rec-embedding-port; TS twin of the Py
+   * `kernel.embed`). Uses the registered `EmbeddingPort` when present, else the
+   * deterministic zero-dep fake floor. Returns one `dims`-length vector per
+   * input, in order; empty input → empty array. Read the space via
+   * `embeddingDims` / `embeddingModelId`.
+   */
+  async embed(texts: string[]): Promise<number[][]> {
+    if (texts.length === 0) return [];
+    return this._resolveEmbeddingProvider().embed([...texts]);
+  }
+
+  /** Output dimensionality of the active embedding provider. */
+  get embeddingDims(): number {
+    return this._resolveEmbeddingProvider().dims;
+  }
+
+  /** Identity of the active embedding space (vectors from different `modelId`s
+   *  are NOT comparable). */
+  get embeddingModelId(): string {
+    return this._resolveEmbeddingProvider().modelId;
   }
 
   /**

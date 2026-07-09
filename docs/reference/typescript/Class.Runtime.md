@@ -167,6 +167,47 @@ readonly [`WriterPort`](Interface.WriterPort.md)[]
 
 ***
 
+### embeddingDims
+
+#### Get Signature
+
+```ts
+get embeddingDims(): number;
+```
+
+Output dimensionality of the active embedding provider.
+
+##### Returns
+
+`number`
+
+#### Inherited from
+
+[`Kernel`](Class.Kernel.md).[`embeddingDims`](Class.Kernel.md#embeddingdims)
+
+***
+
+### embeddingModelId
+
+#### Get Signature
+
+```ts
+get embeddingModelId(): string;
+```
+
+Identity of the active embedding space (vectors from different `modelId`s
+ are NOT comparable).
+
+##### Returns
+
+`string`
+
+#### Inherited from
+
+[`Kernel`](Class.Kernel.md).[`embeddingModelId`](Class.Kernel.md#embeddingmodelid)
+
+***
+
 ### INHERITABLE\_KINDS
 
 #### Get Signature
@@ -643,6 +684,34 @@ Summary dict for a registered kind, including resolved docs. Facade
 
 ***
 
+### embed()
+
+```ts
+embed(texts): Promise<number[][]>;
+```
+
+Embed texts into dense vectors (rec-embedding-port; TS twin of the Py
+`kernel.embed`). Uses the registered `EmbeddingPort` when present, else the
+deterministic zero-dep fake floor. Returns one `dims`-length vector per
+input, in order; empty input → empty array. Read the space via
+`embeddingDims` / `embeddingModelId`.
+
+#### Parameters
+
+| Parameter | Type |
+| ------ | ------ |
+| `texts` | `string`[] |
+
+#### Returns
+
+`Promise`\<`number`\[\]\[\]\>
+
+#### Inherited from
+
+[`Kernel`](Class.Kernel.md).[`embed`](Class.Kernel.md#embed)
+
+***
+
 ### embeddableKinds()
 
 ```ts
@@ -661,6 +730,34 @@ F3 D4 (spec 2026-06-10-kinds-descriptor-f3): kind names whose port
 #### Inherited from
 
 [`Kernel`](Class.Kernel.md).[`embeddableKinds`](Class.Kernel.md#embeddablekinds)
+
+***
+
+### embeddingProvider()
+
+```ts
+embeddingProvider(provider): void;
+```
+
+Register the embedding provider (rec-embedding-port). One per kernel; later
+registration replaces (boot-time wiring). Sibling to
+`recordSearchProvider` — a real provider (ONNX all-MiniLM-L6-v2) registers
+itself at app boot; without one, `embed` uses the deterministic
+`FakeEmbeddingProvider` floor.
+
+#### Parameters
+
+| Parameter | Type |
+| ------ | ------ |
+| `provider` | [`EmbeddingPort`](Interface.EmbeddingPort.md) |
+
+#### Returns
+
+`void`
+
+#### Inherited from
+
+[`Kernel`](Class.Kernel.md).[`embeddingProvider`](Class.Kernel.md#embeddingprovider)
 
 ***
 
