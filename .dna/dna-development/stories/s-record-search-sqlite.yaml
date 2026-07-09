@@ -12,7 +12,7 @@ spec:
     \ kit pr\xF3prio do provider (estilo source_conformance_suite). Wire: dna recall/search\
     \ CLI + faz o recall do Research usar o provider (resolve i-004: deixa de ser\
     \ lexical). Overlay/tenant-aware. Depende de s-embedding-port."
-  status: todo
+  status: in-progress
   feature: f-dna-search-memory
   priority: high
   labels:
@@ -31,10 +31,21 @@ spec:
   - PR merged via dna sdlc story pr
   definition_of_done_source: cli-create
   created_at: '2026-07-09T16:48:03+00:00'
-  updated_at: '2026-07-09T16:48:03+00:00'
+  updated_at: '2026-07-09T17:39:12+00:00'
   timeline:
   - at: '2026-07-09T16:48:03+00:00'
     actor: claude-code
     type: status_change
     source: cli
     to: todo
+  - at: '2026-07-09T17:39:12+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  produces:
+  - kind: Plan
+    name: plan-s-record-search-sqlite
+    role: implementation
+    at: '2026-07-09T17:39:12+00:00'

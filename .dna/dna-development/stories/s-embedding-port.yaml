@@ -14,7 +14,7 @@ spec:
     \ paridade por sa\xEDda (cosine ~1). Registro no kernel (kernel.embed facade +\
     \ register EmbeddingPort). Extras: dna[embed-onnx] / @dna/embed-onnx; core zero-deps-pesadas\
     \ (teste guard: install default n\xE3o importa onnx/torch)."
-  status: in-progress
+  status: done
   feature: f-dna-search-memory
   priority: high
   labels:
@@ -25,15 +25,21 @@ spec:
   reporter: claude-code
   business_value: 500
   acceptance_criteria:
-  - "EmbeddingPort declarado Py+TS + na fixture de paridade; kernel.embed() funciona\
-    \ com o fake no CI offline; adapter ONNX opt-in com paridade Py\u2194TS por sa\xED\
-    da; core sem deps pesadas (guard); CI verde"
+  - text: "EmbeddingPort declarado Py+TS + na fixture de paridade; kernel.embed()\
+      \ funciona com o fake no CI offline; adapter ONNX opt-in com paridade Py\u2194\
+      TS por sa\xEDda; core sem deps pesadas (guard); CI verde"
+    done: true
+    done_at: '2026-07-09T17:36:32+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - PR merged via dna sdlc story pr
+  - text: PR merged via dna sdlc story pr
+    done: true
+    done_at: '2026-07-09T17:36:32+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-09T16:48:02+00:00'
-  updated_at: '2026-07-09T16:48:06+00:00'
+  updated_at: '2026-07-09T17:36:35+00:00'
   timeline:
   - at: '2026-07-09T16:48:02+00:00'
     actor: claude-code
@@ -46,8 +52,47 @@ spec:
     source: cli
     from: todo
     to: in-progress
+  - at: '2026-07-09T17:36:30+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-embedding-port
+    summary: TestGuide tg-s-embedding-port (smoke)
+  - at: '2026-07-09T17:36:32+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-embedding-port-20260709-173631
+    summary: "TestRun tr-tg-s-embedding-port-20260709-173631 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-09T17:36:33+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #13 merged (10 checks). EmbeddingPort Py+TS; fake determin\xEDstico\
+      \ bit-exato (golden m\xFAtuo = prova cross-lang, zero deps ML, default CI);\
+      \ ONNX all-MiniLM opt-in cosine 1.000000 Py\u2194TS (lazy-download, network-gated);\
+      \ kernel.embed() + registro; guard de import; extras embed-onnx."
+  - at: '2026-07-09T17:36:35+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: done
+    commit_ref: 6487d5049555fcad261eb10d7d892fb2c8b4d279
   produces:
   - kind: Plan
     name: plan-s-embedding-port
     role: implementation
     at: '2026-07-09T16:48:06+00:00'
+  - kind: TestGuide
+    name: tg-s-embedding-port
+    role: test-guide
+    at: '2026-07-09T17:36:30+00:00'
+  - kind: TestRun
+    name: tr-tg-s-embedding-port-20260709-173631
+    role: test-run
+    at: '2026-07-09T17:36:32+00:00'
+  closed_at: '2026-07-09T17:36:32+00:00'

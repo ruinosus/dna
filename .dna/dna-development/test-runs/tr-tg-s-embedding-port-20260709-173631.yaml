@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-embedding-port-20260709-173631
+spec:
+  guide_ref: tg-s-embedding-port
+  outcome: pass
+  verifies:
+  - Story/s-embedding-port
+  executed_by: claude-code
+  executed_at: '2026-07-09T17:36:31+00:00'
+  evidence:
+  - ci:pr13-10-checks,fake:paridade-exata-golden-mutuo-py-ts,onnx:cosine-1.000000-py-ts-local,guard:import-default-nao-puxa-onnx-torch,extras:embed-onnx-opt-in,parity-fixture:152-membros

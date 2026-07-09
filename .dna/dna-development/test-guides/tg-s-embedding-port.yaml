@@ -1,0 +1,20 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-s-embedding-port
+spec:
+  description: Roteiro de teste de s-embedding-port (derivado das acceptance_criteria).
+  kind_of_test: smoke
+  status: active
+  steps:
+  - action: "No Studio, valide: EmbeddingPort declarado Py+TS + na fixture de paridade;\
+      \ kernel.embed() funciona com o fake no CI offline; adapter ONNX opt-in com\
+      \ paridade Py\u2194TS por sa\xEDda; core sem deps pesadas (guard); CI verde"
+    where: "<rota/tela \u2014 ex. /scopes/:scope/...>"
+    expected: "<o que voc\xEA V\xCA quando est\xE1 certo (marque \u2717 S\xD3 se estiver\
+      \ quebrado)>"
+  verifies:
+  - Story/s-embedding-port
+  created_at: '2026-07-09T17:36:30+00:00'
+  updated_at: '2026-07-09T17:36:30+00:00'
+  owner: claude-code
