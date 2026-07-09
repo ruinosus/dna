@@ -14,7 +14,7 @@ spec:
     \ hooks), com um exemplo m\xEDnimo de runner no docs (n\xE3o no core). Extension\
     \ automation (563loc upstream; avaliar subset) + descriptor conforme ratchet +\
     \ paridade TS + prosa (guard exige)."
-  status: in-progress
+  status: review
   feature: f-dna-1.0-readiness
   priority: medium
   labels:
@@ -24,16 +24,23 @@ spec:
   reporter: claude-code
   business_value: 500
   acceptance_criteria:
-  - "Automation Kind registrado Py+TS (descriptor se ratchet permitir); valida\xE7\
-    \xE3o de schema on/directive; kernel query lista automations por trigger-type;\
-    \ extension point de execu\xE7\xE3o documentado com exemplo; prosa builtin-kinds\
-    \ + coverage guard verde; CI verde"
+  - text: "Automation Kind registrado Py+TS (descriptor se ratchet permitir); valida\xE7\
+      \xE3o de schema on/directive; kernel query lista automations por trigger-type;\
+      \ extension point de execu\xE7\xE3o documentado com exemplo; prosa builtin-kinds\
+      \ + coverage guard verde; CI verde"
+    done: true
+    done_at: '2026-07-09T23:58:04+00:00'
+    done_by: claude-code
+    evidence: "PR #25: descriptor dna-automation Py+TS byte-id\xEAntico; guard pre_save\
+      \ (schema no write + cron + KNOWN_HOOK_NAMES); automations_for/trigger_key;\
+      \ prosa builtin-kinds 'Background automation' + runner exemplo; coverage guard\
+      \ sem allowlist nova; suites 2864 py / 1308 ts / 267 cli verdes locais"
   acceptance_criteria_source: cli-create
   definition_of_done:
   - PR merged via dna sdlc story pr
   definition_of_done_source: cli-create
   created_at: '2026-07-09T23:20:07+00:00'
-  updated_at: '2026-07-09T23:56:40+00:00'
+  updated_at: '2026-07-09T23:58:07+00:00'
   timeline:
   - at: '2026-07-09T23:20:07+00:00'
     actor: claude-code
@@ -120,6 +127,34 @@ spec:
     name: tr-tg-tier-a-automation-20260709-235639
     summary: "TestRun tr-tg-tier-a-automation-20260709-235639 \u2192 pass"
     outcome: pass
+  - at: '2026-07-09T23:57:48+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/25'
+    pr_url: https://github.com/ruinosus/dna/pull/25
+  - at: '2026-07-09T23:58:04+00:00'
+    actor: claude-code
+    type: checklist_check
+    source: cli
+    marked_ac: 1
+    marked_dod: 0
+    evidence: "PR #25: descriptor dna-automation Py+TS byte-id\xEAntico; guard pre_save\
+      \ (schema no write + cron + KNOWN_HOOK_NAMES); automations_for/trigger_key;\
+      \ prosa builtin-kinds 'Background automation' + runner exemplo; coverage guard\
+      \ sem allowlist nova; suites 2864 py / 1308 ts / 267 cli verdes locais"
+    by: claude-code
+  - at: '2026-07-09T23:58:06+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'PR #25 aberto; aguardando checks do CI'
+  - at: '2026-07-09T23:58:07+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
   produces:
   - kind: Plan
     name: plan-s-tier-a-automation
