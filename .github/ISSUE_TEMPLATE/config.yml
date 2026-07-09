@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions & ideas (Discussions)
+    url: https://github.com/ruinosus/dna/discussions
+    about: Ask questions, share ideas, or discuss the design before filing an issue.
+  - name: Report a security vulnerability
+    url: https://github.com/ruinosus/dna/security/advisories/new
+    about: Please report vulnerabilities privately — never in a public issue. See SECURITY.md.

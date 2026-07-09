@@ -1,0 +1,79 @@
+name: Bug report
+description: Report a defect in the DNA SDK, CLI, or a Kind's behavior.
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug. Please search existing issues
+        first. **Do not report security vulnerabilities here** — use private
+        reporting (see [SECURITY.md](../blob/main/SECURITY.md)).
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug and what you expected instead.
+      placeholder: When I compose an Agent with ... I expected ... but got ...
+    validations:
+      required: true
+  - type: dropdown
+    id: package
+    attributes:
+      label: Affected package
+      description: Which part of DNA is affected?
+      multiple: true
+      options:
+        - "sdk-py (Python SDK)"
+        - "sdk-ts (TypeScript SDK)"
+        - "cli (dna binary)"
+        - "docs"
+        - "not sure"
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction
+      description: >-
+        Minimal steps or a minimal manifest + code snippet that reproduces the
+        issue. The smaller and more self-contained, the faster we can help.
+      render: shell
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version / commit
+      description: Release tag or git commit SHA you are on.
+      placeholder: "main @ <sha>"
+    validations:
+      required: true
+  - type: dropdown
+    id: parity
+    attributes:
+      label: Does this reproduce in both SDKs?
+      description: >-
+        DNA promises behavioral parity between Python and TypeScript. If the
+        bug appears in only one language, that itself is a parity defect —
+        please say so.
+      options:
+        - "Not checked / only tried one language"
+        - "Reproduces in both Python and TypeScript"
+        - "Only Python"
+        - "Only TypeScript"
+        - "N/A (CLI or docs)"
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Python (uv) / Bun version, and the source adapter in use (filesystem / SQLite / Postgres).
+      placeholder: |
+        - OS: macOS 14
+        - Python: 3.13 (uv)
+        - Bun: latest
+        - Source: filesystem
+    validations:
+      required: false
