@@ -12,7 +12,7 @@ spec:
     \ DETERMIN\xCDSTICO puro (ecforia/BM25/decay/encoding-context/CoALA) como extension\
     \ DNA; bi-temporalidade (valid_from/valid_to j\xE1 no schema). Deixa scribes LLM/schedulers\
     \ de fora. CLI dna memory. Depende de s-record-search-sqlite."
-  status: review
+  status: done
   feature: f-dna-search-memory
   priority: medium
   labels:
@@ -23,15 +23,21 @@ spec:
   reporter: claude-code
   business_value: 500
   acceptance_criteria:
-  - "verbos remember/recall/forget/consolidate sobre os Kinds via provider; scoring\
-    \ determin\xEDstico portado (fun\xE7\xF5es puras testadas); bi-temporalidade wired;\
-    \ CLI dna memory; paridade Py\u2194TS; CI verde"
+  - text: "verbos remember/recall/forget/consolidate sobre os Kinds via provider;\
+      \ scoring determin\xEDstico portado (fun\xE7\xF5es puras testadas); bi-temporalidade\
+      \ wired; CLI dna memory; paridade Py\u2194TS; CI verde"
+    done: true
+    done_at: '2026-07-09T19:06:39+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - PR merged
+  - text: PR merged
+    done: true
+    done_at: '2026-07-09T19:06:39+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-09T16:48:04+00:00'
-  updated_at: '2026-07-09T19:01:02+00:00'
+  updated_at: '2026-07-09T19:06:41+00:00'
   timeline:
   - at: '2026-07-09T16:48:04+00:00'
     actor: claude-code
@@ -86,8 +92,48 @@ spec:
     source: cli
     from: in-progress
     to: review
+  - at: '2026-07-09T19:06:36+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-memory-verbs
+    summary: TestGuide tg-s-memory-verbs (smoke)
+  - at: '2026-07-09T19:06:38+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-memory-verbs-20260709-190637
+    summary: "TestRun tr-tg-s-memory-verbs-20260709-190637 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-09T19:06:40+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #16 merged. Verbos remember/recall/forget/consolidate (dna/memory\
+      \ + CLI dna memory) sobre Kinds existentes via provider; scoring determin\xED\
+      stico puro portado (ecforia/BM25/decay/encoding-context/CoALA) SEM scribes LLM/schedulers;\
+      \ bi-temporalidade wired (recall exclui forgotten, forget=valid_to nunca hard-delete);\
+      \ paridade Py\u2194TS por fixture. Ciclo completo provado offline."
+  - at: '2026-07-09T19:06:41+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: f01acbbd402b97b73d9754beeda6d04897499e8e
   produces:
   - kind: Plan
     name: plan-s-memory-verbs
     role: implementation
     at: '2026-07-09T18:25:08+00:00'
+  - kind: TestGuide
+    name: tg-s-memory-verbs
+    role: test-guide
+    at: '2026-07-09T19:06:36+00:00'
+  - kind: TestRun
+    name: tr-tg-s-memory-verbs-20260709-190637
+    role: test-run
+    at: '2026-07-09T19:06:38+00:00'
+  closed_at: '2026-07-09T19:06:39+00:00'

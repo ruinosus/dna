@@ -13,7 +13,7 @@ spec:
     \ Postgres, mem\xF3ria = Kinds existentes recall-eados pelo provider com verbos\
     \ + bi-temporalidade. Core zero-deps-pesadas; tudo pesado \xE9 extra opt-in. Decis\xE3\
     o Barna: feature COMPLETA (2 ondas) + PR\xC9-P\xDABLICO (go-public espera isto)."
-  status: in-development
+  status: done
   epic: e-dna-public-extraction
   reporter: claude-code
   priority: high
@@ -24,7 +24,7 @@ spec:
   - search
   business_value: 700
   created_at: '2026-07-09T16:48:00+00:00'
-  updated_at: '2026-07-09T16:48:02+00:00'
+  updated_at: '2026-07-09T19:06:42+00:00'
   timeline:
   - at: '2026-07-09T16:48:00+00:00'
     actor: claude-code
@@ -37,3 +37,11 @@ spec:
     source: cli
     from: discovery
     to: in-development
+  - at: '2026-07-09T19:06:42+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-development
+    to: done
+    commit_ref: f01acbbd402b97b73d9754beeda6d04897499e8e
+  closed_at: '2026-07-09T19:06:42+00:00'

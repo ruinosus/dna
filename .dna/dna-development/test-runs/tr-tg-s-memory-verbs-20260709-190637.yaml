@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-memory-verbs-20260709-190637
+spec:
+  guide_ref: tg-s-memory-verbs
+  outcome: pass
+  verifies:
+  - Story/s-memory-verbs
+  executed_by: claude-code
+  executed_at: '2026-07-09T19:06:37+00:00'
+  evidence:
+  - ci:pr16-verde-pos-rebase-com-pgvector,verbos:remember-recall-forget-consolidate-offline,scoring:ecforia+decay+CoALA-puro-portado-sem-LLM,bitemporal:recall-exclui-forgotten,paridade:memory-scoring-parity-json-8-casos-2-lados,proof:dna-memory-ciclo-completo
