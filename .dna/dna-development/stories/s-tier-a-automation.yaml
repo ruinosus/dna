@@ -1,0 +1,53 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-tier-a-automation
+spec:
+  title: "Tier A (final): trazer o Automation Kind do SDK upstream \u2014 dispatch\
+    \ declarativo "
+  description: "Tier A (final): trazer o Automation Kind do SDK upstream \u2014 dispatch\
+    \ declarativo como DADOS (a joia que matou o dispatch hardcoded l\xE1): um doc\
+    \ Automation declara on:{type:cron|hook|...} + a diretiva (agent/a\xE7\xE3o).\
+    \ EVOLU\xC7\xC3O honesta: o KIND + valida\xE7\xE3o + query helpers viajam (o SDK\
+    \ sabe declarar e listar automations); a EXECU\xC7\xC3O \xE9 concern do host \u2014\
+    \ documentar como extension point (mesmo padr\xE3o dos scribes/post-transition\
+    \ hooks), com um exemplo m\xEDnimo de runner no docs (n\xE3o no core). Extension\
+    \ automation (563loc upstream; avaliar subset) + descriptor conforme ratchet +\
+    \ paridade TS + prosa (guard exige)."
+  status: in-progress
+  feature: f-dna-1.0-readiness
+  priority: medium
+  labels:
+  - sdk
+  - python
+  - typescript
+  reporter: claude-code
+  business_value: 500
+  acceptance_criteria:
+  - "Automation Kind registrado Py+TS (descriptor se ratchet permitir); valida\xE7\
+    \xE3o de schema on/directive; kernel query lista automations por trigger-type;\
+    \ extension point de execu\xE7\xE3o documentado com exemplo; prosa builtin-kinds\
+    \ + coverage guard verde; CI verde"
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - PR merged via dna sdlc story pr
+  definition_of_done_source: cli-create
+  created_at: '2026-07-09T23:20:07+00:00'
+  updated_at: '2026-07-09T23:20:10+00:00'
+  timeline:
+  - at: '2026-07-09T23:20:07+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-09T23:20:10+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  produces:
+  - kind: Plan
+    name: plan-s-tier-a-automation
+    role: implementation
+    at: '2026-07-09T23:20:10+00:00'

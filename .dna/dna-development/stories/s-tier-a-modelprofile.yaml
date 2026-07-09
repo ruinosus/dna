@@ -36,10 +36,13 @@ spec:
       pass + tsc, cli 262'
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - PR merged via dna sdlc story pr
+  - text: PR merged via dna sdlc story pr
+    done: true
+    done_at: '2026-07-09T23:20:04+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-09T22:39:23+00:00'
-  updated_at: '2026-07-09T23:09:00+00:00'
+  updated_at: '2026-07-09T23:20:05+00:00'
   timeline:
   - at: '2026-07-09T22:39:23+00:00'
     actor: claude-code
@@ -122,6 +125,15 @@ spec:
       \ commit-emails, gitleaks, docs-build (coverage guard incluso), docs-links.\
       \ Pronto pro merge do Barna (n\xE3o mergeio \u2014 coordena\xE7\xE3o Tier A)."
     commit_ref: 8ed4abf95da58a216818832aa5684c79347de96b
+  - at: '2026-07-09T23:20:05+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #23 merged (p\xF3s-rebase com Doc Kind; drift-guard pegou reference\
+      \ stale, regenerada). ModelProfile descriptor byte-par; descoberta: kernel.model_profile\
+      \ e prompt_budget J\xC1 existiam fail-openando \u2014 o registro fechou o circuito;\
+      \ veto 3-caminhos Py+TS (9+14 testes); 'never hardcode token caps' em 5 lugares;\
+      \ prosa Model registry sem allowlist nova."
   produces:
   - kind: Plan
     name: plan-s-tier-a-modelprofile
