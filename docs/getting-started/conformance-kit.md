@@ -119,6 +119,44 @@ sqlite-vec is a loadable C extension delivered as an **opt-in extra**:
     Linux, Bun's bundled SQLite already allows it. When no runtime can load the
     extension the suite skips with a clear reason.
 
+### The scale provider — pgvector
+
+`PgVecRecordSearchProvider` is the server-side sibling for scale: it swaps the
+embeddable one-file-per-scope SQLite store for a shared Postgres database
+(reusing the DNA Postgres that already backs the source plane), and it passes the
+**same** `record_search_conformance_suite` — one contract, many stores. Dense
+search is pgvector's `<=>` cosine distance (accelerated by an IVFFlat index);
+the lexical plane is a generated `tsvector` column ranked by `ts_rank`
+(accelerated by GIN); fusion reuses the **same** pure RRF function as sqlite-vec.
+Its store schema is owned by a numbered migration in the store's own
+`dna_search_migrations` control table (re-boot is a no-op), and `CREATE EXTENSION
+vector` is the migration's first statement — so a database without pgvector fails
+loud rather than silently degrading.
+
+```bash
+pip install "dna-sdk[search-pgvector]"    # asyncpg (via the `postgres` extra)
+# against a pgvector-enabled Postgres (e.g. the `pgvector/pgvector:pg16` image):
+DATABASE_URL=postgresql://dna:dna@localhost/dna_test \
+  cd packages/sdk-py && uv run pytest tests/test_pgvector_search_conformance.py -v
+```
+
+The conformance test is gated on a Postgres DSN (the shared `requires_postgres`
+marker): it skips cleanly with no database and runs **for real** in the CI
+`postgres` job, which uses the `pgvector/pgvector:pg16` service image. Each case
+runs in a fresh, disposable schema so index/delete state never bleeds across
+cases or projects.
+
+!!! note "Py-primary, behavioral parity via the kit"
+    Unlike sqlite-vec, the pgvector provider is **Python-only by design**.
+    sqlite-vec has a TS twin because it is the *embeddable offline floor* both
+    SDKs ship and run in-process; pgvector is the *scale/server* adapter, only
+    meaningful against a running Postgres (which the TS SDK reaches through a
+    different driver, `pg`). Behavioral parity is guaranteed the way the port
+    intends — the **same** conformance kit is the contract, and the only
+    ranking-affecting logic (RRF) is already bit-identical Py↔TS and reused
+    unchanged. A TS pgvector twin, if ever needed, must pass the same eight
+    cases; the kit is the parity guarantee, not a hand-diffed second impl.
+
 ## Cross-SDK parity
 
 Parity between the Python and TypeScript SDKs is enforced by **shared

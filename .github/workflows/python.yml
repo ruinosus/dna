@@ -67,7 +67,11 @@ jobs:
         working-directory: packages/sdk-py
     services:
       postgres:
-        image: postgres:16
+        # pgvector-enabled image (NOT plain postgres:16) so the pgvector search
+        # provider's migration can `CREATE EXTENSION vector` and the
+        # record-search conformance suite runs FOR REAL here (s-search-pgvector).
+        # Wire-compatible with postgres:16 for every other requires_postgres test.
+        image: pgvector/pgvector:pg16
         env:
           POSTGRES_USER: dna
           POSTGRES_PASSWORD: dna
