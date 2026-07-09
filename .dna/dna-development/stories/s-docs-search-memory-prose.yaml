@@ -14,7 +14,7 @@ spec:
     \ esbo\xE7ado em agent-knowledge.md); guides/semantic-recall.md (como usar dna\
     \ recall/search/memory + registrar providers + extras); toque no getting-started\
     \ e no README (1 se\xE7\xE3o curta na landing). Consultar rsh-memory-similarity-evolution."
-  status: in-progress
+  status: review
   feature: f-dna-docs
   priority: high
   labels:
@@ -22,14 +22,21 @@ spec:
   reporter: claude-code
   business_value: 400
   acceptance_criteria:
-  - Concept + guide novos; getting-started e README mencionam a capability; mkdocs
-    build --strict verde; lychee verde; nav atualizada
+  - text: Concept + guide novos; getting-started e README mencionam a capability;
+      mkdocs build --strict verde; lychee verde; nav atualizada
+    done: true
+    done_at: '2026-07-09T21:27:37+00:00'
+    done_by: claude-code
+    evidence: "PR #18 \u2014 concept (search-and-memory.md) + guide (semantic-recall.md)\
+      \ new; first-kind next-steps + README landing section mention the capability;\
+      \ mkdocs build --strict green in docs-build check; docs-links (lychee) green;\
+      \ nav updated (Concepts + How-to guides). All 9 PR checks green."
   acceptance_criteria_source: cli-create
   definition_of_done:
   - PR merged via dna sdlc story pr
   definition_of_done_source: cli-create
   created_at: '2026-07-09T20:52:08+00:00'
-  updated_at: '2026-07-09T20:52:12+00:00'
+  updated_at: '2026-07-09T21:27:37+00:00'
   timeline:
   - at: '2026-07-09T20:52:08+00:00'
     actor: claude-code
@@ -42,6 +49,42 @@ spec:
     source: cli
     from: todo
     to: in-progress
+  - at: '2026-07-09T21:18:25+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/18'
+    pr_url: https://github.com/ruinosus/dna/pull/18
+  - at: '2026-07-09T21:26:50+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Prose written + shipped to PR #18: concepts/search-and-memory.md (two\
+      \ ports + offline-first + memory-as-Kinds + 2 Mermaid diagrams), guides/semantic-recall.md\
+      \ (all examples executed for real, incl. honest-degradation capture from a bare\
+      \ venv + 1 sequence diagram), first-kind next-steps bullet, README landing section,\
+      \ mkdocs nav + mermaid superfence. Gates: brand_guard+self-test clean, mkdocs\
+      \ build --strict green, diagrams confirmed rendering in-browser. One CI wrinkle:\
+      \ gitleaks false-positive (the concept's fake-embedder sentence matched\
+      \ generic-api-key) \u2014 reworded + amended + force-pushed; gitleaks now green."
+    commit_ref: ab9f741d4a81b1add3b5941cdf6ed6e7ec70a768
+  - at: '2026-07-09T21:27:22+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
+  - at: '2026-07-09T21:27:37+00:00'
+    actor: claude-code
+    type: checklist_check
+    source: cli
+    marked_ac: 1
+    marked_dod: 0
+    evidence: "PR #18 \u2014 concept (search-and-memory.md) + guide (semantic-recall.md)\
+      \ new; first-kind next-steps + README landing section mention the capability;\
+      \ mkdocs build --strict green in docs-build check; docs-links (lychee) green;\
+      \ nav updated (Concepts + How-to guides). All 9 PR checks green."
+    by: claude-code
   produces:
   - kind: Plan
     name: plan-s-docs-search-memory-prose
