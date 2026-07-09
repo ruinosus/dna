@@ -1,0 +1,19 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-s-docs-parity-matrix
+spec:
+  description: Roteiro de teste de s-docs-parity-matrix (derivado das acceptance_criteria).
+  kind_of_test: smoke
+  status: active
+  steps:
+  - action: "No Studio, valide: p\xE1gina parity-matrix gerada do kit/fixture (n\xE3\
+      o hand-kept), no site; regenera no CI; build strict verde; CI 7/7"
+    where: "<rota/tela \u2014 ex. /scopes/:scope/...>"
+    expected: "<o que voc\xEA V\xCA quando est\xE1 certo (marque \u2717 S\xD3 se estiver\
+      \ quebrado)>"
+  verifies:
+  - Story/s-docs-parity-matrix
+  created_at: '2026-07-09T15:11:03+00:00'
+  updated_at: '2026-07-09T15:11:03+00:00'
+  owner: claude-code

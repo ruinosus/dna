@@ -9,7 +9,7 @@ spec:
     \ fixture, publicada como p\xE1gina do site (modelo OTel spec-compliance-matrix):\
     \ linhas=capabilities/Kinds/port-contracts, colunas=Python+TypeScript, legenda\
     \ +/-/N-A. Prova '1:1 parity' em vez de afirmar. Depende de s-docs-diataxis-site."
-  status: in-progress
+  status: done
   feature: f-dna-docs
   priority: medium
   labels:
@@ -18,14 +18,20 @@ spec:
   reporter: claude-code
   business_value: 400
   acceptance_criteria:
-  - "p\xE1gina parity-matrix gerada do kit/fixture (n\xE3o hand-kept), no site; regenera\
-    \ no CI; build strict verde; CI 7/7"
+  - text: "p\xE1gina parity-matrix gerada do kit/fixture (n\xE3o hand-kept), no site;\
+      \ regenera no CI; build strict verde; CI 7/7"
+    done: true
+    done_at: '2026-07-09T15:11:06+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - PR merged
+  - text: PR merged
+    done: true
+    done_at: '2026-07-09T15:11:06+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-09T13:54:01+00:00'
-  updated_at: '2026-07-09T14:57:33+00:00'
+  updated_at: '2026-07-09T15:11:08+00:00'
   timeline:
   - at: '2026-07-09T13:54:01+00:00'
     actor: claude-code
@@ -38,8 +44,47 @@ spec:
     source: cli
     from: todo
     to: in-progress
+  - at: '2026-07-09T15:11:04+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-docs-parity-matrix
+    summary: TestGuide tg-s-docs-parity-matrix (smoke)
+  - at: '2026-07-09T15:11:05+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-docs-parity-matrix-20260709-151104
+    summary: "TestRun tr-tg-s-docs-parity-matrix-20260709-151104 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-09T15:11:06+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #11 merged (10/10). P\xE1gina parity-matrix GERADA da fixture port-surface-parity\
+      \ (149 compartilhados / 39 assimetrias justificadas), estilo OTel, \u2705/\u26A0\
+      \uFE0F/\u2796. Regenera no CI docs-build + guard pytest anti-drift. Prova 1:1\
+      \ parity em vez de afirmar."
+  - at: '2026-07-09T15:11:08+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: done
+    commit_ref: d2f1c2ff370fda82cdef15eb61f99723d3957301
   produces:
   - kind: Plan
     name: plan-s-docs-parity-matrix
     role: implementation
     at: '2026-07-09T14:57:33+00:00'
+  - kind: TestGuide
+    name: tg-s-docs-parity-matrix
+    role: test-guide
+    at: '2026-07-09T15:11:04+00:00'
+  - kind: TestRun
+    name: tr-tg-s-docs-parity-matrix-20260709-151104
+    role: test-run
+    at: '2026-07-09T15:11:05+00:00'
+  closed_at: '2026-07-09T15:11:06+00:00'

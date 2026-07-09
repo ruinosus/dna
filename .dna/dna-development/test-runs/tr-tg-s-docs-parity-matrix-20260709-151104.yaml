@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-docs-parity-matrix-20260709-151104
+spec:
+  guide_ref: tg-s-docs-parity-matrix
+  outcome: pass
+  verifies:
+  - Story/s-docs-parity-matrix
+  executed_by: claude-code
+  executed_at: '2026-07-09T15:11:04+00:00'
+  evidence:
+  - ci:pr11-10-of-10,gerador:scripts/gen_parity_matrix.py-deterministico-idempotente,matriz:149-compartilhados-39-assimetrias-documentadas,guard:test_parity_matrix_fresh+regen-no-CI,check:mkdocs-build-strict
