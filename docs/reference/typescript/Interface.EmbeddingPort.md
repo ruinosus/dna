@@ -52,4 +52,4 @@ embed(texts): Promise<number[][]>;
 
 #### Returns
 
-`Promise`\<`number`[][]\>
+`Promise`\<`number`\[\]\[\]\>

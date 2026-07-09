@@ -600,7 +600,7 @@ input, in order; empty input → empty array. Read the space via
 
 #### Returns
 
-`Promise`\<`number`[][]\>
+`Promise`\<`number`\[\]\[\]\>
 
 ***
 

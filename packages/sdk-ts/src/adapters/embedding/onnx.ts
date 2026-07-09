@@ -44,11 +44,15 @@ export class OnnxEmbeddingProvider implements EmbeddingPort {
   > {
     if (this._pipe === null) {
       let mod: { pipeline: (task: string, model: string) => Promise<unknown> };
+      // NON-LITERAL specifier on purpose: the peer dep is OPTIONAL and its
+      // type declarations are NOT installed by default, so a literal
+      // `import("@huggingface/transformers")` would fail `tsc --noEmit` in CI
+      // with TS2307. A string variable makes the dynamic import resolve to
+      // `Promise<any>` at type-check time (still the same module at runtime).
+      const spec: string = "@huggingface/transformers";
       try {
         // Dynamic import so the dep is optional and never bundled by default.
-        mod = (await import(
-          /* @vite-ignore */ "@huggingface/transformers"
-        )) as typeof mod;
+        mod = (await import(/* @vite-ignore */ spec)) as typeof mod;
       } catch (err) {
         throw new Error(
           "OnnxEmbeddingProvider needs the '@huggingface/transformers' peer dep: "
