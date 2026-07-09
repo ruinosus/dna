@@ -5,7 +5,7 @@ metadata:
 spec:
   title: "Trazer o Research Kind (s\xEDntese curada de N References com findings evidence-rat"
   description: "Trazer o Research Kind (s\xEDntese curada de N References com findings\
-    \ evidence-rated + recommendations + citation graph) do AAP pro DNA \u2014 infraestrutura\
+    \ evidence-rated + recommendations + citation graph) do SDK upstream pro DNA \u2014 infraestrutura\
     \ de conhecimento agent-facing, a resposta declarativa/curada do DNA ao problema\
     \ OpenWiki/DeepWiki. Porta a extension research (Py 762loc + twin research.ts)\
     \ + CLI 'dna research list/show/create', kernel-bound. Decis\xF5es ratificadas\
