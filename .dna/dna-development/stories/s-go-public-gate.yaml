@@ -8,7 +8,7 @@ spec:
   description: 'The explicit gate to flip ruinosus/dna to public: all f-dna-1.0-readiness
     stories done, CI green, final review of README/docs, and the owner''s explicit
     approval. Nothing flips without it.'
-  status: todo
+  status: done
   feature: f-dna-1.0-readiness
   priority: high
   labels:
@@ -16,13 +16,19 @@ spec:
   reporter: claude-code
   business_value: 800
   acceptance_criteria:
-  - Checklist complete; owner approval recorded on this story's timeline
+  - text: Checklist complete; owner approval recorded on this story's timeline
+    done: true
+    done_at: '2026-07-09T20:39:22+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - Repo public; announcement optional
+  - text: Repo public; announcement optional
+    done: true
+    done_at: '2026-07-09T20:39:22+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-08T18:27:50+00:00'
-  updated_at: '2026-07-09T19:07:02+00:00'
+  updated_at: '2026-07-09T20:39:24+00:00'
   timeline:
   - at: '2026-07-08T18:27:50+00:00'
     actor: claude-code
@@ -95,3 +101,64 @@ spec:
       ntica funcionando, como pedido. Checklist t\xE9cnico 100%; s\xF3 falta a DECIS\xC3\
       O do Barna: revis\xE3o final + 'pode publicar'."
     commit_ref: f01acbbd402b97b73d9754beeda6d04897499e8e
+  - at: '2026-07-09T20:39:18+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-09T20:39:18+00:00'
+    actor: claude-code
+    type: decision
+    source: cli
+    summary: "APROVA\xC7\xC3O DO BARNA REGISTRADA (2026-07-09): 'pode publicar' \u2014\
+      \ com e-mail pessoal na hist\xF3ria aceito explicitamente (12 commits, decis\xE3\
+      o dele) e branch protection configurada antes do flip (PR+9 checks obrigat\xF3\
+      rios, force-push/dele\xE7\xE3o bloqueados, admin bypass p/ bookkeeping). Visibilidade\
+      \ flipada: github.com/ruinosus/dna \xE9 P\xDABLICO. Pages habilitado (build\
+      \ via workflow)."
+    commit_ref: 848587b794baab735187c88206a386ebd31ee6ec
+  - at: '2026-07-09T20:39:20+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-go-public-gate
+    summary: TestGuide tg-s-go-public-gate (smoke)
+  - at: '2026-07-09T20:39:21+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-go-public-gate-20260709-203921
+    summary: "TestRun tr-tg-s-go-public-gate-20260709-203921 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-09T20:39:23+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PUBLICADO 2026-07-09. Verifica\xE7\xE3o final pr\xE9-flip: brand-guard\
+      \ (arquivos+identidades) limpo, zero segredos, branch protection no lugar. Aprova\xE7\
+      \xE3o expl\xEDcita do Barna na timeline. github.com/ruinosus/dna \xE9 p\xFA\
+      blico; Pages habilitado."
+  - at: '2026-07-09T20:39:24+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: done
+    commit_ref: 848587b794baab735187c88206a386ebd31ee6ec
+  produces:
+  - kind: Plan
+    name: plan-s-go-public-gate
+    role: implementation
+    at: '2026-07-09T20:39:18+00:00'
+  - kind: TestGuide
+    name: tg-s-go-public-gate
+    role: test-guide
+    at: '2026-07-09T20:39:20+00:00'
+  - kind: TestRun
+    name: tr-tg-s-go-public-gate-20260709-203921
+    role: test-run
+    at: '2026-07-09T20:39:21+00:00'
+  closed_at: '2026-07-09T20:39:22+00:00'

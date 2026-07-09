@@ -7,7 +7,7 @@ spec:
     \ gate"
   description: First feature tracked inside the DNA repo itself (dogfood since day
     one). Covers the path from private extracted core to a public 1.0-ready SDK.
-  status: in-development
+  status: done
   reporter: claude-code
   priority: high
   labels:
@@ -15,7 +15,7 @@ spec:
   - meta
   business_value: 800
   created_at: '2026-07-08T18:27:48+00:00'
-  updated_at: '2026-07-08T18:52:06+00:00'
+  updated_at: '2026-07-09T20:39:45+00:00'
   timeline:
   - at: '2026-07-08T18:27:48+00:00'
     actor: claude-code
@@ -28,3 +28,11 @@ spec:
     source: cli
     from: discovery
     to: in-development
+  - at: '2026-07-09T20:39:45+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-development
+    to: done
+    commit_ref: 848587b794baab735187c88206a386ebd31ee6ec
+  closed_at: '2026-07-09T20:39:45+00:00'

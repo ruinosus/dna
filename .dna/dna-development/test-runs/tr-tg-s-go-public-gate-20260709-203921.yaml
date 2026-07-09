@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-go-public-gate-20260709-203921
+spec:
+  guide_ref: tg-s-go-public-gate
+  outcome: pass
+  verifies:
+  - Story/s-go-public-gate
+  executed_by: claude-code
+  executed_at: '2026-07-09T20:39:21+00:00'
+  evidence:
+  - check:brand-guard-arquivos+commits-limpo-pre-flip,check:gitleaks-ci-verde,check:zero-segredos-tracked,check:branch-protection-9-checks+no-force-push,decision:barna-pode-publicar-registrada,flip:PUBLIC-confirmado

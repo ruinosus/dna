@@ -1,0 +1,15 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-go-public-gate
+spec:
+  title: 'Plano: s-go-public-gate'
+  date: '2026-07-09'
+  status: accepted
+  story_ref: s-go-public-gate
+  journey_phase: plan
+  body: "Checklist t\xE9cnico j\xE1 100% (registrado na timeline); esta story \xE9\
+    \ o evento da decis\xE3o: aprova\xE7\xE3o do Barna registrada + flip de visibilidade\
+    \ + Pages no ar."
+  created_at: '2026-07-09T20:39:15+00:00'
+  updated_at: '2026-07-09T20:39:15+00:00'

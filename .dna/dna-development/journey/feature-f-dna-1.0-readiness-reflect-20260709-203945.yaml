@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: WorkflowEvent
+metadata:
+  name: feature-f-dna-1.0-readiness-reflect-20260709-203945
+spec:
+  phase: reflect
+  ref: Feature/f-dna-1.0-readiness
+  parent_ref: Feature/f-dna-1.0-readiness
+  methodology: ad-hoc
+  started_at: '2026-07-09T20:39:45+00:00'
+  actor: claude-code
+  created_at: '2026-07-09T20:39:45+00:00'
+  summary: 'Feature shipped via cascade: f-dna-1.0-readiness'
