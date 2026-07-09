@@ -177,6 +177,17 @@ export { CollabExtension } from "./extensions/collab.js";
 // (Community/Research/Sdlc) were loaded by no bootstrap at all. See bootstrap.ts.
 export { FederationExtension } from "./extensions/federation.js";
 export { SdlcExtension } from "./extensions/sdlc.js";
+// s-tier-a-modelprofile — ModelProfile registry + the prompt-budget
+// machinery its write guard runs on (consumers need the error class to
+// catch the veto; never hardcode token caps — read the ModelProfile).
+export { ModelRegExtension } from "./extensions/modelreg.js";
+export {
+  CHARS_PER_TOKEN,
+  estimateTokens,
+  evaluateInstructionBudget,
+  PromptBudgetExceededError,
+} from "./kernel/prompt-budget.js";
+export type { BudgetVerdict } from "./kernel/prompt-budget.js";
 export { DeclarativeKindPort, storageDictToDescriptor } from "./kernel/meta.js";
 export { KindDefinitionSchema, KindDefinitionSpecSchema, KIND_DEFINITION_API_VERSION, KIND_DEFINITION_KIND } from "./kernel/models.js";
 export type { TypedKindDefinition } from "./kernel/models.js";

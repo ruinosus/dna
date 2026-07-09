@@ -1,11 +1,16 @@
 """Prompt-budget estimation + enforcement helpers.
 
 Conservative token estimator + instruction-budget evaluator used by the
-write-path guard that blocks voice Agents whose instruction exceeds
-the realtime model's instruction_token_cap. Mirrors the Studio client guard
-apps/studio/src/lib/voice/instruction-budget.ts (CHARS_PER_TOKEN = 3.5) so
-client and server agree. Motivated by the 2026-05-29 JARVIS bug (17269-token
-persona > gpt-realtime-2's 16384-token session.instructions cap).
+write-path guard (``dna.extensions.helix.write_guards.prompt_budget_guard``)
+that vetoes a strict/voice Agent whose instruction exceeds its model's
+``instruction_token_cap`` and warns for chat models. TS twin:
+``src/kernel/prompt-budget.ts`` (CHARS_PER_TOKEN = 3.5 on both sides).
+
+CONTRACT — never hardcode token caps: the ``cap`` the evaluator receives
+ALWAYS comes from the ModelProfile registry
+(``kernel.model_profile(id_or_alias)``), never from a literal in code.
+Motivated by a real outage: a 17269-token voice persona silently exceeded
+the realtime model's 16384-token session-instructions cap.
 """
 from __future__ import annotations
 import math
@@ -23,8 +28,9 @@ class PromptBudgetExceededError(Exception):
         super().__init__(
             f"Agent '{agent_name}' instruction is ~{estimated_tokens} tokens, "
             f"over the {cap}-token instruction cap of model '{model_id}'. "
-            f"Trim the persona (s-jarvis-persona-trim-to-budget) or move detail to "
-            f"tool-discoverable docs."
+            f"Trim the instruction or move detail to tool-discoverable docs. "
+            f"(The cap comes from the model's ModelProfile doc — update the "
+            f"profile if the model's real cap changed; never hardcode caps.)"
         )
 
 
