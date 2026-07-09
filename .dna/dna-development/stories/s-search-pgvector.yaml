@@ -9,7 +9,7 @@ spec:
     \ do DNA \u2014 porta o RRF lib-puro do upstream; mesma interface do sqlite-vec,\
     \ promove sem trocar contrato; DDL dono via migration contract. Passa o MESMO\
     \ provider conformance kit. Depende de s-record-search-sqlite."
-  status: review
+  status: done
   feature: f-dna-search-memory
   priority: medium
   labels:
@@ -20,14 +20,20 @@ spec:
   reporter: claude-code
   business_value: 400
   acceptance_criteria:
-  - PgRecordSearchProvider passa o conformance kit do provider; mesma interface; DDL
-    dono; CI verde (pg job)
+  - text: PgRecordSearchProvider passa o conformance kit do provider; mesma interface;
+      DDL dono; CI verde (pg job)
+    done: true
+    done_at: '2026-07-09T18:48:25+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - PR merged
+  - text: PR merged
+    done: true
+    done_at: '2026-07-09T18:48:25+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-09T16:48:03+00:00'
-  updated_at: '2026-07-09T18:44:08+00:00'
+  updated_at: '2026-07-09T18:48:28+00:00'
   timeline:
   - at: '2026-07-09T16:48:03+00:00'
     actor: claude-code
@@ -67,8 +73,48 @@ spec:
     source: cli
     from: in-progress
     to: review
+  - at: '2026-07-09T18:48:23+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-search-pgvector
+    summary: TestGuide tg-s-search-pgvector (smoke)
+  - at: '2026-07-09T18:48:25+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-search-pgvector-20260709-184824
+    summary: "TestRun tr-tg-s-search-pgvector-20260709-184824 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-09T18:48:26+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #15 merged. PgVecRecordSearchProvider (escala) reusa Postgres, passa\
+      \ o MESMO conformance kit contra pgvector real no CI (68 passed) \u2014 prova\
+      \ sqlite-vec e pgvector no mesmo contrato. IVFFlat + tsvector/GIN + RRF reusado;\
+      \ DDL dono (CREATE EXTENSION vector 1\xAA stmt); Py-primary justificado (adapter\
+      \ servidor). CI usa pgvector/pgvector:pg16."
+  - at: '2026-07-09T18:48:28+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: 336e10d94b8bc3d7dfeb1b6c9da721647b2eee24
   produces:
   - kind: Plan
     name: plan-s-search-pgvector
     role: implementation
     at: '2026-07-09T18:25:07+00:00'
+  - kind: TestGuide
+    name: tg-s-search-pgvector
+    role: test-guide
+    at: '2026-07-09T18:48:23+00:00'
+  - kind: TestRun
+    name: tr-tg-s-search-pgvector-20260709-184824
+    role: test-run
+    at: '2026-07-09T18:48:25+00:00'
+  closed_at: '2026-07-09T18:48:25+00:00'

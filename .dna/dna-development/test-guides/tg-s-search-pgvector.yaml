@@ -1,0 +1,19 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-s-search-pgvector
+spec:
+  description: Roteiro de teste de s-search-pgvector (derivado das acceptance_criteria).
+  kind_of_test: smoke
+  status: active
+  steps:
+  - action: 'No Studio, valide: PgRecordSearchProvider passa o conformance kit do
+      provider; mesma interface; DDL dono; CI verde (pg job)'
+    where: "<rota/tela \u2014 ex. /scopes/:scope/...>"
+    expected: "<o que voc\xEA V\xCA quando est\xE1 certo (marque \u2717 S\xD3 se estiver\
+      \ quebrado)>"
+  verifies:
+  - Story/s-search-pgvector
+  created_at: '2026-07-09T18:48:22+00:00'
+  updated_at: '2026-07-09T18:48:22+00:00'
+  owner: claude-code

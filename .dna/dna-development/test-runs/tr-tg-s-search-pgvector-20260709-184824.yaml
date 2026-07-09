@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-search-pgvector-20260709-184824
+spec:
+  guide_ref: tg-s-search-pgvector
+  outcome: pass
+  verifies:
+  - Story/s-search-pgvector
+  executed_by: claude-code
+  executed_at: '2026-07-09T18:48:24+00:00'
+  evidence:
+  - ci:pr15-verde,conformance:mesmo-kit-8-casos-vs-pgvector-REAL-no-CI-68-passed,ddl:CREATE-EXTENSION-vector+migracao-dona-idempotente,py-primary-justificado+guard-import,ci:pgvector-pg16-image
