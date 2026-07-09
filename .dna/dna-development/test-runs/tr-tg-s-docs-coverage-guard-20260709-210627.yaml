@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-docs-coverage-guard-20260709-210627
+spec:
+  guide_ref: tg-s-docs-coverage-guard
+  outcome: pass
+  verifies:
+  - Story/s-docs-coverage-guard
+  executed_by: claude-code
+  executed_at: '2026-07-09T21:06:27+00:00'
+  evidence:
+  - ci:pr17-todos-verdes,selftest:planta-item-sem-prosa-falha,prova:guard-acusou-gap-search-memory-pre-fix,allowlist:temporaria-marcada-pra-remocao,wired:docs-build

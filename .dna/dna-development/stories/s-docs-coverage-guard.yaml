@@ -16,7 +16,7 @@ spec:
     \ exatamente o gap de search/memory (self-valida\xE7\xE3o) \u2014 rode ANTES da\
     \ story irm\xE3 mergear pra provar, mas o merge final passa verde (a irm\xE3 fecha\
     \ o gap)."
-  status: in-progress
+  status: done
   feature: f-dna-docs
   priority: high
   labels:
@@ -26,15 +26,21 @@ spec:
   reporter: claude-code
   business_value: 500
   acceptance_criteria:
-  - "Guard enumera CLI+Kinds da fonte; falha com item p\xFAblico sem prosa; self-test\
-    \ verde; wired no CI; allowlist justificada; prova de que acusou o gap search/memory\
-    \ antes do fix"
+  - text: "Guard enumera CLI+Kinds da fonte; falha com item p\xFAblico sem prosa;\
+      \ self-test verde; wired no CI; allowlist justificada; prova de que acusou o\
+      \ gap search/memory antes do fix"
+    done: true
+    done_at: '2026-07-09T21:06:29+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - PR merged via dna sdlc story pr
+  - text: PR merged via dna sdlc story pr
+    done: true
+    done_at: '2026-07-09T21:06:29+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-09T20:52:10+00:00'
-  updated_at: '2026-07-09T21:00:55+00:00'
+  updated_at: '2026-07-09T21:06:32+00:00'
   timeline:
   - at: '2026-07-09T20:52:10+00:00'
     actor: claude-code
@@ -70,8 +76,48 @@ spec:
     source: cli
     summary: 'PR aberto: https://github.com/ruinosus/dna/pull/17'
     pr_url: https://github.com/ruinosus/dna/pull/17
+  - at: '2026-07-09T21:06:26+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-docs-coverage-guard
+    summary: TestGuide tg-s-docs-coverage-guard (smoke)
+  - at: '2026-07-09T21:06:28+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-docs-coverage-guard-20260709-210627
+    summary: "TestRun tr-tg-s-docs-coverage-guard-20260709-210627 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-09T21:06:30+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #17 merged. docs_coverage_guard.py enumera CLI (Click tree) + Kinds\
+      \ (registry) da FONTE e exige men\xE7\xE3o em prosa; self-test; acusou o gap\
+      \ real de search/memory pr\xE9-fix (a prova de valor); allowlist tempor\xE1\
+      ria marcada \u2014 removo quando a prosa (story irm\xE3) mergear. Institucionaliza\
+      \ o insight do Barna: feature sem doc n\xE3o passa no CI."
+  - at: '2026-07-09T21:06:32+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: done
+    commit_ref: 9cbfb8d9d1f2e28ccb20c2077bbc136568ab9f97
   produces:
   - kind: Plan
     name: plan-s-docs-coverage-guard
     role: implementation
     at: '2026-07-09T20:52:14+00:00'
+  - kind: TestGuide
+    name: tg-s-docs-coverage-guard
+    role: test-guide
+    at: '2026-07-09T21:06:26+00:00'
+  - kind: TestRun
+    name: tr-tg-s-docs-coverage-guard-20260709-210627
+    role: test-run
+    at: '2026-07-09T21:06:28+00:00'
+  closed_at: '2026-07-09T21:06:29+00:00'
