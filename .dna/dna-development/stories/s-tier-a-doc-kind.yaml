@@ -10,7 +10,7 @@ spec:
     \ manual; com o Kind nativo o grupo funciona out-of-the-box). Extension doc (497loc\
     \ upstream, avaliar o que \xE9 core vs service) + paridade TS + prosa (atualizar\
     \ o bloco do cli-tour removendo o workaround)."
-  status: in-progress
+  status: review
   feature: f-dna-1.0-readiness
   priority: medium
   labels:
@@ -28,7 +28,7 @@ spec:
   - PR merged
   definition_of_done_source: cli-create
   created_at: '2026-07-09T22:39:24+00:00'
-  updated_at: '2026-07-09T23:03:38+00:00'
+  updated_at: '2026-07-09T23:05:47+00:00'
   timeline:
   - at: '2026-07-09T22:39:24+00:00'
     actor: claude-code
@@ -71,6 +71,18 @@ spec:
     name: tr-tg-s-tier-a-doc-kind-20260709-230337
     summary: "TestRun tr-tg-s-tier-a-doc-kind-20260709-230337 \u2192 pass"
     outcome: pass
+  - at: '2026-07-09T23:05:22+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/22'
+    pr_url: https://github.com/ruinosus/dna/pull/22
+  - at: '2026-07-09T23:05:47+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
   produces:
   - kind: Plan
     name: plan-s-tier-a-doc-kind
