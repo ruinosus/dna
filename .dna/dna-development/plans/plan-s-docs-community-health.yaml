@@ -1,0 +1,14 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-docs-community-health
+spec:
+  title: 'Plano: s-docs-community-health'
+  date: '2026-07-09'
+  status: accepted
+  story_ref: s-docs-community-health
+  journey_phase: plan
+  body: "Escrever os arquivos community-health + .github; disciplina do i-003 (n\xE3\
+    o citar repo upstream por nome). Worktree dna-wt-health; PR via story pr."
+  created_at: '2026-07-09T13:54:02+00:00'
+  updated_at: '2026-07-09T13:54:02+00:00'

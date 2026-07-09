@@ -1,0 +1,35 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-docs-api-reference
+spec:
+  title: 'API reference autogerada dual-language wired no site MkDocs: mkdocstrings
+    pra Py'
+  description: "API reference autogerada dual-language wired no site MkDocs: mkdocstrings\
+    \ pra Python (::: dna.kernel... inline) + TypeDoc\u2192markdown pra TS em /reference/typescript/,\
+    \ docstrings/TSDoc como fonte \xFAnica. + reference do CLI dna gerada dos command\
+    \ defs + reference dos Kinds do JSON Schema. Depende de s-docs-diataxis-site."
+  status: todo
+  feature: f-dna-docs
+  priority: high
+  labels:
+  - docs
+  - python
+  - typescript
+  reporter: claude-code
+  business_value: 500
+  acceptance_criteria:
+  - "API-ref Py e TS geradas da fonte, naveg\xE1veis no site; CLI ref gerada; sem\
+    \ duplica\xE7\xE3o manual; build strict verde; CI 7/7"
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - PR merged
+  definition_of_done_source: cli-create
+  created_at: '2026-07-09T13:54:01+00:00'
+  updated_at: '2026-07-09T13:54:01+00:00'
+  timeline:
+  - at: '2026-07-09T13:54:01+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo

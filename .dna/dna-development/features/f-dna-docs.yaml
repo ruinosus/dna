@@ -1,0 +1,36 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Feature
+metadata:
+  name: f-dna-docs
+spec:
+  title: "Documenta\xE7\xE3o p\xFAblica completa \u2014 MkDocs Material + Di\xE1taxis\
+    \ + API-ref dual-language + parity matrix"
+  description: "Documenta\xE7\xE3o de padr\xE3o de mercado antes de abrir (decis\xE3\
+    o Barna 2026-07-09): stack MkDocs+Material+mkdocstrings(Py)+TypeDoc(TS), IA Di\xE1\
+    taxis, site no GitHub Pages, API-ref autogerada por linguagem, matriz de paridade\
+    \ Py\u2194TS gerada do conformance kit, CI de docs (lychee+build strict+doctest).\
+    \ Fundamentada nas pesquisas rsh-doc-frameworks-oss + rsh-exemplar-sdk-repos (consult\xE1\
+    veis no pr\xF3prio repo via dna research show)."
+  status: in-development
+  epic: e-dna-public-extraction
+  reporter: claude-code
+  priority: high
+  labels:
+  - docs
+  - infra
+  - meta
+  business_value: 700
+  created_at: '2026-07-09T13:53:58+00:00'
+  updated_at: '2026-07-09T13:53:59+00:00'
+  timeline:
+  - at: '2026-07-09T13:53:58+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: discovery
+  - at: '2026-07-09T13:53:59+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: discovery
+    to: in-development
