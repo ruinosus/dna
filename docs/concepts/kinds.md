@@ -52,7 +52,8 @@ flowchart LR
 
 Run `Kernel.auto()` and inspect `k._kinds` (or `kernel.describe()`) for the
 full registered catalog — tenancy, audit, evidence, federation and safety
-Kinds ship as well.
+Kinds ship as well. The commented catalog of those non-core built-ins is
+[The built-in Kinds](builtin-kinds.md).
 
 ## Kind Properties
 

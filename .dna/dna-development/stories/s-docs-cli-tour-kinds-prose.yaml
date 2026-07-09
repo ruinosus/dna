@@ -33,7 +33,7 @@ spec:
   - PR merged via dna sdlc story pr
   definition_of_done_source: cli-create
   created_at: '2026-07-09T21:07:23+00:00'
-  updated_at: '2026-07-09T22:07:05+00:00'
+  updated_at: '2026-07-09T22:29:45+00:00'
   timeline:
   - at: '2026-07-09T21:07:23+00:00'
     actor: claude-code
@@ -46,8 +46,45 @@ spec:
     source: cli
     from: todo
     to: in-progress
+  - at: '2026-07-09T22:22:15+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Setup done (worktree feat/s-docs-cli-tour-kinds-prose). Baseline guard:\
+      \ clean, 73 items, ALLOWLIST = 46 entries (6 CLI + 27 SDLC machinery + 13 composition\
+      \ Kinds; TestRun j\xE1 saiu no #20). Executei os 6 grupos CLI contra o repo\
+      \ + um playground scratch (o grupo 'dna docs' exige um scope docs com KindDefinition\
+      \ Doc \u2014 montado no playground). 2 bugs achados e arquivados no caminho:\
+      \ i-006-source-diff-push-base-layer-empty (diff/push sempre 'in sync' em adapter\
+      \ real) e i-007-scope-detect-legacy-manifest-marker (detect procura manifest.yaml\
+      \ legado). Agora: escrever guides/cli-tour.md + concepts/builtin-kinds.md e\
+      \ encolher a allowlist."
+    commit_ref: 3d4d7e1fd7cc7321a30d50c1c591deaf101a56c6
+  - at: '2026-07-09T22:29:25+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-docs-cli-tour-kinds-prose
+    summary: TestGuide tg-s-docs-cli-tour-kinds-prose (manual)
+  - at: '2026-07-09T22:29:45+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-docs-cli-tour-kinds-prose-20260709-222944
+    summary: "TestRun tr-tg-s-docs-cli-tour-kinds-prose-20260709-222944 \u2192 pass"
+    outcome: pass
   produces:
   - kind: Plan
     name: plan-s-docs-cli-tour-kinds-prose
     role: implementation
     at: '2026-07-09T22:07:05+00:00'
+  - kind: TestGuide
+    name: tg-s-docs-cli-tour-kinds-prose
+    role: test-guide
+    at: '2026-07-09T22:29:25+00:00'
+  - kind: TestRun
+    name: tr-tg-s-docs-cli-tour-kinds-prose-20260709-222944
+    role: test-run
+    at: '2026-07-09T22:29:45+00:00'

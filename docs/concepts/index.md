@@ -12,6 +12,9 @@ Start with the thesis; the rest expand its pieces.
 - **[Kinds — identity and composition](kinds.md)** — how `(apiVersion,
   kind)`, `dep_filters` and prompt templates turn cross-references into a
   single composed prompt.
+- **[The built-in Kinds — a catalog](builtin-kinds.md)** — the commented
+  catalog of the composition-plane Kinds beyond the core prompt family:
+  collaboration, safety & governance, preferences, testkit.
 - **[The microkernel and its five ports](microkernel-ports.md)** — the
   closed core that knows no Kinds, and the ports extensions plug into.
 - **[Market fidelity](market-fidelity.md)** — how "consume standards

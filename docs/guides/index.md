@@ -5,6 +5,11 @@ specific *how do I…?* Read the [Concepts](../concepts/index.md) first if you
 want the model behind them; do the [tutorial](../getting-started/first-kind.md)
 first if you have never loaded a scope.
 
+## The CLI
+
+- **[A tour of the `dna` CLI](cli-tour.md)** — every command group in five
+  minutes, one executed example each, linked to the generated reference.
+
 ## Authoring
 
 - **[How to add a Kind](add-a-kind.md)** — ship a new Kind + Extension (or a

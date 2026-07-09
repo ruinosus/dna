@@ -1,0 +1,20 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-007-scope-detect-legacy-manifest-marker
+spec:
+  description: "dna scope detect walks up looking for .dna/<scope>/manifest.yaml \u2014\
+    \ a legacy marker that predates the Genome rename. Scopes rooted by Genome.yaml\
+    \ (all current ones, incl. dna-development and examples/hello-genome) are never\
+    \ detected: the command always prints '(no DNA scope found)' and exits 1. Fix:\
+    \ detect Genome.yaml (or either marker). Found while writing docs cli-tour (s-docs-cli-tour-kinds-prose)."
+  type: bug
+  severity: low
+  status: open
+  owner: claude-code
+  timeline:
+  - at: '2026-07-09T22:21:27+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

@@ -1,0 +1,32 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-s-docs-cli-tour-kinds-prose
+spec:
+  description: 'Verifies the CLI tour + built-in Kinds catalog prose: pages build,
+    examples reproduce, and the docs-coverage allowlist shrank with the guard green.'
+  kind_of_test: manual
+  status: active
+  steps:
+  - action: Run 'python3 scripts/docs_coverage_guard.py' on the branch
+    expected: "clean \u2014 73 public items covered, ALLOWLIST has ZERO cli:* and\
+      \ ZERO composition-plane kind:* entries (27 SDLC-machinery entries remain),\
+      \ no stale NOTEs"
+  - action: Run 'python3 scripts/docs_coverage_guard.py --self-test'
+    expected: self-test OK
+  - action: Run 'mkdocs build --strict'
+    expected: "build succeeds; nav shows 'A tour of the dna CLI' under How-to guides\
+      \ and 'The built-in Kinds \u2014 a catalog' under Concepts"
+  - action: Follow docs/guides/cli-tour.md playground setup, then run each console
+      example (scope/kind/doc/docs/research/source)
+    expected: outputs match the page (research block runs from a DNA checkout)
+  - action: Open docs/concepts/builtin-kinds.md and spot-check 3 Kind entries against
+      packages/sdk-py/dna/extensions source docstrings
+    expected: prose matches the code's actual docs= text, no invented behavior
+  - action: Run 'python3 scripts/brand_guard.py'
+    expected: clean
+  verifies:
+  - Story/s-docs-cli-tour-kinds-prose
+  created_at: '2026-07-09T22:29:24+00:00'
+  updated_at: '2026-07-09T22:29:24+00:00'
+  owner: claude-code

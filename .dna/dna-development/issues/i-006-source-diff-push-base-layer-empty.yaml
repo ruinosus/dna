@@ -1,0 +1,24 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-006-source-diff-push-base-layer-empty
+spec:
+  description: "dna source diff/push always report 'in sync' on real adapters: SourceSync.digest_manifest()\
+    \ reads load_layer(scope,'tenant','__base__'), but FileSystemSource/SQLite load_layer\
+    \ treat '__base__' as a tenant overlay dir/row (tenants/__base__/scopes/<s> or\
+    \ layer_documents), never the BASE scope docs \u2014 so both sides digest to {}\
+    \ and diff/push are no-ops. Repro: any scope on FS, remove a doc in the copy,\
+    \ 'dna source diff fs://<copy> --scope <s>' \u2192 'in sync (0 diffs)'. Tests\
+    \ pass because test_digest_manifest.py fakes load_layer to return base docs regardless\
+    \ of layer_value. Fix: digest_manifest should read the base layer via load_all\
+    \ (or adapters must map __base__ to base). Found while writing docs cli-tour (s-docs-cli-tour-kinds-prose)."
+  type: bug
+  severity: high
+  status: open
+  owner: claude-code
+  timeline:
+  - at: '2026-07-09T22:21:25+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
