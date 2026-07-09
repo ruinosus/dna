@@ -27,6 +27,16 @@ spec:
   skills: [verification-before-completion]   # a real marketplace skill
 ```
 
+The whole idea in one picture:
+
+```mermaid
+flowchart LR
+    D["Kinds — YAML / Markdown<br/>(spec = authored intent)"] -->|validated on write| K["microkernel<br/>+ 5 ports"]
+    E["extensions<br/>register Kinds"] --> K
+    K -->|composed on read| P["system prompt<br/>(derived behavior)"]
+    P --> R["any runtime<br/>Python · TypeScript"]
+```
+
 📖 **Full documentation: [ruinosus.github.io/dna](https://ruinosus.github.io/dna/)**
 · [The thesis](https://ruinosus.github.io/dna/concepts/thesis/)
 · [Your first Kind](https://ruinosus.github.io/dna/getting-started/first-kind/)

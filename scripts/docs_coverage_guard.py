@@ -132,7 +132,6 @@ ALLOWLIST: dict[str, str] = {
     "kind:SafetyPolicy": _KIND_GAP,
     "kind:Setting": _KIND_GAP,
     "kind:TestGuide": _KIND_GAP,
-    "kind:TestRun": _KIND_GAP,
     "kind:Theme": _KIND_GAP,
     "kind:UserProfile": _KIND_GAP,
     "kind:UserRoleAssignment": _KIND_GAP,

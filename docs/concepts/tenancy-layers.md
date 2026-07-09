@@ -32,6 +32,24 @@ composed on top of the shared base at read time. The adapter resolves a
 the base document is never mutated. A tenant that overrides nothing sees the
 base unchanged.
 
+The merge is by `(kind, name)` — an overlay document shadows its base twin,
+everything else passes through:
+
+```mermaid
+flowchart LR
+    subgraph base ["base scope"]
+        B1["Agent greeter"]
+        B2["Skill review"]
+    end
+    subgraph overlay ["tenant overlay"]
+        O1["Agent greeter (override)"]
+    end
+    B1 --> M{"merge by<br/>(kind, name)"}
+    B2 --> M
+    O1 -->|shadows base| M
+    M --> V["tenant view<br/>greeter (overlay) + review (base)"]
+```
+
 ## Tenants — a first-class dimension
 
 Tenancy is **orthogonal to layers**, not a special case of them. DNA models

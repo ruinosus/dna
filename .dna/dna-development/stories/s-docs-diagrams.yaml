@@ -22,7 +22,7 @@ spec:
     \ (que est\xE1 adicionando) \u2014 se ela n\xE3o tiver mergeado ainda, incluir\
     \ aqui com merge cuidadoso. Diagramas simples (~10 n\xF3s), sem cores custom,\
     \ leg\xEDveis no tema claro/escuro."
-  status: in-progress
+  status: review
   feature: f-dna-docs
   priority: high
   labels:
@@ -38,7 +38,7 @@ spec:
   - PR merged via dna sdlc story pr
   definition_of_done_source: cli-create
   created_at: '2026-07-09T20:55:42+00:00'
-  updated_at: '2026-07-09T21:39:33+00:00'
+  updated_at: '2026-07-09T21:58:29+00:00'
   timeline:
   - at: '2026-07-09T20:55:42+00:00'
     actor: claude-code
@@ -51,6 +51,32 @@ spec:
     source: cli
     from: todo
     to: in-progress
+  - at: '2026-07-09T21:56:03+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/20'
+    pr_url: https://github.com/ruinosus/dna/pull/20
+  - at: '2026-07-09T21:58:28+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
+  - at: '2026-07-09T21:58:29+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "8 diagramas Mermaid entregues (PR #20, checks 10/10 verdes): assinatura\
+      \ microkernel-ports (kernel mediador + 5 ports + search plane + adapters), kinds\
+      \ (anatomia + composi\xE7\xE3o), thesis (pain\xE9is espelhados CRD\u2194Kind),\
+      \ market-fidelity (round-trip byte-id\xEAntico), tenancy-layers (base \u222A\
+      \ overlay shadow por kind,name), sdlc (loop com plan gate/test gate/dna-sdlc[bot])\
+      \ e README hero. Sintaxe validada + render verificado em browser real (light\
+      \ e slate, SVG no shadow root fechado). B\xF4nus: allowlist kind:TestRun removida\
+      \ do coverage guard (prose do sdlc agora cobre). PR aguardando revis\xE3o visual\
+      \ do Barna \u2014 n\xE3o mergeei de prop\xF3sito."
+    commit_ref: b83edc06b39b891a51e66ee5b8c24197ec619fad
   produces:
   - kind: Plan
     name: plan-s-docs-diagrams

@@ -19,6 +19,16 @@ its own directory bundle exactly as its author wrote it. DNA gives you typed
 access and composes it into prompts, but it never rewrites the file into a
 DNA schema. When DNA writes it back, it comes back byte-identical.
 
+The round-trip that guarantees it:
+
+```mermaid
+flowchart LR
+    B["native bundle<br/>SKILL.md directory"] -->|Reader| D["typed Document<br/>agentskills.io/v1 · Skill"]
+    D -->|typed access / composition| P["prompts & queries"]
+    D -->|Writer| O["bytes out"]
+    O -->|"byte-identical? (conformance kit)"| B
+```
+
 ## Enforced, not aspirational
 
 This is a test, not a promise. The [market-conformance

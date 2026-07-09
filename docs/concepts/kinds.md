@@ -25,6 +25,18 @@ spec:
   soul: brad
 ```
 
+The anatomy is always the same: the envelope gives identity, `parse()`
+gives a typed model, and the schema is enforced at the write boundary:
+
+```mermaid
+flowchart LR
+    D["document<br/>apiVersion · kind · metadata · spec"] --> ID["(apiVersion, kind)<br/>= Kind identity"]
+    D -->|"KindPort.parse()"| T["typed model"]
+    D -->|on write| V{"valid against<br/>Kind schema?"}
+    V -->|yes| S[(stored)]
+    V -->|no| R["rejected at the boundary"]
+```
+
 ## Built-in Kinds (selection)
 
 | Kind | Extension | What it represents | Storage |
@@ -155,6 +167,17 @@ build_prompt(agent="brad") renders:
 ```
 
 ### Composition Flow
+
+Each referenced Kind contributes its piece; the template stitches them:
+
+```mermaid
+flowchart LR
+    A["Agent brad<br/>instruction · soul · skills"] --> B["build_prompt(agent=brad)"]
+    SO["Soul brad"] -->|"dep_filters: spec.soul"| B
+    SK["Skills"] -->|"dep_filters: spec.skills"| B
+    G["Guardrails"] -->|"spec.guardrails"| B
+    B -->|Mustache template| P(["composed system prompt"])
+```
 
 1. `build_prompt(agent="brad")` finds the Agent (priority=10 > Soul's priority=1)
 2. Builds Mustache context: `{ agent: { instruction, name }, soul_content, ... }`

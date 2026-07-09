@@ -8,6 +8,23 @@ CLI's default source `./.dna` resolves. This is the SDLC methodology as a
 first-class, dogfooded pillar: the trail from idea to shipped commit is
 itself declarative data.
 
+The loop end to end: a Story is created, started through a **plan gate**
+(`story start` refuses to run without `--plan`/`--plan-doc`/`--plan-file`),
+built with stamped commits, and closed by `story done` — whose **test gate**
+refuses to close without a passing TestRun (escape hatch: `--allow-no-tests`,
+recorded as an exception). The `dna-sdlc[bot]` identity co-signs every commit
+born under a Story:
+
+```mermaid
+flowchart LR
+    C["story create"] --> S["story start<br/>(plan gate)"]
+    S --> B["build<br/>git commits"]
+    HOOK["prepare-commit-msg hook<br/>co-author: dna-sdlc[bot]"] -.->|"stamps Work-Item trailer"| B
+    B --> PR["story pr"]
+    PR --> D["story done<br/>(test gate: passing TestRun)"]
+    D -.->|"story show lists commits<br/>via the trailer"| B
+```
+
 ## The git side: stamped commits
 
 The loop is closed by a versioned `prepare-commit-msg` hook:
