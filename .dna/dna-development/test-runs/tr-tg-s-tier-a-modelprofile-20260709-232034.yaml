@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-tier-a-modelprofile-20260709-232034
+spec:
+  guide_ref: tg-s-tier-a-modelprofile
+  outcome: pass
+  verifies:
+  - Story/s-tier-a-modelprofile
+  executed_by: claude-code
+  executed_at: '2026-07-09T23:20:34+00:00'
+  evidence:
+  - ci:pr23-verde-pos-rebase,teste:9py+14ts-veto-3-caminhos,check:drift-guard-pegou-reference-stale-regen,check:coverage-guard-sem-allowlist-nova
