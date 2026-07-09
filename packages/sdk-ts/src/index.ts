@@ -160,6 +160,7 @@ export { SafetyPolicyExtension } from "./extensions/safety.js";
 export { RecognizerExtension } from "./extensions/recognizer.js";
 export { KindDefinitionExtension, KindDefinitionReader, KindDefinitionWriter } from "./extensions/kinddef.js";
 export { EvidenceExtension, shouldCapture } from "./extensions/evidence.js";
+export { ResearchExtension } from "./extensions/research.js";
 export { CollabExtension } from "./extensions/collab.js";
 // s-export-unwired-ts-extensions — these 9 had an *Extension class but were
 // never exported (external consumers couldn't import them) and 3 of them

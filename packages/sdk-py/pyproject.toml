@@ -63,6 +63,7 @@ federation = "dna.extensions.federation:FederationExtension"
 testkit = "dna.extensions.testkit:TestkitExtension"
 tenant = "dna.extensions.tenant:TenantExtension"
 lesson = "dna.extensions.lesson:LessonExtension"
+research = "dna.extensions.research:ResearchExtension"
 
 [build-system]
 requires = ["hatchling"]

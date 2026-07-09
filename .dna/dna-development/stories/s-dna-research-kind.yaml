@@ -5,20 +5,20 @@ metadata:
 spec:
   title: "Trazer o Research Kind (s\xEDntese curada de N References com findings evidence-rat"
   description: "Trazer o Research Kind (s\xEDntese curada de N References com findings\
-    \ evidence-rated + recommendations + citation graph) do AAP pro DNA \u2014 infraestrutura\
-    \ de conhecimento agent-facing, a resposta declarativa/curada do DNA ao problema\
-    \ OpenWiki/DeepWiki. Porta a extension research (Py 762loc + twin research.ts)\
-    \ + CLI 'dna research list/show/create', kernel-bound. Decis\xF5es ratificadas\
-    \ (Barna): (1) namespace github.com/ruinosus/dna/research/v1; (2) tenancy PERMISSIVA\
-    \ (research \xE9 conhecimento autorado do repo, n\xE3o dado per-cliente \u2014\
-    \ dna research create sem tenant obrigat\xF3rio); (3) recall sem\xE2ntico DEGRADA\
-    \ pra query lexical/estruturada (kernel.query) \u2014 servidor de embeddings n\xE3\
-    o viajou; recall via pgvector \xE9 futuro documentado. Reference companion j\xE1\
-    \ existe via extension sdlc. Engenharia: verificar ratchet F3 descriptor-vs-classe\
-    \ (prov\xE1vel classe com exce\xE7\xE3o registrada \u2014 tem l\xF3gica comput\xE1\
-    vel). Payoff imediato: capturar as 3 pesquisas de hoje (doc-frameworks, exemplar-repos,\
-    \ openwiki-analysis) como Research docs."
-  status: in-progress
+    \ evidence-rated + recommendations + citation graph) do SDK upstream pro DNA \u2014\
+    \ infraestrutura de conhecimento agent-facing, a resposta declarativa/curada do\
+    \ DNA ao problema OpenWiki/DeepWiki. Porta a extension research (Py 762loc + twin\
+    \ research.ts) + CLI 'dna research list/show/create', kernel-bound. Decis\xF5\
+    es ratificadas (Barna): (1) namespace github.com/ruinosus/dna/research/v1; (2)\
+    \ tenancy PERMISSIVA (research \xE9 conhecimento autorado do repo, n\xE3o dado\
+    \ per-cliente \u2014 dna research create sem tenant obrigat\xF3rio); (3) recall\
+    \ sem\xE2ntico DEGRADA pra query lexical/estruturada (kernel.query) \u2014 servidor\
+    \ de embeddings n\xE3o viajou; recall via pgvector \xE9 futuro documentado. Reference\
+    \ companion j\xE1 existe via extension sdlc. Engenharia: verificar ratchet F3\
+    \ descriptor-vs-classe (prov\xE1vel classe com exce\xE7\xE3o registrada \u2014\
+    \ tem l\xF3gica comput\xE1vel). Payoff imediato: capturar as 3 pesquisas de hoje\
+    \ (doc-frameworks, exemplar-repos, openwiki-analysis) como Research docs."
+  status: review
   feature: f-dna-1.0-readiness
   priority: high
   labels:
@@ -41,7 +41,7 @@ spec:
     concepts; 3 Research docs no dna-development
   definition_of_done_source: cli-create
   created_at: '2026-07-09T12:33:41+00:00'
-  updated_at: '2026-07-09T12:33:43+00:00'
+  updated_at: '2026-07-09T13:02:10+00:00'
   timeline:
   - at: '2026-07-09T12:33:41+00:00'
     actor: claude-code
@@ -54,6 +54,29 @@ spec:
     source: cli
     from: todo
     to: in-progress
+  - at: '2026-07-09T13:01:34+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/8'
+    pr_url: https://github.com/ruinosus/dna/pull/8
+  - at: '2026-07-09T13:01:56+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
+  - at: '2026-07-09T13:02:10+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Portado ResearchKind (Py+TS twin, alias gerado research-research), tenancy\
+      \ PERMISSIVA (sem scope declarado). Reference reusado do sdlc (n\xE3o duplicado).\
+      \ CLI dna research list/show/create kernel-bound; recall degrada lexical (sem\
+      \ embeddings). 3 Research reais capturadas + docs/concepts/agent-knowledge.md.\
+      \ Gates locais verdes: sdk-py 2731 pass, cli 255, sdk-ts 1211 pass+typecheck,\
+      \ brand_guard clean. PR #8."
+    commit_ref: f50e0411679299221c3a41c618bbd85866b4937c
   produces:
   - kind: Plan
     name: plan-s-dna-research-kind

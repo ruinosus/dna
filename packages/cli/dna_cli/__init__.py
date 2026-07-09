@@ -19,6 +19,7 @@ from dna_cli import (
     doc_cmd,
     docs_cmd,
     kind_cmd,
+    research_cmd,
     scope_cmd,
     sdlc_cmd,
     source_cmd,
@@ -57,6 +58,7 @@ main.add_command(doc_cmd.doc)
 main.add_command(scope_cmd.scope)
 main.add_command(docs_cmd.docs_)
 main.add_command(sdlc_cmd.sdlc)
+main.add_command(research_cmd.research)
 # Importing testkit_cmd registers `sdlc test-guide` + `sdlc test-run` on the
 # sdlc group via its decorators (TESTS as first-class SDLC).
 from dna_cli import testkit_cmd as _testkit_cmd  # noqa: E402,F401

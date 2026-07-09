@@ -8,8 +8,8 @@ spec:
   status: accepted
   story_ref: s-dna-research-kind
   journey_phase: plan
-  body: "1) Portar packages/sdk-py/dna/extensions/research/ (do AAP cockpit_aap) +\
-    \ twin research.ts com rewrite research.aap/v1\u2192NS/research/v1 + tenancy permissiva;\
+  body: "1) Portar packages/sdk-py/dna/extensions/research/ (do SDK upstream) +\
+    \ twin research.ts com rewrite do namespace upstream\u2192github.com/ruinosus/dna/research/v1 + tenancy permissiva;\
     \ 2) verificar ratchet F3 (test_kinds_descriptor_ratchet) \u2014 classe c/ exce\xE7\
     \xE3o ou descriptor; 3) CLI dna research (list/show/create) em packages/cli/dna_cli/research_cmd.py,\
     \ kernel-bound, recall degrada lexical; 4) registrar entry-points Py + bootstrap\
