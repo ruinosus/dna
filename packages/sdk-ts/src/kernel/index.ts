@@ -1838,6 +1838,18 @@ export class Kernel {
 
   // -- Model registry helpers -----------------------------------------------
 
+  /** s-realtime-model-single-default — 1:1 parity with the Python kernel:
+   *  the realtime fallback the prompt-budget guard caps against resolves
+   *  through ONE env (DNA_VOICE_REALTIME_MODEL), read at ACCESS time so a
+   *  pin set after construction still applies. */
+  readonly _DEFAULT_REALTIME_MODEL_FALLBACK = "gpt-realtime-2";
+
+  get _DEFAULT_REALTIME_MODEL(): string {
+    return (
+      process.env.DNA_VOICE_REALTIME_MODEL || this._DEFAULT_REALTIME_MODEL_FALLBACK
+    );
+  }
+
   /**
    * Resolve a ModelProfile from the `_lib` scope by `model_id` (pass 1)
    * or `aliases[]` (pass 2). Returns the matching Document or null on miss.

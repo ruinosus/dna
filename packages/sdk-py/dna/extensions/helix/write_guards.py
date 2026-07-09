@@ -7,9 +7,12 @@ into the microkernel. They are now ``pre_save`` VETO hooks registered by
 
 - platform-agent fork guard  (priority 10) — no per-tenant overlay of a
   ``_lib`` Agent (JARVIS 16384 outage, 2026-05-29).
-- prompt-budget enforcement  (priority 20) — a voice Agent whose
-  instruction exceeds the realtime model's ``instruction_token_cap`` is
-  blocked (fail-open on unknown model / missing cap / instruction_file).
+- prompt-budget enforcement  (priority 20) — an Agent whose instruction
+  exceeds its model's ``instruction_token_cap`` (read from the ModelProfile
+  registry — never hardcode token caps) is blocked when the model is
+  strict (voice persona / ``realtime: true`` profile) and warned when it
+  is a chat model (fail-open on unknown model / missing cap /
+  instruction_file).
 - Kind-Writer contract       (priority 30) — a Agent declaring
   ``writes_kind`` must satisfy the slot↔schema contract at write time.
 
@@ -60,29 +63,57 @@ def platform_agent_fork_guard(ctx: PreSaveContext) -> None:
 
 
 async def prompt_budget_guard(ctx: PreSaveContext) -> None:
-    """Block over-cap VOICE Agent writes (prompt-budget enforcement).
+    """Enforce the Agent instruction budget against the ModelProfile registry.
 
-    Forcing function for the JARVIS bug (over-cap persona silently degraded
-    the realtime session). Fires ONLY for voice Agents
-    (``spec.voice_persona`` present); chat / non-Agent writes pass
-    through untouched. Fail-open on unknown model / missing cap /
-    instruction_file-only — warn + proceed, never block on uncounted text.
+    CONTRACT — never hardcode token caps: the cap ALWAYS comes from the
+    ModelProfile registry (``kernel.model_profile(id_or_alias)`` → the
+    ``modelreg-model-profile`` Kind in ``_lib``), never from a literal in
+    code. Forcing function for a real outage: an over-cap voice persona
+    silently degraded the realtime session because the cap lived in
+    nobody's code.
+
+    Three paths (s-tier-a-modelprofile):
+
+    - **VETO** — the write targets a STRICT model (the Agent has a
+      ``voice_persona``, or the resolved profile declares
+      ``realtime: true``) and the instruction estimate exceeds the
+      profile's ``instruction_token_cap``. The raise aborts the write with
+      a didactic error.
+    - **WARN** — a chat Agent (``spec.model`` declared, non-realtime
+      profile) exceeds the cap: over-budget is tolerated (chat models
+      truncate gracefully) but logged loud.
+    - **PASS** — no model declared, no ModelProfile found, no cap on the
+      profile, or instruction within budget. Enforcement is opt-in by
+      DATA: writing a profile with a cap arms the guard.
+
+    Token estimate: conservative chars/3.5 heuristic
+    (``dna.kernel.prompt_budget``) — over-counts on purpose so the guard
+    never under-blocks. Fail-open on uncounted text (instruction_file /
+    non-string body): warn + proceed, never block on text we didn't count.
+    ``DNA_PROMPT_BUDGET_ENFORCE=0`` downgrades the veto to a warn
+    (ops kill-switch).
     """
     if ctx.kind != _KIND or not isinstance(ctx.raw, dict):
         return
     spec = ctx.raw.get("spec") or {}
-    if not isinstance(spec, dict) or spec.get("voice_persona") is None:
+    if not isinstance(spec, dict):
         return
+    vp = spec.get("voice_persona")
+    is_voice = vp is not None
+    if is_voice:
+        model_id = (
+            (vp.get("model") if isinstance(vp, dict) else None)
+            # s-realtime-model-single-default — the kernel property reads
+            # DNA_VOICE_REALTIME_MODEL at access-time so the cap and the
+            # minted voice session can't drift to different realtime models.
+            or ctx.kernel._DEFAULT_REALTIME_MODEL
+        )
+    else:
+        model_id = spec.get("model")
+        if not model_id or not isinstance(model_id, str):
+            return  # PASS — no model declared, nothing to enforce against.
     from dna.kernel.prompt_budget import (  # noqa: PLC0415
         evaluate_instruction_budget, PromptBudgetExceededError,
-    )
-    vp = spec.get("voice_persona") or {}
-    model_id = (
-        (vp.get("model") if isinstance(vp, dict) else None)
-        # s-realtime-model-single-default — the kernel property reads
-        # DNA_VOICE_REALTIME_MODEL at access-time so the cap and the minted
-        # voice session can't drift to different realtime models.
-        or ctx.kernel._DEFAULT_REALTIME_MODEL
     )
     profile = await ctx.kernel.model_profile(model_id)
     instruction = spec.get("instruction") or ""
@@ -98,27 +129,39 @@ async def prompt_budget_guard(ctx: PreSaveContext) -> None:
         )
     cap = ((profile or {}).get("spec") or {}).get("instruction_token_cap")
     if profile is None or cap is None or not instruction:
-        logger.warning(
-            "[prompt-budget] no ModelProfile/cap for model '%s' "
-            "(agent '%s'); cap not enforced", model_id, ctx.name,
-        )
+        # PASS — enforcement is opt-in: no profile / no cap / uncounted
+        # text never blocks. Voice stays LOUD (the outage class this guard
+        # exists for); a chat model without a profile is the common case
+        # and stays quiet.
+        if is_voice:
+            logger.warning(
+                "[prompt-budget] no ModelProfile/cap for model '%s' "
+                "(agent '%s'); cap not enforced", model_id, ctx.name,
+            )
         return
     verdict = evaluate_instruction_budget(instruction, cap=cap)
-    if verdict.exceeded:
-        if os.environ.get("DNA_PROMPT_BUDGET_ENFORCE") == "0":
-            logger.warning(
-                "[prompt-budget] DNA_PROMPT_BUDGET_ENFORCE=0 — "
-                "agent '%s' instruction is ~%d tokens, over the "
-                "%d-token cap of model '%s'; BLOCKED downgraded "
-                "to WARN (kill-switch active)",
-                ctx.name, verdict.estimated_tokens, cap, model_id,
-            )
-        else:
-            raise PromptBudgetExceededError(
-                model_id=model_id,
-                estimated_tokens=verdict.estimated_tokens,
-                cap=cap, agent_name=ctx.name,
-            )
+    if not verdict.exceeded:
+        return  # PASS — within budget.
+    strict = is_voice or bool((profile.get("spec") or {}).get("realtime"))
+    if strict and os.environ.get("DNA_PROMPT_BUDGET_ENFORCE") != "0":
+        raise PromptBudgetExceededError(
+            model_id=model_id,
+            estimated_tokens=verdict.estimated_tokens,
+            cap=cap, agent_name=ctx.name,
+        )
+    # WARN — chat model over budget, or strict veto downgraded by the
+    # kill-switch. Loud either way: the cap came from the ModelProfile
+    # registry, the fix is trimming the instruction (or updating the
+    # profile if the model's real cap changed — never a hardcoded number).
+    logger.warning(
+        "[prompt-budget] agent '%s' instruction is ~%d tokens, over the "
+        "%d-token instruction_token_cap of model '%s' (ModelProfile "
+        "registry)%s. Trim the instruction or move detail to "
+        "tool-discoverable docs.",
+        ctx.name, verdict.estimated_tokens, cap, model_id,
+        " — VETO downgraded to WARN (DNA_PROMPT_BUDGET_ENFORCE=0)"
+        if strict else "",
+    )
 
 
 def kind_writer_contract_guard(ctx: PreSaveContext) -> None:

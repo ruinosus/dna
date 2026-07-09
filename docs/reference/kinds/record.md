@@ -485,6 +485,34 @@ A Kaizen is a continuous-improvement observation noticed while working on someth
 | `valid_to` | string |  | World-time validity end. Set when superseded/contradicted — the memory is INVALIDATED, never hard-deleted. Default recall excludes valid_to<now. |
 | `visibility` | string |  | Recall audience (the customization axis): shared = all agents in scope recall it (cross-agent knowledge, default); private = only `owner` recalls it (an agent's raw working memory); pinned = always injected into working memory at bootstrap, bypassing recall scoring (the Letta 'memory block'); archived = retained + auditable but excluded from default recall (soft-forget). Humans audit ALL regardless of visibility (audit != recall). Phase 0 (2026-06-02). |
 
+## ModelProfile
+
+- **Alias:** `modelreg-model-profile`
+- **apiVersion:** `github.com/ruinosus/dna/modelreg/v1`
+- **Plane:** record
+
+A ModelProfile records one LLM model's hard limits and capabilities (instruction_token_cap, context_window, tools_cap, modalities, cost). It is the single source of truth the prompt-budget write guard reads — never hardcode token caps in code; read them from the ModelProfile registry via kernel.model_profile().
+
+**Spec fields**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `aliases` | array |  | Alternate ids that resolve to this profile (deployment names, dated snapshots). kernel.model_profile() matches these on pass 2. |
+| `context_window` | integer |  | Total context window in tokens. |
+| `cost_per_1m_input_usd` | number \| null |  | USD per 1M input tokens (informational). |
+| `cost_per_1m_output_usd` | number \| null |  | USD per 1M output tokens (informational). |
+| `deprecated` | boolean |  | True when the model is scheduled for removal. |
+| `deprecated_message` | string \| null |  | Human guidance shown when a deprecated model is used. |
+| `family` | string \| null |  | Model family/lineage for grouping, e.g. 'gpt-realtime'. |
+| `instruction_token_cap` | integer \| null |  | Hard cap for the system-instruction/persona in tokens. Null = no cap known (the guard fails open). THE value the prompt-budget guard enforces — never hardcode it in code. |
+| `max_output_tokens` | integer \| null |  | Max completion/output tokens per response. |
+| `modalities` | array |  | Supported modalities, e.g. [text], [text, audio], [text, image]. |
+| `model_id` | string | yes | Canonical model identifier, e.g. 'gpt-realtime-2'. The doc name SHOULD equal the model_id; kernel.model_profile() matches on this field first. |
+| `notes` | string \| null |  | Free-form operator notes. |
+| `provider` | string | yes | Who serves the model — 'openai', 'anthropic', 'azure', a proxy alias, etc. |
+| `realtime` | boolean |  | True for realtime voice models. STRICT marker: the prompt-budget guard VETOES an over-cap write against a realtime profile (voice sessions silently degrade past the cap); chat profiles only warn. |
+| `tools_cap` | integer \| null |  | Max number of tools the model accepts per session. |
+
 ## Narrative
 
 - **Alias:** `sdlc-narrative`

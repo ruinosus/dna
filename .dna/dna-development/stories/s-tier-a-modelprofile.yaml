@@ -14,7 +14,7 @@ spec:
     \ (84loc upstream) + descriptor/classe conforme ratchet + paridade TS + PROSA\
     \ (o coverage guard vai exigir: concept ou se\xE7\xE3o + men\xE7\xE3o do grupo\
     \ CLI se houver)."
-  status: in-progress
+  status: review
   feature: f-dna-1.0-readiness
   priority: high
   labels:
@@ -24,15 +24,22 @@ spec:
   reporter: claude-code
   business_value: 500
   acceptance_criteria:
-  - Kind ModelProfile registrado Py+TS; veto hook de prompt-budget no write path (voice/strict
-    veta, chat warna) testado; nunca-hardcode documentado; prosa cobrindo o Kind (guard
-    verde); CI verde
+  - text: Kind ModelProfile registrado Py+TS; veto hook de prompt-budget no write
+      path (voice/strict veta, chat warna) testado; nunca-hardcode documentado; prosa
+      cobrindo o Kind (guard verde); CI verde
+    done: true
+    done_at: '2026-07-09T23:06:07+00:00'
+    done_by: claude-code
+    evidence: 'PR #23: descriptor Kind Py+TS (byte-identical, hash-parity), guard
+      3 caminhos testado (9 py + 14 ts), never-hardcode na prosa/docstrings, coverage
+      guard verde sem allowlist nova; suites locais: sdk-py 2810 passed, sdk-ts 1265
+      pass + tsc, cli 262'
   acceptance_criteria_source: cli-create
   definition_of_done:
   - PR merged via dna sdlc story pr
   definition_of_done_source: cli-create
   created_at: '2026-07-09T22:39:23+00:00'
-  updated_at: '2026-07-09T22:39:26+00:00'
+  updated_at: '2026-07-09T23:09:00+00:00'
   timeline:
   - at: '2026-07-09T22:39:23+00:00'
     actor: claude-code
@@ -45,6 +52,76 @@ spec:
     source: cli
     from: todo
     to: in-progress
+  - at: '2026-07-09T23:02:07+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "build: shape decidido \u2014 ModelProfile como DESCRIPTOR (kinds/model-profile.kind.yaml,\
+      \ byte-id\xEAntico Py\u2194TS; ratchet F3 pro\xEDbe classe nova pra record Kind\
+      \ e todo o upstream \xE9 express\xE1vel via D2/D3: describe '{provider}/{model_id}',\
+      \ summary curado, ui govern). Alias modelreg-model-profile = exatamente a conven\xE7\
+      \xE3o <owner>-<kebab> gerada; allowlist de classe intocada. GLOBAL (registry\
+      \ base-only, sem override por tenant). Descoberta: o DNA J\xC1 tinha kernel.model_profile\
+      \ + prompt_budget.py + o guard voice-only no helix \u2014 o que faltava era\
+      \ o Kind (resolve retornava None \u2192 tudo fail-open) e os caminhos strict/warn."
+    commit_ref: 3565d3bb758a266de6e300f817b0afbae91fc09f
+  - at: '2026-07-09T23:02:22+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "build: guard estendido nos 3 caminhos \u2014 VETO (voice_persona OU\
+      \ profile realtime:true acima do instruction_token_cap; erro did\xE1tico com\
+      \ o contrato 'never hardcode caps'), WARN (chat com spec.model acima do cap;\
+      \ escreve mas loga alto), PASS (sem model/sem profile/sem cap/dentro do budget\
+      \ \u2014 enforcement opt-in por DADO). TS ganhou a m\xE1quina que faltava: src/kernel/prompt-budget.ts\
+      \ + promptBudgetGuard async no helix (priority 20, antes reservada) + Kernel._DEFAULT_REALTIME_MODEL\
+      \ (paridade). Testes: 9 py + 14 ts, todos os caminhos + registro do Kind + resolve\
+      \ id\u2192alias. Prosa: se\xE7\xE3o 'Model registry' em builtin-kinds.md + refer\xEA\
+      ncia regenerada; coverage guard verde SEM allowlist nova; brand_guard limpo;\
+      \ mkdocs --strict verde."
+    commit_ref: 3565d3bb758a266de6e300f817b0afbae91fc09f
+  - at: '2026-07-09T23:05:35+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/23'
+    pr_url: https://github.com/ruinosus/dna/pull/23
+  - at: '2026-07-09T23:06:08+00:00'
+    actor: claude-code
+    type: checklist_check
+    source: cli
+    marked_ac: 1
+    marked_dod: 0
+    evidence: 'PR #23: descriptor Kind Py+TS (byte-identical, hash-parity), guard
+      3 caminhos testado (9 py + 14 ts), never-hardcode na prosa/docstrings, coverage
+      guard verde sem allowlist nova; suites locais: sdk-py 2810 passed, sdk-ts 1265
+      pass + tsc, cli 262'
+    by: claude-code
+  - at: '2026-07-09T23:06:09+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
+  - at: '2026-07-09T23:07:23+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "review: PR #23 aberto (base main), story em review, AC checado com evid\xEA\
+      ncia. TestGuide tg-s-tier-a-modelprofile + TestRun pass registrados. CI parcial:\
+      \ brand-guard/cli/commit-emails/docs-links/gitleaks/sdk-ts verdes; aguardando\
+      \ docs-build/postgres/sdk-py. N\xC3O mergear \u2014 coordena\xE7\xE3o com a\
+      \ story irm\xE3 s-tier-a-doc-kind (conflito esperado em builtin-kinds.md, resolve\
+      \ no merge)."
+    commit_ref: 8ed4abf95da58a216818832aa5684c79347de96b
+  - at: '2026-07-09T23:09:00+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #23 com TODOS os checks verdes: sdk-py, sdk-ts, cli, postgres, brand-guard,\
+      \ commit-emails, gitleaks, docs-build (coverage guard incluso), docs-links.\
+      \ Pronto pro merge do Barna (n\xE3o mergeio \u2014 coordena\xE7\xE3o Tier A)."
+    commit_ref: 8ed4abf95da58a216818832aa5684c79347de96b
   produces:
   - kind: Plan
     name: plan-s-tier-a-modelprofile
