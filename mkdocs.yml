@@ -1,0 +1,110 @@
+site_name: DNA — Domain Notation of Anything
+site_description: >-
+  A declarative, typed notation for agentic behavior. Kubernetes CRDs, but
+  for agents, skills, souls, guardrails and policies — behavior as versioned
+  data, not code.
+site_url: https://ruinosus.github.io/dna/
+repo_url: https://github.com/ruinosus/dna
+repo_name: ruinosus/dna
+edit_uri: edit/main/docs/
+copyright: MIT-licensed. DNA — Domain Notation of Anything.
+
+theme:
+  name: material
+  icon:
+    repo: fontawesome/brands/github
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - navigation.footer
+    - toc.follow
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - search.suggest
+    - search.highlight
+  palette:
+    # Light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    # Dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+nav:
+  - Home: index.md
+  - Tutorials:
+      - getting-started/index.md
+      - Your first Kind: getting-started/first-kind.md
+      - Running the conformance kit: getting-started/conformance-kit.md
+  - Concepts:
+      - concepts/index.md
+      - The thesis — CRDs for agent behavior: concepts/thesis.md
+      - Kinds — identity & composition: concepts/kinds.md
+      - Microkernel & the five ports: concepts/microkernel-ports.md
+      - Market fidelity: concepts/market-fidelity.md
+      - Tenancy & layers: concepts/tenancy-layers.md
+      - Agent-facing knowledge: concepts/agent-knowledge.md
+  - How-to guides:
+      - guides/index.md
+      - How to add a Kind: guides/add-a-kind.md
+      - How to read document data: guides/read-document-data.md
+      - How to write a source adapter: guides/write-a-source-adapter.md
+      - How to write a Reader/Writer: guides/readers-and-writers.md
+      - Your git log is your SDLC: guides/sdlc.md
+  - Reference: reference/index.md
+
+markdown_extensions:
+  # Admonitions + collapsible blocks
+  - admonition
+  - pymdownx.details
+  # Code blocks, content tabs, side-by-side Python/TypeScript
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  # Grid cards on the landing page
+  - attr_list
+  - md_in_html
+  # Emoji + Material icons (used by the grid cards)
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  # Nice tables, footnotes, task lists, heading anchors
+  - tables
+  - footnotes
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - toc:
+      permalink: true
+
+plugins:
+  - search
+
+# Make the build gate meaningful: with `mkdocs build --strict` these
+# warnings become hard errors, so a broken internal link or anchor fails CI.
+validation:
+  nav:
+    omitted_files: warn
+    not_found: warn
+  links:
+    not_found: warn
+    anchors: warn
+    absolute_links: ignore
+    unrecognized_links: warn

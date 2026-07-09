@@ -1,10 +1,10 @@
-# Kind Authoring Guide
+# How to add a Kind
 
 Step-by-step: write a new `Kind` + `Extension` for the DNA SDK.
 
-This is the **procedural** companion to `KINDS-GUIDE.md` (which
-covers the conceptual model). Read this when you want to ship a new
-Kind in 30 minutes.
+This is the **procedural** companion to [Kinds — the identity and
+composition model](../concepts/kinds.md) (which covers the conceptual
+model). Read this when you want to ship a new Kind in 30 minutes.
 
 ## Live references
 
@@ -312,8 +312,8 @@ SpecDict still works for both attribute and key access.
 
 ## Reference reading
 
-- `docs/KINDS-GUIDE.md` — conceptual overview of Kinds
-- `docs/PORT-CONTRACT.md` — what every adapter must implement
+- [Kinds — the identity and composition model](../concepts/kinds.md) — conceptual overview of Kinds
+- [How to write a source adapter](write-a-source-adapter.md) — what every adapter must implement
 - `packages/sdk-py/dna/kernel/protocols.py` — Protocol definitions
 - `packages/sdk-py/dna/kernel/capabilities.py` — optional capability Protocols
 - `packages/sdk-py/dna/kernel/errors.py` — registration errors raised at boot

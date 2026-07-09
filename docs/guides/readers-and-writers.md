@@ -1,4 +1,4 @@
-# Readers & Writers — Bundle Format System
+# How to write a Reader/Writer
 
 Readers detect and parse bundle directories on the filesystem. Writers serialize documents back to those directories. Together they enable the SDK's human-readable, git-friendly file formats.
 
