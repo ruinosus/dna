@@ -14,7 +14,7 @@ spec:
     \ pr, trailers; (4) plugin Claude Code (marketplace.json) entregando a skill a\
     \ quem clona. Espelha o que o repo-m\xE3e interno tem (12 skills + plugin + CLAUDE.md),\
     \ adaptado e enxuto pro DNA."
-  status: review
+  status: done
   feature: f-dna-1.0-readiness
   priority: high
   labels:
@@ -47,7 +47,7 @@ spec:
       CI 6/6 acompanhado no PR'
   definition_of_done_source: cli-create
   created_at: '2026-07-08T22:18:32+00:00'
-  updated_at: '2026-07-08T22:33:13+00:00'
+  updated_at: '2026-07-09T10:19:38+00:00'
   timeline:
   - at: '2026-07-08T22:18:32+00:00'
     actor: claude-code
@@ -148,6 +148,35 @@ spec:
       \ CI parcial: brand-guard, cli e gitleaks verdes; aguardando sdk-py, postgres\
       \ e sdk-ts."
     commit_ref: d54da75ae15d988191d0ac19c9395f4355029d38
+  - at: '2026-07-09T10:19:36+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-dna-agent-ready
+    summary: TestGuide tg-s-dna-agent-ready (smoke)
+  - at: '2026-07-09T10:19:37+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-dna-agent-ready-20260709-101937
+    summary: "TestRun tr-tg-s-dna-agent-ready-20260709-101937 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-09T10:19:38+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #6 merged (6/6 CI). AGENTS.md raiz (parse\xE1vel pelo pr\xF3prio\
+      \ reader agents.md/v1 \u2014 teste prova o dogfood), CLAUDE.md fino, skill dna-sdlc-cli,\
+      \ plugin marketplace.json. PR aberto pelo pr\xF3prio dna sdlc story pr."
+  - at: '2026-07-09T10:19:38+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: 0c386c1b83b7fd195f8912397e4a16ef6b1c056c
   produces:
   - kind: Plan
     name: plan-s-dna-agent-ready
@@ -161,3 +190,8 @@ spec:
     name: tr-tg-s-dna-agent-ready-20260708-223146
     role: test-run
     at: '2026-07-08T22:31:46+00:00'
+  - kind: TestRun
+    name: tr-tg-s-dna-agent-ready-20260709-101937
+    role: test-run
+    at: '2026-07-09T10:19:37+00:00'
+  closed_at: '2026-07-09T10:19:37+00:00'

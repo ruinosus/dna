@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-dna-agent-ready-20260709-101937
+spec:
+  guide_ref: tg-s-dna-agent-ready
+  outcome: pass
+  verifies:
+  - Story/s-dna-agent-ready
+  executed_by: claude-code
+  executed_at: '2026-07-09T10:19:37+00:00'
+  evidence:
+  - ci:pr6-6-of-6-green,test:test_agents_md_root-parse-pelo-reader-agentsmd,selfapp:pr-criado-via-story-pr,check:commits-carimbados-hook,check:brand-guard-verde-arquivos-novos
