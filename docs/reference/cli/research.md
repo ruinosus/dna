@@ -54,6 +54,37 @@ dna research list [OPTIONS]
 | `--status` |  |
 | `--tenant` | Optional tenant (Research is PERMISSIVE — omit for base docs). |
 
+## `dna research recall`
+
+Semantic recall over the Research catalog (resolves i-004).
+
+Previously lexical-only (no embeddings server travelled to this repo).
+Now routes through ``kernel.search()``: when the ``search-sqlite`` extra is
+installed it uses the registered RecordSearchProvider (dense sqlite-vec +
+lexical FTS5 fused with RRF — real semantic recall); otherwise it degrades
+HONESTLY to the kernel's lexical scan. Thin wrapper over ``dna recall
+--kind Research`` so the two share one code path.
+
+```text
+dna research recall [OPTIONS] QUERY
+```
+
+**Arguments**
+
+| Argument | Required |
+| --- | --- |
+| `QUERY` | yes |
+
+**Options**
+
+| Option | Description |
+| --- | --- |
+| `--help` | Show this message and exit. |
+| `--json` | Machine-readable output. |
+| `--scope` | Scope to search. _(default: `dna-development`)_ |
+| `--tenant` | Tenant overlay (base ∪ overlay). |
+| `-k`, `--limit` | Max hits. _(default: `10`)_ |
+
 ## `dna research show`
 
 Show a Research doc + its citation graph.

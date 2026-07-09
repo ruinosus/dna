@@ -18,3 +18,6 @@ site/
 # per-workstation pointer written by `dna sdlc story start` (read by the
 # prepare-commit-msg hook) — never source-of-truth, never committed
 .dna/active-story.txt
+
+# Local hybrid-search index store (dna recall/search) — s-record-search-sqlite
+.dna-search/
