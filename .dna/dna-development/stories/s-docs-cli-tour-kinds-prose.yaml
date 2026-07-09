@@ -1,0 +1,42 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-docs-cli-tour-kinds-prose
+spec:
+  title: "PRIMEIRO ACHADO do docs-coverage guard (PR #17): o gap de prosa vai muito\
+    \ al\xE9m d"
+  description: "PRIMEIRO ACHADO do docs-coverage guard (PR #17): o gap de prosa vai\
+    \ muito al\xE9m de search/memory \u2014 9/10 grupos CLI sem prosa (doc, docs,\
+    \ kind, research, scope, source + os 3 da irm\xE3) e 14 Kinds composition-plane\
+    \ p\xFAblicos sem uma linha (Canvas, Comment, EvidencePolicy, Hook, Lesson, MCPFederation,\
+    \ Recognizer, SafetyPolicy, Setting, TestGuide, TestRun, Theme, UserProfile, UserRoleAssignment).\
+    \ Escrever: (1) guides/cli-tour.md \u2014 um tour pr\xE1tico dos grupos do CLI\
+    \ dna (1-2 par\xE1grafos + exemplo real por grupo); (2) concepts/composition-kinds.md\
+    \ (ou expandir concepts/kinds.md) \u2014 o cat\xE1logo comentado dos Kinds de\
+    \ comportamento (o que cada um faz na composi\xE7\xE3o, quando usar); (3) remover\
+    \ as entries correspondentes da allowlist do docs_coverage_guard (o guard imprime\
+    \ NOTE de stale sozinho \u2014 a remo\xE7\xE3o \xE9 o DoD natural). 28 Kinds record-plane\
+    \ do SDLC machinery ficam allowlistados de vez (long-tail interno, justificado)."
+  status: todo
+  feature: f-dna-docs
+  priority: medium
+  labels:
+  - docs
+  reporter: claude-code
+  business_value: 400
+  acceptance_criteria:
+  - "cli-tour cobre os grupos allowlistados com exemplos executados; cat\xE1logo dos\
+    \ 14 composition Kinds escrito; entries removidas da allowlist e guard verde SEM\
+    \ elas; build strict + coverage guard verdes"
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - PR merged via dna sdlc story pr
+  definition_of_done_source: cli-create
+  created_at: '2026-07-09T21:07:23+00:00'
+  updated_at: '2026-07-09T21:07:23+00:00'
+  timeline:
+  - at: '2026-07-09T21:07:23+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
