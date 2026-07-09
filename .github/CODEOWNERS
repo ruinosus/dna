@@ -1,0 +1,14 @@
+# Code owners for DNA. Requested for review automatically on matching PRs.
+# See: https://docs.github.com/en/repositories/managing-your-repositories-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner for everything not matched below.
+*                   @ruinosus
+
+# The two SDKs — parity-critical; a change to one usually needs the twin.
+/packages/sdk-py/   @ruinosus
+/packages/sdk-ts/   @ruinosus
+/packages/cli/      @ruinosus
+
+# Repo guards and versioned git hooks.
+/scripts/           @ruinosus
+/.github/           @ruinosus
