@@ -20,6 +20,12 @@ first if you have never loaded a scope.
 - **[How to write a Reader/Writer](readers-and-writers.md)** — teach DNA a
   new bundle format and keep the round-trip invariant green.
 
+## Search and memory
+
+- **[How to use semantic recall & memory](semantic-recall.md)** — install
+  the extras, search a scope with `dna recall`, drive the memory verbs, and
+  register embedding/search providers programmatically.
+
 ## Lifecycle
 
 - **[Your git log is your SDLC](sdlc.md)** — how this repo tracks its own

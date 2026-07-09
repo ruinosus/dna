@@ -209,5 +209,7 @@ both SDKs' test suites so it can never silently rot:
   thirty minutes.
 - **[How to read document data](../guides/read-document-data.md)** — the
   unified read surface across both SDKs.
+- **[How to use semantic recall & memory](../guides/semantic-recall.md)** —
+  search the scope you just loaded with `dna recall`, offline.
 - **[Running the conformance kit](conformance-kit.md)** — prove the
   byte-faithful, dual-SDK claims for yourself.

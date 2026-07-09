@@ -57,6 +57,7 @@ nav:
       - Microkernel & the five ports: concepts/microkernel-ports.md
       - Market fidelity: concepts/market-fidelity.md
       - Tenancy & layers: concepts/tenancy-layers.md
+      - Search & memory: concepts/search-and-memory.md
       - Agent-facing knowledge: concepts/agent-knowledge.md
   - How-to guides:
       - guides/index.md
@@ -64,6 +65,7 @@ nav:
       - How to read document data: guides/read-document-data.md
       - How to write a source adapter: guides/write-a-source-adapter.md
       - How to write a Reader/Writer: guides/readers-and-writers.md
+      - How to use semantic recall & memory: guides/semantic-recall.md
       - Your git log is your SDLC: guides/sdlc.md
   # Reference — GENERATED FROM SOURCE. The four API sub-references (Python via
   # mkdocstrings, TypeScript via TypeDoc, CLI + Kinds via scripts/gen_*_docs.py)
@@ -76,8 +78,15 @@ markdown_extensions:
   # Admonitions + collapsible blocks
   - admonition
   - pymdownx.details
-  # Code blocks, content tabs, side-by-side Python/TypeScript
-  - pymdownx.superfences
+  # Code blocks, content tabs, side-by-side Python/TypeScript.
+  # The mermaid custom fence renders ```mermaid blocks as diagrams on the
+  # site (Material ships the Mermaid.js integration); GitHub renders the
+  # same fences natively.
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.tabbed:
       alternate_style: true
   - pymdownx.highlight:

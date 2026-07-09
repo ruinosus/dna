@@ -19,6 +19,10 @@ Start with the thesis; the rest expand its pieces.
   marketplace bundles.
 - **[Tenancy and layers](tenancy-layers.md)** — scopes, the orthogonal
   tenant dimension, and layer overlays.
+- **[Search & memory](search-and-memory.md)** — semantic recall and agent
+  memory as two kernel ports with pluggable adapters: offline-first
+  sqlite-vec + FTS5 + RRF, pgvector for scale, and memory as the Kinds you
+  already have.
 - **[Agent-facing knowledge](agent-knowledge.md)** — why DNA represents
   knowledge as curated, cited Kinds rather than generated wiki prose.
 
