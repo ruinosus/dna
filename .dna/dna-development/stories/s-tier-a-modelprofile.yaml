@@ -14,7 +14,7 @@ spec:
     \ (84loc upstream) + descriptor/classe conforme ratchet + paridade TS + PROSA\
     \ (o coverage guard vai exigir: concept ou se\xE7\xE3o + men\xE7\xE3o do grupo\
     \ CLI se houver)."
-  status: in-progress
+  status: review
   feature: f-dna-1.0-readiness
   priority: high
   labels:
@@ -24,15 +24,22 @@ spec:
   reporter: claude-code
   business_value: 500
   acceptance_criteria:
-  - Kind ModelProfile registrado Py+TS; veto hook de prompt-budget no write path (voice/strict
-    veta, chat warna) testado; nunca-hardcode documentado; prosa cobrindo o Kind (guard
-    verde); CI verde
+  - text: Kind ModelProfile registrado Py+TS; veto hook de prompt-budget no write
+      path (voice/strict veta, chat warna) testado; nunca-hardcode documentado; prosa
+      cobrindo o Kind (guard verde); CI verde
+    done: true
+    done_at: '2026-07-09T23:06:07+00:00'
+    done_by: claude-code
+    evidence: 'PR #23: descriptor Kind Py+TS (byte-identical, hash-parity), guard
+      3 caminhos testado (9 py + 14 ts), never-hardcode na prosa/docstrings, coverage
+      guard verde sem allowlist nova; suites locais: sdk-py 2810 passed, sdk-ts 1265
+      pass + tsc, cli 262'
   acceptance_criteria_source: cli-create
   definition_of_done:
   - PR merged via dna sdlc story pr
   definition_of_done_source: cli-create
   created_at: '2026-07-09T22:39:23+00:00'
-  updated_at: '2026-07-09T23:02:22+00:00'
+  updated_at: '2026-07-09T23:06:09+00:00'
   timeline:
   - at: '2026-07-09T22:39:23+00:00'
     actor: claude-code
@@ -73,6 +80,29 @@ spec:
       ncia regenerada; coverage guard verde SEM allowlist nova; brand_guard limpo;\
       \ mkdocs --strict verde."
     commit_ref: 3565d3bb758a266de6e300f817b0afbae91fc09f
+  - at: '2026-07-09T23:05:35+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/23'
+    pr_url: https://github.com/ruinosus/dna/pull/23
+  - at: '2026-07-09T23:06:08+00:00'
+    actor: claude-code
+    type: checklist_check
+    source: cli
+    marked_ac: 1
+    marked_dod: 0
+    evidence: 'PR #23: descriptor Kind Py+TS (byte-identical, hash-parity), guard
+      3 caminhos testado (9 py + 14 ts), never-hardcode na prosa/docstrings, coverage
+      guard verde sem allowlist nova; suites locais: sdk-py 2810 passed, sdk-ts 1265
+      pass + tsc, cli 262'
+    by: claude-code
+  - at: '2026-07-09T23:06:09+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
   produces:
   - kind: Plan
     name: plan-s-tier-a-modelprofile
