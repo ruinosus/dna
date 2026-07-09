@@ -115,6 +115,31 @@ Immutable record of a role-gated HTTP endpoint invocation. Captures actor, roles
 | `target_tenant` | string \| null |  | Tenant the operation routed to (claims.tenant + overrides resolved). Null = base layer write. |
 | `user_agent` | string |  | HTTP User-Agent header. |
 
+## Automation
+
+- **Alias:** `dna-automation`
+- **apiVersion:** `github.com/ruinosus/dna/automation/v1`
+- **Plane:** record
+
+An Automation declares background work as data — ``on`` picks the trigger (cron = 5-field schedule; hook = a kernel lifecycle hook name from KNOWN_HOOK_NAMES; tool = an async dispatch tool the host exposes to the model), ``runner`` picks what executes (an Agent or a Tool by name), plus the shared agent_directive / input / result templating / spoken copy / safety block. Adding or retargeting an automation is writing one YAML, zero deploy. The SDK validates and lists (see ``dna.extensions.automation.query.automations_for``); the HOST executes — the runner contract is an extension point, documented in docs/concepts/builtin-kinds.md.
+
+**Spec fields**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `agent_directive` | string |  | Dispatch instruction sent to an agent runner (with {arg} placeholders). Optional — a tool runner needs none. |
+| `description` | string |  |  |
+| `done_message` | string |  | Spoken/UI copy attached to the finished run. Supports {placeholders} from the args. |
+| `enabled` | boolean |  | Disabled automations stay declared but hosts must not fire them (automations_for filters them out by default). |
+| `input` | object |  | Structured input the host resolves into the runner's context. Hosts may support tokens such as {scope}, {now}, {utc_date}. |
+| `labels` | array |  |  |
+| `on` | object | yes | The trigger. type=cron → scheduled (5-field cron expression, validated at write); type=hook → a kernel lifecycle hook name (KNOWN_HOOK_NAMES vocabulary, validated at write); type=tool → an async dispatch tool the host exposes to the model. |
+| `result_kind` | string |  | Kind the automation output should be persisted as (e.g. Research, Doc) when the runner produces a document. |
+| `result_spec_template` | object |  | Deterministic persist template — when an agent runner synthesizes but does not persist a doc itself, the host creates a result_kind doc from this template ({arg} fills from the args, {output} from the agent synthesis). |
+| `runner` | object | yes |  |
+| `running_message` | string |  | Spoken/UI copy returned at dispatch (tool trigger). |
+| `safety` | object |  | Loop-safety the HOST enforces for this automation. All fields optional — an absent field falls back to the host default. |
+
 ## Bug
 
 - **Alias:** `sdlc-bug`

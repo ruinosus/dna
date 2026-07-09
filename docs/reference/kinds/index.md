@@ -46,7 +46,7 @@ Declarative Kind descriptor — the format of builtin `kinds/*.kind.yaml` packag
 | `volatile_spec_fields` |  | Extra write-/runtime-stamped spec fields excluded from the canonical digest, unioned with the base set {updated_at, version, created_at}. |
 | `workitem_common` |  | DEPRECATED back-compat shorthand for schema_fragments: ["sdlc/workitem-common"]. Python-only. |
 
-## Registered Kinds (65)
+## Registered Kinds (66)
 
 ### Composition plane
 
@@ -93,6 +93,7 @@ Declarative Kind descriptor — the format of builtin `kinds/*.kind.yaml` packag
 | [AgentSession](record.md#agentsession) | `sdlc-agent-session` | `github.com/ruinosus/dna/sdlc/v1` |
 | [ArchiveProposal](record.md#archiveproposal) | `sdlc-archive-proposal` | `github.com/ruinosus/dna/sdlc/v1` |
 | [AuditLog](record.md#auditlog) | `audit-auditlog` | `github.com/ruinosus/dna/audit/v1` |
+| [Automation](record.md#automation) | `dna-automation` | `github.com/ruinosus/dna/automation/v1` |
 | [Bug](record.md#bug) | `sdlc-bug` | `github.com/ruinosus/dna/sdlc/v1` |
 | [Changelog](record.md#changelog) | `sdlc-changelog` | `github.com/ruinosus/dna/sdlc/v1` |
 | [CognitivePolicy](record.md#cognitivepolicy) | `sdlc-cognitive-policy` | `github.com/ruinosus/dna/sdlc/v1` |
