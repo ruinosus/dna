@@ -20,6 +20,13 @@ consulted, not read start-to-finish.
     This page is a reserved slot in the navigation so links to it stay
     stable once the generated reference lands.
 
+!!! success "Available now — the parity matrix"
+
+    The first generated reference page has landed:
+    **[Parity matrix — Python × TypeScript](parity-matrix.md)** — a
+    *member × language* grid generated from the byte-parity fixtures that CI
+    enforces, in the spirit of the OpenTelemetry spec-compliance matrix.
+
 ## In the meantime
 
 The current source of truth for the API is the code and its tests:
