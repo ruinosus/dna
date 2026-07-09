@@ -1,0 +1,47 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-docs-diagrams
+spec:
+  title: "Diagramas Mermaid nas p\xE1ginas EXISTENTES da doc (pedido Barna 2026-07-09\
+    \ \u2014 'sent"
+  description: "Diagramas Mermaid nas p\xE1ginas EXISTENTES da doc (pedido Barna 2026-07-09\
+    \ \u2014 'senti falta de algo VISUAL para ports, kinds etc'): (1) concepts/microkernel-ports.md\
+    \ \u2014 o diagrama-assinatura do projeto: kernel mediador no centro, 5 ports\
+    \ (Source/Cache/Resolver/Reader-Writer/Kind) + EmbeddingPort/RecordSearchProvider,\
+    \ adapters plugados, extensions registrando Kinds; (2) concepts/kinds.md \u2014\
+    \ anatomia de um Kind (apiVersion/kind/metadata/spec) + fluxo de composi\xE7\xE3\
+    o (Agent + Soul + Skills + Guardrails \u2192 prompt composto); (3) concepts/thesis.md\
+    \ \u2014 o paralelo CRD\u2194Kind lado a lado (2 colunas visuais); (4) concepts/market-fidelity.md\
+    \ \u2014 round-trip bundle nativo\u2192reader\u2192typed doc\u2192writer\u2192\
+    byte-id\xEAntico; (5) concepts/tenancy-layers.md \u2014 base \u222A overlay com\
+    \ shadow; (6) guides/sdlc.md \u2014 o ciclo story\u2192plan\u2192build(commits\
+    \ carimbados)\u2192test-gate\u2192done + a symbiosis git\u2194SDLC; (7) README\
+    \ \u2014 1 diagrama hero compacto da arquitetura (GitHub renderiza mermaid nativo).\
+    \ Config superfences/mermaid no mkdocs.yml vem da story irm\xE3 s-docs-search-memory-prose\
+    \ (que est\xE1 adicionando) \u2014 se ela n\xE3o tiver mergeado ainda, incluir\
+    \ aqui com merge cuidadoso. Diagramas simples (~10 n\xF3s), sem cores custom,\
+    \ leg\xEDveis no tema claro/escuro."
+  status: todo
+  feature: f-dna-docs
+  priority: high
+  labels:
+  - docs
+  reporter: claude-code
+  business_value: 400
+  acceptance_criteria:
+  - "7 diagramas nas p\xE1ginas listadas; mermaid renderiza no site (config superfences)\
+    \ e no GitHub; mkdocs build --strict verde; diagramas leg\xEDveis (revis\xE3o\
+    \ visual do Barna no PR)"
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - PR merged via dna sdlc story pr
+  definition_of_done_source: cli-create
+  created_at: '2026-07-09T20:55:42+00:00'
+  updated_at: '2026-07-09T20:55:42+00:00'
+  timeline:
+  - at: '2026-07-09T20:55:42+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
