@@ -25,7 +25,9 @@ from dna.kernel import Kernel
 # This set may only SHRINK — adding an alias here to silence the lint for a NEW
 # Kind is a code-review red flag (prefer additionalProperties:false on new Kinds).
 _GRANDFATHERED_OPEN_SCHEMAS = frozenset({
-    "dna-doc", "agentskills-skill",
+    # "dna-doc" left this set on s-tier-a-doc-kind: the native Doc Kind
+    # ships strict (additionalProperties: false) from day one.
+    "agentskills-skill",
     "agentsmd-agent", "asset-asset", "audit-auditlog", "audit-userroleassignment",
     "autoagent-experiment", "autoagent-program", "autolab-run",
     "blocks-html",

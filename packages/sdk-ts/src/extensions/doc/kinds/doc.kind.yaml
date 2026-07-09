@@ -1,0 +1,118 @@
+# Doc — one page of in-product documentation (record plane, authored content).
+#
+# Tier A port from the internal SDK's doc extension (s-tier-a-doc-kind). What
+# travels is the CORE: a Doc is structured content — a markdown ``body`` plus
+# sidebar metadata (icon / subtitle / summary / order / locale / enabled),
+# Diátaxis ``kind_of`` and a free-form ``category`` — exactly the corpus
+# ``dna docs list/show`` reads. The authoring shape is preserved: a bundle
+# ``docs/<name>/DOC.md`` (YAML frontmatter + markdown body), handled entirely
+# by the generic bundle machinery (``body_field: body``) — no custom
+# reader/writer, no class. ``tags`` is a DNA addition (free-form labels),
+# not an upstream field.
+#
+# Deliberately NOT ported (coupled to the upstream product's help-center
+# service, not to the Kind):
+#   - ``data_sections`` + ``live_diagrams`` (the ``<!-- DATA: … -->`` /
+#     ``<!-- LIVE: … -->`` body placeholders) — resolved by upstream service
+#     endpoints (live kernel-introspection tables + server-rendered
+#     diagrams) that have no DNA equivalent;
+#   - ``spec.assets`` (sibling sub-markdown/drawio files lifted into the
+#     spec) — a UI rendering concern; sibling files still live in the
+#     bundle directory, they are just not aggregated into the document;
+#   - the ``featured`` landing-page curation flag, the "blank Doc" template
+#     scaffold, and the widget-hint ``ui_schema`` bag — upstream product
+#     UX; hosts can derive forms from the JSON Schema below.
+#
+# PARITY-CRITICAL package data: byte-identical mirror under both runtimes'
+# doc/kinds/ (tests/test_descriptor_hash_parity.py enforces).
+#
+# tenant_scope intentionally NOT declared — permissive (base doc + optional
+# per-tenant overlay). Docs are shared per-scope content a tenant may
+# legitimately override; the máxima "inheritable ⇒ never tenanted" holds.
+apiVersion: github.com/ruinosus/dna/core/v1
+kind: KindDefinition
+metadata:
+  name: doc
+spec:
+  target_api_version: github.com/ruinosus/dna/doc/v1
+  target_kind: Doc
+  alias: dna-doc
+  origin: github.com/ruinosus/dna/doc
+  plane: record
+  prompt_target: false
+  flatten_in_context: false
+  prompt_target_priority: 0
+  storage:
+    type: bundle
+    container: docs
+    marker: DOC.md
+    body_field: body
+  spec_defaults:
+    order: 999
+    locale: pt-BR
+    enabled: true
+  schema:
+    type: object
+    required:
+    - body
+    additionalProperties: false
+    properties:
+      body:
+        type: string
+        description: Markdown body of the page — the DOC.md content below the
+          frontmatter.
+      icon:
+        type: string
+        description: Emoji or short string shown next to the title.
+      subtitle:
+        type: string
+        description: One-line subtitle shown under the title.
+      summary:
+        type: string
+        description: 1-2 sentences for the topic header card / previews.
+      order:
+        type: integer
+        description: Sort order in the sidebar (ascending).
+      locale:
+        type: string
+        description: Content locale (e.g. pt-BR, en). ``dna docs`` filters
+          on it.
+      enabled:
+        type: boolean
+        description: If false, the page is hidden from listings.
+      kind_of:
+        enum:
+        - tutorial
+        - how_to
+        - reference
+        - explanation
+        - null
+        description: Diátaxis classification (learning- / task- /
+          information- / understanding-oriented). Null = uncategorized.
+      category:
+        type:
+        - string
+        - 'null'
+        description: Free-form sidebar grouping (e.g. "Getting started").
+          Null falls back to a flat list.
+      tags:
+        type: array
+        items:
+          type: string
+        description: Free-form labels for filtering and search.
+  describe:
+    path: subtitle
+  description_fallback_field: subtitle
+  graph_style:
+    fill: '#0EA5E9'
+    stroke: '#0284C7'
+    text_color: '#fff'
+  ascii_icon: 📘
+  display_label: Docs
+  docs: A Doc is one page of in-product documentation. The marker is
+    ``docs/<name>/DOC.md`` — YAML frontmatter (icon, subtitle, summary,
+    order, locale, enabled, kind_of, category, tags) plus a markdown body
+    that lands in ``spec.body``. The page title is ``metadata.description``.
+    ``kind_of`` follows Diátaxis (tutorial/how_to/reference/explanation);
+    ``category`` groups the sidebar; ``locale`` lets one corpus serve
+    multiple languages. This is the Kind behind ``dna docs list/show``.
