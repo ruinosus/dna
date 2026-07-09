@@ -1,0 +1,26 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-s-docs-community-health
+spec:
+  description: 'Manual verification of the community-health baseline: brand guard,
+    YAML validity of issue forms, and content coverage of CONTRIBUTING/SECURITY.'
+  kind_of_test: manual
+  status: active
+  steps:
+  - action: python3 scripts/brand_guard.py --self-test
+    expected: exits 0 (7 planted tokens caught)
+  - action: python3 scripts/brand_guard.py over new files
+    expected: no brand tokens in new content/paths
+  - action: yaml.safe_load over .github/ISSUE_TEMPLATE/*.yml
+    expected: all parse as valid YAML
+  - action: inspect CONTRIBUTING.md
+    expected: covers build/test py+ts+cli, dna.testing conformance kit, Py<->TS parity
+      gate, dna sdlc flow
+  - action: inspect SECURITY.md
+    expected: Private Vulnerability Reporting + pre-1.0 supported versions + manifest-as-injection
+      threat model
+  verifies:
+  - Story/s-docs-community-health
+  created_at: '2026-07-09T14:05:18+00:00'
+  updated_at: '2026-07-09T14:05:18+00:00'

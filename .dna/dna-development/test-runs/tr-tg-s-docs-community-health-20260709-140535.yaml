@@ -1,0 +1,14 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-docs-community-health-20260709-140535
+spec:
+  guide_ref: tg-s-docs-community-health
+  outcome: pass
+  verifies:
+  - Story/s-docs-community-health
+  executed_by: claude-code
+  executed_at: '2026-07-09T14:05:35+00:00'
+  notes: brand_guard self-test + scan of 9 new files clean; issue forms valid YAML;
+    CONTRIBUTING covers build/test/conformance/parity/sdlc; SECURITY covers PVR +
+    threat model.
