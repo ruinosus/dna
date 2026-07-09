@@ -3,6 +3,8 @@
 #   brand-guard — scripts/brand_guard.py (pure stdlib): fails on internal brand
 #                 tokens outside its explicit per-file allowlist. Runs its own
 #                 planted-token self-test first, then the real scan.
+#   commit-emails — brand_guard.py --commits: author/committer identities
+#                 in the PR range (full history on push) vs the denylist.
 #   gitleaks    — gitleaks binary over the full git history. Deliberately NOT
 #                 gitleaks/gitleaks-action@v2: on pull_request the action calls
 #                 GET /pulls/N/commits with the workflow GITHUB_TOKEN and dies
@@ -24,6 +26,24 @@ jobs:
         run: python3 scripts/brand_guard.py --self-test
       - name: Scan repo
         run: python3 scripts/brand_guard.py
+
+  commit-emails:
+    # Commit METADATA guard (s-commit-email-guard): the file scan can't see
+    # author/committer identities — this validates the PR's commit range
+    # (on push to main: the ENTIRE history, cheap and keeps it clean forever).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Validate commit identities
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            RANGE="${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
+          else
+            RANGE="HEAD"
+          fi
+          python3 scripts/brand_guard.py --commits "$RANGE"
 
   gitleaks:
     runs-on: ubuntu-latest
