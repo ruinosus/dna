@@ -35,6 +35,8 @@ jobs:
         with:
           python-version: "3.13"
       - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.4"
       # mkdocstrings renders the Python API inline from the `dna` package, and
       # the CLI/Kinds/parity generators import it — so the SDK + CLI must be
       # importable in the build env (they are NOT needed for the prose pages,
@@ -56,11 +58,19 @@ jobs:
           python scripts/gen_kinds_docs.py
           ( cd packages/sdk-ts && bun run docs:api )
       # Drift guard (uv/Ruff model): the committed reference must equal a fresh
-      # regeneration. If this fails, run the generators locally and commit.
+      # regeneration. Scoped to the DETERMINISTIC Python generators (CLI, Kinds,
+      # parity matrix) — a stale commit there fails the PR. The TypeDoc output
+      # can vary slightly by toolchain across platforms, so it is regenerated
+      # fresh here for the actual build but not diff-gated (any drift is printed
+      # for visibility, never fatal).
       - name: Fail if the generated reference is stale
         run: |
-          git diff --exit-code -- docs/reference \
-            || { echo '::error::docs/reference is stale — re-run the generators and commit.'; exit 1; }
+          git diff --exit-code -- \
+            docs/reference/cli docs/reference/kinds docs/reference/parity-matrix.md \
+            || { echo '::error::CLI/Kinds/parity reference is stale — re-run the generators and commit.'; \
+                 git --no-pager diff -- docs/reference/cli docs/reference/kinds docs/reference/parity-matrix.md; \
+                 exit 1; }
+          git --no-pager diff --stat -- docs/reference/typescript || true
       - name: Build (strict)
         run: mkdocs build --strict
       - name: Upload Pages artifact

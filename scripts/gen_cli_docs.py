@@ -22,10 +22,21 @@ from __future__ import annotations
 
 import argparse
 import io
+import re
 import sys
 from pathlib import Path
 
 import click
+
+# Wrap bare `scheme://…` example URLs (file://, fs://, postgres://, …) that
+# appear in help text as inline code. Rendered nicer AND keeps the offline
+# link-checker (lychee) from resolving an *example* connection string as a
+# real local file link (would 404 on docs-links).
+_URL_RE = re.compile(r"(?<![`\w])([a-z][a-z0-9+.\-]*://[^\s`|)]+)")
+
+
+def _neutralize_urls(text: str) -> str:
+    return _URL_RE.sub(r"`\1`", text)
 
 # Groups to surface as top-level pages (the task's blessed CLI surface). Any
 # additional registered top-level command is still emitted, so the reference
@@ -37,7 +48,7 @@ _OUT_DIR = _REPO_ROOT / "docs" / "reference" / "cli"
 
 
 def _md_escape(text: str) -> str:
-    return text.replace("|", "\\|").replace("\n", " ").strip()
+    return _neutralize_urls(text.replace("|", "\\|").replace("\n", " ").strip())
 
 
 def _short_help(cmd: click.Command) -> str:
@@ -84,8 +95,18 @@ def _options_table(cmd: click.Command, out: io.StringIO) -> None:
         for o in sorted(opts, key=lambda p: p.opts[0]):
             decls = ", ".join(f"`{d}`" for d in o.opts + o.secondary_opts)
             desc = _md_escape(o.help or "")
-            if o.default is not None and o.default is not False and not o.is_flag:
-                desc = f"{desc} _(default: `{o.default}`)_".strip()
+            default = o.default
+            # Skip sentinel / object-repr defaults (e.g. Sentinel.UNSET,
+            # <object at 0x…>) — they're noise, not a user-facing value.
+            show_default = (
+                default is not None
+                and default is not False
+                and not o.is_flag
+                and "UNSET" not in repr(default)
+                and not repr(default).startswith("<")
+            )
+            if show_default:
+                desc = f"{desc} _(default: `{default}`)_".strip()
             out.write(f"| {decls} | {desc} |\n")
         out.write("\n")
 
@@ -96,7 +117,7 @@ def _render_command(cmd: click.Command, path: list[str], level: int, out: io.Str
 
     help_text = (cmd.help or "").strip()
     if help_text:
-        out.write(help_text + "\n\n")
+        out.write(_neutralize_urls(help_text) + "\n\n")
 
     out.write("```text\n")
     out.write(_usage(cmd, path) + "\n")
@@ -114,7 +135,7 @@ def _render_group_page(name: str, cmd: click.Command) -> str:
     title = _short_help(cmd) or f"`dna {name}`"
     out.write(f"# `dna {name}`\n\n")
     if cmd.help:
-        out.write(cmd.help.strip() + "\n\n")
+        out.write(_neutralize_urls(cmd.help.strip()) + "\n\n")
     out.write(
         "!!! info \"Generated from the command definitions\"\n\n"
         "    This page is introspected from the `dna` Click command tree by\n"

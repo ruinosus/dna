@@ -51,7 +51,7 @@ dna research list [OPTIONS]
 | `--json` | Machine-readable output. |
 | `--methodology` |  |
 | `--scope` | _(default: `dna-development`)_ |
-| `--status` | _(default: `Sentinel.UNSET`)_ |
+| `--status` |  |
 | `--tenant` | Optional tenant (Research is PERMISSIVE — omit for base docs). |
 
 ## `dna research show`

@@ -11,7 +11,7 @@ Source-level operations: declarative replicas, introspection.
 ## `dna source diff`
 
 s-sync-s4 — semantic diff of a scope between the CURRENT source
-(DNA_SOURCE_URL) and OTHER_URL (e.g. file://./scopes or a postgres URL).
+(DNA_SOURCE_URL) and OTHER_URL (e.g. `file://./scopes` or a postgres URL).
 
 Compares Kind-aware content digests (not raw text), so formatting,
 frontmatter re-serialization and volatile stamps never show as drift.
@@ -35,7 +35,7 @@ dna source diff [OPTIONS] OTHER_URL
 | `--authored-only` | Skip runtime-generated Kinds (EvalRun, Narrative, …) — compare only authored docs (the FS git source-of-truth class). |
 | `--help` | Show this message and exit. |
 | `--json` | Emit JSON. |
-| `--scope` | Scope to compare. _(default: `Sentinel.UNSET`)_ |
+| `--scope` | Scope to compare. |
 | `--tenant` | Tenant layer (default: base). |
 
 ## `dna source push`
@@ -64,7 +64,7 @@ dna source push [OPTIONS] TO_URL
 | `--help` | Show this message and exit. |
 | `--json` | Emit JSON. |
 | `--prune` | Delete docs that exist ONLY in the target (off by default). |
-| `--scope` | Scope to reconcile. _(default: `Sentinel.UNSET`)_ |
+| `--scope` | Scope to reconcile. |
 | `--tenant` | Tenant layer (default: base). |
 
 ## `dna source replica`
@@ -102,8 +102,8 @@ dna source replica add [OPTIONS] REPLICA_ID
 | `--config` | Path to .dna-replicas.yaml (default: walk up from cwd, then cwd). |
 | `--help` | Show this message and exit. |
 | `--kinds` | Comma-separated Kind allowlist. Omit = all kinds. |
-| `--replica` | Destination URL (fs://path or file://path). _(default: `Sentinel.UNSET`)_ |
-| `--scopes` | Comma-separated scope allowlist (e.g. dna-development). _(default: `Sentinel.UNSET`)_ |
+| `--replica` | Destination URL (`fs://path` or `file://path`). |
+| `--scopes` | Comma-separated scope allowlist (e.g. dna-development). |
 
 ### `dna source replica disable`
 

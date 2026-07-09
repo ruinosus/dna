@@ -63,12 +63,12 @@ dna sdlc adr create [OPTIONS] NAME
 | --- | --- |
 | `--body` | Markdown body (→ spec.body / ADR.md). |
 | `--consequences` | Trade-offs that follow (→ spec.consequences). |
-| `--context` | WHY we needed to decide (→ spec.context). _(default: `Sentinel.UNSET`)_ |
-| `--decision` | WHAT we decided (→ spec.decision). _(default: `Sentinel.UNSET`)_ |
+| `--context` | WHY we needed to decide (→ spec.context). |
+| `--decision` | WHAT we decided (→ spec.decision). |
 | `--help` | Show this message and exit. |
 | `--scope` | Scope holding the SDLC docs (default: dna-development). _(default: `dna-development`)_ |
 | `--status` | _(default: `proposed`)_ |
-| `--title` | Decision headline (→ spec.title). _(default: `Sentinel.UNSET`)_ |
+| `--title` | Decision headline (→ spec.title). |
 
 ### `dna sdlc adr deprecate`
 
@@ -130,7 +130,7 @@ dna sdlc adr supersede [OPTIONS] NAME
 
 | Option | Description |
 | --- | --- |
-| `--by` | ADR name that supersedes this one (→ spec.superseded_by). _(default: `Sentinel.UNSET`)_ |
+| `--by` | ADR name that supersedes this one (→ spec.superseded_by). |
 | `--help` | Show this message and exit. |
 | `--scope` | Scope holding the SDLC docs (default: dna-development). _(default: `dna-development`)_ |
 
@@ -162,7 +162,7 @@ dna sdlc backfill [OPTIONS] PATTERN
 | --- | --- |
 | `--default-status` | _(default: `accepted`)_ |
 | `--dry-run` | Preview without writing. |
-| `--from` | Directory containing markdown files to back-fill from. _(default: `Sentinel.UNSET`)_ |
+| `--from` | Directory containing markdown files to back-fill from. |
 | `--help` | Show this message and exit. |
 | `--kind` | Generate Spec or Plan docs (auto: infer from path — specs/ → Spec, plans/ → Plan). _(default: `auto`)_ |
 | `--scope` | Scope holding the SDLC docs (default: dna-development). _(default: `dna-development`)_ |
@@ -223,7 +223,7 @@ dna sdlc bug create [OPTIONS] NAME
 | Option | Description |
 | --- | --- |
 | `--body` | Markdown body (→ spec.body / BUG.md). |
-| `--desc` | One-line description (→ spec.description; derives title). _(default: `Sentinel.UNSET`)_ |
+| `--desc` | One-line description (→ spec.description; derives title). |
 | `--help` | Show this message and exit. |
 | `--labels` | Comma-separated labels. |
 | `--owner` |  |
@@ -366,15 +366,15 @@ dna sdlc changelog release [OPTIONS]
 
 | Option | Description |
 | --- | --- |
-| `--added` | Keep-a-Changelog 'added' entry (repeatable). _(default: `Sentinel.UNSET`)_ |
-| `--changed` | Keep-a-Changelog 'changed' entry (repeatable). _(default: `Sentinel.UNSET`)_ |
-| `--deprecated` | Keep-a-Changelog 'deprecated' entry (repeatable). _(default: `Sentinel.UNSET`)_ |
-| `--fixed` | Keep-a-Changelog 'fixed' entry (repeatable). _(default: `Sentinel.UNSET`)_ |
+| `--added` | Keep-a-Changelog 'added' entry (repeatable). |
+| `--changed` | Keep-a-Changelog 'changed' entry (repeatable). |
+| `--deprecated` | Keep-a-Changelog 'deprecated' entry (repeatable). |
+| `--fixed` | Keep-a-Changelog 'fixed' entry (repeatable). |
 | `--help` | Show this message and exit. |
-| `--removed` | Keep-a-Changelog 'removed' entry (repeatable). _(default: `Sentinel.UNSET`)_ |
+| `--removed` | Keep-a-Changelog 'removed' entry (repeatable). |
 | `--scope` | Scope holding the SDLC docs (default: dna-development). _(default: `dna-development`)_ |
-| `--security` | Keep-a-Changelog 'security' entry (repeatable). _(default: `Sentinel.UNSET`)_ |
-| `--version` | SemVer for this release (e.g. 1.4.0). _(default: `Sentinel.UNSET`)_ |
+| `--security` | Keep-a-Changelog 'security' entry (repeatable). |
+| `--version` | SemVer for this release (e.g. 1.4.0). |
 
 ### `dna sdlc changelog show`
 
@@ -403,14 +403,14 @@ dna sdlc changelog unreleased [OPTIONS]
 
 | Option | Description |
 | --- | --- |
-| `--added` | Keep-a-Changelog 'added' entry (repeatable). _(default: `Sentinel.UNSET`)_ |
-| `--changed` | Keep-a-Changelog 'changed' entry (repeatable). _(default: `Sentinel.UNSET`)_ |
-| `--deprecated` | Keep-a-Changelog 'deprecated' entry (repeatable). _(default: `Sentinel.UNSET`)_ |
-| `--fixed` | Keep-a-Changelog 'fixed' entry (repeatable). _(default: `Sentinel.UNSET`)_ |
+| `--added` | Keep-a-Changelog 'added' entry (repeatable). |
+| `--changed` | Keep-a-Changelog 'changed' entry (repeatable). |
+| `--deprecated` | Keep-a-Changelog 'deprecated' entry (repeatable). |
+| `--fixed` | Keep-a-Changelog 'fixed' entry (repeatable). |
 | `--help` | Show this message and exit. |
-| `--removed` | Keep-a-Changelog 'removed' entry (repeatable). _(default: `Sentinel.UNSET`)_ |
+| `--removed` | Keep-a-Changelog 'removed' entry (repeatable). |
 | `--scope` | Scope holding the SDLC docs (default: dna-development). _(default: `dna-development`)_ |
-| `--security` | Keep-a-Changelog 'security' entry (repeatable). _(default: `Sentinel.UNSET`)_ |
+| `--security` | Keep-a-Changelog 'security' entry (repeatable). |
 
 ## `dna sdlc cite`
 
@@ -431,7 +431,7 @@ dna sdlc cite [OPTIONS] REF_NAME
 
 | Option | Description |
 | --- | --- |
-| `--from` | Kind/name of the doc that cites this reference (e.g. Spec/2026-05-12-foo). _(default: `Sentinel.UNSET`)_ |
+| `--from` | Kind/name of the doc that cites this reference (e.g. Spec/2026-05-12-foo). |
 | `--help` | Show this message and exit. |
 | `--scope` | Scope holding the SDLC docs (default: dna-development). _(default: `dna-development`)_ |
 
@@ -485,14 +485,14 @@ dna sdlc demand [OPTIONS] TITLE
 
 | Option | Description |
 | --- | --- |
-| `--accept` | Acceptance criterion (repeatable). One bullet per --accept. _(default: `Sentinel.UNSET`)_ |
+| `--accept` | Acceptance criterion (repeatable). One bullet per --accept. |
 | `--artifact` | Optional path/URL to a methodology artifact (e.g. spec/plan). |
 | `--as` | User-story 'As a <role>' slot. |
 | `--consult` | Consult the Tático oracle before creating the Story. Surfaces divergence between user intent and pattern the system observes — doesn't block. |
 | `--desc` | Multi-line description. Defaults to TITLE if omitted. |
-| `--dod` | Definition-of-Done check (repeatable). One bullet per --dod. _(default: `Sentinel.UNSET`)_ |
+| `--dod` | Definition-of-Done check (repeatable). One bullet per --dod. |
 | `--epic` | Auto-create the Feature under this Epic if missing (else fails loud). |
-| `--feature` | Parent Feature name (must exist in scope). _(default: `Sentinel.UNSET`)_ |
+| `--feature` | Parent Feature name (must exist in scope). |
 | `--help` | Show this message and exit. |
 | `--json` | Emit machine-readable JSON with the created IDs. |
 | `--methodology` | Method the agent will follow. _(default: `superpowers`)_ |
@@ -641,7 +641,7 @@ dna sdlc feature cancel [OPTIONS] NAME
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
-| `--reason` | Why is the Feature cancelled? _(default: `Sentinel.UNSET`)_ |
+| `--reason` | Why is the Feature cancelled? |
 | `--scope` | Scope holding the SDLC docs (default: dna-development). _(default: `dna-development`)_ |
 
 ### `dna sdlc feature create`
@@ -677,7 +677,7 @@ dna sdlc feature create [OPTIONS] NAME
 | Option | Description |
 | --- | --- |
 | `--business-value` | WSJF-style scalar (0-1000) — drives roadmap sort. |
-| `--desc` | Multi-line description of the Feature's scope. _(default: `Sentinel.UNSET`)_ |
+| `--desc` | Multi-line description of the Feature's scope. |
 | `--epic` | Optional parent Epic name (for hierarchy). |
 | `--help` | Show this message and exit. |
 | `--labels` | Comma-separated labels. |
@@ -688,7 +688,7 @@ dna sdlc feature create [OPTIONS] NAME
 | `--status` | _(default: `discovery`)_ |
 | `--target-milestone` | Milestone name this Feature is scheduled into. |
 | `--target-package` | Owner/name of the Genome this Feature targets (for the per-Genome roadmap widget). |
-| `--title` | Short title shown on roadmap cards. _(default: `Sentinel.UNSET`)_ |
+| `--title` | Short title shown on roadmap cards. |
 
 ### `dna sdlc feature narrate-all`
 
@@ -734,7 +734,7 @@ dna sdlc feature narrative [OPTIONS] NAME
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
-| `--line` | One-sentence prose summary of what this Feature has been DOING. _(default: `Sentinel.UNSET`)_ |
+| `--line` | One-sentence prose summary of what this Feature has been DOING. |
 | `--scope` | Scope holding the SDLC docs (default: dna-development). _(default: `dna-development`)_ |
 
 ### `dna sdlc feature reopen`
@@ -936,7 +936,7 @@ dna sdlc initiative cancel [OPTIONS] NAME
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
-| `--reason` | Short cancel reason (mandatory). _(default: `Sentinel.UNSET`)_ |
+| `--reason` | Short cancel reason (mandatory). |
 | `--scope` | Scope holding the SDLC docs (default: dna-development). _(default: `dna-development`)_ |
 
 ### `dna sdlc initiative create`
@@ -969,8 +969,8 @@ dna sdlc initiative create [OPTIONS] NAME
 | Option | Description |
 | --- | --- |
 | `--business-value` | WSJF-style scalar 0-1000 — drives roadmap sort. |
-| `--desc` | Multi-paragraph description of the Initiative goal. _(default: `Sentinel.UNSET`)_ |
-| `--epic` | Epic name this Initiative groups. Repeatable. _(default: `Sentinel.UNSET`)_ |
+| `--desc` | Multi-paragraph description of the Initiative goal. |
+| `--epic` | Epic name this Initiative groups. Repeatable. |
 | `--help` | Show this message and exit. |
 | `--horizon-end` | End of horizon, ISO date. |
 | `--horizon-start` | Start of horizon, ISO date (e.g. 2026-Q3 start). |
@@ -983,7 +983,7 @@ dna sdlc initiative create [OPTIONS] NAME
 | `--status` | _(default: `proposed`)_ |
 | `--target-value` | e.g. '+30% MAU' or '<200ms p95'. |
 | `--theme-ref` | Optional Theme/OKR Objective slug (upstream OKR). |
-| `--title` | Headline shown on roadmap / cards. _(default: `Sentinel.UNSET`)_ |
+| `--title` | Headline shown on roadmap / cards. |
 
 ### `dna sdlc initiative ship`
 
@@ -1043,7 +1043,7 @@ dna sdlc issue comment [OPTIONS] NAME
 
 | Option | Description |
 | --- | --- |
-| `--body` | The comment / finding / decision text. _(default: `Sentinel.UNSET`)_ |
+| `--body` | The comment / finding / decision text. |
 | `--help` | Show this message and exit. |
 | `--scope` | Scope holding the SDLC docs (default: dna-development). _(default: `dna-development`)_ |
 | `--type` | Defaults to 'comment'; decision-shaped bodies auto-promote. |
@@ -1060,14 +1060,14 @@ dna sdlc issue file [OPTIONS]
 
 | Option | Description |
 | --- | --- |
-| `--desc` | _(default: `Sentinel.UNSET`)_ |
+| `--desc` |  |
 | `--help` | Show this message and exit. |
 | `--owner` |  |
 | `--related-feature` | Feature name (optional). |
 | `--related-finding` | Finding name (optional, eval-derived). |
 | `--scope` | Scope holding the SDLC docs (default: dna-development). _(default: `dna-development`)_ |
 | `--severity` | _(default: `medium`)_ |
-| `--slug` | Short kebab-case slug, e.g. 'date-postgres-bug'. _(default: `Sentinel.UNSET`)_ |
+| `--slug` | Short kebab-case slug, e.g. 'date-postgres-bug'. |
 | `--type` | _(default: `bug`)_ |
 
 ### `dna sdlc issue resolve`
@@ -1228,9 +1228,9 @@ dna sdlc journey enter [OPTIONS] {discover|specify|plan|build|reflect}
 | `--force` | Override methodology gates. Requires --reason for honest justification. |
 | `--help` | Show this message and exit. |
 | `--methodology` | _(default: `ad-hoc`)_ |
-| `--parent` | Anchor doc (Feature/f-X or Epic/e-X) grouping siblings. _(default: `Sentinel.UNSET`)_ |
+| `--parent` | Anchor doc (Feature/f-X or Epic/e-X) grouping siblings. |
 | `--reason` | Reason for --force override. Stored in entry.spec.force_reason for audit. |
-| `--ref` | Doc representing this phase (Kind/name, e.g. Plan/foo). _(default: `Sentinel.UNSET`)_ |
+| `--ref` | Doc representing this phase (Kind/name, e.g. Plan/foo). |
 | `--scope` | Scope holding the SDLC docs (default: dna-development). _(default: `dna-development`)_ |
 | `--skip-from` | Previous phase you skipped to land here (honest about cut corners, e.g. --skip-from discover). |
 | `--summary` | 1-2 sentence note about what's happening here. |
@@ -1255,7 +1255,7 @@ dna sdlc journey list [OPTIONS]
 | --- | --- |
 | `--help` | Show this message and exit. |
 | `--json` |  |
-| `--parent` | Anchor doc to show the trajectory of. _(default: `Sentinel.UNSET`)_ |
+| `--parent` | Anchor doc to show the trajectory of. |
 | `--scope` | Scope holding the SDLC docs (default: dna-development). _(default: `dna-development`)_ |
 
 ### `dna sdlc journey transition`
@@ -1287,7 +1287,7 @@ dna sdlc journey transition [OPTIONS] {discover|specify|plan|build|reflect}
 | `--inline` | Inline plan text (1-3 lines describing the sequence). Stored in entry.inline_plan — cheap alternative to writing a full Plan doc. Use for small demands. |
 | `--keep-ref` | Reuse the previous entry's ref for the next entry. |
 | `--methodology` | _(default: `ad-hoc`)_ |
-| `--parent` | Anchor doc grouping siblings (must match the open entry). _(default: `Sentinel.UNSET`)_ |
+| `--parent` | Anchor doc grouping siblings (must match the open entry). |
 | `--reason` | Reason for --force override. Stored in entry.spec.force_reason for audit. |
 | `--ref` | Doc representing the NEXT phase. Defaults to previous entry's ref if --keep-ref. |
 | `--scope` | Scope holding the SDLC docs (default: dna-development). _(default: `dna-development`)_ |
@@ -1343,10 +1343,10 @@ dna sdlc kaizen flag [OPTIONS] WORK_ITEM
 
 | Option | Description |
 | --- | --- |
-| `--body` | The kaizen observation (lands on the timeline event). _(default: `Sentinel.UNSET`)_ |
+| `--body` | The kaizen observation (lands on the timeline event). |
 | `--help` | Show this message and exit. |
 | `--issue` | Optional Issue/Story slug that captured the improvement (e.g. i-042). Linked on the event so it's traceable. |
-| `--label` | Free-form theme tag (repeatable). Lands on the Kaizen doc and is weighted into semantic-search source text. _(default: `Sentinel.UNSET`)_ |
+| `--label` | Free-form theme tag (repeatable). Lands on the Kaizen doc and is weighted into semantic-search source text. |
 | `--scope` | Scope holding the SDLC docs (default: dna-development). _(default: `dna-development`)_ |
 
 ### `dna sdlc kaizen resolve`
@@ -1394,7 +1394,7 @@ dna sdlc kaizen route [OPTIONS] NAME
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
-| `--issue` | Issue/Story slug que rastreia o fix (e.g. i-042). _(default: `Sentinel.UNSET`)_ |
+| `--issue` | Issue/Story slug que rastreia o fix (e.g. i-042). |
 | `--scope` | Scope holding the SDLC docs (default: dna-development). _(default: `dna-development`)_ |
 
 ## `dna sdlc list`
@@ -1466,7 +1466,7 @@ dna sdlc narrative add-decision [OPTIONS] NAME
 
 | Option | Description |
 | --- | --- |
-| `--decision` | 1-sentence summary of WHAT was decided. _(default: `Sentinel.UNSET`)_ |
+| `--decision` | 1-sentence summary of WHAT was decided. |
 | `--help` | Show this message and exit. |
 | `--reason` | WHY — the tradeoff or driving constraint. |
 | `--scope` | Scope holding the SDLC docs (default: dna-development). _(default: `dna-development`)_ |
@@ -1499,7 +1499,7 @@ dna sdlc narrative add-open-item [OPTIONS] NAME
 | `--help` | Show this message and exit. |
 | `--owner` | Who's on this (actor name). |
 | `--scope` | Scope holding the SDLC docs (default: dna-development). _(default: `dna-development`)_ |
-| `--title` | Short description of the open work item. _(default: `Sentinel.UNSET`)_ |
+| `--title` | Short description of the open work item. |
 
 ### `dna sdlc narrative add-paragraph`
 
@@ -1526,7 +1526,7 @@ dna sdlc narrative add-paragraph [OPTIONS] NAME
 | --- | --- |
 | `--help` | Show this message and exit. |
 | `--scope` | Scope holding the SDLC docs (default: dna-development). _(default: `dna-development`)_ |
-| `--text` | Past-tense paragraph of what shipped (no bullets). _(default: `Sentinel.UNSET`)_ |
+| `--text` | Past-tense paragraph of what shipped (no bullets). |
 
 ### `dna sdlc narrative new`
 
@@ -1652,7 +1652,7 @@ dna sdlc plan create [OPTIONS] NAME
 | `--spec` | Parent Spec (spec_ref). |
 | `--status` | _(default: `accepted`)_ |
 | `--story` | Story this plan attacks (slug or Story/<slug>) — lights up its `plan` phase. |
-| `--title` | Human title (→ spec.title). _(default: `Sentinel.UNSET`)_ |
+| `--title` | Human title (→ spec.title). |
 
 ### `dna sdlc plan deprecate`
 
@@ -1714,7 +1714,7 @@ dna sdlc plan supersede [OPTIONS] NAME
 
 | Option | Description |
 | --- | --- |
-| `--by` | Plan name that supersedes this one (→ spec.superseded_by). _(default: `Sentinel.UNSET`)_ |
+| `--by` | Plan name that supersedes this one (→ spec.superseded_by). |
 | `--help` | Show this message and exit. |
 | `--scope` | Scope holding the SDLC docs (default: dna-development). _(default: `dna-development`)_ |
 
@@ -1857,13 +1857,13 @@ dna sdlc reference create [OPTIONS] NAME
 | --- | --- |
 | `--content-path` | Path to rich-content sidecar markdown. |
 | `--help` | Show this message and exit. |
-| `--kind-of` | _(default: `Sentinel.UNSET`)_ |
-| `--quote` | Verbatim key quote (max ~500 chars). Repeat for multiple. _(default: `Sentinel.UNSET`)_ |
+| `--kind-of` |  |
+| `--quote` | Verbatim key quote (max ~500 chars). Repeat for multiple. |
 | `--relevance` | Why this matters for THIS project. |
 | `--scope` | Scope holding the SDLC docs (default: dna-development). _(default: `dna-development`)_ |
-| `--summary` | 1-2 sentence summary of what this source says. _(default: `Sentinel.UNSET`)_ |
-| `--tag` | _(default: `Sentinel.UNSET`)_ |
-| `--title` | _(default: `Sentinel.UNSET`)_ |
+| `--summary` | 1-2 sentence summary of what this source says. |
+| `--tag` |  |
+| `--title` |  |
 | `--url` |  |
 
 ### `dna sdlc reference list`
@@ -1958,7 +1958,7 @@ dna sdlc spec create [OPTIONS] NAME
 | `--help` | Show this message and exit. |
 | `--scope` | Scope holding the SDLC docs (default: dna-development). _(default: `dna-development`)_ |
 | `--status` | _(default: `draft`)_ |
-| `--title` | Title (→ spec.title). _(default: `Sentinel.UNSET`)_ |
+| `--title` | Title (→ spec.title). |
 
 ### `dna sdlc spec deprecate`
 
@@ -2014,7 +2014,7 @@ dna sdlc spec supersede [OPTIONS] NAME
 
 | Option | Description |
 | --- | --- |
-| `--by` | Spec name that supersedes this one (→ spec.superseded_by). _(default: `Sentinel.UNSET`)_ |
+| `--by` | Spec name that supersedes this one (→ spec.superseded_by). |
 | `--help` | Show this message and exit. |
 | `--scope` | Scope holding the SDLC docs (default: dna-development). _(default: `dna-development`)_ |
 
@@ -2099,7 +2099,7 @@ dna sdlc spike comment [OPTIONS] NAME
 
 | Option | Description |
 | --- | --- |
-| `--body` | The comment / finding / decision text. _(default: `Sentinel.UNSET`)_ |
+| `--body` | The comment / finding / decision text. |
 | `--help` | Show this message and exit. |
 | `--scope` | Scope holding the SDLC docs (default: dna-development). _(default: `dna-development`)_ |
 | `--type` | Defaults to 'comment'; decision-shaped bodies auto-promote. |
@@ -2128,7 +2128,7 @@ dna sdlc spike create [OPTIONS] NAME
 | `--help` | Show this message and exit. |
 | `--labels` | Comma-separated labels. |
 | `--owner` |  |
-| `--question` | The ONE question this spike answers (→ spec.question_to_answer). _(default: `Sentinel.UNSET`)_ |
+| `--question` | The ONE question this spike answers (→ spec.question_to_answer). |
 | `--references` | Comma-separated Reference names (→ spec.references). |
 | `--research-refs` | Comma-separated Research names (→ spec.research_refs). |
 | `--scope` | Scope holding the SDLC docs (default: dna-development). _(default: `dna-development`)_ |
@@ -2221,7 +2221,7 @@ dna sdlc story block [OPTIONS] NAME
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
-| `--reason` | Why is it blocked? _(default: `Sentinel.UNSET`)_ |
+| `--reason` | Why is it blocked? |
 | `--scope` | Scope holding the SDLC docs (default: dna-development). _(default: `dna-development`)_ |
 
 ### `dna sdlc story cancel`
@@ -2245,7 +2245,7 @@ dna sdlc story cancel [OPTIONS] NAME
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
-| `--reason` | Why is the Story cancelled? _(default: `Sentinel.UNSET`)_ |
+| `--reason` | Why is the Story cancelled? |
 | `--scope` | Scope holding the SDLC docs (default: dna-development). _(default: `dna-development`)_ |
 
 ### `dna sdlc story check`
@@ -2272,11 +2272,11 @@ dna sdlc story check [OPTIONS] NAME
 
 | Option | Description |
 | --- | --- |
-| `--ac` | Acceptance-criterion to mark done: 1-based index or text substring (repeatable). _(default: `Sentinel.UNSET`)_ |
+| `--ac` | Acceptance-criterion to mark done: 1-based index or text substring (repeatable). |
 | `--all` | Mark ALL acceptance_criteria + definition_of_done items done. |
 | `--by` | Actor crediting the check (default: DNA_AGENT_OWNER or claude-code). |
-| `--dod` | Definition-of-done item to mark done: 1-based index or text substring (repeatable). _(default: `Sentinel.UNSET`)_ |
-| `--evidence` | Evidence the item is satisfied (PR #, commit sha, link, or prose). Stored per-item. _(default: `Sentinel.UNSET`)_ |
+| `--dod` | Definition-of-done item to mark done: 1-based index or text substring (repeatable). |
+| `--evidence` | Evidence the item is satisfied (PR #, commit sha, link, or prose). Stored per-item. |
 | `--help` | Show this message and exit. |
 | `--scope` | Scope holding the SDLC docs (default: dna-development). _(default: `dna-development`)_ |
 
@@ -2304,7 +2304,7 @@ dna sdlc story comment [OPTIONS] NAME
 
 | Option | Description |
 | --- | --- |
-| `--body` | Comment text (lands on the timeline event). _(default: `Sentinel.UNSET`)_ |
+| `--body` | Comment text (lands on the timeline event). |
 | `--commit-ref` | Optional Git SHA to associate. Auto-detected from HEAD when omitted. |
 | `--help` | Show this message and exit. |
 | `--scope` | Scope holding the SDLC docs (default: dna-development). _(default: `dna-development`)_ |
@@ -2364,15 +2364,15 @@ dna sdlc story create [OPTIONS] NAME
 
 | Option | Description |
 | --- | --- |
-| `--ac` | Acceptance criterion (repeatable). Each --ac adds one bullet to spec.acceptance_criteria. Use Given/When/Then prose. _(default: `Sentinel.UNSET`)_ |
+| `--ac` | Acceptance criterion (repeatable). Each --ac adds one bullet to spec.acceptance_criteria. Use Given/When/Then prose. |
 | `--ac-source` | Provenance tag for acceptance_criteria (e.g. claude-code, llm-analyst-backfill, human). |
 | `--allow-no-ac-dod` | Skip the AC + DoD guard. Use ONLY for back-compat backfills or exceptional grooming. Stories filed without acceptance_criteria + definition_of_done are blocked by default because they ship without exit criteria — see chat 2026-05-14 + memory feedback_story_ac_dod_required. |
 | `--business-value` | WSJF-style scalar (0-1000). |
-| `--desc` | One-line description. _(default: `Sentinel.UNSET`)_ |
-| `--dod` | Definition of Done item (repeatable). Each --dod adds one bullet to spec.definition_of_done. Cover Code/Tests/Docs/CI/UX. _(default: `Sentinel.UNSET`)_ |
+| `--desc` | One-line description. |
+| `--dod` | Definition of Done item (repeatable). Each --dod adds one bullet to spec.definition_of_done. Cover Code/Tests/Docs/CI/UX. |
 | `--dod-source` | Provenance tag for definition_of_done. |
 | `--estimate` |  |
-| `--feature` | Parent Feature name. _(default: `Sentinel.UNSET`)_ |
+| `--feature` | Parent Feature name. |
 | `--help` | Show this message and exit. |
 | `--labels` | Comma-separated labels. |
 | `--owner` |  |
@@ -2432,10 +2432,10 @@ dna sdlc story groom [OPTIONS] NAME
 
 | Option | Description |
 | --- | --- |
-| `--ac` | Acceptance criterion (repeatable). REPLACES existing list. _(default: `Sentinel.UNSET`)_ |
+| `--ac` | Acceptance criterion (repeatable). REPLACES existing list. |
 | `--ac-source` |  |
 | `--business-value` |  |
-| `--dod` | DoD item (repeatable). REPLACES existing list. _(default: `Sentinel.UNSET`)_ |
+| `--dod` | DoD item (repeatable). REPLACES existing list. |
 | `--dod-source` |  |
 | `--help` | Show this message and exit. |
 | `--labels` | Comma-separated. Replaces existing. |
@@ -2633,7 +2633,7 @@ dna sdlc task block [OPTIONS] NAME
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
-| `--reason` | Why is it blocked? (→ spec.blocked_reason). _(default: `Sentinel.UNSET`)_ |
+| `--reason` | Why is it blocked? (→ spec.blocked_reason). |
 | `--scope` | Scope holding the SDLC docs (default: dna-development). _(default: `dna-development`)_ |
 
 ### `dna sdlc task cancel`
@@ -2676,7 +2676,7 @@ dna sdlc task create [OPTIONS] NAME
 | Option | Description |
 | --- | --- |
 | `--body` | Markdown body (→ spec.body / TASK.md). |
-| `--desc` | One-line description (→ spec.description; derives title). _(default: `Sentinel.UNSET`)_ |
+| `--desc` | One-line description (→ spec.description; derives title). |
 | `--estimate` | Estimated hours (→ spec.estimate_hours). |
 | `--feature` | Parent Feature name. |
 | `--help` | Show this message and exit. |
@@ -2768,8 +2768,8 @@ dna sdlc test-guide create [OPTIONS] NAME
 | `--owner` | Actor who owns this guide. |
 | `--product` | Scaffold a UI-first PRODUCT smoke: forces kind_of_test=smoke and (with --from-ac) generates leigo-proof steps with a 'where' route + observable 'expected'. The tester marks ✗ ONLY if the product is broken — never author a step that forces a failure. |
 | `--scope` | Scope holding the SDLC docs (default: dna-development). _(default: `dna-development`)_ |
-| `--step` | A step as 'action :: expected' (repeatable). _(default: `Sentinel.UNSET`)_ |
-| `--verifies` | Work item this guide verifies, e.g. 'Story/s-x' (repeatable). _(default: `Sentinel.UNSET`)_ |
+| `--step` | A step as 'action :: expected' (repeatable). |
+| `--verifies` | Work item this guide verifies, e.g. 'Story/s-x' (repeatable). |
 
 ## `dna sdlc test-run`
 
@@ -2806,13 +2806,13 @@ dna sdlc test-run record [OPTIONS] GUIDE
 | Option | Description |
 | --- | --- |
 | `--by` | Actor who ran it (default: CLI actor). |
-| `--evidence` | Ref/link backing the outcome, e.g. 'HtmlArtifact/ha-x' (repeatable). _(default: `Sentinel.UNSET`)_ |
+| `--evidence` | Ref/link backing the outcome, e.g. 'HtmlArtifact/ha-x' (repeatable). |
 | `--help` | Show this message and exit. |
 | `--name` | Run doc name (default: tr-<guide>-<timestamp>). |
 | `--note` | Free-text notes on the run. |
-| `--outcome` | _(default: `Sentinel.UNSET`)_ |
+| `--outcome` |  |
 | `--scope` | Scope holding the SDLC docs (default: dna-development). _(default: `dna-development`)_ |
-| `--screenshot` | Print de evidência (imagem). Repetível. Uploadado como Asset. _(default: `Sentinel.UNSET`)_ |
+| `--screenshot` | Print de evidência (imagem). Repetível. Uploadado como Asset. |
 
 ## `dna sdlc uncite`
 
@@ -2832,7 +2832,7 @@ dna sdlc uncite [OPTIONS] REF_NAME
 
 | Option | Description |
 | --- | --- |
-| `--from` | _(default: `Sentinel.UNSET`)_ |
+| `--from` |  |
 | `--help` | Show this message and exit. |
 | `--scope` | Scope holding the SDLC docs (default: dna-development). _(default: `dna-development`)_ |
 
