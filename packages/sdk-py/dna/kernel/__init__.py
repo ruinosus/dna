@@ -2323,7 +2323,7 @@ class Kernel:
 
     async def model_profile(self, model_id_or_alias: str) -> dict | None:
         """Resolve a ModelProfile from the _lib registry by model_id, then by
-        aliases[]. Returns the RAW DICT row (callers read profile["spec"][...])
+        aliases[]. Returns the RAW DICT row (callers read ``profile["spec"][...]``)
         or None. _lib-direct + fail-soft. Thin facade over the RegistryAccessor
         collaborator (s-kernel-decomp-f5-satellites)."""
         return await self._registry.model_profile(model_id_or_alias)

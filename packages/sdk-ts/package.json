@@ -1,7 +1,7 @@
 {
   "name": "@dna/sdk",
   "version": "0.1.0",
-  "description": "DNA \u2014 Domain Notation of Anything (TypeScript SDK)",
+  "description": "DNA — Domain Notation of Anything (TypeScript SDK)",
   "type": "module",
   "main": "src/index.ts",
   "files": [
@@ -11,7 +11,8 @@
   ],
   "scripts": {
     "test": "bun test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "docs:api": "bun run scripts/gen-api-docs.ts"
   },
   "dependencies": {
     "@types/pg": "^8.20.0",
@@ -26,6 +27,8 @@
     "@types/js-yaml": "^4.0.9",
     "@types/mustache": "^4.2.5",
     "bun-types": "^1.3.0",
+    "typedoc": "^0.28.20",
+    "typedoc-plugin-markdown": "^4.12.0",
     "typescript": "^5.5.0"
   },
   "exports": {

@@ -1,0 +1,18 @@
+# CLI reference
+
+The `dna` binary is a thin wrapper over the DNA kernel — every command
+boots a local kernel against `DNA_SOURCE_URL` / `DNA_BASE_DIR`, runs one
+command, and exits. No service is required.
+
+These pages are **generated from the Click command definitions** by
+`scripts/gen_cli_docs.py`, so `--help` and the docs can never drift.
+
+| Group | What it does |
+| --- | --- |
+| [`dna sdlc`](sdlc.md) | Declarative lifecycle tracking (Roadmap/Epic/Feature/Story/Issue). |
+| [`dna research`](research.md) | Manage Research synthesis documents (curated syntheses of References). |
+| [`dna doc`](doc.md) | List, show, create, edit, delete documents. |
+| [`dna docs`](docs.md) | Browse the in-product Doc corpus. |
+| [`dna scope`](scope.md) | List + inspect scopes (manifest modules). |
+| [`dna kind`](kind.md) | List + inspect registered Kinds. |
+| [`dna source`](source.md) | Source-level operations: declarative replicas, introspection. |

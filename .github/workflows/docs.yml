@@ -34,12 +34,33 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      - name: Install docs deps
-        run: pip install -r requirements-docs.txt
-      - name: Regenerate the parity matrix from the fixtures
-        # Keeps docs/reference/parity-matrix.md in lockstep with the CI parity
-        # fixtures every build, so the published matrix can never drift.
-        run: python scripts/gen_parity_matrix.py
+      - uses: oven-sh/setup-bun@v2
+      # mkdocstrings renders the Python API inline from the `dna` package, and
+      # the CLI/Kinds/parity generators import it — so the SDK + CLI must be
+      # importable in the build env (they are NOT needed for the prose pages,
+      # only for the source-generated Reference quadrant).
+      - name: Install DNA SDK + CLI (source of the API reference)
+        run: pip install -e packages/sdk-py -e packages/cli
+      - name: Install TypeScript SDK deps (TypeDoc)
+        run: bun install --frozen-lockfile
+        working-directory: packages/sdk-ts
+      # Regenerate the whole source-derived Reference: the Py↔TS parity matrix
+      # (from the byte-parity fixtures), the CLI ref (Click tree), the Kinds ref
+      # (registered Kinds' schemas) and the TypeScript API (TypeDoc). The Python
+      # API is rendered inline by mkdocstrings at build time, so it has no
+      # committed artifact.
+      - name: Generate the reference from source
+        run: |
+          python scripts/gen_parity_matrix.py
+          python scripts/gen_cli_docs.py
+          python scripts/gen_kinds_docs.py
+          ( cd packages/sdk-ts && bun run docs:api )
+      # Drift guard (uv/Ruff model): the committed reference must equal a fresh
+      # regeneration. If this fails, run the generators locally and commit.
+      - name: Fail if the generated reference is stale
+        run: |
+          git diff --exit-code -- docs/reference \
+            || { echo '::error::docs/reference is stale — re-run the generators and commit.'; exit 1; }
       - name: Build (strict)
         run: mkdocs build --strict
       - name: Upload Pages artifact
