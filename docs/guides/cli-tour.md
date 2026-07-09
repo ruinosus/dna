@@ -359,6 +359,39 @@ id           replica        scopes  kinds  enabled
 docs-backup  fs://./backup  docs    all    yes    
 ```
 
+`diff` reports drift in three buckets — added (in the current source,
+missing in the other), changed (content digest drifted), removed (in the
+other only). `push` is dry-run by default; `--apply` writes the minimal
+set through the target's atomic save path (doc + bundle entries
+together). Here the `./copy` replica is stale: one agent drifted, one is
+missing entirely:
+
+```console
+$ dna source diff fs://./copy --scope demo
+demo: 1 added · 1 changed · 0 removed  (current ↔ fs://./copy)
+  A Agent/release-notes
+  C Agent/code-reviewer
+
+$ dna source push fs://./copy --scope demo
+[DRY-RUN] demo → fs://./copy: would write 2 (1 added, 1 changed)
+  + Agent/release-notes
+  ~ Agent/code-reviewer
+  (dry-run — re-run with --apply to write)
+
+$ dna source push fs://./copy --scope demo --apply
+[APPLIED] demo → fs://./copy: wrote 2 (1 added, 1 changed)
+  + Agent/release-notes
+  ~ Agent/code-reviewer
+
+$ dna source diff fs://./copy --scope demo
+✔ in sync — demo matches fs://./copy (0 diffs)
+```
+
+The digests are Kind-aware and source-independent: the same scope held
+in a filesystem tree and in a database digests identically when in sync,
+so a diff never needs to transfer content — and re-serialization noise
+(key order, volatile stamps) never shows up as drift.
+
 ## The groups with their own guides
 
 Four groups already have dedicated prose — one line each here:
