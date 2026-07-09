@@ -181,6 +181,20 @@ export { SdlcExtension } from "./extensions/sdlc.js";
 // machinery its write guard runs on (consumers need the error class to
 // catch the veto; never hardcode token caps — read the ModelProfile).
 export { ModelRegExtension } from "./extensions/modelreg.js";
+// s-tier-a-automation — the Automation Kind (declare-in-data, host
+// executes). Hosts import the query helpers to list what to run and the
+// cron validator to pre-check expressions in their own surfaces.
+export { AutomationExtension } from "./extensions/automation.js";
+export {
+  automationsFor,
+  triggerKey,
+  TRIGGER_TYPES,
+} from "./extensions/automation/query.js";
+export type { TriggerType } from "./extensions/automation/query.js";
+export {
+  validateCronExpression,
+  automationTriggerGuard,
+} from "./extensions/automation/write-guards.js";
 export {
   CHARS_PER_TOKEN,
   estimateTokens,
