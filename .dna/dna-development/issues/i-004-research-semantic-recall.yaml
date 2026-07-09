@@ -4,7 +4,7 @@ metadata:
   name: i-004-research-semantic-recall
 spec:
   description: "Research Kind (PR #8) shipou com recall LEXICAL apenas (kernel.query)\
-    \ \u2014 o recall_research(topic) sem\xE2ntico do AAP dependia de pgvector/embeddings\
+    \ \u2014 o recall_research(topic) sem\xE2ntico do SDK upstream dependia de pgvector/embeddings\
     \ (cognitive-api, n\xE3o viajou). Futuro: quando/se o DNA ganhar um provider de\
     \ embeddings plug\xE1vel (via SourcePort/ResolverPort ou um servi\xE7o opcional),\
     \ religar o recall sem\xE2ntico. Hoje: dna research list/show + kernel.query cobrem\
