@@ -28,7 +28,7 @@ spec:
   - PR merged
   definition_of_done_source: cli-create
   created_at: '2026-07-09T22:39:24+00:00'
-  updated_at: '2026-07-09T23:05:47+00:00'
+  updated_at: '2026-07-09T23:07:30+00:00'
   timeline:
   - at: '2026-07-09T22:39:24+00:00'
     actor: claude-code
@@ -83,6 +83,16 @@ spec:
     source: cli
     from: in-progress
     to: review
+  - at: '2026-07-09T23:07:30+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR https://github.com/ruinosus/dna/pull/22 aberto (base main) e story\
+      \ em review. CI: brand-guard, commit-emails, gitleaks, cli, postgres, sdk-ts,\
+      \ docs-build (drift+coverage guards) e docs-links verdes; aguardando s\xF3 sdk-py.\
+      \ Testkit registrado: tg-s-tier-a-doc-kind (5 passos) + tr pass. N\xC3O vou\
+      \ mergear \u2014 done-on-merge fica com o Barna."
+    commit_ref: 29e4ef80f32d07c76aea5dc0891df14f6d910317
   produces:
   - kind: Plan
     name: plan-s-tier-a-doc-kind
