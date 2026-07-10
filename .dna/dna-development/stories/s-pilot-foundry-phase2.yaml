@@ -1,0 +1,55 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-pilot-foundry-phase2
+spec:
+  title: "Fase 2 do piloto (ratificada Barna p\xF3s-merge do foundry#104): (1) BOOTSTRAP\
+    \ do d"
+  description: "Fase 2 do piloto (ratificada Barna p\xF3s-merge do foundry#104): (1)\
+    \ BOOTSTRAP do dna sdlc DENTRO do foundry-assured \u2014 scope .dna/foundry-dev/\
+    \ na raiz (separado do apps/backend/.dna runtime), hooks instalados, e a PR\xD3\
+    PRIA story da decomposi\xE7\xE3o rastreada L\xC1 nativamente (o dogfood completo:\
+    \ story pr assina sozinho, resolvendo por constru\xE7\xE3o o gap de assinatura\
+    \ do #104); (2) DECOMPOSI\xC7\xC3O p\xF3s-trava-byte: com o merge, a fidelidade\
+    \ byte morre \u2014 decompor onde \xE9 natural (CONCIERGE base/grounded/ungrounded\
+    \ \u2192 Soul persona + variantes; regras HITL never-claim-a-write e dever-de-cita\xE7\
+    \xE3o \u2192 Guardrail Kinds), trocando o teste golden byte-exato pelos invariantes\
+    \ sem\xE2nticos da eval suite (os evals viram A guarda \u2014 byte-golden aposentado\
+    \ com nota). O PR de l\xE1 fica pra review do Barna."
+  status: in-progress
+  feature: f-dna-ecosystem
+  priority: high
+  labels:
+  - meta
+  - python
+  - sdlc-tracking
+  reporter: claude-code
+  business_value: 600
+  acceptance_criteria:
+  - "dna sdlc funcionando no foundry (story criada/narrada/PR assinado NATIVAMENTE\
+    \ de l\xE1); CONCIERGE decomposto em Soul+variantes e guardrails extra\xEDdos\
+    \ onde natural; eval suite atualizada como guarda sem\xE2ntica (viola\xE7\xE3\
+    o plantada \u2192 exit 1); testes deles verdes; PR aberto l\xE1 aguardando Barna"
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - PR aberto no foundry (merge do Barna)
+  definition_of_done_source: cli-create
+  created_at: '2026-07-10T16:10:15+00:00'
+  updated_at: '2026-07-10T16:10:20+00:00'
+  timeline:
+  - at: '2026-07-10T16:10:15+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-10T16:10:20+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  produces:
+  - kind: Plan
+    name: plan-s-pilot-foundry-phase2
+    role: implementation
+    at: '2026-07-10T16:10:20+00:00'

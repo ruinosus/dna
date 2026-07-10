@@ -1,0 +1,16 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-pilot-foundry-phase2
+spec:
+  title: 'Plano: s-pilot-foundry-phase2'
+  date: '2026-07-10'
+  status: accepted
+  story_ref: s-pilot-foundry-phase2
+  journey_phase: plan
+  body: "Bootstrap .dna/foundry-dev + hooks no foundry; criar a story da decomposi\xE7\
+    \xE3o L\xC1 e rastrear nativamente; decompor CONCIERGE (Soul+variantes) + Guardrails\
+    \ HITL/cita\xE7\xE3o; evals como guarda sem\xE2ntica no lugar do byte-golden;\
+    \ PR via dna sdlc story pr DE L\xC1. Trabalho no clone ~/projects/foundry-assured."
+  created_at: '2026-07-10T16:10:18+00:00'
+  updated_at: '2026-07-10T16:10:18+00:00'
