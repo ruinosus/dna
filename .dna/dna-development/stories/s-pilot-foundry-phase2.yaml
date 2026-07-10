@@ -16,7 +16,7 @@ spec:
     \xE3o \u2192 Guardrail Kinds), trocando o teste golden byte-exato pelos invariantes\
     \ sem\xE2nticos da eval suite (os evals viram A guarda \u2014 byte-golden aposentado\
     \ com nota). O PR de l\xE1 fica pra review do Barna."
-  status: in-progress
+  status: done
   feature: f-dna-ecosystem
   priority: high
   labels:
@@ -41,7 +41,7 @@ spec:
     done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-10T16:10:15+00:00'
-  updated_at: '2026-07-10T17:11:54+00:00'
+  updated_at: '2026-07-10T17:12:27+00:00'
   timeline:
   - at: '2026-07-10T16:10:15+00:00'
     actor: claude-code
@@ -109,8 +109,45 @@ spec:
       ntica (eval) substituiu o byte-golden com exit-1 provado. Veredito: 'mais redondo\
       \ do que esperava'; 3 fric\xE7\xF5es DX \u2192 i-012/i-013/i-014. O foundry\
       \ agora se auto-rastreia com DNA."
+  - at: '2026-07-10T17:12:20+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-pilot-foundry-phase2
+    summary: TestGuide tg-s-pilot-foundry-phase2 (smoke)
+  - at: '2026-07-10T17:12:23+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-pilot-foundry-phase2-20260710-171222
+    summary: "TestRun tr-tg-s-pilot-foundry-phase2-20260710-171222 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-10T17:12:25+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "foundry#106 MERGED. Dogfood completo num repo terceiro; 3 fric\xE7\xF5\
+      es DX viraram i-012/13/14 (s-pilot-dx-fixes em curso)."
+  - at: '2026-07-10T17:12:27+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: done
+    commit_ref: f074b6a91e7678a9ce232ce626ea633a7709a564
   produces:
   - kind: Plan
     name: plan-s-pilot-foundry-phase2
     role: implementation
     at: '2026-07-10T16:10:20+00:00'
+  - kind: TestGuide
+    name: tg-s-pilot-foundry-phase2
+    role: test-guide
+    at: '2026-07-10T17:12:20+00:00'
+  - kind: TestRun
+    name: tr-tg-s-pilot-foundry-phase2-20260710-171222
+    role: test-run
+    at: '2026-07-10T17:12:23+00:00'
+  closed_at: '2026-07-10T17:12:24+00:00'

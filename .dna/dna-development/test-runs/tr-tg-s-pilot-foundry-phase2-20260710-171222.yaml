@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-pilot-foundry-phase2-20260710-171222
+spec:
+  guide_ref: tg-s-pilot-foundry-phase2
+  outcome: pass
+  verifies:
+  - Story/s-pilot-foundry-phase2
+  executed_by: claude-code
+  executed_at: '2026-07-10T17:12:22+00:00'
+  evidence:
+  - foundry#106-merged-pelo-barna,board-nativo:story-14-eventos+pr-assinado-nativamente,decomposicao:soul+2-guardrails+base-morto,guarda-semantica:violacao-plantada-exit-1-com-pin-do-ci,veredito:redondo-3-friccoes-DX-filed
