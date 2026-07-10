@@ -8,7 +8,7 @@ spec:
     \ pip install dna-cli entrega kernel+CLI mas o agente chega cego (skill/AGENTS.md/hooks\
     \ s\xF3 existem no repo dna; piloto foundry bootstrapou \xE0 m\xE3o). Um comando\
     \ materializa o Genome de onboarding embarcado via os writers de mercado do SDK."
-  status: review
+  status: done
   feature: f-dna-ecosystem
   priority: high
   labels:
@@ -87,7 +87,7 @@ spec:
       \ clean); docs_coverage_guard clean; mkdocs build --strict OK local"
   definition_of_done_source: claude-code
   created_at: '2026-07-10T19:10:46+00:00'
-  updated_at: '2026-07-10T19:46:29+00:00'
+  updated_at: '2026-07-10T19:52:20+00:00'
   timeline:
   - at: '2026-07-10T19:10:46+00:00'
     actor: claude-code
@@ -291,6 +291,18 @@ spec:
     source: cli
     fields:
       title: "dna init \u2014 multi-tool agent-ready onboarding para projetos consumidores"
+  - at: '2026-07-10T19:52:17+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'PR #39 merged; sai no v0.2.0'
+  - at: '2026-07-10T19:52:20+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: d6bdf441585002a697433ec2bc10fe9606a18c1c
   produces:
   - kind: Plan
     name: plan-s-dna-init-agent-ready
@@ -308,3 +320,4 @@ spec:
     name: tr-tg-s-dna-init-agent-ready-20260710-193815
     role: test-run
     at: '2026-07-10T19:38:17+00:00'
+  closed_at: '2026-07-10T19:52:16+00:00'
