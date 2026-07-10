@@ -16,7 +16,7 @@ spec:
     \ doc com resultados, compara com Baseline. Paridade TS dos Kinds (runner Py-primary\
     \ justificado se for o caso). Prosa + guards. Evals s\xE3o o assunto do momento\
     \ em agentic \u2014 e o testkit (TestGuide/TestRun) j\xE1 \xE9 primo no repo."
-  status: in-progress
+  status: review
   feature: f-dna-ecosystem
   priority: high
   labels:
@@ -36,7 +36,7 @@ spec:
   - PR merged via dna sdlc story pr
   definition_of_done_source: cli-create
   created_at: '2026-07-10T09:24:31+00:00'
-  updated_at: '2026-07-10T09:58:56+00:00'
+  updated_at: '2026-07-10T10:03:29+00:00'
   timeline:
   - at: '2026-07-10T09:24:31+00:00'
     actor: claude-code
@@ -105,6 +105,26 @@ spec:
     source: cli
     summary: 'PR aberto: https://github.com/ruinosus/dna/pull/27'
     pr_url: https://github.com/ruinosus/dna/pull/27
+  - at: '2026-07-10T10:03:16+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Smoke real --product executado (tg-dna-eval-kit \u2192 TestRun tr-tg-dna-eval-kit-20260710-095855\
+      \ PASS): hello-genome offline \u2014 run (2 passed, exit 0) \u2192 --save (EvalRun\
+      \ run-greeter-suite-20260710-095826 em eval-runs/) \u2192 pin (EvalBaseline/baseline-greeter-suite)\
+      \ \u2192 re-run --baseline (0 regressions, exit 0) \u2192 quebra proposital\
+      \ do greeter (Helio\u2192Anonymous) \u2192 '\u2717 REGRESSION: greeter-identity',\
+      \ exit 1 \u2192 revertido \u2192 list mostra suite/run/baseline. PR aberto via\
+      \ story pr: https://github.com/ruinosus/dna/pull/27 (base main). 9 checks: 8\
+      \ verdes na primeira leva, aguardando sdk-py. Story fica em review at\xE9 o\
+      \ merge (n\xE3o mergeio \u2014 gate do chamador)."
+    commit_ref: 187c7cc2b022317f56d5590161ddf22084b35508
+  - at: '2026-07-10T10:03:29+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
   produces:
   - kind: Plan
     name: plan-s-dna-eval-kit
