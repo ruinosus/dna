@@ -11,6 +11,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-07-10
+
+### Added
+
+- **`dna init` — multi-tool agent-ready onboarding** (s-dna-init-agent-ready).
+  One command scaffolds a consumer project for AI-assisted development: a
+  `.dna/<scope>` board, a canonical `AGENTS.md` (agents.md/v1), the
+  `dna-sdlc-cli` skill materialized per tool directory
+  (`--tools claude,copilot,cursor,opencode`, default `claude,copilot`,
+  `all` supported), and the `Work-Item:` git hooks. The skill ships inside
+  the package as a real Kind and is projected byte-faithfully by the
+  agentskills writer — one Kind, N projections. Idempotent: existing files
+  are never overwritten without `--force`; the board is never rewritten.
+  See the [agent onboarding guide](docs/getting-started/agent-onboarding.md).
+- **Semantic recall in memory** (s-memory-semantic-recall). `recall` now
+  feeds the previously inert semantic path of the ecphory scorer: when an
+  `EmbeddingPort` + `RecordSearchProvider` are configured, results blend the
+  existing hybrid retrieval with ecphory×cosine ranking via RRF. Opt-out
+  with `--no-semantic`; without a provider the behavior is byte-identical
+  to previous releases (offline-first, no schema migration — lazy backfill
+  indexes older memories on demand). See the
+  [semantic recall guide](docs/guides/semantic-recall.md).
+
+### Changed
+
+- `dna-cli` now depends on `dna-sdk>=0.2,<0.3`.
+
 ## [0.1.0] - 2026-07-10
 
 The first tagged release — the extracted public core, published to the
@@ -140,5 +167,6 @@ registries: **PyPI** ([`dna-sdk`](https://pypi.org/project/dna-sdk/),
   source conformance kit now pins the contract: base content is served
   by `load_all`, never by a `load_layer` sentinel.
 
-[Unreleased]: https://github.com/ruinosus/dna/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/ruinosus/dna/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/ruinosus/dna/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/ruinosus/dna/releases/tag/v0.1.0

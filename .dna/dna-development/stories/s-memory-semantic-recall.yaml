@@ -11,34 +11,49 @@ spec:
     \ do score_engram, hoje c\xF3digo morto) e funde via RRF \u2014 o mesmo RRF do\
     \ search. Sem provider \u2192 comportamento atual intacto (offline-first, zero\
     \ breaking change). Sem LLM/scribes."
-  status: review
+  status: done
   feature: f-dna-search-memory
   reporter: claude-code
   acceptance_criteria:
-  - "Given um scope com provider sqlite-vec + embedder registrados, When recall(cue)\
-    \ roda com uma par\xE1frase que o cue-match do ecphory n\xE3o alcan\xE7a, Then\
-    \ a mem\xF3ria-alvo surge no top-k via plano sem\xE2ntico (cosine no Path 3 do\
-    \ score_engram) e o hit \xE9 anotado (semantic/rank_ecphory/rank_recall)"
-  - "Given nenhum provider registrado, When recall(cue) roda em modo auto, Then hits\
-    \ id\xEAnticos (golden) ao comportamento pr\xE9-story"
-  - "Given o mesmo conjunto de engrams + cue + fake embeddings, When o ranking sem\xE2\
-    ntico roda em Py e TS, Then ordem e scores s\xE3o id\xEAnticos (fixture de paridade\
-    \ compartilhada)"
-  - "Given dna memory recall --semantic/--no-semantic, When o flag \xE9 omitido, Then\
-    \ modo auto (usa sem\xE2ntico se provider dispon\xEDvel)"
+  - text: "Given um scope com provider sqlite-vec + embedder registrados, When recall(cue)\
+      \ roda com uma par\xE1frase que o cue-match do ecphory n\xE3o alcan\xE7a, Then\
+      \ a mem\xF3ria-alvo surge no top-k via plano sem\xE2ntico (cosine no Path 3\
+      \ do score_engram) e o hit \xE9 anotado (semantic/rank_ecphory/rank_recall)"
+    done: true
+    done_at: '2026-07-10T19:52:09+00:00'
+    done_by: story-done-auto
+  - text: "Given nenhum provider registrado, When recall(cue) roda em modo auto, Then\
+      \ hits id\xEAnticos (golden) ao comportamento pr\xE9-story"
+    done: true
+    done_at: '2026-07-10T19:52:09+00:00'
+    done_by: story-done-auto
+  - text: "Given o mesmo conjunto de engrams + cue + fake embeddings, When o ranking\
+      \ sem\xE2ntico roda em Py e TS, Then ordem e scores s\xE3o id\xEAnticos (fixture\
+      \ de paridade compartilhada)"
+    done: true
+    done_at: '2026-07-10T19:52:09+00:00'
+    done_by: story-done-auto
+  - text: "Given dna memory recall --semantic/--no-semantic, When o flag \xE9 omitido,\
+      \ Then modo auto (usa sem\xE2ntico se provider dispon\xEDvel)"
+    done: true
+    done_at: '2026-07-10T19:52:09+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - "c\xF3digo Py+TS em paridade 1:1 (core puro twin; verbs Py-only como j\xE1 \xE9\
-    \ a fronteira do repo); remember segue indexando no write; backfill lazy promovido\
-    \ pra SDK e documentado; testes unit Py+TS com FakeEmbedding (par\xE1frase, golden\
-    \ sem provider, paridade de ranking); fixture memory-scoring-parity estendida\
-    \ via gerador; docs prosa (guides/semantic-recall.md + concepts/search-and-memory.md)\
-    \ + refer\xEAncia CLI regenerada; suites completas + guards + mkdocs --strict\
-    \ verdes; smoke real sqlite-vec com TestGuide --product + TestRun; PR via story\
-    \ pr, sem merge"
+  - text: "c\xF3digo Py+TS em paridade 1:1 (core puro twin; verbs Py-only como j\xE1\
+      \ \xE9 a fronteira do repo); remember segue indexando no write; backfill lazy\
+      \ promovido pra SDK e documentado; testes unit Py+TS com FakeEmbedding (par\xE1\
+      frase, golden sem provider, paridade de ranking); fixture memory-scoring-parity\
+      \ estendida via gerador; docs prosa (guides/semantic-recall.md + concepts/search-and-memory.md)\
+      \ + refer\xEAncia CLI regenerada; suites completas + guards + mkdocs --strict\
+      \ verdes; smoke real sqlite-vec com TestGuide --product + TestRun; PR via story\
+      \ pr, sem merge"
+    done: true
+    done_at: '2026-07-10T19:52:09+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-10T19:09:38+00:00'
-  updated_at: '2026-07-10T19:36:02+00:00'
+  updated_at: '2026-07-10T19:52:14+00:00'
   timeline:
   - at: '2026-07-10T19:09:38+00:00'
     actor: claude-code
@@ -111,6 +126,18 @@ spec:
     source: cli
     from: in-progress
     to: review
+  - at: '2026-07-10T19:52:11+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'PR #38 merged; sai no v0.2.0'
+  - at: '2026-07-10T19:52:14+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: d6bdf441585002a697433ec2bc10fe9606a18c1c
   produces:
   - kind: Plan
     name: plan-s-memory-semantic-recall
@@ -124,3 +151,4 @@ spec:
     name: tr-tg-memory-semantic-recall-20260710-193410
     role: test-run
     at: '2026-07-10T19:34:12+00:00'
+  closed_at: '2026-07-10T19:52:09+00:00'
