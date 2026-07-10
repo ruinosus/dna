@@ -23,3 +23,14 @@ spec:
     type: status_change
     source: cli
     to: open
+  - at: '2026-07-10T12:17:50+00:00'
+    actor: claude-code
+    type: github_published
+    source: cli
+    summary: 'Publicada no GitHub: #30'
+    github_url: https://github.com/ruinosus/dna/issues/30
+  github_number: 30
+  github_url: https://github.com/ruinosus/dna/issues/30
+  github_state: open
+  github_synced_at: '2026-07-10T12:19:15+00:00'
+  updated_at: '2026-07-10T12:19:15+00:00'

@@ -98,6 +98,49 @@ the story, not the other way around — and when it squash-merges, the landed
 commit carries the `Work-Item:` trailer, so `story show` lists it with zero
 bookkeeping.
 
+## The triangle closes: GitHub Issues, bridged with provenance
+
+GitHub Issues are artifacts of the github.com domain — DNA **bridges** to
+them, it does not replace them. Commits carry the `Work-Item:` trailer, PRs
+carry the 🧬 footer, and issues complete the triangle with the same
+attribution plus explicit provenance fields on the Issue document
+(`github_number`, `github_url`, `github_state`, `github_synced_at` — all on
+the Issue Kind schema, so the write path validates them):
+
+```bash
+dna sdlc issue publish i-007-my-bug        # gh issue create, born FROM the doc
+dna sdlc issue publish i-007-my-bug --dry-run   # print title + body, no gh call
+dna sdlc issue import "#42"                # GitHub issue → Issue doc
+dna sdlc issue import https://github.com/owner/repo/issues/42
+dna sdlc issue sync i-007-my-bug           # refresh github_state from the remote
+```
+
+`publish` assembles the GitHub issue from the document — title
+`<title> (<i-007-my-bug>)`, body = description + type/severity + a link back
+to the doc on the board + the same 🧬 footer PRs carry — then stamps the
+GitHub number/URL back onto the doc. It is idempotent: publishing an
+already-bridged Issue just prints its link. `import` goes the other way:
+the doc gets a board-convention name (`i-NNN-gh42-<title-slug>`), labels map
+to `type`/`severity` by a deliberately simple heuristic
+(`bug`/`regression` → bug, `enhancement`/`feature` → enhancement,
+`question` → question, anything doc/chore-shaped → task;
+`critical`/`p0` → critical, `p1` → high, `minor`/`p3` → low, default
+medium), and the GitHub author becomes the `reporter`.
+
+The sync is deliberately **light**, and honest about degradation:
+
+- `dna sdlc issue resolve` on a bridged Issue also closes the GitHub twin
+  with a comment (`gh issue close --comment`) — best-effort: no `gh`, no
+  auth, no network → the local resolve still lands and you get a warning,
+  never a failure.
+- `issue sync` refreshes `github_state`; an issue closed on the GitHub side
+  leaves a note on the local timeline instead of silently flipping the local
+  status — whether "closed there" means "resolved here" is a triage
+  decision, not a heuristic.
+- `--repo owner/name` defaults to the `origin` remote of the enclosing
+  repo; `publish`/`import` without a usable `gh` fail with a didactic
+  message, not a traceback.
+
 ## Agent-ready
 
 The repo is agent-ready:

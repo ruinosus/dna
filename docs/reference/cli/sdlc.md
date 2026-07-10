@@ -1070,6 +1070,62 @@ dna sdlc issue file [OPTIONS]
 | `--slug` | Short kebab-case slug, e.g. 'date-postgres-bug'. |
 | `--type` | _(default: `bug`)_ |
 
+### `dna sdlc issue import`
+
+Import a GitHub issue as an Issue doc (``#N``, ``N`` or the URL).
+
+Nome segue a convenção do board (``i-NNN-<slug-do-título>`` no
+próximo número livre). Labels→type/severity por heurística simples
+(documentada em ``_github_bridge``); reporter = autor GitHub;
+proveniência (github_number/url/state/synced_at) preenchida.
+Idempotente: um doc já bridged pra essa issue vence.
+
+```text
+dna sdlc issue import [OPTIONS] REF
+```
+
+**Arguments**
+
+| Argument | Required |
+| --- | --- |
+| `REF` | yes |
+
+**Options**
+
+| Option | Description |
+| --- | --- |
+| `--help` | Show this message and exit. |
+| `--repo` | GitHub repo 'owner/name' (default: derivado do remote origin). |
+| `--scope` | Scope holding the SDLC docs (default: dna-development). _(default: `dna-development`)_ |
+
+### `dna sdlc issue publish`
+
+Publish the Issue to GitHub — ``gh issue create`` born FROM the doc.
+
+Title ``<título> (<i-x>)``; body = description + type/severity + link
+pro doc no repo + footer 🧬 de atribuição. Grava github_number/url/
+state/synced_at de volta no doc (proveniência). Idempotente: doc já
+publicado só mostra o link.
+
+```text
+dna sdlc issue publish [OPTIONS] NAME
+```
+
+**Arguments**
+
+| Argument | Required |
+| --- | --- |
+| `NAME` | yes |
+
+**Options**
+
+| Option | Description |
+| --- | --- |
+| `--dry-run` | Só imprime title + body montados; não chama gh. |
+| `--help` | Show this message and exit. |
+| `--repo` | GitHub repo 'owner/name' (default: derivado do remote origin). |
+| `--scope` | Scope holding the SDLC docs (default: dna-development). _(default: `dna-development`)_ |
+
 ### `dna sdlc issue resolve`
 
 Mark Issue status: resolved, set closed_at + optional resolution text.
@@ -1112,6 +1168,32 @@ dna sdlc issue start [OPTIONS] NAME
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
+| `--scope` | Scope holding the SDLC docs (default: dna-development). _(default: `dna-development`)_ |
+
+### `dna sdlc issue sync`
+
+Refresh ``github_state`` from the remote twin.
+
+Fechada lá → além do refresh, deixa uma nota na timeline local (o
+board fica sabendo sem ninguém vigiar o GitHub). Não mexe no status
+local — decidir se "closed no GitHub" vira "resolved" é triage humana.
+
+```text
+dna sdlc issue sync [OPTIONS] NAME
+```
+
+**Arguments**
+
+| Argument | Required |
+| --- | --- |
+| `NAME` | yes |
+
+**Options**
+
+| Option | Description |
+| --- | --- |
+| `--help` | Show this message and exit. |
+| `--repo` | GitHub repo 'owner/name' (default: derivado do remote origin). |
 | `--scope` | Scope holding the SDLC docs (default: dna-development). _(default: `dna-development`)_ |
 
 ### `dna sdlc issue triage`

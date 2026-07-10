@@ -75,6 +75,9 @@ from dna_cli import hooks_cmd as _hooks_cmd  # noqa: E402,F401
 # Importing pr_cmd registers `sdlc story pr` + `sdlc pr-footer` — the PR
 # half of the symbiosis (attribution footer, PR born from the Story).
 from dna_cli import pr_cmd as _pr_cmd  # noqa: E402,F401
+# Importing issue_bridge_cmd registers `sdlc issue publish|import|sync` —
+# the GitHub Issues side of the symbiosis (bridge with provenance).
+from dna_cli import issue_bridge_cmd as _issue_bridge_cmd  # noqa: E402,F401
 main.add_command(source_cmd.source)
 main.add_command(install_cmd.install)
 main.add_command(eval_cmd.eval_)

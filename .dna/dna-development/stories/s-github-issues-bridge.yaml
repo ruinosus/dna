@@ -12,7 +12,7 @@ spec:
     \ no doc), issue import <#N> (GH\u2192Issue doc com proveni\xEAncia), sync leve\
     \ (resolve fecha l\xE1 com comment; fechada l\xE1 vira nota aqui). Testes com\
     \ gh mockado + smoke real contra ruinosus/dna."
-  status: in-progress
+  status: review
   feature: f-dna-issues-round1
   priority: high
   labels:
@@ -29,7 +29,7 @@ spec:
   - PR merged via story pr
   definition_of_done_source: cli-create
   created_at: '2026-07-10T10:51:31+00:00'
-  updated_at: '2026-07-10T12:00:20+00:00'
+  updated_at: '2026-07-10T12:20:57+00:00'
   timeline:
   - at: '2026-07-10T10:51:31+00:00'
     actor: claude-code
@@ -42,8 +42,77 @@ spec:
     source: cli
     from: todo
     to: in-progress
+  - at: '2026-07-10T12:06:09+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Recon done: Issue \xE9 class Kind (Py+TS twin, n\xE3o descriptor \u2014\
+      \ paridade por conven\xE7\xE3o). Write-path validation (#29) enforce ON \u2192\
+      \ github_* entra no schema dos DOIS lados antes de qualquer write. Plano de\
+      \ m\xF3dulos: _github_bridge.py (builders puros + gh plumbing, espelho do _git_symbiosis)\
+      \ + issue_bridge_cmd.py (publish/import/sync no issue_group, espelho do pr_cmd)\
+      \ + resolve ganha close best-effort fail-soft."
+    commit_ref: fbf6ff29984dcfd9d881f159f4fc043587c3ff81
+  - at: '2026-07-10T12:15:06+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Build core pronto: schema Issue +github_number/url/state/synced_at (Py+TS),\
+      \ _github_bridge.py (builders puros + gh plumbing fail-loud/fail-soft), issue\
+      \ publish/import/sync no issue_group, resolve fecha o twin best-effort. 27 testes\
+      \ novos (gh 100% mockado); suites completas verdes: sdk-py 2944 pass, cli 329\
+      \ pass, ts 1329 pass + typecheck. Agora: prosa sdlc.md (tri\xE2ngulo commits+PRs+issues)\
+      \ + reference regen + guards + smoke real."
+    commit_ref: fbf6ff29984dcfd9d881f159f4fc043587c3ff81
+  - at: '2026-07-10T12:17:38+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-github-issues-bridge-smoke
+    summary: TestGuide tg-github-issues-bridge-smoke (smoke)
+  - at: '2026-07-10T12:20:03+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-github-issues-bridge-smoke-20260710-122002
+    summary: "TestRun tr-tg-github-issues-bridge-smoke-20260710-122002 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-10T12:20:40+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/31'
+    pr_url: https://github.com/ruinosus/dna/pull/31
+  - at: '2026-07-10T12:20:55+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Smoke real DONE + PR #31 aberto (via story pr). Round-trip: publish\
+      \ i-005 \u2192 ruinosus/dna#30 (footer \U0001F9EC + doc link verificados no\
+      \ GitHub) \u2192 import de volta em scope tempor\xE1rio (i-001-gh30-\u2026,\
+      \ proveni\xEAncia id\xEAntica) \u2192 re-publish/re-import idempotentes \u2192\
+      \ sync open. Degrada\xE7\xE3o verificada ao vivo (PATH sem gh \u2192 erro did\xE1\
+      tico). Decis\xE3o: #30 fica ABERTA como primeira issue p\xFAblica do backlog.\
+      \ Marco review; done s\xF3 no merge."
+    commit_ref: 391efea7520c12cbfe7dd7fa41b4f5258faa900a
+  - at: '2026-07-10T12:20:57+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
   produces:
   - kind: Plan
     name: plan-s-github-issues-bridge
     role: implementation
     at: '2026-07-10T12:00:20+00:00'
+  - kind: TestGuide
+    name: tg-github-issues-bridge-smoke
+    role: test-guide
+    at: '2026-07-10T12:17:38+00:00'
+  - kind: TestRun
+    name: tr-tg-github-issues-bridge-smoke-20260710-122002
+    role: test-run
+    at: '2026-07-10T12:20:03+00:00'

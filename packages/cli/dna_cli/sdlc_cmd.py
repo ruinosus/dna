@@ -2534,6 +2534,34 @@ def cmd_issue_resolve(
         )
         raw = _build_raw("Issue", name, spec)
         s.run(s.kernel.write_document(scope, "Issue", name, raw))
+        # GitHub bridge (s-github-issues-bridge): a published Issue closes
+        # its GitHub twin with a comment. Best-effort by contract — the
+        # local resolve ALREADY persisted above; a missing gh / dead
+        # network degrades to a warning, never a failure.
+        if spec.get("github_number"):
+            from dna_cli import _github_bridge as gb  # noqa: PLC0415
+            warning = gb.close_issue_best_effort(
+                int(spec["github_number"]),
+                gb.default_repo(),
+                gb.close_comment(name, resolution),
+            )
+            if warning:
+                click.secho(f"⚠ {warning}", fg="yellow", err=True)
+            else:
+                click.secho(
+                    f"CLOSED GitHub #{spec['github_number']} (comment posted)",
+                    fg="green",
+                )
+                try:  # provenance refresh — same best-effort contract
+                    spec["github_state"] = "closed"
+                    spec["github_synced_at"] = _now_iso()
+                    raw = _build_raw("Issue", name, spec)
+                    s.run(s.kernel.write_document(scope, "Issue", name, raw))
+                except Exception as e:  # noqa: BLE001 — fail-soft
+                    click.secho(
+                        f"⚠ não consegui atualizar github_state no doc "
+                        f"(non-fatal): {e}", fg="yellow", err=True,
+                    )
     # Closing beat (i-126): explicitly clear the merged FOCUS anchor — same
     # contract as `story done`. Best-effort, never breaks the resolve.
     _post_done_beat(scope, "Issue", name)

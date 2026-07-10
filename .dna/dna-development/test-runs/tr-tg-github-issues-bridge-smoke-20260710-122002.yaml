@@ -1,0 +1,24 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-github-issues-bridge-smoke-20260710-122002
+spec:
+  guide_ref: tg-github-issues-bridge-smoke
+  outcome: pass
+  verifies:
+  - Story/s-github-issues-bridge
+  executed_by: claude-code
+  executed_at: '2026-07-10T12:20:02+00:00'
+  notes: "Round-trip REAL contra ruinosus/dna executado 2026-07-10: publish i-005\
+    \ \u2192 GitHub #30 criada (t\xEDtulo com sufixo (i-005-\u2026), body com Type/Severity\
+    \ + doc link + footer \U0001F9EC Work-Item); proveni\xEAncia gravada no doc via\
+    \ kernel (write-path validation passou = schema evolu\xEDdo funciona). Import\
+    \ de volta em scope tempor\xE1rio \u2192 i-001-gh30-\u2026 com number/url id\xEA\
+    nticos, reporter=ruinosus, status=open. Re-publish \u2192 'j\xE1 publicada #30'\
+    \ sem duplicar; re-import no board \u2192 'j\xE1 importada como Issue/i-005-\u2026\
+    '; sync \u2192 state open refrescado. Degrada\xE7\xE3o: PATH sem gh \u2192 erro\
+    \ did\xE1tico (exit 1, sem traceback). Decis\xE3o: #30 fica ABERTA como primeira\
+    \ issue p\xFAblica do backlog (i-005 \xE9 trabalho genuinamente aberto \u2014\
+    \ o bridge \xE9 exatamente pra isso)."
+  evidence:
+  - https://github.com/ruinosus/dna/issues/30
