@@ -36,7 +36,7 @@ spec:
   - PR merged via dna sdlc story pr
   definition_of_done_source: cli-create
   created_at: '2026-07-10T09:24:31+00:00'
-  updated_at: '2026-07-10T09:33:17+00:00'
+  updated_at: '2026-07-10T09:58:56+00:00'
   timeline:
   - at: '2026-07-10T09:24:31+00:00'
     actor: claude-code
@@ -71,8 +71,44 @@ spec:
       \ real offline no hello-genome (suite\u2192run\u2192pin\u2192re-run vs baseline)\
       \ + TestGuide --product + TestRun."
     commit_ref: ddd27e1f8b3bbdc2b0e1dbbcb15b6e6f5e273c38
+  - at: '2026-07-10T09:57:31+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Build conclu\xEDdo nos 4 slices (sdk-py 91be9b0, sdk-ts 34966bd, cli\
+      \ 4ef3fe1, docs+example): 4 Kinds como descriptors byte-id\xEAnticos Py\u2194\
+      TS (aliases gerados eval-eval-*, schemas estritos, tenancy permissiva), runner\
+      \ puro offline (PromptCompositionTarget default + EvalTargetPort p/ host), CLI\
+      \ dna eval run/list/show/pin com gate de regress\xE3o (exit 1 S\xD3 em regress\xE3\
+      o quando --baseline). Gates locais: sdk-py 2925 passed, sdk-ts 1318 pass + typecheck,\
+      \ cli 296 passed, brand+coverage guards clean, reference regen (drift zero),\
+      \ mkdocs --strict verde. Agora: smoke real --product no hello-genome + TestGuide/TestRun."
+    commit_ref: 84d2e41d6b563439e8916359d9a3bdf1907c7c40
+  - at: '2026-07-10T09:58:03+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-dna-eval-kit
+    summary: TestGuide tg-dna-eval-kit (smoke)
+  - at: '2026-07-10T09:58:56+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-dna-eval-kit-20260710-095855
+    summary: "TestRun tr-tg-dna-eval-kit-20260710-095855 \u2192 pass"
+    outcome: pass
   produces:
   - kind: Plan
     name: plan-s-dna-eval-kit
     role: implementation
     at: '2026-07-10T09:24:35+00:00'
+  - kind: TestGuide
+    name: tg-dna-eval-kit
+    role: test-guide
+    at: '2026-07-10T09:58:03+00:00'
+  - kind: TestRun
+    name: tr-tg-dna-eval-kit-20260710-095855
+    role: test-run
+    at: '2026-07-10T09:58:56+00:00'

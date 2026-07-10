@@ -1,0 +1,21 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-dna-eval-kit-20260710-095855
+spec:
+  guide_ref: tg-dna-eval-kit
+  outcome: pass
+  verifies:
+  - Story/s-dna-eval-kit
+  executed_by: claude-code
+  executed_at: '2026-07-10T09:58:55+00:00'
+  notes: "Executado offline em examples/hello-genome (2026-07-10). Passo 1: run \u2192\
+    \ '2 passed \xB7 0 failed \xB7 0 errored \xB7 0 skipped (total 2)', exit 0. Passo\
+    \ 2: --save --json \u2192 saved=true, EvalRun run-greeter-suite-20260710-095826\
+    \ gravado em eval-runs/. Passo 3: pin \u2192 'pinned: EvalBaseline/baseline-greeter-suite\
+    \ \u2192 EvalRun/run-greeter-suite-20260710-095826'. Passo 4: re-run --baseline\
+    \ \u2192 '0 regression(s) \xB7 0 improvement(s) \xB7 2 unchanged', exit 0. Passo\
+    \ 5: greeter.yaml Helio\u2192Anonymous \u2192 '\u2717 greeter-identity [failed]\
+    \ \xB7 contains: text does not contain Helio' + '\u2717 REGRESSION: greeter-identity',\
+    \ exit 1 (gate pega a regress\xE3o); revertido. Passo 6: list \u2192 suite, run\
+    \ e baseline listados. Zero LLM, zero rede."
