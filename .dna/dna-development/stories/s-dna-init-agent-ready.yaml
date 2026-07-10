@@ -9,7 +9,7 @@ spec:
     \ pip install dna-cli entrega kernel+CLI mas o agente chega cego (skill/AGENTS.md/hooks\
     \ s\xF3 existem no repo dna; piloto foundry bootstrapou \xE0 m\xE3o). Um comando\
     \ materializa o Genome de onboarding embarcado via os writers de mercado do SDK."
-  status: in-progress
+  status: review
   feature: f-dna-ecosystem
   priority: high
   labels:
@@ -47,7 +47,7 @@ spec:
     \ (drift guard); mkdocs build --strict verde; assimetria Py-only documentada"
   definition_of_done_source: claude-code
   created_at: '2026-07-10T19:10:46+00:00'
-  updated_at: '2026-07-10T19:38:17+00:00'
+  updated_at: '2026-07-10T19:39:38+00:00'
   timeline:
   - at: '2026-07-10T19:10:46+00:00'
     actor: claude-code
@@ -125,6 +125,25 @@ spec:
     name: tr-tg-s-dna-init-agent-ready-20260710-193815
     summary: "TestRun tr-tg-s-dna-init-agent-ready-20260710-193815 \u2192 pass"
     outcome: pass
+  - at: '2026-07-10T19:39:15+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/39'
+    pr_url: https://github.com/ruinosus/dna/pull/39
+  - at: '2026-07-10T19:39:36+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #39 aberto (https://github.com/ruinosus/dna/pull/39) \u2014 aguardando\
+      \ 11 checks. Suites locais: cli 356, sdk-py 2777, sdk-ts 1344 + typecheck; guards\
+      \ + mkdocs --strict verdes; smoke de produto registrado em tr-tg-s-dna-init-agent-ready-20260710-193815."
+  - at: '2026-07-10T19:39:38+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
   produces:
   - kind: Plan
     name: plan-s-dna-init-agent-ready
