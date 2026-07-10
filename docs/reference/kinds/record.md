@@ -276,6 +276,85 @@ An Epic groups Features under a single business goal (Jira/ADO terminology). May
 | `updated_at` | string |  |  |
 | `watchers` | array |  |  |
 
+## EvalBaseline
+
+- **Alias:** `eval-eval-baseline`
+- **apiVersion:** `github.com/ruinosus/dna/eval/v1`
+- **Plane:** record
+
+An EvalBaseline pins one EvalRun as the "known good" reference for an EvalSuite. `dna eval run <suite> --baseline <name>` compares the fresh run against the pinned run and reports regressions (passed → now failing), improvements and unchanged cases — with an exit code a user's CI can gate on. Pin with `dna eval pin <run>`.
+
+**Spec fields**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `label` | string |  | Human note on why this run is the reference. |
+| `pinned_at` | string |  |  |
+| `run_name` | string | yes | Name of the pinned EvalRun document. |
+| `suite` | string | yes | Name of the EvalSuite this baseline belongs to. |
+
+## EvalCase
+
+- **Alias:** `eval-eval-case`
+- **apiVersion:** `github.com/ruinosus/dna/eval/v1`
+- **Plane:** record
+
+An EvalCase is one declarative evaluation scenario. It names a target (default = the kernel's own prompt composition via build_prompt, deterministic and offline; custom targets such as a live LLM are host-registered EvalTargetPorts) and a list of deterministic checks (contains/regex/equals/length) applied to the text the target produced. Grouped by an EvalSuite; executed by the local runner (`dna eval run`), which persists an EvalRun.
+
+**Spec fields**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `checks` | array | yes | Deterministic assertions applied to the text the target produced. ALL checks must pass for the case to pass. |
+| `description` | string |  | What this case verifies (one line). |
+| `expected` | string |  | Human-readable note of the expected outcome (shown in reports; not machine-checked). |
+| `input` | string |  | Free-form input for custom targets (e.g. the user message an LLM target sends). The prompt target ignores it. |
+| `skip` | boolean |  | Declared but not executed (reported as skipped). |
+| `skip_reason` | string |  |  |
+| `tags` | array |  |  |
+| `target` | object |  | What to evaluate. Omitted → the suite's target → {type = prompt}. type=prompt composes the agent's system prompt via build_prompt (deterministic, offline); any other type must be registered by the host as an EvalTargetPort. |
+
+## EvalRun
+
+- **Alias:** `eval-eval-run`
+- **apiVersion:** `github.com/ruinosus/dna/eval/v1`
+- **Plane:** record
+
+An EvalRun is the persisted result of one local execution of an EvalSuite — pass/fail/error/skip counts, timestamps, the resolved target, and per-case results with the outcome of every declared check. Written by `dna eval run --save`; compared against a pinned EvalBaseline to detect regressions (`dna eval run --baseline`).
+
+**Spec fields**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `errored` | integer |  |  |
+| `failed` | integer | yes |  |
+| `finished_at` | string |  |  |
+| `passed` | integer | yes |  |
+| `results` | array | yes | Per-case outcomes, in execution order. |
+| `skipped` | integer |  |  |
+| `started_at` | string |  |  |
+| `suite` | string | yes | Name of the EvalSuite that was executed. |
+| `target` | object |  | The suite-level target the run resolved (per-case overrides are recorded on each result row). |
+| `total` | integer | yes |  |
+
+## EvalSuite
+
+- **Alias:** `eval-eval-suite`
+- **apiVersion:** `github.com/ruinosus/dna/eval/v1`
+- **Plane:** record
+
+An EvalSuite groups EvalCase documents and configures how the local runner executes them — the case list (empty = all cases in the scope), a default target the cases inherit, and stop_on_fail. Run it with `dna eval run <suite>`; each execution can be persisted as an EvalRun and compared against a pinned EvalBaseline.
+
+**Spec fields**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `cases` | array |  | EvalCase names to run, in order. Empty/omitted = every EvalCase in the scope. |
+| `description` | string |  | What this suite evaluates (one line). |
+| `labels` | array |  |  |
+| `stop_on_fail` | boolean |  | Stop executing remaining cases after the first failed/errored case. Default false. |
+| `target` | object |  | Default target for cases that do not declare their own (same shape as EvalCase.target). |
+
 ## Evidence
 
 - **Alias:** `evidence-evidence`

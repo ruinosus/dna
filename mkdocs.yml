@@ -69,6 +69,7 @@ nav:
       - How to write a source adapter: guides/write-a-source-adapter.md
       - How to write a Reader/Writer: guides/readers-and-writers.md
       - How to use semantic recall & memory: guides/semantic-recall.md
+      - How to evaluate agents: guides/evaluating-agents.md
       - Your git log is your SDLC: guides/sdlc.md
   # Reference — GENERATED FROM SOURCE. The four API sub-references (Python via
   # mkdocstrings, TypeScript via TypeDoc, CLI + Kinds via scripts/gen_*_docs.py)

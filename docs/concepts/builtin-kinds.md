@@ -293,6 +293,56 @@ evidence. A passing run whose `verifies` points at a work item drives that
 item's *verify* phase in the derived journey — it is the proof, where the
 guide is the promise.
 
+## Evaluation
+
+Four Kinds make evaluation authoring data — ported from the internal
+SDK's eval extension minus its runtime (the upstream runner was a
+Temporal worker driving live agents through LLM judges; none of that
+belongs in a notation library). What ships instead is a **local,
+synchronous, offline runner** whose default target is the kernel itself:
+composing a prompt is a deterministic function of the declared documents,
+so *"does my agent compose the prompt I expect?"* is a real evaluation of
+declarative config — no LLM required. The [evaluating agents
+guide](../guides/evaluating-agents.md) walks the full workflow, including
+how a host registers an LLM target (`EvalTargetPort` — the same
+declare-here/execute-in-the-host split as [Automation](#automation)
+runners).
+
+### EvalCase
+
+An [`EvalCase`](../reference/kinds/record.md#evalcase) (`eval-eval-case`)
+is one scenario: a `target` (what produces the text under test — default
+`{type: prompt, agent: X}`, the composed system prompt) and a list of
+deterministic `checks` (`contains`, `not_contains`, `regex`, `not_regex`,
+`equals`, `min_length`, `max_length`) that ALL must pass. Upstream fields
+that presuppose a live agent loop (trajectory matching, HITL policies,
+judge engines) deliberately did not travel.
+
+### EvalSuite
+
+An [`EvalSuite`](../reference/kinds/record.md#evalsuite)
+(`eval-eval-suite`) groups cases and configures the run: the `cases` list
+(empty = every EvalCase in the scope), a default `target` the cases
+inherit, and `stop_on_fail`. Execute it with `dna eval run <suite>` —
+offline, in seconds, in CI.
+
+### EvalRun
+
+An [`EvalRun`](../reference/kinds/record.md#evalrun) (`eval-eval-run`) is
+the persisted ledger of one execution: counts, timestamps, the resolved
+target and per-case results with the outcome of every declared check.
+`dna eval run --save` writes it; being a document, runs are queryable,
+diffable and versioned like everything else.
+
+### EvalBaseline
+
+An [`EvalBaseline`](../reference/kinds/record.md#evalbaseline)
+(`eval-eval-baseline`) pins one EvalRun as the "known good" reference for
+a suite (`dna eval pin <run>`). Future runs compared against it
+(`dna eval run <suite> --baseline <name>`) report regressions,
+improvements and unchanged cases — and exit non-zero only on a
+regression, so a pre-existing failure doesn't re-fail your CI.
+
 ## Domain content
 
 ### Doc

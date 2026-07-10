@@ -1,0 +1,18 @@
+apiVersion: github.com/ruinosus/dna/eval/v1
+kind: EvalCase
+metadata:
+  name: greeter-identity
+spec:
+  description: The greeter composes its declared identity into the prompt
+  target:
+    type: prompt
+    agent: greeter
+  checks:
+  - type: contains
+    value: Helio
+  - type: regex
+    value: 'friendly assistant'
+  - type: min_length
+    value: 50
+  expected: The composed system prompt introduces Helio, the friendly assistant.
+  tags: [identity]
