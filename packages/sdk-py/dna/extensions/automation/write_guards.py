@@ -1,7 +1,7 @@
 """Automation-owned write-path guards (s-tier-a-automation).
 
 One ``pre_save`` VETO hook that makes an Automation write *fully valid or
-not persisted*, in three ordered steps:
+not persisted*, in two ordered steps:
 
 1. **Normalize the YAML 1.1 ``on`` trap (Python-only).** PyYAML reads a
    bare ``on:`` key as boolean ``True`` (YAML 1.1 booleans), so a
@@ -12,13 +12,7 @@ not persisted*, in three ordered steps:
    the veto-channel contract) before validating; PyYAML's emitter quotes
    ``'on'`` on dump, so the healed doc round-trips. js-yaml keeps ``on``
    a string, so the TS twin has no such step.
-2. **Schema shape at WRITE time.** The kernel validates Kind schemas at
-   scan/read (``parse_error`` channel), not on the write path — a
-   shape-broken Automation would persist and only explode later. The
-   guard runs the descriptor's own schema-validating ``parse`` (trigger
-   discriminator, per-type required fields, runner enum) so the veto
-   happens at the write, with the author still present.
-3. **Semantics the schema cannot express:**
+2. **Semantics the schema cannot express:**
 
    - **cron expression** (``on.type: cron``) — parsed by a
      zero-dependency 5-field validator (documented decision: a cron lib
@@ -32,6 +26,13 @@ not persisted*, in three ordered steps:
      Automation is DATA a host executor dispatches on: a misspelled hook
      would be declared, listed, and silently never fire — so here the
      unknown name is a veto, not a warning.
+
+Schema SHAPE at write time (originally this guard's step 2) is no longer
+Automation-specific: ``s-write-path-validation`` (i-008) generalized it —
+``WritePipeline.write`` validates every doc's spec against the Kind's
+declared ``schema()`` AFTER the veto hooks run, so the YAML-1.1 heal here
+lands before the shape check. This guard keeps only what is Automation's
+own: the heal and the semantics JSON Schema cannot express.
 
 A raise from the guard vetoes the write (nothing is persisted). The hook
 fires for EVERY ``kernel.write_document`` regardless of ``skip_hooks`` —
@@ -115,9 +116,10 @@ def automation_trigger_guard(ctx: "PreSaveContext") -> None:
     """Veto an Automation write that is not fully valid.
 
     Steps (module docstring): normalize the PyYAML ``on``→``True`` key
-    trap, run the descriptor's schema-validating parse (shape at write,
-    not at scan), then check the semantics JSON Schema cannot express
-    (cron grammar, hook-name vocabulary).
+    trap, then check the semantics JSON Schema cannot express (cron
+    grammar, hook-name vocabulary). Schema SHAPE is validated by the
+    kernel's generic write-path step (s-write-path-validation, i-008),
+    which runs after this guard — so the heal below lands first.
     """
     if ctx.kind != _KIND or not isinstance(ctx.raw, dict):
         return
@@ -129,17 +131,8 @@ def automation_trigger_guard(ctx: "PreSaveContext") -> None:
     #    contract) so the persisted doc carries the real field.
     if True in spec and "on" not in spec:
         spec["on"] = spec.pop(True)
-    # 2. Shape at write time: the kernel only schema-validates at
-    #    scan/read; run the descriptor's own parse here so a shape-broken
-    #    doc is vetoed instead of persisted. Fail-open when the guard has
-    #    no kernel (direct unit use) — the semantic steps below still run.
-    kernel = getattr(ctx, "kernel", None)
-    if kernel is not None:
-        port = kernel.kind_port_for(
-            _KIND, api_version=ctx.raw.get("apiVersion"),
-        )
-        if port is not None:
-            port.parse(ctx.raw)  # raises ValueError on schema violations
+    # 2. Semantics the schema cannot express (shape itself is the kernel's
+    #    generic write-path validation, which runs after the veto hooks).
     on = spec.get("on") or {}
     if not isinstance(on, dict):
         return

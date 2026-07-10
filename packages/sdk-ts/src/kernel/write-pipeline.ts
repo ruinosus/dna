@@ -21,22 +21,111 @@
  * kernel re-instantiates the pipeline in `withTenant` so a tenant-bound copy
  * resolves its own tenant.
  */
+import type { ValidateFunction } from "ajv";
 import type { WriteHost } from "./collaborator-ports.js";
 import { deriveEventType } from "./events.js";
+import { createAjv } from "./kind_base.js";
 import {
   type KindPort,
   type WritableSourcePort,
+  SpecValidationError,
   TenantScope,
   TenantRequired,
   TenantNotAllowed,
   validateTenantSlug,
 } from "./protocols.js";
 
+/** Compiled-validator cache for the generic write-path schema check
+ *  (s-write-path-validation, i-008) — keyed by KindPort identity so each
+ *  port's schema compiles once per process, not once per write. `null`
+ *  marks a schema-less (permissive) port. */
+const _writeValidators = new WeakMap<object, ValidateFunction | null>();
+
 export class WritePipeline {
   private readonly _k: WriteHost;
 
   constructor(kernel: WriteHost) {
     this._k = kernel;
+  }
+
+  /** Read the write-validation mode knob. `enforce` (default) vetoes an
+   *  invalid write; `warn` logs and persists; `off` skips the step. Read
+   *  per-write (not memoized) so tests / operators can flip it live. */
+  private static _validationMode(): "enforce" | "warn" | "off" {
+    const mode = (process.env.DNA_WRITE_VALIDATION ?? "enforce").trim().toLowerCase();
+    return mode === "warn" || mode === "off" ? mode : "enforce";
+  }
+
+  /**
+   * Validate `raw.spec` against the Kind's declared JSON Schema at WRITE
+   * time (s-write-path-validation, i-008 — the systemic gap found on the
+   * Automation work: the kernel only schema-validated at scan/read via the
+   * fail-soft `parse_error` channel, so a shape-broken doc persisted and
+   * exploded later, far from the author). Twin of Python
+   * `WritePipeline._validate_spec_schema`.
+   *
+   * Contract:
+   * - Kinds without a schema (`schema()` null/empty, or throwing) stay
+   *   PERMISSIVE — validation is opt-in by data, as always.
+   * - `spec_defaults` (descriptor D5) are shallow-merged into the spec
+   *   BEFORE validating, mirroring `DeclarativeKindPort.parse`.
+   * - Runs AFTER the `pre_save` veto hooks (Kind-owned cures mutate
+   *   ctx.raw first), BEFORE persistence.
+   * - Didactic failure (install #26 pattern): names the field, the
+   *   violation, and points at `dna kind show <Kind>`.
+   */
+  private _validateSpecSchema(
+    scope: string,
+    kind: string,
+    name: string,
+    raw: Record<string, unknown>,
+    port: KindPort | null,
+  ): void {
+    const mode = WritePipeline._validationMode();
+    if (mode === "off" || port === null || typeof raw !== "object" || raw === null) {
+      return;
+    }
+    let validate = _writeValidators.get(port);
+    if (validate === undefined) {
+      let schema: Record<string, unknown> | null = null;
+      try {
+        schema = port.schema?.() ?? null;
+      } catch {
+        schema = null; // a Kind whose schema errors stays permissive
+      }
+      validate =
+        schema !== null && typeof schema === "object" && Object.keys(schema).length > 0
+          ? createAjv().compile(schema)
+          : null;
+      _writeValidators.set(port, validate);
+    }
+    if (validate === null) return;
+    const rawSpec = raw.spec;
+    let spec: Record<string, unknown> =
+      rawSpec !== null && typeof rawSpec === "object" && !Array.isArray(rawSpec)
+        ? (rawSpec as Record<string, unknown>)
+        : {};
+    // Descriptor D5: defaults fill, spec overrides — exactly what the
+    // validating parse sees.
+    const defaults = (port as { _specDefaults?: Record<string, unknown> | null })
+      ._specDefaults;
+    if (defaults != null && Object.keys(defaults).length > 0) {
+      spec = { ...defaults, ...spec };
+    }
+    if (validate(spec)) return;
+    const first = validate.errors?.[0];
+    const path = (first?.instancePath ?? "").replace(/^\//, "").replace(/\//g, ".");
+    const loc = path ? `spec.${path}` : "spec";
+    const detail = first?.message ?? "spec does not match the Kind's schema";
+    const msg =
+      `write vetoed for ${scope}/${kind}/${name}: schema validation failed ` +
+      `at ${loc}: ${detail} — see \`dna kind show ${kind}\` for the expected shape`;
+    if (mode === "warn") {
+      // eslint-disable-next-line no-console
+      console.warn(`${msg} (DNA_WRITE_VALIDATION=warn — persisted anyway)`);
+      return;
+    }
+    throw new SpecValidationError(msg);
   }
 
   /**
@@ -135,6 +224,14 @@ export class WritePipeline {
         kernel: k,
       });
     }
+    // --- generic spec↔schema validation (s-write-path-validation, i-008) ---
+    // AFTER the veto hooks (Kind-owned cures mutate ctx.raw first), BEFORE
+    // persistence: what gets validated is the exact shape that would be
+    // saved. i-195: resolve the port by the doc's own apiVersion.
+    this._validateSpecSchema(
+      scope, kind, name, raw,
+      k.kindPortFor(kind, raw?.apiVersion as string | undefined),
+    );
     const version = await src.saveDocument(
       scope, kind, name, raw,
       {

@@ -92,6 +92,25 @@ export class TenantNotAllowed extends Error {
   }
 }
 
+/**
+ * Raised when `writeDocument` vetoes a doc whose `spec` violates the Kind's
+ * declared JSON Schema (`KindPort.schema()`).
+ *
+ * s-write-path-validation (i-008): the kernel used to validate schemas only
+ * at SCAN/read (the fail-soft `parse_error` channel) — a shape-broken doc
+ * would persist and explode later, far from the author. Now every
+ * `writeDocument` validates the spec at write time when the Kind declares a
+ * schema; Kinds without a schema stay permissive.
+ * Mode knob: `DNA_WRITE_VALIDATION=enforce|warn|off`.
+ */
+export class SpecValidationError extends Error {
+  constructor(message?: string) {
+    super(message);
+    this.name = "SpecValidationError";
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
 /** Raised when a tenant slug is reserved or empty. */
 export class InvalidTenantSlug extends Error {
   constructor(message?: string) {

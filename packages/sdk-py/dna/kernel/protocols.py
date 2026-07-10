@@ -355,6 +355,22 @@ class TenantNotAllowed(Exception):
     """
 
 
+class SpecValidationError(ValueError):
+    """Raised when ``write_document`` vetoes a doc whose ``spec`` violates
+    the Kind's declared JSON Schema (``KindPort.schema()``).
+
+    s-write-path-validation (i-008): the kernel used to validate schemas
+    only at SCAN/read (the fail-soft ``parse_error`` channel) — a
+    shape-broken doc would persist and explode later, far from the author.
+    Now every ``write_document`` validates the spec at write time when the
+    Kind declares a schema; Kinds without a schema stay permissive.
+
+    Subclasses ``ValueError`` so existing callers that treat write-path
+    vetoes as ValueError (the pre_save guard convention) keep working.
+    Mode knob: ``DNA_WRITE_VALIDATION=enforce|warn|off``.
+    """
+
+
 class VersionAlreadyPublished(Exception):
     """Raised when a Module is published at an existing semver version.
 

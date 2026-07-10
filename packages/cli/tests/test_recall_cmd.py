@@ -42,7 +42,9 @@ def _seed_scope(base_dir: str, scope: str) -> None:
                 "apiVersion": "github.com/ruinosus/dna/sdlc/v1",
                 "kind": "Story",
                 "metadata": {"name": name},
-                "spec": {"title": text, "description": text},
+                # status: Story schema requires it — the generic write-path
+                # validation (i-008) now vetoes the skeletal fixture.
+                "spec": {"title": text, "description": text, "status": "todo"},
             }
             await kernel.write_document(scope, "Story", name, raw)
 

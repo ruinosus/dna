@@ -124,7 +124,10 @@ async def test_consolidate_detects_stale_without_llm(kernel_with_provider):
     # age one memory into oblivion (deterministic — no wall clock in assertions)
     old = await kernel.get_document("demo", "LessonLearned", "rem-ancient")
     old["spec"]["last_surfaced"] = "2000-01-01T00:00:00+00:00"
-    old["spec"]["confidence_score"] = "faint"
+    # NOTE: was the string "faint" — a shape-broken value the write path used
+    # to accept silently (i-008); the generic write validation now vetoes it
+    # (confidence_score is `type: number` in the Kind schema).
+    old["spec"]["confidence_score"] = 0.1
     await kernel.write_document("demo", "LessonLearned", "rem-ancient", old, invalidate_mode="doc")
 
     report = await consolidate(kernel, "demo", apply=False)

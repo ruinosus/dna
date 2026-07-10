@@ -206,15 +206,26 @@ async def test_bitemporal_guard_fires_through_write_document(tmp_path):
     k.source(src)
     src.attach_kernel(k)
 
-    superseded = _ll_raw("rem-x", {
+    # Full required set (area/surface_when/source_refs/affect/summary) — the
+    # generic write-path validation (i-008) now vetoes the skeletal fixture
+    # this test used to write.
+    _ll_base = {
+        "area": "Feature/despecialize",
+        "surface_when": ["feature_touched"],
+        "source_refs": ["s-1"],
+        "affect": "triumph",
+        "affect_reason": "guard preserved rem-x valid_to across maintenance write",
         "summary": "old lesson",
+    }
+    superseded = _ll_raw("rem-x", {
+        **_ll_base,
         "valid_to": "2026-06-02T00:00:00+00:00",
         "superseded_by_memory": "sem-x",
     })
     await k.write_document("proj", "LessonLearned", "rem-x", superseded)
 
     # Maintenance write drops valid_to (decay/cue hooks re-emit by name).
-    maintenance = _ll_raw("rem-x", {"summary": "old lesson", "surface_count": 3})
+    maintenance = _ll_raw("rem-x", {**_ll_base, "surface_count": 3})
     await k.write_document("proj", "LessonLearned", "rem-x", maintenance)
 
     stored = await k.get_document("proj", "LessonLearned", "rem-x")
