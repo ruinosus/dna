@@ -63,6 +63,7 @@ nav:
   - How-to guides:
       - guides/index.md
       - A tour of the dna CLI: guides/cli-tour.md
+      - How to install bundles from a repository: guides/installing-scopes.md
       - How to add a Kind: guides/add-a-kind.md
       - How to read document data: guides/read-document-data.md
       - How to write a source adapter: guides/write-a-source-adapter.md
