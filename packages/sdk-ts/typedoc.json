@@ -12,6 +12,12 @@
   "excludeInternal": true,
   "excludeExternals": true,
   "skipErrorChecking": true,
+  "intentionallyNotExported": [
+    "CompositionResolverHost",
+    "QueryableInstance",
+    "ManifestInstanceOpts",
+    "DeclarativeMarker"
+  ],
   "sort": ["alphabetical"],
   "entryFileName": "index",
   "flattenOutputFiles": true,

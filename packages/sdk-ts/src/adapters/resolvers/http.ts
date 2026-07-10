@@ -20,6 +20,7 @@ import {
   ResolveNetworkError,
   ResolveError,
 } from "../../kernel/protocols.js";
+import { rejectLegacyShorthand } from "./local.js";
 
 export class HttpResolver implements ResolverPort {
   cacheKey(uri: string): string {
@@ -148,6 +149,9 @@ export class HttpResolver implements ResolverPort {
   }
 
   private _collectRequested(dep: Record<string, unknown>): Record<string, string[]> | null {
+    // i-010 — same normalization contract as LocalResolver._collectRequested:
+    // the legacy pre-v3 shorthand throws ResolveError before any fetch.
+    rejectLegacyShorthand(dep);
     const result: Record<string, string[]> = {};
     const items = (dep.items as Record<string, unknown>[]) ?? [];
     for (const item of items) {

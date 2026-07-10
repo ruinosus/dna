@@ -33,7 +33,7 @@ Equivalent to `mi.buildPrompt(opts)`.
 
 | Parameter | Type |
 | ------ | ------ |
-| `opts?` | `BuildPromptOpts` |
+| `opts?` | [`BuildPromptOpts`](Interface.BuildPromptOpts.md) |
 
 #### Returns
 

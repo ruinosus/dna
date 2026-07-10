@@ -263,7 +263,7 @@ buildPrompt(opts?): Promise<string>;
 
 | Parameter | Type |
 | ------ | ------ |
-| `opts?` | `BuildPromptOpts` |
+| `opts?` | [`BuildPromptOpts`](Interface.BuildPromptOpts.md) |
 
 #### Returns
 
@@ -796,7 +796,7 @@ Returns null if no profile covers this kind.
 
 #### Returns
 
-`CompositionProfile` \| `null`
+[`CompositionProfile`](Interface.CompositionProfile.md) \| `null`
 
 ***
 

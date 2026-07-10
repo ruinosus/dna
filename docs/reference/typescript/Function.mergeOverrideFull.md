@@ -20,4 +20,4 @@ First non-null contribution wins entirely.
 
 ## Returns
 
-\[`Raw` \| `null`, [`ResolutionLayer`](Class.ResolutionLayer.md) \| `null`\]
+\[[`Raw`](TypeAlias.Raw.md) \| `null`, [`ResolutionLayer`](Class.ResolutionLayer.md) \| `null`\]

@@ -12,7 +12,7 @@ spec:
     \ aceita o dep shorthand legado que o Py rejeita desde #28 \u2014 portar reject_legacy_shorthand).\
     \ O resolve da i-005 fecha a issue p\xFAblica GitHub #30 AUTOMATICAMENTE pela\
     \ ponte (#31) \u2014 o processo completo demonstrado em p\xFAblico."
-  status: in-progress
+  status: review
   feature: f-dna-sql-consolidation
   priority: medium
   labels:
@@ -33,7 +33,7 @@ spec:
   - PR merged via story pr; board de issues ZERADO
   definition_of_done_source: cli-create
   created_at: '2026-07-10T13:32:52+00:00'
-  updated_at: '2026-07-10T13:32:55+00:00'
+  updated_at: '2026-07-10T13:59:55+00:00'
   timeline:
   - at: '2026-07-10T13:32:52+00:00'
     actor: claude-code
@@ -46,8 +46,76 @@ spec:
     source: cli
     from: todo
     to: in-progress
+  - at: '2026-07-10T13:40:43+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Worktree feat/s-zero-the-board montado; venvs py+ts ok. Levantei o estado\
+      \ ATUAL: Kernel 6 m\xE9todos sem docstring (source/cache/resolver/reader/writer/load),\
+      \ ManifestInstance 20 (root, default_agent, list_kinds, get, describe, summary,\
+      \ 8x *_mermaid, export_diagrams_md, matrix, matrix_markdown, impact, health,\
+      \ ascii_tree), TypeDoc 15 broken-xref (o relat\xF3rio #12 dizia 14 \u2014 ManifestInstanceOpts\
+      \ entrou desde ent\xE3o). i-010: TS github delega pro LocalResolver (rejei\xE7\
+      \xE3o no _collectRequested cobre local+github); http TS tem _collectRequested\
+      \ pr\xF3prio \u2014 recebe a chamada expl\xEDcita como o Py. Ordem: i-010 red\u2192\
+      green primeiro, docstrings depois, regen docs, gates, PR."
+    commit_ref: dc6ceaf3026ff9ba7fbb30403b2832c739a6fe2d
+  - at: '2026-07-10T13:57:07+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Build completo nos 2 fronts. i-010: rejectLegacyShorthand portado pro\
+      \ TS (local.ts, mensagem espelhando byte a byte a receita do Py; http._collectRequested;\
+      \ github rejeita ANTES do clone \u2014 Py rejeita p\xF3s-fetch, mesmo contrato,\
+      \ sem round-trip perdido). Red: 3 fail provando fall-through silencioso; green:\
+      \ 12 pass. i-005: 26 docstrings Py (6 Kernel port-registers + 20 MI viz helpers);\
+      \ TS: 15 broken-xref (relat\xF3rio dizia 14 \u2014 ManifestInstanceOpts entrou\
+      \ depois) \u2192 11 re-exportados como superf\xEDcie p\xFAblica leg\xEDtima\
+      \ (Raw/TenantScope/PreviewResult/PreviewBlockKind/BuildPromptOpts/SourceCapabilities/KindLike/AsyncEventHandler/CompositionProfile/BundleHandle/LayerSource\
+      \ + 2\xAA ordem CompositionSlot/hints/sourceCapabilities/deriveCapabilities)\
+      \ e 4 intentionallyNotExported (CompositionResolverHost=collaborator-ports internals,\
+      \ QueryableInstance, ManifestInstanceOpts, DeclarativeMarker). Fixtures blessed/port-surface\
+      \ intactas (re-exports de tipo n\xE3o adicionam membro; suites verdes). Gates:\
+      \ py 2771 pass, ts 1333 pass, cli 329 pass, brand+coverage guards limpos, mkdocs\
+      \ --strict verde, TypeDoc 0 warnings."
+    commit_ref: 67fb938779a5bd82b4fb5a140c83bd955be5bd45
+  - at: '2026-07-10T13:58:49+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-zero-the-board
+    summary: TestGuide tg-zero-the-board (smoke)
+  - at: '2026-07-10T13:59:02+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-zero-the-board-20260710-135901
+    summary: "TestRun tr-tg-zero-the-board-20260710-135901 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-10T13:59:33+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/33'
+    pr_url: https://github.com/ruinosus/dna/pull/33
+  - at: '2026-07-10T13:59:55+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
   produces:
   - kind: Plan
     name: plan-s-zero-the-board
     role: implementation
     at: '2026-07-10T13:32:55+00:00'
+  - kind: TestGuide
+    name: tg-zero-the-board
+    role: test-guide
+    at: '2026-07-10T13:58:49+00:00'
+  - kind: TestRun
+    name: tr-tg-zero-the-board-20260710-135901
+    role: test-run
+    at: '2026-07-10T13:59:02+00:00'

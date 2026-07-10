@@ -46,7 +46,7 @@ detect(bundle): boolean;
 
 | Parameter | Type |
 | ------ | ------ |
-| `bundle` | `BundleHandle` |
+| `bundle` | [`BundleHandle`](Interface.BundleHandle.md) |
 
 #### Returns
 
@@ -68,7 +68,7 @@ read(bundle): Record<string, unknown>;
 
 | Parameter | Type |
 | ------ | ------ |
-| `bundle` | `BundleHandle` |
+| `bundle` | [`BundleHandle`](Interface.BundleHandle.md) |
 
 #### Returns
 

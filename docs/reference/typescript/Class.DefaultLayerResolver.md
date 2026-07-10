@@ -38,7 +38,7 @@ resolve(
 | ------ | ------ |
 | `baseDocuments` | `Record`\<`string`, `unknown`\>[] |
 | `layers` | `Record`\<`string`, `string`\> |
-| `source` | `LayerSource` |
+| `source` | [`LayerSource`](Interface.LayerSource.md) |
 | `scope` | `string` |
 | `policies` | `Record`\<`string`, `string`\> |
 

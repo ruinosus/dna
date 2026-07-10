@@ -38,7 +38,7 @@ detect(bundle): boolean | Promise<boolean>;
 
 | Parameter | Type |
 | ------ | ------ |
-| `bundle` | `BundleHandle` |
+| `bundle` | [`BundleHandle`](Interface.BundleHandle.md) |
 
 #### Returns
 
@@ -58,7 +58,7 @@ read(bundle):
 
 | Parameter | Type |
 | ------ | ------ |
-| `bundle` | `BundleHandle` |
+| `bundle` | [`BundleHandle`](Interface.BundleHandle.md) |
 
 #### Returns
 

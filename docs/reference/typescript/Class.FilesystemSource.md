@@ -65,7 +65,7 @@ no bundle/write surface on the TS twin yet.
 
 #### Returns
 
-`SourceCapabilities`
+[`SourceCapabilities`](Interface.SourceCapabilities.md)
 
 #### Implementation of
 

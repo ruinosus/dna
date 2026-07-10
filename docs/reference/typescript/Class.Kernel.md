@@ -29,6 +29,19 @@ new Kernel(opts?): Kernel;
 
 ## Properties
 
+### \_DEFAULT\_REALTIME\_MODEL\_FALLBACK
+
+```ts
+readonly _DEFAULT_REALTIME_MODEL_FALLBACK: "gpt-realtime-2" = "gpt-realtime-2";
+```
+
+s-realtime-model-single-default — 1:1 parity with the Python kernel:
+ the realtime fallback the prompt-budget guard caps against resolves
+ through ONE env (DNA_VOICE_REALTIME_MODEL), read at ACCESS time so a
+ pin set after construction still applies.
+
+***
+
 ### hooks
 
 ```ts
@@ -59,6 +72,20 @@ kinds raise `TenantRequired`. Set via the constructor (Sanity
 Connect pattern).
 
 ## Accessors
+
+### \_DEFAULT\_REALTIME\_MODEL
+
+#### Get Signature
+
+```ts
+get _DEFAULT_REALTIME_MODEL(): string;
+```
+
+##### Returns
+
+`string`
+
+***
 
 ### \_kinds
 
@@ -401,7 +428,7 @@ Register a composition profile that declares how an orchestrator
 
 | Parameter | Type |
 | ------ | ------ |
-| `profile` | `CompositionProfile` |
+| `profile` | [`CompositionProfile`](Interface.CompositionProfile.md) |
 
 #### Returns
 
@@ -1046,7 +1073,7 @@ Kernel.preview_document.
 
 #### Returns
 
-`Promise`\<`PreviewResult`\>
+`Promise`\<[`PreviewResult`](Interface.PreviewResult.md)\>
 
 ***
 
