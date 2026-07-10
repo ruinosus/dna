@@ -9,7 +9,7 @@ spec:
     \ terceiros CONSOMEM e COMPARTILHAM Kinds/scopes. Come\xE7a pelo dna install github:owner/repo\
     \ (evolu\xE7\xE3o do source-as-distribution do SDK upstream, reusando o GitHubResolver/ResolverPort\
     \ + lock_manager que j\xE1 viajaram); depois eval Kinds + runner local."
-  status: in-development
+  status: done
   epic: e-dna-public-extraction
   reporter: claude-code
   priority: high
@@ -19,7 +19,7 @@ spec:
   - meta
   business_value: 700
   created_at: '2026-07-10T04:26:57+00:00'
-  updated_at: '2026-07-10T04:27:02+00:00'
+  updated_at: '2026-07-10T10:11:59+00:00'
   timeline:
   - at: '2026-07-10T04:26:57+00:00'
     actor: claude-code
@@ -32,3 +32,11 @@ spec:
     source: cli
     from: discovery
     to: in-development
+  - at: '2026-07-10T10:11:59+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-development
+    to: done
+    commit_ref: 78bcc48d5f285f71348b87b03ee91912ce5b7d9d
+  closed_at: '2026-07-10T10:11:59+00:00'

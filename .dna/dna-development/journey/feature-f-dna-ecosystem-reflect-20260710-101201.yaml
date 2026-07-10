@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: WorkflowEvent
+metadata:
+  name: feature-f-dna-ecosystem-reflect-20260710-101201
+spec:
+  phase: reflect
+  ref: Feature/f-dna-ecosystem
+  parent_ref: Feature/f-dna-ecosystem
+  methodology: ad-hoc
+  started_at: '2026-07-10T10:12:00+00:00'
+  actor: claude-code
+  created_at: '2026-07-10T10:12:00+00:00'
+  summary: 'Feature shipped via cascade: f-dna-ecosystem'

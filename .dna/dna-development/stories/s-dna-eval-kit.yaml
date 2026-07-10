@@ -16,7 +16,7 @@ spec:
     \ doc com resultados, compara com Baseline. Paridade TS dos Kinds (runner Py-primary\
     \ justificado se for o caso). Prosa + guards. Evals s\xE3o o assunto do momento\
     \ em agentic \u2014 e o testkit (TestGuide/TestRun) j\xE1 \xE9 primo no repo."
-  status: review
+  status: done
   feature: f-dna-ecosystem
   priority: high
   labels:
@@ -27,16 +27,22 @@ spec:
   reporter: claude-code
   business_value: 600
   acceptance_criteria:
-  - "Kinds Eval* registrados (descriptor se ratchet permitir) Py+TS; dna eval run\
-    \ executa suite local offline (alvo determin\xEDstico default) e grava EvalRun;\
-    \ baseline compare funciona; alvo-LLM documentado como extension point; smoke\
-    \ real --product; prosa (guard) + reference regen; CI verde"
+  - text: "Kinds Eval* registrados (descriptor se ratchet permitir) Py+TS; dna eval\
+      \ run executa suite local offline (alvo determin\xEDstico default) e grava EvalRun;\
+      \ baseline compare funciona; alvo-LLM documentado como extension point; smoke\
+      \ real --product; prosa (guard) + reference regen; CI verde"
+    done: true
+    done_at: '2026-07-10T10:11:51+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - PR merged via dna sdlc story pr
+  - text: PR merged via dna sdlc story pr
+    done: true
+    done_at: '2026-07-10T10:11:51+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-10T09:24:31+00:00'
-  updated_at: '2026-07-10T10:06:41+00:00'
+  updated_at: '2026-07-10T10:11:57+00:00'
   timeline:
   - at: '2026-07-10T09:24:31+00:00'
     actor: claude-code
@@ -134,6 +140,23 @@ spec:
       \ 9/9 pass (deploy = skipping, s\xF3 roda no main). Pronto pra merge; story\
       \ em review aguardando."
     commit_ref: f35d7eb0a3536f54c535e8b93c24552086d2b31f
+  - at: '2026-07-10T10:11:55+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #27 merged (9/9; TestGuide --product com smoke real incluindo regress\xE3\
+      o de verdade capturada exit 1). 4 Kinds descriptors byte-par (EvalCase/Suite/Run/EvalBaseline);\
+      \ runner local s\xEDncrono com EvalTargetPort (default = kernel como sistema\
+      \ avali\xE1vel); compare com exit codes CI-friendly (regress\xE3o-only com baseline);\
+      \ dna eval run/list/show/pin; subset Temporal/judge-LLM cortado com nota honesta;\
+      \ runner TS Py-primary justificado (descriptors = contrato cross-lang)."
+  - at: '2026-07-10T10:11:57+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: 78bcc48d5f285f71348b87b03ee91912ce5b7d9d
   produces:
   - kind: Plan
     name: plan-s-dna-eval-kit
@@ -147,3 +170,4 @@ spec:
     name: tr-tg-dna-eval-kit-20260710-095855
     role: test-run
     at: '2026-07-10T09:58:56+00:00'
+  closed_at: '2026-07-10T10:11:51+00:00'
