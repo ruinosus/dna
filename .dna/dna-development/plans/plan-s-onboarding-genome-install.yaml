@@ -1,0 +1,61 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-onboarding-genome-install
+spec:
+  title: 'Plano: s-onboarding-genome-install'
+  date: '2026-07-10'
+  status: accepted
+  story_ref: s-onboarding-genome-install
+  journey_phase: plan
+  body: "# Plan \u2014 s-onboarding-genome-install (resolve i-015-onboarding-genome-via-install)\n\
+    \n## Problema\n`dna init` projeta apenas o Genome de onboarding EMBARCADO no dna-cli.\
+    \ Um time que\nqueira distribuir seu pr\xF3prio pack (skill de conven\xE7\xF5\
+    es + AGENTS.md da casa) n\xE3o tem\ncanal: `dna install` escreve no source `.dna/`,\
+    \ n\xE3o nas proje\xE7\xF5es de ferramenta\n(.claude/.github/...). Sem\xE2nticas\
+    \ distintas \u2192 design pr\xF3prio (i-015).\n\n## Design\n\n### Sem\xE2ntica:\
+    \ `dna init --from <uri>` = proje\xE7\xE3o, `dna install` = board\n- `--from`\
+    \ aceita `github:owner/repo[/subdir][@ref]`, `local:<path>` e (a\xE7\xFAcar) um\n\
+    \  path local existente. Fetch/parse \xE9 o MESMO c\xF3digo do install (`install_cmd._fetch`\n\
+    \  \u2192 `GitHubResolver.fetch_tree`) \u2014 zero duplica\xE7\xE3o.\n- O pack\
+    \ substitui os assets embarcados: toda Skill v\xE1lida encontrada na \xE1rvore\
+    \ \xE9\n  projetada por `--tools` (uma Kind, N proje\xE7\xF5es, writers byte-fi\xE9\
+    is \u2014 id\xEAntico ao\n  caminho embarcado, mesma idempot\xEAncia/`--force`).\
+    \ AGENTS.md do pack quando existir;\n  sen\xE3o **fallback pro embarcado com nota\
+    \ expl\xEDcita** (o projeto continua agent-ready\n  completo; o time que s\xF3\
+    \ distribui skill herda a superf\xEDcie can\xF4nica padr\xE3o).\n- `--from` N\xC3\
+    O grava conte\xFAdo do pack no source. Board bootstrap continua local\n  (Genome\
+    \ derivado do dirname); Genome no pack \xE9 ignorado (nunca redefine identidade\n\
+    \  de scope \u2014 mesma regra do install). Quem quiser o pack TAMB\xC9M no board\
+    \ roda a\n  combina\xE7\xE3o documentada: `dna install <uri>` + `dna init --from\
+    \ <uri>` (mesmo ref).\n  Dupla-escrita autom\xE1tica = acoplamento sem caso de\
+    \ uso claro \u2192 n\xE3o implementar.\n\n### Modelo de amea\xE7a (3 linhas)\n\
+    1. Conte\xFAdo do pack \xE9 DADO N\xC3O-CONFI\xC1VEL \u2192 reuso verbatim da\
+    \ 1\xAA defesa do install\n   (`_scan_tree` + `_validate_doc`): s\xF3 Kinds registrados,\
+    \ schema JSON validado,\n   nomes slug-only (path traversal nunca alcan\xE7a o\
+    \ filesystem), root-Kind rejeitado.\n2. Destinos de proje\xE7\xE3o s\xE3o `<tool-dir>/<slug>`\
+    \ + `AGENTS.md` fixo \u2192 sem escrita\n   fora do projeto por constru\xE7\xE3\
+    o.\n3. Risco residual inerente: uma skill \xC9 instru\xE7\xE3o de agente (vetor\
+    \ de prompt\n   injection) \u2014 n\xE3o \xE9 mitig\xE1vel por c\xF3digo; o output\
+    \ com `--from` imprime aviso\n   \"review before committing \u2014 treat a third-party\
+    \ pack like a dependency\".\n\n### Passos de output\nEmbarcado: byte-compat\xED\
+    vel com hoje (`skill[claude]`...). Com `--from`:\n`skill[<tool>:<skill-name>]`\
+    \ (packs multi-skill precisam de ids \xFAnicos no `--json`).\n\n## Implementa\xE7\
+    \xE3o\n1. `init_cmd.py`: extrair `_load_embedded_pack()` / `_load_remote_pack(uri)`\n\
+    \   (dataclass `OnboardingPack{skills, agents_raw, source_label, notes}`);\n \
+    \  generalizar `_materialize_skills`/`_materialize_agents_md` pra receber raws;\n\
+    \   op\xE7\xE3o `--from`; aviso de seguran\xE7a; docstrings/help.\n2. Pack exemplo\
+    \ `examples/onboarding-pack/` (skill gen\xE9rica `acme-conventions` +\n   AGENTS.md\
+    \ + README) \u2014 o dogfood p\xFAblico.\n3. Testes offline em `test_init_cmd.py`\
+    \ (pack local: happy, sem-skill falha,\n   fallback AGENTS, idempot\xEAncia/--force,\
+    \ traversal/schema rejeitados, bare path,\n   Genome do pack ignorado, --json).\
+    \ Smoke real `github:` fica no TestRun\n   (CI \xE9 DNA_OFFLINE=1; teste de rede\
+    \ pinado em branch ficaria stale p\xF3s-merge \u2014\n   follow-up: apontar um\
+    \ requires_network pra @main depois do merge).\n4. Docs: `agent-onboarding.md`\
+    \ \xA7 \"Distribute your team's onboarding pack\";\n   `scripts/gen_cli_docs.py`\
+    \ regenerado; coverage guard + mkdocs --strict.\n5. Smoke: push da branch \u2192\
+    \ `dna init --from github:ruinosus/dna/examples/onboarding-pack@feat/s-onboarding-genome-install`\n\
+    \   em projeto scratch; TestGuide `--product` + TestRun pass.\n6. `story pr` (11\
+    \ checks), issue i-015 in-progress + nota resolve done-on-merge.\n"
+  created_at: '2026-07-10T20:07:24+00:00'
+  updated_at: '2026-07-10T20:07:24+00:00'

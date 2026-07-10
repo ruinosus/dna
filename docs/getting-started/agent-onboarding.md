@@ -117,6 +117,62 @@ dna sdlc story start s-my-first-story --plan "plan of attack"
 From here, the full loop is the one described in
 [Your git log is your SDLC](../guides/sdlc.md).
 
+## Distribute your team's onboarding — `--from`
+
+The embedded assets are the *default* onboarding. A team can distribute its
+**own** pack — the house skill(s) plus, optionally, a custom AGENTS.md —
+and consumers bootstrap from it directly:
+
+```console
+$ dna init --from github:ruinosus/dna/examples/onboarding-pack
+dna init — /home/you/my-project  (board scope: my-project-dev)
+  pack: ruinosus/dna/examples/onboarding-pack (commit 95232daf6e2b)
+  created board                           .dna/my-project-dev
+  created skill[claude:acme-conventions]  .claude/skills/acme-conventions
+  created skill[copilot:acme-conventions] .github/skills/acme-conventions
+  created agents-md                       AGENTS.md
+  created hooks                           core.hooksPath = scripts/git-hooks
+
+5 created · 0 skipped
+
+⚠ pack content is third-party — review the projected files before
+  committing (a skill is agent instructions; treat a pack like a dependency)
+```
+
+An onboarding pack is just a repository subtree — see the live example at
+[`examples/onboarding-pack/`](https://github.com/ruinosus/dna/tree/main/examples/onboarding-pack):
+
+- **at least one Skill bundle** (`skills/<name>/SKILL.md`,
+  `agentskills.io/v1`) — packs without one are refused;
+- **optionally an `AGENTS.md` at the pack root** — it replaces the embedded
+  instruction surface; without one, the embedded default is used (the
+  summary says so explicitly).
+
+`--from` accepts `github:owner/repo[/subdir][@ref]`, `local:<path>`, or a
+bare directory path — the offline authoring loop while you draft the pack.
+Everything else about `dna init` is unchanged: idempotence, `--force`,
+`--tools`, and the board is always born from the **local** Genome (a pack
+never redefines the board scope — a `Genome.yaml` in the pack is ignored,
+with a note).
+
+**`--from` vs `dna install`.** The two channels share the fetch and the
+untrusted-input validation (registered Kinds only, JSON-Schema-checked
+specs, slug-only names — see [`dna install`](../guides/installing-scopes.md)) but
+write to different places: `dna install` puts *documents* into your `.dna/`
+source with a provenance lockfile; `dna init --from` *projects* Kinds into
+tool directories. When you want both — the pack's docs on the board *and*
+the projections — combine them at the same ref:
+
+```bash
+dna install github:acme/onboarding-pack@v1        # docs → .dna/ (+ lockfile)
+dna init   --from github:acme/onboarding-pack@v1  # projections → tool dirs
+```
+
+Because a skill *is* agent instructions, a third-party pack carries the
+same inherent risk as any dependency — the validation stops path traversal
+and malformed documents, not hostile prose. Review what was projected
+before committing it.
+
 ## Python-only, by construction
 
 The `dna` binary is part of the Python distribution (`dna-cli`); the

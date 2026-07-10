@@ -1,0 +1,18 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-onboarding-genome-install-20260710-202230
+spec:
+  guide_ref: tg-onboarding-genome-install
+  outcome: pass
+  verifies:
+  - Story/s-onboarding-genome-install
+  executed_by: claude-code
+  executed_at: '2026-07-10T20:22:30+00:00'
+  notes: "Executado 2026-07-10 em scratch dir: init --from github:ruinosus/dna/examples/onboarding-pack@feat/s-onboarding-genome-install\
+    \ (commit 07cb681170b5) \u2192 7 created + aviso de seguran\xE7a; cmp AGENTS.md/SKILL.md\
+    \ = byte-id\xEAnticos; re-run 0 created \xB7 7 skipped; dna install mesmo ref\
+    \ \u2192 installed 1 + installed.lock (AgentDefinition; skills escondidas pelo\
+    \ claim da raiz = bug pr\xE9-existente do install, filado i-016). Unit: cli 364\
+    \ passed / sdk-py suite verde / TS bun test verde; guards brand+coverage+gen_cli_docs\
+    \ --check+mkdocs --strict verdes."

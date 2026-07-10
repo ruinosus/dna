@@ -28,6 +28,26 @@ by the SDK's own market readers/writers, not by copying text templates:
      hooks dir (same semantics as ``dna sdlc hooks install``); skipped
      with a note when the directory is not a git repository.
 
+``--from <uri>`` (i-015) swaps the EMBEDDED onboarding assets for a
+distributed **onboarding pack** — a repository subtree carrying your
+team's own Skill bundle(s) and (optionally) an AGENTS.md. The fetch and
+the untrusted-input validation are the exact machinery of ``dna install``
+(``install_cmd._fetch`` / ``_scan_tree`` / ``_validate_doc`` — one code
+path, the defenses can never drift); only the DESTINATION differs:
+``dna install`` writes documents into the ``.dna/`` source, ``dna init
+--from`` PROJECTS Kinds into tool directories. The two compose: run
+``dna install <uri>`` with the same ref when you also want the pack's
+docs on the board.
+
+SECURITY (``--from``) — pack content is UNTRUSTED DATA: only registered
+Kinds pass, each ``spec`` is schema-validated before any projection,
+document names must be plain slugs (path-shaped names never reach the
+projection paths), and a Genome in the pack is ignored (a pack never
+redefines the board scope). The residual risk is inherent to the
+artifact: a Skill IS agent instructions — installing a third-party pack
+is installing a dependency, and the summary says so ("review before
+committing").
+
 Design evidence: Research/rsh-cross-tool-agent-standards (dna-development
 board) — the cross-tool adoption facts behind the multi-tool projection.
 
@@ -39,6 +59,7 @@ from __future__ import annotations
 import asyncio
 import re
 import stat
+from dataclasses import dataclass, field
 from importlib.resources import files as _pkg_files
 from pathlib import Path
 
@@ -47,6 +68,11 @@ import click
 from dna_cli._ctx import build_source_from_env, fail, print_json
 
 SKILL_NAME = "dna-sdlc-cli"
+
+#: The (apiVersion, kind) pairs `dna init` knows how to PROJECT. Everything
+#: else a pack may carry is board content — `dna install`'s territory.
+_SKILL_KEY = ("agentskills.io/v1", "Skill")
+_AGENTS_KEY = ("agents.md/v1", "AgentDefinition")
 
 #: Container dirs seeded (with .gitkeep) so the fresh board is recognized by
 #: the CLI's sole-SDLC-scope autodetection (``_autodetect_sdlc_scope`` probes
@@ -96,6 +122,134 @@ _SKIPPED = "skipped"
 def _onboarding_root() -> Path:
     """Root of the embedded onboarding scope shipped as package-data."""
     return Path(str(_pkg_files("dna_cli").joinpath("data/onboarding-scope")))
+
+
+# ─── onboarding pack (embedded or --from) ─────────────────────────────
+
+
+@dataclass
+class OnboardingPack:
+    """What `dna init` projects: skills + the AGENTS.md instruction surface.
+
+    ``skills`` are raw ``agentskills.io/v1`` Skill docs (already validated
+    when the pack is remote); ``agents_raw`` is the raw AgentDefinition or
+    ``None`` (the caller falls back to the embedded one, with a note).
+    ``label`` names the pack origin for the summary; ``notes`` carry
+    per-document rejections/ignores so nothing disappears silently.
+    """
+    skills: list[dict]
+    agents_raw: dict | None
+    label: str
+    remote: bool = False
+    notes: list[str] = field(default_factory=list)
+
+
+def _load_embedded_pack() -> OnboardingPack:
+    """The onboarding scope shipped inside dna-cli (the default pack)."""
+    from dna.extensions.agentskills import SkillReader
+    from dna.extensions.agentsmd import AgentDefinitionReader
+    from dna.kernel.bundle_handle import FilesystemBundleHandle
+
+    root = _onboarding_root()
+    skill = SkillReader().read(FilesystemBundleHandle(root / "skills" / SKILL_NAME))
+    agents = AgentDefinitionReader().read(FilesystemBundleHandle(root))
+    return OnboardingPack(skills=[skill], agents_raw=agents, label="embedded")
+
+
+def _normalize_from_uri(value: str) -> str:
+    """Accept ``github:``/``local:`` URIs plus a bare existing directory
+    (sugar for ``local:<abspath>`` — the offline-friendly authoring loop)."""
+    if value.startswith(("github:", "local:")):
+        return value
+    path = Path(value).expanduser()
+    if path.is_dir():
+        return f"local:{path.resolve()}"
+    raise fail(
+        f"--from {value!r}: not a github:owner/repo[/subdir][@ref] or "
+        f"local:<path> URI, and not an existing directory either"
+    )
+
+
+def _load_pack_from(from_uri: str) -> OnboardingPack:
+    """Fetch + validate a distributed onboarding pack (the i-015 channel).
+
+    Reuses ``dna install``'s machinery verbatim — ``_fetch`` (GitHubResolver
+    / local trees), ``_scan_tree`` (reader-driven walk) and ``_validate_doc``
+    (the first defense against untrusted input: registered-Kind-only, JSON
+    Schema, slug-only names). One deliberate difference from install's scan:
+    the walk runs with the SkillReader only, and the pack root is probed for
+    AGENTS.md separately — a reader that claims a directory stops the
+    recursion there, so scanning with the agentsmd reader would let a
+    root-level AGENTS.md hide the pack's skills.
+    """
+    from dna.extensions.agentsmd import AgentDefinitionReader
+    from dna.extensions.agentskills import SkillReader
+    from dna.kernel import Kernel
+    from dna.kernel.bundle_handle import FilesystemBundleHandle
+    from dna_cli.install_cmd import ScannedDoc, _fetch, _scan_tree, _validate_doc
+
+    fetched = _fetch(_normalize_from_uri(from_uri))
+    kernel = Kernel.auto()  # Kind registry only — no source is touched
+
+    pack = OnboardingPack(
+        skills=[], agents_raw=None, label=fetched.describe, remote=True,
+    )
+    seen: set[str] = set()
+    scanned = _scan_tree(fetched.root, [SkillReader()])
+
+    # The instruction surface: AGENTS.md at the pack ROOT (the agents.md
+    # convention), read with the same reader the embedded path uses.
+    agents_reader = AgentDefinitionReader()
+    root_handle = FilesystemBundleHandle(fetched.root)
+    if agents_reader.detect(root_handle):
+        raw = agents_reader.read(root_handle)
+        reason = _validate_doc(kernel, ScannedDoc(raw=raw, rel_path="AGENTS.md"))
+        if reason:
+            pack.notes.append(f"AGENTS.md: rejected — {reason}")
+        else:
+            pack.agents_raw = raw
+
+    for sd in scanned:
+        raw = sd.raw
+        key = (str(raw.get("apiVersion", "")), str(raw.get("kind", "")))
+        label = f"{sd.rel_path}"
+        if key == _AGENTS_KEY:
+            continue  # root AGENTS.md is the surface; bundles stay skills-only
+        if key != _SKILL_KEY:
+            kp = kernel.kind_port_for(key[1], api_version=key[0])
+            if kp is not None and getattr(kp, "is_root", False):
+                pack.notes.append(
+                    f"{label}: Genome ignored — a pack never redefines the "
+                    f"board scope"
+                )
+            else:
+                pack.notes.append(
+                    f"{label}: {key[1]} is not projectable by `dna init` — "
+                    f"only Skill bundles + AGENTS.md are; `dna install` is "
+                    f"the channel for board content"
+                )
+            continue
+        reason = _validate_doc(kernel, sd)
+        if reason:
+            pack.notes.append(f"{label}: rejected — {reason}")
+            continue
+        name = str(raw["metadata"]["name"])
+        if name in seen:
+            pack.notes.append(
+                f"{label}: duplicate skill {name!r} — the first one wins"
+            )
+            continue
+        seen.add(name)
+        pack.skills.append(raw)
+
+    if not pack.skills:
+        detail = "\n".join(f"  - {n}" for n in pack.notes) or "  (empty tree)"
+        raise fail(
+            f"no valid Skill found in {fetched.describe} — an onboarding "
+            f"pack must carry at least one agentskills.io Skill bundle "
+            f"(skills/<name>/SKILL.md).\n{detail}"
+        )
+    return pack
 
 
 def _derive_scope(target: Path) -> str:
@@ -158,46 +312,60 @@ async def _bootstrap_board(target: Path, scope: str) -> None:
 
 
 def _materialize_skills(
-    target: Path, force: bool, tools: list[str],
+    target: Path, force: bool, tools: list[str], pack: OnboardingPack,
 ) -> list[tuple[str, str, str]]:
-    """Skill Kind → one projection per selected tool, via reader→writer.
+    """Skill Kind(s) → one projection per selected tool, via reader→writer.
 
-    The embedded bundle is parsed ONCE with the registered
-    ``agentskills-skill`` reader and re-emitted with the byte-faithful
-    SkillWriter into each tool's skill directory — the same round-trip
-    machinery the market-conformance suites enforce. Returns one
-    ``(step, outcome, relative path)`` per tool.
+    Each pack skill was parsed ONCE with the registered ``agentskills-skill``
+    reader and is re-emitted with the byte-faithful SkillWriter into each
+    tool's skill directory — the same round-trip machinery the
+    market-conformance suites enforce. Returns one ``(step, outcome,
+    relative path)`` per (skill, tool). The embedded pack keeps the historic
+    ``skill[<tool>]`` step ids; a remote pack may carry several skills, so
+    its step ids are ``skill[<tool>:<name>]`` (unique in ``--json``).
     """
-    from dna.extensions.agentskills import SkillReader, SkillWriter
+    from dna.extensions.agentskills import SkillWriter
     from dna.kernel.bundle_handle import FilesystemBundleHandle
 
-    raw = SkillReader().read(
-        FilesystemBundleHandle(_onboarding_root() / "skills" / SKILL_NAME)
-    )
     writer = SkillWriter()
     results: list[tuple[str, str, str]] = []
-    for tool in tools:
-        rel = f"{TOOL_SKILL_DIRS[tool]}/{SKILL_NAME}"
-        dest = target / TOOL_SKILL_DIRS[tool] / SKILL_NAME
-        if (dest / "SKILL.md").exists() and not force:
-            results.append((f"skill[{tool}]", _SKIPPED, rel))
-            continue
-        dest.mkdir(parents=True, exist_ok=True)
-        writer.write(FilesystemBundleHandle(dest), raw)
-        results.append((f"skill[{tool}]", _CREATED, rel))
+    for raw in pack.skills:
+        name = str(raw["metadata"]["name"])
+        for tool in tools:
+            step = f"skill[{tool}:{name}]" if pack.remote else f"skill[{tool}]"
+            rel = f"{TOOL_SKILL_DIRS[tool]}/{name}"
+            dest = target / TOOL_SKILL_DIRS[tool] / name
+            if (dest / "SKILL.md").exists() and not force:
+                results.append((step, _SKIPPED, rel))
+                continue
+            dest.mkdir(parents=True, exist_ok=True)
+            writer.write(FilesystemBundleHandle(dest), raw)
+            results.append((step, _CREATED, rel))
     return results
 
 
-def _materialize_agents_md(target: Path, force: bool) -> tuple[str, str]:
-    """AgentDefinition Kind → ``<target>/AGENTS.md`` via reader→writer."""
+def _materialize_agents_md(
+    target: Path, force: bool, pack: OnboardingPack,
+) -> tuple[str, str]:
+    """AgentDefinition Kind → ``<target>/AGENTS.md`` via reader→writer.
+
+    A pack without an AGENTS.md falls back to the EMBEDDED one (with an
+    explicit note): the project must still end up with the canonical
+    instruction surface — a team distributing only a skill inherits the
+    default conventions file rather than an agent-blind root.
+    """
     from dna.extensions.agentsmd import AgentDefinitionReader, AgentDefinitionWriter
     from dna.kernel.bundle_handle import FilesystemBundleHandle
 
+    detail = "AGENTS.md"
+    raw = pack.agents_raw
+    if raw is None:
+        raw = AgentDefinitionReader().read(FilesystemBundleHandle(_onboarding_root()))
+        detail = "AGENTS.md (embedded default — the pack ships none)"
     if (target / "AGENTS.md").exists() and not force:
-        return _SKIPPED, "AGENTS.md"
-    raw = AgentDefinitionReader().read(FilesystemBundleHandle(_onboarding_root()))
+        return _SKIPPED, detail
     AgentDefinitionWriter().write(FilesystemBundleHandle(target), raw)
-    return _CREATED, "AGENTS.md"
+    return _CREATED, detail
 
 
 def _install_hooks(target: Path) -> tuple[str, str]:
@@ -256,9 +424,20 @@ def _install_hooks(target: Path) -> tuple[str, str]:
          "AGENTS.md). The board Genome is never rewritten — an existing "
          "board is verified and kept.",
 )
+@click.option(
+    "--from", "from_opt", default=None, metavar="URI",
+    help="Project a DISTRIBUTED onboarding pack instead of the embedded "
+         "one: `github:owner/repo[/subdir][@ref]`, `local:<path>`, or a "
+         "bare directory path. The pack must carry at least one agentskills.io "
+         "Skill bundle; a root AGENTS.md replaces the embedded instruction "
+         "surface (absent: the embedded one is used, with a note). Pack "
+         "content is validated with the same defenses as `dna install` and "
+         "only PROJECTED into tool directories — combine with `dna install "
+         "<same-uri>` when you also want it on the board.",
+)
 @click.option("--json", "as_json", is_flag=True, help="Machine-readable summary.")
 def init(scope_opt: str | None, dir_opt: str, tools_opt: str,
-         force: bool, as_json: bool) -> None:
+         force: bool, from_opt: str | None, as_json: bool) -> None:
     """Make a project agent-ready: board + skill + AGENTS.md + git hooks.
 
     One command bootstraps everything an AI coding agent needs to work
@@ -278,6 +457,14 @@ def init(scope_opt: str | None, dir_opt: str, tools_opt: str,
     readers/writers — one Kind, N regenerable projections. AGENTS.md serves
     every tool at once; Gemini CLI users can point GEMINI.md at it.
 
+    With --from, the skills + AGENTS.md come from a DISTRIBUTED onboarding
+    pack (your team's own conventions) instead of the embedded scope. The
+    pack is fetched and validated with the same machinery as `dna install`
+    (untrusted-input defenses included) but only PROJECTED into tool
+    directories — nothing from the pack is written to the .dna/ source.
+    Review the projected files before committing: a skill is agent
+    instructions; treat a third-party pack like a dependency.
+
     Idempotent: re-running never overwrites an existing file unless
     --force is given; the summary reports what was created vs skipped.
 
@@ -289,6 +476,8 @@ def init(scope_opt: str | None, dir_opt: str, tools_opt: str,
       dna init --tools all                  # every supported tool dir
       dna init --tools claude,cursor        # explicit projection set
       dna init --dir ../other-project       # initialize another directory
+      dna init --from github:acme/onboarding-pack@v1   # your team's pack
+      dna init --from local:../onboarding-pack         # offline authoring loop
     """
     target = Path(dir_opt)
     if not target.is_dir():
@@ -301,9 +490,13 @@ def init(scope_opt: str | None, dir_opt: str, tools_opt: str,
         )
     tools = _parse_tools(tools_opt)
 
+    # 0. The onboarding pack — embedded, or fetched + validated via --from.
+    pack = _load_pack_from(from_opt) if from_opt else _load_embedded_pack()
+
     results: list[tuple[str, str, str]] = []  # (step, outcome, detail)
 
-    # 1. Board — create when missing, verify + keep when present.
+    # 1. Board — create when missing, verify + keep when present. Always the
+    #    LOCAL Genome (derived scope): a pack never redefines the board.
     board_rel = f".dna/{scope}"
     if _board_exists(target, scope):
         results.append(("board", _SKIPPED, f"{board_rel} already exists"))
@@ -311,32 +504,48 @@ def init(scope_opt: str | None, dir_opt: str, tools_opt: str,
         asyncio.run(_bootstrap_board(target, scope))
         results.append(("board", _CREATED, board_rel))
 
-    # 2. Skill Kind → one projection per tool (byte-faithful writer).
-    results.extend(_materialize_skills(target, force, tools))
+    # 2. Skill Kind(s) → one projection per tool (byte-faithful writer).
+    results.extend(_materialize_skills(target, force, tools, pack))
 
     # 3. AGENTS.md (agentsmd-agent Kind) — the canonical instruction surface.
-    outcome, detail = _materialize_agents_md(target, force)
+    outcome, detail = _materialize_agents_md(target, force, pack)
     results.append(("agents-md", outcome, detail))
 
     # 4. Git hooks (Work-Item trailers).
     outcome, detail = _install_hooks(target)
     results.append(("hooks", outcome, detail))
 
+    review_note = (
+        "pack content is third-party — review the projected files before "
+        "committing (a skill is agent instructions; treat a pack like a "
+        "dependency)"
+    ) if pack.remote else None
+
     if as_json:
-        print_json({
+        payload = {
             "dir": str(target),
             "scope": scope,
             "steps": [
                 {"step": s, "outcome": o, "detail": d} for s, o, d in results
             ],
-        })
+        }
+        if pack.remote:
+            payload["from"] = pack.label
+            payload["notes"] = pack.notes
+            payload["review_note"] = review_note
+        print_json(payload)
         return
 
-    click.secho(f"dna init — {target}  (board scope: {scope})", bold=True)
+    header = f"dna init — {target}  (board scope: {scope})"
+    if pack.remote:
+        header += f"\n  pack: {pack.label}"
+    click.secho(header, bold=True)
     step_width = max(len(s) for s, _, _ in results)
     for step, outcome, detail in results:
         color = "green" if outcome == _CREATED else "yellow"
         click.secho(f"  {outcome:<7} {step:<{step_width}} {detail}", fg=color)
+    for note in pack.notes:
+        click.secho(f"  note    {note}", fg="yellow", dim=True)
     n_created = sum(1 for _, o, _ in results if o == _CREATED)
     n_skipped = len(results) - n_created
     click.secho(
@@ -344,12 +553,17 @@ def init(scope_opt: str | None, dir_opt: str, tools_opt: str,
         + ("" if force or not n_skipped else "  (re-run with --force to overwrite files)"),
         bold=True,
     )
+    if review_note:
+        click.secho(f"\n⚠ {review_note}", fg="yellow", bold=True)
+    skill_names = ", ".join(
+        str(raw["metadata"]["name"]) for raw in pack.skills
+    )
     click.echo(
         "\nNext steps:\n"
         "  dna sdlc feature create f-my-area --title \"...\" --desc \"...\"\n"
         "  dna sdlc story create s-my-first-story --feature f-my-area --desc \"...\" \\\n"
         "    --ac \"Given/When/Then ...\" --dod \"code+tests+docs\"\n"
         "  dna sdlc story start s-my-first-story --plan \"plan of attack\"\n"
-        f"  (your agent: read AGENTS.md + the {SKILL_NAME} skill in its "
-        f"tool's skills dir)"
+        f"  (your agent: read AGENTS.md + the {skill_names} skill"
+        f"{'s' if len(pack.skills) > 1 else ''} in its tool's skills dir)"
     )

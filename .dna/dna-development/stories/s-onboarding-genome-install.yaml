@@ -1,0 +1,233 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-onboarding-genome-install
+spec:
+  title: "dna init --from: onboarding Genome via distribui\xE7\xE3o remota"
+  description: "Resolve i-015: times distribuem seu pr\xF3prio onboarding pack (skills+AGENTS.md\
+    \ custom) e consomem via dna init --from github:owner/repo[/subdir][@ref] (ou\
+    \ local:) \u2014 reuso do fetch/scan/valida\xE7\xE3o do install, proje\xE7\xE3\
+    o id\xEAntica ao init embarcado"
+  status: review
+  feature: f-dna-ecosystem
+  priority: medium
+  labels:
+  - cli
+  - ecosystem
+  reporter: claude-code
+  acceptance_criteria:
+  - text: "Given um pack remoto com >=1 Skill v\xE1lida, When dna init --from github:owner/repo/subdir[@ref],\
+      \ Then as skills do pack s\xE3o projetadas por --tools com a mesma idempot\xEA\
+      ncia/--force do init embarcado"
+    done: true
+    done_at: '2026-07-10T20:22:49+00:00'
+    done_by: claude-code
+    evidence: 'AC1-4: tests test_init_cmd.py (22 passed; happy/fallback/no-skill/defesas);
+      AC5: TestRun tr-tg-onboarding-genome-install-20260710-202230 (smoke github:
+      commit 07cb681170b5). DoD: reuso _fetch/_scan_tree/_validate_doc verbatim; docs
+      agent-onboarding.md + CLI ref regen; suites cli+sdk-py+ts verdes; guards + mkdocs
+      --strict verdes; i-015 in-progress (resolve done-on-merge)'
+  - text: "Given um pack sem AGENTS.md, When init --from, Then o AGENTS.md embarcado\
+      \ \xE9 usado como fallback com nota expl\xEDcita no output"
+    done: true
+    done_at: '2026-07-10T20:22:49+00:00'
+    done_by: claude-code
+    evidence: 'AC1-4: tests test_init_cmd.py (22 passed; happy/fallback/no-skill/defesas);
+      AC5: TestRun tr-tg-onboarding-genome-install-20260710-202230 (smoke github:
+      commit 07cb681170b5). DoD: reuso _fetch/_scan_tree/_validate_doc verbatim; docs
+      agent-onboarding.md + CLI ref regen; suites cli+sdk-py+ts verdes; guards + mkdocs
+      --strict verdes; i-015 in-progress (resolve done-on-merge)'
+  - text: "Given um pack sem nenhuma Skill v\xE1lida, When init --from, Then o comando\
+      \ falha com mensagem did\xE1tica e nada \xE9 escrito"
+    done: true
+    done_at: '2026-07-10T20:22:49+00:00'
+    done_by: claude-code
+    evidence: 'AC1-4: tests test_init_cmd.py (22 passed; happy/fallback/no-skill/defesas);
+      AC5: TestRun tr-tg-onboarding-genome-install-20260710-202230 (smoke github:
+      commit 07cb681170b5). DoD: reuso _fetch/_scan_tree/_validate_doc verbatim; docs
+      agent-onboarding.md + CLI ref regen; suites cli+sdk-py+ts verdes; guards + mkdocs
+      --strict verdes; i-015 in-progress (resolve done-on-merge)'
+  - text: "Given docs com nome path-shaped ou schema inv\xE1lido no pack, When init\
+      \ --from, Then s\xE3o rejeitados pelas mesmas defesas do dna install (slug guard,\
+      \ schema, root-Kind) e nunca alcan\xE7am o filesystem"
+    done: true
+    done_at: '2026-07-10T20:22:49+00:00'
+    done_by: claude-code
+    evidence: 'AC1-4: tests test_init_cmd.py (22 passed; happy/fallback/no-skill/defesas);
+      AC5: TestRun tr-tg-onboarding-genome-install-20260710-202230 (smoke github:
+      commit 07cb681170b5). DoD: reuso _fetch/_scan_tree/_validate_doc verbatim; docs
+      agent-onboarding.md + CLI ref regen; suites cli+sdk-py+ts verdes; guards + mkdocs
+      --strict verdes; i-015 in-progress (resolve done-on-merge)'
+  - text: "Given o pack exemplo examples/onboarding-pack no pr\xF3prio repo dna, When\
+      \ dna init --from github:ruinosus/dna/examples/onboarding-pack@<ref> num projeto\
+      \ scratch, Then o smoke passa end-to-end (evid\xEAncia em TestRun)"
+    done: true
+    done_at: '2026-07-10T20:22:49+00:00'
+    done_by: claude-code
+    evidence: 'AC1-4: tests test_init_cmd.py (22 passed; happy/fallback/no-skill/defesas);
+      AC5: TestRun tr-tg-onboarding-genome-install-20260710-202230 (smoke github:
+      commit 07cb681170b5). DoD: reuso _fetch/_scan_tree/_validate_doc verbatim; docs
+      agent-onboarding.md + CLI ref regen; suites cli+sdk-py+ts verdes; guards + mkdocs
+      --strict verdes; i-015 in-progress (resolve done-on-merge)'
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - text: "c\xF3digo init_cmd.py com reuso real de install_cmd (fetch+scan+validate,\
+      \ zero duplica\xE7\xE3o)"
+    done: true
+    done_at: '2026-07-10T20:22:49+00:00'
+    done_by: claude-code
+    evidence: 'AC1-4: tests test_init_cmd.py (22 passed; happy/fallback/no-skill/defesas);
+      AC5: TestRun tr-tg-onboarding-genome-install-20260710-202230 (smoke github:
+      commit 07cb681170b5). DoD: reuso _fetch/_scan_tree/_validate_doc verbatim; docs
+      agent-onboarding.md + CLI ref regen; suites cli+sdk-py+ts verdes; guards + mkdocs
+      --strict verdes; i-015 in-progress (resolve done-on-merge)'
+  - text: "testes unit offline (happy path local, pack inv\xE1lido, fallback AGENTS,\
+      \ idempot\xEAncia, defesas de seguran\xE7a)"
+    done: true
+    done_at: '2026-07-10T20:22:49+00:00'
+    done_by: claude-code
+    evidence: 'AC1-4: tests test_init_cmd.py (22 passed; happy/fallback/no-skill/defesas);
+      AC5: TestRun tr-tg-onboarding-genome-install-20260710-202230 (smoke github:
+      commit 07cb681170b5). DoD: reuso _fetch/_scan_tree/_validate_doc verbatim; docs
+      agent-onboarding.md + CLI ref regen; suites cli+sdk-py+ts verdes; guards + mkdocs
+      --strict verdes; i-015 in-progress (resolve done-on-merge)'
+  - text: "docs: agent-onboarding.md se\xE7\xE3o 'distribua o onboarding do seu time'\
+      \ + refer\xEAncia CLI regenerada + guards de docs verdes"
+    done: true
+    done_at: '2026-07-10T20:22:49+00:00'
+    done_by: claude-code
+    evidence: 'AC1-4: tests test_init_cmd.py (22 passed; happy/fallback/no-skill/defesas);
+      AC5: TestRun tr-tg-onboarding-genome-install-20260710-202230 (smoke github:
+      commit 07cb681170b5). DoD: reuso _fetch/_scan_tree/_validate_doc verbatim; docs
+      agent-onboarding.md + CLI ref regen; suites cli+sdk-py+ts verdes; guards + mkdocs
+      --strict verdes; i-015 in-progress (resolve done-on-merge)'
+  - text: 'smoke real via github: com TestGuide --product + TestRun pass'
+    done: true
+    done_at: '2026-07-10T20:22:49+00:00'
+    done_by: claude-code
+    evidence: 'AC1-4: tests test_init_cmd.py (22 passed; happy/fallback/no-skill/defesas);
+      AC5: TestRun tr-tg-onboarding-genome-install-20260710-202230 (smoke github:
+      commit 07cb681170b5). DoD: reuso _fetch/_scan_tree/_validate_doc verbatim; docs
+      agent-onboarding.md + CLI ref regen; suites cli+sdk-py+ts verdes; guards + mkdocs
+      --strict verdes; i-015 in-progress (resolve done-on-merge)'
+  - text: suites completas + guards + mkdocs --strict verdes; PR via story pr; issue
+      i-015 in-progress com resolve done-on-merge
+    done: true
+    done_at: '2026-07-10T20:22:49+00:00'
+    done_by: claude-code
+    evidence: 'AC1-4: tests test_init_cmd.py (22 passed; happy/fallback/no-skill/defesas);
+      AC5: TestRun tr-tg-onboarding-genome-install-20260710-202230 (smoke github:
+      commit 07cb681170b5). DoD: reuso _fetch/_scan_tree/_validate_doc verbatim; docs
+      agent-onboarding.md + CLI ref regen; suites cli+sdk-py+ts verdes; guards + mkdocs
+      --strict verdes; i-015 in-progress (resolve done-on-merge)'
+  definition_of_done_source: cli-create
+  created_at: '2026-07-10T20:06:39+00:00'
+  updated_at: '2026-07-10T20:27:25+00:00'
+  timeline:
+  - at: '2026-07-10T20:06:39+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-10T20:07:26+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-10T20:09:11+00:00'
+    actor: claude-code
+    type: decision
+    source: cli
+    summary: "Decis\xE3o de scan: _scan_tree do install para de recursar quando um\
+      \ reader clama um dir \u2014 AGENTS.md na raiz do pack esconderia as skills.\
+      \ Solu\xE7\xE3o sem tocar no install: scan do pack com readers=[SkillReader]\
+      \ (skills + YAMLs standalone) + probe expl\xEDcito da raiz com AgentDefinitionReader\
+      \ pro AGENTS.md. _fetch/_scan_tree/_validate_doc reusados verbatim."
+    commit_ref: 95232da0c9429b4e65644b1ba856af248763352c
+  - at: '2026-07-10T20:14:38+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Implementa\xE7\xE3o core pronta: init_cmd com OnboardingPack (_load_embedded_pack/_load_pack_from),\
+      \ --from github:/local:/bare-path, materializers generalizados, notes + aviso\
+      \ de seguran\xE7a; pack exemplo examples/onboarding-pack (SKILL.md em forma\
+      \ writer-can\xF4nica pro fixpoint byte-fiel). Smoke manual local: 5 created,\
+      \ re-run 5 skipped, embedded path byte-compat\xEDvel. Agora: testes unit."
+    commit_ref: 95232da0c9429b4e65644b1ba856af248763352c
+  - at: '2026-07-10T20:22:29+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-onboarding-genome-install
+    summary: TestGuide tg-onboarding-genome-install (smoke)
+  - at: '2026-07-10T20:22:32+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-onboarding-genome-install-20260710-202230
+    summary: "TestRun tr-tg-onboarding-genome-install-20260710-202230 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-10T20:22:50+00:00'
+    actor: claude-code
+    type: checklist_check
+    source: cli
+    marked_ac: 5
+    marked_dod: 5
+    evidence: 'AC1-4: tests test_init_cmd.py (22 passed; happy/fallback/no-skill/defesas);
+      AC5: TestRun tr-tg-onboarding-genome-install-20260710-202230 (smoke github:
+      commit 07cb681170b5). DoD: reuso _fetch/_scan_tree/_validate_doc verbatim; docs
+      agent-onboarding.md + CLI ref regen; suites cli+sdk-py+ts verdes; guards + mkdocs
+      --strict verdes; i-015 in-progress (resolve done-on-merge)'
+    by: claude-code
+  - at: '2026-07-10T20:22:52+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Smoke real conclu\xEDdo: pack consumido via github: com commit pinado,\
+      \ byte-fiel, idempotente. Descoberta colateral: dna install de \xE1rvore com\
+      \ AGENTS.md na raiz esconde as skills (claim para a recurs\xE3o) \u2014 filado\
+      \ i-016-install-root-agents-md-hides-skills (bug/medium). Abrindo PR."
+    commit_ref: 07cb681170b5a3ea83a2d8cc8b21854351859f3c
+  - at: '2026-07-10T20:23:19+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/41'
+    pr_url: https://github.com/ruinosus/dna/pull/41
+  - at: '2026-07-10T20:23:33+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #41 aberto; resolve de i-015 \xE9 done-on-merge"
+  - at: '2026-07-10T20:23:34+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
+  - at: '2026-07-10T20:27:25+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "CI do PR #41: 11/11 pass (cli 3.12/3.13, sdk-py 3.12/3.13, postgres,\
+      \ sdk-ts, docs-build, docs-links, brand-guard, commit-emails, gitleaks; deploy=skipping\
+      \ normal em PR). Follow-ups trackeados: i-016 (install root-AGENTS.md esconde\
+      \ skills) + i-017 (network test do pack @main p\xF3s-merge). Story fica em review\
+      \ at\xE9 o merge; done-on-merge tamb\xE9m resolve i-015."
+    commit_ref: fba3005403a0231616eb0c9ff86e737dd36e7db0
+  produces:
+  - kind: Plan
+    name: plan-s-onboarding-genome-install
+    role: implementation
+    at: '2026-07-10T20:07:26+00:00'
+  - kind: TestGuide
+    name: tg-onboarding-genome-install
+    role: test-guide
+    at: '2026-07-10T20:22:29+00:00'
+  - kind: TestRun
+    name: tr-tg-onboarding-genome-install-20260710-202230
+    role: test-run
+    at: '2026-07-10T20:22:32+00:00'

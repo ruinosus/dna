@@ -1,0 +1,25 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-016-install-root-agents-md-hides-skills
+spec:
+  description: "dna install de uma \xE1rvore com AGENTS.md na RAIZ instala s\xF3 o\
+    \ AgentDefinition: _scan_tree para de recursar quando um reader clama um dir ('claimed\
+    \ by a reader \u2014 its subtree is the bundle'), ent\xE3o o agentsmd reader clamando\
+    \ a raiz esconde skills/ e todo o resto. Reproduzido no smoke de i-015: dna install\
+    \ github:ruinosus/dna/examples/onboarding-pack \u2192 installed 1 (AgentDefinition),\
+    \ Skill acme-conventions ausente. dna init --from contorna (scan com SkillReader\
+    \ only + probe expl\xEDcito da raiz AGENTS.md); o install precisa de fix pr\xF3\
+    prio \u2014 ex.: claim de doc single-file (AGENTS.md) n\xE3o deveria bloquear\
+    \ a recurs\xE3o nos subdirs, s\xF3 claim de bundle-dir (Skill)."
+  type: bug
+  severity: medium
+  status: open
+  owner: claude-code
+  related_feature: f-dna-ecosystem
+  timeline:
+  - at: '2026-07-10T20:22:06+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
