@@ -1,0 +1,21 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-dna-install-20260710-045756
+spec:
+  guide_ref: tg-dna-install
+  outcome: pass
+  verifies:
+  - Story/s-dna-install
+  executed_by: claude-code
+  executed_at: '2026-07-10T04:57:56+00:00'
+  notes: "Executado 2026-07-10 na rede local (n\xE3o CI) contra github.com real. Todos\
+    \ os 7 passos passaram verbatim: dry-run mostra plano com commit 9d2f1ae187231d8199c64b5b762e1bdf2244733d\
+    \ resolvido e n\xE3o escreve nada; install real grava skills/pdf/SKILL.md + Genome\
+    \ pr\xF3prio; installed.lock v3 com origin pinado github:anthropics/skills/skills/pdf@9d2f1ae187231d8199c64b5b762e1bdf2244733d\
+    \ e sha256 612060f1...; rerun idempotente skipa; doc show devolve instruction\
+    \ + scripts sidecars fi\xE9is; repo bogus degrada com erro did\xE1tico exit 1\
+    \ sem traceback; \xE1rvore local com 4 classes de doc malicioso/inv\xE1lido rejeita\
+    \ cada um com raz\xE3o espec\xEDfica (schema '42 is not of type string', Kind\
+    \ n\xE3o registrado, root Kind bloqueado, name path-shaped bloqueado) enquanto\
+    \ os v\xE1lidos instalam."

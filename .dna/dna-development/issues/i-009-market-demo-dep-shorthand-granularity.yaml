@@ -1,0 +1,24 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-009-market-demo-dep-shorthand-granularity
+spec:
+  description: "Genome dep 'github:anthropics/skills/skills@main' do market-demo usa\
+    \ o shorthand legado 'skills: [...]' que LocalResolver._collect_requested n\xE3\
+    o l\xEA (s\xF3 v3 'items:'), caindo em _resolve_all \u2014 que assume layout <categoria>/<item>\
+    \ 2-n\xEDveis e, apontado direto pra skills/, retorna os SUBDIRET\xD3RIOS dos\
+    \ bundles (references/, scripts/) em vez dos bundles. O demo n\xE3o quebra porque\
+    \ os skills est\xE3o vendorizados no disco do scope; o dep \xE9 decorativo. Fix:\
+    \ aceitar o shorthand em _collect_requested ou migrar o fixture pro formato items:\
+    \ \u2014 e decidir a sem\xE2ntica de _resolve_all para \xE1rvores rasas (bundle\
+    \ no primeiro n\xEDvel). Encontrado durante s-dna-install (o fetch do install\
+    \ contorna isso escaneando a \xE1rvore com readers)."
+  type: bug
+  severity: low
+  status: open
+  timeline:
+  - at: '2026-07-10T04:56:32+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

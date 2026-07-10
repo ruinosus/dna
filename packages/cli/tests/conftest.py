@@ -10,8 +10,50 @@ Tests scope:
 """
 from __future__ import annotations
 
+import os
+import socket
+
 import pytest
 from click.testing import CliRunner
+
+
+# --- requires_network gate (mirror of packages/sdk-py/tests/conftest.py) ----
+#
+# ``DNA_OFFLINE=1`` forces the skip regardless of real connectivity — CI
+# runners DO have network, but CI must never clone external repos
+# (s-public-ci); the python workflow exports DNA_OFFLINE=1.
+
+_NETWORK_CACHE: bool | None = None
+
+
+def _network_available() -> bool:
+    if os.environ.get("DNA_OFFLINE"):
+        return False
+    global _NETWORK_CACHE
+    if _NETWORK_CACHE is None:
+        try:
+            conn = socket.create_connection(("github.com", 443), timeout=2)
+            conn.close()
+            _NETWORK_CACHE = True
+        except OSError:
+            _NETWORK_CACHE = False
+    return _NETWORK_CACHE
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    config.addinivalue_line(
+        "markers",
+        "requires_network: skip unless outbound network is available "
+        "(and DNA_OFFLINE is unset — see tests/conftest.py)",
+    )
+
+
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+    for item in items:
+        if item.get_closest_marker("requires_network") and not _network_available():
+            item.add_marker(pytest.mark.skip(
+                reason="no network / GitHub access (or DNA_OFFLINE=1 set)",
+            ))
 
 
 @pytest.fixture

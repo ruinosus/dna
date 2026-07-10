@@ -18,6 +18,7 @@ import click
 from dna_cli import (
     doc_cmd,
     docs_cmd,
+    install_cmd,
     kind_cmd,
     memory_cmd,
     recall_cmd,
@@ -74,6 +75,7 @@ from dna_cli import hooks_cmd as _hooks_cmd  # noqa: E402,F401
 # half of the symbiosis (attribution footer, PR born from the Story).
 from dna_cli import pr_cmd as _pr_cmd  # noqa: E402,F401
 main.add_command(source_cmd.source)
+main.add_command(install_cmd.install)
 
 
 if __name__ == "__main__":

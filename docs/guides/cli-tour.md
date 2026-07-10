@@ -392,6 +392,55 @@ in a filesystem tree and in a database digests identically when in sync,
 so a diff never needs to transfer content — and re-serialization noise
 (key order, volatile stamps) never shows up as drift.
 
+## `dna install` — install bundles from a repository
+
+[Reference →](../reference/cli/install.md) ·
+[full guide →](installing-scopes.md)
+
+The front door of the ecosystem: point `dna install` at a repository —
+`github:owner/repo[/subdir][@ref]` (a shallow clone, the same URI grammar
+`Genome` dependencies use) or `local:<path>` (a directory you already
+have) — and it detects the DNA documents in the fetched tree with the
+kernel's registered readers, validates each one, and writes the valid
+ones into your source through `kernel.write_document`, so every write
+guard runs. Third-party manifests are **untrusted data**: schema
+validation is the first defense, and an invalid document is rejected
+with the reason while the install continues with the valid ones (see the
+[threat model](https://github.com/ruinosus/dna/blob/main/SECURITY.md)).
+`--dry-run` prints the plan and stops:
+
+```console
+$ dna install local:../market-drop --scope playground --dry-run
+install plan — /Users/you/market-drop → scope 'playground'
+  ! reject    Skill/bad-skill  (prompts/bad-skill.yaml)
+      schema validation failed at spec.instruction: 42 is not of type 'string' — see `dna kind show Skill` for the expected shape
+  + install   Skill/greeter  (skills/greeter)
+
+dry-run: 1 to write · 0 to skip · 1 rejected — re-run without --dry-run to apply
+
+$ dna install local:../market-drop --scope playground
+...
+installed 1 · skipped 0 · rejected 1
+provenance → ~/dna-playground/.dna/playground/installed.lock
+```
+
+Installing straight from a real marketplace repo works the same way —
+this pulls one official Anthropic skill into a `market` scope:
+
+```console
+$ dna install github:anthropics/skills/skills/pdf --scope market
+install plan — anthropics/skills/skills/pdf (commit 9d2f1ae18723) → scope 'market'
+  + install   Skill/pdf  (.)
+
+installed 1 · skipped 0 · rejected 0
+provenance → ~/dna-playground/.dna/market/installed.lock
+```
+
+Re-running is idempotent (existing documents are skipped with a warning;
+`--force` overwrites), and every install upserts `installed.lock` in the
+scope — each entry records the origin URI **pinned to the fetched
+commit**, the path inside the fetched tree, and a content SHA-256.
+
 ## The groups with their own guides
 
 Four groups already have dedicated prose — one line each here:

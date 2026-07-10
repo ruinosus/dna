@@ -1,0 +1,37 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-dna-install
+spec:
+  description: "Product smoke: dna install end-to-end contra repo GitHub REAL p\xFA\
+    blico (anthropics/skills) + valida\xE7\xE3o/degrada\xE7\xE3o"
+  kind_of_test: smoke
+  status: active
+  steps:
+  - action: 'num playground limpo (DNA_BASE_DIR novo com _lib/Genome.yaml), rode:
+      dna install github:anthropics/skills/skills/pdf --scope market --dry-run'
+    expected: "plano mostra '+ install Skill/pdf', linha de cabe\xE7alho traz o commit\
+      \ resolvido, exit 0, NADA escrito no disco"
+  - action: rode sem --dry-run
+    expected: "'installed 1 \xB7 skipped 0 \xB7 rejected 0'; .dna/market/skills/pdf/SKILL.md\
+      \ existe; .dna/market/manifest.yaml \xE9 um Genome pr\xF3prio do scope"
+  - action: cat .dna/market/installed.lock
+    expected: "lockVersion 3, entry Skill/pdf com origin github:anthropics/skills/skills/pdf@<sha-completo>\
+      \ (pinado no commit, n\xE3o em @main) e sha256 de 64 hex"
+  - action: repita o install
+    expected: "'= skip Skill/pdf \u2014 already exists locally (use --force to overwrite)',\
+      \ exit 0 (idempotente)"
+  - action: dna doc show Skill pdf --scope market
+    expected: "spec.instruction cont\xE9m o guia real de PDF e spec.scripts cont\xE9\
+      m os sidecars (round-trip fiel)"
+  - action: dna install github:usuario-inexistente-xyz/nope --scope market
+    expected: "erro did\xE1tico 'Could not fetch the repository' com as 3 dicas (URI/repo/offline\u2192\
+      local:), exit 1, SEM traceback"
+  - action: "aponte pra uma \xE1rvore local com doc de schema inv\xE1lido (spec.instruction:\
+      \ 42), Kind desconhecido, Genome remoto e name '../../escape'"
+    expected: "cada um rejeitado com raz\xE3o did\xE1tica espec\xEDfica; v\xE1lidos\
+      \ instalam mesmo assim"
+  verifies:
+  - Story/s-dna-install
+  created_at: '2026-07-10T04:57:39+00:00'
+  updated_at: '2026-07-10T04:57:39+00:00'

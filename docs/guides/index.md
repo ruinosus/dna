@@ -9,6 +9,10 @@ first if you have never loaded a scope.
 
 - **[A tour of the `dna` CLI](cli-tour.md)** — every command group in five
   minutes, one executed example each, linked to the generated reference.
+- **[How to install bundles from a repository](installing-scopes.md)** —
+  `dna install github:owner/repo[/subdir][@ref]`: fetch, reader-driven
+  detection, validation of untrusted manifests, conflicts, and the
+  `installed.lock` provenance record.
 
 ## Authoring
 
