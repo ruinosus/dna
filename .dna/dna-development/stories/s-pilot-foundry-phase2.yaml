@@ -26,16 +26,22 @@ spec:
   reporter: claude-code
   business_value: 600
   acceptance_criteria:
-  - "dna sdlc funcionando no foundry (story criada/narrada/PR assinado NATIVAMENTE\
-    \ de l\xE1); CONCIERGE decomposto em Soul+variantes e guardrails extra\xEDdos\
-    \ onde natural; eval suite atualizada como guarda sem\xE2ntica (viola\xE7\xE3\
-    o plantada \u2192 exit 1); testes deles verdes; PR aberto l\xE1 aguardando Barna"
+  - text: "dna sdlc funcionando no foundry (story criada/narrada/PR assinado NATIVAMENTE\
+      \ de l\xE1); CONCIERGE decomposto em Soul+variantes e guardrails extra\xEDdos\
+      \ onde natural; eval suite atualizada como guarda sem\xE2ntica (viola\xE7\xE3\
+      o plantada \u2192 exit 1); testes deles verdes; PR aberto l\xE1 aguardando Barna"
+    done: true
+    done_at: '2026-07-10T17:11:51+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - PR aberto no foundry (merge do Barna)
+  - text: PR aberto no foundry (merge do Barna)
+    done: true
+    done_at: '2026-07-10T17:11:51+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-10T16:10:15+00:00'
-  updated_at: '2026-07-10T16:38:39+00:00'
+  updated_at: '2026-07-10T17:11:54+00:00'
   timeline:
   - at: '2026-07-10T16:10:15+00:00'
     actor: claude-code
@@ -93,6 +99,16 @@ spec:
       \ terceiro: redondo \u2014 \xFAnico ajuste foi passar --scope foundry-dev em\
       \ cada verbo (default dna-development)."
     commit_ref: 62a29151703e4f7deba5d165cc0202772442bdd6
+  - at: '2026-07-10T17:11:54+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "foundry#106 MERGED pelo Barna. Board bootstrapado no foundry (1 arquivo\
+      \ + 1 comando, hooks limpos), story nativa com 14 eventos, PR assinado nativamente;\
+      \ CONCIERGE\u2192Soul+deltas, 2 Guardrails, concierge-base morto; guarda sem\xE2\
+      ntica (eval) substituiu o byte-golden com exit-1 provado. Veredito: 'mais redondo\
+      \ do que esperava'; 3 fric\xE7\xF5es DX \u2192 i-012/i-013/i-014. O foundry\
+      \ agora se auto-rastreia com DNA."
   produces:
   - kind: Plan
     name: plan-s-pilot-foundry-phase2

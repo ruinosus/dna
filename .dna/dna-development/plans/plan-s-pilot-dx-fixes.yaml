@@ -1,0 +1,16 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-pilot-dx-fixes
+spec:
+  title: 'Plano: s-pilot-dx-fixes'
+  date: '2026-07-10'
+  status: accepted
+  story_ref: s-pilot-dx-fixes
+  journey_phase: plan
+  body: "i-014 red\u2192green (match exato de \xEDndice); i-013 strip no reader +\
+    \ sweep de outros bundles; i-012 resolu\xE7\xE3o de scope default (env > Genome/auto-detect\
+    \ > hardcoded) com preced\xEAncia documentada e testes em repo-de-nome-arbitr\xE1\
+    rio. Worktree dna-wt-dxfix; PR via story pr."
+  created_at: '2026-07-10T17:11:57+00:00'
+  updated_at: '2026-07-10T17:11:57+00:00'

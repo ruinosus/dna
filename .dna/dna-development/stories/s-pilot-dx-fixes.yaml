@@ -1,0 +1,51 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-pilot-dx-fixes
+spec:
+  title: "Queimar as 3 fric\xE7\xF5es DX do piloto fase-2: i-012 (scope default configur\xE1\
+    vel \u2014 e"
+  description: "Queimar as 3 fric\xE7\xF5es DX do piloto fase-2: i-012 (scope default\
+    \ configur\xE1vel \u2014 env DNA_SDLC_SCOPE + auto-detec\xE7\xE3o do \xFAnico\
+    \ scope com Kinds SDLC no source, preced\xEAncia documentada; mata o --scope repetido\
+    \ em repo adotante), i-013 (trailing newline do SOUL.md vazando \\n\\n\\n no prompt\
+    \ composto \u2014 strip no reader/composi\xE7\xE3o + verificar AGENT.md/LESSON),\
+    \ i-014 (story check --ac com matching guloso de \xEDndice \u2014 red\u2192green\
+    \ match exato)."
+  status: in-progress
+  feature: f-dna-ecosystem
+  priority: high
+  labels:
+  - sdk
+  - cli
+  - python
+  reporter: claude-code
+  business_value: 400
+  acceptance_criteria:
+  - "DNA_SDLC_SCOPE + auto-detect funcionando (testado num source com scope de board\
+    \ de nome arbitr\xE1rio); soul newline n\xE3o vaza mais (red\u2192green; outros\
+    \ bundles verificados); story check marca exatamente os \xEDndices pedidos (red\u2192\
+    green); 3 issues resolvidas; CI verde"
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - PR merged via story pr
+  definition_of_done_source: cli-create
+  created_at: '2026-07-10T17:11:56+00:00'
+  updated_at: '2026-07-10T17:11:59+00:00'
+  timeline:
+  - at: '2026-07-10T17:11:56+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-10T17:11:59+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  produces:
+  - kind: Plan
+    name: plan-s-pilot-dx-fixes
+    role: implementation
+    at: '2026-07-10T17:11:59+00:00'
