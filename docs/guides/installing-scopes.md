@@ -44,7 +44,11 @@ dna install local:~/checkouts/some-skills --scope playground
    directory with a `SKILL.md` becomes a Skill, a `SOUL.md` a Soul, and
    so on; standalone `*.yaml` files with `apiVersion` + `kind` +
    `metadata.name` are collected as documents too. Dot-directories
-   (`.git`, `.github`) are skipped.
+   (`.git`, `.github`) are skipped. Mixed trees work: a claim consumes
+   its **bundle**, not the subtree — an `AGENTS.md` at the tree root
+   installs as an AgentDefinition *and* the `skills/` bundles next to it
+   still install, while a Skill bundle (SKILL.md + companion files) is
+   always exactly one document.
 3. **Build the plan** — every detected document is validated (below) and checked
    against the target scope for conflicts. `--dry-run` prints this plan
    and stops; nothing is written.

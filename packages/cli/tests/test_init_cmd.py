@@ -457,6 +457,30 @@ def test_init_from_rejects_untrusted_input_like_install(runner, project, tmp_pat
     assert "Genome ignored" in r.output
 
 
+@pytest.mark.requires_network
+def test_init_from_network_pack_on_default_branch(runner, project):
+    """i-017: the repo's published onboarding pack works end-to-end over the
+    network WITHOUT a ref — ``github:ruinosus/dna/examples/onboarding-pack``
+    resolves to the default branch, where the pack lives since PR #41 merged.
+    Skips under DNA_OFFLINE=1 (CI never clones external repos — s-public-ci)
+    and offline; run it locally."""
+    r = runner.invoke(init, [
+        "--scope", "acme-dev", "--tools", "claude",
+        "--from", "github:ruinosus/dna/examples/onboarding-pack",
+    ])
+    assert r.exit_code == 0, r.output
+    # The summary names the remote pack (commit-resolved describe line).
+    assert "ruinosus/dna/examples/onboarding-pack" in r.output
+    # The pack's skill was projected, the embedded one was NOT.
+    projected = project / ".claude" / "skills" / "acme-conventions" / "SKILL.md"
+    assert projected.exists()
+    assert not (project / ".claude" / "skills" / SKILL_NAME).exists()
+    # The pack AGENTS.md (not the embedded default) is the surface — and it
+    # only lands at all because the fixed scan lets the root AGENTS.md claim
+    # coexist with the skills/ tree below it (i-016).
+    assert "Acme engineering conventions" in (project / "AGENTS.md").read_text()
+
+
 def test_init_from_example_pack_in_this_repo(runner, project):
     """Dogfood: the repo's own examples/onboarding-pack is a valid pack and
     its SKILL.md is writer-canonical (projection is byte-identical)."""

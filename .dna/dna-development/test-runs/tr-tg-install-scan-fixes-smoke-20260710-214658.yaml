@@ -1,0 +1,18 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-install-scan-fixes-smoke-20260710-214658
+spec:
+  guide_ref: tg-install-scan-fixes-smoke
+  outcome: pass
+  verifies:
+  - Story/s-install-scan-fixes
+  executed_by: claude-code
+  executed_at: '2026-07-10T21:46:58+00:00'
+  notes: "All 4 steps executed live 2026-07-10. Step 1: install of github:ruinosus/dna/examples/onboarding-pack\
+    \ (commit 38b7d9c2a9f3) \u2192 installed 2 (AgentDefinition/onboarding-pack path\
+    \ '.', Skill/acme-conventions path 'skills/acme-conventions'), lockVersion 3 with\
+    \ both entries commit-pinned \u2014 the i-016 repro that previously installed\
+    \ only 1 doc. Step 2: SKILL.md present on disk in the target scope. Step 3: test_init_from_network_pack_on_default_branch\
+    \ PASSED in 4.47s online (no ref \u2192 default branch). Step 4: same test SKIPPED\
+    \ under DNA_OFFLINE=1 with the conftest reason string."

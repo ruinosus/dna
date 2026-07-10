@@ -10,7 +10,7 @@ spec:
     \ \xE9 DNA_OFFLINE=1, roda s\xF3 local."
   type: task
   severity: low
-  status: open
+  status: in-progress
   owner: claude-code
   related_feature: f-dna-ecosystem
   timeline:
@@ -19,3 +19,9 @@ spec:
     type: status_change
     source: cli
     to: open
+  - at: '2026-07-10T21:38:30+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: open
+    to: in-progress

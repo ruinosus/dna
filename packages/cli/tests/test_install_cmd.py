@@ -186,6 +186,92 @@ def test_install_readback_via_doc_show(tmp_path, monkeypatch):
     assert "Say hello nicely." in res.output
 
 
+# ─── mixed trees — a claim consumes its bundle, not the subtree (i-016) ──
+
+
+_AGENTS_MD = "# Acme conventions\n\nBe excellent to each other.\n"
+
+
+def test_root_agents_md_does_not_hide_sibling_docs(tmp_path, monkeypatch):
+    """i-016: a single-file claim at the tree ROOT (AGENTS.md) must not
+    swallow the rest of the tree — the skills/ bundles and the standalone
+    YAML docs next to it still install, and the AgentDefinition itself
+    lands too (with provenance for every one of them)."""
+    runner, base, remote = _env(tmp_path, monkeypatch)
+    (remote / "AGENTS.md").write_text(_AGENTS_MD, encoding="utf-8")
+    res = _install(runner, remote, "--json")
+    assert res.exit_code == 0, res.output
+    payload = json.loads(res.output)
+    assert sorted(payload["installed"]) == [
+        "AgentDefinition/remote", "Skill/greeter", "Skill/standalone-skill",
+    ]
+    # the untrusted-input rejections are unchanged by the deeper scan
+    assert len(payload["rejected"]) == 4
+
+    # every installed doc carries provenance; the root claim records path "."
+    lock = yaml.safe_load((base / "playground" / "installed.lock").read_text())
+    by_name = {d["name"]: d for d in lock["documents"]}
+    assert set(by_name) == {"remote", "greeter", "standalone-skill"}
+    assert by_name["remote"]["kind"] == "AgentDefinition"
+    assert by_name["remote"]["path"] == "."
+
+
+def test_skill_bundle_scans_as_exactly_one_doc(tmp_path, monkeypatch):
+    """The inverse guard: a Skill bundle (SKILL.md + companion files +
+    subdirs) is ONE doc — the scan must not recurse into the bundle's own
+    consumed content and re-collect envelope-shaped YAML companions as
+    separate documents."""
+    runner, _, remote = _env(tmp_path, monkeypatch)
+    greeter = remote / "skills" / "greeter"
+    # An envelope-shaped YAML at the bundle root (reader keeps it in
+    # spec.root_files) and one nested in references/ (spec.references).
+    (greeter / "companion.yaml").write_text(_SKILL_YAML, encoding="utf-8")
+    (greeter / "references").mkdir()
+    (greeter / "references" / "nested.yaml").write_text(
+        _SKILL_YAML.replace("standalone-skill", "nested-skill"), encoding="utf-8",
+    )
+    res = _install(runner, remote, "--dry-run", "--json")
+    assert res.exit_code == 0, res.output
+    plan = json.loads(res.output)["plan"]
+    greeter_docs = [p for p in plan if p["path"].startswith("skills/greeter")]
+    assert [f"{p['kind']}/{p['name']}" for p in greeter_docs] == ["Skill/greeter"]
+    # the companions never surfaced as standalone docs anywhere in the plan
+    assert not any(p["name"] == "nested-skill" for p in plan)
+    assert [p["path"] for p in plan if p["name"] == "standalone-skill"] == [
+        "docs/standalone.yaml",
+    ]
+
+
+def test_scan_claim_without_writer_keeps_conservative_subtree(tmp_path):
+    """A claimed doc with NO matching writer has an unknowable extent — the
+    scan falls back to the pre-i-016 semantics (the whole subtree is the
+    bundle) instead of guessing and double-collecting."""
+    from dna.extensions.agentskills import SkillReader, SkillWriter
+    from dna_cli.install_cmd import _scan_tree
+
+    class MarkerReader:
+        def detect(self, bundle):
+            return bundle.exists("MARKER.md")
+
+        def read(self, bundle):
+            return {
+                "apiVersion": "x.test/v1", "kind": "Marker",
+                "metadata": {"name": bundle.name}, "spec": {},
+            }
+
+    tree = tmp_path / "tree"
+    (tree / "skills" / "greeter").mkdir(parents=True)
+    (tree / "MARKER.md").write_text("root claim\n", encoding="utf-8")
+    (tree / "skills" / "greeter" / "SKILL.md").write_text(_SKILL_MD, encoding="utf-8")
+
+    scanned = _scan_tree(tree, [MarkerReader(), SkillReader()], writers=[SkillWriter()])
+    assert [d.raw["kind"] for d in scanned] == ["Marker"]
+
+    # and without any writers at all (init's historic call shape) — same
+    scanned = _scan_tree(tree, [MarkerReader(), SkillReader()])
+    assert [d.raw["kind"] for d in scanned] == ["Marker"]
+
+
 # ─── conflicts ────────────────────────────────────────────────────────
 
 

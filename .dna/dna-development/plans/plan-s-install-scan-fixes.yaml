@@ -1,0 +1,51 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-install-scan-fixes
+spec:
+  title: 'Plano: s-install-scan-fixes'
+  date: '2026-07-10'
+  status: accepted
+  story_ref: s-install-scan-fixes
+  journey_phase: plan
+  body: "# Plan \u2014 s-install-scan-fixes\n\n## Context\nBoth items were born from\
+    \ the PR #41 smoke:\n- i-016: `install_cmd._scan_tree` stops recursing when ANY\
+    \ reader claims a directory. A single-file claim (AGENTS.md at the tree root)\
+    \ therefore hides `skills/` and every other doc below \u2014 `dna install github:ruinosus/dna/examples/onboarding-pack`\
+    \ installed only the AgentDefinition.\n- i-017: post-merge task \u2014 a `requires_network`\
+    \ test for `dna init --from github:ruinosus/dna/examples/onboarding-pack` (no\
+    \ ref \u2192 default branch), skipped under DNA_OFFLINE=1 (CI).\n\n## i-016 \u2014\
+    \ structural fix: consumed-set scan\nA claim must consume exactly the files that\
+    \ make up the claimed bundle, not the whole subtree. The kernel already has the\
+    \ authoritative answer: every registered WriterPort implements `serialize(raw)`\
+    \ returning the exact entry list the bundle comprises (write \u2261 serialize\
+    \ is enforced by the round-trip conformance suite).\n\nChange `_scan_tree(root,\
+    \ readers)` \u2192 `_scan_tree(root, readers, writers=None)`:\n1. When a reader\
+    \ claims a directory, find the matching writer (`can_write(raw)`) and compute\
+    \ `consumed = {relativePath for serialize(raw)}`.\n2. Continue the standalone-YAML\
+    \ collection at that level, excluding consumed paths.\n3. Recurse into subdirs\
+    \ NOT touched by any consumed path prefix (a Skill bundle's `scripts/`, `references/`,\
+    \ `extras` dirs are consumed \u2192 one doc, no duplicates; an AGENTS.md claim\
+    \ consumes only `AGENTS.md` \u2192 siblings keep scanning).\n4. No matching writer\
+    \ / serialize failure \u2192 conservative fallback = old behavior (whole subtree\
+    \ is the bundle).\n5. First claiming reader still wins per directory (no multi-claim).\n\
+    \n`install` passes `kernel.active_writers`. `dna init --from` then DELEGATES to\
+    \ the fixed scan (`[SkillReader(), AgentDefinitionReader()]` + writers) and drops\
+    \ the PR #41 workaround (explicit root probe): the root AgentDefinition arrives\
+    \ as the scanned doc with rel_path \".\".\n\nLockfile: entries are (kind, name,\
+    \ api_version, origin, path, sha256) \u2014 more docs = more entries, same shape;\
+    \ root claim records path \".\". No schema change.\n\n## i-017 \u2014 network\
+    \ test\n`test_init_cmd.py` (or the github_real twin): `@pytest.mark.requires_network`\
+    \ test running `dna init --from github:ruinosus/dna/examples/onboarding-pack`\
+    \ (NO ref) into a tmp dir; assert the acme-conventions skill projection + the\
+    \ pack AGENTS.md landed. The existing conftest marker gate (DNA_OFFLINE=1 \u2192\
+    \ skip) does the CI skip.\n\n## Tests (prove-it list)\n- mixed tree (AGENTS.md\
+    \ root + skills/) installs ALL docs\n- skills-only tree: golden before/after (installed\
+    \ set + lock identical)\n- skill bundle with subdirs/companion yaml \u2192 exactly\
+    \ one doc (no duplicates)\n- no-writer fallback keeps old semantics\n- init --from\
+    \ tests stay green after delegation\n- i-017 requires_network test (local run\
+    \ evidence; CI skips)\n\n## Gates\ncli + sdk-py + sdk-ts suites, typecheck, guards,\
+    \ mkdocs --strict (install docs page gets a line on mixed trees), TestGuide --product\
+    \ + TestRun, PR 11/11 checks, no merge.\n"
+  created_at: '2026-07-10T21:38:23+00:00'
+  updated_at: '2026-07-10T21:38:23+00:00'

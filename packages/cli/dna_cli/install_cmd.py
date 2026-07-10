@@ -65,15 +65,26 @@ class ScannedDoc:
     rel_path: str  # path of the bundle dir / yaml file, relative to the root
 
 
-def _scan_tree(root: Path, readers: list) -> list[ScannedDoc]:
+def _scan_tree(root: Path, readers: list, writers: list | None = None) -> list[ScannedDoc]:
     """Walk ``root`` detecting documents with the registered readers.
 
     Mirrors ``FilesystemCache._read_tree`` (the kernel's own reader-driven
     scan of resolved dependencies) with two install-specific twists: the
     root directory itself is probed first (so a URI can point straight at a
     single bundle), and standalone ``*.yaml`` documents are collected at
-    every level. A directory claimed by a reader is not recursed into —
-    its files belong to that bundle.
+    every level.
+
+    A claim consumes its BUNDLE, not the subtree (i-016). When a reader
+    claims a directory, the matching WriterPort's ``serialize(raw)`` is the
+    authoritative extent of the claimed bundle (``write ≡ serialize`` is
+    enforced per registered pair by the round-trip conformance suite);
+    everything the claim did not consume keeps scanning. So a single-file
+    claim at the tree root (AGENTS.md) no longer hides the ``skills/`` tree
+    next to it, while a Skill bundle (SKILL.md + companions) still scans as
+    exactly ONE doc — its consumed files and subdirs are never re-collected.
+    Without ``writers`` (or when no writer matches the claimed doc) the
+    extent is unknowable and the scan falls back to the conservative
+    historic semantics: the whole subtree is the bundle.
     """
     from dna.kernel.bundle_handle import FilesystemBundleHandle
 
@@ -82,15 +93,31 @@ def _scan_tree(root: Path, readers: list) -> list[ScannedDoc]:
     def _rel(p: Path) -> str:
         return "." if p == root else str(p.relative_to(root))
 
+    def _consumed_paths(raw: dict) -> set[str] | None:
+        """Relative paths making up the claimed bundle, or None = unknown."""
+        for w in writers or ():
+            try:
+                if w.can_write(raw):
+                    return {str(e["relativePath"]) for e in w.serialize(raw)}
+            except Exception:  # noqa: BLE001 — the extent probe must never kill the scan
+                return None
+        return None
+
     def _visit(directory: Path) -> None:
         bundle = FilesystemBundleHandle(directory)
+        consumed: set[str] = set()
         for reader in readers:
             try:
                 if reader.detect(bundle):
                     raw = reader.read(bundle)
-                    if isinstance(raw, dict) and raw.get("kind"):
-                        found.append(ScannedDoc(raw=raw, rel_path=_rel(directory)))
-                    return  # claimed by a reader — its subtree is the bundle
+                    if not (isinstance(raw, dict) and raw.get("kind")):
+                        return  # claimed but not a doc — subtree stays opaque
+                    found.append(ScannedDoc(raw=raw, rel_path=_rel(directory)))
+                    paths = _consumed_paths(raw)
+                    if paths is None:
+                        return  # unknown extent — the subtree is the bundle
+                    consumed = paths
+                    break  # first claiming reader wins for this directory
             except Exception as e:  # noqa: BLE001 — one broken bundle must not kill the scan
                 click.secho(
                     f"warning: reader {type(reader).__name__} failed on "
@@ -98,6 +125,8 @@ def _scan_tree(root: Path, readers: list) -> list[ScannedDoc]:
                     fg="yellow", err=True,
                 )
         for yf in sorted(list(directory.glob("*.yaml")) + list(directory.glob("*.yml"))):
+            if yf.name in consumed:
+                continue  # part of the claimed bundle, not a standalone doc
             try:
                 content = yaml.safe_load(yf.read_text(encoding="utf-8"))
             except (yaml.YAMLError, UnicodeDecodeError):
@@ -111,8 +140,11 @@ def _scan_tree(root: Path, readers: list) -> list[ScannedDoc]:
             ):
                 found.append(ScannedDoc(raw=content, rel_path=_rel(yf)))
         for sub in sorted(directory.iterdir()):
-            if sub.is_dir() and not sub.name.startswith(".") and sub.name not in _SKIP_DIRS:
-                _visit(sub)
+            if not sub.is_dir() or sub.name.startswith(".") or sub.name in _SKIP_DIRS:
+                continue
+            if any(p.startswith(sub.name + "/") for p in consumed):
+                continue  # the claimed bundle owns this subdir — one doc, no dupes
+            _visit(sub)
 
     _visit(root)
     return found
@@ -397,7 +429,7 @@ def install(uri: str, scope_opt: str | None, dry_run: bool, force: bool, as_json
     with dna_session(scope) as s:
         kernel = s.kernel
         readers = list(kernel.active_readers)
-        scanned = _scan_tree(fetched.root, readers)
+        scanned = _scan_tree(fetched.root, readers, writers=list(kernel.active_writers))
         if not scanned:
             raise fail(
                 f"no DNA documents detected in {fetched.describe} — nothing the "

@@ -176,17 +176,16 @@ def _load_pack_from(from_uri: str) -> OnboardingPack:
     Reuses ``dna install``'s machinery verbatim — ``_fetch`` (GitHubResolver
     / local trees), ``_scan_tree`` (reader-driven walk) and ``_validate_doc``
     (the first defense against untrusted input: registered-Kind-only, JSON
-    Schema, slug-only names). One deliberate difference from install's scan:
-    the walk runs with the SkillReader only, and the pack root is probed for
-    AGENTS.md separately — a reader that claims a directory stops the
-    recursion there, so scanning with the agentsmd reader would let a
-    root-level AGENTS.md hide the pack's skills.
+    Schema, slug-only names). The walk runs with the Skill + agentsmd
+    readers together: since i-016 a claim consumes its BUNDLE, not the
+    subtree, so the root AGENTS.md (the agents.md convention — it arrives
+    as the scanned doc at rel_path ``.``) no longer hides the pack's
+    skills and needs no separate probe.
     """
     from dna.extensions.agentsmd import AgentDefinitionReader
     from dna.extensions.agentskills import SkillReader
     from dna.kernel import Kernel
-    from dna.kernel.bundle_handle import FilesystemBundleHandle
-    from dna_cli.install_cmd import ScannedDoc, _fetch, _scan_tree, _validate_doc
+    from dna_cli.install_cmd import _fetch, _scan_tree, _validate_doc
 
     fetched = _fetch(_normalize_from_uri(from_uri))
     kernel = Kernel.auto()  # Kind registry only — no source is touched
@@ -195,26 +194,26 @@ def _load_pack_from(from_uri: str) -> OnboardingPack:
         skills=[], agents_raw=None, label=fetched.describe, remote=True,
     )
     seen: set[str] = set()
-    scanned = _scan_tree(fetched.root, [SkillReader()])
-
-    # The instruction surface: AGENTS.md at the pack ROOT (the agents.md
-    # convention), read with the same reader the embedded path uses.
-    agents_reader = AgentDefinitionReader()
-    root_handle = FilesystemBundleHandle(fetched.root)
-    if agents_reader.detect(root_handle):
-        raw = agents_reader.read(root_handle)
-        reason = _validate_doc(kernel, ScannedDoc(raw=raw, rel_path="AGENTS.md"))
-        if reason:
-            pack.notes.append(f"AGENTS.md: rejected — {reason}")
-        else:
-            pack.agents_raw = raw
+    scanned = _scan_tree(
+        fetched.root,
+        [SkillReader(), AgentDefinitionReader()],
+        writers=list(kernel.active_writers),
+    )
 
     for sd in scanned:
         raw = sd.raw
         key = (str(raw.get("apiVersion", "")), str(raw.get("kind", "")))
         label = f"{sd.rel_path}"
         if key == _AGENTS_KEY:
-            continue  # root AGENTS.md is the surface; bundles stay skills-only
+            # The instruction surface: AGENTS.md at the pack ROOT only (the
+            # agents.md convention); nested ones stay out — skills-only.
+            if sd.rel_path == "." and pack.agents_raw is None:
+                reason = _validate_doc(kernel, sd)
+                if reason:
+                    pack.notes.append(f"AGENTS.md: rejected — {reason}")
+                else:
+                    pack.agents_raw = raw
+            continue
         if key != _SKILL_KEY:
             kp = kernel.kind_port_for(key[1], api_version=key[0])
             if kp is not None and getattr(kp, "is_root", False):

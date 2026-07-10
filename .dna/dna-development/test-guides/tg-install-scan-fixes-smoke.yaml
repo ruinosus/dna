@@ -1,0 +1,31 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-install-scan-fixes-smoke
+spec:
+  description: 'Product smoke for s-install-scan-fixes: mixed-tree install (i-016)
+    + init --from network path (i-017).'
+  kind_of_test: smoke
+  status: active
+  steps:
+  - action: Run 'dna install github:ruinosus/dna/examples/onboarding-pack --scope
+      smoke' against a fresh DNA_BASE_DIR
+    expected: "Plan lists BOTH AgentDefinition/onboarding-pack (path .) and Skill/acme-conventions\
+      \ (path skills/acme-conventions); 'installed 2 \xB7 skipped 0 \xB7 rejected\
+      \ 0'; installed.lock carries both entries pinned to the resolved commit"
+  - action: Inspect the installed scope on disk
+    expected: skills/acme-conventions/SKILL.md exists and the AgentDefinition doc
+      is readable via 'dna doc show'
+  - action: Run 'pytest tests/test_init_cmd.py -k network_pack -v' in packages/cli
+      with network
+    expected: "test_init_from_network_pack_on_default_branch PASSES \u2014 the pack\
+      \ projects .claude/skills/acme-conventions/SKILL.md and the pack AGENTS.md becomes\
+      \ the surface"
+  - action: Re-run the same test with DNA_OFFLINE=1
+    expected: "test is SKIPPED with reason 'no network / GitHub access (or DNA_OFFLINE=1\
+      \ set)' \u2014 the CI behavior"
+  verifies:
+  - Story/s-install-scan-fixes
+  created_at: '2026-07-10T21:46:38+00:00'
+  updated_at: '2026-07-10T21:46:38+00:00'
+  owner: claude-code
