@@ -33,7 +33,7 @@ spec:
   - PR to main with 11/11 checks; i-016 + i-017 resolved on merge
   definition_of_done_source: cli-create
   created_at: '2026-07-10T21:37:51+00:00'
-  updated_at: '2026-07-10T21:48:49+00:00'
+  updated_at: '2026-07-10T21:53:50+00:00'
   timeline:
   - at: '2026-07-10T21:37:51+00:00'
     actor: claude-code
@@ -109,6 +109,18 @@ spec:
       \ 2819 pass, sdk-ts 1368 pass + tsc, brand-guard clean, mkdocs --strict clean,\
       \ TestRun tr-tg-install-scan-fixes-smoke-20260710-214658 pass."
     commit_ref: c494a3d71fd479f1aeff3dd3dd1bb42dcb57a7ec
+  - at: '2026-07-10T21:53:50+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "CI do PR #44: 11/11 pass (brand-guard, cli 3.12/3.13, commit-emails,\
+      \ docs-build, docs-links, gitleaks, postgres, sdk-py 3.12/3.13, sdk-ts; deploy\
+      \ skipping como esperado). Aguardando merge humano \u2014 N\xC3O mergear pelo\
+      \ agente. P\xF3s-merge: resolver i-016 + i-017 (done-on-merge) e story done.\
+      \ Kaizen: i-018-cache-read-tree-claim-subtree filado (mesmo padr\xE3o claim-engole-sub\xE1\
+      rvore no FilesystemCache._read_tree do SDK, fora de escopo aqui por tocar paridade\
+      \ Py+TS)."
+    commit_ref: 83f6121af95ed9b81f4d597353ef335e9eb5f3c9
   produces:
   - kind: Plan
     name: plan-s-install-scan-fixes
