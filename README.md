@@ -41,13 +41,25 @@ flowchart LR
 · [The thesis](https://ruinosus.github.io/dna/concepts/thesis/)
 · [Your first Kind](https://ruinosus.github.io/dna/getting-started/first-kind/)
 
+## Install
+
+```bash
+pip install dna-sdk dna-cli      # Python SDK + the `dna` CLI
+npm install dna-sdk              # TypeScript SDK (or: bun add dna-sdk)
+```
+
+Pre-release / exact-pin alternative — consume straight from the repo
+(`cd packages/sdk-py && uv sync` · `cd packages/sdk-ts && bun install`), as
+the quick start below does. See [RELEASING.md](RELEASING.md) for how versions
+are cut.
+
 ## Quick start
 
 The snippets below run against [`examples/hello-genome`](examples/hello-genome/) —
 a minimal scope with one `Genome`, one `Agent` and one real marketplace
-Skill. Neither package is published to PyPI/npm yet; use them from the repo.
-Python and TypeScript do the same thing — that parity is a test-enforced
-invariant, not a goal.
+Skill — so they use the packages from the repo checkout. Python and
+TypeScript do the same thing — that parity is a test-enforced invariant,
+not a goal.
 
 ### Python
 
@@ -79,7 +91,7 @@ bun run ../../examples/hello-genome/run.ts
 ```
 
 ```typescript
-import { quickInstance } from "@dna/sdk";
+import { quickInstance } from "dna-sdk";
 
 // Path relative to packages/sdk-ts.
 const mi = await quickInstance("hello-genome", "../../examples/hello-genome/.dna");
@@ -101,7 +113,7 @@ step by step in **[Your first Kind](https://ruinosus.github.io/dna/getting-start
 | **The owner names the schema.** A Skill is `agentskills.io/v1`, a Soul `soulspec.org/v1`, an `AGENTS.md` `agents.md/v1` — standards DNA didn't invent are consumed **byte-faithful** under their owners' namespaces, enforced against 31 real marketplace bundles. | [Market fidelity](https://ruinosus.github.io/dna/concepts/market-fidelity/) |
 | **Behavior is data, not code.** Prompts, personas and wiring are versioned documents — validated on write, composed on read. Iterating never rebuilds the runtime. | [The thesis](https://ruinosus.github.io/dna/concepts/thesis/) |
 | **The kernel knows no Kinds.** A microkernel mediates five ports (source, cache, resolver, reader/writer, kind); extensions register Kinds onto it. A record Kind is a descriptor file — no fork, no code. | [Microkernel & ports](https://ruinosus.github.io/dna/concepts/microkernel-ports/) |
-| **Dual SDK, one behavior.** Python (`import dna`) and TypeScript (`@dna/sdk`) implement the same kernel 1:1 — parity enforced by shared fixtures and descriptor hash checks. | [Concepts](https://ruinosus.github.io/dna/concepts/) |
+| **Dual SDK, one behavior.** Python (`import dna`) and TypeScript (`dna-sdk`) implement the same kernel 1:1 — parity enforced by shared fixtures and descriptor hash checks. | [Concepts](https://ruinosus.github.io/dna/concepts/) |
 
 ## Your git log is your SDLC
 
@@ -151,7 +163,7 @@ mkdocs serve        # live preview at http://127.0.0.1:8000
 dna/
 ├── packages/
 │   ├── sdk-py/          # Python SDK — kernel + adapters + extensions (import dna)
-│   ├── sdk-ts/          # TypeScript SDK — 1:1 twin (@dna/sdk)
+│   ├── sdk-ts/          # TypeScript SDK — 1:1 twin (dna-sdk)
 │   └── cli/             # `dna` binary — document CRUD + declarative SDLC (dna sdlc)
 ├── docs/                # Diátaxis docs site (MkDocs + Material)
 ├── examples/

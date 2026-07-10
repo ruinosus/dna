@@ -102,7 +102,7 @@ Throws if the `(kind, name)` pair doesn't resolve.
 ### Form 2: `readSpec*(doc, field)` — when you hold a Document
 
 ```typescript
-import { readSpecString, readSpecStringArray, readSpecRecord } from "@dna/sdk";
+import { readSpecString, readSpecStringArray, readSpecRecord } from "dna-sdk";
 
 const agent = mi.documents.find((d) => d.kind === "Agent" && d.name === "foo");
 if (!agent) return;

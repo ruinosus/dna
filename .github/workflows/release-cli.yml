@@ -1,0 +1,69 @@
+# Release (dna-cli) — publish dna-cli to PyPI (s-publish-registries).
+# Tag-triggered ONLY, exactly like release.yml. See RELEASING.md.
+#
+# WHY A SEPARATE WORKFLOW FILE: PyPI trusted-publishing pending publishers
+# are deduplicated on the FULL identity tuple (owner + repo + WORKFLOW
+# FILENAME + environment) and a given tuple can be registered for only ONE
+# project name — dna-sdk and dna-cli cannot both be registered from
+# release.yml, even with distinct environments. dna-sdk publishes from
+# release.yml (environment `pypi`); dna-cli publishes from THIS file
+# (environment `pypi-cli`).
+name: release-cli
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  sanity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tag version must match every package version
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          SDK_PY=$(python3 -c "import tomllib; print(tomllib.load(open('packages/sdk-py/pyproject.toml','rb'))['project']['version'])")
+          CLI_PY=$(python3 -c "import tomllib; print(tomllib.load(open('packages/cli/pyproject.toml','rb'))['project']['version'])")
+          SDK_TS=$(python3 -c "import json; print(json.load(open('packages/sdk-ts/package.json'))['version'])")
+          echo "tag=$TAG  dna-sdk(py)=$SDK_PY  dna-cli=$CLI_PY  dna-sdk(npm)=$SDK_TS"
+          FAIL=0
+          [ "$TAG" = "$SDK_PY" ] || { echo "::error::tag $TAG != packages/sdk-py version $SDK_PY"; FAIL=1; }
+          [ "$TAG" = "$CLI_PY" ] || { echo "::error::tag $TAG != packages/cli version $CLI_PY"; FAIL=1; }
+          [ "$TAG" = "$SDK_TS" ] || { echo "::error::tag $TAG != packages/sdk-ts version $SDK_TS"; FAIL=1; }
+          exit $FAIL
+
+  build-cli:
+    needs: sanity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+      - name: Build sdist + wheel (dna-cli)
+        run: uv build --out-dir dist packages/cli && ls -l dist/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-cli
+          path: dist/
+          if-no-files-found: error
+
+  publish-pypi-cli:
+    needs: build-cli
+    runs-on: ubuntu-latest
+    # Trusted publishing (OIDC): the environment name is part of the PyPI
+    # pending-publisher identity — keep `pypi-cli` in sync with RELEASING.md.
+    environment: pypi-cli
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist-cli
+          path: dist/
+      - name: Publish dna-cli to PyPI (trusted publishing)
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/

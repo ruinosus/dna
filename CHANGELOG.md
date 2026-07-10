@@ -7,16 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > **Pre-1.0 notice.** DNA has not yet reached 1.0. Until then the public API
 > may change between releases without a major-version bump; SemVer guarantees
-> apply from 1.0.0 onward. The packages are not yet published to PyPI/npm —
-> consume them from the repository.
+> apply from 1.0.0 onward.
 
 ## [Unreleased]
 
-Everything below is the extracted public core as it stands today — the
-baseline that the first tagged release will draw from.
+## [0.1.0] - 2026-07-10
+
+The first tagged release — the extracted public core, published to the
+registries: **PyPI** ([`dna-sdk`](https://pypi.org/project/dna-sdk/),
+[`dna-cli`](https://pypi.org/project/dna-cli/)) and **npm**
+([`dna-sdk`](https://www.npmjs.com/package/dna-sdk)).
 
 ### Added
 
+- **Published packages** (s-publish-registries). `pip install dna-sdk dna-cli`
+  and `npm install dna-sdk` are now the primary install paths (the repo
+  remains the pre-release/exact-pin alternative). The TypeScript package was
+  renamed `@dna/sdk` → `dna-sdk` (unscoped, mirroring PyPI) and gained a
+  publication build — compiled ESM JS + type declarations in `dist/`,
+  including the runtime `*.kind.yaml` descriptors and `DOCS*.md` kind docs
+  that the extensions load relative to their own compiled modules. `dna-cli`
+  now depends on `dna-sdk>=0.1,<0.2` (resolved from PyPI in published
+  artifacts; the dev workspace keeps the editable path source). Releases are
+  cut by pushing a `vX.Y.Z` tag: tag-triggered workflows (`release.yml` +
+  `release-cli.yml` — one PyPI project per workflow file, a PyPI
+  pending-publisher dedup constraint) build sdist+wheel for both Python
+  packages and publish them via PyPI trusted publishing (OIDC, no long-lived
+  token), and publish the npm package with provenance via npm OIDC trusted
+  publishing (no token; the first npm publish is manual). See `RELEASING.md`.
 - **Write-path schema validation** (i-008). `write_document` /
   `writeDocument` now validate the doc's `spec` against the Kind's declared
   `schema()` **before persisting** — previously schemas were only checked at
@@ -31,7 +49,7 @@ baseline that the first tagged release will draw from.
   source, cache, resolver, reader/writer, and kind — and knows no Kinds
   itself; extensions register Kinds onto it via `kernel.load(ext)`.
 - **Dual SDK, one behavior.** Python (`packages/sdk-py`, `import dna`) and
-  TypeScript (`packages/sdk-ts`, `@dna/sdk`) implementing the same kernel 1:1,
+  TypeScript (`packages/sdk-ts`, `dna-sdk`) implementing the same kernel 1:1,
   with a test-enforced Python↔TypeScript parity contract (port-surface parity,
   descriptor hash parity, kind-registry parity, composition parity).
 - **Core Kinds** under `github.com/ruinosus/dna/...` — `Genome`, `Agent`,
@@ -122,4 +140,5 @@ baseline that the first tagged release will draw from.
   source conformance kit now pins the contract: base content is served
   by `load_all`, never by a `load_layer` sentinel.
 
-[Unreleased]: https://github.com/ruinosus/dna/commits/main
+[Unreleased]: https://github.com/ruinosus/dna/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/ruinosus/dna/releases/tag/v0.1.0

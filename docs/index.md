@@ -19,7 +19,7 @@ spec:
 ```
 
 DNA ships as a **dual SDK** — Python (`import dna`) and TypeScript
-(`@dna/sdk`) — that implement the same kernel 1:1. Behavioral parity between
+(`dna-sdk`) — that implement the same kernel 1:1. Behavioral parity between
 them is a test-enforced invariant, not a goal.
 
 ## Start here

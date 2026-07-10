@@ -10,7 +10,7 @@
  *     cd packages/sdk-ts && bun install
  *     bun run ../../scopes/market-integration/demo.ts
  */
-// In your own project this is: import { quickInstance } from "@dna/sdk";
+// In your own project this is: import { quickInstance } from "dna-sdk";
 import { quickInstance } from "../../packages/sdk-ts/src/index.ts";
 import { resolve } from "node:path";
 

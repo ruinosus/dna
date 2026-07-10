@@ -2,12 +2,16 @@
 
 Python SDK for **DNA — Domain Notation of Anything**: a microkernel +
 extensions runtime for declarative agent notation. See the
-[repository README](../../README.md) for the thesis, the architecture and
+[repository README](https://github.com/ruinosus/dna#readme) for the thesis, the architecture and
 the full Kind catalog.
 
 ## Install
 
-Not yet on PyPI — use it from the repo:
+```bash
+pip install dna-sdk        # or: uv add dna-sdk
+```
+
+Pre-release / exact-pin alternative — from the repo:
 
 ```bash
 cd packages/sdk-py
@@ -36,7 +40,7 @@ for d in mi.documents:
 print(mi.build_prompt(agent="greeter"))
 ```
 
-Runnable version: [`examples/hello-genome/run.py`](../../examples/hello-genome/run.py).
+Runnable version: [`examples/hello-genome/run.py`](https://github.com/ruinosus/dna/blob/main/examples/hello-genome/run.py).
 
 ## Layout
 

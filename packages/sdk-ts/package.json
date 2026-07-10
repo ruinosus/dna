@@ -1,17 +1,51 @@
 {
-  "name": "@dna/sdk",
+  "name": "dna-sdk",
   "version": "0.1.0",
   "description": "DNA — Domain Notation of Anything (TypeScript SDK)",
   "type": "module",
-  "main": "src/index.ts",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ruinosus/dna.git",
+    "directory": "packages/sdk-ts"
+  },
+  "homepage": "https://ruinosus.github.io/dna/",
+  "bugs": "https://github.com/ruinosus/dna/issues",
+  "keywords": [
+    "dna",
+    "agents",
+    "declarative",
+    "microkernel",
+    "manifests",
+    "prompts",
+    "skills",
+    "sdlc"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./testing": {
+      "types": "./dist/testing/index.d.ts",
+      "import": "./dist/testing/index.js",
+      "default": "./dist/testing/index.js"
+    }
+  },
   "files": [
-    "src/**/*.ts",
-    "src/extensions/*/templates/**",
-    "src/extensions/*/kinds/**"
+    "dist"
   ],
   "scripts": {
     "test": "bun test",
     "typecheck": "tsc --noEmit",
+    "build": "rm -rf dist && tsc -p tsconfig.build.json && bun run scripts/copy-dist-assets.ts",
     "docs:api": "bun run scripts/gen-api-docs.ts"
   },
   "dependencies": {
@@ -44,9 +78,5 @@
     "sqlite-vec": {
       "optional": true
     }
-  },
-  "exports": {
-    ".": "./src/index.ts",
-    "./testing": "./src/testing/index.ts"
   }
 }

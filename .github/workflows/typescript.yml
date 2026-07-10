@@ -1,4 +1,4 @@
-# TypeScript CI — @dna/sdk bun test + typecheck (s-public-ci).
+# TypeScript CI — dna-sdk bun test + typecheck (s-public-ci).
 name: typescript
 
 on:

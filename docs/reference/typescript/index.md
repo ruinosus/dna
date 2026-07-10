@@ -1,4 +1,4 @@
-# @dna/sdk
+# dna-sdk
 
 ## Classes
 

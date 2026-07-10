@@ -1,0 +1,23 @@
+{
+  // Publication build (s-publish-registries): emit ESM JS + .d.ts into dist/
+  // for the npm package. Dev/tests keep running straight from src/ under Bun
+  // (tsconfig.json stays the typecheck config; `bun test` never uses dist).
+  //
+  // Relative imports in src/ already carry explicit `.js` extensions, so the
+  // emitted output is Node-ESM resolvable as-is. Runtime assets that the
+  // compiled modules load via `import.meta.url` (extensions/*/kinds/*.kind.yaml
+  // descriptors + DOCS*.md kind docs) are copied into dist/ by
+  // scripts/copy-dist-assets.ts — see the `build` script in package.json.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "noEmit": false,
+    // No maps in the published artifact: `files: ["dist"]` deliberately does
+    // not ship src/, so maps would point at nothing and only bloat the tarball.
+    "sourceMap": false,
+    "declarationMap": false
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "tests"]
+}

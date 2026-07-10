@@ -16,7 +16,7 @@ TypeScript, implement the same kernel 1:1.
 
 ```
 packages/sdk-py/   # Python SDK — kernel + adapters + extensions (import dna)
-packages/sdk-ts/   # TypeScript SDK — 1:1 twin (@dna/sdk)
+packages/sdk-ts/   # TypeScript SDK — 1:1 twin (dna-sdk)
 packages/cli/      # `dna` binary — document CRUD + declarative SDLC (dna sdlc)
 docs/              # Quick start, Kinds guide, port contract, readers/writers
 examples/          # hello-genome — minimal runnable scope

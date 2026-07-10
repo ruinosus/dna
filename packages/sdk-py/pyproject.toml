@@ -2,6 +2,16 @@
 name = "dna-sdk"
 version = "0.1.0"
 description = "DNA — Domain Notation of Anything: microkernel + extensions for declarative agent notation"
+readme = "README.md"
+license = "MIT"
+keywords = ["dna", "agents", "declarative", "microkernel", "manifests", "prompts", "skills", "sdlc"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Typing :: Typed",
+]
 # 3.12 floor (s-py312-floor): the first real consumer (an Azure Container
 # Apps backend pinned >=3.12,<3.13) could not install the SDK under the old
 # 3.13-only floor — that floor was a convenience decision from PR #1 whose
@@ -142,3 +152,10 @@ markers = [
 dev = [
     "aiosqlite>=0.22.1",
 ]
+
+[project.urls]
+Homepage = "https://ruinosus.github.io/dna/"
+Repository = "https://github.com/ruinosus/dna"
+Documentation = "https://ruinosus.github.io/dna/"
+Changelog = "https://github.com/ruinosus/dna/blob/main/CHANGELOG.md"
+Issues = "https://github.com/ruinosus/dna/issues"
