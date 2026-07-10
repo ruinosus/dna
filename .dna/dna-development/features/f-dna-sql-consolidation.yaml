@@ -1,0 +1,35 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Feature
+metadata:
+  name: f-dna-sql-consolidation
+spec:
+  title: "Consolida\xE7\xE3o SQL \u2014 aposentar adapters crus Py em favor do SqlAlchemySource"
+  description: "Decis\xE3o Barna (2026-07-10, evid\xEAncia: pg cru 2241loc+2 bugs+1\
+    \ skip permanente; sqlite cru 1149loc; SA 1529loc cobre os dois dialetos \u2287\
+    \ funcional, mesmas tabelas = troca sem migra\xE7\xE3o): REMOVER PostgresSource\
+    \ e SqliteSource crus do Python; SA = \xFAnico caminho SQL Py. Trade-off aceito:\
+    \ uso SQL arrasta sqlalchemy (piso embarc\xE1vel segue sendo o FS default). TS\
+    \ MANT\xC9M seus adapters (n\xE3o h\xE1 SA em TS) \u2014 assimetria justificada\
+    \ na parity matrix. i-001/i-002 resolvidas por remo\xE7\xE3o."
+  status: in-development
+  epic: e-dna-public-extraction
+  reporter: claude-code
+  priority: high
+  labels:
+  - sdk
+  - python
+  business_value: 500
+  created_at: '2026-07-10T12:33:18+00:00'
+  updated_at: '2026-07-10T12:33:20+00:00'
+  timeline:
+  - at: '2026-07-10T12:33:18+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: discovery
+  - at: '2026-07-10T12:33:20+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: discovery
+    to: in-development

@@ -1,0 +1,57 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-retire-raw-sql-adapters
+spec:
+  title: "Executar a aposentadoria: (1) INVENT\xC1RIO primeiro \u2014 tudo que importa\
+    \ de adapters"
+  description: "Executar a aposentadoria: (1) INVENT\xC1RIO primeiro \u2014 tudo que\
+    \ importa de adapters/postgres|sqlite e sobrevive (SA importa _build_notify_payload/document_text/payloads\
+    \ de migra\xE7\xE3o dos crus; eventbus PostgresEventBus; helpers) MOVE pra local\
+    \ neutro (adapters/_shared ou pro pr\xF3prio SA) antes de remover; (2) remover\
+    \ PostgresSource+SqliteSource (classes, migrations m\xF3dulos pr\xF3prios, testes\
+    \ dedicados) com CHANGELOG Removed + nota de migra\xE7\xE3o (mesmas tabelas: trocar\
+    \ = instanciar SqlAlchemySource, zero migra\xE7\xE3o de dados); (3) extras: postgres/sqlite\
+    \ passam a puxar sqlalchemy+driver (compat de nome mantida) \u2014 guard de import\
+    \ default intocado; (4) conformance matrix e docs (adapters guide, parity-matrix\
+    \ justifications p/ TS-raw-pg-fica, builtin/concepts, cli-tour se citar) atualizados;\
+    \ (5) i-001+i-002 resolvidas por remo\xE7\xE3o com comments honestos; (6) suites\
+    \ full verdes \u2014 aten\xE7\xE3o: source_sync, kernel_bootstrap, capabilities\
+    \ e o conformance kit referenciam os crus."
+  status: in-progress
+  feature: f-dna-sql-consolidation
+  priority: high
+  labels:
+  - sdk
+  - python
+  reporter: claude-code
+  business_value: 500
+  acceptance_criteria:
+  - "Zero refer\xEAncias vivas aos crus Py (fora CHANGELOG/notas); helpers movidos\
+    \ sem regress\xE3o; SA passa a matriz nos 2 dialetos como antes; TS intocado +\
+    \ assimetria documentada; extras compat; i-001/i-002 resolvidas; nota de migra\xE7\
+    \xE3o publicada; CI verde"
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - "PR merged via story pr; TestGuide --product (troca real de um source cru\u2192\
+    SA provada)"
+  definition_of_done_source: cli-create
+  created_at: '2026-07-10T12:33:21+00:00'
+  updated_at: '2026-07-10T12:33:38+00:00'
+  timeline:
+  - at: '2026-07-10T12:33:21+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-10T12:33:38+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  produces:
+  - kind: Plan
+    name: plan-s-retire-raw-sql-adapters
+    role: implementation
+    at: '2026-07-10T12:33:38+00:00'
