@@ -10,7 +10,7 @@ spec:
     \ i-009 (dep shorthand skills: n\xE3o lido por _collect_requested \u2192 granularidade\
     \ errada no resolve; ler o shorthand ou rejeit\xE1-lo com erro claro \u2014 decidir\
     \ pelo contrato real e documentar)."
-  status: in-progress
+  status: review
   feature: f-dna-issues-round1
   priority: medium
   labels:
@@ -20,14 +20,20 @@ spec:
   reporter: claude-code
   business_value: 300
   acceptance_criteria:
-  - "scope detect funciona com Genome.yaml (teste); dep shorthand resolvido com teste\
-    \ red\u2192green; i-007+i-009 resolvidas"
+  - text: "scope detect funciona com Genome.yaml (teste); dep shorthand resolvido\
+      \ com teste red\u2192green; i-007+i-009 resolvidas"
+    done: true
+    done_at: '2026-07-10T11:11:33+00:00'
+    done_by: claude-code
+    evidence: "PR #28: test_scope_detect.py (red\u2192green Genome.yaml) + TestLegacyDepShorthandRejected\
+      \ (3 red + controle); i-007+i-009 resolved; TestRun tr-tg-s-small-bug-fixes-20260710-110950\
+      \ pass"
   acceptance_criteria_source: cli-create
   definition_of_done:
   - PR merged
   definition_of_done_source: cli-create
   created_at: '2026-07-10T10:51:30+00:00'
-  updated_at: '2026-07-10T11:09:51+00:00'
+  updated_at: '2026-07-10T11:11:33+00:00'
   timeline:
   - at: '2026-07-10T10:51:30+00:00'
     actor: claude-code
@@ -85,6 +91,28 @@ spec:
     name: tr-tg-s-small-bug-fixes-20260710-110950
     summary: "TestRun tr-tg-s-small-bug-fixes-20260710-110950 \u2192 pass"
     outcome: pass
+  - at: '2026-07-10T11:10:28+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/28'
+    pr_url: https://github.com/ruinosus/dna/pull/28
+  - at: '2026-07-10T11:11:20+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
+  - at: '2026-07-10T11:11:34+00:00'
+    actor: claude-code
+    type: checklist_check
+    source: cli
+    marked_ac: 1
+    marked_dod: 0
+    evidence: "PR #28: test_scope_detect.py (red\u2192green Genome.yaml) + TestLegacyDepShorthandRejected\
+      \ (3 red + controle); i-007+i-009 resolved; TestRun tr-tg-s-small-bug-fixes-20260710-110950\
+      \ pass"
+    by: claude-code
   produces:
   - kind: Plan
     name: plan-s-small-bug-fixes
