@@ -122,7 +122,7 @@ spec:
       --strict verdes; i-015 in-progress (resolve done-on-merge)'
   definition_of_done_source: cli-create
   created_at: '2026-07-10T20:06:39+00:00'
-  updated_at: '2026-07-10T20:23:34+00:00'
+  updated_at: '2026-07-10T20:27:25+00:00'
   timeline:
   - at: '2026-07-10T20:06:39+00:00'
     actor: claude-code
@@ -208,6 +208,16 @@ spec:
     source: cli
     from: in-progress
     to: review
+  - at: '2026-07-10T20:27:25+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "CI do PR #41: 11/11 pass (cli 3.12/3.13, sdk-py 3.12/3.13, postgres,\
+      \ sdk-ts, docs-build, docs-links, brand-guard, commit-emails, gitleaks; deploy=skipping\
+      \ normal em PR). Follow-ups trackeados: i-016 (install root-AGENTS.md esconde\
+      \ skills) + i-017 (network test do pack @main p\xF3s-merge). Story fica em review\
+      \ at\xE9 o merge; done-on-merge tamb\xE9m resolve i-015."
+    commit_ref: fba3005403a0231616eb0c9ff86e737dd36e7db0
   produces:
   - kind: Plan
     name: plan-s-onboarding-genome-install

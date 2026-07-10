@@ -1,0 +1,21 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-017-init-from-network-test-post-merge
+spec:
+  description: "P\xF3s-merge do PR #41: adicionar teste requires_network em test_init_cmd.py\
+    \ (ou test_install_github_real.py) consumindo github:ruinosus/dna/examples/onboarding-pack\
+    \ SEM ref (default branch) \u2014 n\xE3o dava pra incluir no pr\xF3prio PR porque\
+    \ o pack s\xF3 existe no main ap\xF3s o merge (branch pinada ficaria stale). CI\
+    \ \xE9 DNA_OFFLINE=1, roda s\xF3 local."
+  type: task
+  severity: low
+  status: open
+  owner: claude-code
+  related_feature: f-dna-ecosystem
+  timeline:
+  - at: '2026-07-10T20:27:23+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
