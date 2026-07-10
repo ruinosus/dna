@@ -14,7 +14,7 @@ spec:
     \ hooks), com um exemplo m\xEDnimo de runner no docs (n\xE3o no core). Extension\
     \ automation (563loc upstream; avaliar subset) + descriptor conforme ratchet +\
     \ paridade TS + prosa (guard exige)."
-  status: review
+  status: done
   feature: f-dna-1.0-readiness
   priority: medium
   labels:
@@ -37,10 +37,13 @@ spec:
       \ sem allowlist nova; suites 2864 py / 1308 ts / 267 cli verdes locais"
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - PR merged via dna sdlc story pr
+  - text: PR merged via dna sdlc story pr
+    done: true
+    done_at: '2026-07-10T00:07:56+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-09T23:20:07+00:00'
-  updated_at: '2026-07-10T00:03:39+00:00'
+  updated_at: '2026-07-10T00:08:01+00:00'
   timeline:
   - at: '2026-07-09T23:20:07+00:00'
     actor: claude-code
@@ -173,6 +176,23 @@ spec:
       \ sdk-ts; deploy=skip por design em PR). Story em review aguardando merge \u2014\
       \ done s\xF3 depois do merge (n\xE3o pushar mais nesta branch)."
     commit_ref: 249dbe717b56213c46452b89570f2242b82dacb0
+  - at: '2026-07-10T00:07:58+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #25 merged (todos os checks; TestGuide/TestRun --product do agente\
+      \ com smoke real via CLI). Automation Kind descriptor byte-par (66 Kinds); cura\
+      \ do YAML-1.1 on:\u2192True; valida\xE7\xE3o de schema NO WRITE via guard (gap\
+      \ sist\xEAmico achado \u2192 i-008); cron zero-dep + hook\u2208KNOWN_HOOK_NAMES;\
+      \ query helpers na superf\xEDcie blessed; extension point documentado com runner\
+      \ exemplo nos docs (SDK declara, host executa)."
+  - at: '2026-07-10T00:08:01+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: 584363aecd1fc537ebdc57d717c08984e146dad3
   produces:
   - kind: Plan
     name: plan-s-tier-a-automation
@@ -186,3 +206,4 @@ spec:
     name: tr-tg-tier-a-automation-20260709-235639
     role: test-run
     at: '2026-07-09T23:56:40+00:00'
+  closed_at: '2026-07-10T00:07:56+00:00'
