@@ -10,11 +10,15 @@ List + inspect scopes (manifest modules).
 
 ## `dna scope detect`
 
-Walk upward from cwd looking for the nearest .dna/<scope>/manifest.yaml.
+Walk upward from cwd looking for the nearest .dna/<scope>/Genome.yaml.
 
 Phase 14u — used by the Claude Code PreToolUse hook to auto-inject
 scope context. Prints the scope name to stdout (no decorations) so
 shell scripts can capture it via $(dna scope detect).
+
+Genome.yaml is the canonical scope-root marker (Phase 16); the legacy
+pre-Genome manifest.yaml is still accepted (i-007) — same dual-marker
+contract as `dna install` and the composite source.
 
 ```text
 dna scope detect [OPTIONS]
