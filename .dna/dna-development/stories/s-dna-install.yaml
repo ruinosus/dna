@@ -1,0 +1,56 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-dna-install
+spec:
+  title: 'dna install github:owner/repo[/subdir][@ref] [--scope NAME] [--dry-run]:
+    instala'
+  description: "dna install github:owner/repo[/subdir][@ref] [--scope NAME] [--dry-run]:\
+    \ instala bundles/Kinds de um repo GitHub no source local \u2014 a porta de entrada\
+    \ do ecossistema. EVOLU\xC7\xC3O (n\xE3o c\xF3pia) do source-as-distribution do\
+    \ SDK upstream: reusa o GitHubResolver (ResolverPort, j\xE1 no DNA) pra fetch;\
+    \ detecta bundles via os readers registrados; VALIDA e escreve via kernel.write_document\
+    \ (todos os guards rodam \u2014 manifesto de terceiro \xE9 dado n\xE3o-confi\xE1\
+    vel, coerente com SECURITY.md); registra proveni\xEAncia (lock \u2014 investigar\
+    \ o lock_manager do kernel que j\xE1 viajou; sen\xE3o um installed-manifest pr\xF3\
+    prio). dry-run mostra o plano; conflitos (doc j\xE1 existe) pedem --force ou skip\
+    \ com aviso. Prosa obrigat\xF3ria (coverage guard: grupo CLI novo) + reference\
+    \ regen (drift guard)."
+  status: in-progress
+  feature: f-dna-ecosystem
+  priority: high
+  labels:
+  - sdk
+  - cli
+  - python
+  reporter: claude-code
+  business_value: 700
+  acceptance_criteria:
+  - "dna install de um repo REAL p\xFAblico funciona end-to-end local (smoke com repo\
+    \ real, ex. o de skills da Anthropic); valida\xE7\xE3o no write roda (doc inv\xE1\
+    lido do repo remoto \xE9 rejeitado com erro did\xE1tico); dry-run e provenance\
+    \ funcionam; degrada\xE7\xE3o honesta offline; prosa cli-tour/guide + guards verdes;\
+    \ CI verde"
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - PR merged via dna sdlc story pr; TestGuide --product com smoke real
+  definition_of_done_source: cli-create
+  created_at: '2026-07-10T04:27:02+00:00'
+  updated_at: '2026-07-10T04:27:05+00:00'
+  timeline:
+  - at: '2026-07-10T04:27:02+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-10T04:27:05+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  produces:
+  - kind: Plan
+    name: plan-s-dna-install
+    role: implementation
+    at: '2026-07-10T04:27:05+00:00'

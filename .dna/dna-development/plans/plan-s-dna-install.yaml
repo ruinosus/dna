@@ -1,0 +1,16 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-dna-install
+spec:
+  title: 'Plano: s-dna-install'
+  date: '2026-07-10'
+  status: accepted
+  story_ref: s-dna-install
+  journey_phase: plan
+  body: "Ler spec upstream source-as-distribution + community/package cmds como arte\
+    \ pr\xE9via; desenhar sobre GitHubResolver+readers+write_document+lock_manager;\
+    \ CLI install_cmd kernel-bound; smoke real contra repo p\xFAblico; prosa+guards.\
+    \ Worktree dna-wt-install; PR via story pr."
+  created_at: '2026-07-10T04:27:03+00:00'
+  updated_at: '2026-07-10T04:27:03+00:00'
