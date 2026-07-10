@@ -8,6 +8,8 @@ from __future__ import annotations
 import logging
 from typing import Any, TYPE_CHECKING
 
+from dna.kernel._text import strip_prompt_block
+
 if TYPE_CHECKING:
     from dna.kernel.document import Document
     from dna.kernel.instance import ManifestInstance
@@ -234,7 +236,13 @@ class PromptBuilder:
         ctx["agent"] = {
             "name": agent_doc.name,
             "description": _get_description(agent_doc),
-            "instruction": self._host.ref(instruction_ref) if instruction_ref else "",
+            # strip_prompt_block: composition-only trailing-whitespace
+            # normalization (i-013) — storage stays byte-faithful.
+            "instruction": (
+                strip_prompt_block(self._host.ref(instruction_ref))
+                if instruction_ref
+                else ""
+            ),
         }
         ctx["agentId"] = agent_doc.name
 
@@ -285,6 +293,8 @@ class PromptBuilder:
                         ctx[alias] = [e for e in ctx[alias] if e.get("name") in enabled_names]
 
         # Flatten: kinds with flatten_in_context have their spec entries merged into ctx.
+        # String values (soul_content, agents_content, ...) get trailing
+        # whitespace normalized — the template supplies the joiners (i-013).
         _reserved = {"agent", "metadata", "spec", "agentId"}
         for doc in self._host.documents:
             kp = self._host._kinds.get((doc.api_version, doc.kind))
@@ -293,7 +303,11 @@ class PromptBuilder:
             spec = doc.spec
             for k, v in spec.items():
                 if v is not None and k not in _reserved:
-                    ctx[k] = self._host.ref(v) if isinstance(v, str) else v
+                    ctx[k] = (
+                        strip_prompt_block(self._host.ref(v))
+                        if isinstance(v, str)
+                        else v
+                    )
 
         # Extra context from caller
         if extra:
@@ -343,8 +357,9 @@ class PromptBuilder:
         ctx["agent"] = {
             "name": agent_doc.name,
             "description": _get_description(agent_doc),
+            # strip_prompt_block: composition-only normalization (i-013).
             "instruction": (
-                await self._host.ref_async(instruction_ref)
+                strip_prompt_block(await self._host.ref_async(instruction_ref))
                 if instruction_ref
                 else ""
             ),
@@ -406,7 +421,9 @@ class PromptBuilder:
             for k, v in spec.items():
                 if v is not None and k not in _reserved:
                     ctx[k] = (
-                        await self._host.ref_async(v) if isinstance(v, str) else v
+                        strip_prompt_block(await self._host.ref_async(v))
+                        if isinstance(v, str)
+                        else v
                     )
 
         if extra:

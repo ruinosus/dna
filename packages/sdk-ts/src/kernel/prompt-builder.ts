@@ -11,6 +11,7 @@
 
 import Mustache from "mustache";
 
+import { stripPromptBlock } from "./_text.js";
 import type { Document } from "./document.js";
 import type { HookContext } from "./hooks.js";
 import type { ManifestInstance, BuildPromptOpts } from "./instance.js";
@@ -123,7 +124,11 @@ export class PromptBuilder {
     ctx.agent = {
       name: agentDoc.name,
       description: PromptBuilder._getDescription(agentDoc),
-      instruction: instructionRef ? await this.host.ref(instructionRef) : "",
+      // stripPromptBlock: composition-only trailing-whitespace
+      // normalization (i-013) — storage stays byte-faithful.
+      instruction: instructionRef
+        ? stripPromptBlock(await this.host.ref(instructionRef))
+        : "",
     };
     ctx.agentId = agentDoc.name;
 
@@ -193,14 +198,19 @@ export class PromptBuilder {
       }
     }
 
-    // Flatten: kinds with flattenInContext have their spec entries merged into ctx
+    // Flatten: kinds with flattenInContext have their spec entries merged into ctx.
+    // String values (soul_content, agents_content, ...) get trailing
+    // whitespace normalized — the template supplies the joiners (i-013).
     for (const doc of this.host.documents) {
       const kp = kinds.get(`${doc.apiVersion}\0${doc.kind}`);
       if (!kp?.flattenInContext) continue;
       const spec = doc.spec;
       for (const [k, v] of Object.entries(spec)) {
         if (k.startsWith("_") || v == null) continue;
-        ctx[k] = typeof v === "string" ? await this.host.ref(v) : v;
+        ctx[k] =
+          typeof v === "string"
+            ? stripPromptBlock(await this.host.ref(v))
+            : v;
       }
     }
 
