@@ -30,6 +30,7 @@ import logging
 import re
 from typing import Any
 
+from dna.kernel._text import strip_prompt_block
 from dna.kernel.document import Document
 
 
@@ -218,8 +219,11 @@ async def build_prompt_async(
     ctx["agent"] = {
         "name": agent_doc.name,
         "description": _get_description(agent_doc),
+        # strip_prompt_block: composition-only normalization (i-013).
         "instruction": (
-            await ref_resolve(instruction_ref) if instruction_ref else ""
+            strip_prompt_block(await ref_resolve(instruction_ref))
+            if instruction_ref
+            else ""
         ),
     }
     ctx["agentId"] = agent_doc.name
@@ -298,7 +302,13 @@ async def build_prompt_async(
             spec = doc.spec
             for k, v in (spec.items() if hasattr(spec, "items") else []):
                 if v is not None and k not in _reserved:
-                    ctx[k] = (await ref_resolve(v)) if isinstance(v, str) else v
+                    # Trailing-whitespace normalization on flattened string
+                    # values — the template supplies the joiners (i-013).
+                    ctx[k] = (
+                        strip_prompt_block(await ref_resolve(v))
+                        if isinstance(v, str)
+                        else v
+                    )
 
     # --- 9. Extra context from caller -----------------------------------
     if context:

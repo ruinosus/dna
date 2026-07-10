@@ -18,8 +18,9 @@ Subcommands::
     dna sdlc epic show <name>                             # burndown
     dna sdlc epic ship <name>                             # → done + cascade
 
-All commands operate on the ``dna-development`` scope by default.
-Override with ``--scope`` flag (e.g. when tracking a different project).
+Scope resolution (i-012) — every verb resolves its scope with the same
+precedence: ``--scope`` flag > env ``DNA_SDLC_SCOPE`` > auto-detected
+sole SDLC scope in the source > ``dna-development`` (compat fallback).
 """
 from __future__ import annotations
 
@@ -349,10 +350,83 @@ def _fire_post_transition(
             )
 
 
+#: Directory containers whose presence marks a scope as holding SDLC
+#: structure (the Kinds `dna sdlc` operates on live in these).
+_SDLC_CONTAINERS = ("stories", "features", "epics", "issues", "roadmaps")
+
+
+def _autodetect_sdlc_scope() -> str | None:
+    """Return the SOLE scope in the source with SDLC structure, else None.
+
+    i-012 (pilot phase-2): adopter repos have arbitrary board-scope names
+    ('foundry-dev', ...) — when the source holds exactly ONE scope with
+    SDLC containers, use it. Ambiguous (0 or 2+) → None (caller falls
+    back). Filesystem probe only (the CLI boots filesystem sources —
+    see _ctx module docstring); scope enumeration mirrors
+    FilesystemWritableSource.list_scopes (non-hidden dirs, minus the
+    reserved 'tenants'/'_legacy').
+    """
+    from pathlib import Path
+    from urllib.parse import urlparse
+
+    from dna_cli._ctx import _resolve_source_url
+
+    url = _resolve_source_url()
+    parsed = urlparse(url)
+    if parsed.scheme not in ("file", "fs", ""):
+        return None  # non-filesystem source — no cheap probe
+    path = (parsed.netloc + parsed.path) if parsed.netloc else (parsed.path or url)
+    base = Path(path)
+    if not base.is_dir():
+        return None
+    reserved = {"tenants", "_legacy"}
+    candidates = [
+        d.name
+        for d in sorted(base.iterdir())
+        if d.is_dir()
+        and not d.name.startswith(".")
+        and d.name not in reserved
+        and any((d / c).is_dir() for c in _SDLC_CONTAINERS)
+    ]
+    return candidates[0] if len(candidates) == 1 else None
+
+
+def _resolve_scope_default() -> str:
+    """Resolve the scope for sdlc verbs when --scope is absent (i-012).
+
+    Precedence (documented in docs/guides/sdlc.md):
+      1. --scope explicit          (click passes it through; this helper
+                                    only runs when the flag is absent)
+      2. env DNA_SDLC_SCOPE
+      3. auto-detect               (sole SDLC scope in the source)
+      4. DEFAULT_SCOPE             ('dna-development' — compat fallback)
+    """
+    env = os.environ.get("DNA_SDLC_SCOPE")
+    if env:
+        return env
+    detected = _autodetect_sdlc_scope()
+    if detected is not None:
+        if detected != DEFAULT_SCOPE:
+            click.secho(
+                f"scope: {detected} (auto-detected sole SDLC scope; "
+                f"override with --scope or DNA_SDLC_SCOPE)",
+                fg="cyan", err=True,
+            )
+        return detected
+    return DEFAULT_SCOPE
+
+
+def _scope_callback(ctx: Any, param: Any, value: str | None) -> str:
+    del ctx, param
+    return value if value else _resolve_scope_default()
+
+
 def _scope_option(f):
     return click.option(
-        "--scope", default=DEFAULT_SCOPE, show_default=True,
-        help="Scope holding the SDLC docs (default: dna-development).",
+        "--scope", default=None, callback=_scope_callback,
+        help="Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else "
+             "the auto-detected sole SDLC scope in the source, else "
+             "dna-development).",
     )(f)
 
 
@@ -3413,16 +3487,24 @@ def _mark_checklist_items(
     mark_all: bool, done_at: str, done_by: str, evidence: str,
 ) -> int:
     """Mark selected checklist items done + evidence. Selectors match by
-    1-based index OR case-insensitive substring of the item text. Returns
-    the number of items marked."""
+    1-based index (digit selectors — EXACT int match, never substring) OR
+    case-insensitive substring of the item text (non-digit selectors).
+    Returns the number of items marked.
+
+    i-014: a digit selector must NOT fall through to the substring branch —
+    ``--ac 1`` used to also mark any item whose TEXT contained "1"
+    ("API v1", "10 retries", ...), over-marking checklists in the field.
+    """
     n = 0
     for i, it in enumerate(items, start=1):
         match = mark_all
         if not match:
             for sel in selectors:
-                if sel.isdigit() and int(sel) == i:
-                    match = True
-                    break
+                if sel.isdigit():
+                    if int(sel) == i:
+                        match = True
+                        break
+                    continue  # index selector: exact match only (i-014)
                 if sel and sel.lower() in str(it.get("text", "")).lower():
                     match = True
                     break
@@ -3438,9 +3520,9 @@ def _mark_checklist_items(
 @story_group.command("check")
 @click.argument("name")
 @click.option("--ac", "ac_sel", multiple=True,
-              help="Acceptance-criterion to mark done: 1-based index or text substring (repeatable).")
+              help="Acceptance-criterion to mark done: 1-based index (exact) or text substring (repeatable).")
 @click.option("--dod", "dod_sel", multiple=True,
-              help="Definition-of-done item to mark done: 1-based index or text substring (repeatable).")
+              help="Definition-of-done item to mark done: 1-based index (exact) or text substring (repeatable).")
 @click.option("--all", "mark_all", is_flag=True, default=False,
               help="Mark ALL acceptance_criteria + definition_of_done items done.")
 @click.option("--evidence", required=True,

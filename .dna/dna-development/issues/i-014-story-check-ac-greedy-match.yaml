@@ -9,7 +9,7 @@ spec:
     \ story de 3+ ACs, corrigir pra match exato de \xEDndice."
   type: bug
   severity: medium
-  status: open
+  status: resolved
   owner: claude-code
   related_feature: f-dna-ecosystem
   timeline:
@@ -18,3 +18,21 @@ spec:
     type: status_change
     source: cli
     to: open
+  - at: '2026-07-10T17:41:29+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Fix: seletor num\xE9rico em _mark_checklist_items agora \xE9 match EXATO\
+      \ de \xEDndice (int) \u2014 sem fallback de substring (era isso: '--ac 1' tamb\xE9\
+      m casava qualquer item cujo TEXTO contivesse '1', ex. 'API v1', '10 retries';\
+      \ o repro do piloto '--ac 1 --ac 2' marcava 3/3). --dod compartilha a fun\xE7\
+      \xE3o \u2014 mesmo fix. Red\u2192green em test_story_check.py (5 testes novos,\
+      \ incluindo out-of-range e substring preservado). Smoke real: '\u2713 checked\
+      \ 2 AC' com 2 'done: true' no YAML. Commit 48ed56c."
+  - at: '2026-07-10T17:41:31+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: open
+    to: resolved
+  closed_at: '2026-07-10T17:41:31+00:00'
