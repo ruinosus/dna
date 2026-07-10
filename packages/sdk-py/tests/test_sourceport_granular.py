@@ -21,7 +21,7 @@ from pathlib import Path
 import pytest
 
 from dna.adapters.filesystem.source import FilesystemSource
-from dna.adapters.sqlite.source import SqliteSource
+from dna.adapters.sqlalchemy_ import SqlAlchemySource
 
 
 # Same env-name fallback chain as the requires_postgres marker gate
@@ -95,16 +95,16 @@ class TestFilesystemGranular:
 # ─── SQLite adapter ────────────────────────────────────────────────────
 
 class TestSqliteGranular:
-    """SqliteSource é writable diretamente (save_document); não tem
-    classe Writable separada como PG."""
+    """SqlAlchemySource[sqlite] é writable diretamente (save_document) —
+    mesma superfície nas duas dialetos."""
 
     @pytest.mark.asyncio
     async def test_list_doc_refs_after_write(self, tmp_path):
         db_path = tmp_path / "test.db"
-        src = SqliteSource(str(db_path))
+        src = SqlAlchemySource(f"sqlite+aiosqlite:///{db_path}")
         await src.connect()
-        # SqliteSource has draft/publish split — save THEN publish moves
-        # to the `documents` table that list/load_one read.
+        # save_document auto-publishes (save is the publish point); the
+        # explicit publish below is a harmless no-op re-promotion.
         await src.save_document("scope-x", "Story", "s-1", {
             "apiVersion": "github.com/ruinosus/dna/sdlc/v1",
             "kind": "Story",
@@ -130,7 +130,7 @@ class TestSqliteGranular:
     @pytest.mark.asyncio
     async def test_load_one_round_trip(self, tmp_path):
         db_path = tmp_path / "test.db"
-        src = SqliteSource(str(db_path))
+        src = SqlAlchemySource(f"sqlite+aiosqlite:///{db_path}")
         await src.connect()
         raw = {
             "apiVersion": "github.com/ruinosus/dna/sdlc/v1",
@@ -160,10 +160,11 @@ class TestPostgresGranular:
     @pytest.mark.asyncio
     async def test_list_doc_refs_basic(self):
         import secrets
-        import asyncpg
-        from dna.adapters.postgres import PostgresSource
+        from dna.adapters.sqlalchemy_ import SqlAlchemySource
         scope = f"test-{secrets.token_hex(4)}"
-        src = PostgresSource(await asyncpg.create_pool(PG_TEST_URL))
+        sa_url = PG_TEST_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+        src = SqlAlchemySource(sa_url)
+        await src.connect()
         try:
             await src.save_document(scope, "Story", "s-1", {
                 "apiVersion": "github.com/ruinosus/dna/sdlc/v1",
@@ -183,10 +184,11 @@ class TestPostgresGranular:
     @pytest.mark.asyncio
     async def test_load_one_round_trip(self):
         import secrets
-        import asyncpg
-        from dna.adapters.postgres import PostgresSource
+        from dna.adapters.sqlalchemy_ import SqlAlchemySource
         scope = f"test-{secrets.token_hex(4)}"
-        src = PostgresSource(await asyncpg.create_pool(PG_TEST_URL))
+        sa_url = PG_TEST_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+        src = SqlAlchemySource(sa_url)
+        await src.connect()
         try:
             raw = {
                 "apiVersion": "github.com/ruinosus/dna/sdlc/v1",

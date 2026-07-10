@@ -106,7 +106,7 @@ class FrontmatterParseWarning(UserWarning):
 
 class FrontmatterParseError(Exception):
     """Raised when YAML frontmatter parsing fails and the caller requested
-    strict mode. Callers (e.g. PostgresSource) catch this and fall back to
+    strict mode. Callers (e.g. SqlAlchemySource) catch this and fall back to
     the canonical doc content stored alongside the bundle marker so a
     corrupt marker does not silently wipe spec fields.
 
@@ -135,7 +135,7 @@ def _parse_frontmatter(
 
     When ``strict=True``: invalid YAML raises ``FrontmatterParseError``
     instead. Used by adapters that hold a canonical-spec fallback
-    (e.g. PostgresSource ships the parsed-at-write-time ``content`` JSONB
+    (e.g. SqlAlchemySource ships the parsed-at-write-time ``content``
     in ``dna_documents``). The adapter catches and uses the fallback,
     avoiding silent spec-wipe on a corrupted marker.
     """
@@ -260,7 +260,7 @@ class GenericBundleReader(ReaderPort):
 
     ``strict_parse``: when True, propagates ``FrontmatterParseError`` on
     invalid YAML instead of silently returning a spec built only from the
-    body. Adapters that hold a canonical-spec fallback (PostgresSource via
+    body. Adapters that hold a canonical-spec fallback (SqlAlchemySource via
     ``dna_documents.content``) opt in so corrupt markers no longer wipe
     spec. Default False keeps the legacy warning-and-degraded-spec path.
     """

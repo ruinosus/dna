@@ -5,12 +5,12 @@ against the EXISTING adapter schemas (promoted from the i-216 spike by
 ``s-sqlalchemy-source-production``):
 
   - sqlite  (aiosqlite):  ``documents`` / ``versions`` / ``bundle_entries``
-    / ``layer_documents`` — byte-compatible with ``SqliteSource`` DBs,
-    including the ``schema_migrations`` control table.
+    / ``layer_documents`` — byte-compatible with DBs built by the retired
+    raw sqlite adapter, including the ``schema_migrations`` control table.
   - postgresql (asyncpg): ``{schema}.dna_documents`` / ``dna_versions`` /
     ``dna_bundle_entries`` / ``dna_layer_documents`` / ``dna_outbox`` /
-    ``dna_versions_seq`` — byte-compatible with ``PostgresSource`` schemas,
-    including ``dna_schema_migrations``.
+    ``dna_versions_seq`` — byte-compatible with schemas built by the retired
+    raw PG adapter, including ``dna_schema_migrations``.
 
 The adapter REUSES each dialect's existing migration payloads (it invents
 no schema); the shared forward-only runner (``adapters/_migrations.py``)
@@ -64,6 +64,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
@@ -84,6 +85,13 @@ logger = logging.getLogger(__name__)
 
 _OPS = ("eq", "neq", "gt", "gte", "lt", "lte", "like")
 _PG_NUMERIC_RE = r"^-?[0-9]+(\.[0-9]+)?$"
+
+# s-pg-schema-identifier-guard (inherited from the retired raw Postgres
+# adapter): the schema identifier is f-string-interpolated into the
+# migration DDL + control-table statements and can't be a bind param, so
+# validate it ONCE at construction against a conservative allowlist —
+# trusted-config-only, never request input.
+_VALID_SCHEMA_IDENT = re.compile(r"^[a-z_][a-z0-9_]*$")
 
 
 def _now() -> str:
@@ -107,8 +115,8 @@ class _PgOutboxEmitter:
 
     Emits the KernelEventBus event atomically with the caller's data
     write (the caller passes the open ``engine.begin()`` connection).
-    Three operations, same transaction — identical to
-    ``PostgresSource._emit_outbox``:
+    Three operations, same transaction — the contract the retired raw PG
+    adapter's ``_emit_outbox`` pioneered:
 
       1. INSERT into ``dna_outbox`` (durable, FIFO event log).
       2. UPSERT ``dna_versions_seq`` (per-(scope, tenant) checkpoint).
@@ -193,6 +201,12 @@ class SqlAlchemySource(WritableSourcePort):
         self._engine: AsyncEngine = create_async_engine(url)
         self._is_pg = self._engine.dialect.name == "postgresql"
         # [dialect] pg keeps its namespaced schema; sqlite has none.
+        if schema is not None and not _VALID_SCHEMA_IDENT.match(schema):
+            raise ValueError(
+                f"Invalid Postgres schema identifier {schema!r}: must match "
+                f"{_VALID_SCHEMA_IDENT.pattern} (trusted-config-only — set via "
+                "deploy config, never from request input)."
+            )
         self._schema = schema if self._is_pg else None
         # [dialect] base-layer tenant sentinel on documents/versions:
         # pg uses '' (NOT NULL DEFAULT ''), sqlite uses NULL (Phase 2c).
@@ -1104,7 +1118,7 @@ class SqlAlchemySource(WritableSourcePort):
             await conn.execute(b.delete().where(*key, cond))
         else:
             # [dialect] sqlite has one flexible-affinity column — full
-            # replace, exactly like the raw SqliteSource.
+            # replace, exactly like the retired raw sqlite adapter did.
             await conn.execute(b.delete().where(*key))
         ts = _now()
         for entry_path, body in {**text_entries, **bin_entries}.items():

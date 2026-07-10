@@ -135,9 +135,9 @@ async def test_helper_failure_keeps_prior_versions_and_stops():
 
 
 async def _legacy_sqlite_migrate(db_path: str, migrations: dict[int, str]) -> None:
-    """VERBATIM replica of the pre-refactor ``SqliteSource._run_migrations``
-    inline loop (the 'old code') — used to build DB fixtures the way every
-    existing SQLite DB in the wild was built."""
+    """VERBATIM replica of the retired raw sqlite adapter's pre-refactor
+    inline migration loop (the 'old code') — used to build DB fixtures the
+    way every existing SQLite DB in the wild was built."""
     conn = await aiosqlite.connect(db_path)
     try:
         conn.row_factory = sqlite3.Row
@@ -176,20 +176,24 @@ async def _sqlite_control_rows(db_path: str) -> list[int]:
 
 
 async def test_sqlite_old_db_reboots_clean_on_new_code(tmp_path):
-    from dna.adapters.sqlite import SqliteSource
-    from dna.adapters.sqlite.migrations import MIGRATIONS
+    from dna.adapters.sqlalchemy_ import SqlAlchemySource
+    from dna.adapters.sqlalchemy_.migrations import SQLITE_MIGRATIONS as MIGRATIONS
 
     db = str(tmp_path / "legacy-full.db")
     await _legacy_sqlite_migrate(db, MIGRATIONS)
 
-    src = SqliteSource(db)
+    src = SqlAlchemySource(f"sqlite+aiosqlite:///{db}")
     await src.connect()  # must not raise nor re-apply anything
     try:
         assert await src.run_schema_migrations() == []
         # control table: exact historical name + shape, one row per version
-        async with src._acquire() as conn:
+        conn = await aiosqlite.connect(db)
+        try:
+            conn.row_factory = sqlite3.Row
             cursor = await conn.execute("PRAGMA table_info(schema_migrations)")
             cols = [row["name"] for row in await cursor.fetchall()]
+        finally:
+            await conn.close()
         assert cols == ["version", "applied_at"]
         assert await _sqlite_control_rows(db) == sorted(MIGRATIONS)
         # and the schema is actually usable by the new code
@@ -206,8 +210,8 @@ async def test_sqlite_old_db_reboots_clean_on_new_code(tmp_path):
 
 
 async def test_sqlite_partially_migrated_old_db_gets_only_the_tail(tmp_path):
-    from dna.adapters.sqlite import SqliteSource
-    from dna.adapters.sqlite.migrations import MIGRATIONS
+    from dna.adapters.sqlalchemy_ import SqlAlchemySource
+    from dna.adapters.sqlalchemy_.migrations import SQLITE_MIGRATIONS as MIGRATIONS
 
     versions = sorted(MIGRATIONS)
     head, tail = versions[:4], versions[4:]
@@ -215,7 +219,7 @@ async def test_sqlite_partially_migrated_old_db_gets_only_the_tail(tmp_path):
     await _legacy_sqlite_migrate(db, {v: MIGRATIONS[v] for v in head})
     assert await _sqlite_control_rows(db) == head
 
-    src = SqliteSource(db)
+    src = SqlAlchemySource(f"sqlite+aiosqlite:///{db}")
     await src.connect()  # boot applies the missing tail
     try:
         assert await _sqlite_control_rows(db) == versions
@@ -225,11 +229,11 @@ async def test_sqlite_partially_migrated_old_db_gets_only_the_tail(tmp_path):
 
 
 async def test_sqlite_fresh_db_boot_applies_all_then_noop(tmp_path):
-    from dna.adapters.sqlite import SqliteSource
-    from dna.adapters.sqlite.migrations import MIGRATIONS
+    from dna.adapters.sqlalchemy_ import SqlAlchemySource
+    from dna.adapters.sqlalchemy_.migrations import SQLITE_MIGRATIONS as MIGRATIONS
 
     db = str(tmp_path / "fresh.db")
-    src = SqliteSource(db)
+    src = SqlAlchemySource(f"sqlite+aiosqlite:///{db}")
     await src.connect()
     try:
         assert await _sqlite_control_rows(db) == sorted(MIGRATIONS)
@@ -255,8 +259,8 @@ def _pg_dsn() -> str:
 async def _legacy_pg_migrate(
     dsn: str, schema: str, migrations: dict[int, list[str]],
 ) -> None:
-    """VERBATIM replica of the pre-refactor ``PostgresSource._run_migrations``
-    loop (the 'old code'), minus the pool plumbing."""
+    """VERBATIM replica of the retired raw PG adapter's pre-refactor
+    migration loop (the 'old code'), minus the pool plumbing."""
     import asyncpg
 
     conn = await asyncpg.connect(dsn)
@@ -288,8 +292,8 @@ async def _legacy_pg_migrate(
 @pytest.mark.parametrize("partial", [False, True], ids=["full-old-db", "partial-old-db"])
 async def test_postgres_old_schema_reboots_clean_on_new_code(partial):
     import asyncpg
-    from dna.adapters.postgres import PostgresSource
-    from dna.adapters.postgres.source import _MIGRATIONS
+    from dna.adapters.sqlalchemy_ import SqlAlchemySource
+    from dna.adapters.sqlalchemy_.migrations import PG_MIGRATIONS as _MIGRATIONS
 
     dsn = _pg_dsn()
     schema = f"dna_mig_compat_{uuid.uuid4().hex[:12]}"
@@ -305,10 +309,15 @@ async def test_postgres_old_schema_reboots_clean_on_new_code(partial):
             dsn, schema, {v: _MIGRATIONS[v] for v in legacy_versions},
         )
 
+        sa_url = dsn.replace("postgresql://", "postgresql+asyncpg://", 1)
+        src = SqlAlchemySource(sa_url, schema=schema)
+        await src.connect()  # must not raise; applies only what's missing
+        try:
+            assert await src.run_schema_migrations() == []
+        finally:
+            await src.close()
+
         pool = await asyncpg.create_pool(dsn)
-        src = PostgresSource(pool, schema=schema)
-        await src.init()  # must not raise; applies only what's missing
-        assert await src.run_schema_migrations() == []
 
         async with pool.acquire() as c:
             rows = await c.fetch(

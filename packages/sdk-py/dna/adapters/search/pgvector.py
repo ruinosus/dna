@@ -35,8 +35,8 @@ not an omission:
     offline floor* both language SDKs ship and run in-process (browser/Bun
     included). pgvector is the *scale/server* adapter — it only makes sense
     against a running Postgres, which the TS SDK reaches through the ``pg``
-    driver used by its own ``adapters/postgres`` source, a different surface
-    from this asyncpg path.
+    driver used by its own raw Postgres source, a different surface from
+    this asyncpg path.
   * Behavioral parity is guaranteed the way the port intends: the SAME
     ``record_search_conformance_suite`` (its TS twin is
     ``src/testing/recordSearchConformance.ts``) is the contract. A future TS
@@ -82,7 +82,7 @@ _MIN_CANDIDATES = 40
 
 #: The schema identifier is f-string-interpolated into the DDL/DML (it can't be
 #: a bind parameter), so validate it once against a conservative allowlist —
-#: same guard the PostgresSource applies (trusted-config-only, never request
+#: same guard SqlAlchemySource applies (trusted-config-only, never request
 #: input).
 _VALID_SCHEMA_IDENT = re.compile(r"^[a-z_][a-z0-9_]*$")
 

@@ -51,7 +51,7 @@ class BundleEntryReadable(Protocol):
 
     Tenant overlay routing: when ``tenant`` is provided and the
     adapter supports it, the tenant-scoped copy is preferred over
-    the base layer (see FilesystemWritableSource and PostgresSource
+    the base layer (see FilesystemWritableSource and SqlAlchemySource
     impls for the canonical 2-step lookup).
 
     Raises:
@@ -67,7 +67,7 @@ class BundleEntryReadable(Protocol):
     (e.g. a ``Skill`` and a ``Persona`` both named ``"foo"``).
     Without ``kind``, SQL adapters fall back to a name+entry-only
     match and accept the rare collision risk documented in
-    ``PostgresSource.fetch_bundle_entry``.
+    ``SqlAlchemySource.fetch_bundle_entry``.
     """
 
     def fetch_bundle_entry(
@@ -139,8 +139,8 @@ class Versionable(Protocol):
     decide whether to expose the ``/catalog/{owner}/{name}/versions``
     endpoint (501 otherwise).
 
-    All 3 production adapters (FilesystemWritableSource,
-    SqliteSource, PostgresSource) implement this. Custom adapters
+    The production adapters (FilesystemWritableSource and
+    SqlAlchemySource on both dialects) implement this. Custom adapters
     that don't track per-doc versions can omit and the harness
     will degrade gracefully with a 501 response.
     """
@@ -390,7 +390,7 @@ class KernelAttachable(Protocol):
     that wired ``source._writers`` and ``source.set_kernel(k)``. SQLite
     and Postgres sources required the same wiring but only got it via
     the runtime source factory — leaving direct
-    ``Kernel.auto(source=SqliteSource(...))`` callers with a
+    ``Kernel.auto(source=SqlAlchemySource(...))`` callers with a
     half-broken kernel that silently dropped bundle writes.
 
     Adapters now declare attachability by implementing

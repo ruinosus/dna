@@ -1,18 +1,56 @@
-"""Integration tests for Layers — real SQLite, no mocks.
+"""Integration tests for Layers — real Postgres store, no mocks.
 
 Proves: overlay merge, tenant isolation, edit propagation, policy enforcement.
-Each class is an independent business scenario with its own fresh database.
+Each class is an independent business scenario with its own fresh schema.
+
+Backed by the pg dialect of SqlAlchemySource (``requires_postgres``): tenant
+overlays live in ``documents.tenant`` with a tenant-aware PK, so base and
+overlay rows coexist. The sqlite dialect can NOT host these scenarios — its
+``documents`` PK lacks ``tenant`` (i-092 schema debt, strict-xfailed in the
+conformance kit), so an overlay publish clobbers the base row. (The retired
+raw SqliteSource sidestepped that by keeping tenant overlays in the legacy
+``layer_documents`` table — a semantics the SQL path no longer has.)
 """
 from __future__ import annotations
 
+import os
+import uuid
 import warnings
 
 import pytest
 import pytest_asyncio
 
-from dna.adapters.sqlite import SqliteSource
+from dna.adapters.sqlalchemy_ import SqlAlchemySource
 from dna.kernel import Kernel
 from dna.kernel.protocols import LayerPolicy
+
+pytestmark = pytest.mark.requires_postgres
+
+
+async def _pg_env():
+    """Fresh throwaway schema + connected pg-dialect SqlAlchemySource."""
+    import asyncpg
+
+    dsn = (
+        os.environ.get("DATABASE_URL")
+        or os.environ.get("DNA_PG_TEST_URL")
+        or os.environ.get("DNA_PG_TEST_DSN")
+    )
+    schema = f"dna_layers_{uuid.uuid4().hex[:12]}"
+    conn = await asyncpg.connect(dsn)
+    await conn.execute(f"CREATE SCHEMA {schema}")
+    await conn.close()
+    sa_url = dsn.replace("postgresql://", "postgresql+asyncpg://", 1)
+    src = SqlAlchemySource(sa_url, schema=schema)
+    await src.connect()
+
+    async def cleanup() -> None:
+        await src.close()
+        c = await asyncpg.connect(dsn)
+        await c.execute(f"DROP SCHEMA IF EXISTS {schema} CASCADE")
+        await c.close()
+
+    return src, cleanup
 
 
 # ---------------------------------------------------------------------------
@@ -49,7 +87,7 @@ SOUL_BRAD_RAW = {
 }
 
 
-async def _seed_base(source: SqliteSource) -> None:
+async def _seed_base(source: SqlAlchemySource) -> None:
     """Seed the base documents (module + agent + soul) and publish them."""
     for kind, name, raw in [
         ("Genome", "test-mod", MODULE_RAW),
@@ -60,7 +98,7 @@ async def _seed_base(source: SqliteSource) -> None:
         await source.publish("test-mod", kind, name)
 
 
-def _make_kernel(source: SqliteSource) -> Kernel:
+def _make_kernel(source: SqlAlchemySource) -> Kernel:
     """Build a Kernel wired to a SQLite source with all extensions loaded."""
     k = Kernel.auto()
     k.source(source)
@@ -98,15 +136,14 @@ def _overlay_agent(instruction: str, **extra_spec) -> dict:
 
 
 @pytest_asyncio.fixture
-async def sqlite_env(tmp_path):
-    """Fresh SQLite + Kernel with base documents seeded."""
-    db = tmp_path / "test.db"
-    source = SqliteSource(str(db))
-    await source.connect()
+async def sqlite_env():
+    """Fresh pg store + Kernel with base documents seeded (fixture name kept
+    for the scenario classes' readability-diff)."""
+    source, cleanup = await _pg_env()
     await _seed_base(source)
     kernel = _make_kernel(source)
     yield kernel, source
-    await source.close()
+    await cleanup()
 
 
 # ---------------------------------------------------------------------------
@@ -283,10 +320,8 @@ class TestPolicyRestricted:
     """RESTRICTED policy: can overwrite existing fields, cannot add new ones."""
 
     @pytest_asyncio.fixture
-    async def restricted_env(self, tmp_path):
-        db = tmp_path / "restricted.db"
-        source = SqliteSource(str(db))
-        await source.connect()
+    async def restricted_env(self):
+        source, cleanup = await _pg_env()
 
         module = {
             **MODULE_RAW,
@@ -307,7 +342,7 @@ class TestPolicyRestricted:
 
         kernel = _make_kernel(source)
         yield kernel, source
-        await source.close()
+        await cleanup()
 
     @pytest.mark.asyncio
     async def test_existing_field_overwritten(self, restricted_env):
@@ -347,10 +382,8 @@ class TestPolicyLocked:
     """LOCKED policy: overlay changes are completely ignored."""
 
     @pytest_asyncio.fixture
-    async def locked_env(self, tmp_path):
-        db = tmp_path / "locked.db"
-        source = SqliteSource(str(db))
-        await source.connect()
+    async def locked_env(self):
+        source, cleanup = await _pg_env()
 
         # Phase 16 — overlay rules live in LayerPolicy docs, not
         # Module.spec.layers. Policy keys by alias.
@@ -375,7 +408,7 @@ class TestPolicyLocked:
 
         kernel = _make_kernel(source)
         yield kernel, source
-        await source.close()
+        await cleanup()
 
     @pytest.mark.asyncio
     async def test_instruction_unchanged(self, locked_env):

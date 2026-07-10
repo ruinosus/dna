@@ -11,8 +11,8 @@ signatures only; the behavior lives here:
   parameter: the caller decides which readers apply (the kernel passes
   its live ``_readers``; the FS adapter passes its kernel-attached view).
 - :func:`count_via_query` — aggregation riding ``source.query`` (native
-  push-down when the adapter has one). Used by the FS/SQLite adapters and
-  the PostgresSource in-memory fallback branch.
+  push-down when the adapter has one). Used by the FS adapters and as the
+  parity oracle for the SQL adapter's native count.
 - :func:`count_via_load_all` — aggregation for sources with NO native
   ``query`` at all (the kernel's legacy-source path).
 

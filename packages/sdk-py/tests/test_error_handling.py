@@ -340,9 +340,9 @@ class TestSupportsReaders:
 
     def test_sqlite_source_does_not_support_readers(self):
         import tempfile, os
-        from dna.adapters.sqlite.source import SqliteSource
+        from dna.adapters.sqlalchemy_ import SqlAlchemySource
         db = os.path.join(tempfile.mkdtemp(), "test.db")
-        source = SqliteSource(db)
+        source = SqlAlchemySource(f"sqlite+aiosqlite:///{db}")
         assert source.supports_readers is False
 
     def test_async_adapter_delegates_supports_readers(self):
@@ -354,9 +354,9 @@ class TestSupportsReaders:
     def test_async_adapter_false_for_sqlite(self):
         import tempfile, os
         from dna.adapters.async_adapter import AsyncSourceAdapter
-        from dna.adapters.sqlite.source import SqliteSource
+        from dna.adapters.sqlalchemy_ import SqlAlchemySource
         db = os.path.join(tempfile.mkdtemp(), "test.db")
-        async_source = AsyncSourceAdapter(SqliteSource(db))
+        async_source = AsyncSourceAdapter(SqlAlchemySource(f"sqlite+aiosqlite:///{db}"))
         assert async_source.supports_readers is False
 
 

@@ -134,15 +134,14 @@ def test_all_in_repo_adapters_pass_gate(tmp_path):
     from dna.adapters.filesystem.composite import CompositeFilesystemSource
     from dna.adapters.filesystem.source import FilesystemSource
     from dna.adapters.filesystem.writable import FilesystemWritableSource
-    from dna.adapters.postgres.source import PostgresSource
-    from dna.adapters.sqlite.source import SqliteSource
+    from dna.adapters.sqlalchemy_ import SqlAlchemySource
 
     sources = [
         FilesystemSource(tmp_path),
         FilesystemWritableSource(str(tmp_path)),
         CompositeFilesystemSource(tmp_path),
-        SqliteSource(str(tmp_path / "gate.db")),
-        PostgresSource(pool=None),
+        SqlAlchemySource(f"sqlite+aiosqlite:///{tmp_path / 'gate.db'}"),
+        SqlAlchemySource("postgresql+asyncpg://u:p@nowhere.invalid/db"),
     ]
     for src in sources:
         k = Kernel()

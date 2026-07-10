@@ -7,7 +7,7 @@ from __future__ import annotations
 import pytest
 import pytest_asyncio
 
-from dna.adapters.sqlite import SqliteSource
+from dna.adapters.sqlalchemy_ import SqlAlchemySource
 from dna.kernel.capabilities import (
     BundleEntryReadable,
     TenantAware,
@@ -18,7 +18,7 @@ from dna.kernel.capabilities import (
 
 @pytest_asyncio.fixture
 async def source(tmp_path):
-    src = SqliteSource(str(tmp_path / "caps.db"))
+    src = SqlAlchemySource(f"sqlite+aiosqlite:///{tmp_path / 'caps.db'}")
     await src.connect()
     yield src
     await src.close()

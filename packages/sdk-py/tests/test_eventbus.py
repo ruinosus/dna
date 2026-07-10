@@ -187,11 +187,12 @@ pgmark = pytest.mark.requires_postgres
 
 @pytest_asyncio.fixture(loop_scope="function")
 async def pg_setup():
-    """Per-function fixture: clean schema with migration #5 applied + a
-    PostgresSource ready to write outbox events.
+    """Per-function fixture: clean schema with migrations applied + a
+    pg-dialect SqlAlchemySource ready to write outbox events (it emits the
+    same outbox/NOTIFY contract the retired raw adapter pioneered).
     """
     import asyncpg
-    from dna.adapters.postgres import PostgresSource
+    from dna.adapters.sqlalchemy_ import SqlAlchemySource
 
     dsn = os.environ["DATABASE_URL"]
     schema = "dna_test_eventbus"
@@ -201,9 +202,9 @@ async def pg_setup():
     await conn.execute(f"CREATE SCHEMA {schema}")
     await conn.close()
 
-    pool = await asyncpg.create_pool(dsn)
-    src = PostgresSource(pool, schema=schema)
-    await src.init()
+    sa_url = dsn.replace("postgresql://", "postgresql+asyncpg://", 1)
+    src = SqlAlchemySource(sa_url, schema=schema)
+    await src.connect()
 
     # Seed a Module so `save_document` round-trips.
     module_raw = {
@@ -212,7 +213,7 @@ async def pg_setup():
     }
     await src.save_document("evbus-test", "Genome", "evbus-test", module_raw)
 
-    yield {"dsn": dsn, "schema": schema, "source": src, "pool": pool}
+    yield {"dsn": dsn, "schema": schema, "source": src}
 
     await src.close()
     conn = await asyncpg.connect(dsn)

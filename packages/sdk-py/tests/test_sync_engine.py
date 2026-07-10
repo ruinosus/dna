@@ -160,7 +160,7 @@ class TestComputeDiff:
 import yaml as pyyaml
 from dna.sync import SyncEngine
 from dna.adapters.filesystem.writable import FilesystemWritableSource
-from dna.adapters.sqlite.source import SqliteSource
+from dna.adapters.sqlalchemy_ import SqlAlchemySource
 
 
 def _create_fs_module(base_dir: str, scope: str, docs: list[dict]) -> None:
@@ -195,7 +195,7 @@ class TestSyncEngineIntegration:
         _create_fs_module(fs_dir, "test-mod", docs)
 
         fs = FilesystemWritableSource(fs_dir)
-        db = SqliteSource(str(tmp_path / "test.db"))
+        db = SqlAlchemySource(f"sqlite+aiosqlite:///{tmp_path / 'test.db'}")
         await db.connect()
 
         snap_path = str(tmp_path / ".dna.sync")
@@ -221,7 +221,7 @@ class TestSyncEngineIntegration:
         _create_fs_module(fs_dir, "test-mod", docs)
 
         fs = FilesystemWritableSource(fs_dir)
-        db = SqliteSource(str(tmp_path / "test.db"))
+        db = SqlAlchemySource(f"sqlite+aiosqlite:///{tmp_path / 'test.db'}")
         await db.connect()
 
         snap_path = str(tmp_path / ".dna.sync")
@@ -245,7 +245,7 @@ class TestSyncEngineIntegration:
         _create_fs_module(fs_dir, "test-mod", docs)
 
         fs = FilesystemWritableSource(fs_dir)
-        db = SqliteSource(str(tmp_path / "test.db"))
+        db = SqlAlchemySource(f"sqlite+aiosqlite:///{tmp_path / 'test.db'}")
         await db.connect()
 
         snap_path = str(tmp_path / ".dna.sync")
@@ -271,7 +271,7 @@ class TestSyncEngineIntegration:
         _create_fs_module(fs_dir, "test-mod", docs)
 
         fs = FilesystemWritableSource(fs_dir)
-        db = SqliteSource(str(tmp_path / "test.db"))
+        db = SqlAlchemySource(f"sqlite+aiosqlite:///{tmp_path / 'test.db'}")
         await db.connect()
 
         snap_path = str(tmp_path / ".dna.sync")

@@ -1,8 +1,9 @@
 """PostgresEventBus — LISTEN/NOTIFY consumer with reconnect + replay.
 
-Concrete `KernelEventBus` impl backed by Postgres. Co-located with
-PostgresSource (the producer side) but is conceptually independent:
-it could subscribe to a Postgres a different writer is using.
+Concrete `KernelEventBus` impl backed by Postgres. The producer side is
+the SQL source's postgres dialect (SqlAlchemySource outbox emitter), but
+this subscriber is conceptually independent: it could subscribe to a
+Postgres a different writer is using.
 
 Lifecycle:
 
@@ -55,7 +56,7 @@ class PostgresEventBus(KernelEventBus):
         dsn: Postgres connection string. Must be the same database as the
             producer; channel is database-scoped.
         schema: Postgres schema for the dna_outbox / dna_versions_seq
-            tables. Default 'public' matches PostgresSource default.
+            tables. Default 'public' matches the SQL source's default.
         channel: NOTIFY channel name. Default
             `KERNEL_EVENTBUS_CHANNEL`. Override only if a deploy needs
             multiple isolated buses on the same DB.

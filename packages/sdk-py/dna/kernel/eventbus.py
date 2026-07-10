@@ -7,10 +7,11 @@ primitive, the harness HTTP serves stale data after a worker writes.
 
 Design contract (see docs/superpowers/specs/2026-04-30-phase-15-1-kernel-eventbus-design.md):
 
-    * Producer side: `PostgresWritableSource.save_document` /
-      `delete_document` / `publish` insert into `dna_outbox` and
+    * Producer side: the SQL source's postgres dialect (`SqlAlchemySource`)
+      inserts into `dna_outbox` and fires
       `pg_notify('kernel_writes', payload)` atomically inside the
-      same transaction as the data write. (Phase 15.1 PR2 — done.)
+      same transaction as every `save_document` / `delete_document` /
+      `publish` data write.
 
     * Subscriber side (this file): `KernelEventBus.start(kernel)`
       establishes a persistent connection that LISTENs on the channel.
@@ -60,9 +61,8 @@ def build_notify_payload(
 
     THE producer half of the event contract (the consumer half is
     :class:`KernelEvent` below). Lives next to the channel constant so the
-    wire shape has exactly one home — it was born as
-    ``dna.adapters.postgres.source._build_notify_payload`` and moved here
-    when the raw SQL adapters were retired (s-retire-raw-sql-adapters).
+    wire shape has exactly one home — born in the retired raw Postgres
+    adapter, moved here by s-retire-raw-sql-adapters.
 
     MUST include ``author``: cross-process subscribers read it to honor
     author-based loop guards (``skip_if_authored_by_self`` /

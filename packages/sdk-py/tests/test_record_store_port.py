@@ -19,8 +19,8 @@ camadas de antes:
 - coroutine-ness (async def vs async generator).
 
 ``CompositeFilesystemSource`` é OBRIGATÓRIA aqui: é o caminho da
-distribuição community. ``SqliteSource`` entrou na matriz com a
-unificação (satisfaz o contrato completo).
+distribuição community. ``SqlAlchemySource`` é o único adapter SQL
+(ambos os dialetos, mesma classe) desde s-retire-raw-sql-adapters.
 """
 from __future__ import annotations
 
@@ -30,28 +30,25 @@ import pytest
 
 from dna.adapters.filesystem.composite import CompositeFilesystemSource
 from dna.adapters.filesystem.writable import FilesystemWritableSource
-from dna.adapters.postgres.source import PostgresSource
-from dna.adapters.sqlite.source import SqliteSource
+from dna.adapters.sqlalchemy_ import SqlAlchemySource
 from dna.kernel.protocols import (
     SourcePort,
     WritableSourcePort,
 )
 
 _ADAPTERS = [
-    PostgresSource,
+    SqlAlchemySource,
     FilesystemWritableSource,
     CompositeFilesystemSource,
-    SqliteSource,
 ]
 _PORT_METHODS = ["save_document", "delete_document", "query", "count"]
 
 
 def _make(cls, tmp_path):
-    """Cheap instances — no I/O at construction for any of the four."""
-    if cls is PostgresSource:
-        return cls(pool=None)  # pool is only touched on first operation
-    if cls is SqliteSource:
-        return cls(str(tmp_path / "port.sqlite3"))  # opened lazily
+    """Cheap instances — no I/O at construction for any of the three."""
+    if cls is SqlAlchemySource:
+        # engine creation is lazy — no file/server touched here
+        return cls(f"sqlite+aiosqlite:///{tmp_path / 'port.sqlite3'}")
     return cls(tmp_path)  # FS roots; empty dir is a valid (scopeless) tree
 
 

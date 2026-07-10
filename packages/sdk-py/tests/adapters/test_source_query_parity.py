@@ -1,24 +1,22 @@
-"""Parity suite — Source.query() semantics MUST match across all 3
-adapters (Postgres, SQLite, Filesystem).
+"""Parity suite — Source.query() semantics MUST match across all
+adapters (SqlAlchemySource on both dialects, Filesystem).
 
 Story s-source-query-parity-tests (Feature f-source-as-query).
 
 Why this exists:
-  Each adapter implements ``query`` differently (PG jsonb, SQLite
+  Each backend implements ``query`` differently (PG jsonb, SQLite
   json_extract, FS via Protocol fallback). They all promise the same
   semantics. This file is the contract test that proves it.
 
   When a future Story adds (or changes) an operator, this is the
-  single place to update — the per-adapter tests can stay focused
-  on dialect specifics (e.g., "PG uses = ANY for IN") while THIS
-  file enforces semantic equivalence.
+  single place to update — THIS file enforces semantic equivalence
+  across backends.
 
 Adapter availability:
-  - SQLite: always (uses tmp file).
+  - SQLite dialect: always (uses tmp file).
   - Filesystem: always (uses tmp dir).
-  - Postgres: skipped when ``DNA_PG_TEST_DSN`` / ``DNA_SOURCE_URL=postgres://``
-    is unset. The PG-only tests in test_postgres_source_query_impl.py
-    cover the dialect details.
+  - Postgres dialect: skipped when ``DNA_PG_TEST_DSN`` / ``DNA_SOURCE_URL``
+    is unset.
 
 Fixture shape (each adapter seeds the same docs):
   6 Story docs in scope 'parity':
@@ -86,18 +84,15 @@ async def src(request, tmp_path):
     adapter = request.param
 
     if adapter == "sqlite":
-        from dna.adapters.sqlite.source import SqliteSource
-        s = SqliteSource(str(tmp_path / "parity.db"))
+        from dna.adapters.sqlalchemy_ import SqlAlchemySource
+        s = SqlAlchemySource(f"sqlite+aiosqlite:///{tmp_path / 'parity.db'}")
         await s.connect()
-        async with s._acquire() as conn:
-            for doc in SEED_DOCS:
-                await conn.execute(
-                    "INSERT OR REPLACE INTO documents "
-                    "(scope, kind, name, content, version, updated_at, tenant) "
-                    "VALUES (?, ?, ?, ?, 1, '2026-01-01', NULL)",
-                    ("parity", doc["kind"], doc["metadata"]["name"], json.dumps(doc)),
-                )
-            await conn.commit()
+        for doc in SEED_DOCS:
+            # save_document auto-publishes — rows land in `documents`,
+            # which is what query() reads.
+            await s.save_document(
+                "parity", doc["kind"], doc["metadata"]["name"], doc,
+            )
         yield s
         await s.close()
         return
@@ -133,28 +128,22 @@ async def src(request, tmp_path):
 
     if adapter == "postgres":
         import asyncpg
-        from dna.adapters.postgres.source import PostgresSource
-        pool = await asyncpg.create_pool(PG_DSN, min_size=1, max_size=2)
-        s = PostgresSource(pool)
-        await s.init()
-        async with pool.acquire() as conn:
-            await conn.execute(
-                "DELETE FROM dna_documents WHERE scope=$1", "parity",
+        from dna.adapters.sqlalchemy_ import SqlAlchemySource
+        sa_url = PG_DSN.replace("postgresql://", "postgresql+asyncpg://", 1)
+        s = SqlAlchemySource(sa_url)
+        await s.connect()
+        conn = await asyncpg.connect(PG_DSN)
+        await conn.execute("DELETE FROM dna_documents WHERE scope=$1", "parity")
+        await conn.close()
+        for doc in SEED_DOCS:
+            await s.save_document(
+                "parity", doc["kind"], doc["metadata"]["name"], doc,
             )
-            for doc in SEED_DOCS:
-                await conn.execute(
-                    "INSERT INTO dna_documents "
-                    "(scope, kind, name, content, version, updated_at, tenant) "
-                    "VALUES ($1, $2, $3, $4, 1, $5, '')",
-                    "parity", doc["kind"], doc["metadata"]["name"],
-                    json.dumps(doc), "2026-01-01T00:00:00Z",
-                )
         yield s
-        async with pool.acquire() as conn:
-            await conn.execute(
-                "DELETE FROM dna_documents WHERE scope=$1", "parity",
-            )
-        await pool.close()
+        conn = await asyncpg.connect(PG_DSN)
+        await conn.execute("DELETE FROM dna_documents WHERE scope=$1", "parity")
+        await conn.close()
+        await s.close()
         return
 
     raise ValueError(f"unknown adapter: {adapter}")
