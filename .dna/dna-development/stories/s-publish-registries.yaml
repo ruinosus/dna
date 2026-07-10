@@ -40,7 +40,7 @@ spec:
     dele
   definition_of_done_source: cli-create
   created_at: '2026-07-10T17:59:56+00:00'
-  updated_at: '2026-07-10T18:25:01+00:00'
+  updated_at: '2026-07-10T18:30:16+00:00'
   timeline:
   - at: '2026-07-10T17:59:56+00:00'
     actor: claude-code
@@ -107,6 +107,21 @@ spec:
       o real \xE9 a tag v0.1.0 ap\xF3s o dono configurar PyPI pending publishers (dna-sdk\u2192\
       env pypi, dna-cli\u2192env pypi-cli) + NPM_TOKEN (checklist em RELEASING.md)."
     commit_ref: 6b7ee3713a32ff8453d7c78929380d8a6e784b5e
+  - at: '2026-07-10T18:30:16+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Rework do release (config real dos registries): (1) PyPI deduplica pending\
+      \ publishers pela tupla completa owner+repo+FILENAME do workflow+environment\
+      \ \u2192 dois arquivos: release.yml (build+publish dna-sdk env pypi + job npm\
+      \ + sanity) e release-cli.yml (build+publish dna-cli env pypi-cli + sanity).\
+      \ (2) npm sem token/secret: primeiro publish do dna-sdk ser\xE1 manual/local\
+      \ pelo dono (npm login + npm publish), depois Trusted Publisher OIDC nas settings\
+      \ do pacote; o job publish-npm usa OIDC puro (node 24 + npm@latest >=11.5.1,\
+      \ sem NODE_AUTH_TOKEN) com guard step que SKIPA se npm view dna-sdk@vers\xE3\
+      o j\xE1 existir (idempotente p\xF3s-publish manual). RELEASING.md e CHANGELOG\
+      \ atualizados. YAMLs validados, guards+mkdocs verdes."
+    commit_ref: 6cf88d68b461f8531c8ff4e1813c97dc083f1de3
   produces:
   - kind: Plan
     name: plan-s-publish-registries

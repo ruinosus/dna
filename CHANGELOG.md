@@ -29,10 +29,12 @@ registries: **PyPI** ([`dna-sdk`](https://pypi.org/project/dna-sdk/),
   that the extensions load relative to their own compiled modules. `dna-cli`
   now depends on `dna-sdk>=0.1,<0.2` (resolved from PyPI in published
   artifacts; the dev workspace keeps the editable path source). Releases are
-  cut by pushing a `vX.Y.Z` tag: a tag-triggered workflow builds sdist+wheel
-  for both Python packages and publishes them via PyPI trusted publishing
-  (OIDC, no long-lived token), then builds and publishes the npm package
-  with provenance. See `RELEASING.md`.
+  cut by pushing a `vX.Y.Z` tag: tag-triggered workflows (`release.yml` +
+  `release-cli.yml` — one PyPI project per workflow file, a PyPI
+  pending-publisher dedup constraint) build sdist+wheel for both Python
+  packages and publish them via PyPI trusted publishing (OIDC, no long-lived
+  token), and publish the npm package with provenance via npm OIDC trusted
+  publishing (no token; the first npm publish is manual). See `RELEASING.md`.
 - **Write-path schema validation** (i-008). `write_document` /
   `writeDocument` now validate the doc's `spec` against the Kind's declared
   `schema()` **before persisting** — previously schemas were only checked at
