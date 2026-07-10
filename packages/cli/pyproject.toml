@@ -2,6 +2,15 @@
 name = "dna-cli"
 version = "0.1.0"
 description = "DNA command-line interface — the `dna` binary for the declarative SDLC + document CRUD (kernel-local, no service required)"
+readme = "README.md"
+license = "MIT"
+keywords = ["dna", "cli", "agents", "declarative", "sdlc", "manifests"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
 # 3.12 floor: tracks dna-sdk, which is >=3.12 since s-py312-floor (PEP 696
 # TypeVar defaults come from typing_extensions on <3.13 — see
 # packages/sdk-py/pyproject.toml).
@@ -10,7 +19,12 @@ dependencies = [
     "click>=8.1.0",
     "pyyaml>=6.0",
     "rich>=13.0",
-    "dna-sdk",
+    # Published constraint (s-publish-registries): the wheel/sdist resolve
+    # dna-sdk from PyPI within the same pre-1.0 minor. In THIS repo, uv
+    # replaces the registry lookup with the workspace path source below
+    # ([tool.uv.sources] — editable ../sdk-py), so dev installs keep tracking
+    # the sibling package live; the constraint only bites consumers.
+    "dna-sdk>=0.1,<0.2",
 ]
 
 [project.scripts]
@@ -38,5 +52,17 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["dna_cli"]
 
+# Dev-workspace override: inside this repo, uv resolves dna-sdk from the
+# sibling package (editable), NOT from PyPI — the registry constraint above
+# is what published artifacts carry. Two paths, one name:
+#   dev  (this repo)  → ../sdk-py editable, always current
+#   user (pip/uv add) → PyPI dna-sdk>=0.1,<0.2
 [tool.uv.sources]
 dna-sdk = { path = "../sdk-py", editable = true }
+
+[project.urls]
+Homepage = "https://ruinosus.github.io/dna/"
+Repository = "https://github.com/ruinosus/dna"
+Documentation = "https://ruinosus.github.io/dna/reference/cli/"
+Changelog = "https://github.com/ruinosus/dna/blob/main/CHANGELOG.md"
+Issues = "https://github.com/ruinosus/dna/issues"
