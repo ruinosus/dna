@@ -14,7 +14,7 @@ spec:
     \ a recurs\xE3o nos subdirs, s\xF3 claim de bundle-dir (Skill)."
   type: bug
   severity: medium
-  status: open
+  status: in-progress
   owner: claude-code
   related_feature: f-dna-ecosystem
   timeline:
@@ -23,3 +23,9 @@ spec:
     type: status_change
     source: cli
     to: open
+  - at: '2026-07-10T21:38:28+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: open
+    to: in-progress

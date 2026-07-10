@@ -1,0 +1,136 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-install-scan-fixes
+spec:
+  title: 'install scan: mixed trees + network test for init --from'
+  description: Fix _scan_tree so a reader claiming a directory (root AGENTS.md) no
+    longer hides sibling/child docs (i-016), and add the requires_network test for
+    dna init --from against the onboarding pack on main (i-017).
+  status: review
+  feature: f-dna-ecosystem
+  owner: claude-code
+  reporter: claude-code
+  acceptance_criteria:
+  - Given a tree with AGENTS.md at the root AND skills/<name>/SKILL.md, When dna install
+    runs, Then BOTH the AgentDefinition and every Skill are installed (plan lists
+    them all).
+  - "Given a Skill bundle directory (SKILL.md + companions/subdirs), When scanned,\
+    \ Then it yields exactly ONE doc \u2014 no duplicates from recursing into the\
+    \ bundle."
+  - Given a skills-only tree, When installed, Then the result is byte-identical to
+    before the fix (golden unchanged).
+  - 'Given the fix, When dna init --from loads a pack, Then it delegates to the shared
+    scan (workaround from PR #41 removed) and its tests stay green.'
+  - Given network locally, When pytest runs test marked requires_network for dna init
+    --from github:ruinosus/dna/examples/onboarding-pack (no ref), Then it passes;
+    under DNA_OFFLINE=1 it skips.
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - code + tests (cli/sdk-py/sdk-ts suites green) + guards + mkdocs build --strict
+  - TestGuide --product + TestRun recorded for the mixed-tree install smoke and the
+    local network test
+  - PR to main with 11/11 checks; i-016 + i-017 resolved on merge
+  definition_of_done_source: cli-create
+  created_at: '2026-07-10T21:37:51+00:00'
+  updated_at: '2026-07-10T21:53:50+00:00'
+  timeline:
+  - at: '2026-07-10T21:37:51+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-10T21:38:26+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-10T21:40:34+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Plan approved into the story; design locked: _scan_tree gains a consumed-set\
+      \ \u2014 when a reader claims a dir, the matching WriterPort.serialize(raw)\
+      \ (write\u2261serialize enforced by the round-trip suite) is the authoritative\
+      \ bundle extent; unconsumed siblings/subdirs keep scanning. No writer match\
+      \ \u2192 conservative pre-fix fallback (whole subtree). install passes kernel.active_writers;\
+      \ init --from will delegate to the fixed scan and drop the PR #41 root-probe\
+      \ workaround. Writing failing tests first (mixed tree, bundle no-dup, fallback)."
+    commit_ref: 38b7d9c2a9f304354225360793aa5e8f0e8bf2ef
+  - at: '2026-07-10T21:43:48+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Build: fix landed. (1) _scan_tree now computes a consumed-set per claim\
+      \ via the matching WriterPort.serialize(raw); unconsumed yamls/subdirs keep\
+      \ scanning; no-writer claim falls back to whole-subtree (conservative). install\
+      \ passes kernel.active_writers. (2) init --from delegates to the fixed scan\
+      \ ([SkillReader, AgentDefinitionReader] + writers) \u2014 PR #41 root-probe\
+      \ workaround REMOVED; root AGENTS.md arrives as the scanned doc at rel_path\
+      \ '.'. (3) i-017 requires_network test added (test_init_cmd.py): github:ruinosus/dna/examples/onboarding-pack\
+      \ no-ref \u2014 PASSED online in 4.47s, SKIPPED under DNA_OFFLINE=1. 39/39 cli\
+      \ install+init tests green incl. the anthropics/skills real-clone test."
+    commit_ref: 38b7d9c2a9f304354225360793aa5e8f0e8bf2ef
+  - at: '2026-07-10T21:46:40+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-install-scan-fixes-smoke
+    summary: TestGuide tg-install-scan-fixes-smoke (smoke)
+  - at: '2026-07-10T21:46:59+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-install-scan-fixes-smoke-20260710-214658
+    summary: "TestRun tr-tg-install-scan-fixes-smoke-20260710-214658 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-10T21:48:19+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/44'
+    pr_url: https://github.com/ruinosus/dna/pull/44
+  - at: '2026-07-10T21:48:34+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
+  - at: '2026-07-10T21:48:49+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR https://github.com/ruinosus/dna/pull/44 aberto (base main). Resolve\
+      \ i-016 + i-017 done-on-merge \u2014 issues ficam in-progress at\xE9 o merge;\
+      \ resolver na sequ\xEAncia do merge do PR. Gates locais: cli 369 pass, sdk-py\
+      \ 2819 pass, sdk-ts 1368 pass + tsc, brand-guard clean, mkdocs --strict clean,\
+      \ TestRun tr-tg-install-scan-fixes-smoke-20260710-214658 pass."
+    commit_ref: c494a3d71fd479f1aeff3dd3dd1bb42dcb57a7ec
+  - at: '2026-07-10T21:53:50+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "CI do PR #44: 11/11 pass (brand-guard, cli 3.12/3.13, commit-emails,\
+      \ docs-build, docs-links, gitleaks, postgres, sdk-py 3.12/3.13, sdk-ts; deploy\
+      \ skipping como esperado). Aguardando merge humano \u2014 N\xC3O mergear pelo\
+      \ agente. P\xF3s-merge: resolver i-016 + i-017 (done-on-merge) e story done.\
+      \ Kaizen: i-018-cache-read-tree-claim-subtree filado (mesmo padr\xE3o claim-engole-sub\xE1\
+      rvore no FilesystemCache._read_tree do SDK, fora de escopo aqui por tocar paridade\
+      \ Py+TS)."
+    commit_ref: 83f6121af95ed9b81f4d597353ef335e9eb5f3c9
+  produces:
+  - kind: Plan
+    name: plan-s-install-scan-fixes
+    role: implementation
+    at: '2026-07-10T21:38:26+00:00'
+  - kind: TestGuide
+    name: tg-install-scan-fixes-smoke
+    role: test-guide
+    at: '2026-07-10T21:46:40+00:00'
+  - kind: TestRun
+    name: tr-tg-install-scan-fixes-smoke-20260710-214658
+    role: test-run
+    at: '2026-07-10T21:46:59+00:00'
