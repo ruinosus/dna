@@ -1,0 +1,17 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-dna-eval-kit
+spec:
+  title: 'Plano: s-dna-eval-kit'
+  date: '2026-07-10'
+  status: accepted
+  story_ref: s-dna-eval-kit
+  journey_phase: plan
+  body: "Portar Kinds eval do upstream (subset declarativo, descriptors se poss\xED\
+    vel); runner local s\xEDncrono com EvalTargetPort (default: kernel/composi\xE7\
+    \xE3o determin\xEDstica; LLM = host extension point); dna eval run/list/show +\
+    \ baseline; paridade TS dos Kinds; prosa+guards. Worktree dna-wt-eval; PR via\
+    \ story pr."
+  created_at: '2026-07-10T09:24:34+00:00'
+  updated_at: '2026-07-10T09:24:34+00:00'

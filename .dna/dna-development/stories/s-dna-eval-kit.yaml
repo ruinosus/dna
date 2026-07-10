@@ -1,0 +1,56 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-dna-eval-kit
+spec:
+  title: "Eval Kinds + runner LOCAL (Tier B, item 2): a autoria de avalia\xE7\xE3\
+    o como dados \u2014 "
+  description: "Eval Kinds + runner LOCAL (Tier B, item 2): a autoria de avalia\xE7\
+    \xE3o como dados \u2014 EvalCase/EvalSuite/EvalRun/Baseline do SDK upstream (extension\
+    \ eval, 752loc; a autoria \xE9 declarativa, o runner l\xE1 era Temporal/servi\xE7\
+    o e N\xC3O viaja). EVOLU\xC7\xC3O: runner S\xCDNCRONO local no SDK ('rode seus\
+    \ evals offline') \u2014 dna eval run <suite> executa os cases contra um alvo\
+    \ plug\xE1vel (callable/porta EvalTargetPort \u2014 o default \xC9 o pr\xF3prio\
+    \ kernel: build_prompt/composi\xE7\xE3o como alvo avali\xE1vel determin\xEDstico;\
+    \ alvo-LLM \xE9 do host, extension point documentado como sempre), grava EvalRun\
+    \ doc com resultados, compara com Baseline. Paridade TS dos Kinds (runner Py-primary\
+    \ justificado se for o caso). Prosa + guards. Evals s\xE3o o assunto do momento\
+    \ em agentic \u2014 e o testkit (TestGuide/TestRun) j\xE1 \xE9 primo no repo."
+  status: in-progress
+  feature: f-dna-ecosystem
+  priority: high
+  labels:
+  - sdk
+  - cli
+  - python
+  - typescript
+  reporter: claude-code
+  business_value: 600
+  acceptance_criteria:
+  - "Kinds Eval* registrados (descriptor se ratchet permitir) Py+TS; dna eval run\
+    \ executa suite local offline (alvo determin\xEDstico default) e grava EvalRun;\
+    \ baseline compare funciona; alvo-LLM documentado como extension point; smoke\
+    \ real --product; prosa (guard) + reference regen; CI verde"
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - PR merged via dna sdlc story pr
+  definition_of_done_source: cli-create
+  created_at: '2026-07-10T09:24:31+00:00'
+  updated_at: '2026-07-10T09:24:35+00:00'
+  timeline:
+  - at: '2026-07-10T09:24:31+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-10T09:24:35+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  produces:
+  - kind: Plan
+    name: plan-s-dna-eval-kit
+    role: implementation
+    at: '2026-07-10T09:24:35+00:00'
