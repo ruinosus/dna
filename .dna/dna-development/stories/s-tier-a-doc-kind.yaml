@@ -34,7 +34,7 @@ spec:
     done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-09T22:39:24+00:00'
-  updated_at: '2026-07-09T23:12:03+00:00'
+  updated_at: '2026-07-10T00:08:26+00:00'
   timeline:
   - at: '2026-07-09T22:39:24+00:00'
     actor: claude-code
@@ -107,6 +107,20 @@ spec:
       \ puro byte-par Py\u2194TS; dna docs out-of-the-box (e2e en/pt-BR pinado); cli-tour\
       \ re-executado (workaround\u2192demo de extens\xE3o); strict-schema ratchet\
       \ encolheu; subset service-bound cortado com nota honesta."
+  - at: '2026-07-10T00:08:24+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-tier-a-doc-kind-20260710-000823
+    summary: "TestRun tr-tg-s-tier-a-doc-kind-20260710-000823 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-10T00:08:26+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #22 merged (fechamento formal \u2014 o gate pedia TestRun na guide\
+      \ --product do agente, registrado agora)."
   produces:
   - kind: Plan
     name: plan-s-tier-a-doc-kind
@@ -120,3 +134,7 @@ spec:
     name: tr-tg-s-tier-a-doc-kind-20260709-230337
     role: test-run
     at: '2026-07-09T23:03:38+00:00'
+  - kind: TestRun
+    name: tr-tg-s-tier-a-doc-kind-20260710-000823
+    role: test-run
+    at: '2026-07-10T00:08:24+00:00'

@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-tier-a-doc-kind-20260710-000823
+spec:
+  guide_ref: tg-s-tier-a-doc-kind
+  outcome: pass
+  verifies:
+  - Story/s-tier-a-doc-kind
+  executed_by: claude-code
+  executed_at: '2026-07-10T00:08:23+00:00'
+  evidence:
+  - ci:pr22-10-of-10,smoke-produto:dna-docs-list-show-out-of-the-box-outputs-reais-en-ptbr,e2e:test_docs_cmd.py-pinado
