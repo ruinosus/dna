@@ -82,12 +82,21 @@ async def test_memory_conformance_lexical(case):
 # verb suite × sqlite-vec kernel (hybrid + semantic branch)
 # ---------------------------------------------------------------------------
 
-sqlite_vec = pytest.importorskip(
-    "sqlite_vec",
+# NOT a module-level importorskip: that would skip the whole module — including
+# the provider-less lexical branch above, which must run on a bare install.
+try:
+    import sqlite_vec  # noqa: F401
+    _HAS_SQLITE_VEC = True
+except Exception:  # noqa: BLE001 — any import failure means "extra absent"
+    _HAS_SQLITE_VEC = False
+
+requires_sqlite_vec = pytest.mark.skipif(
+    not _HAS_SQLITE_VEC,
     reason="search-sqlite extra not installed (pip install 'dna-sdk[search-sqlite]')",
 )
 
 
+@requires_sqlite_vec
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     "case",
@@ -98,6 +107,7 @@ async def test_memory_conformance_sqlite_vec(case):
     await case.run()
 
 
+@requires_sqlite_vec
 @pytest.mark.asyncio
 async def test_programmatic_runner_covers_both_branches():
     """The programmatic runner reports every case; between the two builtin
