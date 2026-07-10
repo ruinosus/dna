@@ -269,6 +269,15 @@ kernel.record_search_provider(provider)
 
 Nothing else in your code changes — that is the point of the port.
 
+### Prove your stack: the memory conformance kit
+
+Whatever combination you assemble — custom source, custom provider, custom
+embedder — the SDK ships a public battery that certifies the memory verbs
+over it: `memory_conformance_suite` (the verb lifecycle, capability-aware)
+and `memory_scoring_conformance_suite` / `memoryScoringConformanceSuite`
+(the pure scoring core, Py↔TS twinned). See [Running the conformance
+kit](../getting-started/conformance-kit.md#the-memory-conformance-kit).
+
 ## TypeScript
 
 The TS SDK ships the same surface: `kernel.embed` / `kernel.search`, the
