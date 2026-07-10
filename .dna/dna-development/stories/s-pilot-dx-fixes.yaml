@@ -12,7 +12,7 @@ spec:
     \ composto \u2014 strip no reader/composi\xE7\xE3o + verificar AGENT.md/LESSON),\
     \ i-014 (story check --ac com matching guloso de \xEDndice \u2014 red\u2192green\
     \ match exato)."
-  status: review
+  status: done
   feature: f-dna-ecosystem
   priority: high
   labels:
@@ -41,7 +41,7 @@ spec:
       (pass); PR a abrir via story pr
   definition_of_done_source: cli-create
   created_at: '2026-07-10T17:11:56+00:00'
-  updated_at: '2026-07-10T17:44:55+00:00'
+  updated_at: '2026-07-10T17:49:10+00:00'
   timeline:
   - at: '2026-07-10T17:11:56+00:00'
     actor: claude-code
@@ -136,6 +136,23 @@ spec:
       \ main (token no s-pilot-foundry-assured.yaml, pr\xE9-existente) \u2014 allowlist\
       \ pontual no commit 9bde7f0 desbloqueia este PR e o pr\xF3ximo push do main."
     commit_ref: 8099ac1023c9df14913c0d4760565e69bb0c047c
+  - at: '2026-07-10T17:49:06+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #35 merged (matriz verde). i-012: preced\xEAncia --scope > DNA_SDLC_SCOPE\
+      \ > auto-detect do board > fallback (testada com scope de nome arbitr\xE1rio);\
+      \ i-013: strip do trailing newline na COMPOSI\xC7\xC3O (storage byte-fiel intacto,\
+      \ rw kit prova); i-014: story check match exato de \xEDndice red\u2192green.\
+      \ As 3 fric\xE7\xF5es do primeiro adotante externo eliminadas \u2014 o pr\xF3\
+      ximo n\xE3o as sente."
+  - at: '2026-07-10T17:49:10+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: 0e5c9b0800b9980a1995758da97c22146bd0d861
   produces:
   - kind: Plan
     name: plan-s-pilot-dx-fixes
@@ -149,3 +166,4 @@ spec:
     name: tr-tg-pilot-dx-fixes-20260710-174112
     role: test-run
     at: '2026-07-10T17:41:14+00:00'
+  closed_at: '2026-07-10T17:49:03+00:00'
