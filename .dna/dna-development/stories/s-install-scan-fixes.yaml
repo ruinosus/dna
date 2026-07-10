@@ -7,7 +7,7 @@ spec:
   description: Fix _scan_tree so a reader claiming a directory (root AGENTS.md) no
     longer hides sibling/child docs (i-016), and add the requires_network test for
     dna init --from against the onboarding pack on main (i-017).
-  status: in-progress
+  status: review
   feature: f-dna-ecosystem
   owner: claude-code
   reporter: claude-code
@@ -33,7 +33,7 @@ spec:
   - PR to main with 11/11 checks; i-016 + i-017 resolved on merge
   definition_of_done_source: cli-create
   created_at: '2026-07-10T21:37:51+00:00'
-  updated_at: '2026-07-10T21:46:59+00:00'
+  updated_at: '2026-07-10T21:48:49+00:00'
   timeline:
   - at: '2026-07-10T21:37:51+00:00'
     actor: claude-code
@@ -87,6 +87,28 @@ spec:
     name: tr-tg-install-scan-fixes-smoke-20260710-214658
     summary: "TestRun tr-tg-install-scan-fixes-smoke-20260710-214658 \u2192 pass"
     outcome: pass
+  - at: '2026-07-10T21:48:19+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/44'
+    pr_url: https://github.com/ruinosus/dna/pull/44
+  - at: '2026-07-10T21:48:34+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
+  - at: '2026-07-10T21:48:49+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR https://github.com/ruinosus/dna/pull/44 aberto (base main). Resolve\
+      \ i-016 + i-017 done-on-merge \u2014 issues ficam in-progress at\xE9 o merge;\
+      \ resolver na sequ\xEAncia do merge do PR. Gates locais: cli 369 pass, sdk-py\
+      \ 2819 pass, sdk-ts 1368 pass + tsc, brand-guard clean, mkdocs --strict clean,\
+      \ TestRun tr-tg-install-scan-fixes-smoke-20260710-214658 pass."
+    commit_ref: c494a3d71fd479f1aeff3dd3dd1bb42dcb57a7ec
   produces:
   - kind: Plan
     name: plan-s-install-scan-fixes
