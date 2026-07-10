@@ -19,7 +19,7 @@ spec:
     \ vira alternativa); (5) CHANGELOG Unreleased\u21920.1.0. Lado Barna (contas):\
     \ PyPI pending publishers + npm token \u2014 checklist entregue \xE0 parte. Publica\xE7\
     \xE3o real = tag v0.1.0 AP\xD3S o Barna configurar os registries."
-  status: review
+  status: done
   feature: f-dna-ecosystem
   priority: high
   labels:
@@ -30,17 +30,23 @@ spec:
   reporter: claude-code
   business_value: 700
   acceptance_criteria:
-  - "Pacote npm builda e empacota (npm pack v\xE1lido, dist+types, name dna-sdk);\
-    \ wheels/sdist buildam limpos; release.yml completo (dry-run validado onde poss\xED\
-    vel); docs 100% no nome novo (guard verde); constraint do cli correta; CHANGELOG\
-    \ 0.1.0"
+  - text: "Pacote npm builda e empacota (npm pack v\xE1lido, dist+types, name dna-sdk);\
+      \ wheels/sdist buildam limpos; release.yml completo (dry-run validado onde poss\xED\
+      vel); docs 100% no nome novo (guard verde); constraint do cli correta; CHANGELOG\
+      \ 0.1.0"
+    done: true
+    done_at: '2026-07-10T18:52:07+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - PR merged; checklist de contas entregue ao Barna; tag v0.1.0 aguardando config
-    dele
+  - text: PR merged; checklist de contas entregue ao Barna; tag v0.1.0 aguardando
+      config dele
+    done: true
+    done_at: '2026-07-10T18:52:07+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-10T17:59:56+00:00'
-  updated_at: '2026-07-10T18:30:16+00:00'
+  updated_at: '2026-07-10T18:53:05+00:00'
   timeline:
   - at: '2026-07-10T17:59:56+00:00'
     actor: claude-code
@@ -122,8 +128,60 @@ spec:
       o j\xE1 existir (idempotente p\xF3s-publish manual). RELEASING.md e CHANGELOG\
       \ atualizados. YAMLs validados, guards+mkdocs verdes."
     commit_ref: 6cf88d68b461f8531c8ff4e1813c97dc083f1de3
+  - at: '2026-07-10T18:52:06+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Publica\xE7\xE3o REAL conclu\xEDda: dna-sdk 0.1.0 no PyPI (OIDC) + npm\
+      \ (manual 1a vez); dna-cli 0.1.0 no PyPI (OIDC, ap\xF3s fix do environment pypi-cli\
+      \ no pending publisher). Tag v0.1.0. Falta s\xF3 o Trusted Publisher do npm\
+      \ (config de conta) p/ releases 100% autom\xE1ticas."
+    commit_ref: dd692ee0ffcd4e469295106cd5047f251beffcbc
+  - at: '2026-07-10T18:52:09+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 3 pacotes publicados nos 2 registries; release = tag-only daqui em diante
+      (RELEASING.md)
+  - at: '2026-07-10T18:52:58+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-publish-registries
+    summary: TestGuide tg-s-publish-registries (smoke)
+  - at: '2026-07-10T18:53:00+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-publish-registries-20260710-185259
+    summary: "TestRun tr-tg-s-publish-registries-20260710-185259 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-10T18:53:03+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 3 pacotes publicados nos 2 registries; release = tag-only daqui em diante
+      (RELEASING.md)
+  - at: '2026-07-10T18:53:05+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: dd692ee0ffcd4e469295106cd5047f251beffcbc
   produces:
   - kind: Plan
     name: plan-s-publish-registries
     role: implementation
     at: '2026-07-10T17:59:59+00:00'
+  - kind: TestGuide
+    name: tg-s-publish-registries
+    role: test-guide
+    at: '2026-07-10T18:52:58+00:00'
+  - kind: TestRun
+    name: tr-tg-s-publish-registries-20260710-185259
+    role: test-run
+    at: '2026-07-10T18:53:00+00:00'
+  closed_at: '2026-07-10T18:53:01+00:00'
