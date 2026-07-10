@@ -11,6 +11,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-07-10
+
+### Added
+
+- **`dna init --from` — distributed onboarding packs**
+  (s-onboarding-genome-install, closes i-015). `dna init` can now source its
+  assets from a remote pack instead of the embedded Genome:
+  `dna init --from github:owner/repo[/subdir][@ref]` (or a local path). Every
+  valid Skill in the pack is projected per `--tools`; a root `AGENTS.md`
+  replaces the embedded one (absent → embedded fallback, noted). `--from`
+  only projects to tool directories — `dna install` remains the channel that
+  writes documents to the source; the two compose over the same ref. Pack
+  content is untrusted and goes through the same install defenses
+  (registered Kinds, JSON Schema, slug-only names). A public example pack
+  ships in `examples/onboarding-pack/`.
+- **Memory conformance kit** (s-memory-conformance-kit). `dna.testing` now
+  ships a public conformance suite for memory: 10 verb invariants
+  (remember→recall roundtrip, bi-temporal forget with no hard deletes,
+  idempotent consolidate, strictly decreasing Ebbinghaus retention under
+  simulated time, text-hash-idempotent backfill, honest lexical fallback)
+  plus 7 pure scoring invariants mirrored 1:1 in `dna-sdk/testing` for
+  TypeScript (ecphory weights/threshold, RRF fusion, cosine ordering).
+  Runs against the builtin providers (filesystem, sqlite-vec, pgvector)
+  and against custom `RecordSearchProvider`/`EmbeddingPort` implementations
+  via the public factory API.
+
+### Changed
+
+- `dna-cli` now depends on `dna-sdk>=0.3,<0.4`.
+
 ## [0.2.0] - 2026-07-10
 
 ### Added
@@ -167,6 +197,7 @@ registries: **PyPI** ([`dna-sdk`](https://pypi.org/project/dna-sdk/),
   source conformance kit now pins the contract: base content is served
   by `load_all`, never by a `load_layer` sentinel.
 
-[Unreleased]: https://github.com/ruinosus/dna/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/ruinosus/dna/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/ruinosus/dna/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/ruinosus/dna/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/ruinosus/dna/releases/tag/v0.1.0

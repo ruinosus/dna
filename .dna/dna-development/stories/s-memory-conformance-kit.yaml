@@ -11,36 +11,52 @@ spec:
     \ roundtrip remember\u2192recall, determinismo, semantic on/off, forget bi-temporal,\
     \ consolidate idempotente, decay monot\xF4nico, backfill lazy idempotente, pesos/threshold\
     \ do ecphory e fus\xE3o RRF."
-  status: review
+  status: done
   feature: f-dna-search-memory
   reporter: claude-code
   acceptance_criteria:
-  - "Given um autor de adapter com um kernel factory (source grav\xE1vel + provider\
-    \ opcional), When ele roda memory_conformance_suite(factory) via pytest parametrize,\
-    \ Then os 9 casos kernel-bound passam contra sqlite-vec e pgvector builtin e casos\
-    \ que exigem provider skipam limpo sem provider"
-  - "Given um embedder custom (EmbeddingPort), When memory_scoring_conformance_suite/memoryScoringConformanceSuite\
-    \ rodam com o factory dele, Then os casos puros (pesos/threshold ecphory, fus\xE3\
-    o RRF, decay monot\xF4nico, bi-temporal fail-open, cosine relativo) passam em\
-    \ Py e TS com nomes de caso id\xEAnticos"
-  - "Given recall com semantic=False, When o kit valida o shape, Then hits sem anota\xE7\
-    \xF5es de fus\xE3o (byte-shape base); com provider em modo auto, semantic=True\
-    \ + rank_recall/rank_ecphory/score_recall anotados"
-  - "Given um consumidor externo simulado (projeto scratch com sdk editable + provider\
-    \ fake trivial implementado de fora), When ele roda run_memory_conformance + run_memory_scoring_conformance,\
-    \ Then a suite passa provando a API p\xFAblica de fora"
+  - text: "Given um autor de adapter com um kernel factory (source grav\xE1vel + provider\
+      \ opcional), When ele roda memory_conformance_suite(factory) via pytest parametrize,\
+      \ Then os 9 casos kernel-bound passam contra sqlite-vec e pgvector builtin e\
+      \ casos que exigem provider skipam limpo sem provider"
+    done: true
+    done_at: '2026-07-10T20:57:32+00:00'
+    done_by: story-done-auto
+  - text: "Given um embedder custom (EmbeddingPort), When memory_scoring_conformance_suite/memoryScoringConformanceSuite\
+      \ rodam com o factory dele, Then os casos puros (pesos/threshold ecphory, fus\xE3\
+      o RRF, decay monot\xF4nico, bi-temporal fail-open, cosine relativo) passam em\
+      \ Py e TS com nomes de caso id\xEAnticos"
+    done: true
+    done_at: '2026-07-10T20:57:32+00:00'
+    done_by: story-done-auto
+  - text: "Given recall com semantic=False, When o kit valida o shape, Then hits sem\
+      \ anota\xE7\xF5es de fus\xE3o (byte-shape base); com provider em modo auto,\
+      \ semantic=True + rank_recall/rank_ecphory/score_recall anotados"
+    done: true
+    done_at: '2026-07-10T20:57:32+00:00'
+    done_by: story-done-auto
+  - text: "Given um consumidor externo simulado (projeto scratch com sdk editable\
+      \ + provider fake trivial implementado de fora), When ele roda run_memory_conformance\
+      \ + run_memory_scoring_conformance, Then a suite passa provando a API p\xFA\
+      blica de fora"
+    done: true
+    done_at: '2026-07-10T20:57:32+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - "kit Py dna.testing.memory_conformance + espelho TS dna-sdk/testing pro core puro\
-    \ (verbs Py-only documentado); kit rodando contra sqlite-vec + pgvector (requires_postgres,\
-    \ mesmo padr\xE3o do job postgres); docs na casa dos kits (getting-started/conformance-kit.md)\
-    \ + ponteiro no guia de semantic recall; refer\xEAncias re-geradas se drift; suites\
-    \ completas sdk-py/sdk-ts+typecheck/cli + guards + mkdocs --strict verdes; smoke\
-    \ de produto com TestGuide --product + TestRun; PR via story pr com CI 11/11,\
-    \ sem merge"
+  - text: "kit Py dna.testing.memory_conformance + espelho TS dna-sdk/testing pro\
+      \ core puro (verbs Py-only documentado); kit rodando contra sqlite-vec + pgvector\
+      \ (requires_postgres, mesmo padr\xE3o do job postgres); docs na casa dos kits\
+      \ (getting-started/conformance-kit.md) + ponteiro no guia de semantic recall;\
+      \ refer\xEAncias re-geradas se drift; suites completas sdk-py/sdk-ts+typecheck/cli\
+      \ + guards + mkdocs --strict verdes; smoke de produto com TestGuide --product\
+      \ + TestRun; PR via story pr com CI 11/11, sem merge"
+    done: true
+    done_at: '2026-07-10T20:57:32+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-10T20:09:00+00:00'
-  updated_at: '2026-07-10T20:34:10+00:00'
+  updated_at: '2026-07-10T20:57:37+00:00'
   timeline:
   - at: '2026-07-10T20:09:00+00:00'
     actor: claude-code
@@ -136,6 +152,18 @@ spec:
       \ muitos stores). Story fica em review aguardando merge humano (worktree dna-wt-memkit\
       \ preservado)."
     commit_ref: 5d1b69f37b912df4b343d1fa2ec00c3324bf024d
+  - at: '2026-07-10T20:57:34+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'PR #42 merged; sai no v0.3.0'
+  - at: '2026-07-10T20:57:37+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: eb67539a46b513585d18977438a973c08e05c0ec
   produces:
   - kind: Plan
     name: plan-s-memory-conformance-kit
@@ -149,3 +177,4 @@ spec:
     name: tr-tg-memory-conformance-kit-20260710-202637
     role: test-run
     at: '2026-07-10T20:26:39+00:00'
+  closed_at: '2026-07-10T20:57:32+00:00'

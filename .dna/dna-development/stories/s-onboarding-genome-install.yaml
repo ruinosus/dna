@@ -8,7 +8,7 @@ spec:
     \ custom) e consomem via dna init --from github:owner/repo[/subdir][@ref] (ou\
     \ local:) \u2014 reuso do fetch/scan/valida\xE7\xE3o do install, proje\xE7\xE3\
     o id\xEAntica ao init embarcado"
-  status: review
+  status: done
   feature: f-dna-ecosystem
   priority: medium
   labels:
@@ -122,7 +122,7 @@ spec:
       --strict verdes; i-015 in-progress (resolve done-on-merge)'
   definition_of_done_source: cli-create
   created_at: '2026-07-10T20:06:39+00:00'
-  updated_at: '2026-07-10T20:27:25+00:00'
+  updated_at: '2026-07-10T20:57:30+00:00'
   timeline:
   - at: '2026-07-10T20:06:39+00:00'
     actor: claude-code
@@ -218,6 +218,18 @@ spec:
       \ skills) + i-017 (network test do pack @main p\xF3s-merge). Story fica em review\
       \ at\xE9 o merge; done-on-merge tamb\xE9m resolve i-015."
     commit_ref: fba3005403a0231616eb0c9ff86e737dd36e7db0
+  - at: '2026-07-10T20:57:27+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'PR #41 merged; sai no v0.3.0'
+  - at: '2026-07-10T20:57:30+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: eb67539a46b513585d18977438a973c08e05c0ec
   produces:
   - kind: Plan
     name: plan-s-onboarding-genome-install
@@ -231,3 +243,4 @@ spec:
     name: tr-tg-onboarding-genome-install-20260710-202230
     role: test-run
     at: '2026-07-10T20:22:32+00:00'
+  closed_at: '2026-07-10T20:57:24+00:00'
