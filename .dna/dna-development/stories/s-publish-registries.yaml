@@ -40,7 +40,7 @@ spec:
     dele
   definition_of_done_source: cli-create
   created_at: '2026-07-10T17:59:56+00:00'
-  updated_at: '2026-07-10T17:59:59+00:00'
+  updated_at: '2026-07-10T18:19:40+00:00'
   timeline:
   - at: '2026-07-10T17:59:56+00:00'
     actor: claude-code
@@ -53,6 +53,38 @@ spec:
     source: cli
     from: todo
     to: in-progress
+  - at: '2026-07-10T18:05:25+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Plano (worktree feat/s-publish-registries): (A) rename npm @dna/sdk\u2192\
+      dna-sdk + tsconfig.build.json (tsc emit dist/ ESM+d.ts, rootDir src) + copy\
+      \ de assets runtime (extensions/*/kinds/*.kind.yaml + DOCS*.md, carregados via\
+      \ import.meta.url \u2014 precisam viajar no dist) + exports map/files/engines/license/repository\
+      \ no package.json + bun.lock regen; valida\xE7\xE3o npm pack --dry-run + smoke\
+      \ do tarball em projeto scratch com Node. (B) cli: dna-sdk>=0.1,<0.2 com uv.sources\
+      \ path pra dev documentado. (C) release.yml tag v* \u2014 build-py (uv build\
+      \ sdk+cli) \u2192 publish-pypi (trusted publishing, env pypi) + publish-npm\
+      \ (bun run build + npm publish --provenance, NPM_TOKEN) com sanity tag==vers\xF5\
+      es. (D) CHANGELOG 0.1.0, sweep docs/exemplos (14 arquivos), install one-liners\
+      \ pip/npm prim\xE1rio + git-dep alternativa, RELEASING.md com checklist de contas\
+      \ do dono. Gates: suites TS+Py+cli, guards, mkdocs --strict, typedoc regen."
+    commit_ref: f47f948830f83450ccecd40a1198d5f00b387c6b
+  - at: '2026-07-10T18:19:40+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Build+gates verdes: sdk-ts bun test 1337 pass + typecheck; sdk-py 2756\
+      \ pass; cli 341 pass; brand/coverage/drift guards limpos; mkdocs --strict OK.\
+      \ npm pack = 239 files/366kB (dist JS+d.ts + 37 assets runtime kind.yaml/DOCS.md\
+      \ + LICENSE/README); smoke do tarball sob Node 22: quickInstance no hello-genome\
+      \ + 69 Kinds registrados (descriptors carregam do dist). uv build: 4 artifacts\
+      \ limpos; wheel do dna-cli carrega dna-sdk<0.2,>=0.1. Requisito atualizado aplicado:\
+      \ publish-pypi dividido em publish-pypi-sdk (env pypi) + publish-pypi-cli (env\
+      \ pypi-cli) com artifacts separados dist-sdk-py/dist-cli \u2014 PyPI s\xF3 aceita\
+      \ um pending publisher por tupla owner+repo+workflow+environment; RELEASING.md\
+      \ reflete os dois environments."
+    commit_ref: f47f948830f83450ccecd40a1198d5f00b387c6b
   produces:
   - kind: Plan
     name: plan-s-publish-registries
