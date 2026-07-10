@@ -90,14 +90,15 @@ async def sa_sqlite():
 
 
 def test_notify_payload_builder_is_shared():
-    """Byte-parity by construction: the SA adapter uses the raw Postgres
-    adapter's payload builder + channel constant (imported, not copied)."""
+    """Byte-parity by construction: the SA adapter uses the kernel event
+    contract's payload builder + channel constant (imported, not copied) —
+    the same objects the PostgresEventBus subscriber side reads."""
     _require_sqlalchemy()
     from dna.adapters import sqlalchemy_ as sam
-    from dna.adapters.postgres import source as pgm
+    from dna.kernel import eventbus as ebm
 
-    assert sam.source._build_notify_payload is pgm._build_notify_payload
-    assert sam.source.KERNEL_EVENTBUS_CHANNEL == pgm.KERNEL_EVENTBUS_CHANNEL
+    assert sam.source.build_notify_payload is ebm.build_notify_payload
+    assert sam.source.KERNEL_EVENTBUS_CHANNEL == ebm.KERNEL_EVENTBUS_CHANNEL
 
 
 def test_cross_process_invalidation_flag_follows_dialect():

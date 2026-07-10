@@ -25,10 +25,11 @@ Production behaviors (each mirrors the raw adapter that pioneered it):
     every write on the postgresql dialect appends to ``dna_outbox``,
     checkpoints ``dna_versions_seq`` and fires ``pg_notify`` on
     ``KERNEL_EVENTBUS_CHANNEL`` **inside the same transaction** as the
-    data write — Phase 15.1 semantics. The NOTIFY payload is built by the
-    SAME ``_build_notify_payload`` the raw ``PostgresSource`` uses
-    (imported, not copied), so payload parity is byte-exact by
-    construction. SQLite gets :class:`_NullEventEmitter` (no bus — H2).
+    data write — Phase 15.1 semantics. The NOTIFY payload is built by
+    ``dna.kernel.eventbus.build_notify_payload`` — the same producer
+    contract the retired raw ``PostgresSource`` used, now co-located with
+    the channel constant. SQLite gets :class:`_NullEventEmitter` (no bus
+    — H2).
   - **Memo-cached ``_load_view``** (dialect-agnostic): the canonical
     (scope, tenant) view is memoized with a single-flight lock and served
     as deep copies (s-query-loadview-cache semantics). Invalidation is a
@@ -71,12 +72,10 @@ from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 from dna.kernel.protocols import WritableSourcePort
 
-# Single source of truth for the Phase 15.1 event contract — importing
-# (instead of copying) the payload builder + channel name from the raw
-# Postgres adapter guarantees byte-exact NOTIFY parity by construction.
-# (`adapters/postgres/source.py` has no hard asyncpg dependency at import
-# time, so this import stays safe without the `postgres` extra.)
-from ..postgres.source import KERNEL_EVENTBUS_CHANNEL, _build_notify_payload
+# Single source of truth for the Phase 15.1 event contract — the payload
+# builder + channel name live with the KernelEventBus contract itself
+# (dna/kernel/eventbus.py), shared with the PostgresEventBus subscriber.
+from dna.kernel.eventbus import KERNEL_EVENTBUS_CHANNEL, build_notify_payload
 
 if TYPE_CHECKING:
     from dna.kernel.capabilities import SourceCapabilities
@@ -115,9 +114,9 @@ class _PgOutboxEmitter:
       2. UPSERT ``dna_versions_seq`` (per-(scope, tenant) checkpoint).
       3. ``pg_notify`` on :data:`KERNEL_EVENTBUS_CHANNEL`.
 
-    The payload is produced by the raw adapter's ``_build_notify_payload``
-    (imported), so ``PostgresEventBus`` subscribers can't tell which
-    adapter produced the event.
+    The payload is produced by ``dna.kernel.eventbus.build_notify_payload``
+    (the shared producer contract), so ``PostgresEventBus`` subscribers
+    see the exact same wire shape the retired raw adapter emitted.
     """
 
     def __init__(self, source: "SqlAlchemySource") -> None:
@@ -157,7 +156,7 @@ class _PgOutboxEmitter:
             set_={"last_id": ins.excluded.last_id,
                   "last_at": ins.excluded.last_at},
         ))
-        payload = _build_notify_payload(
+        payload = build_notify_payload(
             outbox_id, scope, tenant, kind, name, op, doc_version,
             actor_val, write_class,
         )
@@ -378,8 +377,9 @@ class SqlAlchemySource(WritableSourcePort):
 
         if self._is_pg:
             # [dialect] pg payload: list[str] with {schema} placeholder,
-            # one tx per version (existing PostgresSource semantics).
-            from ..postgres.source import _MIGRATIONS as PG_MIGRATIONS
+            # one tx per version (the raw-PostgresSource semantics it
+            # inherited — payloads moved here on adapter retirement).
+            from .migrations import PG_MIGRATIONS
             control = f"{self._schema or 'public'}.dna_schema_migrations"
 
             async def ensure_control_table() -> None:
@@ -418,7 +418,7 @@ class SqlAlchemySource(WritableSourcePort):
 
         # [dialect] sqlite payload: one multi-statement SCRIPT per version
         # (executescript semantics) — split into statements for Core.
-        from ..sqlite.migrations import MIGRATIONS as SQLITE_MIGRATIONS
+        from .migrations import SQLITE_MIGRATIONS
 
         async def ensure_control_table() -> None:
             async with self._engine.begin() as conn:

@@ -28,6 +28,7 @@ dataclass. The concrete Postgres adapter lives at
 """
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from typing import Protocol, runtime_checkable, TYPE_CHECKING
 
@@ -38,10 +39,54 @@ if TYPE_CHECKING:
 KERNEL_EVENTBUS_CHANNEL = "kernel_writes"
 """Channel name. Producers and subscribers must agree.
 
-Mirrored on the producer side at
-`dna.adapters.postgres.source.KERNEL_EVENTBUS_CHANNEL`. Single
-constant used in both places — change the value in exactly one location.
+THE single constant — the producer (`SqlAlchemySource`'s postgresql
+dialect, via its outbox emitter) and the subscriber (`PostgresEventBus`)
+both import it from here.
 """
+
+
+def build_notify_payload(
+    outbox_id: int,
+    scope: str,
+    tenant: str,
+    kind: str,
+    name: str,
+    op: str,
+    doc_version: int,
+    author: str | None,
+    write_class: str = "substantive",
+) -> str:
+    """Build the ``kernel_writes`` NOTIFY payload (i-076).
+
+    THE producer half of the event contract (the consumer half is
+    :class:`KernelEvent` below). Lives next to the channel constant so the
+    wire shape has exactly one home — it was born as
+    ``dna.adapters.postgres.source._build_notify_payload`` and moved here
+    when the raw SQL adapters were retired (s-retire-raw-sql-adapters).
+
+    MUST include ``author``: cross-process subscribers read it to honor
+    author-based loop guards (``skip_if_authored_by_self`` /
+    ``skip_if_authored_by_any_hook``). Dropping it makes every
+    cross-process event look human-authored, which defeated the guards and
+    let hook-authored writes drive a self-sustaining feedback loop. Pure +
+    tiny so the contract is unit-tested without a DB.
+
+    ``write_class`` (s-buswrite-class-substantive-cue) classifies the write
+    as ``substantive`` (a real doc create/change) or ``cue`` (a pure
+    metadata bump). Hooks that react to substantive writes filter out
+    ``cue`` events BY CLASS — so metadata-bump feedback cycles can't close
+    by construction, instead of relying on the coarse "skip any hook
+    author".
+    """
+    return json.dumps(
+        {
+            "id": outbox_id, "scope": scope, "tenant": tenant,
+            "kind": kind, "name": name, "op": op,
+            "doc_version": doc_version, "author": author or "",
+            "write_class": write_class or "substantive",
+        },
+        separators=(",", ":"),
+    )
 
 
 @dataclass(frozen=True, slots=True)
