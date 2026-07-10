@@ -1,0 +1,53 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-zero-the-board
+spec:
+  title: "Fechamento de ciclo \u2014 as 2 \xFAltimas issues do board: i-005 (docstrings:\
+    \ Kernel 6 "
+  description: "Fechamento de ciclo \u2014 as 2 \xFAltimas issues do board: i-005\
+    \ (docstrings: Kernel 6 m\xE9todos p\xFAblicos sem docstring, ManifestInstance\
+    \ ~19 helpers de viz, + TSDoc: 14 tipos referenciados n\xE3o re-exportados de\
+    \ src/index.ts gerando broken-xref no TypeDoc) e i-010 (twin TS do resolver ainda\
+    \ aceita o dep shorthand legado que o Py rejeita desde #28 \u2014 portar reject_legacy_shorthand).\
+    \ O resolve da i-005 fecha a issue p\xFAblica GitHub #30 AUTOMATICAMENTE pela\
+    \ ponte (#31) \u2014 o processo completo demonstrado em p\xFAblico."
+  status: in-progress
+  feature: f-dna-sql-consolidation
+  priority: medium
+  labels:
+  - sdk
+  - python
+  - typescript
+  - docs
+  reporter: claude-code
+  business_value: 300
+  acceptance_criteria:
+  - "Docstrings preenchidas (mkdocstrings renderiza conte\xFAdo real, n\xE3o assinatura\
+    \ nua); TSDoc: tipos exportados ou intentionallyNotExported (TypeDoc sem broken-xref);\
+    \ shorthand rejeitado no TS com red\u2192green espelhando o Py; i-005 e i-010\
+    \ resolvidas via CLI; a #30 fechada no GitHub pela ponte (prova no relat\xF3rio);\
+    \ CI verde"
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - PR merged via story pr; board de issues ZERADO
+  definition_of_done_source: cli-create
+  created_at: '2026-07-10T13:32:52+00:00'
+  updated_at: '2026-07-10T13:32:55+00:00'
+  timeline:
+  - at: '2026-07-10T13:32:52+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-10T13:32:55+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  produces:
+  - kind: Plan
+    name: plan-s-zero-the-board
+    role: implementation
+    at: '2026-07-10T13:32:55+00:00'

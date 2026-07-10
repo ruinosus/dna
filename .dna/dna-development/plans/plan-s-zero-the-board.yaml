@@ -1,0 +1,16 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-zero-the-board
+spec:
+  title: 'Plano: s-zero-the-board'
+  date: '2026-07-10'
+  status: accepted
+  story_ref: s-zero-the-board
+  journey_phase: plan
+  body: "Docstrings Py (conte\xFAdo real, tom das existentes) + TSDoc exports/intentionallyNotExported\
+    \ + regen API-ref; reject shorthand no resolver TS (red\u2192green, paridade com\
+    \ #28); resolver i-010 e por \xFAltimo i-005 (a ponte fecha a #30 \u2014 capturar\
+    \ o output). Worktree dna-wt-zero; PR via story pr."
+  created_at: '2026-07-10T13:32:53+00:00'
+  updated_at: '2026-07-10T13:32:53+00:00'
