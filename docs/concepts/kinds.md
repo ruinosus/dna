@@ -37,6 +37,23 @@ flowchart LR
     V -->|no| R["rejected at the boundary"]
 ```
 
+### Validation at the write boundary
+
+`write_document` / `writeDocument` validates the `spec` against the Kind's
+declared `schema()` **before persisting** (historically this only happened
+at scan/read, fail-soft — a shape-broken doc would save fine and explode
+later, far from you). What this means for an author:
+
+- **Invalid spec → the write is rejected**, with a didactic error naming
+  the field and the violation, and pointing at `dna kind show <Kind>` for
+  the expected shape. Nothing is persisted.
+- **Kinds without a schema are untouched** — validation is opt-in by data:
+  declare a `schema` on the Kind and every write of that Kind is checked.
+- Descriptor `spec_defaults` fill in before validation, so a doc that
+  parses clean also writes clean.
+- Escape hatch for bulk/legacy loads: `DNA_WRITE_VALIDATION=warn` (log and
+  persist anyway) or `off` (skip). The default is `enforce`.
+
 ## Built-in Kinds (selection)
 
 | Kind | Extension | What it represents | Storage |

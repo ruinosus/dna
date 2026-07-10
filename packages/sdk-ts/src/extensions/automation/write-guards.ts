@@ -2,15 +2,9 @@
  * Automation-owned write-path guards (s-tier-a-automation).
  *
  * One `pre_save` VETO hook that makes an Automation write *fully valid or
- * not persisted*, in two ordered steps:
+ * not persisted*, covering what is Automation's OWN:
  *
- * 1. **Schema shape at WRITE time.** The kernel validates Kind schemas at
- *    scan/read (`parse_error` channel), not on the write path — a
- *    shape-broken Automation would persist and only explode later. The
- *    guard runs the descriptor's own schema-validating `parse` (trigger
- *    discriminator, per-type required fields, runner enum) so the veto
- *    happens at the write, with the author still present.
- * 2. **Semantics the schema cannot express:**
+ * - **Semantics the schema cannot express:**
  *
  *    - **cron expression** (`on.type: cron`) — parsed by a zero-dependency
  *      5-field validator (documented decision: a cron lib would be a
@@ -28,6 +22,12 @@
  * reads a bare `on:` key as boolean `True` (YAML 1.1), so the Py guard
  * heals a top-level `True` spec key back to `"on"` before validating.
  * js-yaml keeps `on` a string — no trap, no step.
+ *
+ * Schema SHAPE at write time (originally this guard's step 1) is no longer
+ * Automation-specific: `s-write-path-validation` (i-008) generalized it —
+ * `WritePipeline.write` validates every doc's spec against the Kind's
+ * declared `schema()` after the veto hooks run. This guard keeps only the
+ * semantics JSON Schema cannot express.
  *
  * A throw from the guard vetoes the write (nothing is persisted). The hook
  * fires for EVERY `kernel.writeDocument` regardless of `skipHooks` — it is
@@ -120,20 +120,13 @@ export function validateCronExpression(expr: string): void {
   }
 }
 
-/** The narrow kernel surface the schema step reads through. */
-interface KindPortHost {
-  kindPortFor(
-    kind: string,
-    apiVersion?: string,
-  ): { parse(raw: Record<string, unknown>): unknown } | null;
-}
-
 /**
  * Veto an Automation write that is not fully valid.
  *
- * Steps (module docstring): run the descriptor's schema-validating parse
- * (shape at write, not at scan), then check the semantics JSON Schema
- * cannot express (cron grammar, hook-name vocabulary).
+ * Checks the semantics JSON Schema cannot express (cron grammar,
+ * hook-name vocabulary). Schema SHAPE is validated by the kernel's
+ * generic write-path step (s-write-path-validation, i-008), which runs
+ * after the veto hooks — this guard no longer duplicates it.
  */
 export function automationTriggerGuard(ctx: PreSaveContext): void {
   if (ctx.kind !== KIND || typeof ctx.raw !== "object" || ctx.raw === null) {
@@ -141,18 +134,8 @@ export function automationTriggerGuard(ctx: PreSaveContext): void {
   }
   const spec = (ctx.raw as Record<string, unknown>).spec;
   if (typeof spec !== "object" || spec === null) return;
-  // 1. Shape at write time: the kernel only schema-validates at
-  //    scan/read; run the descriptor's own parse here so a shape-broken
-  //    doc is vetoed instead of persisted. Fail-open when the guard has
-  //    no kernel (direct unit use) — the semantic steps below still run.
-  const kernel = ctx.kernel as KindPortHost | null | undefined;
-  if (kernel && typeof kernel.kindPortFor === "function") {
-    const port = kernel.kindPortFor(
-      KIND,
-      (ctx.raw as Record<string, unknown>).apiVersion as string | undefined,
-    );
-    port?.parse(ctx.raw as Record<string, unknown>); // throws on violations
-  }
+  // Semantics the schema cannot express (shape itself is the kernel's
+  // generic write-path validation, which runs after the veto hooks).
   const on = (spec as Record<string, unknown>).on;
   if (typeof on !== "object" || on === null) return;
   const onType = (on as Record<string, unknown>).type;

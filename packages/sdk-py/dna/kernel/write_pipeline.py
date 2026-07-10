@@ -35,6 +35,7 @@ copy exactly like the other back-ref collaborators.
 from __future__ import annotations
 
 import logging
+import os
 from pathlib import Path  # noqa: F401 — kept for parity with prior inline imports
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
@@ -57,6 +58,74 @@ class WritePipeline:
 
     def __init__(self, host: WriteHost) -> None:
         self._host = host
+
+    # -- generic write-time spec↔schema validation (s-write-path-validation,
+    #    i-008) ----------------------------------------------------------------
+
+    @staticmethod
+    def _validation_mode() -> str:
+        """Read the write-validation mode knob. ``enforce`` (default) vetoes
+        an invalid write; ``warn`` logs and persists; ``off`` skips the step.
+        Read per-write (not memoized) so tests / operators can flip it live."""
+        mode = os.environ.get("DNA_WRITE_VALIDATION", "enforce").strip().lower()
+        return mode if mode in ("enforce", "warn", "off") else "enforce"
+
+    def _validate_spec_schema(
+        self, scope: str, kind: str, name: str, raw: Any, port: Any,
+    ) -> None:
+        """Validate ``raw['spec']`` against the Kind's declared JSON Schema
+        at WRITE time (i-008 — the systemic gap found on the Automation work:
+        the kernel only schema-validated at scan/read, via the fail-soft
+        ``parse_error`` channel, so a shape-broken doc persisted and exploded
+        later, far from the author).
+
+        Contract:
+        - Kinds without a schema (``schema()`` None/empty, or raising) stay
+          PERMISSIVE — validation is opt-in by data, as always.
+        - ``spec_defaults`` (descriptor D5) are shallow-merged into the spec
+          BEFORE validating, mirroring ``DeclarativeKindPort.parse`` — a doc
+          that parses clean must also write clean.
+        - Runs AFTER the ``pre_save`` veto hooks so Kind-owned cures (e.g.
+          the Automation YAML-1.1 ``on:``→True heal) apply first; what gets
+          validated is the exact shape that would persist.
+        - Didactic failure (install #26 pattern): names the field, the
+          violation, and points at ``dna kind show <Kind>``.
+        - ``DNA_WRITE_VALIDATION=warn`` downgrades the veto to a log line;
+          ``off`` skips entirely (escape hatch for bulk/legacy loads).
+        """
+        mode = self._validation_mode()
+        if mode == "off" or port is None or not isinstance(raw, dict):
+            return
+        try:
+            schema = port.schema()
+        except Exception:  # noqa: BLE001 — a Kind whose schema errors stays permissive
+            return
+        if not isinstance(schema, dict) or not schema:
+            return
+        spec = raw.get("spec")
+        spec = spec if isinstance(spec, dict) else {}
+        # Descriptor D5: defaults fill, spec overrides — exactly what the
+        # validating parse sees (autolab-run style Kinds must not be vetoed
+        # for fields their own defaults provide).
+        defaults = getattr(port, "_spec_defaults", None)
+        if isinstance(defaults, dict) and defaults:
+            spec = {**defaults, **spec}
+        import jsonschema  # local import — core dep (pyproject: jsonschema>=4.0)
+        try:
+            jsonschema.validate(spec, schema)
+        except jsonschema.ValidationError as e:
+            path = ".".join(str(p) for p in e.absolute_path)
+            loc = f"spec.{path}" if path else "spec"
+            msg = (
+                f"write vetoed for {scope}/{kind}/{name}: schema validation "
+                f"failed at {loc}: {e.message} — see `dna kind show {kind}` "
+                f"for the expected shape"
+            )
+            if mode == "warn":
+                logger.warning("%s (DNA_WRITE_VALIDATION=warn — persisted anyway)", msg)
+                return
+            from dna.kernel.protocols import SpecValidationError  # noqa: PLC0415
+            raise SpecValidationError(msg) from e
 
     # -- Kind-Writer slot↔schema validation (write-time; fired by the helix
     #    ``pre_save`` veto hook via ``kernel._validate_kind_writer`` shim) ------
@@ -347,6 +416,11 @@ class WritePipeline:
                 tenant=effective_tenant, layer=policy_check_layer,
                 kernel=host,
             ))
+        # --- generic spec↔schema validation (s-write-path-validation, i-008) ---
+        # AFTER the veto hooks (Kind-owned cures — e.g. the Automation
+        # YAML-1.1 `on:` heal — mutate ctx.raw first), BEFORE persistence:
+        # what gets validated is the exact shape that would be saved.
+        self._validate_spec_schema(scope, kind, name, raw, _kind_port)
         version = await src.save_document(scope, kind, name, raw, **kwargs)
         # R2-fix (2026-05-14): three invalidation tiers.
         #

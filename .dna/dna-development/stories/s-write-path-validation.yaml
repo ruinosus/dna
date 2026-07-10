@@ -11,7 +11,7 @@ spec:
     \ (quando o Kind declara), com warn\u2192enforce ratchet se necess\xE1rio pra\
     \ backcompat. \xC9 o twin do d\xE9bito catalogado no SDK upstream \u2014 o DNA\
     \ resolve primeiro. Py+TS."
-  status: in-progress
+  status: review
   feature: f-dna-issues-round1
   priority: high
   labels:
@@ -30,7 +30,7 @@ spec:
   - PR merged via story pr
   definition_of_done_source: cli-create
   created_at: '2026-07-10T10:51:29+00:00'
-  updated_at: '2026-07-10T10:51:34+00:00'
+  updated_at: '2026-07-10T11:40:03+00:00'
   timeline:
   - at: '2026-07-10T10:51:29+00:00'
     actor: claude-code
@@ -43,8 +43,99 @@ spec:
     source: cli
     from: todo
     to: in-progress
+  - at: '2026-07-10T10:57:31+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Plano em execu\xE7\xE3o: (1) passo gen\xE9rico de schema-validate no\
+      \ WritePipeline.write (Py+TS), rodando DEPOIS dos veto hooks pre_save (para\
+      \ as curas \u2014 ex. YAML-1.1 on: do Automation \u2014 acontecerem antes) e\
+      \ ANTES do save_document; (2) merge de spec_defaults (D5) antes de validar,\
+      \ espelhando DeclarativeKindPort.parse; (3) modo via DNA_WRITE_VALIDATION=enforce|warn|off\
+      \ \u2014 default decidido por evid\xEAncia (suite completa roda com enforce\
+      \ primeiro); (4) dedup do guard do Automation: remove o port.parse (passo 2),\
+      \ mant\xE9m heal YAML-1.1 + sem\xE2ntica cron/hook; (5) erro did\xE1tico no\
+      \ padr\xE3o do install #26 (campo + dna kind show <Kind>)."
+    commit_ref: 586b342e5d8956a70dc25c7b240f18d6f5d74ee3
+  - at: '2026-07-10T11:04:57+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Evid\xEAncia colhida (a pol\xEDtica de backcompat \xE9 decidida por\
+      \ n\xFAmeros): suite sdk-py completa com o passo gen\xE9rico em ENFORCE = 2\
+      \ failed / 2923 passed / 220 skipped. As 2 falhas eram exatamente a classe do\
+      \ i-008 \u2014 fixtures shape-quebradas que o write path aceitava em sil\xEA\
+      ncio: (1) test_memory_verbs escrevia LessonLearned com confidence_score='faint'\
+      \ (schema: type number); (2) test_write_path_despecialize escrevia LessonLearned\
+      \ sem os required area/surface_when/source_refs/affect. Ambas corrigidas legitimamente\
+      \ (n\xE3o relaxei nada). DECIS\xC3O: default ENFORCE, com DNA_WRITE_VALIDATION=warn|off\
+      \ como escape hatch documentado. Dedup do guard Automation feito (Py+TS): port.parse\
+      \ removido, heal YAML-1.1 + cron/hook semantics mantidos; 57 testes automation+memory+despecialize\
+      \ verdes."
+    commit_ref: 586b342e5d8956a70dc25c7b240f18d6f5d74ee3
+  - at: '2026-07-10T11:13:29+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-write-path-validation
+    summary: TestGuide tg-write-path-validation (smoke)
+  - at: '2026-07-10T11:14:11+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-write-path-validation-20260710-111410
+    summary: "TestRun tr-tg-write-path-validation-20260710-111410 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-10T11:19:50+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR aberto: https://github.com/ruinosus/dna/pull/29 \u2014 e o dogfooding\
+      \ pagou na hora: o carimbo autom\xE1tico do PR (timeline type=pr_opened) foi\
+      \ VETADO pela valida\xE7\xE3o nova, porque o schema da timeline fechava o enum\
+      \ em 5 tipos enquanto o pr\xF3prio m\xF3dulo documenta vocabul\xE1rio aberto\
+      \ ('no validator enforces... future types just work') e o CLI j\xE1 escreve\
+      \ pr_opened. O schema era o errado (contradizia o design documentado e s\xF3\
+      \ nunca doeu porque nada validava no write) \u2014 fix: enum de type vira description\
+      \ com os nomes reconhecidos (Py+TS), vocabul\xE1rio aberto como sempre foi a\
+      \ inten\xE7\xE3o. Latente exatamente da classe do i-008, achado pelo pr\xF3\
+      prio mecanismo no primeiro write real."
+    commit_ref: 37911859be7e09bc4b4eab2b58e93d9bd6662050
+  - at: '2026-07-10T11:26:25+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Segunda onda (achados do pr\xF3prio mecanismo, todos da classe i-008):\
+      \ (1) timeline.type do SDLC \u2014 enum fechado contradizia o design documentado\
+      \ ('open enum') e vetou o carimbo pr_opened do story pr; aberto em Py+TS, testes\
+      \ re-pinados pro contrato aberto (test_timeline_type_is_open_vocabulary + sdlc.test.ts).\
+      \ (2) _schema_from_model (helix) mapeava TODO list[...] pra items:string \u2014\
+      \ Genome.dependencies e UseCase.alternate_flows s\xE3o list[dict] no model (e\
+      \ no zod TS!); schema gerado era o errado e vetaria docs leg\xEDtimos (market-demo,\
+      \ open-swe). Fix: inspecionar o element type. (3) Sweep repo-wide (162 docs\
+      \ schema-bearing em .dna/, scopes/, examples/): 3 viola\xE7\xF5es \u2192 0 ap\xF3\
+      s fixes (a terceira era o TestGuide legado tg-s-tier-a-modelprofile com kind_of_test:\
+      \ automated, fora do enum do testkit \u2014 corrigido pra regression). Guards\
+      \ + mkdocs re-verificados verdes."
+    commit_ref: 37911859be7e09bc4b4eab2b58e93d9bd6662050
+  - at: '2026-07-10T11:40:03+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
   produces:
   - kind: Plan
     name: plan-s-write-path-validation
     role: implementation
     at: '2026-07-10T10:51:34+00:00'
+  - kind: TestGuide
+    name: tg-write-path-validation
+    role: test-guide
+    at: '2026-07-10T11:13:29+00:00'
+  - kind: TestRun
+    name: tr-tg-write-path-validation-20260710-111410
+    role: test-run
+    at: '2026-07-10T11:14:11+00:00'

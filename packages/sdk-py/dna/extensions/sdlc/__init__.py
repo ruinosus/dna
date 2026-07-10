@@ -76,10 +76,14 @@ JOURNEY_PHASES = ("discover", "specify", "plan", "build", "verify", "reflect")
 
 # v1.6: Activity Timeline event types. Open enum — additionalProperties
 # True on each entry lets new types add fields without schema migration.
-# Phase 1 (s-timeline-schema, this Story): the 5 below are recognized
-# names, but no validator enforces "type must be in this list" — it's a
-# documentation-style enum so future types (e.g. "deploy", "review",
-# "block_resolved") just work.
+# Phase 1 (s-timeline-schema): the names below are the RECOGNIZED types,
+# but the schema deliberately does NOT close the vocabulary (no enum) —
+# it's documentation-style so future types (e.g. "deploy", "review",
+# "block_resolved") just work. This became load-bearing with
+# s-write-path-validation (i-008): writes now really validate against the
+# schema, and the CLI already stamps types beyond the original five
+# ("pr_opened" from `dna sdlc story pr`) — a closed enum here vetoed the
+# PR-URL stamp the first time the write path had teeth.
 TIMELINE_TYPES = (
     "status_change",     # status flip via CLI/Studio
     "groom",             # board grooming (priority/labels/sprint update)
@@ -148,7 +152,15 @@ def _timeline_field_schema() -> dict[str, Any]:
                     "type": "string",
                     "description": "Who triggered the event (Actor name or 'claude-code').",
                 },
-                "type": {"type": "string", "enum": list(TIMELINE_TYPES)},
+                "type": {
+                    "type": "string",
+                    "description": (
+                        "Event type. Recognized: "
+                        + ", ".join(TIMELINE_TYPES)
+                        + " (open vocabulary — new types are additive, "
+                        "e.g. pr_opened)."
+                    ),
+                },
                 "source": {"type": "string", "enum": list(TIMELINE_SOURCES)},
                 # Type-specific (all opt; entry shape varies per type).
                 "from": {"type": "string", "description": "status_change: previous status."},

@@ -17,6 +17,16 @@ baseline that the first tagged release will draw from.
 
 ### Added
 
+- **Write-path schema validation** (i-008). `write_document` /
+  `writeDocument` now validate the doc's `spec` against the Kind's declared
+  `schema()` **before persisting** — previously schemas were only checked at
+  scan/read (fail-soft), so a shape-broken doc persisted and exploded later,
+  far from the author. Kinds without a schema stay permissive; descriptor
+  `spec_defaults` fill before validation; the veto error is didactic (field,
+  violation, `dna kind show <Kind>` hint). Escape hatches:
+  `DNA_WRITE_VALIDATION=warn|off` (default `enforce`). The Automation write
+  guard dropped its now-redundant local shape check and keeps only its
+  Kind-specific cures (YAML-1.1 `on:` heal, cron/hook semantics).
 - **Microkernel + extensions core.** A kernel that mediates five ports —
   source, cache, resolver, reader/writer, and kind — and knows no Kinds
   itself; extensions register Kinds onto it via `kernel.load(ext)`.

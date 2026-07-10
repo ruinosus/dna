@@ -267,18 +267,30 @@ def test_timeline_entry_validates_decision():
     jsonschema.validate(raw, schema)
 
 
-def test_timeline_unknown_type_rejected_by_enum():
-    """Phase 1 enums are documentation-style but jsonschema enforces them."""
+def test_timeline_type_is_open_vocabulary():
+    """The timeline `type` vocabulary is OPEN — documentation-style, exactly
+    as the module always documented ('no validator enforces... future types
+    just work'). This became load-bearing with s-write-path-validation
+    (i-008): writes now really validate against the schema, and the CLI
+    already stamps types beyond the original five (`pr_opened` from
+    `dna sdlc story pr`) — a closed enum vetoed the PR-URL stamp the first
+    time the write path had teeth. Recognized names stay listed in the
+    field's description."""
     schema = StoryKind().schema()
-    raw = {
-        "description": "x", "status": "todo",
-        "timeline": [{
-            "at": "2026-05-09T20:00:00+00:00",
-            "actor": "x",
-            "type": "deploy",  # not in enum
-        }],
-    }
-    with pytest.raises(jsonschema.ValidationError):
+    type_schema = schema["properties"]["timeline"]["items"]["properties"]["type"]
+    assert "enum" not in type_schema
+    for name in ("status_change", "groom", "comment", "decision",
+                 "artifact_produced"):
+        assert name in type_schema["description"]
+    for new_type in ("deploy", "pr_opened"):
+        raw = {
+            "description": "x", "status": "todo",
+            "timeline": [{
+                "at": "2026-05-09T20:00:00+00:00",
+                "actor": "x",
+                "type": new_type,  # additive — no schema migration needed
+            }],
+        }
         jsonschema.validate(raw, schema)
 
 

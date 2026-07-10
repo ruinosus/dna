@@ -193,9 +193,10 @@ def test_cron_validator_rejects_bad_grammar(expr, detail):
 
 @pytest.mark.asyncio
 async def test_write_vetoes_shape_broken_doc(kernel):
-    # The kernel only schema-validates at scan/read; the guard runs the
-    # descriptor's parse at WRITE so a shape-broken doc never persists
-    # (found live: a broken doc wrote fine and exploded at scan time).
+    # Shape at write time — originally this guard's own parse step; since
+    # s-write-path-validation (i-008) the veto comes from the kernel's
+    # GENERIC write-path schema validation (the guard keeps only the
+    # YAML-1.1 heal + cron/hook semantics).
     with pytest.raises(ValueError, match="'cron' is a required property"):
         await kernel.write_document(
             "s", "Automation", "no-cron",

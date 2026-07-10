@@ -51,7 +51,20 @@ def _schema_from_model(model: type) -> dict[str, Any] | None:
         elif resolved is bool or t == "<class 'bool'>":
             properties[f.name] = {"type": "boolean"}
         elif "list" in t.lower():
-            properties[f.name] = {"type": "array", "items": {"type": "string"}}
+            # Inspect the ELEMENT type — list[dict[...]] fields (e.g.
+            # Genome.dependencies, UseCase.alternate_flows) are arrays of
+            # OBJECTS. The old blanket items:string contradicted the typed
+            # model and (since s-write-path-validation made schemas
+            # enforceable at write) vetoed legitimate docs; the TS twin
+            # (zod z.array(z.record(...))) always said object here.
+            inner = t.lower()
+            if "dict" in inner:
+                items: dict[str, Any] = {"type": "object"}
+            elif "int" in inner:
+                items = {"type": "integer"}
+            else:
+                items = {"type": "string"}
+            properties[f.name] = {"type": "array", "items": items}
         elif "dict" in t.lower():
             properties[f.name] = {"type": "object"}
         elif "None" in t:
