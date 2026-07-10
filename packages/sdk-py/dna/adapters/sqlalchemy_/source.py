@@ -953,12 +953,85 @@ class SqlAlchemySource(WritableSourcePort):
         self, scope: str, kind: str, *,
         filter=None, group_by=None, tenant=None,
     ) -> dict[str, Any]:
-        # Rides this adapter's query() via the shared aggregation helper —
-        # inherits the bundle-override slow-path automatically.
+        """COUNT push-down (F2 D2) — the pg dialect aggregates natively in
+        SQL (only aggregates travel back, never rows), inheriting the
+        retired raw PG adapter's native count. The sqlite dialect rides
+        this adapter's ``query()`` via the shared helper — the raw sqlite
+        adapter's documented choice ("native push-down can land later if
+        sqlite scopes grow").
+
+        Bundle-override guard (mirrors ``query()``'s slow-path): when a
+        registered reader can produce this kind, bundle docs may cross
+        containers and pure SQL would diverge — ride the protocol default,
+        which inherits query()'s slow-path bundle resolution.
+
+        Tenant dedup (pg): ``DISTINCT ON (name) … ORDER BY name, tenant
+        DESC`` (overlay wins: any slug > '' lexicographically) in a
+        subquery; the ``filter`` applies INSIDE, per physical row —
+        matching ``query()``'s per-tenant fetches (a base row that matches
+        the filter is not shadowed by an overlay that doesn't).
+
+        Group ordering: count DESC, key ASC NULLS LAST — parity with the
+        protocol default (``-count, key-is-None, str(key)``).
+        """
+        from dna.kernel.protocols import QueryError
         from dna.kernel.query_fallback import count_via_query
-        return await count_via_query(
-            self, scope, kind, filter=filter, group_by=group_by, tenant=tenant,
-        )
+
+        if filter is not None and not isinstance(filter, dict):
+            raise QueryError(f"filter must be dict, got {type(filter).__name__}")
+
+        if self._reader_can_produce(kind) or not self._is_pg:
+            # [dialect] the guard applies to both dialects; sqlite always
+            # rides query() (no native aggregation, as before).
+            return await count_via_query(
+                self, scope, kind, filter=filter, group_by=group_by, tenant=tenant,
+            )
+
+        d = self.documents
+        where = self._build_where(filter)
+        key_expr = self._json_expr(group_by) if group_by else None
+
+        async with self._engine.connect() as conn:
+            if tenant is None:
+                pred = [d.c.scope == scope, d.c.kind == kind,
+                        self._tenant_where(d.c.tenant, None), *where]
+                if key_expr is None:
+                    total = (await conn.execute(
+                        sa.select(sa.func.count()).where(*pred)
+                    )).scalar_one()
+                    return {"total": int(total), "groups": None}
+                key = key_expr.label("key")
+                cnt = sa.func.count().label("cnt")
+                rows = (await conn.execute(
+                    sa.select(key, cnt).where(*pred).group_by(key)
+                    .order_by(cnt.desc(), key.asc().nulls_last())
+                )).all()
+            else:
+                # [dialect] DISTINCT ON is a pg-only construct — fine, this
+                # whole branch is pg-only (sqlite returned above).
+                inner_cols: list[Any] = [d.c.name]
+                if key_expr is not None:
+                    inner_cols.append(key_expr.label("key"))
+                inner = (
+                    sa.select(*inner_cols)
+                    .distinct(d.c.name)
+                    .where(d.c.scope == scope, d.c.kind == kind,
+                           d.c.tenant.in_(["", tenant]), *where)
+                    .order_by(d.c.name, d.c.tenant.desc())
+                ).subquery("t")
+                if key_expr is None:
+                    total = (await conn.execute(
+                        sa.select(sa.func.count()).select_from(inner)
+                    )).scalar_one()
+                    return {"total": int(total), "groups": None}
+                cnt = sa.func.count().label("cnt")
+                rows = (await conn.execute(
+                    sa.select(inner.c.key, cnt).group_by(inner.c.key)
+                    .order_by(cnt.desc(), inner.c.key.asc().nulls_last())
+                )).all()
+
+        groups = [{"key": r.key, "count": int(r.cnt)} for r in rows]
+        return {"total": sum(g["count"] for g in groups), "groups": groups}
 
     # ------------------------------------------------------------------
     # WritableSourcePort (write)

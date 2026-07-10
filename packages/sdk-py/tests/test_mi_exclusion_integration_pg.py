@@ -45,9 +45,9 @@ async def test_dna_development_mi_materializes_composition_only(tmp_path):
 
     dsn = _dsn()
     sa_url = dsn.replace("postgresql://", "postgresql+asyncpg://", 1)
+    src = SqlAlchemySource(sa_url)
     try:
         k = Kernel.auto()
-        src = SqlAlchemySource(sa_url)
         await src.connect()
         k._source = src  # bypass Protocol isinstance (test pattern)
         k.cache(FilesystemCache(str(tmp_path / ".dna-cache")))
@@ -100,4 +100,4 @@ async def test_dna_development_mi_materializes_composition_only(tmp_path):
         docs = await mi.all_async(biggest)
         assert len(docs) >= record_counts[biggest]
     finally:
-        await pool.close()
+        await src.close()
