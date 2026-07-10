@@ -1,0 +1,38 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-github-issues-bridge
+spec:
+  title: "A ponte DNA\u2194GitHub Issues (pergunta do Barna 2026-07-10): GitHub Issues\
+    \ s\xE3o arte"
+  description: "A ponte DNA\u2194GitHub Issues (pergunta do Barna 2026-07-10): GitHub\
+    \ Issues s\xE3o artefato do dom\xEDnio github.com \u2014 o DNA faz PONTE com proveni\xEA\
+    ncia, n\xE3o substitui\xE7\xE3o (mesma filosofia do story pr): dna sdlc issue\
+    \ publish <i-x> (cria GH issue via gh com footer \U0001F9EC+Work-Item, grava github_number/url\
+    \ no doc), issue import <#N> (GH\u2192Issue doc com proveni\xEAncia), sync leve\
+    \ (resolve fecha l\xE1 com comment; fechada l\xE1 vira nota aqui). Testes com\
+    \ gh mockado + smoke real contra ruinosus/dna."
+  status: todo
+  feature: f-dna-issues-round1
+  priority: high
+  labels:
+  - cli
+  - sdlc-tracking
+  reporter: claude-code
+  business_value: 500
+  acceptance_criteria:
+  - "publish/import/sync funcionam (smoke real: publicar uma issue do board no GitHub\
+    \ e import\xE1-la de volta round-trip); campos de proveni\xEAncia no Issue doc;\
+    \ degrada\xE7\xE3o honesta sem gh; prosa (guard) + reference regen; CI verde"
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - PR merged via story pr
+  definition_of_done_source: cli-create
+  created_at: '2026-07-10T10:51:31+00:00'
+  updated_at: '2026-07-10T10:51:31+00:00'
+  timeline:
+  - at: '2026-07-10T10:51:31+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo

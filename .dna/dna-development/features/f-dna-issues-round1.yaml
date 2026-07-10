@@ -1,0 +1,33 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Feature
+metadata:
+  name: f-dna-issues-round1
+spec:
+  title: Issue burn-down + ponte GitHub Issues
+  description: "Queimar as issues abertas do board (i-008 valida\xE7\xE3o write-path\
+    \ gen\xE9rica; i-007+i-009 fixes pequenos; i-001+i-002 d\xE9bito do adapter pg\
+    \ cru; i-005 docstrings) + a ponte DNA\u2194GitHub Issues (publish/import/sync\
+    \ com proveni\xEAncia \u2014 fecha o tri\xE2ngulo da symbiosis: commits+PRs+issues)."
+  status: in-development
+  epic: e-dna-public-extraction
+  reporter: claude-code
+  priority: high
+  labels:
+  - sdk
+  - cli
+  - meta
+  business_value: 500
+  created_at: '2026-07-10T10:51:27+00:00'
+  updated_at: '2026-07-10T10:51:29+00:00'
+  timeline:
+  - at: '2026-07-10T10:51:27+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: discovery
+  - at: '2026-07-10T10:51:29+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: discovery
+    to: in-development

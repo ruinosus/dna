@@ -1,0 +1,15 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-small-bug-fixes
+spec:
+  title: 'Plano: s-small-bug-fixes'
+  date: '2026-07-10'
+  status: accepted
+  story_ref: s-small-bug-fixes
+  journey_phase: plan
+  body: "i-007: scope detect \u2192 Genome.yaml marker (red\u2192green); i-009: dep\
+    \ shorthand lido ou rejeitado com contrato documentado (red\u2192green). Worktree\
+    \ dna-wt-smallfix; PR via story pr."
+  created_at: '2026-07-10T10:51:34+00:00'
+  updated_at: '2026-07-10T10:51:34+00:00'

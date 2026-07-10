@@ -14,7 +14,7 @@ spec:
     \ aqui pra n\xE3o recorrer."
   type: task
   severity: low
-  status: open
+  status: resolved
   owner: claude-code
   related_feature: f-dna-1.0-readiness
   timeline:
@@ -23,3 +23,18 @@ spec:
     type: status_change
     source: cli
     to: open
+  - at: '2026-07-10T10:51:25+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "RESOLVIDO como processo institucionalizado: a disciplina ('upstream\
+      \ SDK', nunca o nome) est\xE1 nos prompts de todos os agentes desde ent\xE3\
+      o (zero recorr\xEAncia em ~15 PRs), no CONTRIBUTING (\xA7 secret/brand hygiene)\
+      \ e o brand_guard pega qualquer deslize no CI. O registro cumpriu o papel."
+  - at: '2026-07-10T10:51:26+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: open
+    to: resolved
+  closed_at: '2026-07-10T10:51:26+00:00'

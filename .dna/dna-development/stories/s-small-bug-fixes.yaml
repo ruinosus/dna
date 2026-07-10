@@ -1,0 +1,47 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-small-bug-fixes
+spec:
+  title: 'Bundle de fixes pequenos: i-007 (dna scope detect procura manifest.yaml
+    legado p'
+  description: "Bundle de fixes pequenos: i-007 (dna scope detect procura manifest.yaml\
+    \ legado pr\xE9-Genome \u2014 nunca detecta; trocar pro marker Genome.yaml) +\
+    \ i-009 (dep shorthand skills: n\xE3o lido por _collect_requested \u2192 granularidade\
+    \ errada no resolve; ler o shorthand ou rejeit\xE1-lo com erro claro \u2014 decidir\
+    \ pelo contrato real e documentar)."
+  status: in-progress
+  feature: f-dna-issues-round1
+  priority: medium
+  labels:
+  - sdk
+  - cli
+  - python
+  reporter: claude-code
+  business_value: 300
+  acceptance_criteria:
+  - "scope detect funciona com Genome.yaml (teste); dep shorthand resolvido com teste\
+    \ red\u2192green; i-007+i-009 resolvidas"
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - PR merged
+  definition_of_done_source: cli-create
+  created_at: '2026-07-10T10:51:30+00:00'
+  updated_at: '2026-07-10T10:51:36+00:00'
+  timeline:
+  - at: '2026-07-10T10:51:30+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-10T10:51:36+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  produces:
+  - kind: Plan
+    name: plan-s-small-bug-fixes
+    role: implementation
+    at: '2026-07-10T10:51:36+00:00'
