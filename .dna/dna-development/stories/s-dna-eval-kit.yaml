@@ -16,7 +16,7 @@ spec:
     \ doc com resultados, compara com Baseline. Paridade TS dos Kinds (runner Py-primary\
     \ justificado se for o caso). Prosa + guards. Evals s\xE3o o assunto do momento\
     \ em agentic \u2014 e o testkit (TestGuide/TestRun) j\xE1 \xE9 primo no repo."
-  status: in-progress
+  status: review
   feature: f-dna-ecosystem
   priority: high
   labels:
@@ -36,7 +36,7 @@ spec:
   - PR merged via dna sdlc story pr
   definition_of_done_source: cli-create
   created_at: '2026-07-10T09:24:31+00:00'
-  updated_at: '2026-07-10T09:24:35+00:00'
+  updated_at: '2026-07-10T10:06:41+00:00'
   timeline:
   - at: '2026-07-10T09:24:31+00:00'
     actor: claude-code
@@ -49,8 +49,101 @@ spec:
     source: cli
     from: todo
     to: in-progress
+  - at: '2026-07-10T09:33:17+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Plano (worktree feat/s-dna-eval-kit): (1) 4 Kinds como DESCRIPTORS (ratchet\
+      \ F3 \u2014 record plane): eval-case/eval-suite/eval-run/eval-baseline em sdk-py\
+      \ dna/extensions/eval/kinds/ + espelho byte-id\xEAntico em sdk-ts src/extensions/eval/kinds/;\
+      \ aliases pela conven\xE7\xE3o gerada (eval-eval-case, \u2026); tenancy permissiva\
+      \ (n\xE3o-declarada, precedente Automation/Evidence). (2) Runner local s\xED\
+      ncrono puro sobre o kernel: dna/extensions/eval/runner.py \u2014 EvalTargetPort\
+      \ (Protocol pequeno), default PromptCompositionTarget (mi.build_prompt determin\xED\
+      stico, offline), apply_checks (contains/regex/equals/length), run_suite \u2192\
+      \ raw EvalRun; compare(run, baseline) \u2192 regressions/improvements/unchanged.\
+      \ (3) CLI dna eval run/list/show/pin. (4) TS: extens\xE3o eval.ts registra os\
+      \ descriptors (Kinds twins); runner Py-primary \u2014 justificativa: execu\xE7\
+      \xE3o \xE9 lib do host, mesmo padr\xE3o Automation (declara\xE7\xE3o viaja,\
+      \ execu\xE7\xE3o n\xE3o). (5) Prosa: fam\xEDlia Evaluation no builtin-kinds.md\
+      \ + guides/evaluating-agents.md (inclui extension point LLM ~15 linhas); coverage\
+      \ guard sem allowlist nova. (6) Regen reference (kinds+cli+parity). (7) Smoke\
+      \ real offline no hello-genome (suite\u2192run\u2192pin\u2192re-run vs baseline)\
+      \ + TestGuide --product + TestRun."
+    commit_ref: ddd27e1f8b3bbdc2b0e1dbbcb15b6e6f5e273c38
+  - at: '2026-07-10T09:57:31+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Build conclu\xEDdo nos 4 slices (sdk-py 91be9b0, sdk-ts 34966bd, cli\
+      \ 4ef3fe1, docs+example): 4 Kinds como descriptors byte-id\xEAnticos Py\u2194\
+      TS (aliases gerados eval-eval-*, schemas estritos, tenancy permissiva), runner\
+      \ puro offline (PromptCompositionTarget default + EvalTargetPort p/ host), CLI\
+      \ dna eval run/list/show/pin com gate de regress\xE3o (exit 1 S\xD3 em regress\xE3\
+      o quando --baseline). Gates locais: sdk-py 2925 passed, sdk-ts 1318 pass + typecheck,\
+      \ cli 296 passed, brand+coverage guards clean, reference regen (drift zero),\
+      \ mkdocs --strict verde. Agora: smoke real --product no hello-genome + TestGuide/TestRun."
+    commit_ref: 84d2e41d6b563439e8916359d9a3bdf1907c7c40
+  - at: '2026-07-10T09:58:03+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-dna-eval-kit
+    summary: TestGuide tg-dna-eval-kit (smoke)
+  - at: '2026-07-10T09:58:56+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-dna-eval-kit-20260710-095855
+    summary: "TestRun tr-tg-dna-eval-kit-20260710-095855 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-10T09:59:47+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/27'
+    pr_url: https://github.com/ruinosus/dna/pull/27
+  - at: '2026-07-10T10:03:16+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Smoke real --product executado (tg-dna-eval-kit \u2192 TestRun tr-tg-dna-eval-kit-20260710-095855\
+      \ PASS): hello-genome offline \u2014 run (2 passed, exit 0) \u2192 --save (EvalRun\
+      \ run-greeter-suite-20260710-095826 em eval-runs/) \u2192 pin (EvalBaseline/baseline-greeter-suite)\
+      \ \u2192 re-run --baseline (0 regressions, exit 0) \u2192 quebra proposital\
+      \ do greeter (Helio\u2192Anonymous) \u2192 '\u2717 REGRESSION: greeter-identity',\
+      \ exit 1 \u2192 revertido \u2192 list mostra suite/run/baseline. PR aberto via\
+      \ story pr: https://github.com/ruinosus/dna/pull/27 (base main). 9 checks: 8\
+      \ verdes na primeira leva, aguardando sdk-py. Story fica em review at\xE9 o\
+      \ merge (n\xE3o mergeio \u2014 gate do chamador)."
+    commit_ref: 187c7cc2b022317f56d5590161ddf22084b35508
+  - at: '2026-07-10T10:03:29+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
+  - at: '2026-07-10T10:06:41+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "CI do PR #27 100% verde: sdk-py (2m32s), sdk-ts, cli, postgres, brand-guard,\
+      \ gitleaks, commit-emails, docs-build (drift+coverage guards), docs-links \u2014\
+      \ 9/9 pass (deploy = skipping, s\xF3 roda no main). Pronto pra merge; story\
+      \ em review aguardando."
+    commit_ref: f35d7eb0a3536f54c535e8b93c24552086d2b31f
   produces:
   - kind: Plan
     name: plan-s-dna-eval-kit
     role: implementation
     at: '2026-07-10T09:24:35+00:00'
+  - kind: TestGuide
+    name: tg-dna-eval-kit
+    role: test-guide
+    at: '2026-07-10T09:58:03+00:00'
+  - kind: TestRun
+    name: tr-tg-dna-eval-kit-20260710-095855
+    role: test-run
+    at: '2026-07-10T09:58:56+00:00'

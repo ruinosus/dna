@@ -1,0 +1,31 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-dna-eval-kit
+spec:
+  description: "Product smoke: the eval kit end-to-end on hello-genome \u2014 suite\
+    \ \u2192 run \u2192 save \u2192 pin \u2192 baseline gate (offline, no LLM)"
+  kind_of_test: smoke
+  status: active
+  steps:
+  - action: 'No terminal, a partir de examples/hello-genome: DNA_BASE_DIR=$PWD/.dna
+      dna eval run greeter-suite --scope hello-genome'
+    expected: "2 passed \xB7 0 failed (greeter-identity \u2713, greeter-tone \u2713\
+      ), exit 0"
+  - action: dna eval run greeter-suite --scope hello-genome --save --json
+    expected: JSON com run.spec.passed=2 e saved=true; arquivo eval-runs/run-greeter-suite-<ts>.yaml
+      criado
+  - action: dna eval pin <run-name> --scope hello-genome
+    expected: "'pinned: EvalBaseline/baseline-greeter-suite \u2192 EvalRun/<run-name>'"
+  - action: dna eval run greeter-suite --scope hello-genome --baseline baseline-greeter-suite
+    expected: "'0 regression(s) \xB7 0 improvement(s) \xB7 2 unchanged', exit 0"
+  - action: "Quebre o agente (greeter.yaml: Helio\u2192Anonymous) e re-rode com --baseline"
+    expected: "'\u2717 REGRESSION: greeter-identity', exit 1; reverta a edi\xE7\xE3\
+      o depois"
+  - action: dna eval list --scope hello-genome
+    expected: suites (greeter-suite), runs salvos e baseline-greeter-suite listados
+  verifies:
+  - Story/s-dna-eval-kit
+  created_at: '2026-07-10T09:58:02+00:00'
+  updated_at: '2026-07-10T09:58:02+00:00'
+  owner: claude-code

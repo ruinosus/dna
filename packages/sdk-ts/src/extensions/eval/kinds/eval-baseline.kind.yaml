@@ -1,0 +1,65 @@
+# EvalBaseline — pinned "known good" EvalRun for a suite (record plane).
+#
+# Tier B port from the internal SDK's eval extension (s-dna-eval-kit).
+# Same semantics as upstream: a pointer to one EvalRun pinned as the
+# reference for a suite; future runs are compared against it to detect
+# regressions (a case that passed in the baseline and fails now). One
+# baseline per suite by convention (`dna eval pin` names it
+# baseline-<suite>). The upstream status field (approved/candidate) did
+# not travel — a local-first workflow pins exactly one reference.
+#
+# tenant_scope intentionally NOT declared — permissive (base + per-tenant
+# overlay), the Evidence/Automation precedent.
+#
+# PARITY-CRITICAL package data: byte-identical mirror under both runtimes'
+# eval/kinds/ (tests/test_descriptor_hash_parity.py enforces).
+apiVersion: github.com/ruinosus/dna/core/v1
+kind: KindDefinition
+metadata:
+  name: eval-baseline
+spec:
+  target_api_version: github.com/ruinosus/dna/eval/v1
+  target_kind: EvalBaseline
+  alias: eval-eval-baseline
+  origin: github.com/ruinosus/dna/eval
+  plane: record
+  prompt_target: false
+  flatten_in_context: false
+  prompt_target_priority: 0
+  storage:
+    type: yaml
+    container: eval-baselines
+  schema:
+    type: object
+    required:
+    - suite
+    - run_name
+    additionalProperties: false
+    properties:
+      suite:
+        type: string
+        description: Name of the EvalSuite this baseline belongs to.
+      run_name:
+        type: string
+        description: Name of the pinned EvalRun document.
+      pinned_at:
+        type: string
+        format: date-time
+      label:
+        type: string
+        description: Human note on why this run is the reference.
+  describe: '{suite} → {run_name}'
+  summary:
+    suite: ''
+    run_name: ''
+  graph_style:
+    fill: '#F59E0B'
+    stroke: '#D97706'
+    text_color: '#fff'
+  ascii_icon: 📌
+  display_label: Eval Baselines
+  docs: An EvalBaseline pins one EvalRun as the "known good" reference
+    for an EvalSuite. `dna eval run <suite> --baseline <name>` compares
+    the fresh run against the pinned run and reports regressions (passed
+    → now failing), improvements and unchanged cases — with an exit code
+    a user's CI can gate on. Pin with `dna eval pin <run>`.

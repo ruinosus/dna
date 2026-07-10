@@ -1,0 +1,12 @@
+apiVersion: github.com/ruinosus/dna/eval/v1
+kind: EvalSuite
+metadata:
+  name: greeter-suite
+spec:
+  description: Does the greeter compose the prompt we expect? (offline, deterministic)
+  cases:
+  - greeter-identity
+  - greeter-tone
+  target:
+    type: prompt
+    agent: greeter

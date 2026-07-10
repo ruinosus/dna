@@ -1,0 +1,87 @@
+# EvalSuite — groups EvalCases + run configuration (record plane).
+#
+# Tier B port from the internal SDK's eval extension (s-dna-eval-kit).
+# Upstream, a suite bound the cases to a live agent + worker execution
+# config. What does NOT travel (runtime/worker-coupled, honest cut):
+# agent (required upstream — here the target carries the binding),
+# timeout_per_case, max_cost_usd, model_override, comparison_key,
+# auto_findings, judge_language/judge_profile, parent_suite and the
+# red-team (pyrit) block. What travels: the grouping (cases), a default
+# target the cases inherit, and stop_on_fail.
+#
+# tenant_scope intentionally NOT declared — permissive (base + per-tenant
+# overlay), the Evidence/Automation precedent.
+#
+# PARITY-CRITICAL package data: byte-identical mirror under both runtimes'
+# eval/kinds/ (tests/test_descriptor_hash_parity.py enforces).
+apiVersion: github.com/ruinosus/dna/core/v1
+kind: KindDefinition
+metadata:
+  name: eval-suite
+spec:
+  target_api_version: github.com/ruinosus/dna/eval/v1
+  target_kind: EvalSuite
+  alias: eval-eval-suite
+  origin: github.com/ruinosus/dna/eval
+  plane: record
+  prompt_target: false
+  flatten_in_context: false
+  prompt_target_priority: 0
+  storage:
+    type: yaml
+    container: eval-suites
+  dep_filters:
+    cases: eval-eval-case
+  schema:
+    type: object
+    additionalProperties: false
+    properties:
+      description:
+        type: string
+        description: What this suite evaluates (one line).
+      cases:
+        type: array
+        items:
+          type: string
+        description: EvalCase names to run, in order. Empty/omitted =
+          every EvalCase in the scope.
+      target:
+        type: object
+        additionalProperties: true
+        description: Default target for cases that do not declare their
+          own (same shape as EvalCase.target).
+        properties:
+          type:
+            type: string
+          agent:
+            type: string
+          scope:
+            type: string
+      stop_on_fail:
+        type: boolean
+        description: Stop executing remaining cases after the first
+          failed/errored case. Default false.
+      labels:
+        type: array
+        items:
+          type: string
+  describe:
+    path: description
+  description_fallback_field: description
+  summary:
+    cases:
+      count_of: cases
+    target_type:
+      path: target.type
+      default: ''
+  graph_style:
+    fill: '#6366F1'
+    stroke: '#4F46E5'
+    text_color: '#fff'
+  ascii_icon: 📋
+  display_label: Eval Suites
+  docs: An EvalSuite groups EvalCase documents and configures how the
+    local runner executes them — the case list (empty = all cases in the
+    scope), a default target the cases inherit, and stop_on_fail. Run it
+    with `dna eval run <suite>`; each execution can be persisted as an
+    EvalRun and compared against a pinned EvalBaseline.

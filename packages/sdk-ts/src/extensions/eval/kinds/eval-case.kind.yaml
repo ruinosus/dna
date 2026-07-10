@@ -1,0 +1,140 @@
+# EvalCase — one declarative evaluation scenario (record plane).
+#
+# Tier B port from the internal SDK's eval extension (s-dna-eval-kit).
+# Upstream, an EvalCase declared a live-agent scenario (prompt, expected
+# tool calls, trajectory mode, HITL policy, LLM-judge engines) executed by
+# a Temporal worker. What travels is the AUTHORING VOCABULARY — a case
+# declares a target, deterministic checks and tags. What does NOT travel
+# (coupled to the upstream runtime, not the Kind): trajectory_mode,
+# hitl_policy, expected_tool_calls, engines/required_engines, judge_rubric
+# and friends — all of them presuppose a live agent loop + LLM judge that
+# a notation SDK does not ship.
+#
+# Local-first evolution: the default target is the KERNEL ITSELF —
+# `target: {type: prompt, agent: X}` makes the runner compose
+# `build_prompt(agent=X)` and apply the checks to the composed prompt.
+# Deterministic, offline, and a REAL evaluation of declarative config
+# ("does my agent compose what I expect?"). LLM/live targets are an
+# extension point the HOST registers (EvalTargetPort — same
+# declare-here/execute-in-the-host split as Automation).
+#
+# tenant_scope intentionally NOT declared — permissive (base + per-tenant
+# overlay), the Evidence/Automation precedent.
+#
+# PARITY-CRITICAL package data: byte-identical mirror under both runtimes'
+# eval/kinds/ (tests/test_descriptor_hash_parity.py enforces).
+apiVersion: github.com/ruinosus/dna/core/v1
+kind: KindDefinition
+metadata:
+  name: eval-case
+spec:
+  target_api_version: github.com/ruinosus/dna/eval/v1
+  target_kind: EvalCase
+  alias: eval-eval-case
+  origin: github.com/ruinosus/dna/eval
+  plane: record
+  prompt_target: false
+  flatten_in_context: false
+  prompt_target_priority: 0
+  storage:
+    type: yaml
+    container: eval-cases
+  schema:
+    type: object
+    required:
+    - checks
+    additionalProperties: false
+    properties:
+      description:
+        type: string
+        description: What this case verifies (one line).
+      target:
+        type: object
+        additionalProperties: true
+        description: What to evaluate. Omitted → the suite's target →
+          {type = prompt}. type=prompt composes the agent's system prompt
+          via build_prompt (deterministic, offline); any other type must
+          be registered by the host as an EvalTargetPort.
+        properties:
+          type:
+            type: string
+            description: Target type. 'prompt' is built in; custom types
+              are host-registered EvalTargetPorts.
+          agent:
+            type: string
+            description: Agent name for the prompt target (omitted →
+              the scope's default agent).
+          scope:
+            type: string
+            description: Scope override for the prompt target (omitted →
+              the scope the suite runs in).
+      input:
+        type: string
+        description: Free-form input for custom targets (e.g. the user
+          message an LLM target sends). The prompt target ignores it.
+      checks:
+        type: array
+        minItems: 1
+        description: Deterministic assertions applied to the text the
+          target produced. ALL checks must pass for the case to pass.
+        items:
+          type: object
+          required:
+          - type
+          additionalProperties: false
+          properties:
+            type:
+              type: string
+              enum:
+              - contains
+              - not_contains
+              - regex
+              - not_regex
+              - equals
+              - min_length
+              - max_length
+            value:
+              type:
+              - string
+              - integer
+              description: The needle/pattern (string checks) or the
+                length bound (min_length/max_length).
+            case_sensitive:
+              type: boolean
+              description: For contains/not_contains/equals. Default true.
+      expected:
+        type: string
+        description: Human-readable note of the expected outcome (shown
+          in reports; not machine-checked).
+      tags:
+        type: array
+        items:
+          type: string
+      skip:
+        type: boolean
+        description: Declared but not executed (reported as skipped).
+      skip_reason:
+        type: string
+  describe:
+    path: description
+  description_fallback_field: description
+  summary:
+    target_type:
+      path: target.type
+      default: ''
+    checks:
+      count_of: checks
+    tags: []
+  graph_style:
+    fill: '#8B5CF6'
+    stroke: '#7C3AED'
+    text_color: '#fff'
+  ascii_icon: 🧪
+  display_label: Eval Cases
+  docs: An EvalCase is one declarative evaluation scenario. It names a
+    target (default = the kernel's own prompt composition via
+    build_prompt, deterministic and offline; custom targets such as a
+    live LLM are host-registered EvalTargetPorts) and a list of
+    deterministic checks (contains/regex/equals/length) applied to the
+    text the target produced. Grouped by an EvalSuite; executed by the
+    local runner (`dna eval run`), which persists an EvalRun.

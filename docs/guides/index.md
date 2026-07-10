@@ -35,6 +35,12 @@ first if you have never loaded a scope.
   the extras, search a scope with `dna recall`, drive the memory verbs, and
   register embedding/search providers programmatically.
 
+## Quality
+
+- **[How to evaluate agents](evaluating-agents.md)** — author EvalCases and
+  EvalSuites, run them offline with `dna eval run` (the composed prompt is
+  the default target), pin an EvalBaseline and gate CI on regressions.
+
 ## Lifecycle
 
 - **[Your git log is your SDLC](sdlc.md)** — how this repo tracks its own

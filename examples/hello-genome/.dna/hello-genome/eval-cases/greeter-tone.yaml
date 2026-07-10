@@ -1,0 +1,15 @@
+apiVersion: github.com/ruinosus/dna/eval/v1
+kind: EvalCase
+metadata:
+  name: greeter-tone
+spec:
+  description: The greeter's composed prompt asks for warm, concise answers
+  checks:
+  - type: contains
+    value: warmly
+  - type: contains
+    value: concisely
+  - type: not_contains
+    value: sarcastic
+  expected: Warm + concise directives present; no sarcasm directive leaks in.
+  tags: [tone]
