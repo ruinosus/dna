@@ -11,7 +11,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import type { ResolvedItem, ResolverPort } from "../../kernel/protocols.js";
 import { ResolveError, ResolveNotFoundError } from "../../kernel/protocols.js";
-import { LocalResolver } from "./local.js";
+import { LocalResolver, rejectLegacyShorthand } from "./local.js";
 
 export class GitHubResolver implements ResolverPort {
   cacheKey(uri: string): string {
@@ -21,6 +21,12 @@ export class GitHubResolver implements ResolverPort {
   }
 
   async resolve(uri: string, dep: Record<string, unknown>): Promise<ResolvedItem[]> {
+    // i-010 — reject the dead legacy shorthand (`skills: [...]`)
+    // unconditionally, like the Py twin. Py rejects after fetch_tree (it
+    // funnels through LocalResolver._collect_requested); here it fires
+    // BEFORE cloning — same contract (loud ResolveError with the rewrite
+    // recipe), no wasted network round-trip.
+    rejectLegacyShorthand(dep);
     const raw = uri.replace(/^github:/, "");
     const match = raw.match(
       /^(?<owner>[^/]+)\/(?<repo>[^/@]+)(?:\/(?<path>[^@]+))?(?:@(?<ref>.+))?$/,
