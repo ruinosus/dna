@@ -1,0 +1,60 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-publish-registries
+spec:
+  title: "Publica\xE7\xE3o nos registries (ratificado Barna, evid\xEAncia: 2 consumidor-PRs\
+    \ no pilo"
+  description: "Publica\xE7\xE3o nos registries (ratificado Barna, evid\xEAncia: 2\
+    \ consumidor-PRs no piloto): PyPI dna-sdk + dna-cli (livres, verificados) e npm\
+    \ dna-sdk UNSCOPED (livre; espelha o PyPI; decis\xE3o ratificada \u2014 o termo\
+    \ SDK validado no enquadramento spec-first \xE0 la OTel opentelemetry-sdk). Lado\
+    \ repo: (1) rename TS @dna/sdk\u2192dna-sdk + build de publica\xE7\xE3o (tsc emit\
+    \ dist+d.ts, exports map, files) \u2014 npm publica JS compilado, n\xE3o TS cru;\
+    \ (2) dna-cli depend\xEAncia dna-sdk com constraint semver (resolve no PyPI; workspace\
+    \ source segue p/ dev); (3) release.yml tag-triggered v*: uv build sdist/wheel\
+    \ (sdk+cli) \u2192 PyPI via TRUSTED PUBLISHING (OIDC, zero token) \u2192 npm publish\
+    \ com provenance (token NPM_TOKEN como secret p/ o primeiro publish; OIDC depois);\
+    \ (4) sweep de docs/exemplos @dna/sdk\u2192dna-sdk + install one-liners (git-dep\
+    \ vira alternativa); (5) CHANGELOG Unreleased\u21920.1.0. Lado Barna (contas):\
+    \ PyPI pending publishers + npm token \u2014 checklist entregue \xE0 parte. Publica\xE7\
+    \xE3o real = tag v0.1.0 AP\xD3S o Barna configurar os registries."
+  status: in-progress
+  feature: f-dna-ecosystem
+  priority: high
+  labels:
+  - sdk
+  - typescript
+  - python
+  - infra
+  reporter: claude-code
+  business_value: 700
+  acceptance_criteria:
+  - "Pacote npm builda e empacota (npm pack v\xE1lido, dist+types, name dna-sdk);\
+    \ wheels/sdist buildam limpos; release.yml completo (dry-run validado onde poss\xED\
+    vel); docs 100% no nome novo (guard verde); constraint do cli correta; CHANGELOG\
+    \ 0.1.0"
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - PR merged; checklist de contas entregue ao Barna; tag v0.1.0 aguardando config
+    dele
+  definition_of_done_source: cli-create
+  created_at: '2026-07-10T17:59:56+00:00'
+  updated_at: '2026-07-10T17:59:59+00:00'
+  timeline:
+  - at: '2026-07-10T17:59:56+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-10T17:59:59+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  produces:
+  - kind: Plan
+    name: plan-s-publish-registries
+    role: implementation
+    at: '2026-07-10T17:59:59+00:00'

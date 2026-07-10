@@ -1,0 +1,16 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-publish-registries
+spec:
+  title: 'Plano: s-publish-registries'
+  date: '2026-07-10'
+  status: accepted
+  story_ref: s-publish-registries
+  journey_phase: plan
+  body: "Rename+build TS (tsc dist, exports, pack validado); constraint do cli; release.yml\
+    \ (PyPI trusted publishing OIDC + npm provenance); sweep docs; CHANGELOG 0.1.0.\
+    \ Worktree dna-wt-publish; PR via story pr. Tag v0.1.0 s\xF3 ap\xF3s config de\
+    \ contas do Barna."
+  created_at: '2026-07-10T17:59:57+00:00'
+  updated_at: '2026-07-10T17:59:57+00:00'
