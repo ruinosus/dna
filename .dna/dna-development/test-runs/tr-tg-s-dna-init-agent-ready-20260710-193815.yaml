@@ -1,0 +1,18 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-dna-init-agent-ready-20260710-193815
+spec:
+  guide_ref: tg-s-dna-init-agent-ready
+  outcome: pass
+  verifies:
+  - Story/s-dna-init-agent-ready
+  executed_by: claude-code
+  executed_at: '2026-07-10T19:38:15+00:00'
+  notes: "Smoke executado 2026-07-10 em scratch real (fora do repo): install editable\
+    \ OK; init --tools all = 7 created com \xE1rvore completa; re-run 0 created/7\
+    \ skipped; feature+story+start no board novo com autodetec\xE7\xE3o de scope;\
+    \ commit assinado 'Work-Item: Story/s-smoke' + dna-sdlc[bot]. Unit: cli 356 passed\
+    \ (14 do init). sdk-py 2777 passed. sdk-ts 1344 passed + typecheck. Guards: brand\
+    \ clean, docs-coverage clean, gen_cli_docs --check clean. mkdocs build --strict\
+    \ OK."

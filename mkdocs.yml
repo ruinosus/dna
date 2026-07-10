@@ -50,6 +50,7 @@ nav:
       - getting-started/index.md
       - Your first Kind: getting-started/first-kind.md
       - Running the conformance kit: getting-started/conformance-kit.md
+      - Make your project agent-ready: getting-started/agent-onboarding.md
   - Concepts:
       - concepts/index.md
       - The thesis — CRDs for agent behavior: concepts/thesis.md
