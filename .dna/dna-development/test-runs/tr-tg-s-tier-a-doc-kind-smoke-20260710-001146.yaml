@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-tier-a-doc-kind-smoke-20260710-001146
+spec:
+  guide_ref: tg-s-tier-a-doc-kind-smoke
+  outcome: pass
+  verifies:
+  - Story/s-tier-a-doc-kind
+  executed_by: claude-code
+  executed_at: '2026-07-10T00:11:46+00:00'
+  evidence:
+  - smoke-produto-EXECUTADO-pelo-orquestrador:scope-scratch+DOC.md-frontmatter-cru;dna-docs-list-mostra-hello(order/icon/kind_of/category);dna-docs-show-renderiza-body;kind-list-mostra-Doc+ModelProfile+Automation;nota:exigiu-refresh-da-venv(gotcha-conhecida)
