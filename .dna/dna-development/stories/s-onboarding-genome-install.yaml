@@ -8,7 +8,7 @@ spec:
     \ custom) e consomem via dna init --from github:owner/repo[/subdir][@ref] (ou\
     \ local:) \u2014 reuso do fetch/scan/valida\xE7\xE3o do install, proje\xE7\xE3\
     o id\xEAntica ao init embarcado"
-  status: in-progress
+  status: review
   feature: f-dna-ecosystem
   priority: medium
   labels:
@@ -122,7 +122,7 @@ spec:
       --strict verdes; i-015 in-progress (resolve done-on-merge)'
   definition_of_done_source: cli-create
   created_at: '2026-07-10T20:06:39+00:00'
-  updated_at: '2026-07-10T20:22:52+00:00'
+  updated_at: '2026-07-10T20:23:34+00:00'
   timeline:
   - at: '2026-07-10T20:06:39+00:00'
     actor: claude-code
@@ -191,6 +191,23 @@ spec:
       \ AGENTS.md na raiz esconde as skills (claim para a recurs\xE3o) \u2014 filado\
       \ i-016-install-root-agents-md-hides-skills (bug/medium). Abrindo PR."
     commit_ref: 07cb681170b5a3ea83a2d8cc8b21854351859f3c
+  - at: '2026-07-10T20:23:19+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/41'
+    pr_url: https://github.com/ruinosus/dna/pull/41
+  - at: '2026-07-10T20:23:33+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #41 aberto; resolve de i-015 \xE9 done-on-merge"
+  - at: '2026-07-10T20:23:34+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
   produces:
   - kind: Plan
     name: plan-s-onboarding-genome-install

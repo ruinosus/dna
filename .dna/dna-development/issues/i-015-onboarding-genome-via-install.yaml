@@ -36,3 +36,9 @@ spec:
       \ (github:/local:) = proje\xE7\xE3o com reuso do fetch+scan+validate do install;\
       \ install continua sendo o canal de board. Resolve \xE9 done-on-merge do PR\
       \ da story."
+  - at: '2026-07-10T20:23:36+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'PR #41 (feat/s-onboarding-genome-install) implementa dna init --from;
+      esta issue resolve done-on-merge do PR.'
