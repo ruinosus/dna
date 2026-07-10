@@ -12,7 +12,7 @@ spec:
     \ aceita o dep shorthand legado que o Py rejeita desde #28 \u2014 portar reject_legacy_shorthand).\
     \ O resolve da i-005 fecha a issue p\xFAblica GitHub #30 AUTOMATICAMENTE pela\
     \ ponte (#31) \u2014 o processo completo demonstrado em p\xFAblico."
-  status: review
+  status: done
   feature: f-dna-sql-consolidation
   priority: medium
   labels:
@@ -23,17 +23,23 @@ spec:
   reporter: claude-code
   business_value: 300
   acceptance_criteria:
-  - "Docstrings preenchidas (mkdocstrings renderiza conte\xFAdo real, n\xE3o assinatura\
-    \ nua); TSDoc: tipos exportados ou intentionallyNotExported (TypeDoc sem broken-xref);\
-    \ shorthand rejeitado no TS com red\u2192green espelhando o Py; i-005 e i-010\
-    \ resolvidas via CLI; a #30 fechada no GitHub pela ponte (prova no relat\xF3rio);\
-    \ CI verde"
+  - text: "Docstrings preenchidas (mkdocstrings renderiza conte\xFAdo real, n\xE3\
+      o assinatura nua); TSDoc: tipos exportados ou intentionallyNotExported (TypeDoc\
+      \ sem broken-xref); shorthand rejeitado no TS com red\u2192green espelhando\
+      \ o Py; i-005 e i-010 resolvidas via CLI; a #30 fechada no GitHub pela ponte\
+      \ (prova no relat\xF3rio); CI verde"
+    done: true
+    done_at: '2026-07-10T14:06:11+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - PR merged via story pr; board de issues ZERADO
+  - text: PR merged via story pr; board de issues ZERADO
+    done: true
+    done_at: '2026-07-10T14:06:11+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-10T13:32:52+00:00'
-  updated_at: '2026-07-10T13:59:55+00:00'
+  updated_at: '2026-07-10T14:06:18+00:00'
   timeline:
   - at: '2026-07-10T13:32:52+00:00'
     actor: claude-code
@@ -106,6 +112,23 @@ spec:
     source: cli
     from: in-progress
     to: review
+  - at: '2026-07-10T14:06:15+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #33 merged (9/9). 26 docstrings Py (a API-ref p\xFAblica renderiza\
+      \ 'boot gate, not a plain setter'); TypeDoc 0 errors 0 warnings (11 tipos re-exportados\
+      \ + 4 intentionallyNotExported, fixture intacta por constru\xE7\xE3o); shorthand\
+      \ TS rejeitado red\u2192green (delta documentado: TS rejeita ANTES do clone);\
+      \ i-010 e i-005 resolvidas \u2014 A PONTE FECHOU A #30 NO GITHUB AUTOMATICAMENTE\
+      \ com o coment\xE1rio assinado. BOARD DE ISSUES ZERADO."
+  - at: '2026-07-10T14:06:18+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: b2c608c2fa25dafa53aaac19997a66921448f001
   produces:
   - kind: Plan
     name: plan-s-zero-the-board
@@ -119,3 +142,4 @@ spec:
     name: tr-tg-zero-the-board-20260710-135901
     role: test-run
     at: '2026-07-10T13:59:02+00:00'
+  closed_at: '2026-07-10T14:06:11+00:00'
