@@ -8,6 +8,18 @@ CLI's default source `./.dna` resolves. This is the SDLC methodology as a
 first-class, dogfooded pillar: the trail from idea to shipped commit is
 itself declarative data.
 
+**Which scope do the verbs hit?** Every `dna sdlc` verb resolves its
+scope with one documented precedence — no need to repeat `--scope` in an
+adopter repo whose board scope has its own name (`foundry-dev`, ...):
+
+1. `--scope` flag — always wins;
+2. env `DNA_SDLC_SCOPE`;
+3. auto-detection — when the source holds exactly **one** scope with SDLC
+   structure (a `stories/`, `features/`, `epics/`, `issues/` or
+   `roadmaps/` container), that scope is used (the CLI logs the choice
+   to stderr);
+4. fallback `dna-development` (this repo's own board — compat).
+
 The loop end to end: a Story is created, started through a **plan gate**
 (`story start` refuses to run without `--plan`/`--plan-doc`/`--plan-file`),
 built with stamped commits, and closed by `story done` — whose **test gate**
