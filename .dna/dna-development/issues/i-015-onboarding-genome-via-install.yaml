@@ -1,0 +1,24 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-015-onboarding-genome-via-install
+spec:
+  description: "Follow-up de s-dna-init-agent-ready: oferecer o Genome de onboarding\
+    \ tamb\xE9m via canal dna install github: (ex.: dna init --from github:owner/repo/path,\
+    \ ou publicar o onboarding-scope como scope instal\xE1vel). Hoje o Genome viaja\
+    \ como package-data do dna-cli e o init projeta as Kinds nos diret\xF3rios de\
+    \ tools; um canal install permitiria vers\xF5es atualizadas do onboarding sem\
+    \ re-release do dna-cli e onboarding customizado por organiza\xE7\xE3o. Sem\xE2\
+    ntica distinta do install atual (que escreve no source .dna/, n\xE3o em proje\xE7\
+    \xF5es .claude/.github/...) \u2014 precisa de design pr\xF3prio."
+  type: enhancement
+  severity: low
+  status: open
+  owner: claude-code
+  related_feature: f-dna-ecosystem
+  timeline:
+  - at: '2026-07-10T19:40:35+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
