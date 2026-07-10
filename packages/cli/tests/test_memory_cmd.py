@@ -89,3 +89,39 @@ def test_consolidate_reports_cleanly(scoped):
     report = json.loads(res.output)
     assert report["evaluated"] >= 1
     assert report["archived"] == 0  # nothing stale yet
+
+
+def test_recall_semantic_auto_on_and_flag_off(scoped):
+    """s-memory-semantic-recall: with the provider present, auto mode blends the
+    ecphory×embedding ranking (hits annotated, payload flags semantic:true);
+    --no-semantic restores the exact base hit shape."""
+    runner = CliRunner()
+    assert _remember(runner, "deep-copy before mutating documents", "Feature/kernel").exit_code == 0
+    assert _remember(runner, "banana tropical yellow fruit smoothie", "Feature/food").exit_code == 0
+
+    auto = runner.invoke(main, [
+        "memory", "recall", "mutating documents safely", "--scope", "demo",
+        "-k", "2", "--no-reconsolidate", "--json",
+    ])
+    assert auto.exit_code == 0, auto.output
+    payload = json.loads(auto.output)
+    assert payload["semantic"] is True and payload["degraded"] is False
+    top = payload["hits"][0]
+    assert top["name"].startswith("rem-")
+    assert "rank_recall" in top and "score_recall" in top and top["semantic"] > 0
+
+    off = runner.invoke(main, [
+        "memory", "recall", "mutating documents safely", "--scope", "demo",
+        "-k", "2", "--no-reconsolidate", "--no-semantic", "--json",
+    ])
+    assert off.exit_code == 0, off.output
+    payload_off = json.loads(off.output)
+    assert payload_off["semantic"] is False
+    assert all("rank_recall" not in h for h in payload_off["hits"])
+
+    # human output labels the mode
+    human = runner.invoke(main, [
+        "memory", "recall", "mutating documents safely", "--scope", "demo",
+        "-k", "2", "--no-reconsolidate",
+    ])
+    assert "semantic (ecphory×cosine)" in human.output

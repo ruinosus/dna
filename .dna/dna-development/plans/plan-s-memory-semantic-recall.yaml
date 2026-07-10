@@ -1,0 +1,55 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-memory-semantic-recall
+spec:
+  title: 'Plano: s-memory-semantic-recall'
+  date: '2026-07-10'
+  status: accepted
+  story_ref: s-memory-semantic-recall
+  journey_phase: plan
+  body: "# Plan \u2014 s-memory-semantic-recall\n\n## Estado verificado no c\xF3digo\
+    \ (n\xE3o de cor)\n- `recall` (dna/memory/verbs.py) j\xE1 retrieva via `kernel.search`\
+    \ \u2192 provider h\xEDbrido (dense sqlite-vec + FTS5 + RRF) quando registrado,\
+    \ e re-pontua LessonLearned por retention (Ebbinghaus) \xD7 affect. `remember`\
+    \ j\xE1 indexa no write (`_index_doc` \u2192 provider.index \u2192 kernel.embed).\n\
+    - POR\xC9M o ranking ecphory (`run_ecphory`/`score_engram`) \u2014 o scoring cue-based\
+    \ de mem\xF3ria com o Path 3 sem\xE2ntico (`semantic_scores`, `cosine_weight=0.61`,\
+    \ `direct_threshold=0.30`) \u2014 \xE9 c\xF3digo morto no fluxo de recall: nada\
+    \ o chama, nada alimenta `semantic_scores`. policy.py admite: \"inert unless a\
+    \ caller feeds semantic_scores\".\n- TS n\xE3o tem verbs (fronteira documentada\
+    \ em src/memory/index.ts: verbs s\xE3o kernel-bound, Py-only); o core puro \xE9\
+    \ twin 1:1 com fixture memory-scoring-parity.json gerada por packages/sdk-py/scripts/gen_memory_parity.py.\n\
+    \n## Design (m\xEDnimo, usa o que o c\xF3digo j\xE1 pratica)\n1. **Core puro novo**\
+    \ `dna/memory/semantic.py` + `src/memory/semantic.ts` (paridade 1:1):\n   - `cosine_similarity(a,b)`\
+    \ / `cosineSimilarity` \u2014 determin\xEDstico, ordem de ops fixa.\n   - `semantic_scores_from_vectors(names,\
+    \ vectors, query_vector)` \u2192 {name: max(0, cos)}.\n   - `fuse_semantic_recall(hits,\
+    \ engrams, query, semantic_scores, policy, now)` \u2014 roda o `run_ecphory` EXISTENTE\
+    \ com `semantic_scores` alimentado (ativa o score-blend Path 3 que o c\xF3digo\
+    \ j\xE1 tem) e funde o ranking de recall existente com o ranking direct do ecphory\
+    \ via `reciprocal_rank_fusion` EXISTENTE (o mesmo RRF do search). Hits anotados:\
+    \ `score` = RRF fundido, `score_recall` (anterior), `semantic` (cosine), `rank_recall`,\
+    \ `rank_ecphory`.\n2. **Verbo** `recall(..., semantic: bool | None = None)` (Py):\
+    \ auto (None) = ativo sse provider registrado; True for\xE7a (embed tem floor\
+    \ fake); False desliga. Ativo \u2192 1 batch `kernel.embed([query] + textos-candidatos\
+    \ via document_text)` \u2192 semantic_scores \u2192 fuse. Inativo \u2192 caminho\
+    \ de hoje byte-id\xEAntico (golden). Resultado ganha chave top-level `semantic:\
+    \ bool`.\n3. **Backfill lazy (migra\xE7\xE3o)**: promover `_index_memory_kinds`\
+    \ do CLI pra `dna.memory.verbs.backfill_index()`; CLI delega. Escolha documentada:\
+    \ mem\xF3rias antigas (pr\xE9-provider, ou .db local ausente) s\xE3o (re)indexadas\
+    \ idempotentemente por text-hash a cada recall do CLI; embed-no-write cobre as\
+    \ novas. Sem migra\xE7\xE3o de schema.\n4. **CLI**: `dna memory recall --semantic/--no-semantic`\
+    \ (default auto), header mostra o modo, JSON propaga `semantic`.\n5. **Testes**:\
+    \ (a) par\xE1frase \u2014 pure-core: run_ecphory sem semantic_scores \u2192 partial\
+    \ (nada \u2265 threshold); com \u2192 direct hit; verb-level com provider fake:\
+    \ alvo promovido pro top-k. (b) golden sem provider: literais pinados (now fixo).\
+    \ (c) paridade: gerador + fixture + executores Py/TS pro ranking fundido com fake\
+    \ embeddings. TS: memory-semantic.test.ts.\n6. **Docs**: prosa em guides/semantic-recall.md\
+    \ + concepts/search-and-memory.md; `scripts/gen_cli_docs.py` regenera reference/cli/memory.md\
+    \ (drift guard); mkdocs --strict.\n7. **Smoke produto**: scope temp, remember\
+    \ N fatos reais, recall por par\xE1frase com sqlite-vec, hit sem\xE2ntico demonstrado;\
+    \ TestGuide --product + TestRun.\n\n## Gates\nsdk-py pytest, sdk-ts bun test +\
+    \ typecheck, cli pytest, brand_guard, docs_coverage_guard, drift da refer\xEA\
+    ncia, mkdocs --strict; PR via `dna sdlc story pr` (11 checks); N\xC3O mergear.\n"
+  created_at: '2026-07-10T19:10:11+00:00'
+  updated_at: '2026-07-10T19:10:11+00:00'

@@ -17,6 +17,11 @@ lexical FTS5 + RRF, ``degraded=false``); without it, it degrades HONESTLY to the
 kernel's lexical scan. Recall re-ranks memory hits by Ebbinghaus retention ×
 affect, excludes bi-temporally-invalidated memories, and applies a light
 reconsolidation bump (cues_history + confidence) — all fail-soft.
+
+``--semantic/--no-semantic`` (default: auto) additionally blends embedding
+similarity into the ecphory ranking and fuses it with the recall ranking via
+RRF (s-memory-semantic-recall) — auto turns it on exactly when the provider is
+available, so offline behavior without the extra is unchanged.
 """
 from __future__ import annotations
 
@@ -40,30 +45,13 @@ def _slug(text: str) -> str:
     return f"rem-{h}"
 
 
-def _index_memory_kinds(s: Any, provider: Any, scope: str, kinds, tenant) -> None:
-    """Index the memory Kinds into the provider so recall finds pre-existing docs
-    (idempotent by text hash)."""
-    from dna.adapters.search.sqlite_vec import document_text
+def _index_memory_kinds(s: Any, scope: str, kinds, tenant) -> None:
+    """Lazy-backfill: index the memory Kinds into the registered provider so
+    recall finds pre-provider docs (``dna.memory.backfill_index`` — idempotent
+    by text hash, unchanged docs are skipped)."""
+    from dna.memory import backfill_index
 
-    kernel = s.kernel
-    records: list[dict[str, Any]] = []
-
-    async def _collect() -> None:
-        for kind in kinds:
-            async for raw in kernel.query(scope, kind, tenant=tenant):
-                name = (raw.get("metadata") or {}).get("name") or raw.get("name")
-                if not name:
-                    continue
-                records.append({
-                    "scope": scope, "kind": kind, "name": name, "tenant": tenant or "",
-                    "text": document_text(raw),
-                    "title": (raw.get("spec") or {}).get("summary")
-                             or (raw.get("spec") or {}).get("title") or name,
-                })
-
-    s.run(_collect())
-    if records:
-        s.run(provider.index(records))
+    s.run(backfill_index(s.kernel, scope, kinds=tuple(kinds), tenant=tenant))
 
 
 @click.group(name="memory")
@@ -137,10 +125,13 @@ def remember_cmd(
 @click.option("-k", "--limit", "k", default=5, show_default=True)
 @click.option("--no-reconsolidate", is_flag=True, help="Skip the cue/confidence bump side-effect.")
 @click.option("--actor", default="cli", show_default=True, help="Who is recalling (stamped in cues_history).")
+@click.option("--semantic/--no-semantic", "semantic", default=None,
+              help="Blend embedding similarity into the ecphory ranking (RRF fusion). "
+                   "Default: auto — on when the search provider is available.")
 @click.option("--json", "as_json", is_flag=True)
 def recall_cmd(
     query: str, kinds: tuple[str, ...], scope: str | None, tenant: str | None,
-    k: int, no_reconsolidate: bool, actor: str, as_json: bool,
+    k: int, no_reconsolidate: bool, actor: str, semantic: bool | None, as_json: bool,
 ) -> None:
     """Hybrid, bi-temporal, retention-re-scored recall over the memory Kinds."""
     from dna.memory import recall
@@ -151,7 +142,7 @@ def recall_cmd(
         provider = _register_provider(s)
         if provider is not None:
             try:
-                _index_memory_kinds(s, provider, s.scope, kind_list, tenant)
+                _index_memory_kinds(s, s.scope, kind_list, tenant)
             except Exception as exc:  # noqa: BLE001 — indexing failure degrades to lexical
                 click.secho(f"⚠ index failed ({exc}); lexical fallback", fg="yellow", err=True)
         else:
@@ -163,7 +154,7 @@ def recall_cmd(
         try:
             res = s.run(recall(
                 s.kernel, s.scope, query, kinds=tuple(kind_list), tenant=tenant, k=k,
-                reconsolidate=not no_reconsolidate, actor=actor,
+                reconsolidate=not no_reconsolidate, actor=actor, semantic=semantic,
             ))
         finally:
             if provider is not None:
@@ -173,6 +164,8 @@ def recall_cmd(
         print_json(res)
         return
     mode = "lexical (degraded)" if res["degraded"] else "hybrid (dense+lexical+RRF)"
+    if res.get("semantic"):
+        mode += " + semantic (ecphory×cosine)"
     click.secho(f"\n🧠 recall · {mode} · scope={res['scope']} · '{query}'", bold=True)
     hits = res["hits"]
     if not hits:
@@ -182,6 +175,9 @@ def recall_cmd(
         score = h.get("score", 0.0)
         ret = h.get("retention")
         tail = f"  [retention {ret:.2f}]" if ret is not None else ""
+        cos = h.get("semantic")
+        if cos is not None:
+            tail += f"  [cos {cos:.2f}]"
         click.echo(f"  {i:>2}. {h.get('kind','?')}/{h.get('name','?')}  ({score:.4f}){tail}")
         if h.get("snippet"):
             click.secho(f"      {h['snippet']}", fg="bright_black")

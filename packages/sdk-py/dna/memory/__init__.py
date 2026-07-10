@@ -50,8 +50,17 @@ from dna.memory.policy import (
     RecallPolicy,
 )
 from dna.memory.retrieval import Memory, RankedMemory, rank_memories
+from dna.memory.semantic import (
+    ENGRAM_TEXT_FIELDS,
+    cosine_similarity,
+    ecphory_rank,
+    engram_text,
+    fuse_semantic_recall,
+    semantic_scores_from_vectors,
+)
 from dna.memory.verbs import (
     MEMORY_KINDS,
+    backfill_index,
     consolidate,
     forget,
     recall,
@@ -65,6 +74,7 @@ __all__ = [
     "recall",
     "forget",
     "consolidate",
+    "backfill_index",
     # ecphory
     "EngramRef",
     "EcphoryScore",
@@ -73,6 +83,13 @@ __all__ = [
     "apply_semon_adjustments",
     "expand_homophony",
     "run_ecphory",
+    # semantic recall (s-memory-semantic-recall)
+    "ENGRAM_TEXT_FIELDS",
+    "engram_text",
+    "cosine_similarity",
+    "semantic_scores_from_vectors",
+    "ecphory_rank",
+    "fuse_semantic_recall",
     # retrieval
     "Memory",
     "RankedMemory",

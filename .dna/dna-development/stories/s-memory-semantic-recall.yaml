@@ -1,0 +1,114 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-memory-semantic-recall
+spec:
+  title: "Semantic recall na mem\xF3ria: quando um RecordSearchProvider + EmbeddingPort\
+    \ est\xE3o"
+  description: "Semantic recall na mem\xF3ria: quando um RecordSearchProvider + EmbeddingPort\
+    \ est\xE3o configurados, recall(cue) combina o ranking de recall existente com\
+    \ o ranking ecphory alimentado por similaridade de embedding (ativa o hook semantic_scores\
+    \ do score_engram, hoje c\xF3digo morto) e funde via RRF \u2014 o mesmo RRF do\
+    \ search. Sem provider \u2192 comportamento atual intacto (offline-first, zero\
+    \ breaking change). Sem LLM/scribes."
+  status: in-progress
+  feature: f-dna-search-memory
+  reporter: claude-code
+  acceptance_criteria:
+  - "Given um scope com provider sqlite-vec + embedder registrados, When recall(cue)\
+    \ roda com uma par\xE1frase que o cue-match do ecphory n\xE3o alcan\xE7a, Then\
+    \ a mem\xF3ria-alvo surge no top-k via plano sem\xE2ntico (cosine no Path 3 do\
+    \ score_engram) e o hit \xE9 anotado (semantic/rank_ecphory/rank_recall)"
+  - "Given nenhum provider registrado, When recall(cue) roda em modo auto, Then hits\
+    \ id\xEAnticos (golden) ao comportamento pr\xE9-story"
+  - "Given o mesmo conjunto de engrams + cue + fake embeddings, When o ranking sem\xE2\
+    ntico roda em Py e TS, Then ordem e scores s\xE3o id\xEAnticos (fixture de paridade\
+    \ compartilhada)"
+  - "Given dna memory recall --semantic/--no-semantic, When o flag \xE9 omitido, Then\
+    \ modo auto (usa sem\xE2ntico se provider dispon\xEDvel)"
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - "c\xF3digo Py+TS em paridade 1:1 (core puro twin; verbs Py-only como j\xE1 \xE9\
+    \ a fronteira do repo); remember segue indexando no write; backfill lazy promovido\
+    \ pra SDK e documentado; testes unit Py+TS com FakeEmbedding (par\xE1frase, golden\
+    \ sem provider, paridade de ranking); fixture memory-scoring-parity estendida\
+    \ via gerador; docs prosa (guides/semantic-recall.md + concepts/search-and-memory.md)\
+    \ + refer\xEAncia CLI regenerada; suites completas + guards + mkdocs --strict\
+    \ verdes; smoke real sqlite-vec com TestGuide --product + TestRun; PR via story\
+    \ pr, sem merge"
+  definition_of_done_source: cli-create
+  created_at: '2026-07-10T19:09:38+00:00'
+  updated_at: '2026-07-10T19:34:13+00:00'
+  timeline:
+  - at: '2026-07-10T19:09:38+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-10T19:10:14+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-10T19:21:05+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Design validado no c\xF3digo: o hook semantic_scores do score_engram\
+      \ (Path 3, cosine_weight=0.61) era c\xF3digo morto \u2014 policy.py admitia\
+      \ 'inert unless a caller feeds semantic_scores'. Implementado: core puro dna/memory/semantic.py\
+      \ + twin src/memory/semantic.ts (cosine_similarity, semantic_scores_from_vectors,\
+      \ ecphory_rank, fuse_semantic_recall via RRF \u2014 o mesmo RRF do search) +\
+      \ recall(semantic=None auto) no verbo + backfill_index promovido do CLI pro\
+      \ SDK. Decis\xE3o: o plano sem\xE2ntico embedda engram_text (area/title/summary/body\
+      \ \u2014 os mesmos campos que o ecphory pontua), n\xE3o o document_text completo\
+      \ do \xEDndice \u2014 nomes/datas/labels dilu\xEDam o cosseno (verificado: 0.21\
+      \ vs 0.44 no mesmo par). Smoke manual: par\xE1frase 'mutating documents safely'\
+      \ promove rem-target de #2 pra #1 quando sem\xE2ntico ativo; decoy com affect\
+      \ surprise domina sem sem\xE2ntico. Sem provider \u2192 ranking byte-id\xEA\
+      ntico (golden capturado antes de tocar no c\xF3digo)."
+    commit_ref: 13c17b20635eea7b62f1268bfc32b1389408ef08
+  - at: '2026-07-10T19:33:46+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-memory-semantic-recall
+    summary: TestGuide tg-memory-semantic-recall (smoke)
+  - at: '2026-07-10T19:34:12+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-memory-semantic-recall-20260710-193410
+    summary: "TestRun tr-tg-memory-semantic-recall-20260710-193410 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-10T19:34:13+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Smoke de produto PASS (tg-memory-semantic-recall): 3 remembers reais\
+      \ \u2192 recall por par\xE1frase 'safely mutating a shared document spec' acha\
+      \ a lesson do deep-copy como #1 com [cos 0.56] e rank_ecphory=1; header rotula\
+      \ 'hybrid (dense+lexical+RRF) + semantic (ecphory\xD7cosine)'; --no-semantic\
+      \ devolve o shape/ordena\xE7\xE3o base byte-id\xEAntico. Gates locais: sdk-ts\
+      \ 1353 pass + typecheck OK, cli 343+1 pass (inclui teste novo do flag), brand_guard\
+      \ clean, docs_coverage_guard clean (82 itens), mkdocs --strict OK, refer\xEA\
+      ncia CLI regenerada sem drift al\xE9m do memory.md esperado. sdk-py re-rodando\
+      \ (primeira passada coincidiu com disco da m\xE1quina 100% cheio \u2014 ENOSPC,\
+      \ n\xE3o c\xF3digo; liberei ~/.npm/_npx 5.6GB)."
+    commit_ref: 13c17b20635eea7b62f1268bfc32b1389408ef08
+  produces:
+  - kind: Plan
+    name: plan-s-memory-semantic-recall
+    role: implementation
+    at: '2026-07-10T19:10:14+00:00'
+  - kind: TestGuide
+    name: tg-memory-semantic-recall
+    role: test-guide
+    at: '2026-07-10T19:33:46+00:00'
+  - kind: TestRun
+    name: tr-tg-memory-semantic-recall-20260710-193410
+    role: test-run
+    at: '2026-07-10T19:34:12+00:00'

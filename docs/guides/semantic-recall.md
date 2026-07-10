@@ -107,6 +107,36 @@ $ dna memory recall "cache mutation" --scope hello-genome
       rem-5d60593f38 Always deep-copy a doc's spec before mutating — the cache hands back…
 ```
 
+### Recall by paraphrase: the semantic blend
+
+Recall has a second, additive ranking plane. When the provider is available,
+`dna memory recall` also embeds the cue and each candidate's *semantic
+payload* (`area`/`title`/`summary`/`body` — the same fields the ecphory
+scoring reads; names, dates and affect labels never dilute the similarity),
+feeds the cosine into the deterministic ecphory ranking, and fuses the two
+rankings with the same RRF the search plane uses. A memory phrased
+differently from your cue — no shared phrase, no token-subset match — can
+still surface, and the hits say why:
+
+```console
+$ dna memory recall "mutating documents safely" --scope hello-genome -k 2
+
+🧠 recall · hybrid (dense+lexical+RRF) + semantic (ecphory×cosine) · scope=hello-genome · 'mutating documents safely'
+   1. LessonLearned/rem-5d60593f38  (0.0328)  [retention 1.00]  [cos 0.44]
+      rem-5d60593f38 Always deep-copy a doc's spec before mutating — the cache hands back…
+```
+
+`--semantic/--no-semantic` controls the blend; the default is **auto** — on
+exactly when the provider is available, so without the extra the behavior
+(and every score) is unchanged. In JSON output, fused hits carry
+`rank_recall` / `rank_ecphory` / `score_recall` / `semantic` (the cosine) so
+you can see both rankings.
+
+Memories written *before* the provider existed (or on a machine without the
+local `.dna-search/` store) are not a migration problem: every recall
+lazy-backfills the index first (`dna.memory.backfill_index` — idempotent by
+text hash, unchanged docs are never re-embedded).
+
 Forgetting is bi-temporal demotion — the document stays, auditable, but
 stops surfacing:
 

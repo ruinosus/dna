@@ -1,0 +1,17 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-memory-semantic-recall-20260710-193410
+spec:
+  guide_ref: tg-memory-semantic-recall
+  outcome: pass
+  verifies:
+  - Story/s-memory-semantic-recall
+  executed_by: claude-code
+  executed_at: '2026-07-10T19:34:10+00:00'
+  notes: "Rodado ao vivo 2026-07-10 num scope temp com sqlite-vec + fake embedder\
+    \ (offline). Par\xE1frase 'safely mutating a shared document spec' \u2192 hit\
+    \ rem-ef7d758cb7 (deep-copy lesson) com cos 0.5619, rank_ecphory=1, header '+\
+    \ semantic (ecphory\xD7cosine)'; --no-semantic restaura o shape base (sem [cos],\
+    \ sem rank_recall); JSON com semantic:true, degraded:false. Evid\xEAncia completa\
+    \ na timeline da story (comment)."

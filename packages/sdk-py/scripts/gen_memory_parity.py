@@ -20,10 +20,17 @@ from dna.memory.decay import (
     ebbinghaus_retention,
     stability_from_spec,
 )
+from dna.kernel.embedding import fake_embed_one
 from dna.memory.ecphory import EngramRef, score_engram
 from dna.memory.encoding_context import time_of_day
 from dna.memory.memory_type import classify_memory_type
 from dna.memory.retrieval import Memory, rank_memories
+from dna.memory.semantic import (
+    cosine_similarity,
+    engram_text,
+    fuse_semantic_recall,
+    semantic_scores_from_vectors,
+)
 
 NOW = "2026-07-09T15:00:00+00:00"
 _NOW = datetime.fromisoformat(NOW)
@@ -110,6 +117,64 @@ def build() -> dict:
         s = score_engram(EngramRef(c["engram"]["name"], c["engram"]["spec"]), c["cue_ctx"])
         out.append({**c, "expected_score": s.score, "expected_matched": s.matched_dims})
     fx["score_engram"] = out
+
+    # ── semantic recall (s-memory-semantic-recall) ──────────────────────────
+    # Both sides embed the raw TEXTS with their own fake embedder (bit-identical
+    # by construction), so these cases pin cosine + engram_text + the full
+    # fused ranking end to end.
+    cos_cases = [
+        ("mutating documents safely", "deep copy before mutating documents"),
+        ("mutating documents safely", "banana tropical smoothie"),
+        ("reciprocal rank fusion", "reciprocal rank fusion"),
+        ("", "anything at all"),
+    ]
+    fx["cosine_similarity_fake"] = [
+        {"text_a": a, "text_b": b,
+         "expected": cosine_similarity(fake_embed_one(a), fake_embed_one(b))}
+        for a, b in cos_cases
+    ]
+
+    et_specs = [
+        {"area": "Feature/kernel", "summary": "deep-copy before mutating",
+         "affect": "regret", "created_at": "2026-07-01T00:00:00+00:00"},
+        {"title": "AAC apps", "body": "long body text", "summary": "short"},
+        {},
+    ]
+    fx["engram_text"] = [{"spec": s, "expected": engram_text(s)} for s in et_specs]
+
+    engrams = [
+        {"name": "rem-target", "spec": {
+            "area": "Feature/kernel", "summary": "deep-copy before mutating documents",
+            "created_at": "2026-07-01T00:00:00+00:00"}},
+        {"name": "rem-decoy", "spec": {
+            "area": "Feature/ops", "summary": "safely archive old reports nightly",
+            "created_at": "2026-07-01T00:00:00+00:00"}},
+        {"name": "rem-noise", "spec": {
+            "area": "Feature/food", "summary": "banana tropical smoothie recipe",
+            "created_at": "2026-07-01T00:00:00+00:00"}},
+    ]
+    hits = [
+        {"name": "rem-decoy", "score": 0.048},
+        {"name": "rem-target", "score": 0.033},
+        {"name": "rem-noise", "score": 0.020},
+    ]
+    query = "mutating documents safely"
+    refs = [EngramRef(e["name"], e["spec"]) for e in engrams]
+    sem = semantic_scores_from_vectors(
+        [e["name"] for e in engrams],
+        [fake_embed_one(engram_text(e["spec"])) for e in engrams],
+        fake_embed_one(query),
+    )
+    fused = fuse_semantic_recall(hits, refs, query, sem, now=_NOW)
+    fx["semantic_recall_fusion"] = [{
+        "query": query, "now": NOW, "engrams": engrams, "hits": hits,
+        "expected_order": [h["name"] for h in fused],
+        "expected_scores": {h["name"]: h["score"] for h in fused},
+        "expected_semantic": {h["name"]: h["semantic"] for h in fused if "semantic" in h},
+        "expected_rank_ecphory": {
+            h["name"]: h["rank_ecphory"] for h in fused if "rank_ecphory" in h
+        },
+    }]
     return fx
 
 

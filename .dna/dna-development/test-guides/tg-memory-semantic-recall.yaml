@@ -1,0 +1,31 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-memory-semantic-recall
+spec:
+  description: "Product smoke: semantic recall por par\xE1frase com sqlite-vec local\
+    \ (fake embedder, offline)"
+  kind_of_test: smoke
+  status: active
+  steps:
+  - action: "Num diret\xF3rio tempor\xE1rio, criar um scope demo-mem (manifest.yaml\
+      \ Package) e exportar DNA_BASE_DIR/DNA_SEARCH_DIR"
+    expected: scope pronto, sem servidor
+  - action: "dna memory remember 'Always deep-copy a document spec before mutating\
+      \ \u2014 the cache hands back a shared reference' --scope demo-mem --area Feature/kernel\
+      \ --affect regret --reason '...' (+2 outros fatos de \xE1reas diferentes)"
+    expected: "3x '\U0001F9E0 remembered LessonLearned/rem-\u2026' sem aviso de extra\
+      \ ausente (indexado no write)"
+  - action: dna memory recall 'safely mutating a shared document spec' --scope demo-mem
+      -k 2 --no-reconsolidate
+    expected: "header mostra 'hybrid (dense+lexical+RRF) + semantic (ecphory\xD7cosine)';\
+      \ hit #1 \xE9 a mem\xF3ria do deep-copy com tag [cos \u22480.56]"
+  - action: mesmo recall com --no-semantic
+    expected: "header sem '+ semantic'; hits sem [cos]; ordena\xE7\xE3o base preservada"
+  - action: mesmo recall com --json -k 1
+    expected: top hit traz score_recall, rank_recall, rank_ecphory=1, semantic>0.5;
+      payload com semantic:true e degraded:false
+  verifies:
+  - Story/s-memory-semantic-recall
+  created_at: '2026-07-10T19:33:44+00:00'
+  updated_at: '2026-07-10T19:33:44+00:00'

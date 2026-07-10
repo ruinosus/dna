@@ -93,3 +93,49 @@ def test_score_engram_parity():
         s = score_engram(EngramRef(c["engram"]["name"], c["engram"]["spec"]), c["cue_ctx"])
         assert s.score == pytest.approx(c["expected_score"], abs=1e-9), c
         assert s.matched_dims == c["expected_matched"], c
+
+
+# ── semantic recall (s-memory-semantic-recall) ──────────────────────────────
+
+
+def test_cosine_similarity_fake_parity():
+    from dna.kernel.embedding import fake_embed_one
+    from dna.memory.semantic import cosine_similarity
+
+    for c in _FX["cosine_similarity_fake"]:
+        got = cosine_similarity(fake_embed_one(c["text_a"]), fake_embed_one(c["text_b"]))
+        assert got == pytest.approx(c["expected"], abs=1e-12), c
+
+
+def test_engram_text_parity():
+    from dna.memory.semantic import engram_text
+
+    for c in _FX["engram_text"]:
+        assert engram_text(c["spec"]) == c["expected"], c
+
+
+def test_semantic_recall_fusion_parity():
+    from dna.kernel.embedding import fake_embed_one
+    from dna.memory.semantic import (
+        engram_text,
+        fuse_semantic_recall,
+        semantic_scores_from_vectors,
+    )
+
+    for c in _FX["semantic_recall_fusion"]:
+        refs = [EngramRef(e["name"], e["spec"]) for e in c["engrams"]]
+        sem = semantic_scores_from_vectors(
+            [e["name"] for e in c["engrams"]],
+            [fake_embed_one(engram_text(e["spec"])) for e in c["engrams"]],
+            fake_embed_one(c["query"]),
+        )
+        fused = fuse_semantic_recall(
+            [dict(h) for h in c["hits"]], refs, c["query"], sem, now=_dt(c["now"]),
+        )
+        assert [h["name"] for h in fused] == c["expected_order"], c
+        for h in fused:
+            assert h["score"] == pytest.approx(c["expected_scores"][h["name"]], abs=1e-12), h
+            if h["name"] in c["expected_semantic"]:
+                assert h["semantic"] == pytest.approx(
+                    c["expected_semantic"][h["name"]], abs=1e-12), h
+            assert h.get("rank_ecphory") == c["expected_rank_ecphory"].get(h["name"]), h
