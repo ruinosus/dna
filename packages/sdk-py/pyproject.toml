@@ -101,6 +101,7 @@ research = "dna.extensions.research:ResearchExtension"
 doc = "dna.extensions.doc:DocExtension"
 modelreg = "dna.extensions.modelreg:ModelRegExtension"
 automation = "dna.extensions.automation:AutomationExtension"
+eval = "dna.extensions.eval:EvalExtension"
 
 [build-system]
 requires = ["hatchling"]
