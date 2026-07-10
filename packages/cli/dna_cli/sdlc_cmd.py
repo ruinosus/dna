@@ -3413,16 +3413,24 @@ def _mark_checklist_items(
     mark_all: bool, done_at: str, done_by: str, evidence: str,
 ) -> int:
     """Mark selected checklist items done + evidence. Selectors match by
-    1-based index OR case-insensitive substring of the item text. Returns
-    the number of items marked."""
+    1-based index (digit selectors — EXACT int match, never substring) OR
+    case-insensitive substring of the item text (non-digit selectors).
+    Returns the number of items marked.
+
+    i-014: a digit selector must NOT fall through to the substring branch —
+    ``--ac 1`` used to also mark any item whose TEXT contained "1"
+    ("API v1", "10 retries", ...), over-marking checklists in the field.
+    """
     n = 0
     for i, it in enumerate(items, start=1):
         match = mark_all
         if not match:
             for sel in selectors:
-                if sel.isdigit() and int(sel) == i:
-                    match = True
-                    break
+                if sel.isdigit():
+                    if int(sel) == i:
+                        match = True
+                        break
+                    continue  # index selector: exact match only (i-014)
                 if sel and sel.lower() in str(it.get("text", "")).lower():
                     match = True
                     break
@@ -3438,9 +3446,9 @@ def _mark_checklist_items(
 @story_group.command("check")
 @click.argument("name")
 @click.option("--ac", "ac_sel", multiple=True,
-              help="Acceptance-criterion to mark done: 1-based index or text substring (repeatable).")
+              help="Acceptance-criterion to mark done: 1-based index (exact) or text substring (repeatable).")
 @click.option("--dod", "dod_sel", multiple=True,
-              help="Definition-of-done item to mark done: 1-based index or text substring (repeatable).")
+              help="Definition-of-done item to mark done: 1-based index (exact) or text substring (repeatable).")
 @click.option("--all", "mark_all", is_flag=True, default=False,
               help="Mark ALL acceptance_criteria + definition_of_done items done.")
 @click.option("--evidence", required=True,
