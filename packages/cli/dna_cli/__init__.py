@@ -19,6 +19,7 @@ from dna_cli import (
     doc_cmd,
     docs_cmd,
     eval_cmd,
+    init_cmd,
     install_cmd,
     kind_cmd,
     memory_cmd,
@@ -79,6 +80,7 @@ from dna_cli import pr_cmd as _pr_cmd  # noqa: E402,F401
 # the GitHub Issues side of the symbiosis (bridge with provenance).
 from dna_cli import issue_bridge_cmd as _issue_bridge_cmd  # noqa: E402,F401
 main.add_command(source_cmd.source)
+main.add_command(init_cmd.init)
 main.add_command(install_cmd.install)
 main.add_command(eval_cmd.eval_)
 

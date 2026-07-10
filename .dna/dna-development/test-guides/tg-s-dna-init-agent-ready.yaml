@@ -1,0 +1,32 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-s-dna-init-agent-ready
+spec:
+  description: 'Product smoke do dna init: consumidor real instala dna-cli editable
+    num venv limpo e fica agent-ready multi-tool em um comando'
+  kind_of_test: smoke
+  status: active
+  steps:
+  - action: scratch project + git init + uv venv + uv pip install -e sdk-py -e cli
+    expected: "install OK, bin\xE1rio dna dispon\xEDvel"
+  - action: dna init --tools all no projeto
+    expected: "7 created \u2014 board .dna/<dir>-dev (Genome via kernel + containers\
+      \ stories/features/issues com .gitkeep), skill projetada em .claude/.github/.cursor/.opencode/skills/dna-sdlc-cli,\
+      \ AGENTS.md na raiz, core.hooksPath=scripts/git-hooks"
+  - action: re-rodar dna init
+    expected: "idempotente \u2014 0 created, tudo skipped com nota; customiza\xE7\xF5\
+      es preservadas"
+  - action: dna sdlc feature create + story create + story start no board novo
+    expected: scope acme-app-dev auto-detectado, docs criados em .dna/acme-app-dev/
+  - action: git commit com story ativa
+    expected: 'trailers Work-Item: Story/s-smoke + Co-Authored-By: dna-sdlc[bot] presentes
+      na mensagem'
+  - action: "AGENTS.md gerado parseado pelo reader agentsmd; SKILL.md round-trip pelo\
+      \ reader agentskills; proje\xE7\xF5es byte-id\xEAnticas"
+    expected: provado por unit tests (test_init_cmd.py 14/14)
+  verifies:
+  - Story/s-dna-init-agent-ready
+  created_at: '2026-07-10T19:38:12+00:00'
+  updated_at: '2026-07-10T19:38:12+00:00'
+  owner: claude-code

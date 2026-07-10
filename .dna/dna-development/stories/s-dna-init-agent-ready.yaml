@@ -1,0 +1,144 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-dna-init-agent-ready
+spec:
+  title: "dna init \u2014 onboarding agent-ready para projetos consumidores: pip install\
+    \ dna-cl"
+  description: "dna init \u2014 onboarding agent-ready para projetos consumidores:\
+    \ pip install dna-cli entrega kernel+CLI mas o agente chega cego (skill/AGENTS.md/hooks\
+    \ s\xF3 existem no repo dna; piloto foundry bootstrapou \xE0 m\xE3o). Um comando\
+    \ materializa o Genome de onboarding embarcado via os writers de mercado do SDK."
+  status: in-progress
+  feature: f-dna-ecosystem
+  priority: high
+  labels:
+  - cli
+  - docs
+  - meta
+  reporter: claude-code
+  acceptance_criteria: &id001
+  - "Given um diret\xF3rio de projeto limpo, When roda dna init, Then cria o board\
+    \ .dna/<scope>/ com Genome (bootstrap can\xF4nico via kernel) + containers SDLC,\
+    \ projeta a Skill dna-sdlc-cli via SkillWriter byte-fiel no diret\xF3rio de skills\
+    \ de CADA tool selecionada (--tools claude,copilot,cursor,opencode; default claude,copilot;\
+    \ aceita all), escreve AGENTS.md agents.md/v1 como superf\xEDcie can\xF4nica de\
+    \ instru\xE7\xF5es na raiz e instala os git hooks"
+  - "Given um projeto j\xE1 inicializado, When re-roda dna init, Then \xE9 idempotente:\
+    \ nenhum arquivo existente \xE9 sobrescrito sem --force e o resumo diz o que foi\
+    \ pulado; --force nunca reescreve o board"
+  - "AGENTS.md gerado \xE9 parse\xE1vel pelo reader agentsmd do SDK; a skill materializada\
+    \ round-tripa pelo reader agentskills e as N proje\xE7\xF5es s\xE3o byte-id\xEA\
+    nticas entre si (um Kind, N proje\xE7\xF5es \u2014 provado por teste)"
+  - "Conte\xFAdo tool-agnostic (sem frontmatter propriet\xE1rio nem persona de uma\
+    \ tool); skill embarcada generalizada (zero caminhos/venvs internos do repo dna);\
+    \ brand-guard e gitleaks limpos; decis\xE3o multi-tool ancorada em Research/rsh-cross-tool-agent-standards\
+    \ linkada na story"
+  acceptance_criteria_source: claude-code
+  definition_of_done: &id002
+  - "unit tests (init limpo + idempot\xEAncia + round-trip reader/writer + proje\xE7\
+    \xF5es multi-tool) verdes; suites sdk-py/sdk-ts/cli + guards verdes; CI 11 checks\
+    \ verdes no PR"
+  - "smoke de produto real: scratch project + venv com dna-cli editable \u2192 dna\
+    \ init \u2192 dna sdlc story create no board novo + hook assinando commit; TestGuide\
+    \ --product + TestRun com evid\xEAncia"
+  - "docs: prosa getting-started pro dna init com tabela ferramenta\u2192diret\xF3\
+    rio + nota CLAUDE.md/GEMINI.md ponteiro (coverage guard) + refer\xEAncia CLI regenerada\
+    \ (drift guard); mkdocs build --strict verde; assimetria Py-only documentada"
+  definition_of_done_source: claude-code
+  created_at: '2026-07-10T19:10:46+00:00'
+  updated_at: '2026-07-10T19:38:17+00:00'
+  timeline:
+  - at: '2026-07-10T19:10:46+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-10T19:11:33+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-10T19:11:50+00:00'
+    actor: claude-code
+    type: decision
+    source: cli
+    summary: "Explora\xE7\xE3o conclu\xEDda. Decis\xF5es de design: (1) Genome de\
+      \ onboarding embarcado como package-data em dna_cli/data/onboarding-scope/ com\
+      \ skills/dna-sdlc-cli/SKILL.md + AGENTS.md generalizados; (2) dna init l\xEA\
+      \ os assets com SkillReader/AgentDefinitionReader e materializa com SkillWriter/AgentDefinitionWriter\
+      \ (round-trip de mercado \xE9 o produto); (3) board bootstrap reusa o padr\xE3\
+      o can\xF4nico do install_cmd (kernel.write_document Genome); (4) hooks reusam\
+      \ _ensure_hook_file/_git_symbiosis com cwd expl\xEDcito; (5) scope default <dirname>-dev\
+      \ seguindo o precedente foundry-dev do piloto."
+    commit_ref: 13c17b20635eea7b62f1268bfc32b1389408ef08
+  - at: '2026-07-10T19:17:37+00:00'
+    actor: claude-code
+    type: decision
+    source: cli
+    summary: "Implementa\xE7\xE3o core pronta: init_cmd.py (board via kernel.write_document\
+      \ + skill via SkillReader\u2192SkillWriter + AGENTS.md via AgentDefinitionReader\u2192\
+      Writer + hooks via _git_symbiosis com cwd expl\xEDcito). Decis\xE3o: o board\
+      \ rec\xE9m-criado ganha containers stories/features/issues com .gitkeep \u2014\
+      \ sem eles o autodetect de scope do sdlc (que sonda containers SDLC, i-012)\
+      \ n\xE3o enxerga o board novo e story create cairia no fallback dna-development.\
+      \ Validado manualmente: init limpo + re-run idempotente + feature/story create\
+      \ no board novo com autodetec\xE7\xE3o. Decis\xE3o adicional: next-steps e AGENTS.md\
+      \ embarcado incluem feature create antes de story create (--feature \xE9 required)."
+    commit_ref: 13c17b20635eea7b62f1268bfc32b1389408ef08
+  - at: '2026-07-10T19:26:04+00:00'
+    actor: claude-code
+    type: decision
+    source: cli
+    summary: "AMPLIA\xC7\xC3O DE ESCOPO ratificada: dna init vira MULTI-FERRAMENTA.\
+      \ Evid\xEAncia capturada em Research/rsh-cross-tool-agent-standards: AGENTS.md\
+      \ \xE9 O padr\xE3o de instru\xE7\xF5es (LF/Agentic AI Foundation, 28+ tools\
+      \ incl. Claude Code que tamb\xE9m o l\xEA) e SKILL.md/agentskills.io \xE9 O\
+      \ padr\xE3o de skills (~40 tools; formato id\xEAntico, s\xF3 muda o diret\xF3\
+      rio: .claude/.github/.cursor/.opencode). Refatorando: --tools claude,copilot,cursor,opencode\
+      \ (default claude,copilot; aceita all) \u2014 a MESMA Skill Kind projetada 1x\
+      \ por diret\xF3rio-alvo; AGENTS.md vira superf\xEDcie can\xF4nica; conte\xFA\
+      do tool-agnostic; sem GEMINI.md por default (documentado o ponteiro)."
+    commit_ref: 13c17b20635eea7b62f1268bfc32b1389408ef08
+  - at: '2026-07-10T19:34:30+00:00'
+    actor: claude-code
+    type: groom
+    source: cli
+    fields:
+      acceptance_criteria: *id001
+      acceptance_criteria_source: claude-code
+      definition_of_done: *id002
+      definition_of_done_source: claude-code
+  - at: '2026-07-10T19:38:14+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-dna-init-agent-ready
+    summary: TestGuide tg-s-dna-init-agent-ready (smoke)
+  - at: '2026-07-10T19:38:17+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-dna-init-agent-ready-20260710-193815
+    summary: "TestRun tr-tg-s-dna-init-agent-ready-20260710-193815 \u2192 pass"
+    outcome: pass
+  produces:
+  - kind: Plan
+    name: plan-s-dna-init-agent-ready
+    role: implementation
+    at: '2026-07-10T19:11:33+00:00'
+  - kind: Research
+    name: rsh-cross-tool-agent-standards
+    role: investigation
+    at: '2026-07-10T19:26:02+00:00'
+  - kind: TestGuide
+    name: tg-s-dna-init-agent-ready
+    role: test-guide
+    at: '2026-07-10T19:38:14+00:00'
+  - kind: TestRun
+    name: tr-tg-s-dna-init-agent-ready-20260710-193815
+    role: test-run
+    at: '2026-07-10T19:38:17+00:00'

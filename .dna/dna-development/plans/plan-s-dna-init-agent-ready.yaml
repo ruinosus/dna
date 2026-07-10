@@ -1,0 +1,59 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-dna-init-agent-ready
+spec:
+  title: 'Plano: s-dna-init-agent-ready'
+  date: '2026-07-10'
+  status: accepted
+  story_ref: s-dna-init-agent-ready
+  journey_phase: plan
+  body: "# Plan \u2014 `dna init`: agent-ready onboarding for consumer projects\n\n\
+    ## Problem\n`pip install dna-sdk dna-cli` delivers a working kernel + CLI, but\
+    \ the consumer's\nAI agent arrives blind: the `dna-sdlc-cli` skill, the AGENTS.md\
+    \ conventions and the\ngit hooks exist only in the dna repo. The foundry-assured\
+    \ pilot bootstrapped all of\nthis by hand. For vibe coding, agent onboarding IS\
+    \ the product.\n\n## Design (ratified)\nAssets travel as **Kinds inside an embedded\
+    \ onboarding Genome** (package-data in\n`dna_cli/data/onboarding-scope/`), materialized\
+    \ by the SDK's market writers \u2014\nthe writers are the product (dogfood), not\
+    \ loose text templates.\n\n### Embedded onboarding scope (`packages/cli/dna_cli/data/onboarding-scope/`)\n\
+    - `skills/dna-sdlc-cli/SKILL.md` \u2014 Kind `agentskills-skill`; content ported\
+    \ from\n  the repo's `.claude/skills/dna-sdlc-cli/SKILL.md`, GENERALIZED: no dna-repo\
+    \ paths,\n  no `.dna/dna-development` references, scope-agnostic wording.\n- `AGENTS.md`\
+    \ \u2014 Kind `agentsmd-agent` (agents.md/v1): the story-first conventions\n \
+    \ (AC/DoD at create, plan gate, narration, test gate, Work-Item trailers,\n  gapless\
+    \ DoD, review = open PR, done on merge), written for ANY consumer repo.\n\n###\
+    \ `dna init [--scope <name>] [--dir <path>] [--force]` (new top-level group, `init_cmd.py`)\n\
+    1. **Board bootstrap** \u2014 reuse the canonical pattern from `install_cmd.py`\n\
+    \   (`dna_session` + `kernel.write_document(scope, \"Genome\", scope, {...})`);\n\
+    \   default scope = `<dirname>-dev` slugified (pilot precedent: `foundry-dev`).\n\
+    2. **Skill materialization** \u2014 read the embedded bundle with the kernel-registered\n\
+    \   `SkillReader` over a `FilesystemBundleHandle`, write to\n   `.claude/skills/dna-sdlc-cli/`\
+    \ with `SkillWriter` (byte-faithful reader\u2192writer\n   round-trip \u2014 the\
+    \ market-fidelity machinery on its own onboarding).\n3. **AGENTS.md** \u2014 same\
+    \ pattern with `AgentDefinitionReader`/`Writer` to the target\n   root; parseability\
+    \ re-proved by test with the SDK reader.\n4. **Git hooks** \u2014 reuse `hooks_cmd`\
+    \ internals (`_ensure_hook_file` + `core.hooksPath`\n   via `_git_symbiosis`)\
+    \ with explicit `cwd=<dir>`; non-git dir \u2192 skip with note.\n5. **Idempotence**\
+    \ \u2014 never overwrite an existing file without `--force`; each step\n   reports\
+    \ created/skipped; final summary + suggested next step\n   (`dna sdlc story create\
+    \ \u2026`).\n\n### Scope decisions\n- Py-only: the `dna` CLI is Python; sdk-ts\
+    \ has no CLI \u2014 asymmetry documented in the\n  getting-started page. Zero\
+    \ sdk-ts changes.\n- Surgical edit in `dna_cli/__init__.py` (register `init`);\
+    \ `memory_cmd.py` and\n  `dna/memory/` untouched (parallel agent owns those).\n\
+    \n## Tests\n- `packages/cli/tests/test_init_cmd.py` \u2014 clean-dir init creates\
+    \ full tree;\n  re-run idempotent (no clobber, reports skips); `--force` overwrites;\n\
+    \  AGENTS.md parses via `AgentDefinitionReader`; materialized skill round-trips\
+    \ via\n  `SkillReader` (name + instruction fidelity); non-git dir skips hooks\
+    \ gracefully;\n  board usable (`Genome.yaml` written through the kernel).\n- Product\
+    \ smoke: scratch project + fresh venv + editable `dna-cli` \u2192 `dna init` \u2192\
+    \n  tree; `dna sdlc story create` on the new board; hook stamps a commit.\n  TestGuide\
+    \ `--product` + TestRun with evidence.\n\n## Docs (gates)\n- `docs/getting-started/agent-onboarding.md`\
+    \ (prose with `dna init` invocation \u2014\n  docs_coverage_guard) + mkdocs nav\
+    \ entry.\n- Regenerate `docs/reference/cli/` (`scripts/gen_cli_docs.py` \u2014\
+    \ drift guard).\n- `mkdocs build --strict` green.\n\n## Delivery\nBranch `feat/s-dna-init-agent-ready`\
+    \ \u2192 PR via `dna sdlc story pr` (no merge).\nFollow-up candidate (filed as\
+    \ Issue if out of budget): publish the onboarding\nGenome also via `dna install\
+    \ github:` as an alternative delivery channel.\n"
+  created_at: '2026-07-10T19:11:30+00:00'
+  updated_at: '2026-07-10T19:11:30+00:00'
