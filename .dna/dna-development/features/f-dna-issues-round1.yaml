@@ -8,7 +8,7 @@ spec:
     \ gen\xE9rica; i-007+i-009 fixes pequenos; i-001+i-002 d\xE9bito do adapter pg\
     \ cru; i-005 docstrings) + a ponte DNA\u2194GitHub Issues (publish/import/sync\
     \ com proveni\xEAncia \u2014 fecha o tri\xE2ngulo da symbiosis: commits+PRs+issues)."
-  status: in-development
+  status: done
   epic: e-dna-public-extraction
   reporter: claude-code
   priority: high
@@ -18,7 +18,7 @@ spec:
   - meta
   business_value: 500
   created_at: '2026-07-10T10:51:27+00:00'
-  updated_at: '2026-07-10T10:51:29+00:00'
+  updated_at: '2026-07-10T12:26:02+00:00'
   timeline:
   - at: '2026-07-10T10:51:27+00:00'
     actor: claude-code
@@ -31,3 +31,11 @@ spec:
     source: cli
     from: discovery
     to: in-development
+  - at: '2026-07-10T12:26:02+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-development
+    to: done
+    commit_ref: 7e09815fcc7a5535f4beb4c2e8beb7ac18073bc6
+  closed_at: '2026-07-10T12:26:02+00:00'
