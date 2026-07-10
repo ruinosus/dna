@@ -11,7 +11,7 @@ spec:
     \ roundtrip remember\u2192recall, determinismo, semantic on/off, forget bi-temporal,\
     \ consolidate idempotente, decay monot\xF4nico, backfill lazy idempotente, pesos/threshold\
     \ do ecphory e fus\xE3o RRF."
-  status: in-progress
+  status: review
   feature: f-dna-search-memory
   reporter: claude-code
   acceptance_criteria:
@@ -40,7 +40,7 @@ spec:
     \ sem merge"
   definition_of_done_source: cli-create
   created_at: '2026-07-10T20:09:00+00:00'
-  updated_at: '2026-07-10T20:26:39+00:00'
+  updated_at: '2026-07-10T20:29:00+00:00'
   timeline:
   - at: '2026-07-10T20:09:00+00:00'
     actor: claude-code
@@ -93,6 +93,25 @@ spec:
     name: tr-tg-memory-conformance-kit-20260710-202637
     summary: "TestRun tr-tg-memory-conformance-kit-20260710-202637 \u2192 pass"
     outcome: pass
+  - at: '2026-07-10T20:28:21+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/42'
+    pr_url: https://github.com/ruinosus/dna/pull/42
+  - at: '2026-07-10T20:28:58+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: PR https://github.com/ruinosus/dna/pull/42 aberto; gates locais todos
+      verdes (sdk-py 2819, sdk-ts 1361+typecheck, cli 357, guards, mkdocs --strict,
+      smoke de produto externo PASS); aguardando CI 11/11
+  - at: '2026-07-10T20:29:00+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
   produces:
   - kind: Plan
     name: plan-s-memory-conformance-kit
