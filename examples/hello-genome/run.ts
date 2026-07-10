@@ -9,7 +9,7 @@
  *     cd packages/sdk-ts && bun install
  *     bun run ../../examples/hello-genome/run.ts
  */
-// In your own project this is: import { quickInstance } from "@dna/sdk";
+// In your own project this is: import { quickInstance } from "dna-sdk";
 import { quickInstance } from "../../packages/sdk-ts/src/index.ts";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";

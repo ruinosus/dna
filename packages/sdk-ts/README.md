@@ -1,27 +1,33 @@
-# @dna/sdk (TypeScript)
+# dna-sdk (TypeScript)
 
 TypeScript SDK for **DNA — Domain Notation of Anything**: a microkernel +
 extensions runtime for declarative agent notation. 1:1 behavioral twin of
 the Python SDK (`packages/sdk-py`) — same ports, same composition rules,
 same outputs, parity-enforced by tests. See the
-[repository README](../../README.md) for the thesis and the Kind catalog.
+[repository README](https://github.com/ruinosus/dna#readme) for the thesis and the Kind catalog.
 
 ## Install
 
-Not yet on npm — use it from the repo:
+```bash
+npm install dna-sdk        # or: bun add dna-sdk
+```
+
+Pre-release / exact-pin alternative — consume straight from the repo:
 
 ```bash
 cd packages/sdk-ts
 bun install
 ```
 
-ESM-only. Bun is the supported runtime and test runner; the package ships
-TypeScript sources directly (no build step).
+ESM-only, Node >= 20 or Bun. The published package ships compiled JS +
+type declarations (`dist/`); inside the repo, dev and tests run the
+TypeScript sources directly under Bun (no build step needed). The
+publication build is `bun run build` (tsc emit + runtime-asset copy).
 
 ## Minimal example
 
 ```typescript
-import { quickInstance } from "@dna/sdk";
+import { quickInstance } from "dna-sdk";
 
 // Scan a scope (directory of YAML/Markdown manifests under .dna/)
 const mi = await quickInstance("hello-genome", "examples/hello-genome/.dna");
@@ -35,7 +41,7 @@ for (const d of mi.documents) {
 console.log(await mi.buildPrompt({ agent: "greeter" }));
 ```
 
-Runnable version: [`examples/hello-genome/run.ts`](../../examples/hello-genome/run.ts).
+Runnable version: [`examples/hello-genome/run.ts`](https://github.com/ruinosus/dna/blob/main/examples/hello-genome/run.ts).
 
 Prefer `createKernelWithBuiltins()` (from the same entrypoint) when you
 want to wire sources, caches and resolvers yourself.

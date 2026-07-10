@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "@dna/sdk",
+      "name": "dna-sdk",
       "dependencies": {
         "@types/pg": "^8.20.0",
         "ajv": "^8.18.0",
