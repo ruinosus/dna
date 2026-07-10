@@ -1,0 +1,52 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-pilot-foundry-assured
+spec:
+  title: "O PILOTO: primeiro consumidor real do DNA \u2014 o repo p\xFAblico foundry-assured\
+    \ (conc"
+  description: "O PILOTO: primeiro consumidor real do DNA \u2014 o repo p\xFAblico\
+    \ foundry-assured (concierge multi-agente Foundry/AG-UI, multi-tenant). Extrair\
+    \ apps/backend/app/agents/prompts.py (9 blocos de instruction hardcoded: triage/retrieve/resolve/concierge\xD7\
+    3/cockpit/selfwiki/platform) para um scope .dna/helpdesk/ com Agent (+Soul/Guardrail\
+    \ onde a estrutura do prompt pedir) Kinds; backend comp\xF5e no import via dna-sdk\
+    \ GIT-DEP pinada (floor 3.12 resolvido no #34); eval suite (dna eval) guardando\
+    \ os prompts compostos no CI de l\xE1; ADR documentando a ado\xE7\xE3o (cultura\
+    \ do repo). O PR \xE9 no foundry-assured e fica PRA REVIS\xC3O DO BARNA (projeto\
+    \ dele, processo dele). Gatilho da decis\xE3o PyPI/npm."
+  status: in-progress
+  feature: f-dna-ecosystem
+  priority: high
+  labels:
+  - meta
+  - python
+  reporter: claude-code
+  business_value: 700
+  acceptance_criteria:
+  - "prompts.py substitu\xEDdo por composi\xE7\xE3o DNA (paridade byte/equivalente\
+    \ dos 9 prompts provada por teste); backend instala dna-sdk via git pinada e sobe;\
+    \ eval suite verde no CI deles; ADR escrito; PR aberto NO foundry-assured aguardando\
+    \ review do Barna"
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - "PR aberto (merge \xE9 decis\xE3o do Barna no repo dele)"
+  definition_of_done_source: cli-create
+  created_at: '2026-07-10T14:28:52+00:00'
+  updated_at: '2026-07-10T14:28:55+00:00'
+  timeline:
+  - at: '2026-07-10T14:28:52+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-10T14:28:55+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  produces:
+  - kind: Plan
+    name: plan-s-pilot-foundry-assured
+    role: implementation
+    at: '2026-07-10T14:28:55+00:00'

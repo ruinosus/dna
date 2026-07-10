@@ -1,0 +1,17 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-pilot-foundry-assured
+spec:
+  title: 'Plano: s-pilot-foundry-assured'
+  date: '2026-07-10'
+  status: accepted
+  story_ref: s-pilot-foundry-assured
+  journey_phase: plan
+  body: "No clone ~/projects/foundry-assured: branch, .dna/helpdesk com os 9 Agents\
+    \ (fidelidade byte aos prompts atuais provada por teste de equival\xEAncia), prompts.py\
+    \ vira shim de composi\xE7\xE3o via dna-sdk git-dep pinada no commit do #34, eval\
+    \ suite + step no CI deles, ADR. PR aberto l\xE1, review do Barna. Worktree pr\xF3\
+    prio do foundry."
+  created_at: '2026-07-10T14:28:53+00:00'
+  updated_at: '2026-07-10T14:28:53+00:00'

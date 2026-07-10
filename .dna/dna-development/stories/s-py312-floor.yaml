@@ -22,15 +22,21 @@ spec:
   reporter: claude-code
   business_value: 500
   acceptance_criteria:
-  - "requires-python >=3.12 nos pyprojects (sdk+cli); typing_extensions s\xF3 quando\
-    \ <3.13 (zero custo no 3.13+); suites completas verdes em AMBAS as vers\xF5es\
-    \ na matriz de CI; guard de import default intocado"
+  - text: "requires-python >=3.12 nos pyprojects (sdk+cli); typing_extensions s\xF3\
+      \ quando <3.13 (zero custo no 3.13+); suites completas verdes em AMBAS as vers\xF5\
+      es na matriz de CI; guard de import default intocado"
+    done: true
+    done_at: '2026-07-10T14:28:48+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - PR merged via story pr
+  - text: PR merged via story pr
+    done: true
+    done_at: '2026-07-10T14:28:48+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-10T14:10:20+00:00'
-  updated_at: '2026-07-10T14:10:23+00:00'
+  updated_at: '2026-07-10T14:28:50+00:00'
   timeline:
   - at: '2026-07-10T14:10:20+00:00'
     actor: claude-code
@@ -43,6 +49,14 @@ spec:
     source: cli
     from: todo
     to: in-progress
+  - at: '2026-07-10T14:28:50+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #34 merged (matriz 12 checks verde). Floor >=3.12; matriz CI {3.12,3.13}\
+      \ permanente; branch protection atualizada pros contexts da matriz. Motivador:\
+      \ primeiro consumidor real (piloto foundry-assured) pinado em 3.12. O SDK agora\
+      \ instala l\xE1."
   produces:
   - kind: Plan
     name: plan-s-py312-floor
