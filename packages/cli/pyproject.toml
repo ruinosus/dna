@@ -26,6 +26,9 @@ dev = [
 
 [tool.pytest.ini_options]
 pythonpath = ["tests"]
+markers = [
+    "requires_network: skip unless outbound network is available (tests/conftest.py; DNA_OFFLINE=1 forces the skip)",
+]
 
 [build-system]
 requires = ["hatchling"]
