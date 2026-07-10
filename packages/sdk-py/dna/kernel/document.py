@@ -2,8 +2,18 @@
 from __future__ import annotations
 
 import dataclasses
+import sys
 from functools import cached_property
-from typing import Any, Generic, TypeVar, cast
+from typing import Any, Generic, cast
+
+# PEP 696 TypeVar(default=...) is stdlib on 3.13+; on 3.12 it comes from
+# typing_extensions (conditional dependency, env-markered in pyproject.toml —
+# zero cost on 3.13+). Version-gated so type checkers follow the same branch
+# the runtime takes (s-py312-floor).
+if sys.version_info >= (3, 13):
+    from typing import TypeVar
+else:
+    from typing_extensions import TypeVar
 
 
 class SpecDict(dict):

@@ -2,9 +2,10 @@
 name = "dna-cli"
 version = "0.1.0"
 description = "DNA command-line interface — the `dna` binary for the declarative SDLC + document CRUD (kernel-local, no service required)"
-# 3.13 floor: hard dependency on dna-sdk, which is >=3.13 (PEP 696 stdlib
-# TypeVar defaults — see packages/sdk-py/pyproject.toml).
-requires-python = ">=3.13,<3.14"
+# 3.12 floor: tracks dna-sdk, which is >=3.12 since s-py312-floor (PEP 696
+# TypeVar defaults come from typing_extensions on <3.13 — see
+# packages/sdk-py/pyproject.toml).
+requires-python = ">=3.12,<3.14"
 dependencies = [
     "click>=8.1.0",
     "pyyaml>=6.0",

@@ -66,6 +66,20 @@ baseline that the first tagged release will draw from.
 - **Community-health baseline** — this CHANGELOG, plus `CONTRIBUTING`,
   `SECURITY`, `CODE_OF_CONDUCT`, issue forms, and a PR template.
 
+### Changed
+
+- **Python floor lowered to 3.12** (`requires-python = ">=3.12,<3.14"` for
+  `dna-sdk` and `dna-cli`, s-py312-floor). The first real consumer of the
+  SDK — a backend on Azure Container Apps pinned to `>=3.12,<3.13` — could
+  not install it under the previous 3.13-only floor, a convenience decision
+  from PR #1 whose single deliberate 3.13-ism was PEP 696
+  `TypeVar(default=...)` in `dna/kernel/document.py`. That import is now
+  version-gated: stdlib `typing` on 3.13+, `typing_extensions>=4.4` on 3.12
+  (an env-markered dependency — zero cost on 3.13+ installs). A full-suite
+  sweep under 3.12 found no other accidental 3.13-isms, and the CI matrix
+  now runs sdk-py + cli on {3.12, 3.13} so the floor cannot regress
+  silently. Ecosystem libraries support N-1.
+
 ### Removed
 
 - **The raw Python SQL adapters** (`s-retire-raw-sql-adapters`). The

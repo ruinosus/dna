@@ -14,7 +14,7 @@ parity is the point, so this tutorial shows both side by side.
 
 === "Python"
 
-    - **Python 3.13+** with [uv](https://docs.astral.sh/uv/).
+    - **Python 3.12+** with [uv](https://docs.astral.sh/uv/).
 
     ```bash
     cd packages/sdk-py && uv sync
