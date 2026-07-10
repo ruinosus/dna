@@ -159,7 +159,13 @@ class HttpResolver:
 
     @staticmethod
     def _collect_requested(dep: dict[str, Any]) -> dict[str, list[str]] | None:
-        """Collect requested items by kind name."""
+        """Collect requested items by kind name.
+
+        Rejects the legacy pre-v3 category shorthand (i-009) — same
+        contract as ``LocalResolver._collect_requested``.
+        """
+        from dna.adapters.resolvers.local import reject_legacy_shorthand
+        reject_legacy_shorthand(dep)
         result: dict[str, list[str]] = {}
         for item in dep.get("items") or []:
             kind = item.get("kind", "")

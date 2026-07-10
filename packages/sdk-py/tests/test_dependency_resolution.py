@@ -246,3 +246,87 @@ class TestGitHubResolverUnit:
         key = r.cache_key("github:my-org/my-repo@feature/branch")
         assert key.startswith("github-")
         assert ":" not in key
+
+
+class TestLegacyDepShorthandRejected:
+    """i-009 — the pre-v3 dep shorthand ('skills: [...]' as a top-level dep
+    key) is a DEAD format: the Genome contract is ``items: [{kind, names}]``
+    (no doc, schema or resolver ever documented the shorthand). Silently
+    ignoring it made resolution fall through to ``_resolve_all`` with the
+    wrong granularity — pointed at a flat tree it returned the bundle
+    SUBDIRECTORIES (references/, scripts/) instead of the bundles.
+    The shorthand is now rejected loudly with a rewrite recipe.
+    """
+
+    @pytest.mark.asyncio
+    async def test_local_resolver_rejects_skills_shorthand(self, tmp_path):
+        from dna.kernel.protocols import ResolveError
+        remote = _create_remote_repo(tmp_path)
+        resolver = LocalResolver()
+        dep = {"source": f"local:{remote}", "skills": ["tdd", "debugging"]}
+        with pytest.raises(ResolveError) as excinfo:
+            await resolver.resolve(f"local:{remote}", dep)
+        msg = str(excinfo.value)
+        assert "skills" in msg            # names the offending key
+        assert "items" in msg             # points at the v3 contract
+
+    @pytest.mark.asyncio
+    async def test_github_resolver_rejects_shorthand_before_walking(self, tmp_path, monkeypatch):
+        """The github path (the market-demo case) must reject too — it used
+        to skip the check entirely and land in _resolve_all."""
+        from dna.adapters.resolvers.github import FetchedTree
+        from dna.kernel.protocols import ResolveError
+        remote = _create_remote_repo(tmp_path)
+        r = GitHubResolver()
+        monkeypatch.setattr(
+            GitHubResolver, "fetch_tree",
+            lambda self, uri, timeout=60: FetchedTree(
+                root=remote / "skills", owner="anthropics", repo="skills",
+                subdir="skills", ref="main", commit=None,
+            ),
+        )
+        dep = {
+            "source": "github:anthropics/skills/skills@main",
+            "skills": ["tdd", "debugging"],
+        }
+        with pytest.raises(ResolveError) as excinfo:
+            await r.resolve("github:anthropics/skills/skills@main", dep)
+        assert "items" in str(excinfo.value)
+
+    def test_kernel_surfaces_shorthand_as_resolve_error(self, tmp_path):
+        """Through kernel.instance() the rejection lands in mi.resolve_errors
+        (a loud report, not a crash)."""
+        remote = _create_remote_repo(tmp_path)
+        project = tmp_path / "project" / ".dna" / "legacy-app"
+        project.mkdir(parents=True)
+        manifest = {
+            "apiVersion": "github.com/ruinosus/dna/v1",
+            "kind": "Genome",
+            "metadata": {"name": "legacy-app"},
+            "spec": {
+                "dependencies": [
+                    {"source": f"local:{remote}", "skills": ["tdd"]},
+                ],
+            },
+        }
+        (project / "Genome.yaml").write_text(
+            yaml.dump(manifest, default_flow_style=False)
+        )
+        kernel = _build_kernel(tmp_path / "project" / ".dna")
+        mi = kernel.instance("legacy-app")
+        assert any("items" in e for e in mi.resolve_errors)
+        # And the wrong-granularity fallback did NOT happen: no Skill docs
+        # imported from the dep.
+        assert not [d for d in mi.documents if d.kind == "Skill"]
+
+    @pytest.mark.asyncio
+    async def test_items_format_still_resolves(self, tmp_path):
+        """Control: the v3 items format keeps working untouched."""
+        remote = _create_remote_repo(tmp_path)
+        resolver = LocalResolver()
+        dep = {
+            "source": f"local:{remote}",
+            "items": [{"kind": "Skill", "names": ["tdd"]}],
+        }
+        resolved = await resolver.resolve(f"local:{remote}", dep)
+        assert [r.name for r in resolved] == ["tdd"]

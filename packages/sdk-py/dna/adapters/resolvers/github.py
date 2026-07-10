@@ -130,9 +130,10 @@ class GitHubResolver:
 
         from dna.adapters.resolvers.local import LocalResolver
         local = LocalResolver()
-        items_filter = dep.get("items")
-        if items_filter:
-            requested = local._collect_requested(dep)
-            if requested:
-                return local._resolve_by_category(source, requested)
+        # _collect_requested runs unconditionally so the dead legacy
+        # shorthand (`skills: [...]`) is rejected loudly (i-009) instead
+        # of silently falling through to _resolve_all.
+        requested = local._collect_requested(dep)
+        if requested:
+            return local._resolve_by_category(source, requested)
         return local._resolve_all(source)

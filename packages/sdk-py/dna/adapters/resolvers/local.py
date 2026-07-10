@@ -6,9 +6,38 @@ import re
 from pathlib import Path
 from typing import Any
 
-from dna.kernel.protocols import ResolvedItem
+from dna.kernel.protocols import ResolvedItem, ResolveError
 
 logger = logging.getLogger(__name__)
+
+# i-009 — pre-v3 dependency shorthand: category-list keys at the dep top
+# level (`skills: [...]`). DEAD format — the Genome contract is
+# `items: [{kind, names}]` and no resolver ever read the shorthand, so it
+# silently fell through to _resolve_all with the wrong granularity
+# (bundle SUBDIRECTORIES instead of bundles). Rejected loudly instead.
+LEGACY_SHORTHAND_KEYS = ("skills", "souls", "agents", "actors", "guardrails")
+
+
+def reject_legacy_shorthand(dep: dict[str, Any]) -> None:
+    """Raise ResolveError if the dep uses the dead pre-v3 category shorthand.
+
+    Shared by the local, github and http resolvers so the legacy format
+    fails loud (an entry in ``mi.resolve_errors``) with a rewrite recipe
+    instead of silently resolving at the wrong granularity.
+    """
+    legacy = [
+        k for k in LEGACY_SHORTHAND_KEYS
+        if isinstance(dep.get(k), list)
+    ]
+    if legacy:
+        source = dep.get("source", "<unknown>")
+        raise ResolveError(
+            f"Dependency {source!r} uses the legacy '{legacy[0]}:' shorthand, "
+            f"which is no longer read. Rewrite it in the v3 items format:\n"
+            f"  items:\n"
+            f"  - kind: {legacy[0].rstrip('s').capitalize()}\n"
+            f"    names: [...]"
+        )
 
 
 class LocalResolver:
@@ -53,7 +82,11 @@ class LocalResolver:
 
         kind maps to directory name: Skill → skills/, Soul → souls/
         When names is omitted, imports all items of that kind.
+
+        The legacy pre-v3 shorthand (`skills: [...]` at the dep top level)
+        raises ResolveError (i-009) — see ``reject_legacy_shorthand``.
         """
+        reject_legacy_shorthand(dep)
         result: dict[str, list[str]] = {}
         for item in dep.get("items") or []:
             kind = item.get("kind", "")

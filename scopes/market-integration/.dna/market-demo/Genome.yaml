@@ -10,7 +10,9 @@ metadata:
 spec:
   dependencies:
   - source: github:anthropics/skills/skills@main
-    skills:
-    - frontend-design
-    - mcp-builder
-    - claude-api
+    items:
+    - kind: Skill
+      names:
+      - frontend-design
+      - mcp-builder
+      - claude-api
