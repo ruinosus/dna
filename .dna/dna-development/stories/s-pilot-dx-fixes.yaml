@@ -41,7 +41,7 @@ spec:
       (pass); PR a abrir via story pr
   definition_of_done_source: cli-create
   created_at: '2026-07-10T17:11:56+00:00'
-  updated_at: '2026-07-10T17:43:34+00:00'
+  updated_at: '2026-07-10T17:44:55+00:00'
   timeline:
   - at: '2026-07-10T17:11:56+00:00'
     actor: claude-code
@@ -125,6 +125,17 @@ spec:
     source: cli
     from: in-progress
     to: review
+  - at: '2026-07-10T17:44:55+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #35 aberto via story pr (base main). Smoke real registrado: TestGuide\
+      \ tg-pilot-dx-fixes (--product, 5 passos) + TestRun tr-tg-pilot-dx-fixes-20260710-174112\
+      \ (pass). Guards + cli(3.12/3.13) + docs-build j\xE1 verdes no CI; aguardando\
+      \ sdk-py matriz + sdk-ts + postgres. B\xF4nus: brand-guard estava QUEBRADO no\
+      \ main (token no s-pilot-foundry-assured.yaml, pr\xE9-existente) \u2014 allowlist\
+      \ pontual no commit 9bde7f0 desbloqueia este PR e o pr\xF3ximo push do main."
+    commit_ref: 8099ac1023c9df14913c0d4760565e69bb0c047c
   produces:
   - kind: Plan
     name: plan-s-pilot-dx-fixes
