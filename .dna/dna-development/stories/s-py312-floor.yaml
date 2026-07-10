@@ -12,7 +12,7 @@ spec:
     \ TypeVar(default=) \xE9 usado), varrer outros 3.13-isms acidentais (c\xF3digo\
     \ foi escrito sob CI 3.13-only), e MATRIZ de CI {3.12, 3.13} pra o floor nunca\
     \ mais regredir silenciosamente."
-  status: in-progress
+  status: done
   feature: f-dna-ecosystem
   priority: high
   labels:
@@ -36,7 +36,7 @@ spec:
     done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-10T14:10:20+00:00'
-  updated_at: '2026-07-10T14:28:50+00:00'
+  updated_at: '2026-07-10T14:29:23+00:00'
   timeline:
   - at: '2026-07-10T14:10:20+00:00'
     actor: claude-code
@@ -57,8 +57,44 @@ spec:
       \ permanente; branch protection atualizada pros contexts da matriz. Motivador:\
       \ primeiro consumidor real (piloto foundry-assured) pinado em 3.12. O SDK agora\
       \ instala l\xE1."
+  - at: '2026-07-10T14:29:16+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-py312-floor
+    summary: TestGuide tg-s-py312-floor (smoke)
+  - at: '2026-07-10T14:29:19+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-py312-floor-20260710-142917
+    summary: "TestRun tr-tg-s-py312-floor-20260710-142917 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-10T14:29:21+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'PR #34 merged; matriz permanente; consumidor 3.12 desbloqueado.'
+  - at: '2026-07-10T14:29:23+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: done
+    commit_ref: 759e99e4352544aa64225b069eb54a7de7d3d9cf
   produces:
   - kind: Plan
     name: plan-s-py312-floor
     role: implementation
     at: '2026-07-10T14:10:23+00:00'
+  - kind: TestGuide
+    name: tg-s-py312-floor
+    role: test-guide
+    at: '2026-07-10T14:29:16+00:00'
+  - kind: TestRun
+    name: tr-tg-s-py312-floor-20260710-142917
+    role: test-run
+    at: '2026-07-10T14:29:19+00:00'
+  closed_at: '2026-07-10T14:29:20+00:00'

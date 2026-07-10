@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-py312-floor-20260710-142917
+spec:
+  guide_ref: tg-s-py312-floor
+  outcome: pass
+  verifies:
+  - Story/s-py312-floor
+  executed_by: claude-code
+  executed_at: '2026-07-10T14:29:17+00:00'
+  evidence:
+  - ci:pr34-matriz-12-checks-verde-3.12-E-3.13,smoke-produto:uv-venv-3.12-instala-e-roda-suites-completas,check:branch-protection-11-contexts-matriz
