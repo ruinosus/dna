@@ -1,0 +1,24 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-018-cache-read-tree-claim-subtree
+spec:
+  description: "Kaizen follow-up de i-016: FilesystemCache._read_tree (packages/sdk-py/dna/adapters/filesystem/cache.py,\
+    \ TS twin idem) tem o mesmo padr\xE3o claim-engole-sub\xE1rvore que escondia docs\
+    \ no install \u2014 um reader que clama um subdir encerra o probe daquele subdir\
+    \ ('matched \u2192 continue'), ent\xE3o uma \xE1rvore de depend\xEAncia mista\
+    \ (ex. bundle com AGENTS.md + skills/ abaixo) carrega s\xF3 o doc clamado. O install\
+    \ foi consertado com consumed-set via WriterPort.serialize (install_cmd._scan_tree);\
+    \ avaliar levar a mesma sem\xE2ntica pro scan do cache \u2014 toca SDK Py+TS (paridade)\
+    \ e o formato dos deps instalados, por isso ficou fora do escopo de s-install-scan-fixes."
+  type: enhancement
+  severity: low
+  status: open
+  owner: claude-code
+  related_feature: f-dna-ecosystem
+  timeline:
+  - at: '2026-07-10T21:49:42+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
