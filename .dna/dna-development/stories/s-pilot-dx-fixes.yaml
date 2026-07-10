@@ -113,6 +113,12 @@ spec:
     evidence: commits 48ed56c/ff0281d/9b46bb3/9bde7f0 + TestRun tr-tg-pilot-dx-fixes-20260710-174112
       (pass); PR a abrir via story pr
     by: claude-code
+  - at: '2026-07-10T17:42:49+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/35'
+    pr_url: https://github.com/ruinosus/dna/pull/35
   produces:
   - kind: Plan
     name: plan-s-pilot-dx-fixes
