@@ -29,7 +29,7 @@ spec:
   - PR merged via story pr
   definition_of_done_source: cli-create
   created_at: '2026-07-10T10:51:31+00:00'
-  updated_at: '2026-07-10T12:00:20+00:00'
+  updated_at: '2026-07-10T12:20:03+00:00'
   timeline:
   - at: '2026-07-10T10:51:31+00:00'
     actor: claude-code
@@ -42,8 +42,53 @@ spec:
     source: cli
     from: todo
     to: in-progress
+  - at: '2026-07-10T12:06:09+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Recon done: Issue \xE9 class Kind (Py+TS twin, n\xE3o descriptor \u2014\
+      \ paridade por conven\xE7\xE3o). Write-path validation (#29) enforce ON \u2192\
+      \ github_* entra no schema dos DOIS lados antes de qualquer write. Plano de\
+      \ m\xF3dulos: _github_bridge.py (builders puros + gh plumbing, espelho do _git_symbiosis)\
+      \ + issue_bridge_cmd.py (publish/import/sync no issue_group, espelho do pr_cmd)\
+      \ + resolve ganha close best-effort fail-soft."
+    commit_ref: fbf6ff29984dcfd9d881f159f4fc043587c3ff81
+  - at: '2026-07-10T12:15:06+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Build core pronto: schema Issue +github_number/url/state/synced_at (Py+TS),\
+      \ _github_bridge.py (builders puros + gh plumbing fail-loud/fail-soft), issue\
+      \ publish/import/sync no issue_group, resolve fecha o twin best-effort. 27 testes\
+      \ novos (gh 100% mockado); suites completas verdes: sdk-py 2944 pass, cli 329\
+      \ pass, ts 1329 pass + typecheck. Agora: prosa sdlc.md (tri\xE2ngulo commits+PRs+issues)\
+      \ + reference regen + guards + smoke real."
+    commit_ref: fbf6ff29984dcfd9d881f159f4fc043587c3ff81
+  - at: '2026-07-10T12:17:38+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-github-issues-bridge-smoke
+    summary: TestGuide tg-github-issues-bridge-smoke (smoke)
+  - at: '2026-07-10T12:20:03+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-github-issues-bridge-smoke-20260710-122002
+    summary: "TestRun tr-tg-github-issues-bridge-smoke-20260710-122002 \u2192 pass"
+    outcome: pass
   produces:
   - kind: Plan
     name: plan-s-github-issues-bridge
     role: implementation
     at: '2026-07-10T12:00:20+00:00'
+  - kind: TestGuide
+    name: tg-github-issues-bridge-smoke
+    role: test-guide
+    at: '2026-07-10T12:17:38+00:00'
+  - kind: TestRun
+    name: tr-tg-github-issues-bridge-smoke-20260710-122002
+    role: test-run
+    at: '2026-07-10T12:20:03+00:00'

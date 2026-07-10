@@ -1,0 +1,31 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-github-issues-bridge-smoke
+spec:
+  description: "Round-trip REAL contra ruinosus/dna: publish i-005 \u2192 verificar\
+    \ no GitHub \u2192 import de volta num scope tempor\xE1rio \u2192 comparar campos\
+    \ \u2192 idempot\xEAncia (re-publish + re-import) \u2192 sync."
+  kind_of_test: smoke
+  status: active
+  steps:
+  - action: dna sdlc issue publish i-005-docstring-coverage-gaps
+    expected: issue criada no GitHub, URL impressa, doc ganha github_number/url/state=open
+  - action: gh issue view <N> --repo ruinosus/dna
+    expected: "t\xEDtulo '<desc truncada> (i-005-docstring-coverage-gaps)', body com\
+      \ Type/Severity + link pro doc + footer \U0001F9EC Work-Item: Issue/i-005-\u2026"
+  - action: "dna sdlc issue import <#N> num scope tempor\xE1rio (DNA_BASE_DIR scratch)"
+    expected: "doc i-001-gh<N>-\u2026 criado com github_number=<N>, reporter=ruinosus,\
+      \ type/severity mapeados"
+  - action: comparar doc importado vs i-005
+    expected: "proveni\xEAncia id\xEAntica (number/url), title=t\xEDtulo GH, status=open"
+  - action: re-publish i-005
+    expected: "'j\xE1 publicada' + mesma URL, sem duplicar"
+  - action: re-import <#N> no scope do board
+    expected: "'j\xE1 importada como Issue/i-005-\u2026', sem doc novo"
+  - action: "dna sdlc issue sync i-005-\u2026"
+    expected: github_state refrescado (open), synced_at atualizado
+  verifies:
+  - Story/s-github-issues-bridge
+  created_at: '2026-07-10T12:17:37+00:00'
+  updated_at: '2026-07-10T12:17:37+00:00'
