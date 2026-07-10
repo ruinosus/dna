@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-pilot-foundry-assured-20260710-145207
+spec:
+  guide_ref: tg-s-pilot-foundry-assured
+  outcome: pass
+  verifies:
+  - Story/s-pilot-foundry-assured
+  executed_by: claude-code
+  executed_at: '2026-07-10T14:52:07+00:00'
+  evidence:
+  - equivalencia:9-de-9-BYTE-EQUAL-golden,ci-deles:required-check-verde-com-eval-steps,eval:9-passed+violacao-plantada-exit-1,dep:git-pinada-instala-no-3.12-deles,docker:build-context-ajustado,adr:ADR-013-formato-MADR

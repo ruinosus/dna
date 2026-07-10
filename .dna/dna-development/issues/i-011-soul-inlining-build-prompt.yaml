@@ -1,0 +1,24 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-011-soul-inlining-build-prompt
+spec:
+  description: "Achado do piloto foundry-assured (PR #104 de l\xE1): ao probar a decomposi\xE7\
+    \xE3o do CONCIERGE em Soul, o campo soul do Agent N\xC3O inlinou no build_prompt\
+    \ (commit 3628a9e). Investigar: \xE9 gap real no template default do Agent (o\
+    \ twin interno tinha o soul via dep_filters/template \u2014 e o i-213 j\xE1 apontava\
+    \ diverg\xEAncia de template TS), \xE9 opt-in n\xE3o documentado, ou uso errado\
+    \ do piloto? Se gap: consertar template+teste; se opt-in: documentar no guide.\
+    \ O piloto contornou com instruction-only (fidelidade byte mantida) e registrou\
+    \ decomposi\xE7\xE3o como follow-up no ADR deles."
+  type: question
+  severity: medium
+  status: open
+  owner: claude-code
+  related_feature: f-dna-ecosystem
+  timeline:
+  - at: '2026-07-10T14:52:02+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

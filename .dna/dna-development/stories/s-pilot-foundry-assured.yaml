@@ -14,7 +14,7 @@ spec:
     \ os prompts compostos no CI de l\xE1; ADR documentando a ado\xE7\xE3o (cultura\
     \ do repo). O PR \xE9 no foundry-assured e fica PRA REVIS\xC3O DO BARNA (projeto\
     \ dele, processo dele). Gatilho da decis\xE3o PyPI/npm."
-  status: in-progress
+  status: done
   feature: f-dna-ecosystem
   priority: high
   labels:
@@ -23,16 +23,22 @@ spec:
   reporter: claude-code
   business_value: 700
   acceptance_criteria:
-  - "prompts.py substitu\xEDdo por composi\xE7\xE3o DNA (paridade byte/equivalente\
-    \ dos 9 prompts provada por teste); backend instala dna-sdk via git pinada e sobe;\
-    \ eval suite verde no CI deles; ADR escrito; PR aberto NO foundry-assured aguardando\
-    \ review do Barna"
+  - text: "prompts.py substitu\xEDdo por composi\xE7\xE3o DNA (paridade byte/equivalente\
+      \ dos 9 prompts provada por teste); backend instala dna-sdk via git pinada e\
+      \ sobe; eval suite verde no CI deles; ADR escrito; PR aberto NO foundry-assured\
+      \ aguardando review do Barna"
+    done: true
+    done_at: '2026-07-10T14:52:09+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - "PR aberto (merge \xE9 decis\xE3o do Barna no repo dele)"
+  - text: "PR aberto (merge \xE9 decis\xE3o do Barna no repo dele)"
+    done: true
+    done_at: '2026-07-10T14:52:09+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-10T14:28:52+00:00'
-  updated_at: '2026-07-10T14:28:55+00:00'
+  updated_at: '2026-07-10T14:52:13+00:00'
   timeline:
   - at: '2026-07-10T14:28:52+00:00'
     actor: claude-code
@@ -45,8 +51,87 @@ spec:
     source: cli
     from: todo
     to: in-progress
+  - at: '2026-07-10T14:35:25+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Piloto iniciado: repo foundry-assured lido (CLAUDE.md, CONTRIBUTING,\
+      \ 12 ADRs, prompts.py 144L/9 blocos, consumidores domains.py+agents/*+workflow/agents.py,\
+      \ CI ci.yml). Decis\xF5es de partida: (1) layout .dna DENTRO de apps/backend/\
+      \ \u2014 junto do consumidor e copi\xE1vel pro Docker image (Dockerfile s\xF3\
+      \ faz COPY app; vou adicionar COPY .dna + git no slim image p/ git-dep do uv);\
+      \ (2) probe emp\xEDrico do build_prompt: instru\xE7\xE3o-only comp\xF5e instruction\
+      \ + '\\n\\n\\n\\n' de padding \u2014 byte-fidelity alcan\xE7\xE1vel com rstrip('\\\
+      n') documentado; (3) Soul N\xC3O comp\xF5e via campo soul no probe \u2192 CONCIERGE_BASE\
+      \ fica inline duplicado nas 2 variantes (fidelidade primeiro; decomposi\xE7\xE3\
+      o vira follow-up). Branch feat/dna-declarative-prompts criado."
+    commit_ref: 3628a9ee0ccb17319f9f2e21605417ff8295ba2a
+  - at: '2026-07-10T14:49:47+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PILOTO ENTREGUE \u2014 PR aberto p/ review do Barna: https://github.com/ruinosus/foundry-assured/pull/104\
+      \ (feat/dna-declarative-prompts, N\xC3O mergeado). Entrega: (1) scope .dna/helpdesk\
+      \ DENTRO de apps/backend (9 Agents byte-fi\xE9is, gerados programaticamente\
+      \ a partir das constantes originais; SEM decomposi\xE7\xE3o Soul \u2014 concatena\xE7\
+      \xE3o com espa\xE7o single-line n\xE3o \xE9 reproduz\xEDvel byte-id\xEAntica\
+      \ pela composi\xE7\xE3o por se\xE7\xF5es; documentado como follow-up no ADR);\
+      \ (2) prompts.py = shim fail-loud (mesmas 9 constantes p\xFAblicas, compose\
+      \ no import, \xFAnico ajuste rstrip('\\n') documentado); (3) gate de equival\xEA\
+      ncia eval/prompts_equivalence_test.py \u2014 9/9 BYTE-EQUAL + guarda de superf\xED\
+      cie p\xFAblica; (4) dna-sdk git-dep pinada no commit 3628a9ee (precisou tool.hatch.metadata.allow-direct-references\
+      \ + git no python:3.12-slim + COPY .dna no Dockerfile); (5) eval suite helpdesk-prompts:\
+      \ 9 casos de invariantes (sentinela TICKET:, NO_MATCH, cita\xE7\xE3o, pt-BR/grounding\
+      \ exclusivo, never-claim-a-write) \u2014 9 passed local E no CI deles via uvx\
+      \ dna-cli pinado; viola\xE7\xE3o plantada \u2192 exit 1 verificado; (6) ADR-013\
+      \ no formato MADR deles + index + CONTRIBUTING repontado. CI: required check\
+      \ 'CI passed' VERDE com os 2 gates DNA dentro; \xFAnico red \xE9 o wiki-freshness\
+      \ advisory que j\xE1 falhava no main (pr\xE9-existente, documentado no PR).\
+      \ Primeiro consumidor externo real do DNA fechado de ponta a ponta."
+    commit_ref: 3628a9ee0ccb17319f9f2e21605417ff8295ba2a
+  - at: '2026-07-10T14:52:05+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-pilot-foundry-assured
+    summary: TestGuide tg-s-pilot-foundry-assured (smoke)
+  - at: '2026-07-10T14:52:08+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-pilot-foundry-assured-20260710-145207
+    summary: "TestRun tr-tg-s-pilot-foundry-assured-20260710-145207 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-10T14:52:10+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR foundry-assured#104 ABERTO com CI verde (DoD = PR aberto; merge \xE9\
+      \ decis\xE3o do Barna no repo dele). 9 Agents byte-fi\xE9is, shim zero-mudan\xE7\
+      a nos consumidores, equival\xEAncia 9/9 BYTE-EQUAL, eval suite no CI deles (viola\xE7\
+      \xE3o plantada \u2192 exit 1 provado), ADR-013, git-dep pinada instalando no\
+      \ 3.12. Achados: soul n\xE3o inlina no build_prompt (i-011 filed); decomposi\xE7\
+      \xE3o Soul/Guardrail = follow-up honesto no ADR."
+  - at: '2026-07-10T14:52:13+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: done
+    commit_ref: 3628a9ee0ccb17319f9f2e21605417ff8295ba2a
   produces:
   - kind: Plan
     name: plan-s-pilot-foundry-assured
     role: implementation
     at: '2026-07-10T14:28:55+00:00'
+  - kind: TestGuide
+    name: tg-s-pilot-foundry-assured
+    role: test-guide
+    at: '2026-07-10T14:52:05+00:00'
+  - kind: TestRun
+    name: tr-tg-s-pilot-foundry-assured-20260710-145207
+    role: test-run
+    at: '2026-07-10T14:52:08+00:00'
+  closed_at: '2026-07-10T14:52:09+00:00'
