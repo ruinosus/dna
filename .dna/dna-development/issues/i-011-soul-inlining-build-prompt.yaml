@@ -13,7 +13,7 @@ spec:
     \ decomposi\xE7\xE3o como follow-up no ADR deles."
   type: question
   severity: medium
-  status: open
+  status: resolved
   owner: claude-code
   related_feature: f-dna-ecosystem
   timeline:
@@ -22,3 +22,25 @@ spec:
     type: status_change
     source: cli
     to: open
+  - at: '2026-07-10T15:32:54+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "N\xC3O REPRODUZ \u2014 investigado pelo orquestrador com prova: agent\
+      \ bundle (AGENT.md) E agent YAML standalone, ambos com soul: hero-soul referenciando\
+      \ souls/hero-soul/SOUL.md \u2192 build_prompt INLINA o conte\xFAdo do soul nas\
+      \ duas variantes (SOUL_MARKER presente; outputs verbatim na investiga\xE7\xE3\
+      o). O probe do agente do piloto estava incorreto (provavelmente autorou o Soul\
+      \ fora do layout can\xF4nico souls/<name>/SOUL.md). O motivo REAL de n\xE3o\
+      \ decompor no piloto permanece v\xE1lido e \xE9 outro: fidelidade byte da concatena\xE7\
+      \xE3o single-space do CONCIERGE \u2014 restri\xE7\xE3o do PR de migra\xE7\xE3\
+      o, n\xE3o do DNA. Follow-up correto: P\xD3S-merge do foundry#104, decompor um\
+      \ agent em Soul livremente (a trava byte \xE9 s\xF3 da migra\xE7\xE3o; depois\
+      \ os prompts evoluem \u2014 que \xE9 a tese)."
+  - at: '2026-07-10T15:32:55+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: open
+    to: resolved
+  closed_at: '2026-07-10T15:32:55+00:00'
