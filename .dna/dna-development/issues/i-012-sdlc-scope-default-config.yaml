@@ -1,0 +1,22 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-012-sdlc-scope-default-config
+spec:
+  description: "Feedback do piloto fase-2 (repo terceiro): todo verbo dna sdlc exige\
+    \ --scope repetido \u2014 o default \xE9 hardcoded 'dna-development' (funciona\
+    \ no nosso repo por coincid\xEAncia de nome). Num repo adotante o atrito \xE9\
+    \ constante. Fix: resolu\xE7\xE3o de scope default configur\xE1vel \u2014 env\
+    \ DNA_SDLC_SCOPE e/ou declarado no Genome do scope de board (ex.: spec.sdlc_default:\
+    \ true) e/ou o \xFAnico scope com Kinds SDLC no source. Preced\xEAncia documentada."
+  type: enhancement
+  severity: medium
+  status: open
+  owner: claude-code
+  related_feature: f-dna-ecosystem
+  timeline:
+  - at: '2026-07-10T16:41:08+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

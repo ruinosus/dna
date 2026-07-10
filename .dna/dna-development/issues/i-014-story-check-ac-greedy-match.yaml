@@ -1,0 +1,20 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-014-story-check-ac-greedy-match
+spec:
+  description: "Feedback do piloto fase-2: 'dna sdlc story check --ac 1 --ac 2' marcou\
+    \ 3 ACs \u2014 matching de \xEDndice/substring aparentemente guloso (1 casa 1\
+    \ e possivelmente 10/11, ou substring do texto). Red\u2192green: reproduzir com\
+    \ story de 3+ ACs, corrigir pra match exato de \xEDndice."
+  type: bug
+  severity: medium
+  status: open
+  owner: claude-code
+  related_feature: f-dna-ecosystem
+  timeline:
+  - at: '2026-07-10T16:41:12+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

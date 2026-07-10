@@ -1,0 +1,22 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-013-soul-trailing-newline-leak
+spec:
+  description: "Feedback do piloto fase-2: SOUL.md com newline final vaza \\n\\n\\\
+    n no prompt composto (o piloto contornou gravando o arquivo sem trailing newline\
+    \ \u2014 fr\xE1gil, todo editor re-adiciona). Fix: strip/normaliza\xE7\xE3o do\
+    \ trailing whitespace do body no reader do Soul (ou na composi\xE7\xE3o), com\
+    \ teste. Verificar se outros bundles markdown (AGENT.md, LESSON) t\xEAm o mesmo\
+    \ vazamento."
+  type: bug
+  severity: low
+  status: open
+  owner: claude-code
+  related_feature: f-dna-ecosystem
+  timeline:
+  - at: '2026-07-10T16:41:10+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

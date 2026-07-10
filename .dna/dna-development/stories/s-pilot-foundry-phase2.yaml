@@ -35,7 +35,7 @@ spec:
   - PR aberto no foundry (merge do Barna)
   definition_of_done_source: cli-create
   created_at: '2026-07-10T16:10:15+00:00'
-  updated_at: '2026-07-10T16:10:20+00:00'
+  updated_at: '2026-07-10T16:38:39+00:00'
   timeline:
   - at: '2026-07-10T16:10:15+00:00'
     actor: claude-code
@@ -48,6 +48,51 @@ spec:
     source: cli
     from: todo
     to: in-progress
+  - at: '2026-07-10T16:38:36+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "MARCO 1 \u2014 bootstrap ok: scope .dna/foundry-dev na raiz do foundry\
+      \ (Genome m\xEDnimo; kernel n\xE3o exigiu _lib nem reclamou de parent), 'dna\
+      \ sdlc hooks install' rodou 100% limpo num repo terceiro (n\xE3o havia core.hooksPath;\
+      \ hook materializado da c\xF3pia empacotada e versionado em scripts/git-hooks).\
+      \ O prepare-commit-msg carimbou os trailers Work-Item: Story/s-decompose-prompts\
+      \ + dna-sdlc[bot] AUTOMATICAMENTE no primeiro commit \u2014 zero fallback manual\
+      \ (o precedente de trailers \xE0 m\xE3o n\xE3o foi necess\xE1rio). CONTRIBUTING\
+      \ do foundry ganhou se\xE7\xE3o 'Work tracking' de ~12 linhas (CLI via git-dep\
+      \ no mesmo pin do CI)."
+    commit_ref: 62a29151703e4f7deba5d165cc0202772442bdd6
+  - at: '2026-07-10T16:38:38+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "MARCO 2 \u2014 decomposi\xE7\xE3o ok: souls/concierge (persona 1x) +\
+      \ guardrails/grounded-citation e no-write-claims (error/output) wired via spec.guardrails;\
+      \ variantes s\xF3 com delta + promptTemplate persona-first (cascata n\xEDvel\
+      \ 1 usada de verdade num repo externo); concierge-base morreu (agent + constante\
+      \ \u2014 sem consumidor standalone). Guarda mudou de natureza: prompts_equivalence_test.py\
+      \ removido, eval suite expandida \xE9 a guarda de registro \u2014 ganhou not_contains\
+      \ (ungrounded PRO\xCDBE dever de cita\xE7\xE3o), checks de guardrail-wired (header\
+      \ da se\xE7\xE3o) e concierge-soul-identity provando que Soul \xE9 prompt target\
+      \ direto. Viola\xE7\xE3o plantada \u2192 exit 1 (5 checks acusados); 9/9 verdes\
+      \ TAMB\xC9M no dna-cli do pin do CI (3628a9ee). Achado de DX: SOUL.md com \\\
+      n final vaza \\n\\n\\n no prompt composto (contornado gravando sem trailing\
+      \ newline \u2014 candidato a strip no reader)."
+    commit_ref: 62a29151703e4f7deba5d165cc0202772442bdd6
+  - at: '2026-07-10T16:38:39+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "MARCO 3 \u2014 PR aberto NATIVAMENTE de dentro do foundry: 'dna sdlc\
+      \ story pr s-decompose-prompts --scope foundry-dev --base main' \u2192 https://github.com/ruinosus/foundry-assured/pull/106\
+      \ (title feat(dna):\u2026 + AC checklist + footer Work-Item \u2014 o gap de\
+      \ assinatura do #104 resolvido por constru\xE7\xE3o). Check requerido 'CI passed'\
+      \ VERDE (backend inclui a eval suite sem\xE2ntica); \xFAnico vermelho \xE9 o\
+      \ wiki-freshness advisory pr\xE9-existente (drift desde 07-02, n\xE3o-gate).\
+      \ Story do foundry em review; merge fica pro Barna. Fluxo dna sdlc num repo\
+      \ terceiro: redondo \u2014 \xFAnico ajuste foi passar --scope foundry-dev em\
+      \ cada verbo (default dna-development)."
+    commit_ref: 62a29151703e4f7deba5d165cc0202772442bdd6
   produces:
   - kind: Plan
     name: plan-s-pilot-foundry-phase2
