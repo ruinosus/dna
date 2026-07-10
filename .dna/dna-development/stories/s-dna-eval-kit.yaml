@@ -99,6 +99,12 @@ spec:
     name: tr-tg-dna-eval-kit-20260710-095855
     summary: "TestRun tr-tg-dna-eval-kit-20260710-095855 \u2192 pass"
     outcome: pass
+  - at: '2026-07-10T09:59:47+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/27'
+    pr_url: https://github.com/ruinosus/dna/pull/27
   produces:
   - kind: Plan
     name: plan-s-dna-eval-kit
