@@ -13,7 +13,7 @@ spec:
     \ o shorthand ap\xF3s a migra\xE7\xE3o do market-demo em PR #28)."
   type: task
   severity: low
-  status: open
+  status: resolved
   owner: claude-code
   timeline:
   - at: '2026-07-10T11:13:07+00:00'
@@ -21,3 +21,24 @@ spec:
     type: status_change
     source: cli
     to: open
+  - at: '2026-07-10T13:57:24+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Fix: rejectLegacyShorthand + LEGACY_SHORTHAND_KEYS portados pra sdk-ts/src/adapters/resolvers/local.ts\
+      \ (mensagem did\xE1tica id\xEAntica \xE0 do Py \u2014 receita de rewrite pro\
+      \ formato v3 items). Chamado de LocalResolver._collectRequested (espelho do\
+      \ Py), de HttpResolver._collectRequested (antes de qualquer curl) e incondicionalmente\
+      \ no topo de GitHubResolver.resolve \u2014 delta documentado: o Py rejeita ap\xF3\
+      s fetch_tree, o TS ANTES do clone (mesmo contrato ResolveError, sem clone desperdi\xE7\
+      ado). Testes espelhando TestLegacyDepShorthandRejected em tests/resolvers.test.ts:\
+      \ red 3 fail (fall-through silencioso comprovado: local resolvia na granularidade\
+      \ errada, github tentava clonar, http ia pra rede) \u2192 green 12 pass. Commit\
+      \ fb7558b."
+  - at: '2026-07-10T13:57:25+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: open
+    to: resolved
+  closed_at: '2026-07-10T13:57:25+00:00'

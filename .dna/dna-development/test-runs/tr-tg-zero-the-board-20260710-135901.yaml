@@ -1,0 +1,17 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-zero-the-board-20260710-135901
+spec:
+  guide_ref: tg-zero-the-board
+  outcome: pass
+  verifies:
+  - Story/s-zero-the-board
+  executed_by: claude-code
+  executed_at: '2026-07-10T13:59:01+00:00'
+  notes: "Todos os 5 passos executados nesta sess\xE3o: py 2771 passed/0 failed; ts\
+    \ resolvers 12 pass (red\u2192green: 3 fail antes do port provando o fall-through\
+    \ silencioso); TypeDoc 0 warnings; mkdocs --strict verde com docstrings novas\
+    \ renderizadas; #30 CLOSED pela ponte com coment\xE1rio. CLI 329 passed; brand_guard\
+    \ + docs_coverage_guard limpos; drift dos geradores determin\xEDsticos (cli/kinds/parity-matrix)\
+    \ zero."

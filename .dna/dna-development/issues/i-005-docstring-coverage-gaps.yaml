@@ -14,7 +14,7 @@ spec:
     \ (a fonte \xE9 a verdade). N\xE3o-bloqueante."
   type: task
   severity: low
-  status: open
+  status: resolved
   owner: claude-code
   related_feature: f-dna-docs
   timeline:
@@ -29,8 +29,37 @@ spec:
     source: cli
     summary: 'Publicada no GitHub: #30'
     github_url: https://github.com/ruinosus/dna/issues/30
+  - at: '2026-07-10T13:57:48+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Fix: Python \u2014 26 docstrings reais (mkdocstrings renderiza conte\xFA\
+      do, n\xE3o assinatura nua): Kernel 6 port-registers (source com o boot gate\
+      \ de valida\xE7\xE3o estrutural, cache, resolver por scheme, reader/writer com\
+      \ o gate H1 de conformance, load com o contrato fail-loud de Extension) + ManifestInstance\
+      \ 20 helpers (root, default_agent, list_kinds, get, describe, summary, 8 geradores\
+      \ *_mermaid, export_diagrams_md, matrix, matrix_markdown, impact, health, ascii_tree).\
+      \ TSDoc \u2014 15 broken-xref (o relat\xF3rio #12 listava 14; ManifestInstanceOpts\
+      \ entrou desde ent\xE3o) triados tipo a tipo: 11 re-exportados de src/index.ts\
+      \ por serem referenciados por API j\xE1 p\xFAblica (Raw, TenantScope, PreviewResult,\
+      \ PreviewBlockKind, BuildPromptOpts, SourceCapabilities, KindLike, AsyncEventHandler,\
+      \ CompositionProfile, BundleHandle, LayerSource; + 2\xAA ordem CompositionSlot,\
+      \ HealthCheck/Quadrant/TimelineHint, sourceCapabilities, deriveCapabilities)\
+      \ e 4 marcados intentionallyNotExported no typedoc.json (CompositionResolverHost\
+      \ \u2014 collaborator-ports s\xE3o internals por decis\xE3o registrada na fixture;\
+      \ QueryableInstance; ManifestInstanceOpts; DeclarativeMarker). Fixtures blessed_query_surface/port-surface\
+      \ intactas \u2014 re-export de tipo n\xE3o adiciona membro de MI nem de port\
+      \ (suites verdes). TypeDoc: 0 warnings. mkdocs build --strict: verde. Commit\
+      \ 67fb938."
+  - at: '2026-07-10T13:58:00+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: open
+    to: resolved
   github_number: 30
   github_url: https://github.com/ruinosus/dna/issues/30
-  github_state: open
-  github_synced_at: '2026-07-10T12:19:15+00:00'
+  github_state: closed
+  github_synced_at: '2026-07-10T13:58:03+00:00'
   updated_at: '2026-07-10T12:19:15+00:00'
+  closed_at: '2026-07-10T13:58:00+00:00'

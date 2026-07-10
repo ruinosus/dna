@@ -1,0 +1,30 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-zero-the-board
+spec:
+  description: 'Fechamento do board: docstrings Py renderizando na API-ref, TypeDoc
+    sem broken-xref, shorthand legado rejeitado no TS (paridade Py #28), e a ponte
+    GitHub fechando a #30 no resolve'
+  kind_of_test: smoke
+  status: active
+  steps:
+  - action: cd packages/sdk-py && uv run --no-project pytest tests -q --timeout=120
+    expected: "0 failed (2771 passed) \u2014 inclui test_dependency_resolution e blessed/port-surface\
+      \ intactos"
+  - action: cd packages/sdk-ts && bun test tests/resolvers.test.ts && bun run typecheck
+    expected: "12 pass / 0 fail \u2014 os 3 testes de rejei\xE7\xE3o do shorthand\
+      \ legado (local/github/http) + controle items v3 verdes; typecheck limpo"
+  - action: cd packages/sdk-ts && bunx typedoc
+    expected: "'Found 0 errors and 0 warnings' \u2014 nenhum broken-xref; os 11 tipos\
+      \ re-exportados ganham p\xE1gina pr\xF3pria e os 4 internos est\xE3o em intentionallyNotExported"
+  - action: mkdocs build --strict && grep -rl 'boot gate, not a plain setter' site/
+    expected: "build verde; a docstring nova de Kernel.source aparece renderizada\
+      \ em site/reference/python/kernel/index.html (mkdocstrings l\xEA a fonte)"
+  - action: gh issue view 30 --repo ruinosus/dna --json state
+    expected: "state=CLOSED \u2014 fechada automaticamente pela ponte (#31) no 'dna\
+      \ sdlc issue resolve i-005', com coment\xE1rio 'Resolved in DNA SDLC'"
+  verifies:
+  - Story/s-zero-the-board
+  created_at: '2026-07-10T13:58:47+00:00'
+  updated_at: '2026-07-10T13:58:47+00:00'
