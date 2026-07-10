@@ -36,7 +36,7 @@ spec:
   - PR merged via dna sdlc story pr
   definition_of_done_source: cli-create
   created_at: '2026-07-10T09:24:31+00:00'
-  updated_at: '2026-07-10T09:24:35+00:00'
+  updated_at: '2026-07-10T09:33:17+00:00'
   timeline:
   - at: '2026-07-10T09:24:31+00:00'
     actor: claude-code
@@ -49,6 +49,28 @@ spec:
     source: cli
     from: todo
     to: in-progress
+  - at: '2026-07-10T09:33:17+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Plano (worktree feat/s-dna-eval-kit): (1) 4 Kinds como DESCRIPTORS (ratchet\
+      \ F3 \u2014 record plane): eval-case/eval-suite/eval-run/eval-baseline em sdk-py\
+      \ dna/extensions/eval/kinds/ + espelho byte-id\xEAntico em sdk-ts src/extensions/eval/kinds/;\
+      \ aliases pela conven\xE7\xE3o gerada (eval-eval-case, \u2026); tenancy permissiva\
+      \ (n\xE3o-declarada, precedente Automation/Evidence). (2) Runner local s\xED\
+      ncrono puro sobre o kernel: dna/extensions/eval/runner.py \u2014 EvalTargetPort\
+      \ (Protocol pequeno), default PromptCompositionTarget (mi.build_prompt determin\xED\
+      stico, offline), apply_checks (contains/regex/equals/length), run_suite \u2192\
+      \ raw EvalRun; compare(run, baseline) \u2192 regressions/improvements/unchanged.\
+      \ (3) CLI dna eval run/list/show/pin. (4) TS: extens\xE3o eval.ts registra os\
+      \ descriptors (Kinds twins); runner Py-primary \u2014 justificativa: execu\xE7\
+      \xE3o \xE9 lib do host, mesmo padr\xE3o Automation (declara\xE7\xE3o viaja,\
+      \ execu\xE7\xE3o n\xE3o). (5) Prosa: fam\xEDlia Evaluation no builtin-kinds.md\
+      \ + guides/evaluating-agents.md (inclui extension point LLM ~15 linhas); coverage\
+      \ guard sem allowlist nova. (6) Regen reference (kinds+cli+parity). (7) Smoke\
+      \ real offline no hello-genome (suite\u2192run\u2192pin\u2192re-run vs baseline)\
+      \ + TestGuide --product + TestRun."
+    commit_ref: ddd27e1f8b3bbdc2b0e1dbbcb15b6e6f5e273c38
   produces:
   - kind: Plan
     name: plan-s-dna-eval-kit
