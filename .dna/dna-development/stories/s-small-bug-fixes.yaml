@@ -33,7 +33,7 @@ spec:
   - PR merged
   definition_of_done_source: cli-create
   created_at: '2026-07-10T10:51:30+00:00'
-  updated_at: '2026-07-10T11:11:33+00:00'
+  updated_at: '2026-07-10T11:16:38+00:00'
   timeline:
   - at: '2026-07-10T10:51:30+00:00'
     actor: claude-code
@@ -113,6 +113,16 @@ spec:
       \ (3 red + controle); i-007+i-009 resolved; TestRun tr-tg-s-small-bug-fixes-20260710-110950\
       \ pass"
     by: claude-code
+  - at: '2026-07-10T11:16:38+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #28 aberto (base main) e CI 100% verde nos 9 checks: sdk-py (2m37s),\
+      \ cli, postgres, sdk-ts, docs-build, docs-links, brand-guard, gitleaks, commit-emails.\
+      \ i-007 e i-009 resolvidas; i-010 (paridade TS da rejei\xE7\xE3o do shorthand)\
+      \ filada como follow-up. TestRun pass registrado (tr-tg-s-small-bug-fixes-20260710-110950).\
+      \ Story em review \u2014 done na merge do PR."
+    commit_ref: 5335229d8fc5a0023f292388752b02b3971ac4eb
   produces:
   - kind: Plan
     name: plan-s-small-bug-fixes
