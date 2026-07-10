@@ -7,6 +7,10 @@ and reads or writes documents through the same ports. Nothing here is a
 second code path — what the CLI validates and stores is exactly what
 `Kernel.quick()` would load.
 
+Install it with `pip install dna-cli` (or `uv tool install dna-cli`); inside
+the repo it is already on `PATH` after the dev-venv setup
+(`cd packages/sdk-py && uv venv && uv pip install -e ".[dev]" -e ../cli`).
+
 This page is a practical tour of every command group — what it is for and
 one real, executed example each. It does **not** list flags; each heading
 links to the [generated CLI reference](../reference/cli/index.md), which is

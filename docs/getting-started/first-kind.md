@@ -14,21 +14,24 @@ parity is the point, so this tutorial shows both side by side.
 
 === "Python"
 
-    - **Python 3.12+** with [uv](https://docs.astral.sh/uv/).
+    - **Python 3.12+**.
 
     ```bash
-    cd packages/sdk-py && uv sync
+    pip install dna-sdk
     ```
 
 === "TypeScript"
 
-    - **Bun 1.0+**.
+    - **Node 20+** or **Bun 1.0+**.
 
     ```bash
-    cd packages/sdk-ts && bun install
+    npm install dna-sdk        # or: bun add dna-sdk
     ```
 
-The packages are not published to PyPI/npm yet — use them from the repo.
+Pre-release / exact-pin alternative: use the packages straight from the repo —
+`cd packages/sdk-py && uv sync` (Python) or `cd packages/sdk-ts && bun install`
+(TypeScript). Either way, clone the repo to follow along — the example scope
+lives in it: `git clone https://github.com/ruinosus/dna && cd dna`.
 
 ## Step 1 — A scope is a directory of manifests
 
@@ -103,7 +106,7 @@ query surface over the loaded scope.
 === "TypeScript"
 
     ```typescript
-    import { quickInstance } from "@dna/sdk";
+    import { quickInstance } from "dna-sdk";
 
     const mi = await quickInstance("hello-genome", "examples/hello-genome/.dna");
 

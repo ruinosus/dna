@@ -10,8 +10,10 @@ This guide covers how to build and test each package, the **Python↔TypeScript
 parity contract** (the single most important rule in this repo), the
 conformance kits, and the story-first SDLC workflow the repo dogfoods.
 
-> **Pre-1.0.** Public APIs may still move and the packages are not yet
-> published to PyPI/npm — work from the repo. See [CHANGELOG.md](CHANGELOG.md).
+> **Pre-1.0.** Public APIs may still move between releases. The packages are
+> published to PyPI (`dna-sdk`, `dna-cli`) and npm (`dna-sdk`) — but as a
+> contributor you work from the repo. See [CHANGELOG.md](CHANGELOG.md) and
+> [RELEASING.md](RELEASING.md).
 
 ## Table of contents
 
