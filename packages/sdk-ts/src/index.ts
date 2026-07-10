@@ -185,6 +185,7 @@ export { ModelRegExtension } from "./extensions/modelreg.js";
 // executes). Hosts import the query helpers to list what to run and the
 // cron validator to pre-check expressions in their own surfaces.
 export { AutomationExtension } from "./extensions/automation.js";
+export { EvalExtension } from "./extensions/eval.js";
 export {
   automationsFor,
   triggerKey,
