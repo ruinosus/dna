@@ -31,7 +31,7 @@ spec:
   - PR merged via story pr
   definition_of_done_source: cli-create
   created_at: '2026-07-10T17:11:56+00:00'
-  updated_at: '2026-07-10T17:11:59+00:00'
+  updated_at: '2026-07-10T17:41:14+00:00'
   timeline:
   - at: '2026-07-10T17:11:56+00:00'
     actor: claude-code
@@ -44,8 +44,66 @@ spec:
     source: cli
     from: todo
     to: in-progress
+  - at: '2026-07-10T17:20:16+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "i-014 red\u2192green fechado: _mark_checklist_items tratava seletor\
+      \ num\xE9rico com fallback de substring \u2014 '--ac 1' marcava o \xEDndice\
+      \ 1 E qualquer item cujo texto contivesse '1' ('API v1', '10 retries'). Agora\
+      \ d\xEDgito = \xEDndice exato (int), sem fallback; --dod compartilha a fun\xE7\
+      \xE3o (mesmo fix). 5 testes novos em test_story_check.py (repro literal do piloto:\
+      \ --ac 1 --ac 2 marcava 3/3). Commit 48ed56c."
+    commit_ref: 48ed56c9934c7597be38023fcd60f0fc02d98750
+  - at: '2026-07-10T17:34:41+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "i-013 red\u2192green: strip_prompt_block/stripPromptBlock (twins em\
+      \ kernel/_text) normalizam trailing whitespace S\xD3 na fronteira de composi\xE7\
+      \xE3o (agent.instruction + valores flatten: soul_content/agents_content) em\
+      \ todos os builders (PromptBuilder sync+async, prompt_kernel lazy, TS PromptBuilder).\
+      \ Storage byte-faithful intacto (teste trava raw spec com \\n final; rw conformance\
+      \ kit verde). Sweep: AGENT.md body j\xE1 era normalizado pelo reader (teste\
+      \ trava); LESSON n\xE3o \xE9 prompt target nem flatten \u2014 sem vetor. Commit\
+      \ ff0281d."
+    commit_ref: 9b46bb3e31110912503a688a202e5f95d183d6e6
+  - at: '2026-07-10T17:34:42+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "i-012 red\u2192green: _resolve_scope_default (helper \xFAnico, roteado\
+      \ pelo _scope_option que TODOS os 90+ verbos sdlc usam) com preced\xEAncia --scope\
+      \ > DNA_SDLC_SCOPE > auto-detect (\xDANICO scope com container stories/features/epics/issues/roadmaps;\
+      \ log stderr da escolha; espelha list_scopes do adapter fs) > dna-development.\
+      \ 8 testes incluindo o caso do piloto (scope 'foundry-dev' sem --scope). Nota\
+      \ em docs/guides/sdlc.md. Commit 9b46bb3."
+    commit_ref: 9b46bb3e31110912503a688a202e5f95d183d6e6
+  - at: '2026-07-10T17:40:57+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-pilot-dx-fixes
+    summary: TestGuide tg-pilot-dx-fixes (smoke)
+  - at: '2026-07-10T17:41:14+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-pilot-dx-fixes-20260710-174112
+    summary: "TestRun tr-tg-pilot-dx-fixes-20260710-174112 \u2192 pass"
+    outcome: pass
   produces:
   - kind: Plan
     name: plan-s-pilot-dx-fixes
     role: implementation
     at: '2026-07-10T17:11:59+00:00'
+  - kind: TestGuide
+    name: tg-pilot-dx-fixes
+    role: test-guide
+    at: '2026-07-10T17:40:57+00:00'
+  - kind: TestRun
+    name: tr-tg-pilot-dx-fixes-20260710-174112
+    role: test-run
+    at: '2026-07-10T17:41:14+00:00'

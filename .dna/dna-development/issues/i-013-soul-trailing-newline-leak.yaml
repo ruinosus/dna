@@ -11,7 +11,7 @@ spec:
     \ vazamento."
   type: bug
   severity: low
-  status: open
+  status: resolved
   owner: claude-code
   related_feature: f-dna-ecosystem
   timeline:
@@ -20,3 +20,25 @@ spec:
     type: status_change
     source: cli
     to: open
+  - at: '2026-07-10T17:41:53+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Fix: strip_prompt_block (Py kernel/_text.py) + stripPromptBlock (TS\
+      \ kernel/_text.ts) \u2014 normaliza\xE7\xE3o de trailing whitespace S\xD3 na\
+      \ fronteira de COMPOSI\xC7\xC3O (agent.instruction + valores string do flatten_in_context:\
+      \ soul_content/agents_content), aplicada nos 4 builders (PromptBuilder sync+async,\
+      \ prompt_kernel lazy, TS PromptBuilder). Storage byte-faithful intacto \u2014\
+      \ rw conformance kit verde e teste trava o raw spec preservando o \\n final.\
+      \ Sweep pedido: AGENT.md body j\xE1 era normalizado pelo reader (teste trava\
+      \ o contrato); LESSON n\xE3o \xE9 prompt target nem flatten \u2014 sem vetor\
+      \ de composi\xE7\xE3o, sem leak. Red\u2192green Py (test_prompt_trailing_whitespace.py,\
+      \ 6) + TS (prompt-trailing-whitespace.test.ts, 4; red provado via stash). Commit\
+      \ ff0281d."
+  - at: '2026-07-10T17:41:54+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: open
+    to: resolved
+  closed_at: '2026-07-10T17:41:54+00:00'

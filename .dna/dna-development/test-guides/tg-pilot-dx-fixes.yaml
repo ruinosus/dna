@@ -1,0 +1,32 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-pilot-dx-fixes
+spec:
+  description: "Smoke dos 3 fixes DX do piloto fase-2 (i-012 scope default, i-013\
+    \ soul newline, i-014 story check exact index) num source scratch com scope de\
+    \ nome arbitr\xE1rio (foundry-dev)"
+  kind_of_test: smoke
+  status: active
+  steps:
+  - action: "Num source scratch com UM scope 'foundry-dev' (cont\xE9m stories/), rodar\
+      \ 'dna sdlc story create s-smoke-dx --feature f-smoke --ac ...' SEM --scope"
+    expected: "stderr loga 'scope: foundry-dev (auto-detected sole SDLC scope...)'\
+      \ e a story \xE9 criada em foundry-dev/stories/"
+  - action: Com DNA_SDLC_SCOPE=foundry-dev, rodar 'dna sdlc list Story' sem --scope
+    expected: lista s-smoke-dx sem log de auto-detect (env vence, silencioso)
+  - action: Com DNA_SDLC_SCOPE=wrong-scope, rodar 'dna sdlc list Story --scope foundry-dev'
+    expected: "lista s-smoke-dx (--scope expl\xEDcito vence env)"
+  - action: Story com ACs ['Ship the API endpoint','Add 10 retries to client','Document
+      API v1 contract']; rodar 'dna sdlc story check s-smoke-dx --ac 1 --ac 2 --evidence
+      ...'
+    expected: "sa\xEDda '\u2713 checked 2 AC' e YAML tem exatamente 2 'done: true'\
+      \ (AC #3 'API v1' intacto \u2014 antes marcava 3/3)"
+  - action: SOUL.md com trailing newline (xxd confirma 0x0a final) + AGENT.md; compor
+      prompt via Kernel.quick(...).build_prompt(...)
+    expected: repr do prompt SEM '\n\n\n' E doc.spec['soul_content'] ainda termina
+      em '\n' (storage byte-faithful)
+  verifies:
+  - Story/s-pilot-dx-fixes
+  created_at: '2026-07-10T17:40:56+00:00'
+  updated_at: '2026-07-10T17:40:56+00:00'

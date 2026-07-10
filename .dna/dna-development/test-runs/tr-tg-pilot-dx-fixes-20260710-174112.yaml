@@ -1,0 +1,20 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-pilot-dx-fixes-20260710-174112
+spec:
+  guide_ref: tg-pilot-dx-fixes
+  outcome: pass
+  verifies:
+  - Story/s-pilot-dx-fixes
+  executed_by: claude-code
+  executed_at: '2026-07-10T17:41:12+00:00'
+  notes: 'Smoke real executado no worktree feat/s-pilot-dx-fixes em source scratch
+    (scope foundry-dev). i-012: auto-detect logou e criou story sem --scope; env venceu
+    auto-detect silenciosamente; --scope venceu env. i-014: --ac 1 --ac 2 marcou exatamente
+    2 ACs (grep -c ''done: true'' == 2; AC ''API v1'' intacto). i-013: prompt composto
+    sem \n\n\n com SOUL.md terminando em 0x0a; soul_content no doc preserva o trailing
+    newline (byte-faithful). Suites: sdk-py 2777 passed, cli 342 passed, ts 1344 passed
+    + typecheck, guards + mkdocs --strict verdes.'
+  evidence:
+  - commits 48ed56c/ff0281d/9b46bb3/9bde7f0
