@@ -1,0 +1,50 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-py312-floor
+spec:
+  title: 'O PRIMEIRO consumidor real (piloto foundry-assured) bateu no floor: o backend
+    de'
+  description: "O PRIMEIRO consumidor real (piloto foundry-assured) bateu no floor:\
+    \ o backend dele pina >=3.12,<3.13 e o dna-sdk exige >=3.13 (PEP 696 TypeVar default,\
+    \ decis\xE3o do PR #1). Engenharia de biblioteca correta: suportar N-1 \u2014\
+    \ baixar o floor pra >=3.12 via typing_extensions (import condicional s\xF3 onde\
+    \ TypeVar(default=) \xE9 usado), varrer outros 3.13-isms acidentais (c\xF3digo\
+    \ foi escrito sob CI 3.13-only), e MATRIZ de CI {3.12, 3.13} pra o floor nunca\
+    \ mais regredir silenciosamente."
+  status: in-progress
+  feature: f-dna-ecosystem
+  priority: high
+  labels:
+  - sdk
+  - python
+  - infra
+  reporter: claude-code
+  business_value: 500
+  acceptance_criteria:
+  - "requires-python >=3.12 nos pyprojects (sdk+cli); typing_extensions s\xF3 quando\
+    \ <3.13 (zero custo no 3.13+); suites completas verdes em AMBAS as vers\xF5es\
+    \ na matriz de CI; guard de import default intocado"
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - PR merged via story pr
+  definition_of_done_source: cli-create
+  created_at: '2026-07-10T14:10:20+00:00'
+  updated_at: '2026-07-10T14:10:23+00:00'
+  timeline:
+  - at: '2026-07-10T14:10:20+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-10T14:10:23+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  produces:
+  - kind: Plan
+    name: plan-s-py312-floor
+    role: implementation
+    at: '2026-07-10T14:10:23+00:00'
