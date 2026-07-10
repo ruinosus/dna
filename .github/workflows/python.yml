@@ -8,6 +8,14 @@
 #   cli       — dna-cli pytest suite (path-dep on sdk-py).
 #   postgres  — ONLY the requires_postgres-marked tests, against a
 #               postgres:16 service container.
+#
+# Python matrix (s-py312-floor): sdk-py + cli run on {3.12, 3.13} — the
+# supported floor is 3.12 (first real consumer pins >=3.12,<3.13) and the
+# matrix keeps it from regressing silently. The postgres job stays 3.13-only
+# on purpose: it exercises adapter/SQL behavior, not language-version
+# surface — the full suite (including the same adapter code minus the live
+# DB) already runs on 3.12 in the sdk-py job, so a 3.12 postgres leg would
+# double service-container minutes for near-zero marginal coverage.
 name: python
 
 on:
@@ -22,6 +30,10 @@ env:
 jobs:
   sdk-py:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
     defaults:
       run:
         working-directory: packages/sdk-py
@@ -29,7 +41,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
         with:
-          python-version: "3.13"
+          python-version: ${{ matrix.python-version }}
           enable-cache: true
           cache-dependency-glob: packages/sdk-py/pyproject.toml
       - name: Install
@@ -41,6 +53,10 @@ jobs:
 
   cli:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
     defaults:
       run:
         working-directory: packages/cli
@@ -48,7 +64,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
         with:
-          python-version: "3.13"
+          python-version: ${{ matrix.python-version }}
           enable-cache: true
           cache-dependency-glob: |
             packages/cli/pyproject.toml

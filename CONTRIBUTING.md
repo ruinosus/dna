@@ -28,7 +28,7 @@ conformance kits, and the story-first SDLC workflow the repo dogfoods.
 
 | Tool | Why | Notes |
 |---|---|---|
-| [`uv`](https://github.com/astral-sh/uv) | Python env + deps for `sdk-py` and `cli` | Python 3.13 is what CI runs |
+| [`uv`](https://github.com/astral-sh/uv) | Python env + deps for `sdk-py` and `cli` | CI runs the {3.12, 3.13} matrix; floor is 3.12 |
 | [Bun](https://bun.sh) | Runtime + test runner + typecheck for `sdk-ts` | latest |
 | `git` | Versioned commit hooks (`dna sdlc hooks install`) | — |
 | `gh` (optional) | Opening PRs via `dna sdlc story pr` | GitHub CLI |

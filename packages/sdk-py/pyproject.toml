@@ -2,17 +2,25 @@
 name = "dna-sdk"
 version = "0.1.0"
 description = "DNA — Domain Notation of Anything: microkernel + extensions for declarative agent notation"
-# 3.13 floor: dna/kernel/document.py uses PEP 696 TypeVar(default=...) from
-# stdlib typing, which only exists on 3.13+ (s-public-ci — CI caught 3.12
-# failing collection with "TypeError: 'default' is an invalid keyword
-# argument for typevar()"). New SDK → floor raised rather than adding a
-# typing_extensions dependency.
-requires-python = ">=3.13,<3.14"
+# 3.12 floor (s-py312-floor): the first real consumer (an Azure Container
+# Apps backend pinned >=3.12,<3.13) could not install the SDK under the old
+# 3.13-only floor — that floor was a convenience decision from PR #1 whose
+# single deliberate 3.13-ism is PEP 696 TypeVar(default=...) in
+# dna/kernel/document.py, now sourced from typing_extensions on <3.13
+# (conditional dependency below; zero cost on 3.13+). Ecosystem library →
+# support N-1. The CI matrix {3.12, 3.13} keeps the floor from silently
+# regressing.
+requires-python = ">=3.12,<3.14"
 dependencies = [
     "pyyaml>=6.0",
     "chevron>=0.14",
     "aiofiles>=24.1",
     "jsonschema>=4.0",
+    # PEP 696 TypeVar(default=...) landed in stdlib typing on 3.13; on 3.12
+    # dna/kernel/document.py imports it from typing_extensions (>=4.4 is the
+    # first release with PEP 696). Env-markered so 3.13+ installs stay
+    # zero-cost (s-py312-floor).
+    "typing_extensions>=4.4; python_version < '3.13'",
 ]
 
 [project.optional-dependencies]
