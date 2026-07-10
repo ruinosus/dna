@@ -10,7 +10,7 @@ spec:
     \ i-009 (dep shorthand skills: n\xE3o lido por _collect_requested \u2192 granularidade\
     \ errada no resolve; ler o shorthand ou rejeit\xE1-lo com erro claro \u2014 decidir\
     \ pelo contrato real e documentar)."
-  status: in-progress
+  status: review
   feature: f-dna-issues-round1
   priority: medium
   labels:
@@ -20,14 +20,20 @@ spec:
   reporter: claude-code
   business_value: 300
   acceptance_criteria:
-  - "scope detect funciona com Genome.yaml (teste); dep shorthand resolvido com teste\
-    \ red\u2192green; i-007+i-009 resolvidas"
+  - text: "scope detect funciona com Genome.yaml (teste); dep shorthand resolvido\
+      \ com teste red\u2192green; i-007+i-009 resolvidas"
+    done: true
+    done_at: '2026-07-10T11:11:33+00:00'
+    done_by: claude-code
+    evidence: "PR #28: test_scope_detect.py (red\u2192green Genome.yaml) + TestLegacyDepShorthandRejected\
+      \ (3 red + controle); i-007+i-009 resolved; TestRun tr-tg-s-small-bug-fixes-20260710-110950\
+      \ pass"
   acceptance_criteria_source: cli-create
   definition_of_done:
   - PR merged
   definition_of_done_source: cli-create
   created_at: '2026-07-10T10:51:30+00:00'
-  updated_at: '2026-07-10T10:51:36+00:00'
+  updated_at: '2026-07-10T11:16:38+00:00'
   timeline:
   - at: '2026-07-10T10:51:30+00:00'
     actor: claude-code
@@ -40,8 +46,93 @@ spec:
     source: cli
     from: todo
     to: in-progress
+  - at: '2026-07-10T11:07:51+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "i-007 red\u2192green: teste CliRunner provou o bug (scope Genome.yaml\
+      \ \u2192 exit 1, s\xF3 manifest.yaml legado detectava). Decis\xE3o de contrato:\
+      \ marker DUPLO \u2014 Genome.yaml can\xF4nico + manifest.yaml legado aceito,\
+      \ mesmo contrato que dna install e o composite source j\xE1 usam (custo zero).\
+      \ Walk agora sorted() p/ determinismo multi-scope. Docstring \xE9 fonte do doc\
+      \ gerado \u2192 docs/reference/cli/scope.md regenerado via gen_cli_docs.py.\
+      \ Commit 39d0b41."
+    commit_ref: f988fbc7f9119f318e4fe7a2254306b0e81a7c83
+  - at: '2026-07-10T11:08:09+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "i-009 red\u2192green: 3 testes provaram o fall-through silencioso (unit\
+      \ LocalResolver, caminho github via fetch_tree monkeypatched, e kernel-level\
+      \ \u2192 mi.resolve_errors) + 1 controle (items: segue resolvendo). Decis\xE3\
+      o de contrato: shorthand 'skills:' \xE9 formato MORTO \u2014 n\xE3o aparece\
+      \ em doc nenhum, no schema (GenomeSpec.dependencies \xE9 o contrato v3 items:)\
+      \ nem em resolver algum; s\xF3 o fixture market-demo usava. REJEITADO com ResolveError\
+      \ did\xE1tico (receita de rewrite na mensagem) via reject_legacy_shorthand()\
+      \ compartilhado (local+github+http; github chamava _collect_requested s\xF3\
+      \ quando items: existia \u2014 exatamente pulando o caso do bug). Fixture market-demo\
+      \ migrado pro formato items: (nomes resolvem via fallback source/name p/ \xE1\
+      rvores rasas). Commit f988fbc. Nota: sem\xE2ntica geral de _resolve_all p/ \xE1\
+      rvores rasas ficou fora do escopo m\xEDnimo \u2014 a rejei\xE7\xE3o elimina\
+      \ o caminho silencioso."
+    commit_ref: f988fbc7f9119f318e4fe7a2254306b0e81a7c83
+  - at: '2026-07-10T11:08:57+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-small-bug-fixes
+    summary: TestGuide tg-s-small-bug-fixes (smoke)
+  - at: '2026-07-10T11:09:51+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-small-bug-fixes-20260710-110950
+    summary: "TestRun tr-tg-s-small-bug-fixes-20260710-110950 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-10T11:10:28+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/28'
+    pr_url: https://github.com/ruinosus/dna/pull/28
+  - at: '2026-07-10T11:11:20+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
+  - at: '2026-07-10T11:11:34+00:00'
+    actor: claude-code
+    type: checklist_check
+    source: cli
+    marked_ac: 1
+    marked_dod: 0
+    evidence: "PR #28: test_scope_detect.py (red\u2192green Genome.yaml) + TestLegacyDepShorthandRejected\
+      \ (3 red + controle); i-007+i-009 resolved; TestRun tr-tg-s-small-bug-fixes-20260710-110950\
+      \ pass"
+    by: claude-code
+  - at: '2026-07-10T11:16:38+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #28 aberto (base main) e CI 100% verde nos 9 checks: sdk-py (2m37s),\
+      \ cli, postgres, sdk-ts, docs-build, docs-links, brand-guard, gitleaks, commit-emails.\
+      \ i-007 e i-009 resolvidas; i-010 (paridade TS da rejei\xE7\xE3o do shorthand)\
+      \ filada como follow-up. TestRun pass registrado (tr-tg-s-small-bug-fixes-20260710-110950).\
+      \ Story em review \u2014 done na merge do PR."
+    commit_ref: 5335229d8fc5a0023f292388752b02b3971ac4eb
   produces:
   - kind: Plan
     name: plan-s-small-bug-fixes
     role: implementation
     at: '2026-07-10T10:51:36+00:00'
+  - kind: TestGuide
+    name: tg-s-small-bug-fixes
+    role: test-guide
+    at: '2026-07-10T11:08:57+00:00'
+  - kind: TestRun
+    name: tr-tg-s-small-bug-fixes-20260710-110950
+    role: test-run
+    at: '2026-07-10T11:09:51+00:00'

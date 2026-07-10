@@ -10,7 +10,7 @@ spec:
     \ detect Genome.yaml (or either marker). Found while writing docs cli-tour (s-docs-cli-tour-kinds-prose)."
   type: bug
   severity: low
-  status: open
+  status: resolved
   owner: claude-code
   timeline:
   - at: '2026-07-09T22:21:27+00:00'
@@ -18,3 +18,20 @@ spec:
     type: status_change
     source: cli
     to: open
+  - at: '2026-07-10T11:08:22+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Fix em 39d0b41 (branch feat/s-small-bug-fixes): _detect agora aceita\
+      \ Genome.yaml (can\xF4nico) OU manifest.yaml (legado) \u2014 mesmo contrato\
+      \ dual-marker de dna install e do composite source. TDD: packages/cli/tests/test_scope_detect.py\
+      \ (red provou exit 1 em scope Genome.yaml). Smoke real: 'dna scope detect' em\
+      \ examples/hello-genome imprime 'hello-genome' exit 0; de dir aninhado em scopes/market-integration/.dna/market-demo/skills\
+      \ imprime 'market-demo' exit 0. Doc gerado regenerado."
+  - at: '2026-07-10T11:08:23+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: open
+    to: resolved
+  closed_at: '2026-07-10T11:08:23+00:00'

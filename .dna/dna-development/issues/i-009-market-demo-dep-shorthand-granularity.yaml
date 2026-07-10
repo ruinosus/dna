@@ -15,10 +15,33 @@ spec:
     \ contorna isso escaneando a \xE1rvore com readers)."
   type: bug
   severity: low
-  status: open
+  status: resolved
   timeline:
   - at: '2026-07-10T04:56:32+00:00'
     actor: claude-code
     type: status_change
     source: cli
     to: open
+  - at: '2026-07-10T11:08:39+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Fix em f988fbc (branch feat/s-small-bug-fixes). Decis\xE3o de contrato:\
+      \ o shorthand 'skills: [...]' \xE9 formato MORTO (zero docs, zero schema, zero\
+      \ resolvers) \u2192 REJEITADO com ResolveError did\xE1tico via reject_legacy_shorthand()\
+      \ em local._collect_requested (compartilhado por github+http; github agora chama\
+      \ _collect_requested incondicionalmente \u2014 antes era gated em dep.get('items'),\
+      \ pulando o check exatamente no caso do bug). Pelo kernel a rejei\xE7\xE3o cai\
+      \ em mi.resolve_errors (relato alto, sem crash) e o fallback de granularidade\
+      \ errada N\xC3O acontece. Fixture market-demo migrado pro v3 items: (nomes acham\
+      \ os bundles via fallback source/name p/ \xE1rvore rasa). TDD: TestLegacyDepShorthandRejected\
+      \ em test_dependency_resolution.py (3 red + 1 controle). Sem\xE2ntica geral\
+      \ de _resolve_all p/ \xE1rvores rasas fica como poss\xEDvel follow-up \u2014\
+      \ o caminho silencioso foi eliminado."
+  - at: '2026-07-10T11:08:40+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: open
+    to: resolved
+  closed_at: '2026-07-10T11:08:40+00:00'

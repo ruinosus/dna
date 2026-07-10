@@ -1,0 +1,23 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-010-ts-resolver-legacy-shorthand-parity
+spec:
+  description: "Parity follow-up de i-009: sdk-py agora REJEITA o dep shorthand legado\
+    \ ('skills: [...]') com ResolveError did\xE1tico (reject_legacy_shorthand em adapters/resolvers/local.py,\
+    \ compartilhado por local+github+http). O twin TS (sdk-ts/src/adapters/resolvers/local.ts\
+    \ _collectRequested) ainda ignora o shorthand silenciosamente e cai em _resolveAll\
+    \ com granularidade errada \u2014 mesma classe do bug original. Portar a rejei\xE7\
+    \xE3o pro TS (local+github+http) com testes espelhados de TestLegacyDepShorthandRejected\
+    \ (test_dependency_resolution.py). N\xE3o \xE9 hot-path (nenhum fixture usa mais\
+    \ o shorthand ap\xF3s a migra\xE7\xE3o do market-demo em PR #28)."
+  type: task
+  severity: low
+  status: open
+  owner: claude-code
+  timeline:
+  - at: '2026-07-10T11:13:07+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

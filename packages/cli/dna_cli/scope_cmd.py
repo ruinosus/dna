@@ -88,23 +88,30 @@ def tree(scope_name: str | None, as_json: bool, tenant: str | None) -> None:
 @scope.command("detect")
 @click.option("--cwd", default=None, help="Override starting directory (default: CWD).")
 def detect_scope(cwd: str | None) -> None:
-    """Walk upward from cwd looking for the nearest .dna/<scope>/manifest.yaml.
+    """Walk upward from cwd looking for the nearest .dna/<scope>/Genome.yaml.
 
     Phase 14u — used by the Claude Code PreToolUse hook to auto-inject
     scope context. Prints the scope name to stdout (no decorations) so
     shell scripts can capture it via $(dna scope detect).
+
+    Genome.yaml is the canonical scope-root marker (Phase 16); the legacy
+    pre-Genome manifest.yaml is still accepted (i-007) — same dual-marker
+    contract as `dna install` and the composite source.
     """
     from pathlib import Path
 
     def _detect(start):
-        # Inlined from install_cmd (which stays behind): walk upward
-        # looking for `.dna/<scope>/manifest.yaml`, max 6 levels.
+        # Walk upward looking for `.dna/<scope>/Genome.yaml` (canonical)
+        # or the legacy `.dna/<scope>/manifest.yaml`, max 6 levels.
         here = (start or Path.cwd()).resolve()
         for _ in range(6):
             dna = here / ".dna"
             if dna.is_dir():
-                for child in dna.iterdir():
-                    if child.is_dir() and (child / "manifest.yaml").is_file():
+                for child in sorted(dna.iterdir()):
+                    if child.is_dir() and (
+                        (child / "Genome.yaml").is_file()
+                        or (child / "manifest.yaml").is_file()
+                    ):
                         return child.name
             if here.parent == here:
                 break

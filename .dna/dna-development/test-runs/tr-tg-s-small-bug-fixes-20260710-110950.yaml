@@ -1,0 +1,20 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-small-bug-fixes-20260710-110950
+spec:
+  guide_ref: tg-s-small-bug-fixes
+  outcome: pass
+  verifies:
+  - Story/s-small-bug-fixes
+  executed_by: claude-code
+  executed_at: '2026-07-10T11:09:50+00:00'
+  notes: "Smoke real executado 2026-07-10. (1) examples/hello-genome: 'dna scope detect'\
+    \ \u2192 'hello-genome' exit 0 (verbatim; antes exit 1). (2) dir aninhado scopes/market-integration/.dna/market-demo/skills\
+    \ \u2192 'market-demo' exit 0. (3) /tmp sem .dna \u2192 '(no DNA scope found)'\
+    \ exit 1. (4) kernel.instance de scope com shorthand legado \u2192 resolve_errors=[\"\
+    ...uses the legacy 'skills:' shorthand, which is no longer read. Rewrite it in\
+    \ the v3 items format: items: - kind: Skill names: [...]\"], zero Skills de granularidade\
+    \ errada importados. (5) market-demo migrado carrega com 31 skills vendorizados,\
+    \ zero erros de shorthand. Gates: sdk-py 2929 passed/0 failed; cli 302 passed;\
+    \ brand_guard clean; mkdocs build --strict OK."
