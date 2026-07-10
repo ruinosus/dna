@@ -3,8 +3,7 @@ kind: Story
 metadata:
   name: s-dna-init-agent-ready
 spec:
-  title: "dna init \u2014 onboarding agent-ready para projetos consumidores: pip install\
-    \ dna-cl"
+  title: "dna init \u2014 multi-tool agent-ready onboarding para projetos consumidores"
   description: "dna init \u2014 onboarding agent-ready para projetos consumidores:\
     \ pip install dna-cli entrega kernel+CLI mas o agente chega cego (skill/AGENTS.md/hooks\
     \ s\xF3 existem no repo dna; piloto foundry bootstrapou \xE0 m\xE3o). Um comando\
@@ -88,7 +87,7 @@ spec:
       \ clean); docs_coverage_guard clean; mkdocs build --strict OK local"
   definition_of_done_source: claude-code
   created_at: '2026-07-10T19:10:46+00:00'
-  updated_at: '2026-07-10T19:43:48+00:00'
+  updated_at: '2026-07-10T19:46:29+00:00'
   timeline:
   - at: '2026-07-10T19:10:46+00:00'
     actor: claude-code
@@ -286,6 +285,12 @@ spec:
       \ Follow-up i-015-onboarding-genome-via-install filed (canal dna install github:\
       \ pro Genome de onboarding). Story fica em review at\xE9 o merge (done-on-merge)."
     commit_ref: c389612f3c50426ec9a812cbcad17e6dc4c07816
+  - at: '2026-07-10T19:46:29+00:00'
+    actor: claude-code
+    type: groom
+    source: cli
+    fields:
+      title: "dna init \u2014 multi-tool agent-ready onboarding para projetos consumidores"
   produces:
   - kind: Plan
     name: plan-s-dna-init-agent-ready
