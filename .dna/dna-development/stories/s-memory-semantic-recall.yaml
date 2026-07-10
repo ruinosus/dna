@@ -11,7 +11,7 @@ spec:
     \ do score_engram, hoje c\xF3digo morto) e funde via RRF \u2014 o mesmo RRF do\
     \ search. Sem provider \u2192 comportamento atual intacto (offline-first, zero\
     \ breaking change). Sem LLM/scribes."
-  status: in-progress
+  status: review
   feature: f-dna-search-memory
   reporter: claude-code
   acceptance_criteria:
@@ -38,7 +38,7 @@ spec:
     \ pr, sem merge"
   definition_of_done_source: cli-create
   created_at: '2026-07-10T19:09:38+00:00'
-  updated_at: '2026-07-10T19:34:13+00:00'
+  updated_at: '2026-07-10T19:36:02+00:00'
   timeline:
   - at: '2026-07-10T19:09:38+00:00'
     actor: claude-code
@@ -99,6 +99,18 @@ spec:
       \ (primeira passada coincidiu com disco da m\xE1quina 100% cheio \u2014 ENOSPC,\
       \ n\xE3o c\xF3digo; liberei ~/.npm/_npx 5.6GB)."
     commit_ref: 13c17b20635eea7b62f1268bfc32b1389408ef08
+  - at: '2026-07-10T19:35:43+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/38'
+    pr_url: https://github.com/ruinosus/dna/pull/38
+  - at: '2026-07-10T19:36:02+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
   produces:
   - kind: Plan
     name: plan-s-memory-semantic-recall
