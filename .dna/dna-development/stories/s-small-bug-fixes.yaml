@@ -27,7 +27,7 @@ spec:
   - PR merged
   definition_of_done_source: cli-create
   created_at: '2026-07-10T10:51:30+00:00'
-  updated_at: '2026-07-10T10:51:36+00:00'
+  updated_at: '2026-07-10T11:09:51+00:00'
   timeline:
   - at: '2026-07-10T10:51:30+00:00'
     actor: claude-code
@@ -40,8 +40,61 @@ spec:
     source: cli
     from: todo
     to: in-progress
+  - at: '2026-07-10T11:07:51+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "i-007 red\u2192green: teste CliRunner provou o bug (scope Genome.yaml\
+      \ \u2192 exit 1, s\xF3 manifest.yaml legado detectava). Decis\xE3o de contrato:\
+      \ marker DUPLO \u2014 Genome.yaml can\xF4nico + manifest.yaml legado aceito,\
+      \ mesmo contrato que dna install e o composite source j\xE1 usam (custo zero).\
+      \ Walk agora sorted() p/ determinismo multi-scope. Docstring \xE9 fonte do doc\
+      \ gerado \u2192 docs/reference/cli/scope.md regenerado via gen_cli_docs.py.\
+      \ Commit 39d0b41."
+    commit_ref: f988fbc7f9119f318e4fe7a2254306b0e81a7c83
+  - at: '2026-07-10T11:08:09+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "i-009 red\u2192green: 3 testes provaram o fall-through silencioso (unit\
+      \ LocalResolver, caminho github via fetch_tree monkeypatched, e kernel-level\
+      \ \u2192 mi.resolve_errors) + 1 controle (items: segue resolvendo). Decis\xE3\
+      o de contrato: shorthand 'skills:' \xE9 formato MORTO \u2014 n\xE3o aparece\
+      \ em doc nenhum, no schema (GenomeSpec.dependencies \xE9 o contrato v3 items:)\
+      \ nem em resolver algum; s\xF3 o fixture market-demo usava. REJEITADO com ResolveError\
+      \ did\xE1tico (receita de rewrite na mensagem) via reject_legacy_shorthand()\
+      \ compartilhado (local+github+http; github chamava _collect_requested s\xF3\
+      \ quando items: existia \u2014 exatamente pulando o caso do bug). Fixture market-demo\
+      \ migrado pro formato items: (nomes resolvem via fallback source/name p/ \xE1\
+      rvores rasas). Commit f988fbc. Nota: sem\xE2ntica geral de _resolve_all p/ \xE1\
+      rvores rasas ficou fora do escopo m\xEDnimo \u2014 a rejei\xE7\xE3o elimina\
+      \ o caminho silencioso."
+    commit_ref: f988fbc7f9119f318e4fe7a2254306b0e81a7c83
+  - at: '2026-07-10T11:08:57+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-small-bug-fixes
+    summary: TestGuide tg-s-small-bug-fixes (smoke)
+  - at: '2026-07-10T11:09:51+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-small-bug-fixes-20260710-110950
+    summary: "TestRun tr-tg-s-small-bug-fixes-20260710-110950 \u2192 pass"
+    outcome: pass
   produces:
   - kind: Plan
     name: plan-s-small-bug-fixes
     role: implementation
     at: '2026-07-10T10:51:36+00:00'
+  - kind: TestGuide
+    name: tg-s-small-bug-fixes
+    role: test-guide
+    at: '2026-07-10T11:08:57+00:00'
+  - kind: TestRun
+    name: tr-tg-s-small-bug-fixes-20260710-110950
+    role: test-run
+    at: '2026-07-10T11:09:51+00:00'

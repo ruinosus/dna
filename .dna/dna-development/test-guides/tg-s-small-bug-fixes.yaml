@@ -1,0 +1,29 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-s-small-bug-fixes
+spec:
+  description: "Smoke de produto dos 2 fixes: dna scope detect com Genome.yaml + rejei\xE7\
+    \xE3o do dep shorthand legado"
+  kind_of_test: smoke
+  status: active
+  steps:
+  - action: No terminal, cd examples/hello-genome e rode 'dna scope detect'
+    expected: 'imprime ''hello-genome'' no stdout e sai com exit 0 (antes: ''(no DNA
+      scope found)'' + exit 1)'
+  - action: cd scopes/market-integration/.dna/market-demo/skills (dir aninhado) e
+      rode 'dna scope detect'
+    expected: "imprime 'market-demo' \u2014 o walk sobe at\xE9 o root do scope"
+  - action: 'Num dir sem .dna acima (ex: /tmp), rode ''dna scope detect'''
+    expected: imprime '(no DNA scope found)' em stderr e sai com exit 1
+  - action: 'Carregue um scope cujo Genome declara dep com o shorthand legado ''skills:
+      [...]'' (kernel.instance)'
+    expected: "mi.resolve_errors cont\xE9m erro did\xE1tico citando o formato 'items:';\
+      \ NENHUM Skill de granularidade errada \xE9 importado"
+  - action: Carregue o market-demo (fixture migrado pro formato items:)
+    expected: scope carrega sem resolve_errors novos; os skills vendorizados seguem
+      presentes
+  verifies:
+  - Story/s-small-bug-fixes
+  created_at: '2026-07-10T11:08:56+00:00'
+  updated_at: '2026-07-10T11:08:56+00:00'
