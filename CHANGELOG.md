@@ -11,6 +11,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-07-10
+
+### Fixed
+
+- **`dna install` no longer hides sibling documents when a reader claims the
+  tree root** (s-install-scan-fixes, closes i-016). A claim now consumes its
+  *bundle* — whose authoritative extent is the paired writer's
+  `serialize()` — instead of the whole subtree, so a root `AGENTS.md`
+  coexists with `skills/` (mixed trees install completely) while Skill
+  bundles still yield exactly one document. Claims without a paired writer
+  keep the old conservative subtree semantics. `dna init --from` now
+  delegates to the fixed scan (its PR #41 workaround was removed), and a
+  `requires_network` test consumes the public `examples/onboarding-pack`
+  from the default branch (closes i-017).
+
 ## [0.3.0] - 2026-07-10
 
 ### Added
@@ -197,7 +212,8 @@ registries: **PyPI** ([`dna-sdk`](https://pypi.org/project/dna-sdk/),
   source conformance kit now pins the contract: base content is served
   by `load_all`, never by a `load_layer` sentinel.
 
-[Unreleased]: https://github.com/ruinosus/dna/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/ruinosus/dna/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/ruinosus/dna/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/ruinosus/dna/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/ruinosus/dna/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/ruinosus/dna/releases/tag/v0.1.0

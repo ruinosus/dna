@@ -14,7 +14,7 @@ spec:
     \ a recurs\xE3o nos subdirs, s\xF3 claim de bundle-dir (Skill)."
   type: bug
   severity: medium
-  status: in-progress
+  status: resolved
   owner: claude-code
   related_feature: f-dna-ecosystem
   timeline:
@@ -29,3 +29,14 @@ spec:
     source: cli
     from: open
     to: in-progress
+  - at: '2026-07-10T22:41:44+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: resolved
+    summary: "claim consome o bundle (extens\xE3o = writer.serialize), n\xE3o a sub\xE1\
+      rvore \u2014 PR #44"
+  closed_at: '2026-07-10T22:41:44+00:00'
+  resolution: "claim consome o bundle (extens\xE3o = writer.serialize), n\xE3o a sub\xE1\
+    rvore \u2014 PR #44"
