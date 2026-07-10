@@ -1,0 +1,34 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-raw-to-sa-swap
+spec:
+  description: "Prova da TROCA cru\u2192SA: um sqlite .db criado pelo SqliteSource\
+    \ cru (c\xF3digo do main, pr\xE9-branch) \xE9 aberto pelo SqlAlchemySource do\
+    \ branch \u2014 mesmos docs lidos, push-down/count funcionam, write persiste,\
+    \ control table intacta, zero migra\xE7\xE3o de dados."
+  kind_of_test: smoke
+  status: active
+  steps:
+  - action: "No main (ac3f461, c\xF3digo pr\xE9-remo\xE7\xE3o): SqliteSource('smoke-raw-sqlite.db')\
+      \ grava 3 Stories (s-alpha/todo, s-beta/done, s-gamma/in-progress) via save_document+publish"
+    expected: '''wrote 3 docs'' + run_schema_migrations() == [] (DB up-to-date, v1..v8)'
+  - action: 'No branch: SqlAlchemySource(''sqlite+aiosqlite:///<mesmo .db>'').connect()'
+    expected: "boot N\xC3O reaplica nada \u2014 run_schema_migrations() == [] (zero\
+      \ migra\xE7\xE3o de dados)"
+  - action: load_all('smoke') no mesmo .db
+    expected: 'os MESMOS 3 docs, com os MESMOS specs: [(''s-alpha'',''todo''),(''s-beta'',''done''),(''s-gamma'',''in-progress'')]'
+  - action: query('smoke','Story',filter={'status':'todo'})
+    expected: '[''s-alpha''] (push-down sobre linhas gravadas pelo cru)'
+  - action: count('smoke','Story',group_by='spec.status')
+    expected: '{''total'': 3, ''groups'': [done:1, in-progress:1, todo:1]}'
+  - action: save_document de s-delta via SA no mesmo .db + load_all
+    expected: "4 docs ['s-alpha','s-beta','s-delta','s-gamma'] \u2014 write do SA\
+      \ convive com dados do cru"
+  - action: 'sqlite3 direto no .db: sqlite_master + schema_migrations'
+    expected: mesmas tabelas (documents/versions/bundle_entries/layer_documents/schema_migrations)
+      e control table intacta rows [1..8]
+  verifies:
+  - Story/s-retire-raw-sql-adapters
+  created_at: '2026-07-10T13:22:06+00:00'
+  updated_at: '2026-07-10T13:22:06+00:00'

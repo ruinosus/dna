@@ -54,17 +54,17 @@ Reader/Writer](../guides/readers-and-writers.md).
 ## The source conformance kit
 
 Storage backends have their own kit. The port-contract suite runs the same
-battery over every source adapter (Filesystem, SQLite, Postgres,
-SQLAlchemy), so a new adapter is "production-ready" only when its row is
-fully green.
+battery over every source adapter (Filesystem and `SqlAlchemySource` on
+both of its dialects — sqlite and postgres), so a new adapter is
+"production-ready" only when its row is fully green.
 
 === "Python"
 
     ```bash
-    # Filesystem + SQLite (always available)
+    # Filesystem + the sqlite dialect (always available)
     cd packages/sdk-py && uv run pytest tests/test_port_contract.py -v
 
-    # Add Postgres (requires a running DB)
+    # Add the postgres dialect (requires a running DB)
     DATABASE_URL=postgresql://dna:dna@localhost:5432/dna \
       uv run pytest tests/test_port_contract.py -v
     ```

@@ -11,7 +11,7 @@ These lock the payload contract without needing a live Postgres.
 """
 import json
 
-from dna.adapters.postgres.source import _build_notify_payload
+from dna.kernel.eventbus import build_notify_payload as _build_notify_payload
 
 
 def _payload(**over):

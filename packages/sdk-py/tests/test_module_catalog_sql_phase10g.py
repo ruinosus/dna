@@ -55,10 +55,10 @@ def _package(name: str, version: str, owner: str = "acme") -> dict:
 
 @pytest.fixture
 def sqlite_src(tmp_path):
-    """Yields a connected SqliteSource against a temp DB."""
-    from dna.adapters.sqlite.source import SqliteSource
+    """Yields a connected sqlite-dialect SqlAlchemySource against a temp DB."""
+    from dna.adapters.sqlalchemy_ import SqlAlchemySource
 
-    src = SqliteSource(db_path=str(tmp_path / "t.db"))
+    src = SqlAlchemySource(f"sqlite+aiosqlite:///{tmp_path / 't.db'}")
     asyncio.run(src.connect())
     yield src
     asyncio.run(src.close())

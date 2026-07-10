@@ -5,12 +5,12 @@ against the EXISTING adapter schemas (promoted from the i-216 spike by
 ``s-sqlalchemy-source-production``):
 
   - sqlite  (aiosqlite):  ``documents`` / ``versions`` / ``bundle_entries``
-    / ``layer_documents`` — byte-compatible with ``SqliteSource`` DBs,
-    including the ``schema_migrations`` control table.
+    / ``layer_documents`` — byte-compatible with DBs built by the retired
+    raw sqlite adapter, including the ``schema_migrations`` control table.
   - postgresql (asyncpg): ``{schema}.dna_documents`` / ``dna_versions`` /
     ``dna_bundle_entries`` / ``dna_layer_documents`` / ``dna_outbox`` /
-    ``dna_versions_seq`` — byte-compatible with ``PostgresSource`` schemas,
-    including ``dna_schema_migrations``.
+    ``dna_versions_seq`` — byte-compatible with schemas built by the retired
+    raw PG adapter, including ``dna_schema_migrations``.
 
 The adapter REUSES each dialect's existing migration payloads (it invents
 no schema); the shared forward-only runner (``adapters/_migrations.py``)
@@ -25,10 +25,11 @@ Production behaviors (each mirrors the raw adapter that pioneered it):
     every write on the postgresql dialect appends to ``dna_outbox``,
     checkpoints ``dna_versions_seq`` and fires ``pg_notify`` on
     ``KERNEL_EVENTBUS_CHANNEL`` **inside the same transaction** as the
-    data write — Phase 15.1 semantics. The NOTIFY payload is built by the
-    SAME ``_build_notify_payload`` the raw ``PostgresSource`` uses
-    (imported, not copied), so payload parity is byte-exact by
-    construction. SQLite gets :class:`_NullEventEmitter` (no bus — H2).
+    data write — Phase 15.1 semantics. The NOTIFY payload is built by
+    ``dna.kernel.eventbus.build_notify_payload`` — the same producer
+    contract the retired raw ``PostgresSource`` used, now co-located with
+    the channel constant. SQLite gets :class:`_NullEventEmitter` (no bus
+    — H2).
   - **Memo-cached ``_load_view``** (dialect-agnostic): the canonical
     (scope, tenant) view is memoized with a single-flight lock and served
     as deep copies (s-query-loadview-cache semantics). Invalidation is a
@@ -63,6 +64,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
@@ -71,12 +73,10 @@ from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 from dna.kernel.protocols import WritableSourcePort
 
-# Single source of truth for the Phase 15.1 event contract — importing
-# (instead of copying) the payload builder + channel name from the raw
-# Postgres adapter guarantees byte-exact NOTIFY parity by construction.
-# (`adapters/postgres/source.py` has no hard asyncpg dependency at import
-# time, so this import stays safe without the `postgres` extra.)
-from ..postgres.source import KERNEL_EVENTBUS_CHANNEL, _build_notify_payload
+# Single source of truth for the Phase 15.1 event contract — the payload
+# builder + channel name live with the KernelEventBus contract itself
+# (dna/kernel/eventbus.py), shared with the PostgresEventBus subscriber.
+from dna.kernel.eventbus import KERNEL_EVENTBUS_CHANNEL, build_notify_payload
 
 if TYPE_CHECKING:
     from dna.kernel.capabilities import SourceCapabilities
@@ -85,6 +85,13 @@ logger = logging.getLogger(__name__)
 
 _OPS = ("eq", "neq", "gt", "gte", "lt", "lte", "like")
 _PG_NUMERIC_RE = r"^-?[0-9]+(\.[0-9]+)?$"
+
+# s-pg-schema-identifier-guard (inherited from the retired raw Postgres
+# adapter): the schema identifier is f-string-interpolated into the
+# migration DDL + control-table statements and can't be a bind param, so
+# validate it ONCE at construction against a conservative allowlist —
+# trusted-config-only, never request input.
+_VALID_SCHEMA_IDENT = re.compile(r"^[a-z_][a-z0-9_]*$")
 
 
 def _now() -> str:
@@ -108,16 +115,16 @@ class _PgOutboxEmitter:
 
     Emits the KernelEventBus event atomically with the caller's data
     write (the caller passes the open ``engine.begin()`` connection).
-    Three operations, same transaction — identical to
-    ``PostgresSource._emit_outbox``:
+    Three operations, same transaction — the contract the retired raw PG
+    adapter's ``_emit_outbox`` pioneered:
 
       1. INSERT into ``dna_outbox`` (durable, FIFO event log).
       2. UPSERT ``dna_versions_seq`` (per-(scope, tenant) checkpoint).
       3. ``pg_notify`` on :data:`KERNEL_EVENTBUS_CHANNEL`.
 
-    The payload is produced by the raw adapter's ``_build_notify_payload``
-    (imported), so ``PostgresEventBus`` subscribers can't tell which
-    adapter produced the event.
+    The payload is produced by ``dna.kernel.eventbus.build_notify_payload``
+    (the shared producer contract), so ``PostgresEventBus`` subscribers
+    see the exact same wire shape the retired raw adapter emitted.
     """
 
     def __init__(self, source: "SqlAlchemySource") -> None:
@@ -157,7 +164,7 @@ class _PgOutboxEmitter:
             set_={"last_id": ins.excluded.last_id,
                   "last_at": ins.excluded.last_at},
         ))
-        payload = _build_notify_payload(
+        payload = build_notify_payload(
             outbox_id, scope, tenant, kind, name, op, doc_version,
             actor_val, write_class,
         )
@@ -194,6 +201,12 @@ class SqlAlchemySource(WritableSourcePort):
         self._engine: AsyncEngine = create_async_engine(url)
         self._is_pg = self._engine.dialect.name == "postgresql"
         # [dialect] pg keeps its namespaced schema; sqlite has none.
+        if schema is not None and not _VALID_SCHEMA_IDENT.match(schema):
+            raise ValueError(
+                f"Invalid Postgres schema identifier {schema!r}: must match "
+                f"{_VALID_SCHEMA_IDENT.pattern} (trusted-config-only — set via "
+                "deploy config, never from request input)."
+            )
         self._schema = schema if self._is_pg else None
         # [dialect] base-layer tenant sentinel on documents/versions:
         # pg uses '' (NOT NULL DEFAULT ''), sqlite uses NULL (Phase 2c).
@@ -378,8 +391,9 @@ class SqlAlchemySource(WritableSourcePort):
 
         if self._is_pg:
             # [dialect] pg payload: list[str] with {schema} placeholder,
-            # one tx per version (existing PostgresSource semantics).
-            from ..postgres.source import _MIGRATIONS as PG_MIGRATIONS
+            # one tx per version (the raw-PostgresSource semantics it
+            # inherited — payloads moved here on adapter retirement).
+            from .migrations import PG_MIGRATIONS
             control = f"{self._schema or 'public'}.dna_schema_migrations"
 
             async def ensure_control_table() -> None:
@@ -418,7 +432,7 @@ class SqlAlchemySource(WritableSourcePort):
 
         # [dialect] sqlite payload: one multi-statement SCRIPT per version
         # (executescript semantics) — split into statements for Core.
-        from ..sqlite.migrations import MIGRATIONS as SQLITE_MIGRATIONS
+        from .migrations import SQLITE_MIGRATIONS
 
         async def ensure_control_table() -> None:
             async with self._engine.begin() as conn:
@@ -939,12 +953,85 @@ class SqlAlchemySource(WritableSourcePort):
         self, scope: str, kind: str, *,
         filter=None, group_by=None, tenant=None,
     ) -> dict[str, Any]:
-        # Rides this adapter's query() via the shared aggregation helper —
-        # inherits the bundle-override slow-path automatically.
+        """COUNT push-down (F2 D2) — the pg dialect aggregates natively in
+        SQL (only aggregates travel back, never rows), inheriting the
+        retired raw PG adapter's native count. The sqlite dialect rides
+        this adapter's ``query()`` via the shared helper — the raw sqlite
+        adapter's documented choice ("native push-down can land later if
+        sqlite scopes grow").
+
+        Bundle-override guard (mirrors ``query()``'s slow-path): when a
+        registered reader can produce this kind, bundle docs may cross
+        containers and pure SQL would diverge — ride the protocol default,
+        which inherits query()'s slow-path bundle resolution.
+
+        Tenant dedup (pg): ``DISTINCT ON (name) … ORDER BY name, tenant
+        DESC`` (overlay wins: any slug > '' lexicographically) in a
+        subquery; the ``filter`` applies INSIDE, per physical row —
+        matching ``query()``'s per-tenant fetches (a base row that matches
+        the filter is not shadowed by an overlay that doesn't).
+
+        Group ordering: count DESC, key ASC NULLS LAST — parity with the
+        protocol default (``-count, key-is-None, str(key)``).
+        """
+        from dna.kernel.protocols import QueryError
         from dna.kernel.query_fallback import count_via_query
-        return await count_via_query(
-            self, scope, kind, filter=filter, group_by=group_by, tenant=tenant,
-        )
+
+        if filter is not None and not isinstance(filter, dict):
+            raise QueryError(f"filter must be dict, got {type(filter).__name__}")
+
+        if self._reader_can_produce(kind) or not self._is_pg:
+            # [dialect] the guard applies to both dialects; sqlite always
+            # rides query() (no native aggregation, as before).
+            return await count_via_query(
+                self, scope, kind, filter=filter, group_by=group_by, tenant=tenant,
+            )
+
+        d = self.documents
+        where = self._build_where(filter)
+        key_expr = self._json_expr(group_by) if group_by else None
+
+        async with self._engine.connect() as conn:
+            if tenant is None:
+                pred = [d.c.scope == scope, d.c.kind == kind,
+                        self._tenant_where(d.c.tenant, None), *where]
+                if key_expr is None:
+                    total = (await conn.execute(
+                        sa.select(sa.func.count()).where(*pred)
+                    )).scalar_one()
+                    return {"total": int(total), "groups": None}
+                key = key_expr.label("key")
+                cnt = sa.func.count().label("cnt")
+                rows = (await conn.execute(
+                    sa.select(key, cnt).where(*pred).group_by(key)
+                    .order_by(cnt.desc(), key.asc().nulls_last())
+                )).all()
+            else:
+                # [dialect] DISTINCT ON is a pg-only construct — fine, this
+                # whole branch is pg-only (sqlite returned above).
+                inner_cols: list[Any] = [d.c.name]
+                if key_expr is not None:
+                    inner_cols.append(key_expr.label("key"))
+                inner = (
+                    sa.select(*inner_cols)
+                    .distinct(d.c.name)
+                    .where(d.c.scope == scope, d.c.kind == kind,
+                           d.c.tenant.in_(["", tenant]), *where)
+                    .order_by(d.c.name, d.c.tenant.desc())
+                ).subquery("t")
+                if key_expr is None:
+                    total = (await conn.execute(
+                        sa.select(sa.func.count()).select_from(inner)
+                    )).scalar_one()
+                    return {"total": int(total), "groups": None}
+                cnt = sa.func.count().label("cnt")
+                rows = (await conn.execute(
+                    sa.select(inner.c.key, cnt).group_by(inner.c.key)
+                    .order_by(cnt.desc(), inner.c.key.asc().nulls_last())
+                )).all()
+
+        groups = [{"key": r.key, "count": int(r.cnt)} for r in rows]
+        return {"total": sum(g["count"] for g in groups), "groups": groups}
 
     # ------------------------------------------------------------------
     # WritableSourcePort (write)
@@ -1104,7 +1191,7 @@ class SqlAlchemySource(WritableSourcePort):
             await conn.execute(b.delete().where(*key, cond))
         else:
             # [dialect] sqlite has one flexible-affinity column — full
-            # replace, exactly like the raw SqliteSource.
+            # replace, exactly like the retired raw sqlite adapter did.
             await conn.execute(b.delete().where(*key))
         ts = _now()
         for entry_path, body in {**text_entries, **bin_entries}.items():

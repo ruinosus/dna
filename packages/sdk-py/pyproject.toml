@@ -16,21 +16,21 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-postgres = ["asyncpg>=0.29"]
-sqlite = ["aiosqlite>=0.20"]
+# s-retire-raw-sql-adapters: the raw asyncpg/aiosqlite adapters are retired —
+# the SQL path is SqlAlchemySource (adapters/sqlalchemy_) on both dialects,
+# bound to the same tables (switching is pure instantiation — see
+# docs/PORT-CONTRACT.md § "Using the SQLAlchemy adapter"). The `postgres` and
+# `sqlite` extras KEEP their names (anyone who followed the docs keeps
+# working) and now pull the engine + that dialect's async driver; `sql` is
+# the umbrella for both. Nothing in the default install imports sqlalchemy
+# (guard: tests/test_sqlalchemy_source.py::test_default_import_never_pulls_sqlalchemy).
+postgres = ["sqlalchemy[asyncio]>=2", "asyncpg>=0.29"]
+sqlite = ["sqlalchemy[asyncio]>=2", "aiosqlite>=0.20"]
 redis = ["redis>=5.0"]
 s3 = ["boto3>=1.28"]
 tools = ["langchain-core>=1.4,<2"]
 safety-ml = ["presidio-analyzer>=2.2", "presidio-anonymizer>=2.2", "spacy>=3.7", "detoxify>=0.5"]
-# s-sqlalchemy-source-production — SqlAlchemySource (adapters/sqlalchemy_):
-# ONE adapter, both SQL dialects, SAME tables as the raw adapters (switching
-# is pure instantiation — see docs/PORT-CONTRACT.md § "Using the SQLAlchemy
-# adapter"). Decision: engine + BOTH async drivers ride together (via the
-# existing sqlite/postgres extras) — the drivers are tiny and a single extra
-# keeps `pip install dna-sdk[sql]` a complete story on either dialect.
-# Nothing in the default install imports sqlalchemy (guard:
-# tests/test_sqlalchemy_source.py::test_default_import_never_pulls_sqlalchemy).
-sql = ["sqlalchemy[asyncio]>=2", "dna-sdk[sqlite,postgres]"]
+sql = ["dna-sdk[sqlite,postgres]"]
 # rec-embedding-port — the REAL EmbeddingPort (ONNX all-MiniLM-L6-v2 via
 # fastembed, which drags onnxruntime). Deliberately OUT of `all`/`dev`: it is
 # heavy (ONNX runtime) and the default/CI floor is the zero-dep

@@ -46,9 +46,9 @@ class BundleIO:
                 f"add a `fetch_bundle_entry(scope, container, name, entry, "
                 f"*, tenant)` method to your source adapter."
             )
-        # Source impls may be sync (FilesystemSource) or async (PostgresSource).
-        # loop=self._main_loop so worker threads dispatch back to the loop that
-        # owns the asyncpg pool (no new-loop orphaning). ``kind`` lets SQL
+        # Source impls may be sync (FilesystemSource) or async (the SQL
+        # adapter). loop=self._main_loop so worker threads dispatch back to the
+        # loop that owns the async engine (no new-loop orphaning). ``kind`` lets SQL
         # adapters disambiguate same-named docs across kinds; FS impls ignore it.
         from dna.kernel import _run_sync_helper
         return _run_sync_helper(

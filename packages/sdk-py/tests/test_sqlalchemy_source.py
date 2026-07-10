@@ -6,8 +6,8 @@ spike:
 
   - packaging guard: the default install never imports sqlalchemy;
   - PG eventbus strategy: outbox + versions_seq + pg_notify in the SAME
-    transaction, payload byte-identical to the raw PostgresSource (the
-    builder is imported, and the test listens on the live channel);
+    transaction, payload built by the kernel event contract's shared
+    builder (imported, and the test listens on the live channel);
   - memo-cached ``_load_view`` (single-flight, deep copies, invalidation
     on local writes + kernel wiring);
   - FrontmatterParseWarning net (corrupt marker → canonical row);
@@ -90,14 +90,15 @@ async def sa_sqlite():
 
 
 def test_notify_payload_builder_is_shared():
-    """Byte-parity by construction: the SA adapter uses the raw Postgres
-    adapter's payload builder + channel constant (imported, not copied)."""
+    """Byte-parity by construction: the SA adapter uses the kernel event
+    contract's payload builder + channel constant (imported, not copied) —
+    the same objects the PostgresEventBus subscriber side reads."""
     _require_sqlalchemy()
     from dna.adapters import sqlalchemy_ as sam
-    from dna.adapters.postgres import source as pgm
+    from dna.kernel import eventbus as ebm
 
-    assert sam.source._build_notify_payload is pgm._build_notify_payload
-    assert sam.source.KERNEL_EVENTBUS_CHANNEL == pgm.KERNEL_EVENTBUS_CHANNEL
+    assert sam.source.build_notify_payload is ebm.build_notify_payload
+    assert sam.source.KERNEL_EVENTBUS_CHANNEL == ebm.KERNEL_EVENTBUS_CHANNEL
 
 
 def test_cross_process_invalidation_flag_follows_dialect():
@@ -405,8 +406,8 @@ async def test_pg_write_emits_outbox_seq_and_notify_with_raw_parity(sa_pg):
     dna_versions_seq + fires pg_notify — and the received payload is
     byte-identical to what the raw adapter's builder produces."""
     import asyncpg
-    from dna.adapters.postgres.source import (
-        KERNEL_EVENTBUS_CHANNEL, _build_notify_payload,
+    from dna.kernel.eventbus import (
+        KERNEL_EVENTBUS_CHANNEL, build_notify_payload as _build_notify_payload,
     )
 
     src, dsn, schema = sa_pg["src"], sa_pg["dsn"], sa_pg["schema"]
@@ -524,3 +525,20 @@ async def test_pg_save_preserves_binary_bundle_entries(sa_pg):
         "evb-sa3", "Skill", "bin-keeper", "output.png", kind="Skill",
     )
     assert blob == b"\x89PNG-fake"
+
+
+@pytest.mark.asyncio
+async def test_non_tenant_layer_writes_rejected(sa_sqlite):
+    """Layer-write contract (moved from the retired raw-adapter test):
+    save/delete with a non-tenant layer raises NotImplementedError — only
+    tenant overlays are supported on the SQL path."""
+    raw = {"apiVersion": "x/v1", "kind": "Agent",
+           "metadata": {"name": "a"}, "spec": {}}
+    with pytest.raises(NotImplementedError):
+        await sa_sqlite.save_document(
+            "m", "Agent", "a", raw, layer=("region", "emea"),
+        )
+    with pytest.raises(NotImplementedError):
+        await sa_sqlite.delete_document(
+            "m", "Agent", "a", layer=("region", "emea"),
+        )

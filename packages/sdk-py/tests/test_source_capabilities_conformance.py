@@ -25,8 +25,7 @@ import pytest
 from dna.adapters.filesystem.composite import CompositeFilesystemSource
 from dna.adapters.filesystem.source import FilesystemSource
 from dna.adapters.filesystem.writable import FilesystemWritableSource
-from dna.adapters.postgres.source import PostgresSource
-from dna.adapters.sqlite.source import SqliteSource
+from dna.adapters.sqlalchemy_ import SqlAlchemySource
 from dna.kernel.capabilities import (
     DELETE_OPTIONAL_KWARGS,
     SAVE_OPTIONAL_KWARGS,
@@ -36,43 +35,49 @@ from dna.kernel.capabilities import (
     write_kwarg_support,
 )
 
+# (id, factory) — SqlAlchemySource enters once per dialect: capabilities are
+# declared per-instance (the pg row uses an unreachable DSN; the engine is
+# lazy, so declaration honesty is checked with no server).
 _ADAPTERS = [
-    FilesystemSource,
-    FilesystemWritableSource,
-    CompositeFilesystemSource,
-    SqliteSource,
-    PostgresSource,
+    ("FilesystemSource",
+     lambda tmp: FilesystemSource(tmp)),
+    ("FilesystemWritableSource",
+     lambda tmp: FilesystemWritableSource(tmp)),
+    ("CompositeFilesystemSource",
+     lambda tmp: CompositeFilesystemSource(tmp)),
+    ("SqlAlchemySource[sqlite]",
+     lambda tmp: SqlAlchemySource(f"sqlite+aiosqlite:///{tmp}/caps.sqlite3")),
+    ("SqlAlchemySource[postgres]",
+     lambda tmp: SqlAlchemySource("postgresql+asyncpg://u:p@nowhere.invalid/db")),
 ]
+_ADAPTER_IDS = [i for i, _ in _ADAPTERS]
+_ADAPTER_FACTORIES = [f for _, f in _ADAPTERS]
 
 
-def _make(cls, tmp_path):
-    """Cheap instances — no I/O at construction for any of the five."""
-    if cls is PostgresSource:
-        return cls(pool=None)  # pool is only touched on first operation
-    if cls is SqliteSource:
-        return cls(str(tmp_path / "caps.sqlite3"))  # opened lazily
-    return cls(tmp_path)  # FS roots; empty dir is a valid (scopeless) tree
+def _make(factory, tmp_path):
+    """Cheap instances — no I/O at construction for any of them."""
+    return factory(tmp_path)
 
 
 # ---------------------------------------------------------------------------
 # Declaration honesty: declared literal == reflection oracle
 # ---------------------------------------------------------------------------
 
-@pytest.mark.parametrize("cls", _ADAPTERS, ids=lambda c: c.__name__)
-def test_declared_capabilities_match_reflection_oracle(cls, tmp_path):
-    src = _make(cls, tmp_path)
+@pytest.mark.parametrize("factory", _ADAPTER_FACTORIES, ids=_ADAPTER_IDS)
+def test_declared_capabilities_match_reflection_oracle(factory, tmp_path):
+    src = _make(factory, tmp_path)
     declared = src.capabilities()
     assert isinstance(declared, SourceCapabilities)
     oracle = derive_capabilities(src, label=declared.source)
     assert declared == oracle, (
-        f"{cls.__name__} declara capabilities que divergem do que o adapter "
-        f"realmente implementa:\n  declared: {declared}\n  oracle:   {oracle}"
+        f"{type(src).__name__} declara capabilities que divergem do que o "
+        f"adapter realmente implementa:\n  declared: {declared}\n  oracle:   {oracle}"
     )
 
 
-@pytest.mark.parametrize("cls", _ADAPTERS, ids=lambda c: c.__name__)
-def test_declared_kwargs_within_port_vocabulary(cls, tmp_path):
-    caps = _make(cls, tmp_path).capabilities()
+@pytest.mark.parametrize("factory", _ADAPTER_FACTORIES, ids=_ADAPTER_IDS)
+def test_declared_kwargs_within_port_vocabulary(factory, tmp_path):
+    caps = _make(factory, tmp_path).capabilities()
     assert caps.write_kwargs <= SAVE_OPTIONAL_KWARGS
     assert caps.delete_kwargs <= DELETE_OPTIONAL_KWARGS
 
@@ -81,9 +86,9 @@ def test_declared_kwargs_within_port_vocabulary(cls, tmp_path):
 # source_capabilities — declared-first accessor
 # ---------------------------------------------------------------------------
 
-@pytest.mark.parametrize("cls", _ADAPTERS, ids=lambda c: c.__name__)
-def test_source_capabilities_uses_declaration_without_warning(cls, tmp_path):
-    src = _make(cls, tmp_path)
+@pytest.mark.parametrize("factory", _ADAPTER_FACTORIES, ids=_ADAPTER_IDS)
+def test_source_capabilities_uses_declaration_without_warning(factory, tmp_path):
+    src = _make(factory, tmp_path)
     with warnings.catch_warnings():
         warnings.simplefilter("error", DeprecationWarning)
         caps = source_capabilities(src)
@@ -145,12 +150,10 @@ def test_legacy_dict_capabilities_degrade_to_derivation():
 # ---------------------------------------------------------------------------
 
 @pytest.mark.parametrize(
-    "cls",
-    [FilesystemWritableSource, CompositeFilesystemSource, SqliteSource, PostgresSource],
-    ids=lambda c: c.__name__,
-)
-def test_write_kwarg_support_reads_declaration(cls, tmp_path):
-    src = _make(cls, tmp_path)
+    "factory", _ADAPTER_FACTORIES[1:], ids=_ADAPTER_IDS[1:],
+)  # every writable adapter (all but the read-only FilesystemSource)
+def test_write_kwarg_support_reads_declaration(factory, tmp_path):
+    src = _make(factory, tmp_path)
     ws = write_kwarg_support(src)
     assert ws.author and ws.tenant and ws.layer_save
     assert ws.tenant_delete and ws.layer_delete

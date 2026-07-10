@@ -10,8 +10,10 @@ import tempfile
 
 
 def test_sqlite_declares_no_cross_process_invalidation():
-    from dna.adapters.sqlite.source import SqliteSource
-    assert SqliteSource.supports_cross_process_invalidation is False
+    # Instance-level on SqlAlchemySource — dialect decides (no bus on sqlite).
+    from dna.adapters.sqlalchemy_ import SqlAlchemySource
+    src = SqlAlchemySource("sqlite+aiosqlite:///:memory:")
+    assert src.supports_cross_process_invalidation is False
 
 
 def test_filesystem_declares_no_cross_process_invalidation():
@@ -21,6 +23,7 @@ def test_filesystem_declares_no_cross_process_invalidation():
 
 
 def test_postgres_declares_cross_process_invalidation():
-    # Class attribute — no live database needed.
-    from dna.adapters.postgres.source import PostgresSource
-    assert PostgresSource.supports_cross_process_invalidation is True
+    # No live database needed — the flag is set at construction.
+    from dna.adapters.sqlalchemy_ import SqlAlchemySource
+    src = SqlAlchemySource("postgresql+asyncpg://u:p@nowhere.invalid/db")
+    assert src.supports_cross_process_invalidation is True

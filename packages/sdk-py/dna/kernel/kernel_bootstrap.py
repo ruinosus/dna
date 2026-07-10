@@ -189,7 +189,7 @@ def build_auto_kernel(
         # Eliminates the historical FilesystemWritableSource-only
         # special case at this site, and the silent
         # bundle-write-drop bug when callers did
-        # ``Kernel.auto(source=SqliteSource(...))`` directly.
+        # ``Kernel.auto(source=SqlAlchemySource(...))`` directly.
         from dna.kernel.capabilities import KernelAttachable
         if isinstance(source, KernelAttachable):
             source.attach_kernel(k)

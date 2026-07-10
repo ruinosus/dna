@@ -33,8 +33,8 @@ class BundleHandle(Protocol):
     Implementations:
       - ``FilesystemBundleHandle`` (this module) — wraps ``pathlib.Path``.
       - ``DictBundleHandle`` (this module) — in-memory, used in tests.
-      - ``PostgresBundleHandle`` (adapters/postgres/source.py, Phase 8 PR2)
-        — backed by ``dna_bundle_entries`` rows.
+      - ``DictBundleHandle`` is also how the SQL adapter serves bundles —
+        hydrated from ``dna_bundle_entries`` rows.
 
     Entry naming convention: a posix-style relative path inside the bundle.
     Top-level entries are bare names (``"SAFETYPOLICY.md"``,

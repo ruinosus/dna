@@ -1,7 +1,8 @@
-"""Micro-benchmark: SqlAlchemySource vs the raw SQL adapters.
+"""Micro-benchmark: SqlAlchemySource on both dialects.
 
-Ported from the i-216 spike bench (s-sqlalchemy-source-production).
-Reproducible method (no magic): for each (impl, dialect) pair,
+Ported from the i-216 spike bench (s-sqlalchemy-source-production); the
+raw-adapter comparison rows retired with the raw adapters
+(s-retire-raw-sql-adapters). Reproducible method (no magic): per dialect,
 
   1. save_document × N   (insert version + auto-publish + eventbus)  [write]
   2. load_all × R        (full scope view)                           [read]
@@ -10,14 +11,12 @@ Reproducible method (no magic): for each (impl, dialect) pair,
 Times are wall-clock via ``time.perf_counter`` on a single process; each
 suite runs against a FRESH store (temp sqlite file / throwaway pg schema).
 
-Honesty notes (differences vs the spike-era bench):
-  - The production SqlAlchemySource now matches the raw PG write path
-    feature-for-feature on pg (outbox + versions_seq + pg_notify +
-    auto-publish per save; a second event on publish) — the write
-    numbers ARE apples-to-apples now.
-  - BOTH PostgresSource and SqlAlchemySource memoize load_all per
-    (scope, tenant); the raw SqliteSource does not. Read numbers compare
-    cached vs cached for the pg pair, cached vs uncached for sqlite.
+Honesty notes:
+  - The pg dialect does the full production write path per save (outbox +
+    versions_seq + pg_notify + auto-publish; a second event on publish) —
+    heavier than sqlite by design.
+  - load_all is memoized per (scope, tenant) — the read numbers are
+    cache-hit numbers after the first load.
 
 Run:
 
@@ -89,19 +88,6 @@ async def _bench(label: str, source) -> dict:
     }
 
 
-async def bench_sqlite_raw() -> dict:
-    from dna.adapters.sqlite.source import SqliteSource
-    fd, tmp = tempfile.mkstemp(suffix=".db")
-    os.close(fd)
-    src = SqliteSource(db_path=tmp)
-    await src.connect()
-    try:
-        return await _bench("SqliteSource (raw aiosqlite)", src)
-    finally:
-        await src.close()
-        os.unlink(tmp)
-
-
 async def bench_sqlite_sa() -> dict:
     from dna.adapters.sqlalchemy_ import SqlAlchemySource
     fd, tmp = tempfile.mkstemp(suffix=".db")
@@ -113,25 +99,6 @@ async def bench_sqlite_sa() -> dict:
     finally:
         await src.close()
         os.unlink(tmp)
-
-
-async def bench_pg_raw(dsn: str) -> dict:
-    import asyncpg
-    from dna.adapters.postgres import PostgresSource
-    schema = f"dna_bench_{uuid.uuid4().hex[:10]}"
-    conn = await asyncpg.connect(dsn)
-    await conn.execute(f"CREATE SCHEMA {schema}")
-    await conn.close()
-    pool = await asyncpg.create_pool(dsn)
-    src = PostgresSource(pool, schema=schema)
-    await src.init()
-    try:
-        return await _bench("PostgresSource (raw asyncpg)", src)
-    finally:
-        await src.close()
-        c = await asyncpg.connect(dsn)
-        await c.execute(f"DROP SCHEMA IF EXISTS {schema} CASCADE")
-        await c.close()
 
 
 async def bench_pg_sa(dsn: str) -> dict:
@@ -167,13 +134,12 @@ def _print(rows: list[dict]) -> None:
 
 
 async def main() -> None:
-    rows = [await bench_sqlite_raw(), await bench_sqlite_sa()]
+    rows = [await bench_sqlite_sa()]
     dsn = os.environ.get("DATABASE_URL")
     if dsn:
-        rows.append(await bench_pg_raw(dsn))
         rows.append(await bench_pg_sa(dsn))
     else:
-        print("(DATABASE_URL unset — postgres pair skipped)\n")
+        print("(DATABASE_URL unset — postgres row skipped)\n")
     _print(rows)
 
 

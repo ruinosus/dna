@@ -31,7 +31,7 @@ WHERE — load documents from storage. Py: dna/kernel/protocols.py · TS: src/ke
 | `load_all` | ✅ | ✅ |  |
 | `resolve_ref` | ✅ | ✅ |  |
 | `load_layer` | ✅ | ✅ |  |
-| `close` | ✅ | ✅ | ℹ️ Py lists close in SOURCE_PORT_CORE_MEMBERS (boot gate); TS declares it optional — the kernel treats a missing close as a no-op. FS adapters implement a documented no-op; PostgresSource ends its owned pool. |
+| `close` | ✅ | ✅ | ℹ️ Py lists close in SOURCE_PORT_CORE_MEMBERS (boot gate); TS declares it optional — the kernel treats a missing close as a no-op. FS adapters implement a documented no-op; the SQL adapters end what they own (Py SqlAlchemySource disposes its engine; TS raw PostgresSource closes its pool). |
 | `list_doc_refs` | ✅ | ✅ | ℹ️ L1 granular read, capability-mediated on both sides (SourceCapabilities.granular_list / granularList). |
 | `load_one` | ✅ | ✅ |  |
 | `query` | ✅ | ✅ |  |

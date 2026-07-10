@@ -97,8 +97,8 @@ class SourceSync:
                 entry_loader is not None and sd is not None
                 and getattr(sd, "pattern", None) == StoragePattern.BUNDLE
             ):
-                # tenant is keyword-only on SqliteSource._load_bundle_entries
-                # (positional-or-kw on PG) — keyword keeps both happy (i-006).
+                # tenant is keyword-only on some adapters' bundle-entry
+                # loaders — keyword keeps every impl happy (i-006).
                 entries = await entry_loader(scope, kind, name, tenant=tenant or "")
                 if not entries:
                     entries = await entry_loader(scope, kind, name, tenant="")

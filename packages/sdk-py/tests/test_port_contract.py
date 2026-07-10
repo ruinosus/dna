@@ -6,8 +6,8 @@ bug that left SQLite without ``fetch_bundle_entry`` for a year.
 
 Adapters parametrized:
   - ``FilesystemWritableSource`` (always runs)
-  - ``SqliteSource`` (always runs, in-memory db)
-  - ``PostgresSource`` (skipped unless ``DATABASE_URL`` is set)
+  - ``SqlAlchemySource[sqlite]`` (always runs, temp .db file)
+  - ``SqlAlchemySource[postgres]`` (skipped unless ``DATABASE_URL`` is set)
 
 Every adapter that implements ``WritableSourcePort`` must pass these
 tests. Optional capability Protocols (``BundleEntryReadable``,
@@ -57,57 +57,8 @@ async def _build_fs_source() -> tuple[Any, Callable[[], Awaitable[None]]]:
     return src, cleanup
 
 
-async def _build_sqlite_source() -> tuple[Any, Callable[[], Awaitable[None]]]:
-    """SQLite source on a temp .db file. Always available (aiosqlite is core)."""
-    from dna.adapters.sqlite.source import SqliteSource
-
-    fd, tmp = tempfile.mkstemp(prefix="dna-port-contract-sqlite-", suffix=".db")
-    os.close(fd)
-    src = SqliteSource(db_path=tmp)
-    await src.connect()
-
-    async def cleanup() -> None:
-        await src.close()
-        try:
-            os.unlink(tmp)
-        except FileNotFoundError:
-            pass
-
-    return src, cleanup
-
-
-async def _build_postgres_source() -> tuple[Any, Callable[[], Awaitable[None]]]:
-    """Postgres source against ``DATABASE_URL``. Skipped when env unset."""
-    dsn = os.environ.get("DATABASE_URL")
-    if not dsn:
-        pytest.skip("DATABASE_URL not set — skipping Postgres adapter")
-
-    import asyncpg
-    from dna.adapters.postgres import PostgresSource
-
-    schema = f"dna_port_contract_{os.getpid()}_{id(asyncio):x}"
-    conn = await asyncpg.connect(dsn)
-    await conn.execute(f"DROP SCHEMA IF EXISTS {schema} CASCADE")
-    await conn.execute(f"CREATE SCHEMA {schema}")
-    await conn.close()
-
-    pool = await asyncpg.create_pool(dsn)
-    src = PostgresSource(pool, schema=schema)
-    await src.init()
-
-    async def cleanup() -> None:
-        try:
-            cleanup_conn = await asyncpg.connect(dsn)
-            await cleanup_conn.execute(f"DROP SCHEMA IF EXISTS {schema} CASCADE")
-            await cleanup_conn.close()
-        finally:
-            await pool.close()
-
-    return src, cleanup
-
-
 async def _build_sqlalchemy_sqlite_source() -> tuple[Any, Callable[[], Awaitable[None]]]:
-    """SqlAlchemySource[sqlite] — same tables as SqliteSource
+    """SqlAlchemySource[sqlite] — the retired raw sqlite adapter's tables
     (s-sqlalchemy-source-production). Skips without the `sql` extra."""
     try:
         import sqlalchemy  # noqa: F401
@@ -132,7 +83,7 @@ async def _build_sqlalchemy_sqlite_source() -> tuple[Any, Callable[[], Awaitable
 
 
 async def _build_sqlalchemy_postgres_source() -> tuple[Any, Callable[[], Awaitable[None]]]:
-    """SqlAlchemySource[postgres] — same tables as PostgresSource.
+    """SqlAlchemySource[postgres] — the retired raw PG adapter's tables.
     Skips without the `sql` extra or ``DATABASE_URL``."""
     try:
         import sqlalchemy  # noqa: F401
@@ -169,8 +120,6 @@ async def _build_sqlalchemy_postgres_source() -> tuple[Any, Callable[[], Awaitab
 
 _source_factories = [
     pytest.param(_build_fs_source, id="filesystem"),
-    pytest.param(_build_sqlite_source, id="sqlite"),
-    pytest.param(_build_postgres_source, id="postgres"),
     pytest.param(_build_sqlalchemy_sqlite_source, id="sqlalchemy-sqlite"),
     pytest.param(_build_sqlalchemy_postgres_source, id="sqlalchemy-postgres"),
 ]
@@ -432,38 +381,21 @@ async def test_fetch_bundle_entry_kind_disambiguation(source_with_kernel):
     # ``(scope, name, entry_path)`` so the SQL WHERE clause WITHOUT
     # the kind filter would have two candidates.
     fake_marker = b"COMPETING-KIND-PAYLOAD"
-    if hasattr(src, "_pool"):
-        # Postgres
-        async with src._pool.acquire() as conn:
-            await conn.execute(
-                f"INSERT INTO {src._schema}.dna_bundle_entries "
-                "(scope, kind, name, entry_path, content, updated_at, tenant) "
-                "VALUES ($1, $2, $3, $4, $5, $6, $7)",
-                "contract-test",
-                "FakeOtherKind",
-                "shared-name",
-                "SKILL.md",
-                fake_marker.decode("utf-8"),
-                "2026-05-08T00:00:00",
-                "",
-            )
-    elif hasattr(src, "_conn"):
-        # SQLite
-        await src._conn.execute(
-            "INSERT INTO bundle_entries "
-            "(scope, kind, name, entry_path, content, updated_at, tenant) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (
-                "contract-test",
-                "FakeOtherKind",
-                "shared-name",
-                "SKILL.md",
-                fake_marker.decode("utf-8"),
-                "2026-05-08T00:00:00",
-                "",  # base-layer sentinel — bundle_entries.tenant is NOT NULL (migration v8)
-            ),
-        )
-        await src._conn.commit()
+    if hasattr(src, "_engine"):
+        # SqlAlchemySource — one INSERT, dialect-portable via the Table.
+        import sqlalchemy as sa_mod
+        async with src._engine.begin() as conn:
+            await conn.execute(sa_mod.insert(src.bundle_entries).values(
+                scope="contract-test",
+                kind="FakeOtherKind",
+                name="shared-name",
+                entry_path="SKILL.md",
+                content=fake_marker.decode("utf-8"),
+                updated_at="2026-05-08T00:00:00",
+                tenant="",
+            ))
+        if hasattr(src, "invalidate_view"):
+            src.invalidate_view("contract-test")
     else:
         # Filesystem can't have this collision (containers are
         # directory namespaces). Skip cleanly.

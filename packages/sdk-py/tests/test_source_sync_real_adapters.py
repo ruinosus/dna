@@ -2,7 +2,7 @@
 
 The bug: ``digest_manifest`` read the base layer via
 ``load_layer(scope, "tenant", "__base__")``, but the real adapters
-(FilesystemSource, SqliteSource) treat ``load_layer`` strictly as a tenant
+(FilesystemSource, the SQL adapter) treat ``load_layer`` strictly as a tenant
 OVERLAY read — the ``"__base__"`` sentinel never maps to the base scope docs.
 Both sides of a diff therefore digested ``{}`` and diff/push were no-ops by
 construction. The duck-typed fakes in test_digest_manifest / test_source_diff /
@@ -20,7 +20,7 @@ import asyncio
 import yaml
 
 from dna.adapters.filesystem import FilesystemSource
-from dna.adapters.sqlite import SqliteSource
+from dna.adapters.sqlalchemy_ import SqlAlchemySource
 from dna.kernel import Kernel
 
 
@@ -41,8 +41,8 @@ def _write_fs_scope(root, scope: str, docs: list[dict]) -> None:
         )
 
 
-async def _sqlite_source(db_path, docs: list[dict], scope: str) -> SqliteSource:
-    src = SqliteSource(str(db_path))
+async def _sqlite_source(db_path, docs: list[dict], scope: str) -> SqlAlchemySource:
+    src = SqlAlchemySource(f"sqlite+aiosqlite:///{db_path}")
     await src.connect()
     for d in docs:
         await src.save_document(scope, d["kind"], d["metadata"]["name"], d)
@@ -125,8 +125,8 @@ def test_fs_diff_scope_missing_in_other_is_all_added(tmp_path):
 
 
 def test_sqlite_diff_detects_base_divergence(tmp_path):
-    """Same repro against SqliteSource — its load_layer reads the
-    layer_documents table (overlay rows only), so pre-fix both sides
+    """Same repro against the sqlite SQL adapter — its load_layer reads
+    the layer_documents table (overlay rows only), so pre-fix both sides
     digested {} too."""
     async def _run():
         a = await _sqlite_source(

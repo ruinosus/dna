@@ -1,23 +1,25 @@
-"""s-adapter-conformance-matrix — ONE suite × FS / SQLite / Postgres.
+"""s-adapter-conformance-matrix — ONE suite × FS / SQL(sqlite) / SQL(postgres).
 
 Adapters used to diverge silently (a behaviour gap surfaced only in prod). This
-runs the same conformance suite against all three backends so drift fails in CI:
+runs the same conformance suite against the filesystem adapter and both
+SqlAlchemySource dialects (the only SQL path since s-retire-raw-sql-adapters)
+so drift fails in CI:
 
   - query parity      : numeric gt/lt (the 9-vs-10 case — s-pg-query-pushdown-typing),
                         order_by, limit → identical result set per adapter.
   - tenant overlay    : a tenant overlay shadows the base layer on read.
   - bundle isolation  : two tenants writing the same bundle entry don't collide
                         (s-sqlite-bundle-tenant-pk).
-  - cross-process inval: Postgres emits a durable outbox + pg_notify
-                        (`_emit_outbox`); FS/SQLite don't → tracked xfail
-                        (s-sqlite-cross-process-invalidation).
+  - cross-process inval: the postgres dialect emits a durable outbox +
+                        pg_notify in the write tx; FS/sqlite don't → tracked
+                        xfail (s-sqlite-cross-process-invalidation).
 
 Postgres runs only when ``DATABASE_URL`` is set (CI sdk-tests has no PG service,
-so PG params skip there — FS + SQLite always run).
+so PG params skip there — FS + sqlite always run).
 
 Two formerly-failing gaps named in the story (PG TEXT coercion, SQLite bundle PK
-without tenant) are now FIXED, so their dimensions here PASS across adapters —
-the matrix demonstrates the fixes hold rather than re-flagging them.
+without tenant) are FIXED, so their dimensions here PASS across adapters — the
+matrix demonstrates the fixes hold rather than re-flagging them.
 """
 from __future__ import annotations
 
@@ -56,11 +58,12 @@ async def _build_fs_source() -> tuple[Any, Callable[[], Awaitable[None]]]:
 
 
 async def _build_sqlite_source() -> tuple[Any, Callable[[], Awaitable[None]]]:
-    from dna.adapters.sqlite.source import SqliteSource
+    """SqlAlchemySource over aiosqlite — the sqlite dialect row."""
+    from dna.adapters.sqlalchemy_ import SqlAlchemySource
 
     fd, tmp = tempfile.mkstemp(prefix="dna-conf-sqlite-", suffix=".db")
     os.close(fd)
-    src = SqliteSource(db_path=tmp)
+    src = SqlAlchemySource(f"sqlite+aiosqlite:///{tmp}")
     await src.connect()
 
     async def cleanup() -> None:
@@ -74,12 +77,14 @@ async def _build_sqlite_source() -> tuple[Any, Callable[[], Awaitable[None]]]:
 
 
 async def _build_postgres_source() -> tuple[Any, Callable[[], Awaitable[None]]]:
+    """SqlAlchemySource over asyncpg — the postgres dialect row.
+    Skipped when ``DATABASE_URL`` is unset."""
     dsn = os.environ.get("DATABASE_URL")
     if not dsn:
         pytest.skip("DATABASE_URL not set — skipping Postgres adapter")
 
     import asyncpg
-    from dna.adapters.postgres import PostgresSource
+    from dna.adapters.sqlalchemy_ import SqlAlchemySource
 
     schema = f"dna_conf_{os.getpid()}_{id(asyncio):x}"
     conn = await asyncpg.connect(dsn)
@@ -87,17 +92,15 @@ async def _build_postgres_source() -> tuple[Any, Callable[[], Awaitable[None]]]:
     await conn.execute(f"CREATE SCHEMA {schema}")
     await conn.close()
 
-    pool = await asyncpg.create_pool(dsn)
-    src = PostgresSource(pool, schema=schema)
-    await src.init()
+    sa_url = dsn.replace("postgresql://", "postgresql+asyncpg://", 1)
+    src = SqlAlchemySource(sa_url, schema=schema)
+    await src.connect()
 
     async def cleanup() -> None:
-        try:
-            c = await asyncpg.connect(dsn)
-            await c.execute(f"DROP SCHEMA IF EXISTS {schema} CASCADE")
-            await c.close()
-        finally:
-            await pool.close()
+        await src.close()
+        c = await asyncpg.connect(dsn)
+        await c.execute(f"DROP SCHEMA IF EXISTS {schema} CASCADE")
+        await c.close()
 
     return src, cleanup
 
@@ -145,9 +148,9 @@ async def _seed_doc(src: Any, scope: str, name: str, spec: dict, *, tenant: str 
     }
     await src.save_document(scope, "Story", name, raw, tenant=tenant)
     if hasattr(src, "publish"):
-        # PG's publish() is tenant-aware (it selects which tenant's draft to
-        # promote) — pass the tenant so an overlay draft is actually published.
-        # FS publish is a no-op; SQLite publish has no tenant param (i-092).
+        # SqlAlchemySource.publish() is tenant-aware (it selects which
+        # tenant's draft to promote) — pass the tenant so an overlay draft is
+        # actually published. FS publish is a no-op.
         if tenant is not None and "tenant" in inspect.signature(src.publish).parameters:
             await src.publish(scope, "Story", name, tenant=tenant)
         else:
@@ -204,14 +207,14 @@ async def test_query_order_and_limit_parity(adapter):
 
 @pytest.mark.asyncio
 async def test_tenant_overlay_shadows_base(adapter, request):
-    # i-092 — SqliteSource.publish() has no tenant param: it promotes whichever
-    # draft matches (scope,kind,name,is_draft=1), so the acme-overlay draft
-    # clobbers the base documents row → query(tenant=None) returns the overlay.
-    # FS (no-op publish) + PG (tenant-aware publish) shadow correctly. xfail
-    # SQLite until i-092 is fixed (documented, CI-visible).
+    # i-092 — schema debt inherited by the sqlite dialect: the sqlite
+    # documents PK is (scope, kind, name) WITHOUT tenant, so the acme-overlay
+    # publish clobbers the base row → query(tenant=None) returns the overlay.
+    # FS (no-op publish) + PG (tenant-aware PK) shadow correctly. xfail the
+    # sqlite dialect until i-092 is fixed (documented, CI-visible).
     if request.node.callspec.id == "sqlite":
         request.node.add_marker(pytest.mark.xfail(
-            reason="i-092: SQLite publish() ignores tenant — overlay clobbers base.",
+            reason="i-092: sqlite documents PK lacks tenant — overlay clobbers base.",
             strict=True,
         ))
     src, k = adapter
@@ -234,13 +237,10 @@ async def test_tenant_overlay_shadows_base(adapter, request):
 
 @pytest.mark.asyncio
 async def test_bundle_entry_tenant_isolation(adapter, request):
-    # i-093 — PostgresSource.write_bundle_entry hangs under the test's asyncpg
-    # pool (_acquire_safe/_ensure_migrated blocks). FS/SQLite complete instantly.
-    # Skip the PG param until i-093 is root-caused (SQLite isolation is the
-    # dimension that matters here — s-sqlite-bundle-tenant-pk — and PG keys on
-    # the same 5-tuple in its schema). query/overlay/cross-process keep PG.
-    if request.node.callspec.id == "postgres":
-        pytest.skip("i-093: PG write_bundle_entry hangs under the asyncpg test pool")
+    # The historical i-093 skip (raw PostgresSource.write_bundle_entry hung
+    # under the test's asyncpg pool) died with the raw adapter — the
+    # SQLAlchemy pg dialect runs this case for real, proving the hang was a
+    # raw-pool artifact, not a schema/semantics problem.
     src, _ = adapter
     # Seed the parent Skill doc per tenant first — bundle entries belong to a
     # doc (the SQL adapters store them in a sibling table keyed on the same doc).

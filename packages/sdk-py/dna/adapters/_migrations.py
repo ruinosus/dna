@@ -1,9 +1,9 @@
 """Shared forward-only schema-migration runner (s-dna-migration-contract).
 
-THE single implementation of the migration *algorithm* both SQL adapters
-(``adapters/sqlite`` and ``adapters/postgres``) previously hand-rolled in
-parallel. The contract it encodes (documented in
-``docs/PORT-CONTRACT.md`` § "Schema migrations"):
+THE single implementation of the migration *algorithm* the two retired raw
+SQL adapters previously hand-rolled in parallel; today its only caller is
+``SqlAlchemySource`` (one call per dialect). The contract it encodes
+(documented in ``docs/PORT-CONTRACT.md`` § "Schema migrations"):
 
   - **Forward-only, numbered.** Migrations are a ``Mapping[int, payload]``
     keyed by positive integer version. They are applied in ascending

@@ -1,14 +1,13 @@
-"""F2 Task 3: native COUNT push-down on PostgresSource.
+"""F2 Task 3: native COUNT push-down on the Postgres dialect.
 
 Two-planes F2 (spec docs/superpowers/specs/2026-06-09-kinds-two-planes-design.md
-D2). ``PostgresSource.count`` runs ``SELECT count(*) … GROUP BY`` natively —
+D2). ``SqlAlchemySource.count`` runs ``SELECT count(*) … GROUP BY`` natively —
 only aggregates travel back, never rows. The central assert is PARITY: the
 same scenario through the native override and through the protocol-default
-fallback (``await count_via_query(pg_src, …)``, the shared helper) — since
+fallback (``await count_via_query(pg_src, …)``, the shared helper — since
 ``pg_src.count`` is always the native one) must agree.
 
-Requires a running PostgreSQL instance (DATABASE_URL), same gating as
-test_postgres_source.py.
+Requires a running PostgreSQL instance (DATABASE_URL).
 """
 from __future__ import annotations
 
@@ -43,9 +42,9 @@ def _story(name: str, spec: dict) -> dict:
 
 @pytest_asyncio.fixture(loop_scope="module", scope="module")
 async def source():
-    """PostgresSource with a clean schema + seeded count scenarios."""
+    """pg-dialect SqlAlchemySource with a clean schema + seeded count scenarios."""
     import asyncpg
-    from dna.adapters.postgres import PostgresSource
+    from dna.adapters.sqlalchemy_ import SqlAlchemySource
 
     dsn = os.environ["DATABASE_URL"]
 
@@ -54,9 +53,9 @@ async def source():
     await conn.execute(f"CREATE SCHEMA {SCHEMA}")
     await conn.close()
 
-    pool = await asyncpg.create_pool(dsn)
-    src = PostgresSource(pool, schema=SCHEMA)
-    await src.init()
+    sa_url = dsn.replace("postgresql://", "postgresql+asyncpg://", 1)
+    src = SqlAlchemySource(sa_url, schema=SCHEMA)
+    await src.connect()
 
     # Plain scope — 4 Stories (2 todo, 1 done, 1 sem status) + 1 Issue
     # (other kind, must never count).
@@ -104,7 +103,7 @@ class TestNativePushdown:
         monkeypatch.setattr(type(source), "query", _spy)
         res = await source.count("count-scope", "Story")
         assert res == {"total": 4, "groups": None}
-        assert not rode_query, "PostgresSource.count must push down, not ride query()"
+        assert not rode_query, "SqlAlchemySource.count must push down, not ride query()"
 
 
 # ---------------------------------------------------------------------------

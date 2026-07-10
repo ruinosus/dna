@@ -13,7 +13,7 @@ Tested at two levels:
 import pytest
 import pytest_asyncio
 
-from dna.adapters.sqlite.source import SqliteSource
+from dna.adapters.sqlalchemy_ import SqlAlchemySource
 from dna.kernel import (
     Kernel, VERSION_CHURN_RETENTION, VERSION_CHURN_KINDS,
 )
@@ -24,7 +24,7 @@ from dna.kernel.protocols import StorageDescriptor
 
 @pytest_asyncio.fixture
 async def src(tmp_path):
-    s = SqliteSource(str(tmp_path / "ret.db"))
+    s = SqlAlchemySource(f"sqlite+aiosqlite:///{tmp_path / 'ret.db'}")
     await s.connect()  # run migrations (creates the versions table)
     yield s
     await s.close()
@@ -94,7 +94,7 @@ def test_churn_set_excludes_authored_kinds():
 
 @pytest.mark.asyncio
 async def test_kernel_caps_churn_kind_history(tmp_path):
-    s = SqliteSource(str(tmp_path / "k.db"))
+    s = SqlAlchemySource(f"sqlite+aiosqlite:///{tmp_path / 'k.db'}")
     await s.connect()
     k = Kernel()
     k.kind(_ChurnKind())

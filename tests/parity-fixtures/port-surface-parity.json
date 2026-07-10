@@ -27,7 +27,7 @@
         {
           "py": "close",
           "ts": "close",
-          "note": "Py lists close in SOURCE_PORT_CORE_MEMBERS (boot gate); TS declares it optional — the kernel treats a missing close as a no-op. FS adapters implement a documented no-op; PostgresSource ends its owned pool."
+          "note": "Py lists close in SOURCE_PORT_CORE_MEMBERS (boot gate); TS declares it optional — the kernel treats a missing close as a no-op. FS adapters implement a documented no-op; the SQL adapters end what they own (Py SqlAlchemySource disposes its engine; TS raw PostgresSource closes its pool)."
         },
         {
           "py": "list_doc_refs",

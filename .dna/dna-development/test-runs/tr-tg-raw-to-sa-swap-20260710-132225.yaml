@@ -1,0 +1,23 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-raw-to-sa-swap-20260710-132225
+spec:
+  guide_ref: tg-raw-to-sa-swap
+  outcome: pass
+  verifies:
+  - Story/s-retire-raw-sql-adapters
+  executed_by: claude-code
+  executed_at: '2026-07-10T13:22:25+00:00'
+  notes: "Executado 2026-07-10 contra o .db real. Outputs verbatim \u2014 STEP 1 (main\
+    \ ac3f461, venv do repo principal): \"RAW SqliteSource (main @ ac3f461) wrote\
+    \ 3 docs: ['s-alpha', 's-beta', 's-gamma']\" / \"pending migrations after boot:\
+    \ []\". STEP 2 (branch): \"migrations re-applied on the raw-adapter DB: []\" /\
+    \ \"SqlAlchemySource read 3 docs: [('s-alpha', 'todo'), ('s-beta', 'done'), ('s-gamma',\
+    \ 'in-progress')]\" / \"query(status=todo): ['s-alpha']\" / \"count group_by status:\
+    \ {'total': 3, 'groups': [{'key': 'done', 'count': 1}, {'key': 'in-progress',\
+    \ 'count': 1}, {'key': 'todo', 'count': 1}]}\" / \"after SA write: version 1 ->\
+    \ ['s-alpha', 's-beta', 's-delta', 's-gamma']\" / \"tables: ['bundle_entries',\
+    \ 'documents', 'layer_documents', 'schema_migrations', 'sqlite_sequence', 'versions']\"\
+    \ / \"schema_migrations rows: [1, 2, 3, 4, 5, 6, 7, 8]\". Troca cru\u2192SA provada:\
+    \ zero migra\xE7\xE3o, leitura id\xEAntica, write ok."
