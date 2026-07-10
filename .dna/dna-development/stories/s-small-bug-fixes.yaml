@@ -10,7 +10,7 @@ spec:
     \ i-009 (dep shorthand skills: n\xE3o lido por _collect_requested \u2192 granularidade\
     \ errada no resolve; ler o shorthand ou rejeit\xE1-lo com erro claro \u2014 decidir\
     \ pelo contrato real e documentar)."
-  status: review
+  status: done
   feature: f-dna-issues-round1
   priority: medium
   labels:
@@ -30,10 +30,13 @@ spec:
       \ pass"
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - PR merged
+  - text: PR merged
+    done: true
+    done_at: '2026-07-10T11:20:56+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-10T10:51:30+00:00'
-  updated_at: '2026-07-10T11:16:38+00:00'
+  updated_at: '2026-07-10T11:21:01+00:00'
   timeline:
   - at: '2026-07-10T10:51:30+00:00'
     actor: claude-code
@@ -123,6 +126,22 @@ spec:
       \ filada como follow-up. TestRun pass registrado (tr-tg-s-small-bug-fixes-20260710-110950).\
       \ Story em review \u2014 done na merge do PR."
     commit_ref: 5335229d8fc5a0023f292388752b02b3971ac4eb
+  - at: '2026-07-10T11:20:58+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #28 merged (9/9; TestGuide --product com smoke verbatim). i-007:\
+      \ scope detect dual-marker Genome-priorit\xE1rio (dna scope detect funciona!);\
+      \ i-009: shorthand legado REJEITADO com ResolveError did\xE1tico (formato morto\
+      \ \u2014 zero docs/schema/leitores), market-demo migrado pra items:. Follow-up\
+      \ i-010 (twin TS do resolver) filado."
+  - at: '2026-07-10T11:21:01+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: 268ba804629c1981a6e8d7c2aa9a24486c8f833b
   produces:
   - kind: Plan
     name: plan-s-small-bug-fixes
@@ -136,3 +155,4 @@ spec:
     name: tr-tg-s-small-bug-fixes-20260710-110950
     role: test-run
     at: '2026-07-10T11:09:51+00:00'
+  closed_at: '2026-07-10T11:20:56+00:00'
