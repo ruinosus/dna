@@ -1,0 +1,29 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-write-path-validation
+spec:
+  description: "Smoke do mecanismo gen\xE9rico de valida\xE7\xE3o spec\u2194schema\
+    \ no write (i-008): doc inv\xE1lido \xE9 vetado com erro did\xE1tico; v\xE1lido\
+    \ grava; SDLC continua escrevendo."
+  kind_of_test: smoke
+  status: active
+  steps:
+  - action: "No repo, criar um YAML de EvalCase com checks como objeto (n\xE3o array)\
+      \ e rodar: dna doc apply <arquivo> --scope dna-development"
+    expected: "exit code 1 e mensagem 'write vetoed ... schema validation failed at\
+      \ spec.checks ... see `dna kind show EvalCase`' \u2014 nada persiste em .dna/dna-development/eval-cases/"
+  - action: Corrigir o YAML (checks como array de {type, value}) e rodar o mesmo dna
+      doc apply
+    expected: '''CREATED EvalCase/...'' e o arquivo aparece em .dna/dna-development/eval-cases/'
+  - action: 'Rodar qualquer comando SDLC que escreve (ex.: dna sdlc story comment
+      s-write-path-validation --body ''smoke'')'
+    expected: "comando conclui normalmente \u2014 o fluxo SDLC do pr\xF3prio repo\
+      \ (Story/Issue/Comment) passa pela valida\xE7\xE3o e continua verde"
+  - action: "Com DNA_WRITE_VALIDATION=warn, aplicar o YAML inv\xE1lido"
+    expected: "doc grava mesmo assim e um warning did\xE1tico aparece no log (escape\
+      \ hatch documentado)"
+  verifies:
+  - Story/s-write-path-validation
+  created_at: '2026-07-10T11:13:28+00:00'
+  updated_at: '2026-07-10T11:13:28+00:00'

@@ -1,0 +1,19 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-write-path-validation-20260710-111410
+spec:
+  guide_ref: tg-write-path-validation
+  outcome: pass
+  verifies:
+  - Story/s-write-path-validation
+  executed_by: claude-code
+  executed_at: '2026-07-10T11:14:10+00:00'
+  notes: "Smoke executado ao vivo no worktree (2026-07-10): (1) EvalCase inv\xE1lido\
+    \ via dna doc apply \u2192 exit 1 + 'write vetoed ... spec.checks ... not of type\
+    \ array ... dna kind show EvalCase', nada persistiu; (2) YAML corrigido \u2192\
+    \ CREATED + arquivo em eval-cases/; (3) SDLC do pr\xF3prio repo (story comment/test-guide\
+    \ create) escrevendo normalmente atrav\xE9s da valida\xE7\xE3o; (4) DNA_WRITE_VALIDATION=warn\
+    \ \u2192 warning did\xE1tico + persistiu (escape hatch). Suites: sdk-py 2940 passed/0\
+    \ failed; sdk-ts 1329 pass/0 fail + typecheck; cli 297 passed; guards brand+coverage+drift\
+    \ limpos; mkdocs --strict verde."

@@ -14,10 +14,38 @@ spec:
     \ serem lidos fail-soft."
   type: enhancement
   severity: medium
-  status: open
+  status: resolved
   timeline:
   - at: '2026-07-09T23:54:47+00:00'
     actor: claude-code
     type: status_change
     source: cli
     to: open
+  - at: '2026-07-10T11:14:35+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Generalizado em s-write-path-validation: WritePipeline.write (Py) /\
+      \ WritePipeline.write (TS) agora validam raw.spec contra o schema() do Kind\
+      \ ANTES de persistir \u2014 depois dos veto hooks pre_save (curas Kind-owned,\
+      \ ex. heal YAML-1.1 do Automation, aplicam primeiro). Kinds sem schema seguem\
+      \ permissivos (opt-in por dado); spec_defaults (D5) preenchem antes de validar;\
+      \ erro did\xE1tico no padr\xE3o do install #26 (campo + viola\xE7\xE3o + dna\
+      \ kind show <Kind>); SpecValidationError subclasse de ValueError. Pol\xEDtica\
+      \ de backcompat decidida por evid\xEAncia: suite completa com ENFORCE ligado\
+      \ = 2 falhas em 2925 testes, ambas fixtures legitimamente shape-quebradas (LessonLearned\
+      \ com confidence_score string / sem required area) \u2014 corrigidas, ent\xE3\
+      o o default \xE9 ENFORCE, com DNA_WRITE_VALIDATION=warn|off como escape hatch.\
+      \ O guard do Automation foi dedupado (port.parse removido; heal + cron/hook\
+      \ semantics mantidos). Red\u2192green nos shapes reais (Automation sem cron,\
+      \ EvalCase com checks objeto/vazio) em test_write_path_validation.py + write-path-validation.test.ts.\
+      \ Smoke real: dna doc apply de EvalCase inv\xE1lido \u2192 exit 1 + veto did\xE1\
+      tico; v\xE1lido \u2192 grava; o SDLC deste repo continuou escrevendo o tempo\
+      \ todo."
+  - at: '2026-07-10T11:14:36+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: open
+    to: resolved
+  closed_at: '2026-07-10T11:14:36+00:00'

@@ -30,7 +30,7 @@ spec:
   - PR merged via story pr
   definition_of_done_source: cli-create
   created_at: '2026-07-10T10:51:29+00:00'
-  updated_at: '2026-07-10T10:51:34+00:00'
+  updated_at: '2026-07-10T11:14:11+00:00'
   timeline:
   - at: '2026-07-10T10:51:29+00:00'
     actor: claude-code
@@ -43,8 +43,61 @@ spec:
     source: cli
     from: todo
     to: in-progress
+  - at: '2026-07-10T10:57:31+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Plano em execu\xE7\xE3o: (1) passo gen\xE9rico de schema-validate no\
+      \ WritePipeline.write (Py+TS), rodando DEPOIS dos veto hooks pre_save (para\
+      \ as curas \u2014 ex. YAML-1.1 on: do Automation \u2014 acontecerem antes) e\
+      \ ANTES do save_document; (2) merge de spec_defaults (D5) antes de validar,\
+      \ espelhando DeclarativeKindPort.parse; (3) modo via DNA_WRITE_VALIDATION=enforce|warn|off\
+      \ \u2014 default decidido por evid\xEAncia (suite completa roda com enforce\
+      \ primeiro); (4) dedup do guard do Automation: remove o port.parse (passo 2),\
+      \ mant\xE9m heal YAML-1.1 + sem\xE2ntica cron/hook; (5) erro did\xE1tico no\
+      \ padr\xE3o do install #26 (campo + dna kind show <Kind>)."
+    commit_ref: 586b342e5d8956a70dc25c7b240f18d6f5d74ee3
+  - at: '2026-07-10T11:04:57+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Evid\xEAncia colhida (a pol\xEDtica de backcompat \xE9 decidida por\
+      \ n\xFAmeros): suite sdk-py completa com o passo gen\xE9rico em ENFORCE = 2\
+      \ failed / 2923 passed / 220 skipped. As 2 falhas eram exatamente a classe do\
+      \ i-008 \u2014 fixtures shape-quebradas que o write path aceitava em sil\xEA\
+      ncio: (1) test_memory_verbs escrevia LessonLearned com confidence_score='faint'\
+      \ (schema: type number); (2) test_write_path_despecialize escrevia LessonLearned\
+      \ sem os required area/surface_when/source_refs/affect. Ambas corrigidas legitimamente\
+      \ (n\xE3o relaxei nada). DECIS\xC3O: default ENFORCE, com DNA_WRITE_VALIDATION=warn|off\
+      \ como escape hatch documentado. Dedup do guard Automation feito (Py+TS): port.parse\
+      \ removido, heal YAML-1.1 + cron/hook semantics mantidos; 57 testes automation+memory+despecialize\
+      \ verdes."
+    commit_ref: 586b342e5d8956a70dc25c7b240f18d6f5d74ee3
+  - at: '2026-07-10T11:13:29+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-write-path-validation
+    summary: TestGuide tg-write-path-validation (smoke)
+  - at: '2026-07-10T11:14:11+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-write-path-validation-20260710-111410
+    summary: "TestRun tr-tg-write-path-validation-20260710-111410 \u2192 pass"
+    outcome: pass
   produces:
   - kind: Plan
     name: plan-s-write-path-validation
     role: implementation
     at: '2026-07-10T10:51:34+00:00'
+  - kind: TestGuide
+    name: tg-write-path-validation
+    role: test-guide
+    at: '2026-07-10T11:13:29+00:00'
+  - kind: TestRun
+    name: tr-tg-write-path-validation-20260710-111410
+    role: test-run
+    at: '2026-07-10T11:14:11+00:00'
