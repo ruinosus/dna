@@ -129,7 +129,7 @@ def test_init_dir_option_targets_another_directory(runner, tmp_path, monkeypatch
     target.mkdir()
     subprocess.run(["git", "init", "-q"], cwd=target, check=True)
     monkeypatch.chdir(tmp_path)  # NOT the target
-    r = runner_ = CliRunner().invoke(init, ["--dir", str(target), "--scope", "elsewhere-dev"])
+    r = CliRunner().invoke(init, ["--dir", str(target), "--scope", "elsewhere-dev"])
     assert r.exit_code == 0, r.output
     assert (target / ".dna" / "elsewhere-dev" / "manifest.yaml").exists()
     assert (target / "AGENTS.md").exists()
