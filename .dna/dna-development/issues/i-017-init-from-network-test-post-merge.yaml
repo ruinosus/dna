@@ -10,7 +10,7 @@ spec:
     \ \xE9 DNA_OFFLINE=1, roda s\xF3 local."
   type: task
   severity: low
-  status: in-progress
+  status: resolved
   owner: claude-code
   related_feature: f-dna-ecosystem
   timeline:
@@ -25,3 +25,12 @@ spec:
     source: cli
     from: open
     to: in-progress
+  - at: '2026-07-10T22:41:46+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: resolved
+    summary: 'teste requires_network do pack @main adicionado no PR #44'
+  closed_at: '2026-07-10T22:41:46+00:00'
+  resolution: 'teste requires_network do pack @main adicionado no PR #44'

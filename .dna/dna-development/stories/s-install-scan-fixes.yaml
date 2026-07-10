@@ -7,33 +7,57 @@ spec:
   description: Fix _scan_tree so a reader claiming a directory (root AGENTS.md) no
     longer hides sibling/child docs (i-016), and add the requires_network test for
     dna init --from against the onboarding pack on main (i-017).
-  status: review
+  status: done
   feature: f-dna-ecosystem
   owner: claude-code
   reporter: claude-code
   acceptance_criteria:
-  - Given a tree with AGENTS.md at the root AND skills/<name>/SKILL.md, When dna install
-    runs, Then BOTH the AgentDefinition and every Skill are installed (plan lists
-    them all).
-  - "Given a Skill bundle directory (SKILL.md + companions/subdirs), When scanned,\
-    \ Then it yields exactly ONE doc \u2014 no duplicates from recursing into the\
-    \ bundle."
-  - Given a skills-only tree, When installed, Then the result is byte-identical to
-    before the fix (golden unchanged).
-  - 'Given the fix, When dna init --from loads a pack, Then it delegates to the shared
-    scan (workaround from PR #41 removed) and its tests stay green.'
-  - Given network locally, When pytest runs test marked requires_network for dna init
-    --from github:ruinosus/dna/examples/onboarding-pack (no ref), Then it passes;
-    under DNA_OFFLINE=1 it skips.
+  - text: Given a tree with AGENTS.md at the root AND skills/<name>/SKILL.md, When
+      dna install runs, Then BOTH the AgentDefinition and every Skill are installed
+      (plan lists them all).
+    done: true
+    done_at: '2026-07-10T22:41:35+00:00'
+    done_by: story-done-auto
+  - text: "Given a Skill bundle directory (SKILL.md + companions/subdirs), When scanned,\
+      \ Then it yields exactly ONE doc \u2014 no duplicates from recursing into the\
+      \ bundle."
+    done: true
+    done_at: '2026-07-10T22:41:35+00:00'
+    done_by: story-done-auto
+  - text: Given a skills-only tree, When installed, Then the result is byte-identical
+      to before the fix (golden unchanged).
+    done: true
+    done_at: '2026-07-10T22:41:35+00:00'
+    done_by: story-done-auto
+  - text: 'Given the fix, When dna init --from loads a pack, Then it delegates to
+      the shared scan (workaround from PR #41 removed) and its tests stay green.'
+    done: true
+    done_at: '2026-07-10T22:41:35+00:00'
+    done_by: story-done-auto
+  - text: Given network locally, When pytest runs test marked requires_network for
+      dna init --from github:ruinosus/dna/examples/onboarding-pack (no ref), Then
+      it passes; under DNA_OFFLINE=1 it skips.
+    done: true
+    done_at: '2026-07-10T22:41:35+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - code + tests (cli/sdk-py/sdk-ts suites green) + guards + mkdocs build --strict
-  - TestGuide --product + TestRun recorded for the mixed-tree install smoke and the
-    local network test
-  - PR to main with 11/11 checks; i-016 + i-017 resolved on merge
+  - text: code + tests (cli/sdk-py/sdk-ts suites green) + guards + mkdocs build --strict
+    done: true
+    done_at: '2026-07-10T22:41:35+00:00'
+    done_by: story-done-auto
+  - text: TestGuide --product + TestRun recorded for the mixed-tree install smoke
+      and the local network test
+    done: true
+    done_at: '2026-07-10T22:41:35+00:00'
+    done_by: story-done-auto
+  - text: PR to main with 11/11 checks; i-016 + i-017 resolved on merge
+    done: true
+    done_at: '2026-07-10T22:41:35+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-10T21:37:51+00:00'
-  updated_at: '2026-07-10T21:53:50+00:00'
+  updated_at: '2026-07-10T22:41:42+00:00'
   timeline:
   - at: '2026-07-10T21:37:51+00:00'
     actor: claude-code
@@ -121,6 +145,18 @@ spec:
       rvore no FilesystemCache._read_tree do SDK, fora de escopo aqui por tocar paridade\
       \ Py+TS)."
     commit_ref: 83f6121af95ed9b81f4d597353ef335e9eb5f3c9
+  - at: '2026-07-10T22:41:38+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'PR #44 merged; sai no v0.3.1'
+  - at: '2026-07-10T22:41:42+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: 0ea9396a4b4b76ca58a1e7fe8b4d1e3a360cb60f
   produces:
   - kind: Plan
     name: plan-s-install-scan-fixes
@@ -134,3 +170,4 @@ spec:
     name: tr-tg-install-scan-fixes-smoke-20260710-214658
     role: test-run
     at: '2026-07-10T21:46:59+00:00'
+  closed_at: '2026-07-10T22:41:35+00:00'
