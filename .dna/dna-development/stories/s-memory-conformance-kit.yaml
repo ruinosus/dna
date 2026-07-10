@@ -40,7 +40,7 @@ spec:
     \ sem merge"
   definition_of_done_source: cli-create
   created_at: '2026-07-10T20:09:00+00:00'
-  updated_at: '2026-07-10T20:30:39+00:00'
+  updated_at: '2026-07-10T20:34:10+00:00'
   timeline:
   - at: '2026-07-10T20:09:00+00:00'
     actor: claude-code
@@ -124,6 +124,18 @@ spec:
       \ passed (lexical + scoring) / 13 skipped (s\xF3 a perna do extra). Push na\
       \ mesma branch do PR #42."
     commit_ref: 4879f2b124c9c757561f400e5fa70017908a9577
+  - at: '2026-07-10T20:34:10+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "CI do PR #42 fechou verde: 11/11 (brand-guard, commit-emails, gitleaks,\
+      \ cli 3.12+3.13, sdk-py 3.12+3.13, sdk-ts, postgres, docs-build, docs-links;\
+      \ deploy skipa fora do main por design). Destaque: o job postgres rodou o novo\
+      \ test_pgvector_memory_conformance.py pela primeira vez e passou \u2014 os mesmos\
+      \ 10 casos do verb suite sobre pgvector, provando o ponto do port (um contrato,\
+      \ muitos stores). Story fica em review aguardando merge humano (worktree dna-wt-memkit\
+      \ preservado)."
+    commit_ref: 5d1b69f37b912df4b343d1fa2ec00c3324bf024d
   produces:
   - kind: Plan
     name: plan-s-memory-conformance-kit
