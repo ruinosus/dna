@@ -12,10 +12,41 @@ spec:
     \ s-sqlalchemy-source-production)."
   type: bug
   severity: medium
-  status: open
+  status: resolved
   timeline:
   - at: '2026-07-08T19:35:17+00:00'
     actor: claude-code
     type: status_change
     source: cli
     to: open
+  - at: '2026-07-10T13:23:15+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: open
+    to: resolved
+    summary: "Resolvida por REMO\xC7\xC3O do c\xF3digo afetado (s-retire-raw-sql-adapters):\
+      \ o hang era da classe asyncpg-pool-under-test do PostgresSource cru (upstream\
+      \ i-093); o adapter e o teste que travava (test_postgres_source.py::TestPhase15_1OutboxWrites::test_write_atomicity_no_partial_state)\
+      \ foram removidos. O caminho SQL Py \xE9 o SqlAlchemySource, que N\xC3O apresenta\
+      \ o defeito \u2014 evid\xEAncia: os cen\xE1rios equivalentes de atomicidade/outbox\
+      \ (test_pg_write_emits_outbox_seq_and_notify_with_raw_parity, failed-write rollback\
+      \ sem estado parcial) passam sob o pool do SQLAlchemy contra PG real, e a matriz\
+      \ de conformance roda bundle_entry_round_trip no dialeto pg SEM o skip i-093\
+      \ (o skip morreu com o cru \u2014 prova positiva de que era artefato do pool\
+      \ cru, n\xE3o de schema/sem\xE2ntica)."
+  closed_at: '2026-07-10T13:23:15+00:00'
+  resolution: "Resolvida por REMO\xC7\xC3O do c\xF3digo afetado (s-retire-raw-sql-adapters):\
+    \ o hang era da classe asyncpg-pool-under-test do PostgresSource cru (upstream\
+    \ i-093); o adapter e o teste que travava (test_postgres_source.py::TestPhase15_1OutboxWrites::test_write_atomicity_no_partial_state)\
+    \ foram removidos. O caminho SQL Py \xE9 o SqlAlchemySource, que N\xC3O apresenta\
+    \ o defeito \u2014 evid\xEAncia: os cen\xE1rios equivalentes de atomicidade/outbox\
+    \ (test_pg_write_emits_outbox_seq_and_notify_with_raw_parity, failed-write rollback\
+    \ sem estado parcial) passam sob o pool do SQLAlchemy contra PG real, e a matriz\
+    \ de conformance roda bundle_entry_round_trip no dialeto pg SEM o skip i-093 (o\
+    \ skip morreu com o cru \u2014 prova positiva de que era artefato do pool cru,\
+    \ n\xE3o de schema/sem\xE2ntica)."
+  produces:
+  - kind: TestRun
+    name: tr-tg-raw-to-sa-swap-20260710-132225
+    at: '2026-07-10T13:23:29+00:00'

@@ -37,7 +37,7 @@ spec:
     SA provada)"
   definition_of_done_source: cli-create
   created_at: '2026-07-10T12:33:21+00:00'
-  updated_at: '2026-07-10T12:33:38+00:00'
+  updated_at: '2026-07-10T13:22:26+00:00'
   timeline:
   - at: '2026-07-10T12:33:21+00:00'
     actor: claude-code
@@ -50,8 +50,61 @@ spec:
     source: cli
     from: todo
     to: in-progress
+  - at: '2026-07-10T12:44:02+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Invent\xE1rio fechado + commit 1 (MOVE) no ar: build_notify_payload\
+      \ + KERNEL_EVENTBUS_CHANNEL agora moram no contrato do bus (dna/kernel/eventbus.py\
+      \ \u2014 o canal J\xC1 tinha constante can\xF4nica l\xE1; a do source cru era\
+      \ duplicata) e PG_MIGRATIONS/SQLITE_MIGRATIONS movidos verbatim pra dna/adapters/sqlalchemy_/migrations.py.\
+      \ SA rewired; crus intactos at\xE9 o pr\xF3ximo commit. Descoberta: document_text\
+      \ N\xC3O mora no sqlite cru (\xE9 search/sqlite_vec.py) \u2014 nada a mover\
+      \ ali. PostgresEventBus fica (consumer, j\xE1 importa do kernel.eventbus)."
+    commit_ref: 81814911075577f7048dce272ac3876453912bf5
+  - at: '2026-07-10T13:06:44+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Commit 2 (a faca) no ar: PostgresSource (2241 loc) + SqliteSource (1321\
+      \ loc c/ migrations) removidos; 11 arquivos de teste dedicados deletados; ~20\
+      \ rewired pro SA. Matriz final do kit: fs-ro, fs-writable, composite, async(fake\
+      \ sync), async(S3/moto), SA-sqlite, SA-pg \u2014 o skip i-093 N\xC3O migrou\
+      \ (SA[pg] roda bundle_entry_round_trip de verdade). Descobertas no caminho:\
+      \ (1) SA n\xE3o tinha o schema-identifier guard do cru \u2192 portei + test_pg_schema_guard\
+      \ rewired; (2) test_layers_integration passava no sqlite cru s\xF3 porque ele\
+      \ guardava overlay de tenant em layer_documents \u2014 SA usa documents.tenant\
+      \ (parity raw-PG) e trope\xE7a no i-092 no sqlite \u2192 suite movida pro dialeto\
+      \ pg (requires_postgres), coverage de layer-machinery continua nas suites always-run.\
+      \ Extras: postgres/sqlite agora puxam sqlalchemy+driver (nomes mantidos); guard\
+      \ de import default verde. sdk-py full: 2771 passed, 0 failed. \u0394 \u2212\
+      6583/+440 loc."
+    commit_ref: 0a24f854f6a33d74668400a38733ec25d0db2c77
+  - at: '2026-07-10T13:22:08+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-raw-to-sa-swap
+    summary: TestGuide tg-raw-to-sa-swap (smoke)
+  - at: '2026-07-10T13:22:26+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-raw-to-sa-swap-20260710-132225
+    summary: "TestRun tr-tg-raw-to-sa-swap-20260710-132225 \u2192 pass"
+    outcome: pass
   produces:
   - kind: Plan
     name: plan-s-retire-raw-sql-adapters
     role: implementation
     at: '2026-07-10T12:33:38+00:00'
+  - kind: TestGuide
+    name: tg-raw-to-sa-swap
+    role: test-guide
+    at: '2026-07-10T13:22:08+00:00'
+  - kind: TestRun
+    name: tr-tg-raw-to-sa-swap-20260710-132225
+    role: test-run
+    at: '2026-07-10T13:22:26+00:00'

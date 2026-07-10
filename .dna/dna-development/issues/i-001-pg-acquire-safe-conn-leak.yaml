@@ -16,7 +16,7 @@ spec:
     \ CI story."
   type: bug
   severity: medium
-  status: open
+  status: resolved
   owner: claude-code
   timeline:
   - at: '2026-07-08T19:17:48+00:00'
@@ -24,3 +24,40 @@ spec:
     type: status_change
     source: cli
     to: open
+  - at: '2026-07-10T13:23:14+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: open
+    to: resolved
+    summary: "Resolvida por REMO\xC7\xC3O do c\xF3digo afetado (s-retire-raw-sql-adapters):\
+      \ PostgresSource._acquire_safe deixou de existir \u2014 o adapter cru inteiro\
+      \ (adapters/postgres/source.py) foi removido e o caminho SQL Python \xE9 o SqlAlchemySource,\
+      \ cujo pooling \xE9 do SQLAlchemy (release em finally \xE9 responsabilidade\
+      \ do engine, n\xE3o de c\xF3digo nosso). N\xE3o \xE9 um fix do defeito em si\
+      \ \u2014 o defeito morreu com o c\xF3digo. Prova de que o substituto n\xE3o\
+      \ apresenta a classe do problema: a matriz de conformance + test_sqlalchemy_source\
+      \ (incl. test_pg_write_atomicity / rollback sem outbox fantasma) passam contra\
+      \ PG real, incluindo o cen\xE1rio bundle_entry_round_trip que o pool cru travava\
+      \ (i-093-class) \u2014 2850 passed com DATABASE_URL vivo. O teste skipado que\
+      \ referia esta issue (test_postgres_source.py::test_write_atomicity_no_partial_state)\
+      \ foi removido junto com o arquivo; o cen\xE1rio equivalente vive em test_sqlalchemy_source\
+      \ e passa."
+  closed_at: '2026-07-10T13:23:14+00:00'
+  resolution: "Resolvida por REMO\xC7\xC3O do c\xF3digo afetado (s-retire-raw-sql-adapters):\
+    \ PostgresSource._acquire_safe deixou de existir \u2014 o adapter cru inteiro\
+    \ (adapters/postgres/source.py) foi removido e o caminho SQL Python \xE9 o SqlAlchemySource,\
+    \ cujo pooling \xE9 do SQLAlchemy (release em finally \xE9 responsabilidade do\
+    \ engine, n\xE3o de c\xF3digo nosso). N\xE3o \xE9 um fix do defeito em si \u2014\
+    \ o defeito morreu com o c\xF3digo. Prova de que o substituto n\xE3o apresenta\
+    \ a classe do problema: a matriz de conformance + test_sqlalchemy_source (incl.\
+    \ test_pg_write_atomicity / rollback sem outbox fantasma) passam contra PG real,\
+    \ incluindo o cen\xE1rio bundle_entry_round_trip que o pool cru travava (i-093-class)\
+    \ \u2014 2850 passed com DATABASE_URL vivo. O teste skipado que referia esta issue\
+    \ (test_postgres_source.py::test_write_atomicity_no_partial_state) foi removido\
+    \ junto com o arquivo; o cen\xE1rio equivalente vive em test_sqlalchemy_source\
+    \ e passa."
+  produces:
+  - kind: TestRun
+    name: tr-tg-raw-to-sa-swap-20260710-132225
+    at: '2026-07-10T13:23:27+00:00'
