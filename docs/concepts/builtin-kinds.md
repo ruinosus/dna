@@ -29,6 +29,95 @@ Use one when behavior around prompt building must change without a deploy —
 injecting a feature flag or contextual field into every prompt is the
 canonical case.
 
+## Background automation
+
+### Automation
+
+An [`Automation`](../reference/kinds/record.md#automation)
+(`dna-automation`) declares background work as data: `on` says **when** it
+fires and `runner` says **what** runs. One doc, zero deploy — adding,
+retargeting or pausing an automation is a YAML edit, not a code change.
+The Kind is a direct port of the internal SDK's unification of three
+structurally identical trigger Kinds (async-tool job / event hook / cron
+schedule) into one schema discriminated by `on.type`:
+
+- **`cron`** — a 5-field cron expression (`0 10 * * 1,3,5`). The write
+  path parses it with a zero-dependency validator (numbers, `*`, ranges,
+  lists, steps; no `JAN`/`MON` name aliases), so `61 * * * *` is vetoed at
+  write time, not discovered at 3 a.m.
+- **`hook`** — a kernel lifecycle hook name (`post_save`,
+  `post_build_prompt`, …). The name must belong to the kernel's typed
+  vocabulary (`KNOWN_HOOK_NAMES`): a misspelled hook would be declared,
+  listed and silently never fire, so an unknown name is a veto, not a
+  warning.
+- **`tool`** — an async dispatch tool the host exposes to the model
+  (`tool_name` + a declared `input_schema` + `primary_input`), for
+  "fire-and-forget from a conversation" work like deep research.
+
+Validation happens **at the write, not at scan**: the write guard runs the
+Kind's schema (per-trigger required fields, runner enum) and the semantic
+checks above before anything persists, so a broken Automation is vetoed
+while the author is still present. One authoring note for hand-edited
+YAML: prefer quoting the trigger key (`'on':`) — YAML 1.1 parsers such as
+PyYAML read a bare `on` as a boolean. The Python write path heals the
+boolean-key form before validating, and docs emitted by the SDK are
+always quoted, so the round-trip is safe either way.
+
+The runner is a reference to a real Kind — an `Agent` (`kind: agent`) or a
+`Tool` (`kind: tool`) by name — plus the shared directive surface:
+`agent_directive` (the dispatch instruction, with `{arg}` placeholders),
+`input` (structured context), `result_kind`/`result_spec_template`
+(deterministic persistence of the output), `running_message`/`done_message`
+(user-facing copy) and a `safety` block (debounce, cooldown, rate cap,
+fan-out cap, idempotency key) that the host enforces as loop protection.
+Automation is an inheritable `_lib` default: declare the fleet once in the
+library scope, let every scope inherit it, and let a tenant override one
+doc in its overlay.
+
+Contrast with [`Hook`](#hook): a Hook is an *in-process* interceptor the
+SDK itself runs around prompt building; an Automation is *out-of-process*
+work — a report at 03:00, reindexing after a save — that only a host
+runtime can execute.
+
+### The execution extension point
+
+Deliberately, **execution does not ship in the SDK** — there is no
+scheduler, bus or worker in a notation library. The contract is split the
+same way as the CLI's post-transition hooks
+(`dna_cli.sdlc_cmd.register_post_transition_hook`, where the CLI declares
+the hook point and the host registers the executor): the SDK **declares,
+validates and lists**; the host **reads and runs**. The read side is the
+query helpers `automations_for(instance, trigger_type)` and
+`trigger_key(doc)` (`automationsFor` / `triggerKey` in TypeScript), built
+on the blessed instance query surface. A minimal cron runner is ~20 lines:
+
+```python
+# host_runner.py — a minimal cron executor over declared Automations
+import time
+
+from dna.kernel import Kernel
+from dna.extensions.automation import automations_for, trigger_key
+
+mi = Kernel.quick("my-scope")
+
+while True:
+    for doc in automations_for(mi, "cron"):  # enabled-only by default
+        if cron_matches_now(trigger_key(doc)):  # your cron matcher
+            runner = doc.spec["runner"]
+            run_agent(                           # your agent runtime
+                name=runner["ref"],
+                directive=doc.spec.get("agent_directive", ""),
+                inputs=doc.spec.get("input", {}),
+            )
+    time.sleep(60)
+```
+
+A hook-triggered executor is the same pattern on the kernel's own event
+channel: for each doc from `automations_for(mi, "hook")`, subscribe
+`kernel.hooks.on(trigger_key(doc), ...)` and dispatch the runner from the
+listener. Whatever the trigger, honor `spec.safety` before firing — the
+doc declares the loop protection, the host enforces it.
+
 ## Collaboration
 
 ### Comment

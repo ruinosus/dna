@@ -100,6 +100,7 @@ lesson = "dna.extensions.lesson:LessonExtension"
 research = "dna.extensions.research:ResearchExtension"
 doc = "dna.extensions.doc:DocExtension"
 modelreg = "dna.extensions.modelreg:ModelRegExtension"
+automation = "dna.extensions.automation:AutomationExtension"
 
 [build-system]
 requires = ["hatchling"]

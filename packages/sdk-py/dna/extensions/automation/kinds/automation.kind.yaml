@@ -1,0 +1,296 @@
+# Automation — unified declarative background automation (record plane).
+#
+# Tier A port from the internal SDK's automation extension
+# (s-tier-a-automation). Upstream, one Automation doc REPLACED a trio of
+# structurally-identical Kinds (async-tool job / bus-event hook / cron
+# schedule) with a single superset schema discriminated by ``on.type`` —
+# the piece that killed hardcoded dispatch: adding or retargeting an
+# automation is writing one YAML, zero deploy. What travels is the
+# DECLARATION: the Kind, its validation and the query helpers
+# (``dna.extensions.automation.query``). EXECUTION does not travel — the
+# SDK has no scheduler/bus/worker; the host reads Automation docs via the
+# query helpers and runs them (extension point documented in
+# docs/concepts/builtin-kinds.md, same declare-here/execute-in-the-host
+# pattern as the CLI's register_post_transition_hook).
+#
+# Trigger vocabulary (honest evolution of the upstream discriminator):
+#   - cron — 5-field cron expression; the write guard
+#     (dna/extensions/automation/write_guards.py + TS twin) parses it at
+#     write time (zero-dep validator, no name aliases like JAN/MON).
+#   - hook — a kernel lifecycle hook name; upstream's free-form bus-event
+#     trigger becomes the kernel's OWN typed vocabulary (KNOWN_HOOK_NAMES,
+#     s-dna-typed-hook-names) and the write guard vetoes unknown names.
+#   - tool — an async dispatch tool the host exposes to the model
+#     (tool_name + declared input_schema + primary_input).
+#
+# Deliberately NOT ported (coupled to the upstream product, not the Kind):
+#   - ``on.condition: shallow_scope`` + ``on.window_minutes`` — cognitive-
+#     autopilot gating with no DNA equivalent;
+#   - runner kind ``engine`` — upstream cognitive engines; DNA runners are
+#     the real Kinds Agent (kind=agent) and Tool (kind=tool).
+#
+# tenant_scope intentionally NOT declared — permissive (base + per-tenant
+# overlay). Automation is an inheritable `_lib` default (it is already in
+# DEFAULT_INHERITABLE_KINDS_V1); the máxima "inheritable ⇒ never TENANTED"
+# applies (test_inheritable_kinds_tenancy.py).
+#
+# PARITY-CRITICAL package data: byte-identical mirror under both runtimes'
+# automation/kinds/ (tests/test_descriptor_hash_parity.py enforces).
+apiVersion: github.com/ruinosus/dna/core/v1
+kind: KindDefinition
+metadata:
+  name: automation
+spec:
+  target_api_version: github.com/ruinosus/dna/automation/v1
+  target_kind: Automation
+  alias: dna-automation
+  origin: github.com/ruinosus/dna/automation
+  plane: record
+  prompt_target: false
+  flatten_in_context: false
+  prompt_target_priority: 0
+  storage:
+    type: yaml
+    container: automations
+  spec_defaults:
+    enabled: true
+  schema:
+    type: object
+    required:
+    - 'on'
+    - runner
+    additionalProperties: false
+    properties:
+      'on':
+        type: object
+        required:
+        - type
+        additionalProperties: false
+        description: The trigger. type=cron → scheduled (5-field cron
+          expression, validated at write); type=hook → a kernel lifecycle
+          hook name (KNOWN_HOOK_NAMES vocabulary, validated at write);
+          type=tool → an async dispatch tool the host exposes to the model.
+        properties:
+          type:
+            type: string
+            enum:
+            - cron
+            - hook
+            - tool
+          cron:
+            type: string
+            description: 5-field cron 'min hour dom mon dow', e.g.
+              '0 10 * * 1,3,5'. Parsed at write time by the automation
+              write guard (numeric fields, '*', ranges, lists, steps —
+              no JAN/MON name aliases).
+          hook:
+            type: string
+            description: Kernel lifecycle hook that fires this automation,
+              e.g. 'post_save' or 'post_build_prompt'. Must be one of the
+              kernel's KNOWN_HOOK_NAMES — the write guard vetoes unknown
+              names.
+          tool_name:
+            type: string
+            description: The dispatch tool the model sees (e.g.
+              deep_research_async).
+          input_schema:
+            type: array
+            description: Declared args of the dispatch tool (all strings).
+            items:
+              type: object
+              required:
+              - name
+              additionalProperties: true
+              properties:
+                name:
+                  type: string
+                type:
+                  type: string
+                description:
+                  type: string
+                required:
+                  type: boolean
+                default:
+                  type: string
+          primary_input:
+            type: string
+            description: Which input arg carries the main user content fed
+              to an agent runner. Defaults to the first input_schema entry.
+        allOf:
+        - if:
+            properties:
+              type:
+                const: cron
+            required:
+            - type
+          then:
+            required:
+            - cron
+        - if:
+            properties:
+              type:
+                const: hook
+            required:
+            - type
+          then:
+            required:
+            - hook
+        - if:
+            properties:
+              type:
+                const: tool
+            required:
+            - type
+          then:
+            required:
+            - tool_name
+      runner:
+        type: object
+        required:
+        - kind
+        - ref
+        additionalProperties: false
+        properties:
+          kind:
+            type: string
+            enum:
+            - agent
+            - tool
+          ref:
+            type: string
+            description: Agent name (kind=agent) or Tool name (kind=tool)
+              that executes the automation.
+          model:
+            type: string
+            description: Optional model override for the runner.
+          expected_output:
+            type: string
+            enum:
+            - slug
+            - json
+            - text
+            description: For an agent runner, what the agent should
+              produce. 'slug' = persist a real domain doc (result_kind) and
+              return its slug; 'text'/'json' = return prose/structured
+              output inline. Hosts default to 'text'.
+          timeout_seconds:
+            type: number
+            description: Wall-clock budget the host should give one run.
+      agent_directive:
+        type: string
+        description: Dispatch instruction sent to an agent runner (with
+          {arg} placeholders). Optional — a tool runner needs none.
+      input:
+        type: object
+        additionalProperties: true
+        description: Structured input the host resolves into the runner's
+          context. Hosts may support tokens such as {scope}, {now},
+          {utc_date}.
+      result_kind:
+        type: string
+        description: Kind the automation output should be persisted as
+          (e.g. Research, Doc) when the runner produces a document.
+      result_spec_template:
+        type: object
+        additionalProperties: true
+        description: Deterministic persist template — when an agent runner
+          synthesizes but does not persist a doc itself, the host creates a
+          result_kind doc from this template ({arg} fills from the args,
+          {output} from the agent synthesis).
+      running_message:
+        type: string
+        description: Spoken/UI copy returned at dispatch (tool trigger).
+      done_message:
+        type: string
+        description: Spoken/UI copy attached to the finished run. Supports
+          {placeholders} from the args.
+      enabled:
+        type: boolean
+        description: Disabled automations stay declared but hosts must not
+          fire them (automations_for filters them out by default).
+      description:
+        type: string
+      labels:
+        type: array
+        items:
+          type: string
+      safety:
+        type: object
+        additionalProperties: false
+        description: Loop-safety the HOST enforces for this automation. All
+          fields optional — an absent field falls back to the host default.
+        properties:
+          debounce_seconds:
+            type: number
+            minimum: 0
+            description: Coalesce repeated fires within this window into
+              one.
+          cooldown_minutes:
+            type: integer
+            minimum: 0
+            description: Do not re-fire for the same scope within this
+              wall-clock window.
+          max_fires_per_minute:
+            type: integer
+            minimum: 1
+            description: Circuit-breaker rate cap per (scope, automation).
+          max_fan_out:
+            type: integer
+            minimum: 1
+            description: Cap on documents one fire may produce.
+          idempotency_key:
+            type: string
+            description: Template, e.g. '{scope}:{utc_date}'. A 2nd fire
+              with the same resolved key is a no-op.
+  describe:
+    path: description
+  description_fallback_field: description
+  summary:
+    on_type:
+      path: on.type
+    trigger:
+      paths:
+      - on.cron
+      - on.hook
+      - on.tool_name
+      filter_falsy: true
+    runner_kind:
+      path: runner.kind
+      default: ''
+    runner_ref:
+      path: runner.ref
+      default: ''
+    enabled: true
+  ui:
+    mode: build
+    label:
+      en: Automations
+      pt-BR: Automações
+    icon: ⚙️
+    description:
+      en: 'Unified declarative automation: cron/hook/tool trigger + runner.'
+      pt-BR: 'Automação declarativa unificada: gatilho cron/hook/tool + runner.'
+    routes:
+      list: docs/Automation
+      detail: docs/Automation/:name
+    permissions:
+      list: any
+      detail: any
+    in_sidebar: true
+    display_order: 54
+  graph_style:
+    fill: '#60A5FA'
+    stroke: '#2563EB'
+    text_color: '#fff'
+  ascii_icon: ⚙️
+  display_label: Automations
+  docs: An Automation declares background work as data — ``on`` picks the
+    trigger (cron = 5-field schedule; hook = a kernel lifecycle hook name
+    from KNOWN_HOOK_NAMES; tool = an async dispatch tool the host exposes
+    to the model), ``runner`` picks what executes (an Agent or a Tool by
+    name), plus the shared agent_directive / input / result templating /
+    spoken copy / safety block. Adding or retargeting an automation is
+    writing one YAML, zero deploy. The SDK validates and lists (see
+    ``dna.extensions.automation.query.automations_for``); the HOST
+    executes — the runner contract is an extension point, documented in
+    docs/concepts/builtin-kinds.md.

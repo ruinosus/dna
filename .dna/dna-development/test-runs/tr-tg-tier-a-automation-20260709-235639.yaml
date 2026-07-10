@@ -1,0 +1,25 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-tier-a-automation-20260709-235639
+spec:
+  guide_ref: tg-tier-a-automation
+  outcome: pass
+  verifies:
+  - Story/s-tier-a-automation
+  executed_by: claude-code
+  executed_at: '2026-07-09T23:56:39+00:00'
+  notes: "Smoke REAL executado via CLI num scope scratch limpo. Outputs literais:\
+    \ (1) apply nightly-report.yaml (on: sem aspas) \u2192 'CREATED Automation/nightly-report\
+    \ in scope smoke-scope (tenant=unbound/global).' exit 0; arquivo gravado com chave\
+    \ 'on': quoted (trap PyYAML True-key curada pelo guard). (2) apply bad-cron.yaml\
+    \ \u2192 exit 1: \"write failed: invalid cron expression '61 * * * *': 61 out\
+    \ of range 0-59 for minute. Expected 5 whitespace-separated fields 'min hour dom\
+    \ mon dow' \u2026\". (3) apply bad-hook.yaml \u2192 exit 1: \"write failed: Automation\
+    \ 'bad-hook' declares on.hook='pre_saev', which is not a kernel lifecycle hook.\
+    \ Known hooks: ['extension_error', 'kinddef_conflict', 'parse_error', 'post_build_prompt',\
+    \ 'post_delete', 'post_save', 'pre_build_prompt', 'pre_save'] \u2026\". (4) Kernel.quick('smoke-scope')\
+    \ + automations_for(mi,'cron') \u2192 [('nightly-report','0 3 * * 1-5')]; hook\
+    \ \u2192 []. (5) dna doc list Automation \u2192 s\xF3 nightly-report. Suites:\
+    \ sdk-py 2864 passed/0 failed; sdk-ts 1308 pass/0 fail + tsc; cli 267 passed;\
+    \ brand+coverage guards clean; mkdocs --strict verde."
