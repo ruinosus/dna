@@ -274,3 +274,201 @@ def test_init_json_output(runner, project):
         "skill[claude]": "created", "skill[copilot]": "created",
         "agents-md": "created", "hooks": "created",
     }
+    # The embedded path stays byte-compatible: no pack keys leak in.
+    assert "from" not in payload and "notes" not in payload
+
+
+# --- --from: distributed onboarding packs (i-015) --------------------------------
+
+_PACK_SKILL_MD = """---
+name: team-conventions
+description: The team's house conventions for agent work
+---
+
+# Team conventions
+
+Follow the house rules.
+"""
+
+_PACK_SECOND_SKILL_MD = """---
+name: team-review
+description: How the team reviews pull requests
+---
+
+# Review guide
+
+Review with care.
+"""
+
+_PACK_AGENTS_MD = "# Team AGENTS\n\nHouse instruction surface.\n"
+
+
+def _make_pack(
+    tmp_path: Path, *, agents: bool = True, skills: bool = True,
+) -> Path:
+    pack = tmp_path / "pack"
+    pack.mkdir(exist_ok=True)
+    if agents:
+        (pack / "AGENTS.md").write_text(_PACK_AGENTS_MD, encoding="utf-8")
+    if skills:
+        d = pack / "skills" / "team-conventions"
+        d.mkdir(parents=True)
+        (d / "SKILL.md").write_text(_PACK_SKILL_MD, encoding="utf-8")
+    return pack
+
+
+def test_init_from_local_pack_projects_pack_assets(runner, project, tmp_path):
+    pack = _make_pack(tmp_path)
+    r = runner.invoke(init, ["--scope", "acme-dev", "--from", f"local:{pack}"])
+    assert r.exit_code == 0, r.output
+
+    # Pack skill projected for the default tools; embedded skill NOT projected.
+    for tool in ("claude", "copilot"):
+        skill_md = project / TOOL_SKILL_DIRS[tool] / "team-conventions" / "SKILL.md"
+        assert skill_md.exists(), tool
+        assert not (
+            project / TOOL_SKILL_DIRS[tool] / SKILL_NAME / "SKILL.md"
+        ).exists(), tool
+
+    # Pack AGENTS.md replaces the embedded instruction surface.
+    assert (project / "AGENTS.md").read_text() == _PACK_AGENTS_MD
+
+    # Board is still born from the LOCAL scope — never from the pack.
+    assert (project / ".dna" / "acme-dev" / "manifest.yaml").exists()
+
+    # The step ids carry the skill name, and the security note is printed.
+    assert "skill[claude:team-conventions]" in r.output
+    assert "review the projected files before committing" in r.output
+
+
+def test_init_from_accepts_bare_directory_path(runner, project, tmp_path):
+    pack = _make_pack(tmp_path)
+    r = runner.invoke(init, ["--scope", "acme-dev", "--from", str(pack)])
+    assert r.exit_code == 0, r.output
+    assert (project / ".claude" / "skills" / "team-conventions" / "SKILL.md").exists()
+
+    r = CliRunner().invoke(init, ["--from", "does/not/exist"])
+    assert r.exit_code != 0
+    assert "not an existing directory" in (r.output or "") + str(r.exception or "")
+
+
+def test_init_from_pack_without_agents_md_falls_back_to_embedded(
+    runner, project, tmp_path,
+):
+    pack = _make_pack(tmp_path, agents=False)
+    r = runner.invoke(init, ["--scope", "acme-dev", "--from", f"local:{pack}"])
+    assert r.exit_code == 0, r.output
+    # Fallback is explicit in the summary, and the content is the embedded one.
+    assert "embedded default" in r.output
+    embedded = (_onboarding_root() / "AGENTS.md").read_text()
+    assert (project / "AGENTS.md").read_text() == embedded
+
+
+def test_init_from_pack_without_any_skill_fails_didactically(
+    runner, project, tmp_path,
+):
+    pack = _make_pack(tmp_path, skills=False)
+    r = runner.invoke(init, ["--scope", "acme-dev", "--from", f"local:{pack}"])
+    assert r.exit_code != 0
+    msg = (r.output or "") + str(r.exception or "")
+    assert "no valid Skill found" in msg
+    # Nothing was projected — the failure happens before any write.
+    assert not (project / "AGENTS.md").exists()
+    assert not (project / ".dna").exists()
+    assert not (project / ".claude").exists()
+
+
+def test_init_from_multi_skill_pack_projects_all(runner, project, tmp_path):
+    pack = _make_pack(tmp_path)
+    d = pack / "skills" / "team-review"
+    d.mkdir(parents=True)
+    (d / "SKILL.md").write_text(_PACK_SECOND_SKILL_MD, encoding="utf-8")
+    r = runner.invoke(init, [
+        "--scope", "acme-dev", "--tools", "claude", "--from", f"local:{pack}",
+        "--json",
+    ])
+    assert r.exit_code == 0, r.output
+    payload = json.loads(r.output)
+    steps = {s["step"]: s["outcome"] for s in payload["steps"]}
+    assert steps["skill[claude:team-conventions]"] == "created"
+    assert steps["skill[claude:team-review]"] == "created"
+    assert payload["from"]
+    assert "review the projected files" in payload["review_note"]
+
+
+def test_init_from_is_idempotent_and_force_overwrites(runner, project, tmp_path):
+    pack = _make_pack(tmp_path)
+    assert runner.invoke(
+        init, ["--scope", "acme-dev", "--from", f"local:{pack}"],
+    ).exit_code == 0
+
+    skill_md = project / ".claude" / "skills" / "team-conventions" / "SKILL.md"
+    skill_md.write_text("---\nname: team-conventions\n---\n\ncustomized\n")
+    r = runner.invoke(init, ["--scope", "acme-dev", "--from", f"local:{pack}"])
+    assert r.exit_code == 0, r.output
+    assert "0 created" in r.output
+    assert "customized" in skill_md.read_text()
+
+    r = runner.invoke(
+        init, ["--scope", "acme-dev", "--from", f"local:{pack}", "--force"],
+    )
+    assert r.exit_code == 0, r.output
+    assert "house rules" in skill_md.read_text()
+
+
+def test_init_from_rejects_untrusted_input_like_install(runner, project, tmp_path):
+    """The install defenses run verbatim: path-shaped names, schema-invalid
+    specs and pack Genomes never reach the projection paths."""
+    pack = _make_pack(tmp_path)
+    (pack / "evil.yaml").write_text(
+        "apiVersion: agentskills.io/v1\n"
+        "kind: Skill\n"
+        "metadata:\n  name: ../../escape\n"
+        "spec:\n  instruction: nope\n",
+        encoding="utf-8",
+    )
+    (pack / "bad.yaml").write_text(
+        "apiVersion: agentskills.io/v1\n"
+        "kind: Skill\n"
+        "metadata:\n  name: bad-skill\n"
+        "spec:\n  instruction: 42\n",
+        encoding="utf-8",
+    )
+    (pack / "Genome.yaml").write_text(
+        "apiVersion: github.com/ruinosus/dna/v1\n"
+        "kind: Genome\n"
+        "metadata: { name: evil-takeover }\n"
+        "spec: {}\n",
+        encoding="utf-8",
+    )
+    r = runner.invoke(init, ["--scope", "acme-dev", "--from", f"local:{pack}"])
+    assert r.exit_code == 0, r.output
+
+    # The valid skill landed; the hostile/broken ones did not.
+    assert (project / ".claude" / "skills" / "team-conventions" / "SKILL.md").exists()
+    for leaked in ("escape", "bad-skill", "evil-takeover"):
+        assert not list(project.rglob(f"*{leaked}*")), leaked
+    # The board scope is the LOCAL one — the pack Genome was ignored.
+    assert (project / ".dna" / "acme-dev" / "manifest.yaml").exists()
+    assert not (project / ".dna" / "evil-takeover").exists()
+    # Every rejection is visible, never silent.
+    assert "not a plain slug" in r.output
+    assert "schema validation failed" in r.output
+    assert "Genome ignored" in r.output
+
+
+def test_init_from_example_pack_in_this_repo(runner, project):
+    """Dogfood: the repo's own examples/onboarding-pack is a valid pack and
+    its SKILL.md is writer-canonical (projection is byte-identical)."""
+    repo_root = Path(__file__).resolve().parents[3]
+    pack = repo_root / "examples" / "onboarding-pack"
+    assert (pack / "skills" / "acme-conventions" / "SKILL.md").exists()
+    r = runner.invoke(init, ["--scope", "acme-dev", "--from", f"local:{pack}"])
+    assert r.exit_code == 0, r.output
+    projected = project / ".claude" / "skills" / "acme-conventions" / "SKILL.md"
+    assert projected.read_bytes() == (
+        pack / "skills" / "acme-conventions" / "SKILL.md"
+    ).read_bytes()
+    assert (project / "AGENTS.md").read_bytes() == (
+        pack / "AGENTS.md"
+    ).read_bytes()

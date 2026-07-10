@@ -13,7 +13,7 @@ spec:
     \xF5es .claude/.github/...) \u2014 precisa de design pr\xF3prio."
   type: enhancement
   severity: low
-  status: open
+  status: in-progress
   owner: claude-code
   related_feature: f-dna-ecosystem
   timeline:
@@ -22,3 +22,17 @@ spec:
     type: status_change
     source: cli
     to: open
+  - at: '2026-07-10T20:07:29+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: open
+    to: in-progress
+  - at: '2026-07-10T20:07:31+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Design fechado em s-onboarding-genome-install: dna init --from <uri>\
+      \ (github:/local:) = proje\xE7\xE3o com reuso do fetch+scan+validate do install;\
+      \ install continua sendo o canal de board. Resolve \xE9 done-on-merge do PR\
+      \ da story."

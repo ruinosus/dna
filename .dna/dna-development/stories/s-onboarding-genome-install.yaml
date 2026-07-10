@@ -1,0 +1,82 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-onboarding-genome-install
+spec:
+  title: "dna init --from: onboarding Genome via distribui\xE7\xE3o remota"
+  description: "Resolve i-015: times distribuem seu pr\xF3prio onboarding pack (skills+AGENTS.md\
+    \ custom) e consomem via dna init --from github:owner/repo[/subdir][@ref] (ou\
+    \ local:) \u2014 reuso do fetch/scan/valida\xE7\xE3o do install, proje\xE7\xE3\
+    o id\xEAntica ao init embarcado"
+  status: in-progress
+  feature: f-dna-ecosystem
+  priority: medium
+  labels:
+  - cli
+  - ecosystem
+  reporter: claude-code
+  acceptance_criteria:
+  - "Given um pack remoto com >=1 Skill v\xE1lida, When dna init --from github:owner/repo/subdir[@ref],\
+    \ Then as skills do pack s\xE3o projetadas por --tools com a mesma idempot\xEA\
+    ncia/--force do init embarcado"
+  - "Given um pack sem AGENTS.md, When init --from, Then o AGENTS.md embarcado \xE9\
+    \ usado como fallback com nota expl\xEDcita no output"
+  - "Given um pack sem nenhuma Skill v\xE1lida, When init --from, Then o comando falha\
+    \ com mensagem did\xE1tica e nada \xE9 escrito"
+  - "Given docs com nome path-shaped ou schema inv\xE1lido no pack, When init --from,\
+    \ Then s\xE3o rejeitados pelas mesmas defesas do dna install (slug guard, schema,\
+    \ root-Kind) e nunca alcan\xE7am o filesystem"
+  - "Given o pack exemplo examples/onboarding-pack no pr\xF3prio repo dna, When dna\
+    \ init --from github:ruinosus/dna/examples/onboarding-pack@<ref> num projeto scratch,\
+    \ Then o smoke passa end-to-end (evid\xEAncia em TestRun)"
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - "c\xF3digo init_cmd.py com reuso real de install_cmd (fetch+scan+validate, zero\
+    \ duplica\xE7\xE3o)"
+  - "testes unit offline (happy path local, pack inv\xE1lido, fallback AGENTS, idempot\xEA\
+    ncia, defesas de seguran\xE7a)"
+  - "docs: agent-onboarding.md se\xE7\xE3o 'distribua o onboarding do seu time' +\
+    \ refer\xEAncia CLI regenerada + guards de docs verdes"
+  - 'smoke real via github: com TestGuide --product + TestRun pass'
+  - suites completas + guards + mkdocs --strict verdes; PR via story pr; issue i-015
+    in-progress com resolve done-on-merge
+  definition_of_done_source: cli-create
+  created_at: '2026-07-10T20:06:39+00:00'
+  updated_at: '2026-07-10T20:14:38+00:00'
+  timeline:
+  - at: '2026-07-10T20:06:39+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-10T20:07:26+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-10T20:09:11+00:00'
+    actor: claude-code
+    type: decision
+    source: cli
+    summary: "Decis\xE3o de scan: _scan_tree do install para de recursar quando um\
+      \ reader clama um dir \u2014 AGENTS.md na raiz do pack esconderia as skills.\
+      \ Solu\xE7\xE3o sem tocar no install: scan do pack com readers=[SkillReader]\
+      \ (skills + YAMLs standalone) + probe expl\xEDcito da raiz com AgentDefinitionReader\
+      \ pro AGENTS.md. _fetch/_scan_tree/_validate_doc reusados verbatim."
+    commit_ref: 95232da0c9429b4e65644b1ba856af248763352c
+  - at: '2026-07-10T20:14:38+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Implementa\xE7\xE3o core pronta: init_cmd com OnboardingPack (_load_embedded_pack/_load_pack_from),\
+      \ --from github:/local:/bare-path, materializers generalizados, notes + aviso\
+      \ de seguran\xE7a; pack exemplo examples/onboarding-pack (SKILL.md em forma\
+      \ writer-can\xF4nica pro fixpoint byte-fiel). Smoke manual local: 5 created,\
+      \ re-run 5 skipped, embedded path byte-compat\xEDvel. Agora: testes unit."
+    commit_ref: 95232da0c9429b4e65644b1ba856af248763352c
+  produces:
+  - kind: Plan
+    name: plan-s-onboarding-genome-install
+    role: implementation
+    at: '2026-07-10T20:07:26+00:00'
