@@ -1,0 +1,18 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-memory-conformance-kit-20260710-202637
+spec:
+  guide_ref: tg-memory-conformance-kit
+  outcome: pass
+  verifies:
+  - Story/s-memory-conformance-kit
+  executed_by: claude-code
+  executed_at: '2026-07-10T20:26:37+00:00'
+  notes: "Executado em scratch project real fora do repo (scratchpad/memkit-consumer,\
+    \ venv pr\xF3pria, sdk editable sem extras). Sa\xEDda: 'verb suite \xD7 TinyMemorySearchProvider:\
+    \ 9 passed, 1 skipped (expected)' + 'verb suite \xD7 no provider: 8 passed, 2\
+    \ skipped (expected)' + 'scoring suite \xD7 fake floor: 7 passed' + 'scoring suite\
+    \ \xD7 custom embedder: 7 passed' + 'PRODUCT SMOKE: PASS'. Skips capability-aware\
+    \ exatos e sim\xE9tricos; uni\xE3o dos passed cobre os 10 casos do verb suite.\
+    \ Nenhuma API privada usada."

@@ -1,0 +1,37 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-memory-conformance-kit
+spec:
+  description: "Smoke de produto do kit de conformance de mem\xF3ria: um consumidor\
+    \ EXTERNO simulado (projeto scratch fora do repo, venv pr\xF3pria, sdk editable)\
+    \ implementa um RecordSearchProvider trivial do zero e certifica os verbos de\
+    \ mem\xF3ria sobre ele via a superf\xEDcie p\xFAblica dna.testing."
+  kind_of_test: smoke
+  status: active
+  steps:
+  - action: "Criar projeto scratch FORA do repo com venv pr\xF3pria e 'pip install\
+      \ -e <repo>/packages/sdk-py' (nenhum extra)"
+    expected: "instala\xE7\xE3o editable resolve e 'from dna.testing import run_memory_conformance,\
+      \ run_memory_scoring_conformance' importa sem erro"
+  - action: Implementar de fora um TinyMemorySearchProvider trivial (in-memory, ranking
+      por overlap de tokens, index idempotente por hash de texto) e um kernel factory
+      com FilesystemWritableSource
+    expected: "nenhuma API privada necess\xE1ria; s\xF3 a superf\xEDcie p\xFAblica\
+      \ do SDK"
+  - action: Rodar run_memory_conformance(kernel_with_my_provider)
+    expected: "report.ok, 9 casos passam e o \xDANICO skip \xE9 lexical_fallback_degrades_honestly\
+      \ (capability-aware)"
+  - action: Rodar run_memory_conformance(kernel_without_provider)
+    expected: "report.ok, 8 casos passam e os skips s\xE3o exatamente semantic_fusion_activates\
+      \ + backfill_index_is_idempotent (skips sim\xE9tricos \u2014 entre os dois branches\
+      \ todos os 10 casos provados)"
+  - action: Rodar run_memory_scoring_conformance() (fake floor) e com um embedder
+      custom via factory
+    expected: 7 casos passam nos dois modos, incluindo semantic_hook_lifts_paraphrase,
+      sem skips
+  verifies:
+  - Story/s-memory-conformance-kit
+  created_at: '2026-07-10T20:26:09+00:00'
+  updated_at: '2026-07-10T20:26:09+00:00'
+  owner: claude-code

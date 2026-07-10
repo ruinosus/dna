@@ -1,0 +1,81 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-memory-conformance-kit
+spec:
+  title: 'Plano: s-memory-conformance-kit'
+  date: '2026-07-10'
+  status: accepted
+  story_ref: s-memory-conformance-kit
+  journey_phase: plan
+  body: "# Plan \u2014 s-memory-conformance-kit\n\n## Problema\nFollow-up nomeado\
+    \ do PR #38: existem kits p\xFAblicos de conformance pra SourcePort\n(`source_conformance_suite`),\
+    \ Reader/Writer (`reader_writer_conformance_suite`) e\nRecordSearchProvider (`record_search_conformance_suite`\
+    \ / `recordSearchConformanceSuite`),\nmas N\xC3O pra mem\xF3ria. Quem implementa\
+    \ um RecordSearchProvider/EmbeddingPort custom n\xE3o\nconsegue provar que os\
+    \ verbos de mem\xF3ria funcionam sobre ele; quem evolui o scoring\nn\xE3o tem\
+    \ bateria p\xFAblica de regress\xE3o sem\xE2ntica.\n\n## Invariantes pinados (derivados\
+    \ do c\xF3digo real em dna/memory/*)\n\n### Kit kernel-bound (Py-only \u2014 os\
+    \ verbos s\xE3o Py-only por fronteira declarada)\n1. **remember\u2192recall roundtrip\
+    \ + enrichment**: memory_type classificado, encoding_context\n   estampado (idempotente,\
+    \ nunca sobrescreve), valid_from semeado; recall acha o doc.\n2. **recall determin\xED\
+    stico**: mesmo `now` + `reconsolidate=False` + embedder determin\xEDstico\n  \
+    \ \u2192 duas chamadas retornam hits id\xEAnticos (nomes + scores).\n3. **ranking\
+    \ relativo**: doc que compartilha o vocabul\xE1rio do cue > doc sem overlap\n\
+    \   (asser\xE7\xE3o RELATIVA, vale pra fake e embedder real \u2014 mesma filosofia\
+    \ do search kit).\n4. **semantic on/off**: `semantic=False` \u2192 shape base\
+    \ intacto (sem rank_recall/semantic/\n   score_recall); com provider registrado,\
+    \ modo auto \u2192 `semantic=True` + anota\xE7\xF5es RRF.\n   Capability-aware:\
+    \ sem provider, o caso valida o ramo degraded/lexical.\n5. **forget bi-temporal**:\
+    \ seta valid_to, NUNCA hard-delete (get_document ainda acha),\n   recall nunca\
+    \ ressuscita, idempotente (valid_to original preservado), superseded_by gravado.\n\
+    6. **reconsolida\xE7\xE3o**: recall(reconsolidate=True) \u2192 cues_history append\
+    \ (actor+cue),\n   surface_count+1, confidence bump \u2264 10.\n7. **consolidate\
+    \ idempotente**: report-only n\xE3o arquiva; apply=True soft-forgets;\n   segundo\
+    \ pass n\xE3o re-avalia os j\xE1 invalidados (evaluated cai, archived=0).\n8.\
+    \ **decay monot\xF4nico em tempo simulado**: recall a now1 (reconsolida \u2192\
+    \ last_surfaced=now1),\n   depois recalls a now2<now3 com reconsolidate=False\
+    \ \u2192 retention(now3) < retention(now2) < 1.\n9. **backfill lazy idempotente**\
+    \ (requires provider): remember(index=False) \u2192 backfill_index\n   > 0 \u2192\
+    \ segunda chamada == 0 (hash-skip) \u2192 recall h\xEDbrido acha.\n\n### Kit pure-scoring\
+    \ (Py + TS twin 1:1 \u2014 mesmo estilo do parity core)\n10. **cosine_tracks_similarity**\
+    \ (embedder do autor): cos(par\xE1frase) > cos(n\xE3o-relacionado).\n11. **ecphory_weights_and_threshold**\
+    \ (scores injetados, exato): area exata = content_weight;\n    Path 3 = cosine_weight\xD7\
+    cos; primary = MAX dos paths; abaixo de direct_threshold \xE9 exclu\xEDdo.\n12.\
+    \ **ecphory_deterministic_ordering**: score desc, name asc; rerun id\xEAntico.\n\
+    13. **semantic_hook_lifts_paraphrase**: sem semantic_scores o cue-match n\xE3\
+    o acha a par\xE1frase;\n    com scores do embedder o alvo surge (e acima do decoy\
+    \ se ambos presentes).\n14. **fusion_preserves_and_annotates** (RRF exato): nenhum\
+    \ candidato some; anota\xE7\xF5es\n    rank_recall/rank_ecphory/score_recall/semantic;\
+    \ score fundido = \u03A3 1/(k+rank).\n15. **decay_retention_monotonic**: R(0)=1,\
+    \ estritamente decrescente, recall_bump capado\n    em max_stability_days.\n16.\
+    \ **bitemporal_fail_open**: currently_valid \u2014 unset/futuro/lixo \u2192 True;\
+    \ passado \u2192 False.\n\n## Superf\xEDcie p\xFAblica (copy canonical pattern\
+    \ \u2014 mesmo estilo dos kits atuais)\nPy `dna.testing.memory_conformance` (re-exportado\
+    \ em `dna.testing`):\n- `MEMORY_FIXTURE_SCOPE`, `fixture_memories()`\n- `MemoryCaseNotApplicable`\
+    \ (SkipTest \u2014 pytest reporta skip)\n- `memory_conformance_suite(kernel_factory)`\
+    \ \u2192 `list[MemoryConformanceCase]`;\n  factory async \u2192 `(kernel, cleanup)`;\
+    \ kernel com source GRAV\xC1VEL (+ provider opcional).\n  Caso fresh por execu\xE7\
+    \xE3o, cleanup sempre awaited.\n- `run_memory_conformance(kernel_factory)` \u2192\
+    \ `MemoryConformanceReport` (runner program\xE1tico)\n- `memory_scoring_conformance_suite(embedder_factory=None)`\
+    \ + `run_memory_scoring_conformance`\n  (puro; default = fake floor determin\xED\
+    stico)\n\nTS `dna-sdk/testing`:\n- `memoryScoringConformanceSuite(embedderFactory?)`\
+    \ \u2014 espelho S\xD3 do core puro (casos 10\u201316,\n  nomes id\xEAnticos aos\
+    \ do Py). Verbos N\xC3O existem no TS; fronteira documentada.\n\n## Consumo interno\
+    \ (kit \xD7 builtins)\n- `tests/test_memory_conformance_kit.py`: (a) kernel FS\
+    \ sem provider; (b) FS + sqlite-vec\n  (importorskip search-sqlite); scoring kit\
+    \ com fake default + embedder custom trivial.\n- `tests/test_pgvector_memory_conformance.py`:\
+    \ requires_postgres + schema descart\xE1vel\n  `dna_search_ci_<uuid>` \u2014 mesma\
+    \ integra\xE7\xE3o do job `postgres` do CI (pgvector/pgvector:pg16).\n- TS `tests/memory-scoring-conformance.test.ts`.\n\
+    \n## Docs\nSe\xE7\xE3o \"The memory conformance kit\" em `docs/getting-started/conformance-kit.md`\
+    \ (a casa\ndos kits) + ponteiro em `docs/guides/semantic-recall.md`. Sem novo\
+    \ CLI group/Kind \u2192 sem\nmudan\xE7a no docs_coverage_guard. Refer\xEAncias\
+    \ geradas: re-gerar se drift.\n\n## Smoke de produto (consumidor externo)\nProjeto\
+    \ scratch FORA do repo: venv pr\xF3pria + `pip install -e packages/sdk-py`; implementa\n\
+    um RecordSearchProvider fake in-memory de fora e roda `run_memory_conformance`\
+    \ +\n`run_memory_scoring_conformance` \u2014 prova a API p\xFAblica de fora. TestGuide\
+    \ `--product` + TestRun.\n\n## Gates\nsdk-py full + sdk-ts (bun test + typecheck)\
+    \ + cli + brand_guard + docs_coverage_guard +\nmkdocs --strict verdes; PR via\
+    \ `dna sdlc story pr`, CI 11/11; N\xC3O mergear.\n"
+  created_at: '2026-07-10T20:09:12+00:00'
+  updated_at: '2026-07-10T20:09:12+00:00'

@@ -157,6 +157,100 @@ cases or projects.
     unchanged. A TS pgvector twin, if ever needed, must pass the same eight
     cases; the kit is the parity guarantee, not a hand-diffed second impl.
 
+## The memory conformance kit
+
+Memory is the layer where the search plane, the embedding port and the
+kernel's write path all meet — so it gets its own kit, in two halves.
+
+**The verb suite** — `memory_conformance_suite` — is the behavioral contract
+of the four memory verbs (`remember` / `recall` / `forget` / `consolidate`,
+plus the lazy `backfill_index`). Hand it an async factory that returns a
+kernel wired with **your** writable source (and, optionally, your
+`RecordSearchProvider` / `EmbeddingPort`) and it proves the memory lifecycle
+holds over your stack: the remember→recall roundtrip with deterministic
+enrichment, deterministic recall, the untouched base shape with
+`semantic=False` vs. RRF-fused annotations in auto mode, bi-temporal `forget`
+(soft demotion — never a delete, never resurfaces, idempotent),
+reconsolidation side-effects, an idempotent `consolidate` pass, retention
+that decays monotonically in **simulated** time (the kit never reads the wall
+clock), and idempotent lazy backfill. Cases are capability-aware, like the
+source kit: with no search provider the fusion/backfill cases skip cleanly
+and the honest lexical-fallback case runs instead (and vice versa) — probed
+through the public surface only (`remember` reports `indexed`).
+
+```python
+from dna.testing import memory_conformance_suite
+
+async def my_factory():
+    kernel = ...   # your writable source (+ your provider, if any)
+    async def cleanup(): ...
+    return kernel, cleanup
+
+import pytest
+CASES = memory_conformance_suite(my_factory)
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("case", CASES, ids=lambda c: c.name)
+async def test_memory_conformance(case):
+    await case.run()
+```
+
+The SDK holds its own builtins to it: the suite runs against the filesystem
+source without a provider (lexical branch), with the sqlite-vec provider
+(`tests/test_memory_conformance_kit.py`), and against pgvector in the CI
+`postgres` job (`tests/test_pgvector_memory_conformance.py`) — one contract,
+many stores, same as the search kit. There is also a programmatic runner,
+`run_memory_conformance(factory)`, for scripts and CI without pytest.
+
+**The scoring suite** — `memory_scoring_conformance_suite` (Python) /
+`memoryScoringConformanceSuite` (TypeScript) — pins the PURE deterministic
+core the verbs compose: ecphory weights and the `direct_threshold` gate,
+deterministic ordering, the semantic hook that lifts a paraphrase the
+cue-match paths cannot see, RRF fusion invariants (no candidate ever
+disappears; exact reciprocal-rank arithmetic; both ranks + the cosine
+annotated), monotonic Ebbinghaus decay, and fail-open bi-temporal validity.
+It is twinned 1:1 — same case names, same assertions in both SDKs — so the
+kit itself is a parity artifact: anyone evolving the scoring runs the same
+battery on both sides.
+
+Pass an embedder factory to certify a custom `EmbeddingPort` for memory; omit
+it to run on the deterministic fake floor, fully offline. The two
+embedder-driven cases assert **relative** similarity only (identical text is
+maximally similar; a paraphrase beats unrelated text), search-kit style, so a
+real model passes too — with one honest exception:
+`semantic_hook_lifts_paraphrase` requires the embedder to score an easy
+paraphrase above the ecphory gate (`cos ≥ (direct_threshold − novelty_boost)
+/ cosine_weight` ≈ 0.41). An embedder that cannot clear that bar cannot power
+semantic recall, and the kit says so rather than passing vacuously.
+
+=== "Python"
+
+    ```python
+    from dna.testing import run_memory_scoring_conformance
+
+    report = await run_memory_scoring_conformance()          # fake floor
+    report = await run_memory_scoring_conformance(my_embedder_factory)
+    report.raise_if_failed()
+    ```
+
+=== "TypeScript"
+
+    ```typescript
+    import { memoryScoringConformanceSuite } from "dna-sdk/testing";
+
+    for (const c of memoryScoringConformanceSuite(/* factory? */)) {
+      test(c.name, () => c.run());
+    }
+    ```
+
+!!! note "Why the verb suite is Python-only"
+    The memory **verbs** are Python-only by the SDK's declared boundary (the
+    TS SDK ships the pure scoring core; the kernel-bound verbs live with the
+    `dna` CLI). The TS kit therefore mirrors exactly the half that exists in
+    TS — the scoring core — and the verb behaviors are pinned where the verbs
+    are. Same policy as the pgvector provider above: the kit is the parity
+    guarantee, not a hand-diffed second implementation.
+
 ## Cross-SDK parity
 
 Parity between the Python and TypeScript SDKs is enforced by **shared

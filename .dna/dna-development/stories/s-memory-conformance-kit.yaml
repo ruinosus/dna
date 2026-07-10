@@ -1,0 +1,151 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-memory-conformance-kit
+spec:
+  title: "Kit p\xFAblico de conformance de mem\xF3ria em dna.testing"
+  description: "Follow-up nomeado do PR #38: dna.testing tem kits p\xFAblicos pra\
+    \ SourcePort, Reader/Writer e RecordSearchProvider mas n\xE3o pra mem\xF3ria.\
+    \ Criar memory_conformance_suite (verbos kernel-bound, capability-aware) + memory_scoring_conformance_suite\
+    \ (core puro, twin TS memoryScoringConformanceSuite) pinando os invariantes comportamentais:\
+    \ roundtrip remember\u2192recall, determinismo, semantic on/off, forget bi-temporal,\
+    \ consolidate idempotente, decay monot\xF4nico, backfill lazy idempotente, pesos/threshold\
+    \ do ecphory e fus\xE3o RRF."
+  status: review
+  feature: f-dna-search-memory
+  reporter: claude-code
+  acceptance_criteria:
+  - "Given um autor de adapter com um kernel factory (source grav\xE1vel + provider\
+    \ opcional), When ele roda memory_conformance_suite(factory) via pytest parametrize,\
+    \ Then os 9 casos kernel-bound passam contra sqlite-vec e pgvector builtin e casos\
+    \ que exigem provider skipam limpo sem provider"
+  - "Given um embedder custom (EmbeddingPort), When memory_scoring_conformance_suite/memoryScoringConformanceSuite\
+    \ rodam com o factory dele, Then os casos puros (pesos/threshold ecphory, fus\xE3\
+    o RRF, decay monot\xF4nico, bi-temporal fail-open, cosine relativo) passam em\
+    \ Py e TS com nomes de caso id\xEAnticos"
+  - "Given recall com semantic=False, When o kit valida o shape, Then hits sem anota\xE7\
+    \xF5es de fus\xE3o (byte-shape base); com provider em modo auto, semantic=True\
+    \ + rank_recall/rank_ecphory/score_recall anotados"
+  - "Given um consumidor externo simulado (projeto scratch com sdk editable + provider\
+    \ fake trivial implementado de fora), When ele roda run_memory_conformance + run_memory_scoring_conformance,\
+    \ Then a suite passa provando a API p\xFAblica de fora"
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - "kit Py dna.testing.memory_conformance + espelho TS dna-sdk/testing pro core puro\
+    \ (verbs Py-only documentado); kit rodando contra sqlite-vec + pgvector (requires_postgres,\
+    \ mesmo padr\xE3o do job postgres); docs na casa dos kits (getting-started/conformance-kit.md)\
+    \ + ponteiro no guia de semantic recall; refer\xEAncias re-geradas se drift; suites\
+    \ completas sdk-py/sdk-ts+typecheck/cli + guards + mkdocs --strict verdes; smoke\
+    \ de produto com TestGuide --product + TestRun; PR via story pr com CI 11/11,\
+    \ sem merge"
+  definition_of_done_source: cli-create
+  created_at: '2026-07-10T20:09:00+00:00'
+  updated_at: '2026-07-10T20:34:10+00:00'
+  timeline:
+  - at: '2026-07-10T20:09:00+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-10T20:09:14+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-10T20:21:22+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Kit implementado seguindo o padr\xE3o can\xF4nico do record_search_conformance\
+      \ (factory async \u2192 (objeto, cleanup), caso fresh por execu\xE7\xE3o, skip\
+      \ via SkipTest, runner program\xE1tico + report). Decis\xF5es: (1) DOIS suites\
+      \ \u2014 memory_conformance_suite (kernel-bound, 10 casos sobre os verbos, capability-aware\
+      \ via superf\xEDcie P\xDABLICA: remember reporta indexed / backfill_index retorna\
+      \ 0 \u2192 MemoryCaseNotApplicable, sem tocar atributo privado) e memory_scoring_conformance_suite\
+      \ (7 casos puros, twin TS memoryScoringConformanceSuite com nomes id\xEAnticos\
+      \ \u2014 o pr\xF3prio kit \xE9 artefato de paridade). (2) Tempo 100% simulado\
+      \ (now= dos verbos): staleness pro consolidate \xE9 produzida SURFACEANDO a\
+      \ mem\xF3ria em data antiga via recall (superf\xEDcie p\xFAblica), n\xE3o escrevendo\
+      \ last_surfaced na m\xE3o. (3) Casos com embedder assertam similaridade RELATIVA\
+      \ (filosofia do search kit) \u2014 vale pra fake floor e modelo real; o caso\
+      \ da par\xE1frase documenta o gate honesto cos \u2265 (threshold\u2212novelty)/cosine_weight\
+      \ \u2248 0.41. (4) Verbos ficam Py-only (fronteira j\xE1 declarada no repo);\
+      \ TS espelha s\xF3 o core puro. Verificado: Py 26 pass + 3 skips sim\xE9tricos\
+      \ esperados (lexical skipa fus\xE3o/backfill; sqlite-vec skipa fallback lexical;\
+      \ uni\xE3o dos passed == todos os 10 casos), TS 15 pass + typecheck OK. Leg\
+      \ pgvector escrito no mesmo padr\xE3o requires_postgres/schema descart\xE1vel\
+      \ do search kit \u2014 valida\xE7\xE3o local imposs\xEDvel (containerd com I/O\
+      \ error, sem PG local), o job postgres do CI \xE9 o gate."
+    commit_ref: 95232da0c9429b4e65644b1ba856af248763352c
+  - at: '2026-07-10T20:26:11+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-memory-conformance-kit
+    summary: TestGuide tg-memory-conformance-kit (smoke)
+  - at: '2026-07-10T20:26:39+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-memory-conformance-kit-20260710-202637
+    summary: "TestRun tr-tg-memory-conformance-kit-20260710-202637 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-10T20:28:21+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/42'
+    pr_url: https://github.com/ruinosus/dna/pull/42
+  - at: '2026-07-10T20:28:58+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: PR https://github.com/ruinosus/dna/pull/42 aberto; gates locais todos
+      verdes (sdk-py 2819, sdk-ts 1361+typecheck, cli 357, guards, mkdocs --strict,
+      smoke de produto externo PASS); aguardando CI 11/11
+  - at: '2026-07-10T20:29:00+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
+  - at: '2026-07-10T20:30:39+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Corre\xE7\xE3o p\xF3s-abertura do PR (antes de qualquer aprova\xE7\xE3\
+      o): o importorskip de sqlite_vec no meio do m\xF3dulo de teste skipava o M\xD3\
+      DULO inteiro na coleta \u2014 inclusive o branch lexical sem provider, que deve\
+      \ rodar num install pelado. Trocado por marker skipif escopado s\xF3 \xE0 perna\
+      \ sqlite-vec. Verificado bloqueando o import de sqlite_vec via meta_path: 16\
+      \ passed (lexical + scoring) / 13 skipped (s\xF3 a perna do extra). Push na\
+      \ mesma branch do PR #42."
+    commit_ref: 4879f2b124c9c757561f400e5fa70017908a9577
+  - at: '2026-07-10T20:34:10+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "CI do PR #42 fechou verde: 11/11 (brand-guard, commit-emails, gitleaks,\
+      \ cli 3.12+3.13, sdk-py 3.12+3.13, sdk-ts, postgres, docs-build, docs-links;\
+      \ deploy skipa fora do main por design). Destaque: o job postgres rodou o novo\
+      \ test_pgvector_memory_conformance.py pela primeira vez e passou \u2014 os mesmos\
+      \ 10 casos do verb suite sobre pgvector, provando o ponto do port (um contrato,\
+      \ muitos stores). Story fica em review aguardando merge humano (worktree dna-wt-memkit\
+      \ preservado)."
+    commit_ref: 5d1b69f37b912df4b343d1fa2ec00c3324bf024d
+  produces:
+  - kind: Plan
+    name: plan-s-memory-conformance-kit
+    role: implementation
+    at: '2026-07-10T20:09:14+00:00'
+  - kind: TestGuide
+    name: tg-memory-conformance-kit
+    role: test-guide
+    at: '2026-07-10T20:26:11+00:00'
+  - kind: TestRun
+    name: tr-tg-memory-conformance-kit-20260710-202637
+    role: test-run
+    at: '2026-07-10T20:26:39+00:00'
