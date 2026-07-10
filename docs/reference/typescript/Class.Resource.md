@@ -12,10 +12,10 @@ new Resource(opts): Resource;
 
 | Parameter | Type |
 | ------ | ------ |
-| `opts` | \{ `apiVersion`: `string`; `kind`: `string`; `kindRef?`: `KindLike` \| `null`; `metadata?`: `Record`\<`string`, `unknown`\>; `name`: `string`; `origin?`: `string`; `raw?`: `Record`\<`string`, `unknown`\>; `spec?`: `Record`\<`string`, `unknown`\>; `typed?`: `unknown`; \} |
+| `opts` | \{ `apiVersion`: `string`; `kind`: `string`; `kindRef?`: [`KindLike`](Interface.KindLike.md) \| `null`; `metadata?`: `Record`\<`string`, `unknown`\>; `name`: `string`; `origin?`: `string`; `raw?`: `Record`\<`string`, `unknown`\>; `spec?`: `Record`\<`string`, `unknown`\>; `typed?`: `unknown`; \} |
 | `opts.apiVersion` | `string` |
 | `opts.kind` | `string` |
-| `opts.kindRef?` | `KindLike` \| `null` |
+| `opts.kindRef?` | [`KindLike`](Interface.KindLike.md) \| `null` |
 | `opts.metadata?` | `Record`\<`string`, `unknown`\> |
 | `opts.name` | `string` |
 | `opts.origin?` | `string` |
@@ -154,7 +154,7 @@ Create a Resource from a raw dict.
 | `raw` | `Record`\<`string`, `unknown`\> |
 | `typed?` | `unknown` |
 | `origin?` | `string` |
-| `kindRef?` | `KindLike` \| `null` |
+| `kindRef?` | [`KindLike`](Interface.KindLike.md) \| `null` |
 
 #### Returns
 

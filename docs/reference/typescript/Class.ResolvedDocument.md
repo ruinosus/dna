@@ -17,9 +17,9 @@ new ResolvedDocument(opts): ResolvedDocument;
 
 | Parameter | Type |
 | ------ | ------ |
-| `opts` | \{ `contributionsByField?`: `Record`\<`string`, `string`\>; `doc`: `Raw` \| `null`; `isInherited`: `boolean`; `provenance`: [`ResolutionPath`](Class.ResolutionPath.md); \} |
+| `opts` | \{ `contributionsByField?`: `Record`\<`string`, `string`\>; `doc`: [`Raw`](TypeAlias.Raw.md) \| `null`; `isInherited`: `boolean`; `provenance`: [`ResolutionPath`](Class.ResolutionPath.md); \} |
 | `opts.contributionsByField?` | `Record`\<`string`, `string`\> |
-| `opts.doc` | `Raw` \| `null` |
+| `opts.doc` | [`Raw`](TypeAlias.Raw.md) \| `null` |
 | `opts.isInherited` | `boolean` |
 | `opts.provenance` | [`ResolutionPath`](Class.ResolutionPath.md) |
 

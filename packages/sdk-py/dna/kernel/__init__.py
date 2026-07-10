@@ -546,6 +546,18 @@ class Kernel:
         self.hooks.on_veto(hook, fn, priority=priority, key=key)
 
     def source(self, source: SourcePort) -> None:
+        """Register THE SourcePort — where manifest documents live
+        (filesystem, SQLite, Postgres...). One per kernel; registering
+        again replaces it.
+
+        This is a boot gate, not a plain setter: the port is structurally
+        validated here (``validate_source_port``) so a malformed source
+        fails loudly at registration with the missing members named,
+        instead of deep inside the first ``load_all``. Sources that are
+        ``KernelAttachable`` are auto-attached (fail-soft) so direct
+        ``kernel.source(s)`` callers get the same reader wiring as
+        ``Kernel.auto(source=s)``.
+        """
         # s-dna-source-conformance-kit — boot gate: a malformed source used
         # to pass registration silently and fail deep inside the first load.
         # Fail loud HERE, with the missing members named. Names-only check
@@ -1329,12 +1341,30 @@ class Kernel:
         )
 
     def cache(self, cache: CachePort) -> None:
+        """Register THE CachePort — where resolved external dependencies
+        are installed (e.g. ``FilesystemCache`` under ``.dna/cache/``).
+        One per kernel; dependency resolution writes through it and
+        instance loading reads installed items back."""
         self._cache = cache
 
     def resolver(self, scheme: str, resolver: ResolverPort) -> None:
+        """Register a ResolverPort for a URI scheme (``"local"``,
+        ``"github"``, ``"http"``...) — how external dependencies declared
+        in a Genome are fetched. One resolver per scheme; registering the
+        same scheme again replaces the previous resolver."""
         self._resolvers[scheme] = resolver
 
     def reader(self, r: ReaderPort) -> None:
+        """Register a ReaderPort — a bundle-format detector/parser
+        (SKILL.md, SOUL.md, AGENTS.md...). Readers are tried in
+        registration order during scans.
+
+        H1 conformance gate: the object must satisfy the
+        runtime-checkable ``ReaderPort`` Protocol, so a typo'd
+        detect/read fails here (``ReaderRegistrationError``) instead of
+        in production scans. Re-registering the same class is an
+        idempotent no-op.
+        """
         # H1 — Protocol conformance check. ReaderPort is @runtime_checkable
         # in protocols.py so isinstance catches the typo-on-detect class
         # of bug at registration time instead of in production scans.
@@ -1352,6 +1382,15 @@ class Kernel:
         self._readers.append(r)
 
     def writer(self, w: WriterPort) -> None:
+        """Register a WriterPort — the serialize/write half of a bundle
+        format, mirror of ``reader()``.
+
+        Same H1 conformance gate: raises ``WriterRegistrationError``
+        unless the object satisfies the ``WriterPort`` Protocol
+        (``can_write``/``write``/``serialize`` — serialize is part of the
+        contract since s-dna-rw-roundtrip-suite). Re-registering the same
+        class is an idempotent no-op.
+        """
         # H1 — Protocol conformance check (mirror of reader()).
         if not isinstance(w, WriterPort):
             raise WriterRegistrationError(
@@ -1442,6 +1481,22 @@ class Kernel:
         self._kindreg.validate_dep_filters()
 
     def load(self, ext: Extension) -> None:
+        """Load an Extension — the way Kinds, readers, writers and tools
+        enter the kernel (``Kernel.auto()`` calls this for every
+        entry-point-discovered extension).
+
+        Validates the WHOLE Extension contract fail-loud before calling
+        ``ext.register(self)`` (s-dna-extension-host-contract): a callable
+        ``register()`` plus non-empty ``name`` and ``version`` — a blank
+        name used to be accepted silently and resurface later as ``None``
+        alias owners. During ``register()`` the extension's
+        ``alias_owner``/``name`` is the owner context for generated Kind
+        aliases (s-alias-generated-not-typed). Registration-validation
+        errors (duplicate Kind, malformed reader/writer) always propagate
+        — they are configuration problems the operator must fix; other
+        runtime errors route to the ``extension_error`` hook when one is
+        subscribed, and propagate otherwise.
+        """
         # H1 — structural check before calling register(). Catches the
         # "loaded an instance of the wrong class" bug that's invisible
         # in entry-point discovery (e.g. someone registers a Kind class

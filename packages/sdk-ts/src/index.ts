@@ -27,6 +27,9 @@ export {
   mergeOverrideFull,
   mergeFieldLevel,
   type Contribution,
+  // i-005 — Raw is the payload half of the exported Contribution tuple;
+  // exporting it makes the public type self-describing (TypeDoc xref).
+  type Raw,
 } from "./kernel/resolver.js";
 // Composition Engine V2 orchestration (twin of kernel/composition_resolver.py).
 export { CompositionResolver } from "./kernel/composition-resolver.js";
@@ -91,6 +94,48 @@ export type {
   // Tool port (s-dna-port-surface-parity — TS twin of the Py ToolPort)
   ToolPort,
 } from "./kernel/protocols.js";
+// i-005 — types REFERENCED by already-exported public API, previously
+// broken xrefs in TypeDoc. Each is public surface a consumer needs to name:
+//   TenantScope        — DeclarativeKindPort.scope (tenancy is a first-class
+//                        kernel dimension; the Py twin exports it publicly)
+//   PreviewResult      — return type of Kernel.previewDocument
+//   PreviewBlockKind   — field type of the exported PreviewBlock
+//   BuildPromptOpts    — opts of the blessed ManifestInstance.buildPrompt
+//   SourceCapabilities — fixture-tracked port (port-surface-parity.json)
+//   KindLike           — Resource.kindRef contract
+//   AsyncEventHandler  — accepted by HookRegistry.on (sibling of EventHandler)
+//   CompositionProfile — returned by ManifestInstance.profileFor, registered
+//                        via the kernel's composition-profile registry
+//   BundleHandle       — ReaderPort.detect/read param; readers/writers are a
+//                        documented extension point (the Py twin re-exports
+//                        it from dna.kernel.protocols for typing too)
+//   LayerSource        — param of the exported DefaultLayerResolver.resolve
+// None of these adds a ManifestInstance member or a port member, so the
+// blessed_query_surface / port-surface fixtures are unaffected (type-only
+// re-exports). Internals stay unexported via typedoc.json
+// `intentionallyNotExported` (CompositionResolverHost, QueryableInstance,
+// ManifestInstanceOpts, DeclarativeMarker).
+export { TenantScope } from "./kernel/protocols.js";
+export type { PreviewResult } from "./kernel/index.js";
+export type { PreviewBlockKind } from "./kernel/preview.js";
+export type { BuildPromptOpts } from "./kernel/instance.js";
+export type { SourceCapabilities } from "./kernel/capabilities.js";
+// … second-order xrefs: CompositionSlot is the element type of
+// CompositionProfile.slots; sourceCapabilities/deriveCapabilities are the
+// documented way a custom-source author obtains a SourceCapabilities.
+export type {
+  CompositionSlot,
+  // the declarative viz-hint halves of the slot contract
+  HealthCheckHint,
+  QuadrantHint,
+  TimelineHint,
+} from "./kernel/composition-resolver.js";
+export { sourceCapabilities, deriveCapabilities } from "./kernel/capabilities.js";
+export type { KindLike } from "./kernel/resource.js";
+export type { AsyncEventHandler } from "./kernel/hooks.js";
+export type { CompositionProfile } from "./kernel/composition-resolver.js";
+export type { BundleHandle } from "./kernel/bundle-handle.js";
+export type { LayerSource } from "./kernel/layer-resolver.js";
 export { ToolDefinition } from "./kernel/protocols.js";
 // rec-embedding-port — zero-dep deterministic embedding floor (the default).
 export {

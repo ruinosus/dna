@@ -49,7 +49,7 @@ compositionProfile(profile): void;
 
 | Parameter | Type |
 | ------ | ------ |
-| `profile` | `CompositionProfile` |
+| `profile` | [`CompositionProfile`](Interface.CompositionProfile.md) |
 
 #### Returns
 

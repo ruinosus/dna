@@ -90,7 +90,7 @@ write(bundle, raw): void;
 
 | Parameter | Type |
 | ------ | ------ |
-| `bundle` | `BundleHandle` |
+| `bundle` | [`BundleHandle`](Interface.BundleHandle.md) |
 | `raw` | `Record`\<`string`, `unknown`\> |
 
 #### Returns

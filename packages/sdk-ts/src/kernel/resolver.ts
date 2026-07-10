@@ -83,7 +83,9 @@ export const MAX_RESOLUTION_DEPTH = 16;
 // Provenance + result types
 // ──────────────────────────────────────────────────────────────────────
 
-type Raw = Record<string, unknown>;
+/** A raw manifest document dict (pre-`Document` parse) — the payload half
+ *  of a {@link Contribution}. Twin of the Py `Raw = dict[str, Any]` alias. */
+export type Raw = Record<string, unknown>;
 
 /** One step in the resolution chain — a single (scope, tenant) pair consulted
  *  by the resolver.

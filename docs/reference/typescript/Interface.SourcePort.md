@@ -34,7 +34,7 @@ Optional so existing third-party implementers stay source-compatible.
 
 #### Returns
 
-`SourceCapabilities`
+[`SourceCapabilities`](Interface.SourceCapabilities.md)
 
 ***
 

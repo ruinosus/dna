@@ -33,6 +33,23 @@ new Runtime(opts?): Runtime;
 
 ## Properties
 
+### \_DEFAULT\_REALTIME\_MODEL\_FALLBACK
+
+```ts
+readonly _DEFAULT_REALTIME_MODEL_FALLBACK: "gpt-realtime-2" = "gpt-realtime-2";
+```
+
+s-realtime-model-single-default — 1:1 parity with the Python kernel:
+ the realtime fallback the prompt-budget guard caps against resolves
+ through ONE env (DNA_VOICE_REALTIME_MODEL), read at ACCESS time so a
+ pin set after construction still applies.
+
+#### Inherited from
+
+[`Kernel`](Class.Kernel.md).[`_DEFAULT_REALTIME_MODEL_FALLBACK`](Class.Kernel.md#_default_realtime_model_fallback)
+
+***
+
 ### hooks
 
 ```ts
@@ -75,6 +92,24 @@ Connect pattern).
 [`Kernel`](Class.Kernel.md).[`tenant`](Class.Kernel.md#tenant)
 
 ## Accessors
+
+### \_DEFAULT\_REALTIME\_MODEL
+
+#### Get Signature
+
+```ts
+get _DEFAULT_REALTIME_MODEL(): string;
+```
+
+##### Returns
+
+`string`
+
+#### Inherited from
+
+[`Kernel`](Class.Kernel.md).[`_DEFAULT_REALTIME_MODEL`](Class.Kernel.md#_default_realtime_model)
+
+***
 
 ### \_kinds
 
@@ -477,7 +512,7 @@ Register a composition profile that declares how an orchestrator
 
 | Parameter | Type |
 | ------ | ------ |
-| `profile` | `CompositionProfile` |
+| `profile` | [`CompositionProfile`](Interface.CompositionProfile.md) |
 
 #### Returns
 
@@ -1251,7 +1286,7 @@ Kernel.preview_document.
 
 #### Returns
 
-`Promise`\<`PreviewResult`\>
+`Promise`\<[`PreviewResult`](Interface.PreviewResult.md)\>
 
 #### Inherited from
 

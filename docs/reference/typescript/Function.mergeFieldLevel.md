@@ -29,4 +29,4 @@ Deep-merge `spec` dicts. Higher-priority layers shadow lower per-field.
 
 ## Returns
 
-\[`Raw` \| `null`, [`ResolutionLayer`](Class.ResolutionLayer.md) \| `null`, `Record`\<`string`, `string`\>\]
+\[[`Raw`](TypeAlias.Raw.md) \| `null`, [`ResolutionLayer`](Class.ResolutionLayer.md) \| `null`, `Record`\<`string`, `string`\>\]

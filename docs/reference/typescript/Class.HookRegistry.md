@@ -161,7 +161,7 @@ Async functions are routed to the async channel — callers using `emit`
 | Parameter | Type |
 | ------ | ------ |
 | `hook` | [`HookNameArg`](TypeAlias.HookNameArg.md) |
-| `fn` | [`EventHandler`](TypeAlias.EventHandler.md) \| `AsyncEventHandler` |
+| `fn` | \| [`EventHandler`](TypeAlias.EventHandler.md) \| [`AsyncEventHandler`](TypeAlias.AsyncEventHandler.md) |
 
 #### Returns
 
@@ -184,7 +184,7 @@ Explicit async-only registration. Prefer `on()` — this is here for
 | Parameter | Type |
 | ------ | ------ |
 | `hook` | [`HookNameArg`](TypeAlias.HookNameArg.md) |
-| `fn` | `AsyncEventHandler` |
+| `fn` | [`AsyncEventHandler`](TypeAlias.AsyncEventHandler.md) |
 
 #### Returns
 
