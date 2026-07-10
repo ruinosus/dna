@@ -517,6 +517,10 @@ An Issue is a human-authored ticket — bug, enhancement, question, or task. Tra
 | `created_at` | string |  |  |
 | `description` | string | yes |  |
 | `expected_behavior` | string |  |  |
+| `github_number` | integer |  | GitHub issue number this doc is bridged to. |
+| `github_state` | string |  | Last observed GitHub-side state. |
+| `github_synced_at` | string |  | When the GitHub side was last observed/synced. |
+| `github_url` | string |  | Canonical https URL of the GitHub issue. |
 | `journey_phase` | string |  | Universal journey phase (discover → specify → plan → build → reflect). Additive layer over Story/Feature/Epic status, Spec phase, etc. Lets the journey ledger pin this doc to one of five universal phases compatible with Superpowers / BMAD / Spec Kit / Kiro. |
 | `labels` | array |  |  |
 | `owner` | string |  | Actor name |
