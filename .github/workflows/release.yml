@@ -1,0 +1,152 @@
+# Release — publish dna-sdk + dna-cli to PyPI and dna-sdk to npm
+# (s-publish-registries). Tag-triggered ONLY: pushing a `vX.Y.Z` tag is the
+# release act; nothing here runs on PRs or branch pushes.
+#
+# Flow: bump versions → update CHANGELOG → tag vX.Y.Z → this workflow builds
+# and publishes. See RELEASING.md for the full checklist (including the
+# one-time account prerequisites: PyPI pending publishers + npm token).
+#
+# Jobs:
+#   sanity      — the tag MUST equal the version in both pyprojects and the
+#                 npm package.json; any mismatch fails loud before anything
+#                 is built or published.
+#   build-py    — `uv build` (sdist + wheel) for packages/sdk-py and
+#                 packages/cli; uploaded as SEPARATE artifacts (dist-sdk-py,
+#                 dist-cli) so each publish job ships only its own package.
+#   publish-pypi-sdk / publish-pypi-cli — PyPI TRUSTED PUBLISHING (OIDC, zero
+#                 long-lived token): pypa/gh-action-pypi-publish exchanges the
+#                 workflow's id-token for a per-run PyPI token. One job PER
+#                 package, each with its OWN GitHub environment (`pypi` for
+#                 dna-sdk, `pypi-cli` for dna-cli): PyPI allows a given
+#                 owner+repo+workflow+environment pending-publisher tuple to
+#                 be registered for only ONE project name, so the two
+#                 projects must be distinguished by environment — see
+#                 RELEASING.md.
+#   publish-npm — build (tsc emit + runtime assets) and `npm publish` with
+#                 --provenance (id-token: write signs the attestation).
+#                 First publish authenticates with a granular NPM_TOKEN repo
+#                 secret — npm trusted publishing (OIDC, tokenless) requires
+#                 the package to already exist, so migrating to it is the
+#                 follow-up right after v0.1.0 lands on the registry.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  sanity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tag version must match every package version
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          SDK_PY=$(python3 -c "import tomllib; print(tomllib.load(open('packages/sdk-py/pyproject.toml','rb'))['project']['version'])")
+          CLI_PY=$(python3 -c "import tomllib; print(tomllib.load(open('packages/cli/pyproject.toml','rb'))['project']['version'])")
+          SDK_TS=$(python3 -c "import json; print(json.load(open('packages/sdk-ts/package.json'))['version'])")
+          echo "tag=$TAG  dna-sdk(py)=$SDK_PY  dna-cli=$CLI_PY  dna-sdk(npm)=$SDK_TS"
+          FAIL=0
+          [ "$TAG" = "$SDK_PY" ] || { echo "::error::tag $TAG != packages/sdk-py version $SDK_PY"; FAIL=1; }
+          [ "$TAG" = "$CLI_PY" ] || { echo "::error::tag $TAG != packages/cli version $CLI_PY"; FAIL=1; }
+          [ "$TAG" = "$SDK_TS" ] || { echo "::error::tag $TAG != packages/sdk-ts version $SDK_TS"; FAIL=1; }
+          exit $FAIL
+
+  build-py:
+    needs: sanity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+      # One dist dir PER package: the publish action ships everything in its
+      # packages-dir, and each publish job below may only ship its own
+      # project (distinct PyPI trusted-publisher environments).
+      - name: Build sdist + wheel (dna-sdk)
+        run: uv build --out-dir dist-sdk-py packages/sdk-py && ls -l dist-sdk-py/
+      - name: Build sdist + wheel (dna-cli)
+        run: uv build --out-dir dist-cli packages/cli && ls -l dist-cli/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-sdk-py
+          path: dist-sdk-py/
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-cli
+          path: dist-cli/
+          if-no-files-found: error
+
+  # Two publish jobs, one per PyPI project, each under its OWN GitHub
+  # environment: PyPI accepts a given owner+repo+workflow+environment
+  # pending-publisher configuration for only ONE project name — `dna-sdk` is
+  # registered against environment `pypi`, so `dna-cli` needs a second
+  # environment (`pypi-cli`). Keep both names in sync with RELEASING.md.
+  publish-pypi-sdk:
+    needs: build-py
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist-sdk-py
+          path: dist/
+      - name: Publish dna-sdk to PyPI (trusted publishing)
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
+
+  publish-pypi-cli:
+    needs: build-py
+    runs-on: ubuntu-latest
+    environment: pypi-cli
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist-cli
+          path: dist/
+      - name: Publish dna-cli to PyPI (trusted publishing)
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
+
+  publish-npm:
+    needs: sanity
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # --provenance: sign the build attestation with the workflow identity.
+      id-token: write
+    defaults:
+      run:
+        working-directory: packages/sdk-ts
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      # setup-node writes the .npmrc that `npm publish` reads NODE_AUTH_TOKEN
+      # through — bun runs the build, npm does the publish.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+      - name: Install
+        run: bun install --frozen-lockfile
+      - name: Build (tsc emit + runtime assets)
+        run: bun run build
+      # First publish: granular automation token (repo secret NPM_TOKEN,
+      # scoped to the dna-sdk package). Follow-up after v0.1.0: switch the
+      # package to npm trusted publishing (OIDC) and drop the token — npm
+      # requires the package to exist before OIDC can be configured.
+      - name: Publish to npm (with provenance)
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
