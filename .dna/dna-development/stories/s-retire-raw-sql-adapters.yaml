@@ -18,7 +18,7 @@ spec:
     \ (5) i-001+i-002 resolvidas por remo\xE7\xE3o com comments honestos; (6) suites\
     \ full verdes \u2014 aten\xE7\xE3o: source_sync, kernel_bootstrap, capabilities\
     \ e o conformance kit referenciam os crus."
-  status: in-progress
+  status: review
   feature: f-dna-sql-consolidation
   priority: high
   labels:
@@ -37,7 +37,7 @@ spec:
     SA provada)"
   definition_of_done_source: cli-create
   created_at: '2026-07-10T12:33:21+00:00'
-  updated_at: '2026-07-10T13:22:26+00:00'
+  updated_at: '2026-07-10T13:25:02+00:00'
   timeline:
   - at: '2026-07-10T12:33:21+00:00'
     actor: claude-code
@@ -95,6 +95,35 @@ spec:
     name: tr-tg-raw-to-sa-swap-20260710-132225
     summary: "TestRun tr-tg-raw-to-sa-swap-20260710-132225 \u2192 pass"
     outcome: pass
+  - at: '2026-07-10T13:24:16+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/32'
+    pr_url: https://github.com/ruinosus/dna/pull/32
+  - at: '2026-07-10T13:24:49+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #32 aberto (https://github.com/ruinosus/dna/pull/32), aguardando\
+      \ os 9 checks. Fechamento do escopo: (a) suite full sdk-py 2771 passed sem PG\
+      \ e 2850 passed com PG vivo (:5439 descart\xE1vel via Homebrew pg16 \u2014 docker\
+      \ do host estava degradado, n\xE3o toquei); (b) cli 329 passed; (c) TS 1336\
+      \ passed + typecheck, ZERO diffs em sdk-ts; (d) mkdocs --strict + coverage guard\
+      \ + brand guard + parity executors (Py 22 / TS 21) verdes; (e) TestGuide tg-raw-to-sa-swap\
+      \ + TestRun pass com outputs verbatim (troca cru\u2192SA provada num .db gerado\
+      \ pelo main); (f) i-001/i-002 resolvidas por remo\xE7\xE3o com prova; (g) b\xF4\
+      nus gapless: count nativo pg restaurado no SA (tinha regredido pra count_via_query)\
+      \ + schema-identifier guard portado pro SA. Grep final: zero refer\xEAncias\
+      \ vivas aos crus (sobram o pacote sobrevivente adapters/postgres/eventbus e\
+      \ notas hist\xF3ricas)."
+    commit_ref: 1468e587d2aa561f0ce218d9bf2c938cd2375958
+  - at: '2026-07-10T13:25:02+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
   produces:
   - kind: Plan
     name: plan-s-retire-raw-sql-adapters
