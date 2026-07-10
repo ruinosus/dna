@@ -36,7 +36,7 @@ spec:
   - PR merged via dna sdlc story pr
   definition_of_done_source: cli-create
   created_at: '2026-07-10T09:24:31+00:00'
-  updated_at: '2026-07-10T10:03:29+00:00'
+  updated_at: '2026-07-10T10:06:41+00:00'
   timeline:
   - at: '2026-07-10T09:24:31+00:00'
     actor: claude-code
@@ -125,6 +125,15 @@ spec:
     source: cli
     from: in-progress
     to: review
+  - at: '2026-07-10T10:06:41+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "CI do PR #27 100% verde: sdk-py (2m32s), sdk-ts, cli, postgres, brand-guard,\
+      \ gitleaks, commit-emails, docs-build (drift+coverage guards), docs-links \u2014\
+      \ 9/9 pass (deploy = skipping, s\xF3 roda no main). Pronto pra merge; story\
+      \ em review aguardando."
+    commit_ref: f35d7eb0a3536f54c535e8b93c24552086d2b31f
   produces:
   - kind: Plan
     name: plan-s-dna-eval-kit
