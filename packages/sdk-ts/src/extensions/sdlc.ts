@@ -595,6 +595,30 @@ class IssueKind extends KindBase {
         actual_behavior: { type: "string" },
         closed_at: { type: "string", format: "date-time" },
         resolution: { type: "string" },
+        // GitHub-bridge provenance (s-github-issues-bridge): an Issue can
+        // be PUBLISHED to / IMPORTED from a GitHub issue (`dna sdlc issue
+        // publish|import|sync`). These fields are the provenance link —
+        // the bridge mirrors WITH provenance, it never replaces the
+        // github.com artifact.
+        github_number: {
+          type: "integer",
+          minimum: 1,
+          description: "GitHub issue number this doc is bridged to.",
+        },
+        github_url: {
+          type: "string",
+          description: "Canonical https URL of the GitHub issue.",
+        },
+        github_state: {
+          type: "string",
+          enum: ["open", "closed"],
+          description: "Last observed GitHub-side state.",
+        },
+        github_synced_at: {
+          type: "string",
+          format: "date-time",
+          description: "When the GitHub side was last observed/synced.",
+        },
         // v1.5 — board-grade common fields. Issues use `severity`
         // natively; `priority` is orthogonal (severity = how bad,
         // priority = how soon).
