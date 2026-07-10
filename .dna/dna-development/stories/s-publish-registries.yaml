@@ -19,7 +19,7 @@ spec:
     \ vira alternativa); (5) CHANGELOG Unreleased\u21920.1.0. Lado Barna (contas):\
     \ PyPI pending publishers + npm token \u2014 checklist entregue \xE0 parte. Publica\xE7\
     \xE3o real = tag v0.1.0 AP\xD3S o Barna configurar os registries."
-  status: in-progress
+  status: review
   feature: f-dna-ecosystem
   priority: high
   labels:
@@ -40,7 +40,7 @@ spec:
     dele
   definition_of_done_source: cli-create
   created_at: '2026-07-10T17:59:56+00:00'
-  updated_at: '2026-07-10T18:19:40+00:00'
+  updated_at: '2026-07-10T18:25:01+00:00'
   timeline:
   - at: '2026-07-10T17:59:56+00:00'
     actor: claude-code
@@ -85,6 +85,28 @@ spec:
       \ um pending publisher por tupla owner+repo+workflow+environment; RELEASING.md\
       \ reflete os dois environments."
     commit_ref: f47f948830f83450ccecd40a1198d5f00b387c6b
+  - at: '2026-07-10T18:21:15+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/36'
+    pr_url: https://github.com/ruinosus/dna/pull/36
+  - at: '2026-07-10T18:25:00+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
+  - at: '2026-07-10T18:25:01+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #36 aberto, checks 12/12 verdes (sdk-ts, sdk-py 3.12+3.13, cli 3.12+3.13,\
+      \ postgres, brand-guard, commit-emails, gitleaks, docs-build, docs-links; deploy=skip\
+      \ \xE9 main-only). N\xC3O mergeado e NENHUMA tag criada \u2014 publica\xE7\xE3\
+      o real \xE9 a tag v0.1.0 ap\xF3s o dono configurar PyPI pending publishers (dna-sdk\u2192\
+      env pypi, dna-cli\u2192env pypi-cli) + NPM_TOKEN (checklist em RELEASING.md)."
+    commit_ref: 6b7ee3713a32ff8453d7c78929380d8a6e784b5e
   produces:
   - kind: Plan
     name: plan-s-publish-registries
