@@ -117,7 +117,13 @@ flowchart LR
   recall finds it.
 - **`recall`** runs hybrid search over the memory Kinds, drops invalidated
   memories, and re-ranks `LessonLearned` hits by
-  `search score × retention × affect`.
+  `search score × retention × affect`. When a provider is available it also
+  blends **embedding similarity into the ecphory ranking** (the cue and each
+  candidate's semantic payload are embedded once; the cosine feeds the
+  ecphory content score) and fuses the two rankings with the same RRF the
+  search plane uses — so a memory phrased differently from the cue still
+  surfaces. Auto by default (`--semantic/--no-semantic`); with no provider
+  the ranking is exactly the base one, offline-first.
 - **`forget`** *demotes*, never deletes (see bi-temporality below).
 - **`consolidate`** is a deterministic decay pass: recompute retention,
   report — or with `--apply`, soft-forget — memories that have gone stale.

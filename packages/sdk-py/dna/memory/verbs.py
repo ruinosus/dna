@@ -37,9 +37,15 @@ from dna.memory.decay import (
     decay_adjusted_score,
     stability_from_spec,
 )
+from dna.memory.ecphory import EngramRef
 from dna.memory.encoding_context import stamp_encoding_context_if_absent
 from dna.memory.memory_type import classify_memory_type
 from dna.memory.retrieval import affect_factor
+from dna.memory.semantic import (
+    engram_text,
+    fuse_semantic_recall,
+    semantic_scores_from_vectors,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -137,6 +143,47 @@ async def remember(
     return {"kind": kind, "name": name, "spec": spec, "indexed": indexed}
 
 
+async def backfill_index(
+    kernel: Any,
+    scope: str,
+    *,
+    kinds: tuple[str, ...] | list[str] = MEMORY_KINDS,
+    tenant: str | None = None,
+) -> int:
+    """Lazy-backfill the search index for memories that predate the provider.
+
+    ``remember`` embeds on write, but memories written before a provider was
+    registered — or recalled on a machine whose local ``.dna-search/`` store
+    does not exist yet — have no vector. This is the deliberate migration
+    story: instead of a schema migration, (re)index every memory Kind doc into
+    the registered provider ON DEMAND. Idempotent by text hash (the provider
+    skips unchanged docs — no re-embed), so calling it before every recall is
+    cheap. Returns the number of records actually (re)embedded; no provider
+    registered → 0 (recall stays lexical).
+    """
+    prov = _provider(kernel)
+    if prov is None:
+        return 0
+    from dna.adapters.search.sqlite_vec import document_text
+
+    records: list[dict[str, Any]] = []
+    for kind in kinds:
+        async for raw in kernel.query(scope, kind, tenant=tenant):
+            name = (raw.get("metadata") or {}).get("name") or raw.get("name")
+            if not name:
+                continue
+            spec = raw.get("spec") or {}
+            records.append({
+                "scope": scope, "kind": kind, "name": name,
+                "tenant": tenant or "",
+                "text": document_text(raw),
+                "title": spec.get("title") or spec.get("summary") or name,
+            })
+    if not records:
+        return 0
+    return int(await prov.index(records))
+
+
 # ─────────────────────────── recall ───────────────────────────
 
 
@@ -163,6 +210,7 @@ async def recall(
     k: int = 5,
     reconsolidate: bool = True,
     actor: str = "anonymous",
+    semantic: bool | None = None,
     now: datetime | None = None,
 ) -> dict[str, Any]:
     """Hybrid recall over the memory Kinds, bi-temporal + retention re-scored.
@@ -172,11 +220,26 @@ async def recall(
     spec, DROPS memories whose ``valid_to`` is in the past (bi-temporal
     correctness — a forgotten/superseded memory never resurfaces), then
     re-ranks memory hits by ``search_score × retention × affect`` (Ebbinghaus
-    decay + evocative palette). When ``reconsolidate`` is on, each surfaced
-    memory gets a cues_history append + a small confidence bump (Nader light
-    reconsolidation) via ``kernel.write_document`` — fail-soft.
+    decay + evocative palette).
 
-    Returns ``{query, scope, degraded, hits:[{kind,name,score,retention?,...}]}``.
+    **Semantic recall (s-memory-semantic-recall):** ``semantic=None`` (auto)
+    turns the semantic plane on when a search provider is registered; ``True``
+    forces it (``kernel.embed`` always resolves — deterministic fake floor),
+    ``False`` disables it. When active, the cue + every candidate are embedded
+    in ONE ``kernel.embed`` batch, the per-memory cosine feeds the ecphory
+    ranking (``score_engram`` Path 3 — the hook that was inert until this
+    story), and the ecphory + recall rankings are fused with RRF
+    (:func:`dna.memory.semantic.fuse_semantic_recall`). Fail-soft: an embed
+    failure keeps the base ranking (and reports ``semantic: False``). When
+    inactive, ranking and hit shape are IDENTICAL to the pre-semantic behavior
+    (offline-first, zero breaking change).
+
+    When ``reconsolidate`` is on, each surfaced memory gets a cues_history
+    append + a small confidence bump (Nader light reconsolidation) via
+    ``kernel.write_document`` — fail-soft.
+
+    Returns ``{query, scope, degraded, semantic, hits:[{kind,name,score,
+    retention?,semantic?,rank_recall?,rank_ecphory?,...}]}``.
     """
     now_dt = now or datetime.now(timezone.utc)
     overfetch = max(k * 3, 10)
@@ -194,6 +257,7 @@ async def recall(
             merged.append(hit)
 
     scored: list[dict[str, Any]] = []
+    spec_by_name: dict[str, dict[str, Any]] = {}
     for hit in merged:
         kind = hit.get("kind")
         name = hit.get("name")
@@ -210,14 +274,48 @@ async def recall(
             hit["score"] = adjusted
             hit["retention"] = round(retention, 4)
         scored.append(hit)
+        spec_by_name.setdefault(str(name), spec)
 
     scored.sort(key=lambda h: (-float(h.get("score", 0.0) or 0.0), h.get("name", "")))
+
+    semantic_active = semantic is True or (semantic is None and _provider(kernel) is not None)
+    if semantic_active and scored:
+        try:
+            scored = await _semantic_rerank(kernel, scored, spec_by_name, query, now_dt)
+        except Exception:  # noqa: BLE001 — the semantic plane is additive; degrade honestly
+            logger.warning("recall: semantic plane failed; keeping base ranking", exc_info=True)
+            semantic_active = False
+
     top = scored[:k]
 
     if reconsolidate:
         await _reconsolidate(kernel, scope, top, query, actor, tenant, now_dt)
 
-    return {"query": query, "scope": scope, "degraded": degraded, "hits": top}
+    return {
+        "query": query, "scope": scope,
+        "degraded": degraded, "semantic": semantic_active,
+        "hits": top,
+    }
+
+
+async def _semantic_rerank(
+    kernel: Any,
+    scored: list[dict[str, Any]],
+    spec_by_name: dict[str, dict[str, Any]],
+    query: str,
+    now: datetime,
+) -> list[dict[str, Any]]:
+    """The kernel-bound half of semantic recall: ONE ``kernel.embed`` batch for
+    the cue + every candidate's semantic payload
+    (:func:`dna.memory.semantic.engram_text` — area/title/summary/body, the
+    same planes ecphory scores), cosine per memory, then the pure fusion
+    (:func:`dna.memory.semantic.fuse_semantic_recall`)."""
+    names = list(spec_by_name.keys())
+    engrams = [EngramRef(name, spec_by_name[name]) for name in names]
+    texts = [engram_text(spec_by_name[name]) for name in names]
+    vectors = await kernel.embed([query] + texts)
+    sem_scores = semantic_scores_from_vectors(names, vectors[1:], vectors[0])
+    return fuse_semantic_recall(scored, engrams, query, sem_scores, now=now)
 
 
 async def _reconsolidate(
@@ -364,4 +462,5 @@ __all__ = [
     "recall",
     "forget",
     "consolidate",
+    "backfill_index",
 ]

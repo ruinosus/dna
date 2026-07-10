@@ -22,6 +22,13 @@ import { classifyMemoryType } from "../src/memory/memoryType.js";
 import { timeOfDay } from "../src/memory/encodingContext.js";
 import { rankMemories, type Memory } from "../src/memory/retrieval.js";
 import { scoreEngram, type EngramRef } from "../src/memory/ecphory.js";
+import {
+  cosineSimilarity,
+  engramText,
+  fuseSemanticRecall,
+  semanticScoresFromVectors,
+} from "../src/memory/semantic.js";
+import { fakeEmbedOne } from "../src/kernel/embedding.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const FX = JSON.parse(
@@ -84,6 +91,47 @@ describe("memory scoring Py↔TS parity", () => {
       const s = scoreEngram(engram, c.cue_ctx);
       expect(s.score).toBeCloseTo(c.expected_score, 9);
       expect(s.matchedDims).toEqual(c.expected_matched);
+    }
+  });
+
+  // ── semantic recall (s-memory-semantic-recall) ────────────────────────────
+
+  test("cosineSimilarity over fake embeddings", () => {
+    for (const c of FX.cosine_similarity_fake) {
+      const got = cosineSimilarity(fakeEmbedOne(c.text_a), fakeEmbedOne(c.text_b));
+      expect(got).toBeCloseTo(c.expected, 12);
+    }
+  });
+
+  test("engramText", () => {
+    for (const c of FX.engram_text) {
+      expect(engramText(c.spec)).toBe(c.expected);
+    }
+  });
+
+  test("fuseSemanticRecall", () => {
+    for (const c of FX.semantic_recall_fusion) {
+      const refs: EngramRef[] = c.engrams.map(
+        (e: { name: string; spec: Record<string, unknown> }) => ({ name: e.name, spec: e.spec }),
+      );
+      const sem = semanticScoresFromVectors(
+        c.engrams.map((e: { name: string }) => e.name),
+        c.engrams.map((e: { spec: Record<string, unknown> }) => fakeEmbedOne(engramText(e.spec))),
+        fakeEmbedOne(c.query),
+      );
+      const fused = fuseSemanticRecall(
+        c.hits.map((h: Record<string, unknown>) => ({ ...h })),
+        refs, c.query, sem, undefined, iso(c.now),
+      );
+      expect(fused.map((h) => h.name)).toEqual(c.expected_order);
+      for (const h of fused) {
+        const name = String(h.name);
+        expect(h.score as number).toBeCloseTo(c.expected_scores[name], 12);
+        if (name in c.expected_semantic) {
+          expect(h.semantic as number).toBeCloseTo(c.expected_semantic[name], 12);
+        }
+        expect(h.rank_ecphory).toEqual(c.expected_rank_ecphory[name]);
+      }
     }
   });
 });

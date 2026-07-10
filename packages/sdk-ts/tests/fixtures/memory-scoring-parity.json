@@ -336,5 +336,113 @@
         "source_refs"
       ]
     }
+  ],
+  "cosine_similarity_fake": [
+    {
+      "text_a": "mutating documents safely",
+      "text_b": "deep copy before mutating documents",
+      "expected": 0.5163977794943224
+    },
+    {
+      "text_a": "mutating documents safely",
+      "text_b": "banana tropical smoothie",
+      "expected": 0.0
+    },
+    {
+      "text_a": "reciprocal rank fusion",
+      "text_b": "reciprocal rank fusion",
+      "expected": 1.0000000000000002
+    },
+    {
+      "text_a": "",
+      "text_b": "anything at all",
+      "expected": 0.0
+    }
+  ],
+  "engram_text": [
+    {
+      "spec": {
+        "area": "Feature/kernel",
+        "summary": "deep-copy before mutating",
+        "affect": "regret",
+        "created_at": "2026-07-01T00:00:00+00:00"
+      },
+      "expected": "Feature/kernel deep-copy before mutating"
+    },
+    {
+      "spec": {
+        "title": "AAC apps",
+        "body": "long body text",
+        "summary": "short"
+      },
+      "expected": "AAC apps short long body text"
+    },
+    {
+      "spec": {},
+      "expected": ""
+    }
+  ],
+  "semantic_recall_fusion": [
+    {
+      "query": "mutating documents safely",
+      "now": "2026-07-09T15:00:00+00:00",
+      "engrams": [
+        {
+          "name": "rem-target",
+          "spec": {
+            "area": "Feature/kernel",
+            "summary": "deep-copy before mutating documents",
+            "created_at": "2026-07-01T00:00:00+00:00"
+          }
+        },
+        {
+          "name": "rem-decoy",
+          "spec": {
+            "area": "Feature/ops",
+            "summary": "safely archive old reports nightly",
+            "created_at": "2026-07-01T00:00:00+00:00"
+          }
+        },
+        {
+          "name": "rem-noise",
+          "spec": {
+            "area": "Feature/food",
+            "summary": "banana tropical smoothie recipe",
+            "created_at": "2026-07-01T00:00:00+00:00"
+          }
+        }
+      ],
+      "hits": [
+        {
+          "name": "rem-decoy",
+          "score": 0.048
+        },
+        {
+          "name": "rem-target",
+          "score": 0.033
+        },
+        {
+          "name": "rem-noise",
+          "score": 0.02
+        }
+      ],
+      "expected_order": [
+        "rem-target",
+        "rem-decoy",
+        "rem-noise"
+      ],
+      "expected_scores": {
+        "rem-target": 0.03252247488101534,
+        "rem-decoy": 0.01639344262295082,
+        "rem-noise": 0.015873015873015872
+      },
+      "expected_semantic": {
+        "rem-target": 0.4364357804719849,
+        "rem-decoy": 0.21821789023599245
+      },
+      "expected_rank_ecphory": {
+        "rem-target": 1
+      }
+    }
   ]
 }

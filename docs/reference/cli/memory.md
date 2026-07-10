@@ -97,6 +97,7 @@ dna memory recall [OPTIONS] QUERY
 | `--kind` | Restrict to memory kind(s). Default: all. |
 | `--no-reconsolidate` | Skip the cue/confidence bump side-effect. |
 | `--scope` |  |
+| `--semantic`, `--no-semantic` | Blend embedding similarity into the ecphory ranking (RRF fusion). Default: auto — on when the search provider is available. |
 | `--tenant` |  |
 | `-k`, `--limit` | _(default: `5`)_ |
 

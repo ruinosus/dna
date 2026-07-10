@@ -21,3 +21,4 @@ export * from "./memoryType.js";
 export * from "./encodingContext.js";
 export * from "./retrieval.js";
 export * from "./ecphory.js";
+export * from "./semantic.js";
