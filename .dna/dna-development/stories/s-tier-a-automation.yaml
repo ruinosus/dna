@@ -40,7 +40,7 @@ spec:
   - PR merged via dna sdlc story pr
   definition_of_done_source: cli-create
   created_at: '2026-07-09T23:20:07+00:00'
-  updated_at: '2026-07-09T23:59:51+00:00'
+  updated_at: '2026-07-10T00:03:39+00:00'
   timeline:
   - at: '2026-07-09T23:20:07+00:00'
     actor: claude-code
@@ -164,6 +164,15 @@ spec:
       \ via guard, fix gen\xE9rico \xE9 o issue). PR #25 com 9/10 checks verdes (deploy=skip\
       \ por design em PR); aguardando s\xF3 sdk-py."
     commit_ref: d80692d92f5889e7d75136688edd061c1ddd7ac9
+  - at: '2026-07-10T00:03:39+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #25 com TODOS os checks verdes no head final (brand-guard, cli, commit-emails,\
+      \ docs-build [drift+coverage+strict], docs-links, gitleaks, postgres, sdk-py,\
+      \ sdk-ts; deploy=skip por design em PR). Story em review aguardando merge \u2014\
+      \ done s\xF3 depois do merge (n\xE3o pushar mais nesta branch)."
+    commit_ref: 249dbe717b56213c46452b89570f2242b82dacb0
   produces:
   - kind: Plan
     name: plan-s-tier-a-automation
