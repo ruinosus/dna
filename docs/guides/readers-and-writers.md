@@ -412,18 +412,18 @@ for c in configs:
 | Operation | Uses Readers? | Uses Writers? |
 |-----------|--------------|--------------|
 | `kernel.instance()` with FilesystemSource | Yes — to detect and read bundles | No |
-| `kernel.instance()` with SQLiteSource | No — documents are self-contained JSON | No |
+| `kernel.instance()` with a SQL source (SqlAlchemySource) | No — documents are self-contained JSON | No |
 | Admin portal "Save" with filesystem backend | No | Yes — writes back to disk |
-| Admin portal "Save" with SQLite backend | No | No — stores as JSON |
+| Admin portal "Save" with a SQL backend | No | No — stores as JSON |
 | `source.load_all(scope, readers=...)` | Yes | No |
 
-**Key insight:** Readers and Writers only matter for **filesystem-based** sources. When using SQLite or PostgreSQL, documents are stored as JSON blobs — no bundle detection needed. The `supports_readers` property on SourcePort indicates this:
+**Key insight:** Readers and Writers only matter for **filesystem-based** sources. When using a SQL backend (`SqlAlchemySource`, sqlite or postgres dialect), documents are stored as JSON blobs — no bundle detection needed. The `supports_readers` property on SourcePort indicates this:
 
 ```python
 class FilesystemSource:
     supports_readers = True   # Uses readers to detect bundles
 
-class SqliteSource:
+class SqlAlchemySource:
     supports_readers = False  # Documents are self-contained JSON
 ```
 
