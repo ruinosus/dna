@@ -61,8 +61,11 @@ const PRIORITIES = ["highest", "high", "medium", "low", "lowest"] as const;
 // status, Spec phase, etc. Maps to Superpowers / BMAD / Spec Kit / Kiro.
 const JOURNEY_PHASES = ["discover", "specify", "plan", "build", "verify", "reflect"] as const;
 
-// v1.6: Activity Timeline event types (open enum — additionalProperties
-// True per entry lets new types add fields without migration).
+// v1.6: Activity Timeline event types — RECOGNIZED names, but the schema
+// deliberately does NOT close the vocabulary (no enum): documentation-style
+// so future types just work. Load-bearing since s-write-path-validation
+// (i-008): writes really validate now, and the CLI already stamps types
+// beyond these five ("pr_opened" from `dna sdlc story pr`).
 const TIMELINE_TYPES = [
   "status_change", "groom", "comment", "decision", "artifact_produced",
 ] as const;
@@ -107,7 +110,12 @@ function timelineFieldSchema() {
       properties: {
         at: { type: "string", format: "date-time" },
         actor: { type: "string" },
-        type: { type: "string", enum: [...TIMELINE_TYPES] },
+        type: {
+          type: "string",
+          description:
+            "Event type. Recognized: " + TIMELINE_TYPES.join(", ") +
+            " (open vocabulary — new types are additive, e.g. pr_opened).",
+        },
         source: { type: "string", enum: [...TIMELINE_SOURCES] },
         from: { type: "string" },
         to: { type: "string" },

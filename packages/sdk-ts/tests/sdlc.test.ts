@@ -278,16 +278,25 @@ describe("SdlcExtension — TS parity with Python", () => {
     }
   });
 
-  it("Timeline entry type enum lists Phase 1 events", () => {
+  it("Timeline entry type is an OPEN vocabulary (recognized names in the description)", () => {
+    // s-write-path-validation (i-008): writes now really validate against
+    // the schema, and the CLI already stamps types beyond the original five
+    // ("pr_opened" from `dna sdlc story pr`) — so `type` must NOT be a
+    // closed enum (the module always documented it as documentation-style).
     const k = new Kernel();
     k.load(new SdlcExtension());
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const kinds = (k as any)._kinds as Map<string, { schema: () => Record<string, unknown> }>;
     const props = kinds.get("github.com/ruinosus/dna/sdlc/v1\0Story")!.schema().properties as Record<string, unknown>;
-    const tl = props.timeline as { items: { properties: Record<string, { enum?: string[] }> } };
-    expect(tl.items.properties.type.enum).toEqual([
+    const tl = props.timeline as {
+      items: { properties: Record<string, { enum?: string[]; description?: string }> };
+    };
+    expect(tl.items.properties.type.enum).toBeUndefined();
+    for (const name of [
       "status_change", "groom", "comment", "decision", "artifact_produced",
-    ]);
+    ]) {
+      expect(tl.items.properties.type.description).toContain(name);
+    }
     expect(tl.items.properties.source.enum).toEqual([
       "cli", "studio", "agent-session-extracted", "system",
     ]);

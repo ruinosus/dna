@@ -5,7 +5,7 @@ metadata:
 spec:
   description: Roteiro de teste de s-tier-a-modelprofile (ModelProfile Kind + prompt-budget
     veto hook).
-  kind_of_test: automated
+  kind_of_test: regression
   status: active
   steps:
   - action: "pytest tests/test_modelreg_prompt_budget.py \u2014 Kind registrado do\

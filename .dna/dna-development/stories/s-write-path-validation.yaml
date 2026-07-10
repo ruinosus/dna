@@ -30,7 +30,7 @@ spec:
   - PR merged via story pr
   definition_of_done_source: cli-create
   created_at: '2026-07-10T10:51:29+00:00'
-  updated_at: '2026-07-10T11:14:11+00:00'
+  updated_at: '2026-07-10T11:26:25+00:00'
   timeline:
   - at: '2026-07-10T10:51:29+00:00'
     actor: claude-code
@@ -88,6 +88,38 @@ spec:
     name: tr-tg-write-path-validation-20260710-111410
     summary: "TestRun tr-tg-write-path-validation-20260710-111410 \u2192 pass"
     outcome: pass
+  - at: '2026-07-10T11:19:50+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR aberto: https://github.com/ruinosus/dna/pull/29 \u2014 e o dogfooding\
+      \ pagou na hora: o carimbo autom\xE1tico do PR (timeline type=pr_opened) foi\
+      \ VETADO pela valida\xE7\xE3o nova, porque o schema da timeline fechava o enum\
+      \ em 5 tipos enquanto o pr\xF3prio m\xF3dulo documenta vocabul\xE1rio aberto\
+      \ ('no validator enforces... future types just work') e o CLI j\xE1 escreve\
+      \ pr_opened. O schema era o errado (contradizia o design documentado e s\xF3\
+      \ nunca doeu porque nada validava no write) \u2014 fix: enum de type vira description\
+      \ com os nomes reconhecidos (Py+TS), vocabul\xE1rio aberto como sempre foi a\
+      \ inten\xE7\xE3o. Latente exatamente da classe do i-008, achado pelo pr\xF3\
+      prio mecanismo no primeiro write real."
+    commit_ref: 37911859be7e09bc4b4eab2b58e93d9bd6662050
+  - at: '2026-07-10T11:26:25+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Segunda onda (achados do pr\xF3prio mecanismo, todos da classe i-008):\
+      \ (1) timeline.type do SDLC \u2014 enum fechado contradizia o design documentado\
+      \ ('open enum') e vetou o carimbo pr_opened do story pr; aberto em Py+TS, testes\
+      \ re-pinados pro contrato aberto (test_timeline_type_is_open_vocabulary + sdlc.test.ts).\
+      \ (2) _schema_from_model (helix) mapeava TODO list[...] pra items:string \u2014\
+      \ Genome.dependencies e UseCase.alternate_flows s\xE3o list[dict] no model (e\
+      \ no zod TS!); schema gerado era o errado e vetaria docs leg\xEDtimos (market-demo,\
+      \ open-swe). Fix: inspecionar o element type. (3) Sweep repo-wide (162 docs\
+      \ schema-bearing em .dna/, scopes/, examples/): 3 viola\xE7\xF5es \u2192 0 ap\xF3\
+      s fixes (a terceira era o TestGuide legado tg-s-tier-a-modelprofile com kind_of_test:\
+      \ automated, fora do enum do testkit \u2014 corrigido pra regression). Guards\
+      \ + mkdocs re-verificados verdes."
+    commit_ref: 37911859be7e09bc4b4eab2b58e93d9bd6662050
   produces:
   - kind: Plan
     name: plan-s-write-path-validation
