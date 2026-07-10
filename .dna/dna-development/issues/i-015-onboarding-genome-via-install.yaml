@@ -13,7 +13,7 @@ spec:
     \xF5es .claude/.github/...) \u2014 precisa de design pr\xF3prio."
   type: enhancement
   severity: low
-  status: in-progress
+  status: resolved
   owner: claude-code
   related_feature: f-dna-ecosystem
   timeline:
@@ -42,3 +42,14 @@ spec:
     source: cli
     summary: 'PR #41 (feat/s-onboarding-genome-install) implementa dna init --from;
       esta issue resolve done-on-merge do PR.'
+  - at: '2026-07-10T20:58:02+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: resolved
+    summary: "dna init --from shipado no PR #41 (pack distribu\xEDdo via github:/local:,\
+      \ exemplo p\xFAblico examples/onboarding-pack)"
+  closed_at: '2026-07-10T20:58:02+00:00'
+  resolution: "dna init --from shipado no PR #41 (pack distribu\xEDdo via github:/local:,\
+    \ exemplo p\xFAblico examples/onboarding-pack)"
