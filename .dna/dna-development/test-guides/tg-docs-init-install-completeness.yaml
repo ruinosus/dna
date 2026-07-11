@@ -1,0 +1,37 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-docs-init-install-completeness
+spec:
+  description: 'The navigable docs site: prove the init-vs-install distinction is
+    explicit on both pages and the CLI tour + README reflect every command group,
+    with all guards green.'
+  kind_of_test: smoke
+  status: active
+  steps:
+  - action: Run `mkdocs build --strict` after installing requirements-docs.txt + the
+      SDK/CLI
+    expected: exits 0, no link/anchor/nav warnings (site is fully navigable)
+  - action: Open guides/installing-scopes and read the 'dna install vs dna init' section
+    expected: "a comparison table + 'I want to\u2026\u2192use' decision table + a\
+      \ reciprocal link to getting-started/agent-onboarding are present"
+  - action: Open getting-started/agent-onboarding
+    expected: an early 'dna init or dna install?' tip callout and a compact --from-vs-install
+      table both link to the install-guide comparison anchor
+  - action: Open guides/cli-tour
+    expected: dna init and dna eval appear in 'The groups with their own guides',
+      and the pasted `dna --help` block lists eval/init/install (matches live `dna
+      --help`)
+  - action: Open the README top
+    expected: "a 'Make your project agent-ready \u2014 dna init' section + an 'Install\
+      \ Kinds from any repo' block carry the condensed init(project)/install(source)\
+      \ frame and link to the full site pages; Documentation Reference is no longer\
+      \ 'coming soon'"
+  - action: Run scripts/docs_coverage_guard.py (+--self-test) and re-run the reference
+      generators
+    expected: coverage clean, generated reference has zero drift
+  verifies:
+  - Story/s-docs-init-install-completeness
+  created_at: '2026-07-11T05:03:54+00:00'
+  updated_at: '2026-07-11T05:03:54+00:00'
+  owner: claude-code

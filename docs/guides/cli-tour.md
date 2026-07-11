@@ -33,6 +33,9 @@ Options:
 Commands:
   doc       List, show, create, edit, delete documents.
   docs      Browse the in-product Doc corpus.
+  eval      Run EvalSuites locally (offline, deterministic) and compare...
+  init      Make a project agent-ready: board + skill + AGENTS.md + git...
+  install   Install bundles/Kinds from a repository into the local source.
   kind      List + inspect registered Kinds.
   memory    Declarative memory over existing Kinds...
   recall    Hybrid semantic search (dense + lexical + RRF) over the...
@@ -447,8 +450,21 @@ commit**, the path inside the fetched tree, and a content SHA-256.
 
 ## The groups with their own guides
 
-Four groups already have dedicated prose — one line each here:
+The remaining groups already have dedicated prose — one line each here:
 
+- **`dna init`** — make a project *agent-ready*: project the SDLC skill +
+  `AGENTS.md` into your agent tools and bootstrap an SDLC board. This is
+  the *project onboarding* command, distinct from `dna install` (which
+  writes Kinds into your source — see the
+  [comparison](installing-scopes.md#dna-install-vs-dna-init-write-to-source-or-project-to-tools)).
+  The full walkthrough is [Make your project
+  agent-ready](../getting-started/agent-onboarding.md).
+  ([reference](../reference/cli/init.md))
+- **`dna eval`** — author `EvalCase`/`EvalSuite` documents and run them
+  offline and deterministically, with the composed prompt as the default
+  target and an `EvalBaseline` to gate CI on regressions; the walkthrough
+  is [How to evaluate agents](evaluating-agents.md).
+  ([reference](../reference/cli/eval.md))
 - **`dna recall`** (and its neutral-name alias **`dna search`**) — hybrid
   semantic search (dense + lexical + RRF) over a scope's documents; the
   full walkthrough is in [How to use semantic recall &

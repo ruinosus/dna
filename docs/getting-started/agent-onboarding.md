@@ -25,6 +25,18 @@ SDK's own byte-faithful readers and writers — the same
 round-trips third-party bundles — write them to disk. The writers are the
 product.
 
+!!! tip "`dna init` or `dna install`?"
+
+    `dna init` **projects** regenerable onboarding assets — the skill and
+    `AGENTS.md` — into your agent tools' directories, so the coding agent
+    *knows how to operate the project*. It does **not** write those Kinds
+    into your source. If instead you want to **add a Skill or any other
+    Kind from a repo into your project's data** (`.dna/`) — to compose,
+    query or evaluate it — that is
+    [`dna install`](../guides/installing-scopes.md). The two share a fetch
+    path and compose at the same ref; see the
+    [side-by-side comparison](../guides/installing-scopes.md#dna-install-vs-dna-init-write-to-source-or-project-to-tools).
+
 ## What it creates
 
 ```console
@@ -158,10 +170,16 @@ with a note).
 **`--from` vs `dna install`.** The two channels share the fetch and the
 untrusted-input validation (registered Kinds only, JSON-Schema-checked
 specs, slug-only names — see [`dna install`](../guides/installing-scopes.md)) but
-write to different places: `dna install` puts *documents* into your `.dna/`
-source with a provenance lockfile; `dna init --from` *projects* Kinds into
-tool directories. When you want both — the pack's docs on the board *and*
-the projections — combine them at the same ref:
+write to different places:
+
+| | `dna install <uri>` | `dna init --from <uri>` |
+| --- | --- | --- |
+| Writes to | Your `.dna/` **source** — documents + `installed.lock` | Agent **tool directories** — skill(s) + `AGENTS.md` |
+| Result | Real, versioned source you compose/query/evaluate | Regenerable projections your agent reads |
+| Accepts | Any registered Kind the tree carries | Skill bundles + a root `AGENTS.md` only |
+
+When you want both — the pack's docs on the board *and* the projections —
+combine them at the same ref:
 
 ```bash
 dna install github:acme/onboarding-pack@v1        # docs → .dna/ (+ lockfile)

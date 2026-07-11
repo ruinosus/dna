@@ -11,6 +11,36 @@ each install leaves behind.
 For a quick taste, see the [CLI tour](cli-tour.md#dna-install-install-bundles-from-a-repository);
 for every flag, the [generated reference](../reference/cli/install.md).
 
+## `dna install` vs `dna init` — write to source, or project to tools
+
+These two commands both take the *same* `github:owner/repo[/subdir][@ref]`
+grammar and share the exact same fetch + untrusted-input validation code,
+so it is easy to reach for the wrong one. They differ in **where the
+content lands**, and that difference is the whole point:
+
+| | `dna install <uri>` | `dna init` (and `dna init --from <uri>`) |
+| --- | --- | --- |
+| **Goal** | Add Kinds (Skills, Agents, …) to *your project's data* | Make your project *agent-ready* — the coding agent learns how to operate it |
+| **Writes to** | Your **source** — documents under `.dna/<scope>/`, plus an `installed.lock` provenance record | **Tool directories** — the skill into `.claude/skills/`, `.github/skills/`, …, and `AGENTS.md` at the project root |
+| **Also creates** | The target scope (a minimal `Genome`) if it doesn't exist | An **empty SDLC board** (a `Genome` under `.dna/<scope>/`) + git hooks — but the pack's Skills/AGENTS are **never** written into your source as documents |
+| **Regenerable?** | No — installed documents are real, versioned source you own and edit | Yes — projections are regenerable from the Kind; re-run to refresh them |
+| **What you get** | A Skill/Soul/Agent you can compose, query, and evaluate like any other document | A `dna-sdlc-cli` skill your agent reads, and `AGENTS.md` conventions every tool honors |
+
+Put another way:
+
+| I want to… | Use |
+| --- | --- |
+| …add a marketplace Skill (or any Kind) from a repo **into my project** so I can compose/query/evaluate it | `dna install github:owner/repo` |
+| …make my AI coding agent **know how to operate this project** (the story-first workflow, the SDLC verbs) | `dna init` |
+| …hand my team its **own** onboarding skill + `AGENTS.md`, projected into every tool | `dna init --from github:owner/repo` |
+| …do the last one **and** also keep the pack's documents on my board | `dna init --from <ref>` **and** `dna install <ref>` (same ref — they compose) |
+
+"Install" = the content becomes part of your **source**. "Init" =
+regenerable **projections** land in each agent tool's directory. The
+[`dna init` tutorial](../getting-started/agent-onboarding.md) covers the
+agent-readiness side (including `--from` onboarding packs) in full; the
+rest of *this* guide is the install pipeline in detail.
+
 ## The URI grammar
 
 ```text

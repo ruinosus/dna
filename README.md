@@ -53,6 +53,39 @@ Pre-release / exact-pin alternative — consume straight from the repo
 the quick start below does. See [RELEASING.md](RELEASING.md) for how versions
 are cut.
 
+## Make your project agent-ready — `dna init`
+
+One command makes *your* repository agent-ready — so the AI coding agent
+working in it knows the story-first workflow from the first prompt:
+
+```bash
+cd my-project
+dna init
+```
+
+It projects the `dna-sdlc-cli` skill and a canonical `AGENTS.md`
+(`agents.md/v1`, read by 28+ tools) into every agent tool's directory
+(`.claude/skills/`, `.github/skills/`, …), wires the git hooks, and
+bootstraps a `dna sdlc` board — all idempotent, all regenerable. Distribute
+your team's own conventions with `dna init --from github:owner/repo`.
+→ **[Make your project agent-ready](https://ruinosus.github.io/dna/getting-started/agent-onboarding/)**.
+
+### Install Kinds from any repo — `dna install`
+
+The ecosystem's front door pulls DNA documents from a remote repo into your
+source, validating each one as untrusted input and pinning provenance:
+
+```bash
+dna install github:anthropics/skills/skills/pdf --scope market   # a real marketplace Skill → .dna/market/
+```
+
+`init` and `install` are complements, not rivals: **`dna init` *projects*
+regenerable onboarding assets into your agent tools' directories; `dna
+install` *writes* Kinds as documents into your `.dna/` source** (with an
+`installed.lock`). They share a fetch path and compose at the same ref.
+→ **[Installing bundles](https://ruinosus.github.io/dna/guides/installing-scopes/)** ·
+**[the side-by-side comparison](https://ruinosus.github.io/dna/guides/installing-scopes/#dna-install-vs-dna-init-write-to-source-or-project-to-tools)**.
+
 ## Quick start
 
 The snippets below run against [`examples/hello-genome`](examples/hello-genome/) —
@@ -145,10 +178,10 @@ $ dna recall "reciprocal rank fusion" --kind Story -k 1
 
 The full site is organized by [Diátaxis](https://diataxis.fr/):
 
-- **Tutorials** — [Your first Kind](https://ruinosus.github.io/dna/getting-started/first-kind/) · [Running the conformance kit](https://ruinosus.github.io/dna/getting-started/conformance-kit/)
+- **Tutorials** — [Your first Kind](https://ruinosus.github.io/dna/getting-started/first-kind/) · [Running the conformance kit](https://ruinosus.github.io/dna/getting-started/conformance-kit/) · [Make your project agent-ready](https://ruinosus.github.io/dna/getting-started/agent-onboarding/)
 - **Concepts** — [The thesis](https://ruinosus.github.io/dna/concepts/thesis/) · [Kinds](https://ruinosus.github.io/dna/concepts/kinds/) · [Microkernel & ports](https://ruinosus.github.io/dna/concepts/microkernel-ports/) · [Market fidelity](https://ruinosus.github.io/dna/concepts/market-fidelity/) · [Tenancy & layers](https://ruinosus.github.io/dna/concepts/tenancy-layers/) · [Search & memory](https://ruinosus.github.io/dna/concepts/search-and-memory/)
-- **How-to guides** — [Add a Kind](https://ruinosus.github.io/dna/guides/add-a-kind/) · [Read document data](https://ruinosus.github.io/dna/guides/read-document-data/) · [Write a source adapter](https://ruinosus.github.io/dna/guides/write-a-source-adapter/) · [Write a Reader/Writer](https://ruinosus.github.io/dna/guides/readers-and-writers/) · [Semantic recall & memory](https://ruinosus.github.io/dna/guides/semantic-recall/)
-- **Reference** — per-language API, CLI and parity matrix, generated from source *(coming soon)*
+- **How-to guides** — [A tour of the CLI](https://ruinosus.github.io/dna/guides/cli-tour/) · [Install bundles from a repo](https://ruinosus.github.io/dna/guides/installing-scopes/) · [Add a Kind](https://ruinosus.github.io/dna/guides/add-a-kind/) · [Read document data](https://ruinosus.github.io/dna/guides/read-document-data/) · [Write a source adapter](https://ruinosus.github.io/dna/guides/write-a-source-adapter/) · [Write a Reader/Writer](https://ruinosus.github.io/dna/guides/readers-and-writers/) · [Semantic recall & memory](https://ruinosus.github.io/dna/guides/semantic-recall/) · [Evaluate agents](https://ruinosus.github.io/dna/guides/evaluating-agents/)
+- **Reference** — [Python](https://ruinosus.github.io/dna/reference/python/) & [TypeScript](https://ruinosus.github.io/dna/reference/typescript/) API, the [CLI](https://ruinosus.github.io/dna/reference/cli/) and the [Kinds catalog](https://ruinosus.github.io/dna/reference/kinds/), plus the [Py↔TS parity matrix](https://ruinosus.github.io/dna/reference/parity-matrix/) — all generated from source on every build
 
 Building the site locally:
 
@@ -164,7 +197,7 @@ dna/
 ├── packages/
 │   ├── sdk-py/          # Python SDK — kernel + adapters + extensions (import dna)
 │   ├── sdk-ts/          # TypeScript SDK — 1:1 twin (dna-sdk)
-│   └── cli/             # `dna` binary — document CRUD + declarative SDLC (dna sdlc)
+│   └── cli/             # `dna` binary — CRUD, SDLC, agent onboarding (dna init), install
 ├── docs/                # Diátaxis docs site (MkDocs + Material)
 ├── examples/
 │   └── hello-genome/    # Minimal runnable scope (Genome + Agent + real Skill)
@@ -181,8 +214,10 @@ DNA is the **extracted core of a production system**, not a greenfield
 prototype: the kernel, the extension mechanism, multi-tenancy, layer
 composition and the market-format readers/writers run in production today.
 
-It is also **pre-1.0**: public APIs may still move, and the packages are not
-yet on PyPI/npm. The full test suite (~2,900 tests across both SDKs,
+It is also **pre-1.0**: the packages publish to PyPI and npm at `v0.3.x`
+(`dna-sdk` + `dna-cli` on PyPI, `dna-sdk` on npm; see
+[RELEASING.md](RELEASING.md)), and until 1.0 the public API may still move
+between releases. The full test suite (~2,900 tests across both SDKs,
 including the market-conformance suite) gates every change.
 
 ## License
