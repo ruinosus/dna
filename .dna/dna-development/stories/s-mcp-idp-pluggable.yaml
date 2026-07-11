@@ -15,7 +15,7 @@ spec:
     NCIA: Azure Entra ID primeiro (o foundry j\xE1 usa entraTenantId/entraApiClientId;\
     \ deploy Azure via azd; e o tid do Entra mapeia LIMPO pra tenant do DNA). FastMCP:\
     \ JWTVerifier aponta pra qualquer JWKS; OAuthProxy pros sem-DCR."
-  status: in-progress
+  status: review
   feature: f-dna-mcp-server
   priority: high
   labels:
@@ -36,7 +36,7 @@ spec:
   - "OAuth 2.1 COMPLETO (AS+RS), n\xE3o s\xF3 o RS; guia multi-provider; ADR atualizado"
   definition_of_done_source: cli-create
   created_at: '2026-07-11T16:14:20+00:00'
-  updated_at: '2026-07-11T16:39:06+00:00'
+  updated_at: '2026-07-11T16:40:34+00:00'
   timeline:
   - at: '2026-07-11T16:14:20+00:00'
     actor: claude-code
@@ -88,6 +88,29 @@ spec:
     name: tr-tg-s-mcp-idp-pluggable-c-20260711-163902
     summary: "TestRun tr-tg-s-mcp-idp-pluggable-c-20260711-163902 \u2192 pass"
     outcome: pass
+  - at: '2026-07-11T16:40:14+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/68'
+    pr_url: https://github.com/ruinosus/dna/pull/68
+  - at: '2026-07-11T16:40:30+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #68 aberto (base main). AC1 (config-driven N-provider) e AC3 (OIDC/Clerk/WorkOS\
+      \ documentados + claim->tenant por provider) DONE. AC4 (integra\xE7\xE3o ponta-a-ponta\
+      \ com IdP fielmente emulado) DONE via 2 issuers OIDC emulados. AC2 (Entra login\
+      \ REAL end-to-end) parcialmente: a camada Entra existe e valida; o login Azure\
+      \ real->token->server fica DEFERIDO pro azd up do dono (requires_azure skip\
+      \ + passo documentado no guia), pois exige app registration viva e nao roda\
+      \ em CI. NAO mergear."
+  - at: '2026-07-11T16:40:34+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
   produces:
   - kind: Plan
     name: plan-s-mcp-idp-pluggable
