@@ -155,6 +155,12 @@ export const AgentSpecSchema = z.object({
   tags: z.array(z.string()).default([]),
   guardrails: z.array(z.string()).default([]),
   promptTemplate: z.string().optional(),
+  // s-dx-named-layouts — pick the composition ORDER by name instead of
+  // hand-writing raw Mustache. "persona-first" puts the Soul before the
+  // instruction; "instruction-first" (a.k.a. "default") keeps the historic
+  // order. Resolved by the Kind's layoutTemplate() into an embedded preset.
+  // A raw promptTemplate still wins over layout when both are set.
+  layout: z.string().optional(),
   // Phase 14x — tool-group specialization (TS parity with Python).
   tool_groups: z.array(z.string()).default([]),
   // s-mcp-servers-on-agent (2026-07-07, spec

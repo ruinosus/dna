@@ -1,0 +1,14 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-dx-named-layouts-20260711-072848
+spec:
+  guide_ref: tg-s-dx-named-layouts
+  outcome: pass
+  verifies:
+  - Story/s-dx-named-layouts
+  executed_by: claude-code
+  executed_at: '2026-07-11T07:28:48+00:00'
+  notes: Verified via packages/sdk-py/tests/test_named_layouts.py (11) + packages/sdk-ts/tests/named-layouts.test.ts
+    (5). persona-first orders soul<instruction; UnknownLayout raised on typo; raw
+    promptTemplate wins. Py+TS green.

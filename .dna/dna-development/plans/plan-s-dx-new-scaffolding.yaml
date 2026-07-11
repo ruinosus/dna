@@ -1,0 +1,19 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-dx-new-scaffolding
+spec:
+  title: 'Plano: s-dx-new-scaffolding'
+  date: '2026-07-11'
+  status: accepted
+  story_ref: s-dx-new-scaffolding
+  journey_phase: plan
+  body: 'New CLI group ''dna new agent|soul|guardrail <name>'' that scaffolds a valid
+    skeleton doc into the scope via kernel.write_document (dna_session). Options:
+    --scope, --soul/--guardrails/--layout/--model (agent), --force (idempotent, no
+    overwrite without it), --dir/base. Skeleton = correct envelope apiVersion/kind/metadata/spec
+    + a placeholder instruction/soul_content the author fills. CLI-only (Py); reuses
+    dna doc apply write path. Tests in packages/cli/tests.'
+  created_at: '2026-07-11T07:19:08+00:00'
+  updated_at: '2026-07-11T07:19:08+00:00'
+  methodology: ad-hoc

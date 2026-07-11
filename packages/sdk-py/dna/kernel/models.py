@@ -343,6 +343,14 @@ class AgentSpec:
     tags: list[str] = field(default_factory=list)
     guardrails: list[str] = field(default_factory=list)
     promptTemplate: str | None = None
+    # s-dx-named-layouts — pick the composition ORDER by name instead of
+    # hand-writing raw Mustache. ``"persona-first"`` puts the Soul before the
+    # instruction; ``"instruction-first"`` (a.k.a. ``"default"``) keeps the
+    # historic order. Resolved by the Kind's ``layout_template()`` into an
+    # embedded preset — the common case never authors ``{{{soul_content}}}``.
+    # ``promptTemplate`` (raw) still wins over ``layout`` when both are set
+    # (the poweruser escape hatch). None = the Kind default template.
+    layout: str | None = None
     # Phase 14x — toolset specialization. Controls which manifest tool
     # GROUPS this agent receives at graph-build time. Empty list defaults
     # to ["all"] (back-compat — agent receives every tool). Other values:
@@ -513,6 +521,7 @@ class AgentSpec:
             tags=raw.get("tags") or [],
             guardrails=raw.get("guardrails") or [],
             promptTemplate=raw.get("promptTemplate"),
+            layout=raw.get("layout"),
             tool_groups=raw.get("tool_groups") or [],
             mcp_servers=raw.get("mcp_servers") or [],
             shell_sandbox=raw.get("shell_sandbox"),

@@ -246,6 +246,25 @@ export abstract class KindBase implements Omit<KindPort, "apiVersion" | "kind" |
     return null;
   }
 
+  /**
+   * Resolve a NAMED composition layout to an embedded template
+   * (s-dx-named-layouts). Prompt-target Kinds override this to expose
+   * author-friendly presets (persona-first, instruction-first) so the common
+   * case never hand-writes Mustache. Returns null for an unknown name (the
+   * prompt builder fails loud). Twin of Python ``KindBase.layout_template``.
+   */
+  layoutTemplate(_name: string): string | null {
+    return null;
+  }
+
+  /**
+   * Public layout names this Kind offers (s-dx-named-layouts) — powers
+   * discovery + fail-loud error messages. Twin of Python ``layout_names``.
+   */
+  layoutNames(): string[] {
+    return [];
+  }
+
   // ---- Source-sync digest (s-sync-s1; twin of Python canonical_digest) ----
 
   protected canonicalSpec(spec: Record<string, unknown>): Record<string, unknown> {

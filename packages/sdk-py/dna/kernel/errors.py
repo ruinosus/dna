@@ -77,6 +77,31 @@ class AgentNotFound(LookupError):
         super().__init__(f"Agent '{agent}' not found")
 
 
+class UnknownLayout(ValueError):
+    """``build_prompt`` hit an Agent whose ``layout:`` names a preset the
+    Kind does not offer (s-dx-named-layouts).
+
+    Fail-loud DX: a typo'd layout (``persona_first`` for ``persona-first``)
+    must not silently fall through to the Kind default and compose in the
+    wrong order — it raises with the valid names listed. Subclasses
+    ``ValueError``. Exported publicly from the ``dna`` package.
+    """
+
+    def __init__(
+        self, layout: str, available: list[str] | None = None,
+        agent: str | None = None,
+    ) -> None:
+        self.layout = layout
+        self.available = list(available or [])
+        self.agent = agent
+        where = f" on agent '{agent}'" if agent else ""
+        hint = (
+            f" — available: {', '.join(self.available)}"
+            if self.available else ""
+        )
+        super().__init__(f"Unknown layout '{layout}'{where}{hint}")
+
+
 class SourceRegistrationError(KernelRegistrationError):
     """A source failed the SourcePort boot gate at ``kernel.source(src)``
     time (s-dna-source-conformance-kit).

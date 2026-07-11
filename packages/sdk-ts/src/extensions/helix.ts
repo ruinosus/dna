@@ -22,6 +22,41 @@ import { registerWriteGuards } from "./helix/write-guards.js";
 
 const MOD_URL = import.meta.url;
 
+// ── Named composition layouts (s-dx-named-layouts) ─────────────────────
+//
+// An author orders persona-vs-instruction by NAME (`layout:` in the Agent
+// spec) instead of hand-writing raw Mustache with internal section names.
+// Each preset resolves to one of these embedded templates via
+// `AgentKind.layoutTemplate()`. 1:1 with Python `dna.extensions.helix`.
+//
+// The guardrails block is shared verbatim — guardrails are hard policy and
+// always land LAST, after both the instruction and the soul, regardless of
+// their relative order. (Aligns TS composition to Python, closing the
+// pre-existing i-213/i-011 divergence where TS omitted the guardrails block.)
+const GUARDRAILS_BLOCK =
+  "{{#guardrails-guardrail}}" +
+  "## Guardrail: {{name}} ({{severity}})\n" +
+  "{{#description}}_{{description}}_\n\n{{/description}}" +
+  "{{#rules}}- {{{.}}}\n{{/rules}}\n" +
+  "{{/guardrails-guardrail}}";
+
+// instruction-first (a.k.a. "default") — historic order: instruction, soul,
+// guardrails. IS the kind default template.
+const LAYOUT_INSTRUCTION_FIRST =
+  "{{{agent.instruction}}}\n\n{{{soul_content}}}\n\n" + GUARDRAILS_BLOCK;
+
+// persona-first — Soul leads, then instruction, then guardrails.
+const LAYOUT_PERSONA_FIRST =
+  "{{{soul_content}}}\n\n{{{agent.instruction}}}\n\n" + GUARDRAILS_BLOCK;
+
+const AGENT_LAYOUTS: Record<string, string> = {
+  default: LAYOUT_INSTRUCTION_FIRST,
+  "instruction-first": LAYOUT_INSTRUCTION_FIRST,
+  "persona-first": LAYOUT_PERSONA_FIRST,
+};
+
+const AGENT_LAYOUT_NAMES: string[] = ["default", "instruction-first", "persona-first"];
+
 // GenomeKind — Phase 16 (scope segregation)
 //
 // Replaces ModuleKind as the scope-root identity Kind. Carries catalog
@@ -285,6 +320,13 @@ class AgentKind extends KindBase {
     },
     objective: { widget: "textarea", label: "Objective", order: 15 },
     model: { widget: "text", label: "Model", order: 20 },
+    layout: {
+      widget: "select",
+      label: "Layout",
+      options: ["default", "instruction-first", "persona-first"],
+      help: "Named composition order — 'persona-first' puts the Soul before the instruction. Leave empty for the default. A raw promptTemplate, if set, overrides this.",
+      order: 25,
+    },
     soul: { widget: "text", label: "Soul", help: "Name of the Soul doc to flatten into the prompt.", order: 30 },
     skills: { widget: "tags", label: "Skills", order: 40 },
     actors: { widget: "tags", label: "Actors this agent serves", order: 50 },
@@ -340,7 +382,19 @@ class AgentKind extends KindBase {
   }
 
   promptTemplate() {
-    return "{{{agent.instruction}}}\n\n{{{soul_content}}}";
+    // IS the `instruction-first` / `default` named layout — the kind default
+    // template and the `default` layout are one string, so an agent with no
+    // `layout:` composes identically. (Now includes the guardrails block,
+    // matching Python — see the layout-constants comment above.)
+    return LAYOUT_INSTRUCTION_FIRST;
+  }
+
+  layoutTemplate(name: string): string | null {
+    return AGENT_LAYOUTS[name] ?? null;
+  }
+
+  layoutNames(): string[] {
+    return [...AGENT_LAYOUT_NAMES];
   }
 
   preview(doc: Document): PreviewBlock[] {
