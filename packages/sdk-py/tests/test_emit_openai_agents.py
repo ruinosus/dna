@@ -25,7 +25,13 @@ import pytest
 
 from dna.emit import EmitContext, available_targets, emit_agent, get_emitter
 from dna.emit.openai_agents import OpenAIAgentsEmitter, _bare_model_id
-from dna.emit.scaffold import classify_case, select_scaffold
+from dna.emit.scaffold import (
+    PackageDataScaffoldResolver,
+    classify_case,
+    resolve_scaffold,
+    select_scaffold,
+    set_scaffold_resolver,
+)
 from dna.kernel import Kernel
 
 _ROOT = pathlib.Path(__file__).resolve().parents[3]
@@ -139,3 +145,35 @@ def test_tool_body_reported_as_loss(mi) -> None:
 )
 def test_bare_model_id(model, expected) -> None:
     assert _bare_model_id(model) == expected
+
+
+# ── 5. the resolution seam (package-data today; Scaffold Kind tomorrow) ──────
+
+
+def test_default_resolver_reads_package_data() -> None:
+    assert isinstance(PackageDataScaffoldResolver(), object)
+    tmpl = resolve_scaffold("openai-agents", "prompt-only")
+    assert tmpl is not None and "from agents import Agent" in tmpl
+    assert resolve_scaffold("openai-agents", "does-not-exist") is None
+
+
+def test_custom_resolver_plugs_in_without_touching_the_emitter() -> None:
+    """A second template source (the future Scaffold Kind) plugs into the seam:
+    swap the resolver and the SAME emitter fills the SAME contract from it."""
+
+    class InMemoryResolver:
+        def resolve(self, framework: str, case: str) -> str | None:
+            if framework == "openai-agents" and case == "prompt-only":
+                return "from agents import Agent\n\nINSTRUCTIONS = {{{instructions_literal}}}\n"
+            return None
+
+    default = PackageDataScaffoldResolver()
+    try:
+        set_scaffold_resolver(InMemoryResolver())
+        ctx = EmitContext(name="x", description="", instructions="hi", model=None)
+        result = OpenAIAgentsEmitter().emit(ctx)
+        assert "INSTRUCTIONS =" in result.artifact
+        # byte-equal invariant still holds through a different template source.
+        assert OpenAIAgentsEmitter().extract_instructions(result.artifact) == "hi"
+    finally:
+        set_scaffold_resolver(default)

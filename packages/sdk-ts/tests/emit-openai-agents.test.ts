@@ -16,7 +16,15 @@ import { join } from "node:path";
 import { quickInstance } from "../src/bootstrap.js";
 import { emitAgent, getEmitter, availableTargets, type EmitContext } from "../src/index.js";
 import { OpenAIAgentsEmitter, bareModelId } from "../src/emit/openaiAgents.js";
-import { selectScaffold, classifyCase, ScaffoldEmitter } from "../src/emit/scaffold.js";
+import {
+  selectScaffold,
+  classifyCase,
+  ScaffoldEmitter,
+  resolveScaffold,
+  setScaffoldResolver,
+  PackageDataScaffoldResolver,
+  type ScaffoldResolver,
+} from "../src/emit/scaffold.js";
 
 const ROOT = join(import.meta.dir, "..", "..", "..");
 const BASE = join(ROOT, "examples", "emitting-to-a-runtime", ".dna");
@@ -118,5 +126,35 @@ describe("scaffold registry + losses", () => {
     expect(bareModelId("azure/gpt-4o")).toBe("gpt-4o");
     expect(bareModelId("gpt-4o")).toBe("gpt-4o");
     expect(bareModelId(null)).toBeNull();
+  });
+});
+
+// ── the resolution seam (package-data today; Scaffold Kind tomorrow) ─────────
+
+describe("scaffold resolution seam", () => {
+  it("the default resolver reads package-data", () => {
+    expect(new PackageDataScaffoldResolver()).toBeInstanceOf(PackageDataScaffoldResolver);
+    const tmpl = resolveScaffold("openai-agents", "prompt-only");
+    expect(tmpl).toContain("from agents import Agent");
+    expect(resolveScaffold("openai-agents", "does-not-exist")).toBeNull();
+  });
+
+  it("a custom resolver plugs in without touching the emitter", () => {
+    const inMemory: ScaffoldResolver = {
+      resolve(framework, kase) {
+        return framework === "openai-agents" && kase === "prompt-only"
+          ? "from agents import Agent\n\nINSTRUCTIONS = {{{instructions_literal}}}\n"
+          : null;
+      },
+    };
+    const restore = new PackageDataScaffoldResolver();
+    try {
+      setScaffoldResolver(inMemory);
+      const result = new OpenAIAgentsEmitter().emit(ctxOf({ instructions: "hi" }));
+      expect(result.artifact).toContain("INSTRUCTIONS =");
+      expect(new OpenAIAgentsEmitter().extractInstructions(result.artifact)).toBe("hi");
+    } finally {
+      setScaffoldResolver(restore);
+    }
   });
 });

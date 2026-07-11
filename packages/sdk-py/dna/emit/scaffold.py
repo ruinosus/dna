@@ -33,15 +33,21 @@ Adding a CASE is additive and code-free-ish: drop a
 one line to the classifier — no change to the emit core. See the
 `How to write an emitter <../guides/writing-an-emitter.md>`_ guide.
 
-**Future direction.** The scaffold library is package-data today (curated in-tree
-templates). Promoting a Scaffold to a first-class *Kind* — declarative, versioned,
-overridable per tenant like every other DNA Kind — is a natural next step; the
-MVP keeps it as package-data to prove the ``{framework × case}`` shape first.
+**Future direction — Scaffold as a Kind.** Templates are read through an abstract
+seam, :func:`resolve_scaffold` (a :class:`ScaffoldResolver`), *not* a hardcoded
+file path. The MVP resolver reads package-data
+(``emit/scaffolds/<framework>/<case>.py.tmpl``), but the seam lets a **second
+source** plug in with no change to any emitter: a first-class **Scaffold Kind**
+resolved by the kernel — scope-aware and overridable per tenant, like every other
+DNA Kind. That is the DNA thesis applied to its own de-para: a team ships its
+house-style template for a framework as an overlay instead of forking the SDK.
+The promotion is tracked as story ``s-scaffold-as-kind``; this module only
+guarantees the MVP does not paint us into a corner.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Any, Callable, Protocol, runtime_checkable
 
 from dna.emit import EmitContext, EmitError, EmitResult
 
@@ -92,17 +98,53 @@ def classify_case(ctx: EmitContext) -> str:
     return "prompt-only"
 
 
-def _load_template(framework: str, case: str) -> str | None:
-    """Load the ``scaffolds/<framework>/<case>.py.tmpl`` package-data, or None."""
-    from importlib.resources import files
+# ── the template-resolution seam (package-data today; Scaffold Kind tomorrow) ─
 
-    try:
-        res = files("dna.emit").joinpath("scaffolds", framework, f"{case}.py.tmpl")
-        if res.is_file():
-            return res.read_text(encoding="utf-8")
-    except (FileNotFoundError, ModuleNotFoundError, NotADirectoryError):
+
+@runtime_checkable
+class ScaffoldResolver(Protocol):
+    """Resolve a ``{framework × case}`` template to its Mustache source.
+
+    The ABSTRACT seam between an emitter and *where a template lives*. The MVP
+    reads package-data (:class:`PackageDataScaffoldResolver`); a future
+    kernel-backed resolver returns a per-scope/per-tenant **Scaffold Kind** body
+    instead — swapping one for the other requires no change to any emitter.
+    Returns ``None`` when the source has no template for that pair.
+    """
+
+    def resolve(self, framework: str, case: str) -> str | None:
+        ...
+
+
+class PackageDataScaffoldResolver:
+    """The MVP resolver: read ``emit/scaffolds/<framework>/<case>.py.tmpl``."""
+
+    def resolve(self, framework: str, case: str) -> str | None:
+        from importlib.resources import files
+
+        try:
+            res = files("dna.emit").joinpath("scaffolds", framework, f"{case}.py.tmpl")
+            if res.is_file():
+                return res.read_text(encoding="utf-8")
+        except (FileNotFoundError, ModuleNotFoundError, NotADirectoryError):
+            return None
         return None
-    return None
+
+
+_ACTIVE_RESOLVER: ScaffoldResolver = PackageDataScaffoldResolver()
+
+
+def set_scaffold_resolver(resolver: ScaffoldResolver) -> ScaffoldResolver:
+    """Swap the active template resolver (e.g. a host's kernel-backed one). The
+    seam the Scaffold-as-Kind promotion (``s-scaffold-as-kind``) plugs into."""
+    global _ACTIVE_RESOLVER
+    _ACTIVE_RESOLVER = resolver
+    return resolver
+
+
+def resolve_scaffold(framework: str, case: str) -> str | None:
+    """Resolve a ``{framework × case}`` template through the active resolver."""
+    return _ACTIVE_RESOLVER.resolve(framework, case)
 
 
 @dataclass
@@ -123,17 +165,20 @@ def select_scaffold(
     ctx: EmitContext,
     *,
     classify: Callable[[EmitContext], str] = classify_case,
+    resolver: ScaffoldResolver | None = None,
 ) -> ScaffoldChoice:
     """Pick the ``{framework × case}`` template for ``ctx``.
 
     Classifies the case from the ctx's DNA signals, then resolves it to a real
-    template — falling back down the generality chain when the ideal case is not
-    shipped. Raises :class:`~dna.emit.EmitError` when the framework has no
-    templates at all (a misconfigured emitter).
+    template *through the resolution seam* (:func:`resolve_scaffold`, or an
+    explicit ``resolver``) — falling back down the generality chain when the ideal
+    case is not shipped. Raises :class:`~dna.emit.EmitError` when the framework has
+    no templates at all (a misconfigured emitter).
     """
+    resolve = resolver.resolve if resolver is not None else resolve_scaffold
     requested = classify(ctx)
     for case in _FALLBACK.get(requested, [requested]):
-        template = _load_template(framework, case)
+        template = resolve(framework, case)
         if template is not None:
             return ScaffoldChoice(case=case, template=template, requested=requested)
     raise EmitError(
@@ -159,6 +204,10 @@ class ScaffoldEmitter:
     target: str = ""
     #: Emitted-artifact extension (source code → ``py``).
     file_extension: str = "py"
+    #: Optional template-resolution override (defaults to the active resolver —
+    #: package-data today, a Scaffold Kind resolver tomorrow). The seam
+    #: ``s-scaffold-as-kind`` plugs into without touching this emitter.
+    resolver: ScaffoldResolver | None = None
 
     # ── the two hooks a subclass overrides ──────────────────────────────────
 
@@ -213,7 +262,9 @@ class ScaffoldEmitter:
                 "the scaffold emitter needs `chevron` (Mustache) — it ships with the SDK"
             ) from exc
 
-        choice = select_scaffold(self.framework, ctx, classify=self.classify)
+        choice = select_scaffold(
+            self.framework, ctx, classify=self.classify, resolver=self.resolver
+        )
         variables = {**self._common_context(ctx), **self.render_context(ctx, choice.case)}
         artifact = chevron.render(choice.template, variables)
 

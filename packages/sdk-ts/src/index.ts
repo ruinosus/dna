@@ -80,8 +80,15 @@ export { AgentFrameworkEmitter } from "./emit/agentFramework.js";
 export { BedrockEmitter } from "./emit/bedrock.js";
 export { VertexEmitter } from "./emit/vertex.js";
 export { OpenAIAgentsEmitter } from "./emit/openaiAgents.js";
-export { ScaffoldEmitter, selectScaffold, classifyCase } from "./emit/scaffold.js";
-export type { ScaffoldChoice } from "./emit/scaffold.js";
+export {
+  ScaffoldEmitter,
+  selectScaffold,
+  classifyCase,
+  resolveScaffold,
+  setScaffoldResolver,
+  PackageDataScaffoldResolver,
+} from "./emit/scaffold.js";
+export type { ScaffoldChoice, ScaffoldResolver } from "./emit/scaffold.js";
 export type { LoadPromptsOptions } from "./prompts.js";
 export { anchorScopesRoot, PackageScopeNotFound, DEFAULT_SUBPATH } from "./package-scope.js";
 export { loadConfig, findConfig, CONFIG_FILENAME } from "./config.js";

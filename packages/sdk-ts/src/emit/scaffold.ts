@@ -21,9 +21,11 @@
  * `structured-output`) and falls back down a generality chain when a framework
  * does not ship a case, recording the fallback as a loss.
  *
- * Future direction: the scaffold library is package-data today; promoting a
- * Scaffold to a first-class *Kind* (declarative, versioned, tenant-overridable) is
- * the natural next step — the MVP proves the `{framework × case}` shape first.
+ * Future direction — Scaffold as a Kind: templates are read through an abstract
+ * seam, {@link resolveScaffold} (a {@link ScaffoldResolver}), NOT a hardcoded file
+ * path. The MVP resolver reads package-data, but the seam lets a second source
+ * plug in with no change to any emitter — a first-class **Scaffold Kind** resolved
+ * by the kernel (scope-aware, tenant-overridable). Tracked as `s-scaffold-as-kind`.
  */
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -67,9 +69,37 @@ export function classifyCase(ctx: EmitContext): string {
   return "prompt-only";
 }
 
-function loadTemplate(framework: string, kase: string): string | null {
-  const path = join(HERE, "scaffolds", framework, `${kase}.py.tmpl`);
-  return existsSync(path) ? readFileSync(path, "utf-8") : null;
+// ── the template-resolution seam (package-data today; Scaffold Kind tomorrow) ─
+
+/** Resolve a `{framework × case}` template to its Mustache source — the abstract
+ *  seam between an emitter and *where a template lives*. The MVP reads
+ *  package-data ({@link PackageDataScaffoldResolver}); a future kernel-backed
+ *  resolver returns a per-scope/per-tenant Scaffold Kind body, swappable with no
+ *  emitter change. Returns null when the source has no template for the pair. */
+export interface ScaffoldResolver {
+  resolve(framework: string, kase: string): string | null;
+}
+
+/** The MVP resolver: read `emit/scaffolds/<framework>/<case>.py.tmpl`. */
+export class PackageDataScaffoldResolver implements ScaffoldResolver {
+  resolve(framework: string, kase: string): string | null {
+    const path = join(HERE, "scaffolds", framework, `${kase}.py.tmpl`);
+    return existsSync(path) ? readFileSync(path, "utf-8") : null;
+  }
+}
+
+let activeResolver: ScaffoldResolver = new PackageDataScaffoldResolver();
+
+/** Swap the active template resolver — the seam the Scaffold-as-Kind promotion
+ *  (`s-scaffold-as-kind`) plugs into. */
+export function setScaffoldResolver(resolver: ScaffoldResolver): ScaffoldResolver {
+  activeResolver = resolver;
+  return resolver;
+}
+
+/** Resolve a `{framework × case}` template through the active resolver. */
+export function resolveScaffold(framework: string, kase: string): string | null {
+  return activeResolver.resolve(framework, kase);
 }
 
 /** The outcome of {@link selectScaffold}: which case template to fill. */
@@ -88,10 +118,14 @@ export function selectScaffold(
   framework: string,
   ctx: EmitContext,
   classify: (ctx: EmitContext) => string = classifyCase,
+  resolver: ScaffoldResolver | null = null,
 ): ScaffoldChoice {
+  const resolve = resolver
+    ? (f: string, k: string) => resolver.resolve(f, k)
+    : resolveScaffold;
   const requested = classify(ctx);
   for (const kase of FALLBACK[requested] ?? [requested]) {
-    const template = loadTemplate(framework, kase);
+    const template = resolve(framework, kase);
     if (template !== null) return { case: kase, template, requested };
   }
   throw new EmitError(
@@ -108,6 +142,9 @@ export abstract class ScaffoldEmitter implements EmitterPort {
   abstract readonly framework: string;
   abstract readonly target: string;
   readonly fileExtension: string = "py";
+  /** Optional template-resolution override (defaults to the active resolver —
+   *  package-data today, a Scaffold Kind resolver tomorrow). */
+  readonly resolver: ScaffoldResolver | null = null;
 
   // ── the hooks a subclass overrides ────────────────────────────────────────
 
@@ -162,7 +199,7 @@ export abstract class ScaffoldEmitter implements EmitterPort {
   }
 
   emit(ctx: EmitContext): EmitResult {
-    const choice = selectScaffold(this.framework, ctx, (c) => this.classify(c));
+    const choice = selectScaffold(this.framework, ctx, (c) => this.classify(c), this.resolver);
     const variables = { ...this.commonContext(ctx), ...this.renderContext(ctx, choice.case) };
     const artifact = Mustache.render(choice.template, variables);
     const losses = [...this.commonLosses(ctx, choice), ...this.losses(ctx, choice)];

@@ -206,6 +206,15 @@ classifier. No change to the emit core:
 2. If the case keys off a new signal, override `classify()` on your emitter (or
    extend `classify_case`) to return the new case name for that signal.
 
+### Where templates come from — the resolution seam
+
+`ScaffoldEmitter` never reads a file path directly. It resolves a template
+through an abstract seam — `resolve_scaffold(framework, case)` / a
+`ScaffoldResolver` — whose MVP implementation reads the in-tree package-data
+(`emit/scaffolds/<framework>/<case>.py.tmpl`). A host can swap the active resolver
+(`set_scaffold_resolver(...)`) or pass one per emitter, and no emitter changes.
+That seam is deliberate: it is where the next source plugs in.
+
 The fallback chain means you can ship `prompt-only` + `with-tools` first and add
 `structured-output` later without breaking anything — until it exists, a
 structured-output agent falls back to the closest shipped case with a recorded
@@ -236,11 +245,15 @@ holds independently in both.
 ## Future direction — Scaffold as a Kind
 
 Today the scaffold library is **package-data** — curated `.py.tmpl` files in the
-tree. Promoting a Scaffold to a first-class **Kind** (declarative, versioned, and
-overridable per tenant like every other DNA Kind) is the natural next step: a
-team could ship its own house-style template for a framework as an overlay,
-without forking the SDK. The MVP keeps it as package-data to prove the
-`{framework × case}` shape first.
+tree, read by the default `PackageDataScaffoldResolver`. Because every emitter
+goes through the `resolve_scaffold` **seam** (never a hardcoded path), promoting a
+Scaffold to a first-class **Kind** is a matter of adding a *second resolver*, not
+rewriting any emitter: a kernel-backed `ScaffoldResolver` returns a per-scope,
+tenant-overridable `Scaffold` Kind body instead of package-data. Then a team ships
+its own house-style template for a framework as an overlay — declarative,
+versioned, tenant-scoped — without forking the SDK. That is the DNA thesis applied
+to DNA's own de-para. The promotion is tracked as story `s-scaffold-as-kind`; the
+MVP keeps package-data as the sole resolver but guarantees the seam is in place.
 
 ## Where to go next
 

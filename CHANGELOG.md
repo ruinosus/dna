@@ -42,9 +42,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
       `structured-output` — falling back down a generality chain (and recording
       the fallback as a loss) when a framework does not ship a case. A subclass
       stays thin: template + variable mapping; selection, fill, and the byte-equal
-      hook are inherited. (Promoting a Scaffold to a first-class Kind —
-      declarative, versioned, tenant-overridable — is noted as future work; the
-      MVP is package-data.)
+      hook are inherited. Templates are read through an abstract resolution seam
+      (`resolve_scaffold` / `ScaffoldResolver`), NOT a hardcoded path — the MVP
+      resolver reads package-data, but a host can swap in another source with no
+      emitter change. That is where the future first-class **Scaffold Kind**
+      (declarative, versioned, tenant-overridable — story `s-scaffold-as-kind`)
+      plugs in: the DNA thesis applied to DNA's own de-para.
     - **First code-first target: `openai-agents`** (OpenAI Agents SDK). Ships two
       case templates (`prompt-only`, `with-tools`) proving selection + the
       byte-equal instruction + syntactically valid (`py_compile`) output. The next
