@@ -1,0 +1,20 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-emit-bedrock-20260711-135013
+spec:
+  guide_ref: tg-emit-bedrock
+  outcome: pass
+  verifies:
+  - Story/s-emit-bedrock
+  executed_by: claude-code
+  executed_at: '2026-07-11T13:50:13+00:00'
+  notes: "All 6 steps PASS. list-targets shows agent-framework + bedrock. 'dna emit\
+    \ concierge --target bedrock' produces a valid AWS::Bedrock::Agent CloudFormation\
+    \ template; Properties.Instruction byte-equal to build_prompt; kb-search maps\
+    \ to FunctionSchema.Functions with flat Parameters (query:string req, top_k:integer\
+    \ opt); de-para losses printed to stderr. STEP6: the SAME concierge source emits\
+    \ to agent-framework AND bedrock with an IDENTICAL composed prompt \u2014 portability\
+    \ proven. Automated: Py 22, TS 14, CLI +1 bedrock cases green; real cfn-lint validates\
+    \ the template with 0 errors (gated). Full suites: Py 2924 pass, TS 1429 pass,\
+    \ CLI 402 pass; mkdocs --strict + brand-guard + docs-coverage clean."

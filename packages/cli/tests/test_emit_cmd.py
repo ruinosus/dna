@@ -72,8 +72,25 @@ def test_emit_to_out_file(runner, tmp_path):
     assert doc["kind"] == "Prompt"
 
 
+def test_emit_concierge_to_bedrock(runner):
+    """The SECOND runtime: the SAME concierge source emits a CloudFormation
+    AWS::Bedrock::Agent template (the portability proof, end-to-end via the CLI)."""
+    r = _run(runner, "concierge", "-t", "bedrock", "--scope", "concierge", "--json")
+    assert r.exit_code == 0, r.output
+    payload = json.loads(r.output)
+    assert payload["target"] == "bedrock"
+    assert payload["filename"] == "concierge.bedrock.json"
+    t = json.loads(payload["artifact"])
+    (resource,) = t["Resources"].values()
+    assert resource["Type"] == "AWS::Bedrock::Agent"
+    props = resource["Properties"]
+    assert props["AgentName"] == "concierge"
+    assert props["FoundationModel"] == "gpt-4o"
+    assert props["ActionGroups"][0]["FunctionSchema"]["Functions"][0]["Name"] == "kb-search"
+
+
 def test_unknown_target_fails(runner):
-    r = _run(runner, "concierge", "-t", "bedrock", "--scope", "concierge")
+    r = _run(runner, "concierge", "-t", "vertex", "--scope", "concierge")  # not yet implemented
     assert r.exit_code != 0
 
 
