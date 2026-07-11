@@ -49,6 +49,7 @@ describe("AGENT.md frontmatter passthrough — contract", () => {
     tags: ["demo"],
     guardrails: ["g1"],
     promptTemplate: "Hello {{name}}",
+    layout: "persona-first", // s-dx-named-layouts
     tool_groups: ["manifest"],
     // s-mcp-servers-on-agent — string shorthand + per-agent override.
     mcp_servers: [

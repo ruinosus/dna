@@ -1,0 +1,21 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-s-dx-new-scaffolding
+spec:
+  description: dna new scaffolds valid agent/soul/guardrail skeletons; idempotent.
+  kind_of_test: smoke
+  status: active
+  steps:
+  - action: Run 'dna new soul warm-host' then 'dna new agent concierge --soul warm-host
+      --layout persona-first' in a scope
+    expected: 'both created; souls/warm-host/SOUL.md is single-file; agents/concierge/AGENT.md
+      has layout: persona-first and no Mustache'
+  - action: Compose the scaffolded agent (build_prompt)
+    expected: "real prompt with Soul before instruction \u2014 zero Mustache authored"
+  - action: Re-run 'dna new soul warm-host' without --force
+    expected: refuses with 'already exists' (idempotent)
+  verifies:
+  - Story/s-dx-new-scaffolding
+  created_at: '2026-07-11T07:29:06+00:00'
+  updated_at: '2026-07-11T07:29:06+00:00'

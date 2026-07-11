@@ -1,0 +1,19 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-dx-single-file-soul
+spec:
+  title: 'Plano: s-dx-single-file-soul'
+  date: '2026-07-11'
+  status: accepted
+  story_ref: s-dx-single-file-soul
+  journey_phase: plan
+  body: 'Make soul.json optional: a Soul authored as a single SOUL.md (frontmatter
+    minimal or defaults) must read AND compose. The SoulReader already reads SOUL.md-only;
+    this story LOCKS that contract with tests + guarantees the write path emits single-file
+    (no phantom soul.json) while PRESERVING the 2-file soulspec.org format round-trip
+    (market conformance must not regress byte-fidelity). Add a helper so a bare SOUL.md
+    yields a valid typed Soul. Py+TS parity.'
+  created_at: '2026-07-11T07:19:13+00:00'
+  updated_at: '2026-07-11T07:19:13+00:00'
+  methodology: ad-hoc

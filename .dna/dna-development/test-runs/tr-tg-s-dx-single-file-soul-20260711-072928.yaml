@@ -1,0 +1,15 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-dx-single-file-soul-20260711-072928
+spec:
+  guide_ref: tg-s-dx-single-file-soul
+  outcome: pass
+  verifies:
+  - Story/s-dx-single-file-soul
+  executed_by: claude-code
+  executed_at: '2026-07-11T07:29:28+00:00'
+  notes: Verified via packages/sdk-py/tests/test_single_file_soul.py (7) + packages/sdk-ts/tests/single-file-soul.test.ts
+    (4). Single SOUL.md reads/composes; write stays single-file (no phantom soul.json);
+    2-file form preserved. test_market_conformance.py (soulspec byte-fidelity) still
+    green. Py+TS.

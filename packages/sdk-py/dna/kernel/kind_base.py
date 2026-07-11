@@ -246,6 +246,23 @@ class KindBase:
         Default: no template (Kind contributes nothing to prompts)."""
         return None
 
+    def layout_template(self, name: str) -> str | None:
+        """Resolve a NAMED composition layout to an embedded template
+        (s-dx-named-layouts).
+
+        Prompt-target Kinds override this to expose author-friendly layout
+        presets (e.g. ``persona-first``, ``instruction-first``) so the common
+        case never hand-writes Mustache. Returns ``None`` for an unknown name
+        (the prompt builder fails loud). Default: no named layouts."""
+        return None
+
+    def layout_names(self) -> list[str]:
+        """Public layout names this Kind offers (s-dx-named-layouts).
+
+        Powers discovery + fail-loud error messages + ``dna new --layout``
+        validation. Default: none."""
+        return []
+
     # ---- Source-sync digest (s-sync-s1) -----------------------------
 
     def _canonical_spec(self, spec: dict[str, Any]) -> dict[str, Any]:

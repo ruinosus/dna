@@ -1,0 +1,21 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-s-dx-single-file-soul
+spec:
+  description: A single SOUL.md reads + composes; 2-file soulspec fidelity preserved.
+  kind_of_test: smoke
+  status: active
+  steps:
+  - action: Author souls/x/SOUL.md alone (no soul.json, minimal/no frontmatter) and
+      read it
+    expected: valid typed Soul; name inferred from dir when frontmatter omits it
+  - action: Compose an agent that references the single-file soul
+    expected: SOUL.md prose flattens into the prompt
+  - action: Read+write a 2-file soul (SOUL.md + soul.json)
+    expected: soul.json preserved on round-trip (byte-fidelity, market conformance
+      not regressed)
+  verifies:
+  - Story/s-dx-single-file-soul
+  created_at: '2026-07-11T07:29:24+00:00'
+  updated_at: '2026-07-11T07:29:24+00:00'

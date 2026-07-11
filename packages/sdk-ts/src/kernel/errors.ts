@@ -38,6 +38,33 @@ export class AgentNotFound extends Error {
   }
 }
 
+/**
+ * `buildPrompt` hit an Agent whose `layout:` names a preset the Kind does not
+ * offer (s-dx-named-layouts).
+ *
+ * Fail-loud DX: a typo'd layout (`persona_first` for `persona-first`) must not
+ * silently fall through to the Kind default and compose in the wrong order —
+ * it throws with the valid names listed.
+ *
+ * 1:1 parity with python `dna.UnknownLayout` (a `ValueError` subclass).
+ * Exported publicly from the package root.
+ */
+export class UnknownLayout extends Error {
+  readonly layout: string;
+  readonly available: string[];
+  readonly agent: string | null;
+  constructor(layout: string, available: string[] = [], agent: string | null = null) {
+    const where = agent ? ` on agent '${agent}'` : "";
+    const hint = available.length ? ` — available: ${available.join(", ")}` : "";
+    super(`Unknown layout '${layout}'${where}${hint}`);
+    this.name = "UnknownLayout";
+    this.layout = layout;
+    this.available = available;
+    this.agent = agent;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
 /** Base class for kernel registration validation failures. */
 export class KernelRegistrationError extends Error {
   constructor(message?: string) {

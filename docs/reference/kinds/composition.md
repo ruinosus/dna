@@ -45,6 +45,7 @@ A Agent is the primary prompt target: it's what actually runs when the user talk
 | `instruction` | string |  |  |
 | `instruction_file` | string |  |  |
 | `invoked_by_engine` | string |  |  |
+| `layout` | string |  |  |
 | `locale_strings` | object |  |  |
 | `mandatory_tool_calls` | array |  |  |
 | `max_turns` | integer |  |  |
