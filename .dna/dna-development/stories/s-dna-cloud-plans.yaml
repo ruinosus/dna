@@ -11,7 +11,7 @@ spec:
     The server resolves a token''s plan claim -> the Plan doc -> the concrete caps.
     Keeps the no-deploy thesis: changing a tier limit is a file edit, not a redeploy.
     Aligns with DNA''s ''everything is a Kind'' principle.'
-  status: in-progress
+  status: done
   feature: f-dna-cloud
   priority: high
   labels:
@@ -23,17 +23,27 @@ spec:
   reporter: claude-code
   business_value: 560
   acceptance_criteria:
-  - Given the plan catalog, When a Free token is resolved, Then its caps (e.g. ~100
-    calls/day, 1 tenant, memory read-only, no emit) come from the Plan doc not code
-  - Given the owner changes a tier limit in the Plan doc, When the server reloads,
-    Then the new cap applies with no redeploy
+  - text: Given the plan catalog, When a Free token is resolved, Then its caps (e.g.
+      ~100 calls/day, 1 tenant, memory read-only, no emit) come from the Plan doc
+      not code
+    done: true
+    done_at: '2026-07-11T19:31:48+00:00'
+    done_by: story-done-auto
+  - text: Given the owner changes a tier limit in the Plan doc, When the server reloads,
+      Then the new cap applies with no redeploy
+    done: true
+    done_at: '2026-07-11T19:31:48+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: claude-code
   definition_of_done:
-  - Plan/Tier declarative Kind (Py+TS parity) with limits + feature flags; resolver
-    plan-claim -> caps; tests; docs; owner-approved tier numbers
+  - text: Plan/Tier declarative Kind (Py+TS parity) with limits + feature flags; resolver
+      plan-claim -> caps; tests; docs; owner-approved tier numbers
+    done: true
+    done_at: '2026-07-11T19:31:48+00:00'
+    done_by: story-done-auto
   definition_of_done_source: claude-code
   created_at: '2026-07-11T16:34:44+00:00'
-  updated_at: '2026-07-11T18:04:04+00:00'
+  updated_at: '2026-07-11T19:31:59+00:00'
   timeline:
   - at: '2026-07-11T16:34:44+00:00'
     actor: claude-code
@@ -46,8 +56,22 @@ spec:
     source: cli
     from: todo
     to: in-progress
+  - at: '2026-07-11T19:31:52+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'Tier Kind merged #75; re-fechando (status revertido por checkout acidental
+      do FS source)'
+  - at: '2026-07-11T19:31:59+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: done
+    commit_ref: 0c6e3168f4d6dec13219569e545f95208cd83344
   produces:
   - kind: Plan
     name: plan-s-dna-cloud-plans
     role: implementation
     at: '2026-07-11T18:04:04+00:00'
+  closed_at: '2026-07-11T19:31:48+00:00'
