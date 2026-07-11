@@ -1,0 +1,32 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-emit-bedrock
+spec:
+  description: "Product smoke for 'dna emit --target bedrock' \u2014 the second runtime\
+    \ emitter (portability proof)."
+  kind_of_test: smoke
+  status: active
+  steps:
+  - action: Run 'dna emit --list-targets'
+    expected: output lists BOTH 'agent-framework' and 'bedrock'
+  - action: Run 'dna emit concierge --target bedrock --scope concierge' (DNA_BASE_DIR=examples/emitting-to-a-runtime/.dna)
+    expected: stdout is a CloudFormation template with Resources.ConciergeAgent of
+      Type AWS::Bedrock::Agent
+  - action: Inspect Properties.Instruction of the emitted template
+    expected: it is byte-equal to 'dna prompt concierge' / mi.build_prompt(concierge)
+      (the survival gate)
+  - action: Inspect Properties.ActionGroups[0].FunctionSchema.Functions[0]
+    expected: Name=kb-search with a flat Parameters map (query:string Required=true,
+      top_k:integer Required=false)
+  - action: Read the stderr de-para block
+    expected: it reports the honest losses (composition structure, tenant overlay,
+      eval-as-contract, tool parameter depth, model coordinate)
+  - action: Emit the SAME concierge to agent-framework AND bedrock
+    expected: "both artifacts carry the identical composed prompt \u2014 one DNA source,\
+      \ two runtimes (portability proven)"
+  verifies:
+  - Story/s-emit-bedrock
+  created_at: '2026-07-11T13:49:19+00:00'
+  updated_at: '2026-07-11T13:49:19+00:00'
+  owner: claude-code

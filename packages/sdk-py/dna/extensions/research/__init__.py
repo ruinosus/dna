@@ -234,6 +234,17 @@ class ResearchKind(KindBase):
                     ),
                     "default": [],
                 },
+                "cited_by": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "default": [],
+                    "description": (
+                        "Kind/name of docs that cite this Research as a "
+                        "grounding source. Auto-maintained by `dna sdlc "
+                        "cite Research/<name> --from <Kind>/<name>` — don't "
+                        "author by hand."
+                    ),
+                },
                 "findings": {
                     "type": "array",
                     "description": (

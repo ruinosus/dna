@@ -120,7 +120,7 @@ describe("registry", () => {
   it("throws UnknownTarget with the available list", async () => {
     let err: unknown;
     try {
-      await getEmitter("bedrock");
+      await getEmitter("vertex"); // not yet implemented (bedrock now IS a target)
     } catch (e) {
       err = e;
     }
