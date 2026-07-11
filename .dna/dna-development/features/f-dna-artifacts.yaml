@@ -1,0 +1,24 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Feature
+metadata:
+  name: f-dna-artifacts
+spec:
+  title: Governed HTML artifacts
+  description: "HtmlArtifact Kind: bundle de HTML como output de primeira classe,\
+    \ linkavel a work items via produces[]. Nasceu da necessidade de guardar o design\
+    \ doc do proprio e-dna-dx e vincula-lo ao epico \u2014 dogfood."
+  status: discovery
+  epic: e-dna-dx
+  reporter: claude-code
+  priority: medium
+  labels:
+  - sdk
+  - dogfood
+  created_at: '2026-07-11T06:25:32+00:00'
+  updated_at: '2026-07-11T06:25:32+00:00'
+  timeline:
+  - at: '2026-07-11T06:25:32+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: discovery

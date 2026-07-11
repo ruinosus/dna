@@ -1,0 +1,24 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Feature
+metadata:
+  name: f-dna-dx-author
+spec:
+  title: Autorar sem vazar internals
+  description: "Layouts nomeados, scaffolding de novo Kind/scope, e Soul single-file.\
+    \ Reduz o atrito de AUTORAR conte\xFAdo DNA. Fica pra PRs seguintes (stories em\
+    \ todo nesta PR)."
+  status: discovery
+  epic: e-dna-dx
+  reporter: claude-code
+  priority: medium
+  labels:
+  - dx
+  - sdk
+  created_at: '2026-07-11T06:23:07+00:00'
+  updated_at: '2026-07-11T06:23:07+00:00'
+  timeline:
+  - at: '2026-07-11T06:23:07+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: discovery

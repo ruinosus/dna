@@ -158,7 +158,11 @@ async def build_prompt_async(
     # --- 1. Fetch agent doc -----------------------------------------------
     agent_raw = await kernel.get_document(scope, "Agent", agent_name, tenant=tenant)
     if agent_raw is None:
-        return f"Agent '{agent_name}' not found"
+        # Fail loud (s-dx-build-prompt-fail-loud): parity with the MI-level
+        # PromptBuilder — a missing agent raises rather than returning a
+        # placeholder string that would become the literal instruction.
+        from dna.kernel.errors import AgentNotFound
+        raise AgentNotFound(agent_name)
     agent_doc = kernel._parse_doc(agent_raw, origin="local")
     if agent_doc is None:
         return f"Agent '{agent_name}' parse failed"
@@ -335,7 +339,8 @@ async def build_prompt_async(
             HookContext(scope=scope, agent=agent_name, prompt=prompt),
         )
 
-    return prompt
+    # Clean output (s-dx-clean-composition-output) — parity with PromptBuilder.
+    return prompt.rstrip("\n")
 
 
 def _render(template: str | None, ctx: dict[str, Any], agent_doc: Document) -> str:

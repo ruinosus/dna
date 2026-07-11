@@ -1,0 +1,53 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-dx-epic-create
+spec:
+  title: "dna sdlc epic create \u2014 fecha o ultimo gap de CRUD do board (papercut\
+    \ sentido na "
+  description: "dna sdlc epic create \u2014 fecha o ultimo gap de CRUD do board (papercut\
+    \ sentido na Fase 0)."
+  status: in-progress
+  feature: f-dna-dx-configure
+  priority: medium
+  labels:
+  - dx
+  - cli
+  - dogfood
+  reporter: claude-code
+  acceptance_criteria:
+  - dna sdlc epic create <name> espelha feature create (--title/--desc/--status[planning|in-progress|done|cancelled|deprecated]/--reporter/--priority/--labels/--business-value),
+    roteando por kernel.write_document; sem --ac/--dod guard (Epic e roadmap noun).
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - Comando reusa helpers do feature create; cria doc com envelope + timeline inicial;
+    epic show o encontra; usado pra (re)criar e-dna-dx (dogfood); teste; suites verdes.
+  definition_of_done_source: cli-create
+  created_at: '2026-07-11T06:24:52+00:00'
+  updated_at: '2026-07-11T06:27:05+00:00'
+  timeline:
+  - at: '2026-07-11T06:24:52+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-11T06:26:30+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-11T06:27:05+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Implementado: @epic_group.command('create') espelhando feature create,\
+      \ via kernel.write_document + timeline inicial. Dogfood: e-dna-dx foi (re)criado\
+      \ com o comando novo (nao doc apply). Fecha o ultimo gap de CRUD do board \u2014\
+      \ o papercut sentido na Fase 0."
+    commit_ref: 52b7db57f85dbf8b630cbf3f552837f8f8972ae2
+  produces:
+  - kind: Plan
+    name: plan-s-dx-epic-create
+    role: implementation
+    at: '2026-07-11T06:26:30+00:00'

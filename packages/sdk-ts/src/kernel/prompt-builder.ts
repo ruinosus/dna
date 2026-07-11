@@ -12,6 +12,7 @@
 import Mustache from "mustache";
 
 import { stripPromptBlock } from "./_text.js";
+import { AgentNotFound } from "./errors.js";
 import type { Document } from "./document.js";
 import type { HookContext } from "./hooks.js";
 import type { ManifestInstance, BuildPromptOpts } from "./instance.js";
@@ -45,7 +46,10 @@ export class PromptBuilder {
 
     const agentDoc = agentName ? this._findAgent(agentName) : null;
     if (!agentDoc) {
-      return `Agent '${agentName}' not found`;
+      // Fail loud (s-dx-build-prompt-fail-loud): throw a typed error instead
+      // of returning a placeholder string that would become the literal
+      // instruction.
+      throw new AgentNotFound(agentName);
     }
 
     // Build context — merge backwards-compat params into enabledSlots
@@ -79,7 +83,10 @@ export class PromptBuilder {
       });
     }
 
-    return prompt;
+    // Clean output (s-dx-clean-composition-output): template sections can pad
+    // the composed prompt with trailing newlines; consumers used to strip them
+    // themselves. Return it already clean.
+    return prompt.replace(/\n+$/, "");
   }
 
   // -------------------------------------------------------------------------

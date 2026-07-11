@@ -518,6 +518,48 @@ dna sdlc epic [OPTIONS] COMMAND [ARGS]...
 | --- | --- |
 | `--help` | Show this message and exit. |
 
+### `dna sdlc epic create`
+
+Create a new Epic.
+
+Closes the last CRUD gap in the SDLC CLI (s-dx-epic-create): Story and
+Feature had `create`, but an Epic had to be hand-authored via `dna doc
+apply` — an asymmetry the DX epic (e-dna-dx) exists to kill. Mirrors
+`feature create`: same envelope, same write path (`kernel.write_document`),
+same initial-timeline event. Unlike `story create`, no --ac/--dod guard —
+Epics are roadmap nouns; exit criteria live at the Story level.
+
+
+Example:
+  dna sdlc epic create e-dna-dx \
+    --title "DNA developer experience" \
+    --desc "Collapse the consumer's prompt plumbing to a one-liner." \
+    --status in-progress --priority high --labels dx,sdk,dogfood
+
+```text
+dna sdlc epic create [OPTIONS] NAME
+```
+
+**Arguments**
+
+| Argument | Required |
+| --- | --- |
+| `NAME` | yes |
+
+**Options**
+
+| Option | Description |
+| --- | --- |
+| `--business-value` | WSJF-style scalar (0-1000) — drives roadmap sort. |
+| `--desc` | Multi-line description of the Epic's scope. |
+| `--help` | Show this message and exit. |
+| `--labels` | Comma-separated labels. |
+| `--priority` |  |
+| `--reporter` | Actor who filed it. Defaults to DNA_CLI_REPORTER env or 'claude-code'. |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--status` | _(default: `planning`)_ |
+| `--title` | Short title shown on roadmap cards. |
+
 ### `dna sdlc epic ship`
 
 Mark Epic status: done, set closed_at, cascade-close Features whose Stories all done.

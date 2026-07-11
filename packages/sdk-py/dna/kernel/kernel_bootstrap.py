@@ -212,6 +212,73 @@ def build_auto_kernel(
     return k
 
 
+def build_from_config(
+    path: str | None = None, *, cls: type["Kernel"] | None = None,
+) -> "Kernel":
+    """Body of ``Kernel.from_config`` — read ``dna.config.yaml``, resolve every
+    port to its adapter, return the wired Kernel.
+
+    No config present (and no ``path``) → default filesystem ``.dna`` source,
+    unchanged. Otherwise the config's ``source`` URL is resolved through the
+    public ``source_from_url`` factory (file/sqlite/postgres), then ``search`` /
+    ``embedding`` providers are wired when requested. SQL migrations run on a
+    short-lived loop here so this stays a synchronous boot-time factory.
+    """
+    import asyncio
+
+    if cls is None:
+        from dna.kernel import Kernel
+        cls = Kernel
+
+    from dna.adapters.source_url import resolve_default_fs_url, source_from_url
+    from dna.config import load_config
+
+    cfg = load_config(path)
+    source_url = cfg.source if cfg is not None else resolve_default_fs_url()
+
+    # Build (+ connect, for SQL) the source on a throwaway loop. Filesystem
+    # sources fill their writers via attach_kernel below, so no kernel is
+    # needed at construction time.
+    source = asyncio.run(source_from_url(source_url))
+
+    # build_auto_kernel wires source + cache + resolvers + attach_kernel
+    # (writers/readers) + the dep-filter validation gate — one recipe, reused.
+    k = build_auto_kernel(source, cls=cls)
+
+    if cfg is not None:
+        _wire_search(k, cfg)
+        _wire_embedding(k, cfg)
+
+    return k
+
+
+def _wire_embedding(kernel: "Kernel", cfg) -> None:
+    """Register the embedding provider named in the config. ``off`` / ``fake``
+    leave the deterministic fake floor in place (zero heavy deps); ``onnx``
+    imports + registers the real all-MiniLM provider (opt-in extra)."""
+    if cfg.embedding in ("off", "fake"):
+        return
+    if cfg.embedding == "onnx":
+        from dna.adapters.embedding.onnx import OnnxEmbeddingProvider
+        kernel.embedding_provider(OnnxEmbeddingProvider())
+
+
+def _wire_search(kernel: "Kernel", cfg) -> None:
+    """Register the record-search provider named in the config. ``off`` leaves
+    the lexical fallback; ``sqlite-vec`` / ``pgvector`` import + register the
+    matching opt-in provider (the latter reuses the config's Postgres DSN)."""
+    if cfg.search == "off":
+        return
+    if cfg.search == "sqlite-vec":
+        from dna.adapters.search.sqlite_vec import SqliteVecRecordSearchProvider
+        kernel.record_search_provider(SqliteVecRecordSearchProvider(kernel))
+    elif cfg.search == "pgvector":
+        from dna.adapters.search.pgvector import PgVecRecordSearchProvider
+        kernel.record_search_provider(
+            PgVecRecordSearchProvider(kernel, dsn=cfg.source)
+        )
+
+
 class _NoopCache:
     """Minimal CachePort for non-filesystem sources (all docs self-contained)."""
 

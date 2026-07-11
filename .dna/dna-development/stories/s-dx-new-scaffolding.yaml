@@ -1,0 +1,29 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-dx-new-scaffolding
+spec:
+  title: 'Scaffolding: dna new <kind>/<scope> gera esqueleto valido.'
+  description: 'Scaffolding: dna new <kind>/<scope> gera esqueleto valido.'
+  status: todo
+  feature: f-dna-dx-author
+  priority: medium
+  labels:
+  - dx
+  - sdk
+  - cli
+  reporter: claude-code
+  acceptance_criteria:
+  - Comando de scaffolding gera arquivos minimos validos de um novo Kind/scope.
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - "Design + impl + testes; docs. (PR futura \u2014 nao nesta.)"
+  definition_of_done_source: cli-create
+  created_at: '2026-07-11T06:25:12+00:00'
+  updated_at: '2026-07-11T06:25:12+00:00'
+  timeline:
+  - at: '2026-07-11T06:25:12+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo

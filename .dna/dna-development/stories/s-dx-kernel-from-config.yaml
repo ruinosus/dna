@@ -1,0 +1,59 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-dx-kernel-from-config
+spec:
+  title: 'Config declarativa de ports: dna.config.yaml + Kernel.from_config + factory
+    URL-'
+  description: 'Config declarativa de ports: dna.config.yaml + Kernel.from_config
+    + factory URL->source publico.'
+  status: in-progress
+  feature: f-dna-dx-configure
+  priority: high
+  labels:
+  - dx
+  - sdk
+  - cli
+  reporter: claude-code
+  acceptance_criteria:
+  - Le dna.config.yaml (source/search/embedding); Kernel.from_config(path=None) Py
+    + twin TS fromConfig; factory URL->source publico suporta file/sqlite/postgresql
+    via SqlAlchemySource; CLI consome a mesma superficie; sem config -> comportamento
+    atual intacto; fail-loud didatico em scheme invalido.
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - config.py + source_url.py + from_config Py; config.ts + source-url.ts + fromConfig
+    TS; CLI _ctx delega ao factory; suites Py+TS verdes; docs Configuring ports.
+  definition_of_done_source: cli-create
+  created_at: '2026-07-11T06:24:51+00:00'
+  updated_at: '2026-07-11T06:27:03+00:00'
+  timeline:
+  - at: '2026-07-11T06:24:51+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-11T06:26:27+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-11T06:27:03+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Implementado: dna.config (DnaConfig+load_config, valida enums/unknown-keys/missing-source),\
+      \ dna.adapters.source_url (source_from_url file/sqlite/postgresql via SqlAlchemySource\
+      \ + connect; UnsupportedSourceScheme), Kernel.from_config -> build_from_config\
+      \ (reusa build_auto_kernel + wire search/embedding lazy). CLI _ctx.build_source_from_env\
+      \ agora delega ao factory (ganhou sqlite/postgres de graca). Twins TS: config.ts,\
+      \ source-url.ts, fromConfig em bootstrap.ts. Decisao: from_config e classmethod\
+      \ sync (boot-time; SQL connect via asyncio.run) e retorna cls() \u2014 Runtime.from_config\
+      \ devolve Runtime com .manifest. sqlite e Python-only; TS falha loud."
+    commit_ref: 52b7db57f85dbf8b630cbf3f552837f8f8972ae2
+  produces:
+  - kind: Plan
+    name: plan-s-dx-kernel-from-config
+    role: implementation
+    at: '2026-07-11T06:26:27+00:00'

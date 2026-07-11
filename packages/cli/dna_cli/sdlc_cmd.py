@@ -2682,6 +2682,71 @@ def epic_group() -> None:
     """Epic-level operations (Jira/ADO terminology; was 'milestone' in v1.2)."""
 
 
+@epic_group.command("create")
+@click.argument("name")
+@click.option("--title", required=True,
+              help="Short title shown on roadmap cards.")
+@click.option("--desc", "description", required=True,
+              help="Multi-line description of the Epic's scope.")
+@click.option("--status", type=click.Choice(VALID_EPIC_STATUS),
+              default="planning", show_default=True)
+@click.option("--reporter", default=None,
+              help="Actor who filed it. Defaults to DNA_CLI_REPORTER env "
+                   "or 'claude-code'.")
+@click.option("--priority", type=click.Choice(VALID_PRIORITIES), default=None)
+@click.option("--labels", default=None, help="Comma-separated labels.")
+@click.option("--business-value", "business_value", type=int, default=None,
+              help="WSJF-style scalar (0-1000) — drives roadmap sort.")
+@_scope_option
+def cmd_epic_create(
+    name: str, title: str, description: str, status: str,
+    reporter: str | None, priority: str | None, labels: str | None,
+    business_value: int | None, scope: str,
+) -> None:
+    """Create a new Epic.
+
+    Closes the last CRUD gap in the SDLC CLI (s-dx-epic-create): Story and
+    Feature had `create`, but an Epic had to be hand-authored via `dna doc
+    apply` — an asymmetry the DX epic (e-dna-dx) exists to kill. Mirrors
+    `feature create`: same envelope, same write path (`kernel.write_document`),
+    same initial-timeline event. Unlike `story create`, no --ac/--dod guard —
+    Epics are roadmap nouns; exit criteria live at the Story level.
+
+    \b
+    Example:
+      dna sdlc epic create e-dna-dx \\
+        --title "DNA developer experience" \\
+        --desc "Collapse the consumer's prompt plumbing to a one-liner." \\
+        --status in-progress --priority high --labels dx,sdk,dogfood
+    """
+    spec: dict[str, Any] = {
+        "title": title,
+        "description": description,
+        "status": status,
+    }
+    if reporter:
+        spec["reporter"] = reporter
+    else:
+        spec["reporter"] = os.environ.get("DNA_CLI_REPORTER", "claude-code")
+    if priority:
+        spec["priority"] = priority
+    labels_list = _csv(labels)
+    if labels_list:
+        spec["labels"] = labels_list
+    if business_value is not None:
+        spec["business_value"] = business_value
+    now = _now_iso()
+    spec["created_at"] = now
+    spec["updated_at"] = now
+    # First timeline event = the create itself (mirrors feature/story create).
+    _append_timeline(spec, "status_change", to=status)
+
+    raw = _build_raw("Epic", name, spec)
+    with dna_session(scope) as s:
+        s.run(s.kernel.write_document(scope, "Epic", name, raw))
+    click.secho(f"CREATED Epic/{name} (status: {status})", fg="green")
+
+
 @epic_group.command("show")
 @click.argument("name")
 @_scope_option

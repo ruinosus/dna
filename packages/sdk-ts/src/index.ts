@@ -51,7 +51,15 @@ export { serializeRawToFiles } from "./kernel/serialize-to-files.js";
 export * from "./viz/index.js";
 
 // Opinionated bootstrap — extension wiring lives here, not in kernel/
-export { createKernelWithBuiltins, quickInstance, createRuntimeWithBuiltins, quickManifest } from "./bootstrap.js";
+export { createKernelWithBuiltins, quickInstance, createRuntimeWithBuiltins, quickManifest, fromConfig } from "./bootstrap.js";
+
+// DX consumer surface (s-dx-*): fail-loud prompt building + the collapse-the-
+// shim helper + declarative port wiring.
+export { AgentNotFound } from "./kernel/errors.js";
+export { PromptLibrary, loadPrompts } from "./prompts.js";
+export { loadConfig, findConfig, CONFIG_FILENAME } from "./config.js";
+export type { DnaConfig, SearchMode, EmbeddingMode } from "./config.js";
+export { sourceFromUrl, resolveDefaultFsUrl, UnsupportedSourceScheme } from "./adapters/source-url.js";
 export { HookRegistry, KNOWN_HOOK_NAMES } from "./kernel/hooks.js";
 export type {
   HookContext,
