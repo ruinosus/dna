@@ -1,0 +1,16 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-cite-any-citable-kind-20260711-134719
+spec:
+  guide_ref: tg-cite-any-citable-kind
+  outcome: pass
+  verifies:
+  - Story/s-cite-any-citable-kind
+  executed_by: claude-code
+  executed_at: '2026-07-11T13:47:19+00:00'
+  notes: "Live: cite Research/research-cite-smoke --from ADR/adr-cite-smoke \u2192\
+    \ CITED; Research.cited_by=[ADR/adr-cite-smoke], ADR.references=[Research/research-cite-smoke].\
+    \ Bare-name 'cite ref-smoke --from ADR/...' \u2192 Reference default, bare ref\
+    \ in caller. Automated: test_sdlc_correctness.py 4 cite/uncite cases green. Suites:\
+    \ cli 408, sdk-py 2902, sdk-ts 1415 pass."

@@ -1,0 +1,22 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-cite-any-citable-kind
+spec:
+  description: 'Product smoke: dna sdlc cite grounds a work item with any citable
+    Kind (the CLI is the product surface).'
+  kind_of_test: smoke
+  status: active
+  steps:
+  - action: 'Run: dna sdlc cite Research/<name> --from ADR/<name>'
+    expected: "CLI prints 'CITED Research/<name> \u2190 ADR/<name>'; exit 0"
+  - action: 'Inspect the cited doc: dna doc show Research <name>'
+    expected: spec.cited_by contains 'ADR/<name>' (the back-ref)
+  - action: 'Inspect the caller: dna doc show ADR <name>'
+    expected: spec.references contains 'Research/<name>' (qualified cross-Kind ref)
+  - action: 'Backwards-compat: dna sdlc cite <bare-ref> --from ADR/<name>'
+    expected: resolves to Reference; caller.references stores the bare name
+  verifies:
+  - Story/s-cite-any-citable-kind
+  created_at: '2026-07-11T13:46:47+00:00'
+  updated_at: '2026-07-11T13:46:47+00:00'
