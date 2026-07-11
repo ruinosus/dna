@@ -5,7 +5,7 @@ metadata:
 spec:
   title: 'Scaffolding: dna new <kind>/<scope> gera esqueleto valido.'
   description: 'Scaffolding: dna new <kind>/<scope> gera esqueleto valido.'
-  status: in-progress
+  status: review
   feature: f-dna-dx-author
   priority: medium
   labels:
@@ -20,7 +20,7 @@ spec:
   - "Design + impl + testes; docs. (PR futura \u2014 nao nesta.)"
   definition_of_done_source: cli-create
   created_at: '2026-07-11T06:25:12+00:00'
-  updated_at: '2026-07-11T07:29:12+00:00'
+  updated_at: '2026-07-11T07:31:33+00:00'
   timeline:
   - at: '2026-07-11T06:25:12+00:00'
     actor: claude-code
@@ -53,6 +53,17 @@ spec:
     name: tr-tg-s-dx-new-scaffolding-20260711-072910
     summary: "TestRun tr-tg-s-dx-new-scaffolding-20260711-072910 \u2192 pass"
     outcome: pass
+  - at: '2026-07-11T07:31:31+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Coberta pela PR #49 (author DX \u2014 3 stories numa PR coesa). https://github.com/ruinosus/dna/pull/49"
+  - at: '2026-07-11T07:31:33+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
   produces:
   - kind: Plan
     name: plan-s-dx-new-scaffolding

@@ -5,7 +5,7 @@ metadata:
 spec:
   title: Layouts nomeados para autoria sem vazar caminhos internos de bundle.
   description: Layouts nomeados para autoria sem vazar caminhos internos de bundle.
-  status: in-progress
+  status: review
   feature: f-dna-dx-author
   priority: medium
   labels:
@@ -19,7 +19,7 @@ spec:
   - "Design + impl + testes Py/TS; docs. (PR futura \u2014 nao nesta.)"
   definition_of_done_source: cli-create
   created_at: '2026-07-11T06:25:10+00:00'
-  updated_at: '2026-07-11T07:28:50+00:00'
+  updated_at: '2026-07-11T07:32:00+00:00'
   timeline:
   - at: '2026-07-11T06:25:10+00:00'
     actor: claude-code
@@ -66,6 +66,23 @@ spec:
     name: tr-tg-s-dx-named-layouts-20260711-072848
     summary: "TestRun tr-tg-s-dx-named-layouts-20260711-072848 \u2192 pass"
     outcome: pass
+  - at: '2026-07-11T07:30:54+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/49'
+    pr_url: https://github.com/ruinosus/dna/pull/49
+  - at: '2026-07-11T07:31:57+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'PR #49 aberta (author DX, 3 stories). https://github.com/ruinosus/dna/pull/49'
+  - at: '2026-07-11T07:32:00+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
   produces:
   - kind: Plan
     name: plan-s-dx-named-layouts
