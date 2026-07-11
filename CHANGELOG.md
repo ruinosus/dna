@@ -13,6 +13,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`dna sdlc digest` — a retrospective "what happened while you were away"**
+  (feature `f-sdlc-digest`, story `s-sdlc-delegator-digest`). The backward-
+  looking mirror of `brief`/`next`/`current` (which point *forward*): the
+  surface for whoever **delegates** work and reviews the board at the end
+  instead of watching it live. `dna sdlc digest [--since <ref>] [--scope]
+  [--save] [--json]` aggregates every work-item timeline event in a window and
+  groups it — **Concluído / Decidido / Achado / Avançou / Releases / Artefatos**
+  — leading with a first-class, **not-windowed** *"Precisa de você"* section:
+  blocked items (with reason), Stories in review (with their open PR numbers
+  matched from `gh`), owner decisions (ADRs still `proposed`), and open
+  questions (unanswered Spikes), plus a PMO-style RAG status. `--since` accepts
+  an ISO-8601 timestamp, a relative span (`90m`/`24h`/`3d`/`2w`), or
+  `last-digest` (tiles the timeline gaplessly from the previous digest);
+  default is the last 24h. `--save` persists the digest as a queryable
+  `StatusReport` named `digest-<date>` (its `verdict` + `heuristic_explanation`
+  are embedded, so `dna cognitive search` recalls past digests). The
+  aggregation core (`dna_cli._digest.build_digest`) is a pure, kernel-free
+  function with 23 unit tests. CLI-only (Python) — the `dna` binary has no TS
+  twin. Guide: *Digest — what happened while you were away*.
 - **Second runtime emitter — `dna emit --target bedrock`** (epic
   `e-dna-portability`, feature `f-dna-emitters`, story `s-emit-bedrock`). The
   portability thesis, *proven*: the **same** DNA agent that emits a Microsoft

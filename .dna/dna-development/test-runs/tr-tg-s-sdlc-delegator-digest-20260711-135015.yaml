@@ -1,0 +1,21 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-sdlc-delegator-digest-20260711-135015
+spec:
+  guide_ref: tg-s-sdlc-delegator-digest
+  outcome: pass
+  verifies:
+  - Story/s-sdlc-delegator-digest
+  executed_by: claude-code
+  executed_at: '2026-07-11T13:50:15+00:00'
+  notes: "Dogfood real no board dna-development (janela 24h): 38 conclu\xEDdo \xB7\
+    \ 6 decis\xE3o (inclui adr-dna-pivot-portability, o ADR do piv\xF4) \xB7 2 achado\
+    \ (kz-001, kz-002) \xB7 8 releases (v0.1.0\u2192v0.7.0). Se\xE7\xE3o 'PRECISA\
+    \ DE VOC\xCA' no topo (0 pend\xEAncias \u2014 board zerado). --save gravou StatusReport/digest-20260711-134928\
+    \ (query\xE1vel). digest --help distingue explicitamente do brief (pra tr\xE1\
+    s vs pra frente). 23 unit tests do agregador puro verdes; suite CLI 424 passed;\
+    \ mkdocs --strict + brand_guard + gitleaks verdes."
+  evidence:
+  - test:packages/cli/tests/test_digest.py
+  - StatusReport/digest-20260711-134928

@@ -589,6 +589,35 @@ dna sdlc demand [OPTIONS] TITLE
 | `--so-that` | User-story 'so that <benefit>' slot. |
 | `--want` | User-story 'I want <goal>' slot. |
 
+## `dna sdlc digest`
+
+Retrospectiva: **o que aconteceu enquanto você estava fora**.
+
+O inverso do `brief`/`next`/`current` — estes olham PRA FRENTE ("o que
+fazer a seguir"); o **digest olha PRA TRÁS** ("o que já aconteceu"). É a
+superfície de quem DELEGA e revisa no fim, em vez de acompanhar o board ao
+vivo.
+
+Agrega os eventos das timelines de todos os work items numa janela
+(``--since``) e agrupa em **Concluído / Decidido / Achado / Precisa de
+você** — a seção *Precisa de você* (blocked, stories em review, decisões
+do dono, perguntas abertas) vem primeiro, porque é o que o delegador
+quer ver. Com ``--save`` o digest vira um StatusReport queryável depois.
+
+```text
+dna sdlc digest [OPTIONS]
+```
+
+**Options**
+
+| Option | Description |
+| --- | --- |
+| `--help` | Show this message and exit. |
+| `--json` | Saída estruturada (o dict do agregador). |
+| `--save` | Persiste o digest como StatusReport 'digest-<data>' (durável + queryável via `dna cognitive search`/`recall`). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--since` | Janela para trás: ISO-8601, um span (24h/3d/2w) ou 'last-digest' (desde o último digest salvo). Default: 24h. |
+
 ## `dna sdlc epic`
 
 Epic-level operations (Jira/ADO terminology; was 'milestone' in v1.2).

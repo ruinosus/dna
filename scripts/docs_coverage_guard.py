@@ -76,17 +76,13 @@ ALLOWLIST: dict[str, str] = {
     # (docs/guides/cli-tour.md, s-docs-cli-tour-kinds-prose) plus the
     # search/memory guide and the SDLC guide.
     # -- SDLC dogfooding machinery (record plane, long tail) -----------------
-    "kind:ADR": _SDLC_MACHINERY,
     "kind:AgentSession": _SDLC_MACHINERY,
     "kind:ArchiveProposal": _SDLC_MACHINERY,
     "kind:AuditLog": _SDLC_MACHINERY,
-    "kind:Bug": _SDLC_MACHINERY,
     "kind:Changelog": _SDLC_MACHINERY,
     "kind:CognitivePolicy": _SDLC_MACHINERY,
     "kind:Forecast": _SDLC_MACHINERY,
-    "kind:Initiative": _SDLC_MACHINERY,
     "kind:Insight": _SDLC_MACHINERY,
-    "kind:Kaizen": _SDLC_MACHINERY,
     "kind:Narrative": _SDLC_MACHINERY,
     "kind:PatternInsight": _SDLC_MACHINERY,
     "kind:Plan": _SDLC_MACHINERY,
@@ -97,7 +93,6 @@ ALLOWLIST: dict[str, str] = {
     "kind:RiskRegister": _SDLC_MACHINERY,
     "kind:Roadmap": _SDLC_MACHINERY,
     "kind:SavedView": _SDLC_MACHINERY,
-    "kind:StatusReport": _SDLC_MACHINERY,
     "kind:SynthesisRun": _SDLC_MACHINERY,
     "kind:SynthesizerState": _SDLC_MACHINERY,
     "kind:WorkflowEvent": _SDLC_MACHINERY,

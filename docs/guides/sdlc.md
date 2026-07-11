@@ -195,6 +195,9 @@ plugin (`.claude-plugin/marketplace.json`).
 
 ## Related
 
+- [Digest — what happened while you were away](sdlc-digest.md) — the
+  retrospective mirror of `brief`/`next`/`current`: for when you delegated the
+  work and review the timeline at the end.
 - [Agent-facing knowledge](../concepts/agent-knowledge.md) — why DNA
   represents knowledge (including the SDLC timeline) as curated, cited Kinds
   rather than generated prose.

@@ -1,0 +1,36 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-s-sdlc-delegator-digest
+spec:
+  description: "Product smoke do 'dna sdlc digest' \u2014 o delegador roda o comando\
+    \ e v\xEA, numa tela, o que aconteceu enquanto estava fora."
+  kind_of_test: smoke
+  status: active
+  steps:
+  - action: 'No terminal do repo, rode: dna sdlc digest --since 24h --scope dna-development'
+    expected: "Sai um digest de uma tela com cabe\xE7alho '\U0001F5DE\uFE0F Digest\
+      \ \u2014 dna-development (last 24h)' e um verdict-resumo (N conclu\xEDdo \xB7\
+      \ M decis\xE3o \xB7 K achado \xB7 releases)."
+  - action: "Confira que a PRIMEIRA se\xE7\xE3o \xE9 '\U0001F514 PRECISA DE VOC\xCA\
+      '"
+    expected: "A se\xE7\xE3o de aten\xE7\xE3o aparece no topo (blocked/review/decidir/responder),\
+      \ antes de Conclu\xEDdo \u2014 \xE9 o que o delegador v\xEA primeiro."
+  - action: Confira os grupos retrospectivos
+    expected: "Aparecem '\u2705 Conclu\xEDdo', '\U0001F9E0 Decidido', '\U0001F50D\
+      \ Achado', '\U0001F680 Releases' e '\U0001F4CE Artefatos' com os itens reais\
+      \ do dia (stories done, o ADR do piv\xF4 em Decidido, kz-001/kz-002 em Achado,\
+      \ v0.x releases)."
+  - action: 'Rode com --save: dna sdlc digest --since 24h --scope dna-development
+      --save'
+    expected: "Imprime '\U0001F4BE salvo como StatusReport/digest-<data>' e o arquivo\
+      \ aparece em .dna/dna-development/status-reports/ \u2014 digest dur\xE1vel e\
+      \ query\xE1vel."
+  - action: Rode 'dna sdlc digest --help' e compare com 'dna sdlc brief --help'
+    expected: "O help do digest diz explicitamente que ele olha PRA TR\xC1S (o que\
+      \ j\xE1 aconteceu), distinto do brief que olha pra frente (pr\xF3ximos passos)."
+  verifies:
+  - Story/s-sdlc-delegator-digest
+  created_at: '2026-07-11T13:49:57+00:00'
+  updated_at: '2026-07-11T13:49:57+00:00'
+  owner: claude-code

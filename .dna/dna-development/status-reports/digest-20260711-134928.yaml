@@ -1,0 +1,740 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: StatusReport
+metadata:
+  name: digest-20260711-134928
+spec:
+  insight: sdlc-digest
+  question: O que aconteceu em dna-development last 24h?
+  verdict: "38 conclu\xEDdo(s) \xB7 6 decis\xE3o(\xF5es) \xB7 2 achado(s) \xB7 8 release(s)\
+    \ \u2014 nada precisa da sua aten\xE7\xE3o."
+  confidence: certain
+  rag_status: green
+  metrics:
+    completed: 38
+    decided: 6
+    found: 2
+    progressed: 6
+    artifacts: 74
+    releases: 8
+    attention:
+      blocked: []
+      review_awaiting: []
+      owner_decisions: []
+      open_questions: []
+    buckets:
+      completed:
+      - kind: Issue
+        name: i-010-ts-resolver-legacy-shorthand-parity
+        title: 'Parity follow-up de i-009: sdk-py agora REJEITA o dep shorthand legado
+          (''skills:'
+        to: resolved
+        at: '2026-07-10T13:57:25+00:00'
+        commit_ref: null
+      - kind: Issue
+        name: i-005-docstring-coverage-gaps
+        title: "Gaps de cobertura de docstring/TSDoc catalogados na gera\xE7\xE3o\
+          \ da API-ref (PR #12),"
+        to: resolved
+        at: '2026-07-10T13:58:00+00:00'
+        commit_ref: null
+      - kind: Story
+        name: s-zero-the-board
+        title: "Fechamento de ciclo \u2014 as 2 \xFAltimas issues do board: i-005\
+          \ (docstrings: Kernel 6 "
+        to: done
+        at: '2026-07-10T14:06:18+00:00'
+        commit_ref: b2c608c2fa25dafa53aaac19997a66921448f001
+      - kind: Story
+        name: s-py312-floor
+        title: 'O PRIMEIRO consumidor real (piloto foundry-assured) bateu no floor:
+          o backend de'
+        to: done
+        at: '2026-07-10T14:29:23+00:00'
+        commit_ref: 759e99e4352544aa64225b069eb54a7de7d3d9cf
+      - kind: Story
+        name: s-pilot-foundry-assured
+        title: "O PILOTO: primeiro consumidor real do DNA \u2014 o repo p\xFAblico\
+          \ foundry-assured (conc"
+        to: done
+        at: '2026-07-10T14:52:13+00:00'
+        commit_ref: 3628a9ee0ccb17319f9f2e21605417ff8295ba2a
+      - kind: Issue
+        name: i-011-soul-inlining-build-prompt
+        title: "Achado do piloto foundry-assured (PR #104 de l\xE1): ao probar a decomposi\xE7\
+          \xE3o do CO"
+        to: resolved
+        at: '2026-07-10T15:32:55+00:00'
+        commit_ref: null
+      - kind: Story
+        name: s-pilot-foundry-phase2
+        title: "Fase 2 do piloto (ratificada Barna p\xF3s-merge do foundry#104): (1)\
+          \ BOOTSTRAP do d"
+        to: done
+        at: '2026-07-10T17:12:27+00:00'
+        commit_ref: f074b6a91e7678a9ce232ce626ea633a7709a564
+      - kind: Issue
+        name: i-014-story-check-ac-greedy-match
+        title: "Feedback do piloto fase-2: 'dna sdlc story check --ac 1 --ac 2' marcou\
+          \ 3 ACs \u2014 m"
+        to: resolved
+        at: '2026-07-10T17:41:31+00:00'
+        commit_ref: null
+      - kind: Issue
+        name: i-013-soul-trailing-newline-leak
+        title: 'Feedback do piloto fase-2: SOUL.md com newline final vaza \n\n\n no
+          prompt compo'
+        to: resolved
+        at: '2026-07-10T17:41:54+00:00'
+        commit_ref: null
+      - kind: Issue
+        name: i-012-sdlc-scope-default-config
+        title: 'Feedback do piloto fase-2 (repo terceiro): todo verbo dna sdlc exige
+          --scope rep'
+        to: resolved
+        at: '2026-07-10T17:41:57+00:00'
+        commit_ref: null
+      - kind: Story
+        name: s-pilot-dx-fixes
+        title: "Queimar as 3 fric\xE7\xF5es DX do piloto fase-2: i-012 (scope default\
+          \ configur\xE1vel \u2014 e"
+        to: done
+        at: '2026-07-10T17:49:10+00:00'
+        commit_ref: 0e5c9b0800b9980a1995758da97c22146bd0d861
+      - kind: Story
+        name: s-publish-registries
+        title: "Publica\xE7\xE3o nos registries (ratificado Barna, evid\xEAncia: 2\
+          \ consumidor-PRs no pilo"
+        to: done
+        at: '2026-07-10T18:53:05+00:00'
+        commit_ref: dd692ee0ffcd4e469295106cd5047f251beffcbc
+      - kind: Story
+        name: s-memory-semantic-recall
+        title: "Semantic recall na mem\xF3ria: quando um RecordSearchProvider + EmbeddingPort\
+          \ est\xE3o"
+        to: done
+        at: '2026-07-10T19:52:14+00:00'
+        commit_ref: d6bdf441585002a697433ec2bc10fe9606a18c1c
+      - kind: Story
+        name: s-dna-init-agent-ready
+        title: "dna init \u2014 multi-tool agent-ready onboarding para projetos consumidores"
+        to: done
+        at: '2026-07-10T19:52:20+00:00'
+        commit_ref: d6bdf441585002a697433ec2bc10fe9606a18c1c
+      - kind: Story
+        name: s-onboarding-genome-install
+        title: "dna init --from: onboarding Genome via distribui\xE7\xE3o remota"
+        to: done
+        at: '2026-07-10T20:57:30+00:00'
+        commit_ref: eb67539a46b513585d18977438a973c08e05c0ec
+      - kind: Story
+        name: s-memory-conformance-kit
+        title: "Kit p\xFAblico de conformance de mem\xF3ria em dna.testing"
+        to: done
+        at: '2026-07-10T20:57:37+00:00'
+        commit_ref: eb67539a46b513585d18977438a973c08e05c0ec
+      - kind: Issue
+        name: i-015-onboarding-genome-via-install
+        title: "Follow-up de s-dna-init-agent-ready: oferecer o Genome de onboarding\
+          \ tamb\xE9m via "
+        to: resolved
+        at: '2026-07-10T20:58:02+00:00'
+        commit_ref: null
+      - kind: Story
+        name: s-install-scan-fixes
+        title: 'install scan: mixed trees + network test for init --from'
+        to: done
+        at: '2026-07-10T22:41:42+00:00'
+        commit_ref: 0ea9396a4b4b76ca58a1e7fe8b4d1e3a360cb60f
+      - kind: Issue
+        name: i-016-install-root-agents-md-hides-skills
+        title: "dna install de uma \xE1rvore com AGENTS.md na RAIZ instala s\xF3 o\
+          \ AgentDefinition: _s"
+        to: resolved
+        at: '2026-07-10T22:41:44+00:00'
+        commit_ref: null
+      - kind: Issue
+        name: i-017-init-from-network-test-post-merge
+        title: "P\xF3s-merge do PR #41: adicionar teste requires_network em test_init_cmd.py\
+          \ (ou te"
+        to: resolved
+        at: '2026-07-10T22:41:46+00:00'
+        commit_ref: null
+      - kind: Story
+        name: s-docs-init-install-completeness
+        title: 'Docs: clarify dna init (project) vs dna install (source-write) + completeness
+          pa'
+        to: done
+        at: '2026-07-11T05:25:57+00:00'
+        commit_ref: 52b7db57f85dbf8b630cbf3f552837f8f8972ae2
+      - kind: Story
+        name: s-dx-build-prompt-fail-loud
+        title: 'build_prompt fail-loud: raise AgentNotFound em vez de retornar string
+          placeholde'
+        to: done
+        at: '2026-07-11T06:55:20+00:00'
+        commit_ref: 254dc20a4a773bf53a497d0f6d3b4193fd9a50e0
+      - kind: Story
+        name: s-dx-clean-composition-output
+        title: build_prompt devolve saida ja limpa (sem trailing newlines de template).
+        to: done
+        at: '2026-07-11T06:55:34+00:00'
+        commit_ref: 254dc20a4a773bf53a497d0f6d3b4193fd9a50e0
+      - kind: Story
+        name: s-dx-load-prompts-helper
+        title: Helper publico load_prompts + PromptLibrary (Py+TS) que colapsa o shim.
+        to: done
+        at: '2026-07-11T06:55:48+00:00'
+        commit_ref: 254dc20a4a773bf53a497d0f6d3b4193fd9a50e0
+      - kind: Story
+        name: s-dx-kernel-from-config
+        title: 'Config declarativa de ports: dna.config.yaml + Kernel.from_config
+          + factory URL-'
+        to: done
+        at: '2026-07-11T06:56:02+00:00'
+        commit_ref: 254dc20a4a773bf53a497d0f6d3b4193fd9a50e0
+      - kind: Story
+        name: s-dx-epic-create
+        title: "dna sdlc epic create \u2014 fecha o ultimo gap de CRUD do board (papercut\
+          \ sentido na "
+        to: done
+        at: '2026-07-11T06:56:16+00:00'
+        commit_ref: 254dc20a4a773bf53a497d0f6d3b4193fd9a50e0
+      - kind: Story
+        name: s-dx-html-artifact-kind
+        title: Adicionar o HtmlArtifact Kind (bundle HTML) com reader/writer e paridade
+          Py/TS.
+        to: done
+        at: '2026-07-11T10:13:47+00:00'
+        commit_ref: 1169a35c041ca3d564f45b659bda351a22347142
+      - kind: Story
+        name: s-dx-named-layouts
+        title: Layouts nomeados para autoria sem vazar caminhos internos de bundle.
+        to: done
+        at: '2026-07-11T10:14:02+00:00'
+        commit_ref: 1169a35c041ca3d564f45b659bda351a22347142
+      - kind: Story
+        name: s-dx-new-scaffolding
+        title: 'Scaffolding: dna new <kind>/<scope> gera esqueleto valido.'
+        to: done
+        at: '2026-07-11T10:14:18+00:00'
+        commit_ref: 1169a35c041ca3d564f45b659bda351a22347142
+      - kind: Story
+        name: s-dx-single-file-soul
+        title: 'Soul single-file: autorar um Soul num unico arquivo em vez de bundle.'
+        to: done
+        at: '2026-07-11T10:14:34+00:00'
+        commit_ref: 1169a35c041ca3d564f45b659bda351a22347142
+      - kind: Story
+        name: s-cli-localresolver-consistency
+        title: 'CLI boot registers LocalResolver (auto==quick for local: deps)'
+        to: done
+        at: '2026-07-11T10:47:48+00:00'
+        commit_ref: ae2b359c999461306cc2c682737e0d02111aa1ee
+      - kind: Story
+        name: s-scope-as-package-data
+        title: Resolve scope from package data via anchor
+        to: done
+        at: '2026-07-11T12:11:10+00:00'
+        commit_ref: 4bb5189ae2e8cd984c7f6e04666e2ed69436e167
+      - kind: Story
+        name: s-pkg-source-scheme
+        title: pkg:// source scheme for dna.config.yaml
+        to: done
+        at: '2026-07-11T12:11:27+00:00'
+        commit_ref: 4bb5189ae2e8cd984c7f6e04666e2ed69436e167
+      - kind: Story
+        name: s-tool-kind-descriptor
+        title: "Tool Kind \u2192 record-plane descriptor (kinds/tool.kind.yaml, Py\u2194\
+          TS byte-identical)"
+        to: done
+        at: '2026-07-11T12:16:41+00:00'
+        commit_ref: dd29c420fdb1c5551be12dbb38daad45c66bf5a6
+      - kind: Story
+        name: s-load-tools-helper
+        title: "dna.load_tools / loadTools \u2192 ToolLibrary (mirror load_prompts)"
+        to: done
+        at: '2026-07-11T12:16:58+00:00'
+        commit_ref: dd29c420fdb1c5551be12dbb38daad45c66bf5a6
+      - kind: Story
+        name: s-dna-new-tool
+        title: "dna new tool <name> \u2014 scaffold a Tool descriptor into a scope"
+        to: done
+        at: '2026-07-11T12:17:16+00:00'
+        commit_ref: dd29c420fdb1c5551be12dbb38daad45c66bf5a6
+      - kind: Story
+        name: s-emit-agent-framework
+        title: dna emit --target agent-framework
+        to: done
+        at: '2026-07-11T13:16:59+00:00'
+        commit_ref: e8c82599964d99e0bfd63d12ba33a3b405038096
+      - kind: Story
+        name: s-oas-alignment-research
+        title: "Oracle Agent Spec alignment \u2014 verdict"
+        to: done
+        at: '2026-07-11T13:17:19+00:00'
+        commit_ref: e8c82599964d99e0bfd63d12ba33a3b405038096
+      decided:
+      - kind: Story
+        name: s-dna-init-agent-ready
+        title: "dna init \u2014 multi-tool agent-ready onboarding para projetos consumidores"
+        at: '2026-07-10T19:11:50+00:00'
+        summary: "Explora\xE7\xE3o conclu\xEDda. Decis\xF5es de design: (1) Genome\
+          \ de onboarding embarcado como package-data em dna_cli/data/onboarding-scope/\
+          \ com skills/dna-sdlc-cli/SKILL.m"
+      - kind: Story
+        name: s-dna-init-agent-ready
+        title: "dna init \u2014 multi-tool agent-ready onboarding para projetos consumidores"
+        at: '2026-07-10T19:17:37+00:00'
+        summary: "Implementa\xE7\xE3o core pronta: init_cmd.py (board via kernel.write_document\
+          \ + skill via SkillReader\u2192SkillWriter + AGENTS.md via AgentDefinitionReader\u2192\
+          Writer + hooks"
+      - kind: Story
+        name: s-dna-init-agent-ready
+        title: "dna init \u2014 multi-tool agent-ready onboarding para projetos consumidores"
+        at: '2026-07-10T19:26:04+00:00'
+        summary: "AMPLIA\xC7\xC3O DE ESCOPO ratificada: dna init vira MULTI-FERRAMENTA.\
+          \ Evid\xEAncia capturada em Research/rsh-cross-tool-agent-standards: AGENTS.md\
+          \ \xE9 O padr\xE3o de instru\xE7\xF5"
+      - kind: Story
+        name: s-onboarding-genome-install
+        title: "dna init --from: onboarding Genome via distribui\xE7\xE3o remota"
+        at: '2026-07-10T20:09:11+00:00'
+        summary: "Decis\xE3o de scan: _scan_tree do install para de recursar quando\
+          \ um reader clama um dir \u2014 AGENTS.md na raiz do pack esconderia as\
+          \ skills. Solu\xE7\xE3o sem tocar no ins"
+      - kind: ADR
+        name: adr-dna-pivot-portability
+        title: "DNA pivot: prompt-manager \u2192 vendor-neutral portability layer\
+          \ (author once, emit "
+        at: '2026-07-11T12:50:08+00:00'
+        summary: 'Pivot DNA into a vendor-neutral de-para layer: the Agent/Soul/Guardrail/Tool
+          Kinds are the neutral source, emitters materialize each runtime''s native
+          artifact ('
+      - kind: Story
+        name: s-sdlc-delegator-digest
+        title: "dna sdlc digest \u2014 retrospective board-native digest"
+        at: '2026-07-11T13:44:41+00:00'
+        summary: "Implementado: dna_cli/_digest.py (agregador PURO build_digest +\
+          \ resolve_since, kernel-free) + comando 'digest' isolado no fim de sdlc_cmd.py\
+          \ (n\xE3o toca cite/epic"
+      found:
+      - kind: Kaizen
+        name: kz-001-sdlc-expressiveness-gap-dna
+        title: kz-001-sdlc-expressiveness-gap-dna
+        at: '2026-07-11T12:51:29+00:00'
+        body: 'SDLC expressiveness gap: ''dna sdlc cite'' resolves Reference/<name>
+          ONLY (it does get_doc(''Reference'', ref_name)), so a Research/ADR/Epic
+          cannot cite a Research '
+      - kind: Kaizen
+        name: kz-002-sdlc-gap-re-epic-e-dna-porta
+        title: kz-002-sdlc-gap-re-epic-e-dna-porta
+        at: '2026-07-11T12:54:00+00:00'
+        body: 'SDLC gap (re: epic e-dna-portability): ''dna sdlc epic show <e>'' reads
+          the epic''s FORWARD spec.features[], but ''feature create --epic <e>'' only
+          sets the feature'''
+      progressed:
+      - kind: Epic
+        name: e-dna-dx
+        title: DNA developer experience
+        to: in-progress
+        at: '2026-07-11T06:22:44+00:00'
+      - kind: Feature
+        name: f-dna-scope-packaging
+        title: Ship a scope with your app (package-data resolution)
+        to: in-development
+        at: '2026-07-11T10:53:35+00:00'
+      - kind: Epic
+        name: e-dna-portability
+        title: DNA as a vendor-neutral portability layer (Terraform for agents)
+        to: in-progress
+        at: '2026-07-11T12:31:01+00:00'
+      - kind: Feature
+        name: f-dna-emitters
+        title: "Runtime emitters (DNA \u2192 native artifact)"
+        to: in-development
+        at: '2026-07-11T12:31:14+00:00'
+      - kind: Feature
+        name: f-oracle-agent-spec
+        title: Oracle Agent Spec alignment
+        to: in-development
+        at: '2026-07-11T12:31:16+00:00'
+      - kind: Feature
+        name: f-sdlc-digest
+        title: "SDLC Digest \u2014 o que aconteceu enquanto voc\xEA estava fora"
+        to: in-development
+        at: '2026-07-11T13:37:53+00:00'
+      releases:
+      - tag: v0.1.0
+        at: '2026-07-10T18:40:00+00:00'
+      - tag: v0.2.0
+        at: '2026-07-10T19:55:59+00:00'
+      - tag: v0.3.0
+        at: '2026-07-10T21:02:34+00:00'
+      - tag: v0.3.1
+        at: '2026-07-10T22:45:40+00:00'
+      - tag: v0.4.0
+        at: '2026-07-11T07:00:22+00:00'
+      - tag: v0.5.0
+        at: '2026-07-11T10:18:53+00:00'
+      - tag: v0.6.0
+        at: '2026-07-11T12:21:25+00:00'
+      - tag: v0.7.0
+        at: '2026-07-11T13:21:56+00:00'
+      artifacts:
+      - kind: TestGuide
+        name: tg-zero-the-board
+        work_item: Story/s-zero-the-board
+        at: '2026-07-10T13:58:49+00:00'
+      - kind: TestRun
+        name: tr-tg-zero-the-board-20260710-135901
+        work_item: Story/s-zero-the-board
+        at: '2026-07-10T13:59:02+00:00'
+      - kind: TestGuide
+        name: tg-s-py312-floor
+        work_item: Story/s-py312-floor
+        at: '2026-07-10T14:29:16+00:00'
+      - kind: TestRun
+        name: tr-tg-s-py312-floor-20260710-142917
+        work_item: Story/s-py312-floor
+        at: '2026-07-10T14:29:19+00:00'
+      - kind: TestGuide
+        name: tg-s-pilot-foundry-assured
+        work_item: Story/s-pilot-foundry-assured
+        at: '2026-07-10T14:52:05+00:00'
+      - kind: TestRun
+        name: tr-tg-s-pilot-foundry-assured-20260710-145207
+        work_item: Story/s-pilot-foundry-assured
+        at: '2026-07-10T14:52:08+00:00'
+      - kind: TestGuide
+        name: tg-s-pilot-foundry-phase2
+        work_item: Story/s-pilot-foundry-phase2
+        at: '2026-07-10T17:12:20+00:00'
+      - kind: TestRun
+        name: tr-tg-s-pilot-foundry-phase2-20260710-171222
+        work_item: Story/s-pilot-foundry-phase2
+        at: '2026-07-10T17:12:23+00:00'
+      - kind: TestGuide
+        name: tg-pilot-dx-fixes
+        work_item: Story/s-pilot-dx-fixes
+        at: '2026-07-10T17:40:57+00:00'
+      - kind: TestRun
+        name: tr-tg-pilot-dx-fixes-20260710-174112
+        work_item: Story/s-pilot-dx-fixes
+        at: '2026-07-10T17:41:14+00:00'
+      - kind: TestGuide
+        name: tg-s-publish-registries
+        work_item: Story/s-publish-registries
+        at: '2026-07-10T18:52:58+00:00'
+      - kind: TestRun
+        name: tr-tg-s-publish-registries-20260710-185259
+        work_item: Story/s-publish-registries
+        at: '2026-07-10T18:53:00+00:00'
+      - kind: TestGuide
+        name: tg-memory-semantic-recall
+        work_item: Story/s-memory-semantic-recall
+        at: '2026-07-10T19:33:46+00:00'
+      - kind: TestRun
+        name: tr-tg-memory-semantic-recall-20260710-193410
+        work_item: Story/s-memory-semantic-recall
+        at: '2026-07-10T19:34:12+00:00'
+      - kind: TestGuide
+        name: tg-s-dna-init-agent-ready
+        work_item: Story/s-dna-init-agent-ready
+        at: '2026-07-10T19:38:14+00:00'
+      - kind: TestRun
+        name: tr-tg-s-dna-init-agent-ready-20260710-193815
+        work_item: Story/s-dna-init-agent-ready
+        at: '2026-07-10T19:38:17+00:00'
+      - kind: TestGuide
+        name: tg-onboarding-genome-install
+        work_item: Story/s-onboarding-genome-install
+        at: '2026-07-10T20:22:29+00:00'
+      - kind: TestRun
+        name: tr-tg-onboarding-genome-install-20260710-202230
+        work_item: Story/s-onboarding-genome-install
+        at: '2026-07-10T20:22:32+00:00'
+      - kind: TestGuide
+        name: tg-memory-conformance-kit
+        work_item: Story/s-memory-conformance-kit
+        at: '2026-07-10T20:26:11+00:00'
+      - kind: TestRun
+        name: tr-tg-memory-conformance-kit-20260710-202637
+        work_item: Story/s-memory-conformance-kit
+        at: '2026-07-10T20:26:39+00:00'
+      - kind: TestGuide
+        name: tg-install-scan-fixes-smoke
+        work_item: Story/s-install-scan-fixes
+        at: '2026-07-10T21:46:40+00:00'
+      - kind: TestRun
+        name: tr-tg-install-scan-fixes-smoke-20260710-214658
+        work_item: Story/s-install-scan-fixes
+        at: '2026-07-10T21:46:59+00:00'
+      - kind: TestGuide
+        name: tg-docs-init-install-completeness
+        work_item: Story/s-docs-init-install-completeness
+        at: '2026-07-11T05:03:56+00:00'
+      - kind: TestRun
+        name: tr-tg-docs-init-install-completeness-20260711-050412
+        work_item: Story/s-docs-init-install-completeness
+        at: '2026-07-11T05:04:14+00:00'
+      - kind: TestGuide
+        name: tg-s-dx-build-prompt-fail-loud
+        work_item: Story/s-dx-build-prompt-fail-loud
+        at: '2026-07-11T06:55:10+00:00'
+      - kind: TestRun
+        name: tr-tg-s-dx-build-prompt-fail-loud-20260711-065512
+        work_item: Story/s-dx-build-prompt-fail-loud
+        at: '2026-07-11T06:55:14+00:00'
+      - kind: TestGuide
+        name: tg-s-dx-clean-composition-output
+        work_item: Story/s-dx-clean-composition-output
+        at: '2026-07-11T06:55:24+00:00'
+      - kind: TestRun
+        name: tr-tg-s-dx-clean-composition-output-20260711-065526
+        work_item: Story/s-dx-clean-composition-output
+        at: '2026-07-11T06:55:28+00:00'
+      - kind: TestGuide
+        name: tg-s-dx-load-prompts-helper
+        work_item: Story/s-dx-load-prompts-helper
+        at: '2026-07-11T06:55:38+00:00'
+      - kind: TestRun
+        name: tr-tg-s-dx-load-prompts-helper-20260711-065540
+        work_item: Story/s-dx-load-prompts-helper
+        at: '2026-07-11T06:55:42+00:00'
+      - kind: TestGuide
+        name: tg-s-dx-kernel-from-config
+        work_item: Story/s-dx-kernel-from-config
+        at: '2026-07-11T06:55:52+00:00'
+      - kind: TestRun
+        name: tr-tg-s-dx-kernel-from-config-20260711-065554
+        work_item: Story/s-dx-kernel-from-config
+        at: '2026-07-11T06:55:56+00:00'
+      - kind: TestGuide
+        name: tg-s-dx-epic-create
+        work_item: Story/s-dx-epic-create
+        at: '2026-07-11T06:56:06+00:00'
+      - kind: TestRun
+        name: tr-tg-s-dx-epic-create-20260711-065608
+        work_item: Story/s-dx-epic-create
+        at: '2026-07-11T06:56:10+00:00'
+      - kind: TestGuide
+        name: tg-s-dx-named-layouts
+        work_item: Story/s-dx-named-layouts
+        at: '2026-07-11T07:28:46+00:00'
+      - kind: TestRun
+        name: tr-tg-s-dx-named-layouts-20260711-072848
+        work_item: Story/s-dx-named-layouts
+        at: '2026-07-11T07:28:50+00:00'
+      - kind: TestGuide
+        name: tg-s-dx-new-scaffolding
+        work_item: Story/s-dx-new-scaffolding
+        at: '2026-07-11T07:29:08+00:00'
+      - kind: TestRun
+        name: tr-tg-s-dx-new-scaffolding-20260711-072910
+        work_item: Story/s-dx-new-scaffolding
+        at: '2026-07-11T07:29:12+00:00'
+      - kind: TestGuide
+        name: tg-s-dx-single-file-soul
+        work_item: Story/s-dx-single-file-soul
+        at: '2026-07-11T07:29:26+00:00'
+      - kind: TestRun
+        name: tr-tg-s-dx-single-file-soul-20260711-072928
+        work_item: Story/s-dx-single-file-soul
+        at: '2026-07-11T07:29:30+00:00'
+      - kind: TestGuide
+        name: tg-s-dx-html-artifact-kind
+        work_item: Story/s-dx-html-artifact-kind
+        at: '2026-07-11T07:30:29+00:00'
+      - kind: TestRun
+        name: tr-tg-s-dx-html-artifact-kind-20260711-073047
+        work_item: Story/s-dx-html-artifact-kind
+        at: '2026-07-11T07:30:49+00:00'
+      - kind: TestGuide
+        name: tg-s-dx-html-artifact-kind-close
+        work_item: Story/s-dx-html-artifact-kind
+        at: '2026-07-11T10:13:35+00:00'
+      - kind: TestRun
+        name: tr-tg-s-dx-html-artifact-kind-close-20260711-101337
+        work_item: Story/s-dx-html-artifact-kind
+        at: '2026-07-11T10:13:39+00:00'
+      - kind: TestGuide
+        name: tg-s-dx-named-layouts-close
+        work_item: Story/s-dx-named-layouts
+        at: '2026-07-11T10:13:51+00:00'
+      - kind: TestRun
+        name: tr-tg-s-dx-named-layouts-close-20260711-101353
+        work_item: Story/s-dx-named-layouts
+        at: '2026-07-11T10:13:55+00:00'
+      - kind: TestGuide
+        name: tg-s-dx-new-scaffolding-close
+        work_item: Story/s-dx-new-scaffolding
+        at: '2026-07-11T10:14:07+00:00'
+      - kind: TestRun
+        name: tr-tg-s-dx-new-scaffolding-close-20260711-101409
+        work_item: Story/s-dx-new-scaffolding
+        at: '2026-07-11T10:14:11+00:00'
+      - kind: TestGuide
+        name: tg-s-dx-single-file-soul-close
+        work_item: Story/s-dx-single-file-soul
+        at: '2026-07-11T10:14:23+00:00'
+      - kind: TestRun
+        name: tr-tg-s-dx-single-file-soul-close-20260711-101425
+        work_item: Story/s-dx-single-file-soul
+        at: '2026-07-11T10:14:27+00:00'
+      - kind: TestGuide
+        name: tg-cli-localresolver-consistency
+        work_item: Story/s-cli-localresolver-consistency
+        at: '2026-07-11T10:35:20+00:00'
+      - kind: TestRun
+        name: tr-tg-cli-localresolver-consistency-20260711-103540
+        work_item: Story/s-cli-localresolver-consistency
+        at: '2026-07-11T10:35:42+00:00'
+      - kind: TestGuide
+        name: tg-kz001-close
+        work_item: Story/s-cli-localresolver-consistency
+        at: '2026-07-11T10:47:35+00:00'
+      - kind: TestRun
+        name: tr-tg-kz001-close-20260711-104737
+        work_item: Story/s-cli-localresolver-consistency
+        at: '2026-07-11T10:47:39+00:00'
+      - kind: TestGuide
+        name: tg-scope-as-package-data
+        work_item: Story/s-scope-as-package-data
+        at: '2026-07-11T11:14:17+00:00'
+      - kind: TestGuide
+        name: tg-scope-as-package-data
+        work_item: Story/s-pkg-source-scheme
+        at: '2026-07-11T11:14:18+00:00'
+      - kind: TestRun
+        name: tr-tg-scope-as-package-data-20260711-111443
+        work_item: Story/s-scope-as-package-data
+        at: '2026-07-11T11:14:46+00:00'
+      - kind: TestRun
+        name: tr-tg-scope-as-package-data-20260711-111443
+        work_item: Story/s-pkg-source-scheme
+        at: '2026-07-11T11:14:48+00:00'
+      - kind: TestGuide
+        name: tg-s-scope-as-package-data-c
+        work_item: Story/s-scope-as-package-data
+        at: '2026-07-11T12:10:57+00:00'
+      - kind: TestRun
+        name: tr-tg-s-scope-as-package-data-c-20260711-121059
+        work_item: Story/s-scope-as-package-data
+        at: '2026-07-11T12:11:01+00:00'
+      - kind: TestGuide
+        name: tg-s-pkg-source-scheme-c
+        work_item: Story/s-pkg-source-scheme
+        at: '2026-07-11T12:11:15+00:00'
+      - kind: TestRun
+        name: tr-tg-s-pkg-source-scheme-c-20260711-121117
+        work_item: Story/s-pkg-source-scheme
+        at: '2026-07-11T12:11:19+00:00'
+      - kind: TestGuide
+        name: tg-s-tool-kind-descriptor-c
+        work_item: Story/s-tool-kind-descriptor
+        at: '2026-07-11T12:16:27+00:00'
+      - kind: TestRun
+        name: tr-tg-s-tool-kind-descriptor-c-20260711-121630
+        work_item: Story/s-tool-kind-descriptor
+        at: '2026-07-11T12:16:32+00:00'
+      - kind: TestGuide
+        name: tg-s-load-tools-helper-c
+        work_item: Story/s-load-tools-helper
+        at: '2026-07-11T12:16:46+00:00'
+      - kind: TestRun
+        name: tr-tg-s-load-tools-helper-c-20260711-121648
+        work_item: Story/s-load-tools-helper
+        at: '2026-07-11T12:16:50+00:00'
+      - kind: TestGuide
+        name: tg-s-dna-new-tool-c
+        work_item: Story/s-dna-new-tool
+        at: '2026-07-11T12:17:03+00:00'
+      - kind: TestRun
+        name: tr-tg-s-dna-new-tool-c-20260711-121706
+        work_item: Story/s-dna-new-tool
+        at: '2026-07-11T12:17:08+00:00'
+      - kind: TestGuide
+        name: tg-emit-agent-framework
+        work_item: Story/s-emit-agent-framework
+        at: '2026-07-11T12:54:32+00:00'
+      - kind: TestRun
+        name: tr-tg-emit-agent-framework-20260711-125637
+        work_item: Story/s-emit-agent-framework
+        at: '2026-07-11T12:56:39+00:00'
+      - kind: TestGuide
+        name: tg-s-emit-agent-framework-c
+        work_item: Story/s-emit-agent-framework
+        at: '2026-07-11T13:16:44+00:00'
+      - kind: TestRun
+        name: tr-tg-s-emit-agent-framework-c-20260711-131647
+        work_item: Story/s-emit-agent-framework
+        at: '2026-07-11T13:16:50+00:00'
+      - kind: TestGuide
+        name: tg-s-oas-alignment-research-c
+        work_item: Story/s-oas-alignment-research
+        at: '2026-07-11T13:17:05+00:00'
+      - kind: TestRun
+        name: tr-tg-s-oas-alignment-research-c-20260711-131707
+        work_item: Story/s-oas-alignment-research
+        at: '2026-07-11T13:17:10+00:00'
+  heuristic_explanation: "Retrospective digest do scope dna-development na janela\
+    \ last 24h (2026-07-10T13:49:22.519505+00:00 \u2192 2026-07-11T13:49:22.519505+00:00).\
+    \ Varreu as timelines de Story, Feature, Epic, Issue, ADR, Kaizen, Spike, Bug,\
+    \ Task, Initiative: 38 terminais, 6 decis\xF5es, 2 achados, 6 avan\xE7os, 8 releases,\
+    \ 74 artefatos. Aten\xE7\xE3o (0): 0 blocked, 0 em review, 0 decis\xF5es-do-dono,\
+    \ 0 perguntas abertas. RAG=green (red=blocked; amber=pend\xEAncias; green=limpo)."
+  evidence_refs:
+  - Issue/i-010-ts-resolver-legacy-shorthand-parity
+  - Issue/i-005-docstring-coverage-gaps
+  - Story/s-zero-the-board
+  - Story/s-py312-floor
+  - Story/s-pilot-foundry-assured
+  - Issue/i-011-soul-inlining-build-prompt
+  - Story/s-pilot-foundry-phase2
+  - Issue/i-014-story-check-ac-greedy-match
+  - Issue/i-013-soul-trailing-newline-leak
+  - Issue/i-012-sdlc-scope-default-config
+  - Story/s-pilot-dx-fixes
+  - Story/s-publish-registries
+  - Story/s-memory-semantic-recall
+  - Story/s-dna-init-agent-ready
+  - Story/s-onboarding-genome-install
+  - Story/s-memory-conformance-kit
+  - Issue/i-015-onboarding-genome-via-install
+  - Story/s-install-scan-fixes
+  - Issue/i-016-install-root-agents-md-hides-skills
+  - Issue/i-017-init-from-network-test-post-merge
+  - Story/s-docs-init-install-completeness
+  - Story/s-dx-build-prompt-fail-loud
+  - Story/s-dx-clean-composition-output
+  - Story/s-dx-load-prompts-helper
+  - Story/s-dx-kernel-from-config
+  - Story/s-dx-epic-create
+  - Story/s-dx-html-artifact-kind
+  - Story/s-dx-named-layouts
+  - Story/s-dx-new-scaffolding
+  - Story/s-dx-single-file-soul
+  - Story/s-cli-localresolver-consistency
+  - Story/s-scope-as-package-data
+  - Story/s-pkg-source-scheme
+  - Story/s-tool-kind-descriptor
+  - Story/s-load-tools-helper
+  - Story/s-dna-new-tool
+  - Story/s-emit-agent-framework
+  - Story/s-oas-alignment-research
+  - Story/s-dna-init-agent-ready
+  - Story/s-dna-init-agent-ready
+  - Story/s-dna-init-agent-ready
+  - Story/s-onboarding-genome-install
+  - ADR/adr-dna-pivot-portability
+  - Story/s-sdlc-delegator-digest
+  - Kaizen/kz-001-sdlc-expressiveness-gap-dna
+  - Kaizen/kz-002-sdlc-gap-re-epic-e-dna-porta
+  - Epic/e-dna-dx
+  - Feature/f-dna-scope-packaging
+  - Epic/e-dna-portability
+  - Feature/f-dna-emitters
+  - Feature/f-oracle-agent-spec
+  - Feature/f-sdlc-digest
+  generated_at: '2026-07-11T13:49:28+00:00'
+  generated_by: dna-sdlc-digest (claude-code)

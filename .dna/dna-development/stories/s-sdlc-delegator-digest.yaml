@@ -1,0 +1,95 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-sdlc-delegator-digest
+spec:
+  title: "dna sdlc digest \u2014 retrospective board-native digest"
+  description: "Comando 'dna sdlc digest [--since <ref>] [--scope] [--save] [--json]'\
+    \ que agrega os eventos de timeline dos work items numa janela e produz um digest\
+    \ de uma tela agrupado (Conclu\xEDdo / Decidido / Achado / Precisa de voc\xEA\
+    ), persist\xEDvel como StatusReport."
+  status: in-progress
+  feature: f-sdlc-digest
+  owner: claude-code
+  priority: high
+  labels:
+  - sdlc
+  - observability
+  - cli
+  acceptance_criteria:
+  - "dna sdlc digest agrega eventos de timeline (status\u2192done/review/blocked,\
+    \ decis\xF5es/ADRs, features/\xE9picos que avan\xE7aram, issues/kaizen, artefatos,\
+    \ releases) numa janela --since que aceita ISO | Nh/Nd/Nw | last-digest, default\
+    \ 24h"
+  - "Se\xE7\xE3o 'PRECISA DA SUA ATEN\xC7\xC3O' lista blocked (com motivo), stories\
+    \ em review com PR aberto, decis\xF5es-do-dono pendentes e perguntas em aberto\
+    \ \u2014 primeiro e destacado"
+  - "Sa\xEDda de UMA tela agrupada (Conclu\xEDdo/Decidido/Achado/Precisa de voc\xEA\
+    ); --json estruturado; --save persiste StatusReport 'digest-<data>' query\xE1\
+    vel via cognitive search/recall"
+  - "Help/docs distinguem digest (o que j\xE1 aconteceu, pra tr\xE1s) de brief (pr\xF3\
+    ximos passos, pra frente)"
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - "L\xF3gica de agrega\xE7\xE3o pura + unit-testada; suites Py + guards + mkdocs\
+    \ build --strict verdes; doc-guia + CHANGELOG [Unreleased]; digest real do board\
+    \ de hoje capturado no TestRun"
+  definition_of_done_source: cli-create
+  created_at: '2026-07-11T13:37:55+00:00'
+  updated_at: '2026-07-11T13:50:19+00:00'
+  timeline:
+  - at: '2026-07-11T13:37:55+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-11T13:38:11+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-11T13:44:41+00:00'
+    actor: claude-code
+    type: decision
+    source: cli
+    summary: "Implementado: dna_cli/_digest.py (agregador PURO build_digest + resolve_since,\
+      \ kernel-free) + comando 'digest' isolado no fim de sdlc_cmd.py (n\xE3o toca\
+      \ cite/epic show). Janela --since aceita ISO|Nh/Nd/Nw|last-digest|default-24h.\
+      \ Agrega Story/Feature/Epic/Issue/ADR/Kaizen/Spike/Bug/Task/Initiative \u2192\
+      \ Conclu\xEDdo/Decidido/Achado/Precisa-de-voc\xEA + Avan\xE7ou/Releases/Artefatos.\
+      \ Decidi (1) ADR aceito conta como DECIS\xC3O, n\xE3o Conclu\xEDdo (evita double-count);\
+      \ (2) 'Precisa de voc\xEA' \xE9 current-state (n\xE3o-windowed) \u2014 um blocked\
+      \ de 3 dias atr\xE1s ainda precisa de aten\xE7\xE3o; (3) dedupe kaizen-event\
+      \ vs Kaizen-doc preferindo o doc can\xF4nico. --save persiste StatusReport digest-<data>\
+      \ (insight='sdlc-digest', verdict+heuristic embedded p/ recall). 23 unit tests\
+      \ verdes."
+    commit_ref: f0aa9c7c3ba9eb8142fd4f5b5789f95313771a5e
+  - at: '2026-07-11T13:50:00+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-sdlc-delegator-digest
+    summary: TestGuide tg-s-sdlc-delegator-digest (smoke)
+  - at: '2026-07-11T13:50:19+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-sdlc-delegator-digest-20260711-135015
+    summary: "TestRun tr-tg-s-sdlc-delegator-digest-20260711-135015 \u2192 pass"
+    outcome: pass
+  produces:
+  - kind: Plan
+    name: plan-s-sdlc-delegator-digest
+    role: implementation
+    at: '2026-07-11T13:38:11+00:00'
+  - kind: TestGuide
+    name: tg-s-sdlc-delegator-digest
+    role: test-guide
+    at: '2026-07-11T13:50:00+00:00'
+  - kind: TestRun
+    name: tr-tg-s-sdlc-delegator-digest-20260711-135015
+    role: test-run
+    at: '2026-07-11T13:50:19+00:00'
