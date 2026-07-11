@@ -50,6 +50,12 @@ def test_public_factory_builds_and_connects_sqlite(tmp_path):
     — the scheme the CLI used to reject with 'unsupported'."""
     import asyncio
 
+    # The sqlite adapter rides the optional `sqlite` extra (sqlalchemy +
+    # aiosqlite); skip where it isn't installed (e.g. the bare CLI CI job).
+    import pytest
+    pytest.importorskip("sqlalchemy")
+    pytest.importorskip("aiosqlite")
+
     from dna.adapters.source_url import source_from_url
     from dna.adapters.sqlalchemy_ import SqlAlchemySource
 
@@ -77,6 +83,10 @@ def test_public_factory_rejects_unknown_scheme():
 def test_cli_source_from_env_now_accepts_sqlite(tmp_path):
     """The CLI boot path delegates to the public factory, so sqlite:// no longer
     raises the old ClickException."""
+    import pytest
+    pytest.importorskip("sqlalchemy")
+    pytest.importorskip("aiosqlite")
+
     src = asyncio.run(
         build_source_from_env(Kernel.auto(), _source_url=f"sqlite:///{tmp_path/'x.db'}")
     )
