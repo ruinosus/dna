@@ -1,0 +1,16 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-s-mcp-idp-pluggable
+spec:
+  description: "N-provider IdP + claim\u2192tenant bridge"
+  kind_of_test: integration
+  status: active
+  steps:
+  - action: run suite
+    expected: pass (green in CI)
+  verifies:
+  - Story/s-mcp-idp-pluggable
+  created_at: '2026-07-11T17:23:29+00:00'
+  updated_at: '2026-07-11T17:23:29+00:00'
+  owner: claude-code

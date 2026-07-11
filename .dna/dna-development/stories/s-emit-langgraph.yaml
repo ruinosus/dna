@@ -5,23 +5,43 @@ metadata:
 spec:
   title: 'Code-first emitter: LangGraph'
   description: dna emit --target langgraph via ScaffoldEmitter (create_react_agent)
-  status: in-progress
+  status: done
   feature: f-dna-emitters
   acceptance_criteria:
-  - Given the concierge DNA agent, When I run dna emit --target langgraph, Then it
-    emits create_react_agent(model, tools, prompt=INSTRUCTIONS) source that py_compiles
-    with instruction byte-equal to build_prompt
-  - Given a tools/no-tools agent, When emitting, Then the classifier selects with-tools/prompt-only
-    scaffolds respectively
+  - text: Given the concierge DNA agent, When I run dna emit --target langgraph, Then
+      it emits create_react_agent(model, tools, prompt=INSTRUCTIONS) source that py_compiles
+      with instruction byte-equal to build_prompt
+    done: true
+    done_at: '2026-07-11T17:21:34+00:00'
+    done_by: story-done-auto
+  - text: Given a tools/no-tools agent, When emitting, Then the classifier selects
+      with-tools/prompt-only scaffolds respectively
+    done: true
+    done_at: '2026-07-11T17:21:34+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - 'Code: LanggraphEmitter Py+TS twin + 2 scaffolds each, registered in builtins'
-  - "Tests: per-target suites + generic contract green in Py+TS; Py\u2194TS parity"
-  - 'Docs: langgraph de-para section in the guide + mapping table; CHANGELOG [Unreleased]'
-  - 'CI: 11/11 checks green'
+  - text: 'Code: LanggraphEmitter Py+TS twin + 2 scaffolds each, registered in builtins'
+    done: true
+    done_at: '2026-07-11T17:21:34+00:00'
+    done_by: story-done-auto
+  - text: "Tests: per-target suites + generic contract green in Py+TS; Py\u2194TS\
+      \ parity"
+    done: true
+    done_at: '2026-07-11T17:21:34+00:00'
+    done_by: story-done-auto
+  - text: 'Docs: langgraph de-para section in the guide + mapping table; CHANGELOG
+      [Unreleased]'
+    done: true
+    done_at: '2026-07-11T17:21:34+00:00'
+    done_by: story-done-auto
+  - text: 'CI: 11/11 checks green'
+    done: true
+    done_at: '2026-07-11T17:21:34+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-11T16:42:21+00:00'
-  updated_at: '2026-07-11T16:57:40+00:00'
+  updated_at: '2026-07-11T17:27:37+00:00'
   timeline:
   - at: '2026-07-11T16:42:21+00:00'
     actor: claude-code
@@ -46,8 +66,60 @@ spec:
       \ like openai-agents \u2014 smaller loss. 6 py + 5 ts tests green; generic contract\
       \ picks it up automatically."
     commit_ref: 6721f20bfa6a9430b52d4d97063ae8b795b1cbcf
+  - at: '2026-07-11T17:21:38+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'langgraph emitter shipped no batch dos 7 runtimes, PR #71 merged'
+  - at: '2026-07-11T17:24:37+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-emit-langgraph
+    summary: TestGuide tg-s-emit-langgraph (integration)
+  - at: '2026-07-11T17:24:44+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-emit-langgraph-20260711-172441
+    summary: "TestRun tr-tg-s-emit-langgraph-20260711-172441 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-11T17:24:49+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "emit langgraph target \u2014 tests green in CI"
+  - at: '2026-07-11T17:26:21+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: shipped + merged; tests green in CI
+  - at: '2026-07-11T17:27:29+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "backend/lib sem UI: coberto por TestRun de integra\xE7\xE3o (tg-s-emit-langgraph)\
+      \ + suite verde no CI; product-smoke n\xE3o se aplica"
+  - at: '2026-07-11T17:27:37+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: done
+    commit_ref: b5fdca6991fdd61607d8e796a3390b9594fa76ce
   produces:
   - kind: Plan
     name: plan-s-emit-langgraph
     role: implementation
     at: '2026-07-11T16:42:57+00:00'
+  - kind: TestGuide
+    name: tg-s-emit-langgraph
+    role: test-guide
+    at: '2026-07-11T17:24:37+00:00'
+  - kind: TestRun
+    name: tr-tg-s-emit-langgraph-20260711-172441
+    role: test-run
+    at: '2026-07-11T17:24:44+00:00'
+  closed_at: '2026-07-11T17:27:27+00:00'

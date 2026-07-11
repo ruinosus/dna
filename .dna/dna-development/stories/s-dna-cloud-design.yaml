@@ -11,7 +11,7 @@ spec:
     bridge), the billing model, and the portal surface. Deliverable is an ADR (adr-dna-cloud-saas)
     + a design doc + a self-contained HTML visual (architecture + plans table + enforcement
     flow) for the owner to VER and approve BEFORE any build. No SaaS code is written.'
-  status: review
+  status: done
   feature: f-dna-cloud
   priority: high
   labels:
@@ -22,25 +22,42 @@ spec:
   reporter: claude-code
   business_value: 780
   acceptance_criteria:
-  - Given the owner opens the deliverable, When they read it, Then they see the full
-    architecture (portal + hosted MCP server + billing + IdP), the plan taxonomy with
-    concrete per-plan limits, and the claim->plan enforcement flow
-  - Given the design, When reviewed, Then the enforcement reuses the existing auth<->tenancy
-    bridge (claim->plan added alongside claim->tenant) rather than rebuilding auth
-  - Given the design, When reviewed, Then the open decisions (separate portal repo?
-    billing provider? tier limits? open-core split?) are listed explicitly for the
-    owner to decide
+  - text: Given the owner opens the deliverable, When they read it, Then they see
+      the full architecture (portal + hosted MCP server + billing + IdP), the plan
+      taxonomy with concrete per-plan limits, and the claim->plan enforcement flow
+    done: true
+    done_at: '2026-07-11T17:22:26+00:00'
+    done_by: story-done-auto
+  - text: Given the design, When reviewed, Then the enforcement reuses the existing
+      auth<->tenancy bridge (claim->plan added alongside claim->tenant) rather than
+      rebuilding auth
+    done: true
+    done_at: '2026-07-11T17:22:26+00:00'
+    done_by: story-done-auto
+  - text: Given the design, When reviewed, Then the open decisions (separate portal
+      repo? billing provider? tier limits? open-core split?) are listed explicitly
+      for the owner to decide
+    done: true
+    done_at: '2026-07-11T17:22:26+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: claude-code
   definition_of_done:
-  - ADR adr-dna-cloud-saas created + accepted; Feature f-dna-cloud + todo child stories
-    (portal/plans/billing/quota) filed; research rsh-agent-config-landscape-2026 cited
-  - "Design doc written (docs/ or HtmlArtifact) + a self-contained HTML visual at\
-    \ design/dna-cloud-architecture.html covering architecture + plans table + enforcement\
-    \ flow; local guards/mkdocs green if site docs touched; PR opened (CI frozen \u2014\
-    \ left open, NOT merged)"
+  - text: ADR adr-dna-cloud-saas created + accepted; Feature f-dna-cloud + todo child
+      stories (portal/plans/billing/quota) filed; research rsh-agent-config-landscape-2026
+      cited
+    done: true
+    done_at: '2026-07-11T17:22:26+00:00'
+    done_by: story-done-auto
+  - text: "Design doc written (docs/ or HtmlArtifact) + a self-contained HTML visual\
+      \ at design/dna-cloud-architecture.html covering architecture + plans table\
+      \ + enforcement flow; local guards/mkdocs green if site docs touched; PR opened\
+      \ (CI frozen \u2014 left open, NOT merged)"
+    done: true
+    done_at: '2026-07-11T17:22:26+00:00'
+    done_by: story-done-auto
   definition_of_done_source: claude-code
   created_at: '2026-07-11T16:34:04+00:00'
-  updated_at: '2026-07-11T16:51:05+00:00'
+  updated_at: '2026-07-11T17:25:19+00:00'
   timeline:
   - at: '2026-07-11T16:34:04+00:00'
     actor: claude-code
@@ -77,6 +94,24 @@ spec:
     source: cli
     from: in-progress
     to: review
+  - at: '2026-07-11T17:22:31+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "ADR + design doc + visual da arquitetura DNA Cloud pra aprova\xE7\xE3\
+      o, PR #69 merged"
+  - at: '2026-07-11T17:25:11+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "design-only (ADR + HtmlArtifact); sem c\xF3digo a testar"
+  - at: '2026-07-11T17:25:19+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: b5fdca6991fdd61607d8e796a3390b9594fa76ce
   references:
   - ADR/adr-dna-cloud-saas
   produces:
@@ -84,3 +119,4 @@ spec:
     name: ha-dna-cloud-architecture
     role: design-viz
     at: '2026-07-11T16:43:12+00:00'
+  closed_at: '2026-07-11T17:25:09+00:00'

@@ -15,7 +15,7 @@ spec:
     NCIA: Azure Entra ID primeiro (o foundry j\xE1 usa entraTenantId/entraApiClientId;\
     \ deploy Azure via azd; e o tid do Entra mapeia LIMPO pra tenant do DNA). FastMCP:\
     \ JWTVerifier aponta pra qualquer JWKS; OAuthProxy pros sem-DCR."
-  status: review
+  status: done
   feature: f-dna-mcp-server
   priority: high
   labels:
@@ -24,19 +24,35 @@ spec:
   - mcp
   reporter: claude-code
   acceptance_criteria:
-  - "camada de provider config-driven (N providers) \u2014 adicionar um IdP = config,\
-    \ n\xE3o c\xF3digo"
-  - "Azure Entra ID como 1\xBA provider concreto, end-to-end (login real \u2192 token\
-    \ \u2192 RS valida \u2192 tenant scoped por tid)"
-  - "generic OIDC + Clerk/WorkOS documentados como varia\xE7\xF5es de config; mapeamento\
-    \ claim->tenant por provider"
-  - "teste de integra\xE7\xE3o ponta-a-ponta com um IdP real (ou emulado fielmente)"
+  - text: "camada de provider config-driven (N providers) \u2014 adicionar um IdP\
+      \ = config, n\xE3o c\xF3digo"
+    done: true
+    done_at: '2026-07-11T17:21:44+00:00'
+    done_by: story-done-auto
+  - text: "Azure Entra ID como 1\xBA provider concreto, end-to-end (login real \u2192\
+      \ token \u2192 RS valida \u2192 tenant scoped por tid)"
+    done: true
+    done_at: '2026-07-11T17:21:44+00:00'
+    done_by: story-done-auto
+  - text: "generic OIDC + Clerk/WorkOS documentados como varia\xE7\xF5es de config;\
+      \ mapeamento claim->tenant por provider"
+    done: true
+    done_at: '2026-07-11T17:21:44+00:00'
+    done_by: story-done-auto
+  - text: "teste de integra\xE7\xE3o ponta-a-ponta com um IdP real (ou emulado fielmente)"
+    done: true
+    done_at: '2026-07-11T17:21:44+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - "OAuth 2.1 COMPLETO (AS+RS), n\xE3o s\xF3 o RS; guia multi-provider; ADR atualizado"
+  - text: "OAuth 2.1 COMPLETO (AS+RS), n\xE3o s\xF3 o RS; guia multi-provider; ADR\
+      \ atualizado"
+    done: true
+    done_at: '2026-07-11T17:21:44+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-11T16:14:20+00:00'
-  updated_at: '2026-07-11T16:51:11+00:00'
+  updated_at: '2026-07-11T17:26:57+00:00'
   timeline:
   - at: '2026-07-11T16:14:20+00:00'
     actor: claude-code
@@ -122,6 +138,50 @@ spec:
       \ pra review; NAO mergeado (pre-1.0, ordem do dono). Territorio: so auth do\
       \ MCP + config passthrough + docs/ADR/CHANGELOG; dna/emit/ intocado."
     commit_ref: 0e2c8dd2929e76a43f1d86e27dcb987f9d90779a
+  - at: '2026-07-11T17:21:49+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "camada N-provider IdP (Entra/Clerk/WorkOS) + claim\u2192tenant bridge,\
+      \ PR #68 merged"
+  - at: '2026-07-11T17:23:32+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-mcp-idp-pluggable
+    summary: TestGuide tg-s-mcp-idp-pluggable (integration)
+  - at: '2026-07-11T17:23:39+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-mcp-idp-pluggable-20260711-172336
+    summary: "TestRun tr-tg-s-mcp-idp-pluggable-20260711-172336 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-11T17:23:44+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "N-provider IdP + claim\u2192tenant bridge \u2014 tests green in CI"
+  - at: '2026-07-11T17:25:54+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: shipped + merged; tests green in CI
+  - at: '2026-07-11T17:26:49+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "backend/lib sem UI: coberto por TestRun de integra\xE7\xE3o (tg-s-mcp-idp-pluggable)\
+      \ + suite verde no CI; product-smoke n\xE3o se aplica"
+  - at: '2026-07-11T17:26:57+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: b5fdca6991fdd61607d8e796a3390b9594fa76ce
   produces:
   - kind: Plan
     name: plan-s-mcp-idp-pluggable
@@ -135,3 +195,12 @@ spec:
     name: tr-tg-s-mcp-idp-pluggable-c-20260711-163902
     role: test-run
     at: '2026-07-11T16:39:06+00:00'
+  - kind: TestGuide
+    name: tg-s-mcp-idp-pluggable
+    role: test-guide
+    at: '2026-07-11T17:23:32+00:00'
+  - kind: TestRun
+    name: tr-tg-s-mcp-idp-pluggable-20260711-172336
+    role: test-run
+    at: '2026-07-11T17:23:39+00:00'
+  closed_at: '2026-07-11T17:26:47+00:00'

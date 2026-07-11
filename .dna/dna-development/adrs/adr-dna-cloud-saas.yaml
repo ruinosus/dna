@@ -5,7 +5,7 @@ metadata:
 spec:
   title: "DNA Cloud \u2014 the hosted SaaS over the MCP runtime face (plans + quota\
     \ + billing, reusing the auth<->tenancy bridge)"
-  status: proposed
+  status: accepted
   context: "e-dna-portability shipped the MCP runtime face and (Phase 2) hosted it\
     \ with OAuth 2.1 whose token claim is bridged to a DNA tenant, fail-closed. The\
     \ commercial SaaS on top of that hosted face needs users, plans, per-plan quota\
@@ -24,7 +24,13 @@ spec:
     \ auth rebuilt; (4) billing = flat+quota+overage on a Stripe-class provider, the\
     \ server is the meter, provider webhook flips the plan claim; (5) portal = signup\
     \ + plan select + OAuth client DCR + usage dashboards, in a SEPARATE dna-cloud\
-    \ repo (open-core boundary). MVP = Free+Pro only; Enterprise deferred."
+    \ repo (open-core boundary). MVP = Free+Pro only; Enterprise deferred. RATIFIED\
+    \ (owner Barna, 2026-07-11) \u2014 all six open decisions accepted per recommendation:\
+    \ (1) portal in a SEPARATE dna-cloud repo; (2) Stripe as billing provider; (3)\
+    \ tiers Free ~100 calls/day / Pro ~10k calls/day @ $29/mo / Enterprise custom;\
+    \ (4) open-core = SDK/CLI/kernel/emit/MCP self-host free & never capped, managed\
+    \ hosting+portal+billing+SSO paid; (5) flat + included quota + metered overage;\
+    \ (6) MVP = Free+Pro only, Enterprise deferred."
   consequences: 'DNA gets monetization reusing the whole Phase-2 auth/tenancy stack
     (SaaS = plan resolver + meter + limiter + portal, not a new platform); plans stay
     declarative (no-deploy tier changes); commercial surface lives in a separate repo
@@ -158,15 +164,34 @@ spec:
     \ the server\n  meter), so the blast radius of the SaaS on the runtime is minimal.\n\
     \n## Evidence\n- Landscape + sources: Research `rsh-agent-config-landscape-2026`.\n\
     - Runtime + auth reused: `adr-dna-mcp-runtime-face` (Phase 2 \u2014 hosted HTTP\
-    \ + OAuth-tenancy).\n- Pivot thesis: `adr-dna-pivot-portability`."
+    \ + OAuth-tenancy).\n- Pivot thesis: `adr-dna-pivot-portability`.\n\n## Ratification\
+    \ (owner, 2026-07-11)\n\nAll six open decisions ratified by Barna, accepting the\
+    \ recommended option for each:\n\n| # | Decision | Ratified |\n|---|----------|----------|\n\
+    | 1 | Portal repo | **Separate `dna-cloud` repo** (open-core boundary) |\n| 2\
+    \ | Billing provider | **Stripe** (metered / usage-based) |\n| 3 | Tier limits\
+    \ + price | Free ~100 calls/day \xB7 **Pro ~10k calls/day @ $29/mo** \xB7 Enterprise\
+    \ custom |\n| 4 | Open-core split | SDK/CLI/kernel/emit/MCP self-host **free (never\
+    \ capped)**; managed hosting + portal + billing + SSO **paid** |\n| 5 | Billing\
+    \ model | **Flat + included quota + metered overage** |\n| 6 | MVP plan set |\
+    \ **Free + Pro only**; Enterprise deferred |\n\nStatus \u2192 accepted. This unblocks\
+    \ **f-dna-cloud** implementation: scaffold the `dna-cloud` portal repo, add the\
+    \ declarative Plan/Tier Kind (Free/Pro caps + $29/mo), extend `dna_cli._mcp_auth`\
+    \ with claim\u2192plan + meter + limiter, and wire Stripe (flat + overage). To\
+    \ be filed as Stories under `e-dna-portability`."
   created_at: '2026-07-11T16:37:12+00:00'
-  updated_at: '2026-07-11T16:37:53+00:00'
+  updated_at: '2026-07-11T17:51:42+00:00'
   timeline:
   - at: '2026-07-11T16:37:12+00:00'
     actor: claude-code
     type: status_change
     source: cli
     to: proposed
+  - at: '2026-07-11T17:51:42+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: proposed
+    to: accepted
   references:
   - Research/rsh-agent-config-landscape-2026
   - ADR/adr-dna-mcp-runtime-face
@@ -178,3 +203,8 @@ spec:
     name: ha-dna-cloud-architecture
     role: decision-viz
     at: '2026-07-11T16:43:15+00:00'
+  deciders:
+  - jefferson-barna
+  - claude-code
+  date: '2026-07-11'
+  accepted_at: '2026-07-11T17:51:41+00:00'
