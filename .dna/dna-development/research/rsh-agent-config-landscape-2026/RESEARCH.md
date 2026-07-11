@@ -178,7 +178,7 @@ spec:
     backed_by_findings:
     - f-neutral-standards-by-layer
   created_at: '2026-07-11T12:49:10+00:00'
-  updated_at: '2026-07-11T14:42:15+00:00'
+  updated_at: '2026-07-11T16:37:50+00:00'
   instruction: |-
     # Research — Agent-configuration landscape 2026 — prompt managers, cloud frameworks, and neutral standards
 
@@ -187,6 +187,8 @@ spec:
     This file's spec (frontmatter above) is the authoritative data. The prose below is for human reading and is regenerated on each write. Edit via `dna research` CLI or the Studio viewer; raw frontmatter edits are also supported.
   cited_by:
   - ADR/adr-dna-mcp-runtime-face
+  - ADR/adr-dna-cloud-saas
+  - Feature/f-dna-cloud
 ---
 
 # Research — Agent-configuration landscape 2026 — prompt managers, cloud frameworks, and neutral standards

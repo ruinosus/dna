@@ -1,0 +1,45 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-dna-cloud-portal
+spec:
+  title: "DNA Cloud portal \u2014 signup, plan selection, OAuth client registration\
+    \ (DCR), usage dashboards"
+  description: 'The web front door of the SaaS: users sign up (via the pluggable IdP),
+    pick/upgrade a plan, register an OAuth client (Dynamic Client Registration per
+    the MCP Authorization spec), and view usage dashboards (calls today vs quota,
+    per-tool breakdown, billing status). RECOMMENDED to live in a SEPARATE repo (dna-cloud)
+    so the OSS SDK repo stays pure library/CLI; the portal talks to the hosted MCP
+    server + billing provider over HTTP. Design-approved before build.'
+  status: todo
+  feature: f-dna-cloud
+  priority: high
+  labels:
+  - saas
+  - portal
+  - web
+  - dcr
+  - dashboards
+  reporter: claude-code
+  business_value: 620
+  acceptance_criteria:
+  - Given a new user, When they sign up and pick the Free plan, Then a tenant + an
+    OAuth client (DCR) are provisioned and their token carries tenant + plan claims
+  - Given a signed-in user, When they open the dashboard, Then they see calls-today
+    vs quota, per-tool usage, and current plan/billing status
+  - Given a user on Free, When they choose Upgrade, Then the billing provider checkout
+    runs and the plan claim flips on success
+  acceptance_criteria_source: claude-code
+  definition_of_done:
+  - 'Portal app (recommended: separate dna-cloud repo) with signup/plan/DCR/dashboard;
+    talks to hosted MCP server + billing provider; auth via pluggable IdP; tests +
+    docs; owner-approved design first'
+  definition_of_done_source: claude-code
+  created_at: '2026-07-11T16:34:42+00:00'
+  updated_at: '2026-07-11T16:34:42+00:00'
+  timeline:
+  - at: '2026-07-11T16:34:42+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo

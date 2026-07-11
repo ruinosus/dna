@@ -1,0 +1,675 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DNA Cloud — architecture, plans &amp; enforcement</title>
+<style>
+  :root{
+    --bg:#f1efe9; --surface:#fbfaf7; --surface-2:#f5f3ee; --ink:#191b20; --muted:#5b5e67;
+    --faint:#83868f; --line:#e2ded4; --line-2:#d4cfc4;
+    --accent:#2f8570; --accent-ink:#1f5f50; --accent-soft:#e4efea; --accent-line:#cfe4db;
+    --pro:#5a5bc4; --pro-bg:#e9e9f6; --pro-line:#d6d6ee;
+    --warn:#b57814; --warn-bg:#f6edda; --warn-line:#e9dcc0;
+    --danger:#b3402f; --danger-bg:#f6e4e0; --danger-line:#ecccc3;
+    --track:#e7e3d9;
+    --shadow:0 1px 2px rgba(25,27,32,.05), 0 4px 12px rgba(25,27,32,.05);
+    --shadow-lift:0 1px 2px rgba(25,27,32,.06), 0 10px 24px rgba(25,27,32,.09);
+    --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI","Helvetica Neue",sans-serif;
+    --r:14px;
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --bg:#0e1015; --surface:#171a21; --surface-2:#1d2028; --ink:#e9e7e1; --muted:#a6a9b3;
+    --faint:#767986; --line:#262a33; --line-2:#333844;
+    --accent:#5ab99d; --accent-ink:#7fccb4; --accent-soft:#14201c; --accent-line:#21372f;
+    --pro:#9092e6; --pro-bg:#191a2b; --pro-line:#2c2d47;
+    --warn:#e0a838; --warn-bg:#241d10; --warn-line:#3b3018;
+    --danger:#e77a67; --danger-bg:#251411; --danger-line:#3d211b;
+    --track:#22262f;
+    --shadow:0 1px 2px rgba(0,0,0,.34), 0 6px 16px rgba(0,0,0,.30);
+    --shadow-lift:0 1px 2px rgba(0,0,0,.4), 0 12px 30px rgba(0,0,0,.42);
+  }}
+  :root[data-theme="light"]{
+    --bg:#f1efe9;--surface:#fbfaf7;--surface-2:#f5f3ee;--ink:#191b20;--muted:#5b5e67;--faint:#83868f;--line:#e2ded4;--line-2:#d4cfc4;--accent:#2f8570;--accent-ink:#1f5f50;--accent-soft:#e4efea;--accent-line:#cfe4db;--pro:#5a5bc4;--pro-bg:#e9e9f6;--pro-line:#d6d6ee;--warn:#b57814;--warn-bg:#f6edda;--warn-line:#e9dcc0;--danger:#b3402f;--danger-bg:#f6e4e0;--danger-line:#ecccc3;--track:#e7e3d9;--shadow:0 1px 2px rgba(25,27,32,.05),0 4px 12px rgba(25,27,32,.05);--shadow-lift:0 1px 2px rgba(25,27,32,.06),0 10px 24px rgba(25,27,32,.09);
+  }
+  :root[data-theme="dark"]{
+    --bg:#0e1015;--surface:#171a21;--surface-2:#1d2028;--ink:#e9e7e1;--muted:#a6a9b3;--faint:#767986;--line:#262a33;--line-2:#333844;--accent:#5ab99d;--accent-ink:#7fccb4;--accent-soft:#14201c;--accent-line:#21372f;--pro:#9092e6;--pro-bg:#191a2b;--pro-line:#2c2d47;--warn:#e0a838;--warn-bg:#241d10;--warn-line:#3b3018;--danger:#e77a67;--danger-bg:#251411;--danger-line:#3d211b;--track:#22262f;--shadow:0 1px 2px rgba(0,0,0,.34),0 6px 16px rgba(0,0,0,.30);--shadow-lift:0 1px 2px rgba(0,0,0,.4),0 12px 30px rgba(0,0,0,.42);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.6;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 clamp(20px,5vw,48px)}
+  a{color:var(--accent-ink)}
+  code,.mono{font-family:var(--mono)}
+
+  /* ---- header ---- */
+  header{padding:clamp(48px,8vw,88px) 0 clamp(28px,4vw,44px)}
+  .kicker{font-family:var(--mono);font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--accent-ink);font-weight:600;display:flex;align-items:center;gap:.6em;margin:0 0 1.3rem}
+  .kicker .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);position:relative}
+  .kicker .dot::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:1px solid var(--accent);opacity:.35}
+  h1{font-size:clamp(2rem,5vw,3.3rem);line-height:1.03;margin:0;letter-spacing:-.025em;font-weight:680;text-wrap:balance;max-width:20ch}
+  .lede{margin:1.4rem 0 0;max-width:64ch;color:var(--muted);font-size:clamp(1.02rem,1.5vw,1.16rem)}
+  .lede b{color:var(--ink);font-weight:600}
+  .meta{margin-top:1.9rem;display:flex;flex-wrap:wrap;gap:.5rem}
+  .tag{font-family:var(--mono);font-size:.72rem;font-weight:600;padding:5px 10px;border-radius:8px;border:1px solid var(--line-2);color:var(--muted);background:var(--surface)}
+  .tag.k{color:var(--accent-ink);background:var(--accent-soft);border-color:var(--accent-line)}
+  .tag.p{color:var(--warn);background:var(--warn-bg);border-color:var(--warn-line)}
+
+  /* ---- sections ---- */
+  section{padding:clamp(34px,5vw,58px) 0;border-top:1px solid var(--line)}
+  .sec-head{display:flex;align-items:baseline;gap:.8rem;flex-wrap:wrap;margin:0 0 1.9rem}
+  .sec-head .n{font-family:var(--mono);font-size:.8rem;color:var(--accent-ink);font-weight:700}
+  .sec-head h2{font-size:clamp(1.3rem,2.4vw,1.7rem);margin:0;letter-spacing:-.02em;font-weight:660}
+  .sec-head p{flex-basis:100%;margin:.5rem 0 0;color:var(--muted);max-width:70ch}
+  .sec-head p b{color:var(--ink);font-weight:600}
+
+  /* ---- architecture diagram ---- */
+  .arch{display:grid;gap:16px}
+  .arch-row{display:grid;gap:16px}
+  .arch-row.two{grid-template-columns:1fr 1fr}
+  .node{border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:18px 20px;box-shadow:var(--shadow);position:relative}
+  .node.spine{border-color:var(--accent-line);background:linear-gradient(180deg,var(--accent-soft),var(--surface) 78%)}
+  .node .role{font-family:var(--mono);font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);font-weight:700;margin:0 0 .5rem}
+  .node h3{margin:0 0 .35rem;font-size:1.08rem;font-weight:640;letter-spacing:-.01em}
+  .node p{margin:0;color:var(--muted);font-size:.92rem}
+  .node .pill{position:absolute;top:16px;right:16px;font-family:var(--mono);font-size:.64rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:7px}
+  .pill.ext{color:var(--pro);background:var(--pro-bg);border:1px solid var(--pro-line)}
+  .pill.reuse{color:var(--accent-ink);background:var(--accent-soft);border:1px solid var(--accent-line)}
+  .pill.new{color:var(--warn);background:var(--warn-bg);border:1px solid var(--warn-line)}
+  .flowline{display:flex;align-items:center;justify-content:center;gap:.6em;color:var(--faint);font-family:var(--mono);font-size:.74rem;padding:2px 0}
+  .flowline .ar{color:var(--accent-ink);font-weight:700;font-size:1.1em}
+  .spine-tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .spine-tags span{font-family:var(--mono);font-size:.7rem;font-weight:600;padding:4px 9px;border-radius:7px;border:1px solid var(--accent-line);background:var(--surface);color:var(--accent-ink)}
+  .spine-tags span.new{border-color:var(--warn-line);background:var(--warn-bg);color:var(--warn)}
+
+  /* ---- plans / pricing ---- */
+  .plans{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;align-items:stretch}
+  .plan{display:flex;flex-direction:column;border:1px solid var(--line);background:var(--surface);border-radius:16px;padding:26px 24px;box-shadow:var(--shadow);position:relative}
+  .plan.feat{border-color:var(--accent);box-shadow:var(--shadow-lift);z-index:1}
+  .plan .badge{position:absolute;top:-11px;left:24px;font-family:var(--mono);font-size:.66rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--surface);background:var(--accent);padding:4px 11px;border-radius:8px}
+  .plan .pname{font-size:1.18rem;font-weight:660;letter-spacing:-.01em;margin:0}
+  .plan .who{color:var(--muted);font-size:.86rem;margin:.35rem 0 0;min-height:2.6em}
+  .price{display:flex;align-items:baseline;gap:.35rem;margin:18px 0 4px}
+  .price .amt{font-size:2.2rem;font-weight:680;letter-spacing:-.03em;line-height:1}
+  .price .per{color:var(--faint);font-family:var(--mono);font-size:.82rem}
+  .plan .quota{font-family:var(--mono);font-size:.82rem;color:var(--accent-ink);font-weight:600;margin:2px 0 0}
+  .flist{list-style:none;padding:18px 0 0;margin:18px 0 0;border-top:1px solid var(--line);display:grid;gap:11px;flex:1}
+  .flist li{display:flex;align-items:flex-start;gap:.6em;font-size:.9rem;color:var(--ink)}
+  .flist li .ic{flex:none;width:17px;height:17px;margin-top:2px;border-radius:50%;display:grid;place-items:center;font-size:.66rem;font-weight:800}
+  .flist li .ic.y{color:var(--accent-ink);background:var(--accent-soft);border:1px solid var(--accent-line)}
+  .flist li .ic.n{color:var(--faint);background:var(--surface-2);border:1px solid var(--line-2)}
+  .flist li.off{color:var(--faint)}
+  .flist li b{font-weight:640}
+  .cta{margin-top:22px;display:block;text-align:center;text-decoration:none;font-weight:620;font-size:.92rem;padding:12px 16px;border-radius:11px;border:1px solid var(--line-2);color:var(--ink);background:var(--surface-2);transition:transform .15s ease,border-color .15s ease,background .15s ease}
+  .cta:hover{transform:translateY(-1px);border-color:var(--accent-line)}
+  .cta.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  :root[data-theme="dark"] .cta.primary,@media (prefers-color-scheme:dark){.cta.primary{color:#0e1015}}
+  .cta.primary:hover{filter:brightness(1.05)}
+  .plans-note{margin:18px 0 0;color:var(--faint);font-family:var(--mono);font-size:.76rem}
+
+  /* ---- feature matrix ---- */
+  .matrix-scroll{overflow-x:auto;margin-top:22px;border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow)}
+  table.matrix{border-collapse:collapse;width:100%;min-width:560px;font-size:.9rem}
+  table.matrix th,table.matrix td{text-align:left;padding:12px 16px;border-bottom:1px solid var(--line)}
+  table.matrix thead th{background:var(--surface-2);font-weight:640;font-size:.82rem;position:sticky;top:0}
+  table.matrix tbody th{font-weight:560;color:var(--ink)}
+  table.matrix td{color:var(--muted);font-family:var(--mono);font-size:.82rem}
+  table.matrix td.hi{color:var(--accent-ink);font-weight:600}
+  table.matrix tr:last-child td,table.matrix tr:last-child th{border-bottom:0}
+  table.matrix col.f{background:color-mix(in oklab,var(--accent-soft) 55%,transparent)}
+
+  /* ---- enforcement flow ---- */
+  .enf{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-top:8px}
+  .step{position:relative;padding:22px 18px;border:1px solid var(--line);background:var(--surface);box-shadow:var(--shadow)}
+  .step:first-child{border-radius:var(--r) 0 0 var(--r)}
+  .step:last-child{border-radius:0 var(--r) var(--r) 0}
+  .step+.step{border-left:0}
+  .step .sn{font-family:var(--mono);font-size:.72rem;font-weight:700;color:var(--accent-ink)}
+  .step h4{margin:.5rem 0 .4rem;font-size:.98rem;font-weight:640;letter-spacing:-.01em}
+  .step p{margin:0;color:var(--muted);font-size:.85rem}
+  .step .tok{margin-top:10px;font-family:var(--mono);font-size:.72rem;color:var(--ink);background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:6px 8px;display:block;word-break:break-word}
+  .step.deny{background:var(--danger-bg);border-color:var(--danger-line)}
+  .step.deny .sn,.step.deny h4{color:var(--danger)}
+  .verdicts{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+  .verdict{font-family:var(--mono);font-size:.78rem;font-weight:600;padding:8px 12px;border-radius:9px;display:flex;align-items:center;gap:.5em}
+  .verdict.ok{color:var(--accent-ink);background:var(--accent-soft);border:1px solid var(--accent-line)}
+  .verdict.no{color:var(--danger);background:var(--danger-bg);border:1px solid var(--danger-line)}
+
+  /* ---- portal mockup ---- */
+  .mock{border:1px solid var(--line-2);border-radius:16px;overflow:hidden;box-shadow:var(--shadow-lift);background:var(--surface)}
+  .mock-bar{display:flex;align-items:center;gap:.55em;padding:11px 16px;background:var(--surface-2);border-bottom:1px solid var(--line)}
+  .mock-bar .dots{display:flex;gap:6px}
+  .mock-bar .dots i{width:10px;height:10px;border-radius:50%;background:var(--line-2)}
+  .mock-bar .url{font-family:var(--mono);font-size:.74rem;color:var(--faint);margin-left:.5em}
+  .mock-body{display:grid;grid-template-columns:200px 1fr;min-height:420px}
+  .side{border-right:1px solid var(--line);background:var(--surface-2);padding:18px 14px;display:flex;flex-direction:column;gap:2px}
+  .side .brand{display:flex;align-items:center;gap:.55em;font-weight:660;letter-spacing:-.01em;padding:4px 8px 14px}
+  .side .brand svg{flex:none}
+  .side a{display:flex;align-items:center;gap:.65em;text-decoration:none;color:var(--muted);font-size:.88rem;font-weight:520;padding:9px 10px;border-radius:9px}
+  .side a .gl{width:15px;height:15px;flex:none;opacity:.7}
+  .side a.on{color:var(--ink);background:var(--surface);box-shadow:var(--shadow);font-weight:600}
+  .side a.on .gl{opacity:1;color:var(--accent-ink)}
+  .side .grow{flex:1}
+  .side .planchip{margin-top:8px;padding:11px 12px;border:1px solid var(--accent-line);background:var(--accent-soft);border-radius:11px}
+  .side .planchip .l{font-family:var(--mono);font-size:.64rem;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-ink);font-weight:700}
+  .side .planchip .v{font-weight:640;font-size:.94rem;margin-top:2px}
+  .panel{padding:24px clamp(18px,3vw,30px)}
+  .panel .ph{display:flex;align-items:flex-start;justify-content:space-between;gap:1em;flex-wrap:wrap}
+  .panel h3{margin:0;font-size:1.24rem;font-weight:660;letter-spacing:-.02em}
+  .panel .sub{color:var(--muted);font-size:.88rem;margin:.3rem 0 0}
+  .panel .period{font-family:var(--mono);font-size:.74rem;color:var(--faint);border:1px solid var(--line);border-radius:8px;padding:6px 10px;background:var(--surface)}
+
+  .stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:22px}
+  .stat{border:1px solid var(--line);border-radius:12px;padding:16px;background:var(--surface)}
+  .stat .k{font-family:var(--mono);font-size:.7rem;letter-spacing:.05em;text-transform:uppercase;color:var(--faint);font-weight:700}
+  .stat .v{font-size:1.7rem;font-weight:680;letter-spacing:-.02em;margin:.3rem 0 .1rem;line-height:1}
+  .stat .v small{font-size:.9rem;font-weight:500;color:var(--faint);font-family:var(--mono)}
+  .stat .d{font-size:.78rem;color:var(--muted)}
+  .stat .d.up{color:var(--warn)}
+
+  .quota-card{margin-top:16px;border:1px solid var(--line);border-radius:12px;padding:18px;background:var(--surface)}
+  .quota-top{display:flex;align-items:baseline;justify-content:space-between;gap:1em}
+  .quota-top .t{font-weight:600;font-size:.95rem}
+  .quota-top .r{font-family:var(--mono);font-size:.82rem;color:var(--muted)}
+  .quota-top .r b{color:var(--ink)}
+  .bar{margin-top:12px;height:12px;border-radius:99px;background:var(--track);overflow:hidden;position:relative}
+  .bar .fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--accent),var(--accent-ink));width:0;transition:width 1.1s cubic-bezier(.22,1,.36,1)}
+  .bar .mark{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--warn);opacity:.8}
+  .quota-legend{display:flex;gap:1.2em;margin-top:10px;flex-wrap:wrap}
+  .quota-legend span{font-family:var(--mono);font-size:.72rem;color:var(--faint);display:flex;align-items:center;gap:.45em}
+  .quota-legend i{width:9px;height:9px;border-radius:2px;display:inline-block}
+
+  .tools{margin-top:16px;border:1px solid var(--line);border-radius:12px;background:var(--surface);overflow:hidden}
+  .tools .th{font-family:var(--mono);font-size:.7rem;letter-spacing:.05em;text-transform:uppercase;color:var(--faint);font-weight:700;padding:12px 16px;border-bottom:1px solid var(--line)}
+  .trow{display:grid;grid-template-columns:150px 1fr 64px;align-items:center;gap:14px;padding:11px 16px;border-bottom:1px solid var(--line)}
+  .trow:last-child{border-bottom:0}
+  .trow .name{font-family:var(--mono);font-size:.82rem;color:var(--ink)}
+  .trow .name .fam{color:var(--faint);font-size:.72rem;display:block}
+  .minibar{height:8px;border-radius:99px;background:var(--track);overflow:hidden}
+  .minibar i{display:block;height:100%;border-radius:99px;background:var(--accent);width:0;transition:width 1s cubic-bezier(.22,1,.36,1)}
+  .trow .ct{font-family:var(--mono);font-size:.82rem;color:var(--muted);text-align:right}
+
+  /* ---- signup / plan-pick flow strip ---- */
+  .flow3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:8px}
+  .fcard{border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:var(--shadow);overflow:hidden}
+  .fcard .cap{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:.6em;font-family:var(--mono);font-size:.74rem;color:var(--muted);font-weight:600}
+  .fcard .cap .n{color:var(--accent-ink);font-weight:700}
+  .fcard .in{padding:16px}
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:.74rem;font-weight:600;color:var(--muted);margin-bottom:5px}
+  .field .ctrl{border:1px solid var(--line-2);border-radius:9px;background:var(--surface-2);padding:9px 11px;font-family:var(--mono);font-size:.8rem;color:var(--ink)}
+  .field .ctrl.ph{color:var(--faint)}
+  .field .ctrl.focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);background:var(--surface)}
+  .btn{display:block;text-align:center;font-weight:620;font-size:.86rem;padding:10px;border-radius:10px;background:var(--accent);color:#fff;border:1px solid var(--accent)}
+  :root[data-theme="dark"] .btn{color:#0e1015}
+  @media (prefers-color-scheme:dark){.btn{color:#0e1015}}
+  .pickrow{display:flex;flex-direction:column;gap:9px}
+  .pickopt{display:flex;align-items:center;justify-content:space-between;gap:.6em;border:1px solid var(--line-2);border-radius:10px;padding:11px 13px;font-size:.84rem}
+  .pickopt.sel{border-color:var(--accent);background:var(--accent-soft)}
+  .pickopt .nm{font-weight:620}
+  .pickopt .pr{font-family:var(--mono);font-size:.78rem;color:var(--muted)}
+  .pickopt .radio{width:16px;height:16px;border-radius:50%;border:2px solid var(--line-2);flex:none}
+  .pickopt.sel .radio{border-color:var(--accent);background:radial-gradient(circle at center,var(--accent) 0 42%,transparent 46%)}
+  .dcr{font-family:var(--mono);font-size:.74rem;line-height:1.7;color:var(--muted);background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:12px}
+  .dcr .kv b{color:var(--accent-ink)}
+  .dcr .copy{margin-top:10px;display:flex;align-items:center;justify-content:space-between;border:1px solid var(--line-2);border-radius:8px;padding:7px 10px;background:var(--surface)}
+  .dcr .copy span{color:var(--ink)}
+  .dcr .copy .b{color:var(--accent-ink);font-weight:700}
+
+  /* ---- billing ---- */
+  .bill{display:grid;grid-template-columns:1.2fr .8fr;gap:18px}
+  .bill .card{border:1px solid var(--line);border-radius:var(--r);background:var(--surface);box-shadow:var(--shadow);padding:22px}
+  .bill h4{margin:0 0 .3rem;font-size:1.02rem;font-weight:640}
+  .bill p{margin:0 0 1rem;color:var(--muted);font-size:.9rem}
+  .invoice{border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .iline{display:flex;justify-content:space-between;gap:1em;padding:11px 15px;border-bottom:1px solid var(--line);font-size:.88rem}
+  .iline .lab{color:var(--muted)}
+  .iline .val{font-family:var(--mono);color:var(--ink)}
+  .iline.tot{background:var(--surface-2);font-weight:660}
+  .iline.tot .val{color:var(--accent-ink)}
+  .webhook{display:grid;gap:10px}
+  .whrow{display:flex;align-items:center;gap:.7em;font-size:.82rem;color:var(--muted)}
+  .whrow code{font-family:var(--mono);font-size:.76rem;color:var(--ink);background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:2px 6px}
+  .whrow .ar{color:var(--accent-ink);font-weight:700}
+
+  /* ---- phasing + decisions ---- */
+  .phase{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .pcard{border:1px solid var(--line);border-radius:var(--r);background:var(--surface);box-shadow:var(--shadow);padding:20px}
+  .pcard .lbl{font-family:var(--mono);font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;font-weight:700;padding:4px 9px;border-radius:7px;display:inline-block;margin-bottom:12px}
+  .lbl.mvp{color:var(--accent-ink);background:var(--accent-soft);border:1px solid var(--accent-line)}
+  .lbl.later{color:var(--pro);background:var(--pro-bg);border:1px solid var(--pro-line)}
+  .lbl.big{color:var(--warn);background:var(--warn-bg);border:1px solid var(--warn-line)}
+  .pcard ul{margin:0;padding-left:1.1em;color:var(--muted);font-size:.88rem;display:grid;gap:6px}
+  .pcard ul li b{color:var(--ink);font-weight:600}
+
+  .decisions{display:grid;gap:12px;counter-reset:d}
+  .dec{display:grid;grid-template-columns:38px 1fr;gap:14px;align-items:start;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);box-shadow:var(--shadow);padding:18px 20px}
+  .dec .num{counter-increment:d;font-family:var(--mono);font-weight:700;color:var(--accent-ink);font-size:1.05rem}
+  .dec .num::before{content:counter(d,decimal-leading-zero)}
+  .dec .q{font-weight:620;font-size:.98rem;margin:0 0 .3rem;letter-spacing:-.01em}
+  .dec .rec{margin:0;color:var(--muted);font-size:.88rem}
+  .dec .rec b{color:var(--accent-ink);font-weight:640}
+
+  footer{padding:40px 0 72px;border-top:1px solid var(--line);color:var(--faint);font-family:var(--mono);font-size:.75rem;display:flex;gap:.7em;align-items:center;flex-wrap:wrap}
+  footer .dot{width:5px;height:5px;border-radius:50%;background:var(--faint)}
+  footer a{color:var(--accent-ink);text-decoration:none}
+
+  @media (max-width:860px){
+    .arch-row.two,.plans,.enf,.stat-row,.flow3,.bill,.phase{grid-template-columns:1fr}
+    .enf .step{border-radius:var(--r)!important;border-left:1px solid var(--line)!important}
+    .mock-body{grid-template-columns:1fr}
+    .side{flex-direction:row;flex-wrap:wrap;border-right:0;border-bottom:1px solid var(--line);gap:6px}
+    .side .grow,.side .planchip,.side .brand{display:none}
+    .trow{grid-template-columns:120px 1fr 54px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .bar .fill,.minibar i{transition:none!important}
+    .cta,.card{transition:none!important}
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+<header>
+  <p class="kicker"><span class="dot"></span>DNA Cloud · design for review · adr-dna-cloud-saas</p>
+  <h1>The hosted SaaS over DNA&rsquo;s MCP runtime face.</h1>
+  <p class="lede">Phase A hosts the DNA MCP server on managed cloud behind an IdP. <b>Phase B is the SaaS on top</b>: users sign up, pick a <b>plan</b>, register an OAuth client, and consume the DNA tools under a <b>per-plan quota</b> &mdash; <b>billed</b> by a provider. The load-bearing move: the token already carries a <b>tenant</b> claim; DNA Cloud adds a <b>plan/quota</b> claim through the <em>same</em> auth bridge, so the server enforces quota without rebuilding auth.</p>
+  <div class="meta">
+    <span class="tag k">e-dna-portability</span>
+    <span class="tag">f-dna-cloud</span>
+    <span class="tag">reuses Phase-2 auth&harr;tenancy</span>
+    <span class="tag p">design &mdash; not built</span>
+  </div>
+</header>
+
+<!-- 1 · ARCHITECTURE -->
+<section>
+  <div class="sec-head">
+    <span class="n">01</span><h2>Architecture &mdash; how the parts connect</h2>
+    <p>Four participants. Only the <b>portal</b> is a new product surface; the <b>MCP server</b> is the existing runtime with two extra checks; the <b>IdP</b> and <b>billing provider</b> are external, pluggable dependencies.</p>
+  </div>
+
+  <div class="arch">
+    <div class="arch-row two">
+      <div class="node">
+        <span class="pill new">new</span>
+        <p class="role">Product surface</p>
+        <h3>Portal &mdash; <span class="mono">dna-cloud</span> repo</h3>
+        <p>Signup · plan selection &amp; upgrade · OAuth client registration (DCR) · usage dashboards. Recommended in its own repo so the OSS SDK stays a pure library.</p>
+      </div>
+      <div class="node">
+        <span class="pill ext">external</span>
+        <p class="role">Money</p>
+        <h3>Billing provider</h3>
+        <p>Stripe-class. Flat subscription + included quota + metered overage. Receives usage records; its webhook flips the plan claim on subscribe / cancel / payment-fail.</p>
+      </div>
+    </div>
+
+    <div class="flowline"><span>portal provisions tenant + OAuth client (DCR)</span><span class="ar">&darr;</span><span>issues token via IdP</span></div>
+
+    <div class="arch-row two">
+      <div class="node">
+        <span class="pill ext">external · pluggable</span>
+        <p class="role">Identity</p>
+        <h3>IdP &mdash; Entra / Clerk / N</h3>
+        <p>Any provider via FastMCP&rsquo;s <span class="mono">OAuthProxy</span> seam. Mints the OAuth&nbsp;2.1 token carrying the <b>tenant</b> and (new) <b>plan</b> claims.</p>
+      </div>
+      <div class="node reuse-ish">
+        <span class="pill reuse">reused</span>
+        <p class="role">Runtime · Phase A hosted</p>
+        <h3>DNA MCP server</h3>
+        <p>The existing FastMCP server (stdio + Streamable HTTP). Every tool call already passes the tenant bridge; DNA Cloud hangs the plan resolver + meter + limiter on the same seam.</p>
+      </div>
+    </div>
+
+    <div class="flowline"><span class="mono">MCP clients &mdash; Claude · Cursor · Copilot · web</span><span class="ar">&rarr;</span><span>call tools with the token</span></div>
+
+    <div class="node spine">
+      <span class="pill reuse">enforcement point</span>
+      <p class="role">One choke point &mdash; <span class="mono">dna_cli._mcp_auth</span></p>
+      <h3>claim &rarr; tenant &nbsp;+&nbsp; claim &rarr; plan &nbsp;+&nbsp; meter &nbsp;+&nbsp; limiter</h3>
+      <p>The Phase-2 bridge that maps a token to a tenant is extended to also map it to a plan, then meters and limits every call. Auth (OAuth 2.1 / PKCE / DCR / PRM) is untouched.</p>
+      <div class="spine-tags">
+        <span>OAuth 2.1 verifier</span><span>PKCE</span><span>DCR</span><span>PRM</span><span>claim&rarr;tenant</span>
+        <span class="new">+ claim&rarr;plan</span><span class="new">+ metering</span><span class="new">+ quota / rate limit</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 2 · PLANS -->
+<section>
+  <div class="sec-head">
+    <span class="n">02</span><h2>Plans &mdash; the conversion surface</h2>
+    <p>Plans are <b>declarative data</b> (a <span class="mono">Plan</span> Kind), not hardcoded &mdash; changing a tier limit is a file edit, not a redeploy. Numbers below are a <b>starting proposal for the owner to ratify</b>.</p>
+  </div>
+
+  <div class="plans">
+    <div class="plan">
+      <p class="pname">Free / Dev</p>
+      <p class="who">Try DNA hosted. Local agents, side projects, evaluating the platform.</p>
+      <div class="price"><span class="amt">$0</span><span class="per">/ forever</span></div>
+      <p class="quota">~100 calls / day · 1 tenant</p>
+      <ul class="flist">
+        <li><span class="ic y">&checkmark;</span><span><b>compose_prompt</b> &mdash; live, tenant-aware</span></li>
+        <li><span class="ic y">&checkmark;</span><span>SDLC read &mdash; digest, stories, ADRs</span></li>
+        <li><span class="ic y">&checkmark;</span><span>Memory &mdash; <b>recall</b> only</span></li>
+        <li class="off"><span class="ic n">&times;</span><span>Memory write / consolidate</span></li>
+        <li class="off"><span class="ic n">&times;</span><span>Emit to runtimes</span></li>
+        <li><span class="ic y">&checkmark;</span><span>1 req/sec rate limit</span></li>
+      </ul>
+      <a class="cta" href="#">Start free</a>
+    </div>
+
+    <div class="plan feat">
+      <span class="badge">Recommended</span>
+      <p class="pname">Pro</p>
+      <p class="who">Teams shipping agents. Full toolset, real quota, portability.</p>
+      <div class="price"><span class="amt">flat</span><span class="per">/ mo + overage</span></div>
+      <p class="quota">~10,000 calls / day · 5 tenants</p>
+      <ul class="flist">
+        <li><span class="ic y">&checkmark;</span><span><b>Everything in Free</b>, plus:</span></li>
+        <li><span class="ic y">&checkmark;</span><span>Memory <b>read + write</b></span></li>
+        <li><span class="ic y">&checkmark;</span><span><b>Emit</b> &mdash; agent-framework, Bedrock, Vertex&hellip;</span></li>
+        <li><span class="ic y">&checkmark;</span><span>10 req/sec · metered overage above quota</span></li>
+        <li><span class="ic y">&checkmark;</span><span>Usage dashboards &amp; alerts</span></li>
+        <li><span class="ic y">&checkmark;</span><span>Email support</span></li>
+      </ul>
+      <a class="cta primary" href="#">Upgrade to Pro</a>
+    </div>
+
+    <div class="plan">
+      <p class="pname">Enterprise</p>
+      <p class="who">Custom limits, SLA, SSO org-mapping, private deploy.</p>
+      <div class="price"><span class="amt">custom</span><span class="per">/ contract</span></div>
+      <p class="quota">custom calls · unlimited tenants</p>
+      <ul class="flist">
+        <li><span class="ic y">&checkmark;</span><span><b>Everything in Pro</b>, plus:</span></li>
+        <li><span class="ic y">&checkmark;</span><span>Memory <b>consolidate</b> + priority compute</span></li>
+        <li><span class="ic y">&checkmark;</span><span>Custom quota &amp; rate limits</span></li>
+        <li><span class="ic y">&checkmark;</span><span>SSO / org &rarr; tenant mapping</span></li>
+        <li><span class="ic y">&checkmark;</span><span>Private / VPC deploy · SLA</span></li>
+        <li><span class="ic y">&checkmark;</span><span>Invoicing &amp; dedicated support</span></li>
+      </ul>
+      <a class="cta" href="#">Talk to us</a>
+    </div>
+  </div>
+  <p class="plans-note">Feature families map 1:1 to the MCP tool groups the runtime already exposes &mdash; gating a family is a flag in the Plan doc, checked before tool dispatch.</p>
+
+  <div class="matrix-scroll">
+    <table class="matrix">
+      <colgroup><col><col><col class="f"><col></colgroup>
+      <thead><tr><th>Capability (tool family)</th><th>Free / Dev</th><th>Pro</th><th>Enterprise</th></tr></thead>
+      <tbody>
+        <tr><th>Definitions &mdash; compose_prompt, list_agents, list_tools</th><td class="hi">included</td><td class="hi">included</td><td class="hi">included</td></tr>
+        <tr><th>SDLC read &mdash; sdlc_digest, list_stories, get_adr</th><td class="hi">included</td><td class="hi">included</td><td class="hi">included</td></tr>
+        <tr><th>Memory &mdash; recall</th><td class="hi">included</td><td class="hi">included</td><td class="hi">included</td></tr>
+        <tr><th>Memory &mdash; remember / write</th><td>&mdash;</td><td class="hi">included</td><td class="hi">included</td></tr>
+        <tr><th>Memory &mdash; consolidate</th><td>&mdash;</td><td>&mdash;</td><td class="hi">included</td></tr>
+        <tr><th>Emit &mdash; native runtime artifacts</th><td>&mdash;</td><td class="hi">included</td><td class="hi">included</td></tr>
+        <tr><th>Calls / day</th><td>~100</td><td>~10,000</td><td>custom</td></tr>
+        <tr><th>Rate limit</th><td>1 rps</td><td>10 rps</td><td>custom</td></tr>
+        <tr><th>Tenants</th><td>1</td><td>5</td><td>unlimited</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 3 · ENFORCEMENT -->
+<section>
+  <div class="sec-head">
+    <span class="n">03</span><h2>Enforcement &mdash; the reusable piece</h2>
+    <p>Extend the Phase-2 bridge that already maps <span class="mono">claim &rarr; tenant</span> to <b>also</b> map <span class="mono">claim &rarr; plan</span>, then meter and limit at the one choke point. <b>No auth is rebuilt</b> &mdash; a resolver, a counter, a limiter.</p>
+  </div>
+
+  <div class="enf">
+    <div class="step">
+      <span class="sn">STEP 01</span>
+      <h4>Verify</h4>
+      <p>FastMCP validates the OAuth&nbsp;2.1 bearer token (PKCE, signature, audience) &mdash; exactly as Phase&nbsp;2 ships it.</p>
+      <span class="tok">Authorization: Bearer eyJ&hellip;</span>
+    </div>
+    <div class="step">
+      <span class="sn">STEP 02</span>
+      <h4>Resolve</h4>
+      <p>Bridge maps the token&rsquo;s claims to a tenant <b>and</b> a plan. No plan claim &rarr; Free (never &ldquo;unlimited&rdquo;).</p>
+      <span class="tok">tenant: acme<br>plan: pro &rarr; Plan/pro</span>
+    </div>
+    <div class="step">
+      <span class="sn">STEP 03</span>
+      <h4>Meter</h4>
+      <p>Every metered tool call is counted per <span class="mono">(tenant, plan)</span> in the daily quota window &mdash; one counter at the choke point.</p>
+      <span class="tok">count(acme,pro,2026-07-11)++</span>
+    </div>
+    <div class="step">
+      <span class="sn">STEP 04</span>
+      <h4>Limit</h4>
+      <p>Check count + rate against the resolved caps and the plan&rsquo;s feature families, then dispatch or deny.</p>
+      <span class="tok">6,240 / 10,000 &rarr; allow</span>
+    </div>
+  </div>
+
+  <div class="verdicts">
+    <span class="verdict ok">&checkmark; within quota &amp; family unlocked &rarr; <b>tool runs</b></span>
+    <span class="verdict no">&times; over daily quota &rarr; <b>429</b></span>
+    <span class="verdict no">&times; payment failed / no plan &rarr; <b>402</b></span>
+    <span class="verdict no">&times; family not in plan (e.g. Free calls emit) &rarr; <b>403</b></span>
+  </div>
+</section>
+
+<!-- 4 · PORTAL MOCKUP -->
+<section>
+  <div class="sec-head">
+    <span class="n">04</span><h2>Portal &mdash; the dashboard the user lives in</h2>
+    <p>The usage dashboard is the heart of retention: <b>calls today vs quota</b>, per-tool breakdown, and billing status at a glance. Below is the target look &mdash; not a wireframe.</p>
+  </div>
+
+  <div class="mock" role="img" aria-label="DNA Cloud portal usage dashboard mockup">
+    <div class="mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="url">app.dna.cloud/usage</span></div>
+    <div class="mock-body">
+      <nav class="side">
+        <div class="brand">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 3c0 6 12 6 12 12M6 9c0 6 12 6 12 12M6 3c0 6 12 6 12 12"/><path d="M6 21c0-6 12-6 12-12"/></svg>
+          DNA&nbsp;Cloud
+        </div>
+        <a href="#"><svg class="gl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg>Overview</a>
+        <a href="#" class="on"><svg class="gl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18M7 15l4-4 3 3 5-6"/></svg>Usage</a>
+        <a href="#"><svg class="gl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 3h4v4l3 3-3 3v4h-4l-3 3-3-3H5v-4l-3-3 3-3V5h4z"/></svg>OAuth clients</a>
+        <a href="#"><svg class="gl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/></svg>Billing</a>
+        <a href="#"><svg class="gl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>Settings</a>
+        <span class="grow"></span>
+        <div class="planchip"><div class="l">Current plan</div><div class="v">Pro &middot; acme</div></div>
+      </nav>
+
+      <div class="panel">
+        <div class="ph">
+          <div><h3>Usage</h3><p class="sub">Billing period 1&ndash;31 Jul &middot; resets in 20 days</p></div>
+          <span class="period">today &middot; 11 Jul</span>
+        </div>
+
+        <div class="stat-row">
+          <div class="stat"><div class="k">Calls today</div><div class="v">6,240 <small>/ 10,000</small></div><div class="d">62% of daily quota</div></div>
+          <div class="stat"><div class="k">This period</div><div class="v">148k</div><div class="d">across 5 tenants</div></div>
+          <div class="stat"><div class="k">Overage</div><div class="v">12k</div><div class="d up">+ $9.60 est. this period</div></div>
+        </div>
+
+        <div class="quota-card">
+          <div class="quota-top"><span class="t">Daily quota &mdash; Pro</span><span class="r"><b>6,240</b> / 10,000 calls</span></div>
+          <div class="bar"><span class="fill" data-w="62%"></span><span class="mark" style="left:80%"></span></div>
+          <div class="quota-legend">
+            <span><i style="background:var(--accent)"></i>used today</span>
+            <span><i style="background:var(--warn)"></i>alert at 80%</span>
+            <span><i style="background:var(--track)"></i>remaining</span>
+          </div>
+        </div>
+
+        <div class="tools">
+          <div class="th">Calls by tool &mdash; today</div>
+          <div class="trow"><div class="name">compose_prompt<span class="fam">definitions</span></div><div class="minibar"><i data-w="100%"></i></div><div class="ct">3,910</div></div>
+          <div class="trow"><div class="name">recall<span class="fam">memory</span></div><div class="minibar"><i data-w="41%"></i></div><div class="ct">1,604</div></div>
+          <div class="trow"><div class="name">list_stories<span class="fam">sdlc</span></div><div class="minibar"><i data-w="14%"></i></div><div class="ct">548</div></div>
+          <div class="trow"><div class="name">emit<span class="fam">portability</span></div><div class="minibar"><i data-w="4%"></i></div><div class="ct">178</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 5 · ONBOARDING FLOW -->
+<section>
+  <div class="sec-head">
+    <span class="n">05</span><h2>Signup &rarr; plan &rarr; connect</h2>
+    <p>Three steps to a working token: sign up via the IdP, choose a plan, and get OAuth client credentials via Dynamic Client Registration &mdash; ready to point any MCP client at the hosted server.</p>
+  </div>
+
+  <div class="flow3">
+    <div class="fcard">
+      <div class="cap"><span class="n">01</span> Sign up</div>
+      <div class="in">
+        <div class="field"><label>Work email</label><div class="ctrl focus">ana@acme.io</div></div>
+        <div class="field"><label>Organization</label><div class="ctrl">acme</div></div>
+        <a class="btn" href="#">Continue with Entra / Clerk</a>
+      </div>
+    </div>
+    <div class="fcard">
+      <div class="cap"><span class="n">02</span> Choose a plan</div>
+      <div class="in">
+        <div class="pickrow">
+          <div class="pickopt"><span class="radio"></span><span class="nm">Free / Dev</span><span class="pr">$0</span></div>
+          <div class="pickopt sel"><span class="radio"></span><span class="nm">Pro</span><span class="pr">flat + overage</span></div>
+          <div class="pickopt"><span class="radio"></span><span class="nm">Enterprise</span><span class="pr">contact</span></div>
+        </div>
+        <a class="btn" href="#" style="margin-top:14px">Checkout &mdash; Pro</a>
+      </div>
+    </div>
+    <div class="fcard">
+      <div class="cap"><span class="n">03</span> Register OAuth client (DCR)</div>
+      <div class="in">
+        <div class="dcr">
+          <div class="kv">client_id&nbsp; <b>dna_acme_9f3c</b></div>
+          <div class="kv">tenant&nbsp; <b>acme</b> &middot; plan&nbsp; <b>pro</b></div>
+          <div class="copy"><span>mcp&nbsp;endpoint</span><span class="b">https://mcp.dna.cloud &#x29C9;</span></div>
+        </div>
+        <a class="btn" href="#" style="margin-top:14px">Copy client secret</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 6 · BILLING -->
+<section>
+  <div class="sec-head">
+    <span class="n">06</span><h2>Billing &mdash; flat + quota + overage</h2>
+    <p>The server is already the meter, so it pushes usage records to the provider; the provider&rsquo;s webhook flips the plan claim so <b>enforcement always follows billing state</b>.</p>
+  </div>
+
+  <div class="bill">
+    <div class="card">
+      <h4>Example monthly invoice &mdash; Pro</h4>
+      <p>Flat subscription includes the daily quota; overage is metered above it, priced per 1k calls.</p>
+      <div class="invoice">
+        <div class="iline"><span class="lab">Pro subscription &mdash; flat / month</span><span class="val">$49.00</span></div>
+        <div class="iline"><span class="lab">Included quota &mdash; 10k calls/day</span><span class="val">&mdash;</span></div>
+        <div class="iline"><span class="lab">Metered overage &mdash; 12,000 calls &times; $0.80/1k</span><span class="val">$9.60</span></div>
+        <div class="iline tot"><span class="lab">Total &mdash; period 1&ndash;31 Jul</span><span class="val">$58.60</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <h4>Webhook &rarr; plan claim</h4>
+      <p>Billing state changes drive the claim the server enforces.</p>
+      <div class="webhook">
+        <div class="whrow"><code>subscribe</code><span class="ar">&rarr;</span><span>plan = <b>pro</b></span></div>
+        <div class="whrow"><code>upgrade</code><span class="ar">&rarr;</span><span>plan = <b>enterprise</b></span></div>
+        <div class="whrow"><code>payment_failed</code><span class="ar">&rarr;</span><span>plan &rarr; grace &rarr; <b>402</b></span></div>
+        <div class="whrow"><code>cancel</code><span class="ar">&rarr;</span><span>plan = <b>free</b></span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 7 · PHASING -->
+<section>
+  <div class="sec-head">
+    <span class="n">07</span><h2>Phasing &mdash; honest scope</h2>
+    <p>The MVP is small because auth, tenancy and transport already shipped in Phase&nbsp;2. What&rsquo;s genuinely large is flagged.</p>
+  </div>
+
+  <div class="phase">
+    <div class="pcard">
+      <span class="lbl mvp">SaaS MVP</span>
+      <ul>
+        <li><b>Free + Pro</b> only</li>
+        <li>Plan claim in the token</li>
+        <li>Quota + rate-limit on the existing bridge</li>
+        <li>Minimal portal &mdash; signup, pick plan, DCR, a usage number</li>
+        <li>One flat Pro subscription + overage on a provider sandbox</li>
+      </ul>
+    </div>
+    <div class="pcard">
+      <span class="lbl later">Enterprise (later)</span>
+      <ul>
+        <li>Custom limits &amp; SLA</li>
+        <li>SSO / org &rarr; tenant mapping</li>
+        <li>Private / VPC deploy</li>
+        <li>Invoicing &amp; dedicated support</li>
+        <li>Sales-driven, <b>not</b> MVP</li>
+      </ul>
+    </div>
+    <div class="pcard">
+      <span class="lbl big">Big builds (flagged)</span>
+      <ul>
+        <li>The <b>portal web app</b> itself (new repo, new surface)</li>
+        <li><b>Durable metering store</b> &mdash; per-tenant counters, not in-process</li>
+        <li>Billing reconciliation + dunning</li>
+        <li>Abuse / DDoS protection on a public metered endpoint</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 8 · OPEN DECISIONS -->
+<section>
+  <div class="sec-head">
+    <span class="n">08</span><h2>Open decisions &mdash; for the owner</h2>
+    <p>Six calls needed before build. Recommendations noted; the numbers and the open-core line are yours.</p>
+  </div>
+
+  <div class="decisions">
+    <div class="dec"><span class="num"></span><div><p class="q">Separate repo for the portal?</p><p class="rec"><b>Recommended: yes</b> &mdash; a <span class="mono">dna-cloud</span> repo keeps the OSS SDK/CLI a pure library (the open-core boundary).</p></div></div>
+    <div class="dec"><span class="num"></span><div><p class="q">Billing provider?</p><p class="rec">Stripe-class assumed for flat+quota+overage &amp; webhooks. <b>Confirm the provider</b> (keep it behind a thin port so it&rsquo;s swappable).</p></div></div>
+    <div class="dec"><span class="num"></span><div><p class="q">Concrete tier limits &amp; prices?</p><p class="rec">The calls/day, rate, tenant counts and the Pro flat price above are a <b>starting proposal</b> &mdash; set the real numbers.</p></div></div>
+    <div class="dec"><span class="num"></span><div><p class="q">Open-core split?</p><p class="rec"><b>Recommended:</b> SDK + CLI stay free/MIT; hosting + SaaS are the paid layer. Confirm the boundary is where you want it.</p></div></div>
+    <div class="dec"><span class="num"></span><div><p class="q">Billing model?</p><p class="rec"><b>Recommended: flat + quota + overage</b> (predictable bills) over pure per-invocation. Confirm.</p></div></div>
+    <div class="dec"><span class="num"></span><div><p class="q">MVP plan set?</p><p class="rec"><b>Recommended:</b> Free + Pro for the MVP, Enterprise deferred to a sales-driven phase. Confirm.</p></div></div>
+  </div>
+</section>
+
+<footer>
+  <span>DNA Cloud &mdash; design deliverable</span><span class="dot"></span>
+  <span>adr-dna-cloud-saas</span><span class="dot"></span>
+  <span>f-dna-cloud &middot; e-dna-portability</span><span class="dot"></span>
+  <span>grounded in Research rsh-agent-config-landscape-2026</span>
+</footer>
+
+</div>
+
+<script>
+  // Animate the quota + tool bars once, on reveal — conveys state, honors reduced-motion.
+  (function(){
+    var rm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var bars = document.querySelectorAll('[data-w]');
+    function paint(){ bars.forEach(function(b){ b.style.width = b.getAttribute('data-w'); }); }
+    if (rm){ paint(); return; }
+    if ('IntersectionObserver' in window){
+      var io = new IntersectionObserver(function(es){
+        es.forEach(function(e){ if(e.isIntersecting){ e.target.style.width = e.target.getAttribute('data-w'); io.unobserve(e.target); } });
+      }, {threshold:.35});
+      bars.forEach(function(b){ io.observe(b); });
+    } else { paint(); }
+  })();
+</script>
+
+</body>
+</html>

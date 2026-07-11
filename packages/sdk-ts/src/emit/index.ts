@@ -7,9 +7,28 @@
  * consumes. The concrete first step of "DNA as the Terraform of agents": author
  * once, emit per runtime, swap runtimes without rewriting the agent.
  *
+ * The {@link EmitterPort} is a **first-class DNA port** — a documented contract
+ * on the same footing as the kernel's five ports, one layer OUT: the kernel
+ * *composes* the neutral agent; the EmitterPort *materializes* it for a runtime.
+ * See the `How to write an emitter` guide (`docs/guides/writing-an-emitter.md`).
+ *
+ * The contract has two surfaces: `buildEmitContext(mi, agent)` (the kernel-facing
+ * half — compose + project to the neutral {@link EmitContext}) and
+ * `EmitterPort.emit(ctx)` (the runtime-facing half a target implements — PURE,
+ * no kernel I/O). Its **central invariant**: the composed `instructions` in the
+ * emitted artifact is byte-equal to `mi.buildPrompt({agent})`. That invariant is
+ * checkable and *inheritable* via {@link EmitterPort.extractInstructions} — one
+ * generic test runs it over EVERY registered target.
+ *
+ * Two flavors satisfy the same port: **config-declarative** (a runtime with a
+ * published declarative schema — agent-framework / bedrock / vertex) and
+ * **scaffold-code** (a code-first runtime — see `scaffold.ts`; the `openai-agents`
+ * target is the reference).
+ *
  * Parity: the pure de-para (`toPromptAgent` in `agentFramework.ts`) mirrors the
  * Python emitter field-for-field; the serialization (js-yaml vs PyYAML) is a
- * rendering detail, so the parity contract is the emitted OBJECT, not the bytes.
+ * rendering detail, so the parity contract is the emitted OBJECT/behavior, not
+ * the bytes.
  *
  * Shape: {@link EmitContext} (runtime-agnostic view of a composed agent) →
  * {@link EmitterPort} (a target) → {@link EmitResult} (artifact + honest
@@ -62,11 +81,19 @@ export interface EmitResult {
 }
 
 /** A runtime emitter — pure: reads an {@link EmitContext}, returns an
- *  {@link EmitResult}. No kernel I/O, no network. */
+ *  {@link EmitResult}. No kernel I/O, no network.
+ *
+ *  A conforming emitter provides identity (`target` / `fileExtension`), the
+ *  materialization ({@link emit}), and the byte-equal invariant hook
+ *  ({@link extractInstructions}) that makes the central invariant inheritable. */
 export interface EmitterPort {
   readonly target: string;
   readonly fileExtension: string;
   emit(ctx: EmitContext): EmitResult;
+  /** Recover the composed instruction embedded in `artifact` (the inverse of the
+   *  instruction half of {@link emit}) — used by the generic byte-equal contract
+   *  test. Returns null only when the target has no instruction slot at all. */
+  extractInstructions(artifact: string): string | null;
 }
 
 export class EmitError extends Error {}
@@ -95,7 +122,19 @@ async function ensureBuiltins(): Promise<void> {
   const { AgentFrameworkEmitter } = await import("./agentFramework.js");
   const { BedrockEmitter } = await import("./bedrock.js");
   const { VertexEmitter } = await import("./vertex.js");
-  for (const e of [new AgentFrameworkEmitter(), new BedrockEmitter(), new VertexEmitter()]) {
+  const { OpenAIAgentsEmitter } = await import("./openaiAgents.js");
+  const { LanggraphEmitter } = await import("./langgraph.js");
+  const { AgnoEmitter } = await import("./agno.js");
+  const { DeepAgentsEmitter } = await import("./deepagents.js");
+  for (const e of [
+    new AgentFrameworkEmitter(),
+    new BedrockEmitter(),
+    new VertexEmitter(),
+    new OpenAIAgentsEmitter(),
+    new LanggraphEmitter(),
+    new AgnoEmitter(),
+    new DeepAgentsEmitter(),
+  ]) {
     if (!EMITTER_REGISTRY.has(e.target)) EMITTER_REGISTRY.set(e.target, e);
   }
 }
@@ -104,6 +143,13 @@ async function ensureBuiltins(): Promise<void> {
 export function registerEmitter(emitter: EmitterPort): EmitterPort {
   EMITTER_REGISTRY.set(emitter.target, emitter);
   return emitter;
+}
+
+/** Remove a registered emitter (a host override or a test double). Returns
+ *  whether a target was actually removed. Parity with the Python side popping
+ *  from `EMITTER_REGISTRY`. */
+export function unregisterEmitter(target: string): boolean {
+  return EMITTER_REGISTRY.delete(target);
 }
 
 /** Look up a registered emitter or throw {@link UnknownTarget}. */

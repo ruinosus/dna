@@ -38,6 +38,75 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     wires the existing `--auth jwt` provider; a declarative `auth.providers:
     [entra]` front-end is sketched in `dna.config.sample.yaml`.
 
+- **The `EmitterPort` as a first-class, documented DNA port + the scaffold
+  mechanism for code-first runtimes** (epic `e-dna-portability`, feature
+  `f-dna-emitters`, story `s-emit-port-contract`). Elevates the emit layer to a
+  documented contract on the same footing as the kernel's ports, and lays the
+  base the next code-first emitters (langgraph / agno / deepagents) are built on:
+    - **The port contract, made explicit.** `EmitterPort` is a documented
+      Protocol/interface with two surfaces — `build_emit_context(mi, agent)` (the
+      kernel-facing half: compose + project to the neutral `EmitContext`) and
+      `emit(ctx) -> EmitResult` (the runtime-facing half a target implements) —
+      plus `target` / `file_extension`. Py↔TS parity of the contract.
+    - **The byte-equal invariant, made inheritable.** The composed instruction in
+      an emitted artifact MUST be byte-equal to `build_prompt`. A new contract
+      hook, `extract_instructions(artifact)`, recovers it from any target's own
+      artifact, and one generic test (`test_emit_contract` /
+      `emit-contract.test.ts`) runs the byte-equal assertion over **every**
+      registered target — so a new emitter inherits the check the moment it
+      registers. Implemented on all three existing config emitters.
+    - **Two emitter flavors.** *config-declarative* (map onto a runtime's
+      published YAML/JSON schema — the shipped agent-framework / bedrock / vertex)
+      and *scaffold-code* (fill a curated template for a code-first runtime).
+    - **The scaffold mechanism (`ScaffoldEmitter`).** A code-first runtime has no
+      schema to map onto, so the emitter emits *source code* by **filling a
+      curated template, never generating code ad-hoc**. The template library is
+      indexed by `{framework × case}` (`emit/scaffolds/<framework>/<case>.py.tmpl`)
+      and a case classifier (`select_scaffold`) routes from the DNA signals in the
+      context — no tools → `prompt-only`; tools → `with-tools`; `output_schema` →
+      `structured-output` — falling back down a generality chain (and recording
+      the fallback as a loss) when a framework does not ship a case. A subclass
+      stays thin: template + variable mapping; selection, fill, and the byte-equal
+      hook are inherited. Templates are read through an abstract resolution seam
+      (`resolve_scaffold` / `ScaffoldResolver`), NOT a hardcoded path — the MVP
+      resolver reads package-data, but a host can swap in another source with no
+      emitter change. That is where the future first-class **Scaffold Kind**
+      (declarative, versioned, tenant-overridable — story `s-scaffold-as-kind`)
+      plugs in: the DNA thesis applied to DNA's own de-para.
+    - **First code-first target: `openai-agents`** (OpenAI Agents SDK). Ships two
+      case templates (`prompt-only`, `with-tools`) proving selection + the
+      byte-equal instruction + syntactically valid (`py_compile`) output. The next
+      three code-first emitters are then just "a couple of templates + a small
+      mapping".
+    - **Docs.** New guide *How to write an emitter* (both flavors + the *Passo 0*
+      decision + how to add a case), the EmitterPort documented alongside the
+      kernel ports in *The microkernel and its ports*, and the OpenAI Agents
+      scaffold added to *Emitting to a runtime*.
+- **Three more code-first emitters — `dna emit --target {langgraph,agno,deepagents}`**
+  (feature `f-dna-emitters`, stories `s-emit-langgraph` / `s-emit-agno` /
+  `s-emit-deepagents`). Built entirely on the shipped `ScaffoldEmitter` contract —
+  each is a thin emitter class (Py + TS twin) plus a `prompt-only` and a
+  `with-tools` template, registered in the builtins; no change to the emit core.
+    - **`langgraph`** — `create_react_agent(model, tools=[...], prompt=INSTRUCTIONS)`
+      (`langgraph.prebuilt`); with-tools emits `@tool` stubs. **`agno`** —
+      `Agent(name, model, instructions=INSTRUCTIONS, tools=[...])` (`agno.agent`);
+      Agno auto-wraps plain callables as tools. **`deepagents`** —
+      `create_deep_agent(model, tools=[...], system_prompt=INSTRUCTIONS)` (LangChain
+      DeepAgents).
+    - **Model coordinate preserved.** Unlike `openai-agents` (which strips the
+      provider token), all three resolve a `provider:model` string
+      (`init_chat_model` / Agno string models), so the DNA coordinate is carried
+      **verbatim** — a smaller loss. Each emitter reports its own de-para honestly
+      (tool-body stubs; the `init_chat_model` provider-prefix convention; for
+      deepagents the DNA prompt is a *prefix* of the harness system prompt and there
+      is no name slot).
+    - **One source → seven runtimes.** With these three, the `emitting-to-a-runtime`
+      example emits the same `concierge` agent to **seven** runtimes (agent-framework
+      / bedrock / vertex / openai-agents / langgraph / agno / deepagents) with the
+      composed instruction **byte-identical** in every artifact — pinned by a new
+      portability proof (`test_emit_portability.py` / `emit-portability.test.ts`) and
+      inherited automatically by the generic `test_emit_contract` over every target.
+      The three targets are documented with mapping tables in *Emitting to a runtime*.
 - **`dna mcp serve` Phase 2 — remote transport + OAuth 2.1 auth bound to DNA
   tenancy** (feature `f-dna-mcp-server`, stories `s-mcp-remote-transport` +
   `s-mcp-oauth-auth`; ADR `adr-dna-mcp-runtime-face`). The *same* MCP server the

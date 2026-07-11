@@ -6,16 +6,56 @@ one neutral definition into the NATIVE artifact each runtime framework consumes.
 It is the concrete first step of "DNA as the Terraform of agents": author once,
 emit per runtime, swap runtimes without rewriting the agent.
 
+The :class:`EmitterPort` is a **first-class DNA port** — a documented contract on
+the same footing as the kernel's five ports (Source / Cache / Resolver /
+Reader-Writer / Kind), only it lives one layer OUT: the kernel *composes* the
+neutral agent; the EmitterPort *materializes* it for a runtime. See the
+`How to write an emitter <../guides/writing-an-emitter.md>`_ guide.
+
+The contract, in two surfaces (both parity-critical across the Py/TS SDKs):
+
+    build_emit_context(mi, agent, ...) -> EmitContext
+        The kernel-facing half: compose the DNA agent (``build_prompt``) and
+        project it to the NEUTRAL :class:`EmitContext`. Runs once per emit; every
+        target reads the same context. This is NOT part of the port — it is the
+        shared front door that feeds every port implementation.
+
+    EmitterPort.emit(ctx) -> EmitResult
+        The runtime-facing half a target implements. PURE: reads the neutral
+        context, returns the native artifact. No kernel I/O, no network.
+
+**The central invariant** every emitter MUST honor: the composed
+``instructions`` in the emitted artifact is **byte-equal** to
+``mi.build_prompt(agent)`` — the emit carries the composition VERBATIM, it never
+paraphrases. The contract makes this checkable and *inheritable*:
+:meth:`EmitterPort.extract_instructions` recovers the embedded instruction from a
+target's own artifact, and one generic test (``test_emit_contract``) runs the
+byte-equal assertion over EVERY registered target, so a new emitter inherits the
+check for free.
+
+Two flavors of emitter satisfy the same port (see the guide's *Passo 0*):
+
+    - **config-declarative** — the runtime has a published declarative schema
+      (a YAML/JSON agent definition). The emitter maps the context field-for-field
+      into that schema. The three shipped targets are of this flavor:
+      agent-framework (PromptAgent YAML), bedrock (CloudFormation
+      ``AWS::Bedrock::Agent``), vertex (Google ADK Agent Config).
+    - **scaffold-code** — the runtime is *code-first* (no declarative format;
+      you construct an agent object in Python). A :class:`~dna.emit.scaffold.ScaffoldEmitter`
+      fills a curated ``{framework × case}`` template library rather than
+      generating code ad-hoc. The ``openai-agents`` target is the reference.
+
 Shape of the layer (SDK-first; the ``dna emit`` CLI is a thin wrapper):
 
     EmitContext   — the runtime-agnostic view of a composed DNA agent
                     (name / description / instructions / model / tools /
                     output_schema). Built once by :func:`build_emit_context`
                     from a ManifestInstance; every emitter reads from it.
-    EmitterPort   — the port an emitter implements (``target`` + ``emit``).
+    EmitterPort   — the port an emitter implements (``target`` / ``file_extension``
+                    + ``emit`` + ``extract_instructions``).
     EMITTER_REGISTRY / register_emitter / get_emitter / available_targets —
                     the pluggable registry. agent-framework is the FIRST target;
-                    a new one (bedrock / vertex / openai) is a class + one
+                    a new one (bedrock / vertex / openai-agents) is a class + one
                     ``register_emitter(...)`` call — the CLI core never changes.
     EmitResult    — ``{artifact, filename, target, losses[], mapping{}}``. The
                     ``losses`` list is first-class: it names the DNA axes a given
@@ -122,6 +162,25 @@ class EmitterPort(Protocol):
     :class:`EmitResult`. It performs NO kernel I/O and NO network — that is the
     high-level :func:`emit_agent`'s job. This keeps every target trivially
     unit-testable against a hand-built context.
+
+    A conforming emitter provides three things:
+
+    ``target`` / ``file_extension``
+        Identity: the id used on ``dna emit --target <id>`` and the extension of
+        the default output filename.
+
+    :meth:`emit`
+        The materialization — the de-para from the neutral context into the
+        target's native artifact, plus an honest :class:`EmitResult.losses` list.
+
+    :meth:`extract_instructions`
+        The **byte-equal invariant hook**: recover the composed instruction from
+        this target's own artifact. It is what makes the central invariant
+        (emitted instruction == ``build_prompt``) inheritable — one generic test
+        loops every registered target and asserts
+        ``extract_instructions(emit(ctx).artifact) == ctx.instructions``. An
+        emitter that genuinely has no instruction slot may return ``None`` (the
+        generic check skips it), but every real target carries the prompt.
     """
 
     #: Stable target id used on ``dna emit --target <id>``.
@@ -131,6 +190,17 @@ class EmitterPort(Protocol):
 
     def emit(self, ctx: EmitContext) -> EmitResult:
         """Materialize ``ctx`` into a native artifact."""
+        ...
+
+    def extract_instructions(self, artifact: str) -> str | None:
+        """Recover the composed instruction embedded in ``artifact``.
+
+        The inverse of the instruction half of :meth:`emit`, used by the generic
+        byte-equal contract test. A config-declarative emitter parses its own
+        serialized shape (YAML/JSON) and returns the instruction field; a
+        scaffold emitter reads it back from the emitted source. Return ``None``
+        only when the target has no instruction slot at all.
+        """
         ...
 
 
@@ -175,11 +245,23 @@ def _ensure_builtins() -> None:
         return
     _BUILTINS_WIRED = True
     from dna.emit.agent_framework import AgentFrameworkEmitter
+    from dna.emit.agno import AgnoEmitter
     from dna.emit.bedrock import BedrockEmitter
+    from dna.emit.deepagents import DeepAgentsEmitter
+    from dna.emit.langgraph import LanggraphEmitter
+    from dna.emit.openai_agents import OpenAIAgentsEmitter
     from dna.emit.vertex import VertexEmitter
 
     # Only register a target that has not been claimed already (host override).
-    for emitter in (AgentFrameworkEmitter(), BedrockEmitter(), VertexEmitter()):
+    for emitter in (
+        AgentFrameworkEmitter(),
+        BedrockEmitter(),
+        VertexEmitter(),
+        OpenAIAgentsEmitter(),
+        LanggraphEmitter(),
+        AgnoEmitter(),
+        DeepAgentsEmitter(),
+    ):
         EMITTER_REGISTRY.setdefault(emitter.target, emitter)
 
 

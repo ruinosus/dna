@@ -1,0 +1,17 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-emit-port-contract-smoke-20260711-155233
+spec:
+  guide_ref: emit-port-contract-smoke
+  outcome: pass
+  verifies:
+  - Story/s-emit-port-contract
+  executed_by: claude-code
+  executed_at: '2026-07-11T15:52:33+00:00'
+  notes: 'Green: dna emit --list-targets shows the 4 targets; openai-agents emits
+    py_compile-valid source with INSTRUCTIONS byte-equal to build_prompt (with-tools
+    case, kb_search @function_tool stub); agent-framework config flavor unchanged.
+    Suites: sdk-py 2971 passed / cli 449 passed / sdk-ts 1460 pass (incl. test_emit_contract
+    byte-equal invariant over every target + scaffold selection prompt-only vs with-tools).
+    mkdocs --strict exit 0, brand_guard clean, docs_coverage clean.'

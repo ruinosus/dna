@@ -89,6 +89,34 @@ to let a claimed capability go unimplemented. The full contract, its
 capability protocols, and the conformance kit for authoring a new adapter are
 in [How to write a source adapter](../guides/write-a-source-adapter.md).
 
+## The EmitterPort — materialize per runtime
+
+The five ports above are the kernel's *inward* contracts: they answer how the
+core stores, resolves and composes documents. There is one more first-class,
+documented DNA port that sits one layer **out** — the **EmitterPort**. Where the
+kernel *composes* a neutral agent, an emitter *materializes* it into the native
+artifact a specific runtime consumes (the *de-para*): author once in DNA, emit
+per runtime, swap runtimes without a rewrite.
+
+| Port | Question it answers |
+|---|---|
+| **EmitterPort** | How is a composed agent materialized into a target runtime's native artifact? (agent-framework, bedrock, vertex, openai-agents, …) |
+
+It is a genuine port — a documented contract, not a hardcoded switch — so a new
+target is a class plus one `register_emitter(...)` call and the emit core never
+changes. The contract has two surfaces (`build_emit_context(mi, agent)` composes
+and projects the neutral view once; `emit(ctx)` materializes it per target) and
+one **central invariant**: the composed instruction in the emitted artifact is
+**byte-equal** to `build_prompt` — the emit carries the composition verbatim.
+That invariant is inheritable (`extract_instructions` recovers it from any
+target's own artifact, and one generic test runs the check over *every*
+registered target).
+
+Two flavors satisfy the same port: **config-declarative** (map onto a runtime's
+published YAML/JSON schema) and **scaffold-code** (fill a curated
+`{framework × case}` template for a code-first runtime). The full step-by-step is
+in [How to write an emitter](../guides/writing-an-emitter.md).
+
 ## Where to go next
 
 - [Kinds — identity and composition](kinds.md) — what a `KindPort`

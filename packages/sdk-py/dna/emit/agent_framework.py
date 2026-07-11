@@ -171,3 +171,11 @@ class AgentFrameworkEmitter:
             losses=losses,
             mapping=mapping,
         )
+
+    def extract_instructions(self, artifact: str) -> str | None:
+        """Byte-equal invariant hook: read ``instructions`` back from the
+        emitted PromptAgent YAML (see :meth:`~dna.emit.EmitterPort.extract_instructions`)."""
+        import yaml
+
+        doc = yaml.safe_load(artifact)
+        return doc.get("instructions") if isinstance(doc, dict) else None
