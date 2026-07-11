@@ -122,6 +122,13 @@ export const MODEL_REGISTRY_SCOPE = SYSTEM_SCOPE;
  */
 export const VOICE_POLICY_SCOPE = SYSTEM_SCOPE;
 
+/**
+ * The scope that owns the canonical Tier (DNA Cloud pricing) registry.
+ * GLOBAL like ModelProfile — queried directly regardless of the caller's
+ * scope. 1:1 parity with Python `RegistryAccessor._TIER_REGISTRY_SCOPE`.
+ */
+export const TIER_REGISTRY_SCOPE = SYSTEM_SCOPE;
+
 export class Kernel {
   // ── Kind classification — DERIVED from KindPort attributes ──────────────
   // s-kernel-kindport-classification-attrs: the kernel no longer hardcodes
@@ -1884,6 +1891,50 @@ export class Kernel {
       const spec = (row.spec ?? {}) as Record<string, unknown>;
       const aliases = (spec.aliases ?? []) as unknown[];
       if (aliases.includes(modelIdOrAlias)) {
+        return row;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Resolve a Tier (DNA Cloud pricing plan) from the `_lib` scope by
+   * `tier_id` (pass 1) or `aliases[]` (pass 2). Returns the matching
+   * Document or null on miss.
+   *
+   * Always queries `TIER_REGISTRY_SCOPE` ("_lib") directly — Tier is GLOBAL
+   * and NOT in `INHERITABLE_KINDS`; any caller scope is irrelevant. The
+   * quota enforcer reads the caps from here — never hardcode calls_per_day /
+   * rate_per_sec / max_tenants in code.
+   *
+   * 1:1 parity with Python `Kernel.tier(tier_id_or_alias)`.
+   *
+   * @param idOrAlias - The tier_id string or an alias declared on the tier.
+   * @returns The matching Document, or null on miss or error.
+   */
+  async tier(idOrAlias: string): Promise<import("./document.js").Document | null> {
+    let rows: import("./document.js").Document[];
+    try {
+      const mi = await this.instance(TIER_REGISTRY_SCOPE);
+      rows = mi._all("Tier");
+    } catch {
+      return null;
+    }
+
+    // Pass 1: exact tier_id match
+    for (const row of rows) {
+      const spec = (row.spec ?? {}) as Record<string, unknown>;
+      if (spec.tier_id === idOrAlias) {
+        return row;
+      }
+    }
+
+    // Pass 2: aliases[]
+    for (const row of rows) {
+      const spec = (row.spec ?? {}) as Record<string, unknown>;
+      const aliases = (spec.aliases ?? []) as unknown[];
+      if (aliases.includes(idOrAlias)) {
         return row;
       }
     }

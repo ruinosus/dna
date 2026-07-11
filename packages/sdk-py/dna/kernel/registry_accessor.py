@@ -39,6 +39,9 @@ class RegistryAccessor:
     _MODEL_REGISTRY_SCOPE = SYSTEM_SCOPE
     _VOICE_POLICY_SCOPE = SYSTEM_SCOPE
     _EMBEDDING_PROFILE_SCOPE = SYSTEM_SCOPE
+    # Tier (DNA Cloud pricing plans) is GLOBAL — _lib-resident like
+    # ModelProfile, not inheritable. Same _lib-direct rationale.
+    _TIER_REGISTRY_SCOPE = SYSTEM_SCOPE
 
     def __init__(self, kernel: "RegistryAccessorHost") -> None:
         self._k = kernel
@@ -76,6 +79,43 @@ class RegistryAccessor:
         # Second pass: alias match.
         for r in rows:
             if model_id_or_alias in ((r.get("spec") or {}).get("aliases") or []):
+                return r
+        return None
+
+    async def tier(self, tier_id_or_alias: str) -> dict | None:
+        """Resolve a Tier (DNA Cloud pricing plan) from the _lib registry by
+        tier_id, then by aliases[].
+
+        Returns the RAW DICT row (kernel.query yields raw dicts, not
+        Documents — callers read tier["spec"][...]) or None when no match is
+        found.
+
+        The lookup is _lib-direct — Tier is NOT in _INHERITABLE_KINDS so
+        per-scope inheritance does not surface it. Accepts no scope arg: the
+        registry is global. The quota enforcer reads the caps from here —
+        never hardcode calls_per_day / rate_per_sec / max_tenants in code.
+        """
+        try:
+            rows = [
+                r async for r in self._k.query(self._TIER_REGISTRY_SCOPE, "Tier")
+            ]
+        except Exception as e:  # noqa: BLE001
+            # fail-soft: registry read — but a silent None here disables the
+            # quota enforcer downstream (it reads the caps from this Tier), so
+            # the degradation logs loud.
+            logger.warning(
+                "tier: registry query failed for %r (quota enforcement "
+                "degrades to no-tier): %s",
+                tier_id_or_alias, e,
+            )
+            return None
+        # First pass: exact tier_id match.
+        for r in rows:
+            if (r.get("spec") or {}).get("tier_id") == tier_id_or_alias:
+                return r
+        # Second pass: alias match.
+        for r in rows:
+            if tier_id_or_alias in ((r.get("spec") or {}).get("aliases") or []):
                 return r
         return None
 

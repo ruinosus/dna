@@ -1,0 +1,19 @@
+apiVersion: github.com/ruinosus/dna/cloud/v1
+kind: Tier
+metadata:
+  name: pro
+spec:
+  tier_id: pro
+  display_name: Pro
+  price_usd_month: 29
+  calls_per_day: 10000
+  rate_per_sec: 10
+  max_tenants: 5
+  feature_families:
+  - definitions
+  - sdlc
+  - memory
+  - emit
+  memory_mode: write
+  overage_per_1k_usd: 2
+  sla: false

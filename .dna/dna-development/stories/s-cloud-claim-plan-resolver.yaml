@@ -1,0 +1,47 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-cloud-claim-plan-resolver
+spec:
+  title: "claim\u2192plan resolver (fail-closed)"
+  description: "_mcp_auth resolve o plan claim do token \u2192 Plan doc \u2192 caps"
+  status: cancelled
+  feature: f-dna-cloud
+  priority: high
+  labels:
+  - sdk
+  - python
+  reporter: claude-code
+  business_value: 650
+  acceptance_criteria:
+  - "dna_cli._mcp_auth resolve claim 'plan' (ou scope plan:<x>) do token verificado\
+    \ \u2192 doc Plan \u2192 caps"
+  - "Sem claim de plan \u2192 default Free (nunca ilimitado); plan desconhecido \u2192\
+    \ deny fail-closed"
+  - "Reusa o seam claim\u2192tenant existente (mesmo bridge), n\xE3o reconstr\xF3\
+    i auth"
+  - "Unit tests: plan v\xE1lido, sem-claim\u2192Free, plan inv\xE1lido\u2192deny"
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - resolver + testes; caps lidas do Plan Kind (zero hardcode)
+  definition_of_done_source: cli-create
+  created_at: '2026-07-11T18:01:40+00:00'
+  updated_at: '2026-07-11T18:02:58+00:00'
+  timeline:
+  - at: '2026-07-11T18:01:40+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-11T18:02:58+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: cancelled
+    summary: "Duplicata \u2014 a decomposi\xE7\xE3o de f-dna-cloud j\xE1 existia (s-dna-cloud-plans/quota-enforcement/portal/billing,\
+      \ filadas no #69). N\xE3o checei antes de filar."
+  closed_at: '2026-07-11T18:02:56+00:00'
+  cancelled_reason: "Duplicata \u2014 a decomposi\xE7\xE3o de f-dna-cloud j\xE1 existia\
+    \ (s-dna-cloud-plans/quota-enforcement/portal/billing, filadas no #69). N\xE3\
+    o checei antes de filar."

@@ -11,7 +11,7 @@ spec:
     The server resolves a token''s plan claim -> the Plan doc -> the concrete caps.
     Keeps the no-deploy thesis: changing a tier limit is a file edit, not a redeploy.
     Aligns with DNA''s ''everything is a Kind'' principle.'
-  status: todo
+  status: in-progress
   feature: f-dna-cloud
   priority: high
   labels:
@@ -33,10 +33,21 @@ spec:
     plan-claim -> caps; tests; docs; owner-approved tier numbers
   definition_of_done_source: claude-code
   created_at: '2026-07-11T16:34:44+00:00'
-  updated_at: '2026-07-11T16:34:44+00:00'
+  updated_at: '2026-07-11T18:04:04+00:00'
   timeline:
   - at: '2026-07-11T16:34:44+00:00'
     actor: claude-code
     type: status_change
     source: cli
     to: todo
+  - at: '2026-07-11T18:04:04+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  produces:
+  - kind: Plan
+    name: plan-s-dna-cloud-plans
+    role: implementation
+    at: '2026-07-11T18:04:04+00:00'

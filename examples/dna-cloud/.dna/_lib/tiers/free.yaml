@@ -1,0 +1,18 @@
+apiVersion: github.com/ruinosus/dna/cloud/v1
+kind: Tier
+metadata:
+  name: free
+spec:
+  tier_id: free
+  display_name: Free
+  price_usd_month: 0
+  calls_per_day: 100
+  rate_per_sec: 1
+  max_tenants: 1
+  feature_families:
+  - definitions
+  - sdlc
+  - memory
+  memory_mode: read
+  overage_per_1k_usd: null
+  sla: false

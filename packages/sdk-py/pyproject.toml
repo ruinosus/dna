@@ -118,6 +118,7 @@ lesson = "dna.extensions.lesson:LessonExtension"
 research = "dna.extensions.research:ResearchExtension"
 doc = "dna.extensions.doc:DocExtension"
 modelreg = "dna.extensions.modelreg:ModelRegExtension"
+cloud = "dna.extensions.cloud:CloudExtension"
 automation = "dna.extensions.automation:AutomationExtension"
 eval = "dna.extensions.eval:EvalExtension"
 
