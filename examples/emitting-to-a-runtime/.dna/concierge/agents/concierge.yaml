@@ -1,0 +1,18 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: Agent
+metadata:
+  name: concierge
+  description: Internal engineering support concierge grounded in runbooks.
+spec:
+  # The instruction is ONE line — the persona (Soul) and the citation duty
+  # (Guardrail) are COMPOSED in, not copy-pasted. That composition is exactly
+  # what collapses to a flat `instructions` string on emit (the DNA-only value).
+  instruction: |-
+    Answer using the runbook knowledge base.
+  layout: persona-first
+  soul: helpdesk-host
+  guardrails:
+  - grounded-citation
+  tools:
+  - kb-search
+  model: azure/gpt-4o

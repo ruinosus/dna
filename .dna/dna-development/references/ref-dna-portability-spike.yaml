@@ -1,0 +1,25 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Reference
+metadata:
+  name: ref-dna-portability-spike
+spec:
+  title: "DNA\u2194agent-framework portability spike (round-trip byte-equal)"
+  kind_of: internal-doc
+  summary: "The ratified spike (foundry PR #123 + comparison.html scorecard) that\
+    \ proved DNA\u2192agent-framework emit: the DNA Kernel composes Soul+Guardrail+delta,\
+    \ the emitter materializes the PromptAgent YAML AgentFactory loads, and the emitted\
+    \ instructions are BYTE-EQUAL to the DNA-composed prompt."
+  key_quotes:
+  - the emitted instructions are byte-equal to the DNA-composed prompt; AF-native
+    and DNA->AF both produce a live agent-framework Agent
+  cited_by:
+  - ADR/adr-dna-pivot-portability
+  owner: claude-code
+  created_at: '2026-07-11T12:48:16+00:00'
+  updated_at: '2026-07-11T12:50:49+00:00'
+  url: https://github.com/ruinosus/foundry/pull/123
+  fetched_at: '2026-07-11T12:48:16+00:00'
+  relevance: The proof-of-concept evidence behind the pivot decision (ADR).
+  tags:
+  - pivot
+  - evidence

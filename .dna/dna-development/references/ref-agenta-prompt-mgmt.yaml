@@ -1,0 +1,20 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Reference
+metadata:
+  name: ref-agenta-prompt-mgmt
+spec:
+  title: "Agenta \u2014 open-source prompt management"
+  kind_of: web
+  summary: Open-source LLMOps with Git-like prompt versioning (variants/branches +
+    commit history), eval, observability.
+  key_quotes: []
+  cited_by: []
+  owner: claude-code
+  created_at: '2026-07-11T12:47:55+00:00'
+  updated_at: '2026-07-11T12:47:55+00:00'
+  url: https://agenta.ai/blog/top-open-source-prompt-management-platforms
+  fetched_at: '2026-07-11T12:47:55+00:00'
+  relevance: Second mature prompt-manager reinforcing that prompt management is not
+    DNA's edge.
+  tags:
+  - prompt-managers

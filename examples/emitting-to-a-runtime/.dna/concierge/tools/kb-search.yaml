@@ -1,0 +1,39 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: Tool
+metadata:
+  name: kb-search
+  # The agent-facing surface — the exact text a tool-calling model reads to
+  # decide whether to call the tool. Emitted verbatim into the runtime artifact.
+  description: Search the runbook knowledge base for documents relevant to a
+    developer's question. Use before answering any grounded question. Returns
+    matching runbook titles and excerpts to cite.
+spec:
+  type: builtin
+  input_schema:
+    type: object
+    required:
+    - query
+    properties:
+      query:
+        type: string
+        description: The developer's question or keywords to search runbooks for.
+      top_k:
+        type: integer
+        default: 5
+        description: Maximum number of runbook matches to return.
+  output_schema:
+    type: object
+    properties:
+      matches:
+        type: array
+        items:
+          type: object
+          properties:
+            title:
+              type: string
+            excerpt:
+              type: string
+  read_only: true
+  tags:
+  - knowledge-base
+  - retrieval

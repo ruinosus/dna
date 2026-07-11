@@ -1,0 +1,110 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: ADR
+metadata:
+  name: adr-dna-pivot-portability
+spec:
+  title: "DNA pivot: prompt-manager \u2192 vendor-neutral portability layer (author\
+    \ once, emit per runtime)"
+  status: accepted
+  context: "As a prompt-manager DNA loses (Langfuse/Agenta more mature; agent-framework\
+    \ ships a native declarative loader and is already a foundry dep). The 2026 trend\
+    \ is decoupling agent definition from runtime to swap runtimes freely. A spike\
+    \ proved DNA\u2192agent-framework emit round-trip byte-equal."
+  decision: "Pivot DNA into a vendor-neutral de-para layer: the Agent/Soul/Guardrail/Tool\
+    \ Kinds are the neutral source, emitters materialize each runtime's native artifact\
+    \ (agent-framework first, proven). Align to the Oracle Agent Spec where it fits;\
+    \ do not reinvent a neutral schema. Verdict: emit DIRECT-first for runtimes OAS\
+    \ omits (agent-framework), add DNA\u2192OAS as another target (not the mandatory\
+    \ spine)."
+  consequences: "Build/maintain emitters behind a pluggable EmitterPort registry;\
+    \ the DNA Kinds become the neutral source of truth; value shifts to portability/anti-lock-in;\
+    \ DNA\u2192OAS emitter is a follow-up needing schema alignment (feature f-oracle-agent-spec)."
+  body: "# ADR \u2014 DNA pivot: from prompt-manager to vendor-neutral portability\
+    \ layer\n\n## Status\nAccepted (2026-07-11). Ratified by the owner after a spike\
+    \ proved DNA\u2192agent-framework\nemit with a live round-trip.\n\n## Context\n\
+    \nDNA began as a declarative prompt/agent-configuration layer. As a **prompt-manager**\n\
+    it loses: Langfuse (tracing + prompt management + evals) and Agenta (Git-like\
+    \ prompt\nversioning) are more mature at that narrow job, and Microsoft **agent-framework**\n\
+    already ships a *native* declarative `PromptAgent` loader (`AgentFactory`) \u2014\
+    \ and is\nalready a dependency of the consumer (`foundry`). The 2026 macro-trend\
+    \ is to\n**decouple the agent definition from the runtime** so teams can swap\
+    \ runtimes freely\n(\"Terraform for agents\"): AWS Bedrock AgentCore runs *any*\
+    \ framework; Oracle Agent\nSpec transpiles one definition to LangGraph/AutoGen/CrewAI/WayFlow;\
+    \ MCP + A2A\nconsolidate interop under the Linux Foundation. (Full landscape +\
+    \ sources:\nResearch `rsh-agent-config-landscape-2026`.)\n\nThe spike (`ref-dna-portability-spike`)\
+    \ proved the alternative concretely: the DNA\nKernel composes Soul + Guardrail\
+    \ + delta, an emitter materializes the exact\n`PromptAgent` YAML `AgentFactory`\
+    \ loads, and the emitted `instructions` are\n**byte-equal** to the DNA-composed\
+    \ prompt \u2014 both the AF-native and DNA\u2192AF paths\nproduce a live agent-framework\
+    \ `Agent`.\n\n## Decision\n\nPivot DNA into a **vendor-neutral de-para (from-to)\
+    \ layer**: author an agent **once**\nin DNA (the `Agent` / `Soul` / `Guardrail`\
+    \ / `Tool` Kinds are the neutral source) and\n**emit the native artifact each\
+    \ runtime consumes**. The first proven emitter is\n`--target agent-framework`;\
+    \ more targets (bedrock / vertex / openai) plug in behind a\npluggable `EmitterPort`\
+    \ registry. **Align DNA's schema to the Oracle Agent Spec (OAS)\nwhere it fits;\
+    \ do NOT reinvent a neutral schema.**\n\n### Alternatives rejected\n- **(a) Stay\
+    \ a prompt-manager.** Loses to Langfuse/Agenta; and agent-framework's\n  native\
+    \ loader removes the need for a DNA-shaped prompt store. Rejected.\n- **(b) Retire\
+    \ DNA.** Defensible only for a single-runtime world. The thesis is\n  explicitly\
+    \ multi-runtime + anti-lock-in, so a portability layer has durable value.\n  Rejected.\n\
+    - **(c) Reinvent a neutral schema from scratch.** Redundant with the Oracle Agent\n\
+    \  Spec, which already does author-once\u2192transpile. Rejected in favor of alignment.\n\
+    \n## The emit-through-OAS vs emit-direct verdict\n\n**Two ways DNA could reach\
+    \ N runtimes:**\n\n- **Emit-THROUGH-OAS** \u2014 DNA \u2192 OAS \u2192 runtimes\
+    \ via OAS's own adapters. Upside: the\n  four OAS adapters (LangGraph, AutoGen,\
+    \ CrewAI, WayFlow) come \"for free\" from one\n  DNA\u2192OAS emitter. Downside:\
+    \ DNA inherits OAS's schema and its runtime coverage \u2014\n  and OAS ships **no\
+    \ adapter for agent-framework, OpenAI Agents SDK, AWS Bedrock, or\n  Google Vertex/ADK\
+    \ today**, which is exactly the target the owner ratified and the\n  consumer\
+    \ already depends on. Going through OAS would *not* reach agent-framework.\n-\
+    \ **Emit-DIRECT** \u2014 DNA \u2192 each runtime's native artifact via a per-target\
+    \ emitter.\n  Upside: full control of the mapping and coverage; reaches agent-framework\
+    \ now\n  (proven). Downside: DNA reimplements per-runtime rendering that, for\
+    \ OAS's four\n  runtimes, OAS already has.\n\n**Verdict \u2014 a hybrid, direct-first:**\n\
+    \n1. **Emit DIRECT for the runtimes OAS does not cover** \u2014 starting with\n\
+    \   **agent-framework** (done, proven), then OpenAI Agents SDK / Bedrock / Vertex\
+    \ as\n   demand appears. This is where DNA adds net-new portability the market\
+    \ lacks.\n2. **Add a DNA\u2192OAS emitter as ANOTHER target** (not a mandatory\
+    \ hop) so DNA reaches\n   OAS's four adapter runtimes \"for free\" *without* routing\
+    \ the whole pivot through\n   OAS. OAS becomes one destination among many behind\
+    \ the same `EmitterPort`, not the\n   spine.\n3. **Align DNA's schema to OAS vocabulary\
+    \ where it maps cleanly**, so the DNA\u2192OAS\n   emitter is thin and DNA stays\
+    \ legible to the OAS ecosystem.\n\nRationale: making OAS the mandatory spine would\
+    \ forfeit the very target that\njustified the pivot (agent-framework). Direct-first\
+    \ keeps DNA's coverage independent\nof OAS's roadmap while still harvesting OAS's\
+    \ adapters as a bonus target.\n\n### DNA \u2194 OAS alignment points (where to\
+    \ align, not reinvent)\n| DNA | OAS | Note |\n|---|---|---|\n| composed prompt\
+    \ (`build_prompt`) | `Agent.system_prompt` | both are the flat system instruction\
+    \ (OAS uses Mustache `{{var}}`) |\n| `spec.model` / Genome `default_llm` | `llm_config`\
+    \ (`OpenAiConfig`/`OciGenAiConfig`/`OllamaConfig`) | map provider\u2192config\
+    \ class |\n| `Tool` Kind (`type` builtin/http/mcp/python/shell) | typed tools\
+    \ `ServerTool`/`ClientTool`/`RemoteTool`/`MCPTool` | DNA's `type` maps onto OAS's\
+    \ tool taxonomy; `input_schema`\u2192tool params |\n| `Agent.spec` inputs / `output_schema`\
+    \ | `inputs` (Property list) / outputs | JSON-Schema on both sides |\n\nWhere\
+    \ OAS has no peer (tenant overlay, composition structure, eval-as-contract), DNA\n\
+    keeps those as authoring-time-only value \u2014 the same axes the agent-framework\
+    \ emit\ndrops (recorded in `EmitResult.losses`).\n\n## Consequences\n- Build and\
+    \ maintain **emitters** (agent-framework proven; bedrock/vertex/openai/OAS\n \
+    \ next) behind a pluggable `EmitterPort` registry.\n- The DNA **Kinds become the\
+    \ neutral SOURCE of truth**; per-runtime artifacts are\n  regenerable outputs,\
+    \ never hand-edited.\n- DNA's value proposition shifts to **portability / anti-lock-in**,\
+    \ complementary to\n  (not competing with) prompt-managers and runtimes.\n- A\
+    \ DNA\u2192OAS emitter is a follow-up target that requires the schema-alignment\
+    \ work\n  above; tracked under feature `f-oracle-agent-spec`.\n\n## Evidence\n\
+    - Spike: `ref-dna-portability-spike` (round-trip byte-equal; live `AgentFactory`\
+    \ load).\n- Landscape + sources: Research `rsh-agent-config-landscape-2026`.\n\
+    - OAS: `ref-oracle-agent-spec`, `ref-oas-technical-report`.\n- agent-framework\
+    \ schema: `ref-ms-agent-framework-declarative`, `ref-ms-agentschema-promptagent`."
+  created_at: '2026-07-11T12:50:08+00:00'
+  updated_at: '2026-07-11T12:50:55+00:00'
+  timeline:
+  - at: '2026-07-11T12:50:08+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: accepted
+  references:
+  - ref-agent-config-landscape-2026
+  - ref-dna-portability-spike
+  - ref-oracle-agent-spec
+  - ref-oas-technical-report

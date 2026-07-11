@@ -1,0 +1,16 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-oas-alignment-research
+spec:
+  title: 'Plano: s-oas-alignment-research'
+  date: '2026-07-11'
+  status: accepted
+  story_ref: s-oas-alignment-research
+  journey_phase: plan
+  body: Research OAS (schema/adapters/format) + the 2026 landscape; author Research
+    Kind rsh-agent-config-landscape-2026 + ADR adr-dna-pivot-portability with the
+    emit-through-OAS vs emit-direct verdict; bridge citations via Reference docs.
+  created_at: '2026-07-11T12:47:05+00:00'
+  updated_at: '2026-07-11T12:47:05+00:00'
+  methodology: adr

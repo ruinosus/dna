@@ -1,0 +1,58 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-emit-agent-framework
+spec:
+  title: 'Plano: s-emit-agent-framework'
+  date: '2026-07-11'
+  status: accepted
+  story_ref: s-emit-agent-framework
+  journey_phase: plan
+  body: "# Plan \u2014 `dna emit --target agent-framework` (productize the spike)\n\
+    \n## Goal\nTurn the proven spike emitter (`foundry-wt-spike/spike/emitter/dna_to_af.py`,\
+    \ round-trip\nbyte-equal) into a first-class DNA capability: a pluggable emitter\
+    \ port + registry, a real\nstructural field de-para, and a `dna emit` CLI command.\n\
+    \n## Architecture (SDK-first, CLI-thin)\n1. **`packages/sdk-py/dna/emit/__init__.py`**\
+    \ \u2014 the neutral emit layer:\n   - `EmitContext` \u2014 the composed, runtime-agnostic\
+    \ view of a DNA agent\n     (name, description, instructions=build_prompt, model\
+    \ string, tools[], output_schema, losses sink).\n   - `EmitResult` \u2014 `{artifact:\
+    \ str, filename, target, losses[], mapping{}}`.\n   - `EmitterPort` (Protocol/ABC)\
+    \ \u2014 `target`, `file_extension`, `emit(EmitContext) -> EmitResult`.\n   -\
+    \ `register_emitter` / `get_emitter` / `available_targets` \u2014 the registry\
+    \ (NOT hardcoded).\n   - `emit_agent(scope, agent, target, *, base_dir, model,\
+    \ provider, ...)` \u2014 high-level: boots a\n     filesystem kernel, composes\
+    \ the agent (build_prompt + Tool resolution), builds EmitContext,\n     dispatches\
+    \ to the registered emitter.\n2. **`packages/sdk-py/dna/emit/agent_framework.py`**\
+    \ \u2014 first target:\n   - `AgentFrameworkEmitter(EmitterPort)`, `target=\"\
+    agent-framework\"`.\n   - Pure mapping `to_prompt_agent(ctx) -> dict`:\n     -\
+    \ `kind: Prompt`\n     - `name`: CamelCase(agent name)\n     - `description`:\
+    \ metadata.description\n     - `model: {id, provider}` \u2014 from DNA model string\
+    \ (`prov:model` / `prov/model` / bare) via a\n       provider map (openai\u2192\
+    OpenAI, azure\u2192AzureOpenAI, \u2026); CLI `--model/--provider` override.\n\
+    \     - `instructions`: the DNA-composed prompt (byte-equal gate).\n     - `tools`:\
+    \ `[{type: function, name, description, parameters}]` per Tool (input_schema\u2192\
+    parameters).\n     - `outputSchema`: only when the agent/tool declares one.\n\
+    \   - Records losses: tenant overlay, composition structure, eval-as-contract\
+    \ \u2192 no AF slot.\n3. **`packages/cli/dna_cli/emit_cmd.py`** \u2014 `dna emit\
+    \ <agent> --target <t> [--scope] [--out] [--model] [--provider] [--json]`.\n \
+    \  Registered in `dna_cli/__init__.py`. Lists targets via the registry; `--list-targets`.\n\
+    \n## Parity (Py\u2194TS)\nThe pure de-para (`to_prompt_agent`) is small and pure.\
+    \ Decision: implement the emit layer in the\n**Python SDK + CLI** (the `dna emit`\
+    \ surface + the only proven native loader, AgentFactory, are\nPython/.NET). Mirror\
+    \ the pure mapping + registry in the **TS SDK** (`packages/sdk-ts/src/emit/`)\
+    \ so\nStudio/TS consumers can emit too, with a byte-parity fixture test. Document\
+    \ the split in the guide.\n\n## Proof / tests\n- `packages/sdk-py/tests/test_emit_agent_framework.py`:\n\
+    \  - **Always**: emit for a fixture scope \u2192 parse YAML \u2192 `instructions`\
+    \ == `mi.build_prompt(agent)`; tools mapped.\n  - **Gated**: `pytest.importorskip(\"\
+    agent_framework_declarative\")` \u2192 AgentFactory loads the emitted YAML.\n\
+    - TS: `packages/sdk-ts/tests/emit-agent-framework.test.ts` \u2014 same byte-equal\
+    \ mapping over a fixture.\n\n## Docs\n- `docs/guides/emitting-to-a-runtime.md`\
+    \ \u2014 the de-para table (what maps / what is lost) + how to plug a new target.\n\
+    - Wire into `mkdocs.yml` nav; `mkdocs build --strict` green.\n\n## SDLC/board\n\
+    Epic `e-dna-portability`; ADR `adr-dna-pivot-portability` (produces of epic);\
+    \ Research\n`rsh-agent-config-landscape-2026` bridged via a Reference + `cite`\
+    \ from the ADR.\nCHANGELOG [Unreleased] only (no release). PR via `story pr`,\
+    \ base main. NOT merged.\n"
+  created_at: '2026-07-11T12:32:19+00:00'
+  updated_at: '2026-07-11T12:32:19+00:00'
+  methodology: ad-hoc

@@ -1,0 +1,18 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-emit-agent-framework-20260711-125637
+spec:
+  guide_ref: tg-emit-agent-framework
+  outcome: pass
+  verifies:
+  - Story/s-emit-agent-framework
+  executed_by: claude-code
+  executed_at: '2026-07-11T12:56:37+00:00'
+  notes: 'All 6 steps executed green against examples/emitting-to-a-runtime concierge.
+    list-targets shows agent-framework; emit prints the PromptAgent YAML (kind:Prompt,
+    name:Concierge, model:{id:gpt-4o,provider:AzureOpenAI}, tools[0].kind:function,
+    composed instructions); byte-equal gate passes; --out writes the file; unknown
+    target -t bedrock exits 1 (UnknownTarget). Suites: sdk-py 20 pass/1 skip (AgentFactory-load
+    skipped, runtime absent), cli 6 pass, TS 13 pass. Full TS suite 1415 pass/0 fail.
+    mkdocs --strict green.'

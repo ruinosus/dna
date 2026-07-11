@@ -1,0 +1,24 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Feature
+metadata:
+  name: f-dna-emitters
+spec:
+  title: "Runtime emitters (DNA \u2192 native artifact)"
+  description: A pluggable EmitterPort/registry that materializes a DNA agent definition
+    into the native artifact of a target runtime. agent-framework is the first target;
+    bedrock/vertex/openai plug in behind the same port.
+  status: in-development
+  epic: e-dna-portability
+  reporter: claude-code
+  priority: highest
+  labels:
+  - emitters
+  - portability
+  created_at: '2026-07-11T12:31:14+00:00'
+  updated_at: '2026-07-11T12:31:14+00:00'
+  timeline:
+  - at: '2026-07-11T12:31:14+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: in-development

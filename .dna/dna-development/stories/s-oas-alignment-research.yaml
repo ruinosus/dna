@@ -1,0 +1,92 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-oas-alignment-research
+spec:
+  title: "Oracle Agent Spec alignment \u2014 verdict"
+  description: Research the Oracle Agent Spec (schema, adapters, format) and decide
+    + document (Research Kind + ADR) whether DNA should emit THROUGH OAS or emit DIRECT
+    per runtime, with trade-offs and a recommendation.
+  status: review
+  feature: f-oracle-agent-spec
+  priority: high
+  labels:
+  - research
+  - oas
+  acceptance_criteria:
+  - Given the OAS research, when complete, then a Research doc captures its schema,
+    shipped adapters, and format with cited sources.
+  - Given the trade-offs, when documented, then an ADR records the emit-through-OAS
+    vs emit-direct verdict with a clear recommendation.
+  - "Given the verdict, when it recommends alignment, then the concrete DNA\u2194\
+    OAS alignment points are named (or the decision to not align is justified)."
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - 'Code: n/a (research + decision story).'
+  - 'Docs: Research Kind doc + ADR committed to the dna-development board; landscape
+    Reference docs cited.'
+  - 'CI: board docs valid (kernel write path); no schema breakage.'
+  definition_of_done_source: cli-create
+  created_at: '2026-07-11T12:31:45+00:00'
+  updated_at: '2026-07-11T13:01:01+00:00'
+  timeline:
+  - at: '2026-07-11T12:31:45+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-11T12:47:08+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: OAS + landscape research grounded by a live subagent web sweep with sources.
+  - at: '2026-07-11T12:47:10+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - type: kaizen
+    summary: "SDLC expressiveness gap: 'dna sdlc cite' resolves Reference/<name> ONLY\
+      \ (it does get_doc('Reference', ref_name)), so a Research/ADR/Epic cannot cite\
+      \ a Research Kind directly \u2014 the decision-grounds-in-research relationship\
+      \ can't live in the structured citation graph without bridging through a synthetic\
+      \ Reference doc (ref-agent-config-landscape-2026). Improvement: teach 'cite'\
+      \ (and uncite) to accept a citable target of any Kind that carries spec.cited_by\
+      \ (Research already has a citation model), or add a first-class 'grounds' link\
+      \ Research\u2194ADR."
+    actor: claude-code
+    at: '2026-07-11T12:51:29+00:00'
+    source: cli
+    kaizen_doc: kz-001-sdlc-expressiveness-gap-dna
+  - at: '2026-07-11T13:00:19+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Shipped: Research rsh-agent-config-landscape-2026 (sourced landscape\
+      \ \u2014 prompt-managers vs cloud frameworks vs neutral standards) + ADR adr-dna-pivot-portability.\
+      \ Verdict: emit DIRECT-first for runtimes OAS omits (agent-framework, proven),\
+      \ add DNA\u2192OAS as ANOTHER target (not the mandatory spine) since OAS ships\
+      \ no agent-framework/OpenAI/Bedrock/Vertex adapter today; align DNA schema to\
+      \ OAS vocabulary (system_prompt/llm_config/typed tools) where it maps. Citations\
+      \ bridged via Reference (cite is Reference-only \u2014 kaizen kz-001)."
+    commit_ref: 619109465e7b8e74b148333651b0d8f15105e1bb
+  - at: '2026-07-11T13:01:01+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
+  produces:
+  - kind: Plan
+    name: plan-s-oas-alignment-research
+    role: implementation
+    at: '2026-07-11T12:47:10+00:00'
+  - kind: Research
+    name: rsh-agent-config-landscape-2026
+    role: investigation
+    at: '2026-07-11T12:51:32+00:00'
+  - kind: ADR
+    name: adr-dna-pivot-portability
+    role: decision
+    at: '2026-07-11T12:51:34+00:00'

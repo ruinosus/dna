@@ -18,6 +18,7 @@ import click
 from dna_cli import (
     doc_cmd,
     docs_cmd,
+    emit_cmd,
     eval_cmd,
     init_cmd,
     install_cmd,
@@ -85,6 +86,7 @@ main.add_command(init_cmd.init)
 main.add_command(install_cmd.install)
 main.add_command(new_cmd.new)
 main.add_command(eval_cmd.eval_)
+main.add_command(emit_cmd.emit)
 
 
 if __name__ == "__main__":

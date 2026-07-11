@@ -1,0 +1,20 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Reference
+metadata:
+  name: ref-bedrock-agentcore
+spec:
+  title: "AWS Bedrock AgentCore \u2014 use any agent framework"
+  kind_of: web
+  summary: "AWS platform to deploy/operate agents built with ANY framework (CrewAI,\
+    \ LangGraph, LlamaIndex, Google ADK, OpenAI Agents SDK, Strands) \u2014 the 'runtime\
+    \ is swappable' substrate."
+  key_quotes: []
+  cited_by: []
+  owner: claude-code
+  created_at: '2026-07-11T12:47:56+00:00'
+  updated_at: '2026-07-11T12:47:56+00:00'
+  url: https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/using-any-agent-framework.html
+  fetched_at: '2026-07-11T12:47:56+00:00'
+  relevance: Evidence for the definition/runtime decoupling trend DNA rides.
+  tags:
+  - trend
