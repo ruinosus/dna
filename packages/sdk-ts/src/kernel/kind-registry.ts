@@ -127,7 +127,9 @@ export function generateAlias(owner: string, kind: string): string {
 export const EXPLICIT_ALIAS_ALLOWLIST: ReadonlySet<string> = new Set([
   // helix
   "helix-genome", "helix-agent", "helix-actor",
-  "helix-usecase", "helix-tool", "policy-layer-policy",
+  // helix-tool migrated to a descriptor (s-tool-kind-descriptor): its alias
+  // lives in helix/kinds/tool.kind.yaml (parity-critical) — shrink-only.
+  "helix-usecase", "policy-layer-policy",
   "helix-canvas",
   "helix-setting", "helix-theme", "helix-user-profile",
   // sdlc (classes; descriptors are outside the ratchet)

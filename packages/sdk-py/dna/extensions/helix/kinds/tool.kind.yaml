@@ -1,0 +1,240 @@
+# Tool — a declarative, invocable capability an agent can call (record plane).
+#
+# "Tools as data" (f-dna-tools-as-data). The DNA already governs persona,
+# instruction and guardrails declaratively; a Tool moves the AGENT-FACING
+# surface of a tool into the same declarative plane — the ``description`` the
+# model reads to decide whether to call it (``metadata.description``) and the
+# ``parameters`` JSON Schema of its arguments (``spec.input_schema``). One
+# source of truth, versioned, testable, and overridable per tenant, served
+# identically to a Python backend (`@tool`) and a TypeScript frontend
+# (CopilotKit `useCopilotAction`) via ``dna.load_tools`` / ``loadTools``.
+#
+# F3 migration (s-tool-kind-descriptor): this WAS a hand-written ``ToolKind``
+# class (helix/__init__.py + helix.ts) with a ``TypedTool``/``ToolSpec``
+# model. It is now a ``kinds/tool.kind.yaml`` descriptor — a record Kind
+# expressed as data, per the repo's own ratchet (record Kinds are
+# descriptors, never classes). The invocation surface (type/endpoint/mcp/
+# python/shell + input/output schema + auth + read_only/requires_confirmation)
+# is preserved verbatim; only the IMPLEMENTATION moved class → descriptor and
+# the plane moved composition → record (a Tool is not a prompt target and
+# never composes into an agent prompt, so it carries no composition signal —
+# writing a Tool no longer invalidates the composition schema cache).
+#
+# Agents reference Tools by name via ``dep_filters.tools`` (unchanged — the
+# alias ``helix-tool`` is stable). Stored as ``tools/<name>.yaml`` —
+# marketplace-shareable as standalone bundles.
+#
+# tenant_scope intentionally NOT declared — permissive (base Tool + optional
+# per-tenant overlay). A tenant may legitimately override a tool's
+# description/parameters (the SaaS value hook); the base stays intact and the
+# máxima "inheritable ⇒ never tenanted" holds.
+#
+# PARITY-CRITICAL package data: byte-identical mirror under both runtimes'
+# helix/kinds/ (tests/test_descriptor_hash_parity.py enforces).
+apiVersion: github.com/ruinosus/dna/core/v1
+kind: KindDefinition
+metadata:
+  name: tool
+spec:
+  target_api_version: github.com/ruinosus/dna/v1
+  target_kind: Tool
+  alias: helix-tool
+  origin: github.com/ruinosus/dna/tool
+  plane: record
+  prompt_target: false
+  flatten_in_context: false
+  prompt_target_priority: 0
+  storage:
+    type: yaml
+    container: tools
+  schema:
+    type: object
+    properties:
+      type:
+        type: string
+        enum:
+        - http
+        - mcp
+        - python
+        - shell
+        - builtin
+        description: How the tool is executed. builtin | http | mcp | python
+          | shell.
+      endpoint:
+        type: string
+        description: URL called when type=http. Supports {placeholder}
+          templating.
+      method:
+        type: string
+        description: HTTP method when type=http (default POST).
+      mcp_server:
+        type: string
+        description: MCP server name when type=mcp.
+      mcp_tool:
+        type: string
+        description: Tool name on the MCP server when type=mcp.
+      python_module:
+        type: string
+        description: Dotted import path when type=python.
+      python_callable:
+        type: string
+        description: Attribute on the module (function or class) when
+          type=python.
+      shell_command:
+        type: string
+        description: Command template when type=shell. Never executed without
+          confirmation.
+      input_schema:
+        type: object
+        description: JSON Schema of the arguments the agent passes when
+          invoking the tool — the "parameters" the model fills in. Surfaced
+          as ``parameters`` by ``dna.load_tools`` / ``loadTools``.
+      output_schema:
+        type: object
+        description: JSON Schema describing the shape of the tool's response.
+      auth_type:
+        type: string
+        enum:
+        - none
+        - api_key
+        - bearer
+        - oauth2
+        description: Credential strategy for the invocation.
+      auth_env_var:
+        type: string
+        description: Environment variable holding the credential (e.g.
+          GITHUB_TOKEN).
+      read_only:
+        type: boolean
+        description: False = the tool may mutate state (DB writes, file
+          changes, external side effects).
+      requires_confirmation:
+        type: boolean
+        description: Force user approval before each invocation.
+      tags:
+        type: array
+        items:
+          type: string
+        description: Free-form labels for filtering and search.
+      examples:
+        type: array
+        items:
+          type: object
+        description: Usage examples ([{input, output}]).
+  ui:
+    mode: build
+    label:
+      en: Tools
+      pt-BR: Ferramentas
+    description:
+      en: '@tool functions available to agents.'
+      pt-BR: Ferramentas (@tool) disponíveis aos agentes.
+    routes:
+      list: docs/Tool
+      detail: docs/Tool/:name
+    permissions:
+      list: any
+      detail: any
+    in_sidebar: true
+    display_order: 53
+  ui_schema:
+    type:
+      widget: select
+      label: Invocation type
+      help: 'How the tool is executed: http | mcp | python | shell | builtin.'
+      order: 10
+    endpoint:
+      widget: text
+      label: HTTP endpoint
+      help: URL called when type=http. Supports {placeholder} templating.
+      order: 20
+    method:
+      widget: select
+      label: HTTP method
+      order: 25
+    mcp_server:
+      widget: text
+      label: MCP server
+      help: Server name when type=mcp.
+      order: 30
+    mcp_tool:
+      widget: text
+      label: MCP tool name
+      order: 35
+    python_module:
+      widget: text
+      label: Python module
+      help: Dotted import path when type=python.
+      order: 40
+    python_callable:
+      widget: text
+      label: Python callable
+      help: Attribute on the module (function or class).
+      order: 45
+    shell_command:
+      widget: textarea
+      label: Shell command
+      help: Command template when type=shell. Never executed without
+        confirmation.
+      order: 50
+    input_schema:
+      widget: code
+      language: yaml
+      label: Input schema (JSON Schema)
+      help: Validates the arguments the agent passes when invoking the tool.
+      height: 260
+      order: 60
+    output_schema:
+      widget: code
+      language: yaml
+      label: Output schema (JSON Schema)
+      help: Describes the shape of the tool's response.
+      height: 220
+      order: 70
+    auth_type:
+      widget: select
+      label: Auth type
+      help: none | api_key | bearer | oauth2.
+      order: 80
+    auth_env_var:
+      widget: text
+      label: Auth env var
+      help: Environment variable holding the credential.
+      order: 85
+    read_only:
+      widget: checkbox
+      label: Read-only
+      help: Uncheck if the tool mutates state (database writes, file changes,
+        external side effects).
+      order: 90
+    requires_confirmation:
+      widget: checkbox
+      label: Requires confirmation
+      help: Force user approval before each invocation.
+      order: 95
+    tags:
+      widget: tags
+      label: Tags
+      order: 100
+    examples:
+      widget: readonly
+      label: Examples
+      help: Usage examples. Nested list — edit via YAML for now.
+      order: 110
+  graph_style:
+    fill: '#14B8A6'
+    stroke: '#0D9488'
+    text_color: '#fff'
+  ascii_icon: 🔧
+  display_label: Tools
+  docs: A Tool is a declarative, invocable capability an agent can call — an
+    HTTP endpoint, an MCP server tool, a Python callable, a shell command, or
+    a builtin. It bridges DNA with OpenAI/Anthropic tool-calling conventions.
+    The agent-facing surface is its ``metadata.description`` (the text the
+    model reads to decide to call it) and its ``spec.input_schema`` (the
+    "parameters" JSON Schema of the arguments); ``dna.load_tools`` /
+    ``loadTools`` serve exactly that surface, identically to Python and
+    TypeScript consumers from this one source. It also declares an auth
+    strategy and read_only / requires_confirmation flags the host honors at
+    runtime. Agents reference Tools via ``dep_filters.tools``. Stored as
+    ``tools/<name>.yaml`` — marketplace-shareable as standalone bundles.

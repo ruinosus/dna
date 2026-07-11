@@ -39,6 +39,34 @@ export class AgentNotFound extends Error {
 }
 
 /**
+ * `loadTools(scope).get(name)` was asked for a Tool that no `Tool` document in
+ * the scope declares (missing, renamed, or in another scope).
+ *
+ * Fail-loud contract (s-load-tools-helper), the twin of `AgentNotFound`: the
+ * agent-facing tool surface is data, so a miss must throw a typed error —
+ * never return an empty surface that would silently reach a model as a tool
+ * with no description.
+ *
+ * 1:1 parity with python `dna.ToolNotFound` (a `LookupError` subclass).
+ * Exported publicly from the package root.
+ */
+export class ToolNotFound extends Error {
+  readonly toolName: string | null;
+  readonly scope: string | null;
+  readonly available: string[];
+  constructor(name: string | null, scope: string | null = null, available: string[] = []) {
+    const where = scope ? ` in scope '${scope}'` : "";
+    const hint = available.length ? ` — available: ${available.join(", ")}` : "";
+    super(`Tool '${name}' not found${where}${hint}`);
+    this.name = "ToolNotFound";
+    this.toolName = name;
+    this.scope = scope;
+    this.available = available;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+/**
  * `buildPrompt` hit an Agent whose `layout:` names a preset the Kind does not
  * offer (s-dx-named-layouts).
  *

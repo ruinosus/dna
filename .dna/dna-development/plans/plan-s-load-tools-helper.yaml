@@ -1,0 +1,15 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-load-tools-helper
+spec:
+  title: 'Plano: s-load-tools-helper'
+  date: '2026-07-11'
+  status: accepted
+  story_ref: s-load-tools-helper
+  journey_phase: plan
+  body: 'Espelhar prompts.py/ts: dna/tools.py + src/tools.ts (ToolSurface, ToolLibrary,
+    load_tools/loadTools), ToolNotFound em errors, export no root. Testes unit + dogfood
+    + tenant (Py).'
+  created_at: '2026-07-11T11:21:20+00:00'
+  updated_at: '2026-07-11T11:21:20+00:00'

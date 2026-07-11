@@ -9,9 +9,10 @@ from typing import Any
 
 import yaml
 
+from dna.kernel.descriptor_loader import load_descriptors
 from dna.kernel.kind_base import KindBase
 from dna.kernel.models import (
-    TypedAgent, TypedActor, TypedUseCase, TypedTool,
+    TypedAgent, TypedActor, TypedUseCase,
     TypedGenome, TypedLayerPolicy,
     AgentSpec,
 )
@@ -623,119 +624,6 @@ class UseCaseKind(KindBase):
         return [PreviewBlock(kind="fields", title=f"UseCase {doc.name}", fields=fields)]
 
 
-class ToolKind(KindBase):
-    api_version = "github.com/ruinosus/dna/v1"
-    kind = "Tool"
-    alias = "helix-tool"
-    is_schema_affecting = True
-    ui = docs_ui("Tool", mode="build", label_en="Tools", label_pt="Ferramentas", display_order=53, description_en="@tool functions available to agents.", description_pt="Ferramentas (@tool) disponíveis aos agentes.")
-    model = TypedTool
-    origin = "github.com/ruinosus/dna/tool"
-    storage = StorageDescriptor.yaml("tools")
-    graph_style = {"fill": "#14B8A6", "stroke": "#0D9488", "text_color": "#fff"}
-    ascii_icon = "🔧"
-    display_label = "Tools"
-    is_prompt_target = False
-    prompt_target_priority = 0
-    flatten_in_context = False
-    description_fallback_field = None
-    ui_schema = {
-        "type": {
-            "widget": "select",
-            "label": "Invocation type",
-            "help": "How the tool is executed: http | mcp | python | shell | builtin.",
-            "order": 10,
-        },
-        "endpoint": {
-            "widget": "text",
-            "label": "HTTP endpoint",
-            "help": "URL called when type=http. Supports {placeholder} templating.",
-            "order": 20,
-        },
-        "method": {"widget": "select", "label": "HTTP method", "order": 25},
-        "mcp_server": {"widget": "text", "label": "MCP server", "help": "Server name when type=mcp.", "order": 30},
-        "mcp_tool": {"widget": "text", "label": "MCP tool name", "order": 35},
-        "python_module": {"widget": "text", "label": "Python module", "help": "Dotted import path when type=python.", "order": 40},
-        "python_callable": {"widget": "text", "label": "Python callable", "help": "Attribute on the module (function or class).", "order": 45},
-        "shell_command": {"widget": "textarea", "label": "Shell command", "help": "Command template when type=shell. Never executed without confirmation.", "order": 50},
-        "input_schema": {
-            "widget": "code",
-            "language": "yaml",
-            "label": "Input schema (JSON Schema)",
-            "help": "Validates the arguments the agent passes when invoking the tool.",
-            "height": 260,
-            "order": 60,
-        },
-        "output_schema": {
-            "widget": "code",
-            "language": "yaml",
-            "label": "Output schema (JSON Schema)",
-            "help": "Describes the shape of the tool's response.",
-            "height": 220,
-            "order": 70,
-        },
-        "auth_type": {"widget": "select", "label": "Auth type", "help": "none | api_key | bearer | oauth2.", "order": 80},
-        "auth_env_var": {"widget": "text", "label": "Auth env var", "help": "Environment variable holding the credential.", "order": 85},
-        "read_only": {"widget": "checkbox", "label": "Read-only", "help": "Uncheck if the tool mutates state (database writes, file changes, external side effects).", "order": 90},
-        "requires_confirmation": {"widget": "checkbox", "label": "Requires confirmation", "help": "Force user approval before each invocation.", "order": 95},
-        "tags": {"widget": "tags", "label": "Tags", "order": 100},
-        "examples": {"widget": "readonly", "label": "Examples", "help": "Usage examples. Nested list — edit via YAML for now.", "order": 110},
-    }
-    docs = (
-        "A Tool is a declarative, invocable capability an agent can call: an "
-        "HTTP endpoint, an MCP server tool, a Python callable, a shell "
-        "command, or a builtin. Bridges helix with OpenAI/Anthropic tool- "
-        "calling conventions. Each Tool declares an input/output JSON Schema "
-        "(so the model knows exactly what arguments to pass), an auth "
-        "strategy, and a read_only / requires_confirmation flag that the "
-        "harness honors at runtime. Agents reference Tools via "
-        "dep_filters.tools; the harness exposes them through the standard "
-        "tool-calling loop. Stored as tools/<name>.yaml — marketplace- "
-        "shareable as standalone bundles."
-    )
-
-    def schema(self) -> dict[str, Any] | None:
-        return _schema_from_model(self.model)
-
-    def parse(self, raw: dict[str, Any]) -> Any:
-        return TypedTool.from_raw(raw)
-
-    def summary(self, doc: Any) -> dict[str, Any] | None:
-        return None
-
-    def preview(self, doc: Any) -> list[PreviewBlock]:
-        import json as _json
-
-        spec = getattr(doc, "spec", None) or {}
-        spec_dict = dict(spec) if hasattr(spec, "items") else {}
-        fields: list[dict[str, str]] = []
-        for k in (
-            "type",
-            "endpoint",
-            "method",
-            "mcp_server",
-            "mcp_tool",
-            "python_module",
-            "python_callable",
-            "shell_command",
-            "auth_type",
-        ):
-            v = spec_dict.get(k)
-            if isinstance(v, str) and v:
-                fields.append({"label": k, "value": v})
-        for k in ("input_schema", "output_schema"):
-            v = spec_dict.get(k)
-            if v:
-                fields.append({"label": k, "value": _json.dumps(v, indent=2, default=str)})
-        for k in ("read_only", "requires_confirmation"):
-            v = spec_dict.get(k)
-            if v is not None:
-                fields.append({"label": k, "value": str(v)})
-        if not fields:
-            return [PreviewBlock(kind="empty", title=f"Tool {doc.name}")]
-        return [PreviewBlock(kind="fields", title=f"Tool {doc.name}", fields=fields)]
-
-
 _BINARY_EXTENSIONS = {".tar", ".gz", ".zip", ".png", ".jpg", ".jpeg", ".gif", ".pdf", ".wasm", ".bin", ".exe", ".so", ".dylib"}
 _KNOWN_DIRS = {"scripts", "references", "assets"}
 
@@ -1102,9 +990,14 @@ class HelixExtension:
         kernel.kind(GenomeKind())
         kernel.kind(LayerPolicyKind())
         kernel.kind(AgentKind())
-        kernel.kind(ToolKind())
         kernel.kind(ActorKind())
         kernel.kind(UseCaseKind())
+        # Tool (helix-tool) ships as a descriptor — kinds/tool.kind.yaml
+        # (f-dna-tools-as-data / s-tool-kind-descriptor). It WAS a
+        # hand-written ToolKind class; migrated to a record-plane descriptor
+        # per the repo's own ratchet (record Kinds are data, not classes).
+        for raw in load_descriptors("dna.extensions.helix"):
+            kernel.kind_from_descriptor(raw)
         # 2026-05-26 — absorbed from claude-code-templates catalog (MIT).
         # Setting rounds out the Claude-Code-customization primitives that
         # live alongside Skill / UA / Soul / Tool.

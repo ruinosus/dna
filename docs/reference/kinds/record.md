@@ -1162,6 +1162,35 @@ A Task is a granular work item (horas-dias) typically as sub-item of a Story. Fo
 | `title` | string | yes |  |
 | `updated_at` | string |  |  |
 
+## Tool
+
+- **Alias:** `helix-tool`
+- **apiVersion:** `github.com/ruinosus/dna/v1`
+- **Plane:** record
+
+A Tool is a declarative, invocable capability an agent can call — an HTTP endpoint, an MCP server tool, a Python callable, a shell command, or a builtin. It bridges DNA with OpenAI/Anthropic tool-calling conventions. The agent-facing surface is its ``metadata.description`` (the text the model reads to decide to call it) and its ``spec.input_schema`` (the "parameters" JSON Schema of the arguments); ``dna.load_tools`` / ``loadTools`` serve exactly that surface, identically to Python and TypeScript consumers from this one source. It also declares an auth strategy and read_only / requires_confirmation flags the host honors at runtime. Agents reference Tools via ``dep_filters.tools``. Stored as ``tools/<name>.yaml`` — marketplace-shareable as standalone bundles.
+
+**Spec fields**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `auth_env_var` | string |  | Environment variable holding the credential (e.g. GITHUB_TOKEN). |
+| `auth_type` | string |  | Credential strategy for the invocation. |
+| `endpoint` | string |  | URL called when type=http. Supports {placeholder} templating. |
+| `examples` | array |  | Usage examples ([{input, output}]). |
+| `input_schema` | object |  | JSON Schema of the arguments the agent passes when invoking the tool — the "parameters" the model fills in. Surfaced as ``parameters`` by ``dna.load_tools`` / ``loadTools``. |
+| `mcp_server` | string |  | MCP server name when type=mcp. |
+| `mcp_tool` | string |  | Tool name on the MCP server when type=mcp. |
+| `method` | string |  | HTTP method when type=http (default POST). |
+| `output_schema` | object |  | JSON Schema describing the shape of the tool's response. |
+| `python_callable` | string |  | Attribute on the module (function or class) when type=python. |
+| `python_module` | string |  | Dotted import path when type=python. |
+| `read_only` | boolean |  | False = the tool may mutate state (DB writes, file changes, external side effects). |
+| `requires_confirmation` | boolean |  | Force user approval before each invocation. |
+| `shell_command` | string |  | Command template when type=shell. Never executed without confirmation. |
+| `tags` | array |  | Free-form labels for filtering and search. |
+| `type` | string |  | How the tool is executed. builtin \| http \| mcp \| python \| shell. |
+
 ## WorkflowEvent
 
 - **Alias:** `sdlc-workflow-event`

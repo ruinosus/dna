@@ -1,0 +1,59 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-tool-kind-descriptor
+spec:
+  title: "Tool Kind \u2192 record-plane descriptor (kinds/tool.kind.yaml, Py\u2194\
+    TS byte-identical)"
+  description: Migrate the class-based helix-tool Kind to a descriptor
+  status: in-progress
+  feature: f-dna-tools-as-data
+  priority: high
+  labels:
+  - descriptor
+  - ts-parity
+  acceptance_criteria:
+  - "helix-tool registered from kinds/tool.kind.yaml on both runtimes; ToolKind class\
+    \ + TypedTool/ToolSpec models deleted (Py+TS); descriptor byte-identical Py\u2194\
+    TS; ratchet + descriptor-hash-parity green; agents still reference tools via dep_filters.tools;\
+    \ existing github-search tool doc still valid"
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - All suites green (sdk-py, sdk-ts, typecheck); ratchet/parity/classification oracles
+    updated consciously; TestGuide+TestRun recorded
+  definition_of_done_source: cli-create
+  created_at: '2026-07-11T10:43:41+00:00'
+  updated_at: '2026-07-11T11:21:17+00:00'
+  timeline:
+  - at: '2026-07-11T10:43:41+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-11T10:44:08+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-11T11:21:17+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "KEY FINDING: Tool j\xE1 existia como CLASSE (helix ToolKind, ambos runtimes,\
+      \ plane=composition, is_schema_affecting, referenciado por dep_filters.tools,\
+      \ na kind-registry-parity). N\xE3o \xE9 Kind novo \u2014 MIGREI classe\u2192\
+      descriptor record-plane (kinds/tool.kind.yaml byte-id\xEAntico Py\u2194TS).\
+      \ Removi ToolKind + TypedTool/ToolSpec (Py+TS). Consequ\xEAncias conscientes\
+      \ (record-plane correto: Tool n\xE3o \xE9 prompt-target): (1) saiu de _SCHEMA_INVALIDATING\
+      \ (oracle atualizado); (2) tool refs faltantes agora resolvem lazy, n\xE3o 'missing'\
+      \ (test_kernel); (3) Tool doc sai do lock composition-plane 19\u219218. Fixtures\
+      \ conscientes: EXPLICIT_ALIAS_ALLOWLIST, kind-registry-parity.json, alias ratchet\
+      \ TS, preview gen\xE9rico (Py+TS), FakeKernel.kindFromDescriptor. 'kind-count\
+      \ sobe' esperado no plano = na verdade FLAT (migra\xE7\xE3o, sem dupe)."
+    commit_ref: fec9824409b71804205826e6b506a7d59d1605b0
+  produces:
+  - kind: Plan
+    name: plan-s-tool-kind-descriptor
+    role: implementation
+    at: '2026-07-11T10:44:08+00:00'

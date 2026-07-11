@@ -11,6 +11,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Tools as data — `load_tools` + the `Tool` Kind as a descriptor**
+  (feature `f-dna-tools-as-data`). The agent-facing surface of a tool — the
+  `description` a model reads to decide whether to call it, and the JSON Schema
+  of its `parameters` — is now consumable as data, the twin of `load_prompts`:
+  `dna.load_tools(scope)` / `loadTools(scope)` returns a `ToolLibrary` mapping a
+  tool name to its `ToolSurface` (`{description, parameters}` =
+  `{metadata.description, spec.input_schema}`), lazy + cached, exported from the
+  package root on both runtimes. A miss raises the typed, exported
+  `ToolNotFound` (a `LookupError`) — never an empty surface. New CLI: `dna new
+  tool <name> [-d --type]` scaffolds a valid Tool through `kernel.write_document`
+  (idempotent; `--force`). Overlay-aware: a tenant overlay of a tool's
+  description/parameters wins for that tenant while the base stays intact.
+  Cross-language dogfood under `examples/tools_as_data/` — the **same** Tool
+  document read by Python and TypeScript yields **byte-identical** surfaces
+  (asserted against one committed oracle by both suites): the first place the
+  Py↔TS descriptor parity pays off in a real consumer. Guide: **How-to → Tools
+  as data**.
+
+### Changed
+
+- **The `Tool` Kind migrated from a hand-written class to a record-plane
+  descriptor** (`helix/kinds/tool.kind.yaml`, byte-identical Py↔TS), per the
+  repo's own ratchet (record Kinds are data, not classes). The alias
+  (`helix-tool`), storage (`tools/<name>.yaml`), schema, Studio UI metadata and
+  agent references (`dep_filters.tools`) are unchanged. Because a Tool is not a
+  prompt target, it now correctly lives on the **record** plane: writing a Tool
+  no longer invalidates the composition schema cache, and an agent's `tools:`
+  ref pointing at a not-yet-shipped Tool is resolved lazily (host-resolved)
+  instead of being flagged as a missing composition input.
+
 ## [0.5.0] - 2026-07-11
 
 ### Added

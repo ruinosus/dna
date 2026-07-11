@@ -1,0 +1,29 @@
+{
+  "description": "Render a self-contained HTML or Markdown document into a shareable artifact. Use when the user asks for a page, report, dashboard, or visual deliverable that is clearer than plain text. Returns the artifact's URL.",
+  "parameters": {
+    "properties": {
+      "content": {
+        "description": "The full HTML or Markdown body of the artifact.",
+        "type": "string"
+      },
+      "format": {
+        "default": "html",
+        "description": "Rendering format of the content.",
+        "enum": [
+          "html",
+          "markdown"
+        ],
+        "type": "string"
+      },
+      "title": {
+        "description": "Short human-readable title for the artifact.",
+        "type": "string"
+      }
+    },
+    "required": [
+      "title",
+      "content"
+    ],
+    "type": "object"
+  }
+}

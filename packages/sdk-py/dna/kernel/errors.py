@@ -102,6 +102,34 @@ class UnknownLayout(ValueError):
         super().__init__(f"Unknown layout '{layout}'{where}{hint}")
 
 
+class ToolNotFound(LookupError):
+    """``load_tools(scope)[name]`` was asked for a Tool that no ``Tool``
+    document in the scope declares (missing, renamed, or in another scope).
+
+    Fail-loud contract (s-load-tools-helper), the twin of
+    :class:`AgentNotFound`: the agent-facing tool surface is data, so a miss
+    must raise a typed, ignorable-only-on-purpose error — never return an
+    empty surface that would silently reach a model as a tool with no
+    description. Subclasses ``LookupError`` (a lookup miss); callers can
+    ``except ToolNotFound`` (or the broader ``LookupError``) without
+    swallowing unrelated failures. Exported publicly from the ``dna`` package.
+    """
+
+    def __init__(
+        self, name: str | None, scope: str | None = None,
+        available: list[str] | None = None,
+    ) -> None:
+        self.name = name
+        self.scope = scope
+        self.available = list(available or [])
+        where = f" in scope '{scope}'" if scope else ""
+        hint = (
+            f" — available: {', '.join(self.available)}"
+            if self.available else ""
+        )
+        super().__init__(f"Tool '{name}' not found{where}{hint}")
+
+
 class SourceRegistrationError(KernelRegistrationError):
     """A source failed the SourcePort boot gate at ``kernel.source(src)``
     time (s-dna-source-conformance-kit).

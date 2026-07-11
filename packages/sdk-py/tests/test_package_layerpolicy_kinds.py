@@ -405,6 +405,13 @@ class FakeKernel:
     def kind(self, k: Any) -> None:
         self.kinds.append(k)
 
+    def kind_from_descriptor(self, raw: Any) -> None:
+        # helix now registers Tool (helix-tool) as a descriptor
+        # (kinds/tool.kind.yaml, s-tool-kind-descriptor). This double just
+        # records the raw so register() runs; the real DeclarativeKindPort
+        # synthesis is covered by the descriptor/registry parity tests.
+        self.kinds.append(raw)
+
     def reader(self, r: Any) -> None:
         self.readers.append(r)
 

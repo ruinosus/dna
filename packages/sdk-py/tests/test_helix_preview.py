@@ -7,10 +7,22 @@ from dataclasses import dataclass
 from dna.extensions.helix import (
     ActorKind,
     GenomeKind,
-    ToolKind,
     UseCaseKind,
     AgentKind,
 )
+from dna.kernel import Kernel
+
+
+def _port(kind_name: str):
+    """Resolve a registered KindPort by Kind name from the live registry.
+
+    Tool migrated from the hand-written ``ToolKind`` class to a record-plane
+    descriptor (kinds/tool.kind.yaml, s-tool-kind-descriptor); it no longer
+    has an importable class, so its preview comes from the generic
+    ``DeclarativeKindPort.preview`` (schema-driven fields).
+    """
+    kinds = {getattr(kp, "kind", None): kp for kp in Kernel.auto()._kinds.values()}
+    return kinds[kind_name]
 
 
 @dataclass
@@ -54,7 +66,10 @@ class TestAgentPreview:
 
 class TestToolPreview:
     def setup_method(self) -> None:
-        self.kp = ToolKind()
+        # Tool is now a record-plane descriptor — its preview is the generic
+        # schema-driven DeclarativeKindPort.preview (renders spec fields that
+        # are declared schema properties and have a value).
+        self.kp = _port("Tool")
 
     def test_renders_fields(self) -> None:
         blocks = self.kp.preview(
@@ -70,11 +85,15 @@ class TestToolPreview:
                 },
             )
         )
+        # Generic descriptor preview: scalar props render as a leading
+        # "fields" block; object props (input_schema) render as their own
+        # JSON code block.
         assert blocks[0].kind == "fields"
         labels = [f["label"] for f in blocks[0].fields]
         assert "type" in labels
         assert "endpoint" in labels
-        assert "input_schema" in labels
+        code_titles = [b.title for b in blocks if b.kind == "code"]
+        assert "input_schema" in code_titles
 
 
 class TestActorPreview:

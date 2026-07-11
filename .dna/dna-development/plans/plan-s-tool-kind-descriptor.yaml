@@ -1,0 +1,29 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-tool-kind-descriptor
+spec:
+  title: 'Plano: s-tool-kind-descriptor'
+  date: '2026-07-11'
+  status: accepted
+  story_ref: s-tool-kind-descriptor
+  journey_phase: plan
+  body: "MIGRATION (class\u2192descriptor), not a new Kind \u2014 KEY FINDING: helix-tool\
+    \ already exists as a class (both langs), plane=composition, is_schema_affecting=True,\
+    \ referenced by AgentSpec.tools, in kind-registry-parity + strict-schema-lint\
+    \ grandfather set.\n\nPhase 1 \u2014 descriptor: write packages/{sdk-py/dna,sdk-ts/src}/extensions/helix/kinds/tool.kind.yaml\
+    \ (byte-identical). plane: record; alias helix-tool; storage yaml/tools; schema\
+    \ = the ToolSpec fields (type/endpoint/method/mcp_*/python_*/shell_command/input_schema/output_schema/auth_*/read_only/requires_confirmation/tags/examples),\
+    \ open schema (matches current); ui_schema pass-through; describe default (metadata.description);\
+    \ graph_style/ascii_icon/display_label/docs preserved.\n\nPhase 2 \u2014 delete\
+    \ class: remove ToolKind (helix/__init__.py + helix.ts) and TypedTool/ToolSpec\
+    \ (models.py) + ToolSchema/ToolSpecSchema (models.ts); helix register() also loads\
+    \ descriptors (load_descriptors / loadDescriptors).\n\nPhase 3 \u2014 conscious\
+    \ oracle/test edits: test_kind_classification_attrs ORIG_SCHEMA_INVALIDATING drop\
+    \ 'Tool' (descriptors are non-schema-affecting by construction; Tool isn't a prompt-target\
+    \ so this is correct); update test_helix_preview + helix-preview.test.ts to read\
+    \ the port from Kernel.auto() (generic descriptor preview still renders type/endpoint/input_schema\
+    \ as fields).\n\nPhase 4 \u2014 gates: ratchet, descriptor-hash-parity, kind-registry-parity,\
+    \ full sdk-py/sdk-ts/typecheck."
+  created_at: '2026-07-11T10:44:05+00:00'
+  updated_at: '2026-07-11T10:44:05+00:00'

@@ -1,0 +1,29 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Feature
+metadata:
+  name: f-dna-tools-as-data
+spec:
+  title: "Tools as data \u2014 the Tool Kind as a descriptor + load_tools consumer"
+  description: "Move the agent-facing tool surface (the description= the model reads\
+    \ + the params JSON-schema) into the declarative plane: migrate the class-based\
+    \ helix-tool Kind to a record-plane descriptor (kinds/tool.kind.yaml, byte-identical\
+    \ Py/TS), add dna.load_tools/loadTools (ToolLibrary, mirroring load_prompts),\
+    \ a 'dna new tool' scaffold, prove tenant-override of a tool description, and\
+    \ dogfood cross-language parity (same Tool doc read identically by Py + TS \u2014\
+    \ the SDK TS's first real shared-descriptor consumer)."
+  status: discovery
+  reporter: claude-code
+  priority: high
+  labels:
+  - tools-as-data
+  - ts-parity
+  - descriptor
+  business_value: 800
+  created_at: '2026-07-11T10:43:23+00:00'
+  updated_at: '2026-07-11T10:43:23+00:00'
+  timeline:
+  - at: '2026-07-11T10:43:23+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: discovery
