@@ -37,7 +37,7 @@ spec:
     on the PR.'
   definition_of_done_source: claude-code
   created_at: '2026-07-11T10:25:11+00:00'
-  updated_at: '2026-07-11T10:38:14+00:00'
+  updated_at: '2026-07-11T10:41:23+00:00'
   timeline:
   - at: '2026-07-11T10:25:11+00:00'
     actor: claude-code
@@ -107,6 +107,20 @@ spec:
     summary: 'PR aberto: https://github.com/ruinosus/dna/pull/52 (base main). Status
       -> review. CI 11 checks rodando; NAO mergear (decisao do Barna, pre-1.0).'
     commit_ref: 0ae346d33fae5aec381a911847490140ccfb58f4
+  - at: '2026-07-11T10:41:23+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Bonus (kz-001): gap CONFIRMADO fechado. A extracao _lib do foundry depende\
+      \ de um scope-biblioteca compartilhado consumido por dep 'local:_lib' no gate\
+      \ de eval \u2014 que era exatamente o caminho que resolvia no SDK mas nao no\
+      \ CLI. Com o fix, 'dna eval run' (e todo comando CLI) resolve 'local:<lib-scope>'\
+      \ igual ao Kernel.quick. NAO fiz a migracao do foundry aqui (outro repo/story);\
+      \ apenas confirmo o desbloqueio de 'extract-lib-guardrails' como follow-up.\
+      \ (Nota: o warning 'parent scope _lib load failed' visto nos testes e outra\
+      \ maquina \u2014 heranca por parent-chain de scope \u2014 nao a resolucao de\
+      \ dep local:, que e o alvo desta story.)"
+    commit_ref: bac22ae1d7638b92f9de6a727c9d10c9f454058f
   produces:
   - kind: Plan
     name: plan-s-cli-localresolver-consistency
