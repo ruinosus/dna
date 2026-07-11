@@ -1,0 +1,35 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-mcp-deploy-aca
+spec:
+  description: Local, CI-friendly proof of the DNA MCP ACA+Entra deploy recipe (the
+    real azd up is the owner's step).
+  kind_of_test: integration
+  status: active
+  steps:
+  - action: az bicep build --file deploy/azure/main.bicep and resources.bicep
+    expected: exit 0, zero lint warnings/errors
+  - action: pip install packages/sdk-py then packages/cli[mcp] in a clean py3.12 venv
+      (mirrors Dockerfile RUN)
+    expected: both exit 0; dna binary present; fastmcp + dna + dna_cli + build_server
+      import; step 2 does not reach PyPI for dna-sdk
+  - action: DNA_BASE_DIR=deploy/azure/dna-scope dna mcp serve --transport http; POST
+      initialize
+    expected: HTTP 200, MCP initialize result names server 'dna'; scope list shows
+      hosted-demo
+  - action: tools/call compose_prompt(concierge, hosted-demo) over the HTTP MCP session
+    expected: returns the live-composed concierge prompt (baked scope is queryable)
+  - action: entrypoint.sh with Entra-style DNA_MCP_JWKS_URI/ISSUER/AUDIENCE/RESOURCE_URL/AUTH_SERVERS
+      + DNA_MCP_AUTH=jwt
+    expected: server boots; GET /.well-known/oauth-protected-resource/mcp = 200 (PRM/RFC
+      9728); unauthenticated POST /mcp = 401 (auth enforced)
+  - action: sh -n entrypoint.sh and scripts/push-scope.sh
+    expected: valid shell syntax
+  - action: brand_guard --self-test + scan; docs_coverage_guard; mkdocs build --strict;
+      gitleaks detect
+    expected: all clean/exit 0
+  verifies:
+  - Story/s-mcp-deploy-aca
+  created_at: '2026-07-11T16:51:30+00:00'
+  updated_at: '2026-07-11T16:51:30+00:00'

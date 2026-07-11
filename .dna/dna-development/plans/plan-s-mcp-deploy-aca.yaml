@@ -1,0 +1,53 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-mcp-deploy-aca
+spec:
+  title: 'Plano: s-mcp-deploy-aca'
+  date: '2026-07-11'
+  status: accepted
+  story_ref: s-mcp-deploy-aca
+  journey_phase: plan
+  body: "# Plan \u2014 Deploy DNA MCP on Azure Container Apps + Entra ID (Phase A\
+    \ of DNA-hosted)\n\n## Goal\nTurn `dna mcp serve --transport http --auth jwt`\
+    \ into a hosted, Entra-authenticated\nContainer App the owner brings up with one\
+    \ `azd up`. The self-host recipe that becomes\nthe base of the multi-tenant DNA\
+    \ Cloud offering.\n\n## Anchors (prior art, no invention)\n- The sibling Foundry\
+    \ app already runs on Azure Container Apps + Entra ID; its `infra/`\n  (main.bicep\
+    \ subscription-scoped -> resources.bicep: Log Analytics + ACA managed env +\n\
+    \  ACR + user-assigned Managed Identity + AcrPull role + Container App with external\n\
+    \  ingress; azure.yaml service->Dockerfile->remoteBuild) is the template I mirror,\
+    \ trimmed\n  to the MCP server's needs (no Foundry account / search / RAG storage).\n\
+    - The MS official tutorial \"Host a remote MCP server on Azure Container Apps\
+    \ with\n  OAuth 2.1 + Microsoft Entra\" is the auth anchor: an Entra app registration\
+    \ exposes an\n  API scope; the Container App validates bearer JWTs against Entra's\
+    \ JWKS.\n- The DNA auth<->tenancy bridge already exists (`dna_cli._mcp_auth`):\
+    \ `--auth jwt` reads\n  DNA_MCP_JWKS_URI/ISSUER/AUDIENCE/RESOURCE_URL/AUTH_SERVERS\
+    \ and maps the token's tenant\n  claim (DNA_MCP_TENANT_CLAIM, default `tenant`)\
+    \ -> a DNA tenant. Entra is just a JWKS IdP\n  to it; I wire the env, I do NOT\
+    \ touch auth code (parallel agent owns it).\n\n## Deliverables (all under `deploy/azure/`\
+    \ + docs)\n1. Dockerfile (+ entrypoint.sh, .dockerignore): python:3.12-slim, install\
+    \ dna-cli[mcp]\n   from the repo source, non-root, EXPOSE 8080, entrypoint runs\n\
+    \   `dna mcp serve --transport http --host 0.0.0.0 --port 8080 --auth ${DNA_MCP_AUTH:-jwt}`.\n\
+    2. azure.yaml + main.bicep + main.parameters.json + resources.bicep: Container\
+    \ App\n   (ingress 8080 external, HTTPS) + user-assigned MI (AcrPull) + Log Analytics\
+    \ + ACA env +\n   ACR + Azure Files share mounted read-only at /mnt/dna (the DNA\
+    \ source) + the Entra-JWT\n   env vars as params. No secrets (MI + JWKS public-key\
+    \ validation).\n3. Entra: document the app registration (audience/scope) + the\
+    \ JWKS/issuer/audience the\n   Container App validates against; a sample `dna.config.yaml`\
+    \ auth.providers: [entra].\n4. README.md runbook: azd up step-by-step, what the\
+    \ owner configures (Entra tenant, app id,\n   scope), and the post-deploy smoke\
+    \ (an MCP client connects over HTTPS with an Entra token).\n5. docs: a new guide\
+    \ page wired into mkdocs nav + CHANGELOG [Unreleased] + guide cross-link.\n\n\
+    ## Proof (no Azure creds)\n- `az bicep build` clean on every .bicep (the honest\
+    \ local gate).\n- `docker build` of the Dockerfile OK (or validate by inspection\
+    \ if the daemon/disk fails).\n- `dna mcp serve --transport http` boots and answers\
+    \ MCP `initialize` locally (already done).\n- `mkdocs build --strict` green; brand_guard\
+    \ + gitleaks green.\n- TestGuide (integration) + TestRun. The real `azd up` is\
+    \ the owner's checklist.\n\n## Guardrails\n- Territory = `deploy/` + docs ONLY.\
+    \ Do NOT touch `_mcp_auth.py` / auth config (parallel agent).\n- Brand guard forbids\
+    \ the internal tokens; describe the sibling app generically, never by brand.\n\
+    - Open the PR and STOP; CI is frozen, the owner merges when it returns. NOT merged\
+    \ here.\n"
+  created_at: '2026-07-11T16:37:42+00:00'
+  updated_at: '2026-07-11T16:37:42+00:00'

@@ -1,0 +1,10 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: Genome
+metadata:
+  name: hosted-demo
+  description: >-
+    Minimal seed scope baked into the hosted DNA MCP image — one agent, so a
+    fresh `azd up` yields a queryable server before you seed your real scope
+    onto the mounted Azure Files share (deploy/azure/scripts/push-scope.sh).
+spec:
+  default_agent: concierge

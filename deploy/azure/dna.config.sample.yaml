@@ -1,0 +1,33 @@
+# dna.config.sample.yaml — REFERENCE ONLY (do not point the running server at this).
+#
+# The hosted MCP server today wires Entra auth from the ENVIRONMENT (the
+# `--auth jwt` provider reads DNA_MCP_JWKS_URI / _ISSUER / _AUDIENCE /
+# _RESOURCE_URL / _AUTH_SERVERS / DNA_MCP_TENANT_CLAIM — all set by the bicep,
+# see resources.bicep and the README). That is the leg proven in this recipe.
+#
+# This file documents the DECLARATIVE front-end that the config-based auth work
+# adds on the same seam: an `auth.providers` list with a first-class `entra`
+# provider, so the whole hosting config is one language-agnostic file instead of
+# a handful of env vars. Until that lands, `dna.config.yaml` validates strictly
+# and REJECTS unknown keys — so keep this as a `.sample` and drive the deploy
+# from the env vars above.
+
+# Where the DNA documents live. On the Container App this is the mounted Azure
+# Files share (DNA_BASE_DIR=/mnt/dna); a Postgres source works too.
+source: file:///mnt/dna
+# source: postgresql://dna:dna@db.internal:5432/dna
+
+search: off        # pgvector | sqlite-vec | off
+embedding: off     # onnx | fake | off
+
+# --- forthcoming declarative auth (parallel work — see note above) -----------
+# auth:
+#   providers:
+#     - entra                       # Microsoft Entra as an OAuth 2.1 / JWKS IdP
+#   entra:
+#     tenant_id: "<entra-tenant-guid>"
+#     audience: "api://<mcp-app-client-id>"    # the Application ID URI you exposed
+#     # derived from tenant_id, shown for clarity:
+#     jwks_uri: "https://login.microsoftonline.com/<entra-tenant-guid>/discovery/v2.0/keys"
+#     issuer:   "https://login.microsoftonline.com/<entra-tenant-guid>/v2.0"
+#   tenant_claim: tenant            # the claim mapped to a DNA tenant (or `tid`)

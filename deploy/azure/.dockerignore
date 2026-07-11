@@ -1,0 +1,23 @@
+# Build context is the repo root — keep the image slim and the build fast by
+# excluding everything the from-source install does not need.
+.git
+.github
+**/.venv
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/node_modules
+**/dist
+**/build
+site
+docs
+examples
+tests
+**/tests
+scopes
+.dna
+*.md
+!packages/sdk-py/README.md
+!packages/cli/README.md

@@ -1,0 +1,26 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-mcp-deploy-aca-20260711-165202
+spec:
+  guide_ref: tg-mcp-deploy-aca
+  outcome: partial
+  verifies:
+  - Story/s-mcp-deploy-aca
+  executed_by: claude-code
+  executed_at: '2026-07-11T16:52:02+00:00'
+  notes: "Local CI-friendly gates ALL PASS: (1) az bicep build main.bicep + resources.bicep\
+    \ exit 0, ZERO lint warnings (Entra endpoints via environment()). (2) clean py3.12\
+    \ venv install pip sdk-py then cli[mcp] exit 0, imports OK, no PyPI hit for dna-sdk.\
+    \ (3) dna mcp serve --transport http against baked dna-scope: initialize HTTP\
+    \ 200 server 'dna'; scope list=hosted-demo. (4) compose_prompt(concierge) returns\
+    \ live prompt. (5) entrypoint.sh --auth jwt w/ Entra-style env: PRM /.well-known/oauth-protected-resource/mcp=200,\
+    \ unauth POST /mcp=401 (enforced). (6) sh -n both scripts OK. (7) brand_guard\
+    \ self-test+scan clean, docs_coverage clean, mkdocs build --strict exit 0 (hosting\
+    \ page built), gitleaks no leaks. PARTIAL because the real 'azd up' against a\
+    \ live Azure subscription + Entra tenant is the OWNER'S step (documented as a\
+    \ checklist in deploy/azure/README.md) \u2014 no Azure creds here. Docker daemon\
+    \ build blocked by a corrupted local containerd content store (input/output error\
+    \ on its own blobs; host has 23Gi free) \u2014 Dockerfile validated by inspection\
+    \ instead (exact RUN sequence proven in a clean venv; entrypoint proven booting+enforcing\
+    \ auth)."
