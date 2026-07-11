@@ -1,0 +1,109 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-cli-localresolver-consistency
+spec:
+  title: 'CLI boot registers LocalResolver (auto==quick for local: deps)'
+  description: "dna eval run / CLI boot builds kernel via Kernel.auto() WITHOUT LocalResolver\
+    \ while Kernel.quick registers it \u2014 a local:<scope> dep resolves in the SDK\
+    \ but not the CLI. Wire the resolvers on the CLI boot path consistently."
+  status: in-progress
+  feature: f-dna-dx-configure
+  priority: high
+  labels:
+  - cli
+  - sdk
+  - bug
+  reporter: claude-code
+  acceptance_criteria:
+  - "Given a scope with a local:<lib-scope> dep, When the CLI boot path (dna eval\
+    \ run) builds the kernel and resolves the manifest, Then the local: dep resolves\
+    \ (LocalResolver present) \u2014 same result as Kernel.quick."
+  - Given a non-filesystem source (sqlite/postgres) with no resolvable base_dir, When
+    the CLI boots, Then no LocalResolver is wired (documented no-op) and boot does
+    not error.
+  - 'Given Kernel.quick for the same scenario, When it resolves the manifest, Then
+    it still resolves the local: dep (no regression).'
+  acceptance_criteria_source: claude-code
+  definition_of_done:
+  - 'Code: CLI boot (_ctx._build_holder_async) wires the same resolver set as Kernel.quick
+    for filesystem sources via a shared bootstrap helper; from_config/build_auto_kernel
+    aligned.'
+  - 'Tests: a regression test proves the CLI/auto boot resolves a local: dep (red
+    before, green after) and that Kernel.quick keeps resolving; ideally the same scenario
+    via both paths yields the same result.'
+  - 'Docs: CHANGELOG [Unreleased] entry; Py<->TS asymmetry (CLI is Py-only) documented.'
+  - 'CI: full Py + TS suites + guards + mkdocs build --strict green; 11/11 checks
+    on the PR.'
+  definition_of_done_source: claude-code
+  created_at: '2026-07-11T10:25:11+00:00'
+  updated_at: '2026-07-11T10:35:42+00:00'
+  timeline:
+  - at: '2026-07-11T10:25:11+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-11T10:25:33+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-11T10:25:45+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Origem: kaizen kz-001 (achado ao usar o DNA no consumidor foundry \u2014\
+      \ gate de eval com dep local: resolvia no SDK via Kernel.quick mas nao no CLI\
+      \ via dna eval run). Sem doc kz-001 no scope, cito aqui. Confirmei a mecanica\
+      \ lendo os dois caminhos: build_quick_manifest registra o set completo de resolvers;\
+      \ build_auto_kernel so registra LocalResolver quando recebe source; e o CLI\
+      \ (_ctx._build_holder_async) chama Kernel.auto() SEM source e wira o source\
+      \ depois, entao a branch de resolvers nunca roda -> zero resolvers no CLI. Proximo:\
+      \ escrever o teste vermelho (TDD) e extrair helper compartilhado."
+    commit_ref: fec9824409b71804205826e6b506a7d59d1605b0
+  - at: '2026-07-11T10:29:22+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Fix aplicado. Extrai helper wire_filesystem_resolvers(kernel, base_dir)\
+      \ em kernel_bootstrap.py (set canonico: local+github+http+https+registry+helix).\
+      \ build_quick_manifest e build_auto_kernel (branch fs) agora usam o helper ->\
+      \ uma so receita. CLI _ctx._build_holder_async passou a chamar o helper quando\
+      \ source.supports_readers (fs), no-op honesto p/ SQLite/Postgres (sem scopes-root,\
+      \ LocalResolver nao faz sentido). from_config alinhado por construcao (roteia\
+      \ via build_auto_kernel). Teste TDD (packages/cli/tests/test_cli_local_resolver.py):\
+      \ 4 casos, RED antes / GREEN depois \u2014 CLI resolve local:my-lib igual ao\
+      \ Kernel.quick, e ambos concordam. Nota extra: antes build_auto_kernel so registrava\
+      \ 'local'; agora registra o set completo, fechando tambem um gap latente github:/http:\
+      \ no caminho auto e alinhando com o TS fromConfig."
+    commit_ref: fec9824409b71804205826e6b506a7d59d1605b0
+  - at: '2026-07-11T10:35:20+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-cli-localresolver-consistency
+    summary: TestGuide tg-cli-localresolver-consistency (regression)
+  - at: '2026-07-11T10:35:42+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-cli-localresolver-consistency-20260711-103540
+    summary: "TestRun tr-tg-cli-localresolver-consistency-20260711-103540 \u2192 pass"
+    outcome: pass
+  produces:
+  - kind: Plan
+    name: plan-s-cli-localresolver-consistency
+    role: implementation
+    at: '2026-07-11T10:25:33+00:00'
+  - kind: TestGuide
+    name: tg-cli-localresolver-consistency
+    role: test-guide
+    at: '2026-07-11T10:35:20+00:00'
+  - kind: TestRun
+    name: tr-tg-cli-localresolver-consistency-20260711-103540
+    role: test-run
+    at: '2026-07-11T10:35:42+00:00'
