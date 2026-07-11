@@ -1,0 +1,28 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-cli-localresolver-consistency
+spec:
+  description: Prove the dna CLI boot resolves a relative local:<scope> dependency
+    identically to the SDK (kz-001).
+  kind_of_test: regression
+  status: active
+  steps:
+  - action: 'Mount a project .dna/ with a lib bundle (.dna/my-lib/skills/greet/SKILL.md)
+      and a consumer scope whose manifest declares a dependency source: local:my-lib
+      importing Skill greet'
+    expected: fixture on disk, no errors
+  - action: 'Run the real binary: DNA_BASE_DIR=<proj> dna scope tree consumer --json'
+    expected: "output JSON includes \"Skill\": [\"greet\"] \u2014 the local dep resolved\
+      \ through the CLI (pre-fix it showed only Agent + Genome)"
+  - action: 'Run the automated regression: pytest packages/cli/tests/test_cli_local_resolver.py'
+    expected: "4 passed \u2014 CLI boot wires 'local' resolver, resolves greet, and\
+      \ agrees with Kernel.quick"
+  - action: Counterfactual on unmodified main sources
+    expected: kernel._resolvers == [] and resolved Skills == [] (proves the guide
+      would go red without the fix)
+  verifies:
+  - Story/s-cli-localresolver-consistency
+  created_at: '2026-07-11T10:35:17+00:00'
+  updated_at: '2026-07-11T10:35:17+00:00'
+  owner: claude-code

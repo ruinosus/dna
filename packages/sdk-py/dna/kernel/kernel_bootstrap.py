@@ -43,6 +43,37 @@ if TYPE_CHECKING:  # pragma: no cover
 logger = logging.getLogger("dna.kernel")
 
 
+def wire_filesystem_resolvers(kernel: "Kernel", base_dir: str) -> None:
+    """Register the canonical resolver set for a filesystem-backed Kernel.
+
+    ONE recipe, shared by every boot path (``Kernel.quick``, ``Kernel.auto``
+    with an fs source, ``Kernel.from_config``, and the ``dna`` CLI). Before
+    this existed, ``Kernel.quick`` wired the full set here, ``build_auto_kernel``
+    wired only ``local``, and the CLI wired NOTHING — so a ``local:<scope>`` dep
+    resolved through ``Kernel.quick`` but silently NOT through ``dna eval run``
+    (kz-001: same composition, two results). Centralizing it makes the three
+    paths byte-identical for dependency resolution.
+
+    ``LocalResolver`` is anchored at ``base_dir`` so RELATIVE ``local:<scope>``
+    paths resolve against the filesystem scopes root. It is meaningful ONLY for
+    filesystem sources — non-filesystem (SQLite/Postgres) sources have no
+    scopes-root directory, so callers must NOT invoke this for them (see
+    ``build_auto_kernel``'s non-fs branch, which wires a noop cache and no
+    resolvers).
+    """
+    from dna.adapters.resolvers import (
+        HelixResolver, GitHubResolver, HttpResolver, LocalResolver,
+        RegistryResolver,
+    )
+
+    kernel.resolver("local", LocalResolver(base_dir=base_dir))
+    kernel.resolver("github", GitHubResolver())
+    kernel.resolver("http", HttpResolver())
+    kernel.resolver("https", HttpResolver())
+    kernel.resolver("registry", RegistryResolver())
+    kernel.resolver("helix", HelixResolver())
+
+
 def build_quick_manifest(
     scope: str, base_dir: str = ".dna", *, cls: type["Kernel"] | None = None,
 ) -> "ManifestInstance":
@@ -53,20 +84,11 @@ def build_quick_manifest(
         cls = Kernel
 
     from dna.adapters.filesystem import FilesystemCache, FilesystemSource
-    from dna.adapters.resolvers import (
-        HelixResolver, GitHubResolver, HttpResolver, LocalResolver,
-        RegistryResolver,
-    )
 
     k = cls()
     k.source(FilesystemSource(base_dir))
     k.cache(FilesystemCache(base_dir))
-    k.resolver("local", LocalResolver(base_dir=base_dir))
-    k.resolver("github", GitHubResolver())
-    k.resolver("http", HttpResolver())
-    k.resolver("https", HttpResolver())
-    k.resolver("registry", RegistryResolver())
-    k.resolver("helix", HelixResolver())
+    wire_filesystem_resolvers(k, base_dir)
 
     # Load all extensions via entry-point discovery
     for ep in importlib.metadata.entry_points(group=EXTENSIONS_ENTRY_POINT_GROUP):
@@ -177,10 +199,11 @@ def build_auto_kernel(
         k.source(source)
         if source.supports_readers:
             from dna.adapters.filesystem import FilesystemCache
-            from dna.adapters.resolvers import LocalResolver
             base_dir = str(source.base_dir)
             k.cache(FilesystemCache(base_dir))
-            k.resolver("local", LocalResolver(base_dir=base_dir))
+            # Full resolver set (local + network) — one recipe with Kernel.quick
+            # + the CLI, so a local:<scope> dep resolves identically everywhere.
+            wire_filesystem_resolvers(k, base_dir)
         else:
             k.cache(_NoopCache())
         # H2 — uniform auto-wiring via KernelAttachable capability.

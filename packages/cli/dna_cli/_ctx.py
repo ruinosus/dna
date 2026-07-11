@@ -94,6 +94,20 @@ async def _build_holder_async(scope: str | None = None):
     except Exception:  # noqa: BLE001 — cache is optional for CLI reads
         pass
 
+    # kz-001 — wire the resolver set for filesystem sources, exactly like
+    # ``Kernel.quick`` / ``build_auto_kernel``. Because this boot builds the
+    # kernel via ``Kernel.auto()`` (no source) and attaches the source
+    # separately, ``build_auto_kernel``'s resolver-wiring branch never runs —
+    # so without this the CLI kernel had ZERO resolvers and a ``local:<scope>``
+    # dep silently failed to resolve through ``dna eval run`` while it resolved
+    # fine through the SDK. Non-filesystem sources (SQLite/Postgres) have no
+    # scopes-root directory, so ``LocalResolver`` is meaningless there — wire
+    # resolvers ONLY when the source exposes a filesystem base_dir.
+    if getattr(source, "supports_readers", False):
+        from dna.kernel.kernel_bootstrap import wire_filesystem_resolvers
+
+        wire_filesystem_resolvers(kernel, str(getattr(source, "base_dir", ".dna")))
+
     resolved = scope or os.getenv("DNA_SCOPE_DEFAULT")
     if resolved is None:
         scopes = await source.list_scopes()

@@ -1,0 +1,18 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-cli-localresolver-consistency-20260711-103540
+spec:
+  guide_ref: tg-cli-localresolver-consistency
+  outcome: pass
+  verifies:
+  - Story/s-cli-localresolver-consistency
+  executed_by: claude-code
+  executed_at: '2026-07-11T10:35:40+00:00'
+  notes: "All steps green on the fix worktree. (2) Real binary: dna scope tree consumer\
+    \ --json => {\"Agent\":[\"main-agent\"],\"Genome\":[\"consumer\"],\"Skill\":[\"\
+    greet\"]} \u2014 local:my-lib resolved. (3) pytest packages/cli/tests/test_cli_local_resolver.py:\
+    \ 4 passed. (4) Counterfactual on unmodified main sources: kernel._resolvers==[]\
+    \ and resolved Skills==[] (RED). Full suites: sdk-py 2842 passed / cli 389 passed\
+    \ / ts 1396 pass; brand-guard clean; docs_coverage clean; mkdocs build --strict\
+    \ OK; reference generators no-drift."

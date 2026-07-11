@@ -11,6 +11,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **CLI boot now wires the `LocalResolver` — `dna eval run` resolves `local:`
+  deps identically to the SDK** (s-cli-localresolver-consistency, kaizen
+  `kz-001`; feature `f-dna-dx-configure`). The `dna` CLI built its kernel via
+  `Kernel.auto()` **without a source** and attached the source afterwards, so
+  `build_auto_kernel`'s resolver-wiring branch (guarded by `source is not None`)
+  never ran — the CLI kernel had **zero resolvers**. A dependency declared as
+  `local:<scope>` therefore resolved through `Kernel.quick` (which wires the
+  resolvers) but silently **failed to resolve** through `dna eval run` and every
+  other CLI command: same composition, two results. The resolver set is now
+  wired by one shared recipe (`kernel_bootstrap.wire_filesystem_resolvers`) used
+  by `Kernel.quick`, `Kernel.auto`/`Kernel.from_config` (filesystem source), and
+  the CLI boot path. Non-filesystem sources (SQLite/Postgres) have no
+  scopes-root directory, so `LocalResolver` is a documented no-op there. As a
+  side benefit, the `auto`/`from_config` path now also registers the `github` /
+  `http` / `https` / `registry` / `helix` resolvers (previously `local`-only),
+  matching `Kernel.quick` and the TypeScript `fromConfig`. The `dna` CLI is
+  Python-only; the TypeScript `quickInstance` / `fromConfig` already wired their
+  resolvers, so there was no TS-side gap to fix.
+
 ## [0.5.0] - 2026-07-11
 
 ### Added
