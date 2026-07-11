@@ -1,0 +1,38 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-digest-c
+spec:
+  description: Roteiro de teste de s-sdlc-delegator-digest (derivado das acceptance_criteria).
+  kind_of_test: smoke
+  status: active
+  steps:
+  - action: "No Studio, valide: dna sdlc digest agrega eventos de timeline (status\u2192\
+      done/review/blocked, decis\xF5es/ADRs, features/\xE9picos que avan\xE7aram,\
+      \ issues/kaizen, artefatos, releases) numa janela --since que aceita ISO | Nh/Nd/Nw\
+      \ | last-digest, default 24h"
+    where: "<rota/tela \u2014 ex. /scopes/:scope/...>"
+    expected: "<o que voc\xEA V\xCA quando est\xE1 certo (marque \u2717 S\xD3 se estiver\
+      \ quebrado)>"
+  - action: "No Studio, valide: Se\xE7\xE3o 'PRECISA DA SUA ATEN\xC7\xC3O' lista blocked\
+      \ (com motivo), stories em review com PR aberto, decis\xF5es-do-dono pendentes\
+      \ e perguntas em aberto \u2014 primeiro e destacado"
+    where: "<rota/tela \u2014 ex. /scopes/:scope/...>"
+    expected: "<o que voc\xEA V\xCA quando est\xE1 certo (marque \u2717 S\xD3 se estiver\
+      \ quebrado)>"
+  - action: "No Studio, valide: Sa\xEDda de UMA tela agrupada (Conclu\xEDdo/Decidido/Achado/Precisa\
+      \ de voc\xEA); --json estruturado; --save persiste StatusReport 'digest-<data>'\
+      \ query\xE1vel via cognitive search/recall"
+    where: "<rota/tela \u2014 ex. /scopes/:scope/...>"
+    expected: "<o que voc\xEA V\xCA quando est\xE1 certo (marque \u2717 S\xD3 se estiver\
+      \ quebrado)>"
+  - action: "No Studio, valide: Help/docs distinguem digest (o que j\xE1 aconteceu,\
+      \ pra tr\xE1s) de brief (pr\xF3ximos passos, pra frente)"
+    where: "<rota/tela \u2014 ex. /scopes/:scope/...>"
+    expected: "<o que voc\xEA V\xCA quando est\xE1 certo (marque \u2717 S\xD3 se estiver\
+      \ quebrado)>"
+  verifies:
+  - Story/s-sdlc-delegator-digest
+  created_at: '2026-07-11T14:10:41+00:00'
+  updated_at: '2026-07-11T14:10:41+00:00'
+  owner: claude-code

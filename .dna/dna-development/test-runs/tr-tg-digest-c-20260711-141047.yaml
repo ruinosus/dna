@@ -1,0 +1,14 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-digest-c-20260711-141047
+spec:
+  guide_ref: tg-digest-c
+  outcome: pass
+  verifies:
+  - Story/s-sdlc-delegator-digest
+  executed_by: claude-code
+  executed_at: '2026-07-11T14:10:47+00:00'
+  evidence:
+  - "PR #59; dna sdlc digest --since 24h consolidou 38 done + ADR piv\xF4 + kaizen\
+    \ + 8 releases"

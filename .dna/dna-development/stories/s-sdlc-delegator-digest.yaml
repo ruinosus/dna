@@ -8,7 +8,7 @@ spec:
     \ que agrega os eventos de timeline dos work items numa janela e produz um digest\
     \ de uma tela agrupado (Conclu\xEDdo / Decidido / Achado / Precisa de voc\xEA\
     ), persist\xEDvel como StatusReport."
-  status: in-progress
+  status: done
   feature: f-sdlc-digest
   owner: claude-code
   priority: high
@@ -17,26 +17,41 @@ spec:
   - observability
   - cli
   acceptance_criteria:
-  - "dna sdlc digest agrega eventos de timeline (status\u2192done/review/blocked,\
-    \ decis\xF5es/ADRs, features/\xE9picos que avan\xE7aram, issues/kaizen, artefatos,\
-    \ releases) numa janela --since que aceita ISO | Nh/Nd/Nw | last-digest, default\
-    \ 24h"
-  - "Se\xE7\xE3o 'PRECISA DA SUA ATEN\xC7\xC3O' lista blocked (com motivo), stories\
-    \ em review com PR aberto, decis\xF5es-do-dono pendentes e perguntas em aberto\
-    \ \u2014 primeiro e destacado"
-  - "Sa\xEDda de UMA tela agrupada (Conclu\xEDdo/Decidido/Achado/Precisa de voc\xEA\
-    ); --json estruturado; --save persiste StatusReport 'digest-<data>' query\xE1\
-    vel via cognitive search/recall"
-  - "Help/docs distinguem digest (o que j\xE1 aconteceu, pra tr\xE1s) de brief (pr\xF3\
-    ximos passos, pra frente)"
+  - text: "dna sdlc digest agrega eventos de timeline (status\u2192done/review/blocked,\
+      \ decis\xF5es/ADRs, features/\xE9picos que avan\xE7aram, issues/kaizen, artefatos,\
+      \ releases) numa janela --since que aceita ISO | Nh/Nd/Nw | last-digest, default\
+      \ 24h"
+    done: true
+    done_at: '2026-07-11T14:10:52+00:00'
+    done_by: story-done-auto
+  - text: "Se\xE7\xE3o 'PRECISA DA SUA ATEN\xC7\xC3O' lista blocked (com motivo),\
+      \ stories em review com PR aberto, decis\xF5es-do-dono pendentes e perguntas\
+      \ em aberto \u2014 primeiro e destacado"
+    done: true
+    done_at: '2026-07-11T14:10:52+00:00'
+    done_by: story-done-auto
+  - text: "Sa\xEDda de UMA tela agrupada (Conclu\xEDdo/Decidido/Achado/Precisa de\
+      \ voc\xEA); --json estruturado; --save persiste StatusReport 'digest-<data>'\
+      \ query\xE1vel via cognitive search/recall"
+    done: true
+    done_at: '2026-07-11T14:10:52+00:00'
+    done_by: story-done-auto
+  - text: "Help/docs distinguem digest (o que j\xE1 aconteceu, pra tr\xE1s) de brief\
+      \ (pr\xF3ximos passos, pra frente)"
+    done: true
+    done_at: '2026-07-11T14:10:52+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - "L\xF3gica de agrega\xE7\xE3o pura + unit-testada; suites Py + guards + mkdocs\
-    \ build --strict verdes; doc-guia + CHANGELOG [Unreleased]; digest real do board\
-    \ de hoje capturado no TestRun"
+  - text: "L\xF3gica de agrega\xE7\xE3o pura + unit-testada; suites Py + guards +\
+      \ mkdocs build --strict verdes; doc-guia + CHANGELOG [Unreleased]; digest real\
+      \ do board de hoje capturado no TestRun"
+    done: true
+    done_at: '2026-07-11T14:10:52+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-11T13:37:55+00:00'
-  updated_at: '2026-07-11T13:50:19+00:00'
+  updated_at: '2026-07-11T14:11:01+00:00'
   timeline:
   - at: '2026-07-11T13:37:55+00:00'
     actor: claude-code
@@ -80,6 +95,33 @@ spec:
     name: tr-tg-s-sdlc-delegator-digest-20260711-135015
     summary: "TestRun tr-tg-s-sdlc-delegator-digest-20260711-135015 \u2192 pass"
     outcome: pass
+  - at: '2026-07-11T14:10:44+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-digest-c
+    summary: TestGuide tg-digest-c (smoke)
+  - at: '2026-07-11T14:10:50+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-digest-c-20260711-141047
+    summary: "TestRun tr-tg-digest-c-20260711-141047 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-11T14:10:55+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'PR #59 merged'
+  - at: '2026-07-11T14:11:01+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: done
+    commit_ref: b9e87d64c7a6d912a81ccfd9b6d4821ec93dca4d
   produces:
   - kind: Plan
     name: plan-s-sdlc-delegator-digest
@@ -93,3 +135,12 @@ spec:
     name: tr-tg-s-sdlc-delegator-digest-20260711-135015
     role: test-run
     at: '2026-07-11T13:50:19+00:00'
+  - kind: TestGuide
+    name: tg-digest-c
+    role: test-guide
+    at: '2026-07-11T14:10:44+00:00'
+  - kind: TestRun
+    name: tr-tg-digest-c-20260711-141047
+    role: test-run
+    at: '2026-07-11T14:10:50+00:00'
+  closed_at: '2026-07-11T14:10:52+00:00'
