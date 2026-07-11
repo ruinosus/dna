@@ -11,6 +11,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`dna mcp serve` Phase 2 — remote transport + OAuth 2.1 auth bound to DNA
+  tenancy** (feature `f-dna-mcp-server`, stories `s-mcp-remote-transport` +
+  `s-mcp-oauth-auth`; ADR `adr-dna-mcp-runtime-face`). The *same* MCP server the
+  MVP serves over stdio (local: Claude Code/Cursor/Copilot) is now hostable and
+  authenticated for **remote/web** clients (Claude web, ChatGPT):
+  - **Streamable HTTP transport** — `dna mcp serve --transport {stdio|http|sse}`
+    with `--host/--port/--path`. FastMCP-native (MCP spec 2025-06-18) — a flag,
+    not new transport code; the endpoint is `http://<host>:<port>/mcp/`.
+  - **OAuth 2.1 Resource Server** — `--auth jwt` verifies signed bearer JWTs
+    (env `DNA_MCP_JWT_PUBLIC_KEY` | `DNA_MCP_JWKS_URI` + issuer/audience) and
+    advertises Protected Resource Metadata (RFC 9728) when wrapped as a Resource
+    Server (`DNA_MCP_RESOURCE_URL` + `DNA_MCP_AUTH_SERVERS`). Conforms to the MCP
+    Authorization spec revision 2025-11-25 (PKCE, RFC 9728/8707/8414/7591); a
+    WorkOS/Auth0 `OAuthProxy` slots into the same provider seam.
+  - **The auth↔tenancy bridge** (`dna_cli._mcp_auth`) — maps the verified token's
+    claim (`tenant`, configurable) or scope (`tenant:<x>`) to a **DNA tenant** and
+    enforces it: every tool (`compose_prompt`/`recall`/`list_stories`/…) is
+    **tenant-scoped by the token**; a cross-tenant or tenant-less request is denied
+    (fail closed); with no auth (stdio) the bridge is an identity, so the base path
+    is untouched. Auth + multi-tenant in one mechanism. HTTP/auth are optional
+    extras that never break the stdio/base install. Guide: *The MCP server — DNA as
+    a live layer → Remote + authenticated*.
+
 ## [0.9.0] - 2026-07-11
 
 ### Added

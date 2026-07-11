@@ -1,0 +1,14 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-mcp-remote-transport-20260711-154807
+spec:
+  guide_ref: tg-mcp-remote-transport
+  outcome: pass
+  verifies:
+  - Story/s-mcp-remote-transport
+  executed_by: claude-code
+  executed_at: '2026-07-11T15:48:07+00:00'
+  notes: "pytest packages/cli/tests/test_mcp_transport.py \u2192 2 passed; a web-style\
+    \ FastMCP Client over an http:// URL reaches all 10 tools + manifest resource\
+    \ and composes live; full CLI suite 474 passed; mkdocs build --strict exit 0."

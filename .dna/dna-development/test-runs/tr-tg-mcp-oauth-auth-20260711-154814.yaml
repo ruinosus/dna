@@ -1,0 +1,15 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-mcp-oauth-auth-20260711-154814
+spec:
+  guide_ref: tg-mcp-oauth-auth
+  outcome: pass
+  verifies:
+  - Story/s-mcp-oauth-auth
+  executed_by: claude-code
+  executed_at: '2026-07-11T15:48:14+00:00'
+  notes: "pytest packages/cli/tests/test_mcp_auth.py \u2192 15 passed; real RSA-signed\
+    \ JWTs: acme vs globex tenant-scoped compose_prompt, cross-tenant denied, tenant-less\
+    \ denied, unauthenticated rejected, PRM (RFC 9728) discoverable; bridge unit policy\
+    \ green."

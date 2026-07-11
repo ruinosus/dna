@@ -1,0 +1,30 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-mcp-oauth-auth
+spec:
+  description: 'Verify FastMCP OAuth 2.1 auth + the DNA auth<->tenancy bridge: tokens
+    are tenant-scoped, cross-tenant + tenant-less denied, PRM discoverable.'
+  kind_of_test: integration
+  status: active
+  steps:
+  - action: Run pytest packages/cli/tests/test_mcp_auth.py
+    expected: "15 passed \u2014 bridge unit policy (claim/scope->tenant, cross-tenant\
+      \ + tenant-less denial, passthrough) + e2e over real RSA-signed JWTs"
+  - action: Two JWTs (tenant=acme vs globex) call the same compose_prompt over HTTP
+    expected: "composition scoped by the token \u2014 acme sees its overlay, globex\
+      \ does not; neither passes a tenant arg"
+  - action: An acme token calls compose_prompt with tenant=globex
+    expected: DENIED (cross-tenant, ToolError mentioning tenant)
+  - action: A token with no tenant claim/scope calls a tool
+    expected: DENIED (fail closed)
+  - action: GET /.well-known/oauth-protected-resource/mcp on the RemoteAuthProvider-wrapped
+      server
+    expected: 200 with resource + authorization_servers (RFC 9728 PRM discovery)
+  - action: Import dna_cli / mcp_cmd / _mcp_auth without the [mcp] extra
+    expected: no top-level fastmcp import (base install unaffected)
+  verifies:
+  - Story/s-mcp-oauth-auth
+  created_at: '2026-07-11T15:47:35+00:00'
+  updated_at: '2026-07-11T15:47:35+00:00'
+  owner: claude-code
