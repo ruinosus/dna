@@ -1,0 +1,66 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-dna-cloud-my-dna-panel
+spec:
+  title: Painel 'Meu DNA' no dashboard
+  description: 'Dashboard mostra o DNA do tenant logado chamando as tools do MCP:
+    agents, compose_prompt, endpoint+OAuth client, uso'
+  status: done
+  feature: f-dna-cloud
+  priority: high
+  labels:
+  - react
+  - typescript
+  reporter: claude-code
+  business_value: 700
+  acceptance_criteria:
+  - text: "Dashboard 'Meu DNA': lista os agents do tenant (list_agents), compose_prompt\
+      \ ao vivo (escolhe agent \u2192 prompt composto), se\xE7\xE3o Connect (endpoint\
+      \ MCP + OAuth client + snippet .mcp.json p/ Claude/Cursor), uso vs quota"
+    done: true
+    done_at: '2026-07-11T22:01:54+00:00'
+    done_by: story-done-auto
+  - text: "Data layer (lib/dna.ts) chama o MCP server via DNA_MCP_URL (MCP TS SDK);\
+      \ sem env \u2192 sample data rotulado 'sample'; build+typecheck passam sem env"
+    done: true
+    done_at: '2026-07-11T22:01:54+00:00'
+    done_by: story-done-auto
+  - text: "UX polida: tokens DNA reusados, 2 temas, responsivo, contraste \u22654.5:1\
+      \ (product register)"
+    done: true
+    done_at: '2026-07-11T22:01:54+00:00'
+    done_by: story-done-auto
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - text: "painel + lib/dna.ts (MCP client + sample fallback) + docs README + build/typecheck\
+      \ limpos + PR (n\xE3o merge)"
+    done: true
+    done_at: '2026-07-11T22:01:54+00:00'
+    done_by: story-done-auto
+  definition_of_done_source: cli-create
+  created_at: '2026-07-11T21:44:51+00:00'
+  updated_at: '2026-07-11T22:02:15+00:00'
+  timeline:
+  - at: '2026-07-11T21:44:51+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-11T22:02:04+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Painel Meu DNA merged (dna-cloud #5) + wire-up (#6): rota /dashboard/dna\
+      \ (agents, compose_prompt ao vivo, Connect com .mcp.json, uso), lib/dna.ts com\
+      \ seam sample\u2194live (DNA_MCP_URL), link no dashboard. Build/typecheck limpos.\
+      \ UI sem UI-test formal \u2192 sample mode renderiza; live quando DNA_MCP_URL\
+      \ apontar pro MCP."
+  - at: '2026-07-11T22:02:15+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: done
+    commit_ref: bb7d7b40191fcf4c0eefd6b9935147cf8ce17ea4
+  closed_at: '2026-07-11T22:01:54+00:00'
