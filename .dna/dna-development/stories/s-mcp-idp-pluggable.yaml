@@ -1,0 +1,103 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-mcp-idp-pluggable
+spec:
+  title: Fecha o loop OAuth 2.1 end-to-end com IdP REAL, via uma camada de provider
+    PLUGG
+  description: "Fecha o loop OAuth 2.1 end-to-end com IdP REAL, via uma camada de\
+    \ provider PLUGGABLE (N providers). Hoje s\xF3 o Resource Server (valida JWT)\
+    \ roda; falta o Authorization Server real. DESIGN CHAVE: provider \xE9 CONFIG,\
+    \ n\xE3o c\xF3digo \u2014 cada IdP exp\xF5e JWKS/OIDC discovery, ent\xE3o um registry\
+    \ declarativo (dna.config.yaml: {type, issuer, jwks_uri, audience, tenant_claim})\
+    \ cobre Entra/Clerk/WorkOS/Auth0/OIDC-gen\xE9rico sem c\xF3digo por-provider.\
+    \ O bridge claim->tenant \xE9 POR provider (Entra=tid, Clerk=org_id, etc.). REFER\xCA\
+    NCIA: Azure Entra ID primeiro (o foundry j\xE1 usa entraTenantId/entraApiClientId;\
+    \ deploy Azure via azd; e o tid do Entra mapeia LIMPO pra tenant do DNA). FastMCP:\
+    \ JWTVerifier aponta pra qualquer JWKS; OAuthProxy pros sem-DCR."
+  status: in-progress
+  feature: f-dna-mcp-server
+  priority: high
+  labels:
+  - sdk
+  - auth
+  - mcp
+  reporter: claude-code
+  acceptance_criteria:
+  - "camada de provider config-driven (N providers) \u2014 adicionar um IdP = config,\
+    \ n\xE3o c\xF3digo"
+  - "Azure Entra ID como 1\xBA provider concreto, end-to-end (login real \u2192 token\
+    \ \u2192 RS valida \u2192 tenant scoped por tid)"
+  - "generic OIDC + Clerk/WorkOS documentados como varia\xE7\xF5es de config; mapeamento\
+    \ claim->tenant por provider"
+  - "teste de integra\xE7\xE3o ponta-a-ponta com um IdP real (ou emulado fielmente)"
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - "OAuth 2.1 COMPLETO (AS+RS), n\xE3o s\xF3 o RS; guia multi-provider; ADR atualizado"
+  definition_of_done_source: cli-create
+  created_at: '2026-07-11T16:14:20+00:00'
+  updated_at: '2026-07-11T16:39:06+00:00'
+  timeline:
+  - at: '2026-07-11T16:14:20+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-11T16:23:31+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: Generalizando o RS single-env-provider para camada N-provider config-driven;
+      Entra como 1o concreto. Multi-issuer via composite verifier (routing por iss),
+      claim->tenant por provider via stamp no token.
+  - at: '2026-07-11T16:23:36+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-11T16:32:03+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'Implementado: (1) config.py/config.ts aceitam auth: como passthrough
+      opaco (parity Py+TS, +2 testes cada). (2) _mcp_auth.py ganhou a camada pura
+      N-provider: ProviderConfig + parse_auth_providers (defaults por tipo entra=tid/clerk=org_id/workos=org_id/oidc=obrigatorio,
+      JWKS derivado do issuer, Entra common relaxa issuer->audience-only, fail-loud)
+      + select_provider_for_issuer. (3) Composite verifier multi-issuer: tenta cada
+      JWTVerifier, roteia por iss, e CARIMBA o tenant_claim do provider que casou
+      no token.claims -> bridge le o claim certo por-provider sem estado global (sobrevive
+      Entra common). (4) build_auth_from_config + providers_from_config; PRM lista
+      todos os issuers. (5) mcp_cmd: --auth config. Provas: 19 testes novos (parse/routing/e2e
+      2-providers emulados/cross-tenant/PRM) verdes + Entra e2e real DEFERIDO (skip
+      requires DNA_MCP_ENTRA_E2E) pro azd up. Falta: docs guia multi-provider, ADR,
+      CHANGELOG.'
+    commit_ref: 9d659f72a1bcf5083aa0e32aa1152fe9f850eb77
+  - at: '2026-07-11T16:38:36+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-mcp-idp-pluggable-c
+    summary: TestGuide tg-s-mcp-idp-pluggable-c (integration)
+  - at: '2026-07-11T16:39:06+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-mcp-idp-pluggable-c-20260711-163902
+    summary: "TestRun tr-tg-s-mcp-idp-pluggable-c-20260711-163902 \u2192 pass"
+    outcome: pass
+  produces:
+  - kind: Plan
+    name: plan-s-mcp-idp-pluggable
+    role: implementation
+    at: '2026-07-11T16:23:36+00:00'
+  - kind: TestGuide
+    name: tg-s-mcp-idp-pluggable-c
+    role: test-guide
+    at: '2026-07-11T16:38:36+00:00'
+  - kind: TestRun
+    name: tr-tg-s-mcp-idp-pluggable-c-20260711-163902
+    role: test-run
+    at: '2026-07-11T16:39:06+00:00'

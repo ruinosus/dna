@@ -32,7 +32,7 @@ CONFIG_FILENAME = "dna.config.yaml"
 
 _VALID_SEARCH = ("off", "pgvector", "sqlite-vec")
 _VALID_EMBEDDING = ("off", "fake", "onnx")
-_KNOWN_KEYS = {"source", "search", "embedding"}
+_KNOWN_KEYS = {"source", "search", "embedding", "auth"}
 
 
 @dataclass(frozen=True)
@@ -41,12 +41,18 @@ class DnaConfig:
 
     ``source`` is a scheme URL (``file://`` / ``sqlite://`` / ``postgresql://``).
     ``search`` / ``embedding`` are validated enum strings (see module docstring).
+    ``auth`` is an **opaque passthrough** mapping (the ``auth:`` section) — the SDK
+    only checks it is a mapping; its detailed schema (``providers[]`` — the
+    pluggable N-provider IdP layer of the MCP runtime face) is owned and validated
+    by the consumer (``dna_cli._mcp_auth.parse_auth_providers``). ``None`` when the
+    file has no ``auth:`` section.
     ``path`` is where it was loaded from (``None`` for a synthesized default).
     """
 
     source: str
     search: str = "off"
     embedding: str = "off"
+    auth: dict[str, Any] | None = None
     path: Path | None = None
 
 
@@ -130,4 +136,13 @@ def _parse(raw: Any, path: Path) -> DnaConfig:
             f"{list(_VALID_EMBEDDING)}."
         )
 
-    return DnaConfig(source=source, search=search, embedding=embedding, path=path)
+    auth = raw.get("auth")
+    if auth is not None and not isinstance(auth, dict):
+        raise ValueError(
+            f"{path}: `auth:` must be a mapping (its `providers:` list configures "
+            f"the MCP IdP layer), got {type(auth).__name__}."
+        )
+
+    return DnaConfig(
+        source=source, search=search, embedding=embedding, auth=auth, path=path
+    )

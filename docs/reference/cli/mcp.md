@@ -28,8 +28,9 @@ LOCAL (stdio) — wire it into Claude Code / Cursor / Copilot (mcp config JSON):
 REMOTE (Streamable HTTP) — host it so WEB clients (Claude web, ChatGPT) reach it:
   $ dna mcp serve --transport http --host 0.0.0.0 --port 8000
   # endpoint: `http://<host>:8000/mcp/`  — point a remote/web MCP client at that URL.
-  # add --auth jwt to require a bearer token whose tenant claim scopes every
-  # tool to that tenant (see `dna mcp serve --help` / the auth guide).
+  # add --auth jwt (single env IdP) or --auth config (the pluggable N-provider
+  # layer from dna.config.yaml — Entra/Clerk/WorkOS/OIDC) to require a bearer
+  # token whose tenant claim scopes every tool to that tenant (see the auth guide).
 
 Either way the client calls compose_prompt / sdlc_digest / recall and reads the
 `dna://{scope}/manifest` resource — all against your live DNA.
@@ -42,7 +43,7 @@ dna mcp serve [OPTIONS]
 
 | Option | Description |
 | --- | --- |
-| `--auth` | Auth provider for the HTTP transport. `jwt` verifies bearer JWTs and bridges the tenant claim to DNA tenancy (env DNA_MCP_JWT_*; HTTP-only, story s-mcp-oauth-auth). stdio stays local/unauthenticated. _(default: `none`)_ |
+| `--auth` | Auth provider for the HTTP transport. `jwt` = a single bearer-JWT Resource Server from env (DNA_MCP_JWT_*). `config` = the pluggable N-provider IdP layer read from dna.config.yaml's `auth.providers[]` (Entra/Clerk/WorkOS/OIDC — a provider is a config block; multi-issuer, claim→tenant per provider). Both bridge the token to DNA tenancy; both are HTTP-only. stdio stays local/unauthenticated. _(default: `none`)_ |
 | `--base-dir` | Source directory override (else DNA_SOURCE_URL / DNA_BASE_DIR / ./.dna). |
 | `--help` | Show this message and exit. |
 | `--host` | Bind host for the HTTP/SSE transports (ignored for stdio). _(default: `127.0.0.1`)_ |

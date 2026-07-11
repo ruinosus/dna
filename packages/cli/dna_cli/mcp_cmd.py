@@ -40,10 +40,14 @@ def mcp() -> None:
               help="Bind port for the HTTP/SSE transports (ignored for stdio).")
 @click.option("--path", default=None,
               help="URL path the MCP endpoint is mounted at (HTTP/SSE; FastMCP default /mcp).")
-@click.option("--auth", type=click.Choice(["none", "jwt"]), default="none", show_default=True,
-              help="Auth provider for the HTTP transport. `jwt` verifies bearer JWTs and "
-                   "bridges the tenant claim to DNA tenancy (env DNA_MCP_JWT_*; HTTP-only, "
-                   "story s-mcp-oauth-auth). stdio stays local/unauthenticated.")
+@click.option("--auth", type=click.Choice(["none", "jwt", "config"]), default="none",
+              show_default=True,
+              help="Auth provider for the HTTP transport. `jwt` = a single bearer-JWT "
+                   "Resource Server from env (DNA_MCP_JWT_*). `config` = the pluggable "
+                   "N-provider IdP layer read from dna.config.yaml's `auth.providers[]` "
+                   "(Entra/Clerk/WorkOS/OIDC — a provider is a config block; multi-issuer, "
+                   "claim→tenant per provider). Both bridge the token to DNA tenancy; both "
+                   "are HTTP-only. stdio stays local/unauthenticated.")
 def serve(scope: str | None, base_dir: str | None, transport: str,
           host: str, port: int, path: str | None, auth: str) -> None:
     """Run the DNA MCP server (stdio local, or Streamable HTTP for remote/web clients).
@@ -64,8 +68,9 @@ def serve(scope: str | None, base_dir: str | None, transport: str,
     REMOTE (Streamable HTTP) — host it so WEB clients (Claude web, ChatGPT) reach it:
       $ dna mcp serve --transport http --host 0.0.0.0 --port 8000
       # endpoint: http://<host>:8000/mcp/  — point a remote/web MCP client at that URL.
-      # add --auth jwt to require a bearer token whose tenant claim scopes every
-      # tool to that tenant (see `dna mcp serve --help` / the auth guide).
+      # add --auth jwt (single env IdP) or --auth config (the pluggable N-provider
+      # layer from dna.config.yaml — Entra/Clerk/WorkOS/OIDC) to require a bearer
+      # token whose tenant claim scopes every tool to that tenant (see the auth guide).
 
     Either way the client calls compose_prompt / sdlc_digest / recall and reads the
     dna://{scope}/manifest resource — all against your live DNA.
@@ -73,16 +78,30 @@ def serve(scope: str | None, base_dir: str | None, transport: str,
     from dna_cli._mcp_server import build_server
 
     auth_provider = None
-    if auth == "jwt":
+    if auth in ("jwt", "config"):
         if transport == "stdio":
             raise click.ClickException(
-                "--auth jwt is HTTP-only (there is no bearer token over stdio); "
+                f"--auth {auth} is HTTP-only (there is no bearer token over stdio); "
                 "run with --transport http."
             )
-        from dna_cli._mcp_auth import jwt_provider_from_env
-
         try:
-            auth_provider = jwt_provider_from_env()
+            if auth == "jwt":
+                from dna_cli._mcp_auth import jwt_provider_from_env
+
+                auth_provider = jwt_provider_from_env()
+            else:  # config — the pluggable N-provider IdP layer
+                from dna_cli._mcp_auth import (
+                    build_auth_from_config,
+                    providers_from_config,
+                )
+
+                providers = providers_from_config()
+                click.echo(
+                    "auth: multi-provider layer — "
+                    + ", ".join(f"{p.label}({p.tenant_claim})" for p in providers),
+                    err=True,
+                )
+                auth_provider = build_auth_from_config(providers)
         except (RuntimeError, ValueError) as exc:
             raise click.ClickException(str(exc)) from None
 

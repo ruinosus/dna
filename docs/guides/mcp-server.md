@@ -120,9 +120,9 @@ rebuild. It is the **same server**, the same tools, reached over HTTP:
 | Transport | stdio (child process) | Streamable HTTP (MCP spec 2025-06-18) |
 | Clients | Claude Code, Cursor, Copilot | Claude web, ChatGPT, any hosted client |
 | Reachability | your machine only | hostable / networked |
-| Auth | none (local trust) | OAuth 2.1 bearer JWT (Resource Server) |
-| Tenancy | caller-supplied `tenant` arg | **bound to the token** (the bridge) |
-| Command | `dna mcp serve` | `dna mcp serve --transport http --auth jwt` |
+| Auth | none (local trust) | OAuth 2.1 bearer JWT — one IdP (`--auth jwt`) or the pluggable **N-provider layer** (`--auth config`) |
+| Tenancy | caller-supplied `tenant` arg | **bound to the token** (the bridge; the claim is per-provider under `--auth config`) |
+| Command | `dna mcp serve` | `dna mcp serve --transport http --auth config` |
 
 ### Serve it over HTTP
 
@@ -171,11 +171,109 @@ $ DNA_MCP_JWKS_URI=https://idp.example.com/.well-known/jwks.json \
 FastMCP conforms to the current MCP Authorization spec (revision 2025-11-25):
 OAuth 2.1 Resource Server, mandatory PKCE, Protected Resource Metadata (RFC
 9728), Resource Indicators (RFC 8707), Authorization Server Metadata (RFC 8414),
-Dynamic Client Registration (RFC 7591). For a provider **without** DCR (WorkOS,
-Auth0) FastMCP's `OAuthProxy` bridges it to MCP's DCR-compliant flow — it slots
-into the same `dna_cli._mcp_auth.resource_server(...)` seam, and the tenancy
-bridge below is provider-agnostic (it reads the tenant off whatever verified
-token comes back).
+Dynamic Client Registration (RFC 7591).
+
+`--auth jwt` is the **single-IdP** shortcut (one Resource Server from env). For
+**more than one IdP at once** — and for a config-driven setup where adding a
+provider is a config block, not code — use the **multi-provider layer** below.
+
+### Multi-provider auth — a provider is a config block, not code
+
+A serious IdP always exposes **JWKS + OIDC discovery**, so DNA treats a provider
+as a **block of config**, not a code path. Declare `auth.providers[]` in
+`dna.config.yaml` and run `dna mcp serve --transport http --auth config`. The
+server accepts a token from **any** configured provider, routes it to that
+provider by its issuer, and scopes every tool to the tenant the provider's own
+claim names. Adding an IdP is one more block — no new code.
+
+```yaml
+# dna.config.yaml
+source: postgresql://user:pass@host/db
+
+auth:
+  providers:
+    # Azure Entra ID — the reference provider (see below).
+    - type: entra
+      issuer: https://login.microsoftonline.com/<tenant-id-or-common>/v2.0
+      audience: <app-id>          # your Entra app registration (client) ID
+      # tenant_claim defaults to `tid` (the Azure tenant → the DNA tenant)
+
+    # Any OIDC-generic IdP.
+    - type: oidc
+      issuer: https://idp.example.com
+      jwks_uri: https://idp.example.com/.well-known/jwks.json   # optional; derived if omitted
+      audience: dna-mcp
+      tenant_claim: org           # REQUIRED for `oidc` (no default)
+
+    - type: clerk                 # tenant_claim defaults to `org_id`
+      issuer: https://clerk.acme.dev
+
+    - type: workos                # tenant_claim defaults to `org_id`
+      issuer: https://api.workos.com
+      audience: dna-mcp
+```
+
+**The provider table.**
+
+| `type` | default `tenant_claim` | JWKS (when `jwks_uri` omitted) | issuer notes |
+|---|---|---|---|
+| `entra` | `tid` | `…/<tenant>/discovery/v2.0/keys` (derived) | `common`/`organizations`/`consumers` → issuer relaxed, `audience` required |
+| `clerk` | `org_id` | `<issuer>/.well-known/jwks.json` | Clerk Frontend API origin |
+| `workos` | `org_id` | `<issuer>/.well-known/jwks.json` | organization-based |
+| `auth0` | `org_id` | `<issuer>/.well-known/jwks.json` | no DCR → `OAuthProxy` seam |
+| `oidc` | *(required — you name it)* | `<issuer>/.well-known/jwks.json` | any OIDC IdP |
+
+Each block accepts `issuer`, `audience`, `jwks_uri`, `public_key` (static PEM,
+in place of a JWKS), `algorithm`, `tenant_claim`, `scope_prefix`, and `name`. A
+provider needs a key source: `jwks_uri`, a `public_key`, or an `issuer` to derive
+the JWKS from.
+
+**Multi-issuer routing.** DNA builds one FastMCP `JWTVerifier` per provider
+(each aimed at its own JWKS + issuer + audience) and composes them: a token is
+verified by the **one** provider whose issuer + audience + signature match, so it
+is routed by `iss` for free. The composite then stamps *that* provider's
+`tenant_claim` onto the verified token, so the tenancy bridge reads the right
+claim **per provider** — no global state, and it survives Entra `common` (where
+the token's `iss` carries the real Azure tenant, not the literal `common`).
+
+**PRM lists every provider.** Wrap the layer as a Resource Server
+(`DNA_MCP_RESOURCE_URL` + `DNA_MCP_AUTH_SERVERS`, or the per-provider issuers by
+default) and it advertises Protected Resource Metadata (RFC 9728) naming **all**
+configured authorization servers — one discovery document, N providers.
+
+**Providers without DCR (WorkOS, Auth0).** FastMCP's `OAuthProxy` bridges an IdP
+that lacks Dynamic Client Registration to MCP's DCR-compliant flow. It slots into
+the same `dna_cli._mcp_auth.resource_server(...)` seam; the tenancy bridge is
+provider-agnostic (it reads the stamped claim off whatever verified token comes
+back), so nothing downstream changes.
+
+### Entra as the reference provider (+ the `azd up` step)
+
+Azure Entra ID maps onto DNA cleanly: the **Azure tenant is the `tid` claim**,
+and that is the DNA tenant — so `type: entra` defaults `tenant_claim: tid`.
+
+- **Per-tenant** (`issuer: …/<tenant-guid>/v2.0`) — the token's `iss` is a
+  concrete match, validated **strictly**; the derived JWKS is that tenant's keys.
+- **Multi-tenant** (`issuer: …/common/v2.0` or `…/organizations/v2.0`) — Entra
+  mints a *per-caller* issuer, so strict `iss` validation is impossible. DNA
+  relaxes the issuer and validates by **audience + signature** (your app-id
+  audience is the security boundary — it is **required** here), then reads the
+  Azure tenant from `tid`.
+
+**Real end-to-end validation is done on the owner's `azd up`.** The Foundry
+already carries `entraTenantId` / `entraApiClientId`; a full login → Azure token →
+Resource Server check needs a live Entra app registration and is therefore run at
+deploy time, not in CI. The step:
+
+1. `azd up` — provision the Entra app registration (audience = its client ID) and
+   host the server with `--transport http --auth config`.
+2. From a client, sign in against Entra and call a tool with the issued bearer
+   token; confirm `compose_prompt` returns the tenant matching the token's `tid`,
+   and that a token for another Azure tenant cannot reach it.
+
+Locally this is covered by an emulated multi-provider test (two OIDC issuers with
+distinct tenant-claim keys) plus a `requires_azure` placeholder
+(`DNA_MCP_ENTRA_E2E`) that documents the real check without needing a credential.
 
 ### The tenancy bridge — a token composes only what is its tenant's
 
@@ -194,9 +292,13 @@ DNA tenancy. The bridge (`dna_cli._mcp_auth`) maps the verified token's
 - With **no** auth (stdio / local) the bridge is an identity: the caller-supplied
   `tenant` passes through unchanged, so the base/stdio path is untouched.
 
-The claim key is configurable (`DNA_MCP_TENANT_CLAIM`, default `tenant`; scope
-prefix `DNA_MCP_TENANT_SCOPE_PREFIX`, default `tenant:`). Auth + multi-tenant in
-one mechanism — the token IS the tenancy.
+Under `--auth jwt` (single IdP) the claim key is configurable via env
+(`DNA_MCP_TENANT_CLAIM`, default `tenant`; scope prefix
+`DNA_MCP_TENANT_SCOPE_PREFIX`, default `tenant:`). Under `--auth config` (the
+multi-provider layer) the claim key is **per provider** — each block's
+`tenant_claim` (Entra `tid`, Clerk/WorkOS `org_id`, an `oidc` block's own) — and
+the composite verifier binds the right one to each token automatically. Either
+way: auth + multi-tenant in one mechanism — the token IS the tenancy.
 
 ## Why this completes the thesis
 

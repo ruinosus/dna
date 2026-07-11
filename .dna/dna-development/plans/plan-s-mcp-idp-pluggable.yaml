@@ -1,0 +1,65 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-mcp-idp-pluggable
+spec:
+  title: 'Plano: s-mcp-idp-pluggable'
+  date: '2026-07-11'
+  status: accepted
+  story_ref: s-mcp-idp-pluggable
+  journey_phase: plan
+  body: "# Plan \u2014 `s-mcp-idp-pluggable`: pluggable N-provider IdP layer for the\
+    \ DNA MCP server\n\n## Thesis\nA serious IdP always exposes JWKS + OIDC discovery,\
+    \ so **a provider is a block of\nconfig, not code**. Generalize the single-env-provider\
+    \ RS into an\n**N-provider, config-driven** layer, with **Azure Entra ID** as\
+    \ the first concrete\nprovider. Adding an IdP = one `auth.providers[]` block in\
+    \ `dna.config.yaml`.\n\n## Design\n\n### 1. Config schema (`auth.providers[]`)\n\
+    ```yaml\nauth:\n  providers:\n    - type: entra\n      issuer: https://login.microsoftonline.com/<tid|common>/v2.0\n\
+    \      audience: <app-id>\n      tenant_claim: tid          # Entra: Azure tenant\
+    \ \u2192 DNA tenant (clean)\n    - type: oidc\n      issuer: https://...\n   \
+    \   jwks_uri: https://.../jwks\n      audience: ...\n      tenant_claim: ...\n\
+    \    - type: clerk                # tenant_claim default org_id\n    - type: workos\
+    \               # org-based\n```\n- SDK `config.py` / `config.ts`: add `auth`\
+    \ to KNOWN_KEYS as an **opaque\n  passthrough** field (additive, back-compat,\
+    \ parity Py\u2194TS). The SDK does not\n  interpret it \u2014 the CLI owns the\
+    \ detailed schema.\n- CLI `_mcp_auth.parse_auth_providers(cfg)`: validates each\
+    \ block, applies\n  per-type defaults (entra\u2192`tid`, clerk\u2192`org_id`,\
+    \ workos\u2192`org_id`, oidc\u2192required).\n\n### 2. Multi-issuer routing (composite\
+    \ verifier)\n- Build one FastMCP `JWTVerifier` per provider (each aimed at its\
+    \ own JWKS /\n  issuer / audience).\n- `_CompositeVerifier(TokenVerifier)` tries\
+    \ each in order; the **only** verifier\n  that matches the token's issuer+audience+signature\
+    \ succeeds \u2192 routes by `iss`\n  for free. On success it **stamps** `_dna_tenant_claim`\
+    \ / `_dna_scope_prefix`\n  from the matching provider's config onto `token.claims`,\
+    \ so the bridge picks\n  the right per-provider claim without global state (concurrency-safe,\
+    \ and it\n  survives Entra `common` where the token `iss` \u2260 the literal configured\
+    \ issuer).\n- Wrap the composite in `RemoteAuthProvider` to advertise PRM (RFC\
+    \ 9728) listing\n  **all** providers' issuers as `authorization_servers`. `OAuthProxy`\
+    \ is the seam\n  for providers without DCR (WorkOS/Auth0).\n\n### 3. claim\u2192\
+    tenant per provider\n- `enforce_tenant_from_context` reads the stamped `_dna_tenant_claim`\
+    \ /\n  `_dna_scope_prefix` and calls the existing pure `tenant_from_token` with\
+    \ the\n  provider's claim key. The fail-closed policy (`resolve_tenant`) is unchanged:\n\
+    \  cross-tenant denied, tenant-less denied, no-auth = identity.\n\n### 4. CLI\
+    \ surface\n- `dna mcp serve --auth config` \u2014 build the multi-provider layer\
+    \ from\n  `dna.config.yaml`. `--auth jwt` (env single-provider) stays for back-compat.\n\
+    \n### 5. Entra reference\n- `type: entra` defaults `tenant_claim: tid`; document\
+    \ per-tenant issuer (clean\n  exact match) vs multi-tenant `common`/`organizations`\
+    \ (accepted-issuers caveat)\n  and audience validation.\n\n## Proof\n- Unit: `parse_auth_providers`\
+    \ (defaults, validation, per-type tenant_claim).\n- Multi-provider e2e with **two\
+    \ emulated OIDC issuers** (RSAKeyPair, distinct\n  issuers/audiences configured\
+    \ as 2 providers): token A (claim X) \u2192 tenant A;\n  token B (claim Y=different\
+    \ key) \u2192 tenant B; unconfigured issuer \u2192 denied;\n  cross-tenant denied.\
+    \ **Same config serves N providers.**\n- Entra real login\u2192token\u2192server\
+    \ e2e: **deferred to the owner's `azd up`** \u2014\n  a `requires_azure` skip\
+    \ test + a documented validation step (no Azure creds here).\n\n## Gates\n- Auth\
+    \ stays an optional extra (stdio/base untouched). Full CLI suite + SDK\n  parity\
+    \ suites + guards + `mkdocs build --strict` green.\n- Docs: new \"Multi-provider\
+    \ auth\" guide section (provider table, per-provider\n  config, claim\u2192tenant\
+    \ map, Entra + azd-up step).\n- ADR `adr-dna-mcp-runtime-face`: append \"auth\
+    \ = pluggable N-provider,\n  config-driven; Entra 1st; real e2e at azd up\".\n\
+    - CHANGELOG `[Unreleased]` (no release cut).\n- PR via `story pr --base main`,\
+    \ CI 11/11. **N\xC3O mergear.**\n\n## Territory guard\nOnly touch the MCP auth:\
+    \ `_mcp_auth.py`, `mcp_cmd.py`, config (Py+TS opaque\npassthrough), tests, docs,\
+    \ ADR, CHANGELOG. The `dna/emit/` area is another\nagent's \u2014 untouched.\n"
+  created_at: '2026-07-11T16:23:28+00:00'
+  updated_at: '2026-07-11T16:23:28+00:00'
+  methodology: ad-hoc

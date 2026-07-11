@@ -57,6 +57,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
       decision + how to add a case), the EmitterPort documented alongside the
       kernel ports in *The microkernel and its ports*, and the OpenAI Agents
       scaffold added to *Emitting to a runtime*.
+- **`dna mcp serve` — pluggable N-provider IdP layer (config-driven auth)**
+  (feature `f-dna-mcp-server`, story `s-mcp-idp-pluggable`; ADR
+  `adr-dna-mcp-runtime-face`). The OAuth 2.1 auth on the MCP runtime face is now
+  **N-provider without lock-in** — a provider is a **block of config, not code**:
+  - **Provider registry in `dna.config.yaml`** — declare `auth.providers[]` (each
+    `{type, issuer, audience, jwks_uri?, public_key?, tenant_claim?, scope_prefix?}`)
+    and run `dna mcp serve --transport http --auth config`. Supported types:
+    `entra`, `clerk`, `workos`, `auth0`, `oidc` (generic). Per-type defaults
+    (Entra→`tid`, Clerk/WorkOS/Auth0→`org_id`) + JWKS derived from the issuer, so
+    an Entra/Clerk/WorkOS block is `{type, issuer, audience}`. The SDK config
+    (`dna/config.py` + `config.ts`) carries `auth` as an opaque passthrough
+    (Py↔TS parity); the CLI owns the provider schema.
+  - **Multi-issuer routing** — one `JWTVerifier` per provider composed into a
+    verifier that accepts a token from ANY configured IdP, routes it by `iss`, and
+    binds **that provider's** `tenant_claim` to the token, so `claim→tenant` is
+    per-provider. The fail-closed tenancy policy (cross-tenant / tenant-less
+    denied; no-auth identity) is unchanged; PRM (RFC 9728) advertises every
+    configured issuer.
+  - **Azure Entra ID as the first concrete provider** — `tid`→DNA tenant;
+    per-tenant issuer validated strictly, multi-tenant `common`/`organizations`
+    relaxed to audience+signature. The single-IdP `--auth jwt` (env) path stays for
+    back-compat. Auth remains an optional, HTTP-only extra. The real Entra
+    login→token→server check is deferred to the owner's `azd up` (a documented step
+    + `requires_azure` skip); locally proven with two emulated OIDC issuers. Guide:
+    *The MCP server → Multi-provider auth*.
 - **`dna mcp serve` Phase 2 — remote transport + OAuth 2.1 auth bound to DNA
   tenancy** (feature `f-dna-mcp-server`, stories `s-mcp-remote-transport` +
   `s-mcp-oauth-auth`; ADR `adr-dna-mcp-runtime-face`). The *same* MCP server the

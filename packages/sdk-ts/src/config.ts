@@ -28,7 +28,7 @@ export const CONFIG_FILENAME = "dna.config.yaml";
 
 const VALID_SEARCH = ["off", "pgvector", "sqlite-vec"] as const;
 const VALID_EMBEDDING = ["off", "fake", "onnx"] as const;
-const KNOWN_KEYS = new Set(["source", "search", "embedding"]);
+const KNOWN_KEYS = new Set(["source", "search", "embedding", "auth"]);
 
 export type SearchMode = (typeof VALID_SEARCH)[number];
 export type EmbeddingMode = (typeof VALID_EMBEDDING)[number];
@@ -41,6 +41,13 @@ export interface DnaConfig {
   search: SearchMode;
   /** Embedding provider selector (default `off`). */
   embedding: EmbeddingMode;
+  /**
+   * Opaque passthrough of the `auth:` section — the SDK only checks it is a
+   * mapping; its detailed schema (`providers[]` — the pluggable N-provider IdP
+   * layer of the MCP runtime face) is owned by the consumer (the CLI's
+   * `_mcp_auth.parse_auth_providers`). `null` when the file has no `auth:`.
+   */
+  auth: Record<string, unknown> | null;
   /** Where it was loaded from (`null` for a synthesized default). */
   path: string | null;
 }
@@ -130,10 +137,24 @@ function parse(raw: unknown, path: string): DnaConfig {
     );
   }
 
+  const rawAuth = obj.auth;
+  if (
+    rawAuth !== undefined &&
+    rawAuth !== null &&
+    (typeof rawAuth !== "object" || Array.isArray(rawAuth))
+  ) {
+    throw new Error(
+      `${path}: \`auth:\` must be a mapping (its \`providers:\` list configures ` +
+        `the MCP IdP layer).`,
+    );
+  }
+  const auth = (rawAuth ?? null) as Record<string, unknown> | null;
+
   return {
     source,
     search: search as SearchMode,
     embedding: embedding as EmbeddingMode,
+    auth,
     path,
   };
 }
