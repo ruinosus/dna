@@ -13,7 +13,7 @@ spec:
     \ a transport. The MVP stays stdio (local: Claude Code/Cursor/Copilot); this makes\
     \ the SAME server reachable over HTTP. Verified against current FastMCP docs (gofastmcp.com):\
     \ Streamable HTTP is the current standard remote transport (MCP spec 2025-06-18)."
-  status: in-progress
+  status: review
   feature: f-dna-mcp-server
   priority: medium
   labels:
@@ -35,7 +35,7 @@ spec:
     Client; CI green'
   definition_of_done_source: cli-create
   created_at: '2026-07-11T14:43:35+00:00'
-  updated_at: '2026-07-11T15:49:00+00:00'
+  updated_at: '2026-07-11T15:51:44+00:00'
   timeline:
   - at: '2026-07-11T14:43:35+00:00'
     actor: claude-code
@@ -75,6 +75,24 @@ spec:
       \ composes a prompt live. Web-client config (Claude web/ChatGPT) documented\
       \ in the guide. All 27 MCP tests + 474 CLI suite green; mkdocs --strict clean."
     commit_ref: 1a2601995f3612069fe51308a1e800a96fea6041
+  - at: '2026-07-11T15:50:36+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/66'
+    pr_url: https://github.com/ruinosus/dna/pull/66
+  - at: '2026-07-11T15:51:40+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'PR #66 (base main) covers transport + auth. CI must be 11/11 before
+      merge; do NOT merge.'
+  - at: '2026-07-11T15:51:44+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
   produces:
   - kind: Plan
     name: plan-s-mcp-remote-transport
