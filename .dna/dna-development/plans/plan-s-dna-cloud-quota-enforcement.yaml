@@ -1,0 +1,19 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-dna-cloud-quota-enforcement
+spec:
+  title: 'Plano: s-dna-cloud-quota-enforcement'
+  date: '2026-07-11'
+  status: accepted
+  story_ref: s-dna-cloud-quota-enforcement
+  journey_phase: plan
+  body: "Estender _mcp_auth com claim\u2192tier (env DNA_MCP_PLAN_CLAIM, default 'free'\
+    \ fail-closed, nunca ilimitado) espelhando tenant_from_token. Meter in-proc com\
+    \ port abstrato (tenant,tier)\u2192contador em janela di\xE1ria. Limiter: antes\
+    \ do dispatch, checa calls_per_day + rate_per_sec (caps via kernel.tier) \u2192\
+    \ 429 over-quota; feature-family gating (tool n\xE3o na fam\xEDlia do tier) \u2192\
+    \ 403. Hook no mesmo ponto do enforce_tenant. Testes: over-quota\u2192429, family-gating\u2192\
+    deny, meter conta, default Free. TDD, zero hardcode de caps."
+  created_at: '2026-07-11T18:35:28+00:00'
+  updated_at: '2026-07-11T18:35:28+00:00'

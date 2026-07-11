@@ -45,6 +45,23 @@ _ENV_TENANT_SCOPE_PREFIX = "DNA_MCP_TENANT_SCOPE_PREFIX"  # e.g. "tenant:" in sc
 DEFAULT_TENANT_CLAIM = "tenant"
 DEFAULT_TENANT_SCOPE_PREFIX = "tenant:"
 
+# The plan/tier axis (DNA Cloud quota). A token's *plan* claim maps to a Tier id
+# (free/pro/…), which the quota guard resolves to caps via ``kernel.tier``. This
+# is the SECOND axis over the SAME verified token — orthogonal to tenant: tenant
+# says *which data*, plan says *how much*. Mirrors the tenant knobs exactly.
+_ENV_PLAN_CLAIM = "DNA_MCP_PLAN_CLAIM"              # claim key holding the plan/tier
+_ENV_PLAN_SCOPE_PREFIX = "DNA_MCP_PLAN_SCOPE_PREFIX"  # e.g. "plan:" in scopes
+DEFAULT_PLAN_CLAIM = "plan"
+DEFAULT_PLAN_SCOPE_PREFIX = "plan:"
+
+# Per-provider plan-claim stamping markers — the plan twins of
+# ``_DNA_CLAIM_MARKER`` / ``_DNA_SCOPE_MARKER``. The single-env-provider path (and
+# today's multi-provider composite, which stamps only the tenant markers) leaves
+# these ABSENT, so ``enforce_tier_from_context`` falls back to the env/default
+# plan claim — the forward-compatible seam for a per-provider plan claim later.
+_DNA_PLAN_CLAIM_MARKER = "_dna_plan_claim"
+_DNA_PLAN_SCOPE_MARKER = "_dna_plan_scope_prefix"
+
 # Synthetic claim markers the multi-provider composite verifier stamps onto a
 # verified token so the tenancy bridge reads the RIGHT per-provider claim key —
 # without global/request state, and without re-deriving which provider matched
@@ -92,6 +109,18 @@ def tenant_scope_prefix() -> str:
     """The scope prefix a tenant may be encoded under (``DNA_MCP_TENANT_SCOPE_PREFIX``,
     default ``tenant:`` → a ``tenant:acme`` scope means tenant ``acme``)."""
     return os.environ.get(_ENV_TENANT_SCOPE_PREFIX) or DEFAULT_TENANT_SCOPE_PREFIX
+
+
+def plan_claim_key() -> str:
+    """The claim key the plan/tier is read from (``DNA_MCP_PLAN_CLAIM``, default
+    ``plan``)."""
+    return os.environ.get(_ENV_PLAN_CLAIM) or DEFAULT_PLAN_CLAIM
+
+
+def plan_scope_prefix() -> str:
+    """The scope prefix a plan may be encoded under (``DNA_MCP_PLAN_SCOPE_PREFIX``,
+    default ``plan:`` → a ``plan:pro`` scope means tier ``pro``)."""
+    return os.environ.get(_ENV_PLAN_SCOPE_PREFIX) or DEFAULT_PLAN_SCOPE_PREFIX
 
 
 # ── pure core (no FastMCP) ─────────────────────────────────────────────────
@@ -165,6 +194,77 @@ def resolve_tenant(
             f"{requested!r} is denied"
         )
     return token_tenant
+
+
+# ── the plan/tier axis (DNA Cloud quota) — pure core, mirror the tenant twins ─
+
+
+def tier_from_token(
+    claims: dict[str, Any] | None,
+    scopes: list[str] | None = None,
+    *,
+    claim_key: str | None = None,
+    scope_prefix: str | None = None,
+) -> str | None:
+    """Extract the DNA Cloud tier a token maps to — pure, no context.
+
+    The plan twin of :func:`tenant_from_token`. Two encodings are honored (a claim
+    wins over a scope):
+
+    1. a **claim** ``{claim_key: "<tier>"}`` (default key ``plan``), and
+    2. a **scope** ``"<scope_prefix><tier>"`` (default ``plan:pro`` → tier ``pro``).
+
+    Returns ``None`` when the token carries neither — :func:`resolve_tier` then
+    treats that as the Free floor (a missing plan is NOT a denial, unlike a missing
+    tenant which fails closed).
+    """
+    key = claim_key or plan_claim_key()
+    prefix = scope_prefix or plan_scope_prefix()
+
+    # 1. explicit claim.
+    if claims:
+        raw = claims.get(key)
+        if isinstance(raw, str) and raw.strip():
+            return raw.strip()
+        if isinstance(raw, (list, tuple)):
+            for item in raw:
+                if isinstance(item, str) and item.strip():
+                    return item.strip()
+
+    # 2. plan-encoding scope (plan:<x>).
+    for sc in scopes or []:
+        if isinstance(sc, str) and sc.startswith(prefix):
+            candidate = sc[len(prefix):].strip()
+            if candidate:
+                return candidate
+
+    return None
+
+
+def resolve_tier(
+    *,
+    token_present: bool,
+    token_tier: str | None,
+    default: str = "free",
+) -> str:
+    """Reconcile the token's tier into an effective tier id — the policy.
+
+    Deliberately DIFFERENT from :func:`resolve_tenant`: a missing tier is **never a
+    denial** and **never unlimited** — it is the **Free floor**:
+
+    * ``token_present=False`` (no auth / stdio) → ``default`` (the caller never
+      meters an unauthenticated call, but the policy still returns a concrete tier).
+    * token present, no ``token_tier`` → ``default`` (Free floor — authenticated but
+      un-planned callers get the free caps, never denied, never unlimited).
+    * token present with a tier → that tier.
+
+    Always returns a concrete tier id; never raises.
+    """
+    if not token_present:
+        return default
+    if not token_tier:
+        return default
+    return token_tier
 
 
 # ── the pluggable N-provider IdP layer — a provider is CONFIG, not code ─────
@@ -382,6 +482,55 @@ def enforce_tenant_from_context(requested: str | None) -> str | None:
     )
     return resolve_tenant(
         token_present=True, token_tenant=token_tenant, requested=requested
+    )
+
+
+def token_present_in_context() -> bool:
+    """True when the CURRENT MCP request carries a verified access token.
+
+    The single bit the quota guard needs to tell *authenticated / hosted SaaS*
+    (meter + rate-limit + feature-gate) from *stdio / local / ``auth=None``* (an
+    identity — no metering, unlimited). With no ``fastmcp`` installed there is no
+    auth at all → ``False``. Mirrors the ``get_access_token() is None`` check the
+    tenant bridge already makes."""
+    try:
+        from fastmcp.server.dependencies import get_access_token
+    except ModuleNotFoundError:  # pragma: no cover — no fastmcp ⇒ no auth
+        return False
+    return get_access_token() is not None
+
+
+def enforce_tier_from_context(default: str = "free") -> str:
+    """Resolve the **effective tier** for the current MCP request — the plan twin
+    of :func:`enforce_tenant_from_context`.
+
+    Reads the request's access token (if any) via FastMCP's ``get_access_token``,
+    derives the token's tier using the plan claim of the provider that issued it
+    (a per-provider plan claim is honored if the verifier stamps one; otherwise the
+    env/default ``plan`` claim), and applies :func:`resolve_tier`. With no token
+    (stdio / unauthenticated) this returns ``default`` — and the CALLER must not
+    meter that path (see ``token_present_in_context``). Never raises: a missing tier
+    is the Free floor, not a denial."""
+    try:
+        from fastmcp.server.dependencies import get_access_token
+    except ModuleNotFoundError:  # pragma: no cover — no fastmcp ⇒ no auth
+        return default
+
+    token = get_access_token()
+    if token is None:
+        return default  # unauthenticated (stdio) → the default tier (not metered).
+
+    claims = getattr(token, "claims", None) or {}
+    # Per-provider plan-claim key stamped by a (future) plan-aware verifier; absent
+    # today → env/default plan claim.
+    claim_key = claims.get(_DNA_PLAN_CLAIM_MARKER)
+    scope_prefix = claims.get(_DNA_PLAN_SCOPE_MARKER)
+    token_tier = tier_from_token(
+        claims, getattr(token, "scopes", None),
+        claim_key=claim_key, scope_prefix=scope_prefix,
+    )
+    return resolve_tier(
+        token_present=True, token_tier=token_tier, default=default
     )
 
 
