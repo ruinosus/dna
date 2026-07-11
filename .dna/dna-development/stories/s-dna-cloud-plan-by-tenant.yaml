@@ -6,7 +6,7 @@ spec:
   title: "plano-por-tenant (ponte billing\u2192enforcement)"
   description: "TenantPlan Kind + resolver: o server resolve o tier de um tenant pelo\
     \ store (que o webhook Stripe atualiza), n\xE3o s\xF3 pelo claim do token"
-  status: todo
+  status: done
   feature: f-dna-cloud
   priority: high
   labels:
@@ -16,25 +16,55 @@ spec:
   reporter: claude-code
   business_value: 600
   acceptance_criteria:
-  - "Novo Kind TenantPlan (cloud ext, record, GLOBAL) mapeia tenant\u2192tier_id;\
-    \ descriptor byte-id\xEAntico Py\u2194TS"
-  - kernel.tenant_plan(tenant) resolve o tier_id do tenant (query TenantPlan), espelhando
-    kernel.tier
-  - "resolve_tier: sem claim 'plan' no token \u2192 lookup TenantPlan por tenant \u2192\
-    \ sen\xE3o Free; com claim \u2192 honra o claim"
-  - "Testes: tenant com TenantPlan(pro)\u2192pro caps, sem\u2192free, claim do token\
-    \ sobrep\xF5e"
+  - text: "Novo Kind TenantPlan (cloud ext, record, GLOBAL) mapeia tenant\u2192tier_id;\
+      \ descriptor byte-id\xEAntico Py\u2194TS"
+    done: true
+    done_at: '2026-07-11T21:25:56+00:00'
+    done_by: story-done-auto
+  - text: kernel.tenant_plan(tenant) resolve o tier_id do tenant (query TenantPlan),
+      espelhando kernel.tier
+    done: true
+    done_at: '2026-07-11T21:25:56+00:00'
+    done_by: story-done-auto
+  - text: "resolve_tier: sem claim 'plan' no token \u2192 lookup TenantPlan por tenant\
+      \ \u2192 sen\xE3o Free; com claim \u2192 honra o claim"
+    done: true
+    done_at: '2026-07-11T21:25:56+00:00'
+    done_by: story-done-auto
+  - text: "Testes: tenant com TenantPlan(pro)\u2192pro caps, sem\u2192free, claim\
+      \ do token sobrep\xF5e"
+    done: true
+    done_at: '2026-07-11T21:25:56+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - descriptor Py+TS + parity + additionalProperties:false + gen_kinds_docs + resolver
-    + testes + doc de que o webhook Stripe do dna-cloud escreve o TenantPlan (zero
-    Stripe no OSS)
+  - text: descriptor Py+TS + parity + additionalProperties:false + gen_kinds_docs
+      + resolver + testes + doc de que o webhook Stripe do dna-cloud escreve o TenantPlan
+      (zero Stripe no OSS)
+    done: true
+    done_at: '2026-07-11T21:25:56+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-11T20:31:42+00:00'
-  updated_at: '2026-07-11T20:31:42+00:00'
+  updated_at: '2026-07-11T21:26:09+00:00'
   timeline:
   - at: '2026-07-11T20:31:42+00:00'
     actor: claude-code
     type: status_change
     source: cli
     to: todo
+  - at: '2026-07-11T21:26:01+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "TenantPlan Kind + resolver merged (#78). test_cloud_tenant_plan_kind\
+      \ + test_mcp_plan_by_tenant + parity + strict-schema-lint + docs-coverage verdes\
+      \ no CI. Ordem claim\u2192store\u2192Free. Backend/lib sem UI."
+  - at: '2026-07-11T21:26:09+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: done
+    commit_ref: bec401484abd4bfe72f82852ea2f549275f3218f
+  closed_at: '2026-07-11T21:25:56+00:00'
