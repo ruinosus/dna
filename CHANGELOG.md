@@ -11,6 +11,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Ship a scope with your app — resolve a scope as PACKAGE DATA** (feature
+  `f-dna-scope-packaging`; stories `s-scope-as-package-data`,
+  `s-pkg-source-scheme`). A deployed app can now let its DNA scope TRAVEL inside
+  the deployable, resolved from *inside* the installed package — no fragile
+  `Path(__file__).resolve().parents[N] / ".dna"` navigation and no manual
+  `COPY .dna` in the Dockerfile (the image is the app, not the repo; forget the
+  copy and the app boots with no scope — a real pilot bug). Two surfaces, in
+  Python↔TypeScript parity:
+  - `load_prompts(scope, *, anchor="mypkg")` / `loadPrompts(scope, { anchor })`
+    — `anchor` is a package name; the scope is resolved via
+    `importlib.resources` (Py) / the package's own location (TS), so it works
+    identically from a source checkout, an installed wheel, and a Docker image.
+    Precedence: `base_dir` arg > `$DNA_BASE_DIR` > `anchor` (package data) >
+    `.dna` (cwd).
+  - A `pkg://<package>[/<subpath>]` **source scheme** for `dna.config.yaml` /
+    `Kernel.from_config` (subpath defaults to `.dna`), resolving the embedded
+    scope to a **read-only** filesystem source. Both surfaces fail loud with a
+    packaging-oriented message on a missing package/subpath.
+  - New helper `dna.anchor_scopes_root` / `anchorScopesRoot` (+
+    `PackageScopeNotFound`) exposes the resolution directly.
+  - New guide **"How to ship a scope with your app"** (Hatch / setuptools / npm
+    packaging + the Docker contrast) and a runnable example
+    (`examples/shipping-a-scope/`) with a test that installs the example and
+    resolves the scope from a DIFFERENT working directory — the Docker scenario.
+
 ### Fixed
 
 - **CLI boot now wires the `LocalResolver` — `dna eval run` resolves `local:`

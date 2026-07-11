@@ -1,0 +1,23 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-scope-as-package-data
+spec:
+  title: 'Plano: s-scope-as-package-data'
+  date: '2026-07-11'
+  status: accepted
+  story_ref: s-scope-as-package-data
+  journey_phase: plan
+  body: "Add a package-data scope resolver shared by both stories.\n\n## Design\n\
+    1. _resolve helper: given (scope, anchor, base_dir), pick base_dir by precedence\
+    \ base_dir > DNA_BASE_DIR > anchor(pkg-data) > default .dna. anchor resolves <package>/.dna\
+    \ via importlib.resources.files + os.fspath (fail loud on non-fs / missing).\n\
+    2. load_prompts(scope, *, anchor=None, base_dir=None) \u2014 keyword-only anchor/base_dir;\
+    \ delegates to the helper then Kernel.quick.\n3. TS loadPrompts(scope, opts?)\
+    \ \u2014 {anchor?, baseDir?}; anchor resolved via createRequire(import.meta.url).resolve(pkg/package.json)\
+    \ -> dirname -> join subpath.\n\n## Tests\n- Py: monkeypatch a fake installed\
+    \ package (sys.path + tmp .dna), resolve from a different CWD.\n- The real proof\
+    \ lives in examples/ + a wheel-install test (this story's DoD shares it with s-pkg-source-scheme).\n\
+    \n## Parity\nPy keyword-only anchor; TS opts.anchor. Fail-loud messages equivalent."
+  created_at: '2026-07-11T10:53:36+00:00'
+  updated_at: '2026-07-11T10:53:36+00:00'

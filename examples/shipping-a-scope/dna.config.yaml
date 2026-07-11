@@ -1,0 +1,11 @@
+# Declarative port wiring that resolves the scope from PACKAGE DATA.
+#
+# `pkg://acme_support_bot` resolves the `.dna` scopes-root embedded in the
+# installed `acme_support_bot` package (subpath defaults to `.dna`). Kernel
+# boots read-only over it — the scope travels with the app, no `COPY .dna`.
+#
+#   from dna import Kernel
+#   k = Kernel.from_config("dna.config.yaml")   # source: pkg://acme_support_bot
+#
+# Equivalent explicit subpath form: `pkg://acme_support_bot/.dna`.
+source: pkg://acme_support_bot

@@ -1,0 +1,10 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: Agent
+metadata:
+  name: triage
+  description: Routes a customer message to the right queue
+spec:
+  instruction: |
+    You are the ACME support triage agent.
+    Read the customer's message and route it to billing, technical, or general.
+    Answer concisely and never invent policy.

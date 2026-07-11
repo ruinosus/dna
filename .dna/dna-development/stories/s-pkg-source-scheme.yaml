@@ -1,0 +1,89 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-pkg-source-scheme
+spec:
+  title: pkg:// source scheme for dna.config.yaml
+  description: 'source_from_url / sourceFromUrl resolve pkg://<package>[/<subpath>]
+    to a read-only scope embedded as package-data; Kernel.from_config accepts source:
+    pkg://app.'
+  status: review
+  feature: f-dna-scope-packaging
+  owner: claude-code
+  acceptance_criteria:
+  - 'Given dna.config.yaml with source: pkg://app, When Kernel.from_config() boots,
+    Then the scope embedded in package ''app'' resolves read-only'
+  - Given pkg://app/.dna subpath form, When resolving, Then the declared subpath is
+    used
+  - Given a missing package/subpath, When resolving pkg://, Then it fails loud with
+    the supported set
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - 'Code: pkg:// in source_from_url (Py) + sourceFromUrl (TS)'
+  - 'Tests: both SDKs cover pkg:// happy-path + fail-loud'
+  - 'Docs: pkg:// documented in the shipping guide + configuring-ports'
+  - 'CI: all suites + guards + mkdocs strict green'
+  definition_of_done_source: cli-create
+  created_at: '2026-07-11T10:53:17+00:00'
+  updated_at: '2026-07-11T11:16:56+00:00'
+  timeline:
+  - at: '2026-07-11T10:53:17+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-11T11:13:44+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-11T11:13:48+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'Shipped pkg://<package>[/<subpath>] in source_from_url + sourceFromUrl
+      (read-only FilesystemSource); subpath defaults to .dna. Example dna.config.yaml
+      uses source: pkg://acme_support_bot and Kernel.from_config resolves it end-to-end
+      (test proves it from an empty CWD).'
+    commit_ref: ae2b359c999461306cc2c682737e0d02111aa1ee
+  - at: '2026-07-11T11:14:18+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-scope-as-package-data
+    summary: TestGuide tg-scope-as-package-data (integration)
+  - at: '2026-07-11T11:14:48+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-scope-as-package-data-20260711-111443
+    summary: "TestRun tr-tg-scope-as-package-data-20260711-111443 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-11T11:16:53+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'PR #53 opened. pkg:// scheme shipped + Kernel.from_config resolves it
+      end-to-end.'
+  - at: '2026-07-11T11:16:56+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
+  produces:
+  - kind: Plan
+    name: plan-s-pkg-source-scheme
+    role: implementation
+    at: '2026-07-11T11:13:44+00:00'
+  - kind: TestGuide
+    name: tg-scope-as-package-data
+    role: test-guide
+    at: '2026-07-11T11:14:18+00:00'
+  - kind: TestRun
+    name: tr-tg-scope-as-package-data-20260711-111443
+    role: test-run
+    at: '2026-07-11T11:14:48+00:00'
