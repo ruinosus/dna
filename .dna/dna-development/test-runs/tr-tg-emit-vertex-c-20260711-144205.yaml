@@ -1,0 +1,14 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-emit-vertex-c-20260711-144205
+spec:
+  guide_ref: tg-emit-vertex-c
+  outcome: pass
+  verifies:
+  - Story/s-emit-vertex
+  executed_by: claude-code
+  executed_at: '2026-07-11T14:42:05+00:00'
+  evidence:
+  - "PR #62; 1 fonte \u2192 3 runtimes (af==bd==vx==composed byte-id\xEAntico); ADK\
+    \ AgentConfig schema-v\xE1lido"

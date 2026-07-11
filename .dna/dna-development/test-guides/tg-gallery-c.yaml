@@ -1,0 +1,32 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-gallery-c
+spec:
+  description: Roteiro de teste de s-sdlc-gallery (derivado das acceptance_criteria).
+  kind_of_test: smoke
+  status: active
+  steps:
+  - action: "No Studio, valide: Given HtmlArtifacts linkados a work items, When rodo\
+      \ 'dna sdlc gallery', Then lista todos agrupados por status do work item (precisa\
+      \ de avalia\xE7\xE3o / decis\xF5es / shipado)"
+    where: "<rota/tela \u2014 ex. /scopes/:scope/...>"
+    expected: "<o que voc\xEA V\xCA quando est\xE1 certo (marque \u2717 S\xD3 se estiver\
+      \ quebrado)>"
+  - action: "No Studio, valide: Given --html <out>, When gero, Then produz UM arquivo\
+      \ HTML self-contained (sem CDN) naveg\xE1vel com cards, chip de status e link\
+      \ publicado"
+    where: "<rota/tela \u2014 ex. /scopes/:scope/...>"
+    expected: "<o que voc\xEA V\xCA quando est\xE1 certo (marque \u2717 S\xD3 se estiver\
+      \ quebrado)>"
+  - action: "No Studio, valide: Given os 5 prot\xF3tipos do scratchpad registrados\
+      \ como HtmlArtifacts, When rodo gallery, Then os 5 aparecem com published_url\
+      \ clic\xE1vel"
+    where: "<rota/tela \u2014 ex. /scopes/:scope/...>"
+    expected: "<o que voc\xEA V\xCA quando est\xE1 certo (marque \u2717 S\xD3 se estiver\
+      \ quebrado)>"
+  verifies:
+  - Story/s-sdlc-gallery
+  created_at: '2026-07-11T15:05:56+00:00'
+  updated_at: '2026-07-11T15:05:56+00:00'
+  owner: claude-code

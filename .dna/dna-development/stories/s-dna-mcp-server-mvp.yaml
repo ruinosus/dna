@@ -6,37 +6,65 @@ spec:
   title: "MCP server MVP \u2014 one stdio server exposing definitions + SDLC + memory"
   description: 'Build the thin MCP server (dna mcp serve, [mcp] extra) exposing DNA
     live over stdio: definitions, SDLC and memory tools + resources.'
-  status: review
+  status: done
   feature: f-dna-mcp-server
   priority: high
   labels:
   - mcp
   - runtime
   acceptance_criteria:
-  - Given a configured DNA source, When an MCP client calls compose_prompt(scope,agent),
-    Then it returns the live-composed Soul+Guardrail+instruction prompt
-  - Given a scope with a tenant overlay, When compose_prompt is called with tenant=X,
-    Then the returned prompt reflects the tenant overlay (recovering what emit drops)
-  - Given the same single server, When a client calls sdlc_digest / list_stories /
-    get_adr, Then it returns the board data (the self-describing SDLC)
-  - Given the same single server, When a client calls recall(query), Then it returns
-    the matching DNA memory
-  - Given the base install without the [mcp] extra, When dna is imported/run, Then
-    nothing breaks (mcp imported lazily)
+  - text: Given a configured DNA source, When an MCP client calls compose_prompt(scope,agent),
+      Then it returns the live-composed Soul+Guardrail+instruction prompt
+    done: true
+    done_at: '2026-07-11T15:15:55+00:00'
+    done_by: story-done-auto
+  - text: Given a scope with a tenant overlay, When compose_prompt is called with
+      tenant=X, Then the returned prompt reflects the tenant overlay (recovering what
+      emit drops)
+    done: true
+    done_at: '2026-07-11T15:15:55+00:00'
+    done_by: story-done-auto
+  - text: Given the same single server, When a client calls sdlc_digest / list_stories
+      / get_adr, Then it returns the board data (the self-describing SDLC)
+    done: true
+    done_at: '2026-07-11T15:15:55+00:00'
+    done_by: story-done-auto
+  - text: Given the same single server, When a client calls recall(query), Then it
+      returns the matching DNA memory
+    done: true
+    done_at: '2026-07-11T15:15:55+00:00'
+    done_by: story-done-auto
+  - text: Given the base install without the [mcp] extra, When dna is imported/run,
+      Then nothing breaks (mcp imported lazily)
+    done: true
+    done_at: '2026-07-11T15:15:55+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - 'Code: dna_mcp server module + dna mcp serve CLI + [mcp] optional extra on dna-cli
-    (lazy import)'
-  - "Tests: in-process test instantiating the server and calling compose_prompt (incl.\
-    \ tenant), sdlc_digest, list_agents, recall \u2014 one smoke proving definitions+SDLC+memory\
-    \ from the SAME server"
-  - "Docs: guide 'The MCP server \u2014 DNA as a live layer' (emit vs MCP, static/dynamic\
-    \ table, how a client connects) + mkdocs nav; mkdocs build --strict green"
-  - 'CI: suites + guards + mkdocs --strict green (11/11); CHANGELOG [Unreleased] updated;
-    base install unaffected'
+  - text: 'Code: dna_mcp server module + dna mcp serve CLI + [mcp] optional extra
+      on dna-cli (lazy import)'
+    done: true
+    done_at: '2026-07-11T15:15:55+00:00'
+    done_by: story-done-auto
+  - text: "Tests: in-process test instantiating the server and calling compose_prompt\
+      \ (incl. tenant), sdlc_digest, list_agents, recall \u2014 one smoke proving\
+      \ definitions+SDLC+memory from the SAME server"
+    done: true
+    done_at: '2026-07-11T15:15:55+00:00'
+    done_by: story-done-auto
+  - text: "Docs: guide 'The MCP server \u2014 DNA as a live layer' (emit vs MCP, static/dynamic\
+      \ table, how a client connects) + mkdocs nav; mkdocs build --strict green"
+    done: true
+    done_at: '2026-07-11T15:15:55+00:00'
+    done_by: story-done-auto
+  - text: 'CI: suites + guards + mkdocs --strict green (11/11); CHANGELOG [Unreleased]
+      updated; base install unaffected'
+    done: true
+    done_at: '2026-07-11T15:15:55+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-11T14:42:55+00:00'
-  updated_at: '2026-07-11T15:05:29+00:00'
+  updated_at: '2026-07-11T15:16:05+00:00'
   timeline:
   - at: '2026-07-11T14:42:55+00:00'
     actor: claude-code
@@ -128,6 +156,33 @@ spec:
     source: cli
     from: in-progress
     to: review
+  - at: '2026-07-11T15:15:46+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-mcp-c
+    summary: TestGuide tg-mcp-c (smoke)
+  - at: '2026-07-11T15:15:53+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-mcp-c-20260711-151549
+    summary: "TestRun tr-tg-mcp-c-20260711-151549 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-11T15:15:59+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #64 merged \u2014 a face runtime"
+  - at: '2026-07-11T15:16:05+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: bd675c8e89a6bb594ec5b93ea8dc9ed8e2946027
   produces:
   - kind: Plan
     name: plan-s-dna-mcp-server-mvp
@@ -141,3 +196,12 @@ spec:
     name: tr-tg-dna-mcp-server-mvp-20260711-150302
     role: test-run
     at: '2026-07-11T15:03:06+00:00'
+  - kind: TestGuide
+    name: tg-mcp-c
+    role: test-guide
+    at: '2026-07-11T15:15:46+00:00'
+  - kind: TestRun
+    name: tr-tg-mcp-c-20260711-151549
+    role: test-run
+    at: '2026-07-11T15:15:53+00:00'
+  closed_at: '2026-07-11T15:15:55+00:00'

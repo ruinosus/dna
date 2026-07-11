@@ -7,7 +7,7 @@ spec:
   description: "Emit a DNA agent as a Google ADK Agent Config (LlmAgent) YAML \u2014\
     \ the third proven runtime (agent-framework + bedrock + vertex), same composed\
     \ prompt byte-equal across all three."
-  status: in-progress
+  status: done
   feature: f-dna-emitters
   owner: claude-code
   labels:
@@ -17,31 +17,55 @@ spec:
   - vertex
   reporter: claude-code
   acceptance_criteria:
-  - Given the concierge example scope, when I run 'dna emit concierge --target vertex',
-    then a valid ADK Agent Config YAML is produced with agent_class LlmAgent, name,
-    model, instruction, tools.
-  - "Given the emitted config, when I compare its 'instruction' to build_prompt(agent),\
-    \ then they are byte-equal \u2014 AND identical to the agent-framework 'instructions'\
-    \ and the Bedrock 'Instruction' (one source \u2192 three runtimes)."
-  - Given no GCP credential, when the artifact is validated, then it conforms structurally
-    to the documented ADK LlmAgentConfig schema and carries the yaml-language-server
-    schema header.
-  - Given DNA axes ADK has no slot for (composition, tenant, eval, tool-schema depth,
-    output_schema, non-Gemini model), when emitting, then each is reported in EmitResult.losses,
-    not hidden.
+  - text: Given the concierge example scope, when I run 'dna emit concierge --target
+      vertex', then a valid ADK Agent Config YAML is produced with agent_class LlmAgent,
+      name, model, instruction, tools.
+    done: true
+    done_at: '2026-07-11T14:42:10+00:00'
+    done_by: story-done-auto
+  - text: "Given the emitted config, when I compare its 'instruction' to build_prompt(agent),\
+      \ then they are byte-equal \u2014 AND identical to the agent-framework 'instructions'\
+      \ and the Bedrock 'Instruction' (one source \u2192 three runtimes)."
+    done: true
+    done_at: '2026-07-11T14:42:10+00:00'
+    done_by: story-done-auto
+  - text: Given no GCP credential, when the artifact is validated, then it conforms
+      structurally to the documented ADK LlmAgentConfig schema and carries the yaml-language-server
+      schema header.
+    done: true
+    done_at: '2026-07-11T14:42:10+00:00'
+    done_by: story-done-auto
+  - text: Given DNA axes ADK has no slot for (composition, tenant, eval, tool-schema
+      depth, output_schema, non-Gemini model), when emitting, then each is reported
+      in EmitResult.losses, not hidden.
+    done: true
+    done_at: '2026-07-11T14:42:10+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - "Code: dna/emit/vertex.py + src/emit/vertex.ts (Py\u2194TS parity), registered\
-    \ additively in both registries."
-  - 'Tests: test_emit_vertex.py + emit-vertex.test.ts + CLI smoke; existing emit suites
-    updated (vertex no longer the ''unknown target'').'
-  - 'Docs: ''Emitting to a runtime'' guide gains the ADK section + mapping table;
-    example README shows all three runtimes; CHANGELOG [Unreleased].'
-  - 'CI: Py + TS + CLI emit suites green, mkdocs build --strict green, brand/docs-coverage/parity
-    guards green.'
+  - text: "Code: dna/emit/vertex.py + src/emit/vertex.ts (Py\u2194TS parity), registered\
+      \ additively in both registries."
+    done: true
+    done_at: '2026-07-11T14:42:10+00:00'
+    done_by: story-done-auto
+  - text: 'Tests: test_emit_vertex.py + emit-vertex.test.ts + CLI smoke; existing
+      emit suites updated (vertex no longer the ''unknown target'').'
+    done: true
+    done_at: '2026-07-11T14:42:10+00:00'
+    done_by: story-done-auto
+  - text: 'Docs: ''Emitting to a runtime'' guide gains the ADK section + mapping table;
+      example README shows all three runtimes; CHANGELOG [Unreleased].'
+    done: true
+    done_at: '2026-07-11T14:42:10+00:00'
+    done_by: story-done-auto
+  - text: 'CI: Py + TS + CLI emit suites green, mkdocs build --strict green, brand/docs-coverage/parity
+      guards green.'
+    done: true
+    done_at: '2026-07-11T14:42:10+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-11T14:34:39+00:00'
-  updated_at: '2026-07-11T14:35:28+00:00'
+  updated_at: '2026-07-11T14:42:21+00:00'
   timeline:
   - at: '2026-07-11T14:34:39+00:00'
     actor: claude-code
@@ -88,8 +112,44 @@ spec:
       \ Docs: guia 'Emitting to a runtime' ganhou se\xE7\xE3o ADK + tabela de-para;\
       \ example README mostra os 3; CHANGELOG [Unreleased]."
     commit_ref: b4c1859f8196682747e91bc6e75a8f76e86bbc87
+  - at: '2026-07-11T14:42:02+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-emit-vertex-c
+    summary: TestGuide tg-emit-vertex-c (smoke)
+  - at: '2026-07-11T14:42:09+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-emit-vertex-c-20260711-144205
+    summary: "TestRun tr-tg-emit-vertex-c-20260711-144205 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-11T14:42:14+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #62 merged \u2014 3\xBA runtime"
+  - at: '2026-07-11T14:42:21+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: done
+    commit_ref: d21a17156e5e950ab030d2bc410ea90182a25a9e
   produces:
   - kind: Plan
     name: plan-s-emit-vertex
     role: implementation
     at: '2026-07-11T14:35:04+00:00'
+  - kind: TestGuide
+    name: tg-emit-vertex-c
+    role: test-guide
+    at: '2026-07-11T14:42:02+00:00'
+  - kind: TestRun
+    name: tr-tg-emit-vertex-c-20260711-144205
+    role: test-run
+    at: '2026-07-11T14:42:09+00:00'
+  closed_at: '2026-07-11T14:42:10+00:00'
