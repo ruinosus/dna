@@ -1,0 +1,20 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Reference
+metadata:
+  name: ref-mcp-a2a-lf
+spec:
+  title: MCP + A2A under the Linux Foundation (agent protocol stack)
+  kind_of: web
+  summary: "MCP (agent\u2192tool) and A2A (agent\u2192agent, v1.0 Apr 2026) are the\
+    \ interop protocols, both Linux-Foundation-stewarded (Agentic AI Foundation /\
+    \ LF AI & Data)."
+  key_quotes: []
+  cited_by: []
+  owner: claude-code
+  created_at: '2026-07-11T12:48:00+00:00'
+  updated_at: '2026-07-11T12:48:00+00:00'
+  url: https://zuplo.com/blog/agent-protocol-stack-mcp-a2a-acp-2026
+  fetched_at: '2026-07-11T12:48:00+00:00'
+  relevance: The interop substrate DNA leans on rather than reinventing.
+  tags:
+  - standards

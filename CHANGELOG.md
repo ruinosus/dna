@@ -11,6 +11,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Vendor-neutral emitters — `dna emit` + the `dna.emit` port/registry**
+  (epic `e-dna-portability`, feature `f-dna-emitters`, story
+  `s-emit-agent-framework`). The pivot's first concrete step: DNA is a
+  vendor-neutral **definition** layer that authors an agent **once** (Agent +
+  Soul + Guardrail + Tool Kinds) and **materializes the native artifact each
+  runtime consumes** — "author once, emit per runtime". New CLI:
+  `dna emit <agent> --target <t> [--scope --out --model --provider --json]` and
+  `dna emit --list-targets`. First proven target: **Microsoft agent-framework**
+  (`--target agent-framework`) — emits the declarative `PromptAgent` YAML that
+  `AgentFactory` loads. The de-para is **structural**, not a string dump:
+  `metadata.name`→`name` (CamelCase), `metadata.description`→`description`,
+  the composed prompt (`build_prompt`: Soul + guardrails + instruction)→
+  `instructions` (**byte-equal**), `spec.model`/Genome `default_llm`→
+  `model.{id,provider}`, `spec.tools[]` (the `Tool` Kind)→`tools[]`
+  (`kind: function`, carrying each tool's description + input JSON Schema),
+  `spec.output_schema`→`outputSchema`. Axes with no target slot (composition
+  structure, tenant overlay, eval-as-contract) are reported honestly in
+  `EmitResult.losses`. Targets are a **pluggable registry** (`EmitterPort` +
+  `register_emitter`) — a new one (bedrock/vertex/openai) is a class + one call,
+  the CLI core never changes. Exposed from the package root on both runtimes
+  (`dna.emit_agent` / `emitAgent`); the pure de-para is Py↔TS parity-checked.
+  Committed example + fixture: `examples/emitting-to-a-runtime/`. Proof: the
+  emitted `instructions` is byte-equal to `build_prompt` and the artifact loads
+  into a live agent-framework `Agent` (a gated test that skips without the
+  runtime). Guide: **How-to → Emitting to a runtime (the de-para)**.
+
 ## [0.6.0] - 2026-07-11
 
 ### Added

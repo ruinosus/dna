@@ -1,0 +1,21 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Reference
+metadata:
+  name: ref-ms-agentschema-promptagent
+spec:
+  title: "Microsoft AgentSchema \u2014 PromptAgent reference"
+  kind_of: web
+  summary: 'Open schema for the declarative PromptAgent. Function tools use kind:function
+    (name/description/parameters); tool kinds: function/openapi/code_interpreter/file_search/mcp/web_search/custom.
+    Model via model.id + model.connection.kind.'
+  key_quotes: []
+  cited_by: []
+  owner: claude-code
+  created_at: '2026-07-11T12:47:33+00:00'
+  updated_at: '2026-07-11T12:47:33+00:00'
+  url: https://microsoft.github.io/AgentSchema/reference/promptagent/
+  fetched_at: '2026-07-11T12:47:33+00:00'
+  relevance: Corrected the emitter's tools entry to kind:function; documents provider
+    binding options.
+  tags:
+  - agent-framework

@@ -1,0 +1,19 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Reference
+metadata:
+  name: ref-langfuse-prompt-mgmt
+spec:
+  title: "Langfuse \u2014 Prompt Management"
+  kind_of: web
+  summary: Open-source LLM-engineering platform (tracing + prompt management + evals);
+    name+version prompt versioning with deployment labels (production).
+  key_quotes: []
+  cited_by: []
+  owner: claude-code
+  created_at: '2026-07-11T12:47:53+00:00'
+  updated_at: '2026-07-11T12:47:53+00:00'
+  url: https://langfuse.com/docs/prompt-management/overview
+  fetched_at: '2026-07-11T12:47:53+00:00'
+  relevance: A mature prompt-manager DNA would lose to if positioned as one.
+  tags:
+  - prompt-managers

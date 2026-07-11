@@ -59,6 +59,23 @@ export { AgentNotFound, ToolNotFound, UnknownLayout } from "./kernel/errors.js";
 export { PromptLibrary, loadPrompts } from "./prompts.js";
 export { ToolLibrary, loadTools } from "./tools.js";
 export type { ToolSurface } from "./tools.js";
+export {
+  emitAgent,
+  buildEmitContext,
+  registerEmitter,
+  getEmitter,
+  availableTargets,
+  EmitError,
+  UnknownTarget,
+} from "./emit/index.js";
+export type {
+  EmitContext,
+  EmitResult,
+  EmitTool,
+  EmitterPort,
+  BuildEmitContextOpts,
+} from "./emit/index.js";
+export { AgentFrameworkEmitter } from "./emit/agentFramework.js";
 export type { LoadPromptsOptions } from "./prompts.js";
 export { anchorScopesRoot, PackageScopeNotFound, DEFAULT_SUBPATH } from "./package-scope.js";
 export { loadConfig, findConfig, CONFIG_FILENAME } from "./config.js";

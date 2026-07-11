@@ -1,0 +1,34 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-emit-agent-framework
+spec:
+  description: "PRODUCT smoke for 'dna emit --target agent-framework' \u2014 the CLI\
+    \ is the product surface (no UI). Runs against the committed examples/emitting-to-a-runtime\
+    \ concierge scope."
+  kind_of_test: smoke
+  status: active
+  steps:
+  - action: 'Run: DNA_BASE_DIR=examples/emitting-to-a-runtime/.dna dna emit --list-targets'
+    expected: lists 'agent-framework' among registered targets
+  - action: 'Run: DNA_BASE_DIR=examples/emitting-to-a-runtime/.dna dna emit concierge
+      -t agent-framework --scope concierge'
+    expected: prints a PromptAgent YAML with kind:Prompt, name:Concierge, model:{id:gpt-4o,provider:AzureOpenAI},
+      a tools[] entry kind:function, and an instructions block; de-para losses print
+      on stderr
+  - action: 'Compare: the emitted ''instructions'' equals ''dna emit ...'' vs the
+      composed prompt'
+    expected: pytest tests/test_emit_agent_framework.py::test_instructions_byte_equal_to_composed_prompt
+      is green (byte-equal gate)
+  - action: 'Run: dna emit concierge -t agent-framework --scope concierge --out /tmp/concierge.agent.yaml'
+    expected: writes the artifact to the file; stdout confirms 'Emitted ... /tmp/concierge.agent.yaml'
+  - action: 'Run: dna emit concierge -t bedrock --scope concierge'
+    expected: fails loud (non-zero) with UnknownTarget naming available targets
+  - action: 'Run the suites: pytest tests/test_emit_agent_framework.py + cli/tests/test_emit_cmd.py
+      + bun test emit-agent-framework.test.ts'
+    expected: all green (Py 20 pass/1 skip, CLI 6 pass, TS 13 pass)
+  verifies:
+  - Story/s-emit-agent-framework
+  created_at: '2026-07-11T12:54:29+00:00'
+  updated_at: '2026-07-11T12:54:29+00:00'
+  owner: claude-code

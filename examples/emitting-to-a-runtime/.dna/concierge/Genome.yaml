@@ -1,0 +1,10 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: Genome
+metadata:
+  name: concierge
+  description: Emit-target demo — a helpdesk concierge composed from a Soul, a
+    Guardrail and a Tool, authored ONCE in DNA and emitted to a runtime.
+spec:
+  default_agent: concierge
+  default_llm: azure/gpt-4o
+  owner: dna

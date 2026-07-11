@@ -1,0 +1,22 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Reference
+metadata:
+  name: ref-oracle-agent-spec
+spec:
+  title: Oracle Open Agent Specification (github.com/oracle/agent-spec)
+  kind_of: web
+  summary: "Framework-agnostic declarative language for agentic systems (~386 stars,\
+    \ dual UPL-1.0/Apache-2.0). PyAgentSpec SDK + WayFlow reference runtime; ships\
+    \ adapters for LangGraph, AutoGen, CrewAI, WayFlow \u2014 NOT agent-framework/OpenAI/Bedrock/Vertex."
+  key_quotes: []
+  cited_by:
+  - ADR/adr-dna-pivot-portability
+  owner: claude-code
+  created_at: '2026-07-11T12:47:28+00:00'
+  updated_at: '2026-07-11T12:50:52+00:00'
+  url: https://github.com/oracle/agent-spec
+  fetched_at: '2026-07-11T12:47:28+00:00'
+  relevance: "The only shipped author-once\u2192transpile standard; the alignment\
+    \ target for DNA's schema and the emit-through-vs-direct decision."
+  tags:
+  - oracle-agent-spec

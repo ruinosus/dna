@@ -1,0 +1,19 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Reference
+metadata:
+  name: ref-ms-agent-framework-declarative
+spec:
+  title: "Microsoft agent-framework \u2014 declarative agents (Learn)"
+  kind_of: web
+  summary: 'AgentFactory.create_agent_from_yaml loads a declarative PromptAgent (kind:
+    Prompt). Fields: kind/name/displayName/description/instructions/model/tools/inputSchema/outputSchema.'
+  key_quotes: []
+  cited_by: []
+  owner: claude-code
+  created_at: '2026-07-11T12:47:31+00:00'
+  updated_at: '2026-07-11T12:47:31+00:00'
+  url: https://learn.microsoft.com/en-us/agent-framework/agents/declarative
+  fetched_at: '2026-07-11T12:47:31+00:00'
+  relevance: The first proven emit target; defines the PromptAgent artifact DNA emits.
+  tags:
+  - agent-framework
