@@ -11,7 +11,7 @@ spec:
     bridge), the billing model, and the portal surface. Deliverable is an ADR (adr-dna-cloud-saas)
     + a design doc + a self-contained HTML visual (architecture + plans table + enforcement
     flow) for the owner to VER and approve BEFORE any build. No SaaS code is written.'
-  status: in-progress
+  status: review
   feature: f-dna-cloud
   priority: high
   labels:
@@ -40,7 +40,7 @@ spec:
     \ left open, NOT merged)"
   definition_of_done_source: claude-code
   created_at: '2026-07-11T16:34:04+00:00'
-  updated_at: '2026-07-11T16:43:35+00:00'
+  updated_at: '2026-07-11T16:51:05+00:00'
   timeline:
   - at: '2026-07-11T16:34:04+00:00'
     actor: claude-code
@@ -65,6 +65,18 @@ spec:
       \ mockup (impeccable product-register applied). 6 open decisions left for the\
       \ owner."
     commit_ref: 9d659f72a1bcf5083aa0e32aa1152fe9f850eb77
+  - at: '2026-07-11T16:50:48+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/69'
+    pr_url: https://github.com/ruinosus/dna/pull/69
+  - at: '2026-07-11T16:51:05+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
   references:
   - ADR/adr-dna-cloud-saas
   produces:
