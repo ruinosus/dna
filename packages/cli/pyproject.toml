@@ -24,7 +24,7 @@ dependencies = [
     # replaces the registry lookup with the workspace path source below
     # ([tool.uv.sources] — editable ../sdk-py), so dev installs keep tracking
     # the sibling package live; the constraint only bites consumers.
-    "dna-sdk>=0.9,<0.10",
+    "dna-sdk>=0.10,<0.11",
 ]
 
 [project.scripts]
@@ -67,7 +67,7 @@ packages = ["dna_cli"]
 # sibling package (editable), NOT from PyPI — the registry constraint above
 # is what published artifacts carry. Two paths, one name:
 #   dev  (this repo)  → ../sdk-py editable, always current
-#   user (pip/uv add) → PyPI dna-sdk>=0.9,<0.10
+#   user (pip/uv add) → PyPI dna-sdk>=0.10,<0.11
 [tool.uv.sources]
 dna-sdk = { path = "../sdk-py", editable = true }
 
