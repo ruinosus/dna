@@ -134,6 +134,11 @@ $ dna mcp serve --transport http --host 0.0.0.0 --port 8000
 Point a remote/web MCP client at that URL. FastMCP serves the Streamable HTTP
 transport — no transport code is written, it is a flag.
 
+> **Hosting it for real?** [Host the MCP server on Azure Container Apps +
+> Microsoft Entra](hosting-mcp-aca.md) is the one-command (`azd up`) recipe —
+> Dockerfile + bicep + runbook — that runs this HTTP server behind an HTTPS
+> ingress, keyless (Managed Identity), with Entra as the OAuth IdP.
+
 ### Connect a web client
 
 A web MCP client takes a URL (and, when auth is on, drives the OAuth flow):

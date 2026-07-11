@@ -1,0 +1,30 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+#
+# azd project for the hosted DNA MCP server (Phase A of DNA-hosted).
+#
+#   cd deploy/azure && azd up
+#
+# `infra` points at this directory (main.bicep / resources.bicep live here).
+# The single `mcp` service builds the image from the Dockerfile with the REPO
+# ROOT as the build context (project: ../..), so the from-source install can
+# reach packages/. azd builds + pushes to the ACR and deploys onto the Container
+# App tagged `azd-service-name: mcp` (set in resources.bicep).
+
+name: dna-hosted-mcp
+metadata:
+  template: dna-hosted-mcp@0.1.0
+
+infra:
+  provider: bicep
+  path: .
+  module: main
+
+services:
+  mcp:
+    project: ../..
+    host: containerapp
+    language: docker
+    docker:
+      path: deploy/azure/Dockerfile
+      context: .
+      remoteBuild: true

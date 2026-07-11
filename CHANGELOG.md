@@ -13,6 +13,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **DNA hosted — the MCP server on Azure Container Apps + Microsoft Entra**
+  (feature `f-dna-hosting`, story `s-mcp-deploy-aca`; epic `e-dna-portability`).
+  Phase A of DNA-hosted: a one-command (`azd up`) self-host recipe under
+  [`deploy/azure/`](deploy/azure/README.md) that runs `dna mcp serve --transport
+  http --auth jwt` on **Azure Container Apps**, behind an HTTPS ingress,
+  authenticated with **Microsoft Entra** — the base the multi-tenant DNA Cloud
+  offering builds on:
+  - **`Dockerfile` + `entrypoint.sh`** — containerize `dna mcp serve --transport
+    http` on `python:3.12-slim` (non-root, port 8080, `dna-cli[mcp]` installed
+    from source). One image runs authenticated or open by flipping `DNA_MCP_AUTH`.
+  - **azd/bicep** (`azure.yaml` + `main.bicep` + `resources.bicep`) — a **keyless**
+    stack: Container App (external HTTPS ingress) + **user-assigned Managed
+    Identity** (ACR pull, no registry secret) + Log Analytics + ACR + an Azure
+    Files share mounted read-only as the DNA source (`/mnt/dna`). The Entra-JWT
+    env (`DNA_MCP_JWKS_URI`/`_ISSUER`/`_AUDIENCE`/`_RESOURCE_URL`/`_AUTH_SERVERS`
+    + `DNA_MCP_TENANT_CLAIM`) is derived from the tenant id via `environment()`
+    (correct across Azure clouds); Entra tokens are validated against the public
+    JWKS, so **no secret** lives in the template or the container.
+  - **Runbook + guide** — `deploy/azure/README.md` (Entra app registration, `azd
+    up`, `scripts/push-scope.sh` to seed the source, and a post-deploy smoke:
+    PRM 200 / unauth 401 / authed `initialize` 200) and a new site guide *Hosting
+    the MCP server on Azure (ACA + Entra)*. Auth code is untouched — the deploy
+    wires the existing `--auth jwt` provider; a declarative `auth.providers:
+    [entra]` front-end is sketched in `dna.config.sample.yaml`.
+
 - **The `EmitterPort` as a first-class, documented DNA port + the scaffold
   mechanism for code-first runtimes** (epic `e-dna-portability`, feature
   `f-dna-emitters`, story `s-emit-port-contract`). Elevates the emit layer to a
