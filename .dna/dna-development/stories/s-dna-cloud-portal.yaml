@@ -11,7 +11,7 @@ spec:
     per-tool breakdown, billing status). RECOMMENDED to live in a SEPARATE repo (dna-cloud)
     so the OSS SDK repo stays pure library/CLI; the portal talks to the hosted MCP
     server + billing provider over HTTP. Design-approved before build.'
-  status: todo
+  status: in-progress
   feature: f-dna-cloud
   priority: high
   labels:
@@ -36,10 +36,40 @@ spec:
     docs; owner-approved design first'
   definition_of_done_source: claude-code
   created_at: '2026-07-11T16:34:42+00:00'
-  updated_at: '2026-07-11T16:34:42+00:00'
+  updated_at: '2026-07-11T20:48:23+00:00'
   timeline:
   - at: '2026-07-11T16:34:42+00:00'
     actor: claude-code
     type: status_change
     source: cli
     to: todo
+  - at: '2026-07-11T20:26:35+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-11T20:26:39+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Funda\xE7\xE3o shipada no repo dna-cloud (main a0ff5b5): landing crafted\
+      \ (marca DNA, pricing honesto) + auth Microsoft Entra (Auth.js) + /dashboard\
+      \ protegido (shell) + infra azd/bicep (portal+MCP+Postgres, reusando dna#70\
+      \ + foundry). PRs #1 (auth) e #2 (infra) merged. Resta: dashboard de uso real\
+      \ + DCR (p\xF3s-billing)."
+    commit_ref: b6ebe55fe0aa37309f114c66b314c00cf51daa77
+  - at: '2026-07-11T20:48:23+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "SMOKE VIVO \u2713 (Barna, 2026-07-11): fluxo completo validado no navegador\
+      \ \u2014 landing localhost:3000 \u2192 'Start free' \u2192 login Microsoft Entra\
+      \ (app DNA Cloud Portal, single-tenant) \u2192 /dashboard autenticado (plano=Free\
+      \ shell). Auth Entra + gating funcionando end-to-end na m\xE1quina do dono."
+    commit_ref: b6ebe55fe0aa37309f114c66b314c00cf51daa77
+  produces:
+  - kind: Plan
+    name: plan-s-dna-cloud-portal
+    role: implementation
+    at: '2026-07-11T20:26:35+00:00'

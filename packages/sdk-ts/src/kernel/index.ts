@@ -129,6 +129,13 @@ export const VOICE_POLICY_SCOPE = SYSTEM_SCOPE;
  */
 export const TIER_REGISTRY_SCOPE = SYSTEM_SCOPE;
 
+/**
+ * The scope that owns the canonical TenantPlan (tenant→Tier assignment)
+ * registry. GLOBAL like Tier — queried directly regardless of the caller's
+ * scope. 1:1 parity with Python `RegistryAccessor._TENANT_PLAN_REGISTRY_SCOPE`.
+ */
+export const TENANT_PLAN_REGISTRY_SCOPE = SYSTEM_SCOPE;
+
 export class Kernel {
   // ── Kind classification — DERIVED from KindPort attributes ──────────────
   // s-kernel-kindport-classification-attrs: the kernel no longer hardcodes
@@ -1935,6 +1942,40 @@ export class Kernel {
       const spec = (row.spec ?? {}) as Record<string, unknown>;
       const aliases = (spec.aliases ?? []) as unknown[];
       if (aliases.includes(idOrAlias)) {
+        return row;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Resolve a TenantPlan (a tenant→Tier assignment) from the `_lib` scope by
+   * `spec.tenant`. Returns the matching Document or null when no assignment
+   * exists for `tenant`.
+   *
+   * Always queries `TENANT_PLAN_REGISTRY_SCOPE` ("_lib") directly — TenantPlan
+   * is GLOBAL and NOT in `INHERITABLE_KINDS`; any caller scope is irrelevant.
+   * The billing→enforcement bridge: dna-cloud's Stripe webhook writes the doc;
+   * the SDK only reads it here. No alias pass — the match is on `tenant`.
+   *
+   * 1:1 parity with Python `Kernel.tenant_plan(tenant)`.
+   *
+   * @param tenant - The DNA tenant to resolve the plan assignment for.
+   * @returns The matching Document, or null on miss or error.
+   */
+  async tenantPlan(tenant: string): Promise<import("./document.js").Document | null> {
+    let rows: import("./document.js").Document[];
+    try {
+      const mi = await this.instance(TENANT_PLAN_REGISTRY_SCOPE);
+      rows = mi._all("TenantPlan");
+    } catch {
+      return null;
+    }
+
+    for (const row of rows) {
+      const spec = (row.spec ?? {}) as Record<string, unknown>;
+      if (spec.tenant === tenant) {
         return row;
       }
     }

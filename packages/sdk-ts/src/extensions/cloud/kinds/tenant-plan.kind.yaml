@@ -1,0 +1,105 @@
+# TenantPlan — the DNA Cloud tenant→Tier assignment (record plane).
+# One doc per tenant maps it to its CURRENT Tier (free/pro/enterprise) as
+# first-class GLOBAL data, so enforcement follows billing state without a
+# redeploy. This is the billing→enforcement BRIDGE: dna-cloud's Stripe webhook
+# writes this doc on subscribe/cancel, and the MCP server reads it via
+# kernel.tenant_plan(tenant) when a token carries no explicit plan claim.
+#
+# CONTRACT — the OSS SDK only READS: zero Stripe/billing code lives here. The
+# SDK resolves tier_id from THIS doc; dna-cloud (closed source) is the only
+# writer. A missing TenantPlan is not an error — the MCP guard falls back to the
+# Free floor.
+#
+# TenantPlans live in the `_lib` scope (`tenant-plans/<tenant>.yaml`) —
+# TenantPlan is GLOBAL (base only, no per-tenant override) and NOT inheritable;
+# kernel.tenant_plan() queries `_lib` directly regardless of the caller's scope.
+#
+# PARITY-CRITICAL package data: the byte-identical mirror lives at
+# packages/sdk-{py,ts}/{dna/extensions,src/extensions}/cloud/kinds/
+# tenant-plan.kind.yaml (tests/test_descriptor_hash_parity.py enforces).
+apiVersion: github.com/ruinosus/dna/core/v1
+kind: KindDefinition
+metadata:
+  name: tenant-plan
+spec:
+  target_api_version: github.com/ruinosus/dna/cloud/v1
+  target_kind: TenantPlan
+  alias: cloud-tenant-plan
+  origin: github.com/ruinosus/dna/cloud
+  tenant_scope: global
+  plane: record
+  prompt_target: false
+  flatten_in_context: false
+  prompt_target_priority: 0
+  storage:
+    type: yaml
+    container: tenant-plans
+  schema:
+    type: object
+    additionalProperties: false
+    required:
+    - tenant
+    - tier_id
+    properties:
+      tenant:
+        type: string
+        description: The DNA tenant this assignment is for. The doc name SHOULD
+          equal the tenant; kernel.tenant_plan() matches on this field.
+      tier_id:
+        type: string
+        description: The assigned Tier's id, e.g. free, pro, enterprise. Resolved
+          to caps via kernel.tier(tier_id) — never a literal in code.
+      source:
+        type: string
+        description: Where the assignment came from, e.g. stripe / manual / trial.
+      stripe_customer_id:
+        type: string
+        description: The Stripe customer id backing the assignment (dna-cloud
+          writes it; the OSS SDK never calls Stripe).
+      stripe_subscription_id:
+        type: string
+        description: The Stripe subscription id backing the assignment (dna-cloud
+          writes it; the OSS SDK never calls Stripe).
+      status:
+        type: string
+        description: The billing status of the assignment, e.g. active / past_due
+          / canceled.
+      updated_at:
+        type: string
+        format: date-time
+        description: When dna-cloud last wrote this assignment (ISO 8601).
+      notes:
+        type:
+        - string
+        - 'null'
+        description: Free-form operator notes.
+  describe: '{tenant} → {tier_id}'
+  summary:
+    tenant: ''
+    tier_id: ''
+    status: ''
+  ui:
+    mode: govern
+    label:
+      en: Tenant Plans
+      pt-BR: Planos por Tenant
+    icon: 🎫
+    description:
+      en: DNA Cloud tenant→Tier assignments (billing→enforcement bridge).
+      pt-BR: Atribuições tenant→Tier do DNA Cloud (ponte cobrança→enforcement).
+    routes:
+      list: docs/TenantPlan
+      detail: docs/TenantPlan/:name
+    permissions:
+      list: any
+      detail: any
+    in_sidebar: true
+    display_order: 55
+  ascii_icon: 🎫
+  display_label: Tenant Plans
+  docs: A TenantPlan maps one DNA tenant to its current Tier as GLOBAL
+    declarative data, so enforcement follows billing state without a redeploy.
+    dna-cloud's Stripe webhook writes it on subscribe/cancel; the MCP server
+    reads it via kernel.tenant_plan(tenant) when the token carries no explicit
+    plan claim — zero Stripe/billing code lives in the OSS SDK, which only reads
+    the assignment.

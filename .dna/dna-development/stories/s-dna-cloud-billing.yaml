@@ -34,10 +34,31 @@ spec:
     billing model + provider
   definition_of_done_source: claude-code
   created_at: '2026-07-11T16:34:49+00:00'
-  updated_at: '2026-07-11T16:34:49+00:00'
+  updated_at: '2026-07-11T20:20:30+00:00'
   timeline:
   - at: '2026-07-11T16:34:49+00:00'
     actor: claude-code
     type: status_change
     source: cli
     to: todo
+  - at: '2026-07-11T20:20:30+00:00'
+    actor: claude-code
+    type: decision
+    source: cli
+    summary: "PLANO DO BILLING (Stripe, API 2026-06-24, best-practices skill):\n-\
+      \ Pro $29/m\xEAs flat via Stripe CHECKOUT (mode:subscription) + Customer Portal\
+      \ (autogest\xE3o). Nada de PaymentIntent na m\xE3o. Nunca passar payment_method_types.\n\
+      - Overage = Billing Meters b\xE1sico (pay-as-you-go simples); Metronome s\xF3\
+      \ se virar UBB complexo (enterprise/cr\xE9ditos).\n- Free = sem Stripe (row\
+      \ no PG). Enterprise = faturado \xE0 parte, fora do MVP.\n- Fluxo: MCP server\
+      \ \xE9 o medidor \u2192 webhook Stripe atualiza plano do tenant no Postgres\
+      \ \u2192 server resolve plano por tenant (tid). Ponte billing\u2192enforcement\
+      \ = follow-up OSS 'resolver plano-por-tenant' no dna.\n- Rotas portal: /api/billing/checkout,\
+      \ /api/billing/portal, /api/webhooks/stripe (valida whsec).\n- Chave: usar RESTRICTED\
+      \ key (rk_), n\xE3o secret key completa. Barna deve ROLAR a sk_ colada no chat.\n\
+      DECIS\xD5ES (defaults ratificados salvo obje\xE7\xE3o): sem trial no MVP \xB7\
+      \ Stripe Tax diferido p\xF3s-MVP \xB7 overage come\xE7a em Billing Meters b\xE1\
+      sico.\nOrdem: (1) Barna faz setup Stripe \u2192 price_ids; (2) agente billing\
+      \ (rotas+webhook+dashboard) em PR; (3) resolver plano-por-tenant no dna; (4)\
+      \ job de overage quando PG dur\xE1vel subir."
+    commit_ref: b6ebe55fe0aa37309f114c66b314c00cf51daa77

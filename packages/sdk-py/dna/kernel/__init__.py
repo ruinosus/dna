@@ -2433,6 +2433,15 @@ class Kernel:
         The quota enforcer reads the caps from here, never hardcodes them."""
         return await self._registry.tier(tier_id_or_alias)
 
+    async def tenant_plan(self, tenant: str) -> dict | None:
+        """Resolve a TenantPlan (a tenant→Tier assignment) from the _lib
+        registry by ``spec.tenant``. Returns the RAW DICT row (callers read
+        ``plan["spec"]["tier_id"]``) or None when no assignment exists.
+        _lib-direct + fail-soft. Thin facade over the RegistryAccessor
+        collaborator — the billing→enforcement bridge: dna-cloud's Stripe
+        webhook writes the doc; the SDK only reads it here."""
+        return await self._registry.tenant_plan(tenant)
+
     # VoicePolicy is GLOBAL — _lib-resident like ModelProfile. Same
     # _lib-direct lookup rationale (a per-scope query would silently
     # no-op for scopes with zero VoicePolicy docs).

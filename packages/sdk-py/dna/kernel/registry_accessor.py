@@ -42,6 +42,10 @@ class RegistryAccessor:
     # Tier (DNA Cloud pricing plans) is GLOBAL — _lib-resident like
     # ModelProfile, not inheritable. Same _lib-direct rationale.
     _TIER_REGISTRY_SCOPE = SYSTEM_SCOPE
+    # TenantPlan (tenant→Tier assignment) is GLOBAL — _lib-resident like Tier.
+    # dna-cloud's Stripe webhook writes it; the SDK only reads it. Same
+    # _lib-direct rationale.
+    _TENANT_PLAN_REGISTRY_SCOPE = SYSTEM_SCOPE
 
     def __init__(self, kernel: "RegistryAccessorHost") -> None:
         self._k = kernel
@@ -116,6 +120,39 @@ class RegistryAccessor:
         # Second pass: alias match.
         for r in rows:
             if tier_id_or_alias in ((r.get("spec") or {}).get("aliases") or []):
+                return r
+        return None
+
+    async def tenant_plan(self, tenant: str) -> dict | None:
+        """Resolve a TenantPlan (a tenant→Tier assignment) from the _lib
+        registry by ``spec.tenant``.
+
+        Returns the RAW DICT row (kernel.query yields raw dicts, not
+        Documents — callers read plan["spec"]["tier_id"]) or None when no
+        assignment exists for ``tenant``.
+
+        This is the billing→enforcement bridge read: dna-cloud's Stripe webhook
+        writes the TenantPlan doc; the MCP quota guard reads it here when a
+        token carries no explicit plan claim. _lib-direct — TenantPlan is NOT in
+        _INHERITABLE_KINDS so per-scope inheritance does not surface it. No alias
+        pass: the match is on the ``tenant`` field.
+        """
+        try:
+            rows = [
+                r async for r in self._k.query(self._TENANT_PLAN_REGISTRY_SCOPE, "TenantPlan")
+            ]
+        except Exception as e:  # noqa: BLE001
+            # fail-soft: registry read — a silent None means the guard falls
+            # back to the Free floor for this tenant, so the degradation logs
+            # loud rather than silently downgrading a paying tenant.
+            logger.warning(
+                "tenant_plan: registry query failed for %r (enforcement "
+                "degrades to no-assignment / Free floor): %s",
+                tenant, e,
+            )
+            return None
+        for r in rows:
+            if (r.get("spec") or {}).get("tenant") == tenant:
                 return r
         return None
 
