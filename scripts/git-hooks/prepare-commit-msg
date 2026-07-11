@@ -4,7 +4,7 @@
 Stamps every commit made while a Story is active with two trailers:
 
     Work-Item: Story/<story-name>
-    Co-Authored-By: dna-sdlc[bot] <dna-sdlc[bot]@users.noreply.github.com>
+    Co-Authored-By: dna-sdlc[bot] <302582850+dna-sdlc[bot]@users.noreply.github.com>
 
 The active Story comes from `.dna/active-story.txt` at the repo root
 (single line, `<scope>:<story-name>` — written by `dna sdlc story start`,
@@ -36,7 +36,7 @@ import sys
 
 WORK_ITEM_TRAILER = "Work-Item"
 COAUTHOR_TRAILER = "Co-Authored-By"
-DEFAULT_SDLC_COAUTHOR = "dna-sdlc[bot] <dna-sdlc[bot]@users.noreply.github.com>"
+DEFAULT_SDLC_COAUTHOR = "dna-sdlc[bot] <302582850+dna-sdlc[bot]@users.noreply.github.com>"
 COAUTHOR_ENV = "DNA_SDLC_COAUTHOR"
 
 ACTIVE_STORY_FILE = ".dna/active-story.txt"

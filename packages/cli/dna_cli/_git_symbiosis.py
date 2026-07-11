@@ -7,7 +7,7 @@ written by ``dna sdlc story start``) is stamped with two trailers by the
 versioned ``prepare-commit-msg`` hook (``scripts/git-hooks/``):
 
     Work-Item: Story/<story-name>
-    Co-Authored-By: dna-sdlc[bot] <dna-sdlc[bot]@users.noreply.github.com>
+    Co-Authored-By: dna-sdlc[bot] <302582850+dna-sdlc[bot]@users.noreply.github.com>
 
 ``Work-Item: <Kind>/<name>`` is the machine-readable link back to the
 SDLC document. The co-author is **the dna sdlc tool itself** (GitHub
@@ -38,7 +38,7 @@ from typing import Any
 
 WORK_ITEM_TRAILER = "Work-Item"
 COAUTHOR_TRAILER = "Co-Authored-By"
-DEFAULT_SDLC_COAUTHOR = "dna-sdlc[bot] <dna-sdlc[bot]@users.noreply.github.com>"
+DEFAULT_SDLC_COAUTHOR = "dna-sdlc[bot] <302582850+dna-sdlc[bot]@users.noreply.github.com>"
 COAUTHOR_ENV = "DNA_SDLC_COAUTHOR"
 
 #: PR-side twin of the commit trailer (s-sdlc-pr-attribution): the same way

@@ -60,7 +60,7 @@ Author: You <you@example.com>
     feat(cli): stamp Work-Item trailers on commit
 
     Work-Item: Story/s-my-story
-    Co-Authored-By: dna-sdlc[bot] <dna-sdlc[bot]@users.noreply.github.com>
+    Co-Authored-By: dna-sdlc[bot] <302582850+dna-sdlc[bot]@users.noreply.github.com>
 ```
 
 No active Story → no stamp: absence is signal too. Merges, squashes and
