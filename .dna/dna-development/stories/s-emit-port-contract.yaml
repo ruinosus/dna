@@ -10,7 +10,7 @@ spec:
     \ \u2192 emit(ctx) \u2192 artefato), guia de 'como escrever um emissor', e a garantia\
     \ byte-equal do instruction como invariante do contrato. Os 3 targets (agent-framework/bedrock/vertex)\
     \ j\xE1 plugam; falta formalizar o contrato."
-  status: in-progress
+  status: done
   feature: f-dna-emitters
   priority: medium
   labels:
@@ -18,14 +18,24 @@ spec:
   - docs
   reporter: claude-code
   acceptance_criteria:
-  - "EmitterPort \xE9 protocolo/ABC documentado com o contrato expl\xEDcito"
-  - guia 'writing an emitter' + os 3 targets como exemplos do contrato
+  - text: "EmitterPort \xE9 protocolo/ABC documentado com o contrato expl\xEDcito"
+    done: true
+    done_at: '2026-07-11T17:21:19+00:00'
+    done_by: story-done-auto
+  - text: guia 'writing an emitter' + os 3 targets como exemplos do contrato
+    done: true
+    done_at: '2026-07-11T17:21:19+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - "docs + paridade Py/TS do protocolo; novo target pluga s\xF3 implementando o contrato"
+  - text: "docs + paridade Py/TS do protocolo; novo target pluga s\xF3 implementando\
+      \ o contrato"
+    done: true
+    done_at: '2026-07-11T17:21:19+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-11T14:43:11+00:00'
-  updated_at: '2026-07-11T15:52:36+00:00'
+  updated_at: '2026-07-11T17:21:31+00:00'
   timeline:
   - at: '2026-07-11T14:43:11+00:00'
     actor: claude-code
@@ -67,6 +77,19 @@ spec:
     name: tr-emit-port-contract-smoke-20260711-155233
     summary: "TestRun tr-emit-port-contract-smoke-20260711-155233 \u2192 pass"
     outcome: pass
+  - at: '2026-07-11T17:21:23+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "EmitterPort + ScaffoldEmitter shipped, PR #67 merged (byte-identical\
+      \ Py\u2194TS templates)"
+  - at: '2026-07-11T17:21:31+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: done
+    commit_ref: b5fdca6991fdd61607d8e796a3390b9594fa76ce
   produces:
   - kind: Plan
     name: plan-s-emit-port-contract
@@ -80,3 +103,4 @@ spec:
     name: tr-emit-port-contract-smoke-20260711-155233
     role: test-run
     at: '2026-07-11T15:52:36+00:00'
+  closed_at: '2026-07-11T17:21:19+00:00'

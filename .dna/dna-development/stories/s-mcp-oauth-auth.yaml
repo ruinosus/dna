@@ -20,7 +20,7 @@ spec:
     \ the FastMCP + MCP Authorization spec versions are current at implementation\
     \ time (do not assume). Sources: gofastmcp.com/servers/auth, gofastmcp.com/clients/auth/oauth;\
     \ modelcontextprotocol.io/specification/2025-11-25/basic/authorization; RFC 9728/8707/8414/7591."
-  status: review
+  status: done
   feature: f-dna-mcp-server
   priority: medium
   labels:
@@ -31,25 +31,41 @@ spec:
   - multi-tenant
   - phase-2
   acceptance_criteria:
-  - Given a FastMCP token whose scope/claim maps to tenant=acme, When the client calls
-    compose_prompt for a foo-tenant resource, Then access is denied (FastMCP require_scopes/per-tool
-    auth bridged to DNA tenancy)
-  - Given an MCP client, When it discovers the HTTP server, Then FastMCP advertises
-    Protected Resource Metadata (RFC 9728) and validates access tokens per OAuth 2.1
-    (PKCE required, Resource Indicators RFC 8707)
-  - Given a provider without DCR (WorkOS/Auth0), When wired via FastMCP's OAuthProxy,
-    Then the client completes the OAuth 2.1 flow without that provider implementing
-    MCP DCR
+  - text: Given a FastMCP token whose scope/claim maps to tenant=acme, When the client
+      calls compose_prompt for a foo-tenant resource, Then access is denied (FastMCP
+      require_scopes/per-tool auth bridged to DNA tenancy)
+    done: true
+    done_at: '2026-07-11T17:21:55+00:00'
+    done_by: story-done-auto
+  - text: Given an MCP client, When it discovers the HTTP server, Then FastMCP advertises
+      Protected Resource Metadata (RFC 9728) and validates access tokens per OAuth
+      2.1 (PKCE required, Resource Indicators RFC 8707)
+    done: true
+    done_at: '2026-07-11T17:21:55+00:00'
+    done_by: story-done-auto
+  - text: Given a provider without DCR (WorkOS/Auth0), When wired via FastMCP's OAuthProxy,
+      Then the client completes the OAuth 2.1 flow without that provider implementing
+      MCP DCR
+    done: true
+    done_at: '2026-07-11T17:21:55+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - Design + owner approval BEFORE implementation (todo Phase-2 story); re-verify
-    the FastMCP auth API + MCP Authorization spec revision are current and cite sources
-  - 'Code: enable FastMCP auth=... (OAuth server / OAuthProxy / JWT verifier) + the
-    scope/claim -> DNA Tenant BRIDGE; Tests: cross-tenant denial + PRM discovery via
-    FastMCP Client; Docs: auth guide; CI green'
+  - text: Design + owner approval BEFORE implementation (todo Phase-2 story); re-verify
+      the FastMCP auth API + MCP Authorization spec revision are current and cite
+      sources
+    done: true
+    done_at: '2026-07-11T17:21:55+00:00'
+    done_by: story-done-auto
+  - text: 'Code: enable FastMCP auth=... (OAuth server / OAuthProxy / JWT verifier)
+      + the scope/claim -> DNA Tenant BRIDGE; Tests: cross-tenant denial + PRM discovery
+      via FastMCP Client; Docs: auth guide; CI green'
+    done: true
+    done_at: '2026-07-11T17:21:55+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-11T14:43:37+00:00'
-  updated_at: '2026-07-11T15:51:51+00:00'
+  updated_at: '2026-07-11T17:27:10+00:00'
   timeline:
   - at: '2026-07-11T14:43:37+00:00'
     actor: claude-code
@@ -113,6 +129,49 @@ spec:
     source: cli
     from: in-progress
     to: review
+  - at: '2026-07-11T17:21:59+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: OAuth 2.1 Resource Server (JWTVerifier + RFC 9728 PRM) shipped
+  - at: '2026-07-11T17:23:54+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-mcp-oauth-auth
+    summary: TestGuide tg-s-mcp-oauth-auth (integration)
+  - at: '2026-07-11T17:24:01+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-mcp-oauth-auth-20260711-172357
+    summary: "TestRun tr-tg-s-mcp-oauth-auth-20260711-172357 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-11T17:24:05+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "OAuth 2.1 Resource Server (JWT + PRM) \u2014 tests green in CI"
+  - at: '2026-07-11T17:26:03+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: shipped + merged; tests green in CI
+  - at: '2026-07-11T17:27:03+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "backend/lib sem UI: coberto por TestRun de integra\xE7\xE3o (tg-s-mcp-oauth-auth)\
+      \ + suite verde no CI; product-smoke n\xE3o se aplica"
+  - at: '2026-07-11T17:27:10+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: b5fdca6991fdd61607d8e796a3390b9594fa76ce
   produces:
   - kind: TestGuide
     name: tg-mcp-oauth-auth
@@ -126,3 +185,12 @@ spec:
     name: plan-s-mcp-oauth-auth
     role: implementation
     at: '2026-07-11T15:48:42+00:00'
+  - kind: TestGuide
+    name: tg-s-mcp-oauth-auth
+    role: test-guide
+    at: '2026-07-11T17:23:54+00:00'
+  - kind: TestRun
+    name: tr-tg-s-mcp-oauth-auth-20260711-172357
+    role: test-run
+    at: '2026-07-11T17:24:01+00:00'
+  closed_at: '2026-07-11T17:27:00+00:00'

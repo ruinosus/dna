@@ -1,0 +1,34 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-026-cloud-mvp-plan-set
+spec:
+  description: "DECIS\xC3O 6/6 \xB7 DNA Cloud (ref: adr-dna-cloud-saas). Quais planos\
+    \ no PRIMEIRO corte (pra n\xE3o construir tudo)?\nOP\xC7\xD5ES:\n(A) S\xF3 Free\
+    \ + Pro \u2014 valida willingness-to-pay com atrito m\xEDnimo; Dev/Enterprise\
+    \ entram depois. [RECOMENDADO]\n(B) Free + Dev + Pro + Enterprise \u2014 completo,\
+    \ mais superf\xEDcie pra construir/manter.\n(C) Waitlist + Enterprise sales-led\
+    \ \u2014 se o alvo \xE9 B2B grande primeiro.\nRECOMENDO A (Free = aquisi\xE7\xE3\
+    o, Pro = receita). Sua escolha:"
+  type: question
+  severity: medium
+  status: resolved
+  owner: claude-code
+  related_feature: f-dna-cloud
+  timeline:
+  - at: '2026-07-11T17:42:03+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
+  - at: '2026-07-11T17:48:13+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: open
+    to: resolved
+    summary: "Duplicado \u2014 as 6 decis\xF5es j\xE1 vivem em ADR/adr-dna-cloud-saas\
+      \ (\xA7 Open decisions, status proposed). Decidir l\xE1, n\xE3o como Issue."
+  closed_at: '2026-07-11T17:48:13+00:00'
+  resolution: "Duplicado \u2014 as 6 decis\xF5es j\xE1 vivem em ADR/adr-dna-cloud-saas\
+    \ (\xA7 Open decisions, status proposed). Decidir l\xE1, n\xE3o como Issue."

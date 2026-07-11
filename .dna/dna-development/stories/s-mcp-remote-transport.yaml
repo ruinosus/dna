@@ -13,7 +13,7 @@ spec:
     \ a transport. The MVP stays stdio (local: Claude Code/Cursor/Copilot); this makes\
     \ the SAME server reachable over HTTP. Verified against current FastMCP docs (gofastmcp.com):\
     \ Streamable HTTP is the current standard remote transport (MCP spec 2025-06-18)."
-  status: review
+  status: done
   feature: f-dna-mcp-server
   priority: medium
   labels:
@@ -22,20 +22,32 @@ spec:
   - remote
   - phase-2
   acceptance_criteria:
-  - "Given the server, When run with --transport http, Then FastMCP serves the MCP\
-    \ protocol over Streamable HTTP at the standard path (no new transport code \u2014\
-    \ FastMCP native)"
-  - Given a WEB MCP client (no local stdio), When it connects over HTTP, Then it reaches
-    the same tools/resources as the stdio MVP
+  - text: "Given the server, When run with --transport http, Then FastMCP serves the\
+      \ MCP protocol over Streamable HTTP at the standard path (no new transport code\
+      \ \u2014 FastMCP native)"
+    done: true
+    done_at: '2026-07-11T17:22:05+00:00'
+    done_by: story-done-auto
+  - text: Given a WEB MCP client (no local stdio), When it connects over HTTP, Then
+      it reaches the same tools/resources as the stdio MVP
+    done: true
+    done_at: '2026-07-11T17:22:05+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - Design + owner approval BEFORE implementation (todo Phase-2 story)
-  - 'Code: expand the --transport choice to FastMCP''s stdio|http|sse + host/port/path
-    options; a deployment note. Docs: hosting guide; Tests: HTTP smoke via FastMCP
-    Client; CI green'
+  - text: Design + owner approval BEFORE implementation (todo Phase-2 story)
+    done: true
+    done_at: '2026-07-11T17:22:05+00:00'
+    done_by: story-done-auto
+  - text: 'Code: expand the --transport choice to FastMCP''s stdio|http|sse + host/port/path
+      options; a deployment note. Docs: hosting guide; Tests: HTTP smoke via FastMCP
+      Client; CI green'
+    done: true
+    done_at: '2026-07-11T17:22:05+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-11T14:43:35+00:00'
-  updated_at: '2026-07-11T15:51:44+00:00'
+  updated_at: '2026-07-11T17:27:23+00:00'
   timeline:
   - at: '2026-07-11T14:43:35+00:00'
     actor: claude-code
@@ -93,6 +105,49 @@ spec:
     source: cli
     from: in-progress
     to: review
+  - at: '2026-07-11T17:22:10+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: transport HTTP remoto do dna mcp serve shipped
+  - at: '2026-07-11T17:24:15+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-mcp-remote-transport
+    summary: TestGuide tg-s-mcp-remote-transport (integration)
+  - at: '2026-07-11T17:24:23+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-mcp-remote-transport-20260711-172419
+    summary: "TestRun tr-tg-s-mcp-remote-transport-20260711-172419 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-11T17:24:27+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "MCP HTTP remote transport \u2014 tests green in CI"
+  - at: '2026-07-11T17:26:12+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: shipped + merged; tests green in CI
+  - at: '2026-07-11T17:27:16+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "backend/lib sem UI: coberto por TestRun de integra\xE7\xE3o (tg-s-mcp-remote-transport)\
+      \ + suite verde no CI; product-smoke n\xE3o se aplica"
+  - at: '2026-07-11T17:27:23+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: b5fdca6991fdd61607d8e796a3390b9594fa76ce
   produces:
   - kind: Plan
     name: plan-s-mcp-remote-transport
@@ -106,3 +161,12 @@ spec:
     name: tr-tg-mcp-remote-transport-20260711-154807
     role: test-run
     at: '2026-07-11T15:48:11+00:00'
+  - kind: TestGuide
+    name: tg-s-mcp-remote-transport
+    role: test-guide
+    at: '2026-07-11T17:24:15+00:00'
+  - kind: TestRun
+    name: tr-tg-s-mcp-remote-transport-20260711-172419
+    role: test-run
+    at: '2026-07-11T17:24:23+00:00'
+  closed_at: '2026-07-11T17:27:13+00:00'

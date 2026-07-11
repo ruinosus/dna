@@ -1,0 +1,35 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-023-cloud-tiers-prices
+spec:
+  description: "DECIS\xC3O 3/6 \xB7 DNA Cloud (ref: adr-dna-cloud-saas). Planos, limites\
+    \ e pre\xE7os \u2014 PRECISO DOS N\xDAMEROS.\nPROPOSTA (ajuste os valores):\n\
+    - Free: 1 tenant, ~N composi\xE7\xF5es/m\xEAs, community support, sem SLA.\n-\
+    \ Dev: $X/m\xEAs, ~M tenants, quota maior, sem SLA.\n- Pro: $Y/m\xEAs, SLA, mais\
+    \ tenants, overlays gerenciados.\n- Enterprise: custom, SSO/on-prem/support dedicado.\n\
+    DE VOC\xCA: (a) unidade de quota \u2014 sugiro 'composi\xE7\xF5es/m\xEAs' + 'n\xBA\
+    \ de scopes/tenants'; (b) os limites concretos por tier; (c) os valores $X/$Y.\
+    \ Preencha:"
+  type: question
+  severity: high
+  status: resolved
+  owner: claude-code
+  related_feature: f-dna-cloud
+  timeline:
+  - at: '2026-07-11T17:41:51+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
+  - at: '2026-07-11T17:48:03+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: open
+    to: resolved
+    summary: "Duplicado \u2014 as 6 decis\xF5es j\xE1 vivem em ADR/adr-dna-cloud-saas\
+      \ (\xA7 Open decisions, status proposed). Decidir l\xE1, n\xE3o como Issue."
+  closed_at: '2026-07-11T17:48:03+00:00'
+  resolution: "Duplicado \u2014 as 6 decis\xF5es j\xE1 vivem em ADR/adr-dna-cloud-saas\
+    \ (\xA7 Open decisions, status proposed). Decidir l\xE1, n\xE3o como Issue."

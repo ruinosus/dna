@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-mcp-oauth-auth-20260711-172357
+spec:
+  guide_ref: tg-s-mcp-oauth-auth
+  outcome: pass
+  verifies:
+  - Story/s-mcp-oauth-auth
+  executed_by: claude-code
+  executed_at: '2026-07-11T17:23:57+00:00'
+  evidence:
+  - test:packages/cli/tests/test_mcp_auth.py

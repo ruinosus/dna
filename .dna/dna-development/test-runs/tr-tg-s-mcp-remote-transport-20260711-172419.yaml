@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-mcp-remote-transport-20260711-172419
+spec:
+  guide_ref: tg-s-mcp-remote-transport
+  outcome: pass
+  verifies:
+  - Story/s-mcp-remote-transport
+  executed_by: claude-code
+  executed_at: '2026-07-11T17:24:19+00:00'
+  evidence:
+  - test:packages/cli/tests/test_mcp_server.py

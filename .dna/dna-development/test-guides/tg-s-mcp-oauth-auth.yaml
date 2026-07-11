@@ -1,0 +1,16 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-s-mcp-oauth-auth
+spec:
+  description: OAuth 2.1 Resource Server (JWT + PRM)
+  kind_of_test: integration
+  status: active
+  steps:
+  - action: run suite
+    expected: pass (green in CI)
+  verifies:
+  - Story/s-mcp-oauth-auth
+  created_at: '2026-07-11T17:23:50+00:00'
+  updated_at: '2026-07-11T17:23:50+00:00'
+  owner: claude-code
