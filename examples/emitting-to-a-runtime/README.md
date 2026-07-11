@@ -3,7 +3,7 @@
 DNA describes an agent **once** and `dna emit` **materializes the native artifact
 each runtime consumes** — author once, emit per runtime, swap runtimes without a
 rewrite. This example is the portability proof: the **same** `concierge` DNA
-source emits to **two** different runtimes.
+source emits to **three** different runtimes.
 
 ```
 .dna/
@@ -24,7 +24,7 @@ duty (`Guardrail`) are **composed in** by `build_prompt`, not pasted. That
 composition is exactly the DNA-only value that collapses to a flat instruction
 string on emit — and the emitters report it honestly as a loss.
 
-## One source → two runtimes
+## One source → three runtimes
 
 **Microsoft agent-framework** — a declarative `PromptAgent` YAML that
 `AgentFactory` loads:
@@ -45,11 +45,24 @@ dna emit concierge --target bedrock --scope concierge
 #   ActionGroups[0].FunctionSchema.Functions[0].Name: kb-search
 ```
 
-The composed prompt is **byte-equal** across both artifacts — the same author-time
-definition, materialized two ways. What each target has no slot for (composition
-structure, tenant overlay, eval-as-contract, and — for Bedrock — tool-parameter
-depth and the model coordinate) is reported on stderr / under `--json` `losses`,
-never hidden.
+**Google ADK Agent Config** — a declarative `LlmAgent` YAML (loaded with
+`config_agent_utils.from_config`):
+
+```bash
+dna emit concierge --target vertex --scope concierge
+# # yaml-language-server: $schema=https://.../AgentConfig.json
+# agent_class: LlmAgent / name: concierge / model: gpt-4o
+# instruction: <composed prompt, BYTE-EQUAL to the other two>
+# tools: [{name: kb-search}]   # ADK binds tools by code reference (see losses)
+```
+
+The composed prompt is **byte-equal** across all three artifacts — the same
+author-time definition, materialized three ways. What each target has no slot for
+(composition structure, tenant overlay, eval-as-contract; for Bedrock also
+tool-parameter depth and the model coordinate; for ADK the tool binding is a code
+reference so a Tool's schema/description have no declarative slot, and
+`output_schema` is a Pydantic-class reference) is reported on stderr / under
+`--json` `losses`, never hidden.
 
 See `dna emit --list-targets` for the registered runtimes, and the guide
 [Emitting to a runtime](../../docs/guides/emitting-to-a-runtime.md) for the full
@@ -57,10 +70,10 @@ de-para tables.
 
 ## Never rots
 
-The example is exercised by both SDK suites
+The example is exercised by all three SDK suites
 (`packages/sdk-py/tests/test_emit_agent_framework.py` +
-`test_emit_bedrock.py`, and the TypeScript twins
+`test_emit_bedrock.py` + `test_emit_vertex.py`, and the TypeScript twins
 `packages/sdk-ts/tests/emit-agent-framework.test.ts` +
-`emit-bedrock.test.ts`) and the CLI suite
-(`packages/cli/tests/test_emit_cmd.py`), so the two-runtime proof can never
+`emit-bedrock.test.ts` + `emit-vertex.test.ts`) and the CLI suite
+(`packages/cli/tests/test_emit_cmd.py`), so the three-runtime proof can never
 silently break.

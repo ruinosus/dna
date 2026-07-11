@@ -146,8 +146,8 @@ def test_agent_framework_is_registered() -> None:
 
 def test_unknown_target_raises_helpful() -> None:
     with pytest.raises(UnknownTarget) as ei:
-        get_emitter("vertex")  # not yet implemented (bedrock now IS a target)
-    assert ei.value.target == "vertex"
+        get_emitter("no-such-runtime")  # agent-framework/bedrock/vertex all exist now
+    assert ei.value.target == "no-such-runtime"
     assert "agent-framework" in ei.value.available
 
 
