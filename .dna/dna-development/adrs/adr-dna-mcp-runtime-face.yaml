@@ -1,0 +1,120 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: ADR
+metadata:
+  name: adr-dna-mcp-runtime-face
+spec:
+  title: "DNA's MCP runtime face \u2014 expose the live layer (definitions + SDLC\
+    \ + memory) over a neutral protocol"
+  status: accepted
+  context: DNA stores neutral definitions + a self-describing SDLC + declarative memory
+    and has no runtime. The emit face (e-dna-portability) is STATIC and drops composition
+    structure, per-tenant overlay and no-deploy. MCP is the vendor-neutral protocol
+    every client speaks (Claude/Cursor/Copilot/agent-framework/Bedrock), now with
+    a tools+resources layer. DNA already CONSUMES MCP (MCPFederation Kind); exposing
+    itself over MCP is the missing dynamic face that recovers what emit loses (live,
+    tenant-aware composition, zero deploy).
+  decision: "Build ONE thin MCP server that exposes the DNA configured live (same\
+    \ source as the CLI) over MCP. Server UNICO expoe TUDO: definitions (compose_prompt\
+    \ tenant-aware, list_agents, list_tools, get_tool), SDLC (sdlc_digest, list_stories,\
+    \ get_adr) and memory (recall, remember, consolidate) + 1-2 MCP resources. Reuse\
+    \ the existing pure cores (build_prompt, ToolLibrary, _digest.build_digest, dna.memory\
+    \ verbs) \u2014 no new business logic. Faseamento: MVP = stdio/local/all-tools;\
+    \ Phase 2 = Streamable HTTP remote + OAuth 2.1 with scopes bound to DNA tenancy.\
+    \ Base runtime = FastMCP (the standalone framework): it provides native transports\
+    \ (stdio+HTTP) and built-in OAuth 2.1 auth, so Phase 2 (remote + authenticated)\
+    \ is enablement + a tenancy bridge, not construction."
+  consequences: DNA gains a LIVE runtime face any MCP client consumes, completing
+    the vendor-neutral-no-runtime thesis (emit=static, MCP=dynamic). One server; tools
+    are thin adapters over tested cores. The [mcp] dep is optional + lazily imported
+    (base install unaffected). Phase 2 (remote HTTP + OAuth-with-tenant-scoping) is
+    the productionization path, tracked as todo stories.
+  body: "# ADR \u2014 DNA's MCP runtime face (expose the live layer over a neutral\
+    \ protocol)\n\n## Status\nAccepted (2026-07-11). Ratified by the owner as the\
+    \ complement to the emit face\nof `e-dna-portability`.\n\n## Context\n\nDNA stores\
+    \ the neutral **definitions** (Agent / Soul / Guardrail / Tool Kinds)\nplus its\
+    \ **self-describing SDLC** and its **declarative memory**, and has no\nruntime\
+    \ of its own. `e-dna-portability` already gave DNA one face that serves\nruntimes:\
+    \ **EMIT** \u2014 a build-time materialization of one neutral definition into\n\
+    each runtime's native artifact (agent-framework, Bedrock, Vertex). Emit is\n*static*:\
+    \ it is computed once, written to a file, and by construction it DROPS\nthe axes\
+    \ that make DNA earn its keep \u2014 composition **structure** (Soul reuse +\n\
+    wired Guardrails collapse to a flat string), **per-tenant overlay** (a persona\n\
+    without a fork), and **no-deploy** change (the artifact is frozen at emit time).\n\
+    \nThe 2026 interop landscape (Research `rsh-agent-config-landscape-2026`) converged\n\
+    on **MCP** (Model Context Protocol, now under the Linux Foundation with A2A) as\n\
+    the vendor-neutral protocol every client speaks \u2014 Claude Code/Desktop, Cursor,\n\
+    GitHub Copilot, agent-framework, Bedrock AgentCore. MCP grew a **tools + resources**\n\
+    layer, so a server can expose arbitrary capability to any client. DNA already\n\
+    *consumes* MCP (the `MCPFederation` Kind pulls external MCP tools into a scope);\n\
+    the inverse \u2014 DNA *exposing itself* over MCP \u2014 is the missing runtime\
+    \ face.\n\n## Decision\n\nBuild **one thin MCP server** that exposes the DNA that\
+    \ is **configured live**\n(from the same source the CLI reads \u2014 `dna.config.yaml`\
+    \ / `DNA_SOURCE_URL` /\n`base_dir`) over the neutral MCP protocol. It is the *dynamic*\
+    \ face that\n**recovers what emit loses**: a client asks \"compose the ACME concierge\
+    \ **now**\"\nand the server composes it live, tenant-aware, with zero deploy.\n\
+    \n**Server \xDANICO exp\xF5e TUDO.** A single server surfaces all three faces\
+    \ of what\nDNA stores, because the thesis is \"everything DNA stores is reachable\
+    \ over one\nneutral protocol\":\n\n- **Definitions** (recovers the emit loss):\
+    \ `compose_prompt(scope, agent, tenant?)`\n  returns the live-composed Soul+Guardrail+instruction\
+    \ prompt, **tenant-aware**\n  (the killer feature emit cannot express); `list_agents`,\
+    \ `list_tools`,\n  `get_tool`.\n- **SDLC** (the self-describing board): `sdlc_digest`,\
+    \ `list_stories`, `get_adr`.\n- **Memory** (the declarative recall): `recall`,\
+    \ `remember`, `consolidate`.\n- Plus MCP **resources** (the scope manifest / agent\
+    \ roster) to prove resources\n  beyond tools.\n\nThe server reuses the existing\
+    \ pure cores \u2014 the kernel composition\n(`build_prompt`), the emit tool projection\
+    \ (`ToolLibrary`), the digest aggregator\n(`dna_cli._digest.build_digest`), and\
+    \ the memory verbs (`dna.memory`) \u2014 it adds\nNO new business logic, only\
+    \ an MCP adapter over them.\n\n## Phasing (faseamento)\n\n- **MVP \u2014 stdio,\
+    \ local, all tools.** Transport is **stdio** (the local clients:\n  Claude Code,\
+    \ Cursor, Copilot). One server, all tools (definitions + SDLC +\n  memory) + 1\u2013\
+    2 resources. Proven by an in-process test that a single MCP client\n  reaches\
+    \ definitions AND SDLC AND memory from the same server, and that\n  `compose_prompt(tenant=\u2026\
+    )` returns the overlay. Optional `[mcp]` extra on\n  `dna-cli`; import is lazy\
+    \ so the base install never breaks.\n\n- **Phase 2 \u2014 remote + OAuth + tenant\
+    \ scoping** (design/owner-approval, NOT in\n  the MVP):\n  - `s-mcp-remote-transport`\
+    \ \u2014 **Streamable HTTP** transport (alongside stdio),\n    which unblocks\
+    \ WEB clients (Claude web, ChatGPT) that cannot spawn a local\n    stdio process.\
+    \ Makes the server hostable/remote.\n  - `s-mcp-oauth-auth` \u2014 **OAuth 2.1**\
+    \ per the current MCP Authorization spec\n    (server as OAuth Resource Server;\
+    \ PKCE; dynamic client registration; scoped\n    tokens). Key point: bind the\
+    \ OAuth scopes to **DNA tenancy** (the `Tenant`\n    Kind + inheritance that already\
+    \ exist) \u2014 a client/tenant's token composes\n    and reads only what is theirs.\
+    \ Auth + multi-tenant in one mechanism.\n\n## Consequences\n\n- DNA gains a **live**\
+    \ runtime face that any MCP client can consume, completing\n  the \"vendor-neutral\
+    \ intelligence layer, no runtime\" thesis (emit = static\n  de-para; MCP = dynamic,\
+    \ composition/tenant/no-deploy preserved).\n- One server to maintain; the tools\
+    \ are thin adapters over already-tested pure\n  cores, so surface growth is cheap\
+    \ (more tools = more adapters, no new engine).\n- The `[mcp]` dependency is optional\
+    \ and lazily imported \u2014 the base CLI/SDK\n  install carries no `mcp` requirement.\n\
+    - Phase 2 (remote HTTP + OAuth-with-tenant-scoping) is the productionization\n\
+    \  path; the MVP deliberately stays local/stdio to prove the thesis first.\n\n\
+    ## Base: FastMCP (why the runtime + auth are \"enable + bridge\", not \"build\"\
+    )\n\nThe server is built on **FastMCP** (the standalone `fastmcp` framework, 2.x+\
+    \ \u2014\nthe leading MCP framework, from which the official MCP Python SDK's\
+    \ FastMCP 1.0\nwas derived). This is a deliberate cost decision about the phasing,\
+    \ verified\nagainst the current FastMCP docs:\n\n- **Transport is native.** The\
+    \ SAME FastMCP server serves **stdio** (local\n  clients \u2014 the MVP) AND **Streamable\
+    \ HTTP** (remote/web clients) \u2014 `run(transport=\u2026)`\n  with `stdio` |\
+    \ `http` | `sse`. So Phase 2's remote story is *flip a flag +\n  deploy*, not\
+    \ *implement a transport*.\n- **Auth is built-in.** FastMCP ships OAuth 2.1 with\
+    \ Dynamic Client Registration,\n  an **OAuth proxy** that bridges providers *without*\
+    \ DCR (WorkOS, Auth0, \u2026) to\n  MCP's DCR-compliant protocol, and JWT **token\
+    \ verification with scope\n  enforcement** (`auth=` on the server, `require_scopes`\
+    \ / per-tool `auth=`).\n  So Phase 2's auth story is *enable FastMCP auth + **bridge\
+    \ its token\n  scopes/claims to DNA tenancy** (the `Tenant` Kind)* \u2014 the\
+    \ REAL work is the\n  auth\u2194tenancy bridge, not building OAuth.\n\nConsequence:\
+    \ choosing FastMCP **drastically lowers the risk/cost of the\nremote + authenticated\
+    \ phase**. The MVP stays stdio-only; Phase 2 becomes\nenablement + a tenancy bridge.\
+    \ (FastMCP auth is HTTP-only, which is exactly why\nit pairs with the remote-transport\
+    \ story.)\n"
+  created_at: '2026-07-11T14:42:02+00:00'
+  updated_at: '2026-07-11T14:42:20+00:00'
+  timeline:
+  - at: '2026-07-11T14:42:02+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: accepted
+  references:
+  - Research/rsh-agent-config-landscape-2026
+  - ADR/adr-dna-pivot-portability

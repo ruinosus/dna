@@ -1,0 +1,30 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Feature
+metadata:
+  name: f-dna-mcp-server
+spec:
+  title: "DNA's MCP runtime face \u2014 expose the live layer over MCP"
+  description: "The second face of DNA serving runtimes (the inverse of emit): ONE\
+    \ thin MCP server that exposes the DNA configured live over the neutral MCP protocol.\
+    \ Server UNICO expoe TUDO \u2014 definitions (compose_prompt tenant-aware, list_agents/list_tools/get_tool),\
+    \ SDLC (sdlc_digest/list_stories/get_adr) and memory (recall/remember/consolidate)\
+    \ + MCP resources. Recovers what the static emit loses: live composition, per-tenant\
+    \ overlay, no-deploy. MVP is stdio/local; Phase 2 (todo) is remote Streamable\
+    \ HTTP + OAuth 2.1 scoped to DNA tenancy."
+  status: discovery
+  epic: e-dna-portability
+  reporter: claude-code
+  priority: high
+  labels:
+  - portability
+  - mcp
+  - runtime
+  - interop
+  created_at: '2026-07-11T14:42:39+00:00'
+  updated_at: '2026-07-11T14:42:39+00:00'
+  timeline:
+  - at: '2026-07-11T14:42:39+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: discovery

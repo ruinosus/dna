@@ -1,0 +1,143 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-dna-mcp-server-mvp
+spec:
+  title: "MCP server MVP \u2014 one stdio server exposing definitions + SDLC + memory"
+  description: 'Build the thin MCP server (dna mcp serve, [mcp] extra) exposing DNA
+    live over stdio: definitions, SDLC and memory tools + resources.'
+  status: review
+  feature: f-dna-mcp-server
+  priority: high
+  labels:
+  - mcp
+  - runtime
+  acceptance_criteria:
+  - Given a configured DNA source, When an MCP client calls compose_prompt(scope,agent),
+    Then it returns the live-composed Soul+Guardrail+instruction prompt
+  - Given a scope with a tenant overlay, When compose_prompt is called with tenant=X,
+    Then the returned prompt reflects the tenant overlay (recovering what emit drops)
+  - Given the same single server, When a client calls sdlc_digest / list_stories /
+    get_adr, Then it returns the board data (the self-describing SDLC)
+  - Given the same single server, When a client calls recall(query), Then it returns
+    the matching DNA memory
+  - Given the base install without the [mcp] extra, When dna is imported/run, Then
+    nothing breaks (mcp imported lazily)
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - 'Code: dna_mcp server module + dna mcp serve CLI + [mcp] optional extra on dna-cli
+    (lazy import)'
+  - "Tests: in-process test instantiating the server and calling compose_prompt (incl.\
+    \ tenant), sdlc_digest, list_agents, recall \u2014 one smoke proving definitions+SDLC+memory\
+    \ from the SAME server"
+  - "Docs: guide 'The MCP server \u2014 DNA as a live layer' (emit vs MCP, static/dynamic\
+    \ table, how a client connects) + mkdocs nav; mkdocs build --strict green"
+  - 'CI: suites + guards + mkdocs --strict green (11/11); CHANGELOG [Unreleased] updated;
+    base install unaffected'
+  definition_of_done_source: cli-create
+  created_at: '2026-07-11T14:42:55+00:00'
+  updated_at: '2026-07-11T15:05:29+00:00'
+  timeline:
+  - at: '2026-07-11T14:42:55+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-11T14:44:25+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: Iniciando o MVP. Server unico em dna_cli/_mcp_server.py + dna mcp serve;
+      reuso dos cores puros (build_prompt, ToolLibrary, _digest.build_digest, dna.memory).
+      Extra [mcp] em dna-cli, import lazy.
+  - at: '2026-07-11T14:44:28+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-11T15:02:44+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-dna-mcp-server-mvp
+    summary: TestGuide tg-dna-mcp-server-mvp (integration)
+  - at: '2026-07-11T15:03:06+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-dna-mcp-server-mvp-20260711-150302
+    summary: "TestRun tr-tg-dna-mcp-server-mvp-20260711-150302 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-11T15:03:27+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Constru\xED o server em dna_cli/_mcp_server.py (impls puros + wiring\
+      \ FastMCP) + comando dna mcp serve (mcp_cmd.py). 10 tools: compose_prompt (tenant-aware\
+      \ \u2014 a killer feature que recupera o que o emit perde), list_agents/list_tools/get_tool,\
+      \ sdlc_digest (reusa _digest.build_digest)/list_stories/get_adr, recall/remember/consolidate\
+      \ (dna.memory verbs) + 2 resources (dna://{scope}/manifest e /agents). Server\
+      \ UNICO expoe as 3 faces. Adaptadores finos sobre cores testados \u2014 zero\
+      \ l\xF3gica de neg\xF3cio nova."
+    commit_ref: b4c1859f8196682747e91bc6e75a8f76e86bbc87
+  - at: '2026-07-11T15:03:30+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Decis\xE3o de base: FastMCP (framework standalone 'fastmcp'), por dire\xE7\
+      \xE3o do dono. Motivo = custo da Fase 2: FastMCP j\xE1 traz transporte NATIVO\
+      \ (stdio+Streamable HTTP) e auth built-in (OAuth 2.1 + DCR + OAuthProxy p/ WorkOS/Auth0\
+      \ + JWT scope enforcement). Logo Fase 2 vira habilitar+bridge, n\xE3o construir.\
+      \ Reescrevi s-mcp-remote-transport e s-mcp-oauth-auth pra refletir (o trabalho\
+      \ real do OAuth vira o bridge scope->Tenant Kind). Registrei no ADR. Tools com\
+      \ run_in_thread=False p/ rodar no loop do server (kernel binding)."
+    commit_ref: b4c1859f8196682747e91bc6e75a8f76e86bbc87
+  - at: '2026-07-11T15:03:33+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Prova end-to-end: cliente MCP real (mcp SDK) conectou via stdio ao 'dna\
+      \ mcp serve', listou os 10 tools, comp\xF4s o prompt ao vivo (persona do Soul\
+      \ presente) e leu o resource manifest. Testes: 10/10 em test_mcp_server.py (inclui\
+      \ overlay de tenant real via kernel.with_tenant + smoke 'um server, 3 faces'\
+      \ via FastMCP Client). Gates: mkdocs --strict 0, brand_guard limpo, docs_coverage\
+      \ limpo, CLI suite 442 passed, guia 'The MCP server \u2014 DNA as a live layer'\
+      \ + CHANGELOG [Unreleased] + refer\xEAncia CLI regenerada. TestGuide+TestRun(pass)\
+      \ registrados."
+    commit_ref: b4c1859f8196682747e91bc6e75a8f76e86bbc87
+  - at: '2026-07-11T15:04:34+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/64'
+    pr_url: https://github.com/ruinosus/dna/pull/64
+  - at: '2026-07-11T15:05:25+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #64 aberto (base main). MVP completo: 10 tools + 2 resources sobre\
+      \ FastMCP (stdio), defini\xE7\xF5es+SDLC+mem\xF3ria num server \xFAnico; Fase\
+      \ 2 (remoto+OAuth) filada como todo. Aguardando merge do dono \u2014 N\xC3O\
+      \ mergear."
+  - at: '2026-07-11T15:05:29+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
+  produces:
+  - kind: Plan
+    name: plan-s-dna-mcp-server-mvp
+    role: implementation
+    at: '2026-07-11T14:44:28+00:00'
+  - kind: TestGuide
+    name: tg-dna-mcp-server-mvp
+    role: test-guide
+    at: '2026-07-11T15:02:44+00:00'
+  - kind: TestRun
+    name: tr-tg-dna-mcp-server-mvp-20260711-150302
+    role: test-run
+    at: '2026-07-11T15:03:06+00:00'
