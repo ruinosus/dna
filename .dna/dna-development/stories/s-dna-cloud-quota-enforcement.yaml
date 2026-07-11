@@ -12,7 +12,7 @@ spec:
     \ (fail closed, like the tenant bridge denies cross-tenant). No auth rebuild \u2014\
     \ a plan resolver + a metering counter + a limiter on top of the tested bridge\
     \ seam (dna_cli._mcp_auth)."
-  status: todo
+  status: in-progress
   feature: f-dna-cloud
   priority: high
   labels:
@@ -37,7 +37,7 @@ spec:
     stack itself
   definition_of_done_source: claude-code
   created_at: '2026-07-11T16:34:47+00:00'
-  updated_at: '2026-07-11T18:09:58+00:00'
+  updated_at: '2026-07-11T18:35:33+00:00'
   timeline:
   - at: '2026-07-11T16:34:47+00:00'
     actor: claude-code
@@ -54,3 +54,14 @@ spec:
       \ do #70. Recipe OSS self-host segue port\xE1vel (Dockerfile + one-liner Fly/Cloud\
       \ Run documentado)."
     commit_ref: 1bd348482b5d996c51a88d1f952446a990593d77
+  - at: '2026-07-11T18:35:33+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  produces:
+  - kind: Plan
+    name: plan-s-dna-cloud-quota-enforcement
+    role: implementation
+    at: '2026-07-11T18:35:33+00:00'

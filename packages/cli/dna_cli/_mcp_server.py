@@ -411,13 +411,56 @@ def build_server(
     # clean MCP ToolError so the client sees the denial, not a masked 500.
     from fastmcp.exceptions import ToolError
 
-    from dna_cli._mcp_auth import CrossTenantError, enforce_tenant_from_context
+    from dna_cli._mcp_auth import (
+        CrossTenantError,
+        enforce_tenant_from_context,
+        enforce_tier_from_context,
+        token_present_in_context,
+    )
+    from dna_cli._mcp_quota import (
+        FeatureNotInPlanError,
+        OverQuotaError,
+        enforce_quota,
+    )
 
     def _tenant(requested: str | None = None) -> str | None:
         try:
             return enforce_tenant_from_context(requested)
         except CrossTenantError as exc:
             raise ToolError(str(exc)) from None
+
+    async def _guard(family: str, requested: str | None = None) -> str | None:
+        """The single tenancy + quota seam every tool passes through.
+
+        1. Enforce tenancy (existing ``_tenant``): a cross-tenant / tenant-less
+           authenticated request is denied.
+        2. If there is NO token (stdio / local / ``auth=None``) → identity: return
+           the tenant and meter NOTHING (the OSS/self-host path is untouched — the
+           quota invariant mirrors the tenant bridge exactly).
+        3. Otherwise (authenticated / hosted SaaS) resolve the token's tier, read
+           its caps from the ``Tier`` Kind via ``kernel.tier`` (zero hardcoded
+           caps), and meter this call's ``family`` against them.
+
+        Empty-caps fallback: if the token names a tier with no ``Tier`` doc, fall
+        back to the ``free`` doc (the Free floor); if THAT is also absent (no tiers
+        configured at all = an OSS / unconfigured source) enforce nothing — never
+        block a source that never opted into DNA Cloud pricing.
+        """
+        tenant = _tenant(requested)
+        if not token_present_in_context():
+            return tenant  # stdio / local → identity, no metering.
+
+        tier = enforce_tier_from_context()
+        kernel = (await _live()).kernel
+        row = await kernel.tier(tier)
+        if row is None:
+            row = await kernel.tier("free")  # unknown tier → Free floor.
+        caps = (row or {}).get("spec") or {}  # no tiers configured → empty → no-op.
+        try:
+            enforce_quota(caps=caps, tenant=tenant, tier=tier, family=family)
+        except (OverQuotaError, FeatureNotInPlanError) as exc:
+            raise ToolError(str(exc)) from None
+        return tenant
 
     server = FastMCP(
         "dna",
@@ -451,22 +494,24 @@ def build_server(
         composition a static emit artifact cannot express. When the server is
         authenticated, the effective tenant is bound to the token (a cross-tenant
         ``tenant`` is denied)."""
-        return await compose_prompt_impl(await _live(), agent, scope, _tenant(tenant))
+        return await compose_prompt_impl(
+            await _live(), agent, scope, await _guard("definitions", tenant)
+        )
 
     @server.tool(run_in_thread=False)
     async def list_agents(scope: str | None = None) -> dict[str, Any]:
         """List the agents (prompt targets) declared in a scope."""
-        return await list_agents_impl(await _live(), scope, _tenant())
+        return await list_agents_impl(await _live(), scope, await _guard("definitions"))
 
     @server.tool(run_in_thread=False)
     async def list_tools(scope: str | None = None) -> dict[str, Any]:
         """List the Tool Kind surfaces (name + description) in a scope."""
-        return await list_tools_impl(await _live(), scope, _tenant())
+        return await list_tools_impl(await _live(), scope, await _guard("definitions"))
 
     @server.tool(run_in_thread=False)
     async def get_tool(name: str, scope: str | None = None) -> dict[str, Any]:
         """Get one Tool's full agent-facing surface (description + input schema)."""
-        return await get_tool_impl(await _live(), name, scope, _tenant())
+        return await get_tool_impl(await _live(), name, scope, await _guard("definitions"))
 
     # -- SDLC ----------------------------------------------------------------
 
@@ -476,26 +521,26 @@ def build_server(
     ) -> dict[str, Any]:
         """Retrospective board digest — what happened in a window (default 24h).
         ``since`` accepts a span (``90m``/``24h``/``3d``/``2w``) or ISO time."""
-        return await sdlc_digest_impl(await _live(), since, scope, _tenant())
+        return await sdlc_digest_impl(await _live(), since, scope, await _guard("sdlc"))
 
     @server.tool(run_in_thread=False)
     async def list_stories(
         status: str | None = None, scope: str | None = None
     ) -> dict[str, Any]:
         """List SDLC Stories, optionally filtered by status."""
-        return await list_stories_impl(await _live(), status, scope, _tenant())
+        return await list_stories_impl(await _live(), status, scope, await _guard("sdlc"))
 
     @server.tool(run_in_thread=False)
     async def get_adr(name: str, scope: str | None = None) -> dict[str, Any]:
         """Fetch one ADR (Architecture Decision Record) verbatim."""
-        return await get_adr_impl(await _live(), name, scope, _tenant())
+        return await get_adr_impl(await _live(), name, scope, await _guard("sdlc"))
 
     # -- memory --------------------------------------------------------------
 
     @server.tool(run_in_thread=False)
     async def recall(query: str, scope: str | None = None, k: int = 5) -> dict[str, Any]:
         """Recall DNA memory for a query (hybrid/bi-temporal when available)."""
-        return await recall_impl(await _live(), query, scope, k, _tenant())
+        return await recall_impl(await _live(), query, scope, k, await _guard("memory"))
 
     @server.tool(run_in_thread=False)
     async def remember(
@@ -509,20 +554,20 @@ def build_server(
         """Persist a memory (a LessonLearned) so future recalls surface it."""
         return await remember_impl(
             await _live(), summary, scope, area=area, affect=affect, tags=tags,
-            owner=owner, tenant=_tenant(),
+            owner=owner, tenant=await _guard("memory"),
         )
 
     @server.tool(run_in_thread=False)
     async def consolidate(scope: str | None = None, apply: bool = False) -> dict[str, Any]:
         """Deterministic memory consolidation pass (retention re-score)."""
-        return await consolidate_impl(await _live(), scope, apply=apply, tenant=_tenant())
+        return await consolidate_impl(await _live(), scope, apply=apply, tenant=await _guard("memory"))
 
     # -- resources (prove resources beyond tools) ----------------------------
 
     @server.resource("dna://{scope}/manifest")
     async def manifest_resource(scope: str) -> dict[str, Any]:
         """The scope's manifest as a resource: its Kinds → document names."""
-        mi = await (await _live()).mi(scope, _tenant())
+        mi = await (await _live()).mi(scope, await _guard("definitions"))
         by_kind: dict[str, list[str]] = {}
         for d in mi.documents:
             by_kind.setdefault(d.kind, []).append(d.name)
@@ -531,6 +576,6 @@ def build_server(
     @server.resource("dna://{scope}/agents")
     async def agents_resource(scope: str) -> dict[str, Any]:
         """The scope's agent roster as a resource."""
-        return await list_agents_impl(await _live(), scope, _tenant())
+        return await list_agents_impl(await _live(), scope, await _guard("definitions"))
 
     return server
