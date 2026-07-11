@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-pkg-source-scheme-c-20260711-121117
+spec:
+  guide_ref: tg-s-pkg-source-scheme-c
+  outcome: pass
+  verifies:
+  - Story/s-pkg-source-scheme
+  executed_by: claude-code
+  executed_at: '2026-07-11T12:11:17+00:00'
+  evidence:
+  - 'PR #53, CI 11/11; teste reproduz o bug do Docker (CWD vazio resolve via anchor+pkg://)'

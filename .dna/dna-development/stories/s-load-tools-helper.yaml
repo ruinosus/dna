@@ -5,22 +5,28 @@ metadata:
 spec:
   title: "dna.load_tools / loadTools \u2192 ToolLibrary (mirror load_prompts)"
   description: Lazy fail-loud mapping name -> {description, parameters}
-  status: review
+  status: done
   feature: f-dna-tools-as-data
   priority: high
   labels:
   - helper
   - ts-parity
   acceptance_criteria:
-  - load_tools(scope) returns ToolLibrary; lib['name'] -> {description, parameters};
-    missing tool raises ToolNotFound; exported at package root Py+TS; TS twin loadTools/ToolLibrary/ToolNotFound
-    async-parity
+  - text: load_tools(scope) returns ToolLibrary; lib['name'] -> {description, parameters};
+      missing tool raises ToolNotFound; exported at package root Py+TS; TS twin loadTools/ToolLibrary/ToolNotFound
+      async-parity
+    done: true
+    done_at: '2026-07-11T12:16:51+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - Unit tests both langs; ToolNotFound exported+typed; TestGuide+TestRun
+  - text: Unit tests both langs; ToolNotFound exported+typed; TestGuide+TestRun
+    done: true
+    done_at: '2026-07-11T12:16:51+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-11T10:43:45+00:00'
-  updated_at: '2026-07-11T11:23:16+00:00'
+  updated_at: '2026-07-11T12:16:58+00:00'
   timeline:
   - at: '2026-07-11T10:43:45+00:00'
     actor: claude-code
@@ -50,8 +56,44 @@ spec:
     source: cli
     from: in-progress
     to: review
+  - at: '2026-07-11T12:16:46+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-load-tools-helper-c
+    summary: TestGuide tg-s-load-tools-helper-c (smoke)
+  - at: '2026-07-11T12:16:50+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-load-tools-helper-c-20260711-121648
+    summary: "TestRun tr-tg-s-load-tools-helper-c-20260711-121648 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-11T12:16:54+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'PR #54 merged'
+  - at: '2026-07-11T12:16:58+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: dd29c420fdb1c5551be12dbb38daad45c66bf5a6
   produces:
   - kind: Plan
     name: plan-s-load-tools-helper
     role: implementation
     at: '2026-07-11T11:21:23+00:00'
+  - kind: TestGuide
+    name: tg-s-load-tools-helper-c
+    role: test-guide
+    at: '2026-07-11T12:16:46+00:00'
+  - kind: TestRun
+    name: tr-tg-s-load-tools-helper-c-20260711-121648
+    role: test-run
+    at: '2026-07-11T12:16:50+00:00'
+  closed_at: '2026-07-11T12:16:51+00:00'
