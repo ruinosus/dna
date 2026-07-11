@@ -1,0 +1,14 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-oas-alignment-research-c-20260711-131707
+spec:
+  guide_ref: tg-s-oas-alignment-research-c
+  outcome: pass
+  verifies:
+  - Story/s-oas-alignment-research
+  executed_by: claude-code
+  executed_at: '2026-07-11T13:17:07+00:00'
+  evidence:
+  - 'PR #56; dna emit agent-framework byte-equal + carrega no AgentFactory; veredito
+    OAS no ADR'

@@ -1,0 +1,30 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-s-oas-alignment-research-c
+spec:
+  description: Roteiro de teste de s-oas-alignment-research (derivado das acceptance_criteria).
+  kind_of_test: smoke
+  status: active
+  steps:
+  - action: 'No Studio, valide: Given the OAS research, when complete, then a Research
+      doc captures its schema, shipped adapters, and format with cited sources.'
+    where: "<rota/tela \u2014 ex. /scopes/:scope/...>"
+    expected: "<o que voc\xEA V\xCA quando est\xE1 certo (marque \u2717 S\xD3 se estiver\
+      \ quebrado)>"
+  - action: 'No Studio, valide: Given the trade-offs, when documented, then an ADR
+      records the emit-through-OAS vs emit-direct verdict with a clear recommendation.'
+    where: "<rota/tela \u2014 ex. /scopes/:scope/...>"
+    expected: "<o que voc\xEA V\xCA quando est\xE1 certo (marque \u2717 S\xD3 se estiver\
+      \ quebrado)>"
+  - action: "No Studio, valide: Given the verdict, when it recommends alignment, then\
+      \ the concrete DNA\u2194OAS alignment points are named (or the decision to not\
+      \ align is justified)."
+    where: "<rota/tela \u2014 ex. /scopes/:scope/...>"
+    expected: "<o que voc\xEA V\xCA quando est\xE1 certo (marque \u2717 S\xD3 se estiver\
+      \ quebrado)>"
+  verifies:
+  - Story/s-oas-alignment-research
+  created_at: '2026-07-11T13:17:02+00:00'
+  updated_at: '2026-07-11T13:17:02+00:00'
+  owner: claude-code

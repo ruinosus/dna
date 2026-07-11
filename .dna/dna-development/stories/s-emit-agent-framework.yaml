@@ -8,7 +8,7 @@ spec:
     emit <agent> --target agent-framework produces the native agent-framework PromptAgent
     YAML from the DNA definition, with a structural field de-para (instructions/model/tools/outputSchema)
     and a pluggable EmitterPort registry.'
-  status: review
+  status: done
   feature: f-dna-emitters
   priority: highest
   labels:
@@ -16,31 +16,61 @@ spec:
   - cli
   - portability
   acceptance_criteria:
-  - Given a DNA agent, when I run 'dna emit <agent> --target agent-framework', then
-    I get a valid agent-framework PromptAgent YAML on stdout (or --out file).
-  - Given the emitted YAML, when parsed, then its 'instructions' is byte-equal to
-    mi.build_prompt(agent) (the DNA-composed prompt).
-  - Given an agent with spec.tools, when emitted, then each Tool's description + input_schema
-    is mapped into the target's tools list.
-  - Given the agent-framework runtime is installed, when the emitted YAML is loaded
-    via AgentFactory, then a live Agent object is produced (test skips when the runtime/.NET
-    is absent).
-  - Given a new target, when a developer registers an EmitterPort, then 'dna emit
-    --target <new>' dispatches to it with no changes to the CLI core.
+  - text: Given a DNA agent, when I run 'dna emit <agent> --target agent-framework',
+      then I get a valid agent-framework PromptAgent YAML on stdout (or --out file).
+    done: true
+    done_at: '2026-07-11T13:16:51+00:00'
+    done_by: story-done-auto
+  - text: Given the emitted YAML, when parsed, then its 'instructions' is byte-equal
+      to mi.build_prompt(agent) (the DNA-composed prompt).
+    done: true
+    done_at: '2026-07-11T13:16:51+00:00'
+    done_by: story-done-auto
+  - text: Given an agent with spec.tools, when emitted, then each Tool's description
+      + input_schema is mapped into the target's tools list.
+    done: true
+    done_at: '2026-07-11T13:16:51+00:00'
+    done_by: story-done-auto
+  - text: Given the agent-framework runtime is installed, when the emitted YAML is
+      loaded via AgentFactory, then a live Agent object is produced (test skips when
+      the runtime/.NET is absent).
+    done: true
+    done_at: '2026-07-11T13:16:51+00:00'
+    done_by: story-done-auto
+  - text: Given a new target, when a developer registers an EmitterPort, then 'dna
+      emit --target <new>' dispatches to it with no changes to the CLI core.
+    done: true
+    done_at: '2026-07-11T13:16:51+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - 'Code: dna.emit module (EmitterPort + registry + agent_framework emitter) + emit_cmd
-    CLI wired into the dna group.'
-  - 'Tests: byte-equal round-trip test (always runs) + AgentFactory load test (skips
-    without runtime); suites green.'
-  - 'Docs: ''Emitting to a runtime (the de-para)'' guide in mkdocs nav; mkdocs build
-    --strict green.'
-  - 'CI: 11/11 checks green on the PR; CHANGELOG [Unreleased] updated (no release
-    cut).'
-  - 'UX: losses (tenant/composition/eval) documented in emitter output + guide.'
+  - text: 'Code: dna.emit module (EmitterPort + registry + agent_framework emitter)
+      + emit_cmd CLI wired into the dna group.'
+    done: true
+    done_at: '2026-07-11T13:16:51+00:00'
+    done_by: story-done-auto
+  - text: 'Tests: byte-equal round-trip test (always runs) + AgentFactory load test
+      (skips without runtime); suites green.'
+    done: true
+    done_at: '2026-07-11T13:16:51+00:00'
+    done_by: story-done-auto
+  - text: 'Docs: ''Emitting to a runtime (the de-para)'' guide in mkdocs nav; mkdocs
+      build --strict green.'
+    done: true
+    done_at: '2026-07-11T13:16:51+00:00'
+    done_by: story-done-auto
+  - text: 'CI: 11/11 checks green on the PR; CHANGELOG [Unreleased] updated (no release
+      cut).'
+    done: true
+    done_at: '2026-07-11T13:16:51+00:00'
+    done_by: story-done-auto
+  - text: 'UX: losses (tenant/composition/eval) documented in emitter output + guide.'
+    done: true
+    done_at: '2026-07-11T13:16:51+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-11T12:31:32+00:00'
-  updated_at: '2026-07-11T13:10:45+00:00'
+  updated_at: '2026-07-11T13:16:59+00:00'
   timeline:
   - at: '2026-07-11T12:31:32+00:00'
     actor: claude-code
@@ -114,6 +144,33 @@ spec:
       \ 2902 pass, cli 401 pass, TS 1415 pass. In review \u2014 NOT merged (per instruction;\
       \ done-on-merge)."
     commit_ref: 54a9bc805d7159fb3b39587bacba434712f4c7e7
+  - at: '2026-07-11T13:16:44+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-emit-agent-framework-c
+    summary: TestGuide tg-s-emit-agent-framework-c (smoke)
+  - at: '2026-07-11T13:16:50+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-emit-agent-framework-c-20260711-131647
+    summary: "TestRun tr-tg-s-emit-agent-framework-c-20260711-131647 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-11T13:16:54+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'PR #56 merged'
+  - at: '2026-07-11T13:16:59+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: e8c82599964d99e0bfd63d12ba33a3b405038096
   produces:
   - kind: Plan
     name: plan-s-emit-agent-framework
@@ -127,3 +184,12 @@ spec:
     name: tr-tg-emit-agent-framework-20260711-125637
     role: test-run
     at: '2026-07-11T12:56:39+00:00'
+  - kind: TestGuide
+    name: tg-s-emit-agent-framework-c
+    role: test-guide
+    at: '2026-07-11T13:16:44+00:00'
+  - kind: TestRun
+    name: tr-tg-s-emit-agent-framework-c-20260711-131647
+    role: test-run
+    at: '2026-07-11T13:16:50+00:00'
+  closed_at: '2026-07-11T13:16:51+00:00'
