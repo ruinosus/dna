@@ -7,7 +7,7 @@ spec:
     URL-'
   description: 'Config declarativa de ports: dna.config.yaml + Kernel.from_config
     + factory URL->source publico.'
-  status: in-progress
+  status: review
   feature: f-dna-dx-configure
   priority: high
   labels:
@@ -26,7 +26,7 @@ spec:
     TS; CLI _ctx delega ao factory; suites Py+TS verdes; docs Configuring ports.
   definition_of_done_source: cli-create
   created_at: '2026-07-11T06:24:51+00:00'
-  updated_at: '2026-07-11T06:27:03+00:00'
+  updated_at: '2026-07-11T06:37:51+00:00'
   timeline:
   - at: '2026-07-11T06:24:51+00:00'
     actor: claude-code
@@ -52,6 +52,12 @@ spec:
       \ sync (boot-time; SQL connect via asyncio.run) e retorna cls() \u2014 Runtime.from_config\
       \ devolve Runtime com .manifest. sqlite e Python-only; TS falha loud."
     commit_ref: 52b7db57f85dbf8b630cbf3f552837f8f8972ae2
+  - at: '2026-07-11T06:37:51+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
   produces:
   - kind: Plan
     name: plan-s-dx-kernel-from-config

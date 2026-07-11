@@ -5,7 +5,7 @@ metadata:
 spec:
   title: Helper publico load_prompts + PromptLibrary (Py+TS) que colapsa o shim.
   description: Helper publico load_prompts + PromptLibrary (Py+TS) que colapsa o shim.
-  status: in-progress
+  status: review
   feature: f-dna-dx-consume
   priority: high
   labels:
@@ -22,7 +22,7 @@ spec:
     suites verdes; docs Consuming prompts.
   definition_of_done_source: cli-create
   created_at: '2026-07-11T06:24:31+00:00'
-  updated_at: '2026-07-11T06:27:01+00:00'
+  updated_at: '2026-07-11T06:37:48+00:00'
   timeline:
   - at: '2026-07-11T06:24:31+00:00'
     actor: claude-code
@@ -44,6 +44,12 @@ spec:
       \ prova o colapso: prompts = load_prompts(scope); TRIAGE = prompts['swe-agent']\
       \ \u2014 2 linhas vs 166 do foundry. Exportado em __all__ (Py) e index.ts (TS)."
     commit_ref: 52b7db57f85dbf8b630cbf3f552837f8f8972ae2
+  - at: '2026-07-11T06:37:48+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
   produces:
   - kind: Plan
     name: plan-s-dx-load-prompts-helper
