@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-07-11
+
 ### Added
 
 - **DNA hosted — the MCP server on Azure Container Apps + Microsoft Entra**
@@ -154,6 +156,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     is untouched. Auth + multi-tenant in one mechanism. HTTP/auth are optional
     extras that never break the stdio/base install. Guide: *The MCP server — DNA as
     a live layer → Remote + authenticated*.
+
+### Fixed
+
+- **`dna-sdlc[bot]` is now a real, linkable committer** (SDLC git hook). The
+  `Co-Authored-By` trailer used the plain noreply email
+  (`dna-sdlc[bot]@users.noreply.github.com`), which GitHub renders as a gray
+  identicon instead of linking to an account — GitHub links a noreply email only
+  in the form `<user-id>+<login>@users.noreply.github.com`. With the `dna-sdlc`
+  GitHub App created (bot user id `302582850`), the trailer emitted by
+  `scripts/git-hooks/prepare-commit-msg`, its packaged copy under `dna_cli/data/`,
+  and `dna_cli._git_symbiosis` now use
+  `302582850+dna-sdlc[bot]@users.noreply.github.com` — hook-authored commits link
+  to the bot (with its uploaded avatar) going forward. Forward-only; past commits
+  keep their frozen trailer.
 
 ## [0.9.0] - 2026-07-11
 
