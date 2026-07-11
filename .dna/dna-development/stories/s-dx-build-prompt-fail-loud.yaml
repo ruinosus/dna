@@ -6,7 +6,7 @@ spec:
   title: 'build_prompt fail-loud: raise AgentNotFound em vez de retornar string placeholde'
   description: 'build_prompt fail-loud: raise AgentNotFound em vez de retornar string
     placeholder.'
-  status: review
+  status: done
   feature: f-dna-dx-consume
   priority: high
   labels:
@@ -14,16 +14,22 @@ spec:
   - sdk
   reporter: claude-code
   acceptance_criteria:
-  - build_prompt(agent=X) num agente inexistente LEVANTA AgentNotFound (tipado, exportado
-    no publico dna) em vez de retornar 'Agent X not found'; async + record-plane (prompt_kernel)
-    em paridade; TS throw twin.
+  - text: build_prompt(agent=X) num agente inexistente LEVANTA AgentNotFound (tipado,
+      exportado no publico dna) em vez de retornar 'Agent X not found'; async + record-plane
+      (prompt_kernel) em paridade; TS throw twin.
+    done: true
+    done_at: '2026-07-11T06:53:55+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - AgentNotFound em Py (LookupError) + TS (Error, .agent); call-sites/testes antigos
-    atualizados; suites Py+TS verdes; CHANGELOG breaking.
+  - text: AgentNotFound em Py (LookupError) + TS (Error, .agent); call-sites/testes
+      antigos atualizados; suites Py+TS verdes; CHANGELOG breaking.
+    done: true
+    done_at: '2026-07-11T06:53:55+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-11T06:24:28+00:00'
-  updated_at: '2026-07-11T06:37:57+00:00'
+  updated_at: '2026-07-11T06:55:20+00:00'
   timeline:
   - at: '2026-07-11T06:24:28+00:00'
     actor: claude-code
@@ -58,8 +64,54 @@ spec:
     source: cli
     from: in-progress
     to: review
+  - at: '2026-07-11T06:53:57+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'PR #47 merged; v0.4.0'
+  - at: '2026-07-11T06:54:30+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'PR #47 merged; v0.4.0'
+  - at: '2026-07-11T06:55:10+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-dx-build-prompt-fail-loud
+    summary: TestGuide tg-s-dx-build-prompt-fail-loud (smoke)
+  - at: '2026-07-11T06:55:14+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-dx-build-prompt-fail-loud-20260711-065512
+    summary: "TestRun tr-tg-s-dx-build-prompt-fail-loud-20260711-065512 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-11T06:55:16+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'PR #47 merged; v0.4.0'
+  - at: '2026-07-11T06:55:20+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: 254dc20a4a773bf53a497d0f6d3b4193fd9a50e0
   produces:
   - kind: Plan
     name: plan-s-dx-build-prompt-fail-loud
     role: implementation
     at: '2026-07-11T06:26:15+00:00'
+  - kind: TestGuide
+    name: tg-s-dx-build-prompt-fail-loud
+    role: test-guide
+    at: '2026-07-11T06:55:10+00:00'
+  - kind: TestRun
+    name: tr-tg-s-dx-build-prompt-fail-loud-20260711-065512
+    role: test-run
+    at: '2026-07-11T06:55:14+00:00'
+  closed_at: '2026-07-11T06:55:15+00:00'
