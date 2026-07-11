@@ -6451,6 +6451,10 @@ def cmd_plan_supersede(name: str, superseded_by: str, scope: str) -> None:
 # resolve_work_item_outputs (sdk-py) unifies produces[] ∪ legacy back-refs;
 # the derived journey + FOCUS panel read the same.
 _WORK_ITEM_KINDS = {"Story", "Spike", "Feature", "Epic", "Issue"}
+# Kinds that can AUTHOR an output via `produces add`. Superset of work items:
+# an ADR (a decision record) legitimately produces its decision-visualisation
+# HtmlArtifact — the gallery buckets ADR-produced artifacts as "decisões".
+_PRODUCER_KINDS = _WORK_ITEM_KINDS | {"ADR"}
 
 
 def _split_ref(ref: str) -> tuple[str, str]:
@@ -6507,8 +6511,8 @@ def cmd_produces_add(work_item: str, artifact: str, role: str | None, scope: str
     """Attach an artifact: dna sdlc produces add <WiKind>/<wi> <Kind>/<name>."""
     wi_kind, wi_name = _split_ref(work_item)
     art_kind, art_name = _split_ref(artifact)
-    if wi_kind not in _WORK_ITEM_KINDS:
-        raise fail(f"{wi_kind} não é work item ({', '.join(sorted(_WORK_ITEM_KINDS))}).")
+    if wi_kind not in _PRODUCER_KINDS:
+        raise fail(f"{wi_kind} não pode produzir outputs ({', '.join(sorted(_PRODUCER_KINDS))}).")
     with dna_session(scope) as s:
         existing = s.get_doc(wi_kind, wi_name)
         if existing is None:
@@ -6581,10 +6585,14 @@ def artifact_group() -> None:
 @click.option("--title", default=None, help="Human title for the artifact.")
 @click.option("--description", default=None, help="Short description (promoted to metadata).")
 @click.option("--source", default=None, help="Provenance/context (e.g. 'design doc do épico e-dna-dx').")
+@click.option("--published-url", "published_url", default=None,
+              help="Canonical hosted URL (e.g. a claude.ai artifact link) — the "
+                   "gallery renders it as a clickable link.")
 @_scope_option
 def cmd_artifact_create(
     name: str, from_file: str, title: str | None,
-    description: str | None, source: str | None, scope: str,
+    description: str | None, source: str | None,
+    published_url: str | None, scope: str,
 ) -> None:
     """Create an HtmlArtifact from an HTML file: dna sdlc artifact create <name> --from x.html."""
     import datetime as _dt
@@ -6598,6 +6606,8 @@ def cmd_artifact_create(
         artifact_json["description"] = description
     if source is not None:
         artifact_json["source"] = source
+    if published_url is not None:
+        artifact_json["published_url"] = published_url
     artifact_json["created_at"] = _dt.datetime.now(_dt.timezone.utc).isoformat()
 
     spec: dict[str, Any] = {"html": html, "artifact_json": artifact_json}
@@ -6670,6 +6680,8 @@ def cmd_artifact_show(name: str, dump_html: bool, scope: str) -> None:
         click.echo(f"  description: {aj['description']}")
     if aj.get("source"):
         click.echo(f"  source:     {aj['source']}")
+    if aj.get("published_url"):
+        click.echo(f"  published:  {aj['published_url']}")
     if aj.get("created_at"):
         click.echo(f"  created_at: {aj['created_at']}")
     click.echo(f"  html_bytes: {len(spec.get('html') or '')}")
@@ -7056,3 +7068,160 @@ def cmd_digest(since_spec: str | None, save: bool, as_json: bool, scope: str) ->
             f"(query: `dna cognitive search \"digest {scope}\"`)",
             fg="green",
         )
+
+
+# ─── gallery — board-native index of the HtmlArtifacts to review ───────
+# f-sdlc-digest / s-sdlc-gallery. Sibling of `digest`: the digest surfaces
+# EVENTS ("o que aconteceu"); the gallery surfaces the visual ARTIFACTS
+# ("os HtmlArtifacts pra revisar"), grouped by the status of the work item
+# that produced them. Board-native — regenerated from the board, always
+# current — so the delegator stops hunting for artifacts pasted into chat.
+# Aggregation lives in the PURE `dna_cli._gallery` module (unit-tested without
+# a kernel); this command owns only the impure edges: kernel session, gh PRs,
+# rendering, and file output.
+
+# The work-item Kinds whose produces[]/back-refs the gallery walks. Some may
+# be absent in a given distribution — the walk is fail-soft per kind.
+_GALLERY_WI_KINDS = (
+    "Story", "Feature", "Epic", "Issue", "Spike",
+    "Bug", "Task", "Initiative", "ADR",
+)
+
+
+def _render_gallery_text(g: dict[str, Any]) -> None:
+    """One-screen text panel — the review queue (needs_review) leads."""
+    from dna_cli._gallery import BUCKET_ORDER, bucket_label
+    c = g["counts"]
+    click.secho(f"\n🖼️  Gallery — {g['scope']}  ({c['total']} HtmlArtifacts)", fg="cyan", bold=True)
+    click.secho(
+        "   artefatos visuais pra revisar, agrupados pelo status do work item "
+        "(digest = eventos; gallery = artefatos)",
+        fg="white",
+    )
+    _bucket_color = {
+        "needs_review": "yellow", "decisions": "magenta", "shipped": "green",
+        "in_progress": "blue", "unlinked": "white",
+    }
+    _bucket_icon = {
+        "needs_review": "👀", "decisions": "🧭", "shipped": "✅",
+        "in_progress": "📈", "unlinked": "📎",
+    }
+    if not c["total"]:
+        click.secho("\n   (nenhum HtmlArtifact neste scope — registre com "
+                    "`dna sdlc artifact create`)", fg="yellow")
+        return
+    for b in BUCKET_ORDER:
+        entries = g["buckets"].get(b) or []
+        if not entries:
+            continue
+        click.secho(f"\n{_bucket_icon[b]} {bucket_label(b)} ({len(entries)})",
+                    fg=_bucket_color[b], bold=True)
+        for e in entries:
+            wi = e.get("work_item")
+            wi_str = f"{wi['kind']}/{wi['name']} [{wi.get('status') or '—'}]" if wi else "(órfão)"
+            title = e.get("title") or e.get("name")
+            click.echo(f"   • {click.style(e['name'], fg='cyan')}  {title[:52]}")
+            click.echo(f"       ← {wi_str}")
+            if e.get("published_url"):
+                click.echo(f"       🔗 {e['published_url']}")
+            for pr in e.get("prs") or []:
+                click.echo(f"       👀 PR #{pr.get('number')} {pr.get('url') or ''}")
+    click.echo("")
+
+
+@sdlc.command("gallery")
+@click.option("--html", "html_out", type=click.Path(dir_okay=False), default=None,
+              help="Gera UM arquivo HTML self-contained (cards por artifact, "
+                   "chip de status, link publicado) — o painel que o dono abre.")
+@click.option("--open", "open_after", is_flag=True,
+              help="Abre o HTML gerado no browser (implica --html se ausente, "
+                   "usando um arquivo temporário).")
+@click.option("--json", "as_json", is_flag=True,
+              help="Saída estruturada (o dict do agregador build_gallery).")
+@_scope_option
+def cmd_gallery(html_out: str | None, open_after: bool, as_json: bool, scope: str) -> None:
+    """Painel board-native dos **HtmlArtifacts pra revisar**.
+
+    Irmão do ``digest``. O ``digest`` mostra **o que aconteceu** (eventos das
+    timelines); o **gallery** mostra **os artefatos visuais pra revisar** (os
+    ``HtmlArtifact`` do board), agrupados pelo status do work item que os
+    produziu (via ``produces[]`` / back-ref):
+
+    \b
+      👀 Precisa de avaliação  — Story em review / com PR aberto
+      🧭 Decisões              — produzidos por um ADR
+      ✅ Shipado               — work item em status terminal
+      📈 Em andamento          — work item ainda em curso
+      📎 Sem work item         — órfão no board
+
+    Board-native: o índice é **gerado do board**, então está sempre atual —
+    mata o "publico artifacts soltos no chat e o dono tem que caçar".
+    Com ``--html <out>`` vira UM arquivo navegável (self-contained, sem CDN)
+    que o delegador abre pra revisar.
+    """
+    from dna_cli._gallery import build_gallery, render_gallery_html
+
+    with dna_session(scope) as s:
+        artifacts: list[dict[str, Any]] = []
+        async def _collect() -> None:
+            async for raw in s.kernel.query(scope, "HtmlArtifact"):
+                meta = raw.get("metadata") if isinstance(raw, dict) else {}
+                spec = raw.get("spec") if isinstance(raw, dict) else {}
+                spec = spec if isinstance(spec, dict) else {}
+                aj = spec.get("artifact_json") or {}
+                aj = aj if isinstance(aj, dict) else {}
+                artifacts.append({
+                    "name": (meta or {}).get("name", "?"),
+                    "title": aj.get("title"),
+                    "description": aj.get("description") or (meta or {}).get("description"),
+                    "source": aj.get("source"),
+                    "published_url": aj.get("published_url"),
+                    "html_bytes": len(spec.get("html") or ""),
+                })
+        s.run(_collect())
+
+        work_items: list[dict[str, Any]] = []
+        for kind in _GALLERY_WI_KINDS:
+            try:
+                for d in s.query_list(kind):
+                    work_items.append({
+                        "kind": kind, "name": d.name,
+                        "spec": d.spec if isinstance(d.spec, dict) else dict(d.spec or {}),
+                    })
+            except Exception:  # noqa: BLE001 — kind absent in this distribution
+                continue
+
+        open_prs = _gh_open_prs_with_url()
+        g = build_gallery(
+            artifacts=artifacts, work_items=work_items, scope=scope, open_prs=open_prs,
+        )
+
+    if as_json:
+        print_json(g)
+        return
+
+    # HTML output (explicit path, or a temp file when only --open is passed).
+    if html_out or open_after:
+        html = render_gallery_html(g, generated_at=_now_iso())
+        if html_out:
+            from pathlib import Path as _Path
+            _Path(html_out).write_text(html, encoding="utf-8")
+            target = html_out
+            click.secho(f"🖼️  painel salvo em {html_out} "
+                        f"({g['counts']['total']} artifacts)", fg="green")
+        else:
+            import tempfile
+            fd = tempfile.NamedTemporaryFile(
+                "w", suffix="-dna-gallery.html", delete=False, encoding="utf-8")
+            fd.write(html)
+            fd.close()
+            target = fd.name
+            click.secho(f"🖼️  painel em {target}", fg="green")
+        if open_after:
+            import webbrowser
+            webbrowser.open(f"file://{os.path.abspath(target)}")
+        if not as_json:
+            _render_gallery_text(g)
+        return
+
+    _render_gallery_text(g)

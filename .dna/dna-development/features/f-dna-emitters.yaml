@@ -22,3 +22,8 @@ spec:
     type: status_change
     source: cli
     to: in-development
+  produces:
+  - kind: HtmlArtifact
+    name: ha-build-emit-vs-runtime
+    role: prototype
+    at: '2026-07-11T14:34:39+00:00'

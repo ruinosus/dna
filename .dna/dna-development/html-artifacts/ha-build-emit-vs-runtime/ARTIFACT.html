@@ -1,0 +1,352 @@
+<title>build-emit vs runtime-compose — foundry adoption spike</title>
+<style>
+  :root {
+    --ink: #10161d;
+    --paper: #f5f3ec;
+    --paper-2: #ffffff;
+    --border: #d9d4c6;
+    --muted: #5c6672;
+    --text: #1a222b;
+    --blueprint: #0a7d8c;      /* build-emit accent */
+    --blueprint-soft: #d6ecef;
+    --amber: #b5721b;          /* runtime-compose accent */
+    --amber-soft: #f2e4cd;
+    --pass: #2f7d4f;
+    --pass-soft: #d9ecdf;
+    --grid: rgba(10, 125, 140, 0.10);
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --radius: 10px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #e8eef2;
+      --paper: #0e141a;
+      --paper-2: #151d25;
+      --border: #26313c;
+      --muted: #8a97a4;
+      --text: #dce4ea;
+      --blueprint: #3fd0e0;
+      --blueprint-soft: #0e2b30;
+      --amber: #e0a447;
+      --amber-soft: #2c2314;
+      --pass: #5fce8c;
+      --pass-soft: #14261a;
+      --grid: rgba(63, 208, 224, 0.10);
+    }
+  }
+  :root[data-theme="light"] {
+    --ink: #10161d; --paper: #f5f3ec; --paper-2: #ffffff; --border: #d9d4c6;
+    --muted: #5c6672; --text: #1a222b; --blueprint: #0a7d8c; --blueprint-soft: #d6ecef;
+    --amber: #b5721b; --amber-soft: #f2e4cd; --pass: #2f7d4f; --pass-soft: #d9ecdf;
+    --grid: rgba(10, 125, 140, 0.10);
+  }
+  :root[data-theme="dark"] {
+    --ink: #e8eef2; --paper: #0e141a; --paper-2: #151d25; --border: #26313c;
+    --muted: #8a97a4; --text: #dce4ea; --blueprint: #3fd0e0; --blueprint-soft: #0e2b30;
+    --amber: #e0a447; --amber-soft: #2c2314; --pass: #5fce8c; --pass-soft: #14261a;
+    --grid: rgba(63, 208, 224, 0.10);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--text);
+    font-family: var(--sans); line-height: 1.6;
+    font-size: 16px;
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+  .wrap { max-width: 1060px; margin: 0 auto; padding: 0 24px 96px; }
+
+  /* header */
+  header { padding: 64px 0 40px; border-bottom: 1px solid var(--border); }
+  .eyebrow {
+    font-family: var(--mono); font-size: 12px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--blueprint); font-weight: 600;
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  }
+  .badge {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em;
+    padding: 3px 9px; border-radius: 100px; border: 1px solid var(--border);
+    color: var(--muted); background: var(--paper-2); text-transform: uppercase;
+  }
+  h1 {
+    font-family: var(--mono); font-weight: 700; font-size: clamp(30px, 5vw, 46px);
+    line-height: 1.08; margin: 18px 0 12px; color: var(--ink);
+    letter-spacing: -0.01em; text-wrap: balance;
+  }
+  h1 .a { color: var(--amber); }
+  h1 .b { color: var(--blueprint); }
+  .lede { font-size: 18px; color: var(--muted); max-width: 68ch; margin: 0; }
+
+  section { padding-top: 56px; }
+  h2 {
+    font-family: var(--mono); font-size: 13px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--muted); font-weight: 600;
+    margin: 0 0 20px; padding-bottom: 10px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: baseline; gap: 10px;
+  }
+  h2 .n { color: var(--blueprint); }
+
+  /* two-model grid */
+  .models { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 720px) { .models { grid-template-columns: 1fr; } }
+  .card {
+    background: var(--paper-2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 22px; position: relative; overflow: hidden;
+  }
+  .card::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  }
+  .card.a::before { background: var(--amber); }
+  .card.b::before { background: var(--blueprint); }
+  .card h3 {
+    font-family: var(--mono); font-size: 15px; margin: 6px 0 2px; color: var(--ink);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .tag {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em;
+    text-transform: uppercase; padding: 2px 8px; border-radius: 100px;
+  }
+  .card.a .tag { background: var(--amber-soft); color: var(--amber); }
+  .card.b .tag { background: var(--blueprint-soft); color: var(--blueprint); }
+  .card .sub { font-size: 13.5px; color: var(--muted); margin: 0 0 16px; }
+
+  .flow { display: flex; flex-direction: column; gap: 8px; margin: 4px 0 16px; }
+  .step {
+    font-family: var(--mono); font-size: 12.5px; padding: 9px 12px;
+    border-radius: 7px; border: 1px solid var(--border); background: var(--paper);
+    display: flex; gap: 9px; align-items: flex-start;
+  }
+  .step .k {
+    font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--muted); min-width: 62px; padding-top: 1px;
+  }
+  .step .v { color: var(--text); }
+  .step .v em { font-style: normal; color: var(--blueprint); }
+  .card.a .step .v em { color: var(--amber); }
+  .arrow { text-align: center; color: var(--muted); font-family: var(--mono); font-size: 12px; line-height: 1; }
+
+  .note { font-size: 13px; color: var(--muted); margin: 0; }
+  .note strong { color: var(--text); font-weight: 600; }
+
+  /* proof strip */
+  .proof {
+    background: var(--ink); color: var(--paper);
+    border-radius: var(--radius); padding: 26px; margin-top: 4px;
+    font-family: var(--mono);
+  }
+  :root[data-theme="light"] .proof, :root:not([data-theme="dark"]) .proof { color: #eef3f2; }
+  @media (prefers-color-scheme: dark) { .proof { background: #060a0e; } }
+  :root[data-theme="dark"] .proof { background: #060a0e; }
+  .proof .chain {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    font-size: 14px; margin-bottom: 22px;
+  }
+  .chip {
+    padding: 7px 12px; border-radius: 7px; border: 1px solid rgba(255,255,255,0.18);
+    background: rgba(255,255,255,0.05); white-space: nowrap;
+  }
+  .chip.native { border-color: var(--blueprint); color: var(--blueprint); }
+  .eq { color: var(--pass); font-weight: 700; }
+  .links { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 640px) { .links { grid-template-columns: 1fr; } }
+  .link {
+    border: 1px solid rgba(255,255,255,0.14); border-radius: 8px; padding: 14px 16px;
+    background: rgba(255,255,255,0.03);
+  }
+  .link .lbl { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: #93a1a8; }
+  .link .cmd { font-size: 12px; color: #b9c6cd; margin: 6px 0 10px; word-break: break-all; }
+  .link .res { font-size: 13px; display: flex; align-items: center; gap: 8px; }
+  .pass-pill {
+    background: var(--pass); color: #04140a; font-weight: 700; font-size: 11px;
+    padding: 2px 8px; border-radius: 100px; letter-spacing: 0.04em;
+  }
+  @media (prefers-color-scheme: dark) { .pass-pill { color: #04140a; } }
+
+  /* table */
+  .tbl-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; min-width: 560px; }
+  th, td { text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  thead th {
+    font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--muted); background: var(--paper-2);
+    position: sticky; top: 0;
+  }
+  thead th.a { color: var(--amber); }
+  thead th.b { color: var(--blueprint); }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody th { font-weight: 600; color: var(--text); font-size: 13.5px; }
+  td.a { background: color-mix(in srgb, var(--amber-soft) 45%, transparent); }
+  td.b { background: color-mix(in srgb, var(--blueprint-soft) 55%, transparent); }
+  .win { font-family: var(--mono); font-size: 11px; color: var(--pass); font-weight: 700; }
+
+  /* callout */
+  .callout {
+    border-left: 3px solid var(--blueprint); background: var(--blueprint-soft);
+    border-radius: 0 var(--radius) var(--radius) 0; padding: 20px 24px;
+  }
+  .callout h3 { font-family: var(--mono); font-size: 15px; margin: 0 0 8px; color: var(--ink); }
+  .callout p { margin: 0 0 10px; font-size: 15px; }
+  .callout p:last-child { margin-bottom: 0; }
+  .callout code {
+    font-family: var(--mono); font-size: 12.5px; background: var(--paper-2);
+    padding: 1px 6px; border-radius: 5px; border: 1px solid var(--border);
+  }
+
+  /* recommendation */
+  .rec { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 720px) { .rec { grid-template-columns: 1fr; } }
+  .rec .card h3 { justify-content: space-between; }
+  .rec ul { margin: 10px 0 0; padding-left: 18px; font-size: 14px; }
+  .rec li { margin-bottom: 6px; }
+  .verdict {
+    margin-top: 22px; background: var(--paper-2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 22px 24px; font-size: 16px;
+  }
+  .verdict strong { color: var(--ink); }
+  .verdict .lead { font-family: var(--mono); font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--blueprint); display: block; margin-bottom: 8px; }
+
+  footer { margin-top: 64px; padding-top: 24px; border-top: 1px solid var(--border); color: var(--muted); font-size: 12.5px; font-family: var(--mono); }
+  code.inl { font-family: var(--mono); font-size: 0.9em; color: var(--blueprint); }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">
+      <span>DNA · foundry-assured · spike</span>
+      <span class="badge">protótipo — avaliar</span>
+      <span class="badge">s-foundry-emit-prototype</span>
+    </div>
+    <h1>Autora em DNA. <span class="b">Emite o nativo.</span><br>O runtime carrega o <span class="b">nativo</span>, não o DNA.</h1>
+    <p class="lede">O modelo "Terraform" provado no consumidor real: <code class="inl">dna emit</code> gera o
+      PromptAgent nativo do agent-framework em build-time — e o runtime deixa de depender do dna-sdk.
+      Contraste honesto com o modelo <span style="color:var(--amber)">runtime-compose</span> que o foundry usa hoje.</p>
+  </header>
+
+  <section>
+    <h2><span class="n">01</span> Dois modelos, mesma fonte de autoria</h2>
+    <div class="models">
+      <div class="card a">
+        <h3>runtime-compose <span class="tag">hoje</span></h3>
+        <p class="sub">O DNA viaja no deploy; o prompt é composto no processo, a cada boot.</p>
+        <div class="flow">
+          <div class="step"><span class="k">author</span><span class="v">.dna/helpdesk — Soul + Guardrails + instruction</span></div>
+          <div class="arrow">↓ COPY .dna/ + dna-sdk na imagem</div>
+          <div class="step"><span class="k">runtime</span><span class="v"><em>dna.load_prompts("helpdesk")</em> compõe agora → instructions</span></div>
+        </div>
+        <p class="note"><strong>dna-sdk é dependência de runtime.</strong> Ganha no-deploy dinâmico e overlay por tenant.</p>
+      </div>
+      <div class="card b">
+        <h3>build-emit <span class="tag">terraform</span></h3>
+        <p class="sub">Só o YAML nativo viaja; a composição é congelada no build.</p>
+        <div class="flow">
+          <div class="step"><span class="k">author</span><span class="v">.dna/helpdesk — Soul + Guardrails + instruction</span></div>
+          <div class="arrow">↓ <em style="color:var(--blueprint);font-style:normal">dna emit --target agent-framework</em> (build)</div>
+          <div class="step"><span class="k">runtime</span><span class="v"><em>AgentFactory.create_agent_from_yaml_path()</em> → Agent vivo, SEM dna-sdk</span></div>
+        </div>
+        <p class="note"><strong>dna-sdk sai do runtime.</strong> É ferramenta de build, como <code class="inl">terraform apply</code>.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">02</span> A prova: byte-equal, ponta a ponta</h2>
+    <div class="proof">
+      <div class="chain">
+        <span class="chip">dna.load_prompts</span>
+        <span class="eq">══</span>
+        <span class="chip native">concierge.agent.yaml</span>
+        <span class="eq">══</span>
+        <span class="chip">Agent vivo (agent_framework)</span>
+        <span style="color:#93a1a8; font-size:13px;">· 504 chars idênticos</span>
+      </div>
+      <div class="links">
+        <div class="link">
+          <div class="lbl">runtime link — backend venv</div>
+          <div class="cmd">apps/backend/.venv/bin/python demo.py</div>
+          <div class="res"><span class="pass-pill">PASS</span> live Agent == emitted YAML — <strong style="color:#eef3f2">sem importar dna-sdk</strong></div>
+        </div>
+        <div class="link">
+          <div class="lbl">build link — dna venv (0.7)</div>
+          <div class="cmd">.venv-dna/bin/python demo.py</div>
+          <div class="res"><span class="pass-pill">PASS</span> emitted YAML == dna.load_prompts</div>
+        </div>
+      </div>
+    </div>
+    <p class="note" style="margin-top:14px;">Gate .NET/Azure honesto: o PromptAgent emitido não tem bloco <code class="inl">model:</code> (modelo unbound no DNA),
+      então o <code class="inl">AgentFactory</code> usa um chat client injetado (stub) e constrói <strong>100% offline</strong> — nunca resolve Foundry/Azure nem dispara o runtime .NET.</p>
+  </section>
+
+  <section>
+    <h2><span class="n">03</span> Trade-offs</h2>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr><th>Eixo</th><th class="a">runtime-compose</th><th class="b">build-emit</th><th>ganha</th></tr>
+        </thead>
+        <tbody>
+          <tr><th>dna-sdk no runtime</th><td class="a">sim — roda no boot</td><td class="b">não — só no build</td><td><span class="win">emit</span></td></tr>
+          <tr><th>O que viaja no deploy</th><td class="a">scope .dna/ + sdk</td><td class="b">só o *.agent.yaml</td><td><span class="win">emit</span></td></tr>
+          <tr><th>Imagem Docker</th><td class="a">maior (sdk+scope+deps)</td><td class="b">menor (um YAML)</td><td><span class="win">emit</span></td></tr>
+          <tr><th>Gap de empacotamento</th><td class="a">COPY .dna/ + parents[2]</td><td class="b">elimina na raiz</td><td><span class="win">emit</span></td></tr>
+          <tr><th>Composição Soul/Guardrail</th><td class="a">dinâmica, a cada boot</td><td class="b">congelada no emit</td><td><span class="win" style="color:var(--amber)">compose</span></td></tr>
+          <tr><th>Tenant overlay / no-deploy</th><td class="a">sim — troca sem redeploy</td><td class="b">não — reemitir + redeploy</td><td><span class="win" style="color:var(--amber)">compose</span></td></tr>
+          <tr><th>Eval-as-contract</th><td class="a">viaja junto do scope</td><td class="b">fica no authoring</td><td><span class="win" style="color:var(--amber)">compose</span></td></tr>
+          <tr><th>"O que roda?" (auditoria)</th><td class="a">compor mentalmente</td><td class="b">o YAML é literal</td><td><span class="win">emit</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note" style="margin-top:14px;">O próprio <code class="inl">dna emit</code> reporta o de-para — eixos DNA sem slot no target:
+      <strong>composition structure</strong> (Soul+Guardrails achatam), <strong>tenant overlay</strong>, <strong>eval-as-contract</strong>, <strong>model unbound</strong>.
+      Build-emit troca dinamismo por runtime enxuto: o artefato é um snapshot.</p>
+  </section>
+
+  <section>
+    <h2><span class="n">04</span> A crítica de empacotamento do dono — resolvida</h2>
+    <div class="callout">
+      <h3>O gap: artefato de authoring acoplado ao runtime</h3>
+      <p>Hoje o backend leva o scope <code>.dna/</code> para dentro da imagem — <code>Dockerfile</code> faz <code>COPY .dna/</code>
+        e o <code>prompts.py</code> resolve o diretório com o frágil <code>Path(__file__).resolve().parents[2] / ".dna"</code> (+ mount Azure Files <code>/mnt/dna</code>).</p>
+      <p><strong>Build-emit elimina isso na raiz:</strong> o runtime consome só o <code>concierge.agent.yaml</code> nativo.
+        Sem <code>.dna/</code> na imagem, sem <code>parents[2]</code>, sem dna-sdk no <code>requirements</code>, sem mount de scope.
+        O <code>dna emit</code> roda no pipeline de build — o que chega em produção é um artefato de primeira classe do próprio agent-framework.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">05</span> Recomendação — híbrido</h2>
+    <div class="rec">
+      <div class="card b">
+        <h3>build-emit <span class="tag">default</span></h3>
+        <p class="sub">Personas estáveis, valor = runtime enxuto + imagem limpa + auditabilidade.</p>
+        <ul>
+          <li>Agentes de produto core: concierge grounded/ungrounded, triage → retrieve → resolve.</li>
+          <li>Pipeline roda <code class="inl">dna emit</code> e versiona os <code class="inl">*.agent.yaml</code>.</li>
+          <li>Mata o gap de empacotamento Docker.</li>
+        </ul>
+      </div>
+      <div class="card a">
+        <h3>runtime-compose <span class="tag">onde precisa</span></h3>
+        <p class="sub">Onde no-deploy dinâmico + tenant overlay são o produto.</p>
+        <ul>
+          <li>Troca de prompt por tenant sem redeploy; A/B de persona.</li>
+          <li>Hotfix de guardrail em produção via publish de scope (ADR-014 / <code class="inl">/mnt/dna</code>).</li>
+          <li>Mantém <code class="inl">load_prompts</code> só nesses scopes.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="verdict">
+      <span class="lead">Veredito</span>
+      <strong>Emitir no build por padrão</strong> (o default vira Terraform), e manter o caminho <code class="inl">load_prompts</code>
+      só nos scopes/tenants que precisam de override dinâmico. O DNA continua a <strong>fonte de autoria única</strong> nos dois casos —
+      muda só <em>quando</em> a composição é resolvida: build-time vs boot-time. É exatamente a promessa Terraform.
+    </div>
+  </section>
+
+  <footer>
+    spike/emit-adoption/ · concierge.agent.yaml + demo.py + README.md · produção intocada (shims *prompts*.py e pyproject.toml não tocados) · dna-cli 0.7.0
+  </footer>
+</div>

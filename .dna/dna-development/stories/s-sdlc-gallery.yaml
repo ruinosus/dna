@@ -1,0 +1,93 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-sdlc-gallery
+spec:
+  title: "dna sdlc gallery \u2014 board-native painel dos HtmlArtifacts pra revisar"
+  description: "Painel board-native que gera o \xEDndice dos HtmlArtifacts do board\
+    \ agrupados por status do work item \u2014 sempre atual. Irm\xE3o do digest (eventos);\
+    \ gallery = artefatos visuais pra revisar."
+  status: in-progress
+  feature: f-sdlc-digest
+  priority: high
+  acceptance_criteria:
+  - "Given HtmlArtifacts linkados a work items, When rodo 'dna sdlc gallery', Then\
+    \ lista todos agrupados por status do work item (precisa de avalia\xE7\xE3o /\
+    \ decis\xF5es / shipado)"
+  - "Given --html <out>, When gero, Then produz UM arquivo HTML self-contained (sem\
+    \ CDN) naveg\xE1vel com cards, chip de status e link publicado"
+  - "Given os 5 prot\xF3tipos do scratchpad registrados como HtmlArtifacts, When rodo\
+    \ gallery, Then os 5 aparecem com published_url clic\xE1vel"
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - "Code: comando dna sdlc gallery (texto + --html + --open) sobre m\xF3dulo puro\
+    \ _gallery.py, paridade Py\u2194TS no summary do HtmlArtifact (published_url)"
+  - 'Tests: test_gallery.py (agregador puro) + published_url surfacing; suites Py+TS
+    verdes; guards verdes'
+  - "Docs: guia gallery + distin\xE7\xE3o vs digest; mkdocs build --strict verde;\
+    \ CHANGELOG [Unreleased]"
+  - 'Product: TestGuide --product + TestRun provando os 5 HtmlArtifacts no gallery
+    --html'
+  definition_of_done_source: cli-create
+  created_at: '2026-07-11T14:26:19+00:00'
+  updated_at: '2026-07-11T14:46:41+00:00'
+  timeline:
+  - at: '2026-07-11T14:26:19+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-11T14:26:44+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-11T14:39:41+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Constru\xED o n\xFAcleo: (1) m\xF3dulo puro dna_cli/_gallery.py (build_gallery\
+      \ + reverse-index produces[]\u222Aback-refs + render_gallery_html self-contained)\
+      \ com 16 testes; (2) comando 'dna sdlc gallery [--html] [--open] [--json]' irm\xE3\
+      o do digest (digest=eventos, gallery=artefatos); (3) published_url no HtmlArtifact.summary\
+      \ (Py+TS parity) + --published-url no artifact create + surface no show. Registrei\
+      \ os 5 prot\xF3tipos do scratchpad como HtmlArtifacts com published_url e linkei\
+      \ via produces (Epic e-dna-dx, Feature f-dna-dx-configure, ADR adr-dna-pivot-portability,\
+      \ Feature f-dna-emitters, Story s-sdlc-gallery). Provado ao vivo: gallery lista\
+      \ os 6 agrupados (Decis\xF5es/Shipado/Em andamento) + --html gera o painel naveg\xE1\
+      vel (screenshot ok, 5 links clic\xE1veis, 0 CDN). Estendi produces add p/ aceitar\
+      \ ADR (produz sua decision-viz)."
+    commit_ref: b4c1859f8196682747e91bc6e75a8f76e86bbc87
+  - at: '2026-07-11T14:46:19+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-sdlc-gallery
+    summary: TestGuide tg-sdlc-gallery (smoke)
+  - at: '2026-07-11T14:46:41+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-sdlc-gallery-20260711-144638
+    summary: "TestRun tr-tg-sdlc-gallery-20260711-144638 \u2192 pass"
+    outcome: pass
+  produces:
+  - kind: Plan
+    name: plan-s-sdlc-gallery
+    role: implementation
+    at: '2026-07-11T14:26:44+00:00'
+  - kind: HtmlArtifact
+    name: ha-dna-panel
+    role: index
+    at: '2026-07-11T14:34:42+00:00'
+  - kind: TestGuide
+    name: tg-sdlc-gallery
+    role: test-guide
+    at: '2026-07-11T14:46:19+00:00'
+  - kind: TestRun
+    name: tr-tg-sdlc-gallery-20260711-144638
+    role: test-run
+    at: '2026-07-11T14:46:41+00:00'

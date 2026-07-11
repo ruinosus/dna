@@ -2,8 +2,8 @@
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "dna",
   "metadata": {
-    "description": "DNA — Domain Notation of Anything. Declarative, typed notation for agentic behavior. Plugin distribution surface for Claude Code.",
-    "version": "0.1.0"
+    "description": "DNA — Domain Notation of Anything. Declarative, typed notation for agentic behavior. Plugin distribution surface for Claude Code, plus a curated set of recommended ecosystem skills (see RECOMMENDED-SKILLS.md).",
+    "version": "0.2.0"
   },
   "owner": {
     "name": "DNA team"
@@ -13,11 +13,41 @@
       "name": "dna",
       "version": "0.1.0",
       "source": "./.claude",
-      "description": "The dna-sdlc-cli skill — story-first, in-repo SDLC tracking via the `dna sdlc` CLI (AC/DoD guard, plan gate, narration, test gate, Work-Item git trailers, story pr).",
+      "description": "The dna-sdlc-cli skill — story-first, in-repo SDLC tracking via the `dna sdlc` CLI (AC/DoD guard, plan gate, narration, test gate, Work-Item git trailers, story pr, digest + gallery).",
       "category": "agents",
       "tags": ["agents", "yaml", "sdlc", "skills"],
       "author": {
         "name": "DNA team"
+      }
+    },
+    {
+      "name": "superpowers",
+      "version": "6.1.1",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/obra/superpowers.git"
+      },
+      "description": "Core engineering skills the DNA SDLC leans on — TDD, systematic debugging, brainstorming, writing/executing plans, code review, git worktrees. Referenced, not vendored.",
+      "category": "agents",
+      "homepage": "https://github.com/obra/superpowers",
+      "tags": ["skills", "tdd", "debugging", "planning", "collaboration"],
+      "author": {
+        "name": "Jesse Vincent"
+      }
+    },
+    {
+      "name": "impeccable",
+      "version": "3.9.1",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/pbakaus/impeccable.git"
+      },
+      "description": "Frontend design fluency — UX critique, visual hierarchy, typography, motion, anti-pattern detection. Pairs with `dna sdlc gallery` when authoring the HtmlArtifacts you review. Referenced, not vendored.",
+      "category": "design",
+      "homepage": "https://impeccable.style",
+      "tags": ["design", "frontend", "ui", "ux"],
+      "author": {
+        "name": "Paul Bakaus"
       }
     }
   ]

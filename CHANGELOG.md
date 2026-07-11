@@ -11,6 +11,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`dna sdlc gallery` — the board-native index of the HtmlArtifacts to review**
+  (feature `f-sdlc-digest`, story `s-sdlc-gallery`). The sibling of `digest`:
+  where the digest surfaces **events** ("what happened"), the gallery surfaces
+  the visual **artifacts** ("the HtmlArtifacts to review"). `dna sdlc gallery
+  [--html <out>] [--open] [--json] [--scope]` walks every work item's outputs
+  (`produces[]` ∪ legacy back-refs) to find which work item produced each
+  `HtmlArtifact`, then groups the artifacts by that work item's status —
+  **👀 Precisa de avaliação** (Story in review / open PR), **🧭 Decisões**
+  (produced by an ADR), **✅ Shipado** (terminal), **📈 Em andamento**, and
+  **📎 Sem work item** (orphan). Because the index is generated from the board,
+  it is always current — killing the "artifacts pasted into chat get lost"
+  gap. `--html` writes **one self-contained** page (no CDN, theme-aware) with a
+  card per artifact, a status chip, the producing work item, the published
+  link, and open PRs; `--open` opens it. The aggregation core
+  (`dna_cli._gallery.build_gallery` + `render_gallery_html`) is a pure,
+  kernel-free function with 16 unit tests. CLI-only (Python). Guide: *Gallery —
+  the artifacts you need to review*.
+- **`HtmlArtifact` gains a `published_url`** — the canonical hosted location
+  (e.g. a claude.ai artifact link), set via `dna sdlc artifact create
+  --published-url <url>`, surfaced in `artifact show`, the Kind `summary()`
+  (Py↔TS parity), and rendered as the clickable **Abrir artifact ↗** on each
+  gallery card. Lives in `artifact_json` (free-form), so no schema break.
+
+### Changed
+
+- **`dna sdlc produces add` now accepts an `ADR`** as a producer (not only
+  Story/Spike/Feature/Epic/Issue) — an ADR legitimately produces its
+  decision-visualization `HtmlArtifact`, which is what buckets it under
+  **Decisões** in the gallery.
+
 ## [0.8.0] - 2026-07-11
 
 ### Added

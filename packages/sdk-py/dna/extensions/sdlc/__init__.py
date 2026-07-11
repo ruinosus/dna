@@ -2123,6 +2123,10 @@ class HtmlArtifactKind(KindBase):
             "title": aj.get("title"),
             "source": aj.get("source"),
             "created_at": aj.get("created_at"),
+            # published_url — the canonical hosted location (e.g. a claude.ai
+            # artifact URL) so the gallery can render a clickable link instead
+            # of only the byte-blob. Lives in artifact_json (free-form).
+            "published_url": aj.get("published_url"),
             "html_bytes": len(spec_dict.get("html") or ""),
         }
 

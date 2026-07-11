@@ -108,3 +108,8 @@ spec:
   - ref-dna-portability-spike
   - ref-oracle-agent-spec
   - ref-oas-technical-report
+  produces:
+  - kind: HtmlArtifact
+    name: ha-dna-vs-agentframework
+    role: decision-viz
+    at: '2026-07-11T14:34:37+00:00'
