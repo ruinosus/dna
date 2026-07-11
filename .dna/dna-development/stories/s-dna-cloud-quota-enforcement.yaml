@@ -1,0 +1,46 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-dna-cloud-quota-enforcement
+spec:
+  title: "Quota + rate-limit enforcement \u2014 claim->plan bridge extends the auth<->tenancy\
+    \ bridge"
+  description: "The reusable technical piece: extend the existing FastMCP token bridge\
+    \ (which already maps claim->tenant) to ALSO map claim->plan, then enforce per-plan\
+    \ quota + rate-limit at the server. Every tool call (compose_prompt/recall/list_stories/...)\
+    \ is metered and checked against the resolved plan caps; over-quota -> 429/402\
+    \ (fail closed, like the tenant bridge denies cross-tenant). No auth rebuild \u2014\
+    \ a plan resolver + a metering counter + a limiter on top of the tested bridge\
+    \ seam (dna_cli._mcp_auth)."
+  status: todo
+  feature: f-dna-cloud
+  priority: high
+  labels:
+  - saas
+  - quota
+  - rate-limit
+  - enforcement
+  - auth-bridge
+  reporter: claude-code
+  business_value: 640
+  acceptance_criteria:
+  - Given a Free token at its daily cap, When it calls a metered tool, Then the server
+    returns over-quota (429) instead of executing (fail closed)
+  - Given any token, When it calls a tool, Then the call is metered per tenant+plan
+    and counted toward the plan's quota window
+  - "Given the plan claim, When resolved, Then rate-limit + quota come from the Plan\
+    \ doc via the same _mcp_auth seam that maps tenant \u2014 no new auth stack"
+  acceptance_criteria_source: claude-code
+  definition_of_done:
+  - claim->plan resolver + server-side metering + per-plan limiter on the existing
+    bridge seam; cross-plan/over-quota denial tests; docs; no changes to the OAuth
+    stack itself
+  definition_of_done_source: claude-code
+  created_at: '2026-07-11T16:34:47+00:00'
+  updated_at: '2026-07-11T16:34:47+00:00'
+  timeline:
+  - at: '2026-07-11T16:34:47+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
