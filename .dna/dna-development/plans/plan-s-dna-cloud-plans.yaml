@@ -1,0 +1,18 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-dna-cloud-plans
+spec:
+  title: 'Plano: s-dna-cloud-plans'
+  date: '2026-07-11'
+  status: accepted
+  story_ref: s-dna-cloud-plans
+  journey_phase: plan
+  body: "Nova extension 'cloud' (OSS): Kind Plan record-plane GLOBAL via descriptor\
+    \ kinds/plan.kind.yaml (byte-id\xEAntico Py\u2194TS). Campos: display_name, calls_per_day,\
+    \ rate_per_sec, max_tenants, feature_families[] (definitions/sdlc/memory/emit),\
+    \ memory_mode (none/read/write), price_usd_month, overage_per_1k. Seed Free +\
+    \ Pro ($29). Registro: entry-point Py + loadBuiltins TS. Testes: parity hash +\
+    \ resolu\xE7\xE3o de caps a partir do doc (zero hardcode). TDD."
+  created_at: '2026-07-11T18:03:59+00:00'
+  updated_at: '2026-07-11T18:03:59+00:00'

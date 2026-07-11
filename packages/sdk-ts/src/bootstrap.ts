@@ -38,6 +38,7 @@ import { DocExtension } from "./extensions/doc.js";
 import { ResearchExtension } from "./extensions/research.js";
 import { TestkitExtension } from "./extensions/testkit.js";
 import { ModelRegExtension } from "./extensions/modelreg.js";
+import { CloudExtension } from "./extensions/cloud.js";
 import { AutomationExtension } from "./extensions/automation.js";
 import { EvalExtension } from "./extensions/eval.js";
 import type { CacheItem } from "./kernel/protocols.js";
@@ -73,6 +74,7 @@ function loadBuiltins<T extends { load(ext: Extension): void }>(target: T): T {
     new ResearchExtension(),
     new TestkitExtension(),
     new ModelRegExtension(),
+    new CloudExtension(),
     new AutomationExtension(),
     new EvalExtension(),
   ] as Extension[]) {

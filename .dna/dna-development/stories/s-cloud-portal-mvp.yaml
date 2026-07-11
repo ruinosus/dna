@@ -1,0 +1,42 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-cloud-portal-mvp
+spec:
+  title: portal MVP (signup+plan+DCR+uso)
+  description: "Portal web: signup, sele\xE7\xE3o de plano, DCR, dashboard de uso"
+  status: cancelled
+  feature: f-dna-cloud
+  priority: medium
+  labels:
+  - infra
+  reporter: claude-code
+  business_value: 500
+  acceptance_criteria:
+  - "Portal: signup via IdP + sele\xE7\xE3o de plano + registro de client OAuth (DCR)\
+    \ + dashboard (calls-hoje vs quota)"
+  - Vive no repo dna-cloud; fala com o MCP hosted + Stripe por HTTP
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - portal MVP + deploy; UX pela skill impeccable
+  definition_of_done_source: cli-create
+  created_at: '2026-07-11T18:01:50+00:00'
+  updated_at: '2026-07-11T18:03:11+00:00'
+  timeline:
+  - at: '2026-07-11T18:01:50+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: blocked
+  - at: '2026-07-11T18:03:11+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: blocked
+    to: cancelled
+    summary: "Duplicata \u2014 a decomposi\xE7\xE3o de f-dna-cloud j\xE1 existia (s-dna-cloud-plans/quota-enforcement/portal/billing,\
+      \ filadas no #69). N\xE3o checei antes de filar."
+  closed_at: '2026-07-11T18:03:10+00:00'
+  cancelled_reason: "Duplicata \u2014 a decomposi\xE7\xE3o de f-dna-cloud j\xE1 existia\
+    \ (s-dna-cloud-plans/quota-enforcement/portal/billing, filadas no #69). N\xE3\
+    o checei antes de filar."

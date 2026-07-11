@@ -2425,6 +2425,14 @@ class Kernel:
         collaborator (s-kernel-decomp-f5-satellites)."""
         return await self._registry.model_profile(model_id_or_alias)
 
+    async def tier(self, tier_id_or_alias: str) -> dict | None:
+        """Resolve a Tier (DNA Cloud pricing plan) from the _lib registry by
+        tier_id, then by aliases[]. Returns the RAW DICT row (callers read
+        ``tier["spec"][...]``) or None. _lib-direct + fail-soft. Thin facade
+        over the RegistryAccessor collaborator — mirrors ``model_profile``.
+        The quota enforcer reads the caps from here, never hardcodes them."""
+        return await self._registry.tier(tier_id_or_alias)
+
     # VoicePolicy is GLOBAL — _lib-resident like ModelProfile. Same
     # _lib-direct lookup rationale (a per-scope query would silently
     # no-op for scopes with zero VoicePolicy docs).

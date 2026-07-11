@@ -1,0 +1,47 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-cloud-plan-kind
+spec:
+  title: Plan/Tier Kind (declarative)
+  description: Extension 'cloud' com o Kind Plan (record-plane GLOBAL) + seed Free/Pro
+  status: cancelled
+  feature: f-dna-cloud
+  priority: high
+  labels:
+  - sdk
+  - python
+  - typescript
+  reporter: claude-code
+  business_value: 700
+  acceptance_criteria:
+  - Nova extension 'cloud' registra o Kind Plan via descriptor kinds/plan.kind.yaml
+    (record-plane, tenant_scope global)
+  - "Descriptor byte-id\xEAntico Py\u2194TS (coberto por test_descriptor_hash_parity)"
+  - "Seed docs: Free (~100 calls/dia, 1 tenant, memory read-only) e Pro (~10k calls/dia,\
+    \ 5 tenants, $29/m\xEAs, families definitions/sdlc/memory/emit)"
+  - dna doc list Plan lista os dois; show exibe caps + families
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - descriptor Py+TS + entry-point + 2 seed plans + parity test verde + CHANGELOG
+  definition_of_done_source: cli-create
+  created_at: '2026-07-11T18:01:37+00:00'
+  updated_at: '2026-07-11T18:02:54+00:00'
+  timeline:
+  - at: '2026-07-11T18:01:37+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-11T18:02:54+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: cancelled
+    summary: "Duplicata \u2014 a decomposi\xE7\xE3o de f-dna-cloud j\xE1 existia (s-dna-cloud-plans/quota-enforcement/portal/billing,\
+      \ filadas no #69). N\xE3o checei antes de filar."
+  closed_at: '2026-07-11T18:02:53+00:00'
+  cancelled_reason: "Duplicata \u2014 a decomposi\xE7\xE3o de f-dna-cloud j\xE1 existia\
+    \ (s-dna-cloud-plans/quota-enforcement/portal/billing, filadas no #69). N\xE3\
+    o checei antes de filar."

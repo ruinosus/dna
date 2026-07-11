@@ -1162,6 +1162,31 @@ A Task is a granular work item (horas-dias) typically as sub-item of a Story. Fo
 | `title` | string | yes |  |
 | `updated_at` | string |  |  |
 
+## Tier
+
+- **Alias:** `cloud-tier`
+- **apiVersion:** `github.com/ruinosus/dna/cloud/v1`
+- **Plane:** record
+
+A Tier declares one DNA Cloud plan's hard caps (calls/day, rate, tenants) and which feature families it unlocks, as GLOBAL declarative data so changing a limit is a file edit, not a redeploy. Resolve it via kernel.tier(id_or_alias); the quota enforcer reads the caps from here and never hardcodes them.
+
+**Spec fields**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `aliases` | array |  | Alternate ids that resolve to this tier (legacy plan names). kernel.tier() matches these on pass 2. |
+| `calls_per_day` | integer \| null |  | Daily call quota. Null = unlimited (enterprise). THE value the quota enforcer reads — never hardcode it in code. |
+| `display_name` | string | yes | Human-facing plan name, e.g. Free, Pro, Enterprise. |
+| `feature_families` | array |  | Tool families this tier unlocks, e.g. [definitions, sdlc, memory, emit]. |
+| `max_tenants` | integer \| null |  | Number of tenants the plan allows. Null = unlimited. |
+| `memory_mode` | string |  | Memory access level granted by the tier — none, read, or write. |
+| `notes` | string \| null |  | Free-form operator notes. |
+| `overage_per_1k_usd` | number \| null |  | USD charged per 1k calls above the daily quota. Null = no overage (hard cap). |
+| `price_usd_month` | number |  | Flat monthly price in USD (0 for the free tier). |
+| `rate_per_sec` | integer \| null |  | Per-second rate limit. Null = unmetered. |
+| `sla` | boolean |  | True when the tier includes a support/uptime SLA (enterprise). |
+| `tier_id` | string | yes | Canonical tier id, e.g. free, pro, enterprise. The doc name SHOULD equal the tier_id; kernel.tier() matches on this field first. |
+
 ## Tool
 
 - **Alias:** `helix-tool`

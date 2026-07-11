@@ -1,0 +1,41 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-cloud-repo-scaffold
+spec:
+  title: scaffold repo dna-cloud (separado)
+  description: Bootstrap do repo comercial separado (open-core boundary)
+  status: cancelled
+  feature: f-dna-cloud
+  priority: medium
+  labels:
+  - infra
+  reporter: claude-code
+  business_value: 400
+  acceptance_criteria:
+  - "Repo dna-cloud criado, separado, consome dna-sdk do PyPI, sem l\xF3gica de kernel"
+  - "Skeleton do portal + README + CI m\xEDnimo"
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - repo bootstrap + CI + doc de boundary open-core
+  definition_of_done_source: cli-create
+  created_at: '2026-07-11T18:01:45+00:00'
+  updated_at: '2026-07-11T18:03:05+00:00'
+  timeline:
+  - at: '2026-07-11T18:01:45+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: blocked
+  - at: '2026-07-11T18:03:05+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: blocked
+    to: cancelled
+    summary: "Duplicata \u2014 a decomposi\xE7\xE3o de f-dna-cloud j\xE1 existia (s-dna-cloud-plans/quota-enforcement/portal/billing,\
+      \ filadas no #69). N\xE3o checei antes de filar."
+  closed_at: '2026-07-11T18:03:03+00:00'
+  cancelled_reason: "Duplicata \u2014 a decomposi\xE7\xE3o de f-dna-cloud j\xE1 existia\
+    \ (s-dna-cloud-plans/quota-enforcement/portal/billing, filadas no #69). N\xE3\
+    o checei antes de filar."

@@ -1,0 +1,135 @@
+# Tier — DNA Cloud pricing-tier registry (record plane).
+# One doc per plan (free/pro/enterprise): hard caps (calls_per_day, rate_per_sec,
+# max_tenants) + which feature families it unlocks + price, as first-class GLOBAL
+# data so a limit change is a file edit, never a redeploy. NOT named `Plan` — that
+# alias belongs to the SDLC implementation-plan Kind; a pricing plan is a Tier.
+#
+# CONTRACT — never hardcode caps: the quota enforcer reads calls_per_day /
+# rate_per_sec / max_tenants from THIS registry via kernel.tier(id_or_alias); a
+# cap literal in code is a bug.
+#
+# Tiers live in the `_lib` scope (`tiers/<tier_id>.yaml`) — Tier is GLOBAL (base
+# only, no per-tenant override) and NOT inheritable; kernel.tier() queries `_lib`
+# directly regardless of the caller's scope.
+#
+# PARITY-CRITICAL package data: the byte-identical mirror lives at
+# packages/sdk-{py,ts}/{dna/extensions,src/extensions}/cloud/kinds/
+# tier.kind.yaml (tests/test_descriptor_hash_parity.py enforces).
+apiVersion: github.com/ruinosus/dna/core/v1
+kind: KindDefinition
+metadata:
+  name: tier
+spec:
+  target_api_version: github.com/ruinosus/dna/cloud/v1
+  target_kind: Tier
+  alias: cloud-tier
+  origin: github.com/ruinosus/dna/cloud
+  tenant_scope: global
+  plane: record
+  prompt_target: false
+  flatten_in_context: false
+  prompt_target_priority: 0
+  storage:
+    type: yaml
+    container: tiers
+  schema:
+    type: object
+    additionalProperties: false
+    required:
+    - tier_id
+    - display_name
+    properties:
+      tier_id:
+        type: string
+        description: Canonical tier id, e.g. free, pro, enterprise. The doc name
+          SHOULD equal the tier_id; kernel.tier() matches on this field first.
+      display_name:
+        type: string
+        description: Human-facing plan name, e.g. Free, Pro, Enterprise.
+      price_usd_month:
+        type: number
+        default: 0
+        description: Flat monthly price in USD (0 for the free tier).
+      calls_per_day:
+        type:
+        - integer
+        - 'null'
+        description: Daily call quota. Null = unlimited (enterprise). THE value
+          the quota enforcer reads — never hardcode it in code.
+      rate_per_sec:
+        type:
+        - integer
+        - 'null'
+        description: Per-second rate limit. Null = unmetered.
+      max_tenants:
+        type:
+        - integer
+        - 'null'
+        description: Number of tenants the plan allows. Null = unlimited.
+      feature_families:
+        type: array
+        items:
+          type: string
+        description: Tool families this tier unlocks, e.g.
+          [definitions, sdlc, memory, emit].
+      memory_mode:
+        type: string
+        enum:
+        - none
+        - read
+        - write
+        default: none
+        description: Memory access level granted by the tier — none, read, or
+          write.
+      overage_per_1k_usd:
+        type:
+        - number
+        - 'null'
+        description: USD charged per 1k calls above the daily quota. Null = no
+          overage (hard cap).
+      sla:
+        type: boolean
+        default: false
+        description: True when the tier includes a support/uptime SLA
+          (enterprise).
+      aliases:
+        type: array
+        items:
+          type: string
+        description: Alternate ids that resolve to this tier (legacy plan names).
+          kernel.tier() matches these on pass 2.
+      notes:
+        type:
+        - string
+        - 'null'
+        description: Free-form operator notes.
+  describe: '{display_name} (${price_usd_month}/mo)'
+  summary:
+    tier_id: ''
+    display_name: ''
+    price_usd_month: 0
+    calls_per_day: null
+  ui:
+    mode: govern
+    label:
+      en: Tiers
+      pt-BR: Planos
+    icon: 💳
+    description:
+      en: DNA Cloud pricing tiers (caps + feature families).
+      pt-BR: Planos do DNA Cloud (limites + famílias de features).
+    routes:
+      list: docs/Tier
+      detail: docs/Tier/:name
+    permissions:
+      list: any
+      detail: any
+    in_sidebar: true
+    display_order: 54
+  ascii_icon: 💳
+  display_label: Tiers
+  docs: A Tier declares one DNA Cloud plan's hard caps (calls/day, rate, tenants)
+    and which feature families it unlocks, as GLOBAL declarative data so changing
+    a limit is a file edit, not a redeploy. Resolve it via
+    kernel.tier(id_or_alias); the quota enforcer reads the caps from here and
+    never hardcodes them.
