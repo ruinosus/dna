@@ -7,28 +7,46 @@ spec:
   description: Research the Oracle Agent Spec (schema, adapters, format) and decide
     + document (Research Kind + ADR) whether DNA should emit THROUGH OAS or emit DIRECT
     per runtime, with trade-offs and a recommendation.
-  status: review
+  status: done
   feature: f-oracle-agent-spec
   priority: high
   labels:
   - research
   - oas
   acceptance_criteria:
-  - Given the OAS research, when complete, then a Research doc captures its schema,
-    shipped adapters, and format with cited sources.
-  - Given the trade-offs, when documented, then an ADR records the emit-through-OAS
-    vs emit-direct verdict with a clear recommendation.
-  - "Given the verdict, when it recommends alignment, then the concrete DNA\u2194\
-    OAS alignment points are named (or the decision to not align is justified)."
+  - text: Given the OAS research, when complete, then a Research doc captures its
+      schema, shipped adapters, and format with cited sources.
+    done: true
+    done_at: '2026-07-11T13:17:11+00:00'
+    done_by: story-done-auto
+  - text: Given the trade-offs, when documented, then an ADR records the emit-through-OAS
+      vs emit-direct verdict with a clear recommendation.
+    done: true
+    done_at: '2026-07-11T13:17:11+00:00'
+    done_by: story-done-auto
+  - text: "Given the verdict, when it recommends alignment, then the concrete DNA\u2194\
+      OAS alignment points are named (or the decision to not align is justified)."
+    done: true
+    done_at: '2026-07-11T13:17:11+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - 'Code: n/a (research + decision story).'
-  - 'Docs: Research Kind doc + ADR committed to the dna-development board; landscape
-    Reference docs cited.'
-  - 'CI: board docs valid (kernel write path); no schema breakage.'
+  - text: 'Code: n/a (research + decision story).'
+    done: true
+    done_at: '2026-07-11T13:17:11+00:00'
+    done_by: story-done-auto
+  - text: 'Docs: Research Kind doc + ADR committed to the dna-development board; landscape
+      Reference docs cited.'
+    done: true
+    done_at: '2026-07-11T13:17:11+00:00'
+    done_by: story-done-auto
+  - text: 'CI: board docs valid (kernel write path); no schema breakage.'
+    done: true
+    done_at: '2026-07-11T13:17:11+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-11T12:31:45+00:00'
-  updated_at: '2026-07-11T13:01:01+00:00'
+  updated_at: '2026-07-11T13:17:19+00:00'
   timeline:
   - at: '2026-07-11T12:31:45+00:00'
     actor: claude-code
@@ -77,6 +95,33 @@ spec:
     source: cli
     from: in-progress
     to: review
+  - at: '2026-07-11T13:17:05+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-oas-alignment-research-c
+    summary: TestGuide tg-s-oas-alignment-research-c (smoke)
+  - at: '2026-07-11T13:17:10+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-oas-alignment-research-c-20260711-131707
+    summary: "TestRun tr-tg-s-oas-alignment-research-c-20260711-131707 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-11T13:17:14+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'PR #56 merged'
+  - at: '2026-07-11T13:17:19+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: e8c82599964d99e0bfd63d12ba33a3b405038096
   produces:
   - kind: Plan
     name: plan-s-oas-alignment-research
@@ -90,3 +135,12 @@ spec:
     name: adr-dna-pivot-portability
     role: decision
     at: '2026-07-11T12:51:34+00:00'
+  - kind: TestGuide
+    name: tg-s-oas-alignment-research-c
+    role: test-guide
+    at: '2026-07-11T13:17:05+00:00'
+  - kind: TestRun
+    name: tr-tg-s-oas-alignment-research-c-20260711-131707
+    role: test-run
+    at: '2026-07-11T13:17:10+00:00'
+  closed_at: '2026-07-11T13:17:11+00:00'

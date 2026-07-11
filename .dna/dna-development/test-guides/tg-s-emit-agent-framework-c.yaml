@@ -1,0 +1,42 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-s-emit-agent-framework-c
+spec:
+  description: Roteiro de teste de s-emit-agent-framework (derivado das acceptance_criteria).
+  kind_of_test: smoke
+  status: active
+  steps:
+  - action: 'No Studio, valide: Given a DNA agent, when I run ''dna emit <agent> --target
+      agent-framework'', then I get a valid agent-framework PromptAgent YAML on stdout
+      (or --out file).'
+    where: "<rota/tela \u2014 ex. /scopes/:scope/...>"
+    expected: "<o que voc\xEA V\xCA quando est\xE1 certo (marque \u2717 S\xD3 se estiver\
+      \ quebrado)>"
+  - action: 'No Studio, valide: Given the emitted YAML, when parsed, then its ''instructions''
+      is byte-equal to mi.build_prompt(agent) (the DNA-composed prompt).'
+    where: "<rota/tela \u2014 ex. /scopes/:scope/...>"
+    expected: "<o que voc\xEA V\xCA quando est\xE1 certo (marque \u2717 S\xD3 se estiver\
+      \ quebrado)>"
+  - action: 'No Studio, valide: Given an agent with spec.tools, when emitted, then
+      each Tool''s description + input_schema is mapped into the target''s tools list.'
+    where: "<rota/tela \u2014 ex. /scopes/:scope/...>"
+    expected: "<o que voc\xEA V\xCA quando est\xE1 certo (marque \u2717 S\xD3 se estiver\
+      \ quebrado)>"
+  - action: 'No Studio, valide: Given the agent-framework runtime is installed, when
+      the emitted YAML is loaded via AgentFactory, then a live Agent object is produced
+      (test skips when the runtime/.NET is absent).'
+    where: "<rota/tela \u2014 ex. /scopes/:scope/...>"
+    expected: "<o que voc\xEA V\xCA quando est\xE1 certo (marque \u2717 S\xD3 se estiver\
+      \ quebrado)>"
+  - action: 'No Studio, valide: Given a new target, when a developer registers an
+      EmitterPort, then ''dna emit --target <new>'' dispatches to it with no changes
+      to the CLI core.'
+    where: "<rota/tela \u2014 ex. /scopes/:scope/...>"
+    expected: "<o que voc\xEA V\xCA quando est\xE1 certo (marque \u2717 S\xD3 se estiver\
+      \ quebrado)>"
+  verifies:
+  - Story/s-emit-agent-framework
+  created_at: '2026-07-11T13:16:41+00:00'
+  updated_at: '2026-07-11T13:16:41+00:00'
+  owner: claude-code

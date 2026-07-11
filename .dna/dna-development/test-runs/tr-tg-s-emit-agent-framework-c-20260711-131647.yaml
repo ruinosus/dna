@@ -1,0 +1,14 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-emit-agent-framework-c-20260711-131647
+spec:
+  guide_ref: tg-s-emit-agent-framework-c
+  outcome: pass
+  verifies:
+  - Story/s-emit-agent-framework
+  executed_by: claude-code
+  executed_at: '2026-07-11T13:16:47+00:00'
+  evidence:
+  - 'PR #56; dna emit agent-framework byte-equal + carrega no AgentFactory; veredito
+    OAS no ADR'
