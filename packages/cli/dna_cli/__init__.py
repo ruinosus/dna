@@ -23,6 +23,7 @@ from dna_cli import (
     install_cmd,
     kind_cmd,
     memory_cmd,
+    new_cmd,
     recall_cmd,
     research_cmd,
     scope_cmd,
@@ -82,6 +83,7 @@ from dna_cli import issue_bridge_cmd as _issue_bridge_cmd  # noqa: E402,F401
 main.add_command(source_cmd.source)
 main.add_command(init_cmd.init)
 main.add_command(install_cmd.install)
+main.add_command(new_cmd.new)
 main.add_command(eval_cmd.eval_)
 
 

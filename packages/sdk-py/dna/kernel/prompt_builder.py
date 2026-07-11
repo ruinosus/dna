@@ -9,7 +9,7 @@ import logging
 from typing import Any, TYPE_CHECKING
 
 from dna.kernel._text import strip_prompt_block
-from dna.kernel.errors import AgentNotFound
+from dna.kernel.errors import AgentNotFound, UnknownLayout
 
 if TYPE_CHECKING:
     from dna.kernel.document import Document
@@ -326,20 +326,31 @@ class PromptBuilder:
 
     def _render_prompt(self, ctx: dict[str, Any], agent_doc: Document) -> str:
         """Render prompt via template cascade."""
-        # 1. Agent-level template override
+        # 1. Agent-level raw template override (poweruser escape hatch).
         agent_spec = agent_doc.spec
         agent_template = agent_spec.get("promptTemplate") or agent_spec.get("prompt_template")
         if agent_template:
             return self._mustache_render(agent_template, ctx)
 
-        # 2. Kind default template
         agent_kp = self._host._kinds.get((agent_doc.api_version, agent_doc.kind))
+
+        # 2. Named layout preset (s-dx-named-layouts) — author picks the
+        # composition order by NAME; the kernel resolves it to an embedded
+        # template so the common case never hand-writes Mustache.
+        layout = agent_spec.get("layout")
+        if layout and agent_kp is not None:
+            layout_tmpl = agent_kp.layout_template(layout)
+            if layout_tmpl is None:
+                raise UnknownLayout(layout, agent_kp.layout_names(), agent_doc.name)
+            return self._mustache_render(layout_tmpl, ctx)
+
+        # 3. Kind default template
         if agent_kp:
             kind_template = agent_kp.prompt_template()
             if kind_template:
                 return self._mustache_render(kind_template, ctx)
 
-        # 3. Fallback: agent instruction as plain text
+        # 4. Fallback: agent instruction as plain text
         return ctx.get("agent", {}).get("instruction", "")
 
     async def _build_context_async(
@@ -454,6 +465,15 @@ class PromptBuilder:
             return await self._mustache_render_async(agent_template, ctx)
 
         agent_kp = self._host._kinds.get((agent_doc.api_version, agent_doc.kind))
+
+        # Named layout preset (s-dx-named-layouts) — twin of _render_prompt.
+        layout = agent_spec.get("layout")
+        if layout and agent_kp is not None:
+            layout_tmpl = agent_kp.layout_template(layout)
+            if layout_tmpl is None:
+                raise UnknownLayout(layout, agent_kp.layout_names(), agent_doc.name)
+            return await self._mustache_render_async(layout_tmpl, ctx)
+
         if agent_kp:
             kind_template = agent_kp.prompt_template()
             if kind_template:

@@ -5,7 +5,7 @@ metadata:
 spec:
   title: 'Scaffolding: dna new <kind>/<scope> gera esqueleto valido.'
   description: 'Scaffolding: dna new <kind>/<scope> gera esqueleto valido.'
-  status: todo
+  status: in-progress
   feature: f-dna-dx-author
   priority: medium
   labels:
@@ -20,10 +20,49 @@ spec:
   - "Design + impl + testes; docs. (PR futura \u2014 nao nesta.)"
   definition_of_done_source: cli-create
   created_at: '2026-07-11T06:25:12+00:00'
-  updated_at: '2026-07-11T06:25:12+00:00'
+  updated_at: '2026-07-11T07:29:12+00:00'
   timeline:
   - at: '2026-07-11T06:25:12+00:00'
     actor: claude-code
     type: status_change
     source: cli
     to: todo
+  - at: '2026-07-11T07:19:10+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: Story 2/3 da PR author-DX.
+  - at: '2026-07-11T07:19:12+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-11T07:29:08+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-dx-new-scaffolding
+    summary: TestGuide tg-s-dx-new-scaffolding (smoke)
+  - at: '2026-07-11T07:29:12+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-dx-new-scaffolding-20260711-072910
+    summary: "TestRun tr-tg-s-dx-new-scaffolding-20260711-072910 \u2192 pass"
+    outcome: pass
+  produces:
+  - kind: Plan
+    name: plan-s-dx-new-scaffolding
+    role: implementation
+    at: '2026-07-11T07:19:12+00:00'
+  - kind: TestGuide
+    name: tg-s-dx-new-scaffolding
+    role: test-guide
+    at: '2026-07-11T07:29:08+00:00'
+  - kind: TestRun
+    name: tr-tg-s-dx-new-scaffolding-20260711-072910
+    role: test-run
+    at: '2026-07-11T07:29:12+00:00'

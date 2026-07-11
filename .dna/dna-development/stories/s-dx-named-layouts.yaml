@@ -5,7 +5,7 @@ metadata:
 spec:
   title: Layouts nomeados para autoria sem vazar caminhos internos de bundle.
   description: Layouts nomeados para autoria sem vazar caminhos internos de bundle.
-  status: todo
+  status: in-progress
   feature: f-dna-dx-author
   priority: medium
   labels:
@@ -19,10 +19,63 @@ spec:
   - "Design + impl + testes Py/TS; docs. (PR futura \u2014 nao nesta.)"
   definition_of_done_source: cli-create
   created_at: '2026-07-11T06:25:10+00:00'
-  updated_at: '2026-07-11T06:25:10+00:00'
+  updated_at: '2026-07-11T07:28:50+00:00'
   timeline:
   - at: '2026-07-11T06:25:10+00:00'
     actor: claude-code
     type: status_change
     source: cli
     to: todo
+  - at: '2026-07-11T07:07:40+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Iniciando dimens\xE3o AUTHOR do e-dna-dx. Story 1 de 3 (layouts, scaffolding,\
+      \ single-file soul) numa PR coesa."
+  - at: '2026-07-11T07:07:42+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-11T07:18:09+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Impl: campo spec 'layout' no Agent (Py models.py + TS zod). Nova extens\xE3\
+      o de KindPort: layout_template(name)/layout_names() em KindBase (Py+TS), implementada\
+      \ em AgentKind com presets AGENT_LAYOUTS (default/instruction-first/persona-first).\
+      \ Cascata em prompt_builder: raw promptTemplate > layout nomeado > kind default\
+      \ > instruction. UnknownLayout (fail-loud) exportado no root do pacote (Py+TS).\
+      \ Alinhei diverg\xEAncia i-213/i-011: TS promptTemplate() agora inclui o bloco\
+      \ de guardrails (Python era a refer\xEAncia sem\xE2ntica). Testes: test_named_layouts.py\
+      \ (11) + named-layouts.test.ts (5) verdes. Suites Py/TS + typecheck TS OK."
+    commit_ref: ffb39ee41812f934a96b31d09eab3e5cc272bbf4
+  - at: '2026-07-11T07:28:46+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-dx-named-layouts
+    summary: TestGuide tg-s-dx-named-layouts (smoke)
+  - at: '2026-07-11T07:28:50+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-dx-named-layouts-20260711-072848
+    summary: "TestRun tr-tg-s-dx-named-layouts-20260711-072848 \u2192 pass"
+    outcome: pass
+  produces:
+  - kind: Plan
+    name: plan-s-dx-named-layouts
+    role: implementation
+    at: '2026-07-11T07:07:42+00:00'
+  - kind: TestGuide
+    name: tg-s-dx-named-layouts
+    role: test-guide
+    at: '2026-07-11T07:28:46+00:00'
+  - kind: TestRun
+    name: tr-tg-s-dx-named-layouts-20260711-072848
+    role: test-run
+    at: '2026-07-11T07:28:50+00:00'

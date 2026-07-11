@@ -12,7 +12,7 @@
 import Mustache from "mustache";
 
 import { stripPromptBlock } from "./_text.js";
-import { AgentNotFound } from "./errors.js";
+import { AgentNotFound, UnknownLayout } from "./errors.js";
 import type { Document } from "./document.js";
 import type { HookContext } from "./hooks.js";
 import type { ManifestInstance, BuildPromptOpts } from "./instance.js";
@@ -236,7 +236,7 @@ export class PromptBuilder {
     const agentSpec = agentDoc.spec;
     const kinds = (this.host as any)._kinds as Map<string, any>;
 
-    // 1. Agent-level template override
+    // 1. Agent-level raw template override (poweruser escape hatch).
     const agentTemplate =
       (agentSpec.promptTemplate as string) ??
       (agentSpec.prompt_template as string) ??
@@ -245,10 +245,23 @@ export class PromptBuilder {
       return await this._mustacheRender(agentTemplate, ctx);
     }
 
-    // 2. Kind default template
     const agentKp = kinds.get(
       `${agentDoc.apiVersion}\0${agentDoc.kind}`,
     );
+
+    // 2. Named layout preset (s-dx-named-layouts) — author picks the
+    // composition order by NAME; the kernel resolves it to an embedded
+    // template so the common case never hand-writes Mustache.
+    const layout = agentSpec.layout as string | undefined;
+    if (layout && agentKp) {
+      const layoutTmpl = agentKp.layoutTemplate(layout);
+      if (layoutTmpl == null) {
+        throw new UnknownLayout(layout, agentKp.layoutNames(), agentDoc.name);
+      }
+      return await this._mustacheRender(layoutTmpl, ctx);
+    }
+
+    // 3. Kind default template
     if (agentKp) {
       const kindTemplate = agentKp.promptTemplate();
       if (kindTemplate) {
@@ -256,7 +269,7 @@ export class PromptBuilder {
       }
     }
 
-    // 3. Fallback: agent instruction as plain text
+    // 4. Fallback: agent instruction as plain text
     const agent = ctx.agent as Record<string, unknown> | undefined;
     return (agent?.instruction as string) ?? "";
   }

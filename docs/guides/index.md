@@ -16,6 +16,9 @@ first if you have never loaded a scope.
 
 ## Authoring
 
+- **[How to author an agent](authoring-agents.md)** — `dna new` scaffolding,
+  named layouts (order the persona by name, no Mustache), and single-file
+  souls.
 - **[How to add a Kind](add-a-kind.md)** — ship a new Kind + Extension (or a
   record-style Kind as pure data) in about thirty minutes.
 - **[How to read document data](read-document-data.md)** — the blessed query

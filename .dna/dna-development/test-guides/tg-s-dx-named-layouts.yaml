@@ -1,0 +1,21 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-s-dx-named-layouts
+spec:
+  description: Named layouts compose without raw Mustache; unknown layout fails loud.
+  kind_of_test: smoke
+  status: active
+  steps:
+  - action: 'In a temp scope, author agents/x/AGENT.md with only ''layout: persona-first''
+      (+ soul), no promptTemplate'
+    expected: build_prompt renders the Soul BEFORE the instruction; AGENT.md contains
+      no {{ }}
+  - action: Set layout to a typo like 'persona_first' and build_prompt
+    expected: raises UnknownLayout listing default/instruction-first/persona-first
+  - action: Add a raw promptTemplate alongside layout
+    expected: the raw template wins (poweruser escape hatch)
+  verifies:
+  - Story/s-dx-named-layouts
+  created_at: '2026-07-11T07:28:43+00:00'
+  updated_at: '2026-07-11T07:28:43+00:00'

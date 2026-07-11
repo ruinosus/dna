@@ -1,0 +1,14 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-dx-new-scaffolding-20260711-072910
+spec:
+  guide_ref: tg-s-dx-new-scaffolding
+  outcome: pass
+  verifies:
+  - Story/s-dx-new-scaffolding
+  executed_by: claude-code
+  executed_at: '2026-07-11T07:29:10+00:00'
+  notes: 'Verified via packages/cli/tests/test_new_cmd.py (9): single-file soul, agent
+    bundle with layout, guardrail read-back, idempotency (no clobber/--force overwrites),
+    zero-to-composed-prompt persona-first. Manual e2e in /tmp scope also confirmed.'

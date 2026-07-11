@@ -11,6 +11,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Named composition layouts — order the persona by name, no Mustache**
+  (s-dx-named-layouts, epic `e-dna-dx` / feature `f-dna-dx-author`). An Agent
+  spec now accepts a `layout:` field: `persona-first` puts the Soul before the
+  instruction, `instruction-first` (a.k.a. `default`, the historic order) keeps
+  it after. The kernel resolves the name to an embedded template via a new
+  KindPort extension point (`layout_template()` / `layoutTemplate()`), so the
+  common case never hand-writes `{{{soul_content}}}` / `{{#guardrails-guardrail}}`.
+  A raw `promptTemplate` still wins over `layout` (the poweruser escape hatch);
+  an unknown layout fails loud with the new `UnknownLayout` error (exported from
+  the package root, Py + TS). Guardrails always compose last. Py↔TS 1:1. Guide:
+  **Authoring agents**.
+- **`dna new agent|soul|guardrail <name>` — scaffold a valid skeleton**
+  (s-dx-new-scaffolding). Writes the correct envelope + bundle shape into a
+  scope through `kernel.write_document` (every write guard runs), leaving only
+  the prose to fill in. `dna new agent` pre-fills `--soul` / `--guardrails` /
+  `--layout` / `--model`; `dna new soul` emits a single-file `SOUL.md`. Idempotent
+  (never clobbers without `--force`). Guide: **Authoring agents**.
+
+### Changed
+
+- **Single-file souls are a first-class authoring path** (s-dx-single-file-soul).
+  A Soul authored as a lone `SOUL.md` (minimal frontmatter or none) reads and
+  composes — `soul.json` is now optional, not required. The two-file
+  soulspec.org bundle (`SOUL.md` + `soul.json` manifest) stays fully supported
+  and byte-faithful on round-trip (market-conformance suite unchanged); the
+  single-file form is the convenience on-ramp. Py↔TS 1:1.
+- **TS composition now includes the guardrails block** (aligns the TypeScript
+  Agent default template to Python, which was the semantic reference — closing
+  the latent i-213/i-011 divergence where TS `promptTemplate()` omitted it).
+  Composed prompts in the TS SDK now carry the same guardrail policy section as
+  Python.
+
 ## [0.4.0] - 2026-07-11
 
 ### Added

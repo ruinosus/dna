@@ -86,6 +86,53 @@ def _schema_from_model(model: type) -> dict[str, Any] | None:
 from dna.kernel.studio_ui import docs_ui
 
 
+# ── Named composition layouts (s-dx-named-layouts) ─────────────────────
+#
+# An author orders persona-vs-instruction by NAME (`layout:` in the Agent
+# spec) instead of hand-writing raw Mustache with internal section names
+# (`{{{soul_content}}}`, `{{#guardrails-guardrail}}`). Each preset resolves
+# to one of these embedded templates via `AgentKind.layout_template()`.
+#
+# The guardrails block is shared verbatim across layouts — guardrails are
+# hard policy and always land LAST, after both the instruction and the
+# soul, regardless of their relative order.
+_GUARDRAILS_BLOCK = (
+    "{{#guardrails-guardrail}}"
+    "## Guardrail: {{name}} ({{severity}})\n"
+    "{{#description}}_{{description}}_\n\n{{/description}}"
+    "{{#rules}}- {{{.}}}\n{{/rules}}\n"
+    "{{/guardrails-guardrail}}"
+)
+
+# instruction-first (a.k.a. "default") — the historic order; kept BYTE-
+# IDENTICAL to the pre-layouts kind default template so every existing
+# agent composes exactly as before.
+_LAYOUT_INSTRUCTION_FIRST = (
+    "{{{agent.instruction}}}\n\n"
+    "{{{soul_content}}}\n\n"
+    + _GUARDRAILS_BLOCK
+)
+
+# persona-first — the Soul (personality/voice) leads, then the task
+# instruction, then guardrails. The common reason an author reached for a
+# raw promptTemplate before this story existed.
+_LAYOUT_PERSONA_FIRST = (
+    "{{{soul_content}}}\n\n"
+    "{{{agent.instruction}}}\n\n"
+    + _GUARDRAILS_BLOCK
+)
+
+# Map preset name → template. ``default`` aliases ``instruction-first``.
+AGENT_LAYOUTS: dict[str, str] = {
+    "default": _LAYOUT_INSTRUCTION_FIRST,
+    "instruction-first": _LAYOUT_INSTRUCTION_FIRST,
+    "persona-first": _LAYOUT_PERSONA_FIRST,
+}
+
+# Public, ordered names for discovery / error messages / CLI validation.
+AGENT_LAYOUT_NAMES: list[str] = ["default", "instruction-first", "persona-first"]
+
+
 class GenomeKind(KindBase):
     """Phase 16 — replaces Module as the scope-root identity Kind.
 
@@ -317,6 +364,13 @@ class AgentKind(KindBase):
             "order": 10,
         },
         "model": {"widget": "text", "label": "Model", "order": 20},
+        "layout": {
+            "widget": "select",
+            "label": "Layout",
+            "options": ["default", "instruction-first", "persona-first"],
+            "help": "Named composition order — 'persona-first' puts the Soul before the instruction. Leave empty for the default. A raw promptTemplate, if set, overrides this.",
+            "order": 25,
+        },
         "soul": {"widget": "text", "label": "Soul", "help": "Name of the Soul doc to flatten into the prompt.", "order": 30},
         "skills": {"widget": "tags", "label": "Skills", "order": 40},
         "actors": {"widget": "tags", "label": "Actors this agent serves", "order": 50},
@@ -381,15 +435,18 @@ class AgentKind(KindBase):
         #
         # Guardrails ARE included because they're hard policies that must be
         # enforced on every turn (not on-demand procedural know-how).
-        return (
-            "{{{agent.instruction}}}\n\n"
-            "{{{soul_content}}}\n\n"
-            "{{#guardrails-guardrail}}"
-            "## Guardrail: {{name}} ({{severity}})\n"
-            "{{#description}}_{{description}}_\n\n{{/description}}"
-            "{{#rules}}- {{{.}}}\n{{/rules}}\n"
-            "{{/guardrails-guardrail}}"
-        )
+        #
+        # This IS the ``instruction-first`` / ``default`` named layout — the
+        # kind default template and the ``default`` layout are one string, so
+        # an agent with no ``layout:`` composes exactly as before.
+        return _LAYOUT_INSTRUCTION_FIRST
+
+    def layout_template(self, name: str) -> str | None:
+        """Resolve a named layout preset (s-dx-named-layouts)."""
+        return AGENT_LAYOUTS.get(name)
+
+    def layout_names(self) -> list[str]:
+        return list(AGENT_LAYOUT_NAMES)
 
     def preview(self, doc: Any) -> list[PreviewBlock]:
         spec = getattr(doc, "spec", None) or {}
