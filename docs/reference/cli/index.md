@@ -16,6 +16,7 @@ These pages are **generated from the Click command definitions** by
 | [`dna scope`](scope.md) | List + inspect scopes (manifest modules). |
 | [`dna kind`](kind.md) | List + inspect registered Kinds. |
 | [`dna source`](source.md) | Source-level operations: declarative replicas, introspection. |
+| [`dna emit`](emit.md) | Emit a DNA agent as a target runtime's native artifact (the de-para). |
 | [`dna eval`](eval.md) | Run EvalSuites locally (offline, deterministic) and compare runs against a pinned EvalBaseline. |
 | [`dna init`](init.md) | Make a project agent-ready: board + skill + AGENTS.md + git hooks. |
 | [`dna install`](install.md) | Install bundles/Kinds from a repository into the local source. |
