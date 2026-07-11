@@ -89,8 +89,24 @@ def test_emit_concierge_to_bedrock(runner):
     assert props["ActionGroups"][0]["FunctionSchema"]["Functions"][0]["Name"] == "kb-search"
 
 
+def test_emit_concierge_to_vertex(runner):
+    """The THIRD runtime: the SAME concierge source emits a Google ADK Agent Config
+    YAML (an LlmAgent). Three runtimes from one definition, end-to-end via the CLI."""
+    r = _run(runner, "concierge", "-t", "vertex", "--scope", "concierge", "--json")
+    assert r.exit_code == 0, r.output
+    payload = json.loads(r.output)
+    assert payload["target"] == "vertex"
+    assert payload["filename"] == "concierge.adk.yaml"
+    assert payload["artifact"].startswith("# yaml-language-server: $schema=")
+    config = yaml.safe_load(payload["artifact"])
+    assert config["agent_class"] == "LlmAgent"
+    assert config["name"] == "concierge"
+    assert config["model"] == "gpt-4o"
+    assert config["tools"] == [{"name": "kb-search"}]
+
+
 def test_unknown_target_fails(runner):
-    r = _run(runner, "concierge", "-t", "vertex", "--scope", "concierge")  # not yet implemented
+    r = _run(runner, "concierge", "-t", "no-such-runtime", "--scope", "concierge")
     assert r.exit_code != 0
 
 

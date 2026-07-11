@@ -16,6 +16,7 @@ $ dna emit --list-targets
 Registered emit targets:
   - agent-framework
   - bedrock
+  - vertex
 
 $ dna emit concierge --target agent-framework --scope concierge
 kind: Prompt
@@ -149,6 +150,65 @@ eval-as-contract), the Bedrock target also drops:
   foundation-model id; a real deploy needs a Bedrock model id / inference-profile
   ARN (pass `--model`) plus an `AgentResourceRoleArn`.
 
+## The de-para — Google ADK (`LlmAgent` Agent Config)
+
+The **third** proven target. The **same** `concierge` source emits a **Google
+Agent Development Kit (ADK) Agent Config** YAML — the declarative, code-free way
+to define an ADK `LlmAgent`, loaded with `config_agent_utils.from_config(<path>)`.
+Three runtimes from one definition is the whole point: *author once, emit per
+runtime*.
+
+```console
+$ dna emit concierge --target vertex --scope concierge
+# yaml-language-server: $schema=https://raw.githubusercontent.com/google/adk-python/refs/heads/main/src/google/adk/agents/config_schemas/AgentConfig.json
+agent_class: LlmAgent
+name: concierge
+description: Internal engineering support concierge grounded in runbooks.
+model: gpt-4o
+instruction: |-
+  You are the Helpdesk Concierge ...
+tools:
+- name: kb-search
+```
+
+**Why the ADK *Agent Config* (not the code-first `LlmAgent` object or Vertex AI
+Agent Engine).** Google ships two ADK authoring surfaces: **Agent Config** (a
+*published, declarative* YAML schema — `agent_class`, `name`, `model`,
+`instruction`, `tools`, …) and the **code-first** Python/Java `LlmAgent` object.
+Only Agent Config has a field-for-field declarative schema, so it is the only
+honest de-para target; **Vertex AI Agent Engine** is a *deployment host* that runs
+an ADK agent, not a declarative agent definition of its own. Emitting the Agent
+Config YAML yields a lintable artifact you can produce and validate **without any
+GCP credential** — the emitted `# yaml-language-server` header binds the artifact
+to the real published schema in any editor.
+
+| DNA (source of truth) | ADK `LlmAgentConfig` | Notes |
+|---|---|---|
+| *(fixed)* | `agent_class: LlmAgent` | the declarative LLM agent class |
+| `metadata.name` | `name` | snake_cased — ADK requires a valid Python identifier (`concierge-grounded` → `concierge_grounded`) |
+| `metadata.description` | `description` | verbatim (when present) |
+| **`Soul` + `Guardrail`s + `Agent.instruction`** (composed by `build_prompt`) | `instruction` | **flat string** — carried **byte-equal** (identical to the agent-framework `instructions` and the Bedrock `Instruction`) |
+| `Agent.spec.model` → else `Genome.spec.default_llm` | `model` | Gemini id; DNA provider token stripped (`vertex/gemini-2.0-flash` → `gemini-2.0-flash`); a bare id passes through |
+| `Agent.spec.tools[]` → `Tool` Kind | `tools[].name` | a **code reference** (`- name: <fqn>`); ADK has no inline function-schema slot |
+
+### What does **not** survive — ADK-specific
+
+On top of the three DNA-only axes (composition structure / tenant overlay /
+eval-as-contract), the ADK target also drops:
+
+- **Tool binding shape.** ADK binds a tool by a **code reference** — a fully
+  qualified Python path (`my_pkg.my_tools.my_tool`) or a built-in name
+  (`google_search`) — **not** a declarative schema. A Tool's `description` and
+  `parameters` (JSON Schema) have no Agent Config slot; ADK derives them from the
+  referenced Python function's signature + docstring at load. Each emitted
+  `- name` is a **placeholder** to repoint to the tool's real FQN.
+- **`output_schema`.** ADK `output_schema` is a `CodeConfig` (a reference to a
+  Pydantic class by FQN), not an inline JSON Schema — DNA's inline
+  `spec.output_schema` has no inline slot.
+- **Model coordinate.** ADK `model` natively accepts a **Gemini** id; a DNA
+  `azure/openai` coordinate needs `model_code` (a `LiteLlm` `CodeConfig`) at
+  deploy, plus a GCP project/region.
+
 ## The proof: it round-trips into the live runtime
 
 The emitted `instructions` is **byte-equal** to `mi.build_prompt(agent)`, and the
@@ -188,17 +248,17 @@ const mi = await quickInstance("concierge", ".dna");
 const result = await emitAgent(mi, "concierge", "agent-framework");
 ```
 
-## Adding a new target (vertex / openai / …)
+## Adding a new target (openai / …)
 
 Targets are a **registry, not a hardcode** — a new one is a class + one call, and
-the CLI core never changes. The two shipped emitters (`agent-framework`,
-`bedrock`) are the reference; a third looks identical:
+the CLI core never changes. The three shipped emitters (`agent-framework`,
+`bedrock`, `vertex`) are the reference; a fourth looks identical:
 
 ```python
 from dna.emit import EmitContext, EmitResult, register_emitter
 
-class VertexEmitter:
-    target = "vertex"
+class OpenAIEmitter:
+    target = "openai"
     file_extension = "json"
 
     def emit(self, ctx: EmitContext) -> EmitResult:
@@ -209,7 +269,7 @@ class VertexEmitter:
                           filename=f"{ctx.name}.json",
                           losses=[...], mapping={...})
 
-register_emitter(VertexEmitter())
+register_emitter(OpenAIEmitter())
 ```
 
 An emitter is **pure**: it reads the neutral `EmitContext` and returns an

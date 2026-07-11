@@ -1,0 +1,38 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-emit-vertex
+spec:
+  title: 'Plano: s-emit-vertex'
+  date: '2026-07-11'
+  status: accepted
+  story_ref: s-emit-vertex
+  journey_phase: plan
+  body: "Add the THIRD runtime emitter (Google ADK Agent Config) plugged into the\
+    \ SAME EmitterPort registry as agent-framework + bedrock \u2014 the CLI core does\
+    \ not change.\n\n## Target choice (Step 0 \u2014 investigated, not assumed)\n\
+    Google ships two ADK authoring surfaces: (a) the code-first LlmAgent Python/Java\
+    \ object, and (b) **Agent Config** \u2014 a published, DECLARATIVE YAML schema\
+    \ (AgentConfig.json: agent_class/name/model/instruction/tools/\u2026) loaded via\
+    \ config_agent_utils.from_config(). Vertex AI Agent Engine is a deployment HOST,\
+    \ not a declarative definition. \u2192 the only honest de-para target is the ADK\
+    \ **Agent Config LlmAgent** YAML. Grounded in the real published schema (raw.githubusercontent.com/google/adk-python/.../AgentConfig.json).\n\
+    \n## De-para (Py + TS parity)\n- agent_class: LlmAgent (fixed); metadata.name\
+    \ \u2192 name (snake_cased \u2014 ADK requires a valid Python identifier); metadata.description\
+    \ \u2192 description; spec.model/Genome default \u2192 model (Gemini id, DNA provider\
+    \ token stripped); build_prompt \u2192 instruction (flat, BYTE-EQUAL); spec.tools[]\
+    \ \u2192 tools[].name (ADK binds tools by CODE reference, no inline schema).\n\
+    - Artifact leads with a '# yaml-language-server' header binding it to the real\
+    \ schema \u2192 structural validation with no GCP credential.\n\n## Losses (honest,\
+    \ not hidden)\ncomposition structure / tenant overlay / eval-as-contract (the\
+    \ DNA-only axes) + ADK-specific: tool binding is a code ref (Tool description+params\
+    \ JSON-Schema have no declarative slot) / output_schema is a Pydantic-class CodeConfig\
+    \ / non-Gemini model coordinate needs model_code (LiteLlm).\n\n## Proof\n- byte-equal\
+    \ gate + one-source\u2192three-runtimes identity test (af == bd == vx == build_prompt).\n\
+    - credential-free structural conformance test + optional live-load gate (importorskip\
+    \ google.adk).\n- CLI smoke; extend examples/emitting-to-a-runtime to show all\
+    \ 3.\n\n## Gates\nPy\u2194TS parity; Py+TS+CLI emit suites; mkdocs build --strict;\
+    \ brand + docs-coverage + parity guards; CHANGELOG [Unreleased]. Base main, do\
+    \ NOT merge."
+  created_at: '2026-07-11T14:35:00+00:00'
+  updated_at: '2026-07-11T14:35:00+00:00'
