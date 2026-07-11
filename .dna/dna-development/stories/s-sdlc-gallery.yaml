@@ -7,7 +7,7 @@ spec:
   description: "Painel board-native que gera o \xEDndice dos HtmlArtifacts do board\
     \ agrupados por status do work item \u2014 sempre atual. Irm\xE3o do digest (eventos);\
     \ gallery = artefatos visuais pra revisar."
-  status: in-progress
+  status: review
   feature: f-sdlc-digest
   priority: high
   acceptance_criteria:
@@ -30,7 +30,7 @@ spec:
     --html'
   definition_of_done_source: cli-create
   created_at: '2026-07-11T14:26:19+00:00'
-  updated_at: '2026-07-11T14:46:41+00:00'
+  updated_at: '2026-07-11T14:49:54+00:00'
   timeline:
   - at: '2026-07-11T14:26:19+00:00'
     actor: claude-code
@@ -74,6 +74,27 @@ spec:
     name: tr-tg-sdlc-gallery-20260711-144638
     summary: "TestRun tr-tg-sdlc-gallery-20260711-144638 \u2192 pass"
     outcome: pass
+  - at: '2026-07-11T14:48:59+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/63'
+    pr_url: https://github.com/ruinosus/dna/pull/63
+  - at: '2026-07-11T14:49:50+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #63 aberto (https://github.com/ruinosus/dna/pull/63). Suites verdes:\
+      \ CLI 454 + SDK-py 2923 + TS 1437 + typecheck; guards (brand/commit) clean;\
+      \ mkdocs --strict build ok. TestGuide tg-sdlc-gallery + TestRun pass (5 HtmlArtifacts\
+      \ no gallery, painel --html verificado no browser). Aguardando CI 11/11 e review\
+      \ \u2014 N\xC3O mergear."
+  - at: '2026-07-11T14:49:54+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
   produces:
   - kind: Plan
     name: plan-s-sdlc-gallery
