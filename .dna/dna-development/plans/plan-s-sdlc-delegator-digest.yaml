@@ -1,0 +1,22 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-sdlc-delegator-digest
+spec:
+  title: 'Plano: s-sdlc-delegator-digest'
+  date: '2026-07-11'
+  status: accepted
+  story_ref: s-sdlc-delegator-digest
+  journey_phase: plan
+  body: "1) _digest.py: agregador PURO (build_digest) que recebe docs+janela+PRs+tags\
+    \ \u2192 dict {completed,decided,found,progressed,artifacts,releases,attention{blocked,review_open_pr,owner_decisions,open_questions},counts}\
+    \ \u2014 unit-test\xE1vel sem kernel. 2) resolu\xE7\xE3o de janela (_resolve_since:\
+    \ ISO|Nh/Nd/Nw|last-digest|default 24h). 3) comando 'digest' novo NO FIM de sdlc_cmd.py\
+    \ (isolado, sem tocar cite/epic show): session\u2192coleta Story/Feature/Epic/Issue/ADR/Kaizen/Spike/Bug/Task\
+    \ + gh PRs + git tags \u2192 build_digest \u2192 render agrupado / --json / --save\
+    \ StatusReport digest-<data>. 4) testes pytest do agregador. 5) doc-guia + distin\xE7\
+    \xE3o vs brief + CHANGELOG. 6) dogfood no board de hoje \u2192 TestGuide --product\
+    \ + TestRun."
+  created_at: '2026-07-11T13:38:07+00:00'
+  updated_at: '2026-07-11T13:38:07+00:00'
+  methodology: ad-hoc

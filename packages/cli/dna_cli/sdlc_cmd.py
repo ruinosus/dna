@@ -4136,8 +4136,16 @@ def cmd_journey_transition(
         oracle_warnings_text: str | None = None
         if methodology == "superpowers" and next_phase in ("specify", "plan", "build"):
             try:
+                # Exclude digest StatusReports (insight='sdlc-digest',
+                # f-sdlc-digest) — those are retrospective summaries, not
+                # oracle verdicts, and must not leak into the council snapshot.
                 verdicts = sorted(
-                    s.query_list("StatusReport"),
+                    (
+                        v for v in s.query_list("StatusReport")
+                        if not v.name.startswith("digest-")
+                        and (v.spec.get("insight") if isinstance(v.spec, dict) else None)
+                        != "sdlc-digest"
+                    ),
                     key=lambda v: v.name, reverse=True,
                 )[:3]
                 if verdicts:
@@ -6723,3 +6731,266 @@ def changelog_show(scope):
         for cat in _CHANGELOG_CATEGORIES:
             for item in v.get(cat) or []:
                 click.echo(f"  {_CHANGELOG_ICON[cat]} {cat}: {item}")
+
+
+# ─── digest — retrospective "what happened while you were away" ────────
+# f-sdlc-digest / s-sdlc-delegator-digest. Appended isolated at the end of
+# the group so it never touches the neighbouring `cite` / `epic show` work.
+# Aggregation lives in the PURE `dna_cli._digest` module (unit-tested without
+# a kernel); this command owns only the impure edges: kernel session, gh/git
+# context, rendering, and the StatusReport persistence.
+
+# The Kinds whose timelines the digest walks. Some may be absent in a given
+# distribution — the walk is fail-soft per kind (like `extract-decisions`).
+_DIGEST_KINDS = (
+    "Story", "Feature", "Epic", "Issue", "ADR", "Kaizen",
+    "Spike", "Bug", "Task", "Initiative",
+)
+
+
+def _gh_open_prs_with_url() -> list[dict[str, Any]] | None:
+    """Open PRs incl. ``url`` (superset of ``_gh_open_prs`` — the digest wants
+    the clickable link on review items). Fail-soft: None when gh is absent."""
+    import json as _json
+    import subprocess
+    try:
+        result = subprocess.run(
+            ["gh", "pr", "list", "--state", "open",
+             "--json", "number,title,headRefName,createdAt,url"],
+            capture_output=True, text=True, timeout=3, check=False,
+        )
+        if result.returncode != 0:
+            return None
+        parsed = _json.loads(result.stdout or "[]")
+        return parsed if isinstance(parsed, list) else None
+    except (FileNotFoundError, subprocess.TimeoutExpired, OSError, ValueError):
+        return None
+
+
+def _git_tags_with_dates() -> list[dict[str, Any]]:
+    """Repo tags with their creation dates (releases). Fail-soft → []."""
+    import subprocess
+    try:
+        result = subprocess.run(
+            ["git", "for-each-ref", "--sort=-creatordate",
+             "--format=%(refname:short)\t%(creatordate:iso-strict)",
+             "refs/tags"],
+            capture_output=True, text=True, timeout=5, check=False,
+        )
+        if result.returncode != 0:
+            return []
+        tags: list[dict[str, Any]] = []
+        for line in (result.stdout or "").splitlines():
+            if "\t" not in line:
+                continue
+            nm, _, at = line.partition("\t")
+            tags.append({"name": nm.strip(), "at": at.strip()})
+        return tags
+    except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+        return []
+
+
+def _find_last_digest_at(s: Any) -> datetime | None:
+    """Timestamp of the most recent saved digest StatusReport (for
+    ``--since last-digest``). Digests are named ``digest-*`` and carry
+    ``spec.insight == 'sdlc-digest'``; ignore oracle reports."""
+    from dna_cli._digest import parse_iso_utc as _piso
+    latest: datetime | None = None
+    try:
+        for d in s.query_list("StatusReport"):
+            sp = d.spec if isinstance(d.spec, dict) else {}
+            if sp.get("insight") != "sdlc-digest" and not d.name.startswith("digest-"):
+                continue
+            at = _piso(sp.get("generated_at") or sp.get("created_at"))
+            if at and (latest is None or at > latest):
+                latest = at
+    except Exception:  # noqa: BLE001 — no StatusReport kind / query hiccup
+        return None
+    return latest
+
+
+def _render_digest(dg: dict[str, Any]) -> None:
+    """Print a one-screen digest grouped Concluído / Decidido / Achado /
+    Precisa de você — attention section FIRST-CLASS and loud (that's what the
+    delegator opens the digest for)."""
+    c = dg["counts"]
+    rag_color = {"red": "red", "amber": "yellow", "green": "green"}[dg["rag_status"]]
+    click.secho(
+        f"\n🗞️  Digest — {dg['scope']}  ({dg['since_label']})",
+        fg="cyan", bold=True,
+    )
+    click.secho(f"   {dg['verdict']}", fg=rag_color, bold=True)
+
+    # PRECISA DE VOCÊ — first, because it's the point of the digest.
+    att = dg["attention"]
+    click.secho(f"\n🔔 PRECISA DE VOCÊ ({c['attention']})", fg="red", bold=True)
+    if not c["attention"]:
+        click.echo("   (nada pendente — tudo tocou sozinho)")
+    for r in att["blocked"]:
+        click.echo(f"   🚧 BLOCKED  {click.style(r['name'], fg='cyan')}  — {r['reason'][:70]}")
+    for r in att["review_awaiting"]:
+        prs = "  ".join(f"#{p['number']}" for p in r["prs"]) or "(sem PR aberto!)"
+        click.echo(f"   👀 REVIEW   {click.style(r['name'], fg='cyan')}  {prs}")
+    for r in att["owner_decisions"]:
+        click.echo(f"   🧭 DECIDIR  {click.style(r['name'], fg='cyan')}  {r['title'][:60]}")
+    for r in att["open_questions"]:
+        click.echo(f"   ❓ RESPONDER {click.style(r['name'], fg='cyan')}  {r['question'][:60]}")
+
+    click.secho(f"\n✅ Concluído ({c['completed']})", fg="green", bold=True)
+    for r in dg["completed"]:
+        click.echo(f"   • {click.style(r['name'], fg='cyan')}  {r['title'][:56]}  [→{r['to']}]")
+    if not dg["completed"]:
+        click.echo("   (nada fechou na janela)")
+
+    click.secho(f"\n🧠 Decidido ({c['decided']})", fg="magenta", bold=True)
+    for r in dg["decided"]:
+        click.echo(f"   • {click.style(r['name'], fg='cyan')}  {r['summary'][:64]}")
+    if not dg["decided"]:
+        click.echo("   (sem decisões registradas)")
+
+    click.secho(f"\n🔍 Achado ({c['found']})", fg="yellow", bold=True)
+    for r in dg["found"]:
+        click.echo(f"   • {click.style(r['name'], fg='cyan')}  {r['body'][:60]}")
+    if not dg["found"]:
+        click.echo("   (nada filado)")
+
+    if dg["progressed"]:
+        click.secho(f"\n📈 Avançou ({c['progressed']})", fg="blue", bold=True)
+        for r in dg["progressed"]:
+            click.echo(f"   • {click.style(r['name'], fg='cyan')}  {r['title'][:52]}  [→{r['to']}]")
+    if dg["releases"]:
+        click.secho(f"\n🚀 Releases ({c['releases']})", fg="green", bold=True)
+        for r in dg["releases"]:
+            click.echo(f"   • {r['tag']}  ({r['at'][:10]})")
+    if dg["artifacts"]:
+        click.secho(f"\n📎 Artefatos ({c['artifacts']})", fg="blue")
+        for r in dg["artifacts"][:12]:
+            click.echo(f"   • {r['kind']}/{r['name']}  ← {r['work_item']}")
+    click.echo("")
+
+
+def _save_digest_report(s: Any, scope: str, dg: dict[str, Any]) -> str:
+    """Persist the digest as a StatusReport (record plane) — durable +
+    queryable via `dna cognitive search`/`recall`. Returns the doc name.
+
+    `insight='sdlc-digest'` is a synthetic marker (NOT an oracle Insight) so
+    digests are distinguishable from oracle verdicts sharing the Kind. The
+    `verdict` + `heuristic_explanation` fields are `embed`-ed, so a later
+    semantic search over "o que aconteceu com X" recalls the digest.
+    """
+    now = _now_iso()
+    name = f"digest-{now[:19].replace(':', '').replace('-', '').replace('T', '-')}"
+    c = dg["counts"]
+    att = dg["attention"]
+    evidence = [
+        f"{r['kind']}/{r['name']}"
+        for bucket in ("completed", "decided", "found", "progressed")
+        for r in dg[bucket]
+    ]
+    for group in att.values():
+        evidence.extend(f"{r['kind']}/{r['name']}" for r in group)
+    heuristic = (
+        f"Retrospective digest do scope {scope} na janela {dg['since_label']} "
+        f"({dg['since']} → {dg['until']}). Varreu as timelines de "
+        f"{', '.join(_DIGEST_KINDS)}: {c['completed']} terminais, {c['decided']} "
+        f"decisões, {c['found']} achados, {c['progressed']} avanços, "
+        f"{c['releases']} releases, {c['artifacts']} artefatos. "
+        f"Atenção ({c['attention']}): {len(att['blocked'])} blocked, "
+        f"{len(att['review_awaiting'])} em review, {len(att['owner_decisions'])} "
+        f"decisões-do-dono, {len(att['open_questions'])} perguntas abertas. "
+        f"RAG={dg['rag_status']} (red=blocked; amber=pendências; green=limpo)."
+    )
+    spec: dict[str, Any] = {
+        "insight": "sdlc-digest",
+        "question": f"O que aconteceu em {scope} {dg['since_label']}?",
+        "verdict": dg["verdict"],
+        "confidence": "certain",
+        "rag_status": dg["rag_status"],
+        "metrics": {**c, "buckets": {
+            k: dg[k] for k in
+            ("completed", "decided", "found", "progressed", "releases", "artifacts")
+        }, "attention": att},
+        "heuristic_explanation": heuristic,
+        "evidence_refs": evidence[:100],
+        "generated_at": now,
+        "generated_by": f"dna-sdlc-digest ({_cli_actor()})",
+    }
+    raw = _build_raw("StatusReport", name, spec)
+    s.run(s.kernel.write_document(scope, "StatusReport", name, raw))
+    return name
+
+
+@sdlc.command("digest")
+@click.option("--since", "since_spec", default=None,
+              help="Janela para trás: ISO-8601, um span (24h/3d/2w) ou "
+                   "'last-digest' (desde o último digest salvo). Default: 24h.")
+@click.option("--save", is_flag=True,
+              help="Persiste o digest como StatusReport 'digest-<data>' "
+                   "(durável + queryável via `dna cognitive search`/`recall`).")
+@click.option("--json", "as_json", is_flag=True,
+              help="Saída estruturada (o dict do agregador).")
+@_scope_option
+def cmd_digest(since_spec: str | None, save: bool, as_json: bool, scope: str) -> None:
+    """Retrospectiva: **o que aconteceu enquanto você estava fora**.
+
+    O inverso do `brief`/`next`/`current` — estes olham PRA FRENTE ("o que
+    fazer a seguir"); o **digest olha PRA TRÁS** ("o que já aconteceu"). É a
+    superfície de quem DELEGA e revisa no fim, em vez de acompanhar o board ao
+    vivo.
+
+    Agrega os eventos das timelines de todos os work items numa janela
+    (``--since``) e agrupa em **Concluído / Decidido / Achado / Precisa de
+    você** — a seção *Precisa de você* (blocked, stories em review, decisões
+    do dono, perguntas abertas) vem primeiro, porque é o que o delegador
+    quer ver. Com ``--save`` o digest vira um StatusReport queryável depois.
+    """
+    from dna_cli._digest import build_digest, resolve_since
+
+    now = datetime.now(timezone.utc)
+    with dna_session(scope) as s:
+        last_digest_at = (
+            _find_last_digest_at(s) if since_spec == "last-digest" else None
+        )
+        try:
+            since, since_label = resolve_since(
+                since_spec, now=now, last_digest_at=last_digest_at,
+            )
+        except ValueError as exc:
+            raise click.UsageError(str(exc)) from exc
+
+        docs: list[dict[str, Any]] = []
+        for kind in _DIGEST_KINDS:
+            try:
+                for d in s.query_list(kind):
+                    docs.append({
+                        "kind": kind, "name": d.name,
+                        "spec": d.spec if isinstance(d.spec, dict) else dict(d.spec or {}),
+                    })
+            except Exception:  # noqa: BLE001 — kind absent in this distribution
+                continue
+
+        open_prs = _gh_open_prs_with_url()
+        tags = _git_tags_with_dates()
+
+        dg = build_digest(
+            docs=docs, since=since, until=now, since_label=since_label,
+            scope=scope, open_prs=open_prs, tags=tags,
+        )
+
+        saved_name: str | None = None
+        if save:
+            saved_name = _save_digest_report(s, scope, dg)
+
+    if as_json:
+        if saved_name:
+            dg["saved_as"] = f"StatusReport/{saved_name}"
+        print_json(dg)
+        return
+
+    _render_digest(dg)
+    if saved_name:
+        click.secho(
+            f"💾 salvo como StatusReport/{saved_name} "
+            f"(query: `dna cognitive search \"digest {scope}\"`)",
+            fg="green",
+        )
