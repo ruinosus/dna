@@ -15,6 +15,7 @@ the first concrete step of *"DNA as the Terraform of agents"*.
 $ dna emit --list-targets
 Registered emit targets:
   - agent-framework
+  - bedrock
 
 $ dna emit concierge --target agent-framework --scope concierge
 kind: Prompt
@@ -78,6 +79,76 @@ in `--json` under `losses`), never hand-waves them:
 These are the reasons the neutral layer exists. The emit is faithful about the
 trade-off so you can see exactly what you keep by authoring in DNA.
 
+## The de-para — Amazon Bedrock (`AWS::Bedrock::Agent`)
+
+The **second** proven target. The **same** `concierge` source emits an AWS
+**CloudFormation** template declaring an `AWS::Bedrock::Agent` — the managed,
+declarative Bedrock Agents service. Two runtimes from one definition is the whole
+point: *author once, emit per runtime*.
+
+```console
+$ dna emit concierge --target bedrock --scope concierge
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "DNA-emitted Amazon Bedrock Agent: concierge",
+  "Resources": {
+    "ConciergeAgent": {
+      "Type": "AWS::Bedrock::Agent",
+      "Properties": {
+        "AgentName": "concierge",
+        "Description": "Internal engineering support concierge grounded in runbooks.",
+        "FoundationModel": "gpt-4o",
+        "Instruction": "You are the Helpdesk Concierge ...",
+        "ActionGroups": [
+          {
+            "ActionGroupName": "concierge-actions",
+            "ActionGroupExecutor": { "CustomControl": "RETURN_CONTROL" },
+            "FunctionSchema": {
+              "Functions": [
+                { "Name": "kb-search", "Description": "Search the runbook ...",
+                  "Parameters": { "query": { "Type": "string", "Required": true }, ... } }
+              ]
+            }
+          }
+        ],
+        "AutoPrepare": true
+      }
+    }
+  }
+}
+```
+
+**Why Bedrock *Agents* (not Strands / AgentCore).** AWS ships three agent
+surfaces: **Bedrock Agents** (a managed service with a published *declarative*
+schema), **Strands Agents SDK** (code-first Python), and **Bedrock AgentCore** (a
+runtime that *hosts* any framework). Only Bedrock Agents has a field-for-field
+declarative schema, so it is the only honest de-para target — and emitting it as a
+**CloudFormation** template yields a lintable, deployable artifact you can produce
+and validate **without any AWS credential** (`cfn-lint <file>`).
+
+| DNA (source of truth) | Bedrock `AWS::Bedrock::Agent` | Notes |
+|---|---|---|
+| `metadata.name` | `Resources.<Id>Agent.Properties.AgentName` | logical id is CamelCased + `Agent` |
+| `metadata.description` | `Properties.Description` | verbatim (when present) |
+| **`Soul` + `Guardrail`s + `Agent.instruction`** (composed by `build_prompt`) | `Properties.Instruction` | **flat string** — carried **byte-equal** (identical to the agent-framework `instructions`) |
+| `Agent.spec.model` → else `Genome.spec.default_llm` | `Properties.FoundationModel` | DNA provider token stripped (`azure/gpt-4o` → `gpt-4o`); a Bedrock-native id / `arn:` passes through untouched |
+| `Agent.spec.tools[]` → `Tool` Kind | `Properties.ActionGroups[0].FunctionSchema.Functions[]` | one action group, one `Function` per tool; executor `CustomControl: RETURN_CONTROL` (client-side tools, no Lambda) |
+| `Tool.spec.input_schema.properties` | `Function.Parameters{ Type, Description, Required }` | flat map; `Type` ∈ `string\|number\|integer\|boolean\|array` |
+
+### What does **not** survive — Bedrock-specific
+
+On top of the three DNA-only axes above (composition structure / tenant overlay /
+eval-as-contract), the Bedrock target also drops:
+
+- **Tool parameter depth.** Bedrock `ParameterDetail` is a flat
+  `{Type, Description, Required}`; JSON-Schema `default`, `enum`, nested object
+  `properties`, and array `items` typing have no slot (a non-scalar type is
+  flattened to `string`).
+- **`output_schema`.** Bedrock Agent has no structured-response field.
+- **Model coordinate.** A DNA `azure/openai` coordinate is **not** a Bedrock
+  foundation-model id; a real deploy needs a Bedrock model id / inference-profile
+  ARN (pass `--model`) plus an `AgentResourceRoleArn`.
+
 ## The proof: it round-trips into the live runtime
 
 The emitted `instructions` is **byte-equal** to `mi.build_prompt(agent)`, and the
@@ -117,27 +188,28 @@ const mi = await quickInstance("concierge", ".dna");
 const result = await emitAgent(mi, "concierge", "agent-framework");
 ```
 
-## Adding a new target (bedrock / vertex / openai)
+## Adding a new target (vertex / openai / …)
 
 Targets are a **registry, not a hardcode** — a new one is a class + one call, and
-the CLI core never changes:
+the CLI core never changes. The two shipped emitters (`agent-framework`,
+`bedrock`) are the reference; a third looks identical:
 
 ```python
 from dna.emit import EmitContext, EmitResult, register_emitter
 
-class BedrockEmitter:
-    target = "bedrock"
+class VertexEmitter:
+    target = "vertex"
     file_extension = "json"
 
     def emit(self, ctx: EmitContext) -> EmitResult:
         # ctx is the runtime-agnostic view: ctx.instructions (the composed
         # prompt), ctx.model, ctx.tools, ctx.description, ctx.output_schema.
-        artifact = ...  # render Bedrock's Agent JSON
+        artifact = ...  # render the target's native artifact
         return EmitResult(artifact=artifact, target=self.target,
                           filename=f"{ctx.name}.json",
                           losses=[...], mapping={...})
 
-register_emitter(BedrockEmitter())
+register_emitter(VertexEmitter())
 ```
 
 An emitter is **pure**: it reads the neutral `EmitContext` and returns an

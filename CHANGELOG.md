@@ -11,6 +11,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Second runtime emitter — `dna emit --target bedrock`** (epic
+  `e-dna-portability`, feature `f-dna-emitters`, story `s-emit-bedrock`). The
+  portability thesis, *proven*: the **same** DNA agent that emits a Microsoft
+  agent-framework `PromptAgent` now also emits an AWS **CloudFormation**
+  `AWS::Bedrock::Agent` template — one definition, two runtimes, swapped without a
+  rewrite. Target chosen after investigating AWS's three agent surfaces (Bedrock
+  Agents / Strands / AgentCore): only **Bedrock Agents** has a published
+  *declarative* schema, and a CloudFormation artifact is lintable + deployable
+  with **no AWS credential**. The de-para is structural: `metadata.name`→
+  `AgentName`, `metadata.description`→`Description`, the composed prompt
+  (`build_prompt`)→`Instruction` (**byte-equal**, identical to the
+  agent-framework `instructions`), `spec.model`/Genome `default_llm`→
+  `FoundationModel` (DNA provider token stripped; Bedrock-native ids / ARNs pass
+  through), `spec.tools[]`→`ActionGroups[].FunctionSchema.Functions[]` with a flat
+  `Parameters{Type,Description,Required}` map and a `CustomControl: RETURN_CONTROL`
+  executor (client-side tools, no Lambda). Honest `losses` add the Bedrock-specific
+  drops: tool-parameter depth (`default`/`enum`/nested/`items`), `output_schema`,
+  and the model coordinate. Plugged into the existing `EmitterPort` registry — the
+  CLI core is unchanged. Python + TypeScript parity on the emitted template object;
+  the `examples/emitting-to-a-runtime` example now documents both runtimes.
+
 ## [0.7.0] - 2026-07-11
 
 ### Added

@@ -76,6 +76,7 @@ export type {
   BuildEmitContextOpts,
 } from "./emit/index.js";
 export { AgentFrameworkEmitter } from "./emit/agentFramework.js";
+export { BedrockEmitter } from "./emit/bedrock.js";
 export type { LoadPromptsOptions } from "./prompts.js";
 export { anchorScopesRoot, PackageScopeNotFound, DEFAULT_SUBPATH } from "./package-scope.js";
 export { loadConfig, findConfig, CONFIG_FILENAME } from "./config.js";

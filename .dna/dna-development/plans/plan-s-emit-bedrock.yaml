@@ -1,0 +1,41 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-emit-bedrock
+spec:
+  title: 'Plano: s-emit-bedrock'
+  date: '2026-07-11'
+  status: accepted
+  story_ref: s-emit-bedrock
+  journey_phase: plan
+  body: "# Plan \u2014 s-emit-bedrock (DNA \u2192 Amazon Bedrock Agent emitter)\n\n\
+    ## Target choice\nEmit **AWS::Bedrock::Agent** as a CloudFormation template (JSON).\
+    \ Rationale: of the\nthree AWS options \u2014 Bedrock Agents (managed, declarative),\
+    \ Strands (code-first),\nAgentCore (a hosting runtime) \u2014 only Bedrock Agents\
+    \ has a clean, published\ndeclarative schema (Instruction / FoundationModel /\
+    \ ActionGroups+FunctionSchema)\nthat maps field-for-field from a DNA agent. Strands\
+    \ is code, AgentCore hosts a\nframework \u2014 neither is a declarative de-para\
+    \ target. CloudFormation gives a\nlintable, credential-free artifact.\n\n## The\
+    \ de-para (structural, parity Py<->TS on the emitted object)\n- metadata.name\
+    \            -> Resources.<CamelId>Agent.Properties.AgentName\n- metadata.description\
+    \      -> Properties.Description (when present)\n- build_prompt (Soul+guardrails+instruction)\
+    \ -> Properties.Instruction (BYTE-EQUAL gate)\n- spec.model / Genome default_llm\
+    \ -> Properties.FoundationModel (provider token stripped)\n- spec.tools[] (Tool\
+    \ Kind)  -> Properties.ActionGroups[0].FunctionSchema.Functions[]\n    - Tool.name/description\
+    \  -> Function.Name/Description\n    - input_schema.properties-> Function.Parameters{\
+    \ name: {Type,Description,Required} }\n    - ActionGroupExecutor    -> {CustomControl:\
+    \ RETURN_CONTROL} (client-side tools, no Lambda)\n\n## Losses (reported, not hidden)\n\
+    composition structure; tenant overlay; eval-as-contract; tool param schema DEPTH\n\
+    (Bedrock ParameterDetail is flat Type in {string,number,integer,boolean,array};\
+    \ default/\nenum/nested/items dropped); output_schema (no Bedrock response-schema\
+    \ slot); model\ncoordinate (azure/openai coord is not a Bedrock model id \u2014\
+    \ deploy needs a Bedrock\nfoundation-model / inference-profile ARN + AgentResourceRoleArn).\n\
+    \n## Proof\n- Py + TS emit-bedrock tests: byte-equal Instruction, structural de-para,\
+    \ honest\n  losses, registry additivity, and a credential-free structural validator\
+    \ against\n  the documented AWS::Bedrock::Agent schema (required keys, name patterns,\
+    \ enum\n  param Types). Py<->TS parity on the emitted template object.\n- Example\
+    \ extended: same concierge -> agent-framework AND bedrock (2 runtimes,\n  1 source\
+    \ \u2014 the portability proof).\n- Docs guide + CHANGELOG. TestGuide --product\
+    \ + TestRun. PR base main, 11/11 CI.\n"
+  created_at: '2026-07-11T13:33:10+00:00'
+  updated_at: '2026-07-11T13:33:10+00:00'
