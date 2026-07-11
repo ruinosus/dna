@@ -380,6 +380,28 @@ content in a UI without code review. It doubles as the reference example
 of a narrow domain Kind carried by an extension: your equivalent might be
 `Recipe` or `Workout`.
 
+## DNA Cloud
+
+### Tier
+
+A [`Tier`](../reference/kinds/record.md#tier) (`cloud-tier`) declares one
+DNA Cloud pricing plan as data: its hard caps (`calls_per_day`,
+`rate_per_sec`, `max_tenants`), the feature families it unlocks
+(definitions / sdlc / memory / emit), `memory_mode`, and price. The hosted
+MCP server resolves a request's tier and enforces the caps at the same seam
+that binds a token to a tenant — so changing a limit is a file edit, not a
+redeploy. Free and Pro ship as seed docs.
+
+### TenantPlan
+
+A [`TenantPlan`](../reference/kinds/record.md#tenantplan)
+(`cloud-tenant-plan`) maps a DNA tenant to its current `Tier` — the
+billing→enforcement bridge. DNA Cloud's Stripe webhook writes it on
+subscribe / cancel; the MCP server reads it via `kernel.tenant_plan(tenant)`
+to resolve a tenant's plan when the token carries no explicit `plan` claim
+(falling back to Free). Zero Stripe or billing code lives in the OSS SDK —
+it only reads the assignment.
+
 ---
 
 Run `dna kind list` for the live registry in your install, and `dna kind

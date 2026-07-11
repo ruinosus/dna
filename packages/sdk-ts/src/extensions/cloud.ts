@@ -1,9 +1,9 @@
 /**
- * CloudExtension — DNA Cloud pricing-tier registry.
+ * CloudExtension — DNA Cloud pricing + billing→enforcement registry.
  *
  * 1:1 parity with Python `dna.extensions.cloud`.
  *
- * Registers 1 Kind, from a descriptor (F3 — record Kinds are data, not
+ * Registers 2 Kinds, from descriptors (F3 — record Kinds are data, not
  * classes):
  *
  *   - Tier (`cloud-tier`) — one DNA Cloud plan's hard caps
@@ -12,6 +12,11 @@
  *     are project data, not implicit knowledge. NOT named `Plan` — that
  *     alias belongs to the SDLC implementation-plan Kind; a pricing plan is
  *     a Tier. Free / Pro / Enterprise are tiers.
+ *   - TenantPlan (`cloud-tenant-plan`) — the tenant→Tier assignment: which
+ *     Tier a given tenant is currently on. The billing→enforcement bridge:
+ *     dna-cloud's Stripe webhook writes it on subscribe/cancel; the MCP
+ *     server reads it via `kernel.tenantPlan(tenant)` when a token carries no
+ *     explicit plan claim. The OSS SDK only READS — zero Stripe/billing code.
  *
  * CONTRACT — never hardcode caps. The single source of truth for a plan's
  * limits is its Tier doc (`_lib` scope, `tiers/<tier_id>.yaml`), resolved

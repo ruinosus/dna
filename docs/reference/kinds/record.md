@@ -1162,6 +1162,27 @@ A Task is a granular work item (horas-dias) typically as sub-item of a Story. Fo
 | `title` | string | yes |  |
 | `updated_at` | string |  |  |
 
+## TenantPlan
+
+- **Alias:** `cloud-tenant-plan`
+- **apiVersion:** `github.com/ruinosus/dna/cloud/v1`
+- **Plane:** record
+
+A TenantPlan maps one DNA tenant to its current Tier as GLOBAL declarative data, so enforcement follows billing state without a redeploy. dna-cloud's Stripe webhook writes it on subscribe/cancel; the MCP server reads it via kernel.tenant_plan(tenant) when the token carries no explicit plan claim — zero Stripe/billing code lives in the OSS SDK, which only reads the assignment.
+
+**Spec fields**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `notes` | string \| null |  | Free-form operator notes. |
+| `source` | string |  | Where the assignment came from, e.g. stripe / manual / trial. |
+| `status` | string |  | The billing status of the assignment, e.g. active / past_due / canceled. |
+| `stripe_customer_id` | string |  | The Stripe customer id backing the assignment (dna-cloud writes it; the OSS SDK never calls Stripe). |
+| `stripe_subscription_id` | string |  | The Stripe subscription id backing the assignment (dna-cloud writes it; the OSS SDK never calls Stripe). |
+| `tenant` | string | yes | The DNA tenant this assignment is for. The doc name SHOULD equal the tenant; kernel.tenant_plan() matches on this field. |
+| `tier_id` | string | yes | The assigned Tier's id, e.g. free, pro, enterprise. Resolved to caps via kernel.tier(tier_id) — never a literal in code. |
+| `updated_at` | string |  | When dna-cloud last wrote this assignment (ISO 8601). |
+
 ## Tier
 
 - **Alias:** `cloud-tier`

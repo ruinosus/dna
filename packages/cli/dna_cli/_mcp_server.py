@@ -415,6 +415,7 @@ def build_server(
         CrossTenantError,
         enforce_tenant_from_context,
         enforce_tier_from_context,
+        token_has_explicit_plan_claim,
         token_present_in_context,
     )
     from dna_cli._mcp_quota import (
@@ -441,8 +442,15 @@ def build_server(
            its caps from the ``Tier`` Kind via ``kernel.tier`` (zero hardcoded
            caps), and meter this call's ``family`` against them.
 
-        Empty-caps fallback: if the token names a tier with no ``Tier`` doc, fall
-        back to the ``free`` doc (the Free floor); if THAT is also absent (no tiers
+        Tier resolution order — **token plan claim → TenantPlan store → Free**:
+        an explicit ``plan`` claim on the token WINS (the store is not consulted);
+        otherwise the billing→enforcement bridge looks up the tenant's assigned
+        Tier from the ``TenantPlan`` Kind (``kernel.tenant_plan`` — which
+        dna-cloud's Stripe webhook writes) and uses its ``tier_id``; only if there
+        is no TenantPlan either does it fall to the Free floor.
+
+        Empty-caps fallback: if the resolved tier names no ``Tier`` doc, fall back
+        to the ``free`` doc (the Free floor); if THAT is also absent (no tiers
         configured at all = an OSS / unconfigured source) enforce nothing — never
         block a source that never opted into DNA Cloud pricing.
         """
@@ -450,8 +458,15 @@ def build_server(
         if not token_present_in_context():
             return tenant  # stdio / local → identity, no metering.
 
-        tier = enforce_tier_from_context()
         kernel = (await _live()).kernel
+        tier = enforce_tier_from_context()
+        # Bridge: a token WITHOUT an explicit plan claim consults the TenantPlan
+        # store (Stripe-written) before the Free floor. An explicit claim wins.
+        if tenant and not token_has_explicit_plan_claim():
+            plan = await kernel.tenant_plan(tenant)
+            store_tier = ((plan or {}).get("spec") or {}).get("tier_id")
+            if store_tier:
+                tier = store_tier
         row = await kernel.tier(tier)
         if row is None:
             row = await kernel.tier("free")  # unknown tier → Free floor.

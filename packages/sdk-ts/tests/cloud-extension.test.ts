@@ -140,3 +140,88 @@ describe("kernel.tier — caps come from the doc", () => {
     expect(((await k.tier("free"))!.spec as any).calls_per_day).toBe(250);
   });
 });
+
+// ---------------------------------------------------------------------------
+// TenantPlan Kind + kernel.tenantPlan — the billing→enforcement bridge. The
+// assignment lives in a TenantPlan DOC (which dna-cloud's Stripe webhook writes);
+// the SDK only reads it. TS twin of tests/test_cloud_tenant_plan_kind.py.
+// ---------------------------------------------------------------------------
+
+describe("TenantPlan Kind (descriptor)", () => {
+  it("registers from kinds/tenant-plan.kind.yaml", () => {
+    const k = new Kernel();
+    k.load(new CloudExtension());
+    const kp = k.kindPortFor("TenantPlan");
+    expect(kp).not.toBeNull();
+    expect(kp!.alias).toBe("cloud-tenant-plan");
+    expect((kp as any).plane).toBe("record");
+    // GLOBAL — a shared base registry, no per-tenant override.
+    expect((kp as any).scope).toBe(TenantScope.GLOBAL);
+    expect(kp!.storage.container).toBe("tenant-plans");
+  });
+
+  it("registers both Tier and TenantPlan, never Plan", () => {
+    const k = new Kernel();
+    k.load(new CloudExtension());
+    expect(k.kindPortFor("Tier")).not.toBeNull();
+    expect(k.kindPortFor("TenantPlan")).not.toBeNull();
+    expect(k.kindPortFor("Plan")).toBeNull();
+  });
+});
+
+function tenantPlanRaw(tenant: string, tierId: string) {
+  return {
+    apiVersion: "github.com/ruinosus/dna/cloud/v1",
+    kind: "TenantPlan",
+    metadata: { name: tenant },
+    spec: { tenant, tier_id: tierId, source: "stripe", status: "active" },
+  };
+}
+
+function tenantPlanKernel(): { k: Kernel; libDocs: unknown[] } {
+  const libDocs: unknown[] = [tenantPlanRaw("acme", "pro")];
+  const src: any = {
+    async saveDocument() { return "v1"; },
+    async deleteDocument() {},
+    async loadBootstrapDocs() { return []; },
+    async loadDocument() { return null; },
+    async loadAll(scope: string) { return scope === "_lib" ? libDocs : []; },
+    async loadLayer() { return []; },
+    async listVersions() { return []; },
+    async listScopes() { return ["_lib"]; },
+  };
+  const k = new Kernel();
+  k.load(new CloudExtension());
+  k.source(src);
+  k.writableSource(src);
+  k.cache({
+    has: async () => false,
+    store: async () => {},
+    loadKey: async () => [],
+    loadAll: async () => [],
+  } as any);
+  return { k, libDocs };
+}
+
+describe("kernel.tenantPlan — the assignment comes from the doc", () => {
+  it("resolves a tenant to its assigned tier_id", async () => {
+    const { k } = tenantPlanKernel();
+    const plan = await k.tenantPlan("acme");
+    expect(plan).not.toBeNull();
+    expect((plan!.spec as any).tier_id).toBe("pro");
+    expect((plan!.spec as any).tenant).toBe("acme");
+  });
+
+  it("returns null for an unknown tenant (guard falls to Free floor)", async () => {
+    const { k } = tenantPlanKernel();
+    expect(await k.tenantPlan("globex")).toBeNull();
+  });
+
+  it("assignment is data, not code — rewriting the doc changes the re-read", async () => {
+    const { k, libDocs } = tenantPlanKernel();
+    expect(((await k.tenantPlan("acme"))!.spec as any).tier_id).toBe("pro");
+    // dna-cloud's Stripe webhook downgrades acme to free on cancel — a data edit.
+    (libDocs[0] as any).spec.tier_id = "free";
+    expect(((await k.tenantPlan("acme"))!.spec as any).tier_id).toBe("free");
+  });
+});
