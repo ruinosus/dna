@@ -1,0 +1,82 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-cite-any-citable-kind
+spec:
+  title: "dna sdlc cite aceita qualquer Kind cit\xE1vel (n\xE3o s\xF3 Reference)"
+  description: "Generaliza o resolvedor de cita\xE7\xE3o: cite <Kind>/<name> --from\
+    \ <Kind>/<name>. Mant\xE9m bidirecionalidade (o citado ganha cited_by). Sem\xE2\
+    ntica: produces=output autorado, cite=fonte que fundamenta."
+  status: in-progress
+  feature: f-dna-sdlc-expressiveness
+  acceptance_criteria:
+  - "dna sdlc cite Research/<name> --from ADR/<name> (ou Epic) funciona e o v\xED\
+    nculo aparece nos dois lados"
+  - "cita\xE7\xE3o de bare-name continua defaultando pra Reference (backwards-compat)"
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - Teste automatizado travando cite cross-Kind + bidirecionalidade; Research ganha
+    campo cited_by (Py+TS parity); docs/help atualizados; suites verdes
+  definition_of_done_source: cli-create
+  created_at: '2026-07-11T13:33:03+00:00'
+  updated_at: '2026-07-11T13:47:21+00:00'
+  timeline:
+  - at: '2026-07-11T13:33:03+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-11T13:33:20+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-11T13:46:21+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Implementei: generalizei cmd_cite/cmd_uncite pra aceitar <Kind>/<name>\
+      \ no alvo citado (bare-name \u2192 Reference, compat). Bidirecionalidade preservada:\
+      \ o citado ganha spec.cited_by, o caller ganha spec.references (qualificado\
+      \ pra cross-Kind, bare pra Reference). Sem\xE2ntica gravada no help: cite=fonte\
+      \ que fundamenta, produces=output autorado. Research ganhou campo cited_by (Py+TS\
+      \ parity)."
+    commit_ref: f0aa9c7c3ba9eb8142fd4f5b5789f95313771a5e
+  - at: '2026-07-11T13:46:24+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Provado ao vivo: 'dna sdlc cite Research/research-cite-smoke --from\
+      \ ADR/adr-cite-smoke' \u2192 ADR.references=[Research/...] e Research.cited_by=[ADR/...].\
+      \ Bare-name 'cite ref-smoke --from ADR/...' \u2192 Reference default, ref bare\
+      \ no caller. Teste automatizado em test_sdlc_correctness.py (4 casos)."
+    commit_ref: f0aa9c7c3ba9eb8142fd4f5b5789f95313771a5e
+  - at: '2026-07-11T13:46:50+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-cite-any-citable-kind
+    summary: TestGuide tg-cite-any-citable-kind (smoke)
+  - at: '2026-07-11T13:47:21+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-cite-any-citable-kind-20260711-134719
+    summary: "TestRun tr-tg-cite-any-citable-kind-20260711-134719 \u2192 pass"
+    outcome: pass
+  produces:
+  - kind: Plan
+    name: plan-s-cite-any-citable-kind
+    role: implementation
+    at: '2026-07-11T13:33:20+00:00'
+  - kind: TestGuide
+    name: tg-cite-any-citable-kind
+    role: test-guide
+    at: '2026-07-11T13:46:50+00:00'
+  - kind: TestRun
+    name: tr-tg-cite-any-citable-kind-20260711-134719
+    role: test-run
+    at: '2026-07-11T13:47:21+00:00'

@@ -66,6 +66,13 @@ class _FakeSession:
         raw = self._store.get((self.scope, kind, name))
         return _FakeDocView(raw) if raw is not None else None
 
+    def query_list(self, kind, *, tenant=None):
+        return [
+            _FakeDocView(raw)
+            for (sc, kd, _nm), raw in self._store.items()
+            if sc == self.scope and kd == kind
+        ]
+
     def run(self, coro):
         import asyncio
 

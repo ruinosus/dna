@@ -179,8 +179,11 @@ Stories) · `spike` (investigation arc: comment → answer with findings +
 follow-up) · `adr` / `spec` / `plan` (design docs, ADR-style statuses) ·
 `kaizen` (continuous-improvement observations) · `journey` (phase ledger —
 derived; rarely needs manual writes) · `demand` (Story + journey-discover
-in one shot) · `produces` / `cite` (link artifacts / sources) ·
-`changelog` (release notes per scope) · `extract-decisions` (mine timelines).
+in one shot) · `produces` (link an **output** the work authored) / `cite`
+(link a **source** that grounds the work — `cite <Kind>/<name> --from
+<Kind>/<name>`, any citable Kind: Research, ADR, Reference, …; bidirectional,
+the cited doc gains `cited_by`) · `changelog` (release notes per scope) ·
+`extract-decisions` (mine timelines).
 
 ## When NOT to use this skill
 

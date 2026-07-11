@@ -1,0 +1,19 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-cite-any-citable-kind
+spec:
+  title: 'Plano: s-cite-any-citable-kind'
+  date: '2026-07-11'
+  status: accepted
+  story_ref: s-cite-any-citable-kind
+  journey_phase: plan
+  body: "1. Generalizar cmd_cite: ref_name aceita <Kind>/<name>; bare-name \u2192\
+    \ Reference (compat). 2. Resolver o doc citado por seu Kind; append cited_by no\
+    \ citado (qualquer Kind, additionalProperties=True). 3. Caller ganha references\
+    \ (j\xE1 gen\xE9rico). 4. uncite sim\xE9trico. 5. Add campo cited_by ao schema\
+    \ Research (Py+TS parity) pra honestidade/discoverability. 6. Teste: cite Research\
+    \ a partir de ADR/Epic \u2192 v\xEDnculo nos dois lados; bare-name\u2192Reference\
+    \ compat. 7. Docs/help."
+  created_at: '2026-07-11T13:33:16+00:00'
+  updated_at: '2026-07-11T13:33:16+00:00'

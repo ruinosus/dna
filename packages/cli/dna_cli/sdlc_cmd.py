@@ -2768,8 +2768,21 @@ def cmd_epic_show(name: str, scope: str) -> None:
         if pkg:
             click.echo(f"  target: {pkg}@{ver}" if ver else f"  target: {pkg}")
 
-        feature_names = ms.spec.get("features", []) or []
-        if not feature_names:
+        # Reverse-lookup features by Feature.spec.epic — the forward
+        # Epic.spec.features[] list is never populated (`feature create
+        # --epic X` maintains only the back-ref), so reading it showed
+        # "(no features linked)" even for correctly-linked features
+        # (s-epic-show-forward-features). The back-ref is the single source
+        # of truth; mirrors how `feature show` finds stories by
+        # Story.spec.feature. One scan, sorted by name for stable output.
+        features = sorted(
+            (
+                f for f in s.query_list("Feature")
+                if isinstance(f.spec, dict) and f.spec.get("epic") == name
+            ),
+            key=lambda f: f.name,
+        )
+        if not features:
             click.secho("\n  (no features linked)", fg="yellow")
             return
 
@@ -2788,11 +2801,8 @@ def cmd_epic_show(name: str, scope: str) -> None:
         click.secho("\nFeatures:", fg="yellow")
         total_stories = 0
         done_stories = 0
-        for fn in feature_names:
-            f = s.get_doc("Feature", fn)
-            if f is None:
-                click.echo(f"  • {fn} (orphan ref)")
-                continue
+        for f in features:
+            fn = f.name
             f_status = f.spec.get("status", "?")
             children = stories_by_feature.get(fn, [])
             f_total = len(children)
@@ -3069,17 +3079,31 @@ def cmd_epic_ship(name: str, scope: str) -> None:
         s.run(s.kernel.write_document(scope, "Epic", name, raw))
         click.secho(f"DONE Epic/{name}", fg="green", bold=True)
 
-        cascade = []
-        for fn in spec.get("features", []) or []:
-            f = s.get_doc("Feature", fn)
-            if f is None or f.spec.get("status") == "done":
+        # Reverse-lookup features (by Feature.spec.epic) and their stories
+        # (by Story.spec.feature) — the forward Epic.spec.features[] /
+        # Feature.spec.stories[] lists are never populated, so the old
+        # forward-link cascade silently closed nothing
+        # (s-epic-show-forward-features). Back-refs are the single source
+        # of truth; mirrors `epic show`.
+        stories_by_feature: dict[str, list[Any]] = {}
+        for st in s.query_list("Story"):
+            if not isinstance(st.spec, dict):
                 continue
-            story_names = f.spec.get("stories", []) or []
-            all_done = all(
-                (st := s.get_doc("Story", sn)) and st.spec.get("status") == "done"
-                for sn in story_names
+            fref = st.spec.get("feature")
+            if fref:
+                stories_by_feature.setdefault(fref, []).append(st)
+        cascade = []
+        for f in s.query_list("Feature"):
+            if not isinstance(f.spec, dict) or f.spec.get("epic") != name:
+                continue
+            fn = f.name
+            if f.spec.get("status") == "done":
+                continue
+            children = stories_by_feature.get(fn, [])
+            all_done = bool(children) and all(
+                st.spec.get("status") == "done" for st in children
             )
-            if all_done and story_names:
+            if all_done:
                 f_spec = dict(f.spec)
                 f_spec["status"] = "done"
                 f_spec["closed_at"] = _now_iso()
@@ -5362,76 +5386,114 @@ def cmd_reference_show(name: str, scope: str) -> None:
         click.echo(f"             - {c}")
 
 
+# Bare-name citations default to the Reference Kind (backwards-compat with
+# the original Reference-only `cite`). A `<Kind>/<name>` cited target is
+# resolved as-is — any citable Kind (Research, ADR, Reference, ...).
+_CITE_DEFAULT_KIND = "Reference"
+
+
+def _split_cited(target: str) -> tuple[str, str]:
+    """Parse a cited target — ``<Kind>/<name>`` or a bare ``<name>`` that
+    defaults to Reference. Semantics: `cite` records a SOURCE that grounds
+    the caller (vs `produces` = an output the caller authored)."""
+    if "/" in target:
+        kind, name = target.split("/", 1)
+        return kind, name
+    return _CITE_DEFAULT_KIND, target
+
+
 @sdlc.command("cite")
-@click.argument("ref_name")
+@click.argument("cited")
 @click.option("--from", "from_ref", required=True,
-              help="Kind/name of the doc that cites this reference (e.g. Spec/2026-05-12-foo).")
+              help="Kind/name of the doc that cites this source (e.g. ADR/0007-emit).")
 @_scope_option
-def cmd_cite(ref_name: str, from_ref: str, scope: str) -> None:
-    """Bidirectional citation: adds ref_name to caller.spec.references AND
-    adds caller_ref to Reference.spec.cited_by."""
+def cmd_cite(cited: str, from_ref: str, scope: str) -> None:
+    """Bidirectional citation between any two Kinds.
+
+    CITED is the source that grounds the caller — ``<Kind>/<name>`` (e.g.
+    ``Research/dna-portability`` or ``ADR/0007``) or a bare ``<name>`` that
+    defaults to a Reference. Adds ``cited`` to caller.spec.references AND
+    adds the caller ref to the cited doc's spec.cited_by (the back-ref).
+
+    `cite` = a source that FUNDAMENTA the work; `produces` = an output the
+    work AUTHORED. Any Kind with a flexible spec gains ``cited_by`` on the
+    cited side and ``references`` on the caller side.
+    """
     if "/" not in from_ref:
-        click.secho("--from must be Kind/name (e.g. Spec/2026-05-12-foo)", fg="red")
+        click.secho("--from must be Kind/name (e.g. ADR/0007-emit)", fg="red")
         sys.exit(2)
+    cited_kind, cited_name = _split_cited(cited)
+    cited_ref = f"{cited_kind}/{cited_name}"
     caller_kind, caller_name = from_ref.split("/", 1)
     with dna_session(scope) as s:
-        ref_doc = s.get_doc("Reference", ref_name)
-        if not ref_doc:
-            click.secho(f"Reference/{ref_name} not found", fg="red")
+        cited_doc = s.get_doc(cited_kind, cited_name)
+        if not cited_doc:
+            click.secho(f"{cited_ref} not found", fg="red")
             sys.exit(2)
         caller_doc = s.get_doc(caller_kind, caller_name)
         if not caller_doc:
             click.secho(f"{caller_kind}/{caller_name} not found", fg="red")
             sys.exit(2)
-        # Update Reference.spec.cited_by
-        rspec = dict(ref_doc.spec) if isinstance(ref_doc.spec, dict) else {}
+        # Back-ref: cited.spec.cited_by += caller_ref (any Kind — SDLC specs
+        # carry additionalProperties, so the field persists even when the
+        # Kind doesn't declare it explicitly).
+        rspec = dict(cited_doc.spec) if isinstance(cited_doc.spec, dict) else {}
         cited_by = list(rspec.get("cited_by") or [])
         if from_ref not in cited_by:
             cited_by.append(from_ref)
             rspec["cited_by"] = cited_by
             rspec["updated_at"] = _now_iso()
-            rraw = _build_raw("Reference", ref_name, rspec)
-            s.run(s.kernel.write_document(scope, "Reference", ref_name, rraw))
-        # Update caller.spec.references
+            rraw = _build_raw(cited_kind, cited_name, rspec)
+            s.run(s.kernel.write_document(scope, cited_kind, cited_name, rraw))
+        # Forward: caller.spec.references += cited_ref. Bare Reference names
+        # stay bare (compat); cross-Kind citations store the qualified ref.
+        forward = cited_name if cited_kind == _CITE_DEFAULT_KIND else cited_ref
         cspec = dict(caller_doc.spec) if isinstance(caller_doc.spec, dict) else {}
         refs = list(cspec.get("references") or [])
-        if ref_name not in refs:
-            refs.append(ref_name)
+        if forward not in refs:
+            refs.append(forward)
             cspec["references"] = refs
             cspec["updated_at"] = _now_iso()
             craw = _build_raw(caller_kind, caller_name, cspec)
             s.run(s.kernel.write_document(scope, caller_kind, caller_name, craw))
-    click.secho(f"CITED Reference/{ref_name} ← {from_ref}", fg="green")
+    click.secho(f"CITED {cited_ref} ← {from_ref}", fg="green")
 
 
 @sdlc.command("uncite")
-@click.argument("ref_name")
+@click.argument("cited")
 @click.option("--from", "from_ref", required=True)
 @_scope_option
-def cmd_uncite(ref_name: str, from_ref: str, scope: str) -> None:
-    """Symmetric removal of a citation link."""
+def cmd_uncite(cited: str, from_ref: str, scope: str) -> None:
+    """Symmetric removal of a citation link (any Kind)."""
     if "/" not in from_ref:
         click.secho("--from must be Kind/name", fg="red")
         sys.exit(2)
+    cited_kind, cited_name = _split_cited(cited)
+    cited_ref = f"{cited_kind}/{cited_name}"
+    forward = cited_name if cited_kind == _CITE_DEFAULT_KIND else cited_ref
     caller_kind, caller_name = from_ref.split("/", 1)
     with dna_session(scope) as s:
-        ref_doc = s.get_doc("Reference", ref_name)
+        cited_doc = s.get_doc(cited_kind, cited_name)
         caller_doc = s.get_doc(caller_kind, caller_name)
-        if ref_doc:
-            rspec = dict(ref_doc.spec) if isinstance(ref_doc.spec, dict) else {}
+        if cited_doc:
+            rspec = dict(cited_doc.spec) if isinstance(cited_doc.spec, dict) else {}
             cited_by = [c for c in (rspec.get("cited_by") or []) if c != from_ref]
             rspec["cited_by"] = cited_by
             rspec["updated_at"] = _now_iso()
-            rraw = _build_raw("Reference", ref_name, rspec)
-            s.run(s.kernel.write_document(scope, "Reference", ref_name, rraw))
+            rraw = _build_raw(cited_kind, cited_name, rspec)
+            s.run(s.kernel.write_document(scope, cited_kind, cited_name, rraw))
         if caller_doc:
             cspec = dict(caller_doc.spec) if isinstance(caller_doc.spec, dict) else {}
-            refs = [r for r in (cspec.get("references") or []) if r != ref_name]
+            # Tolerate either the bare or qualified form in the caller's list.
+            refs = [
+                r for r in (cspec.get("references") or [])
+                if r not in (forward, cited_ref, cited_name)
+            ]
             cspec["references"] = refs
             cspec["updated_at"] = _now_iso()
             craw = _build_raw(caller_kind, caller_name, cspec)
             s.run(s.kernel.write_document(scope, caller_kind, caller_name, craw))
-    click.secho(f"UNCITED Reference/{ref_name} ← {from_ref}", fg="yellow")
+    click.secho(f"UNCITED {cited_ref} ← {from_ref}", fg="yellow")
 
 
 # ─────────────────────────────────────────────────────────────────

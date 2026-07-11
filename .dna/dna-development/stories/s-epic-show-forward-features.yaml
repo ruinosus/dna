@@ -1,0 +1,80 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-epic-show-forward-features
+spec:
+  title: epic show resolve features via reverse-lookup (feature.spec.epic)
+  description: "epic show lia epic.spec.features[] (nunca populado por feature create\
+    \ --epic) \u2192 '(no features linked)'. Conserta via reverse-lookup por feature.spec.epic,\
+    \ espelhando feature show. Fonte \xFAnica = o back-ref; N\xC3O popular o forward."
+  status: in-progress
+  feature: f-dna-sdlc-expressiveness
+  acceptance_criteria:
+  - dna sdlc epic show e-dna-portability lista as 4 features + burndown
+  - "reverse-lookup \xE9 a fonte \xFAnica \u2014 forward link n\xE3o \xE9 populado"
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - "Teste travando o comportamento (features aparecem sem forward link); paridade\
+    \ Py\u2194TS se rollup existir nos dois; suites verdes"
+  definition_of_done_source: cli-create
+  created_at: '2026-07-11T13:33:05+00:00'
+  updated_at: '2026-07-11T13:47:27+00:00'
+  timeline:
+  - at: '2026-07-11T13:33:05+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-11T13:33:33+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-11T13:46:26+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Implementei: cmd_epic_show resolve features por reverse-lookup (feature.spec.epic\
+      \ == epic) em vez do forward epic.spec.features[] nunca populado. Forward N\xC3\
+      O \xE9 populado (fonte \xFAnica = back-ref). Consertei o mesmo latent bug no\
+      \ cmd_epic_ship (cascade-close via reverse-lookup de features+stories)."
+    commit_ref: f0aa9c7c3ba9eb8142fd4f5b5789f95313771a5e
+  - at: '2026-07-11T13:46:29+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'Provado ao vivo: ''dna sdlc epic show e-dna-portability'' agora lista
+      as 4 features (f-dna-emitters, f-oracle-agent-spec, f-dna-sdlc-expressiveness,
+      f-foundry-emit-adoption) + Burndown 2/5 (40%). Antes: ''(no features linked)''.
+      Teste automatizado trava o comportamento (features via back-ref sem forward
+      link).'
+    commit_ref: f0aa9c7c3ba9eb8142fd4f5b5789f95313771a5e
+  - at: '2026-07-11T13:46:55+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-epic-show-forward-features
+    summary: TestGuide tg-epic-show-forward-features (smoke)
+  - at: '2026-07-11T13:47:27+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-epic-show-forward-features-20260711-134724
+    summary: "TestRun tr-tg-epic-show-forward-features-20260711-134724 \u2192 pass"
+    outcome: pass
+  produces:
+  - kind: Plan
+    name: plan-s-epic-show-forward-features
+    role: implementation
+    at: '2026-07-11T13:33:33+00:00'
+  - kind: TestGuide
+    name: tg-epic-show-forward-features
+    role: test-guide
+    at: '2026-07-11T13:46:55+00:00'
+  - kind: TestRun
+    name: tr-tg-epic-show-forward-features-20260711-134724
+    role: test-run
+    at: '2026-07-11T13:47:27+00:00'
