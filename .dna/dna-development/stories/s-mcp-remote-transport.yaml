@@ -13,7 +13,7 @@ spec:
     \ a transport. The MVP stays stdio (local: Claude Code/Cursor/Copilot); this makes\
     \ the SAME server reachable over HTTP. Verified against current FastMCP docs (gofastmcp.com):\
     \ Streamable HTTP is the current standard remote transport (MCP spec 2025-06-18)."
-  status: todo
+  status: in-progress
   feature: f-dna-mcp-server
   priority: medium
   labels:
@@ -35,10 +35,56 @@ spec:
     Client; CI green'
   definition_of_done_source: cli-create
   created_at: '2026-07-11T14:43:35+00:00'
-  updated_at: '2026-07-11T14:43:35+00:00'
+  updated_at: '2026-07-11T15:49:00+00:00'
   timeline:
   - at: '2026-07-11T14:43:35+00:00'
     actor: claude-code
     type: status_change
     source: cli
     to: todo
+  - at: '2026-07-11T15:30:58+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-11T15:47:21+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-mcp-remote-transport
+    summary: TestGuide tg-mcp-remote-transport (integration)
+  - at: '2026-07-11T15:48:11+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-mcp-remote-transport-20260711-154807
+    summary: "TestRun tr-tg-mcp-remote-transport-20260711-154807 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-11T15:49:00+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Built: expanded 'dna mcp serve --transport' to stdio|http|sse|streamable-http\
+      \ + added --host/--port/--path (FastMCP-native Streamable HTTP, MCP spec 2025-06-18).\
+      \ Same server, both transports. Proof: test_mcp_transport.py drives a FastMCP\
+      \ Client over a REAL http:// socket (uvicorn on a free port, clean shutdown\
+      \ harness in conftest) \u2014 reaches all 10 tools + the manifest resource and\
+      \ composes a prompt live. Web-client config (Claude web/ChatGPT) documented\
+      \ in the guide. All 27 MCP tests + 474 CLI suite green; mkdocs --strict clean."
+    commit_ref: 1a2601995f3612069fe51308a1e800a96fea6041
+  produces:
+  - kind: Plan
+    name: plan-s-mcp-remote-transport
+    role: implementation
+    at: '2026-07-11T15:30:58+00:00'
+  - kind: TestGuide
+    name: tg-mcp-remote-transport
+    role: test-guide
+    at: '2026-07-11T15:47:21+00:00'
+  - kind: TestRun
+    name: tr-tg-mcp-remote-transport-20260711-154807
+    role: test-run
+    at: '2026-07-11T15:48:11+00:00'

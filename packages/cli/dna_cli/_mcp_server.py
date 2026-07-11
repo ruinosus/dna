@@ -125,9 +125,12 @@ def _prompt_target_kinds(mi: Any) -> set[str]:
     return kinds
 
 
-async def list_agents_impl(live: LiveDna, scope: str | None = None) -> dict[str, Any]:
-    """List the prompt-target agents (Agent/UtilityAgent/…) in ``scope``."""
-    mi = await live.mi(scope)
+async def list_agents_impl(
+    live: LiveDna, scope: str | None = None, tenant: str | None = None
+) -> dict[str, Any]:
+    """List the prompt-target agents (Agent/UtilityAgent/…) in ``scope``,
+    tenant-aware when ``tenant`` is set (the auth bridge injects it)."""
+    mi = await live.mi(scope, tenant)
     targets = _prompt_target_kinds(mi)
     agents: list[dict[str, Any]] = []
     for d in mi.documents:
@@ -160,31 +163,35 @@ def _tool_surface(row: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-async def _tool_rows(live: LiveDna, scope: str) -> list[dict[str, Any]]:
+async def _tool_rows(
+    live: LiveDna, scope: str, tenant: str | None = None
+) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
-    async for row in live.kernel.query(scope, "Tool"):
+    async for row in live.kernel.query(scope, "Tool", tenant=tenant):
         if isinstance(row, dict):
             rows.append(row)
     return rows
 
 
-async def list_tools_impl(live: LiveDna, scope: str | None = None) -> dict[str, Any]:
+async def list_tools_impl(
+    live: LiveDna, scope: str | None = None, tenant: str | None = None
+) -> dict[str, Any]:
     """List the Tool Kind surfaces declared in ``scope`` (name + description)."""
-    mi = await live.mi(scope)
+    mi = await live.mi(scope, tenant)
     tools = [
         {"name": s["name"], "description": s["description"]}
-        for s in (_tool_surface(r) for r in await _tool_rows(live, mi.scope))
+        for s in (_tool_surface(r) for r in await _tool_rows(live, mi.scope, tenant))
     ]
     tools.sort(key=lambda t: t["name"] or "")
     return {"scope": mi.scope, "tools": tools}
 
 
 async def get_tool_impl(
-    live: LiveDna, name: str, scope: str | None = None
+    live: LiveDna, name: str, scope: str | None = None, tenant: str | None = None
 ) -> dict[str, Any]:
     """The full agent-facing surface of one Tool: description + input schema."""
-    mi = await live.mi(scope)
-    rows = await _tool_rows(live, mi.scope)
+    mi = await live.mi(scope, tenant)
+    rows = await _tool_rows(live, mi.scope, tenant)
     surface = next((s for s in map(_tool_surface, rows) if s["name"] == name), None)
     if surface is None:
         available = sorted(filter(None, (s["name"] for s in map(_tool_surface, rows))))
@@ -195,9 +202,11 @@ async def get_tool_impl(
 # ── SDLC (the self-describing board) ───────────────────────────────────────
 
 
-async def _collect(live: LiveDna, scope: str, kind: str) -> list[dict[str, Any]]:
+async def _collect(
+    live: LiveDna, scope: str, kind: str, tenant: str | None = None
+) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
-    async for row in live.kernel.query(scope, kind):
+    async for row in live.kernel.query(scope, kind, tenant=tenant):
         meta = row.get("metadata") if isinstance(row, dict) else None
         name = (meta or {}).get("name") if isinstance(meta, dict) else None
         spec = row.get("spec") if isinstance(row, dict) else None
@@ -212,7 +221,8 @@ async def _collect(live: LiveDna, scope: str, kind: str) -> list[dict[str, Any]]
 
 
 async def sdlc_digest_impl(
-    live: LiveDna, since: str | None = None, scope: str | None = None
+    live: LiveDna, since: str | None = None, scope: str | None = None,
+    tenant: str | None = None,
 ) -> dict[str, Any]:
     """The retrospective board digest — what happened in a window. Reuses the
     SAME pure aggregator ``dna sdlc digest`` uses (``_digest.build_digest``)."""
@@ -229,19 +239,20 @@ async def sdlc_digest_impl(
     docs: list[dict[str, Any]] = []
     for kind in _DIGEST_KINDS:
         try:
-            docs.extend(await _collect(live, sc, kind))
+            docs.extend(await _collect(live, sc, kind, tenant))
         except Exception:  # noqa: BLE001 — kind absent in this source
             continue
     return build_digest(docs=docs, since=since_dt, until=now, since_label=label, scope=sc)
 
 
 async def list_stories_impl(
-    live: LiveDna, status: str | None = None, scope: str | None = None
+    live: LiveDna, status: str | None = None, scope: str | None = None,
+    tenant: str | None = None,
 ) -> dict[str, Any]:
     """List Stories, optionally filtered by ``status`` (todo/in-progress/…)."""
     sc = scope or live.base_scope
     stories: list[dict[str, Any]] = []
-    for d in await _collect(live, sc, "Story"):
+    for d in await _collect(live, sc, "Story", tenant):
         spec = d["spec"]
         st = spec.get("status")
         if status and st != status:
@@ -260,12 +271,12 @@ async def list_stories_impl(
 
 
 async def get_adr_impl(
-    live: LiveDna, name: str, scope: str | None = None
+    live: LiveDna, name: str, scope: str | None = None, tenant: str | None = None
 ) -> dict[str, Any]:
     """Fetch one ADR (Architecture Decision Record) by name — the decision the
     board recorded, verbatim (context / decision / consequences / body)."""
     sc = scope or live.base_scope
-    raw = await live.kernel.get_document(sc, "ADR", name)
+    raw = await live.kernel.get_document(sc, "ADR", name, tenant=tenant)
     if raw is None:
         raise ValueError(f"ADR {name!r} not found in scope {sc!r}")
     spec = raw.get("spec") or {}
@@ -285,10 +296,12 @@ async def get_adr_impl(
 
 
 async def recall_impl(
-    live: LiveDna, query: str, scope: str | None = None, k: int = 5
+    live: LiveDna, query: str, scope: str | None = None, k: int = 5,
+    tenant: str | None = None,
 ) -> dict[str, Any]:
     """Recall DNA memory for ``query`` — hybrid + bi-temporal + retention
-    re-scored when the search extra is present, honest lexical otherwise."""
+    re-scored when the search extra is present, honest lexical otherwise.
+    Tenant-scoped when ``tenant`` is set (the auth bridge injects it)."""
     from dna.memory import recall
     from dna.memory.verbs import MEMORY_KINDS
 
@@ -297,10 +310,10 @@ async def recall_impl(
         try:
             from dna.memory import backfill_index
 
-            await backfill_index(live.kernel, sc, kinds=MEMORY_KINDS, tenant=None)
+            await backfill_index(live.kernel, sc, kinds=MEMORY_KINDS, tenant=tenant)
         except Exception:  # noqa: BLE001 — indexing failure degrades to lexical
             pass
-    res = await recall(live.kernel, sc, query, k=k, actor="mcp")
+    res = await recall(live.kernel, sc, query, k=k, actor="mcp", tenant=tenant)
     return res
 
 
@@ -313,9 +326,11 @@ async def remember_impl(
     affect: str = "triumph",
     tags: list[str] | None = None,
     owner: str = "mcp",
+    tenant: str | None = None,
 ) -> dict[str, Any]:
     """Persist a memory Kind (deterministically enriched + indexed) — mirrors
-    ``dna memory remember``."""
+    ``dna memory remember``. Written into the tenant overlay when ``tenant`` is
+    set (the auth bridge injects it)."""
     from dna.memory import remember
 
     sc = scope or live.base_scope
@@ -333,12 +348,13 @@ async def remember_impl(
         )
         if tags:
             spec["tags"] = list(tags)
-    out = await remember(live.kernel, sc, kind=kind, name=name, spec=spec)
+    out = await remember(live.kernel, sc, kind=kind, name=name, spec=spec, tenant=tenant)
     return {"kind": out["kind"], "name": out["name"], "indexed": out["indexed"]}
 
 
 async def consolidate_impl(
-    live: LiveDna, scope: str | None = None, apply: bool = False
+    live: LiveDna, scope: str | None = None, apply: bool = False,
+    tenant: str | None = None,
 ) -> dict[str, Any]:
     """Deterministic memory consolidation pass (Ebbinghaus retention). With
     ``apply=True`` stale memories are soft-forgotten (bi-temporal, never
@@ -346,7 +362,7 @@ async def consolidate_impl(
     from dna.memory import consolidate
 
     sc = scope or live.base_scope
-    return await consolidate(live.kernel, sc, apply=apply)
+    return await consolidate(live.kernel, sc, apply=apply, tenant=tenant)
 
 
 def _slug(text: str) -> str:
@@ -361,10 +377,20 @@ def _slug(text: str) -> str:
 # ── FastMCP wiring ─────────────────────────────────────────────────────────
 
 
-def build_server(scope: str | None = None, base_dir: str | None = None) -> Any:
+def build_server(
+    scope: str | None = None, base_dir: str | None = None, auth: Any = None
+) -> Any:
     """Build the DNA MCP server (a ``FastMCP`` instance) with every tool +
     resource wired. ``scope`` fixes the default scope (else the source's sole /
     first scope); ``base_dir`` overrides the source directory (tests / embedding).
+
+    ``auth`` is an optional FastMCP ``AuthProvider`` / ``TokenVerifier`` (e.g. a
+    ``JWTVerifier`` — see :func:`dna_cli._mcp_auth.jwt_provider_from_env`). When
+    set, every tool resolves its **effective tenant from the verified token** via
+    the auth↔tenancy bridge (``_mcp_auth.enforce_tenant_from_context``): the token's
+    tenant claim/scope is injected into all data access and a cross-tenant (or
+    tenant-less) request is denied. With ``auth=None`` (stdio / local) the bridge
+    is an identity — the base path is untouched.
 
     The live kernel handle is built LAZILY on the first tool call, on whatever
     event loop is running the server (stdio ``mcp.run()`` or the test loop) — so
@@ -380,8 +406,22 @@ def build_server(scope: str | None = None, base_dir: str | None = None) -> Any:
             "with:  pip install 'dna-cli[mcp]'"
         ) from exc
 
+    # The auth↔tenancy bridge: resolve the effective tenant from the current
+    # token (identity when there is no token / no auth). CrossTenantError → a
+    # clean MCP ToolError so the client sees the denial, not a masked 500.
+    from fastmcp.exceptions import ToolError
+
+    from dna_cli._mcp_auth import CrossTenantError, enforce_tenant_from_context
+
+    def _tenant(requested: str | None = None) -> str | None:
+        try:
+            return enforce_tenant_from_context(requested)
+        except CrossTenantError as exc:
+            raise ToolError(str(exc)) from None
+
     server = FastMCP(
         "dna",
+        auth=auth,
         instructions=(
             "The DNA runtime face — the LIVE, vendor-neutral intelligence layer. "
             "One server exposes everything DNA stores: agent DEFINITIONS composed "
@@ -408,23 +448,25 @@ def build_server(scope: str | None = None, base_dir: str | None = None) -> Any:
     ) -> dict[str, Any]:
         """Compose an agent's system prompt LIVE (Soul + Guardrails +
         instruction). Pass ``tenant`` to get the per-tenant overlay — the
-        composition a static emit artifact cannot express."""
-        return await compose_prompt_impl(await _live(), agent, scope, tenant)
+        composition a static emit artifact cannot express. When the server is
+        authenticated, the effective tenant is bound to the token (a cross-tenant
+        ``tenant`` is denied)."""
+        return await compose_prompt_impl(await _live(), agent, scope, _tenant(tenant))
 
     @server.tool(run_in_thread=False)
     async def list_agents(scope: str | None = None) -> dict[str, Any]:
         """List the agents (prompt targets) declared in a scope."""
-        return await list_agents_impl(await _live(), scope)
+        return await list_agents_impl(await _live(), scope, _tenant())
 
     @server.tool(run_in_thread=False)
     async def list_tools(scope: str | None = None) -> dict[str, Any]:
         """List the Tool Kind surfaces (name + description) in a scope."""
-        return await list_tools_impl(await _live(), scope)
+        return await list_tools_impl(await _live(), scope, _tenant())
 
     @server.tool(run_in_thread=False)
     async def get_tool(name: str, scope: str | None = None) -> dict[str, Any]:
         """Get one Tool's full agent-facing surface (description + input schema)."""
-        return await get_tool_impl(await _live(), name, scope)
+        return await get_tool_impl(await _live(), name, scope, _tenant())
 
     # -- SDLC ----------------------------------------------------------------
 
@@ -434,26 +476,26 @@ def build_server(scope: str | None = None, base_dir: str | None = None) -> Any:
     ) -> dict[str, Any]:
         """Retrospective board digest — what happened in a window (default 24h).
         ``since`` accepts a span (``90m``/``24h``/``3d``/``2w``) or ISO time."""
-        return await sdlc_digest_impl(await _live(), since, scope)
+        return await sdlc_digest_impl(await _live(), since, scope, _tenant())
 
     @server.tool(run_in_thread=False)
     async def list_stories(
         status: str | None = None, scope: str | None = None
     ) -> dict[str, Any]:
         """List SDLC Stories, optionally filtered by status."""
-        return await list_stories_impl(await _live(), status, scope)
+        return await list_stories_impl(await _live(), status, scope, _tenant())
 
     @server.tool(run_in_thread=False)
     async def get_adr(name: str, scope: str | None = None) -> dict[str, Any]:
         """Fetch one ADR (Architecture Decision Record) verbatim."""
-        return await get_adr_impl(await _live(), name, scope)
+        return await get_adr_impl(await _live(), name, scope, _tenant())
 
     # -- memory --------------------------------------------------------------
 
     @server.tool(run_in_thread=False)
     async def recall(query: str, scope: str | None = None, k: int = 5) -> dict[str, Any]:
         """Recall DNA memory for a query (hybrid/bi-temporal when available)."""
-        return await recall_impl(await _live(), query, scope, k)
+        return await recall_impl(await _live(), query, scope, k, _tenant())
 
     @server.tool(run_in_thread=False)
     async def remember(
@@ -466,20 +508,21 @@ def build_server(scope: str | None = None, base_dir: str | None = None) -> Any:
     ) -> dict[str, Any]:
         """Persist a memory (a LessonLearned) so future recalls surface it."""
         return await remember_impl(
-            await _live(), summary, scope, area=area, affect=affect, tags=tags, owner=owner
+            await _live(), summary, scope, area=area, affect=affect, tags=tags,
+            owner=owner, tenant=_tenant(),
         )
 
     @server.tool(run_in_thread=False)
     async def consolidate(scope: str | None = None, apply: bool = False) -> dict[str, Any]:
         """Deterministic memory consolidation pass (retention re-score)."""
-        return await consolidate_impl(await _live(), scope, apply=apply)
+        return await consolidate_impl(await _live(), scope, apply=apply, tenant=_tenant())
 
     # -- resources (prove resources beyond tools) ----------------------------
 
     @server.resource("dna://{scope}/manifest")
     async def manifest_resource(scope: str) -> dict[str, Any]:
         """The scope's manifest as a resource: its Kinds → document names."""
-        mi = await (await _live()).mi(scope)
+        mi = await (await _live()).mi(scope, _tenant())
         by_kind: dict[str, list[str]] = {}
         for d in mi.documents:
             by_kind.setdefault(d.kind, []).append(d.name)
@@ -488,6 +531,6 @@ def build_server(scope: str | None = None, base_dir: str | None = None) -> Any:
     @server.resource("dna://{scope}/agents")
     async def agents_resource(scope: str) -> dict[str, Any]:
         """The scope's agent roster as a resource."""
-        return await list_agents_impl(await _live(), scope)
+        return await list_agents_impl(await _live(), scope, _tenant())
 
     return server

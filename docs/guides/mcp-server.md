@@ -58,9 +58,9 @@ leading MCP framework, from which the official MCP Python SDK's FastMCP 1.0 was
 derived). That is a deliberate choice about the *phasing*: FastMCP ships **native
 transports** (stdio + Streamable HTTP) and **built-in auth** (OAuth 2.1 with
 Dynamic Client Registration, an OAuth proxy for providers without DCR like
-WorkOS/Auth0, and JWT token verification with scope enforcement). So the MVP is
-stdio-only, and the remote + authenticated phase is *enable + bridge* — not
-*build* (see the Roadmap below).
+WorkOS/Auth0, and JWT token verification with scope enforcement). So the local
+face is stdio, and the remote + authenticated face is *enable + bridge* — not
+*build* (see [Remote + authenticated](#remote-authenticated-phase-2) below).
 
 ## Install
 
@@ -107,28 +107,106 @@ DNA. For example, composing an agent's prompt live and tenant-aware:
 The same server answers `sdlc_digest`, `list_stories`, `get_adr` (the board) and
 `recall` (the memory) — one server, everything DNA stores.
 
+## Remote + authenticated (Phase 2)
+
+The stdio server above is the LOCAL face — a client on your machine spawns it as
+a child process. A **web** client (Claude web, ChatGPT) cannot spawn a local
+process; it needs a URL. Because the server is on FastMCP — which ships both the
+transport and the auth natively — the remote face is *enable + bridge*, not a
+rebuild. It is the **same server**, the same tools, reached over HTTP:
+
+| | **local — stdio** | **remote — Streamable HTTP + OAuth** |
+|---|---|---|
+| Transport | stdio (child process) | Streamable HTTP (MCP spec 2025-06-18) |
+| Clients | Claude Code, Cursor, Copilot | Claude web, ChatGPT, any hosted client |
+| Reachability | your machine only | hostable / networked |
+| Auth | none (local trust) | OAuth 2.1 bearer JWT (Resource Server) |
+| Tenancy | caller-supplied `tenant` arg | **bound to the token** (the bridge) |
+| Command | `dna mcp serve` | `dna mcp serve --transport http --auth jwt` |
+
+### Serve it over HTTP
+
+```console
+$ dna mcp serve --transport http --host 0.0.0.0 --port 8000
+# → the MCP endpoint is http://<host>:8000/mcp/
+```
+
+Point a remote/web MCP client at that URL. FastMCP serves the Streamable HTTP
+transport — no transport code is written, it is a flag.
+
+### Connect a web client
+
+A web MCP client takes a URL (and, when auth is on, drives the OAuth flow):
+
+```jsonc
+// a hosted/remote MCP client's server entry
+{ "type": "http", "url": "https://dna.example.com/mcp/" }
+```
+
+### Authenticate — OAuth 2.1 with a JWT Resource Server
+
+Add `--auth jwt` (HTTP-only — there is no bearer token over stdio). The server
+becomes an OAuth 2.1 **Resource Server**: it validates signed bearer JWTs and
+advertises **Protected Resource Metadata** (RFC 9728) at
+`/.well-known/oauth-protected-resource/mcp`, so a client discovers where to
+authorize. Configure it from the environment:
+
+| Env var | Meaning |
+|---|---|
+| `DNA_MCP_JWT_PUBLIC_KEY` | PEM public key (static key), **or** |
+| `DNA_MCP_JWKS_URI` | a JWKS endpoint (a real IdP / rotating keys) |
+| `DNA_MCP_JWT_ISSUER` | expected `iss` (optional) |
+| `DNA_MCP_JWT_AUDIENCE` | expected `aud` (optional) |
+| `DNA_MCP_RESOURCE_URL` + `DNA_MCP_AUTH_SERVERS` | set both to advertise PRM (RFC 9728) |
+
+```console
+$ DNA_MCP_JWKS_URI=https://idp.example.com/.well-known/jwks.json \
+  DNA_MCP_JWT_ISSUER=https://idp.example.com/ \
+  DNA_MCP_JWT_AUDIENCE=dna-mcp \
+  DNA_MCP_RESOURCE_URL=https://dna.example.com \
+  DNA_MCP_AUTH_SERVERS=https://idp.example.com/ \
+  dna mcp serve --transport http --auth jwt --host 0.0.0.0 --port 8000
+```
+
+FastMCP conforms to the current MCP Authorization spec (revision 2025-11-25):
+OAuth 2.1 Resource Server, mandatory PKCE, Protected Resource Metadata (RFC
+9728), Resource Indicators (RFC 8707), Authorization Server Metadata (RFC 8414),
+Dynamic Client Registration (RFC 7591). For a provider **without** DCR (WorkOS,
+Auth0) FastMCP's `OAuthProxy` bridges it to MCP's DCR-compliant flow — it slots
+into the same `dna_cli._mcp_auth.resource_server(...)` seam, and the tenancy
+bridge below is provider-agnostic (it reads the tenant off whatever verified
+token comes back).
+
+### The tenancy bridge — a token composes only what is its tenant's
+
+This is the DNA-specific value. FastMCP verifies the token; it does **not** know
+DNA tenancy. The bridge (`dna_cli._mcp_auth`) maps the verified token's
+**claims/scopes → a DNA tenant** and enforces it, so every tool becomes
+**tenant-scoped by the token**, not by a caller argument:
+
+- A token with claim `{"tenant": "acme"}` (or a scope `tenant:acme`) makes
+  `compose_prompt` / `recall` / `list_stories` compose and read **only ACME's**
+  layer — the token's tenant is injected into every data access.
+- A caller that also passes a *different* `tenant` argument is **denied**
+  (cross-tenant). Omitting it resolves to the token's tenant.
+- A token with **no** tenant claim/scope is **denied** — fail closed; an
+  authenticated request with no tenant binding never falls back to "all tenants".
+- With **no** auth (stdio / local) the bridge is an identity: the caller-supplied
+  `tenant` passes through unchanged, so the base/stdio path is untouched.
+
+The claim key is configurable (`DNA_MCP_TENANT_CLAIM`, default `tenant`; scope
+prefix `DNA_MCP_TENANT_SCOPE_PREFIX`, default `tenant:`). Auth + multi-tenant in
+one mechanism — the token IS the tenancy.
+
 ## Why this completes the thesis
 
 DNA is a **vendor-neutral intelligence layer with no runtime**. `emit` proved
 one face (author once, materialize per runtime). The MCP server is the other:
 the *live* layer any client consumes over the market's neutral protocol —
 preserving composition, per-tenant overlay, and no-deploy change, the exact axes
-a static artifact drops.
+a static artifact drops. Locally over stdio, or **remotely over authenticated,
+multi-tenant HTTP** — the same server, the token scoping each client to its own
+tenant.
 
-## Roadmap
-
-The MVP ships **stdio** (local clients). Because the server is on FastMCP —
-which provides the transport and auth natively — the two Phase-2 stories (design
-+ owner approval) are *enablement + a bridge*, not a build:
-
-- **Remote transport** (`s-mcp-remote-transport`) — enable FastMCP's native
-  Streamable HTTP transport (`run(transport="http")`) so the same server is
-  hostable, unblocking WEB clients (Claude web, ChatGPT) that cannot spawn a
-  local stdio process.
-- **OAuth 2.1 + tenancy** (`s-mcp-oauth-auth`) — enable FastMCP's built-in OAuth
-  2.1 auth (DCR servers / OAuth proxy for WorkOS/Auth0 / JWT scope enforcement)
-  and **bridge the token scopes/claims to DNA tenancy** (the `Tenant` Kind +
-  inheritance) — a client/tenant token composes and reads only what is theirs.
-  The real work is the auth↔tenancy bridge, not building OAuth.
-
-See the ADR `adr-dna-mcp-runtime-face` for the decision and phasing.
+See the ADR `adr-dna-mcp-runtime-face` for the decision, the phasing, and the
+auth↔tenancy bridge design.

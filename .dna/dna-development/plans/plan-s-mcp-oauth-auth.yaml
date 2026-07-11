@@ -1,0 +1,18 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-mcp-oauth-auth
+spec:
+  title: 'Plano: s-mcp-oauth-auth'
+  date: '2026-07-11'
+  status: accepted
+  story_ref: s-mcp-oauth-auth
+  journey_phase: plan
+  body: 'Enable FastMCP auth (JWTVerifier Resource Server, --auth jwt, env-configured)
+    + RemoteAuthProvider for PRM. Build the bridge dna_cli._mcp_auth: token claim/scope
+    -> DNA tenant, injected into every tool (mi/with_tenant/query tenant); cross-tenant
+    + tenant-less denied (fail closed); identity when no auth. Prove with 2 RSA JWTs
+    over HTTP + PRM discovery. Capture bridge decision in ADR.'
+  created_at: '2026-07-11T15:48:35+00:00'
+  updated_at: '2026-07-11T15:48:35+00:00'
+  methodology: ad-hoc

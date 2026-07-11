@@ -10,8 +10,12 @@ Tests scope:
 """
 from __future__ import annotations
 
+import contextlib
 import os
 import socket
+import threading
+import time
+from collections.abc import Iterator
 
 import pytest
 from click.testing import CliRunner
@@ -80,6 +84,70 @@ def _isolated_active_story(monkeypatch, tmp_path):
     monkeypatch.setenv(
         "DNA_ACTIVE_STORY_PATH", str(tmp_path / "test-active-story.txt"),
     )
+
+
+# --- MCP HTTP harness (transport + auth stories) ---------------------------
+#
+# Run a built FastMCP server over a REAL Streamable-HTTP socket (uvicorn on a
+# free port, background thread, clean shutdown), so the remote-transport + auth
+# stories are proven end-to-end through the wire — exactly what a remote/web MCP
+# client does — not just via the in-memory client.
+
+
+def _free_port() -> int:
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(("127.0.0.1", 0))
+    port = s.getsockname()[1]
+    s.close()
+    return port
+
+
+def _wait_port(host: str, port: int, timeout: float = 10.0) -> None:
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        with contextlib.suppress(OSError):
+            with socket.create_connection((host, port), timeout=0.5):
+                return
+        time.sleep(0.05)
+    raise RuntimeError(f"HTTP server never came up on {host}:{port}")
+
+
+@contextlib.contextmanager
+def serve_http(
+    server, host: str = "127.0.0.1", path: str = "/mcp", port: int | None = None
+) -> Iterator[str]:
+    """Serve ``server`` over Streamable HTTP on a free port; yield the endpoint URL.
+
+    Uses ``uvicorn.Server`` over ``server.http_app()`` so shutdown is clean
+    (``should_exit`` + join), leaving no orphan listener between tests. Pass an
+    explicit ``port`` when the auth provider needs the public URL up front (PRM).
+    """
+    import uvicorn
+
+    port = port or _free_port()
+    app = server.http_app(path=path)
+    config = uvicorn.Config(app, host=host, port=port, log_level="warning")
+    uv = uvicorn.Server(config)
+    thread = threading.Thread(target=uv.run, daemon=True)
+    thread.start()
+    try:
+        _wait_port(host, port)
+        yield f"http://{host}:{port}{path}"
+    finally:
+        uv.should_exit = True
+        thread.join(timeout=10)
+
+
+@pytest.fixture
+def http_server():
+    """Expose ``serve_http`` as a fixture for tests that want the HTTP harness."""
+    return serve_http
+
+
+@pytest.fixture
+def free_port():
+    """A free localhost TCP port (for tests that need the URL before serving)."""
+    return _free_port
 
 
 @pytest.fixture
