@@ -28,15 +28,28 @@ def mcp() -> None:
               help="Default scope for tools that omit one (else the sole/first scope).")
 @click.option("--base-dir", default=None,
               help="Source directory override (else DNA_SOURCE_URL / DNA_BASE_DIR / ./.dna).")
-@click.option("--transport", type=click.Choice(["stdio"]), default="stdio",
-              show_default=True,
-              help="MCP transport. The MVP ships stdio (local clients); remote "
-                   "Streamable HTTP is Phase 2 (story s-mcp-remote-transport).")
-def serve(scope: str | None, base_dir: str | None, transport: str) -> None:
-    """Run the DNA MCP server (stdio).
+@click.option("--transport", type=click.Choice(["stdio", "http", "sse", "streamable-http"]),
+              default="stdio", show_default=True,
+              help="MCP transport. `stdio` = local clients (Claude Code/Cursor/Copilot). "
+                   "`http` (Streamable HTTP, MCP spec 2025-06-18) = REMOTE/web clients "
+                   "(Claude web, ChatGPT) that cannot spawn a local process. Same server, "
+                   "both transports (FastMCP native — story s-mcp-remote-transport).")
+@click.option("--host", default="127.0.0.1", show_default=True,
+              help="Bind host for the HTTP/SSE transports (ignored for stdio).")
+@click.option("--port", type=int, default=8000, show_default=True,
+              help="Bind port for the HTTP/SSE transports (ignored for stdio).")
+@click.option("--path", default=None,
+              help="URL path the MCP endpoint is mounted at (HTTP/SSE; FastMCP default /mcp).")
+@click.option("--auth", type=click.Choice(["none", "jwt"]), default="none", show_default=True,
+              help="Auth provider for the HTTP transport. `jwt` verifies bearer JWTs and "
+                   "bridges the tenant claim to DNA tenancy (env DNA_MCP_JWT_*; HTTP-only, "
+                   "story s-mcp-oauth-auth). stdio stays local/unauthenticated.")
+def serve(scope: str | None, base_dir: str | None, transport: str,
+          host: str, port: int, path: str | None, auth: str) -> None:
+    """Run the DNA MCP server (stdio local, or Streamable HTTP for remote/web clients).
 
     \b
-    Wire it into a client (e.g. Claude Code / Cursor mcp config):
+    LOCAL (stdio) — wire it into Claude Code / Cursor / Copilot (mcp config JSON):
       {
         "mcpServers": {
           "dna": {
@@ -46,14 +59,43 @@ def serve(scope: str | None, base_dir: str | None, transport: str) -> None:
           }
         }
       }
-    Then the client can call compose_prompt / sdlc_digest / recall, and read the
+
+    \b
+    REMOTE (Streamable HTTP) — host it so WEB clients (Claude web, ChatGPT) reach it:
+      $ dna mcp serve --transport http --host 0.0.0.0 --port 8000
+      # endpoint: http://<host>:8000/mcp/  — point a remote/web MCP client at that URL.
+      # add --auth jwt to require a bearer token whose tenant claim scopes every
+      # tool to that tenant (see `dna mcp serve --help` / the auth guide).
+
+    Either way the client calls compose_prompt / sdlc_digest / recall and reads the
     dna://{scope}/manifest resource — all against your live DNA.
     """
     from dna_cli._mcp_server import build_server
 
+    auth_provider = None
+    if auth == "jwt":
+        if transport == "stdio":
+            raise click.ClickException(
+                "--auth jwt is HTTP-only (there is no bearer token over stdio); "
+                "run with --transport http."
+            )
+        from dna_cli._mcp_auth import jwt_provider_from_env
+
+        try:
+            auth_provider = jwt_provider_from_env()
+        except (RuntimeError, ValueError) as exc:
+            raise click.ClickException(str(exc)) from None
+
     try:
-        server = build_server(scope=scope, base_dir=base_dir)
+        server = build_server(scope=scope, base_dir=base_dir, auth=auth_provider)
     except RuntimeError as exc:
         raise click.ClickException(str(exc)) from None
+
     # FastMCP owns the event loop; the kernel handle is built lazily on it.
-    server.run(transport=transport)
+    if transport == "stdio":
+        server.run(transport=transport)
+    else:
+        kwargs: dict[str, object] = {"host": host, "port": port}
+        if path:
+            kwargs["path"] = path
+        server.run(transport=transport, **kwargs)
