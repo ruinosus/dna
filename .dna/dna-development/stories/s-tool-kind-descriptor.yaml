@@ -6,7 +6,7 @@ spec:
   title: "Tool Kind \u2192 record-plane descriptor (kinds/tool.kind.yaml, Py\u2194\
     TS byte-identical)"
   description: Migrate the class-based helix-tool Kind to a descriptor
-  status: in-progress
+  status: review
   feature: f-dna-tools-as-data
   priority: high
   labels:
@@ -23,7 +23,7 @@ spec:
     updated consciously; TestGuide+TestRun recorded
   definition_of_done_source: cli-create
   created_at: '2026-07-11T10:43:41+00:00'
-  updated_at: '2026-07-11T11:21:17+00:00'
+  updated_at: '2026-07-11T11:23:13+00:00'
   timeline:
   - at: '2026-07-11T10:43:41+00:00'
     actor: claude-code
@@ -52,6 +52,18 @@ spec:
       \ TS, preview gen\xE9rico (Py+TS), FakeKernel.kindFromDescriptor. 'kind-count\
       \ sobe' esperado no plano = na verdade FLAT (migra\xE7\xE3o, sem dupe)."
     commit_ref: fec9824409b71804205826e6b506a7d59d1605b0
+  - at: '2026-07-11T11:22:43+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/54'
+    pr_url: https://github.com/ruinosus/dna/pull/54
+  - at: '2026-07-11T11:23:13+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
   produces:
   - kind: Plan
     name: plan-s-tool-kind-descriptor
