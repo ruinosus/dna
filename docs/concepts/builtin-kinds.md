@@ -357,6 +357,18 @@ port class), ported from the internal SDK's doc extension minus its
 product-specific help-center machinery (live data/diagram placeholders,
 landing-page curation, asset aggregation).
 
+### HtmlArtifact
+
+An [`HtmlArtifact`](../reference/kinds/record.md#htmlartifact)
+(`sdlc-html-artifact`) stores an HTML page as a first-class, linkable output of
+a work item (Story/Feature/Epic/Spike). It is a bundle: `ARTIFACT.html` holds
+the raw HTML **byte-faithful** (the writer never injects frontmatter or
+re-escapes, so a design doc or rendered report round-trips untouched) plus an
+optional `artifact.json` companion with structured metadata — the same mechanic
+as a Soul's `SOUL.md` + `soul.json`. Attach one to the board with `dna sdlc
+produces add <WiKind>/<wi> HtmlArtifact/<name>`; the [SDLC
+guide](../guides/sdlc.md#work-items-produce-artifacts) walks the flow.
+
 ### Lesson
 
 A [`Lesson`](../reference/kinds/composition.md#lesson) (`lesson-lesson`)

@@ -25,11 +25,13 @@
  * v1.3 BREAKING: Milestone Kind renamed to Epic.
  */
 
-import type { ExtensionHost, Extension } from "../kernel/protocols.js";
+import type { ExtensionHost, Extension, ReaderPort, WriterPort, SerializedFile } from "../kernel/protocols.js";
 import { KindBase } from "../kernel/kind_base.js";
 import { SD, TenantScope } from "../kernel/protocols.js";
 import { loadDescriptors } from "../kernel/descriptor-loader.js";
 import type { Document } from "../kernel/document.js";
+import type { BundleHandle } from "../kernel/bundle-handle.js";
+import { HtmlArtifactSchema } from "../kernel/models.js";
 
 const API_VERSION = "github.com/ruinosus/dna/sdlc/v1";
 
@@ -1385,6 +1387,178 @@ const JOURNEY_METHODOLOGIES = [
 // ---------------------------------------------------------------------------
 
 
+// ---------------------------------------------------------------------------
+// HtmlArtifact — an HTML page as a first-class work-item output (record plane)
+//
+// s-dx-html-artifact-kind. 1:1 parity with Python HtmlArtifactKind. Bundle
+// Kind: ARTIFACT.html holds the raw HTML VERBATIM (byte-faithful round-trip —
+// no frontmatter injection), plus an optional artifact.json companion with
+// structured metadata (title, description, source, created_at) — the same
+// mechanic as a Soul (SOUL.md + soul.json). Custom reader/writer (not the
+// generic marker-frontmatter path) because the marker is arbitrary HTML.
+// ---------------------------------------------------------------------------
+
+class HtmlArtifactKind extends KindBase {
+  readonly apiVersion = API_VERSION;
+  readonly kind = "HtmlArtifact";
+  // alias GENERATED = "<owner>-<kebab(kind)>" = "sdlc-html-artifact".
+  // s-alias-generated-not-typed: new Kinds must NOT type an explicit alias
+  // (EXPLICIT_ALIAS_ALLOWLIST ratchet is shrink-only). Empty here + aliasOwner
+  // triggers generation at load time (Py twin sets alias=None + alias_owner).
+  readonly alias = "";
+  readonly aliasOwner = "sdlc";
+  readonly origin = "github.com/ruinosus/dna/sdlc";
+  readonly isPromptTarget = false;
+  readonly promptTargetPriority = 0;
+  readonly flattenInContext = false;
+  readonly plane = "record" as const;
+  readonly storage = SD.bundle("html-artifacts", "ARTIFACT.html");
+  readonly graphStyle = { fill: "#EA580C", stroke: "#C2410C", textColor: "#fff" };
+  readonly asciiIcon = "📄";
+  readonly displayLabel = "HTML Artifacts";
+  readonly uiSchema = {
+    html: {
+      widget: "code",
+      language: "html",
+      label: "ARTIFACT.html",
+      help: "The raw HTML page (stored byte-faithful).",
+      height: 520,
+      order: 10,
+    },
+    artifact_json: {
+      widget: "code",
+      language: "json",
+      label: "artifact.json",
+      help: "Structured metadata (title, description, source, created_at).",
+      height: 220,
+      order: 20,
+    },
+  };
+  readonly docs =
+    "An HtmlArtifact stores an HTML page as a first-class, linkable output " +
+    "of a work item (Story/Feature/Epic/Spike). Bundle: ARTIFACT.html holds " +
+    "the raw HTML verbatim (byte-faithful round-trip) plus an optional " +
+    "artifact.json companion with structured metadata (title, description, " +
+    "source, created_at) — the same shape as a Soul's SOUL.md + soul.json. " +
+    "Attach one with `dna sdlc produces add <WiKind>/<wi> HtmlArtifact/<name>`.";
+
+  schema() {
+    return {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        html: { type: "string", description: "The raw HTML document (byte-faithful)." },
+        artifact_json: {
+          type: "object",
+          additionalProperties: true,
+          description: "Structured metadata: title, description, source, created_at.",
+        },
+      },
+    };
+  }
+
+  parse(raw: Record<string, unknown>): unknown {
+    return HtmlArtifactSchema.parse(raw);
+  }
+
+  summary(doc: Document) {
+    const spec = (doc.spec ?? {}) as Record<string, unknown>;
+    const aj = (spec.artifact_json as Record<string, unknown>) ?? {};
+    return {
+      title: aj.title ?? null,
+      source: aj.source ?? null,
+      created_at: aj.created_at ?? null,
+      html_bytes: ((spec.html as string) ?? "").length,
+    };
+  }
+
+  preview(doc: Document): import("../kernel/preview.js").PreviewBlock[] {
+    const spec = (doc.spec ?? {}) as Record<string, unknown>;
+    const blocks: import("../kernel/preview.js").PreviewBlock[] = [];
+    if (typeof spec.html === "string" && spec.html) {
+      blocks.push({ kind: "code", title: "ARTIFACT.html", body: spec.html, language: "html" });
+    }
+    if (spec.artifact_json && typeof spec.artifact_json === "object") {
+      blocks.push({
+        kind: "code",
+        title: "artifact.json",
+        body: JSON.stringify(spec.artifact_json, null, 2),
+        language: "json",
+      });
+    }
+    if (blocks.length === 0) {
+      return [{ kind: "empty", title: "HtmlArtifact (empty)" }];
+    }
+    return blocks;
+  }
+}
+
+class HtmlArtifactReader implements ReaderPort {
+  async detect(bundle: BundleHandle): Promise<boolean> {
+    return bundle.exists("ARTIFACT.html");
+  }
+
+  async read(bundle: BundleHandle): Promise<Record<string, unknown>> {
+    const spec: Record<string, unknown> = {};
+    const metadata: Record<string, unknown> = {};
+
+    // ARTIFACT.html — read verbatim (byte-faithful; no frontmatter parse).
+    if (await bundle.exists("ARTIFACT.html")) {
+      spec.html = await bundle.readText("ARTIFACT.html");
+    }
+
+    // artifact.json companion — structured metadata.
+    if (await bundle.exists("artifact.json")) {
+      const aj = JSON.parse(await bundle.readText("artifact.json"));
+      if (aj && typeof aj === "object" && !Array.isArray(aj)) {
+        spec.artifact_json = aj;
+        const desc = (aj as Record<string, unknown>).description;
+        if (typeof desc === "string" && desc && !metadata.description) {
+          metadata.description = desc;
+        }
+      }
+    }
+
+    if (metadata.name == null) metadata.name = bundle.name;
+    return {
+      apiVersion: API_VERSION,
+      kind: "HtmlArtifact",
+      metadata,
+      spec,
+    };
+  }
+}
+
+class HtmlArtifactWriter implements WriterPort {
+  canWrite(raw: Record<string, unknown>): boolean {
+    return raw.kind === "HtmlArtifact";
+  }
+
+  serialize(raw: Record<string, unknown>): SerializedFile[] {
+    const files: SerializedFile[] = [];
+    const spec = (raw.spec as Record<string, unknown>) ?? {};
+
+    // ARTIFACT.html — verbatim HTML (byte-faithful).
+    files.push({ relativePath: "ARTIFACT.html", content: (spec.html as string) ?? "" });
+
+    // artifact.json — canonical JSON companion. metadata.description is a
+    // DERIVED promotion of artifact_json.description on read, so it is NOT
+    // re-emitted separately (no phantom frontmatter — F3 market-fidelity).
+    const aj = spec.artifact_json as Record<string, unknown> | undefined;
+    if (aj && typeof aj === "object") {
+      files.push({ relativePath: "artifact.json", content: JSON.stringify(aj, null, 2) });
+    }
+    return files;
+  }
+
+  async write(bundle: BundleHandle, raw: Record<string, unknown>): Promise<void> {
+    for (const f of this.serialize(raw)) {
+      await bundle.writeText(f.relativePath, f.content ?? "");
+    }
+  }
+}
+
+
 export class SdlcExtension implements Extension {
   readonly name = "sdlc";
   // v1.14.0 — s-consolidate-cognitive-policies: the 9 cognitive policy
@@ -1408,6 +1582,12 @@ export class SdlcExtension implements Extension {
     // v1.10.0 — f-reference-citation-kind (ported from Python for
     // s-alias-generated-not-typed: Spike.depFilters → "sdlc-reference").
     kernel.kind(new ReferenceKind());
+    // s-dx-html-artifact-kind — HTML page as a first-class work-item output.
+    // Bundle Kind with a custom reader/writer for byte-faithful HTML,
+    // mirroring the Soul (SOUL.md + soul.json) mechanic.
+    kernel.kind(new HtmlArtifactKind());
+    kernel.reader(new HtmlArtifactReader());
+    kernel.writer(new HtmlArtifactWriter());
     // expr batch B: PromptTemplate is a descriptor now — registered via the
     // loadDescriptors loop below. s-consolidate-cognitive-policies: the
     // cognitive policy family is ONE descriptor (cognitive-policy.kind.yaml).

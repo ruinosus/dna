@@ -27,7 +27,7 @@ no longer parses; legacy YAMLs must be migrated.
 from __future__ import annotations
 from typing import Any
 from dna.kernel.descriptor_loader import load_descriptors
-from dna.kernel.protocols import ExtensionHost, StorageDescriptor, TenantScope
+from dna.kernel.protocols import ExtensionHost, ReaderPort, StorageDescriptor, TenantScope, WriterPort
 from dna.kernel.kind_base import KindBase
 
 
@@ -2024,6 +2024,195 @@ class ReferenceKind(KindBase):
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# HtmlArtifact — an HTML page as a first-class work-item output (record plane)
+#
+# s-dx-html-artifact-kind. A bundle Kind whose primary marker (ARTIFACT.html)
+# holds the raw HTML **verbatim** (byte-faithful round-trip — no frontmatter
+# injection that would corrupt the document), plus an optional artifact.json
+# companion carrying structured metadata (title, description, source,
+# created_at) — mirrors the Soul bundle (SOUL.md + soul.json). Linked to a
+# work item via ``spec.produces[]`` / ``spec.html_artifacts[]`` so the
+# roteiro/design doc that used to live in chat becomes rastreável on the board.
+# Custom reader/writer (not the generic marker-frontmatter path) because the
+# marker is arbitrary HTML, not markdown-with-frontmatter.
+# ---------------------------------------------------------------------------
+
+_HTML_ARTIFACT_API_VERSION = "github.com/ruinosus/dna/sdlc/v1"
+
+
+class HtmlArtifactKind(KindBase):
+    api_version = _HTML_ARTIFACT_API_VERSION
+    kind = "HtmlArtifact"
+    # alias GENERATED = "<owner>-<kebab(kind)>" = "sdlc-html-artifact"
+    # (s-alias-generated-not-typed — new Kinds must not type the alias).
+    alias = None
+    alias_owner = "sdlc"
+    model = dict
+    origin = "github.com/ruinosus/dna/sdlc"
+    # Record plane — a produced artifact, never part of agent composition.
+    plane = "record"
+    # PERMISSIVE tenancy — no ``scope`` declared: repo-authored output,
+    # inheritable like Research (an artifact, not tenant-private data).
+    storage = StorageDescriptor.bundle("html-artifacts", "ARTIFACT.html")
+    graph_style = {"fill": "#EA580C", "stroke": "#C2410C", "text_color": "#fff"}
+    ascii_icon = "📄"
+    display_label = "HTML Artifacts"
+    is_prompt_target = False
+    prompt_target_priority = 0
+    flatten_in_context = False
+    description_fallback_field = None
+    ui_schema = {
+        "html": {
+            "widget": "code",
+            "language": "html",
+            "label": "ARTIFACT.html",
+            "help": "The raw HTML page (stored byte-faithful).",
+            "height": 520,
+            "order": 10,
+        },
+        "artifact_json": {
+            "widget": "code",
+            "language": "json",
+            "label": "artifact.json",
+            "help": "Structured metadata (title, description, source, created_at).",
+            "height": 220,
+            "order": 20,
+        },
+    }
+    docs = (
+        "An HtmlArtifact stores an HTML page as a first-class, linkable output "
+        "of a work item (Story/Feature/Epic/Spike). It is a bundle: "
+        "ARTIFACT.html holds the raw HTML verbatim (byte-faithful round-trip) "
+        "plus an optional artifact.json companion with structured metadata "
+        "(title, description, source, created_at) — the same shape as a Soul's "
+        "SOUL.md + soul.json. Attach one to a work item with "
+        "``dna sdlc produces add <WiKind>/<wi> HtmlArtifact/<name>`` so a "
+        "design doc, roteiro, or report that used to live in chat becomes "
+        "traceable on the board."
+    )
+
+    def schema(self) -> dict[str, Any] | None:
+        return {
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {
+                "html": {
+                    "type": "string",
+                    "description": "The raw HTML document (byte-faithful).",
+                },
+                "artifact_json": {
+                    "type": "object",
+                    "additionalProperties": True,
+                    "description": "Structured metadata: title, description, source, created_at.",
+                },
+            },
+        }
+
+    def parse(self, raw: dict[str, Any]) -> Any:
+        from dna.kernel.models import TypedHtmlArtifact
+        return TypedHtmlArtifact.from_raw(raw)
+
+    def summary(self, doc: Any) -> dict[str, Any] | None:
+        # Keep list endpoints light — never ship the full HTML in a summary.
+        spec = getattr(doc, "spec", None) or {}
+        spec_dict = dict(spec) if hasattr(spec, "items") else {}
+        aj = spec_dict.get("artifact_json") or {}
+        aj = aj if isinstance(aj, dict) else {}
+        return {
+            "title": aj.get("title"),
+            "source": aj.get("source"),
+            "created_at": aj.get("created_at"),
+            "html_bytes": len(spec_dict.get("html") or ""),
+        }
+
+    def preview(self, doc: Any) -> list["PreviewBlock"]:
+        from dna.kernel.preview import PreviewBlock
+        spec = getattr(doc, "spec", None) or {}
+        spec_dict = dict(spec) if hasattr(spec, "items") else {}
+        html = spec_dict.get("html")
+        blocks: list[PreviewBlock] = []
+        if isinstance(html, str) and html:
+            blocks.append(PreviewBlock(kind="code", title="ARTIFACT.html", body=html, language="html"))
+        aj = spec_dict.get("artifact_json")
+        if aj and isinstance(aj, dict):
+            import json as _json
+            blocks.append(
+                PreviewBlock(
+                    kind="code",
+                    title="artifact.json",
+                    body=_json.dumps(aj, indent=2, ensure_ascii=False),
+                    language="json",
+                )
+            )
+        if not blocks:
+            return [PreviewBlock(kind="empty", title="HtmlArtifact (empty)")]
+        return blocks
+
+
+class HtmlArtifactReader(ReaderPort):
+    """Detects and reads ARTIFACT.html bundles (raw HTML + artifact.json)."""
+
+    def detect(self, bundle: Any) -> bool:
+        return bundle.exists("ARTIFACT.html")
+
+    def read(self, bundle: Any) -> dict[str, Any]:
+        import json as _json
+        spec: dict[str, Any] = {}
+        metadata: dict[str, Any] = {}
+
+        # ARTIFACT.html — read verbatim (byte-faithful; no frontmatter parse).
+        if bundle.exists("ARTIFACT.html"):
+            spec["html"] = bundle.read_text("ARTIFACT.html")
+
+        # artifact.json companion — structured metadata.
+        if bundle.exists("artifact.json"):
+            aj = _json.loads(bundle.read_text("artifact.json"))
+            if isinstance(aj, dict):
+                spec["artifact_json"] = aj
+                # Promote description into metadata for search/listing.
+                desc = aj.get("description")
+                if isinstance(desc, str) and desc and not metadata.get("description"):
+                    metadata["description"] = desc
+
+        metadata.setdefault("name", bundle.name)
+        return {
+            "apiVersion": _HTML_ARTIFACT_API_VERSION,
+            "kind": "HtmlArtifact",
+            "metadata": metadata,
+            "spec": spec,
+        }
+
+
+class HtmlArtifactWriter(WriterPort):
+    """Writes an HtmlArtifact raw dict back to an ARTIFACT.html bundle."""
+
+    def can_write(self, raw: dict) -> bool:
+        return raw.get("kind") == "HtmlArtifact"
+
+    def serialize(self, raw: dict) -> list[dict[str, str]]:
+        import json as _json
+        files: list[dict[str, str]] = []
+        spec = raw.get("spec", {}) or {}
+
+        # ARTIFACT.html — verbatim HTML (byte-faithful).
+        files.append({"relativePath": "ARTIFACT.html", "content": spec.get("html", "") or ""})
+
+        # artifact.json — canonical JSON companion. metadata.description is a
+        # DERIVED promotion of artifact_json.description on read, so it is NOT
+        # re-emitted separately (no phantom frontmatter — F3 market-fidelity).
+        aj = spec.get("artifact_json")
+        if aj and isinstance(aj, dict):
+            files.append(
+                {"relativePath": "artifact.json", "content": _json.dumps(aj, indent=2, ensure_ascii=False)}
+            )
+        return files
+
+    def write(self, bundle: Any, raw: dict) -> None:
+        for f in self.serialize(raw):
+            bundle.write_text(f["relativePath"], f["content"])
+
+
 class SdlcExtension:
     """SDLC primitives — Roadmap, Epic, Feature, Story, Issue, Spec, Plan,
     AgentSession, Narrative, WorkflowEvent, Insight, StatusReport, plus the
@@ -2053,6 +2242,12 @@ class SdlcExtension:
         kernel.kind(InitiativeKind())
         # v1.10.0 — f-reference-citation-kind + f-semon-correct-memory
         kernel.kind(ReferenceKind())
+        # s-dx-html-artifact-kind — HTML page as a first-class work-item output.
+        # Bundle Kind (custom reader/writer for byte-faithful HTML), mirroring
+        # the Soul (SOUL.md + soul.json) mechanic.
+        kernel.kind(HtmlArtifactKind())
+        kernel.reader(HtmlArtifactReader())
+        kernel.writer(HtmlArtifactWriter())
         # expr batch B (plan 2026-06-11-descriptor-expressiveness, Chunk 4):
         # PromptTemplate migrated to a descriptor — registered via the
         # load_descriptors loop below (kinds/*.kind.yaml), not per-Kind here.

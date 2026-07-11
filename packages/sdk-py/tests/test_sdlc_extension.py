@@ -44,14 +44,14 @@ def test_extension_registers_expected_kinds():
         "ADR", "AgentSession",
         "ArchiveProposal", "Bug", "Changelog", "CognitivePolicy",
         "Epic",
-        "Feature", "Forecast", "Initiative", "Insight", "Issue", "Kaizen",
+        "Feature", "Forecast", "HtmlArtifact", "Initiative", "Insight", "Issue", "Kaizen",
         "LessonLearned", "Narrative",
         "Plan", "Postmortem", "PromptTemplate", "Reference",
         "Retrospective", "RiskRegister", "Roadmap", "SavedView", "Spec",
         "Spike", "StatusReport", "Story", "SynthesisRun",
         "SynthesizerState", "Task", "WorkflowEvent",
     ]
-    assert len(api_kinds) == 31
+    assert len(api_kinds) == 32
 
 
 def test_agent_session_kind_storage_bundle():

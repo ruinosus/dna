@@ -134,6 +134,83 @@ dna sdlc adr supersede [OPTIONS] NAME
 | `--help` | Show this message and exit. |
 | `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
 
+## `dna sdlc artifact`
+
+Manage HtmlArtifacts — HTML pages as first-class work-item outputs.
+
+```text
+dna sdlc artifact [OPTIONS] COMMAND [ARGS]...
+```
+
+**Options**
+
+| Option | Description |
+| --- | --- |
+| `--help` | Show this message and exit. |
+
+### `dna sdlc artifact create`
+
+Create an HtmlArtifact from an HTML file: dna sdlc artifact create <name> --from x.html.
+
+```text
+dna sdlc artifact create [OPTIONS] NAME
+```
+
+**Arguments**
+
+| Argument | Required |
+| --- | --- |
+| `NAME` | yes |
+
+**Options**
+
+| Option | Description |
+| --- | --- |
+| `--description` | Short description (promoted to metadata). |
+| `--from` | Path to the .html file to store (read byte-faithful). |
+| `--help` | Show this message and exit. |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--source` | Provenance/context (e.g. 'design doc do épico e-dna-dx'). |
+| `--title` | Human title for the artifact. |
+
+### `dna sdlc artifact list`
+
+List HtmlArtifacts in a scope.
+
+```text
+dna sdlc artifact list [OPTIONS]
+```
+
+**Options**
+
+| Option | Description |
+| --- | --- |
+| `--help` | Show this message and exit. |
+| `--json` |  |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+
+### `dna sdlc artifact show`
+
+Show an HtmlArtifact's metadata (or --html to dump the raw HTML).
+
+```text
+dna sdlc artifact show [OPTIONS] NAME
+```
+
+**Arguments**
+
+| Argument | Required |
+| --- | --- |
+| `NAME` | yes |
+
+**Options**
+
+| Option | Description |
+| --- | --- |
+| `--help` | Show this message and exit. |
+| `--html` | Print the raw HTML to stdout. |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+
 ## `dna sdlc backfill`
 
 Back-fill Spec/Plan docs from a directory of markdown files.

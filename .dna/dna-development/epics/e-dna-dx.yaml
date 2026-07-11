@@ -23,3 +23,8 @@ spec:
     type: status_change
     source: cli
     to: in-progress
+  produces:
+  - kind: HtmlArtifact
+    name: ha-e-dna-dx-design
+    role: design-doc
+    at: '2026-07-11T07:16:30+00:00'

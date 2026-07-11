@@ -7,7 +7,7 @@ spec:
     Py/TS.
   description: Adicionar o HtmlArtifact Kind (bundle HTML) com reader/writer e paridade
     Py/TS.
-  status: todo
+  status: in-progress
   feature: f-dna-artifacts
   priority: medium
   labels:
@@ -23,10 +23,57 @@ spec:
     \ (PR PROPRIA \u2014 nao nesta.)"
   definition_of_done_source: cli-create
   created_at: '2026-07-11T06:25:33+00:00'
-  updated_at: '2026-07-11T06:25:33+00:00'
+  updated_at: '2026-07-11T07:30:49+00:00'
   timeline:
   - at: '2026-07-11T06:25:33+00:00'
     actor: claude-code
     type: status_change
     source: cli
     to: todo
+  - at: '2026-07-11T07:09:15+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-11T07:14:43+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Kind + reader/writer implementados e verdes: HtmlArtifactKind (plane=record,\
+      \ alias gerado sdlc-html-artifact) registrado na SdlcExtension Py+TS, espelhando\
+      \ a mec\xE2nica do Soul (SOUL.md+soul.json). Bundle = ARTIFACT.html (HTML verbatim,\
+      \ byte-fiel) + artifact.json (metadata title/description/source/created_at).\
+      \ Modelos: TypedHtmlArtifact (dataclass) + HtmlArtifactSchema (zod). Round-trip\
+      \ byte-fiel provado nos 2 runtimes (6 testes py + 2 ts). kind-registry-parity\
+      \ + typecheck TS verdes. Proximo: comando CLI de create, docs, e dogfood do\
+      \ design doc do e-dna-dx."
+    commit_ref: ffb39ee41812f934a96b31d09eab3e5cc272bbf4
+  - at: '2026-07-11T07:30:29+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-dx-html-artifact-kind
+    summary: TestGuide tg-s-dx-html-artifact-kind (smoke)
+  - at: '2026-07-11T07:30:49+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-dx-html-artifact-kind-20260711-073047
+    summary: "TestRun tr-tg-s-dx-html-artifact-kind-20260711-073047 \u2192 pass"
+    outcome: pass
+  produces:
+  - kind: Plan
+    name: plan-s-dx-html-artifact-kind
+    role: implementation
+    at: '2026-07-11T07:09:15+00:00'
+  - kind: TestGuide
+    name: tg-s-dx-html-artifact-kind
+    role: test-guide
+    at: '2026-07-11T07:30:29+00:00'
+  - kind: TestRun
+    name: tr-tg-s-dx-html-artifact-kind-20260711-073047
+    role: test-run
+    at: '2026-07-11T07:30:49+00:00'

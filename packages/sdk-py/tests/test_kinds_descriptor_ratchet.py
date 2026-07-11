@@ -65,6 +65,13 @@ STILL_CLASS_ALLOWLIST = frozenset({
     # (Chunk 4) — rule_count = {count_of: rules}.
     "sdlc-epic",
     "sdlc-feature",
+    "sdlc-html-artifact",  # Tier-2 (s-dx-html-artifact-kind): a bundle Kind
+                           # with a CUSTOM reader/writer — the primary marker
+                           # (ARTIFACT.html) is raw HTML round-tripped
+                           # byte-faithful, which the descriptor's generic
+                           # marker-frontmatter reader/writer cannot express
+                           # (it would inject frontmatter / re-escape). Mirrors
+                           # the Soul/Skill class Kinds (also custom RW).
     "sdlc-initiative",
     "sdlc-issue",
     # sdlc-lesson-learned: migrated to a descriptor in F3 lote-1.

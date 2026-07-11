@@ -1,0 +1,45 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-dx-html-artifact-kind
+spec:
+  title: 'Plano: s-dx-html-artifact-kind'
+  date: '2026-07-11'
+  status: accepted
+  story_ref: s-dx-html-artifact-kind
+  journey_phase: plan
+  body: "# Plan \u2014 s-dx-html-artifact-kind\n\n## Goal\nAdd a first-class **HtmlArtifact**\
+    \ bundle Kind that stores an HTML page as a\nwork-item output, linkable via `produces[]`.\
+    \ Dogfood by storing the epic\n`e-dna-dx` design doc as `ha-e-dna-dx-design`.\n\
+    \n## Design \u2014 bundle format\nMirror the Soul bundle mechanic (SOUL.md + soul.json),\
+    \ byte-faithful on the\nprimary marker:\n- `<name>/ARTIFACT.html` \u2014 the raw\
+    \ HTML, written **verbatim** (round-trip\n  byte-identical; no frontmatter injection).\n\
+    - `<name>/artifact.json` \u2014 structured metadata companion:\n  `{title, description,\
+    \ source, created_at}` (canonical JSON, like soul.json).\n\nSpec model: `HtmlArtifactSpec{\
+    \ html: str, artifact_json: dict|None }`.\n`metadata.description` promoted from\
+    \ `artifact_json.description` on read for\nsearch/listing; elided on write when\
+    \ derivable (F3 market-fidelity pattern).\n\nRecord plane (an artifact produced\
+    \ by a work item, not composition):\n`plane=\"record\"`, `is_prompt_target=False`,\
+    \ permissive tenancy (no `scope`),\n`scope_inheritable=True` (like Research).\
+    \ Alias GENERATED = `sdlc-html-artifact`\n(owner sdlc + kebab(HtmlArtifact));\
+    \ never typed by hand.\n\n## Steps\n1. **Model** \u2014 `HtmlArtifactSpec`/`TypedHtmlArtifact`\
+    \ in `models.py`; Zod\n   `HtmlArtifactSpecSchema`/`HtmlArtifactSchema` in `models.ts`.\n\
+    2. **Kind + reader/writer** \u2014 register in the sdlc extension (Py `__init__.py`\n\
+    \   + TS `sdlc.ts`), custom `HtmlArtifactReader`/`HtmlArtifactWriter` mirroring\n\
+    \   Soul's reader/writer (detect ARTIFACT.html; verbatim html; artifact.json\n\
+    \   companion). `kernel.kind/reader/writer`.\n3. **Parity registry** \u2014 add\
+    \ `sdlc-html-artifact` to\n   `sdk-ts/kind-registry-parity.json` `ts_aliases`.\n\
+    4. **Round-trip tests** \u2014 `test_html_artifact_roundtrip.py` (py) +\n   `html-artifact-roundtrip.test.ts`\
+    \ proving byte-faithful HTML round-trip and\n   metadata preservation; plus registry-parity\
+    \ stays green.\n5. **CLI** \u2014 friendly `dna sdlc artifact create <name> --from\
+    \ <file.html>\n   [--title --description --source]` that reads the file and writes\
+    \ the doc via\n   `kernel.write_document`; `artifact show/list` for symmetry.\n\
+    6. **Docs** \u2014 prose for the Kind in `docs/reference/kinds/` + `docs/reference/cli/sdlc.md`;\n\
+    \   CHANGELOG `[Unreleased]`. `mkdocs build --strict` green.\n7. **Dogfood** \u2014\
+    \ create `ha-e-dna-dx-design` from the design HTML;\n   `produces add Epic/e-dna-dx\
+    \ HtmlArtifact/ha-e-dna-dx-design`; prove\n   `produces list` resolves it.\n8.\
+    \ **Gates** \u2014 sdk-py, sdk-ts + typecheck, cli suites; brand/docs-coverage/drift\n\
+    \   guards; mkdocs strict. TestGuide(--product) + TestRun before done. PR via\n\
+    \   `story pr --base main`. Do NOT merge.\n"
+  created_at: '2026-07-11T07:09:12+00:00'
+  updated_at: '2026-07-11T07:09:12+00:00'
