@@ -1,0 +1,57 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-dx-load-prompts-helper
+spec:
+  title: Helper publico load_prompts + PromptLibrary (Py+TS) que colapsa o shim.
+  description: Helper publico load_prompts + PromptLibrary (Py+TS) que colapsa o shim.
+  status: review
+  feature: f-dna-dx-consume
+  priority: high
+  labels:
+  - dx
+  - sdk
+  reporter: claude-code
+  acceptance_criteria:
+  - dna.load_prompts(scope, base_dir=None) + twin TS retornando PromptLibrary mapeavel
+    (composto+limpo, levanta em falta); resolve base_dir Kernel.quick/DNA_BASE_DIR;
+    exportado publico.
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - PromptLibrary+load_prompts Py+TS; teste mini-consumidor provando colapso 166->~5;
+    suites verdes; docs Consuming prompts.
+  definition_of_done_source: cli-create
+  created_at: '2026-07-11T06:24:31+00:00'
+  updated_at: '2026-07-11T06:37:48+00:00'
+  timeline:
+  - at: '2026-07-11T06:24:31+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-11T06:26:23+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-11T06:27:01+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Implementado: dna/prompts.py (PromptLibrary Mapping lazy+cached + load_prompts)\
+      \ e src/prompts.ts (PromptLibrary.get async + loadPrompts). Teste mini-consumidor\
+      \ prova o colapso: prompts = load_prompts(scope); TRIAGE = prompts['swe-agent']\
+      \ \u2014 2 linhas vs 166 do foundry. Exportado em __all__ (Py) e index.ts (TS)."
+    commit_ref: 52b7db57f85dbf8b630cbf3f552837f8f8972ae2
+  - at: '2026-07-11T06:37:48+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
+  produces:
+  - kind: Plan
+    name: plan-s-dx-load-prompts-helper
+    role: implementation
+    at: '2026-07-11T06:26:23+00:00'

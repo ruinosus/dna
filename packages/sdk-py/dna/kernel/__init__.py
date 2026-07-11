@@ -2478,3 +2478,26 @@ class Kernel:
         the full recipe + rationale."""
         from dna.kernel.kernel_bootstrap import build_auto_kernel
         return build_auto_kernel(source, cls=cls)
+
+    @classmethod
+    def from_config(cls, path: str | None = None) -> "Kernel":
+        """Boot a fully-wired Kernel from a ``dna.config.yaml`` (declarative
+        port wiring — ``s-dx-kernel-from-config``).
+
+        The config selects the ``source`` (``file://`` / ``sqlite://`` /
+        ``postgresql://``) and, optionally, the ``search`` + ``embedding``
+        providers; every port is resolved to its adapter and wired. With NO
+        config present (and no ``path`` given) the behavior is unchanged — a
+        filesystem ``.dna`` source, exactly like the bare default.
+
+        Returns a wired Kernel; call ``.instance(scope)`` for the
+        ManifestInstance (``Runtime.from_config(...).manifest(scope)`` for the
+        Runtime vocabulary). ``cls`` is threaded through like ``auto``/``quick``
+        so ``Runtime.from_config()`` returns a ``Runtime``.
+
+        This is a boot-time factory: SQL sources run their migrations here via
+        a short-lived event loop, so call it during startup, not from inside a
+        running loop.
+        """
+        from dna.kernel.kernel_bootstrap import build_from_config
+        return build_from_config(path, cls=cls)

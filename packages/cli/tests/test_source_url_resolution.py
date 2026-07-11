@@ -41,3 +41,55 @@ def test_file_url_bare_netloc(tmp_path, monkeypatch):
 def test_plain_relative_path(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     assert _resolved_base("./scopes") == (tmp_path / "scopes").resolve()
+
+
+# ── the public factory now ACTUALLY supports sqlite/postgres (s-dx-kernel-from-config)
+
+def test_public_factory_builds_and_connects_sqlite(tmp_path):
+    """`source_from_url("sqlite://…")` returns a live, migrated SqlAlchemySource
+    — the scheme the CLI used to reject with 'unsupported'."""
+    import asyncio
+
+    # The sqlite adapter rides the optional `sqlite` extra (sqlalchemy +
+    # aiosqlite); skip where it isn't installed (e.g. the bare CLI CI job).
+    import pytest
+    pytest.importorskip("sqlalchemy")
+    pytest.importorskip("aiosqlite")
+
+    from dna.adapters.source_url import source_from_url
+    from dna.adapters.sqlalchemy_ import SqlAlchemySource
+
+    db = tmp_path / "dev.db"
+    src = asyncio.run(source_from_url(f"sqlite:///{db}"))
+    assert isinstance(src, SqlAlchemySource)
+    # connect() ran the migrations → the schema-control table exists.
+    scopes = asyncio.run(src.list_scopes())
+    assert isinstance(scopes, list)
+    asyncio.run(src.close())
+
+
+def test_public_factory_rejects_unknown_scheme():
+    import asyncio
+
+    from dna.adapters.source_url import UnsupportedSourceScheme, source_from_url
+
+    try:
+        asyncio.run(source_from_url("mysql://nope"))
+        assert False, "expected UnsupportedSourceScheme"
+    except UnsupportedSourceScheme as exc:
+        assert "mysql" in str(exc)
+
+
+def test_cli_source_from_env_now_accepts_sqlite(tmp_path):
+    """The CLI boot path delegates to the public factory, so sqlite:// no longer
+    raises the old ClickException."""
+    import pytest
+    pytest.importorskip("sqlalchemy")
+    pytest.importorskip("aiosqlite")
+
+    src = asyncio.run(
+        build_source_from_env(Kernel.auto(), _source_url=f"sqlite:///{tmp_path/'x.db'}")
+    )
+    from dna.adapters.sqlalchemy_ import SqlAlchemySource
+    assert isinstance(src, SqlAlchemySource)
+    asyncio.run(src.close())

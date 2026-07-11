@@ -1,0 +1,20 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-019-epic-feature-forward-link
+spec:
+  description: "epic show mostra '(no features linked)' mesmo com features apontando\
+    \ pro epic \u2014 link e one-way (feature.spec.epic); o forward epic.spec.features[]\
+    \ nunca e populado por 'feature create --epic'. Falta verbo (epic add-feature)\
+    \ ou feature create atualizar o epic. Papercut ao formalizar e-dna-dx. Candidato\
+    \ pro proprio e-dna-dx."
+  type: enhancement
+  severity: low
+  status: open
+  related_feature: f-dna-dx-configure
+  timeline:
+  - at: '2026-07-11T06:47:25+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

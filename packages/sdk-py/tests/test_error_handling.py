@@ -203,9 +203,13 @@ class TestDependencyResolutionErrors:
 
 class TestMIErrors:
     def test_build_prompt_unknown_agent(self):
+        # Fail loud (s-dx-build-prompt-fail-loud): a missing agent raises
+        # AgentNotFound instead of returning a "not found" placeholder string.
+        from dna import AgentNotFound
+
         mi = Kernel.quick("open-swe", base_dir=str(BASE_DIR))
-        result = mi.build_prompt(agent="ghost-agent")
-        assert "not found" in result
+        with pytest.raises(AgentNotFound):
+            mi.build_prompt(agent="ghost-agent")
 
     def test_describe_missing_doc(self):
         mi = Kernel.quick("open-swe", base_dir=str(BASE_DIR))

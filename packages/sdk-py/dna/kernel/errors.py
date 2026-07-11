@@ -55,6 +55,28 @@ class ExtensionLoadError(KernelRegistrationError):
     ``extension_error`` hook."""
 
 
+class AgentNotFound(LookupError):
+    """``build_prompt(agent=X)`` was asked for an agent that no prompt-target
+    document in the loaded manifest declares (missing, renamed, or unparseable).
+
+    Fail-loud contract (s-dx-build-prompt-fail-loud): the builder used to
+    RETURN the string ``"Agent 'X' not found"`` instead of raising — which
+    sailed straight through a consumer's ``if not text`` check and became the
+    LITERAL agent instruction. Every consumer therefore wrote the same
+    defensive guard (``mi.one("Agent", x) is None``) before every call. Raising
+    a typed error deletes that guard: the miss is now impossible to ignore.
+
+    Subclasses ``LookupError`` (not ``ValueError``) — semantically a
+    lookup miss, and narrow enough that a caller can ``except AgentNotFound``
+    (or the broader ``except LookupError``) without swallowing unrelated
+    failures. Exported publicly from the ``dna`` package.
+    """
+
+    def __init__(self, agent: str | None) -> None:
+        self.agent = agent
+        super().__init__(f"Agent '{agent}' not found")
+
+
 class SourceRegistrationError(KernelRegistrationError):
     """A source failed the SourcePort boot gate at ``kernel.source(src)``
     time (s-dna-source-conformance-kit).

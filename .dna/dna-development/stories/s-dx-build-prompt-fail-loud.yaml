@@ -1,0 +1,65 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-dx-build-prompt-fail-loud
+spec:
+  title: 'build_prompt fail-loud: raise AgentNotFound em vez de retornar string placeholde'
+  description: 'build_prompt fail-loud: raise AgentNotFound em vez de retornar string
+    placeholder.'
+  status: review
+  feature: f-dna-dx-consume
+  priority: high
+  labels:
+  - dx
+  - sdk
+  reporter: claude-code
+  acceptance_criteria:
+  - build_prompt(agent=X) num agente inexistente LEVANTA AgentNotFound (tipado, exportado
+    no publico dna) em vez de retornar 'Agent X not found'; async + record-plane (prompt_kernel)
+    em paridade; TS throw twin.
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - AgentNotFound em Py (LookupError) + TS (Error, .agent); call-sites/testes antigos
+    atualizados; suites Py+TS verdes; CHANGELOG breaking.
+  definition_of_done_source: cli-create
+  created_at: '2026-07-11T06:24:28+00:00'
+  updated_at: '2026-07-11T06:37:57+00:00'
+  timeline:
+  - at: '2026-07-11T06:24:28+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-11T06:26:15+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-11T06:26:58+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'Implementado: AgentNotFound(LookupError, .agent) em errors.py exportado
+      no dna publico; raise nos 2 builders MI (build/build_async) + prompt_kernel
+      record-plane; TS AgentNotFound(Error,.agent)+throw. Atualizei test_kernel, test_error_handling
+      e test_dx_quickwins (Py) + kernel.test.ts (TS). Full suite Py 2837 pass, TS
+      1375 pass.'
+    commit_ref: 52b7db57f85dbf8b630cbf3f552837f8f8972ae2
+  - at: '2026-07-11T06:37:07+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/47'
+    pr_url: https://github.com/ruinosus/dna/pull/47
+  - at: '2026-07-11T06:37:57+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
+  produces:
+  - kind: Plan
+    name: plan-s-dx-build-prompt-fail-loud
+    role: implementation
+    at: '2026-07-11T06:26:15+00:00'

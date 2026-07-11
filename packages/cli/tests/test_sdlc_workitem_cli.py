@@ -180,11 +180,65 @@ def test_create_required_option_enforced(runner, label, args):
 # --help works for every group's create (registration smoke).
 # ---------------------------------------------------------------------------
 
-@pytest.mark.parametrize("group", ["spike", "bug", "task", "adr", "spec", "plan"])
+@pytest.mark.parametrize("group", ["spike", "bug", "task", "adr", "spec", "plan", "epic"])
 def test_create_help(runner, group):
     result = runner.invoke(sdlc, [group, "create", "--help"])
     assert result.exit_code == 0, f"{group}: help failed\n{result.output}"
     assert "Usage:" in result.output
+
+
+# ---------------------------------------------------------------------------
+# epic create (s-dx-epic-create) — closes the last CRUD gap in the SDLC CLI.
+# ---------------------------------------------------------------------------
+
+def test_epic_create_writes_doc_with_timeline(runner, store):
+    result = runner.invoke(
+        sdlc,
+        [
+            "epic", "create", "e-demo",
+            "--title", "Demo epic", "--desc", "A demo epic",
+            "--status", "in-progress", "--priority", "high",
+            "--labels", "dx,sdk",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert "CREATED Epic/e-demo (status: in-progress)" in result.output
+    raw = store[("dna-development", "Epic", "e-demo")]
+    assert raw["kind"] == "Epic"
+    spec = raw["spec"]
+    assert spec["title"] == "Demo epic"
+    assert spec["status"] == "in-progress"
+    assert spec["priority"] == "high"
+    assert spec["labels"] == ["dx", "sdk"]
+    assert spec["reporter"] == "claude-code"  # default
+    assert spec.get("created_at") and spec.get("updated_at")
+    # First timeline event = the create itself (parity with feature/story).
+    assert spec["timeline"][0]["type"] == "status_change"
+    assert spec["timeline"][0]["to"] == "in-progress"
+
+
+def test_epic_create_default_status_is_planning(runner, store):
+    result = runner.invoke(
+        sdlc, ["epic", "create", "e-p", "--title", "T", "--desc", "D"],
+    )
+    assert result.exit_code == 0, result.output
+    assert store[("dna-development", "Epic", "e-p")]["spec"]["status"] == "planning"
+
+
+def test_epic_create_show_finds_it(runner, store):
+    runner.invoke(sdlc, ["epic", "create", "e-found", "--title", "T", "--desc", "D"])
+    result = runner.invoke(sdlc, ["epic", "show", "e-found"])
+    assert result.exit_code == 0, result.output
+    assert "Epic: e-found" in result.output
+
+
+@pytest.mark.parametrize("args", [
+    ["epic", "create", "e-x"],                    # missing --title + --desc
+    ["epic", "create", "e-x", "--title", "T"],    # missing --desc
+])
+def test_epic_create_required_options_enforced(runner, args):
+    result = runner.invoke(sdlc, args)
+    assert result.exit_code != 0, result.output
 
 
 # ---------------------------------------------------------------------------

@@ -14,6 +14,30 @@
  * runtime drift.
  */
 
+/**
+ * `buildPrompt({ agent: X })` was asked for an agent that no prompt-target
+ * document in the loaded manifest declares (missing, renamed, or unparseable).
+ *
+ * Fail-loud contract (s-dx-build-prompt-fail-loud): the builder used to RETURN
+ * the string `"Agent 'X' not found"` instead of throwing — which sailed
+ * straight through a consumer's `if (!text)` check and became the LITERAL
+ * agent instruction. Every consumer therefore wrote the same defensive guard
+ * (`mi.findAgent(x) === null`) before every call. Throwing a typed error
+ * deletes that guard: the miss is now impossible to ignore.
+ *
+ * 1:1 parity with python `dna.AgentNotFound` (a `LookupError` subclass).
+ * Exported publicly from the package root.
+ */
+export class AgentNotFound extends Error {
+  readonly agent: string | null;
+  constructor(agent: string | null) {
+    super(`Agent '${agent}' not found`);
+    this.name = "AgentNotFound";
+    this.agent = agent;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
 /** Base class for kernel registration validation failures. */
 export class KernelRegistrationError extends Error {
   constructor(message?: string) {

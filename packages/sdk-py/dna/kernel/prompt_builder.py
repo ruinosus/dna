@@ -9,6 +9,7 @@ import logging
 from typing import Any, TYPE_CHECKING
 
 from dna.kernel._text import strip_prompt_block
+from dna.kernel.errors import AgentNotFound
 
 if TYPE_CHECKING:
     from dna.kernel.document import Document
@@ -55,7 +56,10 @@ class PromptBuilder:
 
         agent_doc = self._find_agent(agent_name) if agent_name else None
         if not agent_doc:
-            return f"Agent '{agent_name}' not found"
+            # Fail loud (s-dx-build-prompt-fail-loud): raising a typed error
+            # instead of returning a placeholder string means a missing/renamed
+            # agent can never silently become the literal instruction.
+            raise AgentNotFound(agent_name)
 
         # Build context — merge backwards-compat params into enabled_slots
         slots = dict(enabled_slots or {})
@@ -81,7 +85,10 @@ class PromptBuilder:
             from dna.kernel.hooks import HookContext
             hooks.emit("post_build_prompt", HookContext(scope=self._host.scope, agent=agent_name, prompt=prompt))
 
-        return prompt
+        # Clean output (s-dx-clean-composition-output): template sections can
+        # pad the composed prompt with trailing newlines; consumers used to
+        # ``.rstrip("\n")`` themselves. Return it already clean so nobody has to.
+        return prompt.rstrip("\n")
 
     async def build_async(
         self,
@@ -109,7 +116,8 @@ class PromptBuilder:
 
         agent_doc = await self._find_agent_async(agent_name) if agent_name else None
         if not agent_doc:
-            return f"Agent '{agent_name}' not found"
+            # Fail loud (s-dx-build-prompt-fail-loud) — see build().
+            raise AgentNotFound(agent_name)
 
         slots = dict(enabled_slots or {})
         if enabled_skills and "skills" not in slots:
@@ -131,7 +139,8 @@ class PromptBuilder:
             from dna.kernel.hooks import HookContext
             hooks.emit("post_build_prompt", HookContext(scope=self._host.scope, agent=agent_name, prompt=prompt))
 
-        return prompt
+        # Clean output (s-dx-clean-composition-output) — see build().
+        return prompt.rstrip("\n")
 
     # -------------------------------------------------------------------------
     # Private helpers

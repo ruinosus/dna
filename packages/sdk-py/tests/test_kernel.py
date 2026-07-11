@@ -27,7 +27,14 @@ class TestBuildPrompt:
         assert "SWE" in prompt or "swe" in prompt
 
     def test_unknown_agent(self, mi):
-        assert "not found" in mi.build_prompt(agent="nonexistent")
+        # Fail loud (s-dx-build-prompt-fail-loud): a missing agent raises a
+        # typed AgentNotFound instead of returning a placeholder string.
+        from dna import AgentNotFound
+
+        with pytest.raises(AgentNotFound) as exc:
+            mi.build_prompt(agent="nonexistent")
+        assert exc.value.agent == "nonexistent"
+        assert "nonexistent" in str(exc.value)
 
     def test_default_agent(self, mi):
         agent = mi.default_agent()

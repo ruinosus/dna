@@ -11,6 +11,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`dna.load_prompts(scope, base_dir=None)` — compose prompts in one line**
+  (s-dx-load-prompts-helper, epic `e-dna-dx`). Returns a `PromptLibrary`, a
+  lazy/cached read-only mapping from agent name to its composed, already-clean
+  system prompt; a missing agent raises `AgentNotFound`. Collapses the
+  ~166-line defensive prompt shim a real consumer wrote (boot kernel + resolve
+  base dir + `mi.one("Agent", x) is None` guard + `.rstrip("\n")`) down to
+  `prompts = load_prompts(scope); TRIAGE = prompts["triage"]`. TS twin
+  `loadPrompts` / `PromptLibrary` (composition is async, so `await
+  prompts.get("triage")`). Guide: **Consuming prompts**.
+- **`dna.config.yaml` + `Kernel.from_config(path=None)` — declarative port
+  wiring** (s-dx-kernel-from-config). A language-agnostic config file selects
+  the `source` (`file://` / `sqlite://` / `postgresql://`), and optionally the
+  `search` (`pgvector` / `sqlite-vec` / `off`) and `embedding` (`onnx` /
+  `fake` / `off`) providers; `Kernel.from_config` resolves every port to its
+  adapter and returns the wired kernel. No config present → the current
+  filesystem `.dna` behavior, unchanged. TS twin `fromConfig`. The URL→source
+  factory is now a **public** surface (`dna.adapters.source_from_url` /
+  `sourceFromUrl`) that actually supports `sqlite://` / `postgresql://` via the
+  existing `SqlAlchemySource`; the `dna` CLI consumes the same factory (so
+  `DNA_SOURCE_URL=sqlite://…` / `postgresql://…` now Just Works). `sqlite://`
+  is Python-only in the TS runtime and fails loud there. Guide: **Configuring
+  ports**.
+- **`dna sdlc epic create <name>`** (s-dx-epic-create) — closes the last CRUD
+  gap in the SDLC CLI. Story and Feature had `create`; an Epic previously had
+  to be hand-authored via `dna doc apply`. Mirrors `feature create` (same
+  flags, same `kernel.write_document` path, same initial timeline event).
+
+### Changed
+
+- **BREAKING — `build_prompt` fails loud on a missing agent**
+  (s-dx-build-prompt-fail-loud). `mi.build_prompt(agent=X)` (and its async /
+  record-plane twins, and the TS `mi.buildPrompt`) now **raise**
+  `AgentNotFound` (Python: a `LookupError`; TS: an `Error` with `.agent`)
+  instead of RETURNING the string `"Agent 'X' not found"`. The old behavior
+  let a missing/renamed agent sail through an `if not text` check and become
+  the literal instruction — every consumer wrote the same `mi.one("Agent", x)
+  is None` guard to defend against it. `AgentNotFound` is exported from the
+  package root. Migration: replace the guard + `.rstrip` shim with a
+  `try/except AgentNotFound` (or just let it propagate) — or adopt
+  `load_prompts`, which does it for you.
+- **BREAKING — `build_prompt` returns clean output**
+  (s-dx-clean-composition-output). Composed prompts no longer carry trailing
+  newlines leaked from template sections; the builder strips them. Consumers
+  that hand-wrote `.rstrip("\n")` can drop it. If you pinned an exact composed
+  string that ended in `\n`, update the expectation.
+
 ## [0.3.1] - 2026-07-10
 
 ### Fixed

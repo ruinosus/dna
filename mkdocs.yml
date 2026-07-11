@@ -64,6 +64,8 @@ nav:
   - How-to guides:
       - guides/index.md
       - A tour of the dna CLI: guides/cli-tour.md
+      - How to consume prompts: guides/consuming-prompts.md
+      - How to configure ports (dna.config.yaml): guides/configuring-ports.md
       - How to install bundles from a repository: guides/installing-scopes.md
       - How to add a Kind: guides/add-a-kind.md
       - How to read document data: guides/read-document-data.md

@@ -358,6 +358,7 @@ describe("Lock types", () => {
 // ---------------------------------------------------------------------------
 
 import { Kernel, ManifestInstance } from "../src/kernel/index.js";
+import { AgentNotFound } from "../src/kernel/errors.js";
 import type { KindPort, SourcePort, CachePort } from "../src/kernel/protocols.js";
 
 function makeKindPort(overrides: Partial<KindPort> & Pick<KindPort, "apiVersion" | "kind" | "alias">): KindPort {
@@ -768,10 +769,11 @@ describe("v3 ManifestInstance", () => {
     expect(prompt).toBe("AGENT TEMPLATE: Be helpful");
   });
 
-  test("buildPrompt returns not found for missing agent", async () => {
+  test("buildPrompt throws AgentNotFound for missing agent", async () => {
+    // Fail loud (s-dx-build-prompt-fail-loud): a missing agent throws a typed
+    // AgentNotFound instead of returning a placeholder string.
     const mi = new ManifestInstance({ scope: "test", documents: [], kinds: new Map() });
-    const prompt = await mi.buildPrompt({ agent: "nonexistent" });
-    expect(prompt).toContain("not found");
+    await expect(mi.buildPrompt({ agent: "nonexistent" })).rejects.toThrow(AgentNotFound);
   });
 
   test("defaultAgent uses root adapter", async () => {

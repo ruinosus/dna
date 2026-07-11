@@ -1,0 +1,56 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-dx-clean-composition-output
+spec:
+  title: build_prompt devolve saida ja limpa (sem trailing newlines de template).
+  description: build_prompt devolve saida ja limpa (sem trailing newlines de template).
+  status: review
+  feature: f-dna-dx-consume
+  priority: high
+  labels:
+  - dx
+  - sdk
+  reporter: claude-code
+  acceptance_criteria:
+  - build_prompt sem newlines finais espurios; consumidor nao precisa de .rstrip;
+    paridade async + record-plane + TS.
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - rstrip em ambos builders Py + prompt_kernel + TS; goldens/testes de trailing whitespace
+    revisados; suites verdes; CHANGELOG.
+  definition_of_done_source: cli-create
+  created_at: '2026-07-11T06:24:29+00:00'
+  updated_at: '2026-07-11T06:37:45+00:00'
+  timeline:
+  - at: '2026-07-11T06:24:29+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-11T06:26:19+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-11T06:26:59+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'Implementado: rstrip(''\n'') no retorno de PromptBuilder.build/build_async
+      + prompt_kernel.build_prompt_async (Py) e /\n+$/ no TS build(). test_prompt_trailing_whitespace
+      continua verde (asserts nao dependem do trailing). Teste novo trava ''not text.endswith(newline)''
+      em ambos runtimes.'
+    commit_ref: 52b7db57f85dbf8b630cbf3f552837f8f8972ae2
+  - at: '2026-07-11T06:37:45+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
+  produces:
+  - kind: Plan
+    name: plan-s-dx-clean-composition-output
+    role: implementation
+    at: '2026-07-11T06:26:19+00:00'

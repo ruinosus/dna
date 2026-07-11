@@ -35,7 +35,6 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterator
-from urllib.parse import urlparse
 
 import click
 
@@ -63,35 +62,21 @@ def _resolve_source_url(base_dir_override: str | None = None) -> str:
 
 
 async def build_source_from_env(kernel: Any, *, _source_url: str | None = None) -> Any:
-    """Build a writable source from the environment (filesystem-only boot
-    path — see module docstring). Async for signature uniformity with the
-    upstream factory this replaces."""
-    url = _source_url or _resolve_source_url()
-    parsed = urlparse(url)
-    scheme = parsed.scheme or "file"
-    if scheme in ("file", "fs", ""):
-        from dna.adapters.filesystem.writable import FilesystemWritableSource
+    """Build a writable source from the environment via the PUBLIC SDK factory.
 
-        # Join netloc + path (same rule as source_cmd._resolve_url_to_path):
-        # 'fs://./copy' parses as netloc='.', path='/copy' — dropping the
-        # netloc silently resolved to the ABSOLUTE '/copy', so `dna source
-        # diff fs://./copy` digested a nonexistent dir as {} and reported a
-        # bogus "in sync" (found while fixing i-006).
-        if parsed.scheme:
-            path = (parsed.netloc + parsed.path) if parsed.netloc else parsed.path
-        else:
-            path = url
-        return FilesystemWritableSource(
-            path,
-            writers=list(getattr(kernel, "active_writers", []) or []),
-            kernel=kernel,
-        )
-    raise click.ClickException(
-        f"unsupported DNA_SOURCE_URL scheme '{scheme}://' — the dna CLI "
-        f"boots filesystem sources (file:// or a plain path). The sqlite/"
-        f"postgres adapters ship in dna.adapters and can be wired "
-        f"programmatically via kernel.source(...)."
-    )
+    Delegates to ``dna.adapters.source_url.source_from_url`` — the same
+    factory ``Kernel.from_config`` uses — so the CLI no longer duplicates
+    URL→adapter logic AND gains sqlite:// / postgresql:// support for free
+    (they were previously reachable only by hand-wiring
+    ``kernel.source(...)``). The i-006 netloc rule + the write-through of the
+    kernel's active writers now live in the factory."""
+    from dna.adapters.source_url import UnsupportedSourceScheme, source_from_url
+
+    url = _source_url or _resolve_source_url()
+    try:
+        return await source_from_url(url, kernel=kernel)
+    except UnsupportedSourceScheme as exc:
+        raise click.ClickException(str(exc)) from exc
 
 
 async def _build_holder_async(scope: str | None = None):

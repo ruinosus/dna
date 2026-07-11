@@ -1,0 +1,25 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Feature
+metadata:
+  name: f-dna-dx-configure
+spec:
+  title: "Configurar ports \xE9 declarativo (dna.config.yaml)"
+  description: "Kernel.from_config + dna.config.yaml (source/search/embedding), factory\
+    \ URL\u2192source p\xFAblico suportando file/sqlite/postgresql, e o CLI consumindo\
+    \ a mesma superf\xEDcie. Inclui o papercut de DX epic create."
+  status: discovery
+  epic: e-dna-dx
+  reporter: claude-code
+  priority: high
+  labels:
+  - dx
+  - sdk
+  - cli
+  created_at: '2026-07-11T06:23:06+00:00'
+  updated_at: '2026-07-11T06:23:06+00:00'
+  timeline:
+  - at: '2026-07-11T06:23:06+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: discovery
