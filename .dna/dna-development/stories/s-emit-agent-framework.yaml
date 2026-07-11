@@ -40,7 +40,7 @@ spec:
   - 'UX: losses (tenant/composition/eval) documented in emitter output + guide.'
   definition_of_done_source: cli-create
   created_at: '2026-07-11T12:31:32+00:00'
-  updated_at: '2026-07-11T13:00:57+00:00'
+  updated_at: '2026-07-11T13:10:45+00:00'
   timeline:
   - at: '2026-07-11T12:31:32+00:00'
     actor: claude-code
@@ -104,6 +104,16 @@ spec:
     source: cli
     from: in-progress
     to: review
+  - at: '2026-07-11T13:10:45+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #56 open, CI 11/11 green (brand-guard, gitleaks, docs-build+links,\
+      \ sdk-py 3.12/3.13, cli 3.12/3.13, sdk-ts, postgres, commit-emails). Regenerated\
+      \ the CLI reference (gen_cli_docs) for the new dna emit page. Full suites: sdk-py\
+      \ 2902 pass, cli 401 pass, TS 1415 pass. In review \u2014 NOT merged (per instruction;\
+      \ done-on-merge)."
+    commit_ref: 54a9bc805d7159fb3b39587bacba434712f4c7e7
   produces:
   - kind: Plan
     name: plan-s-emit-agent-framework
