@@ -1,0 +1,19 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-dx-html-artifact-kind-20260711-073047
+spec:
+  guide_ref: tg-s-dx-html-artifact-kind
+  outcome: pass
+  verifies:
+  - Story/s-dx-html-artifact-kind
+  executed_by: claude-code
+  executed_at: '2026-07-11T07:30:47+00:00'
+  notes: 'All 4 steps executed live. ARTIFACT.html byte-identical to source (diff
+    empty, 20374 bytes). produces list resolves HtmlArtifact/ha-e-dna-dx-design (design-doc).
+    Round-trip byte-fiel proven in Py (6 tests) + TS (2 tests). Full suites green:
+    sdk-py 2848, sdk-ts 1380, cli 378. Guards: brand, docs-coverage, mkdocs --strict,
+    reference-drift all clean.'
+  evidence:
+  - HtmlArtifact/ha-e-dna-dx-design
+  - Epic/e-dna-dx

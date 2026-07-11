@@ -6494,6 +6494,117 @@ def cmd_produces_list(work_item: str, as_json: bool, scope: str) -> None:
         click.echo(f"  {o['kind']:14} {o['name']}{role}{src}")
 
 
+# ── artifact group (s-dx-html-artifact-kind) ─────────────────────────
+# An HtmlArtifact stores an HTML page as a first-class, linkable work-item
+# output (a design doc / roteiro / report). Bundle: ARTIFACT.html (verbatim
+# HTML) + artifact.json (title/description/source/created_at).
+@sdlc.group("artifact")
+def artifact_group() -> None:
+    """Manage HtmlArtifacts — HTML pages as first-class work-item outputs."""
+
+
+@artifact_group.command("create")
+@click.argument("name")
+@click.option("--from", "from_file", required=True,
+              type=click.Path(exists=True, dir_okay=False),
+              help="Path to the .html file to store (read byte-faithful).")
+@click.option("--title", default=None, help="Human title for the artifact.")
+@click.option("--description", default=None, help="Short description (promoted to metadata).")
+@click.option("--source", default=None, help="Provenance/context (e.g. 'design doc do épico e-dna-dx').")
+@_scope_option
+def cmd_artifact_create(
+    name: str, from_file: str, title: str | None,
+    description: str | None, source: str | None, scope: str,
+) -> None:
+    """Create an HtmlArtifact from an HTML file: dna sdlc artifact create <name> --from x.html."""
+    import datetime as _dt
+    from pathlib import Path as _Path
+
+    html = _Path(from_file).read_text(encoding="utf-8")
+    artifact_json: dict[str, Any] = {}
+    if title is not None:
+        artifact_json["title"] = title
+    if description is not None:
+        artifact_json["description"] = description
+    if source is not None:
+        artifact_json["source"] = source
+    artifact_json["created_at"] = _dt.datetime.now(_dt.timezone.utc).isoformat()
+
+    spec: dict[str, Any] = {"html": html, "artifact_json": artifact_json}
+    raw = _build_raw("HtmlArtifact", name, spec)
+    if description:
+        raw["metadata"]["description"] = description
+    with dna_session(scope) as s:
+        s.run(s.kernel.write_document(scope, "HtmlArtifact", name, raw))
+    click.secho(f"CREATED HtmlArtifact/{name} ({len(html)} bytes)", fg="green")
+    click.secho(
+        f"  link it: dna sdlc produces add <WiKind>/<wi> HtmlArtifact/{name}",
+        fg="cyan",
+    )
+
+
+@artifact_group.command("list")
+@click.option("--json", "as_json", is_flag=True)
+@_scope_option
+def cmd_artifact_list(as_json: bool, scope: str) -> None:
+    """List HtmlArtifacts in a scope."""
+    async def _collect(kernel) -> list[dict[str, Any]]:
+        out: list[dict[str, Any]] = []
+        async for raw in kernel.query(scope, "HtmlArtifact"):
+            meta = raw.get("metadata") if isinstance(raw, dict) else {}
+            spec = raw.get("spec") if isinstance(raw, dict) else {}
+            spec = spec if isinstance(spec, dict) else {}
+            aj = spec.get("artifact_json") or {}
+            aj = aj if isinstance(aj, dict) else {}
+            out.append({
+                "name": (meta or {}).get("name", "?"),
+                "title": aj.get("title"),
+                "source": aj.get("source"),
+                "html_bytes": len(spec.get("html") or ""),
+            })
+        return out
+
+    with dna_session(scope) as s:
+        rows = s.run(_collect(s.kernel))
+    if as_json:
+        print_json(rows)
+        return
+    if not rows:
+        click.secho(f"(no HtmlArtifacts in {scope!r})", fg="yellow")
+        return
+    click.secho(f"📄 HtmlArtifacts in {scope} ({len(rows)})", bold=True)
+    for r in rows:
+        t = f" · {r['title']}" if r.get("title") else ""
+        click.echo(f"  {r['name']:32} {r['html_bytes']:>7}B{t}")
+
+
+@artifact_group.command("show")
+@click.argument("name")
+@click.option("--html", "dump_html", is_flag=True, help="Print the raw HTML to stdout.")
+@_scope_option
+def cmd_artifact_show(name: str, dump_html: bool, scope: str) -> None:
+    """Show an HtmlArtifact's metadata (or --html to dump the raw HTML)."""
+    with dna_session(scope) as s:
+        doc = s.get_doc("HtmlArtifact", name)
+    if doc is None:
+        raise fail(f"HtmlArtifact/{name} não encontrado em {scope!r}.")
+    spec = doc.spec if isinstance(doc.spec, dict) else {}
+    if dump_html:
+        click.echo(spec.get("html") or "")
+        return
+    aj = spec.get("artifact_json") or {}
+    click.secho(f"HtmlArtifact: {name}", bold=True)
+    if aj.get("title"):
+        click.echo(f"  title:      {aj['title']}")
+    if aj.get("description"):
+        click.echo(f"  description: {aj['description']}")
+    if aj.get("source"):
+        click.echo(f"  source:     {aj['source']}")
+    if aj.get("created_at"):
+        click.echo(f"  created_at: {aj['created_at']}")
+    click.echo(f"  html_bytes: {len(spec.get('html') or '')}")
+
+
 # ── Changelog — release notes per scope (s-semver-changelog-on-publish) ───────
 # Keep a Changelog 1.1.0: accumulate changes under [Unreleased], then `release`
 # cuts them into a SemVer version. Activates the Changelog Kind (one CHANGELOG

@@ -452,6 +452,24 @@ export const SoulSchema = z.object({
 export type TypedSoul = z.output<typeof SoulSchema>;
 
 // ---------------------------------------------------------------------------
+// HtmlArtifact (github.com/ruinosus/dna/sdlc/v1)
+// ---------------------------------------------------------------------------
+
+export const HtmlArtifactSpecSchema = z.object({
+  html: z.string().optional().default(""),
+  artifact_json: z.record(z.unknown()).optional(),
+});
+
+export const HtmlArtifactSchema = z.object({
+  apiVersion: z.literal("github.com/ruinosus/dna/sdlc/v1"),
+  kind: z.literal("HtmlArtifact"),
+  metadata: MetadataSchema,
+  spec: HtmlArtifactSpecSchema.default({}),
+});
+
+export type TypedHtmlArtifact = z.output<typeof HtmlArtifactSchema>;
+
+// ---------------------------------------------------------------------------
 // AgentDefinition (agents.md/v1)
 // ---------------------------------------------------------------------------
 

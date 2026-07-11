@@ -153,6 +153,38 @@ The sync is deliberately **light**, and honest about degradation:
   repo; `publish`/`import` without a usable `gh` fail with a didactic
   message, not a traceback.
 
+## Work items produce artifacts
+
+A work item is a **hub**: a Story, Feature, Epic or Spike can point at the
+outputs it produced — of any Kind — through its `produces[]` list. Attach one
+with:
+
+```bash
+dna sdlc produces add Epic/e-dna-dx HtmlArtifact/ha-e-dna-dx-design --role design-doc
+dna sdlc produces list Epic/e-dna-dx        # resolved outputs (produces[] ∪ legacy back-refs)
+```
+
+One of the Kinds you can attach is the **`HtmlArtifact`** — an HTML page stored
+as a first-class, linkable output. It is a bundle: `ARTIFACT.html` holds the raw
+markup **byte-faithful** (the writer never injects frontmatter or re-escapes, so
+a design doc, roteiro or rendered report survives the round-trip untouched), plus
+an optional `artifact.json` companion carrying structured metadata (`title`,
+`description`, `source`, `created_at`) — the same shape as a Soul's
+`SOUL.md` + `soul.json`. Create one straight from a file:
+
+```bash
+dna sdlc artifact create ha-e-dna-dx-design --from design.html \
+    --title "DNA DX — Agora → Depois" \
+    --description "Antes/depois da DX do DNA." \
+    --source "design doc do épico e-dna-dx"
+dna sdlc artifact list                       # what's stored in the scope
+dna sdlc artifact show ha-e-dna-dx-design    # metadata (or --html to dump the page)
+```
+
+DNA dogfoods this itself: the `e-dna-dx` epic **produces** its own design doc as
+the `HtmlArtifact/ha-e-dna-dx-design` above — so the "why" of the work is
+traceable on the board, not lost in a chat transcript.
+
 ## Agent-ready
 
 The repo is agent-ready:

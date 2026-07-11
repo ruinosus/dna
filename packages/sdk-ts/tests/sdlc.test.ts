@@ -3,7 +3,7 @@ import { Kernel } from "../src/kernel/index.js";
 import { SdlcExtension } from "../src/extensions/sdlc.js";
 
 describe("SdlcExtension — TS parity with Python", () => {
-  it("registers 31 Kinds under github.com/ruinosus/dna/sdlc/v1 (the 9 cognitive policy Kinds are ONE unified CognitivePolicy since s-consolidate-cognitive-policies, 39→31 — full 1:1 with Py)", () => {
+  it("registers 32 Kinds under github.com/ruinosus/dna/sdlc/v1 (the 9 cognitive policy Kinds are ONE unified CognitivePolicy since s-consolidate-cognitive-policies, 39→31; +HtmlArtifact = 32 — full 1:1 with Py)", () => {
     const k = new Kernel();
     k.load(new SdlcExtension());
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -15,7 +15,7 @@ describe("SdlcExtension — TS parity with Python", () => {
       "ADR", "AgentSession",
       "ArchiveProposal", "Bug", "Changelog", "CognitivePolicy",
       "Epic",
-      "Feature", "Forecast", "Initiative", "Insight", "Issue", "Kaizen",
+      "Feature", "Forecast", "HtmlArtifact", "Initiative", "Insight", "Issue", "Kaizen",
       "LessonLearned", "Narrative",
       "Plan", "Postmortem", "PromptTemplate", "Reference",
       "Retrospective", "RiskRegister", "Roadmap", "SavedView", "Spec",
@@ -58,6 +58,7 @@ describe("SdlcExtension — TS parity with Python", () => {
       "sdlc-epic",
       "sdlc-feature",
       "sdlc-forecast",
+      "sdlc-html-artifact",
       "sdlc-initiative",
       "sdlc-insight",
       "sdlc-issue",

@@ -11,6 +11,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`HtmlArtifact` Kind — an HTML page as a first-class work-item output**
+  (s-dx-html-artifact-kind, epic `e-dna-dx`). A bundle Kind (record plane,
+  alias `sdlc-html-artifact`) registered by the `sdlc` extension in both
+  runtimes: `ARTIFACT.html` stores the raw HTML **byte-faithful** (the writer
+  never injects frontmatter or re-escapes — a design doc / roteiro / rendered
+  report round-trips untouched), plus an optional `artifact.json` companion
+  with structured metadata (`title`, `description`, `source`, `created_at`) —
+  the same mechanic as a Soul's `SOUL.md` + `soul.json`. Custom reader/writer
+  with proven Py↔TS round-trip parity. New CLI: `dna sdlc artifact create
+  <name> --from <file.html> [--title --description --source]`, plus `artifact
+  list` / `artifact show [--html]`. Attach one to the board with `dna sdlc
+  produces add <WiKind>/<wi> HtmlArtifact/<name>`. DNA dogfoods it — the
+  `e-dna-dx` epic **produces** its own design doc as
+  `HtmlArtifact/ha-e-dna-dx-design`. Guide: **SDLC → Work items produce
+  artifacts**.
+
 ## [0.4.0] - 2026-07-11
 
 ### Added

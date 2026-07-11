@@ -450,6 +450,21 @@ Forecast = falseable hypothesis. would_change predictions are verified at outcom
 | `verifications` | array |  | Audit trail appended by verification loop. |
 | `would_change` | array | yes | Predictions checked by verification.py. |
 
+## HtmlArtifact
+
+- **Alias:** `sdlc-html-artifact`
+- **apiVersion:** `github.com/ruinosus/dna/sdlc/v1`
+- **Plane:** record
+
+An HtmlArtifact stores an HTML page as a first-class, linkable output of a work item (Story/Feature/Epic/Spike). It is a bundle: ARTIFACT.html holds the raw HTML verbatim (byte-faithful round-trip) plus an optional artifact.json companion with structured metadata (title, description, source, created_at) — the same shape as a Soul's SOUL.md + soul.json. Attach one to a work item with ``dna sdlc produces add <WiKind>/<wi> HtmlArtifact/<name>`` so a design doc, roteiro, or report that used to live in chat becomes traceable on the board.
+
+**Spec fields**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `artifact_json` | object |  | Structured metadata: title, description, source, created_at. |
+| `html` | string |  | The raw HTML document (byte-faithful). |
+
 ## Initiative
 
 - **Alias:** `sdlc-initiative`
