@@ -7,7 +7,7 @@ spec:
   description: "dna eval run / CLI boot builds kernel via Kernel.auto() WITHOUT LocalResolver\
     \ while Kernel.quick registers it \u2014 a local:<scope> dep resolves in the SDK\
     \ but not the CLI. Wire the resolvers on the CLI boot path consistently."
-  status: review
+  status: done
   feature: f-dna-dx-configure
   priority: high
   labels:
@@ -16,28 +16,50 @@ spec:
   - bug
   reporter: claude-code
   acceptance_criteria:
-  - "Given a scope with a local:<lib-scope> dep, When the CLI boot path (dna eval\
-    \ run) builds the kernel and resolves the manifest, Then the local: dep resolves\
-    \ (LocalResolver present) \u2014 same result as Kernel.quick."
-  - Given a non-filesystem source (sqlite/postgres) with no resolvable base_dir, When
-    the CLI boots, Then no LocalResolver is wired (documented no-op) and boot does
-    not error.
-  - 'Given Kernel.quick for the same scenario, When it resolves the manifest, Then
-    it still resolves the local: dep (no regression).'
+  - text: "Given a scope with a local:<lib-scope> dep, When the CLI boot path (dna\
+      \ eval run) builds the kernel and resolves the manifest, Then the local: dep\
+      \ resolves (LocalResolver present) \u2014 same result as Kernel.quick."
+    done: true
+    done_at: '2026-07-11T10:47:41+00:00'
+    done_by: story-done-auto
+  - text: Given a non-filesystem source (sqlite/postgres) with no resolvable base_dir,
+      When the CLI boots, Then no LocalResolver is wired (documented no-op) and boot
+      does not error.
+    done: true
+    done_at: '2026-07-11T10:47:41+00:00'
+    done_by: story-done-auto
+  - text: 'Given Kernel.quick for the same scenario, When it resolves the manifest,
+      Then it still resolves the local: dep (no regression).'
+    done: true
+    done_at: '2026-07-11T10:47:41+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: claude-code
   definition_of_done:
-  - 'Code: CLI boot (_ctx._build_holder_async) wires the same resolver set as Kernel.quick
-    for filesystem sources via a shared bootstrap helper; from_config/build_auto_kernel
-    aligned.'
-  - 'Tests: a regression test proves the CLI/auto boot resolves a local: dep (red
-    before, green after) and that Kernel.quick keeps resolving; ideally the same scenario
-    via both paths yields the same result.'
-  - 'Docs: CHANGELOG [Unreleased] entry; Py<->TS asymmetry (CLI is Py-only) documented.'
-  - 'CI: full Py + TS suites + guards + mkdocs build --strict green; 11/11 checks
-    on the PR.'
+  - text: 'Code: CLI boot (_ctx._build_holder_async) wires the same resolver set as
+      Kernel.quick for filesystem sources via a shared bootstrap helper; from_config/build_auto_kernel
+      aligned.'
+    done: true
+    done_at: '2026-07-11T10:47:41+00:00'
+    done_by: story-done-auto
+  - text: 'Tests: a regression test proves the CLI/auto boot resolves a local: dep
+      (red before, green after) and that Kernel.quick keeps resolving; ideally the
+      same scenario via both paths yields the same result.'
+    done: true
+    done_at: '2026-07-11T10:47:41+00:00'
+    done_by: story-done-auto
+  - text: 'Docs: CHANGELOG [Unreleased] entry; Py<->TS asymmetry (CLI is Py-only)
+      documented.'
+    done: true
+    done_at: '2026-07-11T10:47:41+00:00'
+    done_by: story-done-auto
+  - text: 'CI: full Py + TS suites + guards + mkdocs build --strict green; 11/11 checks
+      on the PR.'
+    done: true
+    done_at: '2026-07-11T10:47:41+00:00'
+    done_by: story-done-auto
   definition_of_done_source: claude-code
   created_at: '2026-07-11T10:25:11+00:00'
-  updated_at: '2026-07-11T10:41:23+00:00'
+  updated_at: '2026-07-11T10:47:48+00:00'
   timeline:
   - at: '2026-07-11T10:25:11+00:00'
     actor: claude-code
@@ -121,6 +143,33 @@ spec:
       \ maquina \u2014 heranca por parent-chain de scope \u2014 nao a resolucao de\
       \ dep local:, que e o alvo desta story.)"
     commit_ref: bac22ae1d7638b92f9de6a727c9d10c9f454058f
+  - at: '2026-07-11T10:47:35+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-kz001-close
+    summary: TestGuide tg-kz001-close (smoke)
+  - at: '2026-07-11T10:47:39+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-kz001-close-20260711-104737
+    summary: "TestRun tr-tg-kz001-close-20260711-104737 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-11T10:47:43+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'PR #52 merged'
+  - at: '2026-07-11T10:47:48+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: ae2b359c999461306cc2c682737e0d02111aa1ee
   produces:
   - kind: Plan
     name: plan-s-cli-localresolver-consistency
@@ -134,3 +183,12 @@ spec:
     name: tr-tg-cli-localresolver-consistency-20260711-103540
     role: test-run
     at: '2026-07-11T10:35:42+00:00'
+  - kind: TestGuide
+    name: tg-kz001-close
+    role: test-guide
+    at: '2026-07-11T10:47:35+00:00'
+  - kind: TestRun
+    name: tr-tg-kz001-close-20260711-104737
+    role: test-run
+    at: '2026-07-11T10:47:39+00:00'
+  closed_at: '2026-07-11T10:47:41+00:00'

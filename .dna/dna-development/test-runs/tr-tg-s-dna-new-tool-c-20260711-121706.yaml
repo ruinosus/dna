@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-dna-new-tool-c-20260711-121706
+spec:
+  guide_ref: tg-s-dna-new-tool-c
+  outcome: pass
+  verifies:
+  - Story/s-dna-new-tool
+  executed_by: claude-code
+  executed_at: '2026-07-11T12:17:06+00:00'
+  evidence:
+  - "PR #54; dogfood cross-language: mesma description Py==TS byte-id\xEAntico"

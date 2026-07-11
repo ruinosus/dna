@@ -1,0 +1,30 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-s-pkg-source-scheme-c
+spec:
+  description: Roteiro de teste de s-pkg-source-scheme (derivado das acceptance_criteria).
+  kind_of_test: smoke
+  status: active
+  steps:
+  - action: 'No Studio, valide: Given dna.config.yaml with source: pkg://app, When
+      Kernel.from_config() boots, Then the scope embedded in package ''app'' resolves
+      read-only'
+    where: "<rota/tela \u2014 ex. /scopes/:scope/...>"
+    expected: "<o que voc\xEA V\xCA quando est\xE1 certo (marque \u2717 S\xD3 se estiver\
+      \ quebrado)>"
+  - action: 'No Studio, valide: Given pkg://app/.dna subpath form, When resolving,
+      Then the declared subpath is used'
+    where: "<rota/tela \u2014 ex. /scopes/:scope/...>"
+    expected: "<o que voc\xEA V\xCA quando est\xE1 certo (marque \u2717 S\xD3 se estiver\
+      \ quebrado)>"
+  - action: 'No Studio, valide: Given a missing package/subpath, When resolving pkg://,
+      Then it fails loud with the supported set'
+    where: "<rota/tela \u2014 ex. /scopes/:scope/...>"
+    expected: "<o que voc\xEA V\xCA quando est\xE1 certo (marque \u2717 S\xD3 se estiver\
+      \ quebrado)>"
+  verifies:
+  - Story/s-pkg-source-scheme
+  created_at: '2026-07-11T12:11:13+00:00'
+  updated_at: '2026-07-11T12:11:13+00:00'
+  owner: claude-code

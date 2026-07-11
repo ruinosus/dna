@@ -1,0 +1,14 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-kz001-close-20260711-104737
+spec:
+  guide_ref: tg-kz001-close
+  outcome: pass
+  verifies:
+  - Story/s-cli-localresolver-consistency
+  executed_by: claude-code
+  executed_at: '2026-07-11T10:47:37+00:00'
+  evidence:
+  - 'PR #52 merged, CI 11/11; CLI boot registra LocalResolver = Kernel.quick; local:
+    deps resolvem no eval'

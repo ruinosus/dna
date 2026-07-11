@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-scope-as-package-data-c-20260711-121059
+spec:
+  guide_ref: tg-s-scope-as-package-data-c
+  outcome: pass
+  verifies:
+  - Story/s-scope-as-package-data
+  executed_by: claude-code
+  executed_at: '2026-07-11T12:10:59+00:00'
+  evidence:
+  - 'PR #53, CI 11/11; teste reproduz o bug do Docker (CWD vazio resolve via anchor+pkg://)'

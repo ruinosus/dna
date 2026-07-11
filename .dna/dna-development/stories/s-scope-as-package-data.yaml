@@ -6,26 +6,47 @@ spec:
   title: Resolve scope from package data via anchor
   description: load_prompts gains anchor= to resolve a scope embedded as package-data
     (importlib.resources); TS twin resolves relative to the module.
-  status: review
+  status: done
   feature: f-dna-scope-packaging
   owner: claude-code
   acceptance_criteria:
-  - Given a package that embeds a scope as package-data, When load_prompts(scope,
-    anchor='pkg') is called from a different CWD, Then the scope resolves without
-    path navigation or the file being in cwd
-  - Given base_dir/DNA_BASE_DIR/anchor all set, When resolving, Then precedence is
-    base_dir > DNA_BASE_DIR > anchor > default .dna
-  - Given anchor points to a missing package/subpath, When resolving, Then it fails
-    loud with a didactic message
+  - text: Given a package that embeds a scope as package-data, When load_prompts(scope,
+      anchor='pkg') is called from a different CWD, Then the scope resolves without
+      path navigation or the file being in cwd
+    done: true
+    done_at: '2026-07-11T12:11:03+00:00'
+    done_by: story-done-auto
+  - text: Given base_dir/DNA_BASE_DIR/anchor all set, When resolving, Then precedence
+      is base_dir > DNA_BASE_DIR > anchor > default .dna
+    done: true
+    done_at: '2026-07-11T12:11:03+00:00'
+    done_by: story-done-auto
+  - text: Given anchor points to a missing package/subpath, When resolving, Then it
+      fails loud with a didactic message
+    done: true
+    done_at: '2026-07-11T12:11:03+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - 'Code: load_prompts anchor (Py) + loadPrompts anchor (TS) in parity'
-  - 'Tests: sdk-py + sdk-ts cover anchor resolution + precedence + fail-loud'
-  - 'Docs: new guide ''Shipping a scope with your app'''
-  - 'CI: python + typescript + guards + mkdocs strict green'
+  - text: 'Code: load_prompts anchor (Py) + loadPrompts anchor (TS) in parity'
+    done: true
+    done_at: '2026-07-11T12:11:03+00:00'
+    done_by: story-done-auto
+  - text: 'Tests: sdk-py + sdk-ts cover anchor resolution + precedence + fail-loud'
+    done: true
+    done_at: '2026-07-11T12:11:03+00:00'
+    done_by: story-done-auto
+  - text: 'Docs: new guide ''Shipping a scope with your app'''
+    done: true
+    done_at: '2026-07-11T12:11:03+00:00'
+    done_by: story-done-auto
+  - text: 'CI: python + typescript + guards + mkdocs strict green'
+    done: true
+    done_at: '2026-07-11T12:11:03+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-11T10:53:14+00:00'
-  updated_at: '2026-07-11T11:16:51+00:00'
+  updated_at: '2026-07-11T12:11:10+00:00'
   timeline:
   - at: '2026-07-11T10:53:14+00:00'
     actor: claude-code
@@ -75,6 +96,33 @@ spec:
     source: cli
     from: in-progress
     to: review
+  - at: '2026-07-11T12:10:57+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-scope-as-package-data-c
+    summary: TestGuide tg-s-scope-as-package-data-c (smoke)
+  - at: '2026-07-11T12:11:01+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-scope-as-package-data-c-20260711-121059
+    summary: "TestRun tr-tg-s-scope-as-package-data-c-20260711-121059 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-11T12:11:06+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'PR #53 merged'
+  - at: '2026-07-11T12:11:10+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: 4bb5189ae2e8cd984c7f6e04666e2ed69436e167
   produces:
   - kind: Plan
     name: plan-s-scope-as-package-data
@@ -88,3 +136,12 @@ spec:
     name: tr-tg-scope-as-package-data-20260711-111443
     role: test-run
     at: '2026-07-11T11:14:46+00:00'
+  - kind: TestGuide
+    name: tg-s-scope-as-package-data-c
+    role: test-guide
+    at: '2026-07-11T12:10:57+00:00'
+  - kind: TestRun
+    name: tr-tg-s-scope-as-package-data-c-20260711-121059
+    role: test-run
+    at: '2026-07-11T12:11:01+00:00'
+  closed_at: '2026-07-11T12:11:03+00:00'
