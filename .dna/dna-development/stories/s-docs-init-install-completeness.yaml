@@ -10,26 +10,35 @@ spec:
     guide (comparison box + decision table + reciprocal cross-links), and do a docs
     completeness pass (CLI tour was missing init + eval; verify all command groups
     are reachable and explained).
-  status: in-progress
+  status: done
   feature: f-dna-docs
   priority: medium
   labels:
   - docs
   reporter: claude-code
   acceptance_criteria:
-  - GIVEN a reader on docs/guides/installing-scopes.md OR docs/getting-started/agent-onboarding.md
-    WHEN they look for the difference THEN a comparison box + decision table + reciprocal
-    cross-link makes 'projects to tool dirs' vs 'writes to .dna/ source' unmistakable
-  - GIVEN the CLI tour claims 'every command group' THEN dna init and dna eval are
-    present and linked to their dedicated pages
+  - text: GIVEN a reader on docs/guides/installing-scopes.md OR docs/getting-started/agent-onboarding.md
+      WHEN they look for the difference THEN a comparison box + decision table + reciprocal
+      cross-link makes 'projects to tool dirs' vs 'writes to .dna/ source' unmistakable
+    done: true
+    done_at: '2026-07-11T05:25:42+00:00'
+    done_by: story-done-auto
+  - text: GIVEN the CLI tour claims 'every command group' THEN dna init and dna eval
+      are present and linked to their dedicated pages
+    done: true
+    done_at: '2026-07-11T05:25:42+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - mkdocs build --strict green; docs_coverage_guard (+self-test) green; reference
-    drift guard green (generated ref untouched or regenerated); lychee internal links
-    green; new/edited pages navigable in mkdocs.yml; TestRun recorded
+  - text: mkdocs build --strict green; docs_coverage_guard (+self-test) green; reference
+      drift guard green (generated ref untouched or regenerated); lychee internal
+      links green; new/edited pages navigable in mkdocs.yml; TestRun recorded
+    done: true
+    done_at: '2026-07-11T05:25:42+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-11T04:58:49+00:00'
-  updated_at: '2026-07-11T05:04:14+00:00'
+  updated_at: '2026-07-11T05:25:57+00:00'
   timeline:
   - at: '2026-07-11T04:58:49+00:00'
     actor: claude-code
@@ -74,6 +83,13 @@ spec:
     summary: "TestRun tr-tg-docs-init-install-completeness-20260711-050412 \u2192\
       \ pass"
     outcome: pass
+  - at: '2026-07-11T05:25:57+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: done
+    commit_ref: 52b7db57f85dbf8b630cbf3f552837f8f8972ae2
   produces:
   - kind: Plan
     name: plan-s-docs-init-install-completeness
@@ -87,3 +103,4 @@ spec:
     name: tr-tg-docs-init-install-completeness-20260711-050412
     role: test-run
     at: '2026-07-11T05:04:14+00:00'
+  closed_at: '2026-07-11T05:25:42+00:00'
