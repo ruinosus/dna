@@ -57,6 +57,8 @@ export { createKernelWithBuiltins, quickInstance, createRuntimeWithBuiltins, qui
 // shim helper + declarative port wiring.
 export { AgentNotFound, UnknownLayout } from "./kernel/errors.js";
 export { PromptLibrary, loadPrompts } from "./prompts.js";
+export type { LoadPromptsOptions } from "./prompts.js";
+export { anchorScopesRoot, PackageScopeNotFound, DEFAULT_SUBPATH } from "./package-scope.js";
 export { loadConfig, findConfig, CONFIG_FILENAME } from "./config.js";
 export type { DnaConfig, SearchMode, EmbeddingMode } from "./config.js";
 export { sourceFromUrl, resolveDefaultFsUrl, UnsupportedSourceScheme } from "./adapters/source-url.js";

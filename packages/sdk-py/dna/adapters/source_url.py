@@ -17,6 +17,9 @@ Scheme map:
   ``file://<path>``   :class:`FilesystemWritableSource` (read+write on disk)
   ``fs://<path>``     alias of ``file://``
   ``<plain path>``    treated as ``file://<path>``
+  ``pkg://<pkg>[/sub]`` :class:`FilesystemSource` (READ-ONLY) over a scope
+                      embedded as PACKAGE DATA of ``<pkg>``; ``sub`` defaults
+                      to ``.dna``. Travels with the app (wheel / Docker).
   ``sqlite://<path>`` :class:`SqlAlchemySource` (``sqlite+aiosqlite``)
   ``postgresql://…``  :class:`SqlAlchemySource` (``postgresql+asyncpg``)
   ``postgres://…``    alias of ``postgresql://``
@@ -49,6 +52,25 @@ def _url_to_fs_path(url: str) -> str:
     if parsed.scheme:
         return (parsed.netloc + parsed.path) if parsed.netloc else parsed.path
     return url
+
+
+def _parse_pkg_url(url: str, parsed: Any) -> tuple[str, str]:
+    """Split ``pkg://<package>[/<subpath>]`` into ``(package, subpath)``.
+
+    ``pkg://app`` → ``("app", "")`` (subpath defaults to ``.dna`` downstream);
+    ``pkg://app/.dna`` → ``("app", ".dna")``; ``pkg://app/data/scopes`` →
+    ``("app", "data/scopes")``. The package name is the URL *netloc* (a dotted
+    ``pkg://my.app`` stays ``my.app``). Fails loud on a missing package.
+    """
+    package = parsed.netloc
+    if not package:
+        raise UnsupportedSourceScheme(
+            f"pkg:// source URL is missing a package name — use "
+            f"pkg://<package>[/<subpath>] (e.g. pkg://app or pkg://app/.dna). "
+            f"Got: {url!r}."
+        )
+    subpath = parsed.path.lstrip("/")
+    return package, subpath
 
 
 def _normalize_sql_url(url: str, scheme: str) -> str:
@@ -94,6 +116,19 @@ async def source_from_url(
             _url_to_fs_path(url), writers=writers, kernel=kernel,
         )
 
+    if scheme == "pkg":
+        # A scope embedded as PACKAGE DATA — resolve it from inside the
+        # installed package so it travels with the app (wheel / Docker),
+        # no path navigation and no manual COPY. READ-ONLY by nature: the
+        # plain FilesystemSource has no write surface (package data may be a
+        # zip/wheel; to write, use file:// or postgresql://).
+        from dna.adapters.filesystem import FilesystemSource
+        from dna.package_scope import DEFAULT_SUBPATH, anchor_scopes_root
+
+        package, subpath = _parse_pkg_url(url, parsed)
+        base_dir = anchor_scopes_root(package, subpath or DEFAULT_SUBPATH)
+        return FilesystemSource(base_dir)
+
     if scheme.split("+", 1)[0] in ("sqlite", "postgresql", "postgres"):
         from dna.adapters.sqlalchemy_ import SqlAlchemySource
 
@@ -105,8 +140,8 @@ async def source_from_url(
 
     raise UnsupportedSourceScheme(
         f"unsupported source URL scheme '{scheme}://' — the SDK ships adapters "
-        f"for file:// (filesystem), sqlite:// and postgresql:// (via "
-        f"SqlAlchemySource). Got: {url!r}."
+        f"for file:// (filesystem), pkg:// (read-only package-data scope), "
+        f"sqlite:// and postgresql:// (via SqlAlchemySource). Got: {url!r}."
     )
 
 

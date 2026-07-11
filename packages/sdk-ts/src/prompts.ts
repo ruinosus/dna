@@ -24,6 +24,7 @@
  * is `await`ed in TS but not in Python).
  */
 import { quickInstance } from "./bootstrap.js";
+import { anchorScopesRoot } from "./package-scope.js";
 import type { ManifestInstance } from "./kernel/instance.js";
 
 /** Lazy, cached view `agent name -> composed prompt` over one scope. */
@@ -67,18 +68,52 @@ export class PromptLibrary {
   }
 }
 
+/** Options for {@link loadPrompts}. */
+export interface LoadPromptsOptions {
+  /**
+   * The directory that holds `<scope>/` (the `.dna` scopes root), following
+   * the {@link quickInstance} convention.
+   */
+  baseDir?: string;
+  /**
+   * A package specifier whose package data embeds the scope. When given, the
+   * scope is resolved from INSIDE the installed package (via its
+   * `package.json`), so it TRAVELS with the app — an `npm`/`bun install`
+   * carries the package data into the published tarball and into a Docker
+   * image, and resolution works identically from a source checkout, an
+   * installed dependency, or a container whose CWD is not the repo (no
+   * `path.resolve(__dirname, "../..")` navigation, no manual `COPY .dna`).
+   * A scope embedded via `anchor` is READ-ONLY. See the guide "Shipping a
+   * scope with your app".
+   */
+  anchor?: string;
+}
+
 /**
  * Compose the prompts of `scope` behind a {@link PromptLibrary}.
  *
- * `baseDir` follows the {@link quickInstance} convention — the directory that
- * holds `<scope>/` (the `.dna` scopes root). Omitted → the `DNA_BASE_DIR` env
- * var, then `.dna` in the cwd.
+ * Precedence for the scopes-root (first one set wins):
+ *
+ *   `opts.baseDir`  >  `$DNA_BASE_DIR`  >  `opts.anchor` (package data)  >  `.dna`
+ *
+ * The legacy positional-string form (`loadPrompts(scope, "/path/.dna")`) is
+ * still accepted for back-compat and is treated as `baseDir`.
  */
 export async function loadPrompts(
   scope: string,
-  baseDir?: string,
+  opts?: string | LoadPromptsOptions,
 ): Promise<PromptLibrary> {
-  const resolved = baseDir ?? process.env.DNA_BASE_DIR ?? ".dna";
-  const mi = await quickInstance(scope, resolved);
+  const o: LoadPromptsOptions =
+    typeof opts === "string" ? { baseDir: opts } : opts ?? {};
+  const mi = await quickInstance(scope, resolveScopeBaseDir(o));
   return new PromptLibrary(mi);
+}
+
+/** Pick the `.dna` scopes-root by the documented precedence. */
+function resolveScopeBaseDir(o: LoadPromptsOptions): string {
+  if (o.baseDir !== undefined) return o.baseDir;
+  const env = process.env.DNA_BASE_DIR;
+  if (env) return env;
+  if (o.anchor !== undefined) return anchorScopesRoot(o.anchor);
+  return ".dna";
 }

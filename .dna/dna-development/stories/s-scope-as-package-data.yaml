@@ -1,0 +1,78 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-scope-as-package-data
+spec:
+  title: Resolve scope from package data via anchor
+  description: load_prompts gains anchor= to resolve a scope embedded as package-data
+    (importlib.resources); TS twin resolves relative to the module.
+  status: in-progress
+  feature: f-dna-scope-packaging
+  owner: claude-code
+  acceptance_criteria:
+  - Given a package that embeds a scope as package-data, When load_prompts(scope,
+    anchor='pkg') is called from a different CWD, Then the scope resolves without
+    path navigation or the file being in cwd
+  - Given base_dir/DNA_BASE_DIR/anchor all set, When resolving, Then precedence is
+    base_dir > DNA_BASE_DIR > anchor > default .dna
+  - Given anchor points to a missing package/subpath, When resolving, Then it fails
+    loud with a didactic message
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - 'Code: load_prompts anchor (Py) + loadPrompts anchor (TS) in parity'
+  - 'Tests: sdk-py + sdk-ts cover anchor resolution + precedence + fail-loud'
+  - 'Docs: new guide ''Shipping a scope with your app'''
+  - 'CI: python + typescript + guards + mkdocs strict green'
+  definition_of_done_source: cli-create
+  created_at: '2026-07-11T10:53:14+00:00'
+  updated_at: '2026-07-11T11:14:46+00:00'
+  timeline:
+  - at: '2026-07-11T10:53:14+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-11T10:53:39+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-11T11:13:46+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'Shipped the anchor resolver: new dna.package_scope (Py) + package-scope.ts
+      (TS), load_prompts(scope, *, anchor=) + loadPrompts(scope, {anchor}). Precedence
+      base_dir > DNA_BASE_DIR > anchor > .dna in one helper. Fail-loud PackageScopeNotFound
+      with packaging-oriented messages. Exported anchor_scopes_root/PackageScopeNotFound
+      in both SDKs.'
+    commit_ref: ae2b359c999461306cc2c682737e0d02111aa1ee
+  - at: '2026-07-11T11:14:17+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-scope-as-package-data
+    summary: TestGuide tg-scope-as-package-data (integration)
+  - at: '2026-07-11T11:14:46+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-scope-as-package-data-20260711-111443
+    summary: "TestRun tr-tg-scope-as-package-data-20260711-111443 \u2192 pass"
+    outcome: pass
+  produces:
+  - kind: Plan
+    name: plan-s-scope-as-package-data
+    role: implementation
+    at: '2026-07-11T10:53:39+00:00'
+  - kind: TestGuide
+    name: tg-scope-as-package-data
+    role: test-guide
+    at: '2026-07-11T11:14:17+00:00'
+  - kind: TestRun
+    name: tr-tg-scope-as-package-data-20260711-111443
+    role: test-run
+    at: '2026-07-11T11:14:46+00:00'

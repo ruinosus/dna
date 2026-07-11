@@ -87,23 +87,61 @@ class PromptLibrary(Mapping[str, str]):
         return f"PromptLibrary(scope={scope!r}, agents={self.names()})"
 
 
-def load_prompts(scope: str, base_dir: str | None = None) -> PromptLibrary:
+def load_prompts(
+    scope: str,
+    base_dir: str | None = None,
+    *,
+    anchor: str | None = None,
+) -> PromptLibrary:
     """Compose the prompts of ``scope`` behind a mapping.
 
     ``base_dir`` follows the same convention as :py:meth:`Kernel.quick`: it is
-    the directory that holds ``<scope>/`` (the ``.dna`` scopes root). When
-    omitted it falls back to the ``DNA_BASE_DIR`` environment variable, then to
-    ``".dna"`` in the current working directory — the same precedence the
-    ``dna`` CLI uses.
+    the directory that holds ``<scope>/`` (the ``.dna`` scopes root).
+
+    ``anchor`` — a package/module NAME whose installed package data embeds the
+    scope. When given, the scope is resolved from INSIDE the installed package
+    via :mod:`importlib.resources` (``importlib.resources.files(anchor)`` →
+    its ``.dna`` scopes-root child), so the scope TRAVELS with the app: a
+    ``pip install`` / ``uv sync`` carries the package data into a wheel or a
+    Docker image, and resolution works identically from a source checkout, an
+    installed wheel, or a container whose CWD is not the repo — **no fragile
+    ``Path(__file__).parents[N]`` navigation, no manual ``COPY .dna`` in the
+    Dockerfile**. See the guide "Shipping a scope with your app".
+
+    Precedence (first one that is set wins)::
+
+        base_dir (explicit arg)  >  $DNA_BASE_DIR  >  anchor (pkg-data)  >  ".dna"
+
+    A scope embedded via ``anchor`` is READ-ONLY by nature (package data may
+    live in a zip/wheel and the SDK only reads it for composition). To WRITE a
+    scope, use a filesystem or Postgres source instead.
 
     Returns a :class:`PromptLibrary`; see its docstring for the access
     contract (lazy, cached, fail-loud on a missing agent).
     """
-    if base_dir is None:
-        base_dir = os.environ.get("DNA_BASE_DIR") or ".dna"
+    resolved = _resolve_scope_base_dir(anchor=anchor, base_dir=base_dir)
     # Imported lazily to keep ``import dna`` cheap and avoid a hard cycle
     # (kernel imports pull in the whole extension graph).
     from dna.kernel import Kernel
 
-    mi = Kernel.quick(scope, base_dir=base_dir)
+    mi = Kernel.quick(scope, base_dir=resolved)
     return PromptLibrary(mi)
+
+
+def _resolve_scope_base_dir(*, anchor: str | None, base_dir: str | None) -> str:
+    """Pick the ``.dna`` scopes-root by the documented precedence.
+
+    ``base_dir`` (explicit) > ``$DNA_BASE_DIR`` > ``anchor`` (package-data) >
+    ``".dna"`` (cwd, the dev default). Kept as a standalone helper so the
+    precedence lives in ONE place (shared by :func:`load_prompts`).
+    """
+    if base_dir is not None:
+        return base_dir
+    env = os.environ.get("DNA_BASE_DIR")
+    if env:
+        return env
+    if anchor is not None:
+        from dna.package_scope import anchor_scopes_root
+
+        return anchor_scopes_root(anchor)
+    return ".dna"

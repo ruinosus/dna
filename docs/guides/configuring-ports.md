@@ -25,6 +25,7 @@ thing.
 | URL | Adapter |
 |---|---|
 | `file://<path>` (or a plain path) | filesystem (read + write on disk) |
+| `pkg://<package>[/<subpath>]` | filesystem **read-only** over a scope embedded as **package data** — travels with your app (wheel / Docker). See [shipping a scope with your app](shipping-a-scope.md). |
 | `sqlite:///<path>` | `SqlAlchemySource` (aiosqlite) — **Python only** |
 | `postgresql://<user>:<pass>@<host>/<db>` | `SqlAlchemySource` (asyncpg) |
 

@@ -1,0 +1,27 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-pkg-source-scheme
+spec:
+  title: 'Plano: s-pkg-source-scheme'
+  date: '2026-07-11'
+  status: accepted
+  story_ref: s-pkg-source-scheme
+  journey_phase: plan
+  body: 'Extend the public source factory with a pkg:// scheme.
+
+
+    ## Design
+
+    - source_from_url/sourceFromUrl: pkg://<package>[/<subpath>] -> read-only FilesystemSource
+    over anchor_scopes_root(package, subpath or .dna).
+
+    - Reuse the shared package-data resolver (dna.package_scope / package-scope.ts).
+
+    - Fail loud: missing package name (UnsupportedSourceScheme) + missing package/subpath
+    (PackageScopeNotFound).
+
+    - from_config accepts source: pkg://app (read-only source wired via existing supports_readers
+    branch).'
+  created_at: '2026-07-11T11:13:40+00:00'
+  updated_at: '2026-07-11T11:13:40+00:00'
