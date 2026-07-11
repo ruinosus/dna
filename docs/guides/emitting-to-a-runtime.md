@@ -15,7 +15,10 @@ the first concrete step of *"DNA as the Terraform of agents"*.
 $ dna emit --list-targets
 Registered emit targets:
   - agent-framework
+  - agno
   - bedrock
+  - deepagents
+  - langgraph
   - openai-agents
   - vertex
 
@@ -283,7 +286,130 @@ in two flavors. How the scaffold `{framework × case}` mechanism works — and h
 add a new case or a whole new code-first framework — is the
 [How to write an emitter](writing-an-emitter.md) guide.
 
-## Adding a new target (langgraph / agno / …)
+## The de-para — LangGraph (`create_react_agent`, code-first scaffold)
+
+The **fifth** target. LangGraph's prebuilt agent is code-first —
+`create_react_agent(model, tools=[...], prompt="...")` from `langgraph.prebuilt` —
+so the emitter fills a `{langgraph × case}` scaffold. An agent with tools →
+the ReAct idiom (`@tool` stubs); without → `tools=[]`:
+
+```console
+$ dna emit concierge --target langgraph --scope concierge
+from langchain_core.tools import tool
+from langgraph.prebuilt import create_react_agent
+
+INSTRUCTIONS = "You are the Helpdesk Concierge ..."   # byte-equal to build_prompt
+
+@tool
+def kb_search() -> str:
+    "Search the runbook knowledge base ..."
+    raise NotImplementedError("DNA scaffold: implement the kb-search tool")
+
+agent = create_react_agent(
+    model='azure/gpt-4o',
+    tools=[kb_search],
+    prompt=INSTRUCTIONS,
+    name='concierge',
+)
+```
+
+| DNA (source of truth) | LangGraph | Notes |
+|---|---|---|
+| **`Soul` + `Guardrail`s + `Agent.instruction`** (composed by `build_prompt`) | `INSTRUCTIONS` constant → `prompt=INSTRUCTIONS` | **flat string** — carried **byte-equal** (identical across all seven targets) |
+| `metadata.name` | `create_react_agent(name=...)` | the LangGraph graph name |
+| `Agent.spec.model` → else `Genome.spec.default_llm` | `model=...` | DNA coordinate **preserved verbatim** — LangGraph resolves it via `init_chat_model`, which takes a `provider:model` string |
+| `spec.tools[]` (Tool Kind) | `@tool` stubs → `tools=[...]` | one stub per Tool; body + typed signature is wired at deploy (a loss) |
+
+### What does **not** survive — LangGraph-specific
+
+Beyond the three DNA-only axes (composition structure, tenant overlay,
+eval-as-contract), the LangGraph target also drops: the **tool body** (each `@tool`
+is a `NotImplementedError` stub); and it flags the **model-coordinate convention** —
+`init_chat_model` provider prefixes are `openai` / `anthropic` / `azure_openai` /
+`google_genai`, so a DNA `azure/…` coordinate needs the `azure_openai:` prefix (or
+a model instance) at wire-up. `create_react_agent` **requires** a model, so an
+unbound DNA model is a reported loss (supply one at wire-up). `output_schema` maps
+to `response_format` by hand.
+
+## The de-para — Agno (`agno.agent.Agent`, code-first scaffold)
+
+The **sixth** target. Agno is code-first — `Agent(name=..., model=...,
+instructions=..., tools=[...])` from `agno.agent` — so the emitter fills an
+`{agno × case}` scaffold. Agno auto-wraps plain callables as tools, so a stub is a
+bare function:
+
+```console
+$ dna emit concierge --target agno --scope concierge
+from agno.agent import Agent
+
+INSTRUCTIONS = "You are the Helpdesk Concierge ..."   # byte-equal to build_prompt
+
+def kb_search() -> str:
+    "Search the runbook knowledge base ..."
+    raise NotImplementedError("DNA scaffold: implement the kb-search tool")
+
+agent = Agent(
+    name='concierge',
+    model='azure/gpt-4o',
+    instructions=INSTRUCTIONS,
+    tools=[kb_search],
+)
+```
+
+| DNA (source of truth) | Agno | Notes |
+|---|---|---|
+| **`Soul` + `Guardrail`s + `Agent.instruction`** (composed by `build_prompt`) | `INSTRUCTIONS` constant → `instructions=INSTRUCTIONS` | **flat string** — carried **byte-equal** |
+| `metadata.name` | `Agent(name=...)` | the display name |
+| `Agent.spec.model` → else `Genome.spec.default_llm` | `model=...` | DNA coordinate **preserved** as a string (Agno accepts a `provider:model` string) |
+| `spec.tools[]` (Tool Kind) | plain-function stubs → `tools=[...]` | Agno turns a callable into a tool; body is wired at deploy (a loss) |
+
+### What does **not** survive — Agno-specific
+
+Beyond the three DNA-only axes, the Agno target drops the **tool body** (a bare
+callable stub) and notes the **model coordinate** assumes Agno's string-model
+resolution (a specific `Model` object like `OpenAIChat(id=...)` is the alternative).
+`output_schema` maps to `Agent(output_schema=...)` by hand.
+
+## The de-para — DeepAgents (`create_deep_agent`, code-first scaffold)
+
+The **seventh** target. LangChain's DeepAgents (the "batteries-included agent
+harness") is code-first — `create_deep_agent(model=..., tools=[...],
+system_prompt="...")` — so the emitter fills a `{deepagents × case}` scaffold:
+
+```console
+$ dna emit concierge --target deepagents --scope concierge
+from deepagents import create_deep_agent
+
+INSTRUCTIONS = "You are the Helpdesk Concierge ..."   # byte-equal to build_prompt
+
+def kb_search() -> str:
+    "Search the runbook knowledge base ..."
+    raise NotImplementedError("DNA scaffold: implement the kb-search tool")
+
+agent = create_deep_agent(
+    model='azure/gpt-4o',
+    tools=[kb_search],
+    system_prompt=INSTRUCTIONS,
+)
+```
+
+| DNA (source of truth) | DeepAgents | Notes |
+|---|---|---|
+| **`Soul` + `Guardrail`s + `Agent.instruction`** (composed by `build_prompt`) | `INSTRUCTIONS` constant → `system_prompt=INSTRUCTIONS` | **flat string** — carried **byte-equal**, but a **PREFIX** of the effective system prompt (see below) |
+| `Agent.spec.model` → else `Genome.spec.default_llm` | `model=...` | DNA coordinate **preserved** — resolved via `init_chat_model` |
+| `spec.tools[]` (Tool Kind) | callable stubs → `tools=[...]` | body is wired at deploy (a loss) |
+
+### What does **not** survive — DeepAgents-specific
+
+Beyond the three DNA-only axes, the DeepAgents target has two distinctive drops:
+`system_prompt` sits **in front of** the deep-agent's built-in harness prompt
+(planning / filesystem / sub-agent scaffolding) that the framework appends — so the
+DNA prompt is a **prefix** of the effective system prompt, not the whole of it; and
+`create_deep_agent` has **no declarative name slot**, so `metadata.name` is not
+carried. Plus the **tool body** stub and the same model-coordinate convention as
+LangGraph (unbound falls back to the deep-agent default model).
+
+## Adding a new target
 
 Targets are a **registry, not a hardcode** — a new one is a class + one call, and
 the CLI core never changes. The four shipped emitters (`agent-framework`,

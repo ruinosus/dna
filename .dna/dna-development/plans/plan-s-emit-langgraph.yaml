@@ -1,0 +1,19 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-emit-langgraph
+spec:
+  title: 'Plano: s-emit-langgraph'
+  date: '2026-07-11'
+  status: accepted
+  story_ref: s-emit-langgraph
+  journey_phase: plan
+  body: '3 code-first emitters (langgraph/agno/deepagents) via the shipped ScaffoldEmitter
+    contract. Each = a thin emitter class (Py+TS twin) + prompt-only & with-tools
+    scaffolds, registered in builtins. Model: preserve DNA coordinate string (all
+    3 accept init_chat_model-style provider:model, unlike openai-agents which strips).
+    Tools: stub functions (langgraph @tool; agno/deepagents plain callables). Proof:
+    generic contract test + explicit 1-source->7-runtimes portability test; Py<->TS
+    parity. Docs+CHANGELOG. One cohesive PR.'
+  created_at: '2026-07-11T16:42:51+00:00'
+  updated_at: '2026-07-11T16:42:51+00:00'

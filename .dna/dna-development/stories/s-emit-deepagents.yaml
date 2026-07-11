@@ -1,0 +1,42 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-emit-deepagents
+spec:
+  title: 'Code-first emitter: DeepAgents'
+  description: dna emit --target deepagents via ScaffoldEmitter (create_deep_agent)
+  status: todo
+  feature: f-dna-emitters
+  acceptance_criteria:
+  - Given the concierge DNA agent, When I run dna emit --target deepagents, Then it
+    emits create_deep_agent(model, tools, system_prompt=INSTRUCTIONS) source that
+    py_compiles with instruction byte-equal to build_prompt
+  - Given a tools/no-tools agent, When emitting, Then with-tools/prompt-only scaffolds
+    are selected
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - 'Code: DeepAgentsEmitter Py+TS twin + 2 scaffolds each, registered'
+  - 'Tests: per-target + generic contract + 1-source->7-runtimes portability proof
+    green Py+TS; parity'
+  - 'Docs: deepagents de-para + mapping; example README updated to 7 runtimes; CHANGELOG'
+  - 'CI: 11/11 green'
+  definition_of_done_source: cli-create
+  created_at: '2026-07-11T16:42:40+00:00'
+  updated_at: '2026-07-11T16:57:46+00:00'
+  timeline:
+  - at: '2026-07-11T16:42:40+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-11T16:57:46+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'Built DeepAgentsEmitter (Py+TS twin). Passo 0: create_deep_agent(model,
+      tools=[], system_prompt=...). Two distinctive honest losses: system_prompt is
+      a PREFIX of the built-in harness prompt, and there is no declarative name slot.
+      Also added the 1-source->7-runtimes portability proof (test_emit_portability.py
+      / .test.ts) asserting the composed instruction is byte-identical across agent-framework/bedrock/vertex/openai-agents/langgraph/agno/deepagents.
+      Full suites green: py 2997, ts 1478, cli 449; mkdocs --strict built.'
+    commit_ref: 6721f20bfa6a9430b52d4d97063ae8b795b1cbcf
