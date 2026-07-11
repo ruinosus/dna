@@ -30,7 +30,7 @@ spec:
     --html'
   definition_of_done_source: cli-create
   created_at: '2026-07-11T14:26:19+00:00'
-  updated_at: '2026-07-11T14:49:54+00:00'
+  updated_at: '2026-07-11T15:01:30+00:00'
   timeline:
   - at: '2026-07-11T14:26:19+00:00'
     actor: claude-code
@@ -95,6 +95,18 @@ spec:
     source: cli
     from: in-progress
     to: review
+  - at: '2026-07-11T15:01:30+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "CI 11/11 verde no PR #63 (brand-guard, cli 3.12/3.13, commit-emails,\
+      \ docs-build, docs-links, gitleaks, postgres, sdk-py 3.12/3.13, sdk-ts). Resolvi\
+      \ conflito de CHANGELOG com main (Vertex emitter #62 mergeou em paralelo) via\
+      \ merge de main na branch \u2014 [Unreleased] agora combina gallery + published_url\
+      \ + vertex. Regenerei docs/reference/cli/sdlc.md (gate 'generated reference\
+      \ is stale' pegou o comando gallery + --published-url novos). mergeStateStatus=BLOCKED\
+      \ (s\xF3 aguarda review). N\xC3O mergear \u2014 entregue pra revis\xE3o do dono."
+    commit_ref: 242db58b67c445902ee3860143d84edd72c17dbb
   produces:
   - kind: Plan
     name: plan-s-sdlc-gallery
