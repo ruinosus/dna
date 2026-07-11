@@ -7,30 +7,51 @@ spec:
   description: "Painel board-native que gera o \xEDndice dos HtmlArtifacts do board\
     \ agrupados por status do work item \u2014 sempre atual. Irm\xE3o do digest (eventos);\
     \ gallery = artefatos visuais pra revisar."
-  status: review
+  status: done
   feature: f-sdlc-digest
   priority: high
   acceptance_criteria:
-  - "Given HtmlArtifacts linkados a work items, When rodo 'dna sdlc gallery', Then\
-    \ lista todos agrupados por status do work item (precisa de avalia\xE7\xE3o /\
-    \ decis\xF5es / shipado)"
-  - "Given --html <out>, When gero, Then produz UM arquivo HTML self-contained (sem\
-    \ CDN) naveg\xE1vel com cards, chip de status e link publicado"
-  - "Given os 5 prot\xF3tipos do scratchpad registrados como HtmlArtifacts, When rodo\
-    \ gallery, Then os 5 aparecem com published_url clic\xE1vel"
+  - text: "Given HtmlArtifacts linkados a work items, When rodo 'dna sdlc gallery',\
+      \ Then lista todos agrupados por status do work item (precisa de avalia\xE7\xE3\
+      o / decis\xF5es / shipado)"
+    done: true
+    done_at: '2026-07-11T15:06:07+00:00'
+    done_by: story-done-auto
+  - text: "Given --html <out>, When gero, Then produz UM arquivo HTML self-contained\
+      \ (sem CDN) naveg\xE1vel com cards, chip de status e link publicado"
+    done: true
+    done_at: '2026-07-11T15:06:07+00:00'
+    done_by: story-done-auto
+  - text: "Given os 5 prot\xF3tipos do scratchpad registrados como HtmlArtifacts,\
+      \ When rodo gallery, Then os 5 aparecem com published_url clic\xE1vel"
+    done: true
+    done_at: '2026-07-11T15:06:07+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - "Code: comando dna sdlc gallery (texto + --html + --open) sobre m\xF3dulo puro\
-    \ _gallery.py, paridade Py\u2194TS no summary do HtmlArtifact (published_url)"
-  - 'Tests: test_gallery.py (agregador puro) + published_url surfacing; suites Py+TS
-    verdes; guards verdes'
-  - "Docs: guia gallery + distin\xE7\xE3o vs digest; mkdocs build --strict verde;\
-    \ CHANGELOG [Unreleased]"
-  - 'Product: TestGuide --product + TestRun provando os 5 HtmlArtifacts no gallery
-    --html'
+  - text: "Code: comando dna sdlc gallery (texto + --html + --open) sobre m\xF3dulo\
+      \ puro _gallery.py, paridade Py\u2194TS no summary do HtmlArtifact (published_url)"
+    done: true
+    done_at: '2026-07-11T15:06:07+00:00'
+    done_by: story-done-auto
+  - text: 'Tests: test_gallery.py (agregador puro) + published_url surfacing; suites
+      Py+TS verdes; guards verdes'
+    done: true
+    done_at: '2026-07-11T15:06:07+00:00'
+    done_by: story-done-auto
+  - text: "Docs: guia gallery + distin\xE7\xE3o vs digest; mkdocs build --strict verde;\
+      \ CHANGELOG [Unreleased]"
+    done: true
+    done_at: '2026-07-11T15:06:07+00:00'
+    done_by: story-done-auto
+  - text: 'Product: TestGuide --product + TestRun provando os 5 HtmlArtifacts no gallery
+      --html'
+    done: true
+    done_at: '2026-07-11T15:06:07+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-11T14:26:19+00:00'
-  updated_at: '2026-07-11T15:01:30+00:00'
+  updated_at: '2026-07-11T15:06:18+00:00'
   timeline:
   - at: '2026-07-11T14:26:19+00:00'
     actor: claude-code
@@ -107,6 +128,33 @@ spec:
       \ is stale' pegou o comando gallery + --published-url novos). mergeStateStatus=BLOCKED\
       \ (s\xF3 aguarda review). N\xC3O mergear \u2014 entregue pra revis\xE3o do dono."
     commit_ref: 242db58b67c445902ee3860143d84edd72c17dbb
+  - at: '2026-07-11T15:05:59+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-gallery-c
+    summary: TestGuide tg-gallery-c (smoke)
+  - at: '2026-07-11T15:06:05+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-gallery-c-20260711-150602
+    summary: "TestRun tr-tg-gallery-c-20260711-150602 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-11T15:06:11+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'PR #63 merged'
+  - at: '2026-07-11T15:06:18+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: ed5ae1ff994c683feb5d63f581c151721438d086
   produces:
   - kind: Plan
     name: plan-s-sdlc-gallery
@@ -124,3 +172,12 @@ spec:
     name: tr-tg-sdlc-gallery-20260711-144638
     role: test-run
     at: '2026-07-11T14:46:41+00:00'
+  - kind: TestGuide
+    name: tg-gallery-c
+    role: test-guide
+    at: '2026-07-11T15:05:59+00:00'
+  - kind: TestRun
+    name: tr-tg-gallery-c-20260711-150602
+    role: test-run
+    at: '2026-07-11T15:06:05+00:00'
+  closed_at: '2026-07-11T15:06:07+00:00'

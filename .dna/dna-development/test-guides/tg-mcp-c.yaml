@@ -1,0 +1,42 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-mcp-c
+spec:
+  description: Roteiro de teste de s-dna-mcp-server-mvp (derivado das acceptance_criteria).
+  kind_of_test: smoke
+  status: active
+  steps:
+  - action: 'No Studio, valide: Given a configured DNA source, When an MCP client
+      calls compose_prompt(scope,agent), Then it returns the live-composed Soul+Guardrail+instruction
+      prompt'
+    where: "<rota/tela \u2014 ex. /scopes/:scope/...>"
+    expected: "<o que voc\xEA V\xCA quando est\xE1 certo (marque \u2717 S\xD3 se estiver\
+      \ quebrado)>"
+  - action: 'No Studio, valide: Given a scope with a tenant overlay, When compose_prompt
+      is called with tenant=X, Then the returned prompt reflects the tenant overlay
+      (recovering what emit drops)'
+    where: "<rota/tela \u2014 ex. /scopes/:scope/...>"
+    expected: "<o que voc\xEA V\xCA quando est\xE1 certo (marque \u2717 S\xD3 se estiver\
+      \ quebrado)>"
+  - action: 'No Studio, valide: Given the same single server, When a client calls
+      sdlc_digest / list_stories / get_adr, Then it returns the board data (the self-describing
+      SDLC)'
+    where: "<rota/tela \u2014 ex. /scopes/:scope/...>"
+    expected: "<o que voc\xEA V\xCA quando est\xE1 certo (marque \u2717 S\xD3 se estiver\
+      \ quebrado)>"
+  - action: 'No Studio, valide: Given the same single server, When a client calls
+      recall(query), Then it returns the matching DNA memory'
+    where: "<rota/tela \u2014 ex. /scopes/:scope/...>"
+    expected: "<o que voc\xEA V\xCA quando est\xE1 certo (marque \u2717 S\xD3 se estiver\
+      \ quebrado)>"
+  - action: 'No Studio, valide: Given the base install without the [mcp] extra, When
+      dna is imported/run, Then nothing breaks (mcp imported lazily)'
+    where: "<rota/tela \u2014 ex. /scopes/:scope/...>"
+    expected: "<o que voc\xEA V\xCA quando est\xE1 certo (marque \u2717 S\xD3 se estiver\
+      \ quebrado)>"
+  verifies:
+  - Story/s-dna-mcp-server-mvp
+  created_at: '2026-07-11T15:15:42+00:00'
+  updated_at: '2026-07-11T15:15:42+00:00'
+  owner: claude-code

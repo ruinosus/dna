@@ -1,0 +1,14 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-mcp-c-20260711-151549
+spec:
+  guide_ref: tg-mcp-c
+  outcome: pass
+  verifies:
+  - Story/s-dna-mcp-server-mvp
+  executed_by: claude-code
+  executed_at: '2026-07-11T15:15:49+00:00'
+  evidence:
+  - "PR #64; cliente MCP real via stdio \u2192 compose_prompt(tenant) live + SDLC\
+    \ + mem\xF3ria do mesmo server FastMCP"

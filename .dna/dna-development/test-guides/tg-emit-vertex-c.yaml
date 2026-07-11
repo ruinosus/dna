@@ -1,0 +1,39 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-emit-vertex-c
+spec:
+  description: Roteiro de teste de s-emit-vertex (derivado das acceptance_criteria).
+  kind_of_test: smoke
+  status: active
+  steps:
+  - action: 'No Studio, valide: Given the concierge example scope, when I run ''dna
+      emit concierge --target vertex'', then a valid ADK Agent Config YAML is produced
+      with agent_class LlmAgent, name, model, instruction, tools.'
+    where: "<rota/tela \u2014 ex. /scopes/:scope/...>"
+    expected: "<o que voc\xEA V\xCA quando est\xE1 certo (marque \u2717 S\xD3 se estiver\
+      \ quebrado)>"
+  - action: "No Studio, valide: Given the emitted config, when I compare its 'instruction'\
+      \ to build_prompt(agent), then they are byte-equal \u2014 AND identical to the\
+      \ agent-framework 'instructions' and the Bedrock 'Instruction' (one source \u2192\
+      \ three runtimes)."
+    where: "<rota/tela \u2014 ex. /scopes/:scope/...>"
+    expected: "<o que voc\xEA V\xCA quando est\xE1 certo (marque \u2717 S\xD3 se estiver\
+      \ quebrado)>"
+  - action: 'No Studio, valide: Given no GCP credential, when the artifact is validated,
+      then it conforms structurally to the documented ADK LlmAgentConfig schema and
+      carries the yaml-language-server schema header.'
+    where: "<rota/tela \u2014 ex. /scopes/:scope/...>"
+    expected: "<o que voc\xEA V\xCA quando est\xE1 certo (marque \u2717 S\xD3 se estiver\
+      \ quebrado)>"
+  - action: 'No Studio, valide: Given DNA axes ADK has no slot for (composition, tenant,
+      eval, tool-schema depth, output_schema, non-Gemini model), when emitting, then
+      each is reported in EmitResult.losses, not hidden.'
+    where: "<rota/tela \u2014 ex. /scopes/:scope/...>"
+    expected: "<o que voc\xEA V\xCA quando est\xE1 certo (marque \u2717 S\xD3 se estiver\
+      \ quebrado)>"
+  verifies:
+  - Story/s-emit-vertex
+  created_at: '2026-07-11T14:41:58+00:00'
+  updated_at: '2026-07-11T14:41:58+00:00'
+  owner: claude-code

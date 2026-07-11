@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-gallery-c-20260711-150602
+spec:
+  guide_ref: tg-gallery-c
+  outcome: pass
+  verifies:
+  - Story/s-sdlc-gallery
+  executed_by: claude-code
+  executed_at: '2026-07-11T15:06:02+00:00'
+  evidence:
+  - 'PR #63; gallery board-native lista 6 HtmlArtifacts + --html verificado no browser'
