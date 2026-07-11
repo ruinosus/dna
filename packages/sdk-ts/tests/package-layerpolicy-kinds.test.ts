@@ -39,6 +39,7 @@ function findKind(kindName: string) {
     reader() {},
     writer() {},
     compositionProfile() {},
+    kindFromDescriptor() {},
     // s-write-path-despecialize — extensions register pre_save veto
     // hooks on kernel.hooks; the double needs a real registry.
     hooks: new HookRegistry(),
@@ -177,6 +178,9 @@ describe("GenomeKind OVERLAYABLE_FIELDS allowlist (parity with Python)", () => {
       reader() {},
       writer() {},
       compositionProfile() {},
+      // helix registers Tool (helix-tool) as a descriptor
+      // (kinds/tool.kind.yaml, s-tool-kind-descriptor); no-op here.
+      kindFromDescriptor() {},
       hooks: new HookRegistry(),
     };
     ext.register(fakeKernel);
@@ -206,6 +210,9 @@ describe("GenomeKind preview / describe", () => {
       reader() {},
       writer() {},
       compositionProfile() {},
+      // helix registers Tool (helix-tool) as a descriptor
+      // (kinds/tool.kind.yaml, s-tool-kind-descriptor); no-op here.
+      kindFromDescriptor() {},
       hooks: new HookRegistry(),
     };
     ext.register(fakeKernel);
@@ -245,6 +252,9 @@ describe("GenomeKind preview / describe", () => {
       reader() {},
       writer() {},
       compositionProfile() {},
+      // helix registers Tool (helix-tool) as a descriptor
+      // (kinds/tool.kind.yaml, s-tool-kind-descriptor); no-op here.
+      kindFromDescriptor() {},
       hooks: new HookRegistry(),
     });
     const kp = pkgKind as { preview: (doc: Document) => Array<{ kind: string }> };
@@ -305,6 +315,9 @@ describe("LayerPolicyKind normalization (parity with Python LayerPolicySpec.from
       reader() {},
       writer() {},
       compositionProfile() {},
+      // helix registers Tool (helix-tool) as a descriptor
+      // (kinds/tool.kind.yaml, s-tool-kind-descriptor); no-op here.
+      kindFromDescriptor() {},
       hooks: new HookRegistry(),
     });
     const kp = lpKind as { parse: (raw: Record<string, unknown>) => unknown };
@@ -359,6 +372,9 @@ describe("HelixExtension.register", () => {
       reader() {},
       writer() {},
       compositionProfile() {},
+      // helix registers Tool (helix-tool) as a descriptor
+      // (kinds/tool.kind.yaml, s-tool-kind-descriptor); no-op here.
+      kindFromDescriptor() {},
       hooks: new HookRegistry(),
     });
     expect(captured).toContain("Genome");

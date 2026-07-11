@@ -134,7 +134,10 @@ def generate_alias(owner: str, kind: str) -> str:
 EXPLICIT_ALIAS_ALLOWLIST: frozenset[str] = frozenset({
     # helix
     "helix-genome", "helix-agent", "helix-actor",
-    "helix-usecase", "helix-tool", "policy-layer-policy",
+    # helix-tool migrated to a descriptor (s-tool-kind-descriptor): its alias
+    # lives in helix/kinds/tool.kind.yaml (parity-critical), so it's no longer
+    # a hand-typed class alias — shrink-only ratchet.
+    "helix-usecase", "policy-layer-policy",
     "helix-canvas",
     "helix-setting", "helix-theme", "helix-user-profile",
     # sdlc (classes; os descriptors ficam fora do ratchet)

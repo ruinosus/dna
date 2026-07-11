@@ -78,7 +78,6 @@ Declarative Kind descriptor — the format of builtin `kinds/*.kind.yaml` packag
 | [TestGuide](composition.md#testguide) | `testkit-test-guide` | `github.com/ruinosus/dna/testkit/v1` |
 | [TestRun](composition.md#testrun) | `testkit-test-run` | `github.com/ruinosus/dna/testkit/v1` |
 | [Theme](composition.md#theme) | `helix-theme` | `github.com/ruinosus/dna/v1` |
-| [Tool](composition.md#tool) | `helix-tool` | `github.com/ruinosus/dna/v1` |
 | [UseCase](composition.md#usecase) | `helix-usecase` | `github.com/ruinosus/dna/v1` |
 | [UserProfile](composition.md#userprofile) | `helix-user-profile` | `github.com/ruinosus/dna/v1` |
 | [UserRoleAssignment](composition.md#userroleassignment) | `audit-userroleassignment` | `github.com/ruinosus/dna/audit/v1` |
@@ -131,5 +130,6 @@ Declarative Kind descriptor — the format of builtin `kinds/*.kind.yaml` packag
 | [SynthesisRun](record.md#synthesisrun) | `sdlc-synthesis-run` | `github.com/ruinosus/dna/sdlc/v1` |
 | [SynthesizerState](record.md#synthesizerstate) | `sdlc-synthesizer-state` | `github.com/ruinosus/dna/sdlc/v1` |
 | [Task](record.md#task) | `sdlc-task` | `github.com/ruinosus/dna/sdlc/v1` |
+| [Tool](record.md#tool) | `helix-tool` | `github.com/ruinosus/dna/v1` |
 | [WorkflowEvent](record.md#workflowevent) | `sdlc-workflow-event` | `github.com/ruinosus/dna/sdlc/v1` |
 

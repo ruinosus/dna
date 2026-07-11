@@ -1,0 +1,17 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-tools-as-data-20260711-112049
+spec:
+  guide_ref: tg-tools-as-data
+  outcome: pass
+  verifies:
+  - f-dna-tools-as-data
+  executed_by: claude-code
+  executed_at: '2026-07-11T11:20:49+00:00'
+  notes: 'sdk-py 2870 passed; sdk-ts 1394 pass/8 skip/0 fail + typecheck clean; cli
+    391 passed (incl 4 new-tool tests); brand+docs-coverage guards clean; mkdocs build
+    --strict OK. Dogfood: read_py.py == read_ts.ts == expected-surface.json (byte-identical).
+    Tenant override proven in Py; TS tenant path tracked as i-020.'
+  evidence:
+  - examples/tools_as_data + test_tools_as_data.py + tools-as-data.test.ts

@@ -66,6 +66,7 @@ nav:
       - A tour of the dna CLI: guides/cli-tour.md
       - How to author an agent: guides/authoring-agents.md
       - How to consume prompts: guides/consuming-prompts.md
+      - Tools as data: guides/tools-as-data.md
       - How to configure ports (dna.config.yaml): guides/configuring-ports.md
       - How to ship a scope with your app: guides/shipping-a-scope.md
       - How to install bundles from a repository: guides/installing-scopes.md

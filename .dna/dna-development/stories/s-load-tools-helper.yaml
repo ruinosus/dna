@@ -1,0 +1,57 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-load-tools-helper
+spec:
+  title: "dna.load_tools / loadTools \u2192 ToolLibrary (mirror load_prompts)"
+  description: Lazy fail-loud mapping name -> {description, parameters}
+  status: review
+  feature: f-dna-tools-as-data
+  priority: high
+  labels:
+  - helper
+  - ts-parity
+  acceptance_criteria:
+  - load_tools(scope) returns ToolLibrary; lib['name'] -> {description, parameters};
+    missing tool raises ToolNotFound; exported at package root Py+TS; TS twin loadTools/ToolLibrary/ToolNotFound
+    async-parity
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - Unit tests both langs; ToolNotFound exported+typed; TestGuide+TestRun
+  definition_of_done_source: cli-create
+  created_at: '2026-07-11T10:43:45+00:00'
+  updated_at: '2026-07-11T11:23:16+00:00'
+  timeline:
+  - at: '2026-07-11T10:43:45+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-11T11:21:19+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "load_tools/loadTools \u2192 ToolLibrary espelhando load_prompts. Superf\xED\
+      cie agent-facing = {description: metadata.description, parameters: spec.input_schema}\
+      \ \u2014 de onde a descri\xE7\xE3o realmente vive (confirmado no github-search.yaml).\
+      \ ToolNotFound (LookupError) exportado Py+TS. Py get sync (Mapping); TS get\
+      \ sync (record read n\xE3o precisa async, s\xF3 loadTools \xE9 async). L\xEA\
+      \ via mi._one/_all (blessed interno, tenant-aware no Py)."
+    commit_ref: fec9824409b71804205826e6b506a7d59d1605b0
+  - at: '2026-07-11T11:21:23+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-11T11:23:16+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
+  produces:
+  - kind: Plan
+    name: plan-s-load-tools-helper
+    role: implementation
+    at: '2026-07-11T11:21:23+00:00'

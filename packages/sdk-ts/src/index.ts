@@ -55,8 +55,10 @@ export { createKernelWithBuiltins, quickInstance, createRuntimeWithBuiltins, qui
 
 // DX consumer surface (s-dx-*): fail-loud prompt building + the collapse-the-
 // shim helper + declarative port wiring.
-export { AgentNotFound, UnknownLayout } from "./kernel/errors.js";
+export { AgentNotFound, ToolNotFound, UnknownLayout } from "./kernel/errors.js";
 export { PromptLibrary, loadPrompts } from "./prompts.js";
+export { ToolLibrary, loadTools } from "./tools.js";
+export type { ToolSurface } from "./tools.js";
 export type { LoadPromptsOptions } from "./prompts.js";
 export { anchorScopesRoot, PackageScopeNotFound, DEFAULT_SUBPATH } from "./package-scope.js";
 export { loadConfig, findConfig, CONFIG_FILENAME } from "./config.js";

@@ -13,9 +13,17 @@ from dna.kernel.kind_base import KindBase
 
 
 # The original hardcoded frozensets (pre-refactor), locked here as the oracle.
+# "Tool" left this set on s-tool-kind-descriptor (f-dna-tools-as-data): the
+# Tool Kind migrated from a composition-plane class to a RECORD-plane
+# descriptor. A record Kind carries no composition signal by construction
+# (DeclarativeKindPort has no is_schema_affecting), which is correct — a Tool
+# is not a prompt target and never composes into an agent prompt, so writing
+# a Tool doc must NOT invalidate the composition schema cache. Agents still
+# reference tools by name via dep_filters.tools (a filter resolved at
+# composition, not a schema contribution).
 ORIG_SCHEMA_INVALIDATING = frozenset({
     "Genome", "KindDefinition", "LayerPolicy",
-    "Agent", "Skill", "Tool", "Soul", "Guardrail",
+    "Agent", "Skill", "Soul", "Guardrail",
     "SafetyPolicy", "Hook", "Recognizer",
 })
 ORIG_NON_OVERLAYABLE = frozenset({"Genome", "KindDefinition", "LayerPolicy"})

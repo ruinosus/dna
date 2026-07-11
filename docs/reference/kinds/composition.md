@@ -593,35 +593,6 @@ A Theme declares a Studio color palette (primary/accent/success in light + dark 
 | `updated_at` | string |  |  |
 | `vibe` | string |  | Visual vibe tag for grouping. |
 
-## Tool
-
-- **Alias:** `helix-tool`
-- **apiVersion:** `github.com/ruinosus/dna/v1`
-- **Plane:** composition
-
-A Tool is a declarative, invocable capability an agent can call: an HTTP endpoint, an MCP server tool, a Python callable, a shell command, or a builtin. Bridges helix with OpenAI/Anthropic tool- calling conventions. Each Tool declares an input/output JSON Schema (so the model knows exactly what arguments to pass), an auth strategy, and a read_only / requires_confirmation flag that the harness honors at runtime. Agents reference Tools via dep_filters.tools; the harness exposes them through the standard tool-calling loop. Stored as tools/<name>.yaml — marketplace- shareable as standalone bundles.
-
-**Spec fields**
-
-| Field | Type | Required | Description |
-| --- | --- | --- | --- |
-| `auth_env_var` | string |  |  |
-| `auth_type` | string |  |  |
-| `endpoint` | string |  |  |
-| `examples` | array |  |  |
-| `input_schema` | object |  |  |
-| `mcp_server` | string |  |  |
-| `mcp_tool` | string |  |  |
-| `method` | string |  |  |
-| `output_schema` | object |  |  |
-| `python_callable` | string |  |  |
-| `python_module` | string |  |  |
-| `read_only` | boolean |  |  |
-| `requires_confirmation` | boolean |  |  |
-| `shell_command` | string |  |  |
-| `tags` | array |  |  |
-| `type` | string |  |  |
-
 ## UseCase
 
 - **Alias:** `helix-usecase`

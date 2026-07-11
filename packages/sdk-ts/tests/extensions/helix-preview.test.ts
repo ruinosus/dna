@@ -44,8 +44,13 @@ describe("AgentKind.preview", () => {
   });
 });
 
-describe("ToolKind.preview", () => {
-  it("renders type, endpoint, schemas as a fields block", async () => {
+describe("Tool.preview (record-plane descriptor)", () => {
+  // Tool migrated from a hand-written ToolKind class to a record-plane
+  // descriptor (helix/kinds/tool.kind.yaml, s-tool-kind-descriptor); its
+  // preview is now the generic schema-driven DeclarativeKindPort.preview —
+  // scalar props render as a leading "fields" block, object props
+  // (input_schema) as their own JSON code block.
+  it("renders scalar fields + input_schema as a code block", async () => {
     const blocks = getPort("Tool").preview!(
       fakeDoc("Tool", "slack-send", {
         type: "http",
@@ -55,12 +60,12 @@ describe("ToolKind.preview", () => {
         read_only: false,
       }),
     );
-    expect(blocks).toHaveLength(1);
     expect(blocks[0].kind).toBe("fields");
     const labels = (blocks[0].fields ?? []).map((f) => f.label);
     expect(labels).toContain("type");
     expect(labels).toContain("endpoint");
-    expect(labels).toContain("input_schema");
+    const codeTitles = blocks.filter((b) => b.kind === "code").map((b) => b.title);
+    expect(codeTitles).toContain("input_schema");
   });
 });
 

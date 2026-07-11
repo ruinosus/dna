@@ -181,10 +181,14 @@ class TestComposition:
         #   review-pull-request use-case: 2 actors + 1 agent = 3
         cr = mi.composition_result
         assert len(cr.resolved) == 13
-        # The only unresolved refs are agent `tools:` pointing at Tool docs
-        # the fixture intentionally doesn't ship (github_* / run_tests / etc.).
-        assert len(cr.missing) == 11
-        assert all(".tools=" in m and "Tool/" in m for m in cr.missing)
+        # Tool migrated to a RECORD-plane Kind (s-tool-kind-descriptor): an
+        # agent `tools:` ref now points at a record, which the composition
+        # engine resolves LAZILY (host-resolved at runtime) instead of eagerly
+        # flagging it as a missing composition input. So the tool refs the
+        # fixture doesn't ship (github_* / run_tests / …) no longer surface as
+        # missing — records are not composition inputs.
+        assert len(cr.missing) == 0
+        assert not any(".tools=" in m for m in cr.missing)
 
     def test_detects_missing_soul(self, mi):
         from dna.kernel.document import Document
@@ -299,7 +303,12 @@ class TestLockfile:
     def test_generate_lock_has_sha(self, mi):
         lock = mi.generate_lock()
         assert lock.scope == "open-swe"
-        assert len(lock.documents) == 19
+        # 19 → 18: the lock iterates the COMPOSITION plane (mi.documents).
+        # Tool migrated to the RECORD plane (s-tool-kind-descriptor), so the
+        # fixture's github-search Tool doc — like any record (Story, EvalRun)
+        # — is no longer a composition input and drops out of the lock. It
+        # remains fully readable via mi.all("Tool") / mi.one("Tool", …).
+        assert len(lock.documents) == 18
         for entry in lock.documents:
             assert len(entry.sha256) == 64  # SHA256 hex
 

@@ -378,44 +378,6 @@ export const UseCaseSchema = z.object({
 export type TypedUseCase = z.output<typeof UseCaseSchema>;
 
 // ---------------------------------------------------------------------------
-// Tool (github.com/ruinosus/dna/v1)
-//
-// Declarative, invocable capability an agent can call. Bridges helix with
-// OpenAI/Anthropic tool-calling conventions.
-// ---------------------------------------------------------------------------
-
-export const ToolTypeEnum = z.enum(["http", "mcp", "python", "shell", "builtin"]);
-export const ToolAuthTypeEnum = z.enum(["none", "api_key", "bearer", "oauth2"]);
-
-export const ToolSpecSchema = z.object({
-  type: ToolTypeEnum.default("builtin"),
-  endpoint: z.string().optional().default(""),
-  method: z.string().optional().default("POST"),
-  mcp_server: z.string().optional().default(""),
-  mcp_tool: z.string().optional().default(""),
-  python_module: z.string().optional().default(""),
-  python_callable: z.string().optional().default(""),
-  shell_command: z.string().optional().default(""),
-  input_schema: z.record(z.unknown()).default({}),
-  output_schema: z.record(z.unknown()).default({}),
-  auth_type: ToolAuthTypeEnum.default("none"),
-  auth_env_var: z.string().optional().default(""),
-  read_only: z.boolean().default(true),
-  requires_confirmation: z.boolean().default(false),
-  tags: z.array(z.string()).default([]),
-  examples: z.array(z.record(z.unknown())).default([]),
-});
-
-export const ToolSchema = z.object({
-  apiVersion: z.literal("github.com/ruinosus/dna/v1"),
-  kind: z.literal("Tool"),
-  metadata: MetadataSchema,
-  spec: ToolSpecSchema.default({}),
-});
-
-export type TypedTool = z.output<typeof ToolSchema>;
-
-// ---------------------------------------------------------------------------
 // Skill (agentskills.io/v1)
 // ---------------------------------------------------------------------------
 

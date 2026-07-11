@@ -14,7 +14,7 @@ DNA ships a Python SDK and a TypeScript SDK that are **behaviorally identical**.
 - ⚠️ — intentionally absent on this side; the asymmetry is documented (see the Notes column). Undocumented drift reds the parity suite in CI.
 - ➖ — not applicable / shaped differently by design.
 
-**Summary:** **153** shared members across the tracked contracts, **39** documented asymmetries. Python is the semantic reference: a gap is closed by porting to TypeScript, or justified in the fixture — never by silence.
+**Summary:** **152** shared members across the tracked contracts, **39** documented asymmetries. Python is the semantic reference: a gap is closed by porting to TypeScript, or justified in the fixture — never by silence.
 
 ## Ports — the microkernel contract
 
@@ -330,7 +330,6 @@ Class-backed builtin Kinds registered on both runtimes. **Descriptor-backed Kind
 | `helix-safety-policy` | ✅ | ✅ | |
 | `helix-setting` | ✅ | ✅ | |
 | `helix-theme` | ✅ | ✅ | |
-| `helix-tool` | ✅ | ✅ | |
 | `helix-usecase` | ✅ | ✅ | |
 | `helix-user-profile` | ✅ | ✅ | |
 | `kinddef-kinddefinition` | ✅ | ✅ | |

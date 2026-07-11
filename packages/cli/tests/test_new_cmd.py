@@ -141,3 +141,49 @@ class TestZeroToComposedPrompt:
         assert prompt.index("voice, values") < prompt.index("what this agent does"), (
             "persona-first: the Soul must precede the instruction"
         )
+
+
+class TestScaffoldTool:
+    """`dna new tool` — tools as data (s-dna-new-tool). Scaffolds a valid Tool
+    doc through the real write path; the agent-facing surface is readable via
+    `dna.load_tools`."""
+
+    def test_tool_scaffold_is_valid_and_readable(self, runner, scope):
+        r = _run(
+            runner, "tool", "weather", "--scope", "demo",
+            "-d", "Get the current weather for a city.", "--type", "http",
+        )
+        assert r.exit_code == 0, r.output
+        doc = scope / ".dna" / "demo" / "tools" / "weather.yaml"
+        assert doc.exists(), "Tool stored as tools/<name>.yaml"
+        text = doc.read_text()
+        assert "kind: Tool" in text
+        assert "Get the current weather" in text
+
+        # The whole point: the agent-facing surface reads back via load_tools.
+        from dna import load_tools
+        tools = load_tools("demo", base_dir=str(scope / ".dna"))
+        assert "weather" in tools.names()
+        surface = tools["weather"]
+        assert surface.description == "Get the current weather for a city."
+        assert "properties" in surface.parameters
+
+    def test_tool_json_output(self, runner, scope):
+        r = _run(runner, "tool", "weather", "--scope", "demo", "--json")
+        payload = json.loads(r.output)
+        assert payload["created"] is True
+        assert payload["kind"] == "Tool"
+        assert "type" in payload["spec_fields"]
+
+    def test_tool_idempotent_without_force(self, runner, scope):
+        assert _run(runner, "tool", "weather", "--scope", "demo").exit_code == 0
+        r = _run(runner, "tool", "weather", "--scope", "demo", "--json")
+        assert json.loads(r.output)["created"] is False  # no clobber
+
+    def test_tool_force_overwrites(self, runner, scope):
+        assert _run(runner, "tool", "weather", "--scope", "demo").exit_code == 0
+        r = _run(
+            runner, "tool", "weather", "--scope", "demo",
+            "-d", "New description.", "--force", "--json",
+        )
+        assert json.loads(r.output)["created"] is True

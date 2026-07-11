@@ -10,7 +10,8 @@ import { nodeFS, readTextSafe, collectDir } from "../kernel/fs.js";
 import type { BundleHandle } from "../kernel/bundle-handle.js";
 import { KindBase } from "../kernel/kind_base.js";
 import type { FSLike } from "../kernel/fs.js";
-import { AgentSchema, ActorSchema, UseCaseSchema, ToolSchema, AgentSpecSchema, ActorSpecSchema, UseCaseSpecSchema, ToolSpecSchema, GenomeSchema, GenomeSpecSchema, LayerPolicySchema, LayerPolicySpecSchema, zodSpecToJsonSchema } from "../kernel/models.js";
+import { AgentSchema, ActorSchema, UseCaseSchema, AgentSpecSchema, ActorSpecSchema, UseCaseSpecSchema, GenomeSchema, GenomeSpecSchema, LayerPolicySchema, LayerPolicySpecSchema, zodSpecToJsonSchema } from "../kernel/models.js";
+import { loadDescriptors } from "../kernel/descriptor-loader.js";
 import type { Extension, ExtensionHost, KindPort, LayerPolicy, ReaderPort, SerializedFile, WriterPort } from "../kernel/protocols.js";
 import { SD } from "../kernel/protocols.js";
 import type { Document } from "../kernel/document.js";
@@ -586,99 +587,6 @@ class UseCaseKind extends KindBase {
 }
 
 // ---------------------------------------------------------------------------
-// ToolKind
-// ---------------------------------------------------------------------------
-
-class ToolKind extends KindBase {
-  readonly apiVersion = "github.com/ruinosus/dna/v1";
-  readonly kind = "Tool";
-  readonly alias = "helix-tool";
-  readonly isSchemaAffecting = true;
-  readonly origin = "github.com/ruinosus/dna/tool";
-  readonly isPromptTarget = false;
-  readonly promptTargetPriority = 0;
-  readonly flattenInContext = false;
-  readonly storage = SD.yaml("tools");
-  readonly graphStyle = { fill: "#14B8A6", stroke: "#0D9488", textColor: "#fff" };
-  readonly asciiIcon = "🔧";
-  readonly displayLabel = "Tools";
-  readonly _sourceUrl = MOD_URL;
-  readonly docs =
-    "A Tool is a declarative, invocable capability an agent can call: an " +
-    "HTTP endpoint, an MCP server tool, a Python callable, a shell command, " +
-    "or a builtin. Bridges helix with OpenAI/Anthropic tool-calling " +
-    "conventions. Each Tool declares an input/output JSON Schema, an auth " +
-    "strategy, and read_only / requires_confirmation flags that the harness " +
-    "honors at runtime. Agents reference Tools via dep_filters.tools. " +
-    "Stored as tools/<name>.yaml — marketplace-shareable as standalone bundles.";
-  readonly uiSchema = {
-    type: { widget: "select", label: "Invocation type", help: "How the tool is executed: http | mcp | python | shell | builtin.", order: 10 },
-    endpoint: { widget: "text", label: "HTTP endpoint", help: "URL called when type=http. Supports {placeholder} templating.", order: 20 },
-    method: { widget: "select", label: "HTTP method", order: 25 },
-    mcp_server: { widget: "text", label: "MCP server", help: "Server name when type=mcp.", order: 30 },
-    mcp_tool: { widget: "text", label: "MCP tool name", order: 35 },
-    python_module: { widget: "text", label: "Python module", help: "Dotted import path when type=python.", order: 40 },
-    python_callable: { widget: "text", label: "Python callable", help: "Attribute on the module (function or class).", order: 45 },
-    shell_command: { widget: "textarea", label: "Shell command", help: "Command template when type=shell. Never executed without confirmation.", order: 50 },
-    input_schema: {
-      widget: "code",
-      language: "yaml",
-      label: "Input schema (JSON Schema)",
-      help: "Validates the arguments the agent passes when invoking the tool.",
-      height: 260,
-      order: 60,
-    },
-    output_schema: {
-      widget: "code",
-      language: "yaml",
-      label: "Output schema (JSON Schema)",
-      help: "Describes the shape of the tool's response.",
-      height: 220,
-      order: 70,
-    },
-    auth_type: { widget: "select", label: "Auth type", help: "none | api_key | bearer | oauth2.", order: 80 },
-    auth_env_var: { widget: "text", label: "Auth env var", help: "Environment variable holding the credential.", order: 85 },
-    read_only: { widget: "checkbox", label: "Read-only", help: "Uncheck if the tool mutates state.", order: 90 },
-    requires_confirmation: { widget: "checkbox", label: "Requires confirmation", help: "Force user approval before each invocation.", order: 95 },
-    tags: { widget: "tags", label: "Tags", order: 100 },
-    examples: { widget: "readonly", label: "Examples", help: "Usage examples. Edit via YAML for now.", order: 110 },
-  };
-
-  schema() { return zodSpecToJsonSchema(ToolSpecSchema); }
-
-  parse(raw: Record<string, unknown>): unknown {
-    return ToolSchema.parse(raw);
-  }
-
-  summary() { return null; }
-
-  preview(doc: Document): PreviewBlock[] {
-    const spec = (doc.spec ?? {}) as Record<string, unknown>;
-    const fields: Array<{ label: string; value: string }> = [];
-    if (typeof spec.type === "string") fields.push({ label: "type", value: spec.type });
-    if (typeof spec.endpoint === "string") fields.push({ label: "endpoint", value: spec.endpoint });
-    if (typeof spec.method === "string") fields.push({ label: "method", value: spec.method });
-    if (typeof spec.mcp_server === "string") fields.push({ label: "mcp_server", value: spec.mcp_server });
-    if (typeof spec.mcp_tool === "string") fields.push({ label: "mcp_tool", value: spec.mcp_tool });
-    if (typeof spec.python_module === "string") fields.push({ label: "python_module", value: spec.python_module });
-    if (typeof spec.python_callable === "string") fields.push({ label: "python_callable", value: spec.python_callable });
-    if (typeof spec.shell_command === "string") fields.push({ label: "shell_command", value: spec.shell_command });
-    if (spec.input_schema)
-      fields.push({ label: "input_schema", value: JSON.stringify(spec.input_schema, null, 2) });
-    if (spec.output_schema)
-      fields.push({ label: "output_schema", value: JSON.stringify(spec.output_schema, null, 2) });
-    if (typeof spec.auth_type === "string") fields.push({ label: "auth", value: spec.auth_type });
-    if (spec.read_only != null) fields.push({ label: "read_only", value: String(spec.read_only) });
-    if (spec.requires_confirmation != null)
-      fields.push({ label: "requires_confirmation", value: String(spec.requires_confirmation) });
-    if (fields.length === 0) {
-      return [{ kind: "empty", title: `Tool ${doc.name}` }];
-    }
-    return [{ kind: "fields", title: `Tool ${doc.name}`, fields }];
-  }
-}
-
-// ---------------------------------------------------------------------------
 // AgentReader / AgentWriter
 // ---------------------------------------------------------------------------
 
@@ -1064,9 +972,15 @@ export class HelixExtension implements Extension {
     kernel.kind(new GenomeKind());
     kernel.kind(new LayerPolicyKind());
     kernel.kind(new AgentKind());
-    kernel.kind(new ToolKind());
     kernel.kind(new ActorKind());
     kernel.kind(new UseCaseKind());
+    // Tool (helix-tool) ships as a descriptor — helix/kinds/tool.kind.yaml
+    // (f-dna-tools-as-data / s-tool-kind-descriptor). It WAS a hand-written
+    // ToolKind class; migrated to a record-plane descriptor per the repo's
+    // own ratchet (record Kinds are data, not classes).
+    for (const raw of loadDescriptors(import.meta.url, "helix/kinds")) {
+      kernel.kindFromDescriptor(raw);
+    }
     // 2026-05-26 — absorbed from claude-code-templates catalog (MIT).
     // Setting rounds out the Claude-Code-customization primitives that
     // live alongside Skill / UA / Soul / Tool.

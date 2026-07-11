@@ -1,0 +1,10 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: Genome
+metadata:
+  name: tools-demo
+  description: Tools-as-data demo — one Tool descriptor served identically to
+    Python and TypeScript consumers.
+spec:
+  default_agent: builder
+  default_llm: azure/gpt-4o
+  owner: dna

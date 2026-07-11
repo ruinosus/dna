@@ -1,0 +1,49 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: Tool
+metadata:
+  name: generate-artifact
+  # This description is the AGENT-FACING surface — the exact text a
+  # tool-calling model reads to decide whether to call the tool. In a
+  # traditional SDK it lives hard-coded in a `@tool` function's
+  # `description=` (e.g. an "artifacts studio" foundry). Here it is DATA:
+  # versioned, testable, tenant-overridable, and read identically by the
+  # Python backend AND the TypeScript frontend from this one document.
+  description: Render a self-contained HTML or Markdown document into a
+    shareable artifact. Use when the user asks for a page, report, dashboard,
+    or visual deliverable that is clearer than plain text. Returns the
+    artifact's URL.
+spec:
+  type: builtin
+  # `input_schema` is the "parameters" surface — the JSON Schema of the
+  # arguments the model fills in. `dna.load_tools` / `loadTools` expose it as
+  # `parameters`.
+  input_schema:
+    type: object
+    required:
+    - title
+    - content
+    properties:
+      title:
+        type: string
+        description: Short human-readable title for the artifact.
+      content:
+        type: string
+        description: The full HTML or Markdown body of the artifact.
+      format:
+        type: string
+        enum:
+        - html
+        - markdown
+        default: html
+        description: Rendering format of the content.
+  output_schema:
+    type: object
+    properties:
+      url:
+        type: string
+        description: URL of the rendered artifact.
+  read_only: false
+  requires_confirmation: false
+  tags:
+  - artifacts
+  - rendering

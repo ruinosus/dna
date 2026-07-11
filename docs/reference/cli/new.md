@@ -1,6 +1,6 @@
 # `dna new`
 
-Scaffold a valid Kind skeleton into a scope (agent | soul | guardrail).
+Scaffold a valid Kind skeleton into a scope (agent | soul | guardrail | tool).
 
 !!! info "Generated from the command definitions"
 
@@ -111,4 +111,41 @@ dna new soul [OPTIONS] NAME
 | `--help` | Show this message and exit. |
 | `--json` | Machine-readable output. |
 | `--scope` | Scope to write into (default: env / sole scope). |
+
+## `dna new tool`
+
+Scaffold a Tool descriptor (tools/<name>.yaml) — tools as data.
+
+A Tool moves the agent-facing surface of a tool into the declarative plane:
+the ``description`` the model reads (metadata.description) + the
+``input_schema`` of its arguments (surfaced as ``parameters`` by
+``dna.load_tools`` / ``loadTools``). The skeleton is a VALID Tool from the
+first write, with a placeholder single-arg ``input_schema`` to edit.
+
+Examples:
+
+
+  dna new tool generate-artifact -d "Render HTML/Markdown into a shareable artifact."
+  dna new tool github-search --type http -d "Search GitHub code."
+
+```text
+dna new tool [OPTIONS] NAME
+```
+
+**Arguments**
+
+| Argument | Required |
+| --- | --- |
+| `NAME` | yes |
+
+**Options**
+
+| Option | Description |
+| --- | --- |
+| `--description`, `-d` | Agent-facing description — the text the model reads to decide whether to call the tool (goes in metadata.description). |
+| `--force` | Overwrite an existing tool. |
+| `--help` | Show this message and exit. |
+| `--json` | Machine-readable output. |
+| `--scope` | Scope to write into (default: env / sole scope). |
+| `--type` | Invocation type. builtin \| http \| mcp \| python \| shell. _(default: `builtin`)_ |
 

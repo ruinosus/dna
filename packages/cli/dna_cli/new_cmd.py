@@ -76,7 +76,7 @@ def _write(s, kind: str, name: str, raw: dict, *, force: bool, as_json: bool,
 # ── group ──────────────────────────────────────────────────────────────
 
 
-@click.group("new", help="Scaffold a valid Kind skeleton into a scope (agent | soul | guardrail).")
+@click.group("new", help="Scaffold a valid Kind skeleton into a scope (agent | soul | guardrail | tool).")
 def new() -> None:
     """Group root."""
 
@@ -184,6 +184,64 @@ def new_soul(name, scope, description, force, as_json):
     with dna_session(scope) as s:
         _write(s, "Soul", name, raw, force=force, as_json=as_json,
                summary="edit souls/%s/SOUL.md (single-file — no soul.json needed)" % name)
+
+
+_TOOL_TYPES = ["builtin", "http", "mcp", "python", "shell"]
+
+
+@new.command("tool")
+@click.argument("name")
+@click.option("--scope", default=None, help="Scope to write into (default: env / sole scope).")
+@click.option("--description", "-d", default=None,
+              help="Agent-facing description — the text the model reads to "
+                   "decide whether to call the tool (goes in metadata.description).")
+@click.option("--type", "tool_type", type=click.Choice(_TOOL_TYPES), default="builtin",
+              help="Invocation type. builtin | http | mcp | python | shell.")
+@click.option("--force", is_flag=True, help="Overwrite an existing tool.")
+@click.option("--json", "as_json", is_flag=True, help="Machine-readable output.")
+def new_tool(name, scope, description, tool_type, force, as_json):
+    """Scaffold a Tool descriptor (tools/<name>.yaml) — tools as data.
+
+    A Tool moves the agent-facing surface of a tool into the declarative plane:
+    the ``description`` the model reads (metadata.description) + the
+    ``input_schema`` of its arguments (surfaced as ``parameters`` by
+    ``dna.load_tools`` / ``loadTools``). The skeleton is a VALID Tool from the
+    first write, with a placeholder single-arg ``input_schema`` to edit.
+
+    Examples:
+
+    \b
+      dna new tool generate-artifact -d "Render HTML/Markdown into a shareable artifact."
+      dna new tool github-search --type http -d "Search GitHub code."
+    """
+    _validate_name(name)
+    spec: dict = {
+        "type": tool_type,
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "arg": {
+                    "type": "string",
+                    "description": "Replace with the tool's real parameters.",
+                },
+            },
+        },
+        "read_only": True,
+    }
+    raw = {
+        "apiVersion": "github.com/ruinosus/dna/v1",
+        "kind": "Tool",
+        "metadata": {
+            "name": name,
+            "description": description or f"Describe what the {name} tool does "
+            "and when the model should call it.",
+        },
+        "spec": spec,
+    }
+    with dna_session(scope) as s:
+        _write(s, "Tool", name, raw, force=force, as_json=as_json,
+               summary="edit tools/%s.yaml (type=%s; set metadata.description + "
+                       "spec.input_schema)" % (name, tool_type))
 
 
 @new.command("guardrail")
