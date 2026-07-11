@@ -14,6 +14,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 
 import { quickInstance, fromConfig } from "../src/bootstrap.js";
+import { loadConfig } from "../src/config.js";
 import { AgentNotFound } from "../src/kernel/errors.js";
 import { PromptLibrary, loadPrompts } from "../src/prompts.js";
 
@@ -144,5 +145,23 @@ describe("s-dx-kernel-from-config", () => {
   test("bad search enum fails loud", async () => {
     const cfg = mkConfig(`source: file://${BASE_DIR}\nsearch: faiss\n`);
     await expect(fromConfig(cfg)).rejects.toThrow(/faiss/);
+  });
+
+  test("auth section is an opaque passthrough (MCP IdP layer)", async () => {
+    // The `auth:` section is accepted + carried opaquely; the SDK does not
+    // interpret it (its consumer, the CLI, owns the provider schema).
+    const cfg = mkConfig(
+      `source: file://${BASE_DIR}\nauth:\n  providers:\n    - type: entra\n`,
+    );
+    const parsed = loadConfig(cfg);
+    expect(parsed).not.toBeNull();
+    expect(typeof parsed!.auth).toBe("object");
+    expect((parsed!.auth as { providers: { type: string }[] }).providers[0].type)
+      .toBe("entra");
+  });
+
+  test("auth must be a mapping", async () => {
+    const cfg = mkConfig(`source: file://${BASE_DIR}\nauth: nope\n`);
+    expect(() => loadConfig(cfg)).toThrow(/must be a mapping/);
   });
 });

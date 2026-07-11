@@ -1,0 +1,15 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-mcp-idp-pluggable-c-20260711-163902
+spec:
+  guide_ref: tg-s-mcp-idp-pluggable-c
+  outcome: pass
+  verifies:
+  - Story/s-mcp-idp-pluggable
+  executed_by: claude-code
+  executed_at: '2026-07-11T16:39:02+00:00'
+  notes: 'pytest packages/cli/tests/test_mcp_idp_pluggable.py: 19 passed, 1 skipped
+    (Entra e2e deferido). Full CLI suite: 493 passed, 4 skipped. SDK config parity:
+    Py test_dx_quickwins 32 passed; TS bun test 1448 pass 0 fail. Guards: brand_guard
+    clean; docs mkdocs --strict + coverage guard clean.'

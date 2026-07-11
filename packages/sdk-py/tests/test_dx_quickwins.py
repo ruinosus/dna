@@ -173,6 +173,31 @@ def test_from_config_bad_search_enum_fails_loud(tmp_path: Path):
     assert "faiss" in str(exc.value)
 
 
+def test_from_config_auth_section_is_opaque_passthrough(tmp_path: Path):
+    # The `auth:` section (the MCP pluggable-IdP layer) is accepted + carried
+    # opaquely; the SDK does not interpret it (its consumer, the CLI, does).
+    from dna.config import load_config
+
+    cfg = tmp_path / "dna.config.yaml"
+    cfg.write_text(
+        f"source: file://{OPEN_SWE_BASE}\n"
+        "auth:\n  providers:\n    - type: entra\n      issuer: https://i/v2.0\n"
+    )
+    parsed = load_config(str(cfg))
+    assert parsed is not None
+    assert isinstance(parsed.auth, dict)
+    assert parsed.auth["providers"][0]["type"] == "entra"
+
+
+def test_from_config_auth_must_be_mapping(tmp_path: Path):
+    from dna.config import load_config
+
+    cfg = tmp_path / "dna.config.yaml"
+    cfg.write_text(f"source: file://{OPEN_SWE_BASE}\nauth: nope\n")
+    with pytest.raises(ValueError, match="must be a mapping"):
+        load_config(str(cfg))
+
+
 # ── product smoke: an external consumer, whole shim in a handful of lines ─────
 
 def test_external_consumer_from_config_plus_prompts(tmp_path: Path):
