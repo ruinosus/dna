@@ -1,0 +1,18 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-scope-as-package-data-20260711-111443
+spec:
+  guide_ref: tg-scope-as-package-data
+  outcome: pass
+  verifies:
+  - Story/s-scope-as-package-data
+  - Story/s-pkg-source-scheme
+  executed_by: claude-code
+  executed_at: '2026-07-11T11:14:43+00:00'
+  notes: 'sdk-py: 11 passed, 1 skipped offline (wheel test = requires_network); wheel
+    test PASSED locally with network (Genome.yaml + triage.yaml inside the built wheel).
+    sdk-ts: 8/8 pass. Full suites green: sdk-py 2850 passed, sdk-ts 1397 pass, cli
+    389 passed, tsc clean. Guards: brand clean, docs-coverage clean (85 items), gitleaks
+    0 leaks, mkdocs --strict built. Negative control confirms the old path resolution
+    fails where anchor succeeds.'

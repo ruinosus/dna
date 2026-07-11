@@ -1,0 +1,26 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "acme-support-bot"
+version = "0.1.0"
+description = "Example DNA app that ships its scope as package data"
+requires-python = ">=3.11"
+# In a real app this depends on the SDK. Kept unpinned/omitted here so the
+# example builds against the in-repo `dna` without a version dance.
+dependencies = []
+
+[tool.hatch.build.targets.wheel]
+packages = ["acme_support_bot"]
+# THE KEY LINE. The embedded scope must SHIP in the wheel (and thus into a
+# `pip install` / Docker image); otherwise the app installs with NO scope and
+# boots blind. Hatch includes tracked files under the package by default —
+# including the `.dna` dot-dir here — so this `artifacts` entry is belt-and-
+# suspenders: it force-ships the scope even if your VCS IGNORES `.dna` (many
+# repos do). `load_prompts(..., anchor="acme_support_bot")` then finds it via
+# importlib.resources — no manual `COPY .dna`, no `Path(__file__).parents[N]`.
+#
+# setuptools users: the equivalent is `package_data = {"acme_support_bot":
+# [".dna/**/*"]}` + a `MANIFEST.in` `recursive-include acme_support_bot/.dna *`.
+artifacts = ["acme_support_bot/.dna/**"]

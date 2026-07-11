@@ -1,0 +1,39 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-cli-localresolver-consistency
+spec:
+  title: 'Plano: s-cli-localresolver-consistency'
+  date: '2026-07-11'
+  status: accepted
+  story_ref: s-cli-localresolver-consistency
+  journey_phase: plan
+  body: "# Plan \u2014 s-cli-localresolver-consistency (kz-001)\n\n## Root cause (mechanics\
+    \ of the gap)\nThree boot recipes, three resolver-wiring behaviors:\n- `Kernel.quick`\
+    \ / `build_quick_manifest` \u2014 registers the FULL resolver set (local+github+http+https+registry+helix).\
+    \ `local:` deps resolve.\n- `Kernel.auto(source=<fs>)` / `build_auto_kernel` \u2014\
+    \ registers ONLY LocalResolver on the fs branch. `Kernel.from_config` inherits\
+    \ this \u2192 `local:` resolves.\n- CLI `_ctx._build_holder_async` \u2014 calls\
+    \ `Kernel.auto()` with NO source, then `kernel.source(source)` SEPARATELY. The\
+    \ resolver-wiring branch (guarded by `source is not None`) never runs \u2192 NO\
+    \ resolvers at all. `dna eval run` cannot resolve a `local:<scope>` dep. THIS\
+    \ is the bug.\n\n## Fix\n1. Extract a shared `wire_filesystem_resolvers(kernel,\
+    \ base_dir)` helper in `kernel_bootstrap.py` registering the quick resolver set.\n\
+    2. `build_quick_manifest` + `build_auto_kernel` (fs branch) use the helper \u2192\
+    \ one recipe, no drift.\n3. CLI `_build_holder_async`: after `kernel.source(source)`,\
+    \ wire the resolvers when the source is filesystem (has base_dir / supports_readers);\
+    \ documented no-op for non-fs (SQL) sources \u2014 LocalResolver is meaningless\
+    \ without a fs scope-root.\n4. Verify `from_config` (build_from_config \u2192\
+    \ build_auto_kernel) is aligned by construction.\n\n## Non-fs (SQL) honest behavior\n\
+    LocalResolver is relative to a filesystem scopes dir. When the source has no resolvable\
+    \ base_dir (sqlite/postgres), skip LocalResolver (no-op) rather than wiring a\
+    \ broken relative resolver. Matches build_auto_kernel's non-fs branch (NoopCache,\
+    \ no resolvers).\n\n## Parity\nCLI is Python-only (no TS CLI). TS `fromConfig`/`quickInstance`\
+    \ already wire resolvers for fs sources \u2014 no TS gap. Document the asymmetry.\n\
+    \n## Proof\nTDD: a test mounting a scope with a `local:<lib-scope>` dep, proving\
+    \ the CLI/auto boot resolves it (red\u2192green) and that Kernel.quick keeps resolving.\
+    \ Same scenario via both paths \u2192 same result.\n\n## Gates\nFull Py+TS suites\
+    \ + guards + `mkdocs build --strict`; CHANGELOG [Unreleased]; 11/11 on PR. Do\
+    \ NOT merge / cut release."
+  created_at: '2026-07-11T10:25:30+00:00'
+  updated_at: '2026-07-11T10:25:30+00:00'

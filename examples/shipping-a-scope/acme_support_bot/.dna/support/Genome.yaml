@@ -1,0 +1,7 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: Genome
+metadata:
+  name: support
+  description: Minimal scope that TRAVELS with the app as package data
+spec:
+  default_agent: triage

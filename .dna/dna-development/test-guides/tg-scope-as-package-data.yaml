@@ -1,0 +1,31 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-scope-as-package-data
+spec:
+  description: "Verifies a DNA scope resolves as package data (anchor + pkg://) identically\
+    \ from source/wheel/Docker \u2014 the deploy dogfood."
+  kind_of_test: integration
+  status: active
+  steps:
+  - action: 'Run the Python package-data suite: cd packages/sdk-py && .venv/bin/python
+      -m pytest tests/test_scope_as_package_data.py -q'
+    expected: all pass; the reproduction test resolves the scope from an EMPTY cwd
+      via anchor, and pkg:// resolves via Kernel.from_config
+  - action: 'Run the real-wheel proof (network): pytest -k test_wheel_ships_the_scope'
+    expected: uv builds the example wheel and acme_support_bot/.dna/support/Genome.yaml
+      is inside it
+  - action: 'Run the TS twin: cd packages/sdk-ts && bun test tests/scope-as-package-data.test.ts'
+    expected: "8 pass \u2014 anchor + pkg:// resolve the installed example from an\
+      \ empty cwd; fail-loud on bad anchor"
+  - action: 'Negative control (bug reproduction): from an empty cwd without anchor,
+      load_prompts(''support'') does NOT resolve triage'
+    expected: proves the old path-based resolution fails where anchor succeeds
+  - action: 'Docs gate: python scripts/docs_coverage_guard.py && mkdocs build --strict'
+    expected: clean; the new guide 'How to ship a scope with your app' builds
+  verifies:
+  - Story/s-scope-as-package-data
+  - Story/s-pkg-source-scheme
+  created_at: '2026-07-11T11:14:14+00:00'
+  updated_at: '2026-07-11T11:14:14+00:00'
+  owner: claude-code

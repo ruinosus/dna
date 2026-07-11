@@ -10,6 +10,9 @@
  *   file:// <path>      → FilesystemSource (read/write on disk)
  *   fs:// <path>        → alias of file://
  *   <plain path>        → treated as file://<path>
+ *   pkg://<pkg>[/sub]   → FilesystemSource (READ-ONLY) over a scope embedded
+ *                         as PACKAGE DATA of <pkg> (sub defaults to .dna);
+ *                         travels with the app (tarball / Docker)
  *   postgresql:// …     → PostgresSource (node-postgres)
  *   postgres:// …       → alias of postgresql://
  *   sqlite:// <path>    → NOT SUPPORTED in the TS runtime (Python-only; the
@@ -45,6 +48,25 @@ function schemeOf(url: string): string {
 }
 
 /**
+ * Split `pkg://<package>[/<subpath>]` into `{ pkg, subpath }`. Parity with the
+ * python `_parse_pkg_url`: `pkg://app` → `{pkg:"app", subpath:""}`;
+ * `pkg://app/.dna` → `{pkg:"app", subpath:".dna"}`. The package is the netloc
+ * (a dotted `pkg://my.app` stays `my.app`).
+ */
+function parsePkgUrl(url: string): { pkg: string; subpath: string } {
+  const m = /^pkg:\/\/([^/]*)(?:\/(.*))?$/.exec(url);
+  const pkg = m?.[1] ?? "";
+  if (!pkg) {
+    throw new UnsupportedSourceScheme(
+      `pkg:// source URL is missing a package name — use ` +
+        `pkg://<package>[/<subpath>] (e.g. pkg://app or pkg://app/.dna). ` +
+        `Got: ${url}`,
+    );
+  }
+  return { pkg, subpath: m?.[2] ?? "" };
+}
+
+/**
  * Build a source from a scheme URL (see module docstring).
  *
  * Postgres sources run their migrations on first use; this awaits `init()` so
@@ -60,6 +82,19 @@ export async function sourceFromUrl(
   if (scheme === "file" || scheme === "fs" || scheme === "") {
     const { FilesystemSource } = await import("./filesystem/source.js");
     return new FilesystemSource(urlToFsPath(url) || url);
+  }
+
+  if (scheme === "pkg") {
+    // A scope embedded as PACKAGE DATA — resolve it from inside the installed
+    // package so it travels with the app (tarball / Docker), no path
+    // navigation and no manual copy. READ-ONLY: FilesystemSource has no write
+    // surface here (to write, use file:// or postgresql://).
+    const { FilesystemSource } = await import("./filesystem/source.js");
+    const { anchorScopesRoot, DEFAULT_SUBPATH } = await import(
+      "../package-scope.js"
+    );
+    const { pkg, subpath } = parsePkgUrl(url);
+    return new FilesystemSource(anchorScopesRoot(pkg, subpath || DEFAULT_SUBPATH));
   }
 
   if (base === "postgresql" || base === "postgres") {
@@ -79,7 +114,8 @@ export async function sourceFromUrl(
 
   throw new UnsupportedSourceScheme(
     `unsupported source URL scheme '${scheme}://' — the TS runtime ships ` +
-      `file:// (filesystem) and postgresql:// adapters. Got: ${url}`,
+      `file:// (filesystem), pkg:// (read-only package-data scope) and ` +
+      `postgresql:// adapters. Got: ${url}`,
   );
 }
 

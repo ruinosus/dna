@@ -1,0 +1,26 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Feature
+metadata:
+  name: f-dna-scope-packaging
+spec:
+  title: Ship a scope with your app (package-data resolution)
+  description: "First-class way for a DNA scope to travel with a deployed app \u2014\
+    \ resolve scope as package data (importlib.resources / pkg://), identical from\
+    \ source/wheel/Docker."
+  status: in-development
+  owner: claude-code
+  reporter: claude-code
+  created_at: '2026-07-11T10:52:57+00:00'
+  updated_at: '2026-07-11T10:53:35+00:00'
+  timeline:
+  - at: '2026-07-11T10:52:57+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: discovery
+  - at: '2026-07-11T10:53:35+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: discovery
+    to: in-development

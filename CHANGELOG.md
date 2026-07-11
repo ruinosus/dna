@@ -42,6 +42,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   no longer invalidates the composition schema cache, and an agent's `tools:`
   ref pointing at a not-yet-shipped Tool is resolved lazily (host-resolved)
   instead of being flagged as a missing composition input.
+- **Ship a scope with your app — resolve a scope as PACKAGE DATA** (feature
+  `f-dna-scope-packaging`; stories `s-scope-as-package-data`,
+  `s-pkg-source-scheme`). A deployed app can now let its DNA scope TRAVEL inside
+  the deployable, resolved from *inside* the installed package — no fragile
+  `Path(__file__).resolve().parents[N] / ".dna"` navigation and no manual
+  `COPY .dna` in the Dockerfile (the image is the app, not the repo; forget the
+  copy and the app boots with no scope — a real pilot bug). Two surfaces, in
+  Python↔TypeScript parity:
+  - `load_prompts(scope, *, anchor="mypkg")` / `loadPrompts(scope, { anchor })`
+    — `anchor` is a package name; the scope is resolved via
+    `importlib.resources` (Py) / the package's own location (TS), so it works
+    identically from a source checkout, an installed wheel, and a Docker image.
+    Precedence: `base_dir` arg > `$DNA_BASE_DIR` > `anchor` (package data) >
+    `.dna` (cwd).
+  - A `pkg://<package>[/<subpath>]` **source scheme** for `dna.config.yaml` /
+    `Kernel.from_config` (subpath defaults to `.dna`), resolving the embedded
+    scope to a **read-only** filesystem source. Both surfaces fail loud with a
+    packaging-oriented message on a missing package/subpath.
+  - New helper `dna.anchor_scopes_root` / `anchorScopesRoot` (+
+    `PackageScopeNotFound`) exposes the resolution directly.
+  - New guide **"How to ship a scope with your app"** (Hatch / setuptools / npm
+    packaging + the Docker contrast) and a runnable example
+    (`examples/shipping-a-scope/`) with a test that installs the example and
+    resolves the scope from a DIFFERENT working directory — the Docker scenario.
+
+### Fixed
+
+- **CLI boot now wires the `LocalResolver` — `dna eval run` resolves `local:`
+  deps identically to the SDK** (s-cli-localresolver-consistency, kaizen
+  `kz-001`; feature `f-dna-dx-configure`). The `dna` CLI built its kernel via
+  `Kernel.auto()` **without a source** and attached the source afterwards, so
+  `build_auto_kernel`'s resolver-wiring branch (guarded by `source is not None`)
+  never ran — the CLI kernel had **zero resolvers**. A dependency declared as
+  `local:<scope>` therefore resolved through `Kernel.quick` (which wires the
+  resolvers) but silently **failed to resolve** through `dna eval run` and every
+  other CLI command: same composition, two results. The resolver set is now
+  wired by one shared recipe (`kernel_bootstrap.wire_filesystem_resolvers`) used
+  by `Kernel.quick`, `Kernel.auto`/`Kernel.from_config` (filesystem source), and
+  the CLI boot path. Non-filesystem sources (SQLite/Postgres) have no
+  scopes-root directory, so `LocalResolver` is a documented no-op there. As a
+  side benefit, the `auto`/`from_config` path now also registers the `github` /
+  `http` / `https` / `registry` / `helix` resolvers (previously `local`-only),
+  matching `Kernel.quick` and the TypeScript `fromConfig`. The `dna` CLI is
+  Python-only; the TypeScript `quickInstance` / `fromConfig` already wired their
+  resolvers, so there was no TS-side gap to fix.
 
 ## [0.5.0] - 2026-07-11
 
