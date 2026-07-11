@@ -79,6 +79,7 @@ nav:
       - How to evaluate agents: guides/evaluating-agents.md
       - Your git log is your SDLC: guides/sdlc.md
       - "Digest: what happened while you were away": guides/sdlc-digest.md
+      - "Gallery: the artifacts you need to review": guides/sdlc-gallery.md
   # Reference — GENERATED FROM SOURCE. The four API sub-references (Python via
   # mkdocstrings, TypeScript via TypeDoc, CLI + Kinds via scripts/gen_*_docs.py)
   # plus the Py↔TS parity matrix are wired through literate-nav: each generated

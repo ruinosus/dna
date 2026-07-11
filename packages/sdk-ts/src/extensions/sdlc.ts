@@ -1468,6 +1468,9 @@ class HtmlArtifactKind extends KindBase {
       title: aj.title ?? null,
       source: aj.source ?? null,
       created_at: aj.created_at ?? null,
+      // published_url — canonical hosted location (e.g. claude.ai artifact
+      // URL) so the gallery renders a clickable link. Lives in artifact_json.
+      published_url: aj.published_url ?? null,
       html_bytes: ((spec.html as string) ?? "").length,
     };
   }

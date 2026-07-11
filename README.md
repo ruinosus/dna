@@ -86,6 +86,14 @@ install` *writes* Kinds as documents into your `.dna/` source** (with an
 → **[Installing bundles](https://ruinosus.github.io/dna/guides/installing-scopes/)** ·
 **[the side-by-side comparison](https://ruinosus.github.io/dna/guides/installing-scopes/#dna-install-vs-dna-init-write-to-source-or-project-to-tools)**.
 
+### Recommended ecosystem skills
+
+DNA ships its own `dna-sdlc-cli` skill as a Claude Code plugin
+([`.claude-plugin/marketplace.json`](.claude-plugin/marketplace.json)) and
+**references** — never vendors — a curated set of ecosystem skills the DNA loop
+leans on (superpowers, impeccable, find-skills, task-observer).
+→ **[RECOMMENDED-SKILLS.md](RECOMMENDED-SKILLS.md)**.
+
 ## Quick start
 
 The snippets below run against [`examples/hello-genome`](examples/hello-genome/) —

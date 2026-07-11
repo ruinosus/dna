@@ -1,0 +1,503 @@
+<title>DNA vs agent-framework — decision spike</title>
+<style>
+  :root{
+    --ground:#f5f6f9; --surface:#ffffff; --surface-2:#eef1f6;
+    --ink:#161a21; --muted:#5a6472; --faint:#8b95a4; --line:#e2e6ee;
+    --accent:#2f57d6; --accent-soft:#e7ecfb;
+    --dna:#0e8f6e; --dna-soft:#dbf3ec;
+    --af:#5b4bcc; --af-soft:#e9e6fb;
+    --tie:#a9791a; --tie-soft:#f6ecd4;
+    --code-bg:#12151c; --code-ink:#dfe4ee; --code-dim:#7f8ba0;
+    --code-key:#8fb7ff; --code-str:#a9e6c0; --code-com:#6b7688;
+    --shadow:0 1px 2px rgba(18,24,38,.05),0 6px 20px rgba(18,24,38,.06);
+    --mono:ui-monospace,"SF Mono",Menlo,"JetBrains Mono",Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --ground:#0e1014; --surface:#161a20; --surface-2:#1c2129;
+      --ink:#e9ecf1; --muted:#9aa4b3; --faint:#6b7686; --line:#282f39;
+      --accent:#7d97f0; --accent-soft:#1c2438;
+      --dna:#3fce9f; --dna-soft:#123027;
+      --af:#a99bf5; --af-soft:#211d3a;
+      --tie:#e0b24d; --tie-soft:#312712;
+      --code-bg:#0b0e13; --code-ink:#dfe4ee; --code-dim:#7f8ba0;
+      --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="light"]{
+    --ground:#f5f6f9; --surface:#ffffff; --surface-2:#eef1f6;
+    --ink:#161a21; --muted:#5a6472; --faint:#8b95a4; --line:#e2e6ee;
+    --accent:#2f57d6; --accent-soft:#e7ecfb;
+    --dna:#0e8f6e; --dna-soft:#dbf3ec; --af:#5b4bcc; --af-soft:#e9e6fb;
+    --tie:#a9791a; --tie-soft:#f6ecd4;
+    --code-bg:#12151c; --code-ink:#dfe4ee;
+  }
+  :root[data-theme="dark"]{
+    --ground:#0e1014; --surface:#161a20; --surface-2:#1c2129;
+    --ink:#e9ecf1; --muted:#9aa4b3; --faint:#6b7686; --line:#282f39;
+    --accent:#7d97f0; --accent-soft:#1c2438;
+    --dna:#3fce9f; --dna-soft:#123027; --af:#a99bf5; --af-soft:#211d3a;
+    --tie:#e0b24d; --tie-soft:#312712;
+    --code-bg:#0b0e13; --code-ink:#dfe4ee;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+    line-height:1.6;-webkit-font-smoothing:antialiased;font-size:16px}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+  a{color:var(--accent)}
+  h1,h2,h3{text-wrap:balance;line-height:1.15;letter-spacing:-.02em;margin:0}
+  code,kbd,pre{font-family:var(--mono)}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--faint)}
+  .num{font-variant-numeric:tabular-nums}
+
+  /* header */
+  header{padding:56px 0 28px;border-bottom:1px solid var(--line)}
+  header h1{font-size:clamp(28px,4.4vw,44px);font-weight:680;margin-top:14px}
+  header .sub{color:var(--muted);font-size:clamp(16px,2vw,19px);margin-top:14px;max-width:60ch}
+  .meta{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:22px;font-family:var(--mono);
+    font-size:12.5px;color:var(--muted)}
+  .meta b{color:var(--ink);font-weight:600}
+
+  section{padding:40px 0;border-bottom:1px solid var(--line)}
+  section h2{font-size:22px;font-weight:640;display:flex;align-items:baseline;gap:12px}
+  section h2 .idx{font-family:var(--mono);font-size:13px;color:var(--accent);font-weight:600}
+  .lede{color:var(--muted);margin:12px 0 0;max-width:72ch}
+
+  /* verdict card */
+  .verdict{background:var(--surface);border:1px solid var(--line);border-radius:14px;
+    box-shadow:var(--shadow);padding:26px;margin-top:8px}
+  .verdict .tag{display:inline-block;font-family:var(--mono);font-size:12px;font-weight:600;
+    letter-spacing:.08em;text-transform:uppercase;color:var(--accent);
+    background:var(--accent-soft);padding:5px 11px;border-radius:999px}
+  .verdict h3{font-size:clamp(20px,2.6vw,26px);font-weight:660;margin-top:16px;letter-spacing:-.02em}
+  .verdict p{color:var(--muted);margin:14px 0 0}
+  .verdict p strong{color:var(--ink)}
+  .cond{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:22px}
+  .cond .c{border:1px solid var(--line);border-radius:11px;padding:16px;background:var(--surface-2)}
+  .cond .c .k{font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase}
+  .cond .c.go .k{color:var(--dna)} .cond .c.stop .k{color:var(--af)}
+  .cond .c h4{margin:8px 0 6px;font-size:15px;font-weight:640}
+  .cond .c p{margin:0;font-size:14px;color:var(--muted)}
+
+  /* chips */
+  .chip{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11.5px;
+    font-weight:600;letter-spacing:.04em;padding:3px 9px;border-radius:999px;white-space:nowrap}
+  .chip.dna{color:var(--dna);background:var(--dna-soft)}
+  .chip.af{color:var(--af);background:var(--af-soft)}
+  .chip.tie{color:var(--tie);background:var(--tie-soft)}
+
+  /* code trio */
+  .trio{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:20px}
+  .panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden;
+    box-shadow:var(--shadow);display:flex;flex-direction:column;min-width:0}
+  .panel .head{padding:13px 16px;border-bottom:1px solid var(--line);display:flex;
+    align-items:center;justify-content:space-between;gap:8px}
+  .panel .head .t{font-weight:640;font-size:14px}
+  .panel .head .t small{display:block;font-weight:400;color:var(--faint);font-size:11.5px;
+    font-family:var(--mono);letter-spacing:.02em;margin-top:2px}
+  pre{margin:0;background:var(--code-bg);color:var(--code-ink);padding:15px 16px;overflow-x:auto;
+    font-size:12px;line-height:1.62;flex:1}
+  pre .k{color:var(--code-key)} pre .s{color:var(--code-str)} pre .c{color:var(--code-com)}
+  pre .d{color:var(--code-dim)}
+  .panel .foot{padding:11px 16px;font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);
+    background:var(--surface-2)}
+  .panel .foot b{color:var(--ink)}
+
+  /* scorecard */
+  .scroller{overflow-x:auto;margin-top:20px;border:1px solid var(--line);border-radius:12px;
+    box-shadow:var(--shadow)}
+  table{border-collapse:collapse;width:100%;min-width:720px;background:var(--surface);font-size:14px}
+  thead th{text-align:left;padding:13px 16px;font-family:var(--mono);font-size:11.5px;
+    letter-spacing:.07em;text-transform:uppercase;color:var(--muted);
+    border-bottom:1px solid var(--line);background:var(--surface-2);position:sticky;top:0}
+  tbody td{padding:13px 16px;border-bottom:1px solid var(--line);vertical-align:top}
+  tbody tr:last-child td{border-bottom:none}
+  tbody td .ax{font-weight:620} tbody td .ax small{display:block;color:var(--faint);font-weight:400;
+    font-size:12.5px;margin-top:2px}
+  td.why{color:var(--muted);font-size:13px;max-width:34ch}
+  .tally{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;align-items:center}
+  .tally .lbl{font-size:13px;color:var(--muted)}
+  .warnbox{margin-top:16px;background:var(--tie-soft);border:1px solid color-mix(in srgb,var(--tie) 30%,transparent);
+    border-radius:11px;padding:15px 17px;font-size:14px;color:var(--ink)}
+  .warnbox b{color:var(--tie)}
+
+  /* passo-0 callout */
+  .finding{display:grid;grid-template-columns:1.1fr 1fr;gap:16px;margin-top:20px}
+  .finding .card{background:var(--surface);border:1px solid var(--line);border-radius:12px;
+    padding:18px 20px;box-shadow:var(--shadow)}
+  .finding .card h4{margin:0 0 8px;font-size:15px;font-weight:640;display:flex;gap:8px;align-items:center}
+  .finding ul{margin:8px 0 0;padding-left:18px;color:var(--muted);font-size:14px}
+  .finding li{margin:6px 0} .finding li b{color:var(--ink);font-weight:600}
+  .dot{width:8px;height:8px;border-radius:2px;display:inline-block}
+  .dot.y{background:var(--dna)} .dot.n{background:var(--af)}
+
+  /* portability */
+  .ports{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:20px}
+  .port{background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:15px;
+    box-shadow:var(--shadow)}
+  .port .name{font-weight:640;font-size:14px} .port .st{margin-top:9px}
+  .port p{margin:9px 0 0;font-size:12.5px;color:var(--muted)}
+  .land{margin-top:22px;background:var(--surface);border:1px solid var(--line);border-radius:12px;
+    box-shadow:var(--shadow);overflow:hidden}
+  .land .row{display:grid;grid-template-columns:190px 100px 1fr;gap:0;border-bottom:1px solid var(--line)}
+  .land .row:last-child{border-bottom:none}
+  .land .row>div{padding:11px 15px}
+  .land .row .nm{font-weight:600;font-size:13.5px;border-right:1px solid var(--line)}
+  .land .row .vd{border-right:1px solid var(--line);display:flex;align-items:center}
+  .land .row .ds{font-size:13px;color:var(--muted)}
+  .land .row.h>div{background:var(--surface-2);font-family:var(--mono);font-size:11px;
+    letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  .no{color:var(--af);font-weight:600;font-family:var(--mono);font-size:12px}
+  .partial{color:var(--tie);font-weight:600;font-family:var(--mono);font-size:12px}
+
+  footer{padding:34px 0 60px;color:var(--faint);font-size:12.5px;font-family:var(--mono)}
+  .toggle{position:fixed;top:14px;right:14px;z-index:10;background:var(--surface);color:var(--muted);
+    border:1px solid var(--line);border-radius:999px;padding:7px 13px;font-family:var(--mono);
+    font-size:12px;cursor:pointer;box-shadow:var(--shadow)}
+  .toggle:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  @media (max-width:860px){
+    .trio,.cond,.finding{grid-template-columns:1fr}
+    .land .row{grid-template-columns:130px 84px 1fr}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<button class="toggle" id="tt" aria-label="Toggle theme">◐ theme</button>
+
+<header>
+  <div class="wrap">
+    <div class="eyebrow">Decision spike · foundry-assured · not for merge</div>
+    <h1>DNA vs. agent-framework: keep it, pivot it, or retire it?</h1>
+    <p class="sub">The same agent — the grounded helpdesk concierge (persona + citation
+      guardrail) — built both ways and judged by evidence. Steelmanning the competitor,
+      zero pro-DNA bias.</p>
+    <div class="meta">
+      <span><b>Target</b> concierge-grounded</span>
+      <span><b>Competitor</b> agent-framework 1.9.0 (+ -declarative 1.0.0rc2)</span>
+      <span><b>DNA</b> dna-sdk Kernel</span>
+      <span><b>Gate</b> all 3 paths run · emitter round-trips</span>
+    </div>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <div class="eyebrow">The verdict, up front</div>
+    <div class="verdict" style="margin-top:14px">
+      <span class="tag">Conditional — the runtime count decides</span>
+      <h3>As a prompt-manager for a single agent-framework app, DNA does <u>not</u> justify itself.
+        It earns its keep only as a neutral <em>author-once → emit-to-each-runtime</em> layer.</h3>
+      <p>agent-framework already ships a clean declarative YAML loader that lives in this backend's
+        dependency tree. For one runtime, DNA's Genome/Soul/Guardrail apparatus is more ceremony for
+        the same composed prompt. <strong>But</strong> the spike proves DNA can transpile its
+        definition into the exact PromptAgent YAML agent-framework consumes (byte-equal), and 2026
+        research shows the neutral-transpiler niche is <strong>still open</strong> — so the decision
+        hinges on one question, not a feature tally:</p>
+      <div class="cond">
+        <div class="c go">
+          <div class="k">If foundry goes multi-runtime →</div>
+          <h4>Keep DNA — pivot it to the de-para layer</h4>
+          <p>Author once, emit to agent-framework (proven), and to Bedrock / Vertex / OpenAI (cheap,
+            ~20 LOC/target). Composition + eval-as-contract + tenant + no-.NET are real bonuses
+            per-vendor formats lack. Cost: actually build the emitters and reckon with Oracle Agent Spec.</p>
+        </div>
+        <div class="c stop">
+          <div class="k">If foundry stays single-runtime →</div>
+          <h4>Retire DNA → agent-framework-native + Langfuse</h4>
+          <p>The de-para value is never realized, so its ceremony isn't worth it. Use AF's own
+            declarative YAML and add Langfuse for the prompt versioning / A-B / true no-deploy that
+            <em>both</em> DNA and AF lack today.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2><span class="idx">00</span> What agent-framework really does declaratively (not assumed)</h2>
+    <p class="lede">Confirmed against the installed lib, not the marketing. agent-framework has a
+      first-class declarative loader — and it is genuinely clean. It also carries a surprise tax.</p>
+    <div class="finding">
+      <div class="card">
+        <h4><span class="dot y"></span> It covers (natively, in YAML)</h4>
+        <ul>
+          <li><b>Persona / instruction</b> — flat <code>instructions:</code> string</li>
+          <li><b>Model binding</b> — <code>model.{id, provider}</code></li>
+          <li><b>Tools</b> — function / MCP / web-search / code-interpreter</li>
+          <li><b>Options + structured output</b> — temperature, response schema</li>
+          <li>Loaded by <code>AgentFactory.create_agent_from_yaml*</code> → a live <code>Agent</code></li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4><span class="dot n"></span> It does <em>not</em> cover — and one tax</h4>
+        <ul>
+          <li><b>No composition</b> — no Soul reuse, no Guardrail-as-document; the ungrounded
+            variant must <b>copy the persona verbatim</b></li>
+          <li><b>No tenant / overlay</b> — the PromptAgent model has no such field</li>
+          <li><b>No eval-as-contract</b> — no prompt-invariant concept</li>
+          <li><b>.NET tax</b> — the declarative loader hard-loads <b>.NET 8</b> at import
+            (pythonnet 3.0.5 + powerfx 0.0.34). It errored <span class="d">"must install .NET"</span>
+            on this box; only ran via <code>DOTNET_ROLL_FORWARD=Major</code>. Plain (imperative)
+            agent-framework avoids .NET but is no longer declarative.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2><span class="idx">01</span> The same concierge, three ways — all running</h2>
+    <p class="lede">(A) agent-framework-native · (B) DNA composition · (C) the DNA→AF emitter.
+      The emitter's output is byte-equal to the DNA-composed prompt and loads into a live AF agent.</p>
+    <div class="trio">
+      <div class="panel">
+        <div class="head"><div class="t">(A) agent-framework-native<small>concierge-grounded.agent.yaml</small></div>
+          <span class="chip af">flat</span></div>
+<pre><span class="c"># AgentFactory loads this directly</span>
+<span class="k">kind:</span> Prompt
+<span class="k">name:</span> HelpdeskConcierge
+<span class="k">description:</span> <span class="s">Grounded concierge…</span>
+<span class="k">model:</span>
+  <span class="k">id:</span> gpt-4o
+  <span class="k">provider:</span> AzureOpenAI
+<span class="k">instructions:</span> |-
+  <span class="s">You are the Helpdesk Concierge…</span>
+
+  <span class="s">Answer using the runbook KB.</span>
+
+  <span class="s">## Guardrail: grounded-citation</span>
+  <span class="s">- Cite the source document…</span>
+  <span class="s">- …say you don't know instead</span>
+    <span class="s">of guessing.</span></pre>
+        <div class="foot"><b>1 file · 12 lines.</b> Cleanest for one agent — but persona + guardrail
+          are <b>inlined</b>; the ungrounded sibling re-types the persona.</div>
+      </div>
+
+      <div class="panel">
+        <div class="head"><div class="t">(B) DNA composition<small>.dna/helpdesk/…</small></div>
+          <span class="chip dna">composed</span></div>
+<pre><span class="c"># souls/concierge/SOUL.md</span>
+<span class="s">You are the Helpdesk Concierge…</span>
+
+<span class="c"># guardrails/grounded-citation</span>
+<span class="s">- Cite the source document…</span>
+<span class="s">- …say you don't know</span>
+
+<span class="c"># agents/concierge-grounded.yaml</span>
+<span class="k">soul:</span> concierge        <span class="c">← reused</span>
+<span class="k">guardrails:</span> [grounded-citation]
+<span class="k">instruction:</span> <span class="s">Answer using the</span>
+  <span class="s">runbook knowledge base.</span>
+
+<span class="c"># consume:</span>
+Kernel.quick(<span class="s">"helpdesk"</span>)
+     .build_prompt(<span class="s">"concierge-grounded"</span>)</pre>
+        <div class="foot"><b>5 files · more concepts.</b> But Soul + Guardrail are <b>shared</b> —
+          the ungrounded variant reuses them with <b>zero duplication</b>.</div>
+      </div>
+
+      <div class="panel">
+        <div class="head"><div class="t">(C) DNA → AF emitter<small>the de-para</small></div>
+          <span class="chip dna">transpile</span></div>
+<pre><span class="c"># emitter/dna_to_af.py (core)</span>
+mi = Kernel.quick(<span class="s">"helpdesk"</span>, base_dir)
+instr = mi.build_prompt(name)
+doc   = mi.find_agent(name)
+<span class="k">return</span> {
+  <span class="s">"kind"</span>: <span class="s">"Prompt"</span>,
+  <span class="s">"name"</span>: camel(doc.name),
+  <span class="s">"description"</span>: doc.desc,
+  <span class="s">"model"</span>: {<span class="s">"id"</span>:…, <span class="s">"provider"</span>:…},
+  <span class="s">"instructions"</span>: instr,   <span class="c"># composed</span>
+}
+<span class="c"># → AgentFactory.create_agent_from_yaml</span>
+<span class="c"># → live agent-framework Agent ✓</span></pre>
+        <div class="foot"><b>~20 LOC/target.</b> <b>Round-trip PASS</b> — emitted
+          <code>instructions</code> == DNA-composed prompt, byte-for-byte.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2><span class="idx">02</span> The scorecard — nine axes, no mercy for DNA</h2>
+    <p class="lede">Portability is now the top axis (the owner's reframe). A raw win-tally
+      favors DNA — but that tally is not the decision; read the warning below it.</p>
+    <div class="scroller">
+      <table>
+        <thead><tr>
+          <th style="width:26%">Axis</th><th>agent-framework</th><th>DNA</th>
+          <th>Winner</th><th>Why</th>
+        </tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="ax">1 · De-para / portability<small>author once, run on each runtime</small></span></td>
+            <td>PromptAgent YAML is <b>AF-only</b></td>
+            <td>Emits AF YAML (proven, byte-equal); conceptually to others</td>
+            <td><span class="chip dna">DNA</span></td>
+            <td class="why">AF gives one runtime's format. DNA is a neutral definition — but must
+              actually build the emitters (1 of N exists today).</td>
+          </tr>
+          <tr>
+            <td><span class="ax">2 · Authoring (single agent)<small>LOC + concepts to learn</small></span></td>
+            <td><b>1 file · 12 lines</b>; kind/name/model/instructions</td>
+            <td><b>5 files</b>; Genome, Soul, Guardrail, Agent, cascade</td>
+            <td><span class="chip af">agent-framework</span></td>
+            <td class="why">For one agent, AF is decisively less ceremony.</td>
+          </tr>
+          <tr>
+            <td><span class="ax">3 · Composition / reuse<small>share persona + guardrail across variants</small></span></td>
+            <td>No primitive — persona <b>copy-pasted</b> per variant</td>
+            <td>Soul + Guardrail shared; variant keeps only its delta</td>
+            <td><span class="chip dna">DNA</span></td>
+            <td class="why">Proven: the AF ungrounded YAML re-types the persona line; DNA reuses it.</td>
+          </tr>
+          <tr>
+            <td><span class="ax">4 · Consumption<small>LOC to load / compose</small></span></td>
+            <td><code>AgentFactory().create_agent_from_yaml_path(p)</code></td>
+            <td><code>Kernel.quick(s).build_prompt(n)</code></td>
+            <td><span class="chip tie">tie</span></td>
+            <td class="why">Both ~1 call.</td>
+          </tr>
+          <tr>
+            <td><span class="ax">5 · No-deploy<small>change persona without a rebuild</small></span></td>
+            <td>Externalize the YAML → edit w/o rebuild; needs restart</td>
+            <td>Externalize the scope (DNA_BASE_DIR) → same; needs restart</td>
+            <td><span class="chip tie">tie</span></td>
+            <td class="why">Both read a file at boot; neither hot-swaps. Langfuse beats both.</td>
+          </tr>
+          <tr>
+            <td><span class="ax">6 · Tenant override<small>ACME's persona without a fork</small></span></td>
+            <td><b>No field</b> in the PromptAgent model</td>
+            <td>Tenant is a first-class kernel dimension (<code>with_tenant</code>)</td>
+            <td><span class="chip dna">DNA</span></td>
+            <td class="why">Structural: AF simply has no slot for it. (Not exercised e2e in this spike.)</td>
+          </tr>
+          <tr>
+            <td><span class="ax">7 · Eval-as-contract<small>prompt invariant guarded in CI</small></span></td>
+            <td>No prompt-invariant concept</td>
+            <td>EvalSuite (contains / not_contains / min_length) runs in CI</td>
+            <td><span class="chip dna">DNA</span></td>
+            <td class="why">A planted violation flips <code>dna eval run</code> to exit-1 (in repo history).</td>
+          </tr>
+          <tr>
+            <td><span class="ax">8 · Deps / infra<small>external service? extra runtime?</small></span></td>
+            <td>Declarative ⇒ pythonnet + powerfx + <b>.NET 8</b> at import</td>
+            <td>Declarative ⇒ <b>pure Python</b></td>
+            <td><span class="chip dna">DNA</span></td>
+            <td class="why">AF's declarative path failed until <code>DOTNET_ROLL_FORWARD</code>. Plain AF drops declarativeness.</td>
+          </tr>
+          <tr>
+            <td><span class="ax">9 · Curve / ceremony<small>concepts before first agent</small></span></td>
+            <td>kind / model / instructions — done</td>
+            <td>Genome + Soul + Guardrail + Agent + template cascade + aliases</td>
+            <td><span class="chip af">agent-framework</span></td>
+            <td class="why">DNA's concept count is heavier to onboard.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="tally">
+      <span class="lbl">Raw tally:</span>
+      <span class="chip dna">DNA ×5</span>
+      <span class="chip af">agent-framework ×2</span>
+      <span class="chip tie">tie ×2</span>
+    </div>
+    <div class="warnbox"><b>Don't read the tally as the decision.</b> For foundry <em>today</em>
+      (one runtime = agent-framework), axis 1 is <b>unrealized</b> value, and axes 3/6/7/8 are real
+      but thin wins — while AF's simplicity (axis 2/9) plus <em>already being in the stack</em> and
+      <em>not being a second system to maintain</em> carry disproportionate real-world weight. The
+      tally flips meaning entirely the moment a second runtime enters the picture.</div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2><span class="idx">03</span> Portability — what the definition maps onto</h2>
+    <p class="lede">The DNA concierge fields, projected onto each runtime. agent-framework is
+      <em>proven</em> here; the rest is a conceptual field-map (not implemented).</p>
+    <div class="ports">
+      <div class="port"><div class="name">agent-framework</div>
+        <div class="st"><span class="chip dna">proven · byte-equal</span></div>
+        <p>Soul+Guardrail+delta → <code>instructions</code>; name·desc·model 1:1.</p></div>
+      <div class="port"><div class="name">OpenAI Agents SDK</div>
+        <div class="st"><span class="chip tie">1:1 likely</span></div>
+        <p><code>instructions</code>, <code>model</code>, <code>tools</code> map cleanly; no composition slot.</p></div>
+      <div class="port"><div class="name">AWS Bedrock AgentCore</div>
+        <div class="st"><span class="chip tie">runtime, not def</span></div>
+        <p>Hosts whatever you emit (LangGraph/Strands/…); DNA emits <em>into</em> the chosen framework.</p></div>
+      <div class="port"><div class="name">Google Vertex / ADK</div>
+        <div class="st"><span class="chip tie">partial</span></div>
+        <p>instruction/model map; tool + safety config diverge from DNA's Guardrail shape.</p></div>
+    </div>
+    <p class="lede" style="margin-top:26px">Is this niche already occupied? 2026 competitive scan —
+      does anyone already do author-once → emit-to-each-runtime?</p>
+    <div class="land">
+      <div class="row h"><div class="nm">Contender</div><div class="vd">De-para?</div><div class="ds">What it actually is</div></div>
+      <div class="row"><div class="nm">Oracle Agent Spec</div><div class="vd"><span class="partial">PARTIAL</span></div>
+        <div class="ds">The <b>only</b> real transpiler — but adapters cover LangGraph/AutoGen/CrewAI/WayFlow only (not AF/OpenAI/Bedrock/Vertex); ~400★, early.</div></div>
+      <div class="row"><div class="nm">Google OKF</div><div class="vd"><span class="no">NO</span></div>
+        <div class="ds">Wrong layer — a spec for <b>knowledge/context</b> agents consume, not agent definition.</div></div>
+      <div class="row"><div class="nm">A2A protocol</div><div class="vd"><span class="no">NO</span></div>
+        <div class="ds">Runtime agent-to-agent <b>wire protocol</b> (Agent Cards); not authoring.</div></div>
+      <div class="row"><div class="nm">MCP</div><div class="vd"><span class="no">NO</span></div>
+        <div class="ds"><b>Tool/context</b> wire protocol; not an agent definition.</div></div>
+      <div class="row"><div class="nm">Bedrock AgentCore</div><div class="vd"><span class="no">NO</span></div>
+        <div class="ds">Bring-your-own-framework <b>hosting plane</b>; runs, doesn't define.</div></div>
+      <div class="row"><div class="nm">MS declarative / SKILL.md</div><div class="vd"><span class="no">NO</span></div>
+        <div class="ds">Per-vendor declarative format / a portable <b>skill component</b> — neither transpiles out.</div></div>
+    </div>
+    <p class="lede" style="margin-top:18px"><strong style="color:var(--ink)">Read:</strong> the neutral
+      transpiler niche is <b>claimed but not owned</b>. Only Oracle Agent Spec does it, partially, and
+      not for the runtimes foundry would target. A DNA de-para layer is <b>not redundant</b> in 2026 —
+      but it should align with / emit <em>through</em> Oracle Agent Spec rather than reinvent the schema.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2><span class="idx">04</span> So — does DNA justify itself?</h2>
+    <p class="lede">Straight answer, no hedging.</p>
+    <div class="verdict" style="margin-top:14px">
+      <p style="margin-top:0"><strong>Not as it's used here.</strong> As a declarative prompt-manager
+        for a single agent-framework backend, DNA does not pull its weight: agent-framework's own YAML
+        loader is cleaner, already a dependency, and one fewer system to run. DNA's composition,
+        eval-as-contract, tenant and no-.NET wins are genuine but too thin to justify the whole
+        Genome/Kernel apparatus on their own.</p>
+      <p><strong>Yes — but only if foundry commits to portability.</strong> DNA's one non-redundant
+        reason to exist is as the neutral <em>author-once → emit-to-each-runtime</em> layer. The spike
+        proves that works and is cheap (~20 LOC/target, byte-equal round-trip), and the 2026 landscape
+        leaves the niche open (only Oracle Agent Spec, partially). That bet requires (1) foundry actually
+        needing more than one runtime, (2) building the emitters, and (3) aligning with Oracle Agent Spec
+        instead of a bespoke schema.</p>
+      <p><strong>The decision reduces to one question:</strong> does foundry-assured target <em>one</em>
+        agent runtime or <em>many</em>? One → retire DNA to agent-framework-native + Langfuse. Many →
+        keep DNA and pivot it, deliberately, into the de-para layer it was almost accidentally already
+        becoming.</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    spike/comparison.html · all three paths run · emitter round-trip PASS ·
+    production untouched · worktree preserved · sp-dna-vs-agentframework
+  </div>
+</footer>
+
+<script>
+  (function(){
+    var b=document.getElementById('tt');
+    b.addEventListener('click',function(){
+      var r=document.documentElement;
+      var cur=r.getAttribute('data-theme')||
+        (matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');
+      r.setAttribute('data-theme',cur==='dark'?'light':'dark');
+    });
+  })();
+</script>

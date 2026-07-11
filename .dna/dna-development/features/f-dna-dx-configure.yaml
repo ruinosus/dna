@@ -23,3 +23,8 @@ spec:
     type: status_change
     source: cli
     to: discovery
+  produces:
+  - kind: HtmlArtifact
+    name: ha-tenant-overlays
+    role: prototype
+    at: '2026-07-11T14:34:34+00:00'
