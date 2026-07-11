@@ -28,4 +28,8 @@ spec:
     name: ha-e-dna-dx-design
     role: design-doc
     at: '2026-07-11T07:16:30+00:00'
+  - kind: HtmlArtifact
+    name: ha-dna-dx-antes-depois
+    role: visual-spec
+    at: '2026-07-11T14:34:31+00:00'
   closed_at: '2026-07-11T10:15:14+00:00'

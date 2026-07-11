@@ -1,0 +1,128 @@
+<title>DNA · Painel de protótipos & decisões</title>
+<style>
+  :root {
+    --bg:#f1efe9; --surface:#fbfaf7; --surface-2:#f5f3ee; --ink:#191b20; --muted:#6a6d76;
+    --faint:#94969e; --line:#e2ded4; --line-2:#d4cfc4;
+    --accent:#2f8570; --accent-soft:#e4efea;
+    --ship:#2f8570; --ship-bg:#e4efea; --ship-line:#cfe4db;
+    --decide:#5a5bc4; --decide-bg:#e9e9f6; --decide-line:#d6d6ee;
+    --proto:#b57814; --proto-bg:#f6edda; --proto-line:#e9dcc0;
+    --shadow:0 1px 2px rgba(25,27,32,.04),0 10px 30px rgba(25,27,32,.06);
+    --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI","Helvetica Neue",sans-serif;
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --bg:#0e1015; --surface:#171a21; --surface-2:#1d2028; --ink:#e9e7e1; --muted:#9a9da7;
+    --faint:#6f727c; --line:#262a33; --line-2:#333844;
+    --accent:#5ab99d; --accent-soft:#14201c;
+    --ship:#5ab99d; --ship-bg:#13201c; --ship-line:#21372f;
+    --decide:#9092e6; --decide-bg:#191a2b; --decide-line:#2c2d47;
+    --proto:#e0a838; --proto-bg:#241d10; --proto-line:#3b3018;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 34px rgba(0,0,0,.34);
+  }}
+  :root[data-theme="light"]{--bg:#f1efe9;--surface:#fbfaf7;--surface-2:#f5f3ee;--ink:#191b20;--muted:#6a6d76;--faint:#94969e;--line:#e2ded4;--line-2:#d4cfc4;--accent:#2f8570;--accent-soft:#e4efea;--ship:#2f8570;--ship-bg:#e4efea;--ship-line:#cfe4db;--decide:#5a5bc4;--decide-bg:#e9e9f6;--decide-line:#d6d6ee;--proto:#b57814;--proto-bg:#f6edda;--proto-line:#e9dcc0;--shadow:0 1px 2px rgba(25,27,32,.04),0 10px 30px rgba(25,27,32,.06);}
+  :root[data-theme="dark"]{--bg:#0e1015;--surface:#171a21;--surface-2:#1d2028;--ink:#e9e7e1;--muted:#9a9da7;--faint:#6f727c;--line:#262a33;--line-2:#333844;--accent:#5ab99d;--accent-soft:#14201c;--ship:#5ab99d;--ship-bg:#13201c;--ship-line:#21372f;--decide:#9092e6;--decide-bg:#191a2b;--decide-line:#2c2d47;--proto:#e0a838;--proto-bg:#241d10;--proto-line:#3b3018;--shadow:0 1px 2px rgba(0,0,0,.3),0 12px 34px rgba(0,0,0,.34);}
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.6;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1040px;margin:0 auto;padding:0 clamp(20px,5vw,48px)}
+
+  header{padding:clamp(48px,8vw,88px) 0 clamp(24px,4vw,40px)}
+  .eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);font-weight:600;display:flex;align-items:center;gap:.6em;margin:0 0 1.2rem}
+  .eyebrow .dot{width:7px;height:7px;border-radius:50%;background:var(--accent)}
+  h1{font-size:clamp(1.9rem,4.6vw,3rem);line-height:1.05;margin:0;letter-spacing:-.02em;font-weight:680;text-wrap:balance;max-width:18ch}
+  .lede{margin:1.3rem 0 0;max-width:60ch;color:var(--muted);font-size:clamp(1rem,1.5vw,1.1rem)}
+  .lede b{color:var(--ink);font-weight:600}
+  .note{margin-top:1.4rem;font-family:var(--mono);font-size:.78rem;color:var(--faint);display:flex;gap:.6em;align-items:flex-start;max-width:64ch}
+  .note code{color:var(--accent)}
+
+  section{padding:clamp(24px,4vw,40px) 0;border-top:1px solid var(--line)}
+  .sec-head{display:flex;align-items:baseline;gap:.8rem;margin:0 0 20px;flex-wrap:wrap}
+  .sec-head h2{font-size:1.2rem;margin:0;letter-spacing:-.01em;font-weight:640}
+  .sec-head .count{font-family:var(--mono);font-size:.78rem;color:var(--faint)}
+  .sec-head .hint{flex-basis:100%;color:var(--muted);font-size:.92rem;margin-top:-.1rem}
+
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+  @media (max-width:720px){.grid{grid-template-columns:1fr}}
+
+  .card{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:16px;background:var(--surface);padding:22px;box-shadow:var(--shadow);text-decoration:none;color:inherit;transition:border-color .15s,transform .15s}
+  .card:hover{border-color:var(--line-2);transform:translateY(-2px)}
+  .card:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+  .chip{align-self:flex-start;font-family:var(--mono);font-size:.68rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:4px 9px;border-radius:7px;margin-bottom:14px}
+  .chip.ship{color:var(--ship);background:var(--ship-bg);border:1px solid var(--ship-line)}
+  .chip.decide{color:var(--decide);background:var(--decide-bg);border:1px solid var(--decide-line)}
+  .chip.proto{color:var(--proto);background:var(--proto-bg);border:1px solid var(--proto-line)}
+  .card h3{font-size:1.14rem;margin:0 0 .5rem;letter-spacing:-.01em;font-weight:640;line-height:1.25}
+  .card p{margin:0;color:var(--muted);font-size:.95rem;flex:1}
+  .card p b{color:var(--ink);font-weight:600}
+  .card .foot{margin-top:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:14px;border-top:1px solid var(--line)}
+  .card .ref{font-family:var(--mono);font-size:.72rem;color:var(--faint)}
+  .card .open{font-family:var(--mono);font-size:.8rem;font-weight:600;color:var(--accent);display:flex;align-items:center;gap:.4em;white-space:nowrap}
+  .card .open .arr{transition:transform .15s}
+  .card:hover .open .arr{transform:translateX(3px)}
+
+  footer{padding:26px 0 60px;border-top:1px solid var(--line);color:var(--faint);font-family:var(--mono);font-size:.74rem;display:flex;gap:.8em;align-items:center;flex-wrap:wrap}
+  footer .dot{width:5px;height:5px;border-radius:50%;background:var(--faint)}
+  @media (prefers-reduced-motion:reduce){.card{transition:none}.card:hover{transform:none}}
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow"><span class="dot"></span> DNA · painel de protótipos &amp; decisões</p>
+    <h1>Tudo num lugar — sem caçar link no chat.</h1>
+    <p class="lede">Os protótipos e análises visuais da virada do DNA para a <b>camada vendor-neutral de-para</b>. Comece pelo que <b>precisa da sua avaliação</b>; o resto é contexto das decisões já tomadas.</p>
+    <p class="note"><span>ℹ</span><span>Versão durável a caminho: um <code>dna sdlc gallery</code> board-native que gera este painel a partir dos HtmlArtifacts do board — sempre atual, sem eu publicar link solto.</span></p>
+  </header>
+
+  <main>
+    <section>
+      <div class="sec-head">
+        <h2>Precisa da sua avaliação</h2>
+        <span class="count">2 protótipos</span>
+        <span class="hint">Draft PRs abertos, não mergeados — sua decisão de produtizar.</span>
+      </div>
+      <div class="grid">
+        <a class="card" href="https://claude.ai/code/artifact/14fffe69-55b5-4b85-9004-8ef989e957be" target="_blank" rel="noopener">
+          <span class="chip proto">Protótipo · avaliar</span>
+          <h3>Overlay de persona por tenant</h3>
+          <p>O concierge <b>base</b> vs a versão customizada da <b>ACME</b> — base intacta, sem fork, sem redeploy. O recurso-matador SaaS: cada cliente customiza com um YAML de overlay.</p>
+          <div class="foot"><span class="ref">foundry · PR #121</span><span class="open">abrir <span class="arr">→</span></span></div>
+        </a>
+        <a class="card" href="https://claude.ai/code/artifact/dac42484-ad63-4522-80ad-f4b66c651299" target="_blank" rel="noopener">
+          <span class="chip proto">Protótipo · avaliar</span>
+          <h3>Build-emit vs runtime-compose (Terraform)</h3>
+          <p><b>Mata sua crítica do Docker.</b> <code>dna emit</code> no build → só o YAML nativo viaja, sem <code>.dna</code> na imagem, sem <code>parents[2]</code>, sem dna-sdk no runtime. Provado byte-equal.</p>
+          <div class="foot"><span class="ref">foundry · PR #124</span><span class="open">abrir <span class="arr">→</span></span></div>
+        </a>
+      </div>
+    </section>
+
+    <section>
+      <div class="sec-head">
+        <h2>Decisões &amp; análises</h2>
+        <span class="count">2 documentos</span>
+        <span class="hint">O raciocínio por trás do pivô — já executado, aqui como contexto.</span>
+      </div>
+      <div class="grid">
+        <a class="card" href="https://claude.ai/code/artifact/34adbfd0-f4af-4fbd-8af9-f103cd15e902" target="_blank" rel="noopener">
+          <span class="chip decide">Decisão · pivô</span>
+          <h3>DNA vs agent-framework — o head-to-head</h3>
+          <p>O spike honesto que <b>decidiu o pivô</b>: como prompt-manager o DNA perde; como camada de-para (autora 1x, emite por runtime) sobrevive. Scorecard por 9 eixos + veredito.</p>
+          <div class="foot"><span class="ref">ADR · pivot-portability</span><span class="open">abrir <span class="arr">→</span></span></div>
+        </a>
+        <a class="card" href="https://claude.ai/code/artifact/8f9006ec-e3f6-48b7-942f-a08fbc0b2940" target="_blank" rel="noopener">
+          <span class="chip ship">Shipado · v0.4–0.5</span>
+          <h3>DX do DNA — Agora → Depois</h3>
+          <p>Os três fluxos (consumir / autorar / configurar) antes e depois. O shim de 166 linhas → 5, o Mustache → <code>layout: persona-first</code>, o wiring → <code>dna.config.yaml</code>. Já entregue.</p>
+          <div class="foot"><span class="ref">épico · e-dna-dx</span><span class="open">abrir <span class="arr">→</span></span></div>
+        </a>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span>DNA · Domain Notation of Anything</span><span class="dot"></span>
+    <span>gerado enquanto você estava fora — "delego, reviso no fim"</span><span class="dot"></span>
+    <span>próximo: dna sdlc gallery (board-native)</span>
+  </footer>
+</div>

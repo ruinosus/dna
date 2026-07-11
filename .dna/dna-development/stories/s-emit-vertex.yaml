@@ -1,0 +1,95 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-emit-vertex
+spec:
+  title: "Third runtime emitter: DNA \u2192 Google ADK Agent Config"
+  description: "Emit a DNA agent as a Google ADK Agent Config (LlmAgent) YAML \u2014\
+    \ the third proven runtime (agent-framework + bedrock + vertex), same composed\
+    \ prompt byte-equal across all three."
+  status: in-progress
+  feature: f-dna-emitters
+  owner: claude-code
+  labels:
+  - emitter
+  - portability
+  - adk
+  - vertex
+  reporter: claude-code
+  acceptance_criteria:
+  - Given the concierge example scope, when I run 'dna emit concierge --target vertex',
+    then a valid ADK Agent Config YAML is produced with agent_class LlmAgent, name,
+    model, instruction, tools.
+  - "Given the emitted config, when I compare its 'instruction' to build_prompt(agent),\
+    \ then they are byte-equal \u2014 AND identical to the agent-framework 'instructions'\
+    \ and the Bedrock 'Instruction' (one source \u2192 three runtimes)."
+  - Given no GCP credential, when the artifact is validated, then it conforms structurally
+    to the documented ADK LlmAgentConfig schema and carries the yaml-language-server
+    schema header.
+  - Given DNA axes ADK has no slot for (composition, tenant, eval, tool-schema depth,
+    output_schema, non-Gemini model), when emitting, then each is reported in EmitResult.losses,
+    not hidden.
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - "Code: dna/emit/vertex.py + src/emit/vertex.ts (Py\u2194TS parity), registered\
+    \ additively in both registries."
+  - 'Tests: test_emit_vertex.py + emit-vertex.test.ts + CLI smoke; existing emit suites
+    updated (vertex no longer the ''unknown target'').'
+  - 'Docs: ''Emitting to a runtime'' guide gains the ADK section + mapping table;
+    example README shows all three runtimes; CHANGELOG [Unreleased].'
+  - 'CI: Py + TS + CLI emit suites green, mkdocs build --strict green, brand/docs-coverage/parity
+    guards green.'
+  definition_of_done_source: cli-create
+  created_at: '2026-07-11T14:34:39+00:00'
+  updated_at: '2026-07-11T14:35:28+00:00'
+  timeline:
+  - at: '2026-07-11T14:34:39+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-11T14:35:04+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-11T14:35:23+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Investiguei o alvo Google (Passo 0): ADK tem Agent Config \u2014 YAML\
+      \ declarativo publicado (AgentConfig.json, LlmAgentConfig: agent_class/name/model/instruction/tools).\
+      \ Escolhido sobre o LlmAgent code-first e o Vertex AI Agent Engine (esse \xE9\
+      \ HOST de deploy, n\xE3o defini\xE7\xE3o declarativa). Ancorado no schema real\
+      \ via curl."
+    commit_ref: b4c1859f8196682747e91bc6e75a8f76e86bbc87
+  - at: '2026-07-11T14:35:25+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Implementei dna/emit/vertex.py + src/emit/vertex.ts (paridade), registrados\
+      \ aditivos nos dois registries. Prova ao vivo: instruction emitido \xE9 byte-equal\
+      \ a build_prompt e ID\xCANTICO ao 'instructions' do agent-framework e ao 'Instruction'\
+      \ do Bedrock \u2014 1 fonte \u2192 3 runtimes. Descoberta honesta: ADK liga\
+      \ tools por REFER\xCANCIA DE C\xD3DIGO (FQN), n\xE3o schema declarativo \u2192\
+      \ description+params JSON-Schema n\xE3o t\xEAm slot; reportado em losses (n\xE3\
+      o escondido). output_schema \xE9 CodeConfig (classe Pydantic por FQN); modelo\
+      \ n\xE3o-Gemini precisa model_code/LiteLlm."
+    commit_ref: b4c1859f8196682747e91bc6e75a8f76e86bbc87
+  - at: '2026-07-11T14:35:28+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Verde: Py test_emit_vertex.py (25 pass, 1 skip=live-load ADK), TS emit-vertex.test.ts\
+      \ (17 pass), CLI smoke, suites de emit existentes atualizadas (vertex deixou\
+      \ de ser 'unknown target'). Full TS suite 1446 pass. Full CLI 433 pass. mkdocs\
+      \ build --strict verde. Guards brand + docs-coverage + parity-matrix limpos.\
+      \ Docs: guia 'Emitting to a runtime' ganhou se\xE7\xE3o ADK + tabela de-para;\
+      \ example README mostra os 3; CHANGELOG [Unreleased]."
+    commit_ref: b4c1859f8196682747e91bc6e75a8f76e86bbc87
+  produces:
+  - kind: Plan
+    name: plan-s-emit-vertex
+    role: implementation
+    at: '2026-07-11T14:35:04+00:00'

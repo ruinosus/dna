@@ -1,0 +1,7 @@
+{
+  "title": "Build/emit vs runtime",
+  "description": "Protótipo: emitir artefato nativo em build vs interpretar em runtime — trade-offs dos emitters.",
+  "source": "protótipo (emitters)",
+  "published_url": "https://claude.ai/code/artifact/dac42484-ad63-4522-80ad-f4b66c651299",
+  "created_at": "2026-07-11T14:34:17.209844+00:00"
+}

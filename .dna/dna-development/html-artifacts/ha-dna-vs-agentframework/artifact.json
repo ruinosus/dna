@@ -1,0 +1,7 @@
+{
+  "title": "DNA vs Agent Framework — pivot portabilidade",
+  "description": "Visualização da decisão do ADR pivot-portability: DNA como camada de portabilidade vendor-neutral vs um agent framework.",
+  "source": "decision-viz do ADR adr-dna-pivot-portability",
+  "published_url": "https://claude.ai/code/artifact/34adbfd0-f4af-4fbd-8af9-f103cd15e902",
+  "created_at": "2026-07-11T14:34:14.904380+00:00"
+}

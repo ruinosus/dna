@@ -1,0 +1,31 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-sdlc-gallery
+spec:
+  title: 'Plano: s-sdlc-gallery'
+  date: '2026-07-11'
+  status: accepted
+  story_ref: s-sdlc-gallery
+  journey_phase: plan
+  body: "## dna sdlc gallery \u2014 painel board-native dos HtmlArtifacts\n\n### Tese\n\
+    Mata o gap de UX 'publico artifacts soltos no chat e o dono tem que ca\xE7ar'.\
+    \ O digest mostra EVENTOS (o que aconteceu); o gallery mostra os ARTEFATOS VISUAIS\
+    \ pra revisar (HtmlArtifacts), agrupados pelo status do work item que os produziu\
+    \ \u2014 board-native, sempre atual.\n\n### Arquitetura (espelha o digest)\n-\
+    \ M\xF3dulo PURO `dna_cli/_gallery.py` (build_gallery) \u2014 test\xE1vel sem\
+    \ kernel. Reverse-index: p/ cada work item resolve_work_item_outputs \u2192 mapa\
+    \ HtmlArtifact\u2192work item + status. Agrupa em buckets: needs_review (Story\
+    \ review/draft PR), decisions (ADR), shipped (terminal), in_progress, unlinked.\n\
+    - Comando impuro `dna sdlc gallery [--html <out>] [--open] [--scope] [--json]`\
+    \ em sdlc_cmd.py: sess\xE3o kernel, gh PRs, render texto + gerador HTML self-contained\
+    \ (estilo retrospectivo do digest).\n- published_url: campo em artifact_json (additionalProperties),\
+    \ exposto no summary do HtmlArtifact (Py+TS parity) + op\xE7\xE3o --published-url\
+    \ no artifact create.\n\n### Fases\n1. published_url no HtmlArtifact.summary (Py+TS)\
+    \ + --published-url no create\n2. _gallery.py puro + test_gallery.py\n3. comando\
+    \ gallery (texto + --html + --open) + help distinguindo do digest\n4. registrar\
+    \ os 5 prot\xF3tipos como HtmlArtifacts + produces/cite\n5. marketplace.json +\
+    \ RECOMMENDED-SKILLS.md\n6. docs (guia gallery + distin\xE7\xE3o) + CHANGELOG\
+    \ + gates verdes + TestGuide/TestRun + PR"
+  created_at: '2026-07-11T14:26:40+00:00'
+  updated_at: '2026-07-11T14:26:40+00:00'

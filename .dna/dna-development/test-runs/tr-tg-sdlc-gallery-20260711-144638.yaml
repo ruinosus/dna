@@ -1,0 +1,22 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-sdlc-gallery-20260711-144638
+spec:
+  guide_ref: tg-sdlc-gallery
+  outcome: pass
+  verifies:
+  - Story/s-sdlc-gallery
+  executed_by: claude-code
+  executed_at: '2026-07-11T14:46:38+00:00'
+  notes: "Rodado ao vivo: 'dna sdlc gallery' listou os 6 HtmlArtifacts agrupados (Decis\xF5\
+    es 1 / Shipado 2 / Em andamento 3); ha-dna-vs-agentframework sob Decis\xF5es linkado\
+    \ ao ADR. '--html' gerou painel self-contained (0 refs CDN, 5 links claude.ai\
+    \ clic\xE1veis, 6 cards) \u2014 verificado via screenshot no browser. Os 5 prot\xF3\
+    tipos presentes com published_url."
+  evidence:
+  - HtmlArtifact/ha-dna-dx-antes-depois
+  - HtmlArtifact/ha-tenant-overlays
+  - HtmlArtifact/ha-dna-vs-agentframework
+  - HtmlArtifact/ha-build-emit-vs-runtime
+  - HtmlArtifact/ha-dna-panel

@@ -36,6 +36,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `mcp` dependency is an **optional extra** (`pip install 'dna-cli[mcp]'`,
   imported lazily — the base install is unaffected). Guide: *The MCP server —
   DNA as a live layer*.
+- **`dna sdlc gallery` — the board-native index of the HtmlArtifacts to review**
+  (feature `f-sdlc-digest`, story `s-sdlc-gallery`). The sibling of `digest`:
+  where the digest surfaces **events** ("what happened"), the gallery surfaces
+  the visual **artifacts** ("the HtmlArtifacts to review"). `dna sdlc gallery
+  [--html <out>] [--open] [--json] [--scope]` walks every work item's outputs
+  (`produces[]` ∪ legacy back-refs) to find which work item produced each
+  `HtmlArtifact`, then groups the artifacts by that work item's status —
+  **👀 Precisa de avaliação** (Story in review / open PR), **🧭 Decisões**
+  (produced by an ADR), **✅ Shipado** (terminal), **📈 Em andamento**, and
+  **📎 Sem work item** (orphan). Because the index is generated from the board,
+  it is always current — killing the "artifacts pasted into chat get lost"
+  gap. `--html` writes **one self-contained** page (no CDN, theme-aware) with a
+  card per artifact, a status chip, the producing work item, the published
+  link, and open PRs; `--open` opens it. The aggregation core
+  (`dna_cli._gallery.build_gallery` + `render_gallery_html`) is a pure,
+  kernel-free function with 16 unit tests. CLI-only (Python). Guide: *Gallery —
+  the artifacts you need to review*.
+- **`HtmlArtifact` gains a `published_url`** — the canonical hosted location
+  (e.g. a claude.ai artifact link), set via `dna sdlc artifact create
+  --published-url <url>`, surfaced in `artifact show`, the Kind `summary()`
+  (Py↔TS parity), and rendered as the clickable **Abrir artifact ↗** on each
+  gallery card. Lives in `artifact_json` (free-form), so no schema break.
+- **Third runtime emitter — `dna emit --target vertex`** (epic
+  `e-dna-portability`, feature `f-dna-emitters`, story `s-emit-vertex`). The
+  portability thesis, proven a *third* way: the **same** DNA agent that emits a
+  Microsoft agent-framework `PromptAgent` and an AWS CloudFormation
+  `AWS::Bedrock::Agent` now also emits a **Google ADK Agent Config** YAML — the
+  declarative, code-free way to define an ADK `LlmAgent`
+  (`config_agent_utils.from_config(<path>.yaml)`). The emitted `instruction` is
+  **byte-equal** to `build_prompt(agent)` — and identical to the agent-framework
+  `instructions` and the Bedrock `Instruction`: **one source → three runtimes**,
+  the same composed prompt. The de-para maps `agent_class: LlmAgent`,
+  `metadata.name` → `name` (snake_cased to a valid Python identifier),
+  `metadata.description` → `description`, `spec.model`/Genome default → `model`
+  (Gemini id; DNA provider token stripped), and `spec.tools[]` → `tools[].name`
+  (ADK binds tools by *code reference*, not a declarative schema). The artifact
+  leads with a `# yaml-language-server` header binding it to the real published
+  `AgentConfig.json`, so it validates structurally in any editor **without a GCP
+  credential**. Honest `losses` surface the ADK-specific drops (tool binding is a
+  code reference so a Tool's schema/description have no declarative slot;
+  `output_schema` is a Pydantic-class reference; a non-Gemini model coordinate
+  needs `model_code`/LiteLlm) on top of the three DNA-only axes (composition
+  structure / tenant overlay / eval-as-contract). Python + TypeScript parity
+  (`dna/emit/vertex.py` + `src/emit/vertex.ts`); the shared
+  `examples/emitting-to-a-runtime/` now proves all **three** runtimes. Guide:
+  *Emitting to a runtime* (with the ADK mapping table).
+
+### Changed
+
+- **`dna sdlc produces add` now accepts an `ADR`** as a producer (not only
+  Story/Spike/Feature/Epic/Issue) — an ADR legitimately produces its
+  decision-visualization `HtmlArtifact`, which is what buckets it under
+  **Decisões** in the gallery.
 
 ## [0.8.0] - 2026-07-11
 
