@@ -8,7 +8,7 @@ spec:
     \ ancorado no consumidor real (foundry apps/backend/app/agents/prompts.py, 166\
     \ linhas de plumbing defensivo): fail-loud prompt building, output limpo, load_prompts,\
     \ dna.config.yaml. Dogfood do pr\xF3prio board (dna sdlc)."
-  status: in-progress
+  status: done
   reporter: claude-code
   priority: high
   labels:
@@ -28,3 +28,4 @@ spec:
     name: ha-e-dna-dx-design
     role: design-doc
     at: '2026-07-11T07:16:30+00:00'
+  closed_at: '2026-07-11T10:15:14+00:00'

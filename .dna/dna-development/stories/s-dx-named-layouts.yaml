@@ -5,7 +5,7 @@ metadata:
 spec:
   title: Layouts nomeados para autoria sem vazar caminhos internos de bundle.
   description: Layouts nomeados para autoria sem vazar caminhos internos de bundle.
-  status: review
+  status: done
   feature: f-dna-dx-author
   priority: medium
   labels:
@@ -13,13 +13,20 @@ spec:
   - sdk
   reporter: claude-code
   acceptance_criteria:
-  - Autor referencia um layout por nome (nao por path interno); resolvido pelo kernel.
+  - text: Autor referencia um layout por nome (nao por path interno); resolvido pelo
+      kernel.
+    done: true
+    done_at: '2026-07-11T10:13:56+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - "Design + impl + testes Py/TS; docs. (PR futura \u2014 nao nesta.)"
+  - text: "Design + impl + testes Py/TS; docs. (PR futura \u2014 nao nesta.)"
+    done: true
+    done_at: '2026-07-11T10:13:56+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-11T06:25:10+00:00'
-  updated_at: '2026-07-11T07:32:00+00:00'
+  updated_at: '2026-07-11T10:14:02+00:00'
   timeline:
   - at: '2026-07-11T06:25:10+00:00'
     actor: claude-code
@@ -83,6 +90,33 @@ spec:
     source: cli
     from: in-progress
     to: review
+  - at: '2026-07-11T10:13:51+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-dx-named-layouts-close
+    summary: TestGuide tg-s-dx-named-layouts-close (smoke)
+  - at: '2026-07-11T10:13:55+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-dx-named-layouts-close-20260711-101353
+    summary: "TestRun tr-tg-s-dx-named-layouts-close-20260711-101353 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-11T10:13:58+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: merged; v0.5.0
+  - at: '2026-07-11T10:14:02+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: 1169a35c041ca3d564f45b659bda351a22347142
   produces:
   - kind: Plan
     name: plan-s-dx-named-layouts
@@ -96,3 +130,12 @@ spec:
     name: tr-tg-s-dx-named-layouts-20260711-072848
     role: test-run
     at: '2026-07-11T07:28:50+00:00'
+  - kind: TestGuide
+    name: tg-s-dx-named-layouts-close
+    role: test-guide
+    at: '2026-07-11T10:13:51+00:00'
+  - kind: TestRun
+    name: tr-tg-s-dx-named-layouts-close-20260711-101353
+    role: test-run
+    at: '2026-07-11T10:13:55+00:00'
+  closed_at: '2026-07-11T10:13:56+00:00'

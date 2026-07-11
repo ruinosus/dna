@@ -1,0 +1,19 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-s-dx-named-layouts-close
+spec:
+  description: Roteiro de teste de s-dx-named-layouts (derivado das acceptance_criteria).
+  kind_of_test: smoke
+  status: active
+  steps:
+  - action: 'No Studio, valide: Autor referencia um layout por nome (nao por path
+      interno); resolvido pelo kernel.'
+    where: "<rota/tela \u2014 ex. /scopes/:scope/...>"
+    expected: "<o que voc\xEA V\xCA quando est\xE1 certo (marque \u2717 S\xD3 se estiver\
+      \ quebrado)>"
+  verifies:
+  - Story/s-dx-named-layouts
+  created_at: '2026-07-11T10:13:49+00:00'
+  updated_at: '2026-07-11T10:13:49+00:00'
+  owner: claude-code
