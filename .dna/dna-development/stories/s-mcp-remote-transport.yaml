@@ -1,0 +1,44 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-mcp-remote-transport
+spec:
+  title: "Phase 2 \u2014 Streamable HTTP transport (host the MCP server remotely)"
+  description: "ENABLE + configure FastMCP's NATIVE Streamable HTTP transport (the\
+    \ same FastMCP server already serves stdio AND http via run(transport='http'|'sse'|'stdio'))\
+    \ so the DNA MCP server becomes hostable/remote \u2014 unblocking WEB clients\
+    \ (Claude web, ChatGPT) that cannot spawn a local stdio process. Because FastMCP\
+    \ ships the transport, the work is enablement + deployment (a --transport http\
+    \ option on `dna mcp serve`, host/port/path config, a deploy story), NOT implementing\
+    \ a transport. The MVP stays stdio (local: Claude Code/Cursor/Copilot); this makes\
+    \ the SAME server reachable over HTTP. Verified against current FastMCP docs (gofastmcp.com):\
+    \ Streamable HTTP is the current standard remote transport (MCP spec 2025-06-18)."
+  status: todo
+  feature: f-dna-mcp-server
+  priority: medium
+  labels:
+  - mcp
+  - transport
+  - remote
+  - phase-2
+  acceptance_criteria:
+  - "Given the server, When run with --transport http, Then FastMCP serves the MCP\
+    \ protocol over Streamable HTTP at the standard path (no new transport code \u2014\
+    \ FastMCP native)"
+  - Given a WEB MCP client (no local stdio), When it connects over HTTP, Then it reaches
+    the same tools/resources as the stdio MVP
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - Design + owner approval BEFORE implementation (todo Phase-2 story)
+  - 'Code: expand the --transport choice to FastMCP''s stdio|http|sse + host/port/path
+    options; a deployment note. Docs: hosting guide; Tests: HTTP smoke via FastMCP
+    Client; CI green'
+  definition_of_done_source: cli-create
+  created_at: '2026-07-11T14:43:35+00:00'
+  updated_at: '2026-07-11T14:43:35+00:00'
+  timeline:
+  - at: '2026-07-11T14:43:35+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo

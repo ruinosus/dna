@@ -1,0 +1,55 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-dna-mcp-server-mvp
+spec:
+  title: 'Plano: s-dna-mcp-server-mvp'
+  date: '2026-07-11'
+  status: accepted
+  story_ref: s-dna-mcp-server-mvp
+  journey_phase: plan
+  body: "# Plan \u2014 MCP server MVP (`s-dna-mcp-server-mvp`)\n\n## Goal\nOne thin\
+    \ MCP server that exposes the **live, configured DNA** \u2014 definitions + SDLC\n\
+    + memory \u2014 over stdio, reusing the existing pure cores (no new business logic).\n\
+    \n## Where it lives\n- `packages/cli/dna_cli/_mcp_server.py` \u2014 `build_server(scope=None,\
+    \ base_dir=None) -> FastMCP`\n  plus pure async impl helpers. The CLI package\
+    \ is the right home: it already\n  boots the kernel session and owns `_digest.build_digest`;\
+    \ the impl imports the\n  SDK cores (`dna.emit.build_emit_context`/`ToolLibrary`,\
+    \ `dna.memory` verbs,\n  `mi.build_prompt_async`).\n- `packages/cli/dna_cli/mcp_cmd.py`\
+    \ \u2014 `dna mcp serve` Click command (lazy-imports mcp;\n  clean error if the\
+    \ `[mcp]` extra is absent).\n- Register `main.add_command(mcp_cmd.mcp)` in `dna_cli/__init__.py`.\n\
+    - `packages/cli/pyproject.toml` \u2014 add optional `[project.optional-dependencies]\
+    \ mcp = [\"mcp>=1.2\"]`.\n\n## Kernel lifecycle\nFastMCP owns its event loop (`mcp.run()`\
+    \ / test loop). Build ONE persistent kernel\nholder lazily on the running loop\
+    \ (cached per server) via the existing\n`_build_holder_async`; register the sqlite-vec\
+    \ search provider (reuse\n`recall_cmd._register_provider` pattern) so `recall`/`remember`\
+    \ are semantic when\nthe extra is present, lexical otherwise. All tools are async\
+    \ \u2192 call the kernel's\nasync surface directly.\n\n## Tools (server \xDANICO\
+    \ exp\xF5e TUDO)\nDefinitions (recover emit's loss):\n- `compose_prompt(scope?,\
+    \ agent, tenant?)` \u2192 live-composed prompt via\n  `kernel.instance_async(scope,\
+    \ layers={\"tenant\":\u2026})` + `build_prompt_async`.\n  Tenant param is the\
+    \ killer feature.\n- `list_agents(scope?)`, `list_tools(scope?)`, `get_tool(scope?,\
+    \ name)` (Tool Kind\n  surfaces via `ToolLibrary`).\nSDLC (self-describing board):\n\
+    - `sdlc_digest(since?, scope?)` \u2192 reuse `_digest.build_digest`.\n- `list_stories(status?,\
+    \ scope?)`, `get_adr(name, scope?)`.\nMemory (declarative recall):\n- `recall(query,\
+    \ scope?, k?)`, `remember(summary, \u2026)`, `consolidate(apply?)` \u2192\n  `dna.memory`\
+    \ verbs.\n\n## Resources\n- `dna://{scope}/manifest` \u2014 scope manifest (roster\
+    \ of agents/tools/kinds).\n- `dna://{scope}/agents` \u2014 the agent roster. Proves\
+    \ resources beyond tools.\n\n## Tests (`packages/cli/tests/test_mcp_server.py`)\n\
+    - Build the server against `examples/emitting-to-a-runtime/.dna` (concierge scope).\n\
+    - Call impls directly + go through `server.call_tool(...)`:\n  - `compose_prompt`\
+    \ returns the composed prompt (Soul persona line present).\n  - tenant overlay\
+    \ fixture (tmp scope copy + `tenants/acme/scopes/\u2026` override) \u2192\n  \
+    \  `compose_prompt(tenant=\"acme\")` differs from base.\n  - `sdlc_digest` returns\
+    \ a digest dict; `list_agents` lists concierge.\n  - `recall` returns memory (write\
+    \ one via `remember` first) \u2014 SAME server.\n- One smoke asserting definitions\
+    \ + SDLC + memory all answered by ONE server.\n- Lazy-import guard: base import\
+    \ of `dna_cli` never imports `mcp`.\n\n## Docs\n- `docs/guide/mcp-server.md` \u2014\
+    \ \"The MCP server \u2014 DNA as a live layer\": the two\n  faces (emit static\
+    \ vs MCP dynamic) + static/dynamic table + how a client\n  (`dna mcp serve` +\
+    \ client config JSON) connects. Add to mkdocs nav.\n- CHANGELOG `[Unreleased]`.\n\
+    \n## Gates\nsuites + guards + `mkdocs build --strict` green; `[mcp]` lazy so base\
+    \ install\nunaffected. NOT merged (PR via `story pr --base main`).\n"
+  created_at: '2026-07-11T14:44:21+00:00'
+  updated_at: '2026-07-11T14:44:21+00:00'
+  methodology: ad-hoc

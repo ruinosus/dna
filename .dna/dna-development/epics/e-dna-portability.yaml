@@ -32,3 +32,7 @@ spec:
     name: adr-dna-pivot-portability
     role: decision
     at: '2026-07-11T12:50:56+00:00'
+  - kind: ADR
+    name: adr-dna-mcp-runtime-face
+    role: decision
+    at: '2026-07-11T14:42:38+00:00'

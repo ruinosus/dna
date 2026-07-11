@@ -1,0 +1,15 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-dna-mcp-server-mvp-20260711-150302
+spec:
+  guide_ref: tg-dna-mcp-server-mvp
+  outcome: pass
+  verifies:
+  - Story/s-dna-mcp-server-mvp
+  executed_by: claude-code
+  executed_at: '2026-07-11T15:03:02+00:00'
+  notes: 10/10 pytest green (packages/cli/tests/test_mcp_server.py); real stdio MCP
+    client reached all 10 tools + compose_prompt persona + manifest/agents resources;
+    base import pulls no fastmcp/mcp; mkdocs --strict exit 0; brand_guard + docs_coverage_guard
+    clean; full CLI suite 442 passed.

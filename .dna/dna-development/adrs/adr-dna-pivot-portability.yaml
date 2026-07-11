@@ -96,7 +96,7 @@ spec:
     - OAS: `ref-oracle-agent-spec`, `ref-oas-technical-report`.\n- agent-framework\
     \ schema: `ref-ms-agent-framework-declarative`, `ref-ms-agentschema-promptagent`."
   created_at: '2026-07-11T12:50:08+00:00'
-  updated_at: '2026-07-11T12:50:55+00:00'
+  updated_at: '2026-07-11T14:42:19+00:00'
   timeline:
   - at: '2026-07-11T12:50:08+00:00'
     actor: claude-code
@@ -108,3 +108,5 @@ spec:
   - ref-dna-portability-spike
   - ref-oracle-agent-spec
   - ref-oas-technical-report
+  cited_by:
+  - ADR/adr-dna-mcp-runtime-face

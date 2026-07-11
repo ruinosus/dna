@@ -1,0 +1,26 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-dna-mcp-server-mvp
+spec:
+  description: Verify the DNA MCP server (dna mcp serve) exposes definitions + SDLC
+    + memory live over MCP (FastMCP, stdio).
+  kind_of_test: integration
+  status: active
+  steps:
+  - action: 'Run the CLI test suite: pytest packages/cli/tests/test_mcp_server.py'
+    expected: "10 passed (compose_prompt live+tenant, list_agents/list_tools/get_tool,\
+      \ sdlc_digest/list_stories/get_adr, remember\u2192recall, one-server smoke,\
+      \ lazy-import guard)"
+  - action: Connect a real MCP client over stdio to 'dna mcp serve'
+    expected: client.list_tools() returns all 10 tools; compose_prompt composes the
+      Soul persona; resources dna://{scope}/manifest + agents listed and readable
+  - action: Import dna_cli WITHOUT the [mcp] extra
+    expected: no fastmcp/mcp in sys.modules (base install unaffected)
+  - action: mkdocs build --strict
+    expected: exit 0 (the mcp-server guide + regenerated CLI reference build clean)
+  verifies:
+  - Story/s-dna-mcp-server-mvp
+  created_at: '2026-07-11T15:02:40+00:00'
+  updated_at: '2026-07-11T15:02:40+00:00'
+  owner: claude-code

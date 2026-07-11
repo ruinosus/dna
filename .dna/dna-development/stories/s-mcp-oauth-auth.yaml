@@ -1,0 +1,58 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-mcp-oauth-auth
+spec:
+  title: "Phase 2 \u2014 OAuth 2.1 (MCP Authorization) with scopes bound to DNA tenancy"
+  description: "ENABLE FastMCP's BUILT-IN OAuth 2.1 auth and BRIDGE its token scopes/claims\
+    \ to DNA tenancy (the Tenant Kind + inheritance) \u2014 the real Phase-2 work\
+    \ is the auth<->tenancy BRIDGE, not building OAuth. FastMCP (verified at gofastmcp.com)\
+    \ ships: full OAuth 2.1 servers with Dynamic Client Registration (DCR); an OAuthProxy\
+    \ that bridges providers WITHOUT DCR (WorkOS, Auth0, ...) to MCP's DCR-compliant\
+    \ protocol; JWT TokenVerifier + scope enforcement (server auth=..., require_scopes\
+    \ / per-tool auth=AuthCheck). It conforms to the current MCP Authorization spec\
+    \ (revision 2025-11-25): server as OAuth 2.1 Resource Server, mandatory PKCE,\
+    \ Protected Resource Metadata (RFC 9728), Resource Indicators (RFC 8707), Auth\
+    \ Server Metadata (RFC 8414), DCR (RFC 7591). KEY POINT: map the token's scopes/claims\
+    \ to a DNA tenant so a client/tenant token composes/reads ONLY what is theirs\
+    \ \u2014 auth + multi-tenant in one mechanism, via FastMCP's per-tool/require_scopes\
+    \ hooks. Auth is HTTP-only, so this pairs with s-mcp-remote-transport. Re-verify\
+    \ the FastMCP + MCP Authorization spec versions are current at implementation\
+    \ time (do not assume). Sources: gofastmcp.com/servers/auth, gofastmcp.com/clients/auth/oauth;\
+    \ modelcontextprotocol.io/specification/2025-11-25/basic/authorization; RFC 9728/8707/8414/7591."
+  status: todo
+  feature: f-dna-mcp-server
+  priority: medium
+  labels:
+  - mcp
+  - auth
+  - oauth
+  - security
+  - multi-tenant
+  - phase-2
+  acceptance_criteria:
+  - Given a FastMCP token whose scope/claim maps to tenant=acme, When the client calls
+    compose_prompt for a foo-tenant resource, Then access is denied (FastMCP require_scopes/per-tool
+    auth bridged to DNA tenancy)
+  - Given an MCP client, When it discovers the HTTP server, Then FastMCP advertises
+    Protected Resource Metadata (RFC 9728) and validates access tokens per OAuth 2.1
+    (PKCE required, Resource Indicators RFC 8707)
+  - Given a provider without DCR (WorkOS/Auth0), When wired via FastMCP's OAuthProxy,
+    Then the client completes the OAuth 2.1 flow without that provider implementing
+    MCP DCR
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - Design + owner approval BEFORE implementation (todo Phase-2 story); re-verify
+    the FastMCP auth API + MCP Authorization spec revision are current and cite sources
+  - 'Code: enable FastMCP auth=... (OAuth server / OAuthProxy / JWT verifier) + the
+    scope/claim -> DNA Tenant BRIDGE; Tests: cross-tenant denial + PRM discovery via
+    FastMCP Client; Docs: auth guide; CI green'
+  definition_of_done_source: cli-create
+  created_at: '2026-07-11T14:43:37+00:00'
+  updated_at: '2026-07-11T14:43:37+00:00'
+  timeline:
+  - at: '2026-07-11T14:43:37+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo

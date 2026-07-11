@@ -11,6 +11,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`dna mcp serve` — the MCP runtime face (DNA as a live layer)** (epic
+  `e-dna-portability`, feature `f-dna-mcp-server`, story `s-dna-mcp-server-mvp`;
+  ADR `adr-dna-mcp-runtime-face`). The second face of DNA serving runtimes and
+  the **inverse of `dna emit`**: where `emit` writes a *static* artifact (and
+  drops composition structure, per-tenant overlay, and no-deploy change), the
+  MCP server composes **live** on request — recovering exactly those axes. One
+  thin server exposes **everything DNA stores** over the neutral MCP protocol,
+  so any MCP client (Claude Code/Desktop, Cursor, GitHub Copilot,
+  agent-framework, Bedrock AgentCore) can reach it: **definitions** —
+  `compose_prompt(agent, scope?, tenant?)` (the killer surface: the live-composed
+  Soul+Guardrail+instruction prompt, **tenant-aware**), `list_agents`,
+  `list_tools`, `get_tool`; **SDLC** — `sdlc_digest` (reuses the same
+  `build_digest` core), `list_stories`, `get_adr`; **memory** — `recall`,
+  `remember`, `consolidate`; plus MCP **resources** (`dna://{scope}/manifest`,
+  `dna://{scope}/agents`). The tools are thin adapters over already-tested pure
+  cores — no new business logic. Built on **FastMCP** (the standalone `fastmcp`
+  framework) for native stdio+HTTP transports and built-in OAuth 2.1 auth. The
+  MVP is stdio (local clients); remote Streamable HTTP + OAuth-2.1-bound-to-DNA-
+  tenancy are filed as Phase-2 stories (`s-mcp-remote-transport`,
+  `s-mcp-oauth-auth`) — *enable + bridge*, not *build*, thanks to FastMCP. The
+  `mcp` dependency is an **optional extra** (`pip install 'dna-cli[mcp]'`,
+  imported lazily — the base install is unaffected). Guide: *The MCP server —
+  DNA as a live layer*.
+
 ## [0.8.0] - 2026-07-11
 
 ### Added

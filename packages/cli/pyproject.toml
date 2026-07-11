@@ -31,12 +31,23 @@ dependencies = [
 dna = "dna_cli:main"
 
 [project.optional-dependencies]
+# The MCP runtime face (`dna mcp serve`) — expose the live DNA (definitions +
+# SDLC + memory) over the Model Context Protocol. Built on FastMCP (the
+# standalone `fastmcp` framework) for native stdio+HTTP transports and built-in
+# OAuth 2.1 auth, so Phase 2 (remote + authenticated) is enable+bridge, not
+# build. Optional + lazily imported (dna_cli._mcp_server imports `fastmcp` only
+# inside build_server), so the base install never carries it. Guard:
+# tests/test_mcp_server.py::test_base_import_never_pulls_mcp.
+mcp = ["fastmcp>=2"]
 dev = [
     "pytest>=8.0",
     # search-sqlite extra so `dna recall`/`dna research recall` end-to-end tests
     # (tests/test_recall_cmd.py) run the real provider offline in CI, instead of
     # importorskip. Resolves against the path-installed dna-sdk.
     "dna-sdk[search-sqlite]",
+    # `fastmcp` so tests/test_mcp_server.py runs the MCP server for real in CI
+    # (the base install keeps it optional — see the `mcp` extra above).
+    "fastmcp>=2",
 ]
 
 [tool.pytest.ini_options]
