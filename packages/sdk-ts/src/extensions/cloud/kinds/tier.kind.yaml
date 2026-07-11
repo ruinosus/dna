@@ -34,6 +34,7 @@ spec:
     container: tiers
   schema:
     type: object
+    additionalProperties: false
     required:
     - tier_id
     - display_name
