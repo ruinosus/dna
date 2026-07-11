@@ -205,4 +205,14 @@ export class BedrockEmitter implements EmitterPort {
       mapping,
     };
   }
+
+  /** Byte-equal invariant hook: read `Properties.Instruction` back from the
+   *  emitted CloudFormation template. */
+  extractInstructions(artifact: string): string | null {
+    const template = JSON.parse(artifact) as { Resources?: Record<string, any> };
+    const resources = template.Resources ?? {};
+    const first = Object.values(resources)[0] as { Properties?: { Instruction?: unknown } } | undefined;
+    const value = first?.Properties?.Instruction;
+    return typeof value === "string" ? value : null;
+  }
 }

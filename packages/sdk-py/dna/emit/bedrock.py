@@ -254,3 +254,16 @@ class BedrockEmitter:
             losses=losses,
             mapping=mapping,
         )
+
+    def extract_instructions(self, artifact: str) -> str | None:
+        """Byte-equal invariant hook: read ``Properties.Instruction`` back from
+        the emitted CloudFormation template (see
+        :meth:`~dna.emit.EmitterPort.extract_instructions`)."""
+        import json
+
+        template = json.loads(artifact)
+        resources = template.get("Resources") if isinstance(template, dict) else None
+        if not isinstance(resources, dict) or not resources:
+            return None
+        (resource,) = tuple(resources.values())
+        return resource.get("Properties", {}).get("Instruction")

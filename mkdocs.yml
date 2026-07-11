@@ -68,6 +68,7 @@ nav:
       - How to consume prompts: guides/consuming-prompts.md
       - Tools as data: guides/tools-as-data.md
       - Emitting to a runtime (the de-para): guides/emitting-to-a-runtime.md
+      - How to write an emitter: guides/writing-an-emitter.md
       - The MCP server — DNA as a live layer: guides/mcp-server.md
       - How to configure ports (dna.config.yaml): guides/configuring-ports.md
       - How to ship a scope with your app: guides/shipping-a-scope.md

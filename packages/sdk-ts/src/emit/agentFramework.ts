@@ -134,4 +134,11 @@ export class AgentFrameworkEmitter implements EmitterPort {
       mapping,
     };
   }
+
+  /** Byte-equal invariant hook: read `instructions` back from the emitted YAML. */
+  extractInstructions(artifact: string): string | null {
+    const doc = yaml.load(artifact) as Record<string, unknown> | undefined;
+    const value = doc?.instructions;
+    return typeof value === "string" ? value : null;
+  }
 }

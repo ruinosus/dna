@@ -1,0 +1,26 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: emit-port-contract-smoke
+spec:
+  description: Verify the EmitterPort contract + scaffold mechanism via the dna emit
+    CLI and the generic contract tests.
+  kind_of_test: smoke
+  status: active
+  steps:
+  - action: Run 'dna emit --list-targets'
+    expected: lists agent-framework, bedrock, openai-agents, vertex
+  - action: Run 'dna emit concierge -t openai-agents --scope concierge' (scope examples/emitting-to-a-runtime/.dna)
+    expected: 'emits valid Python: INSTRUCTIONS constant byte-equal to build_prompt,
+      @function_tool kb_search stub, Agent(name,instructions,model,tools)'
+  - action: Run 'dna emit concierge -t agent-framework --scope concierge'
+    expected: config-declarative flavor still emits PromptAgent YAML with instructions
+      == build_prompt
+  - action: Run pytest test_emit_contract.py + test_emit_openai_agents.py + bun emit-contract/emit-openai-agents
+    expected: byte-equal invariant holds over EVERY registered target; scaffold selection
+      picks with-tools (tools) vs prompt-only (none); emitted source py_compiles
+  verifies:
+  - Story/s-emit-port-contract
+  created_at: '2026-07-11T15:52:05+00:00'
+  updated_at: '2026-07-11T15:52:05+00:00'
+  owner: claude-code

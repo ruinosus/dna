@@ -167,4 +167,12 @@ export class VertexEmitter implements EmitterPort {
       mapping,
     };
   }
+
+  /** Byte-equal invariant hook: read `instruction` back from the emitted ADK
+   *  Agent Config YAML (the `# yaml-language-server` header is a YAML comment). */
+  extractInstructions(artifact: string): string | null {
+    const config = yaml.load(artifact) as Record<string, unknown> | undefined;
+    const value = config?.instruction;
+    return typeof value === "string" ? value : null;
+  }
 }
