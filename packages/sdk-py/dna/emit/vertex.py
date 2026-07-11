@@ -216,3 +216,13 @@ class VertexEmitter:
             losses=losses,
             mapping=mapping,
         )
+
+    def extract_instructions(self, artifact: str) -> str | None:
+        """Byte-equal invariant hook: read ``instruction`` back from the emitted
+        ADK Agent Config YAML — the leading ``# yaml-language-server`` header is a
+        comment PyYAML skips (see
+        :meth:`~dna.emit.EmitterPort.extract_instructions`)."""
+        import yaml
+
+        config = yaml.safe_load(artifact)
+        return config.get("instruction") if isinstance(config, dict) else None

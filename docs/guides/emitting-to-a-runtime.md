@@ -16,6 +16,7 @@ $ dna emit --list-targets
 Registered emit targets:
   - agent-framework
   - bedrock
+  - openai-agents
   - vertex
 
 $ dna emit concierge --target agent-framework --scope concierge
@@ -248,11 +249,48 @@ const mi = await quickInstance("concierge", ".dna");
 const result = await emitAgent(mi, "concierge", "agent-framework");
 ```
 
-## Adding a new target (openai / …)
+## The de-para — OpenAI Agents SDK (code-first scaffold)
+
+The **fourth** target is the first **code-first** one. The OpenAI Agents SDK has
+no declarative agent file — you construct an `Agent(...)` in Python — so the
+emitter produces *source code* by filling a curated template (a **scaffold**),
+not a schema. The composed prompt is emitted as a byte-equal `INSTRUCTIONS`
+constant; the emitter selects a `{framework × case}` template from the DNA
+signals (an agent with tools → the tool-calling idiom; without → prompt-only):
+
+```console
+$ dna emit concierge --target openai-agents --scope concierge
+"""DNA-emitted OpenAI Agents SDK agent (tool-calling / ReAct): concierge."""
+from agents import Agent, function_tool
+
+INSTRUCTIONS = "You are the Helpdesk Concierge ..."   # byte-equal to build_prompt
+
+@function_tool
+def kb_search() -> str:
+    "Search the runbook knowledge base ..."
+    raise NotImplementedError("DNA scaffold: implement the kb-search tool")
+
+agent = Agent(
+    name='concierge',
+    instructions=INSTRUCTIONS,
+    model='gpt-4o',
+    tools=[kb_search],
+)
+```
+
+The config targets and this scaffold target are **both** the same `EmitterPort`
+in two flavors. How the scaffold `{framework × case}` mechanism works — and how to
+add a new case or a whole new code-first framework — is the
+[How to write an emitter](writing-an-emitter.md) guide.
+
+## Adding a new target (langgraph / agno / …)
 
 Targets are a **registry, not a hardcode** — a new one is a class + one call, and
-the CLI core never changes. The three shipped emitters (`agent-framework`,
-`bedrock`, `vertex`) are the reference; a fourth looks identical:
+the CLI core never changes. The four shipped emitters (`agent-framework`,
+`bedrock`, `vertex`, `openai-agents`) are the reference. For a **declarative**
+runtime a config emitter looks identical to the three below; for a **code-first**
+runtime you subclass `ScaffoldEmitter` and add a template. Full recipe (both
+flavors + the *Passo 0* decision): [How to write an emitter](writing-an-emitter.md).
 
 ```python
 from dna.emit import EmitContext, EmitResult, register_emitter

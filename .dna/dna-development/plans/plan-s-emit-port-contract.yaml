@@ -1,0 +1,51 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-emit-port-contract
+spec:
+  title: 'Plano: s-emit-port-contract'
+  date: '2026-07-11'
+  status: accepted
+  story_ref: s-emit-port-contract
+  journey_phase: plan
+  body: "# s-emit-port-contract \u2014 plan\n\nFormalize the EmitterPort as a first-class,\
+    \ documented DNA port (alongside the 5\nkernel ports) AND lay the scaffold mechanism\
+    \ for the 4 code-first targets next.\n\n## 1. Formalize EmitterPort (Py + TS)\n\
+    - Turn `EmitterPort` into an explicit, richly-documented Protocol contract with\n\
+    \  the two contract surfaces made explicit: `build_emit_context(mi, agent) ->\n\
+    \  EmitContext` (neutral composed view) and `emit(ctx) -> EmitResult` (artifact),\n\
+    \  plus `target` / `file_extension`.\n- Add the byte-equal invariant to the contract\
+    \ as a first-class method:\n  `extract_instructions(artifact) -> str` \u2014 every\
+    \ emitter can recover the\n  composed instruction it embedded. This makes the\
+    \ invariant *inheritable*: a\n  generic test loops all registered targets and\
+    \ asserts\n  `extract_instructions(emit(ctx).artifact) == ctx.instructions`.\n\
+    - Implement `extract_instructions` on the 3 existing config emitters (parse\n\
+    \  YAML/JSON) \u2014 minimal refactor, no behavior change.\n\n## 2. Generic invariant\
+    \ test over ALL targets (Py + TS)\n- `test_emit_contract.py` / `emit-contract.test.ts`:\
+    \ for every target in\n  `available_targets()`, emit the concierge agent and assert\
+    \ the byte-equal\n  invariant + basic contract shape (target/filename/losses list).\
+    \ New emitters\n  inherit the check for free.\n\n## 3. ScaffoldEmitter mechanism\
+    \ (Py + TS) \u2014 code-first targets\n- `ScaffoldEmitter` base over EmitterPort:\
+    \ `emit(ctx)` is generic \u2014 loads a\n  curated Mustache template (package-data)\
+    \ for the target, fills placeholders\n  (name, INSTRUCTIONS=build_prompt byte-equal,\
+    \ model, tools, imports), returns\n  EmitResult. Subclasses stay thin: template\
+    \ name + `render_context` mapping +\n  losses/mapping. `extract_instructions`\
+    \ provided by the base (AST-reads the\n  `INSTRUCTIONS` constant) so scaffolds\
+    \ inherit the invariant check.\n- Templates as package-data: `dna/emit/scaffolds/<target>.py.mustache`\
+    \ (Py) and\n  a byte-identical copy under `sdk-ts/src/emit/scaffolds/` (TS). Mustache\
+    \ = the\n  renderer the SDK already ships (chevron / mustache).\n- Prove with\
+    \ ONE example: `openai` target (OpenAI Agents SDK idiom \u2014\n  `Agent(name=,\
+    \ instructions=, model=, tools=[])`). Test: byte-equal instruction\n  + `py_compile`\
+    \ (syntactically valid) + registered.\n- Future note in contract/docs: promoting\
+    \ Scaffold to a Kind (declarative,\n  versioned, tenant-overridable) is future\
+    \ work; MVP is package-data.\n\n## 4. Docs\n- New guide `docs/guides/writing-an-emitter.md`\
+    \ \u2014 the step-by-step for both\n  flavors (config-declarative vs scaffold-code),\
+    \ the Passo 0 recipe, the 3+1\n  targets as worked examples, the byte-equal invariant.\n\
+    - `docs/concepts/microkernel-ports.md`: document EmitterPort as the emit-layer\n\
+    \  port (distinct from the 5 kernel ports, but a first-class documented port).\n\
+    - Update `emitting-to-a-runtime.md` list-targets output to include openai.\n-\
+    \ mkdocs nav entry for the new guide.\n\n## 5. Release hygiene\n- CHANGELOG `[Unreleased]`\
+    \ entry (do NOT cut a release).\n- Gates: Py + TS suites, guards, `mkdocs build\
+    \ --strict`, py\u2194ts parity.\n"
+  created_at: '2026-07-11T15:32:44+00:00'
+  updated_at: '2026-07-11T15:32:44+00:00'

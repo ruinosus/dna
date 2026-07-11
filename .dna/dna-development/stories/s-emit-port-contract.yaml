@@ -10,7 +10,7 @@ spec:
     \ \u2192 emit(ctx) \u2192 artefato), guia de 'como escrever um emissor', e a garantia\
     \ byte-equal do instruction como invariante do contrato. Os 3 targets (agent-framework/bedrock/vertex)\
     \ j\xE1 plugam; falta formalizar o contrato."
-  status: todo
+  status: in-progress
   feature: f-dna-emitters
   priority: medium
   labels:
@@ -25,10 +25,35 @@ spec:
   - "docs + paridade Py/TS do protocolo; novo target pluga s\xF3 implementando o contrato"
   definition_of_done_source: cli-create
   created_at: '2026-07-11T14:43:11+00:00'
-  updated_at: '2026-07-11T14:43:11+00:00'
+  updated_at: '2026-07-11T15:34:01+00:00'
   timeline:
   - at: '2026-07-11T14:43:11+00:00'
     actor: claude-code
     type: status_change
     source: cli
     to: todo
+  - at: '2026-07-11T15:32:48+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-11T15:34:01+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Contrato formal do EmitterPort + invariante byte-equal como m\xE9todo\
+      \ inherit\xE1vel (extract_instructions), rodado por um teste gen\xE9rico sobre\
+      \ available_targets(). Mecanismo de scaffold p/ code-first: ScaffoldEmitter\
+      \ base + biblioteca {framework \xD7 caso} em emit/scaffolds/<fw>/<caso>.py.tmpl\
+      \ + select_scaffold(framework, ctx) classificando por sinais do DNA (sem tools\u2192\
+      prompt-only; com tools\u2192with-tools; output_schema\u2192structured-output).\
+      \ Prova com openai-agents (2 casos: prompt-only + with-tools). Scaffold \xE9\
+      \ sele\xE7\xE3o+fill de template curado, nunca codegen ad-hoc. Promover Scaffold\
+      \ a Kind = futuro; MVP package-data."
+    commit_ref: 1a2601995f3612069fe51308a1e800a96fea6041
+  produces:
+  - kind: Plan
+    name: plan-s-emit-port-contract
+    role: implementation
+    at: '2026-07-11T15:32:48+00:00'

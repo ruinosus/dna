@@ -11,6 +11,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **The `EmitterPort` as a first-class, documented DNA port + the scaffold
+  mechanism for code-first runtimes** (epic `e-dna-portability`, feature
+  `f-dna-emitters`, story `s-emit-port-contract`). Elevates the emit layer to a
+  documented contract on the same footing as the kernel's ports, and lays the
+  base the next code-first emitters (langgraph / agno / deepagents) are built on:
+    - **The port contract, made explicit.** `EmitterPort` is a documented
+      Protocol/interface with two surfaces — `build_emit_context(mi, agent)` (the
+      kernel-facing half: compose + project to the neutral `EmitContext`) and
+      `emit(ctx) -> EmitResult` (the runtime-facing half a target implements) —
+      plus `target` / `file_extension`. Py↔TS parity of the contract.
+    - **The byte-equal invariant, made inheritable.** The composed instruction in
+      an emitted artifact MUST be byte-equal to `build_prompt`. A new contract
+      hook, `extract_instructions(artifact)`, recovers it from any target's own
+      artifact, and one generic test (`test_emit_contract` /
+      `emit-contract.test.ts`) runs the byte-equal assertion over **every**
+      registered target — so a new emitter inherits the check the moment it
+      registers. Implemented on all three existing config emitters.
+    - **Two emitter flavors.** *config-declarative* (map onto a runtime's
+      published YAML/JSON schema — the shipped agent-framework / bedrock / vertex)
+      and *scaffold-code* (fill a curated template for a code-first runtime).
+    - **The scaffold mechanism (`ScaffoldEmitter`).** A code-first runtime has no
+      schema to map onto, so the emitter emits *source code* by **filling a
+      curated template, never generating code ad-hoc**. The template library is
+      indexed by `{framework × case}` (`emit/scaffolds/<framework>/<case>.py.tmpl`)
+      and a case classifier (`select_scaffold`) routes from the DNA signals in the
+      context — no tools → `prompt-only`; tools → `with-tools`; `output_schema` →
+      `structured-output` — falling back down a generality chain (and recording
+      the fallback as a loss) when a framework does not ship a case. A subclass
+      stays thin: template + variable mapping; selection, fill, and the byte-equal
+      hook are inherited. (Promoting a Scaffold to a first-class Kind —
+      declarative, versioned, tenant-overridable — is noted as future work; the
+      MVP is package-data.)
+    - **First code-first target: `openai-agents`** (OpenAI Agents SDK). Ships two
+      case templates (`prompt-only`, `with-tools`) proving selection + the
+      byte-equal instruction + syntactically valid (`py_compile`) output. The next
+      three code-first emitters are then just "a couple of templates + a small
+      mapping".
+    - **Docs.** New guide *How to write an emitter* (both flavors + the *Passo 0*
+      decision + how to add a case), the EmitterPort documented alongside the
+      kernel ports in *The microkernel and its ports*, and the OpenAI Agents
+      scaffold added to *Emitting to a runtime*.
+
 ## [0.9.0] - 2026-07-11
 
 ### Added
