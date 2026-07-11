@@ -36,7 +36,7 @@ spec:
   - "OAuth 2.1 COMPLETO (AS+RS), n\xE3o s\xF3 o RS; guia multi-provider; ADR atualizado"
   definition_of_done_source: cli-create
   created_at: '2026-07-11T16:14:20+00:00'
-  updated_at: '2026-07-11T16:40:34+00:00'
+  updated_at: '2026-07-11T16:51:11+00:00'
   timeline:
   - at: '2026-07-11T16:14:20+00:00'
     actor: claude-code
@@ -111,6 +111,17 @@ spec:
     source: cli
     from: in-progress
     to: review
+  - at: '2026-07-11T16:51:11+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "CI 11/11 verde no PR #68 (brand-guard, gitleaks, commit-emails, cli\
+      \ 3.12/3.13, sdk-py 3.12/3.13, sdk-ts, docs-build, docs-links, postgres; deploy=skipping).\
+      \ Rebase em cima do main novo (EmitterPort PR #67 mergeado) \u2014 unico conflito\
+      \ era CHANGELOG [Unreleased] (resolvido mantendo as duas entradas). PR pronto\
+      \ pra review; NAO mergeado (pre-1.0, ordem do dono). Territorio: so auth do\
+      \ MCP + config passthrough + docs/ADR/CHANGELOG; dna/emit/ intocado."
+    commit_ref: 0e2c8dd2929e76a43f1d86e27dcb987f9d90779a
   produces:
   - kind: Plan
     name: plan-s-mcp-idp-pluggable
