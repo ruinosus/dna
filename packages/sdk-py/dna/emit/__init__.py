@@ -176,9 +176,10 @@ def _ensure_builtins() -> None:
     _BUILTINS_WIRED = True
     from dna.emit.agent_framework import AgentFrameworkEmitter
     from dna.emit.bedrock import BedrockEmitter
+    from dna.emit.vertex import VertexEmitter
 
     # Only register a target that has not been claimed already (host override).
-    for emitter in (AgentFrameworkEmitter(), BedrockEmitter()):
+    for emitter in (AgentFrameworkEmitter(), BedrockEmitter(), VertexEmitter()):
         EMITTER_REGISTRY.setdefault(emitter.target, emitter)
 
 

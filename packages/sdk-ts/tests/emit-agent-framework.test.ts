@@ -120,7 +120,7 @@ describe("registry", () => {
   it("throws UnknownTarget with the available list", async () => {
     let err: unknown;
     try {
-      await getEmitter("vertex"); // not yet implemented (bedrock now IS a target)
+      await getEmitter("no-such-runtime"); // agent-framework/bedrock/vertex all exist now
     } catch (e) {
       err = e;
     }

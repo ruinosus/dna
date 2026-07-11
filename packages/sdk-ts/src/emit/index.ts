@@ -94,7 +94,8 @@ async function ensureBuiltins(): Promise<void> {
   builtinsWired = true;
   const { AgentFrameworkEmitter } = await import("./agentFramework.js");
   const { BedrockEmitter } = await import("./bedrock.js");
-  for (const e of [new AgentFrameworkEmitter(), new BedrockEmitter()]) {
+  const { VertexEmitter } = await import("./vertex.js");
+  for (const e of [new AgentFrameworkEmitter(), new BedrockEmitter(), new VertexEmitter()]) {
     if (!EMITTER_REGISTRY.has(e.target)) EMITTER_REGISTRY.set(e.target, e);
   }
 }
