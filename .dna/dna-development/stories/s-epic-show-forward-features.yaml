@@ -7,18 +7,27 @@ spec:
   description: "epic show lia epic.spec.features[] (nunca populado por feature create\
     \ --epic) \u2192 '(no features linked)'. Conserta via reverse-lookup por feature.spec.epic,\
     \ espelhando feature show. Fonte \xFAnica = o back-ref; N\xC3O popular o forward."
-  status: review
+  status: done
   feature: f-dna-sdlc-expressiveness
   acceptance_criteria:
-  - dna sdlc epic show e-dna-portability lista as 4 features + burndown
-  - "reverse-lookup \xE9 a fonte \xFAnica \u2014 forward link n\xE3o \xE9 populado"
+  - text: dna sdlc epic show e-dna-portability lista as 4 features + burndown
+    done: true
+    done_at: '2026-07-11T13:57:07+00:00'
+    done_by: story-done-auto
+  - text: "reverse-lookup \xE9 a fonte \xFAnica \u2014 forward link n\xE3o \xE9 populado"
+    done: true
+    done_at: '2026-07-11T13:57:07+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - "Teste travando o comportamento (features aparecem sem forward link); paridade\
-    \ Py\u2194TS se rollup existir nos dois; suites verdes"
+  - text: "Teste travando o comportamento (features aparecem sem forward link); paridade\
+      \ Py\u2194TS se rollup existir nos dois; suites verdes"
+    done: true
+    done_at: '2026-07-11T13:57:07+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-11T13:33:05+00:00'
-  updated_at: '2026-07-11T13:50:01+00:00'
+  updated_at: '2026-07-11T13:57:15+00:00'
   timeline:
   - at: '2026-07-11T13:33:05+00:00'
     actor: claude-code
@@ -78,6 +87,34 @@ spec:
     source: cli
     from: in-progress
     to: review
+  - at: '2026-07-11T13:57:01+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-epic-show-forward-features-c
+    summary: TestGuide tg-s-epic-show-forward-features-c (smoke)
+  - at: '2026-07-11T13:57:06+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-epic-show-forward-features-c-20260711-135703
+    summary: "TestRun tr-tg-s-epic-show-forward-features-c-20260711-135703 \u2192\
+      \ pass"
+    outcome: pass
+  - at: '2026-07-11T13:57:10+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'PR #58 merged'
+  - at: '2026-07-11T13:57:15+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: b4094134e80e53443c9b1ae682b15e7de8fcdf49
   produces:
   - kind: Plan
     name: plan-s-epic-show-forward-features
@@ -91,3 +128,12 @@ spec:
     name: tr-tg-epic-show-forward-features-20260711-134724
     role: test-run
     at: '2026-07-11T13:47:27+00:00'
+  - kind: TestGuide
+    name: tg-s-epic-show-forward-features-c
+    role: test-guide
+    at: '2026-07-11T13:57:01+00:00'
+  - kind: TestRun
+    name: tr-tg-s-epic-show-forward-features-c-20260711-135703
+    role: test-run
+    at: '2026-07-11T13:57:06+00:00'
+  closed_at: '2026-07-11T13:57:07+00:00'

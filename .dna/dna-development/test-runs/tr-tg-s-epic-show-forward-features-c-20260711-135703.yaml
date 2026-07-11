@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-epic-show-forward-features-c-20260711-135703
+spec:
+  guide_ref: tg-s-epic-show-forward-features-c
+  outcome: pass
+  verifies:
+  - Story/s-epic-show-forward-features
+  executed_by: claude-code
+  executed_at: '2026-07-11T13:57:03+00:00'
+  evidence:
+  - 'PR #58; cite aceita qualquer Kind + epic show reverse-lookup (4 features listadas)'

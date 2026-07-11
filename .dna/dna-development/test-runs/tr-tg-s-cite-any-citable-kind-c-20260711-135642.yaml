@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-cite-any-citable-kind-c-20260711-135642
+spec:
+  guide_ref: tg-s-cite-any-citable-kind-c
+  outcome: pass
+  verifies:
+  - Story/s-cite-any-citable-kind
+  executed_by: claude-code
+  executed_at: '2026-07-11T13:56:42+00:00'
+  evidence:
+  - 'PR #58; cite aceita qualquer Kind + epic show reverse-lookup (4 features listadas)'
