@@ -63,6 +63,7 @@ export {
   emitAgent,
   buildEmitContext,
   registerEmitter,
+  unregisterEmitter,
   getEmitter,
   availableTargets,
   EmitError,

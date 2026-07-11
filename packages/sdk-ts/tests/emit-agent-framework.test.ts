@@ -22,6 +22,7 @@ import {
   availableTargets,
   getEmitter,
   registerEmitter,
+  unregisterEmitter,
   UnknownTarget,
   EmitError,
   type EmitContext,
@@ -135,9 +136,18 @@ describe("registry", () => {
       emit(ctx: EmitContext) {
         return { artifact: ctx.instructions, target: this.target, filename: `${ctx.name}.txt`, losses: [], mapping: {} };
       }
+      extractInstructions(artifact: string) {
+        return artifact;
+      }
     }
-    registerEmitter(new EchoEmitter());
-    expect(await availableTargets()).toContain("echo-test-ts");
+    try {
+      registerEmitter(new EchoEmitter());
+      expect(await availableTargets()).toContain("echo-test-ts");
+    } finally {
+      // The registry is process-global; clean up so it does not pollute the
+      // generic contract suite (parity with the Python twin's finally-pop).
+      unregisterEmitter("echo-test-ts");
+    }
   });
 });
 

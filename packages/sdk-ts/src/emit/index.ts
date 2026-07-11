@@ -139,6 +139,13 @@ export function registerEmitter(emitter: EmitterPort): EmitterPort {
   return emitter;
 }
 
+/** Remove a registered emitter (a host override or a test double). Returns
+ *  whether a target was actually removed. Parity with the Python side popping
+ *  from `EMITTER_REGISTRY`. */
+export function unregisterEmitter(target: string): boolean {
+  return EMITTER_REGISTRY.delete(target);
+}
+
 /** Look up a registered emitter or throw {@link UnknownTarget}. */
 export async function getEmitter(target: string): Promise<EmitterPort> {
   await ensureBuiltins();
