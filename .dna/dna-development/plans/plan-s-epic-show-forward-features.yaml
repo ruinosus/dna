@@ -1,0 +1,18 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-epic-show-forward-features
+spec:
+  title: 'Plano: s-epic-show-forward-features'
+  date: '2026-07-11'
+  status: accepted
+  story_ref: s-epic-show-forward-features
+  journey_phase: plan
+  body: "1. cmd_epic_show: trocar leitura de epic.spec.features[] por reverse-lookup:\
+    \ features = [f for f in query_list('Feature') if f.spec.epic == epic]. 2. Manter\
+    \ o rollup de stories (j\xE1 reverse-lookup por story.spec.feature). 3. N\xC3\
+    O popular o forward link. 4. Consertar epic ship (mesmo forward-link nunca populado)\
+    \ via reverse-lookup \u2014 latent bug id\xEAntico. 5. Teste: features com s\xF3\
+    \ o back-ref (sem forward) aparecem no epic show. 6. Paridade TS se rollup existir."
+  created_at: '2026-07-11T13:33:29+00:00'
+  updated_at: '2026-07-11T13:33:29+00:00'

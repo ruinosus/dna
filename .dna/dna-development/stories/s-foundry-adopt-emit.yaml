@@ -1,0 +1,26 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-foundry-adopt-emit
+spec:
+  title: "Foundry adota o emissor DNA \u2192 agent-framework como fluxo de autoria"
+  description: "foundry autora em DNA \u2192 emite agent-framework nativo (modelo\
+    \ Terraform); decis\xE3o de produto do dono"
+  status: todo
+  feature: f-foundry-emit-adoption
+  acceptance_criteria:
+  - "Decis\xE3o de produto do dono registrada antes de qualquer implementa\xE7\xE3\
+    o"
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - "Marcador apenas \u2014 N\xC3O implementar nesta feature; aguarda ok expl\xED\
+    cito do dono"
+  definition_of_done_source: cli-create
+  created_at: '2026-07-11T13:32:48+00:00'
+  updated_at: '2026-07-11T13:32:48+00:00'
+  timeline:
+  - at: '2026-07-11T13:32:48+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo

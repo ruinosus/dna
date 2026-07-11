@@ -491,24 +491,32 @@ dna sdlc changelog unreleased [OPTIONS]
 
 ## `dna sdlc cite`
 
-Bidirectional citation: adds ref_name to caller.spec.references AND
-adds caller_ref to Reference.spec.cited_by.
+Bidirectional citation between any two Kinds.
+
+CITED is the source that grounds the caller — ``<Kind>/<name>`` (e.g.
+``Research/dna-portability`` or ``ADR/0007``) or a bare ``<name>`` that
+defaults to a Reference. Adds ``cited`` to caller.spec.references AND
+adds the caller ref to the cited doc's spec.cited_by (the back-ref).
+
+`cite` = a source that FUNDAMENTA the work; `produces` = an output the
+work AUTHORED. Any Kind with a flexible spec gains ``cited_by`` on the
+cited side and ``references`` on the caller side.
 
 ```text
-dna sdlc cite [OPTIONS] REF_NAME
+dna sdlc cite [OPTIONS] CITED
 ```
 
 **Arguments**
 
 | Argument | Required |
 | --- | --- |
-| `REF_NAME` | yes |
+| `CITED` | yes |
 
 **Options**
 
 | Option | Description |
 | --- | --- |
-| `--from` | Kind/name of the doc that cites this reference (e.g. Spec/2026-05-12-foo). |
+| `--from` | Kind/name of the doc that cites this source (e.g. ADR/0007-emit). |
 | `--help` | Show this message and exit. |
 | `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
 
@@ -3017,17 +3025,17 @@ dna sdlc test-run record [OPTIONS] GUIDE
 
 ## `dna sdlc uncite`
 
-Symmetric removal of a citation link.
+Symmetric removal of a citation link (any Kind).
 
 ```text
-dna sdlc uncite [OPTIONS] REF_NAME
+dna sdlc uncite [OPTIONS] CITED
 ```
 
 **Arguments**
 
 | Argument | Required |
 | --- | --- |
-| `REF_NAME` | yes |
+| `CITED` | yes |
 
 **Options**
 

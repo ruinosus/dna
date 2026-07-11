@@ -33,6 +33,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and the model coordinate. Plugged into the existing `EmitterPort` registry — the
   CLI core is unchanged. Python + TypeScript parity on the emitted template object;
   the `examples/emitting-to-a-runtime` example now documents both runtimes.
+- **`dna sdlc cite` now cites _any_ citable Kind — not just `Reference`**
+  (epic `e-dna-portability`, feature `f-dna-sdlc-expressiveness`, story
+  `s-cite-any-citable-kind`). The cited target accepts `<Kind>/<name>` —
+  `dna sdlc cite Research/<name> --from ADR/<name>` (or from an Epic, Spec,
+  Story, …) — while a bare `<name>` still defaults to `Reference` for
+  backwards-compat. The citation stays **bidirectional**: the cited doc gains
+  `spec.cited_by` (the back-ref) and the caller gains `spec.references`. This
+  encodes the semantic the model had to bridge by hand during the pivot —
+  **`cite` = a source that _grounds_ the work; `produces` = an output the work
+  _authored_.** The `Research` Kind gains an explicit `cited_by` field (Py↔TS)
+  for discoverability; other SDLC Kinds inherit it via their flexible specs.
+  `uncite` is symmetric across Kinds.
+
+### Fixed
+
+- **`dna sdlc epic show` now lists an Epic's features** (feature
+  `f-dna-sdlc-expressiveness`, story `s-epic-show-forward-features`). It read
+  the forward `Epic.spec.features[]` list, which `feature create --epic X`
+  never populates (it maintains only the back-ref `Feature.spec.epic`), so a
+  correctly-linked Epic still printed "(no features linked)". Features are now
+  resolved by **reverse-lookup** on `Feature.spec.epic == <epic>` — the back-ref
+  is the single source of truth, mirroring how `feature show` finds its stories
+  by `Story.spec.feature`. The forward link is intentionally _not_ populated
+  (no duplicate source of truth). `dna sdlc epic ship` had the identical
+  latent bug in its cascade-close and is fixed the same way.
 
 ## [0.7.0] - 2026-07-11
 

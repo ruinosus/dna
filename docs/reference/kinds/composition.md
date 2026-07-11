@@ -362,6 +362,7 @@ A Research is a curated synthesis of N external sources (Reference docs) with ob
 | --- | --- | --- | --- |
 | `audience_context` | string |  | Recipe phase: context block fed to the LLM. |
 | `brief_notes` | string |  | Recipe phase: author notes about the recipe. |
+| `cited_by` | array |  | Kind/name of docs that cite this Research as a grounding source. Auto-maintained by `dna sdlc cite Research/<name> --from <Kind>/<name>` — don't author by hand. |
 | `conducted_at` | string |  | When the research was synthesized. |
 | `conducted_by` | string |  | Actor who ran the synthesis: claude-code, jefferson, auto-synth, ... |
 | `created_at` | string |  |  |

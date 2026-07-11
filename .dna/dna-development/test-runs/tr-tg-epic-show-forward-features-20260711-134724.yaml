@@ -1,0 +1,15 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-epic-show-forward-features-20260711-134724
+spec:
+  guide_ref: tg-epic-show-forward-features
+  outcome: pass
+  verifies:
+  - Story/s-epic-show-forward-features
+  executed_by: claude-code
+  executed_at: '2026-07-11T13:47:24+00:00'
+  notes: "Live: 'dna sdlc epic show e-dna-portability' lists 4 features + Burndown\
+    \ 2/5 (40%) \u2014 was '(no features linked)'. Automated: test_sdlc_correctness.py\
+    \ (epic show back-ref lookup, empty-state, epic ship cascade, isolation) green.\
+    \ Suites: cli 408, sdk-py 2902, sdk-ts 1415 pass."

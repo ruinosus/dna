@@ -1,0 +1,22 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-epic-show-forward-features
+spec:
+  description: 'Product smoke: dna sdlc epic show lists an Epic''s features via the
+    back-ref (the CLI is the product surface).'
+  kind_of_test: smoke
+  status: active
+  steps:
+  - action: 'Run: dna sdlc epic show e-dna-portability'
+    expected: lists the 4 features (f-dna-emitters, f-oracle-agent-spec, f-dna-sdlc-expressiveness,
+      f-foundry-emit-adoption); NOT '(no features linked)'
+  - action: 'Check burndown: same command'
+    expected: 'prints ''Burndown: N/M stories done (X%)'' aggregated across the reverse-looked-up
+      features'
+  - action: 'Isolation: features belonging to a different epic do not appear'
+    expected: only e-dna-portability's features are listed
+  verifies:
+  - Story/s-epic-show-forward-features
+  created_at: '2026-07-11T13:46:52+00:00'
+  updated_at: '2026-07-11T13:46:52+00:00'
