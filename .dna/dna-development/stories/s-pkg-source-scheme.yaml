@@ -7,7 +7,7 @@ spec:
   description: 'source_from_url / sourceFromUrl resolve pkg://<package>[/<subpath>]
     to a read-only scope embedded as package-data; Kernel.from_config accepts source:
     pkg://app.'
-  status: in-progress
+  status: review
   feature: f-dna-scope-packaging
   owner: claude-code
   acceptance_criteria:
@@ -25,7 +25,7 @@ spec:
   - 'CI: all suites + guards + mkdocs strict green'
   definition_of_done_source: cli-create
   created_at: '2026-07-11T10:53:17+00:00'
-  updated_at: '2026-07-11T11:14:48+00:00'
+  updated_at: '2026-07-11T11:16:56+00:00'
   timeline:
   - at: '2026-07-11T10:53:17+00:00'
     actor: claude-code
@@ -62,6 +62,18 @@ spec:
     name: tr-tg-scope-as-package-data-20260711-111443
     summary: "TestRun tr-tg-scope-as-package-data-20260711-111443 \u2192 pass"
     outcome: pass
+  - at: '2026-07-11T11:16:53+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'PR #53 opened. pkg:// scheme shipped + Kernel.from_config resolves it
+      end-to-end.'
+  - at: '2026-07-11T11:16:56+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
   produces:
   - kind: Plan
     name: plan-s-pkg-source-scheme
