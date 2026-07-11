@@ -1,0 +1,19 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-docs-init-install-completeness-20260711-050412
+spec:
+  guide_ref: tg-docs-init-install-completeness
+  outcome: pass
+  verifies:
+  - Story/s-docs-init-install-completeness
+  executed_by: claude-code
+  executed_at: '2026-07-11T05:04:12+00:00'
+  notes: 'All 6 steps verified locally. mkdocs build --strict: exit 0, zero link/anchor/nav
+    warnings. docs_coverage_guard --self-test + real: clean (83 items / 24 prose pages).
+    Reference generators (gen_cli_docs/gen_kinds_docs/gen_parity_matrix) re-run: zero
+    drift. installing-scopes.md, agent-onboarding.md, cli-tour.md, README.md verified
+    byte-by-byte against init_cmd.py/install_cmd.py behavior (init projects to tool
+    dirs + empty board; install writes docs to .dna/ + installed.lock). Cross-link
+    anchor resolved (strict build would fail otherwise). README relative link targets
+    all exist.'

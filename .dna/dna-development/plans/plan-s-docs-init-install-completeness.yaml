@@ -1,0 +1,29 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-docs-init-install-completeness
+spec:
+  title: 'Plano: s-docs-init-install-completeness'
+  date: '2026-07-11'
+  status: accepted
+  story_ref: s-docs-init-install-completeness
+  journey_phase: plan
+  body: "Anchor (init vs install):\n1. installing-scopes.md \u2014 add a '### dna\
+    \ install vs dna init' section: comparison table (writes-to / regenerable / when)\
+    \ + a 'I want to\u2026 \u2192 use\u2026' decision table + reciprocal cross-link\
+    \ back to agent-onboarding.md. This page currently never mentions init \u2014\
+    \ the core gap.\n2. agent-onboarding.md \u2014 the prose '--from vs dna install'\
+    \ section is good but not scannable; add a compact comparison table + decision\
+    \ table so the distinction is grab-and-go; keep the existing reciprocal link.\n\
+    \nCompleteness:\n3. cli-tour.md \u2014 the tour promises 'every command group'\
+    \ but omits dna init and dna eval; add both to the 'groups with their own guides'\
+    \ list, bump the count, link to agent-onboarding.md + evaluating-agents.md.\n\n\
+    Precision guardrails (verified against init_cmd.py/install_cmd.py): init PROJECTS\
+    \ skill+AGENTS content into tool dirs (regenerable) and creates an EMPTY SDLC\
+    \ board Genome under .dna/<scope>/; the pack's Kinds are never written as documents\
+    \ into the source. install writes the Kinds THEMSELVES as documents into .dna/<scope>/\
+    \ with installed.lock. They compose at the same ref.\n\nProof: run docs_coverage_guard\
+    \ --self-test + real, reference drift (git diff on generated ref), mkdocs build\
+    \ --strict, lychee-style internal link check. Record a TestRun."
+  created_at: '2026-07-11T04:59:06+00:00'
+  updated_at: '2026-07-11T04:59:06+00:00'

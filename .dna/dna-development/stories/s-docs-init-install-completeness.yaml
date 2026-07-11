@@ -1,0 +1,89 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-docs-init-install-completeness
+spec:
+  title: 'Docs: clarify dna init (project) vs dna install (source-write) + completeness
+    pass'
+  description: A user confused 'projecting' (init) with 'installing' (install). Make
+    the init-vs-install distinction explicit on BOTH the init tutorial and the install
+    guide (comparison box + decision table + reciprocal cross-links), and do a docs
+    completeness pass (CLI tour was missing init + eval; verify all command groups
+    are reachable and explained).
+  status: in-progress
+  feature: f-dna-docs
+  priority: medium
+  labels:
+  - docs
+  reporter: claude-code
+  acceptance_criteria:
+  - GIVEN a reader on docs/guides/installing-scopes.md OR docs/getting-started/agent-onboarding.md
+    WHEN they look for the difference THEN a comparison box + decision table + reciprocal
+    cross-link makes 'projects to tool dirs' vs 'writes to .dna/ source' unmistakable
+  - GIVEN the CLI tour claims 'every command group' THEN dna init and dna eval are
+    present and linked to their dedicated pages
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - mkdocs build --strict green; docs_coverage_guard (+self-test) green; reference
+    drift guard green (generated ref untouched or regenerated); lychee internal links
+    green; new/edited pages navigable in mkdocs.yml; TestRun recorded
+  definition_of_done_source: cli-create
+  created_at: '2026-07-11T04:58:49+00:00'
+  updated_at: '2026-07-11T05:04:14+00:00'
+  timeline:
+  - at: '2026-07-11T04:58:49+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-11T04:59:08+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-11T05:02:34+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Edits landed: (1) installing-scopes.md gained a 'dna install vs dna\
+      \ init' section \u2014 comparison table + 'I want to\u2026\u2192use' decision\
+      \ table + reciprocal cross-link (this page never mentioned init before). (2)\
+      \ agent-onboarding.md gained an early orientation tip callout + a compact --from-vs-install\
+      \ table. (3) cli-tour.md: added dna init + dna eval (tour claimed 'every command\
+      \ group' but omitted both) and synced the stale dna --help block (was missing\
+      \ eval/init/install). (4) README.md (scope-expansion from owner): new 'Make\
+      \ your project agent-ready \u2014 dna init' section + 'Install Kinds from any\
+      \ repo' with the condensed init/install frame, Documentation section de-staled\
+      \ (Reference no longer 'coming soon'; added init/eval/install/cli-tour links),\
+      \ Status reconciled to published v0.3.x. Now running guards."
+    commit_ref: db4f0256214d5bbda4b0204a3d32328960dada70
+  - at: '2026-07-11T05:03:56+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-docs-init-install-completeness
+    summary: TestGuide tg-docs-init-install-completeness (smoke)
+  - at: '2026-07-11T05:04:14+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-docs-init-install-completeness-20260711-050412
+    summary: "TestRun tr-tg-docs-init-install-completeness-20260711-050412 \u2192\
+      \ pass"
+    outcome: pass
+  produces:
+  - kind: Plan
+    name: plan-s-docs-init-install-completeness
+    role: implementation
+    at: '2026-07-11T04:59:08+00:00'
+  - kind: TestGuide
+    name: tg-docs-init-install-completeness
+    role: test-guide
+    at: '2026-07-11T05:03:56+00:00'
+  - kind: TestRun
+    name: tr-tg-docs-init-install-completeness-20260711-050412
+    role: test-run
+    at: '2026-07-11T05:04:14+00:00'
