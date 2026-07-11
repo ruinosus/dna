@@ -245,7 +245,10 @@ def _ensure_builtins() -> None:
         return
     _BUILTINS_WIRED = True
     from dna.emit.agent_framework import AgentFrameworkEmitter
+    from dna.emit.agno import AgnoEmitter
     from dna.emit.bedrock import BedrockEmitter
+    from dna.emit.deepagents import DeepAgentsEmitter
+    from dna.emit.langgraph import LanggraphEmitter
     from dna.emit.openai_agents import OpenAIAgentsEmitter
     from dna.emit.vertex import VertexEmitter
 
@@ -255,6 +258,9 @@ def _ensure_builtins() -> None:
         BedrockEmitter(),
         VertexEmitter(),
         OpenAIAgentsEmitter(),
+        LanggraphEmitter(),
+        AgnoEmitter(),
+        DeepAgentsEmitter(),
     ):
         EMITTER_REGISTRY.setdefault(emitter.target, emitter)
 

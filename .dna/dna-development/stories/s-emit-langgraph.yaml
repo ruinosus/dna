@@ -1,0 +1,53 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-emit-langgraph
+spec:
+  title: 'Code-first emitter: LangGraph'
+  description: dna emit --target langgraph via ScaffoldEmitter (create_react_agent)
+  status: in-progress
+  feature: f-dna-emitters
+  acceptance_criteria:
+  - Given the concierge DNA agent, When I run dna emit --target langgraph, Then it
+    emits create_react_agent(model, tools, prompt=INSTRUCTIONS) source that py_compiles
+    with instruction byte-equal to build_prompt
+  - Given a tools/no-tools agent, When emitting, Then the classifier selects with-tools/prompt-only
+    scaffolds respectively
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - 'Code: LanggraphEmitter Py+TS twin + 2 scaffolds each, registered in builtins'
+  - "Tests: per-target suites + generic contract green in Py+TS; Py\u2194TS parity"
+  - 'Docs: langgraph de-para section in the guide + mapping table; CHANGELOG [Unreleased]'
+  - 'CI: 11/11 checks green'
+  definition_of_done_source: cli-create
+  created_at: '2026-07-11T16:42:21+00:00'
+  updated_at: '2026-07-11T16:57:40+00:00'
+  timeline:
+  - at: '2026-07-11T16:42:21+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-11T16:42:57+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-11T16:57:40+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Built LanggraphEmitter (Py+TS twin) over the shipped ScaffoldEmitter\
+      \ \u2014 thin: just render_context + losses + mapping + 2 templates (prompt-only/with-tools).\
+      \ Passo 0 confirmed create_react_agent(model, tools, prompt=...) from langgraph.prebuilt;\
+      \ with-tools emits @tool stubs. Key call: PRESERVE the DNA model coordinate\
+      \ (LangGraph resolves via init_chat_model provider:model) instead of stripping\
+      \ like openai-agents \u2014 smaller loss. 6 py + 5 ts tests green; generic contract\
+      \ picks it up automatically."
+    commit_ref: 6721f20bfa6a9430b52d4d97063ae8b795b1cbcf
+  produces:
+  - kind: Plan
+    name: plan-s-emit-langgraph
+    role: implementation
+    at: '2026-07-11T16:42:57+00:00'

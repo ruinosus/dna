@@ -123,11 +123,17 @@ async function ensureBuiltins(): Promise<void> {
   const { BedrockEmitter } = await import("./bedrock.js");
   const { VertexEmitter } = await import("./vertex.js");
   const { OpenAIAgentsEmitter } = await import("./openaiAgents.js");
+  const { LanggraphEmitter } = await import("./langgraph.js");
+  const { AgnoEmitter } = await import("./agno.js");
+  const { DeepAgentsEmitter } = await import("./deepagents.js");
   for (const e of [
     new AgentFrameworkEmitter(),
     new BedrockEmitter(),
     new VertexEmitter(),
     new OpenAIAgentsEmitter(),
+    new LanggraphEmitter(),
+    new AgnoEmitter(),
+    new DeepAgentsEmitter(),
   ]) {
     if (!EMITTER_REGISTRY.has(e.target)) EMITTER_REGISTRY.set(e.target, e);
   }

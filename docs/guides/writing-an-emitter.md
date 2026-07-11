@@ -111,7 +111,10 @@ instruction field — that is all the byte-equal test needs.
 A code-first runtime has no schema to map onto — you emit **source code**. The
 key discipline: **fill a curated template, never generate code ad-hoc.** The
 template captures the framework's best-practice idiom; your emitter only *routes*
-to the right template and fills the blanks.
+to the right template and fills the blanks. Four scaffold targets ship as worked
+examples — `openai-agents` (the reference), `langgraph` (`create_react_agent`),
+`agno` (`agno.agent.Agent`), and `deepagents` (`create_deep_agent`) — each a thin
+emitter class plus a `prompt-only` and a `with-tools` template.
 
 ### The template library — `{framework × case}`
 

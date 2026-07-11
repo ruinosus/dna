@@ -57,6 +57,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
       decision + how to add a case), the EmitterPort documented alongside the
       kernel ports in *The microkernel and its ports*, and the OpenAI Agents
       scaffold added to *Emitting to a runtime*.
+- **Three more code-first emitters — `dna emit --target {langgraph,agno,deepagents}`**
+  (feature `f-dna-emitters`, stories `s-emit-langgraph` / `s-emit-agno` /
+  `s-emit-deepagents`). Built entirely on the shipped `ScaffoldEmitter` contract —
+  each is a thin emitter class (Py + TS twin) plus a `prompt-only` and a
+  `with-tools` template, registered in the builtins; no change to the emit core.
+    - **`langgraph`** — `create_react_agent(model, tools=[...], prompt=INSTRUCTIONS)`
+      (`langgraph.prebuilt`); with-tools emits `@tool` stubs. **`agno`** —
+      `Agent(name, model, instructions=INSTRUCTIONS, tools=[...])` (`agno.agent`);
+      Agno auto-wraps plain callables as tools. **`deepagents`** —
+      `create_deep_agent(model, tools=[...], system_prompt=INSTRUCTIONS)` (LangChain
+      DeepAgents).
+    - **Model coordinate preserved.** Unlike `openai-agents` (which strips the
+      provider token), all three resolve a `provider:model` string
+      (`init_chat_model` / Agno string models), so the DNA coordinate is carried
+      **verbatim** — a smaller loss. Each emitter reports its own de-para honestly
+      (tool-body stubs; the `init_chat_model` provider-prefix convention; for
+      deepagents the DNA prompt is a *prefix* of the harness system prompt and there
+      is no name slot).
+    - **One source → seven runtimes.** With these three, the `emitting-to-a-runtime`
+      example emits the same `concierge` agent to **seven** runtimes (agent-framework
+      / bedrock / vertex / openai-agents / langgraph / agno / deepagents) with the
+      composed instruction **byte-identical** in every artifact — pinned by a new
+      portability proof (`test_emit_portability.py` / `emit-portability.test.ts`) and
+      inherited automatically by the generic `test_emit_contract` over every target.
+      The three targets are documented with mapping tables in *Emitting to a runtime*.
 - **`dna mcp serve` Phase 2 — remote transport + OAuth 2.1 auth bound to DNA
   tenancy** (feature `f-dna-mcp-server`, stories `s-mcp-remote-transport` +
   `s-mcp-oauth-auth`; ADR `adr-dna-mcp-runtime-face`). The *same* MCP server the
