@@ -169,6 +169,7 @@ dna sdlc artifact create [OPTIONS] NAME
 | `--description` | Short description (promoted to metadata). |
 | `--from` | Path to the .html file to store (read byte-faithful). |
 | `--help` | Show this message and exit. |
+| `--published-url` | Canonical hosted URL (e.g. a claude.ai artifact link) — the gallery renders it as a clickable link. |
 | `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
 | `--source` | Provenance/context (e.g. 'design doc do épico e-dna-dx'). |
 | `--title` | Human title for the artifact. |
@@ -992,6 +993,41 @@ dna sdlc feature start [OPTIONS] NAME
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+
+## `dna sdlc gallery`
+
+Painel board-native dos **HtmlArtifacts pra revisar**.
+
+Irmão do ``digest``. O ``digest`` mostra **o que aconteceu** (eventos das
+timelines); o **gallery** mostra **os artefatos visuais pra revisar** (os
+``HtmlArtifact`` do board), agrupados pelo status do work item que os
+produziu (via ``produces[]`` / back-ref):
+
+
+  👀 Precisa de avaliação  — Story em review / com PR aberto
+  🧭 Decisões              — produzidos por um ADR
+  ✅ Shipado               — work item em status terminal
+  📈 Em andamento          — work item ainda em curso
+  📎 Sem work item         — órfão no board
+
+Board-native: o índice é **gerado do board**, então está sempre atual —
+mata o "publico artifacts soltos no chat e o dono tem que caçar".
+Com ``--html <out>`` vira UM arquivo navegável (self-contained, sem CDN)
+que o delegador abre pra revisar.
+
+```text
+dna sdlc gallery [OPTIONS]
+```
+
+**Options**
+
+| Option | Description |
+| --- | --- |
+| `--help` | Show this message and exit. |
+| `--html` | Gera UM arquivo HTML self-contained (cards por artifact, chip de status, link publicado) — o painel que o dono abre. |
+| `--json` | Saída estruturada (o dict do agregador build_gallery). |
+| `--open` | Abre o HTML gerado no browser (implica --html se ausente, usando um arquivo temporário). |
 | `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
 
 ## `dna sdlc hooks`
