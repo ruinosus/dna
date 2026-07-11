@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-dx-html-artifact-kind-close-20260711-101337
+spec:
+  guide_ref: tg-s-dx-html-artifact-kind-close
+  outcome: pass
+  verifies:
+  - Story/s-dx-html-artifact-kind
+  executed_by: claude-code
+  executed_at: '2026-07-11T10:13:37+00:00'
+  evidence:
+  - PR merged (49/50), CI 11/11; smoke registrado pelo agente

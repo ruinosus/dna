@@ -1,0 +1,19 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-s-dx-new-scaffolding-close
+spec:
+  description: Roteiro de teste de s-dx-new-scaffolding (derivado das acceptance_criteria).
+  kind_of_test: smoke
+  status: active
+  steps:
+  - action: 'No Studio, valide: Comando de scaffolding gera arquivos minimos validos
+      de um novo Kind/scope.'
+    where: "<rota/tela \u2014 ex. /scopes/:scope/...>"
+    expected: "<o que voc\xEA V\xCA quando est\xE1 certo (marque \u2717 S\xD3 se estiver\
+      \ quebrado)>"
+  verifies:
+  - Story/s-dx-new-scaffolding
+  created_at: '2026-07-11T10:14:05+00:00'
+  updated_at: '2026-07-11T10:14:05+00:00'
+  owner: claude-code

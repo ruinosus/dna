@@ -7,7 +7,7 @@ spec:
     Py/TS.
   description: Adicionar o HtmlArtifact Kind (bundle HTML) com reader/writer e paridade
     Py/TS.
-  status: in-progress
+  status: done
   feature: f-dna-artifacts
   priority: medium
   labels:
@@ -15,15 +15,21 @@ spec:
   - dogfood
   reporter: claude-code
   acceptance_criteria:
-  - Kind registrado + bundle round-trip byte-fiel Py<->TS; um HtmlArtifact criavel
-    via CLI e linkavel via dna sdlc produces add Epic/<e> HtmlArtifact/<a>.
+  - text: Kind registrado + bundle round-trip byte-fiel Py<->TS; um HtmlArtifact criavel
+      via CLI e linkavel via dna sdlc produces add Epic/<e> HtmlArtifact/<a>.
+    done: true
+    done_at: '2026-07-11T10:13:40+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - "Kind + reader/writer Py+TS; hash-parity; CLI create; produces link; testes; docs.\
-    \ (PR PROPRIA \u2014 nao nesta.)"
+  - text: "Kind + reader/writer Py+TS; hash-parity; CLI create; produces link; testes;\
+      \ docs. (PR PROPRIA \u2014 nao nesta.)"
+    done: true
+    done_at: '2026-07-11T10:13:40+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-11T06:25:33+00:00'
-  updated_at: '2026-07-11T07:30:49+00:00'
+  updated_at: '2026-07-11T10:13:47+00:00'
   timeline:
   - at: '2026-07-11T06:25:33+00:00'
     actor: claude-code
@@ -64,6 +70,33 @@ spec:
     name: tr-tg-s-dx-html-artifact-kind-20260711-073047
     summary: "TestRun tr-tg-s-dx-html-artifact-kind-20260711-073047 \u2192 pass"
     outcome: pass
+  - at: '2026-07-11T10:13:35+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-dx-html-artifact-kind-close
+    summary: TestGuide tg-s-dx-html-artifact-kind-close (smoke)
+  - at: '2026-07-11T10:13:39+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-dx-html-artifact-kind-close-20260711-101337
+    summary: "TestRun tr-tg-s-dx-html-artifact-kind-close-20260711-101337 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-11T10:13:43+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: merged; v0.5.0
+  - at: '2026-07-11T10:13:47+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: done
+    commit_ref: 1169a35c041ca3d564f45b659bda351a22347142
   produces:
   - kind: Plan
     name: plan-s-dx-html-artifact-kind
@@ -77,3 +110,12 @@ spec:
     name: tr-tg-s-dx-html-artifact-kind-20260711-073047
     role: test-run
     at: '2026-07-11T07:30:49+00:00'
+  - kind: TestGuide
+    name: tg-s-dx-html-artifact-kind-close
+    role: test-guide
+    at: '2026-07-11T10:13:35+00:00'
+  - kind: TestRun
+    name: tr-tg-s-dx-html-artifact-kind-close-20260711-101337
+    role: test-run
+    at: '2026-07-11T10:13:39+00:00'
+  closed_at: '2026-07-11T10:13:40+00:00'

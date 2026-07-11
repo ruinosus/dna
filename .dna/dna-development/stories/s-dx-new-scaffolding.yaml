@@ -5,7 +5,7 @@ metadata:
 spec:
   title: 'Scaffolding: dna new <kind>/<scope> gera esqueleto valido.'
   description: 'Scaffolding: dna new <kind>/<scope> gera esqueleto valido.'
-  status: review
+  status: done
   feature: f-dna-dx-author
   priority: medium
   labels:
@@ -14,13 +14,19 @@ spec:
   - cli
   reporter: claude-code
   acceptance_criteria:
-  - Comando de scaffolding gera arquivos minimos validos de um novo Kind/scope.
+  - text: Comando de scaffolding gera arquivos minimos validos de um novo Kind/scope.
+    done: true
+    done_at: '2026-07-11T10:14:12+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - "Design + impl + testes; docs. (PR futura \u2014 nao nesta.)"
+  - text: "Design + impl + testes; docs. (PR futura \u2014 nao nesta.)"
+    done: true
+    done_at: '2026-07-11T10:14:12+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-11T06:25:12+00:00'
-  updated_at: '2026-07-11T07:31:33+00:00'
+  updated_at: '2026-07-11T10:14:18+00:00'
   timeline:
   - at: '2026-07-11T06:25:12+00:00'
     actor: claude-code
@@ -64,6 +70,33 @@ spec:
     source: cli
     from: in-progress
     to: review
+  - at: '2026-07-11T10:14:07+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-dx-new-scaffolding-close
+    summary: TestGuide tg-s-dx-new-scaffolding-close (smoke)
+  - at: '2026-07-11T10:14:11+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-dx-new-scaffolding-close-20260711-101409
+    summary: "TestRun tr-tg-s-dx-new-scaffolding-close-20260711-101409 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-11T10:14:14+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: merged; v0.5.0
+  - at: '2026-07-11T10:14:18+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: 1169a35c041ca3d564f45b659bda351a22347142
   produces:
   - kind: Plan
     name: plan-s-dx-new-scaffolding
@@ -77,3 +110,12 @@ spec:
     name: tr-tg-s-dx-new-scaffolding-20260711-072910
     role: test-run
     at: '2026-07-11T07:29:12+00:00'
+  - kind: TestGuide
+    name: tg-s-dx-new-scaffolding-close
+    role: test-guide
+    at: '2026-07-11T10:14:07+00:00'
+  - kind: TestRun
+    name: tr-tg-s-dx-new-scaffolding-close-20260711-101409
+    role: test-run
+    at: '2026-07-11T10:14:11+00:00'
+  closed_at: '2026-07-11T10:14:12+00:00'
