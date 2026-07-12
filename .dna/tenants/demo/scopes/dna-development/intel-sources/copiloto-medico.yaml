@@ -1,0 +1,15 @@
+apiVersion: github.com/ruinosus/dna/intel/v1
+kind: IntelSource
+metadata:
+  name: copiloto-medico
+spec:
+  name: copiloto-medico
+  type: repo
+  cadence: weekly
+  threshold: 0.6
+  pirs:
+  - "regula\xE7\xE3o"
+  - concorrentes
+  - tech PT-BR
+  muted: false
+  notes: "Copiloto cl\xEDnico ambiente (HITL) \u2014 bra\xE7o do experimento sp-fusion-validation."
