@@ -341,3 +341,208 @@ def test_cross_client_same_tenant_shares_memory(dna_dir, http_server):
 
     names = [h["name"] for h in recalled["hits"]]
     assert any("cross-client" in n for n in names), names
+
+
+# ── 4. list_memories / forget — pure impl (data layer, no server/auth) ──────
+#
+# The DNA Cloud memory dashboard calls these two tool names for its memory LIST
+# + DELETE. They mirror recall/remember: tenant-aware query + tenant-scoped
+# delete, so the same #83 isolation invariant holds at the data layer.
+
+
+def test_list_memories_returns_tenant_memories(dna_dir):
+    """``list_memories`` returns the tenant's own memories with the dashboard's
+    fields (name/summary/area/tags/affect/created_at)."""
+    from dna_cli import _mcp_server as M
+
+    async def scenario():
+        live = await M.boot_live(base_dir=str(dna_dir))
+        await M.remember_impl(
+            live, "ACME onboarding lesson delta", scope=_SCOPE, tenant="acme",
+            area="onboarding", tags=["a", "b"])
+        return await M.list_memories_impl(live, scope=_SCOPE, tenant="acme")
+
+    out = asyncio.run(scenario())
+    assert out["scope"] == _SCOPE
+    mine = [m for m in out["memories"] if "acme-onboarding" in m["name"]]
+    assert mine, out["memories"]
+    m = mine[0]
+    assert m["summary"] == "ACME onboarding lesson delta"
+    assert m["area"] == "onboarding"
+    assert set(m["tags"]) == {"a", "b"}
+    # every projected memory carries the dashboard's field set.
+    for entry in out["memories"]:
+        assert set(entry) == {"name", "summary", "area", "tags", "affect", "created_at"}
+
+
+def test_list_memories_is_tenant_isolated(dna_dir):
+    """Tenant A's ``list_memories`` never returns tenant B's memory; the shared
+    base memory is visible to both (per #83)."""
+    from dna_cli import _mcp_server as M
+
+    async def scenario():
+        live = await M.boot_live(base_dir=str(dna_dir))
+        await M.remember_impl(live, "ACME private list epsilon", scope=_SCOPE, tenant="acme")
+        await M.remember_impl(live, "GLOBEX private list zeta", scope=_SCOPE, tenant="globex")
+        await M.remember_impl(live, "BASE shared list eta", scope=_SCOPE, tenant=None)
+        acme = await M.list_memories_impl(live, scope=_SCOPE, tenant="acme")
+        globex = await M.list_memories_impl(live, scope=_SCOPE, tenant="globex")
+        return acme, globex
+
+    acme, globex = asyncio.run(scenario())
+    acme_names = {m["name"] for m in acme["memories"]}
+    globex_names = {m["name"] for m in globex["memories"]}
+    assert any("acme-private-list" in n for n in acme_names), acme_names
+    assert any("globex-private-list" in n for n in globex_names), globex_names
+    # zero cross-tenant leak ...
+    assert not any("globex" in n for n in acme_names)
+    assert not any("acme" in n for n in globex_names)
+    # ... but the shared base memory is visible to BOTH tenants.
+    assert any("base-shared-list" in n for n in acme_names), acme_names
+    assert any("base-shared-list" in n for n in globex_names), globex_names
+
+
+def test_forget_deletes_own_memory(dna_dir):
+    """``forget`` deletes a memory from the tenant's overlay; a subsequent
+    ``list_memories``/``recall`` no longer returns it."""
+    from dna_cli import _mcp_server as M
+
+    async def scenario():
+        live = await M.boot_live(base_dir=str(dna_dir))
+        out = await M.remember_impl(
+            live, "ACME forgettable memory theta", scope=_SCOPE, tenant="acme")
+        name = out["name"]
+        before = await M.list_memories_impl(live, scope=_SCOPE, tenant="acme")
+        res = await M.forget_impl(live, name, scope=_SCOPE, tenant="acme")
+        after = await M.list_memories_impl(live, scope=_SCOPE, tenant="acme")
+        recalled = await M.recall_impl(
+            live, "forgettable memory", scope=_SCOPE, tenant="acme", k=10)
+        return name, res, before, after, recalled
+
+    name, res, before, after, recalled = asyncio.run(scenario())
+    assert res == {"kind": "LessonLearned", "name": name, "forgotten": True}
+    assert name in {m["name"] for m in before["memories"]}
+    assert name not in {m["name"] for m in after["memories"]}
+    assert name not in {h["name"] for h in recalled["hits"]}
+
+
+def test_forget_nonexistent_is_clean_noop(dna_dir):
+    """Forgetting a name that doesn't exist is a clean no-op (``forgotten:
+    False``), never a crash/500."""
+    from dna_cli import _mcp_server as M
+
+    async def scenario():
+        live = await M.boot_live(base_dir=str(dna_dir))
+        return await M.forget_impl(
+            live, "rem-does-not-exist-0000000000", scope=_SCOPE, tenant="acme")
+
+    res = asyncio.run(scenario())
+    assert res == {"kind": "LessonLearned", "name": "rem-does-not-exist-0000000000",
+                   "forgotten": False}
+
+
+def test_forget_cannot_delete_base_or_other_tenant(dna_dir):
+    """A tenant's ``forget`` cannot delete the shared base doc nor another
+    tenant's overlay doc — the delete targets the caller's overlay only, so a
+    base/other-tenant name is a no-op AND the target survives (per #83)."""
+    from dna_cli import _mcp_server as M
+
+    async def scenario():
+        live = await M.boot_live(base_dir=str(dna_dir))
+        base = await M.remember_impl(live, "BASE undeletable iota", scope=_SCOPE, tenant=None)
+        other = await M.remember_impl(
+            live, "GLOBEX undeletable kappa", scope=_SCOPE, tenant="globex")
+        # acme tries to forget the base doc and globex's doc — both no-ops.
+        r_base = await M.forget_impl(live, base["name"], scope=_SCOPE, tenant="acme")
+        r_other = await M.forget_impl(live, other["name"], scope=_SCOPE, tenant="acme")
+        # both survive: base visible to everyone, globex's visible to globex.
+        base_ls = await M.list_memories_impl(live, scope=_SCOPE, tenant=None)
+        globex_ls = await M.list_memories_impl(live, scope=_SCOPE, tenant="globex")
+        return base, other, r_base, r_other, base_ls, globex_ls
+
+    base, other, r_base, r_other, base_ls, globex_ls = asyncio.run(scenario())
+    assert r_base["forgotten"] is False
+    assert r_other["forgotten"] is False
+    assert base["name"] in {m["name"] for m in base_ls["memories"]}
+    assert other["name"] in {m["name"] for m in globex_ls["memories"]}
+
+
+# ── 5. list_memories / forget — memory_mode gating (over a real token) ───────
+
+
+def test_list_memories_allowed_on_read_tier(dna_dir, http_server):
+    """``list_memories`` is a READ op → allowed on a Free (memory_mode=read)
+    tier, like ``recall``."""
+    pytest.importorskip("fastmcp")
+    from fastmcp import Client
+    from fastmcp.client.auth import BearerAuth
+
+    from dna_cli import _mcp_server as M
+
+    _reset_store()
+    asyncio.run(_seed_tiers(dna_dir))
+    verifier, mint = _verifier_and_mint()
+    server = M.build_server(base_dir=str(dna_dir), auth=verifier)
+    token = mint(tenant="acme", plan="free")
+
+    async def go(url):
+        async with Client(url, auth=BearerAuth(token)) as client:
+            res = await client.call_tool("list_memories", {"scope": _SCOPE})
+            assert "memories" in res.structured_content
+
+    with http_server(server) as url:
+        asyncio.run(go(url))
+
+
+def test_forget_denied_on_read_tier(dna_dir, http_server):
+    """``forget`` is a WRITE op → DENIED on a Free (memory_mode=read) tier by
+    ``memory_mode`` (NOT the family gate — memory IS in Free's families)."""
+    pytest.importorskip("fastmcp")
+    from fastmcp import Client
+    from fastmcp.client.auth import BearerAuth
+
+    from dna_cli import _mcp_server as M
+
+    _reset_store()
+    asyncio.run(_seed_tiers(dna_dir))
+    verifier, mint = _verifier_and_mint()
+    server = M.build_server(base_dir=str(dna_dir), auth=verifier)
+    token = mint(tenant="acme", plan="free")
+
+    async def go(url):
+        async with Client(url, auth=BearerAuth(token)) as client:
+            with pytest.raises(Exception) as ei:  # noqa: PT011 — ToolError/McpError
+                await client.call_tool("forget", {"name": "rem-anything", "scope": _SCOPE})
+            msg = str(ei.value).lower()
+            assert "memory_mode" in msg or "write" in msg
+
+    with http_server(server) as url:
+        asyncio.run(go(url))
+
+
+def test_forget_allowed_on_write_tier(dna_dir, http_server):
+    """``forget`` is allowed on a Pro (memory_mode=write) tier: a remembered
+    memory can be forgotten, and the forget reports ``forgotten: True``."""
+    pytest.importorskip("fastmcp")
+    from fastmcp import Client
+    from fastmcp.client.auth import BearerAuth
+
+    from dna_cli import _mcp_server as M
+
+    _reset_store()
+    asyncio.run(_seed_tiers(dna_dir))
+    verifier, mint = _verifier_and_mint()
+    server = M.build_server(base_dir=str(dna_dir), auth=verifier)
+    token = mint(tenant="acme", plan="pro")
+
+    async def go(url):
+        async with Client(url, auth=BearerAuth(token)) as client:
+            out = await client.call_tool(
+                "remember", {"summary": "pro write then forget lambda", "scope": _SCOPE})
+            name = out.structured_content["name"]
+            res = await client.call_tool("forget", {"name": name, "scope": _SCOPE})
+            assert res.structured_content == {
+                "kind": "LessonLearned", "name": name, "forgotten": True}
+
+    with http_server(server) as url:
+        asyncio.run(go(url))
