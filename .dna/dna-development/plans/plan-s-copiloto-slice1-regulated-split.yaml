@@ -1,0 +1,31 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-copiloto-slice1-regulated-split
+spec:
+  title: 'Plano: s-copiloto-slice1-regulated-split'
+  date: '2026-07-12'
+  status: accepted
+  story_ref: s-copiloto-slice1-regulated-split
+  journey_phase: plan
+  body: "Re-arquiteturar o slice-1 existente do copiloto-medico (Node puro) embutindo\
+    \ o veredito do rsh-copiloto-medico-fusion-insights, sem quebrar o loop atual\
+    \ (COACH_LLM=mock npm start roda ponta-a-ponta).\n\nFASE 1 \u2014 Split de m\xF3\
+    dulos: mover review.js (a superf\xEDcie que 'indica tratamento' = SaMD Classe\
+    \ II) de src/core/ para src/conduct/, atr\xE1s de uma flag CONDUCT_MODULE_ENABLED\
+    \ (default OFF em prod-like), com um marcador expl\xEDcito 'SaMD Classe II \u2014\
+    \ a regularizar'. src/core/ fica s\xF3 com o caminho ISENTO (prontuario + session-state\
+    \ + captura).\n\nFASE 2 \u2014 Safety-net: refor\xE7ar que o m\xF3dulo de conduta\
+    \ s\xF3 dispara no encerramento sobre gaps DETECTADOS (n\xE3o sugeridor sempre-ligado);\
+    \ config de threshold.\n\nFASE 3 \u2014 Explicabilidade: a UI (web/app.js) mostra\
+    \ justificativa + baseadoEm de cada sugest\xE3o (n\xE3o s\xF3 o veredito); aceite\
+    \ exige a raz\xE3o vis\xEDvel.\n\nFASE 4 \u2014 Telemetria: instrumentar RESOLVE\
+    \ (concordar/discordar) \u2192 m\xF3dulo de telemetria loga taxa de aceite/override.\n\
+    \nFASE 5 \u2014 Invariante: teste que garante que nenhuma sa\xEDda vai ao paciente\
+    \ direto (s\xF3 ao m\xE9dico).\n\nFASE 6 \u2014 STT PT-BR: camada de normaliza\xE7\
+    \xE3o (siglas FC/bpm, unidades, falado\u2192documentado) entre o STT e o review.\n\
+    \nTDD: cada fase come\xE7a por um teste em test/ (o repo roda 'node test/*.js').\
+    \ Todos os testes atuais seguem verdes + novos por fase. Branch feat/regulated-split,\
+    \ commit por fase, sem push (Barna revisa o diff)."
+  created_at: '2026-07-12T13:40:49+00:00'
+  updated_at: '2026-07-12T13:40:49+00:00'

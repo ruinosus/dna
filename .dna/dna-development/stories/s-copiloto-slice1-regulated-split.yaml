@@ -8,7 +8,7 @@ spec:
   description: "Copiloto M\xE9dico slice-1 com a arquitetura rachada: core-scribe\
     \ ISENTO + m\xF3dulo de sugest\xE3o-de-conduta SEPARADO (safety-net, regulado).\
     \ Output acion\xE1vel do experimento sp-fusion-validation."
-  status: todo
+  status: in-progress
   feature: f-dna-cloud-intelligence
   priority: high
   labels:
@@ -42,10 +42,21 @@ spec:
   - "Rationale rastre\xE1vel: linka rsh-copiloto-medico-fusion-insights + sp-fusion-validation."
   definition_of_done_source: cli-create
   created_at: '2026-07-12T13:19:38+00:00'
-  updated_at: '2026-07-12T13:19:38+00:00'
+  updated_at: '2026-07-12T13:40:55+00:00'
   timeline:
   - at: '2026-07-12T13:19:38+00:00'
     actor: claude-code
     type: status_change
     source: cli
     to: todo
+  - at: '2026-07-12T13:40:55+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  produces:
+  - kind: Plan
+    name: plan-s-copiloto-slice1-regulated-split
+    role: implementation
+    at: '2026-07-12T13:40:55+00:00'
