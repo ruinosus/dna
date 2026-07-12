@@ -1,0 +1,53 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-dna-cloud-intel-portal
+spec:
+  title: "As 3 telas da camada de intelig\xEAncia no portal Next.js (dna-cloud), ancoradas\
+    \ no"
+  description: "As 3 telas da camada de intelig\xEAncia no portal Next.js (dna-cloud),\
+    \ ancoradas no Intelligence Cycle: Direction (fontes+PIRs) / Dissemination (insights,\
+    \ m\xE9trica Precision) / Feedback (Actioned\xB7Dismissed\xB7Snoozed + flywheel).\
+    \ Prot\xF3tipo aprovado pelo Barna."
+  status: in-progress
+  feature: f-dna-cloud-intelligence
+  priority: high
+  labels:
+  - intelligence
+  - frontend
+  reporter: claude-code
+  business_value: 700
+  acceptance_criteria:
+  - "3 rotas no portal: /dashboard/sources (Direction), /dashboard/insights (Dissemination),\
+    \ /dashboard/feedback \u2014 na marca real (globals.css tokens, dois temas, helix)."
+  - "Fidelidade ao prot\xF3tipo aprovado: fita do Intelligence Cycle, PIRs no cadastro,\
+    \ ring de score + Precision como m\xE9trica-her\xF3i, chips Actioned/Dismissed/Snoozed,\
+    \ expander de suprimidos, flywheel Rocchio."
+  - "Sample-data fallback (chip 'sample data') quando o backend/REST n\xE3o responde\
+    \ \u2014 mesmo padr\xE3o de lib/dna.ts; wira na REST read-API onde j\xE1 existir."
+  - "Nav do dashboard ganha as 3 entradas; responsivo + acess\xEDvel (foco, aria)."
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - npm run build limpo; sem secrets; TS typecheck ok.
+  - Cada tela renderiza com sample data sem backend rodando.
+  - Branch feat/intel-portal, commits por tela, sem push (Barna revisa).
+  definition_of_done_source: cli-create
+  created_at: '2026-07-12T14:31:45+00:00'
+  updated_at: '2026-07-12T14:31:57+00:00'
+  timeline:
+  - at: '2026-07-12T14:31:45+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-12T14:31:57+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  produces:
+  - kind: Plan
+    name: plan-s-dna-cloud-intel-portal
+    role: implementation
+    at: '2026-07-12T14:31:57+00:00'
