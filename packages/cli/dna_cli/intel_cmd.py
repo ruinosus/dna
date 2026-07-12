@@ -22,6 +22,7 @@ import os
 import click
 
 from dna.extensions.intel import engine
+from dna.extensions.intel.analyzer import select_analyzer
 from dna_cli._ctx import dna_session, fail, print_json
 
 DEFAULT_TENANT = "demo"
@@ -65,18 +66,36 @@ def cmd_sources(scope: str, tenant: str | None, as_json: bool) -> None:
 @click.argument("source")
 @click.option("--scope", default=engine.DEFAULT_SCOPE, show_default=True)
 @click.option("--tenant", default=None, help=f"Tenant (default: $DNA_TENANT or {DEFAULT_TENANT!r}).")
+@click.option(
+    "--analyzer",
+    type=click.Choice(["auto", "llm", "seed"]),
+    default="auto",
+    show_default=True,
+    help=(
+        "Which analyzer runs the pass: 'llm' researches the source live via the "
+        "LLM, 'seed' uses the offline curated insights, 'auto' picks the LLM when "
+        "OPENAI_API_KEY is set (else seed)."
+    ),
+)
 @click.option("--json", "as_json", is_flag=True, help="Machine-readable output.")
-def cmd_run(source: str, scope: str, tenant: str | None, as_json: bool) -> None:
+def cmd_run(
+    source: str, scope: str, tenant: str | None, analyzer: str, as_json: bool,
+) -> None:
     """Run one intel pass over SOURCE: pass → rank → suppress → deliver.
 
     Writes the surviving insights as IntelInsight docs (state=new) and prints
     what was KEPT vs SUPPRESSED (below the source threshold — the anti-noise
-    core). Uses the SeedAnalyzer (real experiment insights, no LLM creds needed).
+    core). ``--analyzer auto`` (default) researches the source live via the LLM
+    when OPENAI_API_KEY is set and falls back to the offline SeedAnalyzer (real
+    experiment insights, no creds) otherwise; force either with ``llm``/``seed``.
     """
     t = _tenant(tenant)
+    chosen = select_analyzer(analyzer)
     with dna_session(scope) as s:
         try:
-            result = s.run(engine.run_pass(s.kernel, source, scope=s.scope, tenant=t))
+            result = s.run(engine.run_pass(
+                s.kernel, source, scope=s.scope, tenant=t, analyzer=chosen,
+            ))
         except LookupError as exc:
             raise fail(str(exc))
     if as_json:

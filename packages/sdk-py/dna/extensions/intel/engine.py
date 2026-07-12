@@ -167,6 +167,16 @@ async def run_pass(
         "notes": src_spec.get("notes"),
     }
 
+    # For a `type: scope` source the research material is the TARGET scope's docs.
+    # The analyzer is pure (no kernel) — so the engine, which owns kernel I/O,
+    # pre-fetches them into context['documents'] (fail-soft, bounded). The
+    # SeedAnalyzer ignores this; the LLMAnalyzer folds it into its prompt.
+    if src_spec.get("type") == "scope":
+        target_scope = src_spec.get("uri") or source_name
+        context["documents"] = await _gather_scope_documents(
+            kernel, str(target_scope), tenant,
+        )
+
     candidates = analyzer.analyze(src_spec, context)
 
     # 1. Base actionability score (+ inspectable rationale) for every candidate.
@@ -245,6 +255,62 @@ async def run_pass(
         analyzer=type(analyzer).__name__,
         kept=written, suppressed=suppressed_summary, deduped=deduped,
     )
+
+
+# ── context gathering (kernel-bound; the analyzer is pure) ─────────────────────
+
+
+_SCOPE_DOC_MAX = 12          # cap docs pulled for a `type: scope` source
+_SCOPE_DOC_CHARS = 4000      # per-doc text budget
+
+
+def _doc_text(spec: dict[str, Any]) -> str:
+    """A compact text projection of a doc's spec for LLM context — the string
+    scalar fields joined ``key: value``, longest-form fields first. Bounded."""
+    parts: list[str] = []
+    for key, val in spec.items():
+        if isinstance(val, str) and val.strip():
+            parts.append(f"{key}: {val}")
+    return "\n".join(parts)[:_SCOPE_DOC_CHARS]
+
+
+async def _gather_scope_documents(
+    kernel: Any, target_scope: str, tenant: str | None,
+) -> list[dict[str, Any]]:
+    """Pull the target scope's prompt-target docs as ``[{title, text}]`` research
+    material for a ``type: scope`` IntelSource. Bounded to ``_SCOPE_DOC_MAX`` and
+    fail-soft — a scope we cannot read yields ``[]`` (an honest empty context),
+    never an aborted pass."""
+    docs: list[dict[str, Any]] = []
+    try:
+        ports = kernel.kind_ports()
+    except Exception as exc:  # noqa: BLE001 — introspection failure must not break a pass
+        logger.warning("intel: could not enumerate kinds for scope %r: %s", target_scope, exc)
+        return docs
+    for port in ports:
+        if len(docs) >= _SCOPE_DOC_MAX:
+            break
+        if not getattr(port, "is_prompt_target", False):
+            continue
+        kind = getattr(port, "kind", None)
+        if not kind:
+            continue
+        try:
+            async for row in kernel.query(target_scope, kind, tenant=tenant):
+                if not isinstance(row, dict):
+                    continue
+                text = _doc_text(_spec_of(row))
+                if not text.strip():
+                    continue
+                docs.append({"title": f"{kind}/{_name_of(row)}", "text": text})
+                if len(docs) >= _SCOPE_DOC_MAX:
+                    break
+        except Exception as exc:  # noqa: BLE001 — one bad kind/scope must not abort
+            logger.warning(
+                "intel: scope-doc query failed (%s/%s): %s", target_scope, kind, exc,
+            )
+            continue
+    return docs
 
 
 # ── feedback + dedup helpers (kernel-bound; pure decisions live in the ─────────

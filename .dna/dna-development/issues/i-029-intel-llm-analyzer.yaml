@@ -1,0 +1,55 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-029-intel-llm-analyzer
+spec:
+  description: 'Make the intelligence layer research ARBITRARY sources via a live
+    LLM, not just the 2 seeded ones. Build the LLMAnalyzer for real: gather per-source-type
+    context (repo -> README + docs from the local uri; scope -> the scope''s docs
+    via the kernel; external -> uri hint) plus PIRs, prompt the model for candidate
+    insights as JSON, parse+validate robustly (bad/absent JSON -> empty list + warning,
+    never crash). Mirror the existing safety LLMJudgeScanner client wiring (openai
+    client gated on the API key env, chat.completions, strip code fences, json.loads).
+    Add ''dna intel run --analyzer [auto|llm|seed]'' (auto = LLM when the key is set,
+    else Seed). Injectable client so tests mock it deterministically. Logic stays
+    in the CORE; the CLI flag is the only face change. SeedAnalyzer remains the offline
+    default/fallback.'
+  type: enhancement
+  severity: medium
+  status: open
+  owner: claude
+  related_feature: f-dna-cloud-intelligence
+  timeline:
+  - at: '2026-07-12T21:31:21+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
+  - at: '2026-07-12T21:37:43+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Mirrored the safety LLMJudgeScanner client wiring exactly (openai client\
+      \ gated on the API-key env, chat.completions.create, strip code fences, json.loads)\
+      \ \u2014 that is the canonical LLM-call pattern in the repo (memory has no LLM\
+      \ call; api_scanner is HTTP). Built LLMAnalyzer for real: accepts an INJECTED\
+      \ client (tests mock it, no live key), and gathers per-type context \u2014 repo\
+      \ reads README + bounded docs/specs from the local uri (pure pathlib, no kernel);\
+      \ external uses the uri as a hint; scope docs are pulled by the kernel-bound\
+      \ ENGINE into context['documents'] (the analyzer is pure, has no kernel) and\
+      \ the analyzer folds them in. Parsing is robust: bad/absent/non-object JSON\
+      \ -> [] + a logged warning, never a crash; citations validated to {url, title?}.\
+      \ Selection: select_analyzer(auto|llm|seed); auto = LLM when a client/key is\
+      \ available, else Seed. Wired the --analyzer flag through the thin CLI only\
+      \ (REST unchanged); logic stays in core. Kept SeedAnalyzer as the offline default/fallback.\
+      \ Guards run in a fresh venv with the intel entry-point registered: regenerated\
+      \ docs/reference (only cli/intel.md changed), docs_coverage_guard + brand_guard\
+      \ clean, 39 intel tests green (19 baseline + 20 new). Python-only; TS twin stays\
+      \ the tracked follow-up i-027."
+  - at: '2026-07-12T21:39:08+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR open for review: https://github.com/ruinosus/dna/pull/92 (branch\
+      \ feat/intel-llm-analyzer). Resolve on merge per the issue arc \u2014 not merging\
+      \ here."
