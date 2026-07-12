@@ -35,3 +35,17 @@ spec:
       \ mexe no SDK \u2014 churn. Sequencia: pesquisa -> ADR -> migracao incremental\
       \ (extrai application layer, depois split das faces, shim pra dna mcp/api serve\
       \ nao quebrar)."
+  - at: '2026-07-12T16:54:13+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Pesquisa (wf_af29628b-a68, 95 agentes, 22/25 claims verificados) VOLTOU.\
+      \ Veredito hexagonal inequivoco: (1) a application layer/_impl vai pro CORE,\
+      \ faces (CLI/MCP/REST) viram adapters finos; (2) shipar dna-mcp/dna-api como\
+      \ distribuicoes SEPARADAS versionadas em lockstep \u2014 NAO extras (so gateiam\
+      \ deps) NAO na CLI (arrasta uvicorn/starlette); (3) 1 uvicorn por container\
+      \ ACA. MOVIMENTO No1 = extrair _impl da CLI pro core (load-bearing); split das\
+      \ faces e follow-up mecanico. Migracao incremental com shims (dna mcp/api serve\
+      \ nunca quebra), sem big-bang. Rsh: rsh-faces-reorg."
+  research_refs:
+  - rsh-faces-reorg
