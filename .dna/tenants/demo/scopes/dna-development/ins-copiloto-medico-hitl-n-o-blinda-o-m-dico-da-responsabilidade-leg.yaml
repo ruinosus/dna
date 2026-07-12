@@ -1,0 +1,20 @@
+apiVersion: github.com/ruinosus/dna/intel/v1
+kind: IntelInsight
+metadata:
+  name: ins-copiloto-medico-hitl-n-o-blinda-o-m-dico-da-responsabilidade-leg
+spec:
+  title: "HITL N\xC3O blinda o m\xE9dico da responsabilidade legal"
+  fact: "O m\xE9dico segue 100% respons\xE1vel, mas usar+seguir um aid explic\xE1\
+    vel historicamente PROTEGE em mock-juries."
+  why: "Design explic\xE1vel \xE9 tamb\xE9m mitiga\xE7\xE3o legal \u2014 n\xE3o s\xF3\
+    \ UX."
+  action: "Nunca deixar a IA aconselhar o paciente direto; consultar advogado regulat\xF3\
+    rio/sa\xFAde BR antes de shipar a camada de conduta."
+  score: 0.87
+  source_ref: copiloto-medico
+  pirs:
+  - "regula\xE7\xE3o"
+  citations: []
+  state: new
+  evidence_rating: opinion-practice
+  created_at: '2026-07-12T17:26:54+00:00'

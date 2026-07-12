@@ -1,0 +1,19 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-dna-cloud-intel-portal
+spec:
+  title: 'Plano: s-dna-cloud-intel-portal'
+  date: '2026-07-12'
+  status: accepted
+  story_ref: s-dna-cloud-intel-portal
+  journey_phase: plan
+  body: "Portar o prot\xF3tipo aprovado (scratchpad/dna-cloud-intelligence.html) pro\
+    \ portal Next.js. F1: componentes compartilhados (CycleRibbon, cards) + rota /dashboard/sources\
+    \ com o form de PIRs. F2: /dashboard/insights (ring de score, KPI Precision, lista\
+    \ + suprimidos). F3: /dashboard/feedback (estados Actioned/Dismissed/Snoozed +\
+    \ flywheel + operate). Sample data em lib/, fallback como lib/dna.ts. Reusa globals.css\
+    \ + padr\xF5es de dashboard/dna e dashboard/memory. Branch feat/intel-portal,\
+    \ commit por fase."
+  created_at: '2026-07-12T14:31:51+00:00'
+  updated_at: '2026-07-12T14:31:51+00:00'

@@ -1,0 +1,20 @@
+apiVersion: github.com/ruinosus/dna/intel/v1
+kind: IntelInsight
+metadata:
+  name: ins-copiloto-medico-sugerir-conduta-em-tempo-real-white-space-real
+spec:
+  title: "\"Sugerir conduta em tempo real\" \xE9 white-space real"
+  fact: "At\xE9 a Corti FactsR (jun/2025, o especialista mais avan\xE7ado) para explicitamente\
+    \ em \"o caminho PARA\" decision support, sem empurrar conduta no ponto de cuidado."
+  why: "O diferencial de sugerir conduta \xE9 genu\xEDno e desocupado \u2014 mas \xE9\
+    \ exatamente a linha onde a regula\xE7\xE3o morde."
+  action: "Cunhar na conduta / \"o que passou batido\", N\xC3O no scribing (perde\
+    \ pra Voa na distribui\xE7\xE3o)."
+  score: 1.0
+  source_ref: copiloto-medico
+  pirs:
+  - concorrentes
+  citations: []
+  state: new
+  evidence_rating: evidence-based
+  created_at: '2026-07-12T17:26:54+00:00'

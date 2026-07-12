@@ -7,16 +7,22 @@ spec:
   description: "Automatic research + insights over the user's N apps/use-cases, operating\
     \ existing tools (Jira/ADO/GitHub) via MCPFederation \u2014 not a tracker. Turns\
     \ DNA Cloud from passive storage into proactive intelligence. ADR: adr-dna-cloud-intelligence-layer."
-  status: discovery
+  status: in-development
   epic: e-dna-portability
   reporter: claude-code
   priority: high
   business_value: 800
   created_at: '2026-07-12T12:30:32+00:00'
-  updated_at: '2026-07-12T12:30:32+00:00'
+  updated_at: '2026-07-12T13:39:43+00:00'
   timeline:
   - at: '2026-07-12T12:30:32+00:00'
     actor: claude-code
     type: status_change
     source: cli
     to: discovery
+  - at: '2026-07-12T13:39:43+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: discovery
+    to: in-development

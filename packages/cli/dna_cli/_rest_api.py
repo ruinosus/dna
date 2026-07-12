@@ -160,7 +160,7 @@ def build_app(
     Raises a clean ``RuntimeError`` if the optional ``fastapi`` dependency is absent.
     """
     try:
-        from fastapi import Depends, FastAPI, Header, HTTPException, Query
+        from fastapi import Body, Depends, FastAPI, Header, HTTPException, Query
         from fastapi.middleware.cors import CORSMiddleware
     except ModuleNotFoundError as exc:  # pragma: no cover — exercised via CLI
         raise RuntimeError(
@@ -175,6 +175,9 @@ def build_app(
         list_tools_impl,
         recall_impl,
     )
+    # The intel face delegates to the CORE engine (adr-faces-reorg: logic in the
+    # core, faces thin). These handlers only translate transport + call in.
+    from dna.extensions.intel import engine as intel_engine
 
     app = FastAPI(
         title="DNA REST read-API",
@@ -190,7 +193,7 @@ def build_app(
     app.add_middleware(
         CORSMiddleware,
         allow_origins=origins,
-        allow_methods=["GET", "DELETE", "OPTIONS"],
+        allow_methods=["GET", "DELETE", "PATCH", "OPTIONS"],
         allow_headers=["Authorization", "Content-Type"],
     )
 
@@ -300,6 +303,57 @@ def build_app(
         try:
             return await delete_memory_impl(await _live(), name, scope, tenant)
         except MemoryNotFound as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from None
+
+    # -- intel (sources + insights + the feedback state transition) ----------
+    # Thin delegates to dna.extensions.intel.engine — the portal's intelligence
+    # surface. ZERO business logic here (adr-faces-reorg).
+
+    @app.get("/v1/sources", dependencies=guarded)
+    async def sources(
+        scope: str | None = Query(default=None),
+        tenant: str | None = Query(default=None),
+    ) -> dict[str, Any]:
+        """List the tenant's watched IntelSource docs (the Direction stage)."""
+        live = await _live()
+        sc = scope or live.base_scope
+        items = await intel_engine.list_sources(live.kernel, scope=sc, tenant=tenant)
+        return {"scope": sc, "tenant": tenant, "sources": items}
+
+    @app.get("/v1/insights", dependencies=guarded)
+    async def insights(
+        scope: str | None = Query(default=None),
+        tenant: str | None = Query(default=None),
+        state: str | None = Query(default=None),
+        source_ref: str | None = Query(default=None),
+    ) -> dict[str, Any]:
+        """List the tenant's IntelInsight docs (ranked), optionally filtered by
+        ``state`` and/or originating ``source_ref``."""
+        live = await _live()
+        sc = scope or live.base_scope
+        items = await intel_engine.list_insights(
+            live.kernel, scope=sc, tenant=tenant, state=state, source_ref=source_ref,
+        )
+        return {"scope": sc, "tenant": tenant, "insights": items}
+
+    @app.patch("/v1/insights/{name}/state", dependencies=guarded)
+    async def set_insight_state(
+        name: str,
+        state: str = Body(..., embed=True),
+        scope: str | None = Query(default=None),
+        tenant: str | None = Query(default=None),
+    ) -> dict[str, Any]:
+        """Set an insight's feedback state (new|actioned|dismissed|snoozed) —
+        the reader's disposition. Delegates the read-modify-write to the core."""
+        live = await _live()
+        sc = scope or live.base_scope
+        try:
+            return await intel_engine.set_insight_state(
+                live.kernel, name, state, scope=sc, tenant=tenant,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from None
+        except intel_engine.InsightNotFound as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from None
 
     return app

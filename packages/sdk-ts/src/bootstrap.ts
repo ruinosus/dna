@@ -41,6 +41,7 @@ import { ModelRegExtension } from "./extensions/modelreg.js";
 import { CloudExtension } from "./extensions/cloud.js";
 import { AutomationExtension } from "./extensions/automation.js";
 import { EvalExtension } from "./extensions/eval.js";
+import { IntelExtension } from "./extensions/intel.js";
 import type { CacheItem } from "./kernel/protocols.js";
 import type { Extension } from "./kernel/protocols.js";
 import type { ManifestInstance } from "./kernel/instance.js";
@@ -77,6 +78,7 @@ function loadBuiltins<T extends { load(ext: Extension): void }>(target: T): T {
     new CloudExtension(),
     new AutomationExtension(),
     new EvalExtension(),
+    new IntelExtension(),
   ] as Extension[]) {
     target.load(ext);
   }

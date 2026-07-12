@@ -121,6 +121,7 @@ modelreg = "dna.extensions.modelreg:ModelRegExtension"
 cloud = "dna.extensions.cloud:CloudExtension"
 automation = "dna.extensions.automation:AutomationExtension"
 eval = "dna.extensions.eval:EvalExtension"
+intel = "dna.extensions.intel:IntelExtension"
 
 [build-system]
 requires = ["hatchling"]

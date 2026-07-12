@@ -1,0 +1,18 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-027-i-intel-engine-ts-parity
+spec:
+  description: "Paridade TS do engine intel (analyzer/ranker/engine.run_pass). Kinds\
+    \ ja tem paridade; engine foi Python-first no skeleton. Funcoes puras dict-in/dict-out\
+    \ + analyzer por protocolo \u2192 twin TS e espelho direto."
+  type: task
+  severity: medium
+  status: open
+  related_feature: f-dna-cloud-intelligence
+  timeline:
+  - at: '2026-07-12T17:28:58+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

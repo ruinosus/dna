@@ -1,0 +1,18 @@
+apiVersion: github.com/ruinosus/dna/intel/v1
+kind: IntelInsight
+metadata:
+  name: ins-copiloto-medico-ui-concorda-discorda-tem-risco-documentado-de-de
+spec:
+  title: UI "concorda/discorda" tem risco documentado de deskilling
+  fact: "Revis\xE3o superficial degrada o julgamento cl\xEDnico (automation bias)\
+    \ \u2014 risco documentado."
+  why: "\"Preserva o julgamento\" vira um claim test\xE1vel e diferenciador."
+  action: "Mostrar racioc\xEDnio/evid\xEAncia (n\xE3o s\xF3 veredito); exigir justificativa\
+    \ ativa em aceites de alto risco; instrumentar taxa de aceite/override."
+  score: 0.85
+  source_ref: copiloto-medico
+  pirs: []
+  citations: []
+  state: new
+  evidence_rating: evidence-based
+  created_at: '2026-07-12T17:26:54+00:00'

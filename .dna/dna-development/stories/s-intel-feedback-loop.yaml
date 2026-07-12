@@ -1,0 +1,39 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-intel-feedback-loop
+spec:
+  title: "O flywheel anti-ru\xEDdo: usu\xE1rio marca cada insight como \xFAtil/agido/ru\xED\
+    do \u2192 ajusta"
+  description: "O flywheel anti-ru\xEDdo: usu\xE1rio marca cada insight como \xFA\
+    til/agido/ru\xEDdo \u2192 ajusta o threshold do ranker + alimenta a mem\xF3ria\
+    \ de dedup. A relev\xE2ncia melhora sozinha."
+  status: todo
+  feature: f-dna-cloud-intelligence
+  priority: medium
+  labels:
+  - intelligence
+  - anti-noise
+  - memory
+  reporter: claude-code
+  business_value: 500
+  acceptance_criteria:
+  - "Todo insight entregue tem feedback: \xFAtil | agido | ru\xEDdo."
+  - "Feedback 'ru\xEDdo' sobe o threshold efetivo pra aquele tipo/fonte; 'agido' refor\xE7\
+    a o padr\xE3o."
+  - "M\xE9trica de 'taxa de ru\xEDdo' (ru\xEDdo / entregues) exposta e caindo ao longo\
+    \ do tempo \xE9 o KPI do produto."
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - "Loop testado: marcar um tipo como ru\xEDdo \u2192 pr\xF3ximo pass suprime candidatos\
+    \ similares."
+  - "Feedback grava na mem\xF3ria (fecha com s-intel-dedup-memory)."
+  definition_of_done_source: cli-create
+  created_at: '2026-07-12T13:39:11+00:00'
+  updated_at: '2026-07-12T13:39:11+00:00'
+  timeline:
+  - at: '2026-07-12T13:39:11+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo

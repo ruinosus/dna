@@ -1,0 +1,38 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-intel-digest-delivery
+spec:
+  title: "Entregar como digest priorizado e batcheado (n\xE3o firehose): o feed estilo\
+    \ FOCUS,"
+  description: "Entregar como digest priorizado e batcheado (n\xE3o firehose): o feed\
+    \ estilo FOCUS, com enquadramento de 1-a\xE7\xE3o por insight e cad\xEAncia controlada."
+  status: todo
+  feature: f-dna-cloud-intelligence
+  priority: high
+  labels:
+  - intelligence
+  - anti-noise
+  reporter: claude-code
+  business_value: 600
+  acceptance_criteria:
+  - "Insights chegam como digest peri\xF3dico (n\xE3o push por evento) \u2014 batching\
+    \ \xE9 anti-ru\xEDdo de primeira classe."
+  - "Cada item = fato (citado) + por que importa + 1 a\xE7\xE3o sugerida (o formato\
+    \ que passou no sp-fusion-validation)."
+  - "Usu\xE1rio controla a cad\xEAncia (di\xE1rio/semanal/sob-demanda) e o teto de\
+    \ itens por digest."
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - Endpoint/REST + surface no portal (reusa a REST read-API do DNA).
+  - "Testado: N insights acima do threshold \u2192 1 digest ordenado por acionabilidade,\
+    \ respeitando o teto."
+  definition_of_done_source: cli-create
+  created_at: '2026-07-12T13:39:09+00:00'
+  updated_at: '2026-07-12T13:39:09+00:00'
+  timeline:
+  - at: '2026-07-12T13:39:09+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo

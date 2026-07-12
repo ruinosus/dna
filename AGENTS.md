@@ -93,3 +93,15 @@ seal linking git history to the work item (`dna sdlc story commits s-x`).
   are invisible to `story commits` / `story show`; absence is signal.
 - **Never mark a story `done` with a gap** — finish to market standard or
   keep it `in-progress` / decompose into tracked child stories.
+- **Never commit to `main` directly — every change lands via a feature
+  branch → PR.** `main` tracks `origin/main`; work happens on a branch and
+  merges through review (`dna sdlc story pr` opens the PR pre-filled from the
+  story; `story done` only after it merges). Cherry-picking commits onto
+  `main` to "keep momentum" is the exact anti-pattern — it bypasses review
+  and is how the tree silently diverges from the remote. **This holds for
+  EVERY repo you touch, each on its own gitflow:** `dna` and `dna-cloud` are
+  PR-based (branch → PR → merge, no `--admin` bypass); a repo with no remote
+  (a local-only app) merges to its local trunk with `--no-ff`. When you start
+  in one repo's directory but the work belongs to another, state the repo +
+  branch + path in every update so nobody loses the thread. (Regressed once —
+  `i-respect-repo-gitflow`.)

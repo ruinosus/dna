@@ -21,6 +21,7 @@ These pages are **generated from the Click command definitions** by
 | [`dna eval`](eval.md) | Run EvalSuites locally (offline, deterministic) and compare runs against a pinned EvalBaseline. |
 | [`dna init`](init.md) | Make a project agent-ready: board + skill + AGENTS.md + git hooks. |
 | [`dna install`](install.md) | Install bundles/Kinds from a repository into the local source. |
+| [`dna intel`](intel.md) | Portfolio intelligence — run passes, inspect sources + insights. |
 | [`dna mcp`](mcp.md) | Expose the live DNA (definitions + SDLC + memory) over MCP. |
 | [`dna memory`](memory.md) | Declarative memory over existing Kinds (remember/recall/forget/consolidate). |
 | [`dna new`](new.md) | Scaffold a valid Kind skeleton into a scope (agent \| soul \| guardrail \| tool). |

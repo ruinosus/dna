@@ -1,0 +1,97 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-copiloto-live-review
+spec:
+  title: "Revis\xE3o ao vivo do copiloto: painel de cobertura da consulta que se preenche\
+    \ (a "
+  description: "Revis\xE3o ao vivo do copiloto: painel de cobertura da consulta que\
+    \ se preenche (a revisar \u2192 conduzido) periodicamente + bot\xE3o + config,\
+    \ sobre a transcri\xE7\xE3o INTEIRA. Prot\xF3tipo aprovado pelo Barna."
+  status: review
+  feature: f-dna-cloud-intelligence
+  priority: high
+  labels:
+  - frontend
+  reporter: claude-code
+  business_value: 650
+  acceptance_criteria:
+  - "Review peri\xF3dico enquanto 'capturando': timer configur\xE1vel (30s/60s/2min)\
+    \ via UI + toggle auto-review + bot\xE3o 'Revisar agora' \u2014 sem esperar o\
+    \ encerramento."
+  - "Painel de cobertura: coluna 'A revisar' (pendentes, com justificativa+baseadoEm)\
+    \ e 'Conduzido' (cobertos); anel de cobertura N/M; item migra pendente\u2192conduzido\
+    \ ao registrar."
+  - "A extra\xE7\xE3o roda sobre a transcri\xE7\xE3o INTEIRA + prontu\xE1rio (contexto\
+    \ completo), N\xC3O os \xFAltimos 12 turnos \u2014 distinto do tip-suggester."
+  - "Painel passivo que se preenche (n\xE3o pop-ups que interrompem); 'a revisar'\
+    \ = 'pode ter passado', nunca 'fa\xE7a X'. Atr\xE1s da flag CONDUCT_MODULE_ENABLED\
+    \ + marcador SaMD."
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - "npm test verde (novos testes: categoriza\xE7\xE3o coberto/pendente + full-context\
+    \ + loop); loop de encerramento continua funcionando."
+  - COACH_LLM=mock npm start roda o novo painel ponta-a-ponta; branch feat/live-review
+    off feat/regulated-split, sem push.
+  - "Design fiel ao prot\xF3tipo aprovado (anel, grupos, controles, countdown, contexto-inteiro\
+    \ expl\xEDcito)."
+  definition_of_done_source: cli-create
+  created_at: '2026-07-12T14:33:52+00:00'
+  updated_at: '2026-07-12T14:58:18+00:00'
+  timeline:
+  - at: '2026-07-12T14:33:52+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-12T14:34:05+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-12T14:42:39+00:00'
+    actor: claude-code
+    type: decision
+    source: cli
+    summary: "PORT\xC3O DE ROLLOUT REGULAT\xD3RIO (Barna, postura A): a revis\xE3\
+      o-ao-vivo \xE9 constru\xEDda COMPLETA mas hard-gated \u2014 CONDUCT_MODULE_ENABLED\
+      \ OFF em producao. Sem registro ANVISA, o modulo de sugestao de conduta NAO\
+      \ roda em prod clinica (SaMD Classe II; HITL nao isenta). Tres travas: (1) painel\
+      \ cortado na linha regulatoria \u2014 'cobertura da documentacao' (isento, pode\
+      \ ligar) vs 'a revisar/sugestao de conduta' (regulado, so com flag ON); (2)\
+      \ banner in-product quando flag ON fora de prod: 'uso restrito a pesquisa/piloto\
+      \ com consentimento; requer registro ANVISA'; (3) DoD: nunca habilitado em prod\
+      \ sem registro. Dev/demo/piloto-com-consentimento apenas ate o registro sair."
+    commit_ref: 845a1ce3ab84e553ac26e0090bba98e3f549ebac
+  - at: '2026-07-12T14:58:09+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'Agent fechou em 3 commits TDD (feat/live-review). 12 suites verdes.
+      O corte regulatorio funcionou: com flag OFF -> so cobertura de documentacao
+      (SEM LLM, sem inferir tratamento) roda, coluna de conduta AUSENTE, banner ausente;
+      com flag ON -> coluna de conduta + banner ANVISA aparecem. Loop periodico configuravel
+      (setInterval gated a phase=capturando) + review_now + live_config (auto/intervalo).
+      Contexto INTEIRO passado (teste assere turnos 1 e 15 presentes; distinto do
+      tip-suggester last-12). Painel passivo (re-render, sem modal). Verificado boot
+      flag ON/OFF na 3100.'
+    commit_ref: e6e896f977fcbaea2073c3b57865b3b3973a5432
+  - at: '2026-07-12T14:58:13+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'review sem PR aberto (--no-pr): Repo separado copiloto-medico, branch
+      local feat/live-review off feat/regulated-split (sem remote). Review = diff
+      local pelo Barna + teste ao vivo.'
+  - at: '2026-07-12T14:58:18+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
+  produces:
+  - kind: Plan
+    name: plan-s-copiloto-live-review
+    role: implementation
+    at: '2026-07-12T14:34:05+00:00'

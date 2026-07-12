@@ -1,0 +1,41 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-intel-dedup-memory
+spec:
+  title: "Nunca mostrar o mesmo insight duas vezes: dedup sem\xE2ntico do candidato\
+    \ contra a "
+  description: "Nunca mostrar o mesmo insight duas vezes: dedup sem\xE2ntico do candidato\
+    \ contra a mem\xF3ria (LessonLearned) do que j\xE1 foi surfado/agido/dispensado\
+    \ \u2014 repeti\xE7\xE3o \xE9 a fonte #1 de ru\xEDdo."
+  status: todo
+  feature: f-dna-cloud-intelligence
+  priority: high
+  labels:
+  - intelligence
+  - anti-noise
+  - memory
+  reporter: claude-code
+  business_value: 700
+  acceptance_criteria:
+  - "Cada insight surfado \xE9 gravado na mem\xF3ria (co-pillar) com estado: surfado\
+    \ | agido | dispensado."
+  - "Candidato novo \xE9 matcheado semanticamente contra o hist\xF3rico; duplicata\
+    \ (mesmo tema/mesma a\xE7\xE3o) \xE9 dropada antes da entrega."
+  - "Insight j\xE1 'agido' ou 'dispensado' pelo usu\xE1rio NUNCA reaparece (a n\xE3\
+    o ser que o contexto mude materialmente)."
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - "Dedup testado: rodar 2x o mesmo research \u2192 2\xAA vez entrega 0 insights\
+    \ novos."
+  - "Tenant-isolado (usa o co-pillar de mem\xF3ria, respeita o Tier memory_mode)."
+  - "M\xE9trica: taxa de dedup por pass."
+  definition_of_done_source: cli-create
+  created_at: '2026-07-12T13:39:03+00:00'
+  updated_at: '2026-07-12T13:39:03+00:00'
+  timeline:
+  - at: '2026-07-12T13:39:03+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo

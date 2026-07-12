@@ -1,0 +1,71 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-intel-portfolio-context
+spec:
+  title: "Definir e ingerir o 'portf\xF3lio': o conjunto de apps/scopes/sinais que\
+    \ a camada o"
+  description: "Definir e ingerir o 'portf\xF3lio': o conjunto de apps/scopes/sinais\
+    \ que a camada observa, COM escopo expl\xEDcito (o que est\xE1 dentro/fora) \u2014\
+    \ n\xE3o d\xE1 pra ranquear relev\xE2ncia sem contexto delimitado."
+  status: in-progress
+  feature: f-dna-cloud-intelligence
+  priority: high
+  labels:
+  - intelligence
+  - anti-noise
+  reporter: claude-code
+  business_value: 600
+  acceptance_criteria:
+  - "Um Kind declarativo de 'watchlist': apps/repos/scopes DNA + fontes de sinal externo\
+    \ que o usu\xE1rio quer observar."
+  - "Controles de escopo por item: mutar, focar, pausar \u2014 o usu\xE1rio poda o\
+    \ ru\xEDdo na fonte."
+  - "O contexto de cada app (DNA scope, README, specs) \xE9 o que personaliza o research\
+    \ \u2014 n\xE3o prompt gen\xE9rico."
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - Watchlist Kind (Py+TS parity) + CLI pra add/remove/mute.
+  - 'Testado: research disparado herda o contexto do app correto.'
+  definition_of_done_source: cli-create
+  created_at: '2026-07-12T13:39:06+00:00'
+  updated_at: '2026-07-12T16:54:17+00:00'
+  timeline:
+  - at: '2026-07-12T13:39:06+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-12T16:35:54+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-12T16:35:58+00:00'
+    actor: claude-code
+    type: decision
+    source: cli
+    summary: 'Insight Kind co-construido na fundacao junto do IntelSource: ranker/digest/dedup/feedback
+      TODOS referenciam Insight, entao ele e a fundacao compartilhada, nao pertence
+      a uma story so. Ambos TENANTED (dado per-tenant, nao default herdavel de _lib)
+      pela maxima herdavel=>nunca-TENANTED.'
+    commit_ref: bdbb8184a971af3a8a2e8468fd9a12332939357c
+  - at: '2026-07-12T16:54:17+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "FUNDACAO SHIPADA (branch feat/intel-foundation, 3 commits, todos guards\
+      \ verdes). 2 Kinds byte-identicos Py<->TS: IntelSource (intel-source) + IntelInsight\
+      \ (alias intel-insight \u2014 nomeado IntelInsight nao Insight pq sdlc-insight\
+      \ ja existe; colisao evitada). Ambos TENANTED record. Insight embeddable (embed:[title,fact])\
+      \ p/ o dedup depois. Guards: descriptor-hash-parity, ratchet, strict-schema-lint,\
+      \ inheritable-tenancy, docs-coverage \u2014 15 passed Py, 9 pass TS. FALTA na\
+      \ story (nao done): CLI de gestao de fontes (dna intel source add/mute) + wiring.\
+      \ Kinds sao a fundacao; gestao das fontes e o resto."
+    commit_ref: ba52cd900c9f4288b425b6706ea524c7e7aacb5f
+  produces:
+  - kind: Plan
+    name: plan-s-intel-portfolio-context
+    role: implementation
+    at: '2026-07-12T16:35:54+00:00'

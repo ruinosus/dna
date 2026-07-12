@@ -23,6 +23,7 @@ from dna_cli import (
     eval_cmd,
     init_cmd,
     install_cmd,
+    intel_cmd,
     kind_cmd,
     mcp_cmd,
     memory_cmd,
@@ -91,6 +92,7 @@ main.add_command(eval_cmd.eval_)
 main.add_command(emit_cmd.emit)
 main.add_command(mcp_cmd.mcp)
 main.add_command(api_cmd.api)
+main.add_command(intel_cmd.intel)
 
 
 if __name__ == "__main__":

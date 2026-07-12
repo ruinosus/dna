@@ -1,0 +1,79 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-intel-insight-ranker
+spec:
+  title: "O n\xFAcleo anti-ru\xEDdo: pontuar cada insight candidato por ACIONABILIDADE\
+    \ (faz o us"
+  description: "O n\xFAcleo anti-ru\xEDdo: pontuar cada insight candidato por ACIONABILIDADE\
+    \ (faz o usu\xE1rio agir?), n\xE3o s\xF3 relev\xE2ncia \u2014 abaixo do threshold\
+    \ \xE9 SUPRIMIDO, n\xE3o entregue."
+  status: in-progress
+  feature: f-dna-cloud-intelligence
+  priority: highest
+  labels:
+  - intelligence
+  - anti-noise
+  reporter: claude-code
+  business_value: 900
+  acceptance_criteria:
+  - "Todo insight candidato recebe um score de acionabilidade (0-1) + rationale inspecion\xE1\
+    vel (por que agiria)."
+  - "Existe um threshold configur\xE1vel abaixo do qual o insight \xE9 SUPRIMIDO (nunca\
+    \ entregue) \u2014 o default erra pro lado de suprimir."
+  - "O ranker \xE9 audit\xE1vel: d\xE1 pra ver o que foi suprimido e por qu\xEA (n\xE3\
+    o some silenciosamente sem trilha)."
+  - "Ranking usa o contexto DNA do app (n\xE3o gen\xE9rico) \u2014 o mesmo fato pontua\
+    \ diferente por produto."
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - "Fun\xE7\xE3o de score + supress\xE3o testada com golden path + casos de ru\xED\
+    do conhecido (fato gen\xE9rico \u2192 suprimido; fato espec\xEDfico-acion\xE1\
+    vel \u2192 passa)."
+  - "M\xE9trica exposta: taxa de supress\xE3o + distribui\xE7\xE3o de scores por pass."
+  - "Doc do contrato de score (o que conta como 'acion\xE1vel') no repo."
+  definition_of_done_source: cli-create
+  created_at: '2026-07-12T13:39:00+00:00'
+  updated_at: '2026-07-12T17:27:40+00:00'
+  timeline:
+  - at: '2026-07-12T13:39:00+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-12T17:10:08+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-12T17:10:12+00:00'
+    actor: claude-code
+    type: decision
+    source: cli
+    summary: Walking-skeleton cruza 3 stories (ranker + research-trigger + digest-delivery)
+      numa fatia fina end-to-end. Atribuido ao ranker (core, highest). O analyzer
+      nasce SEED (insights reais dos experimentos) p/ o portal mostrar dado real sem
+      creds LLM; o LLMAnalyzer real e o aprofundamento. Engine no core (nao na CLI)
+      desde ja, por adr-faces-reorg.
+    commit_ref: 21bf84cc0933cefbf2cb5e349947431e87edd4ef
+  - at: '2026-07-12T17:27:40+00:00'
+    actor: claude-code
+    type: decision
+    source: cli
+    summary: "WALKING-SKELETON ANDOU ponta-a-ponta no main (engine cherry-picked,\
+      \ 4 commits). dna intel run copiloto-medico rodou ao vivo: 7 insights entregues\
+      \ (ranqueados) + 1 SUPRIMIDO abaixo do threshold com rationale inspecionavel\
+      \ (base 0.30, no action, evidence=anecdotal, no PIR match = suprimido). Core\
+      \ (analyzer+ranker+engine) transport-agnostic (test guarda contra imports de\
+      \ transporte); CLI (dna intel run/list) + REST (/v1/sources,/v1/insights,PATCH\
+      \ state) FINOS delegando \u2014 padrao adr-faces-reorg. SeedAnalyzer com os\
+      \ insights reais dos experimentos (roda sem creds LLM); LLMAnalyzer stub real.\
+      \ 16+15 testes verdes. Falta: wirar o portal na REST (some o chip sample), paridade\
+      \ TS do engine (follow-up), LLMAnalyzer com creds."
+    commit_ref: 9b9a106729cc6fdcde6603aace44166ff471712b
+  produces:
+  - kind: Plan
+    name: plan-s-intel-insight-ranker
+    role: implementation
+    at: '2026-07-12T17:10:08+00:00'

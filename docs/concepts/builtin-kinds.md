@@ -402,6 +402,36 @@ to resolve a tenant's plan when the token carries no explicit `plan` claim
 (falling back to Free). Zero Stripe or billing code lives in the OSS SDK —
 it only reads the assignment.
 
+## Intelligence layer
+
+The `intel` extension is the data foundation for the DNA's intelligence layer
+(automated research → ranked insights → feedback). It ships two record Kinds,
+both `TENANTED` — they hold a tenant's own portfolio data, not a shared `_lib`
+default, and are deliberately not inheritable.
+
+### IntelSource
+
+An [`IntelSource`](../reference/kinds/record.md#intelsource) (`intel-source`)
+is a watched portfolio source — the Direction stage of the pipeline: what the
+DNA observes. One doc per source (a `repo`, a `scope`, or an `external` URL)
+declares its research `cadence` (manual / event / daily / weekly), an
+actionability `threshold` below which insights are suppressed, its Priority
+Intelligence Requirements (`pirs` — focus areas that get prioritized), and a
+`muted` flag to pause research without deleting the source.
+
+### IntelInsight
+
+An [`IntelInsight`](../reference/kinds/record.md#intelinsight)
+(`intel-insight`) is the dissemination unit — a ranked, actionable insight
+produced from an `IntelSource` that the ranker, digest, dedup and feedback
+stages all reference. It carries a `title`, the cited `fact`, an optional
+`why` / `action`, an actionability `score` the ranker sets, matched `pirs`,
+`citations`, an `evidence_rating`, and a feedback `state` (new / actioned /
+dismissed / snoozed). It is embeddable (`title` + `fact`) so a later dedup
+stage can recall semantically similar insights. Named `IntelInsight` rather
+than `Insight` because the bare `Insight` name already belongs to the SDLC
+oracle Kind.
+
 ---
 
 Run `dna kind list` for the live registry in your install, and `dna kind

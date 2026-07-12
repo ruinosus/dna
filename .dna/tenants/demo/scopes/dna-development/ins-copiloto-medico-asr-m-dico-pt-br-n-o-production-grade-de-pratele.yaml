@@ -1,0 +1,20 @@
+apiVersion: github.com/ruinosus/dna/intel/v1
+kind: IntelInsight
+metadata:
+  name: ins-copiloto-medico-asr-m-dico-pt-br-n-o-production-grade-de-pratele
+spec:
+  title: "ASR m\xE9dico PT-BR n\xE3o \xE9 production-grade de prateleira"
+  fact: "WER >30% em fala cl\xEDnica e sem dataset p\xFAblico \u2014 precisa de LM\
+    \ PT-BR + normaliza\xE7\xE3o (siglas/unidades/falado\u2192documentado)."
+  why: "Um corpus propriet\xE1rio PT-BR \xE9 moat de dados real, pois n\xE3o h\xE1\
+    \ p\xFAblico."
+  action: "N\xE3o confiar no Whisper puro: montar stack LM m\xE9dico PT-BR + normaliza\xE7\
+    \xE3o e come\xE7ar j\xE1 um corpus propriet\xE1rio PT-BR."
+  score: 1.0
+  source_ref: copiloto-medico
+  pirs:
+  - tech PT-BR
+  citations: []
+  state: new
+  evidence_rating: evidence-based
+  created_at: '2026-07-12T17:26:54+00:00'
