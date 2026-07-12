@@ -46,7 +46,7 @@ Declarative Kind descriptor — the format of builtin `kinds/*.kind.yaml` packag
 | `volatile_spec_fields` |  | Extra write-/runtime-stamped spec fields excluded from the canonical digest, unioned with the base set {updated_at, version, created_at}. |
 | `workitem_common` |  | DEPRECATED back-compat shorthand for schema_fragments: ["sdlc/workitem-common"]. Python-only. |
 
-## Registered Kinds (73)
+## Registered Kinds (75)
 
 ### Composition plane
 
@@ -108,6 +108,8 @@ Declarative Kind descriptor — the format of builtin `kinds/*.kind.yaml` packag
 | [HtmlArtifact](record.md#htmlartifact) | `sdlc-html-artifact` | `github.com/ruinosus/dna/sdlc/v1` |
 | [Initiative](record.md#initiative) | `sdlc-initiative` | `github.com/ruinosus/dna/sdlc/v1` |
 | [Insight](record.md#insight) | `sdlc-insight` | `github.com/ruinosus/dna/sdlc/v1` |
+| [IntelInsight](record.md#intelinsight) | `intel-insight` | `github.com/ruinosus/dna/intel/v1` |
+| [IntelSource](record.md#intelsource) | `intel-source` | `github.com/ruinosus/dna/intel/v1` |
 | [Issue](record.md#issue) | `sdlc-issue` | `github.com/ruinosus/dna/sdlc/v1` |
 | [Kaizen](record.md#kaizen) | `sdlc-kaizen` | `github.com/ruinosus/dna/sdlc/v1` |
 | [LessonLearned](record.md#lessonlearned) | `sdlc-lesson-learned` | `github.com/ruinosus/dna/sdlc/v1` |

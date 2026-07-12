@@ -515,6 +515,51 @@ An Insight binds a perpetual question to a target UA (oracle-X). The UA owns the
 | `tags` | array |  |  |
 | `target_ua` | string | yes | Slug of the Agent that runs this oracle (e.g. 'oracle-health'). The UA owns the persona, tools, and LLM config — Insight only points. |
 
+## IntelInsight
+
+- **Alias:** `intel-insight`
+- **apiVersion:** `github.com/ruinosus/dna/intel/v1`
+- **Plane:** record
+
+An IntelInsight is the dissemination unit of the intelligence layer — a ranked, actionable insight produced from an IntelSource, carrying its headline, cited fact, suggested action, actionability score, matched PIRs, citations, evidence rating and feedback state. The ranker sets the score; the digest suppresses insights below the source threshold; the feedback stage records the state (new/actioned/dismissed/snoozed). Embeddable so a later dedup stage can recall semantically similar insights.
+
+**Spec fields**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `action` | string \| null |  | The single suggested action. |
+| `citations` | array |  | Sources backing the fact — each a {url, title} pair. |
+| `created_at` | string \| null |  | ISO-8601 timestamp, stamped by the writer (not defaulted here). |
+| `evidence_rating` | string |  | How well-grounded the fact is — evidence-based, opinion/practice, or anecdotal. |
+| `fact` | string | yes | What happened / the cited fact. |
+| `pirs` | array |  | Which Priority Intelligence Requirements this insight matches. |
+| `score` | number | yes | Actionability score (0..1). The ranker sets this; the digest suppresses insights scoring below the source's threshold. |
+| `source_ref` | string \| null |  | The IntelSource name this insight came from. |
+| `state` | string | yes | The feedback disposition — the reader's response to the insight. |
+| `title` | string | yes | The insight headline. |
+| `why` | string \| null |  | Why it matters to this source. |
+
+## IntelSource
+
+- **Alias:** `intel-source`
+- **apiVersion:** `github.com/ruinosus/dna/intel/v1`
+- **Plane:** record
+
+An IntelSource declares one watched portfolio source (a repo, a scope, or an external URL) the DNA observes — its research cadence, actionability threshold, Priority Intelligence Requirements (PIRs) and mute state, as per-tenant declarative data. It is the Direction stage of the intelligence layer — the research → ranked insights → feedback pipeline reads active IntelSources and researches each on its cadence.
+
+**Spec fields**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `cadence` | string |  | How often the source is researched — manual (on demand), event (on a trigger), daily, or weekly. |
+| `muted` | boolean |  | True to pause research on this source without deleting it. |
+| `name` | string | yes | The source name, e.g. copiloto-medico. The doc name SHOULD equal this. |
+| `notes` | string \| null |  | Free-form operator notes. |
+| `pirs` | array |  | Priority Intelligence Requirements — focus areas that get prioritized when researching this source. |
+| `threshold` | number |  | Actionability threshold (0..1) below which insights from this source are suppressed. Insights scoring under it are not disseminated. |
+| `type` | string | yes | What kind of source this is — a code repo, a DNA scope, or an external URL/feed. |
+| `uri` | string \| null |  | Path / URL / scope id the source points at. Null when the name alone identifies it. |
+
 ## Issue
 
 - **Alias:** `sdlc-issue`
