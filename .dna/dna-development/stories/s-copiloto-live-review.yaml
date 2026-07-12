@@ -37,7 +37,7 @@ spec:
     \ expl\xEDcito)."
   definition_of_done_source: cli-create
   created_at: '2026-07-12T14:33:52+00:00'
-  updated_at: '2026-07-12T14:34:05+00:00'
+  updated_at: '2026-07-12T14:42:39+00:00'
   timeline:
   - at: '2026-07-12T14:33:52+00:00'
     actor: claude-code
@@ -50,6 +50,20 @@ spec:
     source: cli
     from: todo
     to: in-progress
+  - at: '2026-07-12T14:42:39+00:00'
+    actor: claude-code
+    type: decision
+    source: cli
+    summary: "PORT\xC3O DE ROLLOUT REGULAT\xD3RIO (Barna, postura A): a revis\xE3\
+      o-ao-vivo \xE9 constru\xEDda COMPLETA mas hard-gated \u2014 CONDUCT_MODULE_ENABLED\
+      \ OFF em producao. Sem registro ANVISA, o modulo de sugestao de conduta NAO\
+      \ roda em prod clinica (SaMD Classe II; HITL nao isenta). Tres travas: (1) painel\
+      \ cortado na linha regulatoria \u2014 'cobertura da documentacao' (isento, pode\
+      \ ligar) vs 'a revisar/sugestao de conduta' (regulado, so com flag ON); (2)\
+      \ banner in-product quando flag ON fora de prod: 'uso restrito a pesquisa/piloto\
+      \ com consentimento; requer registro ANVISA'; (3) DoD: nunca habilitado em prod\
+      \ sem registro. Dev/demo/piloto-com-consentimento apenas ate o registro sair."
+    commit_ref: 845a1ce3ab84e553ac26e0090bba98e3f549ebac
   produces:
   - kind: Plan
     name: plan-s-copiloto-live-review
