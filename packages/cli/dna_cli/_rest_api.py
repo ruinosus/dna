@@ -13,12 +13,15 @@ app (the DNA Cloud portal). It is a sibling of the MCP server, NOT a replacement
            an OAuth bearer later.
 
 **One core, three faces.** This module does ZERO business logic of its own — it
-imports and calls the SAME ``*_impl`` cores the MCP server already uses
-(``dna_cli._mcp_server``: ``list_agents_impl`` / ``compose_prompt_impl`` /
-``list_tools_impl`` / ``recall_impl``, booted by the SAME ``boot_live`` /
-``LiveDna``). The memory LIST + DELETE endpoints (which have no MCP twin) query
-the memory Kind (``LessonLearned``) directly through the kernel, tenant-aware —
-mirroring exactly how ``recall`` and the kernel query/delete paths already work.
+imports and calls the SAME ``*_impl`` use-cases from the CORE application layer
+(``dna.application``: ``list_agents_impl`` / ``compose_prompt_impl`` /
+``list_tools_impl`` / ``recall_impl``), the same ones the MCP server delegates to,
+booted by the SAME ``boot_live`` / ``LiveDna`` (adr-faces-reorg move #1: the
+shared ``*_impl`` moved OUT of the CLI face INTO the core). The memory LIST +
+DELETE endpoints (which have no MCP twin) query the memory Kind
+(``LessonLearned``) directly through the kernel, tenant-aware — mirroring exactly
+how ``recall`` and the kernel query/delete paths already work. (Those two
+REST-only memory cores are a tracked follow-up to also lift into the core.)
 
 **Tenant isolation is load-bearing.** Every endpoint scopes to the ``tenant``
 query param via the kernel's tenant-aware read/write paths — the SAME base +
@@ -168,13 +171,17 @@ def build_app(
             "it with:  pip install 'dna-cli[api]'"
         ) from exc
 
-    from dna_cli._mcp_server import (
-        boot_live,
+    # The shared use-cases live in the CORE application layer (adr-faces-reorg,
+    # move #1): this face imports them from ``dna.application`` and only shapes
+    # HTTP. ``boot_live`` is the CLI's composition root (it wires the CLI's own
+    # source/provider boot path), so it stays in ``dna_cli._mcp_server``.
+    from dna.application import (
         compose_prompt_impl,
         list_agents_impl,
         list_tools_impl,
         recall_impl,
     )
+    from dna_cli._mcp_server import boot_live
     # The intel face delegates to the CORE engine (adr-faces-reorg: logic in the
     # core, faces thin). These handlers only translate transport + call in.
     from dna.extensions.intel import engine as intel_engine

@@ -1,0 +1,78 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-faces-extract-app-layer
+spec:
+  title: 'adr-faces-reorg move #1 (load-bearing): extract the transport-agnostic *_impl
+    us'
+  description: 'adr-faces-reorg move #1 (load-bearing): extract the transport-agnostic
+    *_impl use-case layer OUT of the CLI face (dna_cli._mcp_server) INTO the core
+    (dna.application), so CLI/MCP/REST become thin adapters over it. Behavior-preserving
+    move + re-import; shims keep ''dna mcp serve''/''dna api serve'' byte-identical.'
+  status: review
+  feature: f-dna-cloud-intelligence
+  acceptance_criteria:
+  - Shared *_impl (compose_prompt/list_agents/list_tools/get_tool/recall/remember/consolidate/list_memories/forget/list_stories/get_adr)
+    live in dna.application, transport-agnostic (no HTTP/Click/FastMCP)
+  - MCP + REST faces import the use-cases from core and delegate; auth/quota stay
+    at the MCP edge
+  - dna mcp serve / dna api serve unchanged (same endpoints/responses); full sdk-py
+    + cli suites green; guards clean
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - Both suites green in a clean venv; brand_guard + docs_coverage_guard clean; parity/CLI/kinds
+    reference regenerated with no diff; PR opened on feat/faces-extract-app-layer
+    linking adr-faces-reorg
+  definition_of_done_source: cli-create
+  created_at: '2026-07-12T21:52:13+00:00'
+  updated_at: '2026-07-12T21:57:16+00:00'
+  timeline:
+  - at: '2026-07-12T21:52:13+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-12T21:52:40+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-12T21:56:01+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Realizes adr-faces-reorg move #1. Created core dna.application (live.py\
+      \ LiveDna + runtime.py use-cases + __init__ re-exports); moved 11 shared *_impl\
+      \ + helpers verbatim out of dna_cli._mcp_server. _mcp_server now imports+re-exports\
+      \ them (M.compose_prompt_impl still resolves for tests) and keeps only boot_live\
+      \ + build_server + the auth/quota _guard edge seam. _rest_api imports the shared\
+      \ use-cases from dna.application (was from _mcp_server), keeps boot_live from\
+      \ the CLI. Deferred (noted in code): sdlc_digest_impl (CLI-coupled to _digest/_DIGEST_KINDS),\
+      \ boot_live (composition root into _ctx/recall_cmd), REST-only memory list/delete.\
+      \ Verified in a clean isolated venv (worktree editable installs, intel entry-point\
+      \ registered): sdk-py 3041 passed/191 skipped/4 xfailed; cli 556 passed/3 skipped;\
+      \ face tests 106 passed/1 skipped. Shim smoke: build_server exposes all 12 MCP\
+      \ tools, build_app all 11 REST routes unchanged. brand_guard clean, docs_coverage_guard\
+      \ clean. No public-surface/CLI change (regenerated reference had only pre-existing\
+      \ whitespace drift \u2192 reverted)."
+    commit_ref: 602f1a181f8ab406524e6657e53a1579e746da10
+  - at: '2026-07-12T21:57:11+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #94 opened: https://github.com/ruinosus/dna/pull/94 \u2014 behavior-preserving\
+      \ extraction of the shared *_impl into dna.application; faces thin; auth/quota\
+      \ stay at the MCP edge; serve surfaces unchanged; sdk-py+cli suites + brand/docs\
+      \ guards green."
+  - at: '2026-07-12T21:57:16+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
+  produces:
+  - kind: Plan
+    name: plan-s-faces-extract-app-layer
+    role: implementation
+    at: '2026-07-12T21:52:40+00:00'
