@@ -27,6 +27,28 @@ dna intel list [OPTIONS]
 | `--state` |  |
 | `--tenant` | Tenant (default: $DNA_TENANT or 'demo'). |
 
+## `dna intel metrics`
+
+Feedback KPIs — precision (actioned ÷ actioned+dismissed) + noise rate.
+
+Read-only; delegates the arithmetic to the core ``feedback_metrics``. The
+noise rate is the intel layer's product KPI (it should fall over time as the
+feedback loop tunes the ranker).
+
+```text
+dna intel metrics [OPTIONS]
+```
+
+**Options**
+
+| Option | Description |
+| --- | --- |
+| `--help` | Show this message and exit. |
+| `--json` | Machine-readable output. |
+| `--scope` | _(default: `dna-development`)_ |
+| `--source` | Restrict to one originating IntelSource. |
+| `--tenant` | Tenant (default: $DNA_TENANT or 'demo'). |
+
 ## `dna intel run`
 
 Run one intel pass over SOURCE: pass → rank → suppress → deliver.

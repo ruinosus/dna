@@ -482,6 +482,15 @@ The remaining groups already have dedicated prose — one line each here:
 - **`dna intel`** — the intelligence layer's driver: `dna intel run
   <source>` researches an [`IntelSource`](../concepts/builtin-kinds.md#intelligence-layer)
   and ranks the candidates, suppressing those below the source's actionability
-  threshold; `dna intel list` shows the delivered `IntelInsight`s. It is a
-  thin face over the in-core engine — the same logic the REST `/v1/insights`
-  face serves. ([reference](../reference/cli/intel.md))
+  threshold; `dna intel list` shows the delivered `IntelInsight`s. Re-running a
+  pass never re-delivers what was already surfaced — the engine **dedups** each
+  candidate (a deterministic key plus a semantic cosine over the memory
+  co-pillar's embedding space) against the source's existing insights. And the
+  loop closes on itself: marking an insight `dismissed` (or `actioned`) records
+  a feedback engram (a `LessonLearned`) that tunes the ranker so
+  semantically-similar candidates are suppressed (or reinforced) next time.
+  `dna intel metrics` prints the feedback KPIs — precision (`actioned ÷
+  actioned+dismissed`) and the product's north-star **noise rate**, which should
+  fall as the loop learns. It is a thin face over the in-core engine — the same
+  logic the REST `/v1/insights` and `/v1/insights/metrics` faces serve.
+  ([reference](../reference/cli/intel.md))

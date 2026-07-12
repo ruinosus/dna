@@ -336,6 +336,21 @@ def build_app(
         )
         return {"scope": sc, "tenant": tenant, "insights": items}
 
+    @app.get("/v1/insights/metrics", dependencies=guarded)
+    async def insight_metrics(
+        scope: str | None = Query(default=None),
+        tenant: str | None = Query(default=None),
+        source_ref: str | None = Query(default=None),
+    ) -> dict[str, Any]:
+        """The feedback KPIs (precision + noise rate) over the tenant's insight
+        stream, optionally for one ``source_ref``. Read-only; the arithmetic is
+        the core ``feedback_metrics``."""
+        live = await _live()
+        sc = scope or live.base_scope
+        return await intel_engine.feedback_metrics(
+            live.kernel, scope=sc, tenant=tenant, source_ref=source_ref,
+        )
+
     @app.patch("/v1/insights/{name}/state", dependencies=guarded)
     async def set_insight_state(
         name: str,
