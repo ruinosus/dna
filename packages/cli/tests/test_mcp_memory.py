@@ -441,10 +441,15 @@ def test_forget_nonexistent_is_clean_noop(dna_dir):
                    "forgotten": False}
 
 
-def test_forget_cannot_delete_base_or_other_tenant(dna_dir):
-    """A tenant's ``forget`` cannot delete the shared base doc nor another
-    tenant's overlay doc — the delete targets the caller's overlay only, so a
-    base/other-tenant name is a no-op AND the target survives (per #83)."""
+def test_forget_never_hard_deletes_base_nor_touches_other_tenant(dna_dir):
+    """``forget`` is a bi-temporal DEMOTION into the caller's OWN overlay — it
+    NEVER hard-deletes the shared base and NEVER reaches another tenant's overlay
+    (#83). Concretely, when acme forgets a base-resolved memory it stamps a
+    tombstone in ITS overlay only; the base doc itself survives (still listed for
+    the no-tenant/base view AND still inherited by globex), and globex's own
+    private memory is untouched. And acme forgetting globex's PRIVATE overlay doc
+    is a clean no-op — acme cannot see, let alone forget, another tenant's
+    overlay memory (KeyError → ``forgotten: False``)."""
     from dna_cli import _mcp_server as M
 
     async def scenario():
@@ -452,18 +457,24 @@ def test_forget_cannot_delete_base_or_other_tenant(dna_dir):
         base = await M.remember_impl(live, "BASE undeletable iota", scope=_SCOPE, tenant=None)
         other = await M.remember_impl(
             live, "GLOBEX undeletable kappa", scope=_SCOPE, tenant="globex")
-        # acme tries to forget the base doc and globex's doc — both no-ops.
+        # acme forgets the base-resolved memory → demoted in ACME's overlay only.
         r_base = await M.forget_impl(live, base["name"], scope=_SCOPE, tenant="acme")
+        # acme tries to forget globex's PRIVATE overlay doc → cannot reach it.
         r_other = await M.forget_impl(live, other["name"], scope=_SCOPE, tenant="acme")
-        # both survive: base visible to everyone, globex's visible to globex.
         base_ls = await M.list_memories_impl(live, scope=_SCOPE, tenant=None)
         globex_ls = await M.list_memories_impl(live, scope=_SCOPE, tenant="globex")
         return base, other, r_base, r_other, base_ls, globex_ls
 
     base, other, r_base, r_other, base_ls, globex_ls = asyncio.run(scenario())
-    assert r_base["forgotten"] is False
-    assert r_other["forgotten"] is False
+    # acme forgetting an inherited base memory is a demotion in acme's overlay ...
+    assert r_base["forgotten"] is True
+    # ... but the base doc itself is NEVER hard-deleted — the shared/base view
+    # still lists it, and globex still inherits it (no cross-tenant leak).
     assert base["name"] in {m["name"] for m in base_ls["memories"]}
+    assert base["name"] in {m["name"] for m in globex_ls["memories"]}
+    # acme CANNOT reach globex's private overlay doc → clean no-op, and globex
+    # still sees its own memory untouched.
+    assert r_other["forgotten"] is False
     assert other["name"] in {m["name"] for m in globex_ls["memories"]}
 
 

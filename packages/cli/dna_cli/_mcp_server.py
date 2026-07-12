@@ -374,11 +374,19 @@ async def list_memories_impl(
     list surface uses (``_collect``): with ``tenant`` set the caller sees the
     shared base PLUS its own overlay only, never another tenant's overlay (#83).
     Projects each memory to ``{name, summary, area, tags, affect, created_at}``
-    and sorts newest-first when a timestamp is available."""
+    and sorts newest-first when a timestamp is available. FORGOTTEN memories
+    (bi-temporally demoted by ``forget`` — ``spec.valid_to`` set/in the past) are
+    EXCLUDED, using the SAME ``currently_valid`` predicate ``recall`` applies
+    (verbs.py) so the list and recall agree: a memory dropped by ``forget``
+    disappears from BOTH surfaces, never a ghost."""
+    from dna.memory.decay import currently_valid
+
     sc = scope or live.base_scope
     memories: list[dict[str, Any]] = []
     for d in await _collect(live, sc, kind, tenant):
         spec = d["spec"]
+        if not currently_valid(spec.get("valid_to")):
+            continue  # forgotten / superseded — never surfaced (mirrors recall).
         # LessonLearned stamps ``created_at`` (== ``valid_from`` seed); fall back
         # to the reconsolidation timeline's first ``at`` when a variant omits it.
         created = spec.get("created_at") or spec.get("valid_from")
@@ -404,23 +412,28 @@ async def forget_impl(
     live: LiveDna, name: str, scope: str | None = None,
     kind: str = "LessonLearned", tenant: str | None = None,
 ) -> dict[str, Any]:
-    """Delete ONE memory by its doc ``name`` (slug) — the DELETE surface the DNA
-    Cloud memory dashboard calls. Routes through ``kernel.delete_document`` with
-    ``tenant=tenant`` so the delete targets the caller's OWN overlay layer only:
-    it never removes the shared base and never another tenant's overlay (#83).
-    A miss (nonexistent name, or a name that lives only in base/another tenant
-    when this tenant's overlay has no such doc) is a clean no-op —
-    ``{forgotten: False}`` — not a 500 (both source adapters raise
-    ``ValueError('not_found')`` for a delete that matched no row in the target
-    layer)."""
+    """Forget ONE memory by its doc ``name`` (slug) — the DELETE surface the DNA
+    Cloud memory dashboard calls. NOT a hard delete: routes through the memory
+    verb ``dna.memory.forget`` — a **bi-temporal DEMOTION** that stamps
+    ``valid_to`` (a revivable tombstone, auditable, never destroyed; verbs.py
+    "NEVER hard-delete"). ``tenant=tenant`` writes the demotion into the caller's
+    OWN overlay only — never base, never another tenant (#83). Because the write
+    invalidates the recall index AND ``recall``/``list_memories`` both exclude
+    ``valid_to`` memories, a forgotten memory disappears from both surfaces (no
+    ghost).
+
+    Result mapping: a real demotion → ``forgotten: True``; an already-forgotten
+    memory (idempotent re-forget) → ``forgotten: False``; a name that does not
+    exist in the caller's layer (``forget`` raises ``KeyError``) → a clean
+    ``forgotten: False`` no-op, never a 500."""
+    from dna.memory import forget
+
     sc = scope or live.base_scope
     try:
-        await live.kernel.delete_document(sc, kind, name, tenant=tenant)
-    except ValueError as exc:
-        if "not_found" in str(exc) or "not found" in str(exc).lower():
-            return {"kind": kind, "name": name, "forgotten": False}
-        raise
-    return {"kind": kind, "name": name, "forgotten": True}
+        out = await forget(live.kernel, sc, name, kind=kind, tenant=tenant)
+    except KeyError:
+        return {"kind": kind, "name": name, "forgotten": False}
+    return {"kind": kind, "name": name, "forgotten": not out["already_forgotten"]}
 
 
 def _slug(text: str) -> str:
