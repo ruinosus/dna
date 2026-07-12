@@ -1,0 +1,37 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-intel-research-trigger
+spec:
+  title: 'O motor de disparo: o que dispara um pass de research (agenda/evento/manual)
+    com'
+  description: "O motor de disparo: o que dispara um pass de research (agenda/evento/manual)\
+    \ com guardas anti-spam \u2014 um pass que n\xE3o acha nada acima do threshold\
+    \ produz ZERO output (sil\xEAncio = sucesso)."
+  status: todo
+  feature: f-dna-cloud-intelligence
+  priority: medium
+  labels:
+  - intelligence
+  - anti-noise
+  reporter: claude-code
+  business_value: 500
+  acceptance_criteria:
+  - "Triggers declarativos: cron (ScheduleType), evento, ou manual \u2014 por item\
+    \ da watchlist."
+  - "Um pass sem insight acima do threshold entrega NADA (sil\xEAncio \xE9 o resultado\
+    \ correto, n\xE3o um erro)."
+  - "Rate-limit por app/fonte \u2014 n\xE3o re-pesquisar o que n\xE3o mudou materialmente."
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - "Trigger reusa o ScheduleType Kind (dispatch declarativo j\xE1 existente)."
+  - "Testado: pass sem novidade \u2192 0 entregas, sem falso 'nada encontrado' barulhento."
+  definition_of_done_source: cli-create
+  created_at: '2026-07-12T13:39:14+00:00'
+  updated_at: '2026-07-12T13:39:14+00:00'
+  timeline:
+  - at: '2026-07-12T13:39:14+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
