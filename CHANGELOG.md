@@ -11,6 +11,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-07-12
+
+### Added
+
+- **The intelligence layer** (feature `f-dna-cloud-intelligence`) — DNA turns
+  from passive storage into a proactive *intelligence cycle* over a portfolio
+  of sources. Two new record Kinds and a transport-agnostic engine, with thin
+  CLI and REST faces:
+  - **`IntelSource`** (`intel-source`) and **`IntelInsight`** (`intel-insight`)
+    — per-tenant record Kinds (byte-identical Py↔TS descriptors): the watched
+    portfolio source (with its Priority Intelligence Requirements, cadence and
+    actionability threshold) and the ranked, actionable insight it produces.
+  - **Engine** (`dna/extensions/intel/`, transport-agnostic) — `run_pass`
+    researches a source, **ranks** each candidate by actionability and
+    **suppresses** those below the source's threshold (the anti-noise core),
+    **dedups** semantically against already-surfaced insights via the memory
+    co-pillar, and writes the survivors. A **feedback loop** turns
+    `dismissed`/`actioned` dispositions into memory engrams that tune the
+    ranker, with a `precision` / `noise_rate` metric.
+  - **`LLMAnalyzer`** — researches *arbitrary* sources via a live LLM (reads a
+    repo's README/docs, a scope's documents, or an external hint), selectable
+    with `dna intel run --analyzer [auto|llm|seed]`; the deterministic
+    `SeedAnalyzer` stays the offline default.
+  - **Faces** — CLI `dna intel run` / `list` / `metrics`; REST `GET /v1/sources`,
+    `GET /v1/insights`, `GET /v1/insights/metrics`, `PATCH /v1/insights/{name}/state`.
+
+### Changed
+
+- **Faces reorg — move #1 (`adr-faces-reorg`).** The transport-agnostic
+  application/use-case layer (the `*_impl` both the MCP server and the REST API
+  call) moved out of the CLI package into the core as `dna.application`, so
+  `dna mcp serve` and `dna api serve` are now thin adapters over a shared core.
+  Behaviour is preserved (the incremental first step; splitting the server
+  faces into separate distributions is a later move).
+
 ## [0.10.0] - 2026-07-11
 
 ### Added
@@ -732,7 +767,8 @@ registries: **PyPI** ([`dna-sdk`](https://pypi.org/project/dna-sdk/),
   source conformance kit now pins the contract: base content is served
   by `load_all`, never by a `load_layer` sentinel.
 
-[Unreleased]: https://github.com/ruinosus/dna/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/ruinosus/dna/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/ruinosus/dna/compare/v0.9.0...v0.11.0
 [0.9.0]: https://github.com/ruinosus/dna/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/ruinosus/dna/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/ruinosus/dna/compare/v0.6.0...v0.7.0
