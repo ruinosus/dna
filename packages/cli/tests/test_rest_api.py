@@ -204,6 +204,91 @@ def test_delete_memory_overlay_only(dna_dir):
         assert acme_two["name"] in acme_after  # untouched.
 
 
+# ── intel: sources + insights + the feedback state transition ────────────────
+
+
+def _seed_intel_and_run(dna_dir, source="copiloto-medico", tenant="acme"):
+    """Seed an IntelSource + run one engine pass (SeedAnalyzer) so the REST face
+    has real data to list. Runs on its own loop; the filesystem source persists,
+    so the TestClient-booted app reads it back."""
+    from dna_cli import _mcp_server as M
+    from dna.extensions.intel import engine
+
+    async def go():
+        live = await M.boot_live(base_dir=str(dna_dir))
+        await live.kernel.write_document(
+            _SCOPE, "IntelSource", source,
+            {
+                "apiVersion": "github.com/ruinosus/dna/intel/v1",
+                "kind": "IntelSource",
+                "metadata": {"name": source},
+                "spec": {
+                    "name": source, "type": "repo", "cadence": "weekly",
+                    "threshold": 0.6,
+                    "pirs": ["regulação", "concorrentes", "tech PT-BR"],
+                },
+            },
+            tenant=tenant,
+        )
+        return await engine.run_pass(live.kernel, source, scope=_SCOPE, tenant=tenant)
+
+    return asyncio.run(go())
+
+
+def test_intel_sources_endpoint(dna_dir):
+    _seed_intel_and_run(dna_dir)
+    with _client(dna_dir) as c:
+        r = c.get("/v1/sources", params={"scope": _SCOPE, "tenant": "acme"})
+        assert r.status_code == 200, r.text
+        body = r.json()
+        assert "copiloto-medico" in [s["name"] for s in body["sources"]]
+        src = next(s for s in body["sources"] if s["name"] == "copiloto-medico")
+        assert src["threshold"] == 0.6
+        assert "regulação" in src["pirs"]
+
+
+def test_intel_insights_endpoint_and_state_filter(dna_dir):
+    result = _seed_intel_and_run(dna_dir)
+    with _client(dna_dir) as c:
+        r = c.get("/v1/insights", params={"scope": _SCOPE, "tenant": "acme"})
+        assert r.status_code == 200, r.text
+        items = r.json()["insights"]
+        assert len(items) == result.kept_count == 7
+        # ranked (score desc) and all state=new after a fresh pass
+        assert items[0]["score"] >= items[-1]["score"]
+        assert all(i["state"] == "new" for i in items)
+        # the suppressed weak candidate never became an insight
+        assert not any("LLM clínico em PT" in (i["title"] or "") for i in items)
+        # state filter
+        assert c.get("/v1/insights",
+                     params={"scope": _SCOPE, "tenant": "acme", "state": "actioned"}
+                     ).json()["insights"] == []
+
+
+def test_intel_patch_state(dna_dir):
+    result = _seed_intel_and_run(dna_dir)
+    name = result.kept[0]["name"]
+    with _client(dna_dir) as c:
+        # new → actioned
+        r = c.patch(f"/v1/insights/{name}/state",
+                    params={"scope": _SCOPE, "tenant": "acme"}, json={"state": "actioned"})
+        assert r.status_code == 200, r.text
+        assert r.json()["state"] == "actioned"
+        # it now shows under the actioned filter
+        actioned = c.get("/v1/insights",
+                         params={"scope": _SCOPE, "tenant": "acme", "state": "actioned"}
+                         ).json()["insights"]
+        assert name in [i["name"] for i in actioned]
+        # invalid state → 400
+        assert c.patch(f"/v1/insights/{name}/state",
+                       params={"scope": _SCOPE, "tenant": "acme"},
+                       json={"state": "bogus"}).status_code == 400
+        # missing doc → 404
+        assert c.patch("/v1/insights/ins-nope/state",
+                       params={"scope": _SCOPE, "tenant": "acme"},
+                       json={"state": "actioned"}).status_code == 404
+
+
 # ── auth: --auth token gates every route but /health ─────────────────────────
 
 
