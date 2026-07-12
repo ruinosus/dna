@@ -44,6 +44,12 @@ first if you have never loaded a scope.
   EvalSuites, run them offline with `dna eval run` (the composed prompt is
   the default target), pin an EvalBaseline and gate CI on regressions.
 
+## DNA Cloud
+
+- **[The DNA Cloud starter catalog & BYO-DNA](dna-cloud-catalog.md)** — the
+  three `_lib` starter agents every tenant inherits, and how a Pro tenant
+  authors + pushes their own agent as a tenant overlay (gated by Tier caps).
+
 ## Lifecycle
 
 - **[Your git log is your SDLC](sdlc.md)** — how this repo tracks its own

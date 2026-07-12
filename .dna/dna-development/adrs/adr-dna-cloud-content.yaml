@@ -1,0 +1,35 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: ADR
+metadata:
+  name: adr-dna-cloud-content
+spec:
+  title: "DNA Cloud content \u2014 curated starter catalog + BYO-DNA per tenant"
+  status: accepted
+  context: "DNA Cloud shipped the storefront (portal+billing) + the engine (MCP+quota+Tier).\
+    \ It still needs the PRODUCT: the actual DNA a customer consumes over MCP. Three\
+    \ strategies weighed \u2014 (A) a curated catalog we provide, (B) BYO-DNA the\
+    \ customer authors, (C) both. A pure catalog commoditizes DNA Cloud into 'another\
+    \ prompt marketplace'; the UNIQUE moat is BYO-DNA served live over MCP (author\
+    \ once \u2192 any runtime, no deploy, tenant overlays) \u2014 the DNA thesis nothing\
+    \ else does."
+  decision: "Adopt C with the weight on B. A curated STARTER CATALOG (~3 generic agents)\
+    \ lives in the shared _lib as the on-ramp; each customer AUTHORS their own DNA\
+    \ as their TENANT OVERLAY (the product + the moat). This maps 1:1 onto DNA's existing\
+    \ tenant/overlay/inheritance \u2014 ZERO new architecture: catalog = _lib inheritable\
+    \ agents, customer DNA = tenant overlay, plan limits = Tier caps (Free uses the\
+    \ base; Pro authors own + emit). MVP = starter catalog + BYO via the SDK/CLI (dna\
+    \ + push to source); an in-portal authoring editor is deferred."
+  consequences: 'Reuses the whole tenant/overlay/inheritance stack (no new platform).
+    The catalog kills the empty-portal cold-start; BYO is the retention + differentiation.
+    Content scales without us building it (customers bring their own). Plan gating
+    is already expressed in the Tier Kind (memory_mode/feature_families). Open follow-ups:
+    what exactly seeds the starter catalog, and when the portal gets an authoring
+    editor.'
+  created_at: '2026-07-12T00:30:59+00:00'
+  updated_at: '2026-07-12T00:30:59+00:00'
+  timeline:
+  - at: '2026-07-12T00:30:59+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: accepted

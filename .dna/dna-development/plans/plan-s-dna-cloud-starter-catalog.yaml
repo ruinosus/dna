@@ -1,0 +1,23 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-dna-cloud-starter-catalog
+spec:
+  title: 'Plano: s-dna-cloud-starter-catalog'
+  date: '2026-07-12'
+  status: accepted
+  story_ref: s-dna-cloud-starter-catalog
+  journey_phase: plan
+  body: "Cat\xE1logo starter no _lib da dna-cloud + valida\xE7\xE3o do fluxo BYO (tenant\
+    \ overlay).\n\nPassos:\n1. Aprender o formato DNA-native de agent (Agent bundle\
+    \ AGENT.md + Soul SOUL.md + Guardrail GUARDRAIL.md + Skill SKILL.md), composi\xE7\
+    \xE3o via build_prompt, e o mecanismo de overlay/tenant (resolve_document + _lib\
+    \ inheritance).\n2. Autorar 3 agents em examples/dna-cloud/.dna/_lib: assistant\
+    \ (helpful-assistant + baseline-safety), code-reviewer (senior-engineer + baseline-safety\
+    \ + review-integrity + skill structured-code-review), dna-copilot (dna-mentor\
+    \ + baseline-safety).\n3. Validar heran\xE7a + overlay com test_dna_cloud_catalog_overlay.py\
+    \ (resolve_document, MockSource) + guard de conte\xFAdo (comp\xF5e os 3 reais\
+    \ do disco).\n4. Guia docs/guides/dna-cloud-catalog.md + nav + seed path (dna\
+    \ doc apply --source $DNA_SOURCE_URL)."
+  created_at: '2026-07-12T00:57:13+00:00'
+  updated_at: '2026-07-12T00:57:13+00:00'
