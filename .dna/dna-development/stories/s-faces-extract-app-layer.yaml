@@ -9,7 +9,7 @@ spec:
     *_impl use-case layer OUT of the CLI face (dna_cli._mcp_server) INTO the core
     (dna.application), so CLI/MCP/REST become thin adapters over it. Behavior-preserving
     move + re-import; shims keep ''dna mcp serve''/''dna api serve'' byte-identical.'
-  status: in-progress
+  status: review
   feature: f-dna-cloud-intelligence
   acceptance_criteria:
   - Shared *_impl (compose_prompt/list_agents/list_tools/get_tool/recall/remember/consolidate/list_memories/forget/list_stories/get_adr)
@@ -25,7 +25,7 @@ spec:
     linking adr-faces-reorg
   definition_of_done_source: cli-create
   created_at: '2026-07-12T21:52:13+00:00'
-  updated_at: '2026-07-12T21:56:01+00:00'
+  updated_at: '2026-07-12T21:57:16+00:00'
   timeline:
   - at: '2026-07-12T21:52:13+00:00'
     actor: claude-code
@@ -57,6 +57,20 @@ spec:
       \ clean. No public-surface/CLI change (regenerated reference had only pre-existing\
       \ whitespace drift \u2192 reverted)."
     commit_ref: 602f1a181f8ab406524e6657e53a1579e746da10
+  - at: '2026-07-12T21:57:11+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #94 opened: https://github.com/ruinosus/dna/pull/94 \u2014 behavior-preserving\
+      \ extraction of the shared *_impl into dna.application; faces thin; auth/quota\
+      \ stay at the MCP edge; serve surfaces unchanged; sdk-py+cli suites + brand/docs\
+      \ guards green."
+  - at: '2026-07-12T21:57:16+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
   produces:
   - kind: Plan
     name: plan-s-faces-extract-app-layer
