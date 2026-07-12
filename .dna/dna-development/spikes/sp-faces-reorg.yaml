@@ -49,3 +49,4 @@ spec:
       \ nunca quebra), sem big-bang. Rsh: rsh-faces-reorg."
   research_refs:
   - rsh-faces-reorg
+  follow_up_adr: adr-faces-reorg

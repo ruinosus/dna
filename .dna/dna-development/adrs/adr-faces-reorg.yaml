@@ -1,0 +1,37 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: ADR
+metadata:
+  name: adr-faces-reorg
+spec:
+  title: "Faces do DNA em ports-and-adapters: application layer no core, dna-mcp/dna-api\
+    \ como distribui\xE7\xF5es separadas"
+  status: accepted
+  context: "As 3 faces do DNA (CLI + MCP server + REST API) estao empacotadas juntas\
+    \ em packages/cli, com a camada _impl compartilhada enterrada ali \u2014 catchall,\
+    \ mesmo cheiro do monolito aap_harness extinto. Barna flagou o acoplamento. Deep-research\
+    \ (rsh-faces-reorg, 95 agentes, 22/25 claims) confirmou o diagnostico e o alvo."
+  decision: "1) A application layer / os *_impl (casos de uso, transport-agnostic)\
+    \ vao pro CORE, nao na CLI. 2) CLI, MCP e REST viram adapters de ENTRADA finos\
+    \ \u2014 so traduzem transporte + validacao de borda (auth/quota do MCP na borda);\
+    \ zero logica de negocio nas faces. 3) MCP server e REST API sao shipados como\
+    \ distribuicoes SEPARADAS (dna-mcp, dna-api), co-localizadas no monorepo, versionadas\
+    \ em lockstep com o SDK. 4) NAO usar extras (pip install dna-cli[mcp]) \u2014\
+    \ extras so gateiam deps, nao codigo, e o MCP SDK arrasta starlette/uvicorn como\
+    \ deps core. 5) Deploy ACA: 1 uvicorn por container por face, replicacao pelo\
+    \ orquestrador. 6) Migracao INCREMENTAL: extrair o _impl pro core primeiro (movimento\
+    \ no1, load-bearing), depois split das faces, com shims mantendo dna mcp/api serve\
+    \ funcionando o tempo todo \u2014 sem big-bang. Codigo NOVO (intel) ja nasce no\
+    \ padrao-alvo (logica no core, faces finas) pra parar de alimentar o catchall."
+  consequences: 'PROS: faces desacopladas, dna-cli/dna-sdk puros leves (sem uvicorn/starlette),
+    paridade Py<->TS fica no core, adicionar face nova = adapter novo. CONTRAS: mais
+    distribuicoes pra versionar em lockstep; refactor do _impl legado e trabalho real
+    (mitigado por ser incremental+shimmed). O intel novo evita divida; o legado migra
+    depois via track propria.'
+  created_at: '2026-07-12T17:08:56+00:00'
+  updated_at: '2026-07-12T17:08:56+00:00'
+  timeline:
+  - at: '2026-07-12T17:08:56+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: accepted
