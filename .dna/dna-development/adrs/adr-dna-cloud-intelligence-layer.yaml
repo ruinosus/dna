@@ -1,0 +1,44 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: ADR
+metadata:
+  name: adr-dna-cloud-intelligence-layer
+spec:
+  title: "DNA Cloud is an intelligence layer over your portfolio \u2014 not a tracker;\
+    \ it researches, surfaces insights, and operates your existing tools"
+  status: proposed
+  context: "DNA Cloud started as portable agents (Definitions) + owned memory (Memory).\
+    \ Owner (Barna) expansion: it should NOT compete with Jira / Azure DevOps \u2014\
+    \ it should be the intelligence layer that can even OPERATE them. As you configure/evolve\
+    \ N apps + N use-cases in DNA, the platform runs AUTOMATIC research relevant to\
+    \ each and surfaces INSIGHTS \u2014 e.g. 'app X got $Y funding / N GitHub stars\
+    \ / shipped feature Z \u2192 worth researching whether you should change YOUR\
+    \ app'. And it ACTS through your existing tools (a Jira card, a GitHub issue)\
+    \ rather than replacing them. The memory/definitions/SDLC are the CONTEXT that\
+    \ makes the research personal, not generic. This turns the product from passive\
+    \ storage into PROACTIVE INTELLIGENCE \u2014 a materially stronger 'why pay'."
+  decision: "PROPOSED direction (validate with market research before committing):\
+    \ position DNA Cloud as a 3-layer intelligence platform \u2014 Definitions (your\
+    \ agents) + Memory (what you know) + INTELLIGENCE (automatic research \u2192 insights\
+    \ \u2192 actions relevant to your portfolio). Reuse the existing DNA substrate:\
+    \ the Research Kind + the deep-research harness (auto research); Insight/Finding\
+    \ Kinds (insights); cognitive hooks / autopilot (scheduled, runs itself); MCPFederation\
+    \ (DNA already consumes other tools' MCP \u2192 operate Jira/ADO/GitHub). Do NOT\
+    \ build a tracker \u2014 integrate + operate the ones people already use. The\
+    \ memory/SDLC context is what makes an insight about YOUR portfolio, not a generic\
+    \ feed."
+  consequences: "Much stronger differentiation (proactive intelligence vs commodity\
+    \ memory). Bigger build. Risk #1: insight-as-NOISE \u2014 relevance/timing/no-spam\
+    \ IS the product ('research that's worth reading', not 'research that runs').\
+    \ Shifts the competitive frame from 'memory layer' to 'portfolio intelligence\
+    \ / proactive dev insights'. Two deep-research reports (memory/vendor-neutral\
+    \ + portfolio-intelligence) are registered as Research docs on this board to ground\
+    \ the decision (evidence over invention). Complements adr-dna-cloud-memory (co-pillars)\
+    \ + adr-dna-cloud-saas."
+  created_at: '2026-07-12T12:29:28+00:00'
+  updated_at: '2026-07-12T12:29:28+00:00'
+  timeline:
+  - at: '2026-07-12T12:29:28+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: proposed
