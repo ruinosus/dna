@@ -1,0 +1,22 @@
+apiVersion: github.com/ruinosus/dna/intel/v1
+kind: IntelInsight
+metadata:
+  name: ins-copiloto-medico-sugerir-conduta-samd-classe-ii-regulado-rache-a
+spec:
+  title: "Sugerir conduta = SaMD Classe II regulado \u2014 rache a arquitetura"
+  fact: "ANVISA RDC 657/2022 regra 9: no instante em que o software indica o tratamento\
+    \ vira dispositivo m\xE9dico regulado (SaMD Classe II). Human-in-the-loop N\xC3\
+    O isenta; s\xF3 documenta\xE7\xE3o pura \xE9 isenta."
+  why: "Boltar sugest\xE3o de conduta no scribe converte um produto isento em SaMD\
+    \ regulado, com exposi\xE7\xE3o de liability e deskilling."
+  action: "Rachar a arquitetura: core-scribe ISENTO (shipa j\xE1) + m\xF3dulo de sugest\xE3\
+    o-de-conduta SEPARADO, governado, em formato safety-net, planejado pra regularizar\
+    \ na ANVISA."
+  score: 1.0
+  source_ref: copiloto-medico
+  pirs:
+  - "regula\xE7\xE3o"
+  citations: []
+  state: new
+  evidence_rating: evidence-based
+  created_at: '2026-07-12T17:26:51+00:00'

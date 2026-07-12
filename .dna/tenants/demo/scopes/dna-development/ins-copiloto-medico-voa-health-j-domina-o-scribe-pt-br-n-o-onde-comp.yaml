@@ -1,0 +1,21 @@
+apiVersion: github.com/ruinosus/dna/intel/v1
+kind: IntelInsight
+metadata:
+  name: ins-copiloto-medico-voa-health-j-domina-o-scribe-pt-br-n-o-onde-comp
+spec:
+  title: "Voa Health j\xE1 domina o scribe PT-BR \u2014 n\xE3o \xE9 onde competir"
+  fact: "Voa Health (60k+ m\xE9dicos, seed $3M Prosus) domina o scribe PT-BR, mas\
+    \ \xE9 scribe, n\xE3o sugeridor de conduta; iClinic Assist (Afya) est\xE1 mais\
+    \ perto da linha."
+  why: "Entrar por scribing perde na distribui\xE7\xE3o; o diferencial est\xE1 na\
+    \ conduta."
+  action: Considerar complementar/integrar scribes existentes em vez de substituir;
+    cunha na conduta.
+  score: 1.0
+  source_ref: copiloto-medico
+  pirs:
+  - concorrentes
+  citations: []
+  state: new
+  evidence_rating: evidence-based
+  created_at: '2026-07-12T17:26:54+00:00'

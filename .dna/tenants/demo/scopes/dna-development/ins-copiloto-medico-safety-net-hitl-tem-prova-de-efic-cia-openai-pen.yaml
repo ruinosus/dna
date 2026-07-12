@@ -1,0 +1,22 @@
+apiVersion: github.com/ruinosus/dna/intel/v1
+kind: IntelInsight
+metadata:
+  name: ins-copiloto-medico-safety-net-hitl-tem-prova-de-efic-cia-openai-pen
+spec:
+  title: "Safety-net HITL tem prova de efic\xE1cia (OpenAI\u2013Penda)"
+  fact: "Estudo OpenAI\u2013Penda (~40k visitas, Nair\xF3bi): um safety-net que dispara\
+    \ s\xF3 em erro detectado cortou \u221216% erro diagn\xF3stico e \u221213% de\
+    \ tratamento \u2014 mas exigiu integra\xE7\xE3o profunda de prontu\xE1rio, n\xE3\
+    o escuta passiva."
+  why: "\xC9 a prova mais forte de que o design HITL do Copiloto funciona \u2014 e\
+    \ valida o enquadramento safety-net como defens\xE1vel cl\xEDnica e legalmente."
+  action: "Adotar \"safety-net que ativa s\xF3 em risco detectado\" em vez de sugeridor\
+    \ sempre-ligado; or\xE7ar contexto estruturado do paciente."
+  score: 1.0
+  source_ref: copiloto-medico
+  pirs:
+  - "regula\xE7\xE3o"
+  citations: []
+  state: new
+  evidence_rating: evidence-based
+  created_at: '2026-07-12T17:26:54+00:00'

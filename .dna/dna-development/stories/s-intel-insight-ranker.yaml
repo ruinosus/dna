@@ -34,7 +34,7 @@ spec:
   - "Doc do contrato de score (o que conta como 'acion\xE1vel') no repo."
   definition_of_done_source: cli-create
   created_at: '2026-07-12T13:39:00+00:00'
-  updated_at: '2026-07-12T17:10:12+00:00'
+  updated_at: '2026-07-12T17:27:40+00:00'
   timeline:
   - at: '2026-07-12T13:39:00+00:00'
     actor: claude-code
@@ -57,6 +57,21 @@ spec:
       creds LLM; o LLMAnalyzer real e o aprofundamento. Engine no core (nao na CLI)
       desde ja, por adr-faces-reorg.
     commit_ref: 21bf84cc0933cefbf2cb5e349947431e87edd4ef
+  - at: '2026-07-12T17:27:40+00:00'
+    actor: claude-code
+    type: decision
+    source: cli
+    summary: "WALKING-SKELETON ANDOU ponta-a-ponta no main (engine cherry-picked,\
+      \ 4 commits). dna intel run copiloto-medico rodou ao vivo: 7 insights entregues\
+      \ (ranqueados) + 1 SUPRIMIDO abaixo do threshold com rationale inspecionavel\
+      \ (base 0.30, no action, evidence=anecdotal, no PIR match = suprimido). Core\
+      \ (analyzer+ranker+engine) transport-agnostic (test guarda contra imports de\
+      \ transporte); CLI (dna intel run/list) + REST (/v1/sources,/v1/insights,PATCH\
+      \ state) FINOS delegando \u2014 padrao adr-faces-reorg. SeedAnalyzer com os\
+      \ insights reais dos experimentos (roda sem creds LLM); LLMAnalyzer stub real.\
+      \ 16+15 testes verdes. Falta: wirar o portal na REST (some o chip sample), paridade\
+      \ TS do engine (follow-up), LLMAnalyzer com creds."
+    commit_ref: 9b9a106729cc6fdcde6603aace44166ff471712b
   produces:
   - kind: Plan
     name: plan-s-intel-insight-ranker
