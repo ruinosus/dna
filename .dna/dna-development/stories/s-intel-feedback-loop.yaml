@@ -8,7 +8,7 @@ spec:
   description: "O flywheel anti-ru\xEDdo: usu\xE1rio marca cada insight como \xFA\
     til/agido/ru\xEDdo \u2192 ajusta o threshold do ranker + alimenta a mem\xF3ria\
     \ de dedup. A relev\xE2ncia melhora sozinha."
-  status: todo
+  status: in-progress
   feature: f-dna-cloud-intelligence
   priority: medium
   labels:
@@ -30,10 +30,37 @@ spec:
   - "Feedback grava na mem\xF3ria (fecha com s-intel-dedup-memory)."
   definition_of_done_source: cli-create
   created_at: '2026-07-12T13:39:11+00:00'
-  updated_at: '2026-07-12T13:39:11+00:00'
+  updated_at: '2026-07-12T19:00:26+00:00'
   timeline:
   - at: '2026-07-12T13:39:11+00:00'
     actor: claude-code
     type: status_change
     source: cli
     to: todo
+  - at: '2026-07-12T18:53:45+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-12T19:00:26+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Core landed: pure dna/extensions/intel/feedback.py (adjust_score, precision,\
+      \ noise_rate, summarize_states). set_insight_state now records a feedback engram\
+      \ via the co-pillar remember() \u2014 dismissed=LessonLearned affect regret\
+      \ (negative), actioned=triumph (reinforce), area Intel/<source>, body=insight\
+      \ title+fact so the ranker can compare. engine.run_pass step 2 recalls the source\
+      \ engrams, embeds candidate+engram texts once, and lowers dismissed-similar\
+      \ candidates below the effective threshold (raise). Writes are fail-soft + skipped\
+      \ when LessonLearned is not registered, so IntelExtension-only kernels are unaffected.\
+      \ Test proves a dismissed pattern suppresses a similar (not identical) candidate\
+      \ next pass (cosine band 0.80..0.97, control keeps it). feedback_metrics exposes\
+      \ precision/noise_rate. Next: thin CLI + REST metric faces + docs regen."
+    commit_ref: 54dafad5e6b1d1fadda53db5768d8f633c76c0f2
+  produces:
+  - kind: Plan
+    name: plan-s-intel-feedback-loop
+    role: implementation
+    at: '2026-07-12T18:53:45+00:00'

@@ -8,7 +8,7 @@ spec:
   description: "Nunca mostrar o mesmo insight duas vezes: dedup sem\xE2ntico do candidato\
     \ contra a mem\xF3ria (LessonLearned) do que j\xE1 foi surfado/agido/dispensado\
     \ \u2014 repeti\xE7\xE3o \xE9 a fonte #1 de ru\xEDdo."
-  status: todo
+  status: in-progress
   feature: f-dna-cloud-intelligence
   priority: high
   labels:
@@ -32,10 +32,36 @@ spec:
   - "M\xE9trica: taxa de dedup por pass."
   definition_of_done_source: cli-create
   created_at: '2026-07-12T13:39:03+00:00'
-  updated_at: '2026-07-12T13:39:03+00:00'
+  updated_at: '2026-07-12T19:00:23+00:00'
   timeline:
   - at: '2026-07-12T13:39:03+00:00'
     actor: claude-code
     type: status_change
     source: cli
     to: todo
+  - at: '2026-07-12T18:53:26+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-12T19:00:23+00:00'
+    actor: claude-code
+    type: decision
+    source: cli
+    summary: "Core landed: pure dna/extensions/intel/dedup.py (normalized_key floor\
+      \ + insight_text + dedup_partition) wired into engine.run_pass step 4. Before\
+      \ writing survivors it loads existing IntelInsight for the source (all states)\
+      \ and drops duplicates via key OR cosine (>=0.97) over kernel.embed \u2014 the\
+      \ co-pillar semantic space. Chose kernel.embed + dna.memory.semantic.cosine_similarity\
+      \ (deterministic fake floor offline) over a search-provider recall so dedup\
+      \ works with zero extras; the normalized_key is the degrade-gracefully floor.\
+      \ Test test_rerun_pass_yields_zero_new_insights: run pass 2x -> 2nd yields kept\
+      \ 0, deduped 7, docs unchanged at 7. dedup_rate metric on PassResult. Faces\
+      \ untouched (still thin)."
+    commit_ref: 54dafad5e6b1d1fadda53db5768d8f633c76c0f2
+  produces:
+  - kind: Plan
+    name: plan-s-intel-dedup-memory
+    role: implementation
+    at: '2026-07-12T18:53:26+00:00'

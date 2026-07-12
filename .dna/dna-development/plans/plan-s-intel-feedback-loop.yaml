@@ -1,0 +1,27 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-intel-feedback-loop
+spec:
+  title: 'Plano: s-intel-feedback-loop'
+  date: '2026-07-12'
+  status: accepted
+  story_ref: s-intel-feedback-loop
+  journey_phase: plan
+  body: "Close the feedback stage in the CORE engine. When set_insight_state marks\
+    \ an insight dismissed, record a negative-feedback engram via the memory co-pillar\
+    \ (dna.memory.remember writes a LessonLearned: affect=regret, area=Intel/<source>,\
+    \ tags=[intel-feedback,dismissed], body=insight title+fact); actioned reinforces\
+    \ (affect=triumph). New pure module dna/extensions/intel/feedback.py: feedback_area,\
+    \ adjust_score (raise the effective threshold \u2014 subtract a penalty when a\
+    \ candidate is semantically similar to a dismissed engram, add a small bonus for\
+    \ actioned), precision (actioned / (actioned+dismissed)) + noise_rate. engine.run_pass,\
+    \ after base ranking, recalls the source's feedback engrams, embeds candidate\
+    \ + engram texts (co-pillar semantic: kernel.embed + dna.memory.semantic.cosine_similarity),\
+    \ lowers scores of dismissed-similar candidates so they fall below threshold.\
+    \ Feedback writes are fail-soft + skipped when LessonLearned is not registered.\
+    \ New read-only metric surfaced by thin faces (dna intel metrics + REST /v1/insights/metrics).\
+    \ Deterministic tests: dismiss a pattern -> similar candidate suppressed next\
+    \ pass; precision metric exposed."
+  created_at: '2026-07-12T18:53:39+00:00'
+  updated_at: '2026-07-12T18:53:39+00:00'

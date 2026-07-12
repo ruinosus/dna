@@ -1,0 +1,23 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-intel-dedup-memory
+spec:
+  title: 'Plano: s-intel-dedup-memory'
+  date: '2026-07-12'
+  status: accepted
+  story_ref: s-intel-dedup-memory
+  journey_phase: plan
+  body: 'Close the dedup stage in the CORE engine (transport-agnostic). New pure module
+    dna/extensions/intel/dedup.py: normalized_key (source_ref + slugged title) + insight_text
+    (title+fact, mirrors the Kind embed fields) + dedup_partition (key-match OR cosine
+    >= threshold). engine.run_pass, after ranking and before writing survivors, loads
+    existing IntelInsight docs for that source (ALL states incl actioned/dismissed
+    via list_insights source_ref filter), embeds candidate + existing texts in ONE
+    kernel.embed batch (the memory co-pillar''s semantic machinery; deterministic
+    fake floor when no provider), and drops duplicates. Re-running a pass yields 0
+    new insights. Degrades gracefully: the normalized_key floor dedups even when embeddings
+    carry no meaning. Deterministic tests + a per-pass dedup metric on PassResult.
+    Faces stay thin.'
+  created_at: '2026-07-12T18:53:20+00:00'
+  updated_at: '2026-07-12T18:53:20+00:00'
