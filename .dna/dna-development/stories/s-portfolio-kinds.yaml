@@ -6,7 +6,7 @@ spec:
   title: "5 portfolio record Kinds as descriptors (byte-identical Py\u2194TS)"
   description: Ship Organization/Project/Repo/Membership/Role as a new portfolio extension
     of F3 descriptor Kinds, per adr-portfolio-project-model.
-  status: in-progress
+  status: review
   feature: f-portfolio-kinds
   priority: high
   labels:
@@ -39,7 +39,7 @@ spec:
   - 'CI: all guards green; PR opened off feat/portfolio-kinds'
   definition_of_done_source: cli-create
   created_at: '2026-07-12T23:14:17+00:00'
-  updated_at: '2026-07-12T23:15:29+00:00'
+  updated_at: '2026-07-12T23:17:33+00:00'
   timeline:
   - at: '2026-07-12T23:14:17+00:00'
     actor: claude-code
@@ -96,6 +96,19 @@ spec:
       \ docs-coverage clean, docs/reference regenerated. Ref: adr-portfolio-project-model,\
       \ rsh-portfolio-project-model."
     commit_ref: b5e9eb96274a99dc89683e4d98c414eb09e1031c
+  - at: '2026-07-12T23:17:19+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR aberto: https://github.com/ruinosus/dna/pull/96 \u2014 todos os guards\
+      \ verdes localmente (py 20/20, ts 13/13, typecheck, brand, docs-coverage). done-on-merge."
+    commit_ref: 2a9ebba41e7ca707c04cb603eb59b4bf8b9bcda2
+  - at: '2026-07-12T23:17:33+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
   produces:
   - kind: Plan
     name: plan-s-portfolio-kinds
