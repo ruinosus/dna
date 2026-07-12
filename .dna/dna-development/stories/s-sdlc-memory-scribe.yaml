@@ -1,0 +1,38 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-sdlc-memory-scribe
+spec:
+  title: "Scribe SDLC\u2192mem\xF3ria (decis\xF5es viram mem\xF3ria recuper\xE1vel)"
+  description: "Toda decis\xE3o do SDLC (ADR accepted, comment --type decision, reflex\xE3\
+    o de story done) vira automaticamente uma LessonLearned recuper\xE1vel por recall\
+    \ \u2014 dogfood do co-pilar no pr\xF3prio projeto. Insight do Barna: 'usar o\
+    \ SDLC deveria gerar mem\xF3ria'."
+  status: todo
+  feature: f-dna-cloud
+  priority: high
+  labels:
+  - sdk
+  - dogfood
+  reporter: claude-code
+  business_value: 750
+  acceptance_criteria:
+  - "Um scribe/hook converte decis\xF5es do SDLC (ADR\u2192accepted, decision comments,\
+    \ story done) em docs LessonLearned (o Kind de mem\xF3ria), tenant-scoped"
+  - "recall('o que decidimos sobre X') traz de volta as decis\xF5es do SDLC \u2014\
+    \ ex: 'por que mem\xF3ria \xE9 co-pilar' \u2192 a articula\xE7\xE3o ratificada"
+  - "As LessonLearned do SDLC + a mem\xF3ria do tenant compartilham UM \xEDndice de\
+    \ recall (n\xE3o dois silos)"
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - "scribe/hook + testes + recall sobre decis\xF5es do SDLC funcionando + doc; prova\
+    \ a tese mem\xF3ria-mant\xE9m-o-DNA no pr\xF3prio dogfooding"
+  definition_of_done_source: cli-create
+  created_at: '2026-07-12T02:40:31+00:00'
+  updated_at: '2026-07-12T02:40:31+00:00'
+  timeline:
+  - at: '2026-07-12T02:40:31+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
