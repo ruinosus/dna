@@ -6,7 +6,7 @@ spec:
   title: "Cat\xE1logo starter (_lib) + BYO via CLI"
   description: Semear ~3 agents starter no _lib + validar o fluxo BYO (tenant overlay)
     gated por Tier
-  status: in-progress
+  status: done
   feature: f-dna-cloud
   priority: high
   labels:
@@ -15,20 +15,32 @@ spec:
   reporter: claude-code
   business_value: 700
   acceptance_criteria:
-  - "3 agents starter \xFAteis no _lib (herd\xE1veis por todo tenant): p.ex. assistant,\
-    \ code-reviewer, research-analyst \u2014 cada um com Soul+Guardrails, comp\xF5\
-    e ao vivo"
-  - 'Fluxo BYO validado: um tenant autora/override um agent (overlay) via dna CLI
-    + push pro source; o MCP serve o overlay dele'
-  - "Gating por plano: Free usa o cat\xE1logo base (read); Pro autora o pr\xF3prio\
-    \ (write) + emit \u2014 via Tier caps"
+  - text: "3 agents starter \xFAteis no _lib (herd\xE1veis por todo tenant): p.ex.\
+      \ assistant, code-reviewer, research-analyst \u2014 cada um com Soul+Guardrails,\
+      \ comp\xF5e ao vivo"
+    done: true
+    done_at: '2026-07-12T01:34:39+00:00'
+    done_by: story-done-auto
+  - text: 'Fluxo BYO validado: um tenant autora/override um agent (overlay) via dna
+      CLI + push pro source; o MCP serve o overlay dele'
+    done: true
+    done_at: '2026-07-12T01:34:39+00:00'
+    done_by: story-done-auto
+  - text: "Gating por plano: Free usa o cat\xE1logo base (read); Pro autora o pr\xF3\
+      prio (write) + emit \u2014 via Tier caps"
+    done: true
+    done_at: '2026-07-12T01:34:39+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - "3 agents _lib + doc do fluxo BYO + smoke (tenant v\xEA base + overlay) + seed\
-    \ no GO-LIVE fase 2"
+  - text: "3 agents _lib + doc do fluxo BYO + smoke (tenant v\xEA base + overlay)\
+      \ + seed no GO-LIVE fase 2"
+    done: true
+    done_at: '2026-07-12T01:34:39+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-12T00:31:04+00:00'
-  updated_at: '2026-07-12T00:57:35+00:00'
+  updated_at: '2026-07-12T01:34:54+00:00'
   timeline:
   - at: '2026-07-12T00:31:04+00:00'
     actor: claude-code
@@ -59,8 +71,24 @@ spec:
       \ + MockSource): tenant herda o cat\xE1logo do _lib (is_inherited) e um overlay\
       \ de tenant ganha da base com isolamento entre tenants. 6/6 verdes."
     commit_ref: d55837d63ec0983cde827a03bac6b1ef3b28eb91
+  - at: '2026-07-12T01:34:46+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "3 agents starter (assistant/code-reviewer/dna-copilot) no _lib + fluxo\
+      \ BYO validado, merged #82. test_dna_cloud_catalog_overlay 6/6 (heran\xE7a +\
+      \ overlay + isolamento). Achou limita\xE7\xE3o de composi\xE7\xE3o (persona-first\
+      \ flatten) \u2014 follow-up. Brand-guard nome-interno\u2192DNA_TENANT corrigido."
+  - at: '2026-07-12T01:34:54+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: done
+    commit_ref: 6dc0c0862e48460bab6a12be340d029430e8d843
   produces:
   - kind: Plan
     name: plan-s-dna-cloud-starter-catalog
     role: implementation
     at: '2026-07-12T00:57:19+00:00'
+  closed_at: '2026-07-12T01:34:39+00:00'

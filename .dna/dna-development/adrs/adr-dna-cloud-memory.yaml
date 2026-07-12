@@ -1,0 +1,42 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: ADR
+metadata:
+  name: adr-dna-cloud-memory
+spec:
+  title: "DNA Cloud \u2014 Memory and Definitions as co-equal pillars over MCP"
+  status: accepted
+  context: DNA Cloud offers two things a customer gets over the MCP connection. Memory
+    is siloed per tool today (ChatGPT != Claude != Cursor); DNA already ships the
+    primitives (remember/recall/consolidate MCP tools, tenant-scoped, gated by the
+    Tier memory_mode). Over MCP, any client authenticating as the tenant shares the
+    same memory. The question was whether Memory LEADS (memory-first) or is a co-pillar.
+  decision: "CO-PILLARS \u2014 two sides of the same thing, not two products. RATIFIED\
+    \ framing (owner Barna, 2026-07-11): as your DNA grows to N items (agents, skills,\
+    \ scopes), you forget why each exists / what it does / which decision led to it\
+    \ \u2014 MEMORY is the layer that keeps a large DNA COHERENT and maintainable.\
+    \ The SYMBIOSIS is why they are co-pillars: your DNA gives the memory what to\
+    \ organize (context, items, decisions); the memory gives the DNA how to maintain\
+    \ it (remembers, connects, surfaces what matters). The more DNA you have, the\
+    \ more you need memory to keep it \u2014 one without the other is worth less.\
+    \ So DNA Cloud offers, over the same MCP + the same tenant: (1) DEFINITIONS \u2014\
+    \ agents/skills (catalog + BYO, adr-dna-cloud-content); (2) MEMORY \u2014 portable,\
+    \ user-owned, cross-tool capture/recall/act. Both tenant-scoped, both user-owned,\
+    \ both plan-gated via Tier caps (Definitions via feature_families; Memory via\
+    \ memory_mode: Free=recall/read, Pro=remember+consolidate/write). Privacy + ownership\
+    \ first-class on memory (see/edit/delete/export, per-tenant isolation, zero cross-client\
+    \ leak)."
+  consequences: "Reuses the shipped memory tools + tenant model + Tier gating \u2014\
+    \ low cost. Positioning: 'your AI layer \u2014 agents AND the memory that keeps\
+    \ them coherent \u2014 portable across every tool, that you own.' Memory's accretion\
+    \ + its role maintaining a growing DNA = a compounding retention moat. Neither\
+    \ pillar blocks the other; both ship incrementally. Follow-ups: the Memory dashboard,\
+    \ cross-client capture validation, the pgvector store on Azure Postgres, privacy/export/delete\
+    \ controls, the memory-agent(s)."
+  created_at: '2026-07-12T00:40:45+00:00'
+  updated_at: '2026-07-12T00:40:45+00:00'
+  timeline:
+  - at: '2026-07-12T00:40:45+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: accepted
