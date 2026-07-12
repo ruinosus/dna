@@ -9,7 +9,7 @@
   "is_runtime_artifact": false,
   "plane": "record",
   "prompt_target_priority": 0,
-  "scope": "global",
+  "scope": null,
   "scope_inheritable": false,
   "volatile_spec_fields": [
    "created_at",

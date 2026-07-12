@@ -25,7 +25,6 @@ spec:
   target_kind: LessonLearned
   alias: sdlc-lesson-learned
   origin: github.com/ruinosus/dna/sdlc
-  tenant_scope: global
   plane: record
   prompt_target: false
   flatten_in_context: false

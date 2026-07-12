@@ -420,7 +420,9 @@ def build_server(
     )
     from dna_cli._mcp_quota import (
         FeatureNotInPlanError,
+        MemoryModeError,
         OverQuotaError,
+        enforce_memory_mode,
         enforce_quota,
     )
 
@@ -430,7 +432,9 @@ def build_server(
         except CrossTenantError as exc:
             raise ToolError(str(exc)) from None
 
-    async def _guard(family: str, requested: str | None = None) -> str | None:
+    async def _guard(
+        family: str, requested: str | None = None, *, memory_op: str | None = None
+    ) -> str | None:
         """The single tenancy + quota seam every tool passes through.
 
         1. Enforce tenancy (existing ``_tenant``): a cross-tenant / tenant-less
@@ -440,7 +444,12 @@ def build_server(
            quota invariant mirrors the tenant bridge exactly).
         3. Otherwise (authenticated / hosted SaaS) resolve the token's tier, read
            its caps from the ``Tier`` Kind via ``kernel.tier`` (zero hardcoded
-           caps), and meter this call's ``family`` against them.
+           caps), and meter this call's ``family`` against them. For the memory
+           tools ``memory_op`` (``read`` for recall / ``write`` for remember +
+           consolidate) additionally enforces the tier's ``memory_mode`` — the
+           read-vs-write refinement of the coarse ``memory`` feature-family gate
+           (Free=read/recall-only, Pro=write/remember+consolidate), read from the
+           Tier spec (zero hardcode).
 
         Tier resolution order — **token plan claim → TenantPlan store → Free**:
         an explicit ``plan`` claim on the token WINS (the store is not consulted);
@@ -472,8 +481,12 @@ def build_server(
             row = await kernel.tier("free")  # unknown tier → Free floor.
         caps = (row or {}).get("spec") or {}  # no tiers configured → empty → no-op.
         try:
+            # memory_mode is a pre-counter gate (like the family gate): a denied
+            # write costs no quota. Enforce it BEFORE metering.
+            if memory_op is not None:
+                enforce_memory_mode(caps=caps, tier=tier, op=memory_op)
             enforce_quota(caps=caps, tenant=tenant, tier=tier, family=family)
-        except (OverQuotaError, FeatureNotInPlanError) as exc:
+        except (OverQuotaError, FeatureNotInPlanError, MemoryModeError) as exc:
             raise ToolError(str(exc)) from None
         return tenant
 
@@ -555,7 +568,9 @@ def build_server(
     @server.tool(run_in_thread=False)
     async def recall(query: str, scope: str | None = None, k: int = 5) -> dict[str, Any]:
         """Recall DNA memory for a query (hybrid/bi-temporal when available)."""
-        return await recall_impl(await _live(), query, scope, k, await _guard("memory"))
+        return await recall_impl(
+            await _live(), query, scope, k, await _guard("memory", memory_op="read")
+        )
 
     @server.tool(run_in_thread=False)
     async def remember(
@@ -569,13 +584,16 @@ def build_server(
         """Persist a memory (a LessonLearned) so future recalls surface it."""
         return await remember_impl(
             await _live(), summary, scope, area=area, affect=affect, tags=tags,
-            owner=owner, tenant=await _guard("memory"),
+            owner=owner, tenant=await _guard("memory", memory_op="write"),
         )
 
     @server.tool(run_in_thread=False)
     async def consolidate(scope: str | None = None, apply: bool = False) -> dict[str, Any]:
         """Deterministic memory consolidation pass (retention re-score)."""
-        return await consolidate_impl(await _live(), scope, apply=apply, tenant=await _guard("memory"))
+        return await consolidate_impl(
+            await _live(), scope, apply=apply,
+            tenant=await _guard("memory", memory_op="write"),
+        )
 
     # -- resources (prove resources beyond tools) ----------------------------
 
