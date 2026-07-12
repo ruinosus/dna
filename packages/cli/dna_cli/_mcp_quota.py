@@ -42,6 +42,48 @@ class FeatureNotInPlanError(PermissionError):
     include the called tool's family. The message names the tier and the family."""
 
 
+class MemoryModeError(PermissionError):
+    """The tier's ``memory_mode`` does not grant the attempted memory op (403).
+
+    Raised by :func:`enforce_memory_mode`: the ``memory`` feature family is a
+    coarse in/out gate (a tier either exposes memory tools or not); ``memory_mode``
+    is the FINER read-vs-write split WITHIN it. Free grants ``read`` (recall only);
+    ``write`` ops (remember/consolidate) need a tier whose ``memory_mode`` is
+    ``write``. The value is read straight from the ``Tier`` spec — never hardcoded."""
+
+
+# Memory access is a total order: none < read < write. A tool declares the level
+# it NEEDS (recall→read, remember/consolidate→write); the tier GRANTS a level.
+_MEMORY_MODE_RANK: dict[str, int] = {"none": 0, "read": 1, "write": 2}
+
+
+def enforce_memory_mode(*, caps: dict[str, Any], tier: str, op: str) -> None:
+    """Gate one memory tool call against the tier's ``memory_mode`` — raises on a
+    breach. The read-vs-write refinement of the ``memory`` feature-family gate.
+
+    ``caps`` is the ``Tier`` Kind's ``spec`` dict (from ``kernel.tier(...)``); the
+    granted mode is READ from ``caps['memory_mode']`` (``none``/``read``/``write``),
+    never hardcoded. ``op`` is the level the tool needs — ``read`` (recall) or
+    ``write`` (remember/consolidate). Denies when the granted rank is below the
+    needed rank: a ``read`` tier calling a ``write`` op → :class:`MemoryModeError`.
+
+    Empty ``caps`` (an unconfigured / OSS source) enforces nothing — mirrors
+    :func:`enforce_quota` exactly, so the OSS/self-host path is never blocked. A
+    missing ``memory_mode`` on a configured tier defaults to ``none`` (fail closed —
+    the schema's own default), denying any memory op until the tier declares one."""
+    if not caps:
+        return  # unconfigured / OSS source → enforce nothing (mirror enforce_quota).
+    granted = str(caps.get("memory_mode") or "none")
+    have = _MEMORY_MODE_RANK.get(granted, 0)
+    need = _MEMORY_MODE_RANK.get(op, _MEMORY_MODE_RANK["write"])  # unknown op → strictest.
+    if have < need:
+        raise MemoryModeError(
+            f"tier {tier!r} grants memory_mode={granted!r}, which does not permit a "
+            f"{op!r} memory operation — a write (remember/consolidate) needs a tier "
+            f"whose memory_mode is 'write' (upgrade the plan)."
+        )
+
+
 # ── the store port (swap in Postgres/Redis for real billing) ───────────────
 
 

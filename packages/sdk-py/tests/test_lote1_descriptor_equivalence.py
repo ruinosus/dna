@@ -111,7 +111,10 @@ def test_flags_match_golden(kernel, kind):
     g = _golden(kind)["flags"]
     port = _port(kernel, kind)
     assert port.plane == g["plane"] == "record"
-    assert port.scope == TenantScope(g["scope"])
+    # A permissive Kind (no declared tenant_scope, e.g. LessonLearned since the
+    # memory co-pillar made it tenant-overlayable) has NO `scope` attribute; a
+    # declared Kind exposes the TenantScope. golden scope=null encodes permissive.
+    assert getattr(port, "scope", None) == (TenantScope(g["scope"]) if g["scope"] else None)
     assert port.is_prompt_target is g["is_prompt_target"]
     assert port.flatten_in_context is g["flatten_in_context"]
     assert port.prompt_target_priority == g["prompt_target_priority"]
