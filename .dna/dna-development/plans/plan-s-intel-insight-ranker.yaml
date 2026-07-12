@@ -1,0 +1,23 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-intel-insight-ranker
+spec:
+  title: 'Plano: s-intel-insight-ranker'
+  date: '2026-07-12'
+  status: accepted
+  story_ref: s-intel-insight-ranker
+  journey_phase: plan
+  body: "Walking-skeleton do ciclo intel, JA no padrao-alvo do adr-faces-reorg (logica\
+    \ no CORE, faces finas). Engine em dna/extensions/intel (transport-agnostic):\
+    \ (1) analyzer plugavel \u2014 SeedAnalyzer (devolve os insights REAIS dos experimentos\
+    \ p/ copiloto-medico+DNA, roda sem creds LLM) + stub LLMAnalyzer; (2) ranker \u2014\
+    \ score de acionabilidade 0-1 + rationale + supressao abaixo do threshold da fonte;\
+    \ (3) engine.run_pass(kernel,source,analyzer) \u2014 le IntelSource, gera candidatos,\
+    \ ranca, suprime, grava IntelInsight (state=new). Faces FINAS delegando: REST\
+    \ em _rest_api.py (GET /v1/sources, /v1/insights, PATCH state) + CLI dna intel\
+    \ run/list. Seed 1 IntelSource (copiloto-medico). Testes: engine (pass gera+suprime),\
+    \ ranker, REST. Paridade TS do engine = follow-up rastreado (Kinds ja tem paridade).\
+    \ Branch feat/intel-engine off main."
+  created_at: '2026-07-12T17:10:02+00:00'
+  updated_at: '2026-07-12T17:10:02+00:00'
