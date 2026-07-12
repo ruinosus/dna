@@ -1,0 +1,57 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-copiloto-live-review
+spec:
+  title: "Revis\xE3o ao vivo do copiloto: painel de cobertura da consulta que se preenche\
+    \ (a "
+  description: "Revis\xE3o ao vivo do copiloto: painel de cobertura da consulta que\
+    \ se preenche (a revisar \u2192 conduzido) periodicamente + bot\xE3o + config,\
+    \ sobre a transcri\xE7\xE3o INTEIRA. Prot\xF3tipo aprovado pelo Barna."
+  status: in-progress
+  feature: f-dna-cloud-intelligence
+  priority: high
+  labels:
+  - frontend
+  reporter: claude-code
+  business_value: 650
+  acceptance_criteria:
+  - "Review peri\xF3dico enquanto 'capturando': timer configur\xE1vel (30s/60s/2min)\
+    \ via UI + toggle auto-review + bot\xE3o 'Revisar agora' \u2014 sem esperar o\
+    \ encerramento."
+  - "Painel de cobertura: coluna 'A revisar' (pendentes, com justificativa+baseadoEm)\
+    \ e 'Conduzido' (cobertos); anel de cobertura N/M; item migra pendente\u2192conduzido\
+    \ ao registrar."
+  - "A extra\xE7\xE3o roda sobre a transcri\xE7\xE3o INTEIRA + prontu\xE1rio (contexto\
+    \ completo), N\xC3O os \xFAltimos 12 turnos \u2014 distinto do tip-suggester."
+  - "Painel passivo que se preenche (n\xE3o pop-ups que interrompem); 'a revisar'\
+    \ = 'pode ter passado', nunca 'fa\xE7a X'. Atr\xE1s da flag CONDUCT_MODULE_ENABLED\
+    \ + marcador SaMD."
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - "npm test verde (novos testes: categoriza\xE7\xE3o coberto/pendente + full-context\
+    \ + loop); loop de encerramento continua funcionando."
+  - COACH_LLM=mock npm start roda o novo painel ponta-a-ponta; branch feat/live-review
+    off feat/regulated-split, sem push.
+  - "Design fiel ao prot\xF3tipo aprovado (anel, grupos, controles, countdown, contexto-inteiro\
+    \ expl\xEDcito)."
+  definition_of_done_source: cli-create
+  created_at: '2026-07-12T14:33:52+00:00'
+  updated_at: '2026-07-12T14:34:05+00:00'
+  timeline:
+  - at: '2026-07-12T14:33:52+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-12T14:34:05+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  produces:
+  - kind: Plan
+    name: plan-s-copiloto-live-review
+    role: implementation
+    at: '2026-07-12T14:34:05+00:00'
