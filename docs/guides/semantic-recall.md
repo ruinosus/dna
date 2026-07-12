@@ -167,9 +167,11 @@ $ dna memory consolidate --scope hello-genome
 
 ## 4. Register providers programmatically
 
-The CLI wires the sqlite-vec provider for you; in your own code you register
-it on the kernel once, at boot. This script is runnable as-is next to a
-`.dna/` directory:
+The CLI (and the MCP server — see §5) wire the sqlite-vec provider **and**,
+when the `embed-onnx` extra is installed, the local ONNX embedder for you — so
+`dna recall` is genuinely semantic offline the moment both extras are present.
+In your own code you register them on the kernel once, at boot. This script is
+runnable as-is next to a `.dna/` directory:
 
 ```python
 import asyncio
@@ -277,6 +279,69 @@ over it: `memory_conformance_suite` (the verb lifecycle, capability-aware)
 and `memory_scoring_conformance_suite` / `memoryScoringConformanceSuite`
 (the pure scoring core, Py↔TS twinned). See [Running the conformance
 kit](../getting-started/conformance-kit.md#the-memory-conformance-kit).
+
+## 5. Enable local semantic recall in the MCP server
+
+The MCP server exposes memory as the `remember` / `recall` tools (and reads
+through the same kernel the `dna` CLI does). Its boot path registers the search
+provider and the embedder from the **same** choke point as the CLI, so enabling
+offline semantic recall for it is purely a matter of installing the two local
+extras into the environment the server runs from — no code change, no external
+API, no network at query time.
+
+```bash
+# into the venv the `dna` binary resolves from (`which dna`):
+pip install "dna-sdk[search-sqlite]"   # sqlite-vec: the vector + FTS5 + RRF search plane
+pip install "dna-sdk[embed-onnx]"      # fastembed/onnxruntime: real local embeddings
+# from a clone: uv pip install 'sqlite-vec>=0.1.6' 'fastembed>=0.3'
+```
+
+That is the whole enable step. With both extras present the server, on boot,
+registers `SqliteVecRecordSearchProvider` (so `recall` is provider-backed, not
+the lexical fallback) and `OnnxEmbeddingProvider` (all-MiniLM-L6-v2, so the
+dense plane is real paraphrase similarity instead of the deterministic
+fake-hash floor). The ONNX model artifact is fetched and cached on the first
+embed (the Chroma pattern) — never an external API on the query path.
+
+### Verify it end to end
+
+Boot a server against a scope and drive it with any MCP client:
+
+```bash
+dna mcp serve --transport http --port 8010 --auth none --base-dir ./path/to/.dna
+```
+
+**Before** (neither extra installed — the honest degraded floor):
+
+```json
+remember → { "kind": "LessonLearned", "name": "rem-…", "indexed": false }
+recall   → { "semantic": false, "degraded": true,  "hits": [ … ] }
+```
+
+`indexed:false` because no search provider is registered; `recall` degrades to
+the kernel's lexical token scan (`degraded:true`), and the semantic plane is
+off (`semantic:false`).
+
+**After** (both extras installed):
+
+```json
+remember → { "kind": "LessonLearned", "name": "rem-…", "indexed": true }
+recall   → { "semantic": true, "degraded": false, "hits": [ … ] }
+```
+
+A paraphrased cue that shares no tokens with the stored memory now surfaces it
+as the top hit — e.g. recalling *"how does foliage make food from solar
+radiation"* returns a memory whose summary is *"Plants convert sunlight into
+chemical energy stored in glucose"* (`semantic:true`, `degraded:false`), which
+the fake-hash floor cannot do (its cosine for that pair is ~0).
+
+!!! note "Why both extras"
+    `search-sqlite` alone already flips `indexed`/`semantic` to `true` — but the
+    dense plane then runs on the fake-hash floor, which is orthogonal for a
+    paraphrase (cosine ≈ 0), so `semantic:true` would be lexical-in-disguise.
+    Adding `embed-onnx` makes the dense plane genuinely semantic. The server
+    registers the ONNX embedder automatically when the extra is present; it
+    never clobbers an embedder you wired explicitly (via config or code).
 
 ## TypeScript
 
