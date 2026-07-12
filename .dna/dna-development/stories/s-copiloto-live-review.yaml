@@ -8,7 +8,7 @@ spec:
   description: "Revis\xE3o ao vivo do copiloto: painel de cobertura da consulta que\
     \ se preenche (a revisar \u2192 conduzido) periodicamente + bot\xE3o + config,\
     \ sobre a transcri\xE7\xE3o INTEIRA. Prot\xF3tipo aprovado pelo Barna."
-  status: in-progress
+  status: review
   feature: f-dna-cloud-intelligence
   priority: high
   labels:
@@ -37,7 +37,7 @@ spec:
     \ expl\xEDcito)."
   definition_of_done_source: cli-create
   created_at: '2026-07-12T14:33:52+00:00'
-  updated_at: '2026-07-12T14:42:39+00:00'
+  updated_at: '2026-07-12T14:58:18+00:00'
   timeline:
   - at: '2026-07-12T14:33:52+00:00'
     actor: claude-code
@@ -64,6 +64,32 @@ spec:
       \ com consentimento; requer registro ANVISA'; (3) DoD: nunca habilitado em prod\
       \ sem registro. Dev/demo/piloto-com-consentimento apenas ate o registro sair."
     commit_ref: 845a1ce3ab84e553ac26e0090bba98e3f549ebac
+  - at: '2026-07-12T14:58:09+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'Agent fechou em 3 commits TDD (feat/live-review). 12 suites verdes.
+      O corte regulatorio funcionou: com flag OFF -> so cobertura de documentacao
+      (SEM LLM, sem inferir tratamento) roda, coluna de conduta AUSENTE, banner ausente;
+      com flag ON -> coluna de conduta + banner ANVISA aparecem. Loop periodico configuravel
+      (setInterval gated a phase=capturando) + review_now + live_config (auto/intervalo).
+      Contexto INTEIRO passado (teste assere turnos 1 e 15 presentes; distinto do
+      tip-suggester last-12). Painel passivo (re-render, sem modal). Verificado boot
+      flag ON/OFF na 3100.'
+    commit_ref: e6e896f977fcbaea2073c3b57865b3b3973a5432
+  - at: '2026-07-12T14:58:13+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'review sem PR aberto (--no-pr): Repo separado copiloto-medico, branch
+      local feat/live-review off feat/regulated-split (sem remote). Review = diff
+      local pelo Barna + teste ao vivo.'
+  - at: '2026-07-12T14:58:18+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
   produces:
   - kind: Plan
     name: plan-s-copiloto-live-review
