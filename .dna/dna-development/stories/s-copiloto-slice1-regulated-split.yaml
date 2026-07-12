@@ -1,0 +1,51 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-copiloto-slice1-regulated-split
+spec:
+  title: "Copiloto M\xE9dico slice-1 com a arquitetura rachada: core-scribe ISENTO\
+    \ + m\xF3dulo d"
+  description: "Copiloto M\xE9dico slice-1 com a arquitetura rachada: core-scribe\
+    \ ISENTO + m\xF3dulo de sugest\xE3o-de-conduta SEPARADO (safety-net, regulado).\
+    \ Output acion\xE1vel do experimento sp-fusion-validation."
+  status: todo
+  feature: f-dna-cloud-intelligence
+  priority: high
+  labels:
+  - feature
+  - intelligence
+  reporter: claude-code
+  business_value: 700
+  acceptance_criteria:
+  - "Duas superf\xEDcies de c\xF3digo separadas: (1) core de documenta\xE7\xE3o (captura\u2192\
+    transcri\xE7\xE3o\u2192nota) que N\xC3O indica tratamento \u2014 caminho isento\
+    \ ANVISA; (2) m\xF3dulo de sugest\xE3o-de-conduta isolado, com sua pr\xF3pria\
+    \ governan\xE7a/flag."
+  - "O m\xF3dulo de conduta segue o padr\xE3o safety-net (dispara s\xF3 em risco/erro\
+    \ detectado + contexto do paciente), N\xC3O sugeridor sempre-ligado."
+  - "Sugest\xF5es s\xE3o explic\xE1veis: mostram racioc\xEDnio/evid\xEAncia, n\xE3\
+    o s\xF3 veredito; aceite de alto risco exige justificativa ativa."
+  - "Telemetria de aceite/override instrumentada desde o slice-1 (deskilling como\
+    \ m\xE9trica, n\xE3o slogan)."
+  - "A ferramenta NUNCA aconselha o paciente direto \u2014 s\xF3 o m\xE9dico no loop\
+    \ (preserva o escudo learned-intermediary)."
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - "Core-scribe roda no slice-1 (mesmo com prontu\xE1rio mockado) e \xE9 claramente\
+    \ marcado como caminho isento."
+  - "M\xF3dulo de conduta existe como superf\xEDcie separada e deslig\xE1vel, com\
+    \ nota expl\xEDcita de que \xE9 SaMD Classe II a regularizar."
+  - "STT com camada de LM PT-BR + normaliza\xE7\xE3o (n\xE3o Whisper puro) no pipeline\
+    \ de captura."
+  - "Consulta regulat\xF3ria BR agendada/registrada antes de habilitar o m\xF3dulo\
+    \ de conduta em produ\xE7\xE3o."
+  - "Rationale rastre\xE1vel: linka rsh-copiloto-medico-fusion-insights + sp-fusion-validation."
+  definition_of_done_source: cli-create
+  created_at: '2026-07-12T13:19:38+00:00'
+  updated_at: '2026-07-12T13:19:38+00:00'
+  timeline:
+  - at: '2026-07-12T13:19:38+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
