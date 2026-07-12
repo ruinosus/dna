@@ -7,7 +7,7 @@ spec:
     \ + board) direto no main LOCAL do repo dna via cherry-pick, sem abrir PR \u2014\
     \ violando o gitflow story-first/PR-based documentado no AGENTS.md. Nada foi pushado\
     \ (origin/main ficou limpo), mas o main local divergiu 23 commits e o Barna ficou\
-    \ sem saber onde o trabalho estava (agravado por a sessao ter aberto em aap-sdk-v3\
+    \ sem saber onde o trabalho estava (agravado por a sessao ter aberto em um repo irmão\
     \ e o trabalho viver em ~/projects/dna). CONSERTO: 23 commits movidos p/ feat/intel-layer,\
     \ main resetado p/ origin/main, PR aberto. REGRA (AGENTS.md ## Do not): nunca\
     \ commitar em main direto \u2014 branch -> PR -> merge, sem --admin; respeitar\

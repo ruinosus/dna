@@ -8,7 +8,7 @@ spec:
   status: accepted
   context: "As 3 faces do DNA (CLI + MCP server + REST API) estao empacotadas juntas\
     \ em packages/cli, com a camada _impl compartilhada enterrada ali \u2014 catchall,\
-    \ mesmo cheiro do monolito aap_harness extinto. Barna flagou o acoplamento. Deep-research\
+    \ mesmo cheiro do monólito interno extinto. Barna flagou o acoplamento. Deep-research\
     \ (rsh-faces-reorg, 95 agentes, 22/25 claims) confirmou o diagnostico e o alvo."
   decision: "1) A application layer / os *_impl (casos de uso, transport-agnostic)\
     \ vao pro CORE, nao na CLI. 2) CLI, MCP e REST viram adapters de ENTRADA finos\

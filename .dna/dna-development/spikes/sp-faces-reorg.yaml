@@ -28,7 +28,7 @@ spec:
     source: cli
     summary: "Barna sentiu MCP+REST+CLI 'muito juntos'. Confirmado: packages/cli/dna_cli\
       \ hospeda 3 runtimes (CLI + FastMCP + REST) + a camada _impl compartilhada \u2014\
-      \ catchall, mesmo cheiro do monolito aap_harness extinto. Alvo hexagonal: extrair\
+      \ catchall, mesmo cheiro do monólito interno extinto. Alvo hexagonal: extrair\
       \ application/_impl pro SDK, cada face vira adapter fino. Sub-decisao (faces\
       \ = modulos no SDK vs pacotes dna-mcp/dna-api) pende do deep-research wf_af29628b-a68\
       \ (footprint self-hosted + ACA). NAO executar agora: agent da fundacao intel\
