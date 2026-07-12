@@ -1,0 +1,12 @@
+apiVersion: github.com/ruinosus/dna/portfolio/v1
+kind: Role
+metadata:
+  name: member
+spec:
+  role_id: member
+  display_name: Member
+  rank: 20
+  capabilities:
+  - project.write
+  - project.read
+  can_delete: false

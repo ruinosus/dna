@@ -1,0 +1,103 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-portfolio-kinds
+spec:
+  title: "5 portfolio record Kinds as descriptors (byte-identical Py\u2194TS)"
+  description: Ship Organization/Project/Repo/Membership/Role as a new portfolio extension
+    of F3 descriptor Kinds, per adr-portfolio-project-model.
+  status: in-progress
+  feature: f-portfolio-kinds
+  priority: high
+  labels:
+  - sdk
+  - python
+  - typescript
+  - kinds
+  - portfolio
+  business_value: 800
+  acceptance_criteria:
+  - Given the portfolio extension is registered (entry-point + TS bootstrap), when
+    Kernel.auto()/loadBuiltins run, then Organization/Project/Repo/Membership/Role
+    register as record-plane, TENANTED, declarative Kinds with aliases portfolio-org/project/repo/membership/role
+    and closed schemas (additionalProperties:false)
+  - Given the 5 descriptors, when hashed, then the Py and TS kinds/*.kind.yaml are
+    byte-identical (test_descriptor_hash_parity + TS twin green)
+  - "Given Project, when inspected, then it is the multi-repo container: repo_refs\
+    \ carries the N\u2014N edge (Repo has no project back-ref) and it owns board_scope\
+    \ + intel_source_refs"
+  - Given Role is data, when the 4 seed docs (owner/admin/member/guest) are loaded,
+    then they validate against the Role schema and form a strictly-ordered ladder
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - 'Code: portfolio extension (Py __init__ + TS class) + 5 descriptors + 4 seed Role
+    docs; registered in pyproject entry-point + bootstrap loadBuiltins'
+  - 'Tests: test_portfolio_kinds.py + portfolio-extension.test.ts green; guards green
+    (descriptor-hash-parity, ratchet, strict-schema-lint, inheritable-kinds-tenancy)'
+  - 'Docs: Portfolio section in docs/concepts/builtin-kinds.md; docs/reference/**
+    regenerated; brand-guard + docs-coverage clean'
+  - 'CI: all guards green; PR opened off feat/portfolio-kinds'
+  definition_of_done_source: cli-create
+  created_at: '2026-07-12T23:14:17+00:00'
+  updated_at: '2026-07-12T23:15:29+00:00'
+  timeline:
+  - at: '2026-07-12T23:14:17+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-12T23:14:50+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-12T23:15:21+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Mirrored the intel extension EXACTLY (v0.11.0 canonical F3 pattern):\
+      \ 5 kinds/*.kind.yaml descriptors written once in Py and cp'd byte-identical\
+      \ to TS, PortfolioExtension (Py __init__ + TS class) loading via load_descriptors,\
+      \ registered in pyproject entry-point + bootstrap loadBuiltins. Model = adr-portfolio-project-model\
+      \ (Azure DevOps container). Kinds register: Organization(portfolio-org) Project(portfolio-project)\
+      \ Repo(portfolio-repo) Membership(portfolio-membership) Role(portfolio-role)\
+      \ \u2014 all record-plane, TENANTED, declarative, closed schemas. Kernel.auto()\
+      \ 75\u219280."
+    commit_ref: b5e9eb96274a99dc89683e4d98c414eb09e1031c
+  - at: '2026-07-12T23:15:25+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Modeling decisions flagged: (1) N\u2014N Repo\u2194Project \u2014 the\
+      \ edge lives ONLY on Project.repo_refs (a list of Repo names); Repo carries\
+      \ NO project back-ref, so a shared repo is never duplicated and there's a single\
+      \ source of truth. A join Kind was considered and rejected as premature. (2)\
+      \ Role ladder AS DATA \u2014 each rung a Role doc with rank+capabilities so\
+      \ the ladder is extensible (custom roles) instead of a hardcoded enum; 4 standard\
+      \ rungs (owner/admin/member/guest, ranks 40/30/20/10) ship as per-tenant seed\
+      \ docs under examples/dna-cloud/.dna/tenants/acme/scopes/acme-development/roles/.\
+      \ (3) Overlap flagged: Organization vs the platform-level Tenant Kind, Membership\
+      \ vs TenantMembership \u2014 kept distinct names (no i-195 bare-name clash)\
+      \ since these are the tenant's OWN editable portfolio profile/grants, not the\
+      \ GLOBAL provisioning identity."
+    commit_ref: b5e9eb96274a99dc89683e4d98c414eb09e1031c
+  - at: '2026-07-12T23:15:29+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Deferred (flagged): the resolve_role helper (highest-role-wins + org-owner\
+      \ superuser) is NOT in this PR \u2014 the Kinds are the priority and the ladder\
+      \ ranks already encode the ordering (test asserts strict order). resolve_role\
+      \ is Python-first with a TS twin as a follow-up. Enterprise SSO/SCIM (rsh-portfolio-enterprise-auth)\
+      \ is explicitly out of scope per the task. All guards green: py 20/20 (hash-parity,\
+      \ ratchet, strict-schema-lint, inheritable-tenancy, portfolio_kinds), ts 13/13\
+      \ (portfolio + descriptor-hash-parity), typecheck clean, brand-guard clean,\
+      \ docs-coverage clean, docs/reference regenerated. Ref: adr-portfolio-project-model,\
+      \ rsh-portfolio-project-model."
+    commit_ref: b5e9eb96274a99dc89683e4d98c414eb09e1031c
+  produces:
+  - kind: Plan
+    name: plan-s-portfolio-kinds
+    role: implementation
+    at: '2026-07-12T23:14:50+00:00'

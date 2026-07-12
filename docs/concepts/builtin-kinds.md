@@ -432,6 +432,72 @@ stage can recall semantically similar insights. Named `IntelInsight` rather
 than `Insight` because the bare `Insight` name already belongs to the SDLC
 oracle Kind.
 
+## Portfolio console
+
+The `portfolio` extension is the data foundation for the DNA Cloud portfolio
+console — the enterprise multi-tenant model of
+[`adr-portfolio-project-model`](../reference/kinds/record.md). It ships five
+record Kinds, all `TENANTED` (per-tenant portfolio data, not a shared `_lib`
+default, and deliberately not inheritable). The shape follows the Azure DevOps
+container model: an Organization owns Projects, a Project is a multi-repo
+container that owns its board + intel + memory, and RBAC is a standard role
+ladder.
+
+### Organization
+
+An [`Organization`](../reference/kinds/record.md#organization)
+(`portfolio-org`) is the tenant's own org profile — the enterprise-familiar
+top-level container (as in GitHub / Azure DevOps) whose portfolio of Projects
+the console aggregates. It carries a `name`, a URL-safe `slug`, an optional
+`display_name`, and a `plan_ref` to the DNA Cloud `Tier` / `TenantPlan` the org
+is on. One Organization per tenant; it is distinct from the platform-level
+`Tenant` provisioning-identity Kind (the editable profile *inside* the tenant's
+portfolio, not the global identity row).
+
+### Project
+
+A [`Project`](../reference/kinds/record.md#project) (`portfolio-project`) is
+the key Kind — the multi-repo development-space container. It owns a SDLC
+`board_scope` (convention `<slug>-development`), the `intel_source_refs` the
+intelligence layer observes, and scoped memory, and it is the permission
+boundary. Repos are attached **by reference** via `repo_refs` — an N—N edge
+kept on the Project side, so a repo can belong to many Projects without
+duplication. A Project has a `visibility` (private / shared) and an `org_ref`
+to its Organization.
+
+### Repo
+
+A [`Repo`](../reference/kinds/record.md#repo) (`portfolio-repo`) is a code
+repository the portfolio references — its `name`, `url`, `provider` (github /
+gitlab / azure-devops / other) and `default_branch`. It is attached to N
+Projects via `Project.repo_refs`; a Repo carries **no** project back-ref, so
+the N—N edge has a single source of truth (the Project) and a shared repo is
+never duplicated. "Which projects use this repo" is a query over Projects, not
+a stored reverse list.
+
+### Membership
+
+A [`Membership`](../reference/kinds/record.md#membership)
+(`portfolio-membership`) is the RBAC join — a `user`'s `role` at an org- or
+project-scope (`scope_type` + `scope_ref`). The role is the standard ladder
+(owner > admin > member > guest); resolution is highest-role-wins across a
+user's memberships, with the org owner a superuser. It carries an invitation
+`status` (invited / active). It is distinct from the platform-level
+`TenantMembership` (which links a user to a provisioning `Tenant`); this grants
+access inside the tenant's own Organization / Project graph.
+
+### Role
+
+A [`Role`](../reference/kinds/record.md#role) (`portfolio-role`) is one rung of
+the RBAC ladder expressed as **data** (the DNA thesis: everything declarative)
+— its `role_id`, `display_name`, `rank` (higher = more access), the
+`capabilities` it grants, and a `can_delete` flag protecting built-in rungs.
+Modelling the ladder as data (not a hardcoded enum) makes it extensible: a
+tenant can add a custom role without a code change, and highest-role-wins
+simply compares `rank`. The four standard rungs (owner / admin / member /
+guest) ship as per-tenant seed docs under
+`examples/dna-cloud/.dna/.../roles/`.
+
 ---
 
 Run `dna kind list` for the live registry in your install, and `dna kind

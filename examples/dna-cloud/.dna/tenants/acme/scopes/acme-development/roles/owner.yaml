@@ -1,0 +1,17 @@
+apiVersion: github.com/ruinosus/dna/portfolio/v1
+kind: Role
+metadata:
+  name: owner
+spec:
+  role_id: owner
+  display_name: Owner
+  rank: 40
+  capabilities:
+  - org.manage
+  - billing.manage
+  - role.manage
+  - member.manage
+  - member.invite
+  - project.write
+  - project.read
+  can_delete: false

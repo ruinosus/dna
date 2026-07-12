@@ -1,0 +1,11 @@
+apiVersion: github.com/ruinosus/dna/portfolio/v1
+kind: Role
+metadata:
+  name: guest
+spec:
+  role_id: guest
+  display_name: Guest
+  rank: 10
+  capabilities:
+  - project.read
+  can_delete: false

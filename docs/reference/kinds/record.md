@@ -653,6 +653,25 @@ A Kaizen is a continuous-improvement observation noticed while working on someth
 | `valid_to` | string |  | World-time validity end. Set when superseded/contradicted — the memory is INVALIDATED, never hard-deleted. Default recall excludes valid_to<now. |
 | `visibility` | string |  | Recall audience (the customization axis): shared = all agents in scope recall it (cross-agent knowledge, default); private = only `owner` recalls it (an agent's raw working memory); pinned = always injected into working memory at bootstrap, bypassing recall scoring (the Letta 'memory block'); archived = retained + auditable but excluded from default recall (soft-forget). Humans audit ALL regardless of visibility (audit != recall). Phase 0 (2026-06-02). |
 
+## Membership
+
+- **Alias:** `portfolio-membership`
+- **apiVersion:** `github.com/ruinosus/dna/portfolio/v1`
+- **Plane:** record
+
+A Membership is the RBAC join — a user's role at an org- or project-scope within a tenant's portfolio. It carries the user (email / id), the scope_type (org / project) and scope_ref it applies to, the role from the standard ladder (owner > admin > member > guest, highest-role-wins, org-owner superuser), and an invitation status (invited / active), as per-tenant declarative data. It is distinct from the platform-level TenantMembership (which links a user to a provisioning Tenant); this grants access inside the tenant's own Organization / Project graph.
+
+**Spec fields**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `invited_at` | string \| null |  | ISO-8601 timestamp of the invite, stamped by the writer (not defaulted here). |
+| `role` | string | yes | The role granted at this scope — the standard ladder (owner > admin > member > guest). Resolution is highest-role-wins across a user's memberships, with the org owner a superuser. |
+| `scope_ref` | string | yes | The Organization or Project name this grant applies to (paired with scope_type). |
+| `scope_type` | string | yes | What the grant is scoped to — an Organization (org) or a single Project (project). |
+| `status` | string |  | Invitation lifecycle — invited (pending acceptance) or active. |
+| `user` | string | yes | The member's identity — an email or stable user id. |
+
 ## ModelProfile
 
 - **Alias:** `modelreg-model-profile`
@@ -712,6 +731,24 @@ A Narrative is a curated, human-readable summary of project activity. Stored as 
 | `tags` | array |  | Free-form tags for filtering (daily, release, retro, ...). |
 | `title` | string | yes | Headline for this narrative. Shown above the body. |
 | `updated_at` | string |  |  |
+
+## Organization
+
+- **Alias:** `portfolio-org`
+- **apiVersion:** `github.com/ruinosus/dna/portfolio/v1`
+- **Plane:** record
+
+An Organization is the tenant's own org profile — the enterprise-familiar top-level container (as in GitHub / Azure DevOps) whose portfolio of Projects the DNA Cloud console aggregates. It carries the org name, a URL-safe slug, an optional display name, and a plan_ref to the DNA Cloud Tier / TenantPlan the org is on, as per-tenant declarative data. One Organization per tenant; it is distinct from the platform-level Tenant provisioning identity Kind (the editable org profile inside the tenant's own portfolio, not the GLOBAL identity row).
+
+**Spec fields**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `created_at` | string \| null |  | ISO-8601 timestamp, stamped by the writer (not defaulted here). |
+| `display_name` | string \| null |  | Human-facing name shown in the console. Falls back to name. |
+| `name` | string | yes | The organization's canonical name. The doc name SHOULD equal this. |
+| `plan_ref` | string \| null |  | The DNA Cloud Tier / TenantPlan this org is on (a Tier tier_id or TenantPlan name). Null falls back to Free. The billing→enforcement bridge reads it; the OSS SDK only stores it. |
+| `slug` | string | yes | URL-safe identity for the org, e.g. acme-corp. Used in routes and as a stable handle for the tenant's portfolio. |
 
 ## PatternInsight
 
@@ -828,6 +865,27 @@ A PreMortem rewinds a Story's history and asks what would have happened on the o
 | `verifications` | array |  | Verification trace (auto-populated by the verifier). |
 | `would_have_changed` | array | yes | Predictions same shape as SynthesisRun.would_change. Verifiable via same measure_metrics path. |
 
+## Project
+
+- **Alias:** `portfolio-project`
+- **apiVersion:** `github.com/ruinosus/dna/portfolio/v1`
+- **Plane:** record
+
+A Project is the multi-repo development-space container — the key Kind of the portfolio model. It owns a SDLC board scope (convention <slug>-development), one or more IntelSources the intelligence layer observes, and scoped memory, and it is the permission boundary. Repos are attached BY REFERENCE via repo_refs (an N—N edge kept on the Project side — a repo can belong to many projects without duplication; Repo carries no project back-ref). A Project has a visibility (private / shared) and an org_ref to its Organization, as per-tenant declarative data.
+
+**Spec fields**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `board_scope` | string \| null |  | The SDLC scope this project owns (convention <slug>-development). Where its Stories / Issues / Epics live. |
+| `created_at` | string \| null |  | ISO-8601 timestamp, stamped by the writer (not defaulted here). |
+| `intel_source_refs` | array |  | IntelSource names the intelligence layer observes for this project (the sources feeding its insight stream). |
+| `name` | string | yes | The project's canonical name. The doc name SHOULD equal this. |
+| `org_ref` | string \| null |  | The Organization (name) this project belongs to. Null while unassigned. |
+| `repo_refs` | array |  | Repo names attached to this project (the N—N edge — a repo may appear on multiple projects). The edge lives on the Project side only. |
+| `slug` | string | yes | URL-safe identity for the project, e.g. copiloto-medico. Used in routes and to derive the board_scope by convention. |
+| `visibility` | string |  | Who can see the project — private (org-internal) or shared (visible across the portfolio). |
+
 ## PromptTemplate
 
 - **Alias:** `sdlc-prompt-template`
@@ -869,6 +927,24 @@ A PromptTemplate is a versioned, overlayable user-prompt template owned by the k
 | `title` | string | yes |  |
 | `updated_at` | string |  |  |
 | `url` | string |  |  |
+
+## Repo
+
+- **Alias:** `portfolio-repo`
+- **apiVersion:** `github.com/ruinosus/dna/portfolio/v1`
+- **Plane:** record
+
+A Repo is a code repository the portfolio references — its name, url, provider (github / gitlab / azure-devops / other) and default_branch, as per-tenant declarative data. It is attached to N Projects via Project.repo_refs (the N—N edge lives on the Project side); a Repo carries no project back-ref, so a repo shared across projects is never duplicated. "Which projects use this repo" is a query over Projects, not a stored reverse list.
+
+**Spec fields**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `created_at` | string \| null |  | ISO-8601 timestamp, stamped by the writer (not defaulted here). |
+| `default_branch` | string \| null |  | The repo's default branch, e.g. main. Null when unknown. |
+| `name` | string | yes | The repo name, e.g. copiloto-medico. The doc name SHOULD equal this; Project.repo_refs point at it. |
+| `provider` | string |  | Where the repo is hosted — github, gitlab, azure-devops, or other. |
+| `url` | string \| null |  | Clone / browse URL of the repository. Null when the name alone identifies it. |
 
 ## Retrospective
 
@@ -956,6 +1032,24 @@ A Roadmap groups Epics across time horizons (e.g. Q1 2026, Q2 2026). Pure organi
 | `journey_phase` | string |  | Universal journey phase. Roadmaps typically live in `discover` or `specify` — they're the north star, not the build. |
 | `links` | array |  | External URLs (Confluence, Notion, etc.) |
 | `owner_team` | string |  |  |
+
+## Role
+
+- **Alias:** `portfolio-role`
+- **apiVersion:** `github.com/ruinosus/dna/portfolio/v1`
+- **Plane:** record
+
+A Role is one rung of the RBAC ladder expressed as data — its role_id, display_name, rank (higher = more access), the capabilities it grants, and a can_delete flag protecting built-in rungs. Modelling the ladder as data (not a hardcoded enum) makes it extensible — a tenant can add a custom role without a code change, and highest-role-wins simply compares rank. The four standard rungs (owner / admin / member / guest) ship as per-tenant seed docs; the org owner is a superuser above the ladder.
+
+**Spec fields**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `can_delete` | boolean |  | False for the built-in ladder rungs that must not be removed (e.g. owner); true for custom roles a tenant adds. |
+| `capabilities` | array |  | The grants this role unlocks (e.g. project.write, member.invite, billing.manage). The permission checker reads them from here. |
+| `display_name` | string | yes | Human-facing role name, e.g. Owner, Admin, Member, Guest. |
+| `rank` | integer | yes | Ladder rank — higher = more access. highest-role-wins compares this across a user's memberships. |
+| `role_id` | string | yes | Canonical role id, e.g. owner / admin / member / guest. The doc name SHOULD equal this; Membership.role references it. |
 
 ## SavedView
 
