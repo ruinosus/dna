@@ -99,3 +99,4 @@ spec:
     ncia como O foco de engenharia. Precificar como intel (time/enterprise). Para\
     \ o copiloto: agir no split regulat\xF3rio."
   follow_up_story: s-copiloto-slice1-regulated-split
+  follow_up_adr: adr-portfolio-project-model

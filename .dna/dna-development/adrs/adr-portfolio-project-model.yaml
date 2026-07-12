@@ -1,0 +1,37 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: ADR
+metadata:
+  name: adr-portfolio-project-model
+spec:
+  title: "Abstra\xE7\xE3o Portfolio \u2192 Project \u2192 (scope SDLC + IntelSource\
+    \ + mem\xF3ria), por Tenant"
+  status: accepted
+  context: Hoje dna-development e um scope hardcoded. Barna tem varios produtos (dna,
+    copiloto-medico, foundry-assured, ...) cada um um espaco de desenvolvimento; e
+    OUTRAS PESSOAS (outros tenants) terao os seus. Pra DNA Cloud ser produto (nao
+    ferramenta pessoal), 'projeto' precisa ser abstracao de primeira classe, generalizavel,
+    multi-tenant. Nasce da visao e-portfolio-console + do experimento sp-fusion-validation.
+  decision: "Modelo: Tenant (dono) -> Portfolio -> Project. Um PROJECT e a unidade\
+    \ de espaco-de-desenvolvimento, formalizando o casamento de tres primitivas que\
+    \ o DNA JA tem: (a) um scope de SDLC (convencao <project>-development), (b) uma\
+    \ ou mais IntelSource (a camada de inteligencia observa), (c) memoria (LessonLearned)\
+    \ escopada. Tenancy e isolamento sao dimensao de primeira classe do DNA + Tier/TenantPlan\
+    \ do SaaS. O dashboard do DNA Cloud itera os Projects DO tenant logado. Nada de\
+    \ scope hardcoded: dna-development vira UM Project entre N, de UM tenant entre\
+    \ N. A forma exata (Kind Project explicito vs Package+convencao) fica pra um design\
+    \ follow-up; o PRINCIPIO \u2014 Project como abstracao generalizavel multi-tenant\
+    \ \u2014 esta aceito."
+  consequences: 'PROS: DNA Cloud vira multi-tenant portfolio SaaS de verdade; um usuario
+    ve so o SEU portfolio; adicionar projeto/pessoa = dado, nao codigo; o console
+    generaliza. Requer: substrato Postgres (uma fonte compartilhada por SDLC+intel+memoria),
+    o modelo Project, e a visao de SDLC no dashboard. CONTRA/risco: definir o Kind
+    Project sem sobrepor Package; migracao FS->Postgres; isolamento por tenant tem
+    que ser a prova de vazamento (ja temos guard #83).'
+  created_at: '2026-07-12T21:56:35+00:00'
+  updated_at: '2026-07-12T21:56:35+00:00'
+  timeline:
+  - at: '2026-07-12T21:56:35+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: accepted
