@@ -479,3 +479,9 @@ The remaining groups already have dedicated prose — one line each here:
   git symbiosis hooks) this repo runs itself on; the whole story is in
   [Your git log is your SDLC](sdlc.md).
   ([reference](../reference/cli/sdlc.md))
+- **`dna intel`** — the intelligence layer's driver: `dna intel run
+  <source>` researches an [`IntelSource`](../concepts/builtin-kinds.md#intelligence-layer)
+  and ranks the candidates, suppressing those below the source's actionability
+  threshold; `dna intel list` shows the delivered `IntelInsight`s. It is a
+  thin face over the in-core engine — the same logic the REST `/v1/insights`
+  face serves. ([reference](../reference/cli/intel.md))
