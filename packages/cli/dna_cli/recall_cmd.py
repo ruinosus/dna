@@ -4,6 +4,10 @@ Kernel-bound, no server. Registers the embeddable ``SqliteVecRecordSearchProvide
 (the ``search-sqlite`` extra) on the local kernel, indexes the requested record
 kinds on demand (idempotent by text hash), and runs ``kernel.search()`` — which
 uses the registered provider (dense sqlite-vec + lexical FTS5, fused with RRF).
+When the ``embed-onnx`` extra is also installed it wires the local ONNX embedder
+(all-MiniLM-L6-v2) so the dense plane is REAL semantic similarity rather than the
+deterministic fake-hash floor — fully offline, no external API (see
+:func:`_register_embedder`).
 
 Degrades HONESTLY: when the ``search-sqlite`` extra is not installed, it prints
 a one-line notice and falls back to ``kernel.search()`` with no provider — the
@@ -26,10 +30,45 @@ import click
 from dna_cli._ctx import dna_session, print_json
 
 
+def _register_embedder(kernel: Any) -> None:
+    """Wire the local ONNX embedder (the ``embed-onnx`` extra) so the dense
+    plane is REAL semantic similarity rather than the deterministic fake-hash
+    floor.
+
+    The floor (``FakeEmbeddingProvider``) is a bag-of-words hash — for a
+    paraphrase with no shared tokens its cosine is ~0 (orthogonal), so a recall
+    reporting ``semantic: true`` over it is lexical-only in disguise. The ONNX
+    provider (all-MiniLM-L6-v2 via ``fastembed`` on ``onnxruntime``) gives true
+    paraphrase similarity and is fully OFFLINE: the model artifact is
+    fetched+cached on first embed (the Chroma pattern), never an external API at
+    query time. ``OnnxEmbeddingProvider.__init__`` is lazy, so registering it
+    here costs nothing until the first ``kernel.embed``.
+
+    No-op — the kernel keeps its fake floor — when the extra is absent OR an
+    embedder was already registered (respect explicit boot-time / config
+    wiring). Sibling of the search-provider registration below: same
+    "extra present → use it" philosophy, so the ``dna`` CLI and the MCP
+    ``boot_live`` (which both route through :func:`_register_provider`) get
+    offline semantic recall the moment ``dna-sdk[embed-onnx]`` is installed."""
+    if getattr(kernel, "_embedding_provider", None) is not None:
+        return
+    try:
+        import fastembed  # noqa: F401
+    except ImportError:
+        return
+    from dna.adapters.embedding.onnx import OnnxEmbeddingProvider
+
+    kernel.embedding_provider(OnnxEmbeddingProvider())
+
+
 def _register_provider(session: Any) -> Any | None:
     """Build + register the sqlite-vec provider on the session's kernel.
     Returns the provider, or ``None`` when the ``search-sqlite`` extra is
-    absent (caller degrades to the lexical fallback)."""
+    absent (caller degrades to the lexical fallback).
+
+    Also wires the local ONNX embedder (:func:`_register_embedder`) so the
+    dense plane is genuinely semantic — offline, no API — when the
+    ``embed-onnx`` extra is present."""
     try:
         import sqlite_vec  # noqa: F401
     except ImportError:
@@ -50,6 +89,9 @@ def _register_provider(session: Any) -> Any | None:
         search_dir = str(parent / ".dna-search")
     provider = SqliteVecRecordSearchProvider(kernel, db_dir=search_dir)
     kernel.record_search_provider(provider)
+    # Upgrade the dense plane from the fake floor to real offline embeddings
+    # when the local ONNX stack is installed (no-op otherwise).
+    _register_embedder(kernel)
     return provider
 
 

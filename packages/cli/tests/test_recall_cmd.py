@@ -110,3 +110,43 @@ def test_document_text_derivation():
            "spec": {"title": "Alpha", "nested": {"k": "Beta"}, "list": ["Gamma"]}}
     text = document_text(raw)
     assert "s-x" in text and "Alpha" in text and "Beta" in text and "Gamma" in text
+
+
+def test_register_provider_wires_onnx_embedder_when_extra_present():
+    """With the ``embed-onnx`` extra installed, ``_register_provider`` upgrades
+    the dense plane from the fake-hash floor to the real offline ONNX embedder,
+    so ``semantic`` recall is genuinely semantic (not lexical-in-disguise).
+
+    Construction is lazy (no model download here) — we only assert the registered
+    provider's identity, so this stays fast and offline."""
+    pytest.importorskip("fastembed", reason="embed-onnx extra not installed")
+
+    from dna.adapters.embedding.onnx import ONNX_MODEL_ID
+    from dna.kernel import Kernel
+    from dna_cli.recall_cmd import _register_provider
+
+    class _Holder:
+        def __init__(self, kernel):
+            self.kernel = kernel
+
+    kernel = Kernel.auto()
+    # Floor is not eagerly registered — no explicit embedder yet.
+    assert getattr(kernel, "_embedding_provider", None) is None
+
+    provider = _register_provider(_Holder(kernel))
+    assert provider is not None, "search-sqlite present → provider registered"
+    # The ONNX embedder is now the active space (real semantic embeddings).
+    assert kernel.embedding_model_id == ONNX_MODEL_ID
+
+
+def test_register_embedder_is_noop_when_embedder_already_wired():
+    """``_register_embedder`` respects an explicit prior registration — it never
+    clobbers a boot-time / config-chosen embedder."""
+    from dna.kernel import Kernel
+    from dna.kernel.embedding import FAKE_EMBEDDING_MODEL_ID, FakeEmbeddingProvider
+    from dna_cli.recall_cmd import _register_embedder
+
+    kernel = Kernel.auto()
+    kernel.embedding_provider(FakeEmbeddingProvider())
+    _register_embedder(kernel)  # extra may be present, but one is already wired
+    assert kernel.embedding_model_id == FAKE_EMBEDDING_MODEL_ID
