@@ -8,6 +8,7 @@ logic lives here.
     dna intel sources                 # list watched IntelSource docs
     dna intel run copiloto-medico     # pass → rank → suppress → deliver
     dna intel list [--state new]      # list produced IntelInsight docs
+    dna intel metrics                 # feedback KPIs (precision / noise rate)
 
 The intel Kinds are TENANTED (per-tenant watchlist + insight stream), so a
 tenant is required. ``--tenant`` defaults to ``DNA_TENANT`` env, else the
@@ -87,9 +88,14 @@ def cmd_run(source: str, scope: str, tenant: str | None, as_json: bool) -> None:
         bold=True,
     )
     click.secho(
-        f"\n  ✅ delivered {result.kept_count} · 🔇 suppressed {result.suppressed_count}",
+        f"\n  ✅ delivered {result.kept_count} · 🔇 suppressed {result.suppressed_count}"
+        f" · ♻️  deduped {result.deduped_count}",
         bold=True,
     )
+    if result.deduped:
+        click.secho("\n  Deduped (already surfaced — not re-delivered):", fg="cyan")
+        for d in result.deduped:
+            click.echo(f"    [{d['score']:.2f}] {d['title']}  ({d['reason']}, cos {d['cosine']:.2f})")
     if result.kept:
         click.secho("\n  Delivered insights:", fg="green")
         for k in result.kept:
@@ -134,3 +140,44 @@ def cmd_list(
             f"{r['score']:5.2f} {r['state']:10s} {(r['source_ref'] or ''):18s}  "
             f"{(r['title'] or '')[:48]}"
         )
+
+
+@intel.command("metrics")
+@click.option("--scope", default=engine.DEFAULT_SCOPE, show_default=True)
+@click.option("--tenant", default=None, help=f"Tenant (default: $DNA_TENANT or {DEFAULT_TENANT!r}).")
+@click.option("--source", "source_ref", default=None, help="Restrict to one originating IntelSource.")
+@click.option("--json", "as_json", is_flag=True, help="Machine-readable output.")
+def cmd_metrics(scope: str, tenant: str | None, source_ref: str | None, as_json: bool) -> None:
+    """Feedback KPIs — precision (actioned ÷ actioned+dismissed) + noise rate.
+
+    Read-only; delegates the arithmetic to the core ``feedback_metrics``. The
+    noise rate is the intel layer's product KPI (it should fall over time as the
+    feedback loop tunes the ranker)."""
+    t = _tenant(tenant)
+    with dna_session(scope) as s:
+        m = s.run(engine.feedback_metrics(
+            s.kernel, scope=s.scope, tenant=t, source_ref=source_ref,
+        ))
+    if as_json:
+        print_json(m)
+        return
+    counts = m["counts"]
+    click.secho(
+        f"\n📊 intel feedback — scope={scope}, tenant={t}"
+        + (f", source={source_ref}" if source_ref else ""),
+        bold=True,
+    )
+    click.echo(
+        "  delivered: "
+        + " · ".join(f"{k}={counts.get(k, 0)}" for k in ("new", "actioned", "dismissed", "snoozed"))
+    )
+    prec = m["precision"]
+    noise = m["noise_rate"]
+    click.echo(
+        f"  precision: {prec:.2%}" if prec is not None else "  precision: — (no feedback yet)"
+    )
+    click.echo(
+        f"  noise rate: {noise:.2%}  (the product KPI — should fall over time)"
+        if noise is not None else "  noise rate: — (no feedback yet)"
+    )
+    click.echo()

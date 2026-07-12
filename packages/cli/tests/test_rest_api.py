@@ -289,6 +289,27 @@ def test_intel_patch_state(dna_dir):
                        json={"state": "actioned"}).status_code == 404
 
 
+def test_intel_metrics_endpoint(dna_dir):
+    result = _seed_intel_and_run(dna_dir)
+    names = [k["name"] for k in result.kept]
+    with _client(dna_dir) as c:
+        # no feedback yet → precision undefined
+        m0 = c.get("/v1/insights/metrics", params={"scope": _SCOPE, "tenant": "acme"})
+        assert m0.status_code == 200, m0.text
+        assert m0.json()["precision"] is None
+        # action 2, dismiss 1 → precision 2/3, noise 1/3
+        for n in names[:2]:
+            c.patch(f"/v1/insights/{n}/state",
+                    params={"scope": _SCOPE, "tenant": "acme"}, json={"state": "actioned"})
+        c.patch(f"/v1/insights/{names[2]}/state",
+                params={"scope": _SCOPE, "tenant": "acme"}, json={"state": "dismissed"})
+        m = c.get("/v1/insights/metrics",
+                  params={"scope": _SCOPE, "tenant": "acme"}).json()
+        assert m["actioned"] == 2 and m["dismissed"] == 1
+        assert round(m["precision"], 4) == round(2 / 3, 4)
+        assert round(m["noise_rate"], 4) == round(1 / 3, 4)
+
+
 # ── auth: --auth token gates every route but /health ─────────────────────────
 
 
