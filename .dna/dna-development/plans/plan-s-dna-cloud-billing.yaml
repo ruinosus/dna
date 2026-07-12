@@ -1,0 +1,16 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-dna-cloud-billing
+spec:
+  title: 'Plano: s-dna-cloud-billing'
+  date: '2026-07-11'
+  status: accepted
+  story_ref: s-dna-cloud-billing
+  journey_phase: plan
+  body: "Checkout $29 + Customer Portal + webhook + bot\xF5es no dashboard SHIPADOS\
+    \ (dna-cloud #3). Falta: smoke local (stripe listen \u2192 whsec \u2192 testar\
+    \ upgrade\u2192Pro com cart\xE3o 4242) + DATABASE_URL pra persistir + overage\
+    \ metering (incremento futuro)."
+  created_at: '2026-07-11T22:03:53+00:00'
+  updated_at: '2026-07-11T22:03:53+00:00'
