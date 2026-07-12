@@ -1,0 +1,105 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Spike
+metadata:
+  name: sp-postgres-substrate
+spec:
+  title: O DNA roda end-to-end numa fonte Postgres (single source of truth do console)?
+  question_to_answer: O DNA roda end-to-end numa fonte Postgres (single source of
+    truth do console)?
+  status: answered
+  created_at: '2026-07-12T23:33:58+00:00'
+  updated_at: '2026-07-12T23:35:52+00:00'
+  timeline:
+  - at: '2026-07-12T23:33:58+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: proposed
+  - at: '2026-07-12T23:34:05+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: proposed
+    to: in-progress
+  - at: '2026-07-12T23:34:28+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Setup: Docker/colima VM disk estava corrompido (containerd content-store\
+      \ I/O error no pull de postgres:16 + write error no meta.db). Fallback: subi\
+      \ um Postgres 16 NATIVO dedicado (homebrew postgresql@16) numa data-dir isolada,\
+      \ porta 5433, socket em /tmp/dnapg \u2014 totalmente separado do 5432 de outro\
+      \ projeto. Venv fresca com sdk-py[postgres] + cli (asyncpg 0.31 + sqlalchemy\
+      \ 2.0.51)."
+  - at: '2026-07-12T23:34:31+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "READ ok: com DNA_SOURCE_URL=postgresql://... o schema \xE9 auto-migrado\
+      \ no primeiro connect() do SqlAlchemySource (n\xE3o h\xE1 comando init/migrate\
+      \ separado). scope list / kind list (82 kinds) / sdlc list Story leem da base.\
+      \ WRITE+round-trip ok: story create -> sdlc list (processo novo) confirma persist\xEA\
+      ncia; story start (todo->in-progress) grava, hook cria Plan/plan-s-pg-smoke\
+      \ automaticamente e journey deriva. psql cru confirma 4+ linhas em dna_documents.\
+      \ Guards de valida\xE7\xE3o de schema disparam no write da base."
+  - at: '2026-07-12T23:34:35+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'INTEL ok na base: criei IntelSource (TENANTED, tenant=demo), rodei intel
+      run com o SeedAnalyzer offline (sem credenciais LLM) -> 3 IntelInsight escritos
+      e lidos de volta por intel list; psql confirma 3 linhas IntelInsight. Tenancy
+      por-tenant funciona no substrato SQL.'
+  - at: '2026-07-12T23:35:07+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "GAP #1 (bloqueia o seed conveniente): 'dna source push/diff' quebra\
+      \ em qualquer scope com Kinds de descriptor \u2014 AttributeError: 'DeclarativeKindPort'\
+      \ object has no attribute 'canonical_digest' (source_sync.py:89). O DeclarativeKindPort\
+      \ at\xE9 prepara VOLATILE_SPEC_FIELDS 'para casar o contrato de digest com record\
+      \ Kinds', mas o m\xE9todo canonical_digest nunca foi definido (s\xF3 existe\
+      \ em KindBase). Como quase todo record Kind hoje \xE9 descriptor (F3), o caminho\
+      \ natural de replicar FS->Postgres est\xE1 morto."
+  - at: '2026-07-12T23:35:11+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "GAP #2: n\xE3o existe verbo CLI para criar um scope DIRETO no Postgres.\
+      \ 'dna init' escreve um Genome via kernel mas PINA a fonte em file://<target>/.dna\
+      \ (init_cmd.py:278-286), ignorando o DNA_SOURCE_URL ambiente. Com push quebrado,\
+      \ tive que semear o Genome via SDK (kernel.write_document). O substrato SQL\
+      \ aceita o Genome sem problema \u2014 falta s\xF3 a ergonomia de bootstrap."
+  - at: '2026-07-12T23:35:14+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "GAP #3 (menor, cosm\xE9tico): em fonte Postgres vazia, 'dna kind list'\
+      \ e 'dna scope list' falham com mensagem FS-c\xEAntrica: 'Create one with a\
+      \ manifest.yaml under <base>/<scope>/ first'. Enganoso pra fonte SQL (n\xE3\
+      o h\xE1 manifest.yaml). Al\xE9m disso kind list \u2014 que lista Kinds registrados\
+      \ por extensions, independente da fonte \u2014 n\xE3o deveria exigir um scope\
+      \ existente. GAP #4 (cosm\xE9tico): colunas 'name' aparecem como '?' em intel\
+      \ sources e doc list Genome (proje\xE7\xE3o summary n\xE3o resolve name)."
+  - at: '2026-07-12T23:35:52+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: answered
+  completed_at: '2026-07-12T23:35:50+00:00'
+  findings: "SIM \u2014 o DNA roda end-to-end numa fonte Postgres. Validado com PG16\
+    \ nativo dedicado (:5433, db dna): schema auto-migra no connect(); READ (scope/kind/sdlc\
+    \ list) le da base; WRITE round-trips (story create/start persistem entre processos,\
+    \ hooks criam Plan+journey, guards de schema disparam); INTEL escreve+le 3 IntelInsight\
+    \ offline (SeedAnalyzer), com tenancy per-tenant. psql cru confirma as linhas\
+    \ em dna_documents. O SUBSTRATO est\xE1 pronto."
+  recommendation: "PROMOVER o Postgres a single-source-of-truth, mas antes fechar\
+    \ 2 gaps que hoje for\xE7am seed via SDK: (1) BUG bloqueante \u2014 implementar\
+    \ DeclarativeKindPort.canonical_digest (delegar a KindBase.canonical_digest usando\
+    \ os VOLATILE_SPEC_FIELDS que ele ja monta) pra destravar 'dna source push/diff'\
+    \ (o caminho de replicar/semear FS->PG); (2) dar um verbo CLI que crie um scope/Genome\
+    \ DIRETO na fonte ambiente (init hoje pina file://). Menores: mensagem de erro\
+    \ FS-c\xEAntrica em fonte SQL vazia + kind list nao deveria exigir scope; coluna\
+    \ name '?' na projecao summary. Nenhum desses e do motor SQL \u2014 o substrato\
+    \ em si funciona."
