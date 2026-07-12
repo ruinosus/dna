@@ -1,0 +1,25 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-028-i-respect-repo-gitflow
+spec:
+  description: "INCIDENTE (2026-07-12): commitei a camada intel (fundacao + engine\
+    \ + board) direto no main LOCAL do repo dna via cherry-pick, sem abrir PR \u2014\
+    \ violando o gitflow story-first/PR-based documentado no AGENTS.md. Nada foi pushado\
+    \ (origin/main ficou limpo), mas o main local divergiu 23 commits e o Barna ficou\
+    \ sem saber onde o trabalho estava (agravado por a sessao ter aberto em aap-sdk-v3\
+    \ e o trabalho viver em ~/projects/dna). CONSERTO: 23 commits movidos p/ feat/intel-layer,\
+    \ main resetado p/ origin/main, PR aberto. REGRA (AGENTS.md ## Do not): nunca\
+    \ commitar em main direto \u2014 branch -> PR -> merge, sem --admin; respeitar\
+    \ o gitflow de CADA repo; declarar repo+branch+path em todo update. PREVENCAO:\
+    \ regra no AGENTS.md (agents leem) + este Issue."
+  type: task
+  severity: high
+  status: open
+  related_feature: f-dna-cloud-intelligence
+  timeline:
+  - at: '2026-07-12T17:44:22+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
