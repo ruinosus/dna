@@ -55,7 +55,9 @@ Run one intel pass over SOURCE: pass → rank → suppress → deliver.
 
 Writes the surviving insights as IntelInsight docs (state=new) and prints
 what was KEPT vs SUPPRESSED (below the source threshold — the anti-noise
-core). Uses the SeedAnalyzer (real experiment insights, no LLM creds needed).
+core). ``--analyzer auto`` (default) researches the source live via the LLM
+when OPENAI_API_KEY is set and falls back to the offline SeedAnalyzer (real
+experiment insights, no creds) otherwise; force either with ``llm``/``seed``.
 
 ```text
 dna intel run [OPTIONS] SOURCE
@@ -71,6 +73,7 @@ dna intel run [OPTIONS] SOURCE
 
 | Option | Description |
 | --- | --- |
+| `--analyzer` | Which analyzer runs the pass: 'llm' researches the source live via the LLM, 'seed' uses the offline curated insights, 'auto' picks the LLM when OPENAI_API_KEY is set (else seed). _(default: `auto`)_ |
 | `--help` | Show this message and exit. |
 | `--json` | Machine-readable output. |
 | `--scope` | _(default: `dna-development`)_ |

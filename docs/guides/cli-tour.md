@@ -482,7 +482,12 @@ The remaining groups already have dedicated prose — one line each here:
 - **`dna intel`** — the intelligence layer's driver: `dna intel run
   <source>` researches an [`IntelSource`](../concepts/builtin-kinds.md#intelligence-layer)
   and ranks the candidates, suppressing those below the source's actionability
-  threshold; `dna intel list` shows the delivered `IntelInsight`s. Re-running a
+  threshold. `--analyzer [auto|llm|seed]` chooses how the research happens:
+  `llm` reads the source live (a repo's README + docs, a scope's docs, or an
+  external URL hint) and asks the model for candidate insights; `seed` uses the
+  offline curated insights; `auto` (the default) picks the LLM when an LLM key
+  is configured and falls back to `seed` otherwise — so it works out of the box
+  offline. `dna intel list` shows the delivered `IntelInsight`s. Re-running a
   pass never re-delivers what was already surfaced — the engine **dedups** each
   candidate (a deterministic key plus a semantic cosine over the memory
   co-pillar's embedding space) against the source's existing insights. And the
