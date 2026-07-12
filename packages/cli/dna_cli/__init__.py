@@ -16,6 +16,7 @@ import os
 import click
 
 from dna_cli import (
+    api_cmd,
     doc_cmd,
     docs_cmd,
     emit_cmd,
@@ -89,6 +90,7 @@ main.add_command(new_cmd.new)
 main.add_command(eval_cmd.eval_)
 main.add_command(emit_cmd.emit)
 main.add_command(mcp_cmd.mcp)
+main.add_command(api_cmd.api)
 
 
 if __name__ == "__main__":
