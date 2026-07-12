@@ -122,6 +122,7 @@ cloud = "dna.extensions.cloud:CloudExtension"
 automation = "dna.extensions.automation:AutomationExtension"
 eval = "dna.extensions.eval:EvalExtension"
 intel = "dna.extensions.intel:IntelExtension"
+portfolio = "dna.extensions.portfolio:PortfolioExtension"
 
 [build-system]
 requires = ["hatchling"]

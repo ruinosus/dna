@@ -46,7 +46,7 @@ Declarative Kind descriptor — the format of builtin `kinds/*.kind.yaml` packag
 | `volatile_spec_fields` |  | Extra write-/runtime-stamped spec fields excluded from the canonical digest, unioned with the base set {updated_at, version, created_at}. |
 | `workitem_common` |  | DEPRECATED back-compat shorthand for schema_fragments: ["sdlc/workitem-common"]. Python-only. |
 
-## Registered Kinds (75)
+## Registered Kinds (80)
 
 ### Composition plane
 
@@ -113,17 +113,22 @@ Declarative Kind descriptor — the format of builtin `kinds/*.kind.yaml` packag
 | [Issue](record.md#issue) | `sdlc-issue` | `github.com/ruinosus/dna/sdlc/v1` |
 | [Kaizen](record.md#kaizen) | `sdlc-kaizen` | `github.com/ruinosus/dna/sdlc/v1` |
 | [LessonLearned](record.md#lessonlearned) | `sdlc-lesson-learned` | `github.com/ruinosus/dna/sdlc/v1` |
+| [Membership](record.md#membership) | `portfolio-membership` | `github.com/ruinosus/dna/portfolio/v1` |
 | [ModelProfile](record.md#modelprofile) | `modelreg-model-profile` | `github.com/ruinosus/dna/modelreg/v1` |
 | [Narrative](record.md#narrative) | `sdlc-narrative` | `github.com/ruinosus/dna/sdlc/v1` |
+| [Organization](record.md#organization) | `portfolio-org` | `github.com/ruinosus/dna/portfolio/v1` |
 | [PatternInsight](record.md#patterninsight) | `cognitive-pattern-insight` | `github.com/ruinosus/dna/cognitive/v1` |
 | [Plan](record.md#plan) | `sdlc-plan` | `github.com/ruinosus/dna/sdlc/v1` |
 | [Postmortem](record.md#postmortem) | `sdlc-postmortem` | `github.com/ruinosus/dna/sdlc/v1` |
 | [PreMortem](record.md#premortem) | `cognitive-pre-mortem` | `github.com/ruinosus/dna/cognitive/v1` |
+| [Project](record.md#project) | `portfolio-project` | `github.com/ruinosus/dna/portfolio/v1` |
 | [PromptTemplate](record.md#prompttemplate) | `sdlc-prompt-template` | `github.com/ruinosus/dna/sdlc/v1` |
 | [Reference](record.md#reference) | `sdlc-reference` | `github.com/ruinosus/dna/sdlc/v1` |
+| [Repo](record.md#repo) | `portfolio-repo` | `github.com/ruinosus/dna/portfolio/v1` |
 | [Retrospective](record.md#retrospective) | `sdlc-retrospective` | `github.com/ruinosus/dna/sdlc/v1` |
 | [RiskRegister](record.md#riskregister) | `sdlc-risk-register` | `github.com/ruinosus/dna/sdlc/v1` |
 | [Roadmap](record.md#roadmap) | `sdlc-roadmap` | `github.com/ruinosus/dna/sdlc/v1` |
+| [Role](record.md#role) | `portfolio-role` | `github.com/ruinosus/dna/portfolio/v1` |
 | [SavedView](record.md#savedview) | `sdlc-saved-view` | `github.com/ruinosus/dna/sdlc/v1` |
 | [Spec](record.md#spec) | `sdlc-spec` | `github.com/ruinosus/dna/sdlc/v1` |
 | [Spike](record.md#spike) | `sdlc-spike` | `github.com/ruinosus/dna/sdlc/v1` |

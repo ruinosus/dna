@@ -1,0 +1,19 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-portfolio-kinds
+spec:
+  title: 'Plano: s-portfolio-kinds'
+  date: '2026-07-12'
+  status: accepted
+  story_ref: s-portfolio-kinds
+  journey_phase: plan
+  body: "1) 5 descriptors kinds/*.kind.yaml (Py) \u2192 cp byte-identical \u2192 TS;\
+    \ 2) portfolio ext (Py __init__ + TS class) mirroring intel; 3) register (pyproject\
+    \ entry-point + bootstrap loadBuiltins); 4) 4 seed Role docs; 5) Py+TS tests;\
+    \ 6) Portfolio prose + regen docs/reference; 7) guards green (hash-parity/ratchet/strict-schema/inheritable-tenancy/brand/docs-coverage);\
+    \ 8) PR off feat/portfolio-kinds. Model = adr-portfolio-project-model (ADO container,\
+    \ N\u2014N repo\u2194project, Role-as-data)."
+  created_at: '2026-07-12T23:14:44+00:00'
+  updated_at: '2026-07-12T23:14:44+00:00'
+  methodology: adr
