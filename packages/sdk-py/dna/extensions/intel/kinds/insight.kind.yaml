@@ -1,0 +1,148 @@
+# IntelInsight — the dissemination unit (record plane; a ranked, actionable
+# insight). Produced from an IntelSource; the ranker/digest/dedup/feedback stages
+# all reference it. Named IntelInsight (NOT Insight) — the bare `Insight` name
+# already belongs to the SDLC oracle Kind (alias sdlc-insight); two Kinds sharing
+# a name makes every bare-name lookup ambiguous (i-195). The cross-stage contract
+# is the alias `intel-insight`.
+#
+# TENANTED — per-tenant generated data (the tenant's own insight stream), NOT a
+# shared `_lib` default. Deliberately NOT inheritable (never in
+# DEFAULT_INHERITABLE_KINDS_V1); TENANTED is correct.
+#
+# Embeddable (embed: [title, fact]) so the later dedup story can do semantic
+# recall over the insight text.
+#
+# PARITY-CRITICAL package data: the byte-identical mirror lives at
+# packages/sdk-{py,ts}/{dna/extensions,src/extensions}/intel/kinds/
+# insight.kind.yaml (tests/test_descriptor_hash_parity.py enforces).
+apiVersion: github.com/ruinosus/dna/core/v1
+kind: KindDefinition
+metadata:
+  name: insight
+spec:
+  target_api_version: github.com/ruinosus/dna/intel/v1
+  target_kind: IntelInsight
+  alias: intel-insight
+  origin: github.com/ruinosus/dna/intel
+  tenant_scope: tenanted
+  plane: record
+  prompt_target: false
+  flatten_in_context: false
+  prompt_target_priority: 0
+  storage:
+    type: yaml
+    container: intel-insights
+  schema:
+    type: object
+    additionalProperties: false
+    required:
+    - title
+    - fact
+    - score
+    - state
+    properties:
+      title:
+        type: string
+        description: The insight headline.
+      fact:
+        type: string
+        description: What happened / the cited fact.
+      why:
+        type:
+        - string
+        - 'null'
+        description: Why it matters to this source.
+      action:
+        type:
+        - string
+        - 'null'
+        description: The single suggested action.
+      score:
+        type: number
+        default: 0
+        description: Actionability score (0..1). The ranker sets this; the digest
+          suppresses insights scoring below the source's threshold.
+      source_ref:
+        type:
+        - string
+        - 'null'
+        description: The IntelSource name this insight came from.
+      pirs:
+        type: array
+        items:
+          type: string
+        description: Which Priority Intelligence Requirements this insight matches.
+      citations:
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          required:
+          - url
+          properties:
+            url:
+              type: string
+            title:
+              type:
+              - string
+              - 'null'
+        description: Sources backing the fact — each a {url, title} pair.
+      state:
+        type: string
+        enum:
+        - new
+        - actioned
+        - dismissed
+        - snoozed
+        default: new
+        description: The feedback disposition — the reader's response to the insight.
+      evidence_rating:
+        type: string
+        enum:
+        - evidence-based
+        - opinion-practice
+        - anecdotal
+        default: anecdotal
+        description: How well-grounded the fact is — evidence-based, opinion/practice,
+          or anecdotal.
+      created_at:
+        type:
+        - string
+        - 'null'
+        description: ISO-8601 timestamp, stamped by the writer (not defaulted here).
+  describe: '{title}'
+  summary:
+    title: ''
+    score: 0
+    state: ''
+    source_ref: null
+  embed:
+  - title
+  - fact
+  ui:
+    mode: govern
+    label:
+      en: Intel Insights
+      pt-BR: Insights de Inteligência
+    icon: 💡
+    description:
+      en: Ranked, actionable insights (the dissemination unit of the intel layer).
+      pt-BR: Insights acionáveis e ranqueados (a unidade de disseminação da camada
+        de inteligência).
+    routes:
+      list: docs/IntelInsight
+      detail: docs/IntelInsight/:name
+    permissions:
+      list: any
+      detail: any
+    in_sidebar: true
+    display_order: 57
+  ascii_icon: 💡
+  display_label: Intel Insights
+  docs: An IntelInsight is the dissemination unit of the intelligence layer — a
+    ranked, actionable insight produced from an IntelSource, carrying its headline,
+    cited fact, suggested action, actionability score, matched PIRs, citations,
+    evidence rating and feedback state. The ranker sets the score; the digest
+    suppresses insights below the source threshold; the feedback stage records the
+    state (new/actioned/dismissed/snoozed). Embeddable so a later dedup stage can
+    recall semantically similar insights.
