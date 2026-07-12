@@ -1,0 +1,23 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Epic
+metadata:
+  name: e-portfolio-console
+spec:
+  title: "DNA Cloud como console de portf\xF3lio multi-tenant + integra\xE7\xE3o Claude\
+    \ Code"
+  description: "DNA Cloud vira o painel \xFAnico onde um tenant acompanha TODO o seu\
+    \ portf\xF3lio de projetos (SDLC + insights de intelig\xEAncia + mem\xF3ria),\
+    \ e o Claude Code opera ATRAVES dele (via MCP) \u2014 cada research/decisao/story/insight\
+    \ vira dado vivo no dashboard. Dogfood: rodar sobre o proprio portfolio (dna,\
+    \ dna-cloud, copiloto-medico, foundry-assured) prova o conceito. Nasce do experimento\
+    \ sp-fusion-validation."
+  status: planning
+  reporter: claude-code
+  created_at: '2026-07-12T21:55:49+00:00'
+  updated_at: '2026-07-12T21:55:49+00:00'
+  timeline:
+  - at: '2026-07-12T21:55:49+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: planning
