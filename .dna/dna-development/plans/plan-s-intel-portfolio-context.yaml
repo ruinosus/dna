@@ -1,0 +1,25 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-intel-portfolio-context
+spec:
+  title: 'Plano: s-intel-portfolio-context'
+  date: '2026-07-12'
+  status: accepted
+  story_ref: s-intel-portfolio-context
+  journey_phase: plan
+  body: "Funda\xE7\xE3o da extension 'intel' no SDK (Py\u2194TS parity), copiando\
+    \ o padr\xE3o da extension 'cloud'. Cria dna/extensions/intel (Py: __init__.py\
+    \ IntelExtension + kinds/*.kind.yaml) + src/extensions/intel (TS twin byte-id\xEA\
+    ntico) com 2 descriptors: (1) IntelSource (alias intel-source) \u2014 a watchlist/portfolio,\
+    \ TENANTED, plane record, container intel-sources: {name,type[repo|scope|external],uri,cadence,threshold,pirs[],muted};\
+    \ (2) Insight (alias intel-insight) \u2014 a unidade de dissemina\xE7\xE3o que\
+    \ ranker/digest/dedup TODOS referenciam, TENANTED, record, container insights:\
+    \ {title,fact,why,action,score,source_ref,pirs[],citations[],state[new|actioned|dismissed|snoozed],evidence_rating,created_at}.\
+    \ TENANTED (n\xE3o-inheritable) pela m\xE1xima herd\xE1vel\u21D2nunca-TENANTED.\
+    \ Registra via entry-point pyproject + registry TS. Guards: descriptor-hash-parity,\
+    \ ratchet (atualiza contagem), strict-schema-lint (additionalProperties:false),\
+    \ docs-coverage (prosa em builtin-kinds). Insight co-constru\xEDdo aqui = decis\xE3\
+    o narrada (\xE9 a funda\xE7\xE3o compartilhada)."
+  created_at: '2026-07-12T16:35:45+00:00'
+  updated_at: '2026-07-12T16:35:45+00:00'
