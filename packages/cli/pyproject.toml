@@ -39,6 +39,14 @@ dna = "dna_cli:main"
 # inside build_server), so the base install never carries it. Guard:
 # tests/test_mcp_server.py::test_base_import_never_pulls_mcp.
 mcp = ["fastmcp>=2"]
+# The REST read-API face (`dna api serve`) — the correct HTTP boundary for a WEB
+# app (the DNA Cloud portal): a normal request/response REST API over the SAME
+# DNA kernel + the SAME `*_impl` cores the MCP server uses (zero logic
+# duplication). Distinct from the `mcp` extra, which is for stateful AI clients.
+# FastAPI (ASGI app) + uvicorn (server). Optional + lazily imported
+# (dna_cli._rest_api imports `fastapi` only inside build_app), so the base
+# install never carries it.
+api = ["fastapi>=0.110", "uvicorn>=0.30"]
 dev = [
     "pytest>=8.0",
     # search-sqlite extra so `dna recall`/`dna research recall` end-to-end tests
@@ -48,6 +56,11 @@ dev = [
     # `fastmcp` so tests/test_mcp_server.py runs the MCP server for real in CI
     # (the base install keeps it optional — see the `mcp` extra above).
     "fastmcp>=2",
+    # `fastapi` + `httpx` so tests/test_rest_api.py drives the REST read-API for
+    # real via FastAPI's TestClient (httpx-backed). The base install keeps FastAPI
+    # optional — see the `api` extra above.
+    "fastapi>=0.110",
+    "httpx>=0.27",
 ]
 
 [tool.pytest.ini_options]

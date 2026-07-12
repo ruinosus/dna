@@ -70,6 +70,7 @@ nav:
       - Emitting to a runtime (the de-para): guides/emitting-to-a-runtime.md
       - How to write an emitter: guides/writing-an-emitter.md
       - The MCP server — DNA as a live layer: guides/mcp-server.md
+      - The REST read-API — DNA's HTTP face for web apps: guides/rest-api.md
       - Hosting the MCP server on Azure (ACA + Entra): guides/hosting-mcp-aca.md
       - The DNA Cloud starter catalog & BYO-DNA: guides/dna-cloud-catalog.md
       - How to configure ports (dna.config.yaml): guides/configuring-ports.md
