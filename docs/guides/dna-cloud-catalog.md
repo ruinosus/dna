@@ -65,7 +65,7 @@ $ dna new agent assistant --scope my-scope --soul my-brand-voice --layout person
 $ dna doc show Agent assistant --scope my-scope
 
 # 4. Push it to the hosted DNA source as your tenant overlay
-$ AAP_TENANT=my-tenant dna doc apply agents/assistant/AGENT.md \
+$ DNA_TENANT=my-tenant dna doc apply agents/assistant/AGENT.md \
       --scope my-scope --source "$DNA_SOURCE_URL"
 ```
 
