@@ -9,7 +9,7 @@ spec:
     \ ancoradas no Intelligence Cycle: Direction (fontes+PIRs) / Dissemination (insights,\
     \ m\xE9trica Precision) / Feedback (Actioned\xB7Dismissed\xB7Snoozed + flywheel).\
     \ Prot\xF3tipo aprovado pelo Barna."
-  status: in-progress
+  status: review
   feature: f-dna-cloud-intelligence
   priority: high
   labels:
@@ -33,7 +33,7 @@ spec:
   - Branch feat/intel-portal, commits por tela, sem push (Barna revisa).
   definition_of_done_source: cli-create
   created_at: '2026-07-12T14:31:45+00:00'
-  updated_at: '2026-07-12T14:31:57+00:00'
+  updated_at: '2026-07-12T14:44:43+00:00'
   timeline:
   - at: '2026-07-12T14:31:45+00:00'
     actor: claude-code
@@ -46,6 +46,30 @@ spec:
     source: cli
     from: todo
     to: in-progress
+  - at: '2026-07-12T14:44:34+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Agent fechou: 4 commits em feat/intel-portal, build Next 15 limpo +\
+      \ typecheck ok. 3 rotas (/dashboard/sources /insights /feedback) + 11 componentes\
+      \ intel/ (CycleRibbon, ScoreRing, InsightCard, StateChip, SampleChip...) + lib/intel.ts\
+      \ (sample-data no padr\xE3o lib/dna.ts, chip 'sample data'). Nav ganhou 'Intelligence'.\
+      \ Fidelidade ao prot\xF3tipo: ribbon, PIRs, ring, Precision hero, Actioned/Dismissed/Snoozed,\
+      \ suprimidos, flywheel Rocchio. Adaptou: CSS centralizado em intel.module.css\
+      \ (componentes = unidade reus\xE1vel) + tabs viraram rotas Next reais."
+    commit_ref: 5c414874c9514eaa58ad068e68097a8866d849b4
+  - at: '2026-07-12T14:44:38+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'review sem PR aberto (--no-pr): Repo separado dna-cloud, branch local
+      feat/intel-portal (sem remote). Review = teste visual pelo Barna + smoke online.'
+  - at: '2026-07-12T14:44:43+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
   produces:
   - kind: Plan
     name: plan-s-dna-cloud-intel-portal
