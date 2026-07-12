@@ -46,3 +46,10 @@ spec:
       \ docs/reference (only cli/intel.md changed), docs_coverage_guard + brand_guard\
       \ clean, 39 intel tests green (19 baseline + 20 new). Python-only; TS twin stays\
       \ the tracked follow-up i-027."
+  - at: '2026-07-12T21:39:08+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR open for review: https://github.com/ruinosus/dna/pull/92 (branch\
+      \ feat/intel-llm-analyzer). Resolve on merge per the issue arc \u2014 not merging\
+      \ here."
