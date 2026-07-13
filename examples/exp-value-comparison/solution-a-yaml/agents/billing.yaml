@@ -1,0 +1,10 @@
+name: billing
+description: Acme Cloud billing specialist — handles invoices and plan changes.
+instruction: Help the customer with billing, invoices, and plan changes.
+layout: persona-first
+soul: support-host
+skills:
+  - kb-grounding
+guardrails:
+  - refund-policy
+model: azure/gpt-4o

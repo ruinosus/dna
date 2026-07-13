@@ -1,0 +1,15 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: Agent
+metadata:
+  name: billing
+  description: Acme Cloud billing specialist — handles invoices and plan changes.
+spec:
+  instruction: |-
+    Help the customer with billing, invoices, and plan changes.
+  layout: persona-first
+  soul: support-host
+  skills:
+  - kb-grounding
+  guardrails:
+  - refund-policy
+  model: azure/gpt-4o

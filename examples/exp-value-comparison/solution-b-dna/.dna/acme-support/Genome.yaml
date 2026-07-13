@@ -1,0 +1,11 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: Genome
+metadata:
+  name: acme-support
+  description: Acme Cloud customer support — two agents (support + billing) that
+    share one KB-grounding Skill, a support persona Soul, and a refund-policy
+    Guardrail, authored once in DNA.
+spec:
+  default_agent: support
+  default_llm: azure/gpt-4o
+  owner: acme

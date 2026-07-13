@@ -1,0 +1,79 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Spike
+metadata:
+  name: sp-exp-value-comparison
+spec:
+  title: O valor do DNA se paga vs YAML+Pydantic+Git+framework no mesmo caso?
+  question_to_answer: O valor do DNA se paga vs YAML+Pydantic+Git+framework no mesmo
+    caso?
+  status: answered
+  owner: claude-code
+  time_box_hours: 6
+  labels:
+  - experiment
+  - value-proof
+  created_at: '2026-07-13T10:11:37+00:00'
+  updated_at: '2026-07-13T10:28:34+00:00'
+  timeline:
+  - at: '2026-07-13T10:11:37+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: proposed
+  - at: '2026-07-13T10:11:55+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: proposed
+    to: in-progress
+  - at: '2026-07-13T10:27:56+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Constru\xED o MESMO agente de suporte (Acme Cloud: support+billing compartilhando\
+      \ Soul+Guardrail+kb-skill) de 2 formas. Prompt composto BYTE-ID\xCANTICO nas\
+      \ duas (verificado em c\xF3digo). Solu\xE7\xE3o A: 53 linhas YAML + 153 linhas\
+      \ Python (compose+models+emit). Solu\xE7\xE3o B (DNA): 91 linhas de config pura,\
+      \ 0 c\xF3digo de app. DNA cobra +72% de envelope apiVersion/kind/metadata por\
+      \ arquivo."
+  - at: '2026-07-13T10:28:00+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Achados duros: (1) Skills s\xE3o INERTES \u2014 referenciadas mas n\xE3\
+      o entram no build_prompt, n\xE3o emitem como tool, nem aparecem em losses. S\xF3\
+      \ Soul+Guardrail comp\xF5em de fato. (2) Valida\xE7\xE3o do DNA \xE9 auto-schema\
+      \ do dataclass (str->string, SEM enum) \u2014 mais RASA que 51 linhas de Pydantic\
+      \ com Literal; s\xF3 dispara no write path real (n\xE3o no read/compose, n\xE3\
+      o no --dry-run). Pydantic pega enum/min_length em todo load. (3) DNA write path\
+      \ d\xE1 boa msg + exit 1 (CI-friendly)."
+  - at: '2026-07-13T10:28:03+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Onde DNA GANHA de verdade: (1) overlay por-tenant \u2014 1 arquivo parcial\
+      \ (7 linhas) sobrescreve s\xF3 spec.instruction, herda Soul+Guardrail, comp\xF5\
+      e on-demand via instance(layers={tenant}); baseline precisaria reimplementar\
+      \ o motor de layers (~30-80 linhas). (2) portabilidade \u2014 7 emitters testados\
+      \ byte-parity; baseline = ~35 linhas por target \xE0 m\xE3o. Ambos s\xF3 valem\
+      \ se voc\xEA REALMENTE tem multi-tenant / multi-runtime."
+  - at: '2026-07-13T10:28:34+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: answered
+  completed_at: '2026-07-13T10:28:32+00:00'
+  findings: "Prompt composto byte-id\xEAntico nas duas solu\xE7\xF5es. Baseline: 53\
+    \ linhas config + 153 Python (compose/models/emit). DNA: 91 config, 0 c\xF3digo.\
+    \ DNA cobra +72% de envelope por arquivo. DNA GANHA claramente em: overlay por-tenant\
+    \ (1 arquivo parcial vs reimplementar motor de layers) e portabilidade (7 emitters\
+    \ testados vs ~35 linhas/target \xE0 m\xE3o). DNA PERDE em: verbosidade de config,\
+    \ onboarding (framework de 23 comandos vs 130 linhas), profundidade de valida\xE7\
+    \xE3o (auto-schema sem enum \xE9 mais raso que Pydantic Literal; s\xF3 valida\
+    \ no write), e debugging. Achado: Skills s\xE3o inertes (n\xE3o comp\xF5em, n\xE3\
+    o emitem, nem em losses)."
+  recommendation: "DNA se paga em multi-tenant + multi-runtime; para app \xFAnico/runtime\
+    \ \xFAnico/tenant \xFAnico, pasta de YAML + Pydantic \xE9 simplesmente melhor.\
+    \ Roadmap: (a) enforce enums no schema, (b) validar no compose/read, (c) decidir\
+    \ se Skills devem compor ou sair do pitch de composi\xE7\xE3o."

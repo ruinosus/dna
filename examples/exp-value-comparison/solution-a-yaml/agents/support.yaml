@@ -1,0 +1,12 @@
+name: support
+description: Acme Cloud front-line customer support agent.
+instruction: Help the customer resolve their Acme Cloud issue.
+layout: persona-first
+soul: support-host
+skills:
+  - kb-grounding
+  - troubleshoot-login
+  - escalation-protocol
+guardrails:
+  - refund-policy
+model: azure/gpt-4o

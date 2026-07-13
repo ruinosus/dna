@@ -1,0 +1,6 @@
+name: troubleshoot-login
+description: Walk a customer through Acme Cloud login and access problems — SSO, password reset, and locked accounts.
+body: |-
+  - For "can't log in": confirm the email, then check SSO vs password auth.
+  - For SSO failures: verify the identity provider is reachable and the domain is claimed.
+  - For a locked account (5+ failed attempts): trigger an unlock, never share the old password.

@@ -1,0 +1,8 @@
+name: refund-policy
+description: Never promise a refund — refunds require billing-team approval; the agent may only open a refund request.
+severity: error
+scope: output
+rules:
+  - Never promise, confirm, or guarantee a refund. You do not have refund authority.
+  - You may open a refund REQUEST and tell the customer the billing team decides within 3 business days.
+  - Never state an amount or a date for a refund. If pressed, restate the policy calmly.
