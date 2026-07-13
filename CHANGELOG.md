@@ -11,6 +11,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-07-13
+
+### Added
+
+- **`POST /v1/tenants/{tid}/provision-owner` — first-login tenant-Owner
+  bootstrap** (C3, #111). Closes the DNA Cloud gap where a brand-new tenant had
+  ZERO Membership docs, so its first (signed-in) user could not manage members:
+  `_require_manage` found no Owner/Admin grant and 403'd every membership write —
+  nothing ever made the sole user the Owner of their own tenant.
+  - **`provision_tenant_owner_impl`** (core application layer) grants the user an
+    org-scope Owner Membership for every referenced org (+ a project-scope Owner
+    for any orgless project), so member management works for any project in the
+    tenant.
+  - **`POST /v1/tenants/{tid}/provision-owner`** on the REST face
+    (`dna_cli._rest_api`) is a bearer-guarded thin delegate the portal calls on
+    first authenticated access (server-side, with the shared `DNA_API_TOKEN` —
+    never opening the DNA source directly, same pattern as `PUT /v1/tenant-plan`).
+  - **Idempotent + first-owner-only:** a NO-OP once any Owner exists, so it is
+    safe to call on every render and a LATER user signing into the same tenant
+    never auto-escalates to Owner (they need an invite). Python-only runtime face
+    (no TS parity surface).
+
 ## [0.13.0] - 2026-07-13
 
 ### Added
@@ -836,7 +858,8 @@ registries: **PyPI** ([`dna-sdk`](https://pypi.org/project/dna-sdk/),
   source conformance kit now pins the contract: base content is served
   by `load_all`, never by a `load_layer` sentinel.
 
-[Unreleased]: https://github.com/ruinosus/dna/compare/v0.13.0...HEAD
+[Unreleased]: https://github.com/ruinosus/dna/compare/v0.14.0...HEAD
+[0.14.0]: https://github.com/ruinosus/dna/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/ruinosus/dna/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/ruinosus/dna/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/ruinosus/dna/compare/v0.9.0...v0.11.0

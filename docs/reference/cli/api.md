@@ -37,6 +37,7 @@ ENDPOINTS (read-focused; tenant-aware via a `tenant` query param):
   GET    /v1/repos?tenant=                     -> {repos:[...]}
   GET    /v1/board?scope=&tenant=              -> {counts, totals, recent}
   PUT    /v1/tenant-plan                       -> billing->runtime TenantPlan write {tenant, tier_id, ...}
+  POST   /v1/tenants/{tid}/provision-owner      -> first-login tenant-Owner bootstrap (idempotent, first-owner-only)
 
 Every endpoint reads/writes through the SAME live kernel `dna` commands +
 `dna mcp serve` use — this is a second HTTP face over one core, not a copy.
