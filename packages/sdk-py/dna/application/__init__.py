@@ -13,7 +13,9 @@ both import these use-cases and only translate transport + edge validation
 """
 from dna.application.live import LiveDna
 from dna.application.runtime import (
+    BoardItemNotFound,
     ProjectNotFound,
+    board_item_impl,
     board_summary_impl,
     compose_prompt_impl,
     consolidate_impl,
@@ -51,5 +53,7 @@ __all__ = [
     "get_project_impl",
     "list_repos_impl",
     "board_summary_impl",
+    "board_item_impl",
     "ProjectNotFound",
+    "BoardItemNotFound",
 ]

@@ -369,6 +369,73 @@ async def board_summary_impl(
     }
 
 
+# The SDLC work-item Kinds a board card can point at, probed in this order when
+# the caller does not pin a ``kind`` (Story/Feature dominate the board; the rest
+# are reachable so a drawer over any work item resolves).
+_BOARD_ITEM_KINDS: tuple[str, ...] = ("Story", "Feature", "Epic", "Issue", "Spike")
+
+
+class BoardItemNotFound(LookupError):
+    """The requested board work-item is absent for this (scope, tenant)."""
+
+
+def _work_item_surface(
+    kind: str, name: str, scope: str, tenant: str | None, raw: dict[str, Any]
+) -> dict[str, Any]:
+    """Project a full SDLC work-item doc onto the console's item-detail surface —
+    the whole thing the drawer renders (description, AC/DoD, status, timeline,
+    feature/epic refs, produces). No reshaping of the nested lists: AC/DoD entries
+    and timeline events pass through verbatim so the UI can render checkboxes +
+    an activity feed."""
+    spec = raw.get("spec") or {}
+    return {
+        "scope": scope,
+        "tenant": tenant,
+        "kind": kind,
+        "name": name,
+        "title": spec.get("title"),
+        "status": spec.get("status"),
+        "description": spec.get("description"),
+        "priority": spec.get("priority"),
+        "labels": list(spec.get("labels") or []),
+        "feature": spec.get("feature"),
+        "epic": spec.get("epic"),
+        "reporter": spec.get("reporter"),
+        "business_value": spec.get("business_value"),
+        "acceptance_criteria": list(spec.get("acceptance_criteria") or []),
+        "definition_of_done": list(spec.get("definition_of_done") or []),
+        "timeline": list(spec.get("timeline") or []),
+        "produces": list(spec.get("produces") or []),
+        "created_at": spec.get("created_at"),
+        "updated_at": spec.get("updated_at"),
+        "closed_at": spec.get("closed_at"),
+    }
+
+
+async def board_item_impl(
+    live: LiveDna, scope: str, name: str, tenant: str | None = None,
+    kind: str | None = None,
+) -> dict[str, Any]:
+    """One board work-item's FULL doc by ``name`` — the console's item-detail
+    drawer. Reuses the SAME ``kernel.get_document`` doc-read primitive
+    ``get_adr_impl`` uses (no new query logic): with an explicit ``kind`` it reads
+    that one Kind; otherwise it probes the SDLC work-item Kinds
+    (:data:`_BOARD_ITEM_KINDS`) and returns the first match. Tenant-aware — a
+    tenant sees the shared base plus its OWN overlay only. Raises
+    :class:`BoardItemNotFound` when ``name`` is unknown for this (scope, tenant).
+    """
+    candidates = [kind] if kind else list(_BOARD_ITEM_KINDS)
+    for k in candidates:
+        raw = await live.kernel.get_document(scope, k, name, tenant=tenant)
+        if raw is not None:
+            return _work_item_surface(k, name, scope, tenant, raw)
+    raise BoardItemNotFound(
+        f"work-item {name!r} not found in scope {scope!r}"
+        + (f" (kind={kind})" if kind else "")
+        + (f" (tenant={tenant})" if tenant else "")
+    )
+
+
 # ── memory (declarative recall) ────────────────────────────────────────────
 
 
