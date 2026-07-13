@@ -204,6 +204,57 @@ def test_delete_memory_overlay_only(dna_dir):
         assert acme_two["name"] in acme_after  # untouched.
 
 
+# ── memory: POST remembers into the tenant's OWN overlay (the add affordance) ─
+
+
+def test_remember_memory_roundtrips(dna_dir):
+    """The portal's add affordance: POST /v1/memories persists ONE memory into
+    the tenant's OWN overlay, and it round-trips on the very next list — the SAME
+    CORE remember_impl the MCP `remember` tool uses (one core, three faces)."""
+    with _client(dna_dir) as c:
+        r = c.post(
+            "/v1/memories",
+            params={"scope": _SCOPE, "tenant": "acme"},
+            json={
+                "summary": "Ship the memory panel end-to-end before polishing",
+                "area": "dna-cloud",
+                "tags": ["decision", "claude"],
+            },
+        )
+        assert r.status_code == 201, r.text
+        created = r.json()
+        assert created["kind"] == "LessonLearned"
+        name = created["name"]
+        assert name  # deterministic slug the DELETE path targets
+
+        # round-trips on the next list, tenant-scoped ...
+        mems = c.get(
+            "/v1/memories", params={"scope": _SCOPE, "tenant": "acme"}
+        ).json()["memories"]
+        mine = next((m for m in mems if m["name"] == name), None)
+        assert mine is not None, [m["name"] for m in mems]
+        assert mine["summary"] == "Ship the memory panel end-to-end before polishing"
+        assert mine["area"] == "dna-cloud"
+        assert "decision" in mine["tags"]
+
+        # ... and is INVISIBLE to another tenant (the #83 isolation holds on write).
+        other = {m["name"] for m in c.get(
+            "/v1/memories", params={"scope": _SCOPE, "tenant": "globex"}
+        ).json()["memories"]}
+        assert name not in other
+
+
+def test_remember_memory_rejects_empty_summary(dna_dir):
+    """An empty summary is a 400 — nothing durable is written."""
+    with _client(dna_dir) as c:
+        r = c.post(
+            "/v1/memories",
+            params={"scope": _SCOPE, "tenant": "acme"},
+            json={"summary": "   "},
+        )
+        assert r.status_code == 400, r.text
+
+
 # ── intel: sources + insights + the feedback state transition ────────────────
 
 

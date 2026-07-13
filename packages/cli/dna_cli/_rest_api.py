@@ -186,6 +186,7 @@ def build_app(
         list_repos_impl,
         list_tools_impl,
         recall_impl,
+        remember_impl,
     )
     from dna_cli._mcp_server import boot_live
     # The intel face delegates to the CORE engine (adr-faces-reorg: logic in the
@@ -206,7 +207,7 @@ def build_app(
     app.add_middleware(
         CORSMiddleware,
         allow_origins=origins,
-        allow_methods=["GET", "DELETE", "PATCH", "OPTIONS"],
+        allow_methods=["GET", "POST", "DELETE", "PATCH", "OPTIONS"],
         allow_headers=["Authorization", "Content-Type"],
     )
 
@@ -283,7 +284,7 @@ def build_app(
         """List a scope's Tool Kind surfaces (name + description), tenant-aware."""
         return await list_tools_impl(await _live(), scope, tenant)
 
-    # -- memory (list + search + the one guarded write: delete) --------------
+    # -- memory (list + search + the two guarded writes: remember + delete) --
 
     @app.get("/v1/memories", dependencies=guarded)
     async def memories(
@@ -293,6 +294,33 @@ def build_app(
         """List the tenant's memory — base + the tenant's OWN overlay (per the #83
         isolation), never another tenant's."""
         return await list_memories_impl(await _live(), scope, tenant)
+
+    @app.post("/v1/memories", dependencies=guarded, status_code=201)
+    async def remember_memory(
+        summary: str = Body(..., embed=True),
+        area: str = Body(default="general", embed=True),
+        tags: list[str] | None = Body(default=None, embed=True),
+        affect: str = Body(default="triumph", embed=True),
+        owner: str = Body(default="portal", embed=True),
+        scope: str | None = Query(default=None),
+        tenant: str | None = Query(default=None),
+    ) -> dict[str, Any]:
+        """Persist ONE memory (a ``LessonLearned``) into the tenant's OWN overlay
+        — the portal's ``remember`` / add affordance, tenant-scoped from the
+        session (never base, never another tenant). Reuses the SAME CORE
+        ``remember_impl`` the MCP ``remember`` tool delegates to (one core, three
+        faces), so a memory added here is recalled identically by MCP/CLI. The
+        deterministic ``_slug(summary)`` name it returns is the id the portal's
+        ``DELETE /v1/memories/{name}`` targets to undo it."""
+        text = (summary or "").strip()
+        if not text:
+            raise HTTPException(
+                status_code=400, detail="summary is required and cannot be empty"
+            )
+        return await remember_impl(
+            await _live(), text, scope, area=area, affect=affect,
+            tags=tags, owner=owner, tenant=tenant,
+        )
 
     @app.get("/v1/memories/search", dependencies=guarded)
     async def memories_search(
