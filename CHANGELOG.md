@@ -11,6 +11,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-07-13
+
+### Added
+
+- **Console REST — the portfolio/board read+write surface** the hosted DNA
+  Cloud console renders. A `/v1` REST face over the kernel, tenant-aware:
+  - **Portfolio read-endpoints + demo seed** (`s-console-rest-seed`, #103) —
+    the console's portfolio/orgs/projects/board listings, backed by the
+    `portfolio-console` record Kinds (#96), with a demo seed so the console has
+    data to render out of the box.
+  - **`GET /v1/board/item`** (#105) — the full work-item document (the console
+    drawer's detail view), not just the board summary row.
+  - **`POST /v1/memories`** (#106) — the portal's remember/add affordance:
+    write a memory engram through the REST face.
+  - **Project members RBAC** (`s-members-panel-functional`, #107) — read + write
+    of project membership with role-based access control, powering the console's
+    Membros panel.
+- **MCP `scopes_supported` advertisement** — the deployed MCP (`--auth jwt` and
+  the multi-provider `--auth config` path) now advertises its OAuth scope in the
+  Protected-Resource-Metadata (RFC 9728) via the new `DNA_MCP_SCOPES_SUPPORTED`
+  env (comma-separated). Without it an MCP client (e.g. VS Code) reaches the IdP
+  with no scope to request and stalls. Per the Azure scope-format nuance
+  (PrefectHQ/fastmcp#3002) the FULL scope (`api://…/user_impersonation`) is
+  advertised in PRM only — never added to the verifier's `required_scopes`, so
+  the token's SHORT `scp` claim (`user_impersonation`) is not rejected.
+
+### Changed
+
+- **Skills compose into `build_prompt`** (`i-031`, `s-dna-explain-provenance`,
+  #102) — Skills now participate in prompt composition, and `dna explain` shows
+  their provenance.
+- **Kind schema emits enums + validates on read/dry-run** (`i-validation-shallow`,
+  #101) — generated schemas carry enum constraints and are validated when a
+  document is read or dry-run applied.
+
+### Fixed
+
+- **`DeclarativeKindPort.canonical_digest`** (`i-030`, #98) — unblocks
+  FS→Postgres source-sync. Combined with the Postgres-substrate spike
+  (`sp-postgres-substrate`, #97), DNA runs end-to-end on a Postgres source
+  (asyncpg driver; set `sslmode`/`ssl` on `DNA_SOURCE_URL` for a TLS-required
+  managed Postgres such as the hosted DNA Cloud).
+
 ## [0.11.0] - 2026-07-12
 
 ### Added
