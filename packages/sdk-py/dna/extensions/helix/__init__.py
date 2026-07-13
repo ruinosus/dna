@@ -21,6 +21,45 @@ from dna.kernel.protocols import ExtensionHost, StorageDescriptor, ReaderPort, W
 from dna.kernel.bundle_handle import BundleHandle
 
 
+def _literal_enum_schema(resolved: Any) -> dict[str, Any] | None:
+    """If ``resolved`` is a ``Literal[...]`` (bare or wrapped in an
+    ``Optional[...]``/``X | None``), return a JSON-Schema ``enum`` property;
+    else ``None``.
+
+    Emits ``{"type": <json-type>, "enum": [...]}`` where the JSON type is
+    inferred from the literal members (all-str → ``string``, all-int →
+    ``integer``, all-bool → ``boolean``; mixed → type omitted). This is what
+    makes a constrained field (e.g. a Guardrail ``severity`` = ``warn | error |
+    hard``) actually enforced by the schema rather than accepting any string
+    (i-validation-shallow). Parity with the TS ``zodSpecToJsonSchema`` ZodEnum
+    branch, which emits the same ``{type, enum}`` shape.
+    """
+    import typing as _t
+
+    origin = _t.get_origin(resolved)
+    if origin is _t.Literal:
+        args = list(_t.get_args(resolved))
+    elif origin is _t.Union:
+        # Optional[Literal[...]] / Literal[...] | None — unwrap NoneType and
+        # recover the Literal member if that's the only non-None arm.
+        inner = [a for a in _t.get_args(resolved) if a is not type(None)]
+        if len(inner) == 1 and _t.get_origin(inner[0]) is _t.Literal:
+            args = list(_t.get_args(inner[0]))
+        else:
+            return None
+    else:
+        return None
+
+    prop: dict[str, Any] = {"enum": args}
+    if args and all(isinstance(a, bool) for a in args):
+        prop = {"type": "boolean", "enum": args}
+    elif args and all(isinstance(a, str) for a in args):
+        prop = {"type": "string", "enum": args}
+    elif args and all(isinstance(a, int) and not isinstance(a, bool) for a in args):
+        prop = {"type": "integer", "enum": args}
+    return prop
+
+
 def _schema_from_model(model: type) -> dict[str, Any] | None:
     """Build a JSON Schema dict from a typed model's spec dataclass fields.
 
@@ -44,6 +83,16 @@ def _schema_from_model(model: type) -> dict[str, Any] | None:
     spec_hints = typing.get_type_hints(spec_type)
     for f in dataclasses.fields(spec_type):
         resolved = spec_hints.get(f.name)
+        # Constrained/enum field — ``Literal["a", "b", ...]`` (also inside an
+        # ``Optional[...]``/``X | None``). Emit ``enum`` so the documented
+        # contract is actually enforced by the schema (i-validation-shallow),
+        # instead of degrading to a bare ``{"type": "string"}`` that accepts any
+        # value. Parity: the TS twin's ``zodSpecToJsonSchema`` maps ``z.enum``
+        # to the same ``{"type": <t>, "enum": [...]}`` shape.
+        enum_prop = _literal_enum_schema(resolved)
+        if enum_prop is not None:
+            properties[f.name] = enum_prop
+            continue
         t = str(resolved) if resolved else str(f.type)
         if resolved is str or t == "<class 'str'>" or t == "str":
             properties[f.name] = {"type": "string"}

@@ -327,6 +327,27 @@ export class Kernel {
     this._writePipeline.validateKindWriter(spec);
   }
 
+  /** Validate `raw.spec` against the Kind's declared JSON Schema — the SAME
+   *  check writeDocument enforces on the write path, exposed as a public
+   *  pre-flight so read-only callers catch a schema-violating doc BEFORE the
+   *  write (i-validation-shallow). Throws SpecValidationError on violation,
+   *  honouring DNA_WRITE_VALIDATION. Twin of Python Kernel.validate_document. */
+  validateDocument(
+    scope: string,
+    kind: string,
+    name: string,
+    raw: Record<string, unknown>,
+    apiVersion?: string,
+  ): void {
+    const api =
+      apiVersion ??
+      (typeof raw === "object" && raw !== null
+        ? (raw.apiVersion as string | undefined)
+        : undefined);
+    const port = this._kindPortFor(kind, api);
+    this._writePipeline.validateSpecSchema(scope, kind, name, raw, port);
+  }
+
   /** All registered KindPorts. Order matches registration. Facade over
    *  `this._kindreg.allPorts()` (Fase 3). */
   kindPorts(): KindPort[] {

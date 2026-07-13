@@ -27,6 +27,10 @@ class GuardrailKind extends KindBase {
   readonly promptTargetPriority = 0;
   readonly flattenInContext = false;
   readonly descriptionFallbackField = "instruction";
+  // Validate on read/compose, not only on write (i-validation-shallow) — parity
+  // with Python GuardrailKind.validate_on_parse. parse() below already throws on
+  // a bad severity/scope via GuardrailSchema (z.enum); this declares the intent.
+  readonly validateOnParse = true;
   readonly storage = SD.bundle("guardrails", "GUARDRAIL.md", "list", "rules");
   readonly graphStyle = { fill: "#EF4444", stroke: "#DC2626", textColor: "#fff" };
   readonly asciiIcon = "🛡️";

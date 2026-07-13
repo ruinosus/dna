@@ -289,3 +289,75 @@ describe("GuardrailWriter", () => {
     expect(existsSync(join(bundleDir, "GUARDRAIL.md"))).toBe(true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// i-validation-shallow — enum enforcement (parity with Python
+// test_guardrail_extension.py::TestGuardrailSchemaEnum /
+// TestGuardrailValidateDocument)
+// ---------------------------------------------------------------------------
+
+describe("Guardrail schema enum enforcement", () => {
+  function kp() {
+    const k = new Kernel();
+    k.load(new GuardrailExtension());
+    return k._kinds.get("github.com/ruinosus/dna/v1\0Guardrail")!;
+  }
+
+  test("severity/scope schema() emit enum (not bare string)", () => {
+    const props = (kp().schema() as any).properties;
+    expect(props.severity).toEqual({ type: "string", enum: ["warn", "error", "hard"] });
+    expect(props.scope).toEqual({ type: "string", enum: ["input", "output", "both"] });
+  });
+
+  test("parse REJECTS severity: critical/garbage (read/compose path)", () => {
+    const port = kp();
+    for (const bad of ["critical", "garbage"]) {
+      expect(() =>
+        port.parse!({
+          apiVersion: "github.com/ruinosus/dna/v1",
+          kind: "Guardrail",
+          metadata: { name: "g" },
+          spec: { rules: ["x"], severity: bad },
+        }),
+      ).toThrow();
+    }
+  });
+
+  test("parse ACCEPTS documented severities", () => {
+    const port = kp();
+    for (const good of ["warn", "error", "hard"]) {
+      expect(() =>
+        port.parse!({
+          apiVersion: "github.com/ruinosus/dna/v1",
+          kind: "Guardrail",
+          metadata: { name: "g" },
+          spec: { rules: ["x"], severity: good },
+        }),
+      ).not.toThrow();
+    }
+  });
+
+  test("validateDocument rejects a bad severity BEFORE the write path", () => {
+    const k = new Kernel();
+    k.load(new GuardrailExtension());
+    const raw = {
+      apiVersion: "github.com/ruinosus/dna/v1",
+      kind: "Guardrail",
+      metadata: { name: "bad" },
+      spec: { rules: ["x"], severity: "critical" },
+    };
+    expect(() => k.validateDocument("s", "Guardrail", "bad", raw)).toThrow();
+  });
+
+  test("validateDocument accepts a valid severity", () => {
+    const k = new Kernel();
+    k.load(new GuardrailExtension());
+    const raw = {
+      apiVersion: "github.com/ruinosus/dna/v1",
+      kind: "Guardrail",
+      metadata: { name: "ok" },
+      spec: { rules: ["x"], severity: "hard", scope: "output" },
+    };
+    expect(() => k.validateDocument("s", "Guardrail", "ok", raw)).not.toThrow();
+  });
+});

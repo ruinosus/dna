@@ -460,8 +460,14 @@ export type TypedAgentDefinition = z.output<typeof AgentDefinitionSchema>;
 
 export const GuardrailSpecSchema = z.object({
   rules: z.array(z.string()).default([]),
-  severity: z.string().optional().default("warn"),
-  scope: z.string().optional().default("both"),
+  // Constrained fields — the documented severity/scope contracts. Typed as
+  // z.enum so zodSpecToJsonSchema emits `{type:"string", enum:[...]}`
+  // (i-validation-shallow): a bare z.string() degraded to `{type:"string"}` and
+  // accepted `severity: critical`/garbage on the write path. Parity: the Python
+  // twin's GuardrailSpec uses Literal[...] → the same enum shape. warn lets the
+  // turn continue; error fails the turn; hard refuses to answer.
+  severity: z.enum(["warn", "error", "hard"]).optional().default("warn"),
+  scope: z.enum(["input", "output", "both"]).optional().default("both"),
 });
 
 export const GuardrailSchema = z.object({

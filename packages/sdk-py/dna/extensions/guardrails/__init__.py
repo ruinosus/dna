@@ -72,6 +72,12 @@ class GuardrailKind(KindBase):
         "destructive commands without confirmation'."
     )
 
+    # Validate the spec against schema() on read/compose (not only on write) —
+    # a doc with e.g. ``severity: critical`` surfaces as a fail-soft parse_error
+    # instead of silently composing (i-validation-shallow). Parity: the TS twin
+    # rejects on parse via GuardrailSchema (z.enum).
+    validate_on_parse = True
+
     def schema(self) -> dict[str, Any] | None:
         return _schema_from_model(self.model)
 
@@ -79,6 +85,10 @@ class GuardrailKind(KindBase):
         spec = raw.get("spec", {})
         spec.setdefault("severity", _DEFAULT_SEVERITY)
         spec.setdefault("scope", _DEFAULT_SCOPE)
+        # Enforce the schema (enum-constrained severity/scope) on parse. Mirrors
+        # the TS GuardrailSchema.parse throw; the kernel's _parse_doc catches it
+        # → typed=None + parse_error event (the doc still loads, untyped).
+        self._validate_spec(raw)
         return TypedGuardrail.from_raw(raw)
 
     def summary(self, doc: Any) -> dict[str, Any] | None:
