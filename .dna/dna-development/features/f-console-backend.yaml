@@ -1,0 +1,26 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Feature
+metadata:
+  name: f-console-backend
+spec:
+  title: "Console backend \u2014 portfolio REST + demo seed"
+  description: Thin REST read-endpoints (orgs/projects/project-detail/repos/board/insights-source-filter)
+    over the 5 portfolio Kinds, mirroring the intel face; plus a seeded demo portfolio
+    (tenant demo) so the DNA Cloud portal reads REAL data.
+  status: discovery
+  epic: e-portfolio-console
+  reporter: claude-code
+  priority: high
+  labels:
+  - portfolio-console
+  - rest
+  - seed
+  business_value: 780
+  created_at: '2026-07-13T12:23:47+00:00'
+  updated_at: '2026-07-13T12:23:47+00:00'
+  timeline:
+  - at: '2026-07-13T12:23:47+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: discovery

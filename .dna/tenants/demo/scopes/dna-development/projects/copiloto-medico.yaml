@@ -1,0 +1,14 @@
+apiVersion: github.com/ruinosus/dna/portfolio/v1
+kind: Project
+metadata:
+  name: copiloto-medico
+spec:
+  name: copiloto-medico
+  slug: copiloto-medico
+  org_ref: barnabe-labs
+  board_scope: copiloto-medico-development
+  repo_refs:
+  - copiloto-medico
+  intel_source_refs:
+  - copiloto-medico
+  visibility: private

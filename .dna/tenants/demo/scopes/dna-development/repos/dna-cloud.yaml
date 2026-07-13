@@ -1,0 +1,9 @@
+apiVersion: github.com/ruinosus/dna/portfolio/v1
+kind: Repo
+metadata:
+  name: dna-cloud
+spec:
+  name: dna-cloud
+  url: https://github.com/ruinosus/dna-cloud
+  provider: github
+  default_branch: main

@@ -1,0 +1,9 @@
+apiVersion: github.com/ruinosus/dna/portfolio/v1
+kind: Repo
+metadata:
+  name: copiloto-medico
+spec:
+  name: copiloto-medico
+  url: https://github.com/ruinosus/copiloto-medico
+  provider: github
+  default_branch: main

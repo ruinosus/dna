@@ -1,0 +1,20 @@
+apiVersion: github.com/ruinosus/dna/intel/v1
+kind: IntelInsight
+metadata:
+  name: ins-dna-willingness-to-pay-do-icp-time-15-40k-ano
+spec:
+  title: "Willingness-to-pay do ICP time: ~$15\u201340k/ano"
+  fact: "Times pagam por ferramentas de contexto/intelig\xEAncia de portf\xF3lio na\
+    \ faixa de $15\u201340k/ano; individual dev tolera $15\u201340/m\xEAs (Pro $29\
+    \ bate a faixa)."
+  why: Ancora o tier Pro $29 e um Enterprise custom no ICP time/org.
+  action: "Validar o Enterprise custom no piso $15k/ano com 2\u20133 design partners\
+    \ antes de tabelar pre\xE7o."
+  score: 0.72
+  source_ref: dna
+  pirs:
+  - willingness-to-pay
+  citations: []
+  state: new
+  evidence_rating: opinion-practice
+  created_at: '2026-07-13T12:13:39+00:00'
