@@ -1,0 +1,60 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Spike
+metadata:
+  name: sp-exp-provenance
+spec:
+  title: "O DNA responde a proveni\xEAncia (que artefato originou cada instru\xE7\xE3\
+    o, preced\xEAncia"
+  question_to_answer: "O DNA responde a proveni\xEAncia (que artefato originou cada\
+    \ instru\xE7\xE3o, preced\xEAncia, override, hash) de uma composi\xE7\xE3o?"
+  status: answered
+  created_at: '2026-07-13T10:13:38+00:00'
+  updated_at: '2026-07-13T10:25:06+00:00'
+  timeline:
+  - at: '2026-07-13T10:13:38+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: proposed
+  - at: '2026-07-13T10:13:52+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: proposed
+    to: in-progress
+  - at: '2026-07-13T10:24:06+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'Compus agente aria de 6 artefatos (Agent+Soul+2 Skills+2 Guardrails+Tool)
+      em 4 Kinds, layout persona-first, + overlay de tenant acme sobrescrevendo o
+      Soul. Achado central: DNA JA tem proveniencia de CAMADA real (resolve_document
+      -> ResolutionPath + has_overlay/overlay_fields, paridade Py/TS), mas NAO tem
+      atribuicao por-secao do prompt: build_prompt renderiza string plana e descarta
+      o mapa secao->artefato. Construi renderer minimo (~200 linhas) sobre o motor
+      real (template de layout + dep_filters + flatten) com gate de igualdade byte-a-byte
+      vs build_prompt.'
+  - at: '2026-07-13T10:25:06+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: answered
+  completed_at: '2026-07-13T10:25:04+00:00'
+  findings: "MEIO real, meio aspiracional. DNA JA entrega proveniencia de CAMADA (resolve_document\
+    \ -> ResolutionPath: layers consultados, found/contributed, effective_layer, is_inherited\
+    \ + has_overlay/overlay_fields inline; paridade Py/TS, testado) \u2014 folder\
+    \ de YAML nao responde nada disso. MAS proveniencia por-SECAO do prompt NAO existe\
+    \ no surface: build_prompt devolve string plana; sem build_prompt(explain=True)\
+    \ nem 'dna explain'. O mapa secao->artefato+hash+versao+layer eh reconstruivel\
+    \ em ~200 linhas dos proprios blocos do kernel (layout template + dep_filters\
+    \ + flatten), provado com gate byte-a-byte vs build_prompt. Gaps: (1) sem explain\
+    \ no CLI/SDK; (2) resolve_document library-only; (3) version_sha=None no FS source;\
+    \ (4) ordem declarada de guardrails nao preservada; (5) Document sem hash/file-path,\
+    \ doc.origin fica 'local' ate no doc sobrescrito."
+  recommendation: 'Promover o renderer pro engine: build_prompt(explain=True) devolvendo
+    [{section, source_artifact, hash, version, layer, overridden_by}], exposto via
+    ''dna explain <agent>'' e no compose_prompt REST/MCP; popular version_sha; corrigir
+    fidelidade de ordem. ~1 dia. Proveniencia eh o diferencial mais defensavel do
+    DNA (folder de YAML eh arquiteturalmente incapaz), mas hoje se DEMONSTRA com script
+    (docs/analysis/exp-provenance.md), nao se aponta como feature.'

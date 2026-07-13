@@ -1,0 +1,22 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: Agent
+metadata:
+  name: aria
+  description: A patient-support assistant composed from layered Kinds.
+  version: 2.1.0
+spec:
+  # ONE-line task instruction. The persona (Soul), the on-demand know-how
+  # (Skills) and the hard policy (Guardrails) are COMPOSED in — not pasted.
+  instruction: |-
+    Help patients understand their care instructions in plain language.
+  layout: persona-first
+  soul: aria-persona
+  skills:
+  - citation-discipline
+  - concise-answers
+  guardrails:
+  - no-medical-advice
+  - cite-sources
+  tools:
+  - kb-search
+  model: azure/gpt-4o

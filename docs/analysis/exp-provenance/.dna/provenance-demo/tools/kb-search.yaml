@@ -1,0 +1,19 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: Tool
+metadata:
+  name: kb-search
+  description: Search the patient-education knowledge base for leaflets relevant
+    to a question. Use before answering any grounded question.
+spec:
+  type: builtin
+  input_schema:
+    type: object
+    required:
+    - query
+    properties:
+      query:
+        type: string
+        description: The patient's question or keywords to search leaflets for.
+  read_only: true
+  tags:
+  - knowledge-base

@@ -1,0 +1,11 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: Genome
+metadata:
+  name: provenance-demo
+  description: Provenance experiment — one agent composed from a Soul, 2 Skills,
+    2 Guardrails and a Tool, with a tenant overlay that overrides the Soul.
+spec:
+  default_agent: aria
+  default_llm: azure/gpt-4o
+  owner: dna
+  version: 1.0.0
