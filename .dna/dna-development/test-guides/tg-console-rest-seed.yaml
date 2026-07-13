@@ -1,0 +1,21 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-console-rest-seed
+spec:
+  description: REST endpoints for the portfolio console + demo seed
+  kind_of_test: integration
+  status: active
+  steps:
+  - action: cd packages/cli && .venv/bin/python -m pytest tests/test_rest_api.py -q
+    expected: 22 passed (portfolio orgs/projects/detail/repos/board + insight source
+      filter)
+  - action: packages/cli/.venv/bin/python scripts/seed_portfolio_demo.py
+    expected: "seeds demo portfolio + runs the dna intel pass \u2192 3 DNA insights\
+      \ delivered"
+  - action: DNA_TENANT=demo dna api serve --port 8091 --auth none; curl /v1/board?scope=dna-development&tenant=demo
+    expected: returns REAL board counts-by-status (104 stories, 22 features)
+  verifies:
+  - Story/s-console-rest-seed
+  created_at: '2026-07-13T12:25:18+00:00'
+  updated_at: '2026-07-13T12:25:18+00:00'

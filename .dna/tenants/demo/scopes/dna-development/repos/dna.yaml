@@ -1,0 +1,9 @@
+apiVersion: github.com/ruinosus/dna/portfolio/v1
+kind: Repo
+metadata:
+  name: dna
+spec:
+  name: dna
+  url: https://github.com/ruinosus/dna
+  provider: github
+  default_branch: main

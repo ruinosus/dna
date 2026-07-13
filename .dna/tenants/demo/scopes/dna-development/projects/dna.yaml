@@ -1,0 +1,15 @@
+apiVersion: github.com/ruinosus/dna/portfolio/v1
+kind: Project
+metadata:
+  name: dna
+spec:
+  name: dna
+  slug: dna
+  org_ref: barnabe-labs
+  board_scope: dna-development
+  repo_refs:
+  - dna
+  - dna-cloud
+  intel_source_refs:
+  - dna
+  visibility: private

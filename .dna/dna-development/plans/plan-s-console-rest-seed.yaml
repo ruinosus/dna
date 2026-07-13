@@ -1,0 +1,22 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-console-rest-seed
+spec:
+  title: 'Plano: s-console-rest-seed'
+  date: '2026-07-13'
+  status: accepted
+  story_ref: s-console-rest-seed
+  journey_phase: plan
+  body: "1) Mirror the intel REST style: add read use-cases to dna.application.runtime\
+    \ (list_orgs/list_projects/get_project/list_repos/board_summary) reusing the _collect\
+    \ primitive + list_stories_impl for the board \u2014 logic in the core, faces\
+    \ thin (adr-faces-reorg). 2) Thin handlers in dna_cli._rest_api: /v1/orgs, /v1/projects,\
+    \ /v1/projects/{slug} (resolve repo_refs\u2192Repo), /v1/repos, /v1/board?scope=;\
+    \ add ?source alias to /v1/insights. 3) Seed tenant demo (Organization barnabe-labs,\
+    \ Repos dna/dna-cloud/copiloto-medico, Projects dna[multi-repo]/copiloto-medico,\
+    \ IntelSource dna) via kernel.write_document + run the offline SeedAnalyzer pass\
+    \ so the DNA project has real insights. 4) REST tests mirroring the intel ones;\
+    \ regenerate CLI reference; guards clean."
+  created_at: '2026-07-13T12:24:19+00:00'
+  updated_at: '2026-07-13T12:24:19+00:00'

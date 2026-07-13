@@ -1,0 +1,20 @@
+apiVersion: github.com/ruinosus/dna/intel/v1
+kind: IntelInsight
+metadata:
+  name: ins-dna-operar-as-ferramentas-jira-ado-github-n-o-compet
+spec:
+  title: "Operar-as-ferramentas (Jira/ADO/GitHub), n\xE3o competir"
+  fact: "Os que sobrevivem ao risco 'insight-como-ru\xEDdo' agem NAS ferramentas que\
+    \ o time j\xE1 usa e resolvem relev\xE2ncia/timing pelo contexto pr\xF3prio."
+  why: "A moat \xE9 o contexto (memory + SDLC) filtrando o que importa \u2014 um feed\
+    \ gen\xE9rico vira ru\xEDdo e \xE9 descartado."
+  action: Priorizar conectores que AGEM (abrir/atualizar work items) sobre um feed
+    read-only; suprimir agressivamente abaixo do threshold da fonte.
+  score: 0.72
+  source_ref: dna
+  pirs:
+  - moat
+  citations: []
+  state: new
+  evidence_rating: opinion-practice
+  created_at: '2026-07-13T12:13:39+00:00'

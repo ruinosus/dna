@@ -176,8 +176,14 @@ def build_app(
     # HTTP. ``boot_live`` is the CLI's composition root (it wires the CLI's own
     # source/provider boot path), so it stays in ``dna_cli._mcp_server``.
     from dna.application import (
+        ProjectNotFound,
+        board_summary_impl,
         compose_prompt_impl,
+        get_project_impl,
         list_agents_impl,
+        list_orgs_impl,
+        list_projects_impl,
+        list_repos_impl,
         list_tools_impl,
         recall_impl,
     )
@@ -332,14 +338,21 @@ def build_app(
         scope: str | None = Query(default=None),
         tenant: str | None = Query(default=None),
         state: str | None = Query(default=None),
+        source: str | None = Query(
+            default=None,
+            description="Filter to one IntelSource's insights (a project shows "
+            "only its own). Alias of source_ref; source_ref wins if both are set.",
+        ),
         source_ref: str | None = Query(default=None),
     ) -> dict[str, Any]:
         """List the tenant's IntelInsight docs (ranked), optionally filtered by
-        ``state`` and/or originating ``source_ref``."""
+        ``state`` and/or originating source. The console's per-project view
+        passes ``?source=<name>`` so a project shows only its own insights."""
         live = await _live()
         sc = scope or live.base_scope
         items = await intel_engine.list_insights(
-            live.kernel, scope=sc, tenant=tenant, state=state, source_ref=source_ref,
+            live.kernel, scope=sc, tenant=tenant, state=state,
+            source_ref=source_ref or source,
         )
         return {"scope": sc, "tenant": tenant, "insights": items}
 
@@ -377,5 +390,58 @@ def build_app(
             raise HTTPException(status_code=400, detail=str(exc)) from None
         except intel_engine.InsightNotFound as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from None
+
+    # -- portfolio (the console's org / project / repo / board read model) ----
+    # Thin delegates to the CORE application impls (dna.application) — the SAME
+    # pattern as the definitions/intel handlers. ZERO business logic here.
+
+    @app.get("/v1/orgs", dependencies=guarded)
+    async def orgs(
+        scope: str | None = Query(default=None),
+        tenant: str | None = Query(default=None),
+    ) -> dict[str, Any]:
+        """List the tenant's Organization docs (the console's top-level container)."""
+        return await list_orgs_impl(await _live(), scope, tenant)
+
+    @app.get("/v1/projects", dependencies=guarded)
+    async def projects(
+        scope: str | None = Query(default=None),
+        tenant: str | None = Query(default=None),
+    ) -> dict[str, Any]:
+        """List the tenant's Project docs (the multi-repo development-space
+        containers the portfolio console aggregates)."""
+        return await list_projects_impl(await _live(), scope, tenant)
+
+    @app.get("/v1/projects/{slug}", dependencies=guarded)
+    async def project_detail(
+        slug: str,
+        scope: str | None = Query(default=None),
+        tenant: str | None = Query(default=None),
+    ) -> dict[str, Any]:
+        """One project's detail + its RESOLVED repos (``repo_refs`` → the Repo
+        docs). 404 when the slug is unknown for this (scope, tenant)."""
+        try:
+            return await get_project_impl(await _live(), slug, scope, tenant)
+        except ProjectNotFound as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from None
+
+    @app.get("/v1/repos", dependencies=guarded)
+    async def repos(
+        scope: str | None = Query(default=None),
+        tenant: str | None = Query(default=None),
+    ) -> dict[str, Any]:
+        """List the tenant's Repo docs (code repositories the portfolio references)."""
+        return await list_repos_impl(await _live(), scope, tenant)
+
+    @app.get("/v1/board", dependencies=guarded)
+    async def board(
+        scope: str = Query(..., description="A project's board_scope (e.g. dna-development)."),
+        tenant: str | None = Query(default=None),
+        recent: int = Query(default=6, ge=0, le=50),
+    ) -> dict[str, Any]:
+        """A compact SDLC summary for a project's ``board_scope``: Story + Feature
+        counts by status, totals, and the newest work items — the console's board
+        card. Reuses the shared SDLC read impl (``list_stories_impl``)."""
+        return await board_summary_impl(await _live(), scope, tenant, recent)
 
     return app

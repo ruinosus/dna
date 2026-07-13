@@ -1,0 +1,14 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-console-rest-seed-20260713-122527
+spec:
+  guide_ref: tg-console-rest-seed
+  outcome: pass
+  verifies:
+  - Story/s-console-rest-seed
+  executed_by: claude-code
+  executed_at: '2026-07-13T12:25:27+00:00'
+  notes: sdk-py 3092 passed / cli 566 passed / REST 22 passed; brand_guard + docs_coverage_guard
+    clean; live curl smoke on :8091 confirmed orgs/projects/project-detail(resolved
+    repos)/repos/board(real)/insights?source=dna.

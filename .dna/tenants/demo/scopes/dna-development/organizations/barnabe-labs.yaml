@@ -1,0 +1,8 @@
+apiVersion: github.com/ruinosus/dna/portfolio/v1
+kind: Organization
+metadata:
+  name: barnabe-labs
+spec:
+  name: barnabe-labs
+  slug: barnabe-labs
+  display_name: "Barnab\xE9 Labs"

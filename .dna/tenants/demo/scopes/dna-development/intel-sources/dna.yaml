@@ -1,0 +1,15 @@
+apiVersion: github.com/ruinosus/dna/intel/v1
+kind: IntelSource
+metadata:
+  name: dna
+spec:
+  name: dna
+  type: repo
+  cadence: weekly
+  threshold: 0.6
+  pirs:
+  - posicionamento
+  - arquitetura
+  - mercado
+  muted: false
+  notes: DNA / DNA Cloud positioning + intelligence-layer experiments.

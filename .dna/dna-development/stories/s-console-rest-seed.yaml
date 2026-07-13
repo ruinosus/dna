@@ -1,0 +1,117 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-console-rest-seed
+spec:
+  title: Portfolio console REST endpoints + demo seed
+  description: Add thin REST read-endpoints for the portfolio console and seed the
+    demo portfolio so the portal shows real data.
+  status: review
+  feature: f-console-backend
+  priority: high
+  labels:
+  - portfolio-console
+  - rest
+  - seed
+  reporter: claude-code
+  acceptance_criteria:
+  - "Given the DNA REST API booted for tenant demo, when the console GETs /v1/orgs,\
+    \ /v1/projects, /v1/projects/{slug}, /v1/repos, /v1/board?scope=dna-development\
+    \ and /v1/insights?source=dna, then each returns the seeded portfolio data (project\
+    \ detail resolves repo_refs\u2192Repo docs; board returns the REAL dna-development\
+    \ counts-by-status + recent; insights filter isolates the dna source)."
+  - Given the intel /v1/insights endpoint, when ?source=<name> is passed, then only
+    that source's insights are returned (alias of source_ref).
+  acceptance_criteria_source: claude-code
+  definition_of_done:
+  - New endpoints are thin adapters delegating to dna.application impls (adr-faces-reorg);
+    REST tests added mirroring the intel ones; sdk-py + cli suites green; brand_guard
+    + docs_coverage_guard clean; CLI reference regenerated; demo portfolio docs +
+    dna IntelSource + DNA insights committed under .dna/tenants/demo/.
+  definition_of_done_source: cli-create
+  created_at: '2026-07-13T12:24:04+00:00'
+  updated_at: '2026-07-13T12:27:12+00:00'
+  timeline:
+  - at: '2026-07-13T12:24:04+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-13T12:24:25+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-13T12:24:43+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Endpoints built as thin adapters over 5 new dna.application impls (list_orgs/list_projects/get_project/list_repos/board_summary)\
+      \ \u2014 no logic in the REST face, mirroring the intel handlers (adr-faces-reorg).\
+      \ board_summary reuses list_stories_impl + the _collect primitive; project detail\
+      \ resolves repo_refs\u2192Repo docs (missing refs skipped honestly). Added ?source\
+      \ alias to /v1/insights (source_ref wins if both set)."
+    commit_ref: cf5a47d5478eec0ca2f52975a01c36720085b3c1
+  - at: '2026-07-13T12:24:46+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Seeded tenant demo via kernel.write_document (scripts/seed_portfolio_demo.py):\
+      \ org barnabe-labs, repos dna/dna-cloud/copiloto-medico, projects dna (multi-repo:\
+      \ [dna,dna-cloud], board dna-development) + copiloto-medico, IntelSource dna.\
+      \ Ran the offline SeedAnalyzer pass \u2192 3 real DNA positioning IntelInsights\
+      \ landed for source dna. Docs committed under .dna/tenants/demo/ (FS source\
+      \ is git-tracked)."
+    commit_ref: cf5a47d5478eec0ca2f52975a01c36720085b3c1
+  - at: '2026-07-13T12:24:50+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Smoke: booted dna api serve :8091 --auth none for tenant demo \u2014\
+      \ /v1/orgs, /v1/projects, /v1/projects/dna (resolves 2 repos), /v1/repos, /v1/board?scope=dna-development\
+      \ (REAL board: 104 stories/22 features counts-by-status), /v1/insights?source=dna\
+      \ (3, isolated from copiloto's 7) all return correct data. 6 REST tests added\
+      \ (22 pass). sdk-py 3092 pass, cli 566 pass. brand_guard + docs_coverage_guard\
+      \ clean; CLI reference regenerated."
+    commit_ref: cf5a47d5478eec0ca2f52975a01c36720085b3c1
+  - at: '2026-07-13T12:25:23+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-console-rest-seed
+    summary: TestGuide tg-console-rest-seed (integration)
+  - at: '2026-07-13T12:25:31+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-console-rest-seed-20260713-122527
+    summary: "TestRun tr-tg-console-rest-seed-20260713-122527 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-13T12:27:07+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'PR #103 open (https://github.com/ruinosus/dna/pull/103). REST endpoints
+      + demo seed + tests green; done on merge.'
+  - at: '2026-07-13T12:27:12+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
+  produces:
+  - kind: Plan
+    name: plan-s-console-rest-seed
+    role: implementation
+    at: '2026-07-13T12:24:25+00:00'
+  - kind: TestGuide
+    name: tg-console-rest-seed
+    role: test-guide
+    at: '2026-07-13T12:25:23+00:00'
+  - kind: TestRun
+    name: tr-tg-console-rest-seed-20260713-122527
+    role: test-run
+    at: '2026-07-13T12:25:31+00:00'

@@ -61,6 +61,13 @@ def serve(scope: str | None, base_dir: str | None, host: str, port: int,
       GET    /v1/memories?scope=&tenant=          -> {memories:[...]}
       GET    /v1/memories/search?q=&scope=&tenant=&k=5  -> {query, hits:[...]}
       DELETE /v1/memories/{name}?scope=&tenant=   -> delete from the tenant's OWN overlay
+      GET    /v1/sources?scope=&tenant=           -> {sources:[...]}
+      GET    /v1/insights?scope=&tenant=&state=&source=  -> {insights:[...]}
+      GET    /v1/orgs?tenant=                      -> {orgs:[...]}
+      GET    /v1/projects?tenant=                  -> {projects:[...]}
+      GET    /v1/projects/{slug}?tenant=           -> {project, repos:[...]}
+      GET    /v1/repos?tenant=                     -> {repos:[...]}
+      GET    /v1/board?scope=&tenant=              -> {counts, totals, recent}
 
     Every endpoint reads/writes through the SAME live kernel `dna` commands +
     `dna mcp serve` use — this is a second HTTP face over one core, not a copy.

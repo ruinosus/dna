@@ -310,6 +310,142 @@ def test_intel_metrics_endpoint(dna_dir):
         assert round(m["noise_rate"], 4) == round(1 / 3, 4)
 
 
+# ── intel: the ?source filter isolates a project's own insights ──────────────
+
+
+def test_intel_insights_source_filter(dna_dir):
+    """A project shows only its OWN insights: ``?source=<name>`` filters the
+    stream to one IntelSource (the console's per-project view)."""
+    _seed_intel_and_run(dna_dir, source="copiloto-medico", tenant="acme")
+    _seed_intel_and_run(dna_dir, source="dna", tenant="acme")
+    with _client(dna_dir) as c:
+        all_ins = c.get("/v1/insights", params={"scope": _SCOPE, "tenant": "acme"}).json()["insights"]
+        dna_ins = c.get("/v1/insights",
+                        params={"scope": _SCOPE, "tenant": "acme", "source": "dna"}
+                        ).json()["insights"]
+    # the union carries both sources; the filtered view is dna-only.
+    assert {i["source_ref"] for i in all_ins} == {"copiloto-medico", "dna"}
+    assert dna_ins, "source=dna returned nothing"
+    assert all(i["source_ref"] == "dna" for i in dna_ins)
+    assert len(dna_ins) < len(all_ins)
+
+
+# ── portfolio: orgs / projects / project detail / repos / board ──────────────
+
+_PORTFOLIO_API = "github.com/ruinosus/dna/portfolio/v1"
+_SDLC_API = "github.com/ruinosus/dna/sdlc/v1"
+
+
+def _seed_portfolio(dna_dir, *, tenant="acme"):
+    """Seed a small portfolio (1 org, 2 repos, 1 multi-repo project) + a tiny
+    board (2 stories, 1 feature) via the SAME kernel write path a face uses.
+    Runs on its own loop; the filesystem source persists so the TestClient-booted
+    app reads it back."""
+    from dna_cli import _mcp_server as M
+
+    def _doc(kind, name, spec, api=_PORTFOLIO_API):
+        return {"apiVersion": api, "kind": kind, "metadata": {"name": name},
+                "spec": {"name": name, **spec}}
+
+    # TENANTED portfolio docs (written into the tenant overlay).
+    tenant_docs = [
+        _doc("Organization", "acme-labs", {"slug": "acme-labs", "display_name": "ACME Labs"}),
+        _doc("Repo", "acme-web", {"url": "https://github.com/acme/web", "provider": "github"}),
+        _doc("Repo", "acme-api", {"url": "https://github.com/acme/api", "provider": "gitlab"}),
+        _doc("Project", "acme", {
+            "slug": "acme", "org_ref": "acme-labs", "board_scope": _SCOPE,
+            "repo_refs": ["acme-web", "acme-api", "ghost-repo"],  # ghost = missing ref
+            "intel_source_refs": ["acme-src"], "visibility": "private",
+        }),
+    ]
+    # Story/Feature are GLOBAL SDLC Kinds — written unbound (no tenant); a
+    # tenant-scoped board query still sees them (global docs cross tenants).
+    global_docs = [
+        _doc("Story", "s-one", {"title": "Story one", "description": "one",
+                                "status": "in-progress",
+                                "created_at": "2026-07-10T10:00:00+00:00"}, api=_SDLC_API),
+        _doc("Story", "s-two", {"title": "Story two", "description": "two",
+                                "status": "done",
+                                "created_at": "2026-07-11T10:00:00+00:00"}, api=_SDLC_API),
+        _doc("Feature", "f-one", {"title": "Feature one", "description": "feat one",
+                                  "status": "in-development",
+                                  "created_at": "2026-07-12T10:00:00+00:00"}, api=_SDLC_API),
+    ]
+
+    async def go():
+        live = await M.boot_live(base_dir=str(dna_dir))
+        for d in tenant_docs:
+            await live.kernel.write_document(
+                _SCOPE, d["kind"], d["metadata"]["name"], d, tenant=tenant)
+        for d in global_docs:
+            await live.kernel.write_document(
+                _SCOPE, d["kind"], d["metadata"]["name"], d, tenant=None)
+
+    asyncio.run(go())
+
+
+def test_portfolio_orgs(dna_dir):
+    _seed_portfolio(dna_dir)
+    with _client(dna_dir) as c:
+        body = c.get("/v1/orgs", params={"scope": _SCOPE, "tenant": "acme"}).json()
+    assert body["tenant"] == "acme"
+    org = next(o for o in body["orgs"] if o["name"] == "acme-labs")
+    assert org["slug"] == "acme-labs"
+    assert org["display_name"] == "ACME Labs"
+
+
+def test_portfolio_projects(dna_dir):
+    _seed_portfolio(dna_dir)
+    with _client(dna_dir) as c:
+        projects = c.get("/v1/projects", params={"scope": _SCOPE, "tenant": "acme"}).json()["projects"]
+    proj = next(p for p in projects if p["name"] == "acme")
+    assert proj["board_scope"] == _SCOPE
+    assert proj["repo_refs"] == ["acme-web", "acme-api", "ghost-repo"]
+    assert proj["org_ref"] == "acme-labs"
+    assert proj["visibility"] == "private"
+    assert proj["intel_source_refs"] == ["acme-src"]
+
+
+def test_portfolio_project_detail_resolves_repos(dna_dir):
+    """Project detail resolves ``repo_refs`` → the Repo docs; a missing ref
+    (``ghost-repo``) is skipped honestly, never fabricated."""
+    _seed_portfolio(dna_dir)
+    with _client(dna_dir) as c:
+        body = c.get("/v1/projects/acme", params={"scope": _SCOPE, "tenant": "acme"}).json()
+        # slug lookup resolves; 404 for an unknown slug.
+        assert c.get("/v1/projects/nope",
+                     params={"scope": _SCOPE, "tenant": "acme"}).status_code == 404
+    assert body["project"]["name"] == "acme"
+    resolved = {r["name"]: r for r in body["repos"]}
+    assert set(resolved) == {"acme-web", "acme-api"}  # ghost-repo dropped
+    assert resolved["acme-web"]["provider"] == "github"
+    assert resolved["acme-api"]["provider"] == "gitlab"
+
+
+def test_portfolio_repos(dna_dir):
+    _seed_portfolio(dna_dir)
+    with _client(dna_dir) as c:
+        repos = c.get("/v1/repos", params={"scope": _SCOPE, "tenant": "acme"}).json()["repos"]
+    names = {r["name"] for r in repos}
+    assert {"acme-web", "acme-api"} <= names
+
+
+def test_portfolio_board_summary(dna_dir):
+    """The board summary reuses the SDLC read impl: counts by status, totals, and
+    the newest items (created_at desc)."""
+    _seed_portfolio(dna_dir)
+    with _client(dna_dir) as c:
+        body = c.get("/v1/board", params={"scope": _SCOPE, "tenant": "acme", "recent": 3}).json()
+    assert body["counts"]["stories"] == {"in-progress": 1, "done": 1}
+    assert body["counts"]["features"] == {"in-development": 1}
+    assert body["totals"] == {"stories": 2, "features": 1, "total": 3}
+    # newest-first: the feature (2026-07-12) leads, then s-two (07-11), s-one (07-10).
+    assert [r["name"] for r in body["recent"]] == ["f-one", "s-two", "s-one"]
+    # scope is required (the board is always for an explicit board_scope).
+    with _client(dna_dir) as c:
+        assert c.get("/v1/board", params={"tenant": "acme"}).status_code == 422
+
+
 # ── auth: --auth token gates every route but /health ─────────────────────────
 
 

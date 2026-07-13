@@ -13,13 +13,19 @@ both import these use-cases and only translate transport + edge validation
 """
 from dna.application.live import LiveDna
 from dna.application.runtime import (
+    ProjectNotFound,
+    board_summary_impl,
     compose_prompt_impl,
     consolidate_impl,
     forget_impl,
     get_adr_impl,
+    get_project_impl,
     get_tool_impl,
     list_agents_impl,
     list_memories_impl,
+    list_orgs_impl,
+    list_projects_impl,
+    list_repos_impl,
     list_stories_impl,
     list_tools_impl,
     recall_impl,
@@ -39,4 +45,11 @@ __all__ = [
     "consolidate_impl",
     "list_memories_impl",
     "forget_impl",
+    # portfolio (the DNA Cloud console read model)
+    "list_orgs_impl",
+    "list_projects_impl",
+    "get_project_impl",
+    "list_repos_impl",
+    "board_summary_impl",
+    "ProjectNotFound",
 ]

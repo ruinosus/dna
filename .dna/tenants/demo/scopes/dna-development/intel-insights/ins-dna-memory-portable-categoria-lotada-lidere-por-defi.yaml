@@ -1,0 +1,21 @@
+apiVersion: github.com/ruinosus/dna/intel/v1
+kind: IntelInsight
+metadata:
+  name: ins-dna-memory-portable-categoria-lotada-lidere-por-defi
+spec:
+  title: "Memory-portable \xE9 categoria lotada \u2014 lidere por Definitions"
+  fact: "Mem/mem0/Zep/Letta/Cognee/Pieces + memory nativo de ChatGPT/Claude/Cursor\
+    \ j\xE1 disputam 'mem\xF3ria port\xE1til'. O que ningu\xE9m entrega \xE9 a DEFINI\xC7\
+    \xC3O declarativa (agentes/SDLC/tools) composta ao vivo e tenant-aware."
+  why: "Competir em 'mem\xF3ria' \xE9 red ocean; o diferencial defens\xE1vel do DNA\
+    \ \xE9 o contexto (memory + SDLC) como fonte \xFAnica vendor-neutral."
+  action: "Posicionar o DNA Cloud pela camada de Definitions/composi\xE7\xE3o ao vivo,\
+    \ n\xE3o como mais um app de mem\xF3ria."
+  score: 0.72
+  source_ref: dna
+  pirs:
+  - concorrentes
+  citations: []
+  state: new
+  evidence_rating: opinion-practice
+  created_at: '2026-07-13T12:13:39+00:00'

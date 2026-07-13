@@ -197,6 +197,178 @@ async def get_adr_impl(
     }
 
 
+# ── portfolio (the DNA Cloud console read model) ───────────────────────────
+#
+# Thin read projections over the 5 TENANTED portfolio Kinds (Organization /
+# Project / Repo, plus Membership / Role) the PortfolioExtension registers. They
+# reuse the SAME ``_collect`` query primitive every list surface here is built on
+# (and ``list_stories_impl`` for the board) — no new query logic, just the shape
+# the console renders. Tenant-aware: with ``tenant`` set ``kernel.query`` returns
+# the shared base plus the tenant's OWN overlay only (#83 isolation).
+
+
+def _org_surface(d: dict[str, Any]) -> dict[str, Any]:
+    spec = d["spec"]
+    return {
+        "name": d["name"],
+        "slug": spec.get("slug"),
+        "display_name": spec.get("display_name") or spec.get("name") or d["name"],
+    }
+
+
+def _project_surface(d: dict[str, Any]) -> dict[str, Any]:
+    spec = d["spec"]
+    return {
+        "name": d["name"],
+        "slug": spec.get("slug"),
+        "org_ref": spec.get("org_ref"),
+        "repo_refs": list(spec.get("repo_refs") or []),
+        "board_scope": spec.get("board_scope"),
+        "intel_source_refs": list(spec.get("intel_source_refs") or []),
+        "visibility": spec.get("visibility", "private"),
+    }
+
+
+def _repo_surface(d: dict[str, Any]) -> dict[str, Any]:
+    spec = d["spec"]
+    return {
+        "name": d["name"],
+        "url": spec.get("url"),
+        "provider": spec.get("provider", "github"),
+        "default_branch": spec.get("default_branch"),
+    }
+
+
+async def list_orgs_impl(
+    live: LiveDna, scope: str | None = None, tenant: str | None = None
+) -> dict[str, Any]:
+    """List the tenant's ``Organization`` docs, projected to the console card
+    surface (``name`` / ``slug`` / ``display_name``), sorted by name."""
+    sc = scope or live.base_scope
+    orgs = [_org_surface(d) for d in await _collect(live, sc, "Organization", tenant)]
+    orgs.sort(key=lambda o: o["name"] or "")
+    return {"scope": sc, "tenant": tenant, "orgs": orgs}
+
+
+async def list_projects_impl(
+    live: LiveDna, scope: str | None = None, tenant: str | None = None
+) -> dict[str, Any]:
+    """List the tenant's ``Project`` docs (the multi-repo containers), projected
+    to the console surface (name/slug/org_ref/repo_refs/board_scope/
+    intel_source_refs/visibility), sorted by name."""
+    sc = scope or live.base_scope
+    projects = [_project_surface(d) for d in await _collect(live, sc, "Project", tenant)]
+    projects.sort(key=lambda p: p["name"] or "")
+    return {"scope": sc, "tenant": tenant, "projects": projects}
+
+
+async def list_repos_impl(
+    live: LiveDna, scope: str | None = None, tenant: str | None = None
+) -> dict[str, Any]:
+    """List the tenant's ``Repo`` docs, projected to the console surface
+    (name/url/provider/default_branch), sorted by name."""
+    sc = scope or live.base_scope
+    repos = [_repo_surface(d) for d in await _collect(live, sc, "Repo", tenant)]
+    repos.sort(key=lambda r: r["name"] or "")
+    return {"scope": sc, "tenant": tenant, "repos": repos}
+
+
+class ProjectNotFound(LookupError):
+    """The requested Project is absent for this (scope, tenant)."""
+
+
+async def get_project_impl(
+    live: LiveDna, slug: str, scope: str | None = None, tenant: str | None = None
+) -> dict[str, Any]:
+    """One project's detail + its RESOLVED repos. Matches ``slug`` against the
+    project's ``spec.slug`` (falling back to the doc name), then resolves each
+    ``repo_refs`` entry to its ``Repo`` doc — the N—N edge lives on the Project
+    side, so this is a lookup over the tenant's Repo docs (missing refs are
+    skipped honestly, never fabricated). Raises :class:`ProjectNotFound`."""
+    sc = scope or live.base_scope
+    rows = await _collect(live, sc, "Project", tenant)
+    match = next(
+        (d for d in rows if d["spec"].get("slug") == slug or d["name"] == slug),
+        None,
+    )
+    if match is None:
+        raise ProjectNotFound(
+            f"project {slug!r} not found in scope {sc!r}"
+            + (f" (tenant={tenant})" if tenant else "")
+        )
+    project = _project_surface(match)
+    repo_rows = {d["name"]: d for d in await _collect(live, sc, "Repo", tenant)}
+    repos = [
+        _repo_surface(repo_rows[ref]) for ref in project["repo_refs"] if ref in repo_rows
+    ]
+    return {"scope": sc, "tenant": tenant, "project": project, "repos": repos}
+
+
+async def board_summary_impl(
+    live: LiveDna, scope: str, tenant: str | None = None, recent: int = 6
+) -> dict[str, Any]:
+    """A compact SDLC summary for a project's ``board_scope``: Story + Feature
+    counts by status, totals, and the ``recent`` newest work items.
+
+    REUSES the shared SDLC read impl (``list_stories_impl``) for the Story
+    projection + counts; Features come through the SAME ``_collect`` primitive
+    (no reimplemented query). ``recent`` is the newest items across both Kinds by
+    ``created_at`` (fail-soft — a missing/unparseable timestamp sorts last)."""
+
+    def _counts(statuses: Any) -> dict[str, int]:
+        c: dict[str, int] = {}
+        for st in statuses:
+            key = st or "unknown"
+            c[key] = c.get(key, 0) + 1
+        return c
+
+    stories = (await list_stories_impl(live, scope=scope, tenant=tenant))["stories"]
+    story_docs = await _collect(live, scope, "Story", tenant)
+    feature_docs = await _collect(live, scope, "Feature", tenant)
+
+    features = [
+        {
+            "name": d["name"],
+            "title": d["spec"].get("title"),
+            "status": d["spec"].get("status"),
+        }
+        for d in feature_docs
+    ]
+
+    dated: list[tuple[str, dict[str, Any]]] = []
+    for kind, docs in (("Story", story_docs), ("Feature", feature_docs)):
+        for d in docs:
+            spec = d["spec"]
+            dated.append(
+                (
+                    spec.get("created_at") or "",
+                    {
+                        "kind": kind,
+                        "name": d["name"],
+                        "title": spec.get("title"),
+                        "status": spec.get("status"),
+                        "created_at": spec.get("created_at"),
+                    },
+                )
+            )
+    dated.sort(key=lambda t: t[0], reverse=True)
+
+    return {
+        "scope": scope,
+        "tenant": tenant,
+        "counts": {
+            "stories": _counts(s.get("status") for s in stories),
+            "features": _counts(f["status"] for f in features),
+        },
+        "totals": {
+            "stories": len(stories),
+            "features": len(features),
+            "total": len(stories) + len(features),
+        },
+        "recent": [item for _, item in dated[: max(0, recent)]],
+    }
+
+
 # ── memory (declarative recall) ────────────────────────────────────────────
 
 
