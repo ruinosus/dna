@@ -1,6 +1,0 @@
-{
-  "title": "DNA Cloud — architecture, plans & enforcement",
-  "description": "Self-contained visual for the DNA Cloud SaaS design: architecture (portal + hosted MCP server + billing + IdP), the Free/Dev/Pro/Enterprise plans table, the claim->plan enforcement flow, a first-class portal usage-dashboard mockup, signup->plan->DCR flow, billing model, phasing and the open decisions for the owner.",
-  "source": "design doc do f-dna-cloud (Phase B SaaS) — adr-dna-cloud-saas",
-  "created_at": "2026-07-11T16:43:01.156493+00:00"
-}
