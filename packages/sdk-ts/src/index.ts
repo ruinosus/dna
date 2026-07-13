@@ -14,6 +14,11 @@ export type { PreviewBlock } from "./kernel/preview.js";
 export { Document } from "./kernel/document.js";
 export { Resource, type ResourceDep } from "./kernel/resource.js";
 export { PromptBuilder } from "./kernel/prompt-builder.js";
+export type {
+  SectionProvenance,
+  PromptExplanation,
+  ExplainOpts,
+} from "./kernel/prompt-builder.js";
 export { CompositionEngine } from "./kernel/composition-resolver.js";
 // Composition Engine V2 resolver module (twin of kernel/resolver.py).
 export {

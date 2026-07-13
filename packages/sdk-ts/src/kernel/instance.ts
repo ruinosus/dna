@@ -20,6 +20,7 @@ import type { CompositionProfile } from "./composition-resolver.js";
 import { profileForOrchestrator } from "./composition-resolver.js";
 import type { PreviewBlock } from "./preview.js";
 import { PromptBuilder } from "./prompt-builder.js";
+import type { ExplainOpts, PromptExplanation } from "./prompt-builder.js";
 import { CompositionEngine } from "./composition-resolver.js";
 import { Navigator } from "./navigator.js";
 import { LockManager } from "./lock-manager.js";
@@ -470,6 +471,16 @@ export class ManifestInstance {
 
   async buildPrompt(opts?: BuildPromptOpts): Promise<string> {
     return this.prompt.build(opts);
+  }
+
+  /**
+   * Compose the agent AND return per-section provenance. The `prompt` field is
+   * byte-identical to {@link buildPrompt}; `sections` attributes each composed
+   * section (instruction, soul, skills, guardrails) to its source artifact,
+   * hash, version, and layer/overlay origin. See {@link PromptBuilder.explain}.
+   */
+  async explainPrompt(opts?: ExplainOpts): Promise<PromptExplanation> {
+    return this.prompt.explain(opts);
   }
 
   // -- Layers ---------------------------------------------------------------

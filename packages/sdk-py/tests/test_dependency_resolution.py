@@ -157,7 +157,48 @@ class TestMultiKindDependencyResolution:
         prompt = env.build_prompt(agent="main-agent")
         assert "main agent" in prompt.lower()
         # Soul should be composed into the prompt
-        assert len(prompt) > 50
+        assert "Deep technical knowledge." in prompt
+        # Guardrail should be composed into the prompt (section header)
+        assert "## Guardrail: safety" in prompt
+
+    def test_skill_content_inlined_in_prompt(self, env):
+        """i-031 — a referenced Skill's SKILL.md body is INLINED into
+        build_prompt, the same way Soul/Guardrail compose. Before the fix a
+        wired Skill was inert (present in context, rendered by no layout)."""
+        prompt = env.build_prompt(agent="main-agent")
+        # Both declared skills' bodies must appear verbatim.
+        assert "Write tests first." in prompt
+        assert "Find root cause." in prompt
+        # Rendered under a labeled section header (mirrors the guardrail block).
+        assert "## Skill: tdd" in prompt
+        assert "## Skill: debugging" in prompt
+
+    def test_skill_disabled_via_empty_filter(self, env):
+        """enabled_skills=[] means 'disable all' — the skill bodies drop out
+        of the prompt (regression guard for the None-vs-[] filter fix)."""
+        full = env.build_prompt(agent="main-agent")
+        none = env.build_prompt(agent="main-agent", enabled_skills=[])
+        assert "Write tests first." in full
+        assert "Write tests first." not in none
+        assert len(none) < len(full)
+
+    def test_skill_content_survives_emit(self, env):
+        """i-031 — because a Skill now composes into build_prompt, and every
+        emitter carries build_prompt VERBATIM (the byte-equal invariant), a
+        referenced Skill now reaches the emitted native artifact too. Before
+        the fix the Skill was silently dropped from every emit target."""
+        from dna.emit import build_emit_context, get_emitter
+
+        ctx = build_emit_context(env, "main-agent")
+        assert "Write tests first." in ctx.instructions
+        # The instruction rides VERBATIM into the target artifact.
+        emitter = get_emitter("agent-framework")
+        result = emitter.emit(ctx)
+        assert "Write tests first." in result.artifact
+        assert "Find root cause." in result.artifact
+        # And the byte-equal invariant still holds: what the target embeds is
+        # exactly what build_prompt produced (skills included).
+        assert emitter.extract_instructions(result.artifact) == ctx.instructions
 
     def test_agent_sees_deps_via_dep_filters(self, env):
         ctx = env._build_context(env._find_agent("main-agent"), None)

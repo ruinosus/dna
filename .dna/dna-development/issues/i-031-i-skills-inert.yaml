@@ -1,0 +1,45 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-031-i-skills-inert
+spec:
+  description: "Skill referenciado por Agent nao e inlined no build_prompt nem emitido\
+    \ \u2014 so Soul/Guardrail compoem (achado do sp-exp-value-comparison). Quebra\
+    \ a tese de composicao."
+  type: bug
+  severity: high
+  status: in-progress
+  related_feature: f-dna-cloud-intelligence
+  timeline:
+  - at: '2026-07-13T11:01:52+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
+  - at: '2026-07-13T11:03:19+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: open
+    to: in-progress
+  - at: '2026-07-13T11:12:57+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Part A shipped (Py): skills agora COMPOEM no build_prompt via _SKILLS_BLOCK\
+      \ (mesma mecanica Mustache-section dos Guardrails) nas layouts instruction-first/persona-first\
+      \ do AgentKind. Skill-less agents byte-identicos (secao vazia). Como build_emit_context\
+      \ usa build_prompt e emitters carregam verbatim (invariante byte-equal), o skill\
+      \ agora chega em TODO artifact emitido \u2014 sem loss. Descoberta lateral:\
+      \ filtro enabled_skills=[] tratava [] como 'sem filtro' (guard truthy) \u2014\
+      \ latente enquanto skill era inerte, agora load-bearing; corrigido p/ None=sem-filtro,\
+      \ []=desabilita-tudo (Py+TS). Tests Py: skill body inline em build_prompt +\
+      \ sobrevive emit (agent-framework) + byte-equal. Design call: NAO emiti skill\
+      \ como tool-schema separado (skill != tool JSON schema; decisao maior) \u2014\
+      \ skill viaja nas instructions compostas, exatamente onde Soul/Guardrail viajam."
+  - at: '2026-07-13T11:48:42+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Fix em review \u2014 PR #102 (https://github.com/ruinosus/dna/pull/102).\
+      \ Resolve no merge."

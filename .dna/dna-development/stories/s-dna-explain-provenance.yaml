@@ -1,0 +1,70 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-dna-explain-provenance
+spec:
+  title: "dna explain \u2014 per-section prompt provenance"
+  description: 'Ship ''dna explain <agent>'' + build_prompt(explain=True): composed
+    prompt PLUS section provenance map (source file, hash, version, layer/overlay
+    origin), byte-equal gate. Ref sp-exp-provenance.'
+  status: review
+  feature: f-dna-cloud-intelligence
+  acceptance_criteria:
+  - Given an agent, When build_prompt(explain=True), Then it returns the prompt plus
+    a per-section provenance map and the prompt is byte-identical to plain build_prompt.
+  - Given a tenant overlay wins a layer, When dna explain runs, Then the row is marked
+    OVERRIDDEN by tenant overlay.
+  acceptance_criteria_source: claude-code
+  definition_of_done:
+  - 'Code: explain API in prompt builder (Py+TS parity) + dna explain CLI.'
+  - 'Tests: Py+TS cover explain map + byte-equality gate + overlay marker.'
+  - 'Docs: docs/reference regenerated + cli-tour prose; docs_coverage + brand guards
+    clean.'
+  definition_of_done_source: claude-code
+  created_at: '2026-07-13T11:02:55+00:00'
+  updated_at: '2026-07-13T11:49:06+00:00'
+  timeline:
+  - at: '2026-07-13T11:02:55+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-13T11:03:27+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-13T11:44:02+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Part B shipped: build_prompt(explain=True) via mi.explain_prompt (Py)\
+      \ / mi.explainPrompt (TS) \u2192 PromptExplanation{prompt, sections[]}. Cada\
+      \ secao (instruction/soul/skill:X/guardrail:Y) reconstruida dos blocos declarados\
+      \ do kernel (layout template + dep_filters + flatten_in_context) \u2014 NAO\
+      \ reimplementa composicao. Provenance por secao: source file (do StorageDescriptor),\
+      \ sha256 do doc resolvido, version, origin (effective_layer via kernel.resolve_document),\
+      \ is_inherited, overridden_by_tenant. Gate byte-equal: explain delega a string\
+      \ 100% pro build() \u2014 nunca re-renderiza (teste assere prompt==build_prompt).\
+      \ Marca de overlay robusta: compara hash tenant-resolved vs base-resolved (o\
+      \ fallback tenant->base do FS source torna o flag 'found' por-layer NAO confiavel;\
+      \ a comparacao de conteudo e correta em FS e PG). CLI 'dna explain <agent> [--scope][--tenant][--json][--show-prompt]'\
+      \ imprime tabela section|source|hash|version|origin + linha 'OVERRIDDEN by tenant\
+      \ overlay'. Hardening lateral: resolve_document agora fail-soft em scope de\
+      \ parent/catalog ausente (FileNotFoundError -> layer sem contribuicao, igual\
+      \ ao instance builder) \u2014 Py+TS. Tests: Py test_explain_provenance (5, inclui\
+      \ overlay FS end-to-end) + CLI test_explain_cmd (3, byte-equal vs emit) + TS\
+      \ explain-provenance (4). Docs regen + cli-tour prose + guards limpos."
+    commit_ref: 74dbb75514f925e050f264bee07ef058ed921979
+  - at: '2026-07-13T11:49:06+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
+  produces:
+  - kind: Plan
+    name: plan-s-dna-explain-provenance
+    role: implementation
+    at: '2026-07-13T11:03:27+00:00'

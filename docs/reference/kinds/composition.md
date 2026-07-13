@@ -31,7 +31,7 @@ An Actor is a UML-canonical participant in the system: a human user, an external
 - **Plane:** composition
 - **Flags:** prompt-target
 
-A Agent is the primary prompt target: it's what actually runs when the user talks to the system. It declares an instruction (usually in a bundle AGENT.md or an agents/<name>.md file), a model to call, and dep_filters listing which Soul, Skills, and Guardrails to compose into its system prompt. The Soul and Guardrails are flattened into the prompt every turn; Skills are exposed via progressive disclosure. Priority 10 means Agent wins over other prompt targets when the harness has to pick one.
+A Agent is the primary prompt target: it's what actually runs when the user talks to the system. It declares an instruction (usually in a bundle AGENT.md or an agents/<name>.md file), a model to call, and dep_filters listing which Soul, Skills, and Guardrails to compose into its system prompt. The Soul, Skills, and Guardrails are all composed into the prompt every turn (a DeepAgents harness may additionally expose Skills via progressive disclosure). Priority 10 means Agent wins over other prompt targets when the harness has to pick one.
 
 **Spec fields**
 
@@ -445,7 +445,7 @@ A Setting is a reusable configuration snippet (env vars + nested config). Compos
 - **apiVersion:** `agentskills.io/v1`
 - **Plane:** composition
 
-A Skill is a reusable capability bundle that an agent can consult on demand. It follows the agents.md SKILL.md convention: one markdown file (frontmatter + body instruction) plus optional scripts/, references/, and assets/ subdirectories. Skills are exposed to agents via progressive disclosure (SkillsMiddleware) — the agent only loads a skill's full content when it decides to use it, keeping the always-on system prompt small. Use a Skill for capabilities that are occasionally relevant, not for identity or always-needed context.
+A Skill is a reusable capability bundle an agent composes into its prompt. It follows the agents.md SKILL.md convention: one markdown file (frontmatter + body instruction) plus optional scripts/, references/, and assets/ subdirectories. A Skill referenced by an Agent (spec.skills) has its SKILL.md body inlined into the composed system prompt — the same way a Soul or Guardrail composes (i-031) — so it reaches build_prompt and every emitted runtime artifact. A DeepAgents harness may additionally expose Skills via progressive disclosure (SkillsMiddleware loads full content on demand). Use a Skill for reusable procedural know-how shared across agents.
 
 **Spec fields**
 
