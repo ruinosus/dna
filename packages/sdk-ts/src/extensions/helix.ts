@@ -41,14 +41,28 @@ const GUARDRAILS_BLOCK =
   "{{#rules}}- {{{.}}}\n{{/rules}}\n" +
   "{{/guardrails-guardrail}}";
 
-// instruction-first (a.k.a. "default") — historic order: instruction, soul,
-// guardrails. IS the kind default template.
-const LAYOUT_INSTRUCTION_FIRST =
-  "{{{agent.instruction}}}\n\n{{{soul_content}}}\n\n" + GUARDRAILS_BLOCK;
+// Skills block (i-031) — a referenced Skill COMPOSES into the system prompt,
+// exactly like Guardrails: a Mustache section over the dep-filtered
+// `agentskills-skill` list, inlining each skill's SKILL.md body. Before this
+// fix a wired Skill was inert (in context, rendered by no layout). Skills
+// land AFTER the soul and BEFORE guardrails; a skill-less agent renders the
+// empty section to nothing, composing byte-identically to before. 1:1 with
+// Python `_SKILLS_BLOCK`.
+const SKILLS_BLOCK =
+  "{{#agentskills-skill}}" +
+  "## Skill: {{name}}\n" +
+  "{{#description}}_{{description}}_\n\n{{/description}}" +
+  "{{{instruction}}}\n\n" +
+  "{{/agentskills-skill}}";
 
-// persona-first — Soul leads, then instruction, then guardrails.
+// instruction-first (a.k.a. "default") — historic order: instruction, soul,
+// skills, guardrails. IS the kind default template.
+const LAYOUT_INSTRUCTION_FIRST =
+  "{{{agent.instruction}}}\n\n{{{soul_content}}}\n\n" + SKILLS_BLOCK + GUARDRAILS_BLOCK;
+
+// persona-first — Soul leads, then instruction, then skills, then guardrails.
 const LAYOUT_PERSONA_FIRST =
-  "{{{soul_content}}}\n\n{{{agent.instruction}}}\n\n" + GUARDRAILS_BLOCK;
+  "{{{soul_content}}}\n\n{{{agent.instruction}}}\n\n" + SKILLS_BLOCK + GUARDRAILS_BLOCK;
 
 const AGENT_LAYOUTS: Record<string, string> = {
   default: LAYOUT_INSTRUCTION_FIRST,
@@ -385,8 +399,9 @@ class AgentKind extends KindBase {
   promptTemplate() {
     // IS the `instruction-first` / `default` named layout — the kind default
     // template and the `default` layout are one string, so an agent with no
-    // `layout:` composes identically. (Now includes the guardrails block,
-    // matching Python — see the layout-constants comment above.)
+    // `layout:` composes identically. Includes the skills block (i-031) and
+    // the guardrails block — Soul, Skills, and Guardrails all compose into the
+    // prompt. See the layout-constants comment above.
     return LAYOUT_INSTRUCTION_FIRST;
   }
 

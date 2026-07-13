@@ -61,11 +61,15 @@ class PromptBuilder:
             # agent can never silently become the literal instruction.
             raise AgentNotFound(agent_name)
 
-        # Build context — merge backwards-compat params into enabled_slots
+        # Build context — merge backwards-compat params into enabled_slots.
+        # An explicit empty list means "disable all", ONLY None means "no
+        # filter" — guarding on truthiness would treat ``[]`` as unset and leak
+        # every skill/guardrail into the prompt. Latent while skills didn't
+        # compose; load-bearing after i-031 (skills now inline).
         slots = dict(enabled_slots or {})
-        if enabled_skills and "skills" not in slots:
+        if enabled_skills is not None and "skills" not in slots:
             slots["skills"] = enabled_skills
-        if enabled_guardrails and "guardrails" not in slots:
+        if enabled_guardrails is not None and "guardrails" not in slots:
             slots["guardrails"] = enabled_guardrails
         ctx = self._build_context(agent_doc, context, slots)
 
@@ -119,10 +123,11 @@ class PromptBuilder:
             # Fail loud (s-dx-build-prompt-fail-loud) — see build().
             raise AgentNotFound(agent_name)
 
+        # See build(): [] means "disable all", only None means "no filter".
         slots = dict(enabled_slots or {})
-        if enabled_skills and "skills" not in slots:
+        if enabled_skills is not None and "skills" not in slots:
             slots["skills"] = enabled_skills
-        if enabled_guardrails and "guardrails" not in slots:
+        if enabled_guardrails is not None and "guardrails" not in slots:
             slots["guardrails"] = enabled_guardrails
         ctx = await self._build_context_async(agent_doc, context, slots)
 

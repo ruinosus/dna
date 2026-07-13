@@ -105,21 +105,43 @@ _GUARDRAILS_BLOCK = (
     "{{/guardrails-guardrail}}"
 )
 
-# instruction-first (a.k.a. "default") — the historic order; kept BYTE-
-# IDENTICAL to the pre-layouts kind default template so every existing
-# agent composes exactly as before.
+# Skills block (i-031) — a referenced Skill now COMPOSES into the system
+# prompt, exactly the way Guardrails do: a Mustache section over the
+# dep-filtered ``agentskills-skill`` list. Before this fix a Skill wired to
+# an Agent was inert — it landed in the Mustache context but no layout ever
+# rendered it, so it never reached ``build_prompt`` nor any emitted artifact
+# (the composition thesis bought nothing at runtime). The section iterates
+# the SAME filtered list the ``skills`` dep_filter produces and inlines each
+# skill's SKILL.md body ({{{instruction}}}). Skills land AFTER the soul and
+# BEFORE guardrails (procedural know-how, then hard policy). An agent with no
+# skills renders the empty section to nothing, so skill-less agents compose
+# byte-identically to before. A DeepAgents harness may still layer
+# progressive-disclosure on top at runtime; the declarative composition now
+# carries the skill so every OTHER runtime (bedrock/vertex/agno/…) gets it.
+_SKILLS_BLOCK = (
+    "{{#agentskills-skill}}"
+    "## Skill: {{name}}\n"
+    "{{#description}}_{{description}}_\n\n{{/description}}"
+    "{{{instruction}}}\n\n"
+    "{{/agentskills-skill}}"
+)
+
+# instruction-first (a.k.a. "default") — the historic order; kept byte-
+# identical for skill-less agents (the skills section renders to nothing).
 _LAYOUT_INSTRUCTION_FIRST = (
     "{{{agent.instruction}}}\n\n"
     "{{{soul_content}}}\n\n"
+    + _SKILLS_BLOCK
     + _GUARDRAILS_BLOCK
 )
 
 # persona-first — the Soul (personality/voice) leads, then the task
-# instruction, then guardrails. The common reason an author reached for a
-# raw promptTemplate before this story existed.
+# instruction, then skills, then guardrails. The common reason an author
+# reached for a raw promptTemplate before this story existed.
 _LAYOUT_PERSONA_FIRST = (
     "{{{soul_content}}}\n\n"
     "{{{agent.instruction}}}\n\n"
+    + _SKILLS_BLOCK
     + _GUARDRAILS_BLOCK
 )
 
@@ -388,10 +410,11 @@ class AgentKind(KindBase):
         "when the user talks to the system. It declares an instruction "
         "(usually in a bundle AGENT.md or an agents/<name>.md file), a model "
         "to call, and dep_filters listing which Soul, Skills, and Guardrails "
-        "to compose into its system prompt. The Soul and Guardrails are "
-        "flattened into the prompt every turn; Skills are exposed via "
-        "progressive disclosure. Priority 10 means Agent wins over "
-        "other prompt targets when the harness has to pick one."
+        "to compose into its system prompt. The Soul, Skills, and Guardrails "
+        "are all composed into the prompt every turn (a DeepAgents harness may "
+        "additionally expose Skills via progressive disclosure). Priority 10 "
+        "means Agent wins over other prompt targets when the harness has to "
+        "pick one."
     )
 
     def dep_filters(self) -> dict[str, str] | None:
@@ -427,15 +450,16 @@ class AgentKind(KindBase):
     def prompt_template(self) -> str | None:
         # Triple braces disable HTML escaping — instructions are markdown.
         #
-        # Architecture decision: skills are NOT cascaded into the system prompt.
-        # When this agent runs in a DeepAgents harness, SkillsMiddleware exposes
-        # skills via Anthropic's Agent Skills progressive disclosure pattern —
-        # the agent sees a catalogue and reads SKILL.md on demand via the `read`
-        # tool. Cascading skill bodies here would duplicate content and waste
-        # context window.
-        #
-        # Guardrails ARE included because they're hard policies that must be
-        # enforced on every turn (not on-demand procedural know-how).
+        # Composition (i-031): Soul, Skills, and Guardrails all cascade into
+        # the system prompt. A referenced Skill's SKILL.md body is inlined via
+        # the ``agentskills-skill`` section (see _SKILLS_BLOCK) — the same
+        # Mustache-section mechanism Guardrails use — so the "compose a Skill"
+        # promise actually buys something at runtime and survives every emit
+        # target. (Before i-031 skills were inert: present in context, rendered
+        # by no layout.) A DeepAgents harness may ADD progressive disclosure on
+        # top (SkillsMiddleware reads SKILL.md on demand); that is a runtime
+        # optimization layered over — not a replacement for — the declarative
+        # composition, which every other runtime relies on.
         #
         # This IS the ``instruction-first`` / ``default`` named layout — the
         # kind default template and the ``default`` layout are one string, so

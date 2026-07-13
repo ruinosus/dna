@@ -74,6 +74,55 @@ describe("v3 integration — open-swe fixture", () => {
     expect(prompt.length).toBeGreaterThan(50);
   });
 
+  test("buildPrompt inlines referenced Skill bodies (i-031)", async () => {
+    // swe-agent declares skills: [pr-review, branch-naming, debug-prod]. Each
+    // skill's SKILL.md body must now COMPOSE into the prompt — the same way a
+    // Soul or Guardrail does. Before i-031 a wired Skill was inert (present in
+    // context, rendered by no layout).
+    const mi = await quickInstance("open-swe", BASE_DIR);
+    const prompt = await mi.buildPrompt({ agent: "swe-agent" });
+    expect(prompt).toContain("## Skill: pr-review");
+    expect(prompt).toContain("## Skill: debug-prod");
+    // A distinctive skill body substring rides into the prompt verbatim.
+    expect(prompt).toContain("Ao debugar em producao");
+  });
+
+  test("enabled_skills=[] disables all skills (None-vs-[] fix)", async () => {
+    const mi = await quickInstance("open-swe", BASE_DIR);
+    const full = await mi.buildPrompt({ agent: "swe-agent" });
+    const none = await mi.buildPrompt({ agent: "swe-agent", enabledSkills: [] });
+    expect(full).toContain("Ao debugar em producao");
+    expect(none).not.toContain("Ao debugar em producao");
+    expect(none.length).toBeLessThan(full.length);
+  });
+
+  test("Skill content survives emit (byte-equal invariant, i-031)", async () => {
+    // build_prompt now carries the skill bodies, and every emitter embeds
+    // build_prompt VERBATIM (the byte-equal invariant), so a referenced Skill
+    // now reaches the emitted native artifact too. We compose the prompt and
+    // hand it to the emitter directly (the tool-resolution half of
+    // buildEmitContext is orthogonal to the skill-composition claim).
+    const { getEmitter } = await import("../src/emit/index.js");
+    const mi = await quickInstance("open-swe", BASE_DIR);
+    const instructions = await mi.buildPrompt({ agent: "swe-agent" });
+    expect(instructions).toContain("Ao debugar em producao");
+    const emitter = await getEmitter("agent-framework");
+    const result = emitter.emit({
+      name: "swe-agent",
+      description: "",
+      instructions,
+      model: null,
+      tools: [],
+      outputSchema: null,
+      scope: "open-swe",
+      options: {},
+    });
+    expect(result.artifact).toContain("Ao debugar em producao");
+    // The byte-equal invariant holds: what the target embeds is exactly what
+    // build_prompt produced (skills included).
+    expect(emitter.extractInstructions(result.artifact)).toBe(instructions);
+  });
+
   test("compositionResult validates refs", async () => {
     const mi = await quickInstance("open-swe", BASE_DIR);
     const cr = mi.compositionResult;

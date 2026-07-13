@@ -52,10 +52,13 @@ export class PromptBuilder {
       throw new AgentNotFound(agentName);
     }
 
-    // Build context — merge backwards-compat params into enabledSlots
+    // Build context — merge backwards-compat params into enabledSlots. An
+    // explicit empty array means "disable all", ONLY undefined means "no
+    // filter" — guarding on truthiness would treat `[]` as unset and leak
+    // every skill/guardrail into the prompt (load-bearing after i-031).
     const enabledSlots: Record<string, string[]> = { ...(opts?.enabledSlots ?? {}) };
-    if (opts?.enabledSkills && !enabledSlots.skills) enabledSlots.skills = opts.enabledSkills;
-    if (opts?.enabledGuardrails && !enabledSlots.guardrails) enabledSlots.guardrails = opts.enabledGuardrails;
+    if (opts?.enabledSkills !== undefined && !enabledSlots.skills) enabledSlots.skills = opts.enabledSkills;
+    if (opts?.enabledGuardrails !== undefined && !enabledSlots.guardrails) enabledSlots.guardrails = opts.enabledGuardrails;
     let ctx = await this._buildContext(agentDoc, extra, enabledSlots);
 
     // Hook: pre_build_prompt — middleware can modify context
