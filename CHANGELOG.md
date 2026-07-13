@@ -11,6 +11,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-07-13
+
+### Added
+
+- **`PUT /v1/tenant-plan` — the billing→runtime bridge write** (C4, #109).
+  Closes the DNA Cloud gap where a paying **Pro** subscriber was still
+  throttled at **Free** on the MCP: the Stripe webhook wrote the plan to the
+  portal's `tenant_plans` SQL table (the dashboard) but never to the
+  `TenantPlan` Kind the MCP runtime reads for quota
+  (`kernel.tenant_plan(tenant)`), so the two stores disagreed.
+  - **`set_tenant_plan_impl`** (core `dna.application.runtime`) upserts the
+    `TenantPlan` Kind into `_lib` (GLOBAL; doc name == tenant == the `tid` the
+    MCP token carries), stamping `tier_id`/`source`/`status`/Stripe ids +
+    `updated_at`. Only schema-allowed keys are written (the descriptor is
+    `additionalProperties: false`) and optional refs are omitted when absent, so
+    a status-only transition never nulls a stored id. Idempotent under Stripe's
+    at-least-once retries (`write_document` upserts on name).
+  - **`PUT /v1/tenant-plan`** on the REST face (`dna_cli._rest_api`) is a
+    bearer-guarded (the shared `DNA_API_TOKEN` the portal already holds) thin
+    delegate to the core impl, keeping DNA-source writes inside the DNA runtime
+    (the Node portal never opens the DNA source directly).
+  - End-to-end: Stripe Pro event → portal webhook → this endpoint → `TenantPlan`
+    Kind in `_lib` → `kernel.tenant_plan(tid)` resolves `pro` → the MCP quota
+    guard lifts the caps. Python-only runtime face (no TS parity surface); the
+    parity-critical `tenant-plan.kind.yaml` descriptor is unchanged.
+
 ## [0.12.0] - 2026-07-13
 
 ### Added
@@ -810,7 +836,9 @@ registries: **PyPI** ([`dna-sdk`](https://pypi.org/project/dna-sdk/),
   source conformance kit now pins the contract: base content is served
   by `load_all`, never by a `load_layer` sentinel.
 
-[Unreleased]: https://github.com/ruinosus/dna/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/ruinosus/dna/compare/v0.13.0...HEAD
+[0.13.0]: https://github.com/ruinosus/dna/compare/v0.12.0...v0.13.0
+[0.12.0]: https://github.com/ruinosus/dna/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/ruinosus/dna/compare/v0.9.0...v0.11.0
 [0.9.0]: https://github.com/ruinosus/dna/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/ruinosus/dna/compare/v0.7.0...v0.8.0

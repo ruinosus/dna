@@ -36,6 +36,7 @@ ENDPOINTS (read-focused; tenant-aware via a `tenant` query param):
   DELETE /v1/projects/{slug}/members/{user}?tenant=&actor=  -> remove (RBAC)
   GET    /v1/repos?tenant=                     -> {repos:[...]}
   GET    /v1/board?scope=&tenant=              -> {counts, totals, recent}
+  PUT    /v1/tenant-plan                       -> billing->runtime TenantPlan write {tenant, tier_id, ...}
 
 Every endpoint reads/writes through the SAME live kernel `dna` commands +
 `dna mcp serve` use — this is a second HTTP face over one core, not a copy.
