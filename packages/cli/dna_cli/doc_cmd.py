@@ -745,6 +745,16 @@ def _apply_one(s, raw: dict, *, path: str, doc_index: int | None,
             action = "UPDATED"
 
     if dry_run:
+        # --dry-run must actually VALIDATE (its help says "Validate without
+        # writing"), not just report the CREATE/UPDATE verb. Run the SAME
+        # spec↔schema check the write path enforces so a schema-violating doc
+        # (e.g. a Guardrail `severity: critical`) is rejected here too, instead
+        # of silently passing dry-run and only failing on the real write
+        # (i-validation-shallow).
+        try:
+            s.kernel.validate_document(s.scope, kind_name, name, raw)
+        except Exception as e:  # noqa: BLE001
+            raise fail(f"{label} failed schema validation: {e}")
         print_json(
             {
                 "dry_run": True,

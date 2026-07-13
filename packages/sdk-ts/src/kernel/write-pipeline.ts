@@ -74,6 +74,20 @@ export class WritePipeline {
    * - Didactic failure (install #26 pattern): names the field, the
    *   violation, and points at `dna kind show <Kind>`.
    */
+  /** Public pre-flight twin of `_validateSpecSchema` — the SAME check the
+   *  write path enforces, exposed so read-only callers (dry-run / pre-flight)
+   *  catch a schema-violating doc BEFORE the write (i-validation-shallow).
+   *  Delegates to Kernel.validateDocument. */
+  validateSpecSchema(
+    scope: string,
+    kind: string,
+    name: string,
+    raw: Record<string, unknown>,
+    port: KindPort | null,
+  ): void {
+    this._validateSpecSchema(scope, kind, name, raw, port);
+  }
+
   private _validateSpecSchema(
     scope: string,
     kind: string,

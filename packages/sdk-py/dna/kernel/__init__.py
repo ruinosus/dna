@@ -437,6 +437,24 @@ class Kernel:
         """
         return self._kindreg.port_for(kind, api_version=api_version)
 
+    def validate_document(
+        self, scope: str, kind: str, name: str, raw: dict,
+        *, api_version: str | None = None,
+    ) -> None:
+        """Validate ``raw['spec']`` against the Kind's declared JSON Schema —
+        the SAME check ``write_document`` enforces on the write path, exposed as
+        a public pre-flight so read-only callers (``dna doc apply --dry-run``)
+        catch a schema-violating doc BEFORE the write (i-validation-shallow).
+
+        Raises ``SpecValidationError`` on violation, honouring
+        ``DNA_WRITE_VALIDATION`` (``enforce`` vetoes, ``warn`` logs, ``off``
+        skips). Kinds without a schema stay permissive. Thin delegator to
+        ``WritePipeline._validate_spec_schema`` so dry-run and apply can never
+        drift."""
+        _api = api_version or (raw.get("apiVersion") if isinstance(raw, dict) else None)
+        port = self.kind_port_for(kind, api_version=_api)
+        self._write_pipeline._validate_spec_schema(scope, kind, name, raw, port)
+
     def _validate_one_kind_writer_entry(
         self,
         target: str,

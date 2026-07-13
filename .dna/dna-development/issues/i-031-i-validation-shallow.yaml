@@ -1,0 +1,41 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-031-i-validation-shallow
+spec:
+  description: Schema auto-gerado sem enums (severity aceita critical/garbage) + validacao
+    so no write-path (dry-run/compose passam docs invalidos). Mais raso que Pydantic
+    (achado do sp-exp-value-comparison).
+  type: bug
+  severity: high
+  status: in-progress
+  related_feature: f-dna-cloud-intelligence
+  timeline:
+  - at: '2026-07-13T11:18:30+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
+  - at: '2026-07-13T11:18:47+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: open
+    to: in-progress
+  - at: '2026-07-13T11:19:30+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Fix implementado em Py+TS (paridade). Axis 1 (enums): GuardrailSpec.severity/scope\
+      \ agora sao Literal (Py) / z.enum (TS); o gerador _schema_from_model ganhou\
+      \ deteccao generica de Literal->enum (novo helper _literal_enum_schema, cobre\
+      \ Optional[Literal] e infere tipo string/int/bool). schema() agora emite {type:string,\
+      \ enum:[warn,error,hard]} \u2014 TS zodSpecToJsonSchema ja emitia enum p/ ZodEnum.\
+      \ Axis 2 (validar antes do write): GuardrailKind.validate_on_parse=True (Py)\
+      \ + parse chama _validate_spec; TS ja rejeitava via GuardrailSchema.parse (validateOnParse=true\
+      \ declarado). Novo kernel.validate_document/validateDocument (delega ao write\
+      \ pipeline _validate_spec_schema) e o CLI 'dna doc apply --dry-run' agora valida\
+      \ \u2014 severity:critical/garbage REJEITADO no dry-run. Descriptor hashes NAO\
+      \ mudaram (Guardrail e class Kind, nao descriptor). Suites verdes: sdk-py 3078+,\
+      \ cli 555, sdk-ts 1512; tsc limpo; brand/docs guards limpos; sem drift em docs/reference\
+      \ (enum type renderiza como string na tabela)."

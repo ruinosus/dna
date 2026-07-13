@@ -6,7 +6,7 @@ Document delegates doc.metadata and doc.spec to these when available.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Literal
 
 
 # ---------------------------------------------------------------------------
@@ -818,8 +818,14 @@ class TypedAgentDefinition:
 @dataclass
 class GuardrailSpec:
     rules: list[str] = field(default_factory=list)
-    severity: str = "warn"  # "error" or "warn"
-    scope: str = "both"     # "input", "output", or "both"
+    # Constrained fields — the documented severity/scope contracts. Typed as
+    # Literal so ``_schema_from_model`` emits ``enum`` in the generated JSON
+    # Schema (i-validation-shallow): a bare ``str`` mapped to bare
+    # ``{"type": "string"}`` and accepted ``severity: critical``/garbage on the
+    # write path, which was shallower than a plain Pydantic model. warn lets the
+    # turn continue; error fails the turn; hard refuses to answer.
+    severity: Literal["warn", "error", "hard"] = "warn"
+    scope: Literal["input", "output", "both"] = "both"
 
     @classmethod
     def from_raw(cls, raw: dict[str, Any]) -> GuardrailSpec:

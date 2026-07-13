@@ -96,6 +96,79 @@ class TestGuardrailRegistration:
 
 
 # ---------------------------------------------------------------------------
+# TestGuardrailSchemaEnum — i-validation-shallow (axis 1: enums)
+#
+# The auto-generated schema must emit ``enum`` for the constrained
+# severity/scope fields (documented ``warn|error|hard`` / ``input|output|both``)
+# instead of a bare ``{"type": "string"}`` that accepted any value. Parity: the
+# TS twin's zodSpecToJsonSchema emits the identical shape (guardrail.test.ts).
+# ---------------------------------------------------------------------------
+
+class TestGuardrailSchemaEnum:
+    def test_severity_schema_is_enum(self):
+        s = GuardrailKind().schema()["properties"]["severity"]
+        assert s == {"type": "string", "enum": ["warn", "error", "hard"]}
+
+    def test_scope_schema_is_enum(self):
+        s = GuardrailKind().schema()["properties"]["scope"]
+        assert s == {"type": "string", "enum": ["input", "output", "both"]}
+
+    def test_parse_rejects_bad_severity(self):
+        """severity: critical/garbage is REJECTED on parse (read/compose path),
+        not silently accepted (the sp-exp-value-comparison finding)."""
+        import jsonschema
+        kp = GuardrailKind()
+        for bad in ("critical", "garbage"):
+            with pytest.raises(jsonschema.ValidationError):
+                kp.parse({
+                    "apiVersion": "github.com/ruinosus/dna/v1",
+                    "kind": "Guardrail", "metadata": {"name": "g"},
+                    "spec": {"rules": ["x"], "severity": bad},
+                })
+
+    def test_parse_accepts_documented_severities(self):
+        kp = GuardrailKind()
+        for good in ("warn", "error", "hard"):
+            kp.parse({
+                "apiVersion": "github.com/ruinosus/dna/v1",
+                "kind": "Guardrail", "metadata": {"name": "g"},
+                "spec": {"rules": ["x"], "severity": good},
+            })
+
+
+# ---------------------------------------------------------------------------
+# TestGuardrailSchemaEnum reused for the write/dry-run path (axis 2)
+# ---------------------------------------------------------------------------
+
+class TestGuardrailValidateDocument:
+    """i-validation-shallow (axis 2): ``kernel.validate_document`` — the SAME
+    check ``dna doc apply --dry-run`` runs — rejects an enum-violating spec
+    BEFORE the write path. Previously validation only fired on the real write."""
+
+    def _kernel(self):
+        return Kernel.auto()
+
+    def test_validate_document_rejects_bad_severity(self):
+        from dna.kernel.protocols import SpecValidationError
+        k = self._kernel()
+        raw = {
+            "apiVersion": "github.com/ruinosus/dna/v1", "kind": "Guardrail",
+            "metadata": {"name": "bad"}, "spec": {"rules": ["x"], "severity": "critical"},
+        }
+        with pytest.raises(SpecValidationError):
+            k.validate_document("s", "Guardrail", "bad", raw)
+
+    def test_validate_document_accepts_valid(self):
+        k = self._kernel()
+        raw = {
+            "apiVersion": "github.com/ruinosus/dna/v1", "kind": "Guardrail",
+            "metadata": {"name": "ok"}, "spec": {"rules": ["x"], "severity": "hard", "scope": "output"},
+        }
+        # no raise
+        k.validate_document("s", "Guardrail", "ok", raw)
+
+
+# ---------------------------------------------------------------------------
 # TestGuardrailGenericReader  (replaces TestGuardrailReader)
 # ---------------------------------------------------------------------------
 
