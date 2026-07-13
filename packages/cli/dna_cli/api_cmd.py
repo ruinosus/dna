@@ -66,6 +66,9 @@ def serve(scope: str | None, base_dir: str | None, host: str, port: int,
       GET    /v1/orgs?tenant=                      -> {orgs:[...]}
       GET    /v1/projects?tenant=                  -> {projects:[...]}
       GET    /v1/projects/{slug}?tenant=           -> {project, repos:[...]}
+      GET    /v1/projects/{slug}/members?tenant=&viewer=  -> {members:[...], viewer}
+      POST   /v1/projects/{slug}/members?tenant=   -> invite/set-role {user, role, actor} (RBAC)
+      DELETE /v1/projects/{slug}/members/{user}?tenant=&actor=  -> remove (RBAC)
       GET    /v1/repos?tenant=                     -> {repos:[...]}
       GET    /v1/board?scope=&tenant=              -> {counts, totals, recent}
 

@@ -177,18 +177,23 @@ def build_app(
     # source/provider boot path), so it stays in ``dna_cli._mcp_server``.
     from dna.application import (
         BoardItemNotFound,
+        MemberForbidden,
+        MemberNotFound,
         ProjectNotFound,
         board_item_impl,
         board_summary_impl,
         compose_prompt_impl,
         get_project_impl,
         list_agents_impl,
+        list_members_impl,
         list_orgs_impl,
         list_projects_impl,
         list_repos_impl,
         list_tools_impl,
         recall_impl,
         remember_impl,
+        remove_member_impl,
+        set_member_impl,
     )
     from dna_cli._mcp_server import boot_live
     # The intel face delegates to the CORE engine (adr-faces-reorg: logic in the
@@ -453,6 +458,75 @@ def build_app(
         try:
             return await get_project_impl(await _live(), slug, scope, tenant)
         except ProjectNotFound as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from None
+
+    @app.get("/v1/projects/{slug}/members", dependencies=guarded)
+    async def project_members(
+        slug: str,
+        scope: str | None = Query(default=None),
+        tenant: str | None = Query(default=None),
+        viewer: str | None = Query(
+            default=None,
+            description="The signed-in user (email/id) — flags their own row and "
+            "whether they may manage membership (Owner/Admin).",
+        ),
+    ) -> dict[str, Any]:
+        """List a project's members with their RESOLVED role (highest-role-wins
+        across org + project grants; org-owner a superuser), tenant-scoped. When
+        ``viewer`` is set, reports ``viewer.can_manage`` so the portal gates its
+        write controls. 404 when the slug is unknown for this (scope, tenant)."""
+        try:
+            return await list_members_impl(await _live(), slug, scope, tenant, viewer)
+        except ProjectNotFound as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from None
+
+    @app.post("/v1/projects/{slug}/members", dependencies=guarded, status_code=201)
+    async def set_project_member(
+        slug: str,
+        user: str = Body(..., embed=True),
+        role: str = Body(..., embed=True),
+        actor: str | None = Body(default=None, embed=True),
+        scope: str | None = Query(default=None),
+        tenant: str | None = Query(default=None),
+    ) -> dict[str, Any]:
+        """Invite / set a user's PROJECT-scope role — the Membros panel's write.
+        RBAC-guarded: ``actor`` (the acting user) must be Owner/Admin of the
+        project/org, and only an Owner may grant Owner (403 otherwise). Upserts the
+        same Membership doc, tenant-scoped to the caller's overlay. 404 for an
+        unknown project; 422 for an unknown role."""
+        try:
+            return await set_member_impl(
+                await _live(), slug, user, role, scope, tenant, actor
+            )
+        except ProjectNotFound as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from None
+        except MemberForbidden as exc:
+            raise HTTPException(status_code=403, detail=str(exc)) from None
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from None
+
+    @app.delete("/v1/projects/{slug}/members/{user}", dependencies=guarded)
+    async def remove_project_member(
+        slug: str,
+        user: str,
+        actor: str | None = Query(default=None),
+        scope: str | None = Query(default=None),
+        tenant: str | None = Query(default=None),
+    ) -> dict[str, Any]:
+        """Remove a user's PROJECT-scope grant — the Membros panel's remove.
+        RBAC-guarded: ``actor`` must be Owner/Admin (removing an Owner needs
+        Owner). Deletes only the project-scope Membership (an inherited org grant
+        is untouched), tenant-scoped. 403 without permission, 404 when the user has
+        no project grant here."""
+        try:
+            return await remove_member_impl(
+                await _live(), slug, user, scope, tenant, actor
+            )
+        except ProjectNotFound as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from None
+        except MemberForbidden as exc:
+            raise HTTPException(status_code=403, detail=str(exc)) from None
+        except MemberNotFound as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from None
 
     @app.get("/v1/repos", dependencies=guarded)
