@@ -63,3 +63,11 @@ spec:
       (4 casos). Suites: sdk-py 3081 passed/193 skipped/4 xfailed; sdk-ts 1507 passed/0
       fail; tsc limpo. Guards: brand_guard limpo, docs_coverage_guard limpo (nenhuma
       superficie publica mudou).'
+  - at: '2026-07-13T09:16:50+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR aberto: https://github.com/ruinosus/dna/pull/98 \u2014 resolve-on-merge.\
+      \ dna source diff/push (source_cmd.py -> kernel.digest_manifest -> source_sync.py:89)\
+      \ agora roda em scopes de Kind descriptor; smoke via o teste digest_manifest\
+      \ end-to-end sobre IntelSource."
