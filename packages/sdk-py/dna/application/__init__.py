@@ -14,6 +14,8 @@ both import these use-cases and only translate transport + edge validation
 from dna.application.live import LiveDna
 from dna.application.runtime import (
     BoardItemNotFound,
+    MemberForbidden,
+    MemberNotFound,
     ProjectNotFound,
     board_item_impl,
     board_summary_impl,
@@ -24,6 +26,7 @@ from dna.application.runtime import (
     get_project_impl,
     get_tool_impl,
     list_agents_impl,
+    list_members_impl,
     list_memories_impl,
     list_orgs_impl,
     list_projects_impl,
@@ -32,6 +35,8 @@ from dna.application.runtime import (
     list_tools_impl,
     recall_impl,
     remember_impl,
+    remove_member_impl,
+    set_member_impl,
 )
 
 __all__ = [
@@ -54,6 +59,11 @@ __all__ = [
     "list_repos_impl",
     "board_summary_impl",
     "board_item_impl",
+    "list_members_impl",
+    "set_member_impl",
+    "remove_member_impl",
     "ProjectNotFound",
     "BoardItemNotFound",
+    "MemberForbidden",
+    "MemberNotFound",
 ]

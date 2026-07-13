@@ -618,6 +618,194 @@ def test_board_item_kind_hint_and_not_found(dna_dir):
                      params={"name": "s-rich"}).status_code == 422
 
 
+# ── portfolio: Membership / Role (the Membros panel — RBAC read + write) ──────
+
+
+def _seed_members(dna_dir, *, tenant="acme"):
+    """Seed the portfolio + a small RBAC graph on the ``acme`` project: an org
+    Owner (superuser), an org Member who is also a project Admin (highest-role-
+    wins), and a project Guest. Plus the 4 standard Role rungs (the ladder as
+    data). Written into the tenant overlay via the SAME kernel write path a face
+    uses."""
+    _seed_portfolio(dna_dir, tenant=tenant)
+    from dna_cli import _mcp_server as M
+    from dna.application.runtime import _member_doc_name
+
+    def _role(rid, display, rank):
+        return {"apiVersion": _PORTFOLIO_API, "kind": "Role",
+                "metadata": {"name": rid},
+                "spec": {"role_id": rid, "display_name": display, "rank": rank}}
+
+    def _member(user, scope_type, scope_ref, role):
+        # Name via the SAME deterministic convention the write path uses, so a
+        # seeded grant is addressable by set/remove (a role change/remove hits the
+        # same doc). Role/Membership specs carry no `name` (additionalProperties:false).
+        name = _member_doc_name(user, scope_type, scope_ref)
+        return {"apiVersion": _PORTFOLIO_API, "kind": "Membership",
+                "metadata": {"name": name},
+                "spec": {"user": user, "scope_type": scope_type,
+                         "scope_ref": scope_ref, "role": role, "status": "active"}}
+
+    roles = [
+        _role("owner", "Owner", 40), _role("admin", "Admin", 30),
+        _role("member", "Member", 20), _role("guest", "Guest", 10),
+    ]
+    members = [
+        # org owner → superuser (Owner on every project in the org)
+        _member("owner@acme.com", "org", "acme-labs", "owner"),
+        # org member + project admin → effective Admin (highest-role-wins)
+        _member("admin@acme.com", "org", "acme-labs", "member"),
+        _member("admin@acme.com", "project", "acme", "admin"),
+        # project guest, no org grant
+        _member("guest@acme.com", "project", "acme", "guest"),
+    ]
+
+    async def go():
+        live = await M.boot_live(base_dir=str(dna_dir))
+        for d in [*roles, *members]:
+            await live.kernel.write_document(
+                _SCOPE, d["kind"], d["metadata"]["name"], d, tenant=tenant)
+
+    asyncio.run(go())
+
+
+def test_members_list_resolves_effective_roles(dna_dir):
+    """The Membros list resolves highest-role-wins: the org owner is superuser
+    (Owner here), the org-member-who-is-project-admin resolves Admin, the project
+    guest stays Guest. Ordered highest-rank first."""
+    _seed_members(dna_dir)
+    with _client(dna_dir) as c:
+        body = c.get("/v1/projects/acme/members",
+                     params={"scope": _SCOPE, "tenant": "acme"}).json()
+    by_user = {m["user"]: m for m in body["members"]}
+    assert by_user["owner@acme.com"]["role"] == "owner"
+    assert by_user["owner@acme.com"]["is_org_owner"] is True
+    assert by_user["admin@acme.com"]["role"] == "admin"
+    assert by_user["admin@acme.com"]["org_role"] == "member"
+    assert by_user["admin@acme.com"]["project_role"] == "admin"
+    assert by_user["guest@acme.com"]["role"] == "guest"
+    # highest rank first.
+    assert [m["role"] for m in body["members"]][:1] == ["owner"]
+
+
+def test_members_viewer_can_manage(dna_dir):
+    """``viewer`` reports whether the caller may manage membership: Owner/Admin →
+    can_manage; a Guest → not."""
+    _seed_members(dna_dir)
+    with _client(dna_dir) as c:
+        as_admin = c.get("/v1/projects/acme/members",
+                         params={"scope": _SCOPE, "tenant": "acme",
+                                 "viewer": "admin@acme.com"}).json()
+        as_guest = c.get("/v1/projects/acme/members",
+                         params={"scope": _SCOPE, "tenant": "acme",
+                                 "viewer": "guest@acme.com"}).json()
+    assert as_admin["viewer"]["can_manage"] is True
+    assert next(m for m in as_admin["members"] if m["user"] == "admin@acme.com")["you"]
+    assert as_guest["viewer"]["can_manage"] is False
+
+
+def test_members_unknown_project_404(dna_dir):
+    _seed_members(dna_dir)
+    with _client(dna_dir) as c:
+        assert c.get("/v1/projects/nope/members",
+                     params={"scope": _SCOPE, "tenant": "acme"}).status_code == 404
+
+
+def test_members_admin_can_set_role(dna_dir):
+    """An Admin may invite/set a Member role — the write succeeds and the new
+    member appears in the list."""
+    _seed_members(dna_dir)
+    with _client(dna_dir) as c:
+        r = c.post("/v1/projects/acme/members",
+                   params={"scope": _SCOPE, "tenant": "acme"},
+                   json={"user": "newbie@acme.com", "role": "member",
+                         "actor": "admin@acme.com"})
+        assert r.status_code == 201, r.text
+        assert r.json()["member"]["role"] == "member"
+        body = c.get("/v1/projects/acme/members",
+                     params={"scope": _SCOPE, "tenant": "acme"}).json()
+    assert "newbie@acme.com" in {m["user"] for m in body["members"]}
+
+
+def test_members_guest_cannot_mutate(dna_dir):
+    """RBAC: a Guest actor is rejected (403) on a write — the isolation the panel
+    relies on to gate its controls."""
+    _seed_members(dna_dir)
+    with _client(dna_dir) as c:
+        r = c.post("/v1/projects/acme/members",
+                   params={"scope": _SCOPE, "tenant": "acme"},
+                   json={"user": "x@acme.com", "role": "member",
+                         "actor": "guest@acme.com"})
+        assert r.status_code == 403, r.text
+        # an anonymous actor (no identity) is likewise rejected.
+        assert c.post("/v1/projects/acme/members",
+                      params={"scope": _SCOPE, "tenant": "acme"},
+                      json={"user": "x@acme.com", "role": "member"}
+                      ).status_code == 403
+
+
+def test_members_only_owner_grants_owner(dna_dir):
+    """An Admin cannot escalate someone to Owner (403); an Owner can."""
+    _seed_members(dna_dir)
+    with _client(dna_dir) as c:
+        assert c.post("/v1/projects/acme/members",
+                      params={"scope": _SCOPE, "tenant": "acme"},
+                      json={"user": "x@acme.com", "role": "owner",
+                            "actor": "admin@acme.com"}).status_code == 403
+        assert c.post("/v1/projects/acme/members",
+                      params={"scope": _SCOPE, "tenant": "acme"},
+                      json={"user": "x@acme.com", "role": "owner",
+                            "actor": "owner@acme.com"}).status_code == 201
+
+
+def test_members_unknown_role_422(dna_dir):
+    _seed_members(dna_dir)
+    with _client(dna_dir) as c:
+        assert c.post("/v1/projects/acme/members",
+                      params={"scope": _SCOPE, "tenant": "acme"},
+                      json={"user": "x@acme.com", "role": "wizard",
+                            "actor": "owner@acme.com"}).status_code == 422
+
+
+def test_members_remove_and_rbac(dna_dir):
+    """Admin removes a project Guest's grant (200), then a repeat 404s (gone).
+    A Guest actor cannot remove (403)."""
+    _seed_members(dna_dir)
+    with _client(dna_dir) as c:
+        # guest cannot remove.
+        assert c.delete("/v1/projects/acme/members/guest@acme.com",
+                        params={"scope": _SCOPE, "tenant": "acme",
+                                "actor": "guest@acme.com"}).status_code == 403
+        # admin removes the guest's project grant.
+        r = c.delete("/v1/projects/acme/members/guest@acme.com",
+                     params={"scope": _SCOPE, "tenant": "acme",
+                             "actor": "admin@acme.com"})
+        assert r.status_code == 200, r.text
+        # gone → the user no longer in the list.
+        body = c.get("/v1/projects/acme/members",
+                     params={"scope": _SCOPE, "tenant": "acme"}).json()
+        assert "guest@acme.com" not in {m["user"] for m in body["members"]}
+        # removing again → 404.
+        assert c.delete("/v1/projects/acme/members/guest@acme.com",
+                        params={"scope": _SCOPE, "tenant": "acme",
+                                "actor": "admin@acme.com"}).status_code == 404
+
+
+def test_members_tenant_isolation(dna_dir):
+    """A membership seeded for tenant ``acme`` is invisible to tenant ``other``
+    (which sees an empty roster on the shared base project)."""
+    _seed_members(dna_dir, tenant="acme")
+    # Seed the project (only) for a second tenant so the slug resolves there.
+    _seed_portfolio(dna_dir, tenant="other")
+    with _client(dna_dir) as c:
+        acme = c.get("/v1/projects/acme/members",
+                     params={"scope": _SCOPE, "tenant": "acme"}).json()
+        other = c.get("/v1/projects/acme/members",
+                      params={"scope": _SCOPE, "tenant": "other"}).json()
+    assert {m["user"] for m in acme["members"]} >= {"owner@acme.com", "admin@acme.com"}
+    assert other["members"] == []
+
+
 # ── auth: --auth token gates every route but /health ─────────────────────────
 
 

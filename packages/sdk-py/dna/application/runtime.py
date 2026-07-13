@@ -304,6 +304,327 @@ async def get_project_impl(
     return {"scope": sc, "tenant": tenant, "project": project, "repos": repos}
 
 
+# ── portfolio: Membership / Role (the console's RBAC read + write model) ─────
+#
+# The Membros panel resolves a user's EFFECTIVE role at a project — the standard
+# ladder (owner > admin > member > guest), highest-role-wins across a user's
+# org- and project-scope grants, with the org owner a superuser. All read + write
+# logic lives HERE (the core); the REST face is a thin translator (adr-faces-reorg).
+
+_PORTFOLIO_API = "github.com/ruinosus/dna/portfolio/v1"
+
+# The standard ladder as a rank fallback — a tenant that has NOT seeded Role docs
+# still resolves highest-role-wins. When Role docs ARE present their ``rank`` wins
+# (the ladder is data — a custom rung slots in without a code change).
+_ROLE_RANKS: dict[str, int] = {"owner": 40, "admin": 30, "member": 20, "guest": 10}
+_ROLE_DISPLAY: dict[str, str] = {
+    "owner": "Owner", "admin": "Admin", "member": "Member", "guest": "Guest",
+}
+
+
+class MemberForbidden(PermissionError):
+    """The acting user (``actor``) lacks the role to mutate this project's
+    membership (needs Owner/Admin; only an Owner may grant Owner). → HTTP 403."""
+
+
+class MemberNotFound(LookupError):
+    """The targeted project-scope Membership is absent for this (project, tenant)
+    — nothing to remove. → HTTP 404."""
+
+
+def _member_doc_name(user: str, scope_type: str, scope_ref: str) -> str:
+    """Deterministic Membership doc name per (user, scope_type, scope_ref), so a
+    role change overwrites the SAME doc rather than creating a duplicate grant."""
+    import re
+
+    def s(x: str) -> str:
+        return re.sub(r"[^a-z0-9]+", "-", str(x).lower()).strip("-")
+
+    return f"{s(user)}--{scope_type}--{s(scope_ref)}"
+
+
+async def _role_ranks(
+    live: LiveDna, scope: str, tenant: str | None
+) -> dict[str, int]:
+    """The role→rank map — the standard ladder, overlaid by any tenant Role docs
+    (the ladder AS DATA: a seeded/custom rung's ``rank`` wins)."""
+    ranks = dict(_ROLE_RANKS)
+    for d in await _collect(live, scope, "Role", tenant):
+        spec = d["spec"]
+        rid = spec.get("role_id") or d["name"]
+        rank = spec.get("rank")
+        if rid and isinstance(rank, int):
+            ranks[str(rid).lower()] = rank
+    return ranks
+
+
+def _effective_role(grant: dict[str, Any], ranks: dict[str, int]) -> str | None:
+    """Highest-role-wins across a user's org- and project-scope grants (the org
+    grant inherits DOWN to the project; the higher rank of the two wins)."""
+    roles = [r for r in (grant.get("org"), grant.get("project")) if r]
+    if not roles:
+        return None
+    return max(roles, key=lambda r: ranks.get(str(r).lower(), 0))
+
+
+def _scope_note(org_role: str | None, project_role: str | None) -> str | None:
+    """A human explanation of WHERE the effective role comes from (mirrors the
+    prototype's scope notes: 'Org Owner → herda Owner aqui', 'Org Member ·
+    Project Admin (highest-role-wins)', 'Guest · sem acesso a outros projetos')."""
+    if org_role == "owner":
+        return "Org Owner → herda Owner aqui"
+    if project_role == "guest" and not org_role:
+        return "Guest · sem acesso a outros projetos da org"
+    parts: list[str] = []
+    if org_role:
+        parts.append(f"Org {_ROLE_DISPLAY.get(org_role, org_role.capitalize())}")
+    if project_role:
+        parts.append(
+            f"Project {_ROLE_DISPLAY.get(project_role, project_role.capitalize())}"
+        )
+    note = " · ".join(parts)
+    if org_role and project_role and org_role != project_role:
+        note += " (highest-role-wins)"
+    return note or None
+
+
+async def _members_context(
+    live: LiveDna, scope: str, slug: str, tenant: str | None
+) -> dict[str, Any]:
+    """Resolve the project (by ``slug`` or name) + everyone's org/project grants
+    on it, tenant-scoped. Shared by the list + both writes. Raises
+    :class:`ProjectNotFound`."""
+    rows = await _collect(live, scope, "Project", tenant)
+    match = next(
+        (d for d in rows if d["spec"].get("slug") == slug or d["name"] == slug),
+        None,
+    )
+    if match is None:
+        raise ProjectNotFound(
+            f"project {slug!r} not found in scope {scope!r}"
+            + (f" (tenant={tenant})" if tenant else "")
+        )
+    project = _project_surface(match)
+    org_ref = project.get("org_ref")
+    project_key = {project["name"]}
+    if project.get("slug"):
+        project_key.add(project["slug"])
+
+    grants: dict[str, dict[str, Any]] = {}
+    for d in await _collect(live, scope, "Membership", tenant):
+        spec = d["spec"]
+        user = spec.get("user")
+        st = spec.get("scope_type")
+        ref = spec.get("scope_ref")
+        role = (spec.get("role") or "").lower() or None
+        if not user or not role:
+            continue
+        applies = (st == "project" and ref in project_key) or (
+            st == "org" and org_ref and ref == org_ref
+        )
+        if not applies:
+            continue
+        g = grants.setdefault(user, {})
+        if st == "project":
+            g["project"] = role
+            g["status"] = spec.get("status")
+            g["invited_at"] = spec.get("invited_at")
+        elif st == "org":
+            g["org"] = role
+    ranks = await _role_ranks(live, scope, tenant)
+    return {
+        "project": project,
+        "org_ref": org_ref,
+        "project_key": project_key,
+        "grants": grants,
+        "ranks": ranks,
+    }
+
+
+def _require_manage(
+    ctx: dict[str, Any], actor: str | None, *, target_role: str | None = None
+) -> None:
+    """RBAC gate on a membership WRITE: the ``actor`` must be Owner/Admin of the
+    project (or its org). Additionally, only an Owner may grant the Owner role (no
+    privilege escalation by an Admin). Raises :class:`MemberForbidden`."""
+    actor_role = (
+        _effective_role(ctx["grants"].get(actor, {}), ctx["ranks"]) if actor else None
+    )
+    if actor_role not in ("owner", "admin"):
+        raise MemberForbidden(
+            f"actor {actor or '<anonymous>'!r} lacks manage permission on project "
+            f"{ctx['project']['name']!r} — needs Owner/Admin (has "
+            f"{actor_role or 'no role'})"
+        )
+    if target_role == "owner" and actor_role != "owner":
+        raise MemberForbidden("only an Owner may grant the Owner role")
+
+
+def _member_surface(
+    user: str, grant: dict[str, Any], ranks: dict[str, int], viewer: str | None
+) -> dict[str, Any]:
+    org_role = grant.get("org")
+    project_role = grant.get("project")
+    effective = _effective_role(grant, ranks) or "guest"
+    return {
+        "user": user,
+        "role": effective,
+        "role_display": _ROLE_DISPLAY.get(effective, effective.capitalize()),
+        "org_role": org_role,
+        "project_role": project_role,
+        "is_org_owner": org_role == "owner",
+        "status": grant.get("status") or "active",
+        "scope_note": _scope_note(org_role, project_role),
+        "you": bool(viewer) and user == viewer,
+    }
+
+
+async def list_members_impl(
+    live: LiveDna,
+    slug: str,
+    scope: str | None = None,
+    tenant: str | None = None,
+    viewer: str | None = None,
+) -> dict[str, Any]:
+    """List a project's members with their RESOLVED role (highest-role-wins across
+    org + project grants, org-owner a superuser), tenant-scoped. When ``viewer``
+    is given, flags the viewer's own row (``you``) and reports whether they may
+    manage membership (``viewer.can_manage`` — Owner/Admin). Raises
+    :class:`ProjectNotFound`."""
+    sc = scope or live.base_scope
+    ctx = await _members_context(live, sc, slug, tenant)
+    ranks = ctx["ranks"]
+    members = [
+        _member_surface(user, grant, ranks, viewer)
+        for user, grant in ctx["grants"].items()
+    ]
+    # Highest rank first, then user for a stable order.
+    members.sort(key=lambda m: (-ranks.get(m["role"], 0), m["user"]))
+    viewer_role = (
+        _effective_role(ctx["grants"].get(viewer, {}), ranks) if viewer else None
+    )
+    return {
+        "scope": sc,
+        "tenant": tenant,
+        "project": {
+            "name": ctx["project"]["name"],
+            "slug": ctx["project"].get("slug"),
+            "org_ref": ctx["org_ref"],
+        },
+        "members": members,
+        "viewer": {
+            "user": viewer,
+            "role": viewer_role,
+            "can_manage": viewer_role in ("owner", "admin"),
+        },
+    }
+
+
+async def set_member_impl(
+    live: LiveDna,
+    slug: str,
+    user: str,
+    role: str,
+    scope: str | None = None,
+    tenant: str | None = None,
+    actor: str | None = None,
+) -> dict[str, Any]:
+    """Invite / set a user's PROJECT-scope role — the Membros panel's write. RBAC:
+    ``actor`` must be Owner/Admin (only an Owner may grant Owner). Upserts the SAME
+    deterministic Membership doc (a role change overwrites, never duplicates),
+    preserving an existing invite's ``status``/``invited_at``. Tenant-scoped: the
+    write routes to the caller's tenant overlay only."""
+    sc = scope or live.base_scope
+    user = (user or "").strip()
+    role = (role or "").lower().strip()
+    if not user:
+        raise ValueError("user is required")
+    if role not in _ROLE_RANKS:
+        raise ValueError(
+            f"unknown role {role!r} — expected one of {sorted(_ROLE_RANKS)}"
+        )
+    ctx = await _members_context(live, sc, slug, tenant)
+    _require_manage(ctx, actor, target_role=role)
+
+    project_name = ctx["project"]["name"]
+    name = _member_doc_name(user, "project", project_name)
+    write_kernel = live.kernel.with_tenant(tenant) if tenant else live.kernel
+
+    # Preserve an existing grant's invite lifecycle (role change ≠ re-invite).
+    existing = await write_kernel.get_document(sc, "Membership", name, tenant=tenant)
+    ex_spec = (existing or {}).get("spec") or {}
+    now = datetime.now(timezone.utc).isoformat()
+    spec = {
+        "user": user,
+        "scope_type": "project",
+        "scope_ref": project_name,
+        "role": role,
+        "status": ex_spec.get("status") or "invited",
+        "invited_at": ex_spec.get("invited_at") or now,
+    }
+    raw = {
+        "apiVersion": _PORTFOLIO_API,
+        "kind": "Membership",
+        "metadata": {"name": name},
+        "spec": spec,
+    }
+    await write_kernel.write_document(
+        sc, "Membership", name, raw, invalidate_mode="doc"
+    )
+    return {
+        "scope": sc,
+        "tenant": tenant,
+        "member": {
+            "user": user,
+            "role": role,
+            "scope_type": "project",
+            "scope_ref": project_name,
+            "status": spec["status"],
+        },
+    }
+
+
+async def remove_member_impl(
+    live: LiveDna,
+    slug: str,
+    user: str,
+    scope: str | None = None,
+    tenant: str | None = None,
+    actor: str | None = None,
+) -> dict[str, Any]:
+    """Remove a user's PROJECT-scope grant — the Membros panel's remove. RBAC:
+    ``actor`` must be Owner/Admin. Removing an Owner's grant requires Owner.
+    Deletes ONLY the project-scope Membership (an inherited org grant is
+    untouched). 404 (:class:`MemberNotFound`) when the user has no project grant
+    here. Tenant-scoped."""
+    sc = scope or live.base_scope
+    user = (user or "").strip()
+    if not user:
+        raise ValueError("user is required")
+    ctx = await _members_context(live, sc, slug, tenant)
+    # Removing an Owner needs Owner (same escalation guard as granting Owner).
+    target_project_role = (ctx["grants"].get(user) or {}).get("project")
+    _require_manage(
+        ctx, actor, target_role="owner" if target_project_role == "owner" else None
+    )
+
+    project_name = ctx["project"]["name"]
+    name = _member_doc_name(user, "project", project_name)
+    write_kernel = live.kernel.with_tenant(tenant) if tenant else live.kernel
+    try:
+        await write_kernel.delete_document(
+            sc, "Membership", name, invalidate_mode="doc"
+        )
+    except ValueError as exc:  # filesystem/pg source raises ValueError("not_found")
+        if "not_found" in str(exc).lower():
+            raise MemberNotFound(
+                f"user {user!r} has no project-scope membership on "
+                f"{project_name!r} (tenant={tenant}) — nothing to remove"
+            ) from None
+        raise
+    return {"removed": user, "scope": sc, "tenant": tenant}
+
+
 async def board_summary_impl(
     live: LiveDna, scope: str, tenant: str | None = None, recent: int = 6
 ) -> dict[str, Any]:
