@@ -308,12 +308,15 @@ async def board_summary_impl(
     live: LiveDna, scope: str, tenant: str | None = None, recent: int = 6
 ) -> dict[str, Any]:
     """A compact SDLC summary for a project's ``board_scope``: Story + Feature
-    counts by status, totals, and the ``recent`` newest work items.
+    counts by status, totals, the FULL ``items`` list, and the ``recent`` newest.
 
     REUSES the shared SDLC read impl (``list_stories_impl``) for the Story
     projection + counts; Features come through the SAME ``_collect`` primitive
-    (no reimplemented query). ``recent`` is the newest items across both Kinds by
-    ``created_at`` (fail-soft — a missing/unparseable timestamp sorts last)."""
+    (no reimplemented query). ``items`` is EVERY Story + Feature (newest-first) so
+    the console renders a real board (all columns full), not a 6-item teaser;
+    ``recent`` stays the ``recent``-sized head of that same list for back-compat.
+    Ordering is by ``created_at`` (fail-soft — a missing/unparseable timestamp
+    sorts last)."""
 
     def _counts(statuses: Any) -> dict[str, int]:
         c: dict[str, int] = {}
@@ -352,6 +355,7 @@ async def board_summary_impl(
                 )
             )
     dated.sort(key=lambda t: t[0], reverse=True)
+    ordered = [item for _, item in dated]
 
     return {
         "scope": scope,
@@ -365,7 +369,8 @@ async def board_summary_impl(
             "features": len(features),
             "total": len(stories) + len(features),
         },
-        "recent": [item for _, item in dated[: max(0, recent)]],
+        "items": ordered,
+        "recent": ordered[: max(0, recent)],
     }
 
 

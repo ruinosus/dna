@@ -441,6 +441,40 @@ def test_portfolio_board_summary(dna_dir):
     assert body["totals"] == {"stories": 2, "features": 1, "total": 3}
     # newest-first: the feature (2026-07-12) leads, then s-two (07-11), s-one (07-10).
     assert [r["name"] for r in body["recent"]] == ["f-one", "s-two", "s-one"]
+    # `items` carries the FULL set (all stories + features), same newest-first
+    # order — the console renders every column in full, not just the `recent` head.
+    assert [r["name"] for r in body["items"]] == ["f-one", "s-two", "s-one"]
+    assert len(body["items"]) == body["totals"]["total"] == 3
+    assert {r["kind"] for r in body["items"]} == {"Story", "Feature"}
+
+
+def test_portfolio_board_items_is_full_not_recent(dna_dir):
+    """`recent` is a bounded head; `items` is the WHOLE board. With more items
+    than the `recent` window, `items` still returns all of them (the fix for a
+    board that showed only ~6 of N)."""
+    _seed_portfolio(dna_dir)
+    # Seed extra stories so the board exceeds the default recent window.
+    from dna_cli import _mcp_server as M
+
+    async def go():
+        live = await M.boot_live(base_dir=str(dna_dir))
+        for i in range(8):
+            name = f"s-extra-{i}"
+            doc = {"apiVersion": _SDLC_API, "kind": "Story",
+                   "metadata": {"name": name},
+                   "spec": {"name": name, "title": f"Extra {i}",
+                            "description": f"extra story {i}", "status": "todo",
+                            "created_at": f"2026-07-0{i+1}T09:00:00+00:00"}}
+            await live.kernel.write_document(_SCOPE, "Story", name, doc, tenant=None)
+
+    asyncio.run(go())
+    with _client(dna_dir) as c:
+        body = c.get("/v1/board",
+                     params={"scope": _SCOPE, "tenant": "acme", "recent": 3}).json()
+    # 2 seeded stories + 8 extra + 1 feature = 11 total; recent is capped at 3.
+    assert body["totals"]["total"] == 11
+    assert len(body["recent"]) == 3
+    assert len(body["items"]) == 11  # the FULL board, past the recent window
     # scope is required (the board is always for an explicit board_scope).
     with _client(dna_dir) as c:
         assert c.get("/v1/board", params={"tenant": "acme"}).status_code == 422
