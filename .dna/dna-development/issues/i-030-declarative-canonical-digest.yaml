@@ -1,0 +1,65 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-030-declarative-canonical-digest
+spec:
+  description: 'DeclarativeKindPort sem canonical_digest -> dna source push/diff crasham
+    em Kinds descriptor (F3) -> caminho FS->Postgres morto. Fix: compartilhar a implementacao
+    canonica do KindBase usando VOLATILE_SPEC_FIELDS que o port ja expoe. Ref spike
+    sp-postgres-substrate.'
+  type: bug
+  severity: high
+  status: in-progress
+  related_feature: f-dna-cloud-intelligence
+  timeline:
+  - at: '2026-07-13T09:13:40+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
+  - at: '2026-07-13T09:14:06+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: open
+    to: in-progress
+  - at: '2026-07-13T09:14:09+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Root cause confirmado: source_sync.py:89 chama kp.canonical_digest(doc);\
+      \ o metodo so existia em KindBase, nao em DeclarativeKindPort \u2014 AttributeError\
+      \ em todo Kind descriptor (F3), matando digest_manifest/diff_manifests/push_scope\
+      \ (dna source diff/push). Repro fixado ao vivo em IntelSource antes/depois."
+  - at: '2026-07-13T09:14:29+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Fix aplicado (Py): DeclarativeKindPort agora COMPARTILHA os metodos\
+      \ canonicos do KindBase por referencia direta de funcao (_canonical_spec = KindBase._canonical_spec;\
+      \ canonical_digest = KindBase.canonical_digest) \u2014 mesmo objeto de codigo,\
+      \ zero copia divergente. Usa self.VOLATILE_SPEC_FIELDS (defaults do KindBase\
+      \ + extras do descriptor) e self.kind, ja montados no __init__. Verificado ao\
+      \ vivo: digest de um doc IntelSource == digest de um KindBase equivalente (byte-identico)."
+  - at: '2026-07-13T09:14:33+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Paridade Py<->TS: o gemeo TS tinha a MESMA lacuna (KindBase.canonicalDigest\
+      \ existe, DeclarativeKindPort nao). TS ainda NAO exercita source-sync (sem digestManifest/pushScope;\
+      \ canonicalDigest nem esta na interface KindPort) \u2014 lacuna latente, sem\
+      \ crash. Ainda assim, para manter paridade extrai o algoritmo do KindBase em\
+      \ helpers de modulo (canonicalSpecOf/canonicalDigestOf) e liguei KindBase E\
+      \ DeclarativeKindPort neles (codigo unico, sem copia). Futuro-prova um caminho\
+      \ de source-sync TS."
+  - at: '2026-07-13T09:14:37+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'Testes: nova regressao test_declarative_canonical_digest.py (6 casos:
+      sem AttributeError, estabilidade, byte-identico ao KindBase, ignora volatile/transport,
+      sensivel a conteudo, digest_manifest end-to-end sobre scope de Kind descriptor).
+      Falha ANTES (AttributeError), passa DEPOIS. TS: declarative-canonical-digest.test.ts
+      (4 casos). Suites: sdk-py 3081 passed/193 skipped/4 xfailed; sdk-ts 1507 passed/0
+      fail; tsc limpo. Guards: brand_guard limpo, docs_coverage_guard limpo (nenhuma
+      superficie publica mudou).'

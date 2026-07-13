@@ -24,7 +24,7 @@ function hslToHex(h: number, s: number, l: number): string {
   const toHex = (v: number) => Math.round((v + m) * 255).toString(16).padStart(2, "0");
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
-import { DEFAULT_VOLATILE_SPEC_FIELDS, createAjv } from "./kind_base.js";
+import { DEFAULT_VOLATILE_SPEC_FIELDS, canonicalDigestOf, createAjv } from "./kind_base.js";
 import { StudioUIMetadata, type StudioUIMetadataInit } from "./studio_ui.js";
 import type { TypedKindDefinition } from "./models.js";
 import type { PreviewBlock } from "./preview.js";
@@ -818,6 +818,17 @@ export class DeclarativeKindPort implements KindPort, DeclarativeMarker {
       return [{ kind: "empty", title: `${this.kind} (empty)` }];
     }
     return blocks;
+  }
+
+  // ---- Source-sync digest (s-sync-s1) -------------------------------------
+  // Share KindBase's canonical algorithm VERBATIM (the same `canonicalDigestOf`
+  // helper) so a descriptor (F3) Kind digests byte-identically to its
+  // hand-written twin — never a divergent second copy. `this.volatileSpecFields`
+  // (KindBase defaults ∪ descriptor extras) + `this.kind` feed it. Twin of the
+  // Python fix (meta.py delegating to KindBase); keeps the port digest-capable
+  // for a future TS source-sync path (no TS consumer exercises it today).
+  canonicalDigest(doc: Document): string {
+    return canonicalDigestOf(this.kind, this.volatileSpecFields, doc);
   }
 
   static fromTyped(typedDef: TypedKindDefinition): DeclarativeKindPort {

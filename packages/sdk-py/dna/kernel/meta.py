@@ -712,6 +712,19 @@ class DeclarativeKindPort:
             return [PreviewBlock(kind="empty", title=f"{self.kind} (empty)")]
         return blocks
 
+    # -- Source-sync digest (s-sync-s1) ---------------------------------------
+    # Share KindBase's canonical implementation VERBATIM — the SAME function
+    # objects, not a re-typed copy — so a descriptor (F3) Kind digests
+    # byte-identically to the equivalent hand-written record Kind. Both read
+    # ``self.VOLATILE_SPEC_FIELDS`` (assembled in __init__ from KindBase's
+    # defaults ∪ the descriptor's declared extras) and ``self.kind``; there is
+    # deliberately no second algorithm to drift. Without this, source_sync's
+    # ``kp.canonical_digest(doc)`` raised AttributeError on every descriptor
+    # Kind, killing ``dna source push``/``diff`` on any F3 scope (the FS→Postgres
+    # replicate/seed path). See i-declarative-canonical-digest / sp-postgres-substrate.
+    _canonical_spec = KindBase._canonical_spec
+    canonical_digest = KindBase.canonical_digest
+
     @classmethod
     def from_typed(cls, typed_def: TypedKindDefinition) -> "DeclarativeKindPort":
         return cls(typed_def)

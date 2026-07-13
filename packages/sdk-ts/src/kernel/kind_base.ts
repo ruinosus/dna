@@ -92,6 +92,44 @@ function _stableStringify(value: unknown): string {
   );
 }
 
+/** Normalize a spec for hashing: drop volatile + transport fields and fold a
+ *  resolved instruction_file into its inline body (s-sync-s1). Shared by
+ *  KindBase and DeclarativeKindPort so both digest identically — never a second
+ *  copy. Twin of Python KindBase._canonical_spec. */
+export function canonicalSpecOf(
+  volatileSpecFields: ReadonlySet<string>,
+  spec: Record<string, unknown>,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(spec ?? {})) {
+    if (volatileSpecFields.has(k)) continue;
+    out[k] = v;
+  }
+  delete out["source_files"]; // pure transport, never identity
+  if (out["instruction_file"] && out["instruction"]) {
+    delete out["instruction_file"]; // file-backed == inline once resolved
+  }
+  return out;
+}
+
+/** Stable SHA-256 of a doc's authored identity — the source diff/sync basis
+ *  (s-sync-s1). Invariant to key order, formatting, volatile stamps, and
+ *  instruction_file-vs-inline; sensitive to real content. Twin of Python
+ *  KindBase.canonical_digest. */
+export function canonicalDigestOf(
+  kind: string,
+  volatileSpecFields: ReadonlySet<string>,
+  doc: Document,
+): string {
+  const spec = ((doc as { spec?: unknown }).spec ?? {}) as Record<string, unknown>;
+  const payload = {
+    kind: (doc as { kind?: string }).kind ?? kind,
+    name: (doc as { name?: string }).name ?? null,
+    spec: canonicalSpecOf(volatileSpecFields, { ...spec }),
+  };
+  return createHash("sha256").update(_stableStringify(payload), "utf8").digest("hex");
+}
+
 export abstract class KindBase implements Omit<KindPort, "apiVersion" | "kind" | "alias" | "storage"> {
   // ---- Identity (subclasses MUST set these) -----------------------
   // abstract apiVersion: string;
@@ -266,31 +304,20 @@ export abstract class KindBase implements Omit<KindPort, "apiVersion" | "kind" |
   }
 
   // ---- Source-sync digest (s-sync-s1; twin of Python canonical_digest) ----
+  // The algorithm lives in the module-level `canonicalSpecOf`/`canonicalDigestOf`
+  // helpers so DeclarativeKindPort (meta.ts) shares the SAME code instead of a
+  // divergent copy — a descriptor Kind digests byte-identically to its
+  // hand-written twin (twin of Python meta.py delegating to KindBase).
 
   protected canonicalSpec(spec: Record<string, unknown>): Record<string, unknown> {
-    const out: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(spec ?? {})) {
-      if (this.volatileSpecFields.has(k)) continue;
-      out[k] = v;
-    }
-    delete out["source_files"]; // pure transport, never identity
-    if (out["instruction_file"] && out["instruction"]) {
-      delete out["instruction_file"]; // file-backed == inline once resolved
-    }
-    return out;
+    return canonicalSpecOf(this.volatileSpecFields, spec);
   }
 
   /** Stable SHA-256 of the doc's authored identity — basis for source
    *  diff/sync. Invariant to key order, formatting, volatile stamps, and
    *  instruction_file-vs-inline; sensitive to real content. */
   canonicalDigest(doc: Document): string {
-    const spec = (((doc as { spec?: unknown }).spec ?? {}) as Record<string, unknown>);
-    const payload = {
-      kind: (doc as { kind?: string }).kind ?? this.kind,
-      name: (doc as { name?: string }).name ?? null,
-      spec: this.canonicalSpec({ ...spec }),
-    };
-    return createHash("sha256").update(_stableStringify(payload), "utf8").digest("hex");
+    return canonicalDigestOf(this.kind, this.volatileSpecFields, doc);
   }
 
   // Required-by-interface but unused — subclasses override.
