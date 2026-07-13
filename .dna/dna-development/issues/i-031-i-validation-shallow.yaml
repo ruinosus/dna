@@ -39,3 +39,9 @@ spec:
       \ mudaram (Guardrail e class Kind, nao descriptor). Suites verdes: sdk-py 3078+,\
       \ cli 555, sdk-ts 1512; tsc limpo; brand/docs guards limpos; sem drift em docs/reference\
       \ (enum type renderiza como string na tabela)."
+  - at: '2026-07-13T11:21:56+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR aberto: https://github.com/ruinosus/dna/pull/101 (branch fix/validation-depth).\
+      \ Aguardando review/merge \u2014 resolve no merge."
