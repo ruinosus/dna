@@ -492,9 +492,130 @@ def test_portfolio_board_summary(dna_dir):
     assert body["totals"] == {"stories": 2, "features": 1, "total": 3}
     # newest-first: the feature (2026-07-12) leads, then s-two (07-11), s-one (07-10).
     assert [r["name"] for r in body["recent"]] == ["f-one", "s-two", "s-one"]
+    # `items` carries the FULL set (all stories + features), same newest-first
+    # order — the console renders every column in full, not just the `recent` head.
+    assert [r["name"] for r in body["items"]] == ["f-one", "s-two", "s-one"]
+    assert len(body["items"]) == body["totals"]["total"] == 3
+    assert {r["kind"] for r in body["items"]} == {"Story", "Feature"}
+
+
+def test_portfolio_board_items_is_full_not_recent(dna_dir):
+    """`recent` is a bounded head; `items` is the WHOLE board. With more items
+    than the `recent` window, `items` still returns all of them (the fix for a
+    board that showed only ~6 of N)."""
+    _seed_portfolio(dna_dir)
+    # Seed extra stories so the board exceeds the default recent window.
+    from dna_cli import _mcp_server as M
+
+    async def go():
+        live = await M.boot_live(base_dir=str(dna_dir))
+        for i in range(8):
+            name = f"s-extra-{i}"
+            doc = {"apiVersion": _SDLC_API, "kind": "Story",
+                   "metadata": {"name": name},
+                   "spec": {"name": name, "title": f"Extra {i}",
+                            "description": f"extra story {i}", "status": "todo",
+                            "created_at": f"2026-07-0{i+1}T09:00:00+00:00"}}
+            await live.kernel.write_document(_SCOPE, "Story", name, doc, tenant=None)
+
+    asyncio.run(go())
+    with _client(dna_dir) as c:
+        body = c.get("/v1/board",
+                     params={"scope": _SCOPE, "tenant": "acme", "recent": 3}).json()
+    # 2 seeded stories + 8 extra + 1 feature = 11 total; recent is capped at 3.
+    assert body["totals"]["total"] == 11
+    assert len(body["recent"]) == 3
+    assert len(body["items"]) == 11  # the FULL board, past the recent window
     # scope is required (the board is always for an explicit board_scope).
     with _client(dna_dir) as c:
         assert c.get("/v1/board", params={"tenant": "acme"}).status_code == 422
+
+
+# ── portfolio: board ITEM detail (the console's drawer) ──────────────────────
+
+
+def _seed_work_item(dna_dir):
+    """Seed one RICH Story (AC/DoD/timeline/produces) so the item-detail endpoint
+    has a full doc to project — global SDLC Kind, written unbound."""
+    from dna_cli import _mcp_server as M
+
+    doc = {
+        "apiVersion": _SDLC_API, "kind": "Story", "metadata": {"name": "s-rich"},
+        "spec": {
+            "name": "s-rich", "title": "Rich story", "description": "a full body",
+            "status": "in-progress", "feature": "f-one", "priority": "high",
+            "labels": ["cli", "ts"], "reporter": "claude-code",
+            "business_value": 400,
+            "acceptance_criteria": [
+                {"text": "AC one", "done": False},
+                {"text": "AC two", "done": True, "done_at": "2026-07-11T10:00:00+00:00"},
+            ],
+            "definition_of_done": [{"text": "DoD one", "done": False}],
+            "created_at": "2026-07-10T10:00:00+00:00",
+            "timeline": [
+                {"at": "2026-07-10T10:00:00+00:00", "actor": "claude-code",
+                 "type": "status_change", "to": "todo"},
+                {"at": "2026-07-10T10:05:00+00:00", "actor": "claude-code",
+                 "type": "comment", "summary": "started the work"},
+            ],
+            "produces": [
+                {"kind": "Plan", "name": "plan-s-rich", "role": "implementation"},
+            ],
+        },
+    }
+
+    async def go():
+        live = await M.boot_live(base_dir=str(dna_dir))
+        await live.kernel.write_document(_SCOPE, "Story", "s-rich", doc, tenant=None)
+
+    asyncio.run(go())
+
+
+def test_board_item_full_doc(dna_dir):
+    """The item-detail endpoint returns the WHOLE work-item: description, AC/DoD
+    (verbatim, with their done flags), status, timeline, feature ref, produces."""
+    _seed_work_item(dna_dir)
+    with _client(dna_dir) as c:
+        body = c.get("/v1/board/item",
+                     params={"scope": _SCOPE, "name": "s-rich"}).json()
+    assert body["kind"] == "Story"
+    assert body["name"] == "s-rich"
+    assert body["title"] == "Rich story"
+    assert body["description"] == "a full body"
+    assert body["status"] == "in-progress"
+    assert body["feature"] == "f-one"
+    assert body["priority"] == "high"
+    assert body["labels"] == ["cli", "ts"]
+    assert body["business_value"] == 400
+    assert [ac["text"] for ac in body["acceptance_criteria"]] == ["AC one", "AC two"]
+    assert body["acceptance_criteria"][1]["done"] is True
+    assert body["definition_of_done"][0]["text"] == "DoD one"
+    assert [ev["type"] for ev in body["timeline"]] == ["status_change", "comment"]
+    assert body["produces"][0]["name"] == "plan-s-rich"
+    assert body["created_at"] == "2026-07-10T10:00:00+00:00"
+
+
+def test_board_item_kind_hint_and_not_found(dna_dir):
+    """An explicit ``kind`` hint constrains the probe (wrong Kind → 404); an
+    unknown name → 404; scope + name are required (422)."""
+    _seed_work_item(dna_dir)
+    with _client(dna_dir) as c:
+        # right kind hint resolves the same doc.
+        ok = c.get("/v1/board/item",
+                   params={"scope": _SCOPE, "name": "s-rich", "kind": "Story"})
+        assert ok.status_code == 200 and ok.json()["kind"] == "Story"
+        # a WRONG kind hint → 404 (the probe never falls back off the hint).
+        assert c.get("/v1/board/item",
+                     params={"scope": _SCOPE, "name": "s-rich", "kind": "Feature"}
+                     ).status_code == 404
+        # unknown name → 404.
+        assert c.get("/v1/board/item",
+                     params={"scope": _SCOPE, "name": "s-nope"}).status_code == 404
+        # scope + name are both required.
+        assert c.get("/v1/board/item",
+                     params={"scope": _SCOPE}).status_code == 422
+        assert c.get("/v1/board/item",
+                     params={"name": "s-rich"}).status_code == 422
 
 
 # ── auth: --auth token gates every route but /health ─────────────────────────

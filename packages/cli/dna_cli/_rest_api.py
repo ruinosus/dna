@@ -176,7 +176,9 @@ def build_app(
     # HTTP. ``boot_live`` is the CLI's composition root (it wires the CLI's own
     # source/provider boot path), so it stays in ``dna_cli._mcp_server``.
     from dna.application import (
+        BoardItemNotFound,
         ProjectNotFound,
+        board_item_impl,
         board_summary_impl,
         compose_prompt_impl,
         get_project_impl,
@@ -471,5 +473,25 @@ def build_app(
         counts by status, totals, and the newest work items — the console's board
         card. Reuses the shared SDLC read impl (``list_stories_impl``)."""
         return await board_summary_impl(await _live(), scope, tenant, recent)
+
+    @app.get("/v1/board/item", dependencies=guarded)
+    async def board_item(
+        scope: str = Query(..., description="The project's board_scope."),
+        name: str = Query(..., description="The work-item doc name (e.g. s-foo)."),
+        tenant: str | None = Query(default=None),
+        kind: str | None = Query(
+            default=None,
+            description="Optional Kind hint (Story/Feature/…); probed if omitted.",
+        ),
+    ) -> dict[str, Any]:
+        """One board work-item's FULL doc — the console's item-detail drawer:
+        title, status, description, acceptance_criteria, definition_of_done,
+        timeline, feature/epic refs, and produces. Delegates to the CORE
+        ``board_item_impl`` (zero logic here). 404s an unknown name (for this
+        scope/tenant, or under an explicit ``kind`` hint)."""
+        try:
+            return await board_item_impl(await _live(), scope, name, tenant, kind)
+        except BoardItemNotFound as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from None
 
     return app
