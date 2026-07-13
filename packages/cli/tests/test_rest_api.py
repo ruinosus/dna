@@ -806,6 +806,96 @@ def test_members_tenant_isolation(dna_dir):
     assert other["members"] == []
 
 
+# ── cloud billing → enforcement bridge: PUT /v1/tenant-plan ──────────────────
+#
+# The write that closes the billing→runtime gap (finding C4): dna-cloud's Stripe
+# webhook PUTs the tenant→tier assignment here, and the MCP runtime reads it via
+# kernel.tenant_plan(tenant). These drive the REST endpoint in-process, then read
+# back through the SAME kernel accessor the MCP quota guard uses — proving the two
+# stores are now bridged (webhook write → runtime read).
+
+
+def _read_tenant_plan(dna_dir, tenant: str) -> dict | None:
+    """Read the TenantPlan the way the MCP quota guard does (kernel.tenant_plan),
+    on its own loop against the on-disk source the app also wrote to."""
+    from dna_cli import _mcp_server as M
+
+    async def go():
+        live = await M.boot_live(base_dir=str(dna_dir))
+        return await live.kernel.tenant_plan(tenant)
+
+    return asyncio.run(go())
+
+
+def test_tenant_plan_put_bridges_to_runtime_read(dna_dir):
+    """PUT /v1/tenant-plan(acme→pro) → kernel.tenant_plan('acme') resolves pro.
+    This is the C4 bridge: what the webhook writes is what the runtime reads."""
+    with _client(dna_dir) as c:
+        r = c.put(
+            "/v1/tenant-plan",
+            json={
+                "tenant": "acme",
+                "tier_id": "pro",
+                "stripe_customer_id": "cus_123",
+                "stripe_subscription_id": "sub_123",
+                "status": "active",
+            },
+        )
+        assert r.status_code == 200, r.text
+        assert r.json()["tier_id"] == "pro"
+
+    plan = _read_tenant_plan(dna_dir, "acme")
+    assert plan is not None, "the runtime read must see the webhook's write"
+    spec = plan["spec"]
+    assert spec["tenant"] == "acme"
+    assert spec["tier_id"] == "pro"
+    assert spec["source"] == "stripe"
+    assert spec["stripe_customer_id"] == "cus_123"
+    assert spec["status"] == "active"
+    assert spec.get("updated_at")
+
+
+def test_tenant_plan_put_is_idempotent_and_downgrades(dna_dir):
+    """Stripe redelivers (at-least-once) → a repeat PUT converges (still one
+    assignment, same tier); a later downgrade PUT flips pro→free in place."""
+    with _client(dna_dir) as c:
+        c.put("/v1/tenant-plan",
+              json={"tenant": "acme", "tier_id": "pro", "status": "active"})
+        # redelivery of the same event → same result, no duplicate doc.
+        c.put("/v1/tenant-plan",
+              json={"tenant": "acme", "tier_id": "pro", "status": "active"})
+    assert _read_tenant_plan(dna_dir, "acme")["spec"]["tier_id"] == "pro"
+
+    with _client(dna_dir) as c:
+        r = c.put("/v1/tenant-plan",
+                  json={"tenant": "acme", "tier_id": "free", "status": "canceled"})
+        assert r.status_code == 200
+    plan = _read_tenant_plan(dna_dir, "acme")["spec"]
+    assert plan["tier_id"] == "free"
+    assert plan["status"] == "canceled"
+
+
+def test_tenant_plan_put_requires_tenant_and_tier(dna_dir):
+    """A missing tenant or tier_id is a 400 (the two required schema fields)."""
+    with _client(dna_dir) as c:
+        assert c.put("/v1/tenant-plan",
+                     json={"tenant": "", "tier_id": "pro"}).status_code == 400
+        assert c.put("/v1/tenant-plan",
+                     json={"tenant": "acme", "tier_id": ""}).status_code == 400
+
+
+def test_tenant_plan_put_is_auth_guarded(dna_dir):
+    """The bridge write is bearer-guarded (only dna-cloud holds DNA_API_TOKEN):
+    a missing/wrong bearer is 401, the right one 200."""
+    with _client(dna_dir, auth="token", token=_TOKEN) as c:
+        body = {"tenant": "acme", "tier_id": "pro"}
+        assert c.put("/v1/tenant-plan", json=body).status_code == 401
+        assert c.put("/v1/tenant-plan", json=body,
+                     headers={"Authorization": "Bearer nope"}).status_code == 401
+        assert c.put("/v1/tenant-plan", json=body,
+                     headers={"Authorization": f"Bearer {_TOKEN}"}).status_code == 200
+
+
 # ── auth: --auth token gates every route but /health ─────────────────────────
 
 

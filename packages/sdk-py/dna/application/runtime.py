@@ -906,6 +906,81 @@ async def forget_impl(
     return {"kind": kind, "name": name, "forgotten": not out["already_forgotten"]}
 
 
+# ── cloud: the billing→enforcement bridge write (TenantPlan) ────────────────
+
+# TenantPlan is GLOBAL and _lib-resident (base only, no per-tenant overlay) —
+# the same scope kernel.tenant_plan() reads _lib-direct. The doc NAME equals the
+# tenant so the read matches on spec.tenant, and the write is a natural upsert
+# (write_document keys on name) → idempotent under Stripe's at-least-once retries.
+_TENANT_PLAN_SCOPE = "_lib"
+_CLOUD_API = "github.com/ruinosus/dna/cloud/v1"
+
+
+async def set_tenant_plan_impl(
+    live: LiveDna,
+    tenant: str,
+    tier_id: str,
+    *,
+    source: str = "stripe",
+    stripe_customer_id: str | None = None,
+    stripe_subscription_id: str | None = None,
+    status: str | None = None,
+) -> dict[str, Any]:
+    """Upsert the TenantPlan Kind assigning ``tenant`` to ``tier_id`` — the
+    billing→enforcement BRIDGE write that dna-cloud's Stripe webhook drives so
+    runtime quota (``kernel.tenant_plan(tenant)`` in the MCP guard) follows
+    billing state without a redeploy.
+
+    GLOBAL / ``_lib``-direct: TenantPlan is not tenant-overlaid — the doc lives in
+    ``_lib`` with its NAME == the tenant (== the ``tid`` the MCP token carries), so
+    the guard's ``spec.tenant`` lookup resolves it regardless of the caller's
+    scope. The write is an UPSERT keyed on that name, so a redelivered Stripe event
+    (at-least-once) converges on the same doc — idempotent by construction.
+
+    Only the schema-allowed keys are written (the descriptor is
+    ``additionalProperties: false``): ``tenant``/``tier_id`` (required),
+    ``source``, ``status``, the two Stripe ids, and an ISO ``updated_at`` stamp.
+    Optional refs are omitted when absent so a status-only transition never nulls a
+    previously-recorded customer/subscription id — mirroring the portal store's
+    COALESCE-on-update semantics."""
+    tenant = (tenant or "").strip()
+    tier_id = (tier_id or "").strip()
+    if not tenant:
+        raise ValueError("tenant is required")
+    if not tier_id:
+        raise ValueError("tier_id is required")
+
+    spec: dict[str, Any] = {
+        "tenant": tenant,
+        "tier_id": tier_id,
+        "source": source,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    if status:
+        spec["status"] = status
+    if stripe_customer_id:
+        spec["stripe_customer_id"] = stripe_customer_id
+    if stripe_subscription_id:
+        spec["stripe_subscription_id"] = stripe_subscription_id
+
+    raw = {
+        "apiVersion": _CLOUD_API,
+        "kind": "TenantPlan",
+        "metadata": {"name": tenant},
+        "spec": spec,
+    }
+    # GLOBAL kind → no tenant kwarg (a tenant on a GLOBAL write is rejected).
+    await live.kernel.write_document(
+        _TENANT_PLAN_SCOPE, "TenantPlan", tenant, raw, invalidate_mode="doc"
+    )
+    return {
+        "scope": _TENANT_PLAN_SCOPE,
+        "tenant": tenant,
+        "tier_id": tier_id,
+        "status": status,
+    }
+
+
 def _slug(text: str) -> str:
     import hashlib
     import re

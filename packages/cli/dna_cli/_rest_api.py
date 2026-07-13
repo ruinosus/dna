@@ -194,6 +194,7 @@ def build_app(
         remember_impl,
         remove_member_impl,
         set_member_impl,
+        set_tenant_plan_impl,
     )
     from dna_cli._mcp_server import boot_live
     # The intel face delegates to the CORE engine (adr-faces-reorg: logic in the
@@ -567,5 +568,40 @@ def build_app(
             return await board_item_impl(await _live(), scope, name, tenant, kind)
         except BoardItemNotFound as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from None
+
+    # -- cloud billing → enforcement bridge (TenantPlan write) ---------------
+    # The ONE write that closes the billing→runtime gap: dna-cloud's Stripe
+    # webhook calls this (server-side, with the shared DNA_API_TOKEN bearer it
+    # already holds) on the Pro-activate / downgrade / cancel transitions, so
+    # runtime quota (kernel.tenant_plan(tenant) in the MCP guard) follows billing
+    # state. It keeps the DNA-source write inside the DNA runtime — the Node
+    # portal never opens the DNA source directly. GLOBAL / _lib-direct: the doc's
+    # name == the tenant (the `tid` the MCP token carries), so there is no
+    # `tenant` query param here — `tenant` is the body key being assigned. Delegates
+    # to the CORE set_tenant_plan_impl (zero logic here); idempotent under Stripe
+    # retries (write_document upserts on name).
+    @app.put("/v1/tenant-plan", dependencies=guarded)
+    async def put_tenant_plan(
+        tenant: str = Body(..., embed=True),
+        tier_id: str = Body(..., embed=True),
+        source: str = Body(default="stripe", embed=True),
+        stripe_customer_id: str | None = Body(default=None, embed=True),
+        stripe_subscription_id: str | None = Body(default=None, embed=True),
+        status: str | None = Body(default=None, embed=True),
+    ) -> dict[str, Any]:
+        """Upsert the TenantPlan Kind assigning ``tenant`` → ``tier_id`` (the
+        billing→enforcement bridge). 400 on a missing tenant/tier_id."""
+        try:
+            return await set_tenant_plan_impl(
+                await _live(),
+                tenant,
+                tier_id,
+                source=source,
+                stripe_customer_id=stripe_customer_id,
+                stripe_subscription_id=stripe_subscription_id,
+                status=status,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from None
 
     return app
