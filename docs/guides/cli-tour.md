@@ -448,6 +448,45 @@ Re-running is idempotent (existing documents are skipped with a warning;
 scope — each entry records the origin URI **pinned to the fetched
 commit**, the path inside the fetched tree, and a content SHA-256.
 
+## `dna explain` — where each part of a prompt comes from
+
+[Reference →](../reference/cli/explain.md)
+
+`build_prompt` renders a flat system prompt, but the composition knows
+*which artifact contributed which section* — and `dna explain` surfaces
+exactly that. It composes the agent (the printed provenance is for the same
+prompt `dna emit` embeds) and prints one row per composed section — the
+agent instruction, its Soul, each referenced Skill, each Guardrail — with
+the source file, a content hash, the version, and the layer the section
+resolved from:
+
+```console
+$ dna explain concierge --scope concierge
+Prompt provenance — concierge (scope: concierge)
+section                  source file                              hash          version  origin
+-----------------------  ---------------------------------------  ------------  -------  ---------
+instruction              agents/concierge/AGENT.md                a1b2c3d4e5f6  -        concierge
+soul                     souls/helpdesk-host/SOUL.md              f6e5d4c3b2a1  -        concierge
+guardrail:grounded-...   guardrails/grounded-citation/GUARDRAIL.md  0f1e2d3c4b5a  -        concierge
+```
+
+Pass `--tenant <t>` to resolve through a tenant's overlays. When a tenant
+layer *wins* a section, that row is flagged so a per-tenant customization is
+visible without diffing artifacts:
+
+```console
+$ dna explain concierge --scope concierge --tenant acme
+...
+  ⚠ soul: OVERRIDDEN by tenant overlay
+```
+
+`--json` returns the composed prompt plus the machine-readable provenance
+list, and `--show-prompt` prints the composed prompt below the table. The
+prompt in explain mode is **byte-identical** to `build_prompt` — explain
+never re-renders, it only *attributes* the string composition already
+produces. The same map is available from the SDK as
+`mi.explain_prompt(agent)` (Python) / `mi.explainPrompt({ agent })` (TS).
+
 ## The groups with their own guides
 
 The remaining groups already have dedicated prose — one line each here:

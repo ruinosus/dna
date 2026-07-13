@@ -585,7 +585,21 @@ export class CompositionResolver {
     // multi-package conflict surface below.
     const catalogHits: string[] = [];
     for (const [layerScope, layerTenant] of chain) {
-      const raw = await k._granularDoc([layerScope, kind, name, layerTenant ?? ""]);
+      let raw: Raw | null;
+      try {
+        raw = await k._granularDoc([layerScope, kind, name, layerTenant ?? ""]);
+      } catch (e) {
+        // A parent/catalog scope in the chain may not exist on this source
+        // (e.g. a `_lib` library scope absent in a bare checkout). Treat it
+        // as "no contribution at this layer" — the same fail-soft the
+        // instance builder applies — instead of crashing the whole resolve.
+        // (Matches Py resolve_document's FileNotFoundError guard.)
+        if (e instanceof Error && /Scope not found/.test(e.message)) {
+          raw = null;
+        } else {
+          throw e;
+        }
+      }
       // NOTE: the Py twin registers `_layer_observers` reverse-deps here
       // (cache invalidation infra). Intentionally not ported — the TS
       // kernel has no granular cache to invalidate.

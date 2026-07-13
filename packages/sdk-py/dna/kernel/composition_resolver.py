@@ -538,9 +538,21 @@ class CompositionResolver:
         # multi-package conflict surface below.
         catalog_hits: list[str] = []
         for layer_scope, layer_tenant in chain:
-            raw = await k._granular_doc_cached(
-                (layer_scope, kind, name, layer_tenant or "")
-            )
+            try:
+                raw = await k._granular_doc_cached(
+                    (layer_scope, kind, name, layer_tenant or "")
+                )
+            except FileNotFoundError as e:
+                # A parent/catalog scope in the chain may not exist on this
+                # source (e.g. a `_lib` library scope absent in a bare
+                # checkout). Treat it as "no contribution at this layer" —
+                # the same fail-soft the instance builder applies — instead of
+                # crashing the whole resolve. (Matches TS resolveDocument.)
+                logger.debug(
+                    "resolve_document: layer scope %r missing for %s/%s: %s",
+                    layer_scope, kind, name, e,
+                )
+                raw = None
             # Register dependency when consulting a NON-requested scope
             # (parent/grandparent/CATALOG). LRU-bounded — touch on access,
             # evict oldest. Catalog layers register identically to parents so

@@ -21,6 +21,7 @@ from dna_cli import (
     docs_cmd,
     emit_cmd,
     eval_cmd,
+    explain_cmd,
     init_cmd,
     install_cmd,
     intel_cmd,
@@ -90,6 +91,7 @@ main.add_command(install_cmd.install)
 main.add_command(new_cmd.new)
 main.add_command(eval_cmd.eval_)
 main.add_command(emit_cmd.emit)
+main.add_command(explain_cmd.explain)
 main.add_command(mcp_cmd.mcp)
 main.add_command(api_cmd.api)
 main.add_command(intel_cmd.intel)

@@ -25,7 +25,7 @@ from dna.kernel.protocols import CompositionResult, KindPort, SourcePort
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from dna.kernel.prompt_builder import PromptBuilder
+    from dna.kernel.prompt_builder import PromptBuilder, PromptExplanation
     from dna.kernel.composition_resolver import CompositionEngine
     from dna.kernel.navigator import Navigator
     from dna.kernel.lock_manager import LockManager
@@ -912,6 +912,52 @@ class ManifestInstance:
             enabled_skills=enabled_skills,
             enabled_guardrails=enabled_guardrails,
             enabled_slots=enabled_slots,
+        )
+
+    def explain_prompt(
+        self,
+        agent: str | None = None,
+        *,
+        context: dict[str, Any] | None = None,
+        enabled_skills: list[str] | None = None,
+        enabled_guardrails: list[str] | None = None,
+        enabled_slots: dict[str, list[str]] | None = None,
+        tenant: str | None = None,
+    ) -> "PromptExplanation":
+        """Compose *agent* AND return per-section provenance.
+
+        The ``prompt`` field is byte-identical to :py:meth:`build_prompt`;
+        ``sections`` attributes each composed section (instruction, soul,
+        skills, guardrails) to its source artifact, hash, version, and
+        layer/overlay origin. Sync — see :py:meth:`build_prompt`.
+        """
+        return self.prompt.explain(
+            agent=agent,
+            context=context,
+            enabled_skills=enabled_skills,
+            enabled_guardrails=enabled_guardrails,
+            enabled_slots=enabled_slots,
+            tenant=tenant,
+        )
+
+    async def explain_prompt_async(
+        self,
+        agent: str | None = None,
+        *,
+        context: dict[str, Any] | None = None,
+        enabled_skills: list[str] | None = None,
+        enabled_guardrails: list[str] | None = None,
+        enabled_slots: dict[str, list[str]] | None = None,
+        tenant: str | None = None,
+    ) -> "PromptExplanation":
+        """Async variant of :py:meth:`explain_prompt`."""
+        return await self.prompt.explain_async(
+            agent=agent,
+            context=context,
+            enabled_skills=enabled_skills,
+            enabled_guardrails=enabled_guardrails,
+            enabled_slots=enabled_slots,
+            tenant=tenant,
         )
 
     def _build_context(
