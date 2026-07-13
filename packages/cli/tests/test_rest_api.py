@@ -806,6 +806,85 @@ def test_members_tenant_isolation(dna_dir):
     assert other["members"] == []
 
 
+# ── first-owner provisioning: POST /v1/tenants/{tid}/provision-owner ─────────
+#
+# The C3 fix: a brand-new tenant has ZERO Membership docs, so its first user could
+# not manage members (_require_manage 403'd every write). Provisioning makes the
+# signed-in user Owner of their OWN tenant. These drive the endpoint in-process
+# then prove, end-to-end, that the just-provisioned user can add a member.
+
+
+def test_provision_owner_unblocks_first_member_add(dna_dir):
+    """A fresh tenant (portfolio seeded, NO memberships) → the first user cannot
+    manage members; after provisioning they are Owner and CAN add a member."""
+    _seed_portfolio(dna_dir, tenant="acme")  # org acme-labs + project acme, no members
+    founder = "founder@acme.com"
+    with _client(dna_dir) as c:
+        # Before: the founder has no grant — cannot manage, and a write 403s.
+        before = c.get("/v1/projects/acme/members",
+                       params={"scope": _SCOPE, "tenant": "acme",
+                               "viewer": founder}).json()
+        assert before["members"] == []
+        assert before["viewer"]["can_manage"] is False
+        assert c.post("/v1/projects/acme/members",
+                      params={"scope": _SCOPE, "tenant": "acme"},
+                      json={"user": "teammate@acme.com", "role": "member",
+                            "actor": founder}).status_code == 403
+
+        # Provision: the founder becomes Owner of their tenant (org-scope grant).
+        r = c.post("/v1/tenants/acme/provision-owner",
+                   params={"scope": _SCOPE}, json={"user": founder})
+        assert r.status_code == 201, r.text
+        body = r.json()
+        assert body["provisioned"] is True
+        assert {"scope_type": "org", "scope_ref": "acme-labs",
+                "role": "owner"} in body["grants"]
+
+        # After: the founder is Owner (can_manage) AND the add now succeeds.
+        after = c.get("/v1/projects/acme/members",
+                      params={"scope": _SCOPE, "tenant": "acme",
+                              "viewer": founder}).json()
+        assert after["viewer"]["can_manage"] is True
+        assert next(m for m in after["members"]
+                    if m["user"] == founder)["role"] == "owner"
+        add = c.post("/v1/projects/acme/members",
+                     params={"scope": _SCOPE, "tenant": "acme"},
+                     json={"user": "teammate@acme.com", "role": "member",
+                           "actor": founder})
+        assert add.status_code == 201, add.text
+        roster = c.get("/v1/projects/acme/members",
+                       params={"scope": _SCOPE, "tenant": "acme"}).json()
+    assert "teammate@acme.com" in {m["user"] for m in roster["members"]}
+
+
+def test_provision_owner_is_first_owner_only_noop(dna_dir):
+    """Idempotent + first-owner-only: with an Owner already present, provisioning a
+    DIFFERENT user is a NO-OP — a later user does not auto-escalate to Owner."""
+    _seed_members(dna_dir)  # seeds owner@acme.com as org owner
+    with _client(dna_dir) as c:
+        r = c.post("/v1/tenants/acme/provision-owner",
+                   params={"scope": _SCOPE},
+                   json={"user": "intruder@acme.com"})
+        assert r.status_code == 201, r.text
+        body = r.json()
+        assert body["provisioned"] is False
+        assert body["reason"] == "owner_exists"
+        assert body["grants"] == []
+        roster = c.get("/v1/projects/acme/members",
+                       params={"scope": _SCOPE, "tenant": "acme"}).json()
+    # The intruder was NOT granted anything.
+    assert "intruder@acme.com" not in {m["user"] for m in roster["members"]}
+
+
+def test_provision_owner_requires_user(dna_dir):
+    """An empty user is a 400 (tenant comes from the path segment)."""
+    _seed_portfolio(dna_dir, tenant="acme")
+    with _client(dna_dir) as c:
+        assert c.post("/v1/tenants/acme/provision-owner",
+                      params={"scope": _SCOPE}, json={"user": ""}
+                      ).status_code == 400
+
+
 # ── cloud billing → enforcement bridge: PUT /v1/tenant-plan ──────────────────
 #
 # The write that closes the billing→runtime gap (finding C4): dna-cloud's Stripe

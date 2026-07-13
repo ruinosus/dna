@@ -190,6 +190,7 @@ def build_app(
         list_projects_impl,
         list_repos_impl,
         list_tools_impl,
+        provision_tenant_owner_impl,
         recall_impl,
         remember_impl,
         remove_member_impl,
@@ -529,6 +530,31 @@ def build_app(
             raise HTTPException(status_code=403, detail=str(exc)) from None
         except MemberNotFound as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from None
+
+    # -- first-owner provisioning (audit finding C3) -------------------------
+    # A brand-new tenant has ZERO Membership docs, so its first user could not
+    # manage members (every membership write 403'd — nothing made the sole user
+    # the Owner of their own tenant). The DNA Cloud portal calls this on first
+    # authenticated access (server-side, with the shared bearer it already holds —
+    # never opening the DNA source directly, same pattern as PUT /v1/tenant-plan)
+    # so the signed-in user becomes Owner of their OWN tenant (== the `tid` path
+    # segment). Idempotent + first-owner-only: a NO-OP once any Owner exists, so a
+    # LATER user does not auto-escalate. Delegates to the CORE impl (zero logic
+    # here). 400 on a missing tenant/user.
+    @app.post("/v1/tenants/{tid}/provision-owner", dependencies=guarded, status_code=201)
+    async def provision_tenant_owner(
+        tid: str,
+        user: str = Body(..., embed=True),
+        scope: str | None = Query(default=None),
+    ) -> dict[str, Any]:
+        """Ensure ``user`` is Owner of tenant ``tid`` when it has no Owner yet — the
+        first-owner bootstrap. Idempotent (no-op if an Owner already exists).
+        Returns the grants created (org-scope per referenced org + project-scope per
+        orgless project). 400 on a missing tenant/user."""
+        try:
+            return await provision_tenant_owner_impl(await _live(), tid, user, scope)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from None
 
     @app.get("/v1/repos", dependencies=guarded)
     async def repos(

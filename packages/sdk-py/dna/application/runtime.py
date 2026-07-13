@@ -625,6 +625,117 @@ async def remove_member_impl(
     return {"removed": user, "scope": sc, "tenant": tenant}
 
 
+async def provision_tenant_owner_impl(
+    live: LiveDna,
+    tenant: str,
+    user: str,
+    scope: str | None = None,
+) -> dict[str, Any]:
+    """Bootstrap the FIRST Owner of a tenant — the fix for a brand-new tenant
+    having ZERO Membership docs (audit finding C3).
+
+    Without this, a freshly provisioned tenant's very first user could not manage
+    members: ``_require_manage`` found no Owner/Admin grant for them and 403'd every
+    membership write, and nothing ever made the sole user the Owner of their own
+    tenant. On first authenticated access the DNA Cloud portal calls this (server
+    side, with the shared bearer — the portal never opens the DNA source directly,
+    same pattern as ``PUT /v1/tenant-plan``) so the signed-in user becomes Owner of
+    their OWN tenant and member management works.
+
+    **Idempotent + first-owner-only.** If the tenant ALREADY has any Owner
+    Membership (org- or project-scope), this is a NO-OP — a *later* user signing
+    into the same tenant does NOT auto-escalate to Owner (they need an invite from
+    an existing Owner/Admin). That first-owner-only rule is what makes it safe to
+    call on every sign-in / dashboard load.
+
+    **What it grants.** An ORG-scope Owner Membership for every organization the
+    tenant references (the org owner is a superuser — Owner across every project in
+    that org), plus a PROJECT-scope Owner Membership for any orgless Project (one an
+    org grant would not cover). The org set is taken from BOTH the Organization docs
+    AND every non-empty ``project.org_ref`` — so the guard's ``applies`` check
+    (org-grant matches ``project.org_ref``; project-grant matches the project name)
+    matches one of these grants for any project in the tenant, even a dangling
+    org_ref with no Organization doc. Memberships are written ``active`` (the tenant
+    owner is a real member, not a pending invite). TENANTED: the write routes to the
+    caller's OWN tenant overlay only.
+    """
+    sc = scope or live.base_scope
+    tenant = (tenant or "").strip()
+    user = (user or "").strip()
+    if not tenant:
+        raise ValueError("tenant is required")
+    if not user:
+        raise ValueError("user is required")
+
+    # First-owner-only: if ANY Owner membership already exists in this tenant, it is
+    # already provisioned — never auto-escalate a subsequent user.
+    existing = await _collect(live, sc, "Membership", tenant)
+    for d in existing:
+        if (d["spec"].get("role") or "").lower() == "owner":
+            return {
+                "scope": sc,
+                "tenant": tenant,
+                "user": user,
+                "provisioned": False,
+                "reason": "owner_exists",
+                "grants": [],
+            }
+
+    orgs = await _collect(live, sc, "Organization", tenant)
+    projects = await _collect(live, sc, "Project", tenant)
+
+    # The set of grants that guarantee the user is Owner of every project in the
+    # tenant: one org-scope grant per referenced org, one project-scope grant per
+    # orgless project.
+    org_refs: set[str] = {o["name"] for o in orgs if o.get("name")}
+    orgless_projects: list[str] = []
+    for proj in projects:
+        oref = (proj["spec"].get("org_ref") or "").strip()
+        if oref:
+            org_refs.add(oref)
+        elif proj.get("name"):
+            orgless_projects.append(proj["name"])
+
+    write_kernel = live.kernel.with_tenant(tenant) if tenant else live.kernel
+    now = datetime.now(timezone.utc).isoformat()
+    grants: list[dict[str, Any]] = []
+
+    async def _grant(scope_type: str, scope_ref: str) -> None:
+        name = _member_doc_name(user, scope_type, scope_ref)
+        raw = {
+            "apiVersion": _PORTFOLIO_API,
+            "kind": "Membership",
+            "metadata": {"name": name},
+            "spec": {
+                "user": user,
+                "scope_type": scope_type,
+                "scope_ref": scope_ref,
+                "role": "owner",
+                "status": "active",
+                "invited_at": now,
+            },
+        }
+        await write_kernel.write_document(
+            sc, "Membership", name, raw, invalidate_mode="doc"
+        )
+        grants.append(
+            {"scope_type": scope_type, "scope_ref": scope_ref, "role": "owner"}
+        )
+
+    for ref in sorted(org_refs):
+        await _grant("org", ref)
+    for ref in orgless_projects:
+        await _grant("project", ref)
+
+    return {
+        "scope": sc,
+        "tenant": tenant,
+        "user": user,
+        "provisioned": bool(grants),
+        "grants": grants,
+    }
+
+
 async def board_summary_impl(
     live: LiveDna, scope: str, tenant: str | None = None, recent: int = 6
 ) -> dict[str, Any]:
