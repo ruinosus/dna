@@ -96,6 +96,94 @@ def test_jwt_provider_from_env_builds_verifier(monkeypatch):
     assert isinstance(prov, JWTVerifier)
 
 
+# ── scopes_supported: advertise the OAuth scope in PRM (RFC 9728) ──────────
+#
+# The deployed MCP (`--auth jwt`) must advertise WHICH OAuth scope to request in
+# its Protected-Resource-Metadata, or an MCP client (VS Code) reaches the IdP with
+# no scope to ask for and stalls. `DNA_MCP_SCOPES_SUPPORTED` (comma-separated env)
+# flows into the `RemoteAuthProvider`'s `scopes_supported` (PRM advertisement) but
+# NOT into the verifier's `required_scopes` — the Azure full-vs-short nuance
+# (PrefectHQ/fastmcp#3002): advertise the FULL `api://…/user_impersonation`, while
+# the token's `scp` claim carries the SHORT `user_impersonation`.
+
+
+def test_scopes_supported_from_env_parses_csv(monkeypatch):
+    monkeypatch.delenv("DNA_MCP_SCOPES_SUPPORTED", raising=False)
+    assert A.scopes_supported_from_env() is None
+    monkeypatch.setenv("DNA_MCP_SCOPES_SUPPORTED", " api://x/user_impersonation , dna.read ")
+    assert A.scopes_supported_from_env() == ["api://x/user_impersonation", "dna.read"]
+    monkeypatch.setenv("DNA_MCP_SCOPES_SUPPORTED", "  , ")
+    assert A.scopes_supported_from_env() is None
+
+
+def test_jwt_provider_from_env_advertises_scopes_in_prm(monkeypatch):
+    """The single-env-provider (`--auth jwt`) path: with a resource URL + auth
+    server + `DNA_MCP_SCOPES_SUPPORTED`, the scope reaches the RemoteAuthProvider's
+    PRM advertisement (`_scopes_supported`) — and NOT `required_scopes` (advertise,
+    don't hard-require: the full-vs-short-form mismatch would reject valid tokens)."""
+    from fastmcp.server.auth.providers.jwt import RSAKeyPair
+
+    kp = RSAKeyPair.generate()
+    scope = "api://dna-mcp-dnacloud/user_impersonation"
+    monkeypatch.setenv("DNA_MCP_JWT_PUBLIC_KEY", kp.public_key)
+    monkeypatch.setenv("DNA_MCP_JWT_ISSUER", _ISSUER)
+    monkeypatch.setenv("DNA_MCP_JWT_AUDIENCE", _AUDIENCE)
+    monkeypatch.setenv("DNA_MCP_RESOURCE_URL", "http://127.0.0.1:9999")
+    monkeypatch.setenv("DNA_MCP_AUTH_SERVERS", _ISSUER)
+    monkeypatch.setenv("DNA_MCP_SCOPES_SUPPORTED", scope)
+
+    prov = A.jwt_provider_from_env()
+    assert prov._scopes_supported == [scope]
+    # advertise, don't require — the token's short `scp` must not be rejected.
+    assert list(getattr(prov, "required_scopes", []) or []) == []
+
+
+def test_jwt_provider_from_env_no_scopes_when_env_unset(monkeypatch):
+    """Without `DNA_MCP_SCOPES_SUPPORTED`, PRM advertises no scope (unchanged
+    behavior) — the env is the only source, never a hard-coded default."""
+    from fastmcp.server.auth.providers.jwt import RSAKeyPair
+
+    kp = RSAKeyPair.generate()
+    monkeypatch.setenv("DNA_MCP_JWT_PUBLIC_KEY", kp.public_key)
+    monkeypatch.setenv("DNA_MCP_JWT_ISSUER", _ISSUER)
+    monkeypatch.setenv("DNA_MCP_JWT_AUDIENCE", _AUDIENCE)
+    monkeypatch.setenv("DNA_MCP_RESOURCE_URL", "http://127.0.0.1:9999")
+    monkeypatch.setenv("DNA_MCP_AUTH_SERVERS", _ISSUER)
+    monkeypatch.delenv("DNA_MCP_SCOPES_SUPPORTED", raising=False)
+
+    prov = A.jwt_provider_from_env()
+    assert not getattr(prov, "_scopes_supported", None)
+
+
+def test_build_auth_from_config_advertises_env_scopes(monkeypatch):
+    """The multi-provider (`--auth config`) path: an explicit arg wins, else the
+    env `DNA_MCP_SCOPES_SUPPORTED` flows into the RemoteAuthProvider's PRM."""
+    provs = [
+        A.ProviderConfig(
+            type="entra", tenant_claim="tid",
+            issuer="https://login.microsoftonline.com/common/v2.0",
+            audience="api://dna-mcp-dnacloud",
+            jwks_uri="https://login.microsoftonline.com/common/discovery/v2.0/keys",
+        )
+    ]
+    scope = "api://dna-mcp-dnacloud/user_impersonation"
+    monkeypatch.setenv("DNA_MCP_SCOPES_SUPPORTED", scope)
+    prov = A.build_auth_from_config(
+        provs, resource_url="http://127.0.0.1:9999",
+        authorization_servers=["https://login.microsoftonline.com/common/v2.0"],
+    )
+    assert prov._scopes_supported == [scope]
+    assert list(getattr(prov, "required_scopes", []) or []) == []
+
+    # an explicit arg overrides the env.
+    prov2 = A.build_auth_from_config(
+        provs, resource_url="http://127.0.0.1:9999",
+        authorization_servers=["https://login.microsoftonline.com/common/v2.0"],
+        scopes_supported=["dna.read"],
+    )
+    assert prov2._scopes_supported == ["dna.read"]
+
+
 # ── end-to-end: real JWT + HTTP + tenant-scoped composition ───────────────
 
 

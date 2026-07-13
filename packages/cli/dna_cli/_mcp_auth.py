@@ -40,6 +40,7 @@ from dataclasses import dataclass
 from typing import Any
 
 # Env knobs (all optional; sensible defaults).
+_ENV_SCOPES_SUPPORTED = "DNA_MCP_SCOPES_SUPPORTED"  # comma-separated OAuth scopes to advertise in PRM
 _ENV_TENANT_CLAIM = "DNA_MCP_TENANT_CLAIM"          # claim key holding the tenant
 _ENV_TENANT_SCOPE_PREFIX = "DNA_MCP_TENANT_SCOPE_PREFIX"  # e.g. "tenant:" in scopes
 DEFAULT_TENANT_CLAIM = "tenant"
@@ -109,6 +110,29 @@ def tenant_scope_prefix() -> str:
     """The scope prefix a tenant may be encoded under (``DNA_MCP_TENANT_SCOPE_PREFIX``,
     default ``tenant:`` → a ``tenant:acme`` scope means tenant ``acme``)."""
     return os.environ.get(_ENV_TENANT_SCOPE_PREFIX) or DEFAULT_TENANT_SCOPE_PREFIX
+
+
+def scopes_supported_from_env() -> list[str] | None:
+    """The OAuth scopes to ADVERTISE in Protected-Resource-Metadata (RFC 9728),
+    from ``DNA_MCP_SCOPES_SUPPORTED`` (comma-separated). Returns ``None`` when unset.
+
+    This drives PRM's ``scopes_supported`` — the list an MCP client (e.g. VS Code)
+    reads to learn WHICH scope to request from the authorization server. Without it,
+    a client that discovers the resource has no scope to ask for and can stall at
+    the IdP (the Entra ``--auth jwt`` symptom).
+
+    **Azure scope-format nuance** (PrefectHQ/fastmcp#3002): advertise the FULL scope
+    URI here (e.g. ``api://dna-mcp-dnacloud/user_impersonation``) — the token's
+    ``scp`` claim carries only the SHORT form (``user_impersonation``). So this value
+    belongs ONLY in the PRM advertisement, NEVER in the JWTVerifier's
+    ``required_scopes`` (a full-vs-short mismatch would reject valid tokens). Advertise
+    only; do not hard-require.
+    """
+    raw = os.environ.get(_ENV_SCOPES_SUPPORTED)
+    if not raw:
+        return None
+    scopes = [s.strip() for s in raw.split(",") if s.strip()]
+    return scopes or None
 
 
 def plan_claim_key() -> str:
@@ -610,6 +634,7 @@ def jwt_provider_from_env() -> Any:
             verifier,
             base_url=resource_url,
             authorization_servers=[s.strip() for s in auth_servers.split(",") if s.strip()],
+            scopes_supported=scopes_supported_from_env(),
         )
     return verifier
 
@@ -711,6 +736,11 @@ def build_auth_from_config(
         )
 
     composite = _multi_provider_verifier(providers)
+
+    # An explicit arg wins; otherwise advertise the env-configured scopes in PRM
+    # (same full-scope-only-in-PRM nuance as the single-provider path above).
+    if scopes_supported is None:
+        scopes_supported = scopes_supported_from_env()
 
     resource_url = resource_url or os.environ.get("DNA_MCP_RESOURCE_URL")
     if authorization_servers is None:
