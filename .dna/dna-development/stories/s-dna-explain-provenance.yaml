@@ -7,7 +7,7 @@ spec:
   description: 'Ship ''dna explain <agent>'' + build_prompt(explain=True): composed
     prompt PLUS section provenance map (source file, hash, version, layer/overlay
     origin), byte-equal gate. Ref sp-exp-provenance.'
-  status: in-progress
+  status: review
   feature: f-dna-cloud-intelligence
   acceptance_criteria:
   - Given an agent, When build_prompt(explain=True), Then it returns the prompt plus
@@ -22,7 +22,7 @@ spec:
     clean.'
   definition_of_done_source: claude-code
   created_at: '2026-07-13T11:02:55+00:00'
-  updated_at: '2026-07-13T11:44:02+00:00'
+  updated_at: '2026-07-13T11:49:06+00:00'
   timeline:
   - at: '2026-07-13T11:02:55+00:00'
     actor: claude-code
@@ -57,6 +57,12 @@ spec:
       \ overlay FS end-to-end) + CLI test_explain_cmd (3, byte-equal vs emit) + TS\
       \ explain-provenance (4). Docs regen + cli-tour prose + guards limpos."
     commit_ref: 74dbb75514f925e050f264bee07ef058ed921979
+  - at: '2026-07-13T11:49:06+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
   produces:
   - kind: Plan
     name: plan-s-dna-explain-provenance

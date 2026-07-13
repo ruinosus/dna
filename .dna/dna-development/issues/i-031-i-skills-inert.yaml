@@ -37,3 +37,9 @@ spec:
       \ sobrevive emit (agent-framework) + byte-equal. Design call: NAO emiti skill\
       \ como tool-schema separado (skill != tool JSON schema; decisao maior) \u2014\
       \ skill viaja nas instructions compostas, exatamente onde Soul/Guardrail viajam."
+  - at: '2026-07-13T11:48:42+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Fix em review \u2014 PR #102 (https://github.com/ruinosus/dna/pull/102).\
+      \ Resolve no merge."
