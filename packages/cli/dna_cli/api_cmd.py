@@ -72,6 +72,7 @@ def serve(scope: str | None, base_dir: str | None, host: str, port: int,
       GET    /v1/repos?tenant=                     -> {repos:[...]}
       GET    /v1/board?scope=&tenant=              -> {counts, totals, recent}
       PUT    /v1/tenant-plan                       -> billing->runtime TenantPlan write {tenant, tier_id, ...}
+      POST   /v1/tenants/{tid}/provision-owner     -> first-login Owner bootstrap {user} (idempotent)
 
     Every endpoint reads/writes through the SAME live kernel `dna` commands +
     `dna mcp serve` use — this is a second HTTP face over one core, not a copy.
