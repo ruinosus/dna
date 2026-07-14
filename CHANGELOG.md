@@ -11,6 +11,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-07-13
+
+### Added
+
+- **`POST /v1/tenants/{tid}/provision-owner` — first-login tenant-Owner
+  bootstrap** (C3, #111). Closes the DNA Cloud gap where a brand-new tenant had
+  zero `Membership` docs, so its first signed-in user hit a `403` on every
+  membership write and nothing ever made them Owner of their own tenant.
+  - **`provision_tenant_owner_impl`** (core `dna.application.runtime`) grants the
+    user an org-scope Owner `Membership` for every referenced org (+ a
+    project-scope Owner for any orgless project), keyed by the tenant (`tid`).
+  - **Idempotent + first-owner-only**: a no-op once any Owner exists, so it is
+    safe to call on every render and a later joiner never auto-escalates.
+  - The hosted portal calls it (best-effort, shared-bearer) before the first
+    member read, so the founder resolves `can_manage: true` and can add members.
+
 ## [0.13.0] - 2026-07-13
 
 ### Added
