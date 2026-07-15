@@ -747,3 +747,151 @@ def _load_body(s, kind: str, name: str, body_field: str) -> str | None:
     spec = doc.spec if isinstance(doc.spec, dict) else {}
     val = spec.get(body_field)
     return val if isinstance(val, str) else None
+
+
+# ─── wire (Layer 2 — DNA feeds Spec Kit's agent over MCP) ─────────────────────
+
+
+@specify.command("wire")
+@click.option("--dir", "dir_opt", default=".",
+              help="Project directory to wire (default: current directory).")
+@click.option("--tools", "tools_opt", default=None,
+              help="Comma-separated agents to project the DNA MCP config for "
+                   "(claude, cursor, copilot, opencode — or 'all'). "
+                   "Default: claude,copilot.")
+@click.option("--source-url", "source_url", default=None,
+              help="DNA_SOURCE_URL to pin in the stdio block (default: the "
+                   "ambient DNA_SOURCE_URL / DNA_BASE_DIR the `dna` CLI reads, "
+                   "so the wired agent sees the SAME DNA).")
+@click.option("--http", "http_url", default=None, metavar="URL",
+              help="Wire a REMOTE Streamable-HTTP endpoint (a hosted "
+                   "`dna mcp serve --transport http`) instead of spawning a "
+                   "local stdio server. Mutually exclusive with --source-url.")
+@click.option("--force", is_flag=True,
+              help="Replace an existing `dna` server entry (default: leave it "
+                   "and report 'skipped'). Other servers are always preserved.")
+@click.option("--dry-run", is_flag=True, help="Preview the projections; write nothing.")
+@click.option("--json", "as_json", is_flag=True, help="Machine-readable output.")
+def wire(dir_opt, tools_opt, source_url, http_url, force, dry_run, as_json) -> None:
+    """Project the DNA MCP server into each agent's MCP config (ADR Layer 2).
+
+    Spec Kit drives whichever agent you chose at ``specify init``; this points
+    that agent at the LIVE DNA over MCP, so mid-run it has DNA's **memory**
+    (recall/remember), **soul** (compose_prompt = Soul + Guardrails, composed
+    live + tenant-aware) and the **board** (sdlc_digest/list_stories) — the SAME
+    context whether Spec Kit drives Copilot or Claude. One DNA endpoint, N
+    per-agent projections (the same philosophy as ``dna init``'s skill
+    projection). Skills themselves travel via ``dna init`` (byte-faithful into
+    the agent's skill dir); run both to fully ground a Spec Kit run in DNA.
+
+    \b
+      dna specify wire                         # here, claude+copilot, stdio
+      dna specify wire --tools all             # every supported agent
+      dna specify wire --http https://h/mcp/   # a hosted remote DNA MCP
+      dna specify wire --dry-run --json        # preview; write nothing
+
+    Non-destructive + idempotent: other MCP servers are preserved, and a
+    re-run leaves an existing `dna` entry untouched unless --force is given.
+    """
+    import json as _json
+
+    from dna_cli._ctx import _resolve_source_url
+    from dna_cli._speckit_mcp import (
+        SERVER_KEY,
+        TOOL_MCP_TARGETS,
+        build_server_block,
+        merge_config,
+        parse_tools,
+    )
+
+    if http_url and source_url:
+        raise fail("--http and --source-url are mutually exclusive "
+                   "(--http wires a remote endpoint; --source-url pins the stdio source).")
+
+    target_dir = Path(dir_opt)
+    if not target_dir.is_dir():
+        raise fail(f"--dir {dir_opt!r} is not an existing directory")
+    target_dir = target_dir.resolve()
+
+    try:
+        tools = parse_tools(tools_opt or "claude,copilot")
+    except ValueError as exc:
+        raise fail(f"--tools: {exc}")
+
+    # Resolve the source URL to pin (stdio only). An explicit --source-url wins;
+    # else the ambient env the `dna` CLI itself reads, so the wired agent's
+    # `dna mcp serve` sees the identical DNA. (For --http the source lives on the
+    # server, so no env is injected.)
+    effective_source = None if http_url else (source_url or _resolve_source_url())
+
+    results: list[dict[str, Any]] = []
+    for tool in tools:
+        target = TOOL_MCP_TARGETS[tool]
+        cfg_path = target_dir / target.config_rel
+        existing: dict[str, Any] | None = None
+        if cfg_path.is_file():
+            try:
+                existing = _json.loads(cfg_path.read_text(encoding="utf-8"))
+            except _json.JSONDecodeError as exc:
+                raise fail(f"{target.config_rel}: not valid JSON ({exc}); "
+                           f"fix it or move it aside before wiring.")
+            if not isinstance(existing, dict):
+                raise fail(f"{target.config_rel}: expected a JSON object at the root.")
+        block = build_server_block(
+            target.schema, source_url=effective_source, http_url=http_url
+        )
+        new_cfg, outcome = merge_config(existing, target, block, force=force)
+        results.append({
+            "tool": tool, "config": target.config_rel, "outcome": outcome,
+            "server_key": SERVER_KEY, "block": block, "_path": cfg_path, "_cfg": new_cfg,
+        })
+
+    if as_json:
+        print_json({
+            "dir": str(target_dir),
+            "dry_run": dry_run,
+            "transport": "http" if http_url else "stdio",
+            "source_url": effective_source,
+            "targets": [
+                {k: v for k, v in r.items() if not k.startswith("_")} for r in results
+            ],
+        })
+        if dry_run:
+            return
+    elif dry_run:
+        click.secho(f"DNA MCP → spec-kit agent configs (dry-run) — {target_dir}",
+                    fg="cyan", bold=True)
+        for r in results:
+            click.echo(f"  {r['outcome']:8} {r['tool']:9} {r['config']}")
+        click.secho("\nnothing written (dry-run).", fg="yellow")
+        return
+
+    # Write (skip untouched files so a re-run never churns bytes).
+    for r in results:
+        if r["outcome"] == "skipped":
+            continue
+        path: Path = r["_path"]
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(_json.dumps(r["_cfg"], indent=2) + "\n", encoding="utf-8")
+
+    if not as_json:
+        transport = "remote (HTTP)" if http_url else "stdio"
+        click.secho(
+            f"Wired DNA MCP ({transport}) into {len(tools)} agent config(s):",
+            fg="green", bold=True,
+        )
+        for r in results:
+            color = "yellow" if r["outcome"] == "skipped" else "green"
+            click.secho(f"  {r['outcome']:8} {r['tool']:9} {r['config']}", fg=color)
+        n_skipped = sum(1 for r in results if r["outcome"] == "skipped")
+        if n_skipped:
+            click.secho("\nre-run with --force to replace an existing `dna` entry.",
+                        fg="yellow")
+        click.echo(
+            "\nNow a Spec Kit run driving these agents reaches DNA live over MCP:\n"
+            "  memory  recall / remember / list_memories\n"
+            "  soul    compose_prompt (Soul + Guardrails, composed live + tenant-aware)\n"
+            "  board   sdlc_digest / list_stories / get_adr\n"
+            "Skills travel separately via `dna init` (byte-faithful into the agent's "
+            "skill dir)."
+        )

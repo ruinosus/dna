@@ -36,6 +36,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     that pins each phase to its `.specify/` artifact. `spec-kit` joins
     `superpowers` as an artifact-gated methodology (spec/plan must exist to leave
     the phase).
+- **`dna specify wire` — DNA feeds Spec Kit's agent live over MCP**
+  (`f-speckit-live-feed`, ADR *ADR-spec-kit-adoption* **Layer 2**). Where
+  `import`/`export` capture a run *after* it happens, `wire` feeds DNA *into* a
+  run *while* it happens: it projects the **DNA MCP server block** into each
+  agent's *own* MCP config file — the same "one source → N projections"
+  philosophy as `dna init`'s skill projection — so a Spec-Kit-driven agent
+  reaches the live DNA over MCP mid-run: **memory** (`recall`/`remember`),
+  **soul** (`compose_prompt` = Soul + Guardrails, composed live + tenant-aware)
+  and the **board** (`sdlc_digest`/`list_stories`) — the *same* context whether
+  Spec Kit drives Copilot or Claude.
+  - Projects the correct per-agent shape: `claude`/`cursor` → `mcpServers` in
+    `.mcp.json`/`.cursor/mcp.json`; `copilot` → `servers` (`type: stdio`) in
+    `.vscode/mcp.json`; `opencode` → `mcp` (`type: local`) in `opencode.json`.
+    The stdio block pins `DNA_SOURCE_URL` to the source the `dna` CLI already
+    reads. `--http <url>` wires a hosted remote `dna mcp serve` instead.
+  - Non-destructive + idempotent: other MCP servers are preserved; a re-run
+    leaves an existing `dna` entry byte-identical unless `--force`. `--dry-run
+    --json` previews. Skills continue to travel via `dna init` (byte-faithful
+    into the agent's skill dir) — the two commands together fully ground a run.
+  - Guide: [Spec Kit + DNA's live memory over MCP](docs/guides/spec-kit-live-memory.md).
 - **Workspace tenancy foundation — `Workspace` + `WorkspaceMembership` Kinds**
   (ADR "Model B", `f-ws-kinds` F1). Two GLOBAL record Kinds that make cross-org
   collaboration expressible (the GitHub/Slack shape): a DNA-native **workspace**
