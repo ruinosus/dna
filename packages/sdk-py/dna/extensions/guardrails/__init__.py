@@ -143,3 +143,9 @@ class GuardrailExtension:
 
     def register(self, kernel: ExtensionHost) -> None:
         kernel.kind(GuardrailKind())
+        # Layer 3 (spec-kit adoption): the constitution Guardrail becomes a
+        # LIVE, no-deploy, overridable write-time gate. Registered as a pre_save
+        # veto so flipping the constitution's severity enforces on the next
+        # write with zero redeploy.
+        from dna.extensions.guardrails.write_guards import register_constitution_guard
+        register_constitution_guard(kernel)
