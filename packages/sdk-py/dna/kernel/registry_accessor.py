@@ -46,6 +46,11 @@ class RegistryAccessor:
     # dna-cloud's Stripe webhook writes it; the SDK only reads it. Same
     # _lib-direct rationale.
     _TENANT_PLAN_REGISTRY_SCOPE = SYSTEM_SCOPE
+    # WorkspaceMembership (identity→workspace grant, ADR "Model B") is GLOBAL —
+    # _lib-resident like TenantPlan (the tenancy boundary lives above any single
+    # workspace). The auth→workspace resolver reads ALL grants here and filters
+    # by the verified identity in pure core. Same _lib-direct rationale.
+    _WORKSPACE_MEMBERSHIP_REGISTRY_SCOPE = SYSTEM_SCOPE
 
     def __init__(self, kernel: "RegistryAccessorHost") -> None:
         self._k = kernel
@@ -155,6 +160,37 @@ class RegistryAccessor:
             if (r.get("spec") or {}).get("tenant") == tenant:
                 return r
         return None
+
+    async def workspace_memberships(self) -> list[dict]:
+        """List EVERY ``WorkspaceMembership`` grant from the _lib registry (ADR
+        "Model B").
+
+        Returns the RAW DICT rows (callers read ``m["spec"][...]``) — the full
+        set, unfiltered: the auth→workspace resolver
+        (:func:`dna.tenancy.resolution.workspace_for_identity`) filters by the
+        VERIFIED identity in pure core. An EMPTY list is meaningful: it means the
+        source never opted into workspaces (OSS / pre-Model-B), and the auth
+        bridge then falls back to the legacy tid tenancy — so this must
+        distinguish "no grants configured" ([]) from a read failure.
+
+        _lib-direct — WorkspaceMembership is GLOBAL and NOT in _INHERITABLE_KINDS
+        so per-scope inheritance does not surface it. Fail-soft: a registry glitch
+        degrades to ``[]`` (logged loud). NOTE the deny-on-no-membership
+        invariant lives in the resolver, not here — a fail-soft ``[]`` on a
+        transient error deliberately degrades to the legacy path, never to
+        "all workspaces"."""
+        try:
+            return [
+                r async for r in self._k.query(
+                    self._WORKSPACE_MEMBERSHIP_REGISTRY_SCOPE, "WorkspaceMembership"
+                )
+            ]
+        except Exception as e:  # noqa: BLE001
+            logger.warning(
+                "workspace_memberships: registry query failed (auth resolution "
+                "degrades to the legacy tid path): %s", e,
+            )
+            return []
 
     async def voice_policy(self, name: str = "default") -> dict | None:
         """Resolve a VoicePolicy from the _lib registry by metadata name.

@@ -509,6 +509,81 @@ def enforce_tenant_from_context(requested: str | None) -> str | None:
     )
 
 
+# ── Model B: workspace resolution (identity → membership → workspace_id) ────
+#
+# The ADR "Model B" rework of the tenant-from-tid bridge above: the DNA tenancy
+# dimension resolves from the caller's VERIFIED IDENTITY + WorkspaceMembership,
+# NOT from the Azure `tid`. The PURE policy (Identity/Membership/resolve_workspace)
+# lives in the CORE SDK (`dna.tenancy.resolution`) so it is transport-agnostic and
+# has a byte-behavioral TS twin (guarded by tests/parity-fixtures/workspace-
+# resolution/). Here is only the FastMCP+kernel glue: read the live token, load
+# the grants, apply the pure resolver.
+
+
+def identity_from_context() -> Any:
+    """The verified :class:`dna.tenancy.resolution.Identity` of the CURRENT MCP
+    request, or ``None`` when there is no token (stdio / unauthenticated).
+
+    Reads the request's access token via FastMCP's ``get_access_token`` and
+    distills ONLY verified claims (oid / email / preferred_username / upn / tid).
+    The per-provider tenant-claim markers stamped by the multi-provider composite
+    are irrelevant here — the identity is read from the standard Entra identity
+    claims, not the (now-demoted) tenant claim."""
+    from dna.tenancy.resolution import identity_from_token
+
+    try:
+        from fastmcp.server.dependencies import get_access_token
+    except ModuleNotFoundError:  # pragma: no cover — no fastmcp ⇒ no auth
+        return None
+
+    token = get_access_token()
+    if token is None:
+        return None
+    claims = getattr(token, "claims", None) or {}
+    return identity_from_token(claims)
+
+
+async def enforce_workspace_from_context(live: Any, requested: str | None) -> str | None:
+    """Resolve the **effective workspace** for the current MCP request (Model B).
+
+    The rework of :func:`enforce_tenant_from_context`: instead of reading the
+    token's ``tid`` as the tenant, resolve the workspace from the caller's
+    verified identity + its active :class:`WorkspaceMembership` grants. With no
+    token (stdio / unauthenticated) this is an identity over ``requested`` — the
+    base path is untouched.
+
+    Fail-OPEN-to-legacy seam (mirrors the quota guard's "no tiers configured →
+    no-op"): when the source has **no WorkspaceMembership grants at all** it never
+    opted into workspaces (OSS / pre-Model-B), so this falls back to the legacy
+    ``tid`` tenancy (:func:`enforce_tenant_from_context`) — the existing
+    single-tenant-token + self-host deployments keep working unchanged. Model B is
+    ENGAGED only once workspaces exist (DNA Cloud, where the F1 seed created
+    workspace #1 + the founder's grant); THEN the ``tid`` stops being the tenancy
+    key and a request with no active membership is denied (fail-closed).
+
+    Raises :class:`dna.tenancy.resolution.CrossWorkspaceError` on a no-membership /
+    cross-workspace authenticated request (surfaced as a tool error by the caller).
+    """
+    from dna.tenancy.resolution import Membership, resolve_workspace
+
+    if not token_present_in_context():
+        return requested  # stdio / local → identity passthrough (base path).
+
+    identity = identity_from_context()
+    grants_raw = await live.kernel.workspace_memberships()
+    if not grants_raw:
+        # No workspaces configured → legacy tid tenancy (OSS / pre-Model-B).
+        return enforce_tenant_from_context(requested)
+
+    memberships = [Membership.from_spec(g.get("spec") or {}) for g in grants_raw]
+    return resolve_workspace(
+        token_present=True,
+        identity=identity,
+        requested=requested,
+        memberships=memberships,
+    )
+
+
 def token_present_in_context() -> bool:
     """True when the CURRENT MCP request carries a verified access token.
 

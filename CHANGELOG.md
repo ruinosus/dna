@@ -81,6 +81,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     id **equals the founder's live Azure tid**, so every existing row is already
     that workspace's data → **zero migration**. Plus an owner
     `WorkspaceMembership` for his identity.
+- **Workspace tenancy resolution — the tenant is resolved from membership, not
+  the org id** (ADR "Model B", `f-ws-resolution` F2). The heart of Model B: the
+  DNA tenancy dimension (a `workspace_id`) now resolves from the caller's
+  **verified identity → active `WorkspaceMembership`**, never from the Azure `tid`
+  (which becomes provenance only). A read/write is served only if the verified
+  identity holds an active membership in the resolved workspace — resolved
+  **before** the source is touched; otherwise it is denied (fail-closed).
+  - **The pure resolver (`dna.tenancy.resolution`, Py + TS twin)** — a
+    transport-agnostic policy: `identity_from_token` (verified Entra
+    `oid`/`email`/`preferred_username`/`upn`/`tid` claims only) →
+    `workspace_for_identity`. An active grant matches on the durable `oid` when
+    bound, else on the **verified email** while still unbound (the F1 founder
+    seed); a `pending` invite authorizes nothing. No membership → deny; a
+    requested workspace the identity is not a member of → deny; a sole membership
+    resolves by default; multiple with no selector → deny (ambiguous). Guarded by
+    shared fixtures (`tests/parity-fixtures/workspace-resolution/`) that gate
+    Py↔TS parity.
+  - **MCP wiring (`dna_cli._mcp_auth` / `_mcp_server`)** — the `tid → tenant` step
+    is replaced by `enforce_workspace_from_context` (identity + membership). A
+    source with **no `WorkspaceMembership` grants configured** falls back to the
+    legacy `tid` tenancy, so OSS / self-host / stdio deployments are untouched;
+    Model B engages only once workspaces exist. `kernel.workspace_memberships()`
+    reads the GLOBAL grants `_lib`-direct (mirrors `tenant_plan`).
+  - **Physical isolation (`LiveDna.default_scope` / `scope_is_bound`)** — the
+    `(scope, tenant=workspace_id)` source keys per workspace: a scope-less read
+    resolves to a per-workspace default (vendor workspace #1 → the base scope,
+    every other → `tenant-<workspace_id>`), and a resolved workspace may name
+    only its own scope (a cross-workspace `scope=` is denied). Enabled by
+    `DNA_VENDOR_WORKSPACE` (unset = single-tenant, unchanged). A no-cross-workspace-
+    leakage e2e over real JWT + HTTP is an acceptance test.
 
 ## [0.14.0] - 2026-07-13
 

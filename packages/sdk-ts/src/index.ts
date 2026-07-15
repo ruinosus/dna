@@ -299,3 +299,20 @@ export { DeclarativeKindPort, storageDictToDescriptor } from "./kernel/meta.js";
 export { KindDefinitionSchema, KindDefinitionSpecSchema, KIND_DEFINITION_API_VERSION, KIND_DEFINITION_KIND } from "./kernel/models.js";
 export type { TypedKindDefinition } from "./kernel/models.js";
 export { DefaultLayerResolver, deepMerge } from "./kernel/layer-resolver.js";
+// f-ws-resolution (Model B) — the pure workspace-resolution policy: a verified
+// identity → active WorkspaceMembership → workspace_id (never the Azure tid).
+// Twin of dna/tenancy/resolution.py; guarded by tests/parity-fixtures/workspace-resolution/.
+export {
+  CrossWorkspaceError,
+  DEFAULT_OID_CLAIM,
+  DEFAULT_EMAIL_CLAIMS,
+  DEFAULT_TID_CLAIM,
+  activeWorkspacesFor,
+  identityFromToken,
+  membershipFromSpec,
+  membershipMatchesIdentity,
+  normalizeEmail,
+  resolveWorkspace,
+  workspaceForIdentity,
+} from "./tenancy/resolution.js";
+export type { Identity, Membership } from "./tenancy/resolution.js";
