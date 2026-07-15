@@ -1,6 +1,6 @@
 # ADR: Microsoft On-Behalf-Of (OBO) for the DNA MCP server
 
-- **Status**: Proposed
+- **Status**: Accepted (2026-07-15 — Barna approved; §8 ratified to the recommended options)
 - **Date**: 2026-07-15
 - **Deciders**: Barna (owner/architect)
 - **Author**: claude-code
@@ -359,7 +359,16 @@ group.
 
 ---
 
-## 8. Open decisions for Barna
+## 8. Decisions (ratified by Barna, 2026-07-15)
+
+Barna approved the ADR and the recommended option on every point:
+1. **Hybrid tool execution** — built-in Python + Tool-Kind data surface + config enablement. NOT a declarative execute-HTTP engine.
+2. **First group: calendar-read** (`ms_calendar_list`, `Calendars.Read`).
+3. **Secret for the PoC; certificate / ACA managed-identity for prod** (prod hardening is a fast-follow, not v1-blocking).
+4. **Per-tool-group incremental consent** (not `.default`).
+5. **Reuse the `dna-mcp-dnacloud` app-reg** (add credential + delegated Graph perms + `knownClientApplications`).
+
+### (original recommendations, for the record)
 
 1. **Built-in vs declarative tool execution.** This ADR **recommends the hybrid**:
    built-in Python execution + data surface (Tool Kind) + config enablement — *not*
