@@ -1,13 +1,21 @@
-"""Story ``s-dna-cloud-plan-by-tenant`` — the billing→enforcement **bridge**.
+"""Story ``s-ws-plan-stripe`` (was ``s-dna-cloud-plan-by-tenant``) — the
+billing→enforcement **bridge**, re-keyed on the WORKSPACE (ADR "Model B").
 
 The MCP quota guard resolves a request's Tier from THREE sources, in order:
 
-    token `plan` claim  →  TenantPlan store (Stripe-written)  →  Free floor
+    token `plan` claim  →  WorkspacePlan store (Stripe-written)  →  Free floor
 
 so enforcement follows billing state (which dna-cloud's Stripe webhook writes into
-the ``TenantPlan`` Kind) even when the token itself carries no plan claim — while
-a token that DOES carry an explicit ``plan`` claim still wins (the store is not
-consulted). The OSS SDK only READS the TenantPlan; no Stripe code lives here.
+the ``WorkspacePlan`` Kind, keyed on the resolved workspace id) even when the token
+itself carries no plan claim — while a token that DOES carry an explicit ``plan``
+claim still wins (the store is not consulted). The OSS SDK only READS the
+WorkspacePlan; no Stripe code lives here.
+
+The tenancy dimension the guard passes into ``kernel.workspace_plan`` is the
+workspace id F2 resolves (identity→membership). With no WorkspaceMembership grants
+seeded here, F2 falls back to the legacy tid tenancy, so the token's ``tenant``
+claim (``acme``) IS the workspace id the store is keyed on — the exact
+zero-regression path (the string is unchanged; only the field/kind name moved).
 
 Two layers:
 
@@ -15,13 +23,13 @@ Two layers:
    (``tier_from_token`` is None), so the guard knows to consult the store; an
    explicit-claim token short-circuits it.
 2. **Integration over a real token context** — a plan-less ``acme`` token with a
-   ``TenantPlan(acme→pro)`` seeded resolves to **pro** caps (many calls sail past
-   the tight Free cap); with NO TenantPlan it falls to **free** (the 3rd call is
-   denied); an explicit ``plan=free`` claim is metered as free EVEN WHEN
-   ``TenantPlan(acme→pro)`` exists (proving the claim wins / the store is skipped).
+   ``WorkspacePlan(acme→pro)`` seeded resolves to **pro** caps (many calls sail
+   past the tight Free cap); with NO WorkspacePlan it falls to **free** (the 3rd
+   call is denied); an explicit ``plan=free`` claim is metered as free EVEN WHEN
+   ``WorkspacePlan(acme→pro)`` exists (proving the claim wins / store is skipped).
 
-The Tier + TenantPlan docs are seeded into the kernel ``_lib`` so
-``kernel.tier`` / ``kernel.tenant_plan`` resolve them.
+The Tier + WorkspacePlan docs are seeded into the kernel ``_lib`` so
+``kernel.tier`` / ``kernel.workspace_plan`` resolve them.
 """
 from __future__ import annotations
 
@@ -40,7 +48,7 @@ from dna_cli import _mcp_quota as Q
 
 def test_plan_less_token_has_no_explicit_claim():
     # No plan claim, no plan scope → tier_from_token is None → the guard will
-    # consult the TenantPlan store (keyed by tenant) before the Free floor.
+    # consult the WorkspacePlan store (keyed by workspace) before the Free floor.
     assert A.tier_from_token({"tenant": "acme"}, ["dna.read"]) is None
 
 
@@ -48,7 +56,7 @@ def test_explicit_plan_claim_is_seen():
     assert A.tier_from_token({"tenant": "acme", "plan": "pro"}, []) == "pro"
 
 
-# ── 2. integration — over a real token context + seeded Tier/TenantPlan ─────
+# ── 2. integration — over a real token context + seeded Tier/WorkspacePlan ──
 #
 # Needs fastmcp (the server + token context) — ``importorskip``s it, exactly like
 # the other MCP suites. The pure tests above run regardless.
@@ -81,21 +89,21 @@ def _tier_doc(tier_id: str, *, calls_per_day: int | None, families: list[str],
     }
 
 
-def _tenant_plan_doc(tenant: str, tier_id: str) -> dict:
-    """A TenantPlan doc — the tenant→Tier assignment dna-cloud's Stripe webhook
-    writes (the OSS SDK only reads it)."""
+def _workspace_plan_doc(workspace_id: str, tier_id: str) -> dict:
+    """A WorkspacePlan doc — the workspace→Tier assignment dna-cloud's Stripe
+    webhook writes (the OSS SDK only reads it)."""
     return {
         "apiVersion": "github.com/ruinosus/dna/cloud/v1",
-        "kind": "TenantPlan",
-        "metadata": {"name": tenant},
-        "spec": {"tenant": tenant, "tier_id": tier_id, "source": "stripe",
-                 "status": "active"},
+        "kind": "WorkspacePlan",
+        "metadata": {"name": workspace_id},
+        "spec": {"workspace_id": workspace_id, "tier_id": tier_id,
+                 "source": "stripe", "status": "active"},
     }
 
 
-async def _seed(dna_dir, *, tenant_plan: tuple[str, str] | None) -> None:
+async def _seed(dna_dir, *, workspace_plan: tuple[str, str] | None) -> None:
     """Seed a tight Free + a roomy Pro Tier into ``_lib`` (so the resolved tier is
-    observable by which cap bites), plus optionally a TenantPlan assignment."""
+    observable by which cap bites), plus optionally a WorkspacePlan assignment."""
     from dna_cli import _mcp_server as M
 
     live = await M.boot_live(base_dir=str(dna_dir))
@@ -110,10 +118,11 @@ async def _seed(dna_dir, *, tenant_plan: tuple[str, str] | None) -> None:
                   families=["definitions", "sdlc", "memory", "emit"],
                   memory_mode="write"),
     )
-    if tenant_plan is not None:
-        tenant, tier_id = tenant_plan
+    if workspace_plan is not None:
+        workspace_id, tier_id = workspace_plan
         await live.kernel.write_document(
-            "_lib", "TenantPlan", tenant, _tenant_plan_doc(tenant, tier_id),
+            "_lib", "WorkspacePlan", workspace_id,
+            _workspace_plan_doc(workspace_id, tier_id),
         )
 
 
@@ -153,7 +162,7 @@ def _verifier_and_mint():
 
 
 def test_plan_less_token_resolves_to_store_tier(dna_dir, http_server):
-    """A plan-less ``acme`` token WITH a ``TenantPlan(acme→pro)`` seeded → the
+    """A plan-less ``acme`` token WITH a ``WorkspacePlan(acme→pro)`` seeded → the
     guard resolves **pro** caps (calls_per_day=10000), so 5 calls (> the Free cap
     of 2) all pass. This is the bridge: enforcement follows the Stripe-written
     assignment even though the token carries no plan claim."""
@@ -163,7 +172,7 @@ def test_plan_less_token_resolves_to_store_tier(dna_dir, http_server):
 
     from dna_cli import _mcp_server as M
 
-    asyncio.run(_seed(dna_dir, tenant_plan=("acme", "pro")))
+    asyncio.run(_seed(dna_dir, workspace_plan=("acme", "pro")))
     verifier, mint = _verifier_and_mint()
     server = M.build_server(base_dir=str(dna_dir), auth=verifier)
     token = mint(tenant="acme", plan=None)  # NO plan claim
@@ -179,7 +188,7 @@ def test_plan_less_token_resolves_to_store_tier(dna_dir, http_server):
 
 
 def test_plan_less_token_no_store_falls_to_free(dna_dir, http_server):
-    """A plan-less ``acme`` token with NO TenantPlan → the Free floor
+    """A plan-less ``acme`` token with NO WorkspacePlan → the Free floor
     (calls_per_day=2), so the 3rd metered call is denied. Proves the fallback
     order bottoms out at Free when the store is empty."""
     pytest.importorskip("fastmcp")
@@ -188,7 +197,7 @@ def test_plan_less_token_no_store_falls_to_free(dna_dir, http_server):
 
     from dna_cli import _mcp_server as M
 
-    asyncio.run(_seed(dna_dir, tenant_plan=None))  # no TenantPlan
+    asyncio.run(_seed(dna_dir, workspace_plan=None))  # no WorkspacePlan
     verifier, mint = _verifier_and_mint()
     server = M.build_server(base_dir=str(dna_dir), auth=verifier)
     token = mint(tenant="acme", plan=None)
@@ -208,7 +217,7 @@ def test_plan_less_token_no_store_falls_to_free(dna_dir, http_server):
 
 def test_explicit_plan_claim_wins_over_store(dna_dir, http_server):
     """A token WITH an explicit ``plan=free`` claim is metered as **free** EVEN
-    when a ``TenantPlan(acme→pro)`` exists — the claim wins and the store is NOT
+    when a ``WorkspacePlan(acme→pro)`` exists — the claim wins and the store is NOT
     consulted. Proven by the Free cap (2) biting on the 3rd call; had the store
     been consulted, pro (10000) would let it through."""
     pytest.importorskip("fastmcp")
@@ -217,7 +226,7 @@ def test_explicit_plan_claim_wins_over_store(dna_dir, http_server):
 
     from dna_cli import _mcp_server as M
 
-    asyncio.run(_seed(dna_dir, tenant_plan=("acme", "pro")))  # store says pro …
+    asyncio.run(_seed(dna_dir, workspace_plan=("acme", "pro")))  # store says pro …
     verifier, mint = _verifier_and_mint()
     server = M.build_server(base_dir=str(dna_dir), auth=verifier)
     token = mint(tenant="acme", plan="free")  # … but the claim says free

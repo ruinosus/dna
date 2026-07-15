@@ -115,6 +115,19 @@ physical `(scope, tenant = workspace_id)` key gives defence in depth: a resolved
 workspace defaults to — and may name — only its own scope, so even a bug upstream
 cannot read another workspace's rows.
 
+### Billing keys on the workspace
+
+Plans attach to the **workspace**, not to an identity or an Azure org. A
+[`WorkspacePlan`](../reference/kinds/record.md#workspaceplan) (`cloud-workspace-plan`)
+maps a `workspace_id` to its current `Tier`; DNA Cloud's Stripe webhook writes it
+(`PUT /v1/workspace-plan`), and the MCP quota guard reads it via
+`kernel.workspace_plan(workspace_id)` — the same resolved workspace id the request
+already keys on. Because the founding workspace's id equals the founder's old
+organization id, a plan written for it keys on the *same* string as before, so the
+switch to workspace-keyed billing is **zero migration**. (The pre-Model-B
+`PUT /v1/tenant-plan` route remains as a deprecated alias that forwards its
+`tenant` body to `workspace_id`, so an already-deployed webhook keeps working.)
+
 ## LayerPolicy — which layers may override which Kinds
 
 Not every Kind should be overridable by every layer. A **`LayerPolicy`**

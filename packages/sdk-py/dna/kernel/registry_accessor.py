@@ -42,12 +42,12 @@ class RegistryAccessor:
     # Tier (DNA Cloud pricing plans) is GLOBAL — _lib-resident like
     # ModelProfile, not inheritable. Same _lib-direct rationale.
     _TIER_REGISTRY_SCOPE = SYSTEM_SCOPE
-    # TenantPlan (tenant→Tier assignment) is GLOBAL — _lib-resident like Tier.
-    # dna-cloud's Stripe webhook writes it; the SDK only reads it. Same
+    # WorkspacePlan (workspace→Tier assignment) is GLOBAL — _lib-resident like
+    # Tier. dna-cloud's Stripe webhook writes it; the SDK only reads it. Same
     # _lib-direct rationale.
-    _TENANT_PLAN_REGISTRY_SCOPE = SYSTEM_SCOPE
+    _WORKSPACE_PLAN_REGISTRY_SCOPE = SYSTEM_SCOPE
     # WorkspaceMembership (identity→workspace grant, ADR "Model B") is GLOBAL —
-    # _lib-resident like TenantPlan (the tenancy boundary lives above any single
+    # _lib-resident like WorkspacePlan (the tenancy boundary lives above any single
     # workspace). The auth→workspace resolver reads ALL grants here and filters
     # by the verified identity in pure core. Same _lib-direct rationale.
     _WORKSPACE_MEMBERSHIP_REGISTRY_SCOPE = SYSTEM_SCOPE
@@ -128,36 +128,39 @@ class RegistryAccessor:
                 return r
         return None
 
-    async def tenant_plan(self, tenant: str) -> dict | None:
-        """Resolve a TenantPlan (a tenant→Tier assignment) from the _lib
-        registry by ``spec.tenant``.
+    async def workspace_plan(self, workspace_id: str) -> dict | None:
+        """Resolve a WorkspacePlan (a workspace→Tier assignment) from the _lib
+        registry by ``spec.workspace_id``.
 
         Returns the RAW DICT row (kernel.query yields raw dicts, not
         Documents — callers read plan["spec"]["tier_id"]) or None when no
-        assignment exists for ``tenant``.
+        assignment exists for ``workspace_id``.
 
-        This is the billing→enforcement bridge read: dna-cloud's Stripe webhook
-        writes the TenantPlan doc; the MCP quota guard reads it here when a
-        token carries no explicit plan claim. _lib-direct — TenantPlan is NOT in
-        _INHERITABLE_KINDS so per-scope inheritance does not surface it. No alias
-        pass: the match is on the ``tenant`` field.
+        This is the billing→enforcement bridge read (ADR "Model B" — billing
+        attaches to the WORKSPACE, not an identity/Azure org): dna-cloud's Stripe
+        webhook writes the WorkspacePlan doc; the MCP quota guard reads it here
+        when a token carries no explicit plan claim. The founding workspace's id
+        == the founder's Azure tid, so an existing assignment keyed on that
+        string resolves unchanged (zero migration). _lib-direct — WorkspacePlan
+        is NOT in _INHERITABLE_KINDS so per-scope inheritance does not surface it.
+        No alias pass: the match is on the ``workspace_id`` field.
         """
         try:
             rows = [
-                r async for r in self._k.query(self._TENANT_PLAN_REGISTRY_SCOPE, "TenantPlan")
+                r async for r in self._k.query(self._WORKSPACE_PLAN_REGISTRY_SCOPE, "WorkspacePlan")
             ]
         except Exception as e:  # noqa: BLE001
             # fail-soft: registry read — a silent None means the guard falls
-            # back to the Free floor for this tenant, so the degradation logs
-            # loud rather than silently downgrading a paying tenant.
+            # back to the Free floor for this workspace, so the degradation logs
+            # loud rather than silently downgrading a paying workspace.
             logger.warning(
-                "tenant_plan: registry query failed for %r (enforcement "
+                "workspace_plan: registry query failed for %r (enforcement "
                 "degrades to no-assignment / Free floor): %s",
-                tenant, e,
+                workspace_id, e,
             )
             return None
         for r in rows:
-            if (r.get("spec") or {}).get("tenant") == tenant:
+            if (r.get("spec") or {}).get("workspace_id") == workspace_id:
                 return r
         return None
 

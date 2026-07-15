@@ -1130,19 +1130,22 @@ async def forget_impl(
     return {"kind": kind, "name": name, "forgotten": not out["already_forgotten"]}
 
 
-# ── cloud: the billing→enforcement bridge write (TenantPlan) ────────────────
+# ── cloud: the billing→enforcement bridge write (WorkspacePlan) ─────────────
 
-# TenantPlan is GLOBAL and _lib-resident (base only, no per-tenant overlay) —
-# the same scope kernel.tenant_plan() reads _lib-direct. The doc NAME equals the
-# tenant so the read matches on spec.tenant, and the write is a natural upsert
-# (write_document keys on name) → idempotent under Stripe's at-least-once retries.
-_TENANT_PLAN_SCOPE = "_lib"
+# WorkspacePlan is GLOBAL and _lib-resident (base only, no per-tenant overlay) —
+# the same scope kernel.workspace_plan() reads _lib-direct. The doc NAME equals
+# the workspace_id so the read matches on spec.workspace_id, and the write is a
+# natural upsert (write_document keys on name) → idempotent under Stripe's
+# at-least-once retries. ADR "Model B": billing keys on the workspace, not the
+# Azure tid; the founding workspace's id == the founder's tid, so a plan written
+# for it keys on the SAME string as before (zero migration).
+_WORKSPACE_PLAN_SCOPE = "_lib"
 _CLOUD_API = "github.com/ruinosus/dna/cloud/v1"
 
 
-async def set_tenant_plan_impl(
+async def set_workspace_plan_impl(
     live: LiveDna,
-    tenant: str,
+    workspace_id: str,
     tier_id: str,
     *,
     source: str = "stripe",
@@ -1150,32 +1153,35 @@ async def set_tenant_plan_impl(
     stripe_subscription_id: str | None = None,
     status: str | None = None,
 ) -> dict[str, Any]:
-    """Upsert the TenantPlan Kind assigning ``tenant`` to ``tier_id`` — the
-    billing→enforcement BRIDGE write that dna-cloud's Stripe webhook drives so
-    runtime quota (``kernel.tenant_plan(tenant)`` in the MCP guard) follows
-    billing state without a redeploy.
+    """Upsert the WorkspacePlan Kind assigning ``workspace_id`` to ``tier_id`` —
+    the billing→enforcement BRIDGE write that dna-cloud's Stripe webhook drives so
+    runtime quota (``kernel.workspace_plan(workspace_id)`` in the MCP guard)
+    follows billing state without a redeploy (ADR "Model B" — billing attaches to
+    the workspace, not an identity/Azure org).
 
-    GLOBAL / ``_lib``-direct: TenantPlan is not tenant-overlaid — the doc lives in
-    ``_lib`` with its NAME == the tenant (== the ``tid`` the MCP token carries), so
-    the guard's ``spec.tenant`` lookup resolves it regardless of the caller's
-    scope. The write is an UPSERT keyed on that name, so a redelivered Stripe event
-    (at-least-once) converges on the same doc — idempotent by construction.
+    GLOBAL / ``_lib``-direct: WorkspacePlan is not tenant-overlaid — the doc lives
+    in ``_lib`` with its NAME == the workspace_id (the opaque value the kernel
+    ``tenant`` dimension carries; the founding workspace's id == the founder's old
+    ``tid``), so the guard's ``spec.workspace_id`` lookup resolves it regardless of
+    the caller's scope. The write is an UPSERT keyed on that name, so a redelivered
+    Stripe event (at-least-once) converges on the same doc — idempotent by
+    construction.
 
     Only the schema-allowed keys are written (the descriptor is
-    ``additionalProperties: false``): ``tenant``/``tier_id`` (required),
+    ``additionalProperties: false``): ``workspace_id``/``tier_id`` (required),
     ``source``, ``status``, the two Stripe ids, and an ISO ``updated_at`` stamp.
     Optional refs are omitted when absent so a status-only transition never nulls a
     previously-recorded customer/subscription id — mirroring the portal store's
     COALESCE-on-update semantics."""
-    tenant = (tenant or "").strip()
+    workspace_id = (workspace_id or "").strip()
     tier_id = (tier_id or "").strip()
-    if not tenant:
-        raise ValueError("tenant is required")
+    if not workspace_id:
+        raise ValueError("workspace_id is required")
     if not tier_id:
         raise ValueError("tier_id is required")
 
     spec: dict[str, Any] = {
-        "tenant": tenant,
+        "workspace_id": workspace_id,
         "tier_id": tier_id,
         "source": source,
         "updated_at": datetime.now(timezone.utc).isoformat(),
@@ -1189,17 +1195,17 @@ async def set_tenant_plan_impl(
 
     raw = {
         "apiVersion": _CLOUD_API,
-        "kind": "TenantPlan",
-        "metadata": {"name": tenant},
+        "kind": "WorkspacePlan",
+        "metadata": {"name": workspace_id},
         "spec": spec,
     }
     # GLOBAL kind → no tenant kwarg (a tenant on a GLOBAL write is rejected).
     await live.kernel.write_document(
-        _TENANT_PLAN_SCOPE, "TenantPlan", tenant, raw, invalidate_mode="doc"
+        _WORKSPACE_PLAN_SCOPE, "WorkspacePlan", workspace_id, raw, invalidate_mode="doc"
     )
     return {
-        "scope": _TENANT_PLAN_SCOPE,
-        "tenant": tenant,
+        "scope": _WORKSPACE_PLAN_SCOPE,
+        "workspace_id": workspace_id,
         "tier_id": tier_id,
         "status": status,
     }

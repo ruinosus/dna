@@ -142,44 +142,46 @@ describe("kernel.tier — caps come from the doc", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TenantPlan Kind + kernel.tenantPlan — the billing→enforcement bridge. The
-// assignment lives in a TenantPlan DOC (which dna-cloud's Stripe webhook writes);
-// the SDK only reads it. TS twin of tests/test_cloud_tenant_plan_kind.py.
+// WorkspacePlan Kind + kernel.workspacePlan — the billing→enforcement bridge
+// (ADR "Model B" — billing keys on the WORKSPACE, not an identity/Azure org).
+// The assignment lives in a WorkspacePlan DOC (which dna-cloud's Stripe webhook
+// writes); the SDK only reads it. TS twin of tests/test_cloud_workspace_plan_kind.py.
 // ---------------------------------------------------------------------------
 
-describe("TenantPlan Kind (descriptor)", () => {
-  it("registers from kinds/tenant-plan.kind.yaml", () => {
+describe("WorkspacePlan Kind (descriptor)", () => {
+  it("registers from kinds/workspace-plan.kind.yaml", () => {
     const k = new Kernel();
     k.load(new CloudExtension());
-    const kp = k.kindPortFor("TenantPlan");
+    const kp = k.kindPortFor("WorkspacePlan");
     expect(kp).not.toBeNull();
-    expect(kp!.alias).toBe("cloud-tenant-plan");
+    expect(kp!.alias).toBe("cloud-workspace-plan");
     expect((kp as any).plane).toBe("record");
     // GLOBAL — a shared base registry, no per-tenant override.
     expect((kp as any).scope).toBe(TenantScope.GLOBAL);
-    expect(kp!.storage.container).toBe("tenant-plans");
+    expect(kp!.storage.container).toBe("workspace-plans");
   });
 
-  it("registers both Tier and TenantPlan, never Plan", () => {
+  it("registers both Tier and WorkspacePlan, never Plan or the old TenantPlan", () => {
     const k = new Kernel();
     k.load(new CloudExtension());
     expect(k.kindPortFor("Tier")).not.toBeNull();
-    expect(k.kindPortFor("TenantPlan")).not.toBeNull();
+    expect(k.kindPortFor("WorkspacePlan")).not.toBeNull();
+    expect(k.kindPortFor("TenantPlan")).toBeNull();
     expect(k.kindPortFor("Plan")).toBeNull();
   });
 });
 
-function tenantPlanRaw(tenant: string, tierId: string) {
+function workspacePlanRaw(workspaceId: string, tierId: string) {
   return {
     apiVersion: "github.com/ruinosus/dna/cloud/v1",
-    kind: "TenantPlan",
-    metadata: { name: tenant },
-    spec: { tenant, tier_id: tierId, source: "stripe", status: "active" },
+    kind: "WorkspacePlan",
+    metadata: { name: workspaceId },
+    spec: { workspace_id: workspaceId, tier_id: tierId, source: "stripe", status: "active" },
   };
 }
 
-function tenantPlanKernel(): { k: Kernel; libDocs: unknown[] } {
-  const libDocs: unknown[] = [tenantPlanRaw("acme", "pro")];
+function workspacePlanKernel(): { k: Kernel; libDocs: unknown[] } {
+  const libDocs: unknown[] = [workspacePlanRaw("acme", "pro")];
   const src: any = {
     async saveDocument() { return "v1"; },
     async deleteDocument() {},
@@ -203,25 +205,35 @@ function tenantPlanKernel(): { k: Kernel; libDocs: unknown[] } {
   return { k, libDocs };
 }
 
-describe("kernel.tenantPlan — the assignment comes from the doc", () => {
-  it("resolves a tenant to its assigned tier_id", async () => {
-    const { k } = tenantPlanKernel();
-    const plan = await k.tenantPlan("acme");
+describe("kernel.workspacePlan — the assignment comes from the doc", () => {
+  it("resolves a workspace to its assigned tier_id", async () => {
+    const { k } = workspacePlanKernel();
+    const plan = await k.workspacePlan("acme");
     expect(plan).not.toBeNull();
     expect((plan!.spec as any).tier_id).toBe("pro");
-    expect((plan!.spec as any).tenant).toBe("acme");
+    expect((plan!.spec as any).workspace_id).toBe("acme");
   });
 
-  it("returns null for an unknown tenant (guard falls to Free floor)", async () => {
-    const { k } = tenantPlanKernel();
-    expect(await k.tenantPlan("globex")).toBeNull();
+  it("returns null for an unknown workspace (guard falls to Free floor)", async () => {
+    const { k } = workspacePlanKernel();
+    expect(await k.workspacePlan("globex")).toBeNull();
   });
 
   it("assignment is data, not code — rewriting the doc changes the re-read", async () => {
-    const { k, libDocs } = tenantPlanKernel();
-    expect(((await k.tenantPlan("acme"))!.spec as any).tier_id).toBe("pro");
+    const { k, libDocs } = workspacePlanKernel();
+    expect(((await k.workspacePlan("acme"))!.spec as any).tier_id).toBe("pro");
     // dna-cloud's Stripe webhook downgrades acme to free on cancel — a data edit.
     (libDocs[0] as any).spec.tier_id = "free";
-    expect(((await k.tenantPlan("acme"))!.spec as any).tier_id).toBe("free");
+    expect(((await k.workspacePlan("acme"))!.spec as any).tier_id).toBe("free");
+  });
+
+  it("zero-migration: founder workspace id == old tid resolves unchanged", async () => {
+    // Workspace #1's id equals the founder's pre-Model-B Azure tid — a plan keyed
+    // on that same string resolves with no data move (mirrors F1/F2).
+    const { k, libDocs } = workspacePlanKernel();
+    (libDocs as unknown[]).push(workspacePlanRaw("c5b891f7", "enterprise"));
+    const plan = await k.workspacePlan("c5b891f7");
+    expect(plan).not.toBeNull();
+    expect((plan!.spec as any).tier_id).toBe("enterprise");
   });
 });
