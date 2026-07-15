@@ -1,33 +1,61 @@
-# dna.config.sample.yaml — REFERENCE ONLY (do not point the running server at this).
+# dna.config.sample.yaml — REFERENCE for `dna mcp serve --auth config` (and
+# `dna api serve --auth config`), the pluggable N-provider IdP layer.
 #
-# The hosted MCP server today wires Entra auth from the ENVIRONMENT (the
-# `--auth jwt` provider reads DNA_MCP_JWKS_URI / _ISSUER / _AUDIENCE /
-# _RESOURCE_URL / _AUTH_SERVERS / DNA_MCP_TENANT_CLAIM — all set by the bicep,
-# see resources.bicep and the README). That is the leg proven in this recipe.
+# `--auth config` reads the `auth.providers[]` list below and builds one JWT
+# verifier per provider (composed into a multi-issuer router that routes each
+# token to its provider by `iss` and stamps the per-provider tenant claim for the
+# DNA tenancy bridge). This is the path with correct **audience-only** validation
+# for Entra's multi-tenant `/organizations` endpoint — the env-driven `--auth jwt`
+# path validates a fixed single-tenant issuer and would reject `/organizations`
+# tokens.
 #
-# This file documents the DECLARATIVE front-end that the config-based auth work
-# adds on the same seam: an `auth.providers` list with a first-class `entra`
-# provider, so the whole hosting config is one language-agnostic file instead of
-# a handful of env vars. Until that lands, `dna.config.yaml` validates strictly
-# and REJECTS unknown keys — so keep this as a `.sample` and drive the deploy
-# from the env vars above.
+# The server still reads the SOURCE from the environment (DNA_SOURCE_URL /
+# DNA_BASE_DIR); the `source:` here is only required for the file to validate —
+# `--auth config` consumes ONLY the `auth:` section.
 
-# Where the DNA documents live. On the Container App this is the mounted Azure
-# Files share (DNA_BASE_DIR=/mnt/dna); a Postgres source works too.
-source: file:///mnt/dna
-# source: postgresql://dna:dna@db.internal:5432/dna
+# Where the DNA documents live (validated, but the CLI boot reads the source from
+# DNA_SOURCE_URL / DNA_BASE_DIR — this line is not the runtime source selector).
+source: postgresql://dna:dna@db.internal:5432/dna
+# source: file:///mnt/dna
 
 search: off        # pgvector | sqlite-vec | off
 embedding: off     # onnx | fake | off
 
-# --- forthcoming declarative auth (parallel work — see note above) -----------
-# auth:
-#   providers:
-#     - entra                       # Microsoft Entra as an OAuth 2.1 / JWKS IdP
-#   entra:
-#     tenant_id: "<entra-tenant-guid>"
-#     audience: "api://<mcp-app-client-id>"    # the Application ID URI you exposed
-#     # derived from tenant_id, shown for clarity:
-#     jwks_uri: "https://login.microsoftonline.com/<entra-tenant-guid>/discovery/v2.0/keys"
-#     issuer:   "https://login.microsoftonline.com/<entra-tenant-guid>/v2.0"
-#   tenant_claim: tenant            # the claim mapped to a DNA tenant (or `tid`)
+# ── auth: the pluggable N-provider IdP layer (`--auth config`) ───────────────
+auth:
+  providers:
+    # Microsoft Entra, MULTI-TENANT. `issuer` is the `/organizations` endpoint —
+    # its tokens carry the CALLER's real Azure tenant GUID in `iss` (never the
+    # literal `organizations`), so the verifier validates by **audience +
+    # signature** (the security boundary is your MCP app-id `audience`) and the
+    # DNA tenant is taken from the `tid` claim (globally unique per org). A token
+    # from ANY Entra org that presents this audience is accepted and isolated to
+    # its own `tid` (the tenancy bridge + `resolve_tenant` fail-close cross-tid).
+    - type: entra
+      name: entra-organizations
+      issuer: https://login.microsoftonline.com/organizations/v2.0
+      audience: api://dna-mcp-dnacloud      # the App ID URI you exposed
+      # tenant_claim defaults to `tid` for entra; jwks derived from the issuer:
+      #   https://login.microsoftonline.com/organizations/discovery/v2.0/keys
+
+    # A SINGLE-TENANT Entra provider instead pins a concrete tenant issuer (strict
+    # `iss` validation). Use this shape when you want to admit exactly one org:
+    # - type: entra
+    #   issuer: https://login.microsoftonline.com/<tenant-guid>/v2.0
+    #   audience: api://dna-mcp-dnacloud
+
+    # Any OIDC-generic IdP (Clerk/WorkOS/Auth0 have first-class types too). A
+    # generic `oidc` provider MUST name the claim that carries the DNA tenant.
+    # - type: oidc
+    #   issuer: https://id.example.com/
+    #   audience: dna-mcp
+    #   tenant_claim: org_id
+
+# ── multi-tenant base-scope isolation (H2) — set via ENV, not this file ──────
+# When the runtime is multi-tenant, set these on the container so a NEW outside
+# tenant never reads the vendor's base scope as its own (see LiveDna.default_scope):
+#   DNA_VENDOR_TENANT       the reserved vendor tenant `tid` — it keeps reading the
+#                           base scope (DNA_SCOPE_DEFAULT, e.g. dna-development);
+#                           EVERY other tenant defaults to its own `tenant-<tid>`.
+#   DNA_TENANT_SCOPE_PREFIX per-tenant scope prefix (default `tenant-`).
+# Unset DNA_VENDOR_TENANT ⇒ single-tenant (every default stays the base scope).

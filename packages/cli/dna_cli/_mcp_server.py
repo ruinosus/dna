@@ -88,7 +88,21 @@ async def boot_live(scope: str | None = None, base_dir: str | None = None) -> Li
 
     holder = await _build_holder_async(scope)
     provider = _register_provider(holder)  # holder exposes .kernel — enough
-    return LiveDna(base_scope=holder.scope, kernel=holder.kernel, provider=provider)
+    # Multi-tenant base-scope isolation (H2): when DNA_VENDOR_TENANT is set the
+    # runtime is multi-tenant — a scope-less read resolves to a PER-TENANT default
+    # (LiveDna.default_scope), the vendor tenant reserved to the base scope. Unset
+    # (OSS / single-tenant) leaves every default at base_scope (unchanged).
+    vendor_tenant = (os.environ.get("DNA_VENDOR_TENANT") or "").strip() or None
+    tenant_scope_prefix = (
+        os.environ.get("DNA_TENANT_SCOPE_PREFIX") or "tenant-"
+    )
+    return LiveDna(
+        base_scope=holder.scope,
+        kernel=holder.kernel,
+        provider=provider,
+        vendor_tenant=vendor_tenant,
+        tenant_scope_prefix=tenant_scope_prefix,
+    )
 
 
 # ── SDLC digest (DEFERRED — still lives here; see note) ────────────────────
@@ -114,7 +128,7 @@ async def sdlc_digest_impl(
     from dna_cli._digest import build_digest, resolve_since
     from dna_cli.sdlc_cmd import _DIGEST_KINDS
 
-    sc = scope or live.base_scope
+    sc = scope or live.default_scope(tenant)
     now = datetime.now(timezone.utc)
     try:
         since_dt, label = resolve_since(since, now=now)
@@ -189,12 +203,17 @@ def build_server(
             raise ToolError(str(exc)) from None
 
     async def _guard(
-        family: str, requested: str | None = None, *, memory_op: str | None = None
+        family: str, requested: str | None = None, *,
+        scope: str | None = None, memory_op: str | None = None,
     ) -> str | None:
         """The single tenancy + quota seam every tool passes through.
 
         1. Enforce tenancy (existing ``_tenant``): a cross-tenant / tenant-less
-           authenticated request is denied.
+           authenticated request is denied. Then enforce **scope-binding** (H2):
+           when the runtime is multi-tenant an authenticated tenant may only name
+           its OWN scope — a caller-supplied ``scope`` pointing at another tenant's
+           (or the vendor's) scope is a cross-scope read and is denied. With
+           multi-tenant off, no token, or no explicit ``scope`` this is a no-op.
         2. If there is NO token (stdio / local / ``auth=None``) → identity: return
            the tenant and meter NOTHING (the OSS/self-host path is untouched — the
            quota invariant mirrors the tenant bridge exactly).
@@ -223,7 +242,15 @@ def build_server(
         if not token_present_in_context():
             return tenant  # stdio / local → identity, no metering.
 
-        kernel = (await _live()).kernel
+        live = await _live()
+        # Scope-binding (H2): an authenticated tenant may only reach its own scope.
+        if not live.scope_is_bound(scope, tenant):
+            raise ToolError(
+                f"token is scoped to tenant {tenant!r} (scope "
+                f"{live.default_scope(tenant)!r}); cross-scope access to "
+                f"{scope!r} is denied"
+            )
+        kernel = live.kernel
         tier = enforce_tier_from_context()
         # Bridge: a token WITHOUT an explicit plan claim consults the TenantPlan
         # store (Stripe-written) before the Free floor. An explicit claim wins.
@@ -280,23 +307,29 @@ def build_server(
         authenticated, the effective tenant is bound to the token (a cross-tenant
         ``tenant`` is denied)."""
         return await compose_prompt_impl(
-            await _live(), agent, scope, await _guard("definitions", tenant)
+            await _live(), agent, scope, await _guard("definitions", tenant, scope=scope)
         )
 
     @server.tool(run_in_thread=False)
     async def list_agents(scope: str | None = None) -> dict[str, Any]:
         """List the agents (prompt targets) declared in a scope."""
-        return await list_agents_impl(await _live(), scope, await _guard("definitions"))
+        return await list_agents_impl(
+            await _live(), scope, await _guard("definitions", scope=scope)
+        )
 
     @server.tool(run_in_thread=False)
     async def list_tools(scope: str | None = None) -> dict[str, Any]:
         """List the Tool Kind surfaces (name + description) in a scope."""
-        return await list_tools_impl(await _live(), scope, await _guard("definitions"))
+        return await list_tools_impl(
+            await _live(), scope, await _guard("definitions", scope=scope)
+        )
 
     @server.tool(run_in_thread=False)
     async def get_tool(name: str, scope: str | None = None) -> dict[str, Any]:
         """Get one Tool's full agent-facing surface (description + input schema)."""
-        return await get_tool_impl(await _live(), name, scope, await _guard("definitions"))
+        return await get_tool_impl(
+            await _live(), name, scope, await _guard("definitions", scope=scope)
+        )
 
     # -- SDLC ----------------------------------------------------------------
 
@@ -306,19 +339,25 @@ def build_server(
     ) -> dict[str, Any]:
         """Retrospective board digest — what happened in a window (default 24h).
         ``since`` accepts a span (``90m``/``24h``/``3d``/``2w``) or ISO time."""
-        return await sdlc_digest_impl(await _live(), since, scope, await _guard("sdlc"))
+        return await sdlc_digest_impl(
+            await _live(), since, scope, await _guard("sdlc", scope=scope)
+        )
 
     @server.tool(run_in_thread=False)
     async def list_stories(
         status: str | None = None, scope: str | None = None
     ) -> dict[str, Any]:
         """List SDLC Stories, optionally filtered by status."""
-        return await list_stories_impl(await _live(), status, scope, await _guard("sdlc"))
+        return await list_stories_impl(
+            await _live(), status, scope, await _guard("sdlc", scope=scope)
+        )
 
     @server.tool(run_in_thread=False)
     async def get_adr(name: str, scope: str | None = None) -> dict[str, Any]:
         """Fetch one ADR (Architecture Decision Record) verbatim."""
-        return await get_adr_impl(await _live(), name, scope, await _guard("sdlc"))
+        return await get_adr_impl(
+            await _live(), name, scope, await _guard("sdlc", scope=scope)
+        )
 
     # -- memory --------------------------------------------------------------
 
@@ -326,7 +365,8 @@ def build_server(
     async def recall(query: str, scope: str | None = None, k: int = 5) -> dict[str, Any]:
         """Recall DNA memory for a query (hybrid/bi-temporal when available)."""
         return await recall_impl(
-            await _live(), query, scope, k, await _guard("memory", memory_op="read")
+            await _live(), query, scope, k,
+            await _guard("memory", scope=scope, memory_op="read"),
         )
 
     @server.tool(run_in_thread=False)
@@ -341,7 +381,7 @@ def build_server(
         """Persist a memory (a LessonLearned) so future recalls surface it."""
         return await remember_impl(
             await _live(), summary, scope, area=area, affect=affect, tags=tags,
-            owner=owner, tenant=await _guard("memory", memory_op="write"),
+            owner=owner, tenant=await _guard("memory", scope=scope, memory_op="write"),
         )
 
     @server.tool(run_in_thread=False)
@@ -349,21 +389,23 @@ def build_server(
         """Deterministic memory consolidation pass (retention re-score)."""
         return await consolidate_impl(
             await _live(), scope, apply=apply,
-            tenant=await _guard("memory", memory_op="write"),
+            tenant=await _guard("memory", scope=scope, memory_op="write"),
         )
 
     @server.tool(run_in_thread=False)
     async def list_memories(scope: str | None = None) -> dict[str, Any]:
         """List your stored memories (tenant-scoped). Read-only."""
         return await list_memories_impl(
-            await _live(), scope, tenant=await _guard("memory", memory_op="read")
+            await _live(), scope,
+            tenant=await _guard("memory", scope=scope, memory_op="read"),
         )
 
     @server.tool(run_in_thread=False)
     async def forget(name: str, scope: str | None = None) -> dict[str, Any]:
         """Delete one memory by name (tenant-scoped, your own overlay only). A write op."""
         return await forget_impl(
-            await _live(), name, scope, tenant=await _guard("memory", memory_op="write")
+            await _live(), name, scope,
+            tenant=await _guard("memory", scope=scope, memory_op="write"),
         )
 
     # -- resources (prove resources beyond tools) ----------------------------
@@ -371,7 +413,7 @@ def build_server(
     @server.resource("dna://{scope}/manifest")
     async def manifest_resource(scope: str) -> dict[str, Any]:
         """The scope's manifest as a resource: its Kinds → document names."""
-        mi = await (await _live()).mi(scope, await _guard("definitions"))
+        mi = await (await _live()).mi(scope, await _guard("definitions", scope=scope))
         by_kind: dict[str, list[str]] = {}
         for d in mi.documents:
             by_kind.setdefault(d.kind, []).append(d.name)
@@ -380,6 +422,8 @@ def build_server(
     @server.resource("dna://{scope}/agents")
     async def agents_resource(scope: str) -> dict[str, Any]:
         """The scope's agent roster as a resource."""
-        return await list_agents_impl(await _live(), scope, await _guard("definitions"))
+        return await list_agents_impl(
+            await _live(), scope, await _guard("definitions", scope=scope)
+        )
 
     return server

@@ -32,12 +32,15 @@ def api() -> None:
               help="Bind host.")
 @click.option("--port", type=int, default=8080, show_default=True,
               help="Bind port.")
-@click.option("--auth", type=click.Choice(["none", "token"]), default="none",
+@click.option("--auth", type=click.Choice(["none", "token", "config"]), default="none",
               show_default=True,
               help="Auth mode. `none` = local dev (no bearer). `token` = require "
-                   "`Authorization: Bearer <DNA_API_TOKEN>` on every route (the MVP "
-                   "shared token; the hosted OAuth 2.1 / per-tenant bearer slots into "
-                   "the same seam later).")
+                   "`Authorization: Bearer <DNA_API_TOKEN>` on every route (the shared "
+                   "token for server-to-server callers). `config` = the token→tenant "
+                   "edge: verify a USER bearer JWT against dna.config.yaml's "
+                   "`auth.providers[]` (the same N-provider IdP layer as `dna mcp "
+                   "serve --auth config`) and BIND `tenant` to the token's claim, so "
+                   "`?tenant=` is no longer caller-supplied. Needs the `mcp` extra.")
 @click.option("--token", default=None,
               help="Expected bearer token for --auth token (else the DNA_API_TOKEN env var).")
 @click.option("--cors-origin", "cors_origins", multiple=True,

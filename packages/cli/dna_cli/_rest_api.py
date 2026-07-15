@@ -126,6 +126,23 @@ async def delete_memory_impl(
 # ── FastAPI wiring ─────────────────────────────────────────────────────────
 
 
+def _force_tenant_qs(query_string: bytes, tenant: str) -> bytes:
+    """Return ``query_string`` with its ``tenant`` param FORCED to ``tenant``.
+
+    The mechanism behind auth mode ``config`` (H3): the middleware rewrites the
+    ASGI request's query string so every route's ``tenant`` query param is the
+    verified token's tenant — any caller-supplied ``?tenant=`` is dropped first,
+    so it can never be forged. All other params are preserved untouched.
+    """
+    from urllib.parse import parse_qsl, urlencode
+
+    pairs = [(k, v) for k, v in parse_qsl(query_string.decode("latin-1"),
+                                          keep_blank_values=True)
+             if k != "tenant"]
+    pairs.append(("tenant", tenant))
+    return urlencode(pairs).encode("latin-1")
+
+
 def _resolve_cors_origins(cors_origins: list[str] | None) -> list[str]:
     """Resolve the allowed browser origins for the portal: explicit arg wins,
     else ``DNA_API_CORS_ORIGINS`` (comma-separated), else a dev default."""
@@ -158,13 +175,25 @@ def build_app(
       * ``"none"`` — local dev, no bearer required.
       * ``"token"`` — every route (except ``/health``) requires
         ``Authorization: Bearer <token>``; the expected token is ``token`` (arg)
-        or ``DNA_API_TOKEN`` (env). A shared token for the MVP.
+        or ``DNA_API_TOKEN`` (env). A shared token for server-to-server callers
+        (the portal / the Stripe webhook, called server-side).
+      * ``"config"`` — the **token→tenant** edge (audit finding H3). Every route
+        (except ``/health``) requires a verified **user** bearer JWT, validated
+        against the SAME pluggable N-provider IdP layer the MCP server uses
+        (``dna.config.yaml``'s ``auth.providers[]`` — reused via
+        ``dna_cli._mcp_auth``). The token's tenant claim (Entra ``tid`` → DNA
+        tenant) becomes the effective ``tenant`` for every request: the middleware
+        OVERWRITES the ``?tenant=`` query param from the verified token, so
+        ``tenant`` stops being caller-supplied (a token with no tenant is denied,
+        fail-closed — the SAME policy as the MCP bridge). Needs the ``mcp`` extra
+        (the JWT verifier) alongside ``api``.
 
     Raises a clean ``RuntimeError`` if the optional ``fastapi`` dependency is absent.
     """
     try:
         from fastapi import Body, Depends, FastAPI, Header, HTTPException, Query
         from fastapi.middleware.cors import CORSMiddleware
+        from fastapi.responses import JSONResponse
     except ModuleNotFoundError as exc:  # pragma: no cover — exercised via CLI
         raise RuntimeError(
             "the REST read-API needs the optional 'fastapi' dependency — install "
@@ -220,12 +249,65 @@ def build_app(
         allow_headers=["Authorization", "Content-Type"],
     )
 
-    # -- auth (shared bearer token for the MVP) ------------------------------
-    # TODO(hosted): OAuth 2.1 / per-tenant bearer — swap this shared-token gate
-    # for a verified-token → tenant bridge (the SAME tenancy model as the MCP
-    # server's dna_cli._mcp_auth: the token's tenant claim becomes the effective
-    # tenant, and a cross-tenant request is denied), so `tenant` stops being a
-    # query param a caller can forge and becomes bound to the verified token.
+    # -- auth mode `config`: the token→tenant edge (audit finding H3) ----------
+    # HOSTED (was the `TODO(hosted)` below): swap the shared-token trust for a
+    # verified-token → tenant bridge, the SAME tenancy model as the MCP server's
+    # dna_cli._mcp_auth. A middleware verifies the USER bearer JWT against the
+    # pluggable N-provider IdP layer (dna.config.yaml `auth.providers[]`) and
+    # OVERWRITES the `?tenant=` query param from the token's tenant claim — so
+    # `tenant` is bound to the verified token, never caller-supplied. A token with
+    # no tenant is denied (fail-closed), exactly like the MCP bridge.
+    if auth == "config":
+        from dna_cli._mcp_auth import (
+            _DNA_CLAIM_MARKER,
+            _DNA_SCOPE_MARKER,
+            _multi_provider_verifier,
+            providers_from_config,
+            tenant_from_token,
+        )
+
+        try:
+            _providers = providers_from_config()
+        except (RuntimeError, ValueError) as exc:
+            raise RuntimeError(str(exc)) from None
+        _verifier = _multi_provider_verifier(_providers)  # needs the `mcp` extra
+
+        @app.middleware("http")
+        async def _bind_tenant_from_token(request: Any, call_next: Any) -> Any:
+            # /health + CORS pre-flight stay open (parity with the token gate).
+            if request.method == "OPTIONS" or request.url.path == "/health":
+                return await call_next(request)
+            authz = request.headers.get("authorization") or ""
+            if not authz.lower().startswith("bearer "):
+                return JSONResponse({"detail": "missing bearer token"}, status_code=401)
+            raw = authz[len("bearer "):].strip()
+            try:
+                access = await _verifier.verify_token(raw)
+            except Exception:  # noqa: BLE001 — any verifier error ⇒ unauthorized
+                access = None
+            if access is None:
+                return JSONResponse({"detail": "invalid bearer token"}, status_code=401)
+            claims = getattr(access, "claims", None) or {}
+            token_tenant = tenant_from_token(
+                claims, getattr(access, "scopes", None),
+                claim_key=claims.get(_DNA_CLAIM_MARKER),
+                scope_prefix=claims.get(_DNA_SCOPE_MARKER),
+            )
+            if not token_tenant:
+                # Fail-closed: an authenticated token with no tenant binding gets
+                # nothing (never fall back to "all tenants") — the MCP policy.
+                return JSONResponse(
+                    {"detail": "authenticated token carries no tenant claim/scope "
+                               "— access denied"},
+                    status_code=403,
+                )
+            # Bind `tenant` to the verified token — drop any caller-supplied one.
+            request.scope["query_string"] = _force_tenant_qs(
+                request.scope.get("query_string", b""), token_tenant
+            )
+            return await call_next(request)
+
+    # -- auth (shared bearer token — server-to-server callers) ---------------
     def _auth_dep(authorization: str | None = Header(default=None)) -> None:
         if auth != "token":
             return
