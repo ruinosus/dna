@@ -191,6 +191,15 @@ same inherent risk as any dependency — the validation stops path traversal
 and malformed documents, not hostile prose. Review what was projected
 before committing it.
 
+## Already driving a Spec Kit run?
+
+If your project uses [GitHub Spec Kit](https://github.com/github/spec-kit) for
+its spec-driven flow, DNA composes underneath it: run Spec Kit as usual, then
+`dna specify import .specify/` to durably capture the run (constitution → a live
+Guardrail + Soul, spec/plan/tasks → Spec/Plan/Story Kinds on the board). See the
+[Spec Kit guide](../guides/spec-kit.md) for the full mapping and the
+`dna specify export` round-trip.
+
 ## Python-only, by construction
 
 The `dna` binary is part of the Python distribution (`dna-cli`); the

@@ -28,3 +28,4 @@ These pages are **generated from the Click command definitions** by
 | [`dna new`](new.md) | Scaffold a valid Kind skeleton into a scope (agent \| soul \| guardrail \| tool). |
 | [`dna recall`](recall.md) | Hybrid semantic search (dense + lexical + RRF) over the scope's records. |
 | [`dna search`](search.md) | Alias of ``dna recall`` (neutral naming). |
+| [`dna specify`](specify.md) | Bidirectional GitHub Spec Kit ↔ DNA bridge (import / export). |

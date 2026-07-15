@@ -32,6 +32,14 @@ first if you have never loaded a scope.
 - **[How to write a Reader/Writer](readers-and-writers.md)** — teach DNA a
   new bundle format and keep the round-trip invariant green.
 
+## Spec-driven methodology
+
+- **[Spec Kit — the supported spec-driven flow](spec-kit.md)** — run
+  [GitHub Spec Kit](https://github.com/github/spec-kit) untouched, then
+  `dna specify import` to durably capture the run as DNA Kinds (and
+  `dna specify export` to project them back byte-faithfully). DNA composes
+  *underneath* Spec Kit, adding portability, memory, governance and tracking.
+
 ## Search and memory
 
 - **[How to use semantic recall & memory](semantic-recall.md)** — install

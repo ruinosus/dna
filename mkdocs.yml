@@ -69,6 +69,7 @@ nav:
       - Tools as data: guides/tools-as-data.md
       - Emitting to a runtime (the de-para): guides/emitting-to-a-runtime.md
       - How to write an emitter: guides/writing-an-emitter.md
+      - "Spec Kit — the supported spec-driven flow": guides/spec-kit.md
       - The MCP server — DNA as a live layer: guides/mcp-server.md
       - The REST read-API — DNA's HTTP face for web apps: guides/rest-api.md
       - Hosting the MCP server on Azure (ACA + Entra): guides/hosting-mcp-aca.md
@@ -155,6 +156,12 @@ plugins:
             merge_init_into_class: true
             show_if_no_docstring: false
             members_order: source
+
+# Architecture Decision Records live under docs/adr/ as versioned repo
+# artifacts (they land on main with the code they justify), not as rendered
+# site pages — so exclude them from the strict build's nav-coverage check.
+exclude_docs: |
+  adr/
 
 # Make the build gate meaningful: with `mkdocs build --strict` these
 # warnings become hard errors, so a broken internal link or anchor fails CI.

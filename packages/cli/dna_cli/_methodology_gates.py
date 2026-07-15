@@ -32,17 +32,23 @@ class GateResult(Enum):
     SKIP = "skip"
 
 
+# Methodologies whose specify/plan phases must be backed by a real artifact
+# on disk. Superpowers pins its docs/superpowers/{specs,plans}/*.md; Spec Kit
+# pins its .specify/-run spec.md / plan.md (s-spec-kit-journey-wiring, ADR §8.3).
+_ARTIFACT_GATED = frozenset({"superpowers", "spec-kit"})
+
+
 # ───── spec_gate ─────────────────────────────────────────────────────
 
 
 def spec_gate(*, methodology: str, phase: str, artifact: str | None) -> GateResult:
-    """Specify phase under superpowers requires a real Spec doc.
+    """Specify phase under an artifact-gated methodology requires a real Spec doc.
 
-    Returns SKIP unless `methodology == "superpowers"` and `phase == "specify"`.
-    Returns FAIL if `artifact` is None or points to a missing file.
-    Returns PASS otherwise.
+    Returns SKIP unless `methodology` is artifact-gated (superpowers | spec-kit)
+    and `phase == "specify"`. FAIL if `artifact` is None or points to a missing
+    file. PASS otherwise (for spec-kit the artifact is the run's ``spec.md``).
     """
-    if methodology != "superpowers" or phase != "specify":
+    if methodology not in _ARTIFACT_GATED or phase != "specify":
         return GateResult.SKIP
     if not artifact:
         return GateResult.FAIL
@@ -61,11 +67,11 @@ def plan_gate(
 ) -> GateResult:
     """Plan phase under superpowers requires Plan doc OR --auto-stub.
 
-    SKIP if not (superpowers + plan).
+    SKIP if not (artifact-gated methodology + plan).
     PASS if --auto-stub (caller will stub the plan file) or artifact exists.
     FAIL otherwise.
     """
-    if methodology != "superpowers" or phase != "plan":
+    if methodology not in _ARTIFACT_GATED or phase != "plan":
         return GateResult.SKIP
     if auto_stub:
         return GateResult.PASS
