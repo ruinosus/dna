@@ -11,6 +11,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Microsoft On-Behalf-Of (OBO) — the `files` tool-group** (`f-mcp-obo`, story
+  `s-mcp-obo-files-group`; [ADR-mcp-obo](docs/adr/ADR-mcp-obo.md)). Mirrors the
+  calendar slice for OneDrive / SharePoint, read-only over the delegated
+  **`Files.Read`** scope. Two built-in MCP tools, gated on the config
+  `graph.groups.files` block being enabled **and** an Entra inbound identity
+  (non-Entra → an honest "OBO unavailable" error); each group opts in independently.
+  - `ms_files_search` — search the signed-in user's files by text
+    (`GET /me/drive/root/search(q='…')`); returns named fields only (name, id, web
+    URL, last-modified, size, type), never file contents, a token, or the raw body.
+    The OData query is single-quote-escaped (injection hygiene).
+  - `ms_file_read` — read a file's content by id (`GET /me/drive/items/{id}`).
+    Text-convertible files (text/\*, Markdown, CSV, JSON, XML, YAML, HTML, source,
+    …) come back as extracted text (capped ~1 MiB, `truncated` flagged); binary
+    Office (`.docx`/`.xlsx`/`.pptx`), images, and PDFs return metadata + a `web_url`
+    + an honest not-text-extractable note (never a byte dump). Token B is confined
+    to the single `graph.microsoft.com` metadata call — content is fetched from the
+    driveItem's *preauthenticated* download URL with **no** `Authorization` header.
+  - Both surfaces are governed, overlayable Tool documents (`ms_files_search.yaml`,
+    `ms_file_read.yaml`). Guide + the Entra `Files.Read` delegated-permission admin
+    step (scope id `10465720-29dd-4523-a11a-6a75c743c9d9`) added to
+    [the OBO guide](docs/guides/mcp-obo.md).
+  - Deferred (follow-up): rich Office (`.docx`/`.xlsx`/`.pptx`) → text extraction
+    for `ms_file_read`, and the `mail` read group.
+
 ## [0.16.0] - 2026-07-15
 
 ### Added

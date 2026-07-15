@@ -5,8 +5,8 @@ and maps it to a DNA tenant/workspace. **On-Behalf-Of (OBO)** is the next hop: t
 same verified token is a *delegated user token*, and a confidential middle tier can
 exchange it at Microsoft Entra for a **downstream Microsoft Graph token** minted
 for the same user. That lets DNA MCP tools read the signed-in user's **Microsoft
-365** — starting with their **calendar** — on their behalf, with **no new
-sign-in**.
+365** — their **calendar** and their **files** (OneDrive / SharePoint) — on their
+behalf, with **no new sign-in**.
 
 The full design (and why this is spec-aligned, not the forbidden token-passthrough
 pattern) is [ADR-mcp-obo](https://github.com/ruinosus/dna/blob/main/docs/adr/ADR-mcp-obo.md).
@@ -59,8 +59,15 @@ graph:                                    # ← absent ⇒ OBO entirely off (def
   groups:
     calendar:
       enabled: true
-      scopes: [ "Calendars.Read" ]        # read-only, the first group
+      scopes: [ "Calendars.Read" ]        # read-only
+    files:                                # ← OneDrive / SharePoint, opt-in
+      enabled: true
+      scopes: [ "Files.Read" ]            # read-only
 ```
+
+Each **group** is independent: enable only the ones you want, each with its own
+delegated scopes. The `files` group above adds two read-only tools —
+`ms_files_search` and `ms_file_read` (see §2b) — gated exactly like `calendar`.
 
 Fail-closed guarantees the parser enforces:
 
@@ -111,6 +118,58 @@ The tool's `description` + `input_schema` are a **governed Tool document**
 (`ms_calendar_list.yaml`), so what the model sees is data — overlayable like any
 [Tool](tools-as-data.md), not hardcoded.
 
+## 2b. The files group — `ms_files_search` + `ms_file_read`
+
+With the `files` group enabled (and an Entra caller), two read-only tools appear.
+Both use the delegated **`Files.Read`** scope only, over On-Behalf-Of.
+
+**`ms_files_search`** — search the user's OneDrive / SharePoint by text
+(`GET /me/drive/root/search(q='…')`). Returns named fields only — never file
+contents, never a token, never the raw Graph body:
+
+```jsonc
+// call_tool ms_files_search
+{ "query": "Q3 plan", "top": 25 }          // top optional; 1–100, default 25
+
+// → shaped result
+{ "count": 1,
+  "files": [
+    { "id": "01ABC…", "name": "Q3 Plan.docx",
+      "web_url": "https://…-my.sharepoint.com/…/Q3%20Plan.docx",
+      "last_modified": "2026-07-10T12:00:00Z", "size": 20480, "type": "docx" }
+  ] }
+```
+
+**`ms_file_read`** — read a file's content by the `id` from a search
+(`GET /me/drive/items/{id}`). Token B is used **only** on that Graph metadata call;
+the content itself is then fetched from the driveItem's *preauthenticated*
+`@microsoft.graph.downloadUrl` with **no** `Authorization` header, so the token
+never leaves `graph.microsoft.com`.
+
+```jsonc
+// call_tool ms_file_read  → text-convertible file
+{ "item_id": "01ABC…" }
+{ "id": "…", "name": "notes.md", "type": "md", "size": 1234,
+  "web_url": "https://…", "mode": "text",
+  "text": "# Notes\n…", "truncated": false }
+
+// call_tool ms_file_read  → binary Office / image / PDF
+{ "id": "…", "name": "Q3 Plan.docx", "type": "docx", "size": 20480,
+  "web_url": "https://…", "mode": "metadata",
+  "note": "This file type is not text-extractable inline in this slice — open it
+           in the browser via web_url. …" }
+```
+
+> **Office-content limitation (this slice).** Text-convertible files — plain text,
+> Markdown, CSV, JSON, XML, YAML, HTML, source code, … — are returned as extracted
+> text (capped at ~1 MiB, `truncated: true` when clipped). Binary Office documents
+> (`.docx` / `.xlsx` / `.pptx`), images, and PDFs are **not** dumped inline; you get
+> their metadata plus a `web_url` to open them. Rich Office → text extraction is a
+> tracked follow-up (see [Deferred](#deferred-follow-on-stories)).
+
+Both tools' surfaces are governed Tool documents (`ms_files_search.yaml`,
+`ms_file_read.yaml`) — overlayable like any [Tool](tools-as-data.md).
+
 ### Honest failure modes
 
 | Situation | What the caller gets |
@@ -138,23 +197,30 @@ az ad app credential reset --id "$APP_ID" \
   --display-name "dna-obo-poc" --years 1 --query password -o tsv
 #   ^ copy the printed secret into DNA_MCP_CLIENT_SECRET (store in a Key Vault in prod).
 
-# (b) Add the DELEGATED Microsoft Graph permission Calendars.Read.
+# (b) Add the DELEGATED Microsoft Graph permission(s) for the group(s) you enabled.
 #     Graph resource appId = 00000003-0000-0000-c000-000000000000
 #     Calendars.Read delegated scope id = 465a38f9-76ea-45b9-9f34-9e8b0d4b0b42  (Scope)
+#     Files.Read     delegated scope id = 10465720-29dd-4523-a11a-6a75c743c9d9  (Scope)
 az ad app permission add --id "$APP_ID" \
   --api 00000003-0000-0000-c000-000000000000 \
   --api-permissions 465a38f9-76ea-45b9-9f34-9e8b0d4b0b42=Scope
+
+# … and, for the `files` group (ms_files_search + ms_file_read), the Files.Read scope:
+az ad app permission add --id "$APP_ID" \
+  --api 00000003-0000-0000-c000-000000000000 \
+  --api-permissions 10465720-29dd-4523-a11a-6a75c743c9d9=Scope
 
 # (c) CONSENT. Either admin-consent the tenant-wide grant …
 az ad app permission admin-consent --id "$APP_ID"
 
 #     … or send end users through the per-user incremental consent URL
-#     (per-tool-group — only Calendars.Read is requested):
+#     (per-tool-group — request only the scope(s) for the group(s) you enabled,
+#     e.g. Calendars.Read for calendar, Files.Read for files):
 #   https://login.microsoftonline.com/<tenant>/oauth2/v2.0/authorize
 #     ?client_id=ff09090f-79e3-4dfe-975c-1a8e007112b7
 #     &response_type=code
 #     &redirect_uri=<your redirect>
-#     &scope=https://graph.microsoft.com/Calendars.Read%20offline_access
+#     &scope=https://graph.microsoft.com/Calendars.Read%20https://graph.microsoft.com/Files.Read%20offline_access
 #     &prompt=consent
 ```
 
@@ -177,9 +243,14 @@ chain once the steps above are done:
 
 ## Deferred (follow-on stories)
 
-Not in this first slice, tracked as `s-mcp-obo-read-groups` +
-`s-mcp-obo-prod-hardening`: the `files` / `mail` read groups, write tools
-(`ms_mail_send`), a bounded in-memory token cache, the **certificate / ACA
-managed-identity** credential (this slice uses a plain secret), the step-up
-consent round-trip surfaced through to the client, and guest (B2B) / personal
-(MSA) identity support.
+Shipped since the first slice: the **files** read group (`ms_files_search` +
+`ms_file_read`, `s-mcp-obo-files-group`).
+
+Still not in scope, tracked as `s-mcp-obo-read-groups` +
+`s-mcp-obo-prod-hardening` (+ a rich-Office-extraction follow-up): the `mail` read
+group, **rich Office (`.docx`/`.xlsx`/`.pptx`) → text extraction** for
+`ms_file_read` (this slice returns metadata + a web link for binary Office), write
+tools (`ms_mail_send`), a bounded in-memory token cache, the **certificate / ACA
+managed-identity** credential (this slice uses a plain secret), the step-up consent
+round-trip surfaced through to the client, and guest (B2B) / personal (MSA) identity
+support.

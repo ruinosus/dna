@@ -13,7 +13,11 @@ no TS twin; the parity-critical part is the governed Tool *surface* doc):
 * :mod:`._obo`     — the per-request OBO exchange (pure, injectable, token never leaks).
 * :mod:`._config`  — the ``graph:`` ``dna.config.yaml`` block (OFF by default,
                      fail-closed scope allow-list, credential as env-var NAME).
-* :mod:`._tools`   — the built-in ``ms_calendar_list`` tool + its governed Tool doc.
+                     Groups are generic: ``calendar``, ``files``, … each opt-in
+                     independently with its own delegated scopes.
+* :mod:`._tools`   — the built-in tools + their governed Tool docs:
+                     ``ms_calendar_list`` (calendar group, ``Calendars.Read``) and
+                     ``ms_files_search`` + ``ms_file_read`` (files group, ``Files.Read``).
 
 Optional ``dna-cli[graph]`` extra (``msal`` + ``httpx``); imported lazily so the
 base install never carries it.
