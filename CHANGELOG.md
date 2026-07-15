@@ -56,6 +56,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     --json` previews. Skills continue to travel via `dna init` (byte-faithful
     into the agent's skill dir) — the two commands together fully ground a run.
   - Guide: [Spec Kit + DNA's live memory over MCP](docs/guides/spec-kit-live-memory.md).
+- **`dna specify install-templates` / `export-templates` — serve the Spec Kit
+  *toolkit* as DNA Kinds over MCP** (`f-speckit-templates`, ADR
+  *ADR-spec-kit-adoption* §5, **Layer 3**). Where `import`/`export` bridge a
+  *run*, this bridges the toolkit itself — templates, slash-commands, scripts,
+  constitution — so it becomes versioned, governed, portable policy instead of
+  per-repo files.
+  - **`dna specify install-templates <path>`** ingests `.specify/templates/*.md`
+    → **PromptTemplate** `speckit-<stem>`; the slash-command definitions
+    (`.specify/templates/commands/*.md` or a projected `.claude/commands/`) →
+    **Skill** `speckit-<cmd>` (verbatim); `.specify/scripts/**` → a **Skill**
+    bundle `speckit-scripts`; `constitution.md` → a servable **PromptTemplate**
+    `speckit-constitution-template` **and** a live **Guardrail**. Each Kind
+    carries its `.specify/`-relative `origin`, so **`export-templates`** replays
+    the tree **byte-for-byte** (round-trip acceptance test). No new Kinds —
+    reuses PromptTemplate/Skill/Guardrail (all with TS twins).
+  - **Served live over `dna mcp serve`** via four new tenant-aware tools —
+    `list_templates` / `get_template` / `list_skills` / `get_skill` — so any MCP
+    client (Claude/Copilot/Cursor) reaches the toolkit, and a **per-workspace/
+    tenant overlay wins with zero redeploy** (PromptTemplate + Skill are
+    inheritable — the kernel's existing overlay machinery).
+  - **Live constitution governance** — a `speckit-constitution` Guardrail with
+    `severity: hard` is enforced at **write time** by a new `pre_save` veto: a
+    governed spec-kit `Story`/`Plan` must trace to a Spec, else the write is
+    refused. Flip the severity (`warn` ⇄ `hard`) and the next write is governed
+    differently — no restart, no deploy.
+  - **Docs:** the [Spec Kit guide](guides/spec-kit.md) now documents installing
+    the real `specify` CLI (`uv tool install specify-cli`) and makes the
+    compose boundary explicit (DNA never invokes the `specify` binary), plus a
+    new [Spec Kit templates, served by DNA](guides/spec-kit-templates.md) guide.
 - **Workspace tenancy foundation — `Workspace` + `WorkspaceMembership` Kinds**
   (ADR "Model B", `f-ws-kinds` F1). Two GLOBAL record Kinds that make cross-org
   collaboration expressible (the GitHub/Slack shape): a DNA-native **workspace**

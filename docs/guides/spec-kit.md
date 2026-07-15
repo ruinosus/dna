@@ -15,6 +15,34 @@ Spec Kit runs**.
 > não são criação nossa e operam conforme foram desenhados."* Spec Kit stays
 > untouched; DNA is the durable layer beneath it.
 
+## Prerequisites — install the real Spec Kit CLI
+
+DNA does **not** bundle, vendor, or reimplement Spec Kit. You install the real
+[`specify` CLI](https://github.com/github/spec-kit) yourself — it is a separate
+tool that does the scaffolding and authoring:
+
+```console
+# Persistent install from PyPI (recommended):
+$ uv tool install specify-cli
+
+# …or pin to a specific Spec Kit release tag:
+$ uv tool install --from git+https://github.com/github/spec-kit.git@v0.0.55 specify-cli
+
+$ specify --version        # confirm the real Spec Kit CLI is on PATH
+```
+
+**Who does what — the composition is explicit:**
+
+| | The real `specify` CLI (you install it) | `dna specify` (ships with DNA) |
+|---|---|---|
+| **Owns** | Scaffolding + authoring: `specify init` creates `.specify/`, the slash-commands (`/speckit.*`) drive your agent through the flow | The DNA-side **bridge**: reads/writes that `.specify/` tree ↔ durable DNA Kinds |
+| **Runs** | The methodology (constitution → spec → plan → tasks → implement) | `import`/`export` a run; `install-templates`/`export-templates` the toolkit |
+
+`dna specify` **never invokes or depends on the `specify` binary at runtime** —
+it only reads and writes the `.specify/` files on disk. That is the whole point:
+*don't reinvent the wheel, compose with it.* Run Spec Kit exactly as its docs
+describe; point DNA at the result.
+
 ## The two-command compose story
 
 ```console
@@ -76,6 +104,13 @@ Projected Feature/f-taskify → ./regenerated (8 files):
 
 Round-trip fidelity is guaranteed: **`import` then `export` reproduces the
 source `.specify/` artifacts byte-for-byte** (an acceptance test in the suite).
+
+## Serving the *toolkit* itself — Layer 3
+
+`import`/`export` bridge a *run*. You can also bridge the **toolkit** — the
+templates, slash-commands, scripts and constitution — so they become versioned
+Kinds served live over MCP and overridable per workspace, instead of files that
+drift per-repo. See **[Spec Kit templates, served by DNA](spec-kit-templates.md)**.
 
 ## What DNA adds over raw Spec Kit
 
