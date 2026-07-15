@@ -1,6 +1,6 @@
 # ADR: Personal / Private Per-User Memory
 
-- **Status**: Proposed
+- **Status**: Accepted (2026-07-15 — Barna approved; §9 ratified to the recommended options)
 - **Date**: 2026-07-15
 - **Deciders**: Barna (owner/architect) — pending review
 - **Author**: claude-code
@@ -19,8 +19,8 @@ DNA's thesis is **portable memory**: *your* memory follows *you* across every AI
 client. Today DNA delivers that portability across **clients** — but bounded to a
 **workspace**. The owner's own observation is the trigger for this ADR:
 
-> His `@avanade` guest and his `@gmail` identity see the **same** memory, because
-> both resolve to the **same tenant** (workspace). That is *correct* for
+> A cross-org guest identity and the owner's own identity see the **same** memory,
+> because both resolve to the **same tenant** (workspace). That is *correct* for
 > collaboration — a workspace's memory is shared by its members by design.
 
 But it exposes a missing axis. There is exactly one thing a member cannot do
@@ -340,7 +340,16 @@ one alone would suffice for the common case; together they close the edges):
 
 ---
 
-## 9. Open decisions for Barna
+## 9. Decisions (ratified by Barna, 2026-07-15)
+
+Barna approved the ADR and the recommended option on every point:
+1. **Key = `oid` alone** (one identity, one personal memory, every client — the portability thesis).
+2. **Explicit selector, `workspace` default** for the PoC (personal is strictly additive, zero behavior change).
+3. **Reuse the tenant partition** (`personal:<oid>` namespace, zero migration, privacy by construction). A separate physical store stays available if a future compliance need demands isolation-at-rest.
+4. **Personal recall unions the base `_lib` defaults** (shared platform lessons are additive; never unions the workspace). Hermetic mode remains a cheap special-case if wanted later.
+5. **`DNA_PERSONAL_ID` for the offline/local single-user case**; deny personal on authenticated HTTP with no `oid` claim (fail-closed). Personal memory is available both hosted (verified `oid`) and local (`DNA_PERSONAL_ID`).
+
+### (original recommendations, for the record)
 
 1. **Key: `oid` alone, or `oid` + client?**
    Recommend **`oid` alone**. Keying on `oid+client` would fragment your personal
