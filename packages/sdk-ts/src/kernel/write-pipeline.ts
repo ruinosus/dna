@@ -175,7 +175,10 @@ export class WritePipeline {
       explicitTenant !== null && explicitTenant !== undefined
         ? explicitTenant
         : k.tenant;
-    validateTenantSlug(effective);
+    // ADR-personal-memory: a reserved `personal:<oid>` partition is a valid
+    // PHYSICAL slug but rejected as user input; the authorized personal write
+    // path carries `k._allowPersonal` so the slug validation permits it.
+    validateTenantSlug(effective, { allowPersonal: k._allowPersonal === true });
 
     // Validate against KindPort.scope when EXPLICITLY declared.
     const scopeDecl = k._kindScope(kind);

@@ -90,6 +90,10 @@ export interface CompositionResolverHost {
 export interface WriteHost {
   readonly hooks: HookRegistry;
   readonly tenant: string | null;
+  /** Whether this kernel may key a reserved `personal:<oid>` partition
+   *  (ADR-personal-memory) — set only on the authorized personal-memory write
+   *  binding, read by the write pipeline's tenant-slug validation. */
+  readonly _allowPersonal?: boolean;
   _kindScope(kind: string): string | null;
   kindPortFor(kind: string, apiVersion?: string): KindPort | null;
   _requireWritableSource(): WritableSourcePort;

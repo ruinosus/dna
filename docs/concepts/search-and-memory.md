@@ -148,6 +148,52 @@ reported step.
 stays, auditable and revivable, and history can be reconstructed
 point-in-time. Contradicted knowledge is *superseded*, not destroyed.
 
+## Personal vs workspace memory — the key is the person
+
+By default a memory is **workspace** memory: it lives in the tenant partition of
+the workspace the request resolved to, shared by that workspace's members — the
+right default for collaboration. But there is a second, orthogonal axis:
+**personal** memory, keyed not on the workspace but on the durable human identity
+(the verified `oid`).
+
+Every memory verb takes an explicit selector, `workspace` (the default — nothing
+changes for existing calls) or `personal`:
+
+```bash
+dna memory remember "I always misread cron day-of-week" --personal   # private to me
+dna memory recall  "cron" --personal
+dna memory remember "our deploy runbook step 3" --area Feature/deploy  # workspace (default)
+```
+
+Over MCP the same choice is a `personal: true` flag on `recall`/`remember`; the
+identity is read from the verified token. Offline (CLI/stdio) it is read from the
+`DNA_PERSONAL_ID` environment variable. **The identity is always resolved
+server-side — never a caller argument.** Without one, a personal request fails
+closed (personal memory never lands in a blank, shared partition).
+
+Personal memory is stored as a reserved value-namespace inside the *existing*
+tenant partition — `personal:<oid>` — so there is **zero schema migration**: it
+reuses the same filesystem path segment / Postgres tenant column that workspace
+tenancy already uses. A personal recall unions your partition with the shared
+base (`_lib`) defaults, and **nothing** from any workspace.
+
+The consequence is the whole point: because the partition key is the *person*,
+`personal:<oid>` is the **same** partition in workspace A, in workspace B, and in
+a bare MCP client with no workspace at all. Workspace memory is portable across
+clients but bounded to a workspace; personal memory is portable across clients
+**and** across workspaces — it follows the identity itself. "Your memory follows
+*you*" stops being a slogan and becomes a primary-key value.
+
+**Privacy (INV-PERSONAL).** A personal memory written by identity X is never
+readable by any other identity, nor by any workspace query — including a
+workspace owner's or admin's. There is no override. This holds by four
+independent layers: the `oid` is derived server-side (you cannot name another
+identity's partition); a workspace read filters `tenant IN ('', <workspace_id>)`,
+which provably cannot select a `personal:*` row; the `personal:` scheme is
+reserved at the tenant validator, so no workspace can be named to alias a
+personal partition; and a raw `tenant=personal:<victim>` override is rejected at
+the surface. See the ADR (`docs/adr/ADR-personal-memory.md`) for the full model.
+
 ## What stays out of the SDK
 
 The line is deterministic-vs-generative. Everything above — scoring, decay,

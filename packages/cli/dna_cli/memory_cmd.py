@@ -26,6 +26,7 @@ available, so offline behavior without the extra is unchanged.
 from __future__ import annotations
 
 import hashlib
+import os
 import re
 from datetime import datetime, timezone
 from typing import Any
@@ -36,6 +37,49 @@ from dna_cli._ctx import dna_session, print_json, print_table
 from dna_cli.recall_cmd import _register_provider
 
 _MEMORY_KINDS = ("LessonLearned", "Research", "Evidence")
+
+
+def _resolve_memory_tenant(personal: bool, tenant: str | None) -> str | None:
+    """Resolve the effective ``tenant`` a ``dna memory`` command targets, honoring
+    the ``--personal`` selector (ADR-personal-memory §6, CLI face).
+
+    * ``--personal`` → the caller's OWN private partition ``personal:<oid>`` where
+      ``oid`` is read SERVER-SIDE from ``DNA_PERSONAL_ID`` (the offline/stdio
+      single-user identity — never a caller argument). Missing ``DNA_PERSONAL_ID``
+      FAILS CLOSED with a clear message; combining ``--personal`` with an explicit
+      ``--tenant`` is rejected (they name conflicting partitions).
+    * otherwise → the raw ``--tenant`` overlay, but a value naming the reserved
+      ``personal:`` scheme is REJECTED (INV-PERSONAL layer 4 — personal partitions
+      are reachable ONLY via ``--personal``, never a raw override)."""
+    from dna.memory.personal import (
+        PersonalIdentityRequired,
+        assert_no_personal_override,
+        personal_tenant,
+    )
+
+    if personal:
+        if tenant:
+            raise click.ClickException(
+                "--personal and --tenant are mutually exclusive: --personal targets "
+                "your private per-user partition (DNA_PERSONAL_ID), --tenant names a "
+                "workspace overlay."
+            )
+        oid = (os.environ.get("DNA_PERSONAL_ID") or "").strip()
+        if not oid:
+            raise click.ClickException(
+                "--personal needs an identity — set DNA_PERSONAL_ID to your durable "
+                "personal id (offline single-user). Personal memory never resolves to "
+                "a blank partition (fail-closed)."
+            )
+        try:
+            return personal_tenant(oid)
+        except PersonalIdentityRequired as exc:  # pragma: no cover — guarded above
+            raise click.ClickException(str(exc)) from None
+    try:
+        assert_no_personal_override(tenant)
+    except PermissionError as exc:
+        raise click.ClickException(str(exc)) from None
+    return tenant
 
 
 def _slug(text: str) -> str:
@@ -72,15 +116,20 @@ def memory() -> None:
 @click.option("--owner", default=None, help="Authoring agent (claude-code, jarvis, …).")
 @click.option("--scope", default=None, help="Scope (default: first/only scope).")
 @click.option("--tenant", default=None, help="Tenant overlay.")
+@click.option("--personal", is_flag=True,
+              help="Remember PRIVATELY — into your own per-user partition "
+                   "(DNA_PERSONAL_ID), portable across workspaces, not shared.")
 @click.option("--json", "as_json", is_flag=True)
 def remember_cmd(
     summary: str, kind: str, name: str | None, area: str, affect: str,
     affect_reason: str | None, source_refs: tuple[str, ...], tags: tuple[str, ...],
-    owner: str | None, scope: str | None, tenant: str | None, as_json: bool,
+    owner: str | None, scope: str | None, tenant: str | None, personal: bool,
+    as_json: bool,
 ) -> None:
     """Write a memory Kind + deterministic encoding-context + index it."""
     from dna.memory import remember
 
+    tenant = _resolve_memory_tenant(personal, tenant)
     name = name or _slug(summary)
     spec: dict[str, Any] = {"summary": summary}
     if kind == "LessonLearned":
@@ -122,6 +171,9 @@ def remember_cmd(
               help="Restrict to memory kind(s). Default: all.")
 @click.option("--scope", default=None)
 @click.option("--tenant", default=None)
+@click.option("--personal", is_flag=True,
+              help="Recall YOUR OWN private memory (DNA_PERSONAL_ID), unioned with "
+                   "the base defaults — never any workspace's memory.")
 @click.option("-k", "--limit", "k", default=5, show_default=True)
 @click.option("--no-reconsolidate", is_flag=True, help="Skip the cue/confidence bump side-effect.")
 @click.option("--actor", default="cli", show_default=True, help="Who is recalling (stamped in cues_history).")
@@ -131,12 +183,14 @@ def remember_cmd(
 @click.option("--json", "as_json", is_flag=True)
 def recall_cmd(
     query: str, kinds: tuple[str, ...], scope: str | None, tenant: str | None,
-    k: int, no_reconsolidate: bool, actor: str, semantic: bool | None, as_json: bool,
+    personal: bool, k: int, no_reconsolidate: bool, actor: str,
+    semantic: bool | None, as_json: bool,
 ) -> None:
     """Hybrid, bi-temporal, retention-re-scored recall over the memory Kinds."""
     from dna.memory import recall
     from dna.memory.verbs import MEMORY_KINDS
 
+    tenant = _resolve_memory_tenant(personal, tenant)
     kind_list = list(kinds) or list(MEMORY_KINDS)
     with dna_session(scope) as s:
         provider = _register_provider(s)
@@ -197,6 +251,7 @@ def forget_cmd(
     """Bi-temporal DEMOTION — set valid_to (never hard-delete)."""
     from dna.memory import forget
 
+    tenant = _resolve_memory_tenant(False, tenant)  # reject raw personal: override
     with dna_session(scope) as s:
         try:
             out = s.run(forget(
@@ -223,6 +278,7 @@ def list_cmd(kind: str, show_all: bool, scope: str | None, tenant: str | None, a
     """List memories in the scope (current by default; ``--all`` includes forgotten)."""
     from dna.memory.decay import currently_valid
 
+    tenant = _resolve_memory_tenant(False, tenant)  # reject raw personal: override
     now = datetime.now(timezone.utc)
     with dna_session(scope) as s:
         rows: list[dict[str, Any]] = []
@@ -270,6 +326,7 @@ def consolidate_cmd(
     stale memories. NO LLM (that scribe is external + optional)."""
     from dna.memory import consolidate
 
+    tenant = _resolve_memory_tenant(False, tenant)  # reject raw personal: override
     with dna_session(scope) as s:
         report = s.run(consolidate(
             s.kernel, s.scope, kind=kind, tenant=tenant,

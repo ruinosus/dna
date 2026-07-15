@@ -989,17 +989,56 @@ async def board_item_impl(
 # ── memory (declarative recall) ────────────────────────────────────────────
 
 
+def _resolve_memory_target(
+    live: LiveDna, scope: str | None, tenant: str | None,
+    memory_scope: str, oid: str | None,
+) -> tuple[str, str | None]:
+    """Resolve the ``(scope, tenant)`` a memory op runs against for the given
+    :data:`~dna.memory.personal.MemoryScope` (ADR-personal-memory §3.3 / §5).
+
+    * ``personal`` → ``tenant = personal:<oid>`` (oid resolved SERVER-SIDE by the
+      surface, fail-closed on missing identity), and the scope defaults to the
+      shared **base** scope (``live.base_scope``) so recall UNIONs the base ``''``
+      ``_lib`` defaults (ratified #4) rather than a workspace's data — the personal
+      partition is workspace-independent (the same partition in every workspace +
+      client).
+    * ``workspace`` (default) → the current behavior unchanged: scope defaults to
+      ``default_scope(tenant)``, tenant is the resolved workspace id. A raw
+      ``tenant`` naming the reserved ``personal:`` scheme is REJECTED here
+      (INV-PERSONAL layer 4) — a workspace request may never name a personal
+      partition directly.
+    """
+    from dna.memory.personal import (
+        PERSONAL_SCOPE,
+        assert_no_personal_override,
+        resolve_memory_tenant,
+    )
+
+    if memory_scope == PERSONAL_SCOPE:
+        tn = resolve_memory_tenant(
+            memory_scope=PERSONAL_SCOPE, oid=oid, workspace_tenant=tenant
+        )
+        return scope or live.base_scope, tn
+    assert_no_personal_override(tenant)
+    return scope or live.default_scope(tenant), tenant
+
+
 async def recall_impl(
     live: LiveDna, query: str, scope: str | None = None, k: int = 5,
-    tenant: str | None = None,
+    tenant: str | None = None, *, memory_scope: str = "workspace",
+    oid: str | None = None,
 ) -> dict[str, Any]:
     """Recall DNA memory for ``query`` — hybrid + bi-temporal + retention
     re-scored when the search extra is present, honest lexical otherwise.
-    Tenant-scoped when ``tenant`` is set (the auth bridge injects it)."""
+    Tenant-scoped when ``tenant`` is set (the auth bridge injects it).
+
+    ``memory_scope="personal"`` recalls the caller's OWN private partition
+    (``personal:<oid>``, oid server-derived) unioned with the base ``_lib``
+    defaults — never any workspace's memory (ADR-personal-memory)."""
     from dna.memory import recall
     from dna.memory.verbs import MEMORY_KINDS
 
-    sc = scope or live.default_scope(tenant)
+    sc, tenant = _resolve_memory_target(live, scope, tenant, memory_scope, oid)
     if live.provider is not None:
         try:
             from dna.memory import backfill_index
@@ -1021,13 +1060,20 @@ async def remember_impl(
     tags: list[str] | None = None,
     owner: str = "mcp",
     tenant: str | None = None,
+    *,
+    memory_scope: str = "workspace",
+    oid: str | None = None,
 ) -> dict[str, Any]:
     """Persist a memory Kind (deterministically enriched + indexed) — mirrors
     ``dna memory remember``. Written into the tenant overlay when ``tenant`` is
-    set (the auth bridge injects it)."""
+    set (the auth bridge injects it).
+
+    ``memory_scope="personal"`` writes to the caller's OWN private partition
+    (``personal:<oid>``, oid server-derived) — "remember privately", never shared
+    with the workspace (ADR-personal-memory)."""
     from dna.memory import remember
 
-    sc = scope or live.default_scope(tenant)
+    sc, tenant = _resolve_memory_target(live, scope, tenant, memory_scope, oid)
     name = _slug(summary)
     spec: dict[str, Any] = {"summary": summary}
     if kind == "LessonLearned":
@@ -1048,20 +1094,25 @@ async def remember_impl(
 
 async def consolidate_impl(
     live: LiveDna, scope: str | None = None, apply: bool = False,
-    tenant: str | None = None,
+    tenant: str | None = None, *, memory_scope: str = "workspace",
+    oid: str | None = None,
 ) -> dict[str, Any]:
     """Deterministic memory consolidation pass (Ebbinghaus retention). With
     ``apply=True`` stale memories are soft-forgotten (bi-temporal, never
-    deleted). Mirrors ``dna memory consolidate``."""
+    deleted). Mirrors ``dna memory consolidate``.
+
+    ``memory_scope="personal"`` consolidates ONLY the caller's personal partition
+    (``personal:<oid>``) — never touches workspace memory (ADR-personal-memory §4)."""
     from dna.memory import consolidate
 
-    sc = scope or live.default_scope(tenant)
+    sc, tenant = _resolve_memory_target(live, scope, tenant, memory_scope, oid)
     return await consolidate(live.kernel, sc, apply=apply, tenant=tenant)
 
 
 async def list_memories_impl(
     live: LiveDna, scope: str | None = None, kind: str = "LessonLearned",
-    tenant: str | None = None,
+    tenant: str | None = None, *, memory_scope: str = "workspace",
+    oid: str | None = None,
 ) -> dict[str, Any]:
     """List the tenant's stored memories — the LIST surface the DNA Cloud memory
     dashboard renders. Tenant-aware via the same ``kernel.query`` idiom every
@@ -1075,7 +1126,7 @@ async def list_memories_impl(
     disappears from BOTH surfaces, never a ghost."""
     from dna.memory.decay import currently_valid
 
-    sc = scope or live.default_scope(tenant)
+    sc, tenant = _resolve_memory_target(live, scope, tenant, memory_scope, oid)
     memories: list[dict[str, Any]] = []
     for d in await _collect(live, sc, kind, tenant):
         spec = d["spec"]
@@ -1105,6 +1156,7 @@ async def list_memories_impl(
 async def forget_impl(
     live: LiveDna, name: str, scope: str | None = None,
     kind: str = "LessonLearned", tenant: str | None = None,
+    *, memory_scope: str = "workspace", oid: str | None = None,
 ) -> dict[str, Any]:
     """Forget ONE memory by its doc ``name`` (slug) — the DELETE surface the DNA
     Cloud memory dashboard calls. NOT a hard delete: routes through the memory
@@ -1122,7 +1174,7 @@ async def forget_impl(
     ``forgotten: False`` no-op, never a 500."""
     from dna.memory import forget
 
-    sc = scope or live.default_scope(tenant)
+    sc, tenant = _resolve_memory_target(live, scope, tenant, memory_scope, oid)
     try:
         out = await forget(live.kernel, sc, name, kind=kind, tenant=tenant)
     except KeyError:

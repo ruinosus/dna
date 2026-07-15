@@ -196,10 +196,16 @@ def build_server(
 
     from dna_cli._mcp_auth import (
         CrossTenantError,
+        enforce_oid_from_context,
         enforce_tier_from_context,
         enforce_workspace_from_context,
         token_has_explicit_plan_claim,
         token_present_in_context,
+    )
+    from dna.memory.personal import (
+        PersonalIdentityRequired,
+        PersonalOverrideRejected,
+        personal_tenant,
     )
     from dna_cli._mcp_quota import (
         FeatureNotInPlanError,
@@ -299,6 +305,48 @@ def build_server(
         except (OverQuotaError, FeatureNotInPlanError, MemoryModeError) as exc:
             raise ToolError(str(exc)) from None
         return tenant
+
+    async def _personal_guard(memory_op: str) -> str:
+        """The tenancy + quota seam for a PERSONAL memory call — the identity twin
+        of :func:`_guard` (ADR-personal-memory).
+
+        Personal memory is keyed on the durable identity, not a workspace, so this
+        deliberately does NOT go through workspace resolution/membership (personal
+        works in a bare MCP client with no workspace — the portability thesis).
+        Instead it:
+
+        1. resolves the ``oid`` SERVER-SIDE via ``enforce_oid_from_context`` — an
+           authenticated request with no verified oid, or an offline caller with no
+           ``DNA_PERSONAL_ID``, is DENIED (INV-PERSONAL layer 1, fail-closed);
+        2. with NO token (stdio / local) → returns the oid, meters nothing (the
+           OSS/self-host path, exactly like ``_guard``);
+        3. otherwise meters this call against the token's tier — the SAME
+           ``memory_mode`` (read vs write) + quota caps as workspace memory, but
+           keyed on the personal partition ``personal:<oid>`` so personal usage
+           meters per identity, independent of any workspace.
+
+        Returns the resolved ``oid`` (never a tenant — the caller passes
+        ``memory_scope="personal"`` + this oid to the impl)."""
+        try:
+            oid = enforce_oid_from_context()
+        except (PersonalIdentityRequired, PersonalOverrideRejected) as exc:
+            raise ToolError(str(exc)) from None
+        if not token_present_in_context():
+            return oid  # stdio / local → identity, no metering.
+        kernel = (await _live()).kernel
+        tier = enforce_tier_from_context()
+        row = await kernel.tier(tier)
+        if row is None:
+            row = await kernel.tier("free")
+        caps = (row or {}).get("spec") or {}
+        try:
+            enforce_memory_mode(caps=caps, tier=tier, op=memory_op)
+            enforce_quota(
+                caps=caps, tenant=personal_tenant(oid), tier=tier, family="memory",
+            )
+        except (OverQuotaError, FeatureNotInPlanError, MemoryModeError) as exc:
+            raise ToolError(str(exc)) from None
+        return oid
 
     server = FastMCP(
         "dna",
@@ -413,8 +461,20 @@ def build_server(
     # -- memory --------------------------------------------------------------
 
     @server.tool(run_in_thread=False)
-    async def recall(query: str, scope: str | None = None, k: int = 5) -> dict[str, Any]:
-        """Recall DNA memory for a query (hybrid/bi-temporal when available)."""
+    async def recall(
+        query: str, scope: str | None = None, k: int = 5, personal: bool = False,
+    ) -> dict[str, Any]:
+        """Recall DNA memory for a query (hybrid/bi-temporal when available).
+
+        ``personal=true`` recalls YOUR OWN private memory (keyed on your verified
+        identity, portable across workspaces + clients) unioned with the shared
+        base defaults — never any workspace's memory. The default (``false``)
+        recalls the workspace's shared memory, unchanged."""
+        if personal:
+            oid = await _personal_guard("read")
+            return await recall_impl(
+                await _live(), query, None, k, memory_scope="personal", oid=oid,
+            )
         return await recall_impl(
             await _live(), query, scope, k, await _guard("memory", scope=scope, memory_op="read")
         )
@@ -427,8 +487,19 @@ def build_server(
         affect: str = "triumph",
         tags: list[str] | None = None,
         owner: str = "mcp",
+        personal: bool = False,
     ) -> dict[str, Any]:
-        """Persist a memory (a LessonLearned) so future recalls surface it."""
+        """Persist a memory (a LessonLearned) so future recalls surface it.
+
+        ``personal=true`` remembers PRIVATELY — into your own identity-keyed
+        partition, portable across workspaces + clients, never shared with the
+        workspace. The default (``false``) shares to the workspace, unchanged."""
+        if personal:
+            oid = await _personal_guard("write")
+            return await remember_impl(
+                await _live(), summary, None, area=area, affect=affect, tags=tags,
+                owner=owner, memory_scope="personal", oid=oid,
+            )
         return await remember_impl(
             await _live(), summary, scope, area=area, affect=affect, tags=tags,
             owner=owner, tenant=await _guard("memory", scope=scope, memory_op="write"),

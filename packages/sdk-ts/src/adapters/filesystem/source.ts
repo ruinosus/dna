@@ -10,6 +10,18 @@ import { resolve, join } from "node:path";
 async function pathExists(p: string): Promise<boolean> {
   try { await access(p); return true; } catch { return false; }
 }
+
+/**
+ * Map a tenant value to a cross-platform-safe on-disk directory segment — 1:1
+ * with Python `fs_tenant_segment` (ADR-personal-memory). The reserved
+ * `personal:<oid>` partition's `:` scheme sigil is not a portable path segment,
+ * so it is percent-escaped to `%3A` for the FS directory; the canonical tenant
+ * value (the read predicate, the API) is unchanged. A no-op for every ordinary
+ * tenant (they carry no `:`).
+ */
+export function fsTenantSegment(tenant: string): string {
+  return tenant.replace(/:/g, "%3A");
+}
 import yaml from "js-yaml";
 import type {
   CountResult,
@@ -62,7 +74,7 @@ export class FilesystemSource implements SourcePort {
     const tenant = opts?.tenant;
     if (tenant) {
       const tenantPath = join(
-        this.baseDir, "tenants", tenant, "scopes", scope, "Genome.yaml",
+        this.baseDir, "tenants", fsTenantSegment(tenant), "scopes", scope, "Genome.yaml",
       );
       if (await pathExists(tenantPath)) {
         const tenantPkg = yaml.load(
@@ -249,7 +261,7 @@ export class FilesystemSource implements SourcePort {
     // first, falling back to the legacy layers/tenant/<X>/ for
     // pre-migration data.
     if (layerId === "tenant") {
-      const newDir = join(this.baseDir, "tenants", layerValue, "scopes", scope);
+      const newDir = join(this.baseDir, "tenants", fsTenantSegment(layerValue), "scopes", scope);
       if (await pathExists(newDir)) {
         return await this._loadDir(newDir, readers ?? [], new Set());
       }

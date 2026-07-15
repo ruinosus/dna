@@ -263,9 +263,19 @@ export class Kernel {
    */
   tenant: string | null = null;
 
-  constructor(opts?: { tenant?: string | null }) {
+  /**
+   * Whether this kernel may key a reserved `personal:<oid>` partition
+   * (ADR-personal-memory) — false for every ordinary caller (the `personal:`
+   * scheme is rejected as user input); only the personal-memory write path sets
+   * it, and it travels with the kernel so the write path's slug validation
+   * permits the personal partition (INV-PERSONAL — server-authorized only).
+   */
+  _allowPersonal = false;
+
+  constructor(opts?: { tenant?: string | null; allowPersonal?: boolean }) {
+    if (opts?.allowPersonal) this._allowPersonal = true;
     if (opts?.tenant !== undefined) {
-      validateTenantSlug(opts.tenant);
+      validateTenantSlug(opts.tenant, { allowPersonal: this._allowPersonal });
       this.tenant = opts.tenant;
     }
   }
@@ -279,12 +289,17 @@ export class Kernel {
    * Pass `tenant=null` to obtain an unbound kernel (writes only allowed
    * for GLOBAL kinds).
    */
-  withTenant(tenant: string | null): Kernel {
-    validateTenantSlug(tenant);
+  withTenant(
+    tenant: string | null,
+    opts: { allowPersonal?: boolean } = {},
+  ): Kernel {
+    const allowPersonal = opts.allowPersonal === true;
+    validateTenantSlug(tenant, { allowPersonal });
     // Shallow object copy — shares source/cache/extensions/hooks
     const copy: Kernel = Object.create(Object.getPrototypeOf(this));
     Object.assign(copy, this);
     copy.tenant = tenant;
+    copy._allowPersonal = allowPersonal;
     // Re-point the write pipeline at the copy so a tenant-bound kernel
     // resolves its OWN tenant in writeDocument/deleteDocument (Fase 2).
     copy._writePipeline = new WritePipeline(copy);

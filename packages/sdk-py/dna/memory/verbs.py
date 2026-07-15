@@ -40,6 +40,7 @@ from dna.memory.decay import (
 from dna.memory.ecphory import EngramRef
 from dna.memory.encoding_context import stamp_encoding_context_if_absent
 from dna.memory.memory_type import classify_memory_type
+from dna.memory.personal import is_personal_tenant
 from dna.memory.retrieval import affect_factor
 from dna.memory.semantic import (
     engram_text,
@@ -133,7 +134,10 @@ async def remember(
     if api_version:
         raw["apiVersion"] = api_version
 
-    write_kernel = kernel.with_tenant(tenant) if tenant else kernel
+    write_kernel = (
+        kernel.with_tenant(tenant, allow_personal=is_personal_tenant(tenant))
+        if tenant else kernel
+    )
     await write_kernel.write_document(scope, kind, name, raw, invalidate_mode="doc")
 
     indexed = False
@@ -326,7 +330,10 @@ async def _reconsolidate(
     Read-modify-write with a deep copy; fail-soft per doc. Nader (2000) light
     reconsolidation: recall reawakens the engram and reinforces it."""
     now_iso = _now_iso(now)
-    write_kernel = kernel.with_tenant(tenant) if tenant else kernel
+    write_kernel = (
+        kernel.with_tenant(tenant, allow_personal=is_personal_tenant(tenant))
+        if tenant else kernel
+    )
     for hit in hits:
         if hit.get("kind") != "LessonLearned":
             continue
@@ -386,7 +393,10 @@ async def forget(
     api_version = _resolve_api_version(kernel, kind)
     if api_version:
         raw["apiVersion"] = api_version
-    write_kernel = kernel.with_tenant(tenant) if tenant else kernel
+    write_kernel = (
+        kernel.with_tenant(tenant, allow_personal=is_personal_tenant(tenant))
+        if tenant else kernel
+    )
     await write_kernel.write_document(scope, kind, name, raw, invalidate_mode="doc")
     return {
         "kind": kind, "name": name,

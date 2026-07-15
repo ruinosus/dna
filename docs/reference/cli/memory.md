@@ -96,6 +96,7 @@ dna memory recall [OPTIONS] QUERY
 | `--json` |  |
 | `--kind` | Restrict to memory kind(s). Default: all. |
 | `--no-reconsolidate` | Skip the cue/confidence bump side-effect. |
+| `--personal` | Recall YOUR OWN private memory (DNA_PERSONAL_ID), unioned with the base defaults — never any workspace's memory. |
 | `--scope` |  |
 | `--semantic`, `--no-semantic` | Blend embedding similarity into the ecphory ranking (RRF fusion). Default: auto — on when the search provider is available. |
 | `--tenant` |  |
@@ -126,6 +127,7 @@ dna memory remember [OPTIONS] SUMMARY
 | `--kind` | _(default: `LessonLearned`)_ |
 | `--name` | Doc name (default: rem-<hash> of summary). |
 | `--owner` | Authoring agent (claude-code, jarvis, …). |
+| `--personal` | Remember PRIVATELY — into your own per-user partition (DNA_PERSONAL_ID), portable across workspaces, not shared. |
 | `--reason` | Concrete justification for the affect (≥20 chars). |
 | `--scope` | Scope (default: first/only scope). |
 | `--source-ref` | Source artifact ref (repeatable). |
