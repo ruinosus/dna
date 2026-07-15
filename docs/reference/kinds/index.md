@@ -46,7 +46,7 @@ Declarative Kind descriptor — the format of builtin `kinds/*.kind.yaml` packag
 | `volatile_spec_fields` |  | Extra write-/runtime-stamped spec fields excluded from the canonical digest, unioned with the base set {updated_at, version, created_at}. |
 | `workitem_common` |  | DEPRECATED back-compat shorthand for schema_fragments: ["sdlc/workitem-common"]. Python-only. |
 
-## Registered Kinds (80)
+## Registered Kinds (82)
 
 ### Composition plane
 
@@ -141,4 +141,6 @@ Declarative Kind descriptor — the format of builtin `kinds/*.kind.yaml` packag
 | [Tier](record.md#tier) | `cloud-tier` | `github.com/ruinosus/dna/cloud/v1` |
 | [Tool](record.md#tool) | `helix-tool` | `github.com/ruinosus/dna/v1` |
 | [WorkflowEvent](record.md#workflowevent) | `sdlc-workflow-event` | `github.com/ruinosus/dna/sdlc/v1` |
+| [Workspace](record.md#workspace) | `tenant-workspace` | `github.com/ruinosus/dna/tenant/v1` |
+| [WorkspaceMembership](record.md#workspacemembership) | `tenant-workspace-membership` | `github.com/ruinosus/dna/tenant/v1` |
 
