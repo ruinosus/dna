@@ -222,8 +222,8 @@ DNA tenant. Clean alignment: the DNA-tenant boundary and the Graph boundary are 
 
 | Inbound identity | `tid` | OBO target | Graph reached |
 |---|---|---|---|
-| **@avanade member** (Entra) | Avanade tenant GUID | Avanade tenant endpoint | Avanade M365 (their calendar/files) ✅ |
-| **@gmail via Google/Clerk** (non-Entra) | — no Entra token | **N/A** | **OBO not available** — honest capability gap ⚠️ |
+| **partner-org member** (Entra) | partner tenant GUID | partner tenant endpoint | that org's M365 (their calendar/files) ✅ |
+| **Google/Clerk sign-in** (non-Entra) | — no Entra token | **N/A** | **OBO not available** — honest capability gap ⚠️ |
 | **Personal Microsoft acct** (`@outlook`, MSA) | `consumers`/`9188…` | consumers endpoint | Personal Outlook/OneDrive (app must enable personal accounts) |
 | **Guest (B2B)** in tenant A, home tenant B | A (resource tenant that issued the token) | tenant A endpoint | The **guest** identity's access *in tenant A* — limited/varies ⚠️ |
 
