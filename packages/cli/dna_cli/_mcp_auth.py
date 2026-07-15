@@ -659,6 +659,33 @@ async def enforce_workspace_from_context(live: Any, requested: str | None) -> st
     )
 
 
+def entra_obo_assertion_from_context() -> tuple[str | None, str | None]:
+    """The current request's raw Entra assertion (token A) + its home tenant
+    (``tid``), for the Microsoft On-Behalf-Of exchange — or ``(None, None)``.
+
+    OBO (``dna_cli.graph``) needs the RAW inbound token string as the ``assertion``
+    (the exact verified token whose ``aud`` is the DNA MCP app) and the token's
+    ``tid`` (the home tenant the exchange must target). This reads both off the live
+    FastMCP access token. Returns ``(None, None)`` when there is no token (stdio /
+    unauthenticated) OR the token is NOT an Entra identity (no ``tid`` claim —
+    Clerk/WorkOS/OIDC), which is the honest capability-gap signal the graph tools
+    branch on (ADR-mcp-obo §4.4). The token is never logged here."""
+    try:
+        from fastmcp.server.dependencies import get_access_token
+    except ModuleNotFoundError:  # pragma: no cover — no fastmcp ⇒ no auth
+        return None, None
+
+    token = get_access_token()
+    if token is None:
+        return None, None
+    claims = getattr(token, "claims", None) or {}
+    tid = claims.get("tid")  # the standard Entra home-tenant claim.
+    raw = getattr(token, "token", None)
+    if not tid or not raw:
+        return None, None
+    return str(raw), str(tid)
+
+
 def token_present_in_context() -> bool:
     """True when the CURRENT MCP request carries a verified access token.
 

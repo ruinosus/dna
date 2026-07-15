@@ -77,6 +77,26 @@ def serve(scope: str | None, base_dir: str | None, transport: str,
     """
     from dna_cli._mcp_server import build_server
 
+    # Microsoft On-Behalf-Of (OBO) enablement — the `graph:` block of
+    # dna.config.yaml, off by default. HTTP-only (like --auth): a bearer token is
+    # the assertion OBO exchanges, so stdio (no token) never registers graph tools.
+    graph_config = None
+    if transport != "stdio":
+        try:
+            from dna.config import load_config
+            from dna_cli.graph._config import parse_graph_config
+
+            cfg = load_config()
+            graph_config = parse_graph_config(cfg.graph if cfg else None)
+        except ValueError as exc:
+            raise click.ClickException(f"graph: config error — {exc}") from None
+        if graph_config is not None and graph_config.active_groups():
+            click.echo(
+                "graph (OBO): active groups — "
+                + ", ".join(graph_config.active_groups()),
+                err=True,
+            )
+
     auth_provider = None
     if auth in ("jwt", "config"):
         if transport == "stdio":
@@ -106,7 +126,10 @@ def serve(scope: str | None, base_dir: str | None, transport: str,
             raise click.ClickException(str(exc)) from None
 
     try:
-        server = build_server(scope=scope, base_dir=base_dir, auth=auth_provider)
+        server = build_server(
+            scope=scope, base_dir=base_dir, auth=auth_provider,
+            graph_config=graph_config,
+        )
     except RuntimeError as exc:
         raise click.ClickException(str(exc)) from None
 

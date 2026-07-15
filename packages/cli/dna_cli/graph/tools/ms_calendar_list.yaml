@@ -1,0 +1,67 @@
+# ms_calendar_list — the first On-Behalf-Of Graph tool (ADR-mcp-obo §6, PoC).
+#
+# The AGENT-FACING surface (description + input_schema) of the built-in
+# ``ms_calendar_list`` MCP tool, expressed as a governed Tool document (record
+# plane, alias ``helix-tool``). The built-in @server.tool reads its description
+# and parameters FROM this doc, so what the model sees is DATA — overlayable per
+# tenant like any Tool, not hardcoded in Python. Execution stays code (the OBO
+# exchange + Graph call live in dna_cli/graph); this doc is only the surface.
+#
+# Delegated scope: Calendars.Read (read-only). Gated behind the config
+# `graph.groups.calendar` block being enabled AND an Entra inbound identity.
+apiVersion: github.com/ruinosus/dna/v1
+kind: Tool
+metadata:
+  name: ms_calendar_list
+  description: >-
+    List the signed-in user's Microsoft 365 calendar events in a time window,
+    on their behalf (Microsoft Graph, delegated Calendars.Read). Reads the user's
+    own calendar via On-Behalf-Of token exchange — no separate sign-in. Only
+    available when the DNA MCP server has the Graph calendar group enabled and the
+    caller signed in with a Microsoft Entra identity.
+spec:
+  type: builtin
+  input_schema:
+    type: object
+    properties:
+      start:
+        type: string
+        description: >-
+          Start of the window (ISO 8601, e.g. 2026-07-15T00:00:00Z). Defaults to
+          the start of today (UTC) when omitted.
+      end:
+        type: string
+        description: >-
+          End of the window (ISO 8601). Defaults to 7 days after start when omitted.
+      top:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 25
+        description: Maximum number of events to return.
+  output_schema:
+    type: object
+    properties:
+      count:
+        type: integer
+      events:
+        type: array
+        items:
+          type: object
+          properties:
+            id: { type: string }
+            subject: { type: string }
+            start: { type: string }
+            end: { type: string }
+            location: { type: string }
+            organizer: { type: string }
+            web_link: { type: string }
+  auth_type: oauth2
+  read_only: true
+  requires_confirmation: false
+  tags:
+    - microsoft
+    - graph
+    - calendar
+    - read-only
+    - on-behalf-of

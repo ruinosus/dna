@@ -32,7 +32,7 @@ CONFIG_FILENAME = "dna.config.yaml"
 
 _VALID_SEARCH = ("off", "pgvector", "sqlite-vec")
 _VALID_EMBEDDING = ("off", "fake", "onnx")
-_KNOWN_KEYS = {"source", "search", "embedding", "auth"}
+_KNOWN_KEYS = {"source", "search", "embedding", "auth", "graph"}
 
 
 @dataclass(frozen=True)
@@ -46,6 +46,11 @@ class DnaConfig:
     pluggable N-provider IdP layer of the MCP runtime face) is owned and validated
     by the consumer (``dna_cli._mcp_auth.parse_auth_providers``). ``None`` when the
     file has no ``auth:`` section.
+    ``graph`` is the SIBLING opaque passthrough for the MCP server's Microsoft
+    On-Behalf-Of (OBO) enablement (the ``graph:`` section) — its schema
+    (``enabled`` / ``client_id_env`` / ``credential_env`` / ``groups[]``) is owned
+    and validated by ``dna_cli.graph._config.parse_graph_config``. ``None`` when the
+    file has no ``graph:`` section (OBO off — the default).
     ``path`` is where it was loaded from (``None`` for a synthesized default).
     """
 
@@ -53,6 +58,7 @@ class DnaConfig:
     search: str = "off"
     embedding: str = "off"
     auth: dict[str, Any] | None = None
+    graph: dict[str, Any] | None = None
     path: Path | None = None
 
 
@@ -143,6 +149,14 @@ def _parse(raw: Any, path: Path) -> DnaConfig:
             f"the MCP IdP layer), got {type(auth).__name__}."
         )
 
+    graph = raw.get("graph")
+    if graph is not None and not isinstance(graph, dict):
+        raise ValueError(
+            f"{path}: `graph:` must be a mapping (it configures the MCP server's "
+            f"Microsoft On-Behalf-Of tool-groups), got {type(graph).__name__}."
+        )
+
     return DnaConfig(
-        source=source, search=search, embedding=embedding, auth=auth, path=path
+        source=source, search=search, embedding=embedding, auth=auth, graph=graph,
+        path=path,
     )

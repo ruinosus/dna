@@ -75,6 +75,7 @@ nav:
       - The MCP server — DNA as a live layer: guides/mcp-server.md
       - The REST read-API — DNA's HTTP face for web apps: guides/rest-api.md
       - Hosting the MCP server on Azure (ACA + Entra): guides/hosting-mcp-aca.md
+      - "On-Behalf-Of — MCP tools act on your Microsoft 365": guides/mcp-obo.md
       - The DNA Cloud starter catalog & BYO-DNA: guides/dna-cloud-catalog.md
       - How to configure ports (dna.config.yaml): guides/configuring-ports.md
       - How to ship a scope with your app: guides/shipping-a-scope.md
