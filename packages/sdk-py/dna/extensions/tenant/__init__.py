@@ -21,6 +21,27 @@ lifecycle operations flow through standard kernel CRUD — list/get/create
 
 Phase A scope (this commit): just the Kind + reader/writer + register.
 Routes (POST /tenants helpers, member management) land in Phase B.
+
+Workspace tenancy (ADR "Model B", f-ws-kinds F1): this extension is also
+the home of the two GLOBAL workspace Kinds, shipped as byte-identical
+Py↔TS descriptors (F3 — record Kinds are data, not classes) and
+auto-registered via ``load_descriptors`` in ``register``:
+
+  - Workspace (``tenant-workspace``) — the DNA tenancy root: a first-class,
+    named, DNA-native space that authenticates identities from any Azure org
+    (Entra) and whose opaque, immutable ``workspace_id`` IS the physical
+    ``tenant`` column value on every row it owns (workspace #1 reuses the
+    founder's Azure tid → zero migration).
+  - WorkspaceMembership (``tenant-workspace-membership``) — the
+    identity→workspace boundary: maps a verified identity (oid + email + tid)
+    to a workspace + role + status. The crown-jewel authorization check
+    (active grant required, fail-closed). This is the platform-level Kind the
+    ADR calls the missing ``TenantMembership``, distinct from the class-based
+    ``TenantMembership`` below (the Model-A user↔Tenant link) and from the
+    portfolio ``Membership`` (intra-workspace org/project RBAC).
+
+F1 adds ONLY these two Kinds + a seed (``scripts/seed_workspace_one.py``);
+the auth→workspace resolution rework is F2 and does not touch this file.
 """
 from __future__ import annotations
 
@@ -29,6 +50,7 @@ from typing import Any
 
 import yaml
 
+from dna.kernel.descriptor_loader import load_descriptors
 from dna.kernel.kind_base import KindBase
 from dna.kernel.protocols import ExtensionHost, StorageDescriptor, SYSTEM_SCOPE, TenantScope, ReaderPort, WriterPort
 from dna.kernel.bundle_handle import BundleHandle
@@ -488,6 +510,13 @@ class TenantExtension:
         kernel.kind(TenantMembershipKind())
         kernel.reader(TenantMembershipReader())
         kernel.writer(TenantMembershipWriter())
+        # F3 / Model B: the GLOBAL workspace Kinds ship as kinds/*.kind.yaml
+        # package data (byte-identical Py↔TS mirror), registered through the
+        # SAME funnel as per-scope KindDefinitions (plane lint + digest
+        # idempotency + builtin conflict marker). Record Kinds are data, not
+        # classes — no models.py, no port class.
+        for raw in load_descriptors("dna.extensions.tenant"):
+            kernel.kind_from_descriptor(raw)
 
 
 def validate_slug(slug: str) -> None:

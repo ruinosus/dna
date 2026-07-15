@@ -148,6 +148,11 @@ def test_extension_registers_both_kinds_reader_writer():
         def kind(self, k): captured["kinds"].append(k)
         def reader(self, r): captured["readers"].append(r)
         def writer(self, w): captured["writers"].append(w)
+        # F1 / Model B: register now also loads the workspace descriptor Kinds
+        # via kind_from_descriptor (same funnel as CloudExtension). This test
+        # only asserts the class Kinds' reader/writer wiring, so a no-op sink
+        # is enough.
+        def kind_from_descriptor(self, raw): captured.setdefault("descriptors", []).append(raw)
     TenantExtension().register(FakeKernel())
     kinds = sorted([k.kind for k in captured["kinds"]])
     assert kinds == ["Tenant", "TenantMembership"]

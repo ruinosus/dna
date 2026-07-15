@@ -25,6 +25,10 @@ function rw() {
     kind(_k: KindPort) {},
     reader(r: ReaderPort) { readers.push(r); },
     writer(w: WriterPort) { writers.push(w); },
+    // F1 / Model B: register now also loads the workspace descriptor Kinds via
+    // kindFromDescriptor (same as CloudExtension). This helper only exercises
+    // the reader/writer round-trip, so a no-op sink is enough.
+    kindFromDescriptor(_raw: Record<string, unknown>) {},
   });
   return { tenantReader: readers[0]!, tenantWriter: writers[0]!, memReader: readers[1]!, memWriter: writers[1]! };
 }

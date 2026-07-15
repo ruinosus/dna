@@ -6,6 +6,21 @@
  *   - Tenant (tenant-tenant) — org/team identity (TENANT.md).
  *   - TenantMembership (tenant-membership) — user↔tenant link (MEMBERSHIP.md).
  * Both strict-detect on apiVersion; envelope (fm.spec) reader with flat fallback.
+ *
+ * Workspace tenancy (ADR "Model B", f-ws-kinds F1): this extension is also
+ * the home of the two GLOBAL workspace Kinds, shipped as byte-identical Py↔TS
+ * descriptors (F3 — record Kinds are data, not classes) and auto-registered
+ * via `loadDescriptors` in `register`:
+ *   - Workspace (`tenant-workspace`) — the DNA tenancy root; its opaque,
+ *     immutable `workspace_id` IS the physical `tenant` column value on every
+ *     row it owns (workspace #1 reuses the founder's Azure tid → zero migration).
+ *   - WorkspaceMembership (`tenant-workspace-membership`) — the
+ *     identity→workspace boundary (verified oid + email + tid → workspace +
+ *     role + status; active grant required, fail-closed). This is the
+ *     platform-level Kind the ADR calls the missing `TenantMembership`,
+ *     distinct from the class-based `TenantMembership` below.
+ * F1 adds ONLY these two Kinds + a seed; the auth→workspace resolution rework
+ * is F2 and does not touch this file.
  */
 import yaml from "js-yaml";
 
@@ -15,6 +30,7 @@ import { SD, TenantScope } from "../kernel/protocols.js";
 import type { BundleHandle } from "../kernel/bundle-handle.js";
 import type { Document } from "../kernel/document.js";
 import { popSourceFilesAsEntries, writeEntriesToHandle } from "../kernel/writer-helpers.js";
+import { loadDescriptors } from "../kernel/descriptor-loader.js";
 
 const API_VERSION = "github.com/ruinosus/dna/tenant/v1";
 
@@ -309,5 +325,11 @@ export class TenantExtension implements Extension {
     kernel.kind(new TenantMembershipKind());
     kernel.reader(new TenantMembershipReader());
     kernel.writer(new TenantMembershipWriter());
+    // F3 / Model B: the GLOBAL workspace Kinds ship as kinds/*.kind.yaml
+    // package data (byte-identical Py↔TS mirror), registered through the SAME
+    // funnel as per-scope KindDefinitions. Record Kinds are data, not classes.
+    for (const raw of loadDescriptors(import.meta.url, "tenant/kinds")) {
+      kernel.kindFromDescriptor(raw);
+    }
   }
 }

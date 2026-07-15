@@ -36,6 +36,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     that pins each phase to its `.specify/` artifact. `spec-kit` joins
     `superpowers` as an artifact-gated methodology (spec/plan must exist to leave
     the phase).
+- **Workspace tenancy foundation — `Workspace` + `WorkspaceMembership` Kinds**
+  (ADR "Model B", `f-ws-kinds` F1). Two GLOBAL record Kinds that make cross-org
+  collaboration expressible (the GitHub/Slack shape): a DNA-native **workspace**
+  is the tenancy unit, and Entra authenticates the *identity* while *membership*
+  decides what it sees. Shipped as byte-identical Py↔TS descriptors (F3 — record
+  Kinds are data, not classes), registered by the `tenant` extension; the
+  auth→workspace *resolution* rework is a later feature (F2) and is untouched
+  here.
+  - **`Workspace` (`tenant-workspace`)** — the tenancy root: an opaque, immutable
+    `workspace_id` (the physical `tenant` column value on every row it owns; the
+    name/slug are editable, the id never changes), plus `name`, `slug`,
+    `created_by`, `created_at`, `plan_ref`.
+  - **`WorkspaceMembership` (`tenant-workspace-membership`)** — the
+    identity→workspace boundary (the platform-level Kind the ADR calls the
+    missing `TenantMembership`): `workspace_id`, `identity_email` (the invite
+    handle), nullable `identity_oid` (the durable key, bound on accept),
+    `identity_tid` (provenance), `role` (owner/admin/member/guest), `status`
+    (pending→active), and invite audit. Distinct from the class-based
+    `TenantMembership` (Model-A) and the portfolio `Membership` (intra-workspace
+    RBAC), both untouched.
+  - **Seed workspace #1 (`scripts/seed_workspace_one.py`)** — a documented,
+    idempotent seed (NOT a data-moving migration): declares a `Workspace` whose
+    id **equals the founder's live Azure tid**, so every existing row is already
+    that workspace's data → **zero migration**. Plus an owner
+    `WorkspaceMembership` for his identity.
 
 ## [0.14.0] - 2026-07-13
 
