@@ -65,6 +65,17 @@ export const RESERVED_TENANT_SLUGS = new Set<string>([
 ]);
 
 /**
+ * Reserved tenant *schemes* (the `<scheme>:` prefix before the first colon).
+ * A slug whose scheme is reserved is rejected as USER input — no Workspace can
+ * be created/renamed to shadow or alias such a partition (ADR-personal-memory
+ * §3.4, INV-PERSONAL layer 3). `personal:` marks the per-user private partition
+ * (`personal:<oid>`); it is a legitimate PHYSICAL partition value, so the
+ * authorized personal-memory write path passes `allowPersonal=true` to reach it
+ * — every other write / workspace naming is rejected by default.
+ */
+export const RESERVED_TENANT_SCHEMES = new Set<string>(["personal"]);
+
+/**
  * Raised when a TENANTED kind is written without a tenant arg.
  *
  * Bind a tenant on construction (`new Kernel({ tenant: X })`) or
@@ -131,13 +142,35 @@ export class InvalidTenantSlug extends Error {
  * Phase 2 may tighten to k8s namespace rules (`[a-z0-9-]{1,63}`) once
  * the migration is complete.
  */
-export function validateTenantSlug(tenant: string | null | undefined): void {
+export function validateTenantSlug(
+  tenant: string | null | undefined,
+  opts: { allowPersonal?: boolean } = {},
+): void {
   if (tenant === null || tenant === undefined) return;
   if (RESERVED_TENANT_SLUGS.has(tenant)) {
     const reserved = Array.from(RESERVED_TENANT_SLUGS).sort();
     throw new InvalidTenantSlug(
       `tenant slug ${JSON.stringify(tenant)} is reserved (one of ${JSON.stringify(reserved)})`,
     );
+  }
+  // Reserved-scheme (ADR-personal-memory §3.4): a slug whose scheme (`<scheme>:`
+  // prefix) is reserved — today only `personal:` — is rejected as user input, so
+  // no Workspace can shadow/alias a personal partition (INV-PERSONAL layer 3).
+  // The authorized personal-memory write path passes allowPersonal to key it.
+  if (!opts.allowPersonal && tenant.includes(":")) {
+    const scheme = tenant.slice(0, tenant.indexOf(":"));
+    if (RESERVED_TENANT_SCHEMES.has(scheme)) {
+      const schemes = Array.from(RESERVED_TENANT_SCHEMES)
+        .map((s) => `${s}:`)
+        .sort();
+      throw new InvalidTenantSlug(
+        `tenant slug ${JSON.stringify(tenant)} uses the reserved ${JSON.stringify(
+          `${scheme}:`,
+        )} scheme (one of ${JSON.stringify(schemes)}) — it may not be used to name a ` +
+          `workspace/tenant; personal partitions are reachable only via the personal ` +
+          `memory selector (identity-derived).`,
+      );
+    }
   }
   if (tenant.length < 1 || tenant.length > 253) {
     throw new InvalidTenantSlug(

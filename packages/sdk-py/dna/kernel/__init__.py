@@ -164,7 +164,7 @@ class _DenylistInheritable:
 class Kernel:
     """Mediator that orchestrates 5 ports + hooks to produce ManifestInstance."""
 
-    def __init__(self, *, tenant: str | None = None) -> None:
+    def __init__(self, *, tenant: str | None = None, allow_personal: bool = False) -> None:
         """Create a Kernel.
 
         ``tenant`` binds this kernel to a tenant — all subsequent
@@ -173,10 +173,19 @@ class Kernel:
         (Stripe Connect pattern). Pass ``None`` (default) for the
         unbound kernel — only GLOBAL kinds may be written; TENANTED
         kinds raise ``TenantRequired``.
+
+        ``allow_personal`` authorizes binding a reserved ``personal:<oid>``
+        partition (ADR-personal-memory) — it is False for every ordinary caller
+        (the ``personal:`` scheme is rejected as user input); only the
+        personal-memory write path sets it, and it travels with this kernel so
+        the write pipeline's slug validation permits the personal partition.
         """
         from dna.kernel.protocols import validate_tenant_slug
-        validate_tenant_slug(tenant)
+        validate_tenant_slug(tenant, allow_personal=allow_personal)
         self.tenant: str | None = tenant
+        #: Whether this kernel may key a reserved ``personal:<oid>`` partition
+        #: (INV-PERSONAL — server-authorized personal writes only).
+        self._allow_personal: bool = allow_personal
 
         self._source: SourcePort | None = None
         self._cache: CachePort | None = None
@@ -357,7 +366,7 @@ class Kernel:
         instead of spawning a new loop. Idempotent."""
         self._main_loop = loop
 
-    def with_tenant(self, tenant: str | None) -> "Kernel":
+    def with_tenant(self, tenant: str | None, *, allow_personal: bool = False) -> "Kernel":
         """Return a shallow-copy Kernel bound to ``tenant``.
 
         Original Kernel is unchanged — call sites can hand off the
@@ -366,12 +375,19 @@ class Kernel:
 
         Pass ``tenant=None`` to obtain an unbound kernel (writes
         only allowed for GLOBAL kinds).
+
+        ``allow_personal`` authorizes binding a reserved ``personal:<oid>``
+        partition (ADR-personal-memory) — the personal-memory write path is the
+        sole caller that sets it. The flag travels with the returned kernel so
+        the downstream write pipeline permits the personal slug (every other
+        binding leaves it False, and the ``personal:`` scheme stays rejected).
         """
         from dna.kernel.protocols import validate_tenant_slug
-        validate_tenant_slug(tenant)
+        validate_tenant_slug(tenant, allow_personal=allow_personal)
         import copy as _copy
         new = _copy.copy(self)  # shallow — shared source/cache/extensions/hooks
         new.tenant = tenant
+        new._allow_personal = allow_personal
         # s-kernel-decompose-god-object — the STATELESS back-ref collaborators
         # read per-kernel instance state (e.g. tenant, batch depth, holders), so
         # they must point at THIS copy, not the original. The STATE-holding ones

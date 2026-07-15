@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any
 import aiofiles
 import yaml
 
-from dna.adapters.filesystem.source import FilesystemSource
+from dna.adapters.filesystem.source import FilesystemSource, fs_tenant_segment
 from dna.kernel.bundle_handle import FilesystemBundleHandle
 from dna.kernel.protocols import WritableSourcePort
 
@@ -53,7 +53,13 @@ def _validate_tenant_path(tenant: str | None) -> None:
     """
     if tenant is None:
         return
-    if not _is_path_safe(tenant):
+    # ADR-personal-memory: a reserved-scheme tenant (e.g. ``personal:<oid>``)
+    # carries a ``:`` sigil that ``fs_tenant_segment`` percent-encodes to a
+    # path-safe on-disk segment. The ``:`` is the ONLY non-allowlist char it
+    # introduces, so validate the value with the ``:`` sigils stripped — every
+    # other char must still be a safe segment, and ``..`` traversal stays blocked.
+    probe = tenant.replace(":", "")
+    if not probe or not _is_path_safe(probe):
         raise ValueError(
             f"Invalid layer segment: 'tenant'/{tenant!r} — "
             f"must match [a-zA-Z0-9_\\-.]+ (no slashes, no '..')"
@@ -188,7 +194,7 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
 
         if effective_tenant is not None:
             scope_dir = (
-                self.base_dir / "tenants" / effective_tenant / "scopes" / scope
+                self.base_dir / "tenants" / fs_tenant_segment(effective_tenant) / "scopes" / scope
             )
         elif residual_layer is None:
             # Legacy layout — preserved for reads of pre-migration data
@@ -449,7 +455,7 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
 
     def _module_dir(self, scope: str, tenant: str | None) -> Path:
         if tenant:
-            return self.base_dir / "tenants" / tenant / "scopes" / scope
+            return self.base_dir / "tenants" / fs_tenant_segment(tenant) / "scopes" / scope
         return self.base_dir / scope
 
     async def list_module_versions(

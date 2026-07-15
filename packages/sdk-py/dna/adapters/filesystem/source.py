@@ -17,6 +17,23 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def fs_tenant_segment(tenant: str | None) -> str | None:
+    """Map a tenant value to a cross-platform-safe on-disk directory segment.
+
+    The reserved personal-memory partition (ADR-personal-memory) carries a
+    ``personal:<oid>`` value whose ``:`` scheme sigil is NOT a portable path
+    segment (illegal on Windows, remapped by macOS Finder). The canonical tenant
+    value — the PG ``tenant`` column, the ``tenant IN ('', X)`` read predicate,
+    the kernel API — is UNCHANGED; only the FS directory name is encoded, by
+    percent-escaping the ``:`` to ``%3A``. ``%`` is outside the ordinary
+    tenant-slug charset (``[a-zA-Z0-9_\\-.]``), so an encoded personal segment can
+    never collide with a real workspace's directory. A no-op for every ordinary
+    tenant (they carry no ``:``) and for ``None``."""
+    if tenant is None:
+        return None
+    return tenant.replace(":", "%3A")
+
+
 class FilesystemSource(SourcePort):
     """Loads manifest documents from .dna/<scope>/ directories.
 
@@ -97,7 +114,7 @@ class FilesystemSource(SourcePort):
             # Pull tenant-published Genome from
             # ``tenants/<t>/scopes/<s>/Genome.yaml`` and shadow the
             # platform Genome in the result.
-            tenant_pkg = self.base_dir / "tenants" / tenant / "scopes" / scope / "Genome.yaml"
+            tenant_pkg = self.base_dir / "tenants" / fs_tenant_segment(tenant) / "scopes" / scope / "Genome.yaml"
             if tenant_pkg.exists():
                 async with aiofiles.open(tenant_pkg, encoding="utf-8") as f:
                     tenant_doc = yaml.safe_load(await f.read())
@@ -258,7 +275,7 @@ class FilesystemSource(SourcePort):
         # path. Tenant reads check the new path first, falling back to
         # the legacy layers/tenant/<X>/ for pre-migration data.
         if layer_id == "tenant":
-            new_dir = self.base_dir / "tenants" / layer_value / "scopes" / scope
+            new_dir = self.base_dir / "tenants" / fs_tenant_segment(layer_value) / "scopes" / scope
             if new_dir.exists():
                 return await self._load_dir(
                     new_dir, readers=readers or [], skip=set()
@@ -420,7 +437,7 @@ class FilesystemSource(SourcePort):
         del kind
         if tenant:
             target = (
-                self.base_dir / "tenants" / tenant / "scopes" / scope
+                self.base_dir / "tenants" / fs_tenant_segment(tenant) / "scopes" / scope
                 / container / name / entry
             )
         else:
@@ -480,7 +497,7 @@ class FilesystemSource(SourcePort):
         candidates: list[Path] = []
         if tenant:
             candidates.append(
-                self.base_dir / "tenants" / tenant / "scopes" / scope
+                self.base_dir / "tenants" / fs_tenant_segment(tenant) / "scopes" / scope
                 / container / name / entry
             )
         candidates.append(self.base_dir / scope / container / name / entry)

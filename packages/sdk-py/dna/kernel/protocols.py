@@ -323,6 +323,15 @@ class TenantScope(str, Enum):
 # Reserved tenant slugs — never accepted as user input
 RESERVED_TENANT_SLUGS = frozenset({"_global", "_legacy", "_system", ""})
 
+# Reserved tenant *schemes* (the ``<scheme>:`` prefix before the first colon).
+# A slug whose scheme is reserved is rejected as USER input — no Workspace can be
+# created/renamed to shadow or alias such a partition (ADR-personal-memory §3.4,
+# INV-PERSONAL layer 3). ``personal:`` marks the per-user private partition
+# (``personal:<oid>``); it is a legitimate PHYSICAL partition value, so the
+# authorized personal-memory write path passes ``allow_personal=True`` to reach
+# it — every other write / workspace naming is rejected by default.
+RESERVED_TENANT_SCHEMES = frozenset({"personal"})
+
 
 # ── Special scopes (i-112) ──────────────────────────────────────────────────
 # Single source of truth para os nomes de scope-mágico que estavam espalhados
@@ -388,7 +397,7 @@ class InvalidTenantSlug(Exception):
     """
 
 
-def validate_tenant_slug(tenant: str | None) -> None:
+def validate_tenant_slug(tenant: str | None, *, allow_personal: bool = False) -> None:
     """Raise InvalidTenantSlug if tenant is not None and is reserved.
 
     Phase 1 only checks the reserved set + non-empty/length. Character
@@ -399,6 +408,15 @@ def validate_tenant_slug(tenant: str | None) -> None:
 
     Phase 2 may tighten to k8s namespace rules (``[a-z0-9-]{1,63}``)
     once the migration is complete.
+
+    Reserved-scheme (ADR-personal-memory §3.4): a slug whose scheme
+    (``<scheme>:`` prefix) is in :data:`RESERVED_TENANT_SCHEMES` — today only
+    ``personal:`` — is rejected as user input, so no Workspace can be created to
+    shadow/alias a personal partition (INV-PERSONAL layer 3). The authorized
+    personal-memory write path is the ONE caller allowed to key such a partition;
+    it passes ``allow_personal=True`` to bypass this scheme check (the slug is
+    still length-validated). Every other write / workspace naming leaves the
+    default ``allow_personal=False``.
     """
     if tenant is None:
         return
@@ -406,6 +424,15 @@ def validate_tenant_slug(tenant: str | None) -> None:
         raise InvalidTenantSlug(
             f"tenant slug {tenant!r} is reserved (one of {sorted(RESERVED_TENANT_SLUGS)})"
         )
+    if not allow_personal and ":" in tenant:
+        scheme = tenant.split(":", 1)[0]
+        if scheme in RESERVED_TENANT_SCHEMES:
+            raise InvalidTenantSlug(
+                f"tenant slug {tenant!r} uses the reserved {scheme + ':'!r} scheme "
+                f"(one of {sorted(s + ':' for s in RESERVED_TENANT_SCHEMES)}) — it "
+                "may not be used to name a workspace/tenant; personal partitions are "
+                "reachable only via the personal memory selector (identity-derived)."
+            )
     if not (1 <= len(tenant) <= 253):
         raise InvalidTenantSlug(
             f"tenant slug {tenant!r} must be 1-253 chars (got {len(tenant)})"

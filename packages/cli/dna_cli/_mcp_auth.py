@@ -220,6 +220,84 @@ def resolve_tenant(
     return token_tenant
 
 
+# ── the personal-identity axis (personal memory) — pure core ───────────────
+#
+# The THIRD orthogonal axis over the SAME verified token, mirroring the tenant /
+# plan twins: tenant says *which workspace's data*, plan says *how much*, and the
+# oid says *whose PERSONAL memory* (ADR-personal-memory). It is the seam the ADR
+# flagged as "currently DISCARDED" — the bridge read only the tenant claim (tid),
+# never the durable ``oid``; personal memory is the first feature to plumb it into
+# a data path. Unlike tenant, the oid is NEVER a caller argument — it is always
+# derived server-side (verified token claim, or the offline ``DNA_PERSONAL_ID``),
+# which is INV-PERSONAL layer 1.
+
+_ENV_PERSONAL_ID = "DNA_PERSONAL_ID"  # the offline/stdio single-user identity
+_ENV_OID_CLAIM = "DNA_MCP_OID_CLAIM"  # claim key holding the durable identity oid
+DEFAULT_OID_CLAIM = "oid"             # Entra durable object id (Model B key)
+
+
+def oid_claim_key() -> str:
+    """The claim key the durable identity ``oid`` is read from
+    (``DNA_MCP_OID_CLAIM``, default ``oid`` — the Entra object id)."""
+    return os.environ.get(_ENV_OID_CLAIM) or DEFAULT_OID_CLAIM
+
+
+def oid_from_token(
+    claims: dict[str, Any] | None, *, claim_key: str | None = None
+) -> str | None:
+    """Extract the durable identity ``oid`` from a verified token's claims — pure,
+    no context. Returns ``None`` when the token carries no oid (an authenticated
+    request with no oid then fails closed for personal memory)."""
+    if not claims:
+        return None
+    raw = claims.get(claim_key or oid_claim_key())
+    if isinstance(raw, str) and raw.strip():
+        return raw.strip()
+    return None
+
+
+def personal_id_from_env() -> str | None:
+    """The offline/stdio personal identity from ``DNA_PERSONAL_ID`` — the local
+    single-user oid when there is no verified token. ``None`` when unset."""
+    raw = os.environ.get(_ENV_PERSONAL_ID)
+    return raw.strip() if raw and raw.strip() else None
+
+
+def resolve_personal_oid(
+    *, token_present: bool, token_oid: str | None, env_oid: str | None
+) -> str:
+    """Reconcile the server-derived personal identity ``oid`` — the policy,
+    fail-closed (ADR-personal-memory §5 / §7 layer 1).
+
+    * token present WITH an ``oid`` claim → that oid (the durable identity).
+    * token present WITHOUT an ``oid`` claim → **denied** (an authenticated
+      request that carries no verified identity gets NO personal memory — never a
+      null/blank partition; mirrors the tenant bridge's fail-closed discipline).
+    * no token (stdio / local) → ``env_oid`` (``DNA_PERSONAL_ID``) when set, else
+      **denied** (offline personal memory needs an explicit local identity).
+
+    Always returns a concrete non-empty oid or raises
+    :class:`~dna.memory.personal.PersonalIdentityRequired`.
+    """
+    from dna.memory.personal import PersonalIdentityRequired
+
+    if token_present:
+        if not token_oid:
+            raise PersonalIdentityRequired(
+                "authenticated request carries no verified identity "
+                f"(claim {oid_claim_key()!r}) — personal memory is denied "
+                "(fail-closed); a personal partition must key on a real identity."
+            )
+        return token_oid
+    if env_oid:
+        return env_oid
+    raise PersonalIdentityRequired(
+        "personal memory needs an identity but none is available — set "
+        f"{_ENV_PERSONAL_ID} for the offline/local single-user identity, or "
+        "authenticate with a token that carries an oid claim."
+    )
+
+
 # ── the plan/tier axis (DNA Cloud quota) — pure core, mirror the tenant twins ─
 
 
@@ -684,6 +762,39 @@ def entra_obo_assertion_from_context() -> tuple[str | None, str | None]:
     if not tid or not raw:
         return None, None
     return str(raw), str(tid)
+
+
+def enforce_oid_from_context() -> str:
+    """Resolve the **server-derived personal identity oid** for the current MCP
+    request — the personal-memory twin of :func:`enforce_tenant_from_context`.
+
+    Reads the request's access token (if any) via FastMCP's ``get_access_token``,
+    extracts the durable ``oid`` claim, and applies :func:`resolve_personal_oid`:
+    an authenticated request with no oid is DENIED (fail-closed); with no token
+    (stdio / local) it falls back to ``DNA_PERSONAL_ID``. The oid is NEVER taken
+    from a caller argument (INV-PERSONAL layer 1) — this is the ONLY way the
+    personal partition ``personal:<oid>`` is keyed. Raises
+    :class:`~dna.memory.personal.PersonalIdentityRequired` when no identity can be
+    resolved."""
+    env_oid = personal_id_from_env()
+    try:
+        from fastmcp.server.dependencies import get_access_token
+    except ModuleNotFoundError:  # pragma: no cover — no fastmcp ⇒ no auth ⇒ offline
+        return resolve_personal_oid(
+            token_present=False, token_oid=None, env_oid=env_oid
+        )
+
+    token = get_access_token()
+    if token is None:
+        return resolve_personal_oid(
+            token_present=False, token_oid=None, env_oid=env_oid
+        )
+
+    claims = getattr(token, "claims", None) or {}
+    token_oid = oid_from_token(claims)
+    return resolve_personal_oid(
+        token_present=True, token_oid=token_oid, env_oid=env_oid
+    )
 
 
 def token_present_in_context() -> bool:

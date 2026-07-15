@@ -282,7 +282,12 @@ class WritePipeline:
 
         # Effective tenant: explicit per-call > Kernel.tenant binding
         effective = explicit_tenant if explicit_tenant is not None else host.tenant
-        validate_tenant_slug(effective)
+        # ADR-personal-memory: a reserved ``personal:<oid>`` partition is a valid
+        # PHYSICAL slug but rejected as user input; the authorized personal write
+        # path carries ``host._allow_personal`` so the slug validation permits it.
+        validate_tenant_slug(
+            effective, allow_personal=getattr(host, "_allow_personal", False)
+        )
 
         # Validate against KindPort.scope when EXPLICITLY declared.
         # Phase 1 keeps undeclared kinds permissive (back-compat).

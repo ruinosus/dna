@@ -37,6 +37,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Deferred to follow-on stories (`s-mcp-obo-read-groups`, `s-mcp-obo-prod-hardening`):
     the files/mail read groups, write tools, token caching, certificate /
     managed-identity credential, and guest/personal identity support.
+- **Personal / private per-user memory — the memory whose key is the person**
+  (`f-personal-memory`, epic `e-dna-portability`; stories
+  `s-personal-memory-partition`, `s-personal-memory-privacy-invariant`,
+  `s-personal-memory-namespace-guard`, `s-personal-memory-surfaces`,
+  `s-personal-memory-ts-parity`; ADR `docs/adr/ADR-personal-memory.md`). A
+  second, orthogonal memory axis keyed on the durable human identity (the
+  verified `oid`), private per-user and portable across workspaces AND AI
+  clients — distinct from today's shared workspace memory.
+  - **Selector, `workspace` default.** Every memory verb takes an explicit
+    `memory_scope ∈ {workspace, personal}`; `workspace` is the default, so every
+    existing call is unchanged (personal is strictly additive). CLI:
+    `dna memory remember/recall --personal` (identity from `DNA_PERSONAL_ID`).
+    MCP: a `personal: true` flag on `recall`/`remember` (identity from the
+    verified token's `oid` claim, via the new `enforce_oid_from_context` — the
+    seam that was previously discarded). The `oid` is ALWAYS resolved
+    server-side, never a caller argument.
+  - **Zero migration.** Personal memory is a reserved value-namespace inside the
+    EXISTING tenant partition — `personal:<oid>` — reusing the same filesystem
+    path segment (the `:` percent-encoded on disk for portability) and Postgres
+    `tenant` column. `personal:<oid>` is literally the SAME partition in every
+    workspace and client, so "your memory follows you" becomes a primary-key
+    value. A personal recall unions your partition with the base `_lib` defaults,
+    never a workspace.
+  - **Privacy (INV-PERSONAL), fail-closed, defense-in-depth.** A personal memory
+    of X is never readable by any other identity, nor by any workspace query
+    (owner/admin included). Enforced by four independent layers: server-derived
+    `oid`; the `tenant IN ('', <workspace_id>)` read predicate provably cannot
+    select `personal:*`; the `personal:` scheme is reserved in
+    `validate_tenant_slug` so no workspace can alias it; and a raw
+    `tenant=personal:<victim>` override is rejected at the surface. Guard suites
+    in Python (`test_personal_memory_privacy.py`) and a TypeScript parity twin.
+  - **Deferred (follow-on stories):** personal-insights LLM consolidation, the
+    Portal Memory-tab UI, and REST personal parity (blocked on the REST
+    token→identity bridge).
 
 ## [0.15.1] - 2026-07-15
 

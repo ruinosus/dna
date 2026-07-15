@@ -58,6 +58,20 @@ from dna.memory.semantic import (
     fuse_semantic_recall,
     semantic_scores_from_vectors,
 )
+from dna.memory.personal import (
+    PERSONAL_SCOPE,
+    PERSONAL_TENANT_PREFIX,
+    PERSONAL_TENANT_SCHEME,
+    WORKSPACE_SCOPE,
+    MemoryScope,
+    PersonalIdentityRequired,
+    PersonalOverrideRejected,
+    assert_no_personal_override,
+    is_personal_tenant,
+    personal_tenant,
+    resolve_memory_tenant,
+    tenant_scheme,
+)
 from dna.memory.verbs import (
     MEMORY_KINDS,
     backfill_index,
@@ -75,6 +89,19 @@ __all__ = [
     "forget",
     "consolidate",
     "backfill_index",
+    # personal / private per-user memory (ADR-personal-memory)
+    "PERSONAL_TENANT_SCHEME",
+    "PERSONAL_TENANT_PREFIX",
+    "MemoryScope",
+    "WORKSPACE_SCOPE",
+    "PERSONAL_SCOPE",
+    "PersonalIdentityRequired",
+    "PersonalOverrideRejected",
+    "personal_tenant",
+    "is_personal_tenant",
+    "tenant_scheme",
+    "resolve_memory_tenant",
+    "assert_no_personal_override",
     # ecphory
     "EngramRef",
     "EcphoryScore",
