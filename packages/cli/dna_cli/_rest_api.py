@@ -145,6 +145,7 @@ def build_app(
     auth: str = "none",
     token: str | None = None,
     cors_origins: list[str] | None = None,
+    verifier: Any = None,
 ) -> Any:
     """Build the DNA REST read-API (a ``FastAPI`` app) over the live kernel.
 
@@ -159,12 +160,27 @@ def build_app(
       * ``"token"`` — every route (except ``/health``) requires
         ``Authorization: Bearer <token>``; the expected token is ``token`` (arg)
         or ``DNA_API_TOKEN`` (env). A shared token for the MVP.
+      * ``"config"`` — the Model B (ADR §2.2 / S2.4) verified-identity path: every
+        request carries a bearer JWT verified by the pluggable N-provider layer
+        (``verifier``, or built from ``dna.config.yaml``'s ``auth.providers[]``);
+        the token→identity middleware then BINDS the effective workspace from the
+        identity's active :class:`WorkspaceMembership` (the ``tenant`` query param
+        is OVERWRITTEN from membership, never trusted from the caller) — mirroring
+        the MCP ``--auth config`` path. A no-membership / cross-workspace request is
+        denied (fail-closed).
 
     Raises a clean ``RuntimeError`` if the optional ``fastapi`` dependency is absent.
     """
     try:
-        from fastapi import Body, Depends, FastAPI, Header, HTTPException, Query
+        from fastapi import Body, Depends, FastAPI, Header, HTTPException, Query, Request
         from fastapi.middleware.cors import CORSMiddleware
+        from fastapi.responses import JSONResponse
+        # `from __future__ import annotations` turns route annotations into STRINGS
+        # that FastAPI resolves against the module globals; since fastapi is imported
+        # lazily (here, inside build_app) `Request` is not a module global, so a
+        # `request: Request` route param would be mis-read as a query field. Publish
+        # it to the module namespace so the string annotation resolves.
+        globals()["Request"] = Request
     except ModuleNotFoundError as exc:  # pragma: no cover — exercised via CLI
         raise RuntimeError(
             "the REST read-API needs the optional 'fastapi' dependency — install "
@@ -180,16 +196,20 @@ def build_app(
         MemberForbidden,
         MemberNotFound,
         ProjectNotFound,
+        WorkspaceForbidden,
+        accept_invites_impl,
         board_item_impl,
         board_summary_impl,
         compose_prompt_impl,
         get_project_impl,
+        invite_member_impl,
         list_agents_impl,
         list_members_impl,
         list_orgs_impl,
         list_projects_impl,
         list_repos_impl,
         list_tools_impl,
+        list_workspace_members_impl,
         provision_tenant_owner_impl,
         recall_impl,
         remember_impl,
@@ -197,6 +217,7 @@ def build_app(
         set_member_impl,
         set_workspace_plan_impl,
     )
+    from dna.tenancy import Identity
     from dna_cli._mcp_server import boot_live
     # The intel face delegates to the CORE engine (adr-faces-reorg: logic in the
     # core, faces thin). These handlers only translate transport + call in.
@@ -254,6 +275,102 @@ def build_app(
         return _state["live"]
 
     guarded = [Depends(_auth_dep)]
+
+    # -- Model B config-auth: token→identity→workspace binding (S2.4) ---------
+    # The verified-identity ingress (ADR §2.2): a bearer JWT is verified by the
+    # N-provider layer; the identity's active WorkspaceMembership BINDS the
+    # effective workspace, which OVERWRITES the `tenant` query param (a caller can
+    # no longer forge it). Mirrors the MCP `_guard` — same resolver, same
+    # fail-closed denial. The `/v1/workspaces/*` boundary routes are EXEMPT from the
+    # bind (they name the workspace in the path and do their OWN RBAC via the
+    # verified identity stashed on `request.state`): notably `accept`, where the
+    # invitee is still PENDING and by definition holds no active membership yet.
+    if auth == "config":
+        from urllib.parse import parse_qs, urlencode
+
+        from dna.tenancy import (
+            CrossWorkspaceError,
+            Membership,
+            identity_from_token,
+            resolve_workspace,
+        )
+
+        _verifier_state: dict[str, Any] = {"v": verifier}
+
+        def _get_verifier() -> Any:
+            if _verifier_state["v"] is None:
+                from dna_cli._mcp_auth import (
+                    _multi_provider_verifier,
+                    providers_from_config,
+                )
+                _verifier_state["v"] = _multi_provider_verifier(providers_from_config())
+            return _verifier_state["v"]
+
+        @app.middleware("http")
+        async def _config_auth(request: Request, call_next):  # type: ignore[no-untyped-def]
+            path = request.url.path
+            if path == "/health":
+                return await call_next(request)
+
+            authz = request.headers.get("authorization")
+            if not authz or not authz.startswith("Bearer "):
+                return JSONResponse({"detail": "missing bearer token"}, status_code=401)
+            bearer = authz[len("Bearer "):].strip()
+            try:
+                access = await _get_verifier().verify_token(bearer)
+            except Exception:  # noqa: BLE001 — a verifier error is an auth failure.
+                access = None
+            if access is None:
+                return JSONResponse({"detail": "invalid bearer token"}, status_code=401)
+
+            claims = dict(getattr(access, "claims", None) or {})
+            request.state.claims = claims
+            request.state.identity = identity_from_token(claims)
+
+            # The boundary routes manage membership themselves (path names the
+            # workspace; they RBAC on request.state.identity) — never bind here.
+            if path.startswith("/v1/workspaces"):
+                return await call_next(request)
+
+            grants_raw = await (await _live()).kernel.workspace_memberships()
+            if not grants_raw:
+                # No workspaces configured → Model B not engaged (legacy passthrough).
+                return await call_next(request)
+
+            memberships = [Membership.from_spec(g.get("spec") or {}) for g in grants_raw]
+            requested = request.query_params.get("tenant")
+            try:
+                workspace = resolve_workspace(
+                    token_present=True,
+                    identity=request.state.identity,
+                    requested=requested,
+                    memberships=memberships,
+                )
+            except CrossWorkspaceError as exc:
+                return JSONResponse({"detail": str(exc)}, status_code=403)
+
+            # Bind the physical scope too (defense-in-depth, mirror the MCP guard):
+            # an explicit `scope=` naming another workspace's scope is denied.
+            live = await _live()
+            req_scope = request.query_params.get("scope")
+            if workspace and not live.scope_is_bound(req_scope, workspace):
+                return JSONResponse(
+                    {"detail": f"request is bound to workspace {workspace!r}; "
+                               f"cross-workspace access to scope {req_scope!r} is denied"},
+                    status_code=403,
+                )
+
+            # OVERWRITE the tenant query param with the membership-bound workspace.
+            qs = parse_qs(request.scope.get("query_string", b"").decode())
+            if workspace is not None:
+                qs["tenant"] = [workspace]
+            request.scope["query_string"] = urlencode(qs, doseq=True).encode()
+            return await call_next(request)
+
+    def _actor_claims_from_state(request: Request) -> dict[str, Any] | None:
+        """The verified token claims stashed by the config-auth middleware (the
+        actor for a `/v1/workspaces/*` write), or ``None`` under none/token auth."""
+        return getattr(request.state, "claims", None)
 
     # -- health (unguarded) --------------------------------------------------
 
@@ -661,5 +778,77 @@ def build_app(
             )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from None
+
+    # -- workspace invites (ADR "Model B", F3 — the cross-org join) -----------
+    # The identity→workspace boundary REST surface (story s-ws-invite-rest). Auth
+    # is BY MEMBERSHIP: Owner/Admin of the workspace to invite/list; the invitee
+    # (a verified email claim) to accept. The RBAC + the anti-impersonation accept
+    # rule live in the CORE impls (invite_member_impl / list_workspace_members_impl
+    # / accept_invites_impl) — these handlers only shape HTTP + source the actor.
+    #
+    # Actor sourcing: under `--auth config` the actor's VERIFIED token claims are
+    # stashed on request.state by the middleware (the hardened path). Under
+    # none/token (a TRUSTED portal server-side call holding the shared bearer) the
+    # actor's Entra-session claims are passed explicitly — the config-auth claims,
+    # when present, always WIN over a body/query value.
+
+    @app.post("/v1/workspaces/{workspace_id}/invites", dependencies=guarded, status_code=201)
+    async def create_invite(
+        request: Request,
+        workspace_id: str,
+        email: str = Body(..., embed=True),
+        role: str = Body(default="member", embed=True),
+        actor: dict[str, Any] | None = Body(default=None, embed=True),
+    ) -> dict[str, Any]:
+        """Invite an identity (by email) into a workspace — a ``pending``
+        WorkspaceMembership. RBAC: the actor must be Owner/Admin (only an Owner may
+        invite an Owner). 403 without permission; 422 on an unknown role."""
+        actor_claims = _actor_claims_from_state(request) or actor
+        try:
+            return await invite_member_impl(
+                await _live(), workspace_id, email, role, actor_claims=actor_claims
+            )
+        except WorkspaceForbidden as exc:
+            raise HTTPException(status_code=403, detail=str(exc)) from None
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from None
+
+    @app.get("/v1/workspaces/{workspace_id}/members", dependencies=guarded)
+    async def workspace_members(
+        request: Request,
+        workspace_id: str,
+        actor_oid: str | None = Query(default=None),
+        actor_email: str | None = Query(default=None),
+    ) -> dict[str, Any]:
+        """List a workspace's members (grants). RBAC: the actor must be
+        Owner/Admin. Under config auth the actor is the verified token identity;
+        under none/token pass ``actor_oid``/``actor_email`` (the trusted portal
+        vouches the session). 403 without permission."""
+        actor_claims = _actor_claims_from_state(request)
+        kwargs: dict[str, Any] = {}
+        if actor_claims is not None:
+            kwargs["actor_claims"] = actor_claims
+        else:
+            kwargs["actor"] = Identity(oid=actor_oid, email=actor_email)
+        try:
+            return await list_workspace_members_impl(await _live(), workspace_id, **kwargs)
+        except WorkspaceForbidden as exc:
+            raise HTTPException(status_code=403, detail=str(exc)) from None
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from None
+
+    @app.post("/v1/workspaces/accept", dependencies=guarded)
+    async def accept_invites(
+        request: Request,
+        claims: dict[str, Any] | None = Body(default=None, embed=True),
+    ) -> dict[str, Any]:
+        """Accept every pending invite the caller's VERIFIED sign-in claims — binds
+        the durable ``oid`` + flips ``pending→active``. Under config auth the
+        claims come from the verified token (the invitee is still pending, so this
+        route is exempt from the membership bind); under none/token a trusted portal
+        passes the verified Entra claims. The SECURITY gate (verified email only, no
+        hijack of a bound grant) is enforced in the core impl — never here."""
+        effective = _actor_claims_from_state(request) or claims or {}
+        return await accept_invites_impl(await _live(), effective)
 
     return app

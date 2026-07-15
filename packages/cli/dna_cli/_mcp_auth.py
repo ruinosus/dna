@@ -543,6 +543,74 @@ def identity_from_context() -> Any:
     return identity_from_token(claims)
 
 
+def workspace_from_mcp_path(path: str | None) -> str | None:
+    """Extract the workspace SELECTOR from a per-workspace MCP URL path — pure.
+
+    ADR "Model B" §2.2: a client (VS Code) picks its workspace by URL —
+    ``…/w/<workspace-id>/mcp``. This reads ``<workspace-id>`` from the path so the
+    workspace is a *named, verified* claim (the path names it; membership
+    authorizes it — never trusted blind). A bare ``/mcp`` (or any path without the
+    ``/w/<id>/`` segment) returns ``None`` → the resolver falls back to the sole /
+    default membership.
+
+    Matches ``/w/<id>/mcp`` anywhere in the path (with or without a trailing
+    slash, and regardless of the mount prefix), e.g. ``/w/ws-a/mcp``,
+    ``/w/ws-a/mcp/``. The id is any non-empty, non-``/`` segment."""
+    if not path:
+        return None
+    segments = [s for s in path.split("/") if s]
+    # find the LAST `w` immediately followed by an id then `mcp` (mount-prefix safe).
+    # i ranges so that i+2 (the `mcp` segment) stays in-bounds.
+    for i in range(len(segments) - 3, -1, -1):
+        if segments[i] == "w" and segments[i + 2] == "mcp":
+            candidate = segments[i + 1].strip()
+            if candidate:
+                return candidate
+    return None
+
+
+def workspace_selector_from_context() -> str | None:
+    """The workspace id named in the CURRENT MCP request's URL path (``/w/<id>/mcp``),
+    or ``None`` (stdio, no HTTP request, or a bare ``/mcp``).
+
+    Reads the live Starlette request via FastMCP's ``get_http_request`` and applies
+    the pure :func:`workspace_from_mcp_path`. Fail-soft: any absence (no fastmcp, no
+    HTTP request context — e.g. stdio) yields ``None`` so the resolver falls back to
+    the identity's sole/default membership."""
+    try:
+        from fastmcp.server.dependencies import get_http_request
+    except ModuleNotFoundError:  # pragma: no cover — no fastmcp ⇒ no HTTP
+        return None
+    try:
+        request = get_http_request()
+    except Exception:  # noqa: BLE001 — no active HTTP request (stdio / non-HTTP tool call)
+        return None
+    if request is None:
+        return None
+    path = getattr(getattr(request, "url", None), "path", None)
+    return workspace_from_mcp_path(path)
+
+
+def _combine_workspace_selectors(
+    path_selector: str | None, requested: str | None
+) -> str | None:
+    """Reconcile the URL-path workspace selector with an explicit tool ``requested``
+    arg. Both are only ever SELECTORS (re-verified against membership downstream);
+    this just picks the effective one and rejects a contradictory pair.
+
+    * neither → ``None`` (sole/default membership);
+    * exactly one → that one;
+    * both, equal → that value;
+    * both, different → a contradictory request → deny (:class:`CrossTenantError`
+      surfaced as a tool error) rather than silently preferring one."""
+    if path_selector is not None and requested is not None and path_selector != requested:
+        raise CrossTenantError(
+            f"conflicting workspace selectors: URL path names {path_selector!r} but "
+            f"the request arg names {requested!r} — refuse to guess (denied)"
+        )
+    return requested if requested is not None else path_selector
+
+
 async def enforce_workspace_from_context(live: Any, requested: str | None) -> str | None:
     """Resolve the **effective workspace** for the current MCP request (Model B).
 
@@ -569,17 +637,24 @@ async def enforce_workspace_from_context(live: Any, requested: str | None) -> st
     if not token_present_in_context():
         return requested  # stdio / local → identity passthrough (base path).
 
+    # The per-workspace URL (`…/w/<id>/mcp`) is the PRIMARY selector (ADR §2.2):
+    # combine it with any explicit tool arg (both are re-verified against
+    # membership below; a contradictory pair is denied).
+    effective_requested = _combine_workspace_selectors(
+        workspace_selector_from_context(), requested
+    )
+
     identity = identity_from_context()
     grants_raw = await live.kernel.workspace_memberships()
     if not grants_raw:
         # No workspaces configured → legacy tid tenancy (OSS / pre-Model-B).
-        return enforce_tenant_from_context(requested)
+        return enforce_tenant_from_context(effective_requested)
 
     memberships = [Membership.from_spec(g.get("spec") or {}) for g in grants_raw]
     return resolve_workspace(
         token_present=True,
         identity=identity,
-        requested=requested,
+        requested=effective_requested,
         memberships=memberships,
     )
 

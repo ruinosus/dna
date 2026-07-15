@@ -465,3 +465,35 @@ def build_server(
         return await list_agents_impl(await _live(), scope, await _guard("definitions", scope=scope))
 
     return server
+
+
+def build_http_app(
+    server: Any, *, path: str = "/mcp", transport: str = "http"
+) -> Any:
+    """Wrap the FastMCP ``server`` as a Starlette ASGI app that ALSO accepts the
+    per-workspace URL ``/w/<workspace-id>/mcp`` (ADR "Model B" §2.2 — S2.3),
+    alongside the bare ``/mcp``.
+
+    FastMCP mounts the MCP endpoint at ``path``; we additionally mount the SAME app
+    instance under ``/w/{workspace_id}`` so a client can paste
+    ``https://…/w/<id>/mcp`` into VS Code to pick its workspace by URL. The workspace
+    id is NOT read here — the auth bridge reads it from the live request path
+    (``_mcp_auth.workspace_selector_from_context``) and re-verifies it against
+    membership, so the path is a *named, verified* selector, never trusted blind.
+
+    Mounting the one app instance at both prefixes shares its lifespan (the MCP
+    session manager), which the outer app forwards. The bare ``/mcp`` route keeps
+    the default single-workspace / stdio-parity behavior (falls back to the
+    identity's sole/default membership)."""
+    from starlette.applications import Starlette
+    from starlette.routing import Mount
+
+    mcp_app = server.http_app(path=path, transport=transport)
+    return Starlette(
+        routes=[
+            # Per-workspace URL first (more specific), then the bare mount.
+            Mount("/w/{workspace_id}", app=mcp_app),
+            Mount("/", app=mcp_app),
+        ],
+        lifespan=mcp_app.lifespan,
+    )

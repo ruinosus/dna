@@ -114,7 +114,25 @@ def serve(scope: str | None, base_dir: str | None, transport: str,
     if transport == "stdio":
         server.run(transport=transport)
     else:
-        kwargs: dict[str, object] = {"host": host, "port": port}
-        if path:
-            kwargs["path"] = path
-        server.run(transport=transport, **kwargs)
+        # HTTP transports also accept the per-workspace URL `/w/<id>/mcp` (Model B
+        # S2.3) beside the bare `/mcp`: build the multi-mount Starlette app and run
+        # it under uvicorn (FastMCP's own dependency), so a client can pick its
+        # workspace by URL. The auth bridge reads the id from the request path.
+        from dna_cli._mcp_server import build_http_app
+
+        try:
+            import uvicorn
+        except ModuleNotFoundError as exc:  # pragma: no cover — exercised via CLI
+            raise click.ClickException(
+                "the HTTP transport needs 'uvicorn' — install with:  pip install "
+                "'dna-cli[mcp]'"
+            ) from exc
+
+        http_transport = "sse" if transport == "sse" else "http"
+        app = build_http_app(server, path=path or "/mcp", transport=http_transport)
+        click.echo(
+            f"DNA MCP over HTTP — bare /mcp and per-workspace /w/<id>/mcp "
+            f"(ADR Model B) on {host}:{port}",
+            err=True,
+        )
+        uvicorn.run(app, host=host, port=port, log_level="info")

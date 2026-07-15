@@ -11,6 +11,17 @@ fixtures at ``tests/parity-fixtures/workspace-resolution/``.
 """
 from __future__ import annotations
 
+import re
+
+from dna.tenancy.invites import (
+    AcceptResult,
+    INVITE_ROLES,
+    bindable_invites_for,
+    can_invite,
+    plan_accept,
+    role_in_workspace,
+    verified_email_from_claims,
+)
 from dna.tenancy.resolution import (
     CrossWorkspaceError,
     Identity,
@@ -23,6 +34,19 @@ from dna.tenancy.resolution import (
     workspace_for_identity,
 )
 
+
+def workspace_membership_name(workspace_id: str, email: str) -> str:
+    """Stable composite doc name for a (workspace, identity) grant.
+
+    Format ``{workspace_id}--{email-slugified}`` — the SAME key the F1 seed
+    (``scripts/seed_workspace_one.py``) uses, so an invite of an already-seeded
+    identity, a re-invite, and the accept-bind all converge on the ONE doc
+    (idempotent upsert, never a duplicate)."""
+    email_part = email.strip().lower().replace("@", "-at-").replace(".", "-")
+    email_part = re.sub(r"[^a-z0-9-]", "-", email_part).strip("-")
+    return f"{workspace_id}--{email_part}"
+
+
 __all__ = [
     "CrossWorkspaceError",
     "Identity",
@@ -33,4 +57,13 @@ __all__ = [
     "normalize_email",
     "resolve_workspace",
     "workspace_for_identity",
+    # invites (F3)
+    "AcceptResult",
+    "INVITE_ROLES",
+    "bindable_invites_for",
+    "can_invite",
+    "plan_accept",
+    "role_in_workspace",
+    "verified_email_from_claims",
+    "workspace_membership_name",
 ]

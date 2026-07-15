@@ -316,3 +316,18 @@ export {
   workspaceForIdentity,
 } from "./tenancy/resolution.js";
 export type { Identity, Membership } from "./tenancy/resolution.js";
+// f-ws-invites (Model B, F3) — the pure invite/accept policy: who may invite
+// (Owner/Admin) + which pending invite a VERIFIED sign-in binds (oid-durable,
+// non-hijackable). Twin of dna/tenancy/invites.py; guarded by
+// tests/parity-fixtures/workspace-invite/.
+export {
+  INVITE_ROLES,
+  DEFAULT_EMAIL_CLAIM,
+  DEFAULT_EMAIL_VERIFIED_CLAIM,
+  bindableInvitesFor,
+  canInvite,
+  planAccept,
+  roleInWorkspace,
+  verifiedEmailFromClaims,
+} from "./tenancy/invites.js";
+export type { AcceptResult } from "./tenancy/invites.js";
