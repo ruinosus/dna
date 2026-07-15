@@ -59,11 +59,35 @@ it with its own Kinds under the `tenant/v1` namespace:
 |---|---|---|
 | `Tenant` | `github.com/ruinosus/dna/tenant/v1` | A first-class tenant identity |
 | `TenantMembership` | `github.com/ruinosus/dna/tenant/v1` | Who belongs to which tenant |
+| `Workspace` | `github.com/ruinosus/dna/tenant/v1` | A named, collaborative tenancy space (alias `tenant-workspace`) |
+| `WorkspaceMembership` | `github.com/ruinosus/dna/tenant/v1` | An identity's role in a `Workspace` (alias `tenant-workspace-membership`) |
 
 Because tenant is a kernel dimension rather than a naming convention, a
 tenant overlay for one scope does not leak into another — the base for a
 scope belongs to that scope, and each tenant sees the base plus its own
 diffs.
+
+## Workspaces — collaborative, identity-based tenancy
+
+A **`Workspace`** is a named tenancy space that is *decoupled* from any
+external identity-provider tenant id. Where a `Tenant` keys the dimension to a
+single organization, a `Workspace` is a first-class DNA space that people from
+**different organizations** can share. The tenancy key the kernel resolves is
+the workspace id — not the caller's home-org id.
+
+A **`WorkspaceMembership`** maps a *verified identity* (its stable subject id
+plus email) to a `Workspace` and a role. Membership — never the caller's
+org id — decides what a request may read or write: every read/write is served
+only if the authenticated identity holds an active membership in that
+workspace, resolved before the source is touched. This is what lets a
+workspace owner invite a collaborator from another organization by email; on
+their first accepted sign-in the invite binds to their stable identity.
+
+The two Kinds mirror `Tenant` / `TenantMembership`, but keyed on a
+portable workspace id and a cross-organization identity rather than a single
+org. A `Workspace` whose id equals a pre-existing tenant id inherits all of
+that tenant's data with **zero migration** — the workspace simply becomes the
+new name for the same rows.
 
 ## LayerPolicy — which layers may override which Kinds
 

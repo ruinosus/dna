@@ -1415,3 +1415,44 @@ Append-only journey ledger. One entry per (artifact, phase) pair. Read together 
 | `timestamp` | string |  | Back-compat (deprecated): legacy form of ``created_at``. |
 | `transitioned_from` | string |  | Name of the previous WorkflowEvent in this trajectory (forms a linked list). Optional for the first entry of a trajectory. |
 
+## Workspace
+
+- **Alias:** `tenant-workspace`
+- **apiVersion:** `github.com/ruinosus/dna/tenant/v1`
+- **Plane:** record
+
+A Workspace is the DNA tenancy root — a first-class, named, DNA-native space that authenticates identities from any Azure org via Entra and decides visibility through WorkspaceMembership (Model B, the GitHub/Slack shape). Its opaque, immutable workspace_id is the physical `tenant` column value on every row it owns, so renaming never rewrites data; the founding workspace reuses the founder's Azure tid for a zero-migration cutover. GLOBAL declarative data in `_lib`.
+
+**Spec fields**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `created_at` | string | yes | When the workspace was created (ISO 8601). |
+| `created_by` | string | yes | Email of the identity that created the workspace (its first Owner). |
+| `name` | string | yes | Human display name, e.g. "Barnabé Labs". Editable. |
+| `plan_ref` | string \| null |  | The workspace's current Tier/TenantPlan key (billing attaches to the workspace, not to an identity or Azure org). Null = the Free floor. Resolved via kernel.tenant_plan(workspace_id). |
+| `slug` | string |  | URL-safe handle (e.g. for `/w/<slug>` links). Editable; distinct from the immutable workspace_id. |
+| `workspace_id` | string | yes | Opaque, immutable id — the physical value of the `tenant` column on every row this workspace owns. Never changes (renaming edits name/slug, never this). The doc name SHOULD equal it. The founding workspace's id == the founder's Azure tid (zero migration); new workspaces get fresh ids and never reuse a tid. |
+
+## WorkspaceMembership
+
+- **Alias:** `tenant-workspace-membership`
+- **apiVersion:** `github.com/ruinosus/dna/tenant/v1`
+- **Plane:** record
+
+A WorkspaceMembership maps a verified identity (Entra oid + email + tid) to a workspace_id + role + status — the identity→workspace boundary of ADR Model B and the crown-jewel authorization check (an ACTIVE grant is required to touch a workspace; fail-closed otherwise). Invites are by email (the handle) and bind to the durable oid on first verified sign-in (two-phase), matching only on verified token claims. GLOBAL declarative data in `_lib`, distinct from the portfolio Membership (intra-workspace org/project RBAC).
+
+**Spec fields**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `accepted_at` | string \| null |  | ISO-8601 timestamp when the invite was accepted and oid bound. |
+| `identity_email` | string | yes | Normalized (lowercased) email — the INVITE HANDLE. You invite by email before the person has ever signed in; matching is only ever on a verified token email claim, never a caller-supplied value. |
+| `identity_oid` | string \| null |  | The stable Entra `oid`, BOUND on first accepted sign-in (null while pending). The durable key — post-bind re-auth keys on this, never the mutable email. |
+| `identity_tid` | string \| null |  | The Azure org (tenant id) the accepting identity came from — PROVENANCE only (no longer the DNA tenant under Model B). Bound on accept. |
+| `invited_at` | string \| null |  | ISO-8601 timestamp of the invite (stamped by the writer). |
+| `invited_by` | string \| null |  | Email of the Owner/Admin who created the invite. |
+| `role` | string | yes | Workspace-level role — the standard ladder (owner > admin > member > guest, highest-role-wins). References the Role Kind. |
+| `status` | string | yes | Invite lifecycle — pending (invited, oid not yet bound) → active (accepted, oid bound). No membership / non-active → no access. |
+| `workspace_id` | string | yes | The workspace this grant is in — the tenant key (matches a Workspace.workspace_id). |
+
