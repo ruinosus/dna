@@ -1232,6 +1232,33 @@ class WorkspaceForbidden(Exception):
     """The actor lacks Owner/Admin on the workspace (RBAC deny → HTTP 403)."""
 
 
+class WorkspaceLastOwner(Exception):
+    """The revoke target is the workspace's SOLE active owner — revoking it would
+    orphan the workspace, so it is refused (fail-closed → HTTP 409)."""
+
+
+class WorkspaceMemberNotFound(LookupError):
+    """The revoke target holds no WorkspaceMembership in this workspace — a clear
+    no-op (→ HTTP 404)."""
+
+
+def _ws_member_surface(spec: dict[str, Any]) -> dict[str, Any]:
+    """Project a WorkspaceMembership ``spec`` to the wire shape the portal reads
+    (the SAME field set ``list_workspace_members_impl`` returns, plus the
+    ``workspace_id``)."""
+    return {
+        "workspace_id": spec.get("workspace_id"),
+        "identity_email": spec.get("identity_email"),
+        "identity_oid": spec.get("identity_oid"),
+        "role": spec.get("role"),
+        "status": spec.get("status"),
+        "bound": bool(spec.get("identity_oid")),
+        "invited_by": spec.get("invited_by"),
+        "invited_at": spec.get("invited_at"),
+        "accepted_at": spec.get("accepted_at"),
+    }
+
+
 async def _workspace_grants(live: LiveDna) -> tuple[list[dict], list[Any]]:
     """The RAW WorkspaceMembership rows AND their pure-policy views, in the same
     order (so an index/object correlates one to the other)."""
@@ -1434,6 +1461,254 @@ async def accept_invites_impl(
     }
 
 
+async def provision_workspace_owner_impl(
+    live: LiveDna,
+    workspace_id: str,
+    claims: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Bootstrap the FIRST owner of a workspace — the Model B twin of
+    ``provision_tenant_owner_impl`` and the fix for the production gap where the
+    portal auto-provisions a Model-A ``TenantMembership`` on first login but
+    nothing ever creates the Model-B owner ``WorkspaceMembership`` the Members
+    panel (``GET /v1/workspaces/{id}/members``) requires — so the founder is 403'd
+    and cannot invite.
+
+    On first authenticated access the DNA Cloud portal calls this (server-side,
+    with the shared bearer, OR under ``--auth config`` with the verified token) so
+    the signed-in user becomes owner of their OWN workspace and member management
+    works. It does the SAME thing the F1 seed (``scripts/seed_workspace_one.py``)
+    does — write a ``Workspace`` + an owner ``WorkspaceMembership`` — but on demand,
+    idempotently, bound to the verified identity.
+
+    **Zero-migration + anti-takeover guard.** ``workspace_id`` MUST equal the
+    verified identity's Azure ``tid`` (workspace #1's id == the founder's tid, so
+    every existing row keyed ``tenant==tid`` is already this workspace's data — no
+    migration). A caller whose ``tid`` differs (or is absent) is denied
+    (:class:`WorkspaceForbidden`) — a verified identity from another org can NEVER
+    seize a tid-workspace by racing the founder's first login.
+
+    **Idempotent + first-owner-only.**
+
+    * If THIS identity already holds an active membership here → NO-OP, return it
+      (the re-login path — every dashboard load may call this safely).
+    * Else if the workspace already has ANY active owner (a *different* identity —
+      e.g. a colleague from the same Azure org) → NO-OP, ``owner_exists``: a later
+      user does NOT auto-escalate to owner (they need an invite). Mirrors the
+      tenant provision-owner's first-owner-only rule.
+    * Else → create the ``Workspace`` doc (id == ``workspace_id``) if absent, then
+      an OWNER ``WorkspaceMembership`` **bound** to the verified identity
+      (``identity_oid`` + ``identity_email`` + ``identity_tid``), ``status`` active.
+
+    GLOBAL / ``_lib``-direct (Workspace + WorkspaceMembership are the tenancy
+    boundary — no ``tenant`` kwarg), through the SAME ``kernel.write_document``
+    funnel the seed uses."""
+    from dna.tenancy import (
+        active_workspaces_for,
+        has_active_owner,
+        identity_from_token,
+        membership_matches_identity,
+        normalize_email,
+        workspace_membership_name,
+    )
+
+    workspace_id = (workspace_id or "").strip()
+    if not workspace_id:
+        raise ValueError("workspace_id is required")
+
+    identity = identity_from_token(claims or {})
+    email = normalize_email(identity.email)
+    if not email:
+        raise ValueError("the verified identity must carry an email claim")
+    if not identity.oid:
+        raise ValueError("the verified identity must carry an oid claim")
+
+    # Zero-migration + anti-takeover: the caller may only bootstrap ownership of
+    # their OWN workspace (id == verified tid). A mismatch/absent tid → deny.
+    if not identity.tid or identity.tid != workspace_id:
+        raise WorkspaceForbidden(
+            f"provision-owner is bound to the caller's own workspace "
+            f"(id must == the verified tid {workspace_id!r}); the identity's tid is "
+            f"{identity.tid!r} — cross-workspace owner bootstrap denied"
+        )
+
+    raw_grants, memberships = await _workspace_grants(live)
+
+    # (1) This identity already an active member here → no-op, return it.
+    if workspace_id in active_workspaces_for(identity, memberships):
+        for g, m in zip(raw_grants, memberships):
+            spec = g.get("spec") or {}
+            if m.workspace_id == workspace_id and membership_matches_identity(m, identity):
+                return {
+                    "workspace_id": workspace_id,
+                    "provisioned": False,
+                    "reason": "already_member",
+                    "workspace_created": False,
+                    "membership": _ws_member_surface(spec),
+                }
+
+    # (2) A DIFFERENT identity already owns the workspace → no-op (no auto-escalate).
+    if has_active_owner(workspace_id, memberships):
+        return {
+            "workspace_id": workspace_id,
+            "provisioned": False,
+            "reason": "owner_exists",
+            "workspace_created": False,
+            "membership": None,
+        }
+
+    # (3) Create: the Workspace identity doc (if absent) + the bound owner grant.
+    now = datetime.now(timezone.utc).isoformat()
+    workspace_created = False
+    try:
+        existing_ws = await live.kernel.get_document(
+            _WORKSPACE_SCOPE, "Workspace", workspace_id
+        )
+    except (FileNotFoundError, ValueError):
+        # provision may be the very FIRST write into `_lib` (a brand-new source /
+        # the founder's first login) — an absent scope/doc just means "no
+        # Workspace yet". The write below creates the scope.
+        existing_ws = None
+    if not existing_ws:
+        ws_raw = {
+            "apiVersion": _TENANT_API,
+            "kind": "Workspace",
+            "metadata": {"name": workspace_id},
+            "spec": {
+                "workspace_id": workspace_id,
+                "name": email,  # a sensible default display name; editable later.
+                "slug": _email_slug(email),
+                "created_by": email,
+                "created_at": now,
+            },
+        }
+        await live.kernel.write_document(
+            _WORKSPACE_SCOPE, "Workspace", workspace_id, ws_raw, invalidate_mode="doc"
+        )
+        workspace_created = True
+
+    name = workspace_membership_name(workspace_id, email)
+    spec = {
+        "workspace_id": workspace_id,
+        "identity_email": email,
+        "identity_oid": identity.oid,
+        "identity_tid": identity.tid,
+        "role": "owner",
+        "status": "active",
+        "invited_by": None,
+        "invited_at": now,
+        "accepted_at": now,
+    }
+    raw = {
+        "apiVersion": _TENANT_API,
+        "kind": "WorkspaceMembership",
+        "metadata": {"name": name},
+        "spec": spec,
+    }
+    await live.kernel.write_document(
+        _WORKSPACE_SCOPE, "WorkspaceMembership", name, raw, invalidate_mode="doc"
+    )
+    return {
+        "workspace_id": workspace_id,
+        "provisioned": True,
+        "reason": None,
+        "workspace_created": workspace_created,
+        "membership": _ws_member_surface(spec),
+    }
+
+
+async def revoke_workspace_member_impl(
+    live: LiveDna,
+    workspace_id: str,
+    *,
+    actor_claims: dict[str, Any] | None,
+    target_email: str | None = None,
+    target_oid: str | None = None,
+) -> dict[str, Any]:
+    """Revoke (remove) a member's ``WorkspaceMembership`` — the Members panel's
+    remove (issue ``i-033``). The target is named by ``target_email`` or
+    ``target_oid`` (oid wins when both are given — the durable key).
+
+    RBAC + policy is the pure ``dna.tenancy.plan_revoke`` decision:
+
+    * the ``actor`` (from the caller's VERIFIED claims) must be Owner/Admin, else
+      :class:`WorkspaceForbidden` (403) — checked BEFORE the target is revealed, so
+      an unauthorized caller gets no membership-existence oracle;
+    * the LAST active owner can NEVER be revoked — the workspace must never be
+      orphaned, else :class:`WorkspaceLastOwner` (409, fail-closed);
+    * a target holding no grant here is :class:`WorkspaceMemberNotFound` (404, a
+      clear no-op — revoking a non-member is not an error to hide).
+
+    Revoking removes the grant outright (``kernel.delete_document`` — the
+    WorkspaceMembership status enum has no ``revoked`` state; a removed grant no
+    longer authorizes, exactly like the portfolio ``remove_member_impl``). Works on
+    a ``pending`` invite (rescind) or an ``active`` member. GLOBAL / ``_lib``-direct
+    (no tenant kwarg). Idempotent-ish: a second revoke of the same target 404s."""
+    from dna.tenancy import (
+        identity_from_token,
+        normalize_email,
+        plan_revoke,
+        role_in_workspace,
+        workspace_membership_name,
+    )
+
+    workspace_id = (workspace_id or "").strip()
+    if not workspace_id:
+        raise ValueError("workspace_id is required")
+    target_email = normalize_email(target_email)
+    target_oid = (target_oid or "").strip()
+    if not target_email and not target_oid:
+        raise ValueError("target_email or target_oid is required")
+
+    actor = identity_from_token(actor_claims or {})
+    raw_grants, memberships = await _workspace_grants(live)
+    actor_role = role_in_workspace(actor, workspace_id, memberships)
+
+    # Locate the target grant in THIS workspace (oid wins when provided).
+    target_spec: dict[str, Any] | None = None
+    target_m: Any = None
+    for g, m in zip(raw_grants, memberships):
+        spec = g.get("spec") or {}
+        if (spec.get("workspace_id") or "") != workspace_id:
+            continue
+        if target_oid:
+            if (spec.get("identity_oid") or "") == target_oid:
+                target_spec, target_m = spec, m
+                break
+        elif normalize_email(spec.get("identity_email")) == target_email:
+            target_spec, target_m = spec, m
+            break
+
+    decision = plan_revoke(actor_role, target_m, workspace_id, memberships)
+    if decision.reason == "not_authorized":
+        raise WorkspaceForbidden(
+            f"actor {(actor.email or '<anonymous>')!r} is not an Owner/Admin of "
+            f"workspace {workspace_id!r} (has {actor_role or 'no membership'}) — "
+            f"cannot revoke members"
+        )
+    if decision.reason == "not_found":
+        raise WorkspaceMemberNotFound(
+            f"no membership for the target ("
+            f"{target_oid or target_email!r}) in workspace {workspace_id!r} — "
+            f"nothing to revoke"
+        )
+    if decision.reason == "last_owner":
+        raise WorkspaceLastOwner(
+            f"cannot revoke the last remaining owner of workspace "
+            f"{workspace_id!r} — the workspace would be orphaned"
+        )
+
+    assert target_spec is not None  # reason=='ok' ⇒ a target was located.
+    name = workspace_membership_name(workspace_id, target_spec.get("identity_email") or "")
+    await live.kernel.delete_document(
+        _WORKSPACE_SCOPE, "WorkspaceMembership", name, invalidate_mode="doc"
+    )
+    return {
+        "workspace_id": workspace_id,
+        "revoked": True,
+        "target": _ws_member_surface(target_spec),
+    }
+
+
 def _slug(text: str) -> str:
     import hashlib
     import re
@@ -1441,3 +1716,12 @@ def _slug(text: str) -> str:
     base = re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")[:40]
     h = hashlib.sha1(text.encode()).hexdigest()[:10]
     return f"rem-{h}-{base}" if base else f"rem-{h}"
+
+
+def _email_slug(email: str) -> str:
+    """A clean URL-safe workspace slug from an email local part (no ``rem-``
+    prefix — that ``_slug`` above is for memory doc names)."""
+    import re
+
+    local = (email or "").split("@", 1)[0]
+    return re.sub(r"[^a-z0-9]+", "-", local.lower()).strip("-") or "workspace"

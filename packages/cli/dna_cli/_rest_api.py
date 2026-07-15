@@ -197,6 +197,8 @@ def build_app(
         MemberNotFound,
         ProjectNotFound,
         WorkspaceForbidden,
+        WorkspaceLastOwner,
+        WorkspaceMemberNotFound,
         accept_invites_impl,
         board_item_impl,
         board_summary_impl,
@@ -211,9 +213,11 @@ def build_app(
         list_tools_impl,
         list_workspace_members_impl,
         provision_tenant_owner_impl,
+        provision_workspace_owner_impl,
         recall_impl,
         remember_impl,
         remove_member_impl,
+        revoke_workspace_member_impl,
         set_member_impl,
         set_workspace_plan_impl,
     )
@@ -850,5 +854,73 @@ def build_app(
         hijack of a bound grant) is enforced in the core impl — never here."""
         effective = _actor_claims_from_state(request) or claims or {}
         return await accept_invites_impl(await _live(), effective)
+
+    # -- workspace owner bootstrap + revoke (Model B, f-ws-owner-provision) ----
+    # The Model B twin of POST /v1/tenants/{tid}/provision-owner. The deployed
+    # portal auto-provisions a Model-A TenantMembership on first login, but the
+    # Members panel (GET .../members) needs a Model-B owner WorkspaceMembership and
+    # nothing created it in production — so the founder was 403'd and could not
+    # invite. These two routes close that: provision-owner makes the first
+    # authenticated user the OWNER of their own workspace (id == verified tid, zero
+    # migration); revoke removes a member (Owner/Admin only, last-owner protected).
+    #
+    # Both live UNDER /v1/workspaces/* so they are EXEMPT from the config-auth
+    # membership bind (the caller may hold no active membership yet — that is the
+    # whole point of the bootstrap) and do their OWN check on the verified identity:
+    # under --auth config the verified token claims (stashed on request.state) WIN
+    # over the body; under none/token a trusted portal passes the verified claims.
+
+    @app.post("/v1/workspaces/{workspace_id}/provision-owner",
+              dependencies=guarded, status_code=201)
+    async def provision_workspace_owner(
+        request: Request,
+        workspace_id: str,
+        claims: dict[str, Any] | None = Body(default=None, embed=True),
+    ) -> dict[str, Any]:
+        """Make the verified identity the OWNER of workspace ``{workspace_id}`` when
+        it has no owner yet — the Model B first-login bootstrap. Idempotent: a
+        re-call by the same identity is a no-op returning the membership; a later
+        DIFFERENT user does not auto-escalate (``owner_exists`` no-op). ``{id}`` MUST
+        equal the verified identity's ``tid`` (zero-migration; a cross-tid caller is
+        403'd). 400 on a missing oid/email claim."""
+        effective = _actor_claims_from_state(request) or claims or {}
+        try:
+            return await provision_workspace_owner_impl(
+                await _live(), workspace_id, effective
+            )
+        except WorkspaceForbidden as exc:
+            raise HTTPException(status_code=403, detail=str(exc)) from None
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from None
+
+    @app.post("/v1/workspaces/{workspace_id}/members/revoke", dependencies=guarded)
+    async def revoke_workspace_member(
+        request: Request,
+        workspace_id: str,
+        target_email: str | None = Body(default=None, embed=True),
+        target_oid: str | None = Body(default=None, embed=True),
+        actor: dict[str, Any] | None = Body(default=None, embed=True),
+    ) -> dict[str, Any]:
+        """Revoke (remove) a member's WorkspaceMembership — the Members panel remove
+        (issue ``i-033``). RBAC: the actor must be Owner/Admin (403 else). The LAST
+        remaining owner can NEVER be revoked (409, fail-closed). A target holding no
+        grant here is 404 (clear no-op). Target named by ``target_email`` or
+        ``target_oid`` (oid wins). Under ``--auth config`` the actor is the verified
+        token identity; under none/token the trusted portal passes ``actor`` claims."""
+        actor_claims = _actor_claims_from_state(request) or actor
+        try:
+            return await revoke_workspace_member_impl(
+                await _live(), workspace_id,
+                actor_claims=actor_claims,
+                target_email=target_email, target_oid=target_oid,
+            )
+        except WorkspaceForbidden as exc:
+            raise HTTPException(status_code=403, detail=str(exc)) from None
+        except WorkspaceLastOwner as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from None
+        except WorkspaceMemberNotFound as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from None
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from None
 
     return app

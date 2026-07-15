@@ -331,3 +331,17 @@ export {
   verifiedEmailFromClaims,
 } from "./tenancy/invites.js";
 export type { AcceptResult } from "./tenancy/invites.js";
+// f-ws-owner-provision (Model B) — the pure workspace-ownership policy: the
+// first-owner probe (provision-owner idempotency) + the last-owner revoke guard
+// (a workspace is never orphaned) + the revoke RBAC. Twin of
+// dna/tenancy/ownership.py; guarded by tests/parity-fixtures/workspace-ownership/.
+export {
+  OWNER_ROLE,
+  REVOKE_ROLES,
+  activeOwners,
+  canRevokeRole,
+  hasActiveOwner,
+  isLastActiveOwner,
+  planRevoke,
+} from "./tenancy/ownership.js";
+export type { RevokeDecision } from "./tenancy/ownership.js";
