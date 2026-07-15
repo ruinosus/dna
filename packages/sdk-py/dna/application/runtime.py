@@ -155,7 +155,7 @@ async def list_stories_impl(
     tenant: str | None = None,
 ) -> dict[str, Any]:
     """List Stories, optionally filtered by ``status`` (todo/in-progress/…)."""
-    sc = scope or live.base_scope
+    sc = scope or live.default_scope(tenant)
     stories: list[dict[str, Any]] = []
     for d in await _collect(live, sc, "Story", tenant):
         spec = d["spec"]
@@ -180,7 +180,7 @@ async def get_adr_impl(
 ) -> dict[str, Any]:
     """Fetch one ADR (Architecture Decision Record) by name — the decision the
     board recorded, verbatim (context / decision / consequences / body)."""
-    sc = scope or live.base_scope
+    sc = scope or live.default_scope(tenant)
     raw = await live.kernel.get_document(sc, "ADR", name, tenant=tenant)
     if raw is None:
         raise ValueError(f"ADR {name!r} not found in scope {sc!r}")
@@ -244,7 +244,7 @@ async def list_orgs_impl(
 ) -> dict[str, Any]:
     """List the tenant's ``Organization`` docs, projected to the console card
     surface (``name`` / ``slug`` / ``display_name``), sorted by name."""
-    sc = scope or live.base_scope
+    sc = scope or live.default_scope(tenant)
     orgs = [_org_surface(d) for d in await _collect(live, sc, "Organization", tenant)]
     orgs.sort(key=lambda o: o["name"] or "")
     return {"scope": sc, "tenant": tenant, "orgs": orgs}
@@ -256,7 +256,7 @@ async def list_projects_impl(
     """List the tenant's ``Project`` docs (the multi-repo containers), projected
     to the console surface (name/slug/org_ref/repo_refs/board_scope/
     intel_source_refs/visibility), sorted by name."""
-    sc = scope or live.base_scope
+    sc = scope or live.default_scope(tenant)
     projects = [_project_surface(d) for d in await _collect(live, sc, "Project", tenant)]
     projects.sort(key=lambda p: p["name"] or "")
     return {"scope": sc, "tenant": tenant, "projects": projects}
@@ -267,7 +267,7 @@ async def list_repos_impl(
 ) -> dict[str, Any]:
     """List the tenant's ``Repo`` docs, projected to the console surface
     (name/url/provider/default_branch), sorted by name."""
-    sc = scope or live.base_scope
+    sc = scope or live.default_scope(tenant)
     repos = [_repo_surface(d) for d in await _collect(live, sc, "Repo", tenant)]
     repos.sort(key=lambda r: r["name"] or "")
     return {"scope": sc, "tenant": tenant, "repos": repos}
@@ -285,7 +285,7 @@ async def get_project_impl(
     ``repo_refs`` entry to its ``Repo`` doc — the N—N edge lives on the Project
     side, so this is a lookup over the tenant's Repo docs (missing refs are
     skipped honestly, never fabricated). Raises :class:`ProjectNotFound`."""
-    sc = scope or live.base_scope
+    sc = scope or live.default_scope(tenant)
     rows = await _collect(live, sc, "Project", tenant)
     match = next(
         (d for d in rows if d["spec"].get("slug") == slug or d["name"] == slug),
@@ -491,7 +491,7 @@ async def list_members_impl(
     is given, flags the viewer's own row (``you``) and reports whether they may
     manage membership (``viewer.can_manage`` — Owner/Admin). Raises
     :class:`ProjectNotFound`."""
-    sc = scope or live.base_scope
+    sc = scope or live.default_scope(tenant)
     ctx = await _members_context(live, sc, slug, tenant)
     ranks = ctx["ranks"]
     members = [
@@ -534,7 +534,7 @@ async def set_member_impl(
     deterministic Membership doc (a role change overwrites, never duplicates),
     preserving an existing invite's ``status``/``invited_at``. Tenant-scoped: the
     write routes to the caller's tenant overlay only."""
-    sc = scope or live.base_scope
+    sc = scope or live.default_scope(tenant)
     user = (user or "").strip()
     role = (role or "").lower().strip()
     if not user:
@@ -597,7 +597,7 @@ async def remove_member_impl(
     Deletes ONLY the project-scope Membership (an inherited org grant is
     untouched). 404 (:class:`MemberNotFound`) when the user has no project grant
     here. Tenant-scoped."""
-    sc = scope or live.base_scope
+    sc = scope or live.default_scope(tenant)
     user = (user or "").strip()
     if not user:
         raise ValueError("user is required")
@@ -659,7 +659,7 @@ async def provision_tenant_owner_impl(
     owner is a real member, not a pending invite). TENANTED: the write routes to the
     caller's OWN tenant overlay only.
     """
-    sc = scope or live.base_scope
+    sc = scope or live.default_scope(tenant)
     tenant = (tenant or "").strip()
     user = (user or "").strip()
     if not tenant:
@@ -886,7 +886,7 @@ async def recall_impl(
     from dna.memory import recall
     from dna.memory.verbs import MEMORY_KINDS
 
-    sc = scope or live.base_scope
+    sc = scope or live.default_scope(tenant)
     if live.provider is not None:
         try:
             from dna.memory import backfill_index
@@ -914,7 +914,7 @@ async def remember_impl(
     set (the auth bridge injects it)."""
     from dna.memory import remember
 
-    sc = scope or live.base_scope
+    sc = scope or live.default_scope(tenant)
     name = _slug(summary)
     spec: dict[str, Any] = {"summary": summary}
     if kind == "LessonLearned":
@@ -942,7 +942,7 @@ async def consolidate_impl(
     deleted). Mirrors ``dna memory consolidate``."""
     from dna.memory import consolidate
 
-    sc = scope or live.base_scope
+    sc = scope or live.default_scope(tenant)
     return await consolidate(live.kernel, sc, apply=apply, tenant=tenant)
 
 
@@ -962,7 +962,7 @@ async def list_memories_impl(
     disappears from BOTH surfaces, never a ghost."""
     from dna.memory.decay import currently_valid
 
-    sc = scope or live.base_scope
+    sc = scope or live.default_scope(tenant)
     memories: list[dict[str, Any]] = []
     for d in await _collect(live, sc, kind, tenant):
         spec = d["spec"]
@@ -1009,7 +1009,7 @@ async def forget_impl(
     ``forgotten: False`` no-op, never a 500."""
     from dna.memory import forget
 
-    sc = scope or live.base_scope
+    sc = scope or live.default_scope(tenant)
     try:
         out = await forget(live.kernel, sc, name, kind=kind, tenant=tenant)
     except KeyError:

@@ -89,6 +89,32 @@ org. A `Workspace` whose id equals a pre-existing tenant id inherits all of
 that tenant's data with **zero migration** — the workspace simply becomes the
 new name for the same rows.
 
+### How the workspace is resolved (identity → membership)
+
+The resolution is a pure, transport-agnostic policy (`dna.tenancy.resolution`,
+with a 1:1 TypeScript twin — both driven by shared parity fixtures):
+
+1. A verified token is distilled to an **identity** — the durable `oid`, the
+   verified `email` (from `email` / `preferred_username` / `upn`), and the `tid`
+   as *provenance only*. The `tid` is deliberately **not** the tenant.
+2. The identity is matched against the `WorkspaceMembership` grants. An **active**
+   grant matches on the durable `oid` once bound; while still unbound (a freshly
+   seeded owner, or a not-yet-accepted invite that is already active) it matches
+   on the **verified email**. A `pending` invite authorizes nothing.
+3. The resolved workspace id is the tenancy key. A caller may *select* among the
+   workspaces it belongs to (e.g. a per-workspace MCP URL), but the selector is
+   re-verified against membership — a workspace the identity is not an active
+   member of is denied. With no membership at all, the request is denied
+   (fail-closed).
+
+At the MCP edge this replaces the older "org id is the tenant" step. A source
+that has **no `WorkspaceMembership` grants at all** has not opted into workspaces
+(the OSS / self-host case) and keeps its prior single-tenant behaviour unchanged;
+workspace resolution engages only once grants exist. Beneath the resolver, the
+physical `(scope, tenant = workspace_id)` key gives defence in depth: a resolved
+workspace defaults to — and may name — only its own scope, so even a bug upstream
+cannot read another workspace's rows.
+
 ## LayerPolicy — which layers may override which Kinds
 
 Not every Kind should be overridable by every layer. A **`LayerPolicy`**

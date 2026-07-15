@@ -2460,6 +2460,15 @@ class Kernel:
         webhook writes the doc; the SDK only reads it here."""
         return await self._registry.tenant_plan(tenant)
 
+    async def workspace_memberships(self) -> list[dict]:
+        """List every ``WorkspaceMembership`` grant from the _lib registry (ADR
+        "Model B"). Returns the RAW DICT rows (unfiltered — the auth→workspace
+        resolver filters by the verified identity in pure core); ``[]`` means the
+        source never opted into workspaces (the auth bridge then falls back to
+        the legacy tid tenancy). _lib-direct + fail-soft. Thin facade over the
+        RegistryAccessor collaborator."""
+        return await self._registry.workspace_memberships()
+
     # VoicePolicy is GLOBAL — _lib-resident like ModelProfile. Same
     # _lib-direct lookup rationale (a per-scope query would silently
     # no-op for scopes with zero VoicePolicy docs).
