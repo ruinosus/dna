@@ -32,12 +32,15 @@ def api() -> None:
               help="Bind host.")
 @click.option("--port", type=int, default=8080, show_default=True,
               help="Bind port.")
-@click.option("--auth", type=click.Choice(["none", "token"]), default="none",
+@click.option("--auth", type=click.Choice(["none", "token", "config"]), default="none",
               show_default=True,
               help="Auth mode. `none` = local dev (no bearer). `token` = require "
                    "`Authorization: Bearer <DNA_API_TOKEN>` on every route (the MVP "
-                   "shared token; the hosted OAuth 2.1 / per-tenant bearer slots into "
-                   "the same seam later).")
+                   "shared token). `config` = the Model B verified-identity path — a "
+                   "bearer JWT verified by the N-provider layer (dna.config.yaml "
+                   "`auth.providers[]`), then the effective workspace BOUND from the "
+                   "identity's WorkspaceMembership (the `tenant` param is overwritten "
+                   "from membership, never trusted from the caller).")
 @click.option("--token", default=None,
               help="Expected bearer token for --auth token (else the DNA_API_TOKEN env var).")
 @click.option("--cors-origin", "cors_origins", multiple=True,
@@ -79,6 +82,19 @@ def serve(scope: str | None, base_dir: str | None, host: str, port: int,
     `dna mcp serve` use — this is a second HTTP face over one core, not a copy.
     """
     from dna_cli._rest_api import build_app
+
+    if auth == "config":
+        # Fail loud NOW (not on the first request) if the provider config is missing.
+        try:
+            from dna_cli._mcp_auth import providers_from_config
+            providers = providers_from_config()
+            click.echo(
+                "auth: multi-provider layer — "
+                + ", ".join(f"{p.label}({p.tenant_claim})" for p in providers),
+                err=True,
+            )
+        except (RuntimeError, ValueError) as exc:
+            raise click.ClickException(str(exc)) from None
 
     try:
         app = build_app(

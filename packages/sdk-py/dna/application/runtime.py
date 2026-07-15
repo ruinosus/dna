@@ -1211,6 +1211,229 @@ async def set_workspace_plan_impl(
     }
 
 
+# ── workspace invites (ADR "Model B", F3 — the cross-org join) ──────────────
+#
+# The identity→workspace boundary writes: a workspace Owner/Admin invites a
+# collaborator from ANY org by EMAIL (a pending WorkspaceMembership, oid unbound);
+# the invitee's first VERIFIED sign-in BINDS their durable oid and flips it active.
+# All three impls are GLOBAL / _lib-direct (WorkspaceMembership is the tenancy
+# boundary — it lives ABOVE any single workspace, exactly like TenantPlan, so
+# there is no `tenant` kwarg). The SECURITY decision (who may invite, which invite
+# a sign-in may bind) is the pure `dna.tenancy` policy — these impls only
+# authorize + persist through the SAME `kernel.write_document` funnel the seed uses.
+
+_TENANT_API = "github.com/ruinosus/dna/tenant/v1"
+_WORKSPACE_SCOPE = "_lib"
+# The workspace-level role ladder (the WorkspaceMembership descriptor enum).
+_WS_ROLES = ("owner", "admin", "member", "guest")
+
+
+class WorkspaceForbidden(Exception):
+    """The actor lacks Owner/Admin on the workspace (RBAC deny → HTTP 403)."""
+
+
+async def _workspace_grants(live: LiveDna) -> tuple[list[dict], list[Any]]:
+    """The RAW WorkspaceMembership rows AND their pure-policy views, in the same
+    order (so an index/object correlates one to the other)."""
+    from dna.tenancy import Membership
+
+    raw = await live.kernel.workspace_memberships()
+    memberships = [Membership.from_spec(g.get("spec") or {}) for g in raw]
+    return raw, memberships
+
+
+def _require_workspace_manage(
+    actor: Any, workspace_id: str, memberships: list[Any], *, target_role: str | None = None
+) -> str:
+    """RBAC gate on a workspace membership WRITE: ``actor`` (a verified
+    :class:`dna.tenancy.Identity`) must hold an ACTIVE Owner/Admin grant in
+    ``workspace_id``; only an Owner may grant/seed the Owner role. Returns the
+    actor's role. Raises :class:`WorkspaceForbidden` (fail-closed)."""
+    from dna.tenancy import can_invite, role_in_workspace
+
+    actor_role = role_in_workspace(actor, workspace_id, memberships)
+    if not can_invite(actor_role):
+        raise WorkspaceForbidden(
+            f"actor {(getattr(actor, 'email', None) or '<anonymous>')!r} is not an "
+            f"Owner/Admin of workspace {workspace_id!r} (has "
+            f"{actor_role or 'no membership'}) — cannot manage members"
+        )
+    if target_role == "owner" and actor_role != "owner":
+        raise WorkspaceForbidden("only an Owner may grant the Owner role")
+    return actor_role
+
+
+async def invite_member_impl(
+    live: LiveDna,
+    workspace_id: str,
+    email: str,
+    role: str,
+    *,
+    actor_claims: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Create (or re-issue) an invite — a ``pending`` :class:`WorkspaceMembership`
+    keyed by the invited EMAIL, ``identity_oid`` null (bound later on accept).
+
+    RBAC: the ``actor`` (derived from the caller's VERIFIED token claims) must be
+    Owner/Admin of ``workspace_id``; only an Owner may invite an Owner. Idempotent
+    upsert on the deterministic ``{workspace_id}--{email}`` doc name: re-inviting an
+    existing member preserves their bound ``oid``/``status`` (a role change, not a
+    downgrade to pending), while inviting a fresh email creates the pending grant.
+    GLOBAL write into ``_lib`` (no tenant binding)."""
+    from dna.tenancy import identity_from_token, normalize_email, workspace_membership_name
+
+    workspace_id = (workspace_id or "").strip()
+    email = normalize_email(email)
+    role = (role or "").lower().strip()
+    if not workspace_id:
+        raise ValueError("workspace_id is required")
+    if not email:
+        raise ValueError("email is required")
+    if role not in _WS_ROLES:
+        raise ValueError(f"unknown role {role!r} — expected one of {list(_WS_ROLES)}")
+
+    actor = identity_from_token(actor_claims or {})
+    _, memberships = await _workspace_grants(live)
+    _require_workspace_manage(actor, workspace_id, memberships, target_role=role)
+
+    name = workspace_membership_name(workspace_id, email)
+    existing = await live.kernel.get_document(_WORKSPACE_SCOPE, "WorkspaceMembership", name)
+    ex_spec = (existing or {}).get("spec") or {}
+    now = datetime.now(timezone.utc).isoformat()
+    # Preserve an already-bound member's identity + lifecycle (re-invite = role
+    # change, never a re-open of an accepted grant); a fresh invite is pending.
+    spec = {
+        "workspace_id": workspace_id,
+        "identity_email": email,
+        "identity_oid": ex_spec.get("identity_oid"),
+        "identity_tid": ex_spec.get("identity_tid"),
+        "role": role,
+        "status": ex_spec.get("status") or "pending",
+        "invited_by": getattr(actor, "email", None) or ex_spec.get("invited_by"),
+        "invited_at": ex_spec.get("invited_at") or now,
+        "accepted_at": ex_spec.get("accepted_at"),
+    }
+    raw = {
+        "apiVersion": _TENANT_API,
+        "kind": "WorkspaceMembership",
+        "metadata": {"name": name},
+        "spec": spec,
+    }
+    # GLOBAL kind → no tenant kwarg (a tenant on a GLOBAL write is rejected).
+    await live.kernel.write_document(
+        _WORKSPACE_SCOPE, "WorkspaceMembership", name, raw, invalidate_mode="doc"
+    )
+    return {
+        "workspace_id": workspace_id,
+        "invite": {
+            "identity_email": email,
+            "role": role,
+            "status": spec["status"],
+            "invited_by": spec["invited_by"],
+            "bound": bool(spec["identity_oid"]),
+        },
+    }
+
+
+async def list_workspace_members_impl(
+    live: LiveDna,
+    workspace_id: str,
+    *,
+    actor_claims: dict[str, Any] | None = None,
+    actor: Any = None,
+) -> dict[str, Any]:
+    """List a workspace's members (grants) — the Membros panel read. RBAC: the
+    actor (verified token claims, or a pre-built :class:`dna.tenancy.Identity` for
+    a GET) must be Owner/Admin of ``workspace_id``. Projects each grant to
+    email/role/status/bound + invite audit. GLOBAL / ``_lib``-direct."""
+    from dna.tenancy import identity_from_token
+
+    workspace_id = (workspace_id or "").strip()
+    if not workspace_id:
+        raise ValueError("workspace_id is required")
+    if actor is None:
+        actor = identity_from_token(actor_claims or {})
+    raw_grants, memberships = await _workspace_grants(live)
+    _require_workspace_manage(actor, workspace_id, memberships)
+
+    members = []
+    for g in raw_grants:
+        spec = g.get("spec") or {}
+        if (spec.get("workspace_id") or "") != workspace_id:
+            continue
+        members.append({
+            "identity_email": spec.get("identity_email"),
+            "role": spec.get("role"),
+            "status": spec.get("status"),
+            "bound": bool(spec.get("identity_oid")),
+            "invited_by": spec.get("invited_by"),
+            "invited_at": spec.get("invited_at"),
+            "accepted_at": spec.get("accepted_at"),
+        })
+    members.sort(key=lambda m: (m.get("identity_email") or ""))
+    return {"workspace_id": workspace_id, "members": members}
+
+
+async def accept_invites_impl(
+    live: LiveDna, claims: dict[str, Any] | None
+) -> dict[str, Any]:
+    """Accept every pending invite a VERIFIED sign-in claims — the cross-org join's
+    second phase. Matches the token's VERIFIED email against unbound grants,
+    BINDS the durable ``oid`` (+ ``tid`` provenance), and flips ``pending→active``
+    (stamping ``accepted_at``). An already-active-but-unbound grant (the F1 seed)
+    just captures its ``oid``.
+
+    The security decision is the pure ``dna.tenancy.bindable_invites_for``
+    (verified-email-only matching; an oid-bound grant is never returned, so it can
+    NOT be hijacked by a different oid; no oid / unverified email → nothing bound).
+    This impl only persists that decision, GLOBAL into ``_lib``. Idempotent: a
+    re-sign-in after acceptance finds nothing unbound left to bind."""
+    from dna.tenancy import (
+        bindable_invites_for,
+        identity_from_token,
+        verified_email_from_claims,
+        workspace_membership_name,
+    )
+
+    identity = identity_from_token(claims or {})
+    verified_email = verified_email_from_claims(claims or {})
+    raw_grants, memberships = await _workspace_grants(live)
+    to_bind = bindable_invites_for(identity, verified_email, memberships)
+    bind_ids = {id(m) for m in to_bind}
+
+    accepted: list[dict[str, Any]] = []
+    now = datetime.now(timezone.utc).isoformat()
+    for g, m in zip(raw_grants, memberships):
+        if id(m) not in bind_ids:
+            continue
+        spec = dict(g.get("spec") or {})
+        was_pending = (spec.get("status") or "pending") == "pending"
+        spec["identity_oid"] = identity.oid
+        spec["identity_tid"] = identity.tid or spec.get("identity_tid")
+        spec["status"] = "active"
+        spec["accepted_at"] = now if was_pending else (spec.get("accepted_at") or now)
+        name = workspace_membership_name(spec["workspace_id"], spec["identity_email"])
+        raw = {
+            "apiVersion": _TENANT_API,
+            "kind": "WorkspaceMembership",
+            "metadata": {"name": name},
+            "spec": spec,
+        }
+        await live.kernel.write_document(
+            _WORKSPACE_SCOPE, "WorkspaceMembership", name, raw, invalidate_mode="doc"
+        )
+        accepted.append({
+            "workspace_id": spec["workspace_id"],
+            "role": spec.get("role"),
+            "activated": was_pending,
+        })
+    return {
+        "identity_oid": identity.oid,
+        "identity_email": verified_email,
+        "accepted": accepted,
+    }
+
+
 def _slug(text: str) -> str:
     import hashlib
     import re

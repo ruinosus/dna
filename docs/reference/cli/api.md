@@ -51,7 +51,7 @@ dna api serve [OPTIONS]
 
 | Option | Description |
 | --- | --- |
-| `--auth` | Auth mode. `none` = local dev (no bearer). `token` = require `Authorization: Bearer <DNA_API_TOKEN>` on every route (the MVP shared token; the hosted OAuth 2.1 / per-tenant bearer slots into the same seam later). _(default: `none`)_ |
+| `--auth` | Auth mode. `none` = local dev (no bearer). `token` = require `Authorization: Bearer <DNA_API_TOKEN>` on every route (the MVP shared token). `config` = the Model B verified-identity path — a bearer JWT verified by the N-provider layer (dna.config.yaml `auth.providers[]`), then the effective workspace BOUND from the identity's WorkspaceMembership (the `tenant` param is overwritten from membership, never trusted from the caller). _(default: `none`)_ |
 | `--base-dir` | Source directory override (else DNA_SOURCE_URL / DNA_BASE_DIR / ./.dna). |
 | `--cors-origin` | Allowed browser origin for CORS (repeatable; else DNA_API_CORS_ORIGINS, else `http://localhost:3000`). |
 | `--help` | Show this message and exit. |

@@ -13,6 +13,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Cross-org workspace invites — the identity→workspace join** (`f-ws-invites`,
+  ADR *ADR-workspace-tenancy* F3). A workspace Owner/Admin invites a collaborator
+  from **any** organization **by email**; the invitee's first verified sign-in
+  binds their durable identity and joins them — the GitHub/Slack shape, on top of
+  the Model B tenancy from `f-ws-resolution`.
+  - **Invite → accept, two-phase bind.** `invite` writes a `pending`
+    `WorkspaceMembership` (`identity_oid` null, keyed by the invited email); the
+    invitee's first sign-in matches the **verified** email claim, binds the durable
+    `oid` (+ `tid` provenance), and flips it `active`. RBAC: only an Owner/Admin of
+    that workspace may invite/list; only an Owner may invite an Owner.
+  - **Impersonation-proof by construction.** Matching is only ever on a verified
+    email claim (`email`+`email_verified`, or the Entra `preferred_username`/`upn`
+    UPN) — never a caller field; an unverified email accepts nothing. The bind key
+    is the durable `oid`: a grant already bound to an `oid` can **not** be hijacked
+    by a different identity sharing the email, and a token with no `oid` binds
+    nothing. The decision is the pure `dna.tenancy.invites` policy with a 1:1
+    TypeScript twin, gated by shared parity fixtures.
+  - **REST surface** (`s-ws-invite-rest`): `POST /v1/workspaces/{id}/invites`,
+    `GET /v1/workspaces/{id}/members` (both Owner/Admin), and
+    `POST /v1/workspaces/accept` (the verified invitee — exempt from the workspace
+    bind, since a pending invitee holds no active membership yet).
+- **Per-workspace MCP URL + REST `--auth config` binding** (`f-ws-resolution`
+  follow-ups `s-ws-res-mcp-url` / `s-ws-res-rest-config`, ADR §2.2). An MCP client
+  picks its workspace **by URL** — `…/w/<workspace-id>/mcp` names it in the path
+  (the bare `/mcp` falls back to the sole/default membership); the selector is
+  re-verified against membership, never trusted blind. `dna mcp serve --transport
+  http` now serves both the bare and per-workspace URLs. The REST face gains
+  `dna api serve --auth config`: a verified bearer JWT is resolved to a workspace by
+  membership, which **overwrites** the request's `tenant` argument (so a caller can
+  no longer forge it) — mirroring the MCP guard, fail-closed on no/cross-workspace
+  membership.
 - **`dna specify` — the bidirectional GitHub Spec Kit ↔ DNA bridge**
   (`f-spec-kit-adoption`, ADR *ADR-spec-kit-adoption*). DNA officially names
   [GitHub Spec Kit](https://github.com/github/spec-kit) as the supported

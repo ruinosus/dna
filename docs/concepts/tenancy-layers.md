@@ -128,6 +128,51 @@ switch to workspace-keyed billing is **zero migration**. (The pre-Model-B
 `PUT /v1/tenant-plan` route remains as a deprecated alias that forwards its
 `tenant` body to `workspace_id`, so an already-deployed webhook keeps working.)
 
+### Picking a workspace by URL (`/w/<id>/mcp`)
+
+An MCP client (VS Code) connects with only a bearer token — there is no
+interactive picker. It selects its workspace **by URL**: the per-workspace
+endpoint `https://…/w/<workspace-id>/mcp` names the workspace in the path, while
+the bare `…/mcp` falls back to the identity's sole / default membership. The
+path is only ever a *selector*: the auth bridge reads `<workspace-id>` from it and
+**re-verifies** it against membership (a non-member is denied), so the workspace
+is a named, verified claim — never trusted blind. The REST face has the mirror
+mechanism: under `--auth config` a verified bearer JWT is resolved to a workspace
+by membership, and that workspace **overwrites** the request's `tenant` argument
+(a caller can no longer forge it).
+
+## Invites — the cross-org join
+
+The point of workspaces is collaboration *across* organizations. A workspace
+Owner or Admin invites a person from **any** org **by email**, and that person's
+first verified sign-in joins them — the GitHub/Slack shape.
+
+1. **Invite.** An Owner/Admin creates a `WorkspaceMembership` with `status:
+   pending`, `identity_email` set to the invited address, and `identity_oid`
+   *null* — no account has to exist yet. Only an Owner/Admin of *that* workspace
+   may invite, and only an Owner may invite another Owner.
+2. **Accept (bind on first sign-in).** The invitee authenticates from their own
+   org. The server matches the token's **verified** email claim against the
+   pending invite, **binds** the durable `oid` (recording the `tid` as
+   provenance), and flips `status: active`. Email is the *handle*; `oid` is the
+   *key*.
+
+The accept step is impersonation-proof by construction:
+
+- Matching is only ever on a **verified** email claim (Entra's
+  `email`+`email_verified`, or the verified `preferred_username`/`upn` UPN) — never
+  a caller-supplied field. An unverified email accepts nothing (fail-closed).
+- The bind key is the durable `oid`. Once a grant is bound, it matches *only* on
+  that `oid` — so a different identity that later controls the same email can
+  **not** hijack the membership. A token with no `oid` binds nothing.
+- The whole decision is the pure `dna.tenancy.invites` policy (with a 1:1
+  TypeScript twin, driven by shared parity fixtures), so both runtimes agree.
+
+REST endpoints expose the flow: `POST /v1/workspaces/{id}/invites` (Owner/Admin),
+`GET /v1/workspaces/{id}/members` (Owner/Admin), and `POST /v1/workspaces/accept`
+(the verified invitee). The accept route is exempt from the workspace bind — an
+invitee is still `pending` and by definition holds no active membership yet.
+
 ## LayerPolicy — which layers may override which Kinds
 
 Not every Kind should be overridable by every layer. A **`LayerPolicy`**
