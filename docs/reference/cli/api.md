@@ -36,7 +36,8 @@ ENDPOINTS (read-focused; tenant-aware via a `tenant` query param):
   DELETE /v1/projects/{slug}/members/{user}?tenant=&actor=  -> remove (RBAC)
   GET    /v1/repos?tenant=                     -> {repos:[...]}
   GET    /v1/board?scope=&tenant=              -> {counts, totals, recent}
-  PUT    /v1/tenant-plan                       -> billing->runtime TenantPlan write {tenant, tier_id, ...}
+  PUT    /v1/workspace-plan                    -> billing->runtime WorkspacePlan write {workspace_id, tier_id, ...}
+  PUT    /v1/tenant-plan                       -> DEPRECATED alias of /v1/workspace-plan (legacy {tenant} body)
   POST   /v1/tenants/{tid}/provision-owner     -> first-login Owner bootstrap {user} (idempotent)
 
 Every endpoint reads/writes through the SAME live kernel `dna` commands +

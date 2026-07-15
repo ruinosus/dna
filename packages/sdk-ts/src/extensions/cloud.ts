@@ -12,11 +12,12 @@
  *     are project data, not implicit knowledge. NOT named `Plan` — that
  *     alias belongs to the SDLC implementation-plan Kind; a pricing plan is
  *     a Tier. Free / Pro / Enterprise are tiers.
- *   - TenantPlan (`cloud-tenant-plan`) — the tenant→Tier assignment: which
- *     Tier a given tenant is currently on. The billing→enforcement bridge:
- *     dna-cloud's Stripe webhook writes it on subscribe/cancel; the MCP
- *     server reads it via `kernel.tenantPlan(tenant)` when a token carries no
- *     explicit plan claim. The OSS SDK only READS — zero Stripe/billing code.
+ *   - WorkspacePlan (`cloud-workspace-plan`) — the workspace→Tier assignment:
+ *     which Tier a given workspace is currently on (ADR "Model B" — billing
+ *     keys on the workspace, not an identity/Azure org). The billing→enforcement
+ *     bridge: dna-cloud's Stripe webhook writes it on subscribe/cancel; the MCP
+ *     server reads it via `kernel.workspacePlan(workspaceId)` when a token
+ *     carries no explicit plan claim. The OSS SDK only READS — zero Stripe code.
  *
  * CONTRACT — never hardcode caps. The single source of truth for a plan's
  * limits is its Tier doc (`_lib` scope, `tiers/<tier_id>.yaml`), resolved

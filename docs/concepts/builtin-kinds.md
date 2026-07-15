@@ -392,15 +392,19 @@ MCP server resolves a request's tier and enforces the caps at the same seam
 that binds a token to a tenant — so changing a limit is a file edit, not a
 redeploy. Free and Pro ship as seed docs.
 
-### TenantPlan
+### WorkspacePlan
 
-A [`TenantPlan`](../reference/kinds/record.md#tenantplan)
-(`cloud-tenant-plan`) maps a DNA tenant to its current `Tier` — the
-billing→enforcement bridge. DNA Cloud's Stripe webhook writes it on
-subscribe / cancel; the MCP server reads it via `kernel.tenant_plan(tenant)`
-to resolve a tenant's plan when the token carries no explicit `plan` claim
-(falling back to Free). Zero Stripe or billing code lives in the OSS SDK —
-it only reads the assignment.
+A [`WorkspacePlan`](../reference/kinds/record.md#workspaceplan)
+(`cloud-workspace-plan`) maps a DNA **workspace** to its current `Tier` — the
+billing→enforcement bridge. Billing attaches to the workspace, not to an
+identity or Azure org (ADR *Model B*): the key is the opaque `workspace_id`
+the kernel resolves from the caller's verified identity + membership. DNA
+Cloud's Stripe webhook writes it on subscribe / cancel; the MCP server reads
+it via `kernel.workspace_plan(workspace_id)` to resolve a workspace's plan
+when the token carries no explicit `plan` claim (falling back to Free). The
+founding workspace's id equals the founder's old Azure `tid`, so an existing
+assignment keyed on that string resolves unchanged — zero migration. Zero
+Stripe or billing code lives in the OSS SDK; it only reads the assignment.
 
 ## Intelligence layer
 
@@ -449,7 +453,7 @@ An [`Organization`](../reference/kinds/record.md#organization)
 (`portfolio-org`) is the tenant's own org profile — the enterprise-familiar
 top-level container (as in GitHub / Azure DevOps) whose portfolio of Projects
 the console aggregates. It carries a `name`, a URL-safe `slug`, an optional
-`display_name`, and a `plan_ref` to the DNA Cloud `Tier` / `TenantPlan` the org
+`display_name`, and a `plan_ref` to the DNA Cloud `Tier` / `WorkspacePlan` the org
 is on. One Organization per tenant; it is distinct from the platform-level
 `Tenant` provisioning-identity Kind (the editable profile *inside* the tenant's
 portfolio, not the global identity row).

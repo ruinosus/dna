@@ -42,7 +42,7 @@ from dna.application.runtime import (
     remember_impl,
     remove_member_impl,
     set_member_impl,
-    set_tenant_plan_impl,
+    set_workspace_plan_impl,
 )
 
 __all__ = [
@@ -74,7 +74,7 @@ __all__ = [
     "set_member_impl",
     "remove_member_impl",
     "provision_tenant_owner_impl",
-    "set_tenant_plan_impl",
+    "set_workspace_plan_impl",
     "ProjectNotFound",
     "BoardItemNotFound",
     "MemberForbidden",

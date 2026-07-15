@@ -638,10 +638,10 @@ def token_has_explicit_plan_claim() -> bool:
     claim (or plan-encoding scope).
 
     The single bit the billing→enforcement bridge needs: whether to trust the
-    token's plan verbatim (a claim WINS) or fall back to the ``TenantPlan`` store
-    (which dna-cloud's Stripe webhook writes) before the Free floor. With no
+    token's plan verbatim (a claim WINS) or fall back to the ``WorkspacePlan``
+    store (which dna-cloud's Stripe webhook writes) before the Free floor. With no
     token / no fastmcp there is no claim → ``False`` (the guard then consults the
-    store keyed by tenant). Reads the SAME claim key / scope prefix as
+    store keyed by workspace). Reads the SAME claim key / scope prefix as
     :func:`enforce_tier_from_context`, so the two never disagree on what "the
     token's plan" means."""
     try:

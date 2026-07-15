@@ -885,35 +885,37 @@ def test_provision_owner_requires_user(dna_dir):
                       ).status_code == 400
 
 
-# ── cloud billing → enforcement bridge: PUT /v1/tenant-plan ──────────────────
+# ── cloud billing → enforcement bridge: PUT /v1/workspace-plan ───────────────
 #
 # The write that closes the billing→runtime gap (finding C4): dna-cloud's Stripe
-# webhook PUTs the tenant→tier assignment here, and the MCP runtime reads it via
-# kernel.tenant_plan(tenant). These drive the REST endpoint in-process, then read
-# back through the SAME kernel accessor the MCP quota guard uses — proving the two
-# stores are now bridged (webhook write → runtime read).
+# webhook PUTs the workspace→tier assignment here, and the MCP runtime reads it
+# via kernel.workspace_plan(workspace_id) (ADR "Model B" — billing keys on the
+# workspace, not the Azure tid). These drive the REST endpoint in-process, then
+# read back through the SAME kernel accessor the MCP quota guard uses — proving
+# the two stores are bridged (webhook write → runtime read).
 
 
-def _read_tenant_plan(dna_dir, tenant: str) -> dict | None:
-    """Read the TenantPlan the way the MCP quota guard does (kernel.tenant_plan),
-    on its own loop against the on-disk source the app also wrote to."""
+def _read_workspace_plan(dna_dir, workspace_id: str) -> dict | None:
+    """Read the WorkspacePlan the way the MCP quota guard does
+    (kernel.workspace_plan), on its own loop against the on-disk source the app
+    also wrote to."""
     from dna_cli import _mcp_server as M
 
     async def go():
         live = await M.boot_live(base_dir=str(dna_dir))
-        return await live.kernel.tenant_plan(tenant)
+        return await live.kernel.workspace_plan(workspace_id)
 
     return asyncio.run(go())
 
 
-def test_tenant_plan_put_bridges_to_runtime_read(dna_dir):
-    """PUT /v1/tenant-plan(acme→pro) → kernel.tenant_plan('acme') resolves pro.
-    This is the C4 bridge: what the webhook writes is what the runtime reads."""
+def test_workspace_plan_put_bridges_to_runtime_read(dna_dir):
+    """PUT /v1/workspace-plan(acme→pro) → kernel.workspace_plan('acme') resolves
+    pro. The C4 bridge: what the webhook writes is what the runtime reads."""
     with _client(dna_dir) as c:
         r = c.put(
-            "/v1/tenant-plan",
+            "/v1/workspace-plan",
             json={
-                "tenant": "acme",
+                "workspace_id": "acme",
                 "tier_id": "pro",
                 "stripe_customer_id": "cus_123",
                 "stripe_subscription_id": "sub_123",
@@ -922,11 +924,12 @@ def test_tenant_plan_put_bridges_to_runtime_read(dna_dir):
         )
         assert r.status_code == 200, r.text
         assert r.json()["tier_id"] == "pro"
+        assert r.json()["workspace_id"] == "acme"
 
-    plan = _read_tenant_plan(dna_dir, "acme")
+    plan = _read_workspace_plan(dna_dir, "acme")
     assert plan is not None, "the runtime read must see the webhook's write"
     spec = plan["spec"]
-    assert spec["tenant"] == "acme"
+    assert spec["workspace_id"] == "acme"
     assert spec["tier_id"] == "pro"
     assert spec["source"] == "stripe"
     assert spec["stripe_customer_id"] == "cus_123"
@@ -934,45 +937,68 @@ def test_tenant_plan_put_bridges_to_runtime_read(dna_dir):
     assert spec.get("updated_at")
 
 
-def test_tenant_plan_put_is_idempotent_and_downgrades(dna_dir):
+def test_workspace_plan_put_is_idempotent_and_downgrades(dna_dir):
     """Stripe redelivers (at-least-once) → a repeat PUT converges (still one
     assignment, same tier); a later downgrade PUT flips pro→free in place."""
     with _client(dna_dir) as c:
-        c.put("/v1/tenant-plan",
-              json={"tenant": "acme", "tier_id": "pro", "status": "active"})
+        c.put("/v1/workspace-plan",
+              json={"workspace_id": "acme", "tier_id": "pro", "status": "active"})
         # redelivery of the same event → same result, no duplicate doc.
-        c.put("/v1/tenant-plan",
-              json={"tenant": "acme", "tier_id": "pro", "status": "active"})
-    assert _read_tenant_plan(dna_dir, "acme")["spec"]["tier_id"] == "pro"
+        c.put("/v1/workspace-plan",
+              json={"workspace_id": "acme", "tier_id": "pro", "status": "active"})
+    assert _read_workspace_plan(dna_dir, "acme")["spec"]["tier_id"] == "pro"
 
     with _client(dna_dir) as c:
-        r = c.put("/v1/tenant-plan",
-                  json={"tenant": "acme", "tier_id": "free", "status": "canceled"})
+        r = c.put("/v1/workspace-plan",
+                  json={"workspace_id": "acme", "tier_id": "free", "status": "canceled"})
         assert r.status_code == 200
-    plan = _read_tenant_plan(dna_dir, "acme")["spec"]
+    plan = _read_workspace_plan(dna_dir, "acme")["spec"]
     assert plan["tier_id"] == "free"
     assert plan["status"] == "canceled"
 
 
-def test_tenant_plan_put_requires_tenant_and_tier(dna_dir):
-    """A missing tenant or tier_id is a 400 (the two required schema fields)."""
+def test_workspace_plan_put_requires_workspace_and_tier(dna_dir):
+    """A missing workspace_id or tier_id is a 400 (the two required schema
+    fields)."""
     with _client(dna_dir) as c:
-        assert c.put("/v1/tenant-plan",
-                     json={"tenant": "", "tier_id": "pro"}).status_code == 400
-        assert c.put("/v1/tenant-plan",
-                     json={"tenant": "acme", "tier_id": ""}).status_code == 400
+        assert c.put("/v1/workspace-plan",
+                     json={"workspace_id": "", "tier_id": "pro"}).status_code == 400
+        assert c.put("/v1/workspace-plan",
+                     json={"workspace_id": "acme", "tier_id": ""}).status_code == 400
 
 
-def test_tenant_plan_put_is_auth_guarded(dna_dir):
+def test_workspace_plan_put_is_auth_guarded(dna_dir):
     """The bridge write is bearer-guarded (only dna-cloud holds DNA_API_TOKEN):
     a missing/wrong bearer is 401, the right one 200."""
     with _client(dna_dir, auth="token", token=_TOKEN) as c:
-        body = {"tenant": "acme", "tier_id": "pro"}
-        assert c.put("/v1/tenant-plan", json=body).status_code == 401
-        assert c.put("/v1/tenant-plan", json=body,
+        body = {"workspace_id": "acme", "tier_id": "pro"}
+        assert c.put("/v1/workspace-plan", json=body).status_code == 401
+        assert c.put("/v1/workspace-plan", json=body,
                      headers={"Authorization": "Bearer nope"}).status_code == 401
-        assert c.put("/v1/tenant-plan", json=body,
+        assert c.put("/v1/workspace-plan", json=body,
                      headers={"Authorization": f"Bearer {_TOKEN}"}).status_code == 200
+
+
+def test_deprecated_tenant_plan_alias_zero_regression(dna_dir):
+    """ZERO-REGRESSION: an already-deployed dna-cloud Stripe webhook still PUTs
+    the legacy ``{tenant}`` body to /v1/tenant-plan. The deprecated alias forwards
+    ``tenant`` → ``workspace_id`` into the SAME WorkspacePlan write, so the runtime
+    read (kernel.workspace_plan) sees it — the Model-A route keeps working while
+    the store is workspace-native. The founder's ws#1 id == his old tid, so his
+    plan continues to match."""
+    founder = "c5b891f7"  # workspace #1 id == the founder's old Azure tid.
+    with _client(dna_dir) as c:
+        r = c.put("/v1/tenant-plan",
+                  json={"tenant": founder, "tier_id": "pro", "status": "active"})
+        assert r.status_code == 200, r.text
+    plan = _read_workspace_plan(dna_dir, founder)
+    assert plan is not None, "the legacy tenant body must land as a WorkspacePlan"
+    assert plan["spec"]["workspace_id"] == founder
+    assert plan["spec"]["tier_id"] == "pro"
+    # a missing tenant/tier on the alias is still a 400.
+    with _client(dna_dir) as c:
+        assert c.put("/v1/tenant-plan",
+                     json={"tenant": "", "tier_id": "pro"}).status_code == 400
 
 
 # ── auth: --auth token gates every route but /health ─────────────────────────

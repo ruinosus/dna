@@ -137,10 +137,10 @@ Declarative Kind descriptor — the format of builtin `kinds/*.kind.yaml` packag
 | [SynthesisRun](record.md#synthesisrun) | `sdlc-synthesis-run` | `github.com/ruinosus/dna/sdlc/v1` |
 | [SynthesizerState](record.md#synthesizerstate) | `sdlc-synthesizer-state` | `github.com/ruinosus/dna/sdlc/v1` |
 | [Task](record.md#task) | `sdlc-task` | `github.com/ruinosus/dna/sdlc/v1` |
-| [TenantPlan](record.md#tenantplan) | `cloud-tenant-plan` | `github.com/ruinosus/dna/cloud/v1` |
 | [Tier](record.md#tier) | `cloud-tier` | `github.com/ruinosus/dna/cloud/v1` |
 | [Tool](record.md#tool) | `helix-tool` | `github.com/ruinosus/dna/v1` |
 | [WorkflowEvent](record.md#workflowevent) | `sdlc-workflow-event` | `github.com/ruinosus/dna/sdlc/v1` |
 | [Workspace](record.md#workspace) | `tenant-workspace` | `github.com/ruinosus/dna/tenant/v1` |
 | [WorkspaceMembership](record.md#workspacemembership) | `tenant-workspace-membership` | `github.com/ruinosus/dna/tenant/v1` |
+| [WorkspacePlan](record.md#workspaceplan) | `cloud-workspace-plan` | `github.com/ruinosus/dna/cloud/v1` |
 

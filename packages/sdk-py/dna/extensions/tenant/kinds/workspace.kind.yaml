@@ -13,7 +13,7 @@
 #
 # Workspaces live in the `_lib` scope (`workspaces/<workspace_id>.yaml`) —
 # Workspace is GLOBAL (the tenancy boundary lives above any single workspace,
-# exactly like TenantPlan) and NOT inheritable.
+# exactly like WorkspacePlan) and NOT inheritable.
 #
 # PARITY-CRITICAL package data: the byte-identical mirror lives at
 # packages/sdk-{py,ts}/{dna/extensions,src/extensions}/tenant/kinds/
@@ -70,9 +70,9 @@ spec:
         type:
         - string
         - 'null'
-        description: The workspace's current Tier/TenantPlan key (billing attaches
-          to the workspace, not to an identity or Azure org). Null = the Free
-          floor. Resolved via kernel.tenant_plan(workspace_id).
+        description: The workspace's current Tier/WorkspacePlan key (billing
+          attaches to the workspace, not to an identity or Azure org). Null = the
+          Free floor. Resolved via kernel.workspace_plan(workspace_id).
   describe: '{name} ({workspace_id})'
   summary:
     workspace_id: ''

@@ -2451,14 +2451,15 @@ class Kernel:
         The quota enforcer reads the caps from here, never hardcodes them."""
         return await self._registry.tier(tier_id_or_alias)
 
-    async def tenant_plan(self, tenant: str) -> dict | None:
-        """Resolve a TenantPlan (a tenant→Tier assignment) from the _lib
-        registry by ``spec.tenant``. Returns the RAW DICT row (callers read
+    async def workspace_plan(self, workspace_id: str) -> dict | None:
+        """Resolve a WorkspacePlan (a workspace→Tier assignment) from the _lib
+        registry by ``spec.workspace_id``. Returns the RAW DICT row (callers read
         ``plan["spec"]["tier_id"]``) or None when no assignment exists.
         _lib-direct + fail-soft. Thin facade over the RegistryAccessor
-        collaborator — the billing→enforcement bridge: dna-cloud's Stripe
-        webhook writes the doc; the SDK only reads it here."""
-        return await self._registry.tenant_plan(tenant)
+        collaborator — the billing→enforcement bridge (ADR "Model B" — billing
+        keys on the workspace): dna-cloud's Stripe webhook writes the doc; the
+        SDK only reads it here."""
+        return await self._registry.workspace_plan(workspace_id)
 
     async def workspace_memberships(self) -> list[dict]:
         """List every ``WorkspaceMembership`` grant from the _lib registry (ADR

@@ -242,12 +242,12 @@ def build_server(
            (Free=read/recall-only, Pro=write/remember+consolidate), read from the
            Tier spec (zero hardcode).
 
-        Tier resolution order — **token plan claim → TenantPlan store → Free**:
+        Tier resolution order — **token plan claim → WorkspacePlan store → Free**:
         an explicit ``plan`` claim on the token WINS (the store is not consulted);
-        otherwise the billing→enforcement bridge looks up the tenant's assigned
-        Tier from the ``TenantPlan`` Kind (``kernel.tenant_plan`` — which
+        otherwise the billing→enforcement bridge looks up the workspace's assigned
+        Tier from the ``WorkspacePlan`` Kind (``kernel.workspace_plan`` — which
         dna-cloud's Stripe webhook writes) and uses its ``tier_id``; only if there
-        is no TenantPlan either does it fall to the Free floor.
+        is no WorkspacePlan either does it fall to the Free floor.
 
         Empty-caps fallback: if the resolved tier names no ``Tier`` doc, fall back
         to the ``free`` doc (the Free floor); if THAT is also absent (no tiers
@@ -269,10 +269,12 @@ def build_server(
             )
         kernel = live.kernel
         tier = enforce_tier_from_context()
-        # Bridge: a token WITHOUT an explicit plan claim consults the TenantPlan
-        # store (Stripe-written) before the Free floor. An explicit claim wins.
+        # Bridge: a token WITHOUT an explicit plan claim consults the
+        # WorkspacePlan store (Stripe-written) before the Free floor. An explicit
+        # claim wins. `tenant` is the resolved workspace_id (ADR "Model B") — so
+        # billing is keyed on the workspace, not the Azure tid.
         if tenant and not token_has_explicit_plan_claim():
-            plan = await kernel.tenant_plan(tenant)
+            plan = await kernel.workspace_plan(tenant)
             store_tier = ((plan or {}).get("spec") or {}).get("tier_id")
             if store_tier:
                 tier = store_tier

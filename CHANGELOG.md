@@ -140,6 +140,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     only its own scope (a cross-workspace `scope=` is denied). Enabled by
     `DNA_VENDOR_WORKSPACE` (unset = single-tenant, unchanged). A no-cross-workspace-
     leakage e2e over real JWT + HTTP is an acceptance test.
+- **`WorkspacePlan` Kind + `PUT /v1/workspace-plan` — billing keys on the
+  workspace** (`f-ws-billing` F4, ADR *Model B* §2.6). Billing now attaches to a
+  workspace, not to an identity or Azure org: the `cloud-workspace-plan` record
+  Kind maps a `workspace_id` → `Tier`, and the Stripe → runtime bridge
+  (`PUT /v1/workspace-plan`, delegating to the core `set_workspace_plan_impl`)
+  writes it. The MCP quota guard reads it via `kernel.workspace_plan(workspace_id)`
+  — the same resolved workspace id F2 already keys on (identity → membership), so
+  the full quota chain (claim → store → Free floor) now resolves tier by
+  workspace. Byte-identical Py↔TS descriptor + `kernel.workspacePlan` twin.
+
+### Changed
+
+- **`TenantPlan` → `WorkspacePlan`; `kernel.tenant_plan` → `kernel.workspace_plan`**
+  (`f-ws-billing` F4). The billing→enforcement bridge Kind, its `_lib`-direct
+  accessor, and the quota guard are re-keyed from the Azure `tid` to the opaque
+  `workspace_id` (field `tenant` → `workspace_id`, container `tenant-plans` →
+  `workspace-plans`, alias `cloud-tenant-plan` → `cloud-workspace-plan`). **Zero
+  migration:** the founding workspace's id equals the founder's old `tid`, so an
+  existing assignment keyed on that string resolves unchanged (mirrors F1/F2).
+
+### Deprecated
+
+- **`PUT /v1/tenant-plan`** — superseded by `PUT /v1/workspace-plan`. Kept as a
+  back-compat alias that forwards its legacy `{tenant}` body to `workspace_id`
+  (they are the same opaque string post-Model-B), so an already-deployed Stripe
+  webhook keeps working. Remove once dna-cloud has cut over.
 
 ## [0.14.0] - 2026-07-13
 

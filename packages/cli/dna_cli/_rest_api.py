@@ -195,7 +195,7 @@ def build_app(
         remember_impl,
         remove_member_impl,
         set_member_impl,
-        set_tenant_plan_impl,
+        set_workspace_plan_impl,
     )
     from dna_cli._mcp_server import boot_live
     # The intel face delegates to the CORE engine (adr-faces-reorg: logic in the
@@ -595,18 +595,49 @@ def build_app(
         except BoardItemNotFound as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from None
 
-    # -- cloud billing → enforcement bridge (TenantPlan write) ---------------
+    # -- cloud billing → enforcement bridge (WorkspacePlan write) ------------
     # The ONE write that closes the billing→runtime gap: dna-cloud's Stripe
     # webhook calls this (server-side, with the shared DNA_API_TOKEN bearer it
     # already holds) on the Pro-activate / downgrade / cancel transitions, so
-    # runtime quota (kernel.tenant_plan(tenant) in the MCP guard) follows billing
-    # state. It keeps the DNA-source write inside the DNA runtime — the Node
-    # portal never opens the DNA source directly. GLOBAL / _lib-direct: the doc's
-    # name == the tenant (the `tid` the MCP token carries), so there is no
-    # `tenant` query param here — `tenant` is the body key being assigned. Delegates
-    # to the CORE set_tenant_plan_impl (zero logic here); idempotent under Stripe
-    # retries (write_document upserts on name).
-    @app.put("/v1/tenant-plan", dependencies=guarded)
+    # runtime quota (kernel.workspace_plan(workspace_id) in the MCP guard) follows
+    # billing state. It keeps the DNA-source write inside the DNA runtime — the
+    # Node portal never opens the DNA source directly. ADR "Model B": billing keys
+    # on the WORKSPACE (not the Azure tid). GLOBAL / _lib-direct: the doc's name ==
+    # the workspace_id, so there is no query param — `workspace_id` is the body key
+    # being assigned. Delegates to the CORE set_workspace_plan_impl (zero logic
+    # here); idempotent under Stripe retries (write_document upserts on name).
+    @app.put("/v1/workspace-plan", dependencies=guarded)
+    async def put_workspace_plan(
+        workspace_id: str = Body(..., embed=True),
+        tier_id: str = Body(..., embed=True),
+        source: str = Body(default="stripe", embed=True),
+        stripe_customer_id: str | None = Body(default=None, embed=True),
+        stripe_subscription_id: str | None = Body(default=None, embed=True),
+        status: str | None = Body(default=None, embed=True),
+    ) -> dict[str, Any]:
+        """Upsert the WorkspacePlan Kind assigning ``workspace_id`` → ``tier_id``
+        (the billing→enforcement bridge). 400 on a missing workspace_id/tier_id."""
+        try:
+            return await set_workspace_plan_impl(
+                await _live(),
+                workspace_id,
+                tier_id,
+                source=source,
+                stripe_customer_id=stripe_customer_id,
+                stripe_subscription_id=stripe_subscription_id,
+                status=status,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from None
+
+    # -- DEPRECATED back-compat alias (Model-A `tenant` body) ----------------
+    # The pre-Model-B route. An already-deployed dna-cloud Stripe webhook still
+    # PUTs `{tenant, tier_id, ...}`; post-F2 the `tenant` string IS the
+    # workspace_id (the founding workspace's id == the founder's tid), so this
+    # forwards `tenant` → `workspace_id` into the SAME core write — zero
+    # regression. New callers use PUT /v1/workspace-plan. Remove once dna-cloud
+    # has cut over.
+    @app.put("/v1/tenant-plan", dependencies=guarded, deprecated=True)
     async def put_tenant_plan(
         tenant: str = Body(..., embed=True),
         tier_id: str = Body(..., embed=True),
@@ -615,10 +646,11 @@ def build_app(
         stripe_subscription_id: str | None = Body(default=None, embed=True),
         status: str | None = Body(default=None, embed=True),
     ) -> dict[str, Any]:
-        """Upsert the TenantPlan Kind assigning ``tenant`` → ``tier_id`` (the
-        billing→enforcement bridge). 400 on a missing tenant/tier_id."""
+        """DEPRECATED — use PUT /v1/workspace-plan. Accepts the legacy
+        ``{tenant}`` body and writes it as the ``workspace_id`` (they are the same
+        opaque string post-Model-B). 400 on a missing tenant/tier_id."""
         try:
-            return await set_tenant_plan_impl(
+            return await set_workspace_plan_impl(
                 await _live(),
                 tenant,
                 tier_id,

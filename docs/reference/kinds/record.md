@@ -738,7 +738,7 @@ A Narrative is a curated, human-readable summary of project activity. Stored as 
 - **apiVersion:** `github.com/ruinosus/dna/portfolio/v1`
 - **Plane:** record
 
-An Organization is the tenant's own org profile — the enterprise-familiar top-level container (as in GitHub / Azure DevOps) whose portfolio of Projects the DNA Cloud console aggregates. It carries the org name, a URL-safe slug, an optional display name, and a plan_ref to the DNA Cloud Tier / TenantPlan the org is on, as per-tenant declarative data. One Organization per tenant; it is distinct from the platform-level Tenant provisioning identity Kind (the editable org profile inside the tenant's own portfolio, not the GLOBAL identity row).
+An Organization is the tenant's own org profile — the enterprise-familiar top-level container (as in GitHub / Azure DevOps) whose portfolio of Projects the DNA Cloud console aggregates. It carries the org name, a URL-safe slug, an optional display name, and a plan_ref to the DNA Cloud Tier / WorkspacePlan the org is on, as per-tenant declarative data. One Organization per tenant; it is distinct from the platform-level Tenant provisioning identity Kind (the editable org profile inside the tenant's own portfolio, not the GLOBAL identity row).
 
 **Spec fields**
 
@@ -747,7 +747,7 @@ An Organization is the tenant's own org profile — the enterprise-familiar top-
 | `created_at` | string \| null |  | ISO-8601 timestamp, stamped by the writer (not defaulted here). |
 | `display_name` | string \| null |  | Human-facing name shown in the console. Falls back to name. |
 | `name` | string | yes | The organization's canonical name. The doc name SHOULD equal this. |
-| `plan_ref` | string \| null |  | The DNA Cloud Tier / TenantPlan this org is on (a Tier tier_id or TenantPlan name). Null falls back to Free. The billing→enforcement bridge reads it; the OSS SDK only stores it. |
+| `plan_ref` | string \| null |  | The DNA Cloud Tier / WorkspacePlan this org is on (a Tier tier_id or WorkspacePlan name). Null falls back to Free. The billing→enforcement bridge reads it; the OSS SDK only stores it. |
 | `slug` | string | yes | URL-safe identity for the org, e.g. acme-corp. Used in routes and as a stable handle for the tenant's portfolio. |
 
 ## PatternInsight
@@ -1301,27 +1301,6 @@ A Task is a granular work item (horas-dias) typically as sub-item of a Story. Fo
 | `title` | string | yes |  |
 | `updated_at` | string |  |  |
 
-## TenantPlan
-
-- **Alias:** `cloud-tenant-plan`
-- **apiVersion:** `github.com/ruinosus/dna/cloud/v1`
-- **Plane:** record
-
-A TenantPlan maps one DNA tenant to its current Tier as GLOBAL declarative data, so enforcement follows billing state without a redeploy. dna-cloud's Stripe webhook writes it on subscribe/cancel; the MCP server reads it via kernel.tenant_plan(tenant) when the token carries no explicit plan claim — zero Stripe/billing code lives in the OSS SDK, which only reads the assignment.
-
-**Spec fields**
-
-| Field | Type | Required | Description |
-| --- | --- | --- | --- |
-| `notes` | string \| null |  | Free-form operator notes. |
-| `source` | string |  | Where the assignment came from, e.g. stripe / manual / trial. |
-| `status` | string |  | The billing status of the assignment, e.g. active / past_due / canceled. |
-| `stripe_customer_id` | string |  | The Stripe customer id backing the assignment (dna-cloud writes it; the OSS SDK never calls Stripe). |
-| `stripe_subscription_id` | string |  | The Stripe subscription id backing the assignment (dna-cloud writes it; the OSS SDK never calls Stripe). |
-| `tenant` | string | yes | The DNA tenant this assignment is for. The doc name SHOULD equal the tenant; kernel.tenant_plan() matches on this field. |
-| `tier_id` | string | yes | The assigned Tier's id, e.g. free, pro, enterprise. Resolved to caps via kernel.tier(tier_id) — never a literal in code. |
-| `updated_at` | string |  | When dna-cloud last wrote this assignment (ISO 8601). |
-
 ## Tier
 
 - **Alias:** `cloud-tier`
@@ -1430,7 +1409,7 @@ A Workspace is the DNA tenancy root — a first-class, named, DNA-native space t
 | `created_at` | string | yes | When the workspace was created (ISO 8601). |
 | `created_by` | string | yes | Email of the identity that created the workspace (its first Owner). |
 | `name` | string | yes | Human display name, e.g. "Barnabé Labs". Editable. |
-| `plan_ref` | string \| null |  | The workspace's current Tier/TenantPlan key (billing attaches to the workspace, not to an identity or Azure org). Null = the Free floor. Resolved via kernel.tenant_plan(workspace_id). |
+| `plan_ref` | string \| null |  | The workspace's current Tier/WorkspacePlan key (billing attaches to the workspace, not to an identity or Azure org). Null = the Free floor. Resolved via kernel.workspace_plan(workspace_id). |
 | `slug` | string |  | URL-safe handle (e.g. for `/w/<slug>` links). Editable; distinct from the immutable workspace_id. |
 | `workspace_id` | string | yes | Opaque, immutable id — the physical value of the `tenant` column on every row this workspace owns. Never changes (renaming edits name/slug, never this). The doc name SHOULD equal it. The founding workspace's id == the founder's Azure tid (zero migration); new workspaces get fresh ids and never reuse a tid. |
 
@@ -1455,4 +1434,25 @@ A WorkspaceMembership maps a verified identity (Entra oid + email + tid) to a wo
 | `role` | string | yes | Workspace-level role — the standard ladder (owner > admin > member > guest, highest-role-wins). References the Role Kind. |
 | `status` | string | yes | Invite lifecycle — pending (invited, oid not yet bound) → active (accepted, oid bound). No membership / non-active → no access. |
 | `workspace_id` | string | yes | The workspace this grant is in — the tenant key (matches a Workspace.workspace_id). |
+
+## WorkspacePlan
+
+- **Alias:** `cloud-workspace-plan`
+- **apiVersion:** `github.com/ruinosus/dna/cloud/v1`
+- **Plane:** record
+
+A WorkspacePlan maps one DNA workspace to its current Tier as GLOBAL declarative data, so enforcement follows billing state without a redeploy. Billing attaches to the workspace (not an identity or Azure org); dna-cloud's Stripe webhook writes it on subscribe/cancel; the MCP server reads it via kernel.workspace_plan(workspace_id) when the token carries no explicit plan claim — zero Stripe/billing code lives in the OSS SDK, which only reads the assignment.
+
+**Spec fields**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `notes` | string \| null |  | Free-form operator notes. |
+| `source` | string |  | Where the assignment came from, e.g. stripe / manual / trial. |
+| `status` | string |  | The billing status of the assignment, e.g. active / past_due / canceled. |
+| `stripe_customer_id` | string |  | The Stripe customer id backing the assignment (dna-cloud writes it; the OSS SDK never calls Stripe). |
+| `stripe_subscription_id` | string |  | The Stripe subscription id backing the assignment (dna-cloud writes it; the OSS SDK never calls Stripe). |
+| `tier_id` | string | yes | The assigned Tier's id, e.g. free, pro, enterprise. Resolved to caps via kernel.tier(tier_id) — never a literal in code. |
+| `updated_at` | string |  | When dna-cloud last wrote this assignment (ISO 8601). |
+| `workspace_id` | string | yes | The DNA workspace this assignment is for (the opaque, immutable id the kernel `tenant` column carries). The doc name SHOULD equal it; kernel.workspace_plan() matches on this field. |
 
