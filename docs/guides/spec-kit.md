@@ -60,6 +60,45 @@ You can run Spec Kit with **zero** DNA, then `import` and get portability,
 memory, governance and board tracking for free. Preview first with
 `--dry-run --json` — it prints the full mapping and writes nothing.
 
+## Worked example — end to end
+
+This is a full, verified round-trip: author a feature with the real Spec Kit,
+capture it in DNA, project it back, and wire the agent to live DNA. Every step
+below was run against a live DNA source.
+
+```console
+# 1. Install the real Spec Kit and scaffold a spec-driven project.
+$ uv tool install specify-cli
+$ specify init dna-cloud-invite --integration claude   # creates .specify/ + the speckit-* skills
+
+# 2. Author the run via Spec Kit's own flow (constitution → spec → plan → tasks).
+$ bash .specify/scripts/bash/create-new-feature.sh "portal member-invite UI"
+$ #  …drive /speckit.constitution, /speckit.specify, /speckit.plan, /speckit.tasks
+$ #    which fill .specify/memory/constitution.md and specs/001-*/spec.md|plan.md|tasks.md
+
+# 3. Capture the run into DNA — Spec Kit is untouched; DNA mirrors it.
+$ dna specify import ./dna-cloud-invite --scope my-scope
+Imported Spec Kit run: 24 documents across 1 feature(s).
+  Feature/f-portal-member-invite-ui  (portal-member-invite-ui)
+
+# 4. The run is now tracked work: a Feature + one Story per task, journey filled.
+$ dna sdlc feature show f-portal-member-invite-ui --scope my-scope
+  Feature: f-portal-member-invite-ui   status: in-development
+  Stories (15) — todo:15   # T001…T015, [P] tasks carry a `parallel` label
+
+# 5. Round-trip: DNA reprojects a byte-identical .specify/ (DNA is the source now).
+$ dna specify export f-portal-member-invite-ui --scope my-scope --out /tmp/rt
+$ diff .specify/memory/constitution.md /tmp/rt/.specify/memory/constitution.md   # identical
+$ diff specs/001-portal-member-invite-ui/spec.md /tmp/rt/specs/001-portal-member-invite-ui/spec.md  # identical
+
+# 6. Point the agent at live DNA memory/soul/board for the next run (Layer 2).
+$ dna specify wire --tools claude   # writes a `dna` MCP server into .mcp.json
+```
+
+After step 3 the constitution is a live **Guardrail** (`speckit-constitution`),
+the spec/plan are queryable Kinds, and the 15 tasks are Stories on the board —
+authored by Spec Kit, owned by DNA.
+
 ## What maps to what
 
 `dna specify import` mirrors each Spec Kit artifact into the durable Kind that
