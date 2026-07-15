@@ -129,6 +129,119 @@ async def get_tool_impl(
     return {"scope": mi.scope, **surface}
 
 
+# ── toolkit: PromptTemplates + Skills (the Spec Kit Layer 3 surface) ─────────
+#
+# The ingested Spec Kit toolkit (``dna specify install-templates``) lands as
+# PromptTemplate + Skill Kinds. These use-cases SERVE them live over any face
+# (MCP/REST), tenant-aware — so a workspace/tenant overlay of a template or a
+# slash-command wins with zero redeploy (the payoff of Layer 3: the toolkit
+# becomes versioned, governed, portable policy, not per-repo files). Both Kinds
+# are in ``DEFAULT_INHERITABLE_KINDS_V1`` — the overlay is the kernel's, not new
+# machinery here.
+
+
+async def _query_rows(
+    live: LiveDna, scope: str, kind: str, tenant: str | None = None
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    async for row in live.kernel.query(scope, kind, tenant=tenant):
+        if isinstance(row, dict):
+            rows.append(row)
+    return rows
+
+
+def _row_name(row: dict[str, Any]) -> str | None:
+    meta = row.get("metadata") if isinstance(row, dict) else None
+    if isinstance(meta, dict) and meta.get("name"):
+        return meta["name"]
+    return row.get("name") if isinstance(row, dict) else None
+
+
+async def list_templates_impl(
+    live: LiveDna, scope: str | None = None, tenant: str | None = None
+) -> dict[str, Any]:
+    """List the PromptTemplates in ``scope`` (name + description + variable
+    count), tenant-aware. The Spec Kit templates ingested by
+    ``dna specify install-templates`` surface here — servable to any client."""
+    sc = scope or live.base_scope
+    templates: list[dict[str, Any]] = []
+    for row in await _query_rows(live, sc, "PromptTemplate", tenant):
+        spec = row.get("spec") or {}
+        spec = spec if isinstance(spec, dict) else {}
+        variables = spec.get("variables") or []
+        templates.append({
+            "name": _row_name(row),
+            "description": spec.get("description") or "",
+            "variables_count": len(variables) if isinstance(variables, list) else 0,
+            "tags": spec.get("tags") or [],
+        })
+    templates.sort(key=lambda t: t["name"] or "")
+    return {"scope": sc, "templates": templates}
+
+
+async def get_template_impl(
+    live: LiveDna, name: str, scope: str | None = None, tenant: str | None = None
+) -> dict[str, Any]:
+    """Fetch one PromptTemplate's full body + variables, tenant-aware. With
+    ``tenant`` set the per-workspace/tenant OVERLAY wins (no redeploy) — the
+    Layer 3 governance payoff."""
+    sc = scope or live.base_scope
+    raw = await live.kernel.get_document(sc, "PromptTemplate", name, tenant=tenant)
+    if raw is None:
+        raise ValueError(f"PromptTemplate {name!r} not found in scope {sc!r}")
+    spec = raw.get("spec") or {}
+    spec = spec if isinstance(spec, dict) else {}
+    return {
+        "scope": sc,
+        "name": name,
+        "tenant": tenant,
+        "body": spec.get("body") or "",
+        "variables": spec.get("variables") or [],
+        "description": spec.get("description") or "",
+        "tags": spec.get("tags") or [],
+    }
+
+
+async def list_skills_impl(
+    live: LiveDna, scope: str | None = None, tenant: str | None = None
+) -> dict[str, Any]:
+    """List the Skills in ``scope`` (name + description), tenant-aware. The Spec
+    Kit slash-command definitions ingested as Skills surface here."""
+    sc = scope or live.base_scope
+    skills: list[dict[str, Any]] = []
+    for row in await _query_rows(live, sc, "Skill", tenant):
+        meta = row.get("metadata") if isinstance(row.get("metadata"), dict) else {}
+        skills.append({
+            "name": _row_name(row),
+            "description": (meta.get("description") if isinstance(meta, dict) else "") or "",
+            "tags": (meta.get("tags") if isinstance(meta, dict) else []) or [],
+        })
+    skills.sort(key=lambda s: s["name"] or "")
+    return {"scope": sc, "skills": skills}
+
+
+async def get_skill_impl(
+    live: LiveDna, name: str, scope: str | None = None, tenant: str | None = None
+) -> dict[str, Any]:
+    """Fetch one Skill's full instruction body + metadata, tenant-aware. With
+    ``tenant`` set the per-workspace/tenant OVERLAY wins (no redeploy)."""
+    sc = scope or live.base_scope
+    raw = await live.kernel.get_document(sc, "Skill", name, tenant=tenant)
+    if raw is None:
+        raise ValueError(f"Skill {name!r} not found in scope {sc!r}")
+    spec = raw.get("spec") or {}
+    spec = spec if isinstance(spec, dict) else {}
+    meta = raw.get("metadata") if isinstance(raw.get("metadata"), dict) else {}
+    return {
+        "scope": sc,
+        "name": name,
+        "tenant": tenant,
+        "instruction": spec.get("instruction") or "",
+        "description": (meta.get("description") if isinstance(meta, dict) else "") or "",
+        "scripts": sorted((spec.get("scripts") or {}).keys()) if isinstance(spec.get("scripts"), dict) else [],
+    }
+
+
 # ── SDLC (the self-describing board) ───────────────────────────────────────
 
 
