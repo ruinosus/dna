@@ -11,6 +11,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Workspace owner bootstrap + member revoke — closing the Model B production
+  gap** (`f-ws-owner-provision`, stories `s-ws-provision-owner-endpoint` +
+  `s-ws-revoke-endpoint`, issue `i-033`). The deployed portal auto-provisioned a
+  Model-A `TenantMembership` on first login, but the Members panel checks a
+  Model-B owner `WorkspaceMembership` that nothing created in production — so the
+  founding user was `403`'d and could not invite. Two REST endpoints close it:
+  - **`POST /v1/workspaces/{id}/provision-owner`** — the Model B twin of
+    `POST /v1/tenants/{tid}/provision-owner`. On first authenticated access the
+    portal calls it so the signed-in user becomes **owner of their own
+    workspace**: it creates the `Workspace` (id == the verified `tid`, so every
+    existing row keyed `tenant==tid` is already this workspace's data — **zero
+    migration**) if absent, then an owner `WorkspaceMembership` **bound to the
+    verified identity** (oid + email + tid), `active`. **Idempotent + first-owner
+    only**: a re-call by the same identity is a no-op returning the membership; a
+    later *different* user does not auto-escalate (`owner_exists` no-op). The path
+    id **must** equal the verified `tid` — a cross-`tid` caller is `403`'d, so a
+    verified identity from another org can never seize a `tid`-workspace by racing
+    the founder's first login.
+  - **`POST /v1/workspaces/{id}/members/revoke`** — Owner/Admin removes a member
+    (pending invite or active member; target named by `target_email` or
+    `target_oid`). RBAC is checked **before** the target is revealed (no
+    membership-existence oracle). **Policy: the last remaining active owner can
+    never be revoked** (`409`, fail-closed — a workspace is never orphaned); a
+    non-Owner/Admin is `403`; an unknown target is `404` (clear no-op).
+  - The RBAC + last-owner + first-owner decisions are the pure
+    `dna.tenancy.ownership` policy with a 1:1 TypeScript twin, gated by shared
+    parity fixtures (`tests/parity-fixtures/workspace-ownership/`).
+
 ## [0.15.0] - 2026-07-15
 
 ### Added

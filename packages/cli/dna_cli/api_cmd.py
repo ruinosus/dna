@@ -77,6 +77,11 @@ def serve(scope: str | None, base_dir: str | None, host: str, port: int,
       PUT    /v1/workspace-plan                    -> billing->runtime WorkspacePlan write {workspace_id, tier_id, ...}
       PUT    /v1/tenant-plan                       -> DEPRECATED alias of /v1/workspace-plan (legacy {tenant} body)
       POST   /v1/tenants/{tid}/provision-owner     -> first-login Owner bootstrap {user} (idempotent)
+      POST   /v1/workspaces/{id}/provision-owner   -> Model B first-login owner bootstrap {claims} (idempotent, id==tid)
+      POST   /v1/workspaces/{id}/invites           -> invite by email {email, role, actor} (Owner/Admin)
+      GET    /v1/workspaces/{id}/members           -> list members (Owner/Admin)
+      POST   /v1/workspaces/{id}/members/revoke    -> remove a member {target_email|target_oid, actor} (last-owner protected)
+      POST   /v1/workspaces/accept                 -> accept pending invites {claims} (verified sign-in)
 
     Every endpoint reads/writes through the SAME live kernel `dna` commands +
     `dna mcp serve` use — this is a second HTTP face over one core, not a copy.

@@ -22,6 +22,16 @@ from dna.tenancy.invites import (
     role_in_workspace,
     verified_email_from_claims,
 )
+from dna.tenancy.ownership import (
+    OWNER_ROLE,
+    REVOKE_ROLES,
+    RevokeDecision,
+    active_owners,
+    can_revoke_role,
+    has_active_owner,
+    is_last_active_owner,
+    plan_revoke,
+)
 from dna.tenancy.resolution import (
     CrossWorkspaceError,
     Identity,
@@ -66,4 +76,13 @@ __all__ = [
     "role_in_workspace",
     "verified_email_from_claims",
     "workspace_membership_name",
+    # ownership (F-ws-owner-provision) — first-owner probe + revoke/last-owner
+    "OWNER_ROLE",
+    "REVOKE_ROLES",
+    "RevokeDecision",
+    "active_owners",
+    "can_revoke_role",
+    "has_active_owner",
+    "is_last_active_owner",
+    "plan_revoke",
 ]
