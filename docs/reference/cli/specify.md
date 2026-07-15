@@ -36,6 +36,27 @@ dna specify export [OPTIONS] FEATURE
 | `--out` | Directory to project the .specify/ tree into. _(default: `.`)_ |
 | `--scope` | Scope to write into (default: env / sole scope). |
 
+## `dna specify export-templates`
+
+Project the DNA-stored Spec Kit toolkit back to a byte-faithful
+``.specify/`` tree — the inverse of ``install-templates``. Reads every
+``speckit-*`` PromptTemplate/Skill/Guardrail carrying a ``spec.origin`` and
+replays its verbatim body to that path (round-trips byte-for-byte).
+
+```text
+dna specify export-templates [OPTIONS]
+```
+
+**Options**
+
+| Option | Description |
+| --- | --- |
+| `--force` | Overwrite existing files. |
+| `--help` | Show this message and exit. |
+| `--json` | Machine-readable output. |
+| `--out` | Directory to project the .specify/ toolkit into. _(default: `.`)_ |
+| `--scope` | Scope to read from (default: env / sole scope). |
+
 ## `dna specify import`
 
 Ingest a Spec Kit ``.specify/`` toolkit (or one ``specs/<feature>/`` run)
@@ -59,6 +80,34 @@ dna specify import [OPTIONS] PATH
 | `--constitution-as` | Map constitution.md to a Guardrail, a Soul, or both. _(default: `both`)_ |
 | `--dry-run` | Preview the full artifact→Kind mapping; write nothing. |
 | `--feature` | Attach the run(s) to this existing Feature instead of creating f-<slug>. |
+| `--help` | Show this message and exit. |
+| `--json` | Machine-readable mapping output. |
+| `--scope` | Scope to write into (default: env / sole scope). |
+
+## `dna specify install-templates`
+
+Ingest a Spec Kit **toolkit** (``.specify/templates/`` + slash-commands +
+``.specify/scripts/`` + constitution) into durable, servable DNA Kinds
+(ADR §5, Layer 3). Served live over ``dna mcp serve`` and overridable per
+scope/tenant. Every write goes through ``kernel.write_document``.
+
+```text
+dna specify install-templates [OPTIONS] PATH
+```
+
+**Arguments**
+
+| Argument | Required |
+| --- | --- |
+| `PATH` | yes |
+
+**Options**
+
+| Option | Description |
+| --- | --- |
+| `--commands-from` | Directory of slash-command markdown (default: auto-detect .specify/templates/commands or a projected agent dir). |
+| `--constitution-as` | Map constitution.md to a Guardrail, a Soul, or both. _(default: `both`)_ |
+| `--dry-run` | Preview the toolkit→Kind mapping; write nothing. |
 | `--help` | Show this message and exit. |
 | `--json` | Machine-readable mapping output. |
 | `--scope` | Scope to write into (default: env / sole scope). |
