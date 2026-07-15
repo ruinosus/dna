@@ -95,6 +95,14 @@ single-agent-family feature run. Point it at DNA and you *additionally* get:
 Every one of these is **additive**. Spec Kit's process is untouched; DNA is the
 layer beneath it.
 
+## Feeding DNA *into* the run (Layer 2)
+
+`import`/`export` capture a run *after* it happens. To feed DNA's live memory,
+soul and board *into* a Spec Kit run *while* it happens — pointing whichever
+agent Spec Kit drives at the DNA MCP — see
+[Spec Kit + DNA's live memory over MCP](spec-kit-live-memory.md) (`dna specify
+wire`).
+
 ## The journey badge
 
 Because the ingester creates the Spec/Plan/Story refs with the right links, the

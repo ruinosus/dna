@@ -63,3 +63,42 @@ dna specify import [OPTIONS] PATH
 | `--json` | Machine-readable mapping output. |
 | `--scope` | Scope to write into (default: env / sole scope). |
 
+## `dna specify wire`
+
+Project the DNA MCP server into each agent's MCP config (ADR Layer 2).
+
+Spec Kit drives whichever agent you chose at ``specify init``; this points
+that agent at the LIVE DNA over MCP, so mid-run it has DNA's **memory**
+(recall/remember), **soul** (compose_prompt = Soul + Guardrails, composed
+live + tenant-aware) and the **board** (sdlc_digest/list_stories) — the SAME
+context whether Spec Kit drives Copilot or Claude. One DNA endpoint, N
+per-agent projections (the same philosophy as ``dna init``'s skill
+projection). Skills themselves travel via ``dna init`` (byte-faithful into
+the agent's skill dir); run both to fully ground a Spec Kit run in DNA.
+
+
+  dna specify wire                         # here, claude+copilot, stdio
+  dna specify wire --tools all             # every supported agent
+  dna specify wire --http `https://h/mcp/`   # a hosted remote DNA MCP
+  dna specify wire --dry-run --json        # preview; write nothing
+
+Non-destructive + idempotent: other MCP servers are preserved, and a
+re-run leaves an existing `dna` entry untouched unless --force is given.
+
+```text
+dna specify wire [OPTIONS]
+```
+
+**Options**
+
+| Option | Description |
+| --- | --- |
+| `--dir` | Project directory to wire (default: current directory). _(default: `.`)_ |
+| `--dry-run` | Preview the projections; write nothing. |
+| `--force` | Replace an existing `dna` server entry (default: leave it and report 'skipped'). Other servers are always preserved. |
+| `--help` | Show this message and exit. |
+| `--http` | Wire a REMOTE Streamable-HTTP endpoint (a hosted `dna mcp serve --transport http`) instead of spawning a local stdio server. Mutually exclusive with --source-url. |
+| `--json` | Machine-readable output. |
+| `--source-url` | DNA_SOURCE_URL to pin in the stdio block (default: the ambient DNA_SOURCE_URL / DNA_BASE_DIR the `dna` CLI reads, so the wired agent sees the SAME DNA). |
+| `--tools` | Comma-separated agents to project the DNA MCP config for (claude, cursor, copilot, opencode — or 'all'). Default: claude,copilot. |
+
