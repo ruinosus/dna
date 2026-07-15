@@ -1,0 +1,79 @@
+# ms_file_read — the On-Behalf-Of Graph "files" group (ADR-mcp-obo §6, read-only).
+#
+# The AGENT-FACING surface (description + input_schema) of the built-in
+# ``ms_file_read`` MCP tool, expressed as a governed Tool document (record plane,
+# alias ``helix-tool``). The built-in @server.tool reads its description and
+# parameters FROM this doc, so what the model sees is DATA — overlayable per
+# tenant like any Tool, not hardcoded in Python. Execution stays code (the OBO
+# exchange + Graph metadata call + content fetch live in dna_cli/graph); this doc
+# is only the surface.
+#
+# Delegated scope: Files.Read (read-only). Gated behind the config
+# `graph.groups.files` block being enabled AND an Entra inbound identity.
+#
+# Content approach (this slice): text-convertible files (text/*, .md/.csv/.json/
+# .xml/.yaml/.html/…) are returned as extracted text (capped). Binary Office files
+# (.docx/.xlsx/.pptx) and other binaries are NOT dumped inline — the caller gets
+# honest metadata + web URL + a "not text-extractable inline" note. Rich Office
+# extraction is a tracked follow-up.
+apiVersion: github.com/ruinosus/dna/v1
+kind: Tool
+metadata:
+  name: ms_file_read
+  description: >-
+    Read the content of one of the signed-in user's Microsoft 365 files by id, on
+    their behalf (Microsoft Graph, delegated Files.Read). Pass an id returned by
+    ms_files_search. Text-convertible files (plain text, Markdown, CSV, JSON, XML,
+    YAML, HTML, …) are returned as extracted text (capped in size). Binary Office
+    files (.docx / .xlsx / .pptx) and other binaries are NOT returned inline — you
+    get their metadata plus a web URL to open them and a note that inline text
+    extraction is not available for that type. Only available when the DNA MCP
+    server has the Graph files group enabled and the caller signed in with a
+    Microsoft Entra identity.
+spec:
+  type: builtin
+  input_schema:
+    type: object
+    properties:
+      item_id:
+        type: string
+        description: >-
+          The driveItem id of the file to read (as returned in the `id` field of
+          ms_files_search results).
+    required:
+      - item_id
+  output_schema:
+    type: object
+    properties:
+      id: { type: string }
+      name: { type: string }
+      web_url: { type: string }
+      last_modified: { type: string }
+      size: { type: integer }
+      type: { type: string }
+      mode:
+        type: string
+        enum: [text, metadata]
+        description: >-
+          "text" when the file's content was extracted inline; "metadata" when the
+          file is binary/non-text-extractable and only its metadata is returned.
+      text:
+        type: string
+        description: The extracted text content (present only when mode == "text").
+      truncated:
+        type: boolean
+        description: True when the text was capped at the size limit (mode == "text").
+      note:
+        type: string
+        description: An explanation when content is not returned inline (mode == "metadata").
+  auth_type: oauth2
+  read_only: true
+  requires_confirmation: false
+  tags:
+    - microsoft
+    - graph
+    - files
+    - onedrive
+    - sharepoint
+    - read-only
+    - on-behalf-of
