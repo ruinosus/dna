@@ -78,10 +78,12 @@ the workspace id — not the caller's home-org id.
 A **`WorkspaceMembership`** maps a *verified identity* (its stable subject id
 plus email) to a `Workspace` and a role. Membership — never the caller's
 org id — decides what a request may read or write: every read/write is served
-only if the authenticated identity holds an active membership in that
-workspace, resolved before the source is touched. This is what lets a
-workspace owner invite a collaborator from another organization by email; on
-their first accepted sign-in the invite binds to their stable identity.
+only if the authenticated identity holds an *active* membership in that
+workspace, resolved before the source is touched. An active grant may exist
+*before* its holder ever signs in — this is exactly how both the zero-migration
+founder seed and a **cross-organization invite** work: the grant is created
+*unbound* (email only) and binds to the holder's stable `oid` on their first
+verified sign-in (see [Invites](#invites-the-cross-org-join) below).
 
 The two Kinds mirror `Tenant` / `TenantMembership`, but keyed on a
 portable workspace id and a cross-organization identity rather than a single
@@ -172,6 +174,20 @@ REST endpoints expose the flow: `POST /v1/workspaces/{id}/invites` (Owner/Admin)
 `GET /v1/workspaces/{id}/members` (Owner/Admin), and `POST /v1/workspaces/accept`
 (the verified invitee). The accept route is exempt from the workspace bind — an
 invitee is still `pending` and by definition holds no active membership yet.
+
+### Shipped, and what's still roadmap
+
+The Model-B workspace stack above is **shipped and live** end to end:
+`Workspace` + `WorkspaceMembership` and the zero-migration seed (F1);
+membership-decides-access resolution (F2); `WorkspacePlan` billing (F4); and the
+cross-org invite flow plus `/w/<id>/mcp` URL selection (F3). Every claim on this
+page traces to merged code in the DNA SDK.
+
+The one piece still **on the roadmap** is the end-user *console* for it: the DNA
+Cloud **portal invite UI** (the buttons that call `POST /v1/workspaces/{id}/invites`
+and surface the member list) lives in the hosted product, not this SDK. The DNA
+side — the Kinds, the resolution/invite policies, the REST endpoints — is done;
+the portal screens that drive them are tracked separately in DNA Cloud.
 
 ## LayerPolicy — which layers may override which Kinds
 

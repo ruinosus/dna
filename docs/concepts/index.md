@@ -28,6 +28,11 @@ Start with the thesis; the rest expand its pieces.
   already have.
 - **[Agent-facing knowledge](agent-knowledge.md)** — why DNA represents
   knowledge as curated, cited Kinds rather than generated wiki prose.
+- **[Composing with GitHub Spec Kit](../guides/spec-kit.md)** — the layering
+  model: DNA names Spec Kit *the* supported spec-driven flow and sits
+  **beneath** it, adding portability, memory, governance and tracking without
+  changing how Spec Kit runs. The full decision is the [Spec Kit adoption
+  ADR](https://github.com/ruinosus/dna/blob/main/docs/adr/ADR-spec-kit-adoption.md).
 
 For the procedures that put these ideas to work, see the
 [How-to guides](../guides/index.md).
