@@ -82,20 +82,16 @@ ALLOWLIST: dict[str, str] = {
     "kind:Changelog": _SDLC_MACHINERY,
     "kind:CognitivePolicy": _SDLC_MACHINERY,
     "kind:Forecast": _SDLC_MACHINERY,
-    "kind:Insight": _SDLC_MACHINERY,
     "kind:Narrative": _SDLC_MACHINERY,
     "kind:PatternInsight": _SDLC_MACHINERY,
-    "kind:Plan": _SDLC_MACHINERY,
     "kind:Postmortem": _SDLC_MACHINERY,
     "kind:PreMortem": _SDLC_MACHINERY,
-    "kind:PromptTemplate": _SDLC_MACHINERY,
     "kind:Retrospective": _SDLC_MACHINERY,
     "kind:RiskRegister": _SDLC_MACHINERY,
     "kind:Roadmap": _SDLC_MACHINERY,
     "kind:SavedView": _SDLC_MACHINERY,
     "kind:SynthesisRun": _SDLC_MACHINERY,
     "kind:SynthesizerState": _SDLC_MACHINERY,
-    "kind:WorkflowEvent": _SDLC_MACHINERY,
     # No composition-plane entries: the 14 Kinds this guard's first run
     # flagged are covered by the commented catalog
     # (docs/concepts/builtin-kinds.md, s-docs-cli-tour-kinds-prose).

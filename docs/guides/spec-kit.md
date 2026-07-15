@@ -160,7 +160,7 @@ single-agent-family feature run. Point it at DNA and you *additionally* get:
   reachable from Claude, Copilot, Cursor, Codex… over MCP, not locked to the one
   agent Spec Kit projected into.
 - **Durable memory + semantic search + versioning** — the run becomes queryable
-  history (`dna cognitive search`, versioned Kinds), not files that rot in a branch.
+  history (`dna recall` / `dna search`, versioned Kinds), not files that rot in a branch.
 - **Live governance** — the constitution becomes an enforced Guardrail
   (no-deploy, per-scope/tenant overridable), not a passive file.
 - **Board tracking** — tasks become Stories on a real board with the derived

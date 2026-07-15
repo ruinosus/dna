@@ -31,19 +31,26 @@ Options:
   -h, --help  Show this message and exit.
 
 Commands:
+  api       Expose the live DNA (definitions + memory) over a REST read-API.
   doc       List, show, create, edit, delete documents.
   docs      Browse the in-product Doc corpus.
+  emit      Emit a DNA agent as a target runtime's native artifact (the...
   eval      Run EvalSuites locally (offline, deterministic) and compare...
+  explain   Show per-section provenance for a composed agent prompt.
   init      Make a project agent-ready: board + skill + AGENTS.md + git...
   install   Install bundles/Kinds from a repository into the local source.
+  intel     Portfolio intelligence — run passes, inspect sources + insights.
   kind      List + inspect registered Kinds.
+  mcp       Expose the live DNA (definitions + SDLC + memory) over MCP.
   memory    Declarative memory over existing Kinds...
+  new       Scaffold a valid Kind skeleton into a scope (agent | soul |...
   recall    Hybrid semantic search (dense + lexical + RRF) over the...
   research  Manage Research synthesis documents (curated syntheses of...
   scope     List + inspect scopes (manifest modules).
   sdlc      Declarative lifecycle tracking...
   search    Alias of ``dna recall`` (neutral naming).
   source    Source-level operations: declarative replicas, introspection.
+  specify   Bidirectional GitHub Spec Kit ↔ DNA bridge (import / export).
 ```
 
 ## Set up a playground
@@ -197,7 +204,7 @@ boundary will enforce.
 
 ```console
 $ dna kind list | wc -l
-      66
+      84
 
 $ dna kind list | grep -E '^(Genome|Agent|Doc|Skill|Soul|Comment) '
 Agent               (use describe)  (use describe)                           
