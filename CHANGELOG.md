@@ -11,6 +11,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Microsoft On-Behalf-Of (OBO) for the MCP server — first slice** (`f-mcp-obo`,
+  stories `s-mcp-obo-exchanger` + `s-mcp-obo-config-gating` +
+  `s-mcp-obo-calendar-tool`; [ADR-mcp-obo](docs/adr/ADR-mcp-obo.md)). The DNA MCP
+  server can now exchange the verified inbound Entra token for a downstream
+  Microsoft Graph token minted for the same user, and act on their Microsoft 365
+  **on their behalf** — no new sign-in. First tool: `ms_calendar_list`
+  (`GET /me/calendarView`, delegated `Calendars.Read`).
+  - New `dna_cli.graph` adapter (optional `dna-cli[graph]` extra = `msal` + `httpx`,
+    lazily imported): a per-request OBO exchanger (`graph/_obo.py`) that targets the
+    token's **home tenant**, enforces the scope allow-list fail-closed, and maps
+    consent / Conditional-Access / Graph errors to honest capability errors —
+    **token B is never logged, persisted, or returned**.
+  - A `graph:` block in `dna.config.yaml` (sibling to `auth:`): **OFF by default**,
+    an explicit fail-closed scope allow-list, and the confidential-client
+    credential referenced by **env-var NAME** (never a secret value in config).
+  - Built-in `ms_calendar_list` MCP tool, gated on the config being enabled **and**
+    an Entra inbound identity (non-Entra → an honest "OBO unavailable" error); its
+    description + input schema come from a governed, overlayable Tool document.
+  - Guide: [On-Behalf-Of — MCP tools act on your Microsoft 365](docs/guides/mcp-obo.md),
+    including the exact Entra admin steps (client secret + delegated `Calendars.Read`
+    + consent) to enable the live path.
+  - Deferred to follow-on stories (`s-mcp-obo-read-groups`, `s-mcp-obo-prod-hardening`):
+    the files/mail read groups, write tools, token caching, certificate /
+    managed-identity credential, and guest/personal identity support.
+
 ## [0.15.1] - 2026-07-15
 
 ### Added

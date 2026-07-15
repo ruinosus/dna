@@ -47,6 +47,14 @@ mcp = ["fastmcp>=2"]
 # (dna_cli._rest_api imports `fastapi` only inside build_app), so the base
 # install never carries it.
 api = ["fastapi>=0.110", "uvicorn>=0.30"]
+# The Microsoft On-Behalf-Of (OBO) graph adapter — `graph.*` MCP tools that
+# exchange the verified inbound Entra token for a downstream Microsoft Graph
+# token and act on the signed-in user's M365 (feature f-mcp-obo, ADR-mcp-obo).
+# `msal` = the confidential-client OBO exchange (acquire_token_on_behalf_of);
+# `httpx` = the outbound Graph call. Optional + lazily imported (dna_cli.graph
+# imports msal/httpx only inside the exchange/Graph-call seams), off by default
+# (needs the `graph:` config block), HTTP-only. The base install never carries it.
+graph = ["msal>=1.28", "httpx>=0.27"]
 dev = [
     "pytest>=8.0",
     # search-sqlite extra so `dna recall`/`dna research recall` end-to-end tests
@@ -61,6 +69,10 @@ dev = [
     # optional — see the `api` extra above.
     "fastapi>=0.110",
     "httpx>=0.27",
+    # `msal` so tests/test_mcp_graph.py can import the OBO exchanger's default
+    # seam (the exchange itself is faked in tests — no live Entra). The base
+    # install keeps it optional — see the `graph` extra above.
+    "msal>=1.28",
 ]
 
 [tool.pytest.ini_options]

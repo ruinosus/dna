@@ -153,11 +153,19 @@ async def sdlc_digest_impl(
 
 
 def build_server(
-    scope: str | None = None, base_dir: str | None = None, auth: Any = None
+    scope: str | None = None, base_dir: str | None = None, auth: Any = None,
+    graph_config: Any = None,
 ) -> Any:
     """Build the DNA MCP server (a ``FastMCP`` instance) with every tool +
     resource wired. ``scope`` fixes the default scope (else the source's sole /
     first scope); ``base_dir`` overrides the source directory (tests / embedding).
+
+    ``graph_config`` is an optional parsed :class:`dna_cli.graph._config.GraphConfig`
+    (the ``graph:`` block of ``dna.config.yaml``). When present AND a tool-group is
+    active, the Microsoft On-Behalf-Of ``graph.*`` tools (e.g. ``ms_calendar_list``)
+    are registered — gated on the config enablement + an Entra inbound identity
+    (ADR-mcp-obo). ``None`` (the default) → OBO off, not one graph tool registered;
+    the OSS / stdio path is untouched.
 
     ``auth`` is an optional FastMCP ``AuthProvider`` / ``TokenVerifier`` (e.g. a
     ``JWTVerifier`` — see :func:`dna_cli._mcp_auth.jwt_provider_from_env`). When
@@ -463,6 +471,26 @@ def build_server(
     async def agents_resource(scope: str) -> dict[str, Any]:
         """The scope's agent roster as a resource."""
         return await list_agents_impl(await _live(), scope, await _guard("definitions", scope=scope))
+
+    # -- graph.* (Microsoft On-Behalf-Of — opt-in, off by default) -----------
+    #
+    # Registered ONLY when the `graph:` config marks a tool-group active. The
+    # tools reuse the SAME `_guard` tenancy/quota seam; each additionally requires
+    # an Entra inbound identity (the raw assertion + tid) to run — a non-Entra
+    # identity gets an honest capability-gap ToolError (ADR-mcp-obo §4.4).
+    if graph_config is not None:
+        from dna_cli._mcp_auth import entra_obo_assertion_from_context
+        from dna_cli.graph._tools import register_graph_tools
+
+        async def _graph_guard(family: str, **kw: Any) -> Any:
+            return await _guard(family, **kw)
+
+        names = register_graph_tools(
+            server, graph_config,
+            guard=_graph_guard, obo_context=entra_obo_assertion_from_context,
+        )
+        for n in names:
+            print(f"[dna-mcp] graph tool wired: {n}")  # noqa: T201 — boot log
 
     return server
 
