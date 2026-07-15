@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.1] - 2026-07-15
+
 ### Added
 
 - **Workspace owner bootstrap + member revoke — closing the Model B production
