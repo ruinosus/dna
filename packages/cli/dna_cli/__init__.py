@@ -93,6 +93,12 @@ main.add_command(new_cmd.new)
 main.add_command(eval_cmd.eval_)
 main.add_command(emit_cmd.emit)
 main.add_command(specify_cmd.specify)
+# Importing specify_toolkit registers `specify install-templates` +
+# `specify export-templates` on the specify group — the Layer 3 toolkit bridge
+# (serve .specify/ templates + slash-commands as DNA Kinds over MCP).
+from dna_cli import specify_toolkit as _specify_toolkit  # noqa: E402
+specify_cmd.specify.add_command(_specify_toolkit.install_templates)
+specify_cmd.specify.add_command(_specify_toolkit.export_templates)
 main.add_command(explain_cmd.explain)
 main.add_command(mcp_cmd.mcp)
 main.add_command(api_cmd.api)
