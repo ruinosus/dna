@@ -1,6 +1,6 @@
 # ADR: Official Adoption of GitHub Spec Kit
 
-- **Status**: Proposed
+- **Status**: Accepted (2026-07-15 — Barna ratified §8; see below)
 - **Date**: 2026-07-15
 - **Deciders**: Barna (owner/architect)
 - **Author**: claude-code
@@ -311,18 +311,24 @@ layer beneath it. **That is the literal demonstration of the founder's thesis.**
 
 ---
 
-## 8. Open decisions for Barna
+## 8. Decisions (ratified by Barna, 2026-07-15)
 
-1. **Constitution mapping** — does `constitution.md` become a **Guardrail**
-   (enforced policy), a **Soul** (identity/persona), or **both**? Recommendation:
-   **Guardrail** for the PoC (it's governance), Soul deferred to Layer 3.
-2. **Ingest trigger** — **manual `dna specify import`** (explicit, PoC-simple) vs
-   a **watcher/git-hook** that auto-imports on `.specify/` change (seamless, more
-   moving parts). Recommendation: **manual for the PoC**, watcher as a
-   fast-follow once the mapping is proven.
-3. **Directionality now vs later** — PoC is **import-only** (Spec Kit → DNA).
-   Confirm we **defer** the `export`/projection direction (Layer 4) rather than
-   building both at once. Recommendation: **defer** — prove one direction first.
+1. **Constitution mapping → BOTH.** `constitution.md` maps to a **Guardrail**
+   (the enforced, live, overridable policy — where DNA adds no-deploy governance)
+   **AND** a **Soul** (the identity/tone). Both Kinds are written on import; the
+   `--constitution-as` flag defaults to `both`. (Barna chose "Ambos" over the
+   Guardrail-only recommendation — the constitution carries both the rules and
+   the voice, so DNA captures both.)
+2. **Ingest trigger → manual `dna specify import`.** Explicit command, no
+   background watcher for now. A watcher/git-hook stays a fast-follow.
+3. **Directionality → BIDIRECTIONAL from the PoC.** Build **both** `dna specify
+   import` (Spec Kit → DNA Kinds) **and** `dna specify export` (DNA → a
+   byte-faithful `.specify/` projection, reusing the same machinery that already
+   projects AGENTS.md / skills). Barna chose the full loop over import-only:
+   DNA becomes the **authoritative store** and `.specify/` one of its
+   projections (Layer 4 pulled INTO the PoC). This roughly doubles the PoC but
+   proves the convergence thesis end-to-end. Round-trip fidelity
+   (`import → export` = byte-identical `.specify/`) becomes an acceptance test.
 
 *(Non-blocking, my call unless you object: task `[P]` markers → a `parallel`
 label on the Story; one Story per `tasks.md` item vs one per checkpoint-group.)*
@@ -345,8 +351,12 @@ separate, larger, and explicitly out of the PoC.
 
 ## 10. Decision
 
-**Proposed:** adopt Spec Kit officially via **Layer 1 (the ingester PoC)** —
-`dna specify import` mapping a Spec Kit run into DNA Kinds (§4), with Spec Kit
-running untouched, the derived journey auto-filling, and DNA's docs naming Spec
-Kit as the supported spec-driven flow. Layers 2–4 are the roadmap after the PoC
-validates the mapping. Awaiting Barna's ruling on §8 before any build.
+**Accepted:** adopt Spec Kit officially via a **bidirectional bridge** —
+`dna specify import` (Spec Kit `.specify/` → DNA Kinds, §4, constitution→**both**
+Guardrail+Soul) **and** `dna specify export` (DNA Kinds → a byte-faithful
+`.specify/` projection, reusing the AGENTS.md/skills projection machinery). Spec
+Kit runs untouched; the derived journey auto-fills; round-trip fidelity is an
+acceptance test; DNA's docs name Spec Kit as the supported spec-driven flow.
+Manual trigger for now (watcher = fast-follow). Layers 2–3 (DNA feeding the
+spec-kit agents live over MCP; serving templates as Skills) remain the roadmap
+after this bridge ships.
