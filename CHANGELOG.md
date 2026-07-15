@@ -11,6 +11,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`dna specify` — the bidirectional GitHub Spec Kit ↔ DNA bridge**
+  (`f-spec-kit-adoption`, ADR *ADR-spec-kit-adoption*). DNA officially names
+  [GitHub Spec Kit](https://github.com/github/spec-kit) as the supported
+  spec-driven flow and composes *underneath* it — Spec Kit runs untouched.
+  - **`dna specify import <path>`** ingests a `.specify/` toolkit (or one
+    `specs/<feature>/` run) into durable Kinds (ADR §4): `constitution.md` → a
+    live **Guardrail** *and* a **Soul** (`--constitution-as`, default `both`);
+    `spec.md` → **Spec** (`pattern="spec-kit"`); `plan.md` → **Plan**
+    (`methodology="spec-kit"`); `research`/`data-model`/`quickstart`/`contracts`
+    → **Reference** docs via `Plan.produces[]`; each `tasks.md` item → a **Story**
+    under the **Feature** (`[P]` → a `parallel` label). Every write goes through
+    `kernel.write_document`, so the constitution *becomes* enforced governance.
+    `--dry-run --json` previews the full mapping without writing.
+  - **`dna specify export <feature>`** projects a DNA-stored run back to a
+    byte-faithful `.specify/` tree from the Feature's `specify_run` manifest —
+    the same "one source → N projections" philosophy as `dna init`/`dna emit`.
+    **Round-trip fidelity** (`import` then `export` = byte-identical `.specify/`)
+    is an acceptance test.
+  - The derived **journey** auto-fills `specify → plan → build` from the created
+    Spec/Plan/Story refs, plus a `WorkflowEvent(methodology="spec-kit")` overlay
+    that pins each phase to its `.specify/` artifact. `spec-kit` joins
+    `superpowers` as an artifact-gated methodology (spec/plan must exist to leave
+    the phase).
+
 ## [0.14.0] - 2026-07-13
 
 ### Added
