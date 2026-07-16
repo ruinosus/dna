@@ -1,6 +1,498 @@
 {
   "components": {
     "schemas": {
+      "AcceptInvitesResponse": {
+        "properties": {
+          "accepted": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/AcceptedInvite"
+            },
+            "title": "Accepted",
+            "type": "array"
+          },
+          "identity_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Identity Email"
+          },
+          "identity_oid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Identity Oid"
+          }
+        },
+        "title": "AcceptInvitesResponse",
+        "type": "object"
+      },
+      "AcceptedInvite": {
+        "properties": {
+          "activated": {
+            "default": false,
+            "title": "Activated",
+            "type": "boolean"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          },
+          "workspace_id": {
+            "title": "Workspace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspace_id"
+        ],
+        "title": "AcceptedInvite",
+        "type": "object"
+      },
+      "AgentPromptResponse": {
+        "properties": {
+          "agent": {
+            "title": "Agent",
+            "type": "string"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "prompt": {
+            "title": "Prompt",
+            "type": "string"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "tenant": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant"
+          }
+        },
+        "required": [
+          "scope",
+          "agent",
+          "prompt"
+        ],
+        "title": "AgentPromptResponse",
+        "type": "object"
+      },
+      "AgentSummary": {
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "kind",
+          "description"
+        ],
+        "title": "AgentSummary",
+        "type": "object"
+      },
+      "AgentsResponse": {
+        "properties": {
+          "agents": {
+            "items": {
+              "$ref": "#/components/schemas/AgentSummary"
+            },
+            "title": "Agents",
+            "type": "array"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scope",
+          "agents"
+        ],
+        "title": "AgentsResponse",
+        "type": "object"
+      },
+      "BoardCounts": {
+        "description": "Status→count maps (dynamic keys — a status label is data).",
+        "properties": {
+          "features": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "default": {},
+            "title": "Features",
+            "type": "object"
+          },
+          "stories": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "default": {},
+            "title": "Stories",
+            "type": "object"
+          }
+        },
+        "title": "BoardCounts",
+        "type": "object"
+      },
+      "BoardItemResponse": {
+        "description": "One SDLC work-item's full doc. The nested AC/DoD/timeline/produces lists\npass through VERBATIM (the drawer renders them raw), so they stay loosely\ntyped; ``business_value`` may be a label or a number → ``Any``.",
+        "properties": {
+          "acceptance_criteria": {
+            "default": [],
+            "items": {},
+            "title": "Acceptance Criteria",
+            "type": "array"
+          },
+          "business_value": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Business Value"
+          },
+          "closed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closed At"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "definition_of_done": {
+            "default": [],
+            "items": {},
+            "title": "Definition Of Done",
+            "type": "array"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "epic": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Epic"
+          },
+          "feature": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feature"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "labels": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Labels",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "priority": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Priority"
+          },
+          "produces": {
+            "default": [],
+            "items": {},
+            "title": "Produces",
+            "type": "array"
+          },
+          "reporter": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reporter"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "tenant": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant"
+          },
+          "timeline": {
+            "default": [],
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Timeline",
+            "type": "array"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "required": [
+          "scope",
+          "kind",
+          "name"
+        ],
+        "title": "BoardItemResponse",
+        "type": "object"
+      },
+      "BoardListItem": {
+        "properties": {
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "BoardListItem",
+        "type": "object"
+      },
+      "BoardResponse": {
+        "properties": {
+          "counts": {
+            "$ref": "#/components/schemas/BoardCounts"
+          },
+          "items": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/BoardListItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "recent": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/BoardListItem"
+            },
+            "title": "Recent",
+            "type": "array"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "tenant": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/BoardTotals"
+          }
+        },
+        "required": [
+          "scope",
+          "counts",
+          "totals"
+        ],
+        "title": "BoardResponse",
+        "type": "object"
+      },
+      "BoardTotals": {
+        "properties": {
+          "features": {
+            "default": 0,
+            "title": "Features",
+            "type": "integer"
+          },
+          "stories": {
+            "default": 0,
+            "title": "Stories",
+            "type": "integer"
+          },
+          "total": {
+            "default": 0,
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "title": "BoardTotals",
+        "type": "object"
+      },
       "Body_accept_invites_v1_workspaces_accept_post": {
         "properties": {
           "claims": {
@@ -316,6 +808,35 @@
         "title": "Body_set_project_member_v1_projects__slug__members_post",
         "type": "object"
       },
+      "DeleteMemoryResponse": {
+        "properties": {
+          "deleted": {
+            "title": "Deleted",
+            "type": "string"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "tenant": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant"
+          }
+        },
+        "required": [
+          "deleted",
+          "scope"
+        ],
+        "title": "DeleteMemoryResponse",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -327,6 +848,1312 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HealthResponse": {
+        "properties": {
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "title": "HealthResponse",
+        "type": "object"
+      },
+      "InsightMetricsResponse": {
+        "properties": {
+          "actioned": {
+            "default": 0,
+            "title": "Actioned",
+            "type": "integer"
+          },
+          "counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "default": {},
+            "title": "Counts",
+            "type": "object"
+          },
+          "dismissed": {
+            "default": 0,
+            "title": "Dismissed",
+            "type": "integer"
+          },
+          "noise_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Noise Rate"
+          },
+          "precision": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Precision"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "source_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Ref"
+          },
+          "tenant": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant"
+          }
+        },
+        "required": [
+          "scope"
+        ],
+        "title": "InsightMetricsResponse",
+        "type": "object"
+      },
+      "InsightStateResponse": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "tenant": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant"
+          }
+        },
+        "required": [
+          "name",
+          "state",
+          "scope"
+        ],
+        "title": "InsightStateResponse",
+        "type": "object"
+      },
+      "InsightsResponse": {
+        "properties": {
+          "insights": {
+            "items": {
+              "$ref": "#/components/schemas/IntelInsightSummary"
+            },
+            "title": "Insights",
+            "type": "array"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "tenant": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant"
+          }
+        },
+        "required": [
+          "scope",
+          "insights"
+        ],
+        "title": "InsightsResponse",
+        "type": "object"
+      },
+      "IntelInsightSummary": {
+        "properties": {
+          "action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "evidence_rating": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Rating"
+          },
+          "fact": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fact"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "pirs": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Pirs",
+            "type": "array"
+          },
+          "score": {
+            "default": 0.0,
+            "title": "Score",
+            "type": "number"
+          },
+          "source_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Ref"
+          },
+          "state": {
+            "default": "new",
+            "title": "State",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "why": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Why"
+          }
+        },
+        "title": "IntelInsightSummary",
+        "type": "object"
+      },
+      "IntelSourceSummary": {
+        "properties": {
+          "cadence": {
+            "default": "weekly",
+            "title": "Cadence",
+            "type": "string"
+          },
+          "muted": {
+            "default": false,
+            "title": "Muted",
+            "type": "boolean"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "pirs": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Pirs",
+            "type": "array"
+          },
+          "threshold": {
+            "default": 0.6,
+            "title": "Threshold",
+            "type": "number"
+          },
+          "type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Type"
+          }
+        },
+        "title": "IntelSourceSummary",
+        "type": "object"
+      },
+      "InviteInfo": {
+        "properties": {
+          "bound": {
+            "default": false,
+            "title": "Bound",
+            "type": "boolean"
+          },
+          "identity_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Identity Email"
+          },
+          "invited_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invited By"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role",
+          "status"
+        ],
+        "title": "InviteInfo",
+        "type": "object"
+      },
+      "InviteResponse": {
+        "properties": {
+          "invite": {
+            "$ref": "#/components/schemas/InviteInfo"
+          },
+          "workspace_id": {
+            "title": "Workspace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspace_id",
+          "invite"
+        ],
+        "title": "InviteResponse",
+        "type": "object"
+      },
+      "MemoriesResponse": {
+        "properties": {
+          "memories": {
+            "items": {
+              "$ref": "#/components/schemas/MemorySummary"
+            },
+            "title": "Memories",
+            "type": "array"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "tenant": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant"
+          }
+        },
+        "required": [
+          "scope",
+          "memories"
+        ],
+        "title": "MemoriesResponse",
+        "type": "object"
+      },
+      "MemorySummary": {
+        "properties": {
+          "area": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Area"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "tags": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "array"
+          }
+        },
+        "title": "MemorySummary",
+        "type": "object"
+      },
+      "OrgSummary": {
+        "properties": {
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "slug": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slug"
+          }
+        },
+        "title": "OrgSummary",
+        "type": "object"
+      },
+      "OrgsResponse": {
+        "properties": {
+          "orgs": {
+            "items": {
+              "$ref": "#/components/schemas/OrgSummary"
+            },
+            "title": "Orgs",
+            "type": "array"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "tenant": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant"
+          }
+        },
+        "required": [
+          "scope",
+          "orgs"
+        ],
+        "title": "OrgsResponse",
+        "type": "object"
+      },
+      "OwnerGrant": {
+        "properties": {
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "scope_ref": {
+            "title": "Scope Ref",
+            "type": "string"
+          },
+          "scope_type": {
+            "title": "Scope Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scope_type",
+          "scope_ref",
+          "role"
+        ],
+        "title": "OwnerGrant",
+        "type": "object"
+      },
+      "ProjectDetailResponse": {
+        "properties": {
+          "project": {
+            "$ref": "#/components/schemas/ProjectSummary"
+          },
+          "repos": {
+            "items": {
+              "$ref": "#/components/schemas/RepoSummary"
+            },
+            "title": "Repos",
+            "type": "array"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "tenant": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant"
+          }
+        },
+        "required": [
+          "scope",
+          "project",
+          "repos"
+        ],
+        "title": "ProjectDetailResponse",
+        "type": "object"
+      },
+      "ProjectMemberSurface": {
+        "properties": {
+          "is_org_owner": {
+            "default": false,
+            "title": "Is Org Owner",
+            "type": "boolean"
+          },
+          "org_role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Org Role"
+          },
+          "project_role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Role"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "role_display": {
+            "title": "Role Display",
+            "type": "string"
+          },
+          "scope_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope Note"
+          },
+          "status": {
+            "default": "active",
+            "title": "Status",
+            "type": "string"
+          },
+          "user": {
+            "title": "User",
+            "type": "string"
+          },
+          "you": {
+            "default": false,
+            "title": "You",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "user",
+          "role",
+          "role_display"
+        ],
+        "title": "ProjectMemberSurface",
+        "type": "object"
+      },
+      "ProjectMemberViewer": {
+        "properties": {
+          "can_manage": {
+            "default": false,
+            "title": "Can Manage",
+            "type": "boolean"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          },
+          "user": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User"
+          }
+        },
+        "title": "ProjectMemberViewer",
+        "type": "object"
+      },
+      "ProjectMembersResponse": {
+        "properties": {
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/ProjectMemberSurface"
+            },
+            "title": "Members",
+            "type": "array"
+          },
+          "project": {
+            "$ref": "#/components/schemas/ProjectRef"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "tenant": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant"
+          },
+          "viewer": {
+            "$ref": "#/components/schemas/ProjectMemberViewer"
+          }
+        },
+        "required": [
+          "scope",
+          "project",
+          "members",
+          "viewer"
+        ],
+        "title": "ProjectMembersResponse",
+        "type": "object"
+      },
+      "ProjectRef": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "org_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Org Ref"
+          },
+          "slug": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slug"
+          }
+        },
+        "title": "ProjectRef",
+        "type": "object"
+      },
+      "ProjectSummary": {
+        "properties": {
+          "board_scope": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Board Scope"
+          },
+          "intel_source_refs": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Intel Source Refs",
+            "type": "array"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "org_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Org Ref"
+          },
+          "repo_refs": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Repo Refs",
+            "type": "array"
+          },
+          "slug": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slug"
+          },
+          "visibility": {
+            "default": "private",
+            "title": "Visibility",
+            "type": "string"
+          }
+        },
+        "title": "ProjectSummary",
+        "type": "object"
+      },
+      "ProjectsResponse": {
+        "properties": {
+          "projects": {
+            "items": {
+              "$ref": "#/components/schemas/ProjectSummary"
+            },
+            "title": "Projects",
+            "type": "array"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "tenant": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant"
+          }
+        },
+        "required": [
+          "scope",
+          "projects"
+        ],
+        "title": "ProjectsResponse",
+        "type": "object"
+      },
+      "ProvisionTenantOwnerResponse": {
+        "properties": {
+          "grants": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/OwnerGrant"
+            },
+            "title": "Grants",
+            "type": "array"
+          },
+          "provisioned": {
+            "title": "Provisioned",
+            "type": "boolean"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "tenant": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant"
+          },
+          "user": {
+            "title": "User",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scope",
+          "user",
+          "provisioned"
+        ],
+        "title": "ProvisionTenantOwnerResponse",
+        "type": "object"
+      },
+      "ProvisionWorkspaceOwnerResponse": {
+        "properties": {
+          "membership": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WorkspaceMemberSurface"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "provisioned": {
+            "title": "Provisioned",
+            "type": "boolean"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "workspace_created": {
+            "default": false,
+            "title": "Workspace Created",
+            "type": "boolean"
+          },
+          "workspace_id": {
+            "title": "Workspace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspace_id",
+          "provisioned"
+        ],
+        "title": "ProvisionWorkspaceOwnerResponse",
+        "type": "object"
+      },
+      "RecallResponse": {
+        "description": "The recall envelope is typed; each ``hit`` stays a loose dict — its shape\nvaries with the search plane active (lexical vs. hybrid/semantic add\n``retention``/``semantic``/``rank_*`` keys), so it is honestly dynamic.",
+        "properties": {
+          "degraded": {
+            "default": false,
+            "title": "Degraded",
+            "type": "boolean"
+          },
+          "hits": {
+            "default": [],
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Hits",
+            "type": "array"
+          },
+          "query": {
+            "title": "Query",
+            "type": "string"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "semantic": {
+            "default": false,
+            "title": "Semantic",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "query",
+          "scope"
+        ],
+        "title": "RecallResponse",
+        "type": "object"
+      },
+      "RememberResponse": {
+        "properties": {
+          "indexed": {
+            "title": "Indexed",
+            "type": "boolean"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "name",
+          "indexed"
+        ],
+        "title": "RememberResponse",
+        "type": "object"
+      },
+      "RemoveMemberResponse": {
+        "properties": {
+          "removed": {
+            "title": "Removed",
+            "type": "string"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "tenant": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant"
+          }
+        },
+        "required": [
+          "removed",
+          "scope"
+        ],
+        "title": "RemoveMemberResponse",
+        "type": "object"
+      },
+      "RepoSummary": {
+        "properties": {
+          "default_branch": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Branch"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "provider": {
+            "default": "github",
+            "title": "Provider",
+            "type": "string"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "title": "RepoSummary",
+        "type": "object"
+      },
+      "ReposResponse": {
+        "properties": {
+          "repos": {
+            "items": {
+              "$ref": "#/components/schemas/RepoSummary"
+            },
+            "title": "Repos",
+            "type": "array"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "tenant": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant"
+          }
+        },
+        "required": [
+          "scope",
+          "repos"
+        ],
+        "title": "ReposResponse",
+        "type": "object"
+      },
+      "RevokeWorkspaceMemberResponse": {
+        "properties": {
+          "revoked": {
+            "title": "Revoked",
+            "type": "boolean"
+          },
+          "target": {
+            "$ref": "#/components/schemas/WorkspaceMemberSurface"
+          },
+          "workspace_id": {
+            "title": "Workspace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspace_id",
+          "revoked",
+          "target"
+        ],
+        "title": "RevokeWorkspaceMemberResponse",
+        "type": "object"
+      },
+      "SetMemberInfo": {
+        "properties": {
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "scope_ref": {
+            "title": "Scope Ref",
+            "type": "string"
+          },
+          "scope_type": {
+            "title": "Scope Type",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "user": {
+            "title": "User",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user",
+          "role",
+          "scope_type",
+          "scope_ref",
+          "status"
+        ],
+        "title": "SetMemberInfo",
+        "type": "object"
+      },
+      "SetMemberResponse": {
+        "properties": {
+          "member": {
+            "$ref": "#/components/schemas/SetMemberInfo"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "tenant": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant"
+          }
+        },
+        "required": [
+          "scope",
+          "member"
+        ],
+        "title": "SetMemberResponse",
+        "type": "object"
+      },
+      "SourcesResponse": {
+        "properties": {
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/IntelSourceSummary"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "tenant": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant"
+          }
+        },
+        "required": [
+          "scope",
+          "sources"
+        ],
+        "title": "SourcesResponse",
+        "type": "object"
+      },
+      "ToolSummary": {
+        "properties": {
+          "description": {
+            "default": "",
+            "title": "Description",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "title": "ToolSummary",
+        "type": "object"
+      },
+      "ToolsResponse": {
+        "properties": {
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "tools": {
+            "items": {
+              "$ref": "#/components/schemas/ToolSummary"
+            },
+            "title": "Tools",
+            "type": "array"
+          }
+        },
+        "required": [
+          "scope",
+          "tools"
+        ],
+        "title": "ToolsResponse",
         "type": "object"
       },
       "ValidationError": {
@@ -368,6 +2195,238 @@
         ],
         "title": "ValidationError",
         "type": "object"
+      },
+      "WorkspaceMemberSummary": {
+        "properties": {
+          "accepted_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accepted At"
+          },
+          "bound": {
+            "default": false,
+            "title": "Bound",
+            "type": "boolean"
+          },
+          "identity_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Identity Email"
+          },
+          "invited_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invited At"
+          },
+          "invited_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invited By"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "title": "WorkspaceMemberSummary",
+        "type": "object"
+      },
+      "WorkspaceMemberSurface": {
+        "description": "The ``_ws_member_surface`` projection (a superset of\n:class:`WorkspaceMemberSummary` with the ``workspace_id`` + ``identity_oid``).",
+        "properties": {
+          "accepted_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accepted At"
+          },
+          "bound": {
+            "default": false,
+            "title": "Bound",
+            "type": "boolean"
+          },
+          "identity_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Identity Email"
+          },
+          "identity_oid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Identity Oid"
+          },
+          "invited_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invited At"
+          },
+          "invited_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invited By"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "workspace_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workspace Id"
+          }
+        },
+        "title": "WorkspaceMemberSurface",
+        "type": "object"
+      },
+      "WorkspaceMembersResponse": {
+        "properties": {
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/WorkspaceMemberSummary"
+            },
+            "title": "Members",
+            "type": "array"
+          },
+          "workspace_id": {
+            "title": "Workspace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspace_id",
+          "members"
+        ],
+        "title": "WorkspaceMembersResponse",
+        "type": "object"
+      },
+      "WorkspacePlanResponse": {
+        "properties": {
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "tier_id": {
+            "title": "Tier Id",
+            "type": "string"
+          },
+          "workspace_id": {
+            "title": "Workspace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scope",
+          "workspace_id",
+          "tier_id"
+        ],
+        "title": "WorkspacePlanResponse",
+        "type": "object"
       }
     }
   },
@@ -386,9 +2445,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Health Health Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/HealthResponse"
                 }
               }
             },
@@ -457,9 +2514,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Agents V1 Agents Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AgentsResponse"
                 }
               }
             },
@@ -547,9 +2602,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Agent Prompt V1 Agents  Name  Prompt Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AgentPromptResponse"
                 }
               }
             },
@@ -635,9 +2688,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Board V1 Board Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BoardResponse"
                 }
               }
             },
@@ -740,9 +2791,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Board Item V1 Board Item Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BoardItemResponse"
                 }
               }
             },
@@ -871,9 +2920,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Insights V1 Insights Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/InsightsResponse"
                 }
               }
             },
@@ -968,9 +3015,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Insight Metrics V1 Insights Metrics Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/InsightMetricsResponse"
                 }
               }
             },
@@ -1068,9 +3113,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Set Insight State V1 Insights  Name  State Patch",
-                  "type": "object"
+                  "$ref": "#/components/schemas/InsightStateResponse"
                 }
               }
             },
@@ -1149,9 +3192,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Memories V1 Memories Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/MemoriesResponse"
                 }
               }
             },
@@ -1238,9 +3279,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Remember Memory V1 Memories Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/RememberResponse"
                 }
               }
             },
@@ -1340,9 +3379,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Memories Search V1 Memories Search Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/RecallResponse"
                 }
               }
             },
@@ -1430,9 +3467,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Delete Memory V1 Memories  Name  Delete",
-                  "type": "object"
+                  "$ref": "#/components/schemas/DeleteMemoryResponse"
                 }
               }
             },
@@ -1511,9 +3546,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Orgs V1 Orgs Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/OrgsResponse"
                 }
               }
             },
@@ -1592,9 +3625,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Projects V1 Projects Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ProjectsResponse"
                 }
               }
             },
@@ -1682,9 +3713,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Project Detail V1 Projects  Slug  Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ProjectDetailResponse"
                 }
               }
             },
@@ -1790,9 +3819,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Project Members V1 Projects  Slug  Members Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ProjectMembersResponse"
                 }
               }
             },
@@ -1888,9 +3915,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Set Project Member V1 Projects  Slug  Members Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/SetMemberResponse"
                 }
               }
             },
@@ -2003,9 +4028,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Remove Project Member V1 Projects  Slug  Members  User  Delete",
-                  "type": "object"
+                  "$ref": "#/components/schemas/RemoveMemberResponse"
                 }
               }
             },
@@ -2084,9 +4107,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Repos V1 Repos Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ReposResponse"
                 }
               }
             },
@@ -2165,9 +4186,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Sources V1 Sources Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/SourcesResponse"
                 }
               }
             },
@@ -2225,9 +4244,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Put Tenant Plan V1 Tenant Plan Put",
-                  "type": "object"
+                  "$ref": "#/components/schemas/WorkspacePlanResponse"
                 }
               }
             },
@@ -2309,9 +4326,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Provision Tenant Owner V1 Tenants  Tid  Provision Owner Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ProvisionTenantOwnerResponse"
                 }
               }
             },
@@ -2390,9 +4405,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Tools V1 Tools Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ToolsResponse"
                 }
               }
             },
@@ -2449,9 +4462,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Put Workspace Plan V1 Workspace Plan Put",
-                  "type": "object"
+                  "$ref": "#/components/schemas/WorkspacePlanResponse"
                 }
               }
             },
@@ -2507,9 +4518,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Accept Invites V1 Workspaces Accept Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AcceptInvitesResponse"
                 }
               }
             },
@@ -2575,9 +4584,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Create Invite V1 Workspaces  Workspace Id  Invites Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/InviteResponse"
                 }
               }
             },
@@ -2665,9 +4672,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Workspace Members V1 Workspaces  Workspace Id  Members Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/WorkspaceMembersResponse"
                 }
               }
             },
@@ -2732,9 +4737,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Revoke Workspace Member V1 Workspaces  Workspace Id  Members Revoke Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/RevokeWorkspaceMemberResponse"
                 }
               }
             },
@@ -2799,9 +4802,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Provision Workspace Owner V1 Workspaces  Workspace Id  Provision Owner Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ProvisionWorkspaceOwnerResponse"
                 }
               }
             },

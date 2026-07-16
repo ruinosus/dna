@@ -615,6 +615,194 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AcceptInvitesResponse */
+        AcceptInvitesResponse: {
+            /**
+             * Accepted
+             * @default []
+             */
+            accepted: components["schemas"]["AcceptedInvite"][];
+            /** Identity Email */
+            identity_email?: string | null;
+            /** Identity Oid */
+            identity_oid?: string | null;
+        };
+        /** AcceptedInvite */
+        AcceptedInvite: {
+            /**
+             * Activated
+             * @default false
+             */
+            activated: boolean;
+            /** Role */
+            role?: string | null;
+            /** Workspace Id */
+            workspace_id: string;
+        };
+        /** AgentPromptResponse */
+        AgentPromptResponse: {
+            /** Agent */
+            agent: string;
+            /** Model */
+            model?: string | null;
+            /** Prompt */
+            prompt: string;
+            /** Scope */
+            scope: string;
+            /** Tenant */
+            tenant?: string | null;
+        };
+        /** AgentSummary */
+        AgentSummary: {
+            /** Description */
+            description: string;
+            /** Kind */
+            kind: string;
+            /** Name */
+            name: string;
+        };
+        /** AgentsResponse */
+        AgentsResponse: {
+            /** Agents */
+            agents: components["schemas"]["AgentSummary"][];
+            /** Scope */
+            scope: string;
+        };
+        /**
+         * BoardCounts
+         * @description Status→count maps (dynamic keys — a status label is data).
+         */
+        BoardCounts: {
+            /**
+             * Features
+             * @default {}
+             */
+            features: {
+                [key: string]: number;
+            };
+            /**
+             * Stories
+             * @default {}
+             */
+            stories: {
+                [key: string]: number;
+            };
+        };
+        /**
+         * BoardItemResponse
+         * @description One SDLC work-item's full doc. The nested AC/DoD/timeline/produces lists
+         *     pass through VERBATIM (the drawer renders them raw), so they stay loosely
+         *     typed; ``business_value`` may be a label or a number → ``Any``.
+         */
+        BoardItemResponse: {
+            /**
+             * Acceptance Criteria
+             * @default []
+             */
+            acceptance_criteria: unknown[];
+            /** Business Value */
+            business_value?: unknown | null;
+            /** Closed At */
+            closed_at?: string | null;
+            /** Created At */
+            created_at?: string | null;
+            /**
+             * Definition Of Done
+             * @default []
+             */
+            definition_of_done: unknown[];
+            /** Description */
+            description?: string | null;
+            /** Epic */
+            epic?: string | null;
+            /** Feature */
+            feature?: string | null;
+            /** Kind */
+            kind: string;
+            /**
+             * Labels
+             * @default []
+             */
+            labels: string[];
+            /** Name */
+            name: string;
+            /** Priority */
+            priority?: string | null;
+            /**
+             * Produces
+             * @default []
+             */
+            produces: unknown[];
+            /** Reporter */
+            reporter?: string | null;
+            /** Scope */
+            scope: string;
+            /** Status */
+            status?: string | null;
+            /** Tenant */
+            tenant?: string | null;
+            /**
+             * Timeline
+             * @default []
+             */
+            timeline: {
+                [key: string]: unknown;
+            }[];
+            /** Title */
+            title?: string | null;
+            /** Updated At */
+            updated_at?: string | null;
+        };
+        /** BoardListItem */
+        BoardListItem: {
+            /** Created At */
+            created_at?: string | null;
+            /** Kind */
+            kind: string;
+            /** Name */
+            name?: string | null;
+            /** Status */
+            status?: string | null;
+            /** Title */
+            title?: string | null;
+        };
+        /** BoardResponse */
+        BoardResponse: {
+            counts: components["schemas"]["BoardCounts"];
+            /**
+             * Items
+             * @default []
+             */
+            items: components["schemas"]["BoardListItem"][];
+            /**
+             * Recent
+             * @default []
+             */
+            recent: components["schemas"]["BoardListItem"][];
+            /** Scope */
+            scope: string;
+            /** Tenant */
+            tenant?: string | null;
+            totals: components["schemas"]["BoardTotals"];
+        };
+        /** BoardTotals */
+        BoardTotals: {
+            /**
+             * Features
+             * @default 0
+             */
+            features: number;
+            /**
+             * Stories
+             * @default 0
+             */
+            stories: number;
+            /**
+             * Total
+             * @default 0
+             */
+            total: number;
+        };
         /** Body_accept_invites_v1_workspaces_accept_post */
         Body_accept_invites_v1_workspaces_accept_post: {
             /** Claims */
@@ -731,10 +919,474 @@ export interface components {
             /** User */
             user: string;
         };
+        /** DeleteMemoryResponse */
+        DeleteMemoryResponse: {
+            /** Deleted */
+            deleted: string;
+            /** Scope */
+            scope: string;
+            /** Tenant */
+            tenant?: string | null;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** HealthResponse */
+        HealthResponse: {
+            /** Ok */
+            ok: boolean;
+        };
+        /** InsightMetricsResponse */
+        InsightMetricsResponse: {
+            /**
+             * Actioned
+             * @default 0
+             */
+            actioned: number;
+            /**
+             * Counts
+             * @default {}
+             */
+            counts: {
+                [key: string]: number;
+            };
+            /**
+             * Dismissed
+             * @default 0
+             */
+            dismissed: number;
+            /** Noise Rate */
+            noise_rate?: number | null;
+            /** Precision */
+            precision?: number | null;
+            /** Scope */
+            scope: string;
+            /** Source Ref */
+            source_ref?: string | null;
+            /** Tenant */
+            tenant?: string | null;
+        };
+        /** InsightStateResponse */
+        InsightStateResponse: {
+            /** Name */
+            name: string;
+            /** Scope */
+            scope: string;
+            /** State */
+            state: string;
+            /** Tenant */
+            tenant?: string | null;
+        };
+        /** InsightsResponse */
+        InsightsResponse: {
+            /** Insights */
+            insights: components["schemas"]["IntelInsightSummary"][];
+            /** Scope */
+            scope: string;
+            /** Tenant */
+            tenant?: string | null;
+        };
+        /** IntelInsightSummary */
+        IntelInsightSummary: {
+            /** Action */
+            action?: string | null;
+            /** Created At */
+            created_at?: string | null;
+            /** Evidence Rating */
+            evidence_rating?: string | null;
+            /** Fact */
+            fact?: string | null;
+            /** Name */
+            name?: string | null;
+            /**
+             * Pirs
+             * @default []
+             */
+            pirs: string[];
+            /**
+             * Score
+             * @default 0
+             */
+            score: number;
+            /** Source Ref */
+            source_ref?: string | null;
+            /**
+             * State
+             * @default new
+             */
+            state: string;
+            /** Title */
+            title?: string | null;
+            /** Why */
+            why?: string | null;
+        };
+        /** IntelSourceSummary */
+        IntelSourceSummary: {
+            /**
+             * Cadence
+             * @default weekly
+             */
+            cadence: string;
+            /**
+             * Muted
+             * @default false
+             */
+            muted: boolean;
+            /** Name */
+            name?: string | null;
+            /**
+             * Pirs
+             * @default []
+             */
+            pirs: string[];
+            /**
+             * Threshold
+             * @default 0.6
+             */
+            threshold: number;
+            /** Type */
+            type?: string | null;
+        };
+        /** InviteInfo */
+        InviteInfo: {
+            /**
+             * Bound
+             * @default false
+             */
+            bound: boolean;
+            /** Identity Email */
+            identity_email?: string | null;
+            /** Invited By */
+            invited_by?: string | null;
+            /** Role */
+            role: string;
+            /** Status */
+            status: string;
+        };
+        /** InviteResponse */
+        InviteResponse: {
+            invite: components["schemas"]["InviteInfo"];
+            /** Workspace Id */
+            workspace_id: string;
+        };
+        /** MemoriesResponse */
+        MemoriesResponse: {
+            /** Memories */
+            memories: components["schemas"]["MemorySummary"][];
+            /** Scope */
+            scope: string;
+            /** Tenant */
+            tenant?: string | null;
+        };
+        /** MemorySummary */
+        MemorySummary: {
+            /** Area */
+            area?: string | null;
+            /** Created At */
+            created_at?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Summary */
+            summary?: string | null;
+            /**
+             * Tags
+             * @default []
+             */
+            tags: string[];
+        };
+        /** OrgSummary */
+        OrgSummary: {
+            /** Display Name */
+            display_name?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Slug */
+            slug?: string | null;
+        };
+        /** OrgsResponse */
+        OrgsResponse: {
+            /** Orgs */
+            orgs: components["schemas"]["OrgSummary"][];
+            /** Scope */
+            scope: string;
+            /** Tenant */
+            tenant?: string | null;
+        };
+        /** OwnerGrant */
+        OwnerGrant: {
+            /** Role */
+            role: string;
+            /** Scope Ref */
+            scope_ref: string;
+            /** Scope Type */
+            scope_type: string;
+        };
+        /** ProjectDetailResponse */
+        ProjectDetailResponse: {
+            project: components["schemas"]["ProjectSummary"];
+            /** Repos */
+            repos: components["schemas"]["RepoSummary"][];
+            /** Scope */
+            scope: string;
+            /** Tenant */
+            tenant?: string | null;
+        };
+        /** ProjectMemberSurface */
+        ProjectMemberSurface: {
+            /**
+             * Is Org Owner
+             * @default false
+             */
+            is_org_owner: boolean;
+            /** Org Role */
+            org_role?: string | null;
+            /** Project Role */
+            project_role?: string | null;
+            /** Role */
+            role: string;
+            /** Role Display */
+            role_display: string;
+            /** Scope Note */
+            scope_note?: string | null;
+            /**
+             * Status
+             * @default active
+             */
+            status: string;
+            /** User */
+            user: string;
+            /**
+             * You
+             * @default false
+             */
+            you: boolean;
+        };
+        /** ProjectMemberViewer */
+        ProjectMemberViewer: {
+            /**
+             * Can Manage
+             * @default false
+             */
+            can_manage: boolean;
+            /** Role */
+            role?: string | null;
+            /** User */
+            user?: string | null;
+        };
+        /** ProjectMembersResponse */
+        ProjectMembersResponse: {
+            /** Members */
+            members: components["schemas"]["ProjectMemberSurface"][];
+            project: components["schemas"]["ProjectRef"];
+            /** Scope */
+            scope: string;
+            /** Tenant */
+            tenant?: string | null;
+            viewer: components["schemas"]["ProjectMemberViewer"];
+        };
+        /** ProjectRef */
+        ProjectRef: {
+            /** Name */
+            name?: string | null;
+            /** Org Ref */
+            org_ref?: string | null;
+            /** Slug */
+            slug?: string | null;
+        };
+        /** ProjectSummary */
+        ProjectSummary: {
+            /** Board Scope */
+            board_scope?: string | null;
+            /**
+             * Intel Source Refs
+             * @default []
+             */
+            intel_source_refs: string[];
+            /** Name */
+            name?: string | null;
+            /** Org Ref */
+            org_ref?: string | null;
+            /**
+             * Repo Refs
+             * @default []
+             */
+            repo_refs: string[];
+            /** Slug */
+            slug?: string | null;
+            /**
+             * Visibility
+             * @default private
+             */
+            visibility: string;
+        };
+        /** ProjectsResponse */
+        ProjectsResponse: {
+            /** Projects */
+            projects: components["schemas"]["ProjectSummary"][];
+            /** Scope */
+            scope: string;
+            /** Tenant */
+            tenant?: string | null;
+        };
+        /** ProvisionTenantOwnerResponse */
+        ProvisionTenantOwnerResponse: {
+            /**
+             * Grants
+             * @default []
+             */
+            grants: components["schemas"]["OwnerGrant"][];
+            /** Provisioned */
+            provisioned: boolean;
+            /** Reason */
+            reason?: string | null;
+            /** Scope */
+            scope: string;
+            /** Tenant */
+            tenant?: string | null;
+            /** User */
+            user: string;
+        };
+        /** ProvisionWorkspaceOwnerResponse */
+        ProvisionWorkspaceOwnerResponse: {
+            membership?: components["schemas"]["WorkspaceMemberSurface"] | null;
+            /** Provisioned */
+            provisioned: boolean;
+            /** Reason */
+            reason?: string | null;
+            /**
+             * Workspace Created
+             * @default false
+             */
+            workspace_created: boolean;
+            /** Workspace Id */
+            workspace_id: string;
+        };
+        /**
+         * RecallResponse
+         * @description The recall envelope is typed; each ``hit`` stays a loose dict — its shape
+         *     varies with the search plane active (lexical vs. hybrid/semantic add
+         *     ``retention``/``semantic``/``rank_*`` keys), so it is honestly dynamic.
+         */
+        RecallResponse: {
+            /**
+             * Degraded
+             * @default false
+             */
+            degraded: boolean;
+            /**
+             * Hits
+             * @default []
+             */
+            hits: {
+                [key: string]: unknown;
+            }[];
+            /** Query */
+            query: string;
+            /** Scope */
+            scope: string;
+            /**
+             * Semantic
+             * @default false
+             */
+            semantic: boolean;
+        };
+        /** RememberResponse */
+        RememberResponse: {
+            /** Indexed */
+            indexed: boolean;
+            /** Kind */
+            kind: string;
+            /** Name */
+            name: string;
+        };
+        /** RemoveMemberResponse */
+        RemoveMemberResponse: {
+            /** Removed */
+            removed: string;
+            /** Scope */
+            scope: string;
+            /** Tenant */
+            tenant?: string | null;
+        };
+        /** RepoSummary */
+        RepoSummary: {
+            /** Default Branch */
+            default_branch?: string | null;
+            /** Name */
+            name?: string | null;
+            /**
+             * Provider
+             * @default github
+             */
+            provider: string;
+            /** Url */
+            url?: string | null;
+        };
+        /** ReposResponse */
+        ReposResponse: {
+            /** Repos */
+            repos: components["schemas"]["RepoSummary"][];
+            /** Scope */
+            scope: string;
+            /** Tenant */
+            tenant?: string | null;
+        };
+        /** RevokeWorkspaceMemberResponse */
+        RevokeWorkspaceMemberResponse: {
+            /** Revoked */
+            revoked: boolean;
+            target: components["schemas"]["WorkspaceMemberSurface"];
+            /** Workspace Id */
+            workspace_id: string;
+        };
+        /** SetMemberInfo */
+        SetMemberInfo: {
+            /** Role */
+            role: string;
+            /** Scope Ref */
+            scope_ref: string;
+            /** Scope Type */
+            scope_type: string;
+            /** Status */
+            status: string;
+            /** User */
+            user: string;
+        };
+        /** SetMemberResponse */
+        SetMemberResponse: {
+            member: components["schemas"]["SetMemberInfo"];
+            /** Scope */
+            scope: string;
+            /** Tenant */
+            tenant?: string | null;
+        };
+        /** SourcesResponse */
+        SourcesResponse: {
+            /** Scope */
+            scope: string;
+            /** Sources */
+            sources: components["schemas"]["IntelSourceSummary"][];
+            /** Tenant */
+            tenant?: string | null;
+        };
+        /** ToolSummary */
+        ToolSummary: {
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /** Name */
+            name?: string | null;
+        };
+        /** ToolsResponse */
+        ToolsResponse: {
+            /** Scope */
+            scope: string;
+            /** Tools */
+            tools: components["schemas"]["ToolSummary"][];
         };
         /** ValidationError */
         ValidationError: {
@@ -748,6 +1400,72 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /** WorkspaceMemberSummary */
+        WorkspaceMemberSummary: {
+            /** Accepted At */
+            accepted_at?: string | null;
+            /**
+             * Bound
+             * @default false
+             */
+            bound: boolean;
+            /** Identity Email */
+            identity_email?: string | null;
+            /** Invited At */
+            invited_at?: string | null;
+            /** Invited By */
+            invited_by?: string | null;
+            /** Role */
+            role?: string | null;
+            /** Status */
+            status?: string | null;
+        };
+        /**
+         * WorkspaceMemberSurface
+         * @description The ``_ws_member_surface`` projection (a superset of
+         *     :class:`WorkspaceMemberSummary` with the ``workspace_id`` + ``identity_oid``).
+         */
+        WorkspaceMemberSurface: {
+            /** Accepted At */
+            accepted_at?: string | null;
+            /**
+             * Bound
+             * @default false
+             */
+            bound: boolean;
+            /** Identity Email */
+            identity_email?: string | null;
+            /** Identity Oid */
+            identity_oid?: string | null;
+            /** Invited At */
+            invited_at?: string | null;
+            /** Invited By */
+            invited_by?: string | null;
+            /** Role */
+            role?: string | null;
+            /** Status */
+            status?: string | null;
+            /** Workspace Id */
+            workspace_id?: string | null;
+        };
+        /** WorkspaceMembersResponse */
+        WorkspaceMembersResponse: {
+            /** Members */
+            members: components["schemas"]["WorkspaceMemberSummary"][];
+            /** Workspace Id */
+            workspace_id: string;
+        };
+        /** WorkspacePlanResponse */
+        WorkspacePlanResponse: {
+            /** Scope */
+            scope: string;
+            /** Status */
+            status?: string | null;
+            /** Tier Id */
+            tier_id: string;
+            /** Workspace Id */
+            workspace_id: string;
         };
     };
     responses: never;
@@ -773,9 +1491,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["HealthResponse"];
                 };
             };
         };
@@ -800,9 +1516,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["AgentsResponse"];
                 };
             };
             /** @description Validation Error */
@@ -838,9 +1552,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["AgentPromptResponse"];
                 };
             };
             /** @description Validation Error */
@@ -876,9 +1588,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["BoardResponse"];
                 };
             };
             /** @description Validation Error */
@@ -917,9 +1627,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["BoardItemResponse"];
                 };
             };
             /** @description Validation Error */
@@ -957,9 +1665,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["InsightsResponse"];
                 };
             };
             /** @description Validation Error */
@@ -994,9 +1700,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["InsightMetricsResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1036,9 +1740,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["InsightStateResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1072,9 +1774,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["MemoriesResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1112,9 +1812,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["RememberResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1150,9 +1848,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["RecallResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1188,9 +1884,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["DeleteMemoryResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1224,9 +1918,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["OrgsResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1260,9 +1952,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["ProjectsResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1298,9 +1988,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["ProjectDetailResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1338,9 +2026,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["ProjectMembersResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1380,9 +2066,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["SetMemberResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1420,9 +2104,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["RemoveMemberResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1456,9 +2138,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["ReposResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1492,9 +2172,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["SourcesResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1529,9 +2207,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["WorkspacePlanResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1570,9 +2246,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["ProvisionTenantOwnerResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1606,9 +2280,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["ToolsResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1643,9 +2315,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["WorkspacePlanResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1680,9 +2350,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["AcceptInvitesResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1719,9 +2387,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["InviteResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1757,9 +2423,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["WorkspaceMembersResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1796,9 +2460,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["RevokeWorkspaceMemberResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1835,9 +2497,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["ProvisionWorkspaceOwnerResponse"];
                 };
             };
             /** @description Validation Error */

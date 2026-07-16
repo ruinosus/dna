@@ -1,0 +1,18 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-033-api-typed-responses
+spec:
+  description: REST read-API handlers return dict[str,Any] -> opaque OpenAPI response
+    schemas -> dna-client response bodies are untyped. Add Pydantic response_model
+    per /v1 endpoint so the clients (+ drift test) get typed responses.
+  type: task
+  severity: medium
+  status: open
+  related_feature: f-dna-client
+  timeline:
+  - at: '2026-07-16T18:56:03+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

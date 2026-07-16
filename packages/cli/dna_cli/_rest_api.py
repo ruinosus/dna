@@ -226,6 +226,12 @@ def build_app(
     # The intel face delegates to the CORE engine (adr-faces-reorg: logic in the
     # core, faces thin). These handlers only translate transport + call in.
     from dna.extensions.intel import engine as intel_engine
+    # Typed response models — declared on every route as ``response_model`` so the
+    # OpenAPI response schemas (and the clients generated from them) carry the real
+    # payload shape instead of an opaque ``object``. Imported lazily here (with
+    # fastapi) so ``import dna_cli`` stays FastAPI/pydantic-face-free. See
+    # ``dna_cli._rest_models`` for the fidelity contract.
+    from dna_cli import _rest_models as m
 
     app = FastAPI(
         title="DNA REST read-API",
@@ -378,13 +384,13 @@ def build_app(
 
     # -- health (unguarded) --------------------------------------------------
 
-    @app.get("/health")
+    @app.get("/health", response_model=m.HealthResponse)
     async def health() -> dict[str, Any]:
         return {"ok": True}
 
     # -- definitions (reuse the MCP impls verbatim — zero duplication) -------
 
-    @app.get("/v1/agents", dependencies=guarded)
+    @app.get("/v1/agents", dependencies=guarded, response_model=m.AgentsResponse)
     async def agents(
         scope: str | None = Query(default=None),
         tenant: str | None = Query(default=None),
@@ -392,7 +398,8 @@ def build_app(
         """List a scope's prompt-target agents, tenant-aware."""
         return await list_agents_impl(await _live(), scope, tenant)
 
-    @app.get("/v1/agents/{name}/prompt", dependencies=guarded)
+    @app.get("/v1/agents/{name}/prompt", dependencies=guarded,
+             response_model=m.AgentPromptResponse)
     async def agent_prompt(
         name: str,
         scope: str | None = Query(default=None),
@@ -406,7 +413,7 @@ def build_app(
         except ValueError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from None
 
-    @app.get("/v1/tools", dependencies=guarded)
+    @app.get("/v1/tools", dependencies=guarded, response_model=m.ToolsResponse)
     async def tools(
         scope: str | None = Query(default=None),
         tenant: str | None = Query(default=None),
@@ -416,7 +423,7 @@ def build_app(
 
     # -- memory (list + search + the two guarded writes: remember + delete) --
 
-    @app.get("/v1/memories", dependencies=guarded)
+    @app.get("/v1/memories", dependencies=guarded, response_model=m.MemoriesResponse)
     async def memories(
         scope: str | None = Query(default=None),
         tenant: str | None = Query(default=None),
@@ -425,7 +432,8 @@ def build_app(
         isolation), never another tenant's."""
         return await list_memories_impl(await _live(), scope, tenant)
 
-    @app.post("/v1/memories", dependencies=guarded, status_code=201)
+    @app.post("/v1/memories", dependencies=guarded, status_code=201,
+              response_model=m.RememberResponse)
     async def remember_memory(
         summary: str = Body(..., embed=True),
         area: str = Body(default="general", embed=True),
@@ -452,7 +460,8 @@ def build_app(
             tags=tags, owner=owner, tenant=tenant,
         )
 
-    @app.get("/v1/memories/search", dependencies=guarded)
+    @app.get("/v1/memories/search", dependencies=guarded,
+             response_model=m.RecallResponse)
     async def memories_search(
         q: str = Query(...),
         scope: str | None = Query(default=None),
@@ -463,7 +472,8 @@ def build_app(
         search extra is present, honest lexical otherwise), tenant-scoped."""
         return await recall_impl(await _live(), q, scope, k, tenant)
 
-    @app.delete("/v1/memories/{name}", dependencies=guarded)
+    @app.delete("/v1/memories/{name}", dependencies=guarded,
+                response_model=m.DeleteMemoryResponse)
     async def delete_memory(
         name: str,
         scope: str | None = Query(default=None),
@@ -480,7 +490,7 @@ def build_app(
     # Thin delegates to dna.extensions.intel.engine — the portal's intelligence
     # surface. ZERO business logic here (adr-faces-reorg).
 
-    @app.get("/v1/sources", dependencies=guarded)
+    @app.get("/v1/sources", dependencies=guarded, response_model=m.SourcesResponse)
     async def sources(
         scope: str | None = Query(default=None),
         tenant: str | None = Query(default=None),
@@ -491,7 +501,7 @@ def build_app(
         items = await intel_engine.list_sources(live.kernel, scope=sc, tenant=tenant)
         return {"scope": sc, "tenant": tenant, "sources": items}
 
-    @app.get("/v1/insights", dependencies=guarded)
+    @app.get("/v1/insights", dependencies=guarded, response_model=m.InsightsResponse)
     async def insights(
         scope: str | None = Query(default=None),
         tenant: str | None = Query(default=None),
@@ -514,7 +524,8 @@ def build_app(
         )
         return {"scope": sc, "tenant": tenant, "insights": items}
 
-    @app.get("/v1/insights/metrics", dependencies=guarded)
+    @app.get("/v1/insights/metrics", dependencies=guarded,
+             response_model=m.InsightMetricsResponse)
     async def insight_metrics(
         scope: str | None = Query(default=None),
         tenant: str | None = Query(default=None),
@@ -529,7 +540,8 @@ def build_app(
             live.kernel, scope=sc, tenant=tenant, source_ref=source_ref,
         )
 
-    @app.patch("/v1/insights/{name}/state", dependencies=guarded)
+    @app.patch("/v1/insights/{name}/state", dependencies=guarded,
+               response_model=m.InsightStateResponse)
     async def set_insight_state(
         name: str,
         state: str = Body(..., embed=True),
@@ -553,7 +565,7 @@ def build_app(
     # Thin delegates to the CORE application impls (dna.application) — the SAME
     # pattern as the definitions/intel handlers. ZERO business logic here.
 
-    @app.get("/v1/orgs", dependencies=guarded)
+    @app.get("/v1/orgs", dependencies=guarded, response_model=m.OrgsResponse)
     async def orgs(
         scope: str | None = Query(default=None),
         tenant: str | None = Query(default=None),
@@ -561,7 +573,7 @@ def build_app(
         """List the tenant's Organization docs (the console's top-level container)."""
         return await list_orgs_impl(await _live(), scope, tenant)
 
-    @app.get("/v1/projects", dependencies=guarded)
+    @app.get("/v1/projects", dependencies=guarded, response_model=m.ProjectsResponse)
     async def projects(
         scope: str | None = Query(default=None),
         tenant: str | None = Query(default=None),
@@ -570,7 +582,8 @@ def build_app(
         containers the portfolio console aggregates)."""
         return await list_projects_impl(await _live(), scope, tenant)
 
-    @app.get("/v1/projects/{slug}", dependencies=guarded)
+    @app.get("/v1/projects/{slug}", dependencies=guarded,
+             response_model=m.ProjectDetailResponse)
     async def project_detail(
         slug: str,
         scope: str | None = Query(default=None),
@@ -583,7 +596,8 @@ def build_app(
         except ProjectNotFound as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from None
 
-    @app.get("/v1/projects/{slug}/members", dependencies=guarded)
+    @app.get("/v1/projects/{slug}/members", dependencies=guarded,
+             response_model=m.ProjectMembersResponse)
     async def project_members(
         slug: str,
         scope: str | None = Query(default=None),
@@ -603,7 +617,8 @@ def build_app(
         except ProjectNotFound as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from None
 
-    @app.post("/v1/projects/{slug}/members", dependencies=guarded, status_code=201)
+    @app.post("/v1/projects/{slug}/members", dependencies=guarded, status_code=201,
+              response_model=m.SetMemberResponse)
     async def set_project_member(
         slug: str,
         user: str = Body(..., embed=True),
@@ -628,7 +643,8 @@ def build_app(
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from None
 
-    @app.delete("/v1/projects/{slug}/members/{user}", dependencies=guarded)
+    @app.delete("/v1/projects/{slug}/members/{user}", dependencies=guarded,
+                response_model=m.RemoveMemberResponse)
     async def remove_project_member(
         slug: str,
         user: str,
@@ -662,7 +678,8 @@ def build_app(
     # segment). Idempotent + first-owner-only: a NO-OP once any Owner exists, so a
     # LATER user does not auto-escalate. Delegates to the CORE impl (zero logic
     # here). 400 on a missing tenant/user.
-    @app.post("/v1/tenants/{tid}/provision-owner", dependencies=guarded, status_code=201)
+    @app.post("/v1/tenants/{tid}/provision-owner", dependencies=guarded, status_code=201,
+              response_model=m.ProvisionTenantOwnerResponse)
     async def provision_tenant_owner(
         tid: str,
         user: str = Body(..., embed=True),
@@ -677,7 +694,7 @@ def build_app(
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from None
 
-    @app.get("/v1/repos", dependencies=guarded)
+    @app.get("/v1/repos", dependencies=guarded, response_model=m.ReposResponse)
     async def repos(
         scope: str | None = Query(default=None),
         tenant: str | None = Query(default=None),
@@ -685,7 +702,7 @@ def build_app(
         """List the tenant's Repo docs (code repositories the portfolio references)."""
         return await list_repos_impl(await _live(), scope, tenant)
 
-    @app.get("/v1/board", dependencies=guarded)
+    @app.get("/v1/board", dependencies=guarded, response_model=m.BoardResponse)
     async def board(
         scope: str = Query(..., description="A project's board_scope (e.g. dna-development)."),
         tenant: str | None = Query(default=None),
@@ -696,7 +713,7 @@ def build_app(
         card. Reuses the shared SDLC read impl (``list_stories_impl``)."""
         return await board_summary_impl(await _live(), scope, tenant, recent)
 
-    @app.get("/v1/board/item", dependencies=guarded)
+    @app.get("/v1/board/item", dependencies=guarded, response_model=m.BoardItemResponse)
     async def board_item(
         scope: str = Query(..., description="The project's board_scope."),
         name: str = Query(..., description="The work-item doc name (e.g. s-foo)."),
@@ -727,7 +744,8 @@ def build_app(
     # the workspace_id, so there is no query param — `workspace_id` is the body key
     # being assigned. Delegates to the CORE set_workspace_plan_impl (zero logic
     # here); idempotent under Stripe retries (write_document upserts on name).
-    @app.put("/v1/workspace-plan", dependencies=guarded)
+    @app.put("/v1/workspace-plan", dependencies=guarded,
+             response_model=m.WorkspacePlanResponse)
     async def put_workspace_plan(
         workspace_id: str = Body(..., embed=True),
         tier_id: str = Body(..., embed=True),
@@ -758,7 +776,8 @@ def build_app(
     # forwards `tenant` → `workspace_id` into the SAME core write — zero
     # regression. New callers use PUT /v1/workspace-plan. Remove once dna-cloud
     # has cut over.
-    @app.put("/v1/tenant-plan", dependencies=guarded, deprecated=True)
+    @app.put("/v1/tenant-plan", dependencies=guarded, deprecated=True,
+             response_model=m.WorkspacePlanResponse)
     async def put_tenant_plan(
         tenant: str = Body(..., embed=True),
         tier_id: str = Body(..., embed=True),
@@ -796,7 +815,8 @@ def build_app(
     # actor's Entra-session claims are passed explicitly — the config-auth claims,
     # when present, always WIN over a body/query value.
 
-    @app.post("/v1/workspaces/{workspace_id}/invites", dependencies=guarded, status_code=201)
+    @app.post("/v1/workspaces/{workspace_id}/invites", dependencies=guarded,
+              status_code=201, response_model=m.InviteResponse)
     async def create_invite(
         request: Request,
         workspace_id: str,
@@ -817,7 +837,8 @@ def build_app(
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from None
 
-    @app.get("/v1/workspaces/{workspace_id}/members", dependencies=guarded)
+    @app.get("/v1/workspaces/{workspace_id}/members", dependencies=guarded,
+             response_model=m.WorkspaceMembersResponse)
     async def workspace_members(
         request: Request,
         workspace_id: str,
@@ -841,7 +862,8 @@ def build_app(
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from None
 
-    @app.post("/v1/workspaces/accept", dependencies=guarded)
+    @app.post("/v1/workspaces/accept", dependencies=guarded,
+              response_model=m.AcceptInvitesResponse)
     async def accept_invites(
         request: Request,
         claims: dict[str, Any] | None = Body(default=None, embed=True),
@@ -871,7 +893,8 @@ def build_app(
     # over the body; under none/token a trusted portal passes the verified claims.
 
     @app.post("/v1/workspaces/{workspace_id}/provision-owner",
-              dependencies=guarded, status_code=201)
+              dependencies=guarded, status_code=201,
+              response_model=m.ProvisionWorkspaceOwnerResponse)
     async def provision_workspace_owner(
         request: Request,
         workspace_id: str,
@@ -893,7 +916,8 @@ def build_app(
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from None
 
-    @app.post("/v1/workspaces/{workspace_id}/members/revoke", dependencies=guarded)
+    @app.post("/v1/workspaces/{workspace_id}/members/revoke", dependencies=guarded,
+              response_model=m.RevokeWorkspaceMemberResponse)
     async def revoke_workspace_member(
         request: Request,
         workspace_id: str,
