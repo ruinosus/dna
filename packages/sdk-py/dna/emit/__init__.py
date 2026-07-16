@@ -184,6 +184,10 @@ class EmitContext:
     #: RAG collection refs the copilot may read (``knowledge.collections``).
     #: Empty when the copilot declares no knowledge (RAG optional).
     knowledge: list[str] = field(default_factory=list)
+    #: Ordered workflow step ids (Copilot ``workflow.chain``) — the agent-framework
+    #: (MS Agent Framework) target emits a ``WorkflowBuilder`` chain + a
+    #: workflow-level escalation node when present. Empty = plain single-agent app.
+    workflow: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -502,6 +506,9 @@ def build_copilot_context(
 
     knowledge_block = _spec_get(cspec, "knowledge") or {}
     ctx.knowledge = list(_spec_get(knowledge_block, "collections") or [])
+
+    workflow_block = _spec_get(cspec, "workflow") or {}
+    ctx.workflow = list(_spec_get(workflow_block, "chain") or [])
 
     return ctx
 

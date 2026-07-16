@@ -210,6 +210,22 @@ def test_copilot_ctx_projects_knowledge(mi):
 # ── Task 3b negatives: everything optional is empty when undeclared ──────────
 
 
+def test_copilot_ctx_projects_workflow_chain(mi):
+    """The Copilot ``workflow.chain`` rides on the ctx as an ordered step list."""
+    from dna.emit import build_copilot_context
+
+    ctx = build_copilot_context(mi, "workflow-copilot", model="azure/gpt-4o")
+    assert ctx.workflow == ["triage", "retrieve", "resolve"]
+
+
+def test_copilot_ctx_workflow_empty_when_undeclared(mi):
+    """A copilot with no ``workflow`` block carries an empty chain (plain app)."""
+    from dna.emit import build_copilot_context
+
+    ctx = build_copilot_context(mi, "memory-copilot", model="azure/gpt-4o")
+    assert ctx.workflow == []
+
+
 def test_copilot_ctx_knowledge_optional(mi):
     """RAG is optional — a pure-action copilot carries no knowledge."""
     from dna.emit import build_copilot_context

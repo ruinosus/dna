@@ -15,8 +15,12 @@
 # Agent — a Copilot never re-declares them (the byte-equal instruction contract
 # stays intact: instructions come from the Agent, unchanged).
 #
-# NOTE: no ``workflow`` field — a workflow-shaped (MS Agent Framework) copilot
-# is deferred to Plan 3; the current scaffold is agent-framework-only.
+# The optional ``workflow`` field carries a multi-step step chain consumed ONLY
+# by the agent-framework (MS Agent Framework) target: when present the emitter
+# emits a ``WorkflowBuilder`` chain of the named steps plus a workflow-level
+# human-approval escalation node. A copilot with no ``workflow`` emits the plain
+# single-agent app (Agno or agent-framework). It is a per-target advanced option
+# (YAGNI for the core) and never re-declares persona/instructions.
 #
 # Like ``Tool`` (f-dna-tools-as-data), this is a record-plane descriptor — data,
 # not a class. It is NOT a prompt target and never composes into an agent
@@ -157,6 +161,22 @@ spec:
               type: string
             description: Starter prompts surfaced to the user in an empty
               console.
+      workflow:
+        type: object
+        additionalProperties: false
+        description: Optional multi-step workflow — agent-framework (MS Agent
+          Framework) target only. When present the emitter emits a
+          WorkflowBuilder chain of the named steps plus a workflow-level
+          human-approval escalation node; absent, a plain single-agent app is
+          emitted. A per-target advanced option (YAGNI for the core).
+        properties:
+          chain:
+            type: array
+            items:
+              type: string
+            description: Ordered workflow step ids. Each becomes a chained
+              agent-executor; the AG-UI adapter surfaces the id as the UI step
+              name.
   ui:
     mode: build
     label:
@@ -218,6 +238,13 @@ spec:
       help: Frontend console hints ({console, panels, suggested_prompts}).
       height: 180
       order: 60
+    workflow:
+      widget: code
+      language: yaml
+      label: Workflow
+      help: Optional agent-framework step chain ({chain}).
+      height: 120
+      order: 70
   graph_style:
     fill: '#8B5CF6'
     stroke: '#7C3AED'

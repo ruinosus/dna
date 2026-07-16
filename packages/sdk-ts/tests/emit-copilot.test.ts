@@ -154,6 +154,7 @@ describe("AgnoEmitter — the servable `copilot` case", () => {
       toolsRequiringConfirmation: new Set<string>(),
       tenantPropagate: false,
       knowledge: ["some-collection"], // copilot signal, no tenant/mcp/hitl
+      workflow: [],
     };
     const serving = new AgnoEmitter().emit(ctx).artifactFor("serving");
     expect(serving).not.toContain("TenantAGUI");
