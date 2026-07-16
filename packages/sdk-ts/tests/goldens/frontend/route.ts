@@ -13,14 +13,34 @@ import { buildAgent } from "@/lib/copilot/resume-adapter";
 // app (`uvicorn memory_agent_serve:app`); the agent is mounted at POST /agui.
 const BACKEND = process.env.DNA_BACKEND_URL ?? "http://localhost:8000";
 const AGENT_URL = process.env.DNA_AGENT_URL ?? `${BACKEND}/agui`;
-
+// Trusted server-to-server tenant headers — resolved HERE (the portal's server),
+// NEVER the browser — and stamped on the outbound request to the /agui backend,
+// which derives them into run-state. DNA tenancy has three dimensions:
+//   X-DNA-Tenant     the tenant (Entra `tid`)
+//   X-DNA-Workspace  the workspace id — a first-class DNA concept
+//                    (WorkspaceMembership, verified at the portal); resolves to
+//                    the scope `tenant-<workspace_id>` via `default_scope`
+//   X-Tenant-OID     the user `oid` (for `personal:<oid>` memory)
+// Mirrors DNA's own X-DNA-Tenant-Effective / X-DNA-Scope outbound convention.
+// Populate from your verified portal session — there is no license/namespace
+// dimension. (Env placeholders here; wire your session/token store at adoption.)
+function dnaTenantHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {};
+  const tenant = process.env.DNA_TENANT;
+  const workspace = process.env.DNA_WORKSPACE;
+  const oid = process.env.DNA_OID;
+  if (tenant) headers["X-DNA-Tenant"] = tenant;
+  if (workspace) headers["X-DNA-Workspace"] = workspace;
+  if (oid) headers["X-Tenant-OID"] = oid;
+  return headers;
+}
 // `default` is required — the v2 client falls back to it when a ready-made
 // component mounts without an explicit agentId. Both point at the one mounted
 // agent; memory-agent is also reachable by its explicit id.
 const runtime = new CopilotRuntime({
   agents: {
-    default: buildAgent(AGENT_URL),
-    "memory-agent": buildAgent(AGENT_URL),
+    default: buildAgent(AGENT_URL, dnaTenantHeaders()),
+    "memory-agent": buildAgent(AGENT_URL, dnaTenantHeaders()),
   },
 });
 

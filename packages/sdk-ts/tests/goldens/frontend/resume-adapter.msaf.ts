@@ -15,9 +15,10 @@ interface ResumeEntry {
   value?: unknown;
 }
 
-export function buildAgent(url: string): HttpAgent {
+export function buildAgent(url: string, headers?: Record<string, string>): HttpAgent {
   return new HttpAgent({
     url,
+    headers,
     fetch: async (input, init) => {
       if (init?.body && typeof init.body === "string") {
         try {
