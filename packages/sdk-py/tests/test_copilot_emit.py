@@ -463,3 +463,136 @@ def test_copilot_no_gate_when_no_confirmation_tools():
     # the docstring mentions the kwarg; assert the ASSIGNMENT is absent.
     assert "external_execution_required_tools=" not in agent
     assert _compiles(agent)
+
+
+# ── Task 4e: integration — the emitted app imports, mounts /agui, pauses/resumes ─
+#
+# Guarded by an agno import: the emit + golden slices above run with NO runtime
+# dep; this slice needs a live agno/ag-ui/fastapi/mcp/openai stack to IMPORT the
+# emitted app and drive a real run. It proves the emitted shape end-to-end and
+# that the external_execution pause/resume the emitted MCP-gate relies on behaves
+# exactly as Spike 0A + the aap-kb reference recorded.
+
+import sys as _sys
+
+
+def _write_and_import(copilot_ctx, tmp_path):
+    """Emit both artifacts to ``tmp_path`` and import them as real modules."""
+    import importlib
+
+    from dna.emit.agno import AgnoEmitter
+
+    res = AgnoEmitter().emit(copilot_ctx)
+    for a in res.artifacts:
+        (tmp_path / a.path).write_text(a.content, encoding="utf-8")
+    # module names = artifact paths minus the .py extension.
+    names = {a.role: a.path[:-3] for a in res.artifacts}
+    _sys.path.insert(0, str(tmp_path))
+    try:
+        for n in names.values():
+            _sys.modules.pop(n, None)
+        agent_mod = importlib.import_module(names["agent"])
+        serve_mod = importlib.import_module(names["serving"])
+        return agent_mod, serve_mod
+    finally:
+        _sys.path.remove(str(tmp_path))
+        for n in names.values():
+            _sys.modules.pop(n, None)
+
+
+def test_emitted_copilot_imports_and_mounts_agui(copilot_ctx, tmp_path):
+    """The emitted agent + serving modules import against real agno: build_agent
+    returns an Agno Agent whose MCP mount gates exactly the confirmation tools,
+    and the serving app is a FastAPI exposing POST /agui."""
+    pytest.importorskip("agno")
+    pytest.importorskip("ag_ui")
+    pytest.importorskip("fastapi")
+    pytest.importorskip("mcp")
+    pytest.importorskip("openai")
+    from agno.agent import Agent
+    from fastapi import FastAPI
+
+    agent_mod, serve_mod = _write_and_import(copilot_ctx, tmp_path)
+
+    # 1. the agent factory builds a real Agno Agent with the MCP gate wired.
+    agent = agent_mod.build_agent()
+    assert isinstance(agent, Agent)
+    mcp = agent.tools[0]
+    assert sorted(mcp.external_execution_required_tools) == ["forget", "remember"]
+
+    # 2. the serving app is a FastAPI mounting /agui, with the tenant hook.
+    assert isinstance(serve_mod.app, FastAPI)
+    assert "/agui" in serve_mod.app.openapi().get("paths", {})
+    assert hasattr(serve_mod, "TenantAGUI")
+    assert callable(serve_mod.tenant_from_request)
+
+
+def test_emitted_copilot_pauses_and_resumes_on_gate(tmp_path):
+    """The pause/resume shape the emitted MCP gate depends on, proven against real
+    agno with a stub model + a local ``external_execution`` tool (a live MCP
+    connection is out of scope). A ``remember`` turn PAUSES (RunStatus.paused,
+    tools_awaiting_external_execution == ['remember']); ``acontinue_run`` resumes
+    to completion — matching Spike 0A + aap-kb ``agui_hitl``."""
+    pytest.importorskip("agno")
+    pytest.importorskip("openai")
+    import asyncio
+
+    from agno.agent import Agent
+    from agno.db.in_memory import InMemoryDb
+    from agno.models.base import Model
+    from agno.models.response import ModelResponse
+    from agno.run.base import RunStatus
+    from agno.tools import tool
+
+    class _StubModel(Model):
+        """Emits a `remember` tool call on turn 1, a final answer on resume."""
+
+        def __init__(self) -> None:
+            super().__init__(id="stub")
+            self._calls = 0
+
+        async def ainvoke(self, *a, **k) -> ModelResponse:
+            self._calls += 1
+            if self._calls == 1:
+                return ModelResponse(role="assistant", tool_calls=[{
+                    "id": "call_1", "type": "function",
+                    "function": {"name": "remember", "arguments": '{"text": "buy milk"}'},
+                }])
+            return ModelResponse(role="assistant", content="Done — remembered.")
+
+        def invoke(self, *a, **k):  # pragma: no cover - non-stream unused
+            raise NotImplementedError
+
+        def invoke_stream(self, *a, **k):  # pragma: no cover
+            raise NotImplementedError
+
+        async def ainvoke_stream(self, *a, **k):  # pragma: no cover
+            raise NotImplementedError
+
+        def _parse_provider_response(self, r, **k):  # pragma: no cover
+            raise NotImplementedError
+
+        def _parse_provider_response_delta(self, r):  # pragma: no cover
+            raise NotImplementedError
+
+    @tool(external_execution=True)
+    def remember(text: str) -> str:
+        """Persist a note (gated — resolved outside the agent, like the remote MCP write)."""
+        return "stored"
+
+    async def _drive() -> None:
+        agent = Agent(model=_StubModel(), tools=[remember], db=InMemoryDb())
+        out = await agent.arun(input="remember buy milk", stream=False, session_id="s1")
+        assert out.status == RunStatus.paused
+        awaiting = [t.tool_name for t in out.tools_awaiting_external_execution]
+        assert awaiting == ["remember"]
+        for t in out.tools_awaiting_external_execution:
+            t.result = "stored ok"
+            t.external_execution_required = False
+        resumed = await agent.acontinue_run(
+            run_id=out.run_id, session_id="s1",
+            updated_tools=out.tools_awaiting_external_execution, stream=False,
+        )
+        assert resumed.status == RunStatus.completed
+
+    asyncio.run(_drive())
