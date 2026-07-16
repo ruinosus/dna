@@ -1,6 +1,6 @@
 # ADR: Provider-agnostic "act on behalf of the user" port for the DNA MCP server
 
-- **Status**: Proposed
+- **Status**: Accepted (2026-07-16 — Barna approved; §10 ratified to the recommended options)
 - **Date**: 2026-07-15
 - **Deciders**: Barna (owner/architect)
 - **Author**: claude-code
@@ -365,7 +365,16 @@ survives; the port is the socket the second plug goes into.
 
 ---
 
-## 10. Open decisions for Barna
+## 10. Decisions (ratified by Barna, 2026-07-16)
+
+Approved on every recommended option:
+1. **Provider-neutral tool names** (`calendar_list` with internal identity→provider dispatch); `ms_*` kept as an explicit alias.
+2. **Google via per-user OAuth** (auth-code + refresh) for v1; DWD supported by the port but not the default we build.
+3. **Identity→provider = the verified inbound provider** (Microsoft-signed-in → Microsoft, Google → Google); no per-tool provider arg.
+4. **One token = one provider in v1**; cross-provider fan-out/linking deferred (not designed away).
+5. **AWS is out** — no user productivity data; `AssumeRole` is infra identity (a different port if ever needed).
+
+### (original recommendations, for the record)
 
 1. **Neutral tool names vs provider-prefixed.** Recommend **provider-neutral
    `calendar_list` with internal identity→provider dispatch**, keeping `ms_*` as an
