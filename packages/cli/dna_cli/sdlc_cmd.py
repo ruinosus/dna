@@ -45,15 +45,28 @@ from dna_cli._ctx import (
 )
 
 
-DEFAULT_SCOPE = "dna-development"
-SDLC_API_VERSION = "github.com/ruinosus/dna/sdlc/v1"
-
-VALID_STORY_STATUS = (
-    "needs-triage", "todo", "in-progress", "review",
-    "done", "blocked", "deferred", "cancelled",
+# The SDLC write PRIMITIVES + enums live in the transport-agnostic core
+# ``dna.application.sdlc`` (adr-faces-reorg) so the CLI + the MCP server share ONE
+# write path — the doc envelope, the timeline event, the issue numbering, and the
+# valid-status enums are defined ONCE. The CLI imports them here and its thin
+# ``_build_raw`` / ``_append_timeline`` / ``_next_issue_number`` wrappers below
+# adapt them to the CLI's clock + actor + ``source="cli"``.
+from dna.application.sdlc import (  # noqa: E402, F401 — enums re-exported for back-compat
+    SDLC_API_VERSION,
+    VALID_EPIC_STATUS,
+    VALID_FEATURE_STATUS,
+    VALID_ISSUE_SEVERITY,
+    VALID_ISSUE_STATUS,
+    VALID_ISSUE_TYPE,
+    VALID_PRIORITIES,
+    VALID_STORY_STATUS,
+    append_event as _core_append_event,
+    build_raw as _core_build_raw,
+    next_issue_number as _core_next_issue_number,
 )
-VALID_FEATURE_STATUS = ("discovery", "in-development", "done", "cancelled", "blocked")
-VALID_EPIC_STATUS = ("planning", "in-progress", "done", "cancelled", "deprecated")
+
+DEFAULT_SCOPE = "dna-development"
+
 # Journey phases + methodologies — defined early because story/plan command
 # decorators (cmd_story_start, cmd_plan_create) reference them in click.Choice.
 VALID_JOURNEY_PHASES = ("discover", "specify", "plan", "build", "reflect")
@@ -61,9 +74,6 @@ VALID_JOURNEY_METHODOLOGIES = (
     "superpowers", "bmad", "spec-kit", "kiro",
     "rfc", "adr", "ad-hoc", "custom",
 )
-VALID_ISSUE_STATUS = ("open", "triaged", "in-progress", "resolved", "wont-fix", "duplicate")
-VALID_ISSUE_TYPE = ("bug", "enhancement", "question", "task")
-VALID_ISSUE_SEVERITY = ("low", "medium", "high", "critical")
 
 
 def _now_iso() -> str:
@@ -209,25 +219,14 @@ def review_pr_guard(
 def _append_timeline(spec: dict[str, Any], event_type: str, **fields: Any) -> None:
     """Append an event to ``spec.timeline[]`` (creates the list if absent).
 
-    Mutates ``spec`` in place. Stamps ``at`` (now), ``actor`` (env-driven),
-    ``type``, ``source: cli`` automatically; per-event extras come via
-    ``fields`` (e.g. ``from`` + ``to`` for status_change, ``fields`` dict
-    for groom).
-    """
-    timeline = list(spec.get("timeline", []) or [])
-    entry: dict[str, Any] = {
-        "at": _now_iso(),
-        "actor": _cli_actor(),
-        "type": event_type,
-        "source": "cli",
-    }
-    # Drop falsy extras so we don't stamp empty `from` when status was
-    # missing (a brand-new doc has no prior status).
-    for k, v in fields.items():
-        if v not in (None, "", [], {}):
-            entry[k] = v
-    timeline.append(entry)
-    spec["timeline"] = timeline
+    Thin CLI adapter over the shared core ``append_event`` — stamps ``at`` (now),
+    ``actor`` (env-driven), ``type``, ``source: cli`` and drops falsy extras
+    (byte-identical to the prior inline impl). The timeline-append logic itself
+    lives ONCE in ``dna.application.sdlc``, shared with the MCP write tools."""
+    _core_append_event(
+        spec, event_type,
+        now=_now_iso(), actor=_cli_actor(), source="cli", **fields,
+    )
 
 
 def _build_kaizen_event(
@@ -303,12 +302,9 @@ def _build_kaizen_doc_spec(
 
 
 def _build_raw(kind: str, name: str, spec: dict[str, Any]) -> dict[str, Any]:
-    return {
-        "apiVersion": SDLC_API_VERSION,
-        "kind": kind,
-        "metadata": {"name": name},
-        "spec": spec,
-    }
+    """The kernel document envelope — delegates to the shared core ``build_raw``
+    so the CLI + MCP write the SAME apiVersion + metadata shape."""
+    return _core_build_raw(kind, name, spec)
 
 
 # ─── Post-transition hook point ──────────────────────────────────────
@@ -792,7 +788,8 @@ def story_group() -> None:
     """Story-level operations."""
 
 
-VALID_PRIORITIES = ("highest", "high", "medium", "low", "lowest")
+# VALID_PRIORITIES is imported from the shared core (dna.application.sdlc) at the
+# top of this module — the single source of truth shared with the MCP write tools.
 
 
 def _csv(value: str | None) -> list[str] | None:
@@ -2004,17 +2001,11 @@ def cmd_story_groom(
 # ---------------------------------------------------------------------------
 
 def _next_issue_number(scope: str) -> int:
-    """Find the next available i-NNN number."""
+    """Find the next available i-NNN number — delegates the numbering to the shared
+    core ``next_issue_number`` (the same primitive the MCP ``create_issue`` uses)."""
     with dna_session(scope) as s:
         existing = [i.name for i in s.query_list("Issue")]
-    max_n = 0
-    for n in existing:
-        m = re.match(r"^i-(\d+)", n)
-        if m:
-            num = int(m.group(1))
-            if num > max_n:
-                max_n = num
-    return max_n + 1
+    return _core_next_issue_number(existing)
 
 
 @sdlc.group("feature")

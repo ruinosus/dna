@@ -52,9 +52,43 @@ class MemoryModeError(PermissionError):
     ``write``. The value is read straight from the ``Tier`` spec — never hardcoded."""
 
 
-# Memory access is a total order: none < read < write. A tool declares the level
-# it NEEDS (recall→read, remember/consolidate→write); the tier GRANTS a level.
-_MEMORY_MODE_RANK: dict[str, int] = {"none": 0, "read": 1, "write": 2}
+class SdlcModeError(PermissionError):
+    """The tier's ``sdlc_mode`` does not grant the attempted SDLC write op (403).
+
+    The SDLC twin of :class:`MemoryModeError`: the ``sdlc`` feature family is the
+    coarse gate (a tier either exposes the board tools or not); ``sdlc_mode`` is the
+    FINER read-vs-write split WITHIN it. Free grants ``read`` (sdlc_digest /
+    list_stories / get_adr); the board WRITE tools (create_story / create_issue /
+    set_status / comment / create_feature) need a tier whose ``sdlc_mode`` is
+    ``write`` (Pro). Read straight from the ``Tier`` spec — never hardcoded."""
+
+
+# An access level is a total order: none < read < write. A tool declares the level
+# it NEEDS; the tier GRANTS a level. Shared by the memory + sdlc mode gates.
+_ACCESS_MODE_RANK: dict[str, int] = {"none": 0, "read": 1, "write": 2}
+_MEMORY_MODE_RANK = _ACCESS_MODE_RANK  # back-compat alias.
+
+
+def _enforce_mode(
+    *, caps: dict[str, Any], tier: str, op: str, field: str,
+    label: str, error: type[PermissionError],
+) -> None:
+    """Gate one tool call against a tier's ``<field>`` access mode — the shared
+    read-vs-write refinement behind :func:`enforce_memory_mode` +
+    :func:`enforce_sdlc_mode`. Granted mode is READ from ``caps[field]`` (never
+    hardcoded); empty ``caps`` (OSS) enforces nothing; a missing mode on a
+    configured tier defaults to ``none`` (fail closed)."""
+    if not caps:
+        return  # unconfigured / OSS source → enforce nothing (mirror enforce_quota).
+    granted = str(caps.get(field) or "none")
+    have = _ACCESS_MODE_RANK.get(granted, 0)
+    need = _ACCESS_MODE_RANK.get(op, _ACCESS_MODE_RANK["write"])  # unknown op → strictest.
+    if have < need:
+        raise error(
+            f"tier {tier!r} grants {field}={granted!r}, which does not permit a "
+            f"{op!r} {label} operation — a write needs a tier whose {field} is "
+            f"'write' (upgrade the plan)."
+        )
 
 
 def enforce_memory_mode(*, caps: dict[str, Any], tier: str, op: str) -> None:
@@ -71,17 +105,22 @@ def enforce_memory_mode(*, caps: dict[str, Any], tier: str, op: str) -> None:
     :func:`enforce_quota` exactly, so the OSS/self-host path is never blocked. A
     missing ``memory_mode`` on a configured tier defaults to ``none`` (fail closed —
     the schema's own default), denying any memory op until the tier declares one."""
-    if not caps:
-        return  # unconfigured / OSS source → enforce nothing (mirror enforce_quota).
-    granted = str(caps.get("memory_mode") or "none")
-    have = _MEMORY_MODE_RANK.get(granted, 0)
-    need = _MEMORY_MODE_RANK.get(op, _MEMORY_MODE_RANK["write"])  # unknown op → strictest.
-    if have < need:
-        raise MemoryModeError(
-            f"tier {tier!r} grants memory_mode={granted!r}, which does not permit a "
-            f"{op!r} memory operation — a write (remember/consolidate) needs a tier "
-            f"whose memory_mode is 'write' (upgrade the plan)."
-        )
+    _enforce_mode(
+        caps=caps, tier=tier, op=op, field="memory_mode", label="memory",
+        error=MemoryModeError,
+    )
+
+
+def enforce_sdlc_mode(*, caps: dict[str, Any], tier: str, op: str) -> None:
+    """Gate one SDLC board **write** tool against the tier's ``sdlc_mode`` — the
+    SDLC twin of :func:`enforce_memory_mode`. Free grants ``read`` (the board is
+    listable/diffable); the write tools need ``sdlc_mode='write'`` (Pro). Read from
+    the ``Tier`` spec (zero hardcode); empty caps (OSS) enforce nothing; a missing
+    mode on a configured tier defaults to ``none`` (fail closed)."""
+    _enforce_mode(
+        caps=caps, tier=tier, op=op, field="sdlc_mode", label="sdlc",
+        error=SdlcModeError,
+    )
 
 
 # ── the store port (swap in Postgres/Redis for real billing) ───────────────

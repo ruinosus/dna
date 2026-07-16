@@ -38,9 +38,26 @@ DNA stores, plus resources:
   the composition a flat artifact cannot express.
 - `list_agents(scope?)` · `list_tools(scope?)` · `get_tool(name, scope?)`.
 
-**SDLC** — the self-describing board:
+**SDLC** — the self-describing board, **readable AND writable**:
 
-- `sdlc_digest(since?, scope?)` · `list_stories(status?, scope?)` · `get_adr(name, scope?)`.
+- _Read_: `sdlc_digest(since?, scope?)` · `list_stories(status?, scope?)` ·
+  `get_adr(name, scope?)`.
+- _Write_ (the dogfood loop — an agent creates + manages the board over its own
+  interface): `create_story(name, feature, description, title?, priority?,
+  labels?, ac?, dod?, scope?)` · `create_issue(slug, description, type?,
+  severity?, feature?, scope?)` · `set_status(kind, name, status, reason?,
+  scope?)` · `comment(kind, name, body, type?, scope?)` · `create_feature(name,
+  title, description, epic?, priority?, labels?, scope?)`.
+
+The write tools reuse the **same core** the `dna sdlc` CLI writes through
+(`dna.application.sdlc` → `kernel.write_document`, so cache invalidation, hooks +
+schema validation all fire) — one write path, two faces. `set_status` refuses a
+status that is not valid for the Kind (Story: `todo`/`in-progress`/`review`/`done`/
+`blocked`; Issue: `open`/`triaged`/`resolved`; Feature: `discovery`/
+`in-development`/`done`). Over an authenticated server the write tools are gated by
+the tier's `sdlc_mode` — **Free = read** (the board is listable), **Pro = write**
+(create/transition/comment); the stdio / local (no-token) path is unmetered and
+unrestricted, exactly like `remember`.
 
 **Memory** — declarative recall:
 
@@ -104,8 +121,20 @@ DNA. For example, composing an agent's prompt live and tenant-aware:
 //     "model": "azure/gpt-4o", "prompt": "You are the Helpdesk Concierge …" }
 ```
 
-The same server answers `sdlc_digest`, `list_stories`, `get_adr` (the board) and
-`recall` (the memory) — one server, everything DNA stores.
+The same server answers `sdlc_digest`, `list_stories`, `get_adr` (read the board),
+`create_story` / `set_status` / `comment` (write the board) and `recall` (the
+memory) — one server, everything DNA stores. For example, filing a Story straight
+from an agent:
+
+```jsonc
+// tool: create_story
+{ "name": "s-add-dark-mode", "feature": "f-theming",
+  "description": "Add a dark-mode toggle to the settings panel",
+  "ac": ["Given the toggle, when flipped, the theme persists across reloads"],
+  "dod": ["Merged + covered by a test"] }
+// → { "kind": "Story", "name": "s-add-dark-mode", "status": "todo",
+//     "feature": "f-theming" }
+```
 
 ## Remote + authenticated (Phase 2)
 

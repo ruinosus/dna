@@ -95,6 +95,7 @@ TIMELINE_TYPES = (
 TIMELINE_SOURCES = (
     "cli",                       # dna sdlc story {start,done,...}
     "studio",                    # Studio drawer save
+    "mcp",                       # a write TOOL on the DNA MCP server (f-mcp-sdlc-write)
     "agent-session-extracted",    # extractor pass over a captured session
     "system",                    # auto-stamping that isn't user-attributable
 )

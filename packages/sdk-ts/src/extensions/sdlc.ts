@@ -72,7 +72,7 @@ const TIMELINE_TYPES = [
   "status_change", "groom", "comment", "decision", "artifact_produced",
 ] as const;
 const TIMELINE_SOURCES = [
-  "cli", "studio", "agent-session-extracted", "system",
+  "cli", "studio", "mcp", "agent-session-extracted", "system",
 ] as const;
 
 // produces[] — a work item is a HUB of the artifacts it produced, of ANY

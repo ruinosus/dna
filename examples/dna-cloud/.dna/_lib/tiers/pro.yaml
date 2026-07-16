@@ -15,5 +15,6 @@ spec:
   - memory
   - emit
   memory_mode: write
+  sdlc_mode: write
   overage_per_1k_usd: 2
   sla: false

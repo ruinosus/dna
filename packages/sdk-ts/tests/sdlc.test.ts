@@ -299,7 +299,7 @@ describe("SdlcExtension — TS parity with Python", () => {
       expect(tl.items.properties.type.description).toContain(name);
     }
     expect(tl.items.properties.source.enum).toEqual([
-      "cli", "studio", "agent-session-extracted", "system",
+      "cli", "studio", "mcp", "agent-session-extracted", "system",
     ]);
   });
 
