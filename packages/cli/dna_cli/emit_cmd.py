@@ -23,7 +23,9 @@ from dna_cli._ctx import dna_session, fail, print_json
 @click.command("emit", help="Emit a DNA agent as a target runtime's native artifact (the de-para).")
 @click.argument("agent", required=False)
 @click.option("--target", "-t", default=None,
-              help="Runtime to emit for (e.g. agent-framework). See --list-targets.")
+              help="Runtime to emit for (e.g. agent-framework). See --list-targets. "
+                   "When AGENT is a Copilot, picks the servable runtime "
+                   "(agno default; agent-framework; langgraph).")
 @click.option("--scope", default=None, help="Scope holding the agent (default: env / sole scope).")
 @click.option("--out", "-o", "out_path", default=None,
               help="Write the artifact to this file instead of stdout.")
@@ -52,6 +54,7 @@ def emit(agent, target, scope, out_path, model, provider, list_targets, as_infra
       dna emit concierge-grounded --target agent-framework
       dna emit triage -t agent-framework --scope support --out triage.agent.yaml
       dna emit greeter -t agent-framework --model openai:gpt-4o-mini
+      dna emit memory-copilot --target agno --out app/         # servable copilot (agent+serving)
       dna emit memory-copilot --infra --out infra/            # Terraform tfvars.json
       dna emit hosted-copilot --hosting --out hosted/         # Foundry hosted-variant files
     """
@@ -75,12 +78,27 @@ def emit(agent, target, scope, out_path, model, provider, list_targets, as_infra
 
     if not agent:
         raise fail("missing AGENT argument (or pass --list-targets)")
-    if not target:
-        raise fail("missing --target (see `dna emit --list-targets`)")
 
     with dna_session(scope) as s:
+        # Copilot vs Agent routing (i-033-dna-emit-copilot-cli): a name that
+        # resolves to a `Copilot` Kind is a SERVABLE app (mounted agent + AG-UI
+        # serve layer) — route it through `build_copilot_context` → the target's
+        # copilot case (agno / agent-framework / langgraph emit `agent`+`serving`).
+        # An Agent name keeps the original single-artifact path unchanged.
+        is_copilot = s.mi._one("Copilot", agent) is not None
         try:
-            result = emit_agent(s.mi, agent, target, model=model, provider=provider)
+            if is_copilot:
+                from dna.emit import build_copilot_context, get_emitter
+
+                # agno is the reference servable-copilot runtime → the default
+                # target when a Copilot is emitted without an explicit --target.
+                emitter = get_emitter(target or "agno")
+                ctx = build_copilot_context(s.mi, agent, model=model, provider=provider)
+                result = emitter.emit(ctx)
+            else:
+                if not target:
+                    raise fail("missing --target (see `dna emit --list-targets`)")
+                result = emit_agent(s.mi, agent, target, model=model, provider=provider)
         except UnknownTarget as e:
             raise fail(str(e)) from None
         except EmitError as e:
@@ -125,11 +143,11 @@ def emit(agent, target, scope, out_path, model, provider, list_targets, as_infra
 
     if multi:
         click.secho(
-            f"Emitted {agent} → {target}: {len(result.artifacts)} files under {out_path}/",
+            f"Emitted {agent} → {result.target}: {len(result.artifacts)} files under {out_path}/",
             fg="green",
         )
     elif out_path:
-        click.secho(f"Emitted {agent} → {target}: {out_path}", fg="green")
+        click.secho(f"Emitted {agent} → {result.target}: {out_path}", fg="green")
     else:
         click.echo(result.artifact, nl=False)
     # The de-para is honest about what did NOT survive — always surfaced (stderr,

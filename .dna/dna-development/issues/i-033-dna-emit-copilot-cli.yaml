@@ -1,0 +1,19 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-033-dna-emit-copilot-cli
+spec:
+  description: dna emit <agent> emits a single-agent stub, not the servable copilot
+    app. Expose the copilot emit (build_copilot_context -> target copilot case, multi-artifact
+    agent+serving[+frontend/infra]) as a CLI command so consumers don't call the SDK
+    seam directly.
+  type: task
+  severity: medium
+  status: open
+  related_feature: f-dna-copilot-emitter
+  timeline:
+  - at: '2026-07-16T18:56:47+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

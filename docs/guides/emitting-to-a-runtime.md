@@ -409,6 +409,46 @@ DNA prompt is a **prefix** of the effective system prompt, not the whole of it; 
 carried. Plus the **tool body** stub and the same model-coordinate convention as
 LangGraph (unbound falls back to the deep-agent default model).
 
+## Emitting a servable Copilot
+
+Everything above emits a **single agent** — one artifact the target runtime
+consumes. A `Copilot` is one step up: a *binder* that mounts an agent and adds the
+copilot-level concerns (MCP servers, an inbound-tenant policy, a HITL write-gate,
+RAG collections). Emitting a Copilot produces a **servable app** — not a stub —
+so the same `dna emit` command routes it differently: when the name resolves to a
+`Copilot` Kind, DNA composes it through `build_copilot_context` and emits the
+target's **copilot case** (a two-artifact output: the `agent` module + an AG-UI
+`serving` app exposing `/agui`).
+
+```console
+$ dna emit memory-copilot --target agno --out app/
+Emitted memory-copilot → agno: 2 files under app/
+# app/memory_agent.py        — build_agent() factory + MCP mounts + HITL write-gate
+# app/memory_agent_serve.py  — Agno AgentOS serving the mounted agent over /agui
+```
+
+Because a copilot is multi-artifact, `--out` is a **directory** (it writes N
+files), exactly like `--infra` / `--hosting`. `--target` picks the servable
+runtime — **`agno`** (the default when `--target` is omitted), `agent-framework`,
+or `langgraph`; each emits its own `agent` + `serving` pair from the *same*
+Copilot source:
+
+```console
+$ dna emit memory-copilot --target langgraph --out app/   # same source, LangGraph app
+$ dna emit memory-copilot --out app/                      # no --target → agno
+```
+
+A name that is an **Agent** (not a Copilot) keeps the original single-artifact
+path unchanged — the routing is by Kind, so nothing about the agent emits above
+shifts. The `--infra`, `--hosting` (and the Terraform / Foundry paths documented
+in the [Copilot hosting](copilot-hosting.md) and
+[infra-binding](copilot-infra-binding.md) guides) flags then add the deployment
+artifacts alongside the servable app.
+
+> Before this command, a consumer that wanted the servable app had to call the SDK
+> seam (`build_copilot_context(...)`) directly — `dna emit <copilot>` closes that
+> gap so the copilot app is a first-class CLI artifact like every single-agent emit.
+
 ## Adding a new target
 
 Targets are a **registry, not a hardcode** — a new one is a class + one call, and

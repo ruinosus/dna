@@ -222,6 +222,81 @@ def test_emit_multi_artifact_requires_out_dir(runner):
     assert r.exit_code != 0
 
 
+def test_emit_copilot_agno_writes_agent_and_serving(runner, tmp_path):
+    """`dna emit <copilot> --target agno --out DIR` routes a Copilot Kind through
+    `build_copilot_context` → the agno copilot case, producing the SERVABLE
+    two-artifact app: the `agent` module + the AG-UI `serving` app
+    (i-033-dna-emit-copilot-cli)."""
+    out_dir = tmp_path / "app"
+    r = _run(runner, "memory-copilot", "--target", "agno", "--scope", "concierge",
+             "--out", str(out_dir))
+    assert r.exit_code == 0, r.output
+    # The mounted agent (memory-agent) → module `memory_agent`.
+    agent_mod = out_dir / "memory_agent.py"
+    serve_mod = out_dir / "memory_agent_serve.py"
+    assert agent_mod.exists()
+    assert serve_mod.exists()
+    # The agent module carries the byte-equal composed prompt as INSTRUCTIONS …
+    assert "INSTRUCTIONS = " in agent_mod.read_text()
+    assert "def build_agent(" in agent_mod.read_text()
+    # … and the serving module is the AG-UI (`/agui`) serve app.
+    serve_src = serve_mod.read_text()
+    assert "/agui" in serve_src
+    assert "AgentOS" in serve_src
+    assert "2 files" in r.output
+
+
+def test_emit_copilot_default_target_is_agno(runner, tmp_path):
+    """A Copilot emitted without an explicit --target defaults to the agno
+    servable runtime (agent-framework / langgraph are the other choices)."""
+    out_dir = tmp_path / "app"
+    r = _run(runner, "memory-copilot", "--scope", "concierge", "--out", str(out_dir))
+    assert r.exit_code == 0, r.output
+    assert (out_dir / "memory_agent.py").exists()
+    assert (out_dir / "memory_agent_serve.py").exists()
+    assert "→ agno" in r.output
+
+
+def test_emit_copilot_json_lists_agent_and_serving_roles(runner, tmp_path):
+    """The --json view of a copilot emit surfaces both artifacts with their
+    semantic roles (`agent` + `serving`) and the resolved target."""
+    out_dir = tmp_path / "app"
+    r = _run(runner, "memory-copilot", "--target", "agno", "--scope", "concierge",
+             "--json", "--out", str(out_dir))
+    assert r.exit_code == 0, r.output
+    payload = json.loads(r.output)
+    assert payload["target"] == "agno"
+    roles = {a["role"] for a in payload["artifacts"]}
+    assert {"agent", "serving"} <= roles
+
+
+def test_emit_copilot_langgraph_target(runner, tmp_path):
+    """`--target langgraph` picks the LangGraph servable runtime for the SAME
+    copilot — the same source, a different runtime (portability via the CLI)."""
+    out_dir = tmp_path / "app"
+    r = _run(runner, "memory-copilot", "--target", "langgraph", "--scope", "concierge",
+             "--out", str(out_dir))
+    assert r.exit_code == 0, r.output
+    assert (out_dir / "memory_agent.py").exists()
+    assert (out_dir / "memory_agent_serve.py").exists()
+    assert "→ langgraph" in r.output
+
+
+def test_emit_agent_name_keeps_single_artifact_path(runner):
+    """A name that is an Agent (not a Copilot) takes the original single-artifact
+    path unchanged — the copilot routing must not disturb the agent emit."""
+    r = _run(runner, "concierge", "--target", "agent-framework", "--scope", "concierge")
+    assert r.exit_code == 0, r.output
+    doc = yaml.safe_load(r.output)
+    assert doc["kind"] == "Prompt"
+
+
+def test_emit_unknown_name_fails_clearly(runner):
+    """A name that resolves to neither a Copilot nor an Agent fails clearly."""
+    r = _run(runner, "no-such-thing", "--target", "agno", "--scope", "concierge")
+    assert r.exit_code != 0
+
+
 def test_unknown_target_fails(runner):
     r = _run(runner, "concierge", "-t", "no-such-runtime", "--scope", "concierge")
     assert r.exit_code != 0
