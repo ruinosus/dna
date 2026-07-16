@@ -1130,3 +1130,304 @@ def test_frontend_backend_emit_still_two_artifacts(fe_ctx):
 
     res = AgnoEmitter().emit(fe_ctx)
     assert {a.role for a in res.artifacts} == {"agent", "serving"}
+
+
+# ── Chunk 7 · the LangGraph `copilot` scaffold case ──────────────────────────
+#
+# The THIRD per-runtime copilot scaffold case (f-copilot-langgraph-target):
+# ``build_copilot_context`` (the SAME ctx the Agno + MS-AF cases read) →
+# ``LanggraphEmitter().emit(ctx)`` renders TWO artifacts — an ``agent`` module (a
+# ``StateGraph`` compiled to an AG-UI-native CoAgent: the ``MultiServerMCPClient``
+# + ``ToolNode`` MCP mount, the graph-enforced ``interrupt()`` HITL write-gate, and
+# the tenant carried IN the graph state) and a ``serving`` module (the AG-UI
+# LangGraph adapter → ``/agui``). A Copilot that declares a ``workflow.chain``
+# emits the chain AS graph nodes + edges (LangGraph is graph-native — the cleanest
+# workflow shape) with an appended ``interrupt()`` review node. Byte-equal goldens
+# govern both. This makes it 3 runtime targets — the emitter fully runtime-agnostic.
+
+
+@pytest.fixture()
+def lg_ctx(mi):
+    from dna.emit import build_copilot_context
+
+    return build_copilot_context(
+        mi, "memory-copilot", model="azure/gpt-4o", provider="azure"
+    )
+
+
+@pytest.fixture()
+def lg_workflow_ctx(mi):
+    from dna.emit import build_copilot_context
+
+    return build_copilot_context(
+        mi, "workflow-copilot", model="azure/gpt-4o", provider="azure"
+    )
+
+
+# ── agent + /agui serving (mirrors the Agno + MS-AF two-artifact shape) ──────
+
+
+def test_lg_copilot_is_two_artifacts(lg_ctx):
+    from dna.emit.langgraph import LanggraphEmitter
+
+    res = LanggraphEmitter().emit(lg_ctx)
+    assert {a.role for a in res.artifacts} == {"agent", "serving"}
+    assert res.target == "langgraph"
+    paths = {a.role: a.path for a in res.artifacts}
+    assert paths["agent"] == "memory_agent.py"
+    assert paths["serving"] == "memory_agent_serve.py"
+
+
+def test_lg_copilot_agent_matches_golden(lg_ctx):
+    from dna.emit.langgraph import LanggraphEmitter
+
+    res = LanggraphEmitter().emit(lg_ctx)
+    assert res.artifact_for("agent") == read_golden("langgraph/copilot_agent.py")
+
+
+def test_lg_copilot_serving_matches_golden(lg_ctx):
+    from dna.emit.langgraph import LanggraphEmitter
+
+    res = LanggraphEmitter().emit(lg_ctx)
+    assert res.artifact_for("serving") == read_golden("langgraph/copilot_serve.py")
+
+
+def test_lg_copilot_carries_instructions_byte_equal(lg_ctx):
+    """The byte-equal invariant, recovered via the inherited scaffold method off the
+    ``role="agent"`` artifact — the mounted agent's composed prompt, verbatim."""
+    from dna.emit.langgraph import LanggraphEmitter
+
+    em = LanggraphEmitter()
+    res = em.emit(lg_ctx)
+    assert em.extract_instructions(res.artifact_for("agent")) == lg_ctx.instructions
+
+
+def test_lg_copilot_artifacts_compile(lg_ctx):
+    from dna.emit.langgraph import LanggraphEmitter
+
+    res = LanggraphEmitter().emit(lg_ctx)
+    assert _compiles(res.artifact_for("agent"))
+    assert _compiles(res.artifact_for("serving"))
+
+
+def test_lg_copilot_agent_builds_stategraph(lg_ctx):
+    """The runtime-delta vs Agno/MS-AF: a `StateGraph` compiled to a CoAgent (not
+    `Agent(...)` / `as_agent(...)`)."""
+    from dna.emit.langgraph import LanggraphEmitter
+
+    agent = LanggraphEmitter().emit(lg_ctx).artifact_for("agent")
+    assert "from langgraph.graph import END, START, StateGraph" in agent
+    assert "graph = StateGraph(State)" in agent
+    assert "return graph.compile(checkpointer=MemorySaver())" in agent
+    assert "def build_agent():" in agent
+
+
+def test_lg_copilot_serving_exposes_agui(lg_ctx):
+    """The serving artifact mounts the AG-UI endpoint via the LangGraph adapter
+    `add_langgraph_fastapi_endpoint` (the CopilotKit CoAgent serving)."""
+    from dna.emit.langgraph import LanggraphEmitter
+
+    serving = LanggraphEmitter().emit(lg_ctx).artifact_for("serving")
+    assert "from ag_ui_langgraph import LangGraphAgent, add_langgraph_fastapi_endpoint" in serving
+    assert "add_langgraph_fastapi_endpoint(" in serving
+    assert "agent=LangGraphAgent(name='memory-agent', graph=build_agent())," in serving
+    assert 'path="/agui",' in serving
+    assert "from memory_agent import build_agent" in serving
+
+
+# ── MCP mount (MultiServerMCPClient + ToolNode vs MCPStreamableHTTPTool) ─────
+
+
+def test_lg_copilot_mounts_mcp_via_multiserver_client(lg_ctx):
+    from dna.emit.langgraph import LanggraphEmitter
+
+    agent = LanggraphEmitter().emit(lg_ctx).artifact_for("agent")
+    assert "from langchain_mcp_adapters.client import MultiServerMCPClient" in agent
+    assert "from langgraph.prebuilt import ToolNode" in agent
+    assert "def _mcp_client() -> MultiServerMCPClient:" in agent
+    assert "'mcp_dna-mcp': {" in agent
+    assert '"url": \'https://mcp.dna.example/agui\',' in agent
+    assert '"transport": "streamable_http",' in agent
+    assert "ToolNode(await _mcp_client().get_tools())" in agent
+
+
+# ── graph-enforced HITL (interrupt() vs approval_mode / external_execution) ──
+
+
+def test_lg_copilot_hitl_via_interrupt(lg_ctx):
+    """The runtime-delta for HITL: LangGraph's graph-enforced `interrupt()` review
+    node gated on the confirmation tools (the native equivalent of Agno's
+    `external_execution` / MS-AF's `request_info`)."""
+    from dna.emit.langgraph import LanggraphEmitter
+
+    assert lg_ctx.tools_requiring_confirmation == {"remember", "forget"}
+    agent = LanggraphEmitter().emit(lg_ctx).artifact_for("agent")
+    assert "from langgraph.types import interrupt" in agent
+    assert "_CONFIRM_TOOLS = ['forget', 'remember']" in agent
+    assert "def _review_node(state: State) -> dict:" in agent
+    assert 'interrupt({"awaiting_approval": gated})' in agent
+    # the review node is wired into the graph, gated by _route.
+    assert 'graph.add_node("review", _review_node)' in agent
+    assert 'return "review"' in agent
+
+
+def test_lg_copilot_no_gate_no_interrupt():
+    """An MCP copilot with no confirmation-gated tools emits NO interrupt/review
+    machinery — just the plain ReAct loop over the tool node."""
+    from dna.emit import EmitContext, EmitMcpServer
+    from dna.emit.langgraph import LanggraphEmitter
+
+    ctx = EmitContext(
+        name="reader",
+        description="",
+        instructions="Read only.",
+        model="azure/gpt-4o",
+        mcp_servers=[EmitMcpServer(ref="dna-mcp", transport="streamable-http",
+                                   url="https://mcp.example/agui", allowed_tools=["recall"])],
+        tools_requiring_confirmation=set(),
+    )
+    agent = LanggraphEmitter().emit(ctx).artifact_for("agent")
+    assert "interrupt" not in agent
+    assert "_review_node" not in agent
+    assert "_CONFIRM_TOOLS" not in agent
+    # still a real ReAct graph over the MCP tools.
+    assert "def _tool_node(state: State) -> dict:" in agent
+    assert _compiles(agent)
+
+
+# ── inbound-tenant derivation (ContextVar → graph state, DNA-native only) ────
+
+
+def test_lg_copilot_derives_inbound_tenant_dna_native(lg_ctx):
+    """When `ctx.tenant_propagate` is set the agent module carries the tenant IN the
+    graph state (`State.tenant`), seeded from a request-scoped ContextVar the serving
+    middleware sets, and stamps the DNA-native tenant headers ONLY (`X-DNA-Tenant` +
+    `X-DNA-Workspace` + `X-Tenant-OID`) on outbound MCP calls — no license/namespace."""
+    from dna.emit.langgraph import LanggraphEmitter
+
+    assert lg_ctx.tenant_propagate is True
+    res = LanggraphEmitter().emit(lg_ctx)
+    agent = res.artifact_for("agent")
+    serving = res.artifact_for("serving")
+    # tenant carried IN graph state (the LangGraph-native carrier).
+    assert "class State(TypedDict):" in agent
+    assert "tenant: dict" in agent
+    assert 'tenant = state.get("tenant") or _CURRENT_TENANT.get()' in agent
+    assert '"messages": [reply], "tenant": tenant' in agent
+    # ContextVar bridge for the outbound MCP headers.
+    assert "contextvars.ContextVar" in agent
+    assert "def _tenant_headers() -> dict:" in agent
+    assert '"X-DNA-Tenant"' in agent
+    assert '"X-DNA-Workspace"' in agent
+    assert '"X-Tenant-OID"' in agent
+    # the serving layer sets the ContextVar from inbound headers via middleware.
+    assert '@app.middleware("http")' in serving
+    assert "set_request_tenant(tenant_from_headers(request.headers))" in serving
+    # app-specific tenant dimensions must NOT leak (DNA-native only).
+    for forbidden in ("X-DNA-License-ID", "X-DNA-Namespace-ID", "license_id", "namespace_id"):
+        assert forbidden not in agent
+        assert forbidden not in serving
+
+
+def test_lg_copilot_no_tenant_machinery_when_not_propagated():
+    """A knowledge-only copilot signal with `tenant_propagate=False` emits no
+    ContextVar/middleware — just the plain single-agent graph."""
+    from dna.emit import EmitContext
+    from dna.emit.langgraph import LanggraphEmitter
+
+    ctx = EmitContext(
+        name="kb-copilot",
+        description="",
+        instructions="Answer from the KB.",
+        model="azure/gpt-4o",
+        knowledge=["some-collection"],  # copilot signal, but no tenant/mcp/hitl
+        tenant_propagate=False,
+    )
+    res = LanggraphEmitter().emit(ctx)
+    agent = res.artifact_for("agent")
+    serving = res.artifact_for("serving")
+    assert "contextvars" not in agent
+    assert "_tenant_headers" not in agent
+    assert "middleware" not in serving
+    assert "graph=build_agent())," in serving
+    assert _compiles(agent)
+    assert _compiles(serving)
+
+
+# ── workflow capability (graph nodes + edges + interrupt() review node) ──────
+
+
+def test_lg_workflow_agent_matches_golden(lg_workflow_ctx):
+    from dna.emit.langgraph import LanggraphEmitter
+
+    res = LanggraphEmitter().emit(lg_workflow_ctx)
+    assert res.artifact_for("agent") == read_golden(
+        "langgraph/copilot_workflow_agent.py"
+    )
+
+
+def test_lg_workflow_serving_matches_golden(lg_workflow_ctx):
+    from dna.emit.langgraph import LanggraphEmitter
+
+    res = LanggraphEmitter().emit(lg_workflow_ctx)
+    assert res.artifact_for("serving") == read_golden(
+        "langgraph/copilot_workflow_serve.py"
+    )
+
+
+def test_lg_workflow_emits_graph_node_chain(lg_workflow_ctx):
+    """The declared `workflow.chain` becomes graph nodes + linear edges — LangGraph
+    IS the graph, so the chain is `add_node`/`add_edge` directly (the cleanest
+    workflow target of the three), with the review node appended."""
+    from dna.emit.langgraph import LanggraphEmitter
+
+    assert lg_workflow_ctx.workflow == ["triage", "retrieve", "resolve"]
+    agent = LanggraphEmitter().emit(lg_workflow_ctx).artifact_for("agent")
+    assert "async def _triage_node(state: State) -> dict:" in agent
+    assert "async def _retrieve_node(state: State) -> dict:" in agent
+    assert "async def _resolve_node(state: State) -> dict:" in agent
+    assert "def build_workflow():" in agent
+    assert "graph.add_node('triage', _triage_node)" in agent
+    assert "graph.add_edge(START, 'triage')" in agent
+    assert "graph.add_edge('triage', 'retrieve')" in agent
+    assert "graph.add_edge('retrieve', 'resolve')" in agent
+    assert "graph.add_edge('resolve', 'review')" in agent
+    assert "graph.add_edge('review', END)" in agent
+
+
+def test_lg_workflow_level_hitl_interrupt(lg_workflow_ctx):
+    """Workflow-level HITL: a dedicated `interrupt()` review node appended to the
+    graph chain (the LangGraph-native equivalent of MS-AF's `request_info`
+    escalation node) — no per-tool gate on the ReAct loop."""
+    from dna.emit.langgraph import LanggraphEmitter
+
+    agent = LanggraphEmitter().emit(lg_workflow_ctx).artifact_for("agent")
+    assert "def _review_node(state: State) -> dict:" in agent
+    assert 'interrupt({"awaiting_approval": summary})' in agent
+    assert 'graph.add_node("review", _review_node)' in agent
+    # workflow-level gate → no single-agent ReAct _route / _CONFIRM_TOOLS.
+    assert "_CONFIRM_TOOLS" not in agent
+    assert "def _route(" not in agent
+
+
+def test_lg_workflow_serving_mounts_workflow(lg_workflow_ctx):
+    from dna.emit.langgraph import LanggraphEmitter
+
+    serving = LanggraphEmitter().emit(lg_workflow_ctx).artifact_for("serving")
+    assert "from memory_agent import build_workflow" in serving
+    assert "graph=build_workflow())," in serving
+    assert "mounted workflow" in serving
+
+
+def test_lg_plain_agent_still_single_module(mi):
+    """Back-compat: a plain agent (no copilot signals) stays the single-artifact
+    `create_react_agent` scaffold — the copilot routing does not disturb the base
+    LangGraph path."""
+    from dna.emit import emit_agent
+
+    res = emit_agent(mi, "concierge", "langgraph")
+    assert [a.role for a in res.artifacts] == ["agent"]
+    assert res.filename.endswith(".py")
+    assert "create_react_agent(" in res.artifact
+    assert "StateGraph" not in res.artifact
+    assert "add_langgraph_fastapi_endpoint" not in res.artifact

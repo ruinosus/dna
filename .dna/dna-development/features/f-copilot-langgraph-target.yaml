@@ -1,0 +1,45 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Feature
+metadata:
+  name: f-copilot-langgraph-target
+spec:
+  title: LangGraph scaffold case (3rd copilot runtime target)
+  description: "Absorption phase 4c. A THIRD per-runtime copilot scaffold case (LangGraph:\
+    \ StateGraph compiled graph + AG-UI CoAgent serving + interrupt() graph-enforced\
+    \ HITL + graph-state tenant), from the SAME build_copilot_context that drives\
+    \ the Agno + MS-AF cases. Proves the emitter is fully runtime-agnostic across\
+    \ 3 runtimes. Workflow.chain maps to graph nodes (LangGraph is graph-native \u2014\
+    \ the cleanest workflow target). Byte-equal Py/TS goldens (single-agent + workflow),\
+    \ brand-guard clean. Mirrors f-copilot-agentframework-target."
+  status: in-development
+  epic: e-dna-copilot-absorption
+  reporter: claude-code
+  priority: medium
+  labels:
+  - copilot
+  - langgraph
+  - emitter
+  - absorption
+  business_value: 550
+  created_at: '2026-07-16T14:59:08+00:00'
+  updated_at: '2026-07-16T15:25:15+00:00'
+  timeline:
+  - at: '2026-07-16T14:59:08+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: discovery
+  - at: '2026-07-16T14:59:23+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: discovery
+    to: in-development
+  narrative_line: "LangGraph copilot scaffold case (3rd runtime target) \u2014 StateGraph\
+    \ CoAgent + AG-UI adapter serving + graph-enforced interrupt() HITL + graph-state\
+    \ tenant, from the SAME build_copilot_context as Agno + MS-AF. workflow.chain\
+    \ \u2192 graph nodes (cleanest workflow target \u2014 LangGraph is graph-native).\
+    \ Byte-identical Py/TS templates + per-language goldens (single-agent + workflow);\
+    \ 109 sdk-py + 1680 bun tests green, tsc clean, brand-guard clean. Emitter now\
+    \ fully runtime-agnostic across 3 runtimes. Branch feat/copilot-langgraph-target\
+    \ pushed."
