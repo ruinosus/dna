@@ -17,11 +17,13 @@
  * state, membership, workspace-plan) — is reachable through {@link DnaClient.raw},
  * the underlying `openapi-fetch` client, with the same generated types.
  *
- * NOTE ON RETURN TYPES: every DNA REST handler returns an untyped JSON object
- * (`dict[str, Any]`), so the OpenAPI response schemas are opaque
- * (`Record<string, unknown>`). Request inputs (query/path/body) ARE strongly
- * typed; response bodies are `unknown`-shaped and documented per method. Tighten
- * the API's response models to tighten these for free.
+ * RETURN TYPES: each `/v1/*` handler declares a Pydantic `response_model`, so the
+ * OpenAPI response schemas — and these methods' return types, inferred through
+ * `openapi-fetch` from the generated `schema.ts` — carry the real payload shape
+ * (e.g. `listAgents()` → `{ scope, agents: { name, kind, description }[] }`).
+ * Genuinely dynamic payloads stay loose by design: a memory recall `hit`, a
+ * Document `spec`, an SDLC work-item's verbatim AC/DoD/timeline lists, and
+ * status→count maps are typed as open records/`unknown`.
  */
 import createClient, { type Client } from "openapi-fetch";
 import type { paths } from "./schema.js";
