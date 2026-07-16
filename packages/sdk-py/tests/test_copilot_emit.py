@@ -240,3 +240,359 @@ def test_copilot_ctx_tenant_default_false_when_undeclared(mi):
 
     ctx = build_copilot_context(mi, "pure-action-copilot", model="azure/gpt-4o")
     assert ctx.tenant_propagate is False
+
+
+# ── Chunk 4 · the Agno `copilot` scaffold case ──────────────────────────────
+#
+# ``build_copilot_context`` (Chunk 3) → ``AgnoEmitter().emit(ctx)`` renders TWO
+# artifacts: a ``role="agent"`` module (the ``build_agent`` factory + MCP mount +
+# the HITL write-gate) and a ``role="serving"`` module (Agno AgentOS exposing
+# ``/agui`` + inbound-tenant derivation). Byte-equal goldens govern both. The
+# goldens are regenerated as each slice (4a→4d) extends the templates.
+
+import py_compile
+import tempfile
+
+
+def _compiles(source: str) -> bool:
+    with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False) as fh:
+        fh.write(source)
+        path = fh.name
+    try:
+        py_compile.compile(path, doraise=True)
+        return True
+    except py_compile.PyCompileError:
+        return False
+
+
+def read_golden(name: str) -> str:
+    """Read a frozen golden under ``tests/goldens/`` (e.g. ``agno/copilot_agent.py``)."""
+    return (
+        pathlib.Path(__file__).parent / "goldens" / name
+    ).read_text(encoding="utf-8")
+
+
+@pytest.fixture()
+def copilot_ctx(mi):
+    from dna.emit import build_copilot_context
+
+    return build_copilot_context(
+        mi, "memory-copilot", model="azure/gpt-4o", provider="azure"
+    )
+
+
+# ── Task 4a: agent + /agui serving ──────────────────────────────────────────
+
+
+def test_copilot_emit_is_two_artifacts(copilot_ctx):
+    """A servable copilot emits an ``agent`` module + a ``serving`` module."""
+    from dna.emit.agno import AgnoEmitter
+
+    res = AgnoEmitter().emit(copilot_ctx)
+    assert {a.role for a in res.artifacts} == {"agent", "serving"}
+    assert res.target == "agno"
+    # module paths are valid python identifiers (the mounted agent's slug).
+    assert res.artifact_for("agent") is not None
+    paths = {a.role: a.path for a in res.artifacts}
+    assert paths["agent"] == "memory_agent.py"
+    assert paths["serving"] == "memory_agent_serve.py"
+
+
+def test_copilot_agent_artifact_matches_golden(copilot_ctx):
+    from dna.emit.agno import AgnoEmitter
+
+    res = AgnoEmitter().emit(copilot_ctx)
+    assert res.artifact_for("agent") == read_golden("agno/copilot_agent.py")
+
+
+def test_copilot_serving_artifact_matches_golden(copilot_ctx):
+    from dna.emit.agno import AgnoEmitter
+
+    res = AgnoEmitter().emit(copilot_ctx)
+    assert res.artifact_for("serving") == read_golden("agno/copilot_serve.py")
+
+
+def test_copilot_agent_carries_instructions_byte_equal(copilot_ctx):
+    """The byte-equal invariant, recovered via the emitter METHOD off the
+    ``role="agent"`` artifact — the mounted agent's composed prompt, verbatim."""
+    from dna.emit.agno import AgnoEmitter
+
+    emitter = AgnoEmitter()
+    res = emitter.emit(copilot_ctx)
+    assert emitter.extract_instructions(res.artifact_for("agent")) == copilot_ctx.instructions
+
+
+def test_copilot_artifacts_compile(copilot_ctx):
+    from dna.emit.agno import AgnoEmitter
+
+    res = AgnoEmitter().emit(copilot_ctx)
+    assert _compiles(res.artifact_for("agent"))
+    assert _compiles(res.artifact_for("serving"))
+
+
+def test_copilot_serving_exposes_agui(copilot_ctx):
+    """The serving artifact wires Agno's AgentOS + AGUI interface → /agui."""
+    from dna.emit.agno import AgnoEmitter
+
+    serving = AgnoEmitter().emit(copilot_ctx).artifact_for("serving")
+    assert "from agno.os import AgentOS" in serving
+    assert "from agno.os.interfaces.agui import AGUI" in serving
+    assert "app = agent_os.get_app()" in serving
+    assert "from memory_agent import build_agent" in serving
+
+
+def test_plain_agent_still_single_artifact(mi):
+    """Back-compat: a plain agent (no copilot signals) stays a single artifact."""
+    from dna.emit import emit_agent
+
+    res = emit_agent(mi, "concierge", "agno")
+    assert [a.role for a in res.artifacts] == ["agent"]
+    assert "AgentOS" not in res.artifact
+
+
+# ── Task 4b: MCP-tool mount ─────────────────────────────────────────────────
+
+
+def test_copilot_agent_mounts_mcp_tools(copilot_ctx):
+    """The mounted agent builds ``MCPTools(url, transport="streamable-http")``
+    from ``ctx.mcp_servers`` and wires them into ``Agent(tools=...)``."""
+    from dna.emit.agno import AgnoEmitter
+
+    agent = AgnoEmitter().emit(copilot_ctx).artifact_for("agent")
+    assert "from agno.tools.mcp import MCPTools" in agent
+    assert "url='https://mcp.dna.example/agui'" in agent
+    assert "transport='streamable-http'" in agent
+    assert "tools=_mcp_tools()" in agent
+
+
+def test_copilot_agent_mcp_matches_golden(copilot_ctx):
+    from dna.emit.agno import AgnoEmitter
+
+    res = AgnoEmitter().emit(copilot_ctx)
+    assert res.artifact_for("agent") == read_golden("agno/copilot_agent.py")
+
+
+# ── Task 4c: inbound-tenant derivation ──────────────────────────────────────
+
+
+def test_copilot_serving_derives_inbound_tenant(copilot_ctx):
+    """When ``ctx.tenant_propagate`` is set the serving layer derives tenant/oid
+    from request headers into run-state; tools read it via RunContext.session_state
+    (mirrors aap-kb ``inject_tenant`` — NOT a propagate_tenant freebie)."""
+    from dna.emit.agno import AgnoEmitter
+
+    assert copilot_ctx.tenant_propagate is True
+    serving = AgnoEmitter().emit(copilot_ctx).artifact_for("serving")
+    assert "class TenantAGUI(AGUI):" in serving
+    assert "def tenant_from_request(request: Request)" in serving
+    assert "def inject_tenant(run_input: RunAgentInput, tenant: dict)" in serving
+    assert 'run_input.state["tenant"] = tenant' in serving
+    assert "from agno.os.interfaces.agui.router import run_entity" in serving
+    assert "interfaces=[TenantAGUI(agent=agent)]" in serving
+
+
+def test_copilot_serving_tenant_matches_golden(copilot_ctx):
+    from dna.emit.agno import AgnoEmitter
+
+    res = AgnoEmitter().emit(copilot_ctx)
+    assert res.artifact_for("serving") == read_golden("agno/copilot_serve.py")
+
+
+def test_copilot_serving_no_tenant_when_not_propagated():
+    """A copilot that does not propagate tenant serves the plain ``AGUI`` — no
+    header-derivation machinery. Synthesized ctx: a knowledge-only copilot signal
+    with ``tenant_propagate=False``."""
+    from dna.emit import EmitContext
+    from dna.emit.agno import AgnoEmitter
+
+    ctx = EmitContext(
+        name="kb-copilot",
+        description="",
+        instructions="Answer from the KB.",
+        model="azure/gpt-4o",
+        knowledge=["some-collection"],  # copilot signal, but no tenant/mcp/hitl
+        tenant_propagate=False,
+    )
+    res = AgnoEmitter().emit(ctx)
+    serving = res.artifact_for("serving")
+    assert "TenantAGUI" not in serving
+    assert "interfaces=[AGUI(agent=agent)]" in serving
+    assert _compiles(serving)
+
+
+# ── Task 4d: HITL (gate-remote-directly per Spike 0A) ───────────────────────
+
+
+def test_copilot_gates_write_tools_on_remote_mcp(copilot_ctx):
+    """Spike 0A verdict = gate-remote-directly: the emitted MCPTools mount carries
+    ``external_execution_required_tools`` = ``ctx.tools_requiring_confirmation``
+    (sorted) — the DNA write tools are gated on the REMOTE tool, no local wrapper."""
+    from dna.emit.agno import AgnoEmitter
+
+    assert copilot_ctx.tools_requiring_confirmation == {"remember", "forget"}
+    agent = AgnoEmitter().emit(copilot_ctx).artifact_for("agent")
+    assert "external_execution_required_tools=['forget', 'remember']" in agent
+    # no local wrapper tool — the gate rides on the remote MCP tool itself.
+    assert "def remember(" not in agent
+    assert "def forget(" not in agent
+
+
+def test_copilot_hitl_agent_matches_golden(copilot_ctx):
+    from dna.emit.agno import AgnoEmitter
+
+    res = AgnoEmitter().emit(copilot_ctx)
+    assert res.artifact_for("agent") == read_golden("agno/copilot_agent.py")
+
+
+def test_copilot_no_gate_when_no_confirmation_tools():
+    """A copilot with MCP but no confirmation-gated tools omits
+    ``external_execution_required_tools`` entirely."""
+    from dna.emit import EmitContext, EmitMcpServer
+    from dna.emit.agno import AgnoEmitter
+
+    ctx = EmitContext(
+        name="reader",
+        description="",
+        instructions="Read only.",
+        model="azure/gpt-4o",
+        mcp_servers=[EmitMcpServer(ref="dna-mcp", transport="streamable-http",
+                                   url="https://mcp.example/agui")],
+        tools_requiring_confirmation=set(),
+    )
+    agent = AgnoEmitter().emit(ctx).artifact_for("agent")
+    # the docstring mentions the kwarg; assert the ASSIGNMENT is absent.
+    assert "external_execution_required_tools=" not in agent
+    assert _compiles(agent)
+
+
+# ── Task 4e: integration — the emitted app imports, mounts /agui, pauses/resumes ─
+#
+# Guarded by an agno import: the emit + golden slices above run with NO runtime
+# dep; this slice needs a live agno/ag-ui/fastapi/mcp/openai stack to IMPORT the
+# emitted app and drive a real run. It proves the emitted shape end-to-end and
+# that the external_execution pause/resume the emitted MCP-gate relies on behaves
+# exactly as Spike 0A + the aap-kb reference recorded.
+
+import sys as _sys
+
+
+def _write_and_import(copilot_ctx, tmp_path):
+    """Emit both artifacts to ``tmp_path`` and import them as real modules."""
+    import importlib
+
+    from dna.emit.agno import AgnoEmitter
+
+    res = AgnoEmitter().emit(copilot_ctx)
+    for a in res.artifacts:
+        (tmp_path / a.path).write_text(a.content, encoding="utf-8")
+    # module names = artifact paths minus the .py extension.
+    names = {a.role: a.path[:-3] for a in res.artifacts}
+    _sys.path.insert(0, str(tmp_path))
+    try:
+        for n in names.values():
+            _sys.modules.pop(n, None)
+        agent_mod = importlib.import_module(names["agent"])
+        serve_mod = importlib.import_module(names["serving"])
+        return agent_mod, serve_mod
+    finally:
+        _sys.path.remove(str(tmp_path))
+        for n in names.values():
+            _sys.modules.pop(n, None)
+
+
+def test_emitted_copilot_imports_and_mounts_agui(copilot_ctx, tmp_path):
+    """The emitted agent + serving modules import against real agno: build_agent
+    returns an Agno Agent whose MCP mount gates exactly the confirmation tools,
+    and the serving app is a FastAPI exposing POST /agui."""
+    pytest.importorskip("agno")
+    pytest.importorskip("ag_ui")
+    pytest.importorskip("fastapi")
+    pytest.importorskip("mcp")
+    pytest.importorskip("openai")
+    from agno.agent import Agent
+    from fastapi import FastAPI
+
+    agent_mod, serve_mod = _write_and_import(copilot_ctx, tmp_path)
+
+    # 1. the agent factory builds a real Agno Agent with the MCP gate wired.
+    agent = agent_mod.build_agent()
+    assert isinstance(agent, Agent)
+    mcp = agent.tools[0]
+    assert sorted(mcp.external_execution_required_tools) == ["forget", "remember"]
+
+    # 2. the serving app is a FastAPI mounting /agui, with the tenant hook.
+    assert isinstance(serve_mod.app, FastAPI)
+    assert "/agui" in serve_mod.app.openapi().get("paths", {})
+    assert hasattr(serve_mod, "TenantAGUI")
+    assert callable(serve_mod.tenant_from_request)
+
+
+def test_emitted_copilot_pauses_and_resumes_on_gate(tmp_path):
+    """The pause/resume shape the emitted MCP gate depends on, proven against real
+    agno with a stub model + a local ``external_execution`` tool (a live MCP
+    connection is out of scope). A ``remember`` turn PAUSES (RunStatus.paused,
+    tools_awaiting_external_execution == ['remember']); ``acontinue_run`` resumes
+    to completion — matching Spike 0A + aap-kb ``agui_hitl``."""
+    pytest.importorskip("agno")
+    pytest.importorskip("openai")
+    import asyncio
+
+    from agno.agent import Agent
+    from agno.db.in_memory import InMemoryDb
+    from agno.models.base import Model
+    from agno.models.response import ModelResponse
+    from agno.run.base import RunStatus
+    from agno.tools import tool
+
+    class _StubModel(Model):
+        """Emits a `remember` tool call on turn 1, a final answer on resume."""
+
+        def __init__(self) -> None:
+            super().__init__(id="stub")
+            self._calls = 0
+
+        async def ainvoke(self, *a, **k) -> ModelResponse:
+            self._calls += 1
+            if self._calls == 1:
+                return ModelResponse(role="assistant", tool_calls=[{
+                    "id": "call_1", "type": "function",
+                    "function": {"name": "remember", "arguments": '{"text": "buy milk"}'},
+                }])
+            return ModelResponse(role="assistant", content="Done — remembered.")
+
+        def invoke(self, *a, **k):  # pragma: no cover - non-stream unused
+            raise NotImplementedError
+
+        def invoke_stream(self, *a, **k):  # pragma: no cover
+            raise NotImplementedError
+
+        async def ainvoke_stream(self, *a, **k):  # pragma: no cover
+            raise NotImplementedError
+
+        def _parse_provider_response(self, r, **k):  # pragma: no cover
+            raise NotImplementedError
+
+        def _parse_provider_response_delta(self, r):  # pragma: no cover
+            raise NotImplementedError
+
+    @tool(external_execution=True)
+    def remember(text: str) -> str:
+        """Persist a note (gated — resolved outside the agent, like the remote MCP write)."""
+        return "stored"
+
+    async def _drive() -> None:
+        agent = Agent(model=_StubModel(), tools=[remember], db=InMemoryDb())
+        out = await agent.arun(input="remember buy milk", stream=False, session_id="s1")
+        assert out.status == RunStatus.paused
+        awaiting = [t.tool_name for t in out.tools_awaiting_external_execution]
+        assert awaiting == ["remember"]
+        for t in out.tools_awaiting_external_execution:
+            t.result = "stored ok"
+            t.external_execution_required = False
+        resumed = await agent.acontinue_run(
+            run_id=out.run_id, session_id="s1",
+            updated_tools=out.tools_awaiting_external_execution, stream=False,
+        )
+        assert resumed.status == RunStatus.completed
+
+    asyncio.run(_drive())

@@ -36,16 +36,62 @@ from __future__ import annotations
 
 from typing import Any
 
-from dna.emit import EmitContext
-from dna.emit.scaffold import ScaffoldChoice, ScaffoldEmitter, py_identifier, py_str_literal
+from dna.emit import EmitArtifact, EmitContext, EmitError, EmitResult
+from dna.emit.scaffold import (
+    ScaffoldChoice,
+    ScaffoldEmitter,
+    py_identifier,
+    py_str_literal,
+    resolve_scaffold,
+)
 
 
 class AgnoEmitter(ScaffoldEmitter):
-    """Emit a DNA agent as Agno ``Agent(...)`` source (scaffold, code-first)."""
+    """Emit a DNA agent as Agno ``Agent(...)`` source (scaffold, code-first).
+
+    Two shapes share this target:
+
+    - A **single agent** (``prompt-only`` / ``with-tools``) — one ``Agent(...)``
+      module, byte-equal ``INSTRUCTIONS``. The inherited :class:`ScaffoldEmitter`
+      machinery drives it.
+    - A **servable copilot** (``copilot`` case, from
+      :func:`~dna.emit.build_copilot_context`) — a TWO-artifact emit: an ``agent``
+      module (``build_agent`` factory + MCP mount + the HITL write-gate) and a
+      ``serving`` module (Agno AgentOS exposing ``/agui``, with inbound-tenant
+      derivation). Agno 2.7.x resumes ``external_execution`` gates natively inside
+      its AG-UI router, so the emitted app carries no hand-rolled resume machinery
+      — the DNA MCP write tools are gated DIRECTLY on the remote tool (Spike 0A:
+      gate-remote-directly) and the router pauses/resumes them.
+    """
 
     framework = "agno"
     target = "agno"
     file_extension = "py"
+
+    # ── copilot case routing ────────────────────────────────────────────────
+
+    def _is_copilot(self, ctx: EmitContext) -> bool:
+        """A ctx from :func:`build_copilot_context` carries copilot-only
+        projections a single-agent ctx never has. Any one of them present routes
+        the emit to the servable ``copilot`` case."""
+        return bool(
+            ctx.mcp_servers
+            or ctx.tools_requiring_confirmation
+            or ctx.tenant_propagate
+            or ctx.knowledge
+        )
+
+    def classify(self, ctx: EmitContext) -> str:
+        if self._is_copilot(ctx):
+            return "copilot"
+        return super().classify(ctx)
+
+    def emit(self, ctx: EmitContext) -> EmitResult:
+        if self.classify(ctx) == "copilot":
+            return self._emit_copilot(ctx)
+        return super().emit(ctx)
+
+    # ── single-agent render (prompt-only / with-tools) ──────────────────────
 
     def render_context(self, ctx: EmitContext, case: str) -> dict[str, Any]:
         tools = [
@@ -98,3 +144,86 @@ class AgnoEmitter(ScaffoldEmitter):
             "spec.model / Genome.default_llm": "Agent(model=...) (DNA coordinate preserved)",
             "spec.tools[] (Tool Kind)": "plain-function stubs → Agent(tools=[...])",
         }
+
+    # ── servable copilot render (the two-artifact case) ─────────────────────
+
+    def _copilot_context(self, ctx: EmitContext) -> dict[str, Any]:
+        """Template variables for the ``copilot`` case (merged over the common
+        ones). The mounted agent's MCP servers become ``MCPTools`` mounts; the
+        HITL-write intent (``ctx.tools_requiring_confirmation``) becomes each
+        mount's ``external_execution_required_tools`` (Spike 0A: gate-remote-
+        directly). Everything is sorted for a deterministic golden."""
+        module = py_identifier(ctx.name)
+        gated = sorted(ctx.tools_requiring_confirmation)
+        servers = []
+        for s in ctx.mcp_servers:
+            servers.append(
+                {
+                    "url_literal": py_str_literal(s.url) if s.url else "None",
+                    "transport_literal": py_str_literal(s.transport),
+                    "has_external_tools": bool(gated),
+                    "external_tools_literal": repr(gated),
+                }
+            )
+        return {
+            "agent_module": module,
+            "has_model": ctx.model is not None,
+            "model_literal": py_str_literal(ctx.model) if ctx.model else "",
+            "has_mcp": bool(ctx.mcp_servers),
+            "mcp_servers": servers,
+            "tenant_propagate": bool(ctx.tenant_propagate),
+        }
+
+    def _copilot_losses(self, ctx: EmitContext) -> list[str]:
+        out = [
+            "MCP tool bodies — the mounted agent calls the DNA MCP server's tools "
+            "over Streamable HTTP; the emitted app builds `MCPTools(...)` but the "
+            "tool implementations live on the remote MCP server, not in the scaffold",
+            "frontend console — `frontend`/`knowledge` hints (CopilotKit panels, "
+            "suggested prompts, RAG collections) are copilot-level metadata with no "
+            "code-first backend slot; wire them in the console at the UI layer",
+        ]
+        if ctx.model is None:
+            out.append(
+                "model unbound in DNA and none supplied — emitted `build_agent()` has "
+                "no `model=`; supply one at wire-up (Agno requires a model)"
+            )
+        return out
+
+    def _emit_copilot(self, ctx: EmitContext) -> EmitResult:
+        """Render the two servable artifacts (agent module + AG-UI serve app) from
+        an enriched copilot ctx (:func:`build_copilot_context`)."""
+        try:
+            import chevron
+        except ModuleNotFoundError as exc:  # pragma: no cover - dev dep always present
+            raise EmitError(
+                "the scaffold emitter needs `chevron` (Mustache) — it ships with the SDK"
+            ) from exc
+
+        agent_tmpl = resolve_scaffold(self.framework, "copilot_agent")
+        serve_tmpl = resolve_scaffold(self.framework, "copilot_serve")
+        if agent_tmpl is None or serve_tmpl is None:
+            raise EmitError(
+                "the agno `copilot` case needs both `copilot_agent.py.tmpl` and "
+                "`copilot_serve.py.tmpl` scaffold templates"
+            )
+
+        variables = {**self._common_context(ctx), **self._copilot_context(ctx)}
+        agent_src = chevron.render(agent_tmpl, variables)
+        serve_src = chevron.render(serve_tmpl, variables)
+        module = variables["agent_module"]
+
+        # A servable copilot never "falls back" a case — mark case == requested so
+        # the common-loss helper adds no spurious fallback note.
+        choice = ScaffoldChoice(case="copilot", template="", requested="copilot")
+        losses = self._common_losses(ctx, choice) + self._copilot_losses(ctx)
+
+        return EmitResult(
+            target=self.target,
+            artifacts=[
+                EmitArtifact(path=f"{module}.py", content=agent_src, role="agent"),
+                EmitArtifact(path=f"{module}_serve.py", content=serve_src, role="serving"),
+            ],
+            losses=losses,
+            mapping=self.mapping(),
+        )

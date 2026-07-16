@@ -75,6 +75,16 @@ search-sqlite = ["sqlite-vec>=0.1.6"]
 # dna.adapters.search.pgvector (guard: tests/test_search_import_isolation.py).
 # Install explicitly: pip install "dna-sdk[search-pgvector]".
 search-pgvector = ["dna-sdk[postgres]"]
+# f-dna-copilot-emitter — the RUNTIME stack the Agno `copilot` scaffold TARGETS
+# (agno + ag-ui + fastapi + the MCP client + an OpenAI-compatible model). The
+# emitter itself has NO runtime dep — it renders source (`dna emit`) and the
+# golden/emit tests only `py_compile` it (zero-dep). This extra is ONLY for the
+# end-to-end integration test (tests/test_copilot_emit.py::test_emitted_copilot_*),
+# which IMPORTS the emitted app and drives a real external_execution pause/resume;
+# those tests `importorskip("agno")` so they SKIP unless this extra is installed.
+# Deliberately OUT of `all`/`dev` (heavy, and it is the emitted app's dep, not the
+# SDK's). Install to run the integration slice: pip install "dna-sdk[agno-copilot]".
+agno-copilot = ["agno>=2.6.12", "ag-ui-protocol>=0.1.19", "fastapi>=0.115", "mcp>=1.0", "openai>=1.40"]
 all = ["dna-sdk[postgres,sqlite,redis,s3,sql]"]
 dev = [
     "pytest>=7.0",
