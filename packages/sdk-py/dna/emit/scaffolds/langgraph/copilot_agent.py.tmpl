@@ -10,7 +10,8 @@ native). Tool bodies live on the remote DNA MCP server; per-node bodies are wire
 at the consumer.
 """
 {{#tenant_propagate}}import contextvars
-{{/tenant_propagate}}from typing import Annotated, TypedDict
+{{/tenant_propagate}}{{#needs_os}}import os
+{{/needs_os}}from typing import Annotated, TypedDict
 
 from langchain_core.messages import AnyMessage, SystemMessage
 from langgraph.graph import END, START, StateGraph
@@ -165,8 +166,11 @@ def _route(state: State) -> str:
 def build_agent():
     """Build the AG-UI-native CoAgent graph for one run — a `StateGraph` compiled to
     a checkpointed graph the AG-UI adapter serves. LangGraph IS the graph, so the
-    ReAct loop{{#has_hitl}} + the human-approval interrupt{{/has_hitl}} is expressed directly as nodes + edges."""
-    from langgraph.checkpoint.memory import MemorySaver
+    ReAct loop{{#has_hitl}} + the human-approval interrupt{{/has_hitl}} is expressed directly as nodes + edges.{{#cp_pg}} State is
+    checkpointed to Postgres (`PostgresSaver`){{#has_store}} + a `PostgresStore` for long-term memory
+    (pgvector semantic search via `index=`){{/has_store}}; DSNs come from the infra refs via env
+    vars (f-copilot-infra-binding wires them) — open the pool + `.setup()` at wire-up.{{/cp_pg}}"""
+{{{checkpoint_imports}}}
 
     graph = StateGraph(State)
     graph.add_node("agent", _agent_node)
@@ -177,7 +181,7 @@ def build_agent():
 {{#has_hitl}}    graph.add_edge("review", "tools")
 {{/has_hitl}}    graph.add_edge("tools", "agent")
 {{/has_mcp}}{{^has_mcp}}    graph.add_edge("agent", END)
-{{/has_mcp}}    return graph.compile(checkpointer=MemorySaver())
+{{/has_mcp}}    return graph.compile(checkpointer={{{checkpointer_expr}}}{{#has_store}}, store={{{store_expr}}}{{/has_store}})
 {{/has_workflow}}
 {{#has_workflow}}
 {{#workflow_steps}}
@@ -219,8 +223,9 @@ def build_workflow():
     """Per-request factory: the declared `workflow.chain` AS graph nodes. LangGraph is
     graph-native, so a multi-step chain is just `add_edge` from step to step{{#has_hitl}} + a
     `review` interrupt node for human approval{{/has_hitl}} — the cleanest workflow shape of the
-    three runtime targets."""
-    from langgraph.checkpoint.memory import MemorySaver
+    three runtime targets.{{#cp_pg}} State is checkpointed to Postgres (`PostgresSaver`){{#has_store}} + a
+    `PostgresStore` for long-term memory{{/has_store}}; DSNs from the infra refs via env vars.{{/cp_pg}}"""
+{{{checkpoint_imports}}}
 
     graph = StateGraph(State)
 {{#workflow_steps}}    graph.add_node({{{name_literal_step}}}, _{{func}}_node)
@@ -228,5 +233,5 @@ def build_workflow():
 {{/has_hitl}}    graph.add_edge(START, {{{first_node_literal}}})
 {{#workflow_edges}}    graph.add_edge({{{from_literal}}}, {{{to_literal}}})
 {{/workflow_edges}}    graph.add_edge({{{last_node_literal}}}, END)
-    return graph.compile(checkpointer=MemorySaver())
+    return graph.compile(checkpointer={{{checkpointer_expr}}}{{#has_store}}, store={{{store_expr}}}{{/has_store}})
 {{/has_workflow}}

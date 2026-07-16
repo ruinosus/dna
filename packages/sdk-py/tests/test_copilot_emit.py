@@ -676,18 +676,31 @@ def _write_and_import(copilot_ctx, tmp_path):
             _sys.modules.pop(n, None)
 
 
-def test_emitted_copilot_imports_and_mounts_agui(copilot_ctx, tmp_path):
+def test_emitted_copilot_imports_and_mounts_agui(copilot_ctx, tmp_path, monkeypatch):
     """The emitted agent + serving modules import against real agno: build_agent
     returns an Agno Agent whose MCP mount gates exactly the confirmation tools,
-    and the serving app is a FastAPI exposing POST /agui."""
+    and the serving app is a FastAPI exposing POST /agui.
+
+    ``memory-copilot`` now declares Postgres persistence + a pgvector knowledge
+    store, so the emitted ``build_agent`` binds a real ``PostgresDb`` + a
+    ``PgVector``-backed ``Knowledge`` (the DSN read from ``DNA_PRIMARY_PG_URL``).
+    That needs ``sqlalchemy``/``psycopg`` and, because Agno's ``Knowledge`` creates
+    the vector table at Agent-construction time, a reachable Postgres — so this
+    slice ``importorskip``s the SQL stack + sets the env DSN, and stays skipped in
+    the pure-emit CI (no live PG)."""
     pytest.importorskip("agno")
     pytest.importorskip("ag_ui")
     pytest.importorskip("fastapi")
     pytest.importorskip("mcp")
     pytest.importorskip("openai")
+    pytest.importorskip("sqlalchemy")
+    pytest.importorskip("psycopg")
     from agno.agent import Agent
     from fastapi import FastAPI
 
+    monkeypatch.setenv(
+        "DNA_PRIMARY_PG_URL", "postgresql+psycopg://dna:dna@localhost:5432/dna"
+    )
     agent_mod, serve_mod = _write_and_import(copilot_ctx, tmp_path)
 
     # 1. the agent factory builds a real Agno Agent with the MCP gate wired.
@@ -1378,7 +1391,13 @@ def test_lg_copilot_agent_builds_stategraph(lg_ctx):
     agent = LanggraphEmitter().emit(lg_ctx).artifact_for("agent")
     assert "from langgraph.graph import END, START, StateGraph" in agent
     assert "graph = StateGraph(State)" in agent
-    assert "return graph.compile(checkpointer=MemorySaver())" in agent
+    # memory-copilot declares Postgres persistence → the compiled graph binds a
+    # PostgresSaver checkpointer + a PostgresStore (pgvector index), NOT MemorySaver.
+    assert "from langgraph.checkpoint.postgres import PostgresSaver" in agent
+    assert "from langgraph.store.postgres import PostgresStore" in agent
+    assert 'checkpointer=PostgresSaver.from_conn_string(os.environ["DNA_PRIMARY_PG_URL"])' in agent
+    assert "store=PostgresStore.from_conn_string(" in agent
+    assert "MemorySaver" not in agent
     assert "def build_agent():" in agent
 
 
@@ -1591,3 +1610,114 @@ def test_lg_plain_agent_still_single_module(mi):
     assert "create_react_agent(" in res.artifact
     assert "StateGraph" not in res.artifact
     assert "add_langgraph_fastapi_endpoint" not in res.artifact
+
+
+# ── f-copilot-persistence · the emit half (Postgres v1) ──────────────────────
+#
+# ``memory-copilot`` now declares `persistence` (checkpoint+memory=postgres) +
+# `knowledge.store` (pgvector). Each scaffold reads `ctx.persistence` /
+# `ctx.knowledge_store` and emits REAL backend config — killing the hardcoded
+# `InMemoryDb()`. The DSN is always an env-var read keyed by the infra `ref`
+# (`f-copilot-infra-binding` wires it), never a hardcoded literal.
+
+
+def test_pg_env_var_is_ref_keyed():
+    """The ref→env-var derivation the infra-binding feature wires against:
+    `primary-pg` → `DNA_PRIMARY_PG_URL`; slots sharing a ref share the env var."""
+    from dna.emit.scaffold import pg_env_var, pg_url_expr
+
+    assert pg_env_var("primary-pg") == "DNA_PRIMARY_PG_URL"
+    assert pg_env_var("analytics.warehouse") == "DNA_ANALYTICS_WAREHOUSE_URL"
+    assert pg_url_expr("primary-pg") == 'os.environ["DNA_PRIMARY_PG_URL"]'
+
+
+def test_agno_copilot_emits_postgres_db(copilot_ctx):
+    """Agno: checkpoint/memory=postgres → `db=PostgresDb(db_url=<env>)` (v2
+    `agno.db.postgres`, NOT the v1 `agno.storage`), memory adds
+    `enable_user_memories`; the hardcoded `InMemoryDb()` is GONE."""
+    from dna.emit.agno import AgnoEmitter
+
+    agent = AgnoEmitter().emit(copilot_ctx).artifact_for("agent")
+    assert "from agno.db.postgres import PostgresDb" in agent
+    assert 'db=PostgresDb(db_url=os.environ["DNA_PRIMARY_PG_URL"])' in agent
+    assert "enable_user_memories=True," in agent
+    assert "InMemoryDb" not in agent
+    assert "agno.storage" not in agent  # v2 surface, not v1
+
+
+def test_agno_copilot_emits_pgvector_knowledge(copilot_ctx):
+    """Agno: knowledge.store=pgvector → a real `Knowledge(vector_db=PgVector(...))`
+    with hybrid search + the declared embedder — no longer a `return None` stub."""
+    from dna.emit.agno import AgnoEmitter
+
+    agent = AgnoEmitter().emit(copilot_ctx).artifact_for("agent")
+    assert "from agno.vectordb.pgvector import PgVector, SearchType" in agent
+    assert "from agno.knowledge.knowledge import Knowledge" in agent
+    assert "return Knowledge(" in agent
+    assert "vector_db=PgVector(" in agent
+    assert "table_name='knowledge_base'," in agent
+    assert 'db_url=os.environ["DNA_PRIMARY_PG_URL"],' in agent
+    assert "search_type=SearchType.hybrid," in agent
+    assert "OpenAIEmbedder(id='text-embedding-3-small', dimensions=1536)" in agent
+    assert "return None" not in agent
+
+
+def test_langgraph_copilot_emits_postgres_saver_and_store(lg_ctx):
+    """LangGraph: checkpoint=postgres → `PostgresSaver.from_conn_string`;
+    memory=postgres → `PostgresStore.from_conn_string(..., index=...)` carrying the
+    pgvector RAG on the Store's `index=`. No `MemorySaver`."""
+    from dna.emit.langgraph import LanggraphEmitter
+
+    agent = LanggraphEmitter().emit(lg_ctx).artifact_for("agent")
+    assert "from langgraph.checkpoint.postgres import PostgresSaver" in agent
+    assert "from langgraph.store.postgres import PostgresStore" in agent
+    assert 'checkpointer=PostgresSaver.from_conn_string(os.environ["DNA_PRIMARY_PG_URL"])' in agent
+    assert (
+        "store=PostgresStore.from_conn_string(os.environ[\"DNA_PRIMARY_PG_URL\"], "
+        "index={'dims': 1536, 'embed': 'openai:text-embedding-3-small'})" in agent
+    )
+    assert "MemorySaver" not in agent
+
+
+def test_msaf_copilot_emits_postgres_vector_store_and_serialize_point(maf_ctx):
+    """MS-AF: knowledge.store=pgvector → `PostgresVectorStore` (wired as a
+    context provider); checkpoint/memory = the honest serialize-yourself wiring
+    point (`_thread_store_dsn`) since MS-AF has no Postgres thread-store."""
+    from dna.emit.agent_framework import AgentFrameworkEmitter
+
+    agent = AgentFrameworkEmitter().emit(maf_ctx).artifact_for("agent")
+    assert "from agent_framework.postgres import PostgresVectorStore" in agent
+    assert "def _vector_store() -> PostgresVectorStore:" in agent
+    assert 'connection_string=os.environ["DNA_PRIMARY_PG_URL"],' in agent
+    assert "context_providers=[_vector_store()]," in agent
+    # checkpoint/memory: documented serialize-to-PG-column wiring point.
+    assert "def _thread_store_dsn() -> str:" in agent
+    assert "AgentThread" in agent
+
+
+def test_copilot_persistence_is_backcompat_when_undeclared():
+    """Back-compat: a copilot with NO persistence/knowledge.store emits exactly as
+    before — Agno keeps `InMemoryDb()`, LangGraph keeps `MemorySaver()`, and no
+    `os.environ` DSN read leaks in."""
+    from dna.emit import EmitContext, EmitMcpServer
+    from dna.emit.agno import AgnoEmitter
+    from dna.emit.langgraph import LanggraphEmitter
+
+    ctx = EmitContext(
+        name="reader",
+        description="",
+        instructions="Read only.",
+        model="azure/gpt-4o",
+        mcp_servers=[EmitMcpServer(ref="dna-mcp", transport="streamable-http",
+                                   url="https://mcp.example/agui", allowed_tools=["recall"])],
+        tools_requiring_confirmation=set(),
+    )
+    agno_agent = AgnoEmitter().emit(ctx).artifact_for("agent")
+    assert "db=InMemoryDb()," in agno_agent
+    assert "PostgresDb" not in agno_agent
+    assert "os.environ" not in agno_agent
+
+    lg_agent = LanggraphEmitter().emit(ctx).artifact_for("agent")
+    assert "checkpointer=MemorySaver()" in lg_agent
+    assert "PostgresSaver" not in lg_agent
+    assert "os.environ" not in lg_agent

@@ -10,11 +10,13 @@ Tool bodies + any per-app retrieval (AzureAISearchContextProvider) are wired at
 the consumer.
 """
 import contextvars
+import os
 
 from agent_framework import Agent
 from agent_framework.foundry import FoundryChatClient
 from azure.identity import DefaultAzureCredential
 from agent_framework import MCPStreamableHTTPTool
+from agent_framework.postgres import PostgresVectorStore
 INSTRUCTIONS = "Remember and recall the user's notes. Confirm before writing.\n\nYou are the Helpdesk Concierge, an internal engineering support assistant. You help developers triage and resolve engineering questions."
 
 #: Request-scoped tenant carrier. The serving layer sets it from inbound request
@@ -83,6 +85,33 @@ def _mcp_tools() -> list[MCPStreamableHTTPTool]:
         ),
     ]
 
+
+
+def _vector_store() -> PostgresVectorStore:
+    """The RAG store this copilot reads (`Copilot.knowledge`). DNA declares a
+    pgvector store (`knowledge.store`), so this binds MS-AF's `PostgresVectorStore`
+    over Postgres — the DSN comes from the `primary-pg` infra ref via its env var
+    (f-copilot-infra-binding wires it), NEVER a hardcoded literal. Wire it as the
+    agent's `context_providers=[_vector_store()]` and load the corpus CONTENT
+    per-app."""
+    return PostgresVectorStore(
+        collection_name='knowledge_base',
+        connection_string=os.environ["DNA_PRIMARY_PG_URL"],
+        embedding_model='text-embedding-3-small',
+        embedding_dimensions=1536,
+    )
+
+
+
+def _thread_store_dsn() -> str:
+    """The Postgres DSN for thread/run state, read from the `primary-pg` infra ref's
+    env var (f-copilot-infra-binding wires it). DNA declares Postgres checkpoint/
+    memory, but MS-AF has NO native Postgres thread-store (design §6 gap): serialize
+    the run's `AgentThread` (`thread.serialize()` / `AgentThread.deserialize(...)`)
+    to a PG column keyed by conversation id yourself, using this DSN. This is the
+    honest wiring-point — not a `PostgresSaver` equivalent."""
+    return os.environ["DNA_PRIMARY_PG_URL"]
+
 def build_agent() -> Agent:
     """Build the MS Agent Framework agent for one run — a Foundry-backed ChatAgent
     (`FoundryChatClient(...).as_agent(...)`)."""
@@ -94,4 +123,5 @@ def build_agent() -> Agent:
         name='memory-agent',
         instructions=INSTRUCTIONS,
         tools=_mcp_tools(),
+        context_providers=[_vector_store()],
     )

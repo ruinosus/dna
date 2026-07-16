@@ -41,6 +41,8 @@ from dna.emit import EmitArtifact, EmitContext, EmitError, EmitResult
 from dna.emit.scaffold import (
     ScaffoldChoice,
     ScaffoldEmitter,
+    persistence_facts,
+    pg_url_expr,
     py_identifier,
     py_str_literal,
     resolve_scaffold,
@@ -205,6 +207,43 @@ class LanggraphEmitter(ScaffoldEmitter):
         build_fn = "build_workflow" if has_workflow else "build_agent"
         mounted_kind = "workflow" if has_workflow else "agent"
 
+        # ── persistence → real LangGraph backends ───────────────────────────
+        # checkpoint=postgres → `PostgresSaver.from_conn_string(...)`;
+        # memory=postgres → `PostgresStore.from_conn_string(..., index=...)`
+        # with the pgvector RAG expressed via the Store's `index=` (design map).
+        # Absent slots keep the in-memory `MemorySaver()` (back-compat). DSNs come
+        # from the infra `ref` via an env var, never a hardcoded literal.
+        facts = persistence_facts(ctx)
+        cp_pg = facts["checkpoint_pg"]
+        mem_pg = facts["memory_pg"]
+        # The in-function import block, pre-rendered so the no-persistence path is
+        # byte-identical to before (a plain interpolation preserves the blank line
+        # the template carries; a conditional section would collapse it).
+        import_lines = [
+            "    from langgraph.checkpoint.postgres import PostgresSaver"
+            if cp_pg
+            else "    from langgraph.checkpoint.memory import MemorySaver"
+        ]
+        if mem_pg:
+            import_lines.append("    from langgraph.store.postgres import PostgresStore")
+        checkpoint_imports = "\n".join(import_lines)
+        if cp_pg:
+            checkpointer_expr = (
+                f"PostgresSaver.from_conn_string({pg_url_expr(facts['checkpoint_ref'])})"
+            )
+        else:
+            checkpointer_expr = "MemorySaver()"
+        store_expr = ""
+        if mem_pg:
+            memory_url = pg_url_expr(facts["memory_ref"])
+            if facts["vector_pg"]:
+                index_literal = self._store_index_literal(
+                    facts["embed_model"], facts["embed_dims"]
+                )
+                store_expr = f"PostgresStore.from_conn_string({memory_url}, index={index_literal})"
+            else:
+                store_expr = f"PostgresStore.from_conn_string({memory_url})"
+
         return {
             "name": ctx.name,
             "name_literal": py_str_literal(ctx.name),
@@ -224,7 +263,29 @@ class LanggraphEmitter(ScaffoldEmitter):
             "last_node_literal": py_str_literal(nodes[-1]) if nodes else '""',
             "build_fn": build_fn,
             "mounted_kind": mounted_kind,
+            # persistence
+            "needs_os": bool(cp_pg or mem_pg),
+            "cp_pg": bool(cp_pg),
+            "has_store": bool(mem_pg),
+            "checkpoint_imports": checkpoint_imports,
+            "checkpointer_expr": checkpointer_expr,
+            "store_expr": store_expr,
         }
+
+    @staticmethod
+    def _store_index_literal(model: str | None, dims: int | None) -> str:
+        """The LangGraph ``PostgresStore(index=...)`` dict literal that binds
+        pgvector semantic search — ``{'dims': 1536, 'embed': 'openai:<model>'}``
+        (langchain ``init_embeddings`` provider:model coordinate). The vector RAG
+        rides on the Store's index (design map), not a separate vector store."""
+        coord = f"openai:{model}" if model else "openai:text-embedding-3-small"
+        d = dims if dims is not None else 1536
+        return (
+            "{"
+            + py_str_literal("dims") + ": " + str(d) + ", "
+            + py_str_literal("embed") + ": " + py_str_literal(coord)
+            + "}"
+        )
 
     def _copilot_losses(self, ctx: EmitContext) -> list[str]:
         out = [
@@ -242,6 +303,21 @@ class LanggraphEmitter(ScaffoldEmitter):
             "frontend console — `frontend`/`knowledge` hints (CopilotKit panels, suggested "
             "prompts, RAG collections) have no code-first backend slot; RAG retrieval is per-app",
         ]
+        facts = persistence_facts(ctx)
+        if facts["checkpoint_pg"] or facts["memory_pg"]:
+            out.append(
+                "persistence lifecycle — `PostgresSaver`/`PostgresStore."
+                "from_conn_string(...)` return CONTEXT MANAGERS; the emitted "
+                "`build_agent` calls them inline (the config shape), so open the "
+                "pool + call `.setup()` (one-time table create) at wire-up per the "
+                "LangGraph persistence docs"
+            )
+        if facts["vector_pg"]:
+            out.append(
+                "pgvector RAG — the vector store rides on the memory `PostgresStore`'s "
+                "`index=` (semantic search over the Store); a standalone corpus index "
+                "(`PGVector` retriever) + the collection CONTENT load are per-app"
+            )
         if ctx.workflow:
             out.append(
                 "workflow step bodies — each `workflow.chain` step is a scaffolded graph "

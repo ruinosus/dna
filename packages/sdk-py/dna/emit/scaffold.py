@@ -46,6 +46,7 @@ guarantees the MVP does not paint us into a corner.
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from typing import Any, Callable, Protocol, runtime_checkable
 
@@ -81,6 +82,62 @@ def py_identifier(name: str) -> str:
     if ident[0].isdigit():
         ident = f"_{ident}"
     return ident
+
+
+def pg_env_var(ref: str) -> str:
+    """Derive the env-var name that holds the Postgres DSN for an infra ``ref``.
+
+    ``primary-pg`` → ``DNA_PRIMARY_PG_URL``. The emitter NEVER hardcodes a DSN
+    literal — it emits an ``os.environ[...]`` read keyed by the ref, and the
+    ``f-copilot-infra-binding`` feature wires the ref → env-var (a Terraform
+    module output) at deploy time. Two slots that share one ``ref`` (one physical
+    Postgres) resolve to the SAME env var, exactly as the design intends.
+    """
+    slug = re.sub(r"[^A-Za-z0-9]+", "_", ref).strip("_").upper()
+    return f"DNA_{slug}_URL"
+
+
+def pg_url_expr(ref: str) -> str:
+    """The Python expression that reads the Postgres DSN for ``ref`` from the env
+    (``os.environ["DNA_PRIMARY_PG_URL"]``) — the emitted, never-hardcoded DSN."""
+    return f'os.environ["{pg_env_var(ref)}"]'
+
+
+def persistence_facts(ctx: EmitContext) -> dict[str, Any]:
+    """Neutral persistence/knowledge-store facts shared by every scaffold emitter.
+
+    Reads ``ctx.persistence`` (``{checkpoint, memory, cache}``) + ``ctx.
+    knowledge_store`` into plain flags + env-var-backed DSN expressions, so each
+    framework's copilot template maps the SAME facts onto its own classes
+    (Agno ``PostgresDb``/``PgVector``, LangGraph ``PostgresSaver``/``PostgresStore``,
+    MS-AF ``PostgresVectorStore`` + serialize-yourself). Kept in ONE place so the
+    Py↔TS twin cannot drift. Absent/None slots → the framework default (in-memory),
+    exactly the back-compat shape a copilot with no ``persistence`` block emits.
+    """
+    persistence = ctx.persistence or {}
+    checkpoint = persistence.get("checkpoint") or {}
+    memory = persistence.get("memory") or {}
+    store = ctx.knowledge_store or {}
+    embed = store.get("embed") or {}
+
+    checkpoint_pg = checkpoint.get("backend") == "postgres"
+    memory_pg = memory.get("backend") == "postgres"
+    # checkpoint + memory may share one physical Postgres (one ``ref``) — prefer
+    # the checkpoint ref, fall back to the memory ref for the shared DSN.
+    pg_ref = checkpoint.get("ref") if checkpoint_pg else (memory.get("ref") if memory_pg else None)
+    vector_pg = store.get("backend") == "pgvector"
+
+    return {
+        "checkpoint_pg": checkpoint_pg,
+        "memory_pg": memory_pg,
+        "checkpoint_ref": checkpoint.get("ref") if checkpoint_pg else None,
+        "memory_ref": memory.get("ref") if memory_pg else None,
+        "pg_ref": pg_ref,
+        "vector_pg": vector_pg,
+        "vector_ref": store.get("ref"),
+        "embed_model": embed.get("model"),
+        "embed_dims": embed.get("dims"),
+    }
 
 
 def classify_case(ctx: EmitContext) -> str:

@@ -310,6 +310,28 @@ class AgentFrameworkEmitter:
         if has_workflow and has_hitl:
             chain_funcs = chain_funcs + ["escalate"]
 
+        # ── persistence / knowledge-store → MS-AF backends (design map + gaps) ──
+        # Postgres covers VECTORS (`PostgresVectorStore` context provider); MS-AF
+        # has NO Postgres thread-store, so checkpoint/memory are a documented
+        # serialize-yourself wiring-point (serialize the AgentThread to a PG
+        # column) — honest per the design gap. DSNs come from the infra `ref` via
+        # an env var, never a hardcoded literal.
+        from dna.emit.scaffold import pg_url_expr, persistence_facts
+
+        facts = persistence_facts(ctx)
+        has_pgvector = facts["vector_pg"]
+        pg_thread = facts["checkpoint_pg"] or facts["memory_pg"]
+
+        # The stdlib import block, pre-rendered so contextvars + os group cleanly
+        # (one blank line before the agent_framework imports; none when neither is
+        # needed — the no-tenant/no-persistence path stays byte-identical).
+        stdlib = []
+        if ctx.tenant_propagate:
+            stdlib.append("import contextvars")
+        if has_pgvector or pg_thread:
+            stdlib.append("import os")
+        stdlib_imports = ("\n".join(stdlib) + "\n\n") if stdlib else ""
+
         build_fn = "build_workflow" if has_workflow else "build_agent"
         mounted_kind = "workflow" if has_workflow else "agent"
         serve_agent_expr = (
@@ -337,6 +359,24 @@ class AgentFrameworkEmitter:
             "build_fn": build_fn,
             "mounted_kind": mounted_kind,
             "serve_agent_expr": serve_agent_expr,
+            "stdlib_imports": stdlib_imports,
+            # persistence
+            "needs_os": bool(has_pgvector or pg_thread),
+            "has_pgvector": bool(has_pgvector),
+            "pg_thread": bool(pg_thread),
+            "vector_ref": facts["vector_ref"] or "",
+            "vector_collection_literal": py_str_literal(
+                py_identifier(ctx.knowledge[0]) if ctx.knowledge else "knowledge"
+            ),
+            "vector_db_url_expr": (
+                pg_url_expr(facts["vector_ref"]) if has_pgvector and facts["vector_ref"] else ""
+            ),
+            "embed_model_literal": py_str_literal(facts["embed_model"] or "text-embedding-3-small"),
+            "embed_dims": facts["embed_dims"] if facts["embed_dims"] is not None else 1536,
+            "thread_ref": facts["pg_ref"] or "",
+            "thread_db_url_expr": (
+                pg_url_expr(facts["pg_ref"]) if pg_thread and facts["pg_ref"] else ""
+            ),
         }
 
     def _copilot_losses(self, ctx: EmitContext) -> list[str]:
@@ -352,6 +392,25 @@ class AgentFrameworkEmitter:
             "prompts, RAG collections) have no code-first backend slot; RAG retrieval "
             "(`AzureAISearchContextProvider`) is per-app",
         ]
+        from dna.emit.scaffold import persistence_facts
+        facts = persistence_facts(ctx)
+        if facts["vector_pg"]:
+            out.append(
+                "pgvector RAG — the emitted `_vector_store()` binds MS-AF's "
+                "`PostgresVectorStore` over Postgres (DSN from the infra ref via env "
+                "var); wire it as the agent's `context_providers` + load the corpus "
+                "CONTENT per-app. (Class/import surface pinned to the design map — "
+                "MS-AF is not a runtime dep of the emit tests, verify against the "
+                "installed `agent_framework` at wire-up.)"
+            )
+        if facts["checkpoint_pg"] or facts["memory_pg"]:
+            out.append(
+                "checkpoint/memory serialize-yourself — MS-AF has NO Postgres "
+                "thread-store (design §6 gap): the emitted `_thread_store_dsn()` "
+                "exposes the PG DSN, but you must serialize the `AgentThread` "
+                "(`serialize()`/`deserialize()`) to a PG column yourself — no native "
+                "`PostgresSaver` equivalent"
+            )
         if ctx.workflow:
             out.append(
                 "workflow step bodies — each `workflow.chain` step is a scaffolded "

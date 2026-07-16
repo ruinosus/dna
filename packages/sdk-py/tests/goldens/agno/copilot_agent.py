@@ -10,9 +10,14 @@ session_state so tenant/knowledge stay fresh without a restart.
 """
 from __future__ import annotations
 
+import os
+
 from agno.agent import Agent
-from agno.db.in_memory import InMemoryDb
+from agno.db.postgres import PostgresDb
+from agno.knowledge.embedder.openai import OpenAIEmbedder
+from agno.knowledge.knowledge import Knowledge
 from agno.models.openai import OpenAILike
+from agno.vectordb.pgvector import PgVector, SearchType
 from agno.tools.mcp import MCPTools
 INSTRUCTIONS = "Remember and recall the user's notes. Confirm before writing.\n\nYou are the Helpdesk Concierge, an internal engineering support assistant. You help developers triage and resolve engineering questions."
 
@@ -37,23 +42,29 @@ def _mcp_tools() -> list[MCPTools]:
     ]
 
 
-def _knowledge() -> object | None:
-    """The RAG collection(s) this copilot may read
-    (`Copilot.knowledge.collections`: knowledge-base). DNA carries the
-    collection REFS; the retrieval implementation — the vector store + embedder
-    (e.g. Agno `Knowledge(vector_db=PgVector(...), contents_db=...)`, mirroring
-    the Agno KB reference's `build_knowledge`) — is PER-APP (design §6.3). This
-    is the WIRING POINT: build your `Knowledge` over the collections above and
-    return it. Returning None (the scaffold default) leaves the agent corpus-free
-    (`search_knowledge=False`), exactly like a pure-action copilot."""
-    # TODO(consumer): bind + return an Agno Knowledge over: knowledge-base
-    return None
+def _knowledge() -> Knowledge:
+    """The RAG store this copilot reads (`Copilot.knowledge`: knowledge-base).
+    DNA declares a pgvector store (`knowledge.store`), so this binds a REAL Agno
+    `Knowledge(vector_db=PgVector(...))` over Postgres — the DSN comes from the
+    `primary-pg` infra ref via its env var (f-copilot-infra-binding wires it),
+    NEVER a hardcoded literal. The corpus CONTENT is loaded per-app (call
+    `_knowledge().add_content(...)` at wire-up)."""
+    return Knowledge(
+        vector_db=PgVector(
+            table_name='knowledge_base',
+            db_url=os.environ["DNA_PRIMARY_PG_URL"],
+            search_type=SearchType.hybrid,
+            embedder=OpenAIEmbedder(id='text-embedding-3-small', dimensions=1536),
+        ),
+    )
+
 
 def build_agent(session_state: dict | None = None) -> Agent:
-    """Build the Agno Agent for one run. No network is touched — the model is
-    constructed lazily and no connection is opened at build time. `db` is an
-    in-memory default so HITL resume (paused runs) works out of the box; swap it
-    for a persistent Agno db at wire-up."""
+    """Build the Agno Agent for one run. No network is touched at build time — the
+    model is constructed lazily. `db` binds Agno's `PostgresDb` to the `primary-pg`
+    infra ref (DSN read from its env var — f-copilot-infra-binding wires it), so
+    thread/run state + cross-session user memories survive restarts and HITL resume
+    works across processes."""
     knowledge = _knowledge()
     return Agent(
         name='memory-agent',
@@ -62,7 +73,8 @@ def build_agent(session_state: dict | None = None) -> Agent:
         tools=_mcp_tools(),
         knowledge=knowledge,
         search_knowledge=knowledge is not None,
-        db=InMemoryDb(),
+        db=PostgresDb(db_url=os.environ["DNA_PRIMARY_PG_URL"]),
+        enable_user_memories=True,
         session_state=session_state or {},
         add_session_state_to_context=True,
         markdown=True,
