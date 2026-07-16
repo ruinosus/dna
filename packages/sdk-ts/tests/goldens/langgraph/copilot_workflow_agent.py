@@ -86,7 +86,7 @@ def _model():
     azure_openai / google_genai — a DNA `azure/…` coordinate needs `azure_openai:`)."""
     from langchain.chat_models import init_chat_model
 
-    return init_chat_model('azure/gpt-4o')
+    return init_chat_model("azure/gpt-4o")
 
 def _mcp_client() -> MultiServerMCPClient:
     """The DNA MCP server(s) this copilot mounts over Streamable HTTP
@@ -95,71 +95,60 @@ def _mcp_client() -> MultiServerMCPClient:
     request-scoped carrier — the outbound half of tenant propagation."""
     return MultiServerMCPClient(
         {
-            'mcp_dna-mcp': {
-                "url": 'https://mcp.dna.example/agui',
+            "mcp_dna-mcp": {
+                "url": "https://mcp.dna.example/agui",
                 "transport": "streamable_http",
                 "headers": _tenant_headers(),
             },
         }
     )
 
-async def _agent_node(state: State) -> dict:
-    """The reasoning node: call the model with the byte-equal INSTRUCTIONS as the
-    system prompt, binding the DNA MCP tools. Tenant rides IN the graph
-    state (seeded from the request-scoped carrier)."""
+async def _triage_node(state: State) -> dict:
+    """Workflow step `triage` — a graph node in the chain. Runs the mounted agent's
+    byte-equal INSTRUCTIONS + the DNA MCP tools — the per-step body is a per-app
+    stub (see EmitResult.losses)."""
     tenant = state.get("tenant") or _CURRENT_TENANT.get()
     model = _model()
     model = model.bind_tools(await _mcp_client().get_tools())
     reply = await model.ainvoke([SystemMessage(INSTRUCTIONS), *state["messages"]])
     return {"messages": [reply], "tenant": tenant}
 
-async def _tool_node(state: State) -> dict:
-    """Run the model's MCP tool calls (a LangGraph `ToolNode` over the tools the DNA
-    MCP server exposes), then loop back to the agent node."""
-    return await ToolNode(await _mcp_client().get_tools()).ainvoke(state)
+async def _retrieve_node(state: State) -> dict:
+    """Workflow step `retrieve` — a graph node in the chain. The per-step body is a per-app stub
+    (see EmitResult.losses)."""
+    reply = await _model().ainvoke(state["messages"])
+    return {"messages": [reply]}
 
-#: The DNA write tools gated on human approval (`Tool.requires_confirmation`) — the
-#: graph pauses on these via LangGraph `interrupt()`.
-_CONFIRM_TOOLS = ['forget', 'remember']
-
+async def _resolve_node(state: State) -> dict:
+    """Workflow step `resolve` — a graph node in the chain. The per-step body is a per-app stub
+    (see EmitResult.losses)."""
+    reply = await _model().ainvoke(state["messages"])
+    return {"messages": [reply]}
 
 def _review_node(state: State) -> dict:
-    """Graph-enforced HITL: pause for human approval before a gated write tool runs.
-    `interrupt()` suspends the graph (the LangGraph-native equivalent of Agno's
-    `external_execution` / MS-AF's `request_info`); CopilotKit's `useInterrupt`
-    renders the approval card and resumes the graph with the decision. The gated
-    effect runs only after approval — wire the post-approval branch at the consumer."""
-    last = state["messages"][-1]
-    gated = [
-        c["name"]
-        for c in getattr(last, "tool_calls", None) or []
-        if c["name"] in _CONFIRM_TOOLS
-    ]
-    interrupt({"awaiting_approval": gated})
+    """Workflow-level graph-enforced HITL: a dedicated `interrupt()` node appended to
+    the chain (the LangGraph-native equivalent of MS-AF's `request_info` escalation
+    node). CopilotKit's `useInterrupt` answers; the gated effect runs only after
+    approval — wire it at the consumer."""
+    summary = state["messages"][-1].content if state["messages"] else ""
+    interrupt({"awaiting_approval": summary})
     return {"messages": []}
 
-def _route(state: State) -> str:
-    """After the agent node: a gated tool call → `review` (HITL); any tool call →
-    `tools`; no tool call → END."""
-    calls = getattr(state["messages"][-1], "tool_calls", None) or []
-    if not calls:
-        return END
-    if any(c["name"] in _CONFIRM_TOOLS for c in calls):
-        return "review"
-    return "tools"
-
-def build_agent():
-    """Build the AG-UI-native CoAgent graph for one run — a `StateGraph` compiled to
-    a checkpointed graph the AG-UI adapter serves. LangGraph IS the graph, so the
-    ReAct loop + the human-approval interrupt is expressed directly as nodes + edges."""
+def build_workflow():
+    """Per-request factory: the declared `workflow.chain` AS graph nodes. LangGraph is
+    graph-native, so a multi-step chain is just `add_edge` from step to step + a
+    `review` interrupt node for human approval — the cleanest workflow shape of the
+    three runtime targets."""
     from langgraph.checkpoint.memory import MemorySaver
 
     graph = StateGraph(State)
-    graph.add_node("agent", _agent_node)
-    graph.add_node("tools", _tool_node)
+    graph.add_node("triage", _triage_node)
+    graph.add_node("retrieve", _retrieve_node)
+    graph.add_node("resolve", _resolve_node)
     graph.add_node("review", _review_node)
-    graph.add_edge(START, "agent")
-    graph.add_conditional_edges("agent", _route)
-    graph.add_edge("review", "tools")
-    graph.add_edge("tools", "agent")
+    graph.add_edge(START, "triage")
+    graph.add_edge("triage", "retrieve")
+    graph.add_edge("retrieve", "resolve")
+    graph.add_edge("resolve", "review")
+    graph.add_edge("review", END)
     return graph.compile(checkpointer=MemorySaver())

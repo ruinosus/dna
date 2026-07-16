@@ -290,3 +290,135 @@ describe("AgentFrameworkEmitter — the servable `copilot` case (MS Agent Framew
     expect(res.artifact).not.toContain("FoundryChatClient");
   });
 });
+
+/**
+ * The LangGraph `copilot` scaffold case (TS twin of the Chunk 7 slice of
+ * `test_copilot_emit.py`) — the THIRD per-runtime copilot case
+ * (f-copilot-langgraph-target). `buildCopilotContext` (the SAME ctx the Agno +
+ * MS-AF cases read) → `LanggraphEmitter().emit(ctx)` renders TWO artifacts
+ * (a `StateGraph` agent module + the AG-UI LangGraph serving module) governed by
+ * byte-equal goldens; a Copilot with a `workflow.chain` emits the graph-native
+ * node chain. Rendered literals differ from Python only in quote style (JSON
+ * string literals — the shared convention). This makes it 3 runtime targets —
+ * the emitter fully runtime-agnostic.
+ */
+import { LanggraphEmitter } from "../src/emit/langgraph.js";
+
+describe("LanggraphEmitter — the servable `copilot` case (StateGraph CoAgent)", () => {
+  async function ctxFor(copilot: string): Promise<EmitContext> {
+    const mi = await quickInstance(SCOPE, BASE);
+    return buildCopilotContext(mi, copilot, { model: "azure/gpt-4o", provider: "azure" });
+  }
+
+  it("emits two artifacts (agent + serving) at the mounted agent's module paths", async () => {
+    const res = new LanggraphEmitter().emit(await ctxFor("memory-copilot"));
+    expect(new Set(res.artifacts.map((a) => a.role))).toEqual(new Set(["agent", "serving"]));
+    expect(res.target).toBe("langgraph");
+    const paths = Object.fromEntries(res.artifacts.map((a) => [a.role, a.path]));
+    expect(paths.agent).toBe("memory_agent.py");
+    expect(paths.serving).toBe("memory_agent_serve.py");
+  });
+
+  it("the agent artifact matches the golden", async () => {
+    const res = new LanggraphEmitter().emit(await ctxFor("memory-copilot"));
+    expect(res.artifactFor("agent")).toBe(readGolden("langgraph/copilot_agent.py"));
+  });
+
+  it("the serving artifact matches the golden", async () => {
+    const res = new LanggraphEmitter().emit(await ctxFor("memory-copilot"));
+    expect(res.artifactFor("serving")).toBe(readGolden("langgraph/copilot_serve.py"));
+  });
+
+  it("carries the byte-equal instruction via the inherited scaffold method (role=agent)", async () => {
+    const ctx = await ctxFor("memory-copilot");
+    const emitter = new LanggraphEmitter();
+    const res = emitter.emit(ctx);
+    expect(emitter.extractInstructions(res.artifactFor("agent"))).toBe(ctx.instructions);
+  });
+
+  it("builds a StateGraph CoAgent and serves /agui via the LangGraph AG-UI adapter", async () => {
+    const res = new LanggraphEmitter().emit(await ctxFor("memory-copilot"));
+    const agent = res.artifactFor("agent");
+    const serving = res.artifactFor("serving");
+    // runtime-delta vs Agno/MS-AF: a StateGraph compiled to a CoAgent.
+    expect(agent).toContain("from langgraph.graph import END, START, StateGraph");
+    expect(agent).toContain("graph = StateGraph(State)");
+    expect(agent).toContain("return graph.compile(checkpointer=MemorySaver())");
+    expect(serving).toContain(
+      "from ag_ui_langgraph import LangGraphAgent, add_langgraph_fastapi_endpoint",
+    );
+    expect(serving).toContain("agent=LangGraphAgent(name=\"memory-agent\", graph=build_agent()),");
+    expect(serving).toContain('path="/agui",');
+  });
+
+  it("mounts MCP via MultiServerMCPClient + ToolNode", async () => {
+    const agent = new LanggraphEmitter().emit(await ctxFor("memory-copilot")).artifactFor("agent");
+    expect(agent).toContain("from langchain_mcp_adapters.client import MultiServerMCPClient");
+    expect(agent).toContain("from langgraph.prebuilt import ToolNode");
+    expect(agent).toContain('"mcp_dna-mcp": {');
+    expect(agent).toContain('"url": "https://mcp.dna.example/agui",');
+    expect(agent).toContain('"transport": "streamable_http",');
+    expect(agent).toContain("ToolNode(await _mcp_client().get_tools())");
+  });
+
+  it("gates writes via the graph-enforced interrupt() review node (HITL)", async () => {
+    const ctx = await ctxFor("memory-copilot");
+    expect(ctx.toolsRequiringConfirmation).toEqual(new Set(["remember", "forget"]));
+    const agent = new LanggraphEmitter().emit(ctx).artifactFor("agent");
+    expect(agent).toContain("from langgraph.types import interrupt");
+    expect(agent).toContain('_CONFIRM_TOOLS = ["forget", "remember"]');
+    expect(agent).toContain("def _review_node(state: State) -> dict:");
+    expect(agent).toContain('interrupt({"awaiting_approval": gated})');
+    expect(agent).toContain('graph.add_node("review", _review_node)');
+  });
+
+  it("carries tenant IN the graph state + DNA-native headers only (no license/namespace)", async () => {
+    const res = new LanggraphEmitter().emit(await ctxFor("memory-copilot"));
+    const agent = res.artifactFor("agent");
+    const serving = res.artifactFor("serving");
+    // tenant is the LangGraph-native carrier — it rides in the graph state.
+    expect(agent).toContain("class State(TypedDict):");
+    expect(agent).toContain("tenant: dict");
+    expect(agent).toContain('tenant = state.get("tenant") or _CURRENT_TENANT.get()');
+    // ContextVar bridge for the outbound MCP headers, DNA-native only.
+    expect(agent).toContain("contextvars.ContextVar");
+    expect(agent).toContain('"X-DNA-Tenant"');
+    expect(agent).toContain('"X-DNA-Workspace"');
+    expect(agent).toContain('"X-Tenant-OID"');
+    expect(serving).toContain('@app.middleware("http")');
+    for (const forbidden of ["X-DNA-License-ID", "X-DNA-Namespace-ID", "license_id", "namespace_id"]) {
+      expect(agent).not.toContain(forbidden);
+      expect(serving).not.toContain(forbidden);
+    }
+  });
+
+  it("emits the graph-native node chain + interrupt() review node for a workflow copilot", async () => {
+    const ctx = await ctxFor("workflow-copilot");
+    expect(ctx.workflow).toEqual(["triage", "retrieve", "resolve"]);
+    const res = new LanggraphEmitter().emit(ctx);
+    const agent = res.artifactFor("agent");
+    expect(agent).toBe(readGolden("langgraph/copilot_workflow_agent.py"));
+    expect(agent).toContain("async def _triage_node(state: State) -> dict:");
+    expect(agent).toContain("def build_workflow():");
+    expect(agent).toContain('graph.add_node("triage", _triage_node)');
+    expect(agent).toContain('graph.add_edge("triage", "retrieve")');
+    expect(agent).toContain('graph.add_edge("resolve", "review")');
+    // workflow-level HITL: a dedicated interrupt() review node, no ReAct _route.
+    expect(agent).toContain('interrupt({"awaiting_approval": summary})');
+    expect(agent).not.toContain("def _route(");
+    const serving = res.artifactFor("serving");
+    expect(serving).toBe(readGolden("langgraph/copilot_workflow_serve.py"));
+    expect(serving).toContain("from memory_agent import build_workflow");
+    expect(serving).toContain("graph=build_workflow())");
+  });
+
+  it("a plain agent (no copilot signals) stays the single-artifact create_react_agent scaffold", async () => {
+    const mi = await quickInstance(SCOPE, BASE);
+    const res = await emitAgent(mi, "concierge", "langgraph");
+    expect(res.artifacts.map((a) => a.role)).toEqual(["agent"]);
+    expect(res.filename.endsWith(".py")).toBe(true);
+    expect(res.artifact).toContain("create_react_agent(");
+    expect(res.artifact).not.toContain("StateGraph");
+    expect(res.artifact).not.toContain("add_langgraph_fastapi_endpoint");
+  });
+});

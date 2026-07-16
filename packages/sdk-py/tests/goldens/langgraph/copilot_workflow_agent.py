@@ -88,8 +88,6 @@ def _model():
 
     return init_chat_model('azure/gpt-4o')
 
-
-
 def _mcp_client() -> MultiServerMCPClient:
     """The DNA MCP server(s) this copilot mounts over Streamable HTTP
     (langchain-mcp-adapters). Tool bodies live on the remote MCP server, not in
@@ -105,8 +103,6 @@ def _mcp_client() -> MultiServerMCPClient:
         }
     )
 
-
-
 async def _triage_node(state: State) -> dict:
     """Workflow step `triage` — a graph node in the chain. Runs the mounted agent's
     byte-equal INSTRUCTIONS + the DNA MCP tools — the per-step body is a per-app
@@ -117,23 +113,17 @@ async def _triage_node(state: State) -> dict:
     reply = await model.ainvoke([SystemMessage(INSTRUCTIONS), *state["messages"]])
     return {"messages": [reply], "tenant": tenant}
 
-
-
 async def _retrieve_node(state: State) -> dict:
     """Workflow step `retrieve` — a graph node in the chain. The per-step body is a per-app stub
     (see EmitResult.losses)."""
     reply = await _model().ainvoke(state["messages"])
     return {"messages": [reply]}
 
-
-
 async def _resolve_node(state: State) -> dict:
     """Workflow step `resolve` — a graph node in the chain. The per-step body is a per-app stub
     (see EmitResult.losses)."""
     reply = await _model().ainvoke(state["messages"])
     return {"messages": [reply]}
-
-
 
 def _review_node(state: State) -> dict:
     """Workflow-level graph-enforced HITL: a dedicated `interrupt()` node appended to
@@ -143,7 +133,6 @@ def _review_node(state: State) -> dict:
     summary = state["messages"][-1].content if state["messages"] else ""
     interrupt({"awaiting_approval": summary})
     return {"messages": []}
-
 
 def build_workflow():
     """Per-request factory: the declared `workflow.chain` AS graph nodes. LangGraph is
