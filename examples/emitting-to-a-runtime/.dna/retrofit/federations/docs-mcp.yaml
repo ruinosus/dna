@@ -1,0 +1,19 @@
+apiVersion: github.com/ruinosus/dna/federation/v1
+kind: MCPFederation
+metadata:
+  name: docs-mcp
+  description: >-
+    The document MCP server the RFP analyst mounts over Streamable HTTP —
+    corpus search + verdict recording against a tenant-scoped store. A flat
+    allowlist (no RBAC split) — the Agno reference gates the write with a LOCAL
+    external_execution tool + per-request grants, not a registry role floor.
+spec:
+  transport: streamable_http
+  url: https://mcp.docs.example/agui
+  auth:
+    kind: bearer_env
+    env: DNA_DOCS_TOKEN
+  allowed_tools:
+  - search-corpus
+  - record-verdict
+  propagate_tenant: true
