@@ -161,11 +161,14 @@ plugins:
             show_if_no_docstring: false
             members_order: source
 
-# Architecture Decision Records live under docs/adr/ as versioned repo
-# artifacts (they land on main with the code they justify), not as rendered
-# site pages — so exclude them from the strict build's nav-coverage check.
+# ADRs (docs/adr/), design specs (docs/design/) and implementation plans
+# (docs/plans/) live as versioned repo artifacts — they land on main with the
+# code they justify, not as rendered site pages — so exclude them from the
+# strict build's nav-coverage check.
 exclude_docs: |
   adr/
+  design/
+  plans/
 
 # Make the build gate meaningful: with `mkdocs build --strict` these
 # warnings become hard errors, so a broken internal link or anchor fails CI.
