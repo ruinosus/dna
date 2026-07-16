@@ -76,6 +76,27 @@ export interface EmitContext {
    *  (MS Agent Framework) target emits a `WorkflowBuilder` chain + a
    *  workflow-level escalation node when present. Empty = plain single-agent app. */
   workflow: string[];
+  // ── frontend projections (filled by buildCopilotContext) ──────────────────
+  /** The console kind (`Copilot.frontend.console`, e.g. `"copilotkit"`), or null
+   *  when the copilot declares no `frontend` block (backend-only). The frontend
+   *  emit (`emitFrontendConsole`) is gated on this being set. */
+  frontendConsole: string | null;
+  /** Named side panels the console mounts alongside the chat
+   *  (`Copilot.frontend.panels`). Empty when none / no frontend. */
+  frontendPanels: string[];
+  /** Starter prompts surfaced in the empty console
+   *  (`Copilot.frontend.suggested_prompts`) — the anti-blank-box surface. */
+  frontendSuggestedPrompts: string[];
+  /** The HITL approval-card copy (`Copilot.hitl.approval_card`:
+   *  `{title, details_from, reason_from}`), or null when no card is declared. */
+  hitlApprovalCard: ApprovalCardConfig | null;
+}
+
+/** The `Copilot.hitl.approval_card` copy projected onto the ctx. */
+export interface ApprovalCardConfig {
+  title: string | null;
+  details_from: string | null;
+  reason_from: string | null;
 }
 
 export interface EmitTool {
@@ -311,6 +332,10 @@ export async function buildEmitContext(
     tenantPropagate: false,
     knowledge: [],
     workflow: [],
+    frontendConsole: null,
+    frontendPanels: [],
+    frontendSuggestedPrompts: [],
+    hitlApprovalCard: null,
   };
 }
 
@@ -366,8 +391,34 @@ export async function buildCopilotContext(
 
   const workflowBlock = (cspec.workflow as Record<string, unknown> | undefined) ?? {};
   ctx.workflow = ((workflowBlock.chain as string[] | undefined) ?? []).slice();
+  // ── frontend projection (Chunk 5) ─────────────────────────────────────────
+  // The Copilot's `frontend` + `hitl.approval_card` blocks — consumed ONLY by
+  // the frontend emit (`emitFrontendConsole`); the backend scaffold ignores them.
+  const frontendBlock = (cspec.frontend as Record<string, unknown> | undefined) ?? {};
+  ctx.frontendConsole = (frontendBlock.console as string | undefined) ?? null;
+  ctx.frontendPanels = ((frontendBlock.panels as string[] | undefined) ?? []).slice();
+  ctx.frontendSuggestedPrompts = (
+    (frontendBlock.suggested_prompts as string[] | undefined) ?? []
+  ).slice();
+  const hitlBlock = (cspec.hitl as Record<string, unknown> | undefined) ?? {};
+  ctx.hitlApprovalCard = projectApprovalCard(
+    hitlBlock.approval_card as Record<string, unknown> | undefined,
+  );
 
   return ctx;
+}
+
+/** Normalize the `hitl.approval_card` node to `{title, details_from, reason_from}`,
+ *  or null when undeclared (TS twin of Python `_project_approval_card`). */
+function projectApprovalCard(
+  card: Record<string, unknown> | undefined,
+): ApprovalCardConfig | null {
+  if (card == null) return null;
+  return {
+    title: (card.title as string | undefined) ?? null,
+    details_from: (card.details_from as string | undefined) ?? null,
+    reason_from: (card.reason_from as string | undefined) ?? null,
+  };
 }
 
 /** Resolve the mounted `Agent.spec.mcp_servers` refs → their `MCPFederation`

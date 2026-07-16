@@ -24,26 +24,53 @@ from agno.os.middleware.user_scope import resolve_run_user_id
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 
-#: Inbound AG-UI request headers → the per-run tenant carrier. Mirrors the
-#: Agno KB reference `tenant_from_request`; adjust the header names to your IdP.
+#: Inbound AG-UI request headers → the per-run tenant carrier. DNA tenancy is
+#: THREE dimensions, all carried as TRUSTED server-to-server headers stamped by
+#: the portal AFTER it verifies the session (never read from the browser),
+#: mirroring DNA's own outbound `X-DNA-Tenant-Effective` / `X-DNA-Scope`
+#: convention (`dna.extensions.federation`):
+#:   * `X-DNA-Tenant`    — the tenant (Entra `tid`).
+#:   * `X-DNA-Workspace` — the workspace id (DNA's tenancy dimension; the portal
+#:                         already verified the caller's WorkspaceMembership).
+#:   * `X-Tenant-OID`    — the user `oid` (routes personal memory `personal:<oid>`).
 _TENANT_HEADERS = {
-    "license_id": "X-DNA-License-ID",
-    "namespace_id": "X-DNA-Namespace-ID",
-    "user_id": "X-User-ID",
+    "tenant": "X-DNA-Tenant",
+    "workspace": "X-DNA-Workspace",
     "oid": "X-Tenant-OID",
 }
 
+#: Workspace → scope prefix. Mirrors `dna.application.live` (`default_scope`,
+#: `workspace_scope_prefix="tenant-"`): a resolved workspace reads/writes its OWN
+#: scope `tenant-<workspace_id>`, never the vendor's base.
+_WORKSPACE_SCOPE_PREFIX = "tenant-"
+
+
+def workspace_scope(workspace: str | None) -> str | None:
+    """Resolve a verified `workspace` id to its DNA scope `tenant-<workspace_id>`.
+
+    Mirrors `dna.application.live.default_scope`: the portal already verified the
+    caller's `WorkspaceMembership`, so the emitted agent maps the trusted
+    `workspace` straight to its own scope. Blank → `None` (the stdio /
+    unauthenticated path defaults to the base scope server-side)."""
+    if not workspace:
+        return None
+    return f"{_WORKSPACE_SCOPE_PREFIX}{workspace}"
+
 
 def tenant_from_request(request: Request) -> dict:
-    """Derive the per-run tenant/oid from the inbound AG-UI request headers."""
+    """Derive DNA's 3-dimension tenant carrier (tenant / workspace / oid) from the
+    inbound AG-UI request's trusted headers, resolving `workspace` → `scope`."""
     h = request.headers
-    return {key: h.get(header) for key, header in _TENANT_HEADERS.items()}
+    tenant = {key: h.get(header) for key, header in _TENANT_HEADERS.items()}
+    tenant["scope"] = workspace_scope(tenant.get("workspace"))
+    return tenant
 
 
 def inject_tenant(run_input: RunAgentInput, tenant: dict) -> None:
     """Write the request tenant into run-state so the mounted tools read it via
-    `RunContext.session_state` — never a tool param (no LLM-schema leak). Mirrors
-    the Agno KB reference `inject_tenant`; frontend-owned state is preserved."""
+    `RunContext.session_state` — never a tool param (no LLM-schema leak). The
+    resolved `scope` (`tenant-<workspace_id>`) targets the workspace's data; the
+    `oid` routes personal memory (`personal:<oid>`). Frontend state is preserved."""
     if not isinstance(run_input.state, dict):
         run_input.state = {}
     run_input.state["tenant"] = tenant

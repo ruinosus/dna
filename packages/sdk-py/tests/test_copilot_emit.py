@@ -637,6 +637,70 @@ def maf_ctx(mi):
     )
 
 
+# ── Chunk 5 · the shared CopilotKit frontend console scaffold ────────────────
+#
+# ``build_copilot_context`` also projects the Copilot's ``frontend`` + ``hitl.
+# approval_card`` blocks; ``emit_frontend_console`` renders the shared CopilotKit
+# v2 console (route + console + approval-card + suggested-prompts) plus the ONE
+# per-runtime resume-adapter. This is a TS-only golden family (design §7): the
+# emitted files are TypeScript, governed by their own byte-stable golden, with no
+# Py↔TS twin-diff (there is no Python frontend to diff against).
+
+
+def _fe_files(res) -> dict:
+    """The emitted frontend artifacts keyed by their target-relative path."""
+    return {a.path: a.content for a in res.artifacts}
+
+
+# ── Task 5a: build_copilot_context projects the frontend + hitl.approval_card ─
+
+
+def test_copilot_ctx_projects_frontend(mi):
+    from dna.emit import build_copilot_context
+
+    ctx = build_copilot_context(mi, "memory-copilot", model="azure/gpt-4o")
+    assert ctx.frontend_console == "copilotkit"
+    assert ctx.frontend_panels == ["memory-timeline"]
+    assert ctx.frontend_suggested_prompts == ["What did I ask you to remember?"]
+
+
+def test_copilot_ctx_projects_approval_card(mi):
+    from dna.emit import build_copilot_context
+
+    ctx = build_copilot_context(mi, "memory-copilot", model="azure/gpt-4o")
+    assert ctx.hitl_approval_card == {
+        "title": "Confirm write",
+        "details_from": "args.text",
+        "reason_from": "args.reason",
+    }
+
+
+def test_copilot_ctx_frontend_absent_when_undeclared(mi):
+    """A pure-action copilot declares no ``frontend`` / ``hitl`` — the ctx carries
+    None/empty, and ``has_frontend`` is False (no console to emit)."""
+    from dna.emit import build_copilot_context
+    from dna.emit.frontend import has_frontend
+
+    ctx = build_copilot_context(mi, "pure-action-copilot", model="azure/gpt-4o")
+    assert ctx.frontend_console is None
+    assert ctx.frontend_panels == []
+    assert ctx.frontend_suggested_prompts == []
+    assert ctx.hitl_approval_card is None
+    assert has_frontend(ctx) is False
+
+
+# ── Task 5b: the frontend emit — one shared console tree (role="frontend") ────
+
+
+@pytest.fixture()
+def fe_ctx(mi):
+    from dna.emit import build_copilot_context
+
+    return build_copilot_context(
+        mi, "memory-copilot", model="azure/gpt-4o", provider="azure"
+    )
+
+
 @pytest.fixture()
 def maf_workflow_ctx(mi):
     from dna.emit import build_copilot_context
@@ -891,3 +955,178 @@ def test_maf_plain_agent_still_single_yaml(mi):
     assert res.filename.endswith("agent.yaml")
     assert "kind: Prompt" in res.artifact
     assert "FoundryChatClient" not in res.artifact
+def test_frontend_emit_is_the_shared_console_tree(fe_ctx):
+    """Five files, all ``role="frontend"``, at their target-relative paths."""
+    from dna.emit.frontend import emit_frontend_console
+
+    res = emit_frontend_console(fe_ctx, runtime="agno")
+    assert {a.role for a in res.artifacts} == {"frontend"}
+    assert set(_fe_files(res)) == {
+        "app/api/copilotkit/route.ts",
+        "components/copilot/console.tsx",
+        "components/copilot/approval-card.tsx",
+        "components/copilot/suggested-prompts.tsx",
+        "lib/copilot/resume-adapter.ts",
+    }
+    assert res.target == "copilotkit-agno"
+
+
+def test_frontend_route_matches_golden(fe_ctx):
+    from dna.emit.frontend import emit_frontend_console
+
+    files = _fe_files(emit_frontend_console(fe_ctx, runtime="agno"))
+    assert files["app/api/copilotkit/route.ts"] == read_golden("frontend/route.ts")
+
+
+def test_frontend_console_matches_golden(fe_ctx):
+    from dna.emit.frontend import emit_frontend_console
+
+    files = _fe_files(emit_frontend_console(fe_ctx, runtime="agno"))
+    assert files["components/copilot/console.tsx"] == read_golden("frontend/console.tsx")
+
+
+def test_frontend_approval_card_matches_golden(fe_ctx):
+    from dna.emit.frontend import emit_frontend_console
+
+    files = _fe_files(emit_frontend_console(fe_ctx, runtime="agno"))
+    assert files["components/copilot/approval-card.tsx"] == read_golden(
+        "frontend/approval-card.tsx"
+    )
+
+
+def test_frontend_suggested_prompts_matches_golden(fe_ctx):
+    from dna.emit.frontend import emit_frontend_console
+
+    files = _fe_files(emit_frontend_console(fe_ctx, runtime="agno"))
+    assert files["components/copilot/suggested-prompts.tsx"] == read_golden(
+        "frontend/suggested-prompts.tsx"
+    )
+
+
+# ── Task 5c: the console is parameterized from Copilot.frontend / hitl ────────
+
+
+def test_frontend_console_wires_chat_and_provider(fe_ctx):
+    from dna.emit.frontend import emit_frontend_console
+
+    console = _fe_files(emit_frontend_console(fe_ctx))["components/copilot/console.tsx"]
+    assert 'const AGENT_ID = "memory-agent";' in console
+    assert "<CopilotChat agentId={AGENT_ID} />" in console
+    assert 'runtimeUrl="/api/copilotkit"' in console
+
+
+def test_frontend_console_wires_panels_and_prompts(fe_ctx):
+    from dna.emit.frontend import emit_frontend_console
+
+    console = _fe_files(emit_frontend_console(fe_ctx))["components/copilot/console.tsx"]
+    # panel from frontend.panels
+    assert 'data-panel="memory-timeline"' in console
+    # starter prompt from frontend.suggested_prompts (anti-blank-box)
+    assert '"What did I ask you to remember?"' in console
+    assert "<SuggestedPrompts agentId={AGENT_ID} prompts={SUGGESTED_PROMPTS} />" in console
+
+
+def test_frontend_console_gates_write_tools_via_hitl(fe_ctx):
+    """One useHumanInTheLoop hook per gated write tool, driving the ApprovalCard
+    with the Copilot's approval_card copy (title + details_from/reason_from)."""
+    from dna.emit.frontend import emit_frontend_console
+
+    console = _fe_files(emit_frontend_console(fe_ctx))["components/copilot/console.tsx"]
+    assert 'name: "remember",' in console
+    assert 'name: "forget",' in console
+    assert 'title="Confirm write"' in console
+    assert 'pick(args as Record<string, unknown>, "args.text")' in console
+    assert 'pick(args as Record<string, unknown>, "args.reason")' in console
+
+
+def test_frontend_route_stamps_three_trusted_tenant_headers(fe_ctx):
+    """DNA tenancy is three dimensions, stamped server-to-server in the ROUTE (the
+    portal's server) — X-DNA-Tenant + X-DNA-Workspace + X-Tenant-OID — NEVER the
+    browser. No license/namespace dimension anywhere."""
+    from dna.emit.frontend import emit_frontend_console
+
+    files = _fe_files(emit_frontend_console(fe_ctx))
+    route = files["app/api/copilotkit/route.ts"]
+    assert '"X-DNA-Tenant"' in route
+    assert '"X-DNA-Workspace"' in route
+    assert '"X-Tenant-OID"' in route
+    assert "buildAgent(AGENT_URL, dnaTenantHeaders())" in route
+    # server-only env, never exposed to the browser bundle.
+    assert "NEXT_PUBLIC" not in route
+    for content in files.values():
+        assert "License" not in content
+        assert "Namespace" not in content
+
+
+def test_frontend_console_sends_no_client_tenant_headers(fe_ctx):
+    """The browser console (a client component) forwards NO tenant headers — the
+    trusted headers live in the server route, not the CopilotKitProvider."""
+    from dna.emit.frontend import emit_frontend_console
+
+    console = _fe_files(emit_frontend_console(fe_ctx))["components/copilot/console.tsx"]
+    assert "dnaTenantHeaders" not in console
+    assert "headers={" not in console
+    assert 'runtimeUrl="/api/copilotkit"' in console
+
+
+# ── Task 5d: the per-runtime resume-adapter (the ONE per-runtime file) ────────
+
+
+def test_frontend_agno_resume_adapter_is_native(fe_ctx):
+    """agno resumes external_execution gates natively → identity HttpAgent, no
+    payload rewrite."""
+    from dna.emit.frontend import emit_frontend_console
+
+    adapter = _fe_files(emit_frontend_console(fe_ctx, runtime="agno"))[
+        "lib/copilot/resume-adapter.ts"
+    ]
+    assert adapter == read_golden("frontend/resume-adapter.agno.ts")
+    assert "return new HttpAgent({ url, headers });" in adapter
+    # no payload-rewrite bridge (that is the MS-AF adapter's job).
+    assert "body.resume" not in adapter
+    assert "fetch:" not in adapter
+
+
+def test_frontend_msaf_resume_adapter_bridges_interrupts(fe_ctx):
+    """MS Agent Framework needs the AG-UI resume array → {interrupts:[…]} bridge —
+    the ONLY file that differs from the agno emit."""
+    from dna.emit.frontend import emit_frontend_console
+
+    res = emit_frontend_console(fe_ctx, runtime="agent-framework")
+    adapter = _fe_files(res)["lib/copilot/resume-adapter.ts"]
+    assert adapter == read_golden("frontend/resume-adapter.msaf.ts")
+    assert "interrupts:" in adapter
+    assert res.target == "copilotkit-agent-framework"
+    # the SHARED files are byte-identical to the agno emit — only the adapter differs.
+    agno = _fe_files(emit_frontend_console(fe_ctx, runtime="agno"))
+    msaf = _fe_files(res)
+    for path in agno:
+        if path != "lib/copilot/resume-adapter.ts":
+            assert agno[path] == msaf[path]
+
+
+def test_frontend_emit_rejects_unknown_runtime(fe_ctx):
+    from dna.emit import EmitError
+    from dna.emit.frontend import emit_frontend_console
+
+    with pytest.raises(EmitError):
+        emit_frontend_console(fe_ctx, runtime="carrier-pigeon")
+
+
+def test_frontend_emit_requires_a_frontend_block(mi):
+    """A copilot with no ``frontend`` block has no console to emit → EmitError."""
+    from dna.emit import EmitError, build_copilot_context
+    from dna.emit.frontend import emit_frontend_console
+
+    ctx = build_copilot_context(mi, "pure-action-copilot", model="azure/gpt-4o")
+    with pytest.raises(EmitError):
+        emit_frontend_console(ctx)
+
+
+def test_frontend_backend_emit_still_two_artifacts(fe_ctx):
+    """The frontend emit is a SEPARATE surface — the backend copilot emit is
+    unchanged (agent + serving only, no frontend leak)."""
+    from dna.emit.agno import AgnoEmitter
+
+    res = AgnoEmitter().emit(fe_ctx)
+    assert {a.role for a in res.artifacts} == {"agent", "serving"}
