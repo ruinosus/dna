@@ -23,6 +23,8 @@ import pathlib
 import pytest
 
 from dna.emit import (
+    EmitArtifact,
+    EmitResult,
     UnknownTarget,
     available_targets,
     build_emit_context,
@@ -99,3 +101,31 @@ def test_build_context_is_the_shared_front_door(mi) -> None:
     ctx = build_emit_context(mi, _AGENT)
     assert ctx.instructions == mi.build_prompt(_AGENT)
     assert ctx.name == _AGENT
+
+
+# ── 4. multi-artifact EmitResult (back-compat single) ───────────────────────
+
+
+def test_multi_artifact_byte_equal_on_agent_role():
+    """A multi-artifact emit carries the byte-equal instruction on the
+    ``role="agent"`` entry; other roles (serving, …) ride alongside."""
+    res = EmitResult(
+        target="x",
+        artifacts=[
+            EmitArtifact(path="agent.py", content="INSTRUCTIONS = 'hi'\n", role="agent"),
+            EmitArtifact(path="serve.py", content="# serve", role="serving"),
+        ],
+    )
+    assert {a.role for a in res.artifacts} == {"agent", "serving"}
+    assert res.artifact == res.artifact_for("agent")
+    from dna.emit.agno import AgnoEmitter
+
+    assert AgnoEmitter().extract_instructions(res.artifact_for("agent")) == "hi"
+
+
+def test_single_artifact_back_compat():
+    """The legacy single-artifact constructor still works: ``artifact``/
+    ``filename`` resolve transparently to the lone ``role="agent"`` entry."""
+    res = EmitResult(artifact="A", target="x", filename="a.py")
+    assert res.artifact == "A" and res.filename == "a.py"
+    assert [a.role for a in res.artifacts] == ["agent"]
