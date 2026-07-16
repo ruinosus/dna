@@ -22,6 +22,118 @@ import type { Document } from "../kernel/document.js";
 
 const API_VERSION = "github.com/ruinosus/dna/federation/v1";
 
+// ── RBAC (absorption phase 6a, design §6.4) ─────────────────────────────────
+// Read/write tool governance + per-tool role floors, mirroring foundry-assured's
+// McpServer registry (apps/backend/app/agents/mcp/registry.py) adapted to DNA's
+// role ladder. Foundry uses a flat named-grant set (Reader/Author/Approver/Admin);
+// DNA's ladder is rank-based (portfolio Role Kind: guest < member < admin < owner,
+// "highest-role-wins compares rank"), so the floor is a RANK comparison, not set
+// membership. PURE functions — no network/framework — 1:1 twin of
+// dna/extensions/federation/__init__.py.
+//
+// Back-compat is SACRED: the flat allowed_tools allowlist is unchanged; the
+// read/write split + role floors are ADDITIVE, OPTIONAL refinements. Undeclared
+// split (both empty) => RBAC OFF, allowed_tools governs alone (as before).
+
+/** The standard DNA ladder ranks (higher = more access). Custom rungs can be
+ * injected via the `roleRanks` param; the pure default is this ladder. */
+export const STANDARD_ROLE_RANKS: Record<string, number> = {
+  guest: 0,
+  member: 10,
+  admin: 20,
+  owner: 30,
+};
+
+type Spec = Record<string, unknown>;
+type RoleRanks = Record<string, number>;
+
+function specDict(spec: unknown): Spec {
+  return (spec ?? {}) as Spec;
+}
+
+function rank(roleId: string, roleRanks?: RoleRanks): number {
+  const ranks = roleRanks ?? STANDARD_ROLE_RANKS;
+  return roleId in ranks ? ranks[roleId] : -1;
+}
+
+function maxRank(roles: Iterable<string>, roleRanks?: RoleRanks): number {
+  const rs = [...roles].map((r) => rank(r, roleRanks));
+  return rs.length ? Math.max(...rs) : -1;
+}
+
+function satisfies(
+  roles: Iterable<string>,
+  floor: string,
+  roleRanks?: RoleRanks,
+): boolean {
+  const floorRank = rank(floor, roleRanks);
+  if (floorRank < 0) return false; // unknown floor → deny (fail-closed)
+  return maxRank(roles, roleRanks) >= floorRank;
+}
+
+/** 'read' | 'write'. Fail-closed: a tool on NEITHER list is a WRITE — an
+ * unclassified new tool can't slip through as an open read. Mirrors foundry. */
+export function classifyTool(spec: unknown, toolName: string): "read" | "write" {
+  const s = specDict(spec);
+  const reads = (s.read_tools as string[]) ?? [];
+  return reads.includes(toolName) ? "read" : "write";
+}
+
+/** [reads, writes] this caller may see, gated by role. A no-role caller sees
+ * nothing (fail-closed). Mirrors foundry's visible_tools. */
+export function visibleTools(
+  spec: unknown,
+  roles: Iterable<string>,
+  roleRanks?: RoleRanks,
+): [string[], string[]] {
+  const s = specDict(spec);
+  const reads = ((s.read_tools as string[]) ?? []).slice();
+  const writes = ((s.write_tools as string[]) ?? []).slice();
+  const minRole = (s.min_role as string) || "guest";
+  const minRoleWrite = (s.min_role_write as string) || "member";
+  const visibleReads = satisfies(roles, minRole, roleRanks) ? reads : [];
+  const visibleWrites = satisfies(roles, minRoleWrite, roleRanks) ? writes : [];
+  return [visibleReads, visibleWrites];
+}
+
+export interface ResolvedTools {
+  rbac: boolean;
+  reads: string[];
+  writes: string[];
+  allowed: string[];
+}
+
+/** Effective tool governance for a caller against a federation doc.
+ *
+ * - rbac false (legacy / no split declared): allowed_tools is returned untouched
+ *   (empty = all), reads/writes empty, NO role gating — the SACRED back-compat
+ *   path, exactly as before.
+ * - rbac true (split declared): reads/writes are the role-gated visible sets; a
+ *   non-empty allowed_tools is an outer bound (stricter-of-both — tightens only),
+ *   mirroring foundry's registry ∧ connection min-role. */
+export function resolveTools(
+  spec: unknown,
+  roles?: Iterable<string>,
+  roleRanks?: RoleRanks,
+): ResolvedTools {
+  const s = specDict(spec);
+  const roleSet = new Set(roles ?? []);
+  const readTools = (s.read_tools as string[]) ?? [];
+  const writeTools = (s.write_tools as string[]) ?? [];
+  const allowed = ((s.allowed_tools as string[]) ?? []).slice();
+  const rbacOn = readTools.length > 0 || writeTools.length > 0;
+  if (!rbacOn) {
+    return { rbac: false, reads: [], writes: [], allowed };
+  }
+  let [reads, writes] = visibleTools(s, roleSet, roleRanks);
+  if (allowed.length) {
+    const aset = new Set(allowed);
+    reads = reads.filter((t) => aset.has(t));
+    writes = writes.filter((t) => aset.has(t));
+  }
+  return { rbac: true, reads, writes, allowed };
+}
+
 class MCPFederationKind extends KindBase {
   readonly apiVersion = API_VERSION;
   readonly kind = "MCPFederation";
@@ -100,6 +212,32 @@ class MCPFederationKind extends KindBase {
           default: [],
           description:
             "Server-level allowlist of remote tool names (pre-prefix). Empty = all.",
+        },
+        read_tools: {
+          type: "array",
+          items: { type: "string" },
+          default: [],
+          description:
+            "RBAC read set (§6.4): non-mutating tool names callable by roles at or above min_role. ADDITIVE optional refinement over allowed_tools — when read_tools and write_tools are both empty the split is undeclared, RBAC is OFF, and allowed_tools governs alone (back-compat). When declared, a tool in NEITHER read_tools nor write_tools is not exposed (fail-closed).",
+        },
+        write_tools: {
+          type: "array",
+          items: { type: "string" },
+          default: [],
+          description:
+            "RBAC write set (§6.4): mutating tool names callable by roles at or above min_role_write. These are the tools routed through HITL confirmation. An unclassified tool is treated as a write (fail-closed).",
+        },
+        min_role: {
+          type: "string",
+          default: "guest",
+          description:
+            "Role floor for read_tools — the lowest ladder rung (guest<member<admin<owner; highest-role-wins compares rank) whose members may call read tools.",
+        },
+        min_role_write: {
+          type: "string",
+          default: "member",
+          description:
+            "Role floor for write_tools — the lowest ladder rung whose members may call write (mutating) tools.",
         },
         timeout_s: {
           type: "integer",
