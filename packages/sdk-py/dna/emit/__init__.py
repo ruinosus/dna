@@ -184,6 +184,20 @@ class EmitContext:
     #: RAG collection refs the copilot may read (``knowledge.collections``).
     #: Empty when the copilot declares no knowledge (RAG optional).
     knowledge: list[str] = field(default_factory=list)
+    # ── frontend projections (filled by build_copilot_context) ───────────────
+    #: The console kind (``Copilot.frontend.console``, e.g. ``"copilotkit"``), or
+    #: None when the copilot declares no ``frontend`` block (backend-only). The
+    #: frontend emit (:mod:`dna.emit.frontend`) is gated on this being set.
+    frontend_console: str | None = None
+    #: Named side panels the console mounts alongside the chat
+    #: (``Copilot.frontend.panels``). Empty when none / no frontend.
+    frontend_panels: list[str] = field(default_factory=list)
+    #: Starter prompts surfaced in the empty console
+    #: (``Copilot.frontend.suggested_prompts``) — the anti-blank-box surface.
+    frontend_suggested_prompts: list[str] = field(default_factory=list)
+    #: The HITL approval-card copy (``Copilot.hitl.approval_card``:
+    #: ``{title, details_from, reason_from}``), or None when no card is declared.
+    hitl_approval_card: dict[str, Any] | None = None
 
 
 @dataclass
@@ -503,7 +517,31 @@ def build_copilot_context(
     knowledge_block = _spec_get(cspec, "knowledge") or {}
     ctx.knowledge = list(_spec_get(knowledge_block, "collections") or [])
 
+    # ── frontend projection (Chunk 5) ───────────────────────────────────────
+    # The Copilot's `frontend` + `hitl.approval_card` blocks — consumed ONLY by
+    # the frontend emit (dna.emit.frontend); the backend scaffold ignores them.
+    frontend_block = _spec_get(cspec, "frontend") or {}
+    ctx.frontend_console = _spec_get(frontend_block, "console")
+    ctx.frontend_panels = list(_spec_get(frontend_block, "panels") or [])
+    ctx.frontend_suggested_prompts = list(
+        _spec_get(frontend_block, "suggested_prompts") or []
+    )
+    hitl_block = _spec_get(cspec, "hitl") or {}
+    ctx.hitl_approval_card = _project_approval_card(_spec_get(hitl_block, "approval_card"))
+
     return ctx
+
+
+def _project_approval_card(card: Any) -> dict[str, Any] | None:
+    """Normalize the ``hitl.approval_card`` node (dict OR namespace) to a plain
+    ``{title, details_from, reason_from}`` dict, or None when undeclared."""
+    if card is None:
+        return None
+    return {
+        "title": _spec_get(card, "title"),
+        "details_from": _spec_get(card, "details_from"),
+        "reason_from": _spec_get(card, "reason_from"),
+    }
 
 
 def _spec_get(obj: Any, key: str) -> Any:
