@@ -10,7 +10,7 @@ spec:
     \ OPTIONAL retrieval/knowledge (DNA native search: pgvector/embedding/graph \u2014\
     \ per-consumer, NOT mandatory). Byte-equal parity across targets. Extracted from\
     \ the 2 reference apps; DNA Cloud Memory copilot = first emitted consumer."
-  status: discovery
+  status: in-development
   epic: e-dna-copilot-absorption
   reporter: claude-code
   priority: high
@@ -23,10 +23,16 @@ spec:
   - absorption
   business_value: 900
   created_at: '2026-07-16T10:34:47+00:00'
-  updated_at: '2026-07-16T10:34:47+00:00'
+  updated_at: '2026-07-16T11:03:46+00:00'
   timeline:
   - at: '2026-07-16T10:34:47+00:00'
     actor: claude-code
     type: status_change
     source: cli
     to: discovery
+  - at: '2026-07-16T11:03:46+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: discovery
+    to: in-development
