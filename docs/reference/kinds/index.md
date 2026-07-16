@@ -46,7 +46,7 @@ Declarative Kind descriptor — the format of builtin `kinds/*.kind.yaml` packag
 | `volatile_spec_fields` |  | Extra write-/runtime-stamped spec fields excluded from the canonical digest, unioned with the base set {updated_at, version, created_at}. |
 | `workitem_common` |  | DEPRECATED back-compat shorthand for schema_fragments: ["sdlc/workitem-common"]. Python-only. |
 
-## Registered Kinds (82)
+## Registered Kinds (83)
 
 ### Composition plane
 
@@ -96,6 +96,7 @@ Declarative Kind descriptor — the format of builtin `kinds/*.kind.yaml` packag
 | [Bug](record.md#bug) | `sdlc-bug` | `github.com/ruinosus/dna/sdlc/v1` |
 | [Changelog](record.md#changelog) | `sdlc-changelog` | `github.com/ruinosus/dna/sdlc/v1` |
 | [CognitivePolicy](record.md#cognitivepolicy) | `sdlc-cognitive-policy` | `github.com/ruinosus/dna/sdlc/v1` |
+| [Copilot](record.md#copilot) | `helix-copilot` | `github.com/ruinosus/dna/v1` |
 | [Doc](record.md#doc) | `dna-doc` | `github.com/ruinosus/dna/doc/v1` |
 | [Epic](record.md#epic) | `sdlc-epic` | `github.com/ruinosus/dna/sdlc/v1` |
 | [EvalBaseline](record.md#evalbaseline) | `eval-eval-baseline` | `github.com/ruinosus/dna/eval/v1` |

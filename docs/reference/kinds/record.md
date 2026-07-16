@@ -220,6 +220,25 @@ A Changelog records release notes per semver version per Keep a Changelog 1.1.0 
 | `recall` | object |  | Recall-tuning knobs for the ecphory engine (ex-RecallPolicy). |
 | `updated_at` | string |  |  |
 
+## Copilot
+
+- **Alias:** `helix-copilot`
+- **apiVersion:** `github.com/ruinosus/dna/v1`
+- **Plane:** record
+
+A Copilot is a declarative, servable AG-UI copilot backend — a binder that composes one-or-more mounted Agents (each with its own Tools and optional MCPFederation) into a single servable ``/agui`` app. It carries only the copilot-level concerns that don't belong on any single Agent ``mounts`` (where agents serve), ``serving`` (the transport), ``tenant`` (inbound-tenant propagation), ``hitl`` (the approval card for gated write tools), ``knowledge`` (RAG collections it may read), and ``frontend`` (console hints). Instructions and persona stay on the mounted Agent — a Copilot never re-declares them. One document emits a servable backend (Agno today), the single evolution point DNA Cloud's copilots consume. Stored as ``copilots/<name>.yaml`` — marketplace-shareable as a bundle.
+
+**Spec fields**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `frontend` | object |  | Frontend console hints for the emitted copilot UI. |
+| `hitl` | object |  | Human-in-the-loop approval surface for write tools the mounted agents gate. |
+| `knowledge` | object |  | RAG the copilot may read. Optional — a pure-action copilot declares none. |
+| `mounts` | array | yes | The Agents this copilot serves, each at a mount path. At least one is required. |
+| `serving` | object | yes | How the copilot backend is served. |
+| `tenant` | object |  | Inbound-tenant handling. When propagate is true, the emitted serving layer derives tenant/oid from request headers into run-state for the mounted tools to read. |
+
 ## Doc
 
 - **Alias:** `dna-doc`
