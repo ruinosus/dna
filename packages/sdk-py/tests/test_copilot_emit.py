@@ -240,3 +240,111 @@ def test_copilot_ctx_tenant_default_false_when_undeclared(mi):
 
     ctx = build_copilot_context(mi, "pure-action-copilot", model="azure/gpt-4o")
     assert ctx.tenant_propagate is False
+
+
+# ── Chunk 4 · the Agno `copilot` scaffold case ──────────────────────────────
+#
+# ``build_copilot_context`` (Chunk 3) → ``AgnoEmitter().emit(ctx)`` renders TWO
+# artifacts: a ``role="agent"`` module (the ``build_agent`` factory + MCP mount +
+# the HITL write-gate) and a ``role="serving"`` module (Agno AgentOS exposing
+# ``/agui`` + inbound-tenant derivation). Byte-equal goldens govern both. The
+# goldens are regenerated as each slice (4a→4d) extends the templates.
+
+import py_compile
+import tempfile
+
+
+def _compiles(source: str) -> bool:
+    with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False) as fh:
+        fh.write(source)
+        path = fh.name
+    try:
+        py_compile.compile(path, doraise=True)
+        return True
+    except py_compile.PyCompileError:
+        return False
+
+
+def read_golden(name: str) -> str:
+    """Read a frozen golden under ``tests/goldens/`` (e.g. ``agno/copilot_agent.py``)."""
+    return (
+        pathlib.Path(__file__).parent / "goldens" / name
+    ).read_text(encoding="utf-8")
+
+
+@pytest.fixture()
+def copilot_ctx(mi):
+    from dna.emit import build_copilot_context
+
+    return build_copilot_context(
+        mi, "memory-copilot", model="azure/gpt-4o", provider="azure"
+    )
+
+
+# ── Task 4a: agent + /agui serving ──────────────────────────────────────────
+
+
+def test_copilot_emit_is_two_artifacts(copilot_ctx):
+    """A servable copilot emits an ``agent`` module + a ``serving`` module."""
+    from dna.emit.agno import AgnoEmitter
+
+    res = AgnoEmitter().emit(copilot_ctx)
+    assert {a.role for a in res.artifacts} == {"agent", "serving"}
+    assert res.target == "agno"
+    # module paths are valid python identifiers (the mounted agent's slug).
+    assert res.artifact_for("agent") is not None
+    paths = {a.role: a.path for a in res.artifacts}
+    assert paths["agent"] == "memory_agent.py"
+    assert paths["serving"] == "memory_agent_serve.py"
+
+
+def test_copilot_agent_artifact_matches_golden(copilot_ctx):
+    from dna.emit.agno import AgnoEmitter
+
+    res = AgnoEmitter().emit(copilot_ctx)
+    assert res.artifact_for("agent") == read_golden("agno/copilot_agent.py")
+
+
+def test_copilot_serving_artifact_matches_golden(copilot_ctx):
+    from dna.emit.agno import AgnoEmitter
+
+    res = AgnoEmitter().emit(copilot_ctx)
+    assert res.artifact_for("serving") == read_golden("agno/copilot_serve.py")
+
+
+def test_copilot_agent_carries_instructions_byte_equal(copilot_ctx):
+    """The byte-equal invariant, recovered via the emitter METHOD off the
+    ``role="agent"`` artifact — the mounted agent's composed prompt, verbatim."""
+    from dna.emit.agno import AgnoEmitter
+
+    emitter = AgnoEmitter()
+    res = emitter.emit(copilot_ctx)
+    assert emitter.extract_instructions(res.artifact_for("agent")) == copilot_ctx.instructions
+
+
+def test_copilot_artifacts_compile(copilot_ctx):
+    from dna.emit.agno import AgnoEmitter
+
+    res = AgnoEmitter().emit(copilot_ctx)
+    assert _compiles(res.artifact_for("agent"))
+    assert _compiles(res.artifact_for("serving"))
+
+
+def test_copilot_serving_exposes_agui(copilot_ctx):
+    """The serving artifact wires Agno's AgentOS + AGUI interface → /agui."""
+    from dna.emit.agno import AgnoEmitter
+
+    serving = AgnoEmitter().emit(copilot_ctx).artifact_for("serving")
+    assert "from agno.os import AgentOS" in serving
+    assert "from agno.os.interfaces.agui import AGUI" in serving
+    assert "app = agent_os.get_app()" in serving
+    assert "from memory_agent import build_agent" in serving
+
+
+def test_plain_agent_still_single_artifact(mi):
+    """Back-compat: a plain agent (no copilot signals) stays a single artifact."""
+    from dna.emit import emit_agent
+
+    res = emit_agent(mi, "concierge", "agno")
+    assert [a.role for a in res.artifacts] == ["agent"]
+    assert "AgentOS" not in res.artifact
