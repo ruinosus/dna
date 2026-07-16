@@ -17,18 +17,22 @@
 
 | File | Responsibility | New? |
 |---|---|---|
-| `spikes/2026-07-16-hitl-on-mcp/` | Spike A harness: does Agno `external_execution` fire on an `MCPTools` tool? | create |
-| `spikes/2026-07-16-multi-artifact-emit/NOTES.md` | Spike B findings: the multi-artifact `EmitResult` shape + byte-equal target | create |
-| `packages/sdk-py/dna/extensions/helix/kinds/copilot.kind.yaml` | The `Copilot` Kind schema (mounts/serving/hitl/knowledge/frontend/tenant/workflow) | create |
+| `.dna/dna-development/spikes/sp-copilot-hitl-on-mcp.yaml` | Spike A (tracked Spike Kind, via CLI): does Agno `external_execution` fire on an `MCPTools` tool? | create |
+| `.dna/dna-development/spikes/sp-copilot-multi-artifact-emit.yaml` | Spike B (tracked Spike Kind, via CLI): the multi-artifact `EmitResult` shape + byte-equal target | create |
+| `scratch/copilot-spikes/` | Throwaway spike code (scratch; findings recorded on the Spike docs) | create |
+| `packages/sdk-py/dna/extensions/helix/kinds/copilot.kind.yaml` | The `Copilot` Kind schema (mounts/serving/hitl/knowledge/frontend/tenant) — **no `workflow` field** (deferred to Plan 3) | create |
+| `packages/sdk-ts/src/extensions/helix/kinds/copilot.kind.yaml` | Byte-identical TS twin (mandatory — `test_descriptor_hash_parity.py` enforces both sides) | create |
+| `packages/sdk-py/dna/emit/__init__.py` (`build_copilot_context`) | Resolve a `Copilot` doc → `EmitContext` (the Chunk 1↔3 seam) | modify |
 | `packages/sdk-py/dna/emit/__init__.py` | Multi-artifact `EmitResult`; `EmitContext` projection of mcp_servers/hitl/tenant/knowledge | modify |
 | `packages/sdk-py/dna/emit/scaffold.py` | Multi-artifact scaffold support | modify |
 | `packages/sdk-py/dna/emit/agno.py` | The Agno `copilot` scaffold case (serving + mount + inbound-tenant + tool-HITL) | modify |
 | `packages/sdk-py/dna/emit/scaffolds/agno/copilot.py.tmpl` | The emitted servable `/agui` app template | create |
 | `packages/sdk-ts/src/emit/*` | TS twins of the port + projection (byte-equal backend) | modify |
-| `packages/sdk-py/tests/emit/test_copilot_emit.py` | Golden + projection tests | create |
-| `packages/sdk-py/tests/emit/test_emit_contract.py` | Extend for multi-artifact | modify |
+| `packages/sdk-py/tests/test_copilot_emit.py` | Golden + projection + context tests (flat `tests/`, `test_emit_<target>` convention) | create |
+| `packages/sdk-py/tests/test_emit_contract.py` | Extend for multi-artifact (the real generic contract suite) | modify |
+| `packages/sdk-ts/tests/emit-contract.test.ts` | TS contract twin (flat `tests/`) | modify |
 
-> Confirm exact paths against the tree before writing (`dna/extensions/helix/kinds/` and `tests/emit/` locations). Follow the established emitter patterns in `agno.py`/`scaffold.py` — do not restructure.
+> **Verified layout (do not deviate):** tests are **flat** in `packages/sdk-py/tests/` — there is **no** `tests/emit/`; the contract harness is `tests/test_emit_contract.py`. Kinds live in `extensions/helix/kinds/`; the TS twin is byte-identical and mandatory. Scaffold templates are `scaffolds/agno/*.py.tmpl`. Follow these patterns — do not restructure.
 
 ---
 
@@ -39,18 +43,34 @@ These two investigations determine the design of Chunks 3–4. Do not detail-bui
 ### Task 0A: Spike — HITL on an MCP-mounted Agno tool
 
 **Files:**
-- Create: `spikes/2026-07-16-hitl-on-mcp/spike.py`, `spikes/2026-07-16-hitl-on-mcp/NOTES.md`
+- Create (tracked Spike Kind, via CLI): `sp-copilot-hitl-on-mcp`
+- Scratch code: `scratch/copilot-spikes/hitl_on_mcp/` (throwaway; findings live on the Spike doc)
 
-- [ ] **Step 1: Stand up a minimal MCP server with one write tool.** A tiny FastMCP server exposing `remember(text) -> str` (streamable-http). Reuse the `aap-knowledge-base` `mcp:` pattern (`apps/agent/src/agents/factory.py:_build_mcp_tools`) as the reference for `MCPTools(url, transport="streamable-http")`.
-
-- [ ] **Step 2: Build an Agno agent that mounts it and try to gate it.** Attempt `@tool(external_execution=True)` semantics on the MCP-provided `remember`. Run a turn that calls `remember` and inspect `get_last_run_output().tools_awaiting_external_execution` (the aap-kb pattern, `core/agui_hitl.py`).
-
-- [ ] **Step 3: Record the verdict in NOTES.md.** Does external-execution fire on the MCP tool? (a) YES → the emitter can gate the remote tool directly. (b) NO → the emitter must emit a **local wrapper tool** that calls the MCP tool, with `external_execution` on the wrapper. Write which, with the evidence.
-
-- [ ] **Step 4: Commit the spike + verdict.**
+- [ ] **Step 1: File the Spike doc.**
 
 ```bash
-git add spikes/2026-07-16-hitl-on-mcp/
+dna sdlc spike create sp-copilot-hitl-on-mcp \
+  --question "Does Agno external_execution fire on an MCPTools-provided tool, or must HITL wrap a local tool?" \
+  --feature f-dna-copilot-emitter --time-box 4 --scope dna-development
+dna sdlc spike start sp-copilot-hitl-on-mcp --scope dna-development
+```
+
+- [ ] **Step 2: Stand up a minimal MCP server with one write tool** under `scratch/copilot-spikes/hitl_on_mcp/`. A tiny FastMCP server exposing `remember(text) -> str` (streamable-http). Reuse the `aap-knowledge-base` `mcp:` reference `MCPTools(url, transport="streamable-http")` (`apps/agent/src/agents/factory.py:90`, `_build_mcp_tools`).
+
+- [ ] **Step 3: Build an Agno agent that mounts it and try to gate it.** Attempt `@tool(external_execution=True)` semantics on the MCP-provided `remember`. Run a turn that calls it and inspect `agent.get_last_run_output(session_id=…).tools_awaiting_external_execution` (the aap-kb pattern — note the accessor takes `session_id`, `core/agui_hitl.py:85`).
+
+- [ ] **Step 4: Record the verdict on the Spike doc.** (a) YES → the emitter can gate the remote tool directly. (b) NO → the emitter emits a **local wrapper tool** that calls the MCP tool, with `external_execution` on the wrapper. Answer the spike:
+
+```bash
+dna sdlc spike answer sp-copilot-hitl-on-mcp \
+  --findings "<yes/no + evidence>" \
+  --recommendation "<gate-remote | local-wrapper>" --scope dna-development
+```
+
+- [ ] **Step 5: Commit (Spike doc + scratch, or discard scratch).**
+
+```bash
+git add .dna/dna-development/spikes/sp-copilot-hitl-on-mcp.yaml scratch/copilot-spikes/hitl_on_mcp/
 git commit -m "spike(copilot): HITL on MCP-mounted Agno tool — verdict recorded"
 ```
 
@@ -59,23 +79,25 @@ git commit -m "spike(copilot): HITL on MCP-mounted Agno tool — verdict recorde
 ### Task 0B: Spike — multi-artifact EmitResult shape
 
 **Files:**
-- Read: `packages/sdk-py/dna/emit/__init__.py` (`EmitResult`, `extract_instructions`, the byte-equal assertion), `scaffold.py`
-- Create: `spikes/2026-07-16-multi-artifact-emit/NOTES.md`
+- Read: `packages/sdk-py/dna/emit/__init__.py` (`EmitResult`, `EmitterPort.extract_instructions`, the byte-equal assertion at `tests/test_emit_contract.py:55`), `scaffold.py`
+- Create (tracked Spike Kind, via CLI): `sp-copilot-multi-artifact-emit`
 
-- [ ] **Step 1: Map the current single-artifact contract.** Document `EmitResult{artifact, filename}` and how `test_emit_contract.py` asserts `extract_instructions(artifact) == ctx.instructions`.
+- [ ] **Step 1: File + start the Spike doc** (`dna sdlc spike create/start sp-copilot-multi-artifact-emit --feature f-dna-copilot-emitter --scope dna-development`).
 
-- [ ] **Step 2: Design the multi-artifact shape.** A copilot emits N files (agent module + AG-UI serve + route). Propose `EmitResult.artifacts: list[EmitArtifact{path, content, role}]` (back-compat: single-artifact stays valid), and decide **which artifact carries the byte-equal instruction assertion** (the agent module).
+- [ ] **Step 2: Map the current single-artifact contract.** Document `EmitResult{artifact, filename}` and how `tests/test_emit_contract.py` asserts `emitter.extract_instructions(result.artifact) == ctx.instructions` (a **method** on the emitter, not a free function).
 
-- [ ] **Step 3: Record the shape + the harness change in NOTES.md** (what `test_emit_contract.py` must do for multi-artifact: assert byte-equal on the `role=agent` artifact; golden the rest).
+- [ ] **Step 3: Design the multi-artifact shape.** A copilot emits N files (agent module + AG-UI serve + route). Propose `EmitResult.artifacts: list[EmitArtifact{path, content, role}]` (back-compat: single-artifact stays valid via a `role="agent"` default), and decide **which artifact carries the byte-equal assertion** (the `role="agent"` module) + **how N artifacts reach disk** (the `dna emit` CLI writer — see `packages/cli/tests/test_emit_cmd.py`).
 
-- [ ] **Step 4: Commit.**
+- [ ] **Step 4: Answer the spike** with the recorded shape + the harness change + the write-out plan.
+
+- [ ] **Step 5: Commit.**
 
 ```bash
-git add spikes/2026-07-16-multi-artifact-emit/
-git commit -m "spike(copilot): multi-artifact EmitResult shape + byte-equal target"
+git add .dna/dna-development/spikes/sp-copilot-multi-artifact-emit.yaml
+git commit -m "spike(copilot): multi-artifact EmitResult shape + byte-equal target + write-out"
 ```
 
-**Feeds:** Chunk 2.
+**Feeds:** Chunk 2 (+ the CLI write-out).
 
 ---
 
@@ -85,8 +107,8 @@ git commit -m "spike(copilot): multi-artifact EmitResult shape + byte-equal targ
 
 **Files:**
 - Create: `packages/sdk-py/dna/extensions/helix/kinds/copilot.kind.yaml`
-- Test: `packages/sdk-py/tests/emit/test_copilot_emit.py`
-- Parity: the TS twin loader (confirm how helix kinds mirror to TS)
+- Test: `packages/sdk-py/tests/test_copilot_emit.py`
+- Parity: `packages/sdk-ts/src/extensions/helix/kinds/copilot.kind.yaml` (byte-identical; enforced by `test_descriptor_hash_parity.py`)
 
 - [ ] **Step 1: Write the failing test — the Kind loads + validates a minimal Copilot doc.**
 
@@ -101,10 +123,10 @@ def test_copilot_kind_loads_minimal():
 ```
 
 - [ ] **Step 2: Run it — expect FAIL (Kind unknown).**
-Run: `uv run pytest packages/sdk-py/tests/emit/test_copilot_emit.py::test_copilot_kind_loads_minimal -v`
+Run: `uv run pytest packages/sdk-py/tests/test_copilot_emit.py::test_copilot_kind_loads_minimal -v`
 Expected: FAIL (no such Kind `Copilot`).
 
-- [ ] **Step 3: Author `copilot.kind.yaml`** with schemas for all seven fields: `mounts[]{id, agent(ref), path}` (required), `serving{transport}` (required), and optional `tenant{propagate}`, `hitl{approval_card{title, details_from, reason_from}}`, `knowledge{collections[](ref)}`, `frontend{console, panels[], suggested_prompts[]}`, `workflow{chain[]}`. Follow the shape of an existing `*.kind.yaml` (e.g. `tool.kind.yaml`).
+- [ ] **Step 3: Author `copilot.kind.yaml`** with schemas for **six** fields (NOT `workflow` — deferred to Plan 3, agent-framework-only): `mounts[]{id, agent(ref), path}` (required), `serving{transport}` (required), and optional `tenant{propagate}`, `hitl{approval_card{title, details_from, reason_from}}`, `knowledge{collections[](ref)}`, `frontend{console, panels[], suggested_prompts[]}`. Follow the shape of `tool.kind.yaml` (same dir).
 
 - [ ] **Step 4: Run — expect PASS.**
 
@@ -113,11 +135,11 @@ Expected: FAIL (no such Kind `Copilot`).
 - [ ] **Step 6: Run all + commit.**
 
 ```bash
-git add packages/sdk-py/dna/extensions/helix/kinds/copilot.kind.yaml packages/sdk-py/tests/emit/test_copilot_emit.py
+git add packages/sdk-py/dna/extensions/helix/kinds/copilot.kind.yaml packages/sdk-py/tests/test_copilot_emit.py
 git commit -m "feat(kind): Copilot Kind — servable-copilot binder over Agent/Tool/MCPFederation"
 ```
 
-- [ ] **Step 7: Parity twin** — mirror the Kind to TS per the descriptor-parity convention; run the descriptor-hash parity test. Commit.
+- [ ] **Step 7: Parity twin (MANDATORY).** Create the byte-identical `packages/sdk-ts/src/extensions/helix/kinds/copilot.kind.yaml`; run `uv run pytest packages/sdk-py/tests/test_descriptor_hash_parity.py -v` (it auto-globs `*/kinds/*.kind.yaml` and fails if either side is missing or differs). Commit.
 
 ---
 
@@ -127,10 +149,11 @@ git commit -m "feat(kind): Copilot Kind — servable-copilot binder over Agent/T
 
 **Files:**
 - Modify: `packages/sdk-py/dna/emit/__init__.py`, `scaffold.py`
-- Modify: `packages/sdk-py/tests/emit/test_emit_contract.py`
-- Parity: `packages/sdk-ts/src/emit/*`
+- Modify: `packages/sdk-py/tests/test_emit_contract.py`
+- Modify: the `dna emit` CLI writer + `packages/cli/tests/test_emit_cmd.py` (multi-file write-out)
+- Parity: `packages/sdk-ts/src/emit/*`, `packages/sdk-ts/tests/emit-contract.test.ts`
 
-- [ ] **Step 1: Write the failing test — an emitter can return >1 artifact, byte-equal asserted on the agent artifact.**
+- [ ] **Step 1: Write the failing test — an emitter can return >1 artifact, byte-equal asserted on the agent artifact.** Note `extract_instructions` is an **emitter method** (`emitter.extract_instructions(artifact)`), not a free function.
 
 ```python
 def test_multi_artifact_emit_result():
@@ -138,59 +161,91 @@ def test_multi_artifact_emit_result():
         EmitArtifact(path="agent.py", content=agent_src, role="agent"),
         EmitArtifact(path="serve.py", content=serve_src, role="serving"),
     ])
-    assert extract_instructions(res.artifact_for("agent")) == ctx.instructions
+    emitter = AgnoEmitter()
+    assert emitter.extract_instructions(res.artifact_for("agent")) == ctx.instructions
     assert {a.role for a in res.artifacts} == {"agent", "serving"}
 ```
 
 - [ ] **Step 2: Run — expect FAIL.**
 
-- [ ] **Step 3: Implement `EmitArtifact` + `EmitResult.artifacts` (back-compat: `artifact`/`filename` still work as a single `role=agent` artifact).** Per Spike 0B's recorded shape.
+- [ ] **Step 3: Implement `EmitArtifact` + `EmitResult.artifacts` (back-compat: `artifact`/`filename` still work as a single `role="agent"` artifact via a property).** Per Spike 0B's recorded shape.
 
 - [ ] **Step 4: Run — expect PASS.**
 
-- [ ] **Step 5: Update `test_emit_contract.py`** to assert byte-equal on the `role=agent` artifact for multi-artifact emitters; keep single-artifact assertions unchanged.
+- [ ] **Step 5: Update `tests/test_emit_contract.py`** to assert byte-equal via `emitter.extract_instructions(res.artifact_for("agent"))` for multi-artifact emitters; keep the single-artifact assertion (`emitter.extract_instructions(result.artifact)`) unchanged.
 
-- [ ] **Step 6: TS twin + parity. Commit.**
+- [ ] **Step 6: Multi-file write-out.** Extend the `dna emit` CLI to write every `EmitResult.artifacts` entry (`path`+`content`) to disk (single-artifact path unchanged); add a `test_emit_cmd.py` case asserting N files land. Per Spike 0B's write-out plan.
+
+- [ ] **Step 7: TS twin + parity (`emit-contract.test.ts`). Commit.**
 
 ```bash
-git commit -am "feat(emit): multi-artifact EmitResult (back-compat single) + byte-equal on agent role"
+git commit -am "feat(emit): multi-artifact EmitResult (back-compat single) + byte-equal on agent role + CLI write-out"
 ```
 
 ---
 
-## Chunk 3: EmitContext projection
+## Chunk 3: Copilot → EmitContext (the Chunk 1↔4 seam) + projection
 
-### Task 3: Project mcp_servers / hitl-intent / inbound-tenant / knowledge
+> **The missing seam (plan-review S2).** The existing front door is
+> `build_emit_context(mi, agent, *, model, provider)` (`emit/__init__.py:271`) — keyed
+> by an **Agent name**, resolved via `mi.find_agent(agent)`. A `Copilot` doc has a
+> *mounted* agent plus `hitl`/`tenant`/`knowledge`/`serving` on the Copilot itself. We
+> need a `build_copilot_context(mi, copilot_name)` that resolves the mounted agent's
+> base ctx via the existing front door, then **enriches** it. Chunk 4 emits from *this*.
+
+### Task 3a: `build_copilot_context` — resolve the mounted agent's base ctx
 
 **Files:**
-- Modify: `packages/sdk-py/dna/emit/__init__.py` (`EmitContext`, the projection that today drops these)
-- Test: `packages/sdk-py/tests/emit/test_copilot_emit.py`
+- Modify: `packages/sdk-py/dna/emit/__init__.py`
+- Test: `packages/sdk-py/tests/test_copilot_emit.py`
 
-- [ ] **Step 1: Write failing tests — the projection now carries what it used to drop.**
+- [ ] **Step 1: Failing test — a Copilot resolves to the mounted agent's base EmitContext.**
 
 ```python
-def test_emitcontext_projects_mcp_servers():
-    ctx = build_emit_context(copilot_doc_with_mcp_federation)
+def test_build_copilot_context_resolves_mounted_agent():
+    ctx = build_copilot_context(mi, "memory-copilot", model="…", provider="…")
+    assert ctx.name == "memory-agent"   # the mounted agent's base ctx
+    assert ctx.instructions             # instructions come from the agent, unchanged
+```
+
+- [ ] **Step 2: Run — expect FAIL (no `build_copilot_context`).**
+
+- [ ] **Step 3: Implement `build_copilot_context`** — load the Copilot doc, read `mounts[0].agent`, delegate to `build_emit_context(mi, that_agent, model=…, provider=…)` for the base ctx. (Keep the byte-equal instruction contract intact — instructions still come from the agent.)
+
+- [ ] **Step 4: Run — expect PASS. Commit.**
+
+### Task 3b: Enrich the ctx — project mcp_servers / hitl-intent / inbound-tenant / knowledge
+
+**Files:**
+- Modify: `packages/sdk-py/dna/emit/__init__.py` (`EmitContext` + `build_copilot_context` enrichment)
+- Test: `packages/sdk-py/tests/test_copilot_emit.py`
+
+- [ ] **Step 1: Write failing tests — the enriched ctx carries what the projection used to drop.**
+
+```python
+def test_copilot_ctx_projects_mcp_servers():
+    ctx = build_copilot_context(mi, "memory-copilot", model="…", provider="…")
     assert ctx.mcp_servers[0].transport == "streamable-http"
 
-def test_emitcontext_projects_hitl_intent():
-    ctx = build_emit_context(copilot_doc_with_confirm_tool)
+def test_copilot_ctx_projects_hitl_intent():
+    ctx = build_copilot_context(mi, "memory-copilot", model="…", provider="…")
     assert ctx.tools_requiring_confirmation == {"remember", "forget"}
 
-def test_emitcontext_projects_knowledge_optional():
-    assert build_emit_context(pure_action_copilot).knowledge == []  # RAG optional
+def test_copilot_ctx_knowledge_optional():
+    ctx = build_copilot_context(mi, "pure-action-copilot", model="…", provider="…")
+    assert ctx.knowledge == []   # RAG optional
 ```
 
 - [ ] **Step 2: Run — expect FAIL.**
 
-- [ ] **Step 3: Extend `EmitContext`** with `mcp_servers` (from `Agent.spec.mcp_servers` + `MCPFederation` docs: transport/url/auth/allowed_tools), `tools_requiring_confirmation` (from `Tool.requires_confirmation`), `tenant_propagate`, `knowledge` refs. Stop dropping them in the projection.
+- [ ] **Step 3: Extend `EmitContext`** with `mcp_servers` (from the mounted `Agent.spec.mcp_servers` + referenced `MCPFederation` docs: transport/url/auth/allowed_tools — `models.py:376`, `federation/__init__.py`), `tools_requiring_confirmation` (from `Tool.requires_confirmation` — `tool.kind.yaml:111`), `tenant_propagate` (from the Copilot `tenant`/the federation `propagate_tenant`), `knowledge` refs. Enrich in `build_copilot_context`.
 
-- [ ] **Step 4: Run — expect PASS. Add the negative: `knowledge` empty when undeclared; `mcp_servers` empty when none.**
+- [ ] **Step 4: Run — expect PASS. Add negatives: `knowledge`/`mcp_servers` empty when undeclared.**
 
 - [ ] **Step 5: TS twin + parity. Commit.**
 
 ```bash
-git commit -am "feat(emit): project mcp_servers/hitl-intent/tenant/knowledge into EmitContext"
+git commit -am "feat(emit): build_copilot_context + project mcp_servers/hitl-intent/tenant/knowledge"
 ```
 
 ---
@@ -199,33 +254,29 @@ git commit -am "feat(emit): project mcp_servers/hitl-intent/tenant/knowledge int
 
 ### Task 4: Emit the servable Agno `/agui` app
 
+> **This is the ~391-line `agui_hitl.py`-class glue the spec calls "the bulk of the
+> work" — decomposed into four test→golden→commit slices, each its own golden slice,
+> not one bundled step (plan-review S3).** All emit from `build_copilot_context` (Chunk 3).
+
 **Files:**
 - Create: `packages/sdk-py/dna/emit/scaffolds/agno/copilot.py.tmpl`
 - Modify: `packages/sdk-py/dna/emit/agno.py`
-- Test: `packages/sdk-py/tests/emit/test_copilot_emit.py` (golden)
+- Test: `packages/sdk-py/tests/test_copilot_emit.py` (golden)
 
-- [ ] **Step 1: Write the failing golden test — emitting a minimal Copilot yields a byte-stable servable app.**
+- [ ] **Task 4a — agent + `/agui` serving.** Failing golden: `res.artifact_for("agent") == read_golden("agno/copilot_agent.py")` and `res.artifact_for("serving") == read_golden("agno/copilot_serve.py")`; assert `AgnoEmitter().extract_instructions(res.artifact_for("agent")) == ctx.instructions`. Template emits the Agno `Agent(model, instructions, tools, session_state, db)` + the AgentOS `AGUI` subclass → `/agui`. Generate → eyeball → freeze golden → PASS → commit.
 
-```python
-def test_agno_copilot_scaffold_golden():
-    res = AgnoEmitter().emit(memory_copilot_ctx)
-    assert res.artifact_for("agent") == read_golden("agno/copilot_agent.py")
-    assert res.artifact_for("serving") == read_golden("agno/copilot_serve.py")
-    assert extract_instructions(res.artifact_for("agent")) == memory_copilot_ctx.instructions
-```
+- [ ] **Task 4b — MCP-tool mount.** Failing golden slice: the emitted agent builds `MCPTools(url, transport="streamable-http")` from `ctx.mcp_servers`. Extend template → regen golden → PASS → commit.
 
-- [ ] **Step 2: Run — expect FAIL.**
+- [ ] **Task 4c — inbound-tenant derivation.** Failing golden slice: the emitted serving layer derives tenant/`oid` from request headers into run-state, tools read via `RunContext.session_state` (NOT a `propagate_tenant` freebie; mirrors aap-kb `inject_tenant`). Extend → regen → PASS → commit.
 
-- [ ] **Step 3: Write the scaffold template** emitting: the Agno `Agent(model, instructions, tools, knowledge?, session_state, db)`; the **MCP-tool mount** (`MCPTools(url, transport)` from `ctx.mcp_servers`); the **inbound-tenant derivation** (request headers → run-state, tools read via `RunContext.session_state` — NOT a propagate_tenant freebie); the **AG-UI serving** (AgentOS `AGUI` subclass → `/agui`); and **HITL per Spike 0A** — if 0A=YES, gate the MCP tool; if 0A=NO, emit a **local wrapper tool** carrying `external_execution` that calls the MCP write. Tool bodies for non-HITL remain stubs (per-app fill).
+- [ ] **Task 4d — HITL per Spike 0A.** Failing golden slice: if 0A=YES, the emitted agent gates the MCP write tool directly; if 0A=NO, it emits a **local wrapper tool** carrying `external_execution` that calls the MCP write. Non-HITL tool bodies stay stubs (per-app fill). Extend → regen → PASS → commit.
 
-- [ ] **Step 4: Generate + eyeball the golden, then freeze it. Run — expect PASS.**
+- [ ] **Task 4e — Integration test.** The emitted app imports, mounts `/agui`, and (with a fake MCP) a `remember` turn pauses for HITL; assert the pause/resume shape matches the aap-kb reference (`core/agui_hitl.py`). Commit.
 
-- [ ] **Step 5: Integration test** — the emitted app imports, mounts `/agui`, and (with a fake MCP) a `remember` turn pauses for HITL. Assert the pause/resume shape matches the aap-kb reference.
-
-- [ ] **Step 6: TS parity note** — backend scaffold parity Py↔TS (byte-identical template). Commit.
+- [ ] **Task 4f — TS parity.** Backend scaffold parity Py↔TS (byte-identical template + render context); run the emit parity/contract suite. Commit.
 
 ```bash
-git commit -am "feat(emit): Agno copilot scaffold — servable /agui (mount+tenant+HITL) + golden"
+git commit -am "feat(emit): Agno copilot scaffold — servable /agui (mount+tenant+HITL) + goldens"
 ```
 
 ---
