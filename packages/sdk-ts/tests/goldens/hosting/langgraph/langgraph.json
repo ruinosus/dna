@@ -1,0 +1,7 @@
+{
+  "dependencies": ["."],
+  "graphs": {
+    "lg_copilot": "./lg_copilot.py:graph"
+  },
+  "env": ".env"
+}

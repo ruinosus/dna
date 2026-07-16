@@ -1,0 +1,42 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: Copilot
+metadata:
+  name: hosted-copilot
+  description: The HOSTED variant of the memory copilot — the SAME memory-agent,
+    deployed as a Foundry single-identity hosted agent (Responses protocol on
+    8088) instead of the per-user AG-UI app. The hosted variant DEGRADES — it
+    drops per-user OBO, per-user memory, and HITL (design §2 variant selector).
+spec:
+  mounts:
+  - id: memory
+    agent: memory-agent
+    path: /agui
+  serving:
+    transport: ag-ui
+  tenant:
+    propagate: true
+  hitl:
+    approval_card:
+      title: Confirm write
+      details_from: args.text
+      reason_from: args.reason
+  knowledge:
+    collections:
+    - knowledge-base
+    store:
+      backend: pgvector
+      ref: primary-pg
+      embed:
+        model: text-embedding-3-small
+        dims: 1536
+  hosting:
+    mode: hosted
+    target: foundry
+    resources:
+      cpu: "0.5"
+      memory: 1Gi
+    image:
+      registry_hint: acr
+      remote_build: true
+      base_image: null
+      port: null

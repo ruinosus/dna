@@ -27,6 +27,7 @@ dna emit [OPTIONS] [AGENT]
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
+| `--hosting` | Treat AGENT as a Copilot and emit its HOSTED variant (hosting.mode=hosted) — Foundry Dockerfile/main.py/requirements/azure.yaml (first-class), langgraph/agentos documented (f-copilot-hosting). Writes N files; needs --out DIR. |
 | `--infra` | Treat AGENT as a Copilot and emit its Terraform infra inputs (<agent>.tfvars.json) — the persistence/knowledge.store/hosting → TF module inputs (f-copilot-infra-binding). |
 | `--json` | Machine-readable output (artifact + de-para). |
 | `--list-targets` | List the registered emit targets and exit. |

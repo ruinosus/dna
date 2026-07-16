@@ -134,6 +134,36 @@ def test_emit_infra_to_out_dir(runner, tmp_path):
     json.loads(written.read_text())
 
 
+def test_emit_hosting_foundry_json(runner):
+    """`dna emit <copilot> --hosting` renders the HOSTED variant from the copilot's
+    `hosting` block (mode=hosted, target=foundry) — f-copilot-hosting."""
+    r = _run(runner, "hosted-copilot", "--hosting", "--scope", "concierge", "--json")
+    assert r.exit_code == 0, r.output
+    payload = json.loads(r.output)
+    assert payload["target"] == "foundry-hosted"
+    paths = {a["path"]: a for a in payload["artifacts"]}
+    assert set(paths) == {"Dockerfile", "main.py", "requirements.txt", "azure.yaml"}
+    assert all(a["role"] == "hosting" for a in payload["artifacts"])
+    assert "ResponsesHostServer(build_agent()).run()" in paths["main.py"]["content"]
+    assert "host: azure.ai.agent" in paths["azure.yaml"]["content"]
+
+
+def test_emit_hosting_to_out_dir(runner, tmp_path):
+    out_dir = tmp_path / "hosted"
+    out_dir.mkdir()
+    r = _run(runner, "hosted-copilot", "--hosting", "--scope", "concierge",
+             "--out", str(out_dir))
+    assert r.exit_code == 0, r.output
+    for name in ("Dockerfile", "main.py", "requirements.txt", "azure.yaml"):
+        assert (out_dir / name).exists()
+
+
+def test_emit_hosting_self_hosted_fails(runner):
+    """A `mode: self-hosted` copilot has no hosted variant → the command fails."""
+    r = _run(runner, "memory-copilot", "--hosting", "--scope", "concierge")
+    assert r.exit_code != 0
+
+
 def test_emit_multi_artifact_writes_n_files(runner, tmp_path):
     """A multi-artifact emitter (agent.py + serve.py) treats --out as a DIRECTORY
     and lands every EmitArtifact at its own `path`. Registered as an in-test stub
