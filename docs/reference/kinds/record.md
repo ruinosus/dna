@@ -238,6 +238,7 @@ A Copilot is a declarative, servable AG-UI copilot backend — a binder that com
 | `mounts` | array | yes | The Agents this copilot serves, each at a mount path. At least one is required. |
 | `serving` | object | yes | How the copilot backend is served. |
 | `tenant` | object |  | Inbound-tenant handling. When propagate is true, the emitted serving layer derives tenant/oid from request headers into run-state for the mounted tools to read. |
+| `workflow` | object |  | Optional multi-step workflow — agent-framework (MS Agent Framework) target only. When present the emitter emits a WorkflowBuilder chain of the named steps plus a workflow-level human-approval escalation node; absent, a plain single-agent app is emitted. A per-target advanced option (YAGNI for the core). |
 
 ## Doc
 
