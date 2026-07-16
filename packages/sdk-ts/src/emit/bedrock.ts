@@ -22,7 +22,8 @@
  * `toTemplate` is the PURE de-para and is parity-critical: it must build the SAME
  * object the Python `to_template` builds from the same context.
  */
-import type { EmitContext, EmitResult, EmitTool, EmitterPort } from "./index.js";
+import { EmitResult } from "./index.js";
+import type { EmitContext, EmitTool, EmitterPort } from "./index.js";
 
 /** Bedrock `ParameterDetail.Type` allowed values. A JSON-Schema type outside
  *  this set (notably `object`) is coerced to `string` (the depth loss). */
@@ -197,13 +198,13 @@ export class BedrockEmitter implements EmitterPort {
       "Tool.input_schema.properties": "Function.Parameters{Type,Description,Required}",
     };
 
-    return {
+    return new EmitResult({
       artifact,
       target: this.target,
       filename: `${ctx.name}.${this.fileExtension}`,
       losses,
       mapping,
-    };
+    });
   }
 
   /** Byte-equal invariant hook: read `Properties.Instruction` back from the

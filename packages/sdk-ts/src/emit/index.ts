@@ -66,18 +66,75 @@ export interface EmitTool {
   parameters: Record<string, unknown>;
 }
 
-/** The emitted native artifact + an honest account of the de-para. */
-export interface EmitResult {
-  /** The serialized native artifact. */
-  artifact: string;
-  /** The target runtime id. */
+/** One emitted file, tagged with a semantic role. A single-agent emit produces
+ *  one `role="agent"` artifact; a servable copilot emits several. */
+export interface EmitArtifact {
+  /** Target-relative output path (`"agent.py"`, `"serve.py"`). */
+  path: string;
+  /** Serialized file content (source / YAML / JSON). */
+  content: string;
+  /** Semantic role — `"agent"` carries the byte-equal instruction; `"serving"`
+   *  is the AG-UI serve app. Extensible. */
+  role: string;
+}
+
+/** Constructor init for {@link EmitResult}: either the legacy `artifact`+
+ *  `filename` pair OR a full `artifacts` list. */
+export interface EmitResultInit {
   target: string;
-  /** Suggested filename. */
-  filename: string;
-  /** DNA axes with NO slot in this target — what did NOT survive the emit. */
-  losses: string[];
-  /** Field-level de-para (`dnaField -> targetField`). */
-  mapping: Record<string, string>;
+  artifact?: string;
+  filename?: string;
+  artifacts?: EmitArtifact[];
+  losses?: string[];
+  mapping?: Record<string, string>;
+}
+
+/** The emitted native artifact(s) + an honest account of the de-para.
+ *
+ *  `artifacts` is the SINGLE SOURCE OF TRUTH; `artifact`/`filename` are
+ *  read-only views of the `role="agent"` entry (back-compat). Mirrors the Python
+ *  `EmitResult`: a class (not a plain object) so the legacy single-artifact
+ *  accessors coexist with the N-artifact list. */
+export class EmitResult {
+  readonly artifacts: EmitArtifact[];
+  readonly target: string;
+  readonly losses: string[];
+  readonly mapping: Record<string, string>;
+
+  constructor(init: EmitResultInit) {
+    this.target = init.target;
+    this.losses = init.losses ?? [];
+    this.mapping = init.mapping ?? {};
+    if (init.artifacts) {
+      this.artifacts = init.artifacts;
+    } else {
+      if (init.artifact == null || init.filename == null) {
+        throw new EmitError(
+          "EmitResult needs `artifacts` or the legacy `artifact`+`filename` pair",
+        );
+      }
+      this.artifacts = [{ path: init.filename, content: init.artifact, role: "agent" }];
+    }
+  }
+
+  /** Content of the artifact tagged `role` (throws if absent). */
+  artifactFor(role: string): string {
+    const a = this.artifacts.find((x) => x.role === role);
+    if (!a) throw new EmitError(`no artifact with role '${role}'`);
+    return a.content;
+  }
+
+  /** Legacy single-artifact content = the `role="agent"` entry. */
+  get artifact(): string {
+    return this.artifactFor("agent");
+  }
+
+  /** Legacy single-artifact path = the `role="agent"` entry's path. */
+  get filename(): string {
+    const a = this.artifacts.find((x) => x.role === "agent");
+    if (!a) throw new EmitError("EmitResult has no role='agent' artifact");
+    return a.path;
+  }
 }
 
 /** A runtime emitter — pure: reads an {@link EmitContext}, returns an

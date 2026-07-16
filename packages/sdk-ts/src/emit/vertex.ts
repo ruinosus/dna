@@ -26,7 +26,8 @@
  */
 import yaml from "js-yaml";
 
-import type { EmitContext, EmitResult, EmitTool, EmitterPort } from "./index.js";
+import { EmitResult } from "./index.js";
+import type { EmitContext, EmitTool, EmitterPort } from "./index.js";
 
 /** The published ADK Agent Config JSON Schema — emitted as a leading
  *  `# yaml-language-server` header so any editor / validator binds the artifact to
@@ -159,13 +160,13 @@ export class VertexEmitter implements EmitterPort {
       "spec.tools[] (Tool Kind)": "tools[].name (code reference)",
     };
 
-    return {
+    return new EmitResult({
       artifact,
       target: this.target,
       filename: `${ctx.name}.${this.fileExtension}`,
       losses,
       mapping,
-    };
+    });
   }
 
   /** Byte-equal invariant hook: read `instruction` back from the emitted ADK

@@ -72,11 +72,13 @@ export {
   getEmitter,
   availableTargets,
   EmitError,
+  EmitResult,
   UnknownTarget,
 } from "./emit/index.js";
 export type {
   EmitContext,
-  EmitResult,
+  EmitArtifact,
+  EmitResultInit,
   EmitTool,
   EmitterPort,
   BuildEmitContextOpts,

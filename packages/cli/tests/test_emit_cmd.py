@@ -105,6 +105,64 @@ def test_emit_concierge_to_vertex(runner):
     assert config["tools"] == [{"name": "kb-search"}]
 
 
+def test_emit_multi_artifact_writes_n_files(runner, tmp_path):
+    """A multi-artifact emitter (agent.py + serve.py) treats --out as a DIRECTORY
+    and lands every EmitArtifact at its own `path`. Registered as an in-test stub
+    (the real multi-artifact target — agno copilot — lands in Chunk 4)."""
+    from dna.emit import EmitArtifact, EmitResult, register_emitter
+
+    class _MultiStub:
+        target = "multi-stub"
+        file_extension = "py"
+
+        def emit(self, ctx):
+            return EmitResult(
+                target=self.target,
+                artifacts=[
+                    EmitArtifact(path="agent.py", content="INSTRUCTIONS = 'x'\n", role="agent"),
+                    EmitArtifact(path="serve.py", content="# serve app\n", role="serving"),
+                ],
+                losses=["composition structure", "tenant overlay", "eval-as-contract"],
+            )
+
+        def extract_instructions(self, artifact):
+            return "x"
+
+    register_emitter(_MultiStub())
+    out_dir = tmp_path / "emitted"
+    r = _run(runner, "concierge", "-t", "multi-stub", "--scope", "concierge",
+             "--out", str(out_dir))
+    assert r.exit_code == 0, r.output
+    assert (out_dir / "agent.py").read_text() == "INSTRUCTIONS = 'x'\n"
+    assert (out_dir / "serve.py").read_text() == "# serve app\n"
+    assert "2 files" in r.output
+
+
+def test_emit_multi_artifact_requires_out_dir(runner):
+    """Multi-artifact emit without --out errors (it must write N files)."""
+    from dna.emit import EmitArtifact, EmitResult, register_emitter
+
+    class _MultiStub2:
+        target = "multi-stub-2"
+        file_extension = "py"
+
+        def emit(self, ctx):
+            return EmitResult(
+                target=self.target,
+                artifacts=[
+                    EmitArtifact(path="agent.py", content="INSTRUCTIONS = 'x'\n", role="agent"),
+                    EmitArtifact(path="serve.py", content="# serve\n", role="serving"),
+                ],
+            )
+
+        def extract_instructions(self, artifact):
+            return "x"
+
+    register_emitter(_MultiStub2())
+    r = _run(runner, "concierge", "-t", "multi-stub-2", "--scope", "concierge")
+    assert r.exit_code != 0
+
+
 def test_unknown_target_fails(runner):
     r = _run(runner, "concierge", "-t", "no-such-runtime", "--scope", "concierge")
     assert r.exit_code != 0

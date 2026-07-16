@@ -17,7 +17,8 @@
  */
 import yaml from "js-yaml";
 
-import type { EmitContext, EmitResult, EmitTool, EmitterPort } from "./index.js";
+import { EmitResult } from "./index.js";
+import type { EmitContext, EmitTool, EmitterPort } from "./index.js";
 
 /** DNA provider token → agent-framework `model.provider` value. Unknown tokens
  *  pass through unchanged so a future provider needs no code change. */
@@ -126,13 +127,13 @@ export class AgentFrameworkEmitter implements EmitterPort {
       "spec.output_schema": "outputSchema",
     };
 
-    return {
+    return new EmitResult({
       artifact,
       target: this.target,
       filename: `${ctx.name}.${this.fileExtension}`,
       losses,
       mapping,
-    };
+    });
   }
 
   /** Byte-equal invariant hook: read `instructions` back from the emitted YAML. */

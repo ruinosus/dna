@@ -77,6 +77,7 @@ from typing import Any, Protocol, runtime_checkable
 
 __all__ = [
     "EmitContext",
+    "EmitArtifact",
     "EmitResult",
     "EmitterPort",
     "EmitError",
@@ -138,19 +139,86 @@ class EmitContext:
 
 
 @dataclass
-class EmitResult:
-    """The emitted native artifact + an honest account of the de-para."""
+class EmitArtifact:
+    """One emitted file, tagged with a semantic role.
 
-    #: The serialized native artifact (e.g. the agent-framework PromptAgent YAML).
-    artifact: str
-    #: The target runtime id (``agent-framework``).
-    target: str
-    #: Suggested filename (``<name>.agent.yaml``) for ``--out`` defaults.
-    filename: str
-    #: DNA axes with NO slot in this target — what did NOT survive the emit.
-    losses: list[str] = field(default_factory=list)
-    #: Field-level de-para (``dna_field -> target_field``) for reporting.
-    mapping: dict[str, str] = field(default_factory=dict)
+    A single-agent emit produces one ``role="agent"`` artifact; a servable
+    copilot emits several (agent module + AG-UI serve app + …). ``artifacts`` on
+    :class:`EmitResult` is the source of truth; the legacy ``artifact``/
+    ``filename`` are read-only views of the ``role="agent"`` entry.
+    """
+
+    #: Target-relative output path (``"agent.py"``, ``"serve.py"``); the legacy
+    #: ``filename`` for a single emit.
+    path: str
+    #: Serialized file content (source / YAML / JSON).
+    content: str
+    #: Semantic role — ``"agent"`` carries the byte-equal instruction; ``"serving"``
+    #: is the AG-UI serve app. Extensible (route/frontend later).
+    role: str = "agent"
+
+
+class EmitResult:
+    """The emitted native artifact(s) + an honest account of the de-para.
+
+    ``artifacts`` is the SINGLE SOURCE OF TRUTH; ``artifact``/``filename`` are
+    read-only views of the ``role="agent"`` entry (back-compat). This is a plain
+    class with an explicit ``__init__`` rather than a ``@dataclass`` because a
+    dataclass cannot host both an ``artifact`` init-field AND an ``artifact``
+    ``@property`` of the same name — the property object would collide with the
+    field's class-level default. The explicit ``__init__`` accepts EITHER the
+    legacy ``artifact=``+``filename=`` pair OR ``artifacts=[...]``, so every
+    existing keyword-only call site keeps working verbatim.
+    """
+
+    def __init__(
+        self,
+        target: str,
+        *,
+        artifact: str | None = None,
+        filename: str | None = None,
+        artifacts: list[EmitArtifact] | None = None,
+        losses: list[str] | None = None,
+        mapping: dict[str, str] | None = None,
+    ) -> None:
+        if artifacts is None:
+            if artifact is None or filename is None:
+                raise EmitError(
+                    "EmitResult needs `artifacts=[...]` or the legacy "
+                    "`artifact=`+`filename=` pair"
+                )
+            artifacts = [EmitArtifact(path=filename, content=artifact, role="agent")]
+        #: The emitted files (source of truth). At least one, conventionally
+        #: including a ``role="agent"`` entry that carries the byte-equal prompt.
+        self.artifacts = artifacts
+        #: The target runtime id (``agent-framework``).
+        self.target = target
+        #: DNA axes with NO slot in this target — what did NOT survive the emit.
+        self.losses = losses if losses is not None else []
+        #: Field-level de-para (``dna_field -> target_field``) for reporting.
+        self.mapping = mapping if mapping is not None else {}
+
+    def artifact_for(self, role: str) -> str:
+        """Return the content of the artifact tagged ``role`` (raises if absent)."""
+        for a in self.artifacts:
+            if a.role == role:
+                return a.content
+        raise EmitError(
+            f"no artifact with role {role!r} (have {[a.role for a in self.artifacts]})"
+        )
+
+    @property
+    def artifact(self) -> str:
+        """Legacy single-artifact content = the ``role="agent"`` entry."""
+        return self.artifact_for("agent")
+
+    @property
+    def filename(self) -> str:
+        """Legacy single-artifact path = the ``role="agent"`` entry's path."""
+        for a in self.artifacts:
+            if a.role == "agent":
+                return a.path
+        raise EmitError("EmitResult has no role='agent' artifact")
 
 
 @runtime_checkable
