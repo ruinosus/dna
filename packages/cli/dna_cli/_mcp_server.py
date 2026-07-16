@@ -676,6 +676,17 @@ def build_server(
         for n in names:
             print(f"[dna-mcp] graph tool wired: {n}")  # noqa: T201 — boot log
 
+        # Provider-NEUTRAL capabilities (f-act-on-behalf-port): `calendar_list`
+        # dispatches to the right ActOnBehalfPort by the caller's verified provider
+        # family. Added ALONGSIDE the ms_* tools above (ms_calendar_list stays the
+        # Microsoft binding/alias). Same gate/guard; Google off until configured.
+        from dna_cli.act_on_behalf._server import register_neutral_capabilities
+
+        for n in register_neutral_capabilities(
+            server, graph_config, guard=_graph_guard,
+        ):
+            print(f"[dna-mcp] capability tool wired: {n}")  # noqa: T201 — boot log
+
     return server
 
 

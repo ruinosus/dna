@@ -345,3 +345,14 @@ export {
   planRevoke,
 } from "./tenancy/ownership.js";
 export type { RevokeDecision } from "./tenancy/ownership.js";
+
+// f-act-on-behalf-port — the provider-agnostic "act on behalf of the user" contract
+// (surface only; execution is Python-side for the PoC, ADR-act-on-behalf-port §8).
+// Parity twin of dna_cli/act_on_behalf/_port.py — the *contract* stays byte-shaped
+// across Py↔TS (camelCase here, snake_case there).
+export { ActOnBehalfUnavailable } from "./act-on-behalf.js";
+export type {
+  ActContext,
+  ActOnBehalfPort,
+  UserCredential,
+} from "./act-on-behalf.js";

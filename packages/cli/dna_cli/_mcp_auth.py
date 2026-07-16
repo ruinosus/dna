@@ -71,6 +71,24 @@ _DNA_PLAN_SCOPE_MARKER = "_dna_plan_scope_prefix"
 _DNA_CLAIM_MARKER = "_dna_tenant_claim"
 _DNA_SCOPE_MARKER = "_dna_scope_prefix"
 
+# The provider-FAMILY stamp (f-act-on-behalf-port §6) — the OUTBOUND twin of the
+# tenant-claim stamp above. The composite verifier writes which provider FAMILY
+# verified the token (``entra`` → ``"microsoft"``, ``google`` → ``"google"``) so the
+# act-on-behalf dispatch (``dna_cli.act_on_behalf._dispatch``) can pick the right
+# ``ActOnBehalfPort`` from the SAME already-verified token — no new sign-in, no new
+# trust surface, just a label. Absent on the single-env-provider path → no
+# act-on-behalf dispatch (that path never enabled a provider registry).
+_DNA_PROVIDER_FAMILY_MARKER = "_dna_provider_family"
+
+# IdP-type → provider-FAMILY (the outbound act-on-behalf provider the identity maps
+# to). Only families DNA can act on behalf of appear here; an identity from any
+# other IdP type has no act-on-behalf family (``None``) — an honest capability gap,
+# not a crash.
+_PROVIDER_FAMILY = {
+    "entra": "microsoft",
+    "google": "google",
+}
+
 # Per-IdP-type conventions. A provider is a BLOCK OF CONFIG, not code — every
 # serious IdP exposes JWKS + OIDC discovery, so the only per-type knowledge we
 # bake in is (a) the default claim the DNA tenant is read from, and (b) how to
@@ -81,15 +99,30 @@ _DNA_SCOPE_MARKER = "_dna_scope_prefix"
 #   workos — organization-based (``org_id``).
 #   auth0  — organization-based (``org_id``); no DCR → ``OAuthProxy`` seam.
 #   oidc   — any OIDC-generic IdP; ``tenant_claim`` MUST be given (no default).
+#   google — Google Workspace OIDC; the hosted-domain ``hd`` claim is the DNA tenant
+#            AND the identity DNA acts on behalf of (f-act-on-behalf-port).
 _PROVIDER_TENANT_CLAIM_DEFAULT = {
     "entra": "tid",
     "clerk": "org_id",
     "workos": "org_id",
     "auth0": "org_id",
+    "google": "hd",
 }
 _KNOWN_PROVIDER_TYPES = frozenset(
-    {"entra", "clerk", "workos", "auth0", "oidc", "generic"}
+    {"entra", "clerk", "workos", "auth0", "oidc", "generic", "google"}
 )
+
+
+def provider_family_for_type(ptype: str | None) -> str | None:
+    """The outbound act-on-behalf provider FAMILY an IdP type maps to.
+
+    ``entra`` → ``"microsoft"``, ``google`` → ``"google"``; every other type →
+    ``None`` (that identity has no productivity-data provider DNA can act through —
+    an honest capability gap). The single source of truth the composite verifier
+    stamps and the act-on-behalf dispatch reads."""
+    if not ptype:
+        return None
+    return _PROVIDER_FAMILY.get(ptype)
 
 
 class CrossTenantError(PermissionError):
@@ -992,6 +1025,11 @@ def _multi_provider_verifier(providers: list[ProviderConfig]) -> Any:
                     claims = dict(getattr(access, "claims", None) or {})
                     claims[_DNA_CLAIM_MARKER] = pc.tenant_claim
                     claims[_DNA_SCOPE_MARKER] = pc.scope_prefix
+                    # The outbound act-on-behalf provider-family stamp (may be None
+                    # for a family DNA cannot act through — an honest gap downstream).
+                    claims[_DNA_PROVIDER_FAMILY_MARKER] = provider_family_for_type(
+                        pc.type
+                    )
                     access.claims = claims
                     return access
             return None

@@ -7,6 +7,13 @@
 - **Tracking**: `f-mcp-obo` (board `dna-development`, under epic `e-dna-portability`)
 - **Relates to**: `f-dna-hosting` (the MCP server on ACA + Entra), `f-dna-mcp-server`,
   `f-dna-tools-as-data`, `MCPFederation` Kind (DNA-consumes-MCP, the inverse)
+- **Generalized by**: `ADR-act-on-behalf-port` (`f-act-on-behalf-port`). As of the
+  ActOnBehalfPort PoC, **the Microsoft OBO exchange here is the reference implementation
+  of the provider-agnostic `ActOnBehalfPort`** (`MicrosoftOboProvider`, wrapping the
+  unchanged `graph._obo.exchange_on_behalf_of`). Nothing in this ADR changed — its
+  security model, config gating, and tool set are the port's reference. The neutral
+  `calendar_list` tool now dispatches to this exchanger for a Microsoft identity;
+  `ms_calendar_list` remains its Microsoft binding/alias.
 
 > **DESIGN ONLY.** This ADR proposes the shape. No app-registration change, no
 > `az` change, no code, no deploy has been made. Barna reviews before any build.
