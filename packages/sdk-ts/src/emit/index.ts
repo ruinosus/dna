@@ -58,12 +58,46 @@ export interface EmitContext {
   scope: string | null;
   /** Per-emitter hints (e.g. a `--provider` override). */
   options: Record<string, unknown>;
+  // ── copilot-only projections (filled by buildCopilotContext) ──────────────
+  /** External MCP servers the mounted agent consumes, resolved from its
+   *  `mcp_servers` refs → `MCPFederation` docs. Empty for a single agent. */
+  mcpServers: EmitMcpServer[];
+  /** Tool names the mounted agent gates on human approval
+   *  (`Tool.requires_confirmation`) — the HITL-write surface. Empty = none. */
+  toolsRequiringConfirmation: Set<string>;
+  /** Whether the emitted serving layer derives inbound tenant from request
+   *  headers into run-state (Copilot `tenant.propagate` / federation
+   *  `propagate_tenant`). */
+  tenantPropagate: boolean;
+  /** RAG collection refs the copilot may read (`knowledge.collections`). Empty
+   *  when the copilot declares no knowledge (RAG optional). */
+  knowledge: string[];
 }
 
 export interface EmitTool {
   name: string;
   description: string;
   parameters: Record<string, unknown>;
+}
+
+/** Neutral projection of ONE `MCPFederation` the mounted agent consumes. Filled
+ *  by {@link buildCopilotContext}. `transport` is normalized to the MCP client
+ *  wire form (`streamable-http`) that Chunk 4's `MCPTools(url, transport)`
+ *  consumes — the federation Kind stores it as `streamable_http`. */
+export interface EmitMcpServer {
+  /** Name of the `MCPFederation` doc (`mcp_servers[].ref`). */
+  ref: string;
+  /** MCP transport wire name — `streamable-http` or `stdio`. */
+  transport: string;
+  /** Server endpoint (`streamable_http` only), or null. */
+  url: string | null;
+  /** Auth block by env-var NAME (`{kind, env, header?}`) — never a secret. */
+  auth: Record<string, unknown>;
+  /** Effective tool allowlist — per-agent allowlist ∩ the federation's own.
+   *  Empty = everything the federation allows. */
+  allowedTools: string[];
+  /** Whether the HTTP transport stamps tenant/scope/agent headers. */
+  propagateTenant: boolean;
 }
 
 /** One emitted file, tagged with a semantic role. A single-agent emit produces
@@ -267,7 +301,133 @@ export async function buildEmitContext(
     outputSchema,
     scope: mi.scope ?? null,
     options: opts.provider ? { provider: opts.provider } : {},
+    // copilot-only projections stay at their empty defaults for a single agent.
+    mcpServers: [],
+    toolsRequiringConfirmation: new Set<string>(),
+    tenantPropagate: false,
+    knowledge: [],
   };
+}
+
+/** Compose a `Copilot` doc through the kernel and project it to an enriched
+ *  {@link EmitContext} — the Chunk 1↔4 seam (TS twin of Python
+ *  `build_copilot_context`).
+ *
+ *  Resolves the mounted agent's base ctx via the existing front door
+ *  ({@link buildEmitContext} — so the byte-equal instruction contract is
+ *  untouched), then enriches it with the mounted `mcp_servers` (→ `MCPFederation`
+ *  docs), the HITL-gated tools (`Tool.requires_confirmation`), the inbound-tenant
+ *  signal (`tenant.propagate` / federation `propagate_tenant`), and the
+ *  `knowledge.collections` refs. Chunk 4's Agno scaffold emits from *this*. */
+export async function buildCopilotContext(
+  mi: ManifestInstance,
+  copilot: string,
+  opts: BuildEmitContextOpts = {},
+): Promise<EmitContext> {
+  const doc = mi._one("Copilot", copilot);
+  if (!doc) {
+    throw new EmitError(`copilot '${copilot}' not found in scope '${mi.scope ?? "?"}'`);
+  }
+  const cspec = (doc.spec ?? {}) as Record<string, unknown>;
+  const mounts = (cspec.mounts as Array<Record<string, unknown>> | undefined) ?? [];
+  if (mounts.length === 0) {
+    throw new EmitError(`copilot '${copilot}' declares no mounts`);
+  }
+  const agentName = mounts[0].agent as string | undefined;
+  if (!agentName) {
+    throw new EmitError(`copilot '${copilot}' mount[0] has no agent`);
+  }
+
+  // Base ctx from the EXISTING front door — keyed by the mounted agent's name.
+  const ctx = await buildEmitContext(mi, agentName, opts);
+
+  // ── enrich ──────────────────────────────────────────────────────────────
+  const agentDoc = mi.findAgent(agentName);
+  const agentSpec = (agentDoc?.spec ?? {}) as Record<string, unknown>;
+
+  const mcpServers = projectMcpServers(mi, agentSpec);
+  ctx.mcpServers = mcpServers;
+  ctx.toolsRequiringConfirmation = projectHitlIntent(mi, agentSpec);
+
+  const tenantBlock = (cspec.tenant as Record<string, unknown> | undefined) ?? {};
+  const copilotPropagate = tenantBlock.propagate as boolean | undefined;
+  ctx.tenantPropagate =
+    copilotPropagate !== undefined
+      ? Boolean(copilotPropagate)
+      : mcpServers.some((s) => s.propagateTenant);
+
+  const knowledgeBlock = (cspec.knowledge as Record<string, unknown> | undefined) ?? {};
+  ctx.knowledge = ((knowledgeBlock.collections as string[] | undefined) ?? []).slice();
+
+  return ctx;
+}
+
+/** Resolve the mounted `Agent.spec.mcp_servers` refs → their `MCPFederation`
+ *  docs, projected to neutral {@link EmitMcpServer} surfaces. Each entry is
+ *  EITHER a string ref OR a `{ref, allowed_tools?}` dict; the effective allowlist
+ *  is the per-agent allowlist ∩ the federation's own. `transport` is normalized
+ *  from `streamable_http` to the MCP client wire form `streamable-http`. */
+function projectMcpServers(
+  mi: ManifestInstance,
+  agentSpec: Record<string, unknown>,
+): EmitMcpServer[] {
+  const entries = (agentSpec.mcp_servers as Array<string | Record<string, unknown>> | undefined) ?? [];
+  const out: EmitMcpServer[] = [];
+  for (const entry of entries) {
+    let ref: string | undefined;
+    let agentAllow: string[] = [];
+    if (typeof entry === "string") {
+      ref = entry;
+    } else {
+      ref = entry.ref as string | undefined;
+      agentAllow = ((entry.allowed_tools as string[] | undefined) ?? []).slice();
+    }
+    if (!ref) continue;
+    const fed = mi._one("MCPFederation", ref);
+    if (!fed) {
+      throw new EmitError(
+        `MCPFederation '${ref}' referenced by the mounted agent was not found in scope '${mi.scope ?? "?"}'`,
+      );
+    }
+    const fspec = (fed.spec ?? {}) as Record<string, unknown>;
+    const fedAllow = ((fspec.allowed_tools as string[] | undefined) ?? []).slice();
+    let allowed: string[];
+    if (agentAllow.length > 0 && fedAllow.length > 0) {
+      allowed = agentAllow.filter((t) => fedAllow.includes(t));
+    } else {
+      allowed = agentAllow.length > 0 ? agentAllow : fedAllow;
+    }
+    const rawTransport = (fspec.transport as string | undefined) ?? "stdio";
+    const transport = rawTransport === "streamable_http" ? "streamable-http" : rawTransport;
+    const auth = fspec.auth as Record<string, unknown> | undefined;
+    const propagate = fspec.propagate_tenant as boolean | undefined;
+    out.push({
+      ref,
+      transport,
+      url: (fspec.url as string | undefined) ?? null,
+      auth: auth && typeof auth === "object" ? { ...auth } : {},
+      allowedTools: allowed,
+      propagateTenant: propagate === undefined ? true : Boolean(propagate),
+    });
+  }
+  return out;
+}
+
+/** The mounted agent's tools whose `Tool.spec.requires_confirmation` is true —
+ *  the HITL-gated write surface. */
+function projectHitlIntent(
+  mi: ManifestInstance,
+  agentSpec: Record<string, unknown>,
+): Set<string> {
+  const names = (agentSpec.tools as string[] | undefined) ?? [];
+  const gated = new Set<string>();
+  for (const name of names) {
+    const tdoc = mi._one("Tool", name);
+    if (!tdoc) continue;
+    const tspec = (tdoc.spec ?? {}) as Record<string, unknown>;
+    if (Boolean(tspec.requires_confirmation)) gated.add(name);
+  }
+  return gated;
 }
 
 function resolveTools(mi: ManifestInstance, spec: Record<string, unknown>): EmitTool[] {

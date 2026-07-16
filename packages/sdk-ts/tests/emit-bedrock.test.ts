@@ -194,7 +194,7 @@ describe("losses", () => {
   it("reports the unbound-model loss and omits FoundationModel/ActionGroups", () => {
     const ctx: EmitContext = {
       name: "bare", description: "", instructions: "x".repeat(40),
-      model: null, tools: [], outputSchema: null, scope: null, options: {},
+      model: null, tools: [], outputSchema: null, scope: null, options: {}, mcpServers: [], toolsRequiringConfirmation: new Set<string>(), tenantPropagate: false, knowledge: [],
     };
     const result = new BedrockEmitter().emit(ctx);
     const p = props(JSON.parse(result.artifact));
