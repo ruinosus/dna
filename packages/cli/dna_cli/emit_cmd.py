@@ -37,8 +37,13 @@ from dna_cli._ctx import dna_session, fail, print_json
               help="Treat AGENT as a Copilot and emit its Terraform infra inputs "
                    "(<agent>.tfvars.json) — the persistence/knowledge.store/hosting "
                    "→ TF module inputs (f-copilot-infra-binding).")
+@click.option("--hosting", "as_hosting", is_flag=True,
+              help="Treat AGENT as a Copilot and emit its HOSTED variant "
+                   "(hosting.mode=hosted) — Foundry Dockerfile/main.py/requirements/"
+                   "azure.yaml (first-class), langgraph/agentos documented "
+                   "(f-copilot-hosting). Writes N files; needs --out DIR.")
 @click.option("--json", "as_json", is_flag=True, help="Machine-readable output (artifact + de-para).")
-def emit(agent, target, scope, out_path, model, provider, list_targets, as_infra, as_json):
+def emit(agent, target, scope, out_path, model, provider, list_targets, as_infra, as_hosting, as_json):
     """Render AGENT for a runtime TARGET.
 
     \b
@@ -48,11 +53,15 @@ def emit(agent, target, scope, out_path, model, provider, list_targets, as_infra
       dna emit triage -t agent-framework --scope support --out triage.agent.yaml
       dna emit greeter -t agent-framework --model openai:gpt-4o-mini
       dna emit memory-copilot --infra --out infra/            # Terraform tfvars.json
+      dna emit hosted-copilot --hosting --out hosted/         # Foundry hosted-variant files
     """
     from dna.emit import available_targets, emit_agent, EmitError, UnknownTarget
 
     if as_infra:
         return _emit_infra(agent, scope, out_path, model, provider, as_json)
+
+    if as_hosting:
+        return _emit_hosting(agent, scope, out_path, model, provider, as_json)
 
     if list_targets:
         targets = available_targets()
@@ -183,5 +192,64 @@ def _emit_infra(copilot, scope, out_path, model, provider, as_json):
         click.echo(art.content, nl=False)
     if result.losses:
         click.secho("\n# de-para — infra axes with no Terraform mapping:", fg="yellow", err=True)
+        for loss in result.losses:
+            click.secho(f"#   - {loss}", fg="yellow", err=True)
+
+
+def _emit_hosting(copilot, scope, out_path, model, provider, as_json):
+    """`dna emit <copilot> --hosting` — the HOSTED-variant deployment artifacts.
+
+    Reads a COPILOT's `hosting` block (needs `mode: hosted`) and renders the
+    hosted variant (f-copilot-hosting): the Foundry Dockerfile/main.py/
+    requirements.txt/azure.yaml (first-class), or the langgraph/agentos documented
+    self-host artifacts. Multi-artifact — `--out` is a DIRECTORY.
+    """
+    import os
+
+    from dna.emit import EmitError, build_copilot_context
+    from dna.emit.hosting import emit_hosting
+
+    if not copilot:
+        raise fail("missing COPILOT argument (dna emit <copilot> --hosting)")
+
+    with dna_session(scope) as s:
+        try:
+            ctx = build_copilot_context(s.mi, copilot, model=model, provider=provider)
+            result = emit_hosting(ctx)
+        except EmitError as e:
+            raise fail(f"hosting emit failed: {e}") from None
+
+    if out_path:
+        for a in result.artifacts:
+            dest = os.path.join(out_path, a.path)
+            os.makedirs(os.path.dirname(dest) or ".", exist_ok=True)
+            with open(dest, "w", encoding="utf-8") as fh:
+                fh.write(a.content)
+
+    if as_json:
+        print_json({
+            "copilot": copilot,
+            "target": result.target,
+            "scope": s.scope,
+            "out": out_path,
+            "artifacts": [
+                {"path": a.path, "content": a.content, "role": a.role}
+                for a in result.artifacts
+            ],
+            "mapping": result.mapping,
+            "losses": result.losses,
+        })
+        return
+
+    if out_path:
+        click.secho(
+            f"Emitted {copilot} hosted → {result.target}: "
+            f"{len(result.artifacts)} files under {out_path}/",
+            fg="green",
+        )
+    else:
+        raise fail("hosting emit is multi-artifact — pass --out DIR")
+    if result.losses:
+        click.secho("\n# de-para — the hosted variant DEGRADES / documents:", fg="yellow", err=True)
         for loss in result.losses:
             click.secho(f"#   - {loss}", fg="yellow", err=True)

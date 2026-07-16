@@ -1,0 +1,12 @@
+# DNA-emitted thin AgentOS compose scaffold: ao-copilot (target=agentos).
+# Agno AgentOS has no managed runtime — this is a SINGLE-service self-host
+# scaffold. Wire the managed Postgres/Redis + JWT secrets + ingress via
+# f-copilot-infra-binding (the Terraform closure), NOT this file.
+services:
+  ao_copilot:
+    build: .
+    ports:
+      - "7777:7777"
+    environment:
+      - AGENTOS_JWT_SECRET
+    restart: unless-stopped

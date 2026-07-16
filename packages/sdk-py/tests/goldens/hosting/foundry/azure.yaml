@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+#
+# DNA-emitted Foundry hosted-agent service block for memory-agent (target=foundry).
+# `host: azure.ai.agent` is the NON-deprecated Foundry hosted-agent manifest (NOT
+# the deprecated `agent.yaml`). Merge this `services:` entry into your azd
+# `azure.yaml` and set `project:` to this service's directory. `azd deploy` builds
+# the image (remoteBuild via ACR) and publishes a new agent
+# VERSION — the agent version is a deploy step, NOT an ARM resource (design §3).
+services:
+  memory-agent:
+    project: .
+    host: azure.ai.agent
+    language: docker
+    docker:
+      remoteBuild: true
+    config:
+      container:
+        resources:
+          cpu: "0.5"
+          memory: 1Gi
+      startupCommand: python main.py

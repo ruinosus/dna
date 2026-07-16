@@ -1,0 +1,23 @@
+# Hosting lg-copilot on LangGraph Platform (documented, not a managed hosted agent)
+
+`hosting.target: langgraph-platform` is emitted **documented, lower v1 priority**:
+LangGraph Platform is a stateful **server**, not a Foundry-style managed hosted
+agent, so the hosting abstraction bends — `identity` and `protocol` do not map the
+way they do for Foundry.
+
+## What this emit gives you
+
+- `langgraph.json` — the deployment config: the `lg_copilot` graph
+  (`./lg_copilot.py:graph`), `dependencies` (`.`), and `env` (`.env`).
+
+## What you still do (not this emit)
+
+1. Provide the compiled `graph` in `lg_copilot.py` (the self-hosted LangGraph
+   scaffold emits the StateGraph body).
+2. `langgraph build` — this produces the container image FROM `langgraph.json`
+   (unlike Foundry, you do not write a Dockerfile).
+3. Provision compute + managed **Postgres + Redis** + registry + the
+   `LANGGRAPH_CLOUD_LICENSE_KEY` secret — via `f-copilot-infra-binding` (the
+   Terraform closure), not this file.
+
+The server exposes the LangGraph Server API on `:8123`.
