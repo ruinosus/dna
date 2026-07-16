@@ -160,3 +160,83 @@ def test_build_copilot_context_resolves_mounted_agent(mi):
     # unchanged (the byte-equal instruction contract stays intact).
     assert ctx.name == "memory-agent"
     assert ctx.instructions == mi.build_prompt("memory-agent")
+
+
+# ── Task 3b: enrich the ctx — mcp_servers / hitl-intent / tenant / knowledge ─
+
+
+def test_copilot_ctx_projects_mcp_servers(mi):
+    """The mounted agent's ``mcp_servers`` refs resolve to their MCPFederation
+    docs, projected with the MCP client wire transport + effective allowlist."""
+    from dna.emit import build_copilot_context
+
+    ctx = build_copilot_context(mi, "memory-copilot", model="azure/gpt-4o")
+    assert len(ctx.mcp_servers) == 1
+    fed = ctx.mcp_servers[0]
+    assert fed.ref == "dna-mcp"
+    assert fed.transport == "streamable-http"  # normalized from streamable_http
+    assert fed.url == "https://mcp.dna.example/agui"
+    assert fed.auth == {"kind": "bearer_env", "env": "DNA_MCP_TOKEN"}
+    # agent allowlist ∩ federation allowlist.
+    assert fed.allowed_tools == ["remember", "forget", "recall"]
+    assert fed.propagate_tenant is True
+
+
+def test_copilot_ctx_projects_hitl_intent(mi):
+    """Tools the mounted agent gates (``requires_confirmation``) surface as the
+    HITL-write intent — ``recall`` (read-only) is NOT gated."""
+    from dna.emit import build_copilot_context
+
+    ctx = build_copilot_context(mi, "memory-copilot", model="azure/gpt-4o")
+    assert ctx.tools_requiring_confirmation == {"remember", "forget"}
+
+
+def test_copilot_ctx_projects_tenant_propagate(mi):
+    """The Copilot ``tenant.propagate`` drives inbound-tenant derivation."""
+    from dna.emit import build_copilot_context
+
+    ctx = build_copilot_context(mi, "memory-copilot", model="azure/gpt-4o")
+    assert ctx.tenant_propagate is True
+
+
+def test_copilot_ctx_projects_knowledge(mi):
+    """The Copilot ``knowledge.collections`` refs ride on the ctx."""
+    from dna.emit import build_copilot_context
+
+    ctx = build_copilot_context(mi, "memory-copilot", model="azure/gpt-4o")
+    assert ctx.knowledge == ["aap-knowledge-base"]
+
+
+# ── Task 3b negatives: everything optional is empty when undeclared ──────────
+
+
+def test_copilot_ctx_knowledge_optional(mi):
+    """RAG is optional — a pure-action copilot carries no knowledge."""
+    from dna.emit import build_copilot_context
+
+    ctx = build_copilot_context(mi, "pure-action-copilot", model="azure/gpt-4o")
+    assert ctx.knowledge == []
+
+
+def test_copilot_ctx_mcp_servers_empty_when_undeclared(mi):
+    """A mounted agent with no ``mcp_servers`` projects an empty list."""
+    from dna.emit import build_copilot_context
+
+    ctx = build_copilot_context(mi, "pure-action-copilot", model="azure/gpt-4o")
+    assert ctx.mcp_servers == []
+
+
+def test_copilot_ctx_hitl_empty_when_no_gated_tools(mi):
+    """No tool gates on approval → the HITL-write surface is empty."""
+    from dna.emit import build_copilot_context
+
+    ctx = build_copilot_context(mi, "pure-action-copilot", model="azure/gpt-4o")
+    assert ctx.tools_requiring_confirmation == set()
+
+
+def test_copilot_ctx_tenant_default_false_when_undeclared(mi):
+    """No Copilot ``tenant`` block + no federation → tenant is NOT propagated."""
+    from dna.emit import build_copilot_context
+
+    ctx = build_copilot_context(mi, "pure-action-copilot", model="azure/gpt-4o")
+    assert ctx.tenant_propagate is False
