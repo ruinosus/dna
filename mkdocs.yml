@@ -77,6 +77,7 @@ nav:
       - Hosting the MCP server on Azure (ACA + Entra): guides/hosting-mcp-aca.md
       - "On-Behalf-Of — MCP tools act on your Microsoft 365": guides/mcp-obo.md
       - "Act on behalf — one calendar tool, any provider": guides/act-on-behalf.md
+      - "Copilot infra binding — persistence/hosting to Terraform": guides/copilot-infra-binding.md
       - The DNA Cloud starter catalog & BYO-DNA: guides/dna-cloud-catalog.md
       - How to configure ports (dna.config.yaml): guides/configuring-ports.md
       - How to ship a scope with your app: guides/shipping-a-scope.md
