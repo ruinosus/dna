@@ -84,10 +84,10 @@ def _mcp_tools() -> list[MCPStreamableHTTPTool]:
     level instead, so it mounts with `never_require`)."""
     return [
         MCPStreamableHTTPTool(
-            name='mcp_dna-mcp',
-            url='https://mcp.dna.example/agui',
-            allowed_tools=['forget', 'recall', 'remember'],
-            approval_mode='never_require',
+            name="mcp_dna-mcp",
+            url="https://mcp.dna.example/agui",
+            allowed_tools=["forget", "recall", "remember"],
+            approval_mode="never_require",
             header_provider=_tenant_header_provider,
         ),
     ]
@@ -100,7 +100,7 @@ _STEP_INSTRUCTIONS = "TODO: per-step instructions (see EmitResult.losses)."
 
 def _client() -> FoundryChatClient:
     return FoundryChatClient(
-        model='azure/gpt-4o',
+        model="azure/gpt-4o",
         credential=DefaultAzureCredential(),
     )
 
@@ -109,7 +109,7 @@ def build_triage_agent() -> Agent:
     """Workflow step `triage` — a Foundry-backed ChatAgent. Its `name` becomes the
     workflow executor id the AG-UI adapter surfaces as the UI step name."""
     return _client().as_agent(
-        name='triage',
+        name="triage",
         instructions=INSTRUCTIONS,
         tools=_mcp_tools(),
     )
@@ -119,7 +119,7 @@ def build_retrieve_agent() -> Agent:
     """Workflow step `retrieve` — a Foundry-backed ChatAgent. Its `name` becomes the
     workflow executor id the AG-UI adapter surfaces as the UI step name."""
     return _client().as_agent(
-        name='retrieve',
+        name="retrieve",
         instructions=_STEP_INSTRUCTIONS,
     )
 
@@ -128,7 +128,7 @@ def build_resolve_agent() -> Agent:
     """Workflow step `resolve` — a Foundry-backed ChatAgent. Its `name` becomes the
     workflow executor id the AG-UI adapter surfaces as the UI step name."""
     return _client().as_agent(
-        name='resolve',
+        name="resolve",
         instructions=_STEP_INSTRUCTIONS,
     )
 
@@ -170,7 +170,7 @@ def build_workflow() -> Workflow:
     escalate = EscalationExecutor()
     return (
         WorkflowBuilder(
-            name='MemoryAgent',
+            name="MemoryAgent",
             start_executor=triage,
         )
         .add_chain([triage, retrieve, resolve, escalate])

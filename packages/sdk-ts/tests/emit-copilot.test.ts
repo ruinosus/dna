@@ -179,3 +179,114 @@ describe("AgnoEmitter — the servable `copilot` case", () => {
     expect(res.artifact).not.toContain("AgentOS");
   });
 });
+
+/**
+ * The Microsoft Agent Framework `copilot` scaffold case (TS twin of the Chunk 6
+ * slice of `test_copilot_emit.py`) — the SECOND per-runtime copilot case
+ * (f-copilot-agentframework-target). `buildCopilotContext` (the SAME ctx the Agno
+ * case reads) → `AgentFrameworkEmitter().emit(ctx)` renders TWO artifacts
+ * (agent + serving) governed by byte-equal goldens; a Copilot with a
+ * `workflow.chain` emits the WorkflowBuilder variant. Rendered literals differ
+ * from Python only in quote style (JSON string literals — the shared convention).
+ */
+import { AgentFrameworkEmitter } from "../src/emit/agentFramework.js";
+
+describe("AgentFrameworkEmitter — the servable `copilot` case (MS Agent Framework)", () => {
+  async function ctxFor(copilot: string): Promise<EmitContext> {
+    const mi = await quickInstance(SCOPE, BASE);
+    return buildCopilotContext(mi, copilot, { model: "azure/gpt-4o", provider: "azure" });
+  }
+
+  it("emits two artifacts (agent + serving) at the mounted agent's module paths", async () => {
+    const res = new AgentFrameworkEmitter().emit(await ctxFor("memory-copilot"));
+    expect(new Set(res.artifacts.map((a) => a.role))).toEqual(new Set(["agent", "serving"]));
+    expect(res.target).toBe("agent-framework");
+    const paths = Object.fromEntries(res.artifacts.map((a) => [a.role, a.path]));
+    expect(paths.agent).toBe("memory_agent.py");
+    expect(paths.serving).toBe("memory_agent_serve.py");
+  });
+
+  it("the agent artifact matches the golden", async () => {
+    const res = new AgentFrameworkEmitter().emit(await ctxFor("memory-copilot"));
+    expect(res.artifactFor("agent")).toBe(readGolden("agent_framework/copilot_agent.py"));
+  });
+
+  it("the serving artifact matches the golden", async () => {
+    const res = new AgentFrameworkEmitter().emit(await ctxFor("memory-copilot"));
+    expect(res.artifactFor("serving")).toBe(readGolden("agent_framework/copilot_serve.py"));
+  });
+
+  it("carries the byte-equal instruction via the emitter method (role=agent)", async () => {
+    const ctx = await ctxFor("memory-copilot");
+    const emitter = new AgentFrameworkEmitter();
+    const res = emitter.emit(ctx);
+    expect(emitter.extractInstructions(res.artifactFor("agent"))).toBe(ctx.instructions);
+  });
+
+  it("builds via FoundryChatClient.as_agent and serves /agui via the fastapi endpoint", async () => {
+    const res = new AgentFrameworkEmitter().emit(await ctxFor("memory-copilot"));
+    const agent = res.artifactFor("agent");
+    const serving = res.artifactFor("serving");
+    expect(agent).toContain("from agent_framework.foundry import FoundryChatClient");
+    expect(agent).toContain("return client.as_agent(");
+    expect(serving).toContain(
+      "from agent_framework_ag_ui import add_agent_framework_fastapi_endpoint",
+    );
+    expect(serving).toContain('path="/agui",');
+  });
+
+  it("mounts MCPStreamableHTTPTool with allowed_tools + approval_mode tool-level HITL", async () => {
+    const agent = new AgentFrameworkEmitter().emit(await ctxFor("memory-copilot")).artifactFor("agent");
+    expect(agent).toContain("from agent_framework import MCPStreamableHTTPTool");
+    expect(agent).toContain('name="mcp_dna-mcp",');
+    expect(agent).toContain('url="https://mcp.dna.example/agui",');
+    expect(agent).toContain('allowed_tools=["forget", "recall", "remember"],');
+    expect(agent).toContain(
+      'approval_mode={"always_require_approval": ["forget", "remember"], ' +
+        '"never_require_approval": ["recall"]},',
+    );
+  });
+
+  it("derives inbound tenant from DNA-native headers only (no license/namespace)", async () => {
+    const res = new AgentFrameworkEmitter().emit(await ctxFor("memory-copilot"));
+    const agent = res.artifactFor("agent");
+    const serving = res.artifactFor("serving");
+    expect(agent).toContain("contextvars.ContextVar");
+    expect(agent).toContain("def _tenant_header_provider(_existing: dict) -> dict:");
+    // DNA tenancy = three dimensions: tenant (tid) + workspace + user oid.
+    expect(agent).toContain('"X-DNA-Tenant"');
+    expect(agent).toContain('"X-DNA-Workspace"');
+    expect(agent).toContain('"X-Tenant-OID"');
+    expect(serving).toContain('@app.middleware("http")');
+    for (const forbidden of ["X-DNA-License-ID", "X-DNA-Namespace-ID", "license_id", "namespace_id"]) {
+      expect(agent).not.toContain(forbidden);
+      expect(serving).not.toContain(forbidden);
+    }
+  });
+
+  it("emits the WorkflowBuilder chain + request_info escalation for a workflow copilot", async () => {
+    const ctx = await ctxFor("workflow-copilot");
+    expect(ctx.workflow).toEqual(["triage", "retrieve", "resolve"]);
+    const res = new AgentFrameworkEmitter().emit(ctx);
+    const agent = res.artifactFor("agent");
+    expect(agent).toBe(readGolden("agent_framework/copilot_workflow_agent.py"));
+    expect(agent).toContain("class EscalationExecutor(Executor):");
+    expect(agent).toContain("await ctx.request_info(request_data=text, response_type=bool)");
+    expect(agent).toContain(".add_chain([triage, retrieve, resolve, escalate])");
+    // writes gated at the workflow level → MCP mount uses never_require.
+    expect(agent).toContain('approval_mode="never_require",');
+    expect(agent).not.toContain("approval_mode={");
+    const serving = res.artifactFor("serving");
+    expect(serving).toBe(readGolden("agent_framework/copilot_workflow_serve.py"));
+    expect(serving).toContain("agent=AgentFrameworkWorkflow(workflow_factory=build_workflow),");
+  });
+
+  it("a plain agent (no copilot signals) stays the single-artifact PromptAgent YAML", async () => {
+    const mi = await quickInstance(SCOPE, BASE);
+    const res = await emitAgent(mi, "concierge", "agent-framework");
+    expect(res.artifacts.map((a) => a.role)).toEqual(["agent"]);
+    expect(res.filename.endsWith("agent.yaml")).toBe(true);
+    expect(res.artifact).toContain("kind: Prompt");
+    expect(res.artifact).not.toContain("FoundryChatClient");
+  });
+});

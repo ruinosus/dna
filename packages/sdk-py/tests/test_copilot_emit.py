@@ -782,7 +782,9 @@ def test_maf_copilot_derives_inbound_tenant_dna_native(maf_ctx):
     serving = res.artifact_for("serving")
     assert "contextvars.ContextVar" in agent
     assert "def _tenant_header_provider(_existing: dict) -> dict:" in agent
+    # DNA tenancy = three dimensions: tenant (tid) + workspace + user oid.
     assert '"X-DNA-Tenant"' in agent
+    assert '"X-DNA-Workspace"' in agent
     assert '"X-Tenant-OID"' in agent
     assert "header_provider=_tenant_header_provider," in agent
     # the serving layer sets the ContextVar from inbound headers via middleware.

@@ -15,15 +15,6 @@ from agent_framework import Agent
 from agent_framework.foundry import FoundryChatClient
 from azure.identity import DefaultAzureCredential
 from agent_framework import MCPStreamableHTTPTool
-from agent_framework import (
-    AgentExecutorResponse,
-    Executor,
-    Workflow,
-    WorkflowBuilder,
-    WorkflowContext,
-    handler,
-    response_handler,
-)
 INSTRUCTIONS = "Remember and recall the user's notes. Confirm before writing.\n\nYou are the Helpdesk Concierge, an internal engineering support assistant. You help developers triage and resolve engineering questions."
 
 #: Request-scoped tenant carrier. The serving layer sets it from inbound request
@@ -84,95 +75,23 @@ def _mcp_tools() -> list[MCPStreamableHTTPTool]:
     level instead, so it mounts with `never_require`)."""
     return [
         MCPStreamableHTTPTool(
-            name='mcp_dna-mcp',
-            url='https://mcp.dna.example/agui',
-            allowed_tools=['forget', 'recall', 'remember'],
-            approval_mode='never_require',
+            name="mcp_dna-mcp",
+            url="https://mcp.dna.example/agui",
+            allowed_tools=["forget", "recall", "remember"],
+            approval_mode={"always_require_approval": ["forget", "remember"], "never_require_approval": ["recall"]},
             header_provider=_tenant_header_provider,
         ),
     ]
 
-#: Per-step instructions are per-app bodies (a de-para loss): each workflow step
-#: runs its own Foundry agent. The mounted agent's composed prompt is carried as
-#: INSTRUCTIONS (byte-equal) and used by the first step; the rest are stubs.
-_STEP_INSTRUCTIONS = "TODO: per-step instructions (see EmitResult.losses)."
-
-
-def _client() -> FoundryChatClient:
-    return FoundryChatClient(
-        model='azure/gpt-4o',
+def build_agent() -> Agent:
+    """Build the MS Agent Framework agent for one run — a Foundry-backed ChatAgent
+    (`FoundryChatClient(...).as_agent(...)`)."""
+    client = FoundryChatClient(
+        model="azure/gpt-4o",
         credential=DefaultAzureCredential(),
     )
-
-
-def build_triage_agent() -> Agent:
-    """Workflow step `triage` — a Foundry-backed ChatAgent. Its `name` becomes the
-    workflow executor id the AG-UI adapter surfaces as the UI step name."""
-    return _client().as_agent(
-        name='triage',
+    return client.as_agent(
+        name="memory-agent",
         instructions=INSTRUCTIONS,
         tools=_mcp_tools(),
-    )
-
-
-def build_retrieve_agent() -> Agent:
-    """Workflow step `retrieve` — a Foundry-backed ChatAgent. Its `name` becomes the
-    workflow executor id the AG-UI adapter surfaces as the UI step name."""
-    return _client().as_agent(
-        name='retrieve',
-        instructions=_STEP_INSTRUCTIONS,
-    )
-
-
-def build_resolve_agent() -> Agent:
-    """Workflow step `resolve` — a Foundry-backed ChatAgent. Its `name` becomes the
-    workflow executor id the AG-UI adapter surfaces as the UI step name."""
-    return _client().as_agent(
-        name='resolve',
-        instructions=_STEP_INSTRUCTIONS,
-    )
-
-
-class EscalationExecutor(Executor):
-    """Workflow-level HITL gate (design §6.1): a `request_info` node that pauses the
-    workflow for human approval and acts only in the `@response_handler` after
-    approval — chosen over a tool-level gate because the AG-UI workflow adapter
-    double-emits TOOL_CALL_START for an approval-gated tool call. Mirrors the
-    foundry reference's escalation node; the decision arrives over the
-    `{interrupts: [{id, value}]}` resume shape. The gated effect is a per-app body."""
-
-    def __init__(self) -> None:
-        super().__init__(id="escalate")
-
-    @handler
-    async def on_step(
-        self, response: AgentExecutorResponse, ctx: WorkflowContext[str, str]
-    ) -> None:
-        text = (response.agent_response.text or "").strip()
-        # Pause for human approval before the gated action runs.
-        await ctx.request_info(request_data=text, response_type=bool)
-
-    @response_handler
-    async def on_decision(
-        self, request: str, approved: bool, ctx: WorkflowContext[str, str]
-    ) -> None:
-        # The gated effect (e.g. the DNA write) runs only after approval — wire it here.
-        await ctx.yield_output("Approved." if approved else "No action taken.")
-
-
-def build_workflow() -> Workflow:
-    """Per-request factory: a `WorkflowBuilder` chain of the declared steps +
-    the human-approval escalation node. Mirrors the foundry reference's
-    `build_helpdesk_workflow`."""
-    triage = build_triage_agent()
-    retrieve = build_retrieve_agent()
-    resolve = build_resolve_agent()
-    escalate = EscalationExecutor()
-    return (
-        WorkflowBuilder(
-            name='MemoryAgent',
-            start_executor=triage,
-        )
-        .add_chain([triage, retrieve, resolve, escalate])
-        .build()
     )

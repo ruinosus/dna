@@ -20,15 +20,18 @@ INSTRUCTIONS = "Remember and recall the user's notes. Confirm before writing.\n\
 #: Request-scoped tenant carrier. The serving layer sets it from inbound request
 #: headers; the MCP `header_provider` reads it to stamp the outbound DNA tenant
 #: headers on every federated MCP call (the inbound->outbound tenant bridge — NOT
-#: a propagate_tenant freebie). DNA tenant model: `tenant` (Entra tid/workspace) +
-#: `personal:<oid>` (per-user; oid server-derived) — no license, no namespace.
+#: a propagate_tenant freebie). DNA tenancy = `tenant` (Entra tid) + `workspace`
+#: (→ scope `tenant-<workspace_id>`) + `personal:<oid>` (oid server-derived) — no
+#: license, no namespace.
 _CURRENT_TENANT: contextvars.ContextVar[dict] = contextvars.ContextVar(
     "dna_tenant", default={}
 )
 
-#: Inbound AG-UI request headers → the per-run tenant carrier (DNA-native only).
+#: Inbound AG-UI request headers → the per-run tenant carrier. DNA-native only,
+#: server-trusted (these are set service-to-service, never by the browser).
 _TENANT_HEADERS = {
     "tenant": "X-DNA-Tenant",
+    "workspace": "X-DNA-Workspace",
     "oid": "X-Tenant-OID",
 }
 
@@ -57,6 +60,8 @@ def _tenant_header_provider(_existing: dict) -> dict:
     headers: dict = {}
     if tenant.get("tenant"):
         headers["X-DNA-Tenant"] = tenant["tenant"]
+    if tenant.get("workspace"):
+        headers["X-DNA-Workspace"] = tenant["workspace"]
     if tenant.get("oid"):
         headers["X-Tenant-OID"] = tenant["oid"]
     return headers
