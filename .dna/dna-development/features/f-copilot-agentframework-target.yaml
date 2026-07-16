@@ -20,7 +20,7 @@ spec:
   - absorption
   business_value: 600
   created_at: '2026-07-16T12:59:11+00:00'
-  updated_at: '2026-07-16T13:46:17+00:00'
+  updated_at: '2026-07-16T14:09:55+00:00'
   timeline:
   - at: '2026-07-16T12:59:11+00:00'
     actor: claude-code
@@ -33,3 +33,7 @@ spec:
     source: cli
     from: discovery
     to: in-development
+  narrative_line: "MS Agent Framework copilot scaffold case (2nd runtime) + Copilot\
+    \ workflow{chain} field \u2014 WorkflowBuilder chain + request_info HITL; byte-equal\
+    \ goldens + full Py/TS parity, brand-guard clean. Unblocks f-copilot-retrofit\
+    \ (foundry=MS-AF)."
