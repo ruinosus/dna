@@ -1323,6 +1323,7 @@ A Tier declares one DNA Cloud plan's hard caps (calls/day, rate, tenants) and wh
 | `overage_per_1k_usd` | number \| null |  | USD charged per 1k calls above the daily quota. Null = no overage (hard cap). |
 | `price_usd_month` | number |  | Flat monthly price in USD (0 for the free tier). |
 | `rate_per_sec` | integer \| null |  | Per-second rate limit. Null = unmetered. |
+| `sdlc_mode` | string |  | SDLC board access level granted by the tier — none, read, or write. Read = list/digest/ADR; write = create/transition/comment. |
 | `sla` | boolean |  | True when the tier includes a support/uptime SLA (enterprise). |
 | `tier_id` | string | yes | Canonical tier id, e.g. free, pro, enterprise. The doc name SHOULD equal the tier_id; kernel.tier() matches on this field first. |
 
