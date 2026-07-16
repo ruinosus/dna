@@ -11,7 +11,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.0] — 2026-07-16
+
 ### Added
+
+- **AG-UI Copilot absorption — one declarative `Copilot` definition emits a servable
+  agent-native copilot across THREE runtimes** (`e-dna-copilot-absorption`). The
+  "AG-UI copilot" scaffold that two reference apps hand-built independently is now a
+  first-class DNA emit capability — the single evolution point. A `Copilot` Kind
+  (a binder over Agent/Tool/MCPFederation + `knowledge`/`hitl`/`frontend`/`persistence`
+  /`hosting`) emits, from one neutral `build_copilot_context`:
+    - **Three runtime targets** (`f-dna-copilot-emitter`, `f-copilot-agentframework-target`,
+      `f-copilot-langgraph-target`) — **Agno**, **Microsoft Agent Framework** (+ the
+      `workflow` capability), and **LangGraph** (the cleanest workflow target — a chain
+      is graph nodes + edges). Each emits a servable AG-UI `/agui` app: the agent build,
+      the `mcp:` tool-mount, tool-level HITL (Agno `external_execution` / MS-AF
+      `request_info` / LangGraph `interrupt()`), and inbound-tenant injection — all
+      parameterized per runtime from one context. `EmitResult` is multi-artifact;
+      byte-equal instructions preserved.
+    - **Shared CopilotKit frontend scaffold** (`f-copilot-frontend-scaffold`) — one
+      console (chat + canvas + approval-card + suggested-prompts + `HttpAgent` bridge)
+      + a per-runtime resume-adapter; a TS-only golden family.
+    - **`MCPFederation` read/write tool split + min-role RBAC** (`f-mcpfederation-rbac`)
+      — rank-based role floors via the `Role` Kind; `allowed_tools` back-compat preserved.
+    - **Persistence** (`f-copilot-persistence`) — declarative `persistence`
+      (checkpoint/memory/cache) + `knowledge.store` (vectors); emitted as real Postgres
+      config across all three runtimes (killing the hardcoded in-memory default), with a
+      documented Mongo path. `ref` → env-var seam.
+    - **Hosting** (`f-copilot-hosting`) — the hosted-agent variant: **Azure AI Foundry**
+      first-class (Dockerfile :8088 + `ResponsesHostServer` + `azure.ai.agent` manifest,
+      degrading per-user concerns), LangGraph Platform + AgentOS documented. One def →
+      self-hosted AG-UI app **and** hosted agent (variant selector).
+    - **Infra binding** (`f-copilot-infra-binding`) — `dna emit <copilot> --infra`
+      turns the declared persistence backends + hosting target into Terraform module
+      inputs (the DNA→Terraform seam that closes the declarative-all-the-way-down loop).
+    - **Retrofit validation** (`f-copilot-retrofit`) — the emitter reproduces both
+      hand-built reference apps' load-bearing servable shape from one `Copilot` def each.
+    - The 3-dimension DNA-native tenant contract throughout: `X-DNA-Tenant` +
+      `X-DNA-Workspace` + `X-Tenant-OID` (workspace → scope via `default_scope`).
 
 - **SDLC write tools on the DNA MCP server — the board is now creatable +
   manageable over MCP** (`f-mcp-sdlc-write`, stories `s-mcp-sdlc-write-tools` +
@@ -1223,7 +1260,8 @@ registries: **PyPI** ([`dna-sdk`](https://pypi.org/project/dna-sdk/),
   source conformance kit now pins the contract: base content is served
   by `load_all`, never by a `load_layer` sentinel.
 
-[Unreleased]: https://github.com/ruinosus/dna/compare/v0.13.0...HEAD
+[Unreleased]: https://github.com/ruinosus/dna/compare/v0.17.0...HEAD
+[0.17.0]: https://github.com/ruinosus/dna/compare/v0.16.0...v0.17.0
 [0.13.0]: https://github.com/ruinosus/dna/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/ruinosus/dna/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/ruinosus/dna/compare/v0.9.0...v0.11.0
