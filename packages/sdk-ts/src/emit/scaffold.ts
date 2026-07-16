@@ -62,6 +62,70 @@ export function pyIdentifier(name: string): string {
   return ident;
 }
 
+/** Derive the env-var name that holds the Postgres DSN for an infra `ref`.
+ *  `primary-pg` → `DNA_PRIMARY_PG_URL`. The emitter NEVER hardcodes a DSN — it
+ *  emits an `os.environ[...]` read keyed by the ref; `f-copilot-infra-binding`
+ *  wires the ref → env-var at deploy time. Slots that share a ref share the env
+ *  var. TS twin of Python `pg_env_var`. */
+export function pgEnvVar(ref: string): string {
+  const slug = ref
+    .replace(/[^0-9a-zA-Z]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .toUpperCase();
+  return `DNA_${slug}_URL`;
+}
+
+/** The Python expression that reads the Postgres DSN for `ref` from the env
+ *  (`os.environ["DNA_PRIMARY_PG_URL"]`) — the emitted, never-hardcoded DSN. */
+export function pgUrlExpr(ref: string): string {
+  return `os.environ["${pgEnvVar(ref)}"]`;
+}
+
+/** Neutral persistence/knowledge-store facts shared by every scaffold emitter —
+ *  `ctx.persistence` (`{checkpoint, memory, cache}`) + `ctx.knowledgeStore` read
+ *  into plain flags + env-var-backed DSN facts, so each framework's copilot
+ *  template maps the SAME facts onto its own classes. Kept in ONE place so the
+ *  Py↔TS twin cannot drift. Absent/null slots → the framework default (in-memory),
+ *  exactly the back-compat shape. TS twin of Python `persistence_facts`. */
+export interface PersistenceFacts {
+  checkpointPg: boolean;
+  memoryPg: boolean;
+  checkpointRef: string | null;
+  memoryRef: string | null;
+  pgRef: string | null;
+  vectorPg: boolean;
+  vectorRef: string | null;
+  embedModel: string | null;
+  embedDims: number | null;
+}
+
+export function persistenceFacts(ctx: EmitContext): PersistenceFacts {
+  const persistence = ctx.persistence;
+  const checkpoint = persistence?.checkpoint ?? null;
+  const memory = persistence?.memory ?? null;
+  const store = ctx.knowledgeStore;
+  const embed = store?.embed ?? null;
+
+  const checkpointPg = checkpoint?.backend === "postgres";
+  const memoryPg = memory?.backend === "postgres";
+  // checkpoint + memory may share one physical Postgres (one `ref`) — prefer the
+  // checkpoint ref, fall back to the memory ref for the shared DSN.
+  const pgRef = checkpointPg ? (checkpoint?.ref ?? null) : memoryPg ? (memory?.ref ?? null) : null;
+  const vectorPg = store?.backend === "pgvector";
+
+  return {
+    checkpointPg,
+    memoryPg,
+    checkpointRef: checkpointPg ? (checkpoint?.ref ?? null) : null,
+    memoryRef: memoryPg ? (memory?.ref ?? null) : null,
+    pgRef,
+    vectorPg,
+    vectorRef: store?.ref ?? null,
+    embedModel: embed?.model ?? null,
+    embedDims: embed?.dims ?? null,
+  };
+}
+
 /** The default case classifier — read the DNA signals the ctx already carries. */
 export function classifyCase(ctx: EmitContext): string {
   if (ctx.outputSchema) return "structured-output";
