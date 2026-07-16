@@ -10,9 +10,17 @@
   `MCPFederation` Kind (DNA-consumes-MCP, the inverse), the pluggable N-provider
   IdP layer (`_mcp_auth.parse_auth_providers`)
 
-> **DESIGN ONLY.** This ADR proposes the shape. No app-registration change, no
-> `az` / `gcloud` change, no code, no deploy has been made. Barna reviews before
-> any build.
+> **DESIGN ONLY (at authoring).** This ADR proposed the shape. Barna reviewed
+> before any build.
+>
+> **PoC SHIPPED (`f-act-on-behalf-port`).** §8's PoC is built: the port contract
+> (`s-aob-port-contract`), the Microsoft OBO as its reference impl
+> (`s-aob-microsoft-as-port`, no regression), the neutral `calendar_list` adapter +
+> identity→provider dispatch (`s-aob-neutral-calendar`), and the Google skeleton with
+> the network boundary stubbed (`s-aob-google-skeleton`). No app-registration / `az` /
+> `gcloud` / deploy change was made — the PoC proves the seam against fakes. The
+> deferred items in §8 (full Google OAuth/DWD, files/mail, write, fan-out, config
+> surface `s-aob-config-surface`) remain open.
 
 ---
 

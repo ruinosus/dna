@@ -46,6 +46,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     and a new timeline **`source: mcp`** so a board write is attributable to the
     MCP face.
 
+- **`ActOnBehalfPort` — the provider-agnostic "act on behalf of the user" port (PoC)**
+  (`f-act-on-behalf-port`, stories `s-aob-port-contract` + `s-aob-microsoft-as-port` +
+  `s-aob-neutral-calendar` + `s-aob-google-skeleton`;
+  [ADR-act-on-behalf-port](https://github.com/ruinosus/dna/blob/main/docs/adr/ADR-act-on-behalf-port.md)).
+  The outbound twin of the pluggable N-provider IdP layer: where `_mcp_auth` made
+  *verifying any identity* provider-agnostic, this port makes *acting on the signed-in
+  user's productivity data* provider-agnostic. The Microsoft OBO is now the **reference
+  implementation** of the port — **its shipped behavior is unchanged** (`ms_calendar_list`
+  / `ms_files_search` / `ms_file_read` and `graph._obo` are untouched).
+  - New `dna_cli.act_on_behalf` package: the contract (`ActContext` / `UserCredential` /
+    `ActOnBehalfPort` / `ActOnBehalfUnavailable`), `MicrosoftOboProvider` (wraps the
+    unchanged OBO exchanger), a provider-**neutral** `calendar_list` capability adapter
+    that returns one neutral event shape whichever provider served it, and identity→provider
+    dispatch driven by a **provider-family stamp** on the verified token (`entra → microsoft`,
+    `google → google`).
+  - New provider-neutral **`calendar_list`** MCP tool, registered ALONGSIDE the unchanged
+    `ms_calendar_list` (which stays callable as the Microsoft binding/alias). It resolves the
+    caller's provider from their verified identity and dispatches to the right port; same
+    opt-in gate as the graph tools (off by default; OSS/stdio untouched).
+  - `GoogleWorkspaceProvider` **skeleton** (calendar only): the OAuth (auth-code + refresh)
+    shape with the **network boundary stubbed** (injectable seams — no live Google Cloud
+    project), proving a second provider fits the same contract. `ActContext.raw_token` is
+    Optional — Google needs no inbound assertion (the asymmetry Microsoft OBO requires).
+    Full OAuth consent + refresh-token storage, Domain-Wide Delegation, `files`/`mail`, all
+    write scopes, multi-provider fan-out, and prod credential hardening remain deferred.
+  - TS parity: the `ActOnBehalfPort` / `ActContext` / `UserCredential` contract twin (camelCase)
+    in `@ruinosus/dna` (execution is Python-side for the PoC; the *surface* is Py↔TS by
+    construction).
 - **Microsoft On-Behalf-Of (OBO) — the `files` tool-group** (`f-mcp-obo`, story
   `s-mcp-obo-files-group`; [ADR-mcp-obo](docs/adr/ADR-mcp-obo.md)). Mirrors the
   calendar slice for OneDrive / SharePoint, read-only over the delegated
