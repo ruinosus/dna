@@ -90,6 +90,22 @@ export interface EmitContext {
   /** The HITL approval-card copy (`Copilot.hitl.approval_card`:
    *  `{title, details_from, reason_from}`), or null when no card is declared. */
   hitlApprovalCard: ApprovalCardConfig | null;
+  // ── persistence / hosting projections (filled by buildCopilotContext) ──────
+  /** Storage/state backends the emitted agent binds (`Copilot.persistence`):
+   *  `{checkpoint, memory, cache}` where each present slot is `{backend, ref}`
+   *  (or null when undeclared). null when the copilot declares no `persistence`
+   *  block (in-memory — back-compat). Each `ref` is an input to the Terraform
+   *  migration modules (f-copilot-infra-binding). */
+  persistence: PersistenceConfig | null;
+  /** The vector store the copilot reads (`Copilot.knowledge.store`):
+   *  `{backend, ref, embed}`, or null when the copilot declares no store (RAG
+   *  store optional). Lives beside `knowledge` (the corpus refs). */
+  knowledgeStore: KnowledgeStoreConfig | null;
+  /** The deployment/hosting model (`Copilot.hosting`): `{mode, target,
+   *  resources, image, env, stores}` (each nested block null when undeclared),
+   *  or null when the copilot declares no `hosting` block (self-hosted only —
+   *  back-compat). Drives the hosted-variant emit + Terraform hosting target. */
+  hosting: HostingConfig | null;
 }
 
 /** The `Copilot.hitl.approval_card` copy projected onto the ctx. */
@@ -97,6 +113,78 @@ export interface ApprovalCardConfig {
   title: string | null;
   details_from: string | null;
   reason_from: string | null;
+}
+
+/** ONE persistence slot (`checkpoint`/`memory`/`cache`) — `{backend, ref}`. */
+export interface PersistenceSlot {
+  /** Storage backend (open set — postgres|sqlite|mongo|redis|inmemory|cosmos|
+   *  serialize|null); null = no backend (framework default / in-memory). */
+  backend: string | null;
+  /** Points at an infra resource (a Terraform module output). Multiple slots
+   *  may share one ref (one physical store). */
+  ref: string | null;
+}
+
+/** The `Copilot.persistence` block projected onto the ctx — each slot present
+ *  or null when undeclared. */
+export interface PersistenceConfig {
+  checkpoint: PersistenceSlot | null;
+  memory: PersistenceSlot | null;
+  cache: PersistenceSlot | null;
+}
+
+/** The embedding model + dimensionality (`knowledge.store.embed`). */
+export interface EmbedConfig {
+  model: string | null;
+  dims: number | null;
+}
+
+/** The `Copilot.knowledge.store` vector store projected onto the ctx. */
+export interface KnowledgeStoreConfig {
+  /** Vector backend (open set — pgvector|mongo-atlas|azure-ai-search|qdrant|
+   *  pinecone|null); null = no store. */
+  backend: string | null;
+  /** Points at the vector-store infra resource; may share the persistence ref. */
+  ref: string | null;
+  /** The embedding model + dimensionality, or null when undeclared. */
+  embed: EmbedConfig | null;
+}
+
+/** Compute request for the hosted variant (`hosting.resources`). */
+export interface HostingResources {
+  cpu: string | null;
+  memory: string | null;
+}
+
+/** Container-image build hints for the hosted variant (`hosting.image`). */
+export interface HostingImage {
+  /** Target registry (open set — acr|ghcr|ecr|dockerhub). */
+  registry_hint: string | null;
+  /** Build remotely (Foundry ACR remoteBuild) vs locally. */
+  remote_build: boolean | null;
+  /** Base image; null → framework default. */
+  base_image: string | null;
+  /** Serve port; null → framework default (8088/8123/7777). */
+  port: number | null;
+}
+
+/** Managed stores the hosted target requires (`hosting.stores`). */
+export interface HostingStores {
+  postgres: string | null;
+  redis: string | null;
+}
+
+/** The `Copilot.hosting` deployment model projected onto the ctx. */
+export interface HostingConfig {
+  /** Variant selector — self-hosted | hosted. */
+  mode: string | null;
+  /** The hosted runtime — foundry | langgraph-platform | agentos. */
+  target: string | null;
+  resources: HostingResources | null;
+  image: HostingImage | null;
+  /** Non-secret config injected into the hosted container (arbitrary keys). */
+  env: Record<string, unknown> | null;
+  stores: HostingStores | null;
 }
 
 export interface EmitTool {
@@ -336,6 +424,10 @@ export async function buildEmitContext(
     frontendPanels: [],
     frontendSuggestedPrompts: [],
     hitlApprovalCard: null,
+    // persistence/hosting projections stay null for a plain single agent.
+    persistence: null,
+    knowledgeStore: null,
+    hosting: null,
   };
 }
 
@@ -405,7 +497,105 @@ export async function buildCopilotContext(
     hitlBlock.approval_card as Record<string, unknown> | undefined,
   );
 
+  // ── persistence / hosting projection (foundation for the scaffold-emit +
+  // infra-binding features) ─────────────────────────────────────────────────
+  // The Copilot's `persistence`, `knowledge.store`, and `hosting` blocks — read
+  // into the neutral ctx here so every scaffold/infra emitter reads ONE shape.
+  // Absent → null (a self-hosted, in-memory, no-RAG copilot: back-compat).
+  ctx.persistence = projectPersistence(
+    cspec.persistence as Record<string, unknown> | undefined,
+  );
+  ctx.knowledgeStore = projectKnowledgeStore(
+    knowledgeBlock.store as Record<string, unknown> | undefined,
+  );
+  ctx.hosting = projectHosting(cspec.hosting as Record<string, unknown> | undefined);
+
   return ctx;
+}
+
+/** Normalize ONE persistence slot to `{backend, ref}`, or null when undeclared
+ *  (TS twin of Python `_project_slot`). */
+function projectSlot(
+  node: Record<string, unknown> | undefined,
+): PersistenceSlot | null {
+  if (node == null) return null;
+  return {
+    backend: (node.backend as string | null | undefined) ?? null,
+    ref: (node.ref as string | undefined) ?? null,
+  };
+}
+
+/** Normalize the `persistence` block to `{checkpoint, memory, cache}` (each a
+ *  slot or null), or null when the whole block is absent. */
+function projectPersistence(
+  block: Record<string, unknown> | undefined,
+): PersistenceConfig | null {
+  if (block == null) return null;
+  return {
+    checkpoint: projectSlot(block.checkpoint as Record<string, unknown> | undefined),
+    memory: projectSlot(block.memory as Record<string, unknown> | undefined),
+    cache: projectSlot(block.cache as Record<string, unknown> | undefined),
+  };
+}
+
+/** Normalize `knowledge.store` to `{backend, ref, embed}`, or null when no
+ *  store is declared (TS twin of Python `_project_knowledge_store`). */
+function projectKnowledgeStore(
+  node: Record<string, unknown> | undefined,
+): KnowledgeStoreConfig | null {
+  if (node == null) return null;
+  const embed = node.embed as Record<string, unknown> | undefined;
+  return {
+    backend: (node.backend as string | null | undefined) ?? null,
+    ref: (node.ref as string | undefined) ?? null,
+    embed:
+      embed != null
+        ? {
+            model: (embed.model as string | undefined) ?? null,
+            dims: (embed.dims as number | undefined) ?? null,
+          }
+        : null,
+  };
+}
+
+/** Normalize the `hosting` block to `{mode, target, resources, image, env,
+ *  stores}` (each nested block null when undeclared), or null when absent. */
+function projectHosting(
+  block: Record<string, unknown> | undefined,
+): HostingConfig | null {
+  if (block == null) return null;
+  const resources = block.resources as Record<string, unknown> | undefined;
+  const image = block.image as Record<string, unknown> | undefined;
+  const stores = block.stores as Record<string, unknown> | undefined;
+  const env = block.env as Record<string, unknown> | undefined;
+  return {
+    mode: (block.mode as string | undefined) ?? null,
+    target: (block.target as string | undefined) ?? null,
+    resources:
+      resources != null
+        ? {
+            cpu: (resources.cpu as string | undefined) ?? null,
+            memory: (resources.memory as string | undefined) ?? null,
+          }
+        : null,
+    image:
+      image != null
+        ? {
+            registry_hint: (image.registry_hint as string | undefined) ?? null,
+            remote_build: (image.remote_build as boolean | null | undefined) ?? null,
+            base_image: (image.base_image as string | null | undefined) ?? null,
+            port: (image.port as number | null | undefined) ?? null,
+          }
+        : null,
+    env: env != null ? { ...env } : null,
+    stores:
+      stores != null
+        ? {
+            postgres: (stores.postgres as string | undefined) ?? null,
+            redis: (stores.redis as string | undefined) ?? null,
+          }
+        : null,
+  };
 }
 
 /** Normalize the `hitl.approval_card` node to `{title, details_from, reason_from}`,

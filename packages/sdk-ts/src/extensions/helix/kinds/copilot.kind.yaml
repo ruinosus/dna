@@ -9,9 +9,11 @@
 # It carries ONLY the copilot-level concerns that don't belong on any single
 # Agent: WHERE agents mount (``mounts``), HOW the backend is served
 # (``serving``), whether inbound tenant is propagated (``tenant``), the
-# human-in-the-loop approval surface (``hitl``), the RAG collections the
-# copilot may read (``knowledge``), and the frontend console hints
-# (``frontend``). Instructions/persona/guardrails still live on the mounted
+# human-in-the-loop approval surface (``hitl``), the RAG collections + vector
+# store the copilot may read (``knowledge``), the storage/state backends it
+# binds (``persistence`` — checkpoint/memory/cache), the deployment model
+# (``hosting`` — self-hosted vs a managed runtime), and the frontend console
+# hints (``frontend``). Instructions/persona/guardrails still live on the mounted
 # Agent — a Copilot never re-declares them (the byte-equal instruction contract
 # stays intact: instructions come from the Agent, unchanged).
 #
@@ -141,6 +143,114 @@ spec:
               type: string
             description: Names of the knowledge collections the copilot may
               query (refs — resolved by the emitter).
+          store:
+            type: object
+            additionalProperties: false
+            required:
+            - backend
+            description: WHERE the corpus is embedded + searched — the vector
+              store. Lives inside knowledge so the corpus and its store stay
+              cohesive. Optional; flows to the Terraform migration modules
+              (f-copilot-infra-binding).
+            properties:
+              backend:
+                type:
+                - string
+                - "null"
+                description: Vector backend — an OPEN set (known values
+                  pgvector | mongo-atlas | azure-ai-search | qdrant | pinecone
+                  | null); emit when built. null = no store (framework default).
+              ref:
+                type: string
+                description: Points at the vector-store infra resource (a
+                  Terraform module output — connection string/endpoint). May
+                  share the persistence ref (one physical Postgres).
+              embed:
+                type: object
+                additionalProperties: false
+                description: The embedding model and its output dimensionality.
+                properties:
+                  model:
+                    type: string
+                    description: Embedding model id (e.g.
+                      text-embedding-3-small).
+                  dims:
+                    type: integer
+                    description: Vector dimensionality (e.g. 1536).
+      persistence:
+        type: object
+        additionalProperties: false
+        description: Storage/state backends the emitted agent binds —
+          checkpoint (thread/run state), long-term memory, and a LangGraph-only
+          cache. Each slot is {backend, ref}; multiple slots may share one ref
+          (one physical store — distinct tables/objects per framework).
+          Optional — an in-memory copilot declares none. Flows to the Terraform
+          migration modules (f-copilot-infra-binding), killing the hardcoded
+          in-memory default.
+        properties:
+          checkpoint:
+            type: object
+            additionalProperties: false
+            required:
+            - backend
+            description: Thread/run state — survives restart/resume (LangGraph
+              PostgresSaver · Agno PostgresDb · MS-AF serialize-to-column).
+            properties:
+              backend:
+                type:
+                - string
+                - "null"
+                description: Storage backend — an OPEN set (known values
+                  postgres | sqlite | mongo | redis | inmemory | cosmos |
+                  serialize | null); emit when built. null = no backend
+                  (framework default / in-memory).
+              ref:
+                type: string
+                description: Points at an infra resource (a Terraform module
+                  output — connection string/endpoint). Multiple slots may
+                  share one ref (one physical store).
+          memory:
+            type: object
+            additionalProperties: false
+            required:
+            - backend
+            description: Cross-session long-term memory (LangGraph PostgresStore
+              · Agno enable_user_memories · MS-AF mem0 / VectorStore).
+            properties:
+              backend:
+                type:
+                - string
+                - "null"
+                description: Storage backend — an OPEN set (known values
+                  postgres | sqlite | mongo | redis | inmemory | cosmos |
+                  serialize | null); emit when built. null = no backend
+                  (framework default / in-memory).
+              ref:
+                type: string
+                description: Points at an infra resource (a Terraform module
+                  output — connection string/endpoint). Multiple slots may
+                  share one ref (one physical store).
+          cache:
+            type: object
+            additionalProperties: false
+            required:
+            - backend
+            description: LangGraph-only node cache — null on the other targets
+              (Agno / MS-AF have no first-class cache slot).
+            properties:
+              backend:
+                type:
+                - string
+                - "null"
+                description: Storage backend — an OPEN set (known values
+                  postgres | sqlite | mongo | redis | inmemory | cosmos |
+                  serialize | null); emit when built. null = no backend
+                  (framework default / in-memory).
+              ref:
+                type: string
+                description: Points at an infra resource (a Terraform module
+                  output — connection string/endpoint). Multiple slots may
+                  share one ref (one physical store).
       frontend:
         type: object
         additionalProperties: false
@@ -177,6 +287,85 @@ spec:
             description: Ordered workflow step ids. Each becomes a chained
               agent-executor; the AG-UI adapter surfaces the id as the UI step
               name.
+      hosting:
+        type: object
+        additionalProperties: false
+        description: Deployment/hosting model — beyond the self-hosted AG-UI app
+          we already emit, the hosted (managed-service) variant. mode is a
+          variant selector over ONE agent def (the same agent emits BOTH the
+          per-user AG-UI app AND the single-identity hosted agent, which
+          degrades — strips per-user OBO / per-user memory / HITL). Optional.
+          Flows to the Terraform migration modules (f-copilot-infra-binding).
+        properties:
+          mode:
+            type: string
+            enum:
+            - self-hosted
+            - hosted
+            description: Variant selector — self-hosted (the per-user AG-UI app)
+              or hosted (a container image + manifest on a managed service).
+          target:
+            type: string
+            enum:
+            - foundry
+            - langgraph-platform
+            - agentos
+            description: The hosted runtime — foundry (MS-AF, true managed,
+              first-class), langgraph-platform (SaaS / self-host), agentos
+              (self-host only).
+          resources:
+            type: object
+            additionalProperties: false
+            description: Compute request for the hosted variant (→ sandbox
+              tier).
+            properties:
+              cpu:
+                type: string
+                description: CPU request (e.g. "0.5").
+              memory:
+                type: string
+                description: Memory request (e.g. 1Gi).
+          image:
+            type: object
+            additionalProperties: false
+            description: Container-image build hints for the hosted variant.
+            properties:
+              registry_hint:
+                type: string
+                description: Target registry — an OPEN set (known values
+                  acr | ghcr | ecr | dockerhub).
+              remote_build:
+                type: boolean
+                description: Build remotely (Foundry ACR remoteBuild) vs
+                  locally.
+              base_image:
+                type:
+                - string
+                - "null"
+                description: Base image; null → framework default.
+              port:
+                type:
+                - integer
+                - "null"
+                description: Serve port; null → framework default (8088 /
+                  8123 / 7777).
+          env:
+            type: object
+            additionalProperties: true
+            description: Non-secret config injected into the hosted container
+              (arbitrary keys; secrets ride on refs, never here).
+          stores:
+            type: object
+            additionalProperties: false
+            description: Managed stores the hosted target requires
+              (langgraph-platform / agentos only — Foundry provisions its own).
+            properties:
+              postgres:
+                type: string
+                description: Postgres requirement (e.g. required).
+              redis:
+                type: string
+                description: Redis requirement (e.g. required).
   ui:
     mode: build
     label:
@@ -228,9 +417,18 @@ spec:
       widget: code
       language: yaml
       label: Knowledge
-      help: RAG collections the copilot may read ({collections}).
+      help: RAG collections + the vector store the copilot may read
+        ({collections, store}).
       height: 120
       order: 50
+    persistence:
+      widget: code
+      language: yaml
+      label: Persistence
+      help: Storage/state backends ({checkpoint, memory, cache}), each
+        {backend, ref}.
+      height: 160
+      order: 55
     frontend:
       widget: code
       language: yaml
@@ -245,6 +443,14 @@ spec:
       help: Optional agent-framework step chain ({chain}).
       height: 120
       order: 70
+    hosting:
+      widget: code
+      language: yaml
+      label: Hosting
+      help: Deployment/hosting model ({mode, target, resources, image, env,
+        stores}).
+      height: 200
+      order: 80
   graph_style:
     fill: '#8B5CF6'
     stroke: '#7C3AED'
@@ -257,8 +463,10 @@ spec:
     only the copilot-level concerns that don't belong on any single Agent
     ``mounts`` (where agents serve), ``serving`` (the transport), ``tenant``
     (inbound-tenant propagation), ``hitl`` (the approval card for gated write
-    tools), ``knowledge`` (RAG collections it may read), and ``frontend``
-    (console hints). Instructions and persona stay on the mounted Agent — a
+    tools), ``knowledge`` (RAG collections + the vector store it may read),
+    ``persistence`` (checkpoint/memory/cache storage backends), ``hosting``
+    (self-hosted vs a managed runtime), and ``frontend`` (console hints).
+    Instructions and persona stay on the mounted Agent — a
     Copilot never re-declares them. One document emits a servable backend
     (Agno today), the single evolution point DNA Cloud's copilots consume.
     Stored as ``copilots/<name>.yaml`` — marketplace-shareable as a bundle.

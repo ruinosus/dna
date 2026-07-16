@@ -71,6 +71,50 @@ describe("buildCopilotContext — the Copilot → EmitContext seam", () => {
     expect(ctx.toolsRequiringConfirmation).toEqual(new Set<string>());
     expect(ctx.tenantPropagate).toBe(false);
   });
+
+  // ── persistence / knowledge.store / hosting projection (the foundation) ────
+  it("projects the persistence block (checkpoint/memory/cache each {backend, ref})", async () => {
+    const mi = await quickInstance(SCOPE, BASE);
+    const ctx = await buildCopilotContext(mi, "memory-copilot", { model: "azure/gpt-4o" });
+    expect(ctx.persistence).toEqual({
+      checkpoint: { backend: "postgres", ref: "primary-pg" },
+      memory: { backend: "postgres", ref: "primary-pg" },
+      cache: { backend: null, ref: null },
+    });
+  });
+
+  it("projects knowledge.store as {backend, ref, embed}", async () => {
+    const mi = await quickInstance(SCOPE, BASE);
+    const ctx = await buildCopilotContext(mi, "memory-copilot", { model: "azure/gpt-4o" });
+    expect(ctx.knowledgeStore).toEqual({
+      backend: "pgvector",
+      ref: "primary-pg",
+      embed: { model: "text-embedding-3-small", dims: 1536 },
+    });
+    // the corpus list is untouched (back-compat).
+    expect(ctx.knowledge).toEqual(["knowledge-base"]);
+  });
+
+  it("projects the hosting block fully (mode/target/resources/image/env/stores)", async () => {
+    const mi = await quickInstance(SCOPE, BASE);
+    const ctx = await buildCopilotContext(mi, "memory-copilot", { model: "azure/gpt-4o" });
+    expect(ctx.hosting).toEqual({
+      mode: "self-hosted",
+      target: "foundry",
+      resources: { cpu: "0.5", memory: "1Gi" },
+      image: { registry_hint: "acr", remote_build: true, base_image: null, port: null },
+      env: { LOG_LEVEL: "info" },
+      stores: { postgres: "required", redis: "required" },
+    });
+  });
+
+  it("leaves persistence/knowledgeStore/hosting null for a pure-action copilot", async () => {
+    const mi = await quickInstance(SCOPE, BASE);
+    const ctx = await buildCopilotContext(mi, "pure-action-copilot", { model: "azure/gpt-4o" });
+    expect(ctx.persistence).toBeNull();
+    expect(ctx.knowledgeStore).toBeNull();
+    expect(ctx.hosting).toBeNull();
+  });
 });
 
 /**

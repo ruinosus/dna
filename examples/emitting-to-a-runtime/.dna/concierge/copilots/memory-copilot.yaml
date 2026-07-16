@@ -22,6 +22,37 @@ spec:
   knowledge:
     collections:
     - knowledge-base
+    store:
+      backend: pgvector
+      ref: primary-pg
+      embed:
+        model: text-embedding-3-small
+        dims: 1536
+  persistence:
+    checkpoint:
+      backend: postgres
+      ref: primary-pg
+    memory:
+      backend: postgres
+      ref: primary-pg
+    cache:
+      backend: null
+  hosting:
+    mode: self-hosted
+    target: foundry
+    resources:
+      cpu: "0.5"
+      memory: 1Gi
+    image:
+      registry_hint: acr
+      remote_build: true
+      base_image: null
+      port: null
+    env:
+      LOG_LEVEL: info
+    stores:
+      postgres: required
+      redis: required
   frontend:
     console: copilotkit
     panels:
