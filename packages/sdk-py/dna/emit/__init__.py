@@ -202,6 +202,25 @@ class EmitContext:
     #: The HITL approval-card copy (``Copilot.hitl.approval_card``:
     #: ``{title, details_from, reason_from}``), or None when no card is declared.
     hitl_approval_card: dict[str, Any] | None = None
+    # ── persistence / hosting projections (filled by build_copilot_context) ──
+    #: Storage/state backends the emitted agent binds (``Copilot.persistence``):
+    #: ``{checkpoint, memory, cache}`` where each present slot is
+    #: ``{backend, ref}`` (or None when the slot is undeclared). None when the
+    #: copilot declares no ``persistence`` block (in-memory — back-compat). The
+    #: scaffold emitters read this to bind real state stores; each ``ref`` is an
+    #: input to the Terraform migration modules (f-copilot-infra-binding).
+    persistence: dict[str, Any] | None = None
+    #: The vector store the copilot reads (``Copilot.knowledge.store``):
+    #: ``{backend, ref, embed: {model, dims} | None}``, or None when the copilot
+    #: declares no store (RAG store optional). Lives beside ``knowledge`` (the
+    #: corpus refs) — corpus + its store, cohesive.
+    knowledge_store: dict[str, Any] | None = None
+    #: The deployment/hosting model (``Copilot.hosting``): ``{mode, target,
+    #: resources, image, env, stores}`` (each nested block None when undeclared),
+    #: or None when the copilot declares no ``hosting`` block (self-hosted only —
+    #: back-compat). Drives the hosted-variant emit + the Terraform hosting
+    #: target (f-copilot-hosting / f-copilot-infra-binding).
+    hosting: dict[str, Any] | None = None
 
 
 @dataclass
@@ -535,7 +554,99 @@ def build_copilot_context(
     hitl_block = _spec_get(cspec, "hitl") or {}
     ctx.hitl_approval_card = _project_approval_card(_spec_get(hitl_block, "approval_card"))
 
+    # ── persistence / hosting projection (foundation for the scaffold-emit +
+    # infra-binding features) ────────────────────────────────────────────────
+    # The Copilot's `persistence`, `knowledge.store`, and `hosting` blocks —
+    # read into the neutral ctx here so every scaffold/infra emitter reads ONE
+    # shape. Absent → None (a self-hosted, in-memory, no-RAG copilot: back-compat).
+    ctx.persistence = _project_persistence(_spec_get(cspec, "persistence"))
+    ctx.knowledge_store = _project_knowledge_store(_spec_get(knowledge_block, "store"))
+    ctx.hosting = _project_hosting(_spec_get(cspec, "hosting"))
+
     return ctx
+
+
+def _project_slot(node: Any) -> dict[str, Any] | None:
+    """Normalize ONE persistence slot (``checkpoint``/``memory``/``cache``) to a
+    plain ``{backend, ref}`` dict, or None when the slot is undeclared."""
+    if node is None:
+        return None
+    return {"backend": _spec_get(node, "backend"), "ref": _spec_get(node, "ref")}
+
+
+def _project_persistence(block: Any) -> dict[str, Any] | None:
+    """Normalize the ``persistence`` block to ``{checkpoint, memory, cache}``
+    (each ``{backend, ref}`` or None), or None when the whole block is absent."""
+    if block is None:
+        return None
+    return {slot: _project_slot(_spec_get(block, slot)) for slot in ("checkpoint", "memory", "cache")}
+
+
+def _project_knowledge_store(node: Any) -> dict[str, Any] | None:
+    """Normalize ``knowledge.store`` to ``{backend, ref, embed}`` (``embed`` =
+    ``{model, dims}`` or None), or None when no store is declared."""
+    if node is None:
+        return None
+    embed = _spec_get(node, "embed")
+    return {
+        "backend": _spec_get(node, "backend"),
+        "ref": _spec_get(node, "ref"),
+        "embed": (
+            {"model": _spec_get(embed, "model"), "dims": _spec_get(embed, "dims")}
+            if embed is not None
+            else None
+        ),
+    }
+
+
+def _to_plain(node: Any) -> Any:
+    """Recursively project a record-plane node (dict / attribute-namespace /
+    list / scalar) to plain Python — used for the free-form ``hosting.env`` map
+    whose keys are arbitrary (no fixed schema to read key-by-key)."""
+    if isinstance(node, dict):
+        return {k: _to_plain(v) for k, v in node.items()}
+    if isinstance(node, list):
+        return [_to_plain(v) for v in node]
+    if hasattr(node, "__dict__") and not isinstance(node, type):
+        return {k: _to_plain(v) for k, v in vars(node).items()}
+    return node
+
+
+def _project_hosting(block: Any) -> dict[str, Any] | None:
+    """Normalize the ``hosting`` block to ``{mode, target, resources, image,
+    env, stores}`` (each nested block None when undeclared), or None when the
+    whole block is absent."""
+    if block is None:
+        return None
+    resources = _spec_get(block, "resources")
+    image = _spec_get(block, "image")
+    stores = _spec_get(block, "stores")
+    env = _spec_get(block, "env")
+    return {
+        "mode": _spec_get(block, "mode"),
+        "target": _spec_get(block, "target"),
+        "resources": (
+            {"cpu": _spec_get(resources, "cpu"), "memory": _spec_get(resources, "memory")}
+            if resources is not None
+            else None
+        ),
+        "image": (
+            {
+                "registry_hint": _spec_get(image, "registry_hint"),
+                "remote_build": _spec_get(image, "remote_build"),
+                "base_image": _spec_get(image, "base_image"),
+                "port": _spec_get(image, "port"),
+            }
+            if image is not None
+            else None
+        ),
+        "env": _to_plain(env) if env is not None else None,
+        "stores": (
+            {"postgres": _spec_get(stores, "postgres"), "redis": _spec_get(stores, "redis")}
+            if stores is not None
+            else None
+        ),
+    }
 
 
 def _project_approval_card(card: Any) -> dict[str, Any] | None:

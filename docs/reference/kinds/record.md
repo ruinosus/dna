@@ -226,7 +226,7 @@ A Changelog records release notes per semver version per Keep a Changelog 1.1.0 
 - **apiVersion:** `github.com/ruinosus/dna/v1`
 - **Plane:** record
 
-A Copilot is a declarative, servable AG-UI copilot backend — a binder that composes one-or-more mounted Agents (each with its own Tools and optional MCPFederation) into a single servable ``/agui`` app. It carries only the copilot-level concerns that don't belong on any single Agent ``mounts`` (where agents serve), ``serving`` (the transport), ``tenant`` (inbound-tenant propagation), ``hitl`` (the approval card for gated write tools), ``knowledge`` (RAG collections it may read), and ``frontend`` (console hints). Instructions and persona stay on the mounted Agent — a Copilot never re-declares them. One document emits a servable backend (Agno today), the single evolution point DNA Cloud's copilots consume. Stored as ``copilots/<name>.yaml`` — marketplace-shareable as a bundle.
+A Copilot is a declarative, servable AG-UI copilot backend — a binder that composes one-or-more mounted Agents (each with its own Tools and optional MCPFederation) into a single servable ``/agui`` app. It carries only the copilot-level concerns that don't belong on any single Agent ``mounts`` (where agents serve), ``serving`` (the transport), ``tenant`` (inbound-tenant propagation), ``hitl`` (the approval card for gated write tools), ``knowledge`` (RAG collections + the vector store it may read), ``persistence`` (checkpoint/memory/cache storage backends), ``hosting`` (self-hosted vs a managed runtime), and ``frontend`` (console hints). Instructions and persona stay on the mounted Agent — a Copilot never re-declares them. One document emits a servable backend (Agno today), the single evolution point DNA Cloud's copilots consume. Stored as ``copilots/<name>.yaml`` — marketplace-shareable as a bundle.
 
 **Spec fields**
 
@@ -234,8 +234,10 @@ A Copilot is a declarative, servable AG-UI copilot backend — a binder that com
 | --- | --- | --- | --- |
 | `frontend` | object |  | Frontend console hints for the emitted copilot UI. |
 | `hitl` | object |  | Human-in-the-loop approval surface for write tools the mounted agents gate. |
+| `hosting` | object |  | Deployment/hosting model — beyond the self-hosted AG-UI app we already emit, the hosted (managed-service) variant. mode is a variant selector over ONE agent def (the same agent emits BOTH the per-user AG-UI app AND the single-identity hosted agent, which degrades — strips per-user OBO / per-user memory / HITL). Optional. Flows to the Terraform migration modules (f-copilot-infra-binding). |
 | `knowledge` | object |  | RAG the copilot may read. Optional — a pure-action copilot declares none. |
 | `mounts` | array | yes | The Agents this copilot serves, each at a mount path. At least one is required. |
+| `persistence` | object |  | Storage/state backends the emitted agent binds — checkpoint (thread/run state), long-term memory, and a LangGraph-only cache. Each slot is {backend, ref}; multiple slots may share one ref (one physical store — distinct tables/objects per framework). Optional — an in-memory copilot declares none. Flows to the Terraform migration modules (f-copilot-infra-binding), killing the hardcoded in-memory default. |
 | `serving` | object | yes | How the copilot backend is served. |
 | `tenant` | object |  | Inbound-tenant handling. When propagate is true, the emitted serving layer derives tenant/oid from request headers into run-state for the mounted tools to read. |
 | `workflow` | object |  | Optional multi-step workflow — agent-framework (MS Agent Framework) target only. When present the emitter emits a WorkflowBuilder chain of the named steps plus a workflow-level human-approval escalation node; absent, a plain single-agent app is emitted. A per-target advanced option (YAGNI for the core). |

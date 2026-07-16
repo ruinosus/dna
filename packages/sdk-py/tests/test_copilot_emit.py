@@ -127,6 +127,97 @@ def test_copilot_kind_accepts_full_optional_shape():
     assert doc.spec.frontend.console == "copilotkit"
 
 
+# ── persistence / knowledge.store / hosting — the schema additions ───────────
+
+
+def test_copilot_kind_accepts_persistence_block():
+    """``persistence`` = {checkpoint, memory, cache}, each {backend, ref}; a
+    slot may declare ``backend: null`` (the null backend — open enum)."""
+    doc = load_kind_doc("Copilot", {
+        "mounts": [{"id": "m", "agent": "a", "path": "/agui"}],
+        "serving": {"transport": "ag-ui"},
+        "persistence": {
+            "checkpoint": {"backend": "postgres", "ref": "primary-pg"},
+            "memory": {"backend": "postgres", "ref": "primary-pg"},
+            "cache": {"backend": None},
+        },
+    })
+    assert doc.spec.persistence.checkpoint.backend == "postgres"
+    assert doc.spec.persistence.checkpoint.ref == "primary-pg"
+    assert doc.spec.persistence.cache.backend is None
+
+
+def test_copilot_kind_accepts_knowledge_store():
+    """``knowledge.store`` = {backend, ref, embed:{model, dims}} beside the
+    existing ``collections``."""
+    doc = load_kind_doc("Copilot", {
+        "mounts": [{"id": "m", "agent": "a", "path": "/agui"}],
+        "serving": {"transport": "ag-ui"},
+        "knowledge": {
+            "collections": ["rfp-corpus"],
+            "store": {
+                "backend": "pgvector",
+                "ref": "primary-pg",
+                "embed": {"model": "text-embedding-3-small", "dims": 1536},
+            },
+        },
+    })
+    assert doc.spec.knowledge.store.backend == "pgvector"
+    assert doc.spec.knowledge.store.embed.dims == 1536
+
+
+def test_copilot_kind_accepts_hosting_block():
+    """``hosting`` = {mode, target, resources, image, env, stores}; ``mode`` and
+    ``target`` are CLOSED enums, ``image.base_image``/``port`` accept null."""
+    doc = load_kind_doc("Copilot", {
+        "mounts": [{"id": "m", "agent": "a", "path": "/agui"}],
+        "serving": {"transport": "ag-ui"},
+        "hosting": {
+            "mode": "hosted",
+            "target": "foundry",
+            "resources": {"cpu": "0.5", "memory": "1Gi"},
+            "image": {"registry_hint": "acr", "remote_build": True,
+                      "base_image": None, "port": None},
+            "env": {"LOG_LEVEL": "info"},
+            "stores": {"postgres": "required", "redis": "required"},
+        },
+    })
+    assert doc.spec.hosting.mode == "hosted"
+    assert doc.spec.hosting.target == "foundry"
+    assert doc.spec.hosting.image.remote_build is True
+
+
+def test_copilot_kind_rejects_unknown_hosting_target():
+    """``hosting.target`` is a closed enum — an unknown value is a schema error."""
+    with pytest.raises(ValueError):
+        load_kind_doc("Copilot", {
+            "mounts": [{"id": "m", "agent": "a", "path": "/agui"}],
+            "serving": {"transport": "ag-ui"},
+            "hosting": {"mode": "hosted", "target": "heroku"},
+        })
+
+
+def test_copilot_kind_rejects_unknown_persistence_key():
+    """``additionalProperties:false`` on a persistence slot rejects a typo."""
+    with pytest.raises(ValueError):
+        load_kind_doc("Copilot", {
+            "mounts": [{"id": "m", "agent": "a", "path": "/agui"}],
+            "serving": {"transport": "ag-ui"},
+            "persistence": {"checkpoint": {"backend": "postgres", "reff": "x"}},
+        })
+
+
+def test_copilot_kind_persistence_hosting_optional():
+    """All three additions are optional — a copilot declaring none stays valid
+    (back-compat)."""
+    doc = load_kind_doc("Copilot", {
+        "mounts": [{"id": "m", "agent": "a", "path": "/agui"}],
+        "serving": {"transport": "ag-ui"},
+    })
+    assert not hasattr(doc.spec, "persistence")
+    assert not hasattr(doc.spec, "hosting")
+
+
 # ── Chunk 3 · the Copilot → EmitContext seam ────────────────────────────────
 #
 # A live filesystem scope (``examples/emitting-to-a-runtime/.dna``) carries the
@@ -256,6 +347,75 @@ def test_copilot_ctx_tenant_default_false_when_undeclared(mi):
 
     ctx = build_copilot_context(mi, "pure-action-copilot", model="azure/gpt-4o")
     assert ctx.tenant_propagate is False
+
+
+# ── persistence / knowledge.store / hosting projection (the foundation) ──────
+
+
+def test_copilot_ctx_projects_persistence(mi):
+    """The Copilot ``persistence`` block rides on the ctx as
+    ``{checkpoint, memory, cache}`` — each present slot a ``{backend, ref}``;
+    a ``backend: null`` slot keeps its ref None."""
+    from dna.emit import build_copilot_context
+
+    ctx = build_copilot_context(mi, "memory-copilot", model="azure/gpt-4o")
+    assert ctx.persistence == {
+        "checkpoint": {"backend": "postgres", "ref": "primary-pg"},
+        "memory": {"backend": "postgres", "ref": "primary-pg"},
+        "cache": {"backend": None, "ref": None},
+    }
+
+
+def test_copilot_ctx_projects_knowledge_store(mi):
+    """``knowledge.store`` projects as ``{backend, ref, embed:{model, dims}}``."""
+    from dna.emit import build_copilot_context
+
+    ctx = build_copilot_context(mi, "memory-copilot", model="azure/gpt-4o")
+    assert ctx.knowledge_store == {
+        "backend": "pgvector",
+        "ref": "primary-pg",
+        "embed": {"model": "text-embedding-3-small", "dims": 1536},
+    }
+    # the corpus list is untouched (byte-equal back-compat).
+    assert ctx.knowledge == ["knowledge-base"]
+
+
+def test_copilot_ctx_projects_hosting(mi):
+    """The Copilot ``hosting`` block projects fully — mode/target + resources +
+    image (with null base_image/port) + env + stores."""
+    from dna.emit import build_copilot_context
+
+    ctx = build_copilot_context(mi, "memory-copilot", model="azure/gpt-4o")
+    assert ctx.hosting == {
+        "mode": "self-hosted",
+        "target": "foundry",
+        "resources": {"cpu": "0.5", "memory": "1Gi"},
+        "image": {"registry_hint": "acr", "remote_build": True,
+                  "base_image": None, "port": None},
+        "env": {"LOG_LEVEL": "info"},
+        "stores": {"postgres": "required", "redis": "required"},
+    }
+
+
+def test_copilot_ctx_persistence_hosting_none_when_undeclared(mi):
+    """Back-compat: a copilot with no ``persistence``/``knowledge.store``/
+    ``hosting`` carries None for all three (in-memory, no-RAG, self-hosted)."""
+    from dna.emit import build_copilot_context
+
+    ctx = build_copilot_context(mi, "pure-action-copilot", model="azure/gpt-4o")
+    assert ctx.persistence is None
+    assert ctx.knowledge_store is None
+    assert ctx.hosting is None
+
+
+def test_single_agent_ctx_has_no_persistence_hosting(mi):
+    """A plain single-agent ctx (not a copilot) defaults the new fields to None."""
+    from dna.emit import build_emit_context
+
+    ctx = build_emit_context(mi, "concierge", model="azure/gpt-4o")
+    assert ctx.persistence is None
+    assert ctx.knowledge_store is None
+    assert ctx.hosting is None
 
 
 # ── Chunk 4 · the Agno `copilot` scaffold case ──────────────────────────────
