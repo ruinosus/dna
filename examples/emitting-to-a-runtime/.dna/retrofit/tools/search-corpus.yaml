@@ -1,0 +1,21 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: Tool
+metadata:
+  name: search-corpus
+  description: Search the RFP corpus for passages relevant to a criterion. Returns
+    matching passages with their source artifact and section to cite.
+spec:
+  type: builtin
+  input_schema:
+    type: object
+    required:
+    - query
+    properties:
+      query:
+        type: string
+        description: The criterion or keywords to search the corpus for.
+  read_only: true
+  requires_confirmation: false
+  tags:
+  - corpus
+  - read

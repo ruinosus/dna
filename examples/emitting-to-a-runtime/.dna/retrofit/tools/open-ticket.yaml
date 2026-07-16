@@ -1,0 +1,21 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: Tool
+metadata:
+  name: open-ticket
+  description: Open a support ticket for an unresolved question. Confirm with the
+    user before opening.
+spec:
+  type: builtin
+  input_schema:
+    type: object
+    required:
+    - summary
+    properties:
+      summary:
+        type: string
+        description: A one-line summary of the issue to open a ticket for.
+  read_only: false
+  requires_confirmation: true
+  tags:
+  - helpdesk
+  - write

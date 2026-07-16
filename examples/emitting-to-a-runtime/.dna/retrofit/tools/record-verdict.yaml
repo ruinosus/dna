@@ -1,0 +1,32 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: Tool
+metadata:
+  name: record-verdict
+  description: Record a grounded verdict for an RFP criterion. Confirm with the
+    user before recording.
+spec:
+  type: builtin
+  input_schema:
+    type: object
+    required:
+    - criterion
+    - verdict
+    - justification
+    properties:
+      criterion:
+        type: string
+        description: The RFP criterion being judged.
+      verdict:
+        type: string
+        description: The verdict (pass / fail / partial).
+      justification:
+        type: string
+        description: The grounded rationale for the verdict.
+      gap:
+        type: string
+        description: What is missing when the verdict is not a full pass.
+  read_only: false
+  requires_confirmation: true
+  tags:
+  - corpus
+  - write

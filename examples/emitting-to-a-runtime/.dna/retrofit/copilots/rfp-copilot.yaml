@@ -1,0 +1,33 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: Copilot
+metadata:
+  name: rfp-copilot
+  description: >-
+    A knowledge-grounded Agno copilot, shaped after the Agno KB reference's RFP
+    analyst — mounts rfp-analyst over an MCP server, reads the RFP corpus
+    collection, gates the verdict write with an approval card, and derives the
+    inbound tenant into run-state. Retrofit validation target for the agno
+    emitter.
+spec:
+  mounts:
+  - id: rfp
+    agent: rfp-analyst
+    path: /agui
+  serving:
+    transport: ag-ui
+  tenant:
+    propagate: true
+  hitl:
+    approval_card:
+      title: Record verdict
+      details_from: args.justification
+      reason_from: args.gap
+  knowledge:
+    collections:
+    - rfp-corpus
+  frontend:
+    console: copilotkit
+    panels:
+    - evidence
+    suggested_prompts:
+    - Does the proposal meet the security criteria?
