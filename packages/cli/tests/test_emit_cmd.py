@@ -105,6 +105,35 @@ def test_emit_concierge_to_vertex(runner):
     assert config["tools"] == [{"name": "kb-search"}]
 
 
+def test_emit_infra_emits_tfvars_json(runner):
+    """`dna emit <copilot> --infra` renders the Terraform infra inputs from the
+    copilot's persistence/knowledge.store/hosting (f-copilot-infra-binding)."""
+    r = _run(runner, "memory-copilot", "--infra", "--scope", "concierge", "--json")
+    assert r.exit_code == 0, r.output
+    payload = json.loads(r.output)
+    assert payload["target"] == "terraform"
+    (art,) = payload["artifacts"]
+    assert art["role"] == "infra"
+    assert art["path"] == "memory_agent.tfvars.json"
+    tf = json.loads(art["content"])
+    # postgres deduped by ref (checkpoint+memory+pgvector store → one resource)
+    assert [p["ref"] for p in tf["postgres"]] == ["primary-pg"]
+    assert tf["postgres"][0]["pgvector"] is True
+    assert tf["hosting"]["target"] == "foundry"
+    assert tf["env_injection"]["DNA_PG_URI_PRIMARY_PG"]["secret"] is True
+
+
+def test_emit_infra_to_out_dir(runner, tmp_path):
+    out_dir = tmp_path / "infra"
+    out_dir.mkdir()
+    r = _run(runner, "memory-copilot", "--infra", "--scope", "concierge",
+             "--out", str(out_dir))
+    assert r.exit_code == 0, r.output
+    written = out_dir / "memory_agent.tfvars.json"
+    assert written.exists()
+    json.loads(written.read_text())
+
+
 def test_emit_multi_artifact_writes_n_files(runner, tmp_path):
     """A multi-artifact emitter (agent.py + serve.py) treats --out as a DIRECTORY
     and lands every EmitArtifact at its own `path`. Registered as an in-test stub
