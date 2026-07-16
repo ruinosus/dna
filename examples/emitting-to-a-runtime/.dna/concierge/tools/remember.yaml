@@ -1,0 +1,24 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: Tool
+metadata:
+  name: remember
+  description: Persist a note to the user's memory store. Confirm with the user
+    before writing.
+spec:
+  type: builtin
+  input_schema:
+    type: object
+    required:
+    - text
+    properties:
+      text:
+        type: string
+        description: The note to remember.
+      reason:
+        type: string
+        description: Why this is worth remembering.
+  read_only: false
+  requires_confirmation: true
+  tags:
+  - memory
+  - write

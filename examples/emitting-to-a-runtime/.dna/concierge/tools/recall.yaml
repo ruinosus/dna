@@ -1,0 +1,20 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: Tool
+metadata:
+  name: recall
+  description: Search the user's memory store for notes relevant to a query.
+spec:
+  type: builtin
+  input_schema:
+    type: object
+    required:
+    - query
+    properties:
+      query:
+        type: string
+        description: What to recall.
+  read_only: true
+  requires_confirmation: false
+  tags:
+  - memory
+  - read

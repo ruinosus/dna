@@ -1,0 +1,29 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Feature
+metadata:
+  name: f-copilot-agentframework-target
+spec:
+  title: MS Agent Framework scaffold case + workflow capability
+  description: "Absorption phase 4 + 6b. A second per-runtime copilot scaffold case\
+    \ (Microsoft Agent Framework: as_agent + add_agent_framework_fastapi_endpoint\
+    \ serving + request_info HITL) proving the emitter is runtime-agnostic. Includes\
+    \ the workflow capability (WorkflowBuilder chain) that foundry's workflow-level\
+    \ HITL depends on (absorption \xA76.1/\xA76.5). Depends on f-dna-copilot-emitter."
+  status: discovery
+  epic: e-dna-copilot-absorption
+  reporter: claude-code
+  priority: medium
+  labels:
+  - copilot
+  - agent-framework
+  - emitter
+  - absorption
+  business_value: 600
+  created_at: '2026-07-16T12:59:11+00:00'
+  updated_at: '2026-07-16T12:59:11+00:00'
+  timeline:
+  - at: '2026-07-16T12:59:11+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: discovery

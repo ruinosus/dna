@@ -1,0 +1,21 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: Tool
+metadata:
+  name: forget
+  description: Delete a note from the user's memory store. Confirm with the
+    user before deleting.
+spec:
+  type: builtin
+  input_schema:
+    type: object
+    required:
+    - id
+    properties:
+      id:
+        type: string
+        description: Identifier of the note to forget.
+  read_only: false
+  requires_confirmation: true
+  tags:
+  - memory
+  - write

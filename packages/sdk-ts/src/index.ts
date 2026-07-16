@@ -67,16 +67,20 @@ export type { ToolSurface } from "./tools.js";
 export {
   emitAgent,
   buildEmitContext,
+  buildCopilotContext,
   registerEmitter,
   unregisterEmitter,
   getEmitter,
   availableTargets,
   EmitError,
+  EmitResult,
   UnknownTarget,
 } from "./emit/index.js";
 export type {
   EmitContext,
-  EmitResult,
+  EmitMcpServer,
+  EmitArtifact,
+  EmitResultInit,
   EmitTool,
   EmitterPort,
   BuildEmitContextOpts,

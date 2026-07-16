@@ -183,7 +183,7 @@ describe("losses", () => {
   it("reports the unbound-model loss and omits model/tools", () => {
     const ctx: EmitContext = {
       name: "bare", description: "", instructions: "x".repeat(40),
-      model: null, tools: [], outputSchema: null, scope: null, options: {},
+      model: null, tools: [], outputSchema: null, scope: null, options: {}, mcpServers: [], toolsRequiringConfirmation: new Set<string>(), tenantPropagate: false, knowledge: [],
     };
     const result = new VertexEmitter().emit(ctx);
     const c: any = yaml.load(result.artifact);
@@ -197,7 +197,7 @@ describe("losses", () => {
   it("a native Gemini id reports no model-coordinate loss", () => {
     const ctx: EmitContext = {
       name: "g", description: "", instructions: "x".repeat(40),
-      model: "gemini-2.0-flash", tools: [], outputSchema: null, scope: null, options: {},
+      model: "gemini-2.0-flash", tools: [], outputSchema: null, scope: null, options: {}, mcpServers: [], toolsRequiringConfirmation: new Set<string>(), tenantPropagate: false, knowledge: [],
     };
     const joined = new VertexEmitter().emit(ctx).losses.join(" ");
     expect(joined).not.toContain("model coordinate");
@@ -207,7 +207,7 @@ describe("losses", () => {
   it("reports output_schema as a loss", () => {
     const ctx: EmitContext = {
       name: "o", description: "", instructions: "x".repeat(40), model: "gemini-2.0-flash",
-      tools: [], outputSchema: { type: "object" }, scope: null, options: {},
+      tools: [], outputSchema: { type: "object" }, scope: null, options: {}, mcpServers: [], toolsRequiringConfirmation: new Set<string>(), tenantPropagate: false, knowledge: [],
     };
     expect(new VertexEmitter().emit(ctx).losses.join(" ")).toContain("output_schema");
   });

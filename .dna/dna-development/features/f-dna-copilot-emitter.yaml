@@ -1,0 +1,38 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Feature
+metadata:
+  name: f-dna-copilot-emitter
+spec:
+  title: Emit the servable AG-UI copilot scaffold (Agno + MS Agent Framework)
+  description: "Extend the Agno/AgentFramework emitters beyond the Agent object to\
+    \ emit the full servable copilot: AG-UI serving, HITL gates + resume bridge, mcp:<server>\
+    \ tool-mount, tenant/context injection via run-state (no LLM schema leak), and\
+    \ OPTIONAL retrieval/knowledge (DNA native search: pgvector/embedding/graph \u2014\
+    \ per-consumer, NOT mandatory). Byte-equal parity across targets. Extracted from\
+    \ the 2 reference apps; DNA Cloud Memory copilot = first emitted consumer."
+  status: in-development
+  epic: e-dna-copilot-absorption
+  reporter: claude-code
+  priority: high
+  labels:
+  - copilot
+  - emitter
+  - ag-ui
+  - agno
+  - agent-framework
+  - absorption
+  business_value: 900
+  created_at: '2026-07-16T10:34:47+00:00'
+  updated_at: '2026-07-16T11:03:46+00:00'
+  timeline:
+  - at: '2026-07-16T10:34:47+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: discovery
+  - at: '2026-07-16T11:03:46+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: discovery
+    to: in-development

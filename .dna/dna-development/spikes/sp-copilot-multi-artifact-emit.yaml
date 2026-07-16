@@ -1,0 +1,149 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Spike
+metadata:
+  name: sp-copilot-multi-artifact-emit
+spec:
+  title: Multi-artifact EmitResult shape + back-compat + byte-equal target + write-out?
+  question_to_answer: Multi-artifact EmitResult shape + back-compat + byte-equal target
+    + write-out?
+  status: answered
+  feature: f-dna-copilot-emitter
+  time_box_hours: 3
+  created_at: '2026-07-16T11:31:26+00:00'
+  updated_at: '2026-07-16T11:31:48+00:00'
+  timeline:
+  - at: '2026-07-16T11:31:26+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: proposed
+  - at: '2026-07-16T11:31:31+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: proposed
+    to: in-progress
+  - at: '2026-07-16T11:31:48+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: answered
+  completed_at: '2026-07-16T11:31:47+00:00'
+  findings: "CURRENT SINGLE-ARTIFACT CONTRACT (cited): `EmitResult` is a `@dataclass`\
+    \ with fields `artifact:str` (emit/__init__.py:145), `target:str` (:147), `filename:str`\
+    \ (:149), `losses:list` (:151), `mapping:dict` (:153). `EmitterPort.extract_instructions(self,\
+    \ artifact:str)->str|None` is a METHOD on the emitter (:195-204), not a free function.\
+    \ `build_emit_context` (:271-322) is the shared front door. The byte-equal contract\
+    \ test (test_emit_contract.py:53-57) does `result=emit_agent(mi,agent,target);\
+    \ recovered=emitter.extract_instructions(result.artifact); assert recovered==mi.build_prompt(agent)`.\
+    \ All 4 constructors (scaffold.py:272, agent_framework.py:167, bedrock.py:250,\
+    \ vertex.py:212) build it with PURE keyword args (artifact=/target=/filename=/losses=/mapping=)\
+    \ \u2014 no positional call exists, which is what makes the reconciliation safe.\n\
+    \nTHE MULTI-ARTIFACT SHAPE. Add `EmitArtifact{path:str, content:str, role:str=\"\
+    agent\"}` (a @dataclass). Make `EmitResult.artifacts:list[EmitArtifact]` the SINGLE\
+    \ SOURCE OF TRUTH; expose the legacy `artifact`/`filename` as READ-ONLY @property\
+    \ returning the role=\"agent\" entry. Roles start {\"agent\",\"serving\"} and\
+    \ are open (route/frontend later).\n\nTHE FIELD-VS-PROPERTY RECONCILIATION (the\
+    \ flagged watch-item), resolved concretely. A Python @dataclass CANNOT have both\
+    \ an `artifact` init-field AND an `artifact` @property: an InitVar named `artifact`\
+    \ would collide with the property object as its class-level default, and a stored\
+    \ field named `artifact` cannot coexist with a property of the same name. Resolution:\
+    \ DROP @dataclass FOR EmitResult and give it an EXPLICIT __init__ that accepts\
+    \ EITHER form. This sidesteps the collision entirely (the 4 keyword-only call\
+    \ sites keep working verbatim). EmitArtifact stays a clean @dataclass. EXACT Py\
+    \ definition:\n\n@dataclass\nclass EmitArtifact:\n    #: Target-relative output\
+    \ path (\"agent.py\",\"serve.py\"); the legacy `filename` for a single emit.\n\
+    \    path: str\n    #: Serialized file content (source/YAML/JSON).\n    content:\
+    \ str\n    #: Semantic role \u2014 \"agent\" carries the byte-equal instruction;\
+    \ \"serving\" is the AG-UI serve app. Extensible.\n    role: str = \"agent\"\n\
+    \nclass EmitResult:\n    \"\"\"Emitted native artifact(s) + honest de-para. `artifacts`\
+    \ is the source of truth;\n    `artifact`/`filename` are read-only views of the\
+    \ role='agent' entry (back-compat).\"\"\"\n    def __init__(self, target, *, artifact=None,\
+    \ filename=None, artifacts=None, losses=None, mapping=None):\n        if artifacts\
+    \ is None:\n            if artifact is None or filename is None:\n           \
+    \     raise EmitError(\"EmitResult needs `artifacts=[...]` or the legacy `artifact=`+`filename=`\
+    \ pair\")\n            artifacts = [EmitArtifact(path=filename, content=artifact,\
+    \ role=\"agent\")]\n        self.artifacts = artifacts\n        self.target =\
+    \ target\n        self.losses = losses if losses is not None else []\n       \
+    \ self.mapping = mapping if mapping is not None else {}\n    def artifact_for(self,\
+    \ role):\n        for a in self.artifacts:\n            if a.role == role:\n \
+    \               return a.content\n        raise EmitError(f\"no artifact with\
+    \ role {role!r} (have {[a.role for a in self.artifacts]})\")\n    @property\n\
+    \    def artifact(self):   # legacy single-artifact content = role 'agent'\n \
+    \       return self.artifact_for(\"agent\")\n    @property\n    def filename(self):\
+    \   # legacy single-artifact path = role 'agent'\n        for a in self.artifacts:\n\
+    \            if a.role == \"agent\":\n                return a.path\n        raise\
+    \ EmitError(\"EmitResult has no role='agent' artifact\")\n\nBack-compat proof:\
+    \ every existing emitter call EmitResult(artifact=..., target=..., filename=...,\
+    \ losses=..., mapping=...) hits the `artifacts is None` branch, wrapping into\
+    \ one role=\"agent\" EmitArtifact(path=filename, content=artifact). `.artifact`/`.filename`\
+    \ return exactly the old strings. The generic contract test's `result.artifact`\
+    \ is unchanged. NO existing emitter file changes.\n\nTS TWIN. TS EmitResult is\
+    \ currently a plain interface returned as object literals by the 5 emitters. Mirror\
+    \ Py: make it a CLASS with getters + an `EmitArtifact` interface. Emitters change\
+    \ `return {artifact,target,filename,losses,mapping}` to `return new EmitResult({artifact,target,filename,losses,mapping})`\
+    \ (scaffold.ts:206 + agentFramework/bedrock/vertex; agno inherits via scaffold).\
+    \ EXACT TS:\n\nexport interface EmitArtifact { path: string; content: string;\
+    \ role: string; }\nexport interface EmitResultInit { target: string; artifact?:\
+    \ string; filename?: string; artifacts?: EmitArtifact[]; losses?: string[]; mapping?:\
+    \ Record<string,string>; }\nexport class EmitResult {\n  readonly artifacts: EmitArtifact[];\
+    \ readonly target: string;\n  readonly losses: string[]; readonly mapping: Record<string,string>;\n\
+    \  constructor(init: EmitResultInit) {\n    this.target = init.target; this.losses\
+    \ = init.losses ?? []; this.mapping = init.mapping ?? {};\n    if (init.artifacts)\
+    \ { this.artifacts = init.artifacts; }\n    else {\n      if (init.artifact ==\
+    \ null || init.filename == null) throw new EmitError(\"EmitResult needs `artifacts`\
+    \ or the legacy `artifact`+`filename` pair\");\n      this.artifacts = [{ path:\
+    \ init.filename, content: init.artifact, role: \"agent\" }];\n    }\n  }\n  artifactFor(role:\
+    \ string): string { const a = this.artifacts.find(x => x.role === role); if (!a)\
+    \ throw new EmitError(`no artifact with role '${role}'`); return a.content; }\n\
+    \  get artifact(): string { return this.artifactFor(\"agent\"); }\n  get filename():\
+    \ string { const a = this.artifacts.find(x => x.role === \"agent\"); if (!a) throw\
+    \ new EmitError(\"EmitResult has no role='agent' artifact\"); return a.path; }\n\
+    }\n\nBYTE-EQUAL TARGET. The assertion runs on the role=\"agent\" artifact via\
+    \ `res.artifact_for(\"agent\")`. `extract_instructions` stays an emitter method,\
+    \ unchanged (AST-reads the INSTRUCTIONS constant, scaffold.py:280-296). Single-artifact\
+    \ emitters keep asserting on `result.artifact` (which now transparently == artifact_for(\"\
+    agent\")), so the existing generic loops in test_emit_contract.py:49-57 + :64-77\
+    \ need NO change to stay green.\n\ntest_emit_contract.py CHANGE (precise): keep\
+    \ the two parametrized tests VERBATIM. ADD:\ndef test_multi_artifact_byte_equal_on_agent_role():\n\
+    \    res = EmitResult(target=\"x\", artifacts=[\n        EmitArtifact(path=\"\
+    agent.py\", content=\"INSTRUCTIONS = 'hi'\\n\", role=\"agent\"),\n        EmitArtifact(path=\"\
+    serve.py\", content=\"# serve\", role=\"serving\")])\n    assert {a.role for a\
+    \ in res.artifacts} == {\"agent\",\"serving\"}\n    assert res.artifact == res.artifact_for(\"\
+    agent\")\n    from dna.emit.agno import AgnoEmitter\n    assert AgnoEmitter().extract_instructions(res.artifact_for(\"\
+    agent\")) == \"hi\"\ndef test_single_artifact_back_compat():\n    res = EmitResult(artifact=\"\
+    A\", target=\"x\", filename=\"a.py\")\n    assert res.artifact == \"A\" and res.filename\
+    \ == \"a.py\"\n    assert [a.role for a in res.artifacts] == [\"agent\"]\nTS:\
+    \ add a mirror it-block in emit-contract.test.ts; existing loop untouched.\n\n\
+    WRITE-OUT (dna emit CLI). Current emit_cmd.py writes result.artifact to out_path\
+    \ (:72-74, single file). Change: branch on artifact count. len==1 -> UNCHANGED\
+    \ (write result.artifact to --out file, or echo/json). Multi -> treat --out as\
+    \ a DIRECTORY, write each artifact at its `path`:\n  if len(result.artifacts)\
+    \ == 1:\n      ... existing out_path / stdout / json branches unchanged ...\n\
+    \  else:\n      if not out_path: raise fail(\"multi-artifact emit needs --out\
+    \ DIR (writes N files)\")\n      for a in result.artifacts:\n          dest =\
+    \ os.path.join(out_path, a.path)\n          os.makedirs(os.path.dirname(dest)\
+    \ or \".\", exist_ok=True)\n          open(dest, \"w\", encoding=\"utf-8\").write(a.content)\n\
+    \      click.secho(f\"Emitted {agent} -> {target}: {len(result.artifacts)} files\
+    \ under {out_path}/\", fg=\"green\")\nThe --json branch adds an `artifacts:[{path,content,role}]`\
+    \ list alongside the legacy `artifact`/`filename` keys. test_emit_cmd.py ADD a\
+    \ case asserting N files land (agent.py + serve.py) under --out for a multi-artifact\
+    \ target (agno-copilot from Chunk 4, or an in-test stub emitter). All existing\
+    \ single-artifact cases pass unchanged."
+  recommendation: "IMPLEMENT IN CHUNK 2 VERBATIM: (1) Add @dataclass EmitArtifact{path,content,role='agent'}\
+    \ + convert EmitResult from @dataclass to an explicit-__init__ class (artifacts=source\
+    \ of truth; artifact/filename = read-only @property over role='agent'; artifact_for(role)\
+    \ accessor). This resolves the dataclass field-vs-property collision \u2014 @dataclass\
+    \ cannot host both an 'artifact' init-field and an 'artifact' property; the 4\
+    \ existing keyword-only call sites (scaffold.py:272, agent_framework.py:167, bedrock.py:250,\
+    \ vertex.py:212) keep working unchanged. (2) TS twin: EmitResult becomes a class\
+    \ with EmitResultInit ctor + get artifact()/get filename()/artifactFor(); 5 emitters\
+    \ switch to 'new EmitResult({...})'. (3) Byte-equal: assert on res.artifact_for('agent');\
+    \ extract_instructions stays an emitter method (unchanged); the two parametrized\
+    \ contract tests stay verbatim (result.artifact still resolves); ADD test_multi_artifact_byte_equal_on_agent_role\
+    \ + test_single_artifact_back_compat (Py) and a mirror it-block (TS). (4) CLI\
+    \ write-out: branch on len(result.artifacts) \u2014 ==1 keeps the current single-file\
+    \ path byte-identical; >1 treats --out as a DIR and writes each EmitArtifact.path+content\
+    \ (mkdir -p), --json gains an artifacts[] list; ADD a test_emit_cmd.py case asserting\
+    \ N files land."

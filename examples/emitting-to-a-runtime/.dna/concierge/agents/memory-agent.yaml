@@ -1,0 +1,26 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: Agent
+metadata:
+  name: memory-agent
+  description: A memory copilot's mounted agent — remembers and forgets notes
+    against the DNA MCP server, gated by human approval on writes.
+spec:
+  # The instruction stays ONE line; the Copilot that mounts this agent adds NO
+  # persona of its own — the byte-equal instruction contract is the agent's.
+  instruction: |-
+    Remember and recall the user's notes. Confirm before writing.
+  model: azure/gpt-4o
+  # Two write tools (remember/forget) both gate on approval, plus one read
+  # (recall) that does not.
+  tools:
+  - remember
+  - forget
+  - recall
+  # External MCP server this agent consumes — a per-agent allowlist narrows the
+  # federation's own allowed_tools to just the two write tools + the read.
+  mcp_servers:
+  - ref: dna-mcp
+    allowed_tools:
+    - remember
+    - forget
+    - recall

@@ -69,24 +69,49 @@ def emit(agent, target, scope, out_path, model, provider, list_targets, as_json)
         except EmitError as e:
             raise fail(f"emit failed: {e}") from None
 
-    if out_path:
+    import os
+
+    multi = len(result.artifacts) > 1
+
+    if not multi and out_path:
+        # Single-artifact path — byte-identical to before: write the one file.
         with open(out_path, "w", encoding="utf-8") as fh:
             fh.write(result.artifact)
+    elif multi:
+        # Multi-artifact: --out is a DIRECTORY; write every EmitArtifact.path.
+        if not out_path:
+            raise fail("multi-artifact emit needs --out DIR (writes N files)")
+        for a in result.artifacts:
+            dest = os.path.join(out_path, a.path)
+            os.makedirs(os.path.dirname(dest) or ".", exist_ok=True)
+            with open(dest, "w", encoding="utf-8") as fh:
+                fh.write(a.content)
 
     if as_json:
         print_json({
             "agent": agent,
             "target": result.target,
             "scope": s.scope,
+            # Legacy keys (the role='agent' view) stay for back-compat …
             "filename": result.filename,
             "out": out_path,
             "artifact": result.artifact,
+            # … with the full N-artifact list alongside.
+            "artifacts": [
+                {"path": a.path, "content": a.content, "role": a.role}
+                for a in result.artifacts
+            ],
             "mapping": result.mapping,
             "losses": result.losses,
         })
         return
 
-    if out_path:
+    if multi:
+        click.secho(
+            f"Emitted {agent} → {target}: {len(result.artifacts)} files under {out_path}/",
+            fg="green",
+        )
+    elif out_path:
         click.secho(f"Emitted {agent} → {target}: {out_path}", fg="green")
     else:
         click.echo(result.artifact, nl=False)

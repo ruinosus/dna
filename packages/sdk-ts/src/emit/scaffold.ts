@@ -33,7 +33,7 @@ import { fileURLToPath } from "node:url";
 
 import Mustache from "mustache";
 
-import { EmitError, type EmitContext, type EmitResult, type EmitterPort } from "./index.js";
+import { EmitError, EmitResult, type EmitContext, type EmitterPort } from "./index.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
@@ -170,7 +170,7 @@ export abstract class ScaffoldEmitter implements EmitterPort {
 
   // ── the inherited machinery ───────────────────────────────────────────────
 
-  private commonContext(ctx: EmitContext): Record<string, unknown> {
+  protected commonContext(ctx: EmitContext): Record<string, unknown> {
     return {
       name: ctx.name,
       name_literal: pyStrLiteral(ctx.name),
@@ -181,7 +181,7 @@ export abstract class ScaffoldEmitter implements EmitterPort {
     };
   }
 
-  private commonLosses(ctx: EmitContext, choice: ScaffoldChoice): string[] {
+  protected commonLosses(ctx: EmitContext, choice: ScaffoldChoice): string[] {
     const losses = [
       "composition structure — Soul reuse + wired Guardrails flatten to one " +
         "`INSTRUCTIONS` string (a code-first agent has no `soul:`/`guardrails:` slot)",
@@ -203,13 +203,13 @@ export abstract class ScaffoldEmitter implements EmitterPort {
     const variables = { ...this.commonContext(ctx), ...this.renderContext(ctx, choice.case) };
     const artifact = Mustache.render(choice.template, variables);
     const losses = [...this.commonLosses(ctx, choice), ...this.losses(ctx, choice)];
-    return {
+    return new EmitResult({
       artifact,
       target: this.target,
       filename: `${ctx.name}.${this.fileExtension}`,
       losses,
       mapping: this.mapping(),
-    };
+    });
   }
 
   /** Byte-equal invariant hook: read the top-level `INSTRUCTIONS = <literal>`

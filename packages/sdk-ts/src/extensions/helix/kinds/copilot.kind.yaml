@@ -1,0 +1,237 @@
+# Copilot — a declarative, servable AG-UI copilot backend (record plane).
+#
+# A Copilot is a BINDER: it composes one-or-more mounted Agents (each already a
+# declarative Agent + its Tools + optional MCPFederation) into a single
+# servable copilot backend. From one Copilot document the emitter produces a
+# servable ``/agui`` app (Agno target today; MS Agent Framework later) — the
+# single evolution point DNA Cloud's Memory copilot consumes.
+#
+# It carries ONLY the copilot-level concerns that don't belong on any single
+# Agent: WHERE agents mount (``mounts``), HOW the backend is served
+# (``serving``), whether inbound tenant is propagated (``tenant``), the
+# human-in-the-loop approval surface (``hitl``), the RAG collections the
+# copilot may read (``knowledge``), and the frontend console hints
+# (``frontend``). Instructions/persona/guardrails still live on the mounted
+# Agent — a Copilot never re-declares them (the byte-equal instruction contract
+# stays intact: instructions come from the Agent, unchanged).
+#
+# NOTE: no ``workflow`` field — a workflow-shaped (MS Agent Framework) copilot
+# is deferred to Plan 3; the current scaffold is agent-framework-only.
+#
+# Like ``Tool`` (f-dna-tools-as-data), this is a record-plane descriptor — data,
+# not a class. It is NOT a prompt target and never composes into an agent
+# prompt, so it carries no composition signal (writing a Copilot does not
+# invalidate the composition schema cache). Agents are referenced by name via
+# ``mounts[].agent`` and knowledge collections by name via
+# ``knowledge.collections[]`` (refs, resolved by the emitter). Stored as
+# ``copilots/<name>.yaml`` — marketplace-shareable as a standalone bundle.
+#
+# tenant_scope intentionally NOT declared — permissive (base Copilot + optional
+# per-tenant overlay), mirroring Tool.
+#
+# PARITY-CRITICAL package data: byte-identical mirror under both runtimes'
+# helix/kinds/ (tests/test_descriptor_hash_parity.py enforces).
+apiVersion: github.com/ruinosus/dna/core/v1
+kind: KindDefinition
+metadata:
+  name: copilot
+spec:
+  target_api_version: github.com/ruinosus/dna/v1
+  target_kind: Copilot
+  alias: helix-copilot
+  origin: github.com/ruinosus/dna/copilot
+  plane: record
+  prompt_target: false
+  flatten_in_context: false
+  prompt_target_priority: 0
+  storage:
+    type: yaml
+    container: copilots
+  schema:
+    type: object
+    additionalProperties: false
+    required:
+    - mounts
+    - serving
+    properties:
+      mounts:
+        type: array
+        minItems: 1
+        description: The Agents this copilot serves, each at a mount path. At
+          least one is required.
+        items:
+          type: object
+          additionalProperties: false
+          required:
+          - id
+          - agent
+          - path
+          properties:
+            id:
+              type: string
+              description: Stable identifier for this mount within the copilot.
+            agent:
+              type: string
+              description: Name of the mounted Agent (ref — resolved by the
+                emitter to its base EmitContext).
+            path:
+              type: string
+              description: The route the mounted agent is served at (e.g.
+                /agui).
+      serving:
+        type: object
+        additionalProperties: false
+        required:
+        - transport
+        description: How the copilot backend is served.
+        properties:
+          transport:
+            type: string
+            enum:
+            - ag-ui
+            description: Wire protocol the copilot backend speaks. Only ag-ui
+              (AG-UI protocol) today.
+      tenant:
+        type: object
+        additionalProperties: false
+        description: Inbound-tenant handling. When propagate is true, the
+          emitted serving layer derives tenant/oid from request headers into
+          run-state for the mounted tools to read.
+        properties:
+          propagate:
+            type: boolean
+            description: Derive tenant from inbound request headers into
+              run-state (default false).
+      hitl:
+        type: object
+        additionalProperties: false
+        description: Human-in-the-loop approval surface for write tools the
+          mounted agents gate.
+        properties:
+          approval_card:
+            type: object
+            additionalProperties: false
+            description: The card shown to the user when a gated tool pauses
+              for approval.
+            properties:
+              title:
+                type: string
+                description: Heading of the approval card.
+              details_from:
+                type: string
+                description: Path into the pending tool's args used to render
+                  the card body (e.g. args.text).
+              reason_from:
+                type: string
+                description: Path into the pending tool's args used to render
+                  the reason line (e.g. args.reason).
+      knowledge:
+        type: object
+        additionalProperties: false
+        description: RAG the copilot may read. Optional — a pure-action copilot
+          declares none.
+        properties:
+          collections:
+            type: array
+            items:
+              type: string
+            description: Names of the knowledge collections the copilot may
+              query (refs — resolved by the emitter).
+      frontend:
+        type: object
+        additionalProperties: false
+        description: Frontend console hints for the emitted copilot UI.
+        properties:
+          console:
+            type: string
+            description: Which console renders the copilot (e.g. copilotkit).
+          panels:
+            type: array
+            items:
+              type: string
+            description: Named side panels the console mounts alongside the
+              chat.
+          suggested_prompts:
+            type: array
+            items:
+              type: string
+            description: Starter prompts surfaced to the user in an empty
+              console.
+  ui:
+    mode: build
+    label:
+      en: Copilots
+      pt-BR: Copilots
+    description:
+      en: Servable AG-UI copilot backends binding agents, tools and knowledge.
+      pt-BR: Backends de copilot AG-UI que ligam agentes, ferramentas e
+        conhecimento.
+    routes:
+      list: docs/Copilot
+      detail: docs/Copilot/:name
+    permissions:
+      list: any
+      detail: any
+    in_sidebar: true
+    display_order: 54
+  ui_schema:
+    mounts:
+      widget: code
+      language: yaml
+      label: Mounts
+      help: The Agents this copilot serves, each at a mount path
+        ([{id, agent, path}]).
+      height: 200
+      order: 10
+    serving:
+      widget: code
+      language: yaml
+      label: Serving
+      help: How the backend is served ({transport}).
+      height: 120
+      order: 20
+    tenant:
+      widget: code
+      language: yaml
+      label: Tenant
+      help: Inbound-tenant handling ({propagate}).
+      height: 100
+      order: 30
+    hitl:
+      widget: code
+      language: yaml
+      label: HITL
+      help: Human-in-the-loop approval card ({approval_card}).
+      height: 180
+      order: 40
+    knowledge:
+      widget: code
+      language: yaml
+      label: Knowledge
+      help: RAG collections the copilot may read ({collections}).
+      height: 120
+      order: 50
+    frontend:
+      widget: code
+      language: yaml
+      label: Frontend
+      help: Frontend console hints ({console, panels, suggested_prompts}).
+      height: 180
+      order: 60
+  graph_style:
+    fill: '#8B5CF6'
+    stroke: '#7C3AED'
+    text_color: '#fff'
+  ascii_icon: 🤖
+  display_label: Copilots
+  docs: A Copilot is a declarative, servable AG-UI copilot backend — a binder
+    that composes one-or-more mounted Agents (each with its own Tools and
+    optional MCPFederation) into a single servable ``/agui`` app. It carries
+    only the copilot-level concerns that don't belong on any single Agent
+    ``mounts`` (where agents serve), ``serving`` (the transport), ``tenant``
+    (inbound-tenant propagation), ``hitl`` (the approval card for gated write
+    tools), ``knowledge`` (RAG collections it may read), and ``frontend``
+    (console hints). Instructions and persona stay on the mounted Agent — a
+    Copilot never re-declares them. One document emits a servable backend
+    (Agno today), the single evolution point DNA Cloud's copilots consume.
+    Stored as ``copilots/<name>.yaml`` — marketplace-shareable as a bundle.

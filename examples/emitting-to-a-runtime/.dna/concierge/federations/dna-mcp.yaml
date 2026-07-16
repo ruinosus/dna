@@ -1,0 +1,17 @@
+apiVersion: github.com/ruinosus/dna/federation/v1
+kind: MCPFederation
+metadata:
+  name: dna-mcp
+  description: The DNA MCP server the memory copilot mounts over Streamable
+    HTTP — remember/forget/recall against a tenant-scoped store.
+spec:
+  transport: streamable_http
+  url: https://mcp.dna.example/agui
+  auth:
+    kind: bearer_env
+    env: DNA_MCP_TOKEN
+  allowed_tools:
+  - remember
+  - forget
+  - recall
+  propagate_tenant: true

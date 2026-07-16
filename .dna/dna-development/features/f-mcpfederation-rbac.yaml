@@ -1,0 +1,29 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Feature
+metadata:
+  name: f-mcpfederation-rbac
+spec:
+  title: MCPFederation read/write tool split + min-role RBAC
+  description: "Absorption phase 6a \u2014 the one genuinely-new Kind work. Extend\
+    \ MCPFederation (today a flat allowed_tools allowlist) with read/write tool governance\
+    \ + a per-tool role floor, matching foundry's richer registry (McpServer read_tools/write_tools/min_role)\
+    \ so the retrofit doesn't lose foundry's RBAC. Prereq for f-copilot-retrofit."
+  status: discovery
+  epic: e-dna-copilot-absorption
+  reporter: claude-code
+  priority: medium
+  labels:
+  - copilot
+  - mcp
+  - federation
+  - rbac
+  - absorption
+  business_value: 550
+  created_at: '2026-07-16T12:59:14+00:00'
+  updated_at: '2026-07-16T12:59:14+00:00'
+  timeline:
+  - at: '2026-07-16T12:59:14+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: discovery

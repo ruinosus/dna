@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: Copilot
+metadata:
+  name: pure-action-copilot
+  description: A pure-action copilot — mounts pure-action-agent, no knowledge,
+    no inbound-tenant, no MCP server. Everything optional is absent.
+spec:
+  mounts:
+  - id: actions
+    agent: pure-action-agent
+    path: /agui
+  serving:
+    transport: ag-ui

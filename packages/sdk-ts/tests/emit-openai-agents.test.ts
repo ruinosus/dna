@@ -41,6 +41,10 @@ function ctxOf(partial: Partial<EmitContext>): EmitContext {
     outputSchema: null,
     scope: null,
     options: {},
+    mcpServers: [],
+    toolsRequiringConfirmation: new Set<string>(),
+    tenantPropagate: false,
+    knowledge: [],
     ...partial,
   };
 }
