@@ -348,3 +348,25 @@ def test_plain_agent_still_single_artifact(mi):
     res = emit_agent(mi, "concierge", "agno")
     assert [a.role for a in res.artifacts] == ["agent"]
     assert "AgentOS" not in res.artifact
+
+
+# ── Task 4b: MCP-tool mount ─────────────────────────────────────────────────
+
+
+def test_copilot_agent_mounts_mcp_tools(copilot_ctx):
+    """The mounted agent builds ``MCPTools(url, transport="streamable-http")``
+    from ``ctx.mcp_servers`` and wires them into ``Agent(tools=...)``."""
+    from dna.emit.agno import AgnoEmitter
+
+    agent = AgnoEmitter().emit(copilot_ctx).artifact_for("agent")
+    assert "from agno.tools.mcp import MCPTools" in agent
+    assert "url='https://mcp.dna.example/agui'" in agent
+    assert "transport='streamable-http'" in agent
+    assert "tools=_mcp_tools()" in agent
+
+
+def test_copilot_agent_mcp_matches_golden(copilot_ctx):
+    from dna.emit.agno import AgnoEmitter
+
+    res = AgnoEmitter().emit(copilot_ctx)
+    assert res.artifact_for("agent") == read_golden("agno/copilot_agent.py")

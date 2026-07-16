@@ -13,9 +13,24 @@ from __future__ import annotations
 from agno.agent import Agent
 from agno.db.in_memory import InMemoryDb
 {{#has_model}}from agno.models.openai import OpenAILike
-{{/has_model}}
+{{/has_model}}{{#has_mcp}}from agno.tools.mcp import MCPTools
+{{/has_mcp}}
 INSTRUCTIONS = {{{instructions_literal}}}
 
+{{#has_mcp}}
+
+def _mcp_tools() -> list[MCPTools]:
+    """The DNA MCP server(s) this copilot mounts over Streamable HTTP. The
+    toolkit is CONSTRUCTED but NOT connected here — connecting is async and
+    happens inside the AG-UI run loop. Tool bodies live on the remote MCP
+    server, not in this scaffold."""
+    return [
+{{#mcp_servers}}        MCPTools(
+            url={{{url_literal}}},
+            transport={{{transport_literal}}},
+        ),
+{{/mcp_servers}}    ]
+{{/has_mcp}}
 
 def build_agent(session_state: dict | None = None) -> Agent:
     """Build the Agno Agent for one run. No network is touched — the model is
@@ -26,7 +41,8 @@ def build_agent(session_state: dict | None = None) -> Agent:
         name={{{name_literal}}},
 {{#has_model}}        model=OpenAILike(id={{{model_literal}}}),
 {{/has_model}}        instructions=INSTRUCTIONS,
-        db=InMemoryDb(),
+{{#has_mcp}}        tools=_mcp_tools(),
+{{/has_mcp}}        db=InMemoryDb(),
         session_state=session_state or {},
         add_session_state_to_context=True,
         markdown=True,
