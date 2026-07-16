@@ -9,13 +9,12 @@ calls, mirroring the foundry reference's Foundry-backed `as_agent(...)` factorie
 Tool bodies + any per-app retrieval (AzureAISearchContextProvider) are wired at
 the consumer.
 """
-{{#tenant_propagate}}import contextvars
-
-{{/tenant_propagate}}from agent_framework import Agent
+{{{stdlib_imports}}}from agent_framework import Agent
 from agent_framework.foundry import FoundryChatClient
 from azure.identity import DefaultAzureCredential
 {{#has_mcp}}from agent_framework import MCPStreamableHTTPTool
-{{/has_mcp}}{{#has_workflow}}from agent_framework import (
+{{/has_mcp}}{{#has_pgvector}}from agent_framework.postgres import PostgresVectorStore
+{{/has_pgvector}}{{#has_workflow}}from agent_framework import (
     AgentExecutorResponse,
     Executor,
     Workflow,
@@ -95,7 +94,34 @@ def _mcp_tools() -> list[MCPStreamableHTTPTool]:
 {{#tenant_propagate}}            header_provider=_tenant_header_provider,
 {{/tenant_propagate}}        ),
 {{/mcp_servers}}    ]
-{{/has_mcp}}
+{{/has_mcp}}{{#has_pgvector}}
+
+
+def _vector_store() -> PostgresVectorStore:
+    """The RAG store this copilot reads (`Copilot.knowledge`). DNA declares a
+    pgvector store (`knowledge.store`), so this binds MS-AF's `PostgresVectorStore`
+    over Postgres — the DSN comes from the `{{vector_ref}}` infra ref via its env var
+    (f-copilot-infra-binding wires it), NEVER a hardcoded literal. Wire it as the
+    agent's `context_providers=[_vector_store()]` and load the corpus CONTENT
+    per-app."""
+    return PostgresVectorStore(
+        collection_name={{{vector_collection_literal}}},
+        connection_string={{{vector_db_url_expr}}},
+        embedding_model={{{embed_model_literal}}},
+        embedding_dimensions={{embed_dims}},
+    )
+{{/has_pgvector}}{{#pg_thread}}
+
+
+def _thread_store_dsn() -> str:
+    """The Postgres DSN for thread/run state, read from the `{{thread_ref}}` infra ref's
+    env var (f-copilot-infra-binding wires it). DNA declares Postgres checkpoint/
+    memory, but MS-AF has NO native Postgres thread-store (design §6 gap): serialize
+    the run's `AgentThread` (`thread.serialize()` / `AgentThread.deserialize(...)`)
+    to a PG column keyed by conversation id yourself, using this DSN. This is the
+    honest wiring-point — not a `PostgresSaver` equivalent."""
+    return {{{thread_db_url_expr}}}
+{{/pg_thread}}
 {{^has_workflow}}
 
 def build_agent() -> Agent:
@@ -109,7 +135,8 @@ def build_agent() -> Agent:
         name={{{name_literal}}},
         instructions=INSTRUCTIONS,
 {{#has_mcp}}        tools=_mcp_tools(),
-{{/has_mcp}}    )
+{{/has_mcp}}{{#has_pgvector}}        context_providers=[_vector_store()],
+{{/has_pgvector}}    )
 {{/has_workflow}}
 {{#has_workflow}}
 

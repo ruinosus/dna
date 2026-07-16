@@ -20,7 +20,13 @@ import Mustache from "mustache";
 
 import { EmitError, EmitResult } from "./index.js";
 import type { EmitArtifact, EmitContext, EmitTool, EmitterPort } from "./index.js";
-import { pyIdentifier, pyStrLiteral, resolveScaffold } from "./scaffold.js";
+import {
+  persistenceFacts,
+  pgUrlExpr,
+  pyIdentifier,
+  pyStrLiteral,
+  resolveScaffold,
+} from "./scaffold.js";
 
 /** DNA provider token → agent-framework `model.provider` value. Unknown tokens
  *  pass through unchanged so a future provider needs no code change. */
@@ -245,6 +251,23 @@ export class AgentFrameworkEmitter implements EmitterPort {
     let chainFuncs = ctx.workflow.map((s) => pyIdentifier(s));
     if (hasWorkflow && hasHitl) chainFuncs = [...chainFuncs, "escalate"];
 
+    // ── persistence / knowledge-store → MS-AF backends (design map + gaps) ──
+    // Postgres covers VECTORS (`PostgresVectorStore`); MS-AF has NO Postgres
+    // thread-store, so checkpoint/memory are a documented serialize-yourself
+    // wiring-point — honest per the design gap. DSNs from the infra `ref` via an
+    // env var, never a hardcoded literal.
+    const facts = persistenceFacts(ctx);
+    const hasPgvector = facts.vectorPg;
+    const pgThread = facts.checkpointPg || facts.memoryPg;
+
+    // The stdlib import block, pre-rendered so contextvars + os group cleanly
+    // (one blank line before the agent_framework imports; none when neither is
+    // needed — the no-tenant/no-persistence path stays byte-identical).
+    const stdlib: string[] = [];
+    if (ctx.tenantPropagate) stdlib.push("import contextvars");
+    if (hasPgvector || pgThread) stdlib.push("import os");
+    const stdlibImports = stdlib.length > 0 ? stdlib.join("\n") + "\n\n" : "";
+
     const buildFn = hasWorkflow ? "build_workflow" : "build_agent";
     const mountedKind = hasWorkflow ? "workflow" : "agent";
     const serveAgentExpr = hasWorkflow
@@ -270,6 +293,20 @@ export class AgentFrameworkEmitter implements EmitterPort {
       build_fn: buildFn,
       mounted_kind: mountedKind,
       serve_agent_expr: serveAgentExpr,
+      stdlib_imports: stdlibImports,
+      // persistence
+      needs_os: hasPgvector || pgThread,
+      has_pgvector: hasPgvector,
+      pg_thread: pgThread,
+      vector_ref: facts.vectorRef ?? "",
+      vector_collection_literal: pyStrLiteral(
+        ctx.knowledge.length > 0 ? pyIdentifier(ctx.knowledge[0]) : "knowledge",
+      ),
+      vector_db_url_expr: hasPgvector && facts.vectorRef ? pgUrlExpr(facts.vectorRef) : "",
+      embed_model_literal: pyStrLiteral(facts.embedModel ?? "text-embedding-3-small"),
+      embed_dims: facts.embedDims ?? 1536,
+      thread_ref: facts.pgRef ?? "",
+      thread_db_url_expr: pgThread && facts.pgRef ? pgUrlExpr(facts.pgRef) : "",
     };
   }
 
@@ -286,6 +323,25 @@ export class AgentFrameworkEmitter implements EmitterPort {
         "prompts, RAG collections) have no code-first backend slot; RAG retrieval " +
         "(`AzureAISearchContextProvider`) is per-app",
     ];
+    const facts = persistenceFacts(ctx);
+    if (facts.vectorPg) {
+      out.push(
+        "pgvector RAG — the emitted `_vector_store()` binds MS-AF's " +
+          "`PostgresVectorStore` over Postgres (DSN from the infra ref via env var); " +
+          "wire it as the agent's `context_providers` + load the corpus CONTENT " +
+          "per-app. (Class/import surface pinned to the design map — MS-AF is not a " +
+          "runtime dep of the emit tests, verify against the installed " +
+          "`agent_framework` at wire-up.)",
+      );
+    }
+    if (facts.checkpointPg || facts.memoryPg) {
+      out.push(
+        "checkpoint/memory serialize-yourself — MS-AF has NO Postgres thread-store " +
+          "(design §6 gap): the emitted `_thread_store_dsn()` exposes the PG DSN, but " +
+          "you must serialize the `AgentThread` (`serialize()`/`deserialize()`) to a " +
+          "PG column yourself — no native `PostgresSaver` equivalent",
+      );
+    }
     if (ctx.workflow.length > 0) {
       out.push(
         "workflow step bodies — each `workflow.chain` step is a scaffolded " +

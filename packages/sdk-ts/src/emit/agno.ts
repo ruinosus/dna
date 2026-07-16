@@ -16,6 +16,8 @@
 import Mustache from "mustache";
 
 import {
+  persistenceFacts,
+  pgUrlExpr,
   pyIdentifier,
   pyStrLiteral,
   resolveScaffold,
@@ -134,6 +136,15 @@ export class AgnoEmitter extends ScaffoldEmitter {
       has_external_tools: gated.length > 0,
       external_tools_literal: externalToolsLiteral,
     }));
+    // ── persistence / knowledge-store → real Agno backends (v2 `agno.db.*`) ──
+    // checkpoint|memory=postgres → `db=PostgresDb`; memory adds
+    // `enable_user_memories`; knowledge.store=pgvector → a real
+    // `Knowledge(vector_db=PgVector(...))`. Absent slots keep `InMemoryDb()`
+    // (framework default — back-compat). DSNs from the infra `ref` via an env
+    // var, never a hardcoded literal.
+    const facts = persistenceFacts(ctx);
+    const pgDb = facts.checkpointPg || facts.memoryPg;
+    const hasPgvector = facts.vectorPg;
     return {
       agent_module: pyIdentifier(ctx.name),
       has_model: ctx.model !== null,
@@ -143,6 +154,22 @@ export class AgnoEmitter extends ScaffoldEmitter {
       tenant_propagate: ctx.tenantPropagate,
       has_knowledge: ctx.knowledge.length > 0,
       knowledge_refs: ctx.knowledge.join(", "),
+      // persistence
+      needs_os: pgDb || hasPgvector,
+      pg_db: pgDb,
+      pg_db_url_expr: pgDb && facts.pgRef ? pgUrlExpr(facts.pgRef) : "",
+      checkpoint_ref: facts.pgRef ?? "",
+      enable_user_memories: facts.memoryPg,
+      // knowledge vector store
+      has_pgvector: hasPgvector,
+      vector_ref: facts.vectorRef ?? "",
+      vector_table_literal: pyStrLiteral(
+        ctx.knowledge.length > 0 ? pyIdentifier(ctx.knowledge[0]) : "knowledge",
+      ),
+      vector_db_url_expr:
+        hasPgvector && facts.vectorRef ? pgUrlExpr(facts.vectorRef) : "",
+      embed_model_literal: pyStrLiteral(facts.embedModel ?? "text-embedding-3-small"),
+      embed_dims: facts.embedDims ?? 1536,
     };
   }
 
@@ -155,11 +182,25 @@ export class AgnoEmitter extends ScaffoldEmitter {
         "are copilot-level metadata with no code-first backend slot; wire them in " +
         "the console at the UI layer",
     ];
-    if (ctx.knowledge.length > 0) {
+    const facts = persistenceFacts(ctx);
+    if (ctx.knowledge.length > 0 && facts.vectorPg) {
+      out.push(
+        "knowledge corpus load — the emitted `_knowledge()` binds a real " +
+          "`Knowledge(vector_db=PgVector(...))` over Postgres, but the corpus CONTENT " +
+          "(`.add_content(...)`) is loaded per-app; the vector store itself is now " +
+          "wired from `knowledge.store`, no longer a stub",
+      );
+    } else if (ctx.knowledge.length > 0) {
       out.push(
         "knowledge retrieval impl — the emitted `_knowledge()` factory is a WIRING " +
           "POINT carrying the DNA collection refs; the vector store + embedder behind " +
           "it (Agno `Knowledge`/`PgVector`) is per-app (§6.3)",
+      );
+    }
+    if (ctx.persistence?.cache?.backend) {
+      out.push(
+        "persistence cache — Agno has no first-class cache slot (design §6); a " +
+          "declared `cache` backend is a documented gap, not emitted",
       );
     }
     if (ctx.model === null) {

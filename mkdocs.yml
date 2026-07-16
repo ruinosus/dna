@@ -69,6 +69,7 @@ nav:
       - Tools as data: guides/tools-as-data.md
       - Emitting to a runtime (the de-para): guides/emitting-to-a-runtime.md
       - How to write an emitter: guides/writing-an-emitter.md
+      - "Copilot persistence — the Mongo path": guides/copilot-persistence-mongo.md
       - "Spec Kit — the supported spec-driven flow": guides/spec-kit.md
       - "Spec Kit + DNA's live memory over MCP": guides/spec-kit-live-memory.md
       - "Spec Kit templates, served by DNA": guides/spec-kit-templates.md

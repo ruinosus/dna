@@ -387,7 +387,15 @@ describe("LanggraphEmitter — the servable `copilot` case (StateGraph CoAgent)"
     // runtime-delta vs Agno/MS-AF: a StateGraph compiled to a CoAgent.
     expect(agent).toContain("from langgraph.graph import END, START, StateGraph");
     expect(agent).toContain("graph = StateGraph(State)");
-    expect(agent).toContain("return graph.compile(checkpointer=MemorySaver())");
+    // memory-copilot declares Postgres persistence → PostgresSaver + PostgresStore,
+    // NOT MemorySaver.
+    expect(agent).toContain("from langgraph.checkpoint.postgres import PostgresSaver");
+    expect(agent).toContain("from langgraph.store.postgres import PostgresStore");
+    expect(agent).toContain(
+      'checkpointer=PostgresSaver.from_conn_string(os.environ["DNA_PRIMARY_PG_URL"])',
+    );
+    expect(agent).toContain("store=PostgresStore.from_conn_string(");
+    expect(agent).not.toContain("MemorySaver");
     expect(serving).toContain(
       "from ag_ui_langgraph import LangGraphAgent, add_langgraph_fastapi_endpoint",
     );
@@ -464,5 +472,98 @@ describe("LanggraphEmitter — the servable `copilot` case (StateGraph CoAgent)"
     expect(res.artifact).toContain("create_react_agent(");
     expect(res.artifact).not.toContain("StateGraph");
     expect(res.artifact).not.toContain("add_langgraph_fastapi_endpoint");
+  });
+});
+
+// ── f-copilot-persistence · the emit half (Postgres v1) — TS twin ────────────
+//
+// `memory-copilot` declares `persistence` (checkpoint+memory=postgres) +
+// `knowledge.store` (pgvector). Each scaffold reads `ctx.persistence` /
+// `ctx.knowledgeStore` and emits REAL backend config — killing the hardcoded
+// `InMemoryDb()`. The DSN is always an env-var read keyed by the infra `ref`
+// (`f-copilot-infra-binding` wires it), never a hardcoded literal.
+import { pgEnvVar, pgUrlExpr } from "../src/emit/scaffold.js";
+
+describe("copilot persistence emit — Postgres v1 (f-copilot-persistence)", () => {
+  async function ctxFor(copilot: string): Promise<EmitContext> {
+    const mi = await quickInstance(SCOPE, BASE);
+    return buildCopilotContext(mi, copilot, { model: "azure/gpt-4o", provider: "azure" });
+  }
+
+  it("derives the ref-keyed Postgres env var", () => {
+    expect(pgEnvVar("primary-pg")).toBe("DNA_PRIMARY_PG_URL");
+    expect(pgEnvVar("analytics.warehouse")).toBe("DNA_ANALYTICS_WAREHOUSE_URL");
+    expect(pgUrlExpr("primary-pg")).toBe('os.environ["DNA_PRIMARY_PG_URL"]');
+  });
+
+  it("Agno emits PostgresDb + pgvector Knowledge (no InMemoryDb)", async () => {
+    const agent = new AgnoEmitter().emit(await ctxFor("memory-copilot")).artifactFor("agent");
+    expect(agent).toContain("from agno.db.postgres import PostgresDb");
+    expect(agent).toContain('db=PostgresDb(db_url=os.environ["DNA_PRIMARY_PG_URL"])');
+    expect(agent).toContain("enable_user_memories=True,");
+    expect(agent).not.toContain("InMemoryDb");
+    expect(agent).not.toContain("agno.storage"); // v2 surface, not v1
+    // pgvector knowledge store — a real Knowledge, no `return None` stub.
+    expect(agent).toContain("from agno.vectordb.pgvector import PgVector, SearchType");
+    expect(agent).toContain("vector_db=PgVector(");
+    expect(agent).toContain('table_name="knowledge_base",');
+    expect(agent).toContain("search_type=SearchType.hybrid,");
+    expect(agent).toContain('OpenAIEmbedder(id="text-embedding-3-small", dimensions=1536)');
+    expect(agent).not.toContain("return None");
+  });
+
+  it("LangGraph emits PostgresSaver + PostgresStore(index=)", async () => {
+    const agent = new LanggraphEmitter().emit(await ctxFor("memory-copilot")).artifactFor("agent");
+    expect(agent).toContain("from langgraph.checkpoint.postgres import PostgresSaver");
+    expect(agent).toContain("from langgraph.store.postgres import PostgresStore");
+    expect(agent).toContain(
+      'checkpointer=PostgresSaver.from_conn_string(os.environ["DNA_PRIMARY_PG_URL"])',
+    );
+    expect(agent).toContain(
+      'store=PostgresStore.from_conn_string(os.environ["DNA_PRIMARY_PG_URL"], ' +
+        'index={"dims": 1536, "embed": "openai:text-embedding-3-small"})',
+    );
+    expect(agent).not.toContain("MemorySaver");
+  });
+
+  it("MS-AF emits PostgresVectorStore + a serialize-yourself wiring point", async () => {
+    const agent = new AgentFrameworkEmitter()
+      .emit(await ctxFor("memory-copilot"))
+      .artifactFor("agent");
+    expect(agent).toContain("from agent_framework.postgres import PostgresVectorStore");
+    expect(agent).toContain("def _vector_store() -> PostgresVectorStore:");
+    expect(agent).toContain('connection_string=os.environ["DNA_PRIMARY_PG_URL"],');
+    expect(agent).toContain("context_providers=[_vector_store()],");
+    expect(agent).toContain("def _thread_store_dsn() -> str:");
+    expect(agent).toContain("AgentThread");
+  });
+
+  it("is back-compat when no persistence is declared (in-memory, no os.environ)", () => {
+    // A copilot signal (knowledge) with NO persistence/knowledge.store → the
+    // in-memory default emit, byte-identical to before.
+    const ctx: EmitContext = {
+      name: "reader",
+      description: "",
+      instructions: "Read only.",
+      model: "azure/gpt-4o",
+      tools: [],
+      outputSchema: null,
+      scope: null,
+      options: {},
+      mcpServers: [],
+      toolsRequiringConfirmation: new Set<string>(),
+      tenantPropagate: false,
+      knowledge: ["some-collection"],
+      workflow: [],
+    };
+    const agno = new AgnoEmitter().emit(ctx).artifactFor("agent");
+    expect(agno).toContain("db=InMemoryDb(),");
+    expect(agno).not.toContain("PostgresDb");
+    expect(agno).not.toContain("os.environ");
+
+    const lg = new LanggraphEmitter().emit(ctx).artifactFor("agent");
+    expect(lg).toContain("checkpointer=MemorySaver()");
+    expect(lg).not.toContain("PostgresSaver");
+    expect(lg).not.toContain("os.environ");
   });
 });

@@ -40,6 +40,8 @@ from dna.emit import EmitArtifact, EmitContext, EmitError, EmitResult
 from dna.emit.scaffold import (
     ScaffoldChoice,
     ScaffoldEmitter,
+    persistence_facts,
+    pg_url_expr,
     py_identifier,
     py_str_literal,
     resolve_scaffold,
@@ -165,6 +167,15 @@ class AgnoEmitter(ScaffoldEmitter):
                     "external_tools_literal": repr(gated),
                 }
             )
+        # ── persistence / knowledge-store → real Agno backends (v2 `agno.db.*`) ──
+        # checkpoint|memory=postgres → `db=PostgresDb`; memory adds
+        # `enable_user_memories`; knowledge.store=pgvector → a real
+        # `Knowledge(vector_db=PgVector(...))`. Absent slots keep `InMemoryDb()`
+        # (the framework default — back-compat). DSNs come from the infra `ref`
+        # via an env var, never a hardcoded literal.
+        facts = persistence_facts(ctx)
+        pg_db = facts["checkpoint_pg"] or facts["memory_pg"]
+        has_pgvector = facts["vector_pg"]
         return {
             "agent_module": module,
             "has_model": ctx.model is not None,
@@ -174,6 +185,23 @@ class AgnoEmitter(ScaffoldEmitter):
             "tenant_propagate": bool(ctx.tenant_propagate),
             "has_knowledge": bool(ctx.knowledge),
             "knowledge_refs": ", ".join(ctx.knowledge),
+            # persistence
+            "needs_os": bool(pg_db or has_pgvector),
+            "pg_db": bool(pg_db),
+            "pg_db_url_expr": pg_url_expr(facts["pg_ref"]) if pg_db and facts["pg_ref"] else "",
+            "checkpoint_ref": facts["pg_ref"] or "",
+            "enable_user_memories": bool(facts["memory_pg"]),
+            # knowledge vector store
+            "has_pgvector": bool(has_pgvector),
+            "vector_ref": facts["vector_ref"] or "",
+            "vector_table_literal": py_str_literal(
+                py_identifier(ctx.knowledge[0]) if ctx.knowledge else "knowledge"
+            ),
+            "vector_db_url_expr": (
+                pg_url_expr(facts["vector_ref"]) if has_pgvector and facts["vector_ref"] else ""
+            ),
+            "embed_model_literal": py_str_literal(facts["embed_model"] or "text-embedding-3-small"),
+            "embed_dims": facts["embed_dims"] if facts["embed_dims"] is not None else 1536,
         }
 
     def _copilot_losses(self, ctx: EmitContext) -> list[str]:
@@ -185,11 +213,24 @@ class AgnoEmitter(ScaffoldEmitter):
             "prompts) are copilot-level metadata with no code-first backend slot; "
             "wire them in the console at the UI layer",
         ]
-        if ctx.knowledge:
+        facts = persistence_facts(ctx)
+        if ctx.knowledge and facts["vector_pg"]:
+            out.append(
+                "knowledge corpus load — the emitted `_knowledge()` binds a real "
+                "`Knowledge(vector_db=PgVector(...))` over Postgres, but the corpus "
+                "CONTENT (`.add_content(...)`) is loaded per-app; the vector store "
+                "itself is now wired from `knowledge.store`, no longer a stub"
+            )
+        elif ctx.knowledge:
             out.append(
                 "knowledge retrieval impl — the emitted `_knowledge()` factory is a "
                 "WIRING POINT carrying the DNA collection refs; the vector store + "
                 "embedder behind it (Agno `Knowledge`/`PgVector`) is per-app (§6.3)"
+            )
+        if ctx.persistence and (ctx.persistence.get("cache") or {}).get("backend"):
+            out.append(
+                "persistence cache — Agno has no first-class cache slot (design §6); "
+                "a declared `cache` backend is a documented gap, not emitted"
             )
         if ctx.model is None:
             out.append(

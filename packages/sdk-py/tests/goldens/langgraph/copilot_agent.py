@@ -10,6 +10,7 @@ native). Tool bodies live on the remote DNA MCP server; per-node bodies are wire
 at the consumer.
 """
 import contextvars
+import os
 from typing import Annotated, TypedDict
 
 from langchain_core.messages import AnyMessage, SystemMessage
@@ -151,8 +152,12 @@ def _route(state: State) -> str:
 def build_agent():
     """Build the AG-UI-native CoAgent graph for one run — a `StateGraph` compiled to
     a checkpointed graph the AG-UI adapter serves. LangGraph IS the graph, so the
-    ReAct loop + the human-approval interrupt is expressed directly as nodes + edges."""
-    from langgraph.checkpoint.memory import MemorySaver
+    ReAct loop + the human-approval interrupt is expressed directly as nodes + edges. State is
+    checkpointed to Postgres (`PostgresSaver`) + a `PostgresStore` for long-term memory
+    (pgvector semantic search via `index=`); DSNs come from the infra refs via env
+    vars (f-copilot-infra-binding wires them) — open the pool + `.setup()` at wire-up."""
+    from langgraph.checkpoint.postgres import PostgresSaver
+    from langgraph.store.postgres import PostgresStore
 
     graph = StateGraph(State)
     graph.add_node("agent", _agent_node)
@@ -162,4 +167,4 @@ def build_agent():
     graph.add_conditional_edges("agent", _route)
     graph.add_edge("review", "tools")
     graph.add_edge("tools", "agent")
-    return graph.compile(checkpointer=MemorySaver())
+    return graph.compile(checkpointer=PostgresSaver.from_conn_string(os.environ["DNA_PRIMARY_PG_URL"]), store=PostgresStore.from_conn_string(os.environ["DNA_PRIMARY_PG_URL"], index={'dims': 1536, 'embed': 'openai:text-embedding-3-small'}))

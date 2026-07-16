@@ -17,6 +17,8 @@
 import Mustache from "mustache";
 
 import {
+  persistenceFacts,
+  pgUrlExpr,
   pyIdentifier,
   pyStrLiteral,
   resolveScaffold,
@@ -169,6 +171,39 @@ export class LanggraphEmitter extends ScaffoldEmitter {
     const buildFn = hasWorkflow ? "build_workflow" : "build_agent";
     const mountedKind = hasWorkflow ? "workflow" : "agent";
 
+    // ── persistence → real LangGraph backends ─────────────────────────────
+    // checkpoint=postgres → `PostgresSaver.from_conn_string(...)`;
+    // memory=postgres → `PostgresStore.from_conn_string(..., index=...)` with the
+    // pgvector RAG expressed via the Store's `index=` (design map). Absent slots
+    // keep in-memory `MemorySaver()` (back-compat). DSNs from the infra `ref` via
+    // an env var, never a hardcoded literal.
+    const facts = persistenceFacts(ctx);
+    const cpPg = facts.checkpointPg;
+    const memPg = facts.memoryPg;
+    // The in-function import block, pre-rendered so the no-persistence path is
+    // byte-identical to before (a plain interpolation preserves the blank line the
+    // template carries; a conditional section would collapse it).
+    const importLines = [
+      cpPg
+        ? "    from langgraph.checkpoint.postgres import PostgresSaver"
+        : "    from langgraph.checkpoint.memory import MemorySaver",
+    ];
+    if (memPg) importLines.push("    from langgraph.store.postgres import PostgresStore");
+    const checkpointImports = importLines.join("\n");
+    const checkpointerExpr = cpPg
+      ? `PostgresSaver.from_conn_string(${pgUrlExpr(facts.checkpointRef as string)})`
+      : "MemorySaver()";
+    let storeExpr = "";
+    if (memPg) {
+      const memoryUrl = pgUrlExpr(facts.memoryRef as string);
+      storeExpr = facts.vectorPg
+        ? `PostgresStore.from_conn_string(${memoryUrl}, index=${LanggraphEmitter.storeIndexLiteral(
+            facts.embedModel,
+            facts.embedDims,
+          )})`
+        : `PostgresStore.from_conn_string(${memoryUrl})`;
+    }
+
     return {
       name: ctx.name,
       name_literal: pyStrLiteral(ctx.name),
@@ -188,7 +223,25 @@ export class LanggraphEmitter extends ScaffoldEmitter {
       last_node_literal: nodes.length > 0 ? pyStrLiteral(nodes[nodes.length - 1]) : '""',
       build_fn: buildFn,
       mounted_kind: mountedKind,
+      // persistence
+      needs_os: cpPg || memPg,
+      cp_pg: cpPg,
+      has_store: memPg,
+      checkpoint_imports: checkpointImports,
+      checkpointer_expr: checkpointerExpr,
+      store_expr: storeExpr,
     };
+  }
+
+  /** The LangGraph `PostgresStore(index=...)` dict literal that binds pgvector
+   *  semantic search — `{'dims': 1536, 'embed': 'openai:<model>'}` (langchain
+   *  `init_embeddings` provider:model coordinate). The vector RAG rides on the
+   *  Store's index (design map), not a separate vector store. TS twin of Python
+   *  `_store_index_literal`. */
+  private static storeIndexLiteral(model: string | null, dims: number | null): string {
+    const coord = model ? `openai:${model}` : "openai:text-embedding-3-small";
+    const d = dims ?? 1536;
+    return `{${pyStrLiteral("dims")}: ${d}, ${pyStrLiteral("embed")}: ${pyStrLiteral(coord)}}`;
   }
 
   private copilotLosses(ctx: EmitContext): string[] {
@@ -207,6 +260,22 @@ export class LanggraphEmitter extends ScaffoldEmitter {
       "frontend console — `frontend`/`knowledge` hints (CopilotKit panels, suggested " +
         "prompts, RAG collections) have no code-first backend slot; RAG retrieval is per-app",
     ];
+    const facts = persistenceFacts(ctx);
+    if (facts.checkpointPg || facts.memoryPg) {
+      out.push(
+        "persistence lifecycle — `PostgresSaver`/`PostgresStore.from_conn_string(...)` " +
+          "return CONTEXT MANAGERS; the emitted `build_agent` calls them inline (the " +
+          "config shape), so open the pool + call `.setup()` (one-time table create) " +
+          "at wire-up per the LangGraph persistence docs",
+      );
+    }
+    if (facts.vectorPg) {
+      out.push(
+        "pgvector RAG — the vector store rides on the memory `PostgresStore`'s " +
+          "`index=` (semantic search over the Store); a standalone corpus index " +
+          "(`PGVector` retriever) + the collection CONTENT load are per-app",
+      );
+    }
     if (ctx.workflow.length > 0) {
       out.push(
         "workflow step bodies — each `workflow.chain` step is a scaffolded graph " +
