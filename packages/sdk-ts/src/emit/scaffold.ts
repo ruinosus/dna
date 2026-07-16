@@ -170,7 +170,7 @@ export abstract class ScaffoldEmitter implements EmitterPort {
 
   // ── the inherited machinery ───────────────────────────────────────────────
 
-  private commonContext(ctx: EmitContext): Record<string, unknown> {
+  protected commonContext(ctx: EmitContext): Record<string, unknown> {
     return {
       name: ctx.name,
       name_literal: pyStrLiteral(ctx.name),
@@ -181,7 +181,7 @@ export abstract class ScaffoldEmitter implements EmitterPort {
     };
   }
 
-  private commonLosses(ctx: EmitContext, choice: ScaffoldChoice): string[] {
+  protected commonLosses(ctx: EmitContext, choice: ScaffoldChoice): string[] {
     const losses = [
       "composition structure — Soul reuse + wired Guardrails flatten to one " +
         "`INSTRUCTIONS` string (a code-first agent has no `soul:`/`guardrails:` slot)",
