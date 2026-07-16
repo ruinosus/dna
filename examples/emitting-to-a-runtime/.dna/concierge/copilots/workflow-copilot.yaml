@@ -1,0 +1,25 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: Copilot
+metadata:
+  name: workflow-copilot
+  description: A workflow-shaped MS Agent Framework copilot — a triage→retrieve→resolve
+    step chain with a workflow-level human-approval escalation node. Mounts
+    memory-agent (MCP + tenant + gated writes).
+spec:
+  mounts:
+  - id: helpdesk
+    agent: memory-agent
+    path: /agui
+  serving:
+    transport: ag-ui
+  tenant:
+    propagate: true
+  hitl:
+    approval_card:
+      title: Approve escalation
+      details_from: args.summary
+  workflow:
+    chain:
+    - triage
+    - retrieve
+    - resolve

@@ -210,6 +210,22 @@ def test_copilot_ctx_projects_knowledge(mi):
 # ── Task 3b negatives: everything optional is empty when undeclared ──────────
 
 
+def test_copilot_ctx_projects_workflow_chain(mi):
+    """The Copilot ``workflow.chain`` rides on the ctx as an ordered step list."""
+    from dna.emit import build_copilot_context
+
+    ctx = build_copilot_context(mi, "workflow-copilot", model="azure/gpt-4o")
+    assert ctx.workflow == ["triage", "retrieve", "resolve"]
+
+
+def test_copilot_ctx_workflow_empty_when_undeclared(mi):
+    """A copilot with no ``workflow`` block carries an empty chain (plain app)."""
+    from dna.emit import build_copilot_context
+
+    ctx = build_copilot_context(mi, "memory-copilot", model="azure/gpt-4o")
+    assert ctx.workflow == []
+
+
 def test_copilot_ctx_knowledge_optional(mi):
     """RAG is optional — a pure-action copilot carries no knowledge."""
     from dna.emit import build_copilot_context
@@ -598,6 +614,29 @@ def test_emitted_copilot_pauses_and_resumes_on_gate(tmp_path):
     asyncio.run(_drive())
 
 
+# ── Chunk 6 · the Microsoft Agent Framework `copilot` scaffold case ──────────
+#
+# The SECOND per-runtime copilot scaffold case (f-copilot-agentframework-target):
+# ``build_copilot_context`` (the SAME ctx the Agno case reads) →
+# ``AgentFrameworkEmitter().emit(ctx)`` renders TWO artifacts — an ``agent``
+# module (``FoundryChatClient(...).as_agent(...)`` + the ``MCPStreamableHTTPTool``
+# mount with ``approval_mode`` tool-level HITL + the inbound-tenant ContextVar/
+# header_provider bridge) and a ``serving`` module
+# (``add_agent_framework_fastapi_endpoint`` → ``/agui``). A Copilot that declares
+# a ``workflow.chain`` emits a ``WorkflowBuilder`` chain + a workflow-level
+# ``request_info`` escalation node instead. Byte-equal goldens govern both. This
+# proves the emitter is runtime-agnostic (Agno + MS-AF from one context).
+
+
+@pytest.fixture()
+def maf_ctx(mi):
+    from dna.emit import build_copilot_context
+
+    return build_copilot_context(
+        mi, "memory-copilot", model="azure/gpt-4o", provider="azure"
+    )
+
+
 # ── Chunk 5 · the shared CopilotKit frontend console scaffold ────────────────
 #
 # ``build_copilot_context`` also projects the Copilot's ``frontend`` + ``hitl.
@@ -662,6 +701,260 @@ def fe_ctx(mi):
     )
 
 
+@pytest.fixture()
+def maf_workflow_ctx(mi):
+    from dna.emit import build_copilot_context
+
+    return build_copilot_context(
+        mi, "workflow-copilot", model="azure/gpt-4o", provider="azure"
+    )
+
+
+# ── agent + /agui serving (mirrors the Agno two-artifact shape) ─────────────
+
+
+def test_maf_copilot_is_two_artifacts(maf_ctx):
+    from dna.emit.agent_framework import AgentFrameworkEmitter
+
+    res = AgentFrameworkEmitter().emit(maf_ctx)
+    assert {a.role for a in res.artifacts} == {"agent", "serving"}
+    assert res.target == "agent-framework"
+    paths = {a.role: a.path for a in res.artifacts}
+    assert paths["agent"] == "memory_agent.py"
+    assert paths["serving"] == "memory_agent_serve.py"
+
+
+def test_maf_copilot_agent_matches_golden(maf_ctx):
+    from dna.emit.agent_framework import AgentFrameworkEmitter
+
+    res = AgentFrameworkEmitter().emit(maf_ctx)
+    assert res.artifact_for("agent") == read_golden("agent_framework/copilot_agent.py")
+
+
+def test_maf_copilot_serving_matches_golden(maf_ctx):
+    from dna.emit.agent_framework import AgentFrameworkEmitter
+
+    res = AgentFrameworkEmitter().emit(maf_ctx)
+    assert res.artifact_for("serving") == read_golden("agent_framework/copilot_serve.py")
+
+
+def test_maf_copilot_carries_instructions_byte_equal(maf_ctx):
+    """The byte-equal invariant, recovered via the emitter METHOD off the
+    ``role="agent"`` artifact — the mounted agent's composed prompt, verbatim."""
+    from dna.emit.agent_framework import AgentFrameworkEmitter
+
+    em = AgentFrameworkEmitter()
+    res = em.emit(maf_ctx)
+    assert em.extract_instructions(res.artifact_for("agent")) == maf_ctx.instructions
+
+
+def test_maf_copilot_artifacts_compile(maf_ctx):
+    from dna.emit.agent_framework import AgentFrameworkEmitter
+
+    res = AgentFrameworkEmitter().emit(maf_ctx)
+    assert _compiles(res.artifact_for("agent"))
+    assert _compiles(res.artifact_for("serving"))
+
+
+def test_maf_copilot_agent_builds_via_foundry_as_agent(maf_ctx):
+    """The runtime-delta vs Agno: `FoundryChatClient(...).as_agent(...)` (not
+    `Agent(...)`)."""
+    from dna.emit.agent_framework import AgentFrameworkEmitter
+
+    agent = AgentFrameworkEmitter().emit(maf_ctx).artifact_for("agent")
+    assert "from agent_framework.foundry import FoundryChatClient" in agent
+    assert "return client.as_agent(" in agent
+    assert "instructions=INSTRUCTIONS," in agent
+
+
+def test_maf_copilot_serving_exposes_agui(maf_ctx):
+    """The serving artifact mounts the AG-UI endpoint via
+    `add_agent_framework_fastapi_endpoint` (not an AGUI subclass)."""
+    from dna.emit.agent_framework import AgentFrameworkEmitter
+
+    serving = AgentFrameworkEmitter().emit(maf_ctx).artifact_for("serving")
+    assert "from agent_framework_ag_ui import add_agent_framework_fastapi_endpoint" in serving
+    assert "add_agent_framework_fastapi_endpoint(" in serving
+    assert 'path="/agui",' in serving
+    assert "from memory_agent import build_agent" in serving
+
+
+# ── MCP mount (MCPStreamableHTTPTool vs MCPTools) ───────────────────────────
+
+
+def test_maf_copilot_mounts_mcp_streamable_http_tool(maf_ctx):
+    from dna.emit.agent_framework import AgentFrameworkEmitter
+
+    agent = AgentFrameworkEmitter().emit(maf_ctx).artifact_for("agent")
+    assert "from agent_framework import MCPStreamableHTTPTool" in agent
+    assert "name='mcp_dna-mcp'," in agent
+    assert "url='https://mcp.dna.example/agui'," in agent
+    assert "allowed_tools=['forget', 'recall', 'remember']," in agent
+    assert "tools=_mcp_tools()," in agent
+
+
+# ── tool-level HITL (approval_mode vs external_execution_required_tools) ────
+
+
+def test_maf_copilot_tool_level_hitl_via_approval_mode(maf_ctx):
+    """Spec §6.1 tool-level HITL for MS-AF = `approval_mode` — gated writes go to
+    `always_require_approval`, reads to `never_require_approval`."""
+    from dna.emit.agent_framework import AgentFrameworkEmitter
+
+    assert maf_ctx.tools_requiring_confirmation == {"remember", "forget"}
+    agent = AgentFrameworkEmitter().emit(maf_ctx).artifact_for("agent")
+    assert (
+        "approval_mode={'always_require_approval': ['forget', 'remember'], "
+        "'never_require_approval': ['recall']}," in agent
+    )
+
+
+def test_maf_copilot_no_gate_uses_never_require():
+    """An MCP copilot with no confirmation-gated tools mounts with the plain
+    `never_require` approval_mode."""
+    from dna.emit import EmitContext, EmitMcpServer
+    from dna.emit.agent_framework import AgentFrameworkEmitter
+
+    ctx = EmitContext(
+        name="reader",
+        description="",
+        instructions="Read only.",
+        model="azure/gpt-4o",
+        mcp_servers=[EmitMcpServer(ref="dna-mcp", transport="streamable-http",
+                                   url="https://mcp.example/agui", allowed_tools=["recall"])],
+        tools_requiring_confirmation=set(),
+    )
+    agent = AgentFrameworkEmitter().emit(ctx).artifact_for("agent")
+    assert "approval_mode='never_require'," in agent
+    # the docstring names the kwarg; assert the dict ASSIGNMENT is absent.
+    assert "approval_mode={" not in agent
+    assert _compiles(agent)
+
+
+# ── inbound-tenant derivation (ContextVar + header_provider, DNA-native only) ─
+
+
+def test_maf_copilot_derives_inbound_tenant_dna_native(maf_ctx):
+    """When `ctx.tenant_propagate` is set the agent module carries a request-scoped
+    ContextVar + a header_provider stamping the DNA-native tenant headers ONLY
+    (`X-DNA-Tenant` + `X-Tenant-OID`) — no license/namespace."""
+    from dna.emit.agent_framework import AgentFrameworkEmitter
+
+    assert maf_ctx.tenant_propagate is True
+    res = AgentFrameworkEmitter().emit(maf_ctx)
+    agent = res.artifact_for("agent")
+    serving = res.artifact_for("serving")
+    assert "contextvars.ContextVar" in agent
+    assert "def _tenant_header_provider(_existing: dict) -> dict:" in agent
+    # DNA tenancy = three dimensions: tenant (tid) + workspace + user oid.
+    assert '"X-DNA-Tenant"' in agent
+    assert '"X-DNA-Workspace"' in agent
+    assert '"X-Tenant-OID"' in agent
+    assert "header_provider=_tenant_header_provider," in agent
+    # the serving layer sets the ContextVar from inbound headers via middleware.
+    assert '@app.middleware("http")' in serving
+    assert "set_request_tenant(tenant_from_headers(request.headers))" in serving
+    # app-specific tenant dimensions must NOT leak (correction: DNA-native only).
+    for forbidden in ("X-DNA-License-ID", "X-DNA-Namespace-ID", "license_id", "namespace_id"):
+        assert forbidden not in agent
+        assert forbidden not in serving
+
+
+def test_maf_copilot_no_tenant_machinery_when_not_propagated():
+    """A knowledge-only copilot signal with `tenant_propagate=False` emits the
+    plain single agent — no ContextVar, no middleware."""
+    from dna.emit import EmitContext
+    from dna.emit.agent_framework import AgentFrameworkEmitter
+
+    ctx = EmitContext(
+        name="kb-copilot",
+        description="",
+        instructions="Answer from the KB.",
+        model="azure/gpt-4o",
+        knowledge=["some-collection"],  # copilot signal, but no tenant/mcp/hitl
+        tenant_propagate=False,
+    )
+    res = AgentFrameworkEmitter().emit(ctx)
+    agent = res.artifact_for("agent")
+    serving = res.artifact_for("serving")
+    assert "contextvars" not in agent
+    assert "_tenant_header_provider" not in agent
+    assert "middleware" not in serving
+    assert "agent=build_agent()," in serving
+    assert _compiles(agent)
+    assert _compiles(serving)
+
+
+# ── workflow capability (WorkflowBuilder chain + workflow-level request_info) ─
+
+
+def test_maf_workflow_agent_matches_golden(maf_workflow_ctx):
+    from dna.emit.agent_framework import AgentFrameworkEmitter
+
+    res = AgentFrameworkEmitter().emit(maf_workflow_ctx)
+    assert res.artifact_for("agent") == read_golden(
+        "agent_framework/copilot_workflow_agent.py"
+    )
+
+
+def test_maf_workflow_serving_matches_golden(maf_workflow_ctx):
+    from dna.emit.agent_framework import AgentFrameworkEmitter
+
+    res = AgentFrameworkEmitter().emit(maf_workflow_ctx)
+    assert res.artifact_for("serving") == read_golden(
+        "agent_framework/copilot_workflow_serve.py"
+    )
+
+
+def test_maf_workflow_emits_builder_chain(maf_workflow_ctx):
+    """The declared `workflow.chain` becomes a `WorkflowBuilder.add_chain([...])`
+    of one agent-executor per step + the appended escalation node."""
+    from dna.emit.agent_framework import AgentFrameworkEmitter
+
+    assert maf_workflow_ctx.workflow == ["triage", "retrieve", "resolve"]
+    agent = AgentFrameworkEmitter().emit(maf_workflow_ctx).artifact_for("agent")
+    assert "def build_triage_agent() -> Agent:" in agent
+    assert "def build_retrieve_agent() -> Agent:" in agent
+    assert "def build_resolve_agent() -> Agent:" in agent
+    assert "WorkflowBuilder(" in agent
+    assert ".add_chain([triage, retrieve, resolve, escalate])" in agent
+
+
+def test_maf_workflow_level_hitl_request_info(maf_workflow_ctx):
+    """Spec §6.1/§6.5 workflow-level HITL: a `request_info` EscalationExecutor
+    (NOT a tool gate) — and the MCP mount drops to `never_require` because writes
+    are gated at the workflow level instead."""
+    from dna.emit.agent_framework import AgentFrameworkEmitter
+
+    agent = AgentFrameworkEmitter().emit(maf_workflow_ctx).artifact_for("agent")
+    assert "class EscalationExecutor(Executor):" in agent
+    assert "await ctx.request_info(request_data=text, response_type=bool)" in agent
+    assert "@response_handler" in agent
+    # writes gated at workflow level → MCP mount uses never_require, no tool gate.
+    assert "approval_mode='never_require'," in agent
+    assert "approval_mode={" not in agent
+
+
+def test_maf_workflow_serving_mounts_workflow(maf_workflow_ctx):
+    from dna.emit.agent_framework import AgentFrameworkEmitter
+
+    serving = AgentFrameworkEmitter().emit(maf_workflow_ctx).artifact_for("serving")
+    assert "from agent_framework_ag_ui import AgentFrameworkWorkflow" in serving
+    assert "agent=AgentFrameworkWorkflow(workflow_factory=build_workflow)," in serving
+    assert "from memory_agent import build_workflow" in serving
+
+
+def test_maf_plain_agent_still_single_yaml(mi):
+    """Back-compat: a plain agent (no copilot signals) stays the single-artifact
+    PromptAgent YAML — the copilot routing does not disturb the config-declarative
+    path."""
+    from dna.emit import emit_agent
+
+    res = emit_agent(mi, "concierge", "agent-framework")
+    assert [a.role for a in res.artifacts] == ["agent"]
+    assert res.filename.endswith("agent.yaml")
+    assert "kind: Prompt" in res.artifact
+    assert "FoundryChatClient" not in res.artifact
 def test_frontend_emit_is_the_shared_console_tree(fe_ctx):
     """Five files, all ``role="frontend"``, at their target-relative paths."""
     from dna.emit.frontend import emit_frontend_console

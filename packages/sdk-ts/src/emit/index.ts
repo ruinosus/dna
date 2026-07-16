@@ -72,6 +72,10 @@ export interface EmitContext {
   /** RAG collection refs the copilot may read (`knowledge.collections`). Empty
    *  when the copilot declares no knowledge (RAG optional). */
   knowledge: string[];
+  /** Ordered workflow step ids (Copilot `workflow.chain`) — the agent-framework
+   *  (MS Agent Framework) target emits a `WorkflowBuilder` chain + a
+   *  workflow-level escalation node when present. Empty = plain single-agent app. */
+  workflow: string[];
   // ── frontend projections (filled by buildCopilotContext) ──────────────────
   /** The console kind (`Copilot.frontend.console`, e.g. `"copilotkit"`), or null
    *  when the copilot declares no `frontend` block (backend-only). The frontend
@@ -327,6 +331,7 @@ export async function buildEmitContext(
     toolsRequiringConfirmation: new Set<string>(),
     tenantPropagate: false,
     knowledge: [],
+    workflow: [],
     frontendConsole: null,
     frontendPanels: [],
     frontendSuggestedPrompts: [],
@@ -384,6 +389,8 @@ export async function buildCopilotContext(
   const knowledgeBlock = (cspec.knowledge as Record<string, unknown> | undefined) ?? {};
   ctx.knowledge = ((knowledgeBlock.collections as string[] | undefined) ?? []).slice();
 
+  const workflowBlock = (cspec.workflow as Record<string, unknown> | undefined) ?? {};
+  ctx.workflow = ((workflowBlock.chain as string[] | undefined) ?? []).slice();
   // ── frontend projection (Chunk 5) ─────────────────────────────────────────
   // The Copilot's `frontend` + `hitl.approval_card` blocks — consumed ONLY by
   // the frontend emit (`emitFrontendConsole`); the backend scaffold ignores them.
