@@ -33,7 +33,7 @@ import { fileURLToPath } from "node:url";
 
 import Mustache from "mustache";
 
-import { EmitError, type EmitContext, type EmitResult, type EmitterPort } from "./index.js";
+import { EmitError, EmitResult, type EmitContext, type EmitterPort } from "./index.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
@@ -203,13 +203,13 @@ export abstract class ScaffoldEmitter implements EmitterPort {
     const variables = { ...this.commonContext(ctx), ...this.renderContext(ctx, choice.case) };
     const artifact = Mustache.render(choice.template, variables);
     const losses = [...this.commonLosses(ctx, choice), ...this.losses(ctx, choice)];
-    return {
+    return new EmitResult({
       artifact,
       target: this.target,
       filename: `${ctx.name}.${this.fileExtension}`,
       losses,
       mapping: this.mapping(),
-    };
+    });
   }
 
   /** Byte-equal invariant hook: read the top-level `INSTRUCTIONS = <literal>`

@@ -20,8 +20,10 @@ import {
   buildEmitContext,
   availableTargets,
   getEmitter,
+  EmitResult,
   UnknownTarget,
 } from "../src/index.js";
+import { AgnoEmitter } from "../src/emit/agno.js";
 
 const ROOT = join(import.meta.dir, "..", "..", "..");
 const BASE = join(ROOT, "examples", "emitting-to-a-runtime", ".dna");
@@ -81,5 +83,27 @@ describe("EmitterPort contract — over every registered target", () => {
     const ctx = await buildEmitContext(mi, AGENT);
     expect(ctx.instructions).toBe(await mi.buildPrompt({ agent: AGENT }));
     expect(ctx.name).toBe(AGENT);
+  });
+
+  // ── multi-artifact EmitResult (back-compat single) ────────────────────────
+
+  it("multi-artifact byte-equal on the agent role", () => {
+    const res = new EmitResult({
+      target: "x",
+      artifacts: [
+        { path: "agent.py", content: 'INSTRUCTIONS = "hi"\n', role: "agent" },
+        { path: "serve.py", content: "# serve", role: "serving" },
+      ],
+    });
+    expect(new Set(res.artifacts.map((a) => a.role))).toEqual(new Set(["agent", "serving"]));
+    expect(res.artifact).toBe(res.artifactFor("agent"));
+    expect(new AgnoEmitter().extractInstructions(res.artifactFor("agent"))).toBe("hi");
+  });
+
+  it("single-artifact back-compat", () => {
+    const res = new EmitResult({ artifact: "A", target: "x", filename: "a.py" });
+    expect(res.artifact).toBe("A");
+    expect(res.filename).toBe("a.py");
+    expect(res.artifacts.map((a) => a.role)).toEqual(["agent"]);
   });
 });
