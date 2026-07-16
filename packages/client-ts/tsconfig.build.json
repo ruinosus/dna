@@ -1,0 +1,16 @@
+{
+  // Publication build (mirrors packages/sdk-ts): emit ESM JS + .d.ts into
+  // dist/ for the npm package. Dev/tests run straight from src/ under Bun.
+  // This package is pure TypeScript (no runtime asset files to copy), so the
+  // `build` script is a plain tsc emit — no copy-dist-assets step.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "noEmit": false,
+    "sourceMap": false,
+    "declarationMap": false
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "tests"]
+}

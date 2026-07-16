@@ -1,0 +1,53 @@
+{
+  "name": "dna-client",
+  "version": "0.17.0",
+  "description": "DNA — Official TypeScript client for the DNA REST read-API (generated from OpenAPI)",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ruinosus/dna.git",
+    "directory": "packages/client-ts"
+  },
+  "homepage": "https://ruinosus.github.io/dna/",
+  "bugs": "https://github.com/ruinosus/dna/issues",
+  "keywords": [
+    "dna",
+    "client",
+    "rest",
+    "openapi",
+    "typed",
+    "agents",
+    "sdlc"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "build": "rm -rf dist && tsc -p tsconfig.build.json",
+    "gen": "openapi-typescript ../../docs/openapi.json -o src/schema.ts && echo 'regenerated src/schema.ts from docs/openapi.json'"
+  },
+  "dependencies": {
+    "openapi-fetch": "^0.13.0"
+  },
+  "devDependencies": {
+    "bun-types": "^1.3.0",
+    "openapi-typescript": "^7.4.0",
+    "typescript": "^5.5.0"
+  }
+}

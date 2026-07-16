@@ -29,3 +29,34 @@ jobs:
         run: bun test
       - name: Typecheck
         run: bun run typecheck
+
+  client-ts:
+    # dna-client (TypeScript) — the REST read-API client. Types are generated
+    # from docs/openapi.json (openapi-typescript, committed as src/schema.ts);
+    # the usage test drives a stub fetch (no server).
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/client-ts
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Cache bun install cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('packages/client-ts/bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+      - name: Install
+        run: bun install --frozen-lockfile
+      - name: Test
+        run: bun test
+      - name: Typecheck
+        run: bun run typecheck
+      - name: Types are in sync with the committed OpenAPI spec
+        run: |
+          bun run gen
+          git diff --exit-code -- src/schema.ts \
+            || { echo '::error::src/schema.ts is stale vs docs/openapi.json — run `bun run gen` and commit.'; exit 1; }

@@ -14,11 +14,13 @@ Releases are **tag-triggered**: pushing a `vX.Y.Z` tag runs
 
 ## Cutting a release
 
-1. **Bump the version** — the same `X.Y.Z` in all three manifests
+1. **Bump the version** — the same `X.Y.Z` in all manifests
    (the workflow's `sanity` job fails loud on any mismatch):
    - `packages/sdk-py/pyproject.toml` → `version`
    - `packages/cli/pyproject.toml` → `version`
    - `packages/sdk-ts/package.json` → `version`
+   - `packages/client-py/pyproject.toml` → `version` *(once client publishing is enabled — see below)*
+   - `packages/client-ts/package.json` → `version` *(idem)*
 2. **Update `CHANGELOG.md`** — move the `[Unreleased]` content into a new
    `## [X.Y.Z] - YYYY-MM-DD` section and refresh the comparison links at the
    bottom.
@@ -85,6 +87,53 @@ From then on the `publish-npm` job publishes tokenlessly via OIDC
 (`npm publish --provenance`, npm >= 11.5.1 on the runner); its guard step
 skips the publish when the tag's version is already on the registry — so
 running the `v0.1.0` tag after the manual publish stays green.
+
+## The DNA API clients (`dna-client` — PyPI + npm)
+
+The official REST clients (`packages/client-py`, `packages/client-ts`) publish
+from [`.github/workflows/release-client.yml`](.github/workflows/release-client.yml)
+(PyPI `dna-client` env `pypi-client`, npm `dna-client`), tag-triggered like the
+others. They are generated from `docs/openapi.json`; keep their versions in lock
+step with the tag (the workflow's `sanity` job enforces it).
+
+> **DORMANT until enabled.** This is a NEW package line, so publishing needs a
+> one-time account setup only the repo owner can do. Until it is done, the whole
+> `release-client` workflow is **gated off** by the repo variable
+> `DNA_CLIENT_PUBLISH` — every job is a no-op unless it equals `true`, so a
+> release tag never reds on the client jobs while the setup is pending. The
+> build jobs are CI-verified (`typescript.yml` `client-ts` + `python.yml`
+> `client-py`) and smoke-built locally when the feature landed.
+
+**To enable client publishing (the human follow-up for `f-dna-client`):**
+
+1. **PyPI** — add a pending publisher at
+   <https://pypi.org/manage/account/publishing/>:
+
+   | Field | `dna-client` (Python) |
+   |---|---|
+   | PyPI project name | `dna-client` |
+   | Owner / Repo | `ruinosus` / `dna` |
+   | Workflow name | `release-client.yml` |
+   | Environment name | `pypi-client` |
+
+   Then create the matching **GitHub environment** `pypi-client`
+   (Settings → Environments → New environment).
+2. **npm** — do the first `dna-client` publish manually (OIDC can only be
+   configured on an existing package), then set its Trusted Publisher:
+
+   ```bash
+   cd packages/client-ts
+   bun install --frozen-lockfile && bun run build
+   npm login && npm publish --access public
+   ```
+
+   On npmjs.com: package `dna-client` → Settings → Trusted Publisher →
+   repository `ruinosus/dna`, workflow `release-client.yml`.
+3. **Flip the gate** — set the repo variable `DNA_CLIENT_PUBLISH=true`
+   (Settings → Secrets and variables → Actions → Variables). From the next tag,
+   `release-client` runs its `sanity → build → publish` jobs like the others
+   (the npm guard skips a version already on the registry, so the manual
+   first-publish tag stays green).
 
 ## After the workflows go green
 

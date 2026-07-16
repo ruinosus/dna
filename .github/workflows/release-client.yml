@@ -1,0 +1,128 @@
+# Release (dna-client) — publish the official DNA API clients: dna-client to
+# PyPI (Python) and dna-client to npm (TypeScript). Tag-triggered ONLY, exactly
+# like release.yml / release-cli.yml. See RELEASING.md § "The DNA API clients".
+#
+# WHY A SEPARATE WORKFLOW FILE: PyPI trusted-publishing pending publishers are
+# deduplicated on the FULL identity tuple (owner + repo + WORKFLOW FILENAME +
+# environment) and a tuple registers only ONE project name — so each PyPI project
+# gets its own file: dna-sdk in release.yml (env `pypi`), dna-cli in
+# release-cli.yml (env `pypi-cli`), dna-client HERE (env `pypi-client`).
+#
+# DORMANT UNTIL ENABLED (the human follow-up, flagged for f-dna-client): the
+# clients are a NEW package line, so publishing needs a one-time account setup
+# the agent cannot do — register the PyPI pending publisher (project
+# `dna-client`, this file, env `pypi-client`), create the `pypi-client` GitHub
+# environment, and do the npm first-publish + Trusted Publisher for `dna-client`.
+# Until that is done, this whole workflow is GATED OFF by the repo variable
+# `DNA_CLIENT_PUBLISH` (Settings → Variables → Actions). Every job is a no-op
+# `if: vars.DNA_CLIENT_PUBLISH == 'true'`, so tagging a release NEVER reds on the
+# client jobs while the setup is pending. Flip the variable to `true` once the
+# account prerequisites in RELEASING.md are configured. The build jobs are
+# CI-verified (typescript.yml `client-ts` + python.yml `client-py`) and were
+# smoke-built locally when the feature landed.
+name: release-client
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  sanity:
+    if: ${{ vars.DNA_CLIENT_PUBLISH == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tag version must match every client package version
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          CLIENT_PY=$(python3 -c "import tomllib; print(tomllib.load(open('packages/client-py/pyproject.toml','rb'))['project']['version'])")
+          CLIENT_TS=$(python3 -c "import json; print(json.load(open('packages/client-ts/package.json'))['version'])")
+          echo "tag=$TAG  dna-client(py)=$CLIENT_PY  dna-client(npm)=$CLIENT_TS"
+          FAIL=0
+          [ "$TAG" = "$CLIENT_PY" ] || { echo "::error::tag $TAG != packages/client-py version $CLIENT_PY"; FAIL=1; }
+          [ "$TAG" = "$CLIENT_TS" ] || { echo "::error::tag $TAG != packages/client-ts version $CLIENT_TS"; FAIL=1; }
+          exit $FAIL
+
+  build-client-py:
+    if: ${{ vars.DNA_CLIENT_PUBLISH == 'true' }}
+    needs: sanity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+      - name: Build sdist + wheel (dna-client, Python)
+        run: uv build --out-dir dist packages/client-py && ls -l dist/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-client-py
+          path: dist/
+          if-no-files-found: error
+
+  publish-pypi-client:
+    if: ${{ vars.DNA_CLIENT_PUBLISH == 'true' }}
+    needs: build-client-py
+    runs-on: ubuntu-latest
+    # Trusted publishing (OIDC): the environment name is part of the PyPI
+    # pending-publisher identity — keep `pypi-client` in sync with RELEASING.md.
+    environment: pypi-client
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist-client-py
+          path: dist/
+      - name: Publish dna-client to PyPI (trusted publishing)
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
+
+  publish-npm-client:
+    if: ${{ vars.DNA_CLIENT_PUBLISH == 'true' }}
+    needs: sanity
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # OIDC: authenticates the publish + signs provenance (npm trusted
+      # publishing — no NODE_AUTH_TOKEN / NPM_TOKEN secret).
+      id-token: write
+    defaults:
+      run:
+        working-directory: packages/client-ts
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+      - name: Ensure npm supports OIDC trusted publishing (>= 11.5.1)
+        run: npm install -g npm@latest && npm --version
+      - name: Install
+        run: bun install --frozen-lockfile
+      - name: Build (tsc emit)
+        run: bun run build
+      # The FIRST dna-client publish is manual (npm trusted publishing can only
+      # be configured on an existing package — see RELEASING.md). This guard
+      # keeps the tag green then and on any re-run: skip if the version is
+      # already on the registry.
+      - name: Skip if this version is already on npm
+        id: guard
+        run: |
+          VER="${GITHUB_REF_NAME#v}"
+          if npm view "dna-client@${VER}" version >/dev/null 2>&1; then
+            echo "dna-client@${VER} already published — skipping npm publish."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "dna-client@${VER} not on the registry — will publish."
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Publish to npm (OIDC trusted publishing, with provenance)
+        if: steps.guard.outputs.skip == 'false'
+        run: npm publish --provenance --access public
