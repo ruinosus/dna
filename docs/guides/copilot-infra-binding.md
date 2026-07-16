@@ -5,7 +5,7 @@ A servable `Copilot` declares three infra-shaped dimensions —
 and `hosting` (the deployment target). This guide documents how DNA turns those
 declarations into **Terraform module inputs**: the `dna emit <copilot> --infra`
 command renders a `<agent>.tfvars.json` that the DNA Cloud Terraform modules
-(the accepted [Terraform migration ADR][adr]) consume to provision the exact
+(the accepted Terraform migration ADR (in the dna-cloud repo)) consume to provision the exact
 resources the emitted copilot needs — and how each resource's Terraform **output**
 (a connection string / endpoint + secret) is injected back into the copilot's env.
 
@@ -109,7 +109,7 @@ emits:
 ## The module contract — backend / target → what Terraform provisions
 
 Each row is a resource the corresponding `dna-cloud` Terraform module implements
-against the `azurerm` + `azuread` provider conventions the [ADR §8][adr] fixes.
+against the `azurerm` + `azuread` provider conventions the the ADR §8 (dna-cloud repo) fixes.
 The **outputs** column is the seam: the module must expose these so `env_injection`
 can inject them.
 
@@ -154,4 +154,3 @@ two disambiguated env vars — the scaffold reads the one matching the store's `
   `apply` (and the module implementations) are the downstream Terraform-ADR
   execution in `dna-cloud`.
 
-[adr]: ../../../dna-cloud/docs/adr/ADR-terraform-migration.md

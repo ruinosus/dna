@@ -27,6 +27,7 @@ dna emit [OPTIONS] [AGENT]
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
+| `--infra` | Treat AGENT as a Copilot and emit its Terraform infra inputs (<agent>.tfvars.json) — the persistence/knowledge.store/hosting → TF module inputs (f-copilot-infra-binding). |
 | `--json` | Machine-readable output (artifact + de-para). |
 | `--list-targets` | List the registered emit targets and exit. |
 | `--model` | Override the model coordinate (else agent.spec.model / Genome default_llm). |
