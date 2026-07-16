@@ -5,7 +5,9 @@ over the AG-UI protocol at `/agui` via Agno's AgentOS. Run it with any ASGI
 server, e.g. `uvicorn {{agent_module}}_serve:app`.
 
 AgentOS mounts the `AGUI` interface; the mounted agent is built once here via the
-sibling module's `build_agent` factory.
+sibling module's `build_agent` factory. Agno resumes `external_execution` gates
+(the HITL write-tools) natively inside its AG-UI router — this app carries no
+hand-rolled resume machinery.
 """
 from __future__ import annotations
 
@@ -13,11 +15,91 @@ from agno.os import AgentOS
 from agno.os.interfaces.agui import AGUI
 
 from {{agent_module}} import build_agent
+{{#tenant_propagate}}
+from typing import AsyncIterator
+
+from ag_ui.core import RunAgentInput
+from ag_ui.encoder import EventEncoder
+from agno.os.interfaces.agui.router import run_entity
+from agno.os.middleware.user_scope import resolve_run_user_id
+from fastapi import APIRouter, Request
+from fastapi.responses import StreamingResponse
+
+#: Inbound AG-UI request headers → the per-run tenant carrier. Mirrors the
+#: aap-knowledge-base `tenant_from_request`; adjust the header names to your IdP.
+_TENANT_HEADERS = {
+    "license_id": "X-Cockpit-License-ID",
+    "namespace_id": "X-Cockpit-Namespace-ID",
+    "user_id": "X-User-ID",
+    "oid": "X-Tenant-OID",
+}
+
+
+def tenant_from_request(request: Request) -> dict:
+    """Derive the per-run tenant/oid from the inbound AG-UI request headers."""
+    h = request.headers
+    return {key: h.get(header) for key, header in _TENANT_HEADERS.items()}
+
+
+def inject_tenant(run_input: RunAgentInput, tenant: dict) -> None:
+    """Write the request tenant into run-state so the mounted tools read it via
+    `RunContext.session_state` — never a tool param (no LLM-schema leak). Mirrors
+    the aap-knowledge-base `inject_tenant`; frontend-owned state is preserved."""
+    if not isinstance(run_input.state, dict):
+        run_input.state = {}
+    run_input.state["tenant"] = tenant
+
+
+class TenantAGUI(AGUI):
+    """`AGUI` that derives inbound tenant from request headers into run-state
+    before delegating to Agno's own AG-UI run handler (which pauses/resumes
+    `external_execution` gates natively)."""
+
+    def get_router(self) -> APIRouter:
+        router = APIRouter(prefix=self.prefix, tags=self.tags)
+        encoder = EventEncoder()
+        entity = self.agent
+
+        @router.post("/agui", name="run_agent")
+        async def run_agent_agui(request: Request, run_input: RunAgentInput) -> StreamingResponse:
+            inject_tenant(run_input, tenant_from_request(request))
+            client_user_id = (
+                run_input.forwarded_props.get("user_id") if run_input.forwarded_props else None
+            )
+            user_id = resolve_run_user_id(request, client_user_id)
+
+            async def event_generator() -> AsyncIterator[str]:
+                async for event in run_entity(entity, run_input, user_id=user_id):
+                    yield encoder.encode(event)
+
+            return StreamingResponse(
+                event_generator(),
+                media_type="text/event-stream",
+                headers={
+                    "Cache-Control": "no-cache",
+                    "Connection": "keep-alive",
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+                    "Access-Control-Allow-Headers": "*",
+                },
+            )
+
+        @router.get("/status")
+        async def get_status() -> dict:
+            return {"status": "available"}
+
+        self.router = router
+        return router
+
 
 agent = build_agent()
 
-agent_os = AgentOS(agents=[agent], interfaces=[AGUI(agent=agent)])
+agent_os = AgentOS(agents=[agent], interfaces=[TenantAGUI(agent=agent)])
+{{/tenant_propagate}}{{^tenant_propagate}}
+agent = build_agent()
 
+agent_os = AgentOS(agents=[agent], interfaces=[AGUI(agent=agent)])
+{{/tenant_propagate}}
 #: The ASGI app — `uvicorn {{agent_module}}_serve:app`. The AG-UI router is served
 #: at `/agui` (POST run, GET status).
 app = agent_os.get_app()

@@ -370,3 +370,51 @@ def test_copilot_agent_mcp_matches_golden(copilot_ctx):
 
     res = AgnoEmitter().emit(copilot_ctx)
     assert res.artifact_for("agent") == read_golden("agno/copilot_agent.py")
+
+
+# ── Task 4c: inbound-tenant derivation ──────────────────────────────────────
+
+
+def test_copilot_serving_derives_inbound_tenant(copilot_ctx):
+    """When ``ctx.tenant_propagate`` is set the serving layer derives tenant/oid
+    from request headers into run-state; tools read it via RunContext.session_state
+    (mirrors aap-kb ``inject_tenant`` — NOT a propagate_tenant freebie)."""
+    from dna.emit.agno import AgnoEmitter
+
+    assert copilot_ctx.tenant_propagate is True
+    serving = AgnoEmitter().emit(copilot_ctx).artifact_for("serving")
+    assert "class TenantAGUI(AGUI):" in serving
+    assert "def tenant_from_request(request: Request)" in serving
+    assert "def inject_tenant(run_input: RunAgentInput, tenant: dict)" in serving
+    assert 'run_input.state["tenant"] = tenant' in serving
+    assert "from agno.os.interfaces.agui.router import run_entity" in serving
+    assert "interfaces=[TenantAGUI(agent=agent)]" in serving
+
+
+def test_copilot_serving_tenant_matches_golden(copilot_ctx):
+    from dna.emit.agno import AgnoEmitter
+
+    res = AgnoEmitter().emit(copilot_ctx)
+    assert res.artifact_for("serving") == read_golden("agno/copilot_serve.py")
+
+
+def test_copilot_serving_no_tenant_when_not_propagated():
+    """A copilot that does not propagate tenant serves the plain ``AGUI`` — no
+    header-derivation machinery. Synthesized ctx: a knowledge-only copilot signal
+    with ``tenant_propagate=False``."""
+    from dna.emit import EmitContext
+    from dna.emit.agno import AgnoEmitter
+
+    ctx = EmitContext(
+        name="kb-copilot",
+        description="",
+        instructions="Answer from the KB.",
+        model="azure/gpt-4o",
+        knowledge=["some-collection"],  # copilot signal, but no tenant/mcp/hitl
+        tenant_propagate=False,
+    )
+    res = AgnoEmitter().emit(ctx)
+    serving = res.artifact_for("serving")
+    assert "TenantAGUI" not in serving
+    assert "interfaces=[AGUI(agent=agent)]" in serving
+    assert _compiles(serving)
