@@ -13,6 +13,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **SDLC write tools on the DNA MCP server — the board is now creatable +
+  manageable over MCP** (`f-mcp-sdlc-write`, stories `s-mcp-sdlc-write-tools` +
+  `s-mcp-sdlc-write-guard` + `s-mcp-sdlc-write-tests`; epic `e-dna-portability`).
+  The DNA MCP server exposed the SDLC board **read-only** (`sdlc_digest` /
+  `list_stories` / `get_adr`); it now also **writes** it, closing the dogfood loop
+  — any MCP client (Copilot, an agent, a bare client) can create + manage the
+  board over DNA's own interface:
+  - Five write tools mirroring the `dna sdlc` core verbs: `create_story`
+    (`{name, feature, description, title?, priority?, labels?, ac?, dod?}`),
+    `create_issue` (`{slug, description, type?, severity?, feature?}` → auto
+    `i-NNN-<slug>`), `set_status` (`{kind, name, status, reason?}` — refuses a
+    status invalid for the Kind), `comment` (`{kind, name, body, type?}` — the
+    FOCUS-feed narration; a decision-shaped body auto-promotes), and
+    `create_feature` (`{name, title, description, epic?, priority?, labels?}`).
+  - **One write path, two faces.** The write logic is extracted into the
+    transport-agnostic core `dna.application.sdlc` (pure spec builders + timeline
+    event + doc envelope + status-enum guard, plus async kernel-level cores that
+    route through `kernel.write_document` so cache invalidation, hooks + schema
+    validation fire). Both the MCP tools **and** the `dna sdlc` CLI now call it —
+    the CLI's `_build_raw` / `_append_timeline` / `_next_issue_number` + the status
+    enums are thin adapters over the shared core (no duplicated write logic).
+  - **Tenant-scoped + plan-guarded**, mirroring `remember`. Every write tool passes
+    the same `_guard` tenancy + quota seam plus the new `sdlc_mode` gate — the
+    read-vs-write refinement within the `sdlc` feature family (**Free = read**,
+    **Pro = write**): a Free/read-only token writing is honestly denied, its reads
+    stay allowed, and the stdio / local (no-token) path is unmetered + unrestricted.
+    The SDLC board Kinds are `TenantScope.GLOBAL`, so isolation is by **scope**
+    (Model B per-workspace scope), not a tenant overlay.
+  - New `Tier` spec field **`sdlc_mode`** (`none`/`read`/`write`, default `none`;
+    parity-critical Py↔TS descriptor + `sdlc_mode` on the example Free/Pro tiers),
+    and a new timeline **`source: mcp`** so a board write is attributable to the
+    MCP face.
+
 - **Microsoft On-Behalf-Of (OBO) — the `files` tool-group** (`f-mcp-obo`, story
   `s-mcp-obo-files-group`; [ADR-mcp-obo](docs/adr/ADR-mcp-obo.md)). Mirrors the
   calendar slice for OneDrive / SharePoint, read-only over the delegated

@@ -81,6 +81,15 @@ spec:
         default: none
         description: Memory access level granted by the tier — none, read, or
           write.
+      sdlc_mode:
+        type: string
+        enum:
+        - none
+        - read
+        - write
+        default: none
+        description: SDLC board access level granted by the tier — none, read, or
+          write. Read = list/digest/ADR; write = create/transition/comment.
       overage_per_1k_usd:
         type:
         - number

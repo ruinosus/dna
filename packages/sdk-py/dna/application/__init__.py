@@ -12,6 +12,19 @@ both import these use-cases and only translate transport + edge validation
 (auth/quota, request/response shaping, JSON-RPC).
 """
 from dna.application.live import LiveDna
+from dna.application.sdlc import (
+    InvalidTransition,
+    add_comment,
+    comment_impl,
+    create_feature,
+    create_feature_impl,
+    create_issue,
+    create_issue_impl,
+    create_story,
+    create_story_impl,
+    set_status,
+    set_status_impl,
+)
 from dna.application.runtime import (
     BoardItemNotFound,
     MemberForbidden,
@@ -55,6 +68,18 @@ from dna.application.runtime import (
 
 __all__ = [
     "LiveDna",
+    # SDLC write core (shared by the CLI + the MCP write tools)
+    "InvalidTransition",
+    "create_story",
+    "create_issue",
+    "create_feature",
+    "set_status",
+    "add_comment",
+    "create_story_impl",
+    "create_issue_impl",
+    "create_feature_impl",
+    "set_status_impl",
+    "comment_impl",
     "compose_prompt_impl",
     "list_agents_impl",
     "list_tools_impl",

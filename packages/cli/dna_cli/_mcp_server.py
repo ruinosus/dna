@@ -15,7 +15,8 @@ the neutral MCP protocol, so any MCP client (Claude Code/Desktop, Cursor, GitHub
 Copilot, agent-framework, Bedrock AgentCore) reaches it:
 
     definitions  compose_prompt · list_agents · list_tools · get_tool
-    SDLC         sdlc_digest · list_stories · get_adr
+    SDLC (read)  sdlc_digest · list_stories · get_adr
+    SDLC (write) create_story · create_issue · set_status · comment · create_feature
     memory       recall · remember · consolidate · list_memories · forget
     resources    dna://{scope}/manifest · dna://{scope}/agents
 
@@ -55,9 +56,14 @@ from typing import Any
 # enforces MCP-edge concerns (auth/quota). The use-cases are re-exported here so
 # ``dna_cli._mcp_server.compose_prompt_impl`` (etc.) keep resolving for callers.
 from dna.application import (  # noqa: F401 — re-exported for the faces + tests
+    InvalidTransition,
     LiveDna,
+    comment_impl,
     compose_prompt_impl,
     consolidate_impl,
+    create_feature_impl,
+    create_issue_impl,
+    create_story_impl,
     forget_impl,
     get_adr_impl,
     get_skill_impl,
@@ -71,6 +77,7 @@ from dna.application import (  # noqa: F401 — re-exported for the faces + test
     list_tools_impl,
     recall_impl,
     remember_impl,
+    set_status_impl,
 )
 from dna.application.runtime import _collect  # sdlc_digest_impl (deferred) uses it
 
@@ -211,8 +218,10 @@ def build_server(
         FeatureNotInPlanError,
         MemoryModeError,
         OverQuotaError,
+        SdlcModeError,
         enforce_memory_mode,
         enforce_quota,
+        enforce_sdlc_mode,
     )
     from dna.tenancy.resolution import CrossWorkspaceError
 
@@ -234,6 +243,7 @@ def build_server(
     async def _guard(
         family: str, requested: str | None = None, *,
         scope: str | None = None, memory_op: str | None = None,
+        sdlc_op: str | None = None,
     ) -> str | None:
         """The single tenancy + quota seam every tool passes through.
 
@@ -297,12 +307,15 @@ def build_server(
             row = await kernel.tier("free")  # unknown tier → Free floor.
         caps = (row or {}).get("spec") or {}  # no tiers configured → empty → no-op.
         try:
-            # memory_mode is a pre-counter gate (like the family gate): a denied
-            # write costs no quota. Enforce it BEFORE metering.
+            # memory_mode / sdlc_mode are pre-counter gates (like the family gate):
+            # a denied write costs no quota. Enforce them BEFORE metering.
             if memory_op is not None:
                 enforce_memory_mode(caps=caps, tier=tier, op=memory_op)
+            if sdlc_op is not None:
+                enforce_sdlc_mode(caps=caps, tier=tier, op=sdlc_op)
             enforce_quota(caps=caps, tenant=tenant, tier=tier, family=family)
-        except (OverQuotaError, FeatureNotInPlanError, MemoryModeError) as exc:
+        except (OverQuotaError, FeatureNotInPlanError, MemoryModeError,
+                SdlcModeError) as exc:
             raise ToolError(str(exc)) from None
         return tenant
 
@@ -355,8 +368,11 @@ def build_server(
             "The DNA runtime face — the LIVE, vendor-neutral intelligence layer. "
             "One server exposes everything DNA stores: agent DEFINITIONS composed "
             "live and tenant-aware (compose_prompt/list_agents/list_tools/get_tool), "
-            "the self-describing SDLC board (sdlc_digest/list_stories/get_adr), and "
-            "declarative MEMORY (recall/remember/consolidate/list_memories/forget). "
+            "the self-describing SDLC board — READABLE "
+            "(sdlc_digest/list_stories/get_adr) AND WRITABLE "
+            "(create_story/create_issue/set_status/comment/create_feature), so an "
+            "agent can create + manage the board over MCP — and declarative MEMORY "
+            "(recall/remember/consolidate/list_memories/forget). "
             "Unlike a static emit "
             "artifact, compose_prompt composes on demand — so per-tenant overlays "
             "and no-deploy changes are preserved."
@@ -457,6 +473,103 @@ def build_server(
     async def get_adr(name: str, scope: str | None = None) -> dict[str, Any]:
         """Fetch one ADR (Architecture Decision Record) verbatim."""
         return await get_adr_impl(await _live(), name, scope, await _guard("sdlc", scope=scope))
+
+    # -- SDLC writes (the board is CREATABLE + MANAGEABLE over MCP) -----------
+    #
+    # The write half of the board: close the dogfood loop so any MCP client
+    # (Copilot / an agent / a bare client) can create + manage the board over its
+    # own interface, not just read it. Each write tool passes the SAME `_guard`
+    # tenancy + quota seam as every other tool, PLUS `sdlc_op="write"` — the finer
+    # read-vs-write gate within the `sdlc` family (Free=read/list-only,
+    # Pro=write), mirroring memory's `remember`. A denied write is an honest
+    # ToolError; the stdio/OSS (no-token) path is unmetered + unrestricted. The
+    # write logic is the shared `dna.application.sdlc` core the `dna sdlc` CLI
+    # also calls — one write path through `kernel.write_document`.
+
+    @server.tool(run_in_thread=False)
+    async def create_story(
+        name: str, feature: str, description: str,
+        title: str | None = None, priority: str | None = None,
+        labels: list[str] | None = None,
+        ac: list[str] | None = None, dod: list[str] | None = None,
+        scope: str | None = None,
+    ) -> dict[str, Any]:
+        """Create a Story on the board. ``feature`` is the parent Feature; ``ac`` /
+        ``dod`` are the acceptance-criteria / definition-of-done bullets (the exit
+        criteria). Returns ``{kind, name, status, feature}``. A write op — needs a
+        tier whose ``sdlc_mode`` is ``write``."""
+        return await create_story_impl(
+            await _live(), name, feature=feature, description=description,
+            title=title, priority=priority, labels=labels,
+            acceptance_criteria=ac, definition_of_done=dod, scope=scope,
+            tenant=await _guard("sdlc", scope=scope, sdlc_op="write"),
+        )
+
+    @server.tool(run_in_thread=False)
+    async def create_issue(
+        slug: str, description: str, type: str = "bug", severity: str = "medium",
+        feature: str | None = None, scope: str | None = None,
+    ) -> dict[str, Any]:
+        """File an Issue (bug / enhancement / question / task) with an
+        auto-incremented ``i-NNN-<slug>`` name. Returns ``{kind, name, type,
+        severity}``. A write op — needs ``sdlc_mode='write'``."""
+        return await create_issue_impl(
+            await _live(), slug, description=description, issue_type=type,
+            severity=severity, related_feature=feature, scope=scope,
+            tenant=await _guard("sdlc", scope=scope, sdlc_op="write"),
+        )
+
+    @server.tool(run_in_thread=False)
+    async def set_status(
+        kind: str, name: str, status: str, reason: str | None = None,
+        scope: str | None = None,
+    ) -> dict[str, Any]:
+        """Transition a board item's status. ``kind`` is Story / Issue / Feature /
+        Epic; ``status`` must be a valid status for that Kind (e.g. Story:
+        todo/in-progress/review/done/blocked; Issue: open/triaged/resolved;
+        Feature: discovery/in-development/done). An invalid target is refused. Pass
+        ``reason`` to record a block reason / resolution. A write op —
+        ``sdlc_mode='write'``."""
+        tenant = await _guard("sdlc", scope=scope, sdlc_op="write")
+        try:
+            return await set_status_impl(
+                await _live(), kind, name, status, reason=reason, scope=scope,
+                tenant=tenant,
+            )
+        except (InvalidTransition, LookupError) as exc:
+            raise ToolError(str(exc)) from None
+
+    @server.tool(run_in_thread=False)
+    async def comment(
+        kind: str, name: str, body: str, type: str | None = None,
+        scope: str | None = None,
+    ) -> dict[str, Any]:
+        """Add a timeline comment (or ``type='decision'``) to a board item WITHOUT
+        changing its status — the FOCUS-feed narration ("agora vou fazer X",
+        "decidi Y porque Z"). A decision-shaped body auto-promotes. A write op —
+        ``sdlc_mode='write'``."""
+        tenant = await _guard("sdlc", scope=scope, sdlc_op="write")
+        try:
+            return await comment_impl(
+                await _live(), kind, name, body, event_type=type, scope=scope,
+                tenant=tenant,
+            )
+        except (InvalidTransition, LookupError) as exc:
+            raise ToolError(str(exc)) from None
+
+    @server.tool(run_in_thread=False)
+    async def create_feature(
+        name: str, title: str, description: str, epic: str | None = None,
+        priority: str | None = None, labels: list[str] | None = None,
+        scope: str | None = None,
+    ) -> dict[str, Any]:
+        """Create a Feature (a roadmap noun; optionally under an ``epic``). Returns
+        ``{kind, name, status}``. A write op — ``sdlc_mode='write'``."""
+        return await create_feature_impl(
+            await _live(), name, title=title, description=description, epic=epic,
+            priority=priority, labels=labels, scope=scope,
+            tenant=await _guard("sdlc", scope=scope, sdlc_op="write"),
+        )
 
     # -- memory --------------------------------------------------------------
 

@@ -14,5 +14,6 @@ spec:
   - sdlc
   - memory
   memory_mode: read
+  sdlc_mode: read
   overage_per_1k_usd: null
   sla: false
