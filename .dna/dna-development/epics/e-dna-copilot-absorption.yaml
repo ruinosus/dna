@@ -1,0 +1,22 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Epic
+metadata:
+  name: e-dna-copilot-absorption
+spec:
+  title: "AG-UI copilot absorption \u2014 emit servable copilots from DNA"
+  description: 'Absorb the ''AG-UI copilot'' scaffold that foundry-assured (MS Agent
+    Framework) and aap-knowledge-base (Agno) independently hand-built into DNA''s
+    emitter surface: one declarative definition emits a full servable AG-UI copilot
+    (agent + MCP-tool-mount + AG-UI serving + HITL + tenant-injection + optional retrieval/knowledge)
+    for any target runtime. Single evolution point; DNA Cloud + foundry + aap-kb become
+    consumers. Under the portability thrust (e-dna-portability).'
+  status: planning
+  reporter: claude-code
+  created_at: '2026-07-16T10:34:42+00:00'
+  updated_at: '2026-07-16T10:34:42+00:00'
+  timeline:
+  - at: '2026-07-16T10:34:42+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: planning
