@@ -1,0 +1,12 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: Agent
+metadata:
+  name: pure-action-agent
+  description: A pure-action copilot's mounted agent — one local tool, no MCP
+    server, no RAG. Exercises the "everything optional is absent" projection.
+spec:
+  instruction: |-
+    Ping the service and report the result.
+  model: azure/gpt-4o
+  tools:
+  - ping

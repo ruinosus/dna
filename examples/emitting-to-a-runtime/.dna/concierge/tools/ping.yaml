@@ -1,0 +1,16 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: Tool
+metadata:
+  name: ping
+  description: Ping the service and return its health status.
+spec:
+  type: builtin
+  input_schema:
+    type: object
+    properties:
+      host:
+        type: string
+        description: Host to ping (default the configured service).
+  read_only: true
+  tags:
+  - health

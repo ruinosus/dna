@@ -14,6 +14,7 @@ malformed spec raises (jsonschema ``required``/``enum`` violations surface as
 """
 from __future__ import annotations
 
+import pathlib
 import types
 
 import pytest
@@ -124,3 +125,38 @@ def test_copilot_kind_accepts_full_optional_shape():
     assert doc.spec.hitl.approval_card.title == "Confirm write"
     assert doc.spec.knowledge.collections[0] == "aap-knowledge-base"
     assert doc.spec.frontend.console == "copilotkit"
+
+
+# ── Chunk 3 · the Copilot → EmitContext seam ────────────────────────────────
+#
+# A live filesystem scope (``examples/emitting-to-a-runtime/.dna``) carries the
+# copilot fixtures: ``memory-copilot`` mounts ``memory-agent`` (an MCP-mounted,
+# HITL-gated agent) and ``pure-action-copilot`` mounts ``pure-action-agent``
+# (one local tool, no MCP, no RAG). ``build_copilot_context`` resolves each
+# Copilot doc to the mounted agent's base EmitContext and enriches it.
+
+_ROOT = pathlib.Path(__file__).resolve().parents[3]
+_BASE = str(_ROOT / "examples" / "emitting-to-a-runtime" / ".dna")
+_SCOPE = "concierge"
+
+
+@pytest.fixture()
+def mi():
+    from dna.kernel import Kernel
+
+    return Kernel.quick(_SCOPE, base_dir=_BASE)
+
+
+# ── Task 3a: build_copilot_context resolves the mounted agent's base ctx ─────
+
+
+def test_build_copilot_context_resolves_mounted_agent(mi):
+    from dna.emit import build_copilot_context
+
+    ctx = build_copilot_context(
+        mi, "memory-copilot", model="azure/gpt-4o", provider="azure"
+    )
+    # The base ctx is the MOUNTED agent's — name + instructions come from it,
+    # unchanged (the byte-equal instruction contract stays intact).
+    assert ctx.name == "memory-agent"
+    assert ctx.instructions == mi.build_prompt("memory-agent")
