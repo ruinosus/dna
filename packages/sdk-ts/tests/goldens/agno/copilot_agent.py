@@ -5,7 +5,7 @@ DNA-composed prompt (Soul + guardrails + instruction), carried byte-equal — ed
 the agent in DNA and re-emit, never hand-edit the prompt here.
 
 `build_agent` is the per-run factory (cheap + network-free — mirrors the
-aap-knowledge-base agent factory): the serving layer calls it with the run's
+Agno KB reference agent factory): the serving layer calls it with the run's
 session_state so tenant/knowledge stay fresh without a restart.
 """
 from __future__ import annotations

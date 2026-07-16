@@ -5,10 +5,10 @@ metadata:
 spec:
   title: "AG-UI copilot absorption \u2014 emit servable copilots from DNA"
   description: 'Absorb the ''AG-UI copilot'' scaffold that foundry-assured (MS Agent
-    Framework) and aap-knowledge-base (Agno) independently hand-built into DNA''s
+    Framework) and the Agno KB reference app independently hand-built into DNA''s
     emitter surface: one declarative definition emits a full servable AG-UI copilot
     (agent + MCP-tool-mount + AG-UI serving + HITL + tenant-injection + optional retrieval/knowledge)
-    for any target runtime. Single evolution point; DNA Cloud + foundry + aap-kb become
+    for any target runtime. Single evolution point; DNA Cloud + foundry + the KB reference app become
     consumers. Under the portability thrust (e-dna-portability).'
   status: planning
   reporter: claude-code

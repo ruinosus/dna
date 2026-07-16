@@ -114,7 +114,7 @@ def test_copilot_kind_accepts_full_optional_shape():
             "details_from": "args.text",
             "reason_from": "args.reason",
         }},
-        "knowledge": {"collections": ["aap-knowledge-base"]},
+        "knowledge": {"collections": ["knowledge-base"]},
         "frontend": {
             "console": "copilotkit",
             "panels": ["memory-timeline"],
@@ -123,7 +123,7 @@ def test_copilot_kind_accepts_full_optional_shape():
     })
     assert doc.spec.tenant.propagate is True
     assert doc.spec.hitl.approval_card.title == "Confirm write"
-    assert doc.spec.knowledge.collections[0] == "aap-knowledge-base"
+    assert doc.spec.knowledge.collections[0] == "knowledge-base"
     assert doc.spec.frontend.console == "copilotkit"
 
 
@@ -204,7 +204,7 @@ def test_copilot_ctx_projects_knowledge(mi):
     from dna.emit import build_copilot_context
 
     ctx = build_copilot_context(mi, "memory-copilot", model="azure/gpt-4o")
-    assert ctx.knowledge == ["aap-knowledge-base"]
+    assert ctx.knowledge == ["knowledge-base"]
 
 
 # ── Task 3b negatives: everything optional is empty when undeclared ──────────
@@ -378,7 +378,7 @@ def test_copilot_agent_mcp_matches_golden(copilot_ctx):
 def test_copilot_serving_derives_inbound_tenant(copilot_ctx):
     """When ``ctx.tenant_propagate`` is set the serving layer derives tenant/oid
     from request headers into run-state; tools read it via RunContext.session_state
-    (mirrors aap-kb ``inject_tenant`` — NOT a propagate_tenant freebie)."""
+    (mirrors the Agno KB reference ``inject_tenant`` — NOT a propagate_tenant freebie)."""
     from dna.emit.agno import AgnoEmitter
 
     assert copilot_ctx.tenant_propagate is True
@@ -471,7 +471,7 @@ def test_copilot_no_gate_when_no_confirmation_tools():
 # dep; this slice needs a live agno/ag-ui/fastapi/mcp/openai stack to IMPORT the
 # emitted app and drive a real run. It proves the emitted shape end-to-end and
 # that the external_execution pause/resume the emitted MCP-gate relies on behaves
-# exactly as Spike 0A + the aap-kb reference recorded.
+# exactly as Spike 0A + the Agno KB reference recorded.
 
 import sys as _sys
 
@@ -532,7 +532,7 @@ def test_emitted_copilot_pauses_and_resumes_on_gate(tmp_path):
     agno with a stub model + a local ``external_execution`` tool (a live MCP
     connection is out of scope). A ``remember`` turn PAUSES (RunStatus.paused,
     tools_awaiting_external_execution == ['remember']); ``acontinue_run`` resumes
-    to completion — matching Spike 0A + aap-kb ``agui_hitl``."""
+    to completion — matching Spike 0A + the Agno KB reference ``agui_hitl``."""
     pytest.importorskip("agno")
     pytest.importorskip("openai")
     import asyncio

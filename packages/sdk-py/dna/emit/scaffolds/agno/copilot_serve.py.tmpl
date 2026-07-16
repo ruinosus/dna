@@ -26,10 +26,10 @@ from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 
 #: Inbound AG-UI request headers → the per-run tenant carrier. Mirrors the
-#: aap-knowledge-base `tenant_from_request`; adjust the header names to your IdP.
+#: Agno KB reference `tenant_from_request`; adjust the header names to your IdP.
 _TENANT_HEADERS = {
-    "license_id": "X-Cockpit-License-ID",
-    "namespace_id": "X-Cockpit-Namespace-ID",
+    "license_id": "X-DNA-License-ID",
+    "namespace_id": "X-DNA-Namespace-ID",
     "user_id": "X-User-ID",
     "oid": "X-Tenant-OID",
 }
@@ -44,7 +44,7 @@ def tenant_from_request(request: Request) -> dict:
 def inject_tenant(run_input: RunAgentInput, tenant: dict) -> None:
     """Write the request tenant into run-state so the mounted tools read it via
     `RunContext.session_state` — never a tool param (no LLM-schema leak). Mirrors
-    the aap-knowledge-base `inject_tenant`; frontend-owned state is preserved."""
+    the Agno KB reference `inject_tenant`; frontend-owned state is preserved."""
     if not isinstance(run_input.state, dict):
         run_input.state = {}
     run_input.state["tenant"] = tenant

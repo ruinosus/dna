@@ -9,7 +9,7 @@
 **Tech Stack:** Python (`dna/emit`, `dna/extensions`), TypeScript twin (`sdk-ts/src/emit`), Agno 2.x + AgentOS, `ag-ui-protocol`, pytest, the existing `test_emit_contract.py` parity harness.
 
 **Spec:** `docs/design/2026-07-16-copilot-absorption-design.md` (this repo).
-**Scope note:** Plan 1 = the emitter skeleton (absorption phases 0–2 + the Agno scaffold). Plan 2 = the DNA Cloud consumer (`dna-cloud`, `s-copilot-design-spec`), written after the spikes + Kind land. Later fill-out (MS-AF scaffold, shared frontend, `MCPFederation` RBAC extension, foundry/aap-kb retrofit) = Plan 3.
+**Scope note:** Plan 1 = the emitter skeleton (absorption phases 0–2 + the Agno scaffold). Plan 2 = the DNA Cloud consumer (`dna-cloud`, `s-copilot-design-spec`), written after the spikes + Kind land. Later fill-out (MS-AF scaffold, shared frontend, `MCPFederation` RBAC extension, foundry/KB-reference-app retrofit) = Plan 3.
 
 ---
 
@@ -55,9 +55,9 @@ dna sdlc spike create sp-copilot-hitl-on-mcp \
 dna sdlc spike start sp-copilot-hitl-on-mcp --scope dna-development
 ```
 
-- [ ] **Step 2: Stand up a minimal MCP server with one write tool** under `scratch/copilot-spikes/hitl_on_mcp/`. A tiny FastMCP server exposing `remember(text) -> str` (streamable-http). Reuse the `aap-knowledge-base` `mcp:` reference `MCPTools(url, transport="streamable-http")` (`apps/agent/src/agents/factory.py:90`, `_build_mcp_tools`).
+- [ ] **Step 2: Stand up a minimal MCP server with one write tool** under `scratch/copilot-spikes/hitl_on_mcp/`. A tiny FastMCP server exposing `remember(text) -> str` (streamable-http). Reuse the Agno KB reference app's `mcp:` reference `MCPTools(url, transport="streamable-http")` (its `apps/agent/src/agents/factory.py:90`, `_build_mcp_tools`).
 
-- [ ] **Step 3: Build an Agno agent that mounts it and try to gate it.** Attempt `@tool(external_execution=True)` semantics on the MCP-provided `remember`. Run a turn that calls it and inspect `agent.get_last_run_output(session_id=…).tools_awaiting_external_execution` (the aap-kb pattern — note the accessor takes `session_id`, `core/agui_hitl.py:85`).
+- [ ] **Step 3: Build an Agno agent that mounts it and try to gate it.** Attempt `@tool(external_execution=True)` semantics on the MCP-provided `remember`. Run a turn that calls it and inspect `agent.get_last_run_output(session_id=…).tools_awaiting_external_execution` (the Agno KB reference pattern — note the accessor takes `session_id`, `core/agui_hitl.py:85`).
 
 - [ ] **Step 4: Record the verdict on the Spike doc.** (a) YES → the emitter can gate the remote tool directly. (b) NO → the emitter emits a **local wrapper tool** that calls the MCP tool, with `external_execution` on the wrapper. Answer the spike:
 
@@ -267,11 +267,11 @@ git commit -am "feat(emit): build_copilot_context + project mcp_servers/hitl-int
 
 - [ ] **Task 4b — MCP-tool mount.** Failing golden slice: the emitted agent builds `MCPTools(url, transport="streamable-http")` from `ctx.mcp_servers`. Extend template → regen golden → PASS → commit.
 
-- [ ] **Task 4c — inbound-tenant derivation.** Failing golden slice: the emitted serving layer derives tenant/`oid` from request headers into run-state, tools read via `RunContext.session_state` (NOT a `propagate_tenant` freebie; mirrors aap-kb `inject_tenant`). Extend → regen → PASS → commit.
+- [ ] **Task 4c — inbound-tenant derivation.** Failing golden slice: the emitted serving layer derives tenant/`oid` from request headers into run-state, tools read via `RunContext.session_state` (NOT a `propagate_tenant` freebie; mirrors the Agno KB reference `inject_tenant`). Extend → regen → PASS → commit.
 
 - [ ] **Task 4d — HITL per Spike 0A.** Failing golden slice: if 0A=YES, the emitted agent gates the MCP write tool directly; if 0A=NO, it emits a **local wrapper tool** carrying `external_execution` that calls the MCP write. Non-HITL tool bodies stay stubs (per-app fill). Extend → regen → PASS → commit.
 
-- [ ] **Task 4e — Integration test.** The emitted app imports, mounts `/agui`, and (with a fake MCP) a `remember` turn pauses for HITL; assert the pause/resume shape matches the aap-kb reference (`core/agui_hitl.py`). Commit.
+- [ ] **Task 4e — Integration test.** The emitted app imports, mounts `/agui`, and (with a fake MCP) a `remember` turn pauses for HITL; assert the pause/resume shape matches the Agno KB reference (`core/agui_hitl.py`). Commit.
 
 - [ ] **Task 4f — TS parity.** Backend scaffold parity Py↔TS (byte-identical template + render context); run the emit parity/contract suite. Commit.
 
@@ -284,7 +284,7 @@ git commit -am "feat(emit): Agno copilot scaffold — servable /agui (mount+tena
 ## Subsequent chunks (separate plans — do NOT build here)
 
 - **Plan 2 — DNA Cloud consumer** (`dna-cloud`): author the `.dna/dna-cloud/copilots/memory.yaml`, emit it via this Agno scaffold, wire the CopilotKit console + MCP-token acquisition. Written after Chunks 0–4 land + the spikes resolve.
-- **Plan 3 — fill-out:** MS Agent Framework scaffold case (+ `workflow` capability for foundry's workflow-HITL); the shared CopilotKit frontend scaffold + per-runtime resume-adapter; the `MCPFederation` read/write + min-role RBAC extension; foundry/aap-kb retrofit validation.
+- **Plan 3 — fill-out:** MS Agent Framework scaffold case (+ `workflow` capability for foundry's workflow-HITL); the shared CopilotKit frontend scaffold + per-runtime resume-adapter; the `MCPFederation` read/write + min-role RBAC extension; foundry/KB-reference-app retrofit validation.
 
 ---
 

@@ -59,7 +59,7 @@ describe("buildCopilotContext — the Copilot → EmitContext seam", () => {
     const mi = await quickInstance(SCOPE, BASE);
     const ctx = await buildCopilotContext(mi, "memory-copilot", { model: "azure/gpt-4o" });
     expect(ctx.tenantPropagate).toBe(true);
-    expect(ctx.knowledge).toEqual(["aap-knowledge-base"]);
+    expect(ctx.knowledge).toEqual(["knowledge-base"]);
   });
 
   // ── negatives: everything optional is empty when undeclared ───────────────

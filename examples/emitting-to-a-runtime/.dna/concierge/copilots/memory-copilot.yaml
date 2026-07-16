@@ -4,7 +4,7 @@ metadata:
   name: memory-copilot
   description: A servable AG-UI memory copilot — mounts memory-agent, propagates
     inbound tenant, gates writes with an approval card, and may read the
-    aap-knowledge-base collection.
+    knowledge-base collection.
 spec:
   mounts:
   - id: memory
@@ -21,7 +21,7 @@ spec:
       reason_from: args.reason
   knowledge:
     collections:
-    - aap-knowledge-base
+    - knowledge-base
   frontend:
     console: copilotkit
     panels:

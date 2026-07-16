@@ -3,7 +3,7 @@
 **Date:** 2026-07-16 · **Status:** Draft (for owner review)
 **Epic:** `e-dna-copilot-absorption` · **Feature:** `f-dna-copilot-emitter`
 **First consumer:** `f-dna-cloud-copilot` (dna-cloud-dev)
-**Inputs:** diff-study of `foundry-assured` (MS Agent Framework) + `aap-knowledge-base` (Agno);
+**Inputs:** diff-study of `foundry-assured` (MS Agent Framework) + the Agno KB reference app;
 prior-art brief `dna-cloud/docs/research/2026-07-16-copilot-agentic-ui-stack.md`.
 
 ---
@@ -16,13 +16,13 @@ two different agent runtimes:
 - **`foundry-assured`** — Microsoft Agent Framework; `/helpdesk` over AG-UI; agents
   declared in `.dna/helpdesk/agents/*.yaml`. **It already runs on DNA** for the
   instruction layer (`Kernel.quick(".dna/helpdesk")` → `mi.build_prompt`).
-- **`aap-knowledge-base`** — Agno + AgentOS; `/agui`; agents as `Content` rows;
+- **The Agno KB reference app** — Agno + AgentOS; `/agui`; agents as `Content` rows;
   MCP-tool mounting, HITL, tenant injection all hand-rolled.
 
 That convergence is the case for absorption: **make the AG-UI copilot a first-class
 DNA emit capability**, so one declarative definition emits a full servable copilot
 for any target runtime. DNA becomes the **single evolution point**; DNA Cloud,
-foundry, and aap-kb become **consumers**.
+foundry, and the KB reference app become **consumers**.
 
 ### The key finding — and its honest limit
 The declarative **field substrate for the hard parts already exists in DNA's Kinds**
@@ -37,7 +37,7 @@ The declarative **field substrate for the hard parts already exists in DNA's Kin
 **But "stop dropping + emit" is honest only about the KINDS, not the total effort.**
 The *servable runtime* — the AG-UI serving glue, the paused-run resume machinery, the
 **inbound** frontend→run-state tenant derivation — is hand-written in the two apps and
-exists in **neither** DNA today. `aap-kb`'s `agui_hitl.py` is ~391 lines of resume +
+exists in **neither** DNA today. The KB reference app's `agui_hitl.py` is ~391 lines of resume +
 inject + a re-emit de-dup fix; `foundry` needs `stream_fix.py` to suppress duplicated
 events. Both are **explicitly temporary, version-pinned workarounds** (Agno 2.6 /
 CopilotKit 1.60 / agent-framework-ag-ui 1.0rc5). Reproducing that glue as byte-stable
@@ -146,7 +146,7 @@ DNA. The emitted scaffold must **generate the inbound derivation** — it is not
 ### 6.1 HITL — the gate emits the TOOL-level idiom only; workflow HITL is separate
 There are **two different HITL mechanisms**, and `Tool.requires_confirmation` can only
 derive one:
-- **Tool-level** (`aap-kb`): `@tool(external_execution=True)` + `acontinue_run`
+- **Tool-level** (the Agno KB reference): `@tool(external_execution=True)` + `acontinue_run`
   continuing the same run. This **IS** derivable from `Tool.requires_confirmation` →
   the emitter emits it. This is what the DNA Cloud consumer uses.
 - **Workflow-level** (`foundry`): a workflow `request_info` **Executor** node, fused
@@ -169,7 +169,7 @@ tool is **unproven** → a spike gates phase 1 (§8). The safe fallback: gate a 
 wrapper tool** that calls the MCP tool, so the confirmation lives on a local callable.
 
 ### 6.2 Frontend — one shared template + a tiny per-runtime resume-adapter
-Both frontends are ~95% generic CopilotKit v2 + `HttpAgent`. `aap-kb`'s web app has
+Both frontends are ~95% generic CopilotKit v2 + `HttpAgent`. The KB reference app's web app has
 **zero** backend leak; `foundry` leaks exactly four things (the `withResumeBridge`
 dict shape, the `TicketApproval` `request_info` matcher, `WorkflowSteps`
 `executor_id/ActivitySnapshot`, hardcoded step ids). → **one shared frontend scaffold
@@ -181,7 +181,7 @@ RAG is **NOT** a mandatory pillar. The Kind carries a `knowledge.collections` re
 the **retrieval implementation stays per-app / native DNA search** (`search:
 pgvector|sqlite-vec` + `embedding` + `graph` in `dna/config.py`). A copilot with no
 corpus (pure-action) declares no `knowledge` — `search: off` is valid. `foundry`'s
-`AzureAISearchContextProvider(mode="agentic")` + ACL-trim and `aap-kb`'s Agno
+`AzureAISearchContextProvider(mode="agentic")` + ACL-trim and the KB reference app's Agno
 `Knowledge`/PgVector are per-app retrieval impls, not absorbed.
 
 ### 6.4 MCPFederation extension — the one real new work
@@ -247,7 +247,7 @@ Rule of three is met: 2 hand-built references + DNA Cloud as the first emitted c
 5. **Shared frontend scaffold** + per-runtime resume-adapter.
 6. **(a)** `MCPFederation` read/write + min-role extension (foundry RBAC); **(b)** the
    `workflow` capability (foundry's workflow-level HITL depends on it — §6.5).
-7. **Retrofit `foundry` + `aap-kb`** — validation that the emitter reproduces both.
+7. **Retrofit `foundry` + the KB reference app** — validation that the emitter reproduces both.
 
 Steps 0–3 are the walking skeleton **and** where the risk is concentrated; 4–7 are the
 fill-out. Extract the scaffold from the concrete Agno case (2/3) rather than designing
@@ -299,4 +299,4 @@ shared CopilotKit frontend scaffold + a per-runtime resume adapter; and one Kind
 extension (`MCPFederation` read/write + min-role) plus the `workflow` capability to
 retrofit foundry's workflow-coupled HITL. Two unknowns gate the start (HITL-on-MCP,
 multi-artifact port) and must be spiked first. DNA Cloud's Memory copilot is the first
-emitted consumer; foundry and aap-kb are the retrofit validation.
+emitted consumer; foundry and the KB reference app are the retrofit validation.

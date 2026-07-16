@@ -3,9 +3,9 @@ kind: Feature
 metadata:
   name: f-copilot-retrofit
 spec:
-  title: Retrofit foundry-assured + aap-knowledge-base onto the emitter
+  title: Retrofit foundry-assured + the Agno KB reference app onto the emitter
   description: "Absorption phase 7 \u2014 validation that the emitter REPRODUCES the\
-    \ two hand-built references: emit foundry's .dna/helpdesk agents + aap-kb's agents\
+    \ two hand-built references: emit foundry's .dna/helpdesk agents + the KB reference app's agents\
     \ from the Copilot emit, diff against the hand-written backends (converge modulo\
     \ per-app tool bodies). Closes the loop: the two apps become emitted consumers,\
     \ single evolution point achieved. Depends on f-copilot-agentframework-target\
