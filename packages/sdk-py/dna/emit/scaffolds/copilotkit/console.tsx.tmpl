@@ -83,22 +83,14 @@ function Console() {
     </div>
   );
 }
-{{#tenant_propagate}}
-// Inbound tenant headers the /agui backend derives into run-state. DNA's tenant
-// model is `tenant` (the workspace / Entra `tid`) + `personal:<oid>` (per-user
-// memory, `oid` server-derived). Only `X-DNA-Tenant` is set here from the app's
-// session; `X-Tenant-OID` is added server-side from the verified access token
-// (never trust a client-supplied oid). No license/namespace dimension exists.
-function dnaTenantHeaders(): Record<string, string> {
-  const headers: Record<string, string> = {};
-  const tenant = process.env.NEXT_PUBLIC_DNA_TENANT;
-  if (tenant) headers["X-DNA-Tenant"] = tenant;
-  return headers;
-}
-{{/tenant_propagate}}
+
+// The console is browser-side (a client component), so it sends NO tenant
+// headers: DNA's inbound tenant/workspace/oid are trusted server-to-server
+// headers stamped by the CopilotKit route (`app/api/copilotkit/route.ts`) from
+// the portal's verified session — never the browser.
 export function CopilotConsole() {
   return (
-    <CopilotKitProvider runtimeUrl="/api/copilotkit"{{#tenant_propagate}} headers={dnaTenantHeaders()}{{/tenant_propagate}}>
+    <CopilotKitProvider runtimeUrl="/api/copilotkit">
       <Console />
     </CopilotKitProvider>
   );

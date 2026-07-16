@@ -746,17 +746,34 @@ def test_frontend_console_gates_write_tools_via_hitl(fe_ctx):
     assert 'pick(args as Record<string, unknown>, "args.reason")' in console
 
 
-def test_frontend_console_forwards_only_dna_tenant_headers(fe_ctx):
-    """DNA tenant model: X-DNA-Tenant (workspace) + X-Tenant-OID (server-derived).
-    NO license/namespace dimension anywhere in the emitted console."""
+def test_frontend_route_stamps_three_trusted_tenant_headers(fe_ctx):
+    """DNA tenancy is three dimensions, stamped server-to-server in the ROUTE (the
+    portal's server) — X-DNA-Tenant + X-DNA-Workspace + X-Tenant-OID — NEVER the
+    browser. No license/namespace dimension anywhere."""
+    from dna.emit.frontend import emit_frontend_console
+
+    files = _fe_files(emit_frontend_console(fe_ctx))
+    route = files["app/api/copilotkit/route.ts"]
+    assert '"X-DNA-Tenant"' in route
+    assert '"X-DNA-Workspace"' in route
+    assert '"X-Tenant-OID"' in route
+    assert "buildAgent(AGENT_URL, dnaTenantHeaders())" in route
+    # server-only env, never exposed to the browser bundle.
+    assert "NEXT_PUBLIC" not in route
+    for content in files.values():
+        assert "License" not in content
+        assert "Namespace" not in content
+
+
+def test_frontend_console_sends_no_client_tenant_headers(fe_ctx):
+    """The browser console (a client component) forwards NO tenant headers — the
+    trusted headers live in the server route, not the CopilotKitProvider."""
     from dna.emit.frontend import emit_frontend_console
 
     console = _fe_files(emit_frontend_console(fe_ctx))["components/copilot/console.tsx"]
-    assert '"X-DNA-Tenant"' in console
-    assert "X-Tenant-OID" in console  # documented as server-derived
-    assert "License" not in console
-    assert "Namespace" not in console
-    assert "headers={dnaTenantHeaders()}" in console
+    assert "dnaTenantHeaders" not in console
+    assert "headers={" not in console
+    assert 'runtimeUrl="/api/copilotkit"' in console
 
 
 # ── Task 5d: the per-runtime resume-adapter (the ONE per-runtime file) ────────
@@ -771,7 +788,7 @@ def test_frontend_agno_resume_adapter_is_native(fe_ctx):
         "lib/copilot/resume-adapter.ts"
     ]
     assert adapter == read_golden("frontend/resume-adapter.agno.ts")
-    assert "return new HttpAgent({ url });" in adapter
+    assert "return new HttpAgent({ url, headers });" in adapter
     # no payload-rewrite bridge (that is the MS-AF adapter's job).
     assert "body.resume" not in adapter
     assert "fetch:" not in adapter

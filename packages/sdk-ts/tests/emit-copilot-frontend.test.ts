@@ -123,12 +123,23 @@ describe("emitFrontendConsole — the shared console tree", () => {
     expect(console).toContain('pick(args as Record<string, unknown>, "args.text")');
   });
 
-  it("forwards only DNA-native tenant headers (no license/namespace)", async () => {
-    const console = feFiles(emitFrontendConsole(await feCtx()))["components/copilot/console.tsx"];
-    expect(console).toContain('"X-DNA-Tenant"');
-    expect(console).toContain("X-Tenant-OID");
-    expect(console).not.toContain("License");
-    expect(console).not.toContain("Namespace");
+  it("stamps three trusted tenant headers in the server route, not the browser", async () => {
+    const files = feFiles(emitFrontendConsole(await feCtx()));
+    const route = files["app/api/copilotkit/route.ts"];
+    // three DNA tenancy dimensions, server-to-server (no license/namespace).
+    expect(route).toContain('"X-DNA-Tenant"');
+    expect(route).toContain('"X-DNA-Workspace"');
+    expect(route).toContain('"X-Tenant-OID"');
+    expect(route).toContain("buildAgent(AGENT_URL, dnaTenantHeaders())");
+    expect(route).not.toContain("NEXT_PUBLIC");
+    // the browser console forwards NO tenant headers.
+    const console = files["components/copilot/console.tsx"];
+    expect(console).not.toContain("dnaTenantHeaders");
+    expect(console).not.toContain("headers={");
+    for (const content of Object.values(files)) {
+      expect(content).not.toContain("License");
+      expect(content).not.toContain("Namespace");
+    }
   });
 });
 
@@ -138,7 +149,7 @@ describe("emitFrontendConsole — the per-runtime resume-adapter", () => {
       "lib/copilot/resume-adapter.ts"
     ];
     expect(adapter).toBe(readGolden("frontend/resume-adapter.agno.ts"));
-    expect(adapter).toContain("return new HttpAgent({ url });");
+    expect(adapter).toContain("return new HttpAgent({ url, headers });");
     expect(adapter).not.toContain("body.resume");
   });
 

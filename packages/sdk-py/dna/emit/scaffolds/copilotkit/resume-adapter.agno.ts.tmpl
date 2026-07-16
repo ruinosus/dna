@@ -8,6 +8,6 @@
 // file in the console scaffold; everything else is shared.
 import { HttpAgent } from "@ag-ui/client";
 
-export function buildAgent(url: string): HttpAgent {
-  return new HttpAgent({ url });
+export function buildAgent(url: string, headers?: Record<string, string>): HttpAgent {
+  return new HttpAgent({ url, headers });
 }

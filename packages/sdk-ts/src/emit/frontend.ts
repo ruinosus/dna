@@ -105,9 +105,10 @@ function frontendLosses(ctx: EmitContext): string[] {
     "panel bodies — each `frontend.panels` entry renders the agent's shared " +
       "state as JSON; wire the real per-panel UI to your domain (the panel " +
       "names are hints, not components)",
-    "inbound-tenant values — the console forwards `X-DNA-Tenant` from the app " +
-      "session and the `/agui` backend derives `X-Tenant-OID` server-side from " +
-      "the verified token; the scaffold marks WHERE, the auth store is per-app",
+    "inbound-tenant values — the route stamps three trusted server-to-server " +
+      "headers (X-DNA-Tenant / X-DNA-Workspace / X-Tenant-OID) on the /agui call " +
+      "from the portal's verified session; the scaffold marks WHERE, the auth " +
+      "store / session is per-app (env placeholders until wired)",
   ];
   if (ctx.toolsRequiringConfirmation.size === 0) {
     out.push(
@@ -163,7 +164,7 @@ export function emitFrontendConsole(ctx: EmitContext, runtime = "agno"): EmitRes
       "Copilot.frontend.suggested_prompts[]": "SUGGESTED_PROMPTS (anti-blank-box chips)",
       "Copilot.hitl.approval_card": "components/copilot/approval-card.tsx (via useHumanInTheLoop)",
       "Tool.requires_confirmation": "useHumanInTheLoop({name}) HITL write-gate",
-      "Copilot.tenant.propagate": "X-DNA-Tenant header forwarding (oid server-derived)",
+      "Copilot.tenant.propagate": "route.ts server-side X-DNA-Tenant/-Workspace/X-Tenant-OID headers",
       [`serving runtime = ${runtime}`]: "lib/copilot/resume-adapter.ts",
     },
   });
