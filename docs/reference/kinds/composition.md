@@ -323,12 +323,16 @@ An MCPFederation declares an external MCP server whose tools DNA agents consume:
 | `enabled` | boolean |  | Disable without deleting the doc — declarative kill-switch, no deploy. |
 | `env` | object |  | Extra env vars merged onto os.environ for the subprocess. |
 | `health_check` | object |  |  |
+| `min_role` | string |  | Role floor for read_tools — the lowest ladder rung (guest<member<admin<owner; highest-role-wins compares rank) whose members may call read tools. |
+| `min_role_write` | string |  | Role floor for write_tools — the lowest ladder rung whose members may call write (mutating) tools. |
 | `propagate_tenant` | boolean |  | HTTP transport: stamp X-DNA-Tenant-Effective / X-DNA-Scope / X-DNA-Agent headers. |
+| `read_tools` | array |  | RBAC read set (§6.4): non-mutating tool names callable by roles at or above min_role. ADDITIVE optional refinement over allowed_tools — when read_tools and write_tools are both empty the split is undeclared, RBAC is OFF, and allowed_tools governs alone (back-compat). When declared, a tool in NEITHER read_tools nor write_tools is not exposed (fail-closed). |
 | `tags` | array |  |  |
 | `timeout_s` | integer |  | Per-call timeout default (seconds). Per-agent entry may override. |
 | `tool_prefix` | string |  | Prepended to every proxied tool name (e.g. 'graphify_'). |
 | `transport` | string |  | How to reach the server: stdio subprocess (default, v1) or Streamable HTTP. |
 | `url` | string |  | Server endpoint. Required when transport=streamable_http. |
+| `write_tools` | array |  | RBAC write set (§6.4): mutating tool names callable by roles at or above min_role_write. These are the tools routed through HITL confirmation. An unclassified tool is treated as a write (fail-closed). |
 
 ## Recognizer
 
