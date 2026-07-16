@@ -126,6 +126,22 @@ hand-wrote (`agui_hitl.py:127` `tenant_from_request`/`inject_tenant`) and is **n
 DNA. The emitted scaffold must **generate the inbound derivation** — it is not a
 `propagate_tenant` freebie.
 
+The inbound carrier follows DNA's **real 3-dimension tenancy** (Model B), NOT a flat
+license/namespace key — all three arrive as **trusted server-to-server headers** the
+portal stamps *after* it verifies the session (never read from the browser), mirroring
+the outbound `X-DNA-Tenant-Effective` / `X-DNA-Scope` convention:
+
+| Header | Dimension | Emitted use |
+|---|---|---|
+| `X-DNA-Tenant` | the tenant (Entra `tid`) | provenance / org |
+| `X-DNA-Workspace` | the workspace id (`WorkspaceMembership`, already verified at the portal) | resolved to the scope via `default_scope(workspace)` → `tenant-<workspace_id>` (`dna.application.live`, `workspace_scope_prefix="tenant-"`) |
+| `X-Tenant-OID` | the user `oid` | routes personal memory (`personal:<oid>`, `dna.memory.personal`) |
+
+The emitted `tenant_from_request` reads these three into the run-state carrier and
+resolves `workspace` → `scope`; `inject_tenant` writes `{tenant, workspace, oid, scope}`
+onto `run_input.state["tenant"]` for the mounted tools to read via
+`RunContext.session_state`.
+
 ---
 
 ## 5. Common / per-runtime / per-app
