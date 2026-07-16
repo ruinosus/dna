@@ -36,16 +36,31 @@ def _mcp_tools() -> list[MCPTools]:
         ),
     ]
 
+def _knowledge() -> object | None:
+    """The RAG collection(s) this copilot may read
+    (`Copilot.knowledge.collections`: knowledge-base). DNA carries the
+    collection REFS; the retrieval implementation — the vector store + embedder
+    (e.g. Agno `Knowledge(vector_db=PgVector(...), contents_db=...)`, mirroring
+    the Agno KB reference's `build_knowledge`) — is PER-APP (design §6.3). This
+    is the WIRING POINT: build your `Knowledge` over the collections above and
+    return it. Returning None (the scaffold default) leaves the agent corpus-free
+    (`search_knowledge=False`), exactly like a pure-action copilot."""
+    # TODO(consumer): bind + return an Agno Knowledge over: knowledge-base
+    return None
+
 def build_agent(session_state: dict | None = None) -> Agent:
     """Build the Agno Agent for one run. No network is touched — the model is
     constructed lazily and no connection is opened at build time. `db` is an
     in-memory default so HITL resume (paused runs) works out of the box; swap it
     for a persistent Agno db at wire-up."""
+    knowledge = _knowledge()
     return Agent(
         name="memory-agent",
         model=OpenAILike(id="azure/gpt-4o"),
         instructions=INSTRUCTIONS,
         tools=_mcp_tools(),
+        knowledge=knowledge,
+        search_knowledge=knowledge is not None,
         db=InMemoryDb(),
         session_state=session_state or {},
         add_session_state_to_context=True,

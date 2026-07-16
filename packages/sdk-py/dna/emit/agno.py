@@ -172,6 +172,8 @@ class AgnoEmitter(ScaffoldEmitter):
             "has_mcp": bool(ctx.mcp_servers),
             "mcp_servers": servers,
             "tenant_propagate": bool(ctx.tenant_propagate),
+            "has_knowledge": bool(ctx.knowledge),
+            "knowledge_refs": ", ".join(ctx.knowledge),
         }
 
     def _copilot_losses(self, ctx: EmitContext) -> list[str]:
@@ -179,10 +181,16 @@ class AgnoEmitter(ScaffoldEmitter):
             "MCP tool bodies — the mounted agent calls the DNA MCP server's tools "
             "over Streamable HTTP; the emitted app builds `MCPTools(...)` but the "
             "tool implementations live on the remote MCP server, not in the scaffold",
-            "frontend console — `frontend`/`knowledge` hints (CopilotKit panels, "
-            "suggested prompts, RAG collections) are copilot-level metadata with no "
-            "code-first backend slot; wire them in the console at the UI layer",
+            "frontend console — `frontend` hints (CopilotKit panels, suggested "
+            "prompts) are copilot-level metadata with no code-first backend slot; "
+            "wire them in the console at the UI layer",
         ]
+        if ctx.knowledge:
+            out.append(
+                "knowledge retrieval impl — the emitted `_knowledge()` factory is a "
+                "WIRING POINT carrying the DNA collection refs; the vector store + "
+                "embedder behind it (Agno `Knowledge`/`PgVector`) is per-app (§6.3)"
+            )
         if ctx.model is None:
             out.append(
                 "model unbound in DNA and none supplied — emitted `build_agent()` has "

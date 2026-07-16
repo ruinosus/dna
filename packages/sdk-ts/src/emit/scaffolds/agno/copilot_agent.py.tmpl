@@ -37,19 +37,35 @@ def _mcp_tools() -> list[MCPTools]:
 {{#has_external_tools}}            external_execution_required_tools={{{external_tools_literal}}},
 {{/has_external_tools}}        ),
 {{/mcp_servers}}    ]
-{{/has_mcp}}
+{{/has_mcp}}{{#has_knowledge}}
+
+def _knowledge() -> object | None:
+    """The RAG collection(s) this copilot may read
+    (`Copilot.knowledge.collections`: {{knowledge_refs}}). DNA carries the
+    collection REFS; the retrieval implementation — the vector store + embedder
+    (e.g. Agno `Knowledge(vector_db=PgVector(...), contents_db=...)`, mirroring
+    the Agno KB reference's `build_knowledge`) — is PER-APP (design §6.3). This
+    is the WIRING POINT: build your `Knowledge` over the collections above and
+    return it. Returning None (the scaffold default) leaves the agent corpus-free
+    (`search_knowledge=False`), exactly like a pure-action copilot."""
+    # TODO(consumer): bind + return an Agno Knowledge over: {{knowledge_refs}}
+    return None
+{{/has_knowledge}}
 
 def build_agent(session_state: dict | None = None) -> Agent:
     """Build the Agno Agent for one run. No network is touched — the model is
     constructed lazily and no connection is opened at build time. `db` is an
     in-memory default so HITL resume (paused runs) works out of the box; swap it
     for a persistent Agno db at wire-up."""
-    return Agent(
+{{#has_knowledge}}    knowledge = _knowledge()
+{{/has_knowledge}}    return Agent(
         name={{{name_literal}}},
 {{#has_model}}        model=OpenAILike(id={{{model_literal}}}),
 {{/has_model}}        instructions=INSTRUCTIONS,
 {{#has_mcp}}        tools=_mcp_tools(),
-{{/has_mcp}}        db=InMemoryDb(),
+{{/has_mcp}}{{#has_knowledge}}        knowledge=knowledge,
+        search_knowledge=knowledge is not None,
+{{/has_knowledge}}        db=InMemoryDb(),
         session_state=session_state or {},
         add_session_state_to_context=True,
         markdown=True,
