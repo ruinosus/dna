@@ -1,0 +1,22 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: Agent
+metadata:
+  name: rfp-analyst
+  description: >-
+    The RFP-analyst copilot's mounted agent — reads an RFP corpus and records a
+    grounded verdict per criterion, gated by human approval on the write
+    (record-verdict). Shaped after the Agno KB reference's rfp_analyst agent
+    (knowledge=, MCP mount, tool-level external_execution HITL).
+spec:
+  instruction: |-
+    Analyse the RFP against the corpus and record a grounded verdict per criterion.
+  model: azure/gpt-4o
+  tools:
+  - search-corpus
+  - record-verdict
+  # The document MCP server the analyst mounts over Streamable HTTP.
+  mcp_servers:
+  - ref: docs-mcp
+    allowed_tools:
+    - search-corpus
+    - record-verdict

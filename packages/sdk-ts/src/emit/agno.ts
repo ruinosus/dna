@@ -141,6 +141,8 @@ export class AgnoEmitter extends ScaffoldEmitter {
       has_mcp: ctx.mcpServers.length > 0,
       mcp_servers: servers,
       tenant_propagate: ctx.tenantPropagate,
+      has_knowledge: ctx.knowledge.length > 0,
+      knowledge_refs: ctx.knowledge.join(", "),
     };
   }
 
@@ -149,10 +151,17 @@ export class AgnoEmitter extends ScaffoldEmitter {
       "MCP tool bodies — the mounted agent calls the DNA MCP server's tools over " +
         "Streamable HTTP; the emitted app builds `MCPTools(...)` but the tool " +
         "implementations live on the remote MCP server, not in the scaffold",
-      "frontend console — `frontend`/`knowledge` hints (CopilotKit panels, suggested " +
-        "prompts, RAG collections) are copilot-level metadata with no code-first " +
-        "backend slot; wire them in the console at the UI layer",
+      "frontend console — `frontend` hints (CopilotKit panels, suggested prompts) " +
+        "are copilot-level metadata with no code-first backend slot; wire them in " +
+        "the console at the UI layer",
     ];
+    if (ctx.knowledge.length > 0) {
+      out.push(
+        "knowledge retrieval impl — the emitted `_knowledge()` factory is a WIRING " +
+          "POINT carrying the DNA collection refs; the vector store + embedder behind " +
+          "it (Agno `Knowledge`/`PgVector`) is per-app (§6.3)",
+      );
+    }
     if (ctx.model === null) {
       out.push(
         "model unbound in DNA and none supplied — emitted `build_agent()` has no " +

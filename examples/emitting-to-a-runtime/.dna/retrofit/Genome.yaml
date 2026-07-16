@@ -1,0 +1,16 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: Genome
+metadata:
+  name: retrofit
+  description: >-
+    Absorption phase 7 retrofit fixtures — two Copilot definitions shaped after
+    the two hand-built reference apps (a Microsoft Agent Framework helpdesk with
+    a triage->retrieve->resolve->escalate workflow + RBAC MCP registry, and an
+    Agno knowledge/RFP analyst with a corpus + tool-level HITL). Emitting these
+    and diffing the emitted backend against each reference's load-bearing shape
+    is what validates DNA's single-evolution-point thesis (see
+    docs/design/2026-07-16-copilot-retrofit-findings.md).
+spec:
+  default_agent: helpdesk-agent
+  default_llm: azure/gpt-4o
+  owner: dna

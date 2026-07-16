@@ -1,0 +1,30 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: Agent
+metadata:
+  name: helpdesk-agent
+  description: >-
+    The helpdesk copilot's mounted agent — a runbook-grounded engineering
+    support concierge that searches runbooks and opens tickets against the
+    helpdesk MCP server, gated by human approval on the write (open-ticket).
+    Shaped after the foundry reference's concierge-grounded agent.
+spec:
+  # ONE-line instruction; the persona (Soul) and citation duty (Guardrail) are
+  # COMPOSED in — exactly the structure that collapses to a flat, byte-equal
+  # `instructions` string on emit (the DNA-only value the retrofit measures).
+  instruction: |-
+    Answer using the runbook knowledge base.
+  layout: persona-first
+  soul: support-host
+  guardrails:
+  - grounded-citation
+  model: azure/gpt-4o
+  tools:
+  - search-runbooks
+  - open-ticket
+  # The helpdesk MCP registry (RBAC read/write + role floors) — a per-agent
+  # allowlist narrows the federation's own allowed_tools.
+  mcp_servers:
+  - ref: helpdesk-mcp
+    allowed_tools:
+    - search-runbooks
+    - open-ticket

@@ -1,0 +1,27 @@
+apiVersion: github.com/ruinosus/dna/federation/v1
+kind: MCPFederation
+metadata:
+  name: helpdesk-mcp
+  description: >-
+    The helpdesk MCP server, shaped after the foundry reference's McpServer
+    registry — read/write tool split plus per-tool role floors (RBAC, design
+    §6.4). search-runbooks is a read (guest+); open-ticket is a write, gated to
+    admin+ and routed through HITL confirmation.
+spec:
+  transport: streamable_http
+  url: https://mcp.helpdesk.example/agui
+  auth:
+    kind: bearer_env
+    env: DNA_HELPDESK_TOKEN
+  allowed_tools:
+  - search-runbooks
+  - open-ticket
+  # RBAC (absorption phase 6a) — the read/write split + role floors the foundry
+  # McpServer registry governs. A tool on NEITHER list is a write (fail-closed).
+  read_tools:
+  - search-runbooks
+  write_tools:
+  - open-ticket
+  min_role: guest
+  min_role_write: admin
+  propagate_tenant: true

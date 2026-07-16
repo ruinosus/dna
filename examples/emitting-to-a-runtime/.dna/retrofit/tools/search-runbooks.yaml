@@ -1,0 +1,21 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: Tool
+metadata:
+  name: search-runbooks
+  description: Search the runbook knowledge base for documents relevant to a
+    developer's question. Returns matching runbook titles and excerpts to cite.
+spec:
+  type: builtin
+  input_schema:
+    type: object
+    required:
+    - query
+    properties:
+      query:
+        type: string
+        description: The developer's question or keywords to search runbooks for.
+  read_only: true
+  requires_confirmation: false
+  tags:
+  - knowledge-base
+  - read
