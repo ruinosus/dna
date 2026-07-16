@@ -1,0 +1,25 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Feature
+metadata:
+  name: f-dna-client
+spec:
+  title: Official DNA API client (TS + Py, generated from OpenAPI)
+  description: Typed read client generated from the dna api serve OpenAPI so consumers
+    don't hand-roll HTTP (dna-cloud's rest-client.ts is the first to replace). Drift-tested
+    against the FastAPI routes. Published with the release.
+  status: discovery
+  epic: e-dna-portability
+  reporter: claude-code
+  priority: high
+  labels:
+  - client
+  - api
+  - portability
+  created_at: '2026-07-16T18:17:36+00:00'
+  updated_at: '2026-07-16T18:17:36+00:00'
+  timeline:
+  - at: '2026-07-16T18:17:36+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: discovery

@@ -75,6 +75,7 @@ nav:
       - "Spec Kit templates, served by DNA": guides/spec-kit-templates.md
       - The MCP server — DNA as a live layer: guides/mcp-server.md
       - The REST read-API — DNA's HTTP face for web apps: guides/rest-api.md
+      - "Using the DNA client — typed REST access": guides/using-the-client.md
       - Hosting the MCP server on Azure (ACA + Entra): guides/hosting-mcp-aca.md
       - "On-Behalf-Of — MCP tools act on your Microsoft 365": guides/mcp-obo.md
       - "Act on behalf — one calendar tool, any provider": guides/act-on-behalf.md

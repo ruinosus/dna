@@ -76,6 +76,37 @@ jobs:
       - name: Test
         run: uv run --no-project pytest tests -q -p no:cacheprovider
 
+  client-py:
+    # dna-client (Python) — the REST read-API client. Its usage test drives an
+    # httpx MockTransport (no server) and the OpenAPI drift test re-dumps the
+    # live FastAPI schema and diffs the committed docs/openapi.json — so the dev
+    # install pulls dna-cli[api] + dna-sdk (path-deps) to make the API face
+    # importable. All offline (DNA_OFFLINE=1 workflow-wide).
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
+    defaults:
+      run:
+        working-directory: packages/client-py
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+          cache-dependency-glob: |
+            packages/client-py/pyproject.toml
+            packages/cli/pyproject.toml
+            packages/sdk-py/pyproject.toml
+      - name: Install
+        run: |
+          uv venv
+          uv pip install -e ../sdk-py -e "../cli[api]" -e ".[dev]"
+      - name: Test
+        run: uv run --no-project pytest tests -q -p no:cacheprovider
+
   postgres:
     runs-on: ubuntu-latest
     defaults:
