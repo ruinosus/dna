@@ -1,0 +1,4 @@
+.venv-spike/
+*.log
+remembered.log
+__pycache__/

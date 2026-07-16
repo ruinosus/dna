@@ -1,0 +1,49 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Spike
+metadata:
+  name: sp-copilot-hitl-on-mcp
+spec:
+  title: Does Agno external_execution fire on an MCPTools-provided tool, or must HITL
+    wra
+  question_to_answer: Does Agno external_execution fire on an MCPTools-provided tool,
+    or must HITL wrap a local tool?
+  status: answered
+  feature: f-dna-copilot-emitter
+  time_box_hours: 4
+  created_at: '2026-07-16T11:27:19+00:00'
+  updated_at: '2026-07-16T11:34:49+00:00'
+  timeline:
+  - at: '2026-07-16T11:27:19+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: proposed
+  - at: '2026-07-16T11:27:34+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: proposed
+    to: in-progress
+  - at: '2026-07-16T11:34:49+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: answered
+  completed_at: '2026-07-16T11:34:47+00:00'
+  findings: "YES \u2014 Agno external_execution fires on an MCPTools-provided (remote)\
+    \ tool. MCPTools accepts external_execution_required_tools=[...] and, at initialize(),\
+    \ builds each MCP tool's Function with external_execution=(name in that list)\
+    \ (agno/tools/mcp/mcp.py:779). The agent run loop pauses purely on fc.function.external_execution\
+    \ (agno/models/base.py:2436), which is provider-agnostic; get_last_run_output(session_id).tools_awaiting_external_execution\
+    \ filters on ToolExecution.external_execution_required (agno/run/agent.py:711).\
+    \ PROVEN end-to-end with a real FastMCP streamable-http server (remember(text)\
+    \ write tool) + a deterministic stub model: run PAUSED (RunStatus.paused), tools_awaiting_external_execution==['remember'],\
+    \ acontinue_run(run_id,session_id,updated_tools) resumed to RunStatus.completed,\
+    \ and the remote MCP write actually executed (server POST 200 + remembered.log\
+    \ line 'buy milk'). Negative control: same mount WITHOUT external_execution_required_tools\
+    \ -> Function.external_execution=False, run COMPLETED without pausing (write ran\
+    \ directly). So the flag is the sole cause of the pause. Agno 2.7.3 / mcp 1.28\
+    \ / fastmcp 3.4.4. Scenario B (local wrapper) was implemented as fallback but\
+    \ NOT needed. Scratch: scratch/copilot-spikes/hitl_on_mcp/ (mcp_server.py, experiment.py)."
+  recommendation: gate-remote-directly
