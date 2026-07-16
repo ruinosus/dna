@@ -418,3 +418,48 @@ def test_copilot_serving_no_tenant_when_not_propagated():
     assert "TenantAGUI" not in serving
     assert "interfaces=[AGUI(agent=agent)]" in serving
     assert _compiles(serving)
+
+
+# ── Task 4d: HITL (gate-remote-directly per Spike 0A) ───────────────────────
+
+
+def test_copilot_gates_write_tools_on_remote_mcp(copilot_ctx):
+    """Spike 0A verdict = gate-remote-directly: the emitted MCPTools mount carries
+    ``external_execution_required_tools`` = ``ctx.tools_requiring_confirmation``
+    (sorted) — the DNA write tools are gated on the REMOTE tool, no local wrapper."""
+    from dna.emit.agno import AgnoEmitter
+
+    assert copilot_ctx.tools_requiring_confirmation == {"remember", "forget"}
+    agent = AgnoEmitter().emit(copilot_ctx).artifact_for("agent")
+    assert "external_execution_required_tools=['forget', 'remember']" in agent
+    # no local wrapper tool — the gate rides on the remote MCP tool itself.
+    assert "def remember(" not in agent
+    assert "def forget(" not in agent
+
+
+def test_copilot_hitl_agent_matches_golden(copilot_ctx):
+    from dna.emit.agno import AgnoEmitter
+
+    res = AgnoEmitter().emit(copilot_ctx)
+    assert res.artifact_for("agent") == read_golden("agno/copilot_agent.py")
+
+
+def test_copilot_no_gate_when_no_confirmation_tools():
+    """A copilot with MCP but no confirmation-gated tools omits
+    ``external_execution_required_tools`` entirely."""
+    from dna.emit import EmitContext, EmitMcpServer
+    from dna.emit.agno import AgnoEmitter
+
+    ctx = EmitContext(
+        name="reader",
+        description="",
+        instructions="Read only.",
+        model="azure/gpt-4o",
+        mcp_servers=[EmitMcpServer(ref="dna-mcp", transport="streamable-http",
+                                   url="https://mcp.example/agui")],
+        tools_requiring_confirmation=set(),
+    )
+    agent = AgnoEmitter().emit(ctx).artifact_for("agent")
+    # the docstring mentions the kwarg; assert the ASSIGNMENT is absent.
+    assert "external_execution_required_tools=" not in agent
+    assert _compiles(agent)

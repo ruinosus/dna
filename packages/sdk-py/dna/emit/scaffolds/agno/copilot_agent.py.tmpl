@@ -23,12 +23,19 @@ def _mcp_tools() -> list[MCPTools]:
     """The DNA MCP server(s) this copilot mounts over Streamable HTTP. The
     toolkit is CONSTRUCTED but NOT connected here — connecting is async and
     happens inside the AG-UI run loop. Tool bodies live on the remote MCP
-    server, not in this scaffold."""
+    server, not in this scaffold.
+
+    HITL (Spike 0A: gate-remote-directly): the DNA write tools are gated DIRECTLY
+    on the remote MCP tool via `external_execution_required_tools` — no local
+    wrapper. Agno pauses the run when the model calls a gated tool
+    (`RunStatus.paused`, the tool in `tools_awaiting_external_execution`); the
+    AG-UI approval card answers and Agno's router resumes it (`acontinue_run`)."""
     return [
 {{#mcp_servers}}        MCPTools(
             url={{{url_literal}}},
             transport={{{transport_literal}}},
-        ),
+{{#has_external_tools}}            external_execution_required_tools={{{external_tools_literal}}},
+{{/has_external_tools}}        ),
 {{/mcp_servers}}    ]
 {{/has_mcp}}
 
