@@ -1,0 +1,126 @@
+"""Copilot emitter — Kind schema + (later) emit context/scaffold tests.
+
+Chunk 1 (this file's first slice): the ``Copilot`` Kind — a servable-copilot
+binder over Agent/Tool/MCPFederation. It ships as a record-plane descriptor
+(``dna/extensions/helix/kinds/copilot.kind.yaml``), exactly like the
+``Tool`` Kind (f-dna-tools-as-data) — data, not a class — and its spec is
+validated against the descriptor's JSON Schema on parse.
+
+``load_kind_doc`` is a thin test helper: it loads the shipped helix
+descriptor for the given target Kind, synthesizes the DeclarativeKindPort the
+kernel would register, and parses (== validates) a doc's spec through it. A
+malformed spec raises (jsonschema ``required``/``enum`` violations surface as
+``ValueError`` out of ``DeclarativeKindPort.parse``).
+"""
+from __future__ import annotations
+
+import types
+
+import pytest
+
+
+def _kind_port(kind_name: str):
+    """Synthesize the DeclarativeKindPort for a shipped helix descriptor."""
+    from dna.kernel.descriptor_loader import load_descriptors
+    from dna.kernel.meta import DeclarativeKindPort
+    from dna.kernel.models import TypedKindDefinition
+
+    for raw in load_descriptors("dna.extensions.helix"):
+        if raw.get("spec", {}).get("target_kind") == kind_name:
+            return DeclarativeKindPort.from_typed(TypedKindDefinition.from_raw(raw))
+    raise KeyError(f"No helix descriptor registers target_kind={kind_name!r}")
+
+
+def _ns(obj):
+    """Recursively wrap dicts as attribute-accessible namespaces."""
+    if isinstance(obj, dict):
+        return types.SimpleNamespace(**{k: _ns(v) for k, v in obj.items()})
+    if isinstance(obj, list):
+        return [_ns(v) for v in obj]
+    return obj
+
+
+def load_kind_doc(kind_name: str, spec: dict):
+    """Load + validate a minimal doc of ``kind_name`` against its descriptor.
+
+    Returns an attribute-accessible view of the parsed doc
+    (``doc.spec.<field>``). Raises ``ValueError`` if the spec violates the
+    descriptor's JSON Schema.
+    """
+    port = _kind_port(kind_name)
+    raw = {
+        "apiVersion": "github.com/ruinosus/dna/v1",
+        "kind": kind_name,
+        "metadata": {"name": "test"},
+        "spec": spec,
+    }
+    return _ns(port.parse(raw))
+
+
+# ── Chunk 1 · Task 1: the Copilot Kind schema ──────────────────────────────
+
+
+def test_copilot_kind_loads_minimal():
+    doc = load_kind_doc("Copilot", {
+        "mounts": [{"id": "memory", "agent": "memory-agent", "path": "/agui"}],
+        "serving": {"transport": "ag-ui"},
+    })
+    assert doc.spec.mounts[0].path == "/agui"
+    assert doc.spec.serving.transport == "ag-ui"
+
+
+def test_copilot_kind_requires_mounts():
+    """No ``mounts`` → schema error (a copilot must mount at least one agent)."""
+    with pytest.raises(ValueError):
+        load_kind_doc("Copilot", {"serving": {"transport": "ag-ui"}})
+
+
+def test_copilot_kind_requires_serving():
+    """No ``serving`` → schema error (a copilot must declare a transport)."""
+    with pytest.raises(ValueError):
+        load_kind_doc("Copilot", {
+            "mounts": [{"id": "memory", "agent": "memory-agent", "path": "/agui"}],
+        })
+
+
+def test_copilot_kind_rejects_unknown_transport():
+    """Unknown ``serving.transport`` → schema enum error."""
+    with pytest.raises(ValueError):
+        load_kind_doc("Copilot", {
+            "mounts": [{"id": "memory", "agent": "memory-agent", "path": "/agui"}],
+            "serving": {"transport": "carrier-pigeon"},
+        })
+
+
+def test_copilot_kind_optional_fields_absent_is_valid():
+    """A pure-action copilot — no knowledge/hitl/tenant/frontend — is valid."""
+    doc = load_kind_doc("Copilot", {
+        "mounts": [{"id": "actions", "agent": "action-agent", "path": "/agui"}],
+        "serving": {"transport": "ag-ui"},
+    })
+    assert not hasattr(doc.spec, "knowledge")
+    assert doc.spec.mounts[0].agent == "action-agent"
+
+
+def test_copilot_kind_accepts_full_optional_shape():
+    """All six fields populated validate together (hitl/knowledge/frontend/tenant)."""
+    doc = load_kind_doc("Copilot", {
+        "mounts": [{"id": "memory", "agent": "memory-agent", "path": "/agui"}],
+        "serving": {"transport": "ag-ui"},
+        "tenant": {"propagate": True},
+        "hitl": {"approval_card": {
+            "title": "Confirm write",
+            "details_from": "args.text",
+            "reason_from": "args.reason",
+        }},
+        "knowledge": {"collections": ["aap-knowledge-base"]},
+        "frontend": {
+            "console": "copilotkit",
+            "panels": ["memory-timeline"],
+            "suggested_prompts": ["What did I ask you to remember?"],
+        },
+    })
+    assert doc.spec.tenant.propagate is True
+    assert doc.spec.hitl.approval_card.title == "Confirm write"
+    assert doc.spec.knowledge.collections[0] == "aap-knowledge-base"
+    assert doc.spec.frontend.console == "copilotkit"
