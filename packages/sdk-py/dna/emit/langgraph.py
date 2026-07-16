@@ -37,16 +37,72 @@ from __future__ import annotations
 
 from typing import Any
 
-from dna.emit import EmitContext
-from dna.emit.scaffold import ScaffoldChoice, ScaffoldEmitter, py_identifier, py_str_literal
+from dna.emit import EmitArtifact, EmitContext, EmitError, EmitResult
+from dna.emit.scaffold import (
+    ScaffoldChoice,
+    ScaffoldEmitter,
+    py_identifier,
+    py_str_literal,
+    resolve_scaffold,
+)
+
+
+def _py_list_literal(items: list[str]) -> str:
+    """A Python list literal (``['a', 'b']``) built from ``py_str_literal`` so the
+    quote style tracks the language (repr single-quotes in Py; the TS twin uses
+    JSON double-quotes) — the shared scaffold-literal convention."""
+    return "[" + ", ".join(py_str_literal(x) for x in items) + "]"
 
 
 class LanggraphEmitter(ScaffoldEmitter):
-    """Emit a DNA agent as LangGraph ``create_react_agent`` source (scaffold)."""
+    """Emit a DNA agent as LangGraph source (scaffold, code-first).
+
+    Two shapes share this target, exactly like the Agno + agent-framework emitters:
+
+    - A **single agent** (``prompt-only`` / ``with-tools``) — one
+      ``create_react_agent`` module, byte-equal ``INSTRUCTIONS``. The inherited
+      :class:`ScaffoldEmitter` machinery drives it.
+    - A **servable copilot** (``copilot`` case, from
+      :func:`~dna.emit.build_copilot_context`) — a TWO-artifact emit: an ``agent``
+      module (a ``StateGraph`` compiled to an AG-UI-native CoAgent — the MCP mount
+      via ``MultiServerMCPClient`` + ``ToolNode``, the graph-enforced ``interrupt()``
+      HITL for the write-gate, and the tenant carried IN the graph state) and a
+      ``serving`` module (the AG-UI LangGraph adapter exposing ``/agui``, with
+      inbound-tenant derivation into graph state). When the ``Copilot`` declares a
+      ``workflow.chain`` the agent module emits the chain AS graph nodes + edges (a
+      ``review`` interrupt node) instead of the single-agent ReAct loop — LangGraph
+      IS a graph, so the workflow is its most natural shape.
+    """
 
     framework = "langgraph"
     target = "langgraph"
     file_extension = "py"
+
+    # ── copilot case routing (mirrors AgnoEmitter / AgentFrameworkEmitter) ───
+
+    def _is_copilot(self, ctx: EmitContext) -> bool:
+        """A ctx from :func:`build_copilot_context` carries copilot-only
+        projections a single-agent ctx never has; any one present routes the emit
+        to the servable LangGraph ``copilot`` case."""
+        return bool(
+            ctx.mcp_servers
+            or ctx.tools_requiring_confirmation
+            or ctx.tenant_propagate
+            or ctx.knowledge
+            or ctx.workflow
+        )
+
+    def classify(self, ctx: EmitContext) -> str:
+        if self._is_copilot(ctx):
+            return "copilot"
+        return super().classify(ctx)
+
+    def emit(self, ctx: EmitContext) -> EmitResult:
+        if self.classify(ctx) == "copilot":
+            return self._emit_copilot(ctx)
+        return super().emit(ctx)
+
+    # ── single-agent render (prompt-only / with-tools) ──────────────────────
 
     def render_context(self, ctx: EmitContext, case: str) -> dict[str, Any]:
         tools = [
@@ -103,3 +159,142 @@ class LanggraphEmitter(ScaffoldEmitter):
             "spec.model / Genome.default_llm": "create_react_agent(model=...) (DNA coordinate preserved)",
             "spec.tools[] (Tool Kind)": "@tool stubs → create_react_agent(tools=[...])",
         }
+
+    # ── servable copilot render (the two-artifact scaffold case) ─────────────
+
+    def _copilot_context(self, ctx: EmitContext) -> dict[str, Any]:
+        """Template variables for the LangGraph ``copilot`` case.
+
+        The mounted agent's MCP servers become a ``MultiServerMCPClient`` +
+        ``ToolNode``; the HITL-write intent (``ctx.tools_requiring_confirmation``)
+        becomes a graph-enforced ``interrupt()`` review node (the LangGraph-native
+        equivalent of Agno's ``external_execution`` / MS-AF's ``request_info``); the
+        ``workflow.chain`` becomes graph nodes + edges (LangGraph is graph-native).
+        Everything is sorted for a deterministic golden."""
+        gated = sorted(ctx.tools_requiring_confirmation)
+        has_workflow = bool(ctx.workflow)
+        has_hitl = bool(gated)
+
+        servers: list[dict[str, Any]] = []
+        for s in ctx.mcp_servers:
+            servers.append(
+                {
+                    "name_literal": py_str_literal(f"mcp_{s.ref}"),
+                    "url_literal": py_str_literal(s.url) if s.url else "None",
+                }
+            )
+
+        steps: list[dict[str, Any]] = []
+        for i, step in enumerate(ctx.workflow):
+            steps.append(
+                {
+                    "step": step,
+                    "func": py_identifier(step),
+                    "name_literal_step": py_str_literal(step),
+                    "is_first": i == 0,
+                }
+            )
+        # The workflow node chain: the declared steps + an appended ``review``
+        # interrupt node when writes are gated. Edges thread consecutive nodes.
+        nodes = list(ctx.workflow) + (["review"] if (has_workflow and has_hitl) else [])
+        edges = [
+            {"from_literal": py_str_literal(a), "to_literal": py_str_literal(b)}
+            for a, b in zip(nodes, nodes[1:])
+        ]
+
+        build_fn = "build_workflow" if has_workflow else "build_agent"
+        mounted_kind = "workflow" if has_workflow else "agent"
+
+        return {
+            "name": ctx.name,
+            "name_literal": py_str_literal(ctx.name),
+            "instructions_literal": py_str_literal(ctx.instructions),
+            "agent_module": py_identifier(ctx.name),
+            "has_model": ctx.model is not None,
+            "model_literal": py_str_literal(ctx.model) if ctx.model else "",
+            "has_mcp": bool(ctx.mcp_servers),
+            "mcp_servers": servers,
+            "tenant_propagate": bool(ctx.tenant_propagate),
+            "has_hitl": has_hitl,
+            "has_workflow": has_workflow,
+            "confirm_tools_literal": _py_list_literal(gated),
+            "workflow_steps": steps,
+            "workflow_edges": edges,
+            "first_node_literal": py_str_literal(nodes[0]) if nodes else '""',
+            "last_node_literal": py_str_literal(nodes[-1]) if nodes else '""',
+            "build_fn": build_fn,
+            "mounted_kind": mounted_kind,
+        }
+
+    def _copilot_losses(self, ctx: EmitContext) -> list[str]:
+        out = [
+            "composition structure — Soul reuse + wired Guardrails flatten to one "
+            "`INSTRUCTIONS` string (a code-first graph has no `soul:`/`guardrails:` slot)",
+            "tenant overlay — a per-tenant persona without a fork has no code-first field",
+            "eval-as-contract — prompt invariants (EvalCases) have no code-first slot",
+            "MCP tool bodies — the mounted graph calls the DNA MCP server's tools over "
+            "Streamable HTTP (langchain-mcp-adapters); the emitted app builds the "
+            "`MultiServerMCPClient(...)` but the tool implementations live on the remote "
+            "MCP server, not in the scaffold",
+            "MCP allowlist — LangGraph's `MultiServerMCPClient` loads the server's whole "
+            "tool set; the per-agent `allowed_tools` bound is not applied at the client "
+            "config, so enforce it at the MCP server or filter the loaded tools at wire-up",
+            "frontend console — `frontend`/`knowledge` hints (CopilotKit panels, suggested "
+            "prompts, RAG collections) have no code-first backend slot; RAG retrieval is per-app",
+        ]
+        if ctx.workflow:
+            out.append(
+                "workflow step bodies — each `workflow.chain` step is a scaffolded graph "
+                "node STUB; per-step instructions + the escalation effect are per-app "
+                "bodies to wire at the consumer"
+            )
+        if ctx.model is None:
+            out.append(
+                "model unbound in DNA and none supplied — emitted `_model()` raises; "
+                "supply a model coordinate or instance at wire-up"
+            )
+        return out
+
+    def _copilot_mapping(self) -> dict[str, str]:
+        return {
+            "build_prompt (Soul+guardrails+instruction)": "INSTRUCTIONS constant (byte-equal)",
+            "metadata.name": "LangGraphAgent(name=...) / StateGraph node ids",
+            "spec.model / Genome.default_llm": "init_chat_model(...) (DNA coordinate preserved)",
+            "Agent.spec.mcp_servers → MCPFederation": "MultiServerMCPClient(...) + ToolNode",
+            "Tool.requires_confirmation": "interrupt() review node (graph-enforced HITL)",
+            "Copilot.tenant.propagate": "inbound ContextVar → graph state['tenant'] + X-DNA-* MCP headers",
+            "Copilot.workflow.chain": "StateGraph nodes + edges (graph-native chain) + interrupt() review node",
+        }
+
+    def _emit_copilot(self, ctx: EmitContext) -> EmitResult:
+        """Render the two servable artifacts (agent graph module + AG-UI serve app)
+        from an enriched copilot ctx (:func:`build_copilot_context`)."""
+        try:
+            import chevron
+        except ModuleNotFoundError as exc:  # pragma: no cover - dev dep always present
+            raise EmitError(
+                "the scaffold emitter needs `chevron` (Mustache) — it ships with the SDK"
+            ) from exc
+
+        agent_tmpl = resolve_scaffold(self.framework, "copilot_agent")
+        serve_tmpl = resolve_scaffold(self.framework, "copilot_serve")
+        if agent_tmpl is None or serve_tmpl is None:
+            raise EmitError(
+                "the langgraph `copilot` case needs both `copilot_agent.py.tmpl` "
+                "and `copilot_serve.py.tmpl` scaffold templates"
+            )
+
+        variables = self._copilot_context(ctx)
+        agent_src = chevron.render(agent_tmpl, variables)
+        serve_src = chevron.render(serve_tmpl, variables)
+        module = variables["agent_module"]
+
+        return EmitResult(
+            target=self.target,
+            artifacts=[
+                EmitArtifact(path=f"{module}.py", content=agent_src, role="agent"),
+                EmitArtifact(path=f"{module}_serve.py", content=serve_src, role="serving"),
+            ],
+            losses=self._copilot_losses(ctx),
+            mapping=self._copilot_mapping(),
+        )
