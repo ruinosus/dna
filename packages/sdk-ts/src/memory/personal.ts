@@ -65,18 +65,33 @@ export class PersonalOverrideRejected extends Error {
 }
 
 /**
- * Build the reserved personal partition value for a durable identity `oid`.
- * `personalTenant("abc") === "personal:abc"`. Throws {@link
- * PersonalIdentityRequired} for a blank/empty oid.
+ * The identity family that keeps the BARE `personal:<id>` value (no family
+ * segment) — Entra, the original lane. Keeping it bare means zero migration of
+ * existing personal partitions (decision D6). Any OTHER family (e.g. `google`)
+ * is namespaced as `personal:<family>:<id>` so the families never collide.
  */
-export function personalTenant(oid: string): string {
+export const PERSONAL_IMPLICIT_FAMILY = "entra";
+
+/**
+ * Build the reserved personal partition value for a durable identity.
+ * Entra (default / `family="entra"`) → the bare `personal:<oid>` (no migration);
+ * any other family (e.g. `family="google"`) → `personal:<family>:<id>`.
+ * `personalTenant("abc") === "personal:abc"`;
+ * `personalTenant("abc", "google") === "personal:google:abc"`. Throws {@link
+ * PersonalIdentityRequired} for a blank/empty identity in any family.
+ */
+export function personalTenant(oid: string, family?: string | null): string {
   const clean = (oid ?? "").trim();
   if (!clean) {
     throw new PersonalIdentityRequired(
-      "personal memory needs a non-empty identity (oid) to key the partition",
+      "personal memory needs a non-empty identity to key the partition",
     );
   }
-  return `${PERSONAL_TENANT_PREFIX}${clean}`;
+  const fam = (family ?? PERSONAL_IMPLICIT_FAMILY).trim().toLowerCase();
+  if (fam === PERSONAL_IMPLICIT_FAMILY) {
+    return `${PERSONAL_TENANT_PREFIX}${clean}`;
+  }
+  return `${PERSONAL_TENANT_PREFIX}${fam}:${clean}`;
 }
 
 /**
