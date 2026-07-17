@@ -757,7 +757,8 @@ def build_server(
 
 
 def build_http_app(
-    server: Any, *, path: str = "/mcp", transport: str = "http"
+    server: Any, *, path: str = "/mcp", transport: str = "http",
+    lane_b_server: Any = None,
 ) -> Any:
     """Wrap the FastMCP ``server`` as a Starlette ASGI app that ALSO accepts the
     per-workspace URL ``/w/<workspace-id>/mcp`` (ADR "Model B" §2.2 — S2.3),
@@ -773,16 +774,33 @@ def build_http_app(
     Mounting the one app instance at both prefixes shares its lifespan (the MCP
     session manager), which the outer app forwards. The bare ``/mcp`` route keeps
     the default single-workspace / stdio-parity behavior (falls back to the
-    identity's sole/default membership)."""
+    identity's sole/default membership).
+
+    ``lane_b_server`` (optional, the identity front-door Option X): a SECOND FastMCP
+    server — the consumer lane (WorkOS AuthKit auth) — mounted at ``/consumer`` with
+    its OWN discovery + auth surface, beside Lane A (Entra). Its lifespan is composed
+    with Lane A's so both session managers run. Absent → single-lane, unchanged."""
     from starlette.applications import Starlette
     from starlette.routing import Mount
 
     mcp_app = server.http_app(path=path, transport=transport)
-    return Starlette(
-        routes=[
-            # Per-workspace URL first (more specific), then the bare mount.
-            Mount("/w/{workspace_id}", app=mcp_app),
-            Mount("/", app=mcp_app),
-        ],
-        lifespan=mcp_app.lifespan,
-    )
+    routes = [
+        # Per-workspace URL first (more specific).
+        Mount("/w/{workspace_id}", app=mcp_app),
+    ]
+    lifespan = mcp_app.lifespan
+    if lane_b_server is not None:
+        from contextlib import asynccontextmanager
+
+        lane_b_app = lane_b_server.http_app(path=path, transport=transport)
+        routes.append(Mount("/consumer", app=lane_b_app))  # Lane B (WorkOS)
+
+        @asynccontextmanager
+        async def _both_lanes(app: Any):
+            # Run BOTH FastMCP session managers (each app owns one).
+            async with mcp_app.lifespan(app), lane_b_app.lifespan(app):
+                yield
+
+        lifespan = _both_lanes
+    routes.append(Mount("/", app=mcp_app))  # bare mount, least specific → last
+    return Starlette(routes=routes, lifespan=lifespan)

@@ -1065,6 +1065,54 @@ def azure_provider_from_env() -> Any:
     return provider
 
 
+def workos_provider_from_env() -> Any:
+    """Build the Lane B (consumer) provider — a Resource Server that validates
+    **WorkOS AuthKit** JWTs and advertises the AuthKit domain (which speaks DCR +
+    CIMD natively) as the authorization server via RFC 9728 PRM.
+
+    Unlike Lane A (Entra has no DCR → the ``AzureProvider`` facade), WorkOS AuthKit
+    IS a DCR/CIMD-native authorization server, so DNA is a **pure resource server**
+    here: it verifies WorkOS-issued tokens and points a client at AuthKit — no
+    OAuthProxy needed. Env:
+
+    * ``DNA_MCP_WORKOS_AUTHKIT_DOMAIN`` — the AuthKit domain (``<slug>.authkit.app``),
+      the authorization server advertised in PRM;
+    * ``DNA_MCP_WORKOS_RESOURCE_URL``   — the DNA MCP Lane-B mount's public URL;
+    * ``DNA_MCP_WORKOS_JWKS_URI``       — JWKS endpoint (defaults ``<domain>/oauth2/jwks``);
+    * ``DNA_MCP_WORKOS_ISSUER``         — expected ``iss`` (defaults to ``<domain>``);
+    * ``DNA_MCP_WORKOS_AUDIENCE``       — expected ``aud`` (defaults to the client id).
+
+    The exact JWKS path / issuer are confirmed against the live AuthKit domain's
+    OIDC discovery at the P2 smoke; the env overrides let the deploy pin them.
+    """
+    from fastmcp.server.auth.providers.jwt import JWTVerifier
+
+    try:
+        domain = os.environ["DNA_MCP_WORKOS_AUTHKIT_DOMAIN"].strip().rstrip("/")
+        resource_url = os.environ["DNA_MCP_WORKOS_RESOURCE_URL"]
+    except KeyError as exc:
+        raise RuntimeError(
+            "workos auth needs DNA_MCP_WORKOS_AUTHKIT_DOMAIN and "
+            "DNA_MCP_WORKOS_RESOURCE_URL"
+        ) from exc
+    if not domain.startswith("http"):
+        domain = f"https://{domain}"
+    audience = os.environ.get("DNA_MCP_WORKOS_AUDIENCE") or os.environ.get(
+        "DNA_MCP_WORKOS_CLIENT_ID"
+    )
+    verifier = JWTVerifier(
+        jwks_uri=os.environ.get("DNA_MCP_WORKOS_JWKS_URI", f"{domain}/oauth2/jwks"),
+        issuer=os.environ.get("DNA_MCP_WORKOS_ISSUER", domain),
+        audience=audience,
+    )
+    return resource_server(
+        verifier,
+        base_url=resource_url,
+        authorization_servers=[domain],
+        scopes_supported=scopes_supported_from_env(),
+    )
+
+
 def resource_server(
     token_verifier: Any,
     *,
