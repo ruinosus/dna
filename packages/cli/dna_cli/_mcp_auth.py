@@ -331,6 +331,34 @@ def resolve_personal_oid(
     )
 
 
+# The provider-family stamp (``_dna_provider_family``, "microsoft"/"google") the
+# composite verifier writes → the personal-memory KEY family. Entra ("microsoft")
+# keeps the BARE ``personal:<oid>`` (decision D6, no migration); google →
+# ``personal:google:<sub>``. Absent/unknown → "entra" (back-compat single-lane).
+_MEMORY_KEY_FAMILY = {"microsoft": "entra", "google": "google"}
+
+
+def personal_key_family(claims: dict[str, Any] | None) -> str:
+    """The personal-memory KEY family for a verified token — pure, no context.
+
+    Reads the ``_dna_provider_family`` stamp: ``microsoft`` → ``"entra"`` (bare
+    key), ``google`` → ``"google"`` (namespaced). Absent/other → ``"entra"`` so
+    the single-lane behavior is unchanged."""
+    fam = (claims or {}).get(_DNA_PROVIDER_FAMILY_MARKER)
+    return _MEMORY_KEY_FAMILY.get(fam, "entra")
+
+
+def identity_claim_for_family(
+    claims: dict[str, Any] | None, *, key_family: str, claim_key: str | None = None
+) -> str | None:
+    """The durable identity claim per KEY family — Entra reads the ``oid`` claim,
+    Google reads ``sub`` (Google OIDC's stable subject). Pure, no context."""
+    if key_family == "google":
+        raw = (claims or {}).get("sub")
+        return raw.strip() if isinstance(raw, str) and raw.strip() else None
+    return oid_from_token(claims, claim_key=claim_key)
+
+
 # ── the plan/tier axis (DNA Cloud quota) — pure core, mirror the tenant twins ─
 
 
@@ -824,10 +852,29 @@ def enforce_oid_from_context() -> str:
         )
 
     claims = getattr(token, "claims", None) or {}
-    token_oid = oid_from_token(claims)
+    # Family-aware identity: Entra → oid, Google → sub (the durable id per lane).
+    key_family = personal_key_family(claims)
+    token_oid = identity_claim_for_family(claims, key_family=key_family)
     return resolve_personal_oid(
         token_present=True, token_oid=token_oid, env_oid=env_oid
     )
+
+
+def enforce_personal_family_from_context() -> str:
+    """The personal-memory KEY family for the CURRENT MCP request
+    (``"entra"``/``"google"``) — server-derived from the verified token's provider
+    stamp, the companion to :func:`enforce_oid_from_context`. ``"entra"`` when
+    there is no token (offline / stdio / ``auth=None``) — the back-compat
+    single-lane default, so an unauthenticated/local caller keeps the bare
+    ``personal:<oid>`` partition."""
+    try:
+        from fastmcp.server.dependencies import get_access_token
+    except ModuleNotFoundError:  # pragma: no cover — no fastmcp ⇒ no auth ⇒ offline
+        return "entra"
+    token = get_access_token()
+    if token is None:
+        return "entra"
+    return personal_key_family(getattr(token, "claims", None) or {})
 
 
 def token_present_in_context() -> bool:

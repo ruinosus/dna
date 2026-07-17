@@ -255,6 +255,7 @@ def build_server(
     from dna_cli._mcp_auth import (
         CrossTenantError,
         enforce_oid_from_context,
+        enforce_personal_family_from_context,
         enforce_tier_from_context,
         enforce_workspace_from_context,
         token_has_explicit_plan_claim,
@@ -370,7 +371,7 @@ def build_server(
             raise ToolError(str(exc)) from None
         return tenant
 
-    async def _personal_guard(memory_op: str) -> str:
+    async def _personal_guard(memory_op: str) -> tuple[str, str]:
         """The tenancy + quota seam for a PERSONAL memory call — the identity twin
         of :func:`_guard` (ADR-personal-memory).
 
@@ -389,14 +390,17 @@ def build_server(
            keyed on the personal partition ``personal:<oid>`` so personal usage
            meters per identity, independent of any workspace.
 
-        Returns the resolved ``oid`` (never a tenant — the caller passes
-        ``memory_scope="personal"`` + this oid to the impl)."""
+        Returns ``(oid, family)`` — the server-resolved identity + its personal-
+        memory KEY family ("entra"/"google"); the caller passes
+        ``memory_scope="personal"`` + this ``oid`` + ``family`` to the impl, which
+        keys the partition ``personal:<oid>`` (Entra) / ``personal:google:<sub>``."""
         try:
             oid = enforce_oid_from_context()
+            family = enforce_personal_family_from_context()
         except (PersonalIdentityRequired, PersonalOverrideRejected) as exc:
             raise ToolError(str(exc)) from None
         if not token_present_in_context():
-            return oid  # stdio / local → identity, no metering.
+            return oid, family  # stdio / local → identity, no metering.
         kernel = (await _live()).kernel
         tier = enforce_tier_from_context()
         row = await kernel.tier(tier)
@@ -406,11 +410,12 @@ def build_server(
         try:
             enforce_memory_mode(caps=caps, tier=tier, op=memory_op)
             enforce_quota(
-                caps=caps, tenant=personal_tenant(oid), tier=tier, family="memory",
+                caps=caps, tenant=personal_tenant(oid, family=family),
+                tier=tier, family="memory",
             )
         except (OverQuotaError, FeatureNotInPlanError, MemoryModeError) as exc:
             raise ToolError(str(exc)) from None
-        return oid
+        return oid, family
 
     server = FastMCP(
         "dna",
@@ -635,9 +640,10 @@ def build_server(
         base defaults — never any workspace's memory. The default (``false``)
         recalls the workspace's shared memory, unchanged."""
         if personal:
-            oid = await _personal_guard("read")
+            oid, family = await _personal_guard("read")
             return await recall_impl(
                 await _live(), query, None, k, memory_scope="personal", oid=oid,
+                family=family,
             )
         return await recall_impl(
             await _live(), query, scope, k, await _guard("memory", scope=scope, memory_op="read")
@@ -659,10 +665,10 @@ def build_server(
         partition, portable across workspaces + clients, never shared with the
         workspace. The default (``false``) shares to the workspace, unchanged."""
         if personal:
-            oid = await _personal_guard("write")
+            oid, family = await _personal_guard("write")
             return await remember_impl(
                 await _live(), summary, None, area=area, affect=affect, tags=tags,
-                owner=owner, memory_scope="personal", oid=oid,
+                owner=owner, memory_scope="personal", oid=oid, family=family,
             )
         return await remember_impl(
             await _live(), summary, scope, area=area, affect=affect, tags=tags,

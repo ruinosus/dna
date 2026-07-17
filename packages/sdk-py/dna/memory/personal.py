@@ -125,6 +125,7 @@ def resolve_memory_tenant(
     memory_scope: MemoryScope,
     oid: str | None,
     workspace_tenant: str | None,
+    family: str | None = None,
 ) -> str | None:
     """Resolve the physical ``tenant`` a memory request runs against — the ADR §5
     decision, pure and workspace-independent for the personal case.
@@ -139,7 +140,10 @@ def resolve_memory_tenant(
 
     The oid is a parameter here only because this pure function does not read
     tokens; the SURFACES derive it server-side and are the sole callers — a
-    caller can never inject the oid (INV-PERSONAL layer 1).
+    caller can never inject the oid (INV-PERSONAL layer 1). ``family`` (the
+    provider family the identity came from, also server-derived) namespaces the
+    partition for non-Entra lanes: Entra/None → bare ``personal:<oid>``, Google →
+    ``personal:google:<sub>`` (the two families never collide).
     """
     if memory_scope == PERSONAL_SCOPE:
         if oid is None or not str(oid).strip():
@@ -148,7 +152,7 @@ def resolve_memory_tenant(
                 "authenticated requests read it from the verified token; offline/stdio "
                 "reads DNA_PERSONAL_ID. None was available — access denied (fail-closed)."
             )
-        return personal_tenant(str(oid))
+        return personal_tenant(str(oid), family=family)
     # workspace (default) — unchanged behavior.
     return workspace_tenant
 
