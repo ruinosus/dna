@@ -50,8 +50,14 @@ def mcp() -> None:
                    "(AzureProvider/OAuthProxy from DNA_MCP_AZURE_*) — gives Claude zero-config "
                    "DCR/CIMD/PKCE while preserving the Entra assertion for OBO. All bridge the "
                    "token to DNA tenancy; all are HTTP-only. stdio stays local/unauthenticated.")
+@click.option("--lane-b", type=click.Choice(["none", "workos"]), default="none",
+              show_default=True,
+              help="Consumer lane (identity front-door Option X). `workos` mounts a "
+                   "SECOND MCP surface at /consumer authenticated by WorkOS AuthKit "
+                   "(DNA_MCP_WORKOS_*) — for Gmail/consumer sign-up — beside the primary "
+                   "Lane A. HTTP-only; requires --transport http.")
 def serve(scope: str | None, base_dir: str | None, transport: str,
-          host: str, port: int, path: str | None, auth: str) -> None:
+          host: str, port: int, path: str | None, auth: str, lane_b: str) -> None:
     """Run the DNA MCP server (stdio local, or Streamable HTTP for remote/web clients).
 
     \b
@@ -162,7 +168,22 @@ def serve(scope: str | None, base_dir: str | None, transport: str,
             ) from exc
 
         http_transport = "sse" if transport == "sse" else "http"
-        app = build_http_app(server, path=path or "/mcp", transport=http_transport)
+        lane_b_server = None
+        if lane_b == "workos":  # Option X — a second WorkOS-authed surface at /consumer
+            try:
+                from dna_cli._mcp_auth import workos_provider_from_env
+
+                lane_b_server = build_server(
+                    scope=scope, base_dir=base_dir,
+                    auth=workos_provider_from_env(), graph_config=graph_config,
+                )
+            except (RuntimeError, ValueError) as exc:
+                raise click.ClickException(str(exc)) from None
+            click.echo("lane-b: WorkOS AuthKit consumer surface at /consumer", err=True)
+        app = build_http_app(
+            server, path=path or "/mcp", transport=http_transport,
+            lane_b_server=lane_b_server,
+        )
         click.echo(
             f"DNA MCP over HTTP — bare /mcp and per-workspace /w/<id>/mcp "
             f"(ADR Model B) on {host}:{port}",
