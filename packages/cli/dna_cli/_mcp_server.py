@@ -172,35 +172,32 @@ async def sdlc_digest_impl(
 
 
 def _with_memory_card(data: dict[str, Any]) -> Any:
-    """Wrap the ``list_memories`` result with its MCP-App card.
+    """Attach MCP-App metadata to the ``list_memories`` result WITHOUT hiding the data.
 
-    Returns a ``ToolResult`` carrying the UI resource in ``content`` (an
-    ``EmbeddedResource`` at ``ui://dna/memory-list``, mimeType
-    ``text/html;profile=mcp-app``), the untouched structured data in
-    ``structured_content`` (so hosts without MCP Apps still get the data), and
-    the ``_meta.ui.resourceUri`` pointer. If the optional ``mcp-ui-server``
-    dependency is absent, degrades to the plain ``data`` dict — the tool never
-    breaks for a host (or install) that does not do MCP Apps."""
+    The DATA is the primary ``content`` (a JSON text block) so EVERY MCP client reads
+    the memories directly. The original M0 put ONLY the rendered card (an
+    ``EmbeddedResource``) in ``content`` and the data in ``structured_content`` — but a
+    normal MCP client reads ``content``, not ``structured_content`` (verified live:
+    ``langchain-mcp-adapters`` returns just the content blocks), so the copilot's own
+    LangGraph agent + the LLM + the canvas projection were starved of memories (empty
+    canvas + the LLM reasoning over raw HTML). ``structured_content`` mirrors the data
+    and ``_meta.ui.resourceUri`` links the ``ui://dna/memory-list`` MCP-App card for
+    hosts that render MCP Apps (fetched via ``resources/read`` — registering that
+    resource + a data-aware template is the proper follow-up; the inline-rawHtml
+    shortcut that broke normal clients is removed). Degrades to the plain ``data`` dict
+    when ``dna.emit`` is unavailable — the tool never breaks."""
     try:
-        from mcp_ui_server import create_ui_resource
-
-        from dna.emit.mcp_ui import (
-            MCP_APP_MIME,
-            UI_MEMORY_LIST_URI,
-            memory_list_ui_resource,
-        )
-    except ModuleNotFoundError:  # pragma: no cover — mcp-ui-server not installed.
+        from dna.emit.mcp_ui import UI_MEMORY_LIST_URI
+    except ModuleNotFoundError:  # pragma: no cover — dna.emit not importable.
         return data
 
-    from fastmcp.tools.tool import ToolResult
+    import json
 
-    resource = create_ui_resource(
-        memory_list_ui_resource(data.get("memories") or [], scope=data.get("scope"))
-    )
-    # Stamp the MCP Apps profile (SEP-1865) — mcp-ui-server emits bare text/html.
-    resource.resource.mimeType = MCP_APP_MIME
+    from fastmcp.tools.tool import ToolResult
+    from mcp.types import TextContent
+
     return ToolResult(
-        content=[resource],
+        content=[TextContent(type="text", text=json.dumps(data))],
         structured_content=data,
         meta={
             # Both spellings of the pointer for host compatibility.

@@ -242,10 +242,20 @@ class LanggraphEmitter(ScaffoldEmitter):
             and not has_workflow
             and bool(memory_panel or read_tools)
         )
-        if memory_canvas and not read_tools:
-            # Panel declared but the allowlist is open (empty = "all tools"):
-            # fall back to the canonical read set as the emitted gate.
-            read_tools = sorted(_MEMORY_READ_TOOLS)
+        if memory_canvas:
+            # The emitted gate matches RUNTIME tool NAMES on the ToolMessage. A copilot's
+            # allowlist carries scope aliases (e.g. `list`), but the DNA MCP serves that
+            # read under its impl name (`list_memories`) at runtime — so a `list` in the
+            # allowlist must ALSO gate `list_memories`, else the canvas never populates on
+            # a list. (A projection gate is safe to over-include.)
+            read_gate = set(read_tools)
+            if "list" in read_gate:
+                read_gate.add("list_memories")
+            if not read_gate:
+                # Panel declared over an open allowlist (empty = "all tools"): the
+                # canonical read set is the gate.
+                read_gate = set(_MEMORY_READ_TOOLS)
+            read_tools = sorted(read_gate)
 
         # ── persistence → real LangGraph backends ───────────────────────────
         # checkpoint=postgres → `PostgresSaver.from_conn_string(...)`;

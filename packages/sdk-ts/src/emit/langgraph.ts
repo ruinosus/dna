@@ -201,10 +201,20 @@ export class LanggraphEmitter extends ScaffoldEmitter {
     const memoryPanel = (ctx.frontendPanels ?? []).includes("memory-timeline");
     const memoryCanvas =
       ctx.mcpServers.length > 0 && !hasWorkflow && (memoryPanel || readTools.length > 0);
-    if (memoryCanvas && readTools.length === 0) {
-      // Panel declared but the allowlist is open (empty = "all tools"): fall back
-      // to the canonical read set as the emitted gate.
-      readTools = [...MEMORY_READ_TOOLS].sort();
+    if (memoryCanvas) {
+      // The emitted gate matches RUNTIME tool NAMES on the ToolMessage. A copilot's
+      // allowlist carries scope aliases (e.g. `list`), but the DNA MCP serves that
+      // read under its impl name (`list_memories`) at runtime — so a `list` in the
+      // allowlist must ALSO gate `list_memories`, else the canvas never populates on
+      // a list. (A projection gate is safe to over-include.)
+      const readGate = new Set(readTools);
+      if (readGate.has("list")) readGate.add("list_memories");
+      if (readGate.size === 0) {
+        // Panel declared over an open allowlist (empty = "all tools"): the
+        // canonical read set is the gate.
+        for (const t of MEMORY_READ_TOOLS) readGate.add(t);
+      }
+      readTools = [...readGate].sort();
     }
 
     // ── persistence → real LangGraph backends ─────────────────────────────

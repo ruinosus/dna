@@ -28,7 +28,6 @@ import shutil
 import pytest
 
 pytest.importorskip("fastmcp", reason="the MCP runtime face needs the optional 'fastmcp' extra")
-pytest.importorskip("mcp_ui_server", reason="MCP Apps need the optional 'mcp-ui-server' (part of the 'mcp' extra)")
 
 from dna_cli import _mcp_server as M  # noqa: E402
 
@@ -47,14 +46,20 @@ def dna_dir(tmp_path, monkeypatch):
     return dst
 
 
-def test_list_memories_emits_mcp_app_card(dna_dir):
-    """Through the real protocol: ``list_memories`` returns the data AND a
-    ``ui://dna/memory-list`` UI resource + the ``_meta.ui.resourceUri`` pointer."""
+def test_list_memories_emits_mcp_app_metadata(dna_dir):
+    """Through the real protocol: ``list_memories`` returns the DATA as the primary
+    ``content`` (a JSON text block EVERY MCP client reads — langchain-mcp-adapters and
+    the like read ``content``, not ``structured_content``), mirrored in
+    ``structured_content``, plus the ``_meta.ui.resourceUri`` MCP-App pointer a host
+    follows to render the ``ui://dna/memory-list`` card (registering that resource +
+    a data-aware template is the proper follow-up)."""
+    import json
+
     from fastmcp import Client
 
     async def scenario():
         server = M.build_server(base_dir=str(dna_dir))
-        # Seed one memory so the card has a real row (write on THIS loop).
+        # Seed one memory so the list has a real row (write on THIS loop).
         live = await M.boot_live(base_dir=str(dna_dir))
         await M.remember_impl(
             live, "Barna ships only on a green CI", _SCOPE,
@@ -64,45 +69,43 @@ def test_list_memories_emits_mcp_app_card(dna_dir):
         async with Client(server) as client:
             result = await client.call_tool("list_memories", {"scope": _SCOPE})
 
-        # 2. graceful degradation — the plain data is intact.
+        # 1. the DATA is the primary content — a JSON text block every client reads.
+        text_blocks = [b for b in result.content if getattr(b, "text", None)]
+        assert len(text_blocks) == 1, "expected one JSON (data) content block"
+        payload = json.loads(text_blocks[0].text)
+        assert payload["scope"] == _SCOPE
+        assert any(
+            "green CI" in (m.get("summary") or "") for m in payload["memories"]
+        ), "the seeded memory is missing from the content data"
+
+        # 2. structured_content mirrors it.
         data = result.structured_content
         assert data["scope"] == _SCOPE
-        assert any(
-            "green CI" in (m.get("summary") or "") for m in data["memories"]
-        ), "the seeded memory is missing from the structured data"
+        assert any("green CI" in (m.get("summary") or "") for m in data["memories"])
 
-        # 1. the card is emitted — a UI resource block at the ui:// uri.
-        resources = [b for b in result.content if getattr(b, "resource", None)]
-        assert len(resources) == 1, "expected exactly one UI resource content block"
-        res = resources[0].resource
-        assert str(res.uri) == "ui://dna/memory-list"
-        assert res.mimeType == "text/html;profile=mcp-app"
-        assert res.text.startswith("<!doctype html>")  # self-contained rawHtml.
-        assert "green CI" in res.text  # the memory rendered into the card.
-
-        # 1. the _meta pointer a host follows (both spellings).
+        # 3. the MCP-App _meta pointer a host follows (both spellings).
         meta = result.meta or {}
         assert meta.get("ui", {}).get("resourceUri") == "ui://dna/memory-list"
         assert meta.get("ui/resourceUri") == "ui://dna/memory-list"
 
-        # 3. no secret in the emitted HTML.
-        lowered = res.text.lower()
-        for forbidden in ("bearer", "authorization", "x-dna-tenant", "token"):
-            assert forbidden not in lowered, f"{forbidden!r} leaked into the card HTML"
+        # 4. no secret leaked into the returned payload.
+        lowered = text_blocks[0].text.lower()
+        for forbidden in ("bearer", "authorization", "x-dna-tenant"):
+            assert forbidden not in lowered, f"{forbidden!r} leaked into the result"
 
     asyncio.run(scenario())
 
 
 def test_degrades_to_plain_dict_without_mcp_ui(monkeypatch):
-    """If ``mcp-ui-server`` is absent, ``_with_memory_card`` returns the plain
-    data dict unchanged — the tool never breaks on an install without the extra."""
+    """If ``dna.emit.mcp_ui`` is unavailable, ``_with_memory_card`` returns the plain
+    data dict unchanged — the tool never breaks."""
     import builtins
 
     real_import = builtins.__import__
 
     def _no_mcp_ui(name, *args, **kwargs):
-        if name == "mcp_ui_server" or name.startswith("mcp_ui_server."):
-            raise ModuleNotFoundError("No module named 'mcp_ui_server'")
+        if name == "dna.emit.mcp_ui" or name.startswith("dna.emit.mcp_ui."):
+            raise ModuleNotFoundError("No module named 'dna.emit.mcp_ui'")
         return real_import(name, *args, **kwargs)
 
     monkeypatch.setattr(builtins, "__import__", _no_mcp_ui)
