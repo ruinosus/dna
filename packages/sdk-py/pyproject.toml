@@ -1,6 +1,6 @@
 [project]
 name = "dna-sdk"
-version = "0.17.0"
+version = "0.18.0"
 description = "DNA — Domain Notation of Anything: microkernel + extensions for declarative agent notation"
 readme = "README.md"
 license = "MIT"
