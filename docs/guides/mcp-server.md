@@ -309,6 +309,34 @@ Locally this is covered by an emulated multi-provider test (two OIDC issuers wit
 distinct tenant-claim keys) plus a `requires_azure` placeholder
 (`DNA_MCP_ENTRA_E2E`) that documents the real check without needing a credential.
 
+### `--auth azure` — the Entra facade (zero-config for Claude, OBO preserved)
+
+`--auth config` verifies a bearer token but does **not** help a client that can't
+be pre-registered (Claude wants Dynamic Client Registration; Entra has none).
+`--auth azure` wraps the server in FastMCP's `AzureProvider` (an OAuth 2.1
+**facade** in front of Entra): it serves the DCR / CIMD / PKCE / discovery
+endpoints Entra refuses, so **Claude auto-connects zero-config** — while the token
+reaching a tool stays the **Entra assertion**, so `graph/_obo.py` OBO to Graph is
+unchanged (the facade retains the upstream token server-side and hands it back).
+
+```bash
+export DNA_MCP_AZURE_CLIENT_ID=<mcp app-reg client id>       # the audience GUID
+export DNA_MCP_AZURE_CLIENT_SECRET=<confidential-client secret>
+export DNA_MCP_AZURE_TENANT=organizations                    # multi-tenant (default) or a GUID
+export DNA_MCP_AZURE_BASE_URL=https://<facade public url>
+export DNA_MCP_AZURE_IDENTIFIER_URI=api://<mcp app id uri>   # optional
+dna mcp serve --transport http --auth azure --host 0.0.0.0 --port 8000
+```
+
+A **multi-tenant** authority (`organizations`/`common`/`consumers`) relaxes issuer
+validation to audience+signature only — real Entra tokens carry the caller's own
+tenant GUID as `iss`, so a pinned issuer would reject every partner-org token (the
+same `verifier_issuer() is None` policy `--auth config` uses).
+
+> OBO note: keep DNA's own `graph/_obo.py` (it exchanges to each user's *home*
+> tenant dynamically). Do **not** route OBO through `AzureProvider`'s built-in
+> `EntraOBOToken`, which is pinned to the `organizations` authority.
+
 ### The tenancy bridge — a token composes only what is its tenant's
 
 This is the DNA-specific value. FastMCP verifies the token; it does **not** know
