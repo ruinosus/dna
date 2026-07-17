@@ -156,6 +156,60 @@ async def sdlc_digest_impl(
     return build_digest(docs=docs, since=since_dt, until=now, since_label=label, scope=sc)
 
 
+# ── MCP Apps (SEP-1865): a UI card at the tool ─────────────────────────────
+#
+# The memory-list tool returns its structured data AND a `ui://dna/memory-list`
+# UI resource (a self-contained rawHtml card), linked from the tool result's
+# `_meta.ui.resourceUri`, so an MCP host renders it in a sandboxed iframe. The
+# card HTML + the `create_ui_resource` payload live in the SDK's standalone
+# emit surface `dna.emit.mcp_ui` (pure, byte-golden, dependency-free); this face
+# turns the payload into a live resource and attaches the `_meta` pointer.
+#
+# Everything is imported LAZILY so the base install stays MCP-free (the
+# `mcp-ui-server` dep rides the optional `[mcp]` extra) and non-MCP-App hosts
+# degrade gracefully: if `mcp-ui-server` is absent the plain data dict is
+# returned unchanged.
+
+
+def _with_memory_card(data: dict[str, Any]) -> Any:
+    """Wrap the ``list_memories`` result with its MCP-App card.
+
+    Returns a ``ToolResult`` carrying the UI resource in ``content`` (an
+    ``EmbeddedResource`` at ``ui://dna/memory-list``, mimeType
+    ``text/html;profile=mcp-app``), the untouched structured data in
+    ``structured_content`` (so hosts without MCP Apps still get the data), and
+    the ``_meta.ui.resourceUri`` pointer. If the optional ``mcp-ui-server``
+    dependency is absent, degrades to the plain ``data`` dict — the tool never
+    breaks for a host (or install) that does not do MCP Apps."""
+    try:
+        from mcp_ui_server import create_ui_resource
+
+        from dna.emit.mcp_ui import (
+            MCP_APP_MIME,
+            UI_MEMORY_LIST_URI,
+            memory_list_ui_resource,
+        )
+    except ModuleNotFoundError:  # pragma: no cover — mcp-ui-server not installed.
+        return data
+
+    from fastmcp.tools.tool import ToolResult
+
+    resource = create_ui_resource(
+        memory_list_ui_resource(data.get("memories") or [], scope=data.get("scope"))
+    )
+    # Stamp the MCP Apps profile (SEP-1865) — mcp-ui-server emits bare text/html.
+    resource.resource.mimeType = MCP_APP_MIME
+    return ToolResult(
+        content=[resource],
+        structured_content=data,
+        meta={
+            # Both spellings of the pointer for host compatibility.
+            "ui": {"resourceUri": UI_MEMORY_LIST_URI},
+            "ui/resourceUri": UI_MEMORY_LIST_URI,
+        },
+    )
+
+
 # ── FastMCP wiring ─────────────────────────────────────────────────────────
 
 
@@ -628,10 +682,19 @@ def build_server(
 
     @server.tool(run_in_thread=False)
     async def list_memories(scope: str | None = None) -> dict[str, Any]:
-        """List your stored memories (tenant-scoped). Read-only."""
-        return await list_memories_impl(
+        """List your stored memories (tenant-scoped). Read-only.
+
+        Also emits an **MCP-App card** (SEP-1865): alongside the structured data
+        the tool returns a ``ui://dna/memory-list`` UI resource linked from
+        ``_meta.ui.resourceUri``, so an MCP host (Claude/ChatGPT/VS Code/Goose)
+        renders the memory list as a card in a sandboxed iframe — DNA's "your
+        context follows you across every client" thesis made visible. Hosts that
+        do not support MCP Apps ignore the resource and read the plain data
+        (graceful degradation)."""
+        data = await list_memories_impl(
             await _live(), scope, tenant=await _guard("memory", scope=scope, memory_op="read")
         )
+        return _with_memory_card(data)
 
     @server.tool(run_in_thread=False)
     async def forget(name: str, scope: str | None = None) -> dict[str, Any]:

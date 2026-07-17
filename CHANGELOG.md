@@ -11,6 +11,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **MCP Apps — the DNA memory card renders INSIDE Claude / ChatGPT / VS Code /
+  Goose** (`f-dna-cloud-copilot`, Phase 3 M0). The `list_memories` MCP tool now
+  ships an interactive UI card (SEP-1865 "MCP Apps", ratified 2026-01-26)
+  alongside its data: a self-contained `rawHtml` resource at `ui://dna/memory-list`
+  (DNA-branded, no external asset), linked from the tool result's
+  `_meta.ui.resourceUri`, so any MCP host renders the memory list as a card in a
+  sandboxed iframe — DNA's "your context follows you across every client" thesis
+  made *visible in the UI*, reached by `host → DNA MCP server` (the copilot
+  `/agui` agent is bypassed). Hosts without MCP Apps ignore the resource and read
+  the plain structured data (graceful degradation); the card carries no secret.
+  Rides the optional `dna-cli[mcp]` extra (new dep `mcp-ui-server>=1`), lazily
+  imported — the base install stays MCP-free.
+- **MCP-UI emit surface scaffold** (`f-dna-cloud-copilot`, Phase 4 groundwork).
+  `dna.emit.mcp_ui` — a standalone, byte-golden card surface (the `frontend.py`
+  pattern, not a registered `EmitterPort`) that projects a tool's clean
+  structured JSON into a `create_ui_resource`-shaped payload. AG-UI is labelled
+  already-covered (backend emitters + `/agui`); A2UI is deferred to its external
+  v1.0 (prepared for via the "data, not markup" discipline).
+
 ## [0.17.0] — 2026-07-16
 
 ### Added
