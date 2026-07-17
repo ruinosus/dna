@@ -73,19 +73,37 @@ class PersonalOverrideRejected(PermissionError):
     """
 
 
-def personal_tenant(oid: str) -> str:
-    """Build the reserved personal partition value for a durable identity ``oid``.
+#: The identity family that keeps the BARE ``personal:<id>`` value (no family
+#: segment) — Entra, the original lane. Keeping it bare means zero migration of
+#: existing personal partitions (decision D6). Any OTHER family (e.g. ``google``)
+#: is namespaced as ``personal:<family>:<id>`` so the families never collide.
+PERSONAL_IMPLICIT_FAMILY = "entra"
 
-    ``personal_tenant("abc") == "personal:abc"``. Raises
-    :class:`PersonalIdentityRequired` for a blank/empty oid — a personal
-    partition must always carry a concrete identity.
+
+def personal_tenant(oid: str, family: str | None = None) -> str:
+    """Build the reserved personal partition value for a durable identity.
+
+    Two lanes, one reserved scheme:
+
+    * Entra (default / ``family="entra"``) → the bare ``personal:<oid>`` — the
+      original value, so existing partitions need **no migration**;
+    * any other family (e.g. ``family="google"``) → ``personal:<family>:<id>``,
+      so a Google ``sub`` and an Entra ``oid`` can never collide.
+
+    ``personal_tenant("abc") == "personal:abc"``;
+    ``personal_tenant("abc", family="google") == "personal:google:abc"``.
+    Raises :class:`PersonalIdentityRequired` for a blank/empty identity in any
+    family — a personal partition must always carry a concrete identity.
     """
-    oid = (oid or "").strip()
-    if not oid:
+    ident = (oid or "").strip()
+    if not ident:
         raise PersonalIdentityRequired(
-            "personal memory needs a non-empty identity (oid) to key the partition"
+            "personal memory needs a non-empty identity to key the partition"
         )
-    return f"{PERSONAL_TENANT_PREFIX}{oid}"
+    fam = (family or PERSONAL_IMPLICIT_FAMILY).strip().lower()
+    if fam == PERSONAL_IMPLICIT_FAMILY:
+        return f"{PERSONAL_TENANT_PREFIX}{ident}"
+    return f"{PERSONAL_TENANT_PREFIX}{fam}:{ident}"
 
 
 def is_personal_tenant(tenant: str | None) -> bool:
