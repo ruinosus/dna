@@ -1430,6 +1430,98 @@ def test_lg_copilot_mounts_mcp_via_multiserver_client(lg_ctx):
     assert "ToolNode(await _mcp_client().get_tools())" in agent
 
 
+# ── Phase-2 canvas / M2: read-tool result → AG-UI shared state ───────────────
+#
+# The emitted ``_tool_node`` projects a READ tool's result into the AG-UI shared
+# state so the DNA console's Memória tab renders it — closing the Phase-2 canvas +
+# M2 gap. Two shared-state keys are the console CONTRACT (a sibling agent reads
+# them, do not rename): ``memory_timeline`` (a JSON list of
+# ``{id,text,when,tags,personal}``) + ``memory_card_html`` (a self-contained
+# rawHtml string, rendered as an ``<iframe srcDoc>``). The M2 research verdict:
+# NOT ``@ag-ui/mcp-apps-middleware`` (a dead end for backend-executed tools) —
+# project the #152-rendered card into shared state, the same channel as the
+# structured canvas items. The gate is DECLARATIVE: a ``memory-timeline``
+# frontend panel OR a memory read tool in the mounted allowlist.
+
+
+def test_lg_copilot_projects_read_tool_into_canvas_state(lg_ctx):
+    """memory-copilot mounts ``recall`` (a read tool) + declares a
+    ``memory-timeline`` panel → the emitted agent adds the two shared-state keys,
+    imports the #152 card renderer, and the tool node projects both."""
+    from dna.emit.langgraph import LanggraphEmitter
+
+    agent = LanggraphEmitter().emit(lg_ctx).artifact_for("agent")
+    # 1. State carries the two console-contract keys.
+    assert "memory_timeline: list" in agent
+    assert "memory_card_html: str" in agent
+    # 2. the #152 card renderer is reused (imported, not reinvented).
+    assert "from dna.emit.mcp_ui import memory_list_card_html" in agent
+    # 3. the read-tool gate reflects the mounted read tool (recall), not a blind
+    #    hardcode — remember/forget (writes) are NOT in it.
+    assert "_READ_TOOLS = {'recall'}" in agent
+    assert "remember" not in "".join(
+        l for l in agent.splitlines() if "_READ_TOOLS" in l
+    )
+    # 4. the tool node projects BOTH keys off the same parsed memory list.
+    assert 'out["memory_timeline"] = _memory_timeline(mems)' in agent
+    assert 'out["memory_card_html"] = memory_list_card_html(mems)' in agent
+    # 5. the item shape is the console contract (mapped from the raw memory).
+    assert '"id": str(mem.get("name") or mem.get("id") or i),' in agent
+    assert '"personal": bool(mem.get("personal")' in agent
+
+
+def test_lg_copilot_canvas_is_noop_for_non_memory_copilot():
+    """The GENERIC guarantee: a copilot mounting an MCP tool that is NOT a memory
+    read tool (and declares no ``memory-timeline`` panel) emits NO canvas
+    projection — no state keys, no ``dna.emit.mcp_ui`` import — and still compiles.
+    Proves the always-emitted path is undisturbed (design constraint)."""
+    from dna.emit import EmitContext, EmitMcpServer
+    from dna.emit.langgraph import LanggraphEmitter
+
+    ctx = EmitContext(
+        name="weatherbot",
+        description="",
+        instructions="Report the weather.",
+        model="azure/gpt-4o",
+        mcp_servers=[EmitMcpServer(ref="wx", transport="streamable-http",
+                                   url="https://wx.example/agui",
+                                   allowed_tools=["get_weather"])],
+        tools_requiring_confirmation=set(),
+    )
+    agent = LanggraphEmitter().emit(ctx).artifact_for("agent")
+    assert "memory_timeline" not in agent
+    assert "memory_card_html" not in agent
+    assert "dna.emit.mcp_ui" not in agent
+    assert "_READ_TOOLS" not in agent
+    # still a real ReAct graph over the MCP tool node.
+    assert "def _tool_node(state: State) -> dict:" in agent
+    assert _compiles(agent)
+
+
+def test_lg_copilot_canvas_gate_via_frontend_panel():
+    """The panel signal alone drives the gate: a copilot declaring a
+    ``memory-timeline`` frontend panel projects the canvas even if its allowlist
+    is open (empty) — the emitted ``_READ_TOOLS`` falls back to the canonical read
+    set."""
+    from dna.emit import EmitContext, EmitMcpServer
+    from dna.emit.langgraph import LanggraphEmitter
+
+    ctx = EmitContext(
+        name="notes",
+        description="",
+        instructions="Notes.",
+        model="azure/gpt-4o",
+        mcp_servers=[EmitMcpServer(ref="dna-mcp", transport="streamable-http",
+                                   url="https://mcp.example/agui")],  # open allowlist
+        tools_requiring_confirmation=set(),
+        frontend_panels=["memory-timeline"],
+    )
+    agent = LanggraphEmitter().emit(ctx).artifact_for("agent")
+    assert "memory_timeline: list" in agent
+    assert "_READ_TOOLS = {'list', 'list_memories', 'recall'}" in agent
+    assert _compiles(agent)
+
+
 # ── graph-enforced HITL (interrupt() vs approval_mode / external_execution) ──
 
 

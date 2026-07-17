@@ -34,6 +34,20 @@ function pyListLiteral(items: string[]): string {
   return "[" + items.map(pyStrLiteral).join(", ") + "]";
 }
 
+/** A Python set literal (`{"a", "b"}`) for a membership-tested constant — the
+ *  emitted `_READ_TOOLS` gate is a set (`name in _READ_TOOLS`). */
+function pySetLiteral(items: string[]): string {
+  return "{" + items.map(pyStrLiteral).join(", ") + "}";
+}
+
+/** The canonical DNA memory READ tools — the "read-tool → canvas" convention.
+ *  A mounted read tool from this set (or a declared `memory-timeline` frontend
+ *  panel) turns on the Phase-2 canvas projection: the tool result is projected
+ *  into the AG-UI shared-state keys `memory_timeline` + `memory_card_html` the
+ *  DNA console's Memória tab reads. Writes (`remember`/`forget`) are the
+ *  HITL-gated set and never feed the canvas. TS twin of `_MEMORY_READ_TOOLS`. */
+const MEMORY_READ_TOOLS = new Set(["list", "list_memories", "recall"]);
+
 /**
  * Two shapes share this target, exactly like the Agno + agent-framework emitters:
  *  - a **single agent** (`prompt-only` / `with-tools`) — one `create_react_agent`
@@ -171,6 +185,28 @@ export class LanggraphEmitter extends ScaffoldEmitter {
     const buildFn = hasWorkflow ? "build_workflow" : "build_agent";
     const mountedKind = hasWorkflow ? "workflow" : "agent";
 
+    // ── memory canvas (Phase-2 generative-UI over AG-UI shared state) ───────
+    // After the tool node runs, a READ tool's result is projected into two
+    // shared-state keys the DNA console's Memória tab reads: `memory_timeline`
+    // (structured `{id,text,when,tags,personal}` items) + `memory_card_html`
+    // (the #152 DNA-branded rawHtml card). The gate is DECLARATIVE, not a memory
+    // hardcode: a `memory-timeline` frontend panel declared on the Copilot, OR a
+    // known memory read tool in the mounted MCP allowlist (the "read-tool →
+    // canvas" convention). Scoped to the single-agent ReAct graph (the
+    // `_tool_node` only exists there); a workflow graph or a copilot with neither
+    // signal emits NO projection — a clean no-op, so the generic template still
+    // emits correctly for a copilot with no memory tools. TS twin of the Python.
+    const allowlist = new Set(ctx.mcpServers.flatMap((s) => s.allowedTools));
+    let readTools = [...MEMORY_READ_TOOLS].filter((t) => allowlist.has(t)).sort();
+    const memoryPanel = (ctx.frontendPanels ?? []).includes("memory-timeline");
+    const memoryCanvas =
+      ctx.mcpServers.length > 0 && !hasWorkflow && (memoryPanel || readTools.length > 0);
+    if (memoryCanvas && readTools.length === 0) {
+      // Panel declared but the allowlist is open (empty = "all tools"): fall back
+      // to the canonical read set as the emitted gate.
+      readTools = [...MEMORY_READ_TOOLS].sort();
+    }
+
     // ── persistence → real LangGraph backends ─────────────────────────────
     // checkpoint=postgres → `PostgresSaver.from_conn_string(...)`;
     // memory=postgres → `PostgresStore.from_conn_string(..., index=...)` with the
@@ -230,6 +266,10 @@ export class LanggraphEmitter extends ScaffoldEmitter {
       checkpoint_imports: checkpointImports,
       checkpointer_expr: checkpointerExpr,
       store_expr: storeExpr,
+      // memory canvas (Phase-2 read-tool → shared-state projection)
+      memory_canvas: memoryCanvas,
+      read_tools_literal: pySetLiteral(readTools),
+      read_tools_doc: readTools.join("/"),
     };
   }
 
@@ -289,11 +329,32 @@ export class LanggraphEmitter extends ScaffoldEmitter {
           "supply a model coordinate or instance at wire-up",
       );
     }
+    if (this.hasMemoryCanvas(ctx)) {
+      out.push(
+        "memory canvas — the emitted `_tool_node` projects a read tool's result " +
+          "into the AG-UI shared-state keys `memory_timeline` + `memory_card_html` " +
+          "(the DNA console's Memória canvas). `memory_card_html` is rendered by " +
+          "`dna.emit.mcp_ui.memory_list_card_html`, so the emitted app imports the " +
+          "`dna` package at runtime (a pure card renderer, no heavy deps); the item " +
+          "shape mapping (name/summary/created_at/tags → id/text/when/tags/personal) " +
+          "is a per-server convention",
+      );
+    }
     return out;
   }
 
-  private copilotMapping(): Record<string, string> {
-    return {
+  /** The declarative "read-tool → canvas" gate, shared by losses + mapping: a
+   *  single-agent MCP copilot that declares a `memory-timeline` frontend panel OR
+   *  mounts a known memory read tool. TS twin of the Python inline gate. */
+  private hasMemoryCanvas(ctx: EmitContext): boolean {
+    if (ctx.mcpServers.length === 0 || ctx.workflow.length > 0) return false;
+    const allowlist = new Set(ctx.mcpServers.flatMap((s) => s.allowedTools));
+    const memoryPanel = (ctx.frontendPanels ?? []).includes("memory-timeline");
+    return memoryPanel || [...MEMORY_READ_TOOLS].some((t) => allowlist.has(t));
+  }
+
+  private copilotMapping(ctx: EmitContext): Record<string, string> {
+    const mapping: Record<string, string> = {
       "buildPrompt (Soul+guardrails+instruction)": "INSTRUCTIONS constant (byte-equal)",
       "metadata.name": "LangGraphAgent(name=...) / StateGraph node ids",
       "spec.model / Genome.default_llm": "init_chat_model(...) (DNA coordinate preserved)",
@@ -304,6 +365,11 @@ export class LanggraphEmitter extends ScaffoldEmitter {
       "Copilot.workflow.chain":
         "StateGraph nodes + edges (graph-native chain) + interrupt() review node",
     };
+    if (this.hasMemoryCanvas(ctx)) {
+      mapping["Copilot.frontend.panels / read-tool result"] =
+        "State.memory_timeline + State.memory_card_html (AG-UI shared-state canvas)";
+    }
+    return mapping;
   }
 
   /** Render the two servable artifacts (agent graph module + AG-UI serve app) from
@@ -330,7 +396,7 @@ export class LanggraphEmitter extends ScaffoldEmitter {
       target: this.target,
       artifacts,
       losses: this.copilotLosses(ctx),
-      mapping: this.copilotMapping(),
+      mapping: this.copilotMapping(ctx),
     });
   }
 }

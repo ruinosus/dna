@@ -473,6 +473,82 @@ describe("LanggraphEmitter — the servable `copilot` case (StateGraph CoAgent)"
     expect(res.artifact).not.toContain("StateGraph");
     expect(res.artifact).not.toContain("add_langgraph_fastapi_endpoint");
   });
+
+  // ── Phase-2 canvas / M2: read-tool result → AG-UI shared state (TS twin) ───
+  //
+  // The emitted `_tool_node` projects a READ tool's result into the AG-UI shared
+  // state so the DNA console's Memória tab renders it. Two shared-state keys are
+  // the console CONTRACT (a sibling agent reads them, do not rename):
+  // `memory_timeline` (JSON `{id,text,when,tags,personal}` list) + `memory_card_html`
+  // (a self-contained rawHtml string). The gate is DECLARATIVE: a `memory-timeline`
+  // frontend panel OR a memory read tool in the mounted allowlist.
+  it("projects a read tool's result into the canvas shared-state keys", async () => {
+    const agent = new LanggraphEmitter().emit(await ctxFor("memory-copilot")).artifactFor("agent");
+    expect(agent).toContain("memory_timeline: list");
+    expect(agent).toContain("memory_card_html: str");
+    // reuses the #152 card renderer (imported, not reinvented).
+    expect(agent).toContain("from dna.emit.mcp_ui import memory_list_card_html");
+    // read-tool gate reflects the mounted read tool (recall) — TS double-quote convention.
+    expect(agent).toContain('_READ_TOOLS = {"recall"}');
+    // the tool node projects BOTH keys off the same parsed memory list.
+    expect(agent).toContain('out["memory_timeline"] = _memory_timeline(mems)');
+    expect(agent).toContain('out["memory_card_html"] = memory_list_card_html(mems)');
+    // the item shape is the console contract.
+    expect(agent).toContain('"id": str(mem.get("name") or mem.get("id") or i),');
+  });
+
+  it("emits NO canvas projection for a non-memory MCP copilot (generic no-op)", () => {
+    const ctx: EmitContext = {
+      name: "weatherbot",
+      description: "",
+      instructions: "Report the weather.",
+      model: "azure/gpt-4o",
+      tools: [],
+      outputSchema: null,
+      scope: null,
+      options: {},
+      mcpServers: [
+        { ref: "wx", transport: "streamable-http", url: "https://wx.example/agui",
+          auth: {}, allowedTools: ["get_weather"], propagateTenant: false },
+      ],
+      toolsRequiringConfirmation: new Set<string>(),
+      tenantPropagate: false,
+      knowledge: [],
+      workflow: [],
+    };
+    const agent = new LanggraphEmitter().emit(ctx).artifactFor("agent");
+    expect(agent).not.toContain("memory_timeline");
+    expect(agent).not.toContain("memory_card_html");
+    expect(agent).not.toContain("dna.emit.mcp_ui");
+    expect(agent).not.toContain("_READ_TOOLS");
+    expect(agent).toContain("def _tool_node(state: State) -> dict:");
+  });
+
+  it("gates the canvas via a declared memory-timeline frontend panel (open allowlist)", () => {
+    const ctx: EmitContext = {
+      name: "notes",
+      description: "",
+      instructions: "Notes.",
+      model: "azure/gpt-4o",
+      tools: [],
+      outputSchema: null,
+      scope: null,
+      options: {},
+      mcpServers: [
+        { ref: "dna-mcp", transport: "streamable-http", url: "https://mcp.example/agui",
+          auth: {}, allowedTools: [], propagateTenant: false },
+      ],
+      toolsRequiringConfirmation: new Set<string>(),
+      tenantPropagate: false,
+      knowledge: [],
+      workflow: [],
+      frontendPanels: ["memory-timeline"],
+    };
+    const agent = new LanggraphEmitter().emit(ctx).artifactFor("agent");
+    expect(agent).toContain("memory_timeline: list");
+    // open allowlist → the emitted gate falls back to the canonical read set.
+    expect(agent).toContain('_READ_TOOLS = {"list", "list_memories", "recall"}');
+  });
 });
 
 // ── f-copilot-persistence · the emit half (Postgres v1) — TS twin ────────────

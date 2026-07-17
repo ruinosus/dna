@@ -56,6 +56,21 @@ def _py_list_literal(items: list[str]) -> str:
     return "[" + ", ".join(py_str_literal(x) for x in items) + "]"
 
 
+def _py_set_literal(items: list[str]) -> str:
+    """A Python set literal (``{'a', 'b'}``) for a membership-tested constant —
+    the emitted ``_READ_TOOLS`` gate is a set (``name in _READ_TOOLS``)."""
+    return "{" + ", ".join(py_str_literal(x) for x in items) + "}"
+
+
+#: The canonical DNA memory READ tools — the "read-tool → canvas" convention.
+#: A mounted read tool from this set (or a declared ``memory-timeline`` frontend
+#: panel) turns on the Phase-2 canvas projection: the tool result is projected
+#: into the AG-UI shared-state keys ``memory_timeline`` + ``memory_card_html``
+#: the DNA console's Memória tab reads. Writes (``remember``/``forget``) are the
+#: HITL-gated set and never feed the canvas.
+_MEMORY_READ_TOOLS = frozenset({"list", "list_memories", "recall"})
+
+
 class LanggraphEmitter(ScaffoldEmitter):
     """Emit a DNA agent as LangGraph source (scaffold, code-first).
 
@@ -207,6 +222,31 @@ class LanggraphEmitter(ScaffoldEmitter):
         build_fn = "build_workflow" if has_workflow else "build_agent"
         mounted_kind = "workflow" if has_workflow else "agent"
 
+        # ── memory canvas (Phase-2 generative-UI over AG-UI shared state) ────
+        # After the tool node runs, a READ tool's result is projected into two
+        # shared-state keys the DNA console's Memória tab reads:
+        # ``memory_timeline`` (structured `{id,text,when,tags,personal}` items)
+        # and ``memory_card_html`` (the #152 DNA-branded rawHtml card). The gate
+        # is DECLARATIVE, not a memory hardcode: a `memory-timeline` frontend
+        # panel declared on the Copilot, OR a known memory read tool present in
+        # the mounted MCP allowlist (the "read-tool → canvas" convention). It is
+        # scoped to the single-agent ReAct graph (the `_tool_node` only exists
+        # there); a workflow graph or a copilot with neither signal emits NO
+        # projection — the block is a clean no-op, so the generic template still
+        # emits correctly for a copilot with no memory tools.
+        allowlist = {tool for s in ctx.mcp_servers for tool in s.allowed_tools}
+        read_tools = sorted(allowlist & _MEMORY_READ_TOOLS)
+        memory_panel = "memory-timeline" in (ctx.frontend_panels or [])
+        memory_canvas = (
+            bool(ctx.mcp_servers)
+            and not has_workflow
+            and bool(memory_panel or read_tools)
+        )
+        if memory_canvas and not read_tools:
+            # Panel declared but the allowlist is open (empty = "all tools"):
+            # fall back to the canonical read set as the emitted gate.
+            read_tools = sorted(_MEMORY_READ_TOOLS)
+
         # ── persistence → real LangGraph backends ───────────────────────────
         # checkpoint=postgres → `PostgresSaver.from_conn_string(...)`;
         # memory=postgres → `PostgresStore.from_conn_string(..., index=...)`
@@ -270,6 +310,10 @@ class LanggraphEmitter(ScaffoldEmitter):
             "checkpoint_imports": checkpoint_imports,
             "checkpointer_expr": checkpointer_expr,
             "store_expr": store_expr,
+            # memory canvas (Phase-2 read-tool → shared-state projection)
+            "memory_canvas": memory_canvas,
+            "read_tools_literal": _py_set_literal(read_tools),
+            "read_tools_doc": "/".join(read_tools),
         }
 
     @staticmethod
@@ -329,10 +373,26 @@ class LanggraphEmitter(ScaffoldEmitter):
                 "model unbound in DNA and none supplied — emitted `_model()` raises; "
                 "supply a model coordinate or instance at wire-up"
             )
+        allowlist = {tool for s in ctx.mcp_servers for tool in s.allowed_tools}
+        if (
+            ctx.mcp_servers
+            and not ctx.workflow
+            and ("memory-timeline" in (ctx.frontend_panels or []) or (allowlist & _MEMORY_READ_TOOLS))
+        ):
+            out.append(
+                "memory canvas — the emitted `_tool_node` projects a read tool's "
+                "result into the AG-UI shared-state keys `memory_timeline` + "
+                "`memory_card_html` (the DNA console's Memória canvas). "
+                "`memory_card_html` is rendered by "
+                "`dna.emit.mcp_ui.memory_list_card_html`, so the emitted app "
+                "imports the `dna` package at runtime (a pure card renderer, no "
+                "heavy deps); the item shape mapping (name/summary/created_at/tags "
+                "→ id/text/when/tags/personal) is a per-server convention"
+            )
         return out
 
-    def _copilot_mapping(self) -> dict[str, str]:
-        return {
+    def _copilot_mapping(self, ctx: EmitContext) -> dict[str, str]:
+        mapping = {
             "build_prompt (Soul+guardrails+instruction)": "INSTRUCTIONS constant (byte-equal)",
             "metadata.name": "LangGraphAgent(name=...) / StateGraph node ids",
             "spec.model / Genome.default_llm": "init_chat_model(...) (DNA coordinate preserved)",
@@ -341,6 +401,16 @@ class LanggraphEmitter(ScaffoldEmitter):
             "Copilot.tenant.propagate": "inbound ContextVar → graph state['tenant'] + X-DNA-* MCP headers",
             "Copilot.workflow.chain": "StateGraph nodes + edges (graph-native chain) + interrupt() review node",
         }
+        allowlist = {tool for s in ctx.mcp_servers for tool in s.allowed_tools}
+        if (
+            ctx.mcp_servers
+            and not ctx.workflow
+            and ("memory-timeline" in (ctx.frontend_panels or []) or (allowlist & _MEMORY_READ_TOOLS))
+        ):
+            mapping["Copilot.frontend.panels / read-tool result"] = (
+                "State.memory_timeline + State.memory_card_html (AG-UI shared-state canvas)"
+            )
+        return mapping
 
     def _emit_copilot(self, ctx: EmitContext) -> EmitResult:
         """Render the two servable artifacts (agent graph module + AG-UI serve app)
@@ -372,5 +442,5 @@ class LanggraphEmitter(ScaffoldEmitter):
                 EmitArtifact(path=f"{module}_serve.py", content=serve_src, role="serving"),
             ],
             losses=self._copilot_losses(ctx),
-            mapping=self._copilot_mapping(),
+            mapping=self._copilot_mapping(ctx),
         )
