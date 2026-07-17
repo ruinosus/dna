@@ -9,6 +9,7 @@ import {
   isPersonalTenant,
   PersonalIdentityRequired,
   personalTenant,
+  resolveMemoryTenant,
 } from "../src/memory/personal.js";
 
 describe("personalTenant — dual-lane family namespacing", () => {
@@ -32,5 +33,14 @@ describe("personalTenant — dual-lane family namespacing", () => {
   test("blank identity fails closed for any family", () => {
     expect(() => personalTenant("", "google")).toThrow(PersonalIdentityRequired);
     expect(() => personalTenant("   ", "entra")).toThrow(PersonalIdentityRequired);
+  });
+
+  test("resolveMemoryTenant threads family (parity with Py)", () => {
+    expect(
+      resolveMemoryTenant({ memoryScope: "personal", oid: "google-sub", workspaceTenant: null, family: "google" }),
+    ).toBe("personal:google:google-sub");
+    expect(
+      resolveMemoryTenant({ memoryScope: "personal", oid: "entra-oid", workspaceTenant: null }),
+    ).toBe("personal:entra-oid");
   });
 });

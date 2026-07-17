@@ -129,8 +129,9 @@ export function resolveMemoryTenant(args: {
   memoryScope: MemoryScope;
   oid: string | null | undefined;
   workspaceTenant: string | null | undefined;
+  family?: string | null;
 }): string | null {
-  const { memoryScope, oid, workspaceTenant } = args;
+  const { memoryScope, oid, workspaceTenant, family } = args;
   if (memoryScope === PERSONAL_SCOPE) {
     if (oid === null || oid === undefined || !String(oid).trim()) {
       throw new PersonalIdentityRequired(
@@ -139,7 +140,7 @@ export function resolveMemoryTenant(args: {
           "reads DNA_PERSONAL_ID. None was available — access denied (fail-closed).",
       );
     }
-    return personalTenant(String(oid));
+    return personalTenant(String(oid), family);
   }
   return workspaceTenant ?? null;
 }
