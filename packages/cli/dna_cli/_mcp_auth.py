@@ -960,6 +960,64 @@ def jwt_provider_from_env() -> Any:
     return verifier
 
 
+#: Entra multi-tenant authorities — tokens from these carry the CALLER's own
+#: tenant GUID as ``iss``, so a pinned issuer would reject every partner-org
+#: token. For these we relax issuer validation to audience+signature only.
+_AZURE_MULTITENANT = frozenset({"organizations", "consumers", "common"})
+
+
+def azure_provider_from_env() -> Any:
+    """Build a FastMCP ``AzureProvider`` (OAuthProxy facade) from env — the Lane A
+    (Entra) provider that gives Claude zero-config DCR/CIMD/PKCE while preserving
+    the Entra assertion for OBO (the proxy retains the upstream token server-side
+    and hands it back on tool calls; DNA's ``graph/_obo.py`` reads it unchanged).
+
+    Env:
+
+    * ``DNA_MCP_AZURE_CLIENT_ID``      — the MCP app-reg client id (the audience GUID),
+    * ``DNA_MCP_AZURE_CLIENT_SECRET``  — the confidential-client secret,
+    * ``DNA_MCP_AZURE_TENANT``         — ``organizations`` (multi-tenant, default) or a GUID,
+    * ``DNA_MCP_AZURE_BASE_URL``       — the facade's public base URL,
+    * ``DNA_MCP_AZURE_IDENTIFIER_URI`` — the App ID URI (e.g. ``api://dna-mcp-dnacloud``), optional,
+    * ``DNA_MCP_AZURE_SCOPES``         — comma-separated required scopes, optional.
+
+    For a **multi-tenant** authority the verifier's issuer is relaxed to ``None``
+    (audience + signature only) — the gate-0/G0.2 fix, and the same
+    ``verifier_issuer() is None`` policy the ``--auth config`` Entra path uses.
+    A concrete single-tenant GUID keeps the pinned issuer.
+    """
+    from fastmcp.server.auth.providers.azure import AzureProvider
+
+    try:
+        client_id = os.environ["DNA_MCP_AZURE_CLIENT_ID"]
+        client_secret = os.environ["DNA_MCP_AZURE_CLIENT_SECRET"]
+        base_url = os.environ["DNA_MCP_AZURE_BASE_URL"]
+    except KeyError as exc:
+        raise RuntimeError(
+            "azure auth needs DNA_MCP_AZURE_CLIENT_ID, DNA_MCP_AZURE_CLIENT_SECRET "
+            "and DNA_MCP_AZURE_BASE_URL"
+        ) from exc
+    tenant = os.environ.get("DNA_MCP_AZURE_TENANT", "organizations")
+    kwargs: dict[str, Any] = dict(
+        client_id=client_id, client_secret=client_secret,
+        tenant_id=tenant, base_url=base_url,
+    )
+    identifier_uri = os.environ.get("DNA_MCP_AZURE_IDENTIFIER_URI")
+    if identifier_uri:
+        kwargs["identifier_uri"] = identifier_uri
+    # ``required_scopes`` is required and must carry ≥1 non-OIDC scope (AzureProvider
+    # rejects an empty/OIDC-only list). Default to the DNA MCP's delegated scope
+    # ``user_impersonation`` (identifier_uri is auto-prefixed by AzureProvider).
+    scopes = [s.strip() for s in os.environ.get("DNA_MCP_AZURE_SCOPES", "").split(",") if s.strip()]
+    kwargs["required_scopes"] = scopes or ["user_impersonation"]
+
+    provider = AzureProvider(**kwargs)
+    if tenant in _AZURE_MULTITENANT:
+        # Relax issuer → audience+signature only (fastmcp's own from_b2c mutation).
+        provider._token_validator.issuer = None
+    return provider
+
+
 def resource_server(
     token_verifier: Any,
     *,
