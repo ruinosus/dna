@@ -52,3 +52,26 @@ def test_azure_provider_requires_core_env(monkeypatch):
 
     with pytest.raises((RuntimeError, KeyError)):
         azure_provider_from_env()
+
+
+def test_serve_auth_azure_selects_azure_provider(monkeypatch):
+    """`dna mcp serve --auth azure` builds the server with an AzureProvider."""
+    _base_env(monkeypatch, "organizations")
+    from click.testing import CliRunner
+    from fastmcp.server.auth.providers.azure import AzureProvider
+    import dna_cli.mcp_cmd as mcp_cmd
+
+    captured: dict = {}
+
+    class _Stop(Exception):
+        pass
+
+    def _fake_build_server(*, scope, base_dir, auth, graph_config=None):
+        captured["auth"] = auth
+        raise _Stop()  # stop before build_http_app/uvicorn
+
+    import dna_cli._mcp_server as mcp_server
+    monkeypatch.setattr(mcp_server, "build_server", _fake_build_server)  # imported inside serve()
+    result = CliRunner().invoke(mcp_cmd.serve, ["--auth", "azure", "--transport", "http"])
+    # the branch ran and passed an AzureProvider to build_server
+    assert isinstance(captured.get("auth"), AzureProvider), result.output
