@@ -19,16 +19,26 @@ from langgraph.graph.message import add_messages
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langgraph.prebuilt import ToolNode
 from langgraph.types import interrupt
+from dna.emit.mcp_ui import memory_list_card_html
 INSTRUCTIONS = "Remember and recall the user's notes. Confirm before writing.\n\nYou are the Helpdesk Concierge, an internal engineering support assistant. You help developers triage and resolve engineering questions."
 
 
 class State(TypedDict):
     """The graph state — the LangGraph-native carrier. `messages` is the running
     transcript; `tenant` rides IN the state (DNA tenancy = tenant + workspace +
-    oid), read by every node and stamped onto outbound MCP calls."""
+    oid), read by every node and stamped onto outbound MCP calls.
+
+    `memory_timeline` + `memory_card_html` are the Phase-2 generative-UI channel:
+    when a READ tool (recall) runs, its result is projected into these
+    keys and streamed to the frontend via the AG-UI state snapshot — the DNA
+    console's Memória tab reads `agent.state.memory_timeline` (structured items)
+    and renders `agent.state.memory_card_html` (the DNA-branded card) as an
+    `<iframe srcDoc>` (scannable, not stuffed into the chat)."""
 
     messages: Annotated[list[AnyMessage], add_messages]
     tenant: dict
+    memory_timeline: list
+    memory_card_html: str
 
 
 #: Request-scoped tenant carrier. The serving layer sets it from inbound request
@@ -116,8 +126,84 @@ async def _agent_node(state: State) -> dict:
 
 async def _tool_node(state: State) -> dict:
     """Run the model's MCP tool calls (a LangGraph `ToolNode` over the tools the DNA
-    MCP server exposes), then loop back to the agent node."""
-    return await ToolNode(await _mcp_client().get_tools()).ainvoke(state)
+    MCP server exposes), then loop back to the agent node. After running, if a READ
+    tool (recall) produced a result, project it into `memory_timeline`
+    (structured items) + `memory_card_html` (the DNA-branded card) so the console's
+    Memória canvas renders it (Phase-2 generative-UI over the AG-UI shared state)."""
+    out = await ToolNode(await _mcp_client().get_tools()).ainvoke(state)
+    mems = _read_tool_memories(out.get("messages", []))
+    if mems is not None:
+        out["memory_timeline"] = _memory_timeline(mems)
+        out["memory_card_html"] = memory_list_card_html(mems)
+    return out
+
+#: Read tools whose result feeds the memory canvas — the "read-tool → canvas"
+#: convention, driven off the copilot's mounted MCP read allowlist (and/or the
+#: declared `memory-timeline` frontend panel). Writes are HITL-gated, never here.
+_READ_TOOLS = {"recall"}
+
+
+def _coerce_json(content):
+    """Best-effort parse of an MCP ToolMessage's content into a Python object.
+    langchain-mcp-adapters may hand back a JSON string, an already-parsed
+    dict/list, or a list of MCP content blocks (`[{"type":"text","text":"…"}]`)."""
+    import json
+
+    if isinstance(content, (dict, list)) and not (
+        isinstance(content, list) and content and isinstance(content[0], dict) and "text" in content[0]
+    ):
+        return content
+    text = content
+    if isinstance(content, list):
+        # MCP text-content blocks → concatenated text
+        text = "".join(
+            b.get("text", "") for b in content if isinstance(b, dict)
+        )
+    if isinstance(text, str):
+        try:
+            return json.loads(text)
+        except Exception:
+            return None
+    return None
+
+
+def _read_tool_memories(new_messages) -> list | None:
+    """If a read tool (recall) just ran, return its RAW memory list —
+    the single parsed source both the timeline projection and the rendered card
+    derive from. Returns None when no read-tool result is present (leaves the
+    canvas unchanged)."""
+    for m in new_messages:
+        if getattr(m, "name", None) not in _READ_TOOLS:
+            continue
+        data = _coerce_json(getattr(m, "content", ""))
+        mems = None
+        if isinstance(data, dict):
+            mems = data.get("memories") or data.get("results") or data.get("hits")
+        elif isinstance(data, list):
+            mems = data
+        if isinstance(mems, list):
+            return mems
+    return None
+
+
+def _memory_timeline(mems) -> list:
+    """Project the raw memory list into the canvas item shape the frontend reads:
+    `{id, text, when, tags, personal}` (mapped from `{name, summary, created_at,
+    tags}`)."""
+    items = []
+    for i, mem in enumerate(mems):
+        if not isinstance(mem, dict):
+            continue
+        items.append(
+            {
+                "id": str(mem.get("name") or mem.get("id") or i),
+                "text": mem.get("summary") or mem.get("text") or mem.get("content") or "",
+                "when": mem.get("created_at") or mem.get("when") or "",
+                "tags": list(mem.get("tags") or []),
+                "personal": bool(mem.get("personal") or mem.get("memory_scope") == "personal"),
+            }
+        )
+    return items
 
 #: The DNA write tools gated on human approval (`Tool.requires_confirmation`) — the
 #: graph pauses on these via LangGraph `interrupt()`.
