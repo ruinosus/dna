@@ -1,6 +1,6 @@
 {
   "name": "dna-sdk",
-  "version": "0.19.1",
+  "version": "0.19.2",
   "description": "DNA — Domain Notation of Anything (TypeScript SDK)",
   "type": "module",
   "license": "MIT",
