@@ -40,7 +40,8 @@ from dataclasses import dataclass
 from typing import Any
 
 # Env knobs (all optional; sensible defaults).
-_ENV_SCOPES_SUPPORTED = "DNA_MCP_SCOPES_SUPPORTED"  # comma-separated OAuth scopes to advertise in PRM
+_ENV_SCOPES_SUPPORTED = "DNA_MCP_SCOPES_SUPPORTED"  # comma-separated OAuth scopes to advertise in PRM (Lane A / Entra)
+_ENV_WORKOS_SCOPES_SUPPORTED = "DNA_MCP_WORKOS_SCOPES_SUPPORTED"  # Lane B (WorkOS) PRM scopes; OIDC default
 _ENV_TENANT_CLAIM = "DNA_MCP_TENANT_CLAIM"          # claim key holding the tenant
 _ENV_TENANT_SCOPE_PREFIX = "DNA_MCP_TENANT_SCOPE_PREFIX"  # e.g. "tenant:" in scopes
 DEFAULT_TENANT_CLAIM = "tenant"
@@ -166,6 +167,28 @@ def scopes_supported_from_env() -> list[str] | None:
         return None
     scopes = [s.strip() for s in raw.split(",") if s.strip()]
     return scopes or None
+
+
+# WorkOS AuthKit's /oauth2 accepts standard OIDC scopes only — it does NOT know
+# Lane A's Entra `user_impersonation` scope URI. Lane B must therefore advertise
+# its OWN scopes in PRM, decoupled from ``DNA_MCP_SCOPES_SUPPORTED`` (which the
+# Entra lane sets to the Azure URI). Sharing that env made the /consumer PRM
+# advertise the Entra scope → an MCP client (Claude) requested it → WorkOS 400
+# `invalid_scope`, which the client surfaced as a failed auth callback.
+_WORKOS_DEFAULT_SCOPES = ["openid", "profile", "email"]
+
+
+def workos_scopes_supported_from_env() -> list[str]:
+    """Lane B (WorkOS) PRM scopes. Defaults to the OIDC set WorkOS AuthKit accepts
+    (and the portal also requests); override via ``DNA_MCP_WORKOS_SCOPES_SUPPORTED``
+    (comma-separated). NEVER falls back to the Entra ``DNA_MCP_SCOPES_SUPPORTED``.
+    """
+    raw = os.environ.get(_ENV_WORKOS_SCOPES_SUPPORTED, "").strip()
+    if raw:
+        scopes = [s.strip() for s in raw.split(",") if s.strip()]
+        if scopes:
+            return scopes
+    return list(_WORKOS_DEFAULT_SCOPES)
 
 
 def plan_claim_key() -> str:
@@ -1135,7 +1158,9 @@ def workos_provider_from_env() -> Any:
         verifier,
         base_url=resource_url,
         authorization_servers=[domain],
-        scopes_supported=scopes_supported_from_env(),
+        # Lane B advertises OIDC scopes — NOT the Entra `user_impersonation` URI
+        # (WorkOS would 400 `invalid_scope`). See workos_scopes_supported_from_env.
+        scopes_supported=workos_scopes_supported_from_env(),
     )
 
 
