@@ -42,17 +42,23 @@ def test_google_absent_without_creds(monkeypatch):
     assert "google" not in registry  # fail-closed: no creds ⇒ not registered
 
 
-@pytest.mark.asyncio
-async def test_google_without_consent_store_is_honest_gap(monkeypatch):
+def test_google_without_consent_store_is_honest_gap(monkeypatch):
     """With no refresh-token store wired (the deferred piece), the Google port
-    reports an honest capability gap — never a crash, never a leak."""
+    reports an honest capability gap — never a crash, never a leak. Uses
+    ``asyncio.run`` (not the pytest-asyncio marker, which CI's cli env lacks)."""
+    import asyncio
+
     from dna_cli.act_on_behalf._port import ActContext, ActOnBehalfUnavailable
 
     monkeypatch.setenv("DNA_MCP_GOOGLE_CLIENT_ID", "gid")
     monkeypatch.setenv("DNA_MCP_GOOGLE_CLIENT_SECRET", "sec")
     port = build_provider_registry(_cfg_calendar_active())["google"]
     ctx = ActContext(provider_hint="google", tenant="", subject="google-sub-1")
-    with pytest.raises(ActOnBehalfUnavailable):
+
+    async def _call():
         await port.credential_for(
             ctx, "calendar", ["https://www.googleapis.com/auth/calendar.readonly"],
         )
+
+    with pytest.raises(ActOnBehalfUnavailable):
+        asyncio.run(_call())
