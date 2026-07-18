@@ -43,6 +43,37 @@ def test_workos_domain_gets_https_prefix(monkeypatch):
     assert workos_provider_from_env() is not None
 
 
+def test_workos_scopes_ignore_entra_env(monkeypatch):
+    """Lane B PRM must advertise OIDC scopes, NEVER the Entra `user_impersonation`
+    URI — sharing DNA_MCP_SCOPES_SUPPORTED made WorkOS 400 `invalid_scope`
+    (the Claude MCP auth-callback failure)."""
+    from dna_cli._mcp_auth import workos_scopes_supported_from_env
+
+    # Entra env set (the Azure scope URI) — Lane B MUST ignore it.
+    monkeypatch.setenv(
+        "DNA_MCP_SCOPES_SUPPORTED", "api://dna-mcp-dnacloud/user_impersonation"
+    )
+    monkeypatch.delenv("DNA_MCP_WORKOS_SCOPES_SUPPORTED", raising=False)
+    scopes = workos_scopes_supported_from_env()
+    assert scopes == ["openid", "profile", "email"], scopes
+    assert not any("user_impersonation" in s for s in scopes)
+
+
+def test_workos_scopes_override(monkeypatch):
+    """A Lane-B-specific override is honored (comma-separated)."""
+    from dna_cli._mcp_auth import workos_scopes_supported_from_env
+
+    monkeypatch.setenv(
+        "DNA_MCP_WORKOS_SCOPES_SUPPORTED", "openid, profile, email, offline_access"
+    )
+    assert workos_scopes_supported_from_env() == [
+        "openid",
+        "profile",
+        "email",
+        "offline_access",
+    ]
+
+
 # ── the /consumer mount (Option X) — fakes to avoid heavy server construction ──
 
 class _FakeMcpApp:
