@@ -73,19 +73,37 @@ class PersonalOverrideRejected(PermissionError):
     """
 
 
-def personal_tenant(oid: str) -> str:
-    """Build the reserved personal partition value for a durable identity ``oid``.
+#: The identity family that keeps the BARE ``personal:<id>`` value (no family
+#: segment) — Entra, the original lane. Keeping it bare means zero migration of
+#: existing personal partitions (decision D6). Any OTHER family (e.g. ``google``)
+#: is namespaced as ``personal:<family>:<id>`` so the families never collide.
+PERSONAL_IMPLICIT_FAMILY = "entra"
 
-    ``personal_tenant("abc") == "personal:abc"``. Raises
-    :class:`PersonalIdentityRequired` for a blank/empty oid — a personal
-    partition must always carry a concrete identity.
+
+def personal_tenant(oid: str, family: str | None = None) -> str:
+    """Build the reserved personal partition value for a durable identity.
+
+    Two lanes, one reserved scheme:
+
+    * Entra (default / ``family="entra"``) → the bare ``personal:<oid>`` — the
+      original value, so existing partitions need **no migration**;
+    * any other family (e.g. ``family="google"``) → ``personal:<family>:<id>``,
+      so a Google ``sub`` and an Entra ``oid`` can never collide.
+
+    ``personal_tenant("abc") == "personal:abc"``;
+    ``personal_tenant("abc", family="google") == "personal:google:abc"``.
+    Raises :class:`PersonalIdentityRequired` for a blank/empty identity in any
+    family — a personal partition must always carry a concrete identity.
     """
-    oid = (oid or "").strip()
-    if not oid:
+    ident = (oid or "").strip()
+    if not ident:
         raise PersonalIdentityRequired(
-            "personal memory needs a non-empty identity (oid) to key the partition"
+            "personal memory needs a non-empty identity to key the partition"
         )
-    return f"{PERSONAL_TENANT_PREFIX}{oid}"
+    fam = (family or PERSONAL_IMPLICIT_FAMILY).strip().lower()
+    if fam == PERSONAL_IMPLICIT_FAMILY:
+        return f"{PERSONAL_TENANT_PREFIX}{ident}"
+    return f"{PERSONAL_TENANT_PREFIX}{fam}:{ident}"
 
 
 def is_personal_tenant(tenant: str | None) -> bool:
@@ -107,6 +125,7 @@ def resolve_memory_tenant(
     memory_scope: MemoryScope,
     oid: str | None,
     workspace_tenant: str | None,
+    family: str | None = None,
 ) -> str | None:
     """Resolve the physical ``tenant`` a memory request runs against — the ADR §5
     decision, pure and workspace-independent for the personal case.
@@ -121,7 +140,10 @@ def resolve_memory_tenant(
 
     The oid is a parameter here only because this pure function does not read
     tokens; the SURFACES derive it server-side and are the sole callers — a
-    caller can never inject the oid (INV-PERSONAL layer 1).
+    caller can never inject the oid (INV-PERSONAL layer 1). ``family`` (the
+    provider family the identity came from, also server-derived) namespaces the
+    partition for non-Entra lanes: Entra/None → bare ``personal:<oid>``, Google →
+    ``personal:google:<sub>`` (the two families never collide).
     """
     if memory_scope == PERSONAL_SCOPE:
         if oid is None or not str(oid).strip():
@@ -130,7 +152,7 @@ def resolve_memory_tenant(
                 "authenticated requests read it from the verified token; offline/stdio "
                 "reads DNA_PERSONAL_ID. None was available — access denied (fail-closed)."
             )
-        return personal_tenant(str(oid))
+        return personal_tenant(str(oid), family=family)
     # workspace (default) — unchanged behavior.
     return workspace_tenant
 

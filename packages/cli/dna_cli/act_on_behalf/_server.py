@@ -24,6 +24,7 @@ from ..graph._obo import _default_acquire
 from ..graph.errors import OboError
 from ._calendar import calendar_list
 from ._dispatch import act_context_from_context, resolve_port
+from ._google import GoogleWorkspaceProvider
 from ._microsoft import MicrosoftOboProvider
 from ._port import ActOnBehalfPort, ActOnBehalfUnavailable
 
@@ -34,8 +35,13 @@ def build_provider_registry(cfg: C.GraphConfig) -> dict[str, ActOnBehalfPort]:
 
     PoC: Microsoft is built from the ``graph:`` block (the reference impl re-used as
     the port), reading the confidential-client id + secret from the env-var NAMES the
-    config declares (never stored). Google is intentionally absent until its config
-    surface (``s-aob-config-surface``) lands — fail-closed, OSS/stdio untouched."""
+    config declares (never stored). **Google (Lane B data)** is registered when the
+    ``calendar`` group is active AND the Google OAuth client creds are present
+    (``DNA_MCP_GOOGLE_CLIENT_ID`` / ``DNA_MCP_GOOGLE_CLIENT_SECRET``); its per-user
+    consent flow + refresh-token store is the remaining deferred piece (the port's
+    ``refresh_lookup`` default returns ``None`` → an honest capability gap until it
+    lands), so a Google identity gets "no consented credential yet", never a crash.
+    Fail-closed, OSS/stdio untouched."""
     registry: dict[str, ActOnBehalfPort] = {}
     if cfg is not None and cfg.is_active("calendar"):
         registry["microsoft"] = MicrosoftOboProvider(
@@ -45,6 +51,21 @@ def build_provider_registry(cfg: C.GraphConfig) -> dict[str, ActOnBehalfPort]:
             supported_capabilities={"calendar"},
             acquire=_default_acquire,
         )
+        g_id = os.environ.get("DNA_MCP_GOOGLE_CLIENT_ID") or None
+        g_secret = os.environ.get("DNA_MCP_GOOGLE_CLIENT_SECRET") or None
+        if g_id and g_secret:
+            g_scopes = [
+                s.strip()
+                for s in os.environ.get(
+                    "DNA_MCP_GOOGLE_CALENDAR_SCOPES",
+                    "https://www.googleapis.com/auth/calendar.readonly",
+                ).split(",")
+                if s.strip()
+            ]
+            registry["google"] = GoogleWorkspaceProvider(
+                client_id=g_id, client_secret=g_secret,
+                allowed_scopes=g_scopes, supported_capabilities={"calendar"},
+            )
     return registry
 
 

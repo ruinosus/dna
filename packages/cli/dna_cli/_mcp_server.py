@@ -255,6 +255,7 @@ def build_server(
     from dna_cli._mcp_auth import (
         CrossTenantError,
         enforce_oid_from_context,
+        enforce_personal_family_from_context,
         enforce_tier_from_context,
         enforce_workspace_from_context,
         token_has_explicit_plan_claim,
@@ -370,7 +371,7 @@ def build_server(
             raise ToolError(str(exc)) from None
         return tenant
 
-    async def _personal_guard(memory_op: str) -> str:
+    async def _personal_guard(memory_op: str) -> tuple[str, str]:
         """The tenancy + quota seam for a PERSONAL memory call — the identity twin
         of :func:`_guard` (ADR-personal-memory).
 
@@ -389,14 +390,17 @@ def build_server(
            keyed on the personal partition ``personal:<oid>`` so personal usage
            meters per identity, independent of any workspace.
 
-        Returns the resolved ``oid`` (never a tenant — the caller passes
-        ``memory_scope="personal"`` + this oid to the impl)."""
+        Returns ``(oid, family)`` — the server-resolved identity + its personal-
+        memory KEY family ("entra"/"google"); the caller passes
+        ``memory_scope="personal"`` + this ``oid`` + ``family`` to the impl, which
+        keys the partition ``personal:<oid>`` (Entra) / ``personal:google:<sub>``."""
         try:
             oid = enforce_oid_from_context()
+            family = enforce_personal_family_from_context()
         except (PersonalIdentityRequired, PersonalOverrideRejected) as exc:
             raise ToolError(str(exc)) from None
         if not token_present_in_context():
-            return oid  # stdio / local → identity, no metering.
+            return oid, family  # stdio / local → identity, no metering.
         kernel = (await _live()).kernel
         tier = enforce_tier_from_context()
         row = await kernel.tier(tier)
@@ -406,11 +410,12 @@ def build_server(
         try:
             enforce_memory_mode(caps=caps, tier=tier, op=memory_op)
             enforce_quota(
-                caps=caps, tenant=personal_tenant(oid), tier=tier, family="memory",
+                caps=caps, tenant=personal_tenant(oid, family=family),
+                tier=tier, family="memory",
             )
         except (OverQuotaError, FeatureNotInPlanError, MemoryModeError) as exc:
             raise ToolError(str(exc)) from None
-        return oid
+        return oid, family
 
     server = FastMCP(
         "dna",
@@ -635,9 +640,10 @@ def build_server(
         base defaults — never any workspace's memory. The default (``false``)
         recalls the workspace's shared memory, unchanged."""
         if personal:
-            oid = await _personal_guard("read")
+            oid, family = await _personal_guard("read")
             return await recall_impl(
                 await _live(), query, None, k, memory_scope="personal", oid=oid,
+                family=family,
             )
         return await recall_impl(
             await _live(), query, scope, k, await _guard("memory", scope=scope, memory_op="read")
@@ -659,10 +665,10 @@ def build_server(
         partition, portable across workspaces + clients, never shared with the
         workspace. The default (``false``) shares to the workspace, unchanged."""
         if personal:
-            oid = await _personal_guard("write")
+            oid, family = await _personal_guard("write")
             return await remember_impl(
                 await _live(), summary, None, area=area, affect=affect, tags=tags,
-                owner=owner, memory_scope="personal", oid=oid,
+                owner=owner, memory_scope="personal", oid=oid, family=family,
             )
         return await remember_impl(
             await _live(), summary, scope, area=area, affect=affect, tags=tags,
@@ -751,7 +757,8 @@ def build_server(
 
 
 def build_http_app(
-    server: Any, *, path: str = "/mcp", transport: str = "http"
+    server: Any, *, path: str = "/mcp", transport: str = "http",
+    lane_b_server: Any = None,
 ) -> Any:
     """Wrap the FastMCP ``server`` as a Starlette ASGI app that ALSO accepts the
     per-workspace URL ``/w/<workspace-id>/mcp`` (ADR "Model B" §2.2 — S2.3),
@@ -767,16 +774,33 @@ def build_http_app(
     Mounting the one app instance at both prefixes shares its lifespan (the MCP
     session manager), which the outer app forwards. The bare ``/mcp`` route keeps
     the default single-workspace / stdio-parity behavior (falls back to the
-    identity's sole/default membership)."""
+    identity's sole/default membership).
+
+    ``lane_b_server`` (optional, the identity front-door Option X): a SECOND FastMCP
+    server — the consumer lane (WorkOS AuthKit auth) — mounted at ``/consumer`` with
+    its OWN discovery + auth surface, beside Lane A (Entra). Its lifespan is composed
+    with Lane A's so both session managers run. Absent → single-lane, unchanged."""
     from starlette.applications import Starlette
     from starlette.routing import Mount
 
     mcp_app = server.http_app(path=path, transport=transport)
-    return Starlette(
-        routes=[
-            # Per-workspace URL first (more specific), then the bare mount.
-            Mount("/w/{workspace_id}", app=mcp_app),
-            Mount("/", app=mcp_app),
-        ],
-        lifespan=mcp_app.lifespan,
-    )
+    routes = [
+        # Per-workspace URL first (more specific).
+        Mount("/w/{workspace_id}", app=mcp_app),
+    ]
+    lifespan = mcp_app.lifespan
+    if lane_b_server is not None:
+        from contextlib import asynccontextmanager
+
+        lane_b_app = lane_b_server.http_app(path=path, transport=transport)
+        routes.append(Mount("/consumer", app=lane_b_app))  # Lane B (WorkOS)
+
+        @asynccontextmanager
+        async def _both_lanes(app: Any):
+            # Run BOTH FastMCP session managers (each app owns one).
+            async with mcp_app.lifespan(app), lane_b_app.lifespan(app):
+                yield
+
+        lifespan = _both_lanes
+    routes.append(Mount("/", app=mcp_app))  # bare mount, least specific → last
+    return Starlette(routes=routes, lifespan=lifespan)

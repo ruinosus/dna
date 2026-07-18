@@ -331,6 +331,34 @@ def resolve_personal_oid(
     )
 
 
+# The provider-family stamp (``_dna_provider_family``, "microsoft"/"google") the
+# composite verifier writes → the personal-memory KEY family. Entra ("microsoft")
+# keeps the BARE ``personal:<oid>`` (decision D6, no migration); google →
+# ``personal:google:<sub>``. Absent/unknown → "entra" (back-compat single-lane).
+_MEMORY_KEY_FAMILY = {"microsoft": "entra", "google": "google"}
+
+
+def personal_key_family(claims: dict[str, Any] | None) -> str:
+    """The personal-memory KEY family for a verified token — pure, no context.
+
+    Reads the ``_dna_provider_family`` stamp: ``microsoft`` → ``"entra"`` (bare
+    key), ``google`` → ``"google"`` (namespaced). Absent/other → ``"entra"`` so
+    the single-lane behavior is unchanged."""
+    fam = (claims or {}).get(_DNA_PROVIDER_FAMILY_MARKER)
+    return _MEMORY_KEY_FAMILY.get(fam, "entra")
+
+
+def identity_claim_for_family(
+    claims: dict[str, Any] | None, *, key_family: str, claim_key: str | None = None
+) -> str | None:
+    """The durable identity claim per KEY family — Entra reads the ``oid`` claim,
+    Google reads ``sub`` (Google OIDC's stable subject). Pure, no context."""
+    if key_family == "google":
+        raw = (claims or {}).get("sub")
+        return raw.strip() if isinstance(raw, str) and raw.strip() else None
+    return oid_from_token(claims, claim_key=claim_key)
+
+
 # ── the plan/tier axis (DNA Cloud quota) — pure core, mirror the tenant twins ─
 
 
@@ -824,10 +852,29 @@ def enforce_oid_from_context() -> str:
         )
 
     claims = getattr(token, "claims", None) or {}
-    token_oid = oid_from_token(claims)
+    # Family-aware identity: Entra → oid, Google → sub (the durable id per lane).
+    key_family = personal_key_family(claims)
+    token_oid = identity_claim_for_family(claims, key_family=key_family)
     return resolve_personal_oid(
         token_present=True, token_oid=token_oid, env_oid=env_oid
     )
+
+
+def enforce_personal_family_from_context() -> str:
+    """The personal-memory KEY family for the CURRENT MCP request
+    (``"entra"``/``"google"``) — server-derived from the verified token's provider
+    stamp, the companion to :func:`enforce_oid_from_context`. ``"entra"`` when
+    there is no token (offline / stdio / ``auth=None``) — the back-compat
+    single-lane default, so an unauthenticated/local caller keeps the bare
+    ``personal:<oid>`` partition."""
+    try:
+        from fastmcp.server.dependencies import get_access_token
+    except ModuleNotFoundError:  # pragma: no cover — no fastmcp ⇒ no auth ⇒ offline
+        return "entra"
+    token = get_access_token()
+    if token is None:
+        return "entra"
+    return personal_key_family(getattr(token, "claims", None) or {})
 
 
 def token_present_in_context() -> bool:
@@ -958,6 +1005,138 @@ def jwt_provider_from_env() -> Any:
             scopes_supported=scopes_supported_from_env(),
         )
     return verifier
+
+
+#: Entra multi-tenant authorities — tokens from these carry the CALLER's own
+#: tenant GUID as ``iss``, so a pinned issuer would reject every partner-org
+#: token. For these we relax issuer validation to audience+signature only.
+_AZURE_MULTITENANT = frozenset({"organizations", "consumers", "common"})
+
+
+def azure_provider_from_env() -> Any:
+    """Build a FastMCP ``AzureProvider`` (OAuthProxy facade) from env — the Lane A
+    (Entra) provider that gives Claude zero-config DCR/CIMD/PKCE while preserving
+    the Entra assertion for OBO (the proxy retains the upstream token server-side
+    and hands it back on tool calls; DNA's ``graph/_obo.py`` reads it unchanged).
+
+    Env:
+
+    * ``DNA_MCP_AZURE_CLIENT_ID``      — the MCP app-reg client id (the audience GUID),
+    * ``DNA_MCP_AZURE_CLIENT_SECRET``  — the confidential-client secret,
+    * ``DNA_MCP_AZURE_TENANT``         — ``organizations`` (multi-tenant, default) or a GUID,
+    * ``DNA_MCP_AZURE_BASE_URL``       — the facade's public base URL,
+    * ``DNA_MCP_AZURE_IDENTIFIER_URI`` — the App ID URI (e.g. ``api://dna-mcp-dnacloud``), optional,
+    * ``DNA_MCP_AZURE_SCOPES``         — comma-separated required scopes, optional.
+
+    For a **multi-tenant** authority the verifier's issuer is relaxed to ``None``
+    (audience + signature only) — the gate-0/G0.2 fix, and the same
+    ``verifier_issuer() is None`` policy the ``--auth config`` Entra path uses.
+    A concrete single-tenant GUID keeps the pinned issuer.
+    """
+    from fastmcp.server.auth.providers.azure import AzureProvider
+
+    try:
+        client_id = os.environ["DNA_MCP_AZURE_CLIENT_ID"]
+        client_secret = os.environ["DNA_MCP_AZURE_CLIENT_SECRET"]
+        base_url = os.environ["DNA_MCP_AZURE_BASE_URL"]
+    except KeyError as exc:
+        raise RuntimeError(
+            "azure auth needs DNA_MCP_AZURE_CLIENT_ID, DNA_MCP_AZURE_CLIENT_SECRET "
+            "and DNA_MCP_AZURE_BASE_URL"
+        ) from exc
+    tenant = os.environ.get("DNA_MCP_AZURE_TENANT", "organizations")
+    kwargs: dict[str, Any] = dict(
+        client_id=client_id, client_secret=client_secret,
+        tenant_id=tenant, base_url=base_url,
+    )
+    identifier_uri = os.environ.get("DNA_MCP_AZURE_IDENTIFIER_URI")
+    if identifier_uri:
+        kwargs["identifier_uri"] = identifier_uri
+    # ``required_scopes`` is required and must carry ≥1 non-OIDC scope (AzureProvider
+    # rejects an empty/OIDC-only list). Default to the DNA MCP's delegated scope
+    # ``user_impersonation`` (identifier_uri is auto-prefixed by AzureProvider).
+    scopes = [s.strip() for s in os.environ.get("DNA_MCP_AZURE_SCOPES", "").split(",") if s.strip()]
+    kwargs["required_scopes"] = scopes or ["user_impersonation"]
+
+    class _CompositeEntraProvider(AzureProvider):  # type: ignore[valid-type,misc]
+        """The facade, made **deploy-safe on the existing mcp**: accepts BOTH
+
+        1. the facade's own DCR-issued **wire tokens** (Claude, zero-config), and
+        2. **raw Entra bearer tokens** audienced to the MCP app — the portal + the
+           copilot forward a per-user Entra token DIRECTLY (never through the facade
+           OAuth flow).
+
+        Without (2), flipping the deployed mcp from ``--auth config`` to the facade
+        would 401 the portal + copilot (the live console memory). The raw path reuses
+        the SAME MCP-audienced, issuer-relaxed verifier (``_token_validator``), so its
+        ``.token`` is the Entra assertion → OBO works on both paths (Claude's swapped
+        upstream token AND the portal's raw token).
+        """
+
+        async def load_access_token(self, token: str) -> Any:  # type: ignore[override]
+            # 1. facade wire token (a client that went through /authorize + DCR).
+            try:
+                access = await super().load_access_token(token)
+            except Exception:  # noqa: BLE001 — a non-wire token is not an error here
+                access = None
+            if access is not None:
+                return access
+            # 2. raw Entra token (portal/copilot) — same MCP-audienced verifier.
+            return await self._token_validator.load_access_token(token)
+
+    provider = _CompositeEntraProvider(**kwargs)
+    if tenant in _AZURE_MULTITENANT:
+        # Relax issuer → audience+signature only (fastmcp's own from_b2c mutation).
+        provider._token_validator.issuer = None
+    return provider
+
+
+def workos_provider_from_env() -> Any:
+    """Build the Lane B (consumer) provider — a Resource Server that validates
+    **WorkOS AuthKit** JWTs and advertises the AuthKit domain (which speaks DCR +
+    CIMD natively) as the authorization server via RFC 9728 PRM.
+
+    Unlike Lane A (Entra has no DCR → the ``AzureProvider`` facade), WorkOS AuthKit
+    IS a DCR/CIMD-native authorization server, so DNA is a **pure resource server**
+    here: it verifies WorkOS-issued tokens and points a client at AuthKit — no
+    OAuthProxy needed. Env:
+
+    * ``DNA_MCP_WORKOS_AUTHKIT_DOMAIN`` — the AuthKit domain (``<slug>.authkit.app``),
+      the authorization server advertised in PRM;
+    * ``DNA_MCP_WORKOS_RESOURCE_URL``   — the DNA MCP Lane-B mount's public URL;
+    * ``DNA_MCP_WORKOS_JWKS_URI``       — JWKS endpoint (defaults ``<domain>/oauth2/jwks``);
+    * ``DNA_MCP_WORKOS_ISSUER``         — expected ``iss`` (defaults to ``<domain>``);
+    * ``DNA_MCP_WORKOS_AUDIENCE``       — expected ``aud`` (defaults to the client id).
+
+    The exact JWKS path / issuer are confirmed against the live AuthKit domain's
+    OIDC discovery at the P2 smoke; the env overrides let the deploy pin them.
+    """
+    from fastmcp.server.auth.providers.jwt import JWTVerifier
+
+    try:
+        domain = os.environ["DNA_MCP_WORKOS_AUTHKIT_DOMAIN"].strip().rstrip("/")
+        resource_url = os.environ["DNA_MCP_WORKOS_RESOURCE_URL"]
+    except KeyError as exc:
+        raise RuntimeError(
+            "workos auth needs DNA_MCP_WORKOS_AUTHKIT_DOMAIN and "
+            "DNA_MCP_WORKOS_RESOURCE_URL"
+        ) from exc
+    if not domain.startswith("http"):
+        domain = f"https://{domain}"
+    audience = os.environ.get("DNA_MCP_WORKOS_AUDIENCE") or os.environ.get(
+        "DNA_MCP_WORKOS_CLIENT_ID"
+    )
+    verifier = JWTVerifier(
+        jwks_uri=os.environ.get("DNA_MCP_WORKOS_JWKS_URI", f"{domain}/oauth2/jwks"),
+        issuer=os.environ.get("DNA_MCP_WORKOS_ISSUER", domain),
+        audience=audience,
+    )
+    return resource_server(
+        verifier,
+        base_url=resource_url,
+        authorization_servers=[domain],
+        scopes_supported=scopes_supported_from_env(),
+    )
 
 
 def resource_server(

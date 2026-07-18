@@ -43,10 +43,11 @@ dna mcp serve [OPTIONS]
 
 | Option | Description |
 | --- | --- |
-| `--auth` | Auth provider for the HTTP transport. `jwt` = a single bearer-JWT Resource Server from env (DNA_MCP_JWT_*). `config` = the pluggable N-provider IdP layer read from dna.config.yaml's `auth.providers[]` (Entra/Clerk/WorkOS/OIDC — a provider is a config block; multi-issuer, claim→tenant per provider). Both bridge the token to DNA tenancy; both are HTTP-only. stdio stays local/unauthenticated. _(default: `none`)_ |
+| `--auth` | Auth provider for the HTTP transport. `jwt` = a single bearer-JWT Resource Server from env (DNA_MCP_JWT_*). `config` = the pluggable N-provider IdP layer read from dna.config.yaml's `auth.providers[]` (Entra/Clerk/WorkOS/OIDC — a provider is a config block; multi-issuer, claim→tenant per provider). `azure` = the Lane A Entra FACADE (AzureProvider/OAuthProxy from DNA_MCP_AZURE_*) — gives Claude zero-config DCR/CIMD/PKCE while preserving the Entra assertion for OBO. All bridge the token to DNA tenancy; all are HTTP-only. stdio stays local/unauthenticated. _(default: `none`)_ |
 | `--base-dir` | Source directory override (else DNA_SOURCE_URL / DNA_BASE_DIR / ./.dna). |
 | `--help` | Show this message and exit. |
 | `--host` | Bind host for the HTTP/SSE transports (ignored for stdio). _(default: `127.0.0.1`)_ |
+| `--lane-b` | Consumer lane (identity front-door Option X). `workos` mounts a SECOND MCP surface at /consumer authenticated by WorkOS AuthKit (DNA_MCP_WORKOS_*) — for Gmail/consumer sign-up — beside the primary Lane A. HTTP-only; requires --transport http. _(default: `none`)_ |
 | `--path` | URL path the MCP endpoint is mounted at (HTTP/SSE; FastMCP default /mcp). |
 | `--port` | Bind port for the HTTP/SSE transports (ignored for stdio). _(default: `8000`)_ |
 | `--scope` | Default scope for tools that omit one (else the sole/first scope). |

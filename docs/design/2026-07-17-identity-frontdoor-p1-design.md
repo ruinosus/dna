@@ -77,10 +77,29 @@ adds a second mount without re-architecting P1.
 
 ---
 
-## 4. Gate-0 — MUST pass before any build (the "verify from source" rule, finished live)
+## 4. Gate-0 — DONE (live-verified 2026-07-17)
 
-The spike verified the design **from source**; two claims can only be confirmed **live**.
-These are gate-0 tasks: **no P1 implementation lands until both pass.**
+The spike verified the design **from source**; the two live-only claims were then
+confirmed by booting the real DNA MCP with `AzureProvider` locally.
+**Status: both PASS** (rigs: `scratchpad/serve_azure_smoke.py`, `scratchpad/obo_smoke.py`).
+
+- **G0.1 — Live OBO smoke — ✓ PASS.** A real Entra user token (`aud=ff09090f`,
+  `scp=user_impersonation`) fed to `graph/_obo.py exchange_on_behalf_of` minted a real
+  Graph token B (`aud=graph.microsoft.com`, `scp=Calendars.Read`) as the user — OBO
+  preserved end-to-end. (The final `/me/events` read returned AADSTS500014 = the dev test
+  tenant has Exchange disabled — a data-availability limit, not an auth/OBO defect.) The
+  zero-config surface (DCR/CIMD/S256/401/PRM) was served live by the facade.
+- **G0.2 — Multi-tenant authority — ✓ PASS (with a 1-line fix, now shipped).**
+  `AzureProvider(tenant_id="organizations")` pins the issuer to the literal
+  `.../organizations/v2.0`; `azure_provider_from_env()` sets `_token_validator.issuer = None`
+  for multi-tenant authorities (fastmcp's own `from_b2c` mutation), reproducing DNA's
+  `verifier_issuer() is None` policy. Verified live: issuer relaxed, audience
+  `['ff09090f-…','api://dna-mcp-dnacloud']`.
+
+Residual (low-risk, source-verified): the token-swap inside a full facade OAuth flow — the
+gate-0 token was fetched via `az`, not through the facade's `/authorize`; the swap itself is
+source-verified and the verifier config is live-verified. Closed by the P1 external gate
+(a redirect-URI app-reg + a real-M365-tenant connect).
 
 - **G0.1 — Live OBO smoke under `AzureProvider`.** The token-swap (§5.3) is code-verified,
   not run end-to-end. Prove: Claude (or a scripted OAuth client) → `AzureProvider` → a DNA
@@ -119,10 +138,10 @@ If either fails, the spec is revised (not the build patched around it).
 Verified present in FastMCP `OAuthProxy` + pinned `mcp` SDK: DCR `/register`; RFC 9728
 protected-resource-metadata; RFC 8414 AS-metadata; `code_challenge_methods_supported:
 ["S256"]`; and the **401 + `WWW-Authenticate: Bearer … resource_metadata="…"`** challenge
-that Claude's auto-discovery keys on. **One gap:** CIMD is *accepted* but not *advertised*
-(`client_id_metadata_document_supported` absent from AS-metadata). Decision: **accept
-DCR-only for Lane A** (Claude does not require CIMD when DCR is present) — revisit only if a
-connector is observed to demand it. (WorkOS advertises CIMD natively for Lane B.)
+that Claude's auto-discovery keys on. **CIMD is also advertised** on fastmcp 3.4.4
+(`client_id_metadata_document_supported: true` in the AS-metadata — verified live in gate-0;
+the earlier spike read an older fastmcp where it was absent). So both DCR *and* CIMD are
+served free — no gap. (WorkOS advertises CIMD natively for Lane B too.)
 
 ### 5.3 OBO preservation (the mechanism — why the fear was wrong)
 
@@ -176,7 +195,7 @@ here so P1's mount/auth wiring doesn't foreclose it.
 
 - Lane B / Gmail signup, WorkOS wiring, Google incremental consent (→ P2/P3).
 - The family-namespaced memory key (→ P2; P1 keeps `personal:<oid>`).
-- CIMD advertisement (DCR-only accepted for P1).
+- (CIMD is already advertised free by fastmcp 3.4.4 — no longer a scoped-out item.)
 - Any change to the copilot, portal, or the tool handlers.
 
 ---

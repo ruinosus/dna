@@ -991,7 +991,7 @@ async def board_item_impl(
 
 def _resolve_memory_target(
     live: LiveDna, scope: str | None, tenant: str | None,
-    memory_scope: str, oid: str | None,
+    memory_scope: str, oid: str | None, family: str | None = None,
 ) -> tuple[str, str | None]:
     """Resolve the ``(scope, tenant)`` a memory op runs against for the given
     :data:`~dna.memory.personal.MemoryScope` (ADR-personal-memory §3.3 / §5).
@@ -1016,7 +1016,8 @@ def _resolve_memory_target(
 
     if memory_scope == PERSONAL_SCOPE:
         tn = resolve_memory_tenant(
-            memory_scope=PERSONAL_SCOPE, oid=oid, workspace_tenant=tenant
+            memory_scope=PERSONAL_SCOPE, oid=oid, workspace_tenant=tenant,
+            family=family,
         )
         return scope or live.base_scope, tn
     assert_no_personal_override(tenant)
@@ -1027,6 +1028,7 @@ async def recall_impl(
     live: LiveDna, query: str, scope: str | None = None, k: int = 5,
     tenant: str | None = None, *, memory_scope: str = "workspace",
     oid: str | None = None,
+    family: str | None = None,
 ) -> dict[str, Any]:
     """Recall DNA memory for ``query`` — hybrid + bi-temporal + retention
     re-scored when the search extra is present, honest lexical otherwise.
@@ -1038,7 +1040,7 @@ async def recall_impl(
     from dna.memory import recall
     from dna.memory.verbs import MEMORY_KINDS
 
-    sc, tenant = _resolve_memory_target(live, scope, tenant, memory_scope, oid)
+    sc, tenant = _resolve_memory_target(live, scope, tenant, memory_scope, oid, family)
     if live.provider is not None:
         try:
             from dna.memory import backfill_index
@@ -1063,6 +1065,7 @@ async def remember_impl(
     *,
     memory_scope: str = "workspace",
     oid: str | None = None,
+    family: str | None = None,
 ) -> dict[str, Any]:
     """Persist a memory Kind (deterministically enriched + indexed) — mirrors
     ``dna memory remember``. Written into the tenant overlay when ``tenant`` is
@@ -1073,7 +1076,7 @@ async def remember_impl(
     with the workspace (ADR-personal-memory)."""
     from dna.memory import remember
 
-    sc, tenant = _resolve_memory_target(live, scope, tenant, memory_scope, oid)
+    sc, tenant = _resolve_memory_target(live, scope, tenant, memory_scope, oid, family)
     name = _slug(summary)
     spec: dict[str, Any] = {"summary": summary}
     if kind == "LessonLearned":
@@ -1096,6 +1099,7 @@ async def consolidate_impl(
     live: LiveDna, scope: str | None = None, apply: bool = False,
     tenant: str | None = None, *, memory_scope: str = "workspace",
     oid: str | None = None,
+    family: str | None = None,
 ) -> dict[str, Any]:
     """Deterministic memory consolidation pass (Ebbinghaus retention). With
     ``apply=True`` stale memories are soft-forgotten (bi-temporal, never
@@ -1105,7 +1109,7 @@ async def consolidate_impl(
     (``personal:<oid>``) — never touches workspace memory (ADR-personal-memory §4)."""
     from dna.memory import consolidate
 
-    sc, tenant = _resolve_memory_target(live, scope, tenant, memory_scope, oid)
+    sc, tenant = _resolve_memory_target(live, scope, tenant, memory_scope, oid, family)
     return await consolidate(live.kernel, sc, apply=apply, tenant=tenant)
 
 
@@ -1113,6 +1117,7 @@ async def list_memories_impl(
     live: LiveDna, scope: str | None = None, kind: str = "LessonLearned",
     tenant: str | None = None, *, memory_scope: str = "workspace",
     oid: str | None = None,
+    family: str | None = None,
 ) -> dict[str, Any]:
     """List the tenant's stored memories — the LIST surface the DNA Cloud memory
     dashboard renders. Tenant-aware via the same ``kernel.query`` idiom every
@@ -1126,7 +1131,7 @@ async def list_memories_impl(
     disappears from BOTH surfaces, never a ghost."""
     from dna.memory.decay import currently_valid
 
-    sc, tenant = _resolve_memory_target(live, scope, tenant, memory_scope, oid)
+    sc, tenant = _resolve_memory_target(live, scope, tenant, memory_scope, oid, family)
     memories: list[dict[str, Any]] = []
     for d in await _collect(live, sc, kind, tenant):
         spec = d["spec"]
@@ -1157,6 +1162,7 @@ async def forget_impl(
     live: LiveDna, name: str, scope: str | None = None,
     kind: str = "LessonLearned", tenant: str | None = None,
     *, memory_scope: str = "workspace", oid: str | None = None,
+    family: str | None = None,
 ) -> dict[str, Any]:
     """Forget ONE memory by its doc ``name`` (slug) — the DELETE surface the DNA
     Cloud memory dashboard calls. NOT a hard delete: routes through the memory
@@ -1174,7 +1180,7 @@ async def forget_impl(
     ``forgotten: False`` no-op, never a 500."""
     from dna.memory import forget
 
-    sc, tenant = _resolve_memory_target(live, scope, tenant, memory_scope, oid)
+    sc, tenant = _resolve_memory_target(live, scope, tenant, memory_scope, oid, family)
     try:
         out = await forget(live.kernel, sc, name, kind=kind, tenant=tenant)
     except KeyError:

@@ -40,16 +40,24 @@ def mcp() -> None:
               help="Bind port for the HTTP/SSE transports (ignored for stdio).")
 @click.option("--path", default=None,
               help="URL path the MCP endpoint is mounted at (HTTP/SSE; FastMCP default /mcp).")
-@click.option("--auth", type=click.Choice(["none", "jwt", "config"]), default="none",
+@click.option("--auth", type=click.Choice(["none", "jwt", "config", "azure"]), default="none",
               show_default=True,
               help="Auth provider for the HTTP transport. `jwt` = a single bearer-JWT "
                    "Resource Server from env (DNA_MCP_JWT_*). `config` = the pluggable "
                    "N-provider IdP layer read from dna.config.yaml's `auth.providers[]` "
                    "(Entra/Clerk/WorkOS/OIDC — a provider is a config block; multi-issuer, "
-                   "claim→tenant per provider). Both bridge the token to DNA tenancy; both "
-                   "are HTTP-only. stdio stays local/unauthenticated.")
+                   "claim→tenant per provider). `azure` = the Lane A Entra FACADE "
+                   "(AzureProvider/OAuthProxy from DNA_MCP_AZURE_*) — gives Claude zero-config "
+                   "DCR/CIMD/PKCE while preserving the Entra assertion for OBO. All bridge the "
+                   "token to DNA tenancy; all are HTTP-only. stdio stays local/unauthenticated.")
+@click.option("--lane-b", type=click.Choice(["none", "workos"]), default="none",
+              show_default=True,
+              help="Consumer lane (identity front-door Option X). `workos` mounts a "
+                   "SECOND MCP surface at /consumer authenticated by WorkOS AuthKit "
+                   "(DNA_MCP_WORKOS_*) — for Gmail/consumer sign-up — beside the primary "
+                   "Lane A. HTTP-only; requires --transport http.")
 def serve(scope: str | None, base_dir: str | None, transport: str,
-          host: str, port: int, path: str | None, auth: str) -> None:
+          host: str, port: int, path: str | None, auth: str, lane_b: str) -> None:
     """Run the DNA MCP server (stdio local, or Streamable HTTP for remote/web clients).
 
     \b
@@ -98,7 +106,7 @@ def serve(scope: str | None, base_dir: str | None, transport: str,
             )
 
     auth_provider = None
-    if auth in ("jwt", "config"):
+    if auth in ("jwt", "config", "azure"):
         if transport == "stdio":
             raise click.ClickException(
                 f"--auth {auth} is HTTP-only (there is no bearer token over stdio); "
@@ -109,6 +117,14 @@ def serve(scope: str | None, base_dir: str | None, transport: str,
                 from dna_cli._mcp_auth import jwt_provider_from_env
 
                 auth_provider = jwt_provider_from_env()
+            elif auth == "azure":  # Lane A — the Entra facade (AzureProvider/OAuthProxy)
+                from dna_cli._mcp_auth import azure_provider_from_env
+
+                auth_provider = azure_provider_from_env()
+                click.echo(
+                    "auth: azure facade — Entra OAuthProxy (zero-config DCR/CIMD; OBO preserved)",
+                    err=True,
+                )
             else:  # config — the pluggable N-provider IdP layer
                 from dna_cli._mcp_auth import (
                     build_auth_from_config,
@@ -152,7 +168,22 @@ def serve(scope: str | None, base_dir: str | None, transport: str,
             ) from exc
 
         http_transport = "sse" if transport == "sse" else "http"
-        app = build_http_app(server, path=path or "/mcp", transport=http_transport)
+        lane_b_server = None
+        if lane_b == "workos":  # Option X — a second WorkOS-authed surface at /consumer
+            try:
+                from dna_cli._mcp_auth import workos_provider_from_env
+
+                lane_b_server = build_server(
+                    scope=scope, base_dir=base_dir,
+                    auth=workos_provider_from_env(), graph_config=graph_config,
+                )
+            except (RuntimeError, ValueError) as exc:
+                raise click.ClickException(str(exc)) from None
+            click.echo("lane-b: WorkOS AuthKit consumer surface at /consumer", err=True)
+        app = build_http_app(
+            server, path=path or "/mcp", transport=http_transport,
+            lane_b_server=lane_b_server,
+        )
         click.echo(
             f"DNA MCP over HTTP — bare /mcp and per-workspace /w/<id>/mcp "
             f"(ADR Model B) on {host}:{port}",
