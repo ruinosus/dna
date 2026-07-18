@@ -64,6 +64,14 @@ class _FakeMcpApp:
 
         return _CM()
 
+    async def __call__(self, scope, receive, send):
+        # Minimal ASGI: echo "<lane>:<path>" so a routing test can see WHICH app
+        # handled a request + at WHAT path (unstripped).
+        body = f"{self.name}:{scope.get('path', '')}".encode()
+        await send({"type": "http.response.start", "status": 200,
+                    "headers": [(b"content-type", b"text/plain")]})
+        await send({"type": "http.response.body", "body": body})
+
 
 class _FakeServer:
     def __init__(self, name: str):
@@ -97,6 +105,31 @@ def test_lane_b_adds_consumer_mount_last_is_bare():
     # so it never shadows the more-specific /consumer or /w mounts
     assert paths[-1] == ""
     assert paths.index("/consumer") < paths.index("")
+
+
+def test_root_dispatches_lane_b_wellknown_to_lane_b():
+    """RFC 9728: Lane B's PRM at the HOST ROOT
+    (`/.well-known/oauth-protected-resource/consumer/mcp`) must be served by the
+    Lane-B app (the 401 advertises it there), NOT 404 on Lane A. Everything else —
+    including Lane A's own root PRM + the bare /mcp — stays Lane A."""
+    from starlette.testclient import TestClient
+
+    from dna_cli._mcp_server import build_http_app
+
+    app = build_http_app(_FakeServer("A"), lane_b_server=_FakeServer("B"))
+    with TestClient(app) as client:
+        # Lane B PRM at the root → Lane B app, with the FULL unstripped path.
+        r = client.get("/.well-known/oauth-protected-resource/consumer/mcp")
+        assert r.text == "B:/.well-known/oauth-protected-resource/consumer/mcp", r.text
+        # Lane A's own root PRM stays Lane A.
+        rA = client.get("/.well-known/oauth-protected-resource/mcp")
+        assert rA.text.startswith("A:"), rA.text
+        # The bare /mcp stays Lane A.
+        rM = client.get("/mcp")
+        assert rM.text.startswith("A:"), rM.text
+        # The Lane-B MCP endpoint is served by the /consumer mount (Lane B).
+        rB = client.get("/consumer/mcp")
+        assert rB.text.startswith("B:"), rB.text
 
 
 def test_lane_b_composes_both_lifespans():
