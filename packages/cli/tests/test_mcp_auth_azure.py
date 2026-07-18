@@ -54,6 +54,42 @@ def test_azure_provider_requires_core_env(monkeypatch):
         azure_provider_from_env()
 
 
+def test_composite_falls_back_to_raw_entra_token(monkeypatch):
+    """P1.5 — the facade also accepts a RAW Entra token (portal/copilot), not only
+    its own DCR wire tokens: a token the facade path rejects (garbage wire JWT →
+    super() returns None) is verified by the MCP-audienced ``_token_validator``."""
+    import asyncio
+
+    _base_env(monkeypatch, "organizations")
+    from dna_cli._mcp_auth import azure_provider_from_env
+
+    p = azure_provider_from_env()
+    sentinel = object()
+
+    async def _fake_raw(token):
+        return sentinel
+
+    monkeypatch.setattr(p._token_validator, "load_access_token", _fake_raw)
+    # "not-a-wire-jwt" is not a valid facade-issued wire token → super() returns
+    # None → the composite falls back to the raw Entra verifier.
+    assert asyncio.run(p.load_access_token("not-a-wire-jwt")) is sentinel
+
+
+def test_composite_returns_none_when_neither_path_accepts(monkeypatch):
+    import asyncio
+
+    _base_env(monkeypatch, "organizations")
+    from dna_cli._mcp_auth import azure_provider_from_env
+
+    p = azure_provider_from_env()
+
+    async def _reject(token):
+        return None
+
+    monkeypatch.setattr(p._token_validator, "load_access_token", _reject)
+    assert asyncio.run(p.load_access_token("garbage")) is None
+
+
 def test_serve_auth_azure_selects_azure_provider(monkeypatch):
     """`dna mcp serve --auth azure` builds the server with an AzureProvider."""
     _base_env(monkeypatch, "organizations")

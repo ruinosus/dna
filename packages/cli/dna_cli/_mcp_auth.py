@@ -1058,7 +1058,33 @@ def azure_provider_from_env() -> Any:
     scopes = [s.strip() for s in os.environ.get("DNA_MCP_AZURE_SCOPES", "").split(",") if s.strip()]
     kwargs["required_scopes"] = scopes or ["user_impersonation"]
 
-    provider = AzureProvider(**kwargs)
+    class _CompositeEntraProvider(AzureProvider):  # type: ignore[valid-type,misc]
+        """The facade, made **deploy-safe on the existing mcp**: accepts BOTH
+
+        1. the facade's own DCR-issued **wire tokens** (Claude, zero-config), and
+        2. **raw Entra bearer tokens** audienced to the MCP app — the portal + the
+           copilot forward a per-user Entra token DIRECTLY (never through the facade
+           OAuth flow).
+
+        Without (2), flipping the deployed mcp from ``--auth config`` to the facade
+        would 401 the portal + copilot (the live console memory). The raw path reuses
+        the SAME MCP-audienced, issuer-relaxed verifier (``_token_validator``), so its
+        ``.token`` is the Entra assertion → OBO works on both paths (Claude's swapped
+        upstream token AND the portal's raw token).
+        """
+
+        async def load_access_token(self, token: str) -> Any:  # type: ignore[override]
+            # 1. facade wire token (a client that went through /authorize + DCR).
+            try:
+                access = await super().load_access_token(token)
+            except Exception:  # noqa: BLE001 — a non-wire token is not an error here
+                access = None
+            if access is not None:
+                return access
+            # 2. raw Entra token (portal/copilot) — same MCP-audienced verifier.
+            return await self._token_validator.load_access_token(token)
+
+    provider = _CompositeEntraProvider(**kwargs)
     if tenant in _AZURE_MULTITENANT:
         # Relax issuer → audience+signature only (fastmcp's own from_b2c mutation).
         provider._token_validator.issuer = None
