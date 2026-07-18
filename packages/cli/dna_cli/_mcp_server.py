@@ -789,6 +789,7 @@ def build_http_app(
         Mount("/w/{workspace_id}", app=mcp_app),
     ]
     lifespan = mcp_app.lifespan
+    root_app: Any = mcp_app
     if lane_b_server is not None:
         from contextlib import asynccontextmanager
 
@@ -802,5 +803,26 @@ def build_http_app(
                 yield
 
         lifespan = _both_lanes
-    routes.append(Mount("/", app=mcp_app))  # bare mount, least specific → last
+
+        # RFC 9728: Lane B's Protected-Resource-Metadata lives at the HOST ROOT
+        # (`/.well-known/oauth-protected-resource/consumer/mcp`) — that is what the
+        # `/consumer/mcp` 401 advertises. But the `/consumer` mount would only serve
+        # it UNDER `/consumer/`, so an MCP client following the 401 to the root 404s
+        # and falls back to Lane A. Dispatch the root Lane-B well-known to lane_b_app
+        # (with the full, UNstripped path — it owns that exact route); everything else
+        # is Lane A. This is the seam that makes two OAuth resource servers coexist
+        # on one host (f-identity-frontdoor).
+        _mcp_app = mcp_app
+        _lane_b_app = lane_b_app
+
+        async def _root(scope: Any, receive: Any, send: Any) -> None:
+            if scope.get("type") == "http" and scope.get("path", "").startswith(
+                "/.well-known/oauth-protected-resource/consumer"
+            ):
+                await _lane_b_app(scope, receive, send)
+            else:
+                await _mcp_app(scope, receive, send)
+
+        root_app = _root
+    routes.append(Mount("/", app=root_app))  # bare mount, least specific → last
     return Starlette(routes=routes, lifespan=lifespan)
