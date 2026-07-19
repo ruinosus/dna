@@ -253,6 +253,12 @@ spec:
     name: tr-tg-memory-interchange-verbs-20260719-195137
     summary: "TestRun tr-tg-memory-interchange-verbs-20260719-195137 \u2192 pass"
     outcome: pass
+  - at: '2026-07-19T20:08:22+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/168'
+    pr_url: https://github.com/ruinosus/dna/pull/168
   produces:
   - kind: Plan
     name: plan-s-memory-interchange-verbs

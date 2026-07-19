@@ -1,0 +1,23 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-035-mif-parity-fixture-edge-cases
+spec:
+  description: 'A fixture de paridade Py<->TS do interchange (packages/sdk-py/scripts/gen_memory_interchange_parity.py)
+    tem 4 casos, todos happy-path: full, minimal, um import estrangeiro e um doc autorado
+    no DNA. Nao cobre campos explicitamente None, a distincao entre string vazia e
+    chave ausente, unicode, nem resonance_score igual a zero. Os dois lados hoje tratam
+    o zero corretamente (is not None no Py, !== null no TS), mas nada FIXA esse comportamento:
+    uma edicao futura em qualquer um dos lados poderia quebrar um edge case de None/0/array
+    vazio e a suite de paridade passaria. Acao: acrescentar esses casos ao gerador
+    da fixture e reprovar com mutacao.'
+  type: task
+  severity: medium
+  status: open
+  related_feature: f-portable-memory
+  timeline:
+  - at: '2026-07-19T20:10:40+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

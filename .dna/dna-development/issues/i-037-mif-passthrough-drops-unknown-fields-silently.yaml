@@ -1,0 +1,21 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-037-mif-passthrough-drops-unknown-fields-silently
+spec:
+  description: 'O allowlist _KNOWN_MIF_FIELDS (packages/cli/dna_cli/memory_cmd.py)
+    descarta qualquer chave de topo nao reconhecida na importacao de passthrough.
+    O comportamento e deliberado e documentado (o schema e strict, entao filtrar evita
+    falha dura), mas nada no resultado da importacao reporta o que foi descartado:
+    um arquivo de terceiro levemente fora do spec perde dados com zero visibilidade
+    pro usuario. Acao: acumular os campos descartados e reporta-los no JSON de resultado.'
+  type: enhancement
+  severity: low
+  status: open
+  related_feature: f-portable-memory
+  timeline:
+  - at: '2026-07-19T20:10:50+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

@@ -75,6 +75,12 @@ spec:
     name: tr-tg-mif-passthrough-kind-20260719-191933
     summary: "TestRun tr-tg-mif-passthrough-kind-20260719-191933 \u2192 pass"
     outcome: pass
+  - at: '2026-07-19T19:19:48+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/167'
+    pr_url: https://github.com/ruinosus/dna/pull/167
   produces:
   - kind: Plan
     name: plan-s-mif-passthrough-kind
