@@ -27,9 +27,13 @@ ORIG_SCHEMA_INVALIDATING = frozenset({
     "SafetyPolicy", "Hook", "Recognizer",
 })
 ORIG_NON_OVERLAYABLE = frozenset({"Genome", "KindDefinition", "LayerPolicy"})
+# "Memory" added on s-mif-passthrough-kind (mif-spec.dev/v1 · Memory): the
+# descriptor declares scope_inheritable: false — mirrors Engram (memory
+# partitioning is a write-path concern, not something that should inherit
+# across scopes).
 ORIG_NON_INHERITABLE = frozenset({
     "Story", "Issue", "Feature", "Milestone", "Roadmap",
-    "Narrative", "VibeSession", "Engram", "Plan",
+    "Narrative", "VibeSession", "Engram", "Plan", "Memory",
     "Genome", "KindDefinition", "LayerPolicy",
 })
 

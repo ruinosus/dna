@@ -1,0 +1,529 @@
+# MIF Memory — byte-faithful passthrough of the external portable-memory
+# format (record plane). s-mif-passthrough-kind (feature f-portable-memory).
+#
+# Applies DNA's market-fidelity rule (docs/concepts/market-fidelity.md — "the
+# owner names the schema"): registers `mif-spec.dev/v1 · Memory` so a foreign
+# MIF memory file is stored and validated under ITS OWN namespace, unchanged
+# — the same mechanic that already carries `agentskills.io/v1 · Skill`
+# (packages/sdk-py/dna/extensions/agentskills/) and `soulspec.org/v1 · Soul`
+# (.../soulspec/). Unlike those two (hand-written KindPort classes, because
+# their bundles carry sidecar files DNA has custom Reader/Writer logic for —
+# scripts/references/assets), a MIF Memory Unit is plain frontmatter + one
+# markdown body with NO sidecar files, so per docs/guides/add-a-kind.md
+# ("record-style Kinds don't need a class at all") it ships as a
+# `*.kind.yaml` descriptor instead — the same choice `doc.kind.yaml` made for
+# an analogous single-marker bundle. This is the *interchange* face only; it
+# does NOT replace Engram (`helix/kinds/engram.kind.yaml`, the native recall
+# engine). A later story (s-memory-interchange-verbs) projects between them.
+#
+# Field source of truth: fetched live from the real spec repo
+# (github.com/modeled-information-format/MIF, pinned mif-spec.dev v1.0.0) —
+# SPECIFICATION.md §4.1 (Memory Unit), §5 (Markdown Format + Appendix A
+# frontmatter quick-reference), §7.5/Appendix C (EntityReference), §8/
+# Appendix B (Relationship Types), §9 (Temporal Model), §13 (Conformance
+# Levels) — NOT the docs/design/mif-memory.kind.yaml draft's assumptions,
+# three of which this descriptor corrects:
+#   1. `id` is a plain UUID in the Markdown frontmatter profile (the
+#      `urn:mif:` URN form is `@id` in the separately-derived JSON-LD
+#      projection only — draft conflated the two representations).
+#   2. The temporal end-of-validity field is `validUntil`, not `validTo`
+#      (draft's Engram-mirroring shorthand doesn't match the real key).
+#   3. `relationships[].type` is an OPEN kebab-case token (custom `ns:type`
+#      namespacing is explicitly allowed, §8.3) — NOT a closed enum. The
+#      draft's enum also had 4 of 9 "core" values wrong (`related-to` for
+#      `relates-to`, `caused-by`/`documents`/`references` that don't exist in
+#      the spec at all, missing `uses`/`created-by`/`mentioned-in`). Kept as
+#      a plain string; the 9 recommended core types are documented in prose
+#      per Appendix B instead of enforced, matching the spec's own
+#      extensibility.
+# A fourth correction, storage-only (not a schema field): SPECIFICATION.md
+# §3.2 + §17 (migration from 0.1.0-draft) confirm current MIF v1.0 file
+# naming is plain `{id}.md` — the `.memory.md` infix the draft assumed (and
+# this Kind's marker name still echoes for readability) was the LEGACY
+# 0.1.0-draft convention, dropped in 1.0. Doesn't change scope here (see the
+# storage note below); noted for whoever picks up the byte-faithful naming
+# follow-up.
+#
+# `description` is deliberately NOT a schema property even though MIF's own
+# JSON Schema declares it (OKF-recommended, mapped from `summary`): DNA's
+# generic bundle reader/writer route a flat frontmatter `description` key
+# into `metadata.description`, never `spec.description` (dna/kernel/
+# generic_rw.py `_META_FIELDS`) — the same convention every bundle Kind gets
+# (a Skill's SKILL.md `description` lands in metadata too). Declaring it in
+# `spec.schema.properties` would validate a field that can never actually
+# reach `spec` through the real read path. `doc.kind.yaml` hit the identical
+# collision and sidestepped it the same way (subtitle/summary instead of
+# description); this is the same call, not a DNA-flavored omission — MIF's
+# description still round-trips, just through the metadata slot every other
+# passthrough Kind already uses.
+#
+# Storage: MIF's canonical on-disk shape (YAML frontmatter + Markdown body)
+# IS a DNA bundle marker, so no custom Reader/Writer is needed — the generic
+# bundle machinery handles it. `body_field: content` maps MIF's own `content`
+# field 1:1 to the marker body (no renaming, unlike `body`/`instruction` on
+# other Kinds) since MIF's spec already names it that. KNOWN OPEN ITEM (do
+# not fix here — MVP is field-faithful, not byte-faithful): MIF names files
+# `{id}.md` (or a human-readable slug), one per memory; DNA's bundle marker
+# is a FIXED filename (`MEMORY.md`) inside a per-doc directory. Literal
+# byte-fidelity on round-trip needs a storage-pattern change (e.g. an
+# id-as-filename marker mode) that is out of scope for this story.
+#
+# PARITY-CRITICAL package data: byte-identical mirror at
+# packages/sdk-ts/src/extensions/mif/kinds/memory.kind.yaml
+# (tests/test_descriptor_hash_parity.py enforces both the byte-identity AND
+# that the SET of `<extension>/<file>.kind.yaml` paths matches on both
+# sides — hence `mif/kinds/memory.kind.yaml` on BOTH runtimes, not just a
+# same-named file in different homes).
+#
+# tenant_scope intentionally NOT declared (mirrors helix-engram, the closest
+# sibling — undeclared stays permissive; memory partitioning is a write-path
+# concern, not a Kind-level tenancy declaration).
+apiVersion: github.com/ruinosus/dna/core/v1
+kind: KindDefinition
+metadata:
+  name: mif-memory
+spec:
+  target_api_version: mif-spec.dev/v1
+  target_kind: Memory
+  alias: mif-memory
+  origin: mif-spec.dev
+  plane: record
+  prompt_target: false
+  flatten_in_context: false
+  prompt_target_priority: 0
+  scope_inheritable: false
+  storage:
+    type: bundle
+    container: memories
+    marker: MEMORY.md
+    body_field: content
+  schema:
+    type: object
+    additionalProperties: false
+    required:
+    - id
+    - type
+    - content
+    - created
+    properties:
+      # === Level 1 — Core (REQUIRED for conformance, SPECIFICATION.md §13.1) ===
+      id:
+        type: string
+        description: 'MIF Memory Unit identifier — a UUID v4 in the Markdown
+          frontmatter profile (SPECIFICATION.md §5.2/Appendix A). NOT the
+          `urn:mif:` URN form — that''s `@id` in the separately-derived
+          JSON-LD projection (§6), never written into this frontmatter.
+          Preserved verbatim so a re-export is stable; on import from Engram,
+          minted once and pinned.'
+      type:
+        type: string
+        enum:
+        - semantic
+        - episodic
+        - procedural
+        description: 'MIF base memory type (§4.2) — CoALA-style taxonomy that
+          maps 1:1 to Engram.memory_type: semantic = declarative facts/
+          concepts/preferences; episodic = time-bound events/sessions;
+          procedural = how-to/runbooks. This is why the DNA↔MIF projection
+          is lossless on the type axis. (The JSON-LD projection additionally
+          accepts the deprecated `memoryType` alias — irrelevant here since
+          this Kind only carries the Markdown frontmatter profile.)'
+      content:
+        type: string
+        description: The memory content in Markdown — the marker body below
+          the frontmatter (title H1, prose, and the optional `## Relationships`
+          / `## Citations` mirror sections all travel as part of this string,
+          exactly as MIF's own §5.1 structure defines).
+      created:
+        type: string
+        format: date-time
+        description: 'Creation timestamp, ISO 8601 (§4.1). Maps to Engram
+          created_at. NOTE (every date-time field on this Kind): PyYAML''s
+          SafeLoader implicitly resolves an UNQUOTED ISO-8601-looking scalar
+          to a Python datetime.datetime at frontmatter parse time (YAML 1.1
+          !!timestamp implicit tag) — a pre-existing, Kind-agnostic quirk of
+          _parse_frontmatter (dna/kernel/generic_rw.py), not specific to
+          MIF. A real MIF .md file (whose own examples write dates
+          unquoted) will therefore parse date-time fields as datetime
+          objects, which this "type: string" schema then rejects on
+          jsonschema.validate. Quoting the value in frontmatter (created is
+          a quoted string) sidesteps it losslessly — same value,
+          string-typed — and is what the test fixtures do; unquoted MIF
+          input is a known gap for whoever picks up strict date-time
+          validation SDK-wide (out of scope for this story).'
+      # === Level 2 — Standard (RECOMMENDED, §13.2) ===
+      title:
+        type: string
+        description: Human-readable title (§5.2). Optional first-H1 mirror
+          in the body is conventional but not required by the schema.
+      modified:
+        type: string
+        format: date-time
+        description: Last modification timestamp, ISO 8601 (§4.1, RECOMMENDED).
+      ontology:
+        type: object
+        description: Reference to the ontology this memory conforms to (§4.3).
+          `id` must match the `ontology.id` declared in the referenced
+          ontology definition; ontology-extended types (§4.2.1) are expressed
+          through the `namespace` axis, not a separate field here.
+        required:
+        - id
+        properties:
+          id:
+            type: string
+            description: Ontology identifier.
+          version:
+            type: string
+            description: Semantic version of the ontology, e.g. "1.0.0".
+          uri:
+            type: string
+            description: URI to the ontology definition (not necessarily a
+              resolvable URL — §5.2 notes it may be an identifier only).
+        additionalProperties: false
+      namespace:
+        type: string
+        description: 'Hierarchical scope path (§10), e.g. `_semantic/decisions`.
+          Base-type roots use the reserved underscore prefixes (`_semantic`,
+          `_episodic`, `_procedural`); visibility prefixes (`_public`,
+          `_shared`, `_local`, `_system`) are reserved alongside them (§4.4
+          note, §10.2). Maps loosely to Engram.area.'
+      tags:
+        type: array
+        items:
+          type: string
+        default: []
+        description: Classification tags (§4.1, OPTIONAL). 1:1 with
+          Engram.tags.
+      aliases:
+        type: array
+        items:
+          type: string
+        default: []
+        description: Alternative names for the memory (§5.2, OPTIONAL).
+      entities:
+        type: array
+        default: []
+        description: Referenced entities (§7.5/Appendix C, OPTIONAL) — typed
+          pointers into the bundle's `.mif/entities/` definitions, distinct
+          from `relationships` (which point at other MEMORIES, not entities).
+        items:
+          type: object
+          required:
+          - '@type'
+          - entity
+          properties:
+            '@type':
+              type: string
+              enum:
+              - EntityReference
+            entity:
+              type: object
+              required:
+              - '@id'
+              description: Entity identifier object.
+              properties:
+                '@id':
+                  type: string
+                  description: Entity URN, e.g. `urn:mif:entity:person:jane-doe`.
+              additionalProperties: false
+            entityType:
+              type: string
+              description: 'Entity type classification: `Person`,
+                `Organization`, `Technology`, `Concept`, `File`, or a custom
+                ontology-defined type.'
+            name:
+              type: string
+              description: Display name for the entity.
+            role:
+              type: string
+              description: Role of the entity in the memory context (e.g.
+                author, subject, topic).
+          additionalProperties: false
+      relationships:
+        type: array
+        default: []
+        description: 'Typed edges to OTHER MEMORIES (§8), authoritative in
+          this frontmatter array and mirrored in the body as `## Relationships`
+          markdown links (§5.3/§8.4) — the frontmatter array is the source of
+          truth, the body links are its OKF-legible mirror. The 9 core types
+          SHOULD-recognized for interoperability (Appendix B, kebab-case):
+          `relates-to`, `derived-from`, `supersedes`, `conflicts-with`,
+          `part-of`, `implements`, `uses`, `created-by`, `mentioned-in`.
+          Providers MAY define additional namespaced types (`ns:type`, §8.3)
+          — NOT a closed enum here, matching the spec''s own extensibility.
+          derived-from maps to Engram.source_refs; supersedes pairs with
+          `temporal.validUntil` for point-in-time audit.'
+        items:
+          type: object
+          required:
+          - type
+          - target
+          properties:
+            type:
+              type: string
+              description: Relationship type — a kebab-case token (e.g.
+                `derived-from`) or a custom namespaced type (e.g. `farm:contradicts`).
+            target:
+              type: string
+              description: Bundle-relative path to the target concept (e.g.
+                `/semantic/policy.md`) or a `urn:mif:` identifier.
+            strength:
+              type: number
+              minimum: 0
+              maximum: 1
+              description: Relationship strength (0.0-1.0).
+            metadata:
+              type: object
+              additionalProperties: true
+              description: Additional relationship metadata (open — mirrors
+                the spec's own permissive shape for this field).
+          additionalProperties: false
+      temporal:
+        type: object
+        description: Bi-temporal validity + decay data (§9, OPTIONAL —
+          RECOMMENDED at Level 2 per §13.2's "temporal metadata" bullet).
+          `validFrom`/`validUntil` map 1:1 to Engram valid_from/valid_to —
+          the second axis DNA and MIF already agree on. NOTE the field is
+          `validUntil`, not `validTo`.
+        properties:
+          validFrom:
+            type:
+            - string
+            - 'null'
+            format: date-time
+            description: When the fact becomes valid.
+          validUntil:
+            type:
+            - string
+            - 'null'
+            format: date-time
+            description: When the fact expires (null = indefinite).
+          recordedAt:
+            type: string
+            format: date-time
+            description: When recorded — transaction time, distinct from
+              `validFrom`'s valid time.
+          ttl:
+            type: string
+            description: Time-to-live, ISO 8601 duration (e.g. `P90D`).
+          decay:
+            type: object
+            description: Decay model parameters (§9.2).
+            properties:
+              model:
+                type: string
+                enum:
+                - none
+                - linear
+                - exponential
+                - step
+              halfLife:
+                type: string
+                description: ISO 8601 duration, e.g. `P7D`.
+              currentStrength:
+                type: number
+                minimum: 0
+                maximum: 1
+              strength:
+                type: number
+                minimum: 0
+                maximum: 1
+                description: Alias for currentStrength.
+              lastReinforced:
+                type: string
+                format: date-time
+            additionalProperties: false
+          accessCount:
+            type: integer
+            minimum: 0
+          lastAccessed:
+            type: string
+            format: date-time
+          reinforcementHistory:
+            type: array
+            description: History of reinforcement events that strengthened
+              or weakened the memory.
+            items:
+              type: object
+              required:
+              - timestamp
+              - event
+              properties:
+                timestamp:
+                  type: string
+                  format: date-time
+                event:
+                  type: string
+                strengthDelta:
+                  type: number
+                context:
+                  type: string
+              additionalProperties: false
+        additionalProperties: false
+      # === Level 3 — Full (OPTIONAL, §13.3) — where DNA's own cognitive
+      # "physics" (which flat MIF files lack) rides along via `extensions`
+      # without polluting MIF's core, so a DNA→MIF→DNA round-trip loses
+      # nothing. ===
+      provenance:
+        type: object
+        description: W3C-PROV-aligned source/trust data (§12, OPTIONAL).
+          `wasAttributedTo` maps to Engram.owner; `wasDerivedFrom` maps to
+          Engram.source_refs. additionalProperties left OPEN (`true`) because
+          the real MIF Provenance schema is itself open — PROV graphs are
+          explicitly open-ended (mif.schema.json ProvNode note) — not a
+          DNA-added exception to the strict-schema convention.
+        properties:
+          sourceType:
+            type: string
+            enum:
+            - user_explicit
+            - user_implicit
+            - agent_inferred
+            - external_import
+            - system_generated
+          confidence:
+            type: number
+            minimum: 0
+            maximum: 1
+          trustLevel:
+            type: string
+            enum:
+            - verified
+            - user_stated
+            - high_confidence
+            - moderate_confidence
+            - low_confidence
+            - uncertain
+          sourceRef:
+            type: string
+            description: Reference to the originating source (e.g.
+              `conversation:conv-456`).
+          agent:
+            type: string
+            description: Identifier of the agent that created the unit (e.g.
+              claude-3-opus).
+          agentVersion:
+            type: string
+          wasGeneratedBy:
+            description: prov:wasGeneratedBy — the activity that produced
+              this unit. A string IRI or an open PROV node object.
+          wasAttributedTo:
+            description: prov:wasAttributedTo — the agent this unit is
+              attributed to. A string IRI or an open PROV node object.
+          wasDerivedFrom:
+            description: prov:wasDerivedFrom — the entity/entities this unit
+              was derived from. A string IRI, an open PROV node object, or an
+              array of either.
+        additionalProperties: true
+      embedding:
+        type: object
+        description: Embedding model reference (OPTIONAL). Actual vectors are
+          stored externally or in the JSON-LD projection — the Markdown
+          frontmatter only carries the reference.
+        properties:
+          model:
+            type: string
+          modelVersion:
+            type: string
+          dimensions:
+            type: integer
+            minimum: 1
+          sourceText:
+            type: string
+            description: The text that was embedded.
+          vectorUri:
+            type: string
+          normalized:
+            type: boolean
+        additionalProperties: false
+      citations:
+        type: array
+        default: []
+        description: Citation references (§5.4, Level 3 OPTIONAL).
+        items:
+          type: object
+          required:
+          - '@type'
+          - citationType
+          - citationRole
+          - title
+          - url
+          properties:
+            '@type':
+              type: string
+              enum:
+              - Citation
+            citationType:
+              type: string
+              description: 'Source category (§5.4.3): article, book, paper,
+                website, documentation, repository, video, podcast,
+                specification, dataset, tool, other — or a custom namespaced
+                type.'
+            citationRole:
+              type: string
+              description: 'Relationship to the memory (§5.4.4): supports,
+                refutes, background, methodology, contradicts, extends,
+                derived, source, example, review — or a custom namespaced
+                role.'
+            title:
+              type: string
+            url:
+              type: string
+            author:
+              description: One or more entity references, or plain text.
+            date:
+              type: string
+              format: date
+              description: Publication date, ISO 8601.
+            accessed:
+              type: string
+              format: date
+              description: Access date, ISO 8601.
+            relevance:
+              type: number
+              minimum: 0
+              maximum: 1
+            note:
+              type: string
+              maxLength: 1000
+          additionalProperties: false
+      summary:
+        type: string
+        maxLength: 500
+        description: Compressed content summary (§5.6, Level 3, max 500 chars).
+      compressed_at:
+        type: string
+        format: date-time
+        description: When compression was applied (§5.6, Level 3, ISO 8601).
+          Snake_case in the Markdown frontmatter profile (the JSON-LD
+          projection's `compressedAt` is camelCase — a naming quirk of that
+          derived form, not this one).
+      extensions:
+        type: object
+        additionalProperties: true
+        description: 'Provider-specific extensions (§4.1/§5.2, OPTIONAL) —
+          the vault where DNA''s own physics rides along on a round-trip:
+          confidence_score, relevance_decay_seed, surface_count,
+          cues_history, encoding_context, affect, affect_reason, visibility.
+          Namespaced under `x-dna` by convention so other MIF-conformant
+          tools degrade gracefully (ignore what they don''t recognize) while
+          a DNA reader recovers everything.'
+  embed:
+  - content
+  - title
+  graph_style:
+    fill: '#5ab99d'
+    stroke: '#2f8570'
+    text_color: '#12161c'
+  ascii_icon: 🧬
+  display_label: Memória Portável
+  docs: A MIF Memory is DNA's byte-faithful passthrough of the external
+    Memory Interchange Format (mif-spec.dev/v1), stored and validated under
+    its owner's namespace exactly as MIF defines it (market-fidelity rule).
+    Frontmatter + Markdown body is a MIF Memory Unit's canonical shape, which
+    is structurally identical to a DNA bundle marker — no custom Reader/
+    Writer needed. This is the interchange face only; it does NOT replace
+    Engram (github.com/ruinosus/dna/v1 · Engram), DNA's native recall engine
+    — `dna memory export`/`import` (a later story) projects between the two,
+    with DNA-specific fields riding along in `extensions` for a lossless
+    round-trip.

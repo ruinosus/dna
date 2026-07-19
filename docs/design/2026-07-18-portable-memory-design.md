@@ -78,6 +78,16 @@ O `display_label` do Kind passa a `Engrama` (pt-BR); "Lições Aprendidas" perma
 
 ## 4. Peça 1 — o Kind de passthrough (`mif-memory.kind.yaml`)
 
+> **Implementado em `s-mif-passthrough-kind`** (feature `f-portable-memory`):
+> o descritor rascunhado aqui foi movido pra
+> `packages/sdk-{py,ts}/{dna/extensions,src/extensions}/mif/kinds/memory.kind.yaml`
+> (extensão dedicada `mif`, no mesmo espírito de `agentskills`/`soulspec` — não
+> dentro de `helix`), com três correções contra a spec real do MIF (`id` é
+> UUID puro no perfil Markdown, não `urn:mif:`; o campo é `validUntil`, não
+> `validTo`; `relationships[].type` é string aberta, não um enum fechado — o
+> enum do rascunho tinha 4 dos 9 valores errados). Este arquivo `.kind.yaml`
+> não fica mais em `docs/design/` — o descritor real é a fonte única.
+
 Entregue junto: `mif-memory.kind.yaml`. É um `KindDefinition` que registra `mif-spec.dev/v1 · Memory` (plano `record`), seguindo o padrão de `evidence.kind.yaml`. Pontos:
 
 - **`origin: mif-spec.dev`** e **`target_api_version: mif-spec.dev/v1`** — o dono nomeia o schema. Um `.memory.json` importado é validado contra o schema do *MIF*, não contra um schema DNA-flavored.
