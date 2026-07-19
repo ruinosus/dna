@@ -11,6 +11,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.20.0] — 2026-07-19
+
+### ⚠️ Breaking
+
+- **The `LessonLearned` Kind is renamed `Engram` and moves from
+  `github.com/ruinosus/dna/sdlc/v1` to `github.com/ruinosus/dna/v1`.** Kind
+  lookup is an EXACT `(apiVersion, kind)` tuple with **no fallback**, so there
+  is no window in which both identities resolve — upgrading is a **hard cutover
+  with a write freeze**, not a rolling one. Existing data must be migrated:
+
+  ```bash
+  python3 scripts/migrate_engram.py --source .dna                    # dry run
+  python3 scripts/migrate_engram.py --source postgresql://...        # dry run
+  python3 scripts/migrate_engram.py --source postgresql://... --apply
+  ```
+
+  Read `docs/guides/engram-postgres-cutover.md` first and **read the dry-run
+  output**, not just its exit code.
+
+### Added
+
+- **Portable memory — `Engram <-> MIF` interchange** (`f-portable-memory`).
+  `dna.memory.interchange` provides pure, deterministic `to_mif` / `from_mif`
+  projections (Py + TS twins), with the fields MIF has no place for travelling
+  intact in an `extensions.x-dna` vault. `mif-spec.dev/v1 · Memory` is
+  registered as a passthrough Kind so a foreign MIF document can be stored
+  verbatim alongside its native projection.
+- **`dna memory export` / `dna memory import`** — the CLI verbs over that
+  projection, including `--as native|passthrough|both`, `--bundle` (JSON-LD)
+  and `--personal`.
+- **`dna.memory.claude_export`** — a `claude-export -> MIF` adapter (~80 lines
+  of code) for the official Claude account export. Note what it can and cannot
+  promise: the export is free-form markdown prose, not discrete records, so
+  **segmentation is inferred**, there are **no per-memory timestamps** (the
+  stamped `created` is import time, not formation time) and **no ids** (they are
+  minted deterministically, so re-import dedupes rather than duplicates).
+- **`interchange_round_trip`** joins the public `memory_conformance_suite`,
+  asserting field fidelity against the live descriptor — so a Kind that grows a
+  field fails the case instead of quietly ceasing to be covered.
+
+### Fixed
+
+- **Consumer lane (WorkOS) could not reach personal memory.** WorkOS stamped no
+  provider family, so `resolve_personal_oid` fell back to `entra` and demanded
+  an `oid` claim a WorkOS token does not carry — personal memory failed closed
+  for every Google/WorkOS sign-in. WorkOS now has its own family, keyed
+  `personal:workos:<sub>`, deliberately distinct from a directly-configured
+  Google IdP.
+- **`dna memory import` could silently overwrite an unrelated memory.** The
+  native projection named the Engram from a hash of the derived summary while
+  the passthrough leg named it by MIF id; two documents sharing a title
+  collided and the second replaced the first. Imported Engrams are now keyed by
+  MIF id.
+- **Unquoted ISO-8601 dates in a third-party MIF file corrupted temporal
+  fields.** MIF's own examples write dates unquoted and YAML resolves those to
+  `datetime` objects, which failed MIF's string-typed schema on import and
+  crashed `--bundle` re-export. They are now coerced back to ISO strings at
+  read time.
+
+
+> **Bookkeeping note.** The entries below this line under the old
+> `[Unreleased]` heading (MCP Apps / MCP-UI) in fact SHIPPED — they are present
+> in the `v0.19.2` tag — but were never moved under a version heading, and
+> `0.18.x`/`0.19.x` have no sections at all. Left in place rather than
+> re-attributed to a guessed version; see the release notes for those tags.
+
 ### Added
 
 - **MCP Apps — the DNA memory card renders INSIDE Claude / ChatGPT / VS Code /

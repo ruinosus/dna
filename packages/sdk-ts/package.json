@@ -1,7 +1,7 @@
 {
   "name": "dna-sdk",
-  "version": "0.19.2",
-  "description": "DNA — Domain Notation of Anything (TypeScript SDK)",
+  "version": "0.20.0",
+  "description": "DNA \u2014 Domain Notation of Anything (TypeScript SDK)",
   "type": "module",
   "license": "MIT",
   "repository": {
@@ -66,7 +66,7 @@
     "typedoc-plugin-markdown": "^4.12.0",
     "typescript": "^5.5.0"
   },
-  "//peerDependencies": "OPTIONAL opt-in extras, never in the default bundle: (1) rec-embedding-port — the REAL EmbeddingPort (ONNX all-MiniLM-L6-v2 via transformers.js), dynamic-imported by OnnxEmbeddingProvider only on first embed() (guard: tests/embedding-import-isolation.test.ts); (2) rec-embeddable-provider — sqlite-vec, the loadable extension for SqliteVecRecordSearchProvider, dynamic-imported by src/adapters/search/driver.ts (guard: tests/search-import-isolation.test.ts). It IS a devDependency too so `bun test` runs the search provider conformance for real, offline. Under Bun on macOS set DNA_SQLITE_LIB to a libsqlite3 that permits extension loading (e.g. Homebrew's).",
+  "//peerDependencies": "OPTIONAL opt-in extras, never in the default bundle: (1) rec-embedding-port \u2014 the REAL EmbeddingPort (ONNX all-MiniLM-L6-v2 via transformers.js), dynamic-imported by OnnxEmbeddingProvider only on first embed() (guard: tests/embedding-import-isolation.test.ts); (2) rec-embeddable-provider \u2014 sqlite-vec, the loadable extension for SqliteVecRecordSearchProvider, dynamic-imported by src/adapters/search/driver.ts (guard: tests/search-import-isolation.test.ts). It IS a devDependency too so `bun test` runs the search provider conformance for real, offline. Under Bun on macOS set DNA_SQLITE_LIB to a libsqlite3 that permits extension loading (e.g. Homebrew's).",
   "peerDependencies": {
     "@huggingface/transformers": "^3.0.0",
     "sqlite-vec": "^0.1.6"
