@@ -124,6 +124,37 @@ def test_no_consented_token_is_an_honest_gap_not_a_crash():
         asyncio.run(prov.credential_for(_google_ctx(), "calendar", [_CAL_SCOPE]))
 
 
+def test_default_refresh_lookup_fails_closed_for_a_workos_shaped_subject():
+    """s-consumer-lane-memory-key regression guard (review FIX 3).
+
+    ``_PROVIDER_FAMILY["workos"] = "workos"`` means a WorkOS token is dispatched
+    to its OWN family and never reaches the ``"google"`` port at all (no
+    ``ActOnBehalfPort`` is registered for ``"workos"`` — see
+    ``dna_cli._mcp_auth.provider_family_for_type``). This test pins the SECOND,
+    independent line of defense in case that ever changes (a future family
+    misconfigured back onto ``"google"``, a routing bug, etc.): even if a
+    WorkOS-shaped subject reaches ``GoogleWorkspaceProvider.credential_for``
+    with the DEFAULT (un-overridden) ``refresh_lookup`` — the real one until a
+    consent-flow store is built — it fails closed with an honest
+    ``ActOnBehalfUnavailable``, and the error leaks nothing identity-specific
+    (no subject, no token) — see the ``RefreshLookup`` docstring in
+    ``_google.py`` for why this MUST stay true once a real store lands."""
+    # No refresh_lookup override — exercises the shipped default explicitly.
+    prov = GoogleWorkspaceProvider(
+        client_id="gclient", client_secret="gsecret",
+        allowed_scopes=[_CAL_SCOPE], supported_capabilities={"calendar"},
+    )
+    workos_subject = "user_01ABCXYZDEFCONSUMER"
+    ctx = _google_ctx(provider_hint="google", subject=workos_subject)
+
+    with pytest.raises(ActOnBehalfUnavailable) as exc_info:
+        asyncio.run(prov.credential_for(ctx, "calendar", [_CAL_SCOPE]))
+
+    message = str(exc_info.value)
+    assert workos_subject not in message
+    assert "user_" not in message
+
+
 def test_missing_client_credential_is_a_clean_gap():
     prov = _google(client_secret=None)
     with pytest.raises(ActOnBehalfUnavailable):
