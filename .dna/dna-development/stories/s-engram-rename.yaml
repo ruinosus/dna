@@ -7,7 +7,7 @@ spec:
   description: Renomear o Kind de memoria LessonLearned -> Engram com identidade github.com/ruinosus/dna/v1,
     preservando LessonLearned (/sdlc/v1) e o alias sdlc-lesson-learned como compat
     read-time. Bloqueia as demais stories (tudo abaixo fala 'Engram').
-  status: in-progress
+  status: review
   feature: f-portable-memory
   priority: high
   labels:
@@ -36,7 +36,7 @@ spec:
     de parity e de alias verdes; make/CI verde; nenhum bump de pin e nenhum azd up
   definition_of_done_source: cli-create
   created_at: '2026-07-19T14:25:30+00:00'
-  updated_at: '2026-07-19T16:38:46+00:00'
+  updated_at: '2026-07-19T16:39:37+00:00'
   timeline:
   - at: '2026-07-19T14:25:30+00:00'
     actor: claude-code
@@ -82,6 +82,25 @@ spec:
     name: tr-tg-engram-rename-20260719-163842
     summary: "TestRun tr-tg-engram-rename-20260719-163842 \u2192 pass"
     outcome: pass
+  - at: '2026-07-19T16:39:04+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/162'
+    pr_url: https://github.com/ruinosus/dna/pull/162
+  - at: '2026-07-19T16:39:31+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Dois reviews independentes; mutation testing achou o gap do VERSION_CHURN_KINDS\
+      \ e tres defeitos no script de migracao \u2014 todos corrigidos e reverificados.\
+      \ PR #162."
+  - at: '2026-07-19T16:39:37+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
   produces:
   - kind: Plan
     name: plan-s-engram-rename
