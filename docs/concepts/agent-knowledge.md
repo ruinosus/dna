@@ -2,7 +2,7 @@
 
 DNA represents agent-facing knowledge as **declarative, curated Kinds with
 provenance** — `Research` (a synthesis of N cited References, each finding
-evidence-rated), `LessonLearned`, and the SDLC timeline itself — rather than as
+evidence-rated), `Engram`, and the SDLC timeline itself — rather than as
 LLM-generated prose (the OpenWiki / DeepWiki approach of auto-writing a repo
 wiki for coding agents).
 

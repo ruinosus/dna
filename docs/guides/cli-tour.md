@@ -538,7 +538,7 @@ The remaining groups already have dedicated prose — one line each here:
   candidate (a deterministic key plus a semantic cosine over the memory
   co-pillar's embedding space) against the source's existing insights. And the
   loop closes on itself: marking an insight `dismissed` (or `actioned`) records
-  a feedback engram (a `LessonLearned`) that tunes the ranker so
+  a feedback engram (an `Engram`) that tunes the ranker so
   semantically-similar candidates are suppressed (or reinforced) next time.
   `dna intel metrics` prints the feedback KPIs — precision (`actioned ÷
   actioned+dismissed`) and the product's north-star **noise rate**, which should

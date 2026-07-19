@@ -81,7 +81,7 @@ finds.
 
 ## 3. Give an agent memory: `dna memory`
 
-Memory is the record Kinds you already have (`LessonLearned`, `Research`,
+Memory is the record Kinds you already have (`Engram`, `Research`,
 `Evidence`) plus four verbs. Write one:
 
 ```console
@@ -90,11 +90,11 @@ $ dna memory remember "Always deep-copy a doc's spec before mutating — the cac
     --reason "Mutating the cached dict in place corrupted every later read in the same process" \
     --tag cache
 
-🧠 remembered LessonLearned/rem-5d60593f38
+🧠 remembered Engram/rem-5d60593f38
    Always deep-copy a doc's spec before mutating — the cache hands back a shared reference
 ```
 
-That wrote a plain `LessonLearned` YAML into the scope (deterministically
+That wrote a plain `Engram` YAML into the scope (deterministically
 enriched: encoding context, memory type, `valid_from`) and indexed it.
 Recall it — hits are re-ranked by search score × Ebbinghaus retention ×
 affect, and each surfaced memory gets its cue recorded:
@@ -103,7 +103,7 @@ affect, and each surfaced memory gets its cue recorded:
 $ dna memory recall "cache mutation" --scope hello-genome
 
 🧠 recall · hybrid (dense+lexical+RRF) · scope=hello-genome · 'cache mutation'
-   1. LessonLearned/rem-5d60593f38  (0.0426)  [retention 1.00]
+   1. Engram/rem-5d60593f38  (0.0426)  [retention 1.00]
       rem-5d60593f38 Always deep-copy a doc's spec before mutating — the cache hands back…
 ```
 
@@ -122,7 +122,7 @@ still surface, and the hits say why:
 $ dna memory recall "mutating documents safely" --scope hello-genome -k 2
 
 🧠 recall · hybrid (dense+lexical+RRF) + semantic (ecphory×cosine) · scope=hello-genome · 'mutating documents safely'
-   1. LessonLearned/rem-5d60593f38  (0.0328)  [retention 1.00]  [cos 0.44]
+   1. Engram/rem-5d60593f38  (0.0328)  [retention 1.00]  [cos 0.44]
       rem-5d60593f38 Always deep-copy a doc's spec before mutating — the cache hands back…
 ```
 
@@ -142,7 +142,7 @@ stops surfacing:
 
 ```console
 $ dna memory forget rem-5d60593f38 --scope hello-genome
-🕯  forgotten: LessonLearned/rem-5d60593f38 (valid_to=2026-07-09T20:59:11+00:00)
+🕯  forgotten: Engram/rem-5d60593f38 (valid_to=2026-07-09T20:59:11+00:00)
    (retained + auditable — bi-temporal invalidation, not deleted)
 
 $ dna memory recall "cache mutation" --scope hello-genome
@@ -314,7 +314,7 @@ dna mcp serve --transport http --port 8010 --auth none --base-dir ./path/to/.dna
 **Before** (neither extra installed — the honest degraded floor):
 
 ```json
-remember → { "kind": "LessonLearned", "name": "rem-…", "indexed": false }
+remember → { "kind": "Engram", "name": "rem-…", "indexed": false }
 recall   → { "semantic": false, "degraded": true,  "hits": [ … ] }
 ```
 
@@ -325,7 +325,7 @@ off (`semantic:false`).
 **After** (both extras installed):
 
 ```json
-remember → { "kind": "LessonLearned", "name": "rem-…", "indexed": true }
+remember → { "kind": "Engram", "name": "rem-…", "indexed": true }
 recall   → { "semantic": true, "degraded": false, "hits": [ … ] }
 ```
 

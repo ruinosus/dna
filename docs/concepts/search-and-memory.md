@@ -97,7 +97,7 @@ a wiring change, not a rewrite.
 ## Memory is the Kinds you already have
 
 DNA does not add a "memory store". Memory is the record Kinds the SDK
-already ships — `LessonLearned`, `Research`, `Evidence` — written through
+already ships — `Engram`, `Research`, `Evidence` — written through
 `kernel.write_document` and recalled through the same
 `RecordSearchProvider` as everything else. Four verbs (`dna.memory` ·
 `dna memory <verb>`) formalize the lifecycle:
@@ -116,7 +116,7 @@ flowchart LR
   memory-type classification, seeds `valid_from`, and indexes it so a later
   recall finds it.
 - **`recall`** runs hybrid search over the memory Kinds, drops invalidated
-  memories, and re-ranks `LessonLearned` hits by
+  memories, and re-ranks `Engram` hits by
   `search score × retention × affect`. When a provider is available it also
   blends **embedding similarity into the ecphory ranking** (the cue and each
   candidate's semantic payload are embedded once; the cosine feeds the
@@ -207,7 +207,7 @@ reproducible and offline.
 This is the same positioning as
 [agent-facing knowledge](agent-knowledge.md): memory is **curated, cited
 Kinds with provenance** — `Research` findings carry evidence ratings,
-`LessonLearned` carries its cues and validity window — recalled
+`Engram` carries its cues and validity window — recalled
 deterministically, not prose regenerated and re-trusted on every run.
 
 ## Where to go next

@@ -31,7 +31,7 @@ overlay only — never another tenant's data):
 - `GET /v1/agents` — list the prompt-target agents in a scope
 - `GET /v1/agents/{name}/prompt` — compose an agent's system prompt **live**
 - `GET /v1/tools` — the Tool surfaces in a scope
-- `GET /v1/memories` — the tenant's stored memories (`LessonLearned`)
+- `GET /v1/memories` — the tenant's stored memories (`Engram`)
 - `GET /v1/memories/search?q=…` — recall (semantic when indexed, else lexical)
 - `DELETE /v1/memories/{name}` — the tenant deletes one of its own memories
 

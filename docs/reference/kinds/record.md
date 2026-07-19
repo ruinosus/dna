@@ -265,6 +265,41 @@ A Doc is one page of in-product documentation. The marker is ``docs/<name>/DOC.m
 | `summary` | string |  | 1-2 sentences for the topic header card / previews. |
 | `tags` | array |  | Free-form labels for filtering and search. |
 
+## Engram
+
+- **Alias:** `helix-engram`
+- **apiVersion:** `github.com/ruinosus/dna/v1`
+- **Plane:** record
+
+An Engram is an affective recall artifact (record plane) — the memory co-pillar's rich, bi-temporal engram. It surfaces unbidden when the current cycle resembles a past one in the same ``area``, carries an evocative ``affect`` (triumph/regret/surprise/wistful/ominous), and is scored by Ebbinghaus-style decay (``relevance_decay_seed``, ``surface_count``, ``confidence_score``) plus Semon-inspired ecphory (``cues_history``, ``homophonic_links``). Bi-temporal — a superseded Engram is invalidated via ``valid_to``/``superseded_by_memory``, never hard-deleted. Renamed from LessonLearned (s-engram-rename, 2026-07-19) — memory is a platform primitive (``github.com/ruinosus/dna/v1``), not sdlc-owned. Authored by the Sage oracle during the deep-sleep ritual (mostly) or manually; written/recalled via ``dna.memory.remember`` / ``recall``. Stored as ``lessons-learned/<name>.yaml`` with body prose in the ``LESSON_LEARNED.md`` bundle marker — storage container/marker names are unchanged by the rename.
+
+**Spec fields**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `affect` | string | yes | Emotional tone. Evocative palette (Spec §15 decision): triumph, regret, surprise, wistful, ominous. |
+| `affect_evidence_refs` | array |  | Concrete refs (rem-X, verdict-Y, Story/s-Z) that back the affect choice. Required for high-stakes affects so the LLM's claim is auditable against actual artifacts in the manifest. |
+| `affect_reason` | string |  | Story s-remembrance-affect-reason-required. Concrete justification for the chosen affect — names specific slugs/SHAs/AC counts/state. NOT generic ('Story closed', 'shipped successfully'). Validator rejects writes that lack reason OR have boilerplate. Required for high-stakes affects (regret/ominous/surprise); optional for triumph/wistful but encouraged. |
+| `area` | string | yes | Scoped target: Feature/X, Epic/Y, or Roadmap/Z. The LessonLearned surfaces when this area is touched. |
+| `confidence_score` | number |  | Semon engram intensity. Multiplies BM25 score in retrieval. Bumps when homophonic LessonsLearned (same area) are filed — engrams reinforce each other. Decays with surface_count for hygiene. |
+| `cues_history` | array |  | Semon ecforia trace. Each time the LessonLearned is surfaced via remember(), the cue (query + actor + timestamp) is appended. History of WHY this memory kept getting recalled. |
+| `encoding_context` | object |  | Snapshot of the conditions at engraphy. semon-recaller scores ecphory candidates by partial-match against this dict. |
+| `homophonic_links` | array |  | Semon homophony — engrams sharing substrate features. Each link records target + resonance score + basis. semon-recaller propagates a small strength boost (+0.02) to neighbors on ecphory (resonance). |
+| `last_surfaced` | string |  | Auto-stamped on each surfacing; null until first surface. |
+| `memory_type` | string |  | CoALA taxonomy — ORTHOGONAL to the Semon EngramState (type vs state): episodic = what happened (instance/sequence); semantic = a generalized fact about the world/user; procedural = how to act (a skill/rule). Absent = untyped (legacy). |
+| `owner` | string |  | ATTRIBUTION: which agent authored this memory (e.g. claude-code, jarvis). Orthogonal to scope + to tenant (tenant separates USERS, owner separates AGENTS). Recall AUDIENCE is governed by `visibility`, NOT by owner (s-agent-memory-phase-0-bridge, 2026-06-02 — supersedes the 2026-05-17 owner-implies-private semantics). When absent: an unowned/project lesson (shared). |
+| `relevance_decay_seed` | number |  | Multiplicative decay factor applied per 24h. Default 0.95 (~30% relevance after 14 days). |
+| `revisions` | array |  | Reconsolidation log (Nader 2000 / neo-Semon). Append-only when a recall reawakens the engram and the consumer updates the summary. |
+| `source_refs` | array | yes | Pointers to source artifacts (Narrative/X, WorkflowEvent/Y, etc.) that this memory derives from. |
+| `summary` | string | yes | 1-2 sentence 'Lembre-se de...' — the recalled essence. |
+| `superseded_by_memory` | string |  | Name of the memory that invalidated this one (not `superseded_by` — that's an ADR dep_filter token). Pairs with valid_to for point-in-time audit. |
+| `surface_count` | integer |  | Increments on each surface. Damps re-surfacing via scoring formula in retrieval.py. |
+| `surface_when` | array | yes | Triggers that surface this LessonLearned. Mirrors how human recall fires unbidden in context. |
+| `tags` | array |  |  |
+| `valid_from` | string |  | World-time validity start (Zep bi-temporal). Default: created_at. |
+| `valid_to` | string |  | World-time validity end. Set when superseded/contradicted — the memory is INVALIDATED, never hard-deleted. Default recall excludes valid_to<now. |
+| `visibility` | string |  | Recall audience (the customization axis): shared = all agents in scope recall it (cross-agent knowledge, default); private = only `owner` recalls it (an agent's raw working memory); pinned = always injected into working memory at bootstrap, bypassing recall scoring (the Letta 'memory block'); archived = retained + auditable but excluded from default recall (soft-forget). Humans audit ALL regardless of visibility (audit != recall). Phase 0 (2026-06-02). |
+
 ## Epic
 
 - **Alias:** `sdlc-epic`
@@ -641,39 +676,6 @@ A Kaizen is a continuous-improvement observation noticed while working on someth
 | `status` | string | yes | Observation arc: observed (flagged) → routed (fix tracked in `issue`) → resolved (fix shipped). |
 | `updated_at` | string |  |  |
 | `work_item` | string |  | Kind/slug of the work item where this was observed (polymorphic — Story/Spike/Issue). |
-
-## LessonLearned
-
-- **Alias:** `sdlc-lesson-learned`
-- **apiVersion:** `github.com/ruinosus/dna/sdlc/v1`
-- **Plane:** record
-
-**Spec fields**
-
-| Field | Type | Required | Description |
-| --- | --- | --- | --- |
-| `affect` | string | yes | Emotional tone. Evocative palette (Spec §15 decision): triumph, regret, surprise, wistful, ominous. |
-| `affect_evidence_refs` | array |  | Concrete refs (rem-X, verdict-Y, Story/s-Z) that back the affect choice. Required for high-stakes affects so the LLM's claim is auditable against actual artifacts in the manifest. |
-| `affect_reason` | string |  | Story s-remembrance-affect-reason-required. Concrete justification for the chosen affect — names specific slugs/SHAs/AC counts/state. NOT generic ('Story closed', 'shipped successfully'). Validator rejects writes that lack reason OR have boilerplate. Required for high-stakes affects (regret/ominous/surprise); optional for triumph/wistful but encouraged. |
-| `area` | string | yes | Scoped target: Feature/X, Epic/Y, or Roadmap/Z. The LessonLearned surfaces when this area is touched. |
-| `confidence_score` | number |  | Semon engram intensity. Multiplies BM25 score in retrieval. Bumps when homophonic LessonsLearned (same area) are filed — engrams reinforce each other. Decays with surface_count for hygiene. |
-| `cues_history` | array |  | Semon ecforia trace. Each time the LessonLearned is surfaced via remember(), the cue (query + actor + timestamp) is appended. History of WHY this memory kept getting recalled. |
-| `encoding_context` | object |  | Snapshot of the conditions at engraphy. semon-recaller scores ecphory candidates by partial-match against this dict. |
-| `homophonic_links` | array |  | Semon homophony — engrams sharing substrate features. Each link records target + resonance score + basis. semon-recaller propagates a small strength boost (+0.02) to neighbors on ecphory (resonance). |
-| `last_surfaced` | string |  | Auto-stamped on each surfacing; null until first surface. |
-| `memory_type` | string |  | CoALA taxonomy — ORTHOGONAL to the Semon EngramState (type vs state): episodic = what happened (instance/sequence); semantic = a generalized fact about the world/user; procedural = how to act (a skill/rule). Absent = untyped (legacy). |
-| `owner` | string |  | ATTRIBUTION: which agent authored this memory (e.g. claude-code, jarvis). Orthogonal to scope + to tenant (tenant separates USERS, owner separates AGENTS). Recall AUDIENCE is governed by `visibility`, NOT by owner (s-agent-memory-phase-0-bridge, 2026-06-02 — supersedes the 2026-05-17 owner-implies-private semantics). When absent: an unowned/project lesson (shared). |
-| `relevance_decay_seed` | number |  | Multiplicative decay factor applied per 24h. Default 0.95 (~30% relevance after 14 days). |
-| `revisions` | array |  | Reconsolidation log (Nader 2000 / neo-Semon). Append-only when a recall reawakens the engram and the consumer updates the summary. |
-| `source_refs` | array | yes | Pointers to source artifacts (Narrative/X, WorkflowEvent/Y, etc.) that this memory derives from. |
-| `summary` | string | yes | 1-2 sentence 'Lembre-se de...' — the recalled essence. |
-| `superseded_by_memory` | string |  | Name of the memory that invalidated this one (not `superseded_by` — that's an ADR dep_filter token). Pairs with valid_to for point-in-time audit. |
-| `surface_count` | integer |  | Increments on each surface. Damps re-surfacing via scoring formula in retrieval.py. |
-| `surface_when` | array | yes | Triggers that surface this LessonLearned. Mirrors how human recall fires unbidden in context. |
-| `tags` | array |  |  |
-| `valid_from` | string |  | World-time validity start (Zep bi-temporal). Default: created_at. |
-| `valid_to` | string |  | World-time validity end. Set when superseded/contradicted — the memory is INVALIDATED, never hard-deleted. Default recall excludes valid_to<now. |
-| `visibility` | string |  | Recall audience (the customization axis): shared = all agents in scope recall it (cross-agent knowledge, default); private = only `owner` recalls it (an agent's raw working memory); pinned = always injected into working memory at bootstrap, bypassing recall scoring (the Letta 'memory block'); archived = retained + auditable but excluded from default recall (soft-forget). Humans audit ALL regardless of visibility (audit != recall). Phase 0 (2026-06-02). |
 
 ## Membership
 

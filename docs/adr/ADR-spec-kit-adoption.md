@@ -146,7 +146,7 @@ The audit of `~/projects/dna` found the adoption surface is **~70% pre-built**:
 3. **The journey is a derived pure function of signals** (`journey_derive.py`):
    `specify` lights from a linked **Spec** (`spec_refs`) or from AC/DoD; `plan`
    from a linked **Plan**; `build`/`verify`/`reflect` from timeline + TestRun +
-   LessonLearned. So: **if the ingester creates Spec/Plan/Story docs with the
+   Engram. So: **if the ingester creates Spec/Plan/Story docs with the
    right refs, the journey auto-fills — zero manual upkeep.** Explicit
    `WorkflowEvent(methodology="spec-kit", methodology_artifact=…)` docs overlay
    on top for the badge + the honest `.specify/` trail.

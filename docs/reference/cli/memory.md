@@ -25,7 +25,7 @@ dna memory consolidate [OPTIONS]
 | `--floor` | Retention floor below which a memory is stale. _(default: `0.15`)_ |
 | `--help` | Show this message and exit. |
 | `--json` |  |
-| `--kind` | _(default: `LessonLearned`)_ |
+| `--kind` | _(default: `Engram`)_ |
 | `--scope` |  |
 | `--tenant` |  |
 
@@ -49,7 +49,7 @@ dna memory forget [OPTIONS] NAME
 | --- | --- |
 | `--help` | Show this message and exit. |
 | `--json` |  |
-| `--kind` | _(default: `LessonLearned`)_ |
+| `--kind` | _(default: `Engram`)_ |
 | `--scope` |  |
 | `--superseded-by` | Name of the memory that supersedes this one. |
 | `--tenant` |  |
@@ -69,7 +69,7 @@ dna memory list [OPTIONS]
 | `--all` | Include bi-temporally-invalidated (forgotten) memories. |
 | `--help` | Show this message and exit. |
 | `--json` |  |
-| `--kind` | _(default: `LessonLearned`)_ |
+| `--kind` | _(default: `Engram`)_ |
 | `--scope` |  |
 | `--tenant` |  |
 
@@ -124,7 +124,7 @@ dna memory remember [OPTIONS] SUMMARY
 | `--area` | Scoped target area (Feature/X, Epic/Y, …). _(default: `general`)_ |
 | `--help` | Show this message and exit. |
 | `--json` |  |
-| `--kind` | _(default: `LessonLearned`)_ |
+| `--kind` | _(default: `Engram`)_ |
 | `--name` | Doc name (default: rem-<hash> of summary). |
 | `--owner` | Authoring agent (claude-code, jarvis, …). |
 | `--personal` | Remember PRIVATELY — into your own per-user partition (DNA_PERSONAL_ID), portable across workspaces, not shared. |
