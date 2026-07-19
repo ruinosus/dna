@@ -23,15 +23,18 @@ before bumping the pin).
   `--source` looks like a `postgresql://`/`postgres://` DSN or a directory.
 - A **maintenance window**. Step 1 stops all writes to the store; nothing in
   the deployment should be writing DNA documents between steps 1 and 4.
+- `pg_dump`/`pg_restore` (matching the target server's major version) and
+  somewhere to store the dump OUTSIDE the database being migrated.
+- `az` CLI access to the deployment's Container Apps (or your platform's
+  equivalent) to scale writers down and verify they actually stopped.
 - Read `scripts/migrate_engram_postgres.py`'s module docstring for the full
   schema analysis (which tables carry the identity, the collision
   pre-flight, and the `dna_outbox` decision) before running this against a
   real database.
 
-## Step 1 — freeze writes
+## Step 1 — freeze writes, verify the freeze, and back up
 
-Scale down every service that can write to the store to zero replicas
-before touching anything:
+### 1a. Scale down every writer
 
 ```bash
 # dna-cloud example (Azure Container Apps, rg-dnacloud) — adjust names/RG
@@ -47,6 +50,97 @@ invisible to the pre-flight and could either (a) collide with the rename
 mid-flight, or (b) get silently skipped by the migration and then become
 unresolvable the moment the new pin ships. The pre-flight assumes a frozen
 store — it is not a substitute for the freeze.
+
+**Is `mcp` + `mcp-ws` + `api` the complete list? What about `copilot`?**
+Verified (read-only, against the actual dna-cloud repo — `infra/*.bicep`,
+`infra/copilot.Dockerfile`, `infra/emit_copilot_langgraph.py`): the
+`copilot` Container App's env DOES include `DNA_SOURCE_URL` (bicep injects
+it, alongside `DNA_MCP_URL` and the separate `DNA_PRIMARY_PG_URL`), which
+looks alarming at a glance — but nothing the copilot runs at request time
+ever reads it. `DNA_SOURCE_URL` is only ever consumed by
+`emit_copilot_langgraph.py`'s `Kernel.quick(SCOPE, base_dir=BASE_DIR)`,
+which runs **once, at `docker build`** (`RUN python
+/app/emit_copilot_langgraph.py` in `copilot.Dockerfile`) against the
+**filesystem** `.dna/` baked into the image (`DNA_BASE_DIR=/app/.dna`) —
+not against Postgres at all, and not at runtime. At request time the
+running copilot's only path to DNA content is `MultiServerMCPClient` over
+`DNA_MCP_URL`, which the emitted agent's own docstring confirms explicitly
+("Tool bodies live on the remote DNA MCP server, not in \[the copilot\]") —
+i.e. every DNA read/write the copilot makes is proxied through `mcp` /
+`mcp-ws`, which are already frozen above. Its other direct Postgres
+connection, `DNA_PRIMARY_PG_URL` (a **separate** secret from
+`dna-source-url`), opens LangGraph's own `AsyncPostgresSaver` /
+`AsyncPostgresStore` — a completely different schema (LangGraph's
+checkpoint/store tables) with zero overlap with `dna_documents` /
+`dna_edges` / any table this migration touches. **Conclusion: freezing
+`mcp` + `mcp-ws` fully covers `copilot`'s write path; `copilot` itself does
+not need to be scaled down.** This was verified against this repo's
+emitter output and dna-cloud's committed patch script as they exist today
+— if either changes (e.g. the Dockerfile comment's noted "optional switch
+to emit-from-Postgres-source at container start" ever gets wired up),
+re-verify before relying on this.
+
+### 1b. Verify the freeze actually took
+
+Scaling to zero does not guarantee zero in-flight writers instantly — a
+request already in progress can still complete after the scale command
+returns. Before proceeding to the backup/migration, confirm no replicas are
+actually running:
+
+```bash
+az containerapp replica list -n ca-dna-mcp-<env>    -g rg-dnacloud -o table
+az containerapp replica list -n ca-dna-mcp-ws-<env> -g rg-dnacloud -o table
+az containerapp replica list -n ca-dna-api-<env>    -g rg-dnacloud -o table
+# all three must return an EMPTY list before continuing.
+```
+
+For extra confidence, confirm at the database itself that nothing is
+actively writing:
+
+```sql
+-- Run against $DNA_SOURCE_URL. Expect zero rows (or only this session).
+SELECT pid, application_name, state, query_start, state_change
+FROM pg_stat_activity
+WHERE datname = current_database()
+  AND state != 'idle'
+  AND pid != pg_backend_pid();
+```
+
+Do not proceed to Step 1c/Step 2 until both checks are clean.
+
+### 1c. Back up before writing anything
+
+The single-transaction guarantee in Step 2 protects against a *bug in this
+script surfacing mid-run* (a collision it failed to pre-flight, a raised
+exception) — it does NOT protect against operator error, a concurrent
+incident unrelated to this migration, or a correctness gap in the script's
+own reasoning that testing and review did not catch. That last one is not
+hypothetical: during development, the pre-flight initially missed a
+`dna_edges`-specific collision shape (two currently-distinct rows renaming
+INTO each other, since `from_kind`/`to_kind` are independent columns) —
+caught by review, not by the original test suite. See
+`_preflight_edges`'s docstring in `scripts/migrate_engram_postgres.py` for
+the fixed reasoning. Irreplaceable production data gets a real backup
+regardless of how much the tooling has been tested:
+
+```bash
+# Managed Azure Postgres: a point-in-time-restore checkpoint is implicit
+# (the service retains PITR automatically), but take an explicit logical
+# dump too — it's cheap, portable, and gives you a restore target that
+# doesn't depend on Azure's retention window:
+pg_dump --format=custom --file="dna-pre-engram-migration-$(date -u +%Y%m%dT%H%M%SZ).dump" "$DNA_SOURCE_URL"
+```
+
+To restore (only if something is wrong with the *result* — the migration's
+own transaction already means a failed run itself leaves the store
+untouched):
+
+```bash
+pg_restore --clean --if-exists --dbname="$DNA_SOURCE_URL" dna-pre-engram-migration-<timestamp>.dump
+```
+
+Confirm the dump file is non-trivially sized and store it somewhere outside
+the database being migrated before proceeding.
 
 ## Step 2 — run the Postgres migration
 
