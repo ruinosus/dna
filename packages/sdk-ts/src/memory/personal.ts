@@ -67,17 +67,28 @@ export class PersonalOverrideRejected extends Error {
 /**
  * The identity family that keeps the BARE `personal:<id>` value (no family
  * segment) — Entra, the original lane. Keeping it bare means zero migration of
- * existing personal partitions (decision D6). Any OTHER family (e.g. `google`)
- * is namespaced as `personal:<family>:<id>` so the families never collide.
+ * existing personal partitions (decision D6). Any OTHER family (e.g. `google`,
+ * `workos`) is namespaced as `personal:<family>:<id>` so the families never
+ * collide — `google` and `workos` are kept as two DISTINCT families even though
+ * both read a `sub` claim, precisely to prevent that collision (see
+ * `personalTenant` below).
  */
 export const PERSONAL_IMPLICIT_FAMILY = "entra";
 
 /**
  * Build the reserved personal partition value for a durable identity.
  * Entra (default / `family="entra"`) → the bare `personal:<oid>` (no migration);
- * any other family (e.g. `family="google"`) → `personal:<family>:<id>`.
+ * any other family → `personal:<family>:<id>`, so no two families' identities can
+ * ever collide — including two families that both read a token's `sub` claim.
+ * The CLI auth bridge (dna-cli, Python-only today) deliberately keeps
+ * `family="google"` (a direct Google sign-in, numeric `sub`) and
+ * `family="workos"` (the WorkOS/AuthKit consumer lane; its `sub` is the WorkOS
+ * user id, NOT a Google subject, even when the user signed in *through* Google)
+ * as TWO SEPARATE families for exactly this reason — see
+ * `dna_cli._mcp_auth.identity_claim_for_family` (Py) / `s-consumer-lane-memory-key`.
  * `personalTenant("abc") === "personal:abc"`;
- * `personalTenant("abc", "google") === "personal:google:abc"`. Throws {@link
+ * `personalTenant("abc", "google") === "personal:google:abc"`;
+ * `personalTenant("abc", "workos") === "personal:workos:abc"`. Throws {@link
  * PersonalIdentityRequired} for a blank/empty identity in any family.
  */
 export function personalTenant(oid: string, family?: string | null): string {
@@ -123,7 +134,18 @@ export function tenantScheme(tenant: string | null | undefined): string | null {
  *
  * The oid is a parameter here only because this pure function does not read
  * tokens; the SURFACES derive it server-side and are the sole callers — a caller
- * can never inject the oid (INV-PERSONAL layer 1).
+ * can never inject the oid (INV-PERSONAL layer 1). `family` (the provider family
+ * the identity came from, also server-derived) namespaces the partition for
+ * non-Entra lanes: Entra/undefined → bare `personal:<oid>`, `"google"` →
+ * `personal:google:<sub>`, `"workos"` → `personal:workos:<sub>` — each its OWN
+ * namespace, so none of the three ever collide even for the same raw id string.
+ * `"google"` and `"workos"` both read a token's `sub` claim, but for different
+ * reasons: Google Workspace direct sign-in — Google's own OIDC subject;
+ * WorkOS/AuthKit, the consumer sign-in lane — the WorkOS user id (`user_...`).
+ * They are kept SEPARATE families deliberately: WorkOS is the token issuer even
+ * when the user signed in *through* Google, so it is never a Google identity, and
+ * a deployment running both IdPs at once must not let them alias the same
+ * partition.
  */
 export function resolveMemoryTenant(args: {
   memoryScope: MemoryScope;

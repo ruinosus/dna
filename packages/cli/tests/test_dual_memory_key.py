@@ -21,6 +21,10 @@ from dna_cli._mcp_auth import (
 def test_key_family_maps_provider_stamp():
     assert personal_key_family({"_dna_provider_family": "microsoft"}) == "entra"
     assert personal_key_family({"_dna_provider_family": "google"}) == "google"
+    # workos is its OWN family — NOT folded into "google" (s-consumer-lane-memory-key
+    # founder decision: WorkOS is the token issuer even when the user signed in
+    # through Google, so it must never share Google's namespace).
+    assert personal_key_family({"_dna_provider_family": "workos"}) == "workos"
     # absent / unknown → back-compat single-lane "entra"
     assert personal_key_family({}) == "entra"
     assert personal_key_family({"_dna_provider_family": "clerk"}) == "entra"
@@ -30,8 +34,12 @@ def test_key_family_maps_provider_stamp():
 def test_identity_claim_per_family():
     assert identity_claim_for_family({"oid": "o1"}, key_family="entra") == "o1"
     assert identity_claim_for_family({"sub": "s1"}, key_family="google") == "s1"
+    # workos reads the SAME claim (sub) as google — only the NAMESPACE differs
+    # (personal_tenant), never the claim read here.
+    assert identity_claim_for_family({"sub": "s1"}, key_family="workos") == "s1"
     # wrong-lane claim missing → None (then the caller fails closed)
     assert identity_claim_for_family({"oid": "o1"}, key_family="google") is None
+    assert identity_claim_for_family({"oid": "o1"}, key_family="workos") is None
     assert identity_claim_for_family({"sub": "s1"}, key_family="entra") is None
 
 
@@ -105,10 +113,17 @@ def test_end_to_end_partition_google_vs_entra():
 # "carries no verified identity (claim 'oid')" — because (1)
 # ``workos_provider_from_env()`` (the env-driven Lane B provider) never stamped
 # the ``_dna_provider_family`` marker at all, and (2) ``_PROVIDER_FAMILY`` had no
-# ``"workos"`` entry for the config-driven path either. Both are fixed below; the
-# ``sub`` claim WorkOS issues is the **WorkOS user id** (``user_...``), never a
-# Google subject — see ``identity_claim_for_family``'s docstring for the founder
-# decision and its consequence (partitions live in WorkOS's id namespace).
+# ``"workos"`` entry for the config-driven path either. Both are fixed below.
+#
+# Revised per review: WorkOS gets its OWN ``"workos"`` family — NOT ``"google"``.
+# The ``sub`` claim WorkOS issues is the **WorkOS user id** (``user_...``), never a
+# Google subject, even when the user signed in *through* Google — WorkOS is the
+# token ISSUER. The first cut of this fix stamped ``family="google"`` (a REUSE),
+# which the founder rejected: it would let a deployment running BOTH a direct
+# Google IdP and WorkOS AuthKit write into the identical ``personal:google:<sub>``
+# namespace, distinguished only by sub-string convention (numeric vs
+# ``user_``-prefixed) — nothing would enforce that. See
+# ``identity_claim_for_family``'s docstring for the full rationale.
 
 class _FakeAccess:
     """Stand-in for FastMCP's ``AccessToken`` — the only shape the stamping
@@ -124,10 +139,10 @@ def _workos_lane_b_env(monkeypatch) -> None:
     monkeypatch.setenv("DNA_MCP_WORKOS_RESOURCE_URL", "https://mcp.dnacloud.io/consumer")
 
 
-def test_workos_env_lane_stamps_google_family_and_resolves_personal_memory(monkeypatch):
+def test_workos_env_lane_stamps_workos_family_and_resolves_personal_memory(monkeypatch):
     """The env-driven Lane B path (``workos_provider_from_env``): a verified WorkOS
-    token must come back stamped ``_dna_provider_family=google`` and resolve to
-    ``personal:google:<workos-sub>`` — NOT denied."""
+    token must come back stamped ``_dna_provider_family=workos`` (its OWN family,
+    not ``google``) and resolve to ``personal:workos:<workos-sub>`` — NOT denied."""
     import asyncio
 
     from dna.memory.personal import resolve_memory_tenant
@@ -154,19 +169,20 @@ def test_workos_env_lane_stamps_google_family_and_resolves_personal_memory(monke
     provider = A.workos_provider_from_env()
     access = asyncio.run(provider.token_verifier.verify_token("fake-bearer"))
 
-    # 1. the stamp is present and correct (the core of the fix).
-    assert access.claims[A._DNA_PROVIDER_FAMILY_MARKER] == "google"
+    # 1. the stamp is present and correct — "workos", NOT "google" (the founder
+    #    decision this test now pins).
+    assert access.claims[A._DNA_PROVIDER_FAMILY_MARKER] == "workos"
 
     # 2. personal memory resolves the SAME way the composite verifier's stamp
     #    already made Entra work — no PersonalIdentityRequired.
     key_family = A.personal_key_family(access.claims)
-    assert key_family == "google"
+    assert key_family == "workos"
     oid = A.identity_claim_for_family(access.claims, key_family=key_family)
     assert oid == "user_01ABCXYZDEF"
     tenant = resolve_memory_tenant(
         memory_scope="personal", oid=oid, workspace_tenant=None, family=key_family,
     )
-    assert tenant == "personal:google:user_01ABCXYZDEF"
+    assert tenant == "personal:workos:user_01ABCXYZDEF"
 
 
 def test_entra_token_still_resolves_bare_personal_partition_no_regression():
@@ -186,29 +202,36 @@ def test_entra_token_still_resolves_bare_personal_partition_no_regression():
     assert tenant == "personal:entra-oid-456"
 
 
-def test_workos_and_entra_partitions_never_collide():
-    """The two families are disjoint even when the raw identity strings collide —
-    the namespaced ``personal:google:<id>`` shape (decision D6 kept Entra bare
-    precisely so a NEW family could never silently alias an existing partition)."""
+def test_workos_google_and_entra_partitions_are_mutually_disjoint():
+    """All THREE families are disjoint even when the raw identity string collides
+    — the point of giving ``workos`` its own namespace (review FIX 1) rather than
+    reusing ``google``'s. Entra stays bare (decision D6, no migration); ``google``
+    and ``workos`` are namespaced SEPARATELY from each other, not merged."""
     from dna.memory.personal import resolve_memory_tenant
 
     same_raw_id = "abc123"
     workos_tenant = resolve_memory_tenant(
+        memory_scope="personal", oid=same_raw_id, workspace_tenant=None, family="workos",
+    )
+    google_tenant = resolve_memory_tenant(
         memory_scope="personal", oid=same_raw_id, workspace_tenant=None, family="google",
     )
     entra_tenant = resolve_memory_tenant(
         memory_scope="personal", oid=same_raw_id, workspace_tenant=None, family="entra",
     )
-    assert workos_tenant == "personal:google:abc123"
+    assert workos_tenant == "personal:workos:abc123"
+    assert google_tenant == "personal:google:abc123"
     assert entra_tenant == "personal:abc123"
-    assert workos_tenant != entra_tenant
+    # pairwise disjoint — no two families ever alias the same partition value.
+    assert len({workos_tenant, google_tenant, entra_tenant}) == 3
 
 
-def test_config_driven_workos_provider_stamps_the_same_google_family(monkeypatch):
+def test_config_driven_workos_provider_stamps_the_workos_family(monkeypatch):
     """The config-driven path (``auth.providers[]`` with ``type: workos``) must
     resolve IDENTICALLY to the env-driven Lane B path — both go through
     ``_multi_provider_verifier`` → ``provider_family_for_type("workos")``, which
-    needed the ``_PROVIDER_FAMILY["workos"] = "google"`` entry (fix part 2)."""
+    needed the ``_PROVIDER_FAMILY["workos"] = "workos"`` entry (fix part 2). NOT
+    ``"google"`` — that was the rejected first cut (see the module-level note)."""
     import asyncio
 
     from dna_cli import _mcp_auth as A
@@ -228,9 +251,46 @@ def test_config_driven_workos_provider_stamps_the_same_google_family(monkeypatch
     composite = A._multi_provider_verifier([pc])
     access = asyncio.run(composite.verify_token("fake-bearer"))
 
-    assert access.claims[A._DNA_PROVIDER_FAMILY_MARKER] == "google"
-    assert A.personal_key_family(access.claims) == "google"
+    assert access.claims[A._DNA_PROVIDER_FAMILY_MARKER] == "workos"
+    assert A.personal_key_family(access.claims) == "workos"
     assert (
-        A.identity_claim_for_family(access.claims, key_family="google")
+        A.identity_claim_for_family(access.claims, key_family="workos")
         == "user_01CFGDRIVEN"
     )
+    # config-driven `type: google` is UNCHANGED — still its own family, still `sub`.
+    assert A.provider_family_for_type("google") == "google"
+
+
+def test_family_aware_denial_names_sub_not_oid_for_workos_and_google(monkeypatch):
+    """Review FIX (minor): ``resolve_personal_oid``'s denial message must name the
+    claim that was actually missing. A Lane-B/google token with no ``sub`` should
+    never be told it is missing ``oid`` — that claim was never expected on those
+    lanes in the first place, and the old hardcoded message was actively
+    misleading once Lane B started reaching this path."""
+    from dna.memory.personal import PersonalIdentityRequired
+    from dna_cli._mcp_auth import enforce_oid_from_context
+
+    import fastmcp.server.dependencies as deps
+
+    for family in ("workos", "google"):
+        monkeypatch.setattr(
+            deps, "get_access_token",
+            lambda: _FakeAccess({"_dna_provider_family": family}),  # no sub
+        )
+        import os
+        os.environ.pop("DNA_PERSONAL_ID", None)
+        with pytest.raises(PersonalIdentityRequired) as exc_info:
+            enforce_oid_from_context()
+        message = str(exc_info.value)
+        assert "'sub'" in message, (family, message)
+        assert "'oid'" not in message, (family, message)
+
+    # Entra (no stamp) still names oid, unchanged.
+    monkeypatch.setattr(
+        deps, "get_access_token", lambda: _FakeAccess({})  # no marker, no oid
+    )
+    import os
+    os.environ.pop("DNA_PERSONAL_ID", None)
+    with pytest.raises(PersonalIdentityRequired) as exc_info:
+        enforce_oid_from_context()
+    assert "'oid'" in str(exc_info.value)

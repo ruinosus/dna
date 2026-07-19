@@ -3,8 +3,9 @@
 Three things proven (all pure / fake-injected, no live network):
 
 1. **Provider-family stamp** — ``provider_family_for_type`` maps ``entra →
-   microsoft`` / ``google → google`` (else ``None``), the outbound twin of the
-   inbound tenant-claim stamp.
+   microsoft`` / ``google → google`` / ``workos → workos`` (its OWN family, never
+   folded into ``google`` — s-consumer-lane-memory-key) (else ``None``), the
+   outbound twin of the inbound tenant-claim stamp.
 2. **``resolve_port``** — a verified provider family selects its ``ActOnBehalfPort``
    from the registry; an unregistered / absent family is an honest
    ``ActOnBehalfUnavailable``.
@@ -32,23 +33,29 @@ def test_provider_family_for_type_maps_actable_providers():
     assert A.provider_family_for_type("google") == "google"
 
 
-def test_workos_shares_the_google_family_for_personal_memory_key_reuse():
-    """``s-consumer-lane-memory-key``: ``workos`` (Lane B / AuthKit, the consumer
-    sign-in IdP) is mapped into the SAME ``"google"`` family as the Google Workspace
-    IdP — NOT because a WorkOS identity is a Google one, but because personal
-    memory's ``personal:google:<sub>`` namespaced-key shape is reused for the
-    consumer lane (see ``identity_claim_for_family``).
+def test_workos_has_its_own_family_distinct_from_google():
+    """``s-consumer-lane-memory-key`` (revised per review): ``workos`` (Lane B /
+    AuthKit, the consumer sign-in IdP) maps to its OWN ``"workos"`` family — NOT
+    ``"google"``. The first cut of this fix reused ``"google"`` for personal
+    memory's namespaced-key shape; the founder rejected that because ``google`` is
+    a live, separately-configurable IdP (a direct Google sign-in, numeric ``sub``)
+    while WorkOS is a DIFFERENT issuer (``sub`` is the WorkOS user id, ``user_...``
+    — the token issuer is WorkOS even when the user signed in *through* Google). A
+    deployment can enable both at once; sharing one family would let them alias the
+    same ``personal:google:<sub>`` partition, distinguished only by sub-string
+    convention — exactly the collision class the family mechanism exists to
+    prevent. See ``dna_cli._mcp_auth.identity_claim_for_family`` for the full
+    rationale.
 
-    Side effect worth documenting: this table is ALSO the act-on-behalf dispatch
-    registry key (``resolve_port``), so a WorkOS-authenticated caller now resolves
-    to the same family as a Google identity there too. That is harmless in
-    practice — ``GoogleWorkspaceProvider.credential_for`` never reads the inbound
-    token; it looks up a separately-consented Google refresh token by subject, and
-    nothing ever populates one for a WorkOS subject, so the request still fails
-    closed (``ActOnBehalfUnavailable: no consented credential ... yet``) instead of
-    the previous "no Microsoft/Google family" message. No live Google API is ever
-    reachable via a WorkOS token."""
-    assert A.provider_family_for_type("workos") == "google"
+    Consequence for THIS module: ``"workos"`` has no registered ``ActOnBehalfPort``
+    (``act_on_behalf._server.build_provider_registry`` only ever registers
+    ``"microsoft"``/``"google"``), so a WorkOS-authenticated caller now gets the
+    SAME honest ``ActOnBehalfUnavailable("no act-on-behalf provider enabled for
+    the 'workos' identity...")`` as any other non-actable identity — see
+    ``test_resolve_port_unregistered_family_is_honest_gap`` below. No collision
+    with the Google port is possible even in principle."""
+    assert A.provider_family_for_type("workos") == "workos"
+    assert A.provider_family_for_type("workos") != A.provider_family_for_type("google")
 
 
 def test_provider_family_is_none_for_non_actable_identities():
@@ -100,6 +107,19 @@ def test_resolve_port_unregistered_family_is_honest_gap():
         resolve_port(registry, None)           # no family at all → honest gap.
     with pytest.raises(ActOnBehalfUnavailable):
         resolve_port(registry, "")
+
+
+def test_resolve_port_workos_family_never_reaches_the_google_port():
+    """The concrete end-to-end proof for ``s-consumer-lane-memory-key``: even with
+    a REALISTIC registry (both Microsoft AND Google ports enabled — the exact
+    shape ``build_provider_registry`` produces when both are configured), a
+    ``"workos"``-family caller resolves to an honest gap, never the Google port.
+    ``provider_hint="workos"`` is what ``act_context_from_context`` would build
+    from a Lane-B token today, now that it carries its own family stamp."""
+    registry = {"microsoft": _FamilyPort("microsoft"), "google": _FamilyPort("google")}
+    with pytest.raises(ActOnBehalfUnavailable) as exc_info:
+        resolve_port(registry, "workos")
+    assert "workos" in str(exc_info.value)
 
 
 # ── 3. the neutral calendar_list adapter, per provider ─────────────────────

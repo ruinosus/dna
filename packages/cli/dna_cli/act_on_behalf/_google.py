@@ -47,6 +47,31 @@ _TOKENISH = re.compile(r"[A-Za-z0-9\-_]{20,}")
 #: The refresh-token lookup seam: ``subject -> refresh_token | None``. The DEFAULT
 #: has no consented-token store yet (that is the deferred full impl), so it always
 #: returns ``None`` → an honest capability gap.
+#:
+#: ⚠️ **KEYING WARNING for the real store (the deferred full impl, NOT this
+#: skeleton)** — reviewed under ``s-consumer-lane-memory-key``: this seam takes
+#: ``subject`` ALONE, no provider-family / issuer. That is safe TODAY only because
+#: (a) dispatch (``dna_cli._mcp_auth._PROVIDER_FAMILY`` /
+#: ``act_on_behalf._dispatch.resolve_port``) routes a token to a port BY FAMILY
+#: FIRST, so only a ``"google"``-family subject ever reaches this seam, and (b) the
+#: skeleton's own default always returns ``None`` regardless of what it's called
+#: with. It stops being safe the moment a real, persistent refresh-token store is
+#: built: a bare ``subject`` string is NOT guaranteed unique across issuers (a
+#: numeric Google ``sub`` and, hypothetically, some other family's subject COULD
+#: collide as raw strings — this is exactly the class of bug
+#: ``s-consumer-lane-memory-key`` fixed for the personal-memory partition key,
+#: where ``google`` and ``workos`` were briefly merged into one family before the
+#: founder decision split them back apart).
+#:
+#: **The real store MUST key on ``(family, subject)`` — or an issuer-qualified id
+#: (e.g. ``f"{ctx.provider_hint}:{ctx.subject}"``) — never bare ``subject`` alone.**
+#: This is a documented invariant, not (yet) a structural change to this
+#: ``Callable[[str], str | None]`` signature: today's dispatch-by-family already
+#: makes a cross-family collision here unreachable for any REGISTERED port
+#: (nothing routes a non-``"google"`` family to this provider), so widening the
+#: seam's signature was judged out of scope for a personal-memory story. Whoever
+#: builds the real store SHOULD widen this signature (or namespace the lookup key
+#: internally) at that time — do not skip it because "dispatch already filters".
 RefreshLookup = Callable[[str], str | None]
 
 #: The token-exchange seam (Google token endpoint shape): ``(client_id,
@@ -67,7 +92,9 @@ def _default_refresh_lookup(subject: str) -> str | None:
     """The skeleton's refresh-token store: EMPTY (no consent flow yet).
 
     Always ``None`` → ``credential_for`` reports an honest capability gap. The real
-    per-user consent + refresh-token persistence is the deferred full Google impl."""
+    per-user consent + refresh-token persistence is the deferred full Google impl
+    — see the ``RefreshLookup`` KEYING WARNING above before building it: key on
+    ``(family, subject)``, never bare ``subject``."""
     return None
 
 
@@ -139,7 +166,11 @@ class GoogleWorkspaceProvider:
         Note ``ctx.raw_token`` is NEVER read — Google needs no inbound assertion
         (the asymmetry). Fail-closed: an unsupported capability, a scope outside the
         allow-list, no consented refresh token, or a missing client credential each
-        yields an honest :class:`ActOnBehalfUnavailable` (never a crash, never a leak)."""
+        yields an honest :class:`ActOnBehalfUnavailable` (never a crash, never a leak).
+
+        ``self._refresh_lookup(ctx.subject)`` is keyed on ``subject`` ALONE — see the
+        ``RefreshLookup`` KEYING WARNING above; this is only safe while dispatch
+        routes strictly by provider family before any call ever reaches here."""
         if not self.supports(capability):
             raise ActOnBehalfUnavailable(
                 f"the Google provider does not offer the {capability!r} capability "

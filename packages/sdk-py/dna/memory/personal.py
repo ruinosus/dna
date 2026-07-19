@@ -87,11 +87,13 @@ def personal_tenant(oid: str, family: str | None = None) -> str:
 
     * Entra (default / ``family="entra"``) → the bare ``personal:<oid>`` — the
       original value, so existing partitions need **no migration**;
-    * any other family (e.g. ``family="google"``, which the CLI auth bridge also
-      stamps for the WorkOS/AuthKit consumer lane — that ``id`` is the WorkOS user
-      id, NOT a Google subject, see ``dna_cli._mcp_auth.identity_claim_for_family``)
-      → ``personal:<family>:<id>``, so no two families' identities can ever
-      collide.
+    * any other family → ``personal:<family>:<id>``, so no two families' identities
+      can ever collide — including two families that both read a token's ``sub``
+      claim. The CLI auth bridge deliberately keeps ``family="google"`` (a direct
+      Google sign-in, numeric ``sub``) and ``family="workos"`` (the WorkOS/AuthKit
+      consumer lane; its ``sub`` is the WorkOS user id, NOT a Google subject, even
+      when the user signed in *through* Google) as TWO SEPARATE families for
+      exactly this reason — see ``dna_cli._mcp_auth.identity_claim_for_family``.
 
     ``personal_tenant("abc") == "personal:abc"``;
     ``personal_tenant("abc", family="google") == "personal:google:abc"``.
@@ -146,12 +148,17 @@ def resolve_memory_tenant(
     caller can never inject the oid (INV-PERSONAL layer 1). ``family`` (the
     provider family the identity came from, also server-derived) namespaces the
     partition for non-Entra lanes: Entra/None → bare ``personal:<oid>``,
-    ``"google"`` → ``personal:google:<sub>`` (the two families never collide). The
-    ``"google"`` family is shared by two IdPs: Google Workspace (``sub`` is
-    Google's OIDC subject) and WorkOS/AuthKit, the consumer sign-in lane (``sub``
-    is the WorkOS user id, ``user_...`` — a deliberate reuse of the key shape, not
-    a Google identity; migrating off WorkOS as the consumer IdP would orphan those
-    partitions).
+    ``"google"`` → ``personal:google:<sub>``, ``"workos"`` →
+    ``personal:workos:<sub>`` — each its OWN namespace, so none of the three ever
+    collide even for the same raw id string. ``"google"`` and ``"workos"`` both
+    read a token's ``sub`` claim, but for different reasons: Google Workspace
+    direct sign-in — Google's own OIDC subject; WorkOS/AuthKit, the consumer
+    sign-in lane (Lane B) — the WorkOS user id (``user_...``). They are kept
+    SEPARATE families deliberately: WorkOS is the token issuer even when the user
+    signed in *through* Google, so it is never a Google identity, and a deployment
+    running both IdPs at once must not let them alias the same partition.
+    Migrating off WorkOS as the consumer IdP would orphan ``personal:workos:*``
+    partitions (they are not portable to a future direct-Google ``sub``).
     """
     if memory_scope == PERSONAL_SCOPE:
         if oid is None or not str(oid).strip():

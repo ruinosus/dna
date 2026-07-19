@@ -74,30 +74,36 @@ _DNA_SCOPE_MARKER = "_dna_scope_prefix"
 
 # The provider-FAMILY stamp (f-act-on-behalf-port §6) — the OUTBOUND twin of the
 # tenant-claim stamp above. The composite verifier writes which provider FAMILY
-# verified the token (``entra`` → ``"microsoft"``, ``google``/``workos`` →
-# ``"google"``) so the act-on-behalf dispatch (``dna_cli.act_on_behalf._dispatch``)
-# can pick the right ``ActOnBehalfPort`` from the SAME already-verified token — no
-# new sign-in, no new trust surface, just a label. Absent on the single-env-provider
-# path → no act-on-behalf dispatch (that path never enabled a provider registry).
+# verified the token (``entra`` → ``"microsoft"``, ``google`` → ``"google"``,
+# ``workos`` → ``"workos"``) so the act-on-behalf dispatch
+# (``dna_cli.act_on_behalf._dispatch``) can pick the right ``ActOnBehalfPort`` from
+# the SAME already-verified token — no new sign-in, no new trust surface, just a
+# label. Absent on the single-env-provider path → no act-on-behalf dispatch (that
+# path never enabled a provider registry).
 #
-# ``workos`` maps to the SAME ``"google"`` family as the (unrelated) Google
-# Workspace lane — this is a REUSE of the existing personal-memory namespace, not a
-# claim that a WorkOS identity IS a Google one. WorkOS/AuthKit (Lane B, consumer
-# sign-in) issues its own tokens whose ``sub`` is the WorkOS user id
-# (``user_...``), not a Google-issued subject; see
-# :func:`identity_claim_for_family`.
+# ``workos`` gets its OWN family (``"workos"``, distinct from ``"google"``) even
+# though both key personal memory off a ``sub`` claim — see
+# :func:`identity_claim_for_family`. They are deliberately NOT merged: ``google``
+# is a live, separately-configurable IdP (direct Google OIDC, a numeric ``sub``);
+# WorkOS AuthKit (Lane B) is a DIFFERENT issuer whose ``sub`` is the WorkOS user id
+# (``user_...``) — the token issuer is WorkOS, Google is only the upstream social
+# provider a WorkOS user may have signed in *through*. A deployment can enable BOTH
+# at once; sharing one family would put two structurally different IdPs in the
+# SAME ``personal:google:<sub>`` namespace, distinguished only by the *convention*
+# that one ``sub`` looks numeric and the other is ``user_``-prefixed — nothing
+# would enforce that. That is exactly the collision the family mechanism exists to
+# prevent, so ``workos`` is namespaced separately: ``personal:workos:<sub>``.
 _DNA_PROVIDER_FAMILY_MARKER = "_dna_provider_family"
 
 # IdP-type → provider-FAMILY (the outbound act-on-behalf provider the identity maps
 # to). Only families DNA can act on behalf of appear here; an identity from any
 # other IdP type has no act-on-behalf family (``None``) — an honest capability gap,
-# not a crash. ``workos`` shares the ``"google"`` family with ``google`` — the
-# consumer lane keys personal memory the same namespaced way (see the marker
-# comment above); it is NOT a Google identity.
+# not a crash. ``workos`` maps to its OWN ``"workos"`` family (NOT ``"google"``) —
+# see the marker comment above for why the two must stay separate namespaces.
 _PROVIDER_FAMILY = {
     "entra": "microsoft",
     "google": "google",
-    "workos": "google",
+    "workos": "workos",
 }
 
 # Per-IdP-type conventions. A provider is a BLOCK OF CONFIG, not code — every
@@ -127,10 +133,15 @@ _KNOWN_PROVIDER_TYPES = frozenset(
 def provider_family_for_type(ptype: str | None) -> str | None:
     """The outbound act-on-behalf provider FAMILY an IdP type maps to.
 
-    ``entra`` → ``"microsoft"``, ``google``/``workos`` → ``"google"``; every other
-    type → ``None`` (that identity has no productivity-data provider DNA can act
-    through — an honest capability gap). The single source of truth the composite
-    verifier stamps and the act-on-behalf dispatch reads."""
+    ``entra`` → ``"microsoft"``, ``google`` → ``"google"``, ``workos`` →
+    ``"workos"`` (its own family — never conflated with ``google``, see the
+    ``_DNA_PROVIDER_FAMILY_MARKER`` comment); every other type → ``None`` (that
+    identity has no productivity-data provider DNA can act through — an honest
+    capability gap). The single source of truth the composite verifier stamps and
+    the act-on-behalf dispatch reads. A ``"workos"`` family currently has NO
+    registered ``ActOnBehalfPort`` (see ``act_on_behalf._server``), so it resolves
+    to an honest :class:`~dna_cli.act_on_behalf.ActOnBehalfUnavailable`, never a
+    crash and never a collision with the Google port."""
     if not ptype:
         return None
     return _PROVIDER_FAMILY.get(ptype)
@@ -329,16 +340,36 @@ def personal_id_from_env() -> str | None:
     return raw.strip() if raw and raw.strip() else None
 
 
+def _claim_name_for_family(key_family: str) -> str:
+    """The claim NAME a KEY family reads its durable identity from — for error
+    messages only (mirrors the branch :func:`identity_claim_for_family` actually
+    takes). ``entra`` (or any family not in ``_SUB_KEYED_FAMILIES``) → the
+    configured oid claim (``oid_claim_key()``); ``google``/``workos`` → ``sub``.
+    Keeps a fail-closed denial from naming the WRONG claim (Lane B never carries
+    ``oid`` — it was never supposed to)."""
+    if key_family in _SUB_KEYED_FAMILIES:
+        return "sub"
+    return oid_claim_key()
+
+
 def resolve_personal_oid(
-    *, token_present: bool, token_oid: str | None, env_oid: str | None
+    *,
+    token_present: bool,
+    token_oid: str | None,
+    env_oid: str | None,
+    key_family: str = "entra",
 ) -> str:
     """Reconcile the server-derived personal identity ``oid`` — the policy,
     fail-closed (ADR-personal-memory §5 / §7 layer 1).
 
-    * token present WITH an ``oid`` claim → that oid (the durable identity).
-    * token present WITHOUT an ``oid`` claim → **denied** (an authenticated
-      request that carries no verified identity gets NO personal memory — never a
-      null/blank partition; mirrors the tenant bridge's fail-closed discipline).
+    * token present WITH an identity claim → that oid (the durable identity).
+    * token present WITHOUT one → **denied** (an authenticated request that
+      carries no verified identity gets NO personal memory — never a null/blank
+      partition; mirrors the tenant bridge's fail-closed discipline). ``key_family``
+      (default ``"entra"``, the back-compat single-lane) names the RIGHT claim in
+      the denial message — Entra denials name ``oid``, google/workos denials name
+      ``sub`` (see :func:`_claim_name_for_family`); getting this wrong doesn't
+      change the (fail-closed) outcome, only how honest the error is.
     * no token (stdio / local) → ``env_oid`` (``DNA_PERSONAL_ID``) when set, else
       **denied** (offline personal memory needs an explicit local identity).
 
@@ -351,8 +382,9 @@ def resolve_personal_oid(
         if not token_oid:
             raise PersonalIdentityRequired(
                 "authenticated request carries no verified identity "
-                f"(claim {oid_claim_key()!r}) — personal memory is denied "
-                "(fail-closed); a personal partition must key on a real identity."
+                f"(claim {_claim_name_for_family(key_family)!r}) — personal memory "
+                "is denied (fail-closed); a personal partition must key on a real "
+                "identity."
             )
         return token_oid
     if env_oid:
@@ -364,25 +396,32 @@ def resolve_personal_oid(
     )
 
 
-# The provider-family stamp (``_dna_provider_family``, "microsoft"/"google") the
-# composite verifier writes → the personal-memory KEY family. Entra ("microsoft")
-# keeps the BARE ``personal:<oid>`` (decision D6, no migration); google →
-# ``personal:google:<sub>``. Absent/unknown → "entra" (back-compat single-lane).
-#
-# The consumer/WorkOS lane (Lane B) is stamped into this SAME "google" family
-# (``_PROVIDER_FAMILY["workos"] = "google"``) — it is a REUSE of the namespaced
-# key shape, not a claim that the identity is Google's. See
-# :func:`identity_claim_for_family`.
-_MEMORY_KEY_FAMILY = {"microsoft": "entra", "google": "google"}
+# The provider-family stamp (``_dna_provider_family``, "microsoft"/"google"/
+# "workos") the composite verifier writes → the personal-memory KEY family. Entra
+# ("microsoft") keeps the BARE ``personal:<oid>`` (decision D6, no migration);
+# google → ``personal:google:<sub>``; workos → ``personal:workos:<sub>`` — its OWN
+# namespace, deliberately NOT the same as google's (see the
+# ``_DNA_PROVIDER_FAMILY_MARKER`` comment for why: WorkOS is a different token
+# issuer than Google, even when a WorkOS user signed in *through* Google — merging
+# them would let two structurally different IdPs write the same
+# ``personal:google:<sub>`` key, distinguished only by sub-string convention).
+# Absent/unknown → "entra" (back-compat single-lane).
+_MEMORY_KEY_FAMILY = {"microsoft": "entra", "google": "google", "workos": "workos"}
+
+#: KEY families whose durable identity is the token's ``sub`` claim (not
+#: ``oid``) — currently ``google`` and ``workos``. Both read the SAME claim name
+#: for a different reason each (Google OIDC's subject vs. the WorkOS user id);
+#: see :func:`identity_claim_for_family`.
+_SUB_KEYED_FAMILIES = frozenset({"google", "workos"})
 
 
 def personal_key_family(claims: dict[str, Any] | None) -> str:
     """The personal-memory KEY family for a verified token — pure, no context.
 
     Reads the ``_dna_provider_family`` stamp: ``microsoft`` → ``"entra"`` (bare
-    key), ``google`` → ``"google"`` (namespaced — covers BOTH the Google Workspace
-    lane and the WorkOS/consumer lane, which share this family). Absent/other →
-    ``"entra"`` so the single-lane behavior is unchanged."""
+    key), ``google`` → ``"google"``, ``workos`` → ``"workos"`` (each namespaced,
+    and namespaced SEPARATELY from one another — see ``_MEMORY_KEY_FAMILY``).
+    Absent/other → ``"entra"`` so the single-lane behavior is unchanged."""
     fam = (claims or {}).get(_DNA_PROVIDER_FAMILY_MARKER)
     return _MEMORY_KEY_FAMILY.get(fam, "entra")
 
@@ -391,23 +430,30 @@ def identity_claim_for_family(
     claims: dict[str, Any] | None, *, key_family: str, claim_key: str | None = None
 ) -> str | None:
     """The durable identity claim per KEY family — Entra reads the ``oid`` claim;
-    the ``"google"`` family reads ``sub``. Pure, no context.
+    ``google`` and ``workos`` both read ``sub`` (but write to DIFFERENT namespaces,
+    ``personal:google:<sub>`` vs. ``personal:workos:<sub>`` — see
+    :func:`personal_tenant` / ``_MEMORY_KEY_FAMILY``). Pure, no context.
 
-    ``sub`` means two different things depending on WHICH lane stamped the
-    ``"google"`` family, and neither is a claim you should read as "the Google
-    subject":
+    ``sub`` means a different thing per family, and neither should be read as "a
+    Google identity":
 
-    * the Google Workspace lane — ``sub`` is Google OIDC's stable subject;
-    * the WorkOS/AuthKit consumer lane (Lane B, ``workos_provider_from_env``) —
-      ``sub`` is the **WorkOS user id** (``user_...``), a WorkOS-issued
-      identifier. It happens to share this key family/claim shape with the
-      Google lane (deliberate reuse, not a Google identity) — see the founder
-      decision in ``s-consumer-lane-memory-key``. A consequence worth stating
-      plainly: the consumer personal partition lives in WorkOS's id namespace,
-      so migrating off WorkOS as the consumer IdP would orphan those partitions
-      (they are NOT portable to a future Google-native ``sub``).
+    * ``google`` — ``sub`` is Google OIDC's own stable subject (a direct Google
+      sign-in, numeric);
+    * ``workos`` — the WorkOS/AuthKit consumer lane (Lane B,
+      ``workos_provider_from_env``); ``sub`` is the **WorkOS user id**
+      (``user_...``), a WorkOS-issued identifier — even when the user signed in
+      *through* Google, WorkOS is the token ISSUER, Google only the upstream
+      social provider. Conflating those two is precisely what produced the
+      original consumer-lane bug (both this SDK and dna-cloud's comments once
+      claimed the key was a Google ``sub``) — see the founder decision in
+      ``s-consumer-lane-memory-key``. A consequence worth stating plainly: the
+      consumer personal partition lives in WorkOS's id namespace, so migrating
+      off WorkOS as the consumer IdP would orphan those partitions (they are NOT
+      portable to a future direct-Google ``sub``, and a deployment running BOTH
+      IdPs at once can never collide — that's the whole point of the separate
+      ``workos`` family).
     """
-    if key_family == "google":
+    if key_family in _SUB_KEYED_FAMILIES:
         raw = (claims or {}).get("sub")
         return raw.strip() if isinstance(raw, str) and raw.strip() else None
     return oid_from_token(claims, claim_key=claim_key)
@@ -906,12 +952,13 @@ def enforce_oid_from_context() -> str:
         )
 
     claims = getattr(token, "claims", None) or {}
-    # Family-aware identity: Entra → oid; the "google" family (Google Workspace OR
-    # WorkOS/consumer, see identity_claim_for_family) → sub.
+    # Family-aware identity: Entra → oid; google/workos (two SEPARATE namespaces,
+    # see identity_claim_for_family) → sub.
     key_family = personal_key_family(claims)
     token_oid = identity_claim_for_family(claims, key_family=key_family)
     return resolve_personal_oid(
-        token_present=True, token_oid=token_oid, env_oid=env_oid
+        token_present=True, token_oid=token_oid, env_oid=env_oid,
+        key_family=key_family,
     )
 
 
@@ -1157,9 +1204,10 @@ def _family_stamped_verifier(verifier: Any, *, family: str) -> Any:
     Without this stamp, :func:`personal_key_family` sees an absent marker and falls
     back to the ``"entra"`` family, which reads the ``oid`` claim — a claim a
     WorkOS-issued token never carries — and personal memory is denied fail-closed.
-    This is the fix for that: every Lane-B token is stamped ``family`` (``"google"``,
-    see :func:`identity_claim_for_family` for what that family actually reads for
-    this lane)."""
+    This is the fix for that: every Lane-B token is stamped ``family`` (``"workos"``
+    — its OWN family, not ``"google"``, so a deployment running both a direct
+    Google IdP and WorkOS AuthKit can never collide on the same partition; see
+    :func:`identity_claim_for_family` for what the family actually reads)."""
     from fastmcp.server.auth import TokenVerifier
 
     class _FamilyStampedVerifier(TokenVerifier):
@@ -1215,11 +1263,11 @@ def workos_provider_from_env() -> Any:
         audience=audience,
     )
     return resource_server(
-        # Stamp the provider-family marker (`family="google"`, the personal-memory
-        # namespace this lane reuses) — the bare JWTVerifier above stamps nothing,
-        # which otherwise fails personal memory closed for every Lane-B token (see
-        # `_family_stamped_verifier`).
-        _family_stamped_verifier(verifier, family="google"),
+        # Stamp the provider-family marker (`family="workos"` — its OWN namespace,
+        # deliberately distinct from "google") — the bare JWTVerifier above stamps
+        # nothing, which otherwise fails personal memory closed for every Lane-B
+        # token (see `_family_stamped_verifier`).
+        _family_stamped_verifier(verifier, family="workos"),
         base_url=resource_url,
         authorization_servers=[domain],
         # Lane B advertises OIDC scopes — NOT the Entra `user_impersonation` URI
