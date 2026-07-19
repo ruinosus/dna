@@ -1,0 +1,19 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-consumer-lane-memory-key-20260719-172843
+spec:
+  guide_ref: tg-consumer-lane-memory-key
+  outcome: pass
+  verifies:
+  - Story/s-consumer-lane-memory-key
+  executed_by: claude-code
+  executed_at: '2026-07-19T17:28:43+00:00'
+  notes: "Review independente confirmou o fix e verificou por conta propria que o\
+    \ efeito colateral no act-on-behalf falha fechado hoje. Levantou tres pontos:\
+    \ a familia google virava namespace compartilhado entre dois IdPs estruturalmente\
+    \ diferentes (WorkOS AuthKit vs Google OIDC direto), o fail-closed era conjuntural\
+    \ (dependia de um stub) e nao tinha teste. Decisao do founder: dar ao WorkOS familia\
+    \ propria \u2014 o que removeu a causa em vez de mitigar, tornando a colisao inalcancavel\
+    \ (resolve_port nunca toca o port google para workos). Mutation-tested nas duas\
+    \ causas. Nao verificado ao vivo: sem token WorkOS real neste ambiente."

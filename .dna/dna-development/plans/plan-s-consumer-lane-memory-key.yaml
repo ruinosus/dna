@@ -1,0 +1,22 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-consumer-lane-memory-key
+spec:
+  title: 'Plano: s-consumer-lane-memory-key'
+  date: '2026-07-19'
+  status: accepted
+  story_ref: s-consumer-lane-memory-key
+  journey_phase: plan
+  body: 'Investigacao ja fechou o desenho. Duas falhas independentes impedem a Lane
+    B de alcancar memoria pessoal: (1) o marcador _DNA_PROVIDER_FAMILY_MARKER so e
+    carimbado dentro de _multi_provider_verifier; a Lane B nasce em workos_provider_from_env(),
+    que devolve um JWTVerifier cru sem carimbo, entao personal_key_family cai no default
+    ''entra'' e identity_claim_for_family procura oid, que o token WorkOS nao tem;
+    (2) mesmo com carimbo, _PROVIDER_FAMILY nao mapeia workos. Passos: envolver o
+    verifier da Lane B carimbando family=google espelhando o caminho config-driven;
+    adicionar workos->google em _PROVIDER_FAMILY; testes cobrindo as duas lanes; documentar
+    que a chave e o user id do WorkOS e NAO o sub do Google. Sem fallback para email.
+    Sem bump de pin.'
+  created_at: '2026-07-19T16:40:59+00:00'
+  updated_at: '2026-07-19T16:40:59+00:00'
