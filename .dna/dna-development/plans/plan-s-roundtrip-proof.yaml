@@ -1,0 +1,64 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-roundtrip-proof
+spec:
+  title: 'Plano: s-roundtrip-proof'
+  date: '2026-07-19'
+  status: accepted
+  story_ref: s-roundtrip-proof
+  journey_phase: plan
+  body: "# `s-roundtrip-proof` \u2014 plano\n\n## Objetivo\n\nProvar as duas afirma\xE7\
+    \xF5es que a feature de mem\xF3ria port\xE1vel faz sobre si mesma:\n\n- **C\xED\
+    rculo A** \u2014 round-trip interno sem perda, ligado ao\n  `memory_conformance_suite`\
+    \ como caso `interchange_round_trip`.\n- **C\xEDrculo B** \u2014 um fato exportado\
+    \ do Claude \xE9 recuper\xE1vel no DNA **por\n  par\xE1frase**, via um adaptador\
+    \ `claude-export \u2192 MIF` de <~150 LOC.\n\n## Estado / depend\xEAncias\n\n\
+    - Base: `feat/memory-interchange-verbs` (o `interchange.py` ainda **n\xE3o est\xE1\
+    \ no\n  `main`** \u2014 PR #168 aberto). Esta branch \xE9 empilhada e rebaseia\
+    \ quando #168 entrar.\n- **C\xEDrculo B est\xE1 BLOQUEADO** aguardando um export\
+    \ de mem\xF3ria real do Claude.\n  N\xE3o existe amostra no repo nem especifica\xE7\
+    \xE3o do formato no design\n  (`docs/design/2026-07-18-portable-memory-design.md`\
+    \ \xA7\"C\xEDrculo B\" cita a Import\n  Tool da Anthropic mas n\xE3o descreve\
+    \ o arquivo). Construir o adaptador contra um\n  formato inventado o validaria\
+    \ contra a pr\xF3pria fic\xE7\xE3o \u2014 sem valor probat\xF3rio\n  para o crit\xE9\
+    rio de aceite. O founder vai fornecer o arquivo real.\n\n## C\xEDrculo A \u2014\
+    \ o que entra\n\nUm caso novo no registry `_CASES` de\n`packages/sdk-py/dna/testing/memory_conformance.py`,\
+    \ `requires=\"always\"`\n(a proje\xE7\xE3o \xE9 pura \u2014 n\xE3o precisa de\
+    \ search provider):\n\n```\n(\"interchange_round_trip\", \"always\", _case_interchange_round_trip)\n\
+    ```\n\nO caso semeia Engrams via `remember`, projeta com `to_mif`, reidrata com\n\
+    `from_mif` e compara os specs. As quatro asser\xE7\xF5es v\xEAm direto da AC 1:\n\
+    \n1. **Fidelidade de campo** \u2014 todo campo da \xA72 do design sobrevive. A\
+    \ lista de\n   campos \xE9 derivada do **descritor** (`engram.kind.yaml`), n\xE3\
+    o de uma lista\n   escrita \xE0 m\xE3o no teste: uma lista \xE0 m\xE3o envelhece\
+    \ em sil\xEAncio quando o Kind\n   ganha campo. Campos que o MIF n\xE3o representa\
+    \ devem voltar pelo cofre `x-dna`.\n2. **Cofre id\xEAntico** \u2014 os `x-dna.*`\
+    \ voltam byte-a-byte iguais.\n3. **Cadeia bi-temporal** \u2014 `valid_to` / `superseded_by`\
+    \ preservados atrav\xE9s de\n   um `forget` (que \xE9 o que cria a cadeia).\n\
+    4. **Sem duplicatas** \u2014 reprojetar duas vezes n\xE3o multiplica documentos;\
+    \ a\n   identidade \xE9 o id MIF (ver o fix de `_engram_doc_name` em `273687d`).\n\
+    \n### Riscos que o plano assume\n\n- O caso roda contra a **proje\xE7\xE3o pura**,\
+    \ n\xE3o contra os verbos CLI. \xC9 o n\xEDvel\n  certo para um kit de conformance\
+    \ (um autor de adaptador roda contra o *seu*\n  stack, n\xE3o contra o Click do\
+    \ DNA) \u2014 mas significa que este caso **n\xE3o** cobre\n  a camada de arquivo/naming.\
+    \ Aquela camada \xE9 onde os dois blockers do review\n  moravam, e ficou coberta\
+    \ pelos testes de `273687d`. Registrar isso no\n  docstring do caso para ningu\xE9\
+    m ler a su\xEDte verde como \"o CLI est\xE1 provado\".\n- `requires=\"always\"\
+    ` s\xF3 se a proje\xE7\xE3o realmente n\xE3o tocar provider. Confirmar\n  antes\
+    \ de fixar, sen\xE3o o caso quebra o leg sem provider.\n\n## C\xEDrculo B \u2014\
+    \ o que entra (quando o export chegar)\n\n- `claude_export` \u2192 MIF, <~150\
+    \ LOC, contado e registrado.\n- Teste: import `--as both --personal` \u2192 `recall`\
+    \ por **par\xE1frase sem token\n  compartilhado** com `embed-onnx` \u2192 hit\
+    \ no top-3.\n- A par\xE1frase precisa ser genuinamente disjunta em tokens do fato\
+    \ original,\n  sen\xE3o o teste prova recupera\xE7\xE3o l\xE9xica e n\xE3o sem\xE2\
+    ntica. Verificar a\n  disjun\xE7\xE3o programaticamente, n\xE3o a olho.\n\n##\
+    \ Verifica\xE7\xE3o\n\n- Su\xEDte py completa; os dois legs do kit (com e sem\
+    \ provider).\n- Muta\xE7\xE3o: quebrar cada asser\xE7\xE3o do caso isoladamente\
+    \ e confirmar que **s\xF3** o\n  caso novo falha. Uma asser\xE7\xE3o que n\xE3\
+    o mata seu mutante n\xE3o est\xE1 provando nada.\n- M\xE9tricas do DoD registradas:\
+    \ fidelidade de campo, preserva\xE7\xE3o bi-temporal,\n  recuperabilidade por\
+    \ par\xE1frase, idempot\xEAncia, LOC do adaptador.\n\n## Fora de escopo\n\nC\xED\
+    rculo C (o tri\xE2ngulo de tr\xEAs fornecedores) \u2014 explicitamente fast-follow\
+    \ no\ndesign, n\xE3o MVP.\n"
+  created_at: '2026-07-19T20:18:29+00:00'
+  updated_at: '2026-07-19T20:18:29+00:00'
