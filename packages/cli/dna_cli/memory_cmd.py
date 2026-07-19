@@ -29,7 +29,7 @@ import hashlib
 import json
 import os
 import re
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -105,6 +105,42 @@ def _slug(text: str) -> str:
     naming convention)."""
     h = hashlib.sha256(text.strip().lower().encode("utf-8")).hexdigest()[:10]
     return f"rem-{h}"
+
+
+def _engram_doc_name(mif_id: str) -> str:
+    """Deterministic Engram doc name for an IMPORTED MIF memory — keyed by the
+    MIF id, exactly like ``_mif_doc_name`` keys the passthrough copy.
+
+    NOT ``_slug(summary)``: two distinct MIF docs can derive the same summary
+    (both untitled, or simply sharing a title), and ``write_document`` is a
+    full replace at a name — so a summary-keyed projection silently overwrote
+    an unrelated, previously-imported memory. The id is the identity
+    (``interchange.py`` §6); the projection must be named off it."""
+    h = hashlib.sha256((mif_id or "unknown").strip().encode("utf-8")).hexdigest()[:10]
+    return f"rem-{h}"
+
+
+def _coerce_timestamps(value: Any) -> Any:
+    """Recursively turn ``date``/``datetime`` back into ISO-8601 STRINGS.
+
+    MIF's own examples write dates unquoted, and YAML's SafeLoader implicitly
+    resolves those to ``datetime`` objects. MIF declares every temporal field
+    as ``type: string``, so the parsed objects fail schema validation on the
+    passthrough leg (the doc is silently dropped into ``failed``), sail
+    unchecked into the native leg, and later crash ``--bundle`` export on
+    ``json.dumps``. Foreign files written to spec are exactly the case this
+    has to survive."""
+    if isinstance(value, datetime):
+        iso = value.isoformat()
+        # Keep UTC as the `Z` form MIF's own examples use, not `+00:00`.
+        return iso[:-6] + "Z" if iso.endswith("+00:00") else iso
+    if isinstance(value, date):
+        return value.isoformat()
+    if isinstance(value, dict):
+        return {k: _coerce_timestamps(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_coerce_timestamps(v) for v in value]
+    return value
 
 
 def _index_memory_kinds(s: Any, scope: str, kinds, tenant) -> None:
@@ -450,7 +486,9 @@ def _read_mif_md(md_path: Path) -> dict[str, Any]:
 
     text = md_path.read_text(encoding="utf-8")
     fm, body = _parse_frontmatter(text, source=str(md_path))
-    doc = dict(fm)
+    # YAML implicitly resolves UNQUOTED ISO dates to datetime objects; MIF
+    # declares every temporal field as a string, so coerce before validating.
+    doc = _coerce_timestamps(dict(fm))
     doc["content"] = body.strip()
     _validate_mif_doc(doc, str(md_path))
     return doc
@@ -700,7 +738,7 @@ def import_cmd(
 
                 if as_mode in ("native", "both"):
                     engram_spec = from_mif(doc)
-                    engram_name = _slug(engram_spec["summary"])
+                    engram_name = _engram_doc_name(doc_id)
                     e_raw: dict[str, Any] = {"kind": "Engram", "metadata": {"name": engram_name}, "spec": engram_spec}
                     if engram_api_version:
                         e_raw["apiVersion"] = engram_api_version

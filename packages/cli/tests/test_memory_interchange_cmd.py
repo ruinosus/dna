@@ -273,3 +273,60 @@ def test_export_rejects_non_engram_kind(scoped):
     ])
     assert r.exit_code != 0
     assert "Engram" in r.output
+
+
+# ─────────────── regressions: foreign input (Círculo B) ───────────────
+# Both of these were found by review against REAL third-party-shaped input,
+# not the hand-authored dicts the suite above feeds through from_mif().
+
+
+def _write_mif(root, slug: str, frontmatter: str, body: str = "Some memory.") -> None:
+    root.mkdir(parents=True, exist_ok=True)
+    (root / f"{slug}.md").write_text(f"---\n{frontmatter}---\n\n{body}\n", encoding="utf-8")
+
+
+def test_two_distinct_memories_sharing_a_title_do_not_overwrite_each_other(scoped):
+    """The projected Engram must be keyed by MIF id, not by summary.
+
+    Two docs with different ids that share a title derive the SAME summary;
+    a summary-keyed name made the second silently REPLACE the first
+    (write_document is a full replace). --as native has no passthrough copy
+    to fall back on, so the first memory was simply gone."""
+    runner = CliRunner()
+    src = scoped / "foreign"
+    shared = "title: Deploy checklist\n"  # same title -> same derived summary
+    _write_mif(src, "a", "id: 11111111-1111-4111-8111-111111111111\ntype: semantic\n"
+               "created: \"2026-01-15T10:30:00Z\"\n" + shared, body="Run the smoke tests first.")
+    _write_mif(src, "b", "id: 22222222-2222-4222-8222-222222222222\ntype: semantic\n"
+               "created: \"2026-01-16T10:30:00Z\"\n" + shared, body="Freeze writes before cutover.")
+
+    imp = _import(runner, src, "demo", "--as", "native")
+    assert imp["imported"] == 2, imp
+
+    back = _export(runner, "demo", scoped / "back", "--bundle")
+    ids = {e["@id"].removeprefix("urn:mif:") for e in json.loads((scoped / "back").read_text())["@graph"]}
+    assert ids == {
+        "11111111-1111-4111-8111-111111111111",
+        "22222222-2222-4222-8222-222222222222",
+    }, f"one memory overwrote the other: {back}"
+
+
+def test_unquoted_iso_dates_survive_import_and_reexport(scoped):
+    """MIF's own examples write dates UNQUOTED, and YAML resolves those to
+    datetime objects. MIF types every temporal field as a string, so the
+    objects failed passthrough schema validation (dropped into `failed`),
+    passed unchecked into the native leg, and crashed `--bundle` re-export
+    on json.dumps. Foreign files written to spec must survive."""
+    runner = CliRunner()
+    src = scoped / "unquoted"
+    _write_mif(src, "u", "id: 33333333-3333-4333-8333-333333333333\ntype: semantic\ncreated: 2026-01-15T10:30:00Z\n")
+
+    imp = _import(runner, src, "demo")
+    assert imp["imported"] == 1, imp
+    assert not imp.get("failed"), imp["failed"]
+
+    # The crash was here: datetime is not JSON serializable.
+    _export(runner, "demo", scoped / "out.json", "--bundle")
+    entry = json.loads((scoped / "out.json").read_text())["@graph"][0]
+    assert isinstance(entry["created"], str)
+    assert entry["created"].startswith("2026-01-15T10:30:00")
