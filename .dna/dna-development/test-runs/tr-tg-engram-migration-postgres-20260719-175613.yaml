@@ -1,0 +1,21 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-engram-migration-postgres-20260719-175613
+spec:
+  guide_ref: tg-engram-migration-postgres
+  outcome: pass
+  verifies:
+  - Story/s-engram-migration-postgres
+  executed_by: claude-code
+  executed_at: '2026-07-19T17:56:13+00:00'
+  notes: "Review independente reproduziu AO VIVO um blind spot: a pre-checagem so\
+    \ comparava candidatos contra linhas pre-existentes, nunca entre si \u2014 e como\
+    \ from_kind/to_kind sao independentes em dna_edges, duas linhas validas podiam\
+    \ convergir para a mesma chave. Dry-run dizia 'zero colisoes' e o apply levantava\
+    \ UniqueViolationError. Corrigido, com teste de regressao reproduzindo o caso\
+    \ exato e mutation test confirmando. Provado que nenhuma outra tabela compartilha\
+    \ o problema (espaco de colisao unidimensional). Runbook ganhou verificacao de\
+    \ freeze e backup. Confirmado que o copilot nao escreve no source em runtime \u2014\
+    \ le so via MCP; o Postgres dele e outro schema (checkpointer LangGraph). 3488\
+    \ testes passando."

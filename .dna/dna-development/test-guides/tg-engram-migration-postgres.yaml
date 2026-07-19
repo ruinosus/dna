@@ -1,0 +1,33 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-engram-migration-postgres
+spec:
+  description: Verifica a migracao Postgres do rename Engram e o runbook de cutover
+  kind_of_test: manual
+  status: active
+  steps:
+  - action: integracao
+    expected: 8/8 contra Postgres real com schema descartavel criado pela DDL de producao
+  - action: pre-checagem
+    expected: colisao contra linhas pre-existentes E entre candidatos (dna_edges)
+      aborta antes de qualquer escrita
+  - action: transacao unica
+    expected: falha reverte limpo, zero escrita parcial (verificado ao vivo)
+  - action: idempotencia
+    expected: reexecucao e no-op
+  - action: dry-run default
+    expected: nao escreve nada, reporta contagem por tabela
+  - action: mutation test
+    expected: quebrar a pre-checagem faz o teste de colisao falhar; quebrar um UPDATE
+      faz outros dois falharem
+  - action: outbox
+    expected: preservado imutavel, com raciocinio verificado (kind do outbox nunca
+      resolve identidade)
+  - action: runbook
+    expected: freeze verificado, pg_dump antes do apply, copilot fora do freeze com
+      justificativa
+  verifies:
+  - Story/s-engram-migration-postgres
+  created_at: '2026-07-19T17:56:04+00:00'
+  updated_at: '2026-07-19T17:56:04+00:00'
