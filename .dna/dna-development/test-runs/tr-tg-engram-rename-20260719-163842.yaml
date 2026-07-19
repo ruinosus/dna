@@ -1,0 +1,21 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-engram-rename-20260719-163842
+spec:
+  guide_ref: tg-engram-rename
+  outcome: pass
+  verifies:
+  - Story/s-engram-rename
+  executed_by: claude-code
+  executed_at: '2026-07-19T16:38:42+00:00'
+  notes: "Dois reviews independentes. O de spec fez MUTATION TESTING e descobriu que\
+    \ VERSION_CHURN_KINDS estava sem guarda (3396 testes verdes com e sem Engram no\
+    \ conjunto) \u2014 corrigido e reprovado por mutacao. O de qualidade achou tres\
+    \ defeitos no script de migracao (idempotencia checando so kind, escrita nao-atomica,\
+    \ e a garantia 'byte-for-byte' falsa por consumo da newline final + normalizacao\
+    \ CRLF->LF). Todos corrigidos com verificacao real (crash simulado, hexdump, igualdade\
+    \ exata nos testes). Uma investigacao paralela descobriu que a producao do dna-cloud\
+    \ e Postgres, entao este script de FS nao a cobre \u2014 docstring corrigido e\
+    \ o trabalho isolado em s-engram-migration-postgres, que agora bloqueia o bump\
+    \ de pin."

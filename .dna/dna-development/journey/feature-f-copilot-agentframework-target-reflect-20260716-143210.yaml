@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: WorkflowEvent
+metadata:
+  name: feature-f-copilot-agentframework-target-reflect-20260716-143210
+spec:
+  phase: reflect
+  ref: Feature/f-copilot-agentframework-target
+  parent_ref: Feature/f-copilot-agentframework-target
+  methodology: ad-hoc
+  started_at: '2026-07-16T14:32:06+00:00'
+  actor: claude-code
+  created_at: '2026-07-16T14:32:06+00:00'
+  summary: 'Feature shipped via cascade: f-copilot-agentframework-target'

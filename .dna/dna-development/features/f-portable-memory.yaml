@@ -1,0 +1,40 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Feature
+metadata:
+  name: f-portable-memory
+spec:
+  title: "Mem\xF3ria port\xE1vel (Engram \u21C4 MIF)"
+  description: "Dar ao DNA a membrana de interc\xE2mbio que falta: exportar/importar\
+    \ mem\xF3ria sem perda, adotando o MIF como fio neutro. O motor nativo \xE9 mantido\
+    \ e renomeado LessonLearned -> Engram; o MIF \xE9 carregado byte-fiel via a regra\
+    \ normativa #3 (o dono nomeia o schema). Design: docs/design/2026-07-18-portable-memory-design.md.\n\
+    \nDECISOES CONFIRMADAS (founder, 2026-07-19):\n(a) Identidade do Kind nativo =\
+    \ github.com/ruinosus/dna/v1 . Engram (sai de /sdlc/v1). O namespace raiz hoje\
+    \ abriga Tool e Copilot \u2014 os pilares; memoria entra como pilar. A alternativa\
+    \ /cognitive/v1 foi descartada: la moram PreMortem e PatternInsight, que sao artefatos\
+    \ de analise, nao substrato.\n(b) Politica de tier: export no Free (levar a sua\
+    \ memoria embora e um direito, e cai do modelo atual Free=read-only), import no\
+    \ Pro (escrita, consome quota) \u2014 COM import limitado no Free como isca de\
+    \ conversao, porque o Circulo B (memoria do Claude recuperavel no DNA) e a demo\
+    \ que vende e nao pode ficar inteira atras do paywall.\n(c) Dados antigos resolvem\
+    \ via alias read-time \u2014 zero migracao obrigatoria. Rewrite unico fica como\
+    \ faxina opcional posterior, nunca bloqueante.\n\nFORA DE ESCOPO (MVP): byte-fidelidade\
+    \ literal; --format omp|pam; Circulo C (triangulo 3-fornecedores); superficie\
+    \ dna-cloud (Story 5, vai para o scope dna-cloud-dev depois)."
+  status: discovery
+  epic: e-dna-portability
+  reporter: claude-code
+  priority: high
+  labels:
+  - memory
+  - interchange
+  - kinds
+  business_value: 800
+  created_at: '2026-07-19T14:25:07+00:00'
+  updated_at: '2026-07-19T14:25:07+00:00'
+  timeline:
+  - at: '2026-07-19T14:25:07+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: discovery

@@ -1,0 +1,64 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-engram-migration-postgres
+spec:
+  title: Migracao Postgres do rename LessonLearned -> Engram, e o runbook de cutover.
+    O s
+  description: "Migracao Postgres do rename LessonLearned -> Engram, e o runbook de\
+    \ cutover. O script de filesystem da s-engram-rename cobre apenas arquivos; a\
+    \ producao do dna-cloud le e escreve 100% em Postgres (DNA_SOURCE_URL), entao\
+    \ hoje ela migraria 5 arquivos do repo e ZERO linhas de producao.\n\nFORMA DO\
+    \ PROBLEMA (verificado no adapter sqlalchemy_): a identidade esta partida \u2014\
+    \ kind e coluna real (e integra chaves primarias), apiVersion vive dentro do JSON\
+    \ da coluna content. kind aparece em pelo menos 6 tabelas: dna_documents (PK),\
+    \ dna_versions (historico completo), dna_layer_documents, dna_bundle_entries,\
+    \ dna_edges (from_kind E to_kind, ambos na PK), dna_search_docs (UNIQUE). content\
+    \ e JSON (nao YAML), entao da para fazer em SQL puro com jsonb_set \u2014 sem\
+    \ loop de parse/reserialize.\n\nRISCO PRINCIPAL: colisao de chave. Com kind dentro\
+    \ de PKs e UNIQUEs, um Engram pre-existente de mesmo nome aborta o UPDATE. Exige\
+    \ pre-checagem de colisao e transacao unica.\n\nORDERING (cutover duro \u2014\
+    \ nao existe janela em que as duas identidades resolvam, o lookup e 2-tupla exata\
+    \ sem fallback): 1) freeze de escrita (scale-down de mcp/mcp-ws/api); 2) migracao\
+    \ PG em transacao unica; 3) bump dos tres pins em lockstep + azd up; 4) rodar\
+    \ o script de FS no .dna do dna-cloud NO MESMO COMMIT do bump \u2014 a imagem\
+    \ do copilot baka o .dna e emite dele no build, entao esquecer isso carrega a\
+    \ identidade velha em silencio.\n\nONDE MORA: no SDK. O schema e do SDK e qualquer\
+    \ deployment DNA com Postgres tem o mesmo problema. Preferencia: generalizar os\
+    \ dois caminhos atras de uma entrada unica que aceite --source <url-ou-path>,\
+    \ em vez de dois scripts soltos."
+  status: todo
+  feature: f-portable-memory
+  priority: high
+  labels:
+  - memory
+  - migration
+  - postgres
+  reporter: claude-code
+  acceptance_criteria:
+  - Dada uma source Postgres, quando a migracao roda, entao kind e apiVersion sao
+    reescritos em todas as tabelas que carregam a identidade (documents, versions,
+    layer_documents, bundle_entries, edges from/to, search_docs) numa transacao unica
+  - Dada uma colisao de chave potencial (Engram pre-existente de mesmo nome/scope),
+    quando a pre-checagem roda, entao ela reporta e aborta ANTES de qualquer escrita
+  - Dado o modo dry-run (default), entao nada e escrito e o relatorio mostra contagem
+    por tabela
+  - Dada a entrada unificada, entao um mesmo verbo aceita --source como path de filesystem
+    ou URL Postgres e escolhe a implementacao correta
+  - Dado o runbook de cutover, entao ele documenta o freeze de escrita, a ordem dos
+    4 passos e a armadilha do .dna bakado na imagem do copilot
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - Teste contra um Postgres semeado (modelar nos testes de integracao PG existentes
+    do SDK); dry-run verificado; pre-checagem de colisao verificada com caso que colide;
+    docstring do script de FS corrigido (hoje afirma falsamente que ele cobre a migracao
+    do dna-cloud); nenhum bump de pin nesta story
+  definition_of_done_source: cli-create
+  created_at: '2026-07-19T16:29:13+00:00'
+  updated_at: '2026-07-19T16:29:13+00:00'
+  timeline:
+  - at: '2026-07-19T16:29:13+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo

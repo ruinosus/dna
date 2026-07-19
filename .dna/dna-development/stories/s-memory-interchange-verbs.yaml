@@ -1,0 +1,46 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-memory-interchange-verbs
+spec:
+  title: Modulo de projecao dna/memory/interchange.py (to_mif/from_mif, puros e determini
+  description: Modulo de projecao dna/memory/interchange.py (to_mif/from_mif, puros
+    e deterministicos) + os verbos CLI dna memory export/import na superficie Click
+    existente. Cobre o mapeamento da secao 2 do design com o cofre x-dna e a estabilidade
+    de @id no round-trip.
+  status: todo
+  feature: f-portable-memory
+  priority: high
+  labels:
+  - memory
+  - interchange
+  - cli
+  reporter: claude-code
+  acceptance_criteria:
+  - Dado interchange.py, quando to_mif(spec)/from_mif(doc) rodam, entao sao puros,
+    deterministicos, sem rede, com espelho Py<->TS, e cobrem 100% do mapeamento da
+    secao 2 incluindo o cofre extensions.x-dna
+  - "Dado um Engram nascido no DNA, quando exportado, entao um urn:mif:<uuid> e mintado\
+    \ UMA vez e pinado de volta no doc \u2014 um segundo export produz o mesmo @id"
+  - Dado um MIF importado, quando reexportado, entao o @id original e preservado;
+    --dedupe id e idempotente e o round-trip nao duplica
+  - Dado dna memory export, entao suporta --format mif, --out, --bundle, --personal,
+    --include-forgotten alem de --scope/--tenant/--kind/--json
+  - Dado dna memory import, entao suporta --as passthrough|native|both (default both),
+    --dedupe id|content-hash|off, --personal alem de --scope/--tenant/--json
+  - 'Dado --personal, entao respeita INV-PERSONAL: identidade resolvida server-side,
+    nunca argumento; export pessoal nunca vaza memoria de workspace e import pessoal
+    nunca cai em particao compartilhada'
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - Testes unitarios das funcoes puras; paridade Py<->TS; suite de memoria verde;
+    nenhuma chamada de rede ou LLM no caminho de projecao
+  definition_of_done_source: cli-create
+  created_at: '2026-07-19T14:25:57+00:00'
+  updated_at: '2026-07-19T14:25:57+00:00'
+  timeline:
+  - at: '2026-07-19T14:25:57+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo

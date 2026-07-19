@@ -1,0 +1,42 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-roundtrip-proof
+spec:
+  title: 'A prova: Circulo A (round-trip interno, fidelidade de campo) ligado ao memory_co'
+  description: "A prova: Circulo A (round-trip interno, fidelidade de campo) ligado\
+    \ ao memory_conformance_suite, e Circulo B (import real de export do Claude via\
+    \ adaptador fino) \u2014 a demo que vende."
+  status: todo
+  feature: f-portable-memory
+  priority: medium
+  labels:
+  - memory
+  - interchange
+  - testing
+  reporter: claude-code
+  acceptance_criteria:
+  - Dado N Engrams semeados, quando export -> import -> diff semantico dos specs,
+    entao 100% dos campos da secao 2 sobrevivem, x-dna voltam identicos, a cadeia
+    supersede/valid_to e preservada e nao ha duplicatas
+  - Dado o Circulo A, entao esta ligado ao memory_conformance_suite como caso 'interchange
+    round-trip'
+  - Dado um export de memoria do Claude, quando passado pelo adaptador claude-export
+    -> MIF e importado com --as both --personal, entao um recall por PARAFRASE (sem
+    token compartilhado) do fato importado retorna hit no top-3 com embed-onnx
+  - Dado o adaptador, entao tem menos de ~150 LOC (a metrica de 'formato novo custa
+    pouco')
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - Circulo A e B verdes na suite; metricas registradas (fidelidade de campo, preservacao
+    bi-temporal, recuperabilidade por parafrase, idempotencia, LOC do adaptador);
+    Circulo C explicitamente fora
+  definition_of_done_source: cli-create
+  created_at: '2026-07-19T14:26:01+00:00'
+  updated_at: '2026-07-19T14:26:01+00:00'
+  timeline:
+  - at: '2026-07-19T14:26:01+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo

@@ -1,0 +1,61 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-consumer-lane-memory-key
+spec:
+  title: Fechar o gap que deixa a lane consumidor (WorkOS/Gmail) sem memoria pessoal.
+    O S
+  description: "Fechar o gap que deixa a lane consumidor (WorkOS/Gmail) sem memoria\
+    \ pessoal. O SDK ja tem a maquina completa (identity_claim_for_family: Entra le\
+    \ oid, Google le sub; personal_tenant suporta family=google -> personal:google:<sub>;\
+    \ testes existem), mas ela nunca engata na Lane B por dois motivos: (1) o marcador\
+    \ de familia so e carimbado dentro de _multi_provider_verifier, e workos_provider_from_env()\
+    \ devolve um JWTVerifier cru sem carimbo, entao personal_key_family cai no default\
+    \ entra e procura oid; (2) _PROVIDER_FAMILY nao mapeia workos. Era o item P2 do\
+    \ design identity-frontdoor: o mount subiu, a metade da identidade nao.\n\nMORA\
+    \ NESTA FEATURE por carona de release: e uma correcao de SDK que precisa do mesmo\
+    \ ciclo release -> bump de pin -> azd up que as Stories 1-4, nao por afinidade\
+    \ tematica.\n\nDECISAO (founder, 2026-07-19): chavear no sub do WorkOS (o user\
+    \ id user_...), aceitando que as particoes ficam no namespace do WorkOS \u2014\
+    \ trocar de IdP orfanaria a memoria pessoal. Escolhido por simplicidade, com zero\
+    \ usuarios o custo de mudar de ideia e minimo hoje.\n\nFORA DE ESCOPO: a metade\
+    \ de workspace (usuario consumidor tambem nao tem WorkspaceMembership) \u2014\
+    \ decisao separada; e a correcao do comentario falso no lib/copilot.ts do dna-cloud\
+    \ (issue propria)."
+  status: todo
+  feature: f-portable-memory
+  priority: high
+  labels:
+  - memory
+  - identity
+  - auth
+  reporter: claude-code
+  acceptance_criteria:
+  - "Dado um token da Lane B (WorkOS), quando chega ao MCP, entao os claims carregam\
+    \ o marcador de familia google \u2014 carimbado em workos_provider_from_env()\
+    \ espelhando o que _multi_provider_verifier ja faz"
+  - Dado o caminho config-driven (auth.providers[]), entao _PROVIDER_FAMILY mapeia
+    workos -> google, de modo que as duas rotas resolvem identico
+  - Dado um usuario da lane consumidor chamando recall com personal=true, entao a
+    memoria pessoal resolve para personal:google:<sub do WorkOS> e NAO e negada por
+    falta de claim oid
+  - "Dado um usuario da lane Entra, entao o comportamento e inalterado (personal:<oid>)\
+    \ \u2014 sem regressao"
+  - Dado os dois provedores, entao as particoes seguem estruturalmente disjuntas (personal:google:<id>
+    vs personal:<oid>), sem colisao possivel
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - Testes cobrindo as duas lanes; a suite dual-memory-key existente verde; nenhuma
+    mudanca necessaria no dna-cloud; documentado no codigo que a chave e o user id
+    do WorkOS (NAO o sub do Google, apesar do que os comentarios dos dois repos afirmam)
+    e a consequencia de portabilidade de IdP registrada; sem fallback para email como
+    chave pessoal (violaria INV-PERSONAL)
+  definition_of_done_source: cli-create
+  created_at: '2026-07-19T14:57:57+00:00'
+  updated_at: '2026-07-19T14:57:57+00:00'
+  timeline:
+  - at: '2026-07-19T14:57:57+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
