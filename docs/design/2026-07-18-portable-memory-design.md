@@ -39,15 +39,23 @@ Mesma estrutura física. E no eixo mais importante — a taxonomia CoALA — os 
 
 Cada linha conferida contra o schema real dos dois lados.
 
+> ⚠️ **Esta tabela foi escrita contra suposições, não contra a spec.** A story
+> `s-mif-passthrough-kind` buscou o MIF v1.0.0 real e achou vários campos
+> inventados. As linhas marcadas CORRIGIDO abaixo já foram ajustadas; a fonte
+> de verdade é o descritor em
+> `packages/sdk-{py,ts}/**/extensions/mif/kinds/memory.kind.yaml`.
+> **Quem implementar `s-memory-interchange-verbs` deve conferir cada linha
+> contra o descritor, não contra esta tabela.**
+
 | `Engram` (DNA) | MIF | Fidelidade | Observação |
 |---|---|---|---|
 | `memory_type` | `type` | ✅ 1:1 | mesmos enums (`episodic/semantic/procedural`) |
 | `summary` + `body` | `title`/`summary` + `content` | ✅ | `summary` (≤280) → `title`; corpo → `content` |
 | `area` | `namespace` | ✅ | `Feature/X` → `_episodic/feature-x`; `visibility` reservada → `_public`/`_shared` |
-| `valid_from` / `valid_to` | `temporal.validFrom` / `validTo` | ✅ 1:1 | **bi-temporalidade — o segundo eixo onde já concordam** |
-| `superseded_by_memory` | `relationships[supersedes]` | ✅ | par com `valid_to` para auditoria point-in-time |
+| `valid_from` / `valid_to` | `temporal.validFrom` / **`validUntil`** | ✅ 1:1 | **bi-temporalidade — o segundo eixo onde já concordam.** ⚠️ CORRIGIDO: dizia `validTo`, que **não existe** na spec real |
+| `superseded_by_memory` | `relationships[supersedes]` | ✅ | par com o `valid_to` do Engram para auditoria point-in-time |
 | `source_refs` | `relationships[derived-from]` + `provenance.wasDerivedFrom` | ✅ | |
-| `homophonic_links` | `relationships[related-to]` | ⚠️ | perde o `resonance_score` → vai para `extensions` |
+| `homophonic_links` | **`relationships[relates-to]`** | ⚠️ | perde o `resonance_score` → vai para `extensions`. ⚠️ CORRIGIDO: dizia `related-to`, que **não existe** |
 | `owner` | `provenance.wasAttributedTo` | ✅ | qual agente engrafou |
 | `tags` | `tags` | ✅ 1:1 | |
 | `created_at` | `created` | ✅ 1:1 | |
@@ -77,6 +85,16 @@ O `display_label` do Kind passa a `Engrama` (pt-BR); "Lições Aprendidas" perma
 ---
 
 ## 4. Peça 1 — o Kind de passthrough (`mif-memory.kind.yaml`)
+
+> **Implementado em `s-mif-passthrough-kind`** (feature `f-portable-memory`):
+> o descritor rascunhado aqui foi movido pra
+> `packages/sdk-{py,ts}/{dna/extensions,src/extensions}/mif/kinds/memory.kind.yaml`
+> (extensão dedicada `mif`, no mesmo espírito de `agentskills`/`soulspec` — não
+> dentro de `helix`), com três correções contra a spec real do MIF (`id` é
+> UUID puro no perfil Markdown, não `urn:mif:`; o campo é `validUntil`, não
+> `validTo`; `relationships[].type` é string aberta, não um enum fechado — o
+> enum do rascunho tinha 4 dos 9 valores errados). Este arquivo `.kind.yaml`
+> não fica mais em `docs/design/` — o descritor real é a fonte única.
 
 Entregue junto: `mif-memory.kind.yaml`. É um `KindDefinition` que registra `mif-spec.dev/v1 · Memory` (plano `record`), seguindo o padrão de `evidence.kind.yaml`. Pontos:
 

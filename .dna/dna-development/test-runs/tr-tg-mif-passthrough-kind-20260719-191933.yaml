@@ -1,0 +1,16 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-mif-passthrough-kind-20260719-191933
+spec:
+  guide_ref: tg-mif-passthrough-kind
+  outcome: pass
+  verifies:
+  - Story/s-mif-passthrough-kind
+  executed_by: claude-code
+  executed_at: '2026-07-19T19:19:33+00:00'
+  notes: "A story buscou a spec real do MIF em vez de confiar no rascunho e corrigiu\
+    \ 5 divergencias. Extensao dedicada mif (nao helix), sem classe \u2014 record-style\
+    \ Kind, seguindo o precedente do doc.kind.yaml. Uma regressao real surgiu e foi\
+    \ corrigida: os goldens de NON_INHERITABLE_KINDS precisavam de Memory. Tres mutacoes\
+    \ distintas confirmaram que os testes protegem."

@@ -8,7 +8,7 @@ spec:
   description: 'Registrar mif-spec.dev/v1 . Memory como Kind de passthrough (plano
     record), aplicando a regra normativa #3: um Kind que o DNA nao inventou viaja
     sob o namespace do dono, inalterado. Base ja rascunhada em docs/design/mif-memory.kind.yaml.'
-  status: todo
+  status: in-progress
   feature: f-portable-memory
   priority: high
   labels:
@@ -30,10 +30,61 @@ spec:
     DNA-flavored injetado no schema do MIF
   definition_of_done_source: cli-create
   created_at: '2026-07-19T14:25:33+00:00'
-  updated_at: '2026-07-19T14:25:33+00:00'
+  updated_at: '2026-07-19T19:19:37+00:00'
   timeline:
   - at: '2026-07-19T14:25:33+00:00'
     actor: claude-code
     type: status_change
     source: cli
     to: todo
+  - at: '2026-07-19T18:34:42+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-19T19:19:21+00:00'
+    actor: claude-code
+    type: decision
+    source: cli
+    summary: "A story buscou a spec REAL do MIF v1.0.0 ao vivo em vez de confiar no\
+      \ descritor rascunhado, e achou o rascunho substancialmente errado: o campo\
+      \ temporal e validUntil (nao validTo); relationships[].type e string kebab-case\
+      \ aberta (nao enum fechado) e 4 dos 9 valores do rascunho nao existem (related-to,\
+      \ caused-by, documents, references \u2014 os reais incluem relates-to, uses,\
+      \ created-by, mentioned-in); o id do perfil Markdown e UUID puro (o urn:mif:\
+      \ e o @id do JSON-LD, outra coisa); e o naming .memory.md era convencao do draft\
+      \ 0.1.0, nao da v1.0. Consequencia que passou perto: a tabela de mapeamento\
+      \ secao 2 do design \u2014 que e a BASE da story s-memory-interchange-verbs\
+      \ \u2014 usava validTo e related-to. Seguir o design teria produzido MIF invalido.\
+      \ A tabela foi corrigida na fonte e ganhou um aviso no topo mandando conferir\
+      \ contra o descritor real, nao contra ela."
+    commit_ref: 983afe16f90784936911addc2632c0b99bc42fdd
+  - at: '2026-07-19T19:19:28+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-mif-passthrough-kind
+    summary: TestGuide tg-mif-passthrough-kind (manual)
+  - at: '2026-07-19T19:19:37+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-mif-passthrough-kind-20260719-191933
+    summary: "TestRun tr-tg-mif-passthrough-kind-20260719-191933 \u2192 pass"
+    outcome: pass
+  produces:
+  - kind: Plan
+    name: plan-s-mif-passthrough-kind
+    role: implementation
+    at: '2026-07-19T18:34:42+00:00'
+  - kind: TestGuide
+    name: tg-mif-passthrough-kind
+    role: test-guide
+    at: '2026-07-19T19:19:28+00:00'
+  - kind: TestRun
+    name: tr-tg-mif-passthrough-kind-20260719-191933
+    role: test-run
+    at: '2026-07-19T19:19:37+00:00'

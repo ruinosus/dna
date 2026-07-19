@@ -133,6 +133,7 @@ automation = "dna.extensions.automation:AutomationExtension"
 eval = "dna.extensions.eval:EvalExtension"
 intel = "dna.extensions.intel:IntelExtension"
 portfolio = "dna.extensions.portfolio:PortfolioExtension"
+mif = "dna.extensions.mif:MifExtension"
 
 [build-system]
 requires = ["hatchling"]

@@ -1,0 +1,25 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-mif-passthrough-kind
+spec:
+  description: Verifica o registro do Kind de passthrough mif-spec.dev/v1 . Memory
+  kind_of_test: manual
+  status: active
+  steps:
+  - action: py 3418 passed / 0 failed ; ts 1733 pass / 0 fail
+    expected: ''
+  - action: descritor
+    expected: sha256 identico nos pares py/ts (613585f8...)
+  - action: fixtures MIF Level 1 e 2
+    expected: validam sem deformacao, lidas pelo GenericBundleReader real
+  - action: extensions
+    expected: aceita additionalProperties (o cofre x-dna)
+  - action: mutation test
+    expected: corromper target_api_version no espelho TS quebra os dois testes de
+      parity; remover created do required quebra o de schema; remover semantic do
+      enum quebra as duas validacoes de fixture
+  verifies:
+  - Story/s-mif-passthrough-kind
+  created_at: '2026-07-19T19:19:24+00:00'
+  updated_at: '2026-07-19T19:19:24+00:00'

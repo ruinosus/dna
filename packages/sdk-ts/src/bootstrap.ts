@@ -43,6 +43,7 @@ import { AutomationExtension } from "./extensions/automation.js";
 import { EvalExtension } from "./extensions/eval.js";
 import { IntelExtension } from "./extensions/intel.js";
 import { PortfolioExtension } from "./extensions/portfolio.js";
+import { MifExtension } from "./extensions/mif.js";
 import type { CacheItem } from "./kernel/protocols.js";
 import type { Extension } from "./kernel/protocols.js";
 import type { ManifestInstance } from "./kernel/instance.js";
@@ -81,6 +82,7 @@ function loadBuiltins<T extends { load(ext: Extension): void }>(target: T): T {
     new EvalExtension(),
     new IntelExtension(),
     new PortfolioExtension(),
+    new MifExtension(),
   ] as Extension[]) {
     target.load(ext);
   }

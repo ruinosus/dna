@@ -18,17 +18,26 @@ tests/parity-fixtures/
 │                            # introspection) + packages/sdk-ts/tests/
 │                            # port-surface-parity.test.ts (keyof-bound
 │                            # PORT_SURFACE manifest). Undocumented drift = red.
-└── workspace-*/cases.json  # Model B tenancy pure policy (dna.tenancy ↔
-                             # src/tenancy). Each dir is a self-contained
-                             # cases.json with case families keyed by op,
-                             # read by a Py test + its TS twin:
-                             #   workspace-resolution/ — identity→workspace
-                             #     resolve (f-ws-resolution, F2)
-                             #   workspace-invite/     — invite/accept authz +
-                             #     anti-impersonation bind (f-ws-invites, F3)
-                             #   workspace-ownership/  — first-owner probe +
-                             #     revoke RBAC + last-owner guard
-                             #     (f-ws-owner-provision)
+├── workspace-*/cases.json  # Model B tenancy pure policy (dna.tenancy ↔
+│                            # src/tenancy). Each dir is a self-contained
+│                            # cases.json with case families keyed by op,
+│                            # read by a Py test + its TS twin:
+│                            #   workspace-resolution/ — identity→workspace
+│                            #     resolve (f-ws-resolution, F2)
+│                            #   workspace-invite/     — invite/accept authz +
+│                            #     anti-impersonation bind (f-ws-invites, F3)
+│                            #   workspace-ownership/  — first-owner probe +
+│                            #     revoke RBAC + last-owner guard
+│                            #     (f-ws-owner-provision)
+└── mif/memories/<name>/MEMORY.md  # Real MIF Memory examples lifted verbatim
+                             # (or lightly extended, noted inline) from
+                             # SPECIFICATION.md §16 — market-fidelity
+                             # conformance for `mif-spec.dev/v1 · Memory`
+                             # (s-mif-passthrough-kind), read by BOTH SDKs'
+                             # GenericBundleReader/Writer directly (bundle
+                             # storage, no scope/manifest ceremony needed):
+                             #   packages/sdk-py/tests/test_mif_memory_kind.py
+                             #   packages/sdk-ts/tests/mif-memory-kind.test.ts
 ```
 
 ## Executors (both read these SAME files)
