@@ -1,0 +1,124 @@
+===============================================================================
+ DNA SDK — HANDOFF (2026-07-19)
+ O que o board e o código NÃO contam. Para o brief factual: `dna sdlc brief`.
+===============================================================================
+
+CONTEXTO
+-------------------------------------------------------------------------------
+Trabalho em curso: feature `f-portable-memory` (epic `e-dna-portability`) —
+memória portável Engram ⇄ MIF. Design fechado em:
+  docs/design/2026-07-18-portable-memory-design.md
+  docs/design/2026-07-18-portable-memory-STORY-DRAFT.md
+  docs/design/mif-memory.kind.yaml           (a Story `s-mif-passthrough-kind` consome)
+
+Repo consumidor: dna-cloud (pin atual 0.19.2 nos 3 Dockerfiles).
+
+
+ESTADO (6 stories)
+-------------------------------------------------------------------------------
+  s-engram-rename               ✅ mesclada (PR #162) — falta rodar `story done`
+  s-consumer-lane-memory-key    PR #163
+  s-engram-migration-postgres   PR #165   ← BLOQUEIA O RELEASE
+  s-mif-passthrough-kind        não iniciada
+  s-memory-interchange-verbs    não iniciada  (o coração: to_mif/from_mif)
+  s-roundtrip-proof             não iniciada  (Círculos A e B)
+
+PRs abertos meus: #163, #164 (docs), #165
+PRs pré-existentes, NÃO meus: #128, #100, #99 — e o #112 é um release da
+v0.14.0 enquanto o repo está na 0.19.2; provavelmente morto, vale fechar.
+
+
+DECISÕES TRAVADAS (não re-litigar)
+-------------------------------------------------------------------------------
+1. Engram vive em `github.com/ruinosus/dna/v1`, extensão `helix` — junto de Tool
+   e Copilot. NÃO em `/cognitive/v1`: lá moram PreMortem e PatternInsight, que
+   são artefatos de ANÁLISE; o Engram é SUBSTRATO.
+2. Rename limpo + migração única, SEM alias de compat. Motivo: zero usuários, e
+   o repo não tem precedente de rename (`kind_registry.py:130` diz que aliases
+   não podem ser renomeados sem migração de doc — a arquitetura ESPERA migração).
+   Fazer alias seria inventar mecanismo novo e permanente pra evitar um script.
+3. Tier: export no Free, import no Pro, COM import limitado no Free como isca
+   (o Círculo B — memória do Claude recuperável no DNA — é a demo que vende e
+   não pode ficar inteira atrás do paywall).
+4. Lane consumidor chaveia em `personal:workos:<sub>`, família PRÓPRIA `workos`.
+   NÃO `google`. O usuário clica "Google", mas quem EMITE o token é o WorkOS —
+   o `sub` é o user id do WorkOS (`user_...`), não o sub do Google. Confundir os
+   dois foi LITERALMENTE o que causou o bug original (comentários nos dois repos
+   afirmavam ser o sub do Google). Consequência aceita: migrar de IdP órfã as
+   partições.
+5. Descoberta autônoma do usuário: NO-GO (LGPD/GDPR). É DECISÃO, não pendência —
+   ver docs/design/2026-07-18-autonomous-discovery-legal-envelope.md §9. Ainda
+   falta virar ADR aceito, senão alguém refaz a pesquisa em 6 meses.
+
+
+ARMADILHAS (o caro de redescobrir)
+-------------------------------------------------------------------------------
+* CUTOVER DO RENAME É DURO. Não existe janela em que as duas identidades
+  resolvam — `instance.py:686` é `_kinds.get((api_version, kind))`, tupla exata
+  sem fallback. Migrar antes do pin → docs invisíveis pro pin velho. Pin antes
+  da migração → docs antigos invisíveis. Exige freeze de escrita.
+  Runbook completo: docs/guides/engram-postgres-cutover.md
+
+* PRODUÇÃO É POSTGRES, NÃO FILESYSTEM. O script de FS
+  (`scripts/migrate_lesson_learned_to_engram.py`) migra os `.dna/` do git;
+  a produção do dna-cloud lê/escreve 100% em Postgres. Ambos são necessários,
+  em momentos diferentes. Entrada unificada: `scripts/migrate_engram.py --source`.
+
+* O `.dna` DO DNA-CLOUD É BAKADO NA IMAGEM DO COPILOT (`COPY .dna /app/.dna`) e
+  o emit roda no BUILD. Se o repo não for migrado NO MESMO COMMIT do bump de
+  pin, o copilot carrega a identidade velha em silêncio.
+
+* `dna_edges` TEM DUAS COLUNAS DE KIND (from/to) NA PK — é a única tabela onde
+  dois candidatos distintos podem convergir para a mesma chave no rename. Foi um
+  blind spot real da pré-checagem (dry-run dizia "zero colisões", apply
+  explodia). Corrigido; teste de regressão em
+  `test_migrate_engram_postgres_integration.py`.
+
+* `dna_documents`/`dna_bundle_entries` têm PK `(scope, kind, name, TENANT)` —
+  a migração v3 adicionou `tenant`. Ignorar isso gera falso-positivo de colisão.
+
+* O COPILOT NÃO ESCREVE NO SOURCE em runtime (verificado): o `DNA_SOURCE_URL`
+  dele só é lido no `docker build`; em request ele fala com o MCP. O Postgres
+  dele (`DNA_PRIMARY_PG_URL`) é o checkpointer do LangGraph, outro schema.
+  Por isso ele NÃO entra no freeze. Re-verificar se o switch "emit from
+  Postgres source" do Dockerfile for ligado.
+
+* CONJUNTOS QUE FALHAM ABERTOS. Ao mexer em identidade de Kind, quatro lugares
+  referenciam por literal e NÃO levantam erro se esquecidos:
+    kernel/resolver.py + sdk-ts/src/kernel/resolver.ts  DEFAULT_NON_INHERITABLE_KINDS_V1
+      → esquecer = Kind vira scope-inheritable = VAZAMENTO entre scopes
+    extensions/sdlc/write_guards.py `_KIND`
+      → esquecer = veto bi-temporal para de disparar
+    kernel/__init__.py VERSION_CHURN_KINDS
+      → esquecer = histórico completo, board afoga
+    extensions/intel/engine.py `_kind_registered`
+      → no-op silencioso
+  Compila, passa typecheck, passa byte-parity — e mesmo assim corrompe.
+
+
+LIÇÃO DE PROCESSO (o padrão que se repetiu 4×)
+-------------------------------------------------------------------------------
+Em TODOS os defeitos sérios desta rodada, o código estava certo NO QUE FAZIA e
+errado NO QUE AFIRMAVA SOBRE SI:
+  - 3396 testes verdes e um conjunto crítico sem proteção nenhuma
+    (descoberto por MUTATION TESTING, não por leitura)
+  - um script cujo docstring dizia cobrir a migração do dna-cloud e migraria
+    zero linhas (produção é Postgres)
+  - um "byte-for-byte intocado" que consumia a newline final
+  - uma pré-checagem de colisão que dava sinal verde e depois explodia
+
+Nenhum apareceu em revisão de leitura. Todos apareceram porque se exigiu PROVA:
+mutar o código e confirmar que o teste falha; executar contra o alvo real.
+=> Quando um plano disser "nada mais no repo pega isso", o teste correspondente
+   precisa vir com prova de mutação, não com nome plausível.
+
+
+PRÓXIMOS PASSOS
+-------------------------------------------------------------------------------
+1. Mesclar #163, #164, #165 (CI verde).
+2. `dna sdlc story done s-engram-rename`.
+3. Stories 3–5: mif-passthrough → interchange-verbs → roundtrip-proof.
+4. Release no PyPI (tag vX.Y.Z dispara o workflow).
+5. No dna-cloud: bump dos 3 pins EM LOCKSTEP + cutover (runbook) + azd up.
+6. ADR do NO-GO de descoberta autônoma.
+===============================================================================

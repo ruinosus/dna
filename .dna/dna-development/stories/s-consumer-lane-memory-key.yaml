@@ -22,7 +22,7 @@ spec:
     \ de workspace (usuario consumidor tambem nao tem WorkspaceMembership) \u2014\
     \ decisao separada; e a correcao do comentario falso no lib/copilot.ts do dna-cloud\
     \ (issue propria)."
-  status: review
+  status: done
   feature: f-portable-memory
   priority: high
   labels:
@@ -31,28 +31,46 @@ spec:
   - auth
   reporter: claude-code
   acceptance_criteria:
-  - "Dado um token da Lane B (WorkOS), quando chega ao MCP, entao os claims carregam\
-    \ o marcador de familia google \u2014 carimbado em workos_provider_from_env()\
-    \ espelhando o que _multi_provider_verifier ja faz"
-  - Dado o caminho config-driven (auth.providers[]), entao _PROVIDER_FAMILY mapeia
-    workos -> google, de modo que as duas rotas resolvem identico
-  - Dado um usuario da lane consumidor chamando recall com personal=true, entao a
-    memoria pessoal resolve para personal:google:<sub do WorkOS> e NAO e negada por
-    falta de claim oid
-  - "Dado um usuario da lane Entra, entao o comportamento e inalterado (personal:<oid>)\
-    \ \u2014 sem regressao"
-  - Dado os dois provedores, entao as particoes seguem estruturalmente disjuntas (personal:google:<id>
-    vs personal:<oid>), sem colisao possivel
+  - text: "Dado um token da Lane B (WorkOS), quando chega ao MCP, entao os claims\
+      \ carregam o marcador de familia google \u2014 carimbado em workos_provider_from_env()\
+      \ espelhando o que _multi_provider_verifier ja faz"
+    done: true
+    done_at: '2026-07-19T18:33:20+00:00'
+    done_by: story-done-auto
+  - text: Dado o caminho config-driven (auth.providers[]), entao _PROVIDER_FAMILY
+      mapeia workos -> google, de modo que as duas rotas resolvem identico
+    done: true
+    done_at: '2026-07-19T18:33:20+00:00'
+    done_by: story-done-auto
+  - text: Dado um usuario da lane consumidor chamando recall com personal=true, entao
+      a memoria pessoal resolve para personal:google:<sub do WorkOS> e NAO e negada
+      por falta de claim oid
+    done: true
+    done_at: '2026-07-19T18:33:20+00:00'
+    done_by: story-done-auto
+  - text: "Dado um usuario da lane Entra, entao o comportamento e inalterado (personal:<oid>)\
+      \ \u2014 sem regressao"
+    done: true
+    done_at: '2026-07-19T18:33:20+00:00'
+    done_by: story-done-auto
+  - text: Dado os dois provedores, entao as particoes seguem estruturalmente disjuntas
+      (personal:google:<id> vs personal:<oid>), sem colisao possivel
+    done: true
+    done_at: '2026-07-19T18:33:20+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - Testes cobrindo as duas lanes; a suite dual-memory-key existente verde; nenhuma
-    mudanca necessaria no dna-cloud; documentado no codigo que a chave e o user id
-    do WorkOS (NAO o sub do Google, apesar do que os comentarios dos dois repos afirmam)
-    e a consequencia de portabilidade de IdP registrada; sem fallback para email como
-    chave pessoal (violaria INV-PERSONAL)
+  - text: Testes cobrindo as duas lanes; a suite dual-memory-key existente verde;
+      nenhuma mudanca necessaria no dna-cloud; documentado no codigo que a chave e
+      o user id do WorkOS (NAO o sub do Google, apesar do que os comentarios dos dois
+      repos afirmam) e a consequencia de portabilidade de IdP registrada; sem fallback
+      para email como chave pessoal (violaria INV-PERSONAL)
+    done: true
+    done_at: '2026-07-19T18:33:20+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-19T14:57:57+00:00'
-  updated_at: '2026-07-19T17:29:19+00:00'
+  updated_at: '2026-07-19T18:33:30+00:00'
   timeline:
   - at: '2026-07-19T14:57:57+00:00'
     actor: claude-code
@@ -105,6 +123,16 @@ spec:
     source: cli
     from: in-progress
     to: review
+  - at: '2026-07-19T18:33:30+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: 980d7b42cbb6a45193fbd04dbfc91ec863fa93b1
+    summary: 'Lane consumidor (WorkOS/Gmail) alcanca memoria pessoal em familia propria
+      personal:workos:<sub>; PR #163 mesclado. A familia propria removeu a causa da
+      colisao com type google em vez de mitigar.'
   produces:
   - kind: Plan
     name: plan-s-consumer-lane-memory-key
@@ -118,3 +146,4 @@ spec:
     name: tr-tg-consumer-lane-memory-key-20260719-172843
     role: test-run
     at: '2026-07-19T17:28:48+00:00'
+  closed_at: '2026-07-19T18:33:20+00:00'

@@ -7,7 +7,7 @@ spec:
   description: Renomear o Kind de memoria LessonLearned -> Engram com identidade github.com/ruinosus/dna/v1,
     preservando LessonLearned (/sdlc/v1) e o alias sdlc-lesson-learned como compat
     read-time. Bloqueia as demais stories (tudo abaixo fala 'Engram').
-  status: review
+  status: done
   feature: f-portable-memory
   priority: high
   labels:
@@ -16,27 +16,46 @@ spec:
   - parity
   reporter: claude-code
   acceptance_criteria:
-  - Dado o novo descritor engram.kind.yaml, quando registrado, entao apiVersion=github.com/ruinosus/dna/v1
-    e kind=Engram, schema identico ao atual, espelho Py<->TS byte-identico e golden
-    de hash-parity atualizado
-  - "Dado um doc ja gravado com kind: LessonLearned (/sdlc/v1), quando lido, entao\
-    \ resolve como Engram via mapa de alias read-time \u2014 com golden novo provando\
-    \ a resolucao"
-  - Dado o alias legado sdlc-lesson-learned, quando usado, entao continua resolvendo
-    para Engram
-  - Dado que KindDefinitionSpec.alias e hoje uma string unica, quando a compat exigir
-    dois nomes, entao a solucao (aliases lista vs mapa externo) e implementada com
-    paridade Py<->TS e goldens em lockstep
-  - Dado o Kind renomeado, entao display_label = Engrama e a view SDLC 'Licoes Aprendidas'
-    segue funcionando como lente (Engram com affect reflexivo em area de SDLC), nao
-    como nome do tipo
+  - text: Dado o novo descritor engram.kind.yaml, quando registrado, entao apiVersion=github.com/ruinosus/dna/v1
+      e kind=Engram, schema identico ao atual, espelho Py<->TS byte-identico e golden
+      de hash-parity atualizado
+    done: true
+    done_at: '2026-07-19T18:32:50+00:00'
+    done_by: story-done-auto
+  - text: "Dado um doc ja gravado com kind: LessonLearned (/sdlc/v1), quando lido,\
+      \ entao resolve como Engram via mapa de alias read-time \u2014 com golden novo\
+      \ provando a resolucao"
+    done: true
+    done_at: '2026-07-19T18:32:50+00:00'
+    done_by: story-done-auto
+  - text: Dado o alias legado sdlc-lesson-learned, quando usado, entao continua resolvendo
+      para Engram
+    done: true
+    done_at: '2026-07-19T18:32:50+00:00'
+    done_by: story-done-auto
+  - text: Dado que KindDefinitionSpec.alias e hoje uma string unica, quando a compat
+      exigir dois nomes, entao a solucao (aliases lista vs mapa externo) e implementada
+      com paridade Py<->TS e goldens em lockstep
+    done: true
+    done_at: '2026-07-19T18:32:50+00:00'
+    done_by: story-done-auto
+  - text: Dado o Kind renomeado, entao display_label = Engrama e a view SDLC 'Licoes
+      Aprendidas' segue funcionando como lente (Engram com affect reflexivo em area
+      de SDLC), nao como nome do tipo
+    done: true
+    done_at: '2026-07-19T18:32:50+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - Zero migracao obrigatoria de dados; suite de memoria existente verde; goldens
-    de parity e de alias verdes; make/CI verde; nenhum bump de pin e nenhum azd up
+  - text: Zero migracao obrigatoria de dados; suite de memoria existente verde; goldens
+      de parity e de alias verdes; make/CI verde; nenhum bump de pin e nenhum azd
+      up
+    done: true
+    done_at: '2026-07-19T18:32:50+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-19T14:25:30+00:00'
-  updated_at: '2026-07-19T16:39:37+00:00'
+  updated_at: '2026-07-19T18:33:16+00:00'
   timeline:
   - at: '2026-07-19T14:25:30+00:00'
     actor: claude-code
@@ -101,6 +120,17 @@ spec:
     source: cli
     from: in-progress
     to: review
+  - at: '2026-07-19T18:33:16+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: 980d7b42cbb6a45193fbd04dbfc91ec863fa93b1
+    summary: 'Rename LessonLearned -> Engram com identidade github.com/ruinosus/dna/v1
+      na extensao helix; PR #162 mesclado. Mutation testing revelou o VERSION_CHURN_KINDS
+      desprotegido; corrigido. Script de migracao FS com deteccao de orfao, escrita
+      atomica e preservacao de newline.'
   produces:
   - kind: Plan
     name: plan-s-engram-rename
@@ -114,3 +144,4 @@ spec:
     name: tr-tg-engram-rename-20260719-163842
     role: test-run
     at: '2026-07-19T16:38:46+00:00'
+  closed_at: '2026-07-19T18:32:50+00:00'
