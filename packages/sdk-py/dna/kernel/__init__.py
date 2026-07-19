@@ -126,7 +126,7 @@ def _run_sync_helper(coro_or_value, *, loop: asyncio.AbstractEventLoop | None = 
 
 # s-version-prune-record-plane-churn — version snapshots to retain for the
 # machine-CHURN Kinds: docs rewritten in place thousands of times by autopilot
-# (engrafia rewrites the SAME LessonLearned 6613×; Remembrance/Canvas/VibeSession
+# (engrafia rewrites the SAME Engram 6613×; Remembrance/Canvas/VibeSession
 # similar), drowning the meaningful authored history. NOT keyed on plane — many
 # record-plane Kinds (Story/Spec/ADR/Feature) are AUTHORED and keep FULL history,
 # while churny ones (Canvas/VibeSession) aren't even record-plane. Curated set,
@@ -134,7 +134,7 @@ def _run_sync_helper(coro_or_value, *, loop: asyncio.AbstractEventLoop | None = 
 # ``version_retention`` to opt in. Authored Kinds keep full history (None).
 VERSION_CHURN_RETENTION = 3
 VERSION_CHURN_KINDS: frozenset[str] = frozenset({
-    "LessonLearned", "Remembrance", "Canvas", "VibeSession", "InsightReport",
+    "Engram", "Remembrance", "Canvas", "VibeSession", "InsightReport",
 })
 
 
@@ -784,7 +784,7 @@ class Kernel:
     # Kinds that affect the kernel's bootstrap state — adding/removing/
     # changing one of these requires a full MI rebuild so the registry
     # picks up the new ports / package metadata / layer policies. Every
-    # other Kind write (LessonLearned, VoiceEpisode, Story, Narrative,
+    # other Kind write (Engram, VoiceEpisode, Story, Narrative,
     # etc) only changes user data and shouldn't drop the base cache —
     # those reads go through ``kernel.get_document`` / ``kernel.query``
     # which have their own granular L2 cache.

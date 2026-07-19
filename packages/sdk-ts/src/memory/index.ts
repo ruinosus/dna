@@ -1,7 +1,7 @@
 /**
  * `dna/memory` — the deterministic memory-scoring core (TS twin).
  *
- * Memory in DNA is the Kinds the SDK already has (LessonLearned, Research,
+ * Memory in DNA is the Kinds the SDK already has (Engram, Research,
  * Evidence) recalled by the same RecordSearchProvider that powers search. This
  * package holds the DETERMINISTIC pure scoring core ported from the upstream
  * cognitive layer — ecphory (Semon's Law of Ecphory), BM25 retrieval,

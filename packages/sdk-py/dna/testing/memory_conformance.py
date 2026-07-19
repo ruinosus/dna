@@ -100,14 +100,14 @@ class MemoryCaseNotApplicable(unittest.SkipTest):
 
 
 def fixture_memories() -> list[dict[str, Any]]:
-    """Canonical fixture: three LessonLearned engrams with disjoint
+    """Canonical fixture: three Engram engrams with disjoint
     vocabularies (clean relevance signal under the fake hash embedder AND any
     real one — relative assertions only), same affect (no affect-boost skew),
     numeric confidence (so reconsolidation's bump is observable), and a fixed
     ``created_at`` (fully simulated time)."""
     def _ll(name: str, area: str, summary: str) -> dict[str, Any]:
         return {
-            "kind": "LessonLearned",
+            "kind": "Engram",
             "name": name,
             "spec": {
                 "area": area,
@@ -170,7 +170,7 @@ async def _case_remember_enriches_and_recall_finds(kernel: Any) -> None:
     """remember→recall roundtrip + deterministic enrichment. Enrichment never
     overwrites caller-provided values (stamp-if-absent contract)."""
     await _seed(kernel)
-    got = await kernel.get_document(MEMORY_FIXTURE_SCOPE, "LessonLearned", "rem-memory")
+    got = await kernel.get_document(MEMORY_FIXTURE_SCOPE, "Engram", "rem-memory")
     spec = got["spec"]
     assert spec.get("memory_type") in ("episodic", "semantic", "procedural"), (
         f"remember must classify memory_type, got {spec.get('memory_type')!r}"
@@ -193,7 +193,7 @@ async def _case_remember_enriches_and_recall_finds(kernel: Any) -> None:
         "encoding_context": {"area": "Custom/area", "time_of_day": "night"},
     }
     await remember(kernel, MEMORY_FIXTURE_SCOPE, name="rem-custom", spec=custom, now=KIT_NOW)
-    got = await kernel.get_document(MEMORY_FIXTURE_SCOPE, "LessonLearned", "rem-custom")
+    got = await kernel.get_document(MEMORY_FIXTURE_SCOPE, "Engram", "rem-custom")
     assert got["spec"]["memory_type"] == "procedural"
     assert got["spec"]["encoding_context"]["area"] == "Custom/area"
 
@@ -286,7 +286,7 @@ async def _case_forget_is_bitemporal_and_idempotent(kernel: Any) -> None:
                        superseded_by="rem-new", now=KIT_NOW)
     assert out["valid_to"] and out["already_forgotten"] is False
 
-    got = await kernel.get_document(MEMORY_FIXTURE_SCOPE, "LessonLearned", "rem-memory")
+    got = await kernel.get_document(MEMORY_FIXTURE_SCOPE, "Engram", "rem-memory")
     assert got is not None, "forget must NEVER hard-delete (auditable, revivable)"
     assert got["spec"]["valid_to"] == out["valid_to"]
     assert got["spec"]["superseded_by_memory"] == "rem-new"
@@ -311,7 +311,7 @@ async def _case_reconsolidation_reinforces_surfaced(kernel: Any) -> None:
     await _seed(kernel)
     await recall(kernel, MEMORY_FIXTURE_SCOPE, _MEMORY_QUERY,
                  k=1, actor="memory-conformance-kit", now=KIT_NOW)
-    got = await kernel.get_document(MEMORY_FIXTURE_SCOPE, "LessonLearned", "rem-memory")
+    got = await kernel.get_document(MEMORY_FIXTURE_SCOPE, "Engram", "rem-memory")
     spec = got["spec"]
     assert spec["surface_count"] == 1
     assert len(spec["cues_history"]) == 1
@@ -341,12 +341,12 @@ async def _case_consolidate_reports_then_archives_idempotently(kernel: Any) -> N
     assert "rem-banana" in stale_names, f"aged memory must be stale, got {stale_names}"
     assert "rem-memory" not in stale_names and "rem-fusion" not in stale_names
     assert report["archived"] == 0, "report-only must not archive"
-    got = await kernel.get_document(MEMORY_FIXTURE_SCOPE, "LessonLearned", "rem-banana")
+    got = await kernel.get_document(MEMORY_FIXTURE_SCOPE, "Engram", "rem-banana")
     assert not got["spec"].get("valid_to"), "report-only must not touch valid_to"
 
     report2 = await consolidate(kernel, MEMORY_FIXTURE_SCOPE, apply=True, now=later)
     assert report2["archived"] == len(report2["stale"]) >= 1
-    got = await kernel.get_document(MEMORY_FIXTURE_SCOPE, "LessonLearned", "rem-banana")
+    got = await kernel.get_document(MEMORY_FIXTURE_SCOPE, "Engram", "rem-banana")
     assert got is not None and got["spec"].get("valid_to"), (
         "apply must soft-forget (valid_to), never delete"
     )
@@ -629,8 +629,8 @@ async def _scoring_fusion_preserves_and_annotates(embed: EmbedFn) -> None:
     reciprocal-rank contributions, and hits carry both ranks + the cosine."""
     engrams = _paraphrase_engrams()
     hits = [
-        {"kind": "LessonLearned", "name": "rem-decoy", "score": 0.048},
-        {"kind": "LessonLearned", "name": "rem-target", "score": 0.033},
+        {"kind": "Engram", "name": "rem-decoy", "score": 0.048},
+        {"kind": "Engram", "name": "rem-target", "score": 0.033},
     ]
     sem = {"rem-target": 0.9}
     fused = fuse_semantic_recall(hits, engrams, _PARAPHRASE_QUERY, sem, now=KIT_NOW)

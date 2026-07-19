@@ -1,7 +1,7 @@
 """Memory verbs — remember / recall / forget / consolidate.
 
 Memory in DNA is NOT a new subsystem: it is the Kinds DNA already has
-(LessonLearned, Research, Evidence) written + recalled through the SAME
+(Engram, Research, Evidence) written + recalled through the SAME
 kernel + RecordSearchProvider that everything else uses. These four verbs
 formalize the lifecycle over those Kinds. The scoring is the deterministic
 pure core (``dna.memory.{ecphory,retrieval,decay,...}``); the LLM scribes /
@@ -50,9 +50,9 @@ from dna.memory.semantic import (
 
 logger = logging.getLogger(__name__)
 
-#: The record Kinds that carry memory. LessonLearned is the rich, affective,
+#: The record Kinds that carry memory. Engram is the rich, affective,
 #: bi-temporal engram; Research + Evidence are recall-able knowledge artifacts.
-MEMORY_KINDS: tuple[str, ...] = ("LessonLearned", "Research", "Evidence")
+MEMORY_KINDS: tuple[str, ...] = ("Engram", "Research", "Evidence")
 
 
 def _now_iso(now: datetime | None = None) -> str:
@@ -101,7 +101,7 @@ async def remember(
     kernel: Any,
     scope: str,
     *,
-    kind: str = "LessonLearned",
+    kind: str = "Engram",
     name: str,
     spec: dict[str, Any],
     tenant: str | None = None,
@@ -110,7 +110,7 @@ async def remember(
 ) -> dict[str, Any]:
     """Persist a memory Kind + deterministic enrichment + index.
 
-    Enrichment (LessonLearned only, idempotent): stamp ``encoding_context`` if
+    Enrichment (Engram only, idempotent): stamp ``encoding_context`` if
     absent, classify ``memory_type`` if absent, seed ``valid_from`` = created_at.
     Then ``kernel.write_document`` (which runs the bi-temporal guard + hooks)
     and — when a search provider is registered — index the doc so ``recall``
@@ -122,7 +122,7 @@ async def remember(
     now_iso = _now_iso(now)
     spec.setdefault("created_at", now_iso)
 
-    if kind == "LessonLearned":
+    if kind == "Engram":
         stamp_encoding_context_if_absent(spec)
         if not spec.get("memory_type"):
             spec["memory_type"] = classify_memory_type(spec)
@@ -272,7 +272,7 @@ async def recall(
         if not currently_valid(spec.get("valid_to"), now=now_dt):
             continue
         base = float(hit.get("score", 0.0) or 0.0)
-        if kind == "LessonLearned" and spec:
+        if kind == "Engram" and spec:
             adjusted, retention = decay_adjusted_score(base, spec, now=now_dt)
             adjusted *= affect_factor(spec.get("affect"))
             hit["score"] = adjusted
@@ -326,7 +326,7 @@ async def _reconsolidate(
     kernel: Any, scope: str, hits: list[dict[str, Any]],
     cue: str, actor: str, tenant: str | None, now: datetime,
 ) -> None:
-    """Append cue + bump confidence on surfaced LessonLearned memories.
+    """Append cue + bump confidence on surfaced Engram memories.
     Read-modify-write with a deep copy; fail-soft per doc. Nader (2000) light
     reconsolidation: recall reawakens the engram and reinforces it."""
     now_iso = _now_iso(now)
@@ -335,11 +335,11 @@ async def _reconsolidate(
         if tenant else kernel
     )
     for hit in hits:
-        if hit.get("kind") != "LessonLearned":
+        if hit.get("kind") != "Engram":
             continue
         name = hit.get("name")
         try:
-            spec = await _load_spec(kernel, scope, "LessonLearned", name, tenant)
+            spec = await _load_spec(kernel, scope, "Engram", name, tenant)
             if not spec:
                 continue
             cues = list(spec.get("cues_history") or [])
@@ -350,12 +350,12 @@ async def _reconsolidate(
             old = spec.get("confidence_score")
             if isinstance(old, (int, float)):
                 spec["confidence_score"] = round(min(10.0, float(old) + 0.05), 3)
-            raw = {"kind": "LessonLearned", "metadata": {"name": name}, "spec": spec}
-            api_version = _resolve_api_version(kernel, "LessonLearned")
+            raw = {"kind": "Engram", "metadata": {"name": name}, "spec": spec}
+            api_version = _resolve_api_version(kernel, "Engram")
             if api_version:
                 raw["apiVersion"] = api_version
             await write_kernel.write_document(
-                scope, "LessonLearned", name, raw, invalidate_mode="doc",
+                scope, "Engram", name, raw, invalidate_mode="doc",
             )
         except Exception as exc:  # noqa: BLE001 — recall must not fail on a bump hiccup
             logger.warning("recall reconsolidation failed for %s: %s", name, exc)
@@ -369,7 +369,7 @@ async def forget(
     scope: str,
     name: str,
     *,
-    kind: str = "LessonLearned",
+    kind: str = "Engram",
     tenant: str | None = None,
     superseded_by: str | None = None,
     now: datetime | None = None,
@@ -411,7 +411,7 @@ async def consolidate(
     kernel: Any,
     scope: str,
     *,
-    kind: str = "LessonLearned",
+    kind: str = "Engram",
     tenant: str | None = None,
     stale_retention_floor: float = 0.15,
     apply: bool = False,

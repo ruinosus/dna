@@ -1,9 +1,12 @@
 """SDLC-owned write-path guards (s-write-path-despecialize).
 
-The bi-temporal LessonLearned guard used to live inline in
+The bi-temporal Engram guard used to live inline in
 ``Kernel._write_document_inner`` as a ``kind == "LessonLearned"``
 special-case. It is now a ``pre_save`` veto hook registered by
-``SdlcExtension.register`` (the extension that owns LessonLearned).
+``SdlcExtension.register``. s-engram-rename (2026-07-19): the Kind itself
+moved to the ``helix`` extension (``/dna/v1``), but this hook stays wired
+here — a ``pre_save`` veto is a plain string match on ``ctx.kind``, it does
+not require the Kind to be registered by the SAME extension that fires it.
 
 This guard never vetoes — it MUTATES ``ctx.raw`` in place (preserving
 ``valid_to``/``superseded_by_memory``) so the write proceeds with the
@@ -20,17 +23,17 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-_KIND = "LessonLearned"
+_KIND = "Engram"
 
 # After the Helix guards (10/20/30) — independent rules, stable order.
 PRIORITY_BITEMPORAL = 40
 
 
-async def bitemporal_lessonlearned_guard(ctx: PreSaveContext) -> None:
+async def bitemporal_engram_guard(ctx: PreSaveContext) -> None:
     """Never resurrect a superseded memory (i-046).
 
-    Maintenance write paths (decay/cue/allocation hooks) re-write a
-    LessonLearned by name WITHOUT carrying ``valid_to``; without this guard
+    Maintenance write paths (decay/cue/allocation hooks) re-write an
+    Engram by name WITHOUT carrying ``valid_to``; without this guard
     a superseded episodic silently returns to recall. Single chokepoint for
     every write path (hooks via kinds-api PUT, create_remembrance, CLI).
     Fail-open: never block a write on the guard read.
@@ -60,6 +63,6 @@ async def bitemporal_lessonlearned_guard(ctx: PreSaveContext) -> None:
 def register_write_guards(kernel: Any) -> None:
     """Wire the SDLC write guards as ``pre_save`` veto hooks (idempotent)."""
     kernel.hooks.on_veto(
-        "pre_save", bitemporal_lessonlearned_guard,
-        priority=PRIORITY_BITEMPORAL, key="sdlc.bitemporal-lessonlearned",
+        "pre_save", bitemporal_engram_guard,
+        priority=PRIORITY_BITEMPORAL, key="sdlc.bitemporal-engram",
     )

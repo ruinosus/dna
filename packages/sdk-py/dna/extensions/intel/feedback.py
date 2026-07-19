@@ -2,7 +2,7 @@
 
 s-intel-feedback-loop. The flywheel: the reader marks each delivered insight as
 useful (``actioned``) or noise (``dismissed``); that disposition is recorded as
-an engram in the memory co-pillar (a ``LessonLearned``) and, on the NEXT pass,
+an engram in the memory co-pillar (a ``Engram``) and, on the NEXT pass,
 tunes the ranker so semantically-similar candidates are suppressed (``dismissed``
 raises the effective threshold for that pattern/source) or reinforced
 (``actioned``). Relevance improves on its own; the KPI is the noise rate falling
@@ -20,7 +20,7 @@ from __future__ import annotations
 from typing import Any
 
 # The tag every intel-feedback engram carries, so the ranker can find just the
-# feedback memories (not every LessonLearned in the scope). Inspectable const.
+# feedback memories (not every Engram in the scope). Inspectable const.
 FEEDBACK_TAG = "intel-feedback"
 DISPOSITION_DISMISSED = "dismissed"
 DISPOSITION_ACTIONED = "actioned"
@@ -42,7 +42,7 @@ ACTION_BONUS = 0.10
 
 
 def feedback_area(source_ref: str | None) -> str:
-    """The LessonLearned ``area`` under which a source's feedback engrams live —
+    """The Engram ``area`` under which a source's feedback engrams live —
     ``Intel/<source>`` — so the ranker recalls only THIS source's feedback."""
     return f"Intel/{source_ref or '_'}"
 

@@ -1320,16 +1320,19 @@ const JOURNEY_METHODOLOGIES = [
 // tests/goldens/lote2/StatusReport.golden.json).
 
 // ---------------------------------------------------------------------------
-// Cognitive Memory Triad (v1.9.0) — LessonLearned + SynthesisRun + ArchiveProposal
+// Cognitive Memory Triad (v1.9.0) — Engram + SynthesisRun + ArchiveProposal
 //
 // Spec: docs/superpowers/specs/2026-05-11-cognitive-memory-triad.md
 // Surface labels (pt-BR) in Studio: "Lições Aprendidas" / "Sínteses" / "Arquivamento".
 // Kind names stay English per repo convention (same pattern as Insight).
 // ---------------------------------------------------------------------------
 
-// REMEMBRANCE_AFFECTS / REMEMBRANCE_SURFACE_TRIGGERS now live ONLY in
-// kinds/lesson-learned.kind.yaml (F3 lote-1) — the descriptor is the
-// single source for the LessonLearned enums.
+// s-engram-rename (2026-07-19): Engram (formerly LessonLearned) MOVED OUT of
+// this extension — it is now registered by HelixExtension from
+// helix/kinds/engram.kind.yaml (identity github.com/ruinosus/dna/v1, alias
+// helix-engram). A clean rename (zero users), not a compat alias — stored
+// docs are rewritten in place. REMEMBRANCE_AFFECTS / REMEMBRANCE_SURFACE_TRIGGERS
+// now live ONLY in that descriptor — the single source for the Engram enums.
 // F3 lote-2: the per-Kind enum consts that used to live here
 // (DREAM_*/FORGETTING_*/ADR_STATUSES/RISK_*/SAVED_VIEW_*/POSTMORTEM_SEVERITY/
 // INSIGHT_CONFIDENCE_LEVELS) died with the classes — the descriptors under
@@ -1337,8 +1340,9 @@ const JOURNEY_METHODOLOGIES = [
 // them from the synthesized port's schema.
 
 
-// LessonLearned — F3 lote-1: twin classes deleted — synthesized from
-// kinds/lesson-learned.kind.yaml. The old TS class was strict + missing
+// Engram — F3 lote-1: twin classes deleted — synthesized from
+// helix/kinds/engram.kind.yaml (moved from sdlc/kinds/lesson-learned.kind.yaml,
+// s-engram-rename). The old TS class was strict + missing
 // affect_reason/affect_evidence_refs (real drift); the descriptor unifies
 // on the canonical (Py) surface.
 

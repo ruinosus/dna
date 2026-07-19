@@ -337,7 +337,7 @@ class WritePipeline:
           + ``Kernel.invalidate`` (holder.reload + observers). For schema /
           Genome / KindDefinition writes that affect sibling docs.
         - ``"doc"``: only the L2 granular cache for (scope, kind, name); skips
-          the mi rebuild + holder.reload. Sidecar writes (LessonLearned, …).
+          the mi rebuild + holder.reload. Sidecar writes (Engram, …).
         - ``"none"``: skip ALL invalidation. Test-only / out-of-band writes.
 
         A catalog-identity Kind (``KindPort.is_catalog_identity``) additionally
@@ -408,7 +408,7 @@ class WritePipeline:
             )
         # --- pre_save veto hooks (s-write-path-despecialize) ---
         # Kind-specific write rules (platform-agent fork guard, prompt-budget
-        # enforcement, Kind-Writer contract, bitemporal LessonLearned guard,
+        # enforcement, Kind-Writer contract, bitemporal Engram guard,
         # ...) live in the extension that OWNS the Kind and register here via
         # ``kernel.on_veto("pre_save", fn, priority=N)``. A raise vetoes the
         # write; listeners may mutate ``ctx.raw`` in place. Fires regardless
@@ -432,7 +432,7 @@ class WritePipeline:
         # mode=none — write only, no cache invalidation. Caller owns hygiene.
         # mode=doc  — only the granular per-doc L2 cache is dropped. The
         #             instance cache + holder.reload chain is SKIPPED. Use
-        #             for sidecar writes (LessonLearned, WorkflowEvent, ...)
+        #             for sidecar writes (Engram, WorkflowEvent, ...)
         #             that don't alter the schema graph and thus don't
         #             require a full mi rebuild.
         # mode=scope (default) — full Phase-15.1 invalidate: drop

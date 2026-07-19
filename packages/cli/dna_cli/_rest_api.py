@@ -19,7 +19,7 @@ imports and calls the SAME ``*_impl`` use-cases from the CORE application layer
 booted by the SAME ``boot_live`` / ``LiveDna`` (adr-faces-reorg move #1: the
 shared ``*_impl`` moved OUT of the CLI face INTO the core). The memory LIST +
 DELETE endpoints (which have no MCP twin) query the memory Kind
-(``LessonLearned``) directly through the kernel, tenant-aware — mirroring exactly
+(``Engram``) directly through the kernel, tenant-aware — mirroring exactly
 how ``recall`` and the kernel query/delete paths already work. (Those two
 REST-only memory cores are a tracked follow-up to also lift into the core.)
 
@@ -54,13 +54,13 @@ from typing import Any
 # kernel, tenant-aware, mirroring how recall/the local docs facade already read
 # and delete.
 
-_MEMORY_KIND = "LessonLearned"
+_MEMORY_KIND = "Engram"
 
 
 async def list_memories_impl(
     live: Any, scope: str | None = None, tenant: str | None = None
 ) -> dict[str, Any]:
-    """List the tenant's memory (``LessonLearned``) — base + the tenant's OWN
+    """List the tenant's memory (``Engram``) — base + the tenant's OWN
     overlay, per the #83 isolation. Tenant-aware ``kernel.query`` returns exactly
     that set (never another tenant's overlay). Projects each to the portal card
     surface (name/summary/area/tags/created_at)."""
@@ -443,7 +443,7 @@ def build_app(
         scope: str | None = Query(default=None),
         tenant: str | None = Query(default=None),
     ) -> dict[str, Any]:
-        """Persist ONE memory (a ``LessonLearned``) into the tenant's OWN overlay
+        """Persist ONE memory (an ``Engram``) into the tenant's OWN overlay
         — the portal's ``remember`` / add affordance, tenant-scoped from the
         session (never base, never another tenant). Reuses the SAME CORE
         ``remember_impl`` the MCP ``remember`` tool delegates to (one core, three

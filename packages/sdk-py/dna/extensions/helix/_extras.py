@@ -496,7 +496,7 @@ class UserProfileKind(KindBase):
                             "type": "boolean",
                             "default": True,
                             "description": (
-                                "False = agents DO NOT write Remembrances/LessonLearned "
+                                "False = agents DO NOT write Remembrances/Engram "
                                 "stamped with this user_id. Existing memories stay."
                             ),
                         },

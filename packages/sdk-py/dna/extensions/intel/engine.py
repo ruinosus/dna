@@ -320,7 +320,7 @@ async def _gather_scope_documents(
 def _kind_registered(kernel: Any, kind: str) -> bool:
     """True when ``kind`` is registered in the kernel — so a feedback write /
     recall against a Kind the host didn't load degrades to a no-op instead of
-    raising (an IntelExtension-only kernel has no LessonLearned)."""
+    raising (an IntelExtension-only kernel has no Engram)."""
     kinds = getattr(kernel, "_kinds", None)
     if isinstance(kinds, dict):
         for kp in kinds.values():
@@ -332,15 +332,15 @@ def _kind_registered(kernel: Any, kind: str) -> bool:
 async def _load_feedback_memories(
     kernel: Any, scope: str, source_name: str, tenant: str | None,
 ) -> list[dict[str, Any]]:
-    """The source's feedback engrams (LessonLearned tagged ``intel-feedback``),
+    """The source's feedback engrams (Engram tagged ``intel-feedback``),
     projected to ``{disposition, text}``. Empty when the memory Kind is not
     registered — the co-pillar is optional, feedback then degrades to a no-op."""
-    if not _kind_registered(kernel, "LessonLearned"):
+    if not _kind_registered(kernel, "Engram"):
         return []
     area = feedback_core.feedback_area(source_name)
     out: list[dict[str, Any]] = []
     try:
-        async for row in kernel.query(scope, "LessonLearned", tenant=tenant):
+        async for row in kernel.query(scope, "Engram", tenant=tenant):
             if not isinstance(row, dict):
                 continue
             spec = _spec_of(row)
@@ -475,14 +475,14 @@ async def _record_feedback(
 ) -> None:
     """Record a disposition as a feedback engram in the memory co-pillar.
 
-    ``dismissed`` → a ``regret`` LessonLearned (negative feedback that suppresses
+    ``dismissed`` → a ``regret`` Engram (negative feedback that suppresses
     similar future candidates); ``actioned`` → a ``triumph`` one (reinforcement).
     The engram body carries the insight's own title+fact so the ranker can
     compare candidates against it. Fail-soft + skipped when the memory Kind is
     not registered — never blocks the state transition."""
     if disposition not in feedback_core.FEEDBACK_DISPOSITIONS:
         return
-    if not _kind_registered(kernel, "LessonLearned"):
+    if not _kind_registered(kernel, "Engram"):
         return
     try:
         from dna.memory import remember
@@ -508,7 +508,7 @@ async def _record_feedback(
             "owner": "intel-feedback",
         }
         await remember(
-            kernel, scope, kind="LessonLearned", name=mem_name, spec=mem_spec,
+            kernel, scope, kind="Engram", name=mem_name, spec=mem_spec,
             tenant=tenant,
         )
     except Exception as exc:  # noqa: BLE001 — feedback is best-effort, never blocks

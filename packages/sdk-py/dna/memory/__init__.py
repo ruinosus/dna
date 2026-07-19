@@ -1,10 +1,10 @@
 """``dna.memory`` — memory verbs over existing Kinds + the deterministic
 scoring core.
 
-Memory in DNA is the Kinds the SDK already has (LessonLearned, Research,
+Memory in DNA is the Kinds the SDK already has (Engram, Research,
 Evidence) recalled by the same ``RecordSearchProvider`` that powers search,
 with four declarative verbs and the affective/bi-temporal fields already in the
-LessonLearned schema. This package holds:
+Engram schema. This package holds:
 
   * the four verbs (``remember`` / ``recall`` / ``forget`` / ``consolidate``) —
     async, kernel-bound (``dna.memory.verbs``);

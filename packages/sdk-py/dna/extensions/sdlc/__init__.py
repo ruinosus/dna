@@ -1747,29 +1747,32 @@ JOURNEY_METHODOLOGIES = (
 
 
 # ---------------------------------------------------------------------------
-# Cognitive Memory Triad (v1.9.0) — LessonLearned + SynthesisRun + ArchiveProposal
+# Cognitive Memory Triad (v1.9.0) — Engram + SynthesisRun + ArchiveProposal
 #
 # Spec: docs/superpowers/specs/2026-05-11-cognitive-memory-triad.md
 # Plan: docs/superpowers/plans/2026-05-11-cognitive-memory-triad-plan.md
 #
-# Adds the affective/associative cognitive layer. LessonLearned =
-# unbidden recall with affect (surface label in Studio: "Lições Aprendidas").
-# SynthesisRun = forward scenario with verifiable predictions. ArchiveProposal =
+# Adds the affective/associative cognitive layer. Engram (renamed from
+# LessonLearned, s-engram-rename 2026-07-19 — see below) = unbidden recall
+# with affect (surface label in Studio: "Lições Aprendidas"). SynthesisRun =
+# forward scenario with verifiable predictions. ArchiveProposal =
 # pruning proposal (proposal-only, never auto-executes; user/CLI approves).
 # ---------------------------------------------------------------------------
 
-# REMEMBRANCE_AFFECTS / REMEMBRANCE_SURFACE_TRIGGERS now live ONLY in
-# kinds/lesson-learned.kind.yaml (F3 lote-1) — the descriptor is the
-# single source for the LessonLearned enums.
-
-# LessonLearned — F3 lote-1 (spec 2026-06-10-kinds-descriptor-f3): the twin LessonLearnedKind classes (Py+TS) were
-# DELETED — synthesized from kinds/lesson-learned.kind.yaml (parity-critical
-# package data, byte-identical Py↔TS) via the load_descriptors loop in
-# register(). Equivalence with the extinct class frozen in
+# s-engram-rename (2026-07-19): Engram (formerly LessonLearned) MOVED OUT of
+# this extension — it is now registered by HelixExtension from
+# ``helix/kinds/engram.kind.yaml`` (identity github.com/ruinosus/dna/v1,
+# alias helix-engram) — memory is a platform primitive, not sdlc-owned. A
+# clean rename (zero users at the time), NOT a compat alias: stored docs are
+# rewritten in place by ``scripts/migrate_lesson_learned_to_engram.py``.
+# REMEMBRANCE_AFFECTS / REMEMBRANCE_SURFACE_TRIGGERS now live ONLY in that
+# descriptor — the single source for the Engram enums. Equivalence with the
+# extinct LessonLearnedKind class stays frozen in
 # tests/test_lote1_descriptor_equivalence.py (golden:
-# tests/goldens/lote1/LessonLearned.golden.json).
-# The class's dead to_card (zero consumers) was not carried over;
-# `embed:` replaces the legacy EMBEDDABLE_KINDS entry (F3 D4).
+# tests/goldens/lote1/Engram.golden.json) — the fixture kernel loads
+# HelixExtension for it now. The class's dead to_card (zero consumers) was
+# not carried over; `embed:` replaces the legacy EMBEDDABLE_KINDS entry
+# (F3 D4).
 
 
 # ─── PatternInsight (2026-05-13, cognitive-engines foundation) ──
@@ -2220,8 +2223,10 @@ class HtmlArtifactWriter(WriterPort):
 
 class SdlcExtension:
     """SDLC primitives — Roadmap, Epic, Feature, Story, Issue, Spec, Plan,
-    AgentSession, Narrative, WorkflowEvent, Insight, StatusReport, plus the
-    Cognitive Memory Triad: LessonLearned, SynthesisRun, ArchiveProposal (v1.9.0).
+    AgentSession, Narrative, WorkflowEvent, Insight, StatusReport, plus two of
+    the Cognitive Memory Triad: SynthesisRun, ArchiveProposal (v1.9.0). The
+    third member, Engram (formerly LessonLearned), moved to HelixExtension
+    (s-engram-rename, 2026-07-19) — memory is a platform primitive.
 
     v1.10.0 (2026-05-12): Reference Kind (f-reference-citation-kind +
     f-semon-correct-memory).
@@ -2268,9 +2273,12 @@ class SdlcExtension:
         for raw in load_descriptors("dna.extensions.sdlc"):
             kernel.kind_from_descriptor(raw)
 
-        # s-write-path-despecialize — the bi-temporal LessonLearned guard
+        # s-write-path-despecialize — the bi-temporal Engram guard
         # (i-046) is a pre_save veto hook owned by this extension, not a
-        # kernel special-case.
+        # kernel special-case. Stays wired here even though Engram itself
+        # now registers via HelixExtension (s-engram-rename) — the hook
+        # matches ctx.kind by string, independent of which extension
+        # registered the Kind.
         from dna.extensions.sdlc.write_guards import (
             register_write_guards,
         )
