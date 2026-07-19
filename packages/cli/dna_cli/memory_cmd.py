@@ -26,9 +26,11 @@ available, so offline behavior without the extra is unchanged.
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import re
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
+from pathlib import Path
 from typing import Any
 
 import click
@@ -37,6 +39,22 @@ from dna_cli._ctx import dna_session, print_json, print_table
 from dna_cli.recall_cmd import _register_provider
 
 _MEMORY_KINDS = ("Engram", "Research", "Evidence")
+
+#: The mif-memory passthrough Kind's own schema property vocabulary
+#: (packages/sdk-py/dna/extensions/mif/kinds/memory.kind.yaml) — the
+#: passthrough Kind is STRICT (additionalProperties: false), so a foreign
+#: MIF file's frontmatter is filtered to this set before being stored
+#: verbatim; anything outside it (a stray custom top-level key a producer
+#: added) is dropped rather than tripping schema validation on write. A
+#: doc built by THIS module's own export path never carries anything
+#: outside this set, so the DNA->MIF->DNA (Circle A) path is never
+#: affected by the filter.
+_KNOWN_MIF_FIELDS = frozenset({
+    "id", "type", "content", "created", "title", "modified", "ontology",
+    "namespace", "tags", "aliases", "entities", "relationships", "temporal",
+    "provenance", "embedding", "citations", "summary", "compressed_at",
+    "extensions",
+})
 
 
 def _resolve_memory_tenant(personal: bool, tenant: str | None) -> str | None:
@@ -87,6 +105,42 @@ def _slug(text: str) -> str:
     naming convention)."""
     h = hashlib.sha256(text.strip().lower().encode("utf-8")).hexdigest()[:10]
     return f"rem-{h}"
+
+
+def _engram_doc_name(mif_id: str) -> str:
+    """Deterministic Engram doc name for an IMPORTED MIF memory — keyed by the
+    MIF id, exactly like ``_mif_doc_name`` keys the passthrough copy.
+
+    NOT ``_slug(summary)``: two distinct MIF docs can derive the same summary
+    (both untitled, or simply sharing a title), and ``write_document`` is a
+    full replace at a name — so a summary-keyed projection silently overwrote
+    an unrelated, previously-imported memory. The id is the identity
+    (``interchange.py`` §6); the projection must be named off it."""
+    h = hashlib.sha256((mif_id or "unknown").strip().encode("utf-8")).hexdigest()[:10]
+    return f"rem-{h}"
+
+
+def _coerce_timestamps(value: Any) -> Any:
+    """Recursively turn ``date``/``datetime`` back into ISO-8601 STRINGS.
+
+    MIF's own examples write dates unquoted, and YAML's SafeLoader implicitly
+    resolves those to ``datetime`` objects. MIF declares every temporal field
+    as ``type: string``, so the parsed objects fail schema validation on the
+    passthrough leg (the doc is silently dropped into ``failed``), sail
+    unchecked into the native leg, and later crash ``--bundle`` export on
+    ``json.dumps``. Foreign files written to spec are exactly the case this
+    has to survive."""
+    if isinstance(value, datetime):
+        iso = value.isoformat()
+        # Keep UTC as the `Z` form MIF's own examples use, not `+00:00`.
+        return iso[:-6] + "Z" if iso.endswith("+00:00") else iso
+    if isinstance(value, date):
+        return value.isoformat()
+    if isinstance(value, dict):
+        return {k: _coerce_timestamps(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_coerce_timestamps(v) for v in value]
+    return value
 
 
 def _index_memory_kinds(s: Any, scope: str, kinds, tenant) -> None:
@@ -346,6 +400,373 @@ def consolidate_cmd(
                    f"({stl['days_since']:.0f}d since recall)")
     if report["stale"] and not do_apply:
         click.secho("  (report-only — pass --apply to soft-forget)", fg="bright_black")
+
+
+# ─────────────────────────── export / import (s-memory-interchange-verbs) ──
+
+
+def _api_version_for(kernel: Any, kind: str) -> str | None:
+    """Best-effort api_version for a Kind from the kernel registry (mirrors
+    the equivalent private helper in ``dna.memory.verbs``; kept as a small
+    local copy rather than importing a leading-underscore cross-module name)."""
+    for kp in (getattr(kernel, "_kinds", {}) or {}).values():
+        if getattr(kp, "kind", None) == kind:
+            return getattr(kp, "api_version", None)
+    return None
+
+
+def _write_kernel_for(s: Any, tenant: str | None) -> Any:
+    from dna.memory.personal import is_personal_tenant
+
+    return s.kernel.with_tenant(tenant, allow_personal=is_personal_tenant(tenant)) if tenant else s.kernel
+
+
+def _mif_doc_name(mif_id: str) -> str:
+    """Deterministic DNA doc name for a MIF id — same ``<prefix>-<hash>``
+    convention ``_slug`` uses for Engram names, so a re-import of the SAME
+    id always targets the SAME storage slot (the id, not a random suffix, is
+    the identity — see ``interchange.py``'s §6 module docstring)."""
+    h = hashlib.sha256((mif_id or "unknown").strip().encode("utf-8")).hexdigest()[:12]
+    return f"mif-{h}"
+
+
+def _safe_filename(mif_id: str) -> str:
+    safe = re.sub(r"[^a-zA-Z0-9_.-]+", "-", mif_id or "memory").strip("-")
+    return (safe or "memory")[:80]
+
+
+def _to_json_ld(doc: dict[str, Any]) -> dict[str, Any]:
+    """Render a Markdown-profile MIF doc (``id`` a plain string) as its
+    JSON-LD projection (``@id`` a ``urn:mif:`` URN) — the two representations
+    the real MIF spec keeps separate (interchange.py module docstring point
+    1). Used only by ``--bundle``."""
+    entry = dict(doc)
+    doc_id = entry.pop("id", None)
+    if doc_id is None:
+        return entry
+    return {"@id": f"urn:mif:{doc_id}", **entry}
+
+
+def _from_json_ld(entry: dict[str, Any]) -> dict[str, Any]:
+    """Inverse of :func:`_to_json_ld` — used when importing a ``--bundle``
+    JSON-LD file (or any JSON-LD-shaped doc): ``@id`` -> ``id``, stripping
+    the ``urn:mif:`` prefix if present (the plain form is what the Markdown
+    profile — and this module's own ``id`` field — carries)."""
+    entry = dict(entry)
+    at_id = entry.pop("@id", None)
+    entry.pop("@type", None)
+    if at_id is not None and "id" not in entry:
+        entry["id"] = at_id[len("urn:mif:"):] if str(at_id).startswith("urn:mif:") else at_id
+    return entry
+
+
+def _render_mif_markdown(doc: dict[str, Any]) -> str:
+    """Serialize a MIF doc to its Markdown frontmatter profile — the real
+    MIF file shape (frontmatter + body), reusing the SDK's own safe YAML
+    dumper (``dna.kernel.generic_rw.safe_yaml_dump``) for the same
+    round-trip-robust scalar styling every DNA bundle marker gets."""
+    from dna.kernel.generic_rw import safe_yaml_dump
+
+    fm = {k: v for k, v in doc.items() if k != "content"}
+    content = doc.get("content") or ""
+    return f"---\n{safe_yaml_dump(fm)}---\n\n{content}\n"
+
+
+def _validate_mif_doc(doc: dict[str, Any], source: str) -> None:
+    missing = [f for f in ("id", "type", "content", "created") if not doc.get(f)]
+    if missing:
+        raise click.ClickException(
+            f"{source}: MIF doc missing required field(s) {missing} "
+            "(MIF Level 1 core — SPECIFICATION.md §13.1)"
+        )
+
+
+def _read_mif_md(md_path: Path) -> dict[str, Any]:
+    from dna.kernel.generic_rw import _parse_frontmatter
+
+    text = md_path.read_text(encoding="utf-8")
+    fm, body = _parse_frontmatter(text, source=str(md_path))
+    # YAML implicitly resolves UNQUOTED ISO dates to datetime objects; MIF
+    # declares every temporal field as a string, so coerce before validating.
+    doc = _coerce_timestamps(dict(fm))
+    doc["content"] = body.strip()
+    _validate_mif_doc(doc, str(md_path))
+    return doc
+
+
+def _read_mif_json(json_path: Path) -> list[dict[str, Any]]:
+    raw = json.loads(json_path.read_text(encoding="utf-8"))
+    if isinstance(raw, dict) and isinstance(raw.get("@graph"), list):
+        entries = raw["@graph"]
+    elif isinstance(raw, list):
+        entries = raw
+    elif isinstance(raw, dict):
+        entries = [raw]
+    else:
+        raise click.ClickException(f"{json_path}: unrecognized MIF JSON shape")
+    docs = [_from_json_ld(e) if "@id" in e else dict(e) for e in entries]
+    for i, doc in enumerate(docs):
+        _validate_mif_doc(doc, f"{json_path}[{i}]")
+    return docs
+
+
+def _read_mif_docs(path: Path) -> list[dict[str, Any]]:
+    """Read one or more MIF Memory Units from PATH — a single ``.md``/
+    ``.json`` file, or a directory of them (any filename; real MIF v1.0 file
+    naming is plain ``{id}.md``, not ``.memory.md`` — see the passthrough
+    Kind descriptor's storage note)."""
+    if path.is_dir():
+        docs: list[dict[str, Any]] = []
+        for md in sorted(path.glob("*.md")):
+            docs.append(_read_mif_md(md))
+        for jf in sorted(path.glob("*.json")):
+            docs.extend(_read_mif_json(jf))
+        if not docs:
+            raise click.ClickException(f"no MIF .md/.json files found under {path}")
+        return docs
+    if path.suffix == ".json":
+        return _read_mif_json(path)
+    return [_read_mif_md(path)]
+
+
+@memory.command(name="export")
+@click.option("--format", "fmt", default="mif", type=click.Choice(["mif"]), show_default=True,
+              help="Interchange format. Only 'mif' is implemented; --format omp/pam are a "
+                   "documented future switch (design §2/§9).")
+@click.option("--out", "out_path", type=click.Path(path_type=Path), default=None,
+              help="Output path — a directory (one <id>.md per memory) or, with --bundle, a "
+                   "single JSON-LD file. Default: ./mif-export/ (or ./mif-export.json with --bundle).")
+@click.option("--bundle", is_flag=True, help="Emit a single JSON-LD file instead of N .md files.")
+@click.option("--kind", default="Engram", type=click.Choice(_MEMORY_KINDS), show_default=True,
+              help="Source memory kind. Only Engram has a MIF field mapping today.")
+@click.option("--personal", is_flag=True,
+              help="Export YOUR OWN private partition (DNA_PERSONAL_ID) — never workspace memory "
+                   "(INV-PERSONAL).")
+@click.option("--include-forgotten", is_flag=True,
+              help="Include bi-temporally invalidated memories (valid_to<now), temporal preserved "
+                   "— otherwise supersession looks like a silent delete on export.")
+@click.option("--scope", default=None)
+@click.option("--tenant", default=None)
+@click.option("--json", "as_json", is_flag=True)
+def export_cmd(
+    fmt: str, out_path: Path | None, bundle: bool, kind: str, personal: bool,
+    include_forgotten: bool, scope: str | None, tenant: str | None, as_json: bool,
+) -> None:
+    """Project Engrams to a portable MIF bundle. Deterministic, no LLM, no network."""
+    from dna.memory.decay import currently_valid
+    from dna.memory.interchange import resolve_or_mint_mif_id, to_mif
+
+    if kind != "Engram":
+        raise click.ClickException(
+            "dna memory export currently only projects Engram to MIF — Research/Evidence "
+            "have no field mapping defined yet."
+        )
+    tenant = _resolve_memory_tenant(personal, tenant)
+    now = datetime.now(timezone.utc)
+
+    with dna_session(scope) as s:
+        rows: list[tuple[str, dict[str, Any]]] = []
+
+        async def _collect() -> None:
+            async for raw in s.kernel.query(s.scope, "Engram", tenant=tenant):
+                spec = raw.get("spec") or {}
+                name = (raw.get("metadata") or {}).get("name") or raw.get("name")
+                if not name:
+                    continue
+                if not include_forgotten and not currently_valid(spec.get("valid_to"), now=now):
+                    continue
+                rows.append((str(name), spec))
+
+        s.run(_collect())
+
+        # §6: mint-once. Resolve every doc's id up front so a batch export
+        # can resolve CROSS-references (superseded_by/homophonic targets
+        # pointing at another doc IN THIS BATCH) to real MIF ids via
+        # id_lookup, and so newly-minted ids get pinned back exactly once.
+        id_lookup: dict[str, str] = {}
+        minted: dict[str, dict[str, Any]] = {}
+        for name, spec in rows:
+            mif_id, was_minted = resolve_or_mint_mif_id(spec)
+            id_lookup[name] = mif_id
+            if was_minted:
+                minted[name] = spec
+
+        if minted:
+            write_kernel = _write_kernel_for(s, tenant)
+            api_version = _api_version_for(s.kernel, "Engram")
+
+            async def _pin() -> None:
+                for name, spec in minted.items():
+                    ec = dict(spec.get("encoding_context") or {})
+                    ec["mif_id"] = id_lookup[name]
+                    spec["encoding_context"] = ec
+                    raw: dict[str, Any] = {"kind": "Engram", "metadata": {"name": name}, "spec": spec}
+                    if api_version:
+                        raw["apiVersion"] = api_version
+                    await write_kernel.write_document(s.scope, "Engram", name, raw, invalidate_mode="doc")
+
+            s.run(_pin())
+
+        mif_docs = [to_mif(spec, mif_id=id_lookup[name], id_lookup=id_lookup) for name, spec in rows]
+
+    out_target = out_path or Path("mif-export.json" if bundle else "mif-export")
+    written: list[str] = []
+    if bundle:
+        out_target.parent.mkdir(parents=True, exist_ok=True)
+        bundle_doc = {
+            "@context": "https://mif-spec.dev/context/v1.0.0",
+            "@graph": [_to_json_ld(d) for d in mif_docs],
+        }
+        out_target.write_text(json.dumps(bundle_doc, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        written = [str(out_target)]
+    else:
+        out_target.mkdir(parents=True, exist_ok=True)
+        for d in mif_docs:
+            file_path = out_target / f"{_safe_filename(str(d['id']))}.md"
+            file_path.write_text(_render_mif_markdown(d), encoding="utf-8")
+            written.append(str(file_path))
+
+    result = {
+        "format": "mif", "kind": kind, "count": len(mif_docs), "bundle": bundle,
+        "out": str(out_target), "files": written, "minted_ids": len(minted),
+    }
+    if as_json:
+        print_json(result)
+        return
+    click.secho(f"\n📤 exported {len(mif_docs)} {kind} -> {out_target}", fg="green", bold=True)
+    if minted:
+        click.secho(
+            f"   minted {len(minted)} new MIF id(s) (pinned back onto the Engram for a stable re-export)",
+            fg="bright_black",
+        )
+
+
+@memory.command(name="import")
+@click.argument("path", type=click.Path(exists=True, path_type=Path))
+@click.option("--as", "as_mode", default="both", type=click.Choice(["passthrough", "native", "both"]),
+              show_default=True,
+              help="passthrough = store the MIF doc verbatim only; native = project to Engram only; "
+                   "both = store verbatim AND project (default — auditable + recallable).")
+@click.option("--dedupe", default="id", type=click.Choice(["id", "content-hash", "off"]), show_default=True,
+              help="id = skip a doc whose MIF id was already imported (idempotent re-import, the "
+                   "§6 contract); content-hash = skip by exact content match; off = no pre-check.")
+@click.option("--personal", is_flag=True,
+              help="Import into YOUR OWN private partition (DNA_PERSONAL_ID) — never a shared "
+                   "partition (INV-PERSONAL).")
+@click.option("--scope", default=None)
+@click.option("--tenant", default=None)
+@click.option("--json", "as_json", is_flag=True)
+def import_cmd(
+    path: Path, as_mode: str, dedupe: str, personal: bool,
+    scope: str | None, tenant: str | None, as_json: bool,
+) -> None:
+    """Ingest a MIF bundle (PATH: a .md/.json file or a directory of them).
+
+    ``--as both`` (default) stores the original MIF doc byte-for-byte as
+    ``mif-spec.dev/v1 · Memory`` (passthrough — auditable, stable re-export)
+    AND projects an ``Engram`` (indexable/recallable by ``dna memory
+    recall``). Deterministic, no LLM, no network.
+    """
+    from dna.memory.interchange import from_mif
+    from dna.memory.personal import is_personal_tenant  # noqa: F401 (import kept local to the CLI layer)
+
+    tenant = _resolve_memory_tenant(personal, tenant)
+    docs = _read_mif_docs(path)
+
+    with dna_session(scope) as s:
+        write_kernel = _write_kernel_for(s, tenant)
+        engram_api_version = _api_version_for(s.kernel, "Engram")
+        memory_api_version = _api_version_for(s.kernel, "Memory")
+
+        existing_passthrough_ids: set[str] = set()
+        existing_engram_mif_ids: set[str] = set()
+        existing_content_hashes: set[str] = set()
+
+        async def _preload() -> None:
+            if dedupe == "off":
+                return
+            if as_mode in ("passthrough", "both"):
+                async for raw in s.kernel.query(s.scope, "Memory", tenant=tenant):
+                    doc_spec = raw.get("spec") or {}
+                    if dedupe == "id" and doc_spec.get("id"):
+                        existing_passthrough_ids.add(str(doc_spec["id"]))
+                    elif dedupe == "content-hash":
+                        c = doc_spec.get("content") or ""
+                        existing_content_hashes.add(hashlib.sha256(c.encode("utf-8")).hexdigest())
+            if as_mode in ("native", "both"):
+                async for raw in s.kernel.query(s.scope, "Engram", tenant=tenant):
+                    e_spec = raw.get("spec") or {}
+                    ec = e_spec.get("encoding_context") or {}
+                    if dedupe == "id" and ec.get("mif_id"):
+                        existing_engram_mif_ids.add(str(ec["mif_id"]))
+                    elif dedupe == "content-hash":
+                        b = e_spec.get("body") or ""
+                        existing_content_hashes.add(hashlib.sha256(b.encode("utf-8")).hexdigest())
+
+        s.run(_preload())
+
+        imported: list[str] = []
+        skipped: list[str] = []
+        failed: list[dict[str, str]] = []
+
+        for doc in docs:
+            doc_id = str(doc.get("id") or "")
+            content_hash = hashlib.sha256((doc.get("content") or "").encode("utf-8")).hexdigest()
+
+            already = False
+            if dedupe == "id":
+                already = (
+                    (as_mode == "passthrough" and doc_id in existing_passthrough_ids)
+                    or (as_mode == "native" and doc_id in existing_engram_mif_ids)
+                    or (as_mode == "both" and (doc_id in existing_passthrough_ids or doc_id in existing_engram_mif_ids))
+                )
+            elif dedupe == "content-hash":
+                already = content_hash in existing_content_hashes
+            if already:
+                skipped.append(doc_id)
+                continue
+
+            try:
+                if as_mode in ("passthrough", "both"):
+                    name = _mif_doc_name(doc_id)
+                    clean_spec = {k: v for k, v in doc.items() if k in _KNOWN_MIF_FIELDS}
+                    raw: dict[str, Any] = {"kind": "Memory", "metadata": {"name": name}, "spec": clean_spec}
+                    if memory_api_version:
+                        raw["apiVersion"] = memory_api_version
+                    s.run(write_kernel.write_document(s.scope, "Memory", name, raw, invalidate_mode="doc"))
+                    existing_passthrough_ids.add(doc_id)
+
+                if as_mode in ("native", "both"):
+                    engram_spec = from_mif(doc)
+                    engram_name = _engram_doc_name(doc_id)
+                    e_raw: dict[str, Any] = {"kind": "Engram", "metadata": {"name": engram_name}, "spec": engram_spec}
+                    if engram_api_version:
+                        e_raw["apiVersion"] = engram_api_version
+                    s.run(write_kernel.write_document(s.scope, "Engram", engram_name, e_raw, invalidate_mode="doc"))
+                    existing_engram_mif_ids.add(doc_id)
+            except Exception as exc:  # noqa: BLE001 — one bad doc must not abort the whole batch
+                failed.append({"id": doc_id, "error": str(exc)})
+                continue
+
+            imported.append(doc_id)
+            if dedupe == "content-hash":
+                existing_content_hashes.add(content_hash)
+
+    result = {
+        "as": as_mode, "dedupe": dedupe, "path": str(path),
+        "imported": len(imported), "skipped": len(skipped), "failed": len(failed),
+        "ids": imported, "errors": failed,
+    }
+    if as_json:
+        print_json(result)
+        return
+    click.secho(f"\n📥 imported {len(imported)} memories from {path} (--as {as_mode})", fg="green", bold=True)
+    if skipped:
+        click.secho(f"   skipped {len(skipped)} already-imported (--dedupe {dedupe})", fg="bright_black")
+    if failed:
+        click.secho(f"   {len(failed)} failed:", fg="red")
+        for f in failed:
+            click.secho(f"     · {f['id']}: {f['error']}", fg="red")
 
 
 __all__ = ["memory"]

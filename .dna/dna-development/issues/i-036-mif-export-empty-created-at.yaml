@@ -1,0 +1,21 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-036-mif-export-empty-created-at
+spec:
+  description: "to_mif faz spec.get('created_at') or '' \u2014 se um Engram nao tiver\
+    \ created_at (o campo NAO esta no required do Kind; remember() carimba, mas um\
+    \ doc migrado ou escrito a mao pode nao ter), o export escreve created: '' e produz\
+    \ um arquivo MIF nao-conformante em silencio. O Level 1 do MIF exige created preenchido;\
+    \ a re-importacao acusaria via _validate_mif_doc, mas o EXPORTADOR nao avisa nada.\
+    \ Acao: falhar ou emitir warning explicito no export em vez do '' silencioso."
+  type: bug
+  severity: low
+  status: open
+  related_feature: f-portable-memory
+  timeline:
+  - at: '2026-07-19T20:10:45+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

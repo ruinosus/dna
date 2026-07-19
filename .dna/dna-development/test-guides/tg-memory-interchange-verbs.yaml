@@ -1,0 +1,32 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-memory-interchange-verbs
+spec:
+  description: 'Engram<->MIF projection + dna memory export/import: field-faithful
+    round trip, id stability, dedupe idempotence, INV-PERSONAL isolation'
+  kind_of_test: manual
+  status: active
+  steps:
+  - action: python -m pytest packages/sdk-py/tests/test_memory_interchange.py
+    expected: 18 pass, full-field + x-dna vault round trip incl. real MIF spec fixtures
+  - action: python -m pytest packages/sdk-py/tests/test_memory_interchange_parity.py
+      + bun test packages/sdk-ts/tests/memory-interchange-parity.test.ts
+    expected: both green, Py is source of truth
+  - action: python -m pytest packages/cli/tests/test_memory_interchange_cmd.py
+    expected: "12 pass \u2014 round trip, id stability, dedupe id no-op, --personal\
+      \ isolation vs a named workspace tenant, --include-forgotten, --bundle, --as\
+      \ modes"
+  - action: 'mutation: drop a vault field from _VAULT_FIELDS'
+    expected: test_full_round_trip_preserves_every_mapped_field + test_x_dna_vault_present_on_export
+      FAIL; restore -> green
+  - action: 'mutation: disable id-pin reuse in resolve_or_mint_mif_id'
+    expected: 4 pure tests + test_id_is_stable_across_repeated_exports_of_the_same_engram
+      (CLI) FAIL; restore -> green
+  - action: 'full suites: packages/sdk-py (3438 passed), packages/cli (898 passed),
+      packages/sdk-ts (1735 pass)'
+    expected: 0 failures
+  verifies:
+  - Story/s-memory-interchange-verbs
+  created_at: '2026-07-19T19:51:23+00:00'
+  updated_at: '2026-07-19T19:51:23+00:00'

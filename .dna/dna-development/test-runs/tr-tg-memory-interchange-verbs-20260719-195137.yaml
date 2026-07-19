@@ -1,0 +1,14 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-memory-interchange-verbs-20260719-195137
+spec:
+  guide_ref: tg-memory-interchange-verbs
+  outcome: pass
+  verifies:
+  - Story/s-memory-interchange-verbs
+  executed_by: claude-code
+  executed_at: '2026-07-19T19:51:37+00:00'
+  notes: 'All steps executed locally 2026-07-19: interchange unit tests 18/18, parity
+    fixture green Py+TS, CLI tests 12/12, both required mutations confirmed failing
+    then restored green, full sdk-py/cli/sdk-ts suites green (0 failures).'
