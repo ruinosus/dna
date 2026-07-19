@@ -1,4 +1,19 @@
-# LessonLearned — affective recall artifact (record plane; memory triad).
+# Engram — affective recall artifact (record plane; memory triad).
+#
+# s-engram-rename (2026-07-19): renamed from LessonLearned
+# (github.com/ruinosus/dna/sdlc/v1) — a CLEAN rename, not a compat/alias
+# shim (founder decision: zero users at rename time; kind_registry.py's own
+# EXPLICIT_ALIAS_ALLOWLIST doc says an alias "CANNOT be renamed without a doc
+# migration" — the architecture already expects a one-time rewrite here, not
+# a permanent dual-read mechanism). The identity moves from the sdlc
+# namespace into `/dna/v1` (this extension, helix) alongside Tool/Copilot —
+# memory is a platform primitive, not an sdlc-owned artifact. Stored docs are
+# migrated by ``scripts/migrate_lesson_learned_to_engram.py`` (idempotent,
+# rewrites ``apiVersion`` + ``kind`` in place). Schema below is byte-for-byte
+# the old LessonLearned schema — only identity (target_api_version,
+# target_kind, alias, origin, display_label) changed; storage container/
+# marker are UNCHANGED (``lessons-learned`` / ``LESSON_LEARNED.md`` — no
+# on-disk directory move, only the two envelope fields rewrite).
 #
 # Surfaces unbidden when the current cycle resembles a past one in the same
 # area. Authored by the Sage oracle during the deep-sleep ritual (mostly) or
@@ -19,12 +34,12 @@
 apiVersion: github.com/ruinosus/dna/core/v1
 kind: KindDefinition
 metadata:
-  name: lesson-learned
+  name: engram
 spec:
-  target_api_version: github.com/ruinosus/dna/sdlc/v1
-  target_kind: LessonLearned
-  alias: sdlc-lesson-learned
-  origin: github.com/ruinosus/dna/sdlc
+  target_api_version: github.com/ruinosus/dna/v1
+  target_kind: Engram
+  alias: helix-engram
+  origin: github.com/ruinosus/dna/engram
   plane: record
   prompt_target: false
   flatten_in_context: false
@@ -266,4 +281,19 @@ spec:
     stroke: '#D97706'
     text_color: '#fff'
   ascii_icon: 💭
-  display_label: Lições Aprendidas
+  display_label: Engrama
+  docs: An Engram is an affective recall artifact (record plane) — the memory
+    co-pillar's rich, bi-temporal engram. It surfaces unbidden when the
+    current cycle resembles a past one in the same ``area``, carries an
+    evocative ``affect`` (triumph/regret/surprise/wistful/ominous), and is
+    scored by Ebbinghaus-style decay (``relevance_decay_seed``,
+    ``surface_count``, ``confidence_score``) plus Semon-inspired ecphory
+    (``cues_history``, ``homophonic_links``). Bi-temporal — a superseded
+    Engram is invalidated via ``valid_to``/``superseded_by_memory``, never
+    hard-deleted. Renamed from LessonLearned (s-engram-rename, 2026-07-19) —
+    memory is a platform primitive (``github.com/ruinosus/dna/v1``), not
+    sdlc-owned. Authored by the Sage oracle during the deep-sleep ritual
+    (mostly) or manually; written/recalled via ``dna.memory.remember`` /
+    ``recall``. Stored as ``lessons-learned/<name>.yaml`` with body prose in
+    the ``LESSON_LEARNED.md`` bundle marker — storage container/marker names
+    are unchanged by the rename.
