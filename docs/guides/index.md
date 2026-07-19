@@ -62,3 +62,11 @@ first if you have never loaded a scope.
 
 - **[Your git log is your SDLC](sdlc.md)** — how this repo tracks its own
   lifecycle as DNA documents and stamps every commit and PR.
+
+## Operations
+
+- **[How to cut over a Postgres-backed deployment from `LessonLearned` to
+  `Engram`](engram-postgres-cutover.md)** — the hard-cutover ordering for a
+  Kind rename against a Postgres source: freeze writes, run the collision
+  pre-flight + single-transaction migration, bump the pins, and the
+  `.dna/`-baked-into-the-image trap to not forget.
