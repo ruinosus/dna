@@ -1,0 +1,27 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-roundtrip-proof
+spec:
+  description: Circulo A (round-trip de campo no conformance kit) e Circulo B (adaptador
+    claude-export -> MIF + recall por parafrase)
+  kind_of_test: manual
+  status: active
+  steps:
+  - action: pytest packages/sdk-py/tests/test_memory_conformance_kit.py -k interchange
+    expected: 2 passed (legs com e sem search provider)
+  - action: 'mutacao: remover affect do cofre / remover surface_count / to_mif sem
+      validUntil assimetrico / remover o id pin'
+    expected: os 4 mutantes morrem
+  - action: pytest packages/sdk-py/tests/test_claude_export_roundtrip.py
+    expected: 8 passed, incluindo o alvo em rank 1 com semantic=True e degraded=False
+  - action: recall com --no-semantic
+    expected: alvo NAO fica em rank 1 (cai para 2), provando que a assercao discrimina
+  - action: wc -l packages/sdk-py/dna/memory/claude_export.py
+    expected: < 150
+  - action: pytest packages/sdk-py/tests
+    expected: 3448 passed, 198 skipped, 4 xfailed
+  verifies:
+  - Story/s-roundtrip-proof
+  created_at: '2026-07-19T20:50:32+00:00'
+  updated_at: '2026-07-19T20:50:32+00:00'
