@@ -55,7 +55,7 @@ spec:
     do dna-cloud); nenhum bump de pin nesta story
   definition_of_done_source: cli-create
   created_at: '2026-07-19T16:29:13+00:00'
-  updated_at: '2026-07-19T17:26:14+00:00'
+  updated_at: '2026-07-19T17:56:17+00:00'
   timeline:
   - at: '2026-07-19T16:29:13+00:00'
     actor: claude-code
@@ -114,6 +114,53 @@ spec:
     name: tr-tg-engram-migration-postgres-20260719-172609
     summary: "TestRun tr-tg-engram-migration-postgres-20260719-172609 \u2192 pass"
     outcome: pass
+  - at: '2026-07-19T17:54:57+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Review recebido, 3 fixes aplicados (commit 2f4c9ce): (1) MUST-FIX -\
+      \ _preflight_edges tinha um blind spot: so checava candidato-vs-linha-pre-existente,\
+      \ nunca candidato-vs-candidato. Como from_kind/to_kind sao colunas independentes,\
+      \ duas linhas atualmente distintas podem renomear UMA PARA A OUTRA (from=LessonLearned/X,to=Engram/Y\
+      \ + from=Engram/X,to=LessonLearned/Y -> ambas viram Engram/X,Engram/Y). Dry-run\
+      \ reportava limpo, --apply estourava UniqueViolationError real. Corrigido agrupando\
+      \ candidatos pela chave pos-renome e flagueando qualquer chave reivindicada\
+      \ por mais de um. Confirmei que nenhuma outra tabela compartilha esse blind\
+      \ spot (cada uma tem s\xF3 uma coluna kind na chave de colis\xE3o, entao dois\
+      \ candidatos nao podem convergir um no outro - a PK pre-renome ja forca distincao).\
+      \ Teste de regressao test_edges_candidate_vs_candidate_collision_is_detected\
+      \ reproduz o cenario exato A/B; mutation-testado (removi o novo check -> o teste\
+      \ falha; restaurado -> verde). (2) Runbook: adicionado pg_dump/pg_restore antes\
+      \ do Step 2, e verificacao de freeze (replica list + pg_stat_activity) antes\
+      \ de prosseguir. (3) Investigado se 'copilot' precisa entrar na lista de freeze\
+      \ - verifiquei (leitura, dna-cloud/infra/emit_copilot_langgraph.py + copilot.Dockerfile\
+      \ + containerapps.bicep): DNA_SOURCE_URL e injetado no copilot mas NUNCA lido\
+      \ em runtime - Kernel.quick roda so uma vez no docker build contra o .dna/ bakado;\
+      \ em runtime o copilot so fala com DNA via MultiServerMCPClient/DNA_MCP_URL\
+      \ (proxy pro mcp/mcp-ws, ja congelados); DNA_PRIMARY_PG_URL e um secret SEPARADO\
+      \ que abre o schema proprio do LangGraph (checkpoint/store), sem overlap com\
+      \ dna_documents/dna_edges. Documentado explicitamente no runbook - copilot NAO\
+      \ precisa entrar no freeze. Minor: _apply_content_table agora bumpa updated_at\
+      \ em dna_documents/dna_layer_documents (dna_versions excluida de proposito -\
+      \ sem coluna updated_at, so created_at imutavel). Suite completa: 3488 passed,\
+      \ 0 failed (14 test IDs de pgvector deselecionados - gap de ambiente pre-existente,\
+      \ extensao vector ausente localmente, nao relacionado)."
+    commit_ref: 2f4c9cea4899b7a4f248a6835df159ac969d24cb
+  - at: '2026-07-19T17:56:09+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-engram-migration-postgres
+    summary: TestGuide tg-engram-migration-postgres (manual)
+  - at: '2026-07-19T17:56:17+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-engram-migration-postgres-20260719-175613
+    summary: "TestRun tr-tg-engram-migration-postgres-20260719-175613 \u2192 pass"
+    outcome: pass
   produces:
   - kind: Plan
     name: plan-s-engram-migration-postgres
@@ -127,3 +174,7 @@ spec:
     name: tr-tg-engram-migration-postgres-20260719-172609
     role: test-run
     at: '2026-07-19T17:26:14+00:00'
+  - kind: TestRun
+    name: tr-tg-engram-migration-postgres-20260719-175613
+    role: test-run
+    at: '2026-07-19T17:56:17+00:00'

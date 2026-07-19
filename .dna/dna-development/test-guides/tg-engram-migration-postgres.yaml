@@ -3,28 +3,31 @@ kind: TestGuide
 metadata:
   name: tg-engram-migration-postgres
 spec:
-  description: 'Verifica a migracao Postgres LessonLearned->Engram: pre-checagem de
-    colisao, transacao unica, dry-run, idempotencia, e o script de FS inalterado.'
+  description: Verifica a migracao Postgres do rename Engram e o runbook de cutover
   kind_of_test: manual
   status: active
   steps:
-  - action: DATABASE_URL=postgresql://<user>@localhost/<test-db> packages/sdk-py/.venv/bin/python
-      -m pytest packages/sdk-py/tests/test_migrate_engram_postgres_integration.py
-      -q
-    expected: 7 passed, 0 failed (requires_postgres auto-skips without a DSN)
-  - action: packages/sdk-py/.venv/bin/python -m pytest packages/sdk-py/tests/test_migrate_lesson_learned_to_engram.py
-      -q
-    expected: 12 passed, unchanged FS behaviour
-  - action: python3 scripts/migrate_engram.py --source <dir-with-LessonLearned-docs>
-    expected: dry run, exit 0, reports candidates, writes nothing
-  - action: python3 scripts/migrate_engram.py --source postgresql://...
-    expected: dry run against a seeded PG source, reports per-table counts, writes
-      nothing
-  - action: 'mutation: force PgMigrationReport.has_collisions() to return False'
-    expected: the two collision tests fail (one via a real Postgres UniqueViolationError)
-  - action: 'mutation: neuter _apply_content_table''s WHERE clause with ''AND false'''
-    expected: the clean-migration and idempotency tests fail
+  - action: integracao
+    expected: 8/8 contra Postgres real com schema descartavel criado pela DDL de producao
+  - action: pre-checagem
+    expected: colisao contra linhas pre-existentes E entre candidatos (dna_edges)
+      aborta antes de qualquer escrita
+  - action: transacao unica
+    expected: falha reverte limpo, zero escrita parcial (verificado ao vivo)
+  - action: idempotencia
+    expected: reexecucao e no-op
+  - action: dry-run default
+    expected: nao escreve nada, reporta contagem por tabela
+  - action: mutation test
+    expected: quebrar a pre-checagem faz o teste de colisao falhar; quebrar um UPDATE
+      faz outros dois falharem
+  - action: outbox
+    expected: preservado imutavel, com raciocinio verificado (kind do outbox nunca
+      resolve identidade)
+  - action: runbook
+    expected: freeze verificado, pg_dump antes do apply, copilot fora do freeze com
+      justificativa
   verifies:
   - Story/s-engram-migration-postgres
-  created_at: '2026-07-19T17:25:50+00:00'
-  updated_at: '2026-07-19T17:25:50+00:00'
+  created_at: '2026-07-19T17:56:04+00:00'
+  updated_at: '2026-07-19T17:56:04+00:00'
