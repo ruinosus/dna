@@ -696,6 +696,38 @@ A Membership is the RBAC join — a user's role at an org- or project-scope with
 | `status` | string |  | Invitation lifecycle — invited (pending acceptance) or active. |
 | `user` | string | yes | The member's identity — an email or stable user id. |
 
+## Memory
+
+- **Alias:** `mif-memory`
+- **apiVersion:** `mif-spec.dev/v1`
+- **Plane:** record
+
+A MIF Memory is DNA's byte-faithful passthrough of the external Memory Interchange Format (mif-spec.dev/v1), stored and validated under its owner's namespace exactly as MIF defines it (market-fidelity rule). Frontmatter + Markdown body is a MIF Memory Unit's canonical shape, which is structurally identical to a DNA bundle marker — no custom Reader/ Writer needed. This is the interchange face only; it does NOT replace Engram (github.com/ruinosus/dna/v1 · Engram), DNA's native recall engine — `dna memory export`/`import` (a later story) projects between the two, with DNA-specific fields riding along in `extensions` for a lossless round-trip.
+
+**Spec fields**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `aliases` | array |  | Alternative names for the memory (§5.2, OPTIONAL). |
+| `citations` | array |  | Citation references (§5.4, Level 3 OPTIONAL). |
+| `compressed_at` | string |  | When compression was applied (§5.6, Level 3, ISO 8601). Snake_case in the Markdown frontmatter profile (the JSON-LD projection's `compressedAt` is camelCase — a naming quirk of that derived form, not this one). |
+| `content` | string | yes | The memory content in Markdown — the marker body below the frontmatter (title H1, prose, and the optional `## Relationships` / `## Citations` mirror sections all travel as part of this string, exactly as MIF's own §5.1 structure defines). |
+| `created` | string | yes | Creation timestamp, ISO 8601 (§4.1). Maps to Engram created_at. NOTE (every date-time field on this Kind): PyYAML's SafeLoader implicitly resolves an UNQUOTED ISO-8601-looking scalar to a Python datetime.datetime at frontmatter parse time (YAML 1.1 !!timestamp implicit tag) — a pre-existing, Kind-agnostic quirk of _parse_frontmatter (dna/kernel/generic_rw.py), not specific to MIF. A real MIF .md file (whose own examples write dates unquoted) will therefore parse date-time fields as datetime objects, which this "type: string" schema then rejects on jsonschema.validate. Quoting the value in frontmatter (created is a quoted string) sidesteps it losslessly — same value, string-typed — and is what the test fixtures do; unquoted MIF input is a known gap for whoever picks up strict date-time validation SDK-wide (out of scope for this story). |
+| `embedding` | object |  | Embedding model reference (OPTIONAL). Actual vectors are stored externally or in the JSON-LD projection — the Markdown frontmatter only carries the reference. |
+| `entities` | array |  | Referenced entities (§7.5/Appendix C, OPTIONAL) — typed pointers into the bundle's `.mif/entities/` definitions, distinct from `relationships` (which point at other MEMORIES, not entities). |
+| `extensions` | object |  | Provider-specific extensions (§4.1/§5.2, OPTIONAL) — the vault where DNA's own physics rides along on a round-trip: confidence_score, relevance_decay_seed, surface_count, cues_history, encoding_context, affect, affect_reason, visibility. Namespaced under `x-dna` by convention so other MIF-conformant tools degrade gracefully (ignore what they don't recognize) while a DNA reader recovers everything. |
+| `id` | string | yes | MIF Memory Unit identifier — a UUID v4 in the Markdown frontmatter profile (SPECIFICATION.md §5.2/Appendix A). NOT the `urn:mif:` URN form — that's `@id` in the separately-derived JSON-LD projection (§6), never written into this frontmatter. Preserved verbatim so a re-export is stable; on import from Engram, minted once and pinned. |
+| `modified` | string |  | Last modification timestamp, ISO 8601 (§4.1, RECOMMENDED). |
+| `namespace` | string |  | Hierarchical scope path (§10), e.g. `_semantic/decisions`. Base-type roots use the reserved underscore prefixes (`_semantic`, `_episodic`, `_procedural`); visibility prefixes (`_public`, `_shared`, `_local`, `_system`) are reserved alongside them (§4.4 note, §10.2). Maps loosely to Engram.area. |
+| `ontology` | object |  | Reference to the ontology this memory conforms to (§4.3). `id` must match the `ontology.id` declared in the referenced ontology definition; ontology-extended types (§4.2.1) are expressed through the `namespace` axis, not a separate field here. |
+| `provenance` | object |  | W3C-PROV-aligned source/trust data (§12, OPTIONAL). `wasAttributedTo` maps to Engram.owner; `wasDerivedFrom` maps to Engram.source_refs. additionalProperties left OPEN (`true`) because the real MIF Provenance schema is itself open — PROV graphs are explicitly open-ended (mif.schema.json ProvNode note) — not a DNA-added exception to the strict-schema convention. |
+| `relationships` | array |  | Typed edges to OTHER MEMORIES (§8), authoritative in this frontmatter array and mirrored in the body as `## Relationships` markdown links (§5.3/§8.4) — the frontmatter array is the source of truth, the body links are its OKF-legible mirror. The 9 core types SHOULD-recognized for interoperability (Appendix B, kebab-case): `relates-to`, `derived-from`, `supersedes`, `conflicts-with`, `part-of`, `implements`, `uses`, `created-by`, `mentioned-in`. Providers MAY define additional namespaced types (`ns:type`, §8.3) — NOT a closed enum here, matching the spec's own extensibility. derived-from maps to Engram.source_refs; supersedes pairs with `temporal.validUntil` for point-in-time audit. |
+| `summary` | string |  | Compressed content summary (§5.6, Level 3, max 500 chars). |
+| `tags` | array |  | Classification tags (§4.1, OPTIONAL). 1:1 with Engram.tags. |
+| `temporal` | object |  | Bi-temporal validity + decay data (§9, OPTIONAL — RECOMMENDED at Level 2 per §13.2's "temporal metadata" bullet). `validFrom`/`validUntil` map 1:1 to Engram valid_from/valid_to — the second axis DNA and MIF already agree on. NOTE the field is `validUntil`, not `validTo`. |
+| `title` | string |  | Human-readable title (§5.2). Optional first-H1 mirror in the body is conventional but not required by the schema. |
+| `type` | string | yes | MIF base memory type (§4.2) — CoALA-style taxonomy that maps 1:1 to Engram.memory_type: semantic = declarative facts/ concepts/preferences; episodic = time-bound events/sessions; procedural = how-to/runbooks. This is why the DNA↔MIF projection is lossless on the type axis. (The JSON-LD projection additionally accepts the deprecated `memoryType` alias — irrelevant here since this Kind only carries the Markdown frontmatter profile.) |
+
 ## ModelProfile
 
 - **Alias:** `modelreg-model-profile`
