@@ -22,7 +22,7 @@ spec:
     \ de workspace (usuario consumidor tambem nao tem WorkspaceMembership) \u2014\
     \ decisao separada; e a correcao do comentario falso no lib/copilot.ts do dna-cloud\
     \ (issue propria)."
-  status: in-progress
+  status: review
   feature: f-portable-memory
   priority: high
   labels:
@@ -52,7 +52,7 @@ spec:
     chave pessoal (violaria INV-PERSONAL)
   definition_of_done_source: cli-create
   created_at: '2026-07-19T14:57:57+00:00'
-  updated_at: '2026-07-19T17:28:48+00:00'
+  updated_at: '2026-07-19T17:29:19+00:00'
   timeline:
   - at: '2026-07-19T14:57:57+00:00'
     actor: claude-code
@@ -87,6 +87,24 @@ spec:
     name: tr-tg-consumer-lane-memory-key-20260719-172843
     summary: "TestRun tr-tg-consumer-lane-memory-key-20260719-172843 \u2192 pass"
     outcome: pass
+  - at: '2026-07-19T17:29:06+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/163'
+    pr_url: https://github.com/ruinosus/dna/pull/163
+  - at: '2026-07-19T17:29:14+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: Review independente; a familia propria para WorkOS removeu a causa da
+      colisao em vez de mitigar.
+  - at: '2026-07-19T17:29:19+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
   produces:
   - kind: Plan
     name: plan-s-consumer-lane-memory-key
