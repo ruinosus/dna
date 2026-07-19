@@ -12,7 +12,7 @@ NOT re-assert those — it references them):
   - ``test_kernel_invalidate_modes``       → the scope/doc/none tiers.
   - ``test_kernel_record_plane_writes``    → record-plane demotion + parity.
   - ``test_write_path_despecialize``       → veto priority/idempotency, bitemporal
-                                             LessonLearned, Genome catalog-drop.
+                                             Engram, Genome catalog-drop.
   - ``test_write_document_prompt_budget``  → voice-UA instruction_token_cap veto.
   - ``test_version_retention``             → VERSION_CHURN_KINDS retention kwarg.
   - ``test_kernel_tenant_phase1``          → TENANTED/GLOBAL/layer back-compat.

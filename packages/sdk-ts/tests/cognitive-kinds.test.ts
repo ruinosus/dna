@@ -8,22 +8,38 @@
  */
 import { describe, it, expect } from "bun:test";
 import { Kernel } from "../src/kernel/index.js";
+import { HelixExtension } from "../src/extensions/helix.js";
 import { SdlcExtension } from "../src/extensions/sdlc.js";
 // F3 lote-1/lote-2: the enum const exports (REMEMBRANCE_*, DREAM_*,
 // FORGETTING_*) died with the classes — the enums now live ONLY in the
 // kinds/*.kind.yaml descriptors; assertions below read them from the
 // synthesized port's schema (the single source).
+//
+// s-engram-rename (2026-07-19): Engram (formerly LessonLearned) moved OUT of
+// SdlcExtension into HelixExtension — its identity api_version is
+// github.com/ruinosus/dna/v1, not sdlc/v1. Tests exercising Engram load
+// BOTH extensions and pass the helix api_version to getKind.
 
-type KindKey = "LessonLearned" | "SynthesisRun" | "ArchiveProposal" | "Forecast";
+type KindKey = "Engram" | "SynthesisRun" | "ArchiveProposal" | "Forecast";
 
-function getKind(k: Kernel, name: KindKey) {
+const SDLC_API = "github.com/ruinosus/dna/sdlc/v1";
+const HELIX_API = "github.com/ruinosus/dna/v1";
+
+function getKind(k: Kernel, name: KindKey, apiVersion: string = SDLC_API) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return ((k as any)._kinds as Map<string, {
     alias: string;
     storage: { pattern: { value?: string } | string; container?: string; marker?: string };
     schema: () => Record<string, unknown>;
     displayLabel: string;
-  }>).get(`github.com/ruinosus/dna/sdlc/v1\0${name}`)!;
+  }>).get(`${apiVersion}\0${name}`)!;
+}
+
+function engramKernel(): Kernel {
+  const k = new Kernel();
+  k.load(new SdlcExtension());
+  k.load(new HelixExtension());
+  return k;
 }
 
 describe("Cognitive Memory Triad — TS parity", () => {
@@ -34,17 +50,16 @@ describe("Cognitive Memory Triad — TS parity", () => {
     expect(new SdlcExtension().version).toBe("1.14.0");
   });
 
-  it("LessonLearned: alias + storage + display label", () => {
-    const k = new Kernel();
-    k.load(new SdlcExtension());
-    const kp = getKind(k, "LessonLearned");
-    expect(kp.alias).toBe("sdlc-lesson-learned");
+  it("Engram: alias + storage + display label", () => {
+    const k = engramKernel();
+    const kp = getKind(k, "Engram", HELIX_API);
+    expect(kp.alias).toBe("helix-engram");
     const sd = kp.storage;
     expect(typeof sd.pattern === "string" ? sd.pattern : sd.pattern.value).toBe("bundle");
     expect(sd.container).toBe("lessons-learned");
     expect(sd.marker).toBe("LESSON_LEARNED.md");
-    // enterprise pt-BR (PMBOK 'Lessons Learned'); s-sdlcv2-memorias-market-viz
-    expect(kp.displayLabel).toBe("Lições Aprendidas");
+    // Engrama (s-engram-rename, 2026-07-19) — was "Lições Aprendidas" pre-rename.
+    expect(kp.displayLabel).toBe("Engrama");
   });
 
   it("SynthesisRun: alias + storage + display label", () => {
@@ -73,30 +88,27 @@ describe("Cognitive Memory Triad — TS parity", () => {
 
   // ---- enums (must match Py byte-for-byte) -----------------------------
 
-  it("LessonLearned: affect enum is evocative palette (parity with Py)", () => {
-    const k = new Kernel();
-    k.load(new SdlcExtension());
-    const props = getKind(k, "LessonLearned").schema()
+  it("Engram: affect enum is evocative palette (parity with Py)", () => {
+    const k = engramKernel();
+    const props = getKind(k, "Engram", HELIX_API).schema()
       .properties as Record<string, { enum?: string[] }>;
     expect(new Set(props.affect.enum)).toEqual(
       new Set(["triumph", "regret", "surprise", "wistful", "ominous"]),
     );
   });
 
-  it("LessonLearned: surface_when triggers (parity with Py)", () => {
-    const k = new Kernel();
-    k.load(new SdlcExtension());
-    const props = getKind(k, "LessonLearned").schema()
+  it("Engram: surface_when triggers (parity with Py)", () => {
+    const k = engramKernel();
+    const props = getKind(k, "Engram", HELIX_API).schema()
       .properties as Record<string, { items?: { enum?: string[] } }>;
     expect(new Set(props.surface_when.items?.enum)).toEqual(
       new Set(["feature_touched", "cycle_open", "session_start", "oracle_consult"]),
     );
   });
 
-  it("LessonLearned: descriptor carries affect_reason/affect_evidence_refs (drift vs old TS class CURED)", () => {
-    const k = new Kernel();
-    k.load(new SdlcExtension());
-    const props = getKind(k, "LessonLearned").schema()
+  it("Engram: descriptor carries affect_reason/affect_evidence_refs (drift vs old TS class CURED)", () => {
+    const k = engramKernel();
+    const props = getKind(k, "Engram", HELIX_API).schema()
       .properties as Record<string, unknown>;
     expect(props.affect_reason).toBeDefined();
     expect(props.affect_evidence_refs).toBeDefined();
@@ -155,10 +167,9 @@ describe("Cognitive Memory Triad — TS parity", () => {
 
   // ---- required fields per Kind ----------------------------------------
 
-  it("LessonLearned: required fields match Py", () => {
-    const k = new Kernel();
-    k.load(new SdlcExtension());
-    const schema = getKind(k, "LessonLearned").schema();
+  it("Engram: required fields match Py", () => {
+    const k = engramKernel();
+    const schema = getKind(k, "Engram", HELIX_API).schema();
     expect(new Set(schema.required as string[])).toEqual(
       new Set(["area", "surface_when", "source_refs", "affect", "summary"]),
     );

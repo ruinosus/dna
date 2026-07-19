@@ -1,7 +1,7 @@
 """Version retention for record-plane Kinds (s-version-prune-record-plane-churn).
 
 Record-plane Kinds (memories, eval runs, events) churn the version history — the
-engrafia hook alone wrote 175k LessonLearned snapshots. The write path caps their
+engrafia hook alone wrote 175k Engram snapshots. The write path caps their
 retained history to the last N versions (manifest-plane keeps full history), so a
 single doc rewritten thousands of times doesn't drown the authored-content trail.
 
@@ -35,9 +35,9 @@ async def src(tmp_path):
 @pytest.mark.asyncio
 async def test_retention_keeps_only_last_n(src):
     for i in range(5):
-        await src.save_document("s", "LessonLearned", "m", {"spec": {"i": i}},
+        await src.save_document("s", "Engram", "m", {"spec": {"i": i}},
                                 version_retention=3)
-    versions = await src.list_versions("s", "LessonLearned", "m")
+    versions = await src.list_versions("s", "Engram", "m")
     assert len(versions) == 3
     # the 3 kept are the most recent (highest version numbers)
     assert [v["version"] for v in versions] == [5, 4, 3]
@@ -55,9 +55,9 @@ async def test_no_retention_keeps_full_history(src):
 async def test_retention_keeps_the_latest_version(src):
     """Pruning keeps the most recent version (the current doc) — never the doc."""
     for i in range(6):
-        await src.save_document("s", "LessonLearned", "m", {"spec": {"i": i}},
+        await src.save_document("s", "Engram", "m", {"spec": {"i": i}},
                                 version_retention=3)
-    versions = await src.list_versions("s", "LessonLearned", "m")
+    versions = await src.list_versions("s", "Engram", "m")
     assert max(v["version"] for v in versions) == 6  # the last write survives
 
 

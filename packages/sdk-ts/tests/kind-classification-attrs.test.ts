@@ -14,7 +14,7 @@ import { SD } from "../src/kernel/protocols";
 const ORIG_NON_OVERLAYABLE = new Set(["Genome", "KindDefinition", "LayerPolicy"]);
 const ORIG_NON_INHERITABLE = new Set([
   "Story", "Issue", "Feature", "Milestone", "Roadmap",
-  "Narrative", "VibeSession", "LessonLearned", "Plan",
+  "Narrative", "VibeSession", "Engram", "Plan",
   "Genome", "KindDefinition", "LayerPolicy",
 ]);
 

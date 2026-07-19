@@ -295,7 +295,7 @@ def test_write_tier_remember_ok(dna_dir, http_server):
             out = await client.call_tool(
                 "remember", {"summary": "pro write: the co-pillar memory lands",
                              "scope": _SCOPE})
-            assert out.structured_content["kind"] == "LessonLearned"
+            assert out.structured_content["kind"] == "Engram"
             mem = await client.call_tool(
                 "recall", {"query": "co-pillar memory", "scope": _SCOPE})
             assert mem.structured_content["hits"]
@@ -420,7 +420,7 @@ def test_forget_deletes_own_memory(dna_dir):
         return name, res, before, after, recalled
 
     name, res, before, after, recalled = asyncio.run(scenario())
-    assert res == {"kind": "LessonLearned", "name": name, "forgotten": True}
+    assert res == {"kind": "Engram", "name": name, "forgotten": True}
     assert name in {m["name"] for m in before["memories"]}
     assert name not in {m["name"] for m in after["memories"]}
     assert name not in {h["name"] for h in recalled["hits"]}
@@ -437,7 +437,7 @@ def test_forget_nonexistent_is_clean_noop(dna_dir):
             live, "rem-does-not-exist-0000000000", scope=_SCOPE, tenant="acme")
 
     res = asyncio.run(scenario())
-    assert res == {"kind": "LessonLearned", "name": "rem-does-not-exist-0000000000",
+    assert res == {"kind": "Engram", "name": "rem-does-not-exist-0000000000",
                    "forgotten": False}
 
 
@@ -553,7 +553,7 @@ def test_forget_allowed_on_write_tier(dna_dir, http_server):
             name = out.structured_content["name"]
             res = await client.call_tool("forget", {"name": name, "scope": _SCOPE})
             assert res.structured_content == {
-                "kind": "LessonLearned", "name": name, "forgotten": True}
+                "kind": "Engram", "name": name, "forgotten": True}
 
     with http_server(server) as url:
         asyncio.run(go(url))

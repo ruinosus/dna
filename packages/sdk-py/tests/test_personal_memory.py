@@ -155,14 +155,14 @@ def kernel(tmp_path):
 async def test_personal_write_keys_on_personal_partition_zero_migration(kernel, tmp_path):
     # Write a personal memory for oid=A via the authorized personal binding.
     await remember(
-        kernel, "_lib", kind="LessonLearned", name="rem-priv",
+        kernel, "_lib", kind="Engram", name="rem-priv",
         spec=_ll("my private cron misread note"),
         tenant=personal_tenant(_OID_A), index=False,
     )
     # It lands under the reserved tenant partition (existing FS path segment, the
     # ':' percent-encoded on disk for portability — zero schema migration).
     hit = await kernel.get_document(
-        "_lib", "LessonLearned", "rem-priv", tenant=personal_tenant(_OID_A)
+        "_lib", "Engram", "rem-priv", tenant=personal_tenant(_OID_A)
     )
     assert hit is not None
     assert hit["spec"]["summary"] == "my private cron misread note"
@@ -175,13 +175,13 @@ async def test_personal_write_keys_on_personal_partition_zero_migration(kernel, 
 @pytest.mark.asyncio
 async def test_workspace_read_cannot_see_personal(kernel):
     await remember(
-        kernel, "_lib", kind="LessonLearned", name="rem-priv",
+        kernel, "_lib", kind="Engram", name="rem-priv",
         spec=_ll("private"), tenant=personal_tenant(_OID_A), index=False,
     )
     # A workspace-bound query (tenant IN ('', <workspace_id>)) provably excludes
     # personal:* — the union predicate cannot name it.
     ws_docs = [
-        d async for d in kernel.query("_lib", "LessonLearned", tenant=_WORKSPACE)
+        d async for d in kernel.query("_lib", "Engram", tenant=_WORKSPACE)
     ]
     assert all(
         (d.get("metadata") or {}).get("name") != "rem-priv" for d in ws_docs

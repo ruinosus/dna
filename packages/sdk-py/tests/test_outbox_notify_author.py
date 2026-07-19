@@ -16,7 +16,7 @@ from dna.kernel.eventbus import build_notify_payload as _build_notify_payload
 
 def _payload(**over):
     base = dict(
-        outbox_id=42, scope="dna-development", tenant="", kind="LessonLearned",
+        outbox_id=42, scope="dna-development", tenant="", kind="Engram",
         name="rem-foo", op="write", doc_version=3, author="hook:forgetting-tick",
     )
     base.update(over)
@@ -32,7 +32,7 @@ def test_payload_carries_all_identity_fields():
     d = _payload()
     assert d == {
         "id": 42, "scope": "dna-development", "tenant": "",
-        "kind": "LessonLearned", "name": "rem-foo", "op": "write",
+        "kind": "Engram", "name": "rem-foo", "op": "write",
         "doc_version": 3, "author": "hook:forgetting-tick",
         # s-buswrite-class-substantive-cue — write_class rides the payload too.
         "write_class": "substantive",

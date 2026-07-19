@@ -204,7 +204,7 @@ def test_memory_round_trip(dna_dir):
         return out, hits
 
     out, hits = asyncio.run(scenario())
-    assert out["kind"] == "LessonLearned"
+    assert out["kind"] == "Engram"
     names = [h.get("name") for h in hits["hits"]]
     assert out["name"] in names
 

@@ -42,7 +42,7 @@ function ctx(partial?: Partial<PreSaveContext>): PreSaveContext {
 // 1. Source ratchet — writeDocument is Kind-name agnostic
 // ---------------------------------------------------------------------------
 
-const FORBIDDEN_KIND_LITERALS = ["Agent", "LessonLearned", "Genome"];
+const FORBIDDEN_KIND_LITERALS = ["Agent", "Engram", "Genome"];
 
 /** Extract the body of `async writeDocument(...)` by brace counting. */
 function writeDocumentBody(): string {

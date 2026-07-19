@@ -170,7 +170,7 @@ def test_review_note_silences_and_persists(runner, store, open_pr):
 # ── GUARD A + B together on done ─────────────────────────────────────────────
 
 def test_done_emits_both_warns(runner, store, monkeypatch):
-    # Isolate from the realtime LessonLearned hook (fail-soft anyway).
+    # Isolate from the realtime Engram hook (fail-soft anyway).
     _seed_story(store, "s-done", status="review")
     r = runner.invoke(sdlc, [
         "story", "done", "s-done", "--no-commit", "--allow-no-tests",

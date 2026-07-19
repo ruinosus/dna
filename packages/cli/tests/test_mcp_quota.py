@@ -364,6 +364,6 @@ def test_unauthenticated_server_meters_nothing(dna_dir):
             # gate never runs without a token.
             out = await client.call_tool(
                 "remember", {"summary": "unmetered local write", "scope": _SCOPE})
-            assert out.structured_content["kind"] == "LessonLearned"
+            assert out.structured_content["kind"] == "Engram"
 
     asyncio.run(go())

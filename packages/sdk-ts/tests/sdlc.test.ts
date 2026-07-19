@@ -1,9 +1,10 @@
 import { describe, it, expect } from "bun:test";
 import { Kernel } from "../src/kernel/index.js";
+import { HelixExtension } from "../src/extensions/helix.js";
 import { SdlcExtension } from "../src/extensions/sdlc.js";
 
 describe("SdlcExtension — TS parity with Python", () => {
-  it("registers 32 Kinds under github.com/ruinosus/dna/sdlc/v1 (the 9 cognitive policy Kinds are ONE unified CognitivePolicy since s-consolidate-cognitive-policies, 39→31; +HtmlArtifact = 32 — full 1:1 with Py)", () => {
+  it("registers 31 Kinds under github.com/ruinosus/dna/sdlc/v1 (the 9 cognitive policy Kinds are ONE unified CognitivePolicy since s-consolidate-cognitive-policies, 39→31; +HtmlArtifact = 32, -Engram (moved to HelixExtension, s-engram-rename) = 31 — full 1:1 with Py)", () => {
     const k = new Kernel();
     k.load(new SdlcExtension());
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -16,7 +17,7 @@ describe("SdlcExtension — TS parity with Python", () => {
       "ArchiveProposal", "Bug", "Changelog", "CognitivePolicy",
       "Epic",
       "Feature", "Forecast", "HtmlArtifact", "Initiative", "Insight", "Issue", "Kaizen",
-      "LessonLearned", "Narrative",
+      "Narrative",
       "Plan", "Postmortem", "PromptTemplate", "Reference",
       "Retrospective", "RiskRegister", "Roadmap", "SavedView", "Spec",
       "Spike", "StatusReport", "Story", "SynthesisRun",
@@ -63,7 +64,6 @@ describe("SdlcExtension — TS parity with Python", () => {
       "sdlc-insight",
       "sdlc-issue",
       "sdlc-kaizen",
-      "sdlc-lesson-learned",
       "sdlc-narrative",
       "sdlc-plan",
       "sdlc-postmortem",
@@ -327,11 +327,13 @@ describe("SdlcExtension — TS parity with Python", () => {
     }
   });
 
-  it("LessonLearned has visibility axis (shared|private|pinned|archived, default shared) — Phase 0 parity", () => {
+  it("Engram has visibility axis (shared|private|pinned|archived, default shared) — Phase 0 parity", () => {
+    // Engram (formerly LessonLearned) registers via HelixExtension now
+    // (s-engram-rename, 2026-07-19).
     const k = new Kernel();
-    k.load(new SdlcExtension());
+    k.load(new HelixExtension());
     const ll = ((k as unknown as { _kinds: Map<string, { schema: () => Record<string, unknown> }> })._kinds)
-      .get("github.com/ruinosus/dna/sdlc/v1\0LessonLearned")!;
+      .get("github.com/ruinosus/dna/v1\0Engram")!;
     const props = ll.schema().properties as Record<string, Record<string, unknown>>;
     expect(props.visibility.enum).toEqual(["shared", "private", "pinned", "archived"]);
     expect(props.visibility.default).toBe("shared");
@@ -379,11 +381,13 @@ describe("SdlcExtension — TS parity with Python", () => {
     });
   });
 
-  it("LessonLearned has CoALA memory_type + bi-temporal fields (Phase 4 parity)", () => {
+  it("Engram has CoALA memory_type + bi-temporal fields (Phase 4 parity)", () => {
+    // Engram (formerly LessonLearned) registers via HelixExtension now
+    // (s-engram-rename, 2026-07-19).
     const k = new Kernel();
-    k.load(new SdlcExtension());
+    k.load(new HelixExtension());
     const ll = ((k as unknown as { _kinds: Map<string, { schema: () => Record<string, unknown> }> })._kinds)
-      .get("github.com/ruinosus/dna/sdlc/v1\0LessonLearned")!;
+      .get("github.com/ruinosus/dna/v1\0Engram")!;
     const props = ll.schema().properties as Record<string, Record<string, unknown>>;
     expect(props.memory_type.enum).toEqual(["episodic", "semantic", "procedural"]);
     expect(props.valid_from).toBeDefined();

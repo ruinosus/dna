@@ -2,7 +2,7 @@
 
 A work item is a hub: its outputs are the union of the explicit `produces[]`
 relationship and the legacy per-Kind back-refs (spec_refs, research_refs,
-html_artifacts, follow_ups, a linked Plan via story_ref, a LessonLearned via
+html_artifacts, follow_ups, a linked Plan via story_ref, a Engram via
 source_refs). Deduped by (kind, name). Zero migration — old docs with only
 back-refs still surface their outputs.
 """
@@ -50,7 +50,7 @@ def test_linked_plan_and_lesson_from_params() -> None:
         lessons=[{"name": "rem-foo", "spec": {"source_refs": ["Story/s-foo"]}}],
     )
     assert ("Plan", "plan-s-foo") in _keys(outs)
-    assert ("LessonLearned", "rem-foo") in _keys(outs)
+    assert ("Engram", "rem-foo") in _keys(outs)
 
 
 def test_lesson_matches_any_work_item_kind() -> None:
@@ -60,7 +60,7 @@ def test_lesson_matches_any_work_item_kind() -> None:
         {},
         lessons=[{"name": "rem-z", "spec": {"source_refs": ["Spike/s-spike-x"]}}],
     )
-    assert ("LessonLearned", "rem-z") in _keys(outs)
+    assert ("Engram", "rem-z") in _keys(outs)
 
 
 def test_dedup_produces_wins_over_legacy() -> None:

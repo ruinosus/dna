@@ -223,7 +223,7 @@ def test_remember_memory_roundtrips(dna_dir):
         )
         assert r.status_code == 201, r.text
         created = r.json()
-        assert created["kind"] == "LessonLearned"
+        assert created["kind"] == "Engram"
         name = created["name"]
         assert name  # deterministic slug the DELETE path targets
 

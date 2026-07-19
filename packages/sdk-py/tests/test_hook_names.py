@@ -178,7 +178,7 @@ async def test_typed_ctx_drives_the_sdlc_bitemporal_guard():
     """The bitemporal guard reads ctx.kernel/scope/kind/name/tenant and
     MUTATES ctx.raw in place — PreSaveContext carries every field it needs."""
     from dna.extensions.sdlc.write_guards import (
-        bitemporal_lessonlearned_guard,
+        bitemporal_engram_guard,
     )
 
     class _FakeKernel:
@@ -187,9 +187,9 @@ async def test_typed_ctx_drives_the_sdlc_bitemporal_guard():
                              "superseded_by_memory": "rem-x"}}
 
     reg = HookRegistry()
-    reg.on_veto("pre_save", bitemporal_lessonlearned_guard, priority=40)
+    reg.on_veto("pre_save", bitemporal_engram_guard, priority=40)
     ctx = PreSaveContext(
-        scope="dna-development", kind="LessonLearned", name="rem-1",
+        scope="dna-development", kind="Engram", name="rem-1",
         raw={"spec": {"body": "rewrite without valid_to"}},
         kernel=_FakeKernel(),
     )

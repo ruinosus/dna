@@ -29,7 +29,7 @@ ORIG_SCHEMA_INVALIDATING = frozenset({
 ORIG_NON_OVERLAYABLE = frozenset({"Genome", "KindDefinition", "LayerPolicy"})
 ORIG_NON_INHERITABLE = frozenset({
     "Story", "Issue", "Feature", "Milestone", "Roadmap",
-    "Narrative", "VibeSession", "LessonLearned", "Plan",
+    "Narrative", "VibeSession", "Engram", "Plan",
     "Genome", "KindDefinition", "LayerPolicy",
 })
 
