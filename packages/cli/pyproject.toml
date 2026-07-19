@@ -1,6 +1,6 @@
 [project]
 name = "dna-cli"
-version = "0.19.2"
+version = "0.20.0"
 description = "DNA command-line interface — the `dna` binary for the declarative SDLC + document CRUD (kernel-local, no service required)"
 readme = "README.md"
 license = "MIT"
@@ -24,7 +24,7 @@ dependencies = [
     # replaces the registry lookup with the workspace path source below
     # ([tool.uv.sources] — editable ../sdk-py), so dev installs keep tracking
     # the sibling package live; the constraint only bites consumers.
-    "dna-sdk>=0.19,<0.20",
+    "dna-sdk>=0.20,<0.21",
 ]
 
 [project.scripts]
