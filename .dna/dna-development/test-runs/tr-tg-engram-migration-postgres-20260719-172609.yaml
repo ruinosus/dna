@@ -1,0 +1,15 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-engram-migration-postgres-20260719-172609
+spec:
+  guide_ref: tg-engram-migration-postgres
+  outcome: pass
+  verifies:
+  - Story/s-engram-migration-postgres
+  executed_by: claude-code
+  executed_at: '2026-07-19T17:26:09+00:00'
+  notes: Todos os passos executados manualmente nesta sessao (worktree /private/tmp/dna-pg-migration).
+    Suite completa do SDK (packages/sdk-py) verde exceto a falha pre-existente/nao-relacionada
+    de test_pgvector_memory_conformance.py (extensao pgvector ausente neste Postgres
+    local de dev).

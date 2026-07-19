@@ -27,7 +27,7 @@ spec:
     \ deployment DNA com Postgres tem o mesmo problema. Preferencia: generalizar os\
     \ dois caminhos atras de uma entrada unica que aceite --source <url-ou-path>,\
     \ em vez de dois scripts soltos."
-  status: todo
+  status: in-progress
   feature: f-portable-memory
   priority: high
   labels:
@@ -55,10 +55,75 @@ spec:
     do dna-cloud); nenhum bump de pin nesta story
   definition_of_done_source: cli-create
   created_at: '2026-07-19T16:29:13+00:00'
-  updated_at: '2026-07-19T16:29:13+00:00'
+  updated_at: '2026-07-19T17:26:14+00:00'
   timeline:
   - at: '2026-07-19T16:29:13+00:00'
     actor: claude-code
     type: status_change
     source: cli
     to: todo
+  - at: '2026-07-19T17:02:21+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-19T17:25:30+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'Implementado: scripts/migrate_engram_postgres.py (nova) faz a migracao
+      Postgres LessonLearned->Engram com pre-checagem de colisao (aborta ANTES de
+      qualquer escrita, transacao unica via asyncpg), cobrindo dna_documents/dna_versions/dna_layer_documents/dna_bundle_entries/dna_edges
+      (from_kind E to_kind)/dna_search_docs (skip gracioso se a tabela nao existir
+      - pgvector e opt-in). Discrepancia vs a spec original: a PK real de dna_documents
+      e dna_bundle_entries e (scope,kind,name,tenant) - a migracao v3 (Phase 8a) adicionou
+      tenant na PK, nao so na tabela; as chaves de colisao usam isso. dna_outbox:
+      decisao de NAO reescrever (ledger imutavel - nada resolve identidade por ele,
+      so invalidacao de cache); contagem exposta no relatorio para visibilidade. scripts/migrate_engram.py
+      (nova) unifica --source path-ou-url, delega para o script de FS (inalterado,
+      12 testes originais continuam verdes) ou o novo modulo PG. Runbook: docs/guides/engram-postgres-cutover.md.
+      Testes: packages/sdk-py/tests/test_migrate_engram_postgres_integration.py, 7
+      casos contra Postgres local real (schema efemera por teste, migrada via SqlAlchemySource.connect()
+      real) - migracao limpa multi-tabela, idempotencia, colisao abortando ANTES de
+      qualquer escrita (inclusive em tabela diferente da que colidiu), colisao em
+      edges (from/to independente), dry-run sem escrita, e o caminho generico de kind-only-table
+      testado contra um UNIQUE real (dna_search_docs nao pode ser testado end-to-end
+      aqui - extensao vector nao instalada neste Postgres local, mesmo gap que fez
+      test_pgvector_memory_conformance.py falhar pre-existentemente, nao relacionado
+      a esta mudanca). Mutation-testing: quebrei has_collisions() para sempre False
+      -> 2 testes de colisao falharam (um delas por um UniqueViolationError REAL do
+      Postgres, provando o pre-flight evita exatamente esse desastre); restaurado,
+      verde. Quebrei o WHERE do UPDATE de dna_documents (AND false) -> 2 testes falharam
+      (clean migration + idempotencia); restaurado, verde. Suite completa do SDK:
+      2321+ passed, so a falha pre-existente de pgvector (ambiente sem extensao vector),
+      nao tocada por esta story.'
+    commit_ref: a14bec562bbd9b48df89155966374ef22f621044
+  - at: '2026-07-19T17:25:55+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-engram-migration-postgres
+    summary: TestGuide tg-engram-migration-postgres (manual)
+  - at: '2026-07-19T17:26:14+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-engram-migration-postgres-20260719-172609
+    summary: "TestRun tr-tg-engram-migration-postgres-20260719-172609 \u2192 pass"
+    outcome: pass
+  produces:
+  - kind: Plan
+    name: plan-s-engram-migration-postgres
+    role: implementation
+    at: '2026-07-19T17:02:21+00:00'
+  - kind: TestGuide
+    name: tg-engram-migration-postgres
+    role: test-guide
+    at: '2026-07-19T17:25:55+00:00'
+  - kind: TestRun
+    name: tr-tg-engram-migration-postgres-20260719-172609
+    role: test-run
+    at: '2026-07-19T17:26:14+00:00'
