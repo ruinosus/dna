@@ -46,6 +46,33 @@ Cada linha conferida contra o schema real dos dois lados.
 > `packages/sdk-{py,ts}/**/extensions/mif/kinds/memory.kind.yaml`.
 > **Quem implementar `s-memory-interchange-verbs` deve conferir cada linha
 > contra o descritor, não contra esta tabela.**
+>
+> **Atualização (`s-memory-interchange-verbs`, implementado):** duas linhas
+> abaixo continuavam erradas mesmo depois da correção acima — ambas
+> corrigidas nesta rodada, com a implementação real em
+> `dna/memory/interchange.py`:
+>
+> 1. **`name`/`@id` (linha da estabilidade de id, §6).** A tabela assumia que
+>    o id mintado no export É o `urn:mif:<uuid>` e que ele é pinado no
+>    `name` do Engram. Os dois estão errados: o `id` do perfil Markdown é uma
+>    **string plana** (os próprios exemplos do MIF usam slugs, não só UUID;
+>    sem `format: uuid` no schema), e `urn:mif:...` é o **`@id` do JSON-LD**,
+>    uma projeção *derivada separadamente* — nunca escrito neste
+>    frontmatter. E `Engram.name` é a chave de storage do DNA (o slug do
+>    bundle, `rem-<hash>`) — um conceito DIFERENTE de uma identidade MIF; o
+>    `spec` nunca vê `name` (ele mora em `metadata.name`, fora do spec). A
+>    decisão implementada: o id é pinado em `encoding_context["mif_id"]` — um
+>    scalar plano, não um sub-objeto `extensions` aninhado (o schema do
+>    Engram já declara `encoding_context.additionalProperties: true`, então
+>    isso não precisa de mudança de schema). Ver o docstring do módulo para o
+>    raciocínio completo.
+> 2. **`homophonic_links` não precisa de cofre.** A tabela dizia que o
+>    `resonance_score` "perde -> vai pra extensions" porque `relationships`
+>    não teria onde guardá-lo. Falso: o descritor real tem
+>    `relationships[].strength` (0.0-1.0) — encaixe exato para
+>    `resonance_score` — mais um `metadata` aberto que encaixa o `basis`.
+>    `homophonic_links` viaja inteiro por `relationships[type=relates-to]`,
+>    sem nenhuma entrada no `extensions.x-dna`.
 
 | `Engram` (DNA) | MIF | Fidelidade | Observação |
 |---|---|---|---|
@@ -55,11 +82,11 @@ Cada linha conferida contra o schema real dos dois lados.
 | `valid_from` / `valid_to` | `temporal.validFrom` / **`validUntil`** | ✅ 1:1 | **bi-temporalidade — o segundo eixo onde já concordam.** ⚠️ CORRIGIDO: dizia `validTo`, que **não existe** na spec real |
 | `superseded_by_memory` | `relationships[supersedes]` | ✅ | par com o `valid_to` do Engram para auditoria point-in-time |
 | `source_refs` | `relationships[derived-from]` + `provenance.wasDerivedFrom` | ✅ | |
-| `homophonic_links` | **`relationships[relates-to]`** | ⚠️ | perde o `resonance_score` → vai para `extensions`. ⚠️ CORRIGIDO: dizia `related-to`, que **não existe** |
+| `homophonic_links` | **`relationships[relates-to]`** | ✅ | `resonance_score` → `relationships[].strength` (0-1, encaixe nativo); `basis` → `relationships[].metadata.basis`. **Sem cofre** — ver a atualização acima. ⚠️ CORRIGIDO: dizia `related-to` (não existe) E dizia que `resonance_score` precisava de `extensions` (não precisa) |
 | `owner` | `provenance.wasAttributedTo` | ✅ | qual agente engrafou |
 | `tags` | `tags` | ✅ 1:1 | |
 | `created_at` | `created` | ✅ 1:1 | |
-| `name` (`rem-<hash>`) | `@id` (`urn:mif:<uuid>`) | ⚠️ | ver §5 (estabilidade de id no round-trip) |
+| *(pin de identidade)* | `id` (string plana no perfil Markdown) | ⚠️ | mintado uma vez, pinado em `Engram.spec.encoding_context["mif_id"]` — ver §6. **NÃO** é `Engram.name` nem `urn:mif:...` (isso é o `@id` do JSON-LD, derivado). ⚠️ CORRIGIDO: a coluna dizia `name (rem-<hash))` ↔ `@id (urn:mif:<uuid>)` |
 | `confidence_score`, `relevance_decay_seed`, `surface_count`, `cues_history`, `encoding_context`, `affect`, `affect_reason` | `extensions.x-dna.*` | ⚠️ **por design** | é a **física cognitiva** do DNA que o MIF flat-file não tem; viaja no `extensions` (MIF Level 3) e volta intacta num round-trip DNA→MIF→DNA |
 
 A leitura da última linha: os campos que **não** têm casa no MIF não são "perda" — são o **diferencial** do DNA. O MIF exporta uma memória *estática*; o DNA exporta a memória *mais a curva de decay, o histórico de cues e o contexto de engraphy*. Guardamos isso em `extensions.x-dna` para um outro sistema MIF simplesmente ignorar (degradação graciosa), mas um DNA de volta recuperar tudo.
@@ -152,7 +179,30 @@ dna memory import PATH [OPTIONS]
 
 ## 6. A estabilidade de id no round-trip (o detalhe que quebra se ignorado)
 
-Risco clássico: exportar → reimportar cria **duplicata** porque o id mudou. Solução:
+Risco clássico: exportar → reimportar cria **duplicata** porque o id mudou.
+
+> ⚠️ **Resolvido em `s-memory-interchange-verbs` — a redação original abaixo
+> (numerada 1-3) ficou como registro histórico da pergunta em aberto que a
+> story herdou; a decisão REAL implementada diverge dela em dois pontos e
+> está em `dna/memory/interchange.py` (module docstring, ponto 1):**
+>
+> - o id mintado/pinado é uma **string plana** (o `id` do perfil Markdown),
+>   **não** `urn:mif:<uuid>` — essa forma é o `@id` do JSON-LD, uma projeção
+>   *derivada*, nunca escrita no frontmatter Markdown (ver a correção #1 do
+>   descritor `mif/kinds/memory.kind.yaml`);
+> - o pin fica em `Engram.spec.encoding_context["mif_id"]` (a chave já é
+>   `additionalProperties: true`), **não** num `source_ref` — um
+>   `source_ref` é semanticamente "artefato do qual esta memória deriva"
+>   (mapeia para `relationships[derived-from]`/`provenance.wasDerivedFrom`);
+>   usá-lo para o pin de identidade colidiria com essa mesma linha da tabela
+>   num export subsequente.
+>
+> `--dedupe id` compara esse valor pinado: para `--as native`/`both`, contra
+> `encoding_context.mif_id` nos Engrams já existentes; para `--as
+> passthrough`/`both`, contra o `id` do próprio doc `Memory` (mesmo campo lá
+> — sem pin necessário).
+
+Redação original (histórica):
 
 1. No **export** de um Engram nascido no DNA, minte um `urn:mif:<uuid>` **uma vez** e guarde-o de volta no doc (em `encoding_context.extensions` ou como `source_ref` `mif:urn:...`). Próximo export → mesmo `@id`.
 2. No **import** de um MIF, preserve o `@id` no Engram projetado (via `source_ref` `mif:urn:...`). Re-export → mesmo `@id`.

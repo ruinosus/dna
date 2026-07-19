@@ -1,0 +1,25 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-memory-interchange-verbs
+spec:
+  title: 'Plano: s-memory-interchange-verbs'
+  date: '2026-07-19'
+  status: accepted
+  story_ref: s-memory-interchange-verbs
+  journey_phase: plan
+  body: "Modulo de projecao dna/memory/interchange.py (to_mif/from_mif puros, deterministicos,\
+    \ sem rede) + os verbos CLI dna memory export/import. FONTE DE VERDADE do mapeamento:\
+    \ o descritor real packages/sdk-{py,ts}/**/extensions/mif/kinds/memory.kind.yaml\
+    \ \u2014 NAO a tabela secao 2 do design, que foi escrita contra suposicoes e ja\
+    \ teve dois campos corrigidos (validUntil, relates-to). Conferir cada linha contra\
+    \ o descritor. Ponto aberto herdado: a secao 6 (estabilidade de id) assume mintar\
+    \ urn:mif:<uuid>, mas a story do passthrough descobriu que o id do perfil Markdown\
+    \ e UUID puro e o urn: e o @id do JSON-LD \u2014 resolver qual e pinado antes\
+    \ de implementar. Passos: 1) to_mif/from_mif cobrindo o mapeamento com o cofre\
+    \ extensions.x-dna; 2) estabilidade de @id com dedupe idempotente; 3) verbos Click\
+    \ na superficie existente (--format, --out, --bundle, --personal, --include-forgotten;\
+    \ --as, --dedupe); 4) --personal respeitando INV-PERSONAL. Empilhada em feat/mif-passthrough-kind\
+    \ (PR 167) porque consome o descritor. Sem bump de pin."
+  created_at: '2026-07-19T19:21:31+00:00'
+  updated_at: '2026-07-19T19:21:31+00:00'

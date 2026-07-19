@@ -8,7 +8,7 @@ spec:
     e deterministicos) + os verbos CLI dna memory export/import na superficie Click
     existente. Cobre o mapeamento da secao 2 do design com o cofre x-dna e a estabilidade
     de @id no round-trip.
-  status: todo
+  status: in-progress
   feature: f-portable-memory
   priority: high
   labels:
@@ -17,30 +17,252 @@ spec:
   - cli
   reporter: claude-code
   acceptance_criteria:
-  - Dado interchange.py, quando to_mif(spec)/from_mif(doc) rodam, entao sao puros,
-    deterministicos, sem rede, com espelho Py<->TS, e cobrem 100% do mapeamento da
-    secao 2 incluindo o cofre extensions.x-dna
-  - "Dado um Engram nascido no DNA, quando exportado, entao um urn:mif:<uuid> e mintado\
-    \ UMA vez e pinado de volta no doc \u2014 um segundo export produz o mesmo @id"
-  - Dado um MIF importado, quando reexportado, entao o @id original e preservado;
-    --dedupe id e idempotente e o round-trip nao duplica
-  - Dado dna memory export, entao suporta --format mif, --out, --bundle, --personal,
-    --include-forgotten alem de --scope/--tenant/--kind/--json
-  - Dado dna memory import, entao suporta --as passthrough|native|both (default both),
-    --dedupe id|content-hash|off, --personal alem de --scope/--tenant/--json
-  - 'Dado --personal, entao respeita INV-PERSONAL: identidade resolvida server-side,
-    nunca argumento; export pessoal nunca vaza memoria de workspace e import pessoal
-    nunca cai em particao compartilhada'
+  - text: Dado interchange.py, quando to_mif(spec)/from_mif(doc) rodam, entao sao
+      puros, deterministicos, sem rede, com espelho Py<->TS, e cobrem 100% do mapeamento
+      da secao 2 incluindo o cofre extensions.x-dna
+    done: true
+    done_at: '2026-07-19T19:50:33+00:00'
+    done_by: claude-code
+    evidence: packages/sdk-py/dna/memory/interchange.py (to_mif/from_mif, pure/no
+      network/no LLM) + TS mirror packages/sdk-ts/src/memory/interchange.ts; test_memory_interchange.py
+      (18 tests, full-field + x-dna vault round trip, real MIF fixtures) + memory-interchange-parity.json/test_memory_interchange_parity.py/memory-interchange-parity.test.ts
+      (Py<->TS parity, both green)
+  - text: "Dado um Engram nascido no DNA, quando exportado, entao um urn:mif:<uuid>\
+      \ e mintado UMA vez e pinado de volta no doc \u2014 um segundo export produz\
+      \ o mesmo @id"
+    done: true
+    done_at: '2026-07-19T19:50:37+00:00'
+    done_by: claude-code
+    evidence: "CORRECTED per real descriptor (see decision comment): the pinned id\
+      \ is a plain string in encoding_context['mif_id'], not urn:mif:<uuid> in the\
+      \ doc \u2014 resolve_or_mint_mif_id() mints once, CLI export pins it back onto\
+      \ the Engram; test_id_is_stable_across_repeated_exports_of_the_same_engram (CLI)\
+      \ + test_reexport_of_the_same_engram_produces_the_same_id (unit) prove a second\
+      \ export reuses the same id (minted_ids=0)"
+  - text: Dado um MIF importado, quando reexportado, entao o @id original e preservado;
+      --dedupe id e idempotente e o round-trip nao duplica
+    done: true
+    done_at: '2026-07-19T19:50:41+00:00'
+    done_by: claude-code
+    evidence: 'from_mif() pins doc[''id''] into encoding_context[''mif_id''] on import;
+      test_import_pins_the_docs_own_id_for_a_stable_reexport + test_dedupe_id_reimport_no_op
+      (CLI: re-import of the same export is skipped=1, imported=0, list count stays
+      1) + test_dedupe_off_does_not_error_but_id_dedupe_default_prevents_duplication'
+  - text: Dado dna memory export, entao suporta --format mif, --out, --bundle, --personal,
+      --include-forgotten alem de --scope/--tenant/--kind/--json
+    done: true
+    done_at: '2026-07-19T19:50:44+00:00'
+    done_by: claude-code
+    evidence: "dna memory export: --format {mif} (omp/pam documented future), --out,\
+      \ --bundle (JSON-LD @graph), --personal, --include-forgotten, --scope/--tenant/--kind/--json\
+      \ \u2014 dna_cli/memory_cmd.py export_cmd; test_bundle_json_ld_round_trips_through_import\
+      \ + test_include_forgotten_carries_the_bi_temporal_chain + test_export_rejects_non_engram_kind"
+  - text: Dado dna memory import, entao suporta --as passthrough|native|both (default
+      both), --dedupe id|content-hash|off, --personal alem de --scope/--tenant/--json
+    done: true
+    done_at: '2026-07-19T19:50:48+00:00'
+    done_by: claude-code
+    evidence: "dna memory import PATH: --as {passthrough,native,both} (default both),\
+      \ --dedupe {id,content-hash,off} (default id), --personal, --scope/--tenant/--json\
+      \ \u2014 import_cmd; test_as_passthrough_only_does_not_project_an_engram + test_dedupe_id_reimport_no_op"
+  - text: 'Dado --personal, entao respeita INV-PERSONAL: identidade resolvida server-side,
+      nunca argumento; export pessoal nunca vaza memoria de workspace e import pessoal
+      nunca cai em particao compartilhada'
+    done: true
+    done_at: '2026-07-19T19:50:52+00:00'
+    done_by: claude-code
+    evidence: reuses dna.memory.personal (no reimplementation) via _resolve_memory_tenant
+      (existing helper); test_personal_export_excludes_named_workspace_tenant + test_workspace_export_excludes_personal_memory
+      + test_personal_import_lands_only_in_the_importers_own_partition (2 distinct
+      identities A/B, cross-checked against a NAMED workspace tenant, not just base)
+      + test_personal_and_tenant_mutually_exclusive_for_export
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - Testes unitarios das funcoes puras; paridade Py<->TS; suite de memoria verde;
-    nenhuma chamada de rede ou LLM no caminho de projecao
+  - text: Testes unitarios das funcoes puras; paridade Py<->TS; suite de memoria verde;
+      nenhuma chamada de rede ou LLM no caminho de projecao
+    done: true
+    done_at: '2026-07-19T19:51:08+00:00'
+    done_by: claude-code
+    evidence: "unit tests: 18 (interchange) + 2 (parity) sdk-py, 2 sdk-ts; CLI tests:\
+      \ 12; Py<->TS parity fixture green both sides; mutation-tested (vault-drop breaks\
+      \ 2 tests, id-pin-disable breaks 5 tests, both restored green); full suites\
+      \ green: sdk-py 3438 passed/197 skipped/4 xfailed, cli 898 passed/5 skipped,\
+      \ sdk-ts 1735 pass/8 skip \u2014 zero failures; no network/LLM calls in to_mif/from_mif\
+      \ (pure dict->dict)"
   definition_of_done_source: cli-create
   created_at: '2026-07-19T14:25:57+00:00'
-  updated_at: '2026-07-19T14:25:57+00:00'
+  updated_at: '2026-07-19T19:51:42+00:00'
   timeline:
   - at: '2026-07-19T14:25:57+00:00'
     actor: claude-code
     type: status_change
     source: cli
     to: todo
+  - at: '2026-07-19T19:21:37+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-19T19:50:06+00:00'
+    actor: claude-code
+    type: decision
+    source: cli
+    summary: "\xA76 id-stability decision (resolving the inherited open question):\
+      \ the MIF Markdown-profile 'id' is a PLAIN string (not urn:mif:<uuid> \u2014\
+      \ that's the JSON-LD @id, a separately-derived projection, per the passthrough\
+      \ descriptor's own correction #1). So: mint a plain id (CLI default factory:\
+      \ uuid4) and pin it to Engram.spec.encoding_context['mif_id'] (a flat scalar\
+      \ \u2014 encoding_context already declares additionalProperties:true, no schema\
+      \ change needed), NOT to Engram.name (a different concept \u2014 DNA's own storage\
+      \ key) and NOT into a source_ref (semantically 'derived-from' provenance, would\
+      \ collide with that mapping). resolve_or_mint_mif_id(spec, id_factory=...) reuses\
+      \ the pinned id on re-export; from_mif() pins the doc's own id on import so\
+      \ a re-export of an imported memory is stable too. dna/memory/interchange.py\
+      \ module docstring has the full writeup; design doc \xA72/\xA76 updated to match."
+    commit_ref: 8b9011568bf42719192ec5a76e37d8bbb884323f
+  - at: '2026-07-19T19:50:10+00:00'
+    actor: claude-code
+    type: decision
+    source: cli
+    summary: "Second divergence found against the (explicitly non-authoritative) design\
+      \ table: homophonic_links needs NO extensions.x-dna vault entry \u2014 the real\
+      \ descriptor's relationships[].strength (0-1) is an exact fit for resonance_score,\
+      \ and the open relationships[].metadata fits basis. Only fields with genuinely\
+      \ no MIF-side home are vaulted: confidence_score, relevance_decay_seed, surface_count,\
+      \ cues_history, encoding_context, affect, affect_reason, visibility (the task's\
+      \ list) PLUS affect_evidence_refs, surface_when, revisions, last_surfaced (found\
+      \ while checking every Engram schema field, not just the pre-named ones) \u2014\
+      \ omitting them would have silently broken the 'loses nothing' bar."
+    commit_ref: 8b9011568bf42719192ec5a76e37d8bbb884323f
+  - at: '2026-07-19T19:50:14+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Implemented: dna/memory/interchange.py (to_mif/from_mif, pure) + TS\
+      \ mirror packages/sdk-ts/src/memory/interchange.ts (following the established\
+      \ precedent that every OTHER pure dna/memory/*.py module \u2014 decay/ecphory/encodingContext/memoryType/personal/policy/retrieval/semantic\
+      \ \u2014 has a TS twin; only the kernel-bound verbs.py does not). Added a dedicated\
+      \ Py<->TS parity fixture (memory-interchange-parity.json) mirroring the memory-scoring-parity.json\
+      \ convention. CLI verbs dna memory export/import added to dna_cli/memory_cmd.py\
+      \ on the existing Click surface (--format/--out/--bundle/--personal/--include-forgotten\
+      \ for export; --as/--dedupe/--personal for import), no new vocabulary. 18 pure\
+      \ unit tests (packages/sdk-py/tests/test_memory_interchange.py, including 2\
+      \ real MIF spec fixtures from tests/parity-fixtures/mif/), 12 CLI tests (packages/cli/tests/test_memory_interchange_cmd.py)\
+      \ covering id-stability, dedupe idempotence, and INV-PERSONAL isolation (personal\
+      \ export excludes named-tenant workspace memory and vice versa; personal import\
+      \ lands only in the importer's own partition, verified against a SECOND identity).\
+      \ Mutation-tested: dropping a vault field breaks 2 tests; disabling the id-pin\
+      \ reuse breaks 4 pure tests + 1 CLI test \u2014 both restored to green. Full\
+      \ suites green: sdk-py 3438 passed, cli 898 passed, sdk-ts 1735 pass (0 failed\
+      \ everywhere)."
+    commit_ref: 8b9011568bf42719192ec5a76e37d8bbb884323f
+  - at: '2026-07-19T19:50:35+00:00'
+    actor: claude-code
+    type: checklist_check
+    source: cli
+    marked_ac: 1
+    marked_dod: 0
+    evidence: packages/sdk-py/dna/memory/interchange.py (to_mif/from_mif, pure/no
+      network/no LLM) + TS mirror packages/sdk-ts/src/memory/interchange.ts; test_memory_interchange.py
+      (18 tests, full-field + x-dna vault round trip, real MIF fixtures) + memory-interchange-parity.json/test_memory_interchange_parity.py/memory-interchange-parity.test.ts
+      (Py<->TS parity, both green)
+    by: claude-code
+  - at: '2026-07-19T19:50:38+00:00'
+    actor: claude-code
+    type: checklist_check
+    source: cli
+    marked_ac: 1
+    marked_dod: 0
+    evidence: "CORRECTED per real descriptor (see decision comment): the pinned id\
+      \ is a plain string in encoding_context['mif_id'], not urn:mif:<uuid> in the\
+      \ doc \u2014 resolve_or_mint_mif_id() mints once, CLI export pins it back onto\
+      \ the Engram; test_id_is_stable_across_repeated_exports_of_the_same_engram (CLI)\
+      \ + test_reexport_of_the_same_engram_produces_the_same_id (unit) prove a second\
+      \ export reuses the same id (minted_ids=0)"
+    by: claude-code
+  - at: '2026-07-19T19:50:42+00:00'
+    actor: claude-code
+    type: checklist_check
+    source: cli
+    marked_ac: 1
+    marked_dod: 0
+    evidence: 'from_mif() pins doc[''id''] into encoding_context[''mif_id''] on import;
+      test_import_pins_the_docs_own_id_for_a_stable_reexport + test_dedupe_id_reimport_no_op
+      (CLI: re-import of the same export is skipped=1, imported=0, list count stays
+      1) + test_dedupe_off_does_not_error_but_id_dedupe_default_prevents_duplication'
+    by: claude-code
+  - at: '2026-07-19T19:50:46+00:00'
+    actor: claude-code
+    type: checklist_check
+    source: cli
+    marked_ac: 1
+    marked_dod: 0
+    evidence: "dna memory export: --format {mif} (omp/pam documented future), --out,\
+      \ --bundle (JSON-LD @graph), --personal, --include-forgotten, --scope/--tenant/--kind/--json\
+      \ \u2014 dna_cli/memory_cmd.py export_cmd; test_bundle_json_ld_round_trips_through_import\
+      \ + test_include_forgotten_carries_the_bi_temporal_chain + test_export_rejects_non_engram_kind"
+    by: claude-code
+  - at: '2026-07-19T19:50:50+00:00'
+    actor: claude-code
+    type: checklist_check
+    source: cli
+    marked_ac: 1
+    marked_dod: 0
+    evidence: "dna memory import PATH: --as {passthrough,native,both} (default both),\
+      \ --dedupe {id,content-hash,off} (default id), --personal, --scope/--tenant/--json\
+      \ \u2014 import_cmd; test_as_passthrough_only_does_not_project_an_engram + test_dedupe_id_reimport_no_op"
+    by: claude-code
+  - at: '2026-07-19T19:50:54+00:00'
+    actor: claude-code
+    type: checklist_check
+    source: cli
+    marked_ac: 1
+    marked_dod: 0
+    evidence: reuses dna.memory.personal (no reimplementation) via _resolve_memory_tenant
+      (existing helper); test_personal_export_excludes_named_workspace_tenant + test_workspace_export_excludes_personal_memory
+      + test_personal_import_lands_only_in_the_importers_own_partition (2 distinct
+      identities A/B, cross-checked against a NAMED workspace tenant, not just base)
+      + test_personal_and_tenant_mutually_exclusive_for_export
+    by: claude-code
+  - at: '2026-07-19T19:51:10+00:00'
+    actor: claude-code
+    type: checklist_check
+    source: cli
+    marked_ac: 0
+    marked_dod: 1
+    evidence: "unit tests: 18 (interchange) + 2 (parity) sdk-py, 2 sdk-ts; CLI tests:\
+      \ 12; Py<->TS parity fixture green both sides; mutation-tested (vault-drop breaks\
+      \ 2 tests, id-pin-disable breaks 5 tests, both restored green); full suites\
+      \ green: sdk-py 3438 passed/197 skipped/4 xfailed, cli 898 passed/5 skipped,\
+      \ sdk-ts 1735 pass/8 skip \u2014 zero failures; no network/LLM calls in to_mif/from_mif\
+      \ (pure dict->dict)"
+    by: claude-code
+  - at: '2026-07-19T19:51:27+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-memory-interchange-verbs
+    summary: TestGuide tg-memory-interchange-verbs (manual)
+  - at: '2026-07-19T19:51:42+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-memory-interchange-verbs-20260719-195137
+    summary: "TestRun tr-tg-memory-interchange-verbs-20260719-195137 \u2192 pass"
+    outcome: pass
+  produces:
+  - kind: Plan
+    name: plan-s-memory-interchange-verbs
+    role: implementation
+    at: '2026-07-19T19:21:37+00:00'
+  - kind: TestGuide
+    name: tg-memory-interchange-verbs
+    role: test-guide
+    at: '2026-07-19T19:51:27+00:00'
+  - kind: TestRun
+    name: tr-tg-memory-interchange-verbs-20260719-195137
+    role: test-run
+    at: '2026-07-19T19:51:42+00:00'

@@ -42,6 +42,7 @@ from dna.memory.encoding_context import (
     stamp_encoding_context_if_absent,
     time_of_day,
 )
+from dna.memory.interchange import from_mif, resolve_or_mint_mif_id, to_mif
 from dna.memory.memory_type import classify_memory_type
 from dna.memory.policy import (
     DEFAULT_DECAY_POLICY,
@@ -135,6 +136,10 @@ __all__ = [
     "stamp_encoding_context_if_absent",
     # memory type
     "classify_memory_type",
+    # interchange (Engram <-> MIF, s-memory-interchange-verbs)
+    "to_mif",
+    "from_mif",
+    "resolve_or_mint_mif_id",
     # policy
     "RecallPolicy",
     "DecayPolicy",
