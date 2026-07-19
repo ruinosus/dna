@@ -87,8 +87,11 @@ def personal_tenant(oid: str, family: str | None = None) -> str:
 
     * Entra (default / ``family="entra"``) → the bare ``personal:<oid>`` — the
       original value, so existing partitions need **no migration**;
-    * any other family (e.g. ``family="google"``) → ``personal:<family>:<id>``,
-      so a Google ``sub`` and an Entra ``oid`` can never collide.
+    * any other family (e.g. ``family="google"``, which the CLI auth bridge also
+      stamps for the WorkOS/AuthKit consumer lane — that ``id`` is the WorkOS user
+      id, NOT a Google subject, see ``dna_cli._mcp_auth.identity_claim_for_family``)
+      → ``personal:<family>:<id>``, so no two families' identities can ever
+      collide.
 
     ``personal_tenant("abc") == "personal:abc"``;
     ``personal_tenant("abc", family="google") == "personal:google:abc"``.
@@ -142,8 +145,13 @@ def resolve_memory_tenant(
     tokens; the SURFACES derive it server-side and are the sole callers — a
     caller can never inject the oid (INV-PERSONAL layer 1). ``family`` (the
     provider family the identity came from, also server-derived) namespaces the
-    partition for non-Entra lanes: Entra/None → bare ``personal:<oid>``, Google →
-    ``personal:google:<sub>`` (the two families never collide).
+    partition for non-Entra lanes: Entra/None → bare ``personal:<oid>``,
+    ``"google"`` → ``personal:google:<sub>`` (the two families never collide). The
+    ``"google"`` family is shared by two IdPs: Google Workspace (``sub`` is
+    Google's OIDC subject) and WorkOS/AuthKit, the consumer sign-in lane (``sub``
+    is the WorkOS user id, ``user_...`` — a deliberate reuse of the key shape, not
+    a Google identity; migrating off WorkOS as the consumer IdP would orphan those
+    partitions).
     """
     if memory_scope == PERSONAL_SCOPE:
         if oid is None or not str(oid).strip():

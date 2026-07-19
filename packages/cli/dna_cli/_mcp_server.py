@@ -393,7 +393,10 @@ def build_server(
         Returns ``(oid, family)`` — the server-resolved identity + its personal-
         memory KEY family ("entra"/"google"); the caller passes
         ``memory_scope="personal"`` + this ``oid`` + ``family`` to the impl, which
-        keys the partition ``personal:<oid>`` (Entra) / ``personal:google:<sub>``."""
+        keys the partition ``personal:<oid>`` (Entra) / ``personal:google:<sub>``
+        (Google Workspace OR WorkOS/consumer — for WorkOS, ``sub`` is the WorkOS
+        user id, not a Google subject; see
+        ``dna_cli._mcp_auth.identity_claim_for_family``)."""
         try:
             oid = enforce_oid_from_context()
             family = enforce_personal_family_from_context()

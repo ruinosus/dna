@@ -32,8 +32,27 @@ def test_provider_family_for_type_maps_actable_providers():
     assert A.provider_family_for_type("google") == "google"
 
 
+def test_workos_shares_the_google_family_for_personal_memory_key_reuse():
+    """``s-consumer-lane-memory-key``: ``workos`` (Lane B / AuthKit, the consumer
+    sign-in IdP) is mapped into the SAME ``"google"`` family as the Google Workspace
+    IdP — NOT because a WorkOS identity is a Google one, but because personal
+    memory's ``personal:google:<sub>`` namespaced-key shape is reused for the
+    consumer lane (see ``identity_claim_for_family``).
+
+    Side effect worth documenting: this table is ALSO the act-on-behalf dispatch
+    registry key (``resolve_port``), so a WorkOS-authenticated caller now resolves
+    to the same family as a Google identity there too. That is harmless in
+    practice — ``GoogleWorkspaceProvider.credential_for`` never reads the inbound
+    token; it looks up a separately-consented Google refresh token by subject, and
+    nothing ever populates one for a WorkOS subject, so the request still fails
+    closed (``ActOnBehalfUnavailable: no consented credential ... yet``) instead of
+    the previous "no Microsoft/Google family" message. No live Google API is ever
+    reachable via a WorkOS token."""
+    assert A.provider_family_for_type("workos") == "google"
+
+
 def test_provider_family_is_none_for_non_actable_identities():
-    for t in ("clerk", "workos", "auth0", "oidc", "generic", None, ""):
+    for t in ("clerk", "auth0", "oidc", "generic", None, ""):
         assert A.provider_family_for_type(t) is None
 
 
