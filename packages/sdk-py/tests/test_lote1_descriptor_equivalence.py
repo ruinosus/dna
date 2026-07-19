@@ -1,8 +1,16 @@
 """F3 lote-1: ports sintetizados dos descriptors ≡ classes extintas.
 
-Kinds: WorkflowEvent · LessonLearned · Retrospective · PatternInsight ·
+Kinds: WorkflowEvent · Engram · Retrospective · PatternInsight ·
 PreMortem (spec 2026-06-10-kinds-descriptor-f3 D5; receita do piloto
 Kaizen — test_kaizen_descriptor_equivalence.py).
+
+s-engram-rename (2026-07-19): Engram (formerly LessonLearned,
+github.com/ruinosus/dna/sdlc/v1) is now registered by HelixExtension from
+``helix/kinds/engram.kind.yaml`` (github.com/ruinosus/dna/v1, alias
+helix-engram) — the fixture kernel below loads BOTH extensions so every
+Kind in ``KINDS`` resolves. The golden identity block was updated
+in-place (alias/api_version/origin/kind/display_label); schema/storage/
+summary_cases are untouched (verbatim schema carry-over).
 
 GOLDENS congelados em tests/goldens/lote1/<Kind>.golden.json — capturados
 2026-06-10 das classes VIVAS (pré-deleção): identity, flags, storage,
@@ -39,6 +47,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from dna.extensions.helix import HelixExtension
 from dna.extensions.sdlc import SdlcExtension
 from dna.kernel import Kernel
 from dna.kernel.kind_base import KindBase
@@ -46,12 +55,12 @@ from dna.kernel.protocols import TenantScope
 
 GOLDEN_DIR = Path(__file__).parent / "goldens" / "lote1"
 
-KINDS = ["WorkflowEvent", "LessonLearned", "Retrospective", "PatternInsight", "PreMortem"]
+KINDS = ["WorkflowEvent", "Engram", "Retrospective", "PatternInsight", "PreMortem"]
 
 # Projeção curada declarada no descriptor (delta intencional — ver
 # docstring). WorkflowEvent não está aqui: seu summary reproduz a classe.
 CURATED_SUMMARY_DEFAULTS = {
-    "LessonLearned": {
+    "Engram": {
         "area": "", "affect": "", "summary": "", "surface_count": 0, "owner": None,
     },
     "Retrospective": {"title": "", "intent": "", "period_end": ""},
@@ -72,9 +81,12 @@ def _golden(kind: str) -> dict:
 
 @pytest.fixture(scope="module")
 def kernel():
-    """Ports como a EXTENSÃO os registra (o funil real)."""
+    """Ports como a EXTENSÃO os registra (o funil real). Engram vive em
+    HelixExtension (s-engram-rename) — os outros 4 Kinds em SdlcExtension;
+    ambas carregadas para o fixture cobrir os 5."""
     k = Kernel()
     k.load(SdlcExtension())
+    k.load(HelixExtension())
     return k
 
 
@@ -111,7 +123,7 @@ def test_flags_match_golden(kernel, kind):
     g = _golden(kind)["flags"]
     port = _port(kernel, kind)
     assert port.plane == g["plane"] == "record"
-    # A permissive Kind (no declared tenant_scope, e.g. LessonLearned since the
+    # A permissive Kind (no declared tenant_scope, e.g. Engram since the
     # memory co-pillar made it tenant-overlayable) has NO `scope` attribute; a
     # declared Kind exposes the TenantScope. golden scope=null encodes permissive.
     assert getattr(port, "scope", None) == (TenantScope(g["scope"]) if g["scope"] else None)
@@ -127,10 +139,10 @@ def test_flags_match_golden(kernel, kind):
     assert port.VOLATILE_SPEC_FIELDS == KindBase.VOLATILE_SPEC_FIELDS
 
 
-def test_lessonlearned_not_scope_inheritable(kernel):
+def test_engram_not_scope_inheritable(kernel):
     """A classe declarava scope_inheritable=False — alimenta o set derivado
     _NON_INHERITABLE_KINDS (test_kind_classification_attrs pina o oracle)."""
-    assert _port(kernel, "LessonLearned").scope_inheritable is False
+    assert _port(kernel, "Engram").scope_inheritable is False
 
 
 def test_builtin_descriptor_markers(kernel):
@@ -173,7 +185,7 @@ def test_workflow_event_stays_strict(kernel):
 def test_dep_filters_match_golden(kernel, kind):
     g = _golden(kind)["dep_filters"]
     got = _port(kernel, kind).dep_filters()
-    if kind == "LessonLearned":
+    if kind == "Engram":
         # NOTA (delta intencional): a classe retornava {}, o port retorna
         # None (sem declaração). Ambos falsy — call-sites fazem `or {}`.
         assert g == {} and got is None
@@ -242,7 +254,7 @@ def test_parse_valid_accepted(kernel, kind):
 
 @pytest.mark.parametrize("kind,missing", [
     ("WorkflowEvent", "phase"),
-    ("LessonLearned", "area"),
+    ("Engram", "area"),
     ("Retrospective", "title"),
     ("PatternInsight", "dream_ref"),
     ("PreMortem", "source_story"),
@@ -261,10 +273,10 @@ def test_parse_invalid_rejected(kernel, kind, missing):
 
 # --- embed (F3 D4) -----------------------------------------------------------
 
-def test_lessonlearned_declares_embed_fields(kernel):
+def test_engram_declares_embed_fields(kernel):
     """Mesmos campos do branch legado de source_text_for (summary + body) —
     substitui a entrada no frozenset EMBEDDABLE_KINDS (ratchet D4)."""
-    assert _port(kernel, "LessonLearned").embed_fields == ["summary", "body"]
+    assert _port(kernel, "Engram").embed_fields == ["summary", "body"]
 
 
 @pytest.mark.parametrize("kind", ["WorkflowEvent", "Retrospective", "PatternInsight", "PreMortem"])

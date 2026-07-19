@@ -201,8 +201,8 @@ async function semanticHookLiftsParaphrase(embed: EmbedFn): Promise<void> {
 async function fusionPreservesAndAnnotates(_embed: EmbedFn): Promise<void> {
   const engrams = paraphraseEngrams();
   const hits = [
-    { kind: "LessonLearned", name: "rem-decoy", score: 0.048 },
-    { kind: "LessonLearned", name: "rem-target", score: 0.033 },
+    { kind: "Engram", name: "rem-decoy", score: 0.048 },
+    { kind: "Engram", name: "rem-target", score: 0.033 },
   ];
   const sem = { "rem-target": 0.9 };
   const fused = fuseSemanticRecall(hits, engrams, PARAPHRASE_QUERY, sem,

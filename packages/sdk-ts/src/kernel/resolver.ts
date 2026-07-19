@@ -54,7 +54,7 @@ export const BOOTSTRAP_KINDS: ReadonlySet<string> = new Set([
  *  below. Mirrors the kernel's `_NON_INHERITABLE_KINDS`. */
 export const DEFAULT_NON_INHERITABLE_KINDS_V1: ReadonlySet<string> = new Set([
   "Story", "Issue", "Feature", "Milestone", "Roadmap",
-  "Narrative", "VibeSession", "LessonLearned", "Plan",
+  "Narrative", "VibeSession", "Engram", "Plan",
   "Genome", "KindDefinition", "LayerPolicy",
 ]);
 

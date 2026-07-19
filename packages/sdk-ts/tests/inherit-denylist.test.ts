@@ -10,7 +10,7 @@ import { createKernelWithBuiltins } from "../src/bootstrap";
 // built-in Kinds registered.
 const LEDGER_AND_STRUCTURAL = [
   "Story", "Issue", "Feature", "Milestone", "Roadmap",
-  "Narrative", "VibeSession", "LessonLearned", "Plan",
+  "Narrative", "VibeSession", "Engram", "Plan",
   "Genome", "KindDefinition", "LayerPolicy",
 ];
 

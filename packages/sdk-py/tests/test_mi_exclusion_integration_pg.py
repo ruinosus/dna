@@ -25,7 +25,7 @@ pytestmark = [
 ]
 
 SCOPE = "dna-development"
-RECORD_KINDS_PROBE = ("Story", "Issue", "LessonLearned")
+RECORD_KINDS_PROBE = ("Story", "Issue", "Engram")
 
 
 def _dsn() -> str:

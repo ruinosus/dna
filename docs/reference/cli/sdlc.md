@@ -249,7 +249,7 @@ dna sdlc backfill [OPTIONS] PATTERN
 
 Session-start briefing — one screen with everything the next session
 needs to bootstrap context: in-progress work, open spikes, recent
-AgentSessions, recent LessonLearned, and open high/critical Issues.
+AgentSessions, recent Engram, and open high/critical Issues.
 
 The cross-session "recall in" command: run it at the START of a session
 (yours or another agent's) instead of `current` + `session list` +

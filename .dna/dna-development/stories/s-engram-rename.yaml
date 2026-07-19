@@ -1,0 +1,116 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-engram-rename
+spec:
+  title: Renomear o Kind de memoria LessonLearned -> Engram com identidade github.com/rui
+  description: Renomear o Kind de memoria LessonLearned -> Engram com identidade github.com/ruinosus/dna/v1,
+    preservando LessonLearned (/sdlc/v1) e o alias sdlc-lesson-learned como compat
+    read-time. Bloqueia as demais stories (tudo abaixo fala 'Engram').
+  status: review
+  feature: f-portable-memory
+  priority: high
+  labels:
+  - memory
+  - kinds
+  - parity
+  reporter: claude-code
+  acceptance_criteria:
+  - Dado o novo descritor engram.kind.yaml, quando registrado, entao apiVersion=github.com/ruinosus/dna/v1
+    e kind=Engram, schema identico ao atual, espelho Py<->TS byte-identico e golden
+    de hash-parity atualizado
+  - "Dado um doc ja gravado com kind: LessonLearned (/sdlc/v1), quando lido, entao\
+    \ resolve como Engram via mapa de alias read-time \u2014 com golden novo provando\
+    \ a resolucao"
+  - Dado o alias legado sdlc-lesson-learned, quando usado, entao continua resolvendo
+    para Engram
+  - Dado que KindDefinitionSpec.alias e hoje uma string unica, quando a compat exigir
+    dois nomes, entao a solucao (aliases lista vs mapa externo) e implementada com
+    paridade Py<->TS e goldens em lockstep
+  - Dado o Kind renomeado, entao display_label = Engrama e a view SDLC 'Licoes Aprendidas'
+    segue funcionando como lente (Engram com affect reflexivo em area de SDLC), nao
+    como nome do tipo
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - Zero migracao obrigatoria de dados; suite de memoria existente verde; goldens
+    de parity e de alias verdes; make/CI verde; nenhum bump de pin e nenhum azd up
+  definition_of_done_source: cli-create
+  created_at: '2026-07-19T14:25:30+00:00'
+  updated_at: '2026-07-19T16:39:37+00:00'
+  timeline:
+  - at: '2026-07-19T14:25:30+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-19T14:58:39+00:00'
+    actor: claude-code
+    type: decision
+    source: cli
+    summary: "DECISAO (c) REVERTIDA (founder, 2026-07-19): de 'alias read-time, zero\
+      \ migracao' para REWRITE UNICO. Motivo: nao ha nenhum usuario nos dois repos\
+      \ \u2014 a compat protegeria consumidores que nao existem. A medicao confirmou\
+      \ o custo real: 5 memorias em disco (4 em personal:local-user, 1 em dna-cloud-dev),\
+      \ todas YAML plano, rewrite mecanico de dois campos (apiVersion + kind). Producao\
+      \ nao foi mensuravel (o MCP negou por membership/oid \u2014 ver s-consumer-lane-memory-key),\
+      \ mas a decisao nao depende da contagem: o script e idempotente e reporta a\
+      \ propria. Consequencia no desenho: cai o descritor de compat, cai o mecanismo\
+      \ de alias (a escolha 'dois descritores vs lista' fica irrelevante), cai a desambiguacao\
+      \ de _resolve_api_version. Fica o teste do conjunto que falha aberto \u2014\
+      \ esse risco nao muda. Racional: rename limpo e mais barato agora do que jamais\
+      \ sera; acumular divida de compat antes de existir alguem para quem ser compativel\
+      \ e o pior dos dois mundos."
+    commit_ref: a5e339d7dd563b7744909b0dc702cc08b1c97d69
+  - at: '2026-07-19T15:00:06+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-19T16:38:38+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-engram-rename
+    summary: TestGuide tg-engram-rename (manual)
+  - at: '2026-07-19T16:38:46+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-engram-rename-20260719-163842
+    summary: "TestRun tr-tg-engram-rename-20260719-163842 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-19T16:39:04+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/162'
+    pr_url: https://github.com/ruinosus/dna/pull/162
+  - at: '2026-07-19T16:39:31+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Dois reviews independentes; mutation testing achou o gap do VERSION_CHURN_KINDS\
+      \ e tres defeitos no script de migracao \u2014 todos corrigidos e reverificados.\
+      \ PR #162."
+  - at: '2026-07-19T16:39:37+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
+  produces:
+  - kind: Plan
+    name: plan-s-engram-rename
+    role: implementation
+    at: '2026-07-19T15:00:06+00:00'
+  - kind: TestGuide
+    name: tg-engram-rename
+    role: test-guide
+    at: '2026-07-19T16:38:38+00:00'
+  - kind: TestRun
+    name: tr-tg-engram-rename-20260719-163842
+    role: test-run
+    at: '2026-07-19T16:38:46+00:00'

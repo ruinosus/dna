@@ -1312,7 +1312,7 @@ COMMUNITY_ARTIFACT_KINDS = frozenset({
 # JARVIS bench renders them in TextSlot/HtmlSlot. HtmlBlock body lands in
 # an iframe sandbox="" — pattern Open Generative UI from CopilotKit/AG-UI.
 #
-# 4-axis taxonomy (matches LessonLearned):
+# 4-axis taxonomy (matches Engram):
 #   - owner (Semon privacy: general vs agent-private; default null/general)
 #   - generated_by (provenance)
 #   - area (subject — Feature/X, Genome/Y, ...)

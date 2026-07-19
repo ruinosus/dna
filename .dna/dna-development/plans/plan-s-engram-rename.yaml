@@ -1,0 +1,63 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-engram-rename
+spec:
+  title: 'Plano: s-engram-rename'
+  date: '2026-07-19'
+  status: accepted
+  story_ref: s-engram-rename
+  journey_phase: plan
+  body: "# Plano \u2014 Story 1 `s-engram-rename` (LessonLearned \u2192 Engram)\n\n\
+    > Plan gate aprovado pelo founder em 2026-07-19. Aterrado numa investiga\xE7\xE3\
+    o do\n> c\xF3digo real; refer\xEAncias file:line verificadas.\n\n## Contexto da\
+    \ decis\xE3o\n\nA decis\xE3o (c) foi **revertida** de \"alias read-time\" para\
+    \ **rewrite \xFAnico**:\nn\xE3o h\xE1 usu\xE1rio algum nos dois repos, ent\xE3\
+    o a compat protegeria consumidores que\nn\xE3o existem. O repo **n\xE3o tem precedente\
+    \ de rename** \u2014 `kind_registry.py:130`\ndiz que aliases *\"CANNOT be renamed\
+    \ without a doc migration\"*, ou seja a pr\xF3pria\narquitetura espera migra\xE7\
+    \xE3o aqui. Fazer o alias seria inventar mecanismo novo,\npermanente, para evitar\
+    \ um script que roda uma vez.\n\nMedi\xE7\xE3o que sustentou: **5 mem\xF3rias\
+    \ em disco** (4 em `personal:local-user`, 1 em\n`dna-cloud-dev`), todas **YAML\
+    \ plano**, rewrite mec\xE2nico de dois campos.\n\n## \u26A0\uFE0F O risco central\
+    \ desta story (n\xE3o mudou com a decis\xE3o)\n\nA resolu\xE7\xE3o de Kind \xE9\
+    \ lookup exato de 2-tupla sem fallback\n(`self._kinds.get((doc.api_version, doc.kind))`,\
+    \ `instance.py:686`, ~25\xD7). Mas o\nperigo maior s\xE3o **quatro conjuntos que\
+    \ referenciam o Kind por literal e falham\nABERTOS** \u2014 n\xE3o levantam erro\
+    \ se esquecidos:\n\n| Local | Se esquecer |\n|---|---|\n| `kernel/resolver.py:69`\
+    \ + `sdk-ts/src/kernel/resolver.ts:57` `DEFAULT_NON_INHERITABLE_KINDS_V1` | **Engram\
+    \ vira scope-inheritable \u2192 vazamento de mem\xF3ria entre scopes** |\n| `extensions/sdlc/write_guards.py:23`\
+    \ `_KIND` | veto bi-temporal para de disparar \u2192 **ressurrei\xE7\xE3o de mem\xF3\
+    ria supersedida** |\n| `kernel/__init__.py:137` `VERSION_CHURN_KINDS` | Engram\
+    \ guarda hist\xF3rico completo \u2192 board afoga |\n| `extensions/intel/engine.py:338,485`\
+    \ | no-op silencioso (guardado por `_kind_registered`) |\n\nCompila, passa typecheck,\
+    \ passa byte-parity \u2014 **e mesmo assim corrompe.**\nO passo 5 existe por causa\
+    \ disso e \xE9 n\xE3o-negoci\xE1vel.\n\n## Passos\n\n1. **`engram.kind.yaml`**\
+    \ \u2014 `target_api_version: github.com/ruinosus/dna/v1`,\n   `target_kind: Engram`,\
+    \ schema copiado verbatim do descritor atual,\n   `display_label: Engrama`, alias\
+    \ novo. C\xF3pia **byte-id\xEAntica** para\n   `packages/sdk-ts/src/extensions/<mesma-ns>/kinds/`\
+    \ \u2014 o teste de parity chaveia\n   por `<extens\xE3o>/<arquivo>`, ent\xE3\
+    o o **nome do diret\xF3rio precisa bater dos dois\n   lados**. `/dna/v1` implica\
+    \ diret\xF3rio de extens\xE3o novo (n\xE3o \xE9 `sdlc/`).\n2. **Remover `lesson-learned.kind.yaml`**\
+    \ dos dois lados. \xC9 rename, n\xE3o compat.\n3. **Literais** \u2014 `memory/verbs.py`\
+    \ (`MEMORY_KINDS:55` + ramos `:125,:275,:338-358`),\n   `application/runtime.py:1059,1082,1117,1163`,\
+    \ CLI `memory_cmd.py`\n   (`click.Choice`, user-visible), `extensions/intel/engine.py`,\n\
+    \   `extensions/sdlc/{write_guards,work_item_outputs}.py`.\n4. **O conjunto que\
+    \ falha aberto** \u2014 `VERSION_CHURN_KINDS`,\n   `DEFAULT_NON_INHERITABLE_KINDS_V1`\
+    \ (**Py e TS**, sen\xE3o vira drift), `_KIND`.\n5. **Teste expl\xEDcito** de que\
+    \ `Engram` \u2208 cada um dos quatro conjuntos.\n   Nada mais no repo pega isso.\n\
+    6. **Goldens** \u2014 `goldens/lote1/LessonLearned.golden.json` \u2192 Engram;\
+    \ `KINDS` e\n   `CURATED_SUMMARY_DEFAULTS` em `test_lote1_descriptor_equivalence.py`.\n\
+    \   (`alias` **n\xE3o** alimenta hash pinado \u2014 o parity \xE9 sha256 dos bytes\
+    \ do par\n   Py/TS \u2014 ent\xE3o nenhum golden de outro Kind \xE9 perturbado.)\n\
+    7. **Script de migra\xE7\xE3o** idempotente: reescreve `apiVersion` + `kind` nos\
+    \ docs\n   existentes, reporta contagem antes/depois, seguro para reexecu\xE7\xE3\
+    o. Rodar nos\n   5 docs locais; dispon\xEDvel para produ\xE7\xE3o no momento do\
+    \ bump de pin.\n8. **Verde**: suite de mem\xF3ria, `test_descriptor_hash_parity`,\n\
+    \   `test_kind_registry_parity`, `test_lote1_descriptor_equivalence`, make/CI.\n\
+    \n## Fora desta story\n\nDocs e `lote2` (s\xF3 prosa); a superf\xEDcie dna-cloud;\
+    \ qualquer bump de pin.\n\n## N\xE3o fazer\n\n**Nenhum bump de pin do `dna-sdk`;\
+    \ nenhum `azd up`.** Stories 1\u20134 s\xE3o SDK puro \u2014\no pin e o deploy\
+    \ s\xF3 quando a superf\xEDcie dna-cloud consumir.\n"
+  created_at: '2026-07-19T15:00:00+00:00'
+  updated_at: '2026-07-19T15:00:00+00:00'

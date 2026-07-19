@@ -48,7 +48,7 @@ class LessonKind extends KindBase {
     "A Lesson is a short, structured educational activity the agent can run with " +
     "a pre-reader child. Declarative — content is in YAML, edited by caregivers " +
     "in Studio, no code review. Tools: start_lesson(subject) picks one; " +
-    "record_attempt(concept, correct) tracks performance into LessonLearned docs.";
+    "record_attempt(concept, correct) tracks performance into Engram docs.";
 
   dependencies() { return null; }
 

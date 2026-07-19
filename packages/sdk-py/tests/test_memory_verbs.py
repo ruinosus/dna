@@ -24,7 +24,7 @@ _REASON = "a concrete reason long enough for the affect validator to accept it i
 
 def _ll(name: str, area: str, summary: str, affect: str = "triumph") -> dict:
     return {
-        "kind": "LessonLearned",
+        "kind": "Engram",
         "name": name,
         "spec": {
             "area": area,
@@ -56,7 +56,7 @@ async def test_remember_stamps_and_indexes(kernel_with_provider):
     kernel = kernel_with_provider
     out = await remember(kernel, "demo", **_ll("rem-a", "Feature/memory", "memory recall works"))
     assert out["indexed"] is True
-    got = await kernel.get_document("demo", "LessonLearned", "rem-a")
+    got = await kernel.get_document("demo", "Engram", "rem-a")
     spec = got["spec"]
     # deterministic enrichment
     assert spec["memory_type"] in ("episodic", "semantic", "procedural")
@@ -76,7 +76,7 @@ async def test_recall_hybrid_ranks_and_reconsolidates(kernel_with_provider):
     assert res["hits"][0]["name"] == "rem-mem"
 
     # reconsolidation: cue appended + surface_count bumped on the surfaced memory
-    got = await kernel.get_document("demo", "LessonLearned", "rem-mem")
+    got = await kernel.get_document("demo", "Engram", "rem-mem")
     assert got["spec"]["surface_count"] == 1
     assert len(got["spec"]["cues_history"]) == 1
     assert got["spec"]["cues_history"][0]["actor"] == "claude-code"
@@ -92,7 +92,7 @@ async def test_forget_is_bitemporal_never_deletes(kernel_with_provider):
     assert out["already_forgotten"] is False
 
     # NOT deleted — still auditable on disk
-    got = await kernel.get_document("demo", "LessonLearned", "rem-x")
+    got = await kernel.get_document("demo", "Engram", "rem-x")
     assert got is not None
     assert got["spec"]["valid_to"] == out["valid_to"]
 
@@ -111,7 +111,7 @@ async def test_forget_records_supersession(kernel_with_provider):
     kernel = kernel_with_provider
     await remember(kernel, "demo", **_ll("rem-old", "Feature/memory", "old belief"))
     await forget(kernel, "demo", "rem-old", superseded_by="rem-new")
-    got = await kernel.get_document("demo", "LessonLearned", "rem-old")
+    got = await kernel.get_document("demo", "Engram", "rem-old")
     assert got["spec"]["superseded_by_memory"] == "rem-new"
 
 
@@ -122,13 +122,13 @@ async def test_consolidate_detects_stale_without_llm(kernel_with_provider):
     await remember(kernel, "demo", **_ll("rem-ancient", "Feature/memory", "ancient memory"))
 
     # age one memory into oblivion (deterministic — no wall clock in assertions)
-    old = await kernel.get_document("demo", "LessonLearned", "rem-ancient")
+    old = await kernel.get_document("demo", "Engram", "rem-ancient")
     old["spec"]["last_surfaced"] = "2000-01-01T00:00:00+00:00"
     # NOTE: was the string "faint" — a shape-broken value the write path used
     # to accept silently (i-008); the generic write validation now vetoes it
     # (confidence_score is `type: number` in the Kind schema).
     old["spec"]["confidence_score"] = 0.1
-    await kernel.write_document("demo", "LessonLearned", "rem-ancient", old, invalidate_mode="doc")
+    await kernel.write_document("demo", "Engram", "rem-ancient", old, invalidate_mode="doc")
 
     report = await consolidate(kernel, "demo", apply=False)
     stale_names = [s["name"] for s in report["stale"]]
@@ -139,7 +139,7 @@ async def test_consolidate_detects_stale_without_llm(kernel_with_provider):
     # apply=True soft-forgets the stale ones (bi-temporal, still not deleted)
     report2 = await consolidate(kernel, "demo", apply=True)
     assert report2["archived"] >= 1
-    got = await kernel.get_document("demo", "LessonLearned", "rem-ancient")
+    got = await kernel.get_document("demo", "Engram", "rem-ancient")
     assert got is not None  # NEVER deleted
     assert got["spec"].get("valid_to")  # invalidated
 

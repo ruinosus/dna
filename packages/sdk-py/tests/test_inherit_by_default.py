@@ -19,7 +19,7 @@ from dna.adapters.filesystem.writable import FilesystemWritableSource
 
 _LEDGER_AND_STRUCTURAL = {
     "Story", "Issue", "Feature", "Milestone", "Roadmap",
-    "Narrative", "VibeSession", "LessonLearned", "Plan",
+    "Narrative", "VibeSession", "Engram", "Plan",
     "Genome", "KindDefinition", "LayerPolicy",
 }
 
@@ -52,11 +52,12 @@ def _make_kernel(tmp: Path) -> Kernel:
             f"metadata: {{name: {s}}}\nspec: {{}}\n"
         )
     k = Kernel()
+    # HelixExtension registers Engram (s-engram-rename) and SdlcExtension the
+    # rest of the ledger Kinds, so the kernel can read their
+    # scope_inheritable=False classification (s-kernel-kindport-
+    # classification-attrs — classification now comes from the registered
+    # Kind, not a hardcoded name list).
     k.load(HelixExtension())
-    # SdlcExtension registers the ledger Kinds (LessonLearned, …) so the kernel
-    # can read their scope_inheritable=False classification
-    # (s-kernel-kindport-classification-attrs — classification now comes from
-    # the registered Kind, not a hardcoded name list).
     k.load(SdlcExtension())
     k.source(FilesystemWritableSource(str(tmp), writers=list(k._writers), kernel=k))
     k.cache(FilesystemCache(tmp / ".dna-cache"))
@@ -73,18 +74,28 @@ def test_child_inherits_arbitrary_kind_but_not_ledger(tmp_path: Path):
              "metadata": {"name": "shared-skill"}, "spec": {"body": "x"}},
             tenant=None,
         )
-        # A ledger doc in _lib must NOT leak into the child scope.
+        # A ledger doc in _lib must NOT leak into the child scope. Engram's
+        # real api_version genuinely IS github.com/ruinosus/dna/v1
+        # (s-engram-rename) — write-path validation (i-008) now applies, so
+        # the spec must satisfy the schema's required fields.
         await k.write_document(
-            "_lib", "LessonLearned", "platform-lesson",
-            {"apiVersion": "github.com/ruinosus/dna/v1", "kind": "LessonLearned",
-             "metadata": {"name": "platform-lesson"}, "spec": {"body": "y"}},
+            "_lib", "Engram", "platform-lesson",
+            {"apiVersion": "github.com/ruinosus/dna/v1", "kind": "Engram",
+             "metadata": {"name": "platform-lesson"},
+             "spec": {
+                 "area": "Feature/inherit-by-default",
+                 "surface_when": ["feature_touched"],
+                 "source_refs": ["s-platform-inherit-by-default"],
+                 "affect": "triumph",
+                 "summary": "y",
+             }},
             tenant=None,
         )
         mi = await k.instance_async("scope")
         # inherits the Skill
         assert await mi.one_async("Skill", "shared-skill") is not None
-        # does NOT inherit the ledger LessonLearned
-        assert await mi.one_async("LessonLearned", "platform-lesson") is None
+        # does NOT inherit the ledger Engram
+        assert await mi.one_async("Engram", "platform-lesson") is None
 
     asyncio.run(_run())
 

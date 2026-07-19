@@ -2,7 +2,7 @@
 
 The journey of a Story is a PURE FUNCTION of its own state (timeline + status +
 created/closed timestamps) plus its linked artifacts (Spec via ``spec_refs``,
-Plan via a story ref, LessonLearned via ``source_refs``). It is computed on read
+Plan via a story ref, Engram via ``source_refs``). It is computed on read
 — never written — so the per-Story phase trajectory auto-fills as the Story
 progresses, with zero manual upkeep.
 
@@ -224,8 +224,8 @@ def derive_story_journey(
         reflect = DerivedPhase(
             phase="reflect", present=True,
             at=closed_at or (lesson_at if isinstance(lesson_at, str) else None),
-            evidence=f"LessonLearned/{linked_lesson.get('name')}",
-            source_ref=f"LessonLearned/{linked_lesson.get('name')}",
+            evidence=f"Engram/{linked_lesson.get('name')}",
+            source_ref=f"Engram/{linked_lesson.get('name')}",
         )
     elif is_done:
         reflect = DerivedPhase(

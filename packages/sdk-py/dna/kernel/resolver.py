@@ -66,7 +66,7 @@ BOOTSTRAP_KINDS: frozenset[str] = frozenset({
 # ``Kernel._NON_INHERITABLE_KINDS``.
 DEFAULT_NON_INHERITABLE_KINDS_V1: frozenset[str] = frozenset({
     "Story", "Issue", "Feature", "Milestone", "Roadmap",
-    "Narrative", "VibeSession", "LessonLearned", "Plan",
+    "Narrative", "VibeSession", "Engram", "Plan",
     "Genome", "KindDefinition", "LayerPolicy",
 })
 

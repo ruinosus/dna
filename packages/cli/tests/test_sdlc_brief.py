@@ -1,7 +1,7 @@
 """Tests for `dna sdlc brief` — the cross-session session-start aggregator.
 
 Read-only command: aggregates in-progress work + open spikes + recent
-AgentSessions + recent LessonLearned + open high/critical Issues into one
+AgentSessions + recent Engram + open high/critical Issues into one
 screen. We fake `dna_session` so `query_list(kind)` returns canned docs
 and assert each section renders.
 """
@@ -33,7 +33,7 @@ _FIXTURE = {
         _Doc("vs-new", {"started_at": "2026-05-31T10:00:00Z"}),
         _Doc("vs-old", {"started_at": "2026-05-01T10:00:00Z"}),
     ],
-    "LessonLearned": [
+    "Engram": [
         _Doc("rem-new", {"summary": "newest lesson", "affect": "triumph", "created_at": "2026-05-31T10:00:00Z"}),
         _Doc("rem-old", {"summary": "older lesson", "affect": "regret", "created_at": "2026-05-01T10:00:00Z"}),
     ],

@@ -1,0 +1,39 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-mif-passthrough-kind
+spec:
+  title: Registrar mif-spec.dev/v1 . Memory como Kind de passthrough (plano record),
+    apli
+  description: 'Registrar mif-spec.dev/v1 . Memory como Kind de passthrough (plano
+    record), aplicando a regra normativa #3: um Kind que o DNA nao inventou viaja
+    sob o namespace do dono, inalterado. Base ja rascunhada em docs/design/mif-memory.kind.yaml.'
+  status: todo
+  feature: f-portable-memory
+  priority: high
+  labels:
+  - memory
+  - kinds
+  - interchange
+  reporter: claude-code
+  acceptance_criteria:
+  - Dado o descritor movido de docs/design para o path de extensao real, quando registrado,
+    entao registra mif-spec.dev/v1 . Memory no plano record, com espelho TS e golden
+    de hash-parity
+  - Dado um .memory.json de exemplo do MIF (Level 1 e 2), quando validado, entao passa
+    sem deformacao
+  - Dado o bloco extensions, entao aceita additionalProperties (o cofre onde x-dna.*
+    viaja)
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - Golden de hash-parity Py<->TS verde; validacao do exemplo MIF verde; nenhum campo
+    DNA-flavored injetado no schema do MIF
+  definition_of_done_source: cli-create
+  created_at: '2026-07-19T14:25:33+00:00'
+  updated_at: '2026-07-19T14:25:33+00:00'
+  timeline:
+  - at: '2026-07-19T14:25:33+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo

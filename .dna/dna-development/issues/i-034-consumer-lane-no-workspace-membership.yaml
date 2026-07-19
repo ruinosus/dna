@@ -1,0 +1,21 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-034-consumer-lane-no-workspace-membership
+spec:
+  description: 'Um usuario da lane consumidor (WorkOS/Gmail) nao tem WorkspaceMembership,
+    entao list_memories e negado com ''identity holds no active workspace membership''.
+    Diferente do gap de memoria pessoal (s-consumer-lane-memory-key), este e uma DECISAO
+    de produto, nao um bug: auto-provisionar um workspace pessoal no signup do consumidor,
+    ou aceitar que consumidor tem so memoria pessoal e workspace e exclusivo da lane
+    org? Nota: workspace_for_identity casa por email quando o grant esta unbound,
+    entao um consumidor PODE ter membership se alguem semear com o email dele.'
+  type: question
+  severity: medium
+  status: open
+  timeline:
+  - at: '2026-07-19T14:58:03+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

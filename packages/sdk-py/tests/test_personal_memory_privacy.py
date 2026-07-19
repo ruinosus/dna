@@ -75,7 +75,7 @@ async def _names(res_or_docs) -> set[str]:
 @pytest.mark.asyncio
 async def test_personal_never_visible_to_workspace(kernel):
     await remember(
-        kernel, _SCOPE, kind="LessonLearned", name="rem-secret",
+        kernel, _SCOPE, kind="Engram", name="rem-secret",
         spec=_ll("my private secret memory"),
         tenant=personal_tenant(_OID_A), index=False,
     )
@@ -85,10 +85,10 @@ async def test_personal_never_visible_to_workspace(kernel):
     )
     assert "rem-secret" not in await _names(ws)
     # The raw union predicate at query level, too: tenant IN ('', workspace).
-    ws_docs = [d async for d in kernel.query(_SCOPE, "LessonLearned", tenant=_WORKSPACE)]
+    ws_docs = [d async for d in kernel.query(_SCOPE, "Engram", tenant=_WORKSPACE)]
     assert "rem-secret" not in await _names(ws_docs)
     # base ('' ) query — the shared defaults — also excludes it.
-    base_docs = [d async for d in kernel.query(_SCOPE, "LessonLearned", tenant=None)]
+    base_docs = [d async for d in kernel.query(_SCOPE, "Engram", tenant=None)]
     assert "rem-secret" not in await _names(base_docs)
 
 
@@ -98,7 +98,7 @@ async def test_personal_never_visible_to_workspace(kernel):
 @pytest.mark.asyncio
 async def test_personal_isolated_between_identities(kernel):
     await remember(
-        kernel, _SCOPE, kind="LessonLearned", name="rem-a-only",
+        kernel, _SCOPE, kind="Engram", name="rem-a-only",
         spec=_ll("A private note"), tenant=personal_tenant(_OID_A), index=False,
     )
     # Y (oid=B) recalls their OWN personal partition → 0 hits.
@@ -159,11 +159,11 @@ def test_resolve_memory_target_rejects_workspace_personal_override():
 @pytest.mark.asyncio
 async def test_consolidate_personal_partition_isolated(kernel):
     await remember(
-        kernel, _SCOPE, kind="LessonLearned", name="rem-a",
+        kernel, _SCOPE, kind="Engram", name="rem-a",
         spec=_ll("A memory"), tenant=personal_tenant(_OID_A), index=False,
     )
     await remember(
-        kernel, _SCOPE, kind="LessonLearned", name="rem-ws",
+        kernel, _SCOPE, kind="Engram", name="rem-ws",
         spec=_ll("workspace memory"), tenant=_WORKSPACE, index=False,
     )
     # Consolidate A's personal partition: evaluates ONLY A's memory, never the

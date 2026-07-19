@@ -3212,7 +3212,7 @@
         "summary": "Memories"
       },
       "post": {
-        "description": "Persist ONE memory (a ``LessonLearned``) into the tenant's OWN overlay\n— the portal's ``remember`` / add affordance, tenant-scoped from the\nsession (never base, never another tenant). Reuses the SAME CORE\n``remember_impl`` the MCP ``remember`` tool delegates to (one core, three\nfaces), so a memory added here is recalled identically by MCP/CLI. The\ndeterministic ``_slug(summary)`` name it returns is the id the portal's\n``DELETE /v1/memories/{name}`` targets to undo it.",
+        "description": "Persist ONE memory (an ``Engram``) into the tenant's OWN overlay\n— the portal's ``remember`` / add affordance, tenant-scoped from the\nsession (never base, never another tenant). Reuses the SAME CORE\n``remember_impl`` the MCP ``remember`` tool delegates to (one core, three\nfaces), so a memory added here is recalled identically by MCP/CLI. The\ndeterministic ``_slug(summary)`` name it returns is the id the portal's\n``DELETE /v1/memories/{name}`` targets to undo it.",
         "operationId": "remember_memory_v1_memories_post",
         "parameters": [
           {

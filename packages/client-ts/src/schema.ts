@@ -190,7 +190,7 @@ export interface paths {
         put?: never;
         /**
          * Remember Memory
-         * @description Persist ONE memory (a ``LessonLearned``) into the tenant's OWN overlay
+         * @description Persist ONE memory (an ``Engram``) into the tenant's OWN overlay
          *     — the portal's ``remember`` / add affordance, tenant-scoped from the
          *     session (never base, never another tenant). Reuses the SAME CORE
          *     ``remember_impl`` the MCP ``remember`` tool delegates to (one core, three

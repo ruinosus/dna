@@ -659,7 +659,7 @@ def build_server(
         owner: str = "mcp",
         personal: bool = False,
     ) -> dict[str, Any]:
-        """Persist a memory (a LessonLearned) so future recalls surface it.
+        """Persist a memory (an Engram) so future recalls surface it.
 
         ``personal=true`` remembers PRIVATELY — into your own identity-keyed
         partition, portable across workspaces + clients, never shared with the

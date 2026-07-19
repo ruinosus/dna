@@ -2,7 +2,7 @@
 
 The journey of a Story is a PURE FUNCTION of its own state (timeline + status +
 created/closed) plus its linked artifacts (Spec via spec_refs, Plan via a
-story ref, LessonLearned via source_refs). Computed on read — no WorkflowEvent
+story ref, Engram via source_refs). Computed on read — no WorkflowEvent
 writes needed. These tests pin the 6-phase derivation rules (discover/specify/
 plan/build/verify/reflect) + skipped detection.
 """
@@ -110,7 +110,7 @@ def test_reflect_present_from_linked_lesson_even_if_not_done() -> None:
     )
     r = _phase(j, "reflect")
     assert r.present is True
-    assert r.source_ref == "LessonLearned/rem-foo"
+    assert r.source_ref == "Engram/rem-foo"
 
 
 def test_skipped_phases_on_todo_to_done_jump() -> None:

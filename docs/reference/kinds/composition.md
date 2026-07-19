@@ -282,7 +282,7 @@ A LayerPolicy declares overlay rules for one layer dimension (tenant, branch, re
 - **apiVersion:** `github.com/ruinosus/dna/lesson/v1`
 - **Plane:** composition
 
-A Lesson is a short, structured educational activity the agent can run with a pre-reader child. Declarative — content is in YAML, edited by caregivers in Studio, no code review. Tools: start_lesson(subject) picks one; record_attempt (concept, correct) tracks performance into LessonLearned docs.
+A Lesson is a short, structured educational activity the agent can run with a pre-reader child. Declarative — content is in YAML, edited by caregivers in Studio, no code review. Tools: start_lesson(subject) picks one; record_attempt (concept, correct) tracks performance into Engram docs.
 
 **Spec fields**
 

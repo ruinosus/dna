@@ -16,6 +16,9 @@ import { createKernelWithBuiltins } from "../src/bootstrap.js";
 import { SpecValidationError } from "../src/kernel/protocols.js";
 
 const SDLC_API = "github.com/ruinosus/dna/sdlc/v1";
+// Engram (formerly LessonLearned, sdlc/v1) now registers via HelixExtension
+// under this identity (s-engram-rename, 2026-07-19).
+const HELIX_API = "github.com/ruinosus/dna/v1";
 const EVAL_API = "github.com/ruinosus/dna/eval/v1";
 const AUTOMATION_API = "github.com/ruinosus/dna/automation/v1";
 
@@ -56,7 +59,7 @@ function raw(
 }
 
 function validLesson(name: string): Record<string, unknown> {
-  return raw(SDLC_API, "LessonLearned", name, {
+  return raw(HELIX_API, "Engram", name, {
     area: "Feature/write-path",
     surface_when: ["feature_touched"],
     source_refs: ["s-write-path-validation"],
@@ -76,7 +79,7 @@ describe("write-path spec↔schema validation (i-008)", () => {
     const bad = validLesson("rem-bad");
     (bad.spec as Record<string, unknown>).confidence_score = "faint"; // schema: number
     await expect(
-      k.writeDocument("s", "LessonLearned", "rem-bad", bad),
+      k.writeDocument("s", "Engram", "rem-bad", bad),
     ).rejects.toThrow(SpecValidationError);
     expect(src.saveCalls).toEqual([]);
   });
@@ -85,8 +88,8 @@ describe("write-path spec↔schema validation (i-008)", () => {
     const { k, src } = freshKernel();
     await expect(
       k.writeDocument(
-        "s", "LessonLearned", "rem-skel",
-        raw(SDLC_API, "LessonLearned", "rem-skel", { summary: "no area" }),
+        "s", "Engram", "rem-skel",
+        raw(HELIX_API, "Engram", "rem-skel", { summary: "no area" }),
       ),
     ).rejects.toThrow(/required property 'area'|must have required property/);
     expect(src.saveCalls).toEqual([]);
@@ -94,7 +97,7 @@ describe("write-path spec↔schema validation (i-008)", () => {
 
   it("persists a valid spec", async () => {
     const { k, src } = freshKernel();
-    await k.writeDocument("s", "LessonLearned", "rem-ok", validLesson("rem-ok"));
+    await k.writeDocument("s", "Engram", "rem-ok", validLesson("rem-ok"));
     expect(src.saveCalls.length).toBe(1);
   });
 
@@ -104,13 +107,13 @@ describe("write-path spec↔schema validation (i-008)", () => {
     (bad.spec as Record<string, unknown>).confidence_score = "faint";
     let msg = "";
     try {
-      await k.writeDocument("s", "LessonLearned", "rem-bad", bad);
+      await k.writeDocument("s", "Engram", "rem-bad", bad);
     } catch (e) {
       msg = (e as Error).message;
     }
     expect(msg).toContain("spec.confidence_score");
-    expect(msg).toContain("dna kind show LessonLearned");
-    expect(msg).toContain("s/LessonLearned/rem-bad");
+    expect(msg).toContain("dna kind show Engram");
+    expect(msg).toContain("s/Engram/rem-bad");
   });
 
   it("a Kind without a schema stays permissive", async () => {
@@ -156,8 +159,8 @@ describe("write-path spec↔schema validation (i-008)", () => {
     const { k, src } = freshKernel();
     process.env.DNA_WRITE_VALIDATION = "warn";
     await k.writeDocument(
-      "s", "LessonLearned", "rem-warn",
-      raw(SDLC_API, "LessonLearned", "rem-warn", { summary: "no area" }),
+      "s", "Engram", "rem-warn",
+      raw(HELIX_API, "Engram", "rem-warn", { summary: "no area" }),
     );
     expect(src.saveCalls.length).toBe(1);
   });
@@ -166,8 +169,8 @@ describe("write-path spec↔schema validation (i-008)", () => {
     const { k, src } = freshKernel();
     process.env.DNA_WRITE_VALIDATION = "off";
     await k.writeDocument(
-      "s", "LessonLearned", "rem-off",
-      raw(SDLC_API, "LessonLearned", "rem-off", { summary: "no area" }),
+      "s", "Engram", "rem-off",
+      raw(HELIX_API, "Engram", "rem-off", { summary: "no area" }),
     );
     expect(src.saveCalls.length).toBe(1);
   });
@@ -177,8 +180,8 @@ describe("write-path spec↔schema validation (i-008)", () => {
     process.env.DNA_WRITE_VALIDATION = "bananas";
     await expect(
       k.writeDocument(
-        "s", "LessonLearned", "rem-x",
-        raw(SDLC_API, "LessonLearned", "rem-x", { summary: "no area" }),
+        "s", "Engram", "rem-x",
+        raw(HELIX_API, "Engram", "rem-x", { summary: "no area" }),
       ),
     ).rejects.toThrow(SpecValidationError);
   });

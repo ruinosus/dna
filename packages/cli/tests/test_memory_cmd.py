@@ -52,7 +52,7 @@ def test_remember_then_recall_hybrid(scoped):
     assert res.exit_code == 0, res.output
     payload = json.loads(res.output)
     assert payload["degraded"] is False  # provider present → hybrid
-    assert payload["hits"][0]["kind"] == "LessonLearned"
+    assert payload["hits"][0]["kind"] == "Engram"
     # the memory hit carries the retention re-score field
     assert "retention" in payload["hits"][0]
 

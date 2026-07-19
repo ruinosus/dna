@@ -1056,7 +1056,7 @@ async def remember_impl(
     live: LiveDna,
     summary: str,
     scope: str | None = None,
-    kind: str = "LessonLearned",
+    kind: str = "Engram",
     area: str = "general",
     affect: str = "triumph",
     tags: list[str] | None = None,
@@ -1079,7 +1079,7 @@ async def remember_impl(
     sc, tenant = _resolve_memory_target(live, scope, tenant, memory_scope, oid, family)
     name = _slug(summary)
     spec: dict[str, Any] = {"summary": summary}
-    if kind == "LessonLearned":
+    if kind == "Engram":
         spec.update(
             {
                 "area": area,
@@ -1114,7 +1114,7 @@ async def consolidate_impl(
 
 
 async def list_memories_impl(
-    live: LiveDna, scope: str | None = None, kind: str = "LessonLearned",
+    live: LiveDna, scope: str | None = None, kind: str = "Engram",
     tenant: str | None = None, *, memory_scope: str = "workspace",
     oid: str | None = None,
     family: str | None = None,
@@ -1137,7 +1137,7 @@ async def list_memories_impl(
         spec = d["spec"]
         if not currently_valid(spec.get("valid_to")):
             continue  # forgotten / superseded — never surfaced (mirrors recall).
-        # LessonLearned stamps ``created_at`` (== ``valid_from`` seed); fall back
+        # Engram stamps ``created_at`` (== ``valid_from`` seed); fall back
         # to the reconsolidation timeline's first ``at`` when a variant omits it.
         created = spec.get("created_at") or spec.get("valid_from")
         if not created:
@@ -1160,7 +1160,7 @@ async def list_memories_impl(
 
 async def forget_impl(
     live: LiveDna, name: str, scope: str | None = None,
-    kind: str = "LessonLearned", tenant: str | None = None,
+    kind: str = "Engram", tenant: str | None = None,
     *, memory_scope: str = "workspace", oid: str | None = None,
     family: str | None = None,
 ) -> dict[str, Any]:

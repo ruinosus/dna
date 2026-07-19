@@ -125,8 +125,8 @@ def test_fuse_semantic_recall_promotes_and_annotates():
     engrams = [_target(), _decoy()]
     sem = _fake_semantic_scores(query, engrams)
     hits = [  # the existing recall ranking: decoy first
-        {"kind": "LessonLearned", "name": "rem-decoy", "score": 0.048},
-        {"kind": "LessonLearned", "name": "rem-target", "score": 0.033},
+        {"kind": "Engram", "name": "rem-decoy", "score": 0.048},
+        {"kind": "Engram", "name": "rem-target", "score": 0.033},
     ]
 
     fused = fuse_semantic_recall(hits, engrams, query, sem, now=NOW)
@@ -152,7 +152,7 @@ def test_fuse_semantic_recall_empty_hits():
 
 def _ll(name: str, area: str, summary: str, affect: str = "wistful") -> dict:
     return {
-        "kind": "LessonLearned",
+        "kind": "Engram",
         "name": name,
         "spec": {
             "area": area, "surface_when": ["feature_touched"], "source_refs": ["s-1"],

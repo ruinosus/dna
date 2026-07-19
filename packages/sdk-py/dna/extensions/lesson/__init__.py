@@ -60,7 +60,7 @@ class LessonKind(KindBase):
         "agent can run with a pre-reader child. Declarative — content "
         "is in YAML, edited by caregivers in Studio, no code review. "
         "Tools: start_lesson(subject) picks one; record_attempt "
-        "(concept, correct) tracks performance into LessonLearned docs."
+        "(concept, correct) tracks performance into Engram docs."
     )
 
     def schema(self) -> dict[str, Any] | None:

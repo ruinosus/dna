@@ -116,7 +116,7 @@ def test_additive_no_route_collision_with_static_manifest(kinds_by_name):
     """The static TS manifest owns these Kind routes already; the SDK merge
     dedupes by ID, so the batch must NOT include any of them (avoids dup)."""
     static_owned = {
-        "AuditLog", "Evidence", "HtmlTemplate", "LayerPolicy", "LessonLearned",
+        "AuditLog", "Evidence", "HtmlTemplate", "LayerPolicy", "Engram",
         "Narrative", "PromptTemplate", "Reference", "Skill", "SynthesisRun",
         "Theme", "Agent", "WorkflowEvent",
     }

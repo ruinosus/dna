@@ -98,6 +98,7 @@ Declarative Kind descriptor — the format of builtin `kinds/*.kind.yaml` packag
 | [CognitivePolicy](record.md#cognitivepolicy) | `sdlc-cognitive-policy` | `github.com/ruinosus/dna/sdlc/v1` |
 | [Copilot](record.md#copilot) | `helix-copilot` | `github.com/ruinosus/dna/v1` |
 | [Doc](record.md#doc) | `dna-doc` | `github.com/ruinosus/dna/doc/v1` |
+| [Engram](record.md#engram) | `helix-engram` | `github.com/ruinosus/dna/v1` |
 | [Epic](record.md#epic) | `sdlc-epic` | `github.com/ruinosus/dna/sdlc/v1` |
 | [EvalBaseline](record.md#evalbaseline) | `eval-eval-baseline` | `github.com/ruinosus/dna/eval/v1` |
 | [EvalCase](record.md#evalcase) | `eval-eval-case` | `github.com/ruinosus/dna/eval/v1` |
@@ -113,7 +114,6 @@ Declarative Kind descriptor — the format of builtin `kinds/*.kind.yaml` packag
 | [IntelSource](record.md#intelsource) | `intel-source` | `github.com/ruinosus/dna/intel/v1` |
 | [Issue](record.md#issue) | `sdlc-issue` | `github.com/ruinosus/dna/sdlc/v1` |
 | [Kaizen](record.md#kaizen) | `sdlc-kaizen` | `github.com/ruinosus/dna/sdlc/v1` |
-| [LessonLearned](record.md#lessonlearned) | `sdlc-lesson-learned` | `github.com/ruinosus/dna/sdlc/v1` |
 | [Membership](record.md#membership) | `portfolio-membership` | `github.com/ruinosus/dna/portfolio/v1` |
 | [ModelProfile](record.md#modelprofile) | `modelreg-model-profile` | `github.com/ruinosus/dna/modelreg/v1` |
 | [Narrative](record.md#narrative) | `sdlc-narrative` | `github.com/ruinosus/dna/sdlc/v1` |

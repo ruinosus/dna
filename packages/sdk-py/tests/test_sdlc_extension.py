@@ -30,12 +30,14 @@ def test_extension_registers_expected_kinds():
 
     Current set (31 Kinds): SDLC core + ADO-grade doc Kinds (ADR,
     Changelog, Initiative, Postmortem, Retrospective, RiskRegister,
-    SavedView, Spike, Bug, Task) + cognitive triad (LessonLearned,
-    SynthesisRun, ArchiveProposal) + SynthesizerState + dream/forecast
-    + the UNIFIED CognitivePolicy (was 9 Kinds — RecallPolicy, DecayPolicy,
-    MemoryPolicy, AllocationPolicy, PaginationPolicy, EngramStrengthPolicy,
-    EmbeddingProfile, AffectPalette + the old CognitivePolicy — consolidated
-    by s-consolidate-cognitive-policies, 39→31) + Reference + Kaizen
+    SavedView, Spike, Bug, Task) + two of the cognitive triad
+    (SynthesisRun, ArchiveProposal — the third, Engram, moved to
+    HelixExtension on s-engram-rename 2026-07-19) + SynthesizerState +
+    dream/forecast + the UNIFIED CognitivePolicy (was 9 Kinds —
+    RecallPolicy, DecayPolicy, MemoryPolicy, AllocationPolicy,
+    PaginationPolicy, EngramStrengthPolicy, EmbeddingProfile, AffectPalette
+    + the old CognitivePolicy — consolidated by
+    s-consolidate-cognitive-policies, 39→31) + Reference + Kaizen
     (improvement observations, v1.13.0)."""
     k = Kernel()
     k.load(SdlcExtension())
@@ -45,13 +47,13 @@ def test_extension_registers_expected_kinds():
         "ArchiveProposal", "Bug", "Changelog", "CognitivePolicy",
         "Epic",
         "Feature", "Forecast", "HtmlArtifact", "Initiative", "Insight", "Issue", "Kaizen",
-        "LessonLearned", "Narrative",
+        "Narrative",
         "Plan", "Postmortem", "PromptTemplate", "Reference",
         "Retrospective", "RiskRegister", "Roadmap", "SavedView", "Spec",
         "Spike", "StatusReport", "Story", "SynthesisRun",
         "SynthesizerState", "Task", "WorkflowEvent",
     ]
-    assert len(api_kinds) == 32
+    assert len(api_kinds) == 31
 
 
 def test_agent_session_kind_storage_bundle():
@@ -344,15 +346,16 @@ def test_kinds_not_prompt_targets():
 
 # --- Agent memory Phase 0 — visibility axis (s-agent-memory-phase-0-bridge) -
 
-def test_lessonlearned_has_visibility_axis():
+def test_engram_has_visibility_axis():
     """visibility controls recall audience; default shared. owner stays = attribution.
     Enum: shared (all agents) | private (owner only) | pinned (always-in-context) |
     archived (retained, excluded from default recall)."""
     # F3 lote-1: class deleted — port synthesized from the descriptor.
-    from dna.extensions.sdlc import SdlcExtension
+    # Engram itself now registers via HelixExtension (s-engram-rename).
+    from dna.extensions.helix import HelixExtension
     from dna.kernel import Kernel
-    k = Kernel(); k.load(SdlcExtension())
-    props = k.kind_port_for("LessonLearned").schema()["properties"]
+    k = Kernel(); k.load(HelixExtension())
+    props = k.kind_port_for("Engram").schema()["properties"]
     vis = props["visibility"]
     assert vis["enum"] == ["shared", "private", "pinned", "archived"]
     assert vis.get("default") == "shared"
@@ -389,14 +392,15 @@ def test_memory_section_is_agent_governance_only():
         assert section in top, f"missing consolidated section {section}"
 
 
-def test_lessonlearned_coala_and_bitemporal_fields():
+def test_engram_coala_and_bitemporal_fields():
     """Phase 4: memory_type (CoALA, orthogonal to EngramState) + bi-temporal
     valid_from/valid_to/superseded_by_memory (invalidate-not-delete)."""
     # F3 lote-1: class deleted — port synthesized from the descriptor.
-    from dna.extensions.sdlc import SdlcExtension
+    # Engram itself now registers via HelixExtension (s-engram-rename).
+    from dna.extensions.helix import HelixExtension
     from dna.kernel import Kernel
-    k = Kernel(); k.load(SdlcExtension())
-    props = k.kind_port_for("LessonLearned").schema()["properties"]
+    k = Kernel(); k.load(HelixExtension())
+    props = k.kind_port_for("Engram").schema()["properties"]
     assert props["memory_type"]["enum"] == ["episodic", "semantic", "procedural"]
     for f in ("valid_from", "valid_to", "superseded_by_memory"):
         assert f in props, f"missing bi-temporal field {f}"

@@ -93,8 +93,8 @@ describe("memory semantic core", () => {
     const engrams = [target, decoy];
     const sem = fakeSemanticScores(query, engrams);
     const hits = [
-      { kind: "LessonLearned", name: "rem-decoy", score: 0.048 },
-      { kind: "LessonLearned", name: "rem-target", score: 0.033 },
+      { kind: "Engram", name: "rem-decoy", score: 0.048 },
+      { kind: "Engram", name: "rem-target", score: 0.033 },
     ];
 
     const fused = fuseSemanticRecall(hits, engrams, query, sem, undefined, NOW);

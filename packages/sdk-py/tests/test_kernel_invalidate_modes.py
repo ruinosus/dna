@@ -166,11 +166,11 @@ async def test_scope_mode_invalidates_granular_cache():
     granular = _track_granular_invalidate(k)
 
     await k.write_document(
-        "scope-x", "LessonLearned", "rem-foo",
-        {"kind": "LessonLearned", "metadata": {"name": "rem-foo"}, "spec": {}},
+        "scope-x", "Engram", "rem-foo",
+        {"kind": "Engram", "metadata": {"name": "rem-foo"}, "spec": {}},
     )
 
-    assert ("scope-x", "LessonLearned", "rem-foo") in granular
+    assert ("scope-x", "Engram", "rem-foo") in granular
 
 
 # ---------- mode="doc" (new — R2-fix happy path) ----------
@@ -181,8 +181,8 @@ async def test_doc_mode_does_NOT_drop_base_cache():
     cached_mi = k._kcache._base["scope-x"]
 
     await k.write_document(
-        "scope-x", "LessonLearned", "rem-sidecar",
-        {"kind": "LessonLearned", "metadata": {"name": "rem-sidecar"}, "spec": {}},
+        "scope-x", "Engram", "rem-sidecar",
+        {"kind": "Engram", "metadata": {"name": "rem-sidecar"}, "spec": {}},
         invalidate_mode="doc",
     )
 
@@ -213,12 +213,12 @@ async def test_doc_mode_DOES_invalidate_granular_cache():
     granular = _track_granular_invalidate(k)
 
     await k.write_document(
-        "scope-x", "LessonLearned", "rem-foo",
-        {"kind": "LessonLearned", "metadata": {"name": "rem-foo"}, "spec": {}},
+        "scope-x", "Engram", "rem-foo",
+        {"kind": "Engram", "metadata": {"name": "rem-foo"}, "spec": {}},
         invalidate_mode="doc",
     )
 
-    assert ("scope-x", "LessonLearned", "rem-foo") in granular
+    assert ("scope-x", "Engram", "rem-foo") in granular
 
 
 # ---------- mode="none" (test-only) ----------
@@ -230,8 +230,8 @@ async def test_none_mode_skips_all_invalidation():
     granular = _track_granular_invalidate(k)
 
     await k.write_document(
-        "scope-x", "LessonLearned", "rem-foo",
-        {"kind": "LessonLearned", "metadata": {"name": "rem-foo"}, "spec": {}},
+        "scope-x", "Engram", "rem-foo",
+        {"kind": "Engram", "metadata": {"name": "rem-foo"}, "spec": {}},
         invalidate_mode="none",
     )
 
@@ -250,14 +250,14 @@ async def test_write_observers_fire_in_all_modes(mode):
     fire = _track_fire_observers(k)
 
     await k.write_document(
-        "scope-x", "LessonLearned", "rem-foo",
-        {"kind": "LessonLearned", "metadata": {"name": "rem-foo"}, "spec": {}},
+        "scope-x", "Engram", "rem-foo",
+        {"kind": "Engram", "metadata": {"name": "rem-foo"}, "spec": {}},
         invalidate_mode=mode,
     )
 
     # _fire_write_observers fires regardless of invalidate_mode — that's
     # the cross-process / SSE delivery contract.
-    assert ("scope-x", "LessonLearned", "rem-foo", "write") in fire
+    assert ("scope-x", "Engram", "rem-foo", "write") in fire
 
 
 # ---------- validation ----------
@@ -267,8 +267,8 @@ async def test_invalid_mode_raises():
     k, _src, _holder = _wire_mock_kernel()
     with pytest.raises(ValueError, match="invalidate_mode"):
         await k.write_document(
-            "scope-x", "LessonLearned", "rem-foo",
-            {"kind": "LessonLearned", "metadata": {"name": "rem-foo"}, "spec": {}},
+            "scope-x", "Engram", "rem-foo",
+            {"kind": "Engram", "metadata": {"name": "rem-foo"}, "spec": {}},
             invalidate_mode="bogus",
         )
 
@@ -281,7 +281,7 @@ async def test_delete_doc_mode_skips_holder_reload():
     cached_mi = k._kcache._base["scope-x"]
 
     await k.delete_document(
-        "scope-x", "LessonLearned", "rem-foo", invalidate_mode="doc",
+        "scope-x", "Engram", "rem-foo", invalidate_mode="doc",
     )
 
     # delete with mode=doc does not invalidate the full mi
@@ -295,5 +295,5 @@ async def test_delete_invalid_mode_raises():
     k, _src, _holder = _wire_mock_kernel()
     with pytest.raises(ValueError, match="invalidate_mode"):
         await k.delete_document(
-            "scope-x", "LessonLearned", "rem-foo", invalidate_mode="bogus",
+            "scope-x", "Engram", "rem-foo", invalidate_mode="bogus",
         )

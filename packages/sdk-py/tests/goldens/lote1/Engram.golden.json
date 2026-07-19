@@ -1,5 +1,5 @@
 {
- "_doc": "FROZEN GOLDEN — captured 2026-06-10 from the live LessonLearnedKind class (pre-deletion), F3 lote-1. Deep-equaled against the descriptor-synthesized port in test_lote1_descriptor_equivalence.py.",
+ "_doc": "FROZEN GOLDEN — captured 2026-06-10 from the live LessonLearnedKind class (pre-deletion), F3 lote-1. Deep-equaled against the descriptor-synthesized port in test_lote1_descriptor_equivalence.py. Renamed LessonLearned -> Engram (s-engram-rename, 2026-07-19): only the identity block (alias/api_version/origin/kind/display_label) changed below — schema/storage/summary_cases are byte-identical to the pre-rename capture (schema copied verbatim into helix/kinds/engram.kind.yaml).",
  "dep_filters": {},
  "flags": {
   "flatten_in_context": false,
@@ -18,18 +18,18 @@
   ]
  },
  "identity": {
-  "alias": "sdlc-lesson-learned",
-  "api_version": "github.com/ruinosus/dna/sdlc/v1",
+  "alias": "helix-engram",
+  "api_version": "github.com/ruinosus/dna/v1",
   "ascii_icon": "💭",
-  "display_label": "Lições Aprendidas",
-  "docs": null,
+  "display_label": "Engrama",
+  "docs": "An Engram is an affective recall artifact (record plane) — the memory co-pillar's rich, bi-temporal engram. It surfaces unbidden when the current cycle resembles a past one in the same ``area``, carries an evocative ``affect`` (triumph/regret/surprise/wistful/ominous), and is scored by Ebbinghaus-style decay (``relevance_decay_seed``, ``surface_count``, ``confidence_score``) plus Semon-inspired ecphory (``cues_history``, ``homophonic_links``). Bi-temporal — a superseded Engram is invalidated via ``valid_to``/``superseded_by_memory``, never hard-deleted. Renamed from LessonLearned (s-engram-rename, 2026-07-19) — memory is a platform primitive (``github.com/ruinosus/dna/v1``), not sdlc-owned. Authored by the Sage oracle during the deep-sleep ritual (mostly) or manually; written/recalled via ``dna.memory.remember`` / ``recall``. Stored as ``lessons-learned/<name>.yaml`` with body prose in the ``LESSON_LEARNED.md`` bundle marker — storage container/marker names are unchanged by the rename.",
   "graph_style": {
    "fill": "#FBBF24",
    "stroke": "#D97706",
    "text_color": "#fff"
   },
-  "kind": "LessonLearned",
-  "origin": "github.com/ruinosus/dna/sdlc"
+  "kind": "Engram",
+  "origin": "github.com/ruinosus/dna/engram"
  },
  "schema": {
   "properties": {

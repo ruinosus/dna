@@ -1,7 +1,7 @@
 """``dna memory`` — remember / recall / forget / list / consolidate, offline.
 
 Kernel-bound, no server. Memory in DNA is the Kinds it already has
-(LessonLearned, Research, Evidence) written + recalled through the same kernel
+(Engram, Research, Evidence) written + recalled through the same kernel
 + ``RecordSearchProvider``. This command group drives ``dna.memory``'s verbs:
 
     dna memory remember "always deep-copy the L2 cache before mutating" \
@@ -9,7 +9,7 @@ Kernel-bound, no server. Memory in DNA is the Kinds it already has
         --reason "hit live during the JARVIS audit — same dict ref across calls"
     dna memory recall "cache mutation" --json
     dna memory forget rem-abc123 --superseded-by rem-def456
-    dna memory list --kind LessonLearned
+    dna memory list --kind Engram
     dna memory consolidate --apply
 
 With the ``search-sqlite`` extra present recall is hybrid (dense sqlite-vec +
@@ -36,7 +36,7 @@ import click
 from dna_cli._ctx import dna_session, print_json, print_table
 from dna_cli.recall_cmd import _register_provider
 
-_MEMORY_KINDS = ("LessonLearned", "Research", "Evidence")
+_MEMORY_KINDS = ("Engram", "Research", "Evidence")
 
 
 def _resolve_memory_tenant(personal: bool, tenant: str | None) -> str | None:
@@ -105,7 +105,7 @@ def memory() -> None:
 
 @memory.command(name="remember")
 @click.argument("summary")
-@click.option("--kind", default="LessonLearned", type=click.Choice(_MEMORY_KINDS), show_default=True)
+@click.option("--kind", default="Engram", type=click.Choice(_MEMORY_KINDS), show_default=True)
 @click.option("--name", default=None, help="Doc name (default: rem-<hash> of summary).")
 @click.option("--area", default="general", show_default=True, help="Scoped target area (Feature/X, Epic/Y, …).")
 @click.option("--affect", default="triumph",
@@ -132,7 +132,7 @@ def remember_cmd(
     tenant = _resolve_memory_tenant(personal, tenant)
     name = name or _slug(summary)
     spec: dict[str, Any] = {"summary": summary}
-    if kind == "LessonLearned":
+    if kind == "Engram":
         spec.update({
             "area": area,
             "surface_when": ["feature_touched"],
@@ -239,7 +239,7 @@ def recall_cmd(
 
 @memory.command(name="forget")
 @click.argument("name")
-@click.option("--kind", default="LessonLearned", type=click.Choice(_MEMORY_KINDS), show_default=True)
+@click.option("--kind", default="Engram", type=click.Choice(_MEMORY_KINDS), show_default=True)
 @click.option("--superseded-by", default=None, help="Name of the memory that supersedes this one.")
 @click.option("--scope", default=None)
 @click.option("--tenant", default=None)
@@ -269,7 +269,7 @@ def forget_cmd(
 
 
 @memory.command(name="list")
-@click.option("--kind", default="LessonLearned", type=click.Choice(_MEMORY_KINDS), show_default=True)
+@click.option("--kind", default="Engram", type=click.Choice(_MEMORY_KINDS), show_default=True)
 @click.option("--all", "show_all", is_flag=True, help="Include bi-temporally-invalidated (forgotten) memories.")
 @click.option("--scope", default=None)
 @click.option("--tenant", default=None)
@@ -311,7 +311,7 @@ def list_cmd(kind: str, show_all: bool, scope: str | None, tenant: str | None, a
 
 
 @memory.command(name="consolidate")
-@click.option("--kind", default="LessonLearned", type=click.Choice(_MEMORY_KINDS), show_default=True)
+@click.option("--kind", default="Engram", type=click.Choice(_MEMORY_KINDS), show_default=True)
 @click.option("--floor", "stale_floor", default=0.15, show_default=True,
               help="Retention floor below which a memory is stale.")
 @click.option("--apply", "do_apply", is_flag=True, help="Soft-forget stale memories (bi-temporal, never delete).")

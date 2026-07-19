@@ -502,7 +502,7 @@ def cmd_current(scope: str, as_json: bool) -> None:
 def cmd_brief(scope: str, limit: int, as_json: bool) -> None:
     """Session-start briefing — one screen with everything the next session
     needs to bootstrap context: in-progress work, open spikes, recent
-    AgentSessions, recent LessonLearned, and open high/critical Issues.
+    AgentSessions, recent Engram, and open high/critical Issues.
 
     The cross-session "recall in" command: run it at the START of a session
     (yours or another agent's) instead of `current` + `session list` +
@@ -559,7 +559,7 @@ def cmd_brief(scope: str, limit: int, as_json: bool) -> None:
                 "affect": _spec(d).get("affect") or "",
                 "when": _ts(_spec(d), "created_at"),
             }
-            for d in s.query_list("LessonLearned")
+            for d in s.query_list("Engram")
         ]
         lessons.sort(key=lambda x: x["when"], reverse=True)
         sections["lessons"] = lessons[:limit]
@@ -1444,7 +1444,7 @@ def cmd_story_done(
     # Story and every gap renders the "não ancorado" anomaly. Best-effort.
     _post_done_beat(scope, "Story", name)
     # Journey derived (s-journey-derived): `reflect` is computed from
-    # status=done / closed_at (or a linked LessonLearned) — no WorkflowEvent.
+    # status=done / closed_at (or a linked Engram) — no WorkflowEvent.
     click.secho(f"📍 journey: Story/{name} → reflect (derived)", fg="cyan")
     # Post-transition hook point (fail-soft) — hooks registered by the
     # host platform fire here.
@@ -4387,7 +4387,7 @@ def cmd_journey_list(parent_ref: str, as_json: bool, scope: str) -> None:
                     _dj = derive_journey(
                         _kind_p, _name_p, dict(_doc.spec or {}),
                         specs=_rows("Spec"), plans=_rows("Plan"),
-                        lessons=_rows("LessonLearned"),
+                        lessons=_rows("Engram"),
                         test_runs=_rows("TestRun"),
                     )
                     story_journey = {

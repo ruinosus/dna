@@ -32,6 +32,7 @@ _GRANDFATHERED_OPEN_SCHEMAS = frozenset({
     "autoagent-experiment", "autoagent-program", "autolab-run",
     "blocks-html",
     "blocks-html-template", "blocks-text", "helix-actor", "helix-canvas",
+    "helix-engram",  # s-engram-rename (2026-07-19): was sdlc-lesson-learned.
     "helix-hook", "helix-genome", "helix-safety-policy",
     "helix-setting", "helix-theme", "helix-tool",
     "helix-usecase", "helix-user-profile", "helix-agent",
@@ -53,7 +54,7 @@ _GRANDFATHERED_OPEN_SCHEMAS = frozenset({
     # The cognitive-policy family (9 open aliases) left this set on
     # s-consolidate-cognitive-policies: 8 Kinds were retired and the unified
     # sdlc-cognitive-policy ships strict (additionalProperties: false).
-    "sdlc-initiative", "sdlc-insight", "sdlc-issue", "sdlc-lesson-learned",
+    "sdlc-initiative", "sdlc-insight", "sdlc-issue",
     "sdlc-narrative", "sdlc-plan", "sdlc-postmortem",
     "sdlc-prompt-template", "sdlc-reference", "sdlc-retrospective",
     "sdlc-risk-register", "sdlc-roadmap", "sdlc-saved-view", "sdlc-spec",

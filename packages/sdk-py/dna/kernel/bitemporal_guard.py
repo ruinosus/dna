@@ -1,12 +1,12 @@
 """Bi-temporal invalidation guard (i-046).
 
 A superseded memory must STAY superseded. Maintenance write paths in the
-cognitive autopilot (decay / cue / allocation hooks) re-write a LessonLearned by
+cognitive autopilot (decay / cue / allocation hooks) re-write a Engram by
 name via read-modify-write and don't carry ``valid_to`` — without this guard a
 superseded episodic silently returns to recall (resurrection).
 
 The guard is the single chokepoint: ``kernel.write_document`` calls it for every
-LessonLearned write. If the EXISTING persisted doc is invalidated (``valid_to``
+Engram write. If the EXISTING persisted doc is invalidated (``valid_to``
 set) and the incoming write lacks it, the incoming spec inherits
 ``valid_to`` + ``superseded_by_memory``. Pure + mutating-in-place on the incoming
 spec (which is about to be persisted). Never blocks a write.

@@ -6,14 +6,14 @@ Two stages of the intelligence cycle, backed by the memory co-pillar:
     (repetition is the #1 source of noise). The deterministic normalized-key
     floor is proven pure; the end-to-end re-run proves it through the engine.
   * **Feedback** — dismissing an insight records a negative-feedback engram (a
-    LessonLearned, via the memory co-pillar's ``remember``) that SUPPRESSES a
+    Engram, via the memory co-pillar's ``remember``) that SUPPRESSES a
     semantically-similar candidate on the next pass; ``actioned`` reinforces; a
     precision / noise-rate metric is exposed.
 
 The pure decisions (dedup partition, score adjustment, precision) are tested
 directly; the engine-level tests drive the transport-agnostic core (no HTTP/CLI)
 — mirroring test_intel_engine.py's kernel+FilesystemWritableSource wiring, and
-test_memory_verbs.py's Kernel.auto()+source wiring for the LessonLearned writes.
+test_memory_verbs.py's Kernel.auto()+source wiring for the Engram writes.
 """
 from __future__ import annotations
 
@@ -182,7 +182,7 @@ class _OneShot:
 
 
 async def _memory_kernel(tmp_path):
-    """Kernel.auto() (LessonLearned + intel Kinds + writers registered) over a
+    """Kernel.auto() (Engram + intel Kinds + writers registered) over a
     filesystem source — mirrors test_memory_verbs.py so the co-pillar's
     ``remember`` can persist the feedback engram."""
     from dna.adapters.filesystem.writable import FilesystemWritableSource
@@ -232,9 +232,9 @@ async def test_dismiss_suppresses_similar_candidate_next_pass(tmp_path):
     name_a = first.kept[0]["name"]
 
     await engine.set_insight_state(k, name_a, "dismissed", scope=_SCOPE, tenant=_TENANT)
-    # the co-pillar recorded a feedback engram (LessonLearned)
+    # the co-pillar recorded a feedback engram (Engram)
     engrams = [
-        r async for r in k.query(_SCOPE, "LessonLearned", tenant=_TENANT)
+        r async for r in k.query(_SCOPE, "Engram", tenant=_TENANT)
     ]
     assert any(
         feedback_core.FEEDBACK_TAG in (r.get("spec", {}).get("tags") or [])

@@ -7,7 +7,7 @@ A work item (Spike/Story/Feature/Epic) is a HUB: its outputs are the union of
   2. the legacy per-Kind back-refs scattered across the schemas today —
      ``spec_refs`` → Spec, ``research_refs`` → Research, ``html_artifacts`` →
      HtmlArtifact, ``references`` → Reference, ``follow_up_story``/``follow_up_adr``,
-     a linked Plan (``Plan.story_ref`` — the start-gate), and a LessonLearned
+     a linked Plan (``Plan.story_ref`` — the start-gate), and an Engram
      whose ``source_refs`` point back at the work item.
 
 Deduped by ``(kind, name)`` with explicit ``produces[]`` winning. Pure — no
@@ -91,6 +91,6 @@ def resolve_work_item_outputs(
     for ld in lessons:
         refs = [r for r in _as_list(_spec_of(ld).get("source_refs")) if isinstance(r, str)]
         if any(r == wi_name or r.endswith(f"/{wi_name}") for r in refs):
-            add("LessonLearned", ld.get("name"), source="legacy")
+            add("Engram", ld.get("name"), source="legacy")
 
     return out

@@ -67,15 +67,15 @@ async def test_live_kind_still_writable():
     k = _bare_kernel()
     raw = {
         "apiVersion": "github.com/ruinosus/dna/sdlc/v1",
-        "kind": "LessonLearned",
+        "kind": "Engram",
         "metadata": {"name": "rem-smoke"},
         "spec": {"area": "x", "summary": "y"},
     }
     # Should NOT raise KindRetiredError. (Other errors may fire — we
     # don't care here; just asserting the retirement guard skips this.)
     try:
-        await k.write_document("scope-x", "LessonLearned", "rem-smoke", raw)
+        await k.write_document("scope-x", "Engram", "rem-smoke", raw)
     except KindRetiredError:
-        pytest.fail("LessonLearned is live; must not trip _REMOVED_KINDS guard")
+        pytest.fail("Engram is live; must not trip _REMOVED_KINDS guard")
     except Exception:
         pass  # any other failure is unrelated to the guard

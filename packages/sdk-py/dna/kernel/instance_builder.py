@@ -131,7 +131,7 @@ class InstanceBuilder:
             # (mi.all/one delegation, kernel.query/get_document).
             # Exact (apiVersion, kind) lookup first; on miss fall back to
             # kind_plane (by NAME) — real datasets hold legacy apiVersion
-            # variants (e.g. github.com/ruinosus/dna/cognitive/v1 LessonLearned) that would
+            # variants (e.g. github.com/ruinosus/dna/cognitive/v1 Engram) that would
             # otherwise materialize yet be unreachable via the delegated
             # mi.all/one (which resolves by name). Unregistered kind names
             # stay composition (kind_plane fail-safe) — behavior unchanged.

@@ -33,7 +33,7 @@ def legacy_dream(schema):
         "symbol": "Um arquivo se abre e a página dentro está em branco.",
         "scenario": "A funcionária abre o arquivo. Vê branco. Hesita.",
         "fragments": [
-            {"source": "LessonLearned/rem-x"},
+            {"source": "Engram/rem-x"},
             {"source": "Story/s-y"},
         ],
     }
@@ -52,18 +52,18 @@ def test_full_v2_dream_validates(schema, legacy_dream):
         "owner": "scribe-engram",
         "lens": "hindsight-cf",
         "confidence": 0.72,
-        "source_event_ids": ["LessonLearned/rem-x", "Story/s-y"],
+        "source_event_ids": ["Engram/rem-x", "Story/s-y"],
         "insight_candidates": [
             {
                 "claim": "Briefs sem audience_context produzem outputs vagos.",
-                "evidence": ["LessonLearned/rem-x"],
+                "evidence": ["Engram/rem-x"],
                 "confidence": 0.8,
                 "speculation": False,
             },
         ],
         "belief_updates": [
             {
-                "target_ref": "LessonLearned/rem-x",
+                "target_ref": "Engram/rem-x",
                 "before": "Brief com 3 perguntas basta.",
                 "after": "Brief precisa de audience_context explícito.",
                 "reason": "Vimos 4 outputs vagos no ciclo do rem-x.",
@@ -81,7 +81,7 @@ def test_full_v2_dream_validates(schema, legacy_dream):
         "contradictions": [
             {
                 "conflict": "rem-x diz briefs longos > curtos; rem-y diz curtos > longos.",
-                "refs": ["LessonLearned/rem-x", "LessonLearned/rem-y"],
+                "refs": ["Engram/rem-x", "Engram/rem-y"],
                 "resolution_options": ["contexto-dependente", "merge"],
             },
         ],

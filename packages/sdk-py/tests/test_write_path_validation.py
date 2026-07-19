@@ -37,6 +37,9 @@ from tests.test_kernel_invalidate_modes import _FakeWritableSource
 _SDLC_API = "github.com/ruinosus/dna/sdlc/v1"
 _EVAL_API = "github.com/ruinosus/dna/eval/v1"
 _AUTOMATION_API = "github.com/ruinosus/dna/automation/v1"
+# Engram (formerly LessonLearned, sdlc/v1) now registers via HelixExtension
+# under this identity (s-engram-rename, 2026-07-19).
+_HELIX_API = "github.com/ruinosus/dna/v1"
 
 
 def _raw(api: str, kind: str, name: str, spec: dict) -> dict:
@@ -45,7 +48,7 @@ def _raw(api: str, kind: str, name: str, spec: dict) -> dict:
 
 
 def _valid_lesson(name: str = "rem-1") -> dict:
-    return _raw(_SDLC_API, "LessonLearned", name, {
+    return _raw(_HELIX_API, "Engram", name, {
         "area": "Feature/write-path",
         "surface_when": ["feature_touched"],
         "source_refs": ["s-write-path-validation"],
@@ -75,21 +78,21 @@ async def test_invalid_spec_is_vetoed_and_not_persisted(kernel, source):
     bad = _valid_lesson("rem-bad")
     bad["spec"]["confidence_score"] = "faint"  # schema: type number (the i-008 class)
     with pytest.raises(SpecValidationError):
-        await kernel.write_document("s", "LessonLearned", "rem-bad", bad)
+        await kernel.write_document("s", "Engram", "rem-bad", bad)
     assert source.save_calls == [], "a vetoed write must not reach the adapter"
 
 
 @pytest.mark.asyncio
 async def test_missing_required_field_is_vetoed(kernel, source):
-    skeletal = _raw(_SDLC_API, "LessonLearned", "rem-skel", {"summary": "no area"})
+    skeletal = _raw(_HELIX_API, "Engram", "rem-skel", {"summary": "no area"})
     with pytest.raises(SpecValidationError, match="'area' is a required property"):
-        await kernel.write_document("s", "LessonLearned", "rem-skel", skeletal)
+        await kernel.write_document("s", "Engram", "rem-skel", skeletal)
     assert source.save_calls == []
 
 
 @pytest.mark.asyncio
 async def test_valid_spec_persists(kernel, source):
-    await kernel.write_document("s", "LessonLearned", "rem-ok", _valid_lesson("rem-ok"))
+    await kernel.write_document("s", "Engram", "rem-ok", _valid_lesson("rem-ok"))
     assert len(source.save_calls) == 1
 
 
@@ -98,21 +101,21 @@ async def test_error_is_didactic(kernel):
     bad = _valid_lesson("rem-bad")
     bad["spec"]["confidence_score"] = "faint"
     with pytest.raises(SpecValidationError) as ei:
-        await kernel.write_document("s", "LessonLearned", "rem-bad", bad)
+        await kernel.write_document("s", "Engram", "rem-bad", bad)
     msg = str(ei.value)
     # The install #26 pattern: WHERE (field), WHAT (violation), HOW (kind show).
     assert "spec.confidence_score" in msg
     assert "not of type 'number'" in msg
-    assert "dna kind show LessonLearned" in msg
-    assert "s/LessonLearned/rem-bad" in msg
+    assert "dna kind show Engram" in msg
+    assert "s/Engram/rem-bad" in msg
 
 
 @pytest.mark.asyncio
 async def test_veto_is_a_value_error_for_backcompat(kernel):
     # Pre_save guard convention: write-path vetoes read as ValueError.
-    bad = _raw(_SDLC_API, "LessonLearned", "x", {"summary": "no area"})
+    bad = _raw(_HELIX_API, "Engram", "x", {"summary": "no area"})
     with pytest.raises(ValueError):
-        await kernel.write_document("s", "LessonLearned", "x", bad)
+        await kernel.write_document("s", "Engram", "x", bad)
 
 
 # --- permissive paths ------------------------------------------------------------
@@ -190,9 +193,9 @@ async def test_spec_defaults_fill_before_validation(kernel, source):
 @pytest.mark.asyncio
 async def test_warn_mode_persists_and_logs(kernel, source, monkeypatch, caplog):
     monkeypatch.setenv("DNA_WRITE_VALIDATION", "warn")
-    bad = _raw(_SDLC_API, "LessonLearned", "rem-warn", {"summary": "no area"})
+    bad = _raw(_HELIX_API, "Engram", "rem-warn", {"summary": "no area"})
     with caplog.at_level(logging.WARNING, logger="dna.kernel"):
-        await kernel.write_document("s", "LessonLearned", "rem-warn", bad)
+        await kernel.write_document("s", "Engram", "rem-warn", bad)
     assert len(source.save_calls) == 1
     assert any("schema validation failed" in r.message for r in caplog.records)
 
@@ -200,17 +203,17 @@ async def test_warn_mode_persists_and_logs(kernel, source, monkeypatch, caplog):
 @pytest.mark.asyncio
 async def test_off_mode_skips_validation(kernel, source, monkeypatch):
     monkeypatch.setenv("DNA_WRITE_VALIDATION", "off")
-    bad = _raw(_SDLC_API, "LessonLearned", "rem-off", {"summary": "no area"})
-    await kernel.write_document("s", "LessonLearned", "rem-off", bad)
+    bad = _raw(_HELIX_API, "Engram", "rem-off", {"summary": "no area"})
+    await kernel.write_document("s", "Engram", "rem-off", bad)
     assert len(source.save_calls) == 1
 
 
 @pytest.mark.asyncio
 async def test_unknown_mode_falls_back_to_enforce(kernel, monkeypatch):
     monkeypatch.setenv("DNA_WRITE_VALIDATION", "bananas")
-    bad = _raw(_SDLC_API, "LessonLearned", "rem-x", {"summary": "no area"})
+    bad = _raw(_HELIX_API, "Engram", "rem-x", {"summary": "no area"})
     with pytest.raises(SpecValidationError):
-        await kernel.write_document("s", "LessonLearned", "rem-x", bad)
+        await kernel.write_document("s", "Engram", "rem-x", bad)
 
 
 # --- red→green: the real i-008 shapes ---------------------------------------------
