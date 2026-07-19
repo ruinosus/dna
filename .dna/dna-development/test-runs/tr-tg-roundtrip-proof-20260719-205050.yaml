@@ -1,0 +1,17 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-roundtrip-proof-20260719-205050
+spec:
+  guide_ref: tg-roundtrip-proof
+  outcome: pass
+  verifies:
+  - Story/s-roundtrip-proof
+  executed_by: claude-code
+  executed_at: '2026-07-19T20:50:50+00:00'
+  notes: "Circulo A e B verdes. sdk-py 3448 passed / 198 skipped / 4 xfailed. Os 4\
+    \ mutantes do caso de conformance morrem; duas versoes anteriores das minhas proprias\
+    \ asser\xE7\xF5es sobreviveram a mutacao e foram reescritas antes disso. Circulo\
+    \ B verificado contra o export REAL do founder (11 unidades, perda zero de prosa)\
+    \ e contra fixture sintetico no repo. Circulo C fora de escopo por decisao de\
+    \ design."

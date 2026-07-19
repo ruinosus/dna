@@ -402,6 +402,117 @@ async def _case_backfill_index_is_idempotent(kernel: Any) -> None:
     assert res["degraded"] is False and res["hits"][0]["name"] == m["name"]
 
 
+#: Every property the Engram descriptor declares, populated. Derived from the
+#: DESCRIPTOR at run time (see ``_case_interchange_round_trip``) rather than
+#: hand-listed, so a Kind that grows a field cannot silently stop being covered
+#: — a hand-written list ages into a false green.
+_INTERCHANGE_SAMPLE: dict[str, Any] = {
+    "area": "Feature/interchange",
+    "summary": "the projection must not lose a single declared field",
+    "memory_type": "semantic",
+    "owner": "conformance-kit",
+    "tags": ["interchange", "round-trip"],
+    "source_refs": ["s-roundtrip-proof"],
+    "homophonic_links": [
+        {"target_name": "rem-banana", "resonance_score": 0.4, "basis": "shared substrate"},
+    ],
+    "valid_from": "2026-07-01T00:00:00+00:00",
+    "valid_to": "2026-07-05T00:00:00+00:00",
+    "superseded_by_memory": "rem-successor",
+    "encoding_context": {"who": "conformance-kit", "why": "field fidelity"},
+    "confidence_score": 3.5,
+    "relevance_decay_seed": 0.7,
+    "surface_count": 4,
+    "cues_history": ["prior cue"],
+    "affect": "wistful",
+    "affect_reason": _AFFECT_REASON,
+    "affect_evidence_refs": ["s-roundtrip-proof"],
+    "visibility": "private",
+    "surface_when": ["feature_touched"],
+    "revisions": [{"at": "2026-07-02T00:00:00+00:00"}],
+    "last_surfaced": "2026-07-03T00:00:00+00:00",
+    "created_at": _CREATED_AT,
+}
+
+_INTERCHANGE_MIF_ID = "3f2504e0-4f89-41d3-9a0c-0305e82c3301"
+
+
+async def _case_interchange_round_trip(kernel: Any) -> None:
+    """Engram -> MIF -> Engram loses nothing (Círculo A of the portable
+    memory design).
+
+    SCOPE — read before trusting a green here: this exercises the PURE
+    projection (``to_mif``/``from_mif``), which is the level an adapter author
+    runs the kit at. It does NOT cover the CLI's file-reading or
+    document-naming layers; both blockers found reviewing ``dna memory
+    import`` lived there, not here, and are covered by the CLI's own tests. A
+    green case means the projection is faithful, not that the CLI is proven.
+    """
+    from dna.memory.interchange import _VAULT_FIELDS, from_mif, to_mif
+
+    # The field list comes from the live descriptor, not from this file.
+    ports = [p for p in kernel.kind_ports() if getattr(p, "kind", None) == "Engram"]
+    assert ports, "the Engram Kind must be registered for the interchange case"
+    declared = set(((ports[0].schema() or {}).get("properties") or {}).keys())
+    missing = declared - set(_INTERCHANGE_SAMPLE)
+    assert not missing, (
+        f"the Engram descriptor grew field(s) {sorted(missing)} that this case never "
+        "populates — extend _INTERCHANGE_SAMPLE, or the round-trip proof is a "
+        "false green for them"
+    )
+
+    spec = dict(_INTERCHANGE_SAMPLE)
+    back = from_mif(to_mif(spec, mif_id=_INTERCHANGE_MIF_ID))
+
+    # 1. field fidelity — every declared field comes back with the SAME VALUE.
+    #    Presence alone is not fidelity: from_mif stamps defaults for several
+    #    fields, so a field that stopped being carried still reappears, just
+    #    holding the default. Mutation-tested — dropping a field from the vault
+    #    survives a presence-only check and dies against this one.
+    drifted = {
+        f: (spec[f], back.get(f))
+        for f in declared
+        if f in spec and back.get(f) != spec[f]
+    }
+    # encoding_context legitimately gains the id pin; it is asserted in (4).
+    drifted.pop("encoding_context", None)
+    assert not drifted, (
+        "fields changed across the round trip (name: before -> after): "
+        + ", ".join(f"{k}: {b!r} -> {a!r}" for k, (b, a) in sorted(drifted.items()))
+    )
+
+    # 2. the vault carries what MIF has no place for. Checked against the
+    #    DECLARED fields above, so this loop cannot be defeated by shrinking
+    #    _VAULT_FIELDS itself — it only documents which fields take that route.
+    for field in _VAULT_FIELDS:
+        if field in spec:
+            assert back[field] == spec[field], (
+                f"x-dna vault field {field!r} came back changed: "
+                f"{spec[field]!r} -> {back[field]!r}"
+            )
+
+    # 3. the bi-temporal / supersession chain survives
+    assert back["valid_from"] == spec["valid_from"]
+    assert back["valid_to"] == spec["valid_to"], "valid_to must survive — it IS the chain"
+    assert back["superseded_by_memory"] == spec["superseded_by_memory"]
+
+    # 4. the id is pinned into encoding_context so a re-import targets the same
+    #    slot rather than duplicating (the identity is the MIF id).
+    assert back["encoding_context"]["mif_id"] == _INTERCHANGE_MIF_ID
+    for k, v in spec["encoding_context"].items():
+        assert back["encoding_context"][k] == v, "the id pin must not clobber the context"
+
+    # 5. idempotence: the FIRST trip normalises (stamps defaults, mirrors the
+    #    summary into `body`); every trip after that is a fixed point. Asserting
+    #    a fixed point from cycle 2 is the honest claim — asserting spec == back
+    #    would be false, and asserting nothing would hide unbounded growth.
+    again = from_mif(to_mif(back, mif_id=_INTERCHANGE_MIF_ID))
+    assert again == back, (
+        "round-trip must reach a fixed point after the first normalising pass; "
+        f"cycle 3 differs at {sorted(k for k in set(again) | set(back) if again.get(k) != back.get(k))}"
+    )
+
+
 _CASES: list[tuple[str, str, Callable[[Any], Any]]] = [
     ("remember_enriches_and_recall_finds", "always", _case_remember_enriches_and_recall_finds),
     ("recall_is_deterministic", "always", _case_recall_is_deterministic),
@@ -413,6 +524,7 @@ _CASES: list[tuple[str, str, Callable[[Any], Any]]] = [
     ("consolidate_reports_then_archives_idempotently", "always", _case_consolidate_reports_then_archives_idempotently),
     ("retention_decays_monotonically", "always", _case_retention_decays_monotonically),
     ("backfill_index_is_idempotent", "search provider", _case_backfill_index_is_idempotent),
+    ("interchange_round_trip", "always", _case_interchange_round_trip),
 ]
 
 
