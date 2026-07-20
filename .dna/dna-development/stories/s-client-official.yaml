@@ -1,0 +1,50 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-client-official
+spec:
+  title: 'Promover os clientes gerados a historia oficial de outra linguagem: cobrir
+    as 31'
+  description: 'Promover os clientes gerados a historia oficial de outra linguagem:
+    cobrir as 31 operacoes e fechar o buraco de deteccao nas rotas de escrita'
+  status: in-progress
+  feature: f-dna-client
+  priority: highest
+  labels:
+  - client
+  - api
+  reporter: claude-code
+  acceptance_criteria:
+  - "Dado o spec com 31 operacoes, quando os clientes sao inspecionados, entao TODAS\
+    \ tem metodo nomeado \u2014 nao so as 18 de leitura"
+  - Dado que hoje o guard so cobre GET (writes stay behind .request), quando uma rota
+    de ESCRITA nova e adicionada ao spec sem metodo no cliente, entao o guard FALHA
+    em vez de passar em silencio
+  - Dado que os clientes estao pinados em 0.17.0 com o repo em 0.20.0, quando esta
+    story fecha, entao a versao acompanha o repo
+  - Dado que o client-ts e agora a UNICA ponte TypeScript, quando o schema.ts e regenerado
+    do openapi, entao a regeneracao e verificada em CI e e idempotente
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - 31/31 cobertas nos dois clientes + guard cobrindo escrita + versoes alinhadas
+    + suites verdes + CI dos clientes obrigatorio (ja configurado)
+  definition_of_done_source: cli-create
+  created_at: '2026-07-20T16:56:39+00:00'
+  updated_at: '2026-07-20T16:56:51+00:00'
+  timeline:
+  - at: '2026-07-20T16:56:39+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-20T16:56:51+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  produces:
+  - kind: Plan
+    name: plan-s-client-official
+    role: implementation
+    at: '2026-07-20T16:56:51+00:00'

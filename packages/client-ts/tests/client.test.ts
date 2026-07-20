@@ -7,6 +7,7 @@
  * (src/schema.ts) are checked separately by `bun run typecheck`.
  */
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
 import { DnaApiError, DnaClient, createDnaClient } from "../src/index.js";
 
 /** A fetch stub that records each request and returns a canned JSON body.
@@ -103,5 +104,164 @@ describe("DnaClient", () => {
     await dna.raw.DELETE("/v1/memories/{name}", { params: { path: { name: "s-foo" } } });
     expect(calls[0]!.method).toBe("DELETE");
     expect(new URL(calls[0]!.url).pathname).toBe("/v1/memories/s-foo");
+  });
+
+  test("named write methods issue the right verb, path and body", async () => {
+    const { fetchImpl, calls } = stub({ ok: 1 });
+    const dna = new DnaClient({ baseUrl: BASE, fetch: fetchImpl });
+
+    await dna.rememberMemory({ summary: "a lesson" }, { scope: "s" });
+    expect(calls[0]!.method).toBe("POST");
+    expect(new URL(calls[0]!.url).pathname).toBe("/v1/memories");
+
+    await dna.deleteMemory("s-foo", { scope: "s" });
+    expect(calls[1]!.method).toBe("DELETE");
+    expect(new URL(calls[1]!.url).pathname).toBe("/v1/memories/s-foo");
+
+    await dna.setInsightState("i-1", "dismissed");
+    expect(calls[2]!.method).toBe("PATCH");
+    expect(new URL(calls[2]!.url).pathname).toBe("/v1/insights/i-1/state");
+
+    await dna.setWorkspacePlan({ workspace_id: "w1", tier_id: "pro" });
+    expect(calls[3]!.method).toBe("PUT");
+    expect(new URL(calls[3]!.url).pathname).toBe("/v1/workspace-plan");
+
+    await dna.revokeWorkspaceMember("w1", { target_email: "a@b.c" });
+    expect(calls[4]!.method).toBe("POST");
+    expect(new URL(calls[4]!.url).pathname).toBe("/v1/workspaces/w1/members/revoke");
+
+    await dna.removeProjectMember("proj", "user@x.y", { actor: "boss@x.y" });
+    expect(calls[5]!.method).toBe("DELETE");
+    // The `user` path segment is URL-encoded (an email is a legal member id).
+    expect(new URL(calls[5]!.url).pathname).toBe("/v1/projects/proj/members/user%40x.y");
+  });
+
+  test("workspace-boundary routes do NOT receive the default scope/tenant", async () => {
+    // The workspace boundary is resolved from the caller's VERIFIED identity, so
+    // a client-level tenant default must never leak onto these routes and imply
+    // the caller may pick their own boundary.
+    const { fetchImpl, calls } = stub({ ok: 1 });
+    const dna = new DnaClient({ baseUrl: BASE, tenant: "acme", scope: "base", fetch: fetchImpl });
+    await dna.listWorkspaces();
+    await dna.createWorkspace({ name: "Acme" });
+    await dna.acceptInvites();
+    await dna.createProject({ workspace_id: "w1", name: "P" });
+    for (const call of calls) {
+      const params = new URL(call.url).searchParams;
+      expect(params.get("tenant")).toBeNull();
+      expect(params.get("scope")).toBeNull();
+    }
+  });
+});
+
+/**
+ * COVERAGE GUARD — the TypeScript twin of `client-py`'s
+ * `test_openapi_drift.py::test_client_covers_every_operation`.
+ *
+ * Every operation in `docs/openapi.json` — of ANY HTTP method — must have a
+ * named method on {@link DnaClient}. A Python-only guard cannot see this client:
+ * that blind spot is why `listWorkspaces` was missing here long after the Python
+ * side had it, and why the write surface was uncovered in both. The map is keyed
+ * by `METHOD path`, never by path alone, so a new write on an already-covered
+ * path (e.g. `POST` beside an existing `GET`) still trips it.
+ */
+const COVERED: Record<string, string> = {
+  // -- reads --
+  "GET /health": "health",
+  "GET /v1/agents": "listAgents",
+  "GET /v1/agents/{name}/prompt": "agentPrompt",
+  "GET /v1/tools": "listTools",
+  "GET /v1/memories": "listMemories",
+  "GET /v1/memories/search": "searchMemories",
+  "GET /v1/sources": "listSources",
+  "GET /v1/insights": "listInsights",
+  "GET /v1/insights/metrics": "insightMetrics",
+  "GET /v1/orgs": "listOrgs",
+  "GET /v1/projects": "listProjects",
+  "GET /v1/projects/{slug}": "getProject",
+  "GET /v1/projects/{slug}/members": "listProjectMembers",
+  "GET /v1/repos": "listRepos",
+  "GET /v1/board": "getBoard",
+  "GET /v1/board/item": "getBoardItem",
+  "GET /v1/workspaces": "listWorkspaces",
+  "GET /v1/workspaces/{workspace_id}/members": "listWorkspaceMembers",
+  // -- writes --
+  "POST /v1/memories": "rememberMemory",
+  "DELETE /v1/memories/{name}": "deleteMemory",
+  "PATCH /v1/insights/{name}/state": "setInsightState",
+  "POST /v1/projects": "createProject",
+  "POST /v1/projects/{slug}/members": "setProjectMember",
+  "DELETE /v1/projects/{slug}/members/{user}": "removeProjectMember",
+  "POST /v1/tenants/{tid}/provision-owner": "provisionTenantOwner",
+  "PUT /v1/workspace-plan": "setWorkspacePlan",
+  "POST /v1/workspaces": "createWorkspace",
+  "POST /v1/workspaces/accept": "acceptInvites",
+  "POST /v1/workspaces/{workspace_id}/invites": "createInvite",
+  "POST /v1/workspaces/{workspace_id}/members/revoke": "revokeWorkspaceMember",
+  "POST /v1/workspaces/{workspace_id}/provision-owner": "provisionWorkspaceOwner",
+};
+
+/**
+ * Operations DELIBERATELY left without a named method, each with a stated reason.
+ * Empty today — every operation in the spec is a single self-contained call a
+ * named method can honestly express. An entry belongs here only if a named method
+ * would LIE about how usable the route is.
+ */
+const UNCOVERED: Record<string, string> = {};
+
+const HTTP_METHODS = new Set([
+  "get", "put", "post", "delete", "options", "head", "patch", "trace",
+]);
+
+function specOperations(): string[] {
+  const specPath = new URL("../../../docs/openapi.json", import.meta.url).pathname;
+  const spec = JSON.parse(readFileSync(specPath, "utf-8")) as {
+    paths: Record<string, Record<string, unknown>>;
+  };
+  const ops: string[] = [];
+  for (const [path, item] of Object.entries(spec.paths)) {
+    for (const verb of Object.keys(item)) {
+      if (HTTP_METHODS.has(verb.toLowerCase())) ops.push(`${verb.toUpperCase()} ${path}`);
+    }
+  }
+  return ops.sort();
+}
+
+describe("OpenAPI operation coverage", () => {
+  test("every operation in the spec has a named client method", () => {
+    const uncovered = specOperations().filter(
+      (op) => !(op in COVERED) && !(op in UNCOVERED),
+    );
+    expect(
+      uncovered,
+      `operation(s) in the API with no named client method: ${uncovered.join(", ")} ` +
+        "— add a named method to src/index.ts and map it in COVERED, or, if it " +
+        "genuinely should not have one, add it to UNCOVERED with the reason.",
+    ).toEqual([]);
+  });
+
+  test("every mapped method actually exists on DnaClient", () => {
+    const proto = DnaClient.prototype as unknown as Record<string, unknown>;
+    for (const [op, name] of Object.entries(COVERED)) {
+      expect(typeof proto[name], `DnaClient.${name}() missing for ${op}`).toBe("function");
+    }
+  });
+
+  test("the coverage map has no entries the spec dropped", () => {
+    const ops = new Set(specOperations());
+    const stale = [...Object.keys(COVERED), ...Object.keys(UNCOVERED)].filter(
+      (op) => !ops.has(op),
+    );
+    expect(
+      stale,
+      `coverage map lists operation(s) absent from the spec: ${stale.join(", ")} ` +
+        "— the route was removed/renamed; drop the entry (and its client method).",
+    ).toEqual([]);
+  });
+
+  test("every UNCOVERED entry states a reason", () => {
+    for (const [op, reason] of Object.entries(UNCOVERED)) {
+      expect(reason.trim(), `UNCOVERED["${op}"] needs a stated reason`).not.toBe("");
+    }
   });
 });

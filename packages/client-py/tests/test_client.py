@@ -5,6 +5,8 @@ that it unwraps success + raises :class:`DnaApiError` on a non-2xx.
 """
 from __future__ import annotations
 
+import json
+
 import httpx
 import pytest
 
@@ -114,3 +116,83 @@ def test_request_reaches_full_surface_incl_writes():
     assert calls[0].method == "DELETE"
     assert calls[0].url.path == "/v1/memories/s-foo"
     assert calls[0].url.params["tenant"] == "acme"
+
+
+# -- the named write surface -------------------------------------------------
+
+
+def test_named_writes_use_the_right_verb_and_path():
+    transport, calls = _recorder({"ok": 1})
+    with DnaClient(BASE, transport=transport) as dna:
+        dna.remember_memory("a lesson", scope="s")
+        dna.delete_memory("s-foo", scope="s")
+        dna.set_insight_state("i-1", "dismissed")
+        dna.set_workspace_plan("w1", "pro")
+        dna.revoke_workspace_member("w1", target_email="a@b.c")
+        dna.remove_project_member("proj", "user@x.y", actor="boss@x.y")
+    seen = [(c.method, c.url.path) for c in calls]
+    assert seen == [
+        ("POST", "/v1/memories"),
+        ("DELETE", "/v1/memories/s-foo"),
+        ("PATCH", "/v1/insights/i-1/state"),
+        ("PUT", "/v1/workspace-plan"),
+        ("POST", "/v1/workspaces/w1/members/revoke"),
+        ("DELETE", "/v1/projects/proj/members/user@x.y"),
+    ]
+
+
+def test_write_body_drops_none_so_server_defaults_apply():
+    transport, calls = _recorder({"ok": 1})
+    with DnaClient(BASE, transport=transport) as dna:
+        dna.create_workspace("Acme")  # slug + claims omitted
+    body = json.loads(calls[0].content)
+    assert body == {"name": "Acme"}, "None-valued optional keys must not be sent"
+
+
+def test_write_body_carries_explicit_values():
+    transport, calls = _recorder({"ok": 1})
+    with DnaClient(BASE, transport=transport) as dna:
+        dna.remember_memory("a lesson", area="ops", tags=["x"], affect="scar")
+    body = json.loads(calls[0].content)
+    assert body == {
+        "summary": "a lesson", "area": "ops", "tags": ["x"],
+        "affect": "scar", "owner": "portal",
+    }
+
+
+def test_workspace_boundary_writes_get_no_scope_tenant_default():
+    # The workspace boundary is resolved from the caller's VERIFIED identity, so a
+    # client-level tenant default must never leak onto these routes and imply the
+    # caller may choose their own boundary.
+    transport, calls = _recorder({"ok": 1})
+    with DnaClient(BASE, tenant="acme", scope="base", transport=transport) as dna:
+        dna.list_workspaces()
+        dna.create_workspace("Acme")
+        dna.accept_invites()
+        dna.create_project("w1", "P")
+        dna.create_invite("w1", "a@b.c")
+        dna.provision_workspace_owner("w1")
+        dna.set_workspace_plan("w1", "pro")
+    for call in calls:
+        assert "tenant" not in call.url.params, f"tenant leaked onto {call.url.path}"
+        assert "scope" not in call.url.params, f"scope leaked onto {call.url.path}"
+
+
+def test_scope_tenant_defaults_still_reach_the_scoped_writes():
+    transport, calls = _recorder({"ok": 1})
+    with DnaClient(BASE, tenant="acme", scope="base", transport=transport) as dna:
+        dna.remember_memory("x")
+        dna.set_project_member("proj", "u@x.y", "admin")
+    for call in calls:
+        assert call.url.params["tenant"] == "acme"
+        assert call.url.params["scope"] == "base"
+
+
+def test_provision_tenant_owner_takes_scope_but_never_tenant():
+    # The tenant IS the {tid} path segment — a default tenant must not shadow it.
+    transport, calls = _recorder({"ok": 1})
+    with DnaClient(BASE, tenant="acme", scope="base", transport=transport) as dna:
+        dna.provision_tenant_owner("tid-1", "u@x.y")
+    assert calls[0].url.path == "/v1/tenants/tid-1/provision-owner"
+    assert calls[0].url.params["scope"] == "base"
+    assert "tenant" not in calls[0].url.params

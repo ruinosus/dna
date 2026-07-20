@@ -37,13 +37,35 @@ Because both come from the SAME spec, they stay semantically in sync —
     typed; response bodies are not. Tighten the API's response models to tighten
     the clients for free.
 
-## Read-first
+## Full coverage — reads *and* writes
 
-The clients expose named methods for the `/v1/*` **GET** read surface — the shape
-a dashboard needs (list agents, compose a prompt, browse memory, read the board).
-The handful of writes the API also carries (memory remember/delete, insight
-state, membership, workspace-plan) is reachable through the underlying client
-(`.raw` in TS, `.request(...)` in Python) with the same generated types.
+The clients expose a named method for **every operation in the spec**: the
+`/v1/*` reads a dashboard needs (list agents, compose a prompt, browse memory,
+read the board) *and* every write (memory remember/delete, insight state, project
+and workspace membership, workspace/project creation, invites, workspace-plan).
+
+The underlying client is still exposed — `.raw` in TS, `.request(...)` in Python
+— but nothing requires it. That matters because the escape hatch was untyped in
+Python and easy to get subtly wrong in both.
+
+!!! note "Coverage is enforced, not aspirational"
+    A guard in each client reads `docs/openapi.json` and fails if any operation
+    — of **any** HTTP method — has no named method
+    (`client-py/tests/test_openapi_drift.py`, `client-ts/tests/client.test.ts`).
+    Its allowlist is keyed by `(method, path)` and is empty today, so adding a
+    write route to the API breaks CI until the clients catch up. The earlier
+    version of this guard enumerated GETs only, which is how `POST /v1/workspaces`
+    and `POST /v1/projects` shipped uncovered.
+
+### Security semantics are documented on the method
+
+Several writes are tenancy boundaries, and their docstrings say what they refuse
+— e.g. `createProject`/`create_project` is **403** without an *active* workspace
+membership (a pending invite does not count), `revokeWorkspaceMember` is **409**
+on the last remaining owner, and `createWorkspace` will not accept a
+`workspace_id` at all because the server mints it. The workspace routes are
+identity-scoped: they resolve the boundary from the caller's verified claims and
+never receive the client's default `scope`/`tenant`.
 
 ## TypeScript
 
@@ -61,7 +83,13 @@ const prompt = await dna.agentPrompt("jarvis");
 const hits = await dna.searchMemories({ q: "tenancy invariant", k: 3 });
 const board = await dna.getBoard({ scope: "dna-development", recent: 6 });
 
-// The full typed surface (incl. writes) via the underlying openapi-fetch client:
+// Writes are named methods too:
+await dna.rememberMemory({ summary: "a lesson worth keeping", area: "ops" });
+await dna.setInsightState("i-42", "actioned");
+const ws = await dna.createWorkspace({ name: "Acme" });  // id minted server-side
+await dna.createInvite(ws.workspace_id, { email: "teammate@acme.com" });
+
+// `.raw` remains for direct, fully-typed access:
 await dna.raw.DELETE("/v1/memories/{name}", { params: { path: { name: "s-foo" } } });
 ```
 
@@ -83,7 +111,13 @@ with DnaClient(
     hits = dna.search_memories("tenancy invariant", k=3)
     board = dna.get_board("dna-development", recent=6)
 
-    # The full surface (incl. writes) via the low-level request():
+    # Writes are named methods too:
+    dna.remember_memory("a lesson worth keeping", area="ops")
+    dna.set_insight_state("i-42", "actioned")
+    ws = dna.create_workspace("Acme")            # id minted server-side
+    dna.create_invite(ws["workspace_id"], "teammate@acme.com")
+
+    # request() remains for direct access:
     dna.request("DELETE", "/v1/memories/s-foo", params={"tenant": "acme"})
 ```
 

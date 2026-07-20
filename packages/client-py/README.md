@@ -1,16 +1,18 @@
 # dna-client (Python)
 
-The **official Python client for the DNA REST read-API** (`dna api serve`).
+The **official Python client for the DNA REST API** (`dna api serve`).
 Spec-parity twin of the TypeScript [`dna-client`](https://www.npmjs.com/package/dna-client):
-both cover the same read surface, derived from the same OpenAPI document
+both cover the same surface, derived from the same OpenAPI document
 (`docs/openapi.json`, dumped from the FastAPI app) — so consumers stop
 hand-rolling HTTP.
 
 - **Typed inputs**, `httpx`-based, sync, context-manageable.
-- **Read-first** — named methods for the `/v1/*` GET read surface; the full
-  surface (incl. the few writes) is reachable via `client.request(...)`.
-- A **drift test** re-dumps the live schema and fails CI if the committed spec
-  is stale — keeping the client in sync with the API.
+- **Complete** — a named method for EVERY operation in the spec, reads and
+  writes alike. `client.request(...)` remains as a low-level escape hatch, but
+  no route depends on it.
+- **Guarded** — a drift test re-dumps the live schema and fails CI if the
+  committed spec is stale, *and* fails if any operation (of any HTTP method)
+  has no named method. Adding a write route cannot pass silently.
 
 ## Install
 
@@ -35,9 +37,20 @@ with DnaClient(
     hits = dna.search_memories("tenancy invariant", k=3)
     board = dna.get_board("dna-development", recent=6)
 
-    # The full surface (incl. writes) via the low-level request()
-    dna.request("DELETE", "/v1/memories/s-foo", params={"tenant": "acme"})
+    # Writes are named methods too — no escape hatch needed.
+    dna.remember_memory("a lesson worth keeping", area="ops")
+    dna.delete_memory("s-foo")
+    dna.set_insight_state("i-42", "actioned")
+
+    # Workspace routes are identity-scoped: the boundary comes from the caller's
+    # verified claims, so they never take the client's default scope/tenant.
+    ws = dna.create_workspace("Acme")           # id is minted server-side
+    dna.create_invite(ws["workspace_id"], "teammate@acme.com", role="member")
 ```
+
+Routes with security semantics say so in their docstring — e.g.
+`create_project()` is **403** without an active workspace membership, and
+`revoke_workspace_member()` is **409** on the last remaining owner.
 
 A non-2xx response raises `DnaApiError` (carrying `.status` and the API's
 `{"detail": ...}` payload).
