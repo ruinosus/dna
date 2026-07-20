@@ -155,8 +155,8 @@ prompts are text, not HTML). Available variables:
         return TypedAgent.from_raw(raw)
 ```
 
-Converts the raw YAML dict into a typed model (dataclasses in Python, Zod
-in TypeScript). The typed model gives you autocomplete and validation:
+Converts the raw YAML dict into a typed model (dataclasses). The typed model
+gives you autocomplete and validation:
 
 ```python
 agent_doc = next(d for d in mi.documents if d.kind == "Agent" and d.name == "brad")
@@ -215,7 +215,7 @@ full step-by-step; what follows is the shape of it.
 
 The GuardrailKind is a fully implemented extension that ships with the SDK.
 Source: `packages/sdk-py/dna/extensions/guardrails/` (Python) and
-`packages/sdk-ts/src/extensions/guardrails.ts` (TypeScript).
+`packages/sdk-py/dna/extensions/guardrails.py`.
 
 It demonstrates:
 - A custom KindPort

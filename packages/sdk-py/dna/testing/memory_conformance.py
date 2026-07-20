@@ -24,10 +24,8 @@ Two suites, two audiences:
   Ebbinghaus decay, bi-temporal fail-open. For anyone evolving the scoring
   (regression pin) or shipping a custom embedder (the two embedder-driven
   cases assert RELATIVE similarity, search-kit style, so they hold for a real
-  model too). This suite is twinned 1:1 in TypeScript
-  (``memoryScoringConformanceSuite`` in ``dna-sdk/testing``) — same case
-  names, same assertions. The verb suite has NO TS twin because the verbs are
-  Py-only by declared boundary (the TS SDK ships the pure core only).
+  model too). The scoring numbers are additionally frozen in
+  ``tests/goldens/memory-scoring.json``.
 
 Consumption contract (same shape as the sibling kits)
 -----------------------------------------------------

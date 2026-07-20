@@ -75,7 +75,7 @@ Three deliberate choices in that table:
 
 **The fake embedder is a floor, not a mock.** It feature-hashes the text
 into a stable, unit-length 384-dim vector — the same input yields the bit-identical vector
-in Python and TypeScript, by construction. It is *not* semantic (its
+by construction. It is *not* semantic (its
 `model_id` is `dna-fake-hash-v1`, honestly incomparable with real spaces),
 but it makes the entire search plane — indexing, KNN, fusion, tests —
 runnable in CI with zero ML dependencies. Swap in the ONNX provider and
@@ -86,7 +86,7 @@ plane is a sqlite-vec KNN over `kernel.embed()` vectors; the lexical plane
 is FTS5's BM25 over the same text; Reciprocal Rank Fusion merges the two
 rankings using only ranks (raw cosine and BM25 scores are incomparable —
 RRF sidesteps that entirely). The fusion is a single pure function shared by
-every provider and both SDKs.
+every provider.
 
 **pgvector is a scale adapter, not a different system.** Same port, same RRF
 function, same overlay/tenant semantics — it swaps the one-file-per-scope
@@ -217,4 +217,4 @@ deterministically, not prose regenerated and re-trusted on every run.
 - **Look it up:** the [`dna recall`](../reference/cli/recall.md) ·
   [`dna search`](../reference/cli/search.md) ·
   [`dna memory`](../reference/cli/memory.md) reference pages, and the
-  [parity matrix](../reference/parity-matrix.md) for the Py↔TS surface.
+  [Python API reference](../reference/python/index.md) for the surface.

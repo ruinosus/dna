@@ -343,11 +343,11 @@ the fake-hash floor cannot do (its cosine for that pair is ~0).
     registers the ONNX embedder automatically when the extra is present; it
     never clobbers an embedder you wired explicitly (via config or code).
 
-## TypeScript
+## From another language
 
-The TS SDK ships the same surface: `kernel.embed` / `kernel.search`, the
-bit-identical fake embedder, `SqliteVecRecordSearchProvider`
-(`sqlite-vec` as an optional peer dependency), and
-`OnnxEmbeddingProvider` (`@huggingface/transformers` as an optional peer
-dependency, same ONNX artifact as Python). See the
-[parity matrix](../reference/parity-matrix.md) for the exact Py↔TS mapping.
+Recall is reachable over the [REST and MCP
+faces](../concepts/microkernel-ports.md#one-runtime-any-language) — the `recall`
+MCP tool and the `/v1/*` read routes serve the same fused results this guide
+describes, with no second implementation to keep in step. See the
+[Python API reference](../reference/python/index.md) for the in-process
+surface.

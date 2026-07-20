@@ -7,7 +7,7 @@ Prints the agent-facing surface ({description, parameters}) as canonical JSON.
 Run alongside `read_ts.ts` (the TypeScript twin) and diff the output: both
 read the SAME Tool document (tools-demo/tools/generate-artifact.yaml) through
 the byte-identical `Tool` Kind descriptor and produce byte-identical surfaces
-— the first time the Py↔TS parity pays off in a real consumer.
+— the governed Tool surface, read straight from the document.
 """
 from __future__ import annotations
 

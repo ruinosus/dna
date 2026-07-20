@@ -9,20 +9,20 @@ microkernel that itself knows no Kinds (extensions register them).
 Standards DNA did not invent are consumed byte-faithful under their owners'
 namespaces — including this very file, which is a live `agents.md/v1`
 instance that the repo's own SDK parses and round-trips
-(`packages/sdk-py/tests/test_agents_md_root.py`). Two SDKs, Python and
-TypeScript, implement the same kernel 1:1.
+(`packages/sdk-py/tests/test_agents_md_root.py`). The runtime is Python;
+other languages reach it over the REST and MCP faces.
 
 ## Layout
 
 ```
-packages/sdk-py/   # Python SDK — kernel + adapters + extensions (import dna)
-packages/sdk-ts/   # TypeScript SDK — 1:1 twin (dna-sdk)
+packages/sdk-py/   # THE runtime — kernel + adapters + extensions (import dna)
 packages/cli/      # `dna` binary — document CRUD + declarative SDLC (dna sdlc)
+packages/client-py/ packages/client-ts/   # REST clients, generated from docs/openapi.json
 docs/              # Quick start, Kinds guide, port contract, readers/writers
 examples/          # hello-genome — minimal runnable scope
 scopes/            # Fixture scopes, incl. 31 real marketplace skills
 scripts/           # Repo guards + versioned git hooks (git-hooks/)
-tests/             # Shared cross-SDK fixtures (parity + market conformance)
+tests/             # Golden fixtures (behavioral + market conformance)
 .dna/              # This repo's own SDLC scope (dna-development)
 ```
 
@@ -33,8 +33,8 @@ tests/             # Shared cross-SDK fixtures (parity + market conformance)
 cd packages/sdk-py && uv venv && uv pip install -e ".[dev]"
 uv run --no-project pytest tests -q --timeout=120
 
-# TypeScript SDK
-cd packages/sdk-ts && bun install
+# REST client (TypeScript)
+cd packages/client-ts && bun install
 bun test && bun run typecheck
 
 # CLI (installs the `dna` binary into the venv)
@@ -47,10 +47,11 @@ python3 scripts/brand_guard.py
 
 ## Conventions
 
-- **Py↔TS parity is test-enforced, not aspirational.** Both SDKs share the
-  fixtures in `tests/`; Kind descriptors are hash-compared byte-identical
-  and a kind-registry parity manifest fails the suite on undocumented
-  drift. A behavior change lands in **both** SDKs in the same PR.
+- **Behavior that crosses a boundary is golden-locked.** Public API
+  surfaces, wire formats, composed prompts and scoring constants are frozen
+  in committed goldens (`tests/golden-fixtures/`,
+  `packages/sdk-py/tests/goldens/`). You change them by re-freezing them in
+  the same PR, never by accident.
 - **Brand guard.** This is the extracted public core of a production
   system; `scripts/brand_guard.py` fails CI on any internal brand token in
   tracked content or paths. Run it before pushing docs.

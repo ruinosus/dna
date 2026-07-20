@@ -174,9 +174,9 @@ class BedrockEmitter:
     def to_template(self, ctx: EmitContext) -> dict[str, Any]:
         """The PURE de-para: :class:`EmitContext` → the CloudFormation dict.
 
-        Parity-critical: the TS twin (``packages/sdk-ts/src/emit/bedrock.ts``)
-        must build the SAME dict from the same context. Field order is intentional
-        and preserved on serialization (``json.dumps`` keeps insertion order)."""
+        Golden-locked: the emitted dict is frozen under ``tests/goldens/``.
+        Field order is intentional and preserved on serialization
+        (``json.dumps`` keeps insertion order)."""
         logical_id = f"{_camel(ctx.name)}Agent"
 
         props: dict[str, Any] = {"AgentName": ctx.name}

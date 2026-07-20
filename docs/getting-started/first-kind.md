@@ -7,31 +7,23 @@ from YAML/Markdown files, with no code change to alter behavior.
 Everything here runs against
 [`examples/hello-genome`](https://github.com/ruinosus/dna/tree/main/examples/hello-genome),
 a minimal scope with one `Genome`, one `Agent`, and one real marketplace
-Skill. The Python and TypeScript SDKs do exactly the same thing — that
-parity is the point, so this tutorial shows both side by side.
+Skill. The runtime is Python; if you are reaching DNA from another language,
+see [Talking to DNA from another
+language](../concepts/microkernel-ports.md#one-runtime-any-language) — the
+concepts below are identical, only the door changes.
 
 ## Prerequisites
 
-=== "Python"
+- **Python 3.12+**.
 
-    - **Python 3.12+**.
+```bash
+pip install dna-sdk
+```
 
-    ```bash
-    pip install dna-sdk
-    ```
-
-=== "TypeScript"
-
-    - **Node 20+** or **Bun 1.0+**.
-
-    ```bash
-    npm install dna-sdk        # or: bun add dna-sdk
-    ```
-
-Pre-release / exact-pin alternative: use the packages straight from the repo —
-`cd packages/sdk-py && uv sync` (Python) or `cd packages/sdk-ts && bun install`
-(TypeScript). Either way, clone the repo to follow along — the example scope
-lives in it: `git clone https://github.com/ruinosus/dna && cd dna`.
+Pre-release / exact-pin alternative: use the package straight from the repo —
+`cd packages/sdk-py && uv sync`. Either way, clone the repo to follow along —
+the example scope lives in it:
+`git clone https://github.com/ruinosus/dna && cd dna`.
 
 ## Step 1 — A scope is a directory of manifests
 
@@ -91,33 +83,17 @@ cache, the default resolvers (`local:`, `github:`, `http(s):`), and every
 built-in extension. One call gives you a `ManifestInstance` (`mi`) — the
 query surface over the loaded scope.
 
-=== "Python"
+```python
+from dna import Kernel
 
-    ```python
-    from dna import Kernel
+mi = Kernel.quick("hello-genome", base_dir="examples/hello-genome/.dna")
 
-    mi = Kernel.quick("hello-genome", base_dir="examples/hello-genome/.dna")
+print(f"scope: {mi.scope}")
+for d in mi.documents:
+    print(f"  {d.api_version:32s} {d.kind:8s} {d.name}")
+```
 
-    print(f"scope: {mi.scope}")
-    for d in mi.documents:
-        print(f"  {d.api_version:32s} {d.kind:8s} {d.name}")
-    ```
-
-=== "TypeScript"
-
-    ```typescript
-    import { quickInstance } from "dna-sdk";
-
-    const mi = await quickInstance("hello-genome", "examples/hello-genome/.dna");
-
-    console.log(`scope: ${mi.scope}`);
-    for (const d of mi.documents) {
-      console.log(`  ${d.apiVersion.padEnd(32)} ${d.kind.padEnd(8)} ${d.name}`);
-    }
-    ```
-
-Both print exactly the same thing — every document identified by
-`(apiVersion, kind, name)`:
+Every document is identified by `(apiVersion, kind, name)`:
 
 ```
 scope: hello-genome
@@ -139,20 +115,11 @@ scope: hello-genome
 `mi.documents` is the [blessed query surface](../guides/read-document-data.md):
 filter by `kind` and `name`, then read typed fields.
 
-=== "Python"
-
-    ```python
-    skill = next(d for d in mi.documents if d.kind == "Skill")
-    print(skill.typed.metadata.name)
-    print(skill.typed.metadata.description)
-    ```
-
-=== "TypeScript"
-
-    ```typescript
-    const skill = mi.documents.find((d) => d.kind === "Skill")!;
-    console.log(skill.name);
-    ```
+```python
+skill = next(d for d in mi.documents if d.kind == "Skill")
+print(skill.typed.metadata.name)
+print(skill.typed.metadata.description)
+```
 
 The Skill's frontmatter was parsed into a typed model — you did not need to
 know anything about the `agentskills.io` format to read it.
@@ -162,17 +129,9 @@ know anything about the `agentskills.io` format to read it.
 Now the payoff. The Agent references a skill; the SDK composes the Agent's
 instruction with its wired-in Kinds into a single system prompt, on read:
 
-=== "Python"
-
-    ```python
-    print(mi.build_prompt(agent="greeter"))
-    ```
-
-=== "TypeScript"
-
-    ```typescript
-    console.log(await mi.buildPrompt({ agent: "greeter" }));
-    ```
+```python
+print(mi.build_prompt(agent="greeter"))
+```
 
 You never wrote that composed prompt down — it is *derived* from the
 authored `spec`. That is the [thesis](../concepts/thesis.md) in one call: the
@@ -188,21 +147,12 @@ That is the whole of it: behavior is data.
 ## Run the finished example
 
 The steps above are packaged as a runnable script in the repo, exercised by
-both SDKs' test suites so it can never silently rot:
+the test suite so it can never silently rot:
 
-=== "Python"
-
-    ```bash
-    cd packages/sdk-py && uv sync
-    uv run python ../../examples/hello-genome/run.py
-    ```
-
-=== "TypeScript"
-
-    ```bash
-    cd packages/sdk-ts && bun install
-    bun run ../../examples/hello-genome/run.ts
-    ```
+```bash
+cd packages/sdk-py && uv sync
+uv run python ../../examples/hello-genome/run.py
+```
 
 ## Next steps
 
@@ -211,8 +161,8 @@ both SDKs' test suites so it can never silently rot:
 - **[How to add a Kind](../guides/add-a-kind.md)** — ship your own Kind in
   thirty minutes.
 - **[How to read document data](../guides/read-document-data.md)** — the
-  unified read surface across both SDKs.
+  blessed read surface.
 - **[How to use semantic recall & memory](../guides/semantic-recall.md)** —
   search the scope you just loaded with `dna recall`, offline.
 - **[Running the conformance kit](conformance-kit.md)** — prove the
-  byte-faithful, dual-SDK claims for yourself.
+  byte-faithful market-format claims for yourself.

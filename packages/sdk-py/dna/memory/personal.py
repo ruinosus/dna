@@ -6,8 +6,7 @@ partition in workspace A, workspace B, and a bare MCP client — "your memory
 follows *you*" as a primary-key value (ADR ``docs/adr/ADR-personal-memory.md``).
 
 This module is the **pure core** of the model — no kernel / FastMCP / HTTP
-import — so it is fully unit-testable and mirror-able 1:1 in TypeScript
-(``packages/sdk-ts/src/memory/personal.ts``). It holds three things:
+import — so it is fully unit-testable. It holds three things:
 
 1. the reserved partition namespace ``personal:<oid>`` (a value-namespace inside
    the EXISTING ``tenant`` partition — zero schema migration), plus the helpers

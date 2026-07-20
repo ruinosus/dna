@@ -64,22 +64,49 @@ Two ways to register a Kind, matching the [thesis rule that a Kind is
 data](thesis.md#2-a-kind-is-data-not-a-class):
 
 - **As data** — a record-style Kind with no custom behavior is a
-  `*.kind.yaml` descriptor registered with `kind_from_descriptor()`. The
-  descriptor files are byte-identical between the two SDKs and hash-enforced.
-  No class, no code.
+  `*.kind.yaml` descriptor registered with `kind_from_descriptor()`. No
+  class, no code — and because the descriptor is data, any language can read
+  the same file to learn the Kind's shape.
 - **As code** — a Kind that needs a custom bundle format, a typed parse
   step, or a composition rule implements a `KindPort` class. See [How to add
   a Kind](../guides/add-a-kind.md).
 
-## Dual SDK, one behavior
+## One runtime, any language
 
-The Python (`packages/sdk-py`) and TypeScript (`packages/sdk-ts`) SDKs
-implement this same kernel 1:1 — same ports, same composition rules, same
-outputs. Parity is enforced by shared fixtures, descriptor hash checks, and a
-kind-registry parity manifest that fails the suite on undocumented drift. The
-public API differs only in casing convention: snake_case in Python
-(`build_prompt`, `default_agent`), camelCase in TypeScript (`buildPrompt`,
-`defaultAgent`).
+The ports above make the kernel *swappable on the inside*. The same
+microkernel discipline is what makes DNA reachable *from the outside* in any
+language — and it is the ports, not a second implementation, that do it.
+
+The runtime is **Python** (`packages/sdk-py`). It exposes two
+language-neutral faces, each of which is just another adapter over the same
+kernel:
+
+| Face | Serve it with | What it is |
+|---|---|---|
+| **REST** | `dna api serve` | The typed read/write surface, described by an OpenAPI document (`docs/openapi.json`) dumped from the live app |
+| **MCP** | `dna mcp serve` | The tool face agents speak natively |
+
+Clients are **generated from that OpenAPI document**, not hand-written:
+`dna-client` ships for [TypeScript](https://www.npmjs.com/package/dna-client)
+and [Python](https://pypi.org/project/dna-client/), and any language with an
+HTTP client can reach the same routes. Because the types come from the spec,
+a client cannot silently drift from the runtime — regeneration is a diff, and
+CI fails when the committed types are stale.
+
+!!! note "Why not a second kernel?"
+
+    DNA used to ship one: `packages/sdk-ts`, a full TypeScript twin of the
+    Python kernel kept 1:1 **by hand**, with parity policed by shared
+    fixtures, descriptor hash checks and a kind-registry manifest. The
+    promise — *DNA runs anywhere* — was right; the mechanism made every
+    kernel change a two-language change, and the parity harness could only
+    ever detect drift after the fact.
+
+    The twin is frozen at the tag
+    [`sdk-ts-final`](https://github.com/ruinosus/dna/releases/tag/sdk-ts-final)
+    and no longer maintained. Portability now costs one implementation
+    instead of two, and the generated clients make drift structurally
+    impossible rather than merely tested.
 
 ## The port contract
 

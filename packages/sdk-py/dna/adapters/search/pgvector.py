@@ -28,24 +28,18 @@ provider byte-for-byte.
 
 Language parity — Py-primary, behavioral parity via the kit
 -----------------------------------------------------------
-This provider is **Python-only by design**, and that asymmetry is deliberate,
-not an omission:
+sqlite-vec is the *embeddable offline floor*; pgvector is the *scale/server*
+adapter, only meaningful against a running Postgres. They share no plumbing —
+and they do not need to:
 
-  * The sqlite-vec provider has a TS twin because sqlite-vec is the *embeddable
-    offline floor* both language SDKs ship and run in-process (browser/Bun
-    included). pgvector is the *scale/server* adapter — it only makes sense
-    against a running Postgres, which the TS SDK reaches through the ``pg``
-    driver used by its own raw Postgres source, a different surface from
-    this asyncpg path.
-  * Behavioral parity is guaranteed the way the port intends: the SAME
-    ``record_search_conformance_suite`` (its TS twin is
-    ``src/testing/recordSearchConformance.ts``) is the contract. A future TS
-    pgvector twin, if ever needed, must pass the same 8 cases — the kit is the
-    parity guarantee, not a hand-diffed second implementation.
-  * RRF, the only ranking-affecting logic, is already bit-identical Py↔TS
-    (``rrf.py`` ↔ ``rrf.ts``) and is REUSED here unchanged.
+  * Correctness is guaranteed the way the port intends: the SAME
+    ``record_search_conformance_suite`` is the contract. Any future provider
+    is correct exactly when it passes the same 8 cases — the kit is the
+    guarantee, not a hand-diffed second implementation.
+  * RRF, the only ranking-affecting logic, is REUSED here unchanged
+    (``rrf.py``).
 
-So the assimetry is: dense/lexical *plumbing* is Py-only; *ranking behavior* is
+So the asymmetry is: dense/lexical *plumbing* differs; *ranking behavior* is
 cross-language via the shared pure RRF core + the shared conformance kit.
 
 Requires asyncpg + a pgvector-enabled Postgres. Install: ``pip install

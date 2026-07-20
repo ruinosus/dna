@@ -18,9 +18,9 @@ spec:
   skills: [verification-before-completion]   # a real marketplace skill
 ```
 
-DNA ships as a **dual SDK** — Python (`import dna`) and TypeScript
-(`dna-sdk`) — that implement the same kernel 1:1. Behavioral parity between
-them is a test-enforced invariant, not a goal.
+The **runtime is Python** (`import dna`). Every other language reaches the
+same kernel through the **REST** and **MCP** faces, with typed clients
+generated from the OpenAPI spec — so a client cannot drift from the runtime.
 
 ## Start here
 
@@ -32,8 +32,7 @@ kinds of documentation, each with one job.
 - :material-school: **[Tutorials](getting-started/index.md)**
 
     Learning-oriented. Build your [first Kind and composed agent
-    prompt](getting-started/first-kind.md) in ten minutes, Python and
-    TypeScript side by side.
+    prompt](getting-started/first-kind.md) in ten minutes.
 
 - :material-lightbulb-on: **[Concepts](concepts/index.md)**
 
@@ -49,8 +48,8 @@ kinds of documentation, each with one job.
 
 - :material-file-document: **[Reference](reference/index.md)**
 
-    Information-oriented. Per-language API reference, the CLI, and the parity
-    matrix — *coming soon* (generated from source).
+    Information-oriented. The Python API, the CLI and the Kinds catalog —
+    all generated from source.
 
 </div>
 
@@ -71,8 +70,8 @@ prototype: the kernel, the extension mechanism, multi-tenancy, layer
 composition and the market-format readers/writers run in production today.
 
 It is also **pre-1.0**: public APIs may still move, and the packages are not
-yet on PyPI/npm. The full test suite (~2,900 tests across both SDKs,
-including the market-conformance suite) gates every change.
+yet on PyPI/npm. The full test suite (thousands of tests, including the
+market-conformance suite and the golden fixtures) gates every change.
 
 The source lives at
 [github.com/ruinosus/dna](https://github.com/ruinosus/dna).

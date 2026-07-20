@@ -84,12 +84,11 @@ logger = logging.getLogger(__name__)
 # Hook-name vocabulary (s-dna-typed-hook-names)
 # ---------------------------------------------------------------------------
 
-# The full vocabulary of hook names the SDK itself emits/consumes. TS twin:
-# ``HookName`` / ``KNOWN_HOOK_NAMES`` in src/kernel/hooks.ts. The two sides
-# are locked to the shared fixture ``tests/parity-fixtures/
-# port-surface-parity.json`` (section ``hook_names``) by
-# tests/test_hook_names.py + tests/hook-names.test.ts — vocabulary drift
-# turns both suites red. Add a name HERE + fixture + TS, never ad hoc.
+# The full vocabulary of hook names the SDK itself emits/consumes. Hook names
+# are WIRE vocabulary, so they are locked to the golden fixture
+# ``tests/golden-fixtures/port-surface.json`` (section ``hook_names``) by
+# tests/test_hook_names.py — drift turns the suite red. Add a name HERE and
+# in the fixture, never ad hoc.
 HookName = Literal[
     "pre_build_prompt",
     "post_build_prompt",

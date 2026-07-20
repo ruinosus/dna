@@ -238,12 +238,12 @@ from a host. Then prove it with a small test:
 
 ## Cross-language parity
 
-Every emitter has a Python and a TypeScript twin with identical behavior. For a
-config emitter the parity contract is the emitted **object** (the YAML/JSON
-*rendering* may differ between PyYAML and js-yaml). For a scaffold emitter the
-templates are byte-identical across the two SDKs (both emit the same source), and
-each side round-trips its own `INSTRUCTIONS` literal — so the byte-equal invariant
-holds independently in both.
+The emit contract is pinned by **golden files**: for a config emitter the
+frozen artifact is the emitted **object**; for a scaffold emitter it is the
+rendered source, plus a round-trip of the `INSTRUCTIONS` literal that proves
+the byte-equal invariant against `build_prompt`. The goldens live in
+`packages/sdk-py/tests/goldens/` and a change to any emitter has to re-freeze
+them deliberately.
 
 ## Future direction — Scaffold as a Kind
 

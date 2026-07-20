@@ -55,7 +55,7 @@ class EvalExtension:
 
     def register(self, kernel: ExtensionHost) -> None:
         # F3: the Kinds ship as kinds/*.kind.yaml package data
-        # (byte-identical Py↔TS mirrors), registered through the SAME
+        # (declarative descriptors), registered through the SAME
         # funnel as per-scope KindDefinitions (plane lint + digest
         # idempotency + builtin conflict marker).
         for raw in load_descriptors("dna.extensions.eval"):

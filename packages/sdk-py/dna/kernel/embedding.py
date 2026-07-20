@@ -21,7 +21,7 @@ for the same string. That is guaranteed *by construction*, not by luck:
      IEEE-754 correctly-rounded, so the resulting doubles are bit-identical
      across the two runtimes.
 
-The golden fixture ``tests/parity-fixtures/fake-embedding-golden.json`` pins a
+The golden fixture ``tests/golden-fixtures/fake-embedding-golden.json`` pins a
 handful of strings to their exact vectors; both language suites assert against
 it (see ``tests/test_fake_embedding.py`` / ``tests/fake-embedding.test.ts``).
 """

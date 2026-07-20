@@ -60,5 +60,5 @@ uv run pytest tests/ -v
 ```
 
 The suite includes the market-fidelity conformance tests
-(`tests/test_market_conformance.py`) and the Py↔TS parity fixtures shared
-with the TypeScript twin.
+(`tests/test_market_conformance.py`) and the golden fixtures that freeze
+behavior crossing a boundary (`tests/goldens/`, `tests/golden-fixtures/`).

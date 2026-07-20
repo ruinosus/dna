@@ -144,10 +144,10 @@ class VertexEmitter:
     def to_agent_config(self, ctx: EmitContext) -> dict[str, Any]:
         """The PURE de-para: :class:`EmitContext` → the ADK Agent Config dict.
 
-        Parity-critical: the TS twin (``packages/sdk-ts/src/emit/vertex.ts``) must
-        build the SAME dict from the same context. Field order is intentional and
-        preserved on serialization (``sort_keys=False``). The schema-header comment
-        is prepended at serialization time, not part of this dict."""
+        Golden-locked: the emitted dict is frozen under ``tests/goldens/``.
+        Field order is intentional and preserved on serialization
+        (``sort_keys=False``). The schema-header comment is prepended at
+        serialization time, not part of this dict."""
         doc: dict[str, Any] = {"agent_class": _AGENT_CLASS, "name": _snake(ctx.name)}
         if ctx.description:
             doc["description"] = ctx.description

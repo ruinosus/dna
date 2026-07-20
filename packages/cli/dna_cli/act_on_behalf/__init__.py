@@ -8,8 +8,8 @@ Microsoft 365 today via OBO, Google Workspace next via OAuth — each behind one
 contract. Purely additive: the Microsoft OBO becomes the reference *implementation*
 of the port; nothing about its shipped behavior changes.
 
-Layering (mirrors ``dna_cli.graph``: MCP-runtime, HTTP-only, Python-side execution
-— the parity-critical surface is the TS interface twin in ``packages/sdk-ts``):
+Layering (mirrors ``dna_cli.graph``: MCP-runtime, HTTP-only, Python-side
+execution):
 
 * :mod:`._port`      — the contract: ``ActContext`` / ``UserCredential`` /
                        ``ActOnBehalfPort`` / ``ActOnBehalfUnavailable``.

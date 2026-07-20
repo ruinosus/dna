@@ -5,12 +5,14 @@ Generated from the `dna` package docstrings with
 source are the single source of truth** — this page cannot drift from the
 code because it is rebuilt from it on every `mkdocs build`.
 
-!!! tip "This is one of two sibling trees"
+!!! tip "Reaching this API from another language"
 
-    DNA ships Python and TypeScript SDKs with 1:1 behavioural parity. Their
-    reference is **kept per-language, never fused** — the same concept is
-    documented against the exact names, types and defaults of each runtime.
-    The TypeScript twin lives under [TypeScript API](../typescript/index.md).
+    This is the in-process surface of the runtime. Other languages consume
+    the same kernel through the **REST** and **MCP** faces — see
+    [Microkernel &
+    ports](../../concepts/microkernel-ports.md#one-runtime-any-language). The
+    REST surface is described by `docs/openapi.json`, and the `dna-client`
+    packages are generated from it.
 
 ## Where to start
 
