@@ -50,16 +50,32 @@ the config-auth workspace bind** — they name the workspace in the path and do
 their own RBAC, so a caller who holds no active membership yet (an invitee, or the
 founder before bootstrap) can still reach them.
 
-- `POST /v1/workspaces/{id}/provision-owner` — the **first-login owner
-  bootstrap**. Body `{claims: {oid, email, tid, …}}` (the verified identity). It
-  makes the signed-in user the **owner of their own workspace**: it creates the
-  `Workspace` (id == the verified `tid`, so existing rows keyed `tenant==tid` are
-  already this workspace's data — **zero migration**) if absent, then a bound
-  owner `WorkspaceMembership`, `active`. **Idempotent + first-owner-only**: a
-  re-call by the same identity is a no-op returning the membership; a later
-  *different* user does not auto-escalate (`owner_exists` no-op). The path `id`
-  **must** equal the verified `tid` — a cross-`tid` caller is `403`'d (a verified
-  identity from another org can never seize a `tid`-workspace).
+- `POST /v1/workspaces` — **create a workspace and its first owner**. Body
+  `{name, slug?, claims: {oid, email, tid, …}}`. The `workspace_id` is **minted by
+  the server** — opaque, unguessable, never derived from the Azure `tid`, and
+  there is deliberately **no request field for it** (decision **D5**). That is the
+  anti-takeover mechanism: an id nobody can name is an id nobody can race you to.
+  `slug` defaults to a slugified `name` and is made unique. The caller's verified
+  identity becomes the active `owner` (its `tid` is stored as provenance only).
+  Requires no pre-existing membership — a brand-new user belongs to nothing yet.
+- `GET /v1/workspaces` — **the workspaces the caller belongs to** (the workspace
+  switcher's source). Enumerates by **ACTIVE membership**, never by `tid`; a
+  `pending` invite is not listed, and an unknown identity gets an empty list.
+  Under `--auth config` the caller is the verified token identity; under
+  `none`/`token` pass `actor_oid` / `actor_email`.
+- `POST /v1/projects` — **create a Project inside a workspace** (decision **A1**:
+  the owning `workspace_id` is an explicit field on the Project). Body
+  `{workspace_id, name, slug?, claims}`. The caller must hold an **active**
+  `WorkspaceMembership` there, else `403`. The write scope and the project's
+  `board_scope` are **derived** from the workspace + slug and are not accepted
+  from the caller.
+- `POST /v1/workspaces/{id}/provision-owner` — the **sign-in reconcile**. Body
+  `{claims: {oid, email, tid, …}}` (the verified identity). Since **D5** it
+  **creates nothing**: it requires an **active** `WorkspaceMembership` in `{id}`
+  and returns it (`already_member`), back-filling the `Workspace` identity doc only
+  for an owner whose doc is missing. **Idempotent** — safe on every dashboard load.
+  A caller holding no active membership here is `403`'d, so a verified identity
+  from another org can never seize a workspace; the `tid` is not consulted at all.
 - `POST /v1/workspaces/{id}/invites` — invite an identity by email (Owner/Admin);
   a `pending` `WorkspaceMembership`.
 - `GET /v1/workspaces/{id}/members` — list the workspace's members (Owner/Admin).

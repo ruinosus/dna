@@ -50,6 +50,18 @@ spec:
         type: string
         description: URL-safe identity for the project, e.g. copiloto-medico. Used
           in routes and to derive the board_scope by convention.
+      workspace_id:
+        type:
+        - string
+        - 'null'
+        description: The Workspace this project belongs to — the EXPLICIT owning
+          edge (decision A1; a Project is created inside exactly one workspace and
+          never moves). The physical `tenant` column carries the same value, so
+          this field is the DECLARATIVE twin of the storage keying, readable
+          without knowing how the kernel keys rows. Null only on a legacy
+          pre-A1 doc, whose owning workspace is then its `tenant` column alone.
+          The board_scope / scope a project resolves to is DERIVED from
+          (workspace, slug) — presentation, never the project's identity.
       org_ref:
         type:
         - string
@@ -120,5 +132,6 @@ spec:
     and it is the permission boundary. Repos are attached BY REFERENCE via repo_refs
     (an N—N edge kept on the Project side — a repo can belong to many projects
     without duplication; Repo carries no project back-ref). A Project has a
-    visibility (private / shared) and an org_ref to its Organization, as per-tenant
+    visibility (private / shared), an org_ref to its Organization and an explicit
+    workspace_id naming the Workspace that owns it (decision A1), as per-tenant
     declarative data.

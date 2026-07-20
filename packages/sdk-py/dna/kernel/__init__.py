@@ -2486,6 +2486,15 @@ class Kernel:
         RegistryAccessor collaborator."""
         return await self._registry.workspace_memberships()
 
+    async def workspaces(self) -> list[dict]:
+        """List every ``Workspace`` doc (the tenancy ROOTS) from the _lib
+        registry. Returns the RAW DICT rows, UNFILTERED — an inventory read, not
+        an authorization surface: the caller-facing ``GET /v1/workspaces``
+        filters it by the verified identity's ACTIVE memberships in pure core.
+        _lib-direct + fail-soft. Thin facade over the RegistryAccessor
+        collaborator — mirrors ``workspace_memberships``."""
+        return await self._registry.workspaces()
+
     # VoicePolicy is GLOBAL — _lib-resident like ModelProfile. Same
     # _lib-direct lookup rationale (a per-scope query would silently
     # no-op for scopes with zero VoicePolicy docs).

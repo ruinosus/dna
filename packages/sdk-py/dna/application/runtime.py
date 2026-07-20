@@ -334,6 +334,9 @@ def _project_surface(d: dict[str, Any]) -> dict[str, Any]:
     return {
         "name": d["name"],
         "slug": spec.get("slug"),
+        # A1: the owning workspace is an explicit field. Absent on a legacy
+        # pre-A1 doc — reported as None rather than guessed from the tenant key.
+        "workspace_id": spec.get("workspace_id"),
         "org_ref": spec.get("org_ref"),
         "repo_refs": list(spec.get("repo_refs") or []),
         "board_scope": spec.get("board_scope"),
@@ -1194,9 +1197,10 @@ async def forget_impl(
 # the same scope kernel.workspace_plan() reads _lib-direct. The doc NAME equals
 # the workspace_id so the read matches on spec.workspace_id, and the write is a
 # natural upsert (write_document keys on name) → idempotent under Stripe's
-# at-least-once retries. ADR "Model B": billing keys on the workspace, not the
-# Azure tid; the founding workspace's id == the founder's tid, so a plan written
-# for it keys on the SAME string as before (zero migration).
+# at-least-once retries. ADR "Model B": billing keys on the WORKSPACE, not the
+# Azure tid. The workspace_id is opaque here — nothing parses or validates its
+# shape — so a generated id (D5) and the founder's legacy GUID-shaped id are the
+# same kind of key to this write.
 _WORKSPACE_PLAN_SCOPE = "_lib"
 _CLOUD_API = "github.com/ruinosus/dna/cloud/v1"
 
@@ -1346,6 +1350,28 @@ def _require_workspace_manage(
     if target_role == "owner" and actor_role != "owner":
         raise WorkspaceForbidden("only an Owner may grant the Owner role")
     return actor_role
+
+
+def _require_workspace_membership(
+    actor: Any, workspace_id: str, memberships: list[Any], action: str
+) -> str:
+    """The BASELINE Model B authorization: ``actor`` must hold an ACTIVE grant in
+    ``workspace_id`` — any role. Returns that role; raises
+    :class:`WorkspaceForbidden` (fail-closed → 403) otherwise.
+
+    Distinct from :func:`_require_workspace_manage`, which additionally demands
+    Owner/Admin. Membership writes need the stronger gate; creating content
+    INSIDE a workspace you belong to needs only this one."""
+    from dna.tenancy import role_in_workspace
+
+    role = role_in_workspace(actor, workspace_id, memberships)
+    if not role:
+        raise WorkspaceForbidden(
+            f"identity {(getattr(actor, 'email', None) or '<anonymous>')!r} holds no "
+            f"active WorkspaceMembership in workspace {workspace_id!r} — "
+            f"cannot {action}"
+        )
+    return role
 
 
 async def invite_member_impl(
@@ -1519,64 +1545,68 @@ async def accept_invites_impl(
     }
 
 
-def assert_may_bootstrap_workspace(identity: Any, workspace_id: str) -> None:
-    """Entitlement gate for owner-bootstrap. **Two rules live here, not one.**
+def assert_may_bootstrap_workspace(
+    identity: Any, workspace_id: str, memberships: Any = ()
+) -> None:
+    """Entitlement gate for owner-bootstrap — **ONE rule now, and it is the
+    security one.**
 
-    This function exists because those two rules were previously a single
-    ``if`` inside :func:`provision_workspace_owner_impl`, sharing one condition
-    and one comment. That is a trap: one of them is scheduled for removal and
-    the other must NEVER be removed, and nothing in the code said so.
+    History (read it, it is the point of this function). This gate used to be a
+    single equality ``identity.tid == workspace_id`` doing TWO jobs at once:
 
-    **Rule 1 — ZERO-MIGRATION (identity mapping). Scheduled to DIE.**
-        Workspace #1's id *is* the founder's Azure ``tid``, so every row keyed
-        ``tenant == tid`` is already that workspace's data and needs no move.
-        Product decision **D5** (``dna-cloud``:
-        ``docs/superpowers/specs/2026-07-19-produto-unidade-workspace-design.md``)
-        retires this: a workspace gets its OWN generated id and the ``tid``
-        becomes a mere fact of authentication. When that lands, the
-        ``tid == workspace_id`` equality below is wrong and must go.
+    * **Rule 1 — zero-migration.** Workspace #1's id *was* the founder's Azure
+      ``tid``, so rows keyed ``tenant == tid`` were already that workspace's
+      data. **This rule is now DEAD.** Product decision **D5** gives every
+      workspace a server-minted id and demotes the ``tid`` to a mere fact of
+      authentication. The founder's workspace keeps working not through any
+      special case but because its id is simply one more opaque string.
+    * **Rule 2 — anti-takeover.** A verified identity must never seize a
+      workspace by racing its legitimate owner to the bootstrap. **This rule
+      survives, and it now has an implementation of its OWN** rather than being
+      a side-effect of Rule 1.
 
-    **Rule 2 — ANTI-TAKEOVER (security). MUST SURVIVE D5.**
-        A verified identity from another org must never seize a workspace by
-        racing its legitimate owner to the bootstrap. Note the shape of the
-        surface, because it is easy to get wrong:
+    **The new entitlement rule, stated without the word ``tid``:**
 
-        * an ALREADY-OWNED workspace is not at risk here — the ``has_active_owner``
-          branch in the caller returns an ``owner_exists`` no-op, and that branch
-          is independent of ``tid``. It survives D5 untouched.
-        * the exposure is an **unclaimed** workspace id: whoever calls first
-          becomes owner. Today Rule 1 is what makes that safe — you can only
-          claim the id that equals your own ``tid``, and you cannot forge a
-          verified ``tid``.
+        You may bootstrap a workspace **iff you already hold an ACTIVE
+        WorkspaceMembership in it.**
 
-    **⚠️ THE HAZARD.** Rule 2 has no implementation of its own — it is a
-    side-effect of Rule 1. Delete the equality to satisfy D5 and the takeover
-    protection leaves with it, silently: the only test that covers the denial
-    branch (``test_workspace_takeover_guard.py``, and historically just
-    ``test_workspace_owner_rest.py::test_provision_cross_tid_is_forbidden``)
-    sits beside a zero-migration test that D5 *requires* you to delete.
+    That reads circular until you notice what changed around it: bootstrap NO
+    LONGER CREATES ANYTHING out of nothing. Creation became an explicit,
+    separate act — :func:`create_workspace_impl` (``POST /v1/workspaces``) mints
+    the id AND its first owner grant together, and the id is minted **by the
+    server**, so a caller cannot name a workspace into existence. Takeover is
+    therefore impossible *by construction* rather than by comparison: there is
+    no unclaimed-but-nameable id left to race for. What remains for
+    provision-owner is the idempotent re-login no-op (bind/repair an existing
+    grant), and that legitimately requires the grant to already exist.
 
-    So D5 must not merely remove this check — it must REPLACE Rule 2 with an
-    entitlement rule that does not mention ``tid``. The open design question,
-    deliberately not answered here: under generated ids, who may claim an
-    unclaimed workspace? The likely answer is that nobody may — creation becomes
-    an explicit act (``POST /v1/workspaces`` mints the id and its first owner in
-    one transaction) and bootstrap degrades to the idempotent re-login no-op,
-    requiring an existing membership. That is a product decision, not a
-    refactor, and it is tracked as open in the D5 doc.
+    Fail-closed by default: ``memberships`` defaults to empty, so a caller that
+    forgets to pass the grants denies rather than allows.
+
+    Args:
+        identity: the VERIFIED caller (:class:`dna.tenancy.Identity`).
+        workspace_id: the workspace being bootstrapped.
+        memberships: every :class:`dna.tenancy.Membership` in the source
+            (unfiltered — the match is done here, on the verified identity).
 
     Raises:
-        WorkspaceForbidden: the caller may not bootstrap this workspace.
+        WorkspaceForbidden: the caller holds no active membership here.
     """
-    # Rule 1 + Rule 2, still fused — see the docstring. Splitting the CONDITION
-    # is not possible while Rule 2 has no independent formulation; splitting the
-    # NAME and pinning the behavior in tests is what makes the removal visible.
-    if not identity.tid or identity.tid != workspace_id:
-        raise WorkspaceForbidden(
-            f"provision-owner is bound to the caller's own workspace "
-            f"(id must == the verified tid {workspace_id!r}); the identity's tid is "
-            f"{identity.tid!r} — cross-workspace owner bootstrap denied"
-        )
+    from dna.tenancy import active_workspaces_for
+
+    if workspace_id in active_workspaces_for(identity, list(memberships or ())):
+        return
+    # Deny. Name the CALLER, not only the defended target, so the 403 is
+    # diagnosable in a log: email + the durable oid, plus the tid as PROVENANCE
+    # (it is reported, never consulted — it decides nothing here any more).
+    raise WorkspaceForbidden(
+        f"identity {(getattr(identity, 'email', None) or '<anonymous>')!r} "
+        f"(oid={getattr(identity, 'oid', None)!r}, "
+        f"tid={getattr(identity, 'tid', None)!r} — provenance only, not consulted) "
+        f"holds no active WorkspaceMembership in workspace {workspace_id!r}; "
+        f"provision-owner cannot create a workspace (use POST /v1/workspaces, "
+        f"which mints its own id) — owner bootstrap denied"
+    )
 
 
 async def provision_workspace_owner_impl(
@@ -1584,49 +1614,37 @@ async def provision_workspace_owner_impl(
     workspace_id: str,
     claims: dict[str, Any] | None,
 ) -> dict[str, Any]:
-    """Bootstrap the FIRST owner of a workspace — the Model B twin of
-    ``provision_tenant_owner_impl`` and the fix for the production gap where the
-    portal auto-provisions a Model-A ``TenantMembership`` on first login but
-    nothing ever creates the Model-B owner ``WorkspaceMembership`` the Members
-    panel (``GET /v1/workspaces/{id}/members``) requires — so the founder is 403'd
-    and cannot invite.
+    """Re-login reconciliation for a workspace the caller ALREADY belongs to.
 
-    On first authenticated access the DNA Cloud portal calls this (server-side,
-    with the shared bearer, OR under ``--auth config`` with the verified token) so
-    the signed-in user becomes owner of their OWN workspace and member management
-    works. It does the SAME thing the F1 seed (``scripts/seed_workspace_one.py``)
-    does — write a ``Workspace`` + an owner ``WorkspaceMembership`` — but on demand,
-    idempotently, bound to the verified identity.
+    **This use-case no longer creates anything from nothing** — decision D5 took
+    creation away from it and gave it to :func:`create_workspace_impl`
+    (``POST /v1/workspaces``), which mints the id server-side. What survives here
+    is the idempotent, safe-to-call-on-every-dashboard-load half:
 
-    **Entitlement guard** — see :func:`assert_may_bootstrap_workspace`, which
-    carries the full contract. In short: ``workspace_id`` MUST equal the verified
-    identity's Azure ``tid``, and that single equality is doing TWO jobs —
-    zero-migration (scheduled to die with product decision D5) and anti-takeover
-    (must survive it). They are named apart there precisely so the second is not
-    deleted along with the first.
+    * the caller holds an ACTIVE grant here → NO-OP returning that grant
+      (``already_member``), plus a back-fill of the ``Workspace`` identity doc if
+      (and only if) an owner grant exists while the doc does not — the repair path
+      for a grant seeded before its Workspace doc was written;
+    * the caller holds NO active grant here → :class:`WorkspaceForbidden` (403).
+      There is nothing legitimate left for a non-member to bootstrap: an id it
+      does not belong to either does not exist (ids are generated and
+      unguessable) or belongs to somebody else.
 
-    **Idempotent + first-owner-only.**
+    **Entitlement guard** — :func:`assert_may_bootstrap_workspace`, which carries
+    the full contract and the history of why it used to compare ``tid``. It no
+    longer mentions ``tid`` at all: entitlement is "I hold an active membership
+    here". The anti-takeover property it used to provide as a side-effect is now
+    structural — nobody can name a workspace into existence.
 
-    * If THIS identity already holds an active membership here → NO-OP, return it
-      (the re-login path — every dashboard load may call this safely).
-    * Else if the workspace already has ANY active owner (a *different* identity —
-      e.g. a colleague from the same Azure org) → NO-OP, ``owner_exists``: a later
-      user does NOT auto-escalate to owner (they need an invite). Mirrors the
-      tenant provision-owner's first-owner-only rule.
-    * Else → create the ``Workspace`` doc (id == ``workspace_id``) if absent, then
-      an OWNER ``WorkspaceMembership`` **bound** to the verified identity
-      (``identity_oid`` + ``identity_email`` + ``identity_tid``), ``status`` active.
+    Naming note: the route keeps the ``provision-owner`` name for wire
+    compatibility with the deployed portal, which calls it on every sign-in.
 
     GLOBAL / ``_lib``-direct (Workspace + WorkspaceMembership are the tenancy
-    boundary — no ``tenant`` kwarg), through the SAME ``kernel.write_document``
-    funnel the seed uses."""
+    boundary — no ``tenant`` kwarg)."""
     from dna.tenancy import (
-        active_workspaces_for,
-        has_active_owner,
         identity_from_token,
         membership_matches_identity,
         normalize_email,
-        workspace_membership_name,
     )
 
     workspace_id = (workspace_id or "").strip()
@@ -1640,71 +1658,225 @@ async def provision_workspace_owner_impl(
     if not identity.oid:
         raise ValueError("the verified identity must carry an oid claim")
 
-    # Entitlement gate — TWO rules, one of which must survive D5 and one of which
-    # must not. Read `assert_may_bootstrap_workspace`'s docstring before touching
-    # it; removing it to satisfy D5 also removes the takeover protection.
-    assert_may_bootstrap_workspace(identity, workspace_id)
-
     raw_grants, memberships = await _workspace_grants(live)
 
-    # (1) This identity already an active member here → no-op, return it.
-    if workspace_id in active_workspaces_for(identity, memberships):
-        for g, m in zip(raw_grants, memberships):
+    # Entitlement gate — the ONE rule: an active membership here. Fail-closed;
+    # raises WorkspaceForbidden (403) for everyone else. Read its docstring
+    # before touching it: it is the anti-takeover surface.
+    assert_may_bootstrap_workspace(identity, workspace_id, memberships)
+
+    spec: dict[str, Any] = {}
+    role = None
+    for g, m in zip(raw_grants, memberships):
+        if m.workspace_id == workspace_id and membership_matches_identity(m, identity):
             spec = g.get("spec") or {}
-            if m.workspace_id == workspace_id and membership_matches_identity(m, identity):
-                return {
-                    "workspace_id": workspace_id,
-                    "provisioned": False,
-                    "reason": "already_member",
-                    "workspace_created": False,
-                    "membership": _ws_member_surface(spec),
-                }
+            role = m.role
+            break
 
-    # (2) A DIFFERENT identity already owns the workspace → no-op (no auto-escalate).
-    if has_active_owner(workspace_id, memberships):
-        return {
-            "workspace_id": workspace_id,
-            "provisioned": False,
-            "reason": "owner_exists",
-            "workspace_created": False,
-            "membership": None,
-        }
-
-    # (3) Create: the Workspace identity doc (if absent) + the bound owner grant.
-    now = datetime.now(timezone.utc).isoformat()
+    # Repair, never create: an OWNER whose Workspace identity doc is missing gets
+    # it written. Gated on the owner grant, so this can never mint a workspace for
+    # a caller who does not already own one.
     workspace_created = False
-    try:
-        existing_ws = await live.kernel.get_document(
-            _WORKSPACE_SCOPE, "Workspace", workspace_id
-        )
-    except (FileNotFoundError, ValueError):
-        # provision may be the very FIRST write into `_lib` (a brand-new source /
-        # the founder's first login) — an absent scope/doc just means "no
-        # Workspace yet". The write below creates the scope.
-        existing_ws = None
-    if not existing_ws:
-        ws_raw = {
-            "apiVersion": _TENANT_API,
-            "kind": "Workspace",
-            "metadata": {"name": workspace_id},
-            "spec": {
-                "workspace_id": workspace_id,
-                "name": email,  # a sensible default display name; editable later.
-                "slug": _email_slug(email),
-                "created_by": email,
-                "created_at": now,
-            },
-        }
+    if role == "owner" and not await _get_workspace_doc(live, workspace_id):
+        now = datetime.now(timezone.utc).isoformat()
         await live.kernel.write_document(
-            _WORKSPACE_SCOPE, "Workspace", workspace_id, ws_raw, invalidate_mode="doc"
+            _WORKSPACE_SCOPE, "Workspace", workspace_id,
+            {
+                "apiVersion": _TENANT_API,
+                "kind": "Workspace",
+                "metadata": {"name": workspace_id},
+                "spec": {
+                    "workspace_id": workspace_id,
+                    "name": email,  # a sensible default display name; editable.
+                    "slug": _email_slug(email),
+                    "created_by": email,
+                    "created_at": now,
+                },
+            },
+            invalidate_mode="doc",
         )
         workspace_created = True
 
-    name = workspace_membership_name(workspace_id, email)
+    return {
+        "workspace_id": workspace_id,
+        "provisioned": False,
+        "reason": "already_member",
+        "workspace_created": workspace_created,
+        "membership": _ws_member_surface(spec),
+    }
+
+
+# ── workspace CREATION — the act that was missing (decision D5) ──────────────
+#
+# Before this, a Workspace could only be born from a seed script: the portal's
+# "workspace" was a by-product of signing in and its id WAS the Azure `tid`. That
+# is the whole reason `assert_may_bootstrap_workspace` had to compare tids. With
+# an explicit creation act the id is minted here, server-side, and the takeover
+# question stops being a comparison and becomes a structural impossibility.
+
+# The generated id's shape. `ws-` + 24 chars of lowercase RFC-4648 base32 over 15
+# random bytes = 120 bits of entropy, alphabet [a-z2-7]. Chosen because the id is
+# used verbatim in FOUR places that each constrain it:
+#   * the kernel `tenant` COLUMN value (must be a plain, stable string);
+#   * a FILENAME — `_lib/workspaces/<id>.yaml` (no `/`, no case-collisions on a
+#     case-insensitive filesystem → lowercase-only, hence base32 over base64);
+#   * a SCOPE name — `tenant-<id>` (see LiveDna.default_scope);
+#   * a URL path segment — `/w/<id>/mcp` (must need no percent-encoding).
+# Opaque: it encodes nothing (no email, no tid, no timestamp, no counter), so it
+# leaks no tenancy information and cannot be enumerated. Unguessable at 120 bits,
+# which is what lets the entitlement rule be "membership" instead of "id equality".
+_WORKSPACE_ID_PREFIX = "ws-"
+_WORKSPACE_ID_BYTES = 15
+
+
+def new_workspace_id() -> str:
+    """Mint a fresh, opaque, unguessable ``workspace_id`` (see the note above).
+
+    The server ALWAYS calls this; a client-supplied id is never honoured. That is
+    not input validation, it is the anti-takeover mechanism: an id nobody can
+    name is an id nobody can race you to."""
+    import base64
+    import secrets
+
+    raw = base64.b32encode(secrets.token_bytes(_WORKSPACE_ID_BYTES))
+    return _WORKSPACE_ID_PREFIX + raw.decode("ascii").rstrip("=").lower()
+
+
+def slugify(value: str) -> str:
+    """Fold a display name into a URL-safe handle (``[a-z0-9-]``, no run of
+    hyphens, trimmed). Returns ``""`` when nothing usable survives — the caller
+    decides the fallback, so this never invents a name."""
+    import re
+    import unicodedata
+
+    text = unicodedata.normalize("NFKD", value or "")
+    text = "".join(ch for ch in text if not unicodedata.combining(ch))
+    text = re.sub(r"[^a-zA-Z0-9]+", "-", text).strip("-").lower()
+    return re.sub(r"-{2,}", "-", text)
+
+
+async def _get_workspace_doc(live: LiveDna, workspace_id: str) -> dict[str, Any] | None:
+    """Read one ``Workspace`` doc, tolerating a source that has never had a
+    ``_lib`` scope (a brand-new install) — absent scope means 'no workspace'."""
+    try:
+        return await live.kernel.get_document(
+            _WORKSPACE_SCOPE, "Workspace", workspace_id
+        )
+    except (FileNotFoundError, ValueError):
+        return None
+
+
+async def _all_workspaces(live: LiveDna) -> list[dict[str, Any]]:
+    """Every ``Workspace`` doc in the source (raw rows). Fail-soft to ``[]`` — a
+    source with no ``_lib`` yet simply has no workspaces."""
+    try:
+        return await live.kernel.workspaces()
+    except Exception:  # noqa: BLE001 — an absent registry is 'no workspaces'.
+        return []
+
+
+async def _unique_workspace_slug(live: LiveDna, wanted: str) -> str:
+    """``wanted``, suffixed ``-2``, ``-3``… until no existing Workspace claims it.
+
+    Slug is PRESENTATION over a stable id (the GitHub model), so a collision is
+    resolved by decorating the slug — never by touching the id, and never by
+    refusing the creation."""
+    taken = {
+        ((row.get("spec") or {}).get("slug") or "").lower()
+        for row in await _all_workspaces(live)
+    }
+    if wanted not in taken:
+        return wanted
+    n = 2
+    while f"{wanted}-{n}" in taken:
+        n += 1
+    return f"{wanted}-{n}"
+
+
+async def create_workspace_impl(
+    live: LiveDna,
+    name: str,
+    claims: dict[str, Any] | None,
+    *,
+    slug: str | None = None,
+) -> dict[str, Any]:
+    """**Create a workspace and its first owner** — the act of creation that DNA
+    Cloud was missing (decision D5). ``POST /v1/workspaces``.
+
+    * the ``workspace_id`` is MINTED HERE (:func:`new_workspace_id`). There is no
+      parameter for it and a client-supplied one is ignored by construction — the
+      signature simply cannot receive it. This is what makes takeover impossible:
+      you cannot claim an id you cannot name.
+    * the caller's VERIFIED identity (oid + email, ``tid`` recorded as provenance
+      only) becomes the workspace's ``owner``, ``status: active``, bound.
+    * ``slug`` defaults to a slugified ``name`` (falling back to the id when the
+      name slugifies to nothing) and is made unique by suffixing.
+
+    **Atomicity — what you actually get.** The kernel exposes no multi-document
+    transaction, so this is NOT atomic; it is *ordered + compensated*:
+
+    1. the ``Workspace`` doc is written first;
+    2. then the owner ``WorkspaceMembership``;
+    3. if (2) fails, (1) is best-effort DELETED and the error re-raised.
+
+    The ordering is chosen so the surviving failure state is the harmless one. A
+    Workspace with no owner grant is INERT: no identity resolves to it, it never
+    appears in :func:`list_workspaces_impl` (which enumerates by membership), and
+    nobody can adopt it — :func:`assert_may_bootstrap_workspace` requires a
+    membership that does not exist, and its id is unguessable. Worst case it is
+    unreferenced garbage under a name no one can type; the client just retries and
+    gets a fresh id. The reverse order would leave a grant pointing at a workspace
+    that does not exist — a ghost the caller can enumerate and read through, which
+    is the strictly worse failure. If the compensating delete ALSO fails, the
+    orphan simply persists; it is still inert.
+
+    GLOBAL / ``_lib``-direct (no ``tenant`` kwarg — Workspace and
+    WorkspaceMembership are the tenancy boundary, they cannot live inside it)."""
+    from dna.tenancy import (
+        identity_from_token,
+        normalize_email,
+        workspace_membership_name,
+    )
+
+    name = (name or "").strip()
+    if not name:
+        raise ValueError("name is required")
+
+    identity = identity_from_token(claims or {})
+    email = normalize_email(identity.email)
+    if not email:
+        raise ValueError("the verified identity must carry an email claim")
+    if not identity.oid:
+        raise ValueError("the verified identity must carry an oid claim")
+
+    workspace_id = new_workspace_id()
+    wanted = slugify(slug or name) or workspace_id
+    slug_value = await _unique_workspace_slug(live, wanted)
+
+    now = datetime.now(timezone.utc).isoformat()
+    ws_raw = {
+        "apiVersion": _TENANT_API,
+        "kind": "Workspace",
+        "metadata": {"name": workspace_id},
+        "spec": {
+            "workspace_id": workspace_id,
+            "name": name,
+            "slug": slug_value,
+            "created_by": email,
+            "created_at": now,
+        },
+    }
+    await live.kernel.write_document(
+        _WORKSPACE_SCOPE, "Workspace", workspace_id, ws_raw, invalidate_mode="doc"
+    )
+
+    grant_name = workspace_membership_name(workspace_id, email)
     spec = {
         "workspace_id": workspace_id,
         "identity_email": email,
         "identity_oid": identity.oid,
+        # PROVENANCE ONLY — recorded so an operator can see which Azure org the
+        # creating sign-in came from. It authorizes nothing (decision D5).
         "identity_tid": identity.tid,
         "role": "owner",
         "status": "active",
@@ -1712,21 +1884,175 @@ async def provision_workspace_owner_impl(
         "invited_at": now,
         "accepted_at": now,
     }
-    raw = {
-        "apiVersion": _TENANT_API,
-        "kind": "WorkspaceMembership",
-        "metadata": {"name": name},
-        "spec": spec,
-    }
-    await live.kernel.write_document(
-        _WORKSPACE_SCOPE, "WorkspaceMembership", name, raw, invalidate_mode="doc"
-    )
+    try:
+        await live.kernel.write_document(
+            _WORKSPACE_SCOPE, "WorkspaceMembership", grant_name,
+            {
+                "apiVersion": _TENANT_API,
+                "kind": "WorkspaceMembership",
+                "metadata": {"name": grant_name},
+                "spec": spec,
+            },
+            invalidate_mode="doc",
+        )
+    except Exception:
+        # Compensate: an ownerless Workspace is inert, but leaving it is still
+        # litter. Best-effort — a failed rollback must not mask the real error.
+        try:
+            await live.kernel.delete_document(
+                _WORKSPACE_SCOPE, "Workspace", workspace_id
+            )
+        except Exception:  # noqa: BLE001
+            pass
+        raise
+
     return {
         "workspace_id": workspace_id,
-        "provisioned": True,
-        "reason": None,
-        "workspace_created": workspace_created,
+        "name": name,
+        "slug": slug_value,
+        "created_by": email,
+        "created_at": now,
+        "role": "owner",
         "membership": _ws_member_surface(spec),
+    }
+
+
+async def list_workspaces_impl(
+    live: LiveDna, claims: dict[str, Any] | None
+) -> dict[str, Any]:
+    """**Enumerate the workspaces the caller belongs to** — ``GET /v1/workspaces``,
+    the workspace switcher's data source (its absence was recorded in
+    ``dna-cloud/lib/copilot.ts``).
+
+    Membership is the enumeration key, never the ``tid``: a workspace is listed
+    iff the VERIFIED identity holds an ACTIVE grant in it (pending invites are not
+    listed — they authorize nothing). A grant whose ``Workspace`` doc is missing is
+    still listed, with ``name``/``slug`` ``None`` — the id is a fact, the display
+    name is not, and inventing one would be fabricating data.
+
+    Sorted by display name (ids last, so an unnamed workspace does not sit on
+    top). Read-only, GLOBAL / ``_lib``-direct."""
+    from dna.tenancy import identity_from_token, membership_matches_identity
+
+    identity = identity_from_token(claims or {})
+    _, memberships = await _workspace_grants(live)
+    docs = {
+        ((row.get("spec") or {}).get("workspace_id") or ""): (row.get("spec") or {})
+        for row in await _all_workspaces(live)
+    }
+
+    seen: set[str] = set()
+    out: list[dict[str, Any]] = []
+    for m in memberships:
+        if not m.workspace_id or m.workspace_id in seen:
+            continue
+        if not membership_matches_identity(m, identity):
+            continue
+        seen.add(m.workspace_id)
+        spec = docs.get(m.workspace_id) or {}
+        out.append({
+            "workspace_id": m.workspace_id,
+            "name": spec.get("name"),
+            "slug": spec.get("slug"),
+            "role": m.role,
+            "created_by": spec.get("created_by"),
+            "created_at": spec.get("created_at"),
+        })
+    out.sort(key=lambda w: ((w["name"] or "").lower(), w["workspace_id"]))
+    return {
+        "identity_oid": identity.oid,
+        "identity_email": identity.email,
+        "workspaces": out,
+    }
+
+
+async def create_project_impl(
+    live: LiveDna,
+    workspace_id: str,
+    name: str,
+    claims: dict[str, Any] | None,
+    *,
+    slug: str | None = None,
+) -> dict[str, Any]:
+    """**Create a Project inside a workspace** — ``POST /v1/projects`` (decision
+    A1: ``Project`` becomes a real entity with an EXPLICIT ``workspace_id``).
+
+    Authorization is the same one rule as everywhere else in Model B: the VERIFIED
+    identity must hold an ACTIVE :class:`WorkspaceMembership` in ``workspace_id``,
+    else :class:`WorkspaceForbidden` (403). No ``tid`` is consulted.
+
+    **The scope is DERIVED, not supplied.** The write lands in
+    ``live.default_scope(workspace_id)`` and the project's ``board_scope`` is the
+    conventional ``<slug>-development``. Neither is a parameter: a caller-chosen
+    scope would be a cross-workspace write vector, and the whole point of A1 is
+    that the project's identity is (workspace, slug) — the scope is a rendering of
+    that, downstream of it.
+
+    Slug defaults to a slugified ``name``, made unique WITHIN the workspace.
+    TENANTED write — the doc is keyed to ``workspace_id`` in the ``tenant``
+    column, matching the declared ``spec.workspace_id``."""
+    from dna.tenancy import identity_from_token
+
+    workspace_id = (workspace_id or "").strip()
+    if not workspace_id:
+        raise ValueError("workspace_id is required")
+    name = (name or "").strip()
+    if not name:
+        raise ValueError("name is required")
+
+    identity = identity_from_token(claims or {})
+    _, memberships = await _workspace_grants(live)
+    _require_workspace_membership(identity, workspace_id, memberships, "create a project")
+
+    sc = live.default_scope(workspace_id)
+    existing = await _collect(live, sc, "Project", workspace_id)
+    taken = {
+        ((d["spec"].get("slug") or d["name"] or "")).lower() for d in existing
+    }
+    wanted = slugify(slug or name) or slugify(name) or "project"
+    slug_value = wanted
+    n = 2
+    while slug_value in taken:
+        slug_value = f"{wanted}-{n}"
+        n += 1
+
+    now = datetime.now(timezone.utc).isoformat()
+    spec = {
+        "name": name,
+        "slug": slug_value,
+        "workspace_id": workspace_id,
+        "org_ref": None,
+        "repo_refs": [],
+        # DERIVED, by convention — not an identity, and not caller-supplied.
+        "board_scope": f"{slug_value}-development",
+        "intel_source_refs": [],
+        "visibility": "private",
+        "created_at": now,
+    }
+    write_kernel = live.kernel.with_tenant(workspace_id)
+    await write_kernel.write_document(
+        sc, "Project", name,
+        {
+            "apiVersion": _PORTFOLIO_API,
+            "kind": "Project",
+            "metadata": {"name": name},
+            "spec": spec,
+        },
+        invalidate_mode="doc",
+    )
+    return {
+        "scope": sc,
+        "workspace_id": workspace_id,
+        "project": {
+            "name": name,
+            "slug": slug_value,
+            "workspace_id": workspace_id,
+            "org_ref": None,
+            "repo_refs": [],
+            "board_scope": spec["board_scope"],
+            "intel_source_refs": [],
+            "visibility": "private",
+        },
     }
 
 

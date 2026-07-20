@@ -129,26 +129,33 @@ async def test_workspace_plan_assignment_is_data_not_code(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# 4. Zero-migration back-compat — workspace #1 id == founder's old Azure tid
+# 4. The plan key is an OPAQUE workspace id — any shape, including a legacy one
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
-async def test_founder_workspace_plan_zero_migration(tmp_path):
-    """The founding workspace's id equals the founder's pre-Model-B Azure ``tid``
-    (``c5b891f7``). A WorkspacePlan keyed on that SAME string resolves unchanged —
-    exactly the value the quota guard now passes (F2 resolves the tenancy
-    dimension to this workspace_id). No data move, no rewrite (mirrors F1/F2)."""
+async def test_workspace_plan_key_is_an_opaque_id_of_any_shape(tmp_path):
+    """A WorkspacePlan resolves by an OPAQUE ``workspace_id`` — the lookup never
+    parses, validates or recognizes the string.
+
+    Decision **D5** made workspace ids server-generated (``ws-<base32>``), so the
+    ids arriving here changed shape. This must not matter, and the founder's live
+    workspace — whose id is a GUID that was once his Azure ``tid`` — must keep
+    resolving for exactly that reason: it is one more opaque string, not a special
+    case. Both shapes are asserted below so a future "validate the id format" would
+    go red."""
     k = Kernel()
     k.load(CloudExtension())
     src = FilesystemWritableSource(str(tmp_path / ".dna"))
     k.source(src)
     src.attach_kernel(k)
-    founder_ws = "c5b891f7"  # workspace #1 id == the founder's old tid.
-    await k.write_document(
-        "_lib", "WorkspacePlan", founder_ws,
-        _workspace_plan(founder_ws, tier_id="enterprise"),
-    )
-    plan = await k.workspace_plan(founder_ws)
-    assert plan is not None
-    assert plan["spec"]["tier_id"] == "enterprise"
-    assert plan["spec"]["workspace_id"] == founder_ws
+    # A legacy GUID-shaped id (the founder's, historically his tid) and a
+    # post-D5 generated id resolve identically.
+    for ws_id in ("c5b891f7", "ws-mfrggzdfmztwq2lknnwg23th"):
+        await k.write_document(
+            "_lib", "WorkspacePlan", ws_id,
+            _workspace_plan(ws_id, tier_id="enterprise"),
+        )
+        plan = await k.workspace_plan(ws_id)
+        assert plan is not None
+        assert plan["spec"]["tier_id"] == "enterprise"
+        assert plan["spec"]["workspace_id"] == ws_id

@@ -1,20 +1,27 @@
 #!/usr/bin/env python3
-"""Seed **workspace #1** — the founder's DNA tenancy root (ADR "Model B", F1).
+"""Seed **workspace #1** — the founder's EXISTING DNA tenancy root (ADR "Model B").
 
-THE ZERO-MIGRATION HINGE. Model B decouples the DNA tenant from the Azure
-``tid`` and makes it a DNA-native *workspace id*. The founder's live data is
-already physically keyed by his Azure tenant id in the ``dna_documents.tenant``
-column. So we seed **workspace #1 with ``workspace_id`` == that exact tid** —
-every existing row is then *already* this workspace's data. No move, no rewrite,
-no downtime. This is a DECLARATIVE SEED (two docs), NOT a migration that touches
-existing rows.
+⚠️  **SUPERSEDED for new workspaces.** Since decision **D5** a workspace is
+created through ``POST /v1/workspaces`` (``create_workspace_impl``), which mints
+its own opaque id server-side. Do NOT use this script to make a new workspace —
+a hand-chosen id is exactly the thing D5 removed. What this script is still for
+is re-declaring the ONE pre-existing workspace whose rows predate the write path.
 
-  ⚠️  ``workspace_id`` MUST equal the physical ``tenant`` column value byte-for-byte,
-      else the zero-migration guarantee breaks. The ADR writes the tid as its
+That workspace's id is the GUID below. It is that value because the founder's
+live rows were already physically keyed by his Azure tenant id in the
+``dna_documents.tenant`` column, so adopting it as the workspace id meant no data
+move. Post-D5 that is **historical trivia, not a rule**: the ``tid`` is a fact of
+authentication and nothing in the runtime derives, compares or validates a
+workspace id against one. The GUID below is simply this workspace's id.
+
+  ⚠️  It MUST equal the physical ``tenant`` column value byte-for-byte, else the
+      seeded docs describe a workspace that owns nothing. The ADR writes it in
       short form ``c5b891f7`` (the GUID's first segment) for readability; the
-      LIVE column value is the FULL Azure tenant GUID
+      LIVE column value is the FULL GUID
       ``c5b891f7-65c2-4417-a5af-22cab24dc1d5`` — verified against the DB. That
       full GUID is the default below.
+
+This is a DECLARATIVE SEED (two docs), NOT a migration that touches existing rows.
 
 What it writes (both GLOBAL, into the ``_lib`` scope — no tenant binding):
   1. a ``Workspace`` doc (``workspaces/<workspace_id>.yaml``) — the tenancy root
@@ -43,7 +50,9 @@ Env knobs (all optional; defaults seed the real founder workspace #1):
     DNA_WORKSPACE_ID     workspace #1 id  (default: the founder's full Azure tid)
     DNA_WORKSPACE_NAME   display name     (default "Barnabé Labs")
     DNA_FOUNDER_EMAIL    owner identity   (default jefferson.barnabe@gmail.com)
-    DNA_FOUNDER_TID      Azure tid (provenance; default == DNA_WORKSPACE_ID)
+    DNA_FOUNDER_TID      Azure tid, recorded as PROVENANCE only — it authorizes
+                         nothing (default == DNA_WORKSPACE_ID, for this one
+                         workspace where the two strings coincide)
 """
 from __future__ import annotations
 
@@ -56,8 +65,9 @@ from typing import Any
 TENANT_API = "github.com/ruinosus/dna/tenant/v1"
 LIB_SCOPE = "_lib"  # GLOBAL Kinds live here (tenant column empty).
 
-# The founder's LIVE Azure tenant id — the value already in dna_documents.tenant
-# for all 19 of his rows. workspace #1's id == this → zero migration.
+# Workspace #1's id — the value already in dna_documents.tenant for all 19 of the
+# founder's rows (it was his Azure tenant id, which is how it came to be this
+# string; post-D5 it is just this workspace's opaque id).
 DEFAULT_WORKSPACE_ID = "c5b891f7-65c2-4417-a5af-22cab24dc1d5"
 DEFAULT_WORKSPACE_NAME = "Barnabé Labs"
 DEFAULT_FOUNDER_EMAIL = "jefferson.barnabe@gmail.com"
@@ -84,7 +94,9 @@ def workspace_doc(
     workspace_id: str, name: str, created_by: str, created_at: str
 ) -> dict[str, Any]:
     """The Workspace identity doc (GLOBAL). The id is opaque + immutable and
-    equals the physical ``tenant`` column value on every row it owns."""
+    equals the physical ``tenant`` column value on every row it owns. For a NEW
+    workspace this doc is written by ``create_workspace_impl`` with a minted id;
+    here the id is supplied because the workspace already exists."""
     return {
         "apiVersion": TENANT_API,
         "kind": "Workspace",
@@ -164,7 +176,12 @@ async def _run() -> None:
     print(f"  seeded WorkspaceMembership/{mem_name}")
     print(
         "done. Every existing row keyed `tenant = "
-        f"{WORKSPACE_ID}` is now workspace #1's data — zero migration."
+        f"{WORKSPACE_ID}` is this workspace's data."
+    )
+    print(
+        "note: to CREATE a new workspace use POST /v1/workspaces — it mints its "
+        "own opaque id (decision D5). This script only re-declares the "
+        "pre-existing one."
     )
 
 

@@ -541,6 +541,83 @@
         "title": "Body_create_invite_v1_workspaces__workspace_id__invites_post",
         "type": "object"
       },
+      "Body_create_project_v1_projects_post": {
+        "properties": {
+          "claims": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claims"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "slug": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slug"
+          },
+          "workspace_id": {
+            "title": "Workspace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspace_id",
+          "name"
+        ],
+        "title": "Body_create_project_v1_projects_post",
+        "type": "object"
+      },
+      "Body_create_workspace_v1_workspaces_post": {
+        "properties": {
+          "claims": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claims"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "slug": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slug"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "Body_create_workspace_v1_workspaces_post",
+        "type": "object"
+      },
       "Body_provision_tenant_owner_v1_tenants__tid__provision_owner_post": {
         "properties": {
           "user": {
@@ -806,6 +883,90 @@
           "role"
         ],
         "title": "Body_set_project_member_v1_projects__slug__members_post",
+        "type": "object"
+      },
+      "CreateProjectResponse": {
+        "description": "``POST /v1/projects`` — the created project. ``scope`` is DERIVED from the\nworkspace (never caller-supplied).",
+        "properties": {
+          "project": {
+            "$ref": "#/components/schemas/ProjectSummary"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "workspace_id": {
+            "title": "Workspace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scope",
+          "workspace_id",
+          "project"
+        ],
+        "title": "CreateProjectResponse",
+        "type": "object"
+      },
+      "CreateWorkspaceResponse": {
+        "description": "``POST /v1/workspaces`` — the created workspace. ``workspace_id`` is\nSERVER-MINTED; there is no request field for it.",
+        "properties": {
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          },
+          "membership": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WorkspaceMemberSurface"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "role": {
+            "default": "owner",
+            "title": "Role",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "workspace_id": {
+            "title": "Workspace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspace_id",
+          "name",
+          "slug"
+        ],
+        "title": "CreateWorkspaceResponse",
         "type": "object"
       },
       "DeleteMemoryResponse": {
@@ -1698,6 +1859,17 @@
             "default": "private",
             "title": "Visibility",
             "type": "string"
+          },
+          "workspace_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workspace Id"
           }
         },
         "title": "ProjectSummary",
@@ -2426,6 +2598,111 @@
           "tier_id"
         ],
         "title": "WorkspacePlanResponse",
+        "type": "object"
+      },
+      "WorkspaceSummary": {
+        "properties": {
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          },
+          "slug": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slug"
+          },
+          "workspace_id": {
+            "title": "Workspace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspace_id"
+        ],
+        "title": "WorkspaceSummary",
+        "type": "object"
+      },
+      "WorkspacesResponse": {
+        "description": "``GET /v1/workspaces`` — the caller's ACTIVE memberships, projected.",
+        "properties": {
+          "identity_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Identity Email"
+          },
+          "identity_oid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Identity Oid"
+          },
+          "workspaces": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/WorkspaceSummary"
+            },
+            "title": "Workspaces",
+            "type": "array"
+          }
+        },
+        "title": "WorkspacesResponse",
         "type": "object"
       }
     }
@@ -3643,6 +3920,61 @@
           }
         },
         "summary": "Projects"
+      },
+      "post": {
+        "description": "Create a Project inside ``workspace_id`` (decision A1 — the owning\nworkspace is an explicit field on the Project). The caller must hold an\nACTIVE WorkspaceMembership there, else **403**. The write scope and the\nproject's ``board_scope`` are DERIVED from the workspace + slug and are\ndeliberately not accepted from the caller. 400 on a blank\nworkspace_id/name.",
+        "operationId": "create_project_v1_projects_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_create_project_v1_projects_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateProjectResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Project"
       }
     },
     "/v1/projects/{slug}": {
@@ -4482,6 +4814,140 @@
         "summary": "Put Workspace Plan"
       }
     },
+    "/v1/workspaces": {
+      "get": {
+        "description": "List the workspaces the caller holds an ACTIVE membership in — the\nworkspace switcher's data source. Membership is the enumeration key, never\nthe ``tid``; a pending invite is not listed. Under config auth the caller\nis the verified token identity; under none/token a trusted portal passes\n``actor_oid``/``actor_email``. Never returns a workspace the identity does\nnot belong to (an unmatched identity gets an empty list, not an error).",
+        "operationId": "list_workspaces_v1_workspaces_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "actor_oid",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Actor Oid"
+            }
+          },
+          {
+            "in": "query",
+            "name": "actor_email",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Actor Email"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspacesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Workspaces"
+      },
+      "post": {
+        "description": "Create a workspace and its first OWNER, in one call. The\n``workspace_id`` is generated by the server (opaque + unguessable) — it is\nNOT accepted from the client, which is what makes takeover structurally\nimpossible. ``slug`` defaults to a slugified ``name`` and is made unique.\nThe caller's verified identity (oid + email; ``tid`` stored as provenance\nonly) becomes the active owner. 400 on a blank name or a missing\noid/email claim.",
+        "operationId": "create_workspace_v1_workspaces_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_create_workspace_v1_workspaces_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateWorkspaceResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Workspace"
+      }
+    },
     "/v1/workspaces/accept": {
       "post": {
         "description": "Accept every pending invite the caller's VERIFIED sign-in claims — binds\nthe durable ``oid`` + flips ``pending→active``. Under config auth the\nclaims come from the verified token (the invitee is still pending, so this\nroute is exempt from the membership bind); under none/token a trusted portal\npasses the verified Entra claims. The SECURITY gate (verified email only, no\nhijack of a bound grant) is enforced in the core impl — never here.",
@@ -4759,7 +5225,7 @@
     },
     "/v1/workspaces/{workspace_id}/provision-owner": {
       "post": {
-        "description": "Make the verified identity the OWNER of workspace ``{workspace_id}`` when\nit has no owner yet — the Model B first-login bootstrap. Idempotent: a\nre-call by the same identity is a no-op returning the membership; a later\nDIFFERENT user does not auto-escalate (``owner_exists`` no-op). ``{id}`` MUST\nequal the verified identity's ``tid`` (zero-migration; a cross-tid caller is\n403'd). 400 on a missing oid/email claim.",
+        "description": "Reconcile the verified identity's membership in ``{workspace_id}`` — the\nevery-sign-in idempotent no-op. Since decision **D5** this CREATES NOTHING:\nit requires an ACTIVE WorkspaceMembership and returns it (back-filling the\nWorkspace identity doc only for an owner whose doc is missing). A caller\nholding no active membership here is **403** — including a stranger, so the\nanti-takeover answer is unchanged; workspaces are created by\n``POST /v1/workspaces``, which mints its own id. 400 on a missing\noid/email claim.",
         "operationId": "provision_workspace_owner_v1_workspaces__workspace_id__provision_owner_post",
         "parameters": [
           {

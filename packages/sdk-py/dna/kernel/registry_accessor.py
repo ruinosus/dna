@@ -51,6 +51,10 @@ class RegistryAccessor:
     # workspace). The auth→workspace resolver reads ALL grants here and filters
     # by the verified identity in pure core. Same _lib-direct rationale.
     _WORKSPACE_MEMBERSHIP_REGISTRY_SCOPE = SYSTEM_SCOPE
+    # Workspace (the tenancy ROOT itself) is GLOBAL for the same reason its
+    # memberships are: the tenancy boundary cannot live inside a tenant. Same
+    # _lib-direct rationale.
+    _WORKSPACE_REGISTRY_SCOPE = SYSTEM_SCOPE
 
     def __init__(self, kernel: "RegistryAccessorHost") -> None:
         self._k = kernel
@@ -139,10 +143,11 @@ class RegistryAccessor:
         This is the billing→enforcement bridge read (ADR "Model B" — billing
         attaches to the WORKSPACE, not an identity/Azure org): dna-cloud's Stripe
         webhook writes the WorkspacePlan doc; the MCP quota guard reads it here
-        when a token carries no explicit plan claim. The founding workspace's id
-        == the founder's Azure tid, so an existing assignment keyed on that
-        string resolves unchanged (zero migration). _lib-direct — WorkspacePlan
-        is NOT in _INHERITABLE_KINDS so per-scope inheritance does not surface it.
+        when a token carries no explicit plan claim. The ``workspace_id`` is
+        OPAQUE to this lookup — it is matched, never parsed — so a generated id
+        (decision D5) and a legacy GUID-shaped one behave identically. _lib-direct
+        — WorkspacePlan is NOT in _INHERITABLE_KINDS so inheritance does not
+        surface it.
         No alias pass: the match is on the ``workspace_id`` field.
         """
         try:
@@ -193,6 +198,31 @@ class RegistryAccessor:
                 "workspace_memberships: registry query failed (auth resolution "
                 "degrades to the legacy tid path): %s", e,
             )
+            return []
+
+    async def workspaces(self) -> list[dict]:
+        """List every ``Workspace`` doc from the _lib registry (ADR "Model B").
+
+        Returns the RAW DICT rows (callers read ``w["spec"][...]``) — the full,
+        UNFILTERED set. This is the tenancy-root inventory, not an authorization
+        surface: ``GET /v1/workspaces`` filters it down to the caller's ACTIVE
+        memberships in pure core (``list_workspaces_impl``), and the workspace
+        creation path uses it only to keep slugs unique. Never hand this list to a
+        caller unfiltered.
+
+        _lib-direct — Workspace is GLOBAL and NOT in _INHERITABLE_KINDS, so a
+        per-scope query would silently no-op. Fail-soft: a registry glitch (or a
+        source that has no ``_lib`` yet) degrades to ``[]``, logged loud. ``[]``
+        is meaningful and safe here: it means "no workspaces to show / no slug
+        taken", never "everything"."""
+        try:
+            return [
+                r async for r in self._k.query(
+                    self._WORKSPACE_REGISTRY_SCOPE, "Workspace"
+                )
+            ]
+        except Exception as e:  # noqa: BLE001
+            logger.warning("workspaces: registry query failed: %s", e)
             return []
 
     async def voice_policy(self, name: str = "default") -> dict | None:

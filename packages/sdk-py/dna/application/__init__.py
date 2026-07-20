@@ -48,6 +48,7 @@ from dna.application.runtime import (
     list_agents_impl,
     list_skills_impl,
     list_workspace_members_impl,
+    list_workspaces_impl,
     list_templates_impl,
     list_members_impl,
     list_memories_impl,
@@ -56,6 +57,8 @@ from dna.application.runtime import (
     list_repos_impl,
     list_stories_impl,
     list_tools_impl,
+    create_project_impl,
+    create_workspace_impl,
     provision_tenant_owner_impl,
     provision_workspace_owner_impl,
     recall_impl,
@@ -112,6 +115,10 @@ __all__ = [
     "invite_member_impl",
     "list_workspace_members_impl",
     "accept_invites_impl",
+    # workspace + project CREATION (decision D5 / A1 — the write path)
+    "create_workspace_impl",
+    "list_workspaces_impl",
+    "create_project_impl",
     # workspace owner bootstrap + revoke (Model B, f-ws-owner-provision)
     "provision_workspace_owner_impl",
     "revoke_workspace_member_impl",
