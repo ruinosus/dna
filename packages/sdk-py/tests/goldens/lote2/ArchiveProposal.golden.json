@@ -1,5 +1,5 @@
 {
- "_doc": "FROZEN GOLDEN \u2014 captured 2026-06-11 from the live ArchiveProposalKind class (pre-deletion), F3 lote-2. Deep-equaled against the descriptor-synthesized port in test_lote2_descriptor_equivalence.py.",
+ "_doc": "FROZEN GOLDEN \u2014 captured 2026-06-11 from the live ArchiveProposalKind class (pre-deletion), F3 lote-2. Deep-equaled against the descriptor-synthesized port in test_lote2_descriptor_equivalence.py. POST-CAPTURE EDIT (censo-12-kinds, 2026-07-20): identity.docs / identity.display_label / schema descriptions were re-synced from the descriptor after prose-only corrections (removed claims of producers/verifiers that do not ship in this distribution; disambiguated the three 'Insight' display labels). No Kind identity, field, type, requiredness, default or enum changed.",
  "dep_filters": {},
  "flags": {
   "flatten_in_context": false,

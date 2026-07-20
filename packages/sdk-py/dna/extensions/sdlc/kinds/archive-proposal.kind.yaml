@@ -1,6 +1,8 @@
 # ArchiveProposal — pruning proposal (record plane). Always a *proposal*,
 # never an execution: user (or Veto Hook) approves before the target moves
-# to _forgotten/. Reversible via `dna sdlc forget undo`.
+# to _forgotten/. Reversal was to be `dna sdlc forget undo` — that verb does
+# NOT ship in this distribution (the cognitive verbs are host-platform
+# surfaces), and no producer here writes an ArchiveProposal either.
 #
 # F3 lote-2 (spec 2026-06-10-kinds-descriptor-f3): synthesized from this
 # descriptor; the hand-written class twins were deleted. PARITY-CRITICAL

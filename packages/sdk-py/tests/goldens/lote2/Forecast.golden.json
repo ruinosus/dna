@@ -1,5 +1,5 @@
 {
- "_doc": "FROZEN GOLDEN \u2014 captured 2026-06-11 from the live ForecastKind class (pre-deletion), F3 lote-2. Deep-equaled against the descriptor-synthesized port in test_lote2_descriptor_equivalence.py.",
+ "_doc": "FROZEN GOLDEN \u2014 captured 2026-06-11 from the live ForecastKind class (pre-deletion), F3 lote-2. Deep-equaled against the descriptor-synthesized port in test_lote2_descriptor_equivalence.py. POST-CAPTURE EDIT (censo-12-kinds, 2026-07-20): identity.docs / identity.display_label / schema descriptions were re-synced from the descriptor after prose-only corrections (removed claims of producers/verifiers that do not ship in this distribution; disambiguated the three 'Insight' display labels). No Kind identity, field, type, requiredness, default or enum changed.",
  "dep_filters": {},
  "flags": {
   "flatten_in_context": false,
@@ -22,7 +22,7 @@
   "api_version": "github.com/ruinosus/dna/sdlc/v1",
   "ascii_icon": "\ud83d\udcca",
   "display_label": "Forecasts",
-  "docs": "Forecast = falseable hypothesis. would_change predictions are verified at outcome_check_at by the cognitive/verification.py loop. Authored by oracles or user. Pair with SynthesisRun (oneiric artefact, non-falseable processing).",
+  "docs": "Forecast = falseable hypothesis. Authored by hand (`dna doc make Forecast`) or by an oracle. would_change predictions are MEANT to be checked at outcome_check_at, but no verification loop ships in this distribution \u2014 status and verifications are maintained by the author. Pair with SynthesisRun (oneiric artefact, non-falseable processing).",
   "graph_style": {
    "fill": "#60A5FA",
    "stroke": "#2563EB",
@@ -95,14 +95,14 @@
    },
    "verifications": {
     "default": [],
-    "description": "Audit trail appended by verification loop.",
+    "description": "Audit trail. Meant to be appended by a verification loop; no such loop ships in this distribution, so the author maintains it.",
     "items": {
      "type": "object"
     },
     "type": "array"
    },
    "would_change": {
-    "description": "Predictions checked by verification.py.",
+    "description": "Predictions to check at outcome_check_at. No automatic verifier ships in this distribution \u2014 checked by the author today.",
     "items": {
      "properties": {
       "by": {

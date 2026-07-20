@@ -197,8 +197,14 @@ spec:
     stroke: '#BE185D'
     text_color: '#fff'
   ascii_icon: 💭
-  display_label: Pattern Insights
+  # display_label says what the doc IS (an interpretation of a SynthesisRun),
+  # disambiguating it from the other two "Insight" Kinds in the UI: Insight
+  # ("Oracles") and IntelInsight ("Intel Insights"). Kind identity
+  # (target_kind: PatternInsight, alias cognitive-pattern-insight) is UNCHANGED.
+  display_label: Dream Interpretations
   docs: PatternInsight = output of a dream-interp engine. Multiple interpretations
     per SynthesisRun OK — engines are complementary lenses, not exclusive. Hill
     engine produces exploration/insight/action structure; Jung produces amplifications
-    + archetypes; Gestalt produces identifications.
+    + archetypes; Gestalt produces identifications. NOTE — none of those engines
+    ship in this distribution; nothing produces a PatternInsight today, so the Kind
+    is the declared contract, hand-authorable via `dna doc make`.

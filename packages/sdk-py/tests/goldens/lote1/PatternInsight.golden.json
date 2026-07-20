@@ -1,5 +1,5 @@
 {
- "_doc": "FROZEN GOLDEN — captured 2026-06-10 from the live PatternInsightKind class (pre-deletion), F3 lote-1. Deep-equaled against the descriptor-synthesized port in test_lote1_descriptor_equivalence.py.",
+ "_doc": "FROZEN GOLDEN — captured 2026-06-10 from the live PatternInsightKind class (pre-deletion), F3 lote-1. Deep-equaled against the descriptor-synthesized port in test_lote1_descriptor_equivalence.py. POST-CAPTURE EDIT (censo-12-kinds, 2026-07-20): identity.docs / identity.display_label / schema descriptions were re-synced from the descriptor after prose-only corrections (removed claims of producers/verifiers that do not ship in this distribution; disambiguated the three 'Insight' display labels). No Kind identity, field, type, requiredness, default or enum changed.",
  "dep_filters": {
   "dream_ref": "sdlc-synthesis-run"
  },
@@ -23,8 +23,8 @@
   "alias": "cognitive-pattern-insight",
   "api_version": "github.com/ruinosus/dna/cognitive/v1",
   "ascii_icon": "💭",
-  "display_label": "Pattern Insights",
-  "docs": "PatternInsight = output of a dream-interp engine. Multiple interpretations per SynthesisRun OK — engines are complementary lenses, not exclusive. Hill engine produces exploration/insight/action structure; Jung produces amplifications + archetypes; Gestalt produces identifications.",
+  "display_label": "Dream Interpretations",
+  "docs": "PatternInsight = output of a dream-interp engine. Multiple interpretations per SynthesisRun OK — engines are complementary lenses, not exclusive. Hill engine produces exploration/insight/action structure; Jung produces amplifications + archetypes; Gestalt produces identifications. NOTE — none of those engines ship in this distribution; nothing produces a PatternInsight today, so the Kind is the declared contract, hand-authorable via `dna doc make`.",
   "graph_style": {
    "fill": "#F472B6",
    "stroke": "#BE185D",

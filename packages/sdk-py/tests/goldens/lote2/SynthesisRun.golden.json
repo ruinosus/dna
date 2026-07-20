@@ -1,5 +1,5 @@
 {
- "_doc": "FROZEN GOLDEN \u2014 captured 2026-06-11 from the live SynthesisRunKind class (pre-deletion), F3 lote-2. Deep-equaled against the descriptor-synthesized port in test_lote2_descriptor_equivalence.py.",
+ "_doc": "FROZEN GOLDEN \u2014 captured 2026-06-11 from the live SynthesisRunKind class (pre-deletion), F3 lote-2. Deep-equaled against the descriptor-synthesized port in test_lote2_descriptor_equivalence.py. POST-CAPTURE EDIT (censo-12-kinds, 2026-07-20): identity.docs / identity.display_label / schema descriptions were re-synced from the descriptor after prose-only corrections (removed claims of producers/verifiers that do not ship in this distribution; disambiguated the three 'Insight' display labels). No Kind identity, field, type, requiredness, default or enum changed.",
  "dep_filters": {},
  "flags": {
   "flatten_in_context": false,
@@ -22,7 +22,7 @@
   "api_version": "github.com/ruinosus/dna/sdlc/v1",
   "ascii_icon": "\ud83d\udd2e",
   "display_label": "S\u00ednteses",
-  "docs": "SynthesisRun = oneiric artefact. Surreal recombination of project memory (fragments lifted from LessonLearned/Story/ArchiveProposal/WorkflowEvent) + impossible juxtapositions + dominant affect + one captured symbol. NOT falseable, NOT a prediction. Pair with Forecast for the predictive dimension.",
+  "docs": "SynthesisRun = oneiric artefact. Surreal recombination of project memory (fragments lifted from LessonLearned/Story/ArchiveProposal/WorkflowEvent) + impossible juxtapositions + dominant affect + one captured symbol. NOT falseable, NOT a prediction. Pair with Forecast for the predictive dimension. The dream-gen engines that were to produce it do not ship in this distribution \u2014 authored by hand today.",
   "graph_style": {
    "fill": "#A78BFA",
    "stroke": "#7C3AED",

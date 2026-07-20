@@ -80,8 +80,15 @@ spec:
     stroke: '#5B21B6'
     text_color: '#fff'
   ascii_icon: 🔮
-  display_label: Insights
-  docs: An Insight binds a perpetual question to a target UA (oracle-X). The UA owns
-    the persona + heuristics + LLM selection. The runner iterates active Insights
-    and dispatches each to its target_ua, which emits an StatusReport via create_status_report
-    tool.
+  # display_label disambiguates the three "Insight" Kinds in the UI: this one
+  # is an ORACLE DEFINITION (a standing question + the UA that answers it),
+  # not an insight — its OUTPUT is StatusReport ("Insight Reports"). Peers:
+  # IntelInsight ("Intel Insights"), PatternInsight ("Dream Interpretations").
+  # Kind identity (target_kind: Insight, alias sdlc-insight) is UNCHANGED.
+  display_label: Oracles
+  docs: An Insight binds a perpetual question to a target UA (oracle-X) — it is the
+    oracle's DEFINITION, not an insight; the answers come back as StatusReport docs.
+    The UA owns the persona + heuristics + LLM selection. A runner was to iterate
+    active Insights and dispatch each to its target_ua (which would emit a
+    StatusReport via the create_status_report tool) — that runner does NOT ship in
+    this distribution, so cadence_hours/active are declarations with no scheduler.

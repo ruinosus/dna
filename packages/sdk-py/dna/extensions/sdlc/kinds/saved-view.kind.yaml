@@ -1,6 +1,7 @@
 # SavedView — filter + groupBy + sort + layout persisted as a first-class
-# named view (record plane; Linear/Notion/Plane pattern). Loaded by the
-# Studio ViewToolbar "Load view" dropdown. tenant_scope: tenanted — views
+# named view (record plane; Linear/Notion/Plane pattern). Intended to be
+# loaded by a Studio ViewToolbar "Load view" dropdown — no such UI ships in
+# this distribution, so nothing reads a SavedView yet. tenant_scope: tenanted — views
 # are per-user/tenant personalization, unlike the global SDLC ledger.
 #
 # F3 lote-2 (spec 2026-06-10-kinds-descriptor-f3): synthesized from this
@@ -124,4 +125,5 @@ spec:
   display_label: Saved Views
   docs: Named view persisting filter + groupBy + sort + layout for a given Kind in
     a scope. Linear/Notion/Plane pattern — views as first-class entities (não só URL
-    state). Load via ViewToolbar dropdown.
+    state). The consuming UI (a Studio ViewToolbar dropdown) does not ship in this
+    distribution — the Kind is the persisted contract, waiting on a reader.

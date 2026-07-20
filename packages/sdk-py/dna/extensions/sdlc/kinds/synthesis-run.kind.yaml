@@ -1,6 +1,9 @@
 # SynthesisRun — oneiric processing artefact (record plane). Surreal
 # recombination of memory fragments + dominant affect + one captured symbol.
 # NOT a prediction (that's Forecast) — synthesis processes, never predicts.
+# The dream-gen engines named throughout (hybrid-topn, critic-pass, ranker,
+# skill-synthesis) do NOT ship in this distribution — nothing here produces
+# or consumes a SynthesisRun; it is hand-authorable via `dna doc make`.
 # Curated summary drops the extinct to_card's DERIVED counts
 # (insight_count/belief_count/skill_count) — computed fields are not
 # expressible as a declared projection and the to_card had zero consumers.
@@ -276,4 +279,5 @@ spec:
   docs: SynthesisRun = oneiric artefact. Surreal recombination of project memory (fragments
     lifted from LessonLearned/Story/ArchiveProposal/WorkflowEvent) + impossible juxtapositions
     + dominant affect + one captured symbol. NOT falseable, NOT a prediction. Pair
-    with Forecast for the predictive dimension.
+    with Forecast for the predictive dimension. The dream-gen engines that were to
+    produce it do not ship in this distribution — authored by hand today.

@@ -1,5 +1,5 @@
 {
- "_doc": "FROZEN GOLDEN \u2014 captured 2026-06-11 from the live InsightKind class (pre-deletion), F3 lote-2. Deep-equaled against the descriptor-synthesized port in test_lote2_descriptor_equivalence.py.",
+ "_doc": "FROZEN GOLDEN \u2014 captured 2026-06-11 from the live InsightKind class (pre-deletion), F3 lote-2. Deep-equaled against the descriptor-synthesized port in test_lote2_descriptor_equivalence.py. POST-CAPTURE EDIT (censo-12-kinds, 2026-07-20): identity.docs / identity.display_label / schema descriptions were re-synced from the descriptor after prose-only corrections (removed claims of producers/verifiers that do not ship in this distribution; disambiguated the three 'Insight' display labels). No Kind identity, field, type, requiredness, default or enum changed.",
  "dep_filters": {},
  "flags": {
   "flatten_in_context": false,
@@ -21,8 +21,8 @@
   "alias": "sdlc-insight",
   "api_version": "github.com/ruinosus/dna/sdlc/v1",
   "ascii_icon": "\ud83d\udd2e",
-  "display_label": "Insights",
-  "docs": "An Insight binds a perpetual question to a target UA (oracle-X). The UA owns the persona + heuristics + LLM selection. The runner iterates active Insights and dispatches each to its target_ua, which emits an StatusReport via create_status_report tool.",
+  "display_label": "Oracles",
+  "docs": "An Insight binds a perpetual question to a target UA (oracle-X) \u2014 it is the oracle's DEFINITION, not an insight; the answers come back as StatusReport docs. The UA owns the persona + heuristics + LLM selection. A runner was to iterate active Insights and dispatch each to its target_ua (which would emit a StatusReport via the create_status_report tool) \u2014 that runner does NOT ship in this distribution, so cadence_hours/active are declarations with no scheduler.",
   "graph_style": {
    "fill": "#7C3AED",
    "stroke": "#5B21B6",

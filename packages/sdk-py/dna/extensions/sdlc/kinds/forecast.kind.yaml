@@ -1,6 +1,9 @@
 # Forecast — falseable forward-looking prediction (record plane).
-# would_change predictions are verified at outcome_check_at by the
-# cognitive/verification.py loop. Pair: SynthesisRun (oneiric, non-falseable).
+# would_change predictions are MEANT to be verified at outcome_check_at by a
+# verification loop that does NOT ship in this distribution — there is no
+# dna/cognitive/ package here and nothing reads this Kind. Authored by hand
+# (`dna doc make Forecast ...`); status/verifications are set by the author
+# until an executor exists. Pair: SynthesisRun (oneiric, non-falseable).
 #
 # F3 lote-2 (spec 2026-06-10-kinds-descriptor-f3): synthesized from this
 # descriptor; the hand-written class twins were deleted. PARITY-CRITICAL
@@ -77,7 +80,8 @@ spec:
             by:
               type: string
         minItems: 1
-        description: Predictions checked by verification.py.
+        description: Predictions to check at outcome_check_at. No automatic verifier
+          ships in this distribution — checked by the author today.
       evidence_from_present:
         type: array
         items:
@@ -105,7 +109,8 @@ spec:
         items:
           type: object
         default: []
-        description: Audit trail appended by verification loop.
+        description: Audit trail. Meant to be appended by a verification loop; no
+          such loop ships in this distribution, so the author maintains it.
       generated_by:
         type: string
       source_oracle:
@@ -120,6 +125,8 @@ spec:
     text_color: '#fff'
   ascii_icon: 📊
   display_label: Forecasts
-  docs: Forecast = falseable hypothesis. would_change predictions are verified at
-    outcome_check_at by the cognitive/verification.py loop. Authored by oracles or
-    user. Pair with SynthesisRun (oneiric artefact, non-falseable processing).
+  docs: Forecast = falseable hypothesis. Authored by hand (`dna doc make Forecast`)
+    or by an oracle. would_change predictions are MEANT to be checked at
+    outcome_check_at, but no verification loop ships in this distribution — status
+    and verifications are maintained by the author. Pair with SynthesisRun (oneiric
+    artefact, non-falseable processing).

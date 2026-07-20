@@ -1,7 +1,9 @@
 # SynthesizerState — persona contract for a dream-gen agent (record plane;
 # role + goal + backstory + method + voice_markers + memory_policy +
-# constitution + few-shots; read by the hybrid-topn engine — S2
-# dream-engines-v2). Bundle: dreamers/<slug>/SYNTHESIZER.md, body=backstory.
+# constitution + few-shots; MEANT to be read by the hybrid-topn engine — S2
+# dream-engines-v2). That engine does NOT ship in this distribution: nothing
+# here reads this Kind, and the SynthesisRunTriggerPolicy it names is not a
+# registered Kind. Bundle: dreamers/<slug>/SYNTHESIZER.md, body=backstory.
 #
 # F3 lote-3 (spec 2026-06-10-kinds-descriptor-f3): the twin
 # SynthesizerStateKind classes (Py+TS) were DELETED — this descriptor is
@@ -191,6 +193,8 @@ spec:
   display_label: Sintetizadores
   docs: SynthesizerState = persona contract for a dream-gen agent. Declares role
     + goal + backstory + method + voice_markers + non_goals + memory_policy + constitution
-    + examples. Read by hybrid-topn engine to drive voice + memory routing. Pairs
-    1:1 with a Agent (scribe-engram, oracle-risk, ...). Multiple co-exist;
-    SynthesisRunTriggerPolicy routes events.
+    + examples. Intended to be read by a hybrid-topn engine to drive voice + memory
+    routing — that engine does not ship in this distribution, so the doc is a
+    declaration with no consumer today. Pairs 1:1 with a Agent (scribe-engram,
+    oracle-risk, ...). Multiple co-exist; routing was to be done by a
+    SynthesisRunTriggerPolicy, which is not a registered Kind.
