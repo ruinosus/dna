@@ -6,7 +6,7 @@ spec:
   title: Separar as duas regras fundidas no guard de provision-owner e ancorar a anti-tak
   description: Separar as duas regras fundidas no guard de provision-owner e ancorar
     a anti-takeover em testes proprios, antes do D5
-  status: in-progress
+  status: review
   feature: f-dna-hosting
   priority: high
   labels:
@@ -30,7 +30,7 @@ spec:
     removido e comparacao leniente) + suite completa verde + PR aberto
   definition_of_done_source: cli-create
   created_at: '2026-07-20T00:35:53+00:00'
-  updated_at: '2026-07-20T00:51:11+00:00'
+  updated_at: '2026-07-20T00:51:39+00:00'
   timeline:
   - at: '2026-07-20T00:35:53+00:00'
     actor: claude-code
@@ -58,6 +58,18 @@ spec:
     name: tr-tg-workspace-takeover-guard-20260720-005106
     summary: "TestRun tr-tg-workspace-takeover-guard-20260720-005106 \u2192 pass"
     outcome: pass
+  - at: '2026-07-20T00:51:34+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #173 aberto (ruinosus/dna). Mutantes mortos; regress\xE3o verde nos\
+      \ dois pacotes."
+  - at: '2026-07-20T00:51:39+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
   produces:
   - kind: Plan
     name: plan-s-split-takeover-guard
