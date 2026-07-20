@@ -1,0 +1,59 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-workspace-write-path
+spec:
+  title: 'O ato de criacao que falta: POST /v1/workspaces e POST /v1/projects, com
+    id gera'
+  description: 'O ato de criacao que falta: POST /v1/workspaces e POST /v1/projects,
+    com id gerado (D5) e projeto ligado a workspace (A1)'
+  status: in-progress
+  feature: f-dna-hosting
+  priority: highest
+  labels:
+  - tenancy
+  - api
+  reporter: claude-code
+  acceptance_criteria:
+  - "Dado um usuario autenticado sem workspace nenhum, quando ele chama POST /v1/workspaces\
+    \ com um nome, entao um Workspace nasce com id GERADO (nunca o tid) e ele vira\
+    \ owner \u2014 Workspace e WorkspaceMembership escritos ATOMICAMENTE"
+  - "Dado que o id e cunhado pelo servidor, quando um chamador tenta ESCOLHER o id,\
+    \ entao o servidor ignora ou recusa \u2014 reivindicar id nao e possivel por construcao"
+  - "Dado que a criacao explicita agora existe, quando provision-owner e chamado para\
+    \ um workspace que nao existe, entao ele NAO cria mais nada: degrada para no-op\
+    \ e exige membership \u2014 a Regra 2 (anti-takeover) ganha implementacao propria\
+    \ e para de depender da igualdade com o tid"
+  - Dado um workspace existente, quando um membro chama POST /v1/projects, entao nasce
+    um Project com workspace_id EXPLICITO (A1) e scope derivado, e um nao-membro recebe
+    403
+  - "Dado que uma pessoa pode pertencer a varios workspaces, quando ela consulta GET\
+    \ /v1/workspaces, entao recebe os workspaces em que tem membership ativa \u2014\
+    \ a rota que hoje nao existe e sem a qual o switcher nao tem fonte de dados"
+  - Dado o workspace atual do fundador, cujo id E o tid, quando esta mudanca sobe,
+    entao ele continua funcionando (o tid vira apenas mais um id opaco, sem tratamento
+    especial)
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - rotas REST + testes com mutacao + os ~9 detectores da equivalencia tid reescritos
+    + suite verde nos dois pacotes + openapi.json regenerado sem drift
+  definition_of_done_source: cli-create
+  created_at: '2026-07-20T11:49:25+00:00'
+  updated_at: '2026-07-20T11:49:48+00:00'
+  timeline:
+  - at: '2026-07-20T11:49:25+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-20T11:49:48+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  produces:
+  - kind: Plan
+    name: plan-s-workspace-write-path
+    role: implementation
+    at: '2026-07-20T11:49:48+00:00'

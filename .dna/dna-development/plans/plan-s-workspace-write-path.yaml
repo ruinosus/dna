@@ -1,0 +1,27 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-workspace-write-path
+spec:
+  title: 'Plano: s-workspace-write-path'
+  date: '2026-07-20'
+  status: accepted
+  story_ref: s-workspace-write-path
+  journey_phase: plan
+  body: "O ato constitutivo que falta. (1) POST /v1/workspaces: id GERADO pelo servidor\
+    \ (nunca aceito do cliente), Workspace + WorkspaceMembership de owner numa unica\
+    \ escrita atomica, bound a identidade verificada. Slug legivel POR CIMA do id,\
+    \ como o GitHub \u2014 apresentacao, nao identidade (D5). (2) GET /v1/workspaces:\
+    \ enumera por membership ativa; e a rota que lib/copilot.ts:113 documenta como\
+    \ inexistente e sem a qual o switcher nao tem fonte de dados. (3) POST /v1/projects:\
+    \ workspace_id EXPLICITO (decisao A1), scope derivado, 403 para nao-membro. (4)\
+    \ assert_may_bootstrap_workspace: a Regra 2 (anti-takeover) ganha implementacao\
+    \ propria \u2014 com criacao explicita, reivindicar id nao reivindicado deixa\
+    \ de ser possivel, entao provision-owner degrada para no-op idempotente exigindo\
+    \ membership. Isso e o que a docstring do PR #173 registrou como hipotese; agora\
+    \ vira codigo. (5) Reescrever os detectores da equivalencia tid, guiado por docs/superpowers/specs/2026-07-19-inventario-testes-equivalencia-tid.md\
+    \ \u2014 13 detector / 4 seguranca / 3 fixture, e os de SEGURANCA nao afrouxam.\
+    \ FORA: limites por plano (D4 adiou preco; quota sem preco e adivinhacao) e qualquer\
+    \ UI."
+  created_at: '2026-07-20T11:49:42+00:00'
+  updated_at: '2026-07-20T11:49:42+00:00'
