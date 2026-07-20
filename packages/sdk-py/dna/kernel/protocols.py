@@ -1522,7 +1522,7 @@ def validate_source_port(source: Any) -> None:
             f"Every source handed to kernel.source() must implement the "
             f"core SourcePort surface (see docs/PORT-CONTRACT.md, section "
             f"'Writing a Source adapter'). If this is a SYNC source (e.g. "
-            f"S3Source), wrap it: AsyncSourceAdapter(your_source). "
+            f"one doing blocking I/O), wrap it: AsyncSourceAdapter(your_source). "
             f"NOTE: this gate checks method NAMES only — run "
             f"{pkg}.testing.source_conformance_suite(factory) to verify "
             f"the adapter's actual behavior."
