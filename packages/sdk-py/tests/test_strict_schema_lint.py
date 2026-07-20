@@ -36,7 +36,7 @@ _GRANDFATHERED_OPEN_SCHEMAS = frozenset({
     "helix-hook", "helix-genome", "helix-safety-policy",
     "helix-setting", "helix-theme", "helix-tool",
     "helix-usecase", "helix-user-profile", "helix-agent",
-    "cognitive-pattern-insight", "cognitive-pre-mortem", "collab-comment",
+    "collab-comment",
     "eval-evalbaseline", "eval-evalcase", "eval-evalexperiment",
     "eval-evalrun", "eval-evalsuite", "eval-evolve-experiment",
     "eval-evolve-program", "eval-evolve-run", "eval-finding", "eval-judgeprofile",
@@ -49,17 +49,17 @@ _GRANDFATHERED_OPEN_SCHEMAS = frozenset({
     "modelreg-model-profile",
     "pictogram-pictogram", "policy-layer-policy", "presidio-recognizer",
     "research-reference", "research-research", "sdlc-adr",
-    "sdlc-agent-session", "sdlc-archive-proposal", "sdlc-bug", "sdlc-changelog",
-    "sdlc-epic", "sdlc-feature", "sdlc-forecast",
+    "sdlc-agent-session", "sdlc-bug", "sdlc-changelog",
+    "sdlc-epic", "sdlc-feature",
     # The cognitive-policy family (9 open aliases) left this set on
     # s-consolidate-cognitive-policies: 8 Kinds were retired and the unified
     # sdlc-cognitive-policy ships strict (additionalProperties: false).
-    "sdlc-initiative", "sdlc-insight", "sdlc-issue",
+    "sdlc-initiative", "sdlc-issue",
     "sdlc-narrative", "sdlc-plan", "sdlc-postmortem",
     "sdlc-prompt-template", "sdlc-reference", "sdlc-retrospective",
     "sdlc-risk-register", "sdlc-roadmap", "sdlc-saved-view", "sdlc-spec",
-    "sdlc-spike", "sdlc-status-report", "sdlc-story", "sdlc-synthesis-run",
-    "sdlc-synthesizer-state", "sdlc-task", "soulspec-soul",
+    "sdlc-spike", "sdlc-status-report", "sdlc-story",
+    "sdlc-task", "soulspec-soul",
     "tenant-membership", "tenant-tenant", "voice-voicepolicy",
 })
 

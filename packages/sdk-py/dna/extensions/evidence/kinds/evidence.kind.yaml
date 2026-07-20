@@ -4,10 +4,16 @@
 #
 # F3 lote-3 (spec 2026-06-10-kinds-descriptor-f3): the twin EvidenceKind
 # classes (Py+TS) were DELETED — this descriptor is the single source.
-# PARITY-CRITICAL package data: byte-identical mirror under both runtimes'
-# evidence/kinds/ (tests/test_descriptor_hash_parity.py enforces).
-# Equivalence frozen in tests/test_lote3_descriptor_equivalence.py
-# (golden: tests/goldens/lote3/Evidence.golden.json).
+# SINGLE-SOURCE package data: this descriptor is the only
+# definition of the Kind — the packages/sdk-ts mirror and the test that
+# enforced byte-identity (tests/test_descriptor_hash_parity.py) were BOTH
+# removed when the TypeScript SDK was frozen (commit 341e517). Nothing
+# mirrors this file and no test enforces byte-identity.
+# NOTE: this header used to cite tests/test_lote3_descriptor_equivalence.py
+# (golden tests/goldens/lote3/Evidence.golden.json) as freezing equivalence.
+# Neither the test nor the lote3 golden directory has ever existed anywhere
+# in this repository's history — the citation was false from the start. No
+# equivalence golden guards this descriptor today.
 #
 # tenant_scope intentionally NOT declared (class never declared `scope`;
 # undeclared kinds stay permissive — declaring would change tenancy).

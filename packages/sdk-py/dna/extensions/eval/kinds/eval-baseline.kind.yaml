@@ -11,8 +11,11 @@
 # tenant_scope intentionally NOT declared — permissive (base + per-tenant
 # overlay), the Evidence/Automation precedent.
 #
-# PARITY-CRITICAL package data: byte-identical mirror under both runtimes'
-# eval/kinds/ (tests/test_descriptor_hash_parity.py enforces).
+# SINGLE-SOURCE package data: this descriptor is the only
+# definition of the Kind — the packages/sdk-ts mirror and the test that
+# enforced byte-identity (tests/test_descriptor_hash_parity.py) were BOTH
+# removed when the TypeScript SDK was frozen (commit 341e517). Nothing
+# mirrors this file and no test enforces byte-identity.
 apiVersion: github.com/ruinosus/dna/core/v1
 kind: KindDefinition
 metadata:

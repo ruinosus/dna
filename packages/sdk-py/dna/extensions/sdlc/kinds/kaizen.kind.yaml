@@ -13,11 +13,14 @@
 # routed (an Issue/Story tracks the fix) → resolved (fix shipped).
 #
 # F3 P2 pilot (spec 2026-06-10-kinds-descriptor-f3): first builtin Kind
-# expressed as a descriptor instead of twin Py/TS classes. PARITY-CRITICAL
-# package data — the byte-identical mirror lives at
-# packages/sdk-{py,ts}/{dna/extensions,src/extensions}/sdlc/kinds/
-# kaizen.kind.yaml; edit one side, copy to the other byte-for-byte
-# (tests/test_descriptor_hash_parity.py enforces).
+# expressed as a descriptor instead of twin Py/TS classes.
+# SINGLE-SOURCE package data: this descriptor is the only
+# definition of the Kind — the packages/sdk-ts mirror and the test that
+# enforced byte-identity (tests/test_descriptor_hash_parity.py) were BOTH
+# removed when the TypeScript SDK was frozen (commit 341e517). Nothing
+# mirrors this file and no test enforces byte-identity.
+# What DOES still guard it: equivalence vs the extinct class, frozen in
+# tests/test_kaizen_descriptor_equivalence.py.
 apiVersion: github.com/ruinosus/dna/core/v1
 kind: KindDefinition
 metadata:

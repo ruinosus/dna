@@ -41,7 +41,9 @@ STILL_CLASS_ALLOWLIST = frozenset({
     # {format,placeholder_defaults}) and autolab's _DEFAULTS parse-merge via
     # the D5 spec_defaults: block.
     # cognitive-pattern-insight + cognitive-pre-mortem: migrated to
-    # descriptors in F3 lote-1 (2026-06-10).
+    # descriptors in F3 lote-1 (2026-06-10), then DELETED entirely in
+    # censo-12-kinds (2026-07-20) — the cognition-engine family they fed
+    # never shipped in this distribution.
     # eval-evalexperiment: migrated to a descriptor in expr batch A (plan
     # 2026-06-11-descriptor-expressiveness) — D2 ui: + D3 describe:
     # ({path: description}) + D6 default_agent_field: agent_ref (now all
@@ -97,8 +99,9 @@ STILL_CLASS_ALLOWLIST = frozenset({
                            # contrato de timeline e o parse validante passaria
                            # a rejeitar novos timeline types.
     "sdlc-story",          # lote-2: precisa de D2-ui (StudioUIMetadata no descriptor)
-    # sdlc-synthesizer-state: migrated to a descriptor in F3 lote-3
-    # (DREAMER_METHODS agora vive só no descriptor).
+    # sdlc-synthesizer-state: migrated to a descriptor in F3 lote-3, then
+    # DELETED in censo-12-kinds (2026-07-20) along with the rest of the
+    # cognition-engine family — DREAMER_METHODS went with it.
     "sdlc-task",
     # sdlc-workflow-event: migrated to a descriptor in F3 lote-1.
     # voice-voiceepisode: migrated to a descriptor in F3 lote-3 (canônico =

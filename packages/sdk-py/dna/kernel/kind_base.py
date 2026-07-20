@@ -62,7 +62,7 @@ class KindBase:
     # authored identity. Excluded from canonical_digest so the same doc
     # in two sources (FS git ↔ Postgres runtime) hashes identically even
     # when one was stamped on write. Kinds override to extend (e.g. an
-    # EvalRun adds 'completed_at', a Forecast adds 'generated_at').
+    # EvalRun adds 'completed_at', a StatusReport adds 'generated_at').
     VOLATILE_SPEC_FIELDS: frozenset[str] = frozenset(
         {"updated_at", "version", "created_at"}
     )

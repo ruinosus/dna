@@ -16,9 +16,11 @@
 # NOT a shared `_lib` default. Deliberately NOT inheritable (never in
 # DEFAULT_INHERITABLE_KINDS_V1); TENANTED is correct.
 #
-# PARITY-CRITICAL package data: the byte-identical mirror lives at
-# packages/sdk-{py,ts}/{dna/extensions,src/extensions}/portfolio/kinds/
-# project.kind.yaml (tests/test_descriptor_hash_parity.py enforces).
+# SINGLE-SOURCE package data: this descriptor is the only
+# definition of the Kind — the packages/sdk-ts mirror and the test that
+# enforced byte-identity (tests/test_descriptor_hash_parity.py) were BOTH
+# removed when the TypeScript SDK was frozen (commit 341e517). Nothing
+# mirrors this file and no test enforces byte-identity.
 apiVersion: github.com/ruinosus/dna/core/v1
 kind: KindDefinition
 metadata:

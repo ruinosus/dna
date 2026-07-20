@@ -1,8 +1,6 @@
 {
- "_doc": "FROZEN GOLDEN \u2014 captured 2026-06-11 from the live StatusReportKind class (pre-deletion), F3 lote-2. Deep-equaled against the descriptor-synthesized port in test_lote2_descriptor_equivalence.py.",
- "dep_filters": {
-  "insight": "sdlc-insight"
- },
+ "_doc": "FROZEN GOLDEN — captured 2026-06-11 from the live StatusReportKind class (pre-deletion), F3 lote-2. Deep-equaled against the descriptor-synthesized port in test_lote2_descriptor_equivalence.py. POST-CAPTURE EDIT (censo-12-kinds, 2026-07-20): dep_filters {'insight': 'sdlc-insight'} dropped and the insight/question descriptions reworded — the Insight Kind was deleted, so the dep pointed at an unknown alias (kernel validate_dep_filters rejects it). No field, type, requiredness, default or enum changed.",
+ "dep_filters": {},
  "flags": {
   "flatten_in_context": false,
   "is_overlayable": true,
@@ -22,7 +20,7 @@
  "identity": {
   "alias": "sdlc-status-report",
   "api_version": "github.com/ruinosus/dna/sdlc/v1",
-  "ascii_icon": "\ud83d\udcdc",
+  "ascii_icon": "📜",
   "display_label": "Insight Reports",
   "docs": null,
   "graph_style": {
@@ -53,7 +51,7 @@
     "type": "array"
    },
    "confidence": {
-    "description": "How firm the verdict is. `insufficient` = the heuristic didn't have enough data \u2014 the LLM was NOT called and the verdict is a stock message.",
+    "description": "How firm the verdict is. `insufficient` = the heuristic didn't have enough data — the LLM was NOT called and the verdict is a stock message.",
     "enum": [
      "certain",
      "guess",
@@ -81,11 +79,11 @@
     "type": "string"
    },
    "insight": {
-    "description": "Name of the Insight that produced this report.",
+    "description": "Free-text marker for what produced this report. Was a slug reference to an Insight Kind; that Kind was deleted in censo-12-kinds (2026-07-20) because the oracle runner that resolved it never shipped. The only live producer, `dna sdlc digest --save`, already wrote the synthetic marker 'sdlc-digest' here rather than an Insight slug — so the field stays, as the free-text tag it actually is.",
     "type": "string"
    },
    "metrics": {
-    "description": "Deterministic numbers the heuristic computed (cycle counts, frequencies, averages). Free-form object \u2014 schema varies per oracle.",
+    "description": "Deterministic numbers the heuristic computed (cycle counts, frequencies, averages). Free-form object — schema varies per oracle.",
     "type": "object"
    },
    "owner": {
@@ -93,11 +91,11 @@
     "type": "string"
    },
    "question": {
-    "description": "Echo of the oracle's question at run time.",
+    "description": "The question this report answers, written out. Was an echo of an Insight's question at run time; no runner ships, so the author writes it.",
     "type": "string"
    },
    "rag_status": {
-    "description": "PMO-standard RAG status (Red/Amber/Green) for executive dashboards. Red = action needed; Amber = watch; Green = healthy. Optional \u2014 heuristics that map metrics \u2192 RAG should populate this.",
+    "description": "PMO-standard RAG status (Red/Amber/Green) for executive dashboards. Red = action needed; Amber = watch; Green = healthy. Optional — heuristics that map metrics → RAG should populate this.",
     "enum": [
      "red",
      "amber",
@@ -151,7 +149,7 @@
     "thresholds": {
      "to_certain": "ratio > 0.8 AND n>=5"
     },
-    "verdict": "Saud\u00e1vel: 9 de 11 stories fecharam dentro do ciclo."
+    "verdict": "Saudável: 9 de 11 stories fecharam dentro do ciclo."
    },
    "spec": {
     "ascended_from": "guess",
@@ -176,7 +174,7 @@
     "thresholds": {
      "to_certain": "ratio > 0.8 AND n>=5"
     },
-    "verdict": "Saud\u00e1vel: 9 de 11 stories fecharam dentro do ciclo."
+    "verdict": "Saudável: 9 de 11 stories fecharam dentro do ciclo."
    }
   },
   "partial": {

@@ -1,8 +1,10 @@
 """Tests for EvidenceExtension — Evidence + EvidencePolicy kinds.
 
 F3 lote-3: EvidenceKind (a classe) foi extinta — o kind é sintetizado de
-kinds/evidence.kind.yaml; os asserts leem do PORT registrado pelo funil real
-(deep equivalence: test_lote3_descriptor_equivalence.py). O parse do port
+kinds/evidence.kind.yaml; os asserts leem do PORT registrado pelo funil real.
+(Este docstring citava test_lote3_descriptor_equivalence.py como deep
+equivalence — esse arquivo nunca existiu neste repositório; os asserts abaixo
+são a única cobertura.) O parse do port
 opera sobre o ENVELOPE ({apiVersion, kind, metadata, spec}) — a forma que o
 kernel sempre passa; o aceite de dicts flat era um acessório da classe.
 """

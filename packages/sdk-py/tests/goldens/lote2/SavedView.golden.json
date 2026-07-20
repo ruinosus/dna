@@ -1,5 +1,5 @@
 {
- "_doc": "FROZEN GOLDEN \u2014 captured 2026-06-11 from the live SavedViewKind class (pre-deletion), F3 lote-2. Deep-equaled against the descriptor-synthesized port in test_lote2_descriptor_equivalence.py.",
+ "_doc": "FROZEN GOLDEN \u2014 captured 2026-06-11 from the live SavedViewKind class (pre-deletion), F3 lote-2. Deep-equaled against the descriptor-synthesized port in test_lote2_descriptor_equivalence.py. POST-CAPTURE EDIT (censo-12-kinds, 2026-07-20): identity.docs / identity.display_label / schema descriptions were re-synced from the descriptor after prose-only corrections (removed claims of producers/verifiers that do not ship in this distribution; disambiguated the three 'Insight' display labels). No Kind identity, field, type, requiredness, default or enum changed.",
  "dep_filters": {
   "owner": "helix-actor"
  },
@@ -24,7 +24,7 @@
   "api_version": "github.com/ruinosus/dna/sdlc/v1",
   "ascii_icon": "\ud83d\udd16",
   "display_label": "Saved Views",
-  "docs": "Named view persisting filter + groupBy + sort + layout for a given Kind in a scope. Linear/Notion/Plane pattern \u2014 views as first-class entities (n\u00e3o s\u00f3 URL state). Load via ViewToolbar dropdown.",
+  "docs": "Named view persisting filter + groupBy + sort + layout for a given Kind in a scope. Linear/Notion/Plane pattern \u2014 views as first-class entities (n\u00e3o s\u00f3 URL state). The consuming UI (a Studio ViewToolbar dropdown) does not ship in this distribution \u2014 the Kind is the persisted contract, waiting on a reader.",
   "graph_style": {
    "fill": "#06B6D4",
    "stroke": "#0E7490",

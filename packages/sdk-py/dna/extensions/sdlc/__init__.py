@@ -1721,22 +1721,19 @@ JOURNEY_METHODOLOGIES = (
 
 
 # ---------------------------------------------------------------------------
-# Insights — Insight + StatusReport (perpetual questions about the project)
+# StatusReport (was: "Insights" — Insight + StatusReport)
 # ---------------------------------------------------------------------------
-# The product face is "Insights" — same vocabulary the market uses (Linear,
-# Backstage, GitHub). Each Insight wraps a perpetual question + persona +
-# heuristic. The persona Markdown body keeps the authorial voice (O Médico,
-# O Auditor, etc.) so verdicts retain character — only the TYPE label is
-# utilitarian. Inspired by the multi-stage computer in Asimov's *The Last
-# Question* (renamed from "Oracle" so PMs/execs read the surface cleanly).
-
-# Insight — F3 lote-2 (spec 2026-06-10-kinds-descriptor-f3): the twin InsightKind classes (Py+TS) were
-# DELETED — synthesized from kinds/insight.kind.yaml (parity-critical
-# package data) via the load_descriptors loop in
-# register(). Equivalence with the extinct class frozen in
-# tests/test_lote2_descriptor_equivalence.py (golden:
-# tests/goldens/lote2/Insight.golden.json).
-
+# censo-12-kinds (2026-07-20): the `Insight` Kind (alias sdlc-insight) was
+# DELETED. It was the oracle DEFINITION — a perpetual question bound to a
+# target UA — and the runner that was to iterate active Insights and
+# dispatch them never shipped in this distribution, so nothing ever
+# produced the StatusReports it pointed at. StatusReport itself STAYS and is
+# genuinely LIVE: `dna sdlc digest --save` writes one (sdlc_cmd.py) and reads
+# them back. Note that live path already wrote spec.insight='sdlc-digest', a
+# synthetic marker — never an Insight slug — so the dep_filter on sdlc-insight
+# was dead for the only real producer even before the deletion.
+# NOTE: this is unrelated to `IntelInsight` (alias intel-insight, the
+# intel extension), which is live and stays.
 
 # StatusReport — F3 lote-2 (spec 2026-06-10-kinds-descriptor-f3): the twin StatusReportKind classes (Py+TS) were
 # DELETED — synthesized from kinds/status-report.kind.yaml (parity-critical
@@ -1747,16 +1744,20 @@ JOURNEY_METHODOLOGIES = (
 
 
 # ---------------------------------------------------------------------------
-# Cognitive Memory Triad (v1.9.0) — Engram + SynthesisRun + ArchiveProposal
+# Engram (was: the "Cognitive Memory Triad", v1.9.0)
 #
-# Spec: docs/superpowers/specs/2026-05-11-cognitive-memory-triad.md
-# Plan: docs/superpowers/plans/2026-05-11-cognitive-memory-triad-plan.md
+# Spec (historical): docs/superpowers/specs/2026-05-11-cognitive-memory-triad.md
 #
-# Adds the affective/associative cognitive layer. Engram (renamed from
-# LessonLearned, s-engram-rename 2026-07-19 — see below) = unbidden recall
-# with affect (surface label in Studio: "Lições Aprendidas"). SynthesisRun =
-# forward scenario with verifiable predictions. ArchiveProposal =
-# pruning proposal (proposal-only, never auto-executes; user/CLI approves).
+# Engram (renamed from LessonLearned, s-engram-rename 2026-07-19 — see
+# below) = unbidden recall with affect (surface label in Studio: "Lições
+# Aprendidas"). It is a real platform memory primitive with live consumers.
+#
+# censo-12-kinds (2026-07-20): the other two members, SynthesisRun and
+# ArchiveProposal, were DELETED. Both only ever existed to receive the
+# output of a cognition-engine family that never shipped in this
+# distribution — there is no dna/cognitive/ package here, no dream-gen
+# engine, no deep-sleep orphan scan. Nothing produced them and nothing
+# read them.
 # ---------------------------------------------------------------------------
 
 # s-engram-rename (2026-07-19): Engram (formerly LessonLearned) MOVED OUT of
@@ -1775,85 +1776,15 @@ JOURNEY_METHODOLOGIES = (
 # (F3 D4).
 
 
-# ─── PatternInsight (2026-05-13, cognitive-engines foundation) ──
-# Output of any dream-interp engine (hill / jung / gestalt / pattern).
-# Each interpretation references ONE SynthesisRun and ONE engine. Multiple
-# interpretations of the same SynthesisRun coexist — that's the whole point
-# of the polyphonic engine model.
-
-# PatternInsight — F3 lote-1 (spec 2026-06-10-kinds-descriptor-f3): the PatternInsightKind class (Py-only) was
-# DELETED — synthesized from kinds/pattern-insight.kind.yaml (parity-critical
-# package data) via the load_descriptors loop in
-# register(). Equivalence with the extinct class frozen in
-# tests/test_lote1_descriptor_equivalence.py (golden:
-# tests/goldens/lote1/PatternInsight.golden.json).
-# Py-only before F3 — the descriptor gives TS the kind for free
-# (kind-registry-parity.json updated). Dead to_card not carried over.
-
-
-# ─── Forecast (2026-05-13) ────────────────────────────────────────────
-# Absorved the predictive shape that used to live on SynthesisRun. A Forecast
-# is a falseable hypothesis with would_change predictions + verification
-# lifecycle (drafted→observing→fulfilled/refuted/expired). The previous
-# "SynthesisRun" Kind blended this with oneiric content; that confusion is
-# resolved here by splitting into 2 Kinds:
-#
-#   Forecast  — falseable predictions, status lifecycle, verified by
-#               cognitive/verification.py against measure_metrics().
-#   SynthesisRun     — oneiric artefact (fragments, juxtapositions, symbol,
-#               affect). NO would_change. NOT verifiable. Processing,
-#               not prediction.
-
-# Forecast — F3 lote-2 (spec 2026-06-10-kinds-descriptor-f3): the ForecastKind class (Py-only) was
-# DELETED — synthesized from kinds/forecast.kind.yaml (parity-critical
-# package data) via the load_descriptors loop in
-# register(). Equivalence with the extinct class frozen in
-# tests/test_lote2_descriptor_equivalence.py (golden:
-# tests/goldens/lote2/Forecast.golden.json).
-# Py-only before F3 — the descriptor gives TS the kind for free
-# (kind-registry-parity.json: py_only_allowlist → ts_aliases).
-
-
-# SynthesizerState — F3 lote-3 (spec 2026-06-10-kinds-descriptor-f3): the
-# twin SynthesizerStateKind classes (Py+TS) were DELETED — synthesized from
-# kinds/synthesizer-state.kind.yaml (parity-critical package data,
-# package data) via the load_descriptors loop in register(). The
-# DREAMER_METHODS enum (analogical/causal/surreal/...) lives ONLY in the
-# descriptor's schema now (it had no other consumer in either runtime).
-# The class's dead to_card (zero consumers) was not carried over; its
-# elected fields (role/method/linked_agent) became the curated summary
-# projection. Equivalence frozen in
-# tests/test_lote3_descriptor_equivalence.py (golden:
-# tests/goldens/lote3/SynthesizerState.golden.json).
-
-
-# ArchiveProposal — F3 lote-2 (spec 2026-06-10-kinds-descriptor-f3): the twin ArchiveProposalKind classes (Py+TS) were
-# DELETED — synthesized from kinds/archive-proposal.kind.yaml (parity-critical
-# package data) via the load_descriptors loop in
-# register(). Equivalence with the extinct class frozen in
-# tests/test_lote2_descriptor_equivalence.py (golden:
-# tests/goldens/lote2/ArchiveProposal.golden.json).
-
-
-# ---------------------------------------------------------------------------
-# PreMortemKind — s-dream-hindsight-counterfactuals (2026-05-13)
-# ---------------------------------------------------------------------------
-# Hindsight memory rewriting (HER pattern from RL literature): when a
-# Story ships OR is cancelled, generate a PreMortem that explores
-# "what if the other branch had been taken?". Different from SynthesisRun:
-# SynthesisRuns project forward; PreMortems rewind backward.
-#
-# Status lifecycle parallel to SynthesisRun: drafted → observing → realized/
-# falsified. The verification path is the same (would_have_changed
-# predictions vs measured reality at outcome_check_at).
-# PreMortem — F3 lote-1 (spec 2026-06-10-kinds-descriptor-f3): the PreMortemKind class (Py-only) was
-# DELETED — synthesized from kinds/pre-mortem.kind.yaml (parity-critical
-# package data) via the load_descriptors loop in
-# register(). Equivalence with the extinct class frozen in
-# tests/test_lote1_descriptor_equivalence.py (golden:
-# tests/goldens/lote1/PreMortem.golden.json).
-# Py-only before F3 — the descriptor gives TS the kind for free
-# (kind-registry-parity.json updated).
+# censo-12-kinds (2026-07-20): PatternInsight, Forecast, SynthesizerState,
+# ArchiveProposal and PreMortem were DELETED here, together with
+# SynthesisRun and Insight above. They formed the record-plane surface of a
+# cognition-engine family (dream-gen, dream-interp lenses, hindsight hooks,
+# a verification loop, a deep-sleep orphan scan) that does not exist in this
+# distribution — it arrived as residue of an unrelated extraction. Kinds
+# whose only purpose was to hold that family's output have no future; the
+# documents a PERSON writes (Postmortem, Retrospective, RiskRegister) and
+# CognitivePolicy (read in production by registry_accessor.py) stay.
 
 
 # ---------------------------------------------------------------------------
@@ -2223,19 +2154,22 @@ class HtmlArtifactWriter(WriterPort):
 
 class SdlcExtension:
     """SDLC primitives — Roadmap, Epic, Feature, Story, Issue, Spec, Plan,
-    AgentSession, Narrative, WorkflowEvent, Insight, StatusReport, plus two of
-    the Cognitive Memory Triad: SynthesisRun, ArchiveProposal (v1.9.0). The
-    third member, Engram (formerly LessonLearned), moved to HelixExtension
+    AgentSession, Narrative, WorkflowEvent, StatusReport.
+
+    Engram (formerly LessonLearned) moved to HelixExtension
     (s-engram-rename, 2026-07-19) — memory is a platform primitive.
 
     v1.10.0 (2026-05-12): Reference Kind (f-reference-citation-kind +
     f-semon-correct-memory).
     v1.14.0 (2026-07-07): the 9 cognitive policy Kinds consolidated into one
     expanded CognitivePolicy (s-consolidate-cognitive-policies).
+    v1.15.0 (2026-07-20): 5 Kinds REMOVED — ArchiveProposal, Forecast,
+    Insight, SynthesisRun, SynthesizerState (censo-12-kinds). See the block
+    comment above their former descriptors for why.
     """
 
     name = "sdlc"
-    version = "1.14.0"
+    version = "1.15.0"
 
     def register(self, kernel: ExtensionHost) -> None:
         kernel.kind(RoadmapKind())

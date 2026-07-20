@@ -5,7 +5,8 @@ record plane, TENANTED — per-tenant user/generated data, NOT inheritable):
 
 1. The `intel` extension registers IntelSource (alias ``intel-source``) and
    IntelInsight (alias ``intel-insight``, kind name ``IntelInsight`` — NOT
-   ``Insight``, which already belongs to the SDLC oracle Kind ``sdlc-insight``).
+   ``Insight``, which belonged to the SDLC oracle Kind ``sdlc-insight`` until
+   that Kind was deleted in censo-12-kinds; the shipped name stays IntelInsight).
 2. Both are record-plane, TENANTED, declarative (synthesized from the
    descriptor), and do NOT collide with the SDLC ``Insight`` Kind.
 3. IntelInsight is embeddable (``embed: [title, fact]``) so a later dedup story
@@ -59,23 +60,28 @@ def test_intel_insight_registered_from_descriptor():
 
 def test_intel_insight_named_intelinsight_not_insight():
     """The intel Insight registers as ``IntelInsight`` — the bare ``Insight``
-    name belongs to the SDLC oracle Kind, and two api_versions sharing a kind
-    name makes bare-name lookup ambiguous (i-195). Loading only the intel
-    extension, IntelInsight exists and the SDLC ``Insight`` is absent."""
+    name belonged to the SDLC oracle Kind, and two api_versions sharing a kind
+    name makes bare-name lookup ambiguous (i-195). That SDLC Kind is now gone
+    (censo-12-kinds) but the shipped name stays IntelInsight; the bare
+    ``Insight`` must resolve to nothing."""
     k = Kernel()
     k.load(IntelExtension())
     assert k.kind_port_for("IntelInsight") is not None
     assert k.kind_port_for("Insight") is None
 
 
-def test_intel_kinds_coexist_with_sdlc_insight_under_auto():
-    """Under full entry-point discovery, the intel Kinds and the SDLC
-    ``Insight`` Kind coexist without a name collision (no boot failure)."""
+def test_intel_kinds_register_under_auto_and_bare_insight_is_free():
+    """Under full entry-point discovery the intel Kinds register cleanly.
+
+    This test used to assert the intel Kinds COEXISTED with the SDLC
+    ``Insight`` (alias sdlc-insight) without colliding. That Kind was deleted
+    in censo-12-kinds (2026-07-20), so the bare name is now unclaimed —
+    asserting THAT is what keeps the check honest: if anything ever registers
+    a bare ``Insight`` again, the i-195 ambiguity is back."""
     k = Kernel.auto()
     assert k.kind_port_for("IntelSource") is not None
     assert k.kind_port_for("IntelInsight").alias == "intel-insight"
-    # The SDLC oracle Insight is untouched — distinct name, distinct alias.
-    assert k.kind_port_for("Insight").alias == "sdlc-insight"
+    assert k.kind_port_for("Insight") is None
 
 
 # ---------------------------------------------------------------------------

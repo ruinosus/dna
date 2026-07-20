@@ -32,10 +32,13 @@ _ORIGIN = "github.com/ruinosus/dna/evidence"
 
 # Evidence — F3 lote-3 (spec 2026-06-10-kinds-descriptor-f3): the twin
 # EvidenceKind classes (Py+TS) were DELETED — synthesized from
-# kinds/evidence.kind.yaml (parity-critical package data, byte-identical
-# Py↔TS) via the load_descriptors loop in register(). Equivalence with the
-# extinct class frozen in tests/test_lote3_descriptor_equivalence.py
-# (golden: tests/goldens/lote3/Evidence.golden.json).
+# kinds/evidence.kind.yaml via the load_descriptors loop in register().
+# That descriptor is now the SINGLE source: the sdk-ts mirror and
+# test_descriptor_hash_parity.py went away with the TypeScript freeze
+# (341e517). This comment used to claim equivalence was frozen in
+# tests/test_lote3_descriptor_equivalence.py (golden
+# tests/goldens/lote3/Evidence.golden.json) — neither has ever existed in
+# this repository's history. No equivalence golden guards Evidence today.
 
 
 # ───────────────────────────────────────────────────────────────────────

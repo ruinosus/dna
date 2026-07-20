@@ -1,9 +1,14 @@
 """F3 lote-2: ports sintetizados dos descriptors ≡ classes extintas.
 
-Kinds: ADR · ArchiveProposal · Changelog · Forecast · Insight · Narrative ·
-Postmortem · RiskRegister · SavedView · StatusReport · SynthesisRun
-(spec 2026-06-10-kinds-descriptor-f3 D5; receita do piloto Kaizen + lote-1 —
-test_lote1_descriptor_equivalence.py).
+Kinds: ADR · Changelog · Narrative · Postmortem · RiskRegister ·
+SavedView · StatusReport (spec 2026-06-10-kinds-descriptor-f3 D5; receita
+do piloto Kaizen + lote-1 — test_lote1_descriptor_equivalence.py).
+
+censo-12-kinds (2026-07-20): ArchiveProposal · Forecast · Insight ·
+SynthesisRun saíram do lote — os Kinds foram apagados junto com a família
+de motores de cognição que nunca existiu nesta distribuição (resíduo de
+outra extração). O `Insight` daqui era o Kind-oráculo do sdlc (alias
+sdlc-insight), NÃO o IntelInsight da extensão intel, que fica.
 
 GOLDENS congelados em tests/goldens/lote2/<Kind>.golden.json — capturados
 2026-06-11 das classes VIVAS (pré-deleção): identity, flags, storage,
@@ -16,26 +21,20 @@ pinados nos testes:
   - **summary**: TODAS as classes do lote herdavam o default do KindBase
     que ecoa o spec INTEIRO no navigator/viz — substituído por projeção
     curada declarada no descriptor (pros kinds com to_card morto, os
-    mesmos campos que o card elegia; SynthesisRun perde os counts
-    DERIVADOS insight_count/belief_count/skill_count — campo computado
-    não é exprimível em projeção declarada e o to_card tinha zero
-    consumidores). List endpoints (/docs/{kind}, docs_service.list_docs)
+    mesmos campos que o card elegia). List endpoints (/docs/{kind}, docs_service.list_docs)
     NÃO usam kp.summary() → payloads de produção inalterados (verificado
     no lote-1 + smoke live byte-idêntico neste lote).
-  - **dep_filters**: Changelog/Insight/Forecast/SynthesisRun/
-    ArchiveProposal retornavam {} — port retorna None (sem declaração).
-    Ambos falsy; todos os call-sites fazem `or {}`.
+  - **dep_filters**: Changelog retornava {} — port retorna None (sem
+    declaração). Ambos falsy; todos os call-sites fazem `or {}`.
   - **parse**: o port VALIDA contra o schema (classes eram pass-through,
     validate_on_parse=False) — upgrade intencional; no kernel um doc
     inválido vira typed=None + evento parse_error, nunca crash de load.
-  - **to_card** (Insight/StatusReport/Forecast/SynthesisRun/
-    ArchiveProposal): dead code, zero consumidores em produção — não
-    migrado.
-  - **dependencies()** (Changelog/Insight): override que retornava {} —
+  - **to_card** (StatusReport): dead code, zero consumidores em
+    produção — não migrado.
+  - **dependencies()** (Changelog): override que retornava {} —
     no-op vs o default do KindBase (delega pra dep_filters); o port
     preserva a delegação.
-  - **embed (F3 D4)**: ADR/StatusReport/SynthesisRun/ArchiveProposal
-    declaram `embed:` com o MESMO field-join dos branches legados de
+  - **embed (F3 D4)**: ADR/StatusReport declaram `embed:` com o MESMO field-join dos branches legados de
     source_text_for (zero re-embed) e saíram do _EMBED_LEGACY. Narrative
     FICA no frozenset: seu branch junta spec.paragraphs com "\\n\\n", que
     a declaração (space-join de arrays) não reproduz byte-idêntico.
@@ -56,21 +55,15 @@ from dna.kernel.protocols import TenantScope
 GOLDEN_DIR = Path(__file__).parent / "goldens" / "lote2"
 
 KINDS = [
-    "ADR", "ArchiveProposal", "Changelog", "Forecast", "Insight",
-    "Narrative", "Postmortem", "RiskRegister", "SavedView",
-    "StatusReport", "SynthesisRun",
+    "ADR", "Changelog", "Narrative", "Postmortem", "RiskRegister",
+    "SavedView", "StatusReport",
 ]
 
 # Projeção curada declarada no descriptor (delta intencional — ver
 # docstring). Todas as classes do lote usavam o eco whole-spec do KindBase.
 CURATED_SUMMARY_DEFAULTS = {
     "ADR": {"title": "", "status": "", "date": "", "superseded_by": ""},
-    "ArchiveProposal": {
-        "target_kind": "", "target_name": "", "reason": "", "status": "",
-    },
     "Changelog": {"title": "", "description": ""},
-    "Forecast": {"forecaster": "", "lens": None, "status": ""},
-    "Insight": {"question": "", "target_ua": "", "icon": "", "active": True},
     "Narrative": {
         "title": "", "summary": "", "actor": "", "author_intent": "",
         "auto_generated": False, "period_end": "",
@@ -88,16 +81,12 @@ CURATED_SUMMARY_DEFAULTS = {
         "insight": "", "verdict": "", "confidence": "", "generated_at": "",
         "owner": None,
     },
-    "SynthesisRun": {
-        "dreamer": "", "affect": "", "symbol": "", "owner": None,
-        "lens": None, "confidence": None,
-    },
 }
 
 # dep_filters {} na classe → None no port (delta falsy pinado, ver docstring).
-EMPTY_DEP_FILTER_KINDS = {
-    "ArchiveProposal", "Changelog", "Forecast", "Insight", "SynthesisRun",
-}
+# StatusReport: the class declared {"insight": "sdlc-insight"}; that dep
+# target was deleted in censo-12-kinds, so the descriptor declares none.
+EMPTY_DEP_FILTER_KINDS = {"Changelog", "StatusReport"}
 
 
 def _golden(kind: str) -> dict:
@@ -193,12 +182,6 @@ def test_storage_matches_golden(kernel, kind):
         assert sd.body_as.value == g["body_as"]
 
 
-def test_insight_body_field_is_description(kernel):
-    """InsightKind usava body_field='description' (o INSIGHT.md é a
-    descrição humana, não uma instruction) — preservado no descriptor."""
-    assert _port(kernel, "Insight").storage.body_field == "description"
-
-
 # --- schema (deep) ----------------------------------------------------------
 
 @pytest.mark.parametrize("kind", KINDS)
@@ -270,16 +253,12 @@ def test_parse_valid_accepted(kernel, kind):
 
 @pytest.mark.parametrize("kind,missing", [
     ("ADR", "context"),
-    ("ArchiveProposal", "reason"),
     ("Changelog", "title"),
-    ("Forecast", "scenario"),
-    ("Insight", "question"),
     ("Narrative", "body"),
     ("Postmortem", "root_cause"),
     ("RiskRegister", "category"),
     ("SavedView", "layout"),
     ("StatusReport", "verdict"),
-    ("SynthesisRun", "symbol"),
 ])
 def test_parse_invalid_rejected(kernel, kind, missing):
     """O PORT valida contra o schema (classes eram pass-through — upgrade
@@ -298,8 +277,6 @@ def test_parse_invalid_rejected(kernel, kind, missing):
 @pytest.mark.parametrize("kind,fields", [
     ("ADR", ["title", "context", "decision"]),
     ("StatusReport", ["verdict", "question", "heuristic_explanation"]),
-    ("SynthesisRun", ["scenario", "dreamer"]),
-    ("ArchiveProposal", ["reason", "target_kind", "target_name"]),
 ])
 def test_embed_fields_match_legacy_join(kernel, kind, fields):
     """Mesmos campos (e ordem) dos branches legados de source_text_for —
@@ -309,7 +286,7 @@ def test_embed_fields_match_legacy_join(kernel, kind, fields):
 
 
 @pytest.mark.parametrize("kind", [
-    "Changelog", "Forecast", "Insight", "Postmortem", "RiskRegister", "SavedView",
+    "Changelog", "Postmortem", "RiskRegister", "SavedView",
 ])
 def test_non_embeddable_kinds_stay_undeclared(kernel, kind):
     """Esses kinds NÃO eram embeddable antes do F3 — declarar embed aqui
@@ -330,8 +307,7 @@ def test_narrative_stays_legacy_embed(kernel):
 def test_classes_are_gone():
     import dna.extensions.sdlc as mod
     for cls in (
-        "ADRKind", "ArchiveProposalKind", "ChangelogKind", "ForecastKind",
-        "InsightKind", "NarrativeKind", "PostmortemKind", "RiskRegisterKind",
-        "SavedViewKind", "StatusReportKind", "SynthesisRunKind",
+        "ADRKind", "ChangelogKind", "NarrativeKind", "PostmortemKind",
+        "RiskRegisterKind", "SavedViewKind", "StatusReportKind",
     ):
         assert not hasattr(mod, cls), f"{cls} ressurgiu — o descriptor é a fonte"

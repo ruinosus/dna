@@ -31,8 +31,11 @@ v0.14.0 enquanto o repo está na 0.19.2; provavelmente morto, vale fechar.
 DECISÕES TRAVADAS (não re-litigar)
 -------------------------------------------------------------------------------
 1. Engram vive em `github.com/ruinosus/dna/v1`, extensão `helix` — junto de Tool
-   e Copilot. NÃO em `/cognitive/v1`: lá moram PreMortem e PatternInsight, que
-   são artefatos de ANÁLISE; o Engram é SUBSTRATO.
+   e Copilot. NÃO em `/cognitive/v1`, que era o namespace dos artefatos de
+   ANÁLISE (PreMortem, PatternInsight); o Engram é SUBSTRATO. Nota
+   censo-12-kinds (2026-07-20): aqueles dois Kinds foram apagados e
+   `/cognitive/v1` ficou vazio — a decisão continua válida pelo mesmo motivo,
+   agora com o namespace extinto em vez de ocupado.
 2. Rename limpo + migração única, SEM alias de compat. Motivo: zero usuários, e
    o repo não tem precedente de rename (`kind_registry.py:130` diz que aliases
    não podem ser renomeados sem migração de doc — a arquitetura ESPERA migração).

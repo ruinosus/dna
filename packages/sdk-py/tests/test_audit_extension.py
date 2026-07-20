@@ -2,10 +2,11 @@
 
 F1.2 of f-multi-role (2026-05-15). The AuditLogKind class was migrated to a
 descriptor (kinds/audit-log.kind.yaml) in expr batch A (plan
-2026-06-11-descriptor-expressiveness); schema / storage / tenanted / ui /
-summary equivalence with the extinct class is frozen in
-test_expr_batch_a_equivalence.py (incl. the byte-identical manifest diff).
-What survives here is the registration check, the end-to-end write→read
+2026-06-11-descriptor-expressiveness). This docstring claimed schema /
+storage / tenanted / ui / summary equivalence with the extinct class was
+frozen in test_expr_batch_a_equivalence.py — that file has never existed in
+this repository's history, so no such equivalence suite runs. What this file
+actually covers is the registration check, the end-to-end write→read
 round-trip through a real writable source, and the emit_audit helper unit.
 """
 from __future__ import annotations

@@ -77,21 +77,15 @@ ALLOWLIST: dict[str, str] = {
     # search/memory guide and the SDLC guide.
     # -- SDLC dogfooding machinery (record plane, long tail) -----------------
     "kind:AgentSession": _SDLC_MACHINERY,
-    "kind:ArchiveProposal": _SDLC_MACHINERY,
     "kind:AuditLog": _SDLC_MACHINERY,
     "kind:Changelog": _SDLC_MACHINERY,
     "kind:CognitivePolicy": _SDLC_MACHINERY,
-    "kind:Forecast": _SDLC_MACHINERY,
     "kind:Narrative": _SDLC_MACHINERY,
-    "kind:PatternInsight": _SDLC_MACHINERY,
     "kind:Postmortem": _SDLC_MACHINERY,
-    "kind:PreMortem": _SDLC_MACHINERY,
     "kind:Retrospective": _SDLC_MACHINERY,
     "kind:RiskRegister": _SDLC_MACHINERY,
     "kind:Roadmap": _SDLC_MACHINERY,
     "kind:SavedView": _SDLC_MACHINERY,
-    "kind:SynthesisRun": _SDLC_MACHINERY,
-    "kind:SynthesizerState": _SDLC_MACHINERY,
     # No composition-plane entries: the 14 Kinds this guard's first run
     # flagged are covered by the commented catalog
     # (docs/concepts/builtin-kinds.md, s-docs-cli-tour-kinds-prose).
