@@ -134,7 +134,7 @@ def _run_sync_helper(coro_or_value, *, loop: asyncio.AbstractEventLoop | None = 
 # ``version_retention`` to opt in. Authored Kinds keep full history (None).
 VERSION_CHURN_RETENTION = 3
 VERSION_CHURN_KINDS: frozenset[str] = frozenset({
-    "Engram", "Remembrance", "Canvas", "VibeSession", "InsightReport",
+    "Engram", "Canvas", "VibeSession",
 })
 
 
