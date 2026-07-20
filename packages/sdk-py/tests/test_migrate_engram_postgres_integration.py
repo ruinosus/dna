@@ -9,7 +9,7 @@ Postgres to run these; they auto-skip otherwise, same as
 
 Each test gets a FRESH throwaway schema (mirrors
 ``test_layers_integration.py``'s ``_pg_env()``), bootstrapped by the REAL
-``SqlAlchemySource.connect()`` (applies ``PG_MIGRATIONS`` 1..9 for real), so
+``SqlAlchemySource.connect()`` (applies ``PG_MIGRATIONS`` 1..10 for real), so
 the tables/indexes under test are byte-identical to what a production
 Postgres-backed DNA store has — never a hand-rolled subset schema. Rows are
 seeded through the SAME writer paths production traffic uses
@@ -84,7 +84,7 @@ async def _fresh_schema():
 
     sa_url = dsn.replace("postgresql://", "postgresql+asyncpg://", 1)
     src = SqlAlchemySource(sa_url, schema=schema)
-    await src.connect()  # applies PG_MIGRATIONS 1..9 for real
+    await src.connect()  # applies PG_MIGRATIONS 1..10 for real
 
     async def cleanup() -> None:
         await src.close()
@@ -150,30 +150,9 @@ async def test_clean_migration_across_all_tables():
             "# A bundled memory\n", kind=OLD_KIND,
         )
 
-        # edges — not managed by SqlAlchemySource, raw insert (mirrors the
-        # dna-cloud app.py write-hook observer that populates this table)
         import asyncpg
         conn = await asyncpg.connect(dsn)
         try:
-            await conn.execute(
-                f"INSERT INTO {schema}.dna_edges "
-                "(scope, from_kind, from_name, to_kind, to_name, edge_type, tenant) "
-                "VALUES ($1,$2,$3,$4,$5,'spec-ref','')",
-                scope, OLD_KIND, "rem-abc123", "Story", "s-unrelated",
-            )
-            await conn.execute(
-                f"INSERT INTO {schema}.dna_edges "
-                "(scope, from_kind, from_name, to_kind, to_name, edge_type, tenant) "
-                "VALUES ($1,$2,$3,$4,$5,'spec-ref','')",
-                scope, "Story", "s-unrelated", OLD_KIND, "rem-abc123",
-            )
-            # a totally unrelated edge — must survive untouched
-            await conn.execute(
-                f"INSERT INTO {schema}.dna_edges "
-                "(scope, from_kind, from_name, to_kind, to_name, edge_type, tenant) "
-                "VALUES ($1,'Story','s-unrelated','Feature','f-x','spec-ref','')",
-                scope,
-            )
             # snapshot the "before" timestamps to prove the minor updated_at
             # consistency fix: dna_documents/dna_layer_documents get touched,
             # dna_versions' created_at (an immutable historical timestamp)
@@ -201,7 +180,6 @@ async def test_clean_migration_across_all_tables():
         assert report.tables["dna_versions"].candidates == 1
         assert report.tables["dna_layer_documents"].candidates == 1
         assert report.tables["dna_bundle_entries"].candidates == 1
-        assert report.tables["dna_edges"].candidates == 2  # one edge per side
         assert report.tables["dna_search_docs"].skipped_missing_table is True
         # outbox: at least the 3 substantive writes above (save_document x2
         # incl. version insert emits once per save_document call, layer
@@ -270,26 +248,6 @@ async def test_clean_migration_across_all_tables():
                 "WHERE scope=$1 AND name='rem-bundled'", scope,
             )
             assert brow["kind"] == NEW_KIND
-
-            # edges: BOTH directions renamed on the LessonLearned side only
-            erows = await conn.fetch(
-                f"SELECT from_kind, to_kind FROM {schema}.dna_edges "
-                "WHERE scope=$1 AND (from_name='rem-abc123' OR to_name='rem-abc123')",
-                scope,
-            )
-            assert len(erows) == 2
-            for r in erows:
-                assert NEW_KIND in (r["from_kind"], r["to_kind"])
-                assert OLD_KIND not in (r["from_kind"], r["to_kind"])
-
-            # the unrelated edge is completely untouched
-            urow = await conn.fetchrow(
-                f"SELECT from_kind, to_kind FROM {schema}.dna_edges "
-                "WHERE scope=$1 AND from_name='s-unrelated' AND to_name='f-x'",
-                scope,
-            )
-            assert urow["from_kind"] == "Story"
-            assert urow["to_kind"] == "Feature"
 
             # outbox: NEVER rewritten — the row(s) still say LessonLearned
             orows = await conn.fetch(
@@ -377,104 +335,6 @@ async def test_collision_preflight_aborts_before_any_write():
                 "WHERE scope=$1 AND name='rem-clean'", scope,
             )
             assert brow["kind"] == OLD_KIND
-        finally:
-            await conn.close()
-    finally:
-        await cleanup()
-
-
-async def test_edges_collision_on_either_side_is_detected():
-    """A pre-existing edge that already has 'Engram' in the exact slot a
-    candidate edge would rewrite to must be caught too — PK collision is
-    independent per from_kind/to_kind side."""
-    dsn, schema, src, cleanup = await _fresh_schema()
-    try:
-        scope = "test-scope"
-        import asyncpg
-        conn = await asyncpg.connect(dsn)
-        try:
-            # candidate: from_kind=LessonLearned
-            await conn.execute(
-                f"INSERT INTO {schema}.dna_edges "
-                "(scope, from_kind, from_name, to_kind, to_name, edge_type, tenant) "
-                "VALUES ($1,$2,'rem-x','Story','s-y','spec-ref','')",
-                scope, OLD_KIND,
-            )
-            # a pre-existing row that already occupies the post-rewrite key
-            await conn.execute(
-                f"INSERT INTO {schema}.dna_edges "
-                "(scope, from_kind, from_name, to_kind, to_name, edge_type, tenant) "
-                "VALUES ($1,$2,'rem-x','Story','s-y','spec-ref','')",
-                scope, NEW_KIND,
-            )
-        finally:
-            await conn.close()
-
-        report = await pgmig.migrate_postgres(dsn, schema=schema, apply=True)
-        assert report.has_collisions()
-        assert report.tables["dna_edges"].collisions
-        assert report.applied is False
-    finally:
-        await cleanup()
-
-
-async def test_edges_candidate_vs_candidate_collision_is_detected():
-    """Regression for a review finding: TWO independently-valid, currently
-    DISTINCT rows can rename INTO each other because from_kind/to_kind are
-    independent columns — neither row's CURRENT key equals the other's
-    target, so a pre-flight that only checks candidates against stationary
-    (non-renaming) rows misses this entirely.
-
-        Row A: (from_kind=LessonLearned, from_name=X, to_kind=Engram,   to_name=Y)
-        Row B: (from_kind=Engram,        from_name=X, to_kind=LessonLearned, to_name=Y)
-
-    Both rename to (Engram, X, Engram, Y). Before the fix, the dry run
-    reported a clean bill of health (has_collisions=False, 2 candidates, 0
-    collisions) and --apply raised a live asyncpg.UniqueViolationError on
-    dna_edges_pkey — the exact failure the pre-flight exists to prevent."""
-    dsn, schema, src, cleanup = await _fresh_schema()
-    try:
-        scope = "test-scope"
-        import asyncpg
-        conn = await asyncpg.connect(dsn)
-        try:
-            await conn.execute(
-                f"INSERT INTO {schema}.dna_edges "
-                "(scope, from_kind, from_name, to_kind, to_name, edge_type, tenant) "
-                "VALUES ($1,$2,'X','Engram','Y','spec-ref','')",
-                scope, OLD_KIND,
-            )
-            await conn.execute(
-                f"INSERT INTO {schema}.dna_edges "
-                "(scope, from_kind, from_name, to_kind, to_name, edge_type, tenant) "
-                "VALUES ($1,'Engram','X',$2,'Y','spec-ref','')",
-                scope, OLD_KIND,
-            )
-        finally:
-            await conn.close()
-
-        dry_run = await pgmig.migrate_postgres(dsn, schema=schema, apply=False)
-        assert dry_run.tables["dna_edges"].candidates == 2
-        assert dry_run.has_collisions(), (
-            "candidate-vs-candidate convergence must be caught by the dry run — "
-            "this is exactly the case a stationary-rows-only check misses"
-        )
-        assert len(dry_run.tables["dna_edges"].collisions) == 2
-
-        applied = await pgmig.migrate_postgres(dsn, schema=schema, apply=True)
-        assert applied.has_collisions()
-        assert applied.applied is False, "must refuse to write, not just report"
-
-        # Nothing written — both rows still carry their original kinds.
-        conn = await asyncpg.connect(dsn)
-        try:
-            rows = await conn.fetch(
-                f"SELECT from_kind, to_kind FROM {schema}.dna_edges "
-                "WHERE scope=$1 AND from_name='X' AND to_name='Y'", scope,
-            )
-            assert len(rows) == 2
-            kinds = {(r["from_kind"], r["to_kind"]) for r in rows}
-            assert kinds == {(OLD_KIND, "Engram"), ("Engram", OLD_KIND)}
         finally:
             await conn.close()
     finally:

@@ -23,7 +23,7 @@ spec:
     \ dois indices e o trecho do script."
   type: bug
   severity: medium
-  status: open
+  status: resolved
   owner: claude-code
   timeline:
   - at: '2026-07-20T11:14:14+00:00'
@@ -31,3 +31,35 @@ spec:
     type: status_change
     source: cli
     to: open
+  - at: '2026-07-20T13:39:52+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: open
+    to: resolved
+    summary: "Removida (opcao 'remover' das duas que a issue propunha). Censo confirmou\
+      \ zero produtor: o writer descrito no DDL da migration 7 ('observer in app.py\
+      \ write-hook') nunca existiu no repo, entao a tabela esta provadamente vazia\
+      \ em todo banco e os dois indices nunca serviram consulta. Cortado: migration\
+      \ 10 nova com DROP TABLE IF EXISTS \u2014 a migration 7 fica INTACTA, porque\
+      \ o runner e forward-only (adapters/_migrations.py itera sorted(migrations)\
+      \ e pula versoes ja aplicadas); _preflight_edges + _apply_edges + call sites\
+      \ em scripts/migrate_engram_postgres.py; os dois testes edges-only e os trechos\
+      \ de edges no teste de migracao limpa; as 4 mencoes em docs/guides/engram-postgres-cutover.md;\
+      \ a mencao em migrate_lesson_learned_to_engram.py; a nota do HANDOFF.txt. Se\
+      \ o grafo for materializado no futuro, o caminho certo e derivar de referencias\
+      \ DECLARADAS nos descritores (issue de refs tipadas), nao o parse de slug por\
+      \ regex do comentario original."
+  closed_at: '2026-07-20T13:39:52+00:00'
+  resolution: "Removida (opcao 'remover' das duas que a issue propunha). Censo confirmou\
+    \ zero produtor: o writer descrito no DDL da migration 7 ('observer in app.py\
+    \ write-hook') nunca existiu no repo, entao a tabela esta provadamente vazia em\
+    \ todo banco e os dois indices nunca serviram consulta. Cortado: migration 10\
+    \ nova com DROP TABLE IF EXISTS \u2014 a migration 7 fica INTACTA, porque o runner\
+    \ e forward-only (adapters/_migrations.py itera sorted(migrations) e pula versoes\
+    \ ja aplicadas); _preflight_edges + _apply_edges + call sites em scripts/migrate_engram_postgres.py;\
+    \ os dois testes edges-only e os trechos de edges no teste de migracao limpa;\
+    \ as 4 mencoes em docs/guides/engram-postgres-cutover.md; a mencao em migrate_lesson_learned_to_engram.py;\
+    \ a nota do HANDOFF.txt. Se o grafo for materializado no futuro, o caminho certo\
+    \ e derivar de referencias DECLARADAS nos descritores (issue de refs tipadas),\
+    \ nao o parse de slug por regex do comentario original."

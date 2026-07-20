@@ -40,10 +40,6 @@ trust a summary):
     ``LessonLearned``/``Engram`` are flat-YAML, non-bundle docs — see the FS
     script's own docstring — so this table is expected to have zero
     matching rows, but the code does not assume that.)
-  * ``dna_edges``            — PK ``(scope, from_kind, from_name, to_kind,
-    to_name, edge_type, tenant)``. BOTH ``from_kind`` AND ``to_kind`` are in
-    the PK, independently — a citation-graph edge to/from an
-    ``Engram``/``LessonLearned`` doc has to be checked on either side.
   * ``dna_search_docs``      — lives in a SEPARATE optional store
     (``dna/adapters/search/pgvector_migrations.py``, extra
     ``search-pgvector``): UNIQUE ``(scope, kind, name, tenant)``. This table
@@ -79,9 +75,9 @@ Single transaction: every table's ``UPDATE`` runs inside ONE
 ``asyncpg`` transaction (``async with conn.transaction():``) — a
 half-migrated store is worse than an unmigrated one, because ``kind_for()``
 (``dna/kernel/instance.py:693``) matches on the bare kind name ignoring
-``apiVersion``, so a doc whose ``dna_documents`` row got renamed but whose
-``dna_edges`` rows didn't would resolve *confusingly* (found by kind,
-inconsistent identity) rather than cleanly (simply invisible).
+``apiVersion``, so a doc renamed in one table but not another would resolve
+*confusingly* (found by kind, inconsistent identity) rather than cleanly
+(simply invisible).
 
 This module is SDK-only tooling. It was NOT run against any real database
 (local or dna-cloud) as part of authoring this story — it is exercised only
@@ -371,99 +367,6 @@ async def _preflight_kind_only_table(
     return report
 
 
-async def _preflight_edges(conn: Any, schema: str) -> TableReport:
-    """``dna_edges``: BOTH ``from_kind`` and ``to_kind`` sit in the PK
-    independently. A row is a candidate if EITHER side is ``LessonLearned``;
-    the post-rewrite key substitutes 'Engram' independently per side. The
-    fetch filter (``from_kind`` or ``to_kind`` IN (OLD, NEW)) is provably
-    sufficient to catch every possible collision target: a collision target
-    must, at the position a candidate changes, already read exactly
-    'Engram' — and any such row is captured by the same filter.
-
-    TWO independent collision shapes, both checked (regression:
-    ``test_edges_candidate_vs_candidate_collision_is_detected``, filed after
-    a review caught the first one missing):
-
-      1. candidate vs. STATIONARY row — a candidate's post-rename key already
-         belongs to some row that is NOT itself being renamed (a fully
-         already-``Engram`` edge, or any other untouched row that happens to
-         already sit at the target key).
-      2. candidate vs. CANDIDATE — because ``from_kind``/``to_kind`` are two
-         INDEPENDENT columns, two currently-distinct, both-valid rows can
-         rename to the SAME target key from opposite directions, e.g.
-         ``(from=LessonLearned/X, to=Engram/Y)`` and
-         ``(from=Engram/X, to=LessonLearned/Y)`` both become
-         ``(Engram/X, Engram/Y)``. Neither row's CURRENT key equals the
-         other's target, so a check that only looks at "stationary" rows
-         (shape 1) misses this entirely — it only surfaces at ``--apply``
-         time as a live ``UniqueViolationError``, which is exactly the
-         failure mode the pre-flight exists to prevent. Detected here by
-         grouping candidates by their post-rename key and flagging any key
-         claimed by more than one.
-
-    (Every OTHER table in this module has exactly one ``kind``-bearing
-    column in its collision key, so two distinct candidate rows can never
-    converge on each other post-rename: their pre-rename PK already forces
-    their non-kind key columns to be pairwise distinct while both currently
-    equal ``OLD_KIND`` — the target-key collision space is one-dimensional,
-    not two. ``dna_edges`` is the only table where this shape applies,
-    because it is the only table with two independent kind columns in one
-    key. Confirmed by re-reading every DDL statement in
-    ``dna/adapters/sqlalchemy_/migrations.py`` and
-    ``dna/adapters/search/pgvector_migrations.py`` for this fix, not
-    assumed.)"""
-    table = "dna_edges"
-    report = TableReport(table=table)
-    if not await _table_exists(conn, schema, table):
-        report.skipped_missing_table = True
-        return report
-
-    rows = await conn.fetch(
-        f"SELECT scope, from_kind, from_name, to_kind, to_name, edge_type, tenant "
-        f"FROM {schema}.{table} "
-        "WHERE from_kind = $1 OR from_kind = $2 OR to_kind = $1 OR to_kind = $2",
-        OLD_KIND, NEW_KIND,
-    )
-    stationary_keys: set[tuple] = set()
-    candidates: list[tuple] = []          # old (current) keys
-    new_key_by_candidate: dict[tuple, tuple] = {}
-    candidates_by_new_key: dict[tuple, list[tuple]] = {}
-    for r in rows:
-        key = (r["scope"], r["from_kind"], r["from_name"], r["to_kind"], r["to_name"],
-               r["edge_type"], r["tenant"])
-        is_candidate = r["from_kind"] == OLD_KIND or r["to_kind"] == OLD_KIND
-        if is_candidate:
-            report.candidates += 1
-            new_from = NEW_KIND if r["from_kind"] == OLD_KIND else r["from_kind"]
-            new_to = NEW_KIND if r["to_kind"] == OLD_KIND else r["to_kind"]
-            new_key = (r["scope"], new_from, r["from_name"], new_to, r["to_name"],
-                       r["edge_type"], r["tenant"])
-            candidates.append(key)
-            new_key_by_candidate[key] = new_key
-            candidates_by_new_key.setdefault(new_key, []).append(key)
-        else:
-            report.already_migrated += 1
-            # Only a NON-candidate row's key is "stationary" (unaffected by
-            # this migration) — a candidate's OWN current key is not a valid
-            # collision target, because that row won't still be sitting
-            # there after its own rename.
-            stationary_keys.add(key)
-
-    collisions: list[tuple] = []
-    for key in candidates:
-        new_key = new_key_by_candidate[key]
-        # Shape 1: lands on a row that isn't moving.
-        if new_key in stationary_keys:
-            collisions.append(key)
-            continue
-        # Shape 2: two-or-more candidates converge on the same target key.
-        if len(candidates_by_new_key[new_key]) > 1:
-            collisions.append(key)
-
-    report.collisions = collisions
-    return report
-
-
 # ---------------------------------------------------------------------------
 # Apply (write) — only called after a collision-free pre-flight, inside the
 # caller's single transaction.
@@ -487,8 +390,7 @@ async def _apply_content_table(
     identity of an existing one). ``dna_documents``/``dna_layer_documents``
     both have a real ``updated_at TEXT`` column (same ISO-8601 convention
     ``SqlAlchemySource`` writes); a consumer that treats it as a staleness
-    signal must see this rewrite, so it is bumped here too — matching
-    ``_apply_edges``, which already sets its own ``updated_at``."""
+    signal must see this rewrite, so it is bumped here too."""
     set_clause = "kind = $1, content = jsonb_set(jsonb_set(content::jsonb, '{kind}', to_jsonb($1::text)), '{apiVersion}', to_jsonb($2::text))::text"
     params: list[Any] = [NEW_KIND, NEW_API_VERSION, OLD_KIND, OLD_API_VERSION]
     if touch_updated_at:
@@ -508,19 +410,6 @@ async def _apply_kind_only_table(conn: Any, schema: str, table: str) -> None:
     await conn.execute(
         f"UPDATE {schema}.{table} SET kind = $1 WHERE kind = $2",
         NEW_KIND, OLD_KIND,
-    )
-
-
-async def _apply_edges(conn: Any, schema: str) -> None:
-    await conn.execute(
-        f"""
-        UPDATE {schema}.dna_edges
-        SET from_kind = CASE WHEN from_kind = $1 THEN $2 ELSE from_kind END,
-            to_kind   = CASE WHEN to_kind   = $1 THEN $2 ELSE to_kind   END,
-            updated_at = now()
-        WHERE from_kind = $1 OR to_kind = $1
-        """,
-        OLD_KIND, NEW_KIND,
     )
 
 
@@ -563,7 +452,6 @@ async def migrate_postgres(
         report.tables["dna_search_docs"] = await _preflight_kind_only_table(
             conn, schema, "dna_search_docs", ("scope", "name", "tenant"),
         )
-        report.tables["dna_edges"] = await _preflight_edges(conn, schema)
 
         if await _table_exists(conn, schema, "dna_outbox"):
             report.outbox_candidate_count = await conn.fetchval(
@@ -578,9 +466,7 @@ async def migrate_postgres(
                 for table, tr in report.tables.items():
                     if tr.skipped_missing_table or tr.candidates == 0:
                         continue
-                    if table == "dna_edges":
-                        await _apply_edges(conn, schema)
-                    elif table in ("dna_documents", "dna_layer_documents"):
+                    if table in ("dna_documents", "dna_layer_documents"):
                         await _apply_content_table(conn, schema, table)
                     elif table == "dna_versions":
                         await _apply_content_table(conn, schema, table, touch_updated_at=False)
