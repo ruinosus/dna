@@ -234,6 +234,18 @@ class DnaClient:
 
     # -- workspaces (read) ---------------------------------------------------
 
+    def list_workspaces(
+        self, *, actor_oid: str | None = None, actor_email: str | None = None,
+    ) -> JsonObject:
+        """The workspaces the caller holds an ACTIVE membership in.
+
+        Enumerates by membership, never by tenant provenance: a pending invite
+        does not appear, and an unknown identity gets an empty list rather than
+        somebody else's. This is the data source a workspace switcher builds on."""
+        return self._get(
+            "/v1/workspaces", actor_oid=actor_oid, actor_email=actor_email,
+        )
+
     def list_workspace_members(
         self, workspace_id: str, *, actor_oid: str | None = None,
         actor_email: str | None = None,

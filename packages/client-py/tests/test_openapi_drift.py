@@ -82,6 +82,7 @@ def test_client_covers_every_get_read_endpoint():
         "/v1/repos": "list_repos",
         "/v1/board": "get_board",
         "/v1/board/item": "get_board_item",
+        "/v1/workspaces": "list_workspaces",
         "/v1/workspaces/{workspace_id}/members": "list_workspace_members",
     }
     missing_from_map = get_paths - covered.keys()
