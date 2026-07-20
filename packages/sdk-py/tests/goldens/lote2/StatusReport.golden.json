@@ -79,7 +79,7 @@
     "type": "string"
    },
    "insight": {
-    "description": "Free-text name of the question this report answers. Was a slug reference to an Insight Kind; that Kind was deleted in censo-12-kinds (2026-07-20) because the oracle runner that resolved it never shipped in this distribution. The field stays (stored docs carry it) but resolves against nothing.",
+    "description": "Free-text marker for what produced this report. Was a slug reference to an Insight Kind; that Kind was deleted in censo-12-kinds (2026-07-20) because the oracle runner that resolved it never shipped. The only live producer, `dna sdlc digest --save`, already wrote the synthetic marker 'sdlc-digest' here rather than an Insight slug — so the field stays, as the free-text tag it actually is.",
     "type": "string"
    },
    "metrics": {

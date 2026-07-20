@@ -1091,7 +1091,7 @@ A Spike is a time-boxed technical investigation. ONE question + finite time budg
 | `generated_at` | string |  |  |
 | `generated_by` | string |  | Model + actor (e.g. 'claude-sonnet-4-6'). |
 | `heuristic_explanation` | string |  | Plain-text walkthrough of HOW the heuristic computed the metrics and decided the confidence. Transparency: a reader can audit the math. |
-| `insight` | string | yes | Free-text name of the question this report answers. Was a slug reference to an Insight Kind; that Kind was deleted in censo-12-kinds (2026-07-20) because the oracle runner that resolved it never shipped in this distribution. The field stays (stored docs carry it) but resolves against nothing. |
+| `insight` | string | yes | Free-text marker for what produced this report. Was a slug reference to an Insight Kind; that Kind was deleted in censo-12-kinds (2026-07-20) because the oracle runner that resolved it never shipped. The only live producer, `dna sdlc digest --save`, already wrote the synthetic marker 'sdlc-digest' here rather than an Insight slug — so the field stays, as the free-text tag it actually is. |
 | `metrics` | object |  | Deterministic numbers the heuristic computed (cycle counts, frequencies, averages). Free-form object — schema varies per oracle. |
 | `owner` | string |  | Slug reference to a Agent. When set, this StatusReport is PRIVATE to that agent. When null, it is GENERAL. Phase: cognitive-reflection. |
 | `question` | string |  | The question this report answers, written out. Was an echo of an Insight's question at run time; no runner ships, so the author writes it. |

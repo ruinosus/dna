@@ -1727,8 +1727,11 @@ JOURNEY_METHODOLOGIES = (
 # DELETED. It was the oracle DEFINITION — a perpetual question bound to a
 # target UA — and the runner that was to iterate active Insights and
 # dispatch them never shipped in this distribution, so nothing ever
-# produced the StatusReports it pointed at. StatusReport itself STAYS: it
-# is a document a person (or an agent over MCP) can write directly.
+# produced the StatusReports it pointed at. StatusReport itself STAYS and is
+# genuinely LIVE: `dna sdlc digest --save` writes one (sdlc_cmd.py) and reads
+# them back. Note that live path already wrote spec.insight='sdlc-digest', a
+# synthetic marker — never an Insight slug — so the dep_filter on sdlc-insight
+# was dead for the only real producer even before the deletion.
 # NOTE: this is unrelated to `IntelInsight` (alias intel-insight, the
 # intel extension), which is live and stays.
 
