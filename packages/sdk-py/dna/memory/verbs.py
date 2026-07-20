@@ -32,6 +32,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from dna.memory.decay import (
+    affect_factor,
     currently_valid,
     days_since,
     decay_adjusted_score,
@@ -41,7 +42,6 @@ from dna.memory.ecphory import EngramRef
 from dna.memory.encoding_context import stamp_encoding_context_if_absent
 from dna.memory.memory_type import classify_memory_type
 from dna.memory.personal import is_personal_tenant
-from dna.memory.retrieval import affect_factor
 from dna.memory.semantic import (
     engram_text,
     fuse_semantic_recall,

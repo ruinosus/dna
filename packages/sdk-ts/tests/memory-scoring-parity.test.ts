@@ -20,7 +20,6 @@ import {
 } from "../src/memory/decay.js";
 import { classifyMemoryType } from "../src/memory/memoryType.js";
 import { timeOfDay } from "../src/memory/encodingContext.js";
-import { rankMemories, type Memory } from "../src/memory/retrieval.js";
 import { scoreEngram, type EngramRef } from "../src/memory/ecphory.js";
 import {
   cosineSimilarity,
@@ -74,16 +73,6 @@ describe("memory scoring Py↔TS parity", () => {
     }
   });
 
-  test("rankMemories", () => {
-    for (const c of FX.rank_memories) {
-      const mems: Memory[] = c.memories;
-      const ranked = rankMemories(mems, c.query, { now: iso(c.now) });
-      expect(ranked.map((r) => r.name)).toEqual(c.expected_order);
-      for (const r of ranked) {
-        expect(r.score).toBeCloseTo(c.expected_scores[r.name], 9);
-      }
-    }
-  });
 
   test("scoreEngram", () => {
     for (const c of FX.score_engram) {
