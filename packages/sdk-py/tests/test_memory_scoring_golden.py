@@ -1,15 +1,21 @@
-"""Py side of the Py↔TS memory-scoring parity (s-memory-verbs).
+"""Memory scoring core — golden lock on ten pure surfaces (s-memory-verbs).
 
-Runs every case in ``packages/sdk-ts/tests/fixtures/memory-scoring-parity.json``
-against the Python pure-scoring core. The TS twin
-(``packages/sdk-ts/tests/memory-scoring-parity.test.ts``) runs the SAME fixture
-against its port. A failure on either side is a parity divergence with an
-immediate reproduction. Regenerate the fixture with
-``scripts/gen_memory_parity.py`` (Python is the source of truth for the numbers).
+Runs every case in ``tests/goldens/memory-scoring.json`` against the Python
+pure-scoring core. This is the numeric heart of recall — the values are
+load-bearing for what an agent remembers and in what order:
 
-Monorepo limitation (documented on purpose): the fixture lives in sdk-ts and is
-reached via a ``Path(__file__)``-relative hop; a standalone sdk-py checkout won't
-have it, so the module SKIPS (explicit reason) rather than failing.
+  - ``ebbinghaus_retention`` — the forgetting curve
+  - ``currently_valid`` — bitemporal validity
+  - ``stability_from_spec`` / ``confidence_score_numeric``
+  - ``classify_memory_type`` / ``time_of_day``
+  - ``score_engram`` — ecphory scoring + matched dimensions
+  - ``cosine_similarity`` / ``engram_text`` / ``fuse_semantic_recall``
+
+History: this began as a Py↔TS parity harness and the fixture lived in
+``packages/sdk-ts``. The TypeScript SDK was frozen (tag ``sdk-ts-final``), but
+the suite never depended on TS for its value: every assertion above is a lock
+on PYTHON behavior that TS merely rode along with. The fixture moved into this
+package and the suite stayed.
 """
 from __future__ import annotations
 
@@ -29,57 +35,49 @@ from dna.memory.ecphory import EngramRef, score_engram
 from dna.memory.encoding_context import time_of_day
 from dna.memory.memory_type import classify_memory_type
 
-FIXTURE = (
-    Path(__file__).resolve().parents[2]
-    / "sdk-ts" / "tests" / "fixtures" / "memory-scoring-parity.json"
-)
+FIXTURE = Path(__file__).parent / "goldens" / "memory-scoring.json"
 
-pytestmark = pytest.mark.skipif(
-    not FIXTURE.exists(),
-    reason=f"shared parity fixture lives in packages/sdk-ts (monorepo required; {FIXTURE})",
-)
-
-_FX = json.loads(FIXTURE.read_text(encoding="utf-8")) if FIXTURE.exists() else {}
+_FX = json.loads(FIXTURE.read_text(encoding="utf-8"))
 
 
 def _dt(iso: str) -> datetime:
     return datetime.fromisoformat(iso)
 
 
-def test_ebbinghaus_retention_parity():
+def test_ebbinghaus_retention_golden():
     for c in _FX["ebbinghaus_retention"]:
         got = ebbinghaus_retention(c["stability_days"], c["days_since_recall"])
         assert got == pytest.approx(c["expected"], abs=1e-12), c
 
 
-def test_currently_valid_parity():
+def test_currently_valid_golden():
     for c in _FX["currently_valid"]:
         got = currently_valid(c["valid_to"], now=_dt(c["now"]))
         assert got == c["expected"], c
 
 
-def test_stability_from_spec_parity():
+def test_stability_from_spec_golden():
     for c in _FX["stability_from_spec"]:
         assert stability_from_spec(c["spec"]) == pytest.approx(c["expected"], abs=1e-12), c
 
 
-def test_confidence_score_numeric_parity():
+def test_confidence_score_numeric_golden():
     for c in _FX["confidence_score_numeric"]:
         assert confidence_score_numeric(c["spec"]) == pytest.approx(c["expected"], abs=1e-12), c
 
 
-def test_classify_memory_type_parity():
+def test_classify_memory_type_golden():
     for c in _FX["classify_memory_type"]:
         assert classify_memory_type(c["spec"]) == c["expected"], c
 
 
-def test_time_of_day_parity():
+def test_time_of_day_golden():
     for c in _FX["time_of_day"]:
         assert time_of_day(datetime(2026, 1, 1, c["hour"])) == c["expected"], c
 
 
 
-def test_score_engram_parity():
+def test_score_engram_golden():
     for c in _FX["score_engram"]:
         s = score_engram(EngramRef(c["engram"]["name"], c["engram"]["spec"]), c["cue_ctx"])
         assert s.score == pytest.approx(c["expected_score"], abs=1e-9), c
@@ -89,7 +87,7 @@ def test_score_engram_parity():
 # ── semantic recall (s-memory-semantic-recall) ──────────────────────────────
 
 
-def test_cosine_similarity_fake_parity():
+def test_cosine_similarity_fake_golden():
     from dna.kernel.embedding import fake_embed_one
     from dna.memory.semantic import cosine_similarity
 
@@ -98,14 +96,14 @@ def test_cosine_similarity_fake_parity():
         assert got == pytest.approx(c["expected"], abs=1e-12), c
 
 
-def test_engram_text_parity():
+def test_engram_text_golden():
     from dna.memory.semantic import engram_text
 
     for c in _FX["engram_text"]:
         assert engram_text(c["spec"]) == c["expected"], c
 
 
-def test_semantic_recall_fusion_parity():
+def test_semantic_recall_fusion_golden():
     from dna.kernel.embedding import fake_embed_one
     from dna.memory.semantic import (
         engram_text,

@@ -1,21 +1,23 @@
-"""s-dna-port-surface-parity — Py↔TS port-surface parity (Python side).
+"""s-dna-port-surface-parity — the port-surface golden lock.
 
-The shared fixture ``tests/parity-fixtures/port-surface-parity.json`` (repo
-root) lists, per port, the expected members on each side (snake_case ↔
-camelCase pairs) plus every INTENTIONAL asymmetry with a ``justification``.
-This suite locks the PYTHON side by introspecting the REAL
-``typing.Protocol`` classes (and dataclass/module surfaces) and comparing
-against the fixture's ``py`` member sets — so:
+The ports ARE the extension contract: every source adapter, cache, resolver,
+reader/writer, Kind, tool and embedding provider — in-tree or third-party — is
+written against these ``typing.Protocol`` classes. Adding or removing a member
+is therefore a public API event, and this suite makes it one.
+
+The golden ``tests/golden-fixtures/port-surface.json`` (repo root) lists the
+expected members per port. This suite introspects the REAL Protocol classes
+(and dataclass/module surfaces) and compares — so:
 
   - a member added to a Protocol without a fixture entry → red
     ("undeclared drift");
   - a member removed from a Protocol while still listed → red
-    ("fixture lies");
-  - a one-sided member (``py`` or ``ts`` null) without a non-empty
-    ``justification`` → red (asymmetries are documented, never silent).
+    ("fixture lies").
 
-TS twin (checks the fixture's ``ts`` sets against the keyof-bound
-PORT_SURFACE manifest): ``packages/sdk-ts/tests/port-surface-parity.test.ts``.
+History: this was a Py↔TS parity harness, each member carrying a
+{py, ts} pair. The TypeScript SDK was frozen (tag ``sdk-ts-final``) and the
+``ts`` half was dropped; the Python surface lock — the part that catches real
+regressions — stays.
 """
 from __future__ import annotations
 
@@ -33,7 +35,7 @@ from dna.kernel import protocols as P
 
 _FIXTURE = (
     pathlib.Path(__file__).resolve().parents[3]
-    / "tests" / "parity-fixtures" / "port-surface-parity.json"
+    / "tests" / "golden-fixtures" / "port-surface.json"
 )
 
 
@@ -96,12 +98,12 @@ _INTROSPECTORS: dict[str, Callable[[], set[str]]] = {
 
 
 def _load_fixture() -> dict[str, Any]:
-    assert _FIXTURE.exists(), f"parity fixture missing: {_FIXTURE}"
+    assert _FIXTURE.exists(), f"golden fixture missing: {_FIXTURE}"
     return json.loads(_FIXTURE.read_text())
 
 
 def _py_members(port: dict[str, Any]) -> set[str]:
-    return {m["py"] for m in port["members"] if m["py"] is not None}
+    return {m["py"] for m in port["members"]}
 
 
 def diff_surface(actual: set[str], fixture_py: set[str]) -> dict[str, list[str]]:
@@ -133,28 +135,13 @@ def test_python_surface_matches_fixture(port_name: str):
     expected = _py_members(fixture["ports"][port_name])
     diff = diff_surface(actual, expected)
     assert not diff["undeclared"], (
-        f"Py {port_name} member(s) not tracked in port-surface-parity.json — "
-        f"add the pair (or a justified py-only entry): {diff['undeclared']}"
+        f"Py {port_name} member(s) not tracked in port-surface.json — "
+        f"declare them (a port member is public API): {diff['undeclared']}"
     )
     assert not diff["missing"], (
         f"fixture lists Py {port_name} member(s) the Protocol no longer has — "
-        f"port the removal to the fixture (and TS, or justify): {diff['missing']}"
-    )
-
-
-def test_every_one_sided_member_is_justified():
-    fixture = _load_fixture()
-    offenders: list[str] = []
-    for name, port in fixture["ports"].items():
-        for m in port["members"]:
-            if m["py"] is None and m["ts"] is None:
-                offenders.append(f"{name}.<null-null>")
-                continue
-            one_sided = (m["py"] is None) != (m["ts"] is None)
-            if one_sided and not (m.get("justification") or "").strip():
-                offenders.append(f"{name}.{m['py'] or m['ts']}")
-    assert not offenders, (
-        f"one-sided fixture member(s) without justification: {offenders}"
+        f"a removal is a breaking change; land it in the fixture too: "
+        f"{diff['missing']}"
     )
 
 
@@ -169,19 +156,8 @@ def test_excluded_surfaces_are_justified_not_silent():
         )
 
 
-def test_extension_host_tool_note_is_not_py_only_anymore():
-    """PR #424 documented ``tool`` as Py-only; s-dna-port-surface-parity
-    ported the tool registry to TS. Pin the docstring so the note can't
-    quietly regress."""
-    doc = P.ExtensionHost.__doc__ or ""
-    assert "Python-only" not in doc, (
-        "ExtensionHost docstring still claims tool() is Python-only — the "
-        "TS kernel has a tool registry now (kernel.tool/getTools)."
-    )
-
-
 # ── test-of-the-test (gate 5): removing a member from the fixture MUST
-# turn the comparison red — parity can't silently erode.
+# turn the comparison red — the lock can't silently erode.
 
 def test_meta_dropping_a_fixture_member_is_detected():
     fixture = _load_fixture()

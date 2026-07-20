@@ -1,7 +1,7 @@
 """s-blessed-query-surface — blessed query surface lock (Python side).
 
-The shared fixture ``tests/parity-fixtures/port-surface-parity.json``
-(repo root, section ``blessed_query_surface``) declares:
+The golden ``tests/golden-fixtures/port-surface.json`` (repo root, section
+``blessed_query_surface``) declares:
 
   - ``blessed``: the ONE documented read/query surface (what docs/,
     README and examples teach). Members must exist and calling the
@@ -13,7 +13,6 @@ The shared fixture ``tests/parity-fixtures/port-surface-parity.json``
     editing the fixture turns this suite red, so every public-surface
     change is a conscious decision.
 
-TS twin: ``packages/sdk-ts/tests/blessed-query-surface.test.ts``.
 """
 from __future__ import annotations
 
@@ -28,7 +27,7 @@ from dna.kernel.instance import ManifestInstance
 
 _FIXTURE = (
     pathlib.Path(__file__).resolve().parents[3]
-    / "tests" / "parity-fixtures" / "port-surface-parity.json"
+    / "tests" / "golden-fixtures" / "port-surface.json"
 )
 
 
@@ -53,9 +52,6 @@ def _mi() -> ManifestInstance:
 def test_blessed_mi_members_exist(surface):
     mi = _mi()
     for m in surface["ManifestInstance"]["blessed"]:
-        if m["py"] is None:
-            assert m.get("justification"), f"one-sided member {m} needs justification"
-            continue
         assert hasattr(mi, m["py"]), f"blessed MI member missing: {m['py']}"
 
 
@@ -70,22 +66,7 @@ def test_deprecated_mi_members_exist(surface):
 def test_blessed_kernel_members_exist(surface):
     k = Kernel()
     for m in surface["Kernel"]["blessed"]:
-        if m["py"] is None:
-            assert m.get("justification"), f"one-sided member {m} needs justification"
-            continue
         assert hasattr(k, m["py"]), f"blessed Kernel member missing: {m['py']}"
-
-
-def test_one_sided_members_carry_justification(surface):
-    for cls in ("ManifestInstance", "Kernel"):
-        for group in ("blessed", "deprecated"):
-            for m in surface[cls].get(group, []):
-                if m.get("py") is None or m.get("ts") is None:
-                    assert m.get("justification"), (
-                        f"{cls}.{group} one-sided member {m} MUST carry a "
-                        f"non-empty justification — asymmetries are "
-                        f"documented, never silent"
-                    )
 
 
 # ---------------------------------------------------------------------------
@@ -94,7 +75,7 @@ def test_one_sided_members_carry_justification(surface):
 
 
 def test_mi_public_surface_is_exactly_the_fixture(surface):
-    expected = set(surface["ManifestInstance"]["public_surface"]["py"])
+    expected = set(surface["ManifestInstance"]["public_surface"])
     actual = {n for n in dir(_mi()) if not n.startswith("_")}
     added = actual - expected
     removed = expected - actual
@@ -102,7 +83,7 @@ def test_mi_public_surface_is_exactly_the_fixture(surface):
         f"ManifestInstance public surface drifted from the fixture — "
         f"added={sorted(added)} removed={sorted(removed)}. If intentional, "
         f"update blessed_query_surface.ManifestInstance.public_surface in "
-        f"{_FIXTURE} (both py AND ts sides — this is a parity decision)."
+        f"{_FIXTURE}."
     )
 
 

@@ -1,14 +1,15 @@
-"""Regenerate the Py<->TS memory-interchange parity fixture (s-memory-interchange-verbs).
+"""Regenerate the memory-interchange golden fixture (s-memory-interchange-verbs).
 
-The fixture (``packages/sdk-ts/tests/fixtures/memory-interchange-parity.json``)
-is the single source of truth for Py<->TS parity of the Engram<->MIF
-projection: Python computes the canonical ``to_mif``/``from_mif`` outputs, and
-BOTH the Python test (``tests/test_memory_interchange_parity.py``) and the TS
-test (``tests/memory-interchange-parity.test.ts``) assert their implementation
-produces the SAME dicts. Mirrors the sibling ``gen_memory_parity.py`` /
-``memory-scoring-parity.json`` convention exactly.
+The fixture (``packages/sdk-py/tests/goldens/memory-interchange.json``) freezes
+the canonical ``to_mif``/``from_mif`` outputs of the Engram<->MIF projection,
+asserted by ``tests/test_memory_interchange_golden.py``.
 
-Run from ``packages/sdk-py``:  ``python scripts/gen_memory_interchange_parity.py``
+MIF is a WIRE format that crosses the MCP and REST faces into other runtimes,
+so a diff here is a compatibility change for every consumer — review it, do
+not just commit it. Mirrors the sibling ``gen_memory_scoring_golden.py``
+convention exactly.
+
+Run from ``packages/sdk-py``:  ``python scripts/gen_memory_interchange_golden.py``
 """
 from __future__ import annotations
 
@@ -17,10 +18,7 @@ from pathlib import Path
 
 from dna.memory.interchange import from_mif, to_mif
 
-FIXTURE = (
-    Path(__file__).resolve().parents[2]
-    / "sdk-ts" / "tests" / "fixtures" / "memory-interchange-parity.json"
-)
+FIXTURE = Path(__file__).resolve().parents[1] / "tests" / "goldens" / "memory-interchange.json"
 
 _REASON = "a concrete reason long enough for the affect validator to accept in full"
 
@@ -78,8 +76,8 @@ def _minimal_engram_spec() -> dict:
 def build() -> dict:
     fx: dict = {
         "_note": (
-            "Py<->TS parity for dna.memory.interchange (to_mif/from_mif). "
-            "Regenerate via packages/sdk-py/scripts/gen_memory_interchange_parity.py"
+            "Golden fixture for dna.memory.interchange (to_mif/from_mif). "
+            "Regenerate via packages/sdk-py/scripts/gen_memory_interchange_golden.py"
         )
     }
 

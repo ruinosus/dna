@@ -3,7 +3,7 @@
 Story: s-mcp-servers-on-agent (f-declarative-tools-mcp).
 Spec: docs/superpowers/specs/2026-07-07-mcp-first-tools-design.md §5.1.
 
-Twin: packages/sdk-ts/tests/mcp-federation-v2.test.ts — keep assertions
+Keep assertions
 in sync (field lists, back-compat cases).
 """
 from __future__ import annotations

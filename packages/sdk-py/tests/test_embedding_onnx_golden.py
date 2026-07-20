@@ -1,19 +1,20 @@
-"""rec-embedding-port — ONNX all-MiniLM-L6-v2 parity (Python side).
+"""rec-embedding-port — ONNX all-MiniLM-L6-v2 golden vectors.
 
-The REAL embedder is parity-BY-ARTIFACT: fastembed (Py) and
-``@huggingface/transformers`` (TS) run the same all-MiniLM-L6-v2 ONNX, so a
-sentence embeds to (near-)identical vectors on both sides. The shared golden
-``tests/parity-fixtures/onnx-embedding-golden.json`` holds the Py vectors; the
-TS twin ``tests/embedding-onnx-parity.test.ts`` asserts its transformers.js
-output has cosine ≥ 0.99 against them.
+The real embedder is an ARTIFACT contract: `fastembed` runs the all-MiniLM-L6-v2
+ONNX, and a given sentence must keep embedding to the same point in vector
+space. The golden ``tests/golden-fixtures/onnx-embedding-golden.json`` pins
+those vectors, so a model swap, a version bump, or a pooling/normalization
+change in the adapter shows up as a cosine drop instead of as silently
+degraded recall in production.
 
 This test is DOUBLE-gated so it never runs in offline CI:
   - ``@pytest.mark.requires_network`` (auto-skips when DNA_OFFLINE=1 — the CI
     default — or with no outbound network); and
   - ``importorskip('fastembed')`` (the opt-in ``embed-onnx`` extra).
 
-Locally-proven cross-language cosine (fastembed ↔ transformers.js): 1.000000 on
-both golden sentences — see the story report.
+History: the same golden also gated a TypeScript transformers.js twin
+(cross-language cosine measured at 1.000000). The TypeScript SDK was frozen
+(tag ``sdk-ts-final``); the Python-side artifact lock is unaffected.
 """
 from __future__ import annotations
 
@@ -27,7 +28,7 @@ pytestmark = pytest.mark.requires_network
 
 _GOLDEN = (
     pathlib.Path(__file__).resolve().parents[3]
-    / "tests" / "parity-fixtures" / "onnx-embedding-golden.json"
+    / "tests" / "golden-fixtures" / "onnx-embedding-golden.json"
 )
 
 

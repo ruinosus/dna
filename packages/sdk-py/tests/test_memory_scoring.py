@@ -2,7 +2,7 @@
 
 The scoring is pure math — no kernel, no LLM, no time-of-wall-clock (every
 function takes ``now``). These assertions pin the ported Semon/Ebbinghaus/BM25
-behavior; the shared parity fixture (``test_memory_parity.py``) pins Py↔TS.
+behavior; the golden fixture (``test_memory_scoring_golden.py``) pins the numbers.
 """
 from __future__ import annotations
 

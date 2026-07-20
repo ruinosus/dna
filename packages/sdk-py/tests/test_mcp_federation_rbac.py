@@ -11,7 +11,7 @@ split + role floors are ADDITIVE, OPTIONAL refinements — a legacy doc
 with only ``allowed_tools`` (and no split) behaves EXACTLY as before
 (RBAC off, ``allowed_tools`` governs alone).
 
-Twin: packages/sdk-ts/tests/mcp-federation-rbac.test.ts — keep the field
+Keep the field
 lists, RBAC semantics, and the back-compat cases in sync.
 """
 from __future__ import annotations

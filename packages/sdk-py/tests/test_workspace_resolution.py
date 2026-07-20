@@ -3,11 +3,9 @@ resolver (``dna.tenancy.resolution``).
 
 Two layers:
 
-1. **Shared parity fixtures** — every case in
-   ``tests/parity-fixtures/workspace-resolution/cases.json`` is executed here AND
-   by the TS twin (``packages/sdk-ts/tests/workspace-resolution.test.ts``). The
-   SAME cases → the SAME outcomes gate Py↔TS behavioral parity: a divergence in
-   either implementation fails its suite.
+1. **Golden fixtures** — every case in
+   ``tests/golden-fixtures/workspace-resolution/cases.json`` is executed here:
+   the same cases must always produce the same resolution outcomes.
 2. **Python-side unit coverage** — the identity/membership matching helpers and
    the fail-closed edges, at the granularity the fixtures don't spell out.
 
@@ -35,7 +33,7 @@ from dna.tenancy.resolution import (
 
 _FIXTURES = (
     pathlib.Path(__file__).resolve().parents[3]
-    / "tests" / "parity-fixtures" / "workspace-resolution" / "cases.json"
+    / "tests" / "golden-fixtures" / "workspace-resolution" / "cases.json"
 )
 
 

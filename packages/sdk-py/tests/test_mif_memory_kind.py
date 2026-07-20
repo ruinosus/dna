@@ -55,7 +55,7 @@ from dna.kernel.bundle_handle import FilesystemBundleHandle
 from dna.kernel.generic_rw import GenericBundleReader, GenericBundleWriter
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-FIXTURE_BASE = REPO_ROOT / "tests" / "parity-fixtures" / "mif" / "memories"
+FIXTURE_BASE = REPO_ROOT / "tests" / "golden-fixtures" / "mif" / "memories"
 
 
 def _split_frontmatter(text: str) -> tuple[dict, str]:

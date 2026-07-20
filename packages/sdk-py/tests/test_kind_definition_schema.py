@@ -16,7 +16,7 @@ package data (``dna/kernel/schemas/``). This suite locks:
 - the strict ``spec.ui`` key set stays derived from StudioUIMetadata
   (single source of truth — the schema can't drift from the dataclass).
 
-TS twin: ``packages/sdk-ts/tests/kind-definition-schema.test.ts`` locks
+This locks
 the Zod ``KindDefinitionSpecSchema`` key set against the same file.
 """
 from __future__ import annotations
@@ -50,7 +50,6 @@ _VOLATILE = {"updated_at", "created_at", "version"}
 def _repo_descriptors() -> list[tuple[pathlib.Path, dict[str, Any]]]:
     files = sorted(
         set(_REPO_ROOT.glob("packages/sdk-py/**/kinds/*.kind.yaml"))
-        | set(_REPO_ROOT.glob("packages/sdk-ts/**/kinds/*.kind.yaml"))
         | set(_REPO_ROOT.glob("scopes/*/.dna/*/kinds/*/KIND.yaml"))
     )
     return [(f, yaml.safe_load(f.read_text(encoding="utf-8"))) for f in files]

@@ -1,0 +1,184 @@
+{
+  "_comment": "StudioUIMetadata golden fixture, consumed by packages/sdk-py/tests/test_studio_ui_golden.py. Each case: `input` is the constructor kwargs, `to_dict` is the expected to_dict() output (omission rules: drops None/empty, in_sidebar=false, display_order===100), `resolve_label` maps locale -> expected resolve_label() (null = None). This metadata is serialized into Kind descriptors and served over the REST/MCP faces, so a diff here is a contract change.",
+  "cases": [
+    {
+      "name": "empty_all_defaults",
+      "input": {},
+      "to_dict": {},
+      "resolve_label": {
+        "en": null,
+        "pt-BR": null,
+        "fr": null
+      }
+    },
+    {
+      "name": "full_quality_experiment",
+      "input": {
+        "mode": "quality",
+        "in_sidebar": true,
+        "display_order": 20,
+        "label": {
+          "en": "Experiments",
+          "pt-BR": "Experimentos"
+        },
+        "icon": "🔬",
+        "description": {
+          "en": "Eval experiments",
+          "pt-BR": "Experimentos de avaliacao"
+        },
+        "breadcrumb": [
+          "Quality",
+          "Experiments"
+        ],
+        "routes": {
+          "list": "eval/experiments",
+          "detail": "eval/experiments/:expId"
+        },
+        "permissions": {
+          "list": "any",
+          "detail": "any",
+          "create": [
+            "maker",
+            "qa"
+          ],
+          "edit": [
+            "maker",
+            "qa"
+          ]
+        },
+        "note": "surfaces in sitemap",
+        "feature_flag": "VITE_STUDIO_COGNITIVE"
+      },
+      "to_dict": {
+        "mode": "quality",
+        "in_sidebar": true,
+        "display_order": 20,
+        "label": {
+          "en": "Experiments",
+          "pt-BR": "Experimentos"
+        },
+        "icon": "🔬",
+        "description": {
+          "en": "Eval experiments",
+          "pt-BR": "Experimentos de avaliacao"
+        },
+        "breadcrumb": [
+          "Quality",
+          "Experiments"
+        ],
+        "routes": {
+          "list": "eval/experiments",
+          "detail": "eval/experiments/:expId"
+        },
+        "permissions": {
+          "list": "any",
+          "detail": "any",
+          "create": [
+            "maker",
+            "qa"
+          ],
+          "edit": [
+            "maker",
+            "qa"
+          ]
+        },
+        "note": "surfaces in sitemap",
+        "feature_flag": "VITE_STUDIO_COGNITIVE"
+      },
+      "resolve_label": {
+        "en": "Experiments",
+        "pt-BR": "Experimentos",
+        "pt": "Experiments",
+        "fr": "Experiments"
+      }
+    },
+    {
+      "name": "in_sidebar_false_display_order_100_omitted",
+      "input": {
+        "mode": "build",
+        "in_sidebar": false,
+        "display_order": 100,
+        "label": "Audit Log"
+      },
+      "to_dict": {
+        "mode": "build",
+        "label": "Audit Log"
+      },
+      "resolve_label": {
+        "en": "Audit Log",
+        "pt-BR": "Audit Log"
+      }
+    },
+    {
+      "name": "plain_string_label_with_pt_base_fallback",
+      "input": {
+        "label": {
+          "en": "Memory",
+          "pt": "Memoria"
+        }
+      },
+      "to_dict": {
+        "label": {
+          "en": "Memory",
+          "pt": "Memoria"
+        }
+      },
+      "resolve_label": {
+        "en": "Memory",
+        "pt-BR": "Memoria",
+        "pt": "Memoria",
+        "es": "Memory"
+      }
+    },
+    {
+      "name": "label_no_en_fallback_to_none",
+      "input": {
+        "label": {
+          "pt-BR": "Somente PT"
+        }
+      },
+      "to_dict": {
+        "label": {
+          "pt-BR": "Somente PT"
+        }
+      },
+      "resolve_label": {
+        "en": null,
+        "pt-BR": "Somente PT",
+        "fr": null
+      }
+    },
+    {
+      "name": "empty_routes_and_permissions_omitted",
+      "input": {
+        "mode": "cognitive",
+        "routes": {},
+        "permissions": {},
+        "breadcrumb": []
+      },
+      "to_dict": {
+        "mode": "cognitive",
+        "breadcrumb": []
+      },
+      "resolve_label": {
+        "en": null
+      }
+    },
+    {
+      "name": "display_order_zero_kept",
+      "input": {
+        "mode": "plan",
+        "display_order": 0,
+        "icon": "📄"
+      },
+      "to_dict": {
+        "mode": "plan",
+        "display_order": 0,
+        "icon": "📄"
+      },
+      "resolve_label": {
+        "en": null
+      }
+    }
+  ]
+}

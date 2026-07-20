@@ -1,9 +1,17 @@
-"""Verify document_hash produces expected values — shared fixtures with TypeScript."""
+"""document_hash — golden lock on the canonical form and its digest.
+
+``document_hash`` is the sync/dedup identity of a document: the canonical JSON
+below (key order, separators, scalar rendering) and its sha256 are a WIRE
+contract, not an implementation detail — a change silently invalidates every
+stored hash. Each fixture pins the exact canonical string AND the digest.
+
+History: these fixtures were mirrored by a TypeScript twin. The TypeScript SDK
+was frozen (tag ``sdk-ts-final``); the canonical form is Python's to keep.
+"""
 import pytest
 from dna.sync.hash import document_hash
 
 
-# Same fixtures as typescript/tests/document-hash.test.ts
 FIXTURES = [
     {
         "doc": {"kind": "Genome", "name": "test", "spec": {"agents": ["bot"]}},
@@ -36,7 +44,7 @@ FIXTURES = [
 ]
 
 
-class TestHashParity:
+class TestHashGolden:
     @pytest.mark.parametrize("fixture", FIXTURES, ids=[f["doc"]["kind"] for f in FIXTURES])
     def test_matches_canonical(self, fixture):
         import hashlib

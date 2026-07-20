@@ -1,12 +1,14 @@
-"""Regenerate the Py↔TS memory-scoring parity fixture (s-memory-verbs).
+"""Regenerate the memory-scoring golden fixture (s-memory-verbs).
 
-The fixture (``packages/sdk-ts/tests/fixtures/memory-scoring-parity.json``) is
-the single source of truth for Py↔TS parity of the pure memory-scoring core:
-Python computes the canonical expected outputs, and BOTH the Python test
-(``tests/test_memory_parity.py``) and the TS test
-(``tests/memory-scoring-parity.test.ts``) assert their implementation matches.
+The fixture (``packages/sdk-py/tests/goldens/memory-scoring.json``) freezes
+the canonical outputs of the pure memory-scoring core, asserted by
+``tests/test_memory_scoring_golden.py``.
 
-Run from ``packages/sdk-py``:  ``python scripts/gen_memory_parity.py``
+Regenerating is a DELIBERATE act: a diff here means a scoring constant or
+formula changed, which changes what an agent recalls and in what order.
+Review the diff, do not just commit it.
+
+Run from ``packages/sdk-py``:  ``python scripts/gen_memory_scoring_golden.py``
 """
 from __future__ import annotations
 
@@ -34,17 +36,14 @@ from dna.memory.semantic import (
 NOW = "2026-07-09T15:00:00+00:00"
 _NOW = datetime.fromisoformat(NOW)
 
-FIXTURE = (
-    Path(__file__).resolve().parents[2]
-    / "sdk-ts" / "tests" / "fixtures" / "memory-scoring-parity.json"
-)
+FIXTURE = Path(__file__).resolve().parents[1] / "tests" / "goldens" / "memory-scoring.json"
 
 
 def build() -> dict:
     fx: dict = {
         "_note": (
-            "Py<->TS parity for dna.memory pure scoring. "
-            "Regenerate via packages/sdk-py/scripts/gen_memory_parity.py"
+            "Golden fixture for dna.memory pure scoring. "
+            "Regenerate via packages/sdk-py/scripts/gen_memory_scoring_golden.py"
         )
     }
     fx["ebbinghaus_retention"] = [

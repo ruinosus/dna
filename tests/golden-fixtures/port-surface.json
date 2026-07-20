@@ -1,0 +1,552 @@
+{
+  "$comment": "s-dna-port-surface-parity → golden surface lock. THE public surface manifest of the Python SDK: each port lists the members of its real typing.Protocol; ManifestInstance/Kernel list the blessed vs deprecated read surface plus the EXACT public_surface. Adding, removing or renaming any tracked member without editing this file turns the suite red — public-surface changes are conscious decisions, never drift. Executors: packages/sdk-py/tests/test_port_surface_golden.py (introspects the real typing.Protocol members), test_blessed_query_surface.py and test_hook_names.py. History: this was a shared Py↔TS manifest with a {py, ts} pair per member; the TypeScript SDK was frozen (tag sdk-ts-final) and the `ts` half was dropped — the Python surface lock, which is what it always really enforced, stays.",
+  "ports": {
+    "SourcePort": {
+      "doc": "WHERE — load documents from storage. Py: dna/kernel/protocols.py · TS: src/kernel/protocols.ts",
+      "members": [
+        {
+          "py": "supports_readers"
+        },
+        {
+          "py": "load_bootstrap_docs"
+        },
+        {
+          "py": "load_all"
+        },
+        {
+          "py": "resolve_ref"
+        },
+        {
+          "py": "load_layer"
+        },
+        {
+          "py": "close",
+          "note": "Py lists close in SOURCE_PORT_CORE_MEMBERS (boot gate); TS declares it optional — the kernel treats a missing close as a no-op. FS adapters implement a documented no-op; the SQL adapters end what they own (Py SqlAlchemySource disposes its engine; TS raw PostgresSource closes its pool)."
+        },
+        {
+          "py": "list_doc_refs",
+          "note": "L1 granular read, capability-mediated on both sides (SourceCapabilities.granular_list / granularList)."
+        },
+        {
+          "py": "load_one"
+        },
+        {
+          "py": "query"
+        },
+        {
+          "py": "count"
+        }
+      ]
+    },
+    "WritableSourcePort": {
+      "doc": "SourcePort + write/versioning half. OWN members only (inherited SourcePort members are tracked above).",
+      "members": [
+        {
+          "py": "save_document"
+        },
+        {
+          "py": "delete_document"
+        },
+        {
+          "py": "list_versions"
+        },
+        {
+          "py": "get_version"
+        },
+        {
+          "py": "publish",
+          "note": "PG TS is a documented single-step no-op (no draft state); the member exists so Draftable-style flows type-check."
+        },
+        {
+          "py": "save_manifest"
+        },
+        {
+          "py": "load_drafts"
+        },
+        {
+          "py": "list_scopes"
+        },
+        {
+          "py": "capabilities"
+        }
+      ]
+    },
+    "CachePort": {
+      "doc": "WHERE — store/retrieve installed deps.",
+      "members": [
+        {
+          "py": "load_all"
+        },
+        {
+          "py": "load_key"
+        },
+        {
+          "py": "store"
+        },
+        {
+          "py": "has"
+        }
+      ]
+    },
+    "ResolverPort": {
+      "doc": "FROM — fetch external deps.",
+      "members": [
+        {
+          "py": "resolve"
+        },
+        {
+          "py": "cache_key"
+        }
+      ]
+    },
+    "ReaderPort": {
+      "doc": "Reads a bundle and produces a raw dict.",
+      "members": [
+        {
+          "py": "detect"
+        },
+        {
+          "py": "read"
+        },
+        {
+          "py": "_owner_container"
+        }
+      ]
+    },
+    "WriterPort": {
+      "doc": "Writes a raw dict back to a bundle. Inverse of ReaderPort.",
+      "members": [
+        {
+          "py": "can_write"
+        },
+        {
+          "py": "write"
+        },
+        {
+          "py": "serialize"
+        }
+      ]
+    },
+    "KindPort": {
+      "doc": "WHO — identity + composition role.",
+      "members": [
+        {
+          "py": "api_version"
+        },
+        {
+          "py": "kind"
+        },
+        {
+          "py": "alias"
+        },
+        {
+          "py": "origin"
+        },
+        {
+          "py": "storage"
+        },
+        {
+          "py": "is_root"
+        },
+        {
+          "py": "is_prompt_target"
+        },
+        {
+          "py": "prompt_target_priority"
+        },
+        {
+          "py": "flatten_in_context"
+        },
+        {
+          "py": "is_runtime_artifact"
+        },
+        {
+          "py": "dep_filters"
+        },
+        {
+          "py": "dependencies"
+        },
+        {
+          "py": "schema"
+        },
+        {
+          "py": "get_default_agent_name"
+        },
+        {
+          "py": "get_layer_policies"
+        },
+        {
+          "py": "parse"
+        },
+        {
+          "py": "describe"
+        },
+        {
+          "py": "summary"
+        },
+        {
+          "py": "prompt_template"
+        },
+        {
+          "py": "model"
+        }
+      ]
+    },
+    "KindPresentation": {
+      "doc": "Optional presentation/UX capability of a Kind (s-dna-kindport-descriptor-schema). Py: typing-only capability Protocol (NOT runtime_checkable, NOT part of KindPort — the H1 isinstance gate must never require these; the is_runtime_artifact precedent). TS: interface that KindPort extends (native optional members). Every member is optional at runtime; KindBase carries the attribute defaults; consumers use typed access with a default (getattr(kp, name, None) / kp.member?.).",
+      "members": [
+        {
+          "py": "docs"
+        },
+        {
+          "py": "description_fallback_field"
+        },
+        {
+          "py": "ui_schema"
+        },
+        {
+          "py": "graph_style"
+        },
+        {
+          "py": "ascii_icon"
+        },
+        {
+          "py": "display_label"
+        },
+        {
+          "py": "visible_in_backend"
+        },
+        {
+          "py": "preview"
+        },
+        {
+          "py": "graph_meta"
+        }
+      ]
+    },
+    "ToolPort": {
+      "doc": "An invocable tool exposed to agents + DNA discovery metadata (s-dna-tool-decorator; TS twin landed with s-dna-port-surface-parity).",
+      "members": [
+        {
+          "py": "name"
+        },
+        {
+          "py": "group"
+        },
+        {
+          "py": "description"
+        },
+        {
+          "py": "summary"
+        },
+        {
+          "py": "args_schema"
+        },
+        {
+          "py": "hitl"
+        },
+        {
+          "py": "scope"
+        },
+        {
+          "py": "source"
+        },
+        {
+          "py": "get_callable"
+        }
+      ]
+    },
+    "ExtensionHost": {
+      "doc": "The registration-time surface the Kernel offers to Extension.register() (s-dna-extension-host-contract).",
+      "members": [
+        {
+          "py": "hooks"
+        },
+        {
+          "py": "kind"
+        },
+        {
+          "py": "kind_from_descriptor"
+        },
+        {
+          "py": "reader"
+        },
+        {
+          "py": "writer"
+        },
+        {
+          "py": "on"
+        },
+        {
+          "py": "on_veto"
+        },
+        {
+          "py": "tool"
+        },
+        {
+          "py": "composition_profile"
+        }
+      ]
+    },
+    "Extension": {
+      "doc": "Registers kinds, readers, and writers on the Kernel.",
+      "members": [
+        {
+          "py": "name"
+        },
+        {
+          "py": "version"
+        },
+        {
+          "py": "register"
+        }
+      ]
+    },
+    "TemplateProvider": {
+      "doc": "Optional Extension capability — ships scaffold file trees. Py-only Protocol; TS folds the member into Extension.templates?.",
+      "members": [
+        {
+          "py": "templates"
+        }
+      ]
+    },
+    "RecordSearchProvider": {
+      "doc": "Two-planes F2 — semantic search over record docs, registered on the kernel at app boot.",
+      "members": [
+        {
+          "py": "search"
+        }
+      ]
+    },
+    "EmbeddingPort": {
+      "doc": "rec-embedding-port — text→dense-vector, sibling to RecordSearchProvider. Fake floor is zero-dep + bit-exact Py↔TS; ONNX all-MiniLM-L6-v2 is an opt-in extra. Py: dna/kernel/protocols.py · TS: src/kernel/protocols.ts",
+      "members": [
+        {
+          "py": "model_id"
+        },
+        {
+          "py": "dims"
+        },
+        {
+          "py": "embed"
+        }
+      ]
+    },
+    "SourceCapabilities": {
+      "doc": "Typed declaration of what a source adapter supports (s-sourceport-contract-cleanup). Members are dataclass fields (Py) / interface keys (TS).",
+      "members": [
+        {
+          "py": "source"
+        },
+        {
+          "py": "drafts"
+        },
+        {
+          "py": "versions"
+        },
+        {
+          "py": "layers"
+        },
+        {
+          "py": "bundle_read"
+        },
+        {
+          "py": "bundle_write"
+        },
+        {
+          "py": "kernel_attachable"
+        },
+        {
+          "py": "granular_list"
+        },
+        {
+          "py": "granular_one"
+        },
+        {
+          "py": "query_pushdown"
+        },
+        {
+          "py": "tenant_layer_writes"
+        },
+        {
+          "py": "write_kwargs"
+        },
+        {
+          "py": "delete_kwargs"
+        }
+      ]
+    },
+    "CapabilityProtocols": {
+      "doc": "Exported optional-capability Protocols (Py capabilities.py) / interfaces (TS capabilities.ts). Members here are the PROTOCOL NAMES, not method names.",
+      "members": [
+        {
+          "py": "BundleEntryReadable"
+        },
+        {
+          "py": "KernelAttachable"
+        },
+        {
+          "py": "Versionable"
+        },
+        {
+          "py": "BundleEntryWritable"
+        },
+        {
+          "py": "Draftable"
+        },
+        {
+          "py": "Layered"
+        },
+        {
+          "py": "TenantAware"
+        },
+        {
+          "py": "LayerAware"
+        }
+      ]
+    }
+  },
+  "blessed_query_surface": {
+    "$comment": "s-blessed-query-surface — THE public read/query surface of the SDK, pre-1.0. `blessed` members are the ONE documented way to read manifest data (docs/ + README + examples teach ONLY these). `deprecated` members still work but warn (DeprecationWarning) — always naming the exact replacement — and are removed in 1.0. `public_surface` is the EXACT set of public members on an instantiated ManifestInstance: adding/removing/renaming ANY public MI member without editing this fixture turns the suite red. Executor: packages/sdk-py/tests/test_blessed_query_surface.py.",
+    "ManifestInstance": {
+      "blessed": [
+        {
+          "py": "documents",
+          "note": "canonical in-memory read — filter/find by d.kind / d.name; what QUICK-START, READMEs and examples teach"
+        },
+        {
+          "py": "root"
+        },
+        {
+          "py": "default_agent"
+        },
+        {
+          "py": "find_agent"
+        },
+        {
+          "py": "build_prompt"
+        },
+        {
+          "py": "build_prompt_async"
+        },
+        {
+          "py": "resolve"
+        },
+        {
+          "py": "resolve_async"
+        },
+        {
+          "py": "all_async"
+        },
+        {
+          "py": "one_async"
+        }
+      ],
+      "deprecated": [
+        {
+          "py": "all",
+          "replacement": "mi.documents (filter by d.kind) or kernel.query(scope, kind)",
+          "removal": "1.0"
+        },
+        {
+          "py": "one",
+          "replacement": "mi.documents (find by d.kind + d.name); Py also kernel.get_document(scope, kind, name), TS kernel.query with a filter",
+          "removal": "1.0"
+        }
+      ],
+      "public_surface": [
+        "all",
+        "all_async",
+        "all_where",
+        "apply_hooks",
+        "build_prompt",
+        "build_prompt_async",
+        "composition",
+        "composition_result",
+        "consumers_of",
+        "default_agent",
+        "dependency_tree",
+        "describe",
+        "documents",
+        "explain_prompt",
+        "explain_prompt_async",
+        "find_agent",
+        "generate_lock",
+        "get",
+        "inventory",
+        "is_root_doc",
+        "iter_doc_deps",
+        "kind_for",
+        "kind_for_alias",
+        "list_kinds",
+        "lock",
+        "nav",
+        "one",
+        "one_async",
+        "profile_for",
+        "prompt",
+        "read_metadata",
+        "read_spec",
+        "read_spec_list",
+        "ref",
+        "ref_async",
+        "render_doc",
+        "reports",
+        "resolve",
+        "resolve_async",
+        "resolve_errors",
+        "root",
+        "scope",
+        "summary"
+      ]
+    },
+    "Kernel": {
+      "blessed": [
+        {
+          "py": "instance",
+          "note": "entry point — loads/returns the scope's ManifestInstance"
+        },
+        {
+          "py": "instance_async"
+        },
+        {
+          "py": "query",
+          "note": "indexed / record-plane read — push-down to the source, raw rows"
+        },
+        {
+          "py": "count",
+          "note": "aggregation twin of query"
+        },
+        {
+          "py": "get_document"
+        },
+        {
+          "py": "query_list_sync"
+        },
+        {
+          "py": "get_document_sync"
+        }
+      ],
+      "deprecated": []
+    }
+  },
+  "hook_names": {
+    "$comment": "s-dna-typed-hook-names — the HookRegistry hook-name vocabulary: HookName Literal + KNOWN_HOOK_NAMES (dna/kernel/hooks.py). Executor: packages/sdk-py/tests/test_hook_names.py — vocabulary drift turns the suite red. These names are wire vocabulary, not API casing.",
+    "names": [
+      "pre_build_prompt",
+      "post_build_prompt",
+      "pre_save",
+      "post_save",
+      "post_delete",
+      "kinddef_conflict",
+      "parse_error",
+      "extension_error"
+    ]
+  },
+  "excluded_surfaces": {
+    "collaborator-ports": {
+      "py": "packages/sdk-py/dna/kernel/collaborator_ports.py",
+      "justification": "Kernel INTERNALS, not public contract: these are the narrow mediator slices from the kernel-decomposition epic (e-kernel-decomposition). They are free to change shape without a surface review, so they are deliberately NOT tracked as a port."
+    }
+  }
+}

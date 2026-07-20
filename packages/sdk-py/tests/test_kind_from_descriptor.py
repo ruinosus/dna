@@ -1,7 +1,6 @@
 """F3 D3: funil builtin + conflito unificado + idempotência forte + lint.
 
 Spec: docs/superpowers/specs/2026-06-10-kinds-descriptor-f3-design.md (D3).
-TS twin: packages/sdk-ts/tests/kind-from-descriptor.test.ts.
 """
 import pytest
 

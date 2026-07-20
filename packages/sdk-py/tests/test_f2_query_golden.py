@@ -1,18 +1,15 @@
-"""Two-planes F2 — Py↔TS parity by shared fixture.
+"""Two-planes F2 — the query/count core, locked to a golden case set.
 
-Runs every case in ``packages/sdk-ts/tests/fixtures/f2-parity.json``
-against the Py in-memory query/count core (the ``SourcePort``
-protocol-default — the exact code path the Filesystem adapter delegates
-to). The TS twin (``packages/sdk-ts/tests/f2-parity.test.ts``) runs the
-SAME fixture against ``queryDocs``/``countDocs``. A failure on either
-side is a parity divergence with an immediate reproduction.
+Runs every case in ``tests/goldens/f2-query.json`` against the Python
+in-memory query/count core (the ``SourcePort`` protocol-default — the exact
+code path the Filesystem adapter delegates to). The cases cover ``filter``,
+``order_by``, ``limit``, ``offset`` and ``group_by`` semantics; a change in
+any of them reds this suite with an immediate reproduction.
 
-MONOREPO LIMITATION (documented on purpose): the fixture lives in the
-sdk-ts package and is reached via a ``Path(__file__)``-relative hop
-across packages. That only works in a monorepo checkout — an sdk-py
-sdist/wheel or a standalone checkout won't have it, so the whole module
-SKIPS (with an explicit reason) instead of failing. If this skips in CI
-of THIS repo, someone moved the fixture — treat that as a failure.
+History: this began as a Py↔TS parity harness and the fixture lived in
+``packages/sdk-ts``. The TypeScript SDK was frozen (tag ``sdk-ts-final``);
+what it was really protecting was the PYTHON query semantics, so the fixture
+moved into this package and the suite stayed.
 """
 from __future__ import annotations
 
@@ -25,20 +22,7 @@ import pytest
 
 from dna.kernel.query_fallback import count_via_query, query_via_load_all
 
-# packages/sdk-py/tests/test_f2_parity_fixture.py
-#   parents[0]=tests, [1]=sdk-py, [2]=packages
-FIXTURE = (
-    Path(__file__).resolve().parents[2]
-    / "sdk-ts" / "tests" / "fixtures" / "f2-parity.json"
-)
-
-pytestmark = pytest.mark.skipif(
-    not FIXTURE.exists(),
-    reason=(
-        "shared parity fixture lives in packages/sdk-ts (monorepo checkout "
-        f"required; looked at {FIXTURE})"
-    ),
-)
+FIXTURE = Path(__file__).parent / "goldens" / "f2-query.json"
 
 
 def _fixture() -> dict[str, Any]:
@@ -66,8 +50,6 @@ class _FixtureSource:
 
 
 def _cases() -> list[dict[str, Any]]:
-    if not FIXTURE.exists():  # pragma: no cover — skipif already guards
-        return []
     return _fixture()["cases"]
 
 
@@ -100,7 +82,7 @@ async def test_f2_parity_case(case: dict[str, Any]) -> None:
 
 
 def test_fixture_sanity() -> None:
-    """Guard the fixture shape both sides rely on."""
+    """Guard the shape the cases rely on."""
     fx = _fixture()
     kinds = {d["kind"] for d in fx["docs"]}
     assert kinds == {"Story", "Issue"}
