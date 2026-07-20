@@ -227,13 +227,18 @@ describe("kernel.workspacePlan — the assignment comes from the doc", () => {
     expect(((await k.workspacePlan("acme"))!.spec as any).tier_id).toBe("free");
   });
 
-  it("zero-migration: founder workspace id == old tid resolves unchanged", async () => {
-    // Workspace #1's id equals the founder's pre-Model-B Azure tid — a plan keyed
-    // on that same string resolves with no data move (mirrors F1/F2).
+  it("the plan key is an opaque workspace id of any shape", async () => {
+    // Decision D5 made workspace ids server-generated (`ws-<base32>`), so the ids
+    // arriving here changed shape. The lookup never parses or validates the
+    // string, which is also why the founder's legacy GUID id (once his Azure tid)
+    // keeps resolving — it is one more opaque string, not a special case.
+    // Parity twin of sdk-py `test_workspace_plan_key_is_an_opaque_id_of_any_shape`.
     const { k, libDocs } = workspacePlanKernel();
-    (libDocs as unknown[]).push(workspacePlanRaw("c5b891f7", "enterprise"));
-    const plan = await k.workspacePlan("c5b891f7");
-    expect(plan).not.toBeNull();
-    expect((plan!.spec as any).tier_id).toBe("enterprise");
+    for (const wsId of ["c5b891f7", "ws-mfrggzdfmztwq2lknnwg23th"]) {
+      (libDocs as unknown[]).push(workspacePlanRaw(wsId, "enterprise"));
+      const plan = await k.workspacePlan(wsId);
+      expect(plan).not.toBeNull();
+      expect((plan!.spec as any).tier_id).toBe("enterprise");
+    }
   });
 });

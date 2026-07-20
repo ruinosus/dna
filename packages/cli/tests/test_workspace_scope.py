@@ -9,10 +9,18 @@ resolved differs.
 
 With multi-workspace OFF (``vendor_workspace`` unset) the scope-less default stays
 ``base_scope`` for everyone (today's behavior / the OSS path). With it ON, a
-scope-less read resolves PER WORKSPACE — the reserved vendor workspace #1 (its id
-== the founder's Azure tid) to ``base_scope`` (``dna-development`` stays the
-vendor's, un-moved — the zero-migration hinge), every other workspace to its OWN
-``tenant-<id>`` scope — so a new outside workspace never reads the vendor's data.
+scope-less read resolves PER WORKSPACE — the RESERVED vendor workspace to
+``base_scope`` (``dna-development`` stays the vendor's, un-moved), every other
+workspace to its OWN ``tenant-<id>`` scope — so a new outside workspace never
+reads the vendor's data.
+
+The reservation is by CONFIGURATION (whatever id is passed as
+``vendor_workspace``), never by recognizing anything about the id itself. That is
+why decision **D5** — workspace ids are generated, an Azure ``tid`` is not an
+identity — left this mechanism untouched: the vendor id in these tests is a
+fixture string and nothing here inspects its shape. The literal below happens to
+be the vendor workspace's real id, which was once the founder's tid; that is
+historical trivia, not a rule.
 """
 from __future__ import annotations
 
@@ -38,7 +46,8 @@ def test_default_scope_no_workspace_is_base():
 
 
 def test_default_scope_vendor_workspace_reserved_to_base():
-    # Workspace #1 (id == founder tid) keeps the base scope — zero migration.
+    # The workspace CONFIGURED as the vendor's keeps the base scope. Reservation
+    # is by configuration; the id is opaque to this code.
     live = _live(vendor="c5b891f7")
     assert live.default_scope("c5b891f7") == "dna-development"
 

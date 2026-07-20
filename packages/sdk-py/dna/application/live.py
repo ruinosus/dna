@@ -47,9 +47,11 @@ class LiveDna:
           the base path is untouched (the OSS / self-host workflow never changes).
         * multi-workspace OFF (``vendor_workspace`` unset) → ``base_scope`` for
           all — exactly today's behavior; per-workspace isolation is opt-in.
-        * the reserved **vendor** workspace #1 (its id == the founder's Azure tid)
-          → ``base_scope`` (``dna-development`` stays the vendor's; its existing
-          data is NOT moved — the zero-migration hinge).
+        * the workspace CONFIGURED as the **vendor**'s (``vendor_workspace``) →
+          ``base_scope`` (``dna-development`` stays the vendor's; its existing data
+          is NOT moved). The reservation is by configuration; this code never
+          inspects the id's shape, which is why generated ids (D5) changed nothing
+          here.
         * every OTHER workspace → its OWN scope ``<prefix><workspace_id>`` (e.g.
           ``tenant-<workspace_id>``), never the vendor's base.
 

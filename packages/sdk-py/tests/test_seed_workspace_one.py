@@ -1,10 +1,17 @@
 """f-ws-kinds F1 — the workspace #1 seed (ADR "Model B", S1.3).
 
-The seed is the ZERO-MIGRATION hinge: it declares two GLOBAL docs (a Workspace
-whose id == the founder's live Azure tid, + an owner WorkspaceMembership). It
-must NOT move existing rows, and re-running it must be idempotent (overwrite the
-SAME two docs — never duplicate). These tests drive the importable seed builders
-+ ``seed()`` against a real filesystem-backed kernel.
+The seed declares two GLOBAL docs (a Workspace + its owner WorkspaceMembership)
+for the ONE workspace that predates the write path. It must NOT move existing
+rows, and re-running it must be idempotent (overwrite the SAME two docs — never
+duplicate). These tests drive the importable seed builders + ``seed()`` against a
+real filesystem-backed kernel.
+
+**Post-D5 scope.** Creating a workspace is now ``POST /v1/workspaces``
+(``create_workspace_impl``), which MINTS the id — see
+``packages/cli/tests/test_workspace_create_rest.py``. This script survives only as
+the re-declaration tool for the pre-existing workspace, so what is pinned here is
+the seed's mechanics (deterministic doc keys, idempotency, the id it declares is
+the key it writes) — never the retired claim that a workspace id is an Azure tid.
 
 The seed script lives at ``scripts/seed_workspace_one.py``; we import it by path
 (scripts/ isn't a package).
@@ -49,9 +56,14 @@ def _kernel(tmp_path) -> Kernel:
 # 1. Builders — the id/name shape (documented, not invented)
 # ---------------------------------------------------------------------------
 
-def test_default_workspace_id_is_the_full_azure_tid():
-    """The ADR shorthand is `c5b891f7`; the LIVE tenant column value is the full
-    GUID — the seed default MUST be the full value or zero-migration breaks."""
+def test_default_workspace_id_is_the_full_live_column_value():
+    """The id this seed declares must match the physical ``tenant`` column
+    byte-for-byte, else the seeded docs describe a workspace that owns no rows.
+
+    The ADR writes it in short form ``c5b891f7``; the LIVE value is the full GUID.
+    (It is a GUID because this workspace's id was adopted from the founder's Azure
+    tid before D5. That is why the constant looks like this — not a rule any code
+    depends on; nothing validates an id's shape.)"""
     assert seed_mod.DEFAULT_WORKSPACE_ID == "c5b891f7-65c2-4417-a5af-22cab24dc1d5"
     # It starts with the ADR's shorthand segment.
     assert seed_mod.DEFAULT_WORKSPACE_ID.startswith("c5b891f7")
@@ -103,14 +115,17 @@ async def test_seed_is_idempotent(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# 3. The seeded workspace_id == the row key (the zero-migration guarantee)
+# 3. The seeded workspace_id == the row key (the doc is keyed on what it declares)
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
 async def test_seeded_workspace_id_equals_its_doc_key(tmp_path):
-    """A row already keyed `tenant = <tid>` is readable as workspace #1 iff the
-    seeded Workspace.workspace_id == that tid. We assert the seed keys the doc on
-    the id it declares — the hinge that makes existing rows 'already his'."""
+    """A row keyed ``tenant = <id>`` is readable as this workspace iff the seeded
+    ``Workspace.workspace_id`` equals that id AND the doc is KEYED on it. Pins the
+    latter: the seed must never declare one id and file the doc under another.
+
+    Holds for any id shape — the same invariant ``create_workspace_impl`` upholds
+    with a minted id."""
     k = _kernel(tmp_path)
     tid = "c5b891f7-65c2-4417-a5af-22cab24dc1d5"
     ws_name, _ = await seed_mod.seed(k, workspace_id=tid, founder_email="f@x.com")

@@ -184,6 +184,8 @@ class OrgsResponse(BaseModel):
 class ProjectSummary(BaseModel):
     name: str | None = None
     slug: str | None = None
+    # A1 — the explicit owning workspace. None on a legacy pre-A1 doc.
+    workspace_id: str | None = None
     org_ref: str | None = None
     repo_refs: list[str] = []
     board_scope: str | None = None
@@ -410,6 +412,45 @@ class WorkspaceMemberSurface(BaseModel):
     invited_by: str | None = None
     invited_at: str | None = None
     accepted_at: str | None = None
+
+
+class CreateWorkspaceResponse(BaseModel):
+    """``POST /v1/workspaces`` — the created workspace. ``workspace_id`` is
+    SERVER-MINTED; there is no request field for it."""
+
+    workspace_id: str
+    name: str
+    slug: str
+    created_by: str | None = None
+    created_at: str | None = None
+    role: str = "owner"
+    membership: WorkspaceMemberSurface | None = None
+
+
+class WorkspaceSummary(BaseModel):
+    workspace_id: str
+    name: str | None = None
+    slug: str | None = None
+    role: str | None = None
+    created_by: str | None = None
+    created_at: str | None = None
+
+
+class WorkspacesResponse(BaseModel):
+    """``GET /v1/workspaces`` — the caller's ACTIVE memberships, projected."""
+
+    identity_oid: str | None = None
+    identity_email: str | None = None
+    workspaces: list[WorkspaceSummary] = []
+
+
+class CreateProjectResponse(BaseModel):
+    """``POST /v1/projects`` — the created project. ``scope`` is DERIVED from the
+    workspace (never caller-supplied)."""
+
+    scope: str
+    workspace_id: str
+    project: ProjectSummary
 
 
 class ProvisionWorkspaceOwnerResponse(BaseModel):
