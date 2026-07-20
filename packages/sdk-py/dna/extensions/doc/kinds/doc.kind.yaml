@@ -23,8 +23,11 @@
 #     scaffold, and the widget-hint ``ui_schema`` bag — upstream product
 #     UX; hosts can derive forms from the JSON Schema below.
 #
-# PARITY-CRITICAL package data: byte-identical mirror under both runtimes'
-# doc/kinds/ (tests/test_descriptor_hash_parity.py enforces).
+# SINGLE-SOURCE package data: this descriptor is the only
+# definition of the Kind — the packages/sdk-ts mirror and the test that enforced byte-identity
+# (tests/test_descriptor_hash_parity.py) were BOTH removed when the
+# TypeScript SDK was frozen (commit 341e517).
+# Nothing mirrors this file and no test enforces byte-identity.
 #
 # tenant_scope intentionally NOT declared — permissive (base doc + optional
 # per-tenant overlay). Docs are shared per-scope content a tenant may

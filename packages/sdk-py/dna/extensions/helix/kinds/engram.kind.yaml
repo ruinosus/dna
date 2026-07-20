@@ -23,9 +23,16 @@
 #
 # F3 lote-1 (spec 2026-06-10-kinds-descriptor-f3): synthesized from this
 # descriptor; the twin LessonLearnedKind classes (Py+TS) were deleted.
-# PARITY-CRITICAL package data — byte-identical mirror under
-# packages/sdk-{py,ts}; tests/test_descriptor_hash_parity.py enforces.
-# O descriptor cura um drift real Py↔TS: a classe TS era strict e NÃO tinha
+# SINGLE-SOURCE package data: this descriptor is the only
+# definition of the Kind — the packages/sdk-ts mirror and the test that enforced byte-identity
+# (tests/test_descriptor_hash_parity.py) were BOTH removed when the
+# TypeScript SDK was frozen (commit 341e517).
+# Nothing mirrors this file and no test enforces byte-identity.
+# What DOES still guard it: equivalence vs the extinct class, frozen in
+# tests/test_lote1_descriptor_equivalence.py (golden:
+# tests/goldens/lote1/Engram.golden.json).
+# O descriptor curou um drift real Py↔TS enquanto o TS existia: a classe TS
+# era strict e NÃO tinha
 # affect_reason/affect_evidence_refs/encoding extras — o canônico é a
 # superfície Py (o que kinds-api serve em produção). A classe Py tinha um
 # to_card morto (zero consumidores) — não migrado de propósito.

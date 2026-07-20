@@ -15,10 +15,14 @@
 # describe() returned `s.get("description") or None` (empty string → None);
 # the {path: description} projection returns "" verbatim. An empty-string
 # description is implausible (descriptions are human text).
-# PARITY-CRITICAL package data: byte-identical mirror at
-# packages/sdk-{py,ts}/{dna/extensions,src/extensions}/sdlc/kinds/
-# prompt-template.kind.yaml (test_descriptor_hash_parity enforces). Equivalence
-# frozen in tests/test_expr_batch_b_equivalence.py.
+# SINGLE-SOURCE package data: this descriptor is the only
+# definition of the Kind — the packages/sdk-ts mirror and the test that enforced byte-identity
+# (tests/test_descriptor_hash_parity.py) were BOTH removed when the
+# TypeScript SDK was frozen (commit 341e517).
+# Nothing mirrors this file and no test enforces byte-identity.
+# NOTE: this header used to also cite tests/test_expr_batch_b_equivalence.py
+# as freezing equivalence. That file has never existed anywhere in this
+# repository's history — the citation was false from the start.
 apiVersion: github.com/ruinosus/dna/core/v1
 kind: KindDefinition
 metadata:

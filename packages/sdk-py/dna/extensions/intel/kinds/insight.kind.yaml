@@ -1,9 +1,11 @@
 # IntelInsight — the dissemination unit (record plane; a ranked, actionable
 # insight). Produced from an IntelSource; the ranker/digest/dedup/feedback stages
-# all reference it. Named IntelInsight (NOT Insight) — the bare `Insight` name
-# already belongs to the SDLC oracle Kind (alias sdlc-insight); two Kinds sharing
-# a name makes every bare-name lookup ambiguous (i-195). The cross-stage contract
-# is the alias `intel-insight`.
+# all reference it. Named IntelInsight (NOT Insight) because the bare `Insight`
+# name belonged to the SDLC oracle Kind (alias sdlc-insight) and two Kinds
+# sharing a name makes every bare-name lookup ambiguous (i-195). That SDLC Kind
+# was deleted in censo-12-kinds (2026-07-20), so the collision no longer exists
+# — but the name stays IntelInsight: it is the shipped identity, and the
+# cross-stage contract is the alias `intel-insight`.
 #
 # TENANTED — per-tenant generated data (the tenant's own insight stream), NOT a
 # shared `_lib` default. Deliberately NOT inheritable (never in
@@ -12,9 +14,11 @@
 # Embeddable (embed: [title, fact]) so the later dedup story can do semantic
 # recall over the insight text.
 #
-# PARITY-CRITICAL package data: the byte-identical mirror lives at
-# packages/sdk-{py,ts}/{dna/extensions,src/extensions}/intel/kinds/
-# insight.kind.yaml (tests/test_descriptor_hash_parity.py enforces).
+# SINGLE-SOURCE package data: this descriptor is the only
+# definition of the Kind — the packages/sdk-ts mirror and the test that enforced byte-identity
+# (tests/test_descriptor_hash_parity.py) were BOTH removed when the
+# TypeScript SDK was frozen (commit 341e517).
+# Nothing mirrors this file and no test enforces byte-identity.
 apiVersion: github.com/ruinosus/dna/core/v1
 kind: KindDefinition
 metadata:

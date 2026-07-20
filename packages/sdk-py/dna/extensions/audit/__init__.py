@@ -39,8 +39,11 @@ _ORIGIN = "github.com/ruinosus/dna/audit"
 # 2026-06-11-descriptor-expressiveness): the twin AuditLogKind classes (Py+TS)
 # were DELETED — kinds/audit-log.kind.yaml is the single source, registered
 # through the load_descriptors loop in register(). It was the first builtin
-# Kind to carry the new D2 `ui:` descriptor field. Equivalence with the
-# extinct class frozen in tests/test_expr_batch_a_equivalence.py.
+# Kind to carry the new D2 `ui:` descriptor field. This comment used to
+# claim equivalence with the extinct class was frozen in
+# tests/test_expr_batch_a_equivalence.py — that file has never existed in
+# this repository's history. No equivalence golden guards AuditLog today;
+# tests/test_audit_extension.py covers registration + round-trip.
 
 
 class UserRoleAssignmentKind(KindBase):

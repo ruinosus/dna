@@ -6,11 +6,15 @@
 # single source. First builtin Kind to carry the new D2 `ui:` descriptor
 # field (StudioUIMetadata reconstructed by DeclarativeKindPort and served
 # by kinds-api's /kinds/manifest verbatim — the class's `ui` block).
-# PARITY-CRITICAL package data: the byte-identical mirror lives at
-# packages/sdk-{py,ts}/{dna/extensions,src/extensions}/audit/kinds/
-# audit-log.kind.yaml (tests/test_descriptor_hash_parity.py enforces).
-# Equivalence with the extinct class frozen in
-# tests/test_expr_batch_a_equivalence.py.
+# SINGLE-SOURCE package data: this descriptor is the only
+# definition of the Kind — the packages/sdk-ts mirror and the test that enforced byte-identity
+# (tests/test_descriptor_hash_parity.py) were BOTH removed when the
+# TypeScript SDK was frozen (commit 341e517).
+# Nothing mirrors this file and no test enforces byte-identity.
+# NOTE: this header used to cite tests/test_expr_batch_a_equivalence.py as
+# freezing equivalence with the extinct class. That file has never existed
+# anywhere in this repository's history — the citation was false from the
+# start. No equivalence golden guards this descriptor today.
 #
 # tenant_scope: tenanted is DECLARED — the class set scope=TenantScope.TENANTED
 # explicitly (each tenant sees only their own audit trail; platform admins
