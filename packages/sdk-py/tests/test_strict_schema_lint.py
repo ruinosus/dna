@@ -57,7 +57,7 @@ _GRANDFATHERED_OPEN_SCHEMAS = frozenset({
     "sdlc-initiative", "sdlc-issue",
     "sdlc-narrative", "sdlc-plan", "sdlc-postmortem",
     "sdlc-prompt-template", "sdlc-reference", "sdlc-retrospective",
-    "sdlc-risk-register", "sdlc-roadmap", "sdlc-saved-view", "sdlc-spec",
+    "sdlc-risk-register", "sdlc-roadmap", "sdlc-spec",
     "sdlc-spike", "sdlc-status-report", "sdlc-story",
     "sdlc-task", "soulspec-soul",
     "tenant-membership", "tenant-tenant", "voice-voicepolicy",

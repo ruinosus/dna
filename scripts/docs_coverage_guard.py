@@ -85,7 +85,6 @@ ALLOWLIST: dict[str, str] = {
     "kind:Retrospective": _SDLC_MACHINERY,
     "kind:RiskRegister": _SDLC_MACHINERY,
     "kind:Roadmap": _SDLC_MACHINERY,
-    "kind:SavedView": _SDLC_MACHINERY,
     # No composition-plane entries: the 14 Kinds this guard's first run
     # flagged are covered by the commented catalog
     # (docs/concepts/builtin-kinds.md, s-docs-cli-tour-kinds-prose).

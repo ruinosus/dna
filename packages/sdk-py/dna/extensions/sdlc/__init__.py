@@ -1716,18 +1716,6 @@ JOURNEY_METHODOLOGIES = (
 
 
 # ---------------------------------------------------------------------------
-# SavedView — filter+groupBy+sort persistence as first-class entity
-# ---------------------------------------------------------------------------
-
-# SavedView — F3 lote-2 (spec 2026-06-10-kinds-descriptor-f3): the twin SavedViewKind classes (Py+TS) were
-# DELETED — synthesized from kinds/saved-view.kind.yaml (parity-critical
-# package data) via the load_descriptors loop in
-# register(). Equivalence with the extinct class frozen in
-# tests/test_lote2_descriptor_equivalence.py (golden:
-# tests/goldens/lote2/SavedView.golden.json).
-
-
-# ---------------------------------------------------------------------------
 # StatusReport (was: "Insights" — Insight + StatusReport)
 # ---------------------------------------------------------------------------
 # censo-12-kinds (2026-07-20): the `Insight` Kind (alias sdlc-insight) was
