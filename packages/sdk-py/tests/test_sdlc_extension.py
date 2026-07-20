@@ -28,9 +28,9 @@ def test_extension_registers_expected_kinds():
     list — that's the whole point of the test (prevents silent
     expansion of the public contract).
 
-    Current set (26 Kinds): SDLC core + ADO-grade doc Kinds (ADR,
+    Current set (25 Kinds): SDLC core + ADO-grade doc Kinds (ADR,
     Changelog, Initiative, Postmortem, Retrospective, RiskRegister,
-    SavedView, Spike, Bug, Task) + the UNIFIED CognitivePolicy (was 9 Kinds —
+    Spike, Bug, Task) + the UNIFIED CognitivePolicy (was 9 Kinds —
     RecallPolicy, DecayPolicy, MemoryPolicy, AllocationPolicy,
     PaginationPolicy, EngramStrengthPolicy, EmbeddingProfile, AffectPalette
     + the old CognitivePolicy — consolidated by
@@ -41,7 +41,12 @@ def test_extension_registers_expected_kinds():
     SynthesisRun and SynthesizerState were DELETED — they only ever existed
     to receive the output of a cognition-engine family that never shipped in
     this distribution. Engram (the one cognitive-triad member with a real
-    home) had already moved to HelixExtension on s-engram-rename."""
+    home) had already moved to HelixExtension on s-engram-rename.
+
+    SavedView deleted (26→25): the censo found ZERO readers — no dep_filter
+    points at it, nothing in the SDK/CLI consumes it, and the UI that
+    justified it (a Studio ViewToolbar "Load view" dropdown) ships in no
+    distribution. Its own descriptor admitted it was "waiting on a reader"."""
     k = Kernel()
     k.load(SdlcExtension())
     api_kinds = sorted(kn for (av, kn) in k._kinds if av == "github.com/ruinosus/dna/sdlc/v1")
@@ -52,11 +57,11 @@ def test_extension_registers_expected_kinds():
         "Feature", "HtmlArtifact", "Initiative", "Issue", "Kaizen",
         "Narrative",
         "Plan", "Postmortem", "PromptTemplate", "Reference",
-        "Retrospective", "RiskRegister", "Roadmap", "SavedView", "Spec",
+        "Retrospective", "RiskRegister", "Roadmap", "Spec",
         "Spike", "StatusReport", "Story",
         "Task", "WorkflowEvent",
     ]
-    assert len(api_kinds) == 26
+    assert len(api_kinds) == 25
 
 
 def test_agent_session_kind_storage_bundle():

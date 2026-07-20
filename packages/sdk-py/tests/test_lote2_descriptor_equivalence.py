@@ -1,7 +1,7 @@
 """F3 lote-2: ports sintetizados dos descriptors ≡ classes extintas.
 
 Kinds: ADR · Changelog · Narrative · Postmortem · RiskRegister ·
-SavedView · StatusReport (spec 2026-06-10-kinds-descriptor-f3 D5; receita
+StatusReport (spec 2026-06-10-kinds-descriptor-f3 D5; receita
 do piloto Kaizen + lote-1 — test_lote1_descriptor_equivalence.py).
 
 censo-12-kinds (2026-07-20): ArchiveProposal · Forecast · Insight ·
@@ -9,6 +9,12 @@ SynthesisRun saíram do lote — os Kinds foram apagados junto com a família
 de motores de cognição que nunca existiu nesta distribuição (resíduo de
 outra extração). O `Insight` daqui era o Kind-oráculo do sdlc (alias
 sdlc-insight), NÃO o IntelInsight da extensão intel, que fica.
+
+SavedView saiu do lote pelo mesmo critério: censo com ZERO leitores —
+nenhum dep_filter aponta pra ele, nada no SDK/CLI o consome e a UI que o
+justificava (o ViewToolbar "Load view" do Studio) não existe em nenhuma
+distribuição. O próprio descriptor admitia estar "waiting on a reader".
+Uma view salva que nada aplica é preferência inexequível.
 
 GOLDENS congelados em tests/goldens/lote2/<Kind>.golden.json — capturados
 2026-06-11 das classes VIVAS (pré-deleção): identity, flags, storage,
@@ -56,7 +62,7 @@ GOLDEN_DIR = Path(__file__).parent / "goldens" / "lote2"
 
 KINDS = [
     "ADR", "Changelog", "Narrative", "Postmortem", "RiskRegister",
-    "SavedView", "StatusReport",
+    "StatusReport",
 ]
 
 # Projeção curada declarada no descriptor (delta intencional — ver
@@ -72,10 +78,6 @@ CURATED_SUMMARY_DEFAULTS = {
     "RiskRegister": {
         "title": "", "category": "", "likelihood": None, "impact": None,
         "owner": "", "status": "",
-    },
-    "SavedView": {
-        "title": "", "target_kind": "", "layout": "", "visibility": "private",
-        "owner": "", "is_default": False,
     },
     "StatusReport": {
         "insight": "", "verdict": "", "confidence": "", "generated_at": "",
@@ -147,11 +149,11 @@ def test_flags_match_golden(kernel, kind):
     assert port.VOLATILE_SPEC_FIELDS == KindBase.VOLATILE_SPEC_FIELDS
 
 
-def test_savedview_is_tenanted(kernel):
-    """SavedView é o ÚNICO kind do lote com TenantScope.TENANTED (a classe
-    declarava — personalização por usuário/tenant, não ledger global)."""
-    assert _port(kernel, "SavedView").scope == TenantScope.TENANTED
-    for kind in set(KINDS) - {"SavedView"}:
+def test_all_lote_kinds_are_global(kernel):
+    """Todo kind do lote é TenantScope.GLOBAL — são ledger de projeto, não
+    personalização por usuário. SavedView era a ÚNICA exceção (TENANTED) e
+    foi apagado por não ter leitor nenhum, então o lote ficou homogêneo."""
+    for kind in KINDS:
         assert _port(kernel, kind).scope == TenantScope.GLOBAL, kind
 
 
@@ -257,7 +259,6 @@ def test_parse_valid_accepted(kernel, kind):
     ("Narrative", "body"),
     ("Postmortem", "root_cause"),
     ("RiskRegister", "category"),
-    ("SavedView", "layout"),
     ("StatusReport", "verdict"),
 ])
 def test_parse_invalid_rejected(kernel, kind, missing):
@@ -286,7 +287,7 @@ def test_embed_fields_match_legacy_join(kernel, kind, fields):
 
 
 @pytest.mark.parametrize("kind", [
-    "Changelog", "Postmortem", "RiskRegister", "SavedView",
+    "Changelog", "Postmortem", "RiskRegister",
 ])
 def test_non_embeddable_kinds_stay_undeclared(kernel, kind):
     """Esses kinds NÃO eram embeddable antes do F3 — declarar embed aqui
@@ -308,6 +309,6 @@ def test_classes_are_gone():
     import dna.extensions.sdlc as mod
     for cls in (
         "ADRKind", "ChangelogKind", "NarrativeKind", "PostmortemKind",
-        "RiskRegisterKind", "SavedViewKind", "StatusReportKind",
+        "RiskRegisterKind", "StatusReportKind",
     ):
         assert not hasattr(mod, cls), f"{cls} ressurgiu — o descriptor é a fonte"

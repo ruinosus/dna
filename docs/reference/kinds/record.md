@@ -982,35 +982,6 @@ A Role is one rung of the RBAC ladder expressed as data — its role_id, display
 | `rank` | integer | yes | Ladder rank — higher = more access. highest-role-wins compares this across a user's memberships. |
 | `role_id` | string | yes | Canonical role id, e.g. owner / admin / member / guest. The doc name SHOULD equal this; Membership.role references it. |
 
-## SavedView
-
-- **Alias:** `sdlc-saved-view`
-- **apiVersion:** `github.com/ruinosus/dna/sdlc/v1`
-- **Plane:** record
-
-Named view persisting filter + groupBy + sort + layout for a given Kind in a scope. Linear/Notion/Plane pattern — views as first-class entities (não só URL state). The consuming UI (a Studio ViewToolbar dropdown) does not ship in this distribution — the Kind is the persisted contract, waiting on a reader.
-
-**Spec fields**
-
-| Field | Type | Required | Description |
-| --- | --- | --- | --- |
-| `body` | string |  |  |
-| `created_at` | string |  |  |
-| `description` | string |  |  |
-| `filters` | object |  | Filter spec — map property → value. E.g. {feature: 'f-X', owner: 'alice', created_window: '7d'}. |
-| `group_by` | string |  | Property to group by (status\|feature\|owner\|priority\|sprint\|...). |
-| `is_default` | boolean |  | Whether this view loads by default when opening the target Kind list. |
-| `layout` | string | yes | Visual layout pra render (board=group-by-status, list=flat, ...). |
-| `owner` | string |  | Actor name (creator). Determines edit permission. |
-| `sort_by` | string |  | Property to sort by. |
-| `sort_direction` | string |  |  |
-| `tags` | array |  |  |
-| `target_kind` | string | yes | Kind name this view targets (Story, Bug, Spike, ...). |
-| `title` | string | yes | Human label (e.g. 'My open Stories', 'This sprint blocked'). |
-| `updated_at` | string |  |  |
-| `visibility` | string |  |  |
-| `visible_columns` | array |  | Subset of properties shown (table layout). Empty = show all default columns. |
-
 ## Spec
 
 - **Alias:** `sdlc-spec`

@@ -31,8 +31,15 @@ ORIG_NON_OVERLAYABLE = frozenset({"Genome", "KindDefinition", "LayerPolicy"})
 # descriptor declares scope_inheritable: false — mirrors Engram (memory
 # partitioning is a write-path concern, not something that should inherit
 # across scopes).
+# "Epic" added on the Milestone→Epic denylist fix: v1.3 renamed the Milestone
+# Kind to Epic, but the classification stayed pinned to the DEAD name (here and
+# in resolver.DEFAULT_NON_INHERITABLE_KINDS_V1), so Epic was the one ledger Kind
+# that INHERITED across scopes — an Epic written to `_lib` leaked into every
+# child scope while its Story/Issue/Feature/Roadmap siblings did not. See
+# test_epic_does_not_inherit_like_its_siblings in test_inherit_by_default.py.
+# "Milestone" stays alongside it as a tombstone for un-migrated on-disk docs.
 ORIG_NON_INHERITABLE = frozenset({
-    "Story", "Issue", "Feature", "Milestone", "Roadmap",
+    "Story", "Issue", "Feature", "Epic", "Milestone", "Roadmap",
     "Narrative", "VibeSession", "Engram", "Plan", "Memory",
     "Genome", "KindDefinition", "LayerPolicy",
 })
