@@ -212,7 +212,7 @@ def _with_memory_card(data: dict[str, Any]) -> Any:
 
 def build_server(
     scope: str | None = None, base_dir: str | None = None, auth: Any = None,
-    graph_config: Any = None,
+    graph_config: Any = None, quota_store: Any = None,
 ) -> Any:
     """Build the DNA MCP server (a ``FastMCP`` instance) with every tool +
     resource wired. ``scope`` fixes the default scope (else the source's sole /
@@ -232,6 +232,15 @@ def build_server(
     tenant claim/scope is injected into all data access and a cross-tenant (or
     tenant-less) request is denied. With ``auth=None`` (stdio / local) the bridge
     is an identity — the base path is untouched.
+
+    ``quota_store`` is an optional :class:`dna_cli._mcp_quota.QuotaStore` — the
+    metering counter this server's quota guard spends against. ``None`` (the
+    default) selects one from the environment via ``_mcp_quota.store_from_env``:
+    a Postgres DSN present → the DURABLE store (survives restart, shared by
+    every replica, readable by the billing job); absent → the in-process store,
+    which is the correct default for local / self-hosted single-process use.
+    Passing one explicitly is how a host wires its own (and how tests get an
+    isolated counter instead of resetting a module singleton).
 
     The live kernel handle is built LAZILY on the first tool call, on whatever
     event loop is running the server (stdio ``mcp.run()`` or the test loop) — so
@@ -274,8 +283,14 @@ def build_server(
         enforce_memory_mode,
         enforce_quota,
         enforce_sdlc_mode,
+        store_from_env,
     )
     from dna.tenancy.resolution import CrossWorkspaceError
+
+    # The metering counter for THIS server. Resolved once, here, and closed
+    # over by both guards — so the quota port is genuinely swappable instead of
+    # every call site silently defaulting to the module singleton.
+    quota = quota_store if quota_store is not None else store_from_env()
 
     async def _workspace(requested: str | None = None) -> str | None:
         """Resolve the effective **workspace** (Model B) for the current request.
@@ -365,7 +380,8 @@ def build_server(
                 enforce_memory_mode(caps=caps, tier=tier, op=memory_op)
             if sdlc_op is not None:
                 enforce_sdlc_mode(caps=caps, tier=tier, op=sdlc_op)
-            enforce_quota(caps=caps, tenant=tenant, tier=tier, family=family)
+            enforce_quota(caps=caps, tenant=tenant, tier=tier, family=family,
+                          store=quota)
         except (OverQuotaError, FeatureNotInPlanError, MemoryModeError,
                 SdlcModeError) as exc:
             raise ToolError(str(exc)) from None
@@ -415,7 +431,7 @@ def build_server(
             enforce_memory_mode(caps=caps, tier=tier, op=memory_op)
             enforce_quota(
                 caps=caps, tenant=personal_tenant(oid, family=family),
-                tier=tier, family="memory",
+                tier=tier, family="memory", store=quota,
             )
         except (OverQuotaError, FeatureNotInPlanError, MemoryModeError) as exc:
             raise ToolError(str(exc)) from None

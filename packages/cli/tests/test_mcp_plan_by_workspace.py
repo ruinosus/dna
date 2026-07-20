@@ -127,8 +127,7 @@ async def _seed(dna_dir, *, workspace_plan: tuple[str, str] | None) -> None:
 
 
 def _reset_store() -> None:
-    Q.DEFAULT_STORE._day_counts.clear()  # type: ignore[attr-defined]
-    Q.DEFAULT_STORE._calls.clear()  # type: ignore[attr-defined]
+    Q.DEFAULT_STORE.reset()
 
 
 @pytest.fixture

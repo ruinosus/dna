@@ -44,11 +44,32 @@ def _network_available() -> bool:
     return _NETWORK_CACHE
 
 
+# --- requires_postgres gate (mirror of packages/sdk-py/tests/conftest.py) ---
+#
+# The durable quota store is only meaningfully testable against a real
+# Postgres: what it exists to guarantee (a count that survives a restart and
+# is shared by concurrent replicas) is a property of the DATABASE, not of the
+# Python. Same DSN env vars the SDK's Postgres tests read.
+
+
+def pg_dsn() -> str:
+    for var in ("DATABASE_URL", "DNA_PG_TEST_URL", "DNA_PG_TEST_DSN"):
+        dsn = os.environ.get(var)
+        if dsn:
+            return dsn
+    return ""
+
+
 def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line(
         "markers",
         "requires_network: skip unless outbound network is available "
         "(and DNA_OFFLINE is unset — see tests/conftest.py)",
+    )
+    config.addinivalue_line(
+        "markers",
+        "requires_postgres: skip unless a Postgres DSN is set "
+        "(DATABASE_URL / DNA_PG_TEST_URL / DNA_PG_TEST_DSN — see tests/conftest.py)",
     )
 
 
@@ -57,6 +78,11 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
         if item.get_closest_marker("requires_network") and not _network_available():
             item.add_marker(pytest.mark.skip(
                 reason="no network / GitHub access (or DNA_OFFLINE=1 set)",
+            ))
+        if item.get_closest_marker("requires_postgres") and not pg_dsn():
+            item.add_marker(pytest.mark.skip(
+                reason="no Postgres DSN (DATABASE_URL / DNA_PG_TEST_URL / "
+                       "DNA_PG_TEST_DSN) set",
             ))
 
 
