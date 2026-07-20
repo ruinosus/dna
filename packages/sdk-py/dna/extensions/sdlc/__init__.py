@@ -297,6 +297,13 @@ class EpicKind(KindBase):
     scope = TenantScope.GLOBAL  # SDLC primitives are project-level, not per-tenant
     kind = "Epic"
     alias = "sdlc-epic"
+    # Per-scope ledger, exactly like its Roadmap/Feature/Story/Issue siblings —
+    # an Epic in `_lib` must NOT leak into every child scope. This was MISSED by
+    # the v1.3 Milestone→Epic rename: the classification stayed pinned to the
+    # dead name (kernel `_LEGACY_NON_INHERITABLE` + resolver
+    # DEFAULT_NON_INHERITABLE_KINDS_V1 both still say "Milestone"), so Epic
+    # silently inherited while its siblings did not.
+    scope_inheritable = False
     model = dict
     origin = "github.com/ruinosus/dna/sdlc"
     storage = StorageDescriptor.yaml("epics")

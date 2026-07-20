@@ -1014,9 +1014,17 @@ class Kernel:
     # blast radius prático = o que `_lib` realmente contém (tudo template-y).
     # _NON_INHERITABLE_KINDS is now DERIVED from ``KindPort.scope_inheritable``
     # (s-kernel-kindport-classification-attrs) — see the property block below.
-    # These two ledger names have NO registered KindPort (legacy doc-kinds that
-    # never got a Kind class), so they cannot carry an attribute and stay an
-    # explicit constant the derived set unions in.
+    # These two ledger names have NO registered KindPort, so they cannot carry
+    # an attribute and stay an explicit constant the derived set unions in.
+    # They are TOMBSTONES, not classifications of a live Kind:
+    #   - "VibeSession": a legacy doc-kind that never got a Kind class.
+    #   - "Milestone":   RENAMED to Epic in v1.3. `kind: Milestone` no longer
+    #     parses, but un-migrated docs may still sit on disk, so the old name
+    #     keeps its denylist entry. NB a tombstone does NOT carry the
+    #     classification over to the new name — ``EpicKind`` must declare its own
+    #     ``scope_inheritable = False`` (it didn't, and Epic leaked across scopes
+    #     until that was fixed). If you rename a ledger Kind, set the attribute
+    #     on the NEW class; adding the old name here is not a substitute.
     _LEGACY_NON_INHERITABLE: frozenset[str] = frozenset({"Milestone", "VibeSession"})
     # `kind in kernel._INHERITABLE_KINDS` continua sendo a API de membership
     # (mantém ~14 call-sites + getattr intactos); agora denylist-backed +
