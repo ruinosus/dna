@@ -684,7 +684,7 @@ def build_app(
     # manage members (every membership write 403'd — nothing made the sole user
     # the Owner of their own tenant). The DNA Cloud portal calls this on first
     # authenticated access (server-side, with the shared bearer it already holds —
-    # never opening the DNA source directly, same pattern as PUT /v1/tenant-plan)
+    # never opening the DNA source directly, same pattern as PUT /v1/workspace-plan)
     # so the signed-in user becomes Owner of their OWN tenant (== the `tid` path
     # segment). Idempotent + first-owner-only: a NO-OP once any Owner exists, so a
     # LATER user does not auto-escalate. Delegates to the CORE impl (zero logic
@@ -771,39 +771,6 @@ def build_app(
             return await set_workspace_plan_impl(
                 await _live(),
                 workspace_id,
-                tier_id,
-                source=source,
-                stripe_customer_id=stripe_customer_id,
-                stripe_subscription_id=stripe_subscription_id,
-                status=status,
-            )
-        except ValueError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from None
-
-    # -- DEPRECATED back-compat alias (Model-A `tenant` body) ----------------
-    # The pre-Model-B route. An already-deployed dna-cloud Stripe webhook still
-    # PUTs `{tenant, tier_id, ...}`; post-F2 the `tenant` string IS the
-    # workspace_id (the founding workspace's id == the founder's tid), so this
-    # forwards `tenant` → `workspace_id` into the SAME core write — zero
-    # regression. New callers use PUT /v1/workspace-plan. Remove once dna-cloud
-    # has cut over.
-    @app.put("/v1/tenant-plan", dependencies=guarded, deprecated=True,
-             response_model=m.WorkspacePlanResponse)
-    async def put_tenant_plan(
-        tenant: str = Body(..., embed=True),
-        tier_id: str = Body(..., embed=True),
-        source: str = Body(default="stripe", embed=True),
-        stripe_customer_id: str | None = Body(default=None, embed=True),
-        stripe_subscription_id: str | None = Body(default=None, embed=True),
-        status: str | None = Body(default=None, embed=True),
-    ) -> dict[str, Any]:
-        """DEPRECATED — use PUT /v1/workspace-plan. Accepts the legacy
-        ``{tenant}`` body and writes it as the ``workspace_id`` (they are the same
-        opaque string post-Model-B). 400 on a missing tenant/tier_id."""
-        try:
-            return await set_workspace_plan_impl(
-                await _live(),
-                tenant,
                 tier_id,
                 source=source,
                 stripe_customer_id=stripe_customer_id,

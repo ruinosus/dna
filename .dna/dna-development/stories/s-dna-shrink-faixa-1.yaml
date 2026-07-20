@@ -1,0 +1,46 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-dna-shrink-faixa-1
+spec:
+  title: 'Faixa 1 da auditoria de complexidade: apagar andaime com zero referencias
+    vivas'
+  description: 'Faixa 1 da auditoria de complexidade: apagar andaime com zero referencias
+    vivas'
+  status: in-progress
+  feature: f-dna-1.0-readiness
+  priority: high
+  labels:
+  - cleanup
+  reporter: claude-code
+  acceptance_criteria:
+  - Dado um item classificado como morto pela auditoria, quando o agente confirma
+    ZERO chamador vivo, entao ele e apagado com commit proprio e reversivel
+  - Dado um item que a auditoria classificou como morto mas que TEM chamador vivo,
+    quando isso e descoberto, entao ele NAO e apagado e a recusa e registrada com
+    evidencia
+  - Dada a suite completa, quando a faixa termina, entao ha ZERO falhas nos dois pacotes
+    (a contagem de testes cai, e isso e esperado)
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - sdk-py e cli verdes + guards de doc limpos + um commit por item + recusas documentadas
+  definition_of_done_source: cli-create
+  created_at: '2026-07-20T13:04:21+00:00'
+  updated_at: '2026-07-20T13:04:33+00:00'
+  timeline:
+  - at: '2026-07-20T13:04:21+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-20T13:04:33+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  produces:
+  - kind: Plan
+    name: plan-s-dna-shrink-faixa-1
+    role: implementation
+    at: '2026-07-20T13:04:33+00:00'

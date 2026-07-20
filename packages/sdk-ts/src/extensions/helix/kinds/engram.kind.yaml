@@ -123,13 +123,13 @@ spec:
       surface_count:
         type: integer
         default: 0
-        description: Increments on each surface. Damps re-surfacing via scoring
-          formula in retrieval.py.
+        description: Increments on each surface. Damps re-surfacing via the recall
+          scoring formula (dna/memory/decay.py).
       confidence_score:
         type: number
         default: 1.0
-        description: Semon engram intensity. Multiplies BM25 score in retrieval.
-          Bumps when homophonic LessonsLearned (same area) are filed — engrams reinforce
+        description: Semon engram intensity. Multiplies the recall score. Bumps
+          when homophonic LessonsLearned (same area) are filed — engrams reinforce
           each other. Decays with surface_count for hygiene.
       cues_history:
         type: array

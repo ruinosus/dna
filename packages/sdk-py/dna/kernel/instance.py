@@ -10,7 +10,7 @@ Namespace API (Chunk 2 extraction):
 - ``mi.lock.generate()``      — LockManager
 
 Old methods are preserved as one-line delegates; both APIs return identical
-results.  Implementation lives in the namespace classes and viz/ module.
+results.  Implementation lives in the namespace classes.
 """
 from __future__ import annotations
 
@@ -687,7 +687,7 @@ class ManifestInstance:
         return bool(getattr(kp, "is_root", False))
 
     def is_root_doc(self, doc: Any) -> bool:
-        """Public alias for _is_root_doc — used by viz functions."""
+        """Public alias for _is_root_doc — part of the blessed public surface."""
         return self._is_root_doc(doc)
 
     def kind_for(self, kind: str) -> Any | None:
@@ -735,96 +735,6 @@ class ManifestInstance:
     def dependency_tree(self) -> dict[str, Any]:
         """Build a dependency tree for every document that has dep_filters."""
         return self.composition.dependency_tree()
-
-    # -- Viz: Mermaid (delegates to viz.mermaid) --------------------------------
-
-    def dependency_tree_mermaid(self) -> str:
-        """Mermaid flowchart of the dependency tree (docs → their
-        dep_filter targets), as diagram source text."""
-        from dna.viz.mermaid import dependency_tree_mermaid as _f
-        return _f(self)
-
-    def er_diagram_mermaid(self) -> str:
-        """Mermaid ER diagram of the document instances and their
-        relationships, as diagram source text."""
-        from dna.viz.mermaid import er_diagram_mermaid as _f
-        return _f(self)
-
-    def mindmap_mermaid(self) -> str:
-        """Mermaid mindmap centered on the root document, fanning out to
-        the manifest's kinds and docs."""
-        from dna.viz.mermaid import mindmap_mermaid as _f
-        return _f(self)
-
-    def pie_chart_mermaid(self) -> str:
-        """Mermaid pie chart of document distribution by Kind."""
-        from dna.viz.mermaid import pie_chart_mermaid as _f
-        return _f(self)
-
-    def quadrant_mermaid(self) -> str:
-        """Mermaid quadrant chart of the docs — axes come from the
-        CompositionProfile hints, not hardcoded kind names."""
-        from dna.viz.mermaid import quadrant_mermaid as _f
-        return _f(self)
-
-    def timeline_mermaid(self) -> str:
-        """Mermaid timeline of the ``build_prompt`` composition phases."""
-        from dna.viz.mermaid import timeline_mermaid as _f
-        return _f(self)
-
-    def sankey_mermaid(self) -> str:
-        """Mermaid sankey diagram of document flow into agents."""
-        from dna.viz.mermaid import sankey_mermaid as _f
-        return _f(self)
-
-    def kind_catalog_mermaid(self) -> str:
-        """Mermaid classDiagram of every registered Kind (the catalog,
-        not just the kinds instantiated in this scope)."""
-        from dna.viz.mermaid import kind_catalog_mermaid as _f
-        return _f(self)
-
-    def export_diagrams_md(self, path: str | None = None) -> dict[str, str]:
-        """Render every diagram to Markdown with embedded Mermaid blocks.
-        Returns ``{diagram_name: markdown}``; when ``path`` is given the
-        files are also written to that directory."""
-        from dna.viz.mermaid import export_diagrams_md as _f
-        return _f(self, path)
-
-    # -- Viz: Matrix (delegates to viz.matrix) ----------------------------------
-
-    def matrix(self) -> dict[str, Any]:
-        """Agent × dependency matrix — which agent uses which docs —
-        as a structured dict (``agents``, ``dependencies``, ``matrix``)."""
-        from dna.viz.matrix import matrix as _f
-        return _f(self)
-
-    def matrix_markdown(self) -> str:
-        """The ``matrix()`` data rendered as a Markdown table."""
-        from dna.viz.matrix import matrix_markdown as _f
-        return _f(self)
-
-    # -- Viz: Health & Impact (delegates to viz.health) -------------------------
-
-    def impact(self, kind: str, name: str) -> dict[str, Any]:
-        """Blast-radius analysis for changing/removing one document:
-        which agents depend on it and through which dep_filters."""
-        from dna.viz.health import impact as _f
-        return _f(self, kind, name)
-
-    def health(self) -> dict[str, Any]:
-        """Manifest health report — coverage gaps, orphan documents,
-        missing refs — driven generically by CompositionProfile slots
-        (no kind names hardcoded)."""
-        from dna.viz.health import health_report as _f
-        return _f(self)
-
-    # -- Viz: ASCII (delegates to viz.ascii) ------------------------------------
-
-    def ascii_tree(self) -> str:
-        """Terminal-friendly ASCII rendering of the dependency tree —
-        no diagram renderer needed."""
-        from dna.viz.ascii import ascii_tree as _f
-        return _f(self)
 
     # -- Ref resolution -------------------------------------------------------
 

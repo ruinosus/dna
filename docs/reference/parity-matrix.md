@@ -281,7 +281,7 @@ The `blessed` members are the ONE documented way to read manifest data; `depreca
 | `all` | ✅ | ✅ | mi.documents (filter by d.kind) or kernel.query(scope, kind) |
 | `one` | ✅ | ✅ | mi.documents (find by d.kind + d.name); Py also kernel.get_document(scope, kind, name), TS kernel.query with a filter |
 
-The exact public `ManifestInstance` surface is pinned member-for-member by the fixture: **57 Python** members and **56 TypeScript** members. Any public addition/removal/rename on either side without a matching fixture edit reds the suite.
+The exact public `ManifestInstance` surface is pinned member-for-member by the fixture: **43 Python** members and **39 TypeScript** members. Any public addition/removal/rename on either side without a matching fixture edit reds the suite.
 
 ### `Kernel` — blessed
 
@@ -365,7 +365,6 @@ Surfaces where member parity is intentionally NOT enforced, each with a recorded
 | Surface | Python | TypeScript | Reason |
 |---|:---:|:---:|---|
 | `collaborator-ports` | ✅ | ✅ | Kernel INTERNALS, not public contract: these are the narrow mediator slices from the kernel-decomposition epic (e-kernel-decomposition). Each language decomposed its own god-object along its own seams (Py ~15 slices, TS 3) — forcing member parity here would couple internal refactors across languages for zero user-facing value. |
-| `dna_tool-decorator` | ✅ | ➖ | The @dna_tool decorator + pending-tools harvest is langchain glue (wraps langchain_core.tools.tool for langgraph/deepagents). The TS SDK has no langchain runtime; the portable part — ToolPort/ToolDefinition + ToolRegistry + kernel.tool()/getTools() and the read-umbrella group aliases — IS ported and surface-tracked above. |
 
 ## Behavioral proof — the conformance kit
 

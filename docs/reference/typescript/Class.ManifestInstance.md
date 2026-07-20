@@ -241,18 +241,6 @@ Auto-register Hook documents on the kernel's HookRegistry.
 
 ***
 
-### asciiTree()
-
-```ts
-asciiTree(): string;
-```
-
-#### Returns
-
-`string`
-
-***
-
 ### buildPrompt()
 
 ```ts
@@ -268,30 +256,6 @@ buildPrompt(opts?): Promise<string>;
 #### Returns
 
 `Promise`\<`string`\>
-
-***
-
-### c4ComponentMermaid()
-
-```ts
-c4ComponentMermaid(): string;
-```
-
-#### Returns
-
-`string`
-
-***
-
-### compositionFlowchartMermaid()
-
-```ts
-compositionFlowchartMermaid(): string;
-```
-
-#### Returns
-
-`string`
 
 ***
 
@@ -347,18 +311,6 @@ dependencyTree(): Record<string, unknown>;
 
 ***
 
-### dependencyTreeMermaid()
-
-```ts
-dependencyTreeMermaid(): string;
-```
-
-#### Returns
-
-`string`
-
-***
-
 ### describe()
 
 ```ts
@@ -375,110 +327,6 @@ describe(kind, name): string;
 #### Returns
 
 `string`
-
-***
-
-### erDiagramMermaid()
-
-```ts
-erDiagramMermaid(): string;
-```
-
-#### Returns
-
-`string`
-
-***
-
-### erModel()
-
-```ts
-erModel(): {
-  entities: {
-     attrs: {
-        key: string;
-        type: string;
-        value: string;
-     }[];
-     id: string;
-     kind: string;
-     name: string;
-  }[];
-  relationships: {
-     isMany: boolean;
-     label: string;
-     sourceId: string;
-     targetId: string;
-  }[];
-};
-```
-
-#### Returns
-
-```ts
-{
-  entities: {
-     attrs: {
-        key: string;
-        type: string;
-        value: string;
-     }[];
-     id: string;
-     kind: string;
-     name: string;
-  }[];
-  relationships: {
-     isMany: boolean;
-     label: string;
-     sourceId: string;
-     targetId: string;
-  }[];
-}
-```
-
-##### entities
-
-```ts
-entities: {
-  attrs: {
-     key: string;
-     type: string;
-     value: string;
-  }[];
-  id: string;
-  kind: string;
-  name: string;
-}[];
-```
-
-##### relationships
-
-```ts
-relationships: {
-  isMany: boolean;
-  label: string;
-  sourceId: string;
-  targetId: string;
-}[];
-```
-
-***
-
-### exportDiagramsMd()
-
-```ts
-exportDiagramsMd(path?): Record<string, string>;
-```
-
-#### Parameters
-
-| Parameter | Type |
-| ------ | ------ |
-| `path?` | `string` |
-
-#### Returns
-
-`Record`\<`string`, `string`\>
 
 ***
 
@@ -544,37 +392,6 @@ get(kind?): {
 
 ***
 
-### health()
-
-```ts
-health(): Record<string, unknown>;
-```
-
-#### Returns
-
-`Record`\<`string`, `unknown`\>
-
-***
-
-### impact()
-
-```ts
-impact(kind, name): Record<string, unknown>;
-```
-
-#### Parameters
-
-| Parameter | Type |
-| ------ | ------ |
-| `kind` | `string` |
-| `name` | `string` |
-
-#### Returns
-
-`Record`\<`string`, `unknown`\>
-
-***
-
 ### inventory()
 
 ```ts
@@ -636,18 +453,6 @@ Delegates to CompositionEngine.
 
 ***
 
-### kindCatalogMermaid()
-
-```ts
-kindCatalogMermaid(): string;
-```
-
-#### Returns
-
-`string`
-
-***
-
 ### kindFor()
 
 ```ts
@@ -700,42 +505,6 @@ listKinds(): string[];
 
 ***
 
-### matrix()
-
-```ts
-matrix(): Record<string, unknown>;
-```
-
-#### Returns
-
-`Record`\<`string`, `unknown`\>
-
-***
-
-### matrixMarkdown()
-
-```ts
-matrixMarkdown(): string;
-```
-
-#### Returns
-
-`string`
-
-***
-
-### mindmapMermaid()
-
-```ts
-mindmapMermaid(): string;
-```
-
-#### Returns
-
-`string`
-
-***
-
 ### ~~one()~~
 
 ```ts
@@ -767,18 +536,6 @@ indexed/record-plane reads. (s-blessed-query-surface)
 
 ***
 
-### pieChartMermaid()
-
-```ts
-pieChartMermaid(): string;
-```
-
-#### Returns
-
-`string`
-
-***
-
 ### profileFor()
 
 ```ts
@@ -797,18 +554,6 @@ Returns null if no profile covers this kind.
 #### Returns
 
 [`CompositionProfile`](Interface.CompositionProfile.md) \| `null`
-
-***
-
-### quadrantMermaid()
-
-```ts
-quadrantMermaid(): string;
-```
-
-#### Returns
-
-`string`
 
 ***
 
@@ -968,18 +713,6 @@ resolve(layers?): ManifestInstance;
 
 ***
 
-### sankeyMermaid()
-
-```ts
-sankeyMermaid(): string;
-```
-
-#### Returns
-
-`string`
-
-***
-
 ### summary()
 
 ```ts
@@ -992,12 +725,3 @@ summary(): string;
 
 ***
 
-### timelineMermaid()
-
-```ts
-timelineMermaid(): string;
-```
-
-#### Returns
-
-`string`

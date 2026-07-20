@@ -28,7 +28,6 @@ from dna.memory.decay import (
 from dna.memory.ecphory import EngramRef, score_engram
 from dna.memory.encoding_context import time_of_day
 from dna.memory.memory_type import classify_memory_type
-from dna.memory.retrieval import Memory, rank_memories
 
 FIXTURE = (
     Path(__file__).resolve().parents[2]
@@ -78,14 +77,6 @@ def test_time_of_day_parity():
     for c in _FX["time_of_day"]:
         assert time_of_day(datetime(2026, 1, 1, c["hour"])) == c["expected"], c
 
-
-def test_rank_memories_parity():
-    for c in _FX["rank_memories"]:
-        mems = [Memory(m["name"], m["spec"]) for m in c["memories"]]
-        ranked = rank_memories(mems, c["query"], now=_dt(c["now"]))
-        assert [r.name for r in ranked] == c["expected_order"], c
-        for r in ranked:
-            assert r.score == pytest.approx(c["expected_scores"][r.name], abs=1e-9), (r.name, c)
 
 
 def test_score_engram_parity():

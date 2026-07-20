@@ -273,6 +273,33 @@ ALTER TABLE {schema}.dna_bundle_entries
     ADD COLUMN IF NOT EXISTS content_binary BYTEA
 """,
     ],
+    10: [
+        # i-039 (2026-07-20) — drop ``dna_edges``, dead scaffolding since
+        # version 7 (s-edge-table-materializer, 2026-05-12). The DDL there
+        # describes a writer -- "an observer in app.py write-hook that
+        # parses spec for slugs and upserts edges" -- that was NEVER built:
+        # ``app.py`` does not exist in this repo, and a grep for
+        # ``dna_edges`` across py/ts/sql returned only the DDL, the two
+        # indexes and the Engram rename script. NOTHING ever inserted a
+        # row, so the table is provably empty in every database and the
+        # two lookup indexes have never served a query.
+        #
+        # Forward-only: version 7 stays EXACTLY as it is. Databases that
+        # already ran it recorded it in ``dna_schema_migrations`` and the
+        # runner is append-only (``adapters/_migrations.py`` iterates
+        # ``sorted(migrations)`` and skips applied versions) -- so the
+        # create-then-drop pair is the only correct shape here. Fresh
+        # bootstraps pay one wasted CREATE + DROP; that is the price of
+        # never editing history.
+        #
+        # DROP TABLE removes the two dependent indexes with it, so
+        # ``dna_edges_from_lookup`` / ``dna_edges_to_lookup`` need no
+        # separate statement. IF EXISTS makes it idempotent for any DB
+        # where the table was already removed by hand.
+        """
+DROP TABLE IF EXISTS {schema}.dna_edges
+""",
+    ],
 }
 
 

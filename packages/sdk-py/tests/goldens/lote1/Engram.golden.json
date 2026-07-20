@@ -62,7 +62,7 @@
    },
    "confidence_score": {
     "default": 1.0,
-    "description": "Semon engram intensity. Multiplies BM25 score in retrieval. Bumps when homophonic LessonsLearned (same area) are filed — engrams reinforce each other. Decays with surface_count for hygiene.",
+    "description": "Semon engram intensity. Multiplies the recall score. Bumps when homophonic LessonsLearned (same area) are filed — engrams reinforce each other. Decays with surface_count for hygiene.",
     "type": "number"
    },
    "cues_history": {
@@ -209,7 +209,7 @@
    },
    "surface_count": {
     "default": 0,
-    "description": "Increments on each surface. Damps re-surfacing via scoring formula in retrieval.py.",
+    "description": "Increments on each surface. Damps re-surfacing via the recall scoring formula (dna/memory/decay.py).",
     "type": "integer"
    },
    "surface_when": {

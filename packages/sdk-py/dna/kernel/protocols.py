@@ -942,19 +942,16 @@ class WriterPort(Protocol):
 # ---------------------------------------------------------------------------
 # Tool port (s-dna-tool-decorator, 2026-05-24)
 #
-# DNA layer ON TOP of langchain — never replaces langchain's
-# StructuredTool. ``@dna_tool`` decorator wraps langchain's ``@tool``
-# (so deepagents/langgraph still get exactly what they expect) and
-# ADDS DNA-side metadata for declarative discovery.
+# DNA-side tool METADATA for declarative discovery. A ToolDefinition
+# describes a tool (name, group, schema) without executing it; the
+# runtime that owns execution is free to be langchain, MCP, or anything
+# else.
 #
 # Architecture:
-#   - Decorator runs at function definition time → emits ToolDefinition
 #   - Extension.register(kernel) calls kernel.tool(td) per definition
 #     (analogous to kernel.kind(KindPort))
 #   - Studio/clients query via kernel.get_tools(group=...) — pure
 #     metadata, no execution
-#   - Agent dispatch path (make_manifest_tools) returns the unchanged
-#     langchain StructuredTool[] — agnostic to DNA wrapping
 # ---------------------------------------------------------------------------
 
 
@@ -1281,9 +1278,9 @@ class ExtensionHost(Protocol):
     ``on(hook, fn)``          an event subscriber (e.g. ``post_save``)
     ``on_veto(hook, fn)``     a veto listener (e.g. ``pre_save`` write guards
                               — raising vetoes the operation)
-    ``tool(td)``              a ToolDefinition (``@dna_tool`` metadata;
-                              TS twin: ``kernel.tool(td)`` + the
-                              ToolRegistry, s-dna-port-surface-parity)
+    ``tool(td)``              a ToolDefinition (tool metadata; TS twin:
+                              ``kernel.tool(td)`` + the ToolRegistry,
+                              s-dna-port-surface-parity)
     ``composition_profile``   a CompositionProfile (orchestrator kind wiring)
     ``hooks``                 the HookRegistry itself, for advanced listener
                               management (``kernel.hooks.on_veto(..., key=)``)
@@ -1522,7 +1519,7 @@ def validate_source_port(source: Any) -> None:
             f"Every source handed to kernel.source() must implement the "
             f"core SourcePort surface (see docs/PORT-CONTRACT.md, section "
             f"'Writing a Source adapter'). If this is a SYNC source (e.g. "
-            f"S3Source), wrap it: AsyncSourceAdapter(your_source). "
+            f"one doing blocking I/O), wrap it: AsyncSourceAdapter(your_source). "
             f"NOTE: this gate checks method NAMES only — run "
             f"{pkg}.testing.source_conformance_suite(factory) to verify "
             f"the adapter's actual behavior."

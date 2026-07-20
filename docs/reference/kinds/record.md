@@ -281,7 +281,7 @@ An Engram is an affective recall artifact (record plane) — the memory co-pilla
 | `affect_evidence_refs` | array |  | Concrete refs (rem-X, verdict-Y, Story/s-Z) that back the affect choice. Required for high-stakes affects so the LLM's claim is auditable against actual artifacts in the manifest. |
 | `affect_reason` | string |  | Story s-remembrance-affect-reason-required. Concrete justification for the chosen affect — names specific slugs/SHAs/AC counts/state. NOT generic ('Story closed', 'shipped successfully'). Validator rejects writes that lack reason OR have boilerplate. Required for high-stakes affects (regret/ominous/surprise); optional for triumph/wistful but encouraged. |
 | `area` | string | yes | Scoped target: Feature/X, Epic/Y, or Roadmap/Z. The LessonLearned surfaces when this area is touched. |
-| `confidence_score` | number |  | Semon engram intensity. Multiplies BM25 score in retrieval. Bumps when homophonic LessonsLearned (same area) are filed — engrams reinforce each other. Decays with surface_count for hygiene. |
+| `confidence_score` | number |  | Semon engram intensity. Multiplies the recall score. Bumps when homophonic LessonsLearned (same area) are filed — engrams reinforce each other. Decays with surface_count for hygiene. |
 | `cues_history` | array |  | Semon ecforia trace. Each time the LessonLearned is surfaced via remember(), the cue (query + actor + timestamp) is appended. History of WHY this memory kept getting recalled. |
 | `encoding_context` | object |  | Snapshot of the conditions at engraphy. semon-recaller scores ecphory candidates by partial-match against this dict. |
 | `homophonic_links` | array |  | Semon homophony — engrams sharing substrate features. Each link records target + resonance score + basis. semon-recaller propagates a small strength boost (+0.02) to neighbors on ecphory (resonance). |
@@ -293,7 +293,7 @@ An Engram is an affective recall artifact (record plane) — the memory co-pilla
 | `source_refs` | array | yes | Pointers to source artifacts (Narrative/X, WorkflowEvent/Y, etc.) that this memory derives from. |
 | `summary` | string | yes | 1-2 sentence 'Lembre-se de...' — the recalled essence. |
 | `superseded_by_memory` | string |  | Name of the memory that invalidated this one (not `superseded_by` — that's an ADR dep_filter token). Pairs with valid_to for point-in-time audit. |
-| `surface_count` | integer |  | Increments on each surface. Damps re-surfacing via scoring formula in retrieval.py. |
+| `surface_count` | integer |  | Increments on each surface. Damps re-surfacing via the recall scoring formula (dna/memory/decay.py). |
 | `surface_when` | array | yes | Triggers that surface this LessonLearned. Mirrors how human recall fires unbidden in context. |
 | `tags` | array |  |  |
 | `valid_from` | string |  | World-time validity start (Zep bi-temporal). Default: created_at. |

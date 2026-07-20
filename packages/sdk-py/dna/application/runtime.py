@@ -755,7 +755,7 @@ async def provision_tenant_owner_impl(
     membership write, and nothing ever made the sole user the Owner of their own
     tenant. On first authenticated access the DNA Cloud portal calls this (server
     side, with the shared bearer — the portal never opens the DNA source directly,
-    same pattern as ``PUT /v1/tenant-plan``) so the signed-in user becomes Owner of
+    same pattern as ``PUT /v1/workspace-plan``) so the signed-in user becomes Owner of
     their OWN tenant and member management works.
 
     **Idempotent + first-owner-only.** If the tenant ALREADY has any Owner

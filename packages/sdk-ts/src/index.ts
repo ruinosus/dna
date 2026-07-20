@@ -52,9 +52,6 @@ export { LockManager } from "./kernel/lock-manager.js";
 export { ReportBuilder } from "./kernel/reports.js";
 export { serializeRawToFiles } from "./kernel/serialize-to-files.js";
 
-// Viz — diagram generators, health, matrix, ASCII tree
-export * from "./viz/index.js";
-
 // Opinionated bootstrap — extension wiring lives here, not in kernel/
 export { createKernelWithBuiltins, quickInstance, createRuntimeWithBuiltins, quickManifest, fromConfig } from "./bootstrap.js";
 

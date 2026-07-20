@@ -649,62 +649,6 @@
         "title": "Body_provision_workspace_owner_v1_workspaces__workspace_id__provision_owner_post",
         "type": "object"
       },
-      "Body_put_tenant_plan_v1_tenant_plan_put": {
-        "properties": {
-          "source": {
-            "default": "stripe",
-            "title": "Source",
-            "type": "string"
-          },
-          "status": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Status"
-          },
-          "stripe_customer_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Stripe Customer Id"
-          },
-          "stripe_subscription_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Stripe Subscription Id"
-          },
-          "tenant": {
-            "title": "Tenant",
-            "type": "string"
-          },
-          "tier_id": {
-            "title": "Tier Id",
-            "type": "string"
-          }
-        },
-        "required": [
-          "tenant",
-          "tier_id"
-        ],
-        "title": "Body_put_tenant_plan_v1_tenant_plan_put",
-        "type": "object"
-      },
       "Body_put_workspace_plan_v1_workspace_plan_put": {
         "properties": {
           "source": {
@@ -4536,64 +4480,6 @@
           }
         },
         "summary": "Sources"
-      }
-    },
-    "/v1/tenant-plan": {
-      "put": {
-        "deprecated": true,
-        "description": "DEPRECATED — use PUT /v1/workspace-plan. Accepts the legacy\n``{tenant}`` body and writes it as the ``workspace_id`` (they are the same\nopaque string post-Model-B). 400 on a missing tenant/tier_id.",
-        "operationId": "put_tenant_plan_v1_tenant_plan_put",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "authorization",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Body_put_tenant_plan_v1_tenant_plan_put"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WorkspacePlanResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Put Tenant Plan"
       }
     },
     "/v1/tenants/{tid}/provision-owner": {

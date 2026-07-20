@@ -27,7 +27,6 @@ from dna.memory.encoding_context import (
     time_of_day,
 )
 from dna.memory.memory_type import classify_memory_type
-from dna.memory.retrieval import Memory, rank_memories
 
 NOW = datetime(2026, 7, 9, 15, 0, 0, tzinfo=timezone.utc)
 
@@ -200,36 +199,3 @@ def test_run_ecphory_homophony_expansion():
     res = run_ecphory(cue={"query": "memory"}, engrams=engrams, now=NOW)
     assert [d["name"] for d in res.direct] == ["a"]
     assert [h["name"] for h in res.homophonic] == ["b"]
-
-
-# ───────────────────────── BM25 retrieval ─────────────────────────
-
-
-def test_rank_memories_orders_by_relevance():
-    mems = [
-        Memory("s-mem", {"area": "memory", "summary": "vector embedding recall cognitive"}),
-        Memory("s-banana", {"area": "fruit", "summary": "banana tropical yellow smoothie"}),
-        Memory("s-fusion", {"area": "search", "summary": "hybrid fusion reciprocal rank"}),
-    ]
-    ranked = rank_memories(mems, "memory recall cognitive", now=NOW)
-    assert ranked[0].name == "s-mem"
-    assert "s-banana" not in [r.name for r in ranked]
-
-
-def test_rank_memories_affect_and_surface_factors():
-    base = {"area": "memory", "summary": "memory recall"}
-    surprise = Memory("s-surprise", {**base, "affect": "surprise"})
-    wistful = Memory("s-wistful", {**base, "affect": "wistful"})
-    ranked = rank_memories([wistful, surprise], "memory recall", now=NOW)
-    # surprise (1.5) outranks wistful (1.0) with identical text
-    assert ranked[0].name == "s-surprise"
-
-
-def test_rank_memories_partial_prefix_floor():
-    mems = [Memory("s-login", {"area": "auth", "summary": "login and logout flow"})]
-    # exact-only: 'logi' has no exact token match → empty
-    assert rank_memories(mems, "logi", now=NOW) == []
-    # partial: prefix overlap 'logi'~'login' surfaces at the floor
-    ranked = rank_memories(mems, "logi", now=NOW, partial=True)
-    assert ranked and ranked[0].name == "s-login"
-    assert ranked[0].factors["partial_match"] is True

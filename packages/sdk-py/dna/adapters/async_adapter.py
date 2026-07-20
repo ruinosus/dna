@@ -5,9 +5,8 @@ preventing event loop blocking in FastAPI/Starlette.
 
 Usage:
     from dna.adapters.async_adapter import AsyncSourceAdapter
-    from dna.adapters.s3.source import S3Source
 
-    sync_source = S3Source(bucket="my-manifests")   # sync SourcePort
+    sync_source = MyBlockingSource(...)             # sync SourcePort
     async_source = AsyncSourceAdapter(sync_source)
 
     docs = await async_source.load_all("my-scope")
@@ -71,7 +70,7 @@ class AsyncSourceAdapter:
 
         Passthrough when the inner source declares; otherwise falls back
         to reflection-derivation over the inner source (external sync
-        sources — e.g. ``S3Source`` — predate the declaration contract).
+        sources predate the declaration contract).
         Both answers match the wrapper's own structural surface, since
         the proxy mirrors the inner source member-for-member.
         """

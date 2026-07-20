@@ -1079,10 +1079,9 @@ export interface KindPort extends KindPresentation {
 // Tool port — TS twin of the Py ToolPort/ToolDefinition
 // (s-dna-tool-decorator 2026-05-24; ported by s-dna-port-surface-parity).
 //
-// DNA discovery metadata for an invocable agent tool. The Python side wraps
-// langchain's StructuredTool via the @dna_tool decorator; the TS SDK has no
-// langchain runtime, so `getCallable()` returns whatever framework-native
-// invocable the registrant provided (a plain function is fine). Extensions
+// DNA discovery metadata for an invocable agent tool. Framework-agnostic on
+// both sides: `getCallable()` returns whatever framework-native invocable the
+// registrant provided (a plain function is fine). Extensions
 // register via `kernel.tool(td)` (see ExtensionHost); consumers query via
 // `kernel.getTools({ group })` — pure metadata, no execution path.
 // ---------------------------------------------------------------------------
