@@ -11,6 +11,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.21.0] — 2026-07-20
+
+### ✨ O ato de criação
+
+- **`POST /v1/workspaces`** — cria um `Workspace` e o `WorkspaceMembership` de
+  owner. O **id é cunhado pelo servidor**: não existe campo `workspace_id` na
+  rota nem na assinatura do impl, então um id escolhido pelo cliente é
+  impossível de passar, não apenas rejeitado. Isso implementa a decisão de
+  produto **D5** (o workspace ganha id próprio; o `tid` do Azure vira apenas
+  fato de autenticação).
+- **`GET /v1/workspaces`** — enumera por membership ATIVA. Convite `pending`
+  não aparece; identidade desconhecida recebe lista vazia, nunca a de outro.
+- **`POST /v1/projects`** — `Project` com `workspace_id` explícito (decisão
+  **A1**); 403 sem membership ativa.
+
+### 🔒 Segurança — anti-takeover ganha implementação própria
+
+`provision-owner` **não cria mais nada**; degradou para o reconcile idempotente
+de login. A regra de entitlement deixou de ser "seu `tid` é igual ao id do
+workspace" e passou a ser **"você já tem membership ativa aqui"**.
+
+Com a criação sendo explícita e o id cunhado pelo servidor, **não sobra id não
+reivindicado para disputar** — takeover passa a ser impossível por construção,
+não por comparação de strings.
+
+### 🧹 Encolhimento
+
+- **`packages/sdk-ts` congelado** na tag `sdk-ts-final` (restaurar:
+  `git checkout sdk-ts-final -- packages/sdk-ts`). A história TypeScript passa a
+  ser o cliente REST gerado. −84.704 linhas.
+- **Alembic no lugar dos payloads DDL à mão.** O ganho não é o runner (que era
+  pequeno e justificado) e sim o `autogenerate`: havia **duas definições
+  paralelas do schema** sem nada verificando que batiam — foi assim que uma
+  coluna ficou duas semanas em drift silencioso.
+- **7 Kinds órfãos removidos** — declarados para receber saída de motores de
+  cognição que nunca existiram neste pacote.
+- Andaime sem referência viva: BM25 escrito à mão, `dna/sync`, `dna/viz`,
+  `@dna_tool`, `RedisCache`, `S3Source`, `dna_edges`.
+
+### 🔧 Clientes
+
+`client-py` e `client-ts` cobrem agora **as 31 operações**, não só as 18 de
+leitura. O guard de drift passou a ser chaveado por `(MÉTODO, path)` e a existir
+**nos dois** clientes — antes era só GET, só no Python, e uma rota de escrita
+nova entrava sem quebrar nada.
+
+
 ### ⚠️ Breaking
 
 - **The TypeScript SDK (`packages/sdk-ts`, npm `dna-sdk`) is frozen and
