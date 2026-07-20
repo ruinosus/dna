@@ -68,27 +68,6 @@ A AgentSession captures a developer↔AI coding conversation as a versioned proj
 | `tool_version` | string |  |  |
 | `workspace_path` | string |  |  |
 
-## ArchiveProposal
-
-- **Alias:** `sdlc-archive-proposal`
-- **apiVersion:** `github.com/ruinosus/dna/sdlc/v1`
-- **Plane:** record
-
-**Spec fields**
-
-| Field | Type | Required | Description |
-| --- | --- | --- | --- |
-| `evidence` | string | yes | Plain-text justification. E.g. 'Unreferenced by any WorkflowEvent.methodology_artifact in 91 entries scanned. Last touch 73 days ago.' |
-| `proposed_at` | string |  | Auto-stamped on creation. |
-| `proposed_by` | string | yes | Oracle slug (typically 'cleanup-suggestions') or 'user'. |
-| `reason` | string | yes | Why prune. orphan = no inbound refs; superseded = newer doc replaces; stale = no touch beyond threshold; contradicted = newer doc disagrees; duplicate = identical. |
-| `review_deadline` | string | yes | Spec §15: default proposed_at + 14d. Stale proposals past this date should be re-evaluated (not auto-vetoed). |
-| `reviewer` | string |  | Auto-stamped on approve/veto. Username or 'system'. |
-| `reviewer_note` | string |  | Optional note explaining approval/veto reasoning. |
-| `status` | string | yes | proposed → approved → executed (moves target to _forgotten/) OR proposed → vetoed (target stays). |
-| `target_kind` | string | yes | Any Kind name (e.g. 'Plan', 'Story', 'Issue', 'Spec'). Self-references rejected at execution time. |
-| `target_name` | string | yes | Slug of the doc being proposed for forgetting. |
-
 ## AuditLog
 
 - **Alias:** `audit-auditlog`
@@ -480,33 +459,6 @@ A Feature is a shippable unit. It implements one or more UseCases, decomposes in
 | `use_cases` | array |  |  |
 | `watchers` | array |  |  |
 
-## Forecast
-
-- **Alias:** `sdlc-forecast`
-- **apiVersion:** `github.com/ruinosus/dna/sdlc/v1`
-- **Plane:** record
-
-Forecast = falseable hypothesis. Authored by hand (`dna doc make Forecast`) or by an oracle. would_change predictions are MEANT to be checked at outcome_check_at, but no verification loop ships in this distribution — status and verifications are maintained by the author. Pair with SynthesisRun (oneiric artefact, non-falseable processing).
-
-**Spec fields**
-
-| Field | Type | Required | Description |
-| --- | --- | --- | --- |
-| `drafted_at` | string |  |  |
-| `evidence_from_present` | array | yes |  |
-| `forecaster` | string | yes | Author — oracle slug or 'user'. |
-| `generated_by` | string |  |  |
-| `lens` | string |  | Optional perspective tag (optimism\|risk\|friction\|opportunity\|neutral). |
-| `outcome_check_at` | string | yes |  |
-| `resolved_at` | string |  |  |
-| `scenario` | string | yes | Prose framing of the hypothesis. |
-| `scope_ref` | string | yes |  |
-| `source_oracle` | string |  |  |
-| `status` | string | yes |  |
-| `timeframe` | string | yes |  |
-| `verifications` | array |  | Audit trail. Meant to be appended by a verification loop; no such loop ships in this distribution, so the author maintains it. |
-| `would_change` | array | yes | Predictions to check at outcome_check_at. No automatic verifier ships in this distribution — checked by the author today. |
-
 ## HtmlArtifact
 
 - **Alias:** `sdlc-html-artifact`
@@ -550,27 +502,6 @@ An Initiative is a strategic investment unit (1-2 quarters) that groups Epics un
 | `theme_ref` | string |  | Optional Theme/OKR Objective slug. |
 | `title` | string | yes |  |
 | `updated_at` | string |  |  |
-
-## Insight
-
-- **Alias:** `sdlc-insight`
-- **apiVersion:** `github.com/ruinosus/dna/sdlc/v1`
-- **Plane:** record
-
-An Insight binds a perpetual question to a target UA (oracle-X) — it is the oracle's DEFINITION, not an insight; the answers come back as StatusReport docs. The UA owns the persona + heuristics + LLM selection. A runner was to iterate active Insights and dispatch each to its target_ua (which would emit a StatusReport via the create_status_report tool) — that runner does NOT ship in this distribution, so cadence_hours/active are declarations with no scheduler.
-
-**Spec fields**
-
-| Field | Type | Required | Description |
-| --- | --- | --- | --- |
-| `active` | boolean |  | False to disable without deleting. |
-| `cadence_hours` | integer |  | How often the runner re-dispatches the target_ua. 0 disables auto-run (manual only via /agent endpoint). |
-| `description` | string |  | Optional 1-2 sentence human description of what this oracle answers. The INSIGHT.md body. |
-| `evidence_kinds` | array |  | Hint of which Kinds the target_ua should read. Informational — the UA itself decides via its tools. |
-| `icon` | string |  | Single emoji shown next to the oracle. |
-| `question` | string | yes | The perpetual question this oracle pursues. |
-| `tags` | array |  |  |
-| `target_ua` | string | yes | Slug of the Agent that runs this oracle (e.g. 'oracle-health'). The UA owns the persona, tools, and LLM config — Insight only points. |
 
 ## IntelInsight
 
@@ -806,36 +737,6 @@ An Organization is the tenant's own org profile — the enterprise-familiar top-
 | `plan_ref` | string \| null |  | The DNA Cloud Tier / WorkspacePlan this org is on (a Tier tier_id or WorkspacePlan name). Null falls back to Free. The billing→enforcement bridge reads it; the OSS SDK only stores it. |
 | `slug` | string | yes | URL-safe identity for the org, e.g. acme-corp. Used in routes and as a stable handle for the tenant's portfolio. |
 
-## PatternInsight
-
-- **Alias:** `cognitive-pattern-insight`
-- **apiVersion:** `github.com/ruinosus/dna/cognitive/v1`
-- **Plane:** record
-
-PatternInsight = output of a dream-interp engine. Multiple interpretations per SynthesisRun OK — engines are complementary lenses, not exclusive. Hill engine produces exploration/insight/action structure; Jung produces amplifications + archetypes; Gestalt produces identifications. NOTE — none of those engines ship in this distribution; nothing produces a PatternInsight today, so the Kind is the declared contract, hand-authorable via `dna doc make`.
-
-**Spec fields**
-
-| Field | Type | Required | Description |
-| --- | --- | --- | --- |
-| `action` | object |  | Hill: stage 3 — what would you DO differently? May propose concrete docs (ArchiveProposal, Story, PreMortem) for HITL approval. |
-| `amplifications` | array |  | Jung: each symbol expanded by association. |
-| `drafted_at` | string |  |  |
-| `dream_ref` | string | yes | Slug of the SynthesisRun being interpreted. |
-| `engine` | string | yes | Engine name from registry (e.g. 'hill-interp'). |
-| `engine_params` | object |  | Params passed to the engine. |
-| `exploration` | object |  | Hill: stage 1 — re-reading, associations, trigger, affect layer. |
-| `framework` | string | yes | Interpretation school applied. |
-| `generated_by` | string |  |  |
-| `identifications` | array |  | Gestalt: voice of each element as the dreamer. |
-| `individuation_question` | string |  | Jung: integration question opening reflection. |
-| `insight` | object |  | Hill: stage 2 — what does the dream MEAN? Level in {waking, phenomenological, past, parts-of-self}. |
-| `lens` | string |  | Perspectiva da interpretação. Valores convencionais: 'hill', 'jung', 'gestalt', 'pattern', um slug de Agent (ex: 'jarvis', 'architect'), ou 'synthesis-by-<agent>' pra meta-synthesis. Pode coincidir com framework — lens é o ponto de vista, framework é a metodologia. Phase: cognitive-reflection. |
-| `owner` | string |  | Slug reference to a Agent. When set, this PatternInsight is PRIVATE to that agent. When null, it is GENERAL. Phase: cognitive-reflection. |
-| `summary` | string | yes | 1-3 sentence overview of the interpretation. |
-| `synthesizes` | array |  | PatternInsight IDs (names/slugs) que esta interpretação sintetiza. Vazia pra interpretações de 1ª camada (hill, jung, agent-interp). Não-vazia pra synthesis engines (agent-synthesis) que lêem N interps + SynthesisRun e produzem leitura final. Phase: cognitive-reflection. |
-| `tags` | array |  |  |
-
 ## Plan
 
 - **Alias:** `sdlc-plan`
@@ -868,7 +769,7 @@ A Plan is a pointer to an implementation plan document on disk. Usually descends
 - **apiVersion:** `github.com/ruinosus/dna/sdlc/v1`
 - **Plane:** record
 
-A Postmortem captures a factual analysis of an incident that happened — timeline, root cause, contributing factors, action items, lessons learned. Google SRE convention: blameless. Distinct from PreMortem (hypothetical) and Retrospective (recurring period summary).
+A Postmortem captures a factual analysis of an incident that happened — timeline, root cause, contributing factors, action items, lessons learned. Google SRE convention: blameless. Distinct from Retrospective (recurring period summary).
 
 **Spec fields**
 
@@ -893,33 +794,6 @@ A Postmortem captures a factual analysis of an incident that happened — timeli
 | `updated_at` | string |  |  |
 | `what_went_well` | array |  | Detection / response things that worked. |
 | `what_went_wrong` | array |  | Detection / response things that didn't work. |
-
-## PreMortem
-
-- **Alias:** `cognitive-pre-mortem`
-- **apiVersion:** `github.com/ruinosus/dna/cognitive/v1`
-- **Plane:** record
-
-A PreMortem rewinds a Story's history and asks what would have happened on the other branch. Intended to be generated by a deep-sleep hindsight hook after Stories ship/cancel — that hook does NOT ship in this distribution, so PreMortems are authored by hand (`dna doc make PreMortem`). Verifiable in principle: would_have_changed predictions are meant to be compared against current state at outcome_check_at, but no verifier ships either.
-
-**Spec fields**
-
-| Field | Type | Required | Description |
-| --- | --- | --- | --- |
-| `alternative` | string | yes | Prose: 'If instead of <outcome>, the Story had <other path>, then...'. 2-4 sentences. |
-| `divergence_point` | string | yes | Decision/event that branched the timeline. Cite a date or trigger event. |
-| `drafted_at` | string |  |  |
-| `evidence_against` | array |  | Doc refs that complicate the counterfactual. |
-| `evidence_for` | array |  | Doc refs supporting the counterfactual. |
-| `generated_by` | string |  |  |
-| `outcome_check_at` | string |  | When the author intends to verify. No automatic loop ships in this distribution. |
-| `source_outcome` | string | yes | What ACTUALLY happened to source_story. |
-| `source_story` | string | yes | Slug of the Story being rewritten (e.g. 's-foo-bar'). |
-| `status` | string |  |  |
-| `strength` | string |  |  |
-| `tags` | array |  |  |
-| `verifications` | array |  | Verification trace. Written by the author — no verifier ships in this distribution to auto-populate it. |
-| `would_have_changed` | array | yes | Predictions same shape as SynthesisRun.would_change. Verifiable via same measure_metrics path. |
 
 ## Project
 
@@ -1217,10 +1091,10 @@ A Spike is a time-boxed technical investigation. ONE question + finite time budg
 | `generated_at` | string |  |  |
 | `generated_by` | string |  | Model + actor (e.g. 'claude-sonnet-4-6'). |
 | `heuristic_explanation` | string |  | Plain-text walkthrough of HOW the heuristic computed the metrics and decided the confidence. Transparency: a reader can audit the math. |
-| `insight` | string | yes | Name of the Insight that produced this report. |
+| `insight` | string | yes | Free-text name of the question this report answers. Was a slug reference to an Insight Kind; that Kind was deleted in censo-12-kinds (2026-07-20) because the oracle runner that resolved it never shipped in this distribution. The field stays (stored docs carry it) but resolves against nothing. |
 | `metrics` | object |  | Deterministic numbers the heuristic computed (cycle counts, frequencies, averages). Free-form object — schema varies per oracle. |
 | `owner` | string |  | Slug reference to a Agent. When set, this StatusReport is PRIVATE to that agent. When null, it is GENERAL. Phase: cognitive-reflection. |
-| `question` | string |  | Echo of the oracle's question at run time. |
+| `question` | string |  | The question this report answers, written out. Was an echo of an Insight's question at run time; no runner ships, so the author writes it. |
 | `rag_status` | string |  | PMO-standard RAG status (Red/Amber/Green) for executive dashboards. Red = action needed; Amber = watch; Green = healthy. Optional — heuristics that map metrics → RAG should populate this. |
 | `thresholds` | object |  | Self-describing thresholds the heuristic used (e.g. `to_certain: 'pattern_freq > 0.9 AND n>=5'`). Lets the reader know what would change the verdict. |
 | `verdict` | string | yes | Human-readable answer (1-3 sentences pt-BR). Synthesized by the LLM from the heuristic numbers. |
@@ -1266,67 +1140,6 @@ A Story is a granular task: one developer, one PR, one estimate. Lists acceptanc
 | `title` | string |  | Human-readable display name (Jira 'summary'). |
 | `updated_at` | string |  |  |
 | `watchers` | array |  | Actor names subscribed to changes. |
-
-## SynthesisRun
-
-- **Alias:** `sdlc-synthesis-run`
-- **apiVersion:** `github.com/ruinosus/dna/sdlc/v1`
-- **Plane:** record
-
-SynthesisRun = oneiric artefact. Surreal recombination of project memory (fragments lifted from LessonLearned/Story/ArchiveProposal/WorkflowEvent) + impossible juxtapositions + dominant affect + one captured symbol. NOT falseable, NOT a prediction. Pair with Forecast for the predictive dimension. The dream-gen engines that were to produce it do not ship in this distribution — authored by hand today.
-
-**Spec fields**
-
-| Field | Type | Required | Description |
-| --- | --- | --- | --- |
-| `affect` | string | yes | Dominant emotional register of the dream. |
-| `belief_updates` | array |  | Belief deltas the dream proposes. Each is a before/after pair with reasoning. Scribe downstream may apply, reject, or queue for human review. |
-| `confidence` | number |  | Self-rated confidence in the dream's claims. 0.0 = pure imagination; 1.0 = ≥3 strong source_event_ids per claim + critic-pass clean. Used by ranker + clinical-guardrails. |
-| `contradictions` | array |  | Detected contradictions between source_event_ids the dream surfaced. NOT auto-resolved — flagged for human or scribe arbitration. |
-| `drafted_at` | string |  |  |
-| `dreamer` | string | yes | Author — UA slug ('oneiric-scribe') or 'user'. |
-| `echo` | array |  | Engram slugs activated (resonance, not analytic weight). |
-| `fragments` | array | yes | 3-5 pieces of real project memory that got recombined to form the dream. Like ecforia cues. |
-| `generated_by` | string |  |  |
-| `insight_candidates` | array |  | Discrete proposals to promote into StatusReport / LessonLearned / Skill via downstream scribes. Each item is independently rankable + verifiable. |
-| `juxtapositions` | array |  | Impossible / surreal combinations of fragments. Ex: 'rem-X encontra forget-Y e oferece uma troca.' Optional but encouraged. |
-| `lens` | string |  | SynthesisRunLens.name used to frame this dream (e.g. 'hindsight-cf', 'future-projection', 'skill-extractor'). Null = generated from SynthesizerState voice alone. |
-| `owner` | string |  | Slug reference to a Agent. When set, this SynthesisRun is PRIVATE to that agent (gerado a partir de LessonsLearned com mesmo owner). When null, the SynthesisRun is GENERAL. Phase: cognitive-reflection. S5 (dream-engines-v2): also matches a SynthesizerState.role when the dream came from hybrid-topn engine. |
-| `scenario` | string | yes | Imagistic prose, 3-6 sentences. The scene unfolding. Can have dialogue, surreal events, affect-loaded imagery. NOT a prediction or hedge. |
-| `skill_candidates` | array |  | Voyager-style skill seeds. Each is a name + trigger condition + procedural sketch. skill-synthesis engine consumes these. |
-| `source_event_ids` | array |  | Doc refs of the memories this dream is grounded in. Required for every claim in insight_candidates + belief_updates. Provenance for critic-pass + eval-suite. |
-| `source_oracle` | string |  |  |
-| `symbol` | string | yes | 1-line metaphor that captures the dream as a whole. Image-based, not analytic. Ex: 'A Feature corre por um corredor que se estreita sem fim.' |
-| `tags` | array |  |  |
-| `woke_thought` | string |  | Optional. The single thought lingering on waking. Where reflection might begin, not a prediction. |
-
-## SynthesizerState
-
-- **Alias:** `sdlc-synthesizer-state`
-- **apiVersion:** `github.com/ruinosus/dna/sdlc/v1`
-- **Plane:** record
-
-SynthesizerState = persona contract for a dream-gen agent. Declares role + goal + backstory + method + voice_markers + non_goals + memory_policy + constitution + examples. Intended to be read by a hybrid-topn engine to drive voice + memory routing — that engine does not ship in this distribution, so the doc is a declaration with no consumer today. Pairs 1:1 with a Agent (scribe-engram, oracle-risk, ...). Multiple co-exist; routing was to be done by a SynthesisRunTriggerPolicy, which is not a registered Kind.
-
-**Spec fields**
-
-| Field | Type | Required | Description |
-| --- | --- | --- | --- |
-| `backstory` | string |  | Narrative background (CrewAI pattern). 2-4 sentences. Anchors voice + perspective. Stored as bundle body so it can grow long. |
-| `constitution` | array |  | Constitutional AI principles (DSI/Anthropic pattern). Ex: ['ground every claim in source_event_ids', 'mark speculation as such', 'prefer evidence over invention']. Critic-pass evaluates dream output against these. |
-| `drafted_at` | string |  |  |
-| `drafted_by` | string |  |  |
-| `dreamer_memory_stream_ref` | string \| null |  | Reference to this dreamer's persistent memory stream — coleção dos SynthesisRuns anteriores deste dreamer (cross-session continuity). Generative Agents (Park 2023) evidence: voz individuada emerge de memory stream + reflexão, NÃO de voice_markers adjetivos. Hybrid-topn engine deve injetar últimos N dreams + reflexões no prompt context. Format esperado: '<scope>/SynthesisRunCollection/<dreamer-slug>' OR simples slug-name resolvido contra um SynthesisRunCollection Kind (a definir). Cross-synth ref: f-unique-voice-is-memory-not-prompt. |
-| `examples_negative` | array |  | 2-3 anti-patterns. Critic-pass uses these as explicit negative examples (what to avoid). |
-| `examples_positive` | array |  | 2-3 exemplary dreams in this dreamer's voice. Few-shot prompts to anchor style. |
-| `goal` | string | yes | What this dreamer is FOR. Ex: 'consolidate episódios em padrões reutilizáveis' (scribe), 'flag tail-risks antes que cristalizem em incidente' (oracle-risk). |
-| `linked_agent` | string |  | Optional Agent slug this SynthesizerState pairs with (1:1 — same persona, two surfaces: agent runs synchronous, dreamer runs offline). |
-| `memory_policy` | object |  | Routing hints for memory retrieval. Hybrid- topn engine respects these when assembling memory_subset. Empty dict = match-all. |
-| `method` | string | yes | How this dreamer reasons. analogical = compare-and-contrast; causal = chain of events; surreal = juxtaposition; structural = patterns/relations; narrative = arc; counterfactual = 'what if'; metaphorical = imagistic transfer. |
-| `non_goals` | array |  | What this dreamer MUST NOT do. Used as explicit critic-pass guardrails. Ex: 'never make diagnostic claims', 'never name living people in dreams'. |
-| `role` | string | yes | Short label for this dreamer. Usually matches a Agent slug. Ex: 'scribe-engram', 'oracle-risk', 'narrative-historian'. |
-| `tags` | array |  |  |
-| `voice_markers` | array | yes | Words/structures/cadence that mark this dreamer's voice. Ex: ['vestígio', 'arquivo subterrâneo', 'frase nominal curta', 'metáfora geológica']. Used by ranker for voice fingerprint match (anti-drift). |
 
 ## Task
 

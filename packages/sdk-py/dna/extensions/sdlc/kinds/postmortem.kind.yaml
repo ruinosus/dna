@@ -1,12 +1,16 @@
 # Postmortem — blameless incident analysis per Google SRE (record plane).
 # Factual: the incident HAPPENED (timeline + root cause + action items).
-# Distinct from PreMortem (hypothetical) and Retrospective (period summary).
+# Distinct from Retrospective (period summary). (A hypothetical counterpart,
+# PreMortem, used to exist; deleted in censo-12-kinds, 2026-07-20.)
 #
 # F3 lote-2 (spec 2026-06-10-kinds-descriptor-f3): synthesized from this
-# descriptor; the hand-written class twins were deleted. PARITY-CRITICAL
-# package data — byte-identical mirror under packages/sdk-{py,ts};
-# tests/test_descriptor_hash_parity.py enforces. Equivalence vs the extinct
-# class frozen in tests/test_lote2_descriptor_equivalence.py (golden:
+# descriptor; the hand-written class twins were deleted. SINGLE-SOURCE package data: this
+# descriptor is the only definition of the Kind — the packages/sdk-ts mirror and the test that enforced byte-identity
+# (tests/test_descriptor_hash_parity.py) were BOTH removed when the
+# TypeScript SDK was frozen (commit 341e517).
+# Nothing mirrors this file and no test enforces byte-identity.
+# What DOES still guard it: equivalence vs the extinct class, frozen
+# in tests/test_lote2_descriptor_equivalence.py (golden:
 # tests/goldens/lote2/Postmortem.golden.json). Deltas intencionais (semântica
 # canônica = port): summary curado substitui o eco whole-spec do KindBase
 # default (list endpoints não usam kp.summary()); parse valida contra o
@@ -164,5 +168,4 @@ spec:
   display_label: Postmortems
   docs: 'A Postmortem captures a factual analysis of an incident that happened — timeline,
     root cause, contributing factors, action items, lessons learned. Google SRE convention:
-    blameless. Distinct from PreMortem (hypothetical) and Retrospective (recurring
-    period summary).'
+    blameless. Distinct from Retrospective (recurring period summary).'

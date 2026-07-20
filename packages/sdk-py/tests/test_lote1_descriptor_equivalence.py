@@ -1,8 +1,12 @@
 """F3 lote-1: ports sintetizados dos descriptors ≡ classes extintas.
 
-Kinds: WorkflowEvent · Engram · Retrospective · PatternInsight ·
-PreMortem (spec 2026-06-10-kinds-descriptor-f3 D5; receita do piloto
-Kaizen — test_kaizen_descriptor_equivalence.py).
+Kinds: WorkflowEvent · Engram · Retrospective (spec
+2026-06-10-kinds-descriptor-f3 D5; receita do piloto Kaizen —
+test_kaizen_descriptor_equivalence.py).
+
+censo-12-kinds (2026-07-20): PatternInsight e PreMortem saíram do lote —
+os Kinds foram apagados junto com a família de motores de cognição que
+nunca existiu nesta distribuição (resíduo de outra extração).
 
 s-engram-rename (2026-07-19): Engram (formerly LessonLearned,
 github.com/ruinosus/dna/sdlc/v1) is now registered by HelixExtension from
@@ -32,8 +36,8 @@ pinados nos testes:
   - **parse**: o port VALIDA contra o schema (classes eram pass-through,
     validate_on_parse=False) — upgrade intencional; no kernel um doc
     inválido vira typed=None + evento parse_error, nunca crash de load.
-  - **to_card** (LessonLearned/PatternInsight): dead code, zero
-    consumidores em produção — não migrado.
+  - **to_card** (LessonLearned): dead code, zero consumidores em
+    produção — não migrado.
   - **drift Py↔TS curado**: as classes TS de LessonLearned (strict + sem
     affect_reason) / Retrospective (summary próprio, schema magro) /
     WorkflowEvent (summary com defaults "") divergiam do Py; o descriptor
@@ -55,7 +59,7 @@ from dna.kernel.protocols import TenantScope
 
 GOLDEN_DIR = Path(__file__).parent / "goldens" / "lote1"
 
-KINDS = ["WorkflowEvent", "Engram", "Retrospective", "PatternInsight", "PreMortem"]
+KINDS = ["WorkflowEvent", "Engram", "Retrospective"]
 
 # Projeção curada declarada no descriptor (delta intencional — ver
 # docstring). WorkflowEvent não está aqui: seu summary reproduz a classe.
@@ -64,14 +68,6 @@ CURATED_SUMMARY_DEFAULTS = {
         "area": "", "affect": "", "summary": "", "surface_count": 0, "owner": None,
     },
     "Retrospective": {"title": "", "intent": "", "period_end": ""},
-    "PatternInsight": {
-        "dream_ref": "", "framework": "", "engine": "", "summary": "",
-        "owner": None, "lens": None, "synthesizes": [],
-    },
-    "PreMortem": {
-        "source_story": "", "source_outcome": "",
-        "status": "drafted", "strength": "medium",
-    },
 }
 
 
@@ -256,8 +252,6 @@ def test_parse_valid_accepted(kernel, kind):
     ("WorkflowEvent", "phase"),
     ("Engram", "area"),
     ("Retrospective", "title"),
-    ("PatternInsight", "dream_ref"),
-    ("PreMortem", "source_story"),
 ])
 def test_parse_invalid_rejected(kernel, kind, missing):
     """O PORT valida contra o schema (classes eram pass-through — upgrade
@@ -279,7 +273,7 @@ def test_engram_declares_embed_fields(kernel):
     assert _port(kernel, "Engram").embed_fields == ["summary", "body"]
 
 
-@pytest.mark.parametrize("kind", ["WorkflowEvent", "Retrospective", "PatternInsight", "PreMortem"])
+@pytest.mark.parametrize("kind", ["WorkflowEvent", "Retrospective"])
 def test_non_embeddable_kinds_stay_undeclared(kernel, kind):
     """Esses kinds NÃO eram embeddable antes do F3 — declarar embed aqui
     seria mudança de comportamento (custo de embedding), não migração."""
@@ -290,6 +284,5 @@ def test_non_embeddable_kinds_stay_undeclared(kernel, kind):
 
 def test_classes_are_gone():
     import dna.extensions.sdlc as mod
-    for cls in ("WorkflowEventKind", "LessonLearnedKind", "RetrospectiveKind",
-                "PatternInsightKind", "PreMortemKind"):
+    for cls in ("WorkflowEventKind", "LessonLearnedKind", "RetrospectiveKind"):
         assert not hasattr(mod, cls), f"{cls} ressurgiu — o descriptor é a fonte"

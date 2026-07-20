@@ -117,7 +117,7 @@ def test_additive_no_route_collision_with_static_manifest(kinds_by_name):
     dedupes by ID, so the batch must NOT include any of them (avoids dup)."""
     static_owned = {
         "AuditLog", "Evidence", "HtmlTemplate", "LayerPolicy", "Engram",
-        "Narrative", "PromptTemplate", "Reference", "Skill", "SynthesisRun",
+        "Narrative", "PromptTemplate", "Reference", "Skill",
         "Theme", "Agent", "WorkflowEvent",
     }
     assert EXPOSED.keys().isdisjoint(static_owned)

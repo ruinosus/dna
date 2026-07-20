@@ -1,5 +1,5 @@
 {
- "_doc": "FROZEN GOLDEN \u2014 captured 2026-06-11 from the live PostmortemKind class (pre-deletion), F3 lote-2. Deep-equaled against the descriptor-synthesized port in test_lote2_descriptor_equivalence.py.",
+ "_doc": "FROZEN GOLDEN — captured 2026-06-11 from the live PostmortemKind class (pre-deletion), F3 lote-2. Deep-equaled against the descriptor-synthesized port in test_lote2_descriptor_equivalence.py. POST-CAPTURE EDIT (censo-12-kinds, 2026-07-20): identity.docs no longer contrasts against PreMortem, a Kind that was deleted. Prose only — no field, type, requiredness, default or enum changed.",
  "dep_filters": {
   "related_features": "sdlc-feature",
   "related_stories": "sdlc-story"
@@ -23,9 +23,9 @@
  "identity": {
   "alias": "sdlc-postmortem",
   "api_version": "github.com/ruinosus/dna/sdlc/v1",
-  "ascii_icon": "\ud83d\udea8",
+  "ascii_icon": "🚨",
   "display_label": "Postmortems",
-  "docs": "A Postmortem captures a factual analysis of an incident that happened \u2014 timeline, root cause, contributing factors, action items, lessons learned. Google SRE convention: blameless. Distinct from PreMortem (hypothetical) and Retrospective (recurring period summary).",
+  "docs": "A Postmortem captures a factual analysis of an incident that happened — timeline, root cause, contributing factors, action items, lessons learned. Google SRE convention: blameless. Distinct from Retrospective (recurring period summary).",
   "graph_style": {
    "fill": "#DC2626",
    "stroke": "#991B1B",
@@ -71,7 +71,7 @@
    },
    "blameless": {
     "default": true,
-    "description": "Google SRE requirement \u2014 should always be true.",
+    "description": "Google SRE requirement — should always be true.",
     "type": "boolean"
    },
    "body": {

@@ -3,10 +3,13 @@
 # regresses as the project accumulates data. Schema mirrors AssessmentReport.
 #
 # F3 lote-2 (spec 2026-06-10-kinds-descriptor-f3): synthesized from this
-# descriptor; the hand-written class twins were deleted. PARITY-CRITICAL
-# package data — byte-identical mirror under packages/sdk-{py,ts};
-# tests/test_descriptor_hash_parity.py enforces. Equivalence vs the extinct
-# class frozen in tests/test_lote2_descriptor_equivalence.py (golden:
+# descriptor; the hand-written class twins were deleted. SINGLE-SOURCE package data: this
+# descriptor is the only definition of the Kind — the packages/sdk-ts mirror and the test that enforced byte-identity
+# (tests/test_descriptor_hash_parity.py) were BOTH removed when the
+# TypeScript SDK was frozen (commit 341e517).
+# Nothing mirrors this file and no test enforces byte-identity.
+# What DOES still guard it: equivalence vs the extinct class, frozen
+# in tests/test_lote2_descriptor_equivalence.py (golden:
 # tests/goldens/lote2/StatusReport.golden.json). Deltas intencionais (semântica
 # canônica = port): summary curado substitui o eco whole-spec do KindBase
 # default (list endpoints não usam kp.summary()); parse valida contra o
@@ -28,8 +31,6 @@ spec:
   storage:
     type: yaml
     container: status-reports
-  dep_filters:
-    insight: sdlc-insight
   schema:
     type: object
     required:
@@ -39,10 +40,16 @@ spec:
     properties:
       insight:
         type: string
-        description: Name of the Insight that produced this report.
+        description: Free-text name of the question this report answers. Was a
+          slug reference to an Insight Kind; that Kind was deleted in
+          censo-12-kinds (2026-07-20) because the oracle runner that resolved
+          it never shipped in this distribution. The field stays (stored docs
+          carry it) but resolves against nothing.
       question:
         type: string
-        description: Echo of the oracle's question at run time.
+        description: The question this report answers, written out. Was an echo
+          of an Insight's question at run time; no runner ships, so the author
+          writes it.
       verdict:
         type: string
         description: Human-readable answer (1-3 sentences pt-BR). Synthesized by the

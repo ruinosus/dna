@@ -28,32 +28,35 @@ def test_extension_registers_expected_kinds():
     list — that's the whole point of the test (prevents silent
     expansion of the public contract).
 
-    Current set (31 Kinds): SDLC core + ADO-grade doc Kinds (ADR,
+    Current set (26 Kinds): SDLC core + ADO-grade doc Kinds (ADR,
     Changelog, Initiative, Postmortem, Retrospective, RiskRegister,
-    SavedView, Spike, Bug, Task) + two of the cognitive triad
-    (SynthesisRun, ArchiveProposal — the third, Engram, moved to
-    HelixExtension on s-engram-rename 2026-07-19) + SynthesizerState +
-    dream/forecast + the UNIFIED CognitivePolicy (was 9 Kinds —
+    SavedView, Spike, Bug, Task) + the UNIFIED CognitivePolicy (was 9 Kinds —
     RecallPolicy, DecayPolicy, MemoryPolicy, AllocationPolicy,
     PaginationPolicy, EngramStrengthPolicy, EmbeddingProfile, AffectPalette
     + the old CognitivePolicy — consolidated by
     s-consolidate-cognitive-policies, 39→31) + Reference + Kaizen
-    (improvement observations, v1.13.0)."""
+    (improvement observations, v1.13.0).
+
+    censo-12-kinds (2026-07-20, 31→26): ArchiveProposal, Forecast, Insight,
+    SynthesisRun and SynthesizerState were DELETED — they only ever existed
+    to receive the output of a cognition-engine family that never shipped in
+    this distribution. Engram (the one cognitive-triad member with a real
+    home) had already moved to HelixExtension on s-engram-rename."""
     k = Kernel()
     k.load(SdlcExtension())
     api_kinds = sorted(kn for (av, kn) in k._kinds if av == "github.com/ruinosus/dna/sdlc/v1")
     assert api_kinds == [
         "ADR", "AgentSession",
-        "ArchiveProposal", "Bug", "Changelog", "CognitivePolicy",
+        "Bug", "Changelog", "CognitivePolicy",
         "Epic",
-        "Feature", "Forecast", "HtmlArtifact", "Initiative", "Insight", "Issue", "Kaizen",
+        "Feature", "HtmlArtifact", "Initiative", "Issue", "Kaizen",
         "Narrative",
         "Plan", "Postmortem", "PromptTemplate", "Reference",
         "Retrospective", "RiskRegister", "Roadmap", "SavedView", "Spec",
-        "Spike", "StatusReport", "Story", "SynthesisRun",
-        "SynthesizerState", "Task", "WorkflowEvent",
+        "Spike", "StatusReport", "Story",
+        "Task", "WorkflowEvent",
     ]
-    assert len(api_kinds) == 31
+    assert len(api_kinds) == 26
 
 
 def test_agent_session_kind_storage_bundle():

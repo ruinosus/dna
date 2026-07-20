@@ -1,23 +1,21 @@
-"""T1 — schema validation tests for the Cognitive Memory Triad.
+"""T1 — schema validation tests for ``Engram``, the surviving member of
+what was once the "Cognitive Memory Triad".
 
-Three new Kinds:
-- ``Engram`` (alias ``helix-engram``) — affective recall artifact. Renamed
-  from ``LessonLearned`` (s-engram-rename, 2026-07-19) and moved OUT of
-  SdlcExtension into HelixExtension (``github.com/ruinosus/dna/v1``) — the
-  other two triad members stay sdlc-owned.
-- ``SynthesisRun`` (alias ``sdlc-dream``) — forward scenario with verifiable predictions.
-- ``ArchiveProposal`` (alias ``sdlc-forgetting``) — pruning proposal.
+``Engram`` (alias ``helix-engram``) — affective recall artifact. Renamed
+from ``LessonLearned`` (s-engram-rename, 2026-07-19) and moved OUT of
+SdlcExtension into HelixExtension (``github.com/ruinosus/dna/v1``).
 
-Per Spec ``docs/superpowers/specs/2026-05-11-cognitive-memory-triad.md`` §3.
+censo-12-kinds (2026-07-20): the other two members, ``SynthesisRun`` and
+``ArchiveProposal``, were DELETED — along with ``Forecast``, whose tests
+also lived here. Nothing in this distribution ever produced or consumed
+them: the cognition-engine family they were designed to receive output
+from never existed here (it came in with an unrelated extraction). Engram
+stays because it is a real platform memory primitive with live consumers.
 
-Three test cases per Kind (9 total):
-1. Minimal valid spec passes parse.
-2. Missing any required field fails parse.
-3. Extra field is preserved (not stripped) — the schema is intentionally
-   permissive to allow forward-compat.
+Original spec (historical): ``docs/superpowers/specs/2026-05-11-cognitive-memory-triad.md`` §3.
 
-The Kinds use BUNDLE storage with marker files ``LEMBRANCA.md`` /
-``DREAM.md`` / ``FORGETTING.md`` mirroring SPEC.md / PLAN.md convention.
+Engram uses BUNDLE storage with the ``LESSON_LEARNED.md`` marker file,
+mirroring the SPEC.md / PLAN.md convention.
 """
 from __future__ import annotations
 
@@ -29,7 +27,8 @@ from dna.extensions.sdlc import SdlcExtension
 
 def _kernel() -> Kernel:
     """Both extensions loaded: Engram lives in HelixExtension
-    (s-engram-rename), SynthesisRun/ArchiveProposal stay in SdlcExtension."""
+    (s-engram-rename); SdlcExtension is still loaded so the registration
+    test can assert on the sdlc api_version bucket."""
     k = Kernel()
     k.load(SdlcExtension())
     k.load(HelixExtension())
@@ -47,24 +46,27 @@ def _engram_port():
 
 
 # ----------------------------------------------------------------------
-# Registration — the extension must register the 3 new Kinds (total 15)
+# Registration
 # ----------------------------------------------------------------------
 
 
-def test_extension_registers_three_cognitive_kinds():
+def test_extension_registers_engram():
+    """Engram is registered by HelixExtension (s-engram-rename), NOT by
+    SdlcExtension. Its two former triad siblings are gone entirely
+    (censo-12-kinds)."""
     k = _kernel()
     sdlc_kinds = sorted(kn for (av, kn) in k._kinds if av == "github.com/ruinosus/dna/sdlc/v1")
     helix_kinds = sorted(kn for (av, kn) in k._kinds if av == "github.com/ruinosus/dna/v1")
     assert "Engram" in helix_kinds
-    assert "SynthesisRun" in sdlc_kinds
-    assert "ArchiveProposal" in sdlc_kinds
+    assert "SynthesisRun" not in sdlc_kinds
+    assert "ArchiveProposal" not in sdlc_kinds
+    assert "Forecast" not in sdlc_kinds
 
 
 def test_extension_version_is_post_cognitive_triad():
-    """v1.9.0 added the cognitive triad; subsequent bumps add new Kinds
-    (Forecast/PreMortem/AffectPalette/EngramStrengthPolicy/...).
-    Test pins minimum version, not exact — exact bumps churn every Kind
-    addition. Cross-Stack Parity oracle still reads .version."""
+    """v1.9.0 added the cognitive triad. Test pins minimum version, not
+    exact — exact bumps churn every Kind addition. Cross-Stack Parity
+    oracle still reads .version."""
     import packaging.version
     actual = packaging.version.parse(SdlcExtension().version)
     assert actual >= packaging.version.parse("1.9.0"), (
@@ -90,22 +92,6 @@ def test_cognitive_display_labels_are_market_aligned():
     Engram's label became "Engrama" on the rename (s-engram-rename,
     2026-07-19) — the founder-approved identity for the renamed Kind."""
     assert _engram_port().display_label == "Engrama"
-    assert _port("SynthesisRun").display_label == "Sínteses"
-    assert _port("ArchiveProposal").display_label == "Arquivamento"
-
-
-def test_synthesis_run_storage_bundle():
-    sd = _port("SynthesisRun").storage
-    assert sd.pattern.value == "bundle"
-    assert sd.container == "synthesis-runs"
-    assert sd.marker == "SYNTHESIS_RUN.md"
-
-
-def test_archive_proposal_storage_bundle():
-    sd = _port("ArchiveProposal").storage
-    assert sd.pattern.value == "bundle"
-    assert sd.container == "archive-proposals"
-    assert sd.marker == "ARCHIVE_PROPOSAL.md"
 
 
 # ----------------------------------------------------------------------
@@ -150,126 +136,11 @@ def test_remembrance_relevance_decay_seed_default():
 
 
 # ----------------------------------------------------------------------
-# SynthesisRun schema
-# ----------------------------------------------------------------------
-
-
-# SynthesisRun redesign (s-dream-redesign 2026-05-13): SynthesisRun is now oneiric-only
-# — surreal recombination with affect + symbol + scenario + fragments. The
-# forward-looking shape (timeframe/would_change/status/outcome_check_at)
-# moved to the new Forecast Kind. The DREAM_MIN constant below reflects
-# the new shape; the forecast equivalent lives under Forecast tests.
-DREAM_MIN = {
-    "dreamer": "future-scenarios",
-    "affect": "wonder",
-    "symbol": "uma ponte que se redesenha enquanto atravesso",
-    "scenario": (
-        "Atravesso uma ponte que muda de forma. Cada pé apoiado solta um "
-        "ângulo. Olho pra trás — o caminho já não é o que pisei."
-    ),
-    "fragments": [
-        {"source": "Story/s-a", "lifted": "rigor"},
-        {"source": "Story/s-b", "lifted": "presença"},
-    ],
-}
-
-
-def test_dream_required_fields():
-    """SynthesisRun (oneiric Kind) requires affect + symbol + scenario + fragments
-    (post s-dream-redesign). Forward-looking forecast shape lives on
-    Forecast — see test_forecast_required_fields below."""
-    schema = _port("SynthesisRun").schema()
-    assert set(schema["required"]) == {
-        "dreamer", "affect", "symbol", "scenario", "fragments",
-    }
-
-
-def test_dream_affect_enum_is_oneiric():
-    """SynthesisRun affect palette differs from Engram affect — SynthesisRun uses
-    surreal/oneiric affects (anxiety, wonder, vertigo, ...)."""
-    schema = _port("SynthesisRun").schema()
-    affect_enum = schema["properties"]["affect"]["enum"]
-    # Subset check — extension may grow palette without breaking test
-    expected_subset = {"anxiety", "longing", "triumph", "eerie", "vertigo",
-                       "wistful", "ominous", "dread", "wonder"}
-    assert expected_subset.issubset(set(affect_enum)), (
-        f"missing oneiric affects: {expected_subset - set(affect_enum)}"
-    )
-
-
-def test_forecast_kind_carries_would_change_shape():
-    """The forward-looking 'would_change' contract migrated from SynthesisRun
-    to Forecast as part of s-dream-redesign. Forecast keeps the
-    timeframe + status + outcome_check_at + would_change shape."""
-    schema = _port("Forecast").schema()
-    required = set(schema["required"])
-    assert "would_change" in required
-    assert "timeframe" in required
-    assert "status" in required
-    assert "outcome_check_at" in required
-    item = schema["properties"]["would_change"]["items"]
-    assert {"metric", "from", "to"}.issubset(set(item["required"]))
-
-
-def test_forecast_status_lifecycle_enum():
-    """Status lifecycle migrated to Forecast (was on SynthesisRun pre-redesign)."""
-    schema = _port("Forecast").schema()
-    status_enum = set(schema["properties"]["status"]["enum"])
-    # Core lifecycle states should be present (subset check tolerates
-    # extension adding new states).
-    assert {"drafted", "observing", "fulfilled", "refuted"}.issubset(status_enum)
-
-
-def test_dream_no_kind_of_field_in_v1():
-    """Per Spec §15 decision: derive from dreamer, no explicit kind_of in v1."""
-    schema = _port("SynthesisRun").schema()
-    assert "kind_of" not in schema["properties"]
-
-
-# ----------------------------------------------------------------------
-# ArchiveProposal schema
-# ----------------------------------------------------------------------
-
-
-FORGETTING_MIN = {
-    "target_kind": "Plan",
-    "target_name": "2026-04-12-orphan-plan",
-    "reason": "orphan",
-    "evidence": "Unreferenced by any WorkflowEvent for 73 days.",
-    "proposed_by": "cleanup-suggestions",
-    "status": "proposed",
-    "review_deadline": "2026-05-25T10:30:00Z",
-}
-
-
-def test_forgetting_required_fields():
-    schema = _port("ArchiveProposal").schema()
-    assert set(schema["required"]) == {
-        "target_kind", "target_name", "reason", "evidence",
-        "proposed_by", "status", "review_deadline",
-    }
-
-
-def test_forgetting_reason_enum():
-    schema = _port("ArchiveProposal").schema()
-    reason_enum = schema["properties"]["reason"]["enum"]
-    assert set(reason_enum) == {"orphan", "superseded", "stale", "contradicted", "duplicate"}
-
-
-def test_forgetting_status_lifecycle():
-    schema = _port("ArchiveProposal").schema()
-    status_enum = schema["properties"]["status"]["enum"]
-    assert set(status_enum) == {"proposed", "approved", "vetoed", "executed"}
-
-
-# ----------------------------------------------------------------------
 # Aliases — match Cross-Stack Parity expectations
 # ----------------------------------------------------------------------
 
 
 def test_aliases_follow_sdlc_convention():
     # Engram (s-engram-rename) moved to HelixExtension — its alias follows
-    # the helix convention now, not sdlc; the other two stay sdlc-owned.
+    # the helix convention now, not sdlc.
     assert _engram_port().alias == "helix-engram"
-    assert _port("SynthesisRun").alias == "sdlc-synthesis-run"
-    assert _port("ArchiveProposal").alias == "sdlc-archive-proposal"

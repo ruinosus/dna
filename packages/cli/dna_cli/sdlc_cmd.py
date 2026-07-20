@@ -3007,11 +3007,14 @@ def cmd_backfill(
             except ValueError:
                 origin_rel = str(f.resolve())
 
-            # updated_at = file mtime (ISO-8601). Required for the
-            # cognitive deep_sleep orphan scan to know the doc's age;
-            # without it, scan treats the doc as "unknown age" and
-            # proposes a ArchiveProposal on the next tick (the bug that
-            # produced the 88-skeleton-Plans loop).
+            # updated_at = file mtime (ISO-8601). Historically this fed a
+            # cognitive deep_sleep orphan scan that needed the doc's age —
+            # without it the scan treated the doc as "unknown age" and
+            # proposed an ArchiveProposal on the next tick (the bug that
+            # produced the 88-skeleton-Plans loop). Neither that scan nor
+            # the ArchiveProposal Kind exists any more (censo-12-kinds,
+            # 2026-07-20); the stamp stays because it is a useful, honest
+            # mtime on the doc.
             try:
                 mtime = datetime.fromtimestamp(
                     f.stat().st_mtime, tz=timezone.utc,
