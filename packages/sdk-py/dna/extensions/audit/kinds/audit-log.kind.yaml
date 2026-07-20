@@ -105,7 +105,8 @@ spec:
   # Curated list-endpoint projection. The extinct Py class declared NO
   # summary() (KindBase whole-spec echo); the TS class returned null. Both
   # are replaced by this curated projection (intentional delta — precedent
-  # VoiceEpisode/SynthesizerState in F3 lote-3). The manifest does NOT carry
+  # VoiceEpisode in F3 lote-3; SynthesizerState too, until censo-12-kinds
+  # deleted it). The manifest does NOT carry
   # summary, so this choice is manifest-neutral.
   summary:
     actor: ''
