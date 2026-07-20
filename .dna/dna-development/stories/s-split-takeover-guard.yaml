@@ -1,0 +1,85 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-split-takeover-guard
+spec:
+  title: Separar as duas regras fundidas no guard de provision-owner e ancorar a anti-tak
+  description: Separar as duas regras fundidas no guard de provision-owner e ancorar
+    a anti-takeover em testes proprios, antes do D5
+  status: review
+  feature: f-dna-hosting
+  priority: high
+  labels:
+  - tenancy
+  - security
+  reporter: claude-code
+  acceptance_criteria:
+  - Dado o guard de provision-owner, quando alguem le o codigo, entao as DUAS regras
+    (zero-migration e anti-takeover) estao nomeadas e documentadas separadamente,
+    com qual morre no D5 e qual sobrevive
+  - Dado que a cobertura da negacao vivia a 25 linhas de um detector que o D5 exige
+    apagar, quando o D5 reescrever aquele arquivo, entao a propriedade anti-takeover
+    continua coberta por testes em arquivo SEPARADO
+  - "Dado um guard afrouxado (strip/lower/prefixo), quando os testes rodam, entao\
+    \ eles FALHAM \u2014 a comparacao exata esta fixada contra normalizacao leniente\
+    \ futura"
+  - Dado que nenhum comportamento muda, quando a suite roda, entao nao ha regressao
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - guard extraido e nomeado + testes em arquivo proprio + mutantes mortos (guard
+    removido e comparacao leniente) + suite completa verde + PR aberto
+  definition_of_done_source: cli-create
+  created_at: '2026-07-20T00:35:53+00:00'
+  updated_at: '2026-07-20T00:51:39+00:00'
+  timeline:
+  - at: '2026-07-20T00:35:53+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-20T00:36:04+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-20T00:50:52+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-workspace-takeover-guard
+    summary: TestGuide tg-workspace-takeover-guard (manual)
+  - at: '2026-07-20T00:51:11+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-workspace-takeover-guard-20260720-005106
+    summary: "TestRun tr-tg-workspace-takeover-guard-20260720-005106 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-20T00:51:34+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "PR #173 aberto (ruinosus/dna). Mutantes mortos; regress\xE3o verde nos\
+      \ dois pacotes."
+  - at: '2026-07-20T00:51:39+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
+  produces:
+  - kind: Plan
+    name: plan-s-split-takeover-guard
+    role: implementation
+    at: '2026-07-20T00:36:04+00:00'
+  - kind: TestGuide
+    name: tg-workspace-takeover-guard
+    role: test-guide
+    at: '2026-07-20T00:50:52+00:00'
+  - kind: TestRun
+    name: tr-tg-workspace-takeover-guard-20260720-005106
+    role: test-run
+    at: '2026-07-20T00:51:11+00:00'

@@ -1519,6 +1519,66 @@ async def accept_invites_impl(
     }
 
 
+def assert_may_bootstrap_workspace(identity: Any, workspace_id: str) -> None:
+    """Entitlement gate for owner-bootstrap. **Two rules live here, not one.**
+
+    This function exists because those two rules were previously a single
+    ``if`` inside :func:`provision_workspace_owner_impl`, sharing one condition
+    and one comment. That is a trap: one of them is scheduled for removal and
+    the other must NEVER be removed, and nothing in the code said so.
+
+    **Rule 1 — ZERO-MIGRATION (identity mapping). Scheduled to DIE.**
+        Workspace #1's id *is* the founder's Azure ``tid``, so every row keyed
+        ``tenant == tid`` is already that workspace's data and needs no move.
+        Product decision **D5** (``dna-cloud``:
+        ``docs/superpowers/specs/2026-07-19-produto-unidade-workspace-design.md``)
+        retires this: a workspace gets its OWN generated id and the ``tid``
+        becomes a mere fact of authentication. When that lands, the
+        ``tid == workspace_id`` equality below is wrong and must go.
+
+    **Rule 2 — ANTI-TAKEOVER (security). MUST SURVIVE D5.**
+        A verified identity from another org must never seize a workspace by
+        racing its legitimate owner to the bootstrap. Note the shape of the
+        surface, because it is easy to get wrong:
+
+        * an ALREADY-OWNED workspace is not at risk here — the ``has_active_owner``
+          branch in the caller returns an ``owner_exists`` no-op, and that branch
+          is independent of ``tid``. It survives D5 untouched.
+        * the exposure is an **unclaimed** workspace id: whoever calls first
+          becomes owner. Today Rule 1 is what makes that safe — you can only
+          claim the id that equals your own ``tid``, and you cannot forge a
+          verified ``tid``.
+
+    **⚠️ THE HAZARD.** Rule 2 has no implementation of its own — it is a
+    side-effect of Rule 1. Delete the equality to satisfy D5 and the takeover
+    protection leaves with it, silently: the only test that covers the denial
+    branch (``test_workspace_takeover_guard.py``, and historically just
+    ``test_workspace_owner_rest.py::test_provision_cross_tid_is_forbidden``)
+    sits beside a zero-migration test that D5 *requires* you to delete.
+
+    So D5 must not merely remove this check — it must REPLACE Rule 2 with an
+    entitlement rule that does not mention ``tid``. The open design question,
+    deliberately not answered here: under generated ids, who may claim an
+    unclaimed workspace? The likely answer is that nobody may — creation becomes
+    an explicit act (``POST /v1/workspaces`` mints the id and its first owner in
+    one transaction) and bootstrap degrades to the idempotent re-login no-op,
+    requiring an existing membership. That is a product decision, not a
+    refactor, and it is tracked as open in the D5 doc.
+
+    Raises:
+        WorkspaceForbidden: the caller may not bootstrap this workspace.
+    """
+    # Rule 1 + Rule 2, still fused — see the docstring. Splitting the CONDITION
+    # is not possible while Rule 2 has no independent formulation; splitting the
+    # NAME and pinning the behavior in tests is what makes the removal visible.
+    if not identity.tid or identity.tid != workspace_id:
+        raise WorkspaceForbidden(
+            f"provision-owner is bound to the caller's own workspace "
+            f"(id must == the verified tid {workspace_id!r}); the identity's tid is "
+            f"{identity.tid!r} — cross-workspace owner bootstrap denied"
+        )
+
+
 async def provision_workspace_owner_impl(
     live: LiveDna,
     workspace_id: str,
@@ -1538,12 +1598,12 @@ async def provision_workspace_owner_impl(
     does — write a ``Workspace`` + an owner ``WorkspaceMembership`` — but on demand,
     idempotently, bound to the verified identity.
 
-    **Zero-migration + anti-takeover guard.** ``workspace_id`` MUST equal the
-    verified identity's Azure ``tid`` (workspace #1's id == the founder's tid, so
-    every existing row keyed ``tenant==tid`` is already this workspace's data — no
-    migration). A caller whose ``tid`` differs (or is absent) is denied
-    (:class:`WorkspaceForbidden`) — a verified identity from another org can NEVER
-    seize a tid-workspace by racing the founder's first login.
+    **Entitlement guard** — see :func:`assert_may_bootstrap_workspace`, which
+    carries the full contract. In short: ``workspace_id`` MUST equal the verified
+    identity's Azure ``tid``, and that single equality is doing TWO jobs —
+    zero-migration (scheduled to die with product decision D5) and anti-takeover
+    (must survive it). They are named apart there precisely so the second is not
+    deleted along with the first.
 
     **Idempotent + first-owner-only.**
 
@@ -1580,14 +1640,10 @@ async def provision_workspace_owner_impl(
     if not identity.oid:
         raise ValueError("the verified identity must carry an oid claim")
 
-    # Zero-migration + anti-takeover: the caller may only bootstrap ownership of
-    # their OWN workspace (id == verified tid). A mismatch/absent tid → deny.
-    if not identity.tid or identity.tid != workspace_id:
-        raise WorkspaceForbidden(
-            f"provision-owner is bound to the caller's own workspace "
-            f"(id must == the verified tid {workspace_id!r}); the identity's tid is "
-            f"{identity.tid!r} — cross-workspace owner bootstrap denied"
-        )
+    # Entitlement gate — TWO rules, one of which must survive D5 and one of which
+    # must not. Read `assert_may_bootstrap_workspace`'s docstring before touching
+    # it; removing it to satisfy D5 also removes the takeover protection.
+    assert_may_bootstrap_workspace(identity, workspace_id)
 
     raw_grants, memberships = await _workspace_grants(live)
 
