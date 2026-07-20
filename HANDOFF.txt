@@ -68,11 +68,13 @@ ARMADILHAS (o caro de redescobrir)
   o emit roda no BUILD. Se o repo não for migrado NO MESMO COMMIT do bump de
   pin, o copilot carrega a identidade velha em silêncio.
 
-* `dna_edges` TEM DUAS COLUNAS DE KIND (from/to) NA PK — é a única tabela onde
-  dois candidatos distintos podem convergir para a mesma chave no rename. Foi um
-  blind spot real da pré-checagem (dry-run dizia "zero colisões", apply
-  explodia). Corrigido; teste de regressão em
-  `test_migrate_engram_postgres_integration.py`.
+* `dna_edges` FOI REMOVIDA (i-039, migration 10 dropa a tabela). Nunca teve
+  produtor: o writer descrito no DDL da migration 7 ("observer no write-hook
+  do app.py") nunca existiu, então a tabela estava vazia em todo banco. O
+  tratamento dela no script de rename saiu junto. Nota histórica: era a única
+  tabela com DUAS colunas de kind (from/to) na PK, onde dois candidatos
+  distintos podiam convergir para a mesma chave no rename — blind spot real da
+  pré-checagem na época (dry-run dizia "zero colisões", apply explodia).
 
 * `dna_documents`/`dna_bundle_entries` têm PK `(scope, kind, name, TENANT)` —
   a migração v3 adicionou `tenant`. Ignorar isso gera falso-positivo de colisão.

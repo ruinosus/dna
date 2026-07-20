@@ -66,8 +66,8 @@ It does **NOT** cover dna-cloud's production runtime store, which is
 migration is a different shape of problem — ``kind`` is part of a primary
 key on several tables, ``apiVersion`` lives inside a JSON ``content``
 column — across ``dna_documents``, ``dna_versions``, ``dna_layer_documents``,
-``dna_bundle_entries``, ``dna_edges`` (``from``/``to``) and
-``dna_search_docs``. That migration is tracked separately as story
+``dna_bundle_entries`` and ``dna_search_docs``.
+That migration is tracked separately as story
 ``s-engram-migration-postgres`` and is OUT OF SCOPE here.
 
 This script is SDK-only tooling — it does not touch anything outside the

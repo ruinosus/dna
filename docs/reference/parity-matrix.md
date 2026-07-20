@@ -281,7 +281,7 @@ The `blessed` members are the ONE documented way to read manifest data; `depreca
 | `all` | ✅ | ✅ | mi.documents (filter by d.kind) or kernel.query(scope, kind) |
 | `one` | ✅ | ✅ | mi.documents (find by d.kind + d.name); Py also kernel.get_document(scope, kind, name), TS kernel.query with a filter |
 
-The exact public `ManifestInstance` surface is pinned member-for-member by the fixture: **57 Python** members and **56 TypeScript** members. Any public addition/removal/rename on either side without a matching fixture edit reds the suite.
+The exact public `ManifestInstance` surface is pinned member-for-member by the fixture: **43 Python** members and **39 TypeScript** members. Any public addition/removal/rename on either side without a matching fixture edit reds the suite.
 
 ### `Kernel` — blessed
 

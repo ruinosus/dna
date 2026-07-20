@@ -404,29 +404,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/tenant-plan": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /**
-         * Put Tenant Plan
-         * @deprecated
-         * @description DEPRECATED — use PUT /v1/workspace-plan. Accepts the legacy
-         *     ``{tenant}`` body and writes it as the ``workspace_id`` (they are the same
-         *     opaque string post-Model-B). 400 on a missing tenant/tier_id.
-         */
-        put: operations["put_tenant_plan_v1_tenant_plan_put"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/v1/tenants/{tid}/provision-owner": {
         parameters: {
             query?: never;
@@ -835,24 +812,6 @@ export interface components {
             claims?: {
                 [key: string]: unknown;
             } | null;
-        };
-        /** Body_put_tenant_plan_v1_tenant_plan_put */
-        Body_put_tenant_plan_v1_tenant_plan_put: {
-            /**
-             * Source
-             * @default stripe
-             */
-            source: string;
-            /** Status */
-            status?: string | null;
-            /** Stripe Customer Id */
-            stripe_customer_id?: string | null;
-            /** Stripe Subscription Id */
-            stripe_subscription_id?: string | null;
-            /** Tenant */
-            tenant: string;
-            /** Tier Id */
-            tier_id: string;
         };
         /** Body_put_workspace_plan_v1_workspace_plan_put */
         Body_put_workspace_plan_v1_workspace_plan_put: {
@@ -2173,41 +2132,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SourcesResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    put_tenant_plan_v1_tenant_plan_put: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["Body_put_tenant_plan_v1_tenant_plan_put"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["WorkspacePlanResponse"];
                 };
             };
             /** @description Validation Error */

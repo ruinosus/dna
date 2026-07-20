@@ -127,8 +127,8 @@ maps a `workspace_id` to its current `Tier`; DNA Cloud's Stripe webhook writes i
 already keys on. Because the founding workspace's id equals the founder's old
 organization id, a plan written for it keys on the *same* string as before, so the
 switch to workspace-keyed billing is **zero migration**. (The pre-Model-B
-`PUT /v1/tenant-plan` route remains as a deprecated alias that forwards its
-`tenant` body to `workspace_id`, so an already-deployed webhook keeps working.)
+`PUT /v1/tenant-plan` alias was removed once dna-cloud cut over to
+`PUT /v1/workspace-plan`.)
 
 ### Picking a workspace by URL (`/w/<id>/mcp`)
 

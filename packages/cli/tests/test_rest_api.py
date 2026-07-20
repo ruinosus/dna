@@ -979,28 +979,6 @@ def test_workspace_plan_put_is_auth_guarded(dna_dir):
                      headers={"Authorization": f"Bearer {_TOKEN}"}).status_code == 200
 
 
-def test_deprecated_tenant_plan_alias_zero_regression(dna_dir):
-    """ZERO-REGRESSION: an already-deployed dna-cloud Stripe webhook still PUTs
-    the legacy ``{tenant}`` body to /v1/tenant-plan. The deprecated alias forwards
-    ``tenant`` → ``workspace_id`` into the SAME WorkspacePlan write, so the runtime
-    read (kernel.workspace_plan) sees it — the Model-A route keeps working while
-    the store is workspace-native. The founder's ws#1 id == his old tid, so his
-    plan continues to match."""
-    founder = "c5b891f7"  # workspace #1 id == the founder's old Azure tid.
-    with _client(dna_dir) as c:
-        r = c.put("/v1/tenant-plan",
-                  json={"tenant": founder, "tier_id": "pro", "status": "active"})
-        assert r.status_code == 200, r.text
-    plan = _read_workspace_plan(dna_dir, founder)
-    assert plan is not None, "the legacy tenant body must land as a WorkspacePlan"
-    assert plan["spec"]["workspace_id"] == founder
-    assert plan["spec"]["tier_id"] == "pro"
-    # a missing tenant/tier on the alias is still a 400.
-    with _client(dna_dir) as c:
-        assert c.put("/v1/tenant-plan",
-                     json={"tenant": "", "tier_id": "pro"}).status_code == 400
-
-
 # ── auth: --auth token gates every route but /health ─────────────────────────
 
 

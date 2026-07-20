@@ -71,8 +71,8 @@ i.e. every DNA read/write the copilot makes is proxied through `mcp` /
 connection, `DNA_PRIMARY_PG_URL` (a **separate** secret from
 `dna-source-url`), opens LangGraph's own `AsyncPostgresSaver` /
 `AsyncPostgresStore` — a completely different schema (LangGraph's
-checkpoint/store tables) with zero overlap with `dna_documents` /
-`dna_edges` / any table this migration touches. **Conclusion: freezing
+checkpoint/store tables) with zero overlap with `dna_documents` / any
+table this migration touches. **Conclusion: freezing
 `mcp` + `mcp-ws` fully covers `copilot`'s write path; `copilot` itself does
 not need to be scaled down.** This was verified against this repo's
 emitter output and dna-cloud's committed patch script as they exist today
@@ -116,11 +116,8 @@ exception) — it does NOT protect against operator error, a concurrent
 incident unrelated to this migration, or a correctness gap in the script's
 own reasoning that testing and review did not catch. That last one is not
 hypothetical: during development, the pre-flight initially missed a
-`dna_edges`-specific collision shape (two currently-distinct rows renaming
-INTO each other, since `from_kind`/`to_kind` are independent columns) —
-caught by review, not by the original test suite. See
-`_preflight_edges`'s docstring in `scripts/migrate_engram_postgres.py` for
-the fixed reasoning. Irreplaceable production data gets a real backup
+collision shape specific to the (since-removed, never-populated) `dna_edges`
+table — caught by review, not by the original test suite. Irreplaceable production data gets a real backup
 regardless of how much the tooling has been tested:
 
 ```bash
@@ -153,7 +150,7 @@ python3 scripts/migrate_engram.py --source "$DNA_SOURCE_URL"
 ```
 
 Read the report. It tells you, per table (`dna_documents`, `dna_versions`,
-`dna_layer_documents`, `dna_bundle_entries`, `dna_edges`, `dna_search_docs`
+`dna_layer_documents`, `dna_bundle_entries`, `dna_search_docs`
 if present), how many rows are candidates, how many are already migrated,
 how many are orphans (half-migrated — `kind: Engram` with a stale/missing
 `apiVersion`, needs manual attention, see the FS script's docstring for what
@@ -182,10 +179,9 @@ This re-runs the same pre-flight (data may have theoretically changed since
 the dry run — it hasn't, because writes are frozen) and then, only if it is
 still collision-free, rewrites every table in **one Postgres transaction**:
 all of it commits together, or none of it does. A half-migrated store is
-strictly worse than an unmigrated one — a document whose `dna_documents` row
-renamed but whose `dna_edges` rows didn't resolves *confusingly* (matched by
-`kind_for()`, which ignores `apiVersion`) rather than cleanly (simply
-absent).
+strictly worse than an unmigrated one — a document renamed in one table but
+not another resolves *confusingly* (matched by `kind_for()`, which ignores
+`apiVersion`) rather than cleanly (simply absent).
 
 If the schema is not `public`, pass `--schema <name>`.
 
