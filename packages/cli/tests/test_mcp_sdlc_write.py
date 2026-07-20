@@ -316,8 +316,7 @@ def test_write_is_workspace_scope_isolated(dna_dir):
 
 
 def _reset_store() -> None:
-    Q.DEFAULT_STORE._day_counts.clear()  # type: ignore[attr-defined]
-    Q.DEFAULT_STORE._calls.clear()  # type: ignore[attr-defined]
+    Q.DEFAULT_STORE.reset()
 
 
 def _tier_doc(tier_id: str, *, families: list[str], sdlc_mode: str,

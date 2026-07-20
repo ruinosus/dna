@@ -150,6 +150,14 @@ class Tables:
     # [dialect] pg-only (Phase 15.1 eventbus); None on sqlite.
     outbox: sa.Table | None
     versions_seq: sa.Table | None
+    # [dialect] pg-only CONTROL-PLANE table. Not bound by SqlAlchemySource --
+    # nothing in the document path reads or writes it. It lives in this model
+    # anyway because the model is what autogenerate compares against: a table
+    # created by a revision but absent here would be reported as a table to
+    # DROP on every run (see FOREIGN_TABLES for the other way out, taken by
+    # the search stores, whose DDL cannot live in a static revision). Written
+    # by the MCP metering store (``dna_cli._mcp_quota.PostgresQuotaStore``).
+    quota_counters: sa.Table | None = None
 
 
 def build_metadata(*, is_pg: bool, schema: str | None = None) -> Tables:
@@ -256,8 +264,33 @@ def build_metadata(*, is_pg: bool, schema: str | None = None) -> Tables:
         sa.Column("updated_at", sa.Text, nullable=False),
     )
 
-    outbox = versions_seq = None
+    outbox = versions_seq = quota_counters = None
     if is_pg:
+        # [dialect] the DNA Cloud metering counter — the DURABLE half of the
+        # MCP quota meter (``dna_cli._mcp_quota``). Postgres-only on purpose:
+        # its whole reason to exist is to be correct across RESTARTS and
+        # across N REPLICAS, which a single-file SQLite self-host does not
+        # have and does not need (that deployment keeps the in-process
+        # counter). One row per (day, tenant, tier); the counter is advanced
+        # with INSERT ... ON CONFLICT DO UPDATE SET calls = calls + 1, never
+        # read-modify-write, so concurrent replicas cannot lose an increment.
+        #
+        # `day` is a DATE in UTC, written by the store (not a server default)
+        # so the bucket boundary is the store's clock, not the database
+        # server's timezone.
+        #
+        # The PK (day, tenant, tier) is also the read path's index: the daily
+        # billing rollup filters `day = <today> AND tenant = <t>`, and both
+        # are equality predicates on a leading prefix of the PK, so no
+        # secondary index is warranted.
+        quota_counters = sa.Table(
+            f"{p}quota_counters", md,
+            sa.Column("day", sa.Date, primary_key=True, nullable=False),
+            sa.Column("tenant", sa.Text, primary_key=True, nullable=False),
+            sa.Column("tier", sa.Text, primary_key=True, nullable=False),
+            sa.Column("calls", sa.BigInteger, nullable=False,
+                      server_default=sa.text("0")),
+        )
         # [dialect] the Phase 15.1 eventbus is Postgres infrastructure
         # (outbox + LISTEN/NOTIFY); sqlite has no cross-process bus.
         outbox = sa.Table(
@@ -291,4 +324,5 @@ def build_metadata(*, is_pg: bool, schema: str | None = None) -> Tables:
         metadata=md, documents=documents, versions=versions,
         bundle_entries=bundle_entries, layer_documents=layer_documents,
         outbox=outbox, versions_seq=versions_seq,
+        quota_counters=quota_counters,
     )
