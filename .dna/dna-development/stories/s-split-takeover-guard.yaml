@@ -6,7 +6,7 @@ spec:
   title: Separar as duas regras fundidas no guard de provision-owner e ancorar a anti-tak
   description: Separar as duas regras fundidas no guard de provision-owner e ancorar
     a anti-takeover em testes proprios, antes do D5
-  status: review
+  status: done
   feature: f-dna-hosting
   priority: high
   labels:
@@ -14,23 +14,38 @@ spec:
   - security
   reporter: claude-code
   acceptance_criteria:
-  - Dado o guard de provision-owner, quando alguem le o codigo, entao as DUAS regras
-    (zero-migration e anti-takeover) estao nomeadas e documentadas separadamente,
-    com qual morre no D5 e qual sobrevive
-  - Dado que a cobertura da negacao vivia a 25 linhas de um detector que o D5 exige
-    apagar, quando o D5 reescrever aquele arquivo, entao a propriedade anti-takeover
-    continua coberta por testes em arquivo SEPARADO
-  - "Dado um guard afrouxado (strip/lower/prefixo), quando os testes rodam, entao\
-    \ eles FALHAM \u2014 a comparacao exata esta fixada contra normalizacao leniente\
-    \ futura"
-  - Dado que nenhum comportamento muda, quando a suite roda, entao nao ha regressao
+  - text: Dado o guard de provision-owner, quando alguem le o codigo, entao as DUAS
+      regras (zero-migration e anti-takeover) estao nomeadas e documentadas separadamente,
+      com qual morre no D5 e qual sobrevive
+    done: true
+    done_at: '2026-07-20T09:27:03+00:00'
+    done_by: story-done-auto
+  - text: Dado que a cobertura da negacao vivia a 25 linhas de um detector que o D5
+      exige apagar, quando o D5 reescrever aquele arquivo, entao a propriedade anti-takeover
+      continua coberta por testes em arquivo SEPARADO
+    done: true
+    done_at: '2026-07-20T09:27:03+00:00'
+    done_by: story-done-auto
+  - text: "Dado um guard afrouxado (strip/lower/prefixo), quando os testes rodam,\
+      \ entao eles FALHAM \u2014 a comparacao exata esta fixada contra normalizacao\
+      \ leniente futura"
+    done: true
+    done_at: '2026-07-20T09:27:03+00:00'
+    done_by: story-done-auto
+  - text: Dado que nenhum comportamento muda, quando a suite roda, entao nao ha regressao
+    done: true
+    done_at: '2026-07-20T09:27:03+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - guard extraido e nomeado + testes em arquivo proprio + mutantes mortos (guard
-    removido e comparacao leniente) + suite completa verde + PR aberto
+  - text: guard extraido e nomeado + testes em arquivo proprio + mutantes mortos (guard
+      removido e comparacao leniente) + suite completa verde + PR aberto
+    done: true
+    done_at: '2026-07-20T09:27:03+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-20T00:35:53+00:00'
-  updated_at: '2026-07-20T00:51:39+00:00'
+  updated_at: '2026-07-20T09:27:17+00:00'
   timeline:
   - at: '2026-07-20T00:35:53+00:00'
     actor: claude-code
@@ -70,6 +85,29 @@ spec:
     source: cli
     from: in-progress
     to: review
+  - at: '2026-07-20T09:27:17+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: 9ac3efc02bc564b1ed5bf33f4d6a4264a16944d0
+    summary: "PR #173 (squash em main, 9ac3efc). Nenhuma mudanca de comportamento:\
+      \ o guard decide exatamente o mesmo. O que muda e que passou a ter nome (assert_may_bootstrap_workspace),\
+      \ contrato escrito e cobertura propria. O problema era que UMA condicao (identity.tid\
+      \ != workspace_id) fazia DOIS trabalhos \u2014 zero-migration, que o D5 exige\
+      \ remover, e anti-takeover, que nunca pode sair \u2014 e a Regra 2 nao tem implementacao\
+      \ propria: e efeito colateral da Regra 1. A unica cobertura do ramo de negacao\
+      \ ficava a 25 linhas de um detector que o D5 obriga a apagar, entao reescrever\
+      \ aquele arquivo (o caminho natural) removeria a protecao contra takeover sem\
+      \ nada ficar vermelho. Agora ha test_workspace_takeover_guard.py: arquivo separado,\
+      \ unitario, frasado como propriedade do sistema e nao como mecanismo. Mutantes\
+      \ mortos: guard virado no-op -> 11 falham e EXATAMENTE 1 passa (o baseline anti-vacuidade,\
+      \ provando que os 11 nao passariam num guard que nega tudo); comparacao trocada\
+      \ por strip().lower() -> falham exatamente os 3 near-miss. CI: 14 checks verdes.\
+      \ Fica em aberto, por ser decisao de produto: sob ids gerados, quem pode reivindicar\
+      \ um id ainda NAO reivindicado. Workspace ja possuido ja e protegido pelo ramo\
+      \ has_active_owner, independente de tid."
   produces:
   - kind: Plan
     name: plan-s-split-takeover-guard
@@ -83,3 +121,4 @@ spec:
     name: tr-tg-workspace-takeover-guard-20260720-005106
     role: test-run
     at: '2026-07-20T00:51:11+00:00'
+  closed_at: '2026-07-20T09:27:03+00:00'
