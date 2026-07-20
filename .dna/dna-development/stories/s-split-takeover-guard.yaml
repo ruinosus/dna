@@ -30,7 +30,7 @@ spec:
     removido e comparacao leniente) + suite completa verde + PR aberto
   definition_of_done_source: cli-create
   created_at: '2026-07-20T00:35:53+00:00'
-  updated_at: '2026-07-20T00:36:04+00:00'
+  updated_at: '2026-07-20T00:51:11+00:00'
   timeline:
   - at: '2026-07-20T00:35:53+00:00'
     actor: claude-code
@@ -43,8 +43,31 @@ spec:
     source: cli
     from: todo
     to: in-progress
+  - at: '2026-07-20T00:50:52+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-workspace-takeover-guard
+    summary: TestGuide tg-workspace-takeover-guard (manual)
+  - at: '2026-07-20T00:51:11+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-workspace-takeover-guard-20260720-005106
+    summary: "TestRun tr-tg-workspace-takeover-guard-20260720-005106 \u2192 pass"
+    outcome: pass
   produces:
   - kind: Plan
     name: plan-s-split-takeover-guard
     role: implementation
     at: '2026-07-20T00:36:04+00:00'
+  - kind: TestGuide
+    name: tg-workspace-takeover-guard
+    role: test-guide
+    at: '2026-07-20T00:50:52+00:00'
+  - kind: TestRun
+    name: tr-tg-workspace-takeover-guard-20260720-005106
+    role: test-run
+    at: '2026-07-20T00:51:11+00:00'

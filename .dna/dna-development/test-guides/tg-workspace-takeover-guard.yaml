@@ -1,0 +1,28 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-workspace-takeover-guard
+spec:
+  description: Verifica que a propriedade anti-takeover do provision-owner esta ancorada
+    em testes proprios e resiste a afrouxamento
+  kind_of_test: manual
+  status: active
+  steps:
+  - action: pytest packages/sdk-py/tests/test_workspace_takeover_guard.py
+    expected: 12 passed
+  - action: 'MUTACAO M1: assert_may_bootstrap_workspace virado no-op'
+    expected: "11 falham e EXATAMENTE 1 passa (o baseline anti-vacuidade) \u2014 prova\
+      \ que os 11 nao sao vacuously true"
+  - action: 'MUTACAO M2: comparacao trocada por strip().lower()'
+    expected: falham EXATAMENTE os 3 near-miss (case, lead-space, trail-space)
+  - action: 'regressao, do jeito do CI (cada pacote separado): cd packages/cli &&
+      pytest tests/'
+    expected: 902 passed
+  - action: 'regressao: cd packages/sdk-py && pytest tests/'
+    expected: 3455 passed, 4 xfailed
+  - action: docs/openapi.json em sincronia
+    expected: _rest_api.py NAO foi tocado (git diff --name-only nao lista)
+  verifies:
+  - Story/s-split-takeover-guard
+  created_at: '2026-07-20T00:50:45+00:00'
+  updated_at: '2026-07-20T00:50:45+00:00'

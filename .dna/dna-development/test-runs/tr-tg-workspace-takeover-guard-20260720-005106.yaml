@@ -1,0 +1,21 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-workspace-takeover-guard-20260720-005106
+spec:
+  guide_ref: tg-workspace-takeover-guard
+  outcome: pass
+  verifies:
+  - Story/s-split-takeover-guard
+  executed_by: claude-code
+  executed_at: '2026-07-20T00:51:06+00:00'
+  notes: "12/12 no modulo novo. Mutantes mortos e verificados: M1 (guard no-op) ->\
+    \ 11 failed / 1 passed, e o unico que passa e test_the_entitled_caller_is_allowed_through,\
+    \ o baseline \u2014 confirmando que os 11 nao passariam num guard que nega tudo.\
+    \ M2 (strip+lower) -> falham exatamente case, lead-space, trail-space. Regressao\
+    \ do jeito do CI: cli 902 passed / 3 skipped; sdk-py 3455 passed / 211 skipped\
+    \ / 4 xfailed. NOTA: rodar 'pytest packages/sdk-py/tests packages/cli/tests' num\
+    \ comando so produz 20 falsos negativos em test_emit_cmd/test_explain_cmd \u2014\
+    \ a config filterwarnings do sdk-py (pyproject.toml:156, ratchet ManifestInstance)\
+    \ e aplicada aos testes do cli, que nunca foram escritos sob ela. Nao e regressao\
+    \ nem poluicao entre testes: e invocacao errada. O CI roda cada pacote separadamente."
