@@ -123,6 +123,28 @@ jobs:
             echo "dna-client@${VER} not on the registry — will publish."
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
+      # Duas formas de autenticar, nesta ordem:
+      #
+      #   1. NPM_TOKEN (segredo do repo, tipo AUTOMATION) — se existir, publica
+      #      com ele. Token de automação IGNORA 2FA por design, que é o que
+      #      permite publicar um pacote NOVO sem ninguém fazer `npm login`.
+      #      É o caminho para o primeiro publish do `dna-client`.
+      #
+      #   2. OIDC trusted publishing — sem segredo nenhum, com proveniência
+      #      assinada. Só funciona em pacote QUE JÁ EXISTE, porque o trusted
+      #      publisher é configurado no npmjs.com sobre um pacote publicado.
+      #
+      # Depois do primeiro publish, cadastre o trusted publisher no npmjs.com e
+      # REMOVA o segredo: o caminho 2 é melhor (sem credencial de longa duração
+      # e com proveniência). O `if` abaixo passa a cair sozinho no OIDC.
+      - name: Publish to npm (token de automação, se houver)
+        if: steps.guard.outputs.skip == 'false' && env.NODE_AUTH_TOKEN != ''
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public
+
       - name: Publish to npm (OIDC trusted publishing, with provenance)
-        if: steps.guard.outputs.skip == 'false'
+        if: steps.guard.outputs.skip == 'false' && env.NODE_AUTH_TOKEN == ''
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npm publish --provenance --access public
