@@ -11,7 +11,8 @@ exact ``(apiVersion, kind)`` 2-tuple lookup with no fallback
 doc.kind))``), so the moment the ``Engram``-only SDK pin ships, every
 unmigrated Postgres row becomes invisible. This module is that migration.
 
-Schema reality (verified against ``dna/adapters/sqlalchemy_/migrations.py``
+Schema reality (verified against the Alembic baseline revision,
+``dna/adapters/sqlalchemy_/alembic/versions/0001_baseline_schema.py``
 and ``dna/adapters/search/pgvector_migrations.py`` — READ THOSE FILES, don't
 trust a summary):
 
