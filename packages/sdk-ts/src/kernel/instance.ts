@@ -26,24 +26,6 @@ import { Navigator } from "./navigator.js";
 import { LockManager } from "./lock-manager.js";
 import { ReportBuilder } from "./reports.js";
 
-// Viz imports — all use `import type { ManifestInstance }` so no circular issue at runtime.
-import {
-  dependencyTreeMermaid as vizDependencyTreeMermaid,
-  compositionFlowchartMermaid as vizCompositionFlowchartMermaid,
-  c4ComponentMermaid as vizC4ComponentMermaid,
-  erDiagramMermaid as vizErDiagramMermaid,
-  erModel as vizErModel,
-  mindmapMermaid as vizMindmapMermaid,
-  pieChartMermaid as vizPieChartMermaid,
-  quadrantMermaid as vizQuadrantMermaid,
-  timelineMermaid as vizTimelineMermaid,
-  sankeyMermaid as vizSankeyMermaid,
-  kindCatalogMermaid as vizKindCatalogMermaid,
-  exportDiagramsMd as vizExportDiagramsMd,
-} from "../viz/mermaid.js";
-import { healthReport as vizHealthReport, impact as vizImpact } from "../viz/health.js";
-import { matrix as vizMatrix, matrixMarkdown as vizMatrixMarkdown } from "../viz/matrix.js";
-import { asciiTree as vizAsciiTree } from "../viz/ascii.js";
 
 export type { PreviewBlock };
 
@@ -405,43 +387,6 @@ export class ManifestInstance {
   dependencyTree(): Record<string, unknown> {
     return this.composition.dependencyTree();
   }
-
-  // -- ER Model → viz -------------------------------------------------------
-
-  erModel(): {
-    entities: { id: string; kind: string; name: string; attrs: { key: string; type: string; value: string }[] }[];
-    relationships: { sourceId: string; targetId: string; label: string; isMany: boolean }[];
-  } {
-    return vizErModel(this);
-  }
-
-  // -- Mermaid diagrams → viz ------------------------------------------------
-
-  dependencyTreeMermaid(): string { return vizDependencyTreeMermaid(this); }
-  compositionFlowchartMermaid(): string { return vizCompositionFlowchartMermaid(this); }
-  c4ComponentMermaid(): string { return vizC4ComponentMermaid(this); }
-  erDiagramMermaid(): string { return vizErDiagramMermaid(this); }
-  mindmapMermaid(): string { return vizMindmapMermaid(this); }
-  pieChartMermaid(): string { return vizPieChartMermaid(this); }
-  quadrantMermaid(): string { return vizQuadrantMermaid(this); }
-  timelineMermaid(): string { return vizTimelineMermaid(this); }
-  sankeyMermaid(): string { return vizSankeyMermaid(this); }
-  kindCatalogMermaid(): string { return vizKindCatalogMermaid(this); }
-  exportDiagramsMd(path?: string): Record<string, string> { return vizExportDiagramsMd(this, path); }
-
-  // -- Matrix → viz ----------------------------------------------------------
-
-  matrix(): Record<string, unknown> { return vizMatrix(this); }
-  matrixMarkdown(): string { return vizMatrixMarkdown(this); }
-
-  // -- Health / Impact → viz -------------------------------------------------
-
-  health(): Record<string, unknown> { return vizHealthReport(this); }
-  impact(kind: string, name: string): Record<string, unknown> { return vizImpact(this, kind, name); }
-
-  // -- ASCII tree → viz ------------------------------------------------------
-
-  asciiTree(): string { return vizAsciiTree(this); }
 
   // -- Ref resolution -------------------------------------------------------
 
