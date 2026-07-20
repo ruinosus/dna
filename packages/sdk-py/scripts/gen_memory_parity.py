@@ -24,7 +24,6 @@ from dna.kernel.embedding import fake_embed_one
 from dna.memory.ecphory import EngramRef, score_engram
 from dna.memory.encoding_context import time_of_day
 from dna.memory.memory_type import classify_memory_type
-from dna.memory.retrieval import Memory, rank_memories
 from dna.memory.semantic import (
     cosine_similarity,
     engram_text,
@@ -89,18 +88,6 @@ def build() -> dict:
         {"hour": h, "expected": time_of_day(datetime(2026, 1, 1, h, tzinfo=timezone.utc))}
         for h in [0, 5, 8, 11, 12, 14, 17, 18, 20, 21, 22, 23]
     ]
-
-    mems = [
-        {"name": "s-mem", "spec": {"area": "memory", "summary": "vector embedding recall cognitive"}},
-        {"name": "s-banana", "spec": {"area": "fruit", "summary": "banana tropical yellow smoothie"}},
-        {"name": "s-fusion", "spec": {"area": "search", "summary": "hybrid fusion reciprocal rank"}},
-    ]
-    rk = rank_memories([Memory(m["name"], m["spec"]) for m in mems], "memory recall cognitive", now=_NOW)
-    fx["rank_memories"] = [{
-        "memories": mems, "query": "memory recall cognitive", "now": NOW,
-        "expected_order": [r.name for r in rk],
-        "expected_scores": {r.name: r.score for r in rk},
-    }]
 
     se_cases = [
         {"engram": {"name": "e1", "spec": {"encoding_context": {"area": "Feature/memory"}}},

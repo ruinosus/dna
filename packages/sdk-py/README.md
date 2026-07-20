@@ -20,8 +20,8 @@ uv sync            # or: pip install -e .
 
 Optional extras: `postgres`, `sqlite`, `sql` (SqlAlchemySource — one
 adapter for both SQL dialects, same tables; see docs/PORT-CONTRACT.md
-§ "Using the SQLAlchemy adapter"), `redis`, `s3`, `tools`
-(langchain `@dna_tool` decorator), `safety-ml` (PII/toxicity models),
+§ "Using the SQLAlchemy adapter")
+`safety-ml` (PII/toxicity models),
 `all`, `dev`.
 
 ## Minimal example
@@ -47,7 +47,7 @@ Runnable version: [`examples/hello-genome/run.py`](https://github.com/ruinosus/d
 ```
 dna/
 ├── kernel/       # Kernel (mediator over 5 ports), Document, ManifestInstance
-├── adapters/     # filesystem (core); sqlite/postgres/sqlalchemy_/redis/s3 via extras
+├── adapters/     # filesystem (core); sqlite/postgres/sqlalchemy_ via extras
 ├── extensions/   # helix (core Kinds) + market formats + governance
 ├── sync/         # lockfile + document hashing
 └── safety/       # safety pipeline (optional ML extras)

@@ -236,41 +236,6 @@
       "expected": "night"
     }
   ],
-  "rank_memories": [
-    {
-      "memories": [
-        {
-          "name": "s-mem",
-          "spec": {
-            "area": "memory",
-            "summary": "vector embedding recall cognitive"
-          }
-        },
-        {
-          "name": "s-banana",
-          "spec": {
-            "area": "fruit",
-            "summary": "banana tropical yellow smoothie"
-          }
-        },
-        {
-          "name": "s-fusion",
-          "spec": {
-            "area": "search",
-            "summary": "hybrid fusion reciprocal rank"
-          }
-        }
-      ],
-      "query": "memory recall cognitive",
-      "now": "2026-07-09T15:00:00+00:00",
-      "expected_order": [
-        "s-mem"
-      ],
-      "expected_scores": {
-        "s-mem": 2.942487759035179
-      }
-    }
-  ],
   "score_engram": [
     {
       "engram": {

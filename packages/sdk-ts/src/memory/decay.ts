@@ -101,3 +101,21 @@ export function currentlyValid(validTo: unknown, now: number = Date.now()): bool
   if (ms === null) return true;
   return ms > now;
 }
+
+/**
+ * Evocative palette — an affect-tagged memory resists forgetting. Multiplies the
+ * decay-adjusted score in `recall`. Lived in `memory/retrieval.ts` until the dead
+ * BM25 ranker there was removed; the weights are unchanged. 1:1 with the Py
+ * `affect_factor` (dna/memory/decay.py).
+ */
+const AFFECT_WEIGHTS: Record<string, number> = {
+  triumph: 1.2,
+  regret: 1.3,
+  surprise: 1.5,
+  wistful: 1.0,
+  ominous: 1.4,
+};
+
+export function affectFactor(affect: unknown): number {
+  return AFFECT_WEIGHTS[String(affect ?? "")] ?? 1.0;
+}

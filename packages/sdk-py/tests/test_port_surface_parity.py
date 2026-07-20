@@ -161,9 +161,8 @@ def test_every_one_sided_member_is_justified():
 def test_excluded_surfaces_are_justified_not_silent():
     fixture = _load_fixture()
     excluded = fixture["excluded_surfaces"]
-    # The two known internal/glue surfaces stay documented.
+    # The known internal/glue surface stays documented.
     assert "collaborator-ports" in excluded
-    assert "dna_tool-decorator" in excluded
     for key, entry in excluded.items():
         assert (entry.get("justification") or "").strip(), (
             f"excluded surface {key!r} has no justification"

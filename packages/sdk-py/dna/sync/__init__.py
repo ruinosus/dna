@@ -1,6 +1,11 @@
 # python/dna/sync/__init__.py
-"""Bi-directional sync between WritableSourcePort implementations."""
-from dna.sync.engine import SyncEngine
-from dna.sync.diff import SyncResult, SyncItem
+"""Content hashing for manifest documents.
 
-__all__ = ["SyncEngine", "SyncResult", "SyncItem"]
+Formerly also hosted a bi-directional SyncEngine (engine/diff/snapshot/apply);
+it was removed as dead scaffolding — no `dna sync` command ever shipped and the
+kernel's own source-sync engine (``dna/kernel/source_sync.py``) is the live path.
+``document_hash`` stays: it backs prompt_builder + kind_registry.
+"""
+from dna.sync.hash import document_hash
+
+__all__ = ["document_hash"]

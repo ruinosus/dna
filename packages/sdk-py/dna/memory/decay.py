@@ -19,6 +19,23 @@ from typing import Any
 from dna.memory.policy import DEFAULT_DECAY_POLICY, DecayPolicy
 
 
+# Evocative palette — an affect-tagged memory resists forgetting. Multiplies the
+# decay-adjusted score in ``recall`` (verbs.py). Lived in ``memory/retrieval.py``
+# until the dead BM25 ranker there was removed; the weights are unchanged.
+_AFFECT_WEIGHTS: dict[str, float] = {
+    "triumph": 1.2,
+    "regret": 1.3,
+    "surprise": 1.5,
+    "wistful": 1.0,
+    "ominous": 1.4,
+}
+
+
+def affect_factor(affect: str | None) -> float:
+    """Score multiplier for a memory's affect tag. 1.0 when untagged."""
+    return _AFFECT_WEIGHTS.get(affect or "", 1.0)
+
+
 def _parse_iso(ts: Any) -> datetime | None:
     if not isinstance(ts, str) or not ts:
         return None
@@ -143,6 +160,7 @@ def currently_valid(valid_to: Any, *, now: datetime | None = None) -> bool:
 
 
 __all__ = [
+    "affect_factor",
     "confidence_score_numeric",
     "stability_from_spec",
     "days_since",

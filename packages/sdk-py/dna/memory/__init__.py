@@ -9,7 +9,7 @@ Engram schema. This package holds:
   * the four verbs (``remember`` / ``recall`` / ``forget`` / ``consolidate``) —
     async, kernel-bound (``dna.memory.verbs``);
   * the DETERMINISTIC pure scoring core ported from the upstream cognitive
-    layer — ecphory (Semon's Law of Ecphory), BM25 retrieval, Ebbinghaus decay,
+    layer — ecphory (Semon's Law of Ecphory), Ebbinghaus decay,
     encoding-context stamping, CoALA classification, recall/decay policy.
 
 Left behind on purpose: LLM scribes, schedulers, deep-sleep, workers, and the
@@ -20,6 +20,7 @@ rsh-memory-similarity-evolution → s-memory-verbs (2026-07-09).
 from __future__ import annotations
 
 from dna.memory.decay import (
+    affect_factor,
     confidence_score_numeric,
     currently_valid,
     days_since,
@@ -50,7 +51,6 @@ from dna.memory.policy import (
     DecayPolicy,
     RecallPolicy,
 )
-from dna.memory.retrieval import Memory, RankedMemory, rank_memories
 from dna.memory.semantic import (
     ENGRAM_TEXT_FIELDS,
     cosine_similarity,
@@ -118,11 +118,8 @@ __all__ = [
     "semantic_scores_from_vectors",
     "ecphory_rank",
     "fuse_semantic_recall",
-    # retrieval
-    "Memory",
-    "RankedMemory",
-    "rank_memories",
     # decay
+    "affect_factor",
     "confidence_score_numeric",
     "stability_from_spec",
     "days_since",

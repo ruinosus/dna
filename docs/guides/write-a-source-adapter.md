@@ -195,7 +195,7 @@ exception is `AsyncSourceAdapter`: it's a transparent `__getattr__`
 proxy that mirrors whatever it wraps, so inheriting would both shadow
 the forwarding and overclaim; its conformance is structural.
 
-If your storage client is synchronous (like `S3Source`/boto3), keep the
+If your storage client is synchronous (a blocking SDK like boto3), keep the
 adapter sync and hand the kernel `AsyncSourceAdapter(your_source)` —
 never the raw sync object.
 
@@ -260,7 +260,7 @@ Rules of the kit:
 
 `packages/sdk-py/tests/test_source_conformance_kit.py` runs the kit over
 ALL in-repo adapters (FS read-only, FS writable, Composite,
-AsyncSourceAdapter, S3-via-moto, SqlAlchemySource × both dialects). A
+AsyncSourceAdapter, SqlAlchemySource × both dialects). A
 new in-repo adapter adds a factory there; known divergences get an
 explicit `xfail`/`skip` with an Issue id — never a silent green.
 

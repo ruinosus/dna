@@ -9,9 +9,8 @@ adapter:
   2. FilesystemWritableSource
   3. CompositeFilesystemSource (multi-base routing)
   4. AsyncSourceAdapter(sync src) (transparent-proxy semantics for real)
-  5. AsyncSourceAdapter(S3Source) (moto in-process fake S3; skips w/o moto)
-  6. SqlAlchemySource[sqlite]     (skips when the `sql` extra is absent)
-  7. SqlAlchemySource[postgres]   (skips w/o `sql` extra or DATABASE_URL)
+  5. SqlAlchemySource[sqlite]     (skips when the `sql` extra is absent)
+  6. SqlAlchemySource[postgres]   (skips w/o `sql` extra or DATABASE_URL)
 
 The raw SqliteSource / PostgresSource rows were retired with the adapters
 themselves (s-retire-raw-sql-adapters) — the SqlAlchemySource rows cover
@@ -27,7 +26,6 @@ Known, tracked divergences (documented — not silently green):
 """
 from __future__ import annotations
 
-import json
 import os
 import shutil
 import tempfile
@@ -133,46 +131,6 @@ async def _async_adapter_factory():
     return AsyncSourceAdapter(_SyncFixtureSource()), None
 
 
-async def _s3_moto_factory():
-    """S3Source over moto's in-process fake S3, wrapped the way production
-    must wrap it (AsyncSourceAdapter — S3Source is sync)."""
-    try:
-        import boto3
-        from moto import mock_aws
-    except ImportError:
-        pytest.skip(
-            "boto3/moto not installed — S3Source can't enter the matrix "
-            "(install the sdk-py dev extras)"
-        )
-
-    from dna.adapters.async_adapter import AsyncSourceAdapter
-    from dna.adapters.s3.source import S3Source
-
-    for var in ("AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY",
-                "AWS_SECURITY_TOKEN", "AWS_SESSION_TOKEN"):
-        os.environ.setdefault(var, "testing")
-    m = mock_aws()
-    m.start()
-    try:
-        bucket = "dna-conformance-kit"
-        boto3.client("s3", region_name="us-east-1").create_bucket(Bucket=bucket)
-        inner = S3Source(bucket=bucket, prefix="dna", region="us-east-1")
-        for raw in fixture_docs():
-            key = f"dna/{FIXTURE_SCOPE}/documents/{raw['metadata']['name']}.json"
-            inner._s3.put_object(
-                Bucket=bucket, Key=key,
-                Body=json.dumps(raw).encode("utf-8"),
-            )
-    except BaseException:
-        m.stop()
-        raise
-
-    async def cleanup() -> None:
-        m.stop()
-
-    return AsyncSourceAdapter(inner), cleanup
-
-
 async def _sqlalchemy_sqlite_factory():
     """SqlAlchemySource over aiosqlite — the retired raw sqlite adapter's
     tables (s-sqlalchemy-source-production). Skips when the `sql` extra
@@ -243,7 +201,6 @@ _FACTORIES: dict[str, Any] = {
     "fs-writable": _fs_writable_factory,
     "composite": _composite_factory,
     "async-adapter": _async_adapter_factory,
-    "s3-via-async-adapter": _s3_moto_factory,
     "sqlalchemy-sqlite": _sqlalchemy_sqlite_factory,
     "sqlalchemy-postgres": _sqlalchemy_postgres_factory,
 }
