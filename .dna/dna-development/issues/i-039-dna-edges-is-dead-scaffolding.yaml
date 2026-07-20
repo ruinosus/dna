@@ -1,0 +1,33 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-039-dna-edges-is-dead-scaffolding
+spec:
+  description: "A tabela dna_edges NUNCA E ESCRITA. Existe o CREATE TABLE (sqlalchemy_/migrations.py:240)\
+    \ e DOIS indices nos dois sentidos (:254 from_lookup, :258 to_lookup); o script\
+    \ migrate_lesson_learned_to_engram.py:69 se da ao trabalho de reescrever from_kind/to_kind\
+    \ nela; e um grep por 'dna_edges' em TODO o repo (py/ts/sql, fora de .venv e worktrees)\
+    \ retorna SO o DDL, os indices e aquele script. NADA insere linha. O comentario\
+    \ no proprio DDL (migrations.py:235-237) descreve o writer que deveria existir:\
+    \ 'observer in app.py write-hook that parses spec for slugs (s-/f-/e-/spec-/plan-/cycle-/rem-/dream-/forget-/verdict-)\
+    \ and upserts edges'. Esse app.py NAO EXISTE no repo. Alguem acreditou que o modelo\
+    \ era um grafo o bastante para criar a tabela de arestas com indices, e o grafo\
+    \ nunca foi materializado. CONSEQUENCIAS: (a) qualquer consulta de relacionamento\
+    \ hoje varre JSON, porque o indice que existiria esta vazio; (b) o custo ja e\
+    \ real \u2014 o script de migracao do Engram gasta codigo e risco reescrevendo\
+    \ uma tabela sem linhas; (c) o comentario mente para quem le, sugerindo um mecanismo\
+    \ em producao. DECISAO: popular ou remover. Se popular, NAO pelo caminho do comentario\
+    \ \u2014 parsear slug por regex faz uma referencia fora do padrao ficar invisivel\
+    \ ao grafo, o que e adivinhacao e nao modelo; deveria derivar de referencias DECLARADAS\
+    \ nos descritores (ver a issue de refs tipadas). Se remover, remover tambem os\
+    \ dois indices e o trecho do script."
+  type: bug
+  severity: medium
+  status: open
+  owner: claude-code
+  timeline:
+  - at: '2026-07-20T11:14:14+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

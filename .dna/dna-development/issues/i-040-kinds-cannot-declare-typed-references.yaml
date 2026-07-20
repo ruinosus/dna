@@ -1,0 +1,35 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-040-kinds-cannot-declare-typed-references
+spec:
+  description: "Os descritores de Kind NAO SABEM DECLARAR REFERENCIA. Procurei x-dna-ref,\
+    \ references:, ref_kind nos *.kind.yaml de todas as extensions: nao existe mecanismo.\
+    \ Uma Story aponta para uma Feature por um CAMPO DE TEXTO com um nome dentro (Story.spec.feature).\
+    \ O kernel nao sabe que aquele campo e uma referencia, entao nao valida, nao tipa\
+    \ e nao impede orfao. CONTEXTO ARQUITETURAL, para nao virar a issue errada: o\
+    \ document store generico e a decisao CERTA para Kinds e nao deve mudar. Kind\
+    \ e tipo ABERTO \u2014 qualquer usuario do SDK pode definir Skill, AGENTS.md,\
+    \ o que for, e o valor da proposta e que isso custa um YAML e ZERO migrations.\
+    \ Tabela por Kind mataria isso. Sistemas de tipo extensiveis nao tem integridade\
+    \ no BANCO, tem no KERNEL \u2014 a troca e consciente. O buraco e que o DNA hoje\
+    \ nao faz nem uma nem outra. PROPOSTA: os descritores passam a declarar referencias\
+    \ com tipo (ex.: feature: {ref: Feature}); o kernel valida no write (apontar para\
+    \ Feature inexistente vira erro, nao silencio); e as arestas de dna_edges passam\
+    \ a ser DERIVADAS dessa declaracao, nao adivinhadas por regex de slug. GANHO COLATERAL:\
+    \ com referencias declaradas, o grafo passa a ser consultavel de verdade via CTE\
+    \ recursiva no proprio Postgres \u2014 sem trocar de banco, sem servico novo.\
+    \ HOJE existem relacoes reais sem nenhuma declaracao: Epic->Feature->Story->Task\
+    \ por nome, Project->Repo por lista de nomes, Membership->Project por scope_ref,\
+    \ Project->Scope por CONVENCAO DE STRING (board_scope = <slug>-development, derivado\
+    \ por template literal em QUATRO lugares independentes do portal)."
+  type: enhancement
+  severity: high
+  status: open
+  owner: claude-code
+  timeline:
+  - at: '2026-07-20T11:14:20+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

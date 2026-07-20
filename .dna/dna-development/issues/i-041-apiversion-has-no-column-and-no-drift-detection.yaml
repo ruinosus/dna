@@ -1,0 +1,37 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-041-apiversion-has-no-column-and-no-drift-detection
+spec:
+  description: "A identidade real de um tipo \u2014 o apiVersion \u2014 NAO E COLUNA.\
+    \ Fica dentro do JSON da coluna content de dna_documents (evidencia: source.py:338-340\
+    \ trata apiVersion como caminho JSON e nao coluna; migrate_engram_postgres.py:18-22\
+    \ confirma que reescreve-lo exige jsonb_set). Consequencias praticas: (1) e IMPOSSIVEL\
+    \ perguntar ao banco quais versoes de Kind existem sem varrer JSON de todas as\
+    \ linhas; (2) o lookup e tupla exata dict.get((apiVersion, kind)) em instance.py:686,\
+    \ sem alias, sem fallback, sem tabela de mapeamento \u2014 se a tupla nao bate,\
+    \ a linha EXISTE no banco e NAO EXISTE para a aplicacao: some, sem erro, sem log;\
+    \ (3) nao ha deteccao de drift entre os descritores carregados em memoria e os\
+    \ (kind, apiVersion) presentes no banco. E CUIDADO: dna_versions, apesar do nome,\
+    \ versiona o CONTEUDO do documento (historico de edicoes) \u2014 nao tem NADA\
+    \ a ver com versao de Kind. A versao do Kind nao tem coluna, nao tem tabela, nao\
+    \ tem historico. O PRECEDENTE que prova o custo: o rename LessonLearned->Engram\
+    \ exigiu um script ad-hoc reescrevendo SEIS lugares numa transacao, hardcoded\
+    \ para aquele rename, e que por confissao propria (migrate_engram_postgres.py:86-89)\
+    \ NUNCA RODOU contra banco real. O dry-run de uma variante reportou has_collisions:\
+    \ False e estourou UniqueViolationError no apply, porque kind participa de quatro\
+    \ PK/UNIQUE diferentes. PROPOSTA: promover apiVersion a coluna (com backfill via\
+    \ jsonb); e um comando de drift que compare SELECT DISTINCT kind, apiVersion no\
+    \ banco contra o registry carregado, respondendo 'quais linhas ficaram invisiveis'\
+    \ \u2014 que e exatamente a pergunta que ninguem conseguiu fazer no cutover do\
+    \ Engram. Isso NAO exige tabela por Kind nem fecha o sistema de tipos."
+  type: enhancement
+  severity: high
+  status: open
+  owner: claude-code
+  timeline:
+  - at: '2026-07-20T11:14:26+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
