@@ -1,0 +1,15 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-dna-shrink-faixa-1
+spec:
+  title: 'Plano: s-dna-shrink-faixa-1'
+  date: '2026-07-20'
+  status: accepted
+  story_ref: s-dna-shrink-faixa-1
+  journey_phase: plan
+  body: 'Executar a Faixa 1 da auditoria. Regra que domina tudo: confirmar ausencia
+    de chamador ANTES de apagar; se aparecer chamador vivo, PULAR e reportar em vez
+    de forcar.'
+  created_at: '2026-07-20T13:04:26+00:00'
+  updated_at: '2026-07-20T13:04:26+00:00'
