@@ -1,4 +1,8 @@
-# TypeScript CI — dna-sdk bun test + typecheck (s-public-ci).
+# TypeScript CI — dna-client (the REST client) bun test + typecheck.
+#
+# The `sdk-ts` job was removed when the TypeScript SDK was frozen (tag
+# `sdk-ts-final`). TypeScript's story in DNA is now the REST CLIENT, so this
+# workflow exists for `client-ts` — treat it as load-bearing, not leftover.
 name: typescript
 
 on:
@@ -7,29 +11,6 @@ on:
   pull_request:
 
 jobs:
-  sdk-ts:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: packages/sdk-ts
-    steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-      - name: Cache bun install cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.bun/install/cache
-          key: bun-${{ runner.os }}-${{ hashFiles('packages/sdk-ts/bun.lock') }}
-          restore-keys: bun-${{ runner.os }}-
-      - name: Install
-        run: bun install --frozen-lockfile
-      - name: Test
-        run: bun test
-      - name: Typecheck
-        run: bun run typecheck
-
   client-ts:
     # dna-client (TypeScript) — the REST read-API client. Types are generated
     # from docs/openapi.json (openapi-typescript, committed as src/schema.ts);
