@@ -1,0 +1,44 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-038-replace-homegrown-migration-runner-with-alembic
+spec:
+  description: "O SDK usa um runner de migrations CASEIRO (packages/sdk-py/dna/adapters/_migrations.py,\
+    \ 99 linhas) onde existe ferramenta oficial: Alembic. Contraria a maxima do DNA\
+    \ de nao reinventar nada. NOTA IMPORTANTE de diagnostico: o ORM ja e oficial (SQLAlchemy,\
+    \ adapters/sqlalchemy_/) \u2014 o que e caseiro e SO o runner. A troca aqui e\
+    \ de runner, nao de ORM. O que o runner caseiro faz hoje e que qualquer substituicao\
+    \ precisa preservar: (a) DOIS dialetos com payloads DIVERGENTES \u2014 PG_MIGRATIONS\
+    \ v1-9 e SQLITE_MIGRATIONS v1-8 (sqlalchemy_/migrations.py), incluindo uma tabela\
+    \ reconstruida inteira porque SQLite nao faz ALTER de PK; (b) aplicacao automatica\
+    \ no connect() (source.py:383) \u2014 e uma BIBLIOTECA que aplica schema no banco\
+    \ DO CONSUMIDOR, nao uma app com passo de deploy; (c) control tables com nomes\
+    \ HISTORICOS (schema_migrations no SQLite, {schema}.dna_schema_migrations no PG,\
+    \ {schema}.dna_search_migrations no pgvector) cuja compat com DBs existentes e\
+    \ testada em test_schema_migrations_contract.py contra fixtures construidas por\
+    \ uma replica do loop antigo; (d) tolerancia forward-only a store mais novo que\
+    \ o binario (_migrations.py:81), que nao pode crashar durante rollout. RISCOS\
+    \ a desenhar antes de mexer: e migracao de migrations em cima de dado de producao\
+    \ (dna_documents no Postgres do dna-cloud, mais os bancos de qualquer consumidor\
+    \ do PyPI); Alembic tradicionalmente assume UMA arvore de revisoes e um alvo,\
+    \ entao os dois dialetos exigem decisao explicita (branches, ou duas arvores,\
+    \ ou condicionais por dialeto). GANHO ESPERADO alem de nao reinventar: Alembic\
+    \ tem autogenerate comparando os sa.Table com o banco, o que fecha um buraco REAL\
+    \ \u2014 hoje existem DUAS definicoes paralelas do schema (os payloads SQL e os\
+    \ sa.Table em source.py:243) sem NADA verificando que batem, e a migration v9\
+    \ (migrations.py:262) existe justamente porque isso ja falhou: a coluna content_binary\
+    \ foi adicionada por codigo sem migration, o dev DB ganhou a coluna na mao, e\
+    \ todo bootstrap limpo quebrava. Duas semanas de drift silencioso pego por acidente.\
+    \ Alembic tambem traz checksum de revisao, que hoje nao existe (editar uma versao\
+    \ ja aplicada nao e detectado). NAO tem rollback e isso e decisao declarada (_migrations.py:11)\
+    \ \u2014 reavaliar se mantem."
+  type: task
+  severity: medium
+  status: open
+  owner: claude-code
+  timeline:
+  - at: '2026-07-20T10:38:48+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
