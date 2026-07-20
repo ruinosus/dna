@@ -69,10 +69,10 @@
 # id-as-filename marker mode) that is out of scope for this story.
 #
 # SINGLE-SOURCE package data: this descriptor is the only
-# definition of the Kind — the packages/sdk-ts mirror and the test that enforced byte-identity
-# (tests/test_descriptor_hash_parity.py) were BOTH removed when the
-# TypeScript SDK was frozen (commit 341e517).
-# Nothing mirrors this file and no test enforces byte-identity.
+# definition of the Kind — the packages/sdk-ts mirror and the test that
+# enforced byte-identity (tests/test_descriptor_hash_parity.py) were BOTH
+# removed when the TypeScript SDK was frozen (commit 341e517). Nothing
+# mirrors this file and no test enforces byte-identity.
 # (The removed test also checked that the SET of `<extension>/<file>.kind.yaml`
 # paths matched on both sides; with one runtime left there is no set to match.)
 #
