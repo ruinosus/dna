@@ -1,9 +1,24 @@
-"""Shared forward-only schema-migration runner (s-dna-migration-contract).
+"""Forward-only schema-migration runner for the SEARCH stores.
 
-THE single implementation of the migration *algorithm* the two retired raw
-SQL adapters previously hand-rolled in parallel; today its only caller is
-``SqlAlchemySource`` (one call per dialect). The contract it encodes
-(documented in ``docs/PORT-CONTRACT.md`` § "Schema migrations"):
+Scope narrowed by i-038. This used to also drive ``SqlAlchemySource``'s
+schema; that moved to Alembic (``adapters/sqlalchemy_/migrate.py``), which
+brings revision checksums and ``autogenerate`` drift detection the numbered
+ladder could not.
+
+The search providers deliberately did NOT move, and this is why: their DDL
+is parametrized at RUNTIME by the active ``EmbeddingPort``'s vector width —
+``build_migrations(dims)`` bakes ``float[384]`` (sqlite-vec ``vec0``) or
+``vector(384)`` (pgvector) into the create statement. An Alembic revision
+is a static file authored ahead of time; it cannot know the width the
+consumer will boot with. Add that these stores are optional extras whose
+tables live beside (and are droppable independently of) the Source's, and a
+small numbered runner is the honest fit. Callers:
+``adapters/search/sqlite_vec.py`` and ``adapters/search/pgvector.py``, each
+with its own control table (``schema_migrations`` /
+``{schema}.dna_search_migrations``).
+
+The contract it encodes (documented in ``docs/PORT-CONTRACT.md``
+§ "Schema migrations"):
 
   - **Forward-only, numbered.** Migrations are a ``Mapping[int, payload]``
     keyed by positive integer version. They are applied in ascending
@@ -16,13 +31,15 @@ SQL adapters previously hand-rolled in parallel; today its only caller is
     nothing and returns ``[]`` — this is what every service boot does.
   - **Control table owned by the adapter.** The helper never touches
     storage itself; the adapter supplies three async callables bound to
-    its own connection/control-table dialect. Existing control tables
-    (SQLite ``schema_migrations``, Postgres ``{schema}.dna_schema_migrations``)
-    keep their exact name and shape — full compat with existing DBs.
+    its own connection/control-table dialect. The search stores' control
+    tables (sqlite-vec ``schema_migrations`` in its own store file,
+    pgvector ``{schema}.dna_search_migrations``) keep their exact name and
+    shape. Note the Source's control tables are NO LONGER among them: it
+    uses Alembic's ``alembic_version`` since i-038.
 
 Why callables instead of a driver abstraction: the two callers have
-deliberately different atomicity semantics (SQLite ``executescript`` per
-version + separate record/commit; Postgres one transaction per version
+deliberately different atomicity semantics (sqlite-vec ``executescript``
+per version + separate record/commit; pgvector one transaction per version
 wrapping statements + record) and different payload shapes (one SQL
 script string vs a list of statements with a ``{schema}`` placeholder).
 ``apply_version`` owns "apply + record, with MY atomicity" so the helper

@@ -233,66 +233,30 @@ class SqlAlchemySource(WritableSourcePort):
         self.supports_cross_process_invalidation = self._is_pg
 
     # ------------------------------------------------------------------
-    # Table metadata — SAME tables the raw adapters own
+    # Table metadata — the ONE model, shared with Alembic autogenerate
     # ------------------------------------------------------------------
 
     def _build_tables(self) -> None:
-        md = sa.MetaData(schema=self._schema)
-        # [dialect] pg tables are dna_-prefixed; sqlite's are bare.
-        p = "dna_" if self._is_pg else ""
-        self.documents = sa.Table(
-            f"{p}documents", md,
-            sa.Column("scope", sa.Text), sa.Column("kind", sa.Text),
-            sa.Column("name", sa.Text), sa.Column("content", sa.Text),
-            sa.Column("version", sa.Integer), sa.Column("updated_at", sa.Text),
-            sa.Column("tenant", sa.Text),
-        )
-        self.versions = sa.Table(
-            f"{p}versions", md,
-            sa.Column("id", sa.Integer, primary_key=True),
-            sa.Column("scope", sa.Text), sa.Column("kind", sa.Text),
-            sa.Column("name", sa.Text), sa.Column("content", sa.Text),
-            sa.Column("version", sa.Integer), sa.Column("is_draft", sa.Boolean),
-            sa.Column("author", sa.Text), sa.Column("created_at", sa.Text),
-            sa.Column("tenant", sa.Text), sa.Column("semver", sa.Text),
-        )
-        bundle_cols = [
-            sa.Column("scope", sa.Text), sa.Column("kind", sa.Text),
-            sa.Column("name", sa.Text), sa.Column("entry_path", sa.Text),
-            sa.Column("content", sa.Text), sa.Column("updated_at", sa.Text),
-            sa.Column("tenant", sa.Text),
-        ]
+        """Bind to the table model in ``schema.py``.
+
+        The model used to be defined inline here, in parallel with the DDL
+        payloads in ``migrations.py``, with nothing checking they agreed —
+        the drift that cost two weeks (``content_binary``). Now there is
+        one definition, and it is also Alembic's ``target_metadata``, so a
+        disagreement between the model and a real database is a test
+        failure (tests/test_schema_autogenerate_guard.py).
+        """
+        from .schema import build_metadata
+
+        tables = build_metadata(is_pg=self._is_pg, schema=self._schema)
+        self.metadata = tables.metadata
+        self.documents = tables.documents
+        self.versions = tables.versions
+        self.bundle_entries = tables.bundle_entries
+        self.layer_documents = tables.layer_documents
         if self._is_pg:
-            # [dialect] only pg has the BYTEA column (migration v9);
-            # sqlite stores bytes in `content` via type affinity.
-            bundle_cols.append(sa.Column("content_binary", sa.LargeBinary))
-        self.bundle_entries = sa.Table(f"{p}bundle_entries", md, *bundle_cols)
-        self.layer_documents = sa.Table(
-            f"{p}layer_documents", md,
-            sa.Column("scope", sa.Text), sa.Column("layer_id", sa.Text),
-            sa.Column("layer_value", sa.Text), sa.Column("kind", sa.Text),
-            sa.Column("name", sa.Text), sa.Column("content", sa.Text),
-            sa.Column("updated_at", sa.Text),
-        )
-        if self._is_pg:
-            # [dialect] Phase 15.1 eventbus tables exist only in the pg
-            # schema (migration v5) — the sqlite dialect has no bus.
-            self.outbox = sa.Table(
-                f"{p}outbox", md,
-                sa.Column("id", sa.BigInteger, primary_key=True),
-                sa.Column("occurred_at", sa.DateTime(timezone=True)),
-                sa.Column("scope", sa.Text), sa.Column("tenant", sa.Text),
-                sa.Column("kind", sa.Text), sa.Column("name", sa.Text),
-                sa.Column("op", sa.Text), sa.Column("doc_version", sa.Integer),
-                sa.Column("actor", sa.Text), sa.Column("cause", sa.Text),
-            )
-            self.versions_seq = sa.Table(
-                f"{p}versions_seq", md,
-                sa.Column("scope", sa.Text, primary_key=True),
-                sa.Column("tenant", sa.Text, primary_key=True),
-                sa.Column("last_id", sa.BigInteger),
-                sa.Column("last_at", sa.DateTime(timezone=True)),
-            )
+            self.outbox = tables.outbox
+            self.versions_seq = tables.versions_seq
 
     # ------------------------------------------------------------------
     # Dialect seams (each is [dialect] evidence)
@@ -377,7 +341,7 @@ class SqlAlchemySource(WritableSourcePort):
         return expr, (str(val) if not isinstance(val, str) else val)
 
     # ------------------------------------------------------------------
-    # Migrations — the EXISTING per-dialect payloads, shared runner
+    # Migrations — Alembic (i-038)
     # ------------------------------------------------------------------
 
     async def connect(self) -> None:
@@ -386,92 +350,32 @@ class SqlAlchemySource(WritableSourcePort):
                 await conn.exec_driver_sql("PRAGMA journal_mode=WAL")  # [dialect]
         await self.run_schema_migrations()
 
-    async def run_schema_migrations(self) -> list[int]:
-        from .._migrations import run_migrations
+    async def run_schema_migrations(self) -> list[str]:
+        """Bring the backing database to the current schema head.
 
-        if self._is_pg:
-            # [dialect] pg payload: list[str] with {schema} placeholder,
-            # one tx per version (the raw-PostgresSource semantics it
-            # inherited — payloads moved here on adapter retirement).
-            from .migrations import PG_MIGRATIONS
-            control = f"{self._schema or 'public'}.dna_schema_migrations"
+        Applied automatically by ``connect()`` — unchanged from the retired
+        runner, and deliberately so: this library owns tables in its
+        consumer's database, and consumers (dna-cloud's four containers)
+        rely on boot-time application.
 
-            async def ensure_control_table() -> None:
-                async with self._engine.begin() as conn:
-                    await conn.exec_driver_sql(
-                        f"CREATE TABLE IF NOT EXISTS {control} "
-                        "(version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL)"
-                    )
+        Returns:
+            The Alembic revision ids applied by THIS call, in application
+            order. ``[]`` means the database was already at head — the
+            idempotent re-boot every service performs.
 
-            async def fetch_applied() -> list[int]:
-                async with self._engine.connect() as conn:
-                    rows = await conn.exec_driver_sql(
-                        f"SELECT version FROM {control}"
-                    )
-                    return [r[0] for r in rows]
+            NOTE: the retired runner returned ``list[int]``, the numbered
+            ladder's version numbers. Alembic identifies a revision by
+            string id, so the contract is now ``list[str]``; the public
+            conformance kit was updated to match (see
+            ``dna/testing/source_conformance.py`` and
+            docs/PORT-CONTRACT.md § "Schema migrations").
+        """
+        from .migrate import upgrade_sync
 
-            async def apply_version(version: int, statements: list[str]) -> None:
-                async with self._engine.begin() as conn:
-                    for stmt in statements:
-                        await conn.exec_driver_sql(
-                            stmt.format(schema=self._schema or "public")
-                        )
-                    await conn.execute(
-                        sa.text(
-                            f"INSERT INTO {control} (version, applied_at) "
-                            "VALUES (:v, :at)"
-                        ),
-                        {"v": version, "at": _now()},
-                    )
-
-            return await run_migrations(
-                PG_MIGRATIONS, ensure_control_table=ensure_control_table,
-                fetch_applied=fetch_applied, apply_version=apply_version,
-                dialect="Postgres(SQLAlchemy)",
+        async with self._engine.begin() as conn:
+            return await conn.run_sync(
+                lambda sync_conn: upgrade_sync(sync_conn, self._schema)
             )
-
-        # [dialect] sqlite payload: one multi-statement SCRIPT per version
-        # (executescript semantics) — split into statements for Core.
-        from .migrations import SQLITE_MIGRATIONS
-
-        async def ensure_control_table() -> None:
-            async with self._engine.begin() as conn:
-                await conn.exec_driver_sql(
-                    "CREATE TABLE IF NOT EXISTS schema_migrations "
-                    "(version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL)"
-                )
-
-        async def fetch_applied() -> list[int]:
-            async with self._engine.connect() as conn:
-                rows = await conn.exec_driver_sql(
-                    "SELECT version FROM schema_migrations"
-                )
-                return [r[0] for r in rows]
-
-        async def apply_version(version: int, script: str) -> None:
-            # Strip full-line `--` comments FIRST (they may contain `;`),
-            # then split the executescript payload into statements.
-            sql_only = "\n".join(
-                line for line in script.splitlines()
-                if not line.strip().startswith("--")
-            )
-            async with self._engine.begin() as conn:
-                for stmt in sql_only.split(";"):
-                    if stmt.strip():
-                        await conn.exec_driver_sql(stmt)
-                await conn.execute(
-                    sa.text(
-                        "INSERT INTO schema_migrations (version, applied_at) "
-                        "VALUES (:v, :at)"
-                    ),
-                    {"v": version, "at": _now()},
-                )
-
-        return await run_migrations(
-            SQLITE_MIGRATIONS, ensure_control_table=ensure_control_table,
-            fetch_applied=fetch_applied, apply_version=apply_version,
-            dialect="SQLite(SQLAlchemy)",
-        )
 
     # ------------------------------------------------------------------
     # Kernel wiring

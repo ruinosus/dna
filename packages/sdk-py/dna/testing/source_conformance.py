@@ -531,14 +531,20 @@ async def _case_bundle_entry_round_trip(ctx: _Ctx) -> None:
 
 async def _case_schema_migrations_idempotent(ctx: _Ctx) -> None:
     """SQL-backed adapters (docs/PORT-CONTRACT.md § "Schema migrations"):
-    ``run_schema_migrations()`` returns the list of versions applied by
+    ``run_schema_migrations()`` returns the list of revisions applied by
     that call, and a SECOND run right after is a no-op (``[]``) — the
     control table persisted in the backing store makes re-boot
     idempotent. Adapters without persistent SQL storage don't expose the
-    method and skip."""
+    method and skip.
+
+    Revision IDENTIFIERS are strings (i-038: the built-in SQL adapter moved
+    to Alembic, which names revisions rather than numbering them). An
+    adapter that still numbers its migrations satisfies this by returning
+    ``[str(v) for v in versions]`` — the contract is "identify what you
+    applied", not "count it"."""
     first = await _aw(ctx.source.run_schema_migrations())
-    assert isinstance(first, list) and all(isinstance(v, int) for v in first), (
-        f"run_schema_migrations must return list[int] of versions applied "
+    assert isinstance(first, list) and all(isinstance(v, str) for v in first), (
+        f"run_schema_migrations must return list[str] of revision ids applied "
         f"by the call, got {first!r}"
     )
     second = await _aw(ctx.source.run_schema_migrations())

@@ -74,18 +74,25 @@ method — the contract test then skips the case.
 
 `SqlAlchemySource` (`dna/adapters/sqlalchemy_/`) is ONE adapter over
 SQLAlchemy Core 2.x async that speaks BOTH SQL dialects and binds to the
-**exact same tables and migrations** the retired raw adapters owned
-(the payloads now live in `dna/adapters/sqlalchemy_/migrations.py`):
+**exact same tables** the retired raw adapters owned. Since i-038 the
+schema is applied by **Alembic** (`dna/adapters/sqlalchemy_/alembic/`),
+against the ONE table model in `dna/adapters/sqlalchemy_/schema.py`:
 
 | dialect | driver | tables | control table |
 |---|---|---|---|
-| `sqlite+aiosqlite` | aiosqlite | `documents` / `versions` / `bundle_entries` / `layer_documents` | `schema_migrations` |
-| `postgresql+asyncpg` | asyncpg | `{schema}.dna_documents` / `dna_versions` / `dna_bundle_entries` / `dna_layer_documents` / `dna_outbox` / `dna_versions_seq` | `{schema}.dna_schema_migrations` |
+| `sqlite+aiosqlite` | aiosqlite | `documents` / `versions` / `bundle_entries` / `layer_documents` | `alembic_version` |
+| `postgresql+asyncpg` | asyncpg | `{schema}.dna_documents` / `dna_versions` / `dna_bundle_entries` / `dna_layer_documents` / `dna_outbox` / `dna_versions_seq` | `{schema}.alembic_version` |
 
-Because the storage is byte-identical, **moving a database created by a
-raw adapter onto `SqlAlchemySource` is pure instantiation — zero data
-migration**. A DB the raw adapters built re-boots clean here (locked by
-`tests/test_schema_migrations_contract.py`).
+The tables are unchanged — the Alembic baseline revision reproduces the
+retired ladder's final schema exactly (verified against `pg_dump
+--schema-only` and SQLAlchemy `inspect()` on both dialects). The
+historical control tables (`schema_migrations`,
+`{schema}.dna_schema_migrations`) are retired: a database carrying one is
+detected at boot, **stamped** at the baseline revision and the old table
+dropped, with no DDL replayed (locked by
+`tests/test_alembic_legacy_baseline.py`). A database at a *partial*
+ladder version is refused loudly — bring it to the ladder head on
+dna-sdk <= 0.20.0 first.
 
 ### Install
 
@@ -283,13 +290,10 @@ shared forward-only runner
   pending migrations before serving — deploying new code upgrades the
   store, no separate migrate step. Booting an up-to-date store applies
   nothing (idempotent re-boot).
-- **Control table per dialect, name/shape frozen.** sqlite:
-  `schema_migrations(version INTEGER PRIMARY KEY, applied_at TEXT)`.
-  postgres: `{schema}.dna_schema_migrations(version, applied_at)`.
-  These predate the shared runner (they were born in the retired raw
-  adapters) and MUST stay byte-compatible — a DB created by any older
-  release re-boots clean on current code (locked by
-  `tests/test_schema_migrations_contract.py`).
+- **Control table.** The built-in SQL adapter uses Alembic's standard
+  `alembic_version` (in the DNA schema on Postgres, so several DNA
+  schemas in one database track independently). Third-party adapters
+  using the numbered runner below own their own control table.
 - **Older binary vs newer store** doesn't crash: unknown recorded
   versions are left untouched and logged as a warning.
 - **Atomicity is the adapter's.** The runner owns ordering/skip/
@@ -309,8 +313,12 @@ from dna.adapters._migrations import run_migrations
 MIGRATIONS: dict[int, str] = {1: "CREATE TABLE ...", 2: "ALTER TABLE ..."}
 
 class MySource(WritableSourcePort):
-    async def run_schema_migrations(self) -> list[int]:
-        """Public entrypoint — also call it from your boot path."""
+    async def run_schema_migrations(self) -> list[str]:
+        """Public entrypoint — also call it from your boot path.
+
+        The conformance kit wants revision IDENTIFIERS as strings; if you
+        number your migrations, return ``[str(v) for v in applied]``.
+        """
         return await run_migrations(
             MIGRATIONS,
             ensure_control_table=self._ensure_control_table,  # CREATE TABLE IF NOT EXISTS my_control(version, applied_at)
@@ -323,7 +331,8 @@ class MySource(WritableSourcePort):
 The conformance kit picks the capability up by duck-typing (same
 pattern as `list_scopes`): an adapter exposing `run_schema_migrations()`
 gets the `schema_migrations_idempotent` case — after boot, a re-run
-must return `[]` (the control table survived in the backing store).
+must return `[]` (the control table survived in the backing store), and
+the first run must return `list[str]` of revision ids.
 Adapters without SQL storage simply don't implement the method and the
 case skips.
 

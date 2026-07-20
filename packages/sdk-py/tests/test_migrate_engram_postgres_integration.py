@@ -9,7 +9,8 @@ Postgres to run these; they auto-skip otherwise, same as
 
 Each test gets a FRESH throwaway schema (mirrors
 ``test_layers_integration.py``'s ``_pg_env()``), bootstrapped by the REAL
-``SqlAlchemySource.connect()`` (applies ``PG_MIGRATIONS`` 1..10 for real), so
+``SqlAlchemySource.connect()`` (applies the Alembic baseline revision for
+real — it reproduces what ``PG_MIGRATIONS`` 1..10 used to build), so
 the tables/indexes under test are byte-identical to what a production
 Postgres-backed DNA store has — never a hand-rolled subset schema. Rows are
 seeded through the SAME writer paths production traffic uses
@@ -84,7 +85,7 @@ async def _fresh_schema():
 
     sa_url = dsn.replace("postgresql://", "postgresql+asyncpg://", 1)
     src = SqlAlchemySource(sa_url, schema=schema)
-    await src.connect()  # applies PG_MIGRATIONS 1..10 for real
+    await src.connect()  # applies the Alembic baseline for real
 
     async def cleanup() -> None:
         await src.close()
