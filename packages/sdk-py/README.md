@@ -20,8 +20,8 @@ uv sync            # or: pip install -e .
 
 Optional extras: `postgres`, `sqlite`, `sql` (SqlAlchemySource — one
 adapter for both SQL dialects, same tables; see docs/PORT-CONTRACT.md
-§ "Using the SQLAlchemy adapter"), `tools`
-(langchain `@dna_tool` decorator), `safety-ml` (PII/toxicity models),
+§ "Using the SQLAlchemy adapter")
+`safety-ml` (PII/toxicity models),
 `all`, `dev`.
 
 ## Minimal example

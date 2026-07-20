@@ -850,11 +850,6 @@
       "py": "packages/sdk-py/dna/kernel/collaborator_ports.py",
       "ts": "packages/sdk-ts/src/kernel/collaborator-ports.ts",
       "justification": "Kernel INTERNALS, not public contract: these are the narrow mediator slices from the kernel-decomposition epic (e-kernel-decomposition). Each language decomposed its own god-object along its own seams (Py ~15 slices, TS 3) — forcing member parity here would couple internal refactors across languages for zero user-facing value."
-    },
-    "dna_tool-decorator": {
-      "py": "packages/sdk-py/dna/kernel/tools.py",
-      "ts": null,
-      "justification": "The @dna_tool decorator + pending-tools harvest is langchain glue (wraps langchain_core.tools.tool for langgraph/deepagents). The TS SDK has no langchain runtime; the portable part — ToolPort/ToolDefinition + ToolRegistry + kernel.tool()/getTools() and the read-umbrella group aliases — IS ported and surface-tracked above."
     }
   }
 }

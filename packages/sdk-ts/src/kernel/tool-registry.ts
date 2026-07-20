@@ -1,15 +1,14 @@
 /**
  * ToolRegistry — the kernel's tool-definition registry. TS twin of the Py
- * `dna.kernel.tool_registry.ToolRegistry` + the portable half of
- * `tools.py` (READ_UMBRELLA_GROUPS / expand_group_aliases). Landed with
- * s-dna-port-surface-parity (closes the "TS kernel has no tool registry"
- * gap the ExtensionHost contract had to footnote).
+ * `dna.kernel.tool_registry.ToolRegistry`, including READ_UMBRELLA_GROUPS /
+ * expand_group_aliases. Landed with s-dna-port-surface-parity (closes the
+ * "TS kernel has no tool registry" gap the ExtensionHost contract had to
+ * footnote).
  *
- * The Py `@dna_tool` decorator (langchain glue that harvests
- * ToolDefinitions at function-definition time) is a JUSTIFIED Py-only
- * asymmetry — see tests/parity-fixtures/port-surface-parity.json. TS
- * registrants construct `ToolDefinition`s directly and call
- * `kernel.tool(td)` inside `Extension.register()`.
+ * Both sides are now symmetric: registrants construct `ToolDefinition`s
+ * directly and call `kernel.tool(td)` inside `Extension.register()`. (The Py
+ * `@dna_tool` langchain decorator that once harvested definitions at
+ * function-definition time was removed as dead code — it decorated nothing.)
  *
  * Tools are global (not tenant-scoped), so one registry is safely shared
  * across `withTenant` shallow copies — same posture as the Py twin.

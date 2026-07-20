@@ -356,8 +356,8 @@ class AgentSpec:
     # to ["all"] (back-compat — agent receives every tool). Other values:
     # ["code"] (only code_* tools), ["manifest"] (only describe_*/list_*/
     # show_*/find_*), ["write"] (only mutating tools), or any combination.
-    # The harness applies the filter via make_manifest_tools(); subagents
-    # listed in team_members can declare disjoint groups for delegation.
+    # The harness applies the filter via kernel.get_tools(groups=...);
+    # subagents in team_members can declare disjoint groups for delegation.
     tool_groups: list[str] = field(default_factory=list)
     # s-mcp-servers-on-agent (2026-07-07, spec
     # 2026-07-07-mcp-first-tools-design.md §5.1) — external MCP servers

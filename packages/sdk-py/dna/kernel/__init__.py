@@ -206,9 +206,8 @@ class Kernel:
         # registration time (boot), long after __init__ returns.
         self._kindreg = KindRegistry(host=self)
         # s-dna-tool-decorator-port (2026-05-24) — tool registry, analogous to
-        # ``_kinds``. Populated via ``kernel.tool(td)`` — called by extensions or
-        # runtime bootstrap (which stub-calls tool factories to harvest @dna_tool
-        # definitions). Extracted to the ToolRegistry collaborator
+        # ``_kinds``. Populated via ``kernel.tool(td)`` — called by extensions at
+        # register time. Extracted to the ToolRegistry collaborator
         # (kernel-decompose-continue); one registry shared across with_tenant
         # copies (tools are global, not tenant-scoped).
         from dna.kernel.tool_registry import ToolRegistry

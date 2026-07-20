@@ -16,6 +16,29 @@ if TYPE_CHECKING:  # pragma: no cover
     from dna.kernel.protocols import ToolDefinition
 
 
+# ─── 'read' umbrella group ──────────────────────────────────────────
+# 'read' is not a real group on any tool — it's an alias that expands
+# to {code, manifest, docs, eval} at filter time. Kept here so consumers
+# of Kernel.get_tools(groups=...) can pass `read` and have it work.
+# 1:1 with the TS twin (src/kernel/tool-registry.ts).
+
+READ_UMBRELLA_GROUPS = frozenset({"code", "manifest", "docs", "eval"})
+
+
+def expand_group_aliases(groups: list[str] | set[str] | None) -> set[str]:
+    """Expand 'read' umbrella into its constituent groups. Other group
+    names pass through unchanged."""
+    if not groups:
+        return set()
+    out: set[str] = set()
+    for g in groups:
+        if g == "read":
+            out.update(READ_UMBRELLA_GROUPS)
+        else:
+            out.add(g)
+    return out
+
+
 class ToolRegistry:
     """Name → ToolDefinition registry with group-aware filtering."""
 
@@ -46,7 +69,6 @@ class ToolRegistry:
         """
         if group is None and not groups:
             return list(self._tools.values())
-        from dna.kernel.tools import expand_group_aliases  # noqa: PLC0415
         wanted = {group} if group else set()
         if groups:
             wanted |= set(groups)
