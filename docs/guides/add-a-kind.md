@@ -35,7 +35,7 @@ A new Kind `Hello`, persisted as YAML files at
 > data (no custom parse/compose behavior), write a `*.kind.yaml`
 > descriptor instead and register it with `kernel.kind_from_descriptor()`
 > — see the descriptor files under
-> `packages/sdk-ts/src/extensions/*/kinds/` for the format. The class
+> `packages/sdk-py/dna/extensions/*/kinds/` for the format. The class
 > pattern below is for Kinds that need behavior.
 
 ## Step 1 — Pick the storage shape
@@ -146,9 +146,8 @@ class HelloExtension:
 
 `ExtensionHost` is the explicit registration-time contract — everything an
 extension may call while loading (`kind`, `kind_from_descriptor`, `reader`,
-`writer`, `on`, `on_veto`, `tool`, `composition_profile`, `hooks`). The
-TypeScript twin is the `ExtensionHost` interface in
-`src/kernel/protocols.ts` (same surface, camelCase).
+`writer`, `on`, `on_veto`, `tool`, `composition_profile`, `hooks`). Its
+member list is golden-locked in `tests/golden-fixtures/port-surface.json`.
 
 ## Step 4 — Wire the entry-point
 

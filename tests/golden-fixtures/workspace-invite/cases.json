@@ -1,0 +1,450 @@
+{
+  "_doc": "Behavioral golden fixtures for the Model B invite/accept pure policy (f-ws-invites, s-ws-invite-create + s-ws-invite-accept). packages/sdk-py/tests/test_workspace_invite.py runs every case against the pure policy. Two case families discriminated by `op`: 'authorize' exercises role_in_workspace + can_invite (who may invite/list); 'accept' exercises verified_email_from_claims + bindable_invites_for (which pending/unbound grants a verified sign-in binds). This is SECURITY-critical: the anti-impersonation cases (wrong oid cannot accept, an oid-bound grant is not hijackable, an unverified email is denied) live here and are gated here.",
+  "authorize": [
+    {
+      "id": "auth-owner-may-invite",
+      "why": "An active owner of the workspace may invite.",
+      "identity": {
+        "oid": "oid-owner",
+        "email": "owner@a.com",
+        "tid": "org-a"
+      },
+      "workspace_id": "ws-a",
+      "memberships": [
+        {
+          "workspace_id": "ws-a",
+          "identity_email": "owner@a.com",
+          "identity_oid": "oid-owner",
+          "role": "owner",
+          "status": "active"
+        }
+      ],
+      "expect": {
+        "role": "owner",
+        "can_invite": true
+      }
+    },
+    {
+      "id": "auth-admin-may-invite",
+      "why": "An active admin may invite.",
+      "identity": {
+        "oid": "oid-admin",
+        "email": "admin@a.com",
+        "tid": "org-a"
+      },
+      "workspace_id": "ws-a",
+      "memberships": [
+        {
+          "workspace_id": "ws-a",
+          "identity_email": "admin@a.com",
+          "identity_oid": "oid-admin",
+          "role": "admin",
+          "status": "active"
+        }
+      ],
+      "expect": {
+        "role": "admin",
+        "can_invite": true
+      }
+    },
+    {
+      "id": "auth-member-may-not-invite",
+      "why": "A member is not owner/admin — cannot invite.",
+      "identity": {
+        "oid": "oid-mem",
+        "email": "mem@a.com",
+        "tid": "org-a"
+      },
+      "workspace_id": "ws-a",
+      "memberships": [
+        {
+          "workspace_id": "ws-a",
+          "identity_email": "mem@a.com",
+          "identity_oid": "oid-mem",
+          "role": "member",
+          "status": "active"
+        }
+      ],
+      "expect": {
+        "role": "member",
+        "can_invite": false
+      }
+    },
+    {
+      "id": "auth-nonmember-has-no-role",
+      "why": "An identity with no grant in the workspace has no role and cannot invite (fail-closed).",
+      "identity": {
+        "oid": "oid-x",
+        "email": "x@x.com",
+        "tid": "org-x"
+      },
+      "workspace_id": "ws-a",
+      "memberships": [
+        {
+          "workspace_id": "ws-a",
+          "identity_email": "owner@a.com",
+          "identity_oid": "oid-owner",
+          "role": "owner",
+          "status": "active"
+        }
+      ],
+      "expect": {
+        "role": null,
+        "can_invite": false
+      }
+    },
+    {
+      "id": "auth-owner-of-other-workspace-cannot-invite-here",
+      "why": "Being owner of ws-b grants no invite power in ws-a (per-workspace boundary).",
+      "identity": {
+        "oid": "oid-owner",
+        "email": "owner@a.com",
+        "tid": "org-a"
+      },
+      "workspace_id": "ws-a",
+      "memberships": [
+        {
+          "workspace_id": "ws-b",
+          "identity_email": "owner@a.com",
+          "identity_oid": "oid-owner",
+          "role": "owner",
+          "status": "active"
+        }
+      ],
+      "expect": {
+        "role": null,
+        "can_invite": false
+      }
+    },
+    {
+      "id": "auth-pending-grant-confers-no-role",
+      "why": "A pending (unaccepted) grant authorizes nothing — the invitee cannot themselves invite.",
+      "identity": {
+        "oid": "oid-inv",
+        "email": "inv@a.com",
+        "tid": "org-a"
+      },
+      "workspace_id": "ws-a",
+      "memberships": [
+        {
+          "workspace_id": "ws-a",
+          "identity_email": "inv@a.com",
+          "identity_oid": null,
+          "role": "admin",
+          "status": "pending"
+        }
+      ],
+      "expect": {
+        "role": null,
+        "can_invite": false
+      }
+    },
+    {
+      "id": "auth-highest-role-wins",
+      "why": "Across multiple active grants in one workspace the highest role wins (owner > admin).",
+      "identity": {
+        "oid": "oid-dual",
+        "email": "dual@a.com",
+        "tid": "org-a"
+      },
+      "workspace_id": "ws-a",
+      "memberships": [
+        {
+          "workspace_id": "ws-a",
+          "identity_email": "dual@a.com",
+          "identity_oid": "oid-dual",
+          "role": "member",
+          "status": "active"
+        },
+        {
+          "workspace_id": "ws-a",
+          "identity_email": "dual@a.com",
+          "identity_oid": "oid-dual",
+          "role": "owner",
+          "status": "active"
+        }
+      ],
+      "expect": {
+        "role": "owner",
+        "can_invite": true
+      }
+    }
+  ],
+  "accept": [
+    {
+      "id": "accept-pending-by-verified-email",
+      "why": "Golden cross-org join: a verified email claim binds the matching pending invite (oid captured, pending->active).",
+      "claims": {
+        "oid": "oid-partner",
+        "email": "partner@partner-org.com",
+        "email_verified": true,
+        "tid": "org-partner"
+      },
+      "memberships": [
+        {
+          "workspace_id": "ws-a",
+          "identity_email": "partner@partner-org.com",
+          "identity_oid": null,
+          "role": "member",
+          "status": "pending"
+        }
+      ],
+      "expect": {
+        "bound": [
+          {
+            "workspace_id": "ws-a",
+            "activated": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "accept-via-preferred-username-entra-upn",
+      "why": "Entra's preferred_username (the verified UPN) counts as a verified email even without an email_verified flag.",
+      "claims": {
+        "oid": "oid-partner",
+        "preferred_username": "Partner@Partner-Org.com",
+        "tid": "org-partner"
+      },
+      "memberships": [
+        {
+          "workspace_id": "ws-a",
+          "identity_email": "partner@partner-org.com",
+          "identity_oid": null,
+          "role": "member",
+          "status": "pending"
+        }
+      ],
+      "expect": {
+        "bound": [
+          {
+            "workspace_id": "ws-a",
+            "activated": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "accept-email-case-folded",
+      "why": "Verified-email matching is case-insensitive on both sides.",
+      "claims": {
+        "oid": "oid-partner",
+        "email": "PARTNER@PARTNER-ORG.COM",
+        "email_verified": true,
+        "tid": "org-partner"
+      },
+      "memberships": [
+        {
+          "workspace_id": "ws-a",
+          "identity_email": "partner@partner-org.com",
+          "identity_oid": null,
+          "role": "guest",
+          "status": "pending"
+        }
+      ],
+      "expect": {
+        "bound": [
+          {
+            "workspace_id": "ws-a",
+            "activated": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "accept-binds-multiple-pending-invites",
+      "why": "One verified sign-in binds EVERY unbound grant for that email (invited into two workspaces).",
+      "claims": {
+        "oid": "oid-partner",
+        "email": "partner@partner-org.com",
+        "email_verified": true,
+        "tid": "org-partner"
+      },
+      "memberships": [
+        {
+          "workspace_id": "ws-a",
+          "identity_email": "partner@partner-org.com",
+          "identity_oid": null,
+          "role": "member",
+          "status": "pending"
+        },
+        {
+          "workspace_id": "ws-b",
+          "identity_email": "partner@partner-org.com",
+          "identity_oid": null,
+          "role": "guest",
+          "status": "pending"
+        }
+      ],
+      "expect": {
+        "bound": [
+          {
+            "workspace_id": "ws-a",
+            "activated": true
+          },
+          {
+            "workspace_id": "ws-b",
+            "activated": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "accept-captures-oid-on-active-unbound-seed",
+      "why": "The F1 founder seed is active-but-unbound; first verified sign-in captures its oid (activated=false, it was already active).",
+      "claims": {
+        "oid": "oid-founder",
+        "email": "founder@a.com",
+        "email_verified": true,
+        "tid": "org-a"
+      },
+      "memberships": [
+        {
+          "workspace_id": "ws-a",
+          "identity_email": "founder@a.com",
+          "identity_oid": null,
+          "role": "owner",
+          "status": "active"
+        }
+      ],
+      "expect": {
+        "bound": [
+          {
+            "workspace_id": "ws-a",
+            "activated": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "security-unverified-email-cannot-accept",
+      "why": "SECURITY: a bare email claim with no email_verified (and no verified UPN) cannot claim an invite — fail-closed, nothing bound.",
+      "claims": {
+        "oid": "oid-attacker",
+        "email": "partner@partner-org.com",
+        "tid": "org-evil"
+      },
+      "memberships": [
+        {
+          "workspace_id": "ws-a",
+          "identity_email": "partner@partner-org.com",
+          "identity_oid": null,
+          "role": "member",
+          "status": "pending"
+        }
+      ],
+      "expect": {
+        "bound": []
+      }
+    },
+    {
+      "id": "security-email-verified-false-cannot-accept",
+      "why": "SECURITY: email_verified explicitly false is not verified — denied.",
+      "claims": {
+        "oid": "oid-attacker",
+        "email": "partner@partner-org.com",
+        "email_verified": false,
+        "tid": "org-evil"
+      },
+      "memberships": [
+        {
+          "workspace_id": "ws-a",
+          "identity_email": "partner@partner-org.com",
+          "identity_oid": null,
+          "role": "member",
+          "status": "pending"
+        }
+      ],
+      "expect": {
+        "bound": []
+      }
+    },
+    {
+      "id": "security-bound-grant-not-hijackable-by-different-oid",
+      "why": "SECURITY (the crux): a grant already bound to oid-partner is NEVER rebindable by a different oid sharing the email — nothing bound for the attacker.",
+      "claims": {
+        "oid": "oid-attacker",
+        "email": "partner@partner-org.com",
+        "email_verified": true,
+        "tid": "org-evil"
+      },
+      "memberships": [
+        {
+          "workspace_id": "ws-a",
+          "identity_email": "partner@partner-org.com",
+          "identity_oid": "oid-partner",
+          "role": "member",
+          "status": "active"
+        }
+      ],
+      "expect": {
+        "bound": []
+      }
+    },
+    {
+      "id": "security-no-oid-cannot-bind",
+      "why": "SECURITY: a token with no durable oid cannot bind an invite (no key to bind to) — nothing bound.",
+      "claims": {
+        "email": "partner@partner-org.com",
+        "email_verified": true,
+        "tid": "org-partner"
+      },
+      "memberships": [
+        {
+          "workspace_id": "ws-a",
+          "identity_email": "partner@partner-org.com",
+          "identity_oid": null,
+          "role": "member",
+          "status": "pending"
+        }
+      ],
+      "expect": {
+        "bound": []
+      }
+    },
+    {
+      "id": "accept-no-matching-invite-is-noop",
+      "why": "A verified identity with no matching invite binds nothing (not an error) — the common re-sign-in.",
+      "claims": {
+        "oid": "oid-partner",
+        "email": "partner@partner-org.com",
+        "email_verified": true,
+        "tid": "org-partner"
+      },
+      "memberships": [
+        {
+          "workspace_id": "ws-a",
+          "identity_email": "someone-else@a.com",
+          "identity_oid": null,
+          "role": "member",
+          "status": "pending"
+        }
+      ],
+      "expect": {
+        "bound": []
+      }
+    },
+    {
+      "id": "accept-idempotent-when-already-bound-to-same-oid",
+      "why": "Re-sign-in after acceptance: the grant is already bound to THIS oid, so there is nothing unbound left to bind (idempotent no-op).",
+      "claims": {
+        "oid": "oid-partner",
+        "email": "partner@partner-org.com",
+        "email_verified": true,
+        "tid": "org-partner"
+      },
+      "memberships": [
+        {
+          "workspace_id": "ws-a",
+          "identity_email": "partner@partner-org.com",
+          "identity_oid": "oid-partner",
+          "role": "member",
+          "status": "active"
+        }
+      ],
+      "expect": {
+        "bound": []
+      }
+    }
+  ]
+}

@@ -203,8 +203,7 @@ Guardrail + Soul, spec/plan/tasks → Spec/Plan/Story Kinds on the board). See t
 ## Python-only, by construction
 
 The `dna` binary is part of the Python distribution (`dna-cli`); the
-TypeScript SDK (`dna-sdk` on npm) is a library and deliberately ships no
-CLI — see the [parity matrix](../reference/parity-matrix.md). `dna init`
+`dna init`
 is therefore Python-only, but everything it materializes is
 runtime-agnostic markdown/YAML: the TypeScript SDK reads the same board,
 skill and `AGENTS.md` byte-for-byte.

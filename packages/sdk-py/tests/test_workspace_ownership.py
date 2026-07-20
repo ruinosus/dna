@@ -3,10 +3,9 @@ Model B workspace-ownership policy (``dna.tenancy.ownership``).
 
 Two layers, mirroring ``test_workspace_invite.py``:
 
-1. **Shared parity fixtures** — every case in
-   ``tests/parity-fixtures/workspace-ownership/cases.json`` runs here AND in the
-   TS twin (``packages/sdk-ts/tests/workspace-ownership.test.ts``); the SAME cases
-   → the SAME outcomes gate Py↔TS behavioral parity.
+1. **Golden fixtures** — every case in
+   ``tests/golden-fixtures/workspace-ownership/cases.json`` runs here: the same
+   cases must always produce the same ownership outcomes.
 2. **Python-side security unit coverage** — the two crown-jewel invariants spelled
    out hard: the LAST active owner can never be revoked (no orphaned workspace),
    and a non-Owner/Admin can revoke nobody (RBAC). A bug here is a workspace
@@ -30,7 +29,7 @@ from dna.tenancy.resolution import Membership
 
 _FIXTURES = (
     pathlib.Path(__file__).resolve().parents[3]
-    / "tests" / "parity-fixtures" / "workspace-ownership" / "cases.json"
+    / "tests" / "golden-fixtures" / "workspace-ownership" / "cases.json"
 )
 
 

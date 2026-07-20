@@ -54,7 +54,7 @@ class AutomationExtension:
 
     def register(self, kernel: ExtensionHost) -> None:
         # F3: Automation ships as kinds/automation.kind.yaml package data
-        # (byte-identical Py↔TS mirror), registered through the SAME funnel
+        # (a declarative descriptor), registered through the SAME funnel
         # as per-scope KindDefinitions (plane lint + digest idempotency +
         # builtin conflict marker).
         for raw in load_descriptors("dna.extensions.automation"):

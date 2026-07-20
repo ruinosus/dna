@@ -754,7 +754,7 @@ def enforce_tenant_from_context(requested: str | None) -> str | None:
 # dimension resolves from the caller's VERIFIED IDENTITY + WorkspaceMembership,
 # NOT from the Azure `tid`. The PURE policy (Identity/Membership/resolve_workspace)
 # lives in the CORE SDK (`dna.tenancy.resolution`) so it is transport-agnostic and
-# has a byte-behavioral TS twin (guarded by tests/parity-fixtures/workspace-
+# has a byte-behavioral TS twin (guarded by tests/golden-fixtures/workspace-
 # resolution/). Here is only the FastMCP+kernel glue: read the live token, load
 # the grants, apply the pure resolver.
 

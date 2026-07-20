@@ -1,13 +1,12 @@
 # Running the conformance kit
 
-DNA makes two strong claims:
+DNA makes strong claims: it consumes real marketplace bundles
+**byte-faithful** under their owners' namespaces, and every implementation of
+a port — search provider, embedder, memory store — meets one shared
+behavioral contract.
 
-1. It consumes real marketplace bundles **byte-faithful**, under their
-   owners' namespaces — no lossy import.
-2. The Python and TypeScript SDKs are **behaviorally identical**.
-
-Neither is aspirational. Both are enforced by test suites you can run
-yourself. This tutorial walks you through the two that matter most.
+None of that is aspirational. It is enforced by test suites you can run
+yourself, and this tutorial walks you through the ones that matter most.
 
 ## The market-conformance suite
 
@@ -22,19 +21,10 @@ The live fixtures are in
 their provenance is recorded in
 [`tests/market-fixtures/NOTICE.md`](https://github.com/ruinosus/dna/blob/main/tests/market-fixtures/NOTICE.md).
 
-=== "Python"
-
-    ```bash
-    cd packages/sdk-py && uv sync
-    uv run pytest tests/test_market_conformance.py -v
-    ```
-
-=== "TypeScript"
-
-    ```bash
-    cd packages/sdk-ts && bun install
-    bun test market-conformance
-    ```
+```bash
+cd packages/sdk-py && uv sync
+uv run pytest tests/test_market_conformance.py -v
+```
 
 A green run is the proof behind [Market
 fidelity](../concepts/market-fidelity.md): DNA read someone else's format,
@@ -77,8 +67,8 @@ adapter](../guides/write-a-source-adapter.md).
 
 `RecordSearchProvider` is the search plane's port: the kernel ships it with an
 honest lexical fallback, and any real implementation must pass one shared
-behavioral battery — `record_search_conformance_suite` (Python) /
-`recordSearchConformanceSuite` (TypeScript). It runs a provider through its OWN
+behavioral battery — `record_search_conformance_suite`. It runs a provider
+through its OWN
 `index` / `search` / `delete` surface and asserts relative ranking, kind and
 tenant filtering (overlay shadows base), the `k` limit, idempotent re-indexing,
 and empty-query handling. The same suite that grades the embeddable sqlite-vec
@@ -87,37 +77,20 @@ provider today will grade a pgvector provider tomorrow.
 The default provider — `SqliteVecRecordSearchProvider` — is **embeddable and
 offline**: one SQLite file per scope, dense KNN via the
 [sqlite-vec](https://github.com/asg017/sqlite-vec) `vec0` virtual table, lexical
-BM25 via FTS5, fused with Reciprocal Rank Fusion (a pure, Py↔TS-identical
-function). Its store schema is owned by a numbered migration, and it embeds
+BM25 via FTS5, fused with Reciprocal Rank Fusion (a pure function). Its store schema is owned by a numbered migration, and it embeds
 through `kernel.embed()` — the deterministic `FakeEmbeddingProvider` floor by
 default, so the whole suite runs in CI with no network and no model download.
 
 sqlite-vec is a loadable C extension delivered as an **opt-in extra**:
 
-=== "Python"
+```bash
+pip install "dna-sdk[search-sqlite]"    # brings the `sqlite-vec` package
+cd packages/sdk-py && uv run pytest tests/test_record_search_conformance.py -v
+```
 
-    ```bash
-    pip install "dna-sdk[search-sqlite]"    # brings the `sqlite-vec` package
-    cd packages/sdk-py && uv run pytest tests/test_record_search_conformance.py -v
-    ```
-
-    The extension is loaded per connection via the `sqlite-vec` package
-    (`enable_load_extension` + `sqlite_vec.load`); the conformance test
-    `importorskip`s when the extra is absent.
-
-=== "TypeScript"
-
-    ```bash
-    cd packages/sdk-ts && bun add sqlite-vec && bun test record-search-conformance
-    ```
-
-    The driver (`src/adapters/search/driver.ts`) loads the extension through
-    `bun:sqlite` (test runner) or `node:sqlite` (Node ≥22.5, `allowExtension`).
-    On **macOS under Bun**, Apple's system SQLite disables extension loading, so
-    set `DNA_SQLITE_LIB` to a libsqlite3 that permits it (e.g. Homebrew's
-    `/opt/homebrew/opt/sqlite/lib/libsqlite3.dylib`) or install `sqlite`; on
-    Linux, Bun's bundled SQLite already allows it. When no runtime can load the
-    extension the suite skips with a clear reason.
+The extension is loaded per connection via the `sqlite-vec` package
+(`enable_load_extension` + `sqlite_vec.load`); the conformance test
+`importorskip`s when the extra is absent.
 
 ### The scale provider — pgvector
 
@@ -146,16 +119,13 @@ marker): it skips cleanly with no database and runs **for real** in the CI
 runs in a fresh, disposable schema so index/delete state never bleeds across
 cases or projects.
 
-!!! note "Py-primary, behavioral parity via the kit"
-    Unlike sqlite-vec, the pgvector provider is **Python-only by design**.
-    sqlite-vec has a TS twin because it is the *embeddable offline floor* both
-    SDKs ship and run in-process; pgvector is the *scale/server* adapter, only
-    meaningful against a running Postgres (which the TS SDK reaches through a
-    different driver, `pg`). Behavioral parity is guaranteed the way the port
-    intends — the **same** conformance kit is the contract, and the only
-    ranking-affecting logic (RRF) is already bit-identical Py↔TS and reused
-    unchanged. A TS pgvector twin, if ever needed, must pass the same eight
-    cases; the kit is the parity guarantee, not a hand-diffed second impl.
+!!! note "The kit IS the contract"
+    sqlite-vec is the *embeddable offline floor*; pgvector is the
+    *scale/server* adapter, only meaningful against a running Postgres. They
+    share no code — and they do not need to. Correctness is guaranteed the way
+    the port intends: the **same** conformance kit grades both, so any future
+    provider (in any language, reaching DNA however it likes) is correct
+    exactly when it passes the same eight cases.
 
 ## The memory conformance kit
 
@@ -202,16 +172,16 @@ source without a provider (lexical branch), with the sqlite-vec provider
 many stores, same as the search kit. There is also a programmatic runner,
 `run_memory_conformance(factory)`, for scripts and CI without pytest.
 
-**The scoring suite** — `memory_scoring_conformance_suite` (Python) /
-`memoryScoringConformanceSuite` (TypeScript) — pins the PURE deterministic
+**The scoring suite** — `memory_scoring_conformance_suite` — pins the PURE
+deterministic
 core the verbs compose: ecphory weights and the `direct_threshold` gate,
 deterministic ordering, the semantic hook that lifts a paraphrase the
 cue-match paths cannot see, RRF fusion invariants (no candidate ever
 disappears; exact reciprocal-rank arithmetic; both ranks + the cosine
 annotated), monotonic Ebbinghaus decay, and fail-open bi-temporal validity.
-It is twinned 1:1 — same case names, same assertions in both SDKs — so the
-kit itself is a parity artifact: anyone evolving the scoring runs the same
-battery on both sides.
+The numbers themselves are additionally frozen in
+`packages/sdk-py/tests/goldens/memory-scoring.json`, so a change to any
+scoring constant has to be made on purpose.
 
 Pass an embedder factory to certify a custom `EmbeddingPort` for memory; omit
 it to run on the deterministic fake floor, fully offline. The two
@@ -223,42 +193,25 @@ paraphrase above the ecphory gate (`cos ≥ (direct_threshold − novelty_boost)
 / cosine_weight` ≈ 0.41). An embedder that cannot clear that bar cannot power
 semantic recall, and the kit says so rather than passing vacuously.
 
-=== "Python"
+```python
+from dna.testing import run_memory_scoring_conformance
 
-    ```python
-    from dna.testing import run_memory_scoring_conformance
+report = await run_memory_scoring_conformance()          # fake floor
+report = await run_memory_scoring_conformance(my_embedder_factory)
+report.raise_if_failed()
+```
 
-    report = await run_memory_scoring_conformance()          # fake floor
-    report = await run_memory_scoring_conformance(my_embedder_factory)
-    report.raise_if_failed()
-    ```
+## Behavior is pinned by goldens
 
-=== "TypeScript"
+Beyond the port kits, the behaviors that cross a boundary are frozen as
+**golden fixtures** — committed expected output that a code change has to
+consciously re-freeze:
 
-    ```typescript
-    import { memoryScoringConformanceSuite } from "dna-sdk/testing";
+| Golden | Pins |
+|---|---|
+| `tests/golden-fixtures/composition/` | The whole composition-V2 resolution surface, 13 cases: chain walk, tenant overlay, catalog splice, field-level merge, cycle guard, layer policy, provenance |
+| `tests/golden-fixtures/port-surface.json` | The exact public member list of every port, the blessed/deprecated read surface, and the hook-name vocabulary |
+| `tests/golden-fixtures/workspace-*/` | The tenancy policies — invite/accept, ownership, resolution — including the security invariants |
+| `packages/sdk-py/tests/goldens/` | The MIF interchange format, memory scoring, the query/count core, `StudioUIMetadata` |
 
-    for (const c of memoryScoringConformanceSuite(/* factory? */)) {
-      test(c.name, () => c.run());
-    }
-    ```
-
-!!! note "Why the verb suite is Python-only"
-    The memory **verbs** are Python-only by the SDK's declared boundary (the
-    TS SDK ships the pure scoring core; the kernel-bound verbs live with the
-    `dna` CLI). The TS kit therefore mirrors exactly the half that exists in
-    TS — the scoring core — and the verb behaviors are pinned where the verbs
-    are. Same policy as the pgvector provider above: the kit is the parity
-    guarantee, not a hand-diffed second implementation.
-
-## Cross-SDK parity
-
-Parity between the Python and TypeScript SDKs is enforced by **shared
-fixtures**: descriptor files are byte-identical and hash-checked, and a
-kind-registry parity manifest fails the suite on undocumented drift. The
-same `hello-genome` example is run by both SDKs' suites and asserted to
-produce the same documents and the same composed prompt.
-
-That parity is why the [tutorial](first-kind.md) can honestly show one set of
-expected output for two languages: it is a test-enforced invariant, not a
-coincidence.
+Run them with the rest of the suite: `cd packages/sdk-py && uv run pytest`.

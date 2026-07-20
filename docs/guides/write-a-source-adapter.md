@@ -327,25 +327,8 @@ must return `[]` (the control table survived in the backing store).
 Adapters without SQL storage simply don't implement the method and the
 case skips.
 
-### TypeScript parity (honest state)
+### One writer per schema
 
-The TS SDK has **no SQLite adapter**; its raw `PostgresSource`
-(`packages/sdk-ts/src/adapters/postgres/`) **stays** — a deliberate
-asymmetry after s-retire-raw-sql-adapters: Python consolidated its two
-raw SQL adapters onto SQLAlchemy (an engine TS doesn't have), while TS
-has exactly one SQL adapter and nothing to unify. It keeps its **own**
-migration mechanism — `MIGRATIONS: Record<number, string[]>` in
-`migrations.ts` + an inline `_runMigrations()` in `source.ts`. The
-*algorithm* matches this contract 1:1 (same `dna_schema_migrations`
-control table, numbered forward-only, one transaction per version
-wrapping statements + record, `{schema}` placeholder, auto-run on
-first use).
-
-**Known cross-language divergence (do not share a schema between the
-two SDKs):** the version *numbering streams* differ — e.g. Py v3 is the
-tenant column/PK migration while TS v3 is a different tenant variant,
-Py's `dna_documents.content` is `TEXT` vs TS `JSONB`, and TS ships only
-v1-v4 (no outbox/edges/hot-field-index migrations). Same control-table
-name + different meaning per number means pointing both SDKs at the
-SAME Postgres schema is unsupported: each would try to "complete" the
-other's history with conflicting DDL. One schema belongs to one SDK.
+The migration stream above is **owned by this runtime**. Point a second
+implementation at the same Postgres schema and both will try to "complete" the
+other's history with conflicting DDL. One schema belongs to one writer.

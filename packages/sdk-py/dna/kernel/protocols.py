@@ -1,13 +1,11 @@
 """v3 Kernel Protocols — the 5 ports + shared types.
 
-Py↔TS port-surface parity is SURFACE-TRACKED (s-dna-port-surface-parity):
-every port's member list — and every INTENTIONAL asymmetry, with its
-justification — lives in the shared fixture
-``tests/parity-fixtures/port-surface-parity.json``, enforced here by
-``tests/test_port_surface_parity.py`` (real Protocol introspection) and on
-the TS side by ``tests/port-surface-parity.test.ts`` (keyof-bound
-PORT_SURFACE manifest). Adding/removing a Protocol member without updating
-the fixture turns the suites red.
+The port surface is SURFACE-TRACKED (s-dna-port-surface-parity): these ports
+ARE the extension contract, so every port's member list lives in the golden
+fixture ``tests/golden-fixtures/port-surface.json``, enforced by
+``tests/test_port_surface_golden.py`` (real Protocol introspection).
+Adding/removing a Protocol member without updating the fixture turns the
+suite red — a port change is a public API event.
 """
 from __future__ import annotations
 
@@ -1207,10 +1205,8 @@ class KindPresentation(Protocol):
     - Consumers read via typed access with a default —
       ``getattr(kp, "ascii_icon", None)`` /
       ``fn = getattr(kp, "preview", None)`` — never ``hasattr``.
-    - TS twin: these are native optional members folded into the
-      ``KindPresentation`` interface that ``KindPort`` extends
-      (protocols.ts); the pairing is tracked in
-      ``tests/parity-fixtures/port-surface-parity.json``.
+    - Tracked in ``tests/golden-fixtures/port-surface.json`` (the
+      ``KindPresentation`` port).
 
     Members:
 
@@ -1278,9 +1274,7 @@ class ExtensionHost(Protocol):
     ``on(hook, fn)``          an event subscriber (e.g. ``post_save``)
     ``on_veto(hook, fn)``     a veto listener (e.g. ``pre_save`` write guards
                               — raising vetoes the operation)
-    ``tool(td)``              a ToolDefinition (tool metadata; TS twin:
-                              ``kernel.tool(td)`` + the ToolRegistry,
-                              s-dna-port-surface-parity)
+    ``tool(td)``              a ToolDefinition (tool metadata)
     ``composition_profile``   a CompositionProfile (orchestrator kind wiring)
     ``hooks``                 the HookRegistry itself, for advanced listener
                               management (``kernel.hooks.on_veto(..., key=)``)

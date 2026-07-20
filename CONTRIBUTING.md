@@ -2,16 +2,16 @@
 
 Thanks for your interest in DNA — **Domain Notation of Anything**, a
 declarative, typed notation for agentic behavior (Kubernetes CRDs, but for
-agents). DNA is the extracted public core of a production system, shipped as
-two behaviorally identical SDKs — Python (`packages/sdk-py`) and TypeScript
-(`packages/sdk-ts`) — plus a `dna` CLI (`packages/cli`).
+agents). DNA is the extracted public core of a production system: a Python
+runtime (`packages/sdk-py`), a `dna` CLI (`packages/cli`), and generated REST
+clients for Python and TypeScript (`packages/client-py`, `packages/client-ts`).
 
-This guide covers how to build and test each package, the **Python↔TypeScript
-parity contract** (the single most important rule in this repo), the
-conformance kits, and the story-first SDLC workflow the repo dogfoods.
+This guide covers how to build and test each package, the **golden-fixture
+contract** (the single most important rule in this repo), the conformance
+kits, and the story-first SDLC workflow the repo dogfoods.
 
 > **Pre-1.0.** Public APIs may still move between releases. The packages are
-> published to PyPI (`dna-sdk`, `dna-cli`) and npm (`dna-sdk`) — but as a
+> published to PyPI (`dna-sdk`, `dna-cli`) — but as a
 > contributor you work from the repo. See [CHANGELOG.md](CHANGELOG.md) and
 > [RELEASING.md](RELEASING.md).
 
@@ -31,7 +31,7 @@ conformance kits, and the story-first SDLC workflow the repo dogfoods.
 | Tool | Why | Notes |
 |---|---|---|
 | [`uv`](https://github.com/astral-sh/uv) | Python env + deps for `sdk-py` and `cli` | CI runs the {3.12, 3.13} matrix; floor is 3.12 |
-| [Bun](https://bun.sh) | Runtime + test runner + typecheck for `sdk-ts` | latest |
+| [Bun](https://bun.sh) | Test runner + typecheck for `client-ts` | latest |
 | `git` | Versioned commit hooks (`dna sdlc hooks install`) | — |
 | `gh` (optional) | Opening PRs via `dna sdlc story pr` | GitHub CLI |
 
@@ -42,7 +42,7 @@ Postgres, an LLM, or the network are skipped unless their resource is present.
 ## Build & test each package
 
 Each package is tested exactly the way CI tests it
-(`.github/workflows/*.yml`). Run all three before opening a PR.
+(`.github/workflows/*.yml`). Run them all before opening a PR.
 
 ### Python SDK — `packages/sdk-py`
 
@@ -52,14 +52,18 @@ uv venv && uv pip install -e ".[dev]"
 uv run --no-project pytest tests -q --timeout=120
 ```
 
-### TypeScript SDK — `packages/sdk-ts`
+### REST client (TypeScript) — `packages/client-ts`
 
 ```bash
-cd packages/sdk-ts
+cd packages/client-ts
 bun install
 bun test
 bun run typecheck        # tsc --noEmit — the type surface is part of the contract
+bun run gen              # regenerate src/schema.ts from docs/openapi.json
 ```
+
+`src/schema.ts` is **generated** from `docs/openapi.json`; CI fails if the
+committed types are stale, so regenerate and commit whenever a route changes.
 
 ### CLI — `packages/cli`
 
@@ -120,34 +124,41 @@ The repo-side entry points, for reference:
 - `packages/sdk-py/tests/test_source_conformance_kit.py`
 - `packages/sdk-py/tests/test_rw_conformance_kit.py`
 - `packages/sdk-py/tests/test_adapter_conformance_matrix.py`
-- `packages/sdk-py/tests/test_market_conformance.py` and its TS twin
-  `packages/sdk-ts/tests/market-conformance.test.ts`
+- `packages/sdk-py/tests/test_market_conformance.py`
 
 If you touch an adapter, a reader, or a writer, **update or extend the
 conformance kit** — never route around it with a one-off test.
 
-## The Python↔TypeScript parity contract (read this)
+## The golden-fixture contract (read this)
 
-DNA is one behavior with two runtimes. Parity is **test-enforced, not
-aspirational** — a behavior change lands in **both** SDKs in the **same PR**.
+Behavior that crosses a boundary — a public API surface, a wire format, a
+composed prompt, a scoring constant — is **frozen in a committed golden**. You
+cannot change it by accident; you change it by re-freezing the golden in the
+same PR, which makes the change reviewable as what it is.
 
-Concretely, if you change the kernel, a port, a Kind's schema/composition, or
-any extension behavior in one language, you must make the equivalent change in
-its twin. These are the gates that will turn your PR red if you don't:
+These are the gates that will turn your PR red:
 
 | Gate (test) | What it locks |
 |---|---|
-| `test_port_surface_parity.py` + `port-surface-parity.test.ts` | The **port surface**: each port's members must match across languages (snake_case ↔ camelCase), and every intentional asymmetry must carry a `justification` in `tests/parity-fixtures/port-surface-parity.json` — no silent one-sided members |
-| `test_descriptor_hash_parity.py` | Record-Kind `*.kind.yaml` descriptors are **byte-identical** across the two SDKs (hash-compared) |
-| `test_hash_parity.py` | Shared fixture trees hash-identical Py↔TS |
-| `test_kind_registry_parity.py` | The kind-registry parity manifest — fails on **undocumented drift** in the set of registered Kinds |
-| `test_composition_parity_fixtures.py` | Prompt composition produces the same output from the same inputs |
+| `test_port_surface_golden.py` | The **port surface**: every member of every `typing.Protocol`. Ports are the extension contract, so adding or removing one is a public API event |
+| `test_blessed_query_surface.py` | The blessed vs deprecated read surface, and the EXACT public member set of `ManifestInstance` |
+| `test_composition_golden.py` | Prompt composition — 13 cases over chain walk, tenant overlay, catalog splice, merges, cycle guard, provenance |
+| `test_hash_golden.py` | `document_hash`'s canonical form + digest — the sync identity of a document |
+| `test_memory_interchange_golden.py` | The MIF interchange wire format (`to_mif` / `from_mif`) |
+| `test_memory_scoring_golden.py` | The memory scoring core — decay, ecphory, semantic fusion |
+| `test_f2_query_golden.py` | The query/count core: filter, order_by, limit, offset, group_by |
+| `test_hook_names.py` | The hook-name vocabulary |
 
-The public API is snake_case in Python (`build_prompt`, `documents`, `one`)
-and camelCase in TypeScript (`buildPrompt`, `documents`, `one`). Consume
-documents only through the **blessed query surface** (`documents`, `all`,
-`one`, `build_prompt`, `doc.typed`) — private kernel internals are guarded by
-`test_blessed_query_surface.py`.
+Consume documents only through the **blessed query surface** (`documents`,
+`all`, `one`, `build_prompt`, `doc.typed`) — private kernel internals are
+guarded by `test_blessed_query_surface.py`.
+
+> **Historical note.** Until the `sdk-ts-final` tag, several of these gates
+> were Py↔TS *parity* suites paired with a hand-maintained TypeScript twin of
+> the kernel. The twin is frozen; the suites stayed because what they actually
+> protect is the Python behavior. See
+> [Microkernel & ports](docs/concepts/microkernel-ports.md#one-runtime-any-language)
+> for how DNA reaches other languages now.
 
 If Python and TypeScript legitimately must differ, encode the asymmetry in the
 parity fixture with a written `justification`. Asymmetries are documented,

@@ -8,7 +8,6 @@ scope travels with the app into a wheel and into a Docker image, with **no**
 ```
 acme_support_bot/
 ├── __init__.py            # triage_prompt() → load_prompts("support", anchor="acme_support_bot")
-├── index.mjs              # TS twin → loadPrompts("support", { anchor: "acme-support-bot" })
 ├── package.json           # `files: [".dna"]` ships the scope in the npm tarball
 └── .dna/support/          # the embedded scope (Genome + triage agent)
 pyproject.toml             # hatch: ships acme_support_bot/.dna into the wheel

@@ -511,7 +511,7 @@ class TenantExtension:
         kernel.reader(TenantMembershipReader())
         kernel.writer(TenantMembershipWriter())
         # F3 / Model B: the GLOBAL workspace Kinds ship as kinds/*.kind.yaml
-        # package data (byte-identical Py↔TS mirror), registered through the
+        # package data, registered through the
         # SAME funnel as per-scope KindDefinitions (plane lint + digest
         # idempotency + builtin conflict marker). Record Kinds are data, not
         # classes — no models.py, no port class.

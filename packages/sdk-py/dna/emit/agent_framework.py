@@ -177,9 +177,9 @@ class AgentFrameworkEmitter:
     def to_prompt_agent(self, ctx: EmitContext) -> dict[str, Any]:
         """The PURE de-para: :class:`EmitContext` → the PromptAgent dict.
 
-        Parity-critical: the TS twin (`packages/sdk-ts/src/emit/agentFramework.ts`)
-        must build the same dict from the same context. Field order is
-        intentional and preserved on serialization (``sort_keys=False``)."""
+        Golden-locked: the emitted dict is frozen in
+        ``tests/goldens/agent_framework/``. Field order is intentional and
+        preserved on serialization (``sort_keys=False``)."""
         provider_hint = ctx.options.get("provider") if ctx.options else None
         doc: dict[str, Any] = {"kind": "Prompt", "name": _camel(ctx.name)}
         if ctx.description:

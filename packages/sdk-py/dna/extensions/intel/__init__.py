@@ -33,7 +33,7 @@ class IntelExtension:
 
     def register(self, kernel: ExtensionHost) -> None:
         # F3: both Kinds ship as kinds/*.kind.yaml package data (byte-identical
-        # Py↔TS mirror), registered through the SAME funnel as per-scope
+        # package data), registered through the SAME funnel as per-scope
         # KindDefinitions (plane lint + digest idempotency + builtin conflict
         # marker).
         for raw in load_descriptors("dna.extensions.intel"):

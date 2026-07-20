@@ -1,9 +1,7 @@
 """Descriptor expressiveness — the 6 new KindDefinitionSpec fields (D1/D3-D7).
 
 ui, describe, ui_schema, spec_defaults, default_agent_field,
-description_fallback_field. All optional with back-compat defaults (None). The
-TS twin asserts the same shapes in
-packages/sdk-ts/tests/descriptor-expressiveness-fields.test.ts.
+description_fallback_field. All optional with back-compat defaults (None).
 
 Port-level behavior (DeclarativeKindPort consuming these) lives in the same
 file once Task 3 lands — see the ``# --- Task 3 (port) ---`` section.

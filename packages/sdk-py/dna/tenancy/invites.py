@@ -6,7 +6,7 @@ first VERIFIED sign-in binds their durable ``oid`` to the pending grant and flip
 it ``active``. This module is the CORE decision layer — pure, no FastMCP / HTTP /
 kernel import — so it is transport-agnostic and has a byte-behavioral TS twin
 (``src/tenancy/invites.ts``), gated by the shared parity fixtures at
-``tests/parity-fixtures/workspace-invite/``.
+``tests/golden-fixtures/workspace-invite/``.
 
 It sits ON TOP of ``dna.tenancy.resolution`` (reusing :class:`Identity`,
 :class:`Membership`, ``normalize_email`` and ``membership_matches_identity``): the

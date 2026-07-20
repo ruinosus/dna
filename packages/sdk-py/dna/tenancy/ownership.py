@@ -13,7 +13,7 @@ The decision layer shared by the two owner-bootstrap endpoints (feature
 Like ``resolution`` and ``invites`` this module is CORE — pure, no FastMCP / HTTP
 / kernel import — so it is transport-agnostic and has a byte-behavioral TypeScript
 twin (``src/tenancy/ownership.ts``), gated by the shared parity fixtures at
-``tests/parity-fixtures/workspace-ownership/``.
+``tests/golden-fixtures/workspace-ownership/``.
 
 It sits ON TOP of ``dna.tenancy.resolution`` (an owner is just an ``active`` grant
 whose ``role`` is ``owner``). Only ``active`` grants ever count as an owner — a

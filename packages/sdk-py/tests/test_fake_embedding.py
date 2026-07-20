@@ -4,7 +4,7 @@ The FAKE is the offline/CI default ``EmbeddingPort``: a stable, content-addresse
 vector so the search plane has *something* deterministic to run against without
 any ML dependency. Its defining property is BIT-EXACT Py↔TS parity — enforced
 here (and in the TS twin ``tests/fake-embedding.test.ts``) against the shared
-golden ``tests/parity-fixtures/fake-embedding-golden.json``.
+golden ``tests/golden-fixtures/fake-embedding-golden.json``.
 """
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ from dna.kernel.protocols import EmbeddingPort
 
 _GOLDEN = (
     pathlib.Path(__file__).resolve().parents[3]
-    / "tests" / "parity-fixtures" / "fake-embedding-golden.json"
+    / "tests" / "golden-fixtures" / "fake-embedding-golden.json"
 )
 
 

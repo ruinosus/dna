@@ -36,7 +36,7 @@ class MifExtension:
     version = "1.0.0"
 
     def register(self, kernel: ExtensionHost) -> None:
-        # F3: ships as kinds/*.kind.yaml package data (byte-identical Py↔TS
+        # F3: ships as kinds/*.kind.yaml package data (declarative descriptors
         # mirror), registered through the SAME funnel as per-scope
         # KindDefinitions (plane lint + digest idempotency + builtin
         # conflict marker).

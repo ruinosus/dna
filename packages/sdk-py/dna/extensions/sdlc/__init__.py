@@ -1282,7 +1282,7 @@ class AgentSessionKind(KindBase):
 
 # Narrative — F3 lote-2 (spec 2026-06-10-kinds-descriptor-f3): the twin NarrativeKind classes (Py+TS) were
 # DELETED — synthesized from kinds/narrative.kind.yaml (parity-critical
-# package data, byte-identical Py↔TS) via the load_descriptors loop in
+# package data) via the load_descriptors loop in
 # register(). Equivalence with the extinct class frozen in
 # tests/test_lote2_descriptor_equivalence.py (golden:
 # tests/goldens/lote2/Narrative.golden.json).
@@ -1641,7 +1641,7 @@ CHANGELOG_SECTIONS = ("Added", "Changed", "Deprecated", "Removed", "Fixed", "Sec
 
 # Changelog — F3 lote-2 (spec 2026-06-10-kinds-descriptor-f3): the twin ChangelogKind classes (Py+TS) were
 # DELETED — synthesized from kinds/changelog.kind.yaml (parity-critical
-# package data, byte-identical Py↔TS) via the load_descriptors loop in
+# package data) via the load_descriptors loop in
 # register(). Equivalence with the extinct class frozen in
 # tests/test_lote2_descriptor_equivalence.py (golden:
 # tests/goldens/lote2/Changelog.golden.json).
@@ -1653,7 +1653,7 @@ CHANGELOG_SECTIONS = ("Added", "Changed", "Deprecated", "Removed", "Fixed", "Sec
 
 # Postmortem — F3 lote-2 (spec 2026-06-10-kinds-descriptor-f3): the twin PostmortemKind classes (Py+TS) were
 # DELETED — synthesized from kinds/postmortem.kind.yaml (parity-critical
-# package data, byte-identical Py↔TS) via the load_descriptors loop in
+# package data) via the load_descriptors loop in
 # register(). Equivalence with the extinct class frozen in
 # tests/test_lote2_descriptor_equivalence.py (golden:
 # tests/goldens/lote2/Postmortem.golden.json).
@@ -1665,7 +1665,7 @@ CHANGELOG_SECTIONS = ("Added", "Changed", "Deprecated", "Removed", "Fixed", "Sec
 
 # RiskRegister — F3 lote-2 (spec 2026-06-10-kinds-descriptor-f3): the twin RiskRegisterKind classes (Py+TS) were
 # DELETED — synthesized from kinds/risk-register.kind.yaml (parity-critical
-# package data, byte-identical Py↔TS) via the load_descriptors loop in
+# package data) via the load_descriptors loop in
 # register(). Equivalence with the extinct class frozen in
 # tests/test_lote2_descriptor_equivalence.py (golden:
 # tests/goldens/lote2/RiskRegister.golden.json).
@@ -1677,7 +1677,7 @@ CHANGELOG_SECTIONS = ("Added", "Changed", "Deprecated", "Removed", "Fixed", "Sec
 
 # ADR — F3 lote-2 (spec 2026-06-10-kinds-descriptor-f3): the twin ADRKind classes (Py+TS) were
 # DELETED — synthesized from kinds/adr.kind.yaml (parity-critical
-# package data, byte-identical Py↔TS) via the load_descriptors loop in
+# package data) via the load_descriptors loop in
 # register(). Equivalence with the extinct class frozen in
 # tests/test_lote2_descriptor_equivalence.py (golden:
 # tests/goldens/lote2/ADR.golden.json).
@@ -1689,7 +1689,7 @@ CHANGELOG_SECTIONS = ("Added", "Changed", "Deprecated", "Removed", "Fixed", "Sec
 
 # Retrospective — F3 lote-1 (spec 2026-06-10-kinds-descriptor-f3): the twin RetrospectiveKind classes (Py+TS) were
 # DELETED — synthesized from kinds/retrospective.kind.yaml (parity-critical
-# package data, byte-identical Py↔TS) via the load_descriptors loop in
+# package data) via the load_descriptors loop in
 # register(). Equivalence with the extinct class frozen in
 # tests/test_lote1_descriptor_equivalence.py (golden:
 # tests/goldens/lote1/Retrospective.golden.json).
@@ -1714,7 +1714,7 @@ JOURNEY_METHODOLOGIES = (
 
 # SavedView — F3 lote-2 (spec 2026-06-10-kinds-descriptor-f3): the twin SavedViewKind classes (Py+TS) were
 # DELETED — synthesized from kinds/saved-view.kind.yaml (parity-critical
-# package data, byte-identical Py↔TS) via the load_descriptors loop in
+# package data) via the load_descriptors loop in
 # register(). Equivalence with the extinct class frozen in
 # tests/test_lote2_descriptor_equivalence.py (golden:
 # tests/goldens/lote2/SavedView.golden.json).
@@ -1732,7 +1732,7 @@ JOURNEY_METHODOLOGIES = (
 
 # Insight — F3 lote-2 (spec 2026-06-10-kinds-descriptor-f3): the twin InsightKind classes (Py+TS) were
 # DELETED — synthesized from kinds/insight.kind.yaml (parity-critical
-# package data, byte-identical Py↔TS) via the load_descriptors loop in
+# package data) via the load_descriptors loop in
 # register(). Equivalence with the extinct class frozen in
 # tests/test_lote2_descriptor_equivalence.py (golden:
 # tests/goldens/lote2/Insight.golden.json).
@@ -1740,7 +1740,7 @@ JOURNEY_METHODOLOGIES = (
 
 # StatusReport — F3 lote-2 (spec 2026-06-10-kinds-descriptor-f3): the twin StatusReportKind classes (Py+TS) were
 # DELETED — synthesized from kinds/status-report.kind.yaml (parity-critical
-# package data, byte-identical Py↔TS) via the load_descriptors loop in
+# package data) via the load_descriptors loop in
 # register(). Equivalence with the extinct class frozen in
 # tests/test_lote2_descriptor_equivalence.py (golden:
 # tests/goldens/lote2/StatusReport.golden.json).
@@ -1783,7 +1783,7 @@ JOURNEY_METHODOLOGIES = (
 
 # PatternInsight — F3 lote-1 (spec 2026-06-10-kinds-descriptor-f3): the PatternInsightKind class (Py-only) was
 # DELETED — synthesized from kinds/pattern-insight.kind.yaml (parity-critical
-# package data, byte-identical Py↔TS) via the load_descriptors loop in
+# package data) via the load_descriptors loop in
 # register(). Equivalence with the extinct class frozen in
 # tests/test_lote1_descriptor_equivalence.py (golden:
 # tests/goldens/lote1/PatternInsight.golden.json).
@@ -1806,7 +1806,7 @@ JOURNEY_METHODOLOGIES = (
 
 # Forecast — F3 lote-2 (spec 2026-06-10-kinds-descriptor-f3): the ForecastKind class (Py-only) was
 # DELETED — synthesized from kinds/forecast.kind.yaml (parity-critical
-# package data, byte-identical Py↔TS) via the load_descriptors loop in
+# package data) via the load_descriptors loop in
 # register(). Equivalence with the extinct class frozen in
 # tests/test_lote2_descriptor_equivalence.py (golden:
 # tests/goldens/lote2/Forecast.golden.json).
@@ -1817,7 +1817,7 @@ JOURNEY_METHODOLOGIES = (
 # SynthesizerState — F3 lote-3 (spec 2026-06-10-kinds-descriptor-f3): the
 # twin SynthesizerStateKind classes (Py+TS) were DELETED — synthesized from
 # kinds/synthesizer-state.kind.yaml (parity-critical package data,
-# byte-identical Py↔TS) via the load_descriptors loop in register(). The
+# package data) via the load_descriptors loop in register(). The
 # DREAMER_METHODS enum (analogical/causal/surreal/...) lives ONLY in the
 # descriptor's schema now (it had no other consumer in either runtime).
 # The class's dead to_card (zero consumers) was not carried over; its
@@ -1829,7 +1829,7 @@ JOURNEY_METHODOLOGIES = (
 
 # ArchiveProposal — F3 lote-2 (spec 2026-06-10-kinds-descriptor-f3): the twin ArchiveProposalKind classes (Py+TS) were
 # DELETED — synthesized from kinds/archive-proposal.kind.yaml (parity-critical
-# package data, byte-identical Py↔TS) via the load_descriptors loop in
+# package data) via the load_descriptors loop in
 # register(). Equivalence with the extinct class frozen in
 # tests/test_lote2_descriptor_equivalence.py (golden:
 # tests/goldens/lote2/ArchiveProposal.golden.json).
@@ -1848,7 +1848,7 @@ JOURNEY_METHODOLOGIES = (
 # predictions vs measured reality at outcome_check_at).
 # PreMortem — F3 lote-1 (spec 2026-06-10-kinds-descriptor-f3): the PreMortemKind class (Py-only) was
 # DELETED — synthesized from kinds/pre-mortem.kind.yaml (parity-critical
-# package data, byte-identical Py↔TS) via the load_descriptors loop in
+# package data) via the load_descriptors loop in
 # register(). Equivalence with the extinct class frozen in
 # tests/test_lote1_descriptor_equivalence.py (golden:
 # tests/goldens/lote1/PreMortem.golden.json).

@@ -8,9 +8,7 @@ use for their template trees — hatchling ships non-py package files by
 default, no pyproject change needed) and hands the parsed raws to
 ``kernel.kind_from_descriptor``.
 
-The TS twin is ``src/kernel/descriptor-loader.ts``; the descriptor FILES
-are parity-critical (byte-identical Py↔TS — see
-``tests/test_descriptor_hash_parity.py``).
+The descriptor FILES ship as package data inside each extension.
 """
 from __future__ import annotations
 

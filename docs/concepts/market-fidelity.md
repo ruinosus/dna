@@ -48,7 +48,7 @@ provenance is recorded in
 the suites are
 [`test_market_conformance.py`](https://github.com/ruinosus/dna/blob/main/packages/sdk-py/tests/test_market_conformance.py)
 and
-[`market-conformance.test.ts`](https://github.com/ruinosus/dna/blob/main/packages/sdk-ts/tests/market-conformance.test.ts).
+[`test_market_conformance.py`](https://github.com/ruinosus/dna/blob/main/packages/sdk-py/tests/test_market_conformance.py).
 
 ## Why byte-faithful matters
 

@@ -18,7 +18,7 @@ Python↔TypeScript parity contract and the conformance kit.
 
 ## Checklist
 
-- [ ] **Tests pass locally** — Python (`sdk-py`), TypeScript (`sdk-ts`), and CLI (`cli`) suites are green.
+- [ ] **Tests pass locally** — `sdk-py`, `cli`, `client-py` and `client-ts` suites are green.
 - [ ] **Python↔TypeScript parity is maintained** — any behavior change to the kernel, a port, a Kind, or an extension landed in **both** SDKs in this PR; the parity gates (port-surface, descriptor-hash, kind-registry, composition) are green.
 - [ ] **Conformance kit updated** — if I touched a source adapter, reader, or writer, I extended/updated the `dna.testing` conformance kit rather than adding a one-off test; market bundles still round-trip byte-identical.
 - [ ] **CHANGELOG updated** — user-facing changes are noted under `## [Unreleased]` in `CHANGELOG.md`.

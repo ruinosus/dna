@@ -1,0 +1,407 @@
+{
+  "_note": "Golden fixture for dna.memory.interchange (to_mif/from_mif). Regenerate via packages/sdk-py/scripts/gen_memory_interchange_golden.py",
+  "to_mif": [
+    {
+      "name": "full",
+      "spec": {
+        "area": "Feature/kernel",
+        "surface_when": [
+          "feature_touched",
+          "cycle_open"
+        ],
+        "source_refs": [
+          "Feature/kernel",
+          "WorkflowEvent/wf-1"
+        ],
+        "affect": "regret",
+        "affect_reason": "a concrete reason long enough for the affect validator to accept in full",
+        "affect_evidence_refs": [
+          "rem-abc123",
+          "verdict-xyz"
+        ],
+        "summary": "Always deep-copy the L2 cache before mutating.",
+        "body": "# Lesson\n\nThe L2 cache hands back a shared ref \u2014 deep-copy before mutating.",
+        "relevance_decay_seed": 0.9,
+        "surface_count": 3,
+        "confidence_score": 4.2,
+        "cues_history": [
+          {
+            "at": "2026-07-01T10:00:00+00:00",
+            "cue": "cache mutation",
+            "actor": "claude-code"
+          }
+        ],
+        "revisions": [
+          {
+            "at": "2026-07-02T10:00:00+00:00",
+            "by": "claude-code",
+            "delta": "clarified wording"
+          }
+        ],
+        "tags": [
+          "kernel",
+          "cache"
+        ],
+        "owner": "claude-code",
+        "visibility": "shared",
+        "memory_type": "procedural",
+        "valid_from": "2026-07-01T00:00:00+00:00",
+        "valid_to": "2026-08-01T00:00:00+00:00",
+        "superseded_by_memory": "rem-successor",
+        "encoding_context": {
+          "area": "Feature/kernel",
+          "affect": "regret",
+          "co_topics": [
+            "kernel",
+            "cache"
+          ],
+          "source_refs": [
+            "Feature/kernel"
+          ],
+          "time_of_day": "afternoon",
+          "day_of_week": "Wednesday",
+          "engraphed_by": "semon-scribe"
+        },
+        "homophonic_links": [
+          {
+            "target_name": "rem-neighbor",
+            "resonance_score": 0.73,
+            "basis": "co-area"
+          }
+        ],
+        "created_at": "2026-06-30T09:00:00+00:00",
+        "last_surfaced": "2026-07-03T11:00:00+00:00"
+      },
+      "mif_id": "test-uuid-1234",
+      "expected": {
+        "id": "test-uuid-1234",
+        "type": "procedural",
+        "content": "# Lesson\n\nThe L2 cache hands back a shared ref \u2014 deep-copy before mutating.",
+        "created": "2026-06-30T09:00:00+00:00",
+        "title": "Always deep-copy the L2 cache before mutating.",
+        "namespace": "_procedural/Feature/kernel",
+        "tags": [
+          "kernel",
+          "cache"
+        ],
+        "temporal": {
+          "validFrom": "2026-07-01T00:00:00+00:00",
+          "validUntil": "2026-08-01T00:00:00+00:00"
+        },
+        "relationships": [
+          {
+            "type": "derived-from",
+            "target": "Feature/kernel"
+          },
+          {
+            "type": "derived-from",
+            "target": "WorkflowEvent/wf-1"
+          },
+          {
+            "type": "supersedes",
+            "target": "rem-successor"
+          },
+          {
+            "type": "relates-to",
+            "target": "rem-neighbor",
+            "strength": 0.73,
+            "metadata": {
+              "basis": "co-area"
+            }
+          }
+        ],
+        "provenance": {
+          "wasAttributedTo": "claude-code",
+          "wasDerivedFrom": [
+            "Feature/kernel",
+            "WorkflowEvent/wf-1"
+          ]
+        },
+        "extensions": {
+          "x-dna": {
+            "confidence_score": 4.2,
+            "relevance_decay_seed": 0.9,
+            "surface_count": 3,
+            "cues_history": [
+              {
+                "at": "2026-07-01T10:00:00+00:00",
+                "cue": "cache mutation",
+                "actor": "claude-code"
+              }
+            ],
+            "affect": "regret",
+            "affect_reason": "a concrete reason long enough for the affect validator to accept in full",
+            "affect_evidence_refs": [
+              "rem-abc123",
+              "verdict-xyz"
+            ],
+            "visibility": "shared",
+            "surface_when": [
+              "feature_touched",
+              "cycle_open"
+            ],
+            "revisions": [
+              {
+                "at": "2026-07-02T10:00:00+00:00",
+                "by": "claude-code",
+                "delta": "clarified wording"
+              }
+            ],
+            "last_surfaced": "2026-07-03T11:00:00+00:00",
+            "encoding_context": {
+              "area": "Feature/kernel",
+              "affect": "regret",
+              "co_topics": [
+                "kernel",
+                "cache"
+              ],
+              "source_refs": [
+                "Feature/kernel"
+              ],
+              "time_of_day": "afternoon",
+              "day_of_week": "Wednesday",
+              "engraphed_by": "semon-scribe"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "minimal",
+      "spec": {
+        "area": "general",
+        "surface_when": [
+          "feature_touched"
+        ],
+        "source_refs": [
+          "Feature/x"
+        ],
+        "affect": "triumph",
+        "summary": "A minimal memory.",
+        "created_at": "2026-07-01T00:00:00+00:00"
+      },
+      "mif_id": "min-id",
+      "expected": {
+        "id": "min-id",
+        "type": "semantic",
+        "content": "A minimal memory.",
+        "created": "2026-07-01T00:00:00+00:00",
+        "title": "A minimal memory.",
+        "namespace": "_semantic/general",
+        "relationships": [
+          {
+            "type": "derived-from",
+            "target": "Feature/x"
+          }
+        ],
+        "provenance": {
+          "wasDerivedFrom": [
+            "Feature/x"
+          ]
+        },
+        "extensions": {
+          "x-dna": {
+            "affect": "triumph",
+            "surface_when": [
+              "feature_touched"
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "from_mif": [
+    {
+      "name": "foreign",
+      "doc": {
+        "id": "ext-1",
+        "type": "semantic",
+        "content": "The team prefers dark mode.",
+        "created": "2026-07-01T00:00:00+00:00"
+      },
+      "expected": {
+        "memory_type": "semantic",
+        "area": "imported/mif",
+        "summary": "The team prefers dark mode.",
+        "body": "The team prefers dark mode.",
+        "created_at": "2026-07-01T00:00:00+00:00",
+        "source_refs": [
+          "mif:ext-1"
+        ],
+        "affect": "surprise",
+        "surface_when": [
+          "feature_touched"
+        ],
+        "affect_reason": "Imported from external MIF memory ext-1 (mif-spec.dev/v1) \u2014 no affect/reason was carried on the source doc's x-dna vault.",
+        "encoding_context": {
+          "mif_id": "ext-1"
+        }
+      }
+    },
+    {
+      "name": "dna_authored",
+      "doc": {
+        "id": "test-uuid-1234",
+        "type": "procedural",
+        "content": "# Lesson\n\nThe L2 cache hands back a shared ref \u2014 deep-copy before mutating.",
+        "created": "2026-06-30T09:00:00+00:00",
+        "title": "Always deep-copy the L2 cache before mutating.",
+        "namespace": "_procedural/Feature/kernel",
+        "tags": [
+          "kernel",
+          "cache"
+        ],
+        "temporal": {
+          "validFrom": "2026-07-01T00:00:00+00:00",
+          "validUntil": "2026-08-01T00:00:00+00:00"
+        },
+        "relationships": [
+          {
+            "type": "derived-from",
+            "target": "Feature/kernel"
+          },
+          {
+            "type": "derived-from",
+            "target": "WorkflowEvent/wf-1"
+          },
+          {
+            "type": "supersedes",
+            "target": "rem-successor"
+          },
+          {
+            "type": "relates-to",
+            "target": "rem-neighbor",
+            "strength": 0.73,
+            "metadata": {
+              "basis": "co-area"
+            }
+          }
+        ],
+        "provenance": {
+          "wasAttributedTo": "claude-code",
+          "wasDerivedFrom": [
+            "Feature/kernel",
+            "WorkflowEvent/wf-1"
+          ]
+        },
+        "extensions": {
+          "x-dna": {
+            "confidence_score": 4.2,
+            "relevance_decay_seed": 0.9,
+            "surface_count": 3,
+            "cues_history": [
+              {
+                "at": "2026-07-01T10:00:00+00:00",
+                "cue": "cache mutation",
+                "actor": "claude-code"
+              }
+            ],
+            "affect": "regret",
+            "affect_reason": "a concrete reason long enough for the affect validator to accept in full",
+            "affect_evidence_refs": [
+              "rem-abc123",
+              "verdict-xyz"
+            ],
+            "visibility": "shared",
+            "surface_when": [
+              "feature_touched",
+              "cycle_open"
+            ],
+            "revisions": [
+              {
+                "at": "2026-07-02T10:00:00+00:00",
+                "by": "claude-code",
+                "delta": "clarified wording"
+              }
+            ],
+            "last_surfaced": "2026-07-03T11:00:00+00:00",
+            "encoding_context": {
+              "area": "Feature/kernel",
+              "affect": "regret",
+              "co_topics": [
+                "kernel",
+                "cache"
+              ],
+              "source_refs": [
+                "Feature/kernel"
+              ],
+              "time_of_day": "afternoon",
+              "day_of_week": "Wednesday",
+              "engraphed_by": "semon-scribe"
+            }
+          }
+        }
+      },
+      "expected": {
+        "memory_type": "procedural",
+        "area": "Feature/kernel",
+        "summary": "Always deep-copy the L2 cache before mutating.",
+        "body": "# Lesson\n\nThe L2 cache hands back a shared ref \u2014 deep-copy before mutating.",
+        "created_at": "2026-06-30T09:00:00+00:00",
+        "tags": [
+          "kernel",
+          "cache"
+        ],
+        "valid_from": "2026-07-01T00:00:00+00:00",
+        "valid_to": "2026-08-01T00:00:00+00:00",
+        "source_refs": [
+          "Feature/kernel",
+          "WorkflowEvent/wf-1"
+        ],
+        "superseded_by_memory": "rem-successor",
+        "homophonic_links": [
+          {
+            "target_name": "rem-neighbor",
+            "resonance_score": 0.73,
+            "basis": "co-area"
+          }
+        ],
+        "owner": "claude-code",
+        "confidence_score": 4.2,
+        "relevance_decay_seed": 0.9,
+        "surface_count": 3,
+        "cues_history": [
+          {
+            "at": "2026-07-01T10:00:00+00:00",
+            "cue": "cache mutation",
+            "actor": "claude-code"
+          }
+        ],
+        "affect": "regret",
+        "affect_reason": "a concrete reason long enough for the affect validator to accept in full",
+        "affect_evidence_refs": [
+          "rem-abc123",
+          "verdict-xyz"
+        ],
+        "visibility": "shared",
+        "surface_when": [
+          "feature_touched",
+          "cycle_open"
+        ],
+        "revisions": [
+          {
+            "at": "2026-07-02T10:00:00+00:00",
+            "by": "claude-code",
+            "delta": "clarified wording"
+          }
+        ],
+        "last_surfaced": "2026-07-03T11:00:00+00:00",
+        "encoding_context": {
+          "area": "Feature/kernel",
+          "affect": "regret",
+          "co_topics": [
+            "kernel",
+            "cache"
+          ],
+          "source_refs": [
+            "Feature/kernel"
+          ],
+          "time_of_day": "afternoon",
+          "day_of_week": "Wednesday",
+          "engraphed_by": "semon-scribe",
+          "mif_id": "test-uuid-1234"
+        }
+      }
+    }
+  ]
+}

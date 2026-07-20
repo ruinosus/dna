@@ -9,9 +9,9 @@ story gates:
   (b) with no provider (or ``semantic=False``) the recall verb's hits are
       IDENTICAL to the pre-semantic behavior — golden literals pinned from the
       pre-story code;
-  (c) the ranking core is pure and Py↔TS twinned (the shared fixture executes
-      in ``tests/test_memory_parity.py`` / TS ``memory-scoring-parity.test.ts``;
-      here we cover the Py behavior directly).
+  (c) the ranking core is pure and golden-locked (the fixture executes in
+      ``tests/test_memory_scoring_golden.py``; here we cover the behavior
+      directly).
 """
 from __future__ import annotations
 

@@ -95,18 +95,18 @@ nav:
       - Your git log is your SDLC: guides/sdlc.md
       - "Digest: what happened while you were away": guides/sdlc-digest.md
       - "Gallery: the artifacts you need to review": guides/sdlc-gallery.md
-  # Reference — GENERATED FROM SOURCE. The four API sub-references (Python via
-  # mkdocstrings, TypeScript via TypeDoc, CLI + Kinds via scripts/gen_*_docs.py)
-  # plus the Py↔TS parity matrix are wired through literate-nav: each generated
-  # subtree is discovered via `reference/SUMMARY.md` (the section spine) without
-  # this file having to hand-list every page (s-docs-api-reference).
+  # Reference — GENERATED FROM SOURCE. The three API sub-references (Python via
+  # mkdocstrings, CLI + Kinds via scripts/gen_*_docs.py) are wired through
+  # literate-nav: each generated subtree is discovered via
+  # `reference/SUMMARY.md` (the section spine) without this file having to
+  # hand-list every page (s-docs-api-reference).
   - Reference: reference/
 
 markdown_extensions:
   # Admonitions + collapsible blocks
   - admonition
   - pymdownx.details
-  # Code blocks, content tabs, side-by-side Python/TypeScript.
+  # Code blocks, content tabs.
   # The mermaid custom fence renders ```mermaid blocks as diagrams on the
   # site (Material ships the Mermaid.js integration); GitHub renders the
   # same fences natively.

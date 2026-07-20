@@ -9,7 +9,7 @@ don't need to know a kind's typed model to work with it.
 There is exactly ONE documented way to read manifest data
 (s-blessed-query-surface). Everything the docs and examples teach uses
 these members — and the parity fixture
-`tests/parity-fixtures/port-surface-parity.json` (section
+`tests/golden-fixtures/port-surface.json` (section
 `blessed_query_surface`) locks them on both sides:
 
 | Read | Python | TypeScript |

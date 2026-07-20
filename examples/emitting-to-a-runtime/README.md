@@ -87,10 +87,9 @@ de-para tables.
 
 ## Never rots
 
-The example is exercised by all seven SDK suites
-(`packages/sdk-py/tests/test_emit_{agent_framework,bedrock,vertex,openai_agents,langgraph,agno,deepagents}.py`
-and the TypeScript twins `packages/sdk-ts/tests/emit-*.test.ts`), the CLI suite
-(`packages/cli/tests/test_emit_cmd.py`), and a dedicated portability proof
-(`test_emit_portability.py` / `emit-portability.test.ts`) that asserts the composed
+The example is exercised by all seven emitter suites
+(`packages/sdk-py/tests/test_emit_{agent_framework,bedrock,vertex,openai_agents,langgraph,agno,deepagents}.py`),
+the CLI suite (`packages/cli/tests/test_emit_cmd.py`), and a dedicated
+portability proof (`test_emit_portability.py`) that asserts the composed
 instruction is byte-identical across all seven artifacts — so the seven-runtime
 proof can never silently break.

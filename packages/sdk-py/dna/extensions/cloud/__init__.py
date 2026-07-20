@@ -39,7 +39,7 @@ class CloudExtension:
 
     def register(self, kernel: ExtensionHost) -> None:
         # F3: Tier ships as kinds/tier.kind.yaml package data (byte-identical
-        # Py↔TS mirror), registered through the SAME funnel as per-scope
+        # package data), registered through the SAME funnel as per-scope
         # KindDefinitions (plane lint + digest idempotency + builtin conflict
         # marker).
         for raw in load_descriptors("dna.extensions.cloud"):

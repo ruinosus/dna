@@ -11,7 +11,7 @@ asserts on plain dicts. Covers:
      ``homophonic_links``) round-tripping through ``relationships[]`` with NO
      vault entry (the divergence this story found against the design table);
   4. importing the REAL MIF spec fixtures used by ``test_mif_memory_kind.py``
-     (``tests/parity-fixtures/mif/memories/*``) — market-fidelity: proving
+     (``tests/golden-fixtures/mif/memories/*``) — market-fidelity: proving
      ``from_mif`` against genuine MIF examples, not only DNA-authored data.
 """
 from __future__ import annotations
@@ -25,7 +25,7 @@ import yaml
 from dna.memory.interchange import from_mif, resolve_or_mint_mif_id, to_mif
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-FIXTURE_BASE = REPO_ROOT / "tests" / "parity-fixtures" / "mif" / "memories"
+FIXTURE_BASE = REPO_ROOT / "tests" / "golden-fixtures" / "mif" / "memories"
 
 _REASON = "a concrete reason long enough for the affect validator to accept in full"
 

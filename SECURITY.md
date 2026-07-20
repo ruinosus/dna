@@ -20,7 +20,7 @@ maintainer will follow up.
 
 Please include, where possible:
 
-- the affected package(s) — `sdk-py`, `sdk-ts`, or `cli` — and version/commit;
+- the affected package(s) — `sdk-py`, `cli`, `client-py` or `client-ts` — and version/commit;
 - a minimal manifest or reproduction (see the threat model below);
 - the impact and any suggested remediation.
 

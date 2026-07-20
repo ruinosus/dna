@@ -4,9 +4,9 @@ Hook names used to be magic strings: ``on("pre_saev", fn)`` compiled, ran,
 and the listener never fired — silently. Now:
 
 1. ``HookName`` (Literal) + ``KNOWN_HOOK_NAMES`` are the single vocabulary,
-   locked to the shared fixture ``tests/parity-fixtures/
-   port-surface-parity.json`` (section ``hook_names``) — drift vs the TS
-   twin (``src/kernel/hooks.ts``) turns both suites red.
+   locked to the golden ``tests/golden-fixtures/port-surface.json``
+   (section ``hook_names``) — hook names are wire vocabulary, so drift
+   turns this suite red.
 2. Registering or emitting an UNKNOWN name warns (``UnknownHookNameWarning``,
    once per registry+name) — fail-loud, never fail-closed (custom names
    stay legal, back-compat).
@@ -14,7 +14,6 @@ and the listener never fired — silently. Now:
    and the real guards (helix fork guard, sdlc bitemporal) consume its
    fields (scope/kind/name/raw/tenant/kernel).
 
-TS twin: packages/sdk-ts/tests/hook-names.test.ts.
 """
 from __future__ import annotations
 
@@ -36,12 +35,12 @@ from dna.kernel.hooks import (
 
 _FIXTURE = (
     pathlib.Path(__file__).resolve().parents[3]
-    / "tests" / "parity-fixtures" / "port-surface-parity.json"
+    / "tests" / "golden-fixtures" / "port-surface.json"
 )
 
 
 # ---------------------------------------------------------------------------
-# 1. Vocabulary — single source, fixture-locked (Py side of the parity gate)
+# 1. Vocabulary — single source, golden-locked
 # ---------------------------------------------------------------------------
 
 def test_known_hook_names_mirror_the_literal():
@@ -49,13 +48,13 @@ def test_known_hook_names_mirror_the_literal():
     assert len(set(KNOWN_HOOK_NAMES)) == len(KNOWN_HOOK_NAMES), "duplicates"
 
 
-def test_vocabulary_matches_parity_fixture():
+def test_vocabulary_matches_golden_fixture():
     fixture = json.loads(_FIXTURE.read_text())
     fixture_names = fixture["hook_names"]["names"]
     assert list(KNOWN_HOOK_NAMES) == fixture_names, (
-        "hook-name vocabulary drifted from tests/parity-fixtures/"
-        "port-surface-parity.json (section hook_names) — update the "
-        "fixture AND the TS twin (src/kernel/hooks.ts), never one side."
+        "hook-name vocabulary drifted from tests/golden-fixtures/"
+        "port-surface.json (section hook_names) — the vocabulary is wire "
+        "vocabulary; update the fixture deliberately."
     )
 
 

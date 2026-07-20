@@ -11,6 +11,71 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### ⚠️ Breaking
+
+- **The TypeScript SDK (`packages/sdk-ts`, npm `dna-sdk`) is frozen and
+  removed from the repository.** It was a ~31k-LOC 1:1 mirror of
+  `packages/sdk-py`, kept in step by **manual parity**. It had no consumers:
+  the one real TypeScript consumer evaluated it and chose REST instead.
+
+  **Recovering it.** Every one of the 414 files is preserved at the tag
+  [`sdk-ts-final`](https://github.com/ruinosus/dna/releases/tag/sdk-ts-final):
+
+  ```bash
+  git checkout sdk-ts-final -- packages/sdk-ts
+  ```
+
+  **What replaces it.** The portability promise is unchanged; the mechanism
+  is different. The runtime is Python, and every other language reaches it
+  through the two language-neutral faces — **REST** (`dna api serve`,
+  described by `docs/openapi.json`) and **MCP** (`dna mcp serve`). TypeScript's
+  package in this repo is now `packages/client-ts` (`dna-client` on npm), a
+  typed REST client **generated from the OpenAPI document**, with
+  `packages/client-py` (`dna-client` on PyPI) as its Python sibling. A
+  generated client cannot drift from the runtime the way a hand-mirrored
+  kernel can.
+
+  Also removed: the `dna-sdk` npm publish job (`release.yml`), the `sdk-ts`
+  CI job (`typescript.yml` — its `client-ts` job stays and is now the point
+  of that workflow), the generated TypeDoc reference (`docs/reference/typescript/`),
+  the Py↔TS parity matrix (`docs/reference/parity-matrix.md` and
+  `scripts/gen_parity_matrix.py`), and the TypeScript twins of the
+  `hello-genome`, `tools_as_data` and `shipping-a-scope` examples.
+
+### Changed
+
+- **The Py↔TS parity suites are reclassified as golden suites.** Each of the
+  eleven was assessed by one question — *what does this protect if TypeScript
+  does not exist?* Eight protect **Python** behavior that TypeScript merely
+  rode along with, and were kept and renamed; three tested nothing but the
+  mirror, and were deleted.
+
+  | Suite | Now | Protects |
+  |---|---|---|
+  | `test_composition_parity_fixtures.py` | `test_composition_golden.py` | Composition-V2 resolution, 13 cases |
+  | `test_embedding_onnx_parity.py` | `test_embedding_onnx_golden.py` | The all-MiniLM-L6-v2 ONNX vectors |
+  | `test_f2_parity_fixture.py` | `test_f2_query_golden.py` | The query/count core |
+  | `test_hash_parity.py` | `test_hash_golden.py` | `document_hash`'s canonical form + digest |
+  | `test_memory_interchange_parity.py` | `test_memory_interchange_golden.py` | The MIF interchange wire format |
+  | `test_memory_parity.py` | `test_memory_scoring_golden.py` | Ten pure memory-scoring surfaces |
+  | `test_port_surface_parity.py` | `test_port_surface_golden.py` | Every `typing.Protocol` member — the extension contract |
+  | `test_studio_ui_parity.py` | `test_studio_ui_golden.py` | `StudioUIMetadata` projection + locale fallback |
+  | `test_descriptor_hash_parity.py` | *deleted* | Only compared Py descriptor files to their TS copies |
+  | `test_kind_registry_parity.py` | *deleted* | Only compared the Py Kind registry to the TS one |
+  | `test_parity_matrix_fresh.py` | *deleted* | Guarded the freshness of the (now removed) parity matrix page |
+
+- **`tests/parity-fixtures/` is now `tests/golden-fixtures/`**, and
+  `port-surface-parity.json` is now `port-surface.json` with the `ts` half of
+  each member pair dropped. Four fixtures that lived in `packages/sdk-ts` but
+  were read by Python suites moved to `packages/sdk-py/tests/goldens/`
+  (`f2-query.json`, `memory-interchange.json`, `memory-scoring.json`,
+  `studio-ui.json`) so nothing depends on a deleted package.
+
+- **Documentation repositioned** from *"Dual SDK, one behavior"* to *"one
+  runtime, any language"* — README, `docs/index.md`,
+  `docs/concepts/microkernel-ports.md`, `docs/reference/index.md`, the
+  tutorials, `CONTRIBUTING.md` and `AGENTS.md`.
+
 ## [0.20.0] — 2026-07-19
 
 ### ⚠️ Breaking

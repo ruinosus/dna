@@ -3,10 +3,9 @@ invite/accept policy (``dna.tenancy.invites``).
 
 Two layers, mirroring ``test_workspace_resolution.py``:
 
-1. **Shared parity fixtures** — every case in
-   ``tests/parity-fixtures/workspace-invite/cases.json`` runs here AND in the TS
-   twin (``packages/sdk-ts/tests/workspace-invite.test.ts``); the SAME cases →
-   the SAME outcomes gate Py↔TS behavioral parity.
+1. **Golden fixtures** — every case in
+   ``tests/golden-fixtures/workspace-invite/cases.json`` runs here: the same
+   cases must always produce the same authorization outcomes.
 2. **Python-side security unit coverage** — the anti-impersonation edges spelled
    out hard: a wrong oid cannot accept, an oid-bound grant is not hijackable, an
    unverified email is denied. A bug here is a cross-org breach, so the deny paths
@@ -30,7 +29,7 @@ from dna.tenancy.resolution import Identity, Membership
 
 _FIXTURES = (
     pathlib.Path(__file__).resolve().parents[3]
-    / "tests" / "parity-fixtures" / "workspace-invite" / "cases.json"
+    / "tests" / "golden-fixtures" / "workspace-invite" / "cases.json"
 )
 
 

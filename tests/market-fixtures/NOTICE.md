@@ -1,8 +1,8 @@
 # Market-fixture provenance (F3 conformance)
 
 These fixtures are **real artifacts downloaded from the market** — the
-conformance suites (`packages/sdk-py/tests/test_market_conformance.py`,
-`packages/sdk-ts/tests/market-conformance.test.ts`) prove they load, type,
+conformance suite (`packages/sdk-py/tests/test_market_conformance.py`)
+proves they load, type,
 compose and write back **without any adaptation** (spec §2.1: the standard
 owner's native bundle, byte-faithful).
 

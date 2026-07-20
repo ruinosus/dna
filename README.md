@@ -34,7 +34,7 @@ flowchart LR
     D["Kinds — YAML / Markdown<br/>(spec = authored intent)"] -->|validated on write| K["microkernel<br/>+ 5 ports"]
     E["extensions<br/>register Kinds"] --> K
     K -->|composed on read| P["system prompt<br/>(derived behavior)"]
-    P --> R["any runtime<br/>Python · TypeScript"]
+    P --> R["any runtime<br/>REST · MCP"]
 ```
 
 📖 **Full documentation: [ruinosus.github.io/dna](https://ruinosus.github.io/dna/)**
@@ -44,13 +44,16 @@ flowchart LR
 ## Install
 
 ```bash
-pip install dna-sdk dna-cli      # Python SDK + the `dna` CLI
-npm install dna-sdk              # TypeScript SDK (or: bun add dna-sdk)
+pip install dna-sdk dna-cli      # the runtime: Python SDK + the `dna` CLI
+npm install dna-client           # TypeScript client for the REST API
+pip install dna-client           # Python client for the REST API
 ```
 
+The **runtime is Python**. Everything else talks to it over **REST or MCP** —
+see [Talking to DNA from another language](#talking-to-dna-from-another-language).
+
 Pre-release / exact-pin alternative — consume straight from the repo
-(`cd packages/sdk-py && uv sync` · `cd packages/sdk-ts && bun install`), as
-the quick start below does. See [RELEASING.md](RELEASING.md) for how versions
+(`cd packages/sdk-py && uv sync`), as the quick start below does. See [RELEASING.md](RELEASING.md) for how versions
 are cut.
 
 ## Make your project agent-ready — `dna init`
@@ -98,9 +101,7 @@ leans on (superpowers, impeccable, find-skills, task-observer).
 
 The snippets below run against [`examples/hello-genome`](examples/hello-genome/) —
 a minimal scope with one `Genome`, one `Agent` and one real marketplace
-Skill — so they use the packages from the repo checkout. Python and
-TypeScript do the same thing — that parity is a test-enforced invariant,
-not a goal.
+Skill — so they use the packages from the repo checkout.
 
 ### Python
 
@@ -124,28 +125,32 @@ for d in mi.documents:
 print(mi.build_prompt(agent="greeter"))
 ```
 
-### TypeScript
+Walk through it step by step in **[Your first Kind](https://ruinosus.github.io/dna/getting-started/first-kind/)**.
 
-```bash
-cd packages/sdk-ts && bun install
-bun run ../../examples/hello-genome/run.ts
-```
+## Talking to DNA from another language
+
+DNA is **portable to any language** — the question is only *through which
+door*. The runtime (kernel, composition, Kinds, memory, SDLC) is Python; it
+serves two language-neutral faces, and everything else is a client of them:
+
+| Face | Serve it with | Consume it from |
+|---|---|---|
+| **REST** — typed read/write over HTTP, OpenAPI-described | `dna api serve` | `dna-client` for [TypeScript](packages/client-ts/) and [Python](packages/client-py/) — both **generated from the same `docs/openapi.json`** — or any HTTP client, in any language |
+| **MCP** — the tool face agents speak natively | `dna mcp serve` | Claude, Cursor, or any MCP client |
 
 ```typescript
-import { quickInstance } from "dna-sdk";
+import { DnaClient } from "dna-client";
 
-// Path relative to packages/sdk-ts.
-const mi = await quickInstance("hello-genome", "../../examples/hello-genome/.dna");
-
-for (const d of mi.documents) {
-  console.log(d.apiVersion, d.kind, d.name);
-}
-
-console.log(await mi.buildPrompt({ agent: "greeter" }));
+const dna = new DnaClient({ baseUrl: "http://127.0.0.1:8080" });
+const agents = await dna.listDocuments({ scope: "hello-genome", kind: "Agent" });
 ```
 
-Both print the same documents and the same composed prompt. Walk through it
-step by step in **[Your first Kind](https://ruinosus.github.io/dna/getting-started/first-kind/)**.
+This is the same portability promise DNA always made, through a mechanism
+that costs one implementation instead of two. Earlier releases shipped a
+**second full kernel in TypeScript**, kept 1:1 with Python by hand; the
+duplicate is frozen at the tag [`sdk-ts-final`](https://github.com/ruinosus/dna/releases/tag/sdk-ts-final)
+and no longer maintained. A generated REST client cannot drift from the
+runtime the way a hand-mirrored kernel can.
 
 ## The idea in four claims
 
@@ -154,7 +159,7 @@ step by step in **[Your first Kind](https://ruinosus.github.io/dna/getting-start
 | **The owner names the schema.** A Skill is `agentskills.io/v1`, a Soul `soulspec.org/v1`, an `AGENTS.md` `agents.md/v1` — standards DNA didn't invent are consumed **byte-faithful** under their owners' namespaces, enforced against 31 real marketplace bundles. | [Market fidelity](https://ruinosus.github.io/dna/concepts/market-fidelity/) |
 | **Behavior is data, not code.** Prompts, personas and wiring are versioned documents — validated on write, composed on read. Iterating never rebuilds the runtime. | [The thesis](https://ruinosus.github.io/dna/concepts/thesis/) |
 | **The kernel knows no Kinds.** A microkernel mediates five ports (source, cache, resolver, reader/writer, kind); extensions register Kinds onto it. A record Kind is a descriptor file — no fork, no code. | [Microkernel & ports](https://ruinosus.github.io/dna/concepts/microkernel-ports/) |
-| **Dual SDK, one behavior.** Python (`import dna`) and TypeScript (`dna-sdk`) implement the same kernel 1:1 — parity enforced by shared fixtures and descriptor hash checks. | [Concepts](https://ruinosus.github.io/dna/concepts/) |
+| **One runtime, any language.** The kernel is Python; every other language reaches it through the REST and MCP faces, with typed clients **generated from the OpenAPI spec** — so a client can't drift from the runtime. | [Microkernel & ports](https://ruinosus.github.io/dna/concepts/microkernel-ports/) |
 
 ## Your git log is your SDLC
 
@@ -189,7 +194,7 @@ The full site is organized by [Diátaxis](https://diataxis.fr/):
 - **Tutorials** — [Your first Kind](https://ruinosus.github.io/dna/getting-started/first-kind/) · [Running the conformance kit](https://ruinosus.github.io/dna/getting-started/conformance-kit/) · [Make your project agent-ready](https://ruinosus.github.io/dna/getting-started/agent-onboarding/)
 - **Concepts** — [The thesis](https://ruinosus.github.io/dna/concepts/thesis/) · [Kinds](https://ruinosus.github.io/dna/concepts/kinds/) · [Microkernel & ports](https://ruinosus.github.io/dna/concepts/microkernel-ports/) · [Market fidelity](https://ruinosus.github.io/dna/concepts/market-fidelity/) · [Tenancy & layers](https://ruinosus.github.io/dna/concepts/tenancy-layers/) · [Search & memory](https://ruinosus.github.io/dna/concepts/search-and-memory/)
 - **How-to guides** — [A tour of the CLI](https://ruinosus.github.io/dna/guides/cli-tour/) · [Install bundles from a repo](https://ruinosus.github.io/dna/guides/installing-scopes/) · [Add a Kind](https://ruinosus.github.io/dna/guides/add-a-kind/) · [Read document data](https://ruinosus.github.io/dna/guides/read-document-data/) · [Write a source adapter](https://ruinosus.github.io/dna/guides/write-a-source-adapter/) · [Write a Reader/Writer](https://ruinosus.github.io/dna/guides/readers-and-writers/) · [Semantic recall & memory](https://ruinosus.github.io/dna/guides/semantic-recall/) · [Evaluate agents](https://ruinosus.github.io/dna/guides/evaluating-agents/)
-- **Reference** — [Python](https://ruinosus.github.io/dna/reference/python/) & [TypeScript](https://ruinosus.github.io/dna/reference/typescript/) API, the [CLI](https://ruinosus.github.io/dna/reference/cli/) and the [Kinds catalog](https://ruinosus.github.io/dna/reference/kinds/), plus the [Py↔TS parity matrix](https://ruinosus.github.io/dna/reference/parity-matrix/) — all generated from source on every build
+- **Reference** — the [Python API](https://ruinosus.github.io/dna/reference/python/), the [CLI](https://ruinosus.github.io/dna/reference/cli/) and the [Kinds catalog](https://ruinosus.github.io/dna/reference/kinds/) — all generated from source on every build
 
 Building the site locally:
 
@@ -203,15 +208,16 @@ mkdocs serve        # live preview at http://127.0.0.1:8000
 ```
 dna/
 ├── packages/
-│   ├── sdk-py/          # Python SDK — kernel + adapters + extensions (import dna)
-│   ├── sdk-ts/          # TypeScript SDK — 1:1 twin (dna-sdk)
-│   └── cli/             # `dna` binary — CRUD, SDLC, agent onboarding (dna init), install
+│   ├── sdk-py/          # THE runtime — kernel + adapters + extensions (import dna)
+│   ├── cli/             # `dna` binary — CRUD, SDLC, agent onboarding (dna init), install
+│   ├── client-py/       # REST client for Python  ┐ both generated from
+│   └── client-ts/       # REST client for TypeScript ┘ docs/openapi.json
 ├── docs/                # Diátaxis docs site (MkDocs + Material)
 ├── examples/
 │   └── hello-genome/    # Minimal runnable scope (Genome + Agent + real Skill)
 ├── scopes/              # Fixture scopes, incl. 31 real marketplace skills
 ├── scripts/             # Repo guards + versioned git hooks (git-hooks/)
-├── tests/               # Shared cross-SDK fixtures (parity + market conformance)
+├── tests/               # Golden fixtures (behavioral + market conformance)
 ├── .dna/                # This repo's own SDLC scope (dna-development)
 └── LICENSE              # MIT
 ```
