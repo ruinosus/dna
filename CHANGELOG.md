@@ -50,6 +50,30 @@ não por comparação de strings.
 - Andaime sem referência viva: BM25 escrito à mão, `dna/sync`, `dna/viz`,
   `@dna_tool`, `RedisCache`, `S3Source`, `dna_edges`.
 
+### 🔒 Billing — o contador de consumo passa a existir
+
+- **`dna_quota_counters`** — contagem durável por `(dia, tenant, tier)`, com
+  incremento atômico. Antes só havia um store **em memória**, cujo docstring já
+  admitia *"WRONG for real billing"*: um restart zerava o uso diário e cada
+  réplica tinha o seu dict, então a cota efetiva era ~N × o limite.
+  Provado com Postgres real: 64 threads × 8 = **512 contou 512**, e a mesma
+  carga contra uma implementação read-modify-write contou **10, perdendo 502**.
+- O port virou **de fato trocável** (`build_server(..., quota_store=)`); sem DSN
+  o in-process continua o default legítimo para local e self-hosted.
+- ⚠️ Consumidores hospedados precisam do extra novo **`dna-cli[quota]`**
+  (psycopg2 — o port é síncrono e o `[postgres]` traz asyncpg, async-only).
+
+### 🐛 Correções
+
+- **`Epic` vazava do `_lib` para todo scope filho.** O rename `Milestone` →
+  `Epic` (v1.3) deixou a classificação de herança presa ao nome morto, e a
+  classe nunca declarou o atributo — então `Epic` era o **único** Kind do ledger
+  que herdava, e um epic da plataforma aparecia dentro de todo projeto.
+  `Milestone` **fica** na denylist: documento não migrado não pode *começar* a
+  vazar porque o Kind dele foi aposentado.
+- `SavedView` removido — zero leitores, e o próprio descriptor dizia
+  *"waiting on a reader"*.
+
 ### 🔧 Clientes
 
 `client-py` e `client-ts` cobrem agora **as 31 operações**, não só as 18 de
