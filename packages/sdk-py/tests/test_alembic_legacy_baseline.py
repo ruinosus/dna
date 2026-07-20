@@ -39,6 +39,20 @@ def _legacy_sqlite_control(conn, version: int | None) -> None:
             )
 
 
+def _head_revision() -> str:
+    """The ladder's current head.
+
+    Read from the script directory rather than pinned to
+    ``BASELINE_REVISION``: the baseline stopped being the head the moment a
+    second revision landed, and a stamped database is expected to come
+    FORWARD to head, not to sit at the baseline forever."""
+    from alembic.script import ScriptDirectory
+
+    from dna.adapters.sqlalchemy_.migrate import build_config
+
+    return ScriptDirectory.from_config(build_config(None)).get_current_head()
+
+
 async def _stamped_state(db) -> tuple[list[str], bool]:
     """(alembic_version rows, legacy table still present)."""
     eng = sa.create_engine(f"sqlite:///{db}")
@@ -75,12 +89,14 @@ async def test_fully_migrated_legacy_sqlite_db_is_stamped_not_remigrated(tmp_pat
     applied = await src.run_schema_migrations()
     await src.close()
 
-    assert applied == [], (
-        "a fully-migrated legacy database must be STAMPED, not migrated — "
-        f"got {applied!r}"
+    assert BASELINE_REVISION not in applied, (
+        "a fully-migrated legacy database must be STAMPED at the baseline, not "
+        f"have the baseline DDL replayed against it — got {applied!r}"
     )
     rows, legacy_present = await _stamped_state(db)
-    assert rows == [BASELINE_REVISION]
+    # Stamped at the baseline, then carried forward to head like any other
+    # database — the post-baseline revisions are real work this DB still needs.
+    assert rows == [_head_revision()]
     assert not legacy_present, "retired control table should have been dropped"
 
 
@@ -112,12 +128,14 @@ async def test_empty_legacy_control_table_falls_through_to_normal_bootstrap(tmp_
 
     src = SqlAlchemySource(f"sqlite+aiosqlite:///{db}")
     applied = await src.run_schema_migrations()
-    assert applied == [BASELINE_REVISION]
+    # A fresh bootstrap runs the whole ladder, baseline first.
+    assert applied[0] == BASELINE_REVISION
+    assert applied[-1] == _head_revision()
     assert await src.run_schema_migrations() == []
     await src.close()
 
     rows, legacy_present = await _stamped_state(db)
-    assert rows == [BASELINE_REVISION]
+    assert rows == [_head_revision()]
     assert not legacy_present
 
 
@@ -136,6 +154,14 @@ async def test_stamped_database_then_boots_idempotently(tmp_path):
         _legacy_sqlite_control(c, LEGACY_HEAD["sqlite"])
     eng.dispose()
 
+    # First boot after the stamp: adopt Alembic and come forward to head
+    # (without replaying the baseline).
+    src = SqlAlchemySource(f"sqlite+aiosqlite:///{db}")
+    first = await src.run_schema_migrations()
+    await src.close()
+    assert BASELINE_REVISION not in first
+
+    # Every boot after that is a no-op — the whole point.
     for _ in range(3):
         src = SqlAlchemySource(f"sqlite+aiosqlite:///{db}")
         assert await src.run_schema_migrations() == []

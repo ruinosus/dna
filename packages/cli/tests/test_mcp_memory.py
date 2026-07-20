@@ -218,8 +218,7 @@ async def _seed_tiers(dna_dir) -> None:
 
 
 def _reset_store() -> None:
-    Q.DEFAULT_STORE._day_counts.clear()  # type: ignore[attr-defined]
-    Q.DEFAULT_STORE._calls.clear()  # type: ignore[attr-defined]
+    Q.DEFAULT_STORE.reset()
 
 
 def _verifier_and_mint():

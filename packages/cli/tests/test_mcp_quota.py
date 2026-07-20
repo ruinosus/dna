@@ -184,6 +184,82 @@ def test_tenant_and_tier_meter_independently():
         Q.enforce_quota(caps=caps, tenant="globex", tier="free", family="memory", store=store)
 
 
+# ── 2b. the metering key + store selection (no server, no database) ────────
+
+
+def test_quota_key_round_trips():
+    """Compose → decompose is the identity, including the structured tenants
+    personal memory uses (``personal:google:<sub>`` carries single colons, so a
+    naive split on the FIRST ':' would shred it)."""
+    for tenant, tier in [
+        ("acme", "free"),
+        ("personal:oid-123", "pro"),
+        ("personal:google:sub-9", "pro"),
+        ("personal:workos:user_42", "free"),
+    ]:
+        assert Q.split_quota_key(Q.quota_key(tenant, tier)) == (tenant, tier)
+
+
+def test_quota_key_maps_a_tenantless_call_to_the_dash_partition():
+    assert Q.quota_key(None, "free") == "-::free"
+    assert Q.split_quota_key("-::free") == ("-", "free")
+
+
+def test_inproc_calls_on_reads_back_what_it_counted():
+    """The billing read, in-process: sums a tenant's tiers, isolates tenants."""
+    store = Q.InProcQuotaStore()
+    store.incr_day(Q.quota_key("acme", "free"))
+    store.incr_day(Q.quota_key("acme", "free"))
+    store.incr_day(Q.quota_key("acme", "pro"))  # upgraded mid-day
+    store.incr_day(Q.quota_key("globex", "pro"))
+
+    assert store.calls_on("acme") == 3  # summed ACROSS tiers — the bill is per tenant
+    assert store.calls_on("globex") == 1
+    assert store.calls_on("nobody") == 0
+
+
+def test_store_from_env_selects_in_process_without_a_postgres_dsn():
+    """No DSN → the in-process store. The legitimate local / self-host default."""
+    assert Q.store_from_env({}) is Q.DEFAULT_STORE
+    # A non-Postgres source is not a durable store either.
+    assert Q.store_from_env({"DNA_SOURCE_URL": "file:///tmp/x/.dna"}) is Q.DEFAULT_STORE
+    assert Q.store_from_env({"DNA_SOURCE_URL": "sqlite:///x.db"}) is Q.DEFAULT_STORE
+
+
+def test_store_from_env_selects_the_durable_store_for_a_postgres_source():
+    """The hosted shape: a Postgres ``DNA_SOURCE_URL`` alone is enough — the
+    counter lives in the same database its migration ran against, so DNA Cloud
+    gets durable metering with no new configuration."""
+    pytest.importorskip("sqlalchemy")
+    for url in (
+        "postgresql://u:p@h/db",
+        "postgres://u:p@h/db",
+        "postgresql+asyncpg://u:p@h/db",
+    ):
+        store = Q.store_from_env({"DNA_SOURCE_URL": url})
+        assert isinstance(store, Q.PostgresQuotaStore)
+
+    # An explicit DNA_QUOTA_DSN wins over the source URL.
+    store = Q.store_from_env({
+        "DNA_SOURCE_URL": "file:///tmp/x/.dna",
+        "DNA_QUOTA_DSN": "postgresql://u:p@h/db",
+        "DNA_QUOTA_SCHEMA": "billing",
+    })
+    assert isinstance(store, Q.PostgresQuotaStore)
+    assert store._qualified == "billing.dna_quota_counters"
+
+
+def test_sync_pg_url_swaps_the_async_driver_but_keeps_the_target():
+    """asyncpg cannot back a synchronous port — the DSN is rewritten to the
+    installed sync driver, host/database/query string untouched."""
+    pytest.importorskip("psycopg2")
+    out = Q.sync_pg_url("postgresql+asyncpg://u:p@h:5432/db?sslmode=require")
+    assert out == "postgresql+psycopg2://u:p@h:5432/db?sslmode=require"
+    assert Q.sync_pg_url("postgres://u@h/db") == "postgresql+psycopg2://u@h/db"
+    with pytest.raises(ValueError, match="not a Postgres URL"):
+        Q.sync_pg_url("sqlite:///x.db")
+
+
 # ── 3. integration — over a real token context + seeded Tier docs ──────────
 #
 # These need fastmcp (the server + the token context) — each ``importorskip``s it,
@@ -242,10 +318,12 @@ async def _seed_tiers(dna_dir, *, free_calls_per_day: int,
 
 
 def _reset_store() -> None:
-    """The server wires the module singleton ``Q.DEFAULT_STORE`` — reset it so each
-    integration test starts from a clean counter."""
-    Q.DEFAULT_STORE._day_counts.clear()  # type: ignore[attr-defined]
-    Q.DEFAULT_STORE._calls.clear()  # type: ignore[attr-defined]
+    """These integration tests build the server WITHOUT a ``quota_store``, and with
+    no Postgres DSN in the environment ``store_from_env`` selects the in-process
+    ``Q.DEFAULT_STORE`` — so reset it for a clean counter per test. A test that
+    wants its own isolated counter passes ``quota_store=`` instead (see
+    ``test_build_server_meters_into_an_injected_store``)."""
+    Q.DEFAULT_STORE.reset()
 
 
 @pytest.fixture
@@ -306,6 +384,43 @@ def test_free_plan_meters_over_daily_quota(dna_dir, http_server):
 
     with http_server(server) as url:
         asyncio.run(go(url))
+
+
+def test_build_server_meters_into_an_injected_store(dna_dir, http_server):
+    """The port is REALLY swappable: a store handed to ``build_server`` is the one
+    the guard spends against.
+
+    This is the seam the durable Postgres store slots into. Before it existed,
+    ``build_server`` took no store and both ``enforce_quota`` call sites fell
+    through to the module singleton, so the only way to observe metering was to
+    reach into ``DEFAULT_STORE``'s private dicts — the port was a port in name
+    only. Asserting on the INJECTED store (and that the singleton stayed at
+    zero) is what proves otherwise."""
+    pytest.importorskip("fastmcp")
+    from fastmcp import Client
+    from fastmcp.client.auth import BearerAuth
+
+    from dna_cli import _mcp_server as M
+
+    asyncio.run(_seed_tiers(dna_dir, free_calls_per_day=10,
+                            free_families=["definitions", "sdlc", "memory"]))
+    verifier, mint = _verifier_and_mint()
+    mine = Q.InProcQuotaStore()
+    server = M.build_server(base_dir=str(dna_dir), auth=verifier, quota_store=mine)
+    token = mint(tenant="acme", plan="free")
+
+    async def go(url):
+        async with Client(url, auth=BearerAuth(token)) as client:
+            for _ in range(3):
+                await client.call_tool("list_stories", {"scope": _SCOPE})
+
+    with http_server(server) as url:
+        asyncio.run(go(url))
+
+    assert mine.calls_on("acme") == 3, "the injected store was not the one metered"
+    assert Q.DEFAULT_STORE.calls_on("acme") == 0, (
+        "the guard still fell through to the module singleton"
+    )
 
 
 def test_read_only_tier_gates_write_family(dna_dir, http_server):

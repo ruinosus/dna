@@ -18,7 +18,9 @@ from dna.adapters.filesystem.writable import FilesystemWritableSource
 
 
 _LEDGER_AND_STRUCTURAL = {
-    "Story", "Issue", "Feature", "Milestone", "Roadmap",
+    # "Epic" is the v1.3 rename of "Milestone"; both are listed because the old
+    # name survives as a tombstone for un-migrated on-disk docs.
+    "Story", "Issue", "Feature", "Epic", "Milestone", "Roadmap",
     "Narrative", "VibeSession", "Engram", "Plan",
     "Genome", "KindDefinition", "LayerPolicy",
 }
@@ -96,6 +98,54 @@ def test_child_inherits_arbitrary_kind_but_not_ledger(tmp_path: Path):
         assert await mi.one_async("Skill", "shared-skill") is not None
         # does NOT inherit the ledger Engram
         assert await mi.one_async("Engram", "platform-lesson") is None
+
+    asyncio.run(_run())
+
+
+def test_epic_does_not_inherit_like_its_siblings(tmp_path: Path):
+    """Regression — Epic is a per-scope ledger Kind, exactly like Feature.
+
+    v1.3 renamed the Milestone Kind to Epic, but the inheritance classification
+    stayed pinned to the DEAD name in BOTH places that carry it
+    (``Kernel._LEGACY_NON_INHERITABLE`` and
+    ``resolver.DEFAULT_NON_INHERITABLE_KINDS_V1``), while ``EpicKind`` itself
+    never declared ``scope_inheritable = False``. Net effect: Epic was the one
+    ledger Kind that INHERITED — an Epic written to `_lib` showed up in every
+    child scope, so every project saw the platform's epics as its own.
+
+    Feature is the control: same hierarchy, same scope, correctly denylisted.
+    """
+    async def _run():
+        k = _make_kernel(tmp_path)
+
+        # ── classification: Epic must sit on the same side as Feature ──
+        assert "Epic" in DEFAULT_NON_INHERITABLE_KINDS_V1
+        assert "Epic" not in k._INHERITABLE_KINDS
+        assert "Feature" not in k._INHERITABLE_KINDS
+
+        # ── the composition rule the resolver actually applies ──
+        assert await k._get_composition_rule("scope", "Epic") == (
+            await k._get_composition_rule("scope", "Feature")
+        ) == ("disabled", "override_full", "field_level")
+
+        # ── end-to-end: neither leaks out of `_lib` ──
+        await k.write_document(
+            "_lib", "Epic", "lib-epic",
+            {"apiVersion": "github.com/ruinosus/dna/sdlc/v1", "kind": "Epic",
+             "metadata": {"name": "lib-epic"},
+             "spec": {"status": "planning", "summary": "platform-only epic"}},
+            tenant=None,
+        )
+        await k.write_document(
+            "_lib", "Feature", "lib-feature",
+            {"apiVersion": "github.com/ruinosus/dna/sdlc/v1", "kind": "Feature",
+             "metadata": {"name": "lib-feature"},
+             "spec": {"status": "discovery", "description": "platform-only feature"}},
+            tenant=None,
+        )
+        mi = await k.instance_async("scope")
+        assert await mi.one_async("Epic", "lib-epic") is None
+        assert await mi.one_async("Feature", "lib-feature") is None
 
     asyncio.run(_run())
 

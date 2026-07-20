@@ -46,7 +46,7 @@ Declarative Kind descriptor — the format of builtin `kinds/*.kind.yaml` packag
 | `volatile_spec_fields` |  | Extra write-/runtime-stamped spec fields excluded from the canonical digest, unioned with the base set {updated_at, version, created_at}. |
 | `workitem_common` |  | DEPRECATED back-compat shorthand for schema_fragments: ["sdlc/workitem-common"]. Python-only. |
 
-## Registered Kinds (77)
+## Registered Kinds (76)
 
 ### Composition plane
 
@@ -126,7 +126,6 @@ Declarative Kind descriptor — the format of builtin `kinds/*.kind.yaml` packag
 | [RiskRegister](record.md#riskregister) | `sdlc-risk-register` | `github.com/ruinosus/dna/sdlc/v1` |
 | [Roadmap](record.md#roadmap) | `sdlc-roadmap` | `github.com/ruinosus/dna/sdlc/v1` |
 | [Role](record.md#role) | `portfolio-role` | `github.com/ruinosus/dna/portfolio/v1` |
-| [SavedView](record.md#savedview) | `sdlc-saved-view` | `github.com/ruinosus/dna/sdlc/v1` |
 | [Spec](record.md#spec) | `sdlc-spec` | `github.com/ruinosus/dna/sdlc/v1` |
 | [Spike](record.md#spike) | `sdlc-spike` | `github.com/ruinosus/dna/sdlc/v1` |
 | [StatusReport](record.md#statusreport) | `sdlc-status-report` | `github.com/ruinosus/dna/sdlc/v1` |

@@ -60,6 +60,16 @@ api = ["fastapi>=0.110", "uvicorn>=0.30"]
 # imports msal/httpx only inside the exchange/Graph-call seams), off by default
 # (needs the `graph:` config block), HTTP-only. The base install never carries it.
 graph = ["msal>=1.28", "httpx>=0.27"]
+# The DURABLE quota meter — `_mcp_quota.PostgresQuotaStore`, the counter DNA
+# Cloud's overage billing reads. Needs a SYNCHRONOUS Postgres driver: the
+# QuotaStore port is sync (`enforce_quota` is sync), and asyncpg — the driver
+# `dna-sdk[postgres]` ships — is async-only, so it cannot back this store.
+# `sqlalchemy` is already implied by dna-sdk[postgres] but is named here so the
+# extra stands alone. Optional + lazily imported (the store imports sqlalchemy
+# only inside its own methods), so the base install and the in-process meter
+# never carry it. The counter TABLE is created by the SDK's Alembic ladder
+# (revision 0002_quota_counters) — nothing to provision separately.
+quota = ["sqlalchemy>=2", "psycopg2-binary>=2.9"]
 dev = [
     "pytest>=8.0",
     # search-sqlite extra so `dna recall`/`dna research recall` end-to-end tests
@@ -81,12 +91,18 @@ dev = [
     # seam (the exchange itself is faked in tests — no live Entra). The base
     # install keeps it optional — see the `graph` extra above.
     "msal>=1.28",
+    # `sqlalchemy` + `psycopg2-binary` so tests/test_mcp_quota_postgres.py can
+    # drive the DURABLE quota store against a real Postgres (the tests skip
+    # without a DSN — see the `quota` extra above).
+    "sqlalchemy>=2",
+    "psycopg2-binary>=2.9",
 ]
 
 [tool.pytest.ini_options]
 pythonpath = ["tests"]
 markers = [
     "requires_network: skip unless outbound network is available (tests/conftest.py; DNA_OFFLINE=1 forces the skip)",
+    "requires_postgres: skip unless a Postgres DSN is set (DATABASE_URL / DNA_PG_TEST_URL / DNA_PG_TEST_DSN)",
 ]
 
 [build-system]

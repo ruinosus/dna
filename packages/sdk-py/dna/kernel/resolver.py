@@ -64,8 +64,15 @@ BOOTSTRAP_KINDS: frozenset[str] = frozenset({
 # scope_inheritance=enabled (override_full merge, field_level tenant overlay)
 # EXCEPT the per-scope ledger + structural Kinds below. Mirrors the kernel's
 # ``Kernel._NON_INHERITABLE_KINDS``.
+#
+# "Epic" and "Milestone" are BOTH listed on purpose: v1.3 renamed the Milestone
+# Kind to Epic and the rename missed this set, so Epic silently inherited while
+# its Story/Issue/Feature/Roadmap siblings did not. "Milestone" stays as a
+# tombstone — `kind: Milestone` no longer parses, but un-migrated docs may still
+# sit in an `_lib` on disk, and a stale ledger doc must not START leaking into
+# child scopes just because its Kind was retired.
 DEFAULT_NON_INHERITABLE_KINDS_V1: frozenset[str] = frozenset({
-    "Story", "Issue", "Feature", "Milestone", "Roadmap",
+    "Story", "Issue", "Feature", "Epic", "Milestone", "Roadmap",
     "Narrative", "VibeSession", "Engram", "Plan",
     "Genome", "KindDefinition", "LayerPolicy",
 })
