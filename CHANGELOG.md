@@ -13,6 +13,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Correções
 
+- **`doc apply` converge: re-apply de arquivo idêntico é `UNCHANGED`**
+  (`i-059`). O compare era torto — doc RESOLVIDO (defaults do Kind injetados
+  no parse: `creative_slots: []`, `objective: ''`, +9 no Agent) contra o spec
+  CRU do arquivo — então Kind com defaults NUNCA convergia: todo boot do
+  seed re-aplicava o Agent como `UPDATED` com bump de versão. Agora compara
+  cru-com-cru: `write_document` persiste o doc CRU, logo o write é no-op
+  exatamente quando o spec cru armazenado == o do arquivo. (Resolvido-com-
+  resolvido foi rejeitado: remover do arquivo uma chave cujo valor era igual
+  ao default resolve idêntico mas MUDA o doc armazenado — e passaria a
+  seguir mudanças futuras do default — então tem que continuar `UPDATED`.)
+
 - **Quota store fala libpq — o DSN é normalizado para o dialeto do driver
   síncrono** (`i-057`, visto em produção no dna-cloud). `store_from_env` cai
   no fallback `DNA_SOURCE_URL`, que num deploy hospedado é asyncpg-style e

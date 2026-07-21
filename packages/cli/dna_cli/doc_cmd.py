@@ -735,7 +735,23 @@ def _apply_one(s, raw: dict, *, path: str, doc_index: int | None,
     if current is None:
         action = "CREATED"
     else:
-        current_spec = dict(current.spec) if current.spec else {}
+        # Compare RAW against RAW (i-059). `current.spec` is the PARSED spec —
+        # the Kind's schema defaults are injected at parse time — while the
+        # file's spec is raw, so a resolved-vs-raw compare NEVER converges for
+        # a Kind with defaults: re-applying an identical file was UPDATED (and
+        # a version bump) forever. `write_document` persists the RAW doc, so
+        # the write is a true no-op exactly when the STORED raw spec equals
+        # the incoming one — that is the pair that decides UNCHANGED/UPDATED.
+        # (Raw-raw also stays honest the other way: a file that drops a key
+        # whose value equalled the default DOES change the stored doc — and
+        # would silently track future default changes — so it must stay
+        # UPDATED, which resolved-vs-resolved would miss.)
+        current_raw = current.raw if isinstance(getattr(current, "raw", None), dict) else {}
+        current_spec = current_raw.get("spec")
+        if not isinstance(current_spec, dict):
+            # Legacy/synthetic doc with no raw round-trip — fall back to the
+            # parsed spec rather than mis-reporting every apply as UPDATED.
+            current_spec = dict(current.spec) if current.spec else {}
         new_spec = raw.get("spec") or {}
         if _json.dumps(current_spec, sort_keys=True, default=str) == _json.dumps(
             new_spec, sort_keys=True, default=str
