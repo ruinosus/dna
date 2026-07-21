@@ -1335,6 +1335,168 @@ def cmd_story_comment(
     click.secho(
         f"COMMENTED Story/{name} ({event_type}){suffix}", fg="green",
     )
+# ─── Story checklist (AC/DoD) — granular check + close-time backfill ──
+# Untangled from the journey block (sdlc_cmd decomposition): these are
+# STORY concerns — cmd_story_done calls _backfill_checklist, and
+# `story check` registers on story_group — so they live with the story
+# section, clearing the way for the journey group to move out as a unit.
+
+def _backfill_checklist(
+    raw: Any, *, done_at: str, done_by: str,
+) -> list[dict[str, Any]] | None:
+    """Stamp every checklist item as done — backfill at story close.
+
+    Story s-checklist-readonly-on-closed-stories. Accepts the same
+    union shape as the TS twin (string | {text, done?, done_at?,
+    done_by?}). Returns canonical object list with done=true on every
+    item; items already done are preserved (idempotent — keeps their
+    original done_at/done_by). Returns None when input is empty/
+    invalid (caller leaves the field alone).
+    """
+    if not isinstance(raw, list) or not raw:
+        return None
+    out: list[dict[str, Any]] = []
+    for r in raw:
+        if isinstance(r, str):
+            text = r.strip()
+            if not text:
+                continue
+            out.append({"text": text, "done": True, "done_at": done_at, "done_by": done_by})
+        elif isinstance(r, dict):
+            text = str(r.get("text", "")).strip()
+            if not text:
+                continue
+            already_done = r.get("done") is True
+            if already_done:
+                item: dict[str, Any] = {"text": text, "done": True}
+                if r.get("done_at"):
+                    item["done_at"] = r["done_at"]
+                if r.get("done_by"):
+                    item["done_by"] = r["done_by"]
+                if r.get("evidence"):  # preserve granular evidence from `story check`
+                    item["evidence"] = r["evidence"]
+                out.append(item)
+            else:
+                out.append({"text": text, "done": True, "done_at": done_at, "done_by": done_by})
+    return out
+
+
+def _normalize_checklist(raw: Any) -> list[dict[str, Any]]:
+    """String|dict checklist → canonical ``{text, ...}`` dict list (preserves
+    existing done/evidence). Used by ``story check`` for granular marking."""
+    out: list[dict[str, Any]] = []
+    if not isinstance(raw, list):
+        return out
+    for r in raw:
+        if isinstance(r, str):
+            t = r.strip()
+            if t:
+                out.append({"text": t})
+        elif isinstance(r, dict) and str(r.get("text", "")).strip():
+            out.append(dict(r))
+    return out
+
+
+def _mark_checklist_items(
+    items: list[dict[str, Any]], selectors: tuple[str, ...], *,
+    mark_all: bool, done_at: str, done_by: str, evidence: str,
+) -> int:
+    """Mark selected checklist items done + evidence. Selectors match by
+    1-based index (digit selectors — EXACT int match, never substring) OR
+    case-insensitive substring of the item text (non-digit selectors).
+    Returns the number of items marked.
+
+    i-014: a digit selector must NOT fall through to the substring branch —
+    ``--ac 1`` used to also mark any item whose TEXT contained "1"
+    ("API v1", "10 retries", ...), over-marking checklists in the field.
+    """
+    n = 0
+    for i, it in enumerate(items, start=1):
+        match = mark_all
+        if not match:
+            for sel in selectors:
+                if sel.isdigit():
+                    if int(sel) == i:
+                        match = True
+                        break
+                    continue  # index selector: exact match only (i-014)
+                if sel and sel.lower() in str(it.get("text", "")).lower():
+                    match = True
+                    break
+        if match:
+            it["done"] = True
+            it["done_at"] = done_at
+            it["done_by"] = done_by
+            it["evidence"] = evidence
+            n += 1
+    return n
+
+
+@story_group.command("check")
+@click.argument("name")
+@click.option("--ac", "ac_sel", multiple=True,
+              help="Acceptance-criterion to mark done: 1-based index (exact) or text substring (repeatable).")
+@click.option("--dod", "dod_sel", multiple=True,
+              help="Definition-of-done item to mark done: 1-based index (exact) or text substring (repeatable).")
+@click.option("--all", "mark_all", is_flag=True, default=False,
+              help="Mark ALL acceptance_criteria + definition_of_done items done.")
+@click.option("--evidence", required=True,
+              help="Evidence the item is satisfied (PR #, commit sha, link, or prose). Stored per-item.")
+@click.option("--by", "by_actor", default=None,
+              help="Actor crediting the check (default: DNA_AGENT_OWNER or claude-code).")
+@_scope_option
+def cmd_story_check(
+    name: str, ac_sel: tuple[str, ...], dod_sel: tuple[str, ...],
+    mark_all: bool, evidence: str, by_actor: str | None, scope: str,
+) -> None:
+    """Mark specific AC / DoD items DONE **with evidence** — granular
+    Gapless-DoD closure, vs ``story done``'s blanket auto-backfill (which
+    stamps ``done_by=story-done-auto`` and no evidence). Select items by
+    1-based index or text substring; ``--all`` marks every AC + DoD item.
+
+    Example:
+        dna sdlc story check s-foo --ac 1 --dod "tests" --evidence "PR #42"
+    """
+    import os as _os
+    if not (ac_sel or dod_sel or mark_all):
+        raise click.UsageError("pass --ac/--dod selectors (index or substring) or --all")
+    actor = by_actor or _os.environ.get("DNA_AGENT_OWNER", "claude-code")
+    now = _now_iso()
+    with open_session(scope) as s:
+        existing = s.get_doc("Story", name)
+        if existing is None:
+            raise fail(f"Story '{name}' not found in scope {scope!r}")
+        spec = dict(existing.spec) if isinstance(existing.spec, dict) else {}
+        ac = _normalize_checklist(spec.get("acceptance_criteria"))
+        dod = _normalize_checklist(spec.get("definition_of_done"))
+        n_ac = (
+            _mark_checklist_items(ac, ac_sel, mark_all=mark_all, done_at=now, done_by=actor, evidence=evidence)
+            if (ac_sel or mark_all) else 0
+        )
+        n_dod = (
+            _mark_checklist_items(dod, dod_sel, mark_all=mark_all, done_at=now, done_by=actor, evidence=evidence)
+            if (dod_sel or mark_all) else 0
+        )
+        if n_ac == 0 and n_dod == 0:
+            raise fail("no AC/DoD items matched the selectors (check indices/substrings)")
+        if n_ac:
+            spec["acceptance_criteria"] = ac
+        if n_dod:
+            spec["definition_of_done"] = dod
+        spec["updated_at"] = now
+        _append_timeline(
+            spec, "checklist_check",
+            marked_ac=n_ac, marked_dod=n_dod, evidence=evidence, by=actor,
+        )
+        raw = _build_raw("Story", name, spec)
+        s.run(s.kernel.write_document(scope, "Story", name, raw))
+    click.secho(
+        f"✓ checked {n_ac} AC + {n_dod} DoD on Story/{name} "
+        f"(evidence: {evidence[:60]})",
+        fg="green",
+    )
+
+
 
 
 class _KaizenGroup(click.Group):
@@ -3251,160 +3413,6 @@ def _write_feature_reflect_workflow_event(
         return None
 
 
-def _backfill_checklist(
-    raw: Any, *, done_at: str, done_by: str,
-) -> list[dict[str, Any]] | None:
-    """Stamp every checklist item as done — backfill at story close.
-
-    Story s-checklist-readonly-on-closed-stories. Accepts the same
-    union shape as the TS twin (string | {text, done?, done_at?,
-    done_by?}). Returns canonical object list with done=true on every
-    item; items already done are preserved (idempotent — keeps their
-    original done_at/done_by). Returns None when input is empty/
-    invalid (caller leaves the field alone).
-    """
-    if not isinstance(raw, list) or not raw:
-        return None
-    out: list[dict[str, Any]] = []
-    for r in raw:
-        if isinstance(r, str):
-            text = r.strip()
-            if not text:
-                continue
-            out.append({"text": text, "done": True, "done_at": done_at, "done_by": done_by})
-        elif isinstance(r, dict):
-            text = str(r.get("text", "")).strip()
-            if not text:
-                continue
-            already_done = r.get("done") is True
-            if already_done:
-                item: dict[str, Any] = {"text": text, "done": True}
-                if r.get("done_at"):
-                    item["done_at"] = r["done_at"]
-                if r.get("done_by"):
-                    item["done_by"] = r["done_by"]
-                if r.get("evidence"):  # preserve granular evidence from `story check`
-                    item["evidence"] = r["evidence"]
-                out.append(item)
-            else:
-                out.append({"text": text, "done": True, "done_at": done_at, "done_by": done_by})
-    return out
-
-
-def _normalize_checklist(raw: Any) -> list[dict[str, Any]]:
-    """String|dict checklist → canonical ``{text, ...}`` dict list (preserves
-    existing done/evidence). Used by ``story check`` for granular marking."""
-    out: list[dict[str, Any]] = []
-    if not isinstance(raw, list):
-        return out
-    for r in raw:
-        if isinstance(r, str):
-            t = r.strip()
-            if t:
-                out.append({"text": t})
-        elif isinstance(r, dict) and str(r.get("text", "")).strip():
-            out.append(dict(r))
-    return out
-
-
-def _mark_checklist_items(
-    items: list[dict[str, Any]], selectors: tuple[str, ...], *,
-    mark_all: bool, done_at: str, done_by: str, evidence: str,
-) -> int:
-    """Mark selected checklist items done + evidence. Selectors match by
-    1-based index (digit selectors — EXACT int match, never substring) OR
-    case-insensitive substring of the item text (non-digit selectors).
-    Returns the number of items marked.
-
-    i-014: a digit selector must NOT fall through to the substring branch —
-    ``--ac 1`` used to also mark any item whose TEXT contained "1"
-    ("API v1", "10 retries", ...), over-marking checklists in the field.
-    """
-    n = 0
-    for i, it in enumerate(items, start=1):
-        match = mark_all
-        if not match:
-            for sel in selectors:
-                if sel.isdigit():
-                    if int(sel) == i:
-                        match = True
-                        break
-                    continue  # index selector: exact match only (i-014)
-                if sel and sel.lower() in str(it.get("text", "")).lower():
-                    match = True
-                    break
-        if match:
-            it["done"] = True
-            it["done_at"] = done_at
-            it["done_by"] = done_by
-            it["evidence"] = evidence
-            n += 1
-    return n
-
-
-@story_group.command("check")
-@click.argument("name")
-@click.option("--ac", "ac_sel", multiple=True,
-              help="Acceptance-criterion to mark done: 1-based index (exact) or text substring (repeatable).")
-@click.option("--dod", "dod_sel", multiple=True,
-              help="Definition-of-done item to mark done: 1-based index (exact) or text substring (repeatable).")
-@click.option("--all", "mark_all", is_flag=True, default=False,
-              help="Mark ALL acceptance_criteria + definition_of_done items done.")
-@click.option("--evidence", required=True,
-              help="Evidence the item is satisfied (PR #, commit sha, link, or prose). Stored per-item.")
-@click.option("--by", "by_actor", default=None,
-              help="Actor crediting the check (default: DNA_AGENT_OWNER or claude-code).")
-@_scope_option
-def cmd_story_check(
-    name: str, ac_sel: tuple[str, ...], dod_sel: tuple[str, ...],
-    mark_all: bool, evidence: str, by_actor: str | None, scope: str,
-) -> None:
-    """Mark specific AC / DoD items DONE **with evidence** — granular
-    Gapless-DoD closure, vs ``story done``'s blanket auto-backfill (which
-    stamps ``done_by=story-done-auto`` and no evidence). Select items by
-    1-based index or text substring; ``--all`` marks every AC + DoD item.
-
-    Example:
-        dna sdlc story check s-foo --ac 1 --dod "tests" --evidence "PR #42"
-    """
-    import os as _os
-    if not (ac_sel or dod_sel or mark_all):
-        raise click.UsageError("pass --ac/--dod selectors (index or substring) or --all")
-    actor = by_actor or _os.environ.get("DNA_AGENT_OWNER", "claude-code")
-    now = _now_iso()
-    with open_session(scope) as s:
-        existing = s.get_doc("Story", name)
-        if existing is None:
-            raise fail(f"Story '{name}' not found in scope {scope!r}")
-        spec = dict(existing.spec) if isinstance(existing.spec, dict) else {}
-        ac = _normalize_checklist(spec.get("acceptance_criteria"))
-        dod = _normalize_checklist(spec.get("definition_of_done"))
-        n_ac = (
-            _mark_checklist_items(ac, ac_sel, mark_all=mark_all, done_at=now, done_by=actor, evidence=evidence)
-            if (ac_sel or mark_all) else 0
-        )
-        n_dod = (
-            _mark_checklist_items(dod, dod_sel, mark_all=mark_all, done_at=now, done_by=actor, evidence=evidence)
-            if (dod_sel or mark_all) else 0
-        )
-        if n_ac == 0 and n_dod == 0:
-            raise fail("no AC/DoD items matched the selectors (check indices/substrings)")
-        if n_ac:
-            spec["acceptance_criteria"] = ac
-        if n_dod:
-            spec["definition_of_done"] = dod
-        spec["updated_at"] = now
-        _append_timeline(
-            spec, "checklist_check",
-            marked_ac=n_ac, marked_dod=n_dod, evidence=evidence, by=actor,
-        )
-        raw = _build_raw("Story", name, spec)
-        s.run(s.kernel.write_document(scope, "Story", name, raw))
-    click.secho(
-        f"✓ checked {n_ac} AC + {n_dod} DoD on Story/{name} "
-        f"(evidence: {evidence[:60]})",
-        fg="green",
-    )
 
 
 def _list_entries_for_parent(holder_or_session: Any, parent_ref: str) -> list[Any]:
