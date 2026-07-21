@@ -80,7 +80,7 @@ from dna.application import (  # noqa: F401 — re-exported for the faces + test
     set_status_impl,
 )
 from dna.application.live import parse_scope_grants
-from dna.application.runtime import _collect  # sdlc_digest_impl (deferred) uses it
+from dna.application.runtime import _collect  # sdlc_digest_impl (below) uses it
 
 
 # ── live DNA handle (composition root) ─────────────────────────────────────
@@ -126,18 +126,16 @@ async def boot_live(scope: str | None = None, base_dir: str | None = None) -> Li
     )
 
 
-# ── SDLC digest (DEFERRED — still lives here; see note) ────────────────────
+# ── SDLC digest (lives here by design; see note) ───────────────────────────
 #
 # adr-faces-reorg move #1 extracted the transport-agnostic ``*_impl`` use-cases
-# into ``dna.application`` (re-exported at the top of this module). ``sdlc_digest_impl``
-# is DELIBERATELY LEFT here for now: unlike its siblings it depends on
-# CLI-internal machinery — the digest aggregator ``dna_cli._digest.build_digest``
-# / ``resolve_since`` and the kind list ``dna_cli.sdlc_cmd._DIGEST_KINDS``. Moving
-# it cleanly into the core requires relocating that aggregator too (a larger,
-# separate change), so it is tracked as a follow-up rather than risked in this
-# behavior-preserving pass. It still delegates the raw fetch to the core
-# ``_collect`` (imported above). It is MCP-only (no REST twin), so leaving it here
-# keeps both faces green.
+# into ``dna.application`` (re-exported at the top of this module).
+# ``sdlc_digest_impl`` DELIBERATELY stays here: unlike its siblings it depends
+# on CLI-internal machinery — the digest aggregator ``dna_cli._digest.build_digest``
+# / ``resolve_since`` and the kind list ``dna_cli.sdlc_cmd._DIGEST_KINDS`` — and
+# moving it cleanly into the core would mean relocating that aggregator too. It
+# still delegates the raw fetch to the core ``_collect`` (imported above). It is
+# MCP-only (no REST twin), so living here keeps both faces green.
 
 
 async def sdlc_digest_impl(
@@ -165,41 +163,22 @@ async def sdlc_digest_impl(
     return build_digest(docs=docs, since=since_dt, until=now, since_label=label, scope=sc)
 
 
-# ── MCP Apps (SEP-1865): a UI card at the tool ─────────────────────────────
+# ── The memory result shape: data first, for every kind of host ────────────
 #
-# The memory-list tool returns its structured data AND a `ui://dna/memory-list`
-# UI resource (a self-contained rawHtml card), linked from the tool result's
-# `_meta.ui.resourceUri`, so an MCP host renders it in a sandboxed iframe. The
-# card HTML + the `create_ui_resource` payload live in the SDK's standalone
-# emit surface `dna.emit.mcp_ui` (pure, byte-golden, dependency-free); this face
-# turns the payload into a live resource and attaches the `_meta` pointer.
-#
-# Everything is imported LAZILY so the base install stays MCP-free (the
-# `mcp-ui-server` dep rides the optional `[mcp]` extra) and non-MCP-App hosts
-# degrade gracefully: if `mcp-ui-server` is absent the plain data dict is
-# returned unchanged.
+# The DATA is always the primary `content` (the lesson of M0): every MCP
+# client reads the memories from the textual result, byte-stable.
+# `structured_content` mirrors the same data for hosts that consume the
+# structured channel.
 
 
 def _with_memory_card(data: dict[str, Any]) -> Any:
-    """Attach MCP-App metadata to the ``list_memories`` result WITHOUT hiding the data.
+    """Shape the ``list_memories`` result for every kind of host, data first.
 
-    The DATA is the primary ``content`` (a JSON text block) so EVERY MCP client reads
-    the memories directly. The original M0 put ONLY the rendered card (an
-    ``EmbeddedResource``) in ``content`` and the data in ``structured_content`` — but a
-    normal MCP client reads ``content``, not ``structured_content`` (verified live:
-    ``langchain-mcp-adapters`` returns just the content blocks), so the copilot's own
-    LangGraph agent + the LLM + the canvas projection were starved of memories (empty
-    canvas + the LLM reasoning over raw HTML). ``structured_content`` mirrors the data
-    and ``_meta.ui.resourceUri`` links the ``ui://dna/memory-list`` MCP-App card for
-    hosts that render MCP Apps (fetched via ``resources/read`` — registering that
-    resource + a data-aware template is the proper follow-up; the inline-rawHtml
-    shortcut that broke normal clients is removed). Degrades to the plain ``data`` dict
-    when ``dna.emit`` is unavailable — the tool never breaks."""
-    try:
-        from dna.emit.mcp_ui import UI_MEMORY_LIST_URI
-    except ModuleNotFoundError:  # pragma: no cover — dna.emit not importable.
-        return data
-
+    The DATA is the primary ``content`` (a JSON text block) so EVERY MCP client
+    reads the memories directly — a normal MCP client reads ``content``, not
+    ``structured_content`` (verified live: ``langchain-mcp-adapters`` returns
+    just the content blocks). ``structured_content`` mirrors the data. The
+    result carries no UI metadata."""
     import json
 
     from fastmcp.tools.tool import ToolResult
@@ -208,11 +187,6 @@ def _with_memory_card(data: dict[str, Any]) -> Any:
     return ToolResult(
         content=[TextContent(type="text", text=json.dumps(data))],
         structured_content=data,
-        meta={
-            # Both spellings of the pointer for host compatibility.
-            "ui": {"resourceUri": UI_MEMORY_LIST_URI},
-            "ui/resourceUri": UI_MEMORY_LIST_URI,
-        },
     )
 
 
@@ -785,15 +759,7 @@ def build_server(
 
     @server.tool(run_in_thread=False)
     async def list_memories(scope: str | None = None) -> dict[str, Any]:
-        """List your stored memories (tenant-scoped). Read-only.
-
-        Also emits an **MCP-App card** (SEP-1865): alongside the structured data
-        the tool returns a ``ui://dna/memory-list`` UI resource linked from
-        ``_meta.ui.resourceUri``, so an MCP host (Claude/ChatGPT/VS Code/Goose)
-        renders the memory list as a card in a sandboxed iframe — DNA's "your
-        context follows you across every client" thesis made visible. Hosts that
-        do not support MCP Apps ignore the resource and read the plain data
-        (graceful degradation)."""
+        """List your stored memories (tenant-scoped). Read-only."""
         data = await list_memories_impl(
             await _live(), scope, tenant=await _guard("memory", scope=scope, memory_op="read")
         )
