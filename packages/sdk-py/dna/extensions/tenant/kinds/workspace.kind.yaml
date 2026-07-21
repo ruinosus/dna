@@ -86,14 +86,21 @@ spec:
         - string
         - 'null'
         description: The BILLING ACCOUNT that owns this workspace — an opaque id
-          (like workspace_id it is matched, never parsed), recorded AT CREATION
-          from the caller's VERIFIED account claim (Entra `tid`,
-          WorkOS/Clerk/Auth0 `org_id`, Google Workspace `hd` — whatever the
-          provider block's `tenant_claim` names). THE SUBSCRIPTION IS PER
-          ACCOUNT - one AccountPlan covers EVERY workspace sharing this id, so a
-          second workspace is never a second charge and never needs a second
-          write. Null = no resolvable account, which resolves to the Free floor
-          (fail-closed) — never another account's tier, never a paid default.
+          (like workspace_id it is matched WHOLE, never parsed), recorded AT
+          CREATION from the caller's VERIFIED claims by
+          dna.tenancy.account_id_from_claims. An account is an ORGANIZATION (the
+          provider block's `tenant_claim` — Entra `tid`, WorkOS/Clerk/Auth0
+          `org_id`, Google Workspace `hd`) or, when the sign-in belongs to no
+          organization, a PERSON (the identity's durable `sub` — the consumer
+          lane). The id is NAMESPACED by provider and kind (`entra-org:<tid>`,
+          `workos-org:<org_id>`, `workos-user:<sub>`, ...) so a `tid` and a `sub`
+          sharing a literal value can never be one account, and so the kind is
+          legible; the prefix is for uniqueness and reading, NEVER a parsing or
+          authorization surface. THE SUBSCRIPTION IS PER ACCOUNT - one AccountPlan
+          covers EVERY workspace sharing this id, so a second workspace is never a
+          second charge and never needs a second write. Null = no resolvable
+          account, which resolves to the Free floor (fail-closed) — never another
+          account's tier, never a paid default.
       plan_ref:
         type:
         - string

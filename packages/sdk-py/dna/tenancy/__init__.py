@@ -13,11 +13,21 @@ from __future__ import annotations
 import re
 
 from dna.tenancy.accounts import (
+    ACCOUNT_NAMESPACE_SEPARATOR,
+    AccountNamespace,
+    CLAIM_PROVIDER_HINT,
     DEFAULT_ACCOUNT_CLAIM,
+    DNA_PROVIDER_FAMILY_MARKER,
+    DNA_PROVIDER_TYPE_MARKER,
     DNA_TENANT_CLAIM_MARKER,
+    FAMILY_PROVIDER_TYPE,
+    GENERIC_ORG_NAMESPACE,
     MSA_SHARED_TENANT_ID,
+    PROVIDER_ACCOUNT_NAMESPACES,
     account_id_from_claims,
     is_account_id,
+    namespaced_account_id,
+    provider_type_from_claims,
 )
 from dna.tenancy.invites import (
     AcceptResult,
@@ -64,12 +74,23 @@ def workspace_membership_name(workspace_id: str, email: str) -> str:
 
 
 __all__ = [
-    # accounts (s-account-scoped-plan) — the BILLING ACCOUNT a sign-in denotes.
+    # accounts (s-account-scoped-plan) — the BILLING ACCOUNT a sign-in denotes,
+    # namespaced by provider + account KIND (org vs. person / consumer lane).
+    "ACCOUNT_NAMESPACE_SEPARATOR",
+    "AccountNamespace",
+    "CLAIM_PROVIDER_HINT",
     "DEFAULT_ACCOUNT_CLAIM",
+    "DNA_PROVIDER_FAMILY_MARKER",
+    "DNA_PROVIDER_TYPE_MARKER",
     "DNA_TENANT_CLAIM_MARKER",
+    "FAMILY_PROVIDER_TYPE",
+    "GENERIC_ORG_NAMESPACE",
     "MSA_SHARED_TENANT_ID",
+    "PROVIDER_ACCOUNT_NAMESPACES",
     "account_id_from_claims",
     "is_account_id",
+    "namespaced_account_id",
+    "provider_type_from_claims",
     "CrossWorkspaceError",
     "Identity",
     "Membership",

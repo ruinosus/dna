@@ -136,12 +136,36 @@ every workspace somebody else founded and invited you into, and paying for those
 would hand a tier to an account that never bought one.
 
 `Workspace.account_id` is stamped once, at creation, from the caller's verified
-account claim (whatever the IdP block's `tenant_claim` names — Entra `tid`,
-WorkOS/Clerk/Auth0 `org_id`, Google Workspace `hd`). A workspace with no
-resolvable account falls to the **Free floor**: fail-closed, never another
-account's tier. There is deliberately no rule that treats an account-less
-workspace as its own account — that would resurrect per-workspace billing as a
-silent default.
+claims (`dna.tenancy.account_id_from_claims`). **An account is an organization or
+a person, and both can be sold to:**
+
+* **organization** — whatever the IdP block's `tenant_claim` names (Entra `tid`,
+  WorkOS/Clerk/Auth0 `org_id`, Google Workspace `hd`);
+* **person** — when the sign-in belongs to no organization (the consumer lane),
+  the identity's durable `sub`. Before this, such a sign-in resolved to no
+  account at all: permanent Free with no way to buy, which is not a plan for a
+  product whose wedge is an individual story.
+
+The id is **namespaced by provider and by account kind** — `entra-org:<tid>`,
+`workos-org:<org_id>`, `workos-user:<sub>`, and the same `-org`/`-user` pair for
+`clerk`, `auth0` and `google`; `tenant:<value>` when the provider cannot be
+named. This buys exactly two things: a `tid` and a `sub` that happen to share a
+literal value can never be the same account, and an id read in a Stripe record or
+a support ticket says what kind of account it is. **The prefix is not a parsing
+surface** — nothing branches on it to decide authorization or entitlement; the
+authorization input is the verified claim, never a substring of an id DNA minted.
+
+Entra has no person lane on purpose: its `sub` is *pairwise* (unique per user
+*per application*), so the same human presents a different `sub` to a different
+app registration. Its durable id is `oid`, but making a personal Microsoft
+account billable is a separate product decision — so the shared-MSA tenant
+(`9188040d-…`, which *every* personal Microsoft account presents as its `tid`)
+stays refused outright rather than becoming one giant shared account.
+
+A workspace with no resolvable account falls to the **Free floor**: fail-closed,
+never another account's tier. There is deliberately no rule that treats an
+account-less workspace as its own account — that would resurrect per-workspace
+billing as a silent default.
 
 (The per-workspace `PUT /v1/workspace-plan` route and its `WorkspacePlan` Kind
 were retired; the Kind remains a write-block tombstone so a stale caller fails

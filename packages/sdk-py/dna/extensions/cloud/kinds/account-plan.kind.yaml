@@ -13,14 +13,27 @@
 # bought. One write, one truth — the plan is keyed on the account and the
 # enforcement path resolves ``workspace → account_id → plan``.
 #
-# WHAT AN ACCOUNT IS. ``account_id`` is an opaque string, exactly like
-# ``workspace_id`` is: the SDK matches it and never parses it. It is recorded on
-# the ``Workspace`` doc at CREATION from the caller's VERIFIED account claim (the
-# per-IdP "which org/tenant is this token from" claim the auth layer already
-# knows — Entra ``tid``, WorkOS/Clerk/Auth0 ``org_id``, Google Workspace ``hd``;
-# see ``dna.tenancy.account_id_from_claims`` and
-# ``dna_cli._mcp_auth._PROVIDER_TENANT_CLAIM_DEFAULT``). No new entity, no new
-# ceremony — the same string dna-cloud's Stripe customer already carries.
+# WHAT AN ACCOUNT IS. An ORGANIZATION or a PERSON — both can be sold to. It is
+# recorded on the ``Workspace`` doc at CREATION from the caller's VERIFIED claims
+# (see ``dna.tenancy.account_id_from_claims``): the per-IdP "which org/tenant is
+# this token from" claim the auth layer already knows (Entra ``tid``,
+# WorkOS/Clerk/Auth0 ``org_id``, Google Workspace ``hd``), or — when the sign-in
+# belongs to NO organization, which is the consumer lane — the durable ``sub`` of
+# the identity, because there the person IS the account.
+#
+# THE ID CARRIES ITS OWN KIND. Every account_id is namespaced by provider AND by
+# account kind: ``entra-org:<tid>``, ``workos-org:<org_id>``,
+# ``workos-user:<sub>``, ``clerk-org:``/``clerk-user:``, ``auth0-org:``/
+# ``auth0-user:``, ``google-org:``/``google-user:``, and ``tenant:<value>`` when
+# the provider cannot be named. Two reasons, and only two: a ``tid`` and a ``sub``
+# that happen to share a literal value can never be the same account, and an id is
+# legible in a Stripe record or a support ticket — which matters the day a person
+# and a company are priced differently.
+#
+# ⚠️ THE PREFIX IS NOT A PARSING SURFACE. ``account_id`` is an opaque string,
+# exactly like ``workspace_id`` is: the SDK matches it whole and never splits it.
+# Nothing may branch on the prefix to decide authorization or entitlement — the
+# authorization input is the verified claim, never a substring of an id we minted.
 #
 # FAIL-CLOSED. A workspace whose ``account_id`` is absent or unresolvable
 # resolves to NO AccountPlan, and the MCP guard therefore falls to the **Free**

@@ -54,8 +54,10 @@ Env knobs (all optional; defaults seed the real founder workspace #1):
                          there it authorizes nothing. It is ALSO this workspace's
                          BILLING ACCOUNT (see below). Default == DNA_WORKSPACE_ID,
                          for this one workspace where the two strings coincide.
-    DNA_ACCOUNT_ID       the billing account that owns the workspace (default ==
-                         DNA_FOUNDER_TID)
+    DNA_ACCOUNT_ID       the billing account that owns the workspace (default:
+                         the founder's tid in the Entra ORG namespace,
+                         ``entra-org:<DNA_FOUNDER_TID>`` — the account id must be
+                         the NAMESPACED form the runtime mints, not the bare tid)
 
 **This script is also the account_id BACKFILL** (s-account-scoped-plan). The
 subscription is now keyed on the BILLING ACCOUNT, so ``Workspace.account_id``
@@ -86,6 +88,8 @@ import re
 from datetime import datetime, timezone
 from typing import Any
 
+from dna.tenancy import PROVIDER_ACCOUNT_NAMESPACES, namespaced_account_id
+
 TENANT_API = "github.com/ruinosus/dna/tenant/v1"
 LIB_SCOPE = "_lib"  # GLOBAL Kinds live here (tenant column empty).
 
@@ -100,15 +104,31 @@ WORKSPACE_ID = os.environ.get("DNA_WORKSPACE_ID", DEFAULT_WORKSPACE_ID)
 WORKSPACE_NAME = os.environ.get("DNA_WORKSPACE_NAME", DEFAULT_WORKSPACE_NAME)
 FOUNDER_EMAIL = os.environ.get("DNA_FOUNDER_EMAIL", DEFAULT_FOUNDER_EMAIL)
 FOUNDER_TID = os.environ.get("DNA_FOUNDER_TID", WORKSPACE_ID)
-# The BILLING ACCOUNT that owns workspace #1. It is the founder's Entra `tid` —
-# the same string the portal's plan table and the Stripe customer's
-# `metadata.tenant` have always been keyed by, which is exactly why the account
-# is that claim and not a newly invented entity. That it also equals
-# WORKSPACE_ID here is a coincidence of this one workspace's history (its id was
-# adopted from the tid so the `tenant` column needed no rewrite) — NOT a rule.
-# Nothing in the runtime derives an account from a workspace id; if it did, every
-# workspace would be its own account and the plan would be per-workspace again.
-ACCOUNT_ID = os.environ.get("DNA_ACCOUNT_ID", FOUNDER_TID)
+# The BILLING ACCOUNT that owns workspace #1: the founder's Entra `tid`, in the
+# Entra ORGANIZATION namespace.
+#
+# ⚠️ THE NAMESPACE IS NOT DECORATION — it must match byte-for-byte what
+# `dna.tenancy.account_id_from_claims` mints for the founder's own sign-in, or
+# this workspace resolves to an AccountPlan nobody writes and silently meters as
+# Free. Every account id carries WHICH KIND of account it is (`entra-org:` an
+# Entra org, `workos-user:` a person on the consumer lane, ...) so a `tid` and a
+# `sub` that happen to be the same literal string can never be the same account.
+# It is built HERE through the SDK's own helper rather than by string-concat, so
+# a change to the format cannot leave this backfill behind.
+#
+# That the tid also equals WORKSPACE_ID is a coincidence of this one workspace's
+# history (its id was adopted from the tid so the `tenant` column needed no
+# rewrite) — NOT a rule. Nothing in the runtime derives an account from a
+# workspace id; if it did, every workspace would be its own account and the plan
+# would be per-workspace again.
+#
+# ⚠️ dna-cloud must send this SAME namespaced string: the Stripe customer's
+# `metadata.tenant` and the plan-table key were the BARE tid and now have to be
+# `entra-org:<tid>`.
+ACCOUNT_ID = os.environ.get(
+    "DNA_ACCOUNT_ID",
+    namespaced_account_id(PROVIDER_ACCOUNT_NAMESPACES["entra"].org, FOUNDER_TID),
+)
 
 
 def membership_doc_name(workspace_id: str, email: str) -> str:
