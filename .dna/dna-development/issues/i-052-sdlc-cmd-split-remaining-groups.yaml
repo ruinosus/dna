@@ -1,0 +1,26 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-052-sdlc-cmd-split-remaining-groups
+spec:
+  description: "Continuacao do split do sdlc_cmd (PR #198, f-cli-session-injection).\
+    \ A DI destravou TODOS os grupos; sairam reference, journey+demand, narrative,\
+    \ initiative (7221 -> 4608 linhas). Restam: story, kaizen, feature, issue, epic,\
+    \ spike, bug, task, adr, spec/plan factory, produces, artifact, changelog. Proximo\
+    \ passo conhecido: spike depende de _post_start_beat/_post_done_beat/_looks_like_decision\
+    \ (presence-beats da regiao story compartilhados entre grupos) + o bloco de constantes\
+    \ de status \u2014 um novo tier de promocao a espinha, mesma forma do trio _transition_workitem\
+    \ ja promovido. Protocolo provado no #198: golden --help do CLI inteiro (206 comandos)\
+    \ vazio a cada commit, controle negativo com mutacao confirmada aplicada, suites\
+    \ no baseline, commits revertiveis. Achado lateral registrado no caminho (relatorio\
+    \ anterior): adr bate os 5 verbos do factory spec/plan mas e escrito a mao \u2014\
+    \ DRY parcial real, precisa de create especializado."
+  type: task
+  severity: medium
+  status: open
+  timeline:
+  - at: '2026-07-21T13:33:06+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
