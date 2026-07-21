@@ -43,11 +43,18 @@ def api() -> None:
                    "from membership, never trusted from the caller).")
 @click.option("--token", default=None,
               help="Expected bearer token for --auth token (else the DNA_API_TOKEN env var).")
+@click.option("--token-scope", "token_scopes", multiple=True,
+              help="A scope this credential may read when the request resolves NO "
+                   "workspace (repeatable; else the DNA_TOKEN_SCOPES env var, "
+                   "comma-separated). Absent, such a caller is bound to the ONE "
+                   "scope this server was booted on — absence of a workspace is not "
+                   "a right to every scope. Pass `*` to consciously opt out.")
 @click.option("--cors-origin", "cors_origins", multiple=True,
               help="Allowed browser origin for CORS (repeatable; else "
                    "DNA_API_CORS_ORIGINS, else http://localhost:3000).")
 def serve(scope: str | None, base_dir: str | None, host: str, port: int,
-          auth: str, token: str | None, cors_origins: tuple[str, ...]) -> None:
+          auth: str, token: str | None, token_scopes: tuple[str, ...],
+          cors_origins: tuple[str, ...]) -> None:
     """Run the DNA REST read-API (the WEB face — a request/response HTTP API).
 
     \b
@@ -104,6 +111,7 @@ def serve(scope: str | None, base_dir: str | None, host: str, port: int,
         app = build_app(
             scope=scope, base_dir=base_dir, auth=auth, token=token,
             cors_origins=list(cors_origins) or None,
+            token_scopes=list(token_scopes) or None,
         )
     except RuntimeError as exc:
         raise click.ClickException(str(exc)) from None

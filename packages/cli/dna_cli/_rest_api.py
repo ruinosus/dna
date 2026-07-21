@@ -146,6 +146,7 @@ def build_app(
     token: str | None = None,
     cors_origins: list[str] | None = None,
     verifier: Any = None,
+    token_scopes: list[str] | None = None,
 ) -> Any:
     """Build the DNA REST read-API (a ``FastAPI`` app) over the live kernel.
 
@@ -168,6 +169,15 @@ def build_app(
         is OVERWRITTEN from membership, never trusted from the caller) — mirroring
         the MCP ``--auth config`` path. A no-membership / cross-workspace request is
         denied (fail-closed).
+
+    ``token_scopes`` — the scope grant for a WORKSPACE-LESS authenticated caller
+    (``--auth token``'s shared service credential, and the ``--auth config``
+    legacy-passthrough case where the source configured no workspaces). Falls back
+    to ``DNA_TOKEN_SCOPES`` (comma-separated). Absent, the credential is bound
+    to the ONE scope the server was booted on; ``"*"`` is the conscious opt-out
+    back to unrestricted multi-scope reads. This is the i-034 fix: before it, a
+    caller that resolved no workspace could name ANY scope precisely *because* it
+    had no workspace to be bound to (absence of evidence became a right).
 
     Raises a clean ``RuntimeError`` if the optional ``fastapi`` dependency is absent.
     """
@@ -224,6 +234,7 @@ def build_app(
         set_member_impl,
         set_workspace_plan_impl,
     )
+    from dna.application.live import parse_scope_grants
     from dna.tenancy import Identity
     from dna_cli._mcp_server import boot_live
     # The intel face delegates to the CORE engine (adr-faces-reorg: logic in the
@@ -288,6 +299,55 @@ def build_app(
         return _state["live"]
 
     guarded = [Depends(_auth_dep)]
+
+    # The scope grant for a workspace-less authenticated credential (i-034).
+    # Resolved ONCE here so every enforcement point reads the same configured set.
+    _token_scopes = (
+        frozenset(token_scopes)
+        if token_scopes
+        else parse_scope_grants(os.environ.get("DNA_TOKEN_SCOPES"))
+    )
+
+    def _scope_denied(req_scope: str, live: Any) -> Any:
+        return JSONResponse(
+            {"detail": f"scope {req_scope!r} is not granted to this credential; "
+                       f"a request that resolves no workspace may only read the "
+                       f"scopes explicitly granted to its token "
+                       f"(default: {live.base_scope!r}). Set DNA_TOKEN_SCOPES "
+                       f"(or --token-scope) to widen the grant."},
+            status_code=403,
+        )
+
+    # -- i-034: shared-token scope binding ------------------------------------
+    # `--auth token` is a SERVICE credential: authenticated, but it resolves no
+    # workspace and never did, so the workspace binder below could not see it —
+    # this is the path dna-cloud's portal actually uses, and the path i-028 left
+    # wide open. An authenticated caller that resolves no workspace is now bound to
+    # the scopes explicitly granted to its token. 401 stays the Depends' job: this
+    # middleware only speaks once the bearer is known-good, so an unauthenticated
+    # request still gets 401 (not a 403 that would leak which scopes exist).
+    if auth == "token":
+
+        @app.middleware("http")
+        async def _token_scope_bind(request: Request, call_next):  # type: ignore[no-untyped-def]
+            if request.url.path == "/health":
+                return await call_next(request)
+            req_scope = request.query_params.get("scope")
+            if req_scope is None:
+                return await call_next(request)
+            expected = token or os.environ.get("DNA_API_TOKEN")
+            authz = request.headers.get("authorization") or ""
+            if not expected or not authz.startswith("Bearer "):
+                return await call_next(request)  # let _auth_dep answer 401/500.
+            provided = authz[len("Bearer "):].strip()
+            if not secrets.compare_digest(provided, expected):
+                return await call_next(request)  # let _auth_dep answer 401.
+            live = await _live()
+            if not live.scope_is_bound(
+                req_scope, None, authenticated=True, granted_scopes=_token_scopes
+            ):
+                return _scope_denied(req_scope, live)
+            return await call_next(request)
 
     # -- Model B config-auth: token→identity→workspace binding (S2.4) ---------
     # The verified-identity ingress (ADR §2.2): a bearer JWT is verified by the
@@ -356,6 +416,16 @@ def build_app(
             grants_raw = await (await _live()).kernel.workspace_memberships()
             if not grants_raw:
                 # No workspaces configured → Model B not engaged (legacy passthrough).
+                # The TENANCY passthrough stays (a pre-Model-B deployment keeps
+                # working), but it is not a scope grant: this caller IS
+                # authenticated and resolves no workspace, so i-034's rule applies
+                # — only an explicitly granted scope is reachable.
+                live = await _live()
+                req_scope = request.query_params.get("scope")
+                if req_scope is not None and not live.scope_is_bound(
+                    req_scope, None, authenticated=True, granted_scopes=_token_scopes
+                ):
+                    return _scope_denied(req_scope, live)
                 return await call_next(request)
 
             memberships = [Membership.from_spec(g.get("spec") or {}) for g in grants_raw]
@@ -372,14 +442,24 @@ def build_app(
 
             # Bind the physical scope too (defense-in-depth, mirror the MCP guard):
             # an explicit `scope=` naming another workspace's scope is denied.
+            # Bind the physical scope. NOTE the missing `workspace and` guard that
+            # used to be here (i-034): gating the check on a resolved workspace made
+            # the workspace-less caller — the one with the LEAST proven right to any
+            # scope — the only one that skipped the check entirely. `scope_is_bound`
+            # now takes `authenticated` and fails closed on that branch itself.
             live = await _live()
             req_scope = request.query_params.get("scope")
-            if workspace and not live.scope_is_bound(req_scope, workspace):
-                return JSONResponse(
-                    {"detail": f"request is bound to workspace {workspace!r}; "
-                               f"cross-workspace access to scope {req_scope!r} is denied"},
-                    status_code=403,
-                )
+            if not live.scope_is_bound(
+                req_scope, workspace, authenticated=True, granted_scopes=_token_scopes
+            ):
+                if workspace:
+                    return JSONResponse(
+                        {"detail": f"request is bound to workspace {workspace!r}; "
+                                   f"cross-workspace access to scope {req_scope!r} "
+                                   f"is denied"},
+                        status_code=403,
+                    )
+                return _scope_denied(req_scope, live)
 
             # OVERWRITE the tenant query param with the membership-bound workspace.
             qs = parse_qs(request.scope.get("query_string", b"").decode())
