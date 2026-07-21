@@ -39,6 +39,7 @@ from dna_cli._active_story import (
 )
 from dna_cli._ctx import (
     dna_session,
+    open_session,
     fail,
     print_json,
     print_table,
@@ -676,7 +677,7 @@ def _update_story_status(
     blocked_reason) go through ``extras`` instead. ``produces_add``
     (kind, name, role) appends to the Story's produces[] hub in the same
     load-modify-write (e.g. the start-gate's Plan)."""
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         existing = s.get_doc("Story", name)
         if existing is None:
             raise fail(f"Story '{name}' not found in scope {scope!r}")
@@ -705,7 +706,7 @@ def _post_story_note(scope: str, name: str, note: str) -> None:
     subsequent ``_update_story_status`` re-read. Auto-promotes decision-shaped
     notes (mirrors ``story comment``). Raises (fail) if the Story is missing."""
     event_type = "decision" if _looks_like_decision(note) else "comment"
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         existing = s.get_doc("Story", name)
         if existing is None:
             raise fail(f"Story '{name}' not found in scope {scope!r}")
@@ -719,7 +720,7 @@ def _post_story_note(scope: str, name: str, note: str) -> None:
 def _load_story_spec(scope: str, name: str) -> dict[str, Any]:
     """Read a Story's current spec dict (empty dict if absent). Used to feed the
     WARN-only FOCUS guards the state BEFORE a transition flips status."""
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         existing = s.get_doc("Story", name)
         if existing is None or not isinstance(existing.spec, dict):
             return {}
@@ -5427,7 +5428,7 @@ def _transition_workitem(
     stamp ``updated_at``, append a ``status_change`` timeline event with
     ``from``/``to`` + any ``timeline_extras``, write, and report.
     """
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         existing = s.get_doc(kind, name)
         if existing is None:
             raise fail(f"{kind} '{name}' not found in scope {scope!r}")
