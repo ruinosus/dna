@@ -1,6 +1,6 @@
 [project]
 name = "dna-client"
-version = "0.21.1"
+version = "0.22.0"
 description = "DNA — Official Python client for the DNA REST read-API (spec-parity twin of the TypeScript dna-client)"
 readme = "README.md"
 license = "MIT"
