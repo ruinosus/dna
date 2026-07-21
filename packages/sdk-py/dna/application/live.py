@@ -10,7 +10,26 @@ hands it to the shared use-cases.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Iterable
+
+#: The conscious opt-out sentinel for a workspace-less credential's scope grant
+#: (see :meth:`LiveDna.scope_is_granted`). An operator that genuinely wants a
+#: service token to read every scope writes this explicitly, so the exposure is
+#: configured and auditable instead of silent — which is the whole point of the
+#: i-034 fix.
+SCOPE_GRANT_ALL = "*"
+
+
+def parse_scope_grants(raw: str | None) -> frozenset[str] | None:
+    """Parse a comma-separated scope-grant list (a CLI flag / env var) into a set.
+
+    ``None`` / blank → ``None`` ("nothing granted"), which the binder reads as
+    fail-closed to the server's own :attr:`LiveDna.base_scope`. Whitespace around
+    entries is trimmed and empties dropped, so ``"a, b,"`` is ``{"a", "b"}``."""
+    if not raw:
+        return None
+    names = frozenset(part.strip() for part in raw.split(",") if part.strip())
+    return names or None
 
 
 @dataclass
@@ -65,20 +84,74 @@ class LiveDna:
             return self.base_scope
         return f"{self.workspace_scope_prefix}{workspace}"
 
-    def scope_is_bound(self, requested: str | None, workspace: str | None) -> bool:
-        """True when an explicitly ``requested`` scope is allowed for ``workspace``.
+    def scope_is_bound(
+        self,
+        requested: str | None,
+        workspace: str | None,
+        *,
+        authenticated: bool = False,
+        granted_scopes: Iterable[str] | None = None,
+    ) -> bool:
+        """True when an explicitly ``requested`` scope is allowed for this caller.
 
-        The scope-binding half of the isolation invariant (the edge enforces it):
-        when multi-workspace is ON and a request carries a resolved workspace, the
-        ONLY scope it may name is its own ``default_scope`` — a caller-supplied
-        ``scope`` pointing at another workspace's (or the vendor's) scope is a
-        cross-workspace read and must be denied. Returns ``True`` (allowed) when:
-        multi-workspace is off, there is no workspace, no explicit scope was named,
-        or the named scope IS the workspace's own.
+        The scope-binding half of the isolation invariant (the edge enforces it).
+        There are three regimes, and the distinction that matters is **not**
+        "is there a workspace" but "is this caller AUTHENTICATED":
+
+        1. ``authenticated=False`` — stdio / local / ``--auth none``. No credential,
+           no tenancy, nothing to bind to: any scope is allowed, exactly as before.
+           This is the OSS / self-host path and it is never capped.
+        2. ``authenticated=True`` **with a resolved** ``workspace`` — when
+           multi-workspace is ON the only scope the request may name is its own
+           ``default_scope``; a ``scope`` pointing at another workspace's (or the
+           vendor's) is a cross-workspace read and is denied. With multi-workspace
+           OFF this is the documented single-tenant shared-scope+overlay model and
+           stays permissive.
+        3. ``authenticated=True`` and **no workspace resolved** — a service /
+           shared-token credential, or an authenticated request on a source that
+           configured no workspaces. This used to return ``True`` (i-034: the REST
+           path's fail-open), which made *absence of evidence* into a right: a
+           caller that resolved no workspace could name ANY scope precisely because
+           it had no workspace to be bound to. It is now **fail-closed** — only a
+           scope EXPLICITLY granted to the credential is reachable.
+           ``granted_scopes`` is that grant: ``None`` means "nothing was granted",
+           which falls back to the single scope the server was booted on
+           (:attr:`base_scope`); the sentinel :data:`SCOPE_GRANT_ALL` (``"*"``) is
+           the operator's conscious, auditable opt-out back to unrestricted
+           multi-scope reads.
+
+        ``requested is None`` (the caller named no scope) is always allowed — it
+        resolves to :meth:`default_scope`, which is itself workspace-bound.
         """
-        if requested is None or not workspace or not self.vendor_workspace:
+        if requested is None:
             return True
-        return requested == self.default_scope(workspace)
+        if not authenticated:
+            # Regime 1 — unauthenticated/local. No tenancy exists to bind against.
+            return True
+        if workspace:
+            # Regime 2 — a resolved workspace may only reach its own scope.
+            if not self.vendor_workspace:
+                return True
+            return requested == self.default_scope(workspace)
+        # Regime 3 — authenticated but workspace-less: explicit grant, or nothing.
+        return self.scope_is_granted(requested, granted_scopes)
+
+    def scope_is_granted(
+        self, requested: str, granted_scopes: Iterable[str] | None
+    ) -> bool:
+        """True when ``requested`` is explicitly granted to a workspace-less
+        authenticated credential.
+
+        The grant is a closed set of scope names, or the sentinel
+        :data:`SCOPE_GRANT_ALL`. ``None`` / empty means nothing was granted, and the
+        credential falls back to the ONE scope the server was booted on — never to
+        "everything", which is the fail-open this method exists to prevent."""
+        grants = frozenset(granted_scopes) if granted_scopes else frozenset()
+        if not grants:
+            return requested == self.base_scope
+        if SCOPE_GRANT_ALL in grants:
+            return True
+        return requested in grants
 
     async def mi(self, scope: str | None = None, tenant: str | None = None) -> Any:
         """Build a (optionally tenant-resolved) ManifestInstance for ``scope``.

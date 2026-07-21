@@ -62,22 +62,35 @@ def test_default_scope_prefix_is_configurable():
     assert _live(vendor="v", prefix="ws-").default_scope("acme") == "ws-acme"
 
 
+# NOTE on the ``authenticated=True`` below: issue ``i-034`` added that keyword
+# because the binder's real axis is whether a CREDENTIAL was presented, not whether
+# a workspace happens to be present — the workspace-LESS authenticated caller (the
+# portal's shared service token) was the one slipping through, precisely because it
+# had no workspace to be compared against. These three tests describe the
+# RESOLVED-workspace regime, which by definition only exists for an authenticated
+# request, so they now say so explicitly. Only the SETUP moved; every answer below
+# is byte-identical to what it was before i-034. The fail-closed half is pinned
+# separately in ``packages/sdk-py/tests/test_scope_binding_guard.py``.
+
+
 def test_scope_is_bound_off_allows_any_scope():
     # Multi-workspace OFF → binding is a no-op (the shared-scope + overlay model).
     live = _live(vendor=None)
-    assert live.scope_is_bound("anything", "ws-acme") is True
+    assert live.scope_is_bound("anything", "ws-acme", authenticated=True) is True
 
 
 def test_scope_is_bound_allows_none_and_own_scope():
     live = _live(vendor="c5b891f7")
-    assert live.scope_is_bound(None, "ws-acme") is True             # omitted → default.
-    assert live.scope_is_bound("tenant-ws-acme", "ws-acme") is True  # own scope.
-    assert live.scope_is_bound("dna-development", "c5b891f7") is True  # vendor's own.
+    a = {"authenticated": True}
+    assert live.scope_is_bound(None, "ws-acme", **a) is True             # omitted → default.
+    assert live.scope_is_bound("tenant-ws-acme", "ws-acme", **a) is True  # own scope.
+    assert live.scope_is_bound("dna-development", "c5b891f7", **a) is True  # vendor's own.
 
 
 def test_scope_is_bound_denies_cross_workspace():
     live = _live(vendor="c5b891f7")
+    a = {"authenticated": True}
     # a non-vendor workspace naming the vendor's scope → cross-workspace.
-    assert live.scope_is_bound("dna-development", "ws-acme") is False
+    assert live.scope_is_bound("dna-development", "ws-acme", **a) is False
     # a workspace naming ANOTHER workspace's scope → cross-workspace.
-    assert live.scope_is_bound("tenant-ws-globex", "ws-acme") is False
+    assert live.scope_is_bound("tenant-ws-globex", "ws-acme", **a) is False

@@ -79,6 +79,7 @@ from dna.application import (  # noqa: F401 — re-exported for the faces + test
     remember_impl,
     set_status_impl,
 )
+from dna.application.live import parse_scope_grants
 from dna.application.runtime import _collect  # sdlc_digest_impl (deferred) uses it
 
 
@@ -352,11 +353,28 @@ def build_server(
         live = await _live()
         # Scope-binding (isolation): a resolved workspace may only reach its own
         # scope — a caller-supplied ``scope`` naming another workspace's is denied.
-        if not live.scope_is_bound(scope, tenant):
+        # Control reaches here only past the `token_present_in_context()` return
+        # above, so this caller IS authenticated — which is what makes the
+        # workspace-less branch fail-closed (i-034). A token that resolves NO
+        # workspace (the legacy tid passthrough on a source with no workspaces
+        # configured, or a provider whose token carries no tid) used to be allowed
+        # ANY scope precisely because it had no workspace to be bound to; it is now
+        # limited to the scopes explicitly granted to it (`DNA_TOKEN_SCOPES`,
+        # defaulting to the server's own base scope).
+        if not live.scope_is_bound(
+            scope, tenant, authenticated=True,
+            granted_scopes=parse_scope_grants(os.environ.get("DNA_TOKEN_SCOPES")),
+        ):
+            if tenant:
+                raise ToolError(
+                    f"request is bound to workspace {tenant!r} (scope "
+                    f"{live.default_scope(tenant)!r}); cross-workspace access to "
+                    f"scope {scope!r} is denied"
+                )
             raise ToolError(
-                f"request is bound to workspace {tenant!r} (scope "
-                f"{live.default_scope(tenant)!r}); cross-workspace access to scope "
-                f"{scope!r} is denied"
+                f"scope {scope!r} is not granted to this credential; a request that "
+                f"resolves no workspace may only read the scopes explicitly granted "
+                f"to its token (default: {live.base_scope!r})"
             )
         kernel = live.kernel
         tier = enforce_tier_from_context()

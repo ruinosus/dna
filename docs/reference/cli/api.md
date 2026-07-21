@@ -63,4 +63,5 @@ dna api serve [OPTIONS]
 | `--port` | Bind port. _(default: `8080`)_ |
 | `--scope` | Default scope for endpoints that omit one (else the sole/first scope). |
 | `--token` | Expected bearer token for --auth token (else the DNA_API_TOKEN env var). |
+| `--token-scope` | A scope this credential may read when the request resolves NO workspace (repeatable; else the DNA_TOKEN_SCOPES env var, comma-separated). Absent, such a caller is bound to the ONE scope this server was booted on — absence of a workspace is not a right to every scope. Pass `*` to consciously opt out. |
 
