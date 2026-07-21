@@ -1,0 +1,22 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-059-doc-apply-never-converges-resolved-vs-raw
+spec:
+  description: "doc apply compara o doc RESOLVIDO (defaults do Kind injetados: creative_slots\
+    \ [], objective '', +9 no caso de Agent) contra o spec CRU do arquivo (dna_cli/doc_cmd.py:734-744)\
+    \ \u2014 para Kinds com defaults, o compare NUNCA converge: todo re-apply e UPDATED\
+    \ com bump de versao, mesmo com conteudo identico. Visto no smoke do seed de definicoes\
+    \ do dna-cloud: 7 docs UNCHANGED, Agent UPDATED para sempre. Inofensivo mas e\
+    \ churn de versao a cada boot de container. Fix: comparar cru-contra-cru (ou resolvido-contra-resolvido),\
+    \ com teste provando que re-apply de arquivo identico e UNCHANGED para um Kind\
+    \ com defaults."
+  type: bug
+  severity: low
+  status: open
+  timeline:
+  - at: '2026-07-21T17:08:50+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

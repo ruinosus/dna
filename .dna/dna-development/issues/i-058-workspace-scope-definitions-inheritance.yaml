@@ -1,0 +1,31 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-058-workspace-scope-definitions-inheritance
+spec:
+  description: "A TESE DO PRODUTO tem um buraco de bootstrapping, descoberto no seed\
+    \ de definicoes do dna-cloud (2026-07-21). O Model B roteia workspace de id gerado\
+    \ para o scope tenant-ws-<id> \u2014 que nasce VAZIO e nenhum seed de boot alcanca\
+    \ (workspaces nascem depois do boot). Consequencia: todo workspace novo comeca\
+    \ sem NENHUMA definicao (agents/tools/souls) e o overlay por tenant nao tem base\
+    \ sobre a qual agir \u2014 a promessa 'o tenant declara so a diferenca e herda\
+    \ o resto' quebra no primeiro passo, porque nao ha resto para herdar. O MECANISMO\
+    \ DE HERANCA JA EXISTE: Genome.spec.parent_scope + compute_resolution_chain caminham\
+    \ a cadeia transitivamente (com guarda de ciclo). O que falta e o scope do workspace\
+    \ NASCER declarando o parent \u2014 provavelmente em create_workspace_impl, apontando\
+    \ para um scope base de definicoes configuravel (o dna-cloud usaria dna-development\
+    \ ou um 'definitions-base'). Alternativa considerada e rejeitada como definitiva:\
+    \ DNA_VENDOR_WORKSPACE apontando para um workspace especifico \u2014 vale para\
+    \ UM workspace, e config morta pos-D5 para os demais. Pronto quando: workspace\
+    \ novo compoe as definicoes do scope base via heranca declarada, overlay por tenant\
+    \ age por cima, teste provando os dois niveis, e o dna-cloud consegue apontar\
+    \ o base por env."
+  type: task
+  severity: high
+  status: open
+  timeline:
+  - at: '2026-07-21T17:08:45+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
