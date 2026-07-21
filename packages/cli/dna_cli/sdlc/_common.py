@@ -312,3 +312,11 @@ def _scope_option(f):
              "the auto-detected sole SDLC scope in the source, else "
              "dna-development).",
     )(f)
+
+
+def _csv(value: str | None) -> list[str] | None:
+    """Parse comma-separated CLI input. None/empty → None (not stamped)."""
+    if value is None:
+        return None
+    parts = [p.strip() for p in value.split(",") if p.strip()]
+    return parts or None

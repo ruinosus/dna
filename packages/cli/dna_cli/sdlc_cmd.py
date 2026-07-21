@@ -81,6 +81,7 @@ from dna_cli.sdlc._common import (  # noqa: F401 — re-exported for back-compat
     _autodetect_sdlc_scope,
     _build_raw,
     _cli_actor,
+    _csv,
     _fire_post_transition,
     _gh_open_prs,
     _gh_open_prs_for_branch,
@@ -532,14 +533,6 @@ def story_group() -> None:
 
 # VALID_PRIORITIES is imported from the shared core (dna.application.sdlc) at the
 # top of this module — the single source of truth shared with the MCP write tools.
-
-
-def _csv(value: str | None) -> list[str] | None:
-    """Parse comma-separated CLI input. None/empty → None (not stamped)."""
-    if value is None:
-        return None
-    parts = [p.strip() for p in value.split(",") if p.strip()]
-    return parts or None
 
 
 @story_group.command("create")
