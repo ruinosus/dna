@@ -21,6 +21,7 @@ them before running this generator.
 from __future__ import annotations
 
 import argparse
+import inspect
 import io
 import re
 import sys
@@ -51,8 +52,20 @@ def _md_escape(text: str) -> str:
     return _neutralize_urls(text.replace("|", "\\|").replace("\n", " ").strip())
 
 
+def _help_text(cmd: click.Command) -> str:
+    """``cmd.help``, normalized to be Python-version-independent.
+
+    Python 3.13 dedents docstrings at COMPILE time (``__doc__`` arrives
+    already stripped of common leading whitespace); 3.12 and earlier keep the
+    raw indentation. Without this, the generated pages differ by hundreds of
+    reflow-only lines depending on which interpreter ran the generator — the
+    exact non-reproducibility that made this guard get waved through.
+    ``inspect.cleandoc`` is idempotent, so on 3.13 it is a no-op."""
+    return inspect.cleandoc(cmd.help) if cmd.help else ""
+
+
 def _short_help(cmd: click.Command) -> str:
-    help_text = (cmd.help or cmd.short_help or "").strip()
+    help_text = (_help_text(cmd) or cmd.short_help or "").strip()
     if not help_text:
         return ""
     # First paragraph only for the index/summary lines.
@@ -115,7 +128,7 @@ def _render_command(cmd: click.Command, path: list[str], level: int, out: io.Str
     heading = "#" * min(level, 6)
     out.write(f"{heading} `{' '.join(['dna', *path])}`\n\n")
 
-    help_text = (cmd.help or "").strip()
+    help_text = _help_text(cmd).strip()
     if help_text:
         out.write(_neutralize_urls(help_text) + "\n\n")
 
@@ -135,7 +148,7 @@ def _render_group_page(name: str, cmd: click.Command) -> str:
     title = _short_help(cmd) or f"`dna {name}`"
     out.write(f"# `dna {name}`\n\n")
     if cmd.help:
-        out.write(_neutralize_urls(cmd.help.strip()) + "\n\n")
+        out.write(_neutralize_urls(_help_text(cmd).strip()) + "\n\n")
     out.write(
         "!!! info \"Generated from the command definitions\"\n\n"
         "    This page is introspected from the `dna` Click command tree by\n"
