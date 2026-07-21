@@ -24,3 +24,6 @@ site/
 
 # superpowers v6 cria worktrees DENTRO do projeto (.worktrees/) — nunca commitá-los
 .worktrees/
+
+# superpowers v6 cria worktrees DENTRO do projeto (.worktrees/) — nunca commitá-los
+.worktrees/
