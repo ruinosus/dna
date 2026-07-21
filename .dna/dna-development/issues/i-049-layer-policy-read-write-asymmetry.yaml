@@ -1,0 +1,24 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-049-layer-policy-read-write-asymmetry
+spec:
+  description: "O casamento de politica de camada responde DIFERENTE conforme a porta.\
+    \ O caminho de escrita (layer_policy.py::_enforce) so aceita a chave pelo ALIAS\
+    \ (lp_policies.get(alias)); o de leitura/merge (layer_resolver, pos i-044) aceita\
+    \ nome de Kind exato, alias declarado e sufixos legados. Consequencia: um LayerPolicy\
+    \ com 'Agent: locked' (nome, nao alias) TRANCA no merge mas e IGNORADO EM SILENCIO\
+    \ no write \u2014 a mesma protecao vale numa porta e nao na outra, que e pior\
+    \ que nao valer: da confianca falsa. Achado do trabalho da i-044 (2026-07-21).\
+    \ Pronto quando: as duas portas usam o MESMO resolvedor de chave (o declarado\
+    \ da i-044), com teste provando que a mesma politica tranca leitura E escrita,\
+    \ e mutacao numa porta derrubando teste."
+  type: bug
+  severity: high
+  status: open
+  timeline:
+  - at: '2026-07-21T12:50:47+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

@@ -1,0 +1,23 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-048-prompt-kernel-dead-divergent-twin
+spec:
+  description: "prompt_kernel.py e um SEGUNDO motor de composicao, morto e divergente.\
+    \ A docstring promete 'Parity contract ... tests in test_prompt_kernel.py lock\
+    \ the parity' \u2014 esse arquivo de teste NUNCA existiu no historico do git,\
+    \ e nada importa o modulo (uma mencao em docstring de hooks.py). Divergencia real:\
+    \ ele renderiza mustache em passada UNICA, entao se religado, o caso open-swe\
+    \ (ref dentro de instruction, pinado na i-046) compoe diferente do PromptBuilder.\
+    \ Mesma anatomia do dna_edges: promessa de docstring sem lastro. Decidir: deletar\
+    \ (recomendado \u2014 o PromptBuilder e o motor real) ou terminar a paridade com\
+    \ os testes prometidos. Relacionada a i-047 (extincao do mi parada no meio)."
+  type: bug
+  severity: medium
+  status: open
+  timeline:
+  - at: '2026-07-21T12:50:42+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

@@ -1,0 +1,25 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-050-quota-counts-denied-calls
+spec:
+  description: "BILLING. enforce_quota INCREMENTA ANTES DE NEGAR: acima do cap a chamada\
+    \ e negada E contada no dna_quota_counters. O job de overage do dna-cloud (#99)\
+    \ le SUM(calls) - included e cobra o excedente \u2014 ou seja, pode cobrar overage\
+    \ por chamadas que o cliente NUNCA conseguiu executar (foram 429). Enquanto o\
+    \ SDK hard-capa e nao existe overage, o dano e zero (o job nunca ve excedente\
+    \ de tenant capado... FALSO: ve exatamente as negadas acima do cap). Reconciliacao\
+    \ necessaria: quando overage billing esta ativo, permitir-e-cobrar acima do cap\
+    \ (soft cap), OU o contador separar aceitas de negadas e o job cobrar so aceitas.\
+    \ Achado do trabalho da i-039 do dna-cloud (2026-07-21). Decisao de produto embutida:\
+    \ soft cap com cobranca vs hard cap sem overage \u2014 hoje o codigo faz um hibrido\
+    \ errado dos dois."
+  type: bug
+  severity: high
+  status: open
+  timeline:
+  - at: '2026-07-21T12:50:52+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

@@ -1,0 +1,24 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-051-quota-require-tiers-flag
+spec:
+  description: "Hosted precisa de fail-CLOSED quando o registry de Tiers esta vazio.\
+    \ Hoje: tier ausente => caps somem silenciosamente (_mcp_server.py ~373-375: fallback\
+    \ kernel.tier('free') e se caps vazio vira no-op; registry_accessor.tier() engole\
+    \ excecao em None+warning). Proposta (do trabalho da i-039 do dna-cloud, descrita\
+    \ em docs/billing.md de la): DNA_QUOTA_REQUIRE_TIERS=1 em dna mcp serve sob o\
+    \ qual (a) caps vazio no _guard vira ToolError; (b) o except fail-soft do tier()\
+    \ propaga. Default OFF \u2014 self-host OSS sem tiers continua livre, a regra\
+    \ dura do open-core nao muda. O dna-cloud seta a flag no mcp.Dockerfile quando\
+    \ ela existir. Pronto quando: flag implementada com teste dos dois modos, mutacao\
+    \ (remover o raise => teste morre), e o dna-cloud avisado para ligar."
+  type: task
+  severity: high
+  status: open
+  timeline:
+  - at: '2026-07-21T12:50:57+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
