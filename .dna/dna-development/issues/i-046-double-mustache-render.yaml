@@ -1,0 +1,23 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-046-double-mustache-render
+spec:
+  description: "_mustache_render_async renderiza DUAS vezes (chevron.render(chevron.render(t,\
+    \ ctx), ctx)) para resolver refs de chevron dentro de conteudo. Efeito colateral:\
+    \ conteudo de usuario contendo {{ e interpretado como template na segunda passada\
+    \ \u2014 um Skill cujo texto ensina sintaxe Mustache, ou contenha {{jinja}} de\
+    \ outro sistema, e re-expandido silenciosamente. E injecao de template de baixa\
+    \ severidade hoje (fontes confiaveis) mas vira superficie real no multi-tenant\
+    \ onde o overlay do tenant e input de terceiro. Pronto quando: a segunda passada\
+    \ so re-renderiza o que a PRIMEIRA introduziu (ou escaping explicito), com teste\
+    \ provando que conteudo com {{ literal sobrevive intacto."
+  type: bug
+  severity: medium
+  status: open
+  timeline:
+  - at: '2026-07-21T12:17:43+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

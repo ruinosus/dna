@@ -1,0 +1,23 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-047-dead-kernel-modules-mi-extinction-stalled
+spec:
+  description: "807 LOC mortos identificados na auditoria: kernel/reports_kernel.py\
+    \ (237, ZERO importadores nem em teste \u2014 cabecalho promete paridade byte-a-byte\
+    \ com mi.reports, nunca foi ligado), kernel/nav_kernel.py (235, so um teste),\
+    \ kernel/composition.py (30) + extensions/helix/layers.py (28) shims auto-declarados\
+    \ sem importador. Causa raiz: f-mi-class-extinction parou no meio \u2014 o caminho\
+    \ legado (instance.py -> navigator.py/reports.py) e o que roda. Decidir: terminar\
+    \ a extincao ou deletar os gemeos abandonados. emit/frontend.py (158) e memory/claude_export.py\
+    \ (119) parecem API publica deliberada \u2014 verificar consumidor externo antes\
+    \ de tocar."
+  type: task
+  severity: low
+  status: open
+  timeline:
+  - at: '2026-07-21T12:17:47+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

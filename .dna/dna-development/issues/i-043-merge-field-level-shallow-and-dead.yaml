@@ -1,0 +1,27 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-043-merge-field-level-shallow-and-dead
+spec:
+  description: "A auditoria de anatomia (2026-07-21) encontrou dois defeitos fundidos\
+    \ no coracao da composicao. (1) merge_field_level promete 'Deep-merge spec dicts'\
+    \ na docstring e entrega atribuicao de chave de PRIMEIRO NIVEL (resolver.py:225):\
+    \ um spec.config.model de camada baixa e apagado inteiro por um spec.config.temperature\
+    \ de camada alta, e contributions_by_field so registra chave de topo \u2014 a\
+    \ proveniencia por campo aninhado prometida nao existe. (2) A funcao NUNCA roda\
+    \ em producao: merge_strategy field_level aparece em exatamente dois lugares no\
+    \ repositorio, ambos golden-fixtures de teste. Nenhum escopo real declara composition_rules;\
+    \ o default e override_full em todos os ramos. A resolucao de conflito por campo\
+    \ \u2014 parte central do pitch 'composicao em camadas' \u2014 e codigo testado\
+    \ e morto. Pronto quando: o merge e recursivo de verdade com proveniencia por\
+    \ caminho aninhado, ha pelo menos um consumidor real (ou a decisao explicita de\
+    \ torna-lo default), e um teste de mutacao prova que rasificar o merge mata testes."
+  type: bug
+  severity: high
+  status: open
+  timeline:
+  - at: '2026-07-21T12:17:28+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

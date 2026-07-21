@@ -1,0 +1,24 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-044-layer-policy-regex-fallback-open
+spec:
+  description: "layer_resolver._policy_for_kind casa a politica de camada (open/restricted/locked)\
+    \ por manipulacao de string: match exato, depois sufixo, depois CamelCase->kebab\
+    \ por regex e sufixo de novo \u2014 e no fim cai em LayerPolicy.OPEN silenciosamente.\
+    \ Um alias que nao bate degrada de LOCKED para OPEN sem aviso. E a mesma natureza\
+    \ do dna_edges (relacao derivada de string em vez de declarada), so que em seguranca\
+    \ de composicao: a protecao mais forte do sistema pode evaporar por um typo de\
+    \ alias. Pronto quando: a relacao doc->politica e declarada (nao inferida de nome),\
+    \ ou no minimo o fallback e BARULHENTO (warn com nome do Kind + politica assumida)\
+    \ e um teste prova que alias nao-casado nao passa despercebido. Mutacao obrigatoria:\
+    \ um alias quebrado deve derrubar teste."
+  type: bug
+  severity: high
+  status: open
+  timeline:
+  - at: '2026-07-21T12:17:33+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

@@ -1,0 +1,29 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-045-provenance-not-exposed-on-paid-surface
+spec:
+  description: "PromptBuilder.explain() existe, e bem-feito (SectionProvenance com\
+    \ artefato de origem, hash, versao, diff base-vs-tenant) e reusa o mesmo caminho\
+    \ de build() \u2014 o prompt explicado e byte-identico por construcao. Mas tem\
+    \ EXATAMENTE UM consumidor: o comando dna explain do CLI. compose_prompt_impl\
+    \ \u2014 autodescrito como 'the killer surface', a superficie que o MCP e o REST\
+    \ servem e que o dna-cloud vende \u2014 retorna {scope, agent, tenant, model,\
+    \ prompt} e joga a proveniencia fora. A capacidade mais defensavel do produto\
+    \ nao e alcancavel pelo produto. Duas ressalvas da auditoria que o trabalho deve\
+    \ tratar: (a) a atribuicao de secao em _contributes_to_prompt e por match de string\
+    \ no template ({{#alias}}), fail-soft \u2014 template customizado quebra a atribuicao\
+    \ em silencio; para valer como auditoria precisa ser capturada no render, nao\
+    \ reconstruida; (b) o retorno do MCP/REST precisa ser opt-in (?explain=true /\
+    \ include_sections) para nao inflar todo compose. Pronto quando: GET /v1/agents/{name}/prompt?explain=true\
+    \ devolve as secoes com proveniencia, a tool MCP tem o equivalente, client-py/client-ts\
+    \ expostos, e o portal consegue renderizar a tabela."
+  type: task
+  severity: high
+  status: open
+  timeline:
+  - at: '2026-07-21T12:17:38+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
