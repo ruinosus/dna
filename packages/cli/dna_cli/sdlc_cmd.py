@@ -38,9 +38,8 @@ from dna_cli._active_story import (
     write_active_story as _active_story_write,
 )
 from dna_cli._ctx import (
-    dna_session,
-    open_session,
     fail,
+    open_session,
     print_json,
     print_table,
 )

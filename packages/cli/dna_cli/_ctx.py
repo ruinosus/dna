@@ -251,27 +251,18 @@ def open_session(scope: str | None = None):
     boots a kernel and ``--scope`` stays parsed at the leaf (the root group
     cannot know the scope; see the eager-vs-lazy evidence on the feature).
 
-    Resolution order:
-      1. ``ctx.obj[SESSION_PROVIDER_KEY]`` on the current click context.
-      2. MIGRATION SHIM — ``dna_cli.sdlc_cmd.dna_session`` module global, so
-         the legacy ``monkeypatch.setattr(sdlc_cmd, "dna_session", ...)`` seam
-         keeps applying while call sites and tests migrate in steps. DELETED
-         at the end of f-cli-session-injection; after that, a patch aimed at
-         the old target fails loudly (AttributeError) instead of silently
-         hitting the real session.
-      3. The real ``dna_session``.
+    Resolution order: ``ctx.obj[SESSION_PROVIDER_KEY]`` on the current click
+    context, else the real ``dna_session``. Command modules do not re-export
+    ``dna_session`` anymore — a monkeypatch aimed at the old per-module seam
+    fails loudly (AttributeError) instead of silently hitting the real
+    session, which is the failure mode that used to block moving commands
+    between modules.
     """
     ctx = click.get_current_context(silent=True)
     if ctx is not None and isinstance(ctx.obj, dict):
         provider = ctx.obj.get(SESSION_PROVIDER_KEY)
         if provider is not None:
             return provider(scope)
-    # --- migration shim (step 2) — remove with f-cli-session-injection ---
-    import dna_cli.sdlc_cmd as _sdlc_cmd
-    legacy = getattr(_sdlc_cmd, "dna_session", None)
-    if legacy is not None and legacy is not dna_session:
-        return legacy(scope)
-    # --- end migration shim ---
     return dna_session(scope)
 
 
