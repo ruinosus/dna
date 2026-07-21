@@ -11,6 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.24.0] — 2026-07-21
+
+O card de memória vira MCP App. Minor novo: faixa interna
+`dna-sdk>=0.24,<0.25`; floor `fastmcp>=3.2`; `mcp-ui-server` sai dos extras.
+
+
 ### ✨ MCP Apps
 
 - **O card de memória renderiza de verdade — MCP Apps (SEP-1865), modelo
