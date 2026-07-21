@@ -1,0 +1,17 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-speckit-mcp-apps-memory-card-t015
+spec:
+  description: "[US1] Aceita\xE7\xE3o final: custom connector no Claude.ai (fundador),\
+    \ card com dados reais e nenhuma a\xE7\xE3o dispon\xEDvel \u2014 gate de `story\
+    \ done` do lado SDK, junto do test-gate"
+  title: "[US1] Aceita\xE7\xE3o final: custom connector no Claude.ai (fundador), card\
+    \ com dados "
+  status: todo
+  feature: f-copilot-mcp-apps
+  labels:
+  - spec-kit
+  reporter: claude-code
+  spec_refs:
+  - speckit-mcp-apps-memory-card

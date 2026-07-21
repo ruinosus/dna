@@ -1,0 +1,17 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-speckit-mcp-apps-memory-card-t001
+spec:
+  description: "Subir o floor `fastmcp>=3.2` e **remover** `mcp-ui-server` dos extras\
+    \ `mcp` e dev em `packages/cli/pyproject.toml` (incluindo os coment\xE1rios que\
+    \ o citam \u2014 regra \xA73)"
+  title: Subir o floor `fastmcp>=3.2` e **remover** `mcp-ui-server` dos extras `mcp`
+    e de
+  status: todo
+  feature: f-copilot-mcp-apps
+  labels:
+  - spec-kit
+  reporter: claude-code
+  spec_refs:
+  - speckit-mcp-apps-memory-card

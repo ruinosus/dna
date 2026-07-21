@@ -1,0 +1,118 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Reference
+metadata:
+  name: speckit-mcp-apps-memory-card-tasks
+spec:
+  title: "Tasks: MCP Apps \u2014 card de mem\xF3ria (s\xF3 leitura, dois hosts)"
+  kind_of: internal-doc
+  summary: Spec Kit tasks.md for mcp-apps-memory-card (22 tasks).
+  body: "# Tasks: MCP Apps \u2014 card de mem\xF3ria (s\xF3 leitura, dois hosts)\n\
+    \n**Input**: Design documents from `/specs/001-mcp-apps-memory-card/`\n\n**Prerequisites**:\
+    \ plan.md, spec.md, research.md, data-model.md, contracts/mcp-surface.md, quickstart.md\n\
+    \n**Tests**: INCLU\xCDDOS \u2014 o design fixa o test-gate explicitamente (\xA7\
+    Testes e\nverifica\xE7\xE3o), com disciplina de muta\xE7\xE3o (\"muta\xE7\xE3\
+    o \u2192 morre\"). Testes primeiro,\nfalhando, antes da implementa\xE7\xE3o.\n\
+    \n**Organization**: Tasks agrupadas por user story. US1 (lado SDK) \xE9 o MVP\
+    \ e \xE9\ncompleta em si; US2 (console) vive no repo irm\xE3o `ruinosus/dna-cloud`\
+    \ e s\xF3\nmergeia com o pin do SDK novo publicado; US3 (degrada\xE7\xE3o) trava\
+    \ o\nbyte-id\xEAntico.\n\n## Format: `[ID] [P?] [Story] Description`\n\n## Phase\
+    \ 1: Setup (Shared Infrastructure)\n\n**Purpose**: depend\xEAncias no estado que\
+    \ o design fixa\n\n- [ ] T001 Subir o floor `fastmcp>=3.2` e **remover** `mcp-ui-server`\
+    \ dos extras `mcp` e dev em `packages/cli/pyproject.toml` (incluindo os coment\xE1\
+    rios que o citam \u2014 regra \xA73)\n- [ ] T002 [P] Vendorizar a lib `@modelcontextprotocol/ext-apps`\
+    \ como asset embut\xEDvel (para bundle inline no HTML; nenhum CDN) em `packages/sdk-py/dna/emit/`\n\
+    \n---\n\n## Phase 2: Foundational (Blocking Prerequisites)\n\n**Purpose**: apagar\
+    \ o modelo pr\xE9-spec e travar a baseline de degrada\xE7\xE3o \u2014 bloqueia\
+    \ todas as stories\n\n**\u26A0\uFE0F CRITICAL**: nenhuma story come\xE7a antes\
+    \ desta fase fechar\n\n- [ ] T003 Limpeza \xA73 em `packages/sdk-py/dna/emit/mcp_ui.py`:\
+    \ remover TODA men\xE7\xE3o a futuro \u2014 A2UI/\"deferred\", twin TS \"follow-up\"\
+    , `externalUrl`/`rawHtml` do modelo pr\xE9-spec \u2014 em c\xF3digo, docstring\
+    \ e coment\xE1rio (ideia futura j\xE1 vive nos itens de board i-060/i-061/i-062)\n\
+    - [ ] T004 Remover o wiring pr\xE9-spec (`_meta` de UI) de `_with_memory_card`\
+    \ em `packages/cli/dna_cli/_mcp_server.py`, preservando `content` textual e `structured_content`\
+    \ intactos\n- [ ] T005 Capturar a baseline byte a byte do `content` textual de\
+    \ `list_memories`/`recall` como fixture em `packages/cli/tests/test_mcp_apps.py`\
+    \ (pr\xE9-requisito do gate de zero regress\xE3o)\n\n**Checkpoint**: superf\xED\
+    cie sem rastro do modelo pr\xE9-spec; baseline travada\n\n---\n\n## Phase 3: User\
+    \ Story 1 \u2014 Card de mem\xF3ria renderiza no Claude.ai (Priority: P1) \U0001F3AF\
+    \ MVP\n\n**Goal**: template est\xE1tico `ui://dna/memory-list` registrado, apontado\
+    \ na declara\xE7\xE3o de `list_memories`/`recall`, dados via push; lado SDK completo\
+    \ em si.\n\n**Independent Test**: custom connector no Claude.ai renderiza o card\
+    \ com dados reais (aceita\xE7\xE3o do fundador) + test-gate verde + smoke no `basic-host`.\n\
+    \n### Tests for User Story 1 (escrever primeiro; devem FALHAR antes da implementa\xE7\
+    \xE3o)\n\n- [ ] T006 [P] [US1] Teste: a declara\xE7\xE3o de `list_memories` e\
+    \ `recall` carrega o `resourceUri` do template (muta\xE7\xE3o: pointer removido\
+    \ \u2192 morre) em `packages/cli/tests/test_mcp_apps.py`\n- [ ] T007 [P] [US1]\
+    \ Teste: `resources/read` de `ui://dna/memory-list` responde com mimeType `text/html;profile=mcp-app`\
+    \ (muta\xE7\xE3o: registro removido \u2192 morre) em `packages/cli/tests/test_mcp_apps.py`\n\
+    - [ ] T008 [P] [US1] Teste: o HTML do template n\xE3o cont\xE9m dados de mem\xF3\
+    ria (muta\xE7\xE3o: dados assados de volta \u2192 morre) nem URL externa (muta\xE7\
+    \xE3o: CDN de volta \u2192 morre) em `packages/sdk-py/tests/test_emit_mcp_ui.py`\n\
+    - [ ] T009 [P] [US1] Grep-guard \xA73: `TODO`/`deferred`/`follow-up`/`coming soon`\
+    \ em `mcp_ui.py` e no template quebra o teste (muta\xE7\xE3o: TODO plantado \u2192\
+    \ morre) em `packages/sdk-py/tests/test_emit_mcp_ui.py`\n\n### Implementation\
+    \ for User Story 1\n\n- [ ] T010 [US1] Reescrever `memory_list_card_html()` como\
+    \ template EST\xC1TICO em `packages/sdk-py/dna/emit/mcp_ui.py`: HTML + JS inline\
+    \ (ext-apps bundlada de T002), JS consome `app.ontoolresult` \u2192 renderiza\
+    \ `structured_content`; empty state honesto (\"nenhuma mem\xF3ria\"); campo ausente\
+    \ \u2192 vazio-honesto; tudo escapado; zero dado de tenant/segredo/token\n- [\
+    \ ] T011 [US1] Regravar os goldens byte-stable em `packages/sdk-py/tests/goldens/mcp_ui/`\
+    \ (conte\xFAdo novo, disciplina mantida)\n- [ ] T012 [US1] Registrar o recurso\
+    \ `ui://dna/memory-list` (`@mcp.resource`, mimeType `text/html;profile=mcp-app`)\
+    \ em `packages/cli/dna_cli/_mcp_server.py`\n- [ ] T013 [US1] Apontar o template\
+    \ na declara\xE7\xE3o de `list_memories` e `recall` via FastMCP 3 (`app=AppConfig(resource_uri=\u2026\
+    )`) em `packages/cli/dna_cli/_mcp_server.py`\n- [ ] T014 [US1] Smoke de render\
+    \ real com o `basic-host` do `ext-apps` (card renderiza; empty state com zero\
+    \ mem\xF3rias) \u2014 roteiro em `specs/001-mcp-apps-memory-card/quickstart.md`\
+    \ \xA73\n- [ ] T015 [US1] Aceita\xE7\xE3o final: custom connector no Claude.ai\
+    \ (fundador), card com dados reais e nenhuma a\xE7\xE3o dispon\xEDvel \u2014 gate\
+    \ de `story done` do lado SDK, junto do test-gate\n\n**Checkpoint**: lado SDK\
+    \ completo em si \u2014 Claude.ai renderiza sem nada do dna-cloud\n\n---\n\n##\
+    \ Phase 4: User Story 2 \u2014 O mesmo card no console do portal (Priority: P2)\n\
+    \n**Goal**: o MESMO card `ui://` renderiza no chat do `/console`; painel lateral\
+    \ \"Mem\xF3ria\" intacto.\n\n**Independent Test**: teste node do middleware no\
+    \ pipeline + card do fixture renderiza; valida\xE7\xE3o visual como gate de deploy.\n\
+    \n**\u26A0\uFE0F Sequenciamento**: tasks T017\u2013T019 vivem no repo irm\xE3\
+    o `ruinosus/dna-cloud` e s\xF3 mergeiam com o pin do SDK novo publicado (T016).\
+    \ Nenhum lado mergeia \"esperando\" o outro; se exigir bump de framework que n\xE3\
+    o caiba, a feature fica `in-progress` \u2014 n\xE3o mergeia metade (regra \xA7\
+    3).\n\n- [ ] T016 [US2] Release do SDK com US1 (tag `vX.Y.Z` \u2192 publica `dna-sdk`/`dna-cli`\
+    \ no PyPI) \u2014 pr\xE9-requisito do trem de pin (repo `ruinosus/dna`)\n- [ ]\
+    \ T017 [US2] dna-cloud: adicionar `@ag-ui/mcp-apps-middleware` ao runtime do copiloto\
+    \ (CopilotKit ^1.63 j\xE1 compat\xEDvel) \u2014 repo `ruinosus/dna-cloud`\n- [\
+    \ ] T018 [US2] dna-cloud: teste node \u2014 middleware no pipeline + card do fixture\
+    \ renderiza; grep-guard \xA73 no c\xF3digo do middleware \u2014 repo `ruinosus/dna-cloud`\n\
+    - [ ] T019 [US2] dna-cloud: bump do pin do SDK + valida\xE7\xE3o visual no `/console`\
+    \ como gate de deploy; painel lateral \"Mem\xF3ria\" permanece inalterado \u2014\
+    \ repo `ruinosus/dna-cloud`\n\n**Checkpoint**: card renderizando nos DOIS hosts\
+    \ \u2014 a regra \"entra inteiro\" satisfeita\n\n---\n\n## Phase 5: User Story\
+    \ 3 \u2014 Degrada\xE7\xE3o limpa em hosts sem MCP Apps (Priority: P3)\n\n**Goal**:\
+    \ zero regress\xE3o \u2014 `content` textual byte-id\xEAntico para todo cliente\
+    \ sem a extens\xE3o (LangGraph/copilot inclu\xEDdos).\n\n**Independent Test**:\
+    \ compara\xE7\xE3o byte a byte contra a baseline de T005.\n\n- [ ] T020 [US3]\
+    \ Teste: `content` textual de `list_memories`/`recall` byte-id\xEAntico \xE0 baseline\
+    \ de T005 num cliente sem a extens\xE3o, em `packages/cli/tests/test_mcp_apps.py`\n\
+    \n**Checkpoint**: contrato de degrada\xE7\xE3o travado por teste\n\n---\n\n##\
+    \ Phase 6: Polish & Cross-Cutting Concerns\n\n- [ ] T021 Rodar a valida\xE7\xE3\
+    o completa de `specs/001-mcp-apps-memory-card/quickstart.md` (test-gate + degrada\xE7\
+    \xE3o + smoke)\n- [ ] T022 [P] Entrada de CHANGELOG.md do lado SDK (sem nenhuma\
+    \ men\xE7\xE3o a trabalho futuro \u2014 regra \xA73; futuro vive em i-060/i-061/i-062)\n\
+    \n---\n\n## Dependencies & Execution Order\n\n### Phase Dependencies\n\n- **Setup\
+    \ (Phase 1)**: sem depend\xEAncias\n- **Foundational (Phase 2)**: depende do Setup\
+    \ \u2014 BLOQUEIA todas as stories\n- **US1 (Phase 3)**: depende da Phase 2 \u2014\
+    \ MVP, completa em si\n- **US2 (Phase 4)**: depende de US1 released (T016) \u2014\
+    \ trem de pin, repo irm\xE3o\n- **US3 (Phase 5)**: depende da Phase 2 (baseline\
+    \ T005); valid\xE1vel junto de US1\n- **Polish (Phase 6)**: depende das stories\
+    \ desejadas completas\n\n### Parallel Opportunities\n\n- T001 \u2225 T002 (arquivos\
+    \ diferentes)\n- T006\u2013T009 em paralelo (testes primeiro, arquivos/casos independentes)\n\
+    - US3 (T020) pode andar em paralelo com US1 assim que T005 exista\n- T017\u2013\
+    T018 (dna-cloud) podem andar em paralelo ap\xF3s T016\n\n## Implementation Strategy\n\
+    \n**MVP = US1** (lado SDK): Setup \u2192 Foundational \u2192 US1 \u2192 validar\n\
+    independentemente (test-gate + basic-host + aceita\xE7\xE3o do fundador). US3\n\
+    trava a rede de seguran\xE7a no mesmo trem. US2 entra no trem de pin do\ndna-cloud\
+    \ com release publicado \u2014 incremental, sem quebrar o que j\xE1 entrou,\n\
+    e sem nenhum merge de metade.\n"
+  origin: specs/001-mcp-apps-memory-card/tasks.md
+  tags:
+  - spec-kit
+  - tasks

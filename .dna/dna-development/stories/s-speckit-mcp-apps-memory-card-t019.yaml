@@ -1,0 +1,17 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-speckit-mcp-apps-memory-card-t019
+spec:
+  description: "[US2] dna-cloud: bump do pin do SDK + valida\xE7\xE3o visual no `/console`\
+    \ como gate de deploy; painel lateral \"Mem\xF3ria\" permanece inalterado \u2014\
+    \ repo `ruinosus/dna-cloud`"
+  title: "[US2] dna-cloud: bump do pin do SDK + valida\xE7\xE3o visual no `/console`\
+    \ como gate d"
+  status: todo
+  feature: f-copilot-mcp-apps
+  labels:
+  - spec-kit
+  reporter: claude-code
+  spec_refs:
+  - speckit-mcp-apps-memory-card

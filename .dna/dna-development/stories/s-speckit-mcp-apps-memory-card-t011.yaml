@@ -1,0 +1,15 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-speckit-mcp-apps-memory-card-t011
+spec:
+  description: "[US1] Regravar os goldens byte-stable em `packages/sdk-py/tests/goldens/mcp_ui/`\
+    \ (conte\xFAdo novo, disciplina mantida)"
+  title: '[US1] Regravar os goldens byte-stable em `packages/sdk-py/tests/goldens/mcp_ui/`'
+  status: todo
+  feature: f-copilot-mcp-apps
+  labels:
+  - spec-kit
+  reporter: claude-code
+  spec_refs:
+  - speckit-mcp-apps-memory-card

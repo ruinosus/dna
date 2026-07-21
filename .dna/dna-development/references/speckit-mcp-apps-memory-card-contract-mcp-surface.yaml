@@ -1,0 +1,36 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Reference
+metadata:
+  name: speckit-mcp-apps-memory-card-contract-mcp-surface
+spec:
+  title: "Contrato \u2014 superf\xEDcie MCP do card de mem\xF3ria"
+  kind_of: internal-doc
+  summary: Spec Kit contract artifact for mcp-apps-memory-card (mcp-surface.md).
+  body: "# Contrato \u2014 superf\xEDcie MCP do card de mem\xF3ria\n\n**Phase 1 do\
+    \ `/speckit-plan`** \u2014 2026-07-21. A superf\xEDcie exposta a hosts\nMCP (Claude.ai\
+    \ custom connector, console do portal, e qualquer outro cliente).\n\n## 1. Recurso\
+    \ de UI\n\n| Aspecto | Contrato |\n|---|---|\n| `resources/read` de `ui://dna/memory-list`\
+    \ | responde o template est\xE1tico |\n| mimeType | `text/html;profile=mcp-app`\
+    \ |\n| Conte\xFAdo | autocontido (lib ext-apps bundlada); zero URL externa; zero\
+    \ dado de tenant/segredo/token |\n| Cacheabilidade | p\xFAblica, por URI (template\
+    \ imut\xE1vel entre releases; mudan\xE7a de conte\xFAdo = release) |\n\n## 2.\
+    \ Declara\xE7\xE3o das tools\n\n`tools/list` DEVE mostrar `list_memories` e `recall`\
+    \ apontando o template de\nUI na pr\xF3pria declara\xE7\xE3o (FastMCP \u22653.2,\
+    \ `app=AppConfig(resource_uri=\u2026)`).\n\n## 3. Resultado das tools (inalterado)\n\
+    \n- `content` textual: **byte-id\xEAntico ao atual** \u2014 o contrato com todo\
+    \ host\n  sem MCP Apps (LangGraph/copilot inclu\xEDdos). Dados sempre no `content`\n\
+    \  prim\xE1rio.\n- `structured_content`: shape existente, sem mudan\xE7a; \xE9\
+    \ o que o host com a\n  extens\xE3o empurra ao card via `ontoolresult`.\n- Nenhum\
+    \ res\xEDduo do modelo pr\xE9-spec (`_meta` de UI) na resposta.\n\n## 4. Comportamento\
+    \ por host\n\n| Situa\xE7\xE3o | Comportamento |\n|---|---|\n| Host com MCP Apps\
+    \ | renderiza o card com os dados da sess\xE3o autenticada |\n| Host sem MCP Apps\
+    \ | `content` textual de hoje, byte-id\xEAntico |\n| Template ileg\xEDvel no host\
+    \ | o host ignora a UI; `content` segue valendo |\n| `structured_content` vazio\
+    \ | empty state do card (\"nenhuma mem\xF3ria\") |\n| ChatGPT (sem tool-calling\
+    \ da UI) | irrelevante nesta entrega \u2014 card \xE9 s\xF3 leitura |\n\n## 5.\
+    \ Intera\xE7\xE3o\n\nS\xF3 leitura. O card n\xE3o exp\xF5e nenhuma a\xE7\xE3o\
+    \ nesta entrega.\n"
+  origin: specs/001-mcp-apps-memory-card/contracts/mcp-surface.md
+  tags:
+  - spec-kit
+  - contract

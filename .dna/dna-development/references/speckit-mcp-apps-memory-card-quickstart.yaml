@@ -1,0 +1,39 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Reference
+metadata:
+  name: speckit-mcp-apps-memory-card-quickstart
+spec:
+  title: "Quickstart \u2014 validar o card de mem\xF3ria MCP Apps"
+  kind_of: internal-doc
+  summary: Spec Kit quickstart artifact for mcp-apps-memory-card (quickstart.md).
+  body: "# Quickstart \u2014 validar o card de mem\xF3ria MCP Apps\n\n**Phase 1 do\
+    \ `/speckit-plan`** \u2014 guia de valida\xE7\xE3o ponta a ponta.\nRefer\xEAncias:\
+    \ [contrato da superf\xEDcie MCP](contracts/mcp-surface.md),\n[data model](data-model.md).\n\
+    \n## Pr\xE9-requisitos\n\n- Python 3.12 + venv com `-e packages/sdk-py -e packages/cli`\
+    \ (extras dev).\n- Node (para o smoke com o `basic-host` do `ext-apps`).\n- `fastmcp>=3.2`\
+    \ resolvido no ambiente (hoje resolve 3.4.4).\n\n## 1. Test-gate do lado SDK\n\
+    \n```bash\npython -m pytest packages/sdk-py/tests/test_emit_mcp_ui.py packages/cli/tests/test_mcp_apps.py\
+    \ -v\n```\n\nEsperado \u2014 todos verdes, cobrindo as muta\xE7\xF5es declaradas\
+    \ no design:\n\n- golden byte-stable do template (conte\xFAdo novo, disciplina\
+    \ mantida);\n- declara\xE7\xE3o de `list_memories`/`recall` carrega o `resourceUri`\n\
+    \  (pointer removido \u2192 morre);\n- `resources/read` de `ui://dna/memory-list`\
+    \ responde com\n  `text/html;profile=mcp-app` (registro removido \u2192 morre);\n\
+    - HTML do template sem dados de mem\xF3ria (dados assados \u2192 morre) e sem\
+    \ URL\n  externa (CDN \u2192 morre);\n- **grep-guard \xA73**: `TODO` / `deferred`\
+    \ / `follow-up` / `coming soon` na\n  superf\xEDcie entregue quebra o teste (TODO\
+    \ plantado \u2192 morre).\n\n## 2. Degrada\xE7\xE3o byte-id\xEAntica\n\nNum cliente\
+    \ sem a extens\xE3o, comparar o `content` textual de\n`list_memories`/`recall`\
+    \ antes/depois da entrega: byte-id\xEAntico.\n\n## 3. Smoke de render real (sem\
+    \ host comercial)\n\nServir o MCP local e abrir com o `basic-host` do `ext-apps`;\
+    \ invocar\n`list_memories` \u2192 o card renderiza; com zero mem\xF3rias \u2192\
+    \ empty state\n\"nenhuma mem\xF3ria\".\n\n## 4. Console do portal (repo dna-cloud,\
+    \ ap\xF3s release+pin)\n\nTeste node: o `@ag-ui/mcp-apps-middleware` est\xE1 no\
+    \ pipeline do runtime do\ncopiloto e o card do fixture renderiza. Valida\xE7\xE3\
+    o visual no `/console` \xE9\ngate de deploy. O painel lateral \"Mem\xF3ria\" permanece\
+    \ inalterado.\n\n## 5. Aceita\xE7\xE3o final (gate de `story done` do lado SDK)\n\
+    \nCustom connector no Claude.ai (fundador): card renderizando com dados reais,\n\
+    junto do test-gate. Nenhuma a\xE7\xE3o dispon\xEDvel no card (s\xF3 leitura).\n"
+  origin: specs/001-mcp-apps-memory-card/quickstart.md
+  tags:
+  - spec-kit
+  - quickstart

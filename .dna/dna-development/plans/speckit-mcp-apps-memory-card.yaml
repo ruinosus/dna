@@ -1,0 +1,106 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: speckit-mcp-apps-memory-card
+spec:
+  title: "Implementation Plan: MCP Apps \u2014 card de mem\xF3ria (s\xF3 leitura,\
+    \ dois hosts)"
+  date: '2026-07-21'
+  status: accepted
+  pattern: spec-kit
+  methodology: spec-kit
+  body: "# Implementation Plan: MCP Apps \u2014 card de mem\xF3ria (s\xF3 leitura,\
+    \ dois hosts)\n\n**Branch**: `feat/mcp-apps-memory-card` (spec dir `001-mcp-apps-memory-card`)\
+    \ | **Date**: 2026-07-21 | **Spec**: [spec.md](spec.md)\n\n**Input**: Feature\
+    \ specification from `/specs/001-mcp-apps-memory-card/spec.md` \u2014 que formaliza\
+    \ o design aprovado em `docs/superpowers/specs/2026-07-21-mcp-apps-memory-card-design.md`\
+    \ (autoridade).\n\n## Summary\n\nCompletar o groundwork inerte do DNA 0.22.1 (`dna/emit/mcp_ui.py`\
+    \ +\n`_with_memory_card`) para o modelo final de MCP Apps (SEP-1865): template\n\
+    est\xE1tico autocontido registrado como recurso `ui://dna/memory-list`\n(`text/html;profile=mcp-app`),\
+    \ apontado na declara\xE7\xE3o de `list_memories` /\n`recall` via FastMCP 3, dados\
+    \ via push (`ontoolresult`) da sess\xE3o\nautenticada. Card s\xF3 leitura, renderizando\
+    \ nos dois hosts \u2014 Claude.ai\n(custom connector) e console do portal (`@ag-ui/mcp-apps-middleware`\
+    \ no\ndna-cloud, trem de pin pr\xF3prio). A regra \xA73 (\"nada shippa meio-referenciado\"\
+    )\nentra como requisito: apagar o padr\xE3o pr\xE9-spec e suas men\xE7\xF5es a\
+    \ futuro,\nremover `mcp-ui-server`, e um grep-guard que quebra o teste.\n\n##\
+    \ Technical Context\n\n**Language/Version**: Python 3.12 (lado SDK: `packages/sdk-py`\
+    \ + `packages/cli`); TypeScript/Node (lado console, repo `ruinosus/dna-cloud`)\n\
+    \n**Primary Dependencies**: `fastmcp>=3.2` (floor novo; ambiente resolve 3.4.4;\
+    \ hoje o pin \xE9 `>=2` \u2014 bump necess\xE1rio), lib `@modelcontextprotocol/ext-apps`\
+    \ **bundlada no HTML** (nenhum CDN); lado console: `@ag-ui/mcp-apps-middleware`\
+    \ (CopilotKit ^1.63 j\xE1 compat\xEDvel). **Sai**: `mcp-ui-server` (extras `mcp`\
+    \ e dev de `packages/cli/pyproject.toml`)\n\n**Storage**: N/A \u2014 nenhuma mudan\xE7\
+    a de shape; o card renderiza o `structured_content` existente\n\n**Testing**:\
+    \ pytest (golden byte-stable j\xE1 existe em `packages/sdk-py/tests/goldens/mcp_ui/`;\
+    \ `packages/cli/tests/test_mcp_apps.py` refeito para o modelo final); smoke com\
+    \ o `basic-host` do `ext-apps`; grep-guard \xA73; lado console: teste node do\
+    \ pipeline do middleware\n\n**Target Platform**: servidor MCP do DNA (stdio+HTTP)\
+    \ consumido por Claude.ai web/desktop (custom connector) e pelo copiloto do portal;\
+    \ hosts sem MCP Apps degradam para `content` textual byte-id\xEAntico\n\n**Project\
+    \ Type**: biblioteca + servidor MCP (monorepo `packages/{sdk-py,cli}`) com entrega\
+    \ irm\xE3 sequenciada no repo `dna-cloud`\n\n**Performance Goals**: N/A nesta\
+    \ entrega (card s\xF3 leitura; template est\xE1tico cache\xE1vel por URI)\n\n\
+    **Constraints**: CSP da spec deny-by-default \u2192 template 100% autocontido,\
+    \ zero URL externa; zero dado de tenant / segredo / token no HTML; zero regress\xE3\
+    o para clientes sem a extens\xE3o (byte-id\xEAntico); console s\xF3 mergeia com\
+    \ o pin do SDK novo publicado\n\n**Scale/Scope**: 2 tools (`list_memories`, `recall`),\
+    \ 1 recurso `ui://`, 1 template; escopo fechado \u2014 \"Fora deste documento:\
+    \ nada\"\n\n## Constitution Check\n\n*GATE: Must pass before Phase 0 research.\
+    \ Re-check after Phase 1 design.*\n\n`.specify/memory/constitution.md` \xE9 o\
+    \ template n\xE3o-ratificado do spec-kit\n(nenhuma constitui\xE7\xE3o de projeto\
+    \ foi estabelecida neste repo). Gate\nvacuosamente aprovado. Os princ\xEDpios\
+    \ operantes v\xEAm do design doc (autoridade)\n\u2014 em particular a regra \xA7\
+    3, tratada como gate verific\xE1vel (grep-guard) no DoD\n\u2014 e das disciplinas\
+    \ j\xE1 vigentes no repo (golden byte-stable, testes de\nmuta\xE7\xE3o \"\u2192\
+    \ morre\").\n\n**Re-check p\xF3s-Phase 1**: sem viola\xE7\xF5es; nenhuma entrada\
+    \ em Complexity\nTracking.\n\n## Project Structure\n\n### Documentation (this\
+    \ feature)\n\n```text\nspecs/001-mcp-apps-memory-card/\n\u251C\u2500\u2500 plan.md\
+    \              # This file (/speckit-plan command output)\n\u251C\u2500\u2500\
+    \ research.md          # Phase 0 output (/speckit-plan command)\n\u251C\u2500\u2500\
+    \ data-model.md        # Phase 1 output (/speckit-plan command)\n\u251C\u2500\u2500\
+    \ quickstart.md        # Phase 1 output (/speckit-plan command)\n\u251C\u2500\u2500\
+    \ contracts/           # Phase 1 output (/speckit-plan command)\n\u2502   \u2514\
+    \u2500\u2500 mcp-surface.md   # Contrato da superf\xEDcie MCP (recurso + declara\xE7\
+    \xE3o + degrada\xE7\xE3o)\n\u251C\u2500\u2500 checklists/\n\u2502   \u2514\u2500\
+    \u2500 requirements.md  # Spec quality checklist (/speckit-specify)\n\u2514\u2500\
+    \u2500 tasks.md             # Phase 2 output (/speckit-tasks command - NOT created\
+    \ by /speckit-plan)\n```\n\n### Source Code (repository root)\n\n```text\n# Lado\
+    \ SDK \u2014 ESTE repo (ruinosus/dna)\npackages/sdk-py/\n\u251C\u2500\u2500 dna/emit/mcp_ui.py\
+    \                  # template est\xE1tico (ext-apps bundlado, JS ontoolresult);\n\
+    \u2502                                       #   limpeza \xA73: some toda men\xE7\
+    \xE3o a futuro/deferred/A2UI/twin\n\u2514\u2500\u2500 tests/\n    \u251C\u2500\
+    \u2500 test_emit_mcp_ui.py             # golden byte-stable (mantido; conte\xFA\
+    do novo) + guard \xA73\n    \u2514\u2500\u2500 goldens/mcp_ui/               \
+    \  # goldens regravados para o template est\xE1tico\n\npackages/cli/\n\u251C\u2500\
+    \u2500 dna_cli/_mcp_server.py              # registro @mcp.resource ui://dna/memory-list;\n\
+    \u2502                                       #   AppConfig(resource_uri=\u2026\
+    ) na declara\xE7\xE3o de\n\u2502                                       #   list_memories/recall;\
+    \ _with_memory_card sem _meta pr\xE9-spec\n\u251C\u2500\u2500 pyproject.toml \
+    \                     # fastmcp>=3.2; mcp-ui-server REMOVIDO (extras mcp + dev)\n\
+    \u2514\u2500\u2500 tests/test_mcp_apps.py              # declara\xE7\xE3o carrega\
+    \ resourceUri; resources/read responde\n                                     \
+    \   #   mimeType da spec; HTML sem dados/sem URL externa; grep-guard\n\n# Lado\
+    \ console \u2014 repo IRM\xC3O (ruinosus/dna-cloud), entrega pr\xF3pria no trem\
+    \ de pin\n#   runtime do copiloto + @ag-ui/mcp-apps-middleware; painel lateral\
+    \ \"Mem\xF3ria\" intacto\n```\n\n**Structure Decision**: monorepo existente do\
+    \ DNA; a feature toca as duas\nsuperf\xEDcies j\xE1 donas do groundwork (`dna/emit/mcp_ui.py`\
+    \ no sdk-py, servidor\nMCP no cli). O lado console vive no repo `dna-cloud` e\
+    \ \xE9 sequenciado por pin\n(release do SDK \u2192 bump do pin \u2192 entrega\
+    \ no dna-cloud); nenhum c\xF3digo do\nconsole entra neste repo.\n\n## Complexity\
+    \ Tracking\n\nSem viola\xE7\xF5es a justificar \u2014 tabela vazia por decis\xE3\
+    o, n\xE3o por omiss\xE3o.\n"
+  origin: specs/001-mcp-apps-memory-card/plan.md
+  spec_ref: speckit-mcp-apps-memory-card
+  produces:
+  - kind: Reference
+    name: speckit-mcp-apps-memory-card-research
+    role: research
+  - kind: Reference
+    name: speckit-mcp-apps-memory-card-data-model
+    role: data-model
+  - kind: Reference
+    name: speckit-mcp-apps-memory-card-quickstart
+    role: quickstart
+  - kind: Reference
+    name: speckit-mcp-apps-memory-card-contract-mcp-surface
+    role: contract

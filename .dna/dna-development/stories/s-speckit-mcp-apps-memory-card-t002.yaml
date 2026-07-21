@@ -1,0 +1,17 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-speckit-mcp-apps-memory-card-t002
+spec:
+  description: "Vendorizar a lib `@modelcontextprotocol/ext-apps` como asset embut\xED\
+    vel (para bundle inline no HTML; nenhum CDN) em `packages/sdk-py/dna/emit/`"
+  title: "Vendorizar a lib `@modelcontextprotocol/ext-apps` como asset embut\xEDvel\
+    \ (para bun"
+  status: todo
+  feature: f-copilot-mcp-apps
+  labels:
+  - spec-kit
+  - parallel
+  reporter: claude-code
+  spec_refs:
+  - speckit-mcp-apps-memory-card

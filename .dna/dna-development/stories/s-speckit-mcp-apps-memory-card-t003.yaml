@@ -1,0 +1,18 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-speckit-mcp-apps-memory-card-t003
+spec:
+  description: "Limpeza \xA73 em `packages/sdk-py/dna/emit/mcp_ui.py`: remover TODA\
+    \ men\xE7\xE3o a futuro \u2014 A2UI/\"deferred\", twin TS \"follow-up\", `externalUrl`/`rawHtml`\
+    \ do modelo pr\xE9-spec \u2014 em c\xF3digo, docstring e coment\xE1rio (ideia\
+    \ futura j\xE1 vive nos itens de board i-060/i-061/i-062)"
+  title: "Limpeza \xA73 em `packages/sdk-py/dna/emit/mcp_ui.py`: remover TODA men\xE7\
+    \xE3o a futuro"
+  status: todo
+  feature: f-copilot-mcp-apps
+  labels:
+  - spec-kit
+  reporter: claude-code
+  spec_refs:
+  - speckit-mcp-apps-memory-card

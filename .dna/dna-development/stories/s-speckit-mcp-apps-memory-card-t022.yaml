@@ -1,0 +1,17 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-speckit-mcp-apps-memory-card-t022
+spec:
+  description: "Entrada de CHANGELOG.md do lado SDK (sem nenhuma men\xE7\xE3o a trabalho\
+    \ futuro \u2014 regra \xA73; futuro vive em i-060/i-061/i-062)"
+  title: "Entrada de CHANGELOG.md do lado SDK (sem nenhuma men\xE7\xE3o a trabalho\
+    \ futuro \u2014 regr"
+  status: todo
+  feature: f-copilot-mcp-apps
+  labels:
+  - spec-kit
+  - parallel
+  reporter: claude-code
+  spec_refs:
+  - speckit-mcp-apps-memory-card

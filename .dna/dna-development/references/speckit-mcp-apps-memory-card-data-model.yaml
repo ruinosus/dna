@@ -1,0 +1,41 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Reference
+metadata:
+  name: speckit-mcp-apps-memory-card-data-model
+spec:
+  title: "Data Model \u2014 MCP Apps: card de mem\xF3ria"
+  kind_of: internal-doc
+  summary: Spec Kit data-model artifact for mcp-apps-memory-card (data-model.md).
+  body: "# Data Model \u2014 MCP Apps: card de mem\xF3ria\n\n**Phase 1 do `/speckit-plan`**\
+    \ \u2014 2026-07-21. Sem mudan\xE7a de shape: nenhuma\nentidade nova \xE9 persistida;\
+    \ o card renderiza dados que j\xE1 existem.\n\n## Entidades\n\n### Template do\
+    \ card de mem\xF3ria (recurso de UI)\n\n| Campo | Valor / Regra |\n|---|---|\n\
+    | URI | `ui://dna/memory-list` (est\xE1vel \u2014 hosts cacheiam por URI) |\n\
+    | mimeType | `text/html;profile=mcp-app` |\n| Conte\xFAdo | HTML + JS inline;\
+    \ lib `@modelcontextprotocol/ext-apps` bundlada; **zero** URL externa |\n| Dados\
+    \ embutidos | **Nenhum** \u2014 zero dado de tenant, zero segredo/token; p\xFA\
+    blico e cache\xE1vel |\n| Contrato de renderiza\xE7\xE3o | o template define os\
+    \ campos que exibe; campo ausente \u2192 vazio-honesto |\n| Estado vazio | \"\
+    nenhuma mem\xF3ria\" \u2014 o mesmo empty state honesto de hoje |\n\n**Valida\xE7\
+    \xE3o (muta\xE7\xF5es que devem morrer)**: dados assados de volta no HTML \u2192\
+    \nteste morre; URL externa (CDN) de volta \u2192 teste morre; golden byte-stable.\n\
+    \n### `structured_content` das tools de mem\xF3ria (existente \u2014 inalterado)\n\
+    \n- Shape atual de `list_memories` / `recall`, j\xE1 espelhado por\n  `_with_memory_card`.\
+    \ **Sem mudan\xE7a.**\n- Fluxo: resultado da tool \u2192 push (`ontoolresult`)\
+    \ \u2192 JS do template renderiza.\n- Escopo de seguran\xE7a: dados s\xF3 existem\
+    \ na sess\xE3o autenticada; nunca no\n  template.\n\n### Declara\xE7\xE3o das\
+    \ tools `list_memories` / `recall`\n\n- Cada declara\xE7\xE3o carrega o ponteiro\
+    \ para o template\n  (`app=AppConfig(resource_uri=\"ui://dna/memory-list\")`,\
+    \ FastMCP \u22653.2).\n- **Valida\xE7\xE3o (muta\xE7\xE3o)**: pointer removido\
+    \ da declara\xE7\xE3o \u2192 teste morre.\n\n## Relacionamentos\n\n```text\ndeclara\xE7\
+    \xE3o(list_memories | recall) \u2500\u2500aponta\u2500\u2500\u25B6 recurso ui://dna/memory-list\
+    \ (est\xE1tico, p\xFAblico)\nresultado(list_memories | recall)  \u2500\u2500push\u2500\
+    \u2500\u2500\u2500\u25B6 card (sess\xE3o autenticada)\nresultado(list_memories\
+    \ | recall).content (textual) \u2500\u2500sempre\u2500\u2500\u25B6 qualquer host\
+    \ (byte-id\xEAntico ao atual)\n```\n\n## Transi\xE7\xF5es de estado\n\nNenhuma\
+    \ \u2014 o card \xE9 s\xF3 leitura nesta entrega; nenhuma a\xE7\xE3o, nenhuma\
+    \ escrita.\n"
+  origin: specs/001-mcp-apps-memory-card/data-model.md
+  tags:
+  - spec-kit
+  - data-model

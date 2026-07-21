@@ -1,0 +1,16 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-speckit-mcp-apps-memory-card-t012
+spec:
+  description: '[US1] Registrar o recurso `ui://dna/memory-list` (`@mcp.resource`,
+    mimeType `text/html;profile=mcp-app`) em `packages/cli/dna_cli/_mcp_server.py`'
+  title: '[US1] Registrar o recurso `ui://dna/memory-list` (`@mcp.resource`, mimeType
+    `tex'
+  status: todo
+  feature: f-copilot-mcp-apps
+  labels:
+  - spec-kit
+  reporter: claude-code
+  spec_refs:
+  - speckit-mcp-apps-memory-card

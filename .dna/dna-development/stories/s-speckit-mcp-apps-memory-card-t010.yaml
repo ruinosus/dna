@@ -1,0 +1,19 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-speckit-mcp-apps-memory-card-t010
+spec:
+  description: "[US1] Reescrever `memory_list_card_html()` como template EST\xC1TICO\
+    \ em `packages/sdk-py/dna/emit/mcp_ui.py`: HTML + JS inline (ext-apps bundlada\
+    \ de T002), JS consome `app.ontoolresult` \u2192 renderiza `structured_content`;\
+    \ empty state honesto (\"nenhuma mem\xF3ria\"); campo ausente \u2192 vazio-honesto;\
+    \ tudo escapado; zero dado de tenant/segredo/token"
+  title: "[US1] Reescrever `memory_list_card_html()` como template EST\xC1TICO em\
+    \ `packages/s"
+  status: todo
+  feature: f-copilot-mcp-apps
+  labels:
+  - spec-kit
+  reporter: claude-code
+  spec_refs:
+  - speckit-mcp-apps-memory-card

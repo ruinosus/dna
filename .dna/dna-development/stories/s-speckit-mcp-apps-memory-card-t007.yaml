@@ -1,0 +1,18 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-speckit-mcp-apps-memory-card-t007
+spec:
+  description: "[US1] Teste: `resources/read` de `ui://dna/memory-list` responde com\
+    \ mimeType `text/html;profile=mcp-app` (muta\xE7\xE3o: registro removido \u2192\
+    \ morre) em `packages/cli/tests/test_mcp_apps.py`"
+  title: '[US1] Teste: `resources/read` de `ui://dna/memory-list` responde com mimeType
+    `t'
+  status: todo
+  feature: f-copilot-mcp-apps
+  labels:
+  - spec-kit
+  - parallel
+  reporter: claude-code
+  spec_refs:
+  - speckit-mcp-apps-memory-card

@@ -1,0 +1,16 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-speckit-mcp-apps-memory-card-t018
+spec:
+  description: "[US2] dna-cloud: teste node \u2014 middleware no pipeline + card do\
+    \ fixture renderiza; grep-guard \xA73 no c\xF3digo do middleware \u2014 repo `ruinosus/dna-cloud`"
+  title: "[US2] dna-cloud: teste node \u2014 middleware no pipeline + card do fixture\
+    \ renderiza"
+  status: todo
+  feature: f-copilot-mcp-apps
+  labels:
+  - spec-kit
+  reporter: claude-code
+  spec_refs:
+  - speckit-mcp-apps-memory-card

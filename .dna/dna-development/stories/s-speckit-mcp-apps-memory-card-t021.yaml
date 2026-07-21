@@ -1,0 +1,16 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-speckit-mcp-apps-memory-card-t021
+spec:
+  description: "Rodar a valida\xE7\xE3o completa de `specs/001-mcp-apps-memory-card/quickstart.md`\
+    \ (test-gate + degrada\xE7\xE3o + smoke)"
+  title: "Rodar a valida\xE7\xE3o completa de `specs/001-mcp-apps-memory-card/quickstart.md`\
+    \ (te"
+  status: todo
+  feature: f-copilot-mcp-apps
+  labels:
+  - spec-kit
+  reporter: claude-code
+  spec_refs:
+  - speckit-mcp-apps-memory-card
