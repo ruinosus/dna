@@ -1,0 +1,22 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-056-admitted-call-that-fails-is-billed
+spec:
+  description: "Proxima fronteira da cobranca honesta (familia i-050): o contador\
+    \ avanca no _guard, ANTES da execucao do tool \u2014 uma chamada admitida cujo\
+    \ tool falha com erro interno vira chamada cobravel. Do ponto de vista do cliente:\
+    \ pagou por um 500. Opcoes: decrementar em falha interna (janela de leitura, mesma\
+    \ objecao do decremento compensatorio da i-050), ou contar em duas fases (reservar/confirmar),\
+    \ ou aceitar e documentar (erro interno e raro e o custo por chamada e minusculo\
+    \ \u2014 mas ai a decisao e explicita, nao acidente). Achado do trabalho da i-050\
+    \ (2026-07-21)."
+  type: bug
+  severity: medium
+  status: open
+  timeline:
+  - at: '2026-07-21T15:26:05+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

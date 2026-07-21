@@ -1,0 +1,21 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-055-rate-limiter-counts-denied-attempts
+spec:
+  description: "Mesma familia do i-050, no eixo do rate: note_call acontece ANTES\
+    \ do check de rate_per_sec, entao tentativa negada mantem a janela cheia \u2014\
+    \ quem insiste acima do limite pode ficar com throughput ~0 em vez de rate, e\
+    \ a mensagem 'retry shortly' perpetua a negacao. Sem impacto de billing (rate\
+    \ nao fatura). Decisao de produto embutida: isso e punicao deliberada a hammering\
+    \ ou bug? Se punicao, documentar; se bug, mover o note_call para depois do check\
+    \ (a tentativa negada nao consome janela). Achado do trabalho da i-050 (2026-07-21)."
+  type: bug
+  severity: medium
+  status: open
+  timeline:
+  - at: '2026-07-21T15:26:00+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

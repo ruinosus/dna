@@ -16,10 +16,31 @@ spec:
     \ errado dos dois."
   type: bug
   severity: high
-  status: open
+  status: resolved
   timeline:
   - at: '2026-07-21T12:50:52+00:00'
     actor: claude-code
     type: status_change
     source: cli
     to: open
+  - at: '2026-07-21T15:26:10+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: open
+    to: resolved
+    summary: "PR #201. try_incr_day com o cap DENTRO do INSERT..ON CONFLICT (avaliado\
+      \ sob row lock \u2014 atomico); negada nao toca o contador que o billing le.\
+      \ Prova de concorrencia: 512 tentativas/cap 100 => exatamente 100 admitidas;\
+      \ o mutante check-then-increment (equivalente single-thread) admitiu 161/512\
+      \ e SO o teste de concorrencia pegou. incr_day incondicional mantido como primitivo\
+      \ do futuro soft cap (b) \u2014 que muda contrato de produto e fica para decisao\
+      \ do fundador. Chega a producao no proximo release+pin."
+  closed_at: '2026-07-21T15:26:10+00:00'
+  resolution: "PR #201. try_incr_day com o cap DENTRO do INSERT..ON CONFLICT (avaliado\
+    \ sob row lock \u2014 atomico); negada nao toca o contador que o billing le. Prova\
+    \ de concorrencia: 512 tentativas/cap 100 => exatamente 100 admitidas; o mutante\
+    \ check-then-increment (equivalente single-thread) admitiu 161/512 e SO o teste\
+    \ de concorrencia pegou. incr_day incondicional mantido como primitivo do futuro\
+    \ soft cap (b) \u2014 que muda contrato de produto e fica para decisao do fundador.\
+    \ Chega a producao no proximo release+pin."

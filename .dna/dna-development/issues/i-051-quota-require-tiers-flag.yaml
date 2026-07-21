@@ -15,10 +15,28 @@ spec:
     \ (remover o raise => teste morre), e o dna-cloud avisado para ligar."
   type: task
   severity: high
-  status: open
+  status: resolved
   timeline:
   - at: '2026-07-21T12:50:57+00:00'
     actor: claude-code
     type: status_change
     source: cli
     to: open
+  - at: '2026-07-21T15:26:14+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: open
+    to: resolved
+    summary: "PR #201. DNA_QUOTA_REQUIRE_TIERS=1: as DUAS caras do fail-open (registry\
+      \ vazio E ilegivel) viram recusa explicita nomeando a causa; flag lida so no\
+      \ ramo com token \u2014 o open-core fica estruturalmente fora do alcance da\
+      \ env. PENDENCIA OPERACIONAL para o proximo bump de pin do dna-cloud: setar\
+      \ a flag no infra/mcp.Dockerfile (os Tiers ja sao semeados no boot pelo #101,\
+      \ entao e seguro la)."
+  closed_at: '2026-07-21T15:26:14+00:00'
+  resolution: "PR #201. DNA_QUOTA_REQUIRE_TIERS=1: as DUAS caras do fail-open (registry\
+    \ vazio E ilegivel) viram recusa explicita nomeando a causa; flag lida so no ramo\
+    \ com token \u2014 o open-core fica estruturalmente fora do alcance da env. PENDENCIA\
+    \ OPERACIONAL para o proximo bump de pin do dna-cloud: setar a flag no infra/mcp.Dockerfile\
+    \ (os Tiers ja sao semeados no boot pelo #101, entao e seguro la)."
