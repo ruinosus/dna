@@ -1,57 +1,17 @@
-"""DNA → **MCP-UI / MCP Apps** card surface (standalone golden family).
+"""DNA → **MCP Apps** memory-card surface (SEP-1865, standalone golden family).
 
-The third UI-emit surface, alongside the AG-UI backend emitters and the
-CopilotKit ``frontend.py`` console. Where the backend emitters materialize a
-servable AG-UI *backend* and ``frontend.py`` materializes the *console* that
-drives it, this module materializes a **UI resource at the tool** — an
-``mcp-ui`` card (SEP-1865 "MCP Apps", ratified 2026-01-26) that any MCP host
-(Claude, ChatGPT, VS Code, Goose) renders in a sandboxed iframe.
+A standalone UI-emit surface, alongside the AG-UI backend emitters and the
+CopilotKit ``frontend.py`` console — like ``frontend.py`` it is NOT a
+registered ``EmitterPort``: it carries no byte-equal ``build_prompt``
+instruction and is governed by its own byte-stable golden renders. Everything
+here is a pure function of its inputs, so every render is byte-golden.
 
-The mechanism (verified against ``mcp-ui-server`` 1.0.0):
-
-    a tool returns a UI resource at ``ui://…`` (``rawHtml`` / ``externalUrl`` /
-    ``remoteDom``) linked from the tool result's ``_meta.ui.resourceUri``; the
-    host prefetches + renders it in a sandboxed iframe. Same resource renders
-    across hosts (plain ``rawHtml`` is the most portable) — DNA's "your context
-    follows you across every client" thesis made *visible in the UI*.
-
-This module produces the **``create_ui_resource``-shaped options dict** (the
-neutral artifact), NOT a live ``UIResource`` object — so the SDK base carries no
-dependency on the optional ``mcp-ui-server`` package. The MCP runtime face
-(``dna_cli._mcp_server``, which owns the ``[mcp]`` extra) turns the options into
-a real resource via ``create_ui_resource(...)`` and attaches the ``_meta``
-pointer. Keeping the payload here (pure, language-neutral) makes it byte-golden
-and — like the ``rawHtml`` backend emitters — a candidate for a byte-equal
-Py↔TS twin (``mcp_ui.ts``, a follow-up; see "Parity" below).
-
-**Standalone surface, NOT a registered ``EmitterPort``.** Exactly like
-``frontend.py``: a card carries no byte-equal ``build_prompt`` instruction and
-is outside the ``build_prompt`` contract. It is a surface a consumer calls
-alongside the backend emit / at the tool, governed by its own byte-stable
-golden render — not by the emitter registry.
-
-**The three UI-emit surfaces (Phase 4 "declare once, emit everywhere"):**
-
-    AG-UI    the agent as a frontend stream — ALREADY COVERED. DNA emits
-             AG-UI-native backends (agno / agent_framework / langgraph / vertex)
-             and serves the copilot over ``/agui``; the portal consumes it via
-             ``HttpAgent`` + ``CopilotRuntime``. Phase 4's AG-UI work is
-             recognition + this label, not new construction.
-    MCP-UI   THIS module — a UI resource at the tool (``rawHtml`` today,
-             ``externalUrl``/portal-route next). The first real emit-target build.
-    A2UI     UI as declarative JSON (``surfaceUpdate``/``dataModelUpdate``/
-             ``beginRendering``) — DEFERRED to A2UI v1.0 (it is v0.9 with a v1.0
-             candidate in flight; adopting the wire now risks churn). The
-             preparation that de-risks it costs nothing and is already honoured
-             here: every card is projected from **clean structured JSON** (the
-             ``memories`` list), so a card becomes an A2UI surface by *mapping*,
-             not rewriting. Build ``dna/emit/a2ui.py`` when A2UI ships v1.0.
-
-**Parity.** The payload this module emits is language-neutral (a plain dict of
-HTML + strings), so a ``mcp_ui.ts`` twin can render a byte-identical payload and
-be diffed against this one (like the ``rawHtml`` backend emitters). That twin is
-a tracked follow-up — this module lands the Python surface + its golden first,
-per the research's "extract emitters once the card shape is real" discipline.
+``memory_list_card_html(memories)`` renders the DNA-branded memory card as a
+self-contained HTML document (inline CSS, no external asset), consumed by the
+AG-UI shared-state canvas: the emitted LangGraph copilot projects a memory
+read-tool result into the ``memory_card_html`` state key and the DNA console's
+Memória canvas renders it as an ``<iframe srcDoc>``. Data flows inside the
+authenticated AG-UI session state, never a public URI.
 """
 from __future__ import annotations
 
@@ -62,17 +22,14 @@ __all__ = [
     "UI_MEMORY_LIST_URI",
     "MCP_APP_MIME",
     "memory_list_card_html",
-    "memory_list_ui_resource",
-    "available_emit_surfaces",
 ]
 
-#: The ``ui://`` scheme resource id for the memory-list card. Stable — hosts key
-#: their prefetch/render cache on it.
+#: The ``ui://`` scheme resource id for the memory-list card. Stable — hosts
+#: key their prefetch/render cache on it.
 UI_MEMORY_LIST_URI = "ui://dna/memory-list"
 
-#: The MCP Apps profile mimeType (SEP-1865). ``mcp-ui-server`` emits the base
-#: ``text/html``; the runtime face stamps this profile so the resource is a
-#: first-class MCP-App, not a bare HTML blob.
+#: The MCP Apps profile mimeType (SEP-1865) that marks a ``ui://`` resource as
+#: a first-class MCP App, not a bare HTML blob.
 MCP_APP_MIME = "text/html;profile=mcp-app"
 
 # DNA brand tokens — dark ink ground, teal + amber accents. Kept inline (no
@@ -199,35 +156,3 @@ def memory_list_card_html(
     )
 
 
-def memory_list_ui_resource(
-    memories: list[dict[str, Any]],
-    *,
-    scope: str | None = None,
-    uri: str = UI_MEMORY_LIST_URI,
-) -> dict[str, Any]:
-    """The ``create_ui_resource``-shaped options for the memory-list card.
-
-    Returns the neutral options dict — ``{uri, content:{type:"rawHtml",
-    htmlString}, encoding:"text"}`` — that ``mcp_ui_server.create_ui_resource``
-    consumes. Kept as a plain dict (no ``mcp-ui-server`` import) so the SDK base
-    stays dependency-free and the payload is byte-golden."""
-    return {
-        "uri": uri,
-        "content": {
-            "type": "rawHtml",
-            "htmlString": memory_list_card_html(memories, scope=scope),
-        },
-        "encoding": "text",
-    }
-
-
-def available_emit_surfaces() -> dict[str, str]:
-    """The UI-emit surfaces and their status (Phase 4 map).
-
-    ``ag-ui`` is already covered by the backend emitters; ``mcp-ui`` is this
-    module; ``a2ui`` is deferred to A2UI v1.0 (prepared for via clean JSON)."""
-    return {
-        "ag-ui": "covered",  # backend emitters + /agui — recognition, not new build.
-        "mcp-ui": "available",  # this module (rawHtml card).
-        "a2ui": "deferred",  # gated on external A2UI v1.0.
-    }
