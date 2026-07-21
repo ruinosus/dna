@@ -125,6 +125,16 @@ class DefaultLayerResolver:
     - locked: block changes (warn only)
     """
 
+    def __init__(self, kind_aliases: dict[str, str] | None = None) -> None:
+        # Declared Kind-name → alias map (from the kind registry). When
+        # present, policy lookup is DECLARED, not inferred from name shape
+        # (i-044) — the string heuristics below survive only as legacy
+        # fallback for callers that can't supply the map.
+        self._kind_aliases: dict[str, str] = dict(kind_aliases or {})
+        # Kinds already warned about (unmatched-policy fallback) — one
+        # warning per kind per resolver instance, not one per document.
+        self._warned_fallback_kinds: set[str] = set()
+
     def resolve(
         self,
         base_documents: list[dict[str, Any]],
@@ -194,21 +204,30 @@ class DefaultLayerResolver:
         return result
 
     def _policy_for_kind(self, kind: str, policies: dict[str, LayerPolicy]) -> LayerPolicy:
-        """Resolve policy for a kind. Falls back to OPEN for unknown kinds.
+        """Resolve policy for a kind. Falls back to OPEN — NOISILY — when a
+        non-empty policy set matches nothing (i-044).
 
-        Phase 16 — accepts both Kind name (``Agent``) and alias
-        (``helix-agent``) as keys. Aliases are the canonical
-        form in LayerPolicy docs; Kind names are the legacy form from
-        ``Module.spec.layers``.
+        Lookup order:
+          1. exact Kind name (``Agent``) — legacy ``Module.spec.layers`` form;
+          2. the Kind's DECLARED alias from the kind registry
+             (``self._kind_aliases``) — the canonical, non-inferred path;
+          3. legacy string heuristics (lowercase / hyphen-suffix /
+             CamelCase→kebab) — kept only for callers that construct the
+             resolver without a registry alias map.
+
+        The fallback contract: OPEN is a fine default when NO policies are
+        declared (that scope opted out of a policy regime). But when the
+        operator DID declare policies and this kind matched none of them,
+        degrading to OPEN silently is how a typo'd alias turns ``locked``
+        into ``open`` — so that path warns, once per kind per resolver.
         """
         if kind in policies:
             return policies[kind]
+        # Declared alias from the registry — exact, no inference.
+        declared_alias = self._kind_aliases.get(kind)
+        if declared_alias is not None and declared_alias in policies:
+            return policies[declared_alias]
         kind_lower = kind.lower()
-        # Direct alias match — exact equality (most common path for
-        # aliases like ``helix-agent``).
-        for alias, policy in policies.items():
-            if alias == kind:
-                return policy
         # Heuristic: hyphen-suffix alias match (legacy from when
         # policies dict could be keyed by tail-of-alias).
         for alias, policy in policies.items():
@@ -222,6 +241,17 @@ class DefaultLayerResolver:
         for alias, policy in policies.items():
             if alias.endswith(f"-{kebab}") or alias == kebab:
                 return policy
+        if policies and kind not in self._warned_fallback_kinds:
+            self._warned_fallback_kinds.add(kind)
+            warnings.warn(
+                f"No LayerPolicy entry matched Kind '{kind}'"
+                + (f" (declared alias '{declared_alias}')" if declared_alias else "")
+                + f"; assuming OPEN. Declared policy keys: "
+                f"{sorted(policies)}. If this Kind was meant to be "
+                f"restricted/locked, check the policy key for a typo — a "
+                f"mismatched alias silently degrades the policy to OPEN.",
+                stacklevel=4,
+            )
         return LayerPolicy.OPEN
 
     def _apply_merge(
