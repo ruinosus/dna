@@ -19,7 +19,7 @@ from langgraph.graph.message import add_messages
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langgraph.prebuilt import ToolNode
 from langgraph.types import interrupt
-from dna.emit.mcp_ui import memory_list_card_html
+from dna.emit.mcp_ui import memory_canvas_card_html
 INSTRUCTIONS = "Remember and recall the user's notes. Confirm before writing.\n\nYou are the Helpdesk Concierge, an internal engineering support assistant. You help developers triage and resolve engineering questions."
 
 
@@ -134,7 +134,7 @@ async def _tool_node(state: State) -> dict:
     mems = _read_tool_memories(out.get("messages", []))
     if mems is not None:
         out["memory_timeline"] = _memory_timeline(mems)
-        out["memory_card_html"] = memory_list_card_html(mems)
+        out["memory_card_html"] = memory_canvas_card_html(mems)
     return out
 
 

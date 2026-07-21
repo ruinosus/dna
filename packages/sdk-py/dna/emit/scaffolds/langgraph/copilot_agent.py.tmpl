@@ -19,7 +19,7 @@ from langgraph.graph.message import add_messages
 {{#has_mcp}}from langchain_mcp_adapters.client import MultiServerMCPClient
 from langgraph.prebuilt import ToolNode
 {{/has_mcp}}{{#has_hitl}}from langgraph.types import interrupt
-{{/has_hitl}}{{#memory_canvas}}from dna.emit.mcp_ui import memory_list_card_html
+{{/has_hitl}}{{#memory_canvas}}from dna.emit.mcp_ui import memory_canvas_card_html
 {{/memory_canvas}}
 INSTRUCTIONS = {{{instructions_literal}}}
 
@@ -145,7 +145,7 @@ async def _tool_node(state: State) -> dict:
     mems = _read_tool_memories(out.get("messages", []))
     if mems is not None:
         out["memory_timeline"] = _memory_timeline(mems)
-        out["memory_card_html"] = memory_list_card_html(mems)
+        out["memory_card_html"] = memory_canvas_card_html(mems)
     return out
 {{/memory_canvas}}{{^memory_canvas}}    return await ToolNode(await _mcp_client().get_tools()).ainvoke(state)
 {{/memory_canvas}}{{#memory_canvas}}
