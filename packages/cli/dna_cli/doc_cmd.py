@@ -4,7 +4,7 @@ Migrated to dna-client for read/write CRUD (no local kernel needed
 for the common path). `apply` is the lone exception: it walks a
 bundle directory or markdown marker file and needs the kernel's
 registered Kinds to resolve marker→kind — that read happens in-process
-via dna_session. Migration of `apply` requires a server-side endpoint
+via open_session. Migration of `apply` requires a server-side endpoint
 that accepts the bundle+marker and resolves kind itself (TODO).
 """
 from __future__ import annotations
@@ -17,8 +17,8 @@ import click
 
 from dna_cli._ctx import (
     dna_client,
-    dna_session,
     fail,
+    open_session,
     print_json,
     print_table,
     run_async,
@@ -839,7 +839,7 @@ def apply(path: str, scope: str | None, tenant: str | None, dry_run: bool) -> No
     bundle/marker → kind resolution requires walking registered Kinds. Other
     `dna doc` commands run via dna-client and don't need DNA_SOURCE_URL set.
     """
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         raws = _load_apply_inputs(path, s.kernel)
         multi = len(raws) > 1
         for idx, raw in enumerate(raws):

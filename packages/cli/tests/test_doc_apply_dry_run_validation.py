@@ -19,7 +19,7 @@ from unittest.mock import MagicMock
 import pytest
 from click.testing import CliRunner
 
-from dna_cli import doc_cmd
+from dna_cli._ctx import SESSION_PROVIDER_KEY
 from dna_cli.doc_cmd import doc
 
 
@@ -44,7 +44,7 @@ def _guardrail_yaml(tmp_path, severity: str):
     return str(f)
 
 
-def _stub_session(monkeypatch):
+def _stub_session():
     """Session with a REAL kernel (live GuardrailKind schema), stubbed get_doc."""
     from dna.kernel import Kernel
 
@@ -58,14 +58,13 @@ def _stub_session(monkeypatch):
     def _fake_dna_session(scope=None):
         yield mock_session
 
-    monkeypatch.setattr(doc_cmd, "dna_session", _fake_dna_session)
-    return mock_session
+    return mock_session, {SESSION_PROVIDER_KEY: _fake_dna_session}
 
 
 def test_dry_run_rejects_bad_severity(runner, tmp_path, monkeypatch):
-    _stub_session(monkeypatch)
+    _mock, obj = _stub_session()
     path = _guardrail_yaml(tmp_path, "critical")
-    result = runner.invoke(doc, ["apply", path, "--dry-run"])
+    result = runner.invoke(doc, ["apply", path, "--dry-run"], obj=obj)
     assert result.exit_code != 0, (
         f"--dry-run must reject an enum-violating severity. Output:\n{result.output}"
     )
@@ -74,16 +73,16 @@ def test_dry_run_rejects_bad_severity(runner, tmp_path, monkeypatch):
 
 
 def test_dry_run_rejects_garbage_severity(runner, tmp_path, monkeypatch):
-    _stub_session(monkeypatch)
+    _mock, obj = _stub_session()
     path = _guardrail_yaml(tmp_path, "garbage")
-    result = runner.invoke(doc, ["apply", path, "--dry-run"])
+    result = runner.invoke(doc, ["apply", path, "--dry-run"], obj=obj)
     assert result.exit_code != 0, result.output
 
 
 def test_dry_run_accepts_valid_severity(runner, tmp_path, monkeypatch):
-    _stub_session(monkeypatch)
+    _mock, obj = _stub_session()
     path = _guardrail_yaml(tmp_path, "hard")
-    result = runner.invoke(doc, ["apply", path, "--dry-run"])
+    result = runner.invoke(doc, ["apply", path, "--dry-run"], obj=obj)
     assert result.exit_code == 0, (
         f"--dry-run must accept a documented severity. Output:\n{result.output}"
     )

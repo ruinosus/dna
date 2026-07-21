@@ -359,8 +359,7 @@ def _doc_fake_session(store: dict, scope: str):
     return _FakeSession(store, scope)
 
 
-def test_doc_apply_multi_document(runner, monkeypatch, tmp_path):
-    from dna_cli import doc_cmd
+def test_doc_apply_multi_document(runner, tmp_path):
     from dna_cli.doc_cmd import doc
 
     backing: dict = {}
@@ -369,7 +368,7 @@ def test_doc_apply_multi_document(runner, monkeypatch, tmp_path):
     def _fake_dna_session(scope=None):
         yield _FakeSession(backing, scope or "dna-development")
 
-    monkeypatch.setattr(doc_cmd, "dna_session", _fake_dna_session)
+    doc_obj = {SESSION_PROVIDER_KEY: _fake_dna_session}
 
     f = tmp_path / "multi.yaml"
     f.write_text(
@@ -384,7 +383,7 @@ def test_doc_apply_multi_document(runner, monkeypatch, tmp_path):
         "spec:\n  title: T\n  status: todo\n",
         encoding="utf-8",
     )
-    result = runner.invoke(doc, ["apply", str(f), "--scope", "dna-development"])
+    result = runner.invoke(doc, ["apply", str(f), "--scope", "dna-development"], obj=doc_obj)
     assert result.exit_code == 0, result.output
     assert ("dna-development", "Spike", "sp-a") in backing
     assert ("dna-development", "Task", "t-a") in backing
@@ -392,8 +391,7 @@ def test_doc_apply_multi_document(runner, monkeypatch, tmp_path):
     assert result.output.count("CREATED") == 2
 
 
-def test_doc_apply_single_document_unchanged_behavior(runner, monkeypatch, tmp_path):
-    from dna_cli import doc_cmd
+def test_doc_apply_single_document_unchanged_behavior(runner, tmp_path):
     from dna_cli.doc_cmd import doc
 
     backing: dict = {}
@@ -402,7 +400,7 @@ def test_doc_apply_single_document_unchanged_behavior(runner, monkeypatch, tmp_p
     def _fake_dna_session(scope=None):
         yield _FakeSession(backing, scope or "dna-development")
 
-    monkeypatch.setattr(doc_cmd, "dna_session", _fake_dna_session)
+    doc_obj = {SESSION_PROVIDER_KEY: _fake_dna_session}
 
     f = tmp_path / "single.yaml"
     f.write_text(
@@ -412,13 +410,12 @@ def test_doc_apply_single_document_unchanged_behavior(runner, monkeypatch, tmp_p
         "spec:\n  title: T\n  status: todo\n",
         encoding="utf-8",
     )
-    result = runner.invoke(doc, ["apply", str(f), "--scope", "dna-development"])
+    result = runner.invoke(doc, ["apply", str(f), "--scope", "dna-development"], obj=doc_obj)
     assert result.exit_code == 0, result.output
     assert ("dna-development", "Task", "t-solo") in backing
 
 
-def test_doc_apply_multi_document_missing_name_fails(runner, monkeypatch, tmp_path):
-    from dna_cli import doc_cmd
+def test_doc_apply_multi_document_missing_name_fails(runner, tmp_path):
     from dna_cli.doc_cmd import doc
 
     backing: dict = {}
@@ -427,7 +424,7 @@ def test_doc_apply_multi_document_missing_name_fails(runner, monkeypatch, tmp_pa
     def _fake_dna_session(scope=None):
         yield _FakeSession(backing, scope or "dna-development")
 
-    monkeypatch.setattr(doc_cmd, "dna_session", _fake_dna_session)
+    doc_obj = {SESSION_PROVIDER_KEY: _fake_dna_session}
 
     f = tmp_path / "bad.yaml"
     f.write_text(
@@ -442,7 +439,7 @@ def test_doc_apply_multi_document_missing_name_fails(runner, monkeypatch, tmp_pa
         "spec:\n  title: T2\n  status: todo\n",
         encoding="utf-8",
     )
-    result = runner.invoke(doc, ["apply", str(f), "--scope", "dna-development"])
+    result = runner.invoke(doc, ["apply", str(f), "--scope", "dna-development"], obj=doc_obj)
     assert result.exit_code != 0
     # Error names the offending document index.
     assert "document #1" in result.output
