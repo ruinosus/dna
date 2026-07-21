@@ -16,6 +16,8 @@ from typing import Any
 
 import click
 
+from dna_cli._ctx import fail, open_session
+
 # The SDLC write PRIMITIVES live in the transport-agnostic core
 # ``dna.application.sdlc`` (adr-faces-reorg) so the CLI + the MCP server share
 # ONE write path. The thin wrappers below adapt them to the CLI's clock +
@@ -320,3 +322,50 @@ def _csv(value: str | None) -> list[str] | None:
         return None
     parts = [p.strip() for p in value.split(",") if p.strip()]
     return parts or None
+
+
+def _transition_workitem(
+    scope: str, kind: str, name: str, new_status: str,
+    *, extras: dict[str, Any] | None = None, **timeline_extras: Any,
+) -> None:
+    """Generic status transition for any work-item / artifact Kind.
+
+    Mirror of ``_update_story_status`` but Kind-agnostic: read via
+    ``s.get_doc(kind, name)`` (fail if missing), copy the spec, set
+    ``status``, apply spec-level ``extras`` (closed_at, resolution, ...),
+    stamp ``updated_at``, append a ``status_change`` timeline event with
+    ``from``/``to`` + any ``timeline_extras``, write, and report.
+    """
+    with open_session(scope) as s:
+        existing = s.get_doc(kind, name)
+        if existing is None:
+            raise fail(f"{kind} '{name}' not found in scope {scope!r}")
+        spec = dict(existing.spec) if isinstance(existing.spec, dict) else {}
+        prev_status = spec.get("status")
+        spec["status"] = new_status
+        if extras:
+            spec.update(extras)
+        spec["updated_at"] = _now_iso()
+        _append_timeline(
+            spec, "status_change",
+            **{"from": prev_status, "to": new_status, **timeline_extras},
+        )
+        raw = _build_raw(kind, name, spec)
+        s.run(s.kernel.write_document(scope, kind, name, raw))
+    click.secho(f"UPDATED {kind}/{name} → {new_status}", fg="green")
+
+
+def _derive_title(title: str | None, source_text: str, fallback: str) -> str:
+    """Title from --title, else first line of source_text (≤80 chars), else fallback."""
+    if title:
+        return title
+    first_line = source_text.splitlines()[0] if source_text else ""
+    return first_line[:80] if first_line else fallback
+
+
+def _stamp_create(spec: dict[str, Any], status: str) -> None:
+    """Stamp created_at/updated_at + the first status_change timeline event."""
+    now = _now_iso()
+    spec["created_at"] = now
+    spec["updated_at"] = now
+    _append_timeline(spec, "status_change", to=status)
