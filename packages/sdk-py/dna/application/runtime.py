@@ -1116,6 +1116,38 @@ async def consolidate_impl(
     return await consolidate(live.kernel, sc, apply=apply, tenant=tenant)
 
 
+async def import_memories_impl(
+    live: LiveDna,
+    docs: list[dict[str, Any]],
+    *,
+    as_mode: str = "both",
+    dedupe: str = "id",
+    scope: str | None = None,
+    tenant: str | None = None,
+    memory_scope: str = "workspace",
+    oid: str | None = None,
+    family: str | None = None,
+) -> dict[str, Any]:
+    """Ingest already-parsed MIF Memory Units — mirrors ``dna memory import``.
+
+    Thin: it resolves the ``(scope, tenant)`` target for the requested
+    :data:`~dna.memory.personal.MemoryScope` and hands off to the ONE write
+    pipeline, :func:`dna.memory.verbs.import_mif_docs`, which the CLI calls too.
+
+    ``memory_scope="personal"`` imports into the caller's OWN private partition
+    (``personal:<oid>``, oid derived SERVER-SIDE by the face — never a caller
+    argument, INV-PERSONAL layer 1) — "your memory, yours", never a shared
+    partition. ``_resolve_memory_target`` fails closed on a missing identity and
+    rejects a raw ``personal:`` tenant override (layer 4).
+    """
+    from dna.memory.verbs import import_mif_docs
+
+    sc, tenant = _resolve_memory_target(live, scope, tenant, memory_scope, oid, family)
+    return await import_mif_docs(
+        live.kernel, sc, docs, as_mode=as_mode, dedupe=dedupe, tenant=tenant
+    )
+
+
 async def list_memories_impl(
     live: LiveDna, scope: str | None = None, kind: str = "Engram",
     tenant: str | None = None, *, memory_scope: str = "workspace",

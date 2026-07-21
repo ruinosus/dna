@@ -459,6 +459,55 @@ def identity_claim_for_family(
     return oid_from_token(claims, claim_key=claim_key)
 
 
+def personal_identity_from_claims(
+    claims: dict[str, Any] | None,
+    *,
+    token_present: bool,
+    allow_env_fallback: bool = False,
+) -> tuple[str, str]:
+    """Resolve ``(oid, family)`` from EXPLICITLY-supplied verified claims — the
+    REST twin of :func:`enforce_oid_from_context`.
+
+    Same policy (:func:`resolve_personal_oid`), different claim SOURCE. The MCP
+    helper reads FastMCP's request-scoped ``get_access_token()``; a FastAPI
+    request has no such context, so the REST face passes the claims its own
+    verifying middleware already stashed on ``request.state``.
+
+    Why this must not be :func:`enforce_oid_from_context`: called from a FastAPI
+    handler, ``get_access_token()`` returns ``None``, so that function would take
+    the OFFLINE branch and hand back ``DNA_PERSONAL_ID`` — meaning **every**
+    caller of a multi-user server would resolve to the SAME personal partition.
+    That is exactly the fail-open this seam exists to prevent.
+
+    * ``token_present=True`` → the oid comes ONLY from ``claims``; a token with
+      no identity claim is DENIED and ``DNA_PERSONAL_ID`` is never consulted.
+    * ``token_present=False`` → no per-request identity exists. ``DNA_PERSONAL_ID``
+      is honored only when ``allow_env_fallback`` is set, which a face may do
+      solely for a genuinely single-user local deployment (``--auth none``,
+      the stdio equivalent). A SHARED bearer token (``--auth token``) is not an
+      identity, so that mode must leave this False and fail closed.
+
+    The oid is NEVER read from a caller argument, body, or query
+    (INV-PERSONAL layer 1). Raises
+    :class:`~dna.memory.personal.PersonalIdentityRequired` when no identity
+    resolves.
+    """
+    family = personal_key_family(claims) if token_present else "entra"
+    token_oid = (
+        identity_claim_for_family(claims, key_family=family)
+        if token_present
+        else None
+    )
+    env_oid = personal_id_from_env() if allow_env_fallback else None
+    oid = resolve_personal_oid(
+        token_present=token_present,
+        token_oid=token_oid,
+        env_oid=env_oid,
+        key_family=family,
+    )
+    return oid, family
+
+
 # ── the plan/tier axis (DNA Cloud quota) — pure core, mirror the tenant twins ─
 
 

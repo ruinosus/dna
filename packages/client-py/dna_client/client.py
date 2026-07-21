@@ -51,6 +51,12 @@ _NO_SCOPE_TENANT: frozenset[tuple[str, str]] = frozenset(
         # POST /v1/projects names its workspace in the BODY (decision A1); the
         # GET on the same path IS scope/tenant-aware, hence the method-keyed set.
         ("POST", "/v1/projects"),
+        # The MIF import always targets the CALLER'S OWN personal partition,
+        # resolved server-side from the token (INV-PERSONAL) — it is
+        # identity-scoped, not tenant-scoped. Merging a default `tenant` here
+        # would send a param the server ignores, implying a choice the caller
+        # does not have. `scope` is passed explicitly by `import_memories`.
+        ("POST", "/v1/memories/import"),
     }
 )
 
@@ -209,6 +215,31 @@ class DnaClient:
             {"summary": summary, "area": area, "tags": tags,
              "affect": affect, "owner": owner},
             scope=scope, tenant=tenant,
+        )
+
+    def import_memories(
+        self, bundle: Any, *, as_mode: str = "both", dedupe: str = "id",
+        scope: str | None = None,
+    ) -> JsonObject:
+        """Import a MIF bundle into the CALLER'S OWN personal memory.
+
+        ``bundle`` is the MIF payload in any shape the export side emits: a
+        JSON-LD ``{"@graph": [...]}``, a bare list of Memory Units, or one
+        Memory Unit. ``as_mode`` (``both``/``passthrough``/``native``) picks
+        verbatim storage, the recallable ``Engram`` projection, or both;
+        ``dedupe`` (``id``/``content-hash``/``off``) makes a re-import
+        idempotent.
+
+        There is deliberately **no tenant/identity parameter**: the write always
+        lands in the caller's own ``personal:<oid>`` partition, with the identity
+        derived server-side from the token (INV-PERSONAL). A malformed bundle is
+        a 400 with nothing written; an oversized one a 413; a token carrying no
+        identity a 403. The returned counts always reconcile with ``received``,
+        so a partial import is never silent."""
+        return self._write(
+            "POST", "/v1/memories/import",
+            {"bundle": bundle, "as": as_mode, "dedupe": dedupe},
+            scope=scope,
         )
 
     def delete_memory(

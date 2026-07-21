@@ -84,6 +84,7 @@ s-memory-interchange-verbs (2026-07-19, feature f-portable-memory).
 from __future__ import annotations
 
 import copy
+import hashlib
 import uuid
 from typing import Any, Callable
 
@@ -445,8 +446,134 @@ def from_mif(doc: dict[str, Any]) -> dict[str, Any]:
     return spec
 
 
+# ── bundle parsing (shared by every face: CLI file read + REST body) ────────
+#
+# The CLI read MIF from the filesystem and raised ``click.ClickException``; the
+# REST face receives the SAME bundle shapes in a request body and must answer
+# 400. The *format* logic is identical and is not CLI policy, so it lives here
+# in the core (adr-faces-reorg: logic in the core, faces thin) raising a plain
+# :class:`MifFormatError` each face maps to its own channel.
+
+
+class MifFormatError(ValueError):
+    """A payload is not a well-formed MIF bundle — an unrecognized container
+    shape, or a Memory Unit missing a MIF Level 1 core field.
+
+    Deliberately raised BEFORE anything is written, so a malformed bundle can
+    never produce a partial import: parsing is a whole-payload gate.
+    """
+
+
+#: MIF Level 1 core — the fields every Memory Unit must carry
+#: (SPECIFICATION.md §13.1).
+MIF_REQUIRED_FIELDS = ("id", "type", "content", "created")
+
+
+def validate_mif_doc(doc: dict[str, Any], source: str) -> None:
+    """Assert a MIF Memory Unit carries the Level 1 core fields, else raise
+    :class:`MifFormatError` naming ``source`` (a path, or ``bundle[i]``)."""
+    missing = [f for f in MIF_REQUIRED_FIELDS if not doc.get(f)]
+    if missing:
+        raise MifFormatError(
+            f"{source}: MIF doc missing required field(s) {missing} "
+            "(MIF Level 1 core — SPECIFICATION.md §13.1)"
+        )
+
+
+def from_json_ld(entry: dict[str, Any]) -> dict[str, Any]:
+    """Normalize a JSON-LD-shaped MIF entry to the Markdown profile: ``@id`` ->
+    ``id`` (stripping the ``urn:mif:`` prefix), dropping ``@type``."""
+    entry = dict(entry)
+    at_id = entry.pop("@id", None)
+    entry.pop("@type", None)
+    if at_id is not None and "id" not in entry:
+        entry["id"] = (
+            at_id[len("urn:mif:"):]
+            if str(at_id).startswith("urn:mif:")
+            else at_id
+        )
+    return entry
+
+
+def parse_mif_bundle(
+    payload: Any, *, source: str = "bundle"
+) -> list[dict[str, Any]]:
+    """Parse a decoded-JSON MIF bundle into validated Memory Unit dicts.
+
+    Accepts the three container shapes the export side emits / the wild
+    produces: a JSON-LD bundle (``{"@graph": [...]}``), a bare list of docs, or
+    a single doc object. Each entry is JSON-LD-normalized then validated.
+
+    Raises :class:`MifFormatError` on an unrecognized shape or any invalid
+    entry — ALL-or-nothing, before a single write.
+    """
+    if isinstance(payload, dict) and isinstance(payload.get("@graph"), list):
+        entries = payload["@graph"]
+    elif isinstance(payload, list):
+        entries = payload
+    elif isinstance(payload, dict):
+        entries = [payload]
+    else:
+        raise MifFormatError(f"{source}: unrecognized MIF JSON shape")
+    docs: list[dict[str, Any]] = []
+    for i, e in enumerate(entries):
+        if not isinstance(e, dict):
+            raise MifFormatError(f"{source}[{i}]: MIF entry must be an object")
+        docs.append(from_json_ld(e) if "@id" in e else dict(e))
+    for i, doc in enumerate(docs):
+        validate_mif_doc(doc, f"{source}[{i}]")
+    return docs
+
+
+# ── storage naming + the passthrough field allow-list (shared by the faces) ──
+
+#: The mif-memory passthrough Kind's own schema property vocabulary
+#: (``dna/extensions/mif/kinds/memory.kind.yaml``) — the passthrough Kind is
+#: STRICT (``additionalProperties: false``), so a foreign MIF file's frontmatter
+#: is filtered to this set before being stored verbatim; anything outside it (a
+#: stray custom top-level key a producer added) is dropped rather than tripping
+#: schema validation on write. A doc built by THIS module's own export path
+#: never carries anything outside this set, so the DNA->MIF->DNA (Circle A) path
+#: is never affected by the filter.
+KNOWN_MIF_FIELDS = frozenset({
+    "id", "type", "content", "created", "title", "modified", "ontology",
+    "namespace", "tags", "aliases", "entities", "relationships", "temporal",
+    "provenance", "embedding", "citations", "summary", "compressed_at",
+    "extensions",
+})
+
+
+def mif_doc_name(mif_id: str) -> str:
+    """Deterministic DNA doc name for the VERBATIM passthrough copy of a MIF id
+    — ``mif-<hash>``, so a re-import of the SAME id always targets the SAME
+    storage slot (the id, not a random suffix, is the identity — §6)."""
+    h = hashlib.sha256((mif_id or "unknown").strip().encode("utf-8")).hexdigest()[:12]
+    return f"mif-{h}"
+
+
+def engram_doc_name(mif_id: str) -> str:
+    """Deterministic Engram doc name for an IMPORTED MIF memory — keyed by the
+    MIF id, exactly like :func:`mif_doc_name` keys the passthrough copy.
+
+    NOT a summary slug: two distinct MIF docs can derive the same summary (both
+    untitled, or simply sharing a title), and ``write_document`` is a full
+    replace at a name — so a summary-keyed projection silently overwrote an
+    unrelated, previously-imported memory. The id is the identity (§6); the
+    projection must be named off it."""
+    h = hashlib.sha256((mif_id or "unknown").strip().encode("utf-8")).hexdigest()[:10]
+    return f"rem-{h}"
+
+
 __all__ = [
     "resolve_or_mint_mif_id",
     "to_mif",
     "from_mif",
+    "KNOWN_MIF_FIELDS",
+    "mif_doc_name",
+    "engram_doc_name",
+    "MifFormatError",
+    "MIF_REQUIRED_FIELDS",
+    "validate_mif_doc",
+    "from_json_ld",
+    "parse_mif_bundle",
 ]
