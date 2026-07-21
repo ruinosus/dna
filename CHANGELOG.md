@@ -11,6 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.1] — 2026-07-21
+
+Patch de cobrança honesta. A faixa interna NÃO muda: 0.22.1 é patch dentro
+do mesmo minor (`dna-sdk>=0.22,<0.23` segue).
+
+
 ### ✨ Quota
 
 - **`DNA_QUOTA_REQUIRE_TIERS=1` — fail-closed opt-in quando o registry de
