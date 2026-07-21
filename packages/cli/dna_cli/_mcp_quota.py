@@ -10,6 +10,9 @@ literal in code**) it meters every MCP tool call against three limits:
       must be unlocked by the tier, else :class:`FeatureNotInPlanError` (403).
     * **rate** — calls-per-second window, else :class:`OverQuotaError` (429).
     * **daily quota** — calls-per-day counter, else :class:`OverQuotaError` (429/402).
+      A HARD cap, and an HONEST one (i-050): the denied call is NOT counted, so
+      the counter the overage job bills from (``SUM(calls) - included``) can
+      never carry calls the customer was refused.
 
 The counting is behind a small **port** (:class:`QuotaStore`) with two impls:
 
@@ -184,7 +187,24 @@ class QuotaStore(Protocol):
     behind this identical interface."""
 
     def incr_day(self, key: str) -> int:
-        """Increment today's counter for ``key`` and return the new count."""
+        """Increment today's counter for ``key`` and return the new count.
+
+        UNCONDITIONAL — this is the soft-cap primitive (count everything,
+        bill the excess). The hard-cap enforcement path does NOT use it;
+        see :meth:`try_incr_day`."""
+        ...
+
+    def try_incr_day(self, key: str, cap: int) -> int | None:
+        """Increment today's counter for ``key`` ONLY if the post-increment
+        count stays within ``cap``; return the new count, or ``None`` when the
+        cap is already spent (in which case NOTHING was counted).
+
+        The hard-cap primitive, and the billing-honesty guarantee lives here:
+        a denied call must never reach the counter the overage job bills from
+        (``SUM(calls) - included``), or a capped tenant gets charged for calls
+        it was refused. The check-and-increment must be ATOMIC — a separate
+        check-then-``incr_day`` reintroduces the read-modify-write race the
+        durable store's ``INSERT .. ON CONFLICT`` exists to kill."""
         ...
 
     def note_call(self, key: str) -> None:
@@ -257,6 +277,20 @@ class InProcQuotaStore:
         count = self._day_counts.get(bucket, 0) + 1
         self._day_counts[bucket] = count
         return count
+
+    def try_incr_day(self, key: str, cap: int) -> int | None:
+        """Count only if the post-increment count stays ≤ ``cap`` (see the port).
+
+        Check-and-increment under one dict read/write pair — the same (single-
+        process) consistency the unconditional ``incr_day`` above already
+        relies on; the ATOMIC version of this conditional lives in
+        :meth:`PostgresQuotaStore.try_incr_day`, where replicas contend."""
+        bucket = (self._today(), key)
+        count = self._day_counts.get(bucket, 0)
+        if count >= cap:
+            return None  # cap spent — the denial costs NOTHING (i-050).
+        self._day_counts[bucket] = count + 1
+        return count + 1
 
     def note_call(self, key: str) -> None:
         self._calls.setdefault(key, []).append(time.time())
@@ -437,6 +471,52 @@ class PostgresQuotaStore:
             ).first()
         return int(row[0]) if row else 1
 
+    def try_incr_day(self, key: str, cap: int) -> int | None:
+        """Advance today's counter ONLY while it stays within ``cap`` — atomically.
+
+        The i-050 fix hinges on this statement. The cap rides INSIDE the same
+        ``INSERT ... ON CONFLICT DO UPDATE`` that made the unconditional
+        increment race-free, as the UPDATE's ``WHERE``::
+
+            ON CONFLICT (day, tenant, tier)
+            DO UPDATE SET calls = dna_quota_counters.calls + 1
+            WHERE dna_quota_counters.calls < :cap
+            RETURNING calls
+
+        Postgres evaluates that ``WHERE`` against the row AFTER taking its
+        lock and seeing the last COMMITTED value — the exact property the
+        64x8-thread test pins for ``incr_day`` — so under concurrency exactly
+        ``cap`` increments succeed and every loser gets ``None`` having
+        written NOTHING. A check-then-``incr_day`` split across two
+        statements would reintroduce the read-modify-write race; a
+        compensating decrement after the denial would leave a window in which
+        the billing read sees phantom calls. Neither is needed: the condition
+        and the increment are one statement.
+
+        When the ``WHERE`` rejects (or ``cap < 1`` — the fresh-INSERT arm
+        would otherwise mint a count of 1 past a zero cap), no row comes back
+        and the counter is untouched: a denied call is invisible to
+        :meth:`calls_on`, the read the overage job bills from."""
+        import sqlalchemy as sa
+
+        if cap < 1:
+            return None  # a cap of 0 admits nothing; never reach the INSERT arm.
+        tenant, tier = split_quota_key(key)
+        stmt = sa.text(
+            f"INSERT INTO {self._qualified} (day, tenant, tier, calls) "
+            "VALUES (:day, :tenant, :tier, 1) "
+            "ON CONFLICT (day, tenant, tier) "
+            f"DO UPDATE SET calls = {self._table}.calls + 1 "
+            f"WHERE {self._table}.calls < :cap "
+            "RETURNING calls"
+        )
+        with self._get_engine().begin() as conn:
+            row = conn.execute(
+                stmt,
+                {"day": self._today(), "tenant": tenant, "tier": tier, "cap": cap},
+            ).first()
+        return int(row[0]) if row else None
+
     def note_call(self, key: str) -> None:
         """Record a call in the (per-replica) rate window."""
         self._rate.note_call(key)
@@ -514,6 +594,35 @@ def store_from_env(env: Any = None) -> Any:
     return PostgresQuotaStore(dsn, schema=(env.get("DNA_QUOTA_SCHEMA") or None))
 
 
+# ── the hosted-shape switch: fail-CLOSED on a missing Tier registry ─────────
+#
+# Empty caps are AMBIGUOUS: for an OSS/self-host they mean "never opted into
+# DNA Cloud pricing — enforce nothing" (the open-core hard rule, default,
+# untouched); for a HOSTED deployment whose Tier seed failed at boot they mean
+# "every cap just silently evaporated" — fail-open exactly where money needs
+# fail-closed. The SDK cannot tell the two apart, so the HOST declares which
+# shape it is (i-051): dna-cloud sets the flag in its mcp container; a
+# self-host never does.
+
+#: Set to ``1`` (or ``true``/``yes``/``on``) to REFUSE metered calls when the
+#: Tier registry is empty or unreadable, instead of serving them uncapped.
+REQUIRE_TIERS_ENV = "DNA_QUOTA_REQUIRE_TIERS"
+
+
+def require_tiers(env: Any = None) -> bool:
+    """Whether this process opted into fail-CLOSED quota (the hosted shape).
+
+    Read per-call (not cached at server build) so the flag is testable and a
+    supervisor restart is not needed to observe a corrected environment. The
+    guard consults it ONLY on the metered (token-present) branch — the
+    stdio/local path returns before any of this, so the OSS invariant is
+    structurally out of the flag's reach."""
+    env = os.environ if env is None else env
+    return str(env.get(REQUIRE_TIERS_ENV) or "").strip().lower() in (
+        "1", "true", "yes", "on",
+    )
+
+
 # ── the enforcer (caps come from the Tier spec — zero literals) ─────────────
 
 
@@ -534,8 +643,11 @@ def enforce_quota(
        ``family`` is not in it → :class:`FeatureNotInPlanError`.
     2. **rate** — if ``caps['rate_per_sec']`` is set, record the call and if the
        1-second window now exceeds it → :class:`OverQuotaError`.
-    3. **daily quota** — if ``caps['calls_per_day']`` is set, increment today's
-       counter and if it now exceeds the cap → :class:`OverQuotaError`.
+    3. **daily quota** — if ``caps['calls_per_day']`` is set, count this call
+       ONLY if the day's counter stays within the cap (one atomic conditional
+       increment — :meth:`QuotaStore.try_incr_day`); at the cap →
+       :class:`OverQuotaError` and the denied call is NOT counted (i-050:
+       what was refused must never reach the billed counter).
 
     A ``None`` cap means *unlimited* for that axis (skipped). Empty ``caps`` (an
     unconfigured / OSS source) enforces nothing. The metering key is
@@ -561,13 +673,23 @@ def enforce_quota(
                 f"(retry shortly)."
             )
 
-    # 3. daily quota (calls-per-day counter).
+    # 3. daily quota (calls-per-day counter). Policy: HARD cap — a denied call
+    # is NOT counted (i-050). The overage job bills SUM(calls) - included off
+    # this counter, so counting a denial would charge the customer for a call
+    # it was refused; deny-without-counting is the only reading under which
+    # `calls_per_day` (sold as a hard cap) and per-call overage cannot
+    # contradict each other. The increment is CONDITIONAL AND ATOMIC
+    # (`try_incr_day` — the cap rides inside the store's own statement), never
+    # check-then-increment. A future SOFT cap (overage billing: allow AND
+    # count above the cap) is the other branch of this `if` — it would switch
+    # to the unconditional `store.incr_day(key)` and not raise, gated on a
+    # Tier-spec knob (e.g. `spec.overage`), which is a product decision, not a
+    # rewrite here.
     cpd = caps.get("calls_per_day")
     if cpd is not None:
-        count = store.incr_day(key)
-        if count > cpd:
+        if store.try_incr_day(key, int(cpd)) is None:
             raise OverQuotaError(
-                f"tier {tier!r} daily call quota exhausted "
-                f"({count - 1}/{cpd} used today) — upgrade the plan or wait for "
-                f"the daily reset."
+                f"tier {tier!r} daily call quota exhausted (the {cpd}/day cap "
+                f"is spent; this denied call was NOT counted) — upgrade the "
+                f"plan or wait for the daily reset."
             )

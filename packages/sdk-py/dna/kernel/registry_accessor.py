@@ -19,6 +19,7 @@ method-bound-to-``self`` behavior exactly.
 from __future__ import annotations
 
 import logging
+import os
 from typing import TYPE_CHECKING
 
 from dna.kernel.protocols import SYSTEM_SCOPE
@@ -27,6 +28,23 @@ if TYPE_CHECKING:  # pragma: no cover
     from dna.kernel.collaborator_ports import RegistryAccessorHost
 
 logger = logging.getLogger(__name__)
+
+#: i-051 — the hosted shape's fail-CLOSED switch for the Tier registry. The
+#: env NAME is the contract shared with ``dna_cli._mcp_quota.require_tiers``
+#: (the CLI cannot be imported from the SDK): when the host sets it, a Tier
+#: registry failure must PROPAGATE to the caller (which then refuses the
+#: call) instead of degrading to ``None`` — because downstream, ``None``
+#: becomes empty caps becomes NO quota enforcement, i.e. a database hiccup
+#: silently converting into unlimited unbilled calls. Scoped to ``tier()``
+#: only: it is a QUOTA contract, not a general fail-hard switch.
+_REQUIRE_TIERS_ENV = "DNA_QUOTA_REQUIRE_TIERS"
+
+
+def _quota_requires_tiers() -> bool:
+    """Whether this process opted into fail-CLOSED quota (see above)."""
+    return str(os.environ.get(_REQUIRE_TIERS_ENV) or "").strip().lower() in (
+        "1", "true", "yes", "on",
+    )
 
 
 class RegistryAccessor:
@@ -115,7 +133,11 @@ class RegistryAccessor:
         except Exception as e:  # noqa: BLE001
             # fail-soft: registry read — but a silent None here disables the
             # quota enforcer downstream (it reads the caps from this Tier), so
-            # the degradation logs loud.
+            # the degradation logs loud. Under DNA_QUOTA_REQUIRE_TIERS (the
+            # hosted shape, i-051) it does not degrade at all: the failure
+            # PROPAGATES so the metered call fails instead of the billing.
+            if _quota_requires_tiers():
+                raise
             logger.warning(
                 "tier: registry query failed for %r (quota enforcement "
                 "degrades to no-tier): %s",

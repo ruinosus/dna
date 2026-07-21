@@ -138,6 +138,56 @@ def test_over_calls_per_day_raises_on_cap_plus_one():
         Q.enforce_quota(caps=caps, tenant="acme", tier="free", family="memory", store=store)
 
 
+def test_a_denied_call_is_not_counted_or_billed():
+    """i-050 — THE billing-honesty property. The overage job bills
+    ``SUM(calls) - included`` straight off this counter; a denial that counted
+    would therefore CHARGE the customer for a call it never got to execute.
+
+    Baseline first (anti-vacuity): the two ALLOWED calls do advance the
+    counter — a meter that counts nothing would also pass the denial half."""
+    store = _store()
+    caps = _free_spec()  # calls_per_day = 2
+    Q.enforce_quota(caps=caps, tenant="acme", tier="free", family="memory", store=store)
+    Q.enforce_quota(caps=caps, tenant="acme", tier="free", family="memory", store=store)
+    assert store.calls_on("acme") == 2  # the meter is alive (baseline)
+
+    for _ in range(7):  # hammering the denial must not creep the counter up
+        with pytest.raises(Q.OverQuotaError, match="quota"):
+            Q.enforce_quota(caps=caps, tenant="acme", tier="free",
+                            family="memory", store=store)
+    assert store.calls_on("acme") == 2, (
+        "a DENIED call reached the billing counter — the overage job would "
+        "charge for calls the customer never executed"
+    )
+
+
+def test_try_incr_day_admits_exactly_cap_then_refuses_without_counting():
+    """The hard-cap primitive: distinct counts 1..cap, then ``None`` forever —
+    and the refusals leave the counter exactly at the cap."""
+    store = _store()
+    key = Q.quota_key("acme", "free")
+    assert [store.try_incr_day(key, 3) for _ in range(5)] == [1, 2, 3, None, None]
+    assert store.calls_on("acme") == 3
+
+
+def test_try_incr_day_cap_zero_admits_nothing():
+    """A zero cap is a real tier shape (a suspended plan), not an accident —
+    it must deny from call one AND write nothing."""
+    store = _store()
+    key = Q.quota_key("acme", "free")
+    assert store.try_incr_day(key, 0) is None
+    assert store.calls_on("acme") == 0
+
+
+def test_incr_day_stays_unconditional_the_soft_cap_primitive():
+    """``incr_day`` is deliberately NOT retired: it is the primitive a future
+    soft-cap/overage tier (allow AND count above the cap) switches to. It must
+    keep counting past any would-be cap."""
+    store = _store()
+    key = Q.quota_key("acme", "pro")
+    assert [store.incr_day(key) for _ in range(4)] == [1, 2, 3, 4]
+
+
 def test_over_rate_per_sec_raises():
     store = _store()
     caps = dict(_free_spec())
@@ -384,6 +434,12 @@ def test_free_plan_meters_over_daily_quota(dna_dir, http_server):
 
     with http_server(server) as url:
         asyncio.run(go(url))
+
+    # i-050, end to end: the DENIED third call must not have reached the
+    # counter the overage job bills from — the billing read stays at the cap.
+    assert Q.DEFAULT_STORE.calls_on("acme") == 2, (
+        "the denied call was counted — billable as overage despite the 429"
+    )
 
 
 def test_build_server_meters_into_an_injected_store(dna_dir, http_server):

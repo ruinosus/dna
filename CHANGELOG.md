@@ -11,6 +11,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### ✨ Quota
+
+- **`DNA_QUOTA_REQUIRE_TIERS=1` — fail-closed opt-in quando o registry de
+  Tiers está vazio ou ilegível** (i-051). Caps vazios são AMBÍGUOS: num
+  self-host OSS significam "nunca optou pelo pricing do DNA Cloud — não
+  enforce nada" (a regra dura do open-core, default intocado); num deploy
+  hosted cujo seed de Tiers falhou no boot significam "todos os caps
+  evaporaram em silêncio" — fail-open exatamente onde o dinheiro exige
+  fail-closed. O SDK não tem como distinguir as duas formas, então o HOST
+  declara: com a flag ligada, registry vazio/ilegível vira `ToolError`
+  explícito no guard ("tier registry empty/unreadable — … refusing") e o
+  `except` fail-soft do `RegistryAccessor.tier()` PROPAGA em vez de degradar
+  para `None` (defesa em profundidade: cada camada é testada por mutação em
+  separado). A flag só é consultada no ramo COM token — o caminho
+  stdio/local retorna antes, então o self-host continua estruturalmente fora
+  do alcance dela. O dna-cloud liga a flag no container `mcp`; um self-host
+  nunca precisa saber que ela existe.
+
+### 🐛 Corrigido
+
+- **Chamada negada não conta — e portanto nunca fatura** (i-050). O
+  `enforce_quota` incrementava o contador diário ANTES de negar: acima do cap
+  a chamada era negada (429) E somada em `dna_quota_counters` — exatamente a
+  soma que o job de overage do dna-cloud lê (`SUM(calls) − included`). Ou
+  seja, dava para cobrar overage por chamadas que o cliente nunca conseguiu
+  executar. O incremento agora é condicional e atômico
+  (`QuotaStore.try_incr_day`): no Postgres o cap viaja DENTRO do mesmo
+  `INSERT … ON CONFLICT DO UPDATE` que já matava a corrida do
+  read-modify-write, como `WHERE calls < :cap` — avaliado sob o row lock,
+  então 512 tentativas concorrentes contra um cap de 100 admitem exatamente
+  100 (provado com o mesmo hammer de 64×8 threads que protege o `incr_day`).
+  O contador nunca passa do cap, o job de overage não tem excedente fantasma,
+  e `calls_per_day` volta a significar o que o plano vende: um hard cap. O
+  primitivo incondicional (`incr_day`) permanece no port de propósito — ele é
+  o knob de um futuro soft cap com overage (permitir E contar acima do cap),
+  que é decisão de produto, não reescrita.
+
 ## [0.22.0] — 2026-07-21
 
 O trem da auditoria de anatomia: o dia em que o núcleo de composição passou a

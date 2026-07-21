@@ -284,6 +284,7 @@ def build_server(
         enforce_memory_mode,
         enforce_quota,
         enforce_sdlc_mode,
+        require_tiers,
         store_from_env,
     )
     from dna.tenancy.resolution import CrossWorkspaceError
@@ -292,6 +293,51 @@ def build_server(
     # over by both guards — so the quota port is genuinely swappable instead of
     # every call site silently defaulting to the module singleton.
     quota = quota_store if quota_store is not None else store_from_env()
+
+    def _caps_from(row: Any) -> dict:
+        """The resolved Tier caps for a METERED (token-present) call.
+
+        Empty caps default to fail-OPEN: a source with no Tier docs is an
+        OSS/self-host that never opted into DNA Cloud pricing, and the
+        open-core rule says it is never capped. Under
+        ``DNA_QUOTA_REQUIRE_TIERS=1`` (the hosted shape, i-051) the same
+        emptiness REFUSES instead: a metered deployment whose Tier seed
+        failed at boot must fail the call, not the billing — silence here
+        would serve unlimited, unbilled calls. Only reachable past the
+        no-token early return, so the flag can never leak enforcement into
+        the stdio/local path."""
+        caps = (row or {}).get("spec") or {}
+        if not caps and require_tiers():
+            raise ToolError(
+                "tier registry empty/unreadable — quota enforcement "
+                "unavailable, refusing this call (DNA_QUOTA_REQUIRE_TIERS=1). "
+                "Seed the Tier docs in _lib, or unset the flag on an uncapped "
+                "self-host."
+            )
+        return caps
+
+    async def _tier_row(kernel: Any, tier: str) -> Any:
+        """Resolve the Tier row (with the Free floor) for a metered call.
+
+        The UNREADABLE half of i-051: ``kernel.tier`` is fail-soft (a registry
+        glitch degrades to ``None``) UNLESS ``DNA_QUOTA_REQUIRE_TIERS`` is set,
+        in which case the SDK propagates — so an exception landing here is,
+        by construction, the hosted shape refusing to guess. It becomes the
+        same explicit refusal ``_caps_from`` raises for the EMPTY half, with
+        the underlying cause attached, instead of a masked internal error."""
+        try:
+            row = await kernel.tier(tier)
+            if row is None:
+                row = await kernel.tier("free")  # unknown tier → Free floor.
+            return row
+        except Exception as exc:  # noqa: BLE001 — see docstring: flag-on only.
+            if not require_tiers():
+                raise  # flag OFF: not a quota refusal — surface the real bug.
+            raise ToolError(
+                "tier registry empty/unreadable — quota enforcement "
+                "unavailable, refusing this call (DNA_QUOTA_REQUIRE_TIERS=1; "
+                f"registry read failed: {exc})"
+            ) from None
 
     async def _workspace(requested: str | None = None) -> str | None:
         """Resolve the effective **workspace** (Model B) for the current request.
@@ -387,10 +433,9 @@ def build_server(
             store_tier = ((plan or {}).get("spec") or {}).get("tier_id")
             if store_tier:
                 tier = store_tier
-        row = await kernel.tier(tier)
-        if row is None:
-            row = await kernel.tier("free")  # unknown tier → Free floor.
-        caps = (row or {}).get("spec") or {}  # no tiers configured → empty → no-op.
+        # No tiers configured → empty caps → no-op (OSS), unless the host
+        # opted into fail-closed via DNA_QUOTA_REQUIRE_TIERS (i-051).
+        caps = _caps_from(await _tier_row(kernel, tier))
         try:
             # memory_mode / sdlc_mode are pre-counter gates (like the family gate):
             # a denied write costs no quota. Enforce them BEFORE metering.
@@ -441,10 +486,9 @@ def build_server(
             return oid, family  # stdio / local → identity, no metering.
         kernel = (await _live()).kernel
         tier = enforce_tier_from_context()
-        row = await kernel.tier(tier)
-        if row is None:
-            row = await kernel.tier("free")
-        caps = (row or {}).get("spec") or {}
+        # Same fail-closed opt-in as _guard (i-051): empty/unreadable Tier
+        # registry refuses the metered call when the host set the flag.
+        caps = _caps_from(await _tier_row(kernel, tier))
         try:
             enforce_memory_mode(caps=caps, tier=tier, op=memory_op)
             enforce_quota(
