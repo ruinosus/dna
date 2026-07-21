@@ -1,0 +1,42 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-042-dep-filters-two-jobs-one-field
+spec:
+  description: "dep_filters carrega DOIS fatos num campo so, e por isso o x-dna-ref\
+    \ (i-040) nao pode reusa-lo. Hoje temos DUAS declaracoes do mesmo fato: 21 Kinds\
+    \ com dep_filters, 14 campos com x-dna-ref, mais um teste garantindo que nao se\
+    \ contradigam. Um teste que garante que duas fontes concordam e o SINTOMA, nao\
+    \ a cura.\n\nOs dois trabalhos fundidos: (1) 'este campo aponta para aquele Kind'\
+    \ \u2014 fato de schema, estatico; (2) 'estes documentos entram no contexto Mustache'\
+    \ \u2014 politica de runtime, seletiva, que e o que prompt_builder.py:698 consome.\n\
+    \nAs semanticas sao OPOSTAS no caso limite: no trabalho (2) uma Skill opcional\
+    \ ausente e CORRETAMENTE filtrada; no trabalho (1) ausencia e ERRO. Foi isso que\
+    \ impediu o reuso na i-040 \u2014 pendurar validacao de existencia no dep_filters\
+    \ transformaria dependencia opcional ausente em falha de escrita para todo Agent/UseCase.\n\
+    \nFim de linha proposto: UMA declaracao, DOIS consumidores. O fato 'campo -> Kind'\
+    \ declarado uma vez (x-dna-ref), e a composicao de prompt lendo esse fato e aplicando\
+    \ a PROPRIA politica de opcionalidade por cima, em vez de carregar o fato junto.\
+    \ Provavelmente dep_filters vira derivado, ou vira so a politica (quais alias\
+    \ entram no contexto) sem repetir o alvo.\n\nNAO foi feito junto com a i-040 de\
+    \ proposito: mudaria composicao de prompt de todo Agent \u2014 o caminho mais\
+    \ quente do produto \u2014 no mesmo PR que introduz validacao de escrita.\n\n\
+    Sobre padrao de mercado, pesquisado e resolvido (nao reabrir): a org do JSON Schema\
+    \ declara que chave estrangeira NAO e do escopo dela ('there is no concept of\
+    \ a database') e recomenda dialeto/keyword custom na propria ferramenta. O $ref\
+    \ e schema-para-schema (consistencia estrutural), nao instancia-para-instancia\
+    \ \u2014 usa-lo aqui seria erro de categoria. JSON Hyper-Schema segue experimental,\
+    \ em timeline separada, movido para repo proprio. Prior art com shape parecido:\
+    \ foreignKeys do Frictionless Data.\n\nPronto quando: existe uma unica declaracao\
+    \ do alvo; prompt_builder continua produzindo prompt byte-identico (o teste de\
+    \ explain mode ja garante isso); e o teste de nao-contradicao entre as duas fontes\
+    \ some por nao ter mais duas fontes."
+  type: task
+  severity: medium
+  status: open
+  timeline:
+  - at: '2026-07-21T11:54:02+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
