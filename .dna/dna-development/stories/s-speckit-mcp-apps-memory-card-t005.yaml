@@ -7,10 +7,88 @@ spec:
     \ como fixture em `packages/cli/tests/test_mcp_apps.py` (pr\xE9-requisito do gate\
     \ de zero regress\xE3o)"
   title: Capturar a baseline byte a byte do `content` textual de `list_memories`/`recall`
-  status: todo
+  status: done
   feature: f-copilot-mcp-apps
   labels:
   - spec-kit
   reporter: claude-code
   spec_refs:
   - speckit-mcp-apps-memory-card
+  produces:
+  - kind: Plan
+    name: speckit-mcp-apps-memory-card
+    role: implementation
+    at: '2026-07-21T19:41:33+00:00'
+  - kind: TestGuide
+    name: tg-speckit-mcp-apps-sdk
+    role: test-guide
+    at: '2026-07-21T20:12:50+00:00'
+  - kind: TestRun
+    name: tr-tg-speckit-mcp-apps-sdk-20260721-201420
+    role: test-run
+    at: '2026-07-21T20:15:23+00:00'
+  - kind: TestGuide
+    name: tg-speckit-mcp-apps-render-smoke
+    role: test-guide
+    at: '2026-07-21T20:21:06+00:00'
+  - kind: TestRun
+    name: tr-tg-speckit-mcp-apps-render-smoke-20260721-202227
+    role: test-run
+    at: '2026-07-21T20:22:55+00:00'
+  updated_at: '2026-07-21T20:25:35+00:00'
+  timeline:
+  - at: '2026-07-21T19:41:33+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-21T19:41:46+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "T005 no commit 3202530: baseline capturada em main limpo ANTES de qualquer\
+      \ mudan\xE7a (script contra a \xE1rvore intocada, fastmcp 3.4.4): fixtures/mcp_apps/list_memories.content.txt\
+      \ (342 bytes, json.dumps com espa\xE7os) + recall.content.txt (151 bytes, serializa\xE7\
+      \xE3o compacta do FastMCP \u2014 por isso recall N\xC3O \xE9 embrulhado em ToolResult).\
+      \ Muta\xE7\xE3o separators=(',',':') \u2192 teste morre (1 failed), revertida."
+    commit_ref: 3202530f40c3a527dad8e436dc6290d9b2298a19
+  - at: '2026-07-21T20:12:50+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-speckit-mcp-apps-sdk
+    summary: TestGuide tg-speckit-mcp-apps-sdk (regression)
+  - at: '2026-07-21T20:15:23+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-speckit-mcp-apps-sdk-20260721-201420
+    summary: "TestRun tr-tg-speckit-mcp-apps-sdk-20260721-201420 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-21T20:21:06+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-speckit-mcp-apps-render-smoke
+    summary: TestGuide tg-speckit-mcp-apps-render-smoke (smoke)
+  - at: '2026-07-21T20:22:55+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-speckit-mcp-apps-render-smoke-20260721-202227
+    summary: "TestRun tr-tg-speckit-mcp-apps-render-smoke-20260721-202227 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-21T20:25:35+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: done
+    commit_ref: '3202530'
+    summary: baseline byte a byte de list_memories/recall como fixture + teste
+  closed_at: '2026-07-21T20:25:26+00:00'

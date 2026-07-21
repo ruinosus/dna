@@ -1,0 +1,37 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-speckit-mcp-apps-sdk-20260721-201420
+spec:
+  guide_ref: tg-speckit-mcp-apps-sdk
+  outcome: pass
+  verifies:
+  - Story/s-speckit-mcp-apps-memory-card-t001
+  - Story/s-speckit-mcp-apps-memory-card-t002
+  - Story/s-speckit-mcp-apps-memory-card-t003
+  - Story/s-speckit-mcp-apps-memory-card-t004
+  - Story/s-speckit-mcp-apps-memory-card-t005
+  - Story/s-speckit-mcp-apps-memory-card-t006
+  - Story/s-speckit-mcp-apps-memory-card-t007
+  - Story/s-speckit-mcp-apps-memory-card-t008
+  - Story/s-speckit-mcp-apps-memory-card-t009
+  - Story/s-speckit-mcp-apps-memory-card-t010
+  - Story/s-speckit-mcp-apps-memory-card-t011
+  - Story/s-speckit-mcp-apps-memory-card-t012
+  - Story/s-speckit-mcp-apps-memory-card-t013
+  - Story/s-speckit-mcp-apps-memory-card-t014
+  - Story/s-speckit-mcp-apps-memory-card-t020
+  - Story/s-speckit-mcp-apps-memory-card-t021
+  executed_by: claude
+  executed_at: '2026-07-21T20:14:20+00:00'
+  notes: "Rodado em 2026-07-21 no worktree feat/mcp-apps-memory-card-impl, venv isolado\
+    \ (fastmcp 3.4.4). Par de suites do gate: 17 passed (10 test_emit_mcp_ui + 7 test_mcp_apps).\
+    \ Su\xEDtes completas: sdk-py 3388 passed/195 skipped/4 xfailed; cli 995 passed/14\
+    \ skipped \u2014 zero falhas novas vs baseline (3385/990 em main limpo). Muta\xE7\
+    \xF5es confirmadas mortas: pointer removido, registro removido, dados assados\
+    \ de volta, CDN plantado, TODO plantado, separators da serializa\xE7\xE3o. Smoke\
+    \ basic-host (chrome headless, playwright): 'rendered summaries: [The memory card\
+    \ renders in every MCP Apps host]', footer '1 memory', scope badge concierge,\
+    \ 0 elementos interativos; hits de recall renderizados; empty state 'No memories\
+    \ yet\u2026' ap\xF3s forget. Wheel confere: dna/emit/_vendor/{ext-apps.iife.js,ext-apps.LICENSE}\
+    \ dentro do dna_sdk-0.23.0-py3-none-any.whl."

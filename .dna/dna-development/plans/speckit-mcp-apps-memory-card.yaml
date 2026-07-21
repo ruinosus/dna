@@ -104,3 +104,5 @@ spec:
   - kind: Reference
     name: speckit-mcp-apps-memory-card-contract-mcp-surface
     role: contract
+  story_ref: s-speckit-mcp-apps-memory-card-t022
+  updated_at: '2026-07-21T20:11:57+00:00'

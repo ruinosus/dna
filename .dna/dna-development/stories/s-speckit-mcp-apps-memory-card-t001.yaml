@@ -8,10 +8,86 @@ spec:
     \ o citam \u2014 regra \xA73)"
   title: Subir o floor `fastmcp>=3.2` e **remover** `mcp-ui-server` dos extras `mcp`
     e de
-  status: todo
+  status: done
   feature: f-copilot-mcp-apps
   labels:
   - spec-kit
   reporter: claude-code
   spec_refs:
   - speckit-mcp-apps-memory-card
+  produces:
+  - kind: Plan
+    name: speckit-mcp-apps-memory-card
+    role: implementation
+    at: '2026-07-21T19:32:48+00:00'
+  - kind: TestGuide
+    name: tg-speckit-mcp-apps-sdk
+    role: test-guide
+    at: '2026-07-21T20:12:27+00:00'
+  - kind: TestRun
+    name: tr-tg-speckit-mcp-apps-sdk-20260721-201420
+    role: test-run
+    at: '2026-07-21T20:14:31+00:00'
+  - kind: TestGuide
+    name: tg-speckit-mcp-apps-render-smoke
+    role: test-guide
+    at: '2026-07-21T20:20:42+00:00'
+  - kind: TestRun
+    name: tr-tg-speckit-mcp-apps-render-smoke-20260721-202227
+    role: test-run
+    at: '2026-07-21T20:22:32+00:00'
+  updated_at: '2026-07-21T20:24:33+00:00'
+  timeline:
+  - at: '2026-07-21T19:32:48+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-21T19:33:16+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "T001 no commit 35d06cb: floor fastmcp>=3.2 nos extras mcp+dev de packages/cli/pyproject.toml;\
+      \ mcp-ui-server removido dos dois extras, coment\xE1rios que o citavam reescritos\
+      \ para o modelo AppConfig/resource do FastMCP 3."
+    commit_ref: 35d06cbb421ceb76cd11ad11022de706e0eef199
+  - at: '2026-07-21T20:12:27+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-speckit-mcp-apps-sdk
+    summary: TestGuide tg-speckit-mcp-apps-sdk (regression)
+  - at: '2026-07-21T20:14:31+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-speckit-mcp-apps-sdk-20260721-201420
+    summary: "TestRun tr-tg-speckit-mcp-apps-sdk-20260721-201420 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-21T20:20:42+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-speckit-mcp-apps-render-smoke
+    summary: TestGuide tg-speckit-mcp-apps-render-smoke (smoke)
+  - at: '2026-07-21T20:22:32+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-speckit-mcp-apps-render-smoke-20260721-202227
+    summary: "TestRun tr-tg-speckit-mcp-apps-render-smoke-20260721-202227 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-21T20:24:33+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: done
+    commit_ref: 35d06cb
+    summary: floor fastmcp>=3.2; mcp-ui-server fora dos extras mcp+dev
+  closed_at: '2026-07-21T20:24:23+00:00'

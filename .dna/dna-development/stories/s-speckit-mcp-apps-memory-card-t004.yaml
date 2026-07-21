@@ -7,10 +7,88 @@ spec:
     \ em `packages/cli/dna_cli/_mcp_server.py`, preservando `content` textual e `structured_content`\
     \ intactos"
   title: "Remover o wiring pr\xE9-spec (`_meta` de UI) de `_with_memory_card` em `packages/cl"
-  status: todo
+  status: done
   feature: f-copilot-mcp-apps
   labels:
   - spec-kit
   reporter: claude-code
   spec_refs:
   - speckit-mcp-apps-memory-card
+  produces:
+  - kind: Plan
+    name: speckit-mcp-apps-memory-card
+    role: implementation
+    at: '2026-07-21T19:37:37+00:00'
+  - kind: TestGuide
+    name: tg-speckit-mcp-apps-sdk
+    role: test-guide
+    at: '2026-07-21T20:12:45+00:00'
+  - kind: TestRun
+    name: tr-tg-speckit-mcp-apps-sdk-20260721-201420
+    role: test-run
+    at: '2026-07-21T20:15:09+00:00'
+  - kind: TestGuide
+    name: tg-speckit-mcp-apps-render-smoke
+    role: test-guide
+    at: '2026-07-21T20:21:00+00:00'
+  - kind: TestRun
+    name: tr-tg-speckit-mcp-apps-render-smoke-20260721-202227
+    role: test-run
+    at: '2026-07-21T20:22:50+00:00'
+  updated_at: '2026-07-21T20:25:20+00:00'
+  timeline:
+  - at: '2026-07-21T19:37:37+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-21T19:41:40+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "T004 no commit 3202530: _meta de UI removido de _with_memory_card; content\
+      \ textual (json.dumps) e structured_content intactos \u2014 provado byte a byte\
+      \ contra a baseline pr\xE9-mudan\xE7a; teste de res\xEDduo: 'ui/resourceUri'\
+      \ e meta.ui.resourceUri ausentes do resultado."
+    commit_ref: 3202530f40c3a527dad8e436dc6290d9b2298a19
+  - at: '2026-07-21T20:12:45+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-speckit-mcp-apps-sdk
+    summary: TestGuide tg-speckit-mcp-apps-sdk (regression)
+  - at: '2026-07-21T20:15:09+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-speckit-mcp-apps-sdk-20260721-201420
+    summary: "TestRun tr-tg-speckit-mcp-apps-sdk-20260721-201420 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-21T20:21:00+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-speckit-mcp-apps-render-smoke
+    summary: TestGuide tg-speckit-mcp-apps-render-smoke (smoke)
+  - at: '2026-07-21T20:22:50+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-speckit-mcp-apps-render-smoke-20260721-202227
+    summary: "TestRun tr-tg-speckit-mcp-apps-render-smoke-20260721-202227 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-21T20:25:20+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: done
+    commit_ref: '3202530'
+    summary: "_meta pr\xE9-spec removido de _with_memory_card; content/structured_content\
+      \ intactos"
+  closed_at: '2026-07-21T20:25:10+00:00'

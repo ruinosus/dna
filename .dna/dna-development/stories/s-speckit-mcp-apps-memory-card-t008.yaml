@@ -8,7 +8,7 @@ spec:
     \xE3o: CDN de volta \u2192 morre) em `packages/sdk-py/tests/test_emit_mcp_ui.py`"
   title: "[US1] Teste: o HTML do template n\xE3o cont\xE9m dados de mem\xF3ria (muta\xE7\
     \xE3o: dados assa"
-  status: todo
+  status: done
   feature: f-copilot-mcp-apps
   labels:
   - spec-kit
@@ -16,3 +16,70 @@ spec:
   reporter: claude-code
   spec_refs:
   - speckit-mcp-apps-memory-card
+  produces:
+  - kind: TestGuide
+    name: tg-speckit-mcp-apps-sdk
+    role: test-guide
+    at: '2026-07-21T20:13:08+00:00'
+  - kind: TestRun
+    name: tr-tg-speckit-mcp-apps-sdk-20260721-201420
+    role: test-run
+    at: '2026-07-21T20:16:03+00:00'
+  - kind: TestGuide
+    name: tg-speckit-mcp-apps-render-smoke
+    role: test-guide
+    at: '2026-07-21T20:21:23+00:00'
+  - kind: TestRun
+    name: tr-tg-speckit-mcp-apps-render-smoke-20260721-202227
+    role: test-run
+    at: '2026-07-21T20:23:14+00:00'
+  timeline:
+  - at: '2026-07-21T20:13:08+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-speckit-mcp-apps-sdk
+    summary: TestGuide tg-speckit-mcp-apps-sdk (regression)
+  - at: '2026-07-21T20:16:03+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-speckit-mcp-apps-sdk-20260721-201420
+    summary: "TestRun tr-tg-speckit-mcp-apps-sdk-20260721-201420 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-21T20:17:58+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "T008 no commit a126050: template zero-arg sem nenhum dado de mem\xF3\
+      ria (fixture strings ausentes; muta\xE7\xE3o dados-assados \u2192 morre) e sem\
+      \ URL externa (fora da regi\xE3o vendorizada zero http(s)://; regi\xE3o vendorizada\
+      \ byte-igual ao asset commitado; muta\xE7\xE3o CDN \u2192 morre)."
+    commit_ref: ee11c11a89e2282556416387fdff80abc96a8136
+  - at: '2026-07-21T20:21:23+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-speckit-mcp-apps-render-smoke
+    summary: TestGuide tg-speckit-mcp-apps-render-smoke (smoke)
+  - at: '2026-07-21T20:23:14+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-speckit-mcp-apps-render-smoke-20260721-202227
+    summary: "TestRun tr-tg-speckit-mcp-apps-render-smoke-20260721-202227 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-21T20:26:35+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: done
+    commit_ref: a126050
+    summary: "template sem dados de mem\xF3ria e sem URL externa (muta\xE7\xF5es mortas)"
+  updated_at: '2026-07-21T20:26:35+00:00'
+  closed_at: '2026-07-21T20:26:25+00:00'

@@ -7,7 +7,7 @@ spec:
     \ futuro \u2014 regra \xA73; futuro vive em i-060/i-061/i-062)"
   title: "Entrada de CHANGELOG.md do lado SDK (sem nenhuma men\xE7\xE3o a trabalho\
     \ futuro \u2014 regr"
-  status: todo
+  status: done
   feature: f-copilot-mcp-apps
   labels:
   - spec-kit
@@ -15,3 +15,33 @@ spec:
   reporter: claude-code
   spec_refs:
   - speckit-mcp-apps-memory-card
+  produces:
+  - kind: Plan
+    name: speckit-mcp-apps-memory-card
+    role: implementation
+    at: '2026-07-21T20:12:03+00:00'
+  updated_at: '2026-07-21T20:29:13+00:00'
+  timeline:
+  - at: '2026-07-21T20:12:03+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-21T20:19:12+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "T022 no commit ee11c11: entrada Unreleased no CHANGELOG.md no estilo\
+      \ da casa \u2014 tr\xEAs blocos (modelo final, zero regress\xE3o, regra \xA7\
+      3 como teste); nenhuma men\xE7\xE3o a trabalho futuro (futuro vive em i-060/i-061/i-062)."
+    commit_ref: ee11c11a89e2282556416387fdff80abc96a8136
+  - at: '2026-07-21T20:29:13+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: done
+    commit_ref: ee11c11
+    summary: "CHANGELOG Unreleased no estilo da casa, sem men\xE7\xE3o a futuro"
+  closed_at: '2026-07-21T20:29:04+00:00'

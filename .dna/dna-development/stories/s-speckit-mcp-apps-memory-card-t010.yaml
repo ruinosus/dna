@@ -10,10 +10,89 @@ spec:
     \ tudo escapado; zero dado de tenant/segredo/token"
   title: "[US1] Reescrever `memory_list_card_html()` como template EST\xC1TICO em\
     \ `packages/s"
-  status: todo
+  status: done
   feature: f-copilot-mcp-apps
   labels:
   - spec-kit
   reporter: claude-code
   spec_refs:
   - speckit-mcp-apps-memory-card
+  produces:
+  - kind: Plan
+    name: speckit-mcp-apps-memory-card
+    role: implementation
+    at: '2026-07-21T20:01:21+00:00'
+  - kind: TestGuide
+    name: tg-speckit-mcp-apps-sdk
+    role: test-guide
+    at: '2026-07-21T20:13:21+00:00'
+  - kind: TestRun
+    name: tr-tg-speckit-mcp-apps-sdk-20260721-201420
+    role: test-run
+    at: '2026-07-21T20:16:28+00:00'
+  - kind: TestGuide
+    name: tg-speckit-mcp-apps-render-smoke
+    role: test-guide
+    at: '2026-07-21T20:21:34+00:00'
+  - kind: TestRun
+    name: tr-tg-speckit-mcp-apps-render-smoke-20260721-202227
+    role: test-run
+    at: '2026-07-21T20:23:26+00:00'
+  updated_at: '2026-07-21T20:27:05+00:00'
+  timeline:
+  - at: '2026-07-21T20:01:21+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-21T20:13:21+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-speckit-mcp-apps-sdk
+    summary: TestGuide tg-speckit-mcp-apps-sdk (regression)
+  - at: '2026-07-21T20:16:28+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-speckit-mcp-apps-sdk-20260721-201420
+    summary: "TestRun tr-tg-speckit-mcp-apps-sdk-20260721-201420 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-21T20:18:34+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "T010 no commit a126050: memory_list_card_html() virou template est\xE1\
+      tico zero-arg \u2014 ext-apps embutida entre sentinelas, JS consome app.ontoolresult\
+      \ \u2192 structuredContent (memories/hits), dado s\xF3 entra via textContent,\
+      \ vazio-honesto, empty state honesto, zero a\xE7\xE3o. O card COM dados do canvas\
+      \ virou memory_canvas_card_html (bytes id\xEAnticos; scaffold langgraph + golden\
+      \ do copilot_agent acompanharam \u2014 diff de 2 linhas)."
+    commit_ref: ee11c11a89e2282556416387fdff80abc96a8136
+  - at: '2026-07-21T20:21:34+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-speckit-mcp-apps-render-smoke
+    summary: TestGuide tg-speckit-mcp-apps-render-smoke (smoke)
+  - at: '2026-07-21T20:23:26+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-speckit-mcp-apps-render-smoke-20260721-202227
+    summary: "TestRun tr-tg-speckit-mcp-apps-render-smoke-20260721-202227 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-21T20:27:05+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: done
+    commit_ref: a126050
+    summary: "memory_list_card_html vira template est\xE1tico; canvas vira memory_canvas_card_html"
+  closed_at: '2026-07-21T20:26:56+00:00'
