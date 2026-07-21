@@ -18,10 +18,25 @@ spec:
     \ torna-lo default), e um teste de mutacao prova que rasificar o merge mata testes."
   type: bug
   severity: high
-  status: open
+  status: resolved
   timeline:
   - at: '2026-07-21T12:17:28+00:00'
     actor: claude-code
     type: status_change
     source: cli
     to: open
+  - at: '2026-07-21T14:05:45+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: open
+    to: resolved
+    summary: "PR #197, v0.22.0. Merge recursivo real (listas substituem, semantica\
+      \ do deep_merge, teste comparando os dois motores byte a byte); proveniencia\
+      \ por caminho de folha com purga de orfaos. Default override_full intocado.\
+      \ HONESTIDADE: a funcao continua sem consumidor real \u2014 corrigida, nao usada."
+  closed_at: '2026-07-21T14:05:45+00:00'
+  resolution: "PR #197, v0.22.0. Merge recursivo real (listas substituem, semantica\
+    \ do deep_merge, teste comparando os dois motores byte a byte); proveniencia por\
+    \ caminho de folha com purga de orfaos. Default override_full intocado. HONESTIDADE:\
+    \ a funcao continua sem consumidor real \u2014 corrigida, nao usada."

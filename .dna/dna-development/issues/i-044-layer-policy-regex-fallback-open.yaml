@@ -15,10 +15,25 @@ spec:
     \ um alias quebrado deve derrubar teste."
   type: bug
   severity: high
-  status: open
+  status: resolved
   timeline:
   - at: '2026-07-21T12:17:33+00:00'
     actor: claude-code
     type: status_change
     source: cli
     to: open
+  - at: '2026-07-21T14:05:50+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: open
+    to: resolved
+    summary: 'PR #197, v0.22.0. Lookup pelo alias DECLARADO do registro; fallback
+      OPEN barulhento (UserWarning nomeando Kind + politica assumida); detector de
+      typo no build. Alias quebrado derruba teste. Restante (politica no KindPort)
+      e a i-049, que tambem cobre a assimetria leitura/escrita achada no caminho.'
+  closed_at: '2026-07-21T14:05:50+00:00'
+  resolution: 'PR #197, v0.22.0. Lookup pelo alias DECLARADO do registro; fallback
+    OPEN barulhento (UserWarning nomeando Kind + politica assumida); detector de typo
+    no build. Alias quebrado derruba teste. Restante (politica no KindPort) e a i-049,
+    que tambem cobre a assimetria leitura/escrita achada no caminho.'

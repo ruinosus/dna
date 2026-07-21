@@ -20,10 +20,27 @@ spec:
     \ expostos, e o portal consegue renderizar a tabela."
   type: task
   severity: high
-  status: open
+  status: resolved
   timeline:
   - at: '2026-07-21T12:17:38+00:00'
     actor: claude-code
     type: status_change
     source: cli
     to: open
+  - at: '2026-07-21T14:05:55+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: open
+    to: resolved
+    summary: "PR #199, v0.22.0. REST ?explain=true + MCP compose_prompt(explain) +\
+      \ clientes py/ts. Opt-in, compose sem flag byte-identico (exclude_unset). attribution\
+      \ declared/heuristic diz a verdade sobre o match de string. Correcao a auditoria:\
+      \ explain() NAO produz diff base-vs-tenant, so overridden_by_tenant bool \u2014\
+      \ exposto exatamente isso. +38ms mediana com flag. 3 mutantes mortos (6/5/2)."
+  closed_at: '2026-07-21T14:05:55+00:00'
+  resolution: "PR #199, v0.22.0. REST ?explain=true + MCP compose_prompt(explain)\
+    \ + clientes py/ts. Opt-in, compose sem flag byte-identico (exclude_unset). attribution\
+    \ declared/heuristic diz a verdade sobre o match de string. Correcao a auditoria:\
+    \ explain() NAO produz diff base-vs-tenant, so overridden_by_tenant bool \u2014\
+    \ exposto exatamente isso. +38ms mediana com flag. 3 mutantes mortos (6/5/2)."
