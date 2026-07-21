@@ -335,22 +335,44 @@ class QueryEngine:
             kind in k._INHERITABLE_KINDS
             and scope != k._INHERIT_PARENT_SCOPE
         ):
-            fallback_key = (
-                k._INHERIT_PARENT_SCOPE, kind, name, tenant or "",
-            )
-            # Fail-soft: a missing parent scope (`_lib` absent) means no
-            # inherited doc, not an error (s-platform-inherit-by-default — the
-            # denylist default routes many more Kinds through this fallback).
+            # Walk the DECLARED parent chain (``Genome.spec.parent_scope``,
+            # transitively) — the SAME ``compute_resolution_chain`` the
+            # query/resolve paths use (i-058). The V1 fallback keeps the
+            # chain ending at ``_INHERIT_PARENT_SCOPE``, so a scope with no
+            # declared parent probes exactly the single ``_lib`` hop it
+            # always did. First hit in chain order wins (local already
+            # missed above; a nearer parent beats a farther one).
             try:
-                return await k._granular_doc_cached(fallback_key)
+                chain = await k._compute_resolution_chain(scope, None)
             except Exception as e:  # noqa: BLE001
-                # fail-soft: missing parent scope → no inherited doc, not an
-                # error (see comment above) — logged at debug (hot path).
+                # fail-soft: an unreadable chain degrades to the V1
+                # single-hop parent — logged at debug (hot path).
                 logger.debug(
-                    "get_document: parent fallback failed for %r: %s",
-                    fallback_key, e,
+                    "get_document: resolution chain failed for %r "
+                    "(falling back to %r): %s",
+                    scope, k._INHERIT_PARENT_SCOPE, e,
                 )
-                return None
+                chain = [(scope, None), (k._INHERIT_PARENT_SCOPE, None)]
+            for parent, _t in chain:
+                if parent == scope:
+                    continue
+                fallback_key = (parent, kind, name, tenant or "")
+                # Fail-soft: a missing parent scope (`_lib` absent) means no
+                # inherited doc, not an error (s-platform-inherit-by-default —
+                # the denylist default routes many more Kinds through here).
+                try:
+                    hit = await k._granular_doc_cached(fallback_key)
+                except Exception as e:  # noqa: BLE001
+                    # fail-soft: missing parent scope → no inherited doc, not
+                    # an error (see comment above) — logged at debug (hot path).
+                    logger.debug(
+                        "get_document: parent fallback failed for %r: %s",
+                        fallback_key, e,
+                    )
+                    continue
+                if hit is not None:
+                    return hit
+            return None
         return None
 
     def query_list_sync(

@@ -388,36 +388,79 @@ class InstanceBuilder:
 
         raw_docs = await k._source.load_all(scope, readers=k._readers)
 
-        # Scope-level inheritance — load _INHERIT_PARENT_SCOPE docs filtered to
-        # _INHERITABLE_KINDS, merge with local (local wins by (kind, name)).
+        # Scope-level inheritance — walk the DECLARED parent chain
+        # (``Genome.spec.parent_scope``, transitively) via the SAME
+        # ``compute_resolution_chain`` the query/resolve paths use (i-058:
+        # one mechanism, every consumer — this eager materialization serves
+        # ``list_agents`` and ``compose_prompt``, which were blind to a
+        # declared parent and only saw the fixed ``_lib`` hop). The chain
+        # ends at ``_INHERIT_PARENT_SCOPE`` through the V1 fallback, so a
+        # scope with no Genome / no ``parent_scope`` loads EXACTLY the
+        # single ``_lib`` hop it always did (golden-pinned in
+        # ``tests/test_workspace_definitions_inheritance.py``).
+        #
+        # Precedence: local wins by (kind, name); then a NEARER parent
+        # shadows a farther one, in chain order.
+        #
+        # Cache-staleness boundary (documented, pinned by test): this build
+        # is NOT wired to the resolver's ``_layer_observers`` reverse-dep
+        # graph. A doc write in a PARENT scope does not drop a child's
+        # cached base MI (``_base_instance_cached*`` consumers — policy
+        # checks, MIHolder/Studio — may serve the parent's OLD docs until
+        # their own scope invalidates or the process reloads; identical to
+        # the pre-chain behavior for ``_lib`` writes). The request paths
+        # (``LiveDna.mi`` → ``instance_async(lazy=False)``) rebuild per
+        # call and see parent writes immediately; only the declared
+        # ``parent_scope`` VALUE itself rides the granular Genome cache
+        # (TTL ``_GRANULAR_DOC_TTL``).
         if scope != k._INHERIT_PARENT_SCOPE:
             try:
-                parent_raws = await k._source.load_all(
-                    k._INHERIT_PARENT_SCOPE, readers=k._readers,
-                )
+                chain = await k._compute_resolution_chain(scope, None)
+                parent_scopes = [s for s, _t in chain if s != scope]
             except Exception as e:  # noqa: BLE001
-                # fail-soft: a missing/broken parent scope contributes no
-                # inherited docs — but scope-level inheritance silently
-                # turning OFF is a visible degradation, so it logs loud.
+                # fail-soft: an unreadable chain degrades to the V1
+                # single-hop parent rather than dropping inheritance.
                 logger.warning(
-                    "instance build: parent scope %r load failed — "
-                    "inherited docs unavailable for %r: %s",
-                    k._INHERIT_PARENT_SCOPE, scope, e,
+                    "instance build: resolution chain failed for %r — "
+                    "falling back to single parent %r: %s",
+                    scope, k._INHERIT_PARENT_SCOPE, e,
                 )
-                parent_raws = []
-            local_keys = {
+                parent_scopes = [k._INHERIT_PARENT_SCOPE]
+            seen_keys = {
                 (r.get("kind"), (r.get("metadata") or {}).get("name") or r.get("name"))
                 for r in raw_docs
             }
-            for praw in parent_raws:
-                pkind = praw.get("kind")
-                if pkind not in k._INHERITABLE_KINDS:
+            for parent in parent_scopes:
+                try:
+                    parent_raws = await k._source.load_all(
+                        parent, readers=k._readers,
+                    )
+                except Exception as e:  # noqa: BLE001
+                    # fail-soft: a missing/broken parent scope contributes no
+                    # inherited docs — but scope-level inheritance silently
+                    # turning OFF is a visible degradation, so it logs loud.
+                    logger.warning(
+                        "instance build: parent scope %r load failed — "
+                        "inherited docs unavailable for %r: %s",
+                        parent, scope, e,
+                    )
                     continue
-                pname = (praw.get("metadata") or {}).get("name") or praw.get("name")
-                if (pkind, pname) in local_keys:
-                    continue
-                praw.setdefault("_inherited_from", k._INHERIT_PARENT_SCOPE)
-                raw_docs.append(praw)
+                added_keys: set[tuple[Any, Any]] = set()
+                for praw in parent_raws:
+                    pkind = praw.get("kind")
+                    if pkind not in k._INHERITABLE_KINDS:
+                        continue
+                    pname = (praw.get("metadata") or {}).get("name") or praw.get("name")
+                    if (pkind, pname) in seen_keys:
+                        continue
+                    praw.setdefault("_inherited_from", parent)
+                    raw_docs.append(praw)
+                    added_keys.add((pkind, pname))
+                # Keys join the dedup set only after the whole parent is
+                # processed: a nearer parent shadows a farther one, while
+                # duplicates WITHIN one parent keep the pre-chain behavior
+                # (both append — byte-compat with the single-hop merge).
+                seen_keys |= added_keys
 
         for key, uri in dep_uri_by_key.items():
             key_raws = await k._cache.load_key(scope, key, readers=k._readers)
