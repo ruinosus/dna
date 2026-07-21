@@ -2884,7 +2884,7 @@ def cmd_narrative_status(scope: str) -> None:
     """
     from datetime import datetime, timezone
 
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         try:
             narratives = s.query_list("Narrative")
         except Exception:  # noqa: BLE001
@@ -3073,7 +3073,7 @@ def _append_to_narrative_array(
     Step 5 calls these AFTER `journey close-cycle` has auto-created a
     cycle Narrative, so a missing target usually means a typo.
     """
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         existing = s.get_doc("Narrative", name)
         if existing is None:
             raise fail(
@@ -3214,7 +3214,7 @@ def _write_feature_reflect_workflow_event(
     parent_ref = f"Feature/{feature_name}"
     try:
         now = _now_iso()
-        with dna_session(scope) as s:
+        with open_session(scope) as s:
             prev_entries = _list_entries_for_parent(s, parent_ref)
             # Already has a reflect entry? Don't double-write.
             has_reflect = any(
@@ -3373,7 +3373,7 @@ def cmd_story_check(
         raise click.UsageError("pass --ac/--dod selectors (index or substring) or --all")
     actor = by_actor or _os.environ.get("DNA_AGENT_OWNER", "claude-code")
     now = _now_iso()
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         existing = s.get_doc("Story", name)
         if existing is None:
             raise fail(f"Story '{name}' not found in scope {scope!r}")
@@ -3668,7 +3668,7 @@ def cmd_journey_enter(
     if force_reason:
         spec["force_reason"] = force_reason
 
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         # Close the previous open entry (no ended_at) for the same parent.
         prev_entries = _list_entries_for_parent(s, parent_ref)
         prev_open = next(
@@ -3809,7 +3809,7 @@ def cmd_journey_transition(
     # nota" warning when the cronista already wrote one.
     summary_was_synthesized = False
 
-    with dna_session(scope) as s:  # local kernel — KernelSource needs _loop
+    with open_session(scope) as s:  # local kernel — KernelSource needs _loop
         entries = _list_entries_for_parent(s, parent_ref)
         if not entries:
             raise fail(
@@ -4056,7 +4056,7 @@ def cmd_journey_current(parent_ref: str | None, scope: str) -> None:
     """Show the latest open WorkflowEvent. Without --parent, shows the
     latest open entry across the whole scope.
     """
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         try:
             entries = s.query_list("WorkflowEvent")
         except Exception:  # noqa: BLE001
@@ -4122,7 +4122,7 @@ def cmd_journey_list(parent_ref: str, as_json: bool, scope: str) -> None:
         _kind_p, _, _name_p = parent_ref.partition("/")
         story_journey: dict | None = None
         try:
-            with dna_session(scope) as _js:
+            with open_session(scope) as _js:
                 _doc = _js.get_doc(_kind_p, _name_p)
                 if _doc is not None:
                     def _rows(k: str) -> list[dict]:
@@ -4166,7 +4166,7 @@ def cmd_journey_list(parent_ref: str, as_json: bool, scope: str) -> None:
             click.echo(f"  methodology: {story_journey['methodology']}")
         return
 
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         entries = _list_entries_for_parent(s, parent_ref)
     if as_json:
         rows = []
@@ -4638,7 +4638,7 @@ def cmd_journey_close_cycle(
     summary. Prints the seed and (unless --show-only) writes a new
     ``discover`` entry with ``seed_from`` set.
     """
-    with dna_session(scope) as s:  # local kernel — KernelSource needs _loop
+    with open_session(scope) as s:  # local kernel — KernelSource needs _loop
         entries = _list_entries_for_parent(s, parent_ref)
         if not entries:
             raise fail(
@@ -4884,7 +4884,7 @@ def cmd_demand(
             fg="yellow",
         )
 
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         # 0) Verify (or auto-create) the Feature.
         feat = s.get_doc("Feature", feature)
         if feat is None:
@@ -5074,7 +5074,7 @@ def cmd_reference_create(
     if tags:
         spec["tags"] = list(tags)
     raw = _build_raw("Reference", name, spec)
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         s.run(s.kernel.write_document(scope, "Reference", name, raw))
     click.secho(f"CREATED Reference/{name} (kind_of={kind_of})", fg="green")
 
@@ -5085,7 +5085,7 @@ def cmd_reference_create(
 @_scope_option
 def cmd_reference_list(kind_of: str | None, scope: str) -> None:
     """List Reference docs (optionally filtered by kind_of)."""
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         refs = s.query_list("Reference")
     if kind_of:
         refs = [r for r in refs if (r.spec or {}).get("kind_of") == kind_of]
@@ -5106,7 +5106,7 @@ def cmd_reference_list(kind_of: str | None, scope: str) -> None:
 @_scope_option
 def cmd_reference_show(name: str, scope: str) -> None:
     """Show a Reference doc + its citation graph."""
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         doc = s.get_doc("Reference", name)
     if not doc:
         click.secho(f"Reference/{name} not found", fg="red")
@@ -5170,7 +5170,7 @@ def cmd_cite(cited: str, from_ref: str, scope: str) -> None:
     cited_kind, cited_name = _split_cited(cited)
     cited_ref = f"{cited_kind}/{cited_name}"
     caller_kind, caller_name = from_ref.split("/", 1)
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         cited_doc = s.get_doc(cited_kind, cited_name)
         if not cited_doc:
             click.secho(f"{cited_ref} not found", fg="red")
@@ -5217,7 +5217,7 @@ def cmd_uncite(cited: str, from_ref: str, scope: str) -> None:
     cited_ref = f"{cited_kind}/{cited_name}"
     forward = cited_name if cited_kind == _CITE_DEFAULT_KIND else cited_ref
     caller_kind, caller_name = from_ref.split("/", 1)
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         cited_doc = s.get_doc(cited_kind, cited_name)
         caller_doc = s.get_doc(caller_kind, caller_name)
         if cited_doc:
@@ -5348,7 +5348,7 @@ def cmd_initiative_create(
     spec["updated_at"] = now
 
     raw = _build_raw("Initiative", name, spec)
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         s.run(s.kernel.write_document(scope, "Initiative", name, raw))
     click.secho(
         f"CREATED Initiative/{name} (status: {status}"
@@ -5363,7 +5363,7 @@ def cmd_initiative_create(
 @_scope_option
 def cmd_initiative_ship(name: str, scope: str) -> None:
     """Mark an Initiative as done."""
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         doc = s.get_doc("Initiative", name)
         # i-063 — s.get_doc returns a _DocView (has `.spec`, not `.get`).
         if doc is None:
@@ -5383,7 +5383,7 @@ def cmd_initiative_ship(name: str, scope: str) -> None:
 @_scope_option
 def cmd_initiative_cancel(name: str, reason: str, scope: str) -> None:
     """Cancel an Initiative with a reason."""
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         doc = s.get_doc("Initiative", name)
         spec = dict(doc.get("spec") or {})
         spec["status"] = "cancelled"
@@ -5526,7 +5526,7 @@ def cmd_spike_create(
         spec["body"] = body
     _stamp_create(spec, status)
     raw = _build_raw("Spike", name, spec)
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         s.run(s.kernel.write_document(scope, "Spike", name, raw))
     click.secho(f"CREATED Spike/{name} (status: {status})", fg="green")
 
@@ -5594,7 +5594,7 @@ def cmd_spike_comment(
     """
     if event_type is None:
         event_type = "decision" if _looks_like_decision(body) else "comment"
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         existing = s.get_doc("Spike", name)
         if existing is None:
             raise fail(f"Spike '{name}' not found in scope {scope!r}")
@@ -5654,7 +5654,7 @@ def cmd_spike_link(
         raise fail("Nothing to link — pass at least one of "
                    "--adr/--spec/--research/--artifact/--reference/"
                    "--follow-up-story/--feature/--related-spike.")
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         existing = s.get_doc("Spike", name)
         if existing is None:
             raise fail(f"Spike '{name}' not found in scope {scope!r}")
@@ -5728,7 +5728,7 @@ def cmd_bug_create(
         spec["body"] = body
     _stamp_create(spec, status)
     raw = _build_raw("Bug", name, spec)
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         s.run(s.kernel.write_document(scope, "Bug", name, raw))
     click.secho(f"CREATED Bug/{name} ({severity}/{status})", fg="green")
 
@@ -5823,7 +5823,7 @@ def cmd_task_create(
         spec["body"] = body
     _stamp_create(spec, status)
     raw = _build_raw("Task", name, spec)
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         s.run(s.kernel.write_document(scope, "Task", name, raw))
     click.secho(f"CREATED Task/{name} (status: {status})", fg="green")
 
@@ -5903,7 +5903,7 @@ def cmd_adr_create(
         spec["body"] = body
     _stamp_create(spec, status)
     raw = _build_raw("ADR", name, spec)
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         s.run(s.kernel.write_document(scope, "ADR", name, raw))
     click.secho(f"CREATED ADR/{name} (status: {status})", fg="green")
 
@@ -5991,7 +5991,7 @@ def _make_artifact_group(kind: str, group_name: str, help_text: str):
             spec["body"] = body
         _stamp_create(spec, status)
         raw = _build_raw(kind, name, spec)
-        with dna_session(scope) as s:
+        with open_session(scope) as s:
             s.run(s.kernel.write_document(scope, kind, name, raw))
         click.secho(f"CREATED {kind}/{name} (status: {status})", fg="green")
 
@@ -6057,7 +6057,7 @@ spec_group = _make_artifact_group(
 @_scope_option
 def cmd_issue_start(name: str, scope: str) -> None:
     """Mark Issue status: in-progress."""
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         existing = s.get_doc("Issue", name)
         if existing is None:
             raise fail(f"Issue '{name}' not found")
@@ -6134,7 +6134,7 @@ def cmd_plan_create(
     # Stamp the first timeline event (i-037) — consistent with the other
     # artifact Kinds; the derived journey + boards read timeline[0].
     _append_timeline(spec, "status_change", **{"from": None, "to": status})
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         raw = _build_raw("Plan", name, spec)
         s.run(s.kernel.write_document(scope, "Plan", name, raw))
     click.secho(f"CREATED Plan/{name} in scope {scope}", fg="green")
@@ -6250,7 +6250,7 @@ def cmd_produces_add(work_item: str, artifact: str, role: str | None, scope: str
     art_kind, art_name = _split_ref(artifact)
     if wi_kind not in _PRODUCER_KINDS:
         raise fail(f"{wi_kind} não pode produzir outputs ({', '.join(sorted(_PRODUCER_KINDS))}).")
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         existing = s.get_doc(wi_kind, wi_name)
         if existing is None:
             raise fail(f"{wi_kind}/{wi_name} não encontrado em {scope!r}.")
@@ -6268,7 +6268,7 @@ def cmd_produces_rm(work_item: str, artifact: str, scope: str) -> None:
     """Detach an artifact from a work item's produces[]."""
     wi_kind, wi_name = _split_ref(work_item)
     art_kind, art_name = _split_ref(artifact)
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         existing = s.get_doc(wi_kind, wi_name)
         if existing is None:
             raise fail(f"{wi_kind}/{wi_name} não encontrado em {scope!r}.")
@@ -6286,7 +6286,7 @@ def cmd_produces_list(work_item: str, as_json: bool, scope: str) -> None:
     """Resolved outputs of a work item (produces[] ∪ legacy back-refs)."""
     from dna.extensions.sdlc.work_item_outputs import resolve_work_item_outputs
     wi_kind, wi_name = _split_ref(work_item)
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         existing = s.get_doc(wi_kind, wi_name)
         if existing is None:
             raise fail(f"{wi_kind}/{wi_name} não encontrado em {scope!r}.")
@@ -6351,7 +6351,7 @@ def cmd_artifact_create(
     raw = _build_raw("HtmlArtifact", name, spec)
     if description:
         raw["metadata"]["description"] = description
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         s.run(s.kernel.write_document(scope, "HtmlArtifact", name, raw))
     click.secho(f"CREATED HtmlArtifact/{name} ({len(html)} bytes)", fg="green")
     click.secho(
@@ -6381,7 +6381,7 @@ def cmd_artifact_list(as_json: bool, scope: str) -> None:
             })
         return out
 
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         rows = s.run(_collect(s.kernel))
     if as_json:
         print_json(rows)
@@ -6401,7 +6401,7 @@ def cmd_artifact_list(as_json: bool, scope: str) -> None:
 @_scope_option
 def cmd_artifact_show(name: str, dump_html: bool, scope: str) -> None:
     """Show an HtmlArtifact's metadata (or --html to dump the raw HTML)."""
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         doc = s.get_doc("HtmlArtifact", name)
     if doc is None:
         raise fail(f"HtmlArtifact/{name} não encontrado em {scope!r}.")
@@ -6444,7 +6444,7 @@ def _changelog_category_options(f):
 
 def _load_changelog(scope: str) -> dict[str, Any]:
     import copy
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         existing = s.get_doc("Changelog", "CHANGELOG")
         if existing is not None and isinstance(existing.spec, dict):
             return copy.deepcopy(existing.spec)  # never mutate the cached doc
@@ -6473,7 +6473,7 @@ def _merge_changelog_items(entry: dict[str, Any], items: dict[str, tuple]) -> in
 
 def _write_changelog(scope: str, spec: dict[str, Any]) -> None:
     raw = _build_raw("Changelog", "CHANGELOG", spec)
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         s.run(s.kernel.write_document(scope, "Changelog", "CHANGELOG", raw))
 
 
@@ -6758,7 +6758,7 @@ def cmd_digest(since_spec: str | None, save: bool, as_json: bool, scope: str) ->
     from dna_cli._digest import build_digest, resolve_since
 
     now = datetime.now(timezone.utc)
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         last_digest_at = (
             _find_last_digest_at(s) if since_spec == "last-digest" else None
         )
@@ -6898,7 +6898,7 @@ def cmd_gallery(html_out: str | None, open_after: bool, as_json: bool, scope: st
     """
     from dna_cli._gallery import build_gallery, render_gallery_html
 
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         artifacts: list[dict[str, Any]] = []
         async def _collect() -> None:
             async for raw in s.kernel.query(scope, "HtmlArtifact"):
