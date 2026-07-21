@@ -38,12 +38,10 @@ dna = "dna_cli:main"
 # build. Optional + lazily imported (dna_cli._mcp_server imports `fastmcp` only
 # inside build_server), so the base install never carries it. Guard:
 # tests/test_mcp_server.py::test_base_import_never_pulls_mcp.
-# `mcp-ui-server` (SEP-1865 "MCP Apps") lets a tool ship an interactive UI card
-# (a `ui://` resource) alongside its data, rendered by an MCP host in a sandboxed
-# iframe — the memory-list tool emits `ui://dna/memory-list`. Also lazily
-# imported (dna_cli._mcp_server._with_memory_card), and the SDK's card surface
-# `dna.emit.mcp_ui` stays dependency-free (it emits the plain payload dict).
-mcp = ["fastmcp>=2", "mcp-ui-server>=1"]
+# The >=3.2 floor is the MCP Apps (SEP-1865) surface: `fastmcp.apps.AppConfig`
+# lets `list_memories`/`recall` point the `ui://dna/memory-list` template in the
+# tool DECLARATION, and `@server.resource` serves the template itself.
+mcp = ["fastmcp>=3.2"]
 # The REST read-API face (`dna api serve`) — the correct HTTP boundary for a WEB
 # app (the DNA Cloud portal): a normal request/response REST API over the SAME
 # DNA kernel + the SAME `*_impl` cores the MCP server uses (zero logic
@@ -76,12 +74,10 @@ dev = [
     # (tests/test_recall_cmd.py) run the real provider offline in CI, instead of
     # importorskip. Resolves against the path-installed dna-sdk.
     "dna-sdk[search-sqlite]",
-    # `fastmcp` so tests/test_mcp_server.py runs the MCP server for real in CI
-    # (the base install keeps it optional — see the `mcp` extra above).
-    "fastmcp>=2",
-    # `mcp-ui-server` so tests/test_mcp_apps.py drives the MCP-App memory card
-    # for real (the base install keeps it optional — see the `mcp` extra above).
-    "mcp-ui-server>=1",
+    # `fastmcp` so tests/test_mcp_server.py + tests/test_mcp_apps.py run the MCP
+    # server (and the MCP Apps memory-card surface) for real in CI — the base
+    # install keeps it optional, see the `mcp` extra above.
+    "fastmcp>=3.2",
     # `fastapi` + `httpx` so tests/test_rest_api.py drives the REST read-API for
     # real via FastAPI's TestClient (httpx-backed). The base install keeps FastAPI
     # optional — see the `api` extra above.
