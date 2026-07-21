@@ -1,0 +1,22 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-063-specify-import-constitution-placeholder
+spec:
+  description: "Atrito 2 da estreia do fluxo composto (2026-07-21): o specify init\
+    \ instala constitution.md TEMPLATE (nao-ratificada) e o dna specify import a mapeia\
+    \ por default (--constitution-as both) como Guardrail+Soul 'live, enforced governance'\
+    \ \u2014 governanca placeholder virando doc vivo no board. Nao existe --constitution-as\
+    \ none nem deteccao de template nao-preenchido. Contorno usado na estreia: mover\
+    \ o arquivo de lado durante o import. Fix: flag de skip E/OU deteccao de placeholder\
+    \ (o template do kit tem marcadores reconheciveis). Pronto quando: importar um\
+    \ init cru nao cria governanca falsa, com teste."
+  type: bug
+  severity: medium
+  status: open
+  timeline:
+  - at: '2026-07-21T18:36:43+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

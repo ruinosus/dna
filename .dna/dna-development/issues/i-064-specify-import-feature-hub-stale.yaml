@@ -1,0 +1,22 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-064-specify-import-feature-hub-stale
+spec:
+  description: "Atrito 3 da estreia (2026-07-21): o import anexa a run ao hub da feature\
+    \ mas NAO atualiza a descricao dela \u2014 f-copilot-mcp-apps ainda descreve a\
+    \ postura pre-design (_meta no resultado, externalUrl, mcp-ui-server, portal-first),\
+    \ exatamente o que o design aprovado apagou. O board carrega DUAS verdades. Fix:\
+    \ o import oferecer refresh da descricao do hub a partir do spec importado (opt-in\
+    \ ou com diff mostrado), ou no minimo um aviso de divergencia. Enquanto isso a\
+    \ descricao da f-copilot-mcp-apps precisa de correcao manual via CLI \u2014 se\
+    \ nao houver verbo para editar descricao de feature, isso e parte da issue."
+  type: bug
+  severity: medium
+  status: open
+  timeline:
+  - at: '2026-07-21T18:36:50+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

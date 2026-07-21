@@ -1,0 +1,18 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-065-specify-import-title-truncation
+spec:
+  description: 'Atrito 4 da estreia (2026-07-21): o dna specify import corta o titulo
+    da Story em ~80 chars NO MEIO DA PALAVRA e sem reticencias (''...em packages/s'').
+    Cosmetico mas e a cara da story no board. Fix: truncar em fronteira de palavra
+    com reticencias, ou elevar o limite.'
+  type: bug
+  severity: low
+  status: open
+  timeline:
+  - at: '2026-07-21T18:36:56+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
