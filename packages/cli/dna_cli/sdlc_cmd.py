@@ -200,7 +200,7 @@ def cmd_current(scope: str, as_json: bool) -> None:
     With ``--json`` returns a structured list for programmatic use.
     """
     rows: list[dict[str, Any]] = []
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         for kind, icon, statuses in (
             ("Story", "📖", {"in-progress"}),
             ("Feature", "🚀", {"in-development"}),
@@ -262,7 +262,7 @@ def cmd_brief(scope: str, limit: int, as_json: bool) -> None:
         return ""
 
     sections: dict[str, list] = {}
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         in_progress: list[dict] = []
         for kind, icon, statuses in (
             ("Story", "📖", {"in-progress"}),
@@ -379,7 +379,7 @@ def cmd_brief(scope: str, limit: int, as_json: bool) -> None:
 @_scope_option
 def cmd_next(scope: str) -> None:
     """Snapshot of active work — in-progress epic, pending stories, open issues."""
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         mi = s.mi
         in_progress_ms = [
             m for m in s.query_list("Epic")
@@ -464,7 +464,7 @@ def cmd_list(
     scope: str, as_json: bool,
 ) -> None:
     """Tabular list of SDLC docs filtered by status/owner/parent ref."""
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         items = s.query_list(kind)
         if status:
             items = [i for i in items if i.spec.get("status") == status]
@@ -660,7 +660,7 @@ def cmd_story_create(
     _append_timeline(spec, "status_change", to=status)
 
     raw = _build_raw("Story", name, spec)
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         s.run(s.kernel.write_document(scope, "Story", name, raw))
     click.secho(f"CREATED Story/{name} (feature: {feature}, status: {status})", fg="green")
 
@@ -827,7 +827,7 @@ def _create_minimal_plan(
     }
     if methodology:
         spec["methodology"] = methodology
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         raw = _build_raw("Plan", plan_name, spec)
         s.run(s.kernel.write_document(scope, "Plan", plan_name, raw))
     return plan_name
@@ -836,7 +836,7 @@ def _create_minimal_plan(
 def _link_plan_to_story(scope: str, plan_name: str, story_name: str) -> None:
     """Ensure an existing Plan declares ``story_ref=<story>`` so the derived
     journey links it. Raises (fail) if the Plan doesn't exist."""
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         existing = s.get_doc("Plan", plan_name)
         if existing is None:
             raise fail(
@@ -1115,7 +1115,7 @@ def cmd_story_done(
     # stories). Idempotent: items already done preserve their stamps.
     try:
         now_iso = _now_iso()
-        with dna_session(scope) as _s:
+        with open_session(scope) as _s:
             existing = _s.get_doc("Story", name)
             if existing is not None and isinstance(existing.spec, dict):
                 story_spec = dict(existing.spec)
@@ -1192,7 +1192,7 @@ def cmd_story_done(
     # Post-transition hook point (fail-soft) — hooks registered by the
     # host platform fire here.
     try:
-        with dna_session(scope) as _s:
+        with open_session(scope) as _s:
             _story_doc = _s.get_doc("Story", name)
             _story_spec = dict(_story_doc.spec) if _story_doc and _story_doc.spec else {}
     except Exception:  # noqa: BLE001 — doc reload is best-effort
@@ -1320,7 +1320,7 @@ def cmd_story_comment(
             promoted = True
         else:
             event_type = "comment"
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         existing = s.get_doc("Story", name)
         if existing is None:
             raise fail(f"Story '{name}' not found in scope {scope!r}")
@@ -1431,7 +1431,7 @@ def cmd_kaizen(work_item: str, body: str, issue: str | None,
         wi_kind, wi_name = "Story", work_item
     if wi_kind not in _WORK_ITEM_KINDS:
         raise fail(f"{wi_kind} não é work item ({', '.join(sorted(_WORK_ITEM_KINDS))}).")
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         existing = s.get_doc(wi_kind, wi_name)
         if existing is None:
             raise fail(f"{wi_kind}/{wi_name} não encontrado em {scope!r}.")
@@ -1475,7 +1475,7 @@ def _kaizen_transition(scope: str, name: str, command: str,
     new status.
     """
     _, target = _KAIZEN_TRANSITIONS[command]
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         existing = s.get_doc("Kaizen", name)
         if existing is None:
             raise fail(f"Kaizen '{name}' not found in scope {scope!r}")
@@ -1535,7 +1535,7 @@ def cmd_story_commits(name: str, as_json: bool, scope: str) -> None:
     - ``spec.timeline[].commit_ref`` (auto-stamped by `story done`) +
       ``spec.timeline[].session_ref`` (linkback to the AgentSession).
     """
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         story = s.get_doc("Story", name)
         if story is None:
             raise fail(f"Story '{name}' not found in scope {scope!r}")
@@ -1606,7 +1606,7 @@ def cmd_story_show(name: str, as_json: bool, scope: str) -> None:
                 out.append(f"[{'x' if done else ' '}] {text}")
         return out
 
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         story = s.get_doc("Story", name)
         if story is None:
             raise fail(f"Story '{name}' not found in scope {scope!r}")
@@ -1723,7 +1723,7 @@ def cmd_story_groom(
         click.secho(f"GROOM Story/{name} — no changes (no flags passed)", fg="yellow")
         return
 
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         existing = s.get_doc("Story", name)
         if existing is None:
             raise fail(f"Story '{name}' not found in scope {scope!r}")
@@ -1746,7 +1746,7 @@ def cmd_story_groom(
 def _next_issue_number(scope: str) -> int:
     """Find the next available i-NNN number — delegates the numbering to the shared
     core ``next_issue_number`` (the same primitive the MCP ``create_issue`` uses)."""
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         existing = [i.name for i in s.query_list("Issue")]
     return _core_next_issue_number(existing)
 
@@ -1835,7 +1835,7 @@ def cmd_feature_create(
     _append_timeline(spec, "status_change", to=status)
 
     raw = _build_raw("Feature", name, spec)
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         s.run(s.kernel.write_document(scope, "Feature", name, raw))
     click.secho(
         f"CREATED Feature/{name} (status: {status}"
@@ -1853,7 +1853,7 @@ def cmd_feature_show(name: str, scope: str) -> None:
     Mirrors `epic show` (i-041) — without it, agents fell back to reading raw
     YAML to understand a Feature's state.
     """
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         f = s.get_doc("Feature", name)
         if f is None:
             raise fail(f"Feature '{name}' not found in scope {scope!r}")
@@ -1909,7 +1909,7 @@ def cmd_feature_ship(
     """
     if commit_ref is None:
         commit_ref = _git_head_sha()
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         ft = s.get_doc("Feature", name)
         if ft is None:
             raise fail(f"Feature '{name}' not found in scope {scope!r}")
@@ -1981,7 +1981,7 @@ def cmd_feature_cancel(name: str, reason: str, scope: str) -> None:
     """Mark a Feature as cancelled with an explicit reason. Used when
     scope shifts and the Feature won't ship — preserves the historical
     intent while closing the open-work loop."""
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         ft = s.get_doc("Feature", name)
         if ft is None:
             raise fail(f"Feature '{name}' not found in scope {scope!r}")
@@ -2011,7 +2011,7 @@ def cmd_feature_start(name: str, scope: str) -> None:
     business_value, labels, …) and stamps a `status_change` event. Use it
     when work has clearly started on a Feature still parked in `discovery`.
     """
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         ft = s.get_doc("Feature", name)
         if ft is None:
             raise fail(f"Feature '{name}' not found in scope {scope!r}")
@@ -2066,7 +2066,7 @@ def cmd_story_reopen(name: str, reason: str, to_status: str, scope: str) -> None
     """Reopen a closed/cancelled Story — flip status back to todo
     (or specified) and clear closed_at + cancelled_reason. Stamps a
     status_change event with the reopen reason."""
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         existing = s.get_doc("Story", name)
         if existing is None:
             raise fail(f"Story '{name}' not found in scope {scope!r}")
@@ -2095,7 +2095,7 @@ def cmd_story_reopen(name: str, reason: str, to_status: str, scope: str) -> None
 def cmd_feature_reopen(name: str, reason: str, to_status: str, scope: str) -> None:
     """Reopen a closed/cancelled Feature — flip status back to
     discovery (or specified). Mirror of feature cancel."""
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         ft = s.get_doc("Feature", name)
         if ft is None:
             raise fail(f"Feature '{name}' not found in scope {scope!r}")
@@ -2171,7 +2171,7 @@ def cmd_feature_narrate_all(only_empty: bool, overwrite: bool, scope: str) -> No
         only_empty = False
     updated = 0
     skipped = 0
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         for ft in s.query_list("Feature"):
             sp = dict(ft.spec) if isinstance(ft.spec, dict) else {}
             if only_empty and sp.get("narrative_line"):
@@ -2203,7 +2203,7 @@ def cmd_feature_narrative(name: str, narrative_line: str, scope: str) -> None:
     semantic summary shown next to the Feature in Studio's narrative
     swimlane. Past-tense voice ("agent shipou X, descobriu Y").
     """
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         ft = s.get_doc("Feature", name)
         if ft is None:
             raise fail(f"Feature '{name}' not found in scope {scope!r}")
@@ -2224,7 +2224,7 @@ def cmd_feature_narrative(name: str, narrative_line: str, scope: str) -> None:
 @_scope_option
 def cmd_epic_reopen(name: str, reason: str, to_status: str, scope: str) -> None:
     """Reopen a closed Epic — flip status back to planning."""
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         ep = s.get_doc("Epic", name)
         if ep is None:
             raise fail(f"Epic '{name}' not found in scope {scope!r}")
@@ -2286,7 +2286,7 @@ def cmd_issue_file(
     _append_timeline(spec, "status_change", to="open")
 
     raw = _build_raw("Issue", name, spec)
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         s.run(s.kernel.write_document(scope, "Issue", name, raw))
     click.secho(
         f"FILED Issue/{name} ({issue_type}/{severity})",
@@ -2299,7 +2299,7 @@ def cmd_issue_file(
 @_scope_option
 def cmd_issue_triage(name: str, scope: str) -> None:
     """Mark Issue status: triaged."""
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         existing = s.get_doc("Issue", name)
         if existing is None:
             raise fail(f"Issue '{name}' not found")
@@ -2322,7 +2322,7 @@ def cmd_issue_resolve(
     name: str, resolution: str | None, allow_no_produces: bool, scope: str,
 ) -> None:
     """Mark Issue status: resolved, set closed_at + optional resolution text."""
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         existing = s.get_doc("Issue", name)
         if existing is None:
             raise fail(f"Issue '{name}' not found")
@@ -2395,7 +2395,7 @@ def cmd_issue_comment(
     """
     if event_type is None:
         event_type = "decision" if _looks_like_decision(body) else "comment"
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         existing = s.get_doc("Issue", name)
         if existing is None:
             raise fail(f"Issue '{name}' not found in scope {scope!r}")
@@ -2476,7 +2476,7 @@ def cmd_epic_create(
     _append_timeline(spec, "status_change", to=status)
 
     raw = _build_raw("Epic", name, spec)
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         s.run(s.kernel.write_document(scope, "Epic", name, raw))
     click.secho(f"CREATED Epic/{name} (status: {status})", fg="green")
 
@@ -2486,7 +2486,7 @@ def cmd_epic_create(
 @_scope_option
 def cmd_epic_show(name: str, scope: str) -> None:
     """Show Epic burndown — features + stories with status counts."""
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         ep = s.get_doc("Epic", name)
         if ep is None:
             raise fail(f"Epic '{name}' not found in scope {scope!r}")
@@ -2577,7 +2577,7 @@ def cmd_sdlc_extract_decisions(scope: str, dry_run: bool) -> None:
     """
     promoted = 0
     scanned = 0
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         for kind in ("Story", "Feature", "Epic", "Issue"):
             try:
                 docs = s.query_list(kind)
@@ -2675,7 +2675,7 @@ def cmd_backfill(
     created_count = 0
     skipped_count = 0
 
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         existing_specs = {sp.name for sp in s.query_list("Spec")}
         existing_plans = {pl.name for pl in s.query_list("Plan")}
 
@@ -2805,7 +2805,7 @@ def cmd_backfill(
 @_scope_option
 def cmd_epic_ship(name: str, scope: str) -> None:
     """Mark Epic status: done, set closed_at, cascade-close Features whose Stories all done."""
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         ms = s.get_doc("Epic", name)
         if ms is None:
             raise fail(f"Epic '{name}' not found")
