@@ -11,6 +11,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 🐛 Correções
+
+- **Quota store fala libpq — o DSN é normalizado para o dialeto do driver
+  síncrono** (`i-057`, visto em produção no dna-cloud). `store_from_env` cai
+  no fallback `DNA_SOURCE_URL`, que num deploy hospedado é asyncpg-style e
+  carrega `?ssl=require` — e o `PostgresQuotaStore` conecta via
+  psycopg2/psycopg (libpq), que rejeita a conexão inteira com
+  `invalid connection option "ssl"`. `sync_pg_url` agora traduz a query
+  string para libpq: `ssl=` → `sslmode=` (nomes de modo do libpq passam
+  intactos; `true`/`false` e afins mapeiam para `require`/`disable`),
+  `sslmode=` explícito vence o gêmeo `ssl=`, e params asyncpg-only
+  (`statement_cache_size`, `command_timeout`, …) são removidos em vez de
+  derrubar o connect. Um DSN já-libpq e um DSN sem query passam intactos.
+
 ## [0.25.0] — 2026-07-21
 
 A memória fica visível: hits de recall com campos de display + `personal`

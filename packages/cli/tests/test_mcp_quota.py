@@ -301,13 +301,68 @@ def test_store_from_env_selects_the_durable_store_for_a_postgres_source():
 
 def test_sync_pg_url_swaps_the_async_driver_but_keeps_the_target():
     """asyncpg cannot back a synchronous port — the DSN is rewritten to the
-    installed sync driver, host/database/query string untouched."""
+    installed sync driver, host/database untouched; a query string already in
+    the libpq dialect passes through unchanged."""
     pytest.importorskip("psycopg2")
     out = Q.sync_pg_url("postgresql+asyncpg://u:p@h:5432/db?sslmode=require")
     assert out == "postgresql+psycopg2://u:p@h:5432/db?sslmode=require"
     assert Q.sync_pg_url("postgres://u@h/db") == "postgresql+psycopg2://u@h/db"
     with pytest.raises(ValueError, match="not a Postgres URL"):
         Q.sync_pg_url("sqlite:///x.db")
+
+
+def test_sync_pg_url_translates_asyncpg_ssl_to_libpq_sslmode():
+    """THE i-057 shape, verbatim from production: the fallback DSN
+    (``DNA_SOURCE_URL``) is asyncpg-style and carries ``?ssl=require`` — the
+    store's DBAPI is libpq, which rejects the whole connection with
+    ``invalid connection option "ssl"``. The store must normalize the DSN to
+    the dialect IT speaks: ``ssl=`` becomes ``sslmode=``."""
+    pytest.importorskip("psycopg2")
+    out = Q.sync_pg_url("postgresql+asyncpg://u:p@h:5432/db?ssl=require")
+    assert out == "postgresql+psycopg2://u:p@h:5432/db?sslmode=require"
+    # libpq mode names pass through the value map unchanged.
+    assert Q.sync_pg_url("postgres://u@h/db?ssl=verify-full").endswith(
+        "?sslmode=verify-full"
+    )
+    # asyncpg boolean spellings map to the nearest libpq mode.
+    assert Q.sync_pg_url("postgres://u@h/db?ssl=true").endswith("?sslmode=require")
+    assert Q.sync_pg_url("postgres://u@h/db?ssl=false").endswith("?sslmode=disable")
+
+
+def test_sync_pg_url_drops_asyncpg_only_params_and_keeps_libpq_ones():
+    """asyncpg-only knobs (statement cache etc.) would each kill a libpq
+    connect ('invalid connection option') — dropped. libpq-valid options
+    (application_name) survive; an explicit ``sslmode=`` wins over a
+    redundant ``ssl=`` twin instead of duplicating the key."""
+    pytest.importorskip("psycopg2")
+    out = Q.sync_pg_url(
+        "postgresql+asyncpg://u@h/db"
+        "?ssl=require&statement_cache_size=0&application_name=dna-mcp"
+        "&prepared_statement_cache_size=100&command_timeout=5"
+    )
+    assert out == (
+        "postgresql+psycopg2://u@h/db?sslmode=require&application_name=dna-mcp"
+    )
+    # Both spellings present → the explicit libpq one wins, no duplicate key.
+    out = Q.sync_pg_url("postgres://u@h/db?ssl=prefer&sslmode=verify-ca")
+    assert out == "postgresql+psycopg2://u@h/db?sslmode=verify-ca"
+    # Everything dropped → no dangling '?'.
+    out = Q.sync_pg_url("postgres://u@h/db?statement_cache_size=0")
+    assert out == "postgresql+psycopg2://u@h/db"
+
+
+def test_store_from_env_accepts_the_asyncpg_shaped_source_url_end_to_end():
+    """The production path of i-057: no ``DNA_QUOTA_DSN``, the store falls
+    back to an asyncpg-style ``DNA_SOURCE_URL`` with ``?ssl=require`` — the
+    resulting engine URL must already be libpq-dialect, or the first metered
+    call dies."""
+    pytest.importorskip("sqlalchemy")
+    pytest.importorskip("psycopg2")
+    store = Q.store_from_env(
+        {"DNA_SOURCE_URL": "postgresql+asyncpg://u:p@h:5432/db?ssl=require"}
+    )
+    assert isinstance(store, Q.PostgresQuotaStore)
+    assert store._url == "postgresql+psycopg2://u:p@h:5432/db?sslmode=require"
 
 
 # ── 3. integration — over a real token context + seeded Tier docs ──────────
