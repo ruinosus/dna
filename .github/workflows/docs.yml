@@ -41,7 +41,11 @@ jobs:
       # importable in the build env (they are NOT needed for the prose pages,
       # only for the source-generated Reference quadrant).
       - name: Install DNA SDK + CLI (source of the API reference)
-        run: pip install -e packages/sdk-py -e packages/cli
+        # [postgres] porque o guard do MER importa o modelo de tabelas do
+        # SQLAlchemy — sem o extra ele morre com ModuleNotFoundError, e
+        # degradá-lo a "pular a metade física" seria exatamente o drift
+        # silencioso que ele existe para impedir.
+        run: pip install -e "packages/sdk-py[postgres]" -e packages/cli
       # Regenerate the source-derived Reference: the CLI ref (Click tree) and
       # the Kinds ref (registered Kinds' schemas). The Python API is rendered
       # inline by mkdocstrings at build time, so it has no committed artifact.
