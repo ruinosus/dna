@@ -8,7 +8,7 @@ spec:
     \ `packages/cli/tests/test_mcp_apps.py`"
   title: "[US1] Teste: a declara\xE7\xE3o de `list_memories` e `recall` carrega o\
     \ `resourceUri` "
-  status: todo
+  status: done
   feature: f-copilot-mcp-apps
   labels:
   - spec-kit
@@ -16,3 +16,71 @@ spec:
   reporter: claude-code
   spec_refs:
   - speckit-mcp-apps-memory-card
+  produces:
+  - kind: TestGuide
+    name: tg-speckit-mcp-apps-sdk
+    role: test-guide
+    at: '2026-07-21T20:12:56+00:00'
+  - kind: TestRun
+    name: tr-tg-speckit-mcp-apps-sdk-20260721-201420
+    role: test-run
+    at: '2026-07-21T20:15:37+00:00'
+  - kind: TestGuide
+    name: tg-speckit-mcp-apps-render-smoke
+    role: test-guide
+    at: '2026-07-21T20:21:11+00:00'
+  - kind: TestRun
+    name: tr-tg-speckit-mcp-apps-render-smoke-20260721-202227
+    role: test-run
+    at: '2026-07-21T20:23:01+00:00'
+  timeline:
+  - at: '2026-07-21T20:12:56+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-speckit-mcp-apps-sdk
+    summary: TestGuide tg-speckit-mcp-apps-sdk (regression)
+  - at: '2026-07-21T20:15:37+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-speckit-mcp-apps-sdk-20260721-201420
+    summary: "TestRun tr-tg-speckit-mcp-apps-sdk-20260721-201420 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-21T20:17:46+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "T006 no commit 524bbf0: teste pelo protocolo real \u2014 tools/list\
+      \ mostra list_memories E recall com meta.ui.resourceUri=ui://dna/memory-list\
+      \ (e remember SEM pointer); muta\xE7\xE3o pointer-removido confirmada morta\
+      \ (1 failed) antes da implementa\xE7\xE3o e ap\xF3s aplicada de prop\xF3sito."
+    commit_ref: ee11c11a89e2282556416387fdff80abc96a8136
+  - at: '2026-07-21T20:21:11+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-speckit-mcp-apps-render-smoke
+    summary: TestGuide tg-speckit-mcp-apps-render-smoke (smoke)
+  - at: '2026-07-21T20:23:01+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-speckit-mcp-apps-render-smoke-20260721-202227
+    summary: "TestRun tr-tg-speckit-mcp-apps-render-smoke-20260721-202227 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-21T20:26:04+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: done
+    commit_ref: 524bbf0
+    summary: "declara\xE7\xE3o de list_memories/recall carrega o resourceUri (muta\xE7\
+      \xE3o morta)"
+  updated_at: '2026-07-21T20:26:04+00:00'
+  closed_at: '2026-07-21T20:25:54+00:00'

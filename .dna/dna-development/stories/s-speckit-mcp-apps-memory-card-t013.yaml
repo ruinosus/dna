@@ -7,10 +7,87 @@ spec:
     \ `recall` via FastMCP 3 (`app=AppConfig(resource_uri=\u2026)`) em `packages/cli/dna_cli/_mcp_server.py`"
   title: "[US1] Apontar o template na declara\xE7\xE3o de `list_memories` e `recall`\
     \ via FastMCP"
-  status: todo
+  status: done
   feature: f-copilot-mcp-apps
   labels:
   - spec-kit
   reporter: claude-code
   spec_refs:
   - speckit-mcp-apps-memory-card
+  produces:
+  - kind: Plan
+    name: speckit-mcp-apps-memory-card
+    role: implementation
+    at: '2026-07-21T20:01:46+00:00'
+  - kind: TestGuide
+    name: tg-speckit-mcp-apps-sdk
+    role: test-guide
+    at: '2026-07-21T20:13:38+00:00'
+  - kind: TestRun
+    name: tr-tg-speckit-mcp-apps-sdk-20260721-201420
+    role: test-run
+    at: '2026-07-21T20:16:51+00:00'
+  - kind: TestGuide
+    name: tg-speckit-mcp-apps-render-smoke
+    role: test-guide
+    at: '2026-07-21T20:21:52+00:00'
+  - kind: TestRun
+    name: tr-tg-speckit-mcp-apps-render-smoke-20260721-202227
+    role: test-run
+    at: '2026-07-21T20:23:44+00:00'
+  updated_at: '2026-07-21T20:28:09+00:00'
+  timeline:
+  - at: '2026-07-21T20:01:46+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-21T20:13:38+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-speckit-mcp-apps-sdk
+    summary: TestGuide tg-speckit-mcp-apps-sdk (regression)
+  - at: '2026-07-21T20:16:51+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-speckit-mcp-apps-sdk-20260721-201420
+    summary: "TestRun tr-tg-speckit-mcp-apps-sdk-20260721-201420 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-21T20:18:53+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "T013 no commit 524bbf0: app=AppConfig(resource_uri=ui://dna/memory-list)\
+      \ na declara\xE7\xE3o de list_memories e recall \u2014 fastmcp.apps.AppConfig\
+      \ (3.4.4), API real igual \xE0 assumida no plan (zero diverg\xEAncia)."
+    commit_ref: ee11c11a89e2282556416387fdff80abc96a8136
+  - at: '2026-07-21T20:21:52+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-speckit-mcp-apps-render-smoke
+    summary: TestGuide tg-speckit-mcp-apps-render-smoke (smoke)
+  - at: '2026-07-21T20:23:44+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-speckit-mcp-apps-render-smoke-20260721-202227
+    summary: "TestRun tr-tg-speckit-mcp-apps-render-smoke-20260721-202227 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-21T20:28:09+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: done
+    commit_ref: 524bbf0
+    summary: "app=AppConfig(resource_uri=\u2026) nas declara\xE7\xF5es \u2014 FastMCP\
+      \ 3, API real = plan"
+  closed_at: '2026-07-21T20:27:59+00:00'

@@ -8,10 +8,80 @@ spec:
     \ \xA73"
   title: '[US1] Smoke de render real com o `basic-host` do `ext-apps` (card renderiza;
     emp'
-  status: todo
+  status: done
   feature: f-copilot-mcp-apps
   labels:
   - spec-kit
   reporter: claude-code
   spec_refs:
   - speckit-mcp-apps-memory-card
+  produces:
+  - kind: TestGuide
+    name: tg-speckit-mcp-apps-sdk
+    role: test-guide
+    at: '2026-07-21T20:13:44+00:00'
+  - kind: TestRun
+    name: tr-tg-speckit-mcp-apps-sdk-20260721-201420
+    role: test-run
+    at: '2026-07-21T20:16:56+00:00'
+  - kind: TestGuide
+    name: tg-speckit-mcp-apps-render-smoke
+    role: test-guide
+    at: '2026-07-21T20:21:58+00:00'
+  - kind: TestRun
+    name: tr-tg-speckit-mcp-apps-render-smoke-20260721-202227
+    role: test-run
+    at: '2026-07-21T20:23:50+00:00'
+  timeline:
+  - at: '2026-07-21T20:13:44+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-speckit-mcp-apps-sdk
+    summary: TestGuide tg-speckit-mcp-apps-sdk (regression)
+  - at: '2026-07-21T20:16:56+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-speckit-mcp-apps-sdk-20260721-201420
+    summary: "TestRun tr-tg-speckit-mcp-apps-sdk-20260721-201420 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-21T20:19:00+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "T014 (smoke): dna mcp serve http + basic-host oficial do ext-apps (repo\
+      \ clonado, build vite, servido com tsx + proxy CORS dev) + chrome headless via\
+      \ playwright. Evid\xEAncia: card renderizou o dado semeado ('The memory card\
+      \ renders in every MCP Apps host'), footer '1 memory', badge de scope 'concierge',\
+      \ 0 elementos interativos; recall renderizou hits no MESMO card; ap\xF3s forget,\
+      \ list_memories renderizou o empty state honesto. SMOKE PASS."
+    commit_ref: ee11c11a89e2282556416387fdff80abc96a8136
+  - at: '2026-07-21T20:21:58+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-speckit-mcp-apps-render-smoke
+    summary: TestGuide tg-speckit-mcp-apps-render-smoke (smoke)
+  - at: '2026-07-21T20:23:50+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-speckit-mcp-apps-render-smoke-20260721-202227
+    summary: "TestRun tr-tg-speckit-mcp-apps-render-smoke-20260721-202227 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-21T20:28:25+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: done
+    commit_ref: 524bbf0
+    summary: "smoke basic-host PASS: card com dados, hits, empty state, zero a\xE7\
+      \xF5es"
+  updated_at: '2026-07-21T20:28:25+00:00'
+  closed_at: '2026-07-21T20:28:15+00:00'

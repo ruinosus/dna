@@ -7,10 +7,87 @@ spec:
     ntico \xE0 baseline de T005 num cliente sem a extens\xE3o, em `packages/cli/tests/test_mcp_apps.py`"
   title: "[US3] Teste: `content` textual de `list_memories`/`recall` byte-id\xEAntico\
     \ \xE0 basel"
-  status: todo
+  status: done
   feature: f-copilot-mcp-apps
   labels:
   - spec-kit
   reporter: claude-code
   spec_refs:
   - speckit-mcp-apps-memory-card
+  produces:
+  - kind: Plan
+    name: speckit-mcp-apps-memory-card
+    role: implementation
+    at: '2026-07-21T20:02:54+00:00'
+  - kind: TestGuide
+    name: tg-speckit-mcp-apps-sdk
+    role: test-guide
+    at: '2026-07-21T20:13:50+00:00'
+  - kind: TestRun
+    name: tr-tg-speckit-mcp-apps-sdk-20260721-201420
+    role: test-run
+    at: '2026-07-21T20:17:02+00:00'
+  - kind: TestGuide
+    name: tg-speckit-mcp-apps-render-smoke
+    role: test-guide
+    at: '2026-07-21T20:22:04+00:00'
+  - kind: TestRun
+    name: tr-tg-speckit-mcp-apps-render-smoke-20260721-202227
+    role: test-run
+    at: '2026-07-21T20:23:55+00:00'
+  updated_at: '2026-07-21T20:28:42+00:00'
+  timeline:
+  - at: '2026-07-21T20:02:54+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-21T20:03:00+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "T020 no commit 4230268: degrada\xE7\xE3o US3 travada \u2014 os dois\
+      \ tools byte-id\xEAnticos \xE0 baseline de T005 num cliente sem a extens\xE3\
+      o; content autossuficiente (json == structured_content)."
+    commit_ref: 423026831b497b9fa8e39f3021268c436c667ac5
+  - at: '2026-07-21T20:13:50+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-speckit-mcp-apps-sdk
+    summary: TestGuide tg-speckit-mcp-apps-sdk (regression)
+  - at: '2026-07-21T20:17:02+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-speckit-mcp-apps-sdk-20260721-201420
+    summary: "TestRun tr-tg-speckit-mcp-apps-sdk-20260721-201420 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-21T20:22:04+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-speckit-mcp-apps-render-smoke
+    summary: TestGuide tg-speckit-mcp-apps-render-smoke (smoke)
+  - at: '2026-07-21T20:23:55+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-speckit-mcp-apps-render-smoke-20260721-202227
+    summary: "TestRun tr-tg-speckit-mcp-apps-render-smoke-20260721-202227 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-21T20:28:42+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: done
+    commit_ref: '4230268'
+    summary: "degrada\xE7\xE3o US3 travada: bytes id\xEAnticos \xE0 baseline num cliente\
+      \ sem a extens\xE3o"
+  closed_at: '2026-07-21T20:28:32+00:00'

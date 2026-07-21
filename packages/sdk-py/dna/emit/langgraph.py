@@ -394,7 +394,7 @@ class LanggraphEmitter(ScaffoldEmitter):
                 "result into the AG-UI shared-state keys `memory_timeline` + "
                 "`memory_card_html` (the DNA console's Memória canvas). "
                 "`memory_card_html` is rendered by "
-                "`dna.emit.mcp_ui.memory_list_card_html`, so the emitted app "
+                "`dna.emit.mcp_ui.memory_canvas_card_html`, so the emitted app "
                 "imports the `dna` package at runtime (a pure card renderer, no "
                 "heavy deps); the item shape mapping (name/summary/created_at/tags "
                 "→ id/text/when/tags/personal) is a per-server convention"

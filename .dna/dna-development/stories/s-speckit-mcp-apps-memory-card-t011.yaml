@@ -6,10 +6,76 @@ spec:
   description: "[US1] Regravar os goldens byte-stable em `packages/sdk-py/tests/goldens/mcp_ui/`\
     \ (conte\xFAdo novo, disciplina mantida)"
   title: '[US1] Regravar os goldens byte-stable em `packages/sdk-py/tests/goldens/mcp_ui/`'
-  status: todo
+  status: done
   feature: f-copilot-mcp-apps
   labels:
   - spec-kit
   reporter: claude-code
   spec_refs:
   - speckit-mcp-apps-memory-card
+  produces:
+  - kind: TestGuide
+    name: tg-speckit-mcp-apps-sdk
+    role: test-guide
+    at: '2026-07-21T20:13:27+00:00'
+  - kind: TestRun
+    name: tr-tg-speckit-mcp-apps-sdk-20260721-201420
+    role: test-run
+    at: '2026-07-21T20:16:39+00:00'
+  - kind: TestGuide
+    name: tg-speckit-mcp-apps-render-smoke
+    role: test-guide
+    at: '2026-07-21T20:21:40+00:00'
+  - kind: TestRun
+    name: tr-tg-speckit-mcp-apps-render-smoke-20260721-202227
+    role: test-run
+    at: '2026-07-21T20:23:32+00:00'
+  timeline:
+  - at: '2026-07-21T20:13:27+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-speckit-mcp-apps-sdk
+    summary: TestGuide tg-speckit-mcp-apps-sdk (regression)
+  - at: '2026-07-21T20:16:39+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-speckit-mcp-apps-sdk-20260721-201420
+    summary: "TestRun tr-tg-speckit-mcp-apps-sdk-20260721-201420 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-21T20:18:40+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "T011 no commit a126050: golden novo memory_list_template.html (379.787\
+      \ bytes, byte-stable); goldens do canvas (memory_list_card.html/memory_list_empty.html)\
+      \ permanecem byte-id\xEAnticos \u2014 rede de zero-drift do console."
+    commit_ref: ee11c11a89e2282556416387fdff80abc96a8136
+  - at: '2026-07-21T20:21:40+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-speckit-mcp-apps-render-smoke
+    summary: TestGuide tg-speckit-mcp-apps-render-smoke (smoke)
+  - at: '2026-07-21T20:23:32+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-speckit-mcp-apps-render-smoke-20260721-202227
+    summary: "TestRun tr-tg-speckit-mcp-apps-render-smoke-20260721-202227 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-21T20:27:21+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: done
+    commit_ref: a126050
+    summary: "goldens regravados: template novo; canvas byte-id\xEAntico"
+  updated_at: '2026-07-21T20:27:21+00:00'
+  closed_at: '2026-07-21T20:27:12+00:00'

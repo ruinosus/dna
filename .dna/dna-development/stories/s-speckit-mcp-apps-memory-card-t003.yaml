@@ -9,10 +9,87 @@ spec:
     \ futura j\xE1 vive nos itens de board i-060/i-061/i-062)"
   title: "Limpeza \xA73 em `packages/sdk-py/dna/emit/mcp_ui.py`: remover TODA men\xE7\
     \xE3o a futuro"
-  status: todo
+  status: done
   feature: f-copilot-mcp-apps
   labels:
   - spec-kit
   reporter: claude-code
   spec_refs:
   - speckit-mcp-apps-memory-card
+  produces:
+  - kind: Plan
+    name: speckit-mcp-apps-memory-card
+    role: implementation
+    at: '2026-07-21T19:34:34+00:00'
+  - kind: TestGuide
+    name: tg-speckit-mcp-apps-sdk
+    role: test-guide
+    at: '2026-07-21T20:12:39+00:00'
+  - kind: TestRun
+    name: tr-tg-speckit-mcp-apps-sdk-20260721-201420
+    role: test-run
+    at: '2026-07-21T20:14:59+00:00'
+  - kind: TestGuide
+    name: tg-speckit-mcp-apps-render-smoke
+    role: test-guide
+    at: '2026-07-21T20:20:54+00:00'
+  - kind: TestRun
+    name: tr-tg-speckit-mcp-apps-render-smoke-20260721-202227
+    role: test-run
+    at: '2026-07-21T20:22:44+00:00'
+  updated_at: '2026-07-21T20:25:04+00:00'
+  timeline:
+  - at: '2026-07-21T19:34:34+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-21T19:37:08+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'T003 no commit 9c94229: grep -i ''todo|deferred|follow-up|coming soon|a2ui|externalUrl|rawHtml|mcp-ui-server''
+      em dna/emit/mcp_ui.py retorna vazio; memory_list_ui_resource + available_emit_surfaces
+      removidos; test_emit_mcp_ui.py acompanhou (goldens intactos: 111 passed no par
+      mcp_ui+copilot_emit).'
+    commit_ref: 9c94229ad16465ec3434ecd90c2d8e6d7dcb89a2
+  - at: '2026-07-21T20:12:39+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-speckit-mcp-apps-sdk
+    summary: TestGuide tg-speckit-mcp-apps-sdk (regression)
+  - at: '2026-07-21T20:14:59+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-speckit-mcp-apps-sdk-20260721-201420
+    summary: "TestRun tr-tg-speckit-mcp-apps-sdk-20260721-201420 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-21T20:20:54+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-speckit-mcp-apps-render-smoke
+    summary: TestGuide tg-speckit-mcp-apps-render-smoke (smoke)
+  - at: '2026-07-21T20:22:44+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-speckit-mcp-apps-render-smoke-20260721-202227
+    summary: "TestRun tr-tg-speckit-mcp-apps-render-smoke-20260721-202227 \u2192 pass"
+    outcome: pass
+  - at: '2026-07-21T20:25:04+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: done
+    commit_ref: 9c94229
+    summary: "limpeza \xA73 em mcp_ui.py \u2014 modelo pr\xE9-spec apagado sem rastro"
+  closed_at: '2026-07-21T20:24:55+00:00'

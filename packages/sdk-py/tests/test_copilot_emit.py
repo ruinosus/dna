@@ -1455,7 +1455,7 @@ def test_lg_copilot_projects_read_tool_into_canvas_state(lg_ctx):
     assert "memory_timeline: list" in agent
     assert "memory_card_html: str" in agent
     # 2. the #152 card renderer is reused (imported, not reinvented).
-    assert "from dna.emit.mcp_ui import memory_list_card_html" in agent
+    assert "from dna.emit.mcp_ui import memory_canvas_card_html" in agent
     # 3. the read-tool gate reflects the mounted read tool (recall), not a blind
     #    hardcode — remember/forget (writes) are NOT in it.
     assert "_READ_TOOLS = {'recall'}" in agent
@@ -1464,7 +1464,7 @@ def test_lg_copilot_projects_read_tool_into_canvas_state(lg_ctx):
     )
     # 4. the tool node projects BOTH keys off the same parsed memory list.
     assert 'out["memory_timeline"] = _memory_timeline(mems)' in agent
-    assert 'out["memory_card_html"] = memory_list_card_html(mems)' in agent
+    assert 'out["memory_card_html"] = memory_canvas_card_html(mems)' in agent
     # 5. the item shape is the console contract (mapped from the raw memory).
     assert '"id": str(mem.get("name") or mem.get("id") or i),' in agent
     assert '"personal": bool(mem.get("personal")' in agent

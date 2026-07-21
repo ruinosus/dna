@@ -1,0 +1,33 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-speckit-mcp-apps-render-smoke-20260721-202227
+spec:
+  guide_ref: tg-speckit-mcp-apps-render-smoke
+  outcome: pass
+  verifies:
+  - Story/s-speckit-mcp-apps-memory-card-t001
+  - Story/s-speckit-mcp-apps-memory-card-t002
+  - Story/s-speckit-mcp-apps-memory-card-t003
+  - Story/s-speckit-mcp-apps-memory-card-t004
+  - Story/s-speckit-mcp-apps-memory-card-t005
+  - Story/s-speckit-mcp-apps-memory-card-t006
+  - Story/s-speckit-mcp-apps-memory-card-t007
+  - Story/s-speckit-mcp-apps-memory-card-t008
+  - Story/s-speckit-mcp-apps-memory-card-t009
+  - Story/s-speckit-mcp-apps-memory-card-t010
+  - Story/s-speckit-mcp-apps-memory-card-t011
+  - Story/s-speckit-mcp-apps-memory-card-t012
+  - Story/s-speckit-mcp-apps-memory-card-t013
+  - Story/s-speckit-mcp-apps-memory-card-t014
+  - Story/s-speckit-mcp-apps-memory-card-t020
+  - Story/s-speckit-mcp-apps-memory-card-t021
+  executed_by: claude
+  executed_at: '2026-07-21T20:22:27+00:00'
+  notes: "Smoke executado em 2026-07-21, automatizado (chrome headless via playwright;\
+    \ runner humano do Claude.ai fica em t015). Transcript: rendered summaries: ['The\
+    \ memory card renders in every MCP Apps host']; footer: '1 memory \xB7 your context,\
+    \ portable across every AI client'; scope badge: {hidden:false,text:'concierge'};\
+    \ interactive elements in card: 0; recall hits rendered: ['rem-b049b2f75a-the-memory-card-renders-in-every-mcp-app'];\
+    \ empty state: 'No memories yet \u2014 anything you ask DNA to remember will appe\u2026\
+    '; SMOKE PASS."

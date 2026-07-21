@@ -1,78 +1,53 @@
-"""DNA → **MCP-UI / MCP Apps** card surface (standalone golden family).
+"""DNA → **MCP Apps** memory-card surface (SEP-1865, standalone golden family).
 
-The third UI-emit surface, alongside the AG-UI backend emitters and the
-CopilotKit ``frontend.py`` console. Where the backend emitters materialize a
-servable AG-UI *backend* and ``frontend.py`` materializes the *console* that
-drives it, this module materializes a **UI resource at the tool** — an
-``mcp-ui`` card (SEP-1865 "MCP Apps", ratified 2026-01-26) that any MCP host
-(Claude, ChatGPT, VS Code, Goose) renders in a sandboxed iframe.
+A standalone UI-emit surface, alongside the AG-UI backend emitters and the
+CopilotKit ``frontend.py`` console — like ``frontend.py`` it is NOT a
+registered ``EmitterPort``: it carries no byte-equal ``build_prompt``
+instruction and is governed by its own byte-stable golden renders. Everything
+here is a pure function of its inputs, so every render is byte-golden.
 
-The mechanism (verified against ``mcp-ui-server`` 1.0.0):
+Two renders live here, one per delivery channel of the memory card:
 
-    a tool returns a UI resource at ``ui://…`` (``rawHtml`` / ``externalUrl`` /
-    ``remoteDom``) linked from the tool result's ``_meta.ui.resourceUri``; the
-    host prefetches + renders it in a sandboxed iframe. Same resource renders
-    across hosts (plain ``rawHtml`` is the most portable) — DNA's "your context
-    follows you across every client" thesis made *visible in the UI*.
+``memory_list_card_html()`` — the **static MCP Apps template** the runtime
+face (``dna_cli._mcp_server``) registers at ``ui://dna/memory-list`` and
+points from the ``list_memories``/``recall`` tool declarations. Self-contained
+HTML + inline JS: the ``@modelcontextprotocol/ext-apps`` lib is vendored in
+this package (``_vendor/ext-apps.iife.js``, license alongside) and embedded in
+an inline ``<script>`` — no CDN, no external URL; the spec's CSP is
+deny-by-default. The JS consumes the host push (``app.ontoolresult``) and
+renders each tool result's ``structured_content``. The template is public and
+cacheable by URI: zero tenant data, zero secret/token in the HTML — data
+reaches the card only via the authenticated session's push, and only ever
+lands in the DOM through ``textContent`` (escaped by construction).
 
-This module produces the **``create_ui_resource``-shaped options dict** (the
-neutral artifact), NOT a live ``UIResource`` object — so the SDK base carries no
-dependency on the optional ``mcp-ui-server`` package. The MCP runtime face
-(``dna_cli._mcp_server``, which owns the ``[mcp]`` extra) turns the options into
-a real resource via ``create_ui_resource(...)`` and attaches the ``_meta``
-pointer. Keeping the payload here (pure, language-neutral) makes it byte-golden
-and — like the ``rawHtml`` backend emitters — a candidate for a byte-equal
-Py↔TS twin (``mcp_ui.ts``, a follow-up; see "Parity" below).
-
-**Standalone surface, NOT a registered ``EmitterPort``.** Exactly like
-``frontend.py``: a card carries no byte-equal ``build_prompt`` instruction and
-is outside the ``build_prompt`` contract. It is a surface a consumer calls
-alongside the backend emit / at the tool, governed by its own byte-stable
-golden render — not by the emitter registry.
-
-**The three UI-emit surfaces (Phase 4 "declare once, emit everywhere"):**
-
-    AG-UI    the agent as a frontend stream — ALREADY COVERED. DNA emits
-             AG-UI-native backends (agno / agent_framework / langgraph / vertex)
-             and serves the copilot over ``/agui``; the portal consumes it via
-             ``HttpAgent`` + ``CopilotRuntime``. Phase 4's AG-UI work is
-             recognition + this label, not new construction.
-    MCP-UI   THIS module — a UI resource at the tool (``rawHtml`` today,
-             ``externalUrl``/portal-route next). The first real emit-target build.
-    A2UI     UI as declarative JSON (``surfaceUpdate``/``dataModelUpdate``/
-             ``beginRendering``) — DEFERRED to A2UI v1.0 (it is v0.9 with a v1.0
-             candidate in flight; adopting the wire now risks churn). The
-             preparation that de-risks it costs nothing and is already honoured
-             here: every card is projected from **clean structured JSON** (the
-             ``memories`` list), so a card becomes an A2UI surface by *mapping*,
-             not rewriting. Build ``dna/emit/a2ui.py`` when A2UI ships v1.0.
-
-**Parity.** The payload this module emits is language-neutral (a plain dict of
-HTML + strings), so a ``mcp_ui.ts`` twin can render a byte-identical payload and
-be diffed against this one (like the ``rawHtml`` backend emitters). That twin is
-a tracked follow-up — this module lands the Python surface + its golden first,
-per the research's "extract emitters once the card shape is real" discipline.
+``memory_canvas_card_html(memories)`` — the **data-populated card** for the
+AG-UI shared-state canvas: the emitted LangGraph copilot projects a memory
+read-tool result into the ``memory_card_html`` state key and the DNA console's
+Memória canvas renders it as an ``<iframe srcDoc>``. Data flows inside the
+authenticated AG-UI session state, never a public URI. Every value is
+HTML-escaped — memory content is user data.
 """
 from __future__ import annotations
 
 import html
+from functools import cache
+from importlib import resources
 from typing import Any
 
 __all__ = [
     "UI_MEMORY_LIST_URI",
     "MCP_APP_MIME",
     "memory_list_card_html",
-    "memory_list_ui_resource",
-    "available_emit_surfaces",
+    "memory_canvas_card_html",
 ]
 
-#: The ``ui://`` scheme resource id for the memory-list card. Stable — hosts key
-#: their prefetch/render cache on it.
+#: The ``ui://`` scheme resource id for the memory-list card template. Stable —
+#: hosts key their prefetch/render cache on it.
 UI_MEMORY_LIST_URI = "ui://dna/memory-list"
 
-#: The MCP Apps profile mimeType (SEP-1865). ``mcp-ui-server`` emits the base
-#: ``text/html``; the runtime face stamps this profile so the resource is a
-#: first-class MCP-App, not a bare HTML blob.
+#: The MCP Apps profile mimeType (SEP-1865) the ``ui://dna/memory-list``
+#: resource is served with — what marks it a first-class MCP App template, not
+#: a bare HTML blob.
 MCP_APP_MIME = "text/html;profile=mcp-app"
 
 # DNA brand tokens — dark ink ground, teal + amber accents. Kept inline (no
@@ -86,10 +61,193 @@ _TEXT = "#e6eaef"
 _MUTED = "#8b95a3"
 _LINE = "#252c37"
 
+# Sentinels delimiting the vendored third-party lib inside the template — the
+# §3 grep-guard and the no-external-URL test treat the region between them as
+# the committed vendor asset (byte-equal), and everything outside as the
+# surface DNA wrote.
+_EXT_APPS_BEGIN = "/*! begin vendored @modelcontextprotocol/ext-apps */"
+_EXT_APPS_END = "/*! end vendored @modelcontextprotocol/ext-apps */"
+
 
 def _esc(value: Any) -> str:
     """HTML-escape any scalar (``None`` → empty string)."""
     return html.escape("" if value is None else str(value), quote=True)
+
+
+# ── the static MCP Apps template (ui://dna/memory-list) ─────────────────────
+
+
+@cache
+def _ext_apps_js() -> str:
+    """The vendored ``@modelcontextprotocol/ext-apps`` IIFE (exposes
+    ``globalThis.DnaExtApps.App``), read from the packaged asset."""
+    return (
+        (resources.files("dna.emit") / "_vendor" / "ext-apps.iife.js")
+        .read_text(encoding="utf-8")
+        .strip("\n")
+    )
+
+
+# The shared brand stylesheet of the card (template + canvas render the same
+# visual system; the template adds the states only the live card has).
+_CARD_CSS = (
+    "*{box-sizing:border-box;margin:0;padding:0}"
+    "body{font:14px/1.5 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,"
+    "Helvetica,Arial,sans-serif;"
+    f"background:{_INK};color:{_TEXT};padding:16px}}"
+    f".dna-card{{max-width:640px;margin:0 auto;background:{_INK_RAISED};"
+    f"border:1px solid {_LINE};border-radius:14px;overflow:hidden}}"
+    ".dna-head{display:flex;align-items:center;gap:10px;padding:14px 18px;"
+    f"border-bottom:1px solid {_LINE}}}"
+    f".dna-mark{{font-weight:700;letter-spacing:.14em;color:{_TEAL}}}"
+    ".dna-htitle{font-weight:600}"
+    f".dna-scope{{margin-left:auto;font-size:12px;color:{_MUTED};"
+    f"border:1px solid {_LINE};padding:2px 8px;border-radius:999px}}"
+    ".dna-list{list-style:none}"
+    f".dna-item{{padding:14px 18px;border-bottom:1px solid {_LINE}}}"
+    ".dna-item:last-child{border-bottom:0}"
+    ".dna-summary{font-weight:600;color:" + _TEXT + "}"
+    ".dna-meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:5px;"
+    f"font-size:12px;color:{_MUTED}}}"
+    f".dna-when{{color:{_AMBER}}}"
+    ".dna-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}"
+    f".dna-tag{{font-size:11px;color:{_TEAL};background:rgba(47,133,112,.12);"
+    f"border:1px solid rgba(47,133,112,.35);padding:2px 8px;"
+    "border-radius:999px}"
+    f".dna-empty{{padding:22px 18px;color:{_MUTED}}}"
+    f".dna-foot{{padding:12px 18px;font-size:11px;color:{_MUTED};"
+    f"border-top:1px solid {_LINE}}}"
+)
+
+# The card app — everything DNA wrote in the template's inline JS. Data only
+# ever enters the DOM via ``textContent`` (escaped by construction); missing
+# fields render honestly empty, never invented. Read-only: no action wired.
+_CARD_JS = """\
+(function () {
+  "use strict";
+  var App = globalThis.DnaExtApps.App;
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text !== undefined && text !== null && text !== "") n.textContent = String(text);
+    return n;
+  }
+  function itemsOf(data) {
+    if (data && Array.isArray(data.memories)) return data.memories;
+    if (data && Array.isArray(data.hits)) return data.hits;
+    return [];
+  }
+  function dataOf(result) {
+    if (result && typeof result.structuredContent === "object" && result.structuredContent) {
+      return result.structuredContent;
+    }
+    var blocks = result && Array.isArray(result.content) ? result.content : [];
+    for (var i = 0; i < blocks.length; i++) {
+      var b = blocks[i];
+      if (b && b.type === "text" && typeof b.text === "string") {
+        try { return JSON.parse(b.text); } catch (e) { /* not JSON — keep looking */ }
+      }
+    }
+    return null;
+  }
+  function render(data) {
+    var body = document.getElementById("dna-body");
+    var foot = document.getElementById("dna-foot");
+    var badge = document.getElementById("dna-scope");
+    body.textContent = "";
+    var scope = data && typeof data.scope === "string" ? data.scope : "";
+    badge.textContent = scope;
+    badge.hidden = !scope;
+    if (data === null) {
+      body.appendChild(el("p", "dna-empty",
+        "The card could not read this result — the tool's textual reply is the source of truth."));
+      foot.textContent = "your context, portable across every AI client";
+      return;
+    }
+    var items = itemsOf(data);
+    if (!items.length) {
+      body.appendChild(el("p", "dna-empty",
+        "No memories yet — anything you ask DNA to remember will appear here, and follow you across every client."));
+    } else {
+      var list = el("ul", "dna-list");
+      for (var i = 0; i < items.length; i++) {
+        var m = items[i] && typeof items[i] === "object" ? items[i] : {};
+        var li = el("li", "dna-item");
+        li.appendChild(el("div", "dna-summary", m.summary || m.name || "(untitled memory)"));
+        var meta = el("div", "dna-meta");
+        if (m.created_at) meta.appendChild(el("time", "dna-when", m.created_at));
+        if (m.area) meta.appendChild(el("span", "dna-area", m.area));
+        if (m.affect) meta.appendChild(el("span", "dna-affect", m.affect));
+        if (meta.childNodes.length) li.appendChild(meta);
+        var tags = [];
+        if (Array.isArray(m.tags)) {
+          for (var j = 0; j < m.tags.length; j++) {
+            if (m.tags[j] !== null && m.tags[j] !== undefined && String(m.tags[j]).trim()) {
+              tags.push(m.tags[j]);
+            }
+          }
+        }
+        if (tags.length) {
+          var row = el("div", "dna-tags");
+          for (var t = 0; t < tags.length; t++) row.appendChild(el("span", "dna-tag", tags[t]));
+          li.appendChild(row);
+        }
+        list.appendChild(li);
+      }
+      body.appendChild(list);
+    }
+    var n = items.length;
+    foot.textContent = n + " " + (n === 1 ? "memory" : "memories") +
+      " \\u00b7 your context, portable across every AI client";
+  }
+  var app = new App({ name: "dna-memory-card", version: "1" });
+  app.ontoolresult = function (result) { render(dataOf(result)); };
+  app.connect();
+})();
+"""
+
+
+@cache
+def memory_list_card_html() -> str:
+    """The **static MCP Apps template** for the memory card — zero arguments,
+    same bytes every call (byte-golden).
+
+    Self-contained HTML: brand CSS inline, the vendored
+    ``@modelcontextprotocol/ext-apps`` lib embedded between sentinel comments,
+    and the card app JS that consumes ``app.ontoolresult`` → renders the
+    pushed ``structured_content`` (``memories`` from ``list_memories``,
+    ``hits`` from ``recall``). No data is baked in — before the host pushes,
+    the card says so honestly; an empty push renders the honest empty state.
+    Read-only: the card exposes no action."""
+    return (
+        "<!doctype html>"
+        '<html lang="en"><head><meta charset="utf-8">'
+        '<meta name="viewport" content="width=device-width, initial-scale=1">'
+        "<title>DNA · Memory</title><style>"
+        + _CARD_CSS
+        + "</style></head><body>"
+        '<div class="dna-card">'
+        '<div class="dna-head"><span class="dna-mark">DNA</span>'
+        '<span class="dna-htitle">Memory</span>'
+        '<span class="dna-scope" id="dna-scope" hidden></span></div>'
+        '<div id="dna-body"><p class="dna-empty">Waiting for the memory data '
+        "from the tool result…</p></div>"
+        '<footer class="dna-foot" id="dna-foot">your context, portable across '
+        "every AI client</footer>"
+        "</div>"
+        "<script>\n"
+        + _EXT_APPS_BEGIN
+        + "\n"
+        + _ext_apps_js()
+        + "\n"
+        + _EXT_APPS_END
+        + "\n</script>"
+        "<script>\n" + _CARD_JS + "</script>"
+        "</body></html>"
+    )
+
+
+# ── the canvas card (AG-UI shared state → console Memória canvas) ───────────
 
 
 def _item_html(memory: dict[str, Any]) -> str:
@@ -127,13 +285,17 @@ def _item_html(memory: dict[str, Any]) -> str:
     )
 
 
-def memory_list_card_html(
+def memory_canvas_card_html(
     memories: list[dict[str, Any]], *, scope: str | None = None
 ) -> str:
-    """Render the memory-list card as a **self-contained** HTML document.
+    """Render the memory card **populated with data** as a self-contained HTML
+    document — the AG-UI shared-state canvas render.
 
-    Fully inline (CSS in a ``<style>`` block, no external assets) so it renders
-    in a host's sandboxed iframe with no network. Each memory shows its summary,
+    The emitted LangGraph copilot projects a memory read-tool result into the
+    ``memory_card_html`` state key with this function, and the DNA console's
+    Memória canvas renders it as an ``<iframe srcDoc>`` — data flows inside the
+    authenticated AG-UI session state, never a public URI. Fully inline (CSS in
+    a ``<style>`` block, no external assets). Each memory shows its summary,
     timestamp, area/affect, and tag chips; an empty list renders an honest empty
     state. Deterministic — the output is a pure function of ``memories`` (+
     ``scope``), so it is byte-golden. DNA-branded (dark ink ground, teal + amber
@@ -163,33 +325,8 @@ def memory_list_card_html(
         '<html lang="en"><head><meta charset="utf-8">'
         '<meta name="viewport" content="width=device-width, initial-scale=1">'
         "<title>DNA · Memory</title><style>"
-        "*{box-sizing:border-box;margin:0;padding:0}"
-        "body{font:14px/1.5 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,"
-        "Helvetica,Arial,sans-serif;"
-        f"background:{_INK};color:{_TEXT};padding:16px}}"
-        f".dna-card{{max-width:640px;margin:0 auto;background:{_INK_RAISED};"
-        f"border:1px solid {_LINE};border-radius:14px;overflow:hidden}}"
-        ".dna-head{display:flex;align-items:center;gap:10px;padding:14px 18px;"
-        f"border-bottom:1px solid {_LINE}}}"
-        f".dna-mark{{font-weight:700;letter-spacing:.14em;color:{_TEAL}}}"
-        ".dna-htitle{font-weight:600}"
-        f".dna-scope{{margin-left:auto;font-size:12px;color:{_MUTED};"
-        f"border:1px solid {_LINE};padding:2px 8px;border-radius:999px}}"
-        ".dna-list{list-style:none}"
-        f".dna-item{{padding:14px 18px;border-bottom:1px solid {_LINE}}}"
-        ".dna-item:last-child{border-bottom:0}"
-        ".dna-summary{font-weight:600;color:" + _TEXT + "}"
-        ".dna-meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:5px;"
-        f"font-size:12px;color:{_MUTED}}}"
-        f".dna-when{{color:{_AMBER}}}"
-        ".dna-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}"
-        f".dna-tag{{font-size:11px;color:{_TEAL};background:rgba(47,133,112,.12);"
-        f"border:1px solid rgba(47,133,112,.35);padding:2px 8px;"
-        "border-radius:999px}"
-        f".dna-empty{{padding:22px 18px;color:{_MUTED}}}"
-        f".dna-foot{{padding:12px 18px;font-size:11px;color:{_MUTED};"
-        f"border-top:1px solid {_LINE}}}"
-        "</style></head><body>"
+        + _CARD_CSS
+        + "</style></head><body>"
         '<div class="dna-card">'
         '<div class="dna-head"><span class="dna-mark">DNA</span>'
         '<span class="dna-htitle">Memory</span>'
@@ -197,37 +334,3 @@ def memory_list_card_html(
         f"{body}{foot}"
         "</div></body></html>"
     )
-
-
-def memory_list_ui_resource(
-    memories: list[dict[str, Any]],
-    *,
-    scope: str | None = None,
-    uri: str = UI_MEMORY_LIST_URI,
-) -> dict[str, Any]:
-    """The ``create_ui_resource``-shaped options for the memory-list card.
-
-    Returns the neutral options dict — ``{uri, content:{type:"rawHtml",
-    htmlString}, encoding:"text"}`` — that ``mcp_ui_server.create_ui_resource``
-    consumes. Kept as a plain dict (no ``mcp-ui-server`` import) so the SDK base
-    stays dependency-free and the payload is byte-golden."""
-    return {
-        "uri": uri,
-        "content": {
-            "type": "rawHtml",
-            "htmlString": memory_list_card_html(memories, scope=scope),
-        },
-        "encoding": "text",
-    }
-
-
-def available_emit_surfaces() -> dict[str, str]:
-    """The UI-emit surfaces and their status (Phase 4 map).
-
-    ``ag-ui`` is already covered by the backend emitters; ``mcp-ui`` is this
-    module; ``a2ui`` is deferred to A2UI v1.0 (prepared for via clean JSON)."""
-    return {
-        "ag-ui": "covered",  # backend emitters + /agui — recognition, not new build.
-        "mcp-ui": "available",  # this module (rawHtml card).
-        "a2ui": "deferred",  # gated on external A2UI v1.0.
-    }

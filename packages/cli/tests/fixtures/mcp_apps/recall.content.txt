@@ -1,0 +1,1 @@
+{"query":"tea","scope":"concierge","degraded":false,"semantic":false,"hits":[{"kind":"Engram","name":"prefers-tea","score":0.8125,"retention":0.9142}]}

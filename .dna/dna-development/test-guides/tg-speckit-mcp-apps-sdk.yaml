@@ -1,0 +1,44 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-speckit-mcp-apps-sdk
+spec:
+  description: "Test-gate do lado SDK do card de mem\xF3ria MCP Apps (spec 001-mcp-apps-memory-card):\
+    \ golden byte-stable do template + declara\xE7\xE3o com resourceUri + resources/read\
+    \ com mimeType da spec + template sem dados/sem URL externa + grep-guard \xA7\
+    3 + degrada\xE7\xE3o byte-id\xEAntica + smoke de render real no basic-host do\
+    \ ext-apps"
+  kind_of_test: regression
+  status: active
+  steps:
+  - action: python -m pytest packages/sdk-py/tests/test_emit_mcp_ui.py packages/cli/tests/test_mcp_apps.py
+      -v
+    expected: "17 testes verdes cobrindo as muta\xE7\xF5es do design (pointer removido,\
+      \ registro removido, dados assados, CDN plantado, TODO plantado \u2014 cada\
+      \ uma morre)"
+  - action: python -m pytest packages/sdk-py/tests packages/cli/tests
+    expected: "su\xEDtes completas verdes contra a baseline (nenhuma falha nova)"
+  - action: 'dna mcp serve --transport http + basic-host do ext-apps + chrome headless:
+      list_memories, recall e empty state'
+    expected: "card renderiza dados reais, hits e o empty state honesto; zero elementos\
+      \ interativos (s\xF3 leitura)"
+  verifies:
+  - Story/s-speckit-mcp-apps-memory-card-t001
+  - Story/s-speckit-mcp-apps-memory-card-t002
+  - Story/s-speckit-mcp-apps-memory-card-t003
+  - Story/s-speckit-mcp-apps-memory-card-t004
+  - Story/s-speckit-mcp-apps-memory-card-t005
+  - Story/s-speckit-mcp-apps-memory-card-t006
+  - Story/s-speckit-mcp-apps-memory-card-t007
+  - Story/s-speckit-mcp-apps-memory-card-t008
+  - Story/s-speckit-mcp-apps-memory-card-t009
+  - Story/s-speckit-mcp-apps-memory-card-t010
+  - Story/s-speckit-mcp-apps-memory-card-t011
+  - Story/s-speckit-mcp-apps-memory-card-t012
+  - Story/s-speckit-mcp-apps-memory-card-t013
+  - Story/s-speckit-mcp-apps-memory-card-t014
+  - Story/s-speckit-mcp-apps-memory-card-t020
+  - Story/s-speckit-mcp-apps-memory-card-t021
+  created_at: '2026-07-21T20:12:22+00:00'
+  updated_at: '2026-07-21T20:12:22+00:00'
+  owner: claude

@@ -15,3 +15,17 @@ spec:
   reporter: claude-code
   spec_refs:
   - speckit-mcp-apps-memory-card
+  timeline:
+  - at: '2026-07-21T20:29:36+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Lado SDK pronto para a aceita\xE7\xE3o: test-gate verde (17 testes,\
+      \ muta\xE7\xF5es mortas), smoke basic-host PASS (card com dados reais, hits\
+      \ do recall, empty state, zero a\xE7\xF5es), degrada\xE7\xE3o byte-id\xEAntica\
+      \ travada. Falta S\xD3 o gate humano desta story: custom connector no Claude.ai\
+      \ com o fundador \u2014 card com dados reais e nenhuma a\xE7\xE3o dispon\xED\
+      vel. Requer release/publica\xE7\xE3o ou t\xFAnel para o servidor MCP; fica com\
+      \ o fundador (fora do escopo do agente)."
+    commit_ref: ee11c11a89e2282556416387fdff80abc96a8136
+  updated_at: '2026-07-21T20:29:36+00:00'
