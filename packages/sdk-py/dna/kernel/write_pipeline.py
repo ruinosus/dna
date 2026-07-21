@@ -127,6 +127,122 @@ class WritePipeline:
             from dna.kernel.protocols import SpecValidationError  # noqa: PLC0415
             raise SpecValidationError(msg) from e
 
+    # -- declared cross-Kind reference validation (i-040) ---------------------
+
+    @staticmethod
+    def _ref_validation_mode() -> str:
+        """Read the reference-validation knob — ``warn`` (default), ``enforce``
+        or ``off``.
+
+        Deliberately a SEPARATE knob from ``DNA_WRITE_VALIDATION``, with a
+        different default, because the two checks have different costs and
+        different blast radii. Schema validation is pure CPU on data already in
+        hand, so it defaults to ``enforce``. Reference validation costs one
+        document READ per declared reference (~5ms PG / ~3ms SQLite / ~20ms FS,
+        LRU-cached), and it can fail on a document that is perfectly
+        well-formed — a forward reference to a target written later in the same
+        bootstrap is a legitimate, common pattern (a seed writing a Plan before
+        its Story; a scope installed in dependency-free order).
+
+        Defaulting to ``enforce`` would therefore turn working setups into hard
+        failures on upgrade, for a public contract third parties author against.
+        Defaulting to ``warn`` still ends the SILENCE that i-040 is actually
+        about — a dangling reference becomes a logged, observable event instead
+        of nothing at all — while leaving the hard gate one environment
+        variable away for CI and for operators who want it.
+        """
+        mode = os.environ.get("DNA_REF_VALIDATION", "warn").strip().lower()
+        return mode if mode in ("enforce", "warn", "off") else "warn"
+
+    async def _validate_references(
+        self, scope: str, kind: str, name: str, raw: Any, port: Any,
+        *, tenant: str | None,
+    ) -> None:
+        """Check every ``x-dna-ref`` the Kind declares actually resolves.
+
+        Contract (each clause is a deliberate refusal to break something):
+        - A Kind declaring NO references returns before doing any work — no
+          reads, no cost, byte-identical behaviour to before i-040. This is
+          what makes the change back-compatible for every existing Kind.
+        - An absent / null / empty reference field is NOT a violation. Optional
+          references stay optional.
+        - Existence is checked in the SAME scope and tenant as the write.
+        - A polymorphic reference passes if the target exists as ANY declared
+          Kind.
+        - If the host cannot read documents, the check is SKIPPED rather than
+          guessed at — see the note below.
+        - ``enforce`` vetoes; ``warn`` logs and persists; ``off`` skips.
+        """
+        mode = self._ref_validation_mode()
+        if mode == "off" or port is None or not isinstance(raw, dict):
+            return
+
+        from dna.kernel.references import (  # noqa: PLC0415
+            declared_references, reference_values,
+        )
+
+        refs = declared_references(port)
+        if not refs:
+            return  # the back-compat fast path: no declaration, no reads
+
+        host = self._host
+        # The WritePipeline's WriteHost slice is intentionally narrow and does
+        # not promise a document read. The Kernel that satisfies it structurally
+        # does provide ``get_document``; a host that does not (a test double,
+        # a reduced embedding) makes this check unavailable, and an unavailable
+        # check must be a no-op rather than a false accusation.
+        getter = getattr(host, "get_document", None)
+        if not callable(getter):
+            return
+
+        spec = raw.get("spec")
+        spec = spec if isinstance(spec, dict) else {}
+        problems: list[str] = []
+
+        for ref in refs:
+            values = reference_values(ref, spec)
+            if not values:
+                continue
+            targets = [
+                t for t in ref.targets
+                if host.kind_port_for(t) is not None
+            ] or list(ref.targets)
+            for value in values:
+                found = False
+                for target in targets:
+                    try:
+                        doc = await getter(scope, target, value, tenant=tenant)
+                    except Exception:  # noqa: BLE001 — a read failure is not a
+                        # dangling reference; never convert infrastructure
+                        # trouble into an authoring error.
+                        return
+                    if doc is not None:
+                        found = True
+                        break
+                if not found:
+                    expected = " | ".join(sorted(ref.targets))
+                    problems.append(
+                        f"spec.{ref.field} → `{value}` (no {expected} "
+                        f"named `{value}` in scope `{scope}`)"
+                    )
+
+        if not problems:
+            return
+
+        detail = "; ".join(problems)
+        msg = (
+            f"write vetoed for {scope}/{kind}/{name}: unresolved reference(s): "
+            f"{detail} — create the target first, or see "
+            f"`dna kind show {kind}` for the declared references"
+        )
+        if mode == "warn":
+            logger.warning(
+                "%s (DNA_REF_VALIDATION=warn — persisted anyway)", msg,
+            )
+            return
+        from dna.kernel.protocols import SpecValidationError  # noqa: PLC0415
+        raise SpecValidationError(msg)
+
     # -- Kind-Writer slot↔schema validation (write-time; fired by the helix
     #    ``pre_save`` veto hook via ``kernel._validate_kind_writer`` shim) ------
 
@@ -426,6 +542,14 @@ class WritePipeline:
         # YAML-1.1 `on:` heal — mutate ctx.raw first), BEFORE persistence:
         # what gets validated is the exact shape that would be saved.
         self._validate_spec_schema(scope, kind, name, raw, _kind_port)
+        # --- declared cross-Kind reference validation (i-040) ---
+        # Immediately after the shape check and before persistence, for the
+        # same reason: the author hears about a dangling reference here, not
+        # when something far away later tries to follow it. No-op (and no
+        # reads) for any Kind that declares no ``x-dna-ref``.
+        await self._validate_references(
+            scope, kind, name, raw, _kind_port, tenant=effective_tenant,
+        )
         version = await src.save_document(scope, kind, name, raw, **kwargs)
         # R2-fix (2026-05-14): three invalidation tiers.
         #

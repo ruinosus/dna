@@ -30,7 +30,7 @@ Declarative Kind descriptor — the format of builtin `kinds/*.kind.yaml` packag
 | `plane` |  | composition = participates in agent composition (writes invalidate scope caches) · record = pure typed document (cacheless writes, never composes into prompts; cannot carry composition signals — the plane lint rejects contradictions). |
 | `prompt_target` |  | True if documents of this Kind compose into LLM prompts. |
 | `prompt_target_priority` |  | Ordering priority among prompt targets (lower first). |
-| `schema` |  | JSON Schema of the Kind's spec dict. Drives Studio form generation + validate_on_parse. New Kinds should ship `additionalProperties: false` (s-strict-schema-lint ratchet). |
+| `schema` |  | JSON Schema of the Kind's spec dict. Drives Studio form generation + validate_on_parse. New Kinds should ship `additionalProperties: false` (s-strict-schema-lint ratchet). A property may additionally carry `x-dna-ref` (i-040) to declare that the field REFERENCES another Kind by document name — a string (`x-dna-ref: Feature`) or a list for a polymorphic target (`x-dna-ref: [Organization, Project]`). On an array field every item is a reference. The kernel checks declared references at write time (see DNA_REF_VALIDATION); the annotation is optional and a Kind without it behaves exactly as before. |
 | `schema_fragments` |  | Namespaced schema fragment IDs merged into `schema` in order (e.g. ["sdlc/workitem-common"]). Python reference implementation only — the TS Zod schema does not consume it yet. |
 | `scope_inheritable` |  | Documents of this Kind inherit across scopes (false for per-scope ledgers + structural Kinds). |
 | `spec_defaults` |  | Shallow-merge defaults applied as {**spec_defaults, **spec} BEFORE schema validation in parse() (D5). |

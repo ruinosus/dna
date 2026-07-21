@@ -97,7 +97,7 @@
         },
         "schema": {
           "type": "object",
-          "description": "JSON Schema of the Kind's spec dict. Drives Studio form generation + validate_on_parse. New Kinds should ship `additionalProperties: false` (s-strict-schema-lint ratchet)."
+          "description": "JSON Schema of the Kind's spec dict. Drives Studio form generation + validate_on_parse. New Kinds should ship `additionalProperties: false` (s-strict-schema-lint ratchet). A property may additionally carry `x-dna-ref` (i-040) to declare that the field REFERENCES another Kind by document name — a string (`x-dna-ref: Feature`) or a list for a polymorphic target (`x-dna-ref: [Organization, Project]`). On an array field every item is a reference. The kernel checks declared references at write time (see DNA_REF_VALIDATION); the annotation is optional and a Kind without it behaves exactly as before."
         },
         "is_root": {
           "type": "boolean",

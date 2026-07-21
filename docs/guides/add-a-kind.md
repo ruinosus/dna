@@ -300,6 +300,69 @@ SpecDict still works for both attribute and key access.
 | Field-level validation matters at parse time | Validation happens via JSON Schema only |
 | Sub-fields have their own types | Sub-fields are loose dicts |
 
+## Step 9 — Optional: declare references to other Kinds
+
+If a spec field holds the *name of another document*, say so. Annotate the
+field with `x-dna-ref` and the kernel stops treating it as an anonymous
+string:
+
+```yaml
+spec:
+  schema:
+    properties:
+      feature:
+        type: string
+        x-dna-ref: Feature              # one target
+      spec_refs:
+        type: array
+        items: {type: string}
+        x-dna-ref: Spec                 # array → every item is a reference
+      scope_ref:
+        type: string
+        x-dna-ref: [Organization, Project]   # polymorphic → any one of them
+```
+
+The same annotation works from a `KindPort.schema()` written in Python — it
+is an ordinary JSON Schema keyword, and the `x-` prefix is the reserved
+extension convention, so validators ignore it.
+
+**What it buys you.** At write time the kernel resolves each reference by
+document name in the same scope and tenant. A reference to something that
+does not exist is reported against the field that carries it, rather than
+surfacing much later as an empty lookup somewhere else.
+
+**What it costs.** One document read per populated reference (roughly 5 ms on
+Postgres, 20 ms on the filesystem source, LRU-cached). A Kind that declares
+no `x-dna-ref` performs no extra reads at all.
+
+**Mode** — `DNA_REF_VALIDATION`:
+
+| Value | Behaviour |
+|---|---|
+| `warn` *(default)* | Logs the unresolved reference and persists anyway. |
+| `enforce` | Vetoes the write with `SpecValidationError`. |
+| `off` | Skips the check; no reads. |
+
+The default is `warn` rather than `enforce` deliberately. Writing a document
+before its target legitimately happens — a seed that creates a Plan ahead of
+its Story, a scope installed in an order nobody promised was dependency-first
+— and a reference that will resolve in a moment is not the same thing as a
+reference that never will. `warn` surfaces both without breaking a bootstrap
+that works today; turn on `enforce` in CI, or once a scope's data is known to
+be complete.
+
+!!! note "Declared by name, not by arbitrary key"
+
+    Resolution is by *document name*. A field that points at another Kind
+    through some other identifier — an opaque generated id, a slug that is not
+    the document name — cannot be declared this way yet, and is deliberately
+    left undeclared rather than declared wrongly.
+
+`x-dna-ref` is separate from `dep_filters`, which looks similar but drives
+*prompt composition*: which documents get folded into an agent's context.
+Where a field carries both, they must name the same Kind — a test enforces
+that they cannot drift apart.
+
 ## Common pitfalls
 
 | Symptom | Cause | Fix |

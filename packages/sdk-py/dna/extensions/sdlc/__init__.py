@@ -348,7 +348,10 @@ class EpicKind(KindBase):
                     "type": "string",
                     "description": "Semver to match Genome.spec.version when done",
                 },
-                "features": {"type": "array", "items": {"type": "string"}},
+                "features": {
+                    "type": "array", "items": {"type": "string"},
+                    "x-dna-ref": "Feature",
+                },
                 "closed_at": {"type": "string", "format": "date-time"},
                 "cancelled_reason": {"type": "string"},
                 # v1.5 — board-grade fields. Epics drop sprint_ref +
@@ -478,8 +481,14 @@ class FeatureKind(KindBase):
                     ),
                 },
                 "status": {"type": "string", "enum": list(FEATURE_STATUSES)},
-                "epic": {"type": "string", "description": "Parent Epic name"},
-                "stories": {"type": "array", "items": {"type": "string"}},
+                "epic": {
+                    "type": "string", "description": "Parent Epic name",
+                    "x-dna-ref": "Epic",
+                },
+                "stories": {
+                    "type": "array", "items": {"type": "string"},
+                    "x-dna-ref": "Story",
+                },
                 "use_cases": {"type": "array", "items": {"type": "string"}},
                 "owner": {"type": "string", "description": "Actor name"},
                 "estimate": {
@@ -639,7 +648,10 @@ class StoryKind(KindBase):
                     "description": "Benefit: 'so that <benefit>'. INVEST/user-story format slot.",
                 },
                 "status": {"type": "string", "enum": list(STORY_STATUSES)},
-                "feature": {"type": "string", "description": "Parent Feature name"},
+                "feature": {
+                    "type": "string", "description": "Parent Feature name",
+                    "x-dna-ref": "Feature",
+                },
                 "owner": {"type": "string", "description": "Actor name"},
                 "estimate": {
                     "type": "number",
@@ -672,6 +684,7 @@ class StoryKind(KindBase):
                     "type": "array",
                     "items": {"type": "string"},
                     "description": "Other Story names that must land first",
+                    "x-dna-ref": "Story",
                 },
                 "spec_refs": {
                     "type": "array",
@@ -681,6 +694,7 @@ class StoryKind(KindBase):
                         "linkage between the planning axis (Story) and the "
                         "design axis (Spec) — Jira/Confluence-shaped."
                     ),
+                    "x-dna-ref": "Spec",
                 },
                 "closed_at": {"type": "string", "format": "date-time"},
                 "blocked_reason": {"type": "string"},
@@ -1016,12 +1030,13 @@ class SpecKind(KindBase):
                         "at runtime."
                     ),
                 },
-                "epic": {"type": "string"},
+                "epic": {"type": "string", "x-dna-ref": "Epic"},
                 "authors": {"type": "array", "items": {"type": "string"}},
                 "tags": {"type": "array", "items": {"type": "string"}},
                 "supersedes": {
                     "type": "string",
                     "description": "Name of the prior Spec this one replaces.",
+                    "x-dna-ref": "Spec",
                 },
                 "summary": {
                     "type": "string",
@@ -1094,8 +1109,9 @@ class PlanKind(KindBase):
                 "spec_ref": {
                     "type": "string",
                     "description": "Name of the Spec this plan implements.",
+                    "x-dna-ref": "Spec",
                 },
-                "epic": {"type": "string"},
+                "epic": {"type": "string", "x-dna-ref": "Epic"},
                 "authors": {"type": "array", "items": {"type": "string"}},
                 "tags": {"type": "array", "items": {"type": "string"}},
                 "summary": {"type": "string"},
@@ -1422,7 +1438,7 @@ class TaskKind(KindBase):
                 "title": {"type": "string"},
                 "description": {"type": "string"},
                 "status": {"type": "string", "enum": list(TASK_STATUSES)},
-                "story_ref": {"type": "string"},
+                "story_ref": {"type": "string", "x-dna-ref": "Story"},
                 "owner": {"type": "string"},
                 "estimate_hours": {"type": "number", "minimum": 0},
                 "logged_hours": {"type": "number", "minimum": 0},
