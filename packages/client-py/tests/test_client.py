@@ -156,7 +156,7 @@ def test_named_writes_use_the_right_verb_and_path():
         dna.remember_memory("a lesson", scope="s")
         dna.delete_memory("s-foo", scope="s")
         dna.set_insight_state("i-1", "dismissed")
-        dna.set_workspace_plan("w1", "pro")
+        dna.set_account_plan("acct-1", "pro")
         dna.revoke_workspace_member("w1", target_email="a@b.c")
         dna.remove_project_member("proj", "user@x.y", actor="boss@x.y")
     seen = [(c.method, c.url.path) for c in calls]
@@ -164,7 +164,7 @@ def test_named_writes_use_the_right_verb_and_path():
         ("POST", "/v1/memories"),
         ("DELETE", "/v1/memories/s-foo"),
         ("PATCH", "/v1/insights/i-1/state"),
-        ("PUT", "/v1/workspace-plan"),
+        ("PUT", "/v1/account-plan"),
         ("POST", "/v1/workspaces/w1/members/revoke"),
         ("DELETE", "/v1/projects/proj/members/user@x.y"),
     ]
@@ -201,7 +201,7 @@ def test_workspace_boundary_writes_get_no_scope_tenant_default():
         dna.create_project("w1", "P")
         dna.create_invite("w1", "a@b.c")
         dna.provision_workspace_owner("w1")
-        dna.set_workspace_plan("w1", "pro")
+        dna.set_account_plan("acct-1", "pro")
     for call in calls:
         assert "tenant" not in call.url.params, f"tenant leaked onto {call.url.path}"
         assert "scope" not in call.url.params, f"scope leaked onto {call.url.path}"

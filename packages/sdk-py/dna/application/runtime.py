@@ -802,7 +802,7 @@ async def provision_tenant_owner_impl(
     membership write, and nothing ever made the sole user the Owner of their own
     tenant. On first authenticated access the DNA Cloud portal calls this (server
     side, with the shared bearer — the portal never opens the DNA source directly,
-    same pattern as ``PUT /v1/workspace-plan``) so the signed-in user becomes Owner of
+    same pattern as ``PUT /v1/account-plan``) so the signed-in user becomes Owner of
     their OWN tenant and member management works.
 
     **Idempotent + first-owner-only.** If the tenant ALREADY has any Owner
@@ -1284,23 +1284,34 @@ async def forget_impl(
     return {"kind": kind, "name": name, "forgotten": not out["already_forgotten"]}
 
 
-# ── cloud: the billing→enforcement bridge write (WorkspacePlan) ─────────────
+# ── cloud: the billing→enforcement bridge write (AccountPlan) ───────────────
 
-# WorkspacePlan is GLOBAL and _lib-resident (base only, no per-tenant overlay) —
-# the same scope kernel.workspace_plan() reads _lib-direct. The doc NAME equals
-# the workspace_id so the read matches on spec.workspace_id, and the write is a
-# natural upsert (write_document keys on name) → idempotent under Stripe's
-# at-least-once retries. ADR "Model B": billing keys on the WORKSPACE, not the
-# Azure tid. The workspace_id is opaque here — nothing parses or validates its
-# shape — so a generated id (D5) and the founder's legacy GUID-shaped id are the
-# same kind of key to this write.
-_WORKSPACE_PLAN_SCOPE = "_lib"
+# **The subscription belongs to the BILLING ACCOUNT, not to a workspace.** One
+# AccountPlan doc covers EVERY workspace whose ``Workspace.account_id`` matches —
+# so the second workspace is not a second charge, and billing writes ONE doc
+# instead of fanning out one per workspace.
+#
+# Why that fan-out had to die rather than be implemented: workspace enumeration
+# is by MEMBERSHIP, not ownership (``GET /v1/workspaces`` lists what you belong
+# to). A biller fanning a paid tier across "the account's workspaces" would have
+# swept in every workspace somebody ELSE founded and invited the payer into, and
+# handed each one a tier its own account never bought. Fixing that needed a
+# private ownership ledger — a fourth source of truth propping up a wrong model.
+# Keying the plan on the account removes the question instead of answering it.
+#
+# AccountPlan is GLOBAL and _lib-resident (base only, no per-tenant overlay) — the
+# same scope kernel.account_plan() reads _lib-direct, and it HAS to be: an account
+# sits above every workspace it owns. The doc NAME equals the account_id so the
+# read matches on spec.account_id, and the write is a natural upsert
+# (write_document keys on name) → idempotent under Stripe's at-least-once
+# retries. The account_id is opaque here — nothing parses or validates its shape.
+_ACCOUNT_PLAN_SCOPE = "_lib"
 _CLOUD_API = "github.com/ruinosus/dna/cloud/v1"
 
 
-async def set_workspace_plan_impl(
+async def set_account_plan_impl(
     live: LiveDna,
-    workspace_id: str,
+    account_id: str,
     tier_id: str,
     *,
     source: str = "stripe",
@@ -1308,35 +1319,37 @@ async def set_workspace_plan_impl(
     stripe_subscription_id: str | None = None,
     status: str | None = None,
 ) -> dict[str, Any]:
-    """Upsert the WorkspacePlan Kind assigning ``workspace_id`` to ``tier_id`` —
-    the billing→enforcement BRIDGE write that dna-cloud's Stripe webhook drives so
-    runtime quota (``kernel.workspace_plan(workspace_id)`` in the MCP guard)
-    follows billing state without a redeploy (ADR "Model B" — billing attaches to
-    the workspace, not an identity/Azure org).
+    """Upsert the AccountPlan Kind assigning ``account_id`` to ``tier_id`` — the
+    billing→enforcement BRIDGE write that dna-cloud's Stripe webhook drives, so
+    runtime quota follows billing state without a redeploy.
 
-    GLOBAL / ``_lib``-direct: WorkspacePlan is not tenant-overlaid — the doc lives
-    in ``_lib`` with its NAME == the workspace_id (the opaque value the kernel
-    ``tenant`` dimension carries; the founding workspace's id == the founder's old
-    ``tid``), so the guard's ``spec.workspace_id`` lookup resolves it regardless of
-    the caller's scope. The write is an UPSERT keyed on that name, so a redelivered
-    Stripe event (at-least-once) converges on the same doc — idempotent by
-    construction.
+    **ONE write covers the whole account.** Every workspace carrying this
+    ``account_id`` resolves to this plan (``kernel.account_for_workspace`` then
+    ``kernel.account_plan`` in the MCP guard). There is nothing to keep in sync
+    and no way for a workspace to end up on a stale tier, because no workspace
+    holds a tier.
+
+    GLOBAL / ``_lib``-direct: AccountPlan is not tenant-overlaid — the doc lives in
+    ``_lib`` with its NAME == the account_id, so the guard's ``spec.account_id``
+    lookup resolves it regardless of the caller's scope. The write is an UPSERT
+    keyed on that name, so a redelivered Stripe event (at-least-once) converges on
+    the same doc — idempotent by construction.
 
     Only the schema-allowed keys are written (the descriptor is
-    ``additionalProperties: false``): ``workspace_id``/``tier_id`` (required),
+    ``additionalProperties: false``): ``account_id``/``tier_id`` (required),
     ``source``, ``status``, the two Stripe ids, and an ISO ``updated_at`` stamp.
     Optional refs are omitted when absent so a status-only transition never nulls a
     previously-recorded customer/subscription id — mirroring the portal store's
     COALESCE-on-update semantics."""
-    workspace_id = (workspace_id or "").strip()
+    account_id = (account_id or "").strip()
     tier_id = (tier_id or "").strip()
-    if not workspace_id:
-        raise ValueError("workspace_id is required")
+    if not account_id:
+        raise ValueError("account_id is required")
     if not tier_id:
         raise ValueError("tier_id is required")
 
     spec: dict[str, Any] = {
-        "workspace_id": workspace_id,
+        "account_id": account_id,
         "tier_id": tier_id,
         "source": source,
         "updated_at": datetime.now(timezone.utc).isoformat(),
@@ -1350,17 +1363,17 @@ async def set_workspace_plan_impl(
 
     raw = {
         "apiVersion": _CLOUD_API,
-        "kind": "WorkspacePlan",
-        "metadata": {"name": workspace_id},
+        "kind": "AccountPlan",
+        "metadata": {"name": account_id},
         "spec": spec,
     }
     # GLOBAL kind → no tenant kwarg (a tenant on a GLOBAL write is rejected).
     await live.kernel.write_document(
-        _WORKSPACE_PLAN_SCOPE, "WorkspacePlan", workspace_id, raw, invalidate_mode="doc"
+        _ACCOUNT_PLAN_SCOPE, "AccountPlan", account_id, raw, invalidate_mode="doc"
     )
     return {
-        "scope": _WORKSPACE_PLAN_SCOPE,
-        "workspace_id": workspace_id,
+        "scope": _ACCOUNT_PLAN_SCOPE,
+        "account_id": account_id,
         "tier_id": tier_id,
         "status": status,
     }
@@ -1735,6 +1748,7 @@ async def provision_workspace_owner_impl(
     GLOBAL / ``_lib``-direct (Workspace + WorkspaceMembership are the tenancy
     boundary — no ``tenant`` kwarg)."""
     from dna.tenancy import (
+        account_id_from_claims,
         identity_from_token,
         membership_matches_identity,
         normalize_email,
@@ -1805,6 +1819,12 @@ async def provision_workspace_owner_impl(
                     "slug": _email_slug(email),
                     "created_by": email,
                     "created_at": now,
+                    # This repair path only ever runs for an OWNER whose identity
+                    # doc is missing, so the caller IS the account that owns the
+                    # workspace — stamping it here is the same act creation would
+                    # have performed. None when the sign-in has no account claim
+                    # ⇒ the Free floor, never a guess.
+                    "account_id": account_id_from_claims(claims or {}),
                 },
             },
             invalidate_mode="doc",
@@ -2066,6 +2086,14 @@ async def create_workspace_impl(
       you cannot claim an id you cannot name.
     * the caller's VERIFIED identity (oid + email, ``tid`` recorded as provenance
       only) becomes the workspace's ``owner``, ``status: active``, bound.
+    * the workspace's ``account_id`` — WHICH BILLING ACCOUNT PAYS FOR IT — is
+      stamped here from the verified account claim
+      (:func:`dna.tenancy.account_id_from_claims`). This is the only moment it is
+      ever written. Because the plan is keyed on the ACCOUNT, this workspace is
+      instantly covered by whatever plan the account already has: a second
+      workspace is not a second charge and needs no billing write at all. A
+      sign-in with no resolvable account gets ``account_id: null`` → no
+      AccountPlan → the Free floor (fail-closed).
     * ``slug`` defaults to a slugified ``name`` (falling back to the id when the
       name slugifies to nothing) and is made unique by suffixing.
 
@@ -2095,6 +2123,7 @@ async def create_workspace_impl(
     GLOBAL / ``_lib``-direct (no ``tenant`` kwarg — Workspace and
     WorkspaceMembership are the tenancy boundary, they cannot live inside it)."""
     from dna.tenancy import (
+        account_id_from_claims,
         identity_from_token,
         normalize_email,
         workspace_membership_name,
@@ -2111,6 +2140,16 @@ async def create_workspace_impl(
     if not identity.oid:
         raise ValueError("the verified identity must carry an oid claim")
 
+    # The BILLING ACCOUNT, stamped ONCE, HERE, from the VERIFIED claims — the
+    # only moment a workspace learns who pays for it. None is a legitimate answer
+    # (the sign-in belongs to no billing account) and is written as null: that
+    # workspace resolves to no AccountPlan and therefore to the Free floor. It is
+    # deliberately NOT an error — refusing to create the workspace would lock out
+    # every identity lane that has no account claim, and it is deliberately NOT
+    # defaulted to anything, because every non-null default here is somebody
+    # else's subscription.
+    account_id = account_id_from_claims(claims or {})
+
     workspace_id = new_workspace_id()
     wanted = slugify(slug or name) or workspace_id
     slug_value = await _unique_workspace_slug(live, wanted)
@@ -2126,6 +2165,7 @@ async def create_workspace_impl(
             "slug": slug_value,
             "created_by": email,
             "created_at": now,
+            "account_id": account_id,
         },
     }
     await live.kernel.write_document(
@@ -2199,6 +2239,10 @@ async def create_workspace_impl(
         "slug": slug_value,
         "created_by": email,
         "created_at": now,
+        # Surfaced (never accepted) so a caller can SEE which billing account it
+        # landed in — null means "no account ⇒ Free floor", which is a fact the
+        # portal must be able to show rather than discover from a quota denial.
+        "account_id": account_id,
         "role": "owner",
         "membership": _ws_member_surface(spec),
     }
@@ -2244,6 +2288,12 @@ async def list_workspaces_impl(
             "role": m.role,
             "created_by": spec.get("created_by"),
             "created_at": spec.get("created_at"),
+            # The billing account that owns it (null = none ⇒ Free floor). Read
+            # ONLY from the Workspace doc — never inferred from the caller, who
+            # may well be an invited guest from a different account entirely.
+            # That distinction is exactly why the abandoned portal-side fan-out
+            # could not be made safe: this list is keyed by MEMBERSHIP.
+            "account_id": spec.get("account_id"),
         })
     out.sort(key=lambda w: ((w["name"] or "").lower(), w["workspace_id"]))
     return {

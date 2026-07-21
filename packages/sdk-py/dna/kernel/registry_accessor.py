@@ -60,12 +60,13 @@ class RegistryAccessor:
     # Tier (DNA Cloud pricing plans) is GLOBAL — _lib-resident like
     # ModelProfile, not inheritable. Same _lib-direct rationale.
     _TIER_REGISTRY_SCOPE = SYSTEM_SCOPE
-    # WorkspacePlan (workspace→Tier assignment) is GLOBAL — _lib-resident like
-    # Tier. dna-cloud's Stripe webhook writes it; the SDK only reads it. Same
-    # _lib-direct rationale.
-    _WORKSPACE_PLAN_REGISTRY_SCOPE = SYSTEM_SCOPE
+    # AccountPlan (BILLING ACCOUNT→Tier assignment) is GLOBAL — _lib-resident like
+    # Tier. dna-cloud's Stripe webhook writes it; the SDK only reads it. It HAS to
+    # be _lib-resident: an account sits ABOVE every workspace it owns, so it
+    # cannot live inside any one of them. Same _lib-direct rationale.
+    _ACCOUNT_PLAN_REGISTRY_SCOPE = SYSTEM_SCOPE
     # WorkspaceMembership (identity→workspace grant, ADR "Model B") is GLOBAL —
-    # _lib-resident like WorkspacePlan (the tenancy boundary lives above any single
+    # _lib-resident like AccountPlan (the tenancy boundary lives above any single
     # workspace). The auth→workspace resolver reads ALL grants here and filters
     # by the verified identity in pure core. Same _lib-direct rationale.
     _WORKSPACE_MEMBERSHIP_REGISTRY_SCOPE = SYSTEM_SCOPE
@@ -154,41 +155,96 @@ class RegistryAccessor:
                 return r
         return None
 
-    async def workspace_plan(self, workspace_id: str) -> dict | None:
-        """Resolve a WorkspacePlan (a workspace→Tier assignment) from the _lib
-        registry by ``spec.workspace_id``.
+    async def account_plan(self, account_id: str) -> dict | None:
+        """Resolve an AccountPlan (an ACCOUNT→Tier assignment) from the _lib
+        registry by ``spec.account_id``.
 
         Returns the RAW DICT row (kernel.query yields raw dicts, not
         Documents — callers read plan["spec"]["tier_id"]) or None when no
-        assignment exists for ``workspace_id``.
+        assignment exists for ``account_id``.
 
-        This is the billing→enforcement bridge read (ADR "Model B" — billing
-        attaches to the WORKSPACE, not an identity/Azure org): dna-cloud's Stripe
-        webhook writes the WorkspacePlan doc; the MCP quota guard reads it here
-        when a token carries no explicit plan claim. The ``workspace_id`` is
-        OPAQUE to this lookup — it is matched, never parsed — so a generated id
-        (decision D5) and a legacy GUID-shaped one behave identically. _lib-direct
-        — WorkspacePlan is NOT in _INHERITABLE_KINDS so inheritance does not
-        surface it.
-        No alias pass: the match is on the ``workspace_id`` field.
+        This is the billing→enforcement bridge read. **The subscription belongs
+        to the BILLING ACCOUNT, not to a workspace** — ONE AccountPlan covers
+        every workspace whose ``Workspace.account_id`` matches, so creating a
+        second workspace is never a second charge and never needs a second write.
+        dna-cloud's Stripe webhook writes the doc; the MCP quota guard reads it
+        here (after :meth:`account_for_workspace`) when a token carries no
+        explicit plan claim.
+
+        The ``account_id`` is OPAQUE to this lookup — matched, never parsed.
+
+        **Fail-closed on a blank key.** A blank/None ``account_id`` returns
+        ``None`` WITHOUT querying: it must never be able to match a doc whose
+        ``spec.account_id`` is itself blank or absent, which would hand a
+        workspace with no account whatever tier that malformed doc names. No
+        account ⇒ no plan ⇒ the Free floor, always.
+
+        _lib-direct — AccountPlan is NOT in _INHERITABLE_KINDS so inheritance
+        does not surface it. No alias pass: the match is on ``account_id``.
         """
+        if not (account_id or "").strip():
+            return None  # fail-closed — see the docstring.
         try:
             rows = [
-                r async for r in self._k.query(self._WORKSPACE_PLAN_REGISTRY_SCOPE, "WorkspacePlan")
+                r async for r in self._k.query(
+                    self._ACCOUNT_PLAN_REGISTRY_SCOPE, "AccountPlan"
+                )
             ]
         except Exception as e:  # noqa: BLE001
             # fail-soft: registry read — a silent None means the guard falls
-            # back to the Free floor for this workspace, so the degradation logs
-            # loud rather than silently downgrading a paying workspace.
+            # back to the Free floor for this account, so the degradation logs
+            # loud rather than silently downgrading a paying account.
             logger.warning(
-                "workspace_plan: registry query failed for %r (enforcement "
+                "account_plan: registry query failed for %r (enforcement "
                 "degrades to no-assignment / Free floor): %s",
+                account_id, e,
+            )
+            return None
+        for r in rows:
+            if (r.get("spec") or {}).get("account_id") == account_id:
+                return r
+        return None
+
+    async def account_for_workspace(self, workspace_id: str) -> str | None:
+        """The BILLING ACCOUNT id a workspace belongs to — ``Workspace.account_id``.
+
+        The FIRST half of the enforcement resolution ``workspace → account_id →
+        AccountPlan``. Returns ``None`` when the workspace is unknown, carries no
+        ``account_id``, or the registry read fails.
+
+        **Every ``None`` here is a Free-floor outcome, never a permissive one.**
+        There is deliberately no fallback that treats the workspace_id itself as
+        an account: that would resurrect the per-workspace plan model this
+        replaced, as a silent default nobody would notice — every workspace whose
+        account failed to record would quietly become its own billing account
+        instead of failing closed. A workspace created before ``account_id``
+        existed is fixed by DATA (re-run ``scripts/seed_workspace_one.py``, which
+        backfills it), not by a permanent code special case.
+
+        Both the workspace_id and the account_id are OPAQUE — matched, never
+        parsed. _lib-direct + fail-soft (a registry glitch degrades to ``None``,
+        logged loud).
+        """
+        if not (workspace_id or "").strip():
+            return None
+        try:
+            rows = [
+                r async for r in self._k.query(
+                    self._WORKSPACE_REGISTRY_SCOPE, "Workspace"
+                )
+            ]
+        except Exception as e:  # noqa: BLE001
+            logger.warning(
+                "account_for_workspace: registry query failed for %r (enforcement "
+                "degrades to no-account / Free floor): %s",
                 workspace_id, e,
             )
             return None
         for r in rows:
-            if (r.get("spec") or {}).get("workspace_id") == workspace_id:
-                return r
+            spec = r.get("spec") or {}
+            if spec.get("workspace_id") == workspace_id:
+                account_id = (spec.get("account_id") or "").strip()
+                return account_id or None
         return None
 
     async def workspace_memberships(self) -> list[dict]:

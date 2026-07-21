@@ -13,7 +13,7 @@
  *
  * FULL coverage: the named methods cover EVERY operation in the spec — the
  * `/v1/*` reads AND the writes (memory remember/delete, insight state, project
- * + workspace membership, workspace/project creation, invites, workspace-plan).
+ * + workspace membership, workspace/project creation, invites, account-plan).
  * {@link DnaClient.raw}, the underlying `openapi-fetch` client, is still exposed
  * for direct access with the same generated types, but it is no longer the only
  * way to reach a write. Coverage is enforced by a test that reads the spec and
@@ -579,16 +579,20 @@ export class DnaClient {
   // ── billing (write) ───────────────────────────────────────────────────────
 
   /**
-   * Upsert the `WorkspacePlan` assigning `workspace_id` → `tier_id` — the
+   * Upsert the `AccountPlan` assigning `account_id` → `tier_id` — the
    * billing→enforcement bridge.
+   *
+   * The subscription belongs to the BILLING ACCOUNT: this ONE call covers every
+   * workspace whose `account_id` matches, so a customer's second workspace needs
+   * no billing write and is never a second charge.
    *
    * SECURITY: this route ASSIGNS a plan and performs no membership check of its
    * own; it is a trusted server-side call (the portal's Stripe webhook handler,
    * holding the shared bearer) and must never be exposed to an end user.
-   * Idempotent under Stripe retries. 400 on a missing workspace_id/tier_id.
+   * Idempotent under Stripe retries. 400 on a missing account_id/tier_id.
    */
-  async setWorkspacePlan(body: {
-    workspace_id: string;
+  async setAccountPlan(body: {
+    account_id: string;
     tier_id: string;
     source?: string;
     stripe_customer_id?: string | null;
@@ -596,7 +600,7 @@ export class DnaClient {
     status?: string | null;
   }) {
     return this.unwrap(
-      await this.raw.PUT("/v1/workspace-plan", { body: { source: "stripe", ...body } }),
+      await this.raw.PUT("/v1/account-plan", { body: { source: "stripe", ...body } }),
     );
   }
 }

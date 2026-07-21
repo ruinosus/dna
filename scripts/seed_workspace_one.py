@@ -50,9 +50,33 @@ Env knobs (all optional; defaults seed the real founder workspace #1):
     DNA_WORKSPACE_ID     workspace #1 id  (default: the founder's full Azure tid)
     DNA_WORKSPACE_NAME   display name     (default "Barnabé Labs")
     DNA_FOUNDER_EMAIL    owner identity   (default jefferson.barnabe@gmail.com)
-    DNA_FOUNDER_TID      Azure tid, recorded as PROVENANCE only — it authorizes
-                         nothing (default == DNA_WORKSPACE_ID, for this one
-                         workspace where the two strings coincide)
+    DNA_FOUNDER_TID      Azure tid. Recorded on the GRANT as PROVENANCE only —
+                         there it authorizes nothing. It is ALSO this workspace's
+                         BILLING ACCOUNT (see below). Default == DNA_WORKSPACE_ID,
+                         for this one workspace where the two strings coincide.
+    DNA_ACCOUNT_ID       the billing account that owns the workspace (default ==
+                         DNA_FOUNDER_TID)
+
+**This script is also the account_id BACKFILL** (s-account-scoped-plan). The
+subscription is now keyed on the BILLING ACCOUNT, so ``Workspace.account_id``
+records who pays; ``create_workspace_impl`` stamps it from verified claims at
+creation, but workspace #1 predates that field and has none. Re-running this
+seed writes it — the backfill is one idempotent re-run of the script that
+already OWNS this workspace's declaration, using the ``tid`` knob it already
+had. No new script, no migration, no schema change (Kind docs are rows in a
+generic ``dna_documents`` table — the physical schema is untouched).
+
+Why data and not a code fallback: a "workspace with no account_id ⇒ the account
+IS the workspace_id" rule in the resolver would be the per-workspace plan model
+resurrected as a silent default. Every future workspace whose account failed to
+record — a lane with no account claim, a bug, a partial write — would quietly
+become its own billing account instead of failing closed to Free. That is a trap
+for the next person; a one-time backfill is not. The resolver therefore stays
+strictly fail-closed and workspace #1 is fixed by writing the fact down.
+
+Safe to do now, precisely: the portal's plan table is EMPTY (0 rows verified), so
+no workspace is on a paid tier today. If the backfill were skipped entirely, the
+worst outcome is workspace #1 resolving to Free — which is what it already is.
 """
 from __future__ import annotations
 
@@ -76,6 +100,15 @@ WORKSPACE_ID = os.environ.get("DNA_WORKSPACE_ID", DEFAULT_WORKSPACE_ID)
 WORKSPACE_NAME = os.environ.get("DNA_WORKSPACE_NAME", DEFAULT_WORKSPACE_NAME)
 FOUNDER_EMAIL = os.environ.get("DNA_FOUNDER_EMAIL", DEFAULT_FOUNDER_EMAIL)
 FOUNDER_TID = os.environ.get("DNA_FOUNDER_TID", WORKSPACE_ID)
+# The BILLING ACCOUNT that owns workspace #1. It is the founder's Entra `tid` —
+# the same string the portal's plan table and the Stripe customer's
+# `metadata.tenant` have always been keyed by, which is exactly why the account
+# is that claim and not a newly invented entity. That it also equals
+# WORKSPACE_ID here is a coincidence of this one workspace's history (its id was
+# adopted from the tid so the `tenant` column needed no rewrite) — NOT a rule.
+# Nothing in the runtime derives an account from a workspace id; if it did, every
+# workspace would be its own account and the plan would be per-workspace again.
+ACCOUNT_ID = os.environ.get("DNA_ACCOUNT_ID", FOUNDER_TID)
 
 
 def membership_doc_name(workspace_id: str, email: str) -> str:
@@ -91,12 +124,18 @@ def membership_doc_name(workspace_id: str, email: str) -> str:
 
 
 def workspace_doc(
-    workspace_id: str, name: str, created_by: str, created_at: str
+    workspace_id: str, name: str, created_by: str, created_at: str,
+    account_id: str | None = None,
 ) -> dict[str, Any]:
     """The Workspace identity doc (GLOBAL). The id is opaque + immutable and
     equals the physical ``tenant`` column value on every row it owns. For a NEW
     workspace this doc is written by ``create_workspace_impl`` with a minted id;
-    here the id is supplied because the workspace already exists."""
+    here the id is supplied because the workspace already exists.
+
+    ``account_id`` is the BILLING ACCOUNT that owns it — the backfill of the
+    field workspace #1 predates. Writing it is what makes the account's plan
+    (``AccountPlan``) apply to this workspace; leaving it null means the Free
+    floor, never another account's tier."""
     return {
         "apiVersion": TENANT_API,
         "kind": "Workspace",
@@ -107,6 +146,7 @@ def workspace_doc(
             "slug": "barnabe-labs",
             "created_by": created_by,
             "created_at": created_at,
+            "account_id": account_id,
         },
     }
 
@@ -141,6 +181,7 @@ async def seed(
     name: str = WORKSPACE_NAME,
     founder_email: str = FOUNDER_EMAIL,
     founder_tid: str = FOUNDER_TID,
+    account_id: str | None = ACCOUNT_ID,
     created_at: str | None = None,
 ) -> tuple[str, str]:
     """Write workspace #1 + its owner grant through ``kernel.write_document``
@@ -151,7 +192,7 @@ async def seed(
     """
     now = created_at or datetime.now(timezone.utc).isoformat()
 
-    ws = workspace_doc(workspace_id, name, founder_email, now)
+    ws = workspace_doc(workspace_id, name, founder_email, now, account_id)
     await kernel.write_document(
         LIB_SCOPE, "Workspace", ws["metadata"]["name"], ws
     )
@@ -169,7 +210,7 @@ async def _run() -> None:
     live = await boot_live(scope=LIB_SCOPE)
     print(
         f"Seeding workspace #1 (id={WORKSPACE_ID}, name={WORKSPACE_NAME!r}, "
-        f"owner={FOUNDER_EMAIL}) into `{LIB_SCOPE}` …"
+        f"owner={FOUNDER_EMAIL}, account={ACCOUNT_ID}) into `{LIB_SCOPE}` …"
     )
     ws_name, mem_name = await seed(live.kernel)
     print(f"  seeded Workspace/{ws_name}")
@@ -179,9 +220,15 @@ async def _run() -> None:
         f"{WORKSPACE_ID}` is this workspace's data."
     )
     print(
+        f"  account_id={ACCOUNT_ID} — this workspace now resolves its Tier via "
+        f"AccountPlan/{ACCOUNT_ID} (one plan covers every workspace this account "
+        f"owns). Absent that doc: the Free floor."
+    )
+    print(
         "note: to CREATE a new workspace use POST /v1/workspaces — it mints its "
-        "own opaque id (decision D5). This script only re-declares the "
-        "pre-existing one."
+        "own opaque id (decision D5) and stamps account_id from the caller's "
+        "verified account claim. This script only re-declares the pre-existing "
+        "one (and backfills its account_id)."
     )
 
 

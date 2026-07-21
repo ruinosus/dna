@@ -117,18 +117,35 @@ physical `(scope, tenant = workspace_id)` key gives defence in depth: a resolved
 workspace defaults to — and may name — only its own scope, so even a bug upstream
 cannot read another workspace's rows.
 
-### Billing keys on the workspace
+### Billing keys on the account, not the workspace
 
-Plans attach to the **workspace**, not to an identity or an Azure org. A
-[`WorkspacePlan`](../reference/kinds/record.md#workspaceplan) (`cloud-workspace-plan`)
-maps a `workspace_id` to its current `Tier`; DNA Cloud's Stripe webhook writes it
-(`PUT /v1/workspace-plan`), and the MCP quota guard reads it via
-`kernel.workspace_plan(workspace_id)` — the same resolved workspace id the request
-already keys on. Because the founding workspace's id equals the founder's old
-organization id, a plan written for it keys on the *same* string as before, so the
-switch to workspace-keyed billing is **zero migration**. (The pre-Model-B
-`PUT /v1/tenant-plan` alias was removed once dna-cloud cut over to
-`PUT /v1/workspace-plan`.)
+**The subscription belongs to the billing account.** An
+[`AccountPlan`](../reference/kinds/record.md#accountplan) (`cloud-account-plan`)
+maps an `account_id` to its current `Tier`, and that one assignment covers *every*
+workspace the account owns — creating a second workspace is not a second charge.
+DNA Cloud's Stripe webhook writes it (`PUT /v1/account-plan`); the MCP quota guard
+resolves **workspace → `account_id` → plan**, taking the account from the
+`Workspace` doc the request already keys on.
+
+Access and billing are therefore two different axes, deliberately. Access is
+resolved by *membership* (you see a workspace because you were granted it);
+billing is resolved by *ownership* (a workspace is paid for by the account that
+created it). Collapsing them is what made the previous per-workspace model
+unworkable: enumerating "the account's workspaces" through membership sweeps in
+every workspace somebody else founded and invited you into, and paying for those
+would hand a tier to an account that never bought one.
+
+`Workspace.account_id` is stamped once, at creation, from the caller's verified
+account claim (whatever the IdP block's `tenant_claim` names — Entra `tid`,
+WorkOS/Clerk/Auth0 `org_id`, Google Workspace `hd`). A workspace with no
+resolvable account falls to the **Free floor**: fail-closed, never another
+account's tier. There is deliberately no rule that treats an account-less
+workspace as its own account — that would resurrect per-workspace billing as a
+silent default.
+
+(The per-workspace `PUT /v1/workspace-plan` route and its `WorkspacePlan` Kind
+were retired; the Kind remains a write-block tombstone so a stale caller fails
+loudly instead of writing docs nothing reads.)
 
 ### Picking a workspace by URL (`/w/<id>/mcp`)
 
@@ -179,7 +196,7 @@ invitee is still `pending` and by definition holds no active membership yet.
 
 The Model-B workspace stack above is **shipped and live** end to end:
 `Workspace` + `WorkspaceMembership` and the zero-migration seed (F1);
-membership-decides-access resolution (F2); `WorkspacePlan` billing (F4); and the
+membership-decides-access resolution (F2); `AccountPlan` billing (F4); and the
 cross-org invite flow plus `/w/<id>/mcp` URL selection (F3). Every claim on this
 page traces to merged code in the DNA SDK.
 

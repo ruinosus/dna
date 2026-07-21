@@ -36,7 +36,7 @@ ENDPOINTS (read-focused; tenant-aware via a `tenant` query param):
   DELETE /v1/projects/{slug}/members/{user}?tenant=&actor=  -> remove (RBAC)
   GET    /v1/repos?tenant=                     -> {repos:[...]}
   GET    /v1/board?scope=&tenant=              -> {counts, totals, recent}
-  PUT    /v1/workspace-plan                    -> billing->runtime WorkspacePlan write {workspace_id, tier_id, ...}
+  PUT    /v1/account-plan                      -> billing->runtime AccountPlan write {account_id, tier_id, ...}
   POST   /v1/tenants/{tid}/provision-owner     -> first-login Owner bootstrap {user} (idempotent)
   POST   /v1/workspaces/{id}/provision-owner   -> Model B first-login owner bootstrap {claims} (idempotent, id==tid)
   POST   /v1/workspaces/{id}/invites           -> invite by email {email, role, actor} (Owner/Admin)

@@ -21,6 +21,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/account-plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Put Account Plan
+         * @description Upsert the AccountPlan Kind assigning ``account_id`` → ``tier_id`` (the
+         *     billing→enforcement bridge). The assignment covers EVERY workspace whose
+         *     ``account_id`` matches. 400 on a missing account_id/tier_id.
+         */
+        put: operations["put_account_plan_v1_account_plan_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/agents": {
         parameters: {
             query?: never;
@@ -549,27 +571,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/workspace-plan": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /**
-         * Put Workspace Plan
-         * @description Upsert the WorkspacePlan Kind assigning ``workspace_id`` → ``tier_id``
-         *     (the billing→enforcement bridge). 400 on a missing workspace_id/tier_id.
-         */
-        put: operations["put_workspace_plan_v1_workspace_plan_put"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/v1/workspaces": {
         parameters: {
             query?: never;
@@ -754,6 +755,23 @@ export interface components {
             role?: string | null;
             /** Workspace Id */
             workspace_id: string;
+        };
+        /**
+         * AccountPlanResponse
+         * @description ``PUT /v1/account-plan`` — the account→Tier assignment that was written.
+         *
+         *     Keyed on the BILLING ACCOUNT, not a workspace: this one assignment covers
+         *     every workspace whose ``account_id`` matches.
+         */
+        AccountPlanResponse: {
+            /** Account Id */
+            account_id: string;
+            /** Scope */
+            scope: string;
+            /** Status */
+            status?: string | null;
+            /** Tier Id */
+            tier_id: string;
         };
         /** AgentPromptResponse */
         AgentPromptResponse: {
@@ -986,8 +1004,10 @@ export interface components {
                 [key: string]: unknown;
             } | null;
         };
-        /** Body_put_workspace_plan_v1_workspace_plan_put */
-        Body_put_workspace_plan_v1_workspace_plan_put: {
+        /** Body_put_account_plan_v1_account_plan_put */
+        Body_put_account_plan_v1_account_plan_put: {
+            /** Account Id */
+            account_id: string;
             /**
              * Source
              * @default stripe
@@ -1001,8 +1021,6 @@ export interface components {
             stripe_subscription_id?: string | null;
             /** Tier Id */
             tier_id: string;
-            /** Workspace Id */
-            workspace_id: string;
         };
         /** Body_remember_memory_v1_memories_post */
         Body_remember_memory_v1_memories_post: {
@@ -1069,6 +1087,8 @@ export interface components {
          *     SERVER-MINTED; there is no request field for it.
          */
         CreateWorkspaceResponse: {
+            /** Account Id */
+            account_id?: string | null;
             /** Created At */
             created_at?: string | null;
             /** Created By */
@@ -1786,19 +1806,10 @@ export interface components {
             /** Workspace Id */
             workspace_id: string;
         };
-        /** WorkspacePlanResponse */
-        WorkspacePlanResponse: {
-            /** Scope */
-            scope: string;
-            /** Status */
-            status?: string | null;
-            /** Tier Id */
-            tier_id: string;
-            /** Workspace Id */
-            workspace_id: string;
-        };
         /** WorkspaceSummary */
         WorkspaceSummary: {
+            /** Account Id */
+            account_id?: string | null;
             /** Created At */
             created_at?: string | null;
             /** Created By */
@@ -1852,6 +1863,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthResponse"];
+                };
+            };
+        };
+    };
+    put_account_plan_v1_account_plan_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Body_put_account_plan_v1_account_plan_put"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountPlanResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -2733,41 +2779,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ToolsResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    put_workspace_plan_v1_workspace_plan_put: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["Body_put_workspace_plan_v1_workspace_plan_put"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["WorkspacePlanResponse"];
                 };
             };
             /** @description Validation Error */

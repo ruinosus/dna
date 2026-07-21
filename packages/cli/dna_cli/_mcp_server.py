@@ -337,12 +337,17 @@ def build_server(
            (Free=read/recall-only, Pro=write/remember+consolidate), read from the
            Tier spec (zero hardcode).
 
-        Tier resolution order — **token plan claim → WorkspacePlan store → Free**:
+        Tier resolution order — **token plan claim → AccountPlan store → Free**:
         an explicit ``plan`` claim on the token WINS (the store is not consulted);
-        otherwise the billing→enforcement bridge looks up the workspace's assigned
-        Tier from the ``WorkspacePlan`` Kind (``kernel.workspace_plan`` — which
-        dna-cloud's Stripe webhook writes) and uses its ``tier_id``; only if there
-        is no WorkspacePlan either does it fall to the Free floor.
+        otherwise the billing→enforcement bridge resolves **workspace → account →
+        plan**: the resolved workspace's ``account_id``
+        (``kernel.account_for_workspace``) then that ACCOUNT's assigned Tier from
+        the ``AccountPlan`` Kind (``kernel.account_plan`` — which dna-cloud's
+        Stripe webhook writes). The subscription belongs to the account, so one
+        plan covers every workspace the account owns and a second workspace is
+        never a second charge. If the workspace has no ``account_id``, or that
+        account has no AccountPlan, it falls to the **Free floor** — fail-closed,
+        never another account's tier and never a paid default.
 
         Empty-caps fallback: if the resolved tier names no ``Tier`` doc, fall back
         to the ``free`` doc (the Free floor); if THAT is also absent (no tiers
@@ -388,13 +393,14 @@ def build_server(
                 f"to its token (default: {live.base_scope!r})"
             )
         kernel = live.kernel
-        # Bridge: a token WITHOUT an explicit plan claim consults the
-        # WorkspacePlan store (Stripe-written) before the Free floor. An explicit
-        # claim wins. `tenant` is the resolved workspace_id (ADR "Model B") — so
-        # billing is keyed on the workspace, not the Azure tid. The whole
-        # pipeline (tier → caps → mode gates → quota, incl. the i-051
-        # fail-closed switch) is the SHARED core `enforce_plan`; this face only
-        # maps its exceptions to ToolError.
+        # Bridge: a token WITHOUT an explicit plan claim consults the AccountPlan
+        # store (Stripe-written) before the Free floor — TWO HOPS, workspace →
+        # account → plan, because the subscription belongs to the BILLING
+        # ACCOUNT, not to a workspace. An explicit claim wins. The whole
+        # pipeline (tier → account resolution → caps → mode gates → quota,
+        # incl. the i-051 fail-closed switch) is the SHARED core
+        # `enforce_plan` (`resolve_metered_tier` carries the two hops); this
+        # face only maps its exceptions to ToolError.
         tier = enforce_tier_from_context()
         try:
             await enforce_plan(
@@ -444,7 +450,7 @@ def build_server(
         kernel = (await _live()).kernel
         # Personal metering keys on the identity partition, never a workspace,
         # and the tier comes from the token's plan claim (Free floor default) —
-        # the WorkspacePlan store is keyed by workspace so it is deliberately
+        # the AccountPlan store hangs off a workspace's account so it is deliberately
         # not consulted (claimed_tier is always set). Same shared core as
         # _guard, incl. the i-051 fail-closed opt-in.
         try:

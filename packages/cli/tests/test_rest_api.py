@@ -885,37 +885,45 @@ def test_provision_owner_requires_user(dna_dir):
                       ).status_code == 400
 
 
-# ── cloud billing → enforcement bridge: PUT /v1/workspace-plan ───────────────
+# ── cloud billing → enforcement bridge: PUT /v1/account-plan ────────────────
 #
-# The write that closes the billing→runtime gap (finding C4): dna-cloud's Stripe
-# webhook PUTs the workspace→tier assignment here, and the MCP runtime reads it
-# via kernel.workspace_plan(workspace_id) (ADR "Model B" — billing keys on the
-# workspace, not the Azure tid). These drive the REST endpoint in-process, then
-# read back through the SAME kernel accessor the MCP quota guard uses — proving
-# the two stores are bridged (webhook write → runtime read).
+# The write that closes the billing→runtime gap: dna-cloud's Stripe webhook PUTs
+# the ACCOUNT→tier assignment here, and the MCP runtime reads it back by
+# resolving workspace → Workspace.account_id → kernel.account_plan(account_id).
+#
+# The plan is keyed on the BILLING ACCOUNT, not a workspace: one PUT covers every
+# workspace the account owns, so a customer's second workspace needs no billing
+# write and is never a second charge. (The retired per-workspace route forced a
+# fan-out that could not be made safe — GET /v1/workspaces enumerates by
+# MEMBERSHIP, not ownership, so it would have handed a paid tier to workspaces
+# the account never bought.)
+#
+# These drive the REST endpoint in-process, then read back through the SAME
+# kernel accessors the MCP quota guard uses — proving the two stores are bridged
+# (webhook write → runtime read).
 
 
-def _read_workspace_plan(dna_dir, workspace_id: str) -> dict | None:
-    """Read the WorkspacePlan the way the MCP quota guard does
-    (kernel.workspace_plan), on its own loop against the on-disk source the app
+def _read_account_plan(dna_dir, account_id: str) -> dict | None:
+    """Read the AccountPlan the way the MCP quota guard does
+    (kernel.account_plan), on its own loop against the on-disk source the app
     also wrote to."""
     from dna_cli import _mcp_server as M
 
     async def go():
         live = await M.boot_live(base_dir=str(dna_dir))
-        return await live.kernel.workspace_plan(workspace_id)
+        return await live.kernel.account_plan(account_id)
 
     return asyncio.run(go())
 
 
-def test_workspace_plan_put_bridges_to_runtime_read(dna_dir):
-    """PUT /v1/workspace-plan(acme→pro) → kernel.workspace_plan('acme') resolves
-    pro. The C4 bridge: what the webhook writes is what the runtime reads."""
+def test_account_plan_put_bridges_to_runtime_read(dna_dir):
+    """The webhook's write is what the runtime reads — the whole point of the
+    bridge."""
     with _client(dna_dir) as c:
         r = c.put(
-            "/v1/workspace-plan",
+            "/v1/account-plan",
             json={
-                "workspace_id": "acme",
+                "account_id": "acct-acme",
                 "tier_id": "pro",
                 "stripe_customer_id": "cus_123",
                 "stripe_subscription_id": "sub_123",
@@ -924,12 +932,12 @@ def test_workspace_plan_put_bridges_to_runtime_read(dna_dir):
         )
         assert r.status_code == 200, r.text
         assert r.json()["tier_id"] == "pro"
-        assert r.json()["workspace_id"] == "acme"
+        assert r.json()["account_id"] == "acct-acme"
 
-    plan = _read_workspace_plan(dna_dir, "acme")
+    plan = _read_account_plan(dna_dir, "acct-acme")
     assert plan is not None, "the runtime read must see the webhook's write"
     spec = plan["spec"]
-    assert spec["workspace_id"] == "acme"
+    assert spec["account_id"] == "acct-acme"
     assert spec["tier_id"] == "pro"
     assert spec["source"] == "stripe"
     assert spec["stripe_customer_id"] == "cus_123"
@@ -937,45 +945,60 @@ def test_workspace_plan_put_bridges_to_runtime_read(dna_dir):
     assert spec.get("updated_at")
 
 
-def test_workspace_plan_put_is_idempotent_and_downgrades(dna_dir):
+def test_account_plan_put_is_idempotent_and_downgrades(dna_dir):
     """Stripe redelivers (at-least-once) → a repeat PUT converges (still one
     assignment, same tier); a later downgrade PUT flips pro→free in place."""
     with _client(dna_dir) as c:
-        c.put("/v1/workspace-plan",
-              json={"workspace_id": "acme", "tier_id": "pro", "status": "active"})
+        c.put("/v1/account-plan",
+              json={"account_id": "acct-acme", "tier_id": "pro", "status": "active"})
         # redelivery of the same event → same result, no duplicate doc.
-        c.put("/v1/workspace-plan",
-              json={"workspace_id": "acme", "tier_id": "pro", "status": "active"})
-    assert _read_workspace_plan(dna_dir, "acme")["spec"]["tier_id"] == "pro"
+        c.put("/v1/account-plan",
+              json={"account_id": "acct-acme", "tier_id": "pro", "status": "active"})
+    assert _read_account_plan(dna_dir, "acct-acme")["spec"]["tier_id"] == "pro"
 
     with _client(dna_dir) as c:
-        r = c.put("/v1/workspace-plan",
-                  json={"workspace_id": "acme", "tier_id": "free", "status": "canceled"})
+        r = c.put("/v1/account-plan",
+                  json={"account_id": "acct-acme", "tier_id": "free",
+                        "status": "canceled"})
         assert r.status_code == 200
-    plan = _read_workspace_plan(dna_dir, "acme")["spec"]
+    plan = _read_account_plan(dna_dir, "acct-acme")["spec"]
     assert plan["tier_id"] == "free"
     assert plan["status"] == "canceled"
 
 
-def test_workspace_plan_put_requires_workspace_and_tier(dna_dir):
-    """A missing workspace_id or tier_id is a 400 (the two required schema
-    fields)."""
+def test_account_plan_put_requires_account_and_tier(dna_dir):
+    """A missing account_id or tier_id is a 400 (the two required schema
+    fields). A blank account must never be written: a doc keyed on "" would be
+    the one plan an account-less workspace could collide with."""
     with _client(dna_dir) as c:
-        assert c.put("/v1/workspace-plan",
-                     json={"workspace_id": "", "tier_id": "pro"}).status_code == 400
-        assert c.put("/v1/workspace-plan",
-                     json={"workspace_id": "acme", "tier_id": ""}).status_code == 400
+        assert c.put("/v1/account-plan",
+                     json={"account_id": "", "tier_id": "pro"}).status_code == 400
+        assert c.put("/v1/account-plan",
+                     json={"account_id": "acct-acme", "tier_id": ""}).status_code == 400
 
 
-def test_workspace_plan_put_is_auth_guarded(dna_dir):
+def test_the_retired_workspace_plan_route_is_gone(dna_dir):
+    """``PUT /v1/workspace-plan`` no longer exists. A stale dna-cloud still
+    calling it must get a loud 404/405 rather than a silent success that writes a
+    doc nothing reads — which would meter a paying customer at Free with no error
+    anywhere to notice."""
+    with _client(dna_dir) as c:
+        r = c.put("/v1/workspace-plan",
+                  json={"workspace_id": "acme", "tier_id": "pro"})
+        assert r.status_code in (404, 405), r.text
+
+
+def test_account_plan_put_is_auth_guarded(dna_dir):
     """The bridge write is bearer-guarded (only dna-cloud holds DNA_API_TOKEN):
-    a missing/wrong bearer is 401, the right one 200."""
+    a missing/wrong bearer is 401, the right one 200. It ASSIGNS a plan and does
+    no membership check of its own, so the bearer is the only thing between a
+    caller and a free upgrade."""
     with _client(dna_dir, auth="token", token=_TOKEN) as c:
-        body = {"workspace_id": "acme", "tier_id": "pro"}
-        assert c.put("/v1/workspace-plan", json=body).status_code == 401
-        assert c.put("/v1/workspace-plan", json=body,
+        body = {"account_id": "acct-acme", "tier_id": "pro"}
+        assert c.put("/v1/account-plan", json=body).status_code == 401
+        assert c.put("/v1/account-plan", json=body,
                      headers={"Authorization": "Bearer nope"}).status_code == 401
-        assert c.put("/v1/workspace-plan", json=body,
+        assert c.put("/v1/account-plan", json=body,
                      headers={"Authorization": f"Bearer {_TOKEN}"}).status_code == 200
 
 

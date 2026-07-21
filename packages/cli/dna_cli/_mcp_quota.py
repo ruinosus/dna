@@ -801,18 +801,37 @@ async def resolve_metered_tier(
     """Resolve the effective Tier id for a metered call.
 
     The resolution order the MCP guard always applied, now shared verbatim:
-    **explicit claim → WorkspacePlan store → Free floor**. A ``claimed_tier``
+    **explicit claim → AccountPlan store → Free floor**. A ``claimed_tier``
     (the token's explicit ``plan`` claim) WINS and the store is not consulted;
-    otherwise the billing→enforcement bridge reads the workspace's assigned
-    Tier from the ``WorkspacePlan`` Kind (``kernel.workspace_plan`` — written
-    by dna-cloud's Stripe webhook); with neither, the ``default_tier`` floor."""
+    otherwise the billing→enforcement bridge resolves **workspace → account →
+    plan** in TWO HOPS, because the subscription belongs to the BILLING
+    ACCOUNT, not to a workspace: the resolved workspace's ``account_id``
+    (``kernel.account_for_workspace``) then that ACCOUNT's assigned Tier from
+    the ``AccountPlan`` Kind (``kernel.account_plan`` — written by dna-cloud's
+    Stripe webhook). One plan covers every workspace the account owns, so a
+    second workspace is never a second charge.
+
+    Both hops are fail-closed by omission — a workspace with no ``account_id``,
+    or an account with no plan, simply yields no tier and the ``default_tier``
+    floor stands. Neither hop can ever return ANOTHER account's plan: the
+    second lookup is keyed strictly on the id the first returned, and a blank
+    account_id is refused before the query rather than matched against blank
+    docs.
+
+    NOTE the cost: one extra _lib registry read per metered call (Workspace) on
+    top of the AccountPlan read — the same order as the WorkspaceMembership
+    read the guard's ``_workspace()`` already performs, against the same
+    ``_lib`` scope and the same cache, so the hot path gains a read of a kind
+    it was already doing, not a new class of work."""
     if claimed_tier is not None:
         return claimed_tier
     if tenant:
-        plan = await kernel.workspace_plan(tenant)
-        store_tier = ((plan or {}).get("spec") or {}).get("tier_id")
-        if store_tier:
-            return str(store_tier)
+        account_id = await kernel.account_for_workspace(tenant)
+        if account_id:
+            plan = await kernel.account_plan(account_id)
+            store_tier = ((plan or {}).get("spec") or {}).get("tier_id")
+            if store_tier:
+                return str(store_tier)
     return default_tier
 
 
@@ -868,7 +887,8 @@ async def enforce_plan(
 
     Composes the whole pipeline the MCP ``_guard`` always ran, for any face:
 
-    1. resolve the Tier (:func:`resolve_metered_tier` — claim → WorkspacePlan →
+    1. resolve the Tier (:func:`resolve_metered_tier` — claim → workspace →
+       account → AccountPlan →
        Free floor),
     2. resolve its caps (:func:`resolve_tier_caps` — Free-doc fallback, empty
        caps = OSS no-op, ``DNA_QUOTA_REQUIRE_TIERS`` fail-closed),

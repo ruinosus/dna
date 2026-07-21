@@ -12,6 +12,13 @@ from __future__ import annotations
 
 import re
 
+from dna.tenancy.accounts import (
+    DEFAULT_ACCOUNT_CLAIM,
+    DNA_TENANT_CLAIM_MARKER,
+    MSA_SHARED_TENANT_ID,
+    account_id_from_claims,
+    is_account_id,
+)
 from dna.tenancy.invites import (
     AcceptResult,
     INVITE_ROLES,
@@ -57,6 +64,12 @@ def workspace_membership_name(workspace_id: str, email: str) -> str:
 
 
 __all__ = [
+    # accounts (s-account-scoped-plan) — the BILLING ACCOUNT a sign-in denotes.
+    "DEFAULT_ACCOUNT_CLAIM",
+    "DNA_TENANT_CLAIM_MARKER",
+    "MSA_SHARED_TENANT_ID",
+    "account_id_from_claims",
+    "is_account_id",
     "CrossWorkspaceError",
     "Identity",
     "Membership",

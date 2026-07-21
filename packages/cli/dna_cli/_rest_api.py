@@ -270,7 +270,7 @@ def build_app(
         remove_member_impl,
         revoke_workspace_member_impl,
         set_member_impl,
-        set_workspace_plan_impl,
+        set_account_plan_impl,
     )
     from dna.application.live import parse_scope_grants
     from dna.tenancy import Identity
@@ -556,7 +556,8 @@ def build_app(
     # a Free workspace writing through the web surface was never gated. The
     # policy is NOT re-implemented here: `_plan_gate` calls the SAME shared core
     # (`dna_cli._mcp_quota.enforce_plan`) the MCP `_guard` runs — same tier
-    # resolution (claim → WorkspacePlan → Free floor), same pre-counter mode
+    # resolution (claim → workspace → account → AccountPlan → Free floor), same
+    # pre-counter mode
     # gates, same i-050 honesty (a denied call is never counted), same i-051
     # fail-closed switch (DNA_QUOTA_REQUIRE_TIERS). This face only maps the
     # exceptions to HTTP.
@@ -571,7 +572,7 @@ def build_app(
     #   * Under `--auth token` (the portal's TRUSTED service bearer) the gate
     #     applies to tenant-attributed writes (the portal passes the session's
     #     workspace as `tenant`). A tenant-less call under the shared bearer is
-    #     the operator's own service op (e.g. PUT /v1/workspace-plan, the
+    #     the operator's own service op (e.g. PUT /v1/account-plan, the
     #     billing bridge itself) and is not plan-gated — the same credential
     #     could rewrite the plan anyway, so gating it would add no security,
     #     only a bootstrap deadlock.
@@ -617,7 +618,7 @@ def build_app(
                 (await _live()).kernel,
                 tenant=tenant, family=family, store=_quota,
                 # An explicit plan claim on the VERIFIED token wins, exactly as
-                # on MCP; a claim-less token falls to WorkspacePlan → Free.
+                # on MCP; a claim-less token falls to AccountPlan → Free.
                 claimed_tier=tier_from_token(claims) if claims else None,
                 memory_op=memory_op, sdlc_op=sdlc_op, quota_tenant=quota_tenant,
             )
@@ -1201,7 +1202,7 @@ def build_app(
     # manage members (every membership write 403'd — nothing made the sole user
     # the Owner of their own tenant). The DNA Cloud portal calls this on first
     # authenticated access (server-side, with the shared bearer it already holds —
-    # never opening the DNA source directly, same pattern as PUT /v1/workspace-plan)
+    # never opening the DNA source directly, same pattern as PUT /v1/account-plan)
     # so the signed-in user becomes Owner of their OWN tenant (== the `tid` path
     # segment). Idempotent + first-owner-only: a NO-OP once any Owner exists, so a
     # LATER user does not auto-escalate. Delegates to the CORE impl (zero logic
@@ -1261,33 +1262,42 @@ def build_app(
         except BoardItemNotFound as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from None
 
-    # -- cloud billing → enforcement bridge (WorkspacePlan write) ------------
+    # -- cloud billing → enforcement bridge (AccountPlan write) --------------
     # The ONE write that closes the billing→runtime gap: dna-cloud's Stripe
     # webhook calls this (server-side, with the shared DNA_API_TOKEN bearer it
     # already holds) on the Pro-activate / downgrade / cancel transitions, so
-    # runtime quota (kernel.workspace_plan(workspace_id) in the MCP guard) follows
-    # billing state. It keeps the DNA-source write inside the DNA runtime — the
-    # Node portal never opens the DNA source directly. ADR "Model B": billing keys
-    # on the WORKSPACE (not the Azure tid). GLOBAL / _lib-direct: the doc's name ==
-    # the workspace_id, so there is no query param — `workspace_id` is the body key
-    # being assigned. Delegates to the CORE set_workspace_plan_impl (zero logic
-    # here); idempotent under Stripe retries (write_document upserts on name).
-    @app.put("/v1/workspace-plan", dependencies=guarded,
-             response_model=m.WorkspacePlanResponse)
-    async def put_workspace_plan(
-        workspace_id: str = Body(..., embed=True),
+    # runtime quota follows billing state.
+    #
+    # KEYED ON THE BILLING ACCOUNT, NOT A WORKSPACE. One call covers every
+    # workspace the account owns — creating a second workspace is not a second
+    # charge and requires no billing write at all. This replaces the retired
+    # `PUT /v1/workspace-plan`, whose per-workspace key forced the caller to FAN
+    # OUT one write per workspace; that fan-out could not be made safe, because
+    # `GET /v1/workspaces` enumerates by MEMBERSHIP, not ownership — a workspace
+    # somebody else founded and invited the payer into would have been swept in
+    # and handed a tier its own account never bought.
+    #
+    # GLOBAL / _lib-direct: the doc's name == the account_id, so there is no query
+    # param — `account_id` is the body key being assigned. Delegates to the CORE
+    # set_account_plan_impl (zero logic here); idempotent under Stripe retries
+    # (write_document upserts on name).
+    @app.put("/v1/account-plan", dependencies=guarded,
+             response_model=m.AccountPlanResponse)
+    async def put_account_plan(
+        account_id: str = Body(..., embed=True),
         tier_id: str = Body(..., embed=True),
         source: str = Body(default="stripe", embed=True),
         stripe_customer_id: str | None = Body(default=None, embed=True),
         stripe_subscription_id: str | None = Body(default=None, embed=True),
         status: str | None = Body(default=None, embed=True),
     ) -> dict[str, Any]:
-        """Upsert the WorkspacePlan Kind assigning ``workspace_id`` → ``tier_id``
-        (the billing→enforcement bridge). 400 on a missing workspace_id/tier_id."""
+        """Upsert the AccountPlan Kind assigning ``account_id`` → ``tier_id`` (the
+        billing→enforcement bridge). The assignment covers EVERY workspace whose
+        ``account_id`` matches. 400 on a missing account_id/tier_id."""
         try:
-            return await set_workspace_plan_impl(
+            return await set_account_plan_impl(
                 await _live(),
-                workspace_id,
+                account_id,
                 tier_id,
                 source=source,
                 stripe_customer_id=stripe_customer_id,

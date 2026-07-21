@@ -102,7 +102,7 @@ _COVERED: dict[tuple[str, str], str] = {
     ("POST", "/v1/projects/{slug}/members"): "set_project_member",
     ("DELETE", "/v1/projects/{slug}/members/{user}"): "remove_project_member",
     ("POST", "/v1/tenants/{tid}/provision-owner"): "provision_tenant_owner",
-    ("PUT", "/v1/workspace-plan"): "set_workspace_plan",
+    ("PUT", "/v1/account-plan"): "set_account_plan",
     ("POST", "/v1/workspaces"): "create_workspace",
     ("POST", "/v1/workspaces/accept"): "accept_invites",
     ("POST", "/v1/workspaces/{workspace_id}/invites"): "create_invite",

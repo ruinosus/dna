@@ -14,9 +14,18 @@
 # happens to be a GUID that was once a `tid`; that is now historical trivia, not
 # a rule, and nothing in this Kind treats it specially — an id is an id.
 #
+# BILLING IS PER ACCOUNT, NOT PER WORKSPACE. `account_id` records which billing
+# account owns this workspace, written at creation from the caller's verified
+# account claim. One `AccountPlan` covers every workspace sharing that id — so
+# the second workspace is free, and there is exactly ONE place a tier is written.
+# The enforcement path resolves workspace → account_id → AccountPlan; a workspace
+# with no `account_id` gets the Free floor (fail-closed). The retired
+# per-workspace `WorkspacePlan` is a write-block tombstone in
+# `Kernel._REMOVED_KINDS`.
+#
 # Workspaces live in the `_lib` scope (`workspaces/<workspace_id>.yaml`) —
 # Workspace is GLOBAL (the tenancy boundary lives above any single workspace,
-# exactly like WorkspacePlan) and NOT inheritable.
+# exactly like AccountPlan) and NOT inheritable.
 #
 # SINGLE-SOURCE package data: this descriptor is the only
 # definition of the Kind — the packages/sdk-ts mirror and the test that
@@ -72,13 +81,28 @@ spec:
         type: string
         format: date-time
         description: When the workspace was created (ISO 8601).
+      account_id:
+        type:
+        - string
+        - 'null'
+        description: The BILLING ACCOUNT that owns this workspace — an opaque id
+          (like workspace_id it is matched, never parsed), recorded AT CREATION
+          from the caller's VERIFIED account claim (Entra `tid`,
+          WorkOS/Clerk/Auth0 `org_id`, Google Workspace `hd` — whatever the
+          provider block's `tenant_claim` names). THE SUBSCRIPTION IS PER
+          ACCOUNT - one AccountPlan covers EVERY workspace sharing this id, so a
+          second workspace is never a second charge and never needs a second
+          write. Null = no resolvable account, which resolves to the Free floor
+          (fail-closed) — never another account's tier, never a paid default.
       plan_ref:
         type:
         - string
         - 'null'
-        description: The workspace's current Tier/WorkspacePlan key (billing
-          attaches to the workspace, not to an identity or Azure org). Null = the
-          Free floor. Resolved via kernel.workspace_plan(workspace_id).
+        description: DEPRECATED, never read. Billing is per ACCOUNT, so the tier
+          resolves as workspace → account_id → AccountPlan via
+          kernel.account_plan(account_id) — never from a per-workspace field.
+          Retained only so pre-existing docs carrying it still validate; writing
+          it influences nothing.
   describe: '{name} ({workspace_id})'
   summary:
     workspace_id: ''

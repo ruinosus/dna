@@ -66,6 +66,41 @@
         "title": "AcceptedInvite",
         "type": "object"
       },
+      "AccountPlanResponse": {
+        "description": "``PUT /v1/account-plan`` — the account→Tier assignment that was written.\n\nKeyed on the BILLING ACCOUNT, not a workspace: this one assignment covers\nevery workspace whose ``account_id`` matches.",
+        "properties": {
+          "account_id": {
+            "title": "Account Id",
+            "type": "string"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "tier_id": {
+            "title": "Tier Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scope",
+          "account_id",
+          "tier_id"
+        ],
+        "title": "AccountPlanResponse",
+        "type": "object"
+      },
       "AgentPromptResponse": {
         "properties": {
           "agent": {
@@ -680,8 +715,12 @@
         "title": "Body_provision_workspace_owner_v1_workspaces__workspace_id__provision_owner_post",
         "type": "object"
       },
-      "Body_put_workspace_plan_v1_workspace_plan_put": {
+      "Body_put_account_plan_v1_account_plan_put": {
         "properties": {
+          "account_id": {
+            "title": "Account Id",
+            "type": "string"
+          },
           "source": {
             "default": "stripe",
             "title": "Source",
@@ -723,17 +762,13 @@
           "tier_id": {
             "title": "Tier Id",
             "type": "string"
-          },
-          "workspace_id": {
-            "title": "Workspace Id",
-            "type": "string"
           }
         },
         "required": [
-          "workspace_id",
+          "account_id",
           "tier_id"
         ],
-        "title": "Body_put_workspace_plan_v1_workspace_plan_put",
+        "title": "Body_put_account_plan_v1_account_plan_put",
         "type": "object"
       },
       "Body_remember_memory_v1_memories_post": {
@@ -886,6 +921,17 @@
       "CreateWorkspaceResponse": {
         "description": "``POST /v1/workspaces`` — the created workspace. ``workspace_id`` is\nSERVER-MINTED; there is no request field for it.",
         "properties": {
+          "account_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Id"
+          },
           "created_at": {
             "anyOf": [
               {
@@ -2797,13 +2843,9 @@
         "title": "WorkspaceMembersResponse",
         "type": "object"
       },
-      "WorkspacePlanResponse": {
+      "WorkspaceSummary": {
         "properties": {
-          "scope": {
-            "title": "Scope",
-            "type": "string"
-          },
-          "status": {
+          "account_id": {
             "anyOf": [
               {
                 "type": "string"
@@ -2812,27 +2854,8 @@
                 "type": "null"
               }
             ],
-            "title": "Status"
+            "title": "Account Id"
           },
-          "tier_id": {
-            "title": "Tier Id",
-            "type": "string"
-          },
-          "workspace_id": {
-            "title": "Workspace Id",
-            "type": "string"
-          }
-        },
-        "required": [
-          "scope",
-          "workspace_id",
-          "tier_id"
-        ],
-        "title": "WorkspacePlanResponse",
-        "type": "object"
-      },
-      "WorkspaceSummary": {
-        "properties": {
           "created_at": {
             "anyOf": [
               {
@@ -2961,6 +2984,63 @@
           }
         },
         "summary": "Health"
+      }
+    },
+    "/v1/account-plan": {
+      "put": {
+        "description": "Upsert the AccountPlan Kind assigning ``account_id`` → ``tier_id`` (the\nbilling→enforcement bridge). The assignment covers EVERY workspace whose\n``account_id`` matches. 400 on a missing account_id/tier_id.",
+        "operationId": "put_account_plan_v1_account_plan_put",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_put_account_plan_v1_account_plan_put"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountPlanResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Account Plan"
       }
     },
     "/v1/agents": {
@@ -5108,63 +5188,6 @@
           }
         },
         "summary": "Tools"
-      }
-    },
-    "/v1/workspace-plan": {
-      "put": {
-        "description": "Upsert the WorkspacePlan Kind assigning ``workspace_id`` → ``tier_id``\n(the billing→enforcement bridge). 400 on a missing workspace_id/tier_id.",
-        "operationId": "put_workspace_plan_v1_workspace_plan_put",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "authorization",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Body_put_workspace_plan_v1_workspace_plan_put"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WorkspacePlanResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Put Workspace Plan"
       }
     },
     "/v1/workspaces": {

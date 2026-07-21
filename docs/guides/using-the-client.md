@@ -42,7 +42,7 @@ Because both come from the SAME spec, they stay semantically in sync —
 The clients expose a named method for **every operation in the spec**: the
 `/v1/*` reads a dashboard needs (list agents, compose a prompt, browse memory,
 read the board) *and* every write (memory remember/delete, insight state, project
-and workspace membership, workspace/project creation, invites, workspace-plan).
+and workspace membership, workspace/project creation, invites, account-plan).
 
 The underlying client is still exposed — `.raw` in TS, `.request(...)` in Python
 — but nothing requires it. That matters because the escape hatch was untyped in
