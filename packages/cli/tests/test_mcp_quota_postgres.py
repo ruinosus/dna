@@ -217,6 +217,97 @@ def test_concurrent_replicas_share_one_budget(pg_schema):
             r.close()
 
 
+# ── i-050: a denied call never reaches the billed counter ──────────────────
+
+
+def test_a_denied_call_never_reaches_the_billed_counter(pg_schema):
+    """i-050 in the DURABLE store — the counter the overage job actually reads.
+
+    Before the fix, ``enforce_quota`` incremented BEFORE denying: a capped
+    tenant that kept calling accumulated rows above the cap, and the overage
+    job (``SUM(calls) - included``) billed those 429s as if they had run.
+    The property: however hard the denial is hammered, ``calls_on`` — the
+    billing read — stays exactly at the cap.
+
+    Baseline first (anti-vacuity): the allowed calls DO advance the counter,
+    so this cannot pass on a store that counts nothing."""
+    caps = {"feature_families": [], "calls_per_day": 2, "rate_per_sec": None}
+    store = _store(pg_schema)
+    try:
+        for _ in range(2):
+            Q.enforce_quota(caps=caps, tenant="acme", tier="pro",
+                            family="memory", store=store)
+        assert store.calls_on("acme") == 2  # the meter is alive (baseline)
+
+        for _ in range(6):
+            with pytest.raises(Q.OverQuotaError, match="quota"):
+                Q.enforce_quota(caps=caps, tenant="acme", tier="pro",
+                                family="memory", store=store)
+        assert store.calls_on("acme") == 2, (
+            "denied calls advanced dna_quota_counters — the overage job "
+            "would bill calls the customer never executed"
+        )
+    finally:
+        store.close()
+
+
+def test_a_zero_cap_admits_nothing_even_on_a_fresh_day(pg_schema):
+    """The fresh-INSERT arm of the upsert unconditionally writes ``calls = 1``
+    — only the explicit ``cap < 1`` short-circuit keeps a zero cap (a
+    suspended plan) from admitting AND billing one call per day."""
+    caps = {"feature_families": [], "calls_per_day": 0, "rate_per_sec": None}
+    store = _store(pg_schema)
+    try:
+        with pytest.raises(Q.OverQuotaError, match="quota"):
+            Q.enforce_quota(caps=caps, tenant="zeroed", tier="free",
+                            family="memory", store=store)
+        assert store.calls_on("zeroed") == 0, "a zero cap wrote a billable row"
+    finally:
+        store.close()
+
+
+def test_concurrent_admission_at_the_cap_is_exact(pg_schema):
+    """The i-050 twin of ``test_concurrent_increments_never_lose_one``: the
+    conditional increment must keep the SAME atomicity as the unconditional
+    one, or fixing the billing bug reopens the race that test killed.
+
+    64 threads x 8 attempts = 512 against a cap of 100. The ``WHERE calls <
+    cap`` rides inside the ``ON CONFLICT DO UPDATE``, evaluated under the row
+    lock against the last COMMITTED value — so EXACTLY 100 attempts are
+    admitted, with DISTINCT post-increment counts 1..100 (the stronger claim,
+    as in the original test: right total + duplicate handouts would still
+    over-admit), the other 412 get ``None``, and the billed counter reads
+    exactly 100. A check-then-increment impl interleaves and lands measurably
+    OVER the cap here; a compensating-decrement impl transiently does too."""
+    threads, per_thread, cap = 64, 8, 100
+    attempts = threads * per_thread
+    key = Q.quota_key("acme", "pro")
+
+    store = Q.PostgresQuotaStore(
+        pg_schema[0], schema=pg_schema[1], pool_size=threads
+    )
+    try:
+        def hammer(_):
+            return [store.try_incr_day(key, cap) for _ in range(per_thread)]
+
+        with ThreadPoolExecutor(max_workers=threads) as pool:
+            results = [r for chunk in pool.map(hammer, range(threads)) for r in chunk]
+
+        admitted = sorted(r for r in results if r is not None)
+        refused = sum(1 for r in results if r is None)
+        assert admitted == list(range(1, cap + 1)), (
+            f"admission under contention is not exact: {len(admitted)} of "
+            f"{attempts} attempts got in against a cap of {cap} (or two "
+            "callers were handed the same count)"
+        )
+        assert refused == attempts - cap
+        assert store.calls_on("acme") == cap, (
+            "the BILLED counter overshot the cap — refused attempts wrote rows"
+        )
+    finally:
+        store.close()
+
+
 # ── the billing read the overage job needs ─────────────────────────────────
 
 
