@@ -1,0 +1,48 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Feature
+metadata:
+  name: f-cli-session-injection
+spec:
+  title: "Inje\xE7\xE3o de sess\xE3o no CLI via contexto do click"
+  description: "Hoje nenhum comando do CLI oferece um lugar declarado para injetar\
+    \ a Session: cada um fecha sobre o dna_session importado no m\xF3dulo, e os testes\
+    \ alcan\xE7am por dentro (monkeypatch.setattr(sdlc_cmd, 'dna_session', fake))\
+    \ para substitu\xED-lo. Na falta de porta, o teste entra pela janela.\n\nO pre\xE7\
+    o: o patch fica amarrado ao NOME DO MODULO que hospeda o comando. Mover um comando\
+    \ para outro m\xF3dulo faz o patch mirar quem nao e mais o dono \u2014 e nao da\
+    \ erro. O teste segue verde batendo na sessao de verdade. Falha silenciosa, a\
+    \ categoria pior. Foi exatamente isso que bloqueou o split de sdlc_cmd (7221 linhas):\
+    \ 14 testes atras desse seam.\n\nO paliativo aprovado e uma costura unica declarada\
+    \ em dna_cli/sdlc/_common.py, feito junto com o split \u2014 resolve o bloqueio\
+    \ e mata a falha silenciosa, mas continua sendo substituicao de um ponto de modulo.\n\
+    \nEsta Feature e a versao limpa: a Session passa a ser injetada pelo contexto\
+    \ do click (ctx.obj), resolvida uma vez na raiz e recebida por quem precisa. O\
+    \ teste passa a construir o contexto com uma sessao falsa \u2014 sem alcancar\
+    \ dentro de modulo nenhum. Elimina a categoria inteira, nao um caso dela.\n\n\
+    Escopo: ~100 call sites 'with dna_session(scope) as s' e os testes que hoje dependem\
+    \ da costura. Nao e refactor mecanico: precisa decidir o que e resolvido na raiz\
+    \ vs por comando, e preservar a cadeia de --scope inteira.\n\nCriterio de pronto:\
+    \ nenhum monkeypatch.setattr mirando dna_session em modulo de comando; o golden\
+    \ --help continua vazio; suites iguais ao baseline."
+  status: in-development
+  reporter: claude-code
+  priority: medium
+  labels:
+  - cli
+  - testing
+  - refactor
+  business_value: 400
+  created_at: '2026-07-21T11:35:07+00:00'
+  updated_at: '2026-07-21T11:36:31+00:00'
+  timeline:
+  - at: '2026-07-21T11:35:07+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: discovery
+  - at: '2026-07-21T11:36:31+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: discovery
+    to: in-development
