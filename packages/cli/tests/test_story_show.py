@@ -8,6 +8,7 @@ from contextlib import contextmanager
 
 from click.testing import CliRunner
 
+from dna_cli._ctx import SESSION_PROVIDER_KEY
 from dna_cli import sdlc_cmd
 
 
@@ -34,7 +35,7 @@ _SPEC = {
 }
 
 
-def _run(monkeypatch, found=True, *args):
+def _run(found=True, *args):
     class _FakeSession:
         scope = "dna-development"
 
@@ -45,12 +46,14 @@ def _run(monkeypatch, found=True, *args):
     def _fake(scope=None, *, tenant=None, timeout=30.0):
         yield _FakeSession()
 
-    monkeypatch.setattr(sdlc_cmd, "dna_session", _fake)
-    return CliRunner().invoke(sdlc_cmd.sdlc, ["story", "show", "s-x", *args])
+    return CliRunner().invoke(
+        sdlc_cmd.sdlc, ["story", "show", "s-x", *args],
+        obj={SESSION_PROVIDER_KEY: _fake},
+    )
 
 
-def test_show_renders_header_ac_dod(monkeypatch):
-    r = _run(monkeypatch, True)
+def test_show_renders_header_ac_dod():
+    r = _run(True)
     assert r.exit_code == 0, r.output
     assert "Story: s-x" in r.output
     assert "Pin gpt-realtime-2" in r.output
@@ -63,16 +66,16 @@ def test_show_renders_header_ac_dod(monkeypatch):
     assert "Plan/plan-s-x" in r.output
 
 
-def test_show_json(monkeypatch):
+def test_show_json():
     import json
-    r = _run(monkeypatch, True, "--json")
+    r = _run(True, "--json")
     assert r.exit_code == 0, r.output
     data = json.loads(r.output)
     assert data["status"] == "todo"
     assert data["feature"] == "f-jarvis-realtime2-adoption"
 
 
-def test_show_not_found_errors(monkeypatch):
-    r = _run(monkeypatch, False)
+def test_show_not_found_errors():
+    r = _run(False)
     assert r.exit_code != 0
     assert "not found" in r.output.lower()

@@ -4,10 +4,11 @@ Covers the 6 Kinds wired to the CLI for parity (schemas + Studio screens
 existed, CLI didn't): Spike, Bug, Task, ADR, Spec, Plan — plus the new
 `issue start` transition and `doc apply` multi-document support.
 
-Approach: REAL creates against an in-memory store. We patch
-``dna_cli.sdlc_cmd.dna_session`` to yield a fake session whose
-``kernel.write_document`` records into a dict and whose ``get_doc`` reads
-it back. The write path (spec assembly, timeline stamping, _build_raw) runs
+Approach: REAL creates against an in-memory store. The fake session is
+INJECTED through the click context (``obj={SESSION_PROVIDER_KEY: fake}``,
+f-cli-session-injection) — no reaching inside command modules. The fake's
+``kernel.write_document`` records into a dict and its ``get_doc`` reads it
+back. The write path (spec assembly, timeline stamping, _build_raw) runs
 for real — only the HTTP boundary is faked. Each `create` is asserted to
 exit 0 + emit its success message, and each Kind's required-option
 enforcement is asserted to fire (missing required → exit != 0).
@@ -19,13 +20,26 @@ from contextlib import contextmanager
 import pytest
 from click.testing import CliRunner
 
-from dna_cli import sdlc_cmd
+from dna_cli._ctx import SESSION_PROVIDER_KEY
 from dna_cli.sdlc_cmd import sdlc
 
 
 @pytest.fixture
-def runner():
-    return CliRunner()
+def runner(session_obj):
+    """CliRunner whose invokes carry the injected session by default.
+
+    An explicit ``obj=`` at a call site wins (setdefault) — used by tests
+    that build their own fake.
+    """
+    r = CliRunner()
+    _orig = r.invoke
+
+    def _invoke(*args, **kwargs):
+        kwargs.setdefault("obj", session_obj)
+        return _orig(*args, **kwargs)
+
+    r.invoke = _invoke  # type: ignore[method-assign]
+    return r
 
 
 class _FakeDocView:
@@ -87,16 +101,20 @@ class _FakeSession:
 
 
 @pytest.fixture
-def store(monkeypatch):
-    """Patch dna_session → in-memory fake. Returns the backing dict."""
-    backing: dict = {}
+def store():
+    """The in-memory backing dict the fake session reads/writes."""
+    return {}
+
+
+@pytest.fixture
+def session_obj(store):
+    """The ctx.obj to inject: a session factory over the backing store."""
 
     @contextmanager
     def _fake(scope=None, *, tenant=None, timeout=30.0):
-        yield _FakeSession(backing, scope or "dna-development")
+        yield _FakeSession(store, scope or "dna-development")
 
-    monkeypatch.setattr(sdlc_cmd, "dna_session", _fake)
-    return backing
+    return {SESSION_PROVIDER_KEY: _fake}
 
 
 # ---------------------------------------------------------------------------
@@ -315,16 +333,9 @@ def test_transition_missing_doc_fails(runner, store):
 # Issue start (Tier 3).
 # ---------------------------------------------------------------------------
 
-def test_issue_start_transition(runner, monkeypatch):
+def test_issue_start_transition(runner, store):
     """issue start mutates Issue → in-progress via the same store pattern."""
-    backing: dict = {}
-
-    @contextmanager
-    def _fake(scope=None, *, tenant=None, timeout=30.0):
-        yield _FakeSession(backing, scope or "dna-development")
-
-    # issue_group commands also call dna_session in sdlc_cmd.
-    monkeypatch.setattr(sdlc_cmd, "dna_session", _fake)
+    backing = store
     # Seed an Issue directly.
     backing[("dna-development", "Issue", "i-001-x")] = {
         "apiVersion": "github.com/ruinosus/dna/sdlc/v1",

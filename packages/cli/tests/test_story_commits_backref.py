@@ -16,6 +16,7 @@ from contextlib import contextmanager
 
 from click.testing import CliRunner
 
+from dna_cli._ctx import SESSION_PROVIDER_KEY
 from dna_cli import sdlc_cmd
 
 
@@ -51,7 +52,7 @@ _TRAILER_COMMITS = [
 ]
 
 
-def _patch_session(monkeypatch, found=True):
+def _session_obj(found=True):
     class _FakeSession:
         scope = "dna-development"
 
@@ -62,7 +63,7 @@ def _patch_session(monkeypatch, found=True):
     def _fake(scope=None, *, tenant=None, timeout=30.0):
         yield _FakeSession()
 
-    monkeypatch.setattr(sdlc_cmd, "dna_session", _fake)
+    return {SESSION_PROVIDER_KEY: _fake}
 
 
 def _patch_commits(monkeypatch, value):
@@ -75,26 +76,26 @@ def _patch_commits(monkeypatch, value):
 
 
 def test_show_renders_commits_section(monkeypatch):
-    _patch_session(monkeypatch)
+    obj = _session_obj()
     _patch_commits(monkeypatch, _TRAILER_COMMITS)
-    r = CliRunner().invoke(sdlc_cmd.sdlc, ["story", "show", "s-symb"])
+    r = CliRunner().invoke(sdlc_cmd.sdlc, ["story", "show", "s-symb"], obj=obj)
     assert r.exit_code == 0, r.output
     assert "Commits (2, via Work-Item trailer)" in r.output
     assert "abc1234" in r.output and "feat(cli): stamp trailers" in r.output
 
 
 def test_show_omits_section_when_no_commits(monkeypatch):
-    _patch_session(monkeypatch)
+    obj = _session_obj()
     _patch_commits(monkeypatch, [])
-    r = CliRunner().invoke(sdlc_cmd.sdlc, ["story", "show", "s-symb"])
+    r = CliRunner().invoke(sdlc_cmd.sdlc, ["story", "show", "s-symb"], obj=obj)
     assert r.exit_code == 0, r.output
     assert "Commits (" not in r.output
 
 
 def test_show_fail_soft_when_git_unavailable(monkeypatch):
-    _patch_session(monkeypatch)
+    obj = _session_obj()
     _patch_commits(monkeypatch, None)  # not a git repo / git missing
-    r = CliRunner().invoke(sdlc_cmd.sdlc, ["story", "show", "s-symb"])
+    r = CliRunner().invoke(sdlc_cmd.sdlc, ["story", "show", "s-symb"], obj=obj)
     assert r.exit_code == 0, r.output
     assert "Commits (" not in r.output
 
@@ -103,9 +104,9 @@ def test_show_fail_soft_when_git_unavailable(monkeypatch):
 
 
 def test_commits_merges_and_dedups(monkeypatch):
-    _patch_session(monkeypatch)
+    obj = _session_obj()
     _patch_commits(monkeypatch, _TRAILER_COMMITS)
-    r = CliRunner().invoke(sdlc_cmd.sdlc, ["story", "commits", "s-symb", "--json"])
+    r = CliRunner().invoke(sdlc_cmd.sdlc, ["story", "commits", "s-symb", "--json"], obj=obj)
     assert r.exit_code == 0, r.output
     rows = json.loads(r.output)
     shas = [row["full_sha"] for row in rows]
@@ -116,9 +117,9 @@ def test_commits_merges_and_dedups(monkeypatch):
 
 
 def test_commits_timeline_only_when_git_unavailable(monkeypatch):
-    _patch_session(monkeypatch)
+    obj = _session_obj()
     _patch_commits(monkeypatch, None)
-    r = CliRunner().invoke(sdlc_cmd.sdlc, ["story", "commits", "s-symb", "--json"])
+    r = CliRunner().invoke(sdlc_cmd.sdlc, ["story", "commits", "s-symb", "--json"], obj=obj)
     assert r.exit_code == 0, r.output
     rows = json.loads(r.output)
     assert len(rows) == 1
@@ -127,10 +128,9 @@ def test_commits_timeline_only_when_git_unavailable(monkeypatch):
 
 
 def test_commits_empty_message(monkeypatch):
-    _patch_session(monkeypatch)
-    monkeypatch.setattr(sdlc_cmd, "dna_session", _empty_session())
+    obj = {SESSION_PROVIDER_KEY: _empty_session()}
     _patch_commits(monkeypatch, [])
-    r = CliRunner().invoke(sdlc_cmd.sdlc, ["story", "commits", "s-symb"])
+    r = CliRunner().invoke(sdlc_cmd.sdlc, ["story", "commits", "s-symb"], obj=obj)
     assert r.exit_code == 0, r.output
     assert "no commits found" in r.output
     assert "Work-Item: Story/s-symb" in r.output  # teaches the convention
