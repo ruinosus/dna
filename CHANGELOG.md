@@ -11,6 +11,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### ✨ MCP Apps
+
+- **O card de memória renderiza de verdade — MCP Apps (SEP-1865), modelo
+  final** (spec `001-mcp-apps-memory-card`, feature `f-copilot-mcp-apps`). O
+  groundwork inerte do 0.22.1 vira a entrega completa do lado SDK:
+  `memory_list_card_html()` agora é o template ESTÁTICO do card — HTML + JS
+  inline com a lib oficial `@modelcontextprotocol/ext-apps` vendorizada e
+  embutida (`dna/emit/_vendor/`, MIT, zero CDN/URL externa — a CSP da spec é
+  deny-by-default), registrado como recurso `ui://dna/memory-list`
+  (`text/html;profile=mcp-app`) e apontado NA DECLARAÇÃO de
+  `list_memories`/`recall` via FastMCP 3 (`app=AppConfig(resource_uri=…)`;
+  floor novo `fastmcp>=3.2`, `mcp-ui-server` fora das dependências). O host
+  empurra o `structured_content` de cada resultado para o card
+  (`app.ontoolresult`); o template é público e cacheável por URI — zero dado
+  de tenant, zero segredo; dado só entra no DOM via `textContent`; campo
+  ausente renderiza vazio-honesto; empty state honesto; só leitura. Smoke de
+  render real no `basic-host` do `ext-apps`: card com dados, hits de
+  `recall`, empty state — zero ações.
+- **Zero regressão para quem não renderiza MCP Apps.** O `content` textual de
+  `list_memories`/`recall` é byte-idêntico ao anterior — travado por fixture
+  capturada ANTES da mudança e comparado byte a byte pelo protocolo real
+  (LangGraph/copilot incluídos; dados sempre no `content` primário). O
+  resultado da tool não carrega mais nenhum `_meta` de UI — o card vive na
+  declaração. O card COM dados do canvas do console segue existindo como
+  `memory_canvas_card_html` (state key `memory_card_html` do agente emitido —
+  bytes idênticos, goldens intactos).
+- **A regra "nada shippa meio-referenciado" agora é teste.** Grep-guard sobre
+  `dna/emit/mcp_ui.py` e sobre o template entregue (região vendorizada
+  delimitada por sentinelas e conferida byte a byte contra o asset
+  commitado); as menções a futuro que existiam em `mcp_ui.py` e
+  `_mcp_server.py` saíram junto com o modelo pré-spec
+  (`memory_list_ui_resource`, `available_emit_surfaces`).
+
 ## [0.23.0] — 2026-07-21
 
 O workspace nasce herdando. Minor novo: a faixa interna vira
