@@ -25,6 +25,12 @@ name: release-client
 on:
   push:
     tags: ["v*"]
+  # Disparo manual, para o PRIMEIRO publish de um pacote novo e para re-rodar
+  # uma tag cujo publish falhou por configuração de conta (trusted publisher
+  # ausente, segredo faltando). O job `sanity` continua exigindo que a versão
+  # dos pacotes case com a ref, então rodar isto numa ref errada FALHA em vez
+  # de publicar coisa errada.
+  workflow_dispatch: {}
 
 permissions:
   contents: read
