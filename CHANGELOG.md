@@ -11,6 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.23.0] — 2026-07-21
+
+O workspace nasce herdando. Minor novo: a faixa interna vira
+`dna-sdk>=0.23,<0.24`.
+
+
 ### ✨ Composição
 
 - **Herança de definições por workspace-scope — a tese do overlay ganha o
