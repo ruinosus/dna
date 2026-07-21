@@ -142,6 +142,24 @@ def test_recall_content_byte_identical_to_baseline(dna_dir, monkeypatch):
     assert text_blocks[0].text.encode("utf-8") == baseline
 
 
+def test_degradation_client_without_extension_reads_same_bytes(dna_dir, monkeypatch):
+    """US3, the whole contract in one scenario: a plain MCP client — one that
+    never negotiates the MCP Apps extension and never reads ``ui://`` resources
+    — calls BOTH memory read tools and gets textual ``content`` byte-identical
+    to the pre-feature baseline, self-sufficient to parse (the JSON in
+    ``content`` IS the data; no UI channel needed)."""
+    for tool, args, fixture in (
+        ("list_memories", {"scope": _SCOPE}, "list_memories.content.txt"),
+        ("recall", {"query": "tea", "scope": _SCOPE}, "recall.content.txt"),
+    ):
+        result = _call_with_pinned_data(dna_dir, monkeypatch, tool, args)
+        text_blocks = [b for b in result.content if getattr(b, "text", None)]
+        assert len(text_blocks) == 1
+        assert text_blocks[0].text.encode("utf-8") == (_FIXTURES / fixture).read_bytes()
+        # content alone carries the data — a UI-less client needs nothing else.
+        assert json.loads(text_blocks[0].text) == result.structured_content
+
+
 # ── 2. the result: data mirrored, no pre-spec UI residue ───────────────────
 
 
