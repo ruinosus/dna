@@ -1,0 +1,20 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-061-mcp-apps-provenance-panel
+spec:
+  description: "Segunda superficie MCP Apps (depende da entrega do card de memoria,\
+    \ spec 2026-07-21): o compose_prompt(explain=true) \u2014 shippado no 0.22.0 \u2014\
+    \ renderizado como painel de proveniencia interativo no host ('este prompt saiu\
+    \ destas secoes'), possivelmente com drill-down via app.callServerTool. O JSON\
+    \ de explain e ilegivel no chat; e UI por natureza. Filada NO ATO do spec pela\
+    \ regra 'nada shippa meio-referenciado'."
+  type: task
+  severity: medium
+  status: open
+  timeline:
+  - at: '2026-07-21T18:20:24+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

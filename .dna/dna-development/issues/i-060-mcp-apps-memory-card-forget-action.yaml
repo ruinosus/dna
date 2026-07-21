@@ -1,0 +1,21 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-060-mcp-apps-memory-card-forget-action
+spec:
+  description: "Iteracao 2 do card de memoria MCP Apps (depende da entrega do card\
+    \ read-only, spec 2026-07-21): acao 'esquecer' por memoria chamando forget via\
+    \ tools/call do iframe, com o desenho de consentimento bem feito (host-consent\
+    \ da spec + o analogo do HITL do console). Divergencia entre hosts documentada:\
+    \ ChatGPT ainda nao suporta tool-calling da UI \u2014 la o card permanece read-only.\
+    \ Filada NO ATO do spec pela regra 'nada shippa meio-referenciado': esta ideia\
+    \ vive AQUI, nao em docstring."
+  type: task
+  severity: medium
+  status: open
+  timeline:
+  - at: '2026-07-21T18:20:18+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

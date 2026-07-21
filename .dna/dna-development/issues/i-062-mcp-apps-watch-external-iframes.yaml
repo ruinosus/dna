@@ -1,0 +1,20 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-062-mcp-apps-watch-external-iframes
+spec:
+  description: "Item de WATCH (regra 'nada shippa meio-referenciado' \u2014 a ideia\
+    \ vive aqui, nao em comentario de codigo): reavaliar quando os hosts moverem:\
+    \ (1) externalIframes \u2014 capability futura da spec para embutir rota externa\
+    \ (ex.: pagina do portal) em vez de template HTML; foi DEFERIDA da spec final\
+    \ 2026-07-28; (2) tool-calling da UI no ChatGPT (hoje ausente \u2014 cards read-only\
+    \ funcionam la). Nenhuma acao ate um dos dois mover."
+  type: task
+  severity: low
+  status: open
+  timeline:
+  - at: '2026-07-21T18:20:30+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
