@@ -11,6 +11,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### ✨ Memória
+
+- **Hits do `recall` carregam campos de display + `personal` por item**
+  (`i-068`, a raiz do canvas em branco do console). Cada hit agora projeta
+  `summary`/`area`/`affect`/`tags`/`created_at` (+ `title` quando o provider
+  não deu um) do spec que o `recall` JÁ carrega para o filtro bi-temporal —
+  enriquecimento em UM ponto (`dna.memory.verbs`), acima dos providers, então
+  pgvector, sqlite-vec E o fallback lexical saem iguais e o contrato do port
+  não muda. Estritamente aditivo: chave existente no hit nunca é sobrescrita,
+  campo ausente no spec não é fabricado; o `content` textual do MCP e o card
+  MCP Apps continuam byte-estáveis. E cada hit/item ganha **`personal: bool`
+  por ITEM** — recall/list pessoal une a base compartilhada, então a
+  distinção é por item, nunca por chamada (`list_memories` idem; o chip
+  "pessoal" do console deixa de ser código morto).
+
 ## [0.24.0] — 2026-07-21
 
 O card de memória vira MCP App. Minor novo: faixa interna
