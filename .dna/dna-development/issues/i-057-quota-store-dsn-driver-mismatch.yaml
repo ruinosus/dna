@@ -1,0 +1,29 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-057-quota-store-dsn-driver-mismatch
+spec:
+  description: "Visto ao vivo no dna-cloud (2026-07-21): store_from_env cai no fallback\
+    \ DNA_SOURCE_URL, que num deploy asyncpg carrega ?ssl=require \u2014 e o PostgresQuotaStore\
+    \ e psycopg2/libpq, que so aceita sslmode=. Toda chamada metrificada morre com\
+    \ 'invalid dsn: invalid connection option ssl'. So apareceu quando a quota deixou\
+    \ de ser fail-open (i-051): cada correcao de honestidade expos o bug latente seguinte.\
+    \ O dna-cloud contornou com DNA_QUOTA_DSN proprio (PR #107 de la), mas a armadilha\
+    \ fica armada para QUALQUER host cujo DNA_SOURCE_URL seja asyncpg-style \u2014\
+    \ que e o shape documentado do proprio dna-cloud. Fix de raiz: store_from_env\
+    \ normaliza o DSN para o driver que ele proprio usa (traduzir ssl=->sslmode=,\
+    \ remover params asyncpg-only), com teste + mutacao (normalizacao removida =>\
+    \ teste morre) e docstring dizendo qual dialeto o store fala. Bonus de robustez:\
+    \ um erro de CONEXAO do quota store hoje vira ToolError por chamada \u2014 avaliar\
+    \ se com DNA_QUOTA_REQUIRE_TIERS desligado deveria degradar para in-proc com warning\
+    \ alto em vez de derrubar a chamada (decisao de honestidade: contar errado e pior\
+    \ que nao responder?)."
+  type: bug
+  severity: high
+  status: open
+  timeline:
+  - at: '2026-07-21T16:39:14+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
