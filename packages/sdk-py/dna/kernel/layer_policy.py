@@ -48,8 +48,10 @@ class LayerPolicyEnforcer:
     def check(
         self, scope: str, kind: str, name: str, raw: dict, layer: tuple[str, str],
     ) -> None:
-        """Sync entry point (non-async callers). Policy modes (resolved via alias
-        ``<owner>-<kind>``): LOCKED (any write raises), RESTRICTED (adding a new
+        """Sync entry point (non-async callers). Policy modes (key resolved by
+        the SHARED ``match_policy_key`` — exact Kind name → declared alias →
+        legacy suffixes — same as the read/merge port, i-049): LOCKED (any
+        write raises), RESTRICTED (adding a new
         doc, or a new top-level spec key on an existing doc, raises; overriding
         existing keys is allowed), OPEN (default — never raises). No Module/
         LayerPolicy doc → OPEN."""
@@ -87,7 +89,13 @@ class LayerPolicyEnforcer:
         alias = self._k._alias_for(kind)
 
         # Pick the LayerPolicy doc whose spec.layer_id matches the layer being
-        # written (last match wins, matching mi.all iteration order).
+        # written (last match wins, matching mi.all iteration order). The key
+        # inside each doc's ``policies`` map is resolved by the SAME resolver
+        # the read/merge port uses (``match_policy_key``, i-049): before this,
+        # the write port accepted the key ONLY by alias, so ``Agent: locked``
+        # (keyed by Kind name) locked the merge but was silently ignored
+        # here — the declared protection held on one port and not the other.
+        from dna.kernel.layer_resolver import match_policy_key
         policy_str = "open"
         try:
             layer_policy_docs = mi_base._all("LayerPolicy")
@@ -107,7 +115,7 @@ class LayerPolicyEnforcer:
                 lp_policies = lp_spec.get("policies") or {}
                 if not isinstance(lp_policies, dict):
                     continue
-                value = lp_policies.get(alias)
+                value = match_policy_key(kind, lp_policies, declared_alias=alias)
                 if value:
                     policy_str = str(value).lower()
             except Exception as e:  # noqa: BLE001

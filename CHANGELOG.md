@@ -13,6 +13,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Correções
 
+- **Política de camada responde IGUAL nas duas portas** (`i-049`). A escrita
+  (`LayerPolicyEnforcer._enforce`) só aceitava a chave da política pelo
+  ALIAS, enquanto a leitura/merge (pós-i-044) aceitava nome de Kind exato →
+  alias declarado → sufixos legados — então `Agent: locked` (pelo nome)
+  trancava o merge mas era IGNORADO EM SILÊNCIO no write: confiança falsa.
+  O resolvedor de chave da i-044 foi extraído como
+  `layer_resolver.match_policy_key` (nome exato → alias declarado →
+  heurísticas legadas) e as DUAS portas resolvem por ele — a mesma política
+  tranca leitura E escrita, por nome OU por alias, e um near-miss não casa
+  em porta nenhuma (na leitura continua avisando alto, i-044).
+
 - **`doc apply` converge: re-apply de arquivo idêntico é `UNCHANGED`**
   (`i-059`). O compare era torto — doc RESOLVIDO (defaults do Kind injetados
   no parse: `creative_slots: []`, `objective: ''`, +9 no Agent) contra o spec
