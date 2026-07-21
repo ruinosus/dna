@@ -11,6 +11,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.21.1] — 2026-07-21
+
+Release de encanamento: nenhuma mudança nos pacotes, só o que faltava para o
+cliente conseguir publicar.
+
+- **`release-client.yml` aceita token de automação** além do OIDC. O trusted
+  publishing do npm só pode ser configurado sobre um pacote **que já existe** —
+  então o primeiro publish de um pacote novo não tinha como sair pelo CI, e caía
+  num `npm login` manual com 2FA. O job agora usa `secrets.NPM_TOKEN` quando ele
+  existe e cai no OIDC quando não existe.
+- **Disparo manual** (`workflow_dispatch`) no `release-client`. A tag `v0.21.0`
+  passou antes de a configuração de conta ficar pronta, e sem disparo manual não
+  havia como publicar o cliente sem cortar uma versão nova.
+- Esta versão é a **primeira publicação do `dna-client`** (PyPI + npm).
+
+
 ## [0.21.0] — 2026-07-20
 
 ### ✨ O ato de criação
