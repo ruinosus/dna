@@ -52,6 +52,15 @@ class LiveDna:
     # ``tenant`` column; Model B only changes that its value is a workspace id.
     vendor_workspace: str | None = None
     workspace_scope_prefix: str = "tenant-"
+    # ── workspace definitions base (i-058) ──────────────────────────────────────
+    # When set (``DNA_WORKSPACE_DEFINITIONS_BASE`` at the faces), a workspace's
+    # scope is born — and an existing one is adopted on sign-in — with a Genome
+    # declaring ``parent_scope = workspace_definitions_base``, so every
+    # definition surface (list_agents / compose_prompt / get_* / query) inherits
+    # the host's curated base scope from the first request: the overlay thesis
+    # ("declare only the difference") finally has a REST to inherit. ``None``
+    # (the OSS / self-host default) writes nothing — behavior unchanged.
+    workspace_definitions_base: str | None = None
 
     def default_scope(self, workspace: str | None = None) -> str:
         """The scope a request DEFAULTS to when it names none — workspace-aware.

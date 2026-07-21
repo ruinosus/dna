@@ -109,12 +109,20 @@ async def boot_live(scope: str | None = None, base_dir: str | None = None) -> Li
     workspace_scope_prefix = (
         os.environ.get("DNA_WORKSPACE_SCOPE_PREFIX") or "tenant-"
     )
+    # i-058 — the definitions base a NEW workspace's scope declares as its
+    # Genome ``parent_scope`` (and an existing one adopts on sign-in), so the
+    # per-workspace overlay has a curated base to inherit. Unset (OSS /
+    # self-host): nothing is written, behavior unchanged.
+    workspace_definitions_base = (
+        os.environ.get("DNA_WORKSPACE_DEFINITIONS_BASE") or ""
+    ).strip() or None
     return LiveDna(
         base_scope=holder.scope,
         kernel=holder.kernel,
         provider=provider,
         vendor_workspace=vendor_workspace,
         workspace_scope_prefix=workspace_scope_prefix,
+        workspace_definitions_base=workspace_definitions_base,
     )
 
 

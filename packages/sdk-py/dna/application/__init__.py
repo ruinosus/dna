@@ -60,6 +60,7 @@ from dna.application.runtime import (
     list_tools_impl,
     create_project_impl,
     create_workspace_impl,
+    ensure_workspace_scope_genome,
     provision_tenant_owner_impl,
     provision_workspace_owner_impl,
     recall_impl,
@@ -119,6 +120,7 @@ __all__ = [
     "accept_invites_impl",
     # workspace + project CREATION (decision D5 / A1 — the write path)
     "create_workspace_impl",
+    "ensure_workspace_scope_genome",
     "list_workspaces_impl",
     "create_project_impl",
     # workspace owner bootstrap + revoke (Model B, f-ws-owner-provision)

@@ -17,10 +17,14 @@ never a re-implementation.
 """
 from __future__ import annotations
 
+import logging
+
 from datetime import datetime, timezone
 from typing import Any
 
 from dna.application.live import LiveDna
+
+logger = logging.getLogger(__name__)
 
 
 # ── definitions (compose / list agents / tools) ────────────────────────────
@@ -1748,6 +1752,27 @@ async def provision_workspace_owner_impl(
             role = m.role
             break
 
+    # i-058 ADOPTION: a workspace born BEFORE the definitions base existed
+    # declares its scope's ``parent_scope`` on the next sign-in — the idempotent
+    # path that retrofits inheritance onto existing workspaces with zero
+    # operational steps (deploy with DNA_WORKSPACE_DEFINITIONS_BASE set; the
+    # next dashboard load adopts). Intent-preserving: an operator-authored
+    # parent_scope is never overwritten, the vendor's base scope is never
+    # touched (see ensure_workspace_scope_genome). Fail-soft — a hiccup here
+    # must not fail a sign-in — but LOUD, because a silently missing Genome is
+    # the bootstrap hole coming back.
+    if live.workspace_definitions_base:
+        try:
+            await ensure_workspace_scope_genome(live, workspace_id)
+        except Exception as e:  # noqa: BLE001
+            logger.warning(
+                "provision-owner: definitions-base adoption failed for "
+                "workspace %r (scope %r, base %r) — the workspace scope still "
+                "has no declared parent: %s",
+                workspace_id, live.default_scope(workspace_id),
+                live.workspace_definitions_base, e,
+            )
+
     # Repair, never create: an OWNER whose Workspace identity doc is missing gets
     # it written. Gated on the owner grant, so this can never mint a workspace for
     # a caller who does not already own one.
@@ -1868,6 +1893,70 @@ async def _unique_workspace_slug(live: LiveDna, wanted: str) -> str:
     return f"{wanted}-{n}"
 
 
+#: The core DNA apiVersion — the Genome a workspace scope is born with.
+_DNA_API = "github.com/ruinosus/dna/v1"
+
+
+async def ensure_workspace_scope_genome(
+    live: LiveDna, workspace_id: str,
+) -> dict[str, Any]:
+    """Declare the workspace scope's ``parent_scope`` = the configured
+    definitions base — **the birth certificate of the overlay thesis** (i-058).
+
+    A Model-B workspace routes to the scope ``tenant-<id>``, which is born
+    EMPTY and unreachable by any boot seed (workspaces are born after boot).
+    With no parent declared, every definition surface over it (list_agents /
+    compose_prompt / get_* / query) had "no rest to inherit". This writes the
+    scope's Genome declaring ``parent_scope = live.workspace_definitions_base``
+    so the EXISTING resolution chain (``compute_resolution_chain`` — the one
+    mechanism behind query, resolve_document, get_document and the eager MI)
+    delivers the host's curated definitions from the first request.
+
+    Idempotent + intent-preserving, so it is safe on every create AND on every
+    sign-in (the adoption path for workspaces born before the base existed):
+
+    * no base configured (OSS / self-host) → NO-OP;
+    * the workspace resolves to the VENDOR's base scope (multi-workspace off,
+      or the vendor workspace itself) → NO-OP — never write a Genome into the
+      host's own scope, and never declare a scope its own parent;
+    * the scope's Genome already declares ANY ``parent_scope`` → NO-OP — an
+      operator-authored parent wins over configuration;
+    * Genome present without a parent → merged write (spec preserved);
+    * Genome absent → a minimal Genome is written.
+
+    Returns ``{"scope", "parent_scope", "written"}`` — ``written`` is True only
+    when a doc was actually persisted this call.
+    """
+    base = (live.workspace_definitions_base or "").strip()
+    scope = live.default_scope(workspace_id)
+    if not base or scope == live.base_scope or scope == base:
+        return {"scope": scope, "parent_scope": None, "written": False}
+
+    try:
+        existing = await live.kernel.get_document(scope, "Genome", scope)
+    except (FileNotFoundError, ValueError):
+        existing = None
+    spec = dict((existing or {}).get("spec") or {})
+    declared = spec.get("parent_scope")
+    if existing is not None and isinstance(declared, str) and declared:
+        return {"scope": scope, "parent_scope": declared, "written": False}
+
+    spec["parent_scope"] = base
+    meta = dict((existing or {}).get("metadata") or {})
+    meta["name"] = scope
+    await live.kernel.write_document(
+        scope, "Genome", scope,
+        {
+            "apiVersion": (existing or {}).get("apiVersion") or _DNA_API,
+            "kind": "Genome",
+            "metadata": meta,
+            "spec": spec,
+        },
+        invalidate_mode="doc",
+    )
+    return {"scope": scope, "parent_scope": base, "written": True}
+
+
 async def create_workspace_impl(
     live: LiveDna,
     name: str,
@@ -1891,8 +1980,13 @@ async def create_workspace_impl(
     transaction, so this is NOT atomic; it is *ordered + compensated*:
 
     1. the ``Workspace`` doc is written first;
-    2. then the owner ``WorkspaceMembership``;
-    3. if (2) fails, (1) is best-effort DELETED and the error re-raised.
+    2. then (when ``live.workspace_definitions_base`` is set) the workspace
+       SCOPE's Genome declaring its ``parent_scope`` — the definitions-
+       inheritance birth certificate (:func:`ensure_workspace_scope_genome`,
+       i-058); if it fails, (1) is best-effort deleted and the error re-raised;
+    3. then the owner ``WorkspaceMembership``;
+    4. if (3) fails, (2) and (1) are best-effort DELETED and the error
+       re-raised.
 
     The ordering is chosen so the surviving failure state is the harmless one. A
     Workspace with no owner grant is INERT: no identity resolves to it, it never
@@ -1945,6 +2039,24 @@ async def create_workspace_impl(
         _WORKSPACE_SCOPE, "Workspace", workspace_id, ws_raw, invalidate_mode="doc"
     )
 
+    # i-058 — the scope is born declaring its parent (the definitions base),
+    # so the first list_agents/compose over this workspace already inherits
+    # the host's curated definitions. NO-OP when no base is configured.
+    definitions: dict[str, Any] = {"scope": None, "parent_scope": None, "written": False}
+    try:
+        definitions = await ensure_workspace_scope_genome(live, workspace_id)
+    except Exception:
+        # Compensate: without its birth Genome the workspace would silently
+        # re-open the bootstrap hole this feature closes — fail the creation
+        # (the client retries and gets a fresh id), removing the litter.
+        try:
+            await live.kernel.delete_document(
+                _WORKSPACE_SCOPE, "Workspace", workspace_id
+            )
+        except Exception:  # noqa: BLE001
+            pass
+        raise
+
     grant_name = workspace_membership_name(workspace_id, email)
     spec = {
         "workspace_id": workspace_id,
@@ -1973,6 +2085,13 @@ async def create_workspace_impl(
     except Exception:
         # Compensate: an ownerless Workspace is inert, but leaving it is still
         # litter. Best-effort — a failed rollback must not mask the real error.
+        if definitions.get("written"):
+            try:
+                await live.kernel.delete_document(
+                    definitions["scope"], "Genome", definitions["scope"]
+                )
+            except Exception:  # noqa: BLE001
+                pass
         try:
             await live.kernel.delete_document(
                 _WORKSPACE_SCOPE, "Workspace", workspace_id
