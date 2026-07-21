@@ -1,0 +1,28 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-054-sdlc-cede-autoria-de-processo
+spec:
+  description: "Consequencia da analise spec-kit + superpowers (2026-07-21): o dna\
+    \ sdlc deve ENCOLHER para ser so o registro tipado, cedendo a AUTORIA de processo\
+    \ as ferramentas de mercado. Fica (nenhuma das duas faz): CRUD tipado de story/feature/epic/issue,\
+    \ timeline/journey como dado, test-gate no done, git-trailers, digest/brief, multi-tenant,\
+    \ write-path MCP. Encolhe: --auto-stub de Plan (writing-plans e /speckit.plan\
+    \ fazem melhor \u2014 o stub vira anti-pattern); autoria rica de corpo em spec\
+    \ create/plan create (degradar para recipientes puros: --body-file/--plan-file/import\
+    \ como unicas portas ricas); a parte de demand/journey-discover que SIMULA discovery\
+    \ (brainstorming do superpowers cobre). Atritos a resolver por convencao, nao\
+    \ codigo: brainstorm ANTES (explora) e speckit.specify DEPOIS (formaliza); um\
+    \ flow por feature para nao gerar plano duplo. O split i-052 e o veiculo natural.\
+    \ Superpowers local esta 4 minors atras (5.0.2 vs 6.1.1, ~2x mais rapido) \u2014\
+    \ atualizar via /plugin install superpowers@claude-plugins-official e conferir\
+    \ .gitignore para .worktrees/."
+  type: task
+  severity: medium
+  status: open
+  timeline:
+  - at: '2026-07-21T15:02:32+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

@@ -1,0 +1,32 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-053-speckit-bridge-drift-and-native-extension
+spec:
+  description: "A critica do fundador (2026-07-21: 'existe o spec-kit e eu gostaria\
+    \ de UTILIZA-LO, nao reinventar nada') foi investigada e o fato surpreende: o\
+    \ DNA JA adotou \u2014 ADR-spec-kit-adoption Aceito em 2026-07-15, ratificado\
+    \ pelo proprio Barna ('Quero utilizar ele oficialmente no DNA'), ponte bidirecional\
+    \ shipped na 0.15.0 (dna specify import/export/wire, PRs #116-#124), com a regra\
+    \ explicita 'DNA does not bundle, vendor, or reimplement Spec Kit'. O que NUNCA\
+    \ aconteceu foi USAR de verdade fora do worked example. E o bridge ja driftou\
+    \ do upstream (que lanca a cada 1-2 dias; hoje v0.13.1): (a) o toolkit scanner\
+    \ assume templates/commands/*.md e o upstream migrou para SKILLS MODE; (b) .specify/feature.json\
+    \ (tracking de feature ativa, novo) nao e conhecido pelo bridge; (c) o gatilho\
+    \ manual do ADR previa 'watcher = fast-follow', mas o mecanismo certo HOJE e uma\
+    \ EXTENSION nativa do spec-kit com hook after_tasks/after_implement chamando dna\
+    \ specify import \u2014 mecanismo que nao existia quando o ADR foi escrito e hoje\
+    \ e o padrao das integracoes Jira/Linear do catalogo comunitario (300+ extensions;\
+    \ publicar a extension 'dna' la e distribuicao gratis). Pronto quando: bridge\
+    \ atualizado para skills mode + feature.json, versao do spec-kit pinada no teste\
+    \ de round-trip, e a extension 'dna' criada com os hooks. Tambem conferir: f-spec-kit-adoption\
+    \ citada nos commits nao esta no FS board \u2014 provavelmente no source Postgres."
+  type: task
+  severity: high
+  status: open
+  timeline:
+  - at: '2026-07-21T15:02:25+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
