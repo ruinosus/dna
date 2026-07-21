@@ -1,0 +1,145 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Spec
+metadata:
+  name: speckit-mcp-apps-memory-card
+spec:
+  title: "Feature Specification: MCP Apps \u2014 card de mem\xF3ria (s\xF3 leitura,\
+    \ dois hosts)"
+  date: '2026-07-21'
+  status: draft
+  pattern: spec-kit
+  body: "# Feature Specification: MCP Apps \u2014 card de mem\xF3ria (s\xF3 leitura,\
+    \ dois hosts)\n\n**Feature Branch**: `001-mcp-apps-memory-card`\n\n**Created**:\
+    \ 2026-07-21\n\n**Status**: Draft\n\n**Input**: User description: \"MCP Apps memory\
+    \ card: the memory card renders in both hosts (Claude.ai custom connector + portal\
+    \ console), read-only, per the approved design doc docs/superpowers/specs/2026-07-21-mcp-apps-memory-card-design.md\"\
+    \n\n> Fonte de verdade: o design aprovado pelo fundador em\n> `docs/superpowers/specs/2026-07-21-mcp-apps-memory-card-design.md`\n\
+    > (brainstorming de 2026-07-21). Esta spec formaliza aquele design; n\xE3o o\n\
+    > re-decide. Feature no board: `f-copilot-mcp-apps` (scope `dna-development`).\n\
+    \n## User Scenarios & Testing *(mandatory)*\n\n### User Story 1 - Card de mem\xF3\
+    ria renderiza no Claude.ai (Priority: P1)\n\nUm usu\xE1rio do DNA Cloud conecta\
+    \ o MCP do DNA como custom connector no\nClaude.ai (plano pago). Quando uma conversa\
+    \ aciona `list_memories` ou\n`recall`, o host renderiza o card de mem\xF3ria interativo\
+    \ (MCP Apps /\nSEP-1865) com as mem\xF3rias da sess\xE3o autenticada do usu\xE1\
+    rio \u2014 em vez de s\xF3 o\ntexto. O card \xE9 **somente leitura**: nenhuma\
+    \ a\xE7\xE3o dispon\xEDvel.\n\n**Why this priority**: \xE9 o canal onde o MCP\
+    \ do DNA Cloud \xE9 consumido hoje e o\ncrit\xE9rio de aceita\xE7\xE3o do fundador.\
+    \ O lado SDK \xE9 completo em si \u2014 o Claude.ai\nrenderiza sem nada do dna-cloud.\n\
+    \n**Independent Test**: conectar o servidor MCP como custom connector no\nClaude.ai\
+    \ e invocar `list_memories`/`recall`; o card renderiza com dados\nreais. Valida\xE7\
+    \xE3o final de aceita\xE7\xE3o feita pelo fundador (gate de `story done`\ndo lado\
+    \ SDK, junto do test-gate).\n\n**Acceptance Scenarios**:\n\n1. **Given** um host\
+    \ com suporte a MCP Apps e sess\xE3o autenticada, **When**\n   `list_memories`\
+    \ ou `recall` executa, **Then** o card renderiza os dados do\n   `structured_content`\
+    \ daquela resposta, empurrados via push\n   (`ontoolresult`) \u2014 nunca assados\
+    \ no HTML do template.\n2. **Given** o mesmo host, **When** o host l\xEA o recurso\
+    \ `ui://dna/memory-list`\n   (`resources/read`), **Then** recebe o template est\xE1\
+    tico com o mimeType da\n   spec (`text/html;profile=mcp-app`), sem nenhum dado\
+    \ de tenant, segredo ou\n   token, e sem nenhuma URL externa (autocontido; CSP\
+    \ deny-by-default).\n3. **Given** a declara\xE7\xE3o das tools `list_memories`\
+    \ e `recall`, **When** um\n   host lista as tools, **Then** ambas apontam o template\
+    \ de UI na pr\xF3pria\n   declara\xE7\xE3o da tool.\n4. **Given** o card renderizado,\
+    \ **When** o usu\xE1rio interage, **Then** n\xE3o h\xE1\n   nenhuma a\xE7\xE3\
+    o dispon\xEDvel (s\xF3 leitura nesta entrega).\n\n---\n\n### User Story 2 - O\
+    \ mesmo card no console do portal (Priority: P2)\n\nUm usu\xE1rio do portal DNA\
+    \ Cloud conversa com o copiloto no `/console`. Quando\nas tools de mem\xF3ria\
+    \ rodam, o MESMO card `ui://` renderiza no fluxo do chat.\nO painel lateral \"\
+    Mem\xF3ria\" (React nativo) n\xE3o muda \u2014 segue sendo a vis\xE3o de\ngest\xE3\
+    o.\n\n**Why this priority**: \xE9 a segunda metade da regra \"o que entra, entra\n\
+    inteiro nos dois hosts\". Sequenciada ap\xF3s o lado SDK porque s\xF3 mergeia\
+    \ com o\npin do SDK novo j\xE1 publicado (release \u2192 pin \u2192 uma entrega\
+    \ no dna-cloud);\nnenhum dos dois lados mergeia \"esperando\" o outro.\n\n**Independent\
+    \ Test**: teste de que o middleware de MCP Apps est\xE1 no pipeline\ndo runtime\
+    \ do copiloto e o card do fixture renderiza (na medida do test\xE1vel\nem node);\
+    \ valida\xE7\xE3o visual declarada como gate de deploy.\n\n**Acceptance Scenarios**:\n\
+    \n1. **Given** o console do portal com o pin do SDK novo publicado, **When**\n\
+    \   uma tool de mem\xF3ria roda no chat, **Then** o mesmo card `ui://` renderiza\n\
+    \   no fluxo do chat.\n2. **Given** a entrega do lado console, **When** ela \xE9\
+    \ avaliada para merge,\n   **Then** s\xF3 mergeia com o pin do SDK novo j\xE1\
+    \ publicado; se exigir bump de\n   framework que n\xE3o caiba, a feature fica\
+    \ `in-progress` \u2014 n\xE3o mergeia metade.\n3. **Given** o painel lateral \"\
+    Mem\xF3ria\", **When** esta feature entra,\n   **Then** o painel permanece inalterado.\n\
+    \n---\n\n### User Story 3 - Degrada\xE7\xE3o limpa em hosts sem MCP Apps (Priority:\
+    \ P3)\n\nUm cliente MCP sem suporte \xE0 extens\xE3o (LangGraph/copilot atuais\
+    \ inclu\xEDdos)\ninvoca as tools de mem\xF3ria e continua recebendo exatamente\
+    \ o `content`\ntextual de hoje \u2014 byte-id\xEAntico. Zero regress\xE3o para\
+    \ clientes existentes\n(a li\xE7\xE3o do M0: dados sempre no `content` prim\xE1\
+    rio).\n\n**Why this priority**: \xE9 rede de seguran\xE7a, n\xE3o valor novo \u2014\
+    \ mas \xE9 requisito\ninegoci\xE1vel do design (zero regress\xE3o).\n\n**Independent\
+    \ Test**: compara\xE7\xE3o byte a byte do `content` textual das\nrespostas de\
+    \ `list_memories`/`recall` antes/depois da entrega, num cliente\nsem a extens\xE3\
+    o.\n\n**Acceptance Scenarios**:\n\n1. **Given** um host sem MCP Apps, **When**\
+    \ as tools de mem\xF3ria executam,\n   **Then** a resposta textual (`content`)\
+    \ \xE9 byte-id\xEAntica \xE0 atual.\n2. **Given** um host onde o template \xE9\
+    \ ileg\xEDvel, **When** a tool executa,\n   **Then** o host ignora a UI e o `content`\
+    \ segue valendo.\n\n---\n\n### Edge Cases\n\n- `structured_content` vazio \u2192\
+    \ empty state do card (\"nenhuma mem\xF3ria\") \u2014 o\n  mesmo honesto de hoje;\
+    \ nada inventado.\n- Campo ausente no `structured_content` \u2192 renderiza vazio-honesto,\
+    \ nunca\n  inventado (o template define o contrato de renderiza\xE7\xE3o).\n-\
+    \ ChatGPT (sem tool-calling da UI) \u2192 irrelevante nesta entrega \u2014 o card\
+    \ \xE9 s\xF3\n  leitura.\n- Template ileg\xEDvel no host \u2192 o host ignora\
+    \ a UI; `content` segue valendo.\n\n## Requirements *(mandatory)*\n\n### Functional\
+    \ Requirements\n\n- **FR-001**: O template do card de mem\xF3ria DEVE ser est\xE1\
+    tico e autocontido:\n  HTML + JS inline com a lib de MCP Apps bundlada no HTML;\
+    \ nenhum CDN /\n  nenhuma URL externa (CSP da spec \xE9 deny-by-default). P\xFA\
+    blico e cache\xE1vel\n  por URI: zero dado de tenant, zero segredo/token no HTML\
+    \ \u2014 nunca.\n- **FR-002**: O servidor DEVE registrar o recurso `ui://dna/memory-list`\
+    \ e\n  respond\xEA-lo via `resources/read` com mimeType `text/html;profile=mcp-app`.\n\
+    - **FR-003**: As tools `list_memories` e `recall` DEVEM apontar o template na\n\
+    \  pr\xF3pria declara\xE7\xE3o da tool.\n- **FR-004**: O card DEVE renderizar\
+    \ o `structured_content` existente das\n  tools de mem\xF3ria (sem mudan\xE7a\
+    \ de shape), recebido via push da sess\xE3o\n  autenticada (`ontoolresult`); campo\
+    \ ausente renderiza vazio-honesto, nunca\n  inventado; `structured_content` vazio\
+    \ renderiza o empty state honesto\n  (\"nenhuma mem\xF3ria\").\n- **FR-005**:\
+    \ O card DEVE ser somente leitura nesta entrega \u2014 nenhuma a\xE7\xE3o.\n-\
+    \ **FR-006**: Hosts sem a extens\xE3o DEVEM continuar recebendo o `content`\n\
+    \  textual atual, byte-id\xEAntico. Zero regress\xE3o para clientes existentes.\n\
+    - **FR-007**: O MESMO card `ui://` DEVE renderizar no chat do `/console` do\n\
+    \  portal quando as tools de mem\xF3ria rodam; o painel lateral \"Mem\xF3ria\"\
+    \ n\xE3o\n  muda.\n- **FR-008**: Sequenciamento entre repos: o lado console s\xF3\
+    \ mergeia com o pin\n  do SDK novo j\xE1 publicado; nenhum lado mergeia \"esperando\"\
+    \ o outro \u2014 o lado\n  SDK \xE9 completo em si.\n\n### Non-Functional Requirements\n\
+    \n- **NFR-001 \u2014 A regra \"nada shippa meio-referenciado\"** (\xA73 do design,\n\
+    \  requisito literal):\n  - O que entra, entra **inteiro nos dois hosts**. Se\
+    \ o lado console exigir\n    bump de framework que n\xE3o caiba, a feature fica\
+    \ `in-progress` \u2014 n\xE3o\n    mergeia metade.\n  - O que n\xE3o entra **n\xE3\
+    o deixa rastro**: zero men\xE7\xE3o a \"esquecer\", A2UI,\n    `externalIframes`,\
+    \ \"follow-up\" em c\xF3digo, docstring ou doc \u2014 inclusive\n    **limpando\
+    \ as men\xE7\xF5es que j\xE1 existem** em `mcp_ui.py`. `mcp-ui-server`\n    sai\
+    \ das depend\xEAncias.\n  - Ideia futura vive num \xFAnico lugar: **item de board\
+    \ com dono**, filado\n    junto deste spec.\n  - **Guard verific\xE1vel no DoD**:\
+    \ grep na superf\xEDcie entregue \u2014 `TODO`,\n    `deferred`, `follow-up`,\
+    \ `coming soon` em `mcp_ui.py`, no template e no\n    c\xF3digo do middleware\
+    \ **quebra o teste** (mesmo esp\xEDrito do\n    `guard:no-mock` do dna-cloud).\n\
+    \n### Key Entities\n\n- **Template do card de mem\xF3ria**: recurso `ui://dna/memory-list`\
+    \ \u2014 HTML\n  est\xE1tico, p\xFAblico, autocontido; define o contrato de renderiza\xE7\
+    \xE3o (os\n  campos que exibe).\n- **`structured_content` das tools de mem\xF3\
+    ria**: os dados reais, por sess\xE3o\n  autenticada, no shape existente (sem mudan\xE7\
+    a); espelhados no resultado da\n  tool e empurrados ao card via push.\n- **Declara\xE7\
+    \xE3o das tools `list_memories` / `recall`**: carrega o ponteiro\n  para o template\
+    \ de UI.\n\n## Success Criteria *(mandatory)*\n\n### Measurable Outcomes\n\n-\
+    \ **SC-001**: O card renderiza com dados reais num custom connector do\n  Claude.ai\
+    \ \u2014 validado pelo fundador (crit\xE9rio de `story done` do lado SDK,\n  junto\
+    \ do test-gate).\n- **SC-002**: O mesmo card renderiza no chat do `/console` do\
+    \ portal\n  (valida\xE7\xE3o visual como gate de deploy).\n- **SC-003**: Clientes\
+    \ sem a extens\xE3o recebem `content` textual byte-id\xEAntico\n  ao atual \u2014\
+    \ zero regress\xE3o (LangGraph/copilot inclu\xEDdos).\n- **SC-004**: O grep-guard\
+    \ da regra \xA73 passa com zero ocorr\xEAncias na\n  superf\xEDcie entregue; um\
+    \ TODO plantado quebra o teste (muta\xE7\xE3o \u2192 morre).\n- **SC-005**: O\
+    \ card renderiza de verdade no `basic-host` do `ext-apps`\n  (smoke, sem host\
+    \ comercial).\n\n## Assumptions\n\n- MCP Apps (SEP-1865) tem status Final e entra\
+    \ na spec de 2026-07-28 (RC\n  travada desde maio); hosts que renderizam hoje:\
+    \ Claude.ai web/desktop\n  (inclusive custom connectors em planos pagos), ChatGPT,\
+    \ VS Code Insiders,\n  Goose.\n- O groundwork do DNA 0.22.1 (`dna/emit/mcp_ui.py`:\
+    \ card byte-golden;\n  `_with_memory_card` no servidor) existe mas segue o modelo\
+    \ pr\xE9-spec e n\xE3o\n  renderiza em host nenhum; esta entrega o completa e\
+    \ apaga o padr\xE3o\n  \"deixamos para depois\" que o gerou.\n- Floor de depend\xEA\
+    ncia do lado SDK: `fastmcp>=3.2` (o ambiente j\xE1 resolve\n  3.4.4).\n- Lado\
+    \ console: `@ag-ui/mcp-apps-middleware`, com CopilotKit ^1.63 j\xE1\n  compat\xED\
+    vel.\n- Proveni\xEAncia e board ficam para features pr\xF3prias, filadas no board\
+    \ no ato\n  deste spec (itens j\xE1 registrados no design: card interativo \"\
+    esquecer\" com\n  desenho de consentimento; painel de proveni\xEAncia como MCP\
+    \ App; watch de\n  `externalIframes` / tool-calling da UI no ChatGPT).\n- Fora\
+    \ deste documento: nada. O que n\xE3o est\xE1 aqui n\xE3o existe nesta entrega\
+    \ \u2014\n  e n\xE3o est\xE1 mencionado em lugar nenhum do c\xF3digo entregue.\n"
+  origin: specs/001-mcp-apps-memory-card/spec.md

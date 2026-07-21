@@ -1,0 +1,16 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-speckit-mcp-apps-memory-card-t020
+spec:
+  description: "[US3] Teste: `content` textual de `list_memories`/`recall` byte-id\xEA\
+    ntico \xE0 baseline de T005 num cliente sem a extens\xE3o, em `packages/cli/tests/test_mcp_apps.py`"
+  title: "[US3] Teste: `content` textual de `list_memories`/`recall` byte-id\xEAntico\
+    \ \xE0 basel"
+  status: todo
+  feature: f-copilot-mcp-apps
+  labels:
+  - spec-kit
+  reporter: claude-code
+  spec_refs:
+  - speckit-mcp-apps-memory-card

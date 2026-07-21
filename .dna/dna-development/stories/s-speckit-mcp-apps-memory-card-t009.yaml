@@ -1,0 +1,17 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-speckit-mcp-apps-memory-card-t009
+spec:
+  description: "[US1] Grep-guard \xA73: `TODO`/`deferred`/`follow-up`/`coming soon`\
+    \ em `mcp_ui.py` e no template quebra o teste (muta\xE7\xE3o: TODO plantado \u2192\
+    \ morre) em `packages/sdk-py/tests/test_emit_mcp_ui.py`"
+  title: "[US1] Grep-guard \xA73: `TODO`/`deferred`/`follow-up`/`coming soon` em `mcp_ui.py` "
+  status: todo
+  feature: f-copilot-mcp-apps
+  labels:
+  - spec-kit
+  - parallel
+  reporter: claude-code
+  spec_refs:
+  - speckit-mcp-apps-memory-card

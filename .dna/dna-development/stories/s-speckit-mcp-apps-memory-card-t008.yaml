@@ -1,0 +1,18 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-speckit-mcp-apps-memory-card-t008
+spec:
+  description: "[US1] Teste: o HTML do template n\xE3o cont\xE9m dados de mem\xF3\
+    ria (muta\xE7\xE3o: dados assados de volta \u2192 morre) nem URL externa (muta\xE7\
+    \xE3o: CDN de volta \u2192 morre) em `packages/sdk-py/tests/test_emit_mcp_ui.py`"
+  title: "[US1] Teste: o HTML do template n\xE3o cont\xE9m dados de mem\xF3ria (muta\xE7\
+    \xE3o: dados assa"
+  status: todo
+  feature: f-copilot-mcp-apps
+  labels:
+  - spec-kit
+  - parallel
+  reporter: claude-code
+  spec_refs:
+  - speckit-mcp-apps-memory-card

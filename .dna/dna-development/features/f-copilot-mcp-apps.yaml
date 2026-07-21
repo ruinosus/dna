@@ -31,3 +31,62 @@ spec:
     type: status_change
     source: cli
     to: discovery
+  stories:
+  - s-speckit-mcp-apps-memory-card-t001
+  - s-speckit-mcp-apps-memory-card-t002
+  - s-speckit-mcp-apps-memory-card-t003
+  - s-speckit-mcp-apps-memory-card-t004
+  - s-speckit-mcp-apps-memory-card-t005
+  - s-speckit-mcp-apps-memory-card-t006
+  - s-speckit-mcp-apps-memory-card-t007
+  - s-speckit-mcp-apps-memory-card-t008
+  - s-speckit-mcp-apps-memory-card-t009
+  - s-speckit-mcp-apps-memory-card-t010
+  - s-speckit-mcp-apps-memory-card-t011
+  - s-speckit-mcp-apps-memory-card-t012
+  - s-speckit-mcp-apps-memory-card-t013
+  - s-speckit-mcp-apps-memory-card-t014
+  - s-speckit-mcp-apps-memory-card-t015
+  - s-speckit-mcp-apps-memory-card-t016
+  - s-speckit-mcp-apps-memory-card-t017
+  - s-speckit-mcp-apps-memory-card-t018
+  - s-speckit-mcp-apps-memory-card-t019
+  - s-speckit-mcp-apps-memory-card-t020
+  - s-speckit-mcp-apps-memory-card-t021
+  - s-speckit-mcp-apps-memory-card-t022
+  produces:
+  - kind: Reference
+    name: speckit-mcp-apps-memory-card-tasks
+    role: tasks
+  specify_run:
+    feature_dir: specs/001-mcp-apps-memory-card
+    slug: mcp-apps-memory-card
+    files:
+    - path: specs/001-mcp-apps-memory-card/spec.md
+      kind: Spec
+      name: speckit-mcp-apps-memory-card
+      body_field: body
+    - path: specs/001-mcp-apps-memory-card/research.md
+      kind: Reference
+      name: speckit-mcp-apps-memory-card-research
+      body_field: body
+    - path: specs/001-mcp-apps-memory-card/data-model.md
+      kind: Reference
+      name: speckit-mcp-apps-memory-card-data-model
+      body_field: body
+    - path: specs/001-mcp-apps-memory-card/quickstart.md
+      kind: Reference
+      name: speckit-mcp-apps-memory-card-quickstart
+      body_field: body
+    - path: specs/001-mcp-apps-memory-card/contracts/mcp-surface.md
+      kind: Reference
+      name: speckit-mcp-apps-memory-card-contract-mcp-surface
+      body_field: body
+    - path: specs/001-mcp-apps-memory-card/plan.md
+      kind: Plan
+      name: speckit-mcp-apps-memory-card
+      body_field: body
+    - path: specs/001-mcp-apps-memory-card/tasks.md
+      kind: Reference
+      name: speckit-mcp-apps-memory-card-tasks
+      body_field: body

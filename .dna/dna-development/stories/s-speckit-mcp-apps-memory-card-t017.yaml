@@ -1,0 +1,16 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-speckit-mcp-apps-memory-card-t017
+spec:
+  description: "[US2] dna-cloud: adicionar `@ag-ui/mcp-apps-middleware` ao runtime\
+    \ do copiloto (CopilotKit ^1.63 j\xE1 compat\xEDvel) \u2014 repo `ruinosus/dna-cloud`"
+  title: '[US2] dna-cloud: adicionar `@ag-ui/mcp-apps-middleware` ao runtime do copiloto
+    ('
+  status: todo
+  feature: f-copilot-mcp-apps
+  labels:
+  - spec-kit
+  reporter: claude-code
+  spec_refs:
+  - speckit-mcp-apps-memory-card

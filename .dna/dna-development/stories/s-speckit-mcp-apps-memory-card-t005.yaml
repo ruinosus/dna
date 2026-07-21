@@ -1,0 +1,16 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-speckit-mcp-apps-memory-card-t005
+spec:
+  description: "Capturar a baseline byte a byte do `content` textual de `list_memories`/`recall`\
+    \ como fixture em `packages/cli/tests/test_mcp_apps.py` (pr\xE9-requisito do gate\
+    \ de zero regress\xE3o)"
+  title: Capturar a baseline byte a byte do `content` textual de `list_memories`/`recall`
+  status: todo
+  feature: f-copilot-mcp-apps
+  labels:
+  - spec-kit
+  reporter: claude-code
+  spec_refs:
+  - speckit-mcp-apps-memory-card

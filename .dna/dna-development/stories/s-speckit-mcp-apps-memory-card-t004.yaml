@@ -1,0 +1,16 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-speckit-mcp-apps-memory-card-t004
+spec:
+  description: "Remover o wiring pr\xE9-spec (`_meta` de UI) de `_with_memory_card`\
+    \ em `packages/cli/dna_cli/_mcp_server.py`, preservando `content` textual e `structured_content`\
+    \ intactos"
+  title: "Remover o wiring pr\xE9-spec (`_meta` de UI) de `_with_memory_card` em `packages/cl"
+  status: todo
+  feature: f-copilot-mcp-apps
+  labels:
+  - spec-kit
+  reporter: claude-code
+  spec_refs:
+  - speckit-mcp-apps-memory-card

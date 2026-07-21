@@ -1,0 +1,77 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Reference
+metadata:
+  name: speckit-mcp-apps-memory-card-research
+spec:
+  title: "Research \u2014 MCP Apps: card de mem\xF3ria"
+  kind_of: internal-doc
+  summary: Spec Kit research artifact for mcp-apps-memory-card (research.md).
+  body: "# Research \u2014 MCP Apps: card de mem\xF3ria\n\n**Phase 0 do `/speckit-plan`**\
+    \ \u2014 2026-07-21.\n\nNenhum `NEEDS CLARIFICATION` restou na Technical Context:\
+    \ o design aprovado\npelo fundador (`docs/superpowers/specs/2026-07-21-mcp-apps-memory-card-design.md`,\n\
+    brainstorming de 2026-07-21) j\xE1 resolveu as inc\xF3gnitas. Este arquivo\nconsolida\
+    \ as decis\xF5es no formato do spec-kit; a autoridade \xE9 o design doc.\n\n##\
+    \ D1 \u2014 Modelo de entrega da UI: MCP Apps (SEP-1865), template pr\xE9-declarado\n\
+    \n- **Decision**: recurso `ui://dna/memory-list` registrado no servidor,\n  mimeType\
+    \ `text/html;profile=mcp-app`, apontado na **declara\xE7\xE3o** das tools;\n \
+    \ dados via push (`ontoolresult`).\n- **Rationale**: \xE9 a primeira extens\xE3\
+    o oficial do MCP, status **Final**,\n  entra na spec de 2026-07-28 (RC travada\
+    \ desde maio). Hosts que renderizam\n  hoje: Claude.ai web/desktop (inclusive\
+    \ custom connectors em planos pagos \u2014\n  o canal do DNA Cloud), ChatGPT,\
+    \ VS Code Insiders, Goose.\n- **Alternatives considered**: o modelo pr\xE9-spec\
+    \ j\xE1 shippado no 0.22.1\n  (`_meta` no resultado, recurso n\xE3o registrado,\
+    \ dados assados no HTML) \u2014\n  rejeitado: n\xE3o renderiza em host nenhum;\
+    \ esta entrega o apaga. A2UI /\n  `externalIframes`: fora \u2014 viram itens de\
+    \ board com dono (regra \xA73).\n\n## D2 \u2014 Escopo: dois hosts, s\xF3 leitura\n\
+    \n- **Decision**: card renderiza no Claude.ai (custom connector) e no console\n\
+    \  do portal (`@ag-ui/mcp-apps-middleware`); nenhuma a\xE7\xE3o no card.\n- **Rationale**:\
+    \ decis\xF5es 1 e 2 do fundador no brainstorming. Proveni\xEAncia e\n  board ficam\
+    \ para features pr\xF3prias filadas no ato; interatividade\n  (\"esquecer\") exige\
+    \ desenho de consentimento \u2014 item de board pr\xF3prio.\n- **Alternatives\
+    \ considered**: um host s\xF3 (viola \"entra inteiro nos dois\n  hosts\"); card\
+    \ interativo j\xE1 nesta entrega (rejeitado \u2014 consentimento/HITL\n  n\xE3\
+    o desenhado).\n\n## D3 \u2014 Template est\xE1tico autocontido\n\n- **Decision**:\
+    \ `memory_list_card_html()` vira template est\xE1tico \u2014 HTML + JS\n  inline\
+    \ com `@modelcontextprotocol/ext-apps` **bundlada no HTML**; nenhum\n  CDN. JS\
+    \ consome `app.ontoolresult` \u2192 renderiza o `structured_content` que\n  `_with_memory_card`\
+    \ j\xE1 espelha. Empty state honesto preservado.\n- **Rationale**: a CSP da spec\
+    \ \xE9 deny-by-default \u2014 o card precisa ser\n  autocontido. Template est\xE1\
+    tico e p\xFAblico = multi-tenant seguro por\n  constru\xE7\xE3o (cache\xE1vel\
+    \ por URI, zero dado de tenant; dados s\xF3 via push da\n  sess\xE3o autenticada;\
+    \ tudo escapado; nenhum segredo/token no HTML \u2014 nunca).\n- **Alternatives\
+    \ considered**: dados assados no HTML (modelo pr\xE9-spec \u2014\n  vaza dado\
+    \ por URI cache\xE1vel e n\xE3o renderiza); CDN (quebra na CSP).\n\n## D4 \u2014\
+    \ Mecanismo de declara\xE7\xE3o: FastMCP 3\n\n- **Decision**: `app=AppConfig(resource_uri=\u2026\
+    )` na declara\xE7\xE3o de\n  `list_memories` e `recall`; floor de depend\xEAncia\
+    \ `fastmcp>=3.2` (o\n  ambiente j\xE1 resolve 3.4.4). `mcp-ui-server` sai das\
+    \ depend\xEAncias.\n- **Rationale**: \xE9 o mecanismo nativo do framework para\
+    \ apontar o template\n  na declara\xE7\xE3o da tool; `mcp-ui-server` pertence\
+    \ ao modelo pr\xE9-spec apagado.\n- **Alternatives considered**: manter `mcp-ui-server`\
+    \ + `_meta` (modelo\n  pr\xE9-spec, rejeitado); reimplementar a declara\xE7\xE3\
+    o \xE0 m\xE3o (desnecess\xE1rio com\n  FastMCP \u22653.2).\n\n## D5 \u2014 Degrada\xE7\
+    \xE3o e compatibilidade\n\n- **Decision**: hosts sem a extens\xE3o continuam recebendo\
+    \ o `content` textual\n  atual, **byte-id\xEAntico**. Dados sempre no `content`\
+    \ prim\xE1rio.\n- **Rationale**: zero regress\xE3o para clientes existentes (LangGraph/copilot\n\
+    \  inclu\xEDdos) \u2014 a li\xE7\xE3o do M0.\n- **Alternatives considered**: mover\
+    \ dados para o canal da UI (rejeitado \u2014\n  quebraria todo host sem a extens\xE3\
+    o).\n\n## D6 \u2014 A regra \xA73 como gate verific\xE1vel\n\n- **Decision**:\
+    \ grep-guard no DoD \u2014 `TODO`, `deferred`, `follow-up`,\n  `coming soon` em\
+    \ `mcp_ui.py`, no template e no c\xF3digo do middleware\n  **quebra o teste**;\
+    \ men\xE7\xF5es existentes a futuro (A2UI, twin TS,\n  \"follow-up\") s\xE3o limpas;\
+    \ ideia futura vive s\xF3 como item de board com dono.\n- **Rationale**: o padr\xE3\
+    o \"deixamos para depois\" \xE9 comprovado no repo\n  (`prompt_kernel.py` prometendo\
+    \ teste que nunca existiu; o pr\xF3prio\n  `mcp_ui.py` shippado inerte). Mesmo\
+    \ esp\xEDrito do `guard:no-mock` do\n  dna-cloud.\n- **Alternatives considered**:\
+    \ disciplina por conven\xE7\xE3o/review (j\xE1 falhou\n  duas vezes \u2014 por\
+    \ isso o guard \xE9 execut\xE1vel).\n\n## D7 \u2014 Sequenciamento entre repos\n\
+    \n- **Decision**: lado SDK completo em si (Claude.ai renderiza sem nada do\n \
+    \ dna-cloud); lado console s\xF3 mergeia com o pin do SDK novo j\xE1 publicado\n\
+    \  (release \u2192 pin \u2192 uma entrega no dna-cloud). Nenhum lado mergeia\n\
+    \  \"esperando\" o outro.\n- **Rationale**: evita merge de metade (regra \xA7\
+    3) e segue o trem de pin j\xE1\n  praticado entre os repos.\n- **Alternatives\
+    \ considered**: mergear console apontando para SDK n\xE3o\n  publicado (viola\
+    \ a disciplina de pin e a regra \xA73).\n"
+  origin: specs/001-mcp-apps-memory-card/research.md
+  tags:
+  - spec-kit
+  - research

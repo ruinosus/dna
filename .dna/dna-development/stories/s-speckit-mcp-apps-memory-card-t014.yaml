@@ -1,0 +1,17 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-speckit-mcp-apps-memory-card-t014
+spec:
+  description: "[US1] Smoke de render real com o `basic-host` do `ext-apps` (card\
+    \ renderiza; empty state com zero mem\xF3rias) \u2014 roteiro em `specs/001-mcp-apps-memory-card/quickstart.md`\
+    \ \xA73"
+  title: '[US1] Smoke de render real com o `basic-host` do `ext-apps` (card renderiza;
+    emp'
+  status: todo
+  feature: f-copilot-mcp-apps
+  labels:
+  - spec-kit
+  reporter: claude-code
+  spec_refs:
+  - speckit-mcp-apps-memory-card
