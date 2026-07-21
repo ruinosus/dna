@@ -694,6 +694,16 @@ def require_tiers(env: Any = None) -> bool:
     )
 
 
+class TierRegistryUnavailableError(RuntimeError):
+    """The host demanded fail-CLOSED quota (``DNA_QUOTA_REQUIRE_TIERS=1``) and the
+    Tier registry is empty or unreadable — the metered call must be REFUSED, not
+    served uncapped (503 semantics on HTTP, a ToolError on MCP).
+
+    Deliberately NOT a :class:`PermissionError`: the caller did nothing wrong —
+    the deployment is broken, and the two faces map it to their transport's
+    "service unavailable", never to a plan denial."""
+
+
 # ── the enforcer (caps come from the Tier spec — zero literals) ─────────────
 
 
@@ -764,3 +774,131 @@ def enforce_quota(
                 f"is spent; this denied call was NOT counted) — upgrade the "
                 f"plan or wait for the daily reset."
             )
+
+
+# ── the ONE metered-call policy (shared by the MCP guard and the REST gates) ─
+#
+# Before i-042 this pipeline lived INSIDE `_mcp_server._guard` (tier resolution
+# → caps → mode gates → enforce_quota), which made it structurally impossible
+# for the REST face to enforce the same plan without duplicating policy. It is
+# now the module's own composition, and BOTH faces call it:
+#
+#     _mcp_server._guard / _personal_guard   →  enforce_plan(...)
+#     _rest_api build_app's _plan_gate       →  enforce_plan(...)
+#
+# so a policy change (tier order, fail-closed switch, i-050 honesty) lands on
+# both channels at once — there is no second copy to drift. The transport error
+# mapping (ToolError vs HTTPException) is the ONLY thing each face keeps.
+
+
+async def resolve_metered_tier(
+    kernel: Any,
+    *,
+    tenant: str | None,
+    claimed_tier: str | None = None,
+    default_tier: str = "free",
+) -> str:
+    """Resolve the effective Tier id for a metered call.
+
+    The resolution order the MCP guard always applied, now shared verbatim:
+    **explicit claim → WorkspacePlan store → Free floor**. A ``claimed_tier``
+    (the token's explicit ``plan`` claim) WINS and the store is not consulted;
+    otherwise the billing→enforcement bridge reads the workspace's assigned
+    Tier from the ``WorkspacePlan`` Kind (``kernel.workspace_plan`` — written
+    by dna-cloud's Stripe webhook); with neither, the ``default_tier`` floor."""
+    if claimed_tier is not None:
+        return claimed_tier
+    if tenant:
+        plan = await kernel.workspace_plan(tenant)
+        store_tier = ((plan or {}).get("spec") or {}).get("tier_id")
+        if store_tier:
+            return str(store_tier)
+    return default_tier
+
+
+async def resolve_tier_caps(kernel: Any, tier: str) -> dict[str, Any]:
+    """Resolve a Tier id to its caps ``spec`` — with the i-051 fail-closed switch.
+
+    ``kernel.tier(tier)`` → unknown tier falls to the ``free`` doc (the Free
+    floor) → still nothing = empty caps. Empty caps are AMBIGUOUS: an OSS /
+    self-host source that never seeded Tier docs must enforce NOTHING (the
+    open-core rule), while a hosted deployment whose Tier seed failed must
+    REFUSE the call rather than serve it uncapped. The host declares which
+    shape it is via ``DNA_QUOTA_REQUIRE_TIERS`` (:func:`require_tiers`):
+
+    * flag OFF — empty caps pass through (enforce nothing); a registry READ
+      error propagates as the real bug it is (not a quota refusal).
+    * flag ON — empty caps AND a registry read error both raise
+      :class:`TierRegistryUnavailableError` (fail closed, nothing served)."""
+    try:
+        row = await kernel.tier(tier)
+        if row is None:
+            row = await kernel.tier("free")  # unknown tier → Free floor.
+    except Exception as exc:  # noqa: BLE001 — flag-on only; see docstring.
+        if not require_tiers():
+            raise  # flag OFF: not a quota refusal — surface the real bug.
+        raise TierRegistryUnavailableError(
+            "tier registry empty/unreadable — quota enforcement "
+            "unavailable, refusing this call (DNA_QUOTA_REQUIRE_TIERS=1; "
+            f"registry read failed: {exc})"
+        ) from None
+    caps = (row or {}).get("spec") or {}
+    if not caps and require_tiers():
+        raise TierRegistryUnavailableError(
+            "tier registry empty/unreadable — quota enforcement "
+            "unavailable, refusing this call (DNA_QUOTA_REQUIRE_TIERS=1). "
+            "Seed the Tier docs in _lib, or unset the flag on an uncapped "
+            "self-host."
+        )
+    return caps
+
+
+async def enforce_plan(
+    kernel: Any,
+    *,
+    tenant: str | None,
+    family: str,
+    store: QuotaStore,
+    claimed_tier: str | None = None,
+    memory_op: str | None = None,
+    sdlc_op: str | None = None,
+    quota_tenant: str | None = None,
+) -> str:
+    """Meter ONE authenticated call against the caller's plan — the shared core.
+
+    Composes the whole pipeline the MCP ``_guard`` always ran, for any face:
+
+    1. resolve the Tier (:func:`resolve_metered_tier` — claim → WorkspacePlan →
+       Free floor),
+    2. resolve its caps (:func:`resolve_tier_caps` — Free-doc fallback, empty
+       caps = OSS no-op, ``DNA_QUOTA_REQUIRE_TIERS`` fail-closed),
+    3. the PRE-COUNTER gates — ``memory_op``/``sdlc_op`` against the tier's
+       ``memory_mode``/``sdlc_mode`` (a denied write costs no quota),
+    4. :func:`enforce_quota` — family gate, rate window, daily cap (the i-050
+       honesty lives there: a denied call is never counted).
+
+    ``quota_tenant`` overrides the METERING key only (the personal-memory case:
+    tenancy resolves no workspace but usage meters per ``personal:<oid>``
+    partition). Raises the quota exception family
+    (:class:`FeatureNotInPlanError` / :class:`MemoryModeError` /
+    :class:`SdlcModeError` / :class:`OverQuotaError`) or
+    :class:`TierRegistryUnavailableError`; each face maps them to its transport.
+    Returns the resolved tier id (observability / tests).
+
+    The OSS invariant is the CALLER's job, exactly as before: a face only calls
+    this once it knows the request is authenticated/metered (MCP: token present;
+    REST: ``--auth token|config``). ``--auth none`` / stdio never reach here."""
+    tier = await resolve_metered_tier(kernel, tenant=tenant, claimed_tier=claimed_tier)
+    caps = await resolve_tier_caps(kernel, tier)
+    # memory_mode / sdlc_mode are pre-counter gates (like the family gate):
+    # a denied write costs no quota. Enforce them BEFORE metering.
+    if memory_op is not None:
+        enforce_memory_mode(caps=caps, tier=tier, op=memory_op)
+    if sdlc_op is not None:
+        enforce_sdlc_mode(caps=caps, tier=tier, op=sdlc_op)
+    enforce_quota(
+        caps=caps,
+        tenant=quota_tenant if quota_tenant is not None else tenant,
+        tier=tier, family=family, store=store,
+    )
+    return tier
