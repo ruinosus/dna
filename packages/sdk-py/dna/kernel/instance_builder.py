@@ -75,7 +75,16 @@ class InstanceBuilder:
             from dna.kernel.layer_resolver import DefaultLayerResolver
             from dna.kernel.protocols import LayerPolicy
 
-            resolver = DefaultLayerResolver()
+            # Declared Kind-name → alias map from the live registry, so the
+            # resolver matches policies by DECLARATION instead of inferring
+            # the doc→policy relation from name shape (i-044).
+            kind_aliases: dict[str, str] = {}
+            for (_av, _kname), _kp in k._kinds.items():
+                _alias = getattr(_kp, "alias", None)
+                if _alias:
+                    kind_aliases.setdefault(_kname, _alias)
+
+            resolver = DefaultLayerResolver(kind_aliases=kind_aliases)
             policies: dict[str, LayerPolicy] = {}
 
             # LayerPolicy docs (filter by current layer ids); merge across all
@@ -97,6 +106,63 @@ class InstanceBuilder:
                         policies[alias] = LayerPolicy(str(ps).lower())
                     except ValueError:
                         policies[alias] = LayerPolicy.OPEN
+
+            # Typo detection (i-044): a policy key that names NO registered
+            # Kind (by name or alias) — and no declarative Kind shipped as a
+            # KindDefinition doc in this build — can never match anything.
+            # That is exactly how `helix-agnet: locked` silently degrades the
+            # strongest protection in the system to OPEN, so it warns.
+            if policies:
+                import re as _re
+                import warnings as _warnings
+                known_keys: set[str] = set()
+                kind_tails: set[str] = set()
+                for (_av, _kname), _kp in k._kinds.items():
+                    known_keys.add(_kname)
+                    known_keys.add(_kname.lower())
+                    kind_tails.add(_kname.lower())
+                    kind_tails.add(
+                        _re.sub(r"(?<!^)(?=[A-Z])", "-", _kname).lower()
+                    )
+                    _alias = getattr(_kp, "alias", None)
+                    if _alias:
+                        known_keys.add(_alias)
+                # KindDefinition docs register AFTER layer resolution (Phase
+                # 1 below) — accept their declared aliases/targets up front
+                # so legitimate declarative-kind policies don't warn.
+                for raw in all_raws:
+                    if raw.get("kind") != "KindDefinition":
+                        continue
+                    kd_spec = raw.get("spec") or {}
+                    if not isinstance(kd_spec, dict):
+                        continue
+                    for key in ("alias", "target_kind"):
+                        v = kd_spec.get(key)
+                        if isinstance(v, str) and v:
+                            known_keys.add(v)
+                            known_keys.add(v.lower())
+                            kind_tails.add(v.lower())
+
+                def _matchable(key: str) -> bool:
+                    if key in known_keys:
+                        return True
+                    # The resolver's legacy suffix heuristics would still
+                    # connect this key to a registered Kind — legal, if
+                    # inferred; not a typo.
+                    return any(
+                        key == tail or key.endswith(f"-{tail}")
+                        for tail in kind_tails
+                    )
+
+                for policy_key in sorted(k2 for k2 in policies if not _matchable(k2)):
+                    _warnings.warn(
+                        f"LayerPolicy declares a policy for {policy_key!r}, "
+                        f"but no registered Kind has that name or alias — "
+                        f"this entry will never match, and the Kind it was "
+                        f"meant to govern falls back to OPEN. Check for a "
+                        f"typo.",
+                        stacklevel=2,
+                    )
 
             class _DirectSource:
                 def load_layer(self, _scope, _lid, _lv):

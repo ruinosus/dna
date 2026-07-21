@@ -40,6 +40,7 @@ uniform API.
 """
 from __future__ import annotations
 
+import copy
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -187,9 +188,10 @@ class ResolvedDocument:
     derived from provenance; Studio uses this for badge/banner toggle."""
 
     contributions_by_field: dict[str, str] = field(default_factory=dict)
-    """Field-path → scope name. Populated when merge_strategy=field_level.
-    Lets the Detail page show ``spec.persona ← _lib`` /
-    ``spec.model ← acme-prod`` annotations."""
+    """LEAF field-path → scope name. Populated when merge_strategy=field_level.
+    Paths are nested (``spec.config.model``, not just ``spec.config``), so
+    the Detail page can show ``spec.persona ← _lib`` /
+    ``spec.config.model ← acme-prod`` annotations at any depth."""
 
     def serialize(self) -> dict[str, Any]:
         return {
@@ -222,25 +224,84 @@ def merge_override_full(
     return None, None
 
 
+def _merge_spec_subtree(
+    dst: dict[str, Any],
+    src: dict[str, Any],
+    origin: str,
+    prefix: str,
+    fields_by_origin: dict[str, str],
+) -> None:
+    """Recursive worker for :func:`merge_field_level`.
+
+    Merge semantics (MUST stay consistent with
+    ``dna.kernel.layer_resolver.deep_merge`` — the overlay engine):
+
+      - dict onto dict   → merge recursively, key by key;
+      - list onto ANY    → the higher-priority list REPLACES wholesale
+                            (no concat / no element-wise merge);
+      - scalar onto ANY  → replace;
+      - dict onto scalar/list → the dict replaces, then fills its keys.
+
+    Provenance is recorded at LEAF paths (``spec.config.model``), not
+    top-level keys — nested contributions from different layers each keep
+    their true origin. When a subtree is REPLACED by a non-dict value,
+    the stale descendant records are purged so provenance never points
+    at fields that no longer exist. An empty-dict contribution is itself
+    a leaf and is recorded at the container path.
+
+    Values are deep-copied into the merged doc so the result never
+    aliases the (cached) raw layer documents.
+    """
+    for k, v in src.items():
+        path = f"{prefix}.{k}"
+        if isinstance(v, dict):
+            existing = dst.get(k)
+            if not isinstance(existing, dict):
+                # A subtree replaces a scalar/list (or nothing) — drop the
+                # stale leaf record from the shadowed layer at this path.
+                fields_by_origin.pop(path, None)
+                dst[k] = {}
+                if not v:
+                    fields_by_origin[path] = origin
+            _merge_spec_subtree(dst[k], v, origin, path, fields_by_origin)
+        else:
+            if isinstance(dst.get(k), dict):
+                # Scalar/list replaces a whole subtree — purge provenance
+                # of every leaf that just ceased to exist.
+                stale_prefix = path + "."
+                for p in [p for p in fields_by_origin if p.startswith(stale_prefix)]:
+                    del fields_by_origin[p]
+            dst[k] = copy.deepcopy(v)
+            fields_by_origin[path] = origin
+
+
 def merge_field_level(
     contributions: list[tuple[ResolutionLayer, dict[str, Any]]],
 ) -> tuple[dict[str, Any] | None, ResolutionLayer | None, dict[str, str]]:
-    """Deep-merge ``spec`` dicts. Higher-priority layers shadow lower
-    per-field. Returns ``(merged_doc, primary_origin_layer, fields_by_origin)``.
+    """Deep-merge ``spec`` dicts, RECURSIVELY. Higher-priority layers shadow
+    lower ones per NESTED field, not per top-level key — a local
+    ``spec.config.temperature`` no longer erases an inherited
+    ``spec.config.model``. Returns
+    ``(merged_doc, primary_origin_layer, fields_by_origin)``.
 
     Algorithm:
       - First pass: find the PRIMARY layer (highest-priority hit). Its
         metadata + envelope (apiVersion, kind) carry over wholesale.
       - Second pass: iterate contributions LOWEST → HIGHEST priority,
-        overwriting spec keys in a fresh merged dict. After the loop,
-        the highest-priority layer's values win per-field.
-      - Track which layer each FINAL spec field came from so the UI
-        can render ``spec.persona ← _lib`` annotations.
+        deep-merging specs into a fresh dict (dicts nest; lists and
+        scalars are replaced wholesale — the same semantics as
+        ``layer_resolver.deep_merge``, so the two merge engines agree).
+      - ``fields_by_origin`` maps each FINAL leaf field path
+        (``spec.config.model``) to the scope that set it, so the UI can
+        render ``spec.config.model ← _lib`` annotations at any depth.
 
     Edge cases:
       - All-None contributions → (None, None, {}).
       - Single hit → equivalent to override_full (single-layer merge).
-      - Spec missing or non-dict → that layer skipped silently.
+      - Spec missing or non-dict → that layer contributes no spec fields
+        (envelope/metadata still count if it is the primary).
+      - A layer contributing an empty dict at some path is recorded as a
+        leaf contribution at that path.
     """
     # First pass — find primary (highest priority hit).
     primary: ResolutionLayer | None = None
@@ -254,7 +315,7 @@ def merge_field_level(
     if primary is None or primary_raw is None:
         return None, None, {}
 
-    # Second pass — merge specs LOWEST to HIGHEST so highest wins per-key.
+    # Second pass — merge specs LOWEST to HIGHEST so highest wins per-field.
     merged_spec: dict[str, Any] = {}
     fields_by_origin: dict[str, str] = {}
     for layer, raw in reversed(contributions):
@@ -263,9 +324,7 @@ def merge_field_level(
         spec = raw.get("spec") or {}
         if not isinstance(spec, dict):
             continue
-        for k, v in spec.items():
-            merged_spec[k] = v
-            fields_by_origin[f"spec.{k}"] = layer.scope
+        _merge_spec_subtree(merged_spec, spec, layer.scope, "spec", fields_by_origin)
 
     final: dict[str, Any] = {
         "apiVersion": primary_raw.get("apiVersion"),

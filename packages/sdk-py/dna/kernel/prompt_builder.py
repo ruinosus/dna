@@ -909,9 +909,8 @@ class PromptBuilder:
             template = await self._host.ref_async(template)
 
         try:
-            import chevron
-            first_pass = chevron.render(template, ctx)
-            return chevron.render(first_pass, ctx)
+            import chevron  # noqa: F401
+            return _two_pass_mustache(template, ctx)
         except ImportError:
             result = template
             for key, value in ctx.items():
@@ -922,14 +921,14 @@ class PromptBuilder:
             return result
 
     def _mustache_render(self, template: str, ctx: dict[str, Any]) -> str:
-        """Render a Mustache template. Double render for refs inside content."""
+        """Render a Mustache template — see :func:`_two_pass_mustache` for
+        the two-pass semantics and the i-046 trust boundary."""
         if "/" in template or template.endswith((".mustache", ".md")):
             template = self._host.ref(template)
 
         try:
-            import chevron
-            first_pass = chevron.render(template, ctx)
-            return chevron.render(first_pass, ctx)
+            import chevron  # noqa: F401
+            return _two_pass_mustache(template, ctx)
         except ImportError:
             result = template
             for key, value in ctx.items():
@@ -942,3 +941,69 @@ class PromptBuilder:
 
 def _get_description(doc: Document) -> str:
     return doc.metadata.get("description", "")
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Two-pass Mustache with a trust boundary (i-046)
+# ──────────────────────────────────────────────────────────────────────
+
+# Sentinels standing in for content-borne mustache delimiters between the
+# two passes. Unicode Private Use Area codepoints — they carry no meaning
+# to chevron and are not expected in legitimate document content.
+_LIT_OPEN = "\ue000"
+_LIT_CLOSE = "\ue001"
+
+# Context entries whose strings MAY carry live mustache refs. The agent
+# document is the composition root — its author writes ``instruction`` (and
+# picks/authors the template), so refs inside it are a feature (e.g. the
+# open-swe scope's instruction interpolating ``{{repository}}``). Every
+# OTHER document's content (Skill, Soul, guardrails, memory, tenant
+# overlays of those docs, caller extras) is DATA: a third party's ``{{``
+# must reach the final prompt as ``{{``, not execute as template.
+_TEMPLATE_BEARING_CTX_KEYS = frozenset({"agent"})
+
+
+def _protect_literals(value: Any) -> Any:
+    """Deep-copy ``value`` with mustache delimiters in strings replaced by
+    inert sentinels (restored verbatim after the final pass)."""
+    if isinstance(value, str):
+        return value.replace("{{", _LIT_OPEN).replace("}}", _LIT_CLOSE)
+    if isinstance(value, dict):
+        return {k: _protect_literals(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_protect_literals(v) for v in value]
+    return value
+
+
+def _restore_literals(text: str) -> str:
+    return text.replace(_LIT_OPEN, "{{").replace(_LIT_CLOSE, "}}")
+
+
+def _two_pass_mustache(template: str, ctx: dict[str, Any]) -> str:
+    """Render ``template`` twice against ``ctx`` — with a trust boundary.
+
+    Why two passes at all: pass 1 expands the layout/kind/agent template
+    (inserting ``{{{agent.instruction}}}``, section content, …); pass 2
+    exists so refs INSIDE the agent's own instruction (``{{repository}}``,
+    ``{{soul_content}}``) still resolve — the ref-inside-content feature.
+
+    Why the boundary (i-046): before it, pass 2 re-rendered EVERYTHING the
+    first pass inserted, so a Skill/Soul/tenant-overlay containing ``{{``
+    executed as template inside the final prompt — template injection when
+    that content is third-party input (and silent data loss for literal
+    ``{{`` in honest content, which chevron erases as an unknown tag).
+
+    The rule: only the agent document's own entry
+    (``_TEMPLATE_BEARING_CTX_KEYS``) keeps live delimiters. All other
+    context values have ``{{``/``}}`` swapped for sentinels before pass 1
+    and restored after pass 2 — they flow through both passes untouched
+    and land in the prompt byte-identical.
+    """
+    import chevron
+
+    safe_ctx = {
+        k: (v if k in _TEMPLATE_BEARING_CTX_KEYS else _protect_literals(v))
+        for k, v in ctx.items()
+    }
+    first_pass = chevron.render(template, safe_ctx)
+    return _restore_literals(chevron.render(first_pass, safe_ctx))
