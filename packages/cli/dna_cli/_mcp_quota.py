@@ -594,6 +594,35 @@ def store_from_env(env: Any = None) -> Any:
     return PostgresQuotaStore(dsn, schema=(env.get("DNA_QUOTA_SCHEMA") or None))
 
 
+# ── the hosted-shape switch: fail-CLOSED on a missing Tier registry ─────────
+#
+# Empty caps are AMBIGUOUS: for an OSS/self-host they mean "never opted into
+# DNA Cloud pricing — enforce nothing" (the open-core hard rule, default,
+# untouched); for a HOSTED deployment whose Tier seed failed at boot they mean
+# "every cap just silently evaporated" — fail-open exactly where money needs
+# fail-closed. The SDK cannot tell the two apart, so the HOST declares which
+# shape it is (i-051): dna-cloud sets the flag in its mcp container; a
+# self-host never does.
+
+#: Set to ``1`` (or ``true``/``yes``/``on``) to REFUSE metered calls when the
+#: Tier registry is empty or unreadable, instead of serving them uncapped.
+REQUIRE_TIERS_ENV = "DNA_QUOTA_REQUIRE_TIERS"
+
+
+def require_tiers(env: Any = None) -> bool:
+    """Whether this process opted into fail-CLOSED quota (the hosted shape).
+
+    Read per-call (not cached at server build) so the flag is testable and a
+    supervisor restart is not needed to observe a corrected environment. The
+    guard consults it ONLY on the metered (token-present) branch — the
+    stdio/local path returns before any of this, so the OSS invariant is
+    structurally out of the flag's reach."""
+    env = os.environ if env is None else env
+    return str(env.get(REQUIRE_TIERS_ENV) or "").strip().lower() in (
+        "1", "true", "yes", "on",
+    )
+
+
 # ── the enforcer (caps come from the Tier spec — zero literals) ─────────────
 
 

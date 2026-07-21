@@ -11,6 +11,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### ✨ Quota
+
+- **`DNA_QUOTA_REQUIRE_TIERS=1` — fail-closed opt-in quando o registry de
+  Tiers está vazio ou ilegível** (i-051). Caps vazios são AMBÍGUOS: num
+  self-host OSS significam "nunca optou pelo pricing do DNA Cloud — não
+  enforce nada" (a regra dura do open-core, default intocado); num deploy
+  hosted cujo seed de Tiers falhou no boot significam "todos os caps
+  evaporaram em silêncio" — fail-open exatamente onde o dinheiro exige
+  fail-closed. O SDK não tem como distinguir as duas formas, então o HOST
+  declara: com a flag ligada, registry vazio/ilegível vira `ToolError`
+  explícito no guard ("tier registry empty/unreadable — … refusing") e o
+  `except` fail-soft do `RegistryAccessor.tier()` PROPAGA em vez de degradar
+  para `None` (defesa em profundidade: cada camada é testada por mutação em
+  separado). A flag só é consultada no ramo COM token — o caminho
+  stdio/local retorna antes, então o self-host continua estruturalmente fora
+  do alcance dela. O dna-cloud liga a flag no container `mcp`; um self-host
+  nunca precisa saber que ela existe.
+
 ### 🐛 Corrigido
 
 - **Chamada negada não conta — e portanto nunca fatura** (i-050). O
