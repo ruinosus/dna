@@ -56,7 +56,7 @@ from typing import Any
 import click
 
 from dna_cli import _git_symbiosis as gs
-from dna_cli._ctx import dna_session, fail
+from dna_cli._ctx import fail, open_session
 from dna_cli.sdlc_cmd import (
     _append_timeline,
     _build_raw,
@@ -153,7 +153,7 @@ def _stamp_pr_on_timeline(scope: str, name: str, url: str) -> None:
     """Append a ``pr_opened`` event carrying the PR URL. Fail-soft — the
     PR already exists; a timeline hiccup must not fail the command."""
     try:
-        with dna_session(scope) as s:
+        with open_session(scope) as s:
             existing = s.get_doc("Story", name)
             if existing is None:
                 return
@@ -190,7 +190,7 @@ def cmd_story_pr(
     nasce da story, não o contrário — e a URL volta pra timeline.
     """
     _anchor_source_to_repo_root()
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         story = s.get_doc("Story", name)
         if story is None:
             raise fail(f"Story '{name}' not found in scope {scope!r}")

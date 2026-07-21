@@ -41,7 +41,7 @@ from typing import Any
 import click
 
 from dna_cli import _github_bridge as gb
-from dna_cli._ctx import dna_session, fail
+from dna_cli._ctx import fail, open_session
 from dna_cli.pr_cmd import _anchor_source_to_repo_root
 from dna_cli.sdlc_cmd import (
     _append_timeline,
@@ -98,7 +98,7 @@ def cmd_issue_publish(
     publicado só mostra o link.
     """
     _anchor_source_to_repo_root()
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         doc = s.get_doc("Issue", name)
         if doc is None:
             raise fail(f"Issue '{name}' not found in scope {scope!r}")
@@ -229,7 +229,7 @@ def cmd_issue_import(ref: str, repo: str | None, scope: str) -> None:
         github_url=spec.get("github_url"),
     )
 
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         for existing in s.query_list("Issue"):
             espec = existing.spec if isinstance(existing.spec, dict) else {}
             if espec.get("github_number") == number:
@@ -266,7 +266,7 @@ def cmd_issue_sync(name: str, repo: str | None, scope: str) -> None:
     local — decidir se "closed no GitHub" vira "resolved" é triage humana.
     """
     _anchor_source_to_repo_root()
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         doc = s.get_doc("Issue", name)
         if doc is None:
             raise fail(f"Issue '{name}' not found in scope {scope!r}")
