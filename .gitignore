@@ -21,3 +21,6 @@ site/
 
 # Local hybrid-search index store (dna recall/search) — s-record-search-sqlite
 .dna-search/
+
+# superpowers v6 cria worktrees DENTRO do projeto (.worktrees/) — nunca commitá-los
+.worktrees/
