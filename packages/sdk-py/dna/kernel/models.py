@@ -1285,26 +1285,6 @@ class TypedHook:
 
 
 # ---------------------------------------------------------------------------
-# Community channel — artifact allowlist
-#
-# Spec: docs/superpowers/specs/2026-05-18-source-as-distribution.md.
-# The CommunityItem Kind was pruned (s-prune-speculative-extensions,
-# recovery: git history), but the FS distribution / install channel
-# (dna_shared.community.* + /community/discover + POST /catalog/install)
-# lives on and validates installable artifact kinds against this
-# allowlist (dna_shared/validation/bundle.py).
-# ---------------------------------------------------------------------------
-
-# Allowlist of artifact_kind values. Locked-in decision #1 of the
-# source-as-distribution spec. Adding a Kind here requires the same
-# entry in the TS twin (typescript/src/kernel/models.ts).
-COMMUNITY_ARTIFACT_KINDS = frozenset({
-    "Skill", "Soul", "Agent", "Hook",
-    "SafetyPolicy", "Recognizer", "Guardrail",
-})
-
-
-# ---------------------------------------------------------------------------
 # TextBlock + HtmlBlock (github.com/ruinosus/dna/v1) — generative blocks
 #
 # Spec: s-generative-blocks (2026-05-19). Any agent (voice-episode-scribe,
