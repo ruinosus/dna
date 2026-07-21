@@ -56,6 +56,9 @@ spec:
         type: string
         description: The Organization or Project name this grant applies to (paired
           with scope_type).
+        x-dna-ref:
+        - Organization
+        - Project
       role:
         type: string
         enum:

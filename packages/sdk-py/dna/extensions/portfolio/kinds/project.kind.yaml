@@ -70,12 +70,14 @@ spec:
         - 'null'
         description: The Organization (name) this project belongs to. Null while
           unassigned.
+        x-dna-ref: Organization
       repo_refs:
         type: array
         items:
           type: string
         description: Repo names attached to this project (the N—N edge — a repo may
           appear on multiple projects). The edge lives on the Project side only.
+        x-dna-ref: Repo
       board_scope:
         type:
         - string
