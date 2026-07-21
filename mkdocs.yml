@@ -177,6 +177,14 @@ exclude_docs: |
 
 # Make the build gate meaningful: with `mkdocs build --strict` these
 # warnings become hard errors, so a broken internal link or anchor fails CI.
+# Working documents that LIVE under docs/ but are deliberately not site pages:
+# the superpowers brainstorming specs (design docs the composed flow produces
+# at docs/superpowers/specs/ — its own convention). Without this, the first
+# such file aborts `mkdocs build --strict` with an omitted-from-nav warning —
+# which is exactly how main's docs build broke on 2026-07-21.
+not_in_nav: |
+  superpowers/
+
 validation:
   nav:
     omitted_files: warn
