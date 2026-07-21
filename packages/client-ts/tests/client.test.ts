@@ -14,10 +14,20 @@ import { DnaApiError, DnaClient, createDnaClient } from "../src/index.js";
  * openapi-fetch invokes `fetch(new Request(url, init))`, so the first arg is a
  * `Request`; we read url/method/headers off it. */
 function stub(body: unknown, status = 200) {
-  const calls: { url: string; method: string; headers: Headers }[] = [];
+  const calls: {
+    url: string;
+    method: string;
+    headers: Headers;
+    body: string | null;
+  }[] = [];
   const fetchImpl = (async (input: string | URL | Request, init?: RequestInit) => {
     const req = input instanceof Request ? input : new Request(input, init);
-    calls.push({ url: req.url, method: req.method, headers: req.headers });
+    const sent = await req
+      .clone()
+      .text()
+      .then((t) => t || null)
+      .catch(() => null);
+    calls.push({ url: req.url, method: req.method, headers: req.headers, body: sent });
     return new Response(status === 204 ? null : JSON.stringify(body), {
       status,
       headers: { "content-type": "application/json" },
@@ -81,6 +91,26 @@ describe("DnaClient", () => {
     expect(search.searchParams.get("k")).toBe("3");
     expect(new URL(calls[3]!.url).searchParams.get("recent")).toBe("5");
     expect(new URL(calls[4]!.url).searchParams.get("name")).toBe("s-foo");
+  });
+
+  test("importMemories posts the bundle and never sends a tenant", async () => {
+    const { fetchImpl, calls } = stub({ imported: 1, skipped: 0, failed: 0, received: 1 });
+    // A client-level default tenant is set on purpose: the import is
+    // identity-scoped (the server derives the personal partition from the
+    // token), so the default must NOT leak onto this request.
+    const dna = new DnaClient({ baseUrl: BASE, tenant: "acme", scope: "base", fetch: fetchImpl });
+    await dna.importMemories({ bundle: { "@graph": [{ id: "m-1" }] } });
+
+    expect(calls[0]!.method).toBe("POST");
+    const url = new URL(calls[0]!.url);
+    expect(url.pathname).toBe("/v1/memories/import");
+    expect(url.searchParams.get("tenant")).toBeNull();
+    expect(url.searchParams.get("scope")).toBe("base");
+    // The server-side defaults are mirrored so an omitted option is explicit.
+    const body = JSON.parse(calls[0]!.body as string);
+    expect(body.as).toBe("both");
+    expect(body.dedupe).toBe("id");
+    expect(body.bundle["@graph"][0].id).toBe("m-1");
   });
 
   test("non-2xx throws DnaApiError carrying the detail", async () => {
@@ -187,6 +217,7 @@ const COVERED: Record<string, string> = {
   "GET /v1/workspaces/{workspace_id}/members": "listWorkspaceMembers",
   // -- writes --
   "POST /v1/memories": "rememberMemory",
+  "POST /v1/memories/import": "importMemories",
   "DELETE /v1/memories/{name}": "deleteMemory",
   "PATCH /v1/insights/{name}/state": "setInsightState",
   "POST /v1/projects": "createProject",

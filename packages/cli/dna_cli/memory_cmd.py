@@ -451,13 +451,11 @@ def _from_json_ld(entry: dict[str, Any]) -> dict[str, Any]:
     """Inverse of :func:`_to_json_ld` — used when importing a ``--bundle``
     JSON-LD file (or any JSON-LD-shaped doc): ``@id`` -> ``id``, stripping
     the ``urn:mif:`` prefix if present (the plain form is what the Markdown
-    profile — and this module's own ``id`` field — carries)."""
-    entry = dict(entry)
-    at_id = entry.pop("@id", None)
-    entry.pop("@type", None)
-    if at_id is not None and "id" not in entry:
-        entry["id"] = at_id[len("urn:mif:"):] if str(at_id).startswith("urn:mif:") else at_id
-    return entry
+    profile — and this module's own ``id`` field — carries). Delegates to the
+    SHARED core normalizer (``dna.memory.interchange.from_json_ld``)."""
+    from dna.memory.interchange import from_json_ld
+
+    return from_json_ld(entry)
 
 
 def _render_mif_markdown(doc: dict[str, Any]) -> str:
@@ -473,12 +471,14 @@ def _render_mif_markdown(doc: dict[str, Any]) -> str:
 
 
 def _validate_mif_doc(doc: dict[str, Any], source: str) -> None:
-    missing = [f for f in ("id", "type", "content", "created") if not doc.get(f)]
-    if missing:
-        raise click.ClickException(
-            f"{source}: MIF doc missing required field(s) {missing} "
-            "(MIF Level 1 core — SPECIFICATION.md §13.1)"
-        )
+    """CLI channel for the SHARED core validator — same fields, same message,
+    surfaced as a ``ClickException`` (the REST face maps it to a 400)."""
+    from dna.memory.interchange import MifFormatError, validate_mif_doc
+
+    try:
+        validate_mif_doc(doc, source)
+    except MifFormatError as exc:
+        raise click.ClickException(str(exc)) from None
 
 
 def _read_mif_md(md_path: Path) -> dict[str, Any]:
@@ -495,19 +495,16 @@ def _read_mif_md(md_path: Path) -> dict[str, Any]:
 
 
 def _read_mif_json(json_path: Path) -> list[dict[str, Any]]:
+    """Read a MIF JSON file (JSON-LD ``@graph`` bundle, bare list, or a single
+    doc) — the SHARED core parser does the shape work; this only supplies the
+    bytes and maps the format error onto the CLI's channel."""
+    from dna.memory.interchange import MifFormatError, parse_mif_bundle
+
     raw = json.loads(json_path.read_text(encoding="utf-8"))
-    if isinstance(raw, dict) and isinstance(raw.get("@graph"), list):
-        entries = raw["@graph"]
-    elif isinstance(raw, list):
-        entries = raw
-    elif isinstance(raw, dict):
-        entries = [raw]
-    else:
-        raise click.ClickException(f"{json_path}: unrecognized MIF JSON shape")
-    docs = [_from_json_ld(e) if "@id" in e else dict(e) for e in entries]
-    for i, doc in enumerate(docs):
-        _validate_mif_doc(doc, f"{json_path}[{i}]")
-    return docs
+    try:
+        return parse_mif_bundle(raw, source=str(json_path))
+    except MifFormatError as exc:
+        raise click.ClickException(str(exc)) from None
 
 
 def _read_mif_docs(path: Path) -> list[dict[str, Any]]:
@@ -667,102 +664,35 @@ def import_cmd(
     AND projects an ``Engram`` (indexable/recallable by ``dna memory
     recall``). Deterministic, no LLM, no network.
     """
-    from dna.memory.interchange import from_mif
-    from dna.memory.personal import is_personal_tenant  # noqa: F401 (import kept local to the CLI layer)
+    from dna.memory.verbs import import_mif_docs
 
     tenant = _resolve_memory_tenant(personal, tenant)
     docs = _read_mif_docs(path)
 
     with dna_session(scope) as s:
-        write_kernel = _write_kernel_for(s, tenant)
-        engram_api_version = _api_version_for(s.kernel, "Engram")
-        memory_api_version = _api_version_for(s.kernel, "Memory")
+        # ONE write pipeline, shared with the REST face (POST /v1/memories/import)
+        # so the two can never drift — see dna.memory.verbs.import_mif_docs.
+        outcome = s.run(
+            import_mif_docs(
+                s.kernel, s.scope, docs, as_mode=as_mode, dedupe=dedupe, tenant=tenant
+            )
+        )
 
-        existing_passthrough_ids: set[str] = set()
-        existing_engram_mif_ids: set[str] = set()
-        existing_content_hashes: set[str] = set()
-
-        async def _preload() -> None:
-            if dedupe == "off":
-                return
-            if as_mode in ("passthrough", "both"):
-                async for raw in s.kernel.query(s.scope, "Memory", tenant=tenant):
-                    doc_spec = raw.get("spec") or {}
-                    if dedupe == "id" and doc_spec.get("id"):
-                        existing_passthrough_ids.add(str(doc_spec["id"]))
-                    elif dedupe == "content-hash":
-                        c = doc_spec.get("content") or ""
-                        existing_content_hashes.add(hashlib.sha256(c.encode("utf-8")).hexdigest())
-            if as_mode in ("native", "both"):
-                async for raw in s.kernel.query(s.scope, "Engram", tenant=tenant):
-                    e_spec = raw.get("spec") or {}
-                    ec = e_spec.get("encoding_context") or {}
-                    if dedupe == "id" and ec.get("mif_id"):
-                        existing_engram_mif_ids.add(str(ec["mif_id"]))
-                    elif dedupe == "content-hash":
-                        b = e_spec.get("body") or ""
-                        existing_content_hashes.add(hashlib.sha256(b.encode("utf-8")).hexdigest())
-
-        s.run(_preload())
-
-        imported: list[str] = []
-        skipped: list[str] = []
-        failed: list[dict[str, str]] = []
-
-        for doc in docs:
-            doc_id = str(doc.get("id") or "")
-            content_hash = hashlib.sha256((doc.get("content") or "").encode("utf-8")).hexdigest()
-
-            already = False
-            if dedupe == "id":
-                already = (
-                    (as_mode == "passthrough" and doc_id in existing_passthrough_ids)
-                    or (as_mode == "native" and doc_id in existing_engram_mif_ids)
-                    or (as_mode == "both" and (doc_id in existing_passthrough_ids or doc_id in existing_engram_mif_ids))
-                )
-            elif dedupe == "content-hash":
-                already = content_hash in existing_content_hashes
-            if already:
-                skipped.append(doc_id)
-                continue
-
-            try:
-                if as_mode in ("passthrough", "both"):
-                    name = _mif_doc_name(doc_id)
-                    clean_spec = {k: v for k, v in doc.items() if k in _KNOWN_MIF_FIELDS}
-                    raw: dict[str, Any] = {"kind": "Memory", "metadata": {"name": name}, "spec": clean_spec}
-                    if memory_api_version:
-                        raw["apiVersion"] = memory_api_version
-                    s.run(write_kernel.write_document(s.scope, "Memory", name, raw, invalidate_mode="doc"))
-                    existing_passthrough_ids.add(doc_id)
-
-                if as_mode in ("native", "both"):
-                    engram_spec = from_mif(doc)
-                    engram_name = _engram_doc_name(doc_id)
-                    e_raw: dict[str, Any] = {"kind": "Engram", "metadata": {"name": engram_name}, "spec": engram_spec}
-                    if engram_api_version:
-                        e_raw["apiVersion"] = engram_api_version
-                    s.run(write_kernel.write_document(s.scope, "Engram", engram_name, e_raw, invalidate_mode="doc"))
-                    existing_engram_mif_ids.add(doc_id)
-            except Exception as exc:  # noqa: BLE001 — one bad doc must not abort the whole batch
-                failed.append({"id": doc_id, "error": str(exc)})
-                continue
-
-            imported.append(doc_id)
-            if dedupe == "content-hash":
-                existing_content_hashes.add(content_hash)
+    imported_ids = outcome["ids"]
+    failed = outcome["errors"]
+    skipped_n = outcome["skipped"]
 
     result = {
         "as": as_mode, "dedupe": dedupe, "path": str(path),
-        "imported": len(imported), "skipped": len(skipped), "failed": len(failed),
-        "ids": imported, "errors": failed,
+        "imported": len(imported_ids), "skipped": skipped_n, "failed": len(failed),
+        "ids": imported_ids, "errors": failed,
     }
     if as_json:
         print_json(result)
         return
-    click.secho(f"\n📥 imported {len(imported)} memories from {path} (--as {as_mode})", fg="green", bold=True)
-    if skipped:
-        click.secho(f"   skipped {len(skipped)} already-imported (--dedupe {dedupe})", fg="bright_black")
+    click.secho(f"\n📥 imported {len(imported_ids)} memories from {path} (--as {as_mode})", fg="green", bold=True)
+    if skipped_n:
+        click.secho(f"   skipped {skipped_n} already-imported (--dedupe {dedupe})", fg="bright_black")
     if failed:
         click.secho(f"   {len(failed)} failed:", fg="red")
         for f in failed:

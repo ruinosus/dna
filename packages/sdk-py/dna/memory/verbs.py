@@ -27,6 +27,7 @@ s-memory-verbs (2026-07-09).
 from __future__ import annotations
 
 import copy
+import hashlib
 import logging
 from datetime import datetime, timezone
 from typing import Any
@@ -466,6 +467,168 @@ async def consolidate(
     }
 
 
+async def import_mif_docs(
+    kernel: Any,
+    scope: str,
+    docs: list[dict[str, Any]],
+    *,
+    as_mode: str = "both",
+    dedupe: str = "id",
+    tenant: str | None = None,
+) -> dict[str, Any]:
+    """Ingest already-parsed MIF Memory Units into ``scope``/``tenant`` — the
+    ONE write pipeline behind ``dna memory import`` (CLI) and
+    ``POST /v1/memories/import`` (REST face), so the two can never drift.
+
+    ``docs`` are validated MIF dicts (see
+    :func:`dna.memory.interchange.parse_mif_bundle`) — parsing/IO is the
+    caller's job.
+
+    ``as_mode``:
+
+    * ``passthrough`` — store the original MIF doc byte-for-byte as
+      ``mif-spec.dev/v1 · Memory`` (auditable, stable re-export);
+    * ``native`` — project an ``Engram`` via :func:`from_mif` only
+      (indexable / recallable);
+    * ``both`` (default) — do both.
+
+    ``dedupe``: ``id`` skips a doc whose MIF id was already imported (the §6
+    idempotence contract), ``content-hash`` skips by exact content match,
+    ``off`` pre-checks nothing.
+
+    ``tenant`` may name a reserved ``personal:<oid>`` partition — the caller
+    (a face) is responsible for having derived that oid SERVER-SIDE
+    (INV-PERSONAL layer 1); this binds the write kernel with the matching
+    ``allow_personal`` authorization.
+
+    One bad doc lands in ``errors`` and does NOT abort the batch, but the
+    counts always reconcile (``imported + skipped + failed == len(docs)``) so a
+    partial import is always REPORTED, never silent. Deterministic — no LLM, no
+    network.
+    """
+    from dna.memory.interchange import (
+        KNOWN_MIF_FIELDS,
+        engram_doc_name,
+        from_mif,
+        mif_doc_name,
+    )
+    from dna.memory.personal import is_personal_tenant
+
+    if as_mode not in ("passthrough", "native", "both"):
+        raise ValueError(
+            f"as_mode must be one of passthrough/native/both, got {as_mode!r}"
+        )
+    if dedupe not in ("id", "content-hash", "off"):
+        raise ValueError(f"dedupe must be one of id/content-hash/off, got {dedupe!r}")
+
+    write_kernel = (
+        kernel.with_tenant(tenant, allow_personal=is_personal_tenant(tenant))
+        if tenant
+        else kernel
+    )
+    engram_api_version = _resolve_api_version(kernel, "Engram")
+    memory_api_version = _resolve_api_version(kernel, "Memory")
+
+    existing_passthrough_ids: set[str] = set()
+    existing_engram_mif_ids: set[str] = set()
+    existing_content_hashes: set[str] = set()
+
+    def _hash(text: str) -> str:
+        return hashlib.sha256((text or "").encode("utf-8")).hexdigest()
+
+    if dedupe != "off":
+        if as_mode in ("passthrough", "both"):
+            async for raw in kernel.query(scope, "Memory", tenant=tenant):
+                doc_spec = raw.get("spec") or {}
+                if dedupe == "id" and doc_spec.get("id"):
+                    existing_passthrough_ids.add(str(doc_spec["id"]))
+                elif dedupe == "content-hash":
+                    existing_content_hashes.add(_hash(doc_spec.get("content") or ""))
+        if as_mode in ("native", "both"):
+            async for raw in kernel.query(scope, "Engram", tenant=tenant):
+                e_spec = raw.get("spec") or {}
+                ec = e_spec.get("encoding_context") or {}
+                if dedupe == "id" and ec.get("mif_id"):
+                    existing_engram_mif_ids.add(str(ec["mif_id"]))
+                elif dedupe == "content-hash":
+                    existing_content_hashes.add(_hash(e_spec.get("body") or ""))
+
+    imported: list[str] = []
+    skipped: list[str] = []
+    failed: list[dict[str, str]] = []
+
+    for doc in docs:
+        doc_id = str(doc.get("id") or "")
+        content_hash = _hash(doc.get("content") or "")
+
+        already = False
+        if dedupe == "id":
+            already = (
+                (as_mode == "passthrough" and doc_id in existing_passthrough_ids)
+                or (as_mode == "native" and doc_id in existing_engram_mif_ids)
+                or (
+                    as_mode == "both"
+                    and (
+                        doc_id in existing_passthrough_ids
+                        or doc_id in existing_engram_mif_ids
+                    )
+                )
+            )
+        elif dedupe == "content-hash":
+            already = content_hash in existing_content_hashes
+        if already:
+            skipped.append(doc_id)
+            continue
+
+        try:
+            if as_mode in ("passthrough", "both"):
+                name = mif_doc_name(doc_id)
+                clean_spec = {k: v for k, v in doc.items() if k in KNOWN_MIF_FIELDS}
+                raw_doc: dict[str, Any] = {
+                    "kind": "Memory",
+                    "metadata": {"name": name},
+                    "spec": clean_spec,
+                }
+                if memory_api_version:
+                    raw_doc["apiVersion"] = memory_api_version
+                await write_kernel.write_document(
+                    scope, "Memory", name, raw_doc, invalidate_mode="doc"
+                )
+                existing_passthrough_ids.add(doc_id)
+
+            if as_mode in ("native", "both"):
+                engram_spec = from_mif(doc)
+                engram_name = engram_doc_name(doc_id)
+                e_raw: dict[str, Any] = {
+                    "kind": "Engram",
+                    "metadata": {"name": engram_name},
+                    "spec": engram_spec,
+                }
+                if engram_api_version:
+                    e_raw["apiVersion"] = engram_api_version
+                await write_kernel.write_document(
+                    scope, "Engram", engram_name, e_raw, invalidate_mode="doc"
+                )
+                existing_engram_mif_ids.add(doc_id)
+        except Exception as exc:  # noqa: BLE001 — one bad doc must not abort the batch
+            failed.append({"id": doc_id, "error": str(exc)})
+            continue
+
+        imported.append(doc_id)
+        if dedupe == "content-hash":
+            existing_content_hashes.add(content_hash)
+
+    return {
+        "as": as_mode,
+        "dedupe": dedupe,
+        "imported": len(imported),
+        "skipped": len(skipped),
+        "failed": len(failed),
+        "ids": imported,
+        "errors": failed,
+    }
+
+
 __all__ = [
     "MEMORY_KINDS",
     "remember",
@@ -473,4 +636,5 @@ __all__ = [
     "forget",
     "consolidate",
     "backfill_index",
+    "import_mif_docs",
 ]

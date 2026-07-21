@@ -968,6 +968,85 @@
         "title": "HealthResponse",
         "type": "object"
       },
+      "ImportFailure": {
+        "description": "One MIF doc that could not be written — reported, never swallowed.",
+        "properties": {
+          "error": {
+            "title": "Error",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "error"
+        ],
+        "title": "ImportFailure",
+        "type": "object"
+      },
+      "ImportMemoriesResponse": {
+        "description": "The outcome of a MIF bundle import into the caller's PERSONAL partition.\n\nThe counts always reconcile with the bundle size\n(``imported + skipped + failed == received``), so a partial import is always\nVISIBLE — ``failed`` is a reported outcome, never a silent one.\n``partition`` echoes only the SCHEME the write landed in (``personal``),\nnever the concrete ``personal:<oid>`` value — echoing that back would leak\nthe server-derived identity onto the wire.",
+        "properties": {
+          "as_mode": {
+            "default": "both",
+            "title": "As Mode",
+            "type": "string"
+          },
+          "dedupe": {
+            "default": "id",
+            "title": "Dedupe",
+            "type": "string"
+          },
+          "errors": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ImportFailure"
+            },
+            "title": "Errors",
+            "type": "array"
+          },
+          "failed": {
+            "title": "Failed",
+            "type": "integer"
+          },
+          "ids": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Ids",
+            "type": "array"
+          },
+          "imported": {
+            "title": "Imported",
+            "type": "integer"
+          },
+          "partition": {
+            "default": "personal",
+            "title": "Partition",
+            "type": "string"
+          },
+          "received": {
+            "title": "Received",
+            "type": "integer"
+          },
+          "skipped": {
+            "title": "Skipped",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "imported",
+          "skipped",
+          "failed",
+          "received"
+        ],
+        "title": "ImportMemoriesResponse",
+        "type": "object"
+      },
       "InsightMetricsResponse": {
         "properties": {
           "actioned": {
@@ -3518,6 +3597,111 @@
           }
         },
         "summary": "Remember Memory"
+      }
+    },
+    "/v1/memories/import": {
+      "post": {
+        "description": "Import a MIF bundle into the CALLER'S OWN personal memory.\n\nThe remote face of ``dna memory import --personal``: it wraps the SAME\ncore pipeline (``dna.memory.verbs.import_mif_docs`` →\n``dna.memory.interchange.from_mif``), so MIF is stored verbatim as a\npassthrough ``Memory`` AND/OR projected to a recallable ``Engram`` with\nno format logic re-implemented anywhere else.\n\nBody: ``{\"bundle\": <MIF>, \"as\": \"both\"|\"passthrough\"|\"native\",\n\"dedupe\": \"id\"|\"content-hash\"|\"off\"}``. ``bundle`` accepts the shapes the\nexport side emits — a JSON-LD ``{\"@graph\": [...]}``, a bare list of\nMemory Units, or one Memory Unit.\n\n**The write ALWAYS lands in the caller's personal partition**\n(``personal:<oid>``), never a workspace: personal memory follows the\nPERSON, not the workspace (decision B1 / ADR-personal-memory). The\nidentity is derived SERVER-SIDE from the verified token's claims and is\nnever accepted from the body or the query — a ``tenant``/``oid``/\n``personal_id`` sent by a client is IGNORED here (INV-PERSONAL layer 1),\nand there is no fallback to a workspace or to ``DNA_PERSONAL_ID`` on an\nauthenticated deployment. No resolvable identity ⇒ 403, nothing written.",
+        "operationId": "import_memories_v1_memories_import_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scope"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "as": {
+                    "default": "both",
+                    "description": "passthrough = store the MIF verbatim only; native = project to a recallable Engram only; both = verbatim AND projected.",
+                    "enum": [
+                      "passthrough",
+                      "native",
+                      "both"
+                    ],
+                    "title": "As",
+                    "type": "string"
+                  },
+                  "bundle": {
+                    "description": "The MIF payload: a JSON-LD {'@graph': [...]} bundle, a bare list of Memory Units, or a single Memory Unit.",
+                    "title": "Bundle"
+                  },
+                  "dedupe": {
+                    "default": "id",
+                    "description": "id = skip a doc whose MIF id was already imported (idempotent re-import); content-hash = skip by exact content match; off = no pre-check.",
+                    "enum": [
+                      "id",
+                      "content-hash",
+                      "off"
+                    ],
+                    "title": "Dedupe",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "bundle"
+                ],
+                "title": "ImportMemoriesRequest",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportMemoriesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Import Memories"
       }
     },
     "/v1/memories/search": {

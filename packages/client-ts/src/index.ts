@@ -191,6 +191,40 @@ export class DnaClient {
   }
 
   /**
+   * Import a MIF bundle into the CALLER'S OWN personal memory.
+   *
+   * `bundle` takes any shape the export side emits: a JSON-LD
+   * `{ "@graph": [...] }`, a bare array of Memory Units, or one Memory Unit.
+   * `as` picks verbatim storage (`passthrough`), the recallable `Engram`
+   * projection (`native`), or both (default); `dedupe` makes a re-import
+   * idempotent by MIF id.
+   *
+   * There is deliberately **no tenant or identity parameter**: the write always
+   * lands in the caller's own `personal:<oid>` partition, with the identity
+   * derived server-side from the token (INV-PERSONAL) — which is also why the
+   * client-level default `tenant` is NOT merged here. A malformed bundle is a
+   * 400 with nothing written, an oversized one a 413, and a token carrying no
+   * identity a 403. The returned counts always reconcile with `received`, so a
+   * partial import is never silent.
+   */
+  async importMemories(
+    body: {
+      bundle: unknown;
+      as?: "passthrough" | "native" | "both";
+      dedupe?: "id" | "content-hash" | "off";
+    },
+    query?: { scope?: string },
+  ) {
+    const scope = query?.scope ?? this.defaults.scope;
+    return this.unwrap(
+      await this.raw.POST("/v1/memories/import", {
+        params: { query: scope !== undefined ? { scope } : {} },
+        body: { as: "both", dedupe: "id", ...body },
+      }),
+    );
+  }
+
+  /**
    * Delete ONE memory from the tenant's OWN overlay.
    *
    * Refuses anything outside that overlay: a base-scope memory, or another

@@ -44,6 +44,7 @@ from dna.application.runtime import (
     get_skill_impl,
     get_template_impl,
     get_tool_impl,
+    import_memories_impl,
     invite_member_impl,
     list_agents_impl,
     list_skills_impl,
@@ -97,6 +98,7 @@ __all__ = [
     "recall_impl",
     "remember_impl",
     "consolidate_impl",
+    "import_memories_impl",
     "list_memories_impl",
     "forget_impl",
     # portfolio (the DNA Cloud console read model)

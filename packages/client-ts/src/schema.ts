@@ -205,6 +205,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/memories/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Import Memories
+         * @description Import a MIF bundle into the CALLER'S OWN personal memory.
+         *
+         *     The remote face of ``dna memory import --personal``: it wraps the SAME
+         *     core pipeline (``dna.memory.verbs.import_mif_docs`` →
+         *     ``dna.memory.interchange.from_mif``), so MIF is stored verbatim as a
+         *     passthrough ``Memory`` AND/OR projected to a recallable ``Engram`` with
+         *     no format logic re-implemented anywhere else.
+         *
+         *     Body: ``{"bundle": <MIF>, "as": "both"|"passthrough"|"native",
+         *     "dedupe": "id"|"content-hash"|"off"}``. ``bundle`` accepts the shapes the
+         *     export side emits — a JSON-LD ``{"@graph": [...]}``, a bare list of
+         *     Memory Units, or one Memory Unit.
+         *
+         *     **The write ALWAYS lands in the caller's personal partition**
+         *     (``personal:<oid>``), never a workspace: personal memory follows the
+         *     PERSON, not the workspace (decision B1 / ADR-personal-memory). The
+         *     identity is derived SERVER-SIDE from the verified token's claims and is
+         *     never accepted from the body or the query — a ``tenant``/``oid``/
+         *     ``personal_id`` sent by a client is IGNORED here (INV-PERSONAL layer 1),
+         *     and there is no fallback to a workspace or to ``DNA_PERSONAL_ID`` on an
+         *     authenticated deployment. No resolvable identity ⇒ 403, nothing written.
+         */
+        post: operations["import_memories_v1_memories_import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/memories/search": {
         parameters: {
             query?: never;
@@ -1001,6 +1041,62 @@ export interface components {
         HealthResponse: {
             /** Ok */
             ok: boolean;
+        };
+        /**
+         * ImportFailure
+         * @description One MIF doc that could not be written — reported, never swallowed.
+         */
+        ImportFailure: {
+            /** Error */
+            error: string;
+            /** Id */
+            id: string;
+        };
+        /**
+         * ImportMemoriesResponse
+         * @description The outcome of a MIF bundle import into the caller's PERSONAL partition.
+         *
+         *     The counts always reconcile with the bundle size
+         *     (``imported + skipped + failed == received``), so a partial import is always
+         *     VISIBLE — ``failed`` is a reported outcome, never a silent one.
+         *     ``partition`` echoes only the SCHEME the write landed in (``personal``),
+         *     never the concrete ``personal:<oid>`` value — echoing that back would leak
+         *     the server-derived identity onto the wire.
+         */
+        ImportMemoriesResponse: {
+            /**
+             * As Mode
+             * @default both
+             */
+            as_mode: string;
+            /**
+             * Dedupe
+             * @default id
+             */
+            dedupe: string;
+            /**
+             * Errors
+             * @default []
+             */
+            errors: components["schemas"]["ImportFailure"][];
+            /** Failed */
+            failed: number;
+            /**
+             * Ids
+             * @default []
+             */
+            ids: string[];
+            /** Imported */
+            imported: number;
+            /**
+             * Partition
+             * @default personal
+             */
+            partition: string;
+            /** Received */
+            received: number;
+            /** Skipped */
+            skipped: number;
         };
         /** InsightMetricsResponse */
         InsightMetricsResponse: {
@@ -1909,6 +2005,63 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RememberResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    import_memories_v1_memories_import_post: {
+        parameters: {
+            query?: {
+                scope?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * As
+                     * @description passthrough = store the MIF verbatim only; native = project to a recallable Engram only; both = verbatim AND projected.
+                     * @default both
+                     * @enum {string}
+                     */
+                    as?: "passthrough" | "native" | "both";
+                    /**
+                     * Bundle
+                     * @description The MIF payload: a JSON-LD {'@graph': [...]} bundle, a bare list of Memory Units, or a single Memory Unit.
+                     */
+                    bundle: unknown;
+                    /**
+                     * Dedupe
+                     * @description id = skip a doc whose MIF id was already imported (idempotent re-import); content-hash = skip by exact content match; off = no pre-check.
+                     * @default id
+                     * @enum {string}
+                     */
+                    dedupe?: "id" | "content-hash" | "off";
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportMemoriesResponse"];
                 };
             };
             /** @description Validation Error */

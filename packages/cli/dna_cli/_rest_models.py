@@ -90,6 +90,34 @@ class RememberResponse(BaseModel):
     indexed: bool
 
 
+class ImportFailure(BaseModel):
+    """One MIF doc that could not be written — reported, never swallowed."""
+
+    id: str
+    error: str
+
+
+class ImportMemoriesResponse(BaseModel):
+    """The outcome of a MIF bundle import into the caller's PERSONAL partition.
+
+    The counts always reconcile with the bundle size
+    (``imported + skipped + failed == received``), so a partial import is always
+    VISIBLE — ``failed`` is a reported outcome, never a silent one.
+    ``partition`` echoes only the SCHEME the write landed in (``personal``),
+    never the concrete ``personal:<oid>`` value — echoing that back would leak
+    the server-derived identity onto the wire."""
+
+    imported: int
+    skipped: int
+    failed: int
+    received: int
+    partition: str = "personal"
+    as_mode: str = "both"
+    dedupe: str = "id"
+    ids: list[str] = []
+    errors: list[ImportFailure] = []
+
+
 class RecallResponse(BaseModel):
     """The recall envelope is typed; each ``hit`` stays a loose dict — its shape
     varies with the search plane active (lexical vs. hybrid/semantic add

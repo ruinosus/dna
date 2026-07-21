@@ -38,6 +38,7 @@ even importing this module) stays FastAPI-free.
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 import secrets
 from typing import Any
@@ -55,6 +56,34 @@ from typing import Any
 # and delete.
 
 _MEMORY_KIND = "Engram"
+
+# ── MIF import bounds ───────────────────────────────────────────────────────
+#
+# The import route buffers and parses the whole bundle (dedupe + validation are
+# whole-payload gates — that is what makes "no partial import" true), so the
+# payload must be BOUNDED or a single upload can exhaust the container. Two
+# independent bounds, because they fail differently: bytes caps the transport +
+# JSON parse, doc count caps the write amplification (each doc can become TWO
+# kernel writes under ``--as both``). Both answer 413 with the actual limit, and
+# both are refused BEFORE anything is written. Overridable per deployment; a
+# non-numeric/absent env keeps the default.
+
+
+def _int_env(name: str, default: int) -> int:
+    raw = os.environ.get(name)
+    try:
+        val = int(raw) if raw else default
+    except ValueError:
+        return default
+    return val if val > 0 else default
+
+
+#: Max MIF bundle body, bytes (``DNA_API_MAX_IMPORT_BYTES``, default 10 MiB —
+#: comfortably a large Claude export, far below a container's memory).
+_MAX_IMPORT_BYTES = _int_env("DNA_API_MAX_IMPORT_BYTES", 10 * 1024 * 1024)
+
+#: Max Memory Units per request (``DNA_API_MAX_IMPORT_DOCS``, default 5000).
+_MAX_IMPORT_DOCS = _int_env("DNA_API_MAX_IMPORT_DOCS", 5000)
 
 
 async def list_memories_impl(
@@ -206,6 +235,7 @@ def build_app(
         create_project_impl,
         create_workspace_impl,
         get_project_impl,
+        import_memories_impl,
         invite_member_impl,
         list_agents_impl,
         list_members_impl,
@@ -352,6 +382,17 @@ def build_app(
             # request that names no `tenant`, and this route names none by design.
             if path == "/v1/projects" and request.method == "POST":
                 return await call_next(request)
+            # POST /v1/memories/import targets the caller's PERSONAL partition,
+            # which is ORTHOGONAL to any workspace (decision B1 — personal memory
+            # follows the person, not the workspace). Binding a workspace here
+            # would be worse than useless: `resolve_workspace` fails closed for a
+            # caller with NO membership, which would block exactly the signed-up
+            # user with no workspace yet from importing their own memory — the
+            # product wedge. Exempting it is not a hole: the route derives its
+            # identity from `request.state.claims` (set just above, on the
+            # VERIFIED token) and never reads `tenant` at all.
+            if path == "/v1/memories/import" and request.method == "POST":
+                return await call_next(request)
 
             grants_raw = await (await _live()).kernel.workspace_memberships()
             if not grants_raw:
@@ -470,6 +511,185 @@ def build_app(
             await _live(), text, scope, area=area, affect=affect,
             tags=tags, owner=owner, tenant=tenant,
         )
+
+    # The body is read RAW (see the handler) so the byte bound is enforced before
+    # anything is buffered into a model — which would otherwise leave the request
+    # body undocumented (``requestBody: never``) and untypeable by the generated
+    # clients. So the schema is declared explicitly here: the OpenAPI contract
+    # and the hand-parsed body are kept in lockstep by the route's own tests.
+    _IMPORT_BODY_SCHEMA = {
+        "title": "ImportMemoriesRequest",
+        "type": "object",
+        "required": ["bundle"],
+        "properties": {
+            "bundle": {
+                "title": "Bundle",
+                "description": (
+                    "The MIF payload: a JSON-LD {'@graph': [...]} bundle, a bare "
+                    "list of Memory Units, or a single Memory Unit."
+                ),
+            },
+            "as": {
+                "title": "As",
+                "type": "string",
+                "enum": ["passthrough", "native", "both"],
+                "default": "both",
+                "description": (
+                    "passthrough = store the MIF verbatim only; native = project "
+                    "to a recallable Engram only; both = verbatim AND projected."
+                ),
+            },
+            "dedupe": {
+                "title": "Dedupe",
+                "type": "string",
+                "enum": ["id", "content-hash", "off"],
+                "default": "id",
+                "description": (
+                    "id = skip a doc whose MIF id was already imported "
+                    "(idempotent re-import); content-hash = skip by exact "
+                    "content match; off = no pre-check."
+                ),
+            },
+        },
+    }
+
+    @app.post("/v1/memories/import", dependencies=guarded, status_code=201,
+              response_model=m.ImportMemoriesResponse,
+              openapi_extra={
+                  "requestBody": {
+                      "required": True,
+                      "content": {
+                          "application/json": {"schema": _IMPORT_BODY_SCHEMA}
+                      },
+                  }
+              })
+    async def import_memories(
+        request: Request,
+        scope: str | None = Query(default=None),
+    ) -> dict[str, Any]:
+        """Import a MIF bundle into the CALLER'S OWN personal memory.
+
+        The remote face of ``dna memory import --personal``: it wraps the SAME
+        core pipeline (``dna.memory.verbs.import_mif_docs`` →
+        ``dna.memory.interchange.from_mif``), so MIF is stored verbatim as a
+        passthrough ``Memory`` AND/OR projected to a recallable ``Engram`` with
+        no format logic re-implemented anywhere else.
+
+        Body: ``{"bundle": <MIF>, "as": "both"|"passthrough"|"native",
+        "dedupe": "id"|"content-hash"|"off"}``. ``bundle`` accepts the shapes the
+        export side emits — a JSON-LD ``{"@graph": [...]}``, a bare list of
+        Memory Units, or one Memory Unit.
+
+        **The write ALWAYS lands in the caller's personal partition**
+        (``personal:<oid>``), never a workspace: personal memory follows the
+        PERSON, not the workspace (decision B1 / ADR-personal-memory). The
+        identity is derived SERVER-SIDE from the verified token's claims and is
+        never accepted from the body or the query — a ``tenant``/``oid``/
+        ``personal_id`` sent by a client is IGNORED here (INV-PERSONAL layer 1),
+        and there is no fallback to a workspace or to ``DNA_PERSONAL_ID`` on an
+        authenticated deployment. No resolvable identity ⇒ 403, nothing written.
+        """
+        from dna.memory.interchange import MifFormatError, parse_mif_bundle
+        from dna.memory.personal import (
+            PersonalIdentityRequired,
+            PersonalOverrideRejected,
+        )
+        from dna_cli._mcp_auth import personal_identity_from_claims
+
+        # 1. Identity FIRST — resolve (and fail closed) before reading a byte of
+        #    body, so an unidentified caller can never even stage an import.
+        #    `auth == "config"` is the only mode with a per-request VERIFIED
+        #    identity; `--auth token` is a SHARED secret (not an identity) and
+        #    `--auth none` is the single-user local deployment, the stdio
+        #    equivalent, which is the only mode allowed to read DNA_PERSONAL_ID.
+        claims = _actor_claims_from_state(request) if auth == "config" else None
+        try:
+            oid, family = personal_identity_from_claims(
+                claims,
+                token_present=(auth == "config"),
+                allow_env_fallback=(auth == "none"),
+            )
+        except (PersonalIdentityRequired, PersonalOverrideRejected) as exc:
+            raise HTTPException(status_code=403, detail=str(exc)) from None
+
+        # 2. Size gate BEFORE parsing — a bounded read, so an oversized upload is
+        #    refused (413) instead of being buffered/parsed into memory.
+        raw = await request.body()
+        if len(raw) > _MAX_IMPORT_BYTES:
+            raise HTTPException(
+                status_code=413,
+                detail=(
+                    f"MIF bundle is {len(raw)} bytes; the import limit is "
+                    f"{_MAX_IMPORT_BYTES} bytes "
+                    f"({_MAX_IMPORT_BYTES // (1024 * 1024)} MiB). Split the "
+                    "export into smaller bundles (import is idempotent by MIF "
+                    "id, so the parts can be sent independently)."
+                ),
+            )
+        try:
+            payload = json.loads(raw or b"")
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=400, detail=f"body is not valid JSON: {exc}"
+            ) from None
+        if not isinstance(payload, dict):
+            raise HTTPException(
+                status_code=400,
+                detail="body must be a JSON object with a 'bundle' field",
+            )
+
+        as_mode = payload.get("as", "both")
+        dedupe = payload.get("dedupe", "id")
+        if as_mode not in ("passthrough", "native", "both"):
+            raise HTTPException(
+                status_code=400,
+                detail=f"'as' must be passthrough/native/both, got {as_mode!r}",
+            )
+        if dedupe not in ("id", "content-hash", "off"):
+            raise HTTPException(
+                status_code=400,
+                detail=f"'dedupe' must be id/content-hash/off, got {dedupe!r}",
+            )
+        if "bundle" not in payload:
+            raise HTTPException(
+                status_code=400, detail="body must carry a 'bundle' field (the MIF)"
+            )
+
+        # 3. Parse + validate the WHOLE bundle before any write — a malformed
+        #    bundle is a 400 with nothing written, never a partial import.
+        try:
+            docs = parse_mif_bundle(payload["bundle"], source="bundle")
+        except MifFormatError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from None
+        if len(docs) > _MAX_IMPORT_DOCS:
+            raise HTTPException(
+                status_code=413,
+                detail=(
+                    f"bundle carries {len(docs)} memories; the import limit is "
+                    f"{_MAX_IMPORT_DOCS} per request."
+                ),
+            )
+
+        try:
+            out = await import_memories_impl(
+                await _live(), docs,
+                as_mode=as_mode, dedupe=dedupe, scope=scope,
+                memory_scope="personal", oid=oid, family=family,
+            )
+        except PersonalIdentityRequired as exc:  # defense in depth (core re-checks)
+            raise HTTPException(status_code=403, detail=str(exc)) from None
+
+        return {
+            "imported": out["imported"],
+            "skipped": out["skipped"],
+            "failed": out["failed"],
+            "received": len(docs),
+            "partition": "personal",
+            "as_mode": out["as"],
+            "dedupe": out["dedupe"],
+            "ids": out["ids"],
+            "errors": out["errors"],
+        }
 
     @app.get("/v1/memories/search", dependencies=guarded,
              response_model=m.RecallResponse)
