@@ -169,12 +169,12 @@ def _build_kaizen_doc_spec(
 
 
 # ---------------------------------------------------------------------------
-# Group root
+# Group root — moved to the decomposed package (dna_cli/sdlc/_root.py) so
+# group modules can attach to it without a cycle through this module.
+# Re-exported: `from dna_cli.sdlc_cmd import sdlc` keeps resolving.
 # ---------------------------------------------------------------------------
 
-@click.group(name="sdlc", help="Declarative lifecycle tracking (Roadmap/Epic/Feature/Story/Issue).")
-def sdlc() -> None:
-    """Group root — Phase 16 SdlcExtension surface."""
+from dna_cli.sdlc._root import sdlc  # noqa: E402, F401 — re-exported for back-compat
 
 
 # ---------------------------------------------------------------------------
