@@ -484,15 +484,25 @@ def build_server(
 
     @server.tool(run_in_thread=False)
     async def compose_prompt(
-        agent: str, scope: str | None = None, tenant: str | None = None
+        agent: str, scope: str | None = None, tenant: str | None = None,
+        explain: bool = False,
     ) -> dict[str, Any]:
         """Compose an agent's system prompt LIVE (Soul + Guardrails +
         instruction). Pass ``tenant`` to get the per-tenant overlay — the
         composition a static emit artifact cannot express. When the server is
         authenticated, the effective tenant is bound to the token (a cross-tenant
-        ``tenant`` is denied)."""
+        ``tenant`` is denied). Pass ``explain=true`` (opt-in) to ALSO get
+        per-section provenance: ``sections`` (source artifact, content hash,
+        version, layer origin, tenant-overlay marker per composed section) and
+        ``attribution`` (``declared`` = kernel-owned template, section map
+        correct by construction; ``heuristic`` = custom promptTemplate, section
+        detection is fail-soft string matching and may omit/over-report
+        sections). The composed ``prompt`` is byte-identical with or without
+        the flag; without it the response shape is unchanged."""
         return await compose_prompt_impl(
-            await _live(), agent, scope, await _guard("definitions", tenant, scope=scope)
+            await _live(), agent, scope,
+            await _guard("definitions", tenant, scope=scope),
+            explain=explain,
         )
 
     @server.tool(run_in_thread=False)

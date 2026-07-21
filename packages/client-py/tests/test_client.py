@@ -86,6 +86,20 @@ def test_path_substitution_and_typed_query():
     assert calls[4].url.params["name"] == "s-foo"
 
 
+def test_agent_prompt_explain_opt_in():
+    # Provenance on the wire (i-045): explain is OPT-IN. The default call sends
+    # NO explain param at all (the request is byte-identical to the historical
+    # plain compose); explain=True sends explain=true.
+    transport, calls = _recorder({"prompt": "p"})
+    with DnaClient(BASE, transport=transport) as dna:
+        dna.agent_prompt("jarvis", scope="s")
+        dna.agent_prompt("jarvis", scope="s", explain=True)
+        dna.agent_prompt("jarvis", scope="s", explain=False)
+    assert "explain" not in calls[0].url.params
+    assert calls[1].url.params["explain"] == "true"
+    assert "explain" not in calls[2].url.params
+
+
 def test_workspace_members_no_scope_tenant_default():
     # /v1/workspaces/* boundary routes do NOT take scope/tenant — the client
     # must not inject its defaults there.

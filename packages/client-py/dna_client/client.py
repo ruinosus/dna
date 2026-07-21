@@ -172,10 +172,24 @@ class DnaClient:
         return self._get("/v1/agents", scope=scope, tenant=tenant)
 
     def agent_prompt(
-        self, name: str, *, scope: str | None = None, tenant: str | None = None
+        self, name: str, *, scope: str | None = None, tenant: str | None = None,
+        explain: bool = False,
     ) -> JsonObject:
-        """Compose one agent's system prompt LIVE (Soul + Guardrails + instruction)."""
-        return self._get(f"/v1/agents/{name}/prompt", scope=scope, tenant=tenant)
+        """Compose one agent's system prompt LIVE (Soul + Guardrails + instruction).
+
+        ``explain=True`` (opt-in) adds per-section provenance to the response:
+        ``sections`` (source artifact, content hash, version, layer origin and
+        tenant-overlay marker per composed section) and ``attribution``
+        (``"declared"`` — kernel-owned template, section map correct by
+        construction; ``"heuristic"`` — the agent has a custom promptTemplate,
+        the map is fail-soft string matching and may omit/over-report
+        sections). The composed ``prompt`` is byte-identical either way. When
+        ``False`` (default) the request is exactly the historical plain
+        compose — no ``explain`` query param is sent at all."""
+        return self._get(
+            f"/v1/agents/{name}/prompt", scope=scope, tenant=tenant,
+            explain=True if explain else None,
+        )
 
     def list_tools(
         self, *, scope: str | None = None, tenant: str | None = None

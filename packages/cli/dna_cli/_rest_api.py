@@ -530,18 +530,35 @@ def build_app(
         """List a scope's prompt-target agents, tenant-aware."""
         return await list_agents_impl(await _live(), scope, tenant)
 
+    # response_model_exclude_unset: the explain-only fields (sections /
+    # attribution) are OMITTED from the plain compose response — the historical
+    # five-key JSON shape is preserved byte-for-byte for every caller that does
+    # not opt in (guarded by tests/test_compose_explain.py).
     @app.get("/v1/agents/{name}/prompt", dependencies=guarded,
-             response_model=m.AgentPromptResponse)
+             response_model=m.AgentPromptResponse,
+             response_model_exclude_unset=True)
     async def agent_prompt(
         name: str,
         scope: str | None = Query(default=None),
         tenant: str | None = Query(default=None),
+        explain: bool = Query(default=False, description=(
+            "Opt-in per-section provenance (i-045). When true, the response "
+            "additionally carries 'sections' (source artifact, content hash, "
+            "version, layer origin and tenant-overlay marker per composed "
+            "section) and 'attribution' (declared|heuristic — how trustworthy "
+            "the section map is; see the response model). The composed "
+            "'prompt' is byte-identical with or without the flag — explain "
+            "never re-renders."
+        )),
     ) -> dict[str, Any]:
         """Compose one agent's system prompt LIVE (Soul + Guardrails +
         instruction), tenant-aware — the per-tenant overlay a static emit
-        artifact cannot express."""
+        artifact cannot express. ``?explain=true`` adds per-section
+        provenance (the ``dna explain`` map) to the same response."""
         try:
-            return await compose_prompt_impl(await _live(), name, scope, tenant)
+            return await compose_prompt_impl(
+                await _live(), name, scope, tenant, explain=explain
+            )
         except ValueError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from None
 

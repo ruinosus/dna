@@ -29,7 +29,15 @@ overlay only — never another tenant's data):
 
 - `GET /health`
 - `GET /v1/agents` — list the prompt-target agents in a scope
-- `GET /v1/agents/{name}/prompt` — compose an agent's system prompt **live**
+- `GET /v1/agents/{name}/prompt` — compose an agent's system prompt **live**.
+  `?explain=true` (opt-in) also returns per-section provenance — the
+  `dna explain` map (source artifact, content hash, version, layer origin and
+  tenant-overlay marker per composed section) plus an `attribution` honesty
+  marker (`declared` = kernel-owned template, the section map is correct by
+  construction; `heuristic` = the agent has its own `promptTemplate`, section
+  detection is fail-soft string matching and may omit/over-report sections).
+  The composed `prompt` is byte-identical with or without the flag; without it
+  the response shape is unchanged.
 - `GET /v1/tools` — the Tool surfaces in a scope
 - `GET /v1/memories` — the tenant's stored memories (`Engram`)
 - `GET /v1/memories/search?q=…` — recall (semantic when indexed, else lexical)

@@ -11,6 +11,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### ✨ Proveniência no fio (i-045)
+
+- **`GET /v1/agents/{name}/prompt?explain=true`** (REST) e
+  **`compose_prompt(explain=true)`** (MCP) — o mapa de proveniência por seção
+  que só o `dna explain` alcançava chega à superfície paga. Opt-in: sem a flag
+  o compose continua byte-idêntico (shape do JSON incluído); com ela a resposta
+  ganha `sections` (artefato de origem, hash do conteúdo, versão, layer de
+  origem e marcador de overlay de tenant por seção composta) e `attribution` —
+  o marcador de honestidade do shape: `declared` (template do kernel, mapa
+  correto por construção) vs `heuristic` (o agente tem `promptTemplate`
+  próprio; a detecção de seções é match de string fail-soft e pode omitir ou
+  sobre-reportar seções). O `prompt` composto é byte-idêntico com e sem a flag
+  — explain nunca re-renderiza. Os clientes `dna-client` (py + ts) expõem o
+  parâmetro tipado.
+
 ## [0.21.1] — 2026-07-21
 
 Release de encanamento: nenhuma mudança nos pacotes, só o que faltava para o

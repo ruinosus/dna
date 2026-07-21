@@ -72,6 +72,22 @@
             "title": "Agent",
             "type": "string"
           },
+          "attribution": {
+            "anyOf": [
+              {
+                "enum": [
+                  "declared",
+                  "heuristic"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How the section list was attributed (only with ?explain=true). 'declared': the agent renders through a kernel-owned template (named layout preset, Kind default, or the plain-instruction fallback) — the kernel authored both the template and the section aliases, so the section map is correct by construction. 'heuristic': the agent carries its OWN promptTemplate, and sections are detected by fail-soft string-matching Mustache blocks in that user-authored template — a section can be silently missing from, or over-reported in, 'sections' (the composed 'prompt' itself is still exact).",
+            "title": "Attribution"
+          },
           "model": {
             "anyOf": [
               {
@@ -90,6 +106,21 @@
           "scope": {
             "title": "Scope",
             "type": "string"
+          },
+          "sections": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/PromptSectionProvenance"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Per-section provenance of the composed prompt (only with ?explain=true). One row per composed input the layout renders. The 'prompt' field is byte-identical to the non-explain compose — explain never re-renders. NOTE: when 'attribution' is 'heuristic' this list may silently omit (or over-report) sections; see 'attribution'.",
+            "title": "Sections"
           },
           "tenant": {
             "anyOf": [
@@ -1930,6 +1961,81 @@
         "title": "ProjectsResponse",
         "type": "object"
       },
+      "PromptSectionProvenance": {
+        "description": "Provenance for ONE composed prompt section (``?explain=true``).\n\nMirrors the kernel's ``SectionProvenance.serialize()`` exactly — the same\nmap ``dna explain`` prints. No field here is invented by the REST face.",
+        "properties": {
+          "hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "SHA-256 (full hex) of the resolved raw document composed into this section, or null when it could not be resolved.",
+            "title": "Hash"
+          },
+          "is_inherited": {
+            "description": "True when 'origin' is a DIFFERENT scope than the requested one (the section is inherited from a parent/library scope).",
+            "title": "Is Inherited",
+            "type": "boolean"
+          },
+          "kind": {
+            "description": "The contributing Kind (Agent/Soul/Skill/Guardrail/…).",
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "description": "The contributing document name.",
+            "title": "Name",
+            "type": "string"
+          },
+          "origin": {
+            "description": "Effective layer/scope the section resolved from — the scope that won ('(not found)' when resolution failed).",
+            "title": "Origin",
+            "type": "string"
+          },
+          "overridden_by_tenant": {
+            "description": "True when the tenant-resolved content of this section DIFFERS from the base resolution — a per-tenant overlay won. Always false when no tenant was requested.",
+            "title": "Overridden By Tenant",
+            "type": "boolean"
+          },
+          "section": {
+            "description": "Human label of the composed section, e.g. 'instruction', 'soul', 'skill:tdd', 'guardrail:polite'.",
+            "title": "Section",
+            "type": "string"
+          },
+          "source": {
+            "description": "Canonical source artifact path, e.g. 'skills/tdd/SKILL.md' ('?' when the Kind declares no storage pattern).",
+            "title": "Source",
+            "type": "string"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "metadata.version of the resolved document, when the author set one.",
+            "title": "Version"
+          }
+        },
+        "required": [
+          "section",
+          "kind",
+          "name",
+          "source",
+          "origin",
+          "is_inherited",
+          "overridden_by_tenant"
+        ],
+        "title": "PromptSectionProvenance",
+        "type": "object"
+      },
       "ProvisionTenantOwnerResponse": {
         "properties": {
           "grants": {
@@ -2836,7 +2942,7 @@
     },
     "/v1/agents/{name}/prompt": {
       "get": {
-        "description": "Compose one agent's system prompt LIVE (Soul + Guardrails +\ninstruction), tenant-aware — the per-tenant overlay a static emit\nartifact cannot express.",
+        "description": "Compose one agent's system prompt LIVE (Soul + Guardrails +\ninstruction), tenant-aware — the per-tenant overlay a static emit\nartifact cannot express. ``?explain=true`` adds per-section\nprovenance (the ``dna explain`` map) to the same response.",
         "operationId": "agent_prompt_v1_agents__name__prompt_get",
         "parameters": [
           {
@@ -2878,6 +2984,18 @@
                 }
               ],
               "title": "Tenant"
+            }
+          },
+          {
+            "description": "Opt-in per-section provenance (i-045). When true, the response additionally carries 'sections' (source artifact, content hash, version, layer origin and tenant-overlay marker per composed section) and 'attribution' (declared|heuristic — how trustworthy the section map is; see the response model). The composed 'prompt' is byte-identical with or without the flag — explain never re-renders.",
+            "in": "query",
+            "name": "explain",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Opt-in per-section provenance (i-045). When true, the response additionally carries 'sections' (source artifact, content hash, version, layer origin and tenant-overlay marker per composed section) and 'attribution' (declared|heuristic — how trustworthy the section map is; see the response model). The composed 'prompt' is byte-identical with or without the flag — explain never re-renders.",
+              "title": "Explain",
+              "type": "boolean"
             }
           },
           {

@@ -24,9 +24,9 @@ is typed but that field stays loose (``dict[str, Any]`` / ``list[...]`` / ``Any`
 """
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 # ── health ──────────────────────────────────────────────────────────────────
 
@@ -49,12 +49,73 @@ class AgentsResponse(BaseModel):
     agents: list[AgentSummary]
 
 
+class PromptSectionProvenance(BaseModel):
+    """Provenance for ONE composed prompt section (``?explain=true``).
+
+    Mirrors the kernel's ``SectionProvenance.serialize()`` exactly — the same
+    map ``dna explain`` prints. No field here is invented by the REST face.
+    """
+
+    section: str = Field(description=(
+        "Human label of the composed section, e.g. 'instruction', 'soul', "
+        "'skill:tdd', 'guardrail:polite'."
+    ))
+    kind: str = Field(description="The contributing Kind (Agent/Soul/Skill/Guardrail/…).")
+    name: str = Field(description="The contributing document name.")
+    source: str = Field(description=(
+        "Canonical source artifact path, e.g. 'skills/tdd/SKILL.md' ('?' when "
+        "the Kind declares no storage pattern)."
+    ))
+    hash: str | None = Field(default=None, description=(
+        "SHA-256 (full hex) of the resolved raw document composed into this "
+        "section, or null when it could not be resolved."
+    ))
+    version: str | None = Field(default=None, description=(
+        "metadata.version of the resolved document, when the author set one."
+    ))
+    origin: str = Field(description=(
+        "Effective layer/scope the section resolved from — the scope that won "
+        "('(not found)' when resolution failed)."
+    ))
+    is_inherited: bool = Field(description=(
+        "True when 'origin' is a DIFFERENT scope than the requested one (the "
+        "section is inherited from a parent/library scope)."
+    ))
+    overridden_by_tenant: bool = Field(description=(
+        "True when the tenant-resolved content of this section DIFFERS from "
+        "the base resolution — a per-tenant overlay won. Always false when no "
+        "tenant was requested."
+    ))
+
+
 class AgentPromptResponse(BaseModel):
     scope: str
     agent: str
     tenant: str | None = None
     model: str | None = None
     prompt: str
+    # ── explain mode (?explain=true, i-045) — ABSENT without the flag ───────
+    # The route serializes with response_model_exclude_unset, so a plain
+    # compose keeps the exact historical five-key JSON shape; these two fields
+    # appear ONLY when the caller opted in.
+    sections: list[PromptSectionProvenance] | None = Field(default=None, description=(
+        "Per-section provenance of the composed prompt (only with "
+        "?explain=true). One row per composed input the layout renders. The "
+        "'prompt' field is byte-identical to the non-explain compose — explain "
+        "never re-renders. NOTE: when 'attribution' is 'heuristic' this list "
+        "may silently omit (or over-report) sections; see 'attribution'."
+    ))
+    attribution: Literal["declared", "heuristic"] | None = Field(default=None, description=(
+        "How the section list was attributed (only with ?explain=true). "
+        "'declared': the agent renders through a kernel-owned template (named "
+        "layout preset, Kind default, or the plain-instruction fallback) — the "
+        "kernel authored both the template and the section aliases, so the "
+        "section map is correct by construction. 'heuristic': the agent "
+        "carries its OWN promptTemplate, and sections are detected by "
+        "fail-soft string-matching Mustache blocks in that user-authored "
+        "template — a section can be silently missing from, or over-reported "
+        "in, 'sections' (the composed 'prompt' itself is still exact)."
+    ))
 
 
 class ToolSummary(BaseModel):
