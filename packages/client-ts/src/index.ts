@@ -132,8 +132,19 @@ export class DnaClient {
     return this.unwrap(await this.raw.GET("/v1/agents", { params: { query: this.q(query) } }));
   }
 
-  /** Compose one agent's system prompt LIVE (Soul + Guardrails + instruction). */
-  async agentPrompt(name: string, query?: ScopeTenant) {
+  /**
+   * Compose one agent's system prompt LIVE (Soul + Guardrails + instruction).
+   *
+   * Pass `explain: true` (opt-in) to also get per-section provenance:
+   * `sections` (source artifact, content hash, version, layer origin and
+   * tenant-overlay marker per composed section) and `attribution`
+   * (`"declared"` — kernel-owned template, section map correct by
+   * construction; `"heuristic"` — the agent has a custom promptTemplate, the
+   * map is fail-soft string matching and may omit/over-report sections). The
+   * composed `prompt` is byte-identical with or without the flag; without it
+   * the response shape is the historical plain compose.
+   */
+  async agentPrompt(name: string, query?: ScopeTenant & { explain?: boolean }) {
     return this.unwrap(
       await this.raw.GET("/v1/agents/{name}/prompt", {
         params: { path: { name }, query: this.q(query) },

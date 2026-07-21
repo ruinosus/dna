@@ -93,6 +93,18 @@ describe("DnaClient", () => {
     expect(new URL(calls[4]!.url).searchParams.get("name")).toBe("s-foo");
   });
 
+  test("agentPrompt explain is opt-in (absent by default, sent when asked)", async () => {
+    // Provenance on the wire (i-045): the default request carries NO explain
+    // param (byte-identical to the historical plain compose); explain: true
+    // sends explain=true.
+    const { fetchImpl, calls } = stub({ prompt: "p" });
+    const dna = new DnaClient({ baseUrl: BASE, fetch: fetchImpl });
+    await dna.agentPrompt("jarvis", { scope: "s" });
+    await dna.agentPrompt("jarvis", { scope: "s", explain: true });
+    expect(new URL(calls[0]!.url).searchParams.has("explain")).toBe(false);
+    expect(new URL(calls[1]!.url).searchParams.get("explain")).toBe("true");
+  });
+
   test("importMemories posts the bundle and never sends a tenant", async () => {
     const { fetchImpl, calls } = stub({ imported: 1, skipped: 0, failed: 0, received: 1 });
     // A client-level default tenant is set on purpose: the import is
