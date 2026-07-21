@@ -189,3 +189,69 @@ def test_list_memories_result_mirrors_data_and_carries_no_ui_meta(dna_dir):
             assert forbidden not in lowered, f"{forbidden!r} leaked into the result"
 
     asyncio.run(scenario())
+
+
+# ── 3. the declaration carries the template pointer (SEP-1865) ─────────────
+
+
+def test_memory_tool_declarations_point_the_template(dna_dir):
+    """``tools/list`` shows ``list_memories`` AND ``recall`` pointing the
+    ``ui://dna/memory-list`` template in their own declaration — the pointer a
+    host follows to prefetch the card. Pointer removed → this dies."""
+    from fastmcp import Client
+
+    async def scenario():
+        server = M.build_server(base_dir=str(dna_dir))
+        async with Client(server) as client:
+            tools = {t.name: t for t in await client.list_tools()}
+
+        for name in ("list_memories", "recall"):
+            meta = tools[name].meta or {}
+            ui = meta.get("ui") or {}
+            assert ui.get("resourceUri") == "ui://dna/memory-list", (
+                f"{name} does not declare the memory-card template pointer"
+            )
+
+    asyncio.run(scenario())
+
+
+def test_non_memory_tools_do_not_point_the_template(dna_dir):
+    """The pointer is deliberate, not a blanket: a non-memory tool (``remember``,
+    a write) declares NO UI template."""
+    from fastmcp import Client
+
+    async def scenario():
+        server = M.build_server(base_dir=str(dna_dir))
+        async with Client(server) as client:
+            tools = {t.name: t for t in await client.list_tools()}
+        meta = tools["remember"].meta or {}
+        assert not (meta.get("ui") or {}).get("resourceUri")
+
+    asyncio.run(scenario())
+
+
+# ── 4. the template resource is served with the SEP-1865 profile ───────────
+
+
+def test_memory_list_template_resource_is_served(dna_dir):
+    """``resources/read`` of ``ui://dna/memory-list`` answers the static
+    template with mimeType ``text/html;profile=mcp-app``. Registration
+    removed → this dies."""
+    from dna.emit.mcp_ui import memory_list_card_html
+    from fastmcp import Client
+
+    async def scenario():
+        server = M.build_server(base_dir=str(dna_dir))
+        async with Client(server) as client:
+            contents = await client.read_resource("ui://dna/memory-list")
+
+        assert len(contents) == 1
+        block = contents[0]
+        assert block.mimeType == "text/html;profile=mcp-app"
+        # The served template IS the SDK's static template — data-free, public.
+        assert block.text == memory_list_card_html()
+        lowered = block.text.lower()
+        for forbidden in ("bearer ", "authorization:", "x-dna-tenant"):
+            assert forbidden not in lowered, f"{forbidden!r} leaked into the template"
+
+    asyncio.run(scenario())

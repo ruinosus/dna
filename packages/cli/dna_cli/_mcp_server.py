@@ -239,6 +239,20 @@ def build_server(
             "with:  pip install 'dna-cli[mcp]'"
         ) from exc
 
+    # MCP Apps (SEP-1865): the memory card. The static template
+    # `ui://dna/memory-list` (dna.emit.mcp_ui.memory_list_card_html — public,
+    # data-free, self-contained) is registered as a resource below and pointed
+    # from the `list_memories`/`recall` DECLARATIONS via `app=AppConfig(...)`,
+    # so an MCP Apps host prefetches the template and pushes each result's
+    # `structured_content` into it. Hosts without the extension see the same
+    # declaration meta and ignore it — the textual `content` keeps carrying
+    # the data, byte-identical.
+    from fastmcp.apps import AppConfig
+
+    from dna.emit.mcp_ui import MCP_APP_MIME, UI_MEMORY_LIST_URI, memory_list_card_html
+
+    memory_card_app = AppConfig(resource_uri=UI_MEMORY_LIST_URI)
+
     # The auth↔tenancy bridge: resolve the effective tenant from the current
     # token (identity when there is no token / no auth). CrossTenantError → a
     # clean MCP ToolError so the client sees the denial, not a masked 500.
@@ -703,11 +717,16 @@ def build_server(
 
     # -- memory --------------------------------------------------------------
 
-    @server.tool(run_in_thread=False)
+    @server.tool(run_in_thread=False, app=memory_card_app)
     async def recall(
         query: str, scope: str | None = None, k: int = 5, personal: bool = False,
     ) -> dict[str, Any]:
         """Recall DNA memory for a query (hybrid/bi-temporal when available).
+
+        The declaration points the ``ui://dna/memory-list`` MCP Apps card
+        (read-only): a host that renders MCP Apps shows the recalled hits as a
+        card fed by this result's ``structured_content``; every other host
+        reads the textual result, unchanged.
 
         ``personal=true`` recalls YOUR OWN private memory (keyed on your verified
         identity, portable across workspaces + clients) unioned with the shared
@@ -757,9 +776,16 @@ def build_server(
             tenant=await _guard("memory", scope=scope, memory_op="write"),
         )
 
-    @server.tool(run_in_thread=False)
+    @server.tool(run_in_thread=False, app=memory_card_app)
     async def list_memories(scope: str | None = None) -> dict[str, Any]:
-        """List your stored memories (tenant-scoped). Read-only."""
+        """List your stored memories (tenant-scoped). Read-only.
+
+        The declaration points the ``ui://dna/memory-list`` MCP Apps card
+        (SEP-1865): a host that renders MCP Apps shows the memory list as a
+        read-only card in a sandboxed iframe, fed by this result's
+        ``structured_content`` — DNA's "your context follows you across every
+        client" thesis made visible. Hosts without MCP Apps read the plain
+        data from ``content``, unchanged (graceful degradation)."""
         data = await list_memories_impl(
             await _live(), scope, tenant=await _guard("memory", scope=scope, memory_op="read")
         )
@@ -787,6 +813,14 @@ def build_server(
     async def agents_resource(scope: str) -> dict[str, Any]:
         """The scope's agent roster as a resource."""
         return await list_agents_impl(await _live(), scope, await _guard("definitions", scope=scope))
+
+    @server.resource(UI_MEMORY_LIST_URI, mime_type=MCP_APP_MIME)
+    def memory_list_card() -> str:
+        """The MCP Apps template for the memory card (SEP-1865) — the resource
+        the ``list_memories``/``recall`` declarations point at. Static, public
+        and data-free (cacheable by URI): the host pushes each tool result's
+        ``structured_content`` into it over the authenticated session."""
+        return memory_list_card_html()
 
     # -- graph.* (Microsoft On-Behalf-Of — opt-in, off by default) -----------
     #
