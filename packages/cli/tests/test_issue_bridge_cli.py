@@ -19,6 +19,7 @@ from click.testing import CliRunner
 
 # Importing issue_bridge_cmd registers publish/import/sync on `sdlc issue`
 # (same as dna_cli/__init__).
+from dna_cli._ctx import SESSION_PROVIDER_KEY
 from dna_cli import issue_bridge_cmd as ib
 from dna_cli import _github_bridge as gb
 from dna_cli import _git_symbiosis as gs
@@ -60,8 +61,9 @@ _GH_ISSUE = {
 
 def _fake_session(monkeypatch, spec=_SPEC, found=True, record=None,
                   existing_issues=()):
-    """Patch dna_session in BOTH issue_bridge_cmd and sdlc_cmd (import's
-    `_next_issue_number` opens its own session via sdlc_cmd)."""
+    """Session obj to inject: ONE fake covers issue_bridge_cmd AND the
+    sdlc_cmd helpers it leans on (`_next_issue_number`) — everything now
+    resolves through open_session on the same click context."""
     monkeypatch.setenv("DNA_SOURCE_URL", "file:///tmp/fake-dna-source")
 
     class _FakeSession:
@@ -91,8 +93,7 @@ def _fake_session(monkeypatch, spec=_SPEC, found=True, record=None,
     def _fake(scope=None, *, tenant=None, timeout=30.0):
         yield _FakeSession()
 
-    monkeypatch.setattr(ib, "dna_session", _fake)
-    monkeypatch.setattr(sc, "dna_session", _fake)
+    return {SESSION_PROVIDER_KEY: _fake}
 
 
 def _gh_present(monkeypatch):
@@ -178,14 +179,14 @@ def test_close_comment_carries_footer_and_resolution():
 
 
 def test_publish_dry_run_prints_and_never_calls_gh(runner, monkeypatch):
-    _fake_session(monkeypatch)
+    obj = _fake_session(monkeypatch)
     monkeypatch.setattr(ib.gb, "default_repo", lambda: "ruinosus/dna")
 
     def _boom(*a, **kw):
         raise AssertionError("subprocess.run called on --dry-run")
 
     monkeypatch.setattr(gb.subprocess, "run", _boom)
-    r = runner.invoke(sdlc, ["issue", "publish", "i-007-x", "--dry-run"])
+    r = runner.invoke(sdlc, ["issue", "publish", "i-007-x", "--dry-run"], obj=obj)
     assert r.exit_code == 0, r.output
     assert "scope detect procura manifest legado (i-007-x)" in r.output
     assert "Work-Item: Issue/i-007-x" in r.output
@@ -195,13 +196,13 @@ def test_publish_dry_run_prints_and_never_calls_gh(runner, monkeypatch):
 def test_publish_is_idempotent_when_already_published(runner, monkeypatch):
     spec = dict(_SPEC, github_number=9,
                 github_url="https://github.com/ruinosus/dna/issues/9")
-    _fake_session(monkeypatch, spec=spec)
+    obj = _fake_session(monkeypatch, spec=spec)
 
     def _boom(*a, **kw):
         raise AssertionError("gh must not be called for a published issue")
 
     monkeypatch.setattr(gb.subprocess, "run", _boom)
-    r = runner.invoke(sdlc, ["issue", "publish", "i-007-x"])
+    r = runner.invoke(sdlc, ["issue", "publish", "i-007-x"], obj=obj)
     assert r.exit_code == 0, r.output
     assert "já publicada" in r.output
     assert "https://github.com/ruinosus/dna/issues/9" in r.output
@@ -209,7 +210,7 @@ def test_publish_is_idempotent_when_already_published(runner, monkeypatch):
 
 def test_publish_invokes_gh_and_stamps_provenance(runner, monkeypatch):
     writes: list = []
-    _fake_session(monkeypatch, record=writes)
+    obj = _fake_session(monkeypatch, record=writes)
     monkeypatch.setattr(ib.gb, "default_repo", lambda: "ruinosus/dna")
     _gh_present(monkeypatch)
     calls: list = []
@@ -220,7 +221,7 @@ def test_publish_invokes_gh_and_stamps_provenance(runner, monkeypatch):
             args, 0, stdout="https://github.com/ruinosus/dna/issues/33\n", stderr="")
 
     monkeypatch.setattr(gb.subprocess, "run", _fake_run)
-    r = runner.invoke(sdlc, ["issue", "publish", "i-007-x"])
+    r = runner.invoke(sdlc, ["issue", "publish", "i-007-x"], obj=obj)
     assert r.exit_code == 0, r.output
     assert len(calls) == 1
     args = calls[0]
@@ -241,17 +242,17 @@ def test_publish_invokes_gh_and_stamps_provenance(runner, monkeypatch):
 
 
 def test_publish_missing_gh_is_didactic(runner, monkeypatch):
-    _fake_session(monkeypatch)
+    obj = _fake_session(monkeypatch)
     monkeypatch.setattr(ib.gb, "default_repo", lambda: "ruinosus/dna")
     _gh_absent(monkeypatch)
-    r = runner.invoke(sdlc, ["issue", "publish", "i-007-x"])
+    r = runner.invoke(sdlc, ["issue", "publish", "i-007-x"], obj=obj)
     assert r.exit_code != 0
     assert "cli.github.com" in r.output
     assert "Traceback" not in r.output
 
 
 def test_publish_gh_failure_is_didactic(runner, monkeypatch):
-    _fake_session(monkeypatch)
+    obj = _fake_session(monkeypatch)
     monkeypatch.setattr(ib.gb, "default_repo", lambda: "ruinosus/dna")
     _gh_present(monkeypatch)
 
@@ -260,7 +261,7 @@ def test_publish_gh_failure_is_didactic(runner, monkeypatch):
             args, 1, stdout="", stderr="HTTP 401: Bad credentials")
 
     monkeypatch.setattr(gb.subprocess, "run", _fake_run)
-    r = runner.invoke(sdlc, ["issue", "publish", "i-007-x"])
+    r = runner.invoke(sdlc, ["issue", "publish", "i-007-x"], obj=obj)
     assert r.exit_code != 0
     assert "Bad credentials" in r.output
     assert "gh auth status" in r.output
@@ -268,16 +269,16 @@ def test_publish_gh_failure_is_didactic(runner, monkeypatch):
 
 
 def test_publish_without_derivable_repo_asks_for_flag(runner, monkeypatch):
-    _fake_session(monkeypatch)
+    obj = _fake_session(monkeypatch)
     monkeypatch.setattr(ib.gb, "default_repo", lambda: None)
-    r = runner.invoke(sdlc, ["issue", "publish", "i-007-x", "--dry-run"])
+    r = runner.invoke(sdlc, ["issue", "publish", "i-007-x", "--dry-run"], obj=obj)
     assert r.exit_code != 0
     assert "--repo" in r.output
 
 
 def test_publish_missing_issue_fails_loud(runner, monkeypatch):
-    _fake_session(monkeypatch, found=False)
-    r = runner.invoke(sdlc, ["issue", "publish", "i-ghost", "--dry-run"])
+    obj = _fake_session(monkeypatch, found=False)
+    r = runner.invoke(sdlc, ["issue", "publish", "i-ghost", "--dry-run"], obj=obj)
     assert r.exit_code != 0
     assert "not found" in r.output
 
@@ -298,10 +299,10 @@ def _gh_view_ok(monkeypatch, payload=_GH_ISSUE):
 
 def test_import_creates_doc_with_provenance_and_heuristics(runner, monkeypatch):
     writes: list = []
-    _fake_session(monkeypatch, record=writes,
+    obj = _fake_session(monkeypatch, record=writes,
                   existing_issues=[("i-004-old", {"status": "open"})])
     _gh_view_ok(monkeypatch)
-    r = runner.invoke(sdlc, ["issue", "import", "#42", "--repo", "ruinosus/dna"])
+    r = runner.invoke(sdlc, ["issue", "import", "#42", "--repo", "ruinosus/dna"], obj=obj)
     assert r.exit_code == 0, r.output
     (name, raw), = writes
     # board convention: next free number + gh marker + title slug
@@ -320,22 +321,23 @@ def test_import_creates_doc_with_provenance_and_heuristics(runner, monkeypatch):
 
 def test_import_url_form_carries_repo(runner, monkeypatch):
     writes: list = []
-    _fake_session(monkeypatch, record=writes)
+    obj = _fake_session(monkeypatch, record=writes)
     _gh_view_ok(monkeypatch)
     # no --repo: the URL supplies it (default_repo must not be needed)
     monkeypatch.setattr(ib.gb, "default_repo", lambda: None)
     r = runner.invoke(
-        sdlc, ["issue", "import", "https://github.com/ruinosus/dna/issues/42"])
+        sdlc, ["issue", "import", "https://github.com/ruinosus/dna/issues/42"],
+        obj=obj)
     assert r.exit_code == 0, r.output
     assert writes
 
 
 def test_import_closed_issue_maps_to_resolved(runner, monkeypatch):
     writes: list = []
-    _fake_session(monkeypatch, record=writes)
+    obj = _fake_session(monkeypatch, record=writes)
     closed = dict(_GH_ISSUE, state="CLOSED", closedAt="2026-07-05T12:00:00Z")
     _gh_view_ok(monkeypatch, payload=closed)
-    r = runner.invoke(sdlc, ["issue", "import", "42", "--repo", "ruinosus/dna"])
+    r = runner.invoke(sdlc, ["issue", "import", "42", "--repo", "ruinosus/dna"], obj=obj)
     assert r.exit_code == 0, r.output
     spec = writes[0][1]["spec"]
     assert spec["status"] == "resolved"
@@ -345,28 +347,28 @@ def test_import_closed_issue_maps_to_resolved(runner, monkeypatch):
 
 def test_import_is_idempotent_by_github_number(runner, monkeypatch):
     writes: list = []
-    _fake_session(
+    obj = _fake_session(
         monkeypatch, record=writes,
         existing_issues=[("i-003-already", {"github_number": 42})])
     _gh_view_ok(monkeypatch)
-    r = runner.invoke(sdlc, ["issue", "import", "#42", "--repo", "ruinosus/dna"])
+    r = runner.invoke(sdlc, ["issue", "import", "#42", "--repo", "ruinosus/dna"], obj=obj)
     assert r.exit_code == 0, r.output
     assert "já importada como Issue/i-003-already" in r.output
     assert not writes
 
 
 def test_import_invalid_ref_is_didactic(runner, monkeypatch):
-    _fake_session(monkeypatch)
-    r = runner.invoke(sdlc, ["issue", "import", "nope", "--repo", "x/y"])
+    obj = _fake_session(monkeypatch)
+    r = runner.invoke(sdlc, ["issue", "import", "nope", "--repo", "x/y"], obj=obj)
     assert r.exit_code != 0
     assert "inválida" in r.output
     assert "Traceback" not in r.output
 
 
 def test_import_missing_gh_is_didactic(runner, monkeypatch):
-    _fake_session(monkeypatch)
+    obj = _fake_session(monkeypatch)
     _gh_absent(monkeypatch)
-    r = runner.invoke(sdlc, ["issue", "import", "#42", "--repo", "ruinosus/dna"])
+    r = runner.invoke(sdlc, ["issue", "import", "#42", "--repo", "ruinosus/dna"], obj=obj)
     assert r.exit_code != 0
     assert "cli.github.com" in r.output
     assert "Traceback" not in r.output
@@ -376,8 +378,8 @@ def test_import_missing_gh_is_didactic(runner, monkeypatch):
 
 
 def test_sync_requires_provenance(runner, monkeypatch):
-    _fake_session(monkeypatch)  # _SPEC has no github_number
-    r = runner.invoke(sdlc, ["issue", "sync", "i-007-x"])
+    obj = _fake_session(monkeypatch)  # _SPEC has no github_number
+    r = runner.invoke(sdlc, ["issue", "sync", "i-007-x"], obj=obj)
     assert r.exit_code != 0
     assert "github_number" in r.output
     assert "issue publish" in r.output
@@ -386,11 +388,11 @@ def test_sync_requires_provenance(runner, monkeypatch):
 def test_sync_remote_close_leaves_timeline_note(runner, monkeypatch):
     writes: list = []
     spec = dict(_SPEC, github_number=42, github_state="open")
-    _fake_session(monkeypatch, spec=spec, record=writes)
+    obj = _fake_session(monkeypatch, spec=spec, record=writes)
     closed = dict(_GH_ISSUE, state="CLOSED")
     _gh_view_ok(monkeypatch, payload=closed)
     monkeypatch.setattr(ib.gb, "default_repo", lambda: "ruinosus/dna")
-    r = runner.invoke(sdlc, ["issue", "sync", "i-007-x"])
+    r = runner.invoke(sdlc, ["issue", "sync", "i-007-x"], obj=obj)
     assert r.exit_code == 0, r.output
     new_spec = writes[0][1]["spec"]
     assert new_spec["github_state"] == "closed"
@@ -405,10 +407,10 @@ def test_sync_remote_close_leaves_timeline_note(runner, monkeypatch):
 def test_sync_no_change_no_note(runner, monkeypatch):
     writes: list = []
     spec = dict(_SPEC, github_number=42, github_state="open")
-    _fake_session(monkeypatch, spec=spec, record=writes)
+    obj = _fake_session(monkeypatch, spec=spec, record=writes)
     _gh_view_ok(monkeypatch)  # remote still OPEN
     monkeypatch.setattr(ib.gb, "default_repo", lambda: "ruinosus/dna")
-    r = runner.invoke(sdlc, ["issue", "sync", "i-007-x"])
+    r = runner.invoke(sdlc, ["issue", "sync", "i-007-x"], obj=obj)
     assert r.exit_code == 0, r.output
     new_spec = writes[0][1]["spec"]
     assert new_spec["github_state"] == "open"
@@ -422,7 +424,7 @@ def test_sync_no_change_no_note(runner, monkeypatch):
 def test_resolve_closes_github_twin_best_effort(runner, monkeypatch):
     writes: list = []
     spec = dict(_SPEC, github_number=42, github_state="open")
-    _fake_session(monkeypatch, spec=spec, record=writes)
+    obj = _fake_session(monkeypatch, spec=spec, record=writes)
     monkeypatch.setattr(gb, "default_repo", lambda: "ruinosus/dna")
     _gh_present(monkeypatch)
     calls: list = []
@@ -433,7 +435,7 @@ def test_resolve_closes_github_twin_best_effort(runner, monkeypatch):
 
     monkeypatch.setattr(gb.subprocess, "run", _fake_run)
     r = runner.invoke(sdlc, ["issue", "resolve", "i-007-x",
-                             "--resolution", "fixed", "--allow-no-produces"])
+                             "--resolution", "fixed", "--allow-no-produces"], obj=obj)
     assert r.exit_code == 0, r.output
     close_calls = [c for c in calls if c[:3] == ["gh", "issue", "close"]]
     assert len(close_calls) == 1
@@ -451,9 +453,9 @@ def test_resolve_closes_github_twin_best_effort(runner, monkeypatch):
 def test_resolve_without_gh_warns_but_resolves(runner, monkeypatch):
     writes: list = []
     spec = dict(_SPEC, github_number=42)
-    _fake_session(monkeypatch, spec=spec, record=writes)
+    obj = _fake_session(monkeypatch, spec=spec, record=writes)
     _gh_absent(monkeypatch)
-    r = runner.invoke(sdlc, ["issue", "resolve", "i-007-x", "--allow-no-produces"])
+    r = runner.invoke(sdlc, ["issue", "resolve", "i-007-x", "--allow-no-produces"], obj=obj)
     assert r.exit_code == 0, r.output  # fail-SOFT: local resolve always lands
     assert "NÃO foi fechada no GitHub" in r.output
     assert "RESOLVED" in r.output
@@ -462,12 +464,12 @@ def test_resolve_without_gh_warns_but_resolves(runner, monkeypatch):
 
 def test_resolve_without_provenance_never_touches_gh(runner, monkeypatch):
     writes: list = []
-    _fake_session(monkeypatch, record=writes)  # no github_number
+    obj = _fake_session(monkeypatch, record=writes)  # no github_number
 
     def _boom(*a, **kw):
         raise AssertionError("gh must not be called without github_number")
 
     monkeypatch.setattr(gb.subprocess, "run", _boom)
-    r = runner.invoke(sdlc, ["issue", "resolve", "i-007-x", "--allow-no-produces"])
+    r = runner.invoke(sdlc, ["issue", "resolve", "i-007-x", "--allow-no-produces"], obj=obj)
     assert r.exit_code == 0, r.output
     assert "RESOLVED" in r.output

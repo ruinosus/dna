@@ -1,6 +1,9 @@
 """Unit net for `dna sdlc test-guide / test-run` helpers (testkit Phase C)."""
 from __future__ import annotations
 
+import click
+
+from dna_cli._ctx import SESSION_PROVIDER_KEY
 from dna_cli import testkit_cmd as tk
 
 
@@ -56,64 +59,64 @@ class _FakeSession:
 _SMOKE_GUIDE = _FakeRun("tg-smoke", {"kind_of_test": "smoke"})
 
 
-def _patch_runs(monkeypatch, runs, guides=None):
-    monkeypatch.setattr(
-        tk, "dna_session",
-        lambda scope: _FakeSession(runs, guides if guides is not None else [_SMOKE_GUIDE]),
-    )
+def _runs_ctx(runs, guides=None):
+    """A click context carrying the fake session — direct helper calls run
+    inside `with _runs_ctx(...):` so open_session resolves the injected fake
+    (f-cli-session-injection: the context IS the port; no module patching)."""
+    def _fake(scope):
+        return _FakeSession(runs, guides if guides is not None else [_SMOKE_GUIDE])
+
+    return click.Context(click.Command("t"), obj={SESSION_PROVIDER_KEY: _fake})
 
 
-def test_passing_run_finds_the_passing_one(monkeypatch) -> None:
-    _patch_runs(monkeypatch, [
+def test_passing_run_finds_the_passing_one() -> None:
+    with _runs_ctx([
         _FakeRun("tr-1", {"outcome": "fail", "verifies": ["Story/s-x"], "guide_ref": "tg-smoke"}),
         _FakeRun("tr-2", {"outcome": "pass", "verifies": ["Story/s-x"], "guide_ref": "tg-smoke"}),
-    ])
-    assert tk.passing_run_for_story("dna-development", "s-x") == "tr-2"
+    ]):
+        assert tk.passing_run_for_story("dna-development", "s-x") == "tr-2"
 
 
-def test_passing_run_none_when_only_failures(monkeypatch) -> None:
-    _patch_runs(monkeypatch, [_FakeRun("tr-1", {"outcome": "fail", "verifies": ["Story/s-x"]})])
-    assert tk.passing_run_for_story("dna-development", "s-x") is None
+def test_passing_run_none_when_only_failures() -> None:
+    with _runs_ctx([_FakeRun("tr-1", {"outcome": "fail", "verifies": ["Story/s-x"]})]):
+        assert tk.passing_run_for_story("dna-development", "s-x") is None
 
 
-def test_passing_run_ignores_runs_for_other_stories(monkeypatch) -> None:
-    _patch_runs(monkeypatch, [_FakeRun("tr-1", {"outcome": "pass", "verifies": ["Story/s-other"]})])
-    assert tk.passing_run_for_story("dna-development", "s-x") is None
+def test_passing_run_ignores_runs_for_other_stories() -> None:
+    with _runs_ctx([_FakeRun("tr-1", {"outcome": "pass", "verifies": ["Story/s-other"]})]):
+        assert tk.passing_run_for_story("dna-development", "s-x") is None
 
 
-def test_passing_run_accepts_bare_story_name_in_verifies(monkeypatch) -> None:
-    _patch_runs(monkeypatch, [_FakeRun("tr-1", {"outcome": "pass", "verifies": ["s-x"], "guide_ref": "tg-smoke"})])
-    assert tk.passing_run_for_story("dna-development", "s-x") == "tr-1"
+def test_passing_run_accepts_bare_story_name_in_verifies() -> None:
+    with _runs_ctx([_FakeRun("tr-1", {"outcome": "pass", "verifies": ["s-x"], "guide_ref": "tg-smoke"})]):
+        assert tk.passing_run_for_story("dna-development", "s-x") == "tr-1"
 
 
 # ── s-testkit-done-requires-product-smoke: gate counts the PRODUCT lane ───────
-def test_passing_run_ignores_automated_lane(monkeypatch) -> None:
+def test_passing_run_ignores_automated_lane() -> None:
     # A pass run whose guide is integration (automated lane, proven by CI) does
     # NOT satisfy the done-gate — only smoke|manual count.
-    _patch_runs(
-        monkeypatch,
+    with _runs_ctx(
         [_FakeRun("tr-int", {"outcome": "pass", "verifies": ["Story/s-x"], "guide_ref": "tg-int"})],
         guides=[_FakeRun("tg-int", {"kind_of_test": "integration"})],
-    )
-    assert tk.passing_run_for_story("dna-development", "s-x") is None
+    ):
+        assert tk.passing_run_for_story("dna-development", "s-x") is None
 
 
-def test_passing_run_counts_smoke_lane(monkeypatch) -> None:
-    _patch_runs(
-        monkeypatch,
+def test_passing_run_counts_smoke_lane() -> None:
+    with _runs_ctx(
         [_FakeRun("tr-sm", {"outcome": "pass", "verifies": ["Story/s-x"], "guide_ref": "tg-sm"})],
         guides=[_FakeRun("tg-sm", {"kind_of_test": "smoke"})],
-    )
-    assert tk.passing_run_for_story("dna-development", "s-x") == "tr-sm"
+    ):
+        assert tk.passing_run_for_story("dna-development", "s-x") == "tr-sm"
 
 
-def test_passing_run_counts_manual_lane(monkeypatch) -> None:
-    _patch_runs(
-        monkeypatch,
+def test_passing_run_counts_manual_lane() -> None:
+    with _runs_ctx(
         [_FakeRun("tr-man", {"outcome": "pass", "verifies": ["s-x"], "guide_ref": "tg-man"})],
         guides=[_FakeRun("tg-man", {"kind_of_test": "manual"})],
-    )
-    assert tk.passing_run_for_story("dna-development", "s-x") == "tr-man"
+    ):
+        assert tk.passing_run_for_story("dna-development", "s-x") == "tr-man"
 
 
 # ── i-100: test-guide create also stamps the verified Story's produces[] ──────
@@ -151,15 +154,17 @@ class _StampSession:
         return coro  # write_document is sync in the fake → returns None
 
 
-def test_stamp_verified_stories_appends_testguide_to_produces(monkeypatch) -> None:
+def test_stamp_verified_stories_appends_testguide_to_produces() -> None:
     sess = _StampSession({"status": "todo"})
-    monkeypatch.setattr(tk, "dna_session", lambda scope: sess)
 
-    tk._stamp_verified_stories(
-        "dna-development", ["Story/s-x"],
-        produced_kind="TestGuide", produced_name="tg-x", role="test-guide",
-        timeline_summary="TestGuide tg-x (manual)",
-    )
+    # direct helper call (no CliRunner): construct the click context by hand
+    # and inject the session through it — same front door the CLI uses.
+    with click.Context(click.Command("t"), obj={SESSION_PROVIDER_KEY: lambda scope: sess}):
+        tk._stamp_verified_stories(
+            "dna-development", ["Story/s-x"],
+            produced_kind="TestGuide", produced_name="tg-x", role="test-guide",
+            timeline_summary="TestGuide tg-x (manual)",
+        )
 
     assert sess.kernel.written, "expected a Story write"
     _, kind, name, raw = sess.kernel.written[-1]
@@ -171,14 +176,14 @@ def test_stamp_verified_stories_appends_testguide_to_produces(monkeypatch) -> No
     assert "artifact_produced" in types
 
 
-def test_stamp_skips_non_story_refs(monkeypatch) -> None:
+def test_stamp_skips_non_story_refs() -> None:
     sess = _StampSession({"status": "todo"})
-    monkeypatch.setattr(tk, "dna_session", lambda scope: sess)
-    tk._stamp_verified_stories(
-        "dna-development", ["Issue/i-y"],  # not a Story → skipped
-        produced_kind="TestGuide", produced_name="tg-x", role="test-guide",
-        timeline_summary="x",
-    )
+    with click.Context(click.Command("t"), obj={SESSION_PROVIDER_KEY: lambda scope: sess}):
+        tk._stamp_verified_stories(
+            "dna-development", ["Issue/i-y"],  # not a Story → skipped
+            produced_kind="TestGuide", produced_name="tg-x", role="test-guide",
+            timeline_summary="x",
+        )
     assert not sess.kernel.written
 
 

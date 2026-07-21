@@ -22,6 +22,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from click.testing import CliRunner
 
+from dna_cli._ctx import SESSION_PROVIDER_KEY
 from dna_cli.doc_cmd import doc
 from dna.kernel.prompt_budget import PromptBudgetExceededError
 
@@ -60,7 +61,7 @@ def _make_budget_error():
 
 
 def _fake_session(monkeypatch, *, raise_error: Exception | None = None):
-    """Patch dna_session so we never touch DNA_SOURCE_URL / kernel boot.
+    """Fake session injected via ctx.obj — never touches DNA_SOURCE_URL / kernel boot.
 
     Returns a mock Session whose kernel.write_document raises `raise_error`
     (if given) or returns successfully.
@@ -115,8 +116,7 @@ def _fake_session(monkeypatch, *, raise_error: Exception | None = None):
     def _fake_dna_session(scope=None):
         yield mock_session
 
-    monkeypatch.setattr(doc_cmd, "dna_session", _fake_dna_session)
-    return mock_session
+    return mock_session, {SESSION_PROVIDER_KEY: _fake_dna_session}
 
 
 # ---------------------------------------------------------------------------
@@ -128,8 +128,8 @@ def test_apply_exits_nonzero_on_prompt_budget_exceeded(
     runner, over_cap_agent_yaml, monkeypatch
 ):
     """apply must exit with code != 0 when the kernel raises PromptBudgetExceededError."""
-    _fake_session(monkeypatch, raise_error=_make_budget_error())
-    result = runner.invoke(doc, ["apply", over_cap_agent_yaml])
+    _mock, obj = _fake_session(monkeypatch, raise_error=_make_budget_error())
+    result = runner.invoke(doc, ["apply", over_cap_agent_yaml], obj=obj)
     assert result.exit_code != 0, (
         f"Expected non-zero exit, got {result.exit_code}. Output:\n{result.output}"
     )
@@ -137,8 +137,8 @@ def test_apply_exits_nonzero_on_prompt_budget_exceeded(
 
 def test_apply_shows_model_id_in_error(runner, over_cap_agent_yaml, monkeypatch):
     """The error output must name the offending model."""
-    _fake_session(monkeypatch, raise_error=_make_budget_error())
-    result = runner.invoke(doc, ["apply", over_cap_agent_yaml])
+    _mock, obj = _fake_session(monkeypatch, raise_error=_make_budget_error())
+    result = runner.invoke(doc, ["apply", over_cap_agent_yaml], obj=obj)
     assert "gpt-realtime-2" in result.output, (
         f"Expected model ID in output. Got:\n{result.output}"
     )
@@ -146,8 +146,8 @@ def test_apply_shows_model_id_in_error(runner, over_cap_agent_yaml, monkeypatch)
 
 def test_apply_shows_agent_name_in_error(runner, over_cap_agent_yaml, monkeypatch):
     """The error output must name the offending agent."""
-    _fake_session(monkeypatch, raise_error=_make_budget_error())
-    result = runner.invoke(doc, ["apply", over_cap_agent_yaml])
+    _mock, obj = _fake_session(monkeypatch, raise_error=_make_budget_error())
+    result = runner.invoke(doc, ["apply", over_cap_agent_yaml], obj=obj)
     assert "jarvis" in result.output, (
         f"Expected agent name in output. Got:\n{result.output}"
     )
@@ -155,8 +155,8 @@ def test_apply_shows_agent_name_in_error(runner, over_cap_agent_yaml, monkeypatc
 
 def test_apply_shows_token_count_in_error(runner, over_cap_agent_yaml, monkeypatch):
     """The error output must include the estimated token count."""
-    _fake_session(monkeypatch, raise_error=_make_budget_error())
-    result = runner.invoke(doc, ["apply", over_cap_agent_yaml])
+    _mock, obj = _fake_session(monkeypatch, raise_error=_make_budget_error())
+    result = runner.invoke(doc, ["apply", over_cap_agent_yaml], obj=obj)
     # The error message contains "17269" (estimated_tokens) and "16384" (cap)
     assert "17269" in result.output or "16384" in result.output, (
         f"Expected token numbers in output. Got:\n{result.output}"
@@ -171,8 +171,8 @@ def test_apply_does_not_say_write_failed_for_budget_error(
     The old code wrapped everything in 'write failed: <msg>'. For prompt
     budget errors the message should stand on its own (no confusing prefix).
     """
-    _fake_session(monkeypatch, raise_error=_make_budget_error())
-    result = runner.invoke(doc, ["apply", over_cap_agent_yaml])
+    _mock, obj = _fake_session(monkeypatch, raise_error=_make_budget_error())
+    result = runner.invoke(doc, ["apply", over_cap_agent_yaml], obj=obj)
     # The output should NOT start with 'write failed:' for a budget error
     combined = (result.output or "") + (result.stderr or "" if hasattr(result, "stderr") else "")
     assert "write failed" not in combined.lower(), (
@@ -189,8 +189,8 @@ def test_apply_still_exits_nonzero_on_other_errors(
     runner, over_cap_agent_yaml, monkeypatch
 ):
     """Non-budget errors must still cause non-zero exit (regression guard)."""
-    _fake_session(monkeypatch, raise_error=ValueError("some other write error"))
-    result = runner.invoke(doc, ["apply", over_cap_agent_yaml])
+    _mock, obj = _fake_session(monkeypatch, raise_error=ValueError("some other write error"))
+    result = runner.invoke(doc, ["apply", over_cap_agent_yaml], obj=obj)
     assert result.exit_code != 0, (
         f"Expected non-zero exit for ValueError. Got {result.exit_code}."
     )

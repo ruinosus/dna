@@ -9,6 +9,7 @@ from contextlib import contextmanager
 
 from click.testing import CliRunner
 
+from dna_cli._ctx import SESSION_PROVIDER_KEY
 from dna_cli import sdlc_cmd
 
 
@@ -57,7 +58,6 @@ def _fake_session(scope=None, *, tenant=None, timeout=30.0):
 
 
 def _run(monkeypatch, *args, gh_prs="default"):
-    monkeypatch.setattr(sdlc_cmd, "dna_session", _fake_session)
     # i-127: never hit the real gh CLI from tests. Default fixture: one
     # fresh PR + one stale (>24h) PR.
     if gh_prs == "default":
@@ -70,7 +70,10 @@ def _run(monkeypatch, *args, gh_prs="default"):
              "createdAt": (now - timedelta(hours=30)).isoformat()},
         ]
     monkeypatch.setattr(sdlc_cmd, "_gh_open_prs", lambda: gh_prs)
-    return CliRunner().invoke(sdlc_cmd.sdlc, ["brief", *args])
+    return CliRunner().invoke(
+        sdlc_cmd.sdlc, ["brief", *args],
+        obj={SESSION_PROVIDER_KEY: _fake_session},
+    )
 
 
 def test_brief_runs_and_renders_all_sections(monkeypatch):

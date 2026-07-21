@@ -20,7 +20,7 @@ from typing import Any
 
 import click
 
-from dna_cli._ctx import dna_session, fail
+from dna_cli._ctx import fail, open_session
 from dna_cli.sdlc_cmd import (
     DEFAULT_SCOPE,
     _append_produces,
@@ -80,7 +80,7 @@ def passing_run_for_story(scope: str, story_name: str) -> str | None:
 
     ref = f"Story/{story_name}"
     try:
-        with dna_session(scope) as s:
+        with open_session(scope) as s:
             runs = s.query_list("TestRun")
             guides = s.query_list("TestGuide")
     except Exception:  # noqa: BLE001 — gate is best-effort
@@ -161,7 +161,7 @@ def cmd_test_guide_create(
 
     verifies_list = list(verifies)
     if from_ac:
-        with dna_session(scope) as s:
+        with open_session(scope) as s:
             story = s.get_doc("Story", from_ac)
         if story is None:
             raise fail(f"--from-ac: Story '{from_ac}' não encontrada em {scope!r}.")
@@ -196,7 +196,7 @@ def cmd_test_guide_create(
     if owner:
         spec["owner"] = owner
 
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         raw = _build_testkit_raw("TestGuide", name, spec)
         s.run(s.kernel.write_document(scope, "TestGuide", name, raw))
     click.secho(f"CREATED TestGuide/{name} ({kind_of_test}, {len(steps)} steps) in {scope}", fg="green")
@@ -257,7 +257,7 @@ def cmd_test_run_record(
     """Record a TestRun for a TestGuide. Inherits the guide's `verifies`, then
     stamps each verified Story (artifact_produced timeline event + produces[]) —
     so the run shows in FOCUS and lights the journey's `verify` phase."""
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         gdoc = s.get_doc("TestGuide", guide)
     if gdoc is None:
         raise fail(f"TestGuide '{guide}' não encontrado em {scope!r}. Crie com `dna sdlc test-guide create`.")
@@ -291,7 +291,7 @@ def cmd_test_run_record(
             fg="yellow", err=True,
         )
 
-    with dna_session(scope) as s:
+    with open_session(scope) as s:
         raw = _build_testkit_raw("TestRun", run_name, spec)
         s.run(s.kernel.write_document(scope, "TestRun", run_name, raw))
     color = "green" if outcome == "pass" else ("red" if outcome == "fail" else "yellow")
@@ -322,7 +322,7 @@ def _stamp_verified_stories(
         if not story_name:
             continue
         try:
-            with dna_session(scope) as s:
+            with open_session(scope) as s:
                 story = s.get_doc("Story", story_name)
                 if story is None:
                     continue

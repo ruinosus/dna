@@ -22,6 +22,7 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
+from dna_cli._ctx import SESSION_PROVIDER_KEY
 from dna_cli import sdlc_cmd
 
 
@@ -65,10 +66,10 @@ def _invoke_and_capture_scope(monkeypatch, *args):
         seen["scope"] = scope
         yield _FakeSession(scope)
 
-    monkeypatch.setattr(sdlc_cmd, "dna_session", _fake)
     r = CliRunner().invoke(
         sdlc_cmd.sdlc,
         ["story", "check", "s-x", "--ac", "1", "--evidence", "e", *args],
+        obj={SESSION_PROVIDER_KEY: _fake},
     )
     assert r.exit_code == 0, r.output
     return seen["scope"]

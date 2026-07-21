@@ -9,6 +9,7 @@ from contextlib import contextmanager
 
 from click.testing import CliRunner
 
+from dna_cli._ctx import SESSION_PROVIDER_KEY
 from dna_cli import sdlc_cmd
 
 
@@ -54,7 +55,7 @@ class _FakeSession:
             loop.close()
 
 
-def _run(monkeypatch, *args, spec=None):
+def _run(*args, spec=None):
     store: dict = {}
 
     @contextmanager
@@ -64,13 +65,15 @@ def _run(monkeypatch, *args, spec=None):
             s.spec_factory = lambda: dict(spec)
         yield s
 
-    monkeypatch.setattr(sdlc_cmd, "dna_session", _fake)
-    r = CliRunner().invoke(sdlc_cmd.sdlc, ["story", "check", "s-x", *args])
+    r = CliRunner().invoke(
+        sdlc_cmd.sdlc, ["story", "check", "s-x", *args],
+        obj={SESSION_PROVIDER_KEY: _fake},
+    )
     return r, store
 
 
-def test_check_by_index_marks_item_with_evidence(monkeypatch):
-    r, store = _run(monkeypatch, "--ac", "1", "--evidence", "PR #42")
+def test_check_by_index_marks_item_with_evidence():
+    r, store = _run("--ac", "1", "--evidence", "PR #42")
     assert r.exit_code == 0, r.output
     ac = store["s-x"]["spec"]["acceptance_criteria"]
     assert ac[0]["done"] is True and ac[0]["evidence"] == "PR #42"
@@ -78,24 +81,24 @@ def test_check_by_index_marks_item_with_evidence(monkeypatch):
     assert "done" not in ac[1] or ac[1].get("done") is not True  # item 2 untouched
 
 
-def test_check_by_substring(monkeypatch):
-    r, store = _run(monkeypatch, "--dod", "docs", "--evidence", "commit abc")
+def test_check_by_substring():
+    r, store = _run("--dod", "docs", "--evidence", "commit abc")
     assert r.exit_code == 0, r.output
     dod = store["s-x"]["spec"]["definition_of_done"]
     matched = [d for d in dod if d.get("done")]
     assert len(matched) == 1 and matched[0]["text"] == "DoD docs updated"
 
 
-def test_check_all(monkeypatch):
-    r, store = _run(monkeypatch, "--all", "--evidence", "PR #99")
+def test_check_all():
+    r, store = _run("--all", "--evidence", "PR #99")
     assert r.exit_code == 0, r.output
     spec = store["s-x"]["spec"]
     assert all(i["done"] and i["evidence"] == "PR #99" for i in spec["acceptance_criteria"])
     assert all(i["done"] and i["evidence"] == "PR #99" for i in spec["definition_of_done"])
 
 
-def test_check_requires_selector(monkeypatch):
-    r, _ = _run(monkeypatch, "--evidence", "PR #1")
+def test_check_requires_selector():
+    r, _ = _run("--evidence", "PR #1")
     assert r.exit_code != 0  # no --ac/--dod/--all
 
 
@@ -121,8 +124,8 @@ _GREEDY_SPEC = {
 }
 
 
-def test_ac_numeric_selector_is_index_only(monkeypatch):
-    r, store = _run(monkeypatch, "--ac", "1", "--evidence", "PR #1",
+def test_ac_numeric_selector_is_index_only():
+    r, store = _run("--ac", "1", "--evidence", "PR #1",
                     spec=_GREEDY_SPEC)
     assert r.exit_code == 0, r.output
     ac = store["s-x"]["spec"]["acceptance_criteria"]
@@ -130,9 +133,9 @@ def test_ac_numeric_selector_is_index_only(monkeypatch):
     assert done == [1], f"--ac 1 must mark ONLY index 1, marked {done}"
 
 
-def test_ac_two_numeric_selectors_mark_exactly_two(monkeypatch):
+def test_ac_two_numeric_selectors_mark_exactly_two():
     """The literal pilot repro: --ac 1 --ac 2 marked 3 of 3 ACs."""
-    r, store = _run(monkeypatch, "--ac", "1", "--ac", "2",
+    r, store = _run("--ac", "1", "--ac", "2",
                     "--evidence", "PR #1", spec=_GREEDY_SPEC)
     assert r.exit_code == 0, r.output
     ac = store["s-x"]["spec"]["acceptance_criteria"]
@@ -140,9 +143,9 @@ def test_ac_two_numeric_selectors_mark_exactly_two(monkeypatch):
     assert done == [1, 2], f"--ac 1 --ac 2 must mark [1, 2], marked {done}"
 
 
-def test_dod_numeric_selector_is_index_only(monkeypatch):
+def test_dod_numeric_selector_is_index_only():
     """--dod shares _mark_checklist_items — same defect, same fix."""
-    r, store = _run(monkeypatch, "--dod", "2", "--evidence", "PR #1",
+    r, store = _run("--dod", "2", "--evidence", "PR #1",
                     spec=_GREEDY_SPEC)
     assert r.exit_code == 0, r.output
     dod = store["s-x"]["spec"]["definition_of_done"]
@@ -150,15 +153,15 @@ def test_dod_numeric_selector_is_index_only(monkeypatch):
     assert done == [2], f"--dod 2 must mark ONLY index 2, marked {done}"
 
 
-def test_out_of_range_numeric_selector_matches_nothing(monkeypatch):
+def test_out_of_range_numeric_selector_matches_nothing():
     """A digit selector beyond the list must NOT degrade to substring."""
-    r, _ = _run(monkeypatch, "--ac", "10", "--evidence", "PR #1",
+    r, _ = _run("--ac", "10", "--evidence", "PR #1",
                 spec=_GREEDY_SPEC)
     assert r.exit_code != 0  # "no AC/DoD items matched"
 
 
-def test_substring_selector_still_works(monkeypatch):
-    r, store = _run(monkeypatch, "--ac", "retries", "--evidence", "PR #1",
+def test_substring_selector_still_works():
+    r, store = _run("--ac", "retries", "--evidence", "PR #1",
                     spec=_GREEDY_SPEC)
     assert r.exit_code == 0, r.output
     ac = store["s-x"]["spec"]["acceptance_criteria"]

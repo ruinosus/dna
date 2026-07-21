@@ -23,13 +23,22 @@ from contextlib import contextmanager
 import pytest
 from click.testing import CliRunner
 
-from dna_cli import sdlc_cmd
 from dna_cli.sdlc_cmd import sdlc
+from dna_cli._ctx import SESSION_PROVIDER_KEY
 
 
 @pytest.fixture
-def runner():
-    return CliRunner()
+def runner(session_obj):
+    """CliRunner whose invokes carry the injected session by default."""
+    r = CliRunner()
+    _orig = r.invoke
+
+    def _invoke(*args, **kwargs):
+        kwargs.setdefault("obj", session_obj)
+        return _orig(*args, **kwargs)
+
+    r.invoke = _invoke  # type: ignore[method-assign]
+    return r
 
 
 class _FakeDocView:
@@ -82,15 +91,20 @@ class _FakeSession:
 
 
 @pytest.fixture
-def store(monkeypatch):
-    backing: dict = {}
+def store():
+    """The in-memory backing dict the fake session reads/writes."""
+    return {}
+
+
+@pytest.fixture
+def session_obj(store):
+    """The ctx.obj to inject (f-cli-session-injection): a session factory."""
 
     @contextmanager
     def _fake(scope=None, *, tenant=None, timeout=30.0):
-        yield _FakeSession(backing, scope or "dna-development")
+        yield _FakeSession(store, scope or "dna-development")
 
-    monkeypatch.setattr(sdlc_cmd, "dna_session", _fake)
-    return backing
+    return {SESSION_PROVIDER_KEY: _fake}
 
 
 def _seed(store, kind, name, spec, scope="dna-development"):

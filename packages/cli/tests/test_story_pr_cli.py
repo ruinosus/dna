@@ -17,6 +17,7 @@ from click.testing import CliRunner
 
 # Importing pr_cmd registers `story pr` + `pr-footer` on `sdlc` (same as
 # dna_cli/__init__).
+from dna_cli._ctx import SESSION_PROVIDER_KEY
 from dna_cli import pr_cmd
 from dna_cli import _git_symbiosis as gs
 from dna_cli.pr_cmd import build_gh_args, build_pr_body, build_pr_title
@@ -75,7 +76,7 @@ def _fake_session(monkeypatch, spec=_SPEC, found=True, record=None):
     def _fake(scope=None, *, tenant=None, timeout=30.0):
         yield _FakeSession()
 
-    monkeypatch.setattr(pr_cmd, "dna_session", _fake)
+    return {SESSION_PROVIDER_KEY: _fake}
 
 
 # ─── pure builders ────────────────────────────────────────────────────
@@ -173,13 +174,13 @@ def test_pr_footer_command_honors_env(runner, monkeypatch):
 
 def test_story_pr_dry_run_prints_title_body_no_gh(runner, monkeypatch):
     monkeypatch.delenv(gs.PR_FOOTER_ENV, raising=False)
-    _fake_session(monkeypatch)
+    obj = _fake_session(monkeypatch)
 
     def _boom(*a, **kw):  # gh must never be invoked on --dry-run
         raise AssertionError("subprocess.run called on --dry-run")
 
     monkeypatch.setattr(pr_cmd.subprocess, "run", _boom)
-    r = runner.invoke(sdlc, ["story", "pr", "s-x", "--dry-run"])
+    r = runner.invoke(sdlc, ["story", "pr", "s-x", "--dry-run"], obj=obj)
     assert r.exit_code == 0, r.output
     assert "feat(cli): PR attribution" in r.output and "(s-x)" in r.output
     assert "- [ ] story pr cria PR real com footer + Work-Item" in r.output
@@ -189,15 +190,15 @@ def test_story_pr_dry_run_prints_title_body_no_gh(runner, monkeypatch):
 
 def test_story_pr_dry_run_footer_env_override(runner, monkeypatch):
     monkeypatch.setenv(gs.PR_FOOTER_ENV, "ACME seal {work_item}")
-    _fake_session(monkeypatch)
-    r = runner.invoke(sdlc, ["story", "pr", "s-x", "--dry-run"])
+    obj = _fake_session(monkeypatch)
+    r = runner.invoke(sdlc, ["story", "pr", "s-x", "--dry-run"], obj=obj)
     assert r.exit_code == 0, r.output
     assert "ACME seal Story/s-x" in r.output
 
 
 def test_story_pr_missing_story_fails_loud(runner, monkeypatch):
-    _fake_session(monkeypatch, found=False)
-    r = runner.invoke(sdlc, ["story", "pr", "s-ghost", "--dry-run"])
+    obj = _fake_session(monkeypatch, found=False)
+    r = runner.invoke(sdlc, ["story", "pr", "s-ghost", "--dry-run"], obj=obj)
     assert r.exit_code != 0
     assert "not found" in r.output
 
@@ -206,9 +207,9 @@ def test_story_pr_missing_story_fails_loud(runner, monkeypatch):
 
 
 def test_story_pr_missing_gh_is_didactic(runner, monkeypatch):
-    _fake_session(monkeypatch)
+    obj = _fake_session(monkeypatch)
     monkeypatch.setattr(pr_cmd.shutil, "which", lambda _: None)
-    r = runner.invoke(sdlc, ["story", "pr", "s-x"])
+    r = runner.invoke(sdlc, ["story", "pr", "s-x"], obj=obj)
     assert r.exit_code != 0
     assert "cli.github.com" in r.output
     assert "dna sdlc pr-footer s-x" in r.output
@@ -217,7 +218,7 @@ def test_story_pr_missing_gh_is_didactic(runner, monkeypatch):
 def test_story_pr_invokes_gh_with_built_args(runner, monkeypatch):
     monkeypatch.delenv(gs.PR_FOOTER_ENV, raising=False)
     writes: list = []
-    _fake_session(monkeypatch, record=writes)
+    obj = _fake_session(monkeypatch, record=writes)
     monkeypatch.setattr(pr_cmd.shutil, "which", lambda _: "/usr/bin/gh")
     calls: list = []
 
@@ -228,7 +229,8 @@ def test_story_pr_invokes_gh_with_built_args(runner, monkeypatch):
 
     monkeypatch.setattr(pr_cmd.subprocess, "run", _fake_run)
     r = runner.invoke(sdlc, ["story", "pr", "s-x",
-                             "--base", "main", "--head", "feat/x", "--draft"])
+                             "--base", "main", "--head", "feat/x", "--draft"],
+                      obj=obj)
     assert r.exit_code == 0, r.output
     assert len(calls) == 1
     args = calls[0]
@@ -249,7 +251,7 @@ def test_story_pr_invokes_gh_with_built_args(runner, monkeypatch):
 
 
 def test_story_pr_gh_failure_fails_loud_with_hints(runner, monkeypatch):
-    _fake_session(monkeypatch)
+    obj = _fake_session(monkeypatch)
     monkeypatch.setattr(pr_cmd.shutil, "which", lambda _: "/usr/bin/gh")
 
     def _fake_run(args, **kw):
@@ -257,7 +259,7 @@ def test_story_pr_gh_failure_fails_loud_with_hints(runner, monkeypatch):
             args, 1, stdout="", stderr="pull request create failed: no commits")
 
     monkeypatch.setattr(pr_cmd.subprocess, "run", _fake_run)
-    r = runner.invoke(sdlc, ["story", "pr", "s-x"])
+    r = runner.invoke(sdlc, ["story", "pr", "s-x"], obj=obj)
     assert r.exit_code != 0
     assert "no commits" in r.output
     assert "git push -u origin" in r.output  # didactic hint
@@ -267,7 +269,6 @@ def test_story_pr_gh_failure_fails_loud_with_hints(runner, monkeypatch):
 
 
 def test_groom_title(runner, monkeypatch):
-    from dna_cli import sdlc_cmd as sc
     writes: list = []
 
     class _FakeSession:
@@ -291,7 +292,9 @@ def test_groom_title(runner, monkeypatch):
     def _fake(scope=None, *, tenant=None, timeout=30.0):
         yield _FakeSession()
 
-    monkeypatch.setattr(sc, "dna_session", _fake)
-    r = runner.invoke(sdlc, ["story", "groom", "s-x", "--title", "new title"])
+    r = runner.invoke(
+        sdlc, ["story", "groom", "s-x", "--title", "new title"],
+        obj={SESSION_PROVIDER_KEY: _fake},
+    )
     assert r.exit_code == 0, r.output
     assert writes and writes[-1]["spec"]["title"] == "new title"
