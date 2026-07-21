@@ -12,3 +12,4 @@
 - Kinds
     - [Overview](kinds/index.md)
     - kinds/*.md
+- [Data model (MER)](data-model.md)
