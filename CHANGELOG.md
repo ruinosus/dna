@@ -11,6 +11,86 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.0] — 2026-07-21
+
+O trem da auditoria de anatomia: o dia em que o núcleo de composição passou a
+entregar o que a docstring afirma, e a proveniência chegou à superfície paga.
+
+### 🔒 Segurança
+
+- **Isolamento de scope no caminho REST que realmente roda** (i-034, #196).
+  `scope_is_bound` nunca era chamado nos modos de auth em produção — um bearer
+  válido lia qualquer scope. Três regimes explícitos agora, com AUTENTICADO
+  como eixo: não-autenticado livre (self-host OSS intocado), workspace
+  resolvida na regra i-028, autenticado sem workspace só no que for
+  explicitamente concedido (`DNA_TOKEN_SCOPES` / `--token-scope`, `*` como
+  opt-out consciente). O mesmo fail-open existia no `_guard` do MCP e no
+  passthrough de fonte sem workspaces — fechados juntos.
+- **Fronteira de confiança no render Mustache** (i-046, #197). O render duplo
+  re-expandia `{{` vindo de conteúdo de usuário — injeção de template quando o
+  overlay de tenant é input de terceiro. Só a instruction do próprio agente
+  mantém delimitadores vivos; todo outro valor é protegido por sentinelas.
+
+### ✨ Proveniência no fio (i-045, #199)
+
+- **`GET /v1/agents/{name}/prompt?explain=true`** (REST) e
+  **`compose_prompt(explain=true)`** (MCP) — o mapa de proveniência por seção
+  que só o `dna explain` alcançava chega às três faces. Opt-in: sem a flag o
+  compose continua byte-idêntico (shape do JSON incluído); com ela a resposta
+  ganha `sections` (artefato de origem, hash, versão, layer de origem,
+  overlay de tenant por seção) e `attribution` — o marcador de honestidade:
+  `declared` (template do kernel, correto por construção) vs `heuristic`
+  (`promptTemplate` próprio; a detecção é match de string fail-soft). Os
+  clientes `dna-client` (py + ts) expõem o parâmetro tipado.
+
+### ✨ Memória
+
+- **`POST /v1/memories/import`** (#192) — o import MIF pela face REST, escrito
+  na partição PESSOAL do chamador. A identidade vem só das claims verificadas
+  (`auth=config`); bearer compartilhado não é identidade (403); `DNA_PERSONAL_ID`
+  vale apenas em `auth=none` local. Limites de 10 MiB / 5000 docs antes de
+  qualquer escrita; bundle malformado é 400 com nada escrito. Pipeline única
+  (`dna.memory.verbs.import_mif_docs`) compartilhada entre CLI e REST.
+
+### ✨ Kinds e modelo de dados
+
+- **`x-dna-ref`** (i-040, #193) — um campo de spec pode declarar que referencia
+  outro Kind por nome de documento. Validação opt-in na escrita
+  (`DNA_REF_VALIDATION`: `warn` default / `enforce` / `off`); Kind sem a
+  anotação comporta-se exatamente como antes. 14 campos declarados no arco
+  SDLC + portfolio.
+- **MER gerado do registry** (#195) — `docs/reference/data-model.md`, com as
+  relações em quatro camadas (declarada / composição / inferida-tracejada /
+  não-resolvida-nomeada) e guard de drift no CI.
+
+### 🛠 Kernel honesto (i-043, i-044, #197)
+
+- `merge_field_level` faz o deep-merge que a docstring promete (dicts aninham,
+  listas substituem — a semântica do `layer_resolver.deep_merge`), com
+  proveniência por caminho de folha. Default `override_full` inalterado.
+- A política de camada é casada pelo alias DECLARADO do registro; o fallback
+  para `open` ficou barulhento e um typo de alias derruba teste em vez de
+  degradar `locked`→`open` em silêncio.
+
+### 🛠 Migrations
+
+- **O baseline do Alembic ficou recuperável de verdade** (#191). A mensagem de
+  recuperação mandava usar uma versão que nenhum wheel continha.
+  `_LEGACY_BRIDGES` fecha o único degrau alcançável (9→10, o DROP idempotente
+  de `dna_edges`), com sentinela de sanidade e recusa preservando dados se a
+  tabela não estiver vazia. SQLite nunca foi afetado.
+
+### 🔧 CLI
+
+- **A Session é injetada pelo contexto do click** (f-cli-session-injection,
+  #198). Os 25 monkeypatches em `dna_session` de módulo viraram um provider em
+  `ctx.obj`; patchar o seam antigo agora falha ALTO. `sdlc_cmd.py` começou a
+  ser desmembrado (7.221 → 4.608 linhas; journey/narrative/reference/initiative
+  em módulos próprios). Superfície `--help` byte-idêntica (206 comandos).
+- `gen_cli_docs.py` ficou reprodutível entre versões de Python (o 3.13 dedenta
+  docstrings em tempo de compilação; `inspect.cleandoc` normaliza).
+
+
 ### ✨ Proveniência no fio (i-045)
 
 - **`GET /v1/agents/{name}/prompt?explain=true`** (REST) e

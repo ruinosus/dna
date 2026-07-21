@@ -1,6 +1,6 @@
 {
   "name": "dna-client",
-  "version": "0.21.1",
+  "version": "0.22.0",
   "description": "DNA \u2014 Official TypeScript client for the DNA REST read-API (generated from OpenAPI)",
   "type": "module",
   "license": "MIT",
