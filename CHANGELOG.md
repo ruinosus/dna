@@ -11,6 +11,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### ✨ Composição
+
+- **Herança de definições por workspace-scope — a tese do overlay ganha o
+  "resto para herdar"** (i-058). Um workspace Model B roteia para o scope
+  `tenant-ws-<id>`, que nascia VAZIO e inalcançável por qualquer seed de boot
+  (workspaces nascem depois do boot): o AgentBrowser do workspace novo vinha
+  vazio e o compose caía no fallback mesmo com o scope base semeado. A cadeia
+  transitiva de `Genome.spec.parent_scope` (`compute_resolution_chain`) já era
+  honrada por `kernel.query` e `resolve_document`, mas NÃO pelos dois leitores
+  que as superfícies de produto realmente usam — a materialização EAGER do
+  ManifestInstance (que serve `list_agents` e `compose_prompt`) e o
+  `kernel.get_document` (`get_skill`/`get_template`), ambos presos ao salto
+  fixo V1 para `_lib`. Agora os quatro leitores andam a MESMA cadeia — um
+  mecanismo, todos os consumidores: local vence por `(kind, name)`, parent
+  mais próximo sombreia o mais distante, e o caso sem parent declarado é
+  byte-idêntico ao comportamento anterior (a cadeia termina em `_lib` pelo
+  fallback V1; golden + timing provaram ~igual no caso comum). Kinds de
+  memória/board (`scope_inheritable=false`) continuam estruturalmente fora da
+  herança — o base é conteúdo curado, nunca estado compartilhado — e a
+  fronteira de staleness do cache de MI ficou documentada no builder e pinada
+  por teste (um write no parent é visto imediatamente pelos builds
+  por-request; um MI base já cacheado do filho não é derrubado — o mesmo
+  contorno que writes em `_lib` sempre tiveram).
+- **O scope do workspace nasce declarando o parent — e os existentes adotam
+  no próximo sign-in** (i-058, a metade de aplicação). Com
+  `DNA_WORKSPACE_DEFINITIONS_BASE` setado (novo env, lido em `boot_live` →
+  `LiveDna.workspace_definitions_base`), `create_workspace_impl` escreve o
+  Genome do scope `tenant-<id>` com `parent_scope` apontando para o base
+  curado do host — entre o doc `Workspace` e o grant de owner, com
+  compensação nas falhas — e `provision_workspace_owner_impl` (chamado a cada
+  sign-in do portal) faz a ADOÇÃO idempotente dos workspaces nascidos antes
+  do env existir: zero passos operacionais. Intent-preserving: um
+  `parent_scope` autorado por operador nunca é sobrescrito, e o scope do
+  vendor (que É o base do host) nunca é tocado. Sem o env (OSS/self-host),
+  nada é escrito — comportamento estruturalmente idêntico ao de hoje. O
+  dna-cloud liga com `DNA_WORKSPACE_DEFINITIONS_BASE=dna-development` nos
+  containers `mcp`/`api`.
+
 ## [0.22.1] — 2026-07-21
 
 Patch de cobrança honesta. A faixa interna NÃO muda: 0.22.1 é patch dentro
