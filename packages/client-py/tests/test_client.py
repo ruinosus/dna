@@ -113,6 +113,21 @@ def test_workspace_members_no_scope_tenant_default():
     assert url.params["actor_email"] == "a@b.com"
 
 
+def test_list_personal_memories_never_sends_a_tenant():
+    # The personal read is IDENTITY-scoped: the partition comes from the
+    # token, server-side. The client-level default `tenant` must not be
+    # merged (sending one would imply a choice the caller does not have);
+    # an explicit `scope` still travels.
+    transport, calls = _recorder({"scope": "base", "partition": "personal",
+                                  "memories": []})
+    with DnaClient(BASE, tenant="acme", scope="base", transport=transport) as dna:
+        dna.list_personal_memories(scope="concierge")
+    url = calls[0].url
+    assert url.path == "/v1/memories/personal"
+    assert "tenant" not in url.params
+    assert url.params["scope"] == "concierge"
+
+
 def test_non_2xx_raises_dna_api_error():
     transport, _ = _recorder({"detail": "unknown project 'nope'"}, status=404)
     with DnaClient(BASE, transport=transport) as dna:

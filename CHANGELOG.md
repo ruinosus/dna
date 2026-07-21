@@ -26,6 +26,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   distinção é por item, nunca por chamada (`list_memories` idem; o chip
   "pessoal" do console deixa de ser código morto).
 
+### 🔗 REST
+
+- **`GET /v1/memories/personal` — a leitura da partição pessoal** (destrava a
+  i-046 do dna-cloud: a partição tinha escrita via REST e ZERO leitura — a
+  memória importada pelo fundador não aparecia em lugar nenhum do portal). O
+  MESMO contrato de identidade do `POST /v1/memories/import`, espelhado:
+  `personal:<oid>` derivado SERVER-SIDE das claims verificadas
+  (`--auth config`); identidade nomeada em query/body IGNORADA (INV-PERSONAL
+  camada 1); bearer compartilhado (`--auth token`) = 403 sempre;
+  `--auth none` só lê via `DNA_PERSONAL_ID` (single-user local) e sem env é
+  403 — nenhum fallback em deployment autenticado. Item = shape do
+  `list_memories` enriquecido (+`personal` por item); a resposta ecoa só o
+  SCHEME (`partition: "personal"`), nunca o oid concreto. OpenAPI
+  regenerado; clientes py (`list_personal_memories`) e ts
+  (`listPersonalMemories`) expostos — por construção sem parâmetro de
+  tenant/identidade.
+
 ## [0.24.0] — 2026-07-21
 
 O card de memória vira MCP App. Minor novo: faixa interna
