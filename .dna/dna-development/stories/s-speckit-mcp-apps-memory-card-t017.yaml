@@ -14,3 +14,32 @@ spec:
   reporter: claude-code
   spec_refs:
   - speckit-mcp-apps-memory-card
+  timeline:
+  - at: '2026-07-21T21:09:13+00:00'
+    actor: claude-code
+    type: decision
+    source: cli
+    summary: "Decidi N\xC3O wirar o @ag-ui/mcp-apps-middleware e parar para reporte\
+      \ (regra do design: n\xE3o mergeia metade), porque a premissa 'CopilotKit ^1.63\
+      \ j\xE1 compat\xEDvel' vale no n\xEDvel do pacote mas a integra\xE7\xE3o \xE9\
+      \ inerte por constru\xE7\xE3o nesta arquitetura \u2014 3 bloqueios verificados\
+      \ no c\xF3digo real: (1) o middleware latest (0.0.3, o MESMO bundlado no @copilotkit/runtime\
+      \ 1.63.1, que \xE9 o latest) implementa o DRAFT da SEP-1865 \u2014 descoberta\
+      \ filtra _meta['ui/resourceUri'] plano e advertisa text/html+mcp \u2014 enquanto\
+      \ FastMCP 3 no SDK 0.24.0 emite o shape FINAL (_meta.ui.resourceUri aninhado,\
+      \ text/html;profile=mcp-app): a descoberta encontra zero UI tools; (2) v0.0.3\
+      \ constr\xF3i os transports com new URL(url) s\xF3 \u2014 o campo headers do\
+      \ config NUNCA chega ao transport \u2014 logo n\xE3o autentica no MCP metered\
+      \ do DNA (tools/list, tools/call e o resources/read proxiado do renderer levam\
+      \ 401); (3) o gatilho de render do middleware \xE9 'pending tool call executado\
+      \ PELO middleware', mas no console o backend LangGraph executa list_memories/recall\
+      \ ele mesmo (bearer por usu\xE1rio + quota) e o scaffold emitido faz bind s\xF3\
+      \ de _allowed_tools_only(mcp_client.get_tools()) \u2014 nunca sobra pending\
+      \ call, o ACTIVITY_SNAPSHOT mcp-apps nunca dispara. N\xE3o existe bump de CopilotKit\
+      \ que resolva (1.63.1 \xC9 o latest). Caminho apontado sem contorno: lado host\
+      \ precisa alcan\xE7ar a SEP-1865 final (middleware novo upstream OU scaffold\
+      \ do SDK emitir ACTIVITY_SNAPSHOT \u2014 ag-ui-protocol 0.1.19 do copilot j\xE1\
+      \ tem o evento \u2014 mais um proxy resources/read autenticado). Feature fica\
+      \ in-progress no lado console; o trem de pin (t019) andou separado."
+    commit_ref: 08ae8a0320b89195967dd1beb5bb817de33ced01
+  updated_at: '2026-07-21T21:09:13+00:00'

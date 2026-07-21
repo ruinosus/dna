@@ -14,3 +14,16 @@ spec:
   reporter: claude-code
   spec_refs:
   - speckit-mcp-apps-memory-card
+  timeline:
+  - at: '2026-07-21T21:09:33+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "N\xE3o iniciada: os testes de t018 (middleware no pipeline + card do\
+      \ fixture + grep-guard \xA73 na superf\xEDcie nova) pressup\xF5em o wire de\
+      \ t017, que est\xE1 bloqueado pelo gap draft-vs-final da SEP-1865 no lado host\
+      \ (ver a decision em t017). Nenhuma superf\xEDcie nova entrou no dna-cloud \u2014\
+      \ logo n\xE3o h\xE1 onde plantar o guard nem o que matar por muta\xE7\xE3o.\
+      \ Destrava junto com t017."
+    commit_ref: 08ae8a0320b89195967dd1beb5bb817de33ced01
+  updated_at: '2026-07-21T21:09:33+00:00'

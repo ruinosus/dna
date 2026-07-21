@@ -1,0 +1,28 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-067-mcp-apps-middleware-host-gap
+spec:
+  description: "t017 do spec 001 parou declaradamente (regra 'nada shippa meio-referenciado'):\
+    \ o @ag-ui/mcp-apps-middleware@0.0.3 (bundleado no @copilotkit/runtime 1.63.1\
+    \ latest) e INERTE contra o nosso MCP, verificado no codigo publicado: (1) fala\
+    \ o DRAFT da SEP-1865 (_meta['ui/resourceUri'] plano + text/html+mcp) enquanto\
+    \ o FastMCP 3 emite o FINAL (aninhado + ;profile=mcp-app) \u2014 descoberta acha\
+    \ zero tools; (2) nao propaga headers de auth ao transport (401 contra o MCP metered);\
+    \ (3) so dispara para pending calls que ELE executa \u2014 no console o LangGraph\
+    \ executa as tools. O renderer do react-core 1.63.1 JA fala o protocolo final\
+    \ de iframe \u2014 o gap e descoberta/auth/trigger. Dois caminhos, sem contorno:\
+    \ (a) upstream alinhar o middleware a spec final + headers (watch de release do\
+    \ CopilotKit); (b) o scaffold emitido pelo SDK emitir o ACTIVITY_SNAPSHOT mcp-apps\
+    \ (o ag-ui-protocol 0.1.19 do copilot JA tem o evento) + um proxy resources/read\
+    \ autenticado no runtime \u2014 nesse caso e feature do SDK (emit) + wire pequeno\
+    \ no dna-cloud. Stories t017/t018 do spec ficam in-progress ate um dos dois destravar."
+  type: task
+  severity: medium
+  status: open
+  timeline:
+  - at: '2026-07-21T21:16:09+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

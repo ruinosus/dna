@@ -15,3 +15,21 @@ spec:
   reporter: claude-code
   spec_refs:
   - speckit-mcp-apps-memory-card
+  timeline:
+  - at: '2026-07-21T21:08:48+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: "Pin cortado no dna-cloud (branch feat/mcp-apps-console, commit 08ae8a0):\
+      \ infra/{mcp,api,copilot}.Dockerfile 0.23.0 \u2192 0.24.0 + linha do CLAUDE.md\
+      \ em lockstep. Fixture do emit em infra/test_emit_copilot_langgraph.py regenerado\
+      \ pela receita do docstring contra 0.24.0 \u2014 \xFAnico delta \xE9 o rename\
+      \ memory_list_card_html \u2192 memory_canvas_card_html (bytes do card id\xEA\
+      nticos), confirmado por diff contra o emit real. Gates: 230 node tests / typecheck\
+      \ / lint / next build / 34 pytest infra \u2014 verdes antes e depois. A valida\xE7\
+      \xE3o visual no /console fica declarada como gate de deploy, mas hoje n\xE3\
+      o h\xE1 card para validar: t017 est\xE1 bloqueada (ver comment l\xE1) \u2014\
+      \ o painel lateral Mem\xF3ria segue intacto e o copiloto n\xE3o regride (content\
+      \ byte-id\xEAntico, US3)."
+    commit_ref: 08ae8a0320b89195967dd1beb5bb817de33ced01
+  updated_at: '2026-07-21T21:08:48+00:00'
