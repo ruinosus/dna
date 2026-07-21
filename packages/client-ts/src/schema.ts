@@ -246,6 +246,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/memories/personal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Personal Memories
+         * @description List the CALLER'S OWN personal memories — the READ face of the
+         *     partition ``POST /v1/memories/import`` writes (i-046: the founder
+         *     imported a memory and no portal surface could show it).
+         *
+         *     Same identity contract as the import, MIRRORED not re-derived: the
+         *     ``personal:<oid>`` partition is resolved SERVER-SIDE from the verified
+         *     token's claims (``--auth config``), and is never accepted from the
+         *     query or body — a ``tenant``/``oid``/``personal_id`` a client sends is
+         *     IGNORED (INV-PERSONAL layer 1). A SHARED bearer (``--auth token``) is
+         *     not an identity, so that mode is always 403; ``--auth none`` (the
+         *     single-user local deployment) may read ``DNA_PERSONAL_ID``, and there
+         *     is no such fallback on an authenticated deployment. No resolvable
+         *     identity ⇒ 403, nothing read.
+         *
+         *     The result unions the personal partition with the shared base scope
+         *     (never any workspace's memory); each item is the ``list_memories``
+         *     shape enriched with the per-ITEM ``personal`` flag (i-068), so a UI
+         *     can chip the caller's own memories apart from the shared riders.
+         */
+        get: operations["personal_memories_v1_memories_personal_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/memories/search": {
         parameters: {
             query?: never;
@@ -1294,6 +1331,57 @@ export interface components {
             /** Scope Type */
             scope_type: string;
         };
+        /**
+         * PersonalMemoriesResponse
+         * @description The caller's OWN personal memories (+ the shared base they union with).
+         *
+         *     Like :class:`ImportMemoriesResponse`, ``partition`` echoes only the SCHEME
+         *     the read resolved (``personal``) — never the concrete ``personal:<oid>``
+         *     value, which would leak the server-derived identity onto the wire. There is
+         *     deliberately NO ``tenant`` field for the same reason.
+         */
+        PersonalMemoriesResponse: {
+            /** Memories */
+            memories: components["schemas"]["PersonalMemorySummary"][];
+            /**
+             * Partition
+             * @default personal
+             */
+            partition: string;
+            /** Scope */
+            scope: string;
+        };
+        /**
+         * PersonalMemorySummary
+         * @description One memory as the PERSONAL list surface projects it — the core
+         *     ``list_memories_impl`` item shape (i-068 enriched): the dashboard fields
+         *     plus the per-ITEM ``personal`` flag. A personal read unions the caller's
+         *     ``personal:<oid>`` partition with the shared base, so the flag varies per
+         *     item (``True`` = the caller's own private memory; ``False`` = a shared
+         *     base memory riding along).
+         */
+        PersonalMemorySummary: {
+            /** Affect */
+            affect?: string | null;
+            /** Area */
+            area?: string | null;
+            /** Created At */
+            created_at?: string | null;
+            /** Name */
+            name?: string | null;
+            /**
+             * Personal
+             * @default false
+             */
+            personal: boolean;
+            /** Summary */
+            summary?: string | null;
+            /**
+             * Tags
+             * @default []
+             */
+            tags: string[];
+        };
         /** ProjectDetailResponse */
         ProjectDetailResponse: {
             project: components["schemas"]["ProjectSummary"];
@@ -2129,6 +2217,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ImportMemoriesResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    personal_memories_v1_memories_personal_get: {
+        parameters: {
+            query?: {
+                scope?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonalMemoriesResponse"];
                 };
             };
             /** @description Validation Error */

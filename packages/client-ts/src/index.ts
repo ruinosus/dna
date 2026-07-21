@@ -164,6 +164,27 @@ export class DnaClient {
     return this.unwrap(await this.raw.GET("/v1/memories", { params: { query: this.q(query) } }));
   }
 
+  /**
+   * List the CALLER'S OWN personal memories — the read face of
+   * {@link DnaClient.importMemories}.
+   *
+   * Same identity contract as the import: the `personal:<oid>` partition is
+   * resolved SERVER-SIDE from the verified token, so there is deliberately
+   * **no tenant or identity parameter** (and the client-level default `tenant`
+   * is NOT merged). A shared bearer (`--auth token`) is not an identity — 403
+   * always; a token carrying no identity claim is 403 too. Each item carries a
+   * per-item `personal` flag: the caller's own memories say `true`, the shared
+   * base memories riding along say `false`.
+   */
+  async listPersonalMemories(query?: { scope?: string }) {
+    const scope = query?.scope ?? this.defaults.scope;
+    return this.unwrap(
+      await this.raw.GET("/v1/memories/personal", {
+        params: { query: scope !== undefined ? { scope } : {} },
+      }),
+    );
+  }
+
   /** Recall the tenant's memory for `q` (hybrid/bi-temporal or lexical). */
   async searchMemories(query: { q: string; scope?: string; tenant?: string; k?: number }) {
     return this.unwrap(await this.raw.GET("/v1/memories/search", { params: { query: this.q(query) } }));

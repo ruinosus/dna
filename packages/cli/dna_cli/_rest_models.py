@@ -145,6 +145,36 @@ class MemoriesResponse(BaseModel):
     memories: list[MemorySummary]
 
 
+class PersonalMemorySummary(BaseModel):
+    """One memory as the PERSONAL list surface projects it — the core
+    ``list_memories_impl`` item shape (i-068 enriched): the dashboard fields
+    plus the per-ITEM ``personal`` flag. A personal read unions the caller's
+    ``personal:<oid>`` partition with the shared base, so the flag varies per
+    item (``True`` = the caller's own private memory; ``False`` = a shared
+    base memory riding along)."""
+
+    name: str | None = None
+    summary: str | None = None
+    area: str | None = None
+    tags: list[str] = []
+    affect: str | None = None
+    created_at: str | None = None
+    personal: bool = False
+
+
+class PersonalMemoriesResponse(BaseModel):
+    """The caller's OWN personal memories (+ the shared base they union with).
+
+    Like :class:`ImportMemoriesResponse`, ``partition`` echoes only the SCHEME
+    the read resolved (``personal``) — never the concrete ``personal:<oid>``
+    value, which would leak the server-derived identity onto the wire. There is
+    deliberately NO ``tenant`` field for the same reason."""
+
+    scope: str
+    partition: str = "personal"
+    memories: list[PersonalMemorySummary]
+
+
 class RememberResponse(BaseModel):
     kind: str
     name: str

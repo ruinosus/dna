@@ -75,6 +75,18 @@ describe("DnaClient", () => {
     expect(new URL(calls[1]!.url).searchParams.get("tenant")).toBe("other");
   });
 
+  test("listPersonalMemories never sends a tenant (identity-scoped read)", async () => {
+    // The partition comes from the TOKEN, server-side — the client-level
+    // default `tenant` must not be merged; an explicit `scope` still travels.
+    const { fetchImpl, calls } = stub({ scope: "base", partition: "personal", memories: [] });
+    const dna = new DnaClient({ baseUrl: BASE, tenant: "acme", scope: "base", fetch: fetchImpl });
+    await dna.listPersonalMemories({ scope: "concierge" });
+    const url = new URL(calls[0]!.url);
+    expect(url.pathname).toBe("/v1/memories/personal");
+    expect(url.searchParams.get("tenant")).toBeNull();
+    expect(url.searchParams.get("scope")).toBe("concierge");
+  });
+
   test("path params are substituted (agentPrompt, getProject, board item)", async () => {
     const { fetchImpl, calls } = stub({ ok: 1 });
     const dna = new DnaClient({ baseUrl: BASE, fetch: fetchImpl });
@@ -214,6 +226,7 @@ const COVERED: Record<string, string> = {
   "GET /v1/agents/{name}/prompt": "agentPrompt",
   "GET /v1/tools": "listTools",
   "GET /v1/memories": "listMemories",
+  "GET /v1/memories/personal": "listPersonalMemories",
   "GET /v1/memories/search": "searchMemories",
   "GET /v1/sources": "listSources",
   "GET /v1/insights": "listInsights",

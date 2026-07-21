@@ -453,6 +453,15 @@ def build_app(
             # VERIFIED token) and never reads `tenant` at all.
             if path == "/v1/memories/import" and request.method == "POST":
                 return await call_next(request)
+            # GET /v1/memories/personal is the READ face of the same partition
+            # (i-046 unblock): identical reasoning — identity-scoped, workspace-
+            # orthogonal, and a signed-up user with NO membership yet must be
+            # able to read the memory they just imported. The route derives its
+            # identity from `request.state.claims` (the VERIFIED token) and
+            # never reads `tenant`; binding a workspace here would 403 exactly
+            # that no-workspace caller.
+            if path == "/v1/memories/personal" and request.method == "GET":
+                return await call_next(request)
 
             grants_raw = await (await _live()).kernel.workspace_memberships()
             if not grants_raw:
@@ -580,6 +589,62 @@ def build_app(
         """List the tenant's memory — base + the tenant's OWN overlay (per the #83
         isolation), never another tenant's."""
         return await list_memories_impl(await _live(), scope, tenant)
+
+    @app.get("/v1/memories/personal", dependencies=guarded,
+             response_model=m.PersonalMemoriesResponse)
+    async def personal_memories(
+        request: Request,
+        scope: str | None = Query(default=None),
+    ) -> dict[str, Any]:
+        """List the CALLER'S OWN personal memories — the READ face of the
+        partition ``POST /v1/memories/import`` writes (i-046: the founder
+        imported a memory and no portal surface could show it).
+
+        Same identity contract as the import, MIRRORED not re-derived: the
+        ``personal:<oid>`` partition is resolved SERVER-SIDE from the verified
+        token's claims (``--auth config``), and is never accepted from the
+        query or body — a ``tenant``/``oid``/``personal_id`` a client sends is
+        IGNORED (INV-PERSONAL layer 1). A SHARED bearer (``--auth token``) is
+        not an identity, so that mode is always 403; ``--auth none`` (the
+        single-user local deployment) may read ``DNA_PERSONAL_ID``, and there
+        is no such fallback on an authenticated deployment. No resolvable
+        identity ⇒ 403, nothing read.
+
+        The result unions the personal partition with the shared base scope
+        (never any workspace's memory); each item is the ``list_memories``
+        shape enriched with the per-ITEM ``personal`` flag (i-068), so a UI
+        can chip the caller's own memories apart from the shared riders."""
+        from dna.application import list_memories_impl as core_list_memories_impl
+        from dna.memory.personal import (
+            PersonalIdentityRequired,
+            PersonalOverrideRejected,
+        )
+        from dna_cli._mcp_auth import personal_identity_from_claims
+
+        claims = _actor_claims_from_state(request) if auth == "config" else None
+        try:
+            oid, family = personal_identity_from_claims(
+                claims,
+                token_present=(auth == "config"),
+                allow_env_fallback=(auth == "none"),
+            )
+        except (PersonalIdentityRequired, PersonalOverrideRejected) as exc:
+            raise HTTPException(status_code=403, detail=str(exc)) from None
+
+        try:
+            out = await core_list_memories_impl(
+                await _live(), scope,
+                memory_scope="personal", oid=oid, family=family,
+            )
+        except PersonalIdentityRequired as exc:  # defense in depth (core re-checks)
+            raise HTTPException(status_code=403, detail=str(exc)) from None
+        # `partition` echoes the SCHEME only — the concrete personal:<oid>
+        # value never goes back onto the wire (mirrors the import response).
+        return {
+            "scope": out["scope"],
+            "partition": "personal",
+            "memories": out["memories"],
+        }
 
     @app.post("/v1/memories", dependencies=guarded, status_code=201,
               response_model=m.RememberResponse)

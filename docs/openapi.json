@@ -1628,6 +1628,108 @@
         "title": "OwnerGrant",
         "type": "object"
       },
+      "PersonalMemoriesResponse": {
+        "description": "The caller's OWN personal memories (+ the shared base they union with).\n\nLike :class:`ImportMemoriesResponse`, ``partition`` echoes only the SCHEME\nthe read resolved (``personal``) — never the concrete ``personal:<oid>``\nvalue, which would leak the server-derived identity onto the wire. There is\ndeliberately NO ``tenant`` field for the same reason.",
+        "properties": {
+          "memories": {
+            "items": {
+              "$ref": "#/components/schemas/PersonalMemorySummary"
+            },
+            "title": "Memories",
+            "type": "array"
+          },
+          "partition": {
+            "default": "personal",
+            "title": "Partition",
+            "type": "string"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scope",
+          "memories"
+        ],
+        "title": "PersonalMemoriesResponse",
+        "type": "object"
+      },
+      "PersonalMemorySummary": {
+        "description": "One memory as the PERSONAL list surface projects it — the core\n``list_memories_impl`` item shape (i-068 enriched): the dashboard fields\nplus the per-ITEM ``personal`` flag. A personal read unions the caller's\n``personal:<oid>`` partition with the shared base, so the flag varies per\nitem (``True`` = the caller's own private memory; ``False`` = a shared\nbase memory riding along).",
+        "properties": {
+          "affect": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Affect"
+          },
+          "area": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Area"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "personal": {
+            "default": false,
+            "title": "Personal",
+            "type": "boolean"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "tags": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "array"
+          }
+        },
+        "title": "PersonalMemorySummary",
+        "type": "object"
+      },
       "ProjectDetailResponse": {
         "properties": {
           "project": {
@@ -3820,6 +3922,69 @@
           }
         },
         "summary": "Import Memories"
+      }
+    },
+    "/v1/memories/personal": {
+      "get": {
+        "description": "List the CALLER'S OWN personal memories — the READ face of the\npartition ``POST /v1/memories/import`` writes (i-046: the founder\nimported a memory and no portal surface could show it).\n\nSame identity contract as the import, MIRRORED not re-derived: the\n``personal:<oid>`` partition is resolved SERVER-SIDE from the verified\ntoken's claims (``--auth config``), and is never accepted from the\nquery or body — a ``tenant``/``oid``/``personal_id`` a client sends is\nIGNORED (INV-PERSONAL layer 1). A SHARED bearer (``--auth token``) is\nnot an identity, so that mode is always 403; ``--auth none`` (the\nsingle-user local deployment) may read ``DNA_PERSONAL_ID``, and there\nis no such fallback on an authenticated deployment. No resolvable\nidentity ⇒ 403, nothing read.\n\nThe result unions the personal partition with the shared base scope\n(never any workspace's memory); each item is the ``list_memories``\nshape enriched with the per-ITEM ``personal`` flag (i-068), so a UI\ncan chip the caller's own memories apart from the shared riders.",
+        "operationId": "personal_memories_v1_memories_personal_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scope"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonalMemoriesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Personal Memories"
       }
     },
     "/v1/memories/search": {

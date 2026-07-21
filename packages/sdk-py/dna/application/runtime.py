@@ -1210,8 +1210,15 @@ async def list_memories_impl(
     (bi-temporally demoted by ``forget`` — ``spec.valid_to`` set/in the past) are
     EXCLUDED, using the SAME ``currently_valid`` predicate ``recall`` applies
     (verbs.py) so the list and recall agree: a memory dropped by ``forget``
-    disappears from BOTH surfaces, never a ghost."""
+    disappears from BOTH surfaces, never a ghost.
+
+    Each item carries ``personal: bool`` (i-068) — the per-ITEM flag telling
+    whether it resolves from the caller's ``personal:<oid>`` partition rather
+    than the shared base a personal read unions with (same predicate recall's
+    hits use, ``dna.memory.verbs.is_personal_doc``); always ``False`` on a
+    workspace read."""
     from dna.memory.decay import currently_valid
+    from dna.memory.verbs import is_personal_doc, memory_created_at
 
     sc, tenant = _resolve_memory_target(live, scope, tenant, memory_scope, oid, family)
     memories: list[dict[str, Any]] = []
@@ -1219,13 +1226,6 @@ async def list_memories_impl(
         spec = d["spec"]
         if not currently_valid(spec.get("valid_to")):
             continue  # forgotten / superseded — never surfaced (mirrors recall).
-        # Engram stamps ``created_at`` (== ``valid_from`` seed); fall back
-        # to the reconsolidation timeline's first ``at`` when a variant omits it.
-        created = spec.get("created_at") or spec.get("valid_from")
-        if not created:
-            history = spec.get("cues_history") or []
-            if isinstance(history, list) and history and isinstance(history[0], dict):
-                created = history[0].get("at")
         memories.append(
             {
                 "name": d["name"],
@@ -1233,7 +1233,12 @@ async def list_memories_impl(
                 "area": spec.get("area"),
                 "tags": list(spec.get("tags") or []),
                 "affect": spec.get("affect"),
-                "created_at": created,
+                # Engram stamps ``created_at`` (== ``valid_from`` seed); the
+                # shared helper falls back to the reconsolidation timeline.
+                "created_at": memory_created_at(spec),
+                "personal": await is_personal_doc(
+                    live.kernel, sc, kind, d["name"], spec, tenant,
+                ),
             }
         )
     memories.sort(key=lambda m: (m.get("created_at") or ""), reverse=True)

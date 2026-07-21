@@ -191,6 +191,79 @@ async def backfill_index(
 
 # ─────────────────────────── recall ───────────────────────────
 
+#: The spec fields recall projects onto each hit for DISPLAY (i-068). The hits
+#: were pointers (``{scope,kind,name,score,title?,snippet?}``); a UI rendering
+#: them had nothing to show. ``recall`` already loads every hit's spec for the
+#: bi-temporal filter + decay re-score, so projecting these is zero extra I/O.
+_DISPLAY_FIELDS: tuple[str, ...] = ("summary", "area", "affect", "tags")
+
+
+def memory_created_at(spec: dict[str, Any]) -> str | None:
+    """A memory's display timestamp: ``created_at``, else the bi-temporal
+    ``valid_from`` seed, else the first reconsolidation cue's ``at`` — the SAME
+    fallback chain ``list_memories`` uses, factored here so the recall hits and
+    the list surface can never disagree about when a memory was born."""
+    created = spec.get("created_at") or spec.get("valid_from")
+    if not created:
+        history = spec.get("cues_history") or []
+        if isinstance(history, list) and history and isinstance(history[0], dict):
+            created = history[0].get("at")
+    return created
+
+
+def _attach_display_fields(hit: dict[str, Any], spec: dict[str, Any]) -> None:
+    """Project the display fields from the (already loaded) spec onto the hit.
+
+    STRICTLY ADDITIVE: existing keys on the hit are never overwritten (a
+    provider-supplied ``title``/``snippet`` wins), and a field the spec does not
+    carry is simply absent — never fabricated. Lives here, ABOVE the search
+    providers, so pgvector, sqlite-vec AND the lexical fallback all enrich at
+    the same single point (the providers' hit contract is untouched)."""
+    if not spec:
+        return
+    for field in _DISPLAY_FIELDS:
+        value = spec.get(field)
+        if value is None or field in hit:
+            continue
+        hit[field] = list(value) if field == "tags" else value
+    if "created_at" not in hit:
+        created = memory_created_at(spec)
+        if created:
+            hit["created_at"] = created
+    if "title" not in hit:
+        title = spec.get("title") or spec.get("summary")
+        if title:
+            hit["title"] = title
+
+
+async def is_personal_doc(
+    kernel: Any, scope: str, kind: str, name: str,
+    spec: dict[str, Any], tenant: str | None,
+) -> bool:
+    """Whether this doc resolves from the caller's PERSONAL partition — the
+    per-ITEM flag (i-068). A personal read unions the shared base with the
+    ``personal:<oid>`` overlay, so "is it personal" is a property of each item,
+    never of the call.
+
+    The merged read cannot answer it (the source's overlay merge keeps no
+    per-row provenance), so this asks the store the one question that does:
+    does the doc exist in the BASE layer, unchanged? Absent from base → it can
+    only have come from the personal overlay. Present but different → the
+    overlay shadows it (the returned spec IS the personal copy). Present and
+    identical → shared base content, not personal. Uses the SAME cached
+    ``get_document`` primitive ``recall`` already reads through. Fail-soft:
+    an errored base probe reports False (display flag; never breaks a read).
+    """
+    if not is_personal_tenant(tenant) or not spec:
+        return False
+    try:
+        base = await kernel.get_document(scope, kind, name, tenant=None)
+    except Exception:  # noqa: BLE001 — a display flag must never break recall
+        return False
+    if base is None:
+        return True
+    return (base.get("spec") or {}) != spec
+
 
 async def _load_spec(
     kernel: Any, scope: str, kind: str, name: str, tenant: str | None,
@@ -244,7 +317,13 @@ async def recall(
     ``kernel.write_document`` — fail-soft.
 
     Returns ``{query, scope, degraded, semantic, hits:[{kind,name,score,
-    retention?,semantic?,rank_recall?,rank_ecphory?,...}]}``.
+    retention?,semantic?,rank_recall?,rank_ecphory?,...}]}``. Each hit is
+    additionally enriched for DISPLAY (i-068): ``summary``/``area``/``affect``/
+    ``tags``/``created_at``/``title`` projected from the already-loaded spec
+    (present only when the spec carries them; a provider-supplied ``title``/
+    ``snippet`` is never overwritten), plus ``personal: bool`` — the per-ITEM
+    flag telling whether the hit resolves from the caller's ``personal:<oid>``
+    partition rather than the shared base it is unioned with.
     """
     now_dt = now or datetime.now(timezone.utc)
     overfetch = max(k * 3, 10)
@@ -278,6 +357,11 @@ async def recall(
             adjusted *= affect_factor(spec.get("affect"))
             hit["score"] = adjusted
             hit["retention"] = round(retention, 4)
+        # i-068: display enrichment + the per-item personal flag — additive,
+        # zero extra I/O for the fields (the spec is already in hand) and one
+        # CACHED base probe per hit only on a personal-partition recall.
+        _attach_display_fields(hit, spec)
+        hit["personal"] = await is_personal_doc(kernel, scope, kind, name, spec, tenant)
         scored.append(hit)
         spec_by_name.setdefault(str(name), spec)
 
@@ -637,4 +721,6 @@ __all__ = [
     "consolidate",
     "backfill_index",
     "import_mif_docs",
+    "memory_created_at",
+    "is_personal_doc",
 ]

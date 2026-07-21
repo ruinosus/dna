@@ -57,6 +57,9 @@ _NO_SCOPE_TENANT: frozenset[tuple[str, str]] = frozenset(
         # would send a param the server ignores, implying a choice the caller
         # does not have. `scope` is passed explicitly by `import_memories`.
         ("POST", "/v1/memories/import"),
+        # Its READ face — identity-scoped for the same reason; `scope` is
+        # passed explicitly by `list_personal_memories`.
+        ("GET", "/v1/memories/personal"),
     }
 )
 
@@ -204,6 +207,22 @@ class DnaClient:
     ) -> JsonObject:
         """List the tenant's memory — base + the tenant's OWN overlay."""
         return self._get("/v1/memories", scope=scope, tenant=tenant)
+
+    def list_personal_memories(self, *, scope: str | None = None) -> JsonObject:
+        """List the CALLER'S OWN personal memories — the read face of
+        :meth:`import_memories`.
+
+        Same identity contract as the import: the ``personal:<oid>`` partition
+        is resolved server-side from the token (INV-PERSONAL), so there is
+        deliberately **no tenant/identity parameter** and the client-level
+        default ``tenant`` is not merged. A shared bearer (``--auth token``) is
+        not an identity — 403 always; a token with no identity claim is 403
+        too. Each item carries a per-item ``personal`` flag: the caller's own
+        memories say ``True``, the shared base memories riding along say
+        ``False``."""
+        return self.request(
+            "GET", "/v1/memories/personal", params={"scope": scope},
+        )
 
     def search_memories(
         self, q: str, *, k: int = 5, scope: str | None = None,

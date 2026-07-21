@@ -369,9 +369,13 @@ def test_list_memories_returns_tenant_memories(dna_dir):
     assert m["summary"] == "ACME onboarding lesson delta"
     assert m["area"] == "onboarding"
     assert set(m["tags"]) == {"a", "b"}
-    # every projected memory carries the dashboard's field set.
+    # every projected memory carries the dashboard's field set (+ the i-068
+    # per-item personal flag; a workspace read is never personal).
     for entry in out["memories"]:
-        assert set(entry) == {"name", "summary", "area", "tags", "affect", "created_at"}
+        assert set(entry) == {
+            "name", "summary", "area", "tags", "affect", "created_at", "personal",
+        }
+        assert entry["personal"] is False
 
 
 def test_list_memories_is_tenant_isolated(dna_dir):
@@ -399,6 +403,32 @@ def test_list_memories_is_tenant_isolated(dna_dir):
     # ... but the shared base memory is visible to BOTH tenants.
     assert any("base-shared-list" in n for n in acme_names), acme_names
     assert any("base-shared-list" in n for n in globex_names), globex_names
+
+
+def test_list_memories_personal_flag_per_item(dna_dir):
+    """A PERSONAL list unions the shared base with the caller's own
+    ``personal:<oid>`` partition — and the ``personal`` flag is per ITEM
+    (i-068): the base rider says ``False``, the private memory says ``True``.
+    This is the data the console's "pessoal" chip renders."""
+    from dna_cli import _mcp_server as M
+
+    async def scenario():
+        live = await M.boot_live(base_dir=str(dna_dir))
+        await M.remember_impl(live, "BASE shared chip note", scope=_SCOPE, tenant=None)
+        await M.remember_impl(
+            live, "MY private chip note", scope=_SCOPE,
+            memory_scope="personal", oid="oid-chip")
+        return await M.list_memories_impl(
+            live, scope=_SCOPE, memory_scope="personal", oid="oid-chip")
+
+    out = asyncio.run(scenario())
+    by_name = {m["name"]: m for m in out["memories"]}
+    private = next(m for n, m in by_name.items() if "my-private-chip" in n)
+    shared = next(m for n, m in by_name.items() if "base-shared-chip" in n)
+    assert private["personal"] is True
+    assert private["summary"] == "MY private chip note"
+    assert shared["personal"] is False
+    assert shared["summary"] == "BASE shared chip note"
 
 
 def test_forget_deletes_own_memory(dna_dir):
