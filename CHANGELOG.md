@@ -11,6 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.25.0] — 2026-07-21
+
+A memória fica visível: hits de recall com campos de display + `personal`
+por item, e a partição pessoal ganha leitura via REST. Minor novo:
+faixa interna `dna-sdk>=0.25,<0.26`.
+
+
 ### ✨ Memória
 
 - **Hits do `recall` carregam campos de display + `personal` por item**

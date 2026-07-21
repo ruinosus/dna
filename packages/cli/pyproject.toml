@@ -1,6 +1,6 @@
 [project]
 name = "dna-cli"
-version = "0.24.0"
+version = "0.25.0"
 description = "DNA command-line interface — the `dna` binary for the declarative SDLC + document CRUD (kernel-local, no service required)"
 readme = "README.md"
 license = "MIT"
@@ -24,7 +24,7 @@ dependencies = [
     # replaces the registry lookup with the workspace path source below
     # ([tool.uv.sources] — editable ../sdk-py), so dev installs keep tracking
     # the sibling package live; the constraint only bites consumers.
-    "dna-sdk>=0.24,<0.25",
+    "dna-sdk>=0.25,<0.26",
 ]
 
 [project.scripts]
@@ -112,7 +112,7 @@ packages = ["dna_cli"]
 # sibling package (editable), NOT from PyPI — the registry constraint above
 # is what published artifacts carry. Two paths, one name:
 #   dev  (this repo)  → ../sdk-py editable, always current
-#   user (pip/uv add) → PyPI dna-sdk>=0.24,<0.25
+#   user (pip/uv add) → PyPI dna-sdk>=0.25,<0.26
 [tool.uv.sources]
 dna-sdk = { path = "../sdk-py", editable = true }
 
