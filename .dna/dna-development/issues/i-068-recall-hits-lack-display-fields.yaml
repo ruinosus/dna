@@ -1,0 +1,27 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-068-recall-hits-lack-display-fields
+spec:
+  description: "Raiz do canvas em branco do console (2026-07-21, fix paliativo no\
+    \ patcher do dna-cloud #113): os hits do recall sao ponteiros de busca ({scope,kind,name,score,title?,snippet?})\
+    \ SEM summary/text/content \u2014 toda superficie que renderiza recall precisa\
+    \ de fallback proprio. O enriquecimento e custo zero de I/O: spec_by_name JA esta\
+    \ carregado dentro de verbs.recall para o scoring; anexar summary/tags/created_at/area/affect\
+    \ por hit e so projetar o que ja esta na mao. JUNTO: expor personal: bool POR\
+    \ ITEM (via _tenant que o provider sabe e hoje faz pop antes de devolver \u2014\
+    \ pgvector.py:431) \u2014 o MemoryPanel do console JA renderiza chip pessoal como\
+    \ codigo morto esperando este dado, e a i-046 do cloud (superficie de leitura\
+    \ pessoal) precisa da mesma distincao. Nota: recall pessoal une base _lib, entao\
+    \ o flag e por-item, nao por-chamada. Pronto quando: hits carregam campos de display\
+    \ + personal, com teste dos dois providers (pgvector e lexical) e mutacao; o fallback\
+    \ do patcher do dna-cloud vira redundancia inofensiva."
+  type: task
+  severity: high
+  status: open
+  timeline:
+  - at: '2026-07-21T21:48:18+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
