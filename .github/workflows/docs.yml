@@ -58,6 +58,17 @@ jobs:
             || { echo '::error::CLI/Kinds reference is stale — re-run the generators and commit.'; \
                  git --no-pager diff -- docs/reference/cli docs/reference/kinds; \
                  exit 1; }
+      # Data model (MER) drift guard. Separate from the git-diff guard above
+      # because it prints WHAT drifted and self-tests that it can still fail.
+      # Order matters: --self-test proves the comparison works, --determinism
+      # proves the generator is stable (a wobbling generator makes its own
+      # guard meaningless — the gen_cli_docs.py failure mode), then the real
+      # staleness check.
+      - name: Data model (MER) drift guard
+        run: |
+          python scripts/data_model_guard.py --self-test
+          python scripts/data_model_guard.py --determinism
+          python scripts/data_model_guard.py
       # Prose-coverage guard (s-docs-coverage-guard): the drift guard above
       # keeps the generated Reference honest; this keeps the PROSE honest.
       # Every public CLI group + registered Kind must be mentioned in at
