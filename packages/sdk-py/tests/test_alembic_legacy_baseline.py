@@ -25,6 +25,7 @@ from dna.adapters.sqlalchemy_.migrate import BASELINE_REVISION, LEGACY_HEAD
 pytestmark = pytest.mark.asyncio
 
 
+
 def _legacy_sqlite_control(conn, version: int | None) -> None:
     """Recreate the retired SQLite control table at ``version``."""
     conn.exec_driver_sql(
