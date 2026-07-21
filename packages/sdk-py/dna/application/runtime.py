@@ -26,25 +26,68 @@ from dna.application.live import LiveDna
 # ── definitions (compose / list agents / tools) ────────────────────────────
 
 
+def _sections_attribution(agent_spec: Any) -> str:
+    """How trustworthy the explain section map is for THIS agent.
+
+    ``PromptBuilder.explain`` reconstructs the section list by matching the
+    layout template's Mustache blocks (``{{#alias}}`` / flatten vars) against
+    the agent's declared deps — fail-soft string matching, never a re-run of
+    composition. Two honesty regimes follow:
+
+    * ``"declared"`` — the agent renders through a KERNEL-OWNED template (a
+      named ``layout`` preset or the Kind's default template, including the
+      plain-instruction fallback). The kernel authored both the aliases and
+      the template, so the block match is correct by construction.
+    * ``"heuristic"`` — the agent carries its OWN ``promptTemplate`` (the
+      poweruser escape hatch). The match runs against a user-authored
+      template, so a section can be silently MISSING from (or over-reported
+      in) ``sections`` — the prompt itself is still byte-exact.
+    """
+    has = agent_spec.get if hasattr(agent_spec, "get") else (lambda _k: None)
+    custom = has("promptTemplate") or has("prompt_template")
+    return "heuristic" if custom else "declared"
+
+
 async def compose_prompt_impl(
-    live: LiveDna, agent: str, scope: str | None = None, tenant: str | None = None
+    live: LiveDna, agent: str, scope: str | None = None, tenant: str | None = None,
+    *, explain: bool = False,
 ) -> dict[str, Any]:
     """Compose ``agent``'s system prompt LIVE (Soul + Guardrails + instruction),
     tenant-aware. This is the killer surface: with ``tenant`` set it returns the
-    per-tenant overlay — the composition emit cannot express in a flat file."""
+    per-tenant overlay — the composition emit cannot express in a flat file.
+
+    ``explain=True`` (opt-in, i-045) ADDS per-section provenance — ``sections``
+    (one row per composed input: source artifact, content hash, version, layer
+    origin, tenant-overlay marker) and ``attribution`` (see
+    :func:`_sections_attribution`). The ``prompt`` is produced by the SAME
+    composition path (``PromptBuilder.explain_async`` delegates to
+    ``build_async``), so it is byte-identical to the plain compose by
+    construction. Without the flag the return is EXACTLY the historical
+    five-key envelope — no new keys, so existing consumers (and the REST/MCP
+    wire shapes) are untouched.
+    """
     mi = await live.mi(scope, tenant)
     doc = mi.find_agent(agent)
     if doc is None:
         raise ValueError(f"agent {agent!r} not found in scope {mi.scope!r}")
-    prompt = await mi.build_prompt_async(agent)
+    explanation = None
+    if explain:
+        explanation = await mi.prompt.explain_async(agent, tenant=tenant)
+        prompt = explanation.prompt
+    else:
+        prompt = await mi.build_prompt_async(agent)
     spec = getattr(doc, "spec", None) or {}
-    return {
+    out: dict[str, Any] = {
         "scope": mi.scope,
         "agent": agent,
         "tenant": tenant,
         "model": spec.get("model") if hasattr(spec, "get") else None,
         "prompt": prompt,
     }
+    if explanation is not None:
+        out["sections"] = [s.serialize() for s in explanation.sections]
+        out["attribution"] = _sections_attribution(spec)
+    return out
 
 
 def _prompt_target_kinds(mi: Any) -> set[str]:
