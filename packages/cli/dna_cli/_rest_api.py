@@ -176,6 +176,7 @@ def build_app(
     cors_origins: list[str] | None = None,
     verifier: Any = None,
     token_scopes: list[str] | None = None,
+    quota_store: Any = None,
 ) -> Any:
     """Build the DNA REST read-API (a ``FastAPI`` app) over the live kernel.
 
@@ -198,6 +199,12 @@ def build_app(
         is OVERWRITTEN from membership, never trusted from the caller) — mirroring
         the MCP ``--auth config`` path. A no-membership / cross-workspace request is
         denied (fail-closed).
+
+    ``quota_store`` — an optional :class:`dna_cli._mcp_quota.QuotaStore` for the
+    plan gates on the WRITE routes (tests / embedding). Default: selected from
+    the environment via ``store_from_env`` (a Postgres DSN → the durable
+    counter, the SAME one the MCP face meters into — one budget, two channels).
+    Never consulted under ``--auth none``: the plan gate does not exist there.
 
     ``token_scopes`` — the scope grant for a WORKSPACE-LESS authenticated caller
     (``--auth token``'s shared service credential, and the ``--auth config``
@@ -523,6 +530,84 @@ def build_app(
         actor for a `/v1/workspaces/*` write), or ``None`` under none/token auth."""
         return getattr(request.state, "claims", None)
 
+    # -- plan gates on the WRITE path (i-042) ---------------------------------
+    # Before this, the REST face had ZERO metering: the axes the Pro plan sells
+    # (memory_mode write, calls_per_day) were enforced ONLY on the MCP channel —
+    # a Free workspace writing through the web surface was never gated. The
+    # policy is NOT re-implemented here: `_plan_gate` calls the SAME shared core
+    # (`dna_cli._mcp_quota.enforce_plan`) the MCP `_guard` runs — same tier
+    # resolution (claim → WorkspacePlan → Free floor), same pre-counter mode
+    # gates, same i-050 honesty (a denied call is never counted), same i-051
+    # fail-closed switch (DNA_QUOTA_REQUIRE_TIERS). This face only maps the
+    # exceptions to HTTP.
+    #
+    # Channel policy (deliberate, documented):
+    #   * READS are NOT metered on REST. On MCP every tool call is an agent
+    #     action and counts; a web dashboard fans a single page render out into
+    #     several GETs, so counting reads would let navigation burn the
+    #     customer's cap. calls_per_day on REST counts gated WRITES only.
+    #   * `--auth none` (local / OSS self-host) is NEVER gated — the open-core
+    #     hard rule, structurally enforced by the early return below.
+    #   * Under `--auth token` (the portal's TRUSTED service bearer) the gate
+    #     applies to tenant-attributed writes (the portal passes the session's
+    #     workspace as `tenant`). A tenant-less call under the shared bearer is
+    #     the operator's own service op (e.g. PUT /v1/workspace-plan, the
+    #     billing bridge itself) and is not plan-gated — the same credential
+    #     could rewrite the plan anyway, so gating it would add no security,
+    #     only a bootstrap deadlock.
+    from dna.memory.personal import personal_tenant
+    from dna_cli import _mcp_quota as _quota_mod
+    from dna_cli._mcp_auth import tier_from_token
+    from dna_cli._mcp_quota import (
+        FeatureNotInPlanError,
+        MemoryModeError,
+        OverQuotaError,
+        SdlcModeError,
+        TierRegistryUnavailableError,
+        store_from_env,
+    )
+
+    # The metering counter for THIS app — never touched under --auth none, and
+    # not even constructed there (a local `dna api serve` against Postgres must
+    # not demand the [quota] extra it will never use).
+    _quota = (
+        quota_store if quota_store is not None
+        else (store_from_env() if auth != "none" else None)
+    )
+
+    async def _plan_gate(
+        request: Request, *, tenant: str | None, family: str,
+        memory_op: str | None = None, sdlc_op: str | None = None,
+        quota_tenant: str | None = None,
+    ) -> None:
+        """Enforce the caller's plan on ONE write — the REST twin of the MCP
+        ``_guard``'s metered branch. Maps the shared core's exceptions to HTTP:
+        403 (mode/family — the plan does not include it), 429 (rate/daily cap),
+        503 (Tier registry unavailable under the fail-closed flag)."""
+        if auth == "none":
+            return  # local / OSS self-host: the plan gate does not exist.
+        if auth == "token" and tenant is None and quota_tenant is None:
+            return  # the shared bearer's own service op — see the note above.
+        claims = _actor_claims_from_state(request)
+        try:
+            # Resolved through the MODULE (not a from-import) so the shared
+            # symbol stays one seam for both faces (and monkeypatchable — the
+            # parity test's hook).
+            await _quota_mod.enforce_plan(
+                (await _live()).kernel,
+                tenant=tenant, family=family, store=_quota,
+                # An explicit plan claim on the VERIFIED token wins, exactly as
+                # on MCP; a claim-less token falls to WorkspacePlan → Free.
+                claimed_tier=tier_from_token(claims) if claims else None,
+                memory_op=memory_op, sdlc_op=sdlc_op, quota_tenant=quota_tenant,
+            )
+        except TierRegistryUnavailableError as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from None
+        except (FeatureNotInPlanError, MemoryModeError, SdlcModeError) as exc:
+            raise HTTPException(status_code=403, detail=str(exc)) from None
+        except OverQuotaError as exc:
+            raise HTTPException(status_code=429, detail=str(exc)) from None
+
     # -- health (unguarded) --------------------------------------------------
 
     @app.get("/health", response_model=m.HealthResponse)
@@ -649,6 +734,7 @@ def build_app(
     @app.post("/v1/memories", dependencies=guarded, status_code=201,
               response_model=m.RememberResponse)
     async def remember_memory(
+        request: Request,
         summary: str = Body(..., embed=True),
         area: str = Body(default="general", embed=True),
         tags: list[str] | None = Body(default=None, embed=True),
@@ -663,12 +749,17 @@ def build_app(
         ``remember_impl`` the MCP ``remember`` tool delegates to (one core, three
         faces), so a memory added here is recalled identically by MCP/CLI. The
         deterministic ``_slug(summary)`` name it returns is the id the portal's
-        ``DELETE /v1/memories/{name}`` targets to undo it."""
+        ``DELETE /v1/memories/{name}`` targets to undo it.
+
+        PLAN-GATED (i-042): the same axes the MCP ``remember`` tool enforces —
+        ``memory`` family, ``memory_mode='write'``, rate + daily cap — via the
+        SAME shared core. 403 for a read-only tier, 429 over quota."""
         text = (summary or "").strip()
         if not text:
             raise HTTPException(
                 status_code=400, detail="summary is required and cannot be empty"
             )
+        await _plan_gate(request, tenant=tenant, family="memory", memory_op="write")
         return await remember_impl(
             await _live(), text, scope, area=area, affect=affect,
             tags=tags, owner=owner, tenant=tenant,
@@ -774,6 +865,17 @@ def build_app(
         except (PersonalIdentityRequired, PersonalOverrideRejected) as exc:
             raise HTTPException(status_code=403, detail=str(exc)) from None
 
+        # 1b. PLAN gate (i-042) — the REST twin of the MCP `_personal_guard`:
+        #    a personal import is a memory WRITE, metered per the caller's
+        #    IDENTITY partition (never a workspace — there may not be one). The
+        #    tier comes from the verified token's plan claim (Free floor
+        #    default), exactly as on MCP; a read-only tier is refused BEFORE a
+        #    byte of body is buffered, and the denial costs no quota.
+        await _plan_gate(
+            request, tenant=None, family="memory", memory_op="write",
+            quota_tenant=personal_tenant(oid, family=family),
+        )
+
         # 2. Size gate BEFORE parsing — a bounded read, so an oversized upload is
         #    refused (413) instead of being buffered/parsed into memory.
         raw = await request.body()
@@ -868,12 +970,18 @@ def build_app(
     @app.delete("/v1/memories/{name}", dependencies=guarded,
                 response_model=m.DeleteMemoryResponse)
     async def delete_memory(
+        request: Request,
         name: str,
         scope: str | None = Query(default=None),
         tenant: str | None = Query(default=None),
     ) -> dict[str, Any]:
         """Delete ONE memory from the tenant's OWN overlay — the portal's
-        ownership/delete. Never base, never another tenant (a 404 otherwise)."""
+        ownership/delete. Never base, never another tenant (a 404 otherwise).
+
+        PLAN-GATED (i-042): a delete is a WRITE on the memory surface — the
+        MCP twin (``forget``) passes ``memory_op='write'`` through the same
+        guard, so this route does too."""
+        await _plan_gate(request, tenant=tenant, family="memory", memory_op="write")
         try:
             return await delete_memory_impl(await _live(), name, scope, tenant)
         except MemoryNotFound as exc:

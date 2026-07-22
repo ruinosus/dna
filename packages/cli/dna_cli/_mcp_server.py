@@ -277,10 +277,8 @@ def build_server(
         MemoryModeError,
         OverQuotaError,
         SdlcModeError,
-        enforce_memory_mode,
-        enforce_quota,
-        enforce_sdlc_mode,
-        require_tiers,
+        TierRegistryUnavailableError,
+        enforce_plan,
         store_from_env,
     )
     from dna.tenancy.resolution import CrossWorkspaceError
@@ -290,50 +288,11 @@ def build_server(
     # every call site silently defaulting to the module singleton.
     quota = quota_store if quota_store is not None else store_from_env()
 
-    def _caps_from(row: Any) -> dict:
-        """The resolved Tier caps for a METERED (token-present) call.
-
-        Empty caps default to fail-OPEN: a source with no Tier docs is an
-        OSS/self-host that never opted into DNA Cloud pricing, and the
-        open-core rule says it is never capped. Under
-        ``DNA_QUOTA_REQUIRE_TIERS=1`` (the hosted shape, i-051) the same
-        emptiness REFUSES instead: a metered deployment whose Tier seed
-        failed at boot must fail the call, not the billing — silence here
-        would serve unlimited, unbilled calls. Only reachable past the
-        no-token early return, so the flag can never leak enforcement into
-        the stdio/local path."""
-        caps = (row or {}).get("spec") or {}
-        if not caps and require_tiers():
-            raise ToolError(
-                "tier registry empty/unreadable — quota enforcement "
-                "unavailable, refusing this call (DNA_QUOTA_REQUIRE_TIERS=1). "
-                "Seed the Tier docs in _lib, or unset the flag on an uncapped "
-                "self-host."
-            )
-        return caps
-
-    async def _tier_row(kernel: Any, tier: str) -> Any:
-        """Resolve the Tier row (with the Free floor) for a metered call.
-
-        The UNREADABLE half of i-051: ``kernel.tier`` is fail-soft (a registry
-        glitch degrades to ``None``) UNLESS ``DNA_QUOTA_REQUIRE_TIERS`` is set,
-        in which case the SDK propagates — so an exception landing here is,
-        by construction, the hosted shape refusing to guess. It becomes the
-        same explicit refusal ``_caps_from`` raises for the EMPTY half, with
-        the underlying cause attached, instead of a masked internal error."""
-        try:
-            row = await kernel.tier(tier)
-            if row is None:
-                row = await kernel.tier("free")  # unknown tier → Free floor.
-            return row
-        except Exception as exc:  # noqa: BLE001 — see docstring: flag-on only.
-            if not require_tiers():
-                raise  # flag OFF: not a quota refusal — surface the real bug.
-            raise ToolError(
-                "tier registry empty/unreadable — quota enforcement "
-                "unavailable, refusing this call (DNA_QUOTA_REQUIRE_TIERS=1; "
-                f"registry read failed: {exc})"
-            ) from None
+    # NOTE (i-042): the tier-resolution → caps → mode-gates → enforce_quota
+    # pipeline that used to live here as `_caps_from` + `_tier_row` + inline
+    # code in the guards is now `dna_cli._mcp_quota.enforce_plan` — the ONE
+    # metered-call policy shared with the REST face. This face keeps only the
+    # transport mapping (quota exceptions → ToolError).
 
     async def _workspace(requested: str | None = None) -> str | None:
         """Resolve the effective **workspace** (Model B) for the current request.
@@ -419,30 +378,22 @@ def build_server(
                 f"to its token (default: {live.base_scope!r})"
             )
         kernel = live.kernel
-        tier = enforce_tier_from_context()
         # Bridge: a token WITHOUT an explicit plan claim consults the
         # WorkspacePlan store (Stripe-written) before the Free floor. An explicit
         # claim wins. `tenant` is the resolved workspace_id (ADR "Model B") — so
-        # billing is keyed on the workspace, not the Azure tid.
-        if tenant and not token_has_explicit_plan_claim():
-            plan = await kernel.workspace_plan(tenant)
-            store_tier = ((plan or {}).get("spec") or {}).get("tier_id")
-            if store_tier:
-                tier = store_tier
-        # No tiers configured → empty caps → no-op (OSS), unless the host
-        # opted into fail-closed via DNA_QUOTA_REQUIRE_TIERS (i-051).
-        caps = _caps_from(await _tier_row(kernel, tier))
+        # billing is keyed on the workspace, not the Azure tid. The whole
+        # pipeline (tier → caps → mode gates → quota, incl. the i-051
+        # fail-closed switch) is the SHARED core `enforce_plan`; this face only
+        # maps its exceptions to ToolError.
+        tier = enforce_tier_from_context()
         try:
-            # memory_mode / sdlc_mode are pre-counter gates (like the family gate):
-            # a denied write costs no quota. Enforce them BEFORE metering.
-            if memory_op is not None:
-                enforce_memory_mode(caps=caps, tier=tier, op=memory_op)
-            if sdlc_op is not None:
-                enforce_sdlc_mode(caps=caps, tier=tier, op=sdlc_op)
-            enforce_quota(caps=caps, tenant=tenant, tier=tier, family=family,
-                          store=quota)
+            await enforce_plan(
+                kernel, tenant=tenant, family=family, store=quota,
+                claimed_tier=tier if token_has_explicit_plan_claim() else None,
+                memory_op=memory_op, sdlc_op=sdlc_op,
+            )
         except (OverQuotaError, FeatureNotInPlanError, MemoryModeError,
-                SdlcModeError) as exc:
+                SdlcModeError, TierRegistryUnavailableError) as exc:
             raise ToolError(str(exc)) from None
         return tenant
 
@@ -481,17 +432,20 @@ def build_server(
         if not token_present_in_context():
             return oid, family  # stdio / local → identity, no metering.
         kernel = (await _live()).kernel
-        tier = enforce_tier_from_context()
-        # Same fail-closed opt-in as _guard (i-051): empty/unreadable Tier
-        # registry refuses the metered call when the host set the flag.
-        caps = _caps_from(await _tier_row(kernel, tier))
+        # Personal metering keys on the identity partition, never a workspace,
+        # and the tier comes from the token's plan claim (Free floor default) —
+        # the WorkspacePlan store is keyed by workspace so it is deliberately
+        # not consulted (claimed_tier is always set). Same shared core as
+        # _guard, incl. the i-051 fail-closed opt-in.
         try:
-            enforce_memory_mode(caps=caps, tier=tier, op=memory_op)
-            enforce_quota(
-                caps=caps, tenant=personal_tenant(oid, family=family),
-                tier=tier, family="memory", store=quota,
+            await enforce_plan(
+                kernel, tenant=None, family="memory", store=quota,
+                claimed_tier=enforce_tier_from_context(),
+                memory_op=memory_op,
+                quota_tenant=personal_tenant(oid, family=family),
             )
-        except (OverQuotaError, FeatureNotInPlanError, MemoryModeError) as exc:
+        except (OverQuotaError, FeatureNotInPlanError, MemoryModeError,
+                TierRegistryUnavailableError) as exc:
             raise ToolError(str(exc)) from None
         return oid, family
 
