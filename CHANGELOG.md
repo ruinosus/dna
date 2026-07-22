@@ -11,6 +11,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 🐛 Correções
+
+- **Política de camada responde IGUAL nas duas portas** (`i-049`). A escrita
+  (`LayerPolicyEnforcer._enforce`) só aceitava a chave da política pelo
+  ALIAS, enquanto a leitura/merge (pós-i-044) aceitava nome de Kind exato →
+  alias declarado → sufixos legados — então `Agent: locked` (pelo nome)
+  trancava o merge mas era IGNORADO EM SILÊNCIO no write: confiança falsa.
+  O resolvedor de chave da i-044 foi extraído como
+  `layer_resolver.match_policy_key` (nome exato → alias declarado →
+  heurísticas legadas) e as DUAS portas resolvem por ele — a mesma política
+  tranca leitura E escrita, por nome OU por alias, e um near-miss não casa
+  em porta nenhuma (na leitura continua avisando alto, i-044).
+
+- **`doc apply` converge: re-apply de arquivo idêntico é `UNCHANGED`**
+  (`i-059`). O compare era torto — doc RESOLVIDO (defaults do Kind injetados
+  no parse: `creative_slots: []`, `objective: ''`, +9 no Agent) contra o spec
+  CRU do arquivo — então Kind com defaults NUNCA convergia: todo boot do
+  seed re-aplicava o Agent como `UPDATED` com bump de versão. Agora compara
+  cru-com-cru: `write_document` persiste o doc CRU, logo o write é no-op
+  exatamente quando o spec cru armazenado == o do arquivo. (Resolvido-com-
+  resolvido foi rejeitado: remover do arquivo uma chave cujo valor era igual
+  ao default resolve idêntico mas MUDA o doc armazenado — e passaria a
+  seguir mudanças futuras do default — então tem que continuar `UPDATED`.)
+
+- **Quota store fala libpq — o DSN é normalizado para o dialeto do driver
+  síncrono** (`i-057`, visto em produção no dna-cloud). `store_from_env` cai
+  no fallback `DNA_SOURCE_URL`, que num deploy hospedado é asyncpg-style e
+  carrega `?ssl=require` — e o `PostgresQuotaStore` conecta via
+  psycopg2/psycopg (libpq), que rejeita a conexão inteira com
+  `invalid connection option "ssl"`. `sync_pg_url` agora traduz a query
+  string para libpq: `ssl=` → `sslmode=` (nomes de modo do libpq passam
+  intactos; `true`/`false` e afins mapeiam para `require`/`disable`),
+  `sslmode=` explícito vence o gêmeo `ssl=`, e params asyncpg-only
+  (`statement_cache_size`, `command_timeout`, …) são removidos em vez de
+  derrubar o connect. Um DSN já-libpq e um DSN sem query passam intactos.
+
 ## [0.25.0] — 2026-07-21
 
 A memória fica visível: hits de recall com campos de display + `personal`

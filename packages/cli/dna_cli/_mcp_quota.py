@@ -340,18 +340,81 @@ def _sync_driver() -> str:
     )
 
 
+#: asyncpg's ``ssl=`` values → libpq's ``sslmode=``. libpq's own mode names
+#: pass through unchanged; asyncpg's boolean spellings map to the nearest
+#: libpq mode (secure on truthy, plain on falsy).
+_SSL_TO_SSLMODE = {
+    "disable": "disable", "allow": "allow", "prefer": "prefer",
+    "require": "require", "verify-ca": "verify-ca",
+    "verify-full": "verify-full",
+    "true": "require", "on": "require", "1": "require", "yes": "require",
+    "false": "disable", "off": "disable", "0": "disable", "no": "disable",
+}
+
+#: Query params only asyncpg (or SQLAlchemy's asyncpg dialect) understands.
+#: libpq rejects the WHOLE connection on any option it does not know
+#: ('invalid connection option "..."'), so these are dropped, not passed.
+_ASYNCPG_ONLY_QUERY_PARAMS = frozenset({
+    "prepared_statement_cache_size",
+    "statement_cache_size",
+    "prepared_statement_name_func",
+    "max_cached_statement_lifetime",
+    "max_cacheable_statement_size",
+    "command_timeout",
+    "server_settings",
+})
+
+
+def _libpq_query(query: str) -> str:
+    """Normalize a DSN query string to the dialect this store SPEAKS — libpq.
+
+    The store's DBAPI is psycopg2/psycopg (see :func:`_sync_driver`), and
+    libpq only accepts ``sslmode=``; the fallback DSN (``DNA_SOURCE_URL``)
+    is asyncpg-shaped in a hosted deployment and carries ``ssl=require`` —
+    which libpq rejects with ``invalid connection option "ssl"`` (i-057, seen
+    live in dna-cloud). So: ``ssl=`` is translated to ``sslmode=`` (values
+    mapped via ``_SSL_TO_SSLMODE``; an already-present ``sslmode=`` wins and
+    the ``ssl=`` twin is dropped), asyncpg-only params are removed, and
+    everything else (libpq-valid options like ``application_name``) passes
+    through untouched."""
+    from urllib.parse import parse_qsl, urlencode
+
+    pairs = parse_qsl(query, keep_blank_values=True)
+    has_sslmode = any(k == "sslmode" for k, _ in pairs)
+    out: list[tuple[str, str]] = []
+    for k, v in pairs:
+        if k == "ssl":
+            if has_sslmode:
+                continue  # the explicit libpq spelling wins; drop the twin.
+            out.append(("sslmode", _SSL_TO_SSLMODE.get(v.lower(), v)))
+        elif k in _ASYNCPG_ONLY_QUERY_PARAMS:
+            continue
+        else:
+            out.append((k, v))
+    return urlencode(out)
+
+
 def sync_pg_url(dsn: str) -> str:
     """Rewrite a DNA source DSN into a SQLAlchemy **sync** Postgres URL.
 
     Accepts what ``DNA_SOURCE_URL`` may carry — ``postgres://``,
     ``postgresql://``, ``postgresql+asyncpg://`` — and swaps the driver for
-    the installed sync one, leaving host/database/query string alone."""
+    the installed sync one, leaving host/database alone. The QUERY STRING is
+    normalized to the libpq dialect the sync driver actually speaks
+    (``ssl=`` → ``sslmode=``, asyncpg-only params dropped — see
+    :func:`_libpq_query`): the fallback DSN is asyncpg-shaped by design, and
+    handing its ``ssl=require`` to psycopg2 kills every metered call with
+    ``invalid connection option "ssl"`` (i-057)."""
     scheme, sep, rest = dsn.partition("://")
     if not sep:
         raise ValueError(f"not a Postgres URL: {dsn!r}")
     base = scheme.split("+", 1)[0].lower()
     if base not in ("postgresql", "postgres"):
         raise ValueError(f"not a Postgres URL: {dsn!r}")
+    netpath, qmark, query = rest.partition("?")
+    if qmark:
+        normalized = _libpq_query(query)
+        rest = f"{netpath}?{normalized}" if normalized else netpath
     return f"postgresql+{_sync_driver()}://{rest}"
 
 
@@ -395,7 +458,15 @@ class PostgresQuotaStore:
     Every call opens its own short transaction on a pooled connection. The
     call is blocking, and ``enforce_quota`` runs on the server's event loop —
     one local round trip per metered tool call, alongside the several the tool
-    itself already makes to the same database."""
+    itself already makes to the same database.
+
+    **Dialect:** the store connects through a SYNC DBAPI (psycopg2/psycopg —
+    see :func:`_sync_driver`), i.e. it speaks **libpq** connection options.
+    The ``dsn`` may be asyncpg-shaped (``DNA_SOURCE_URL`` is, in the hosted
+    deployment); :func:`sync_pg_url` normalizes it — driver swapped and the
+    query string translated to libpq (``ssl=`` → ``sslmode=``, asyncpg-only
+    params dropped) — so a DSN the SOURCE dials with asyncpg cannot kill the
+    quota connection with ``invalid connection option "ssl"`` (i-057)."""
 
     def __init__(
         self,

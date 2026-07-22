@@ -23,6 +23,54 @@ from dna.kernel.protocols import LayerPolicy
 logger = logging.getLogger(__name__)
 
 
+def match_policy_key(
+    kind: str,
+    policies: dict[str, Any],
+    declared_alias: str | None = None,
+) -> Any | None:
+    """THE policy-key resolver — shared by BOTH policy ports (i-049).
+
+    Given a Kind name and a ``policies`` mapping (keys are Kind names or
+    aliases; values are whatever the caller stores — ``LayerPolicy`` enums on
+    the read/merge port, raw strings on the write port), return the entry
+    that governs ``kind``, or ``None`` when nothing matches (the CALLER
+    decides the fallback posture — the read port warns loudly, i-044).
+
+    Lookup order (the i-044 contract):
+      1. exact Kind name (``Agent``) — legacy ``Module.spec.layers`` form;
+      2. ``declared_alias`` — the Kind's DECLARED alias from the kind
+         registry, the canonical non-inferred path;
+      3. legacy string heuristics (lowercase / hyphen-suffix /
+         CamelCase→kebab) — kept only for callers without a registry map.
+
+    Extracted from ``DefaultLayerResolver._policy_for_kind`` so the write
+    port (``LayerPolicyEnforcer._enforce``) resolves the key IDENTICALLY:
+    before i-049 the write port accepted ONLY the alias, so an
+    ``Agent: locked`` (keyed by name) locked the merge but was silently
+    ignored on write — the same declared protection held on one port and
+    not the other. One resolver, one answer."""
+    if kind in policies:
+        return policies[kind]
+    # Declared alias from the registry — exact, no inference.
+    if declared_alias is not None and declared_alias in policies:
+        return policies[declared_alias]
+    kind_lower = kind.lower()
+    # Heuristic: hyphen-suffix alias match (legacy from when
+    # policies dict could be keyed by tail-of-alias).
+    for alias, policy in policies.items():
+        if alias.endswith(f"-{kind_lower}") or alias == kind_lower:
+            return policy
+    # Phase 16 alias match: convert kind to its alias-tail by
+    # CamelCase → kebab-case (Agent → agent), then
+    # match aliases ending in that tail.
+    import re
+    kebab = re.sub(r"(?<!^)(?=[A-Z])", "-", kind).lower()
+    for alias, policy in policies.items():
+        if alias.endswith(f"-{kebab}") or alias == kebab:
+            return policy
+    return None
+
+
 def deep_merge(base: dict[str, Any], overlay: dict[str, Any]) -> dict[str, Any]:
     """Deep merge two dicts. Overlay wins. Lists are replaced, dicts merged recursively."""
     result = copy.deepcopy(base)
@@ -207,13 +255,10 @@ class DefaultLayerResolver:
         """Resolve policy for a kind. Falls back to OPEN — NOISILY — when a
         non-empty policy set matches nothing (i-044).
 
-        Lookup order:
-          1. exact Kind name (``Agent``) — legacy ``Module.spec.layers`` form;
-          2. the Kind's DECLARED alias from the kind registry
-             (``self._kind_aliases``) — the canonical, non-inferred path;
-          3. legacy string heuristics (lowercase / hyphen-suffix /
-             CamelCase→kebab) — kept only for callers that construct the
-             resolver without a registry alias map.
+        Key resolution delegates to :func:`match_policy_key` — the ONE
+        resolver both policy ports share (i-049): the write port
+        (``LayerPolicyEnforcer``) resolves through the same function, so a
+        policy key that locks the merge locks the write too.
 
         The fallback contract: OPEN is a fine default when NO policies are
         declared (that scope opted out of a policy regime). But when the
@@ -221,26 +266,10 @@ class DefaultLayerResolver:
         degrading to OPEN silently is how a typo'd alias turns ``locked``
         into ``open`` — so that path warns, once per kind per resolver.
         """
-        if kind in policies:
-            return policies[kind]
-        # Declared alias from the registry — exact, no inference.
         declared_alias = self._kind_aliases.get(kind)
-        if declared_alias is not None and declared_alias in policies:
-            return policies[declared_alias]
-        kind_lower = kind.lower()
-        # Heuristic: hyphen-suffix alias match (legacy from when
-        # policies dict could be keyed by tail-of-alias).
-        for alias, policy in policies.items():
-            if alias.endswith(f"-{kind_lower}") or alias == kind_lower:
-                return policy
-        # Phase 16 alias match: convert kind to its alias-tail by
-        # CamelCase → kebab-case (Agent → agent), then
-        # match aliases ending in that tail.
-        import re
-        kebab = re.sub(r"(?<!^)(?=[A-Z])", "-", kind).lower()
-        for alias, policy in policies.items():
-            if alias.endswith(f"-{kebab}") or alias == kebab:
-                return policy
+        matched = match_policy_key(kind, policies, declared_alias)
+        if matched is not None:
+            return matched
         if policies and kind not in self._warned_fallback_kinds:
             self._warned_fallback_kinds.add(kind)
             warnings.warn(
