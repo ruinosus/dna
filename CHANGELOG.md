@@ -47,6 +47,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`statement_cache_size`, `command_timeout`, …) são removidos em vez de
   derrubar o connect. Um DSN já-libpq e um DSN sem query passam intactos.
 
+### 🔗 REST
+
+- **O caminho de ESCRITA REST agora passa pelos gates de plano** (`i-042` do
+  dna-cloud). A face REST (`dna api serve`) não tinha metering NENHUM — os
+  eixos que o plano Pro vende (`memory_mode` write, `calls_per_day`) valiam
+  só no canal MCP, então um workspace Free escrevendo pela superfície web
+  nunca era barrado. As rotas de escrita de memória (`POST /v1/memories`,
+  `DELETE /v1/memories/{name}`, `POST /v1/memories/import`) agora passam por
+  um `_plan_gate` que chama o MESMO núcleo compartilhado do guard MCP —
+  mesma ordem de resolução (claim → WorkspacePlan → piso Free), mesmos gates
+  pré-contador (`memory_mode`), mesma honestidade i-050 (negada NÃO conta),
+  mesmo fail-closed i-051 (`DNA_QUOTA_REQUIRE_TIERS` → 503). Política de
+  canal deliberada: LEITURA REST não conta no cap (um render de dashboard
+  abre vários GETs — navegar não pode queimar o budget do cliente); escrita
+  conta e é gated; `--auth none` (self-host OSS) NUNCA é gated — regra dura
+  open-core, estruturalmente fora do alcance do gate. `build_app` ganhou o
+  seam `quota_store` (espelho do `build_server`); com DSN Postgres o
+  contador é o MESMO que o MCP usa — um budget, dois canais. **Deploy
+  hosted:** o container do `dna api serve` passa a precisar de
+  `dna-cli[quota]` (driver Postgres síncrono) quando roda `--auth
+  token|config` contra Postgres, e deve setar `DNA_QUOTA_REQUIRE_TIERS=1`
+  como o do MCP.
+
+### 🧰 Refactor
+
+- **`enforce_plan` — a política de chamada metered vira UM ponto**
+  (`dna_cli._mcp_quota`). O pipeline tier→caps→modos→quota que vivia inline
+  no `_guard`/`_personal_guard` do servidor MCP foi extraído para
+  `enforce_plan` / `resolve_metered_tier` / `resolve_tier_caps` (+
+  `TierRegistryUnavailableError`), e as DUAS faces (MCP e REST) chamam o
+  mesmo símbolo — não existe segunda cópia para divergir (teste de paridade
+  com sentinela pina isso). Zero mudança de comportamento no MCP: mesmas
+  mensagens, mesma ordem, suítes existentes intactas.
+
 ## [0.25.0] — 2026-07-21
 
 A memória fica visível: hits de recall com campos de display + `personal`
