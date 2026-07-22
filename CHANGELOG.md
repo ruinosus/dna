@@ -11,6 +11,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.26.0] — 2026-07-22
+
+O plano é por CONTA (#190): `AccountPlan` chaveado por account_id
+namespaced (`entra-org:<tid>` etc.), a pessoa da lane consumidor vira
+conta, e a rota `PUT /v1/workspace-plan` morre com tombstone — cutover
+coordenado com o dna-cloud pelo pin (a seção "⚠️ Cutover coordenado"
+abaixo tem o passo a passo). Minor novo: faixa interna
+`dna-sdk>=0.26,<0.27`.
+
+
 ### ✨ Novidades
 
 - **O plano passa a ser chaveado pela CONTA DE BILLING, não pelo workspace**
