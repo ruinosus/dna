@@ -14,12 +14,15 @@ class DnaComposePromptMiddleware(AgentMiddleware):
         self._fallback = fallback
 
     async def awrap_model_call(self, request, handler):
+        from langchain_core.messages import SystemMessage
+
         headers = (request.state or {}).get("mcp_headers") or {}
         try:
-            request.system_message = await self._compose(headers) or self._fallback
+            composed = await self._compose(headers)
+            request.system_message = SystemMessage(content=(composed or self._fallback))
         except Exception as exc:  # noqa: BLE001 — degrade, never fail the run
             logging.getLogger("dna.runtime.compose").warning(
                 "compose_prompt failed — degraded to the derived fallback: %s", exc
             )
-            request.system_message = self._fallback
+            request.system_message = SystemMessage(content=self._fallback)
         return await handler(request)

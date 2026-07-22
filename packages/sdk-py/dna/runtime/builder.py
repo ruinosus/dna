@@ -26,8 +26,13 @@ async def build_copilot(
     checkpointer=None,
     store=None,
 ):
-    # langchain/langgraph are heavy — deferred so importing dna.runtime.builder
-    # (and dna core) never pulls them in unless a copilot is actually built.
+    # dna.runtime requires the [runtime] extra, so langchain is present by
+    # construction — importing this module (it imports the middleware
+    # modules, which subclass AgentMiddleware) already pulls it in. The real
+    # invariant is that the DNA KERNEL CORE never imports dna.runtime at all.
+    # create_agent/init_chat_model are still deferred to here (rather than
+    # module scope) to keep construction lazy until a copilot is actually
+    # built.
     from langchain.agents import create_agent
     from langchain.chat_models import init_chat_model
 

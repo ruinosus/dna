@@ -26,5 +26,10 @@ class DnaAllowlistMiddleware(AgentMiddleware):
 
     async def awrap_model_call(self, request, handler):
         kept = [t for t in (request.tools or []) if getattr(t, "name", None) in self._allowed]
+        dropped = sorted({getattr(t, "name", "?") for t in (request.tools or [])} - self._allowed)
+        if dropped:
+            logging.getLogger("dna.runtime.allowlist").warning(
+                "allowlist dropped %d non-allowlisted tool(s): %s", len(dropped), ", ".join(dropped)
+            )
         request.tools = kept
         return await handler(request)
