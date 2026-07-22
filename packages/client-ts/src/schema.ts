@@ -198,6 +198,10 @@ export interface paths {
          *     faces), so a memory added here is recalled identically by MCP/CLI. The
          *     deterministic ``_slug(summary)`` name it returns is the id the portal's
          *     ``DELETE /v1/memories/{name}`` targets to undo it.
+         *
+         *     PLAN-GATED (i-042): the same axes the MCP ``remember`` tool enforces —
+         *     ``memory`` family, ``memory_mode='write'``, rate + daily cap — via the
+         *     SAME shared core. 403 for a read-only tier, 429 over quota.
          */
         post: operations["remember_memory_v1_memories_post"];
         delete?: never;
@@ -318,6 +322,10 @@ export interface paths {
          * Delete Memory
          * @description Delete ONE memory from the tenant's OWN overlay — the portal's
          *     ownership/delete. Never base, never another tenant (a 404 otherwise).
+         *
+         *     PLAN-GATED (i-042): a delete is a WRITE on the memory surface — the
+         *     MCP twin (``forget``) passes ``memory_op='write'`` through the same
+         *     guard, so this route does too.
          */
         delete: operations["delete_memory_v1_memories__name__delete"];
         options?: never;

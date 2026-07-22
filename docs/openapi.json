@@ -3732,7 +3732,7 @@
         "summary": "Memories"
       },
       "post": {
-        "description": "Persist ONE memory (an ``Engram``) into the tenant's OWN overlay\n— the portal's ``remember`` / add affordance, tenant-scoped from the\nsession (never base, never another tenant). Reuses the SAME CORE\n``remember_impl`` the MCP ``remember`` tool delegates to (one core, three\nfaces), so a memory added here is recalled identically by MCP/CLI. The\ndeterministic ``_slug(summary)`` name it returns is the id the portal's\n``DELETE /v1/memories/{name}`` targets to undo it.",
+        "description": "Persist ONE memory (an ``Engram``) into the tenant's OWN overlay\n— the portal's ``remember`` / add affordance, tenant-scoped from the\nsession (never base, never another tenant). Reuses the SAME CORE\n``remember_impl`` the MCP ``remember`` tool delegates to (one core, three\nfaces), so a memory added here is recalled identically by MCP/CLI. The\ndeterministic ``_slug(summary)`` name it returns is the id the portal's\n``DELETE /v1/memories/{name}`` targets to undo it.\n\nPLAN-GATED (i-042): the same axes the MCP ``remember`` tool enforces —\n``memory`` family, ``memory_mode='write'``, rate + daily cap — via the\nSAME shared core. 403 for a read-only tier, 429 over quota.",
         "operationId": "remember_memory_v1_memories_post",
         "parameters": [
           {
@@ -4089,7 +4089,7 @@
     },
     "/v1/memories/{name}": {
       "delete": {
-        "description": "Delete ONE memory from the tenant's OWN overlay — the portal's\nownership/delete. Never base, never another tenant (a 404 otherwise).",
+        "description": "Delete ONE memory from the tenant's OWN overlay — the portal's\nownership/delete. Never base, never another tenant (a 404 otherwise).\n\nPLAN-GATED (i-042): a delete is a WRITE on the memory surface — the\nMCP twin (``forget``) passes ``memory_op='write'`` through the same\nguard, so this route does too.",
         "operationId": "delete_memory_v1_memories__name__delete",
         "parameters": [
           {
