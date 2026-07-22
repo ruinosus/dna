@@ -1971,6 +1971,85 @@ async def ensure_workspace_scope_genome(
     return {"scope": scope, "parent_scope": base, "written": True}
 
 
+async def adopt_workspace_scope_on_access(
+    live: LiveDna, workspace_id: str | None,
+) -> dict[str, Any] | None:
+    """Adopt-on-access — the ROBUST trigger for i-058's definitions inheritance.
+
+    Production taught the lesson: adoption wired ONLY to provision-owner is
+    fragile by design — it depends on a portal navigation path nobody
+    guaranteed (the dna-cloud call site was gated on a stale pre-D5 condition,
+    so the founder used the portal for hours and no Genome was ever born).
+    The robust place is the moment that CANNOT be skipped: **when a request
+    resolves a workspace** (the MCP ``_guard`` bind / the REST workspace
+    middleware). If that workspace's scope has no declared parent and a
+    definitions base is configured, adopt it right there — the same request
+    (compose/list) then already reads the inherited definitions, because the
+    faces call this BEFORE the tool/route impl runs and
+    :func:`ensure_workspace_scope_genome` writes with ``invalidate_mode="doc"``.
+
+    Cheap by construction (this runs on EVERY guarded request):
+
+    * no ``workspace_id`` / no configured base / a ``personal:`` partition /
+      the vendor's own scope → an in-memory early return, no kernel touch;
+    * ``live.adoption_probed`` memoizes every scope that already reached a
+      stable state (parent declared — by us or by an operator — or exempt), so
+      the steady-state cost is one set lookup;
+    * a per-``live`` ``asyncio.Lock`` single-flights the first probe, so a
+      burst of concurrent requests over a fresh scope yields ONE kernel write,
+      never N (``ensure_workspace_scope_genome`` is idempotent anyway — the
+      lock is about cost, the ensure is about correctness);
+    * intent-preserving exactly like the ensure it wraps: an authored
+      ``parent_scope`` is never overwritten, the vendor/base scope is never
+      touched, and with no base configured NOTHING is written (OSS untouched).
+
+    Fail-soft + loud: an adoption error must not fail the request that
+    triggered it (the request proceeds against the unparented scope, exactly
+    as before this feature), but it is logged as a warning AND the scope is
+    NOT cached, so the next request retries instead of sealing the hole.
+
+    Returns the :func:`ensure_workspace_scope_genome` result when the probe
+    ran, ``None`` on every early return (cache hit / exempt / failure).
+    """
+    from dna.memory.personal import PERSONAL_TENANT_PREFIX
+
+    if not workspace_id or not live.workspace_definitions_base:
+        return None
+    if workspace_id.startswith(PERSONAL_TENANT_PREFIX):
+        return None  # personal partitions are people, not workspaces (ADR B1).
+    scope = live.default_scope(workspace_id)
+    if scope == live.base_scope or scope == live.workspace_definitions_base:
+        return None  # the vendor's own scope is never touched (i-058 rule).
+    if scope in live.adoption_probed:
+        return None  # steady state: one set lookup, zero kernel reads.
+
+    import asyncio
+
+    if live.adoption_lock is None:
+        live.adoption_lock = asyncio.Lock()
+    async with live.adoption_lock:
+        if scope in live.adoption_probed:  # lost the race to the first flight.
+            return None
+        try:
+            result = await ensure_workspace_scope_genome(live, workspace_id)
+        except Exception as e:  # noqa: BLE001 — fail-soft, retry next request.
+            logger.warning(
+                "adopt-on-access: definitions-base adoption failed for "
+                "workspace %r (scope %r, base %r) — the request proceeds "
+                "against the unparented scope and the NEXT request retries: %s",
+                workspace_id, scope, live.workspace_definitions_base, e,
+            )
+            return None
+        live.adoption_probed.add(scope)
+        if result.get("written"):
+            logger.info(
+                "adopt-on-access: workspace %r scope %r adopted parent_scope=%r "
+                "(i-058) — definitions inheritance is live from this request on",
+                workspace_id, scope, result.get("parent_scope"),
+            )
+        return result
+
+
 async def create_workspace_impl(
     live: LiveDna,
     name: str,
