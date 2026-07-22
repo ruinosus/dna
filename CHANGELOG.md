@@ -109,6 +109,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`SqlAlchemySource.query` fast/slow path e `query_via_load_all`).
   Queries COM `order_by` mantêm a ordem explícita ponta-a-ponta
   (paginação bem definida não muda).
+- **A topologia do CONSOLE entra na suíte, fim-a-fim** (`i-069`, forense).
+  Novo `test_mcp_console_topology.py` (CLI): servidor REAL
+  (`build_server` + `build_http_app`), JWT real, sessão ATADA ao workspace
+  pela URL `/w/<id>/mcp` (i-044), Model B ligado (`DNA_VENDOR_WORKSPACE`),
+  scope de workspace com `Genome.parent_scope` (i-058). Pina três fatos:
+  (1) `remember`/`recall` pessoais na sessão atada resolvem a MESMA casa
+  `(base_scope, personal:<oid>)` e o recall ACHA a escrita — o binding de
+  workspace nunca vaza para o branch pessoal (verificado verde também em
+  v0.24.0 e v0.25.0: o caminho MCP nunca esteve quebrado; a regressão real
+  é a do REST acima, que o mesmo arquivo agora pina no nível da rota —
+  `GET /v1/memories/personal?scope=tenant-<ws>` continua servindo a
+  partição, e FALHA no 0.25.0 sem o fix); (2) as superfícies de WORKSPACE
+  da sessão atada (`list_memories`, `recall` não-pessoal) resolvem
+  `tenant-<ws>` e nunca surfam a partição pessoal — o vazio honesto que um
+  canvas alimentado por elas mostra; (3) a escrita pessoal nunca aterrissa
+  no scope do workspace.
 
 ## [0.25.0] — 2026-07-21
 
