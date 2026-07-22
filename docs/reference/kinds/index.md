@@ -89,6 +89,7 @@ Declarative Kind descriptor — the format of builtin `kinds/*.kind.yaml` packag
 | Kind | Alias | apiVersion |
 | --- | --- | --- |
 | [ADR](record.md#adr) | `sdlc-adr` | `github.com/ruinosus/dna/sdlc/v1` |
+| [AccountPlan](record.md#accountplan) | `cloud-account-plan` | `github.com/ruinosus/dna/cloud/v1` |
 | [AgentSession](record.md#agentsession) | `sdlc-agent-session` | `github.com/ruinosus/dna/sdlc/v1` |
 | [AuditLog](record.md#auditlog) | `audit-auditlog` | `github.com/ruinosus/dna/audit/v1` |
 | [Automation](record.md#automation) | `dna-automation` | `github.com/ruinosus/dna/automation/v1` |
@@ -136,5 +137,4 @@ Declarative Kind descriptor — the format of builtin `kinds/*.kind.yaml` packag
 | [WorkflowEvent](record.md#workflowevent) | `sdlc-workflow-event` | `github.com/ruinosus/dna/sdlc/v1` |
 | [Workspace](record.md#workspace) | `tenant-workspace` | `github.com/ruinosus/dna/tenant/v1` |
 | [WorkspaceMembership](record.md#workspacemembership) | `tenant-workspace-membership` | `github.com/ruinosus/dna/tenant/v1` |
-| [WorkspacePlan](record.md#workspaceplan) | `cloud-workspace-plan` | `github.com/ruinosus/dna/cloud/v1` |
 

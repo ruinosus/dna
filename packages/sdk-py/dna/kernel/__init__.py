@@ -1072,8 +1072,24 @@ class Kernel:
     #   consumidores runtime (nenhum worker/activity o rodava), 1 doc órfão.
     #   As famílias *Experiment/*Run vivas (autoagent/autolab/eval-evolve) são
     #   subsistemas distintos e ficam. recovery: git history.
+    # WorkspacePlan → RE-KEYED to AccountPlan (s-account-scoped-plan). The
+    #   subscription belongs to the BILLING ACCOUNT, not to a workspace: one plan
+    #   covers every workspace the account owns, so a second workspace is never a
+    #   second charge. Keying the plan per workspace forced the biller to FAN OUT
+    #   one doc per workspace — and workspace enumeration is by MEMBERSHIP, not
+    #   ownership, so a workspace somebody else founded and invited you into would
+    #   be swept into that fan-out and handed a tier the account never bought.
+    #   The descriptor was DELETED; the name lives on here as a WRITE-BLOCK
+    #   tombstone. That guard is load-bearing, not hygiene: writing an
+    #   UNREGISTERED kind succeeds SILENTLY in the generic writer (an orphan doc
+    #   with typed=None), so without it a stale dna-cloud still calling the old
+    #   bridge would keep writing WorkspacePlan docs that NOTHING reads — a paying
+    #   customer silently metered at Free, with no error anywhere. The tombstone
+    #   turns that into a loud KindRetiredError. READS of legacy docs still
+    #   succeed (untyped), which is what lets the backfill script see them.
     _REMOVED_KINDS = frozenset({
         "OracleVerdict", "Oracle",
+        "WorkspacePlan",
         "CommunityItem", "Command", "LottiePrompt", "CopilotInstructions",
         "Course", "AcademyLesson", "LessonStep", "QuizQuestion", "Model3DRef",
         "IntroUnit", "TeachingPath", "TeachingUnit", "PageIndexDocument",
@@ -1092,6 +1108,16 @@ class Kernel:
     _REMOVED_KIND_NOTES: dict[str, str] = {
         "OracleVerdict": "migrated to StatusReport (refactor 2026-05-11)",
         "Oracle": "never a registered Kind — UA naming convention only",
+        "WorkspacePlan": (
+            "RE-KEYED to AccountPlan (s-account-scoped-plan) — the subscription "
+            "belongs to the BILLING ACCOUNT, not to a workspace: one AccountPlan "
+            "covers every Workspace whose `account_id` matches, so a second "
+            "workspace is never a second charge. Write "
+            "AccountPlan{account_id, tier_id} (PUT /v1/account-plan) and read it "
+            "via kernel.account_plan(account_id); the enforcement path resolves "
+            "workspace -> Workspace.account_id -> AccountPlan. A workspace with "
+            "no resolvable account gets the Free floor (fail-closed)."
+        ),
         "JobType": (
             "EXTINTO — unificado no Kind Automation (s-automation-trio-extinction). "
             "Leia legados via extensions.automation.compat; escreva Automation "
@@ -2474,15 +2500,27 @@ class Kernel:
         The quota enforcer reads the caps from here, never hardcodes them."""
         return await self._registry.tier(tier_id_or_alias)
 
-    async def workspace_plan(self, workspace_id: str) -> dict | None:
-        """Resolve a WorkspacePlan (a workspace→Tier assignment) from the _lib
-        registry by ``spec.workspace_id``. Returns the RAW DICT row (callers read
+    async def account_plan(self, account_id: str) -> dict | None:
+        """Resolve an AccountPlan (an ACCOUNT→Tier assignment) from the _lib
+        registry by ``spec.account_id``. Returns the RAW DICT row (callers read
         ``plan["spec"]["tier_id"]``) or None when no assignment exists.
         _lib-direct + fail-soft. Thin facade over the RegistryAccessor
-        collaborator — the billing→enforcement bridge (ADR "Model B" — billing
-        keys on the workspace): dna-cloud's Stripe webhook writes the doc; the
-        SDK only reads it here."""
-        return await self._registry.workspace_plan(workspace_id)
+        collaborator — the billing→enforcement bridge: the subscription belongs
+        to the BILLING ACCOUNT, so ONE plan covers every workspace the account
+        owns. dna-cloud's Stripe webhook writes the doc; the SDK only reads it.
+        A blank ``account_id`` resolves to None (fail-closed)."""
+        return await self._registry.account_plan(account_id)
+
+    async def account_for_workspace(self, workspace_id: str) -> str | None:
+        """The BILLING ACCOUNT id a workspace belongs to — ``Workspace.account_id``
+        — or ``None`` when the workspace is unknown or carries no account.
+
+        The first half of the enforcement resolution ``workspace → account_id →
+        AccountPlan``. FAIL-CLOSED by omission: ``None`` means the quota guard
+        finds no plan and falls to the Free floor — never another account's tier
+        and never a paid default. _lib-direct + fail-soft. Thin facade over the
+        RegistryAccessor collaborator."""
+        return await self._registry.account_for_workspace(workspace_id)
 
     async def workspace_memberships(self) -> list[dict]:
         """List every ``WorkspaceMembership`` grant from the _lib registry (ADR

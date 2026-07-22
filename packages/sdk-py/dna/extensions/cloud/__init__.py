@@ -9,12 +9,17 @@ classes):
     project data, not implicit knowledge. NOT named ``Plan`` — that alias
     belongs to the SDLC implementation-plan Kind; a pricing plan is a Tier.
     Free / Pro / Enterprise are tiers.
-  - WorkspacePlan (``cloud-workspace-plan``) — the workspace→Tier assignment:
-    which Tier a given workspace is currently on (ADR "Model B" — billing keys
-    on the workspace, not an identity/Azure org). The billing→enforcement
-    bridge: dna-cloud's Stripe webhook writes it on subscribe/cancel; the MCP
-    server reads it via ``kernel.workspace_plan(workspace_id)`` when a token
-    carries no explicit plan claim. The OSS SDK only READS — zero Stripe code.
+  - AccountPlan (``cloud-account-plan``) — the BILLING ACCOUNT→Tier assignment:
+    which Tier a given account is currently on. **The subscription belongs to
+    the account, not to a workspace** — ONE AccountPlan covers EVERY workspace
+    whose ``Workspace.account_id`` matches, so a second workspace is never a
+    second charge and billing writes one doc instead of fanning out per
+    workspace. The billing→enforcement bridge: dna-cloud's Stripe webhook writes
+    it on subscribe/cancel; the MCP server resolves ``workspace → account_id →
+    plan`` (``kernel.account_for_workspace`` then ``kernel.account_plan``) when a
+    token carries no explicit plan claim. The OSS SDK only READS — zero Stripe
+    code. Replaces the retired per-workspace ``WorkspacePlan``, now a write-block
+    tombstone in ``Kernel._REMOVED_KINDS``.
 
 CONTRACT — never hardcode caps. The single source of truth for a plan's
 limits is its Tier doc (``_lib`` scope, ``tiers/<tier_id>.yaml``), resolved
@@ -22,8 +27,9 @@ via ``kernel.tier(id_or_alias)``. The quota enforcer reads calls/day, rate
 and tenant caps from there — a cap literal in code is a bug.
 
 Both Kinds are GLOBAL (base-only shared data, no per-tenant override) and NOT
-inheritable — ``kernel.tier`` / ``kernel.workspace_plan`` query ``_lib``
-directly regardless of the caller's scope.
+inheritable — ``kernel.tier`` / ``kernel.account_plan`` query ``_lib``
+directly regardless of the caller's scope. AccountPlan HAS to be global: an
+account sits above every workspace it owns, so it cannot live inside one.
 """
 from __future__ import annotations
 

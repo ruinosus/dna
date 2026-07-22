@@ -47,7 +47,7 @@ _NO_SCOPE_TENANT: frozenset[tuple[str, str]] = frozenset(
         ("GET", "/v1/workspaces"),
         ("POST", "/v1/workspaces"),
         ("POST", "/v1/workspaces/accept"),
-        ("PUT", "/v1/workspace-plan"),
+        ("PUT", "/v1/account-plan"),
         # POST /v1/projects names its workspace in the BODY (decision A1); the
         # GET on the same path IS scope/tenant-aware, hence the method-keyed set.
         ("POST", "/v1/projects"),
@@ -553,21 +553,25 @@ class DnaClient:
 
     # -- billing (write) -----------------------------------------------------
 
-    def set_workspace_plan(
-        self, workspace_id: str, tier_id: str, *, source: str = "stripe",
+    def set_account_plan(
+        self, account_id: str, tier_id: str, *, source: str = "stripe",
         stripe_customer_id: str | None = None,
         stripe_subscription_id: str | None = None, status: str | None = None,
     ) -> JsonObject:
-        """Upsert the ``WorkspacePlan`` assigning ``workspace_id`` → ``tier_id`` —
-        the billing→enforcement bridge.
+        """Upsert the ``AccountPlan`` assigning ``account_id`` → ``tier_id`` — the
+        billing→enforcement bridge.
+
+        The subscription belongs to the BILLING ACCOUNT: this ONE call covers
+        every workspace whose ``account_id`` matches, so a customer's second
+        workspace needs no billing write and is never a second charge.
 
         SECURITY: this route ASSIGNS a plan and performs no membership check of its
         own; it is a trusted server-side call (the portal's Stripe webhook handler,
         holding the shared bearer) and must never be exposed to an end user.
-        Idempotent under Stripe retries. 400 on a missing workspace_id/tier_id."""
+        Idempotent under Stripe retries. 400 on a missing account_id/tier_id."""
         return self._write(
-            "PUT", "/v1/workspace-plan",
-            {"workspace_id": workspace_id, "tier_id": tier_id, "source": source,
+            "PUT", "/v1/account-plan",
+            {"account_id": account_id, "tier_id": tier_id, "source": source,
              "stripe_customer_id": stripe_customer_id,
              "stripe_subscription_id": stripe_subscription_id, "status": status},
         )

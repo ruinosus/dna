@@ -15,7 +15,7 @@
 #
 # WorkspaceMemberships live in the `_lib` scope
 # (`workspace-memberships/<workspace_id>--<email>.yaml`) — GLOBAL (the boundary
-# lives above any single workspace, exactly like Workspace/WorkspacePlan) and NOT
+# lives above any single workspace, exactly like Workspace/AccountPlan) and NOT
 # inheritable.
 #
 # SINGLE-SOURCE package data: this descriptor is the only

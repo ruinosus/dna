@@ -465,12 +465,17 @@ class BoardItemResponse(BaseModel):
     closed_at: str | None = None
 
 
-# ── cloud (workspace-plan billing bridge) ───────────────────────────────────
+# ── cloud (account-plan billing bridge) ─────────────────────────────────────
 
 
-class WorkspacePlanResponse(BaseModel):
+class AccountPlanResponse(BaseModel):
+    """``PUT /v1/account-plan`` — the account→Tier assignment that was written.
+
+    Keyed on the BILLING ACCOUNT, not a workspace: this one assignment covers
+    every workspace whose ``account_id`` matches."""
+
     scope: str
-    workspace_id: str
+    account_id: str
     tier_id: str
     status: str | None = None
 
@@ -542,6 +547,10 @@ class CreateWorkspaceResponse(BaseModel):
     slug: str
     created_by: str | None = None
     created_at: str | None = None
+    #: The BILLING ACCOUNT that owns it, taken from the creator's verified
+    #: account claim. ``None`` = no resolvable account ⇒ the Free floor.
+    #: Reported, never accepted — there is no request field for it.
+    account_id: str | None = None
     role: str = "owner"
     membership: WorkspaceMemberSurface | None = None
 
@@ -553,6 +562,11 @@ class WorkspaceSummary(BaseModel):
     role: str | None = None
     created_by: str | None = None
     created_at: str | None = None
+    #: The billing account that owns the workspace (``None`` ⇒ Free floor). Read
+    #: from the Workspace doc — NOT from the caller, who may be an invited guest
+    #: from another account entirely. This list is keyed by MEMBERSHIP, which is
+    #: precisely why a per-workspace plan could not be fanned out safely.
+    account_id: str | None = None
 
 
 class WorkspacesResponse(BaseModel):

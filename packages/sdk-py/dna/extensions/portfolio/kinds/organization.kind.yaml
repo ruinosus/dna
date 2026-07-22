@@ -57,8 +57,10 @@ spec:
         type:
         - string
         - 'null'
-        description: The DNA Cloud Tier / WorkspacePlan this org is on (a Tier
-          tier_id or WorkspacePlan name). Null falls back to Free. The
+        description: The DNA Cloud Tier this org is on (a Tier tier_id). NOTE
+          the SUBSCRIPTION is not read from here — billing is per BILLING
+          ACCOUNT (AccountPlan, keyed on Workspace.account_id); this is a
+          portfolio-level annotation only. Null falls back to Free. The
           billing→enforcement bridge reads it; the OSS SDK only stores it.
       created_at:
         type:
@@ -94,7 +96,7 @@ spec:
   docs: An Organization is the tenant's own org profile — the enterprise-familiar
     top-level container (as in GitHub / Azure DevOps) whose portfolio of Projects
     the DNA Cloud console aggregates. It carries the org name, a URL-safe slug, an
-    optional display name, and a plan_ref to the DNA Cloud Tier / WorkspacePlan
+    optional display name, and a plan_ref annotation naming a DNA Cloud Tier
     the org is on, as per-tenant declarative data. One Organization per tenant; it is
     distinct from the platform-level Tenant provisioning identity Kind (the
     editable org profile inside the tenant's own portfolio, not the GLOBAL

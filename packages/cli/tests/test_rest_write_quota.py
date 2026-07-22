@@ -14,7 +14,8 @@ Property set (each pins one clause of the contract):
   enforcement).
 * **Free blocked on write / Pro allowed** — under BOTH relevant auth modes
   (``token``: the portal's trusted service bearer + `tenant` param; ``config``:
-  verified JWT). Tier resolution is claim → WorkspacePlan → Free floor, and an
+  verified JWT). Tier resolution is claim → workspace → account → AccountPlan
+  → Free floor (the plan is keyed on the BILLING ACCOUNT — two hops), and an
   explicit plan claim WINS over the store (MCP parity).
 * **calls_per_day counts REST writes and refuses above the cap** — and the
   denied call is NOT counted (i-050 inherited through the shared core).
@@ -52,6 +53,7 @@ _BASE = _ROOT / "examples" / "emitting-to-a-runtime" / ".dna"
 _SCOPE = "concierge"
 _TOKEN = "portal-shared-token-mvp"  # a fake shared token, NOT a real secret.
 _WS = "acme"  # the workspace the portal vouches via ?tenant=
+_ACCT = "entra-org:acct-acme"  # the BILLING ACCOUNT that owns _WS
 
 _ALICE = {"oid": "oid-alice", "email": "alice@a.com"}
 
@@ -93,14 +95,32 @@ def _tier_doc(tier_id: str, *, memory_mode: str, calls_per_day: int | None = 100
     }
 
 
-def _plan_doc(workspace_id: str, tier_id: str) -> dict:
-    return {
-        "apiVersion": "github.com/ruinosus/dna/cloud/v1",
-        "kind": "WorkspacePlan",
-        "metadata": {"name": workspace_id},
-        "spec": {"workspace_id": workspace_id, "tier_id": tier_id,
-                 "source": "stripe", "status": "active"},
-    }
+def _plan_docs(workspace_id: str, account_id: str, tier_id: str) -> list[tuple[str, str, dict]]:
+    """The TWO docs the account-keyed bridge reads: the ``Workspace`` naming its
+    billing account (hop 1) and the ``AccountPlan`` assigning that account a
+    tier (hop 2). Replaces the retired per-workspace WorkspacePlan seed."""
+    return [
+        ("Workspace", workspace_id, {
+            "apiVersion": "github.com/ruinosus/dna/tenant/v1",
+            "kind": "Workspace",
+            "metadata": {"name": workspace_id},
+            "spec": {
+                "workspace_id": workspace_id,
+                "name": workspace_id,
+                "slug": workspace_id,
+                "created_by": "founder@example.com",
+                "created_at": "2026-01-01T00:00:00+00:00",
+                "account_id": account_id,
+            },
+        }),
+        ("AccountPlan", account_id, {
+            "apiVersion": "github.com/ruinosus/dna/cloud/v1",
+            "kind": "AccountPlan",
+            "metadata": {"name": account_id},
+            "spec": {"account_id": account_id, "tier_id": tier_id,
+                     "source": "stripe", "status": "active"},
+        }),
+    ]
 
 
 def _seed(dna_dir, *docs: tuple[str, str, dict]) -> None:
@@ -210,8 +230,8 @@ def test_auth_none_untouched_by_require_tiers_flag(dna_dir, monkeypatch):
 
 
 def test_token_free_write_blocked_and_denial_costs_nothing(dna_dir):
-    """No WorkspacePlan → the Free floor → memory_mode='read' → the write is
-    403 and the denied call never reaches the billed counter (i-050)."""
+    """No account / no AccountPlan → the Free floor → memory_mode='read' → the
+    write is 403 and the denied call never reaches the billed counter (i-050)."""
     _seed_tiers(dna_dir)
     store = Q.InProcQuotaStore()
     with _token_client(dna_dir, store) as c:
@@ -227,10 +247,11 @@ def test_token_free_write_blocked_and_denial_costs_nothing(dna_dir):
 
 
 def test_token_pro_write_allowed_and_counted(dna_dir):
-    """WorkspacePlan(acme→pro) — the Stripe-written bridge — unlocks the write,
-    and the successful write is metered against the workspace."""
+    """AccountPlan(acct→pro) — the Stripe-written bridge, resolved through the
+    workspace's ``account_id`` — unlocks the write, and the successful write is
+    still metered against the WORKSPACE (usage attribution is unchanged)."""
     _seed_tiers(dna_dir)
-    _seed(dna_dir, ("WorkspacePlan", _WS, _plan_doc(_WS, "pro")))
+    _seed(dna_dir, *_plan_docs(_WS, _ACCT, "pro"))
     store = Q.InProcQuotaStore()
     with _token_client(dna_dir, store) as c:
         r = _post_memory(c, headers=_auth())
@@ -253,7 +274,7 @@ def test_token_delete_is_a_gated_write(dna_dir):
         r = c.get("/v1/memories", params={"scope": _SCOPE, "tenant": _WS},
                   headers=_auth())
         assert name in [m["name"] for m in r.json()["memories"]]
-    _seed(dna_dir, ("WorkspacePlan", _WS, _plan_doc(_WS, "pro")))
+    _seed(dna_dir, *_plan_docs(_WS, _ACCT, "pro"))
     with _token_client(dna_dir, store) as c:
         r = c.delete(f"/v1/memories/{name}",
                      params={"scope": _SCOPE, "tenant": _WS}, headers=_auth())
@@ -265,7 +286,7 @@ def test_daily_cap_counts_writes_and_refuses_above_without_counting(dna_dir):
     writes; the third is 429 and — i-050, inherited through the shared core —
     the denial is NOT counted, twice over."""
     _seed_tiers(dna_dir, pro_cpd=2)
-    _seed(dna_dir, ("WorkspacePlan", _WS, _plan_doc(_WS, "pro")))
+    _seed(dna_dir, *_plan_docs(_WS, _ACCT, "pro"))
     store = Q.InProcQuotaStore()
     with _token_client(dna_dir, store) as c:
         assert _post_memory(c, headers=_auth(), summary="first write ok").status_code == 201
@@ -283,7 +304,7 @@ def test_reads_do_not_consume_quota(dna_dir):
     fans into several GETs — navigation must never burn the customer's cap),
     while writes still meter after any number of reads."""
     _seed_tiers(dna_dir, pro_cpd=2)
-    _seed(dna_dir, ("WorkspacePlan", _WS, _plan_doc(_WS, "pro")))
+    _seed(dna_dir, *_plan_docs(_WS, _ACCT, "pro"))
     store = Q.InProcQuotaStore()
     with _token_client(dna_dir, store) as c:
         for _ in range(5):  # far past the cap of 2, if reads counted.
@@ -301,26 +322,27 @@ def test_reads_do_not_consume_quota(dna_dir):
 # ── auth=config (verified JWT; legacy tenant passthrough — no workspaces) ───
 
 
-def test_config_free_blocked_then_workspace_plan_unlocks(dna_dir):
+def test_config_free_blocked_then_account_plan_unlocks(dna_dir):
     """Same property under the verified-identity mode: no plan → Free floor →
-    403; the Stripe-written WorkspacePlan flips the SAME request to 201."""
+    403; the Stripe-written AccountPlan (reached through the workspace's
+    account) flips the SAME request to 201."""
     _seed_tiers(dna_dir)
     store = Q.InProcQuotaStore()
     table = {"alice": _ALICE}
     with _config_client(dna_dir, store, table) as c:
         assert _post_memory(c, headers=_auth("alice")).status_code == 403
-    _seed(dna_dir, ("WorkspacePlan", _WS, _plan_doc(_WS, "pro")))
+    _seed(dna_dir, *_plan_docs(_WS, _ACCT, "pro"))
     with _config_client(dna_dir, store, table) as c:
         assert _post_memory(c, headers=_auth("alice")).status_code == 201, \
-            "WorkspacePlan(acme→pro) must unlock the config-auth write"
+            "AccountPlan(acct→pro) must unlock the config-auth write"
 
 
 def test_config_explicit_plan_claim_wins_over_store(dna_dir):
     """MCP parity, pinned on REST: a token that CARRIES a plan claim is metered
-    on that claim — the WorkspacePlan store is not consulted (same order:
+    on that claim — the AccountPlan store is not consulted (same order:
     claim → store → Free floor)."""
     _seed_tiers(dna_dir)
-    _seed(dna_dir, ("WorkspacePlan", _WS, _plan_doc(_WS, "pro")))  # store says pro…
+    _seed(dna_dir, *_plan_docs(_WS, _ACCT, "pro"))  # store says pro…
     store = Q.InProcQuotaStore()
     table = {"bob": {"oid": "oid-bob", "email": "bob@b.com", "plan": "free"}}
     with _config_client(dna_dir, store, table) as c:

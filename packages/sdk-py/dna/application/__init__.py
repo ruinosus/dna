@@ -69,7 +69,7 @@ from dna.application.runtime import (
     remove_member_impl,
     revoke_workspace_member_impl,
     set_member_impl,
-    set_workspace_plan_impl,
+    set_account_plan_impl,
 )
 
 __all__ = [
@@ -114,7 +114,7 @@ __all__ = [
     "set_member_impl",
     "remove_member_impl",
     "provision_tenant_owner_impl",
-    "set_workspace_plan_impl",
+    "set_account_plan_impl",
     # workspace invites (Model B, F3 — the identity→workspace boundary writes)
     "invite_member_impl",
     "list_workspace_members_impl",

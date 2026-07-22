@@ -95,6 +95,20 @@ _DNA_SCOPE_MARKER = "_dna_scope_prefix"
 # prevent, so ``workos`` is namespaced separately: ``personal:workos:<sub>``.
 _DNA_PROVIDER_FAMILY_MARKER = "_dna_provider_family"
 
+# The provider-TYPE stamp — the exact configured ``type`` of the provider block
+# that verified this token (``entra``/``workos``/``clerk``/``auth0``/``google``/
+# ``oidc``). FINER than the family stamp above, which exists only for the three
+# families DNA can act on behalf of (clerk and auth0 have no family at all).
+#
+# It is read by ``dna.tenancy.accounts`` to namespace the BILLING ACCOUNT id by
+# provider AND by account kind (``workos-org:<org_id>`` vs. ``workos-user:<sub>``),
+# and to decide whether this IdP has a durable subject at all — i.e. whether its
+# organization-less sign-ins have a sellable consumer lane or fail closed to Free.
+# Absent on the single-env-provider paths → the family stamp is the fallback, and
+# with neither the account still resolves, just into the generic ``tenant:``
+# namespace with no person lane (fail-closed).
+_DNA_PROVIDER_TYPE_MARKER = "_dna_provider_type"
+
 # IdP-type → provider-FAMILY (the outbound act-on-behalf provider the identity maps
 # to). Only families DNA can act on behalf of appear here; an identity from any
 # other IdP type has no act-on-behalf family (``None``) — an honest capability gap,
@@ -1082,7 +1096,7 @@ def token_has_explicit_plan_claim() -> bool:
     claim (or plan-encoding scope).
 
     The single bit the billing→enforcement bridge needs: whether to trust the
-    token's plan verbatim (a claim WINS) or fall back to the ``WorkspacePlan``
+    token's plan verbatim (a claim WINS) or fall back to the ``AccountPlan``
     store (which dna-cloud's Stripe webhook writes) before the Free floor. With no
     token / no fastmcp there is no claim → ``False`` (the guard then consults the
     store keyed by workspace). Reads the SAME claim key / scope prefix as
@@ -1390,6 +1404,10 @@ def _multi_provider_verifier(providers: list[ProviderConfig]) -> Any:
                     claims = dict(getattr(access, "claims", None) or {})
                     claims[_DNA_CLAIM_MARKER] = pc.tenant_claim
                     claims[_DNA_SCOPE_MARKER] = pc.scope_prefix
+                    # The exact provider TYPE — what namespaces the billing
+                    # account id (`workos-org:` vs `workos-user:`) and what tells
+                    # the consumer lane whether this IdP has a durable subject.
+                    claims[_DNA_PROVIDER_TYPE_MARKER] = pc.type
                     # The outbound act-on-behalf provider-family stamp (may be None
                     # for a family DNA cannot act through — an honest gap downstream).
                     claims[_DNA_PROVIDER_FAMILY_MARKER] = provider_family_for_type(

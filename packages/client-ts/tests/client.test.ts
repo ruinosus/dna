@@ -176,9 +176,9 @@ describe("DnaClient", () => {
     expect(calls[2]!.method).toBe("PATCH");
     expect(new URL(calls[2]!.url).pathname).toBe("/v1/insights/i-1/state");
 
-    await dna.setWorkspacePlan({ workspace_id: "w1", tier_id: "pro" });
+    await dna.setAccountPlan({ account_id: "acct-1", tier_id: "pro" });
     expect(calls[3]!.method).toBe("PUT");
-    expect(new URL(calls[3]!.url).pathname).toBe("/v1/workspace-plan");
+    expect(new URL(calls[3]!.url).pathname).toBe("/v1/account-plan");
 
     await dna.revokeWorkspaceMember("w1", { target_email: "a@b.c" });
     expect(calls[4]!.method).toBe("POST");
@@ -249,7 +249,7 @@ const COVERED: Record<string, string> = {
   "POST /v1/projects/{slug}/members": "setProjectMember",
   "DELETE /v1/projects/{slug}/members/{user}": "removeProjectMember",
   "POST /v1/tenants/{tid}/provision-owner": "provisionTenantOwner",
-  "PUT /v1/workspace-plan": "setWorkspacePlan",
+  "PUT /v1/account-plan": "setAccountPlan",
   "POST /v1/workspaces": "createWorkspace",
   "POST /v1/workspaces/accept": "acceptInvites",
   "POST /v1/workspaces/{workspace_id}/invites": "createInvite",

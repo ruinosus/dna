@@ -1,0 +1,151 @@
+# AccountPlan — the DNA Cloud account→Tier assignment (record plane).
+#
+# **The subscription belongs to the BILLING ACCOUNT, not to a workspace.** One
+# AccountPlan doc covers EVERY workspace the account owns: creating a second
+# workspace never creates a second charge, and never needs a second write.
+#
+# This Kind REPLACES ``WorkspacePlan`` (retired — see ``Kernel._REMOVED_KINDS``).
+# WorkspacePlan was keyed per workspace, which forced whoever owned billing to
+# FAN OUT one doc per workspace and keep them in sync. That fan-out is
+# unimplementable safely: workspace enumeration is by MEMBERSHIP, not ownership
+# (``GET /v1/workspaces``), so a workspace somebody else founded and invited you
+# into would be swept into your fan-out and handed a paid tier the account never
+# bought. One write, one truth — the plan is keyed on the account and the
+# enforcement path resolves ``workspace → account_id → plan``.
+#
+# WHAT AN ACCOUNT IS. An ORGANIZATION or a PERSON — both can be sold to. It is
+# recorded on the ``Workspace`` doc at CREATION from the caller's VERIFIED claims
+# (see ``dna.tenancy.account_id_from_claims``): the per-IdP "which org/tenant is
+# this token from" claim the auth layer already knows (Entra ``tid``,
+# WorkOS/Clerk/Auth0 ``org_id``, Google Workspace ``hd``), or — when the sign-in
+# belongs to NO organization, which is the consumer lane — the durable ``sub`` of
+# the identity, because there the person IS the account.
+#
+# THE ID CARRIES ITS OWN KIND. Every account_id is namespaced by provider AND by
+# account kind: ``entra-org:<tid>``, ``workos-org:<org_id>``,
+# ``workos-user:<sub>``, ``clerk-org:``/``clerk-user:``, ``auth0-org:``/
+# ``auth0-user:``, ``google-org:``/``google-user:``, and ``tenant:<value>`` when
+# the provider cannot be named. Two reasons, and only two: a ``tid`` and a ``sub``
+# that happen to share a literal value can never be the same account, and an id is
+# legible in a Stripe record or a support ticket — which matters the day a person
+# and a company are priced differently.
+#
+# ⚠️ THE PREFIX IS NOT A PARSING SURFACE. ``account_id`` is an opaque string,
+# exactly like ``workspace_id`` is: the SDK matches it whole and never splits it.
+# Nothing may branch on the prefix to decide authorization or entitlement — the
+# authorization input is the verified claim, never a substring of an id we minted.
+#
+# FAIL-CLOSED. A workspace whose ``account_id`` is absent or unresolvable
+# resolves to NO AccountPlan, and the MCP guard therefore falls to the **Free**
+# floor. Never another account's tier, never a paid default. The kernel read
+# refuses a blank ``account_id`` outright rather than matching docs with a blank
+# key, so a workspace with no account can never collide with one.
+#
+# CONTRACT — the OSS SDK only READS: zero Stripe/billing code lives here. The SDK
+# resolves tier_id from THIS doc; dna-cloud (closed source) is the only writer. A
+# missing AccountPlan is not an error — it IS the Free floor.
+#
+# AccountPlans live in the `_lib` scope (`account-plans/<account_id>.yaml`) —
+# AccountPlan is GLOBAL (base only, no per-tenant override) and NOT inheritable;
+# kernel.account_plan() queries `_lib` directly regardless of the caller's scope.
+# It has to be: an account sits ABOVE every workspace it owns, so it cannot live
+# inside any one of them.
+#
+# SINGLE-SOURCE package data: this descriptor is the only definition of the Kind
+# — nothing mirrors this file and no test enforces byte-identity (the sdk-ts
+# mirror was frozen in commit 341e517).
+apiVersion: github.com/ruinosus/dna/core/v1
+kind: KindDefinition
+metadata:
+  name: account-plan
+spec:
+  target_api_version: github.com/ruinosus/dna/cloud/v1
+  target_kind: AccountPlan
+  alias: cloud-account-plan
+  origin: github.com/ruinosus/dna/cloud
+  tenant_scope: global
+  plane: record
+  prompt_target: false
+  flatten_in_context: false
+  prompt_target_priority: 0
+  storage:
+    type: yaml
+    container: account-plans
+  schema:
+    type: object
+    additionalProperties: false
+    required:
+    - account_id
+    - tier_id
+    properties:
+      account_id:
+        type: string
+        description: The BILLING ACCOUNT this assignment is for — the opaque id
+          recorded on every Workspace the account owns (Workspace.account_id).
+          One plan covers ALL of them. The doc name SHOULD equal it;
+          kernel.account_plan() matches on this field. Opaque - matched, never
+          parsed.
+      tier_id:
+        type: string
+        description: The assigned Tier's id, e.g. free, pro, enterprise. Resolved
+          to caps via kernel.tier(tier_id) — never a literal in code.
+      source:
+        type: string
+        description: Where the assignment came from, e.g. stripe / manual / trial.
+      stripe_customer_id:
+        type: string
+        description: The Stripe customer id backing the assignment (dna-cloud
+          writes it; the OSS SDK never calls Stripe).
+      stripe_subscription_id:
+        type: string
+        description: The Stripe subscription id backing the assignment (dna-cloud
+          writes it; the OSS SDK never calls Stripe).
+      status:
+        type: string
+        description: The billing status of the assignment, e.g. active / past_due
+          / canceled.
+      updated_at:
+        type: string
+        format: date-time
+        description: When dna-cloud last wrote this assignment (ISO 8601).
+      notes:
+        type:
+        - string
+        - 'null'
+        description: Free-form operator notes.
+  describe: '{account_id} → {tier_id}'
+  summary:
+    account_id: ''
+    tier_id: ''
+    status: ''
+  ui:
+    mode: govern
+    label:
+      en: Account Plans
+      pt-BR: Planos por Conta
+    icon: 🎫
+    description:
+      en: DNA Cloud account→Tier assignments (billing→enforcement bridge). One
+        plan covers every workspace the account owns.
+      pt-BR: Atribuições conta→Tier do DNA Cloud (ponte cobrança→enforcement). Um
+        plano cobre todos os workspaces da conta.
+    routes:
+      list: docs/AccountPlan
+      detail: docs/AccountPlan/:name
+    permissions:
+      list: any
+      detail: any
+    in_sidebar: true
+    display_order: 55
+  ascii_icon: 🎫
+  display_label: Account Plans
+  docs: An AccountPlan maps one DNA Cloud BILLING ACCOUNT to its current Tier as
+    GLOBAL declarative data, so enforcement follows billing state without a
+    redeploy. The subscription is per ACCOUNT — one AccountPlan covers every
+    Workspace whose `account_id` matches, so a second workspace is never a second
+    charge. It replaces the retired per-workspace WorkspacePlan, which forced an
+    unsafe fan-out. dna-cloud's Stripe webhook writes it on subscribe/cancel; the
+    MCP server resolves workspace → account_id → AccountPlan via
+    kernel.account_plan(account_id) when the token carries no explicit plan
+    claim. A workspace with no resolvable account gets the Free floor
+    (fail-closed) — never another account's tier.
