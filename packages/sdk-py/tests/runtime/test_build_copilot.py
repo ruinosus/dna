@@ -26,14 +26,18 @@ def test_build_copilot_compiles_with_the_dna_stack(tmp_path, monkeypatch):
     # key is enough to let assembly (create_agent(...)) complete.
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test-not-a-real-key")
 
-    # mcp_url is unreachable in this test (no live DNA MCP endpoint) — stub
-    # load_mcp_tools so the test verifies ASSEMBLY (config derivation +
-    # middleware stack + create_agent compiles), not a live MCP round-trip.
+    # MCP discovery is now LAZY (DnaMcpToolsMiddleware, first model call), so
+    # build makes no MCP round-trip and needs no stub — mcp_url stays unreachable
+    # and build must still compile. We stub load_mcp_tools defensively and assert
+    # it is NOT touched at build time (the discovery moved off the boot path).
+    calls = {"n": 0}
+
     async def fake_load_mcp_tools(mcp_url, auth):
+        calls["n"] += 1
         return []
 
     monkeypatch.setattr(
-        "dna.runtime.builder.load_mcp_tools", fake_load_mcp_tools
+        "dna.runtime.middleware.mcp_tools_mw.load_mcp_tools", fake_load_mcp_tools
     )
 
     async def compose(_):
@@ -53,3 +57,4 @@ def test_build_copilot_compiles_with_the_dna_stack(tmp_path, monkeypatch):
     )
     assert graph is not None
     assert hasattr(graph, "ainvoke")
+    assert calls["n"] == 0  # no eager MCP discovery at build (lazy now)
