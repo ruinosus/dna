@@ -291,8 +291,9 @@ def _emit_langgraph(ctx: EmitContext) -> EmitResult:
             "and `protocol` don't map, and `langgraph build` (not this emit) produces "
             "the image from langgraph.json. Emitted DOCUMENTED, lower v1 priority.",
             "graph body — `langgraph.json` points at `./{}:graph`; the compiled "
-            "StateGraph is a per-app body (the self-hosted LangGraph scaffold emits "
-            "it), not part of the hosting manifest.".format(variables["module"]),
+            "StateGraph is a per-app body (built via `dna.runtime.build_copilot`, "
+            "not emitted by this SDK — see Spec B), not part of the hosting "
+            "manifest.".format(variables["module"]),
         ],
         mapping={
             "Copilot.hosting.target=langgraph-platform": "langgraph.json (graphs + dependencies + env)",

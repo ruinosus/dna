@@ -25,7 +25,8 @@ from dna_cli._ctx import dna_session, fail, print_json
 @click.option("--target", "-t", default=None,
               help="Runtime to emit for (e.g. agent-framework). See --list-targets. "
                    "When AGENT is a Copilot, picks the servable runtime "
-                   "(agno default; agent-framework; langgraph).")
+                   "(agno default; agent-framework). The langgraph copilot scaffold "
+                   "is retired — use dna.runtime.build_copilot instead.")
 @click.option("--scope", default=None, help="Scope holding the agent (default: env / sole scope).")
 @click.option("--out", "-o", "out_path", default=None,
               help="Write the artifact to this file instead of stdout.")
@@ -83,7 +84,9 @@ def emit(agent, target, scope, out_path, model, provider, list_targets, as_infra
         # Copilot vs Agent routing (i-033-dna-emit-copilot-cli): a name that
         # resolves to a `Copilot` Kind is a SERVABLE app (mounted agent + AG-UI
         # serve layer) — route it through `build_copilot_context` → the target's
-        # copilot case (agno / agent-framework / langgraph emit `agent`+`serving`).
+        # copilot case (agno / agent-framework emit `agent`+`serving`; the
+        # langgraph copilot scaffold is retired — dna.runtime.build_copilot
+        # replaces it — LanggraphEmitter.emit() raises EmitError for a copilot ctx).
         # An Agent name keeps the original single-artifact path unchanged.
         is_copilot = s.mi._one("Copilot", agent) is not None
         try:

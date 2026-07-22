@@ -12,8 +12,8 @@ way they do for Foundry.
 
 ## What you still do (not this emit)
 
-1. Provide the compiled `graph` in `lg_copilot.py` (the self-hosted LangGraph
-   scaffold emits the StateGraph body).
+1. Provide the compiled `graph` in `lg_copilot.py` (built via
+   `dna.runtime.build_copilot`, not emitted by this SDK).
 2. `langgraph build` — this produces the container image FROM `langgraph.json`
    (unlike Foundry, you do not write a Dockerfile).
 3. Provision compute + managed **Postgres + Redis** + registry + the

@@ -248,7 +248,9 @@ def test_emit_copilot_agno_writes_agent_and_serving(runner, tmp_path):
 
 def test_emit_copilot_default_target_is_agno(runner, tmp_path):
     """A Copilot emitted without an explicit --target defaults to the agno
-    servable runtime (agent-framework / langgraph are the other choices)."""
+    servable runtime (agent-framework is the other scaffold-copilot choice;
+    langgraph's copilot case is retired — see
+    test_emit_copilot_langgraph_target_is_retired)."""
     out_dir = tmp_path / "app"
     r = _run(runner, "memory-copilot", "--scope", "concierge", "--out", str(out_dir))
     assert r.exit_code == 0, r.output
@@ -270,16 +272,18 @@ def test_emit_copilot_json_lists_agent_and_serving_roles(runner, tmp_path):
     assert {"agent", "serving"} <= roles
 
 
-def test_emit_copilot_langgraph_target(runner, tmp_path):
-    """`--target langgraph` picks the LangGraph servable runtime for the SAME
-    copilot — the same source, a different runtime (portability via the CLI)."""
+def test_emit_copilot_langgraph_target_is_retired(runner, tmp_path):
+    """`--target langgraph` on a Copilot is RETIRED (Spec B): the hand-rolled
+    `StateGraph` scaffold this target used to emit is superseded by
+    `dna.runtime.build_copilot` (programmatic, no code-gen step). The CLI fails
+    loud with a message pointing at the replacement instead of writing stale
+    generated source."""
     out_dir = tmp_path / "app"
     r = _run(runner, "memory-copilot", "--target", "langgraph", "--scope", "concierge",
              "--out", str(out_dir))
-    assert r.exit_code == 0, r.output
-    assert (out_dir / "memory_agent.py").exists()
-    assert (out_dir / "memory_agent_serve.py").exists()
-    assert "→ langgraph" in r.output
+    assert r.exit_code != 0
+    assert "dna.runtime.build_copilot" in r.output
+    assert not (out_dir / "memory_agent.py").exists()
 
 
 def test_emit_agent_name_keeps_single_artifact_path(runner):
