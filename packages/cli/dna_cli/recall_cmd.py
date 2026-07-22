@@ -61,14 +61,57 @@ def _register_embedder(kernel: Any) -> None:
     kernel.embedding_provider(OnnxEmbeddingProvider())
 
 
+def _register_pg_provider(kernel: Any) -> Any | None:
+    """Build + register the PGVECTOR provider when the kernel's source is
+    Postgres — the scale path the hosted MCP always runs (i-069 root cause:
+    the image installed ``search-pgvector`` + ``embed-onnx`` but no boot path
+    ever registered ``PgVecRecordSearchProvider``, so hosted recall was
+    PERMANENTLY lexical-degraded, structurally blind to any query that shares
+    no literal token with the stored specs — e.g. "minhas memórias").
+
+    Gate: the source answers :meth:`pg_search_binding` (Postgres only) AND
+    asyncpg imports (the ``search-pgvector`` extra; on a live PG source it is
+    present by construction — the source itself rides asyncpg). Everything
+    else about the provider is LAZY: the pool is created in the loop that
+    first searches, and the store migrations (including ``CREATE EXTENSION
+    vector``) run on first use — a database without the extension fails that
+    first search and the kernel's existing fail-soft degrades back to the
+    honest lexical fallback (one damped warning), exactly today's behavior.
+    Construction itself is attribute assignment — zero boot I/O.
+
+    Returns the provider, or ``None`` when this is not a Postgres source
+    (the caller falls through to the sqlite-vec path, unchanged)."""
+    source = getattr(kernel, "_source", None)
+    binding = getattr(source, "pg_search_binding", None)
+    info = binding() if callable(binding) else None
+    if info is None:
+        return None
+    try:
+        import asyncpg  # noqa: F401
+    except ImportError:
+        return None
+    from dna.adapters.search.pgvector import PgVecRecordSearchProvider
+
+    dsn, schema = info
+    provider = PgVecRecordSearchProvider(kernel, dsn=dsn, schema=schema)
+    kernel.record_search_provider(provider)
+    return provider
+
+
 def _register_provider(session: Any) -> Any | None:
-    """Build + register the sqlite-vec provider on the session's kernel.
-    Returns the provider, or ``None`` when the ``search-sqlite`` extra is
-    absent (caller degrades to the lexical fallback).
+    """Build + register the search provider on the session's kernel —
+    pgvector when the source is Postgres (:func:`_register_pg_provider`),
+    else sqlite-vec when the ``search-sqlite`` extra is present. Returns the
+    provider, or ``None`` when neither applies (caller degrades to the
+    lexical fallback).
 
     Also wires the local ONNX embedder (:func:`_register_embedder`) so the
     dense plane is genuinely semantic — offline, no API — when the
     ``embed-onnx`` extra is present."""
+    provider = _register_pg_provider(session.kernel)
+    if provider is not None:
+        _register_embedder(session.kernel)
+        return provider
     try:
         import sqlite_vec  # noqa: F401
     except ImportError:

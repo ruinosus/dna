@@ -125,6 +125,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `tenant-<ws>` e nunca surfam a partição pessoal — o vazio honesto que um
   canvas alimentado por elas mostra; (3) a escrita pessoal nunca aterrissa
   no scope do workspace.
+- **Uma source Postgres registra o provider pgvector no boot** (`i-069`, a
+  causa raiz do "recall vazio" de 23:47 — reproduzida byte a byte com as
+  linhas de produção). O MCP hospedado instalava
+  `dna-sdk[search-pgvector,embed-onnx]` para busca semântica, mas NENHUM
+  boot path registrava `PgVecRecordSearchProvider` — `_register_provider`
+  só conhecia sqlite-vec, ausente do container — então o recall de produção
+  rodava PERMANENTEMENTE no fallback lexical degradado, que pontua por
+  interseção literal de tokens (`search_engine._lexical_search`) e é
+  estruturalmente cego a meta-queries: `recall("minhas memórias")` devolvia
+  um `[]` honesto com as memórias intactas na partição certa, enquanto
+  `recall("Barna")` as achava — dependência de QUERY, nunca defeito de
+  partição/versão (forense i-069). Agora `_register_provider` tenta o braço
+  Postgres primeiro: a source responde o novo
+  `SqlAlchemySource.pg_search_binding()` (o par `(dsn, schema)` derivado da
+  PRÓPRIA engine — nunca re-parse de env) e o provider registra com pool,
+  migrações do store E `CREATE EXTENSION vector` todos lazy (primeiro
+  search) — custo de boot medido em ZERO (mediana idêntica com/sem;
+  `__init__` = 0.28µs). Banco sem a extensão → o primeiro search falha e o
+  kernel degrada fail-soft ao lexical com warning damped (comportamento de
+  hoje, inalterado). OSS intocado: source não-Postgres ou sem extras →
+  exatamente o caminho de hoje (sqlite-vec quando presente, senão lexical).
+  E honestidade no degradado: o docstring da tool `recall` agora instrui o
+  host — `degraded: true` + `semantic: false` = busca LITERAL; um vazio
+  nesse modo só prova que nenhuma memória compartilha palavra com a query,
+  nunca que memórias não existem (o copiloto de 23:47 disse "não encontrei"
+  sem saber que estava cego semanticamente). Testes: o par PG-gated pina a
+  cura (meta-query acha as DUAS memórias com o provider; remover o registro
+  mata o teste) e a cegueira honesta do fallback (meta-query vazia + query
+  literal achando, o shape de 23:47 como regressão permanente).
 
 ## [0.25.0] — 2026-07-21
 
