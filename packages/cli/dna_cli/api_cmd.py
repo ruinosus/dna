@@ -92,6 +92,16 @@ def serve(scope: str | None, base_dir: str | None, host: str, port: int,
     Every endpoint reads/writes through the SAME live kernel `dna` commands +
     `dna mcp serve` use — this is a second HTTP face over one core, not a copy.
     """
+    # The SDK is a library of primitives, not a production endpoint. This serve is
+    # a convenience (local / self-host); a PRODUCTION host composes its own REST
+    # app from the public factory: `from dna_cli.serving import build_rest_app`.
+    click.echo(
+        "⚠ `dna api serve` is a convenience endpoint, DEPRECATED for production. "
+        "A host composes its own app from the public primitive: "
+        "`from dna_cli.serving import build_rest_app`. Local / self-host remain "
+        "supported.",
+        err=True,
+    )
     from dna_cli._rest_api import build_app
 
     if auth == "config":
