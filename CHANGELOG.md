@@ -11,6 +11,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.25.1] — 2026-07-22
+
+O patch da caçada: a leitura pessoal fica correta E a busca semântica é
+LIGADA em produção pela primeira vez. Patch dentro do minor: a faixa
+interna `dna-sdk>=0.25,<0.26` não muda. Inclui também o trem de higiene
+(i-057/i-059/i-049) e os gates de plano no caminho de escrita REST
+(i-042) mergeados desde o 0.25.0.
+
+
 ### 🐛 Correções
 
 - **Política de camada responde IGUAL nas duas portas** (`i-049`). A escrita
