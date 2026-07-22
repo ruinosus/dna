@@ -1,0 +1,26 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: Tool
+metadata:
+  name: recall
+  description: Semantic search over the tenant's memory store — DNA's native
+    vector recall. This IS the copilot's retrieval (no separate RAG); results
+    render on the memory canvas.
+spec:
+  type: builtin
+  input_schema:
+    type: object
+    required:
+    - query
+    properties:
+      query:
+        type: string
+        description: What to recall.
+      personal:
+        type: boolean
+        description: Restrict to the caller's personal partition (personal:<oid>,
+          oid server-derived).
+  read_only: true
+  requires_confirmation: false
+  tags:
+  - memory
+  - read

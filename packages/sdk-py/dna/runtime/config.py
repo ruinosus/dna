@@ -10,7 +10,7 @@ class CopilotConfig:
     instructions: str
     model: str
     allowed_tools: frozenset[str]
-    confirm_tools: list[str]
+    confirm_tools: tuple[str, ...]
 
 
 def copilot_config(copilot: str, *, base_dir: str, scope: str) -> CopilotConfig:
@@ -29,7 +29,9 @@ def copilot_config(copilot: str, *, base_dir: str, scope: str) -> CopilotConfig:
         allowed.add("list_memories")
     return CopilotConfig(
         instructions=ctx.instructions or "",
-        model=ctx.model or "gpt-5-mini",
+        model=ctx.model,
         allowed_tools=frozenset(allowed),
-        confirm_tools=list(getattr(ctx, "tools_requiring_confirmation", None) or []),
+        confirm_tools=tuple(
+            sorted(getattr(ctx, "tools_requiring_confirmation", None) or [])
+        ),
     )

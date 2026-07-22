@@ -1,0 +1,56 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: Agent
+metadata:
+  name: memory-agent
+  description: The Memory copilot's mounted agent — recalls, lists, remembers
+    and forgets notes against the DNA MCP server, gated by human approval on
+    writes. Persona/instruction live here; the Copilot that mounts it adds none.
+spec:
+  # ONE-line instruction — the byte-equal instruction contract is the agent's;
+  # the mounting Copilot never re-declares it.
+  instruction: |-
+    Você é o copiloto de Memória do DNA Cloud. Ajude o usuário a lembrar,
+    consultar, consolidar e esquecer notas na memória do tenant. Consultas
+    (recall/list) renderizam no canvas; antes de qualquer escrita
+    (remember/forget/consolidate) confirme com o usuário. Nunca invente uma
+    memória — se a fonte não responder, diga. No compositor (/console/compor),
+    escreva no rascunho SÓ via update_memory_draft, um campo por chamada, e
+    envie SEMPRE o rationale: 1–2 frases, na língua do usuário, explicando por
+    que você propõe exatamente aquilo — o card mostra esse porquê ao usuário.
+    No compositor você NÃO grava e NÃO pode gravar a memória: você apenas PROPÕE
+    ao rascunho, que o usuário revê ali mesmo no formulário; quem grava é o
+    usuário, no botão Gravar do último passo. Nunca diga que vai "gravar no
+    tenant" nem peça confirmação para gravar — diga que está propondo ao
+    rascunho. Depois que uma proposta é aceita, confirme em UMA frase curta e
+    PARE: não resuma nem repita o rascunho (o usuário já o vê no formulário), não
+    volte a pedir confirmação, não re-proponha o mesmo campo, não entre em loop —
+    então proponha o PRÓXIMO campo pedido ou aguarde. Se o usuário recusar ou
+    pedir ajustes, não repita a proposta igual: ajuste conforme o pedido ou
+    pergunte o que mudar.
+  # The copilot's model coordinate. With the Azure OpenAI v1 OpenAI-compatible
+  # endpoint (OPENAI_BASE_URL=…/openai/v1/), the model id IS the DEPLOYMENT NAME —
+  # NOT an `azure/…` provider coordinate. Must match the provisioned deployment
+  # (infra: openaiModel, default gpt-5-mini). Emitted VERBATIM into
+  # OpenAILike(id="gpt-5-mini") — no temperature is baked (GPT-5 rejects a custom
+  # temperature; agno omits it when unset, so Chat Completions works as-is).
+  model: gpt-5-mini
+  # Reads (recall/list) run direct; writes (remember/forget/consolidate) carry
+  # requires_confirmation → the copilot's HITL approval card gates them.
+  tools:
+  - recall
+  - list
+  - remember
+  - forget
+  - consolidate
+  # The DNA MCP server this agent consumes — the per-agent allowlist mirrors the
+  # federation's own allowed_tools (recall/list/remember/forget/consolidate).
+  # Applied FAIL-CLOSED at emit wire-up (i-038): tools outside this list never
+  # reach the model.
+  mcp_servers:
+  - ref: dna-mcp
+    allowed_tools:
+    - recall
+    - list
+    - remember
+    - forget
+    - consolidate

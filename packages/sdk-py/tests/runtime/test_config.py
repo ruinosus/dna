@@ -3,7 +3,9 @@ from pathlib import Path
 
 from dna.runtime.config import copilot_config
 
-FIXTURE_SRC = Path("/Users/jefferson.barnabe/projects/dna-cloud/.dna/dna-cloud-dev")
+# Committed fixture (this repo), NOT the sibling dna-cloud repo — must pass on
+# a fresh clone with no dna-cloud checkout present.
+FIXTURE_SRC = Path(__file__).parent / "fixtures" / "dna" / "dna-cloud-dev"
 
 
 def _copy_fixture(tmp_path: Path) -> Path:
@@ -20,10 +22,10 @@ def test_derives_allowlist_model_confirm_from_def(tmp_path):
     base_dir = _copy_fixture(tmp_path)
     cfg = copilot_config("memory-copilot", base_dir=str(base_dir), scope="dna-cloud-dev")
     assert cfg.model == "gpt-5-mini"
-    # `_project_hitl_intent` (dna.emit) returns a set, so `confirm_tools`
-    # ordering is not stable across process invocations (hash randomization) —
-    # compare sorted to avoid flaking on iteration order.
-    assert sorted(cfg.confirm_tools) == ["consolidate", "forget", "remember"]
+    # config.py sorts `confirm_tools` at the source (dna.emit._project_hitl_intent
+    # returns a set, so raw iteration order is not stable across process
+    # invocations / hash randomization).
+    assert cfg.confirm_tools == ("consolidate", "forget", "remember")
     # `list` (Tool-doc alias) expands to the runtime name `list_memories`:
     assert cfg.allowed_tools == frozenset(
         {"consolidate", "forget", "list", "list_memories", "recall", "remember"}

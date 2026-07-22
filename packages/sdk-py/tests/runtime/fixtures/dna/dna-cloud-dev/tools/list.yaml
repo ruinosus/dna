@@ -1,0 +1,23 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: Tool
+metadata:
+  name: list
+  description: List the tenant's memory entries (most-recent first) for the
+    canvas audit surface. Read-only; no approval needed.
+spec:
+  type: builtin
+  input_schema:
+    type: object
+    properties:
+      limit:
+        type: integer
+        description: Maximum entries to return.
+      personal:
+        type: boolean
+        description: Restrict to the caller's personal partition (personal:<oid>,
+          oid server-derived).
+  read_only: true
+  requires_confirmation: false
+  tags:
+  - memory
+  - read

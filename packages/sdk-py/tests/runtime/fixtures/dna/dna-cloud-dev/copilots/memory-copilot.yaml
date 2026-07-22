@@ -1,0 +1,66 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: Copilot
+metadata:
+  name: memory-copilot
+  description: The DNA Cloud Memory copilot — the first emitted consumer of the
+    AG-UI copilot capability. Mounts memory-agent at /agui, mounts the DNA MCP
+    as its toolbelt, propagates the 3-dimension inbound tenant (tenant +
+    workspace + oid), gates writes (remember/forget) with an approval card, and
+    binds Postgres for checkpoint + memory. Retrieval is DNA's native semantic
+    recall (no separate RAG). Emitted to Agno, self-hosted as the AG-UI app.
+spec:
+  # WHERE the agent mounts — the Agno servable app serves memory-agent at /agui.
+  mounts:
+  - id: memory
+    agent: memory-agent
+    path: /agui
+  # HOW the backend is served — AG-UI protocol (CopilotKit v2 console consumes).
+  serving:
+    transport: ag-ui
+  # Inbound tenant: derive tenant/workspace/oid from the propagated
+  # X-DNA-Tenant-* headers into run-state so the mounted tools read them via
+  # RunContext.session_state — never as an LLM-visible tool param.
+  tenant:
+    propagate: true
+  # Human-in-the-loop: the card shown when a gated write tool (remember/forget)
+  # pauses for approval — text + reason drawn from the pending tool's args.
+  hitl:
+    approval_card:
+      title: Confirmar escrita na memória
+      details_from: args.text
+      reason_from: args.reason
+  # Storage/state the emitted Agno app binds. checkpoint (thread/run state) and
+  # memory (cross-session long-term) both on one physical Postgres (primary-pg);
+  # cache is LangGraph-only → omitted for the Agno target.
+  persistence:
+    checkpoint:
+      backend: postgres
+      ref: primary-pg
+    memory:
+      backend: postgres
+      ref: primary-pg
+  # knowledge: OMITTED by design. The Memory wedge's "RAG" IS DNA's native
+  # semantic recall (the mounted `recall` MCP tool is vector search over the
+  # memory store) — a pure-action copilot declares no separate corpus/vector
+  # store. (§5 of the design; `search: off` is valid.) A document knowledge
+  # base, if DNA Cloud later adds one, would add knowledge.collections + a
+  # knowledge.store here — optional, not required for the wedge.
+
+  # Deployment: the self-hosted per-user AG-UI app (Agno + AgentOS), NOT the
+  # Foundry hosted single-identity variant (which would strip per-user OBO /
+  # per-user memory / HITL).
+  hosting:
+    mode: self-hosted
+    target: agentos
+  # Frontend console hints for the CopilotKit v2 shell.
+  frontend:
+    console: copilotkit
+    panels:
+    - memory-timeline
+    - memory-board
+    - insights
+    suggested_prompts:
+    - O que você sabe sobre este projeto?
+    - Salvar isto na minha memória pessoal
+    - Liste minhas memórias recentes
+    - Esquecer a última nota que salvei
