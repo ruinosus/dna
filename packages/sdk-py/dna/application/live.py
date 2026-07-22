@@ -9,7 +9,7 @@ hands it to the shared use-cases.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Iterable
 
 #: The conscious opt-out sentinel for a workspace-less credential's scope grant
@@ -61,6 +61,17 @@ class LiveDna:
     # ("declare only the difference") finally has a REST to inherit. ``None``
     # (the OSS / self-host default) writes nothing — behavior unchanged.
     workspace_definitions_base: str | None = None
+    # ── adopt-on-access probe cache (the i-058 hardening) ────────────────────────
+    # Scopes this PROCESS has already probed/adopted via
+    # ``dna.application.runtime.adopt_workspace_scope_on_access`` — the memo that
+    # makes the per-request adoption probe cost one set lookup instead of one
+    # kernel read per request (the ``is_personal_doc`` pattern). Entries are added
+    # ONLY after the probe reached a stable state (a parent is declared, or the
+    # scope is exempt); a FAILED probe is never cached, so a transient hiccup
+    # retries on the next request. ``init=False``: faces never pass these — the
+    # cache is an implementation detail of the live handle, not configuration.
+    adoption_probed: set = field(default_factory=set, init=False, repr=False, compare=False)
+    adoption_lock: Any = field(default=None, init=False, repr=False, compare=False)
 
     def default_scope(self, workspace: str | None = None) -> str:
         """The scope a request DEFAULTS to when it names none — workspace-aware.
