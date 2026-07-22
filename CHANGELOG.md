@@ -81,6 +81,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   com sentinela pina isso). Zero mudança de comportamento no MCP: mesmas
   mensagens, mesma ordem, suítes existentes intactas.
 
+### 🐛 Memória — leitura pessoal (regressão de produção, trem 0.25.1)
+
+- **Ops pessoais são PINADAS ao scope-casa (`live.base_scope`)** (`i-069`).
+  Toda ESCRITA pessoal já resolvia para `base_scope`
+  (`_resolve_memory_target`), mas uma LEITURA pessoal que recebesse um
+  `scope` encaminhado pela superfície (o `GET /v1/memories/personal` de
+  0.25.0 repassa seu query param; no dna-cloud o console vive no scope de
+  workspace `tenant-<ws>`) mirava um par `(scope, partição)` onde nada
+  jamais escreve — Engram é `scope_inheritable: false`, memória não herda
+  entre scopes — e devolvia um vazio de aparência honesta com as memórias
+  intactas no banco. Agora leituras E escritas pessoais resolvem
+  estruturalmente a MESMA casa; o `scope` do caller é ignorado no branch
+  pessoal (o fluxo local da CLI `--personal --scope X` não passa por esse
+  resolver e segue livre). Teste novo com a topologia de produção exata —
+  base + scope filho com `Genome.parent_scope` + memória na partição
+  pessoal do pai — a lacuna que os testes do #209 (um scope só) não cobriam.
+- **Um union limitado sem `order_by` nunca mais derruba as linhas do
+  próprio caller** (`i-069`). Todo query tenant-aware mescla
+  `base_sem_shadow + overlay` com o overlay APENSO ao final; o corte
+  `docs[:limit]` esfomeava o overlay assim que a perna base sozinha
+  atingisse o limite — o scan lexical do `recall` (o modo REAL do MCP
+  hospedado, `degraded: true`, `limit=500`) lia 500 linhas da base e ZERO
+  memórias do usuário. Novo `_page_unordered_union` (protocols): num corte
+  sem ordem explícita o overlay (a partição do PRÓPRIO caller) sobrevive
+  primeiro e a base preenche o resto — aplicado nos três pontos de merge
+  (`SqlAlchemySource.query` fast/slow path e `query_via_load_all`).
+  Queries COM `order_by` mantêm a ordem explícita ponta-a-ponta
+  (paginação bem definida não muda).
+
 ## [0.25.0] — 2026-07-21
 
 A memória fica visível: hits de recall com campos de display + `personal`

@@ -233,6 +233,42 @@ def _apply_order_by(rows: list[dict[str, Any]], order_by: QueryOrder) -> list[di
     return rows
 
 
+def _page_unordered_union(
+    docs: list[dict[str, Any]],
+    overlay_ids: frozenset[int],
+    offset: int | None,
+    limit: int | None,
+) -> list[dict[str, Any]]:
+    """Offset/limit over an UNORDERED base+overlay union that never silently
+    drops the caller's own overlay rows (i-069).
+
+    Every tenant-aware query merges ``base_minus_shadow + overlay`` with the
+    overlay APPENDED — so a plain ``docs[:limit]`` cut starves the overlay the
+    moment the base leg alone reaches ``limit``: a personal recall's lexical
+    scan (``limit=500``) then reads 500 base rows and ZERO of the caller's own
+    memories, an honest-looking empty result over data that exists. Without
+    ``order_by`` the emission order is unspecified, so the cut is free to
+    choose — and the only honest choice is that the overlay (the caller's OWN
+    partition, the very thing the tenant kwarg asked to union in) survives
+    first, base fills the rest. Ordered queries (``order_by``) keep the
+    caller's explicit order end-to-end: pagination there is well-defined and
+    dropped rows are reachable on the next page.
+
+    ``overlay_ids`` is the ``id()`` set of the overlay row objects (the merge
+    sites hold the overlay list — identity beats re-deriving name keys).
+    """
+    if offset:
+        docs = docs[int(offset):]
+    if limit is None or len(docs) <= int(limit):
+        return docs
+    lim = int(limit)
+    keep_overlay = [d for d in docs if id(d) in overlay_ids][:lim]
+    if not keep_overlay:
+        return docs[:lim]
+    keep_base = [d for d in docs if id(d) not in overlay_ids][: lim - len(keep_overlay)]
+    return keep_base + keep_overlay
+
+
 # ---------------------------------------------------------------------------
 # Extension discovery
 # ---------------------------------------------------------------------------

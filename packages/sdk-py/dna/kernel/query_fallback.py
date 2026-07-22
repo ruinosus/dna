@@ -36,6 +36,7 @@ from dna.kernel.protocols import (
     QueryProjection,
     _apply_order_by,
     _match_filter,
+    _page_unordered_union,
     _project_doc,
     _resolve_field_path,
 )
@@ -62,6 +63,7 @@ async def query_via_load_all(
     reach-back for the kernel's live readers.)
     """
     _readers = list(readers or [])
+    overlay_ids: frozenset[int] = frozenset()
     if tenant is None:
         raw_docs = await source.load_all(scope, readers=_readers)
     else:
@@ -83,6 +85,7 @@ async def query_via_load_all(
         ]
         merged.extend(overlay)
         raw_docs = merged
+        overlay_ids = frozenset(id(d) for d in overlay)
 
     # Filter by kind first (cheap).
     kind_docs = [d for d in raw_docs if d.get("kind") == kind]
@@ -92,10 +95,14 @@ async def query_via_load_all(
 
     if order_by:
         kind_docs = _apply_order_by(kind_docs, order_by)
-
-    start = offset or 0
-    end = (start + limit) if limit is not None else None
-    page = kind_docs[start:end]
+        start = offset or 0
+        end = (start + limit) if limit is not None else None
+        page = kind_docs[start:end]
+    else:
+        # i-069: unordered limited union — the overlay (the caller's OWN
+        # partition, e.g. personal:<oid>) must survive the cut; a plain
+        # [:limit] starved it as soon as the base leg reached the limit.
+        page = _page_unordered_union(kind_docs, overlay_ids, offset, limit)
 
     for doc in page:
         if projection:

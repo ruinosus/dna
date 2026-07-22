@@ -698,7 +698,14 @@ def build_app(
         The result unions the personal partition with the shared base scope
         (never any workspace's memory); each item is the ``list_memories``
         shape enriched with the per-ITEM ``personal`` flag (i-068), so a UI
-        can chip the caller's own memories apart from the shared riders."""
+        can chip the caller's own memories apart from the shared riders.
+
+        ``scope`` is accepted for back-compat but the read is PINNED to the
+        server's base scope (i-069): every personal write lands there, so a
+        forwarded workspace scope (``tenant-<ws>``) would target a partition
+        nothing ever writes to and return an honest-looking EMPTY list while
+        the caller's memories exist — personal reads and writes must resolve
+        the SAME home. The response's ``scope`` reports the pinned home."""
         from dna.application import list_memories_impl as core_list_memories_impl
         from dna.memory.personal import (
             PersonalIdentityRequired,
