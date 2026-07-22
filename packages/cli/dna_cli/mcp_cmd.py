@@ -83,6 +83,17 @@ def serve(scope: str | None, base_dir: str | None, transport: str,
     Either way the client calls compose_prompt / sdlc_digest / recall and reads the
     dna://{scope}/manifest resource — all against your live DNA.
     """
+    # The SDK is a library of primitives, not a production endpoint. HTTP serving
+    # here is a convenience (local / self-host); for a PRODUCTION endpoint a host
+    # composes its own server from the public factory. Local stdio is unaffected.
+    if transport != "stdio":
+        click.echo(
+            "⚠ `dna mcp serve --transport http` is a convenience endpoint and is "
+            "DEPRECATED for production. A host composes its own server from the "
+            "public primitive: `from dna_cli.serving import build_mcp_server`. "
+            "Local stdio + self-host remain supported.",
+            err=True,
+        )
     from dna_cli._mcp_server import build_server
 
     # Microsoft On-Behalf-Of (OBO) enablement — the `graph:` block of

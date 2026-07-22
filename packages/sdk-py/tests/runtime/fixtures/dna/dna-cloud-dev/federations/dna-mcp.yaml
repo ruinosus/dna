@@ -1,0 +1,32 @@
+apiVersion: github.com/ruinosus/dna/federation/v1
+kind: MCPFederation
+metadata:
+  name: dna-mcp
+  description: The DNA MCP server the Memory copilot mounts over Streamable
+    HTTP — the one capability layer (recall/list/remember/forget against a
+    tenant-scoped store), the exact tools external clients (Claude/Cursor) use.
+    No TS wrappers; zero drift.
+spec:
+  transport: streamable_http
+  # Neutral placeholder — the emitted serving layer reads the real endpoint from
+  # its environment; secrets never live in the doc.
+  url: https://mcp.dna-cloud.example/mcp
+  auth:
+    kind: bearer_env
+    env: DNA_MCP_TOKEN
+  # The FULL tool surface this copilot may see — fail-closed: the hosted DNA
+  # MCP exposes its whole tool set (SDLC board writes included) to every
+  # client, and the emit wire-up (infra/emit_copilot_langgraph.py) drops
+  # anything not listed here BEFORE the model sees a schema (i-038). `list` is
+  # the Tool-doc alias; the runtime name `list_memories` is expanded at
+  # wire-up. Writes (remember/forget/consolidate) additionally carry
+  # Tool.requires_confirmation → the graph-enforced HITL approval card.
+  allowed_tools:
+  - recall
+  - list
+  - remember
+  - forget
+  - consolidate
+  # Stamp the 3-dimension tenant contract (X-DNA-Tenant / -Workspace /
+  # -Tenant-OID) on every outbound MCP call.
+  propagate_tenant: true

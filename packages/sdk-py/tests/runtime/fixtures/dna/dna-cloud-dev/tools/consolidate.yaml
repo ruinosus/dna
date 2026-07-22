@@ -1,0 +1,21 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: Tool
+metadata:
+  name: consolidate
+  description: Deterministic memory consolidation pass (retention re-score)
+    over the tenant's memory store. A write — it re-scores/merges stored
+    memories, so it is gated by human approval (the copilot's HITL approval
+    card) before it runs.
+spec:
+  type: builtin
+  input_schema:
+    type: object
+    properties:
+      apply:
+        type: boolean
+        description: Apply the consolidation (false = dry-run preview).
+  read_only: false
+  requires_confirmation: true
+  tags:
+  - memory
+  - write

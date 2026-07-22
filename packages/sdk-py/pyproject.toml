@@ -86,6 +86,18 @@ search-pgvector = ["dna-sdk[postgres]"]
 # Deliberately OUT of `all`/`dev` (heavy, and it is the emitted app's dep, not the
 # SDK's). Install to run the integration slice: pip install "dna-sdk[agno-copilot]".
 agno-copilot = ["agno>=2.6.12", "ag-ui-protocol>=0.1.19", "fastapi>=0.115", "mcp>=1.0", "openai>=1.40"]
+# f-dna-copilot-runtime — dna.runtime, the high-level copilot runtime that
+# assembles a ready LangGraph copilot from a DNA def + host hooks
+# (build_copilot). Deliberately OUT of `all`/`dev`: heavy (langchain/langgraph)
+# and only the runtime's own functions import it (imported INSIDE functions,
+# never at dna.runtime's module top, so importing dna core never pulls these
+# in). Install to use the runtime: pip install "dna-sdk[runtime]".
+runtime = [
+    "langchain==1.3.14",
+    "langgraph==1.2.9",
+    "langchain-openai==1.3.5",
+    "langchain-mcp-adapters==0.3.0",
+]
 all = ["dna-sdk[postgres,sqlite,sql]"]
 dev = [
     "pytest>=7.0",
