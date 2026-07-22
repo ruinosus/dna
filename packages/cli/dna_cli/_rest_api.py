@@ -246,6 +246,7 @@ def build_app(
         WorkspaceLastOwner,
         WorkspaceMemberNotFound,
         accept_invites_impl,
+        adopt_workspace_scope_on_access,
         board_item_impl,
         board_summary_impl,
         compose_prompt_impl,
@@ -370,7 +371,8 @@ def build_app(
             if request.url.path == "/health":
                 return await call_next(request)
             req_scope = request.query_params.get("scope")
-            if req_scope is None:
+            req_tenant = request.query_params.get("tenant")
+            if req_scope is None and not req_tenant:
                 return await call_next(request)
             expected = token or os.environ.get("DNA_API_TOKEN")
             authz = request.headers.get("authorization") or ""
@@ -380,10 +382,20 @@ def build_app(
             if not secrets.compare_digest(provided, expected):
                 return await call_next(request)  # let _auth_dep answer 401.
             live = await _live()
-            if not live.scope_is_bound(
+            if req_scope is not None and not live.scope_is_bound(
                 req_scope, None, authenticated=True, granted_scopes=_token_scopes
             ):
                 return _scope_denied(req_scope, live)
+            # Adopt-on-access (i-058 hardening): under the portal's TRUSTED
+            # shared bearer the workspace arrives as the `tenant` query param
+            # (this lane resolves no membership — the portal already did).
+            # This is the token lane's "request resolved a workspace" moment:
+            # if that workspace's scope has no declared parent and a
+            # definitions base is configured, declare it before the route
+            # impl reads. Cached + single-flighted; NO-OP without the env
+            # (OSS untouched); fail-soft (never fails the request).
+            if req_tenant:
+                await adopt_workspace_scope_on_access(live, req_tenant)
             return await call_next(request)
 
     # -- Model B config-auth: token→identity→workspace binding (S2.4) ---------
@@ -517,6 +529,14 @@ def build_app(
                         status_code=403,
                     )
                 return _scope_denied(req_scope, live)
+
+            # Adopt-on-access (i-058 hardening): the middleware just RESOLVED
+            # the caller's workspace from its verified membership — the moment
+            # no navigation path can skip. Declare the scope's parent (the
+            # configured definitions base) before the route impl reads, so
+            # THIS request already inherits the base's definitions. Cached +
+            # single-flighted; NO-OP without the env; fail-soft.
+            await adopt_workspace_scope_on_access(live, workspace)
 
             # OVERWRITE the tenant query param with the membership-bound workspace.
             qs = parse_qs(request.scope.get("query_string", b"").decode())

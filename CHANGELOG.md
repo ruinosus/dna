@@ -11,6 +11,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+<!-- trem 0.25.2 -->
+
+### 🐛 Correções
+
+- **Adoção do definitions-base vira adopt-on-access — a herança não depende
+  mais de um caminho de navegação que ninguém garantiu** (endurecimento da
+  `i-058`, visto em produção no dna-cloud). A adoção do workspace (declarar
+  `parent_scope = DNA_WORKSPACE_DEFINITIONS_BASE` no Genome do scope
+  `tenant-<id>`) estava pendurada SÓ no `provision-owner` — e em produção esse
+  caminho nunca disparou: o call site do portal (`lib/portfolio.ts`) guarda a
+  chamada com `t === viewerTid`, condição pré-D5 que um id `ws-…` gerado pelo
+  servidor nunca satisfaz. Resultado: o fundador usou o portal por horas, o
+  env estava presente, e o scope do workspace seguiu sem Genome — todo
+  `compose_prompt` respondia `agent not found in scope 'tenant-ws-…'`.
+  Agora a adoção roda no lugar que NENHUMA navegação pula: **quando um request
+  resolve um workspace** — o bind do `_guard` MCP, o middleware REST
+  `--auth config` (workspace resolvido por membership) e a lane REST
+  `--auth token` do portal (workspace nomeado em `tenant=`), via o novo
+  `dna.application.adopt_workspace_scope_on_access`. O MESMO request que
+  adotou já lê as definições herdadas (o ensure escreve com
+  `invalidate_mode="doc"` antes do impl da tool/rota rodar). Barato por
+  construção: probe memoizado por processo (`LiveDna.adoption_probed` — custo
+  de regime é um lookup de set), single-flight num `asyncio.Lock` (rajada
+  concorrente sobre scope novo = UMA escrita), falha não é cacheada (o
+  próximo request re-tenta). Intacto o que a i-058 já garantia: parent
+  autorado nunca é sobrescrito, o scope do vendor nunca é tocado, partição
+  `personal:` nunca é adotada e SEM o env nada é escrito (OSS/self-host
+  intocado). O ensure no `provision-owner` e no `create_workspace` continua
+  (nascimento segue certo); o adopt-on-access é a rede que segura quem já
+  nasceu errado.
+
 ## [0.25.1] — 2026-07-22
 
 O patch da caçada: a leitura pessoal fica correta E a busca semântica é

@@ -58,6 +58,7 @@ from typing import Any
 from dna.application import (  # noqa: F401 — re-exported for the faces + tests
     InvalidTransition,
     LiveDna,
+    adopt_workspace_scope_on_access,
     comment_impl,
     compose_prompt_impl,
     consolidate_impl,
@@ -349,6 +350,14 @@ def build_server(
         block a source that never opted into DNA Cloud pricing.
         """
         tenant = await _workspace(requested)  # the resolved workspace_id.
+        # Adopt-on-access (i-058 hardening): the request just RESOLVED a
+        # workspace — the one moment no portal navigation path can skip. If the
+        # workspace scope has no declared parent and a definitions base is
+        # configured, declare it NOW, before the tool impl runs, so THIS very
+        # compose/list already inherits the base's definitions. Cached +
+        # single-flighted inside (one set lookup steady-state), NO-OP without
+        # the env (OSS untouched), fail-soft (never fails the request).
+        await adopt_workspace_scope_on_access(await _live(), tenant)
         if not token_present_in_context():
             return tenant  # stdio / local → identity, no metering.
 
