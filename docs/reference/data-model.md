@@ -65,7 +65,7 @@ would be the whole problem. Four tiers, strongest first:
 
 `*` on a label marks a polymorphic reference (several possible target Kinds).
 
-**113 edges: 15 declared, 66 composition-only, 32 inferred** — plus 16 reference-shaped fields left unresolved and 6 known-undeclarable ones.
+**112 edges: 15 declared, 66 composition-only, 31 inferred** — plus 18 reference-shaped fields left unresolved and 6 known-undeclarable ones.
 
 !!! warning "Only the declared tier cannot dangle"
 
@@ -105,7 +105,6 @@ flowchart LR
     agentskills -->|1| sdlc
     audit -->|2| portfolio
     cloud -->|1| intel
-    cloud -->|1| tenant
     evidence -->|1| eval
     evidence -->|1| sdlc
     helix -->|2| agentskills
@@ -147,17 +146,15 @@ erDiagram
     UserRoleAssignment }o..}o Role : "roles (inferred)"
 ```
 
-#### `cloud` (3 edges)
+#### `cloud` (2 edges)
 
 ```mermaid
 erDiagram
+    AccountPlan
     IntelSource
     Tier
-    Workspace
-    WorkspacePlan
-    WorkspacePlan }o..|| IntelSource : "source (inferred)"
-    WorkspacePlan }o..|| Tier : "tier_id (inferred)"
-    WorkspacePlan }o..|| Workspace : "workspace_id (inferred)"
+    AccountPlan }o..|| IntelSource : "source (inferred)"
+    AccountPlan }o..|| Tier : "tier_id (inferred)"
 ```
 
 #### `eval` (3 edges)
@@ -498,6 +495,8 @@ name against the Kind registry — useful, and fallible.
 
 | From | Field | To | Cardinality | Cross-group |
 | --- | --- | --- | --- | --- |
+| `AccountPlan` | `source` | `IntelSource` | one | yes |
+| `AccountPlan` | `tier_id` | `Tier` | one |  |
 | `Actor` | `role` | `Role` | one | yes |
 | `Agent` | `promptTemplate` | `PromptTemplate` | one | yes |
 | `AuditLog` | `roles` | `Role` | many | yes |
@@ -527,9 +526,6 @@ name against the Kind registry — useful, and fallible.
 | `WorkflowEvent` | `actor` | `Actor` | one | yes |
 | `WorkflowEvent` | `epic_ref` | `Epic` | one |  |
 | `WorkflowEvent` | `feature_ref` | `Feature` | one |  |
-| `WorkspacePlan` | `source` | `IntelSource` | one | yes |
-| `WorkspacePlan` | `tier_id` | `Tier` | one |  |
-| `WorkspacePlan` | `workspace_id` | `Workspace` | one | yes |
 
 ## What this model cannot express
 
@@ -561,6 +557,9 @@ cleverer.
 
 | Kind | Field | Why unresolved |
 | --- | --- | --- |
+| `AccountPlan` | `account_id` | reference-shaped, but `account` matches no registered Kind |
+| `AccountPlan` | `stripe_customer_id` | reference-shaped, but `stripe_customer` matches no registered Kind |
+| `AccountPlan` | `stripe_subscription_id` | reference-shaped, but `stripe_subscription` matches no registered Kind |
 | `AuditLog` | `request_id` | reference-shaped, but `request` matches no registered Kind |
 | `Engram` | `affect_evidence_refs` | reference-shaped, but `affect_evidence` matches no registered Kind |
 | `Evidence` | `document_ref` | reference-shaped, but `document` matches no registered Kind |
@@ -573,10 +572,9 @@ cleverer.
 | `TenantMembership` | `user_id` | reference-shaped, but `user` matches no registered Kind |
 | `UserProfile` | `user_id` | reference-shaped, but `user` matches no registered Kind |
 | `UserRoleAssignment` | `user_id` | reference-shaped, but `user` matches no registered Kind |
+| `Workspace` | `account_id` | reference-shaped, but `account` matches no registered Kind |
 | `Workspace` | `plan_ref` | reference-shaped, but `plan` matches no registered Kind |
 | `WorkspaceMembership` | `identity_oid` | reference-shaped, but `identity` matches no registered Kind |
-| `WorkspacePlan` | `stripe_customer_id` | reference-shaped, but `stripe_customer` matches no registered Kind |
-| `WorkspacePlan` | `stripe_subscription_id` | reference-shaped, but `stripe_subscription` matches no registered Kind |
 
 ### Suppressed name matches
 
@@ -592,12 +590,12 @@ rather than silently dropped, so the suppression is auditable.
 | `Tenant` | `plan` | billing/feature tier (a Tier `tier_id`), not the SDLC `Plan` Kind |
 | `Workspace` | `plan_ref` | DEPRECATED and never read — billing is per ACCOUNT (workspace → account_id → AccountPlan); also not the SDLC `Plan` Kind |
 
-### Kinds with no reference edge (15)
+### Kinds with no reference edge (16)
 
 Standalone documents — configuration, composition-plane behaviour, or
 record Kinds whose links are simply not modelled yet.
 
-`AgentDefinition`, `Automation`, `Canvas`, `Changelog`, `Comment`, `Copilot`, `Genome`, `Hook`, `HtmlArtifact`, `LayerPolicy`, `MCPFederation`, `ModelProfile`, `Setting`, `UserProfile`, `WorkspaceMembership`
+`AgentDefinition`, `Automation`, `Canvas`, `Changelog`, `Comment`, `Copilot`, `Genome`, `Hook`, `HtmlArtifact`, `LayerPolicy`, `MCPFederation`, `ModelProfile`, `Setting`, `UserProfile`, `Workspace`, `WorkspaceMembership`
 
 ## Physical model — the real tables
 

@@ -11,6 +11,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### ✨ Novidades
+
+- **O plano passa a ser chaveado pela CONTA DE BILLING, não pelo workspace**
+  (`s-account-scoped-plan`). A assinatura pertence à conta — um `AccountPlan`
+  cobre todos os workspaces cujo `Workspace.account_id` bate, então um segundo
+  workspace nunca é uma segunda cobrança e não exige nenhum write de billing. O
+  enforcement (MCP e REST, via o núcleo compartilhado
+  `_mcp_quota.enforce_plan`/`resolve_metered_tier` da i-042) resolve em dois
+  saltos **workspace → `Workspace.account_id` → `AccountPlan`**, ambos
+  fail-closed por omissão: workspace sem conta, ou conta sem plano, cai no piso
+  Free — nunca no tier de outra conta e nunca num default pago. A conta MSA
+  compartilhada da Microsoft (`9188040d-…`, o mesmo `tid` de todo usuário
+  pessoal outlook/hotmail/live) é recusada explicitamente, junto dos
+  placeholders `common`/`organizations`/`consumers`.
+- **A lane consumidor pode ser vendida: sem organização, a PESSOA é a conta**
+  (`dna.tenancy.accounts`). Um sign-in WorkOS/AuthKit (ou Clerk/Auth0/Google)
+  sem organização resolve para o `sub` durável da identidade. A organização
+  sempre ganha da pessoa. Entra fica DE FORA da lane pessoal de propósito (o
+  `sub` dele é pairwise por app). O `account_id` é namespaced por provedor e
+  por tipo de conta — `entra-org:<tid>`, `workos-org:<org_id>`,
+  `workos-user:<sub>`, `clerk-org/-user`, `auth0-org/-user`,
+  `google-org/-user`, `tenant:<valor>` — e o prefixo NÃO é superfície de
+  parsing: nada a jusante pode ramificar nele para decidir autorização.
+
+### ⚠️ Cutover coordenado — `PUT /v1/workspace-plan` → `PUT /v1/account-plan`
+
+- **A rota `PUT /v1/workspace-plan` foi REMOVIDA** (responde 404/405 alto) e o
+  Kind `WorkspacePlan` virou tombstone de escrita (`KindRetiredError` — um
+  writer desatualizado falha ALTO em vez de escrever docs que ninguém lê e
+  medir cliente pagante como Free em silêncio). **O dna-cloud chama a rota
+  antiga hoje**; o cutover é coordenado pelo pin do container: ao subir o pin
+  para esta versão, o webhook do Stripe TEM de passar a chamar
+  `PUT /v1/account-plan` com `account_id` namespaced (o `metadata.tenant` no
+  Stripe e a chave de `tenant_plans` deixam de ser o `tid` nu e passam a ser
+  `entra-org:<tid>`), na MESMA mudança — nunca subir o pin sem a troca da
+  chamada. Não há rota de delegação da antiga para a nova de propósito: um
+  write legado chaveado por workspace teria de ADIVINHAR a conta, e atribuir a
+  assinatura à conta errada é exatamente a classe de erro que este modelo
+  elimina. Backfill de workspaces pré-`account_id`: `scripts/seed_workspace_one.py`.
+
 ## [0.25.2] — 2026-07-22
 
 Adopt-on-access: a herança de definições ganha o gatilho que nenhuma
