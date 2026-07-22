@@ -11,6 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.25.2] — 2026-07-22
+
+Adopt-on-access: a herança de definições ganha o gatilho que nenhuma
+navegação pula. Patch dentro do minor.
+
+
 <!-- trem 0.25.2 -->
 
 ### 🐛 Correções
