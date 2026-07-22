@@ -81,6 +81,80 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   com sentinela pina isso). Zero mudança de comportamento no MCP: mesmas
   mensagens, mesma ordem, suítes existentes intactas.
 
+### 🐛 Memória — leitura pessoal (regressão de produção, trem 0.25.1)
+
+- **Ops pessoais são PINADAS ao scope-casa (`live.base_scope`)** (`i-069`).
+  Toda ESCRITA pessoal já resolvia para `base_scope`
+  (`_resolve_memory_target`), mas uma LEITURA pessoal que recebesse um
+  `scope` encaminhado pela superfície (o `GET /v1/memories/personal` de
+  0.25.0 repassa seu query param; no dna-cloud o console vive no scope de
+  workspace `tenant-<ws>`) mirava um par `(scope, partição)` onde nada
+  jamais escreve — Engram é `scope_inheritable: false`, memória não herda
+  entre scopes — e devolvia um vazio de aparência honesta com as memórias
+  intactas no banco. Agora leituras E escritas pessoais resolvem
+  estruturalmente a MESMA casa; o `scope` do caller é ignorado no branch
+  pessoal (o fluxo local da CLI `--personal --scope X` não passa por esse
+  resolver e segue livre). Teste novo com a topologia de produção exata —
+  base + scope filho com `Genome.parent_scope` + memória na partição
+  pessoal do pai — a lacuna que os testes do #209 (um scope só) não cobriam.
+- **Um union limitado sem `order_by` nunca mais derruba as linhas do
+  próprio caller** (`i-069`). Todo query tenant-aware mescla
+  `base_sem_shadow + overlay` com o overlay APENSO ao final; o corte
+  `docs[:limit]` esfomeava o overlay assim que a perna base sozinha
+  atingisse o limite — o scan lexical do `recall` (o modo REAL do MCP
+  hospedado, `degraded: true`, `limit=500`) lia 500 linhas da base e ZERO
+  memórias do usuário. Novo `_page_unordered_union` (protocols): num corte
+  sem ordem explícita o overlay (a partição do PRÓPRIO caller) sobrevive
+  primeiro e a base preenche o resto — aplicado nos três pontos de merge
+  (`SqlAlchemySource.query` fast/slow path e `query_via_load_all`).
+  Queries COM `order_by` mantêm a ordem explícita ponta-a-ponta
+  (paginação bem definida não muda).
+- **A topologia do CONSOLE entra na suíte, fim-a-fim** (`i-069`, forense).
+  Novo `test_mcp_console_topology.py` (CLI): servidor REAL
+  (`build_server` + `build_http_app`), JWT real, sessão ATADA ao workspace
+  pela URL `/w/<id>/mcp` (i-044), Model B ligado (`DNA_VENDOR_WORKSPACE`),
+  scope de workspace com `Genome.parent_scope` (i-058). Pina três fatos:
+  (1) `remember`/`recall` pessoais na sessão atada resolvem a MESMA casa
+  `(base_scope, personal:<oid>)` e o recall ACHA a escrita — o binding de
+  workspace nunca vaza para o branch pessoal (verificado verde também em
+  v0.24.0 e v0.25.0: o caminho MCP nunca esteve quebrado; a regressão real
+  é a do REST acima, que o mesmo arquivo agora pina no nível da rota —
+  `GET /v1/memories/personal?scope=tenant-<ws>` continua servindo a
+  partição, e FALHA no 0.25.0 sem o fix); (2) as superfícies de WORKSPACE
+  da sessão atada (`list_memories`, `recall` não-pessoal) resolvem
+  `tenant-<ws>` e nunca surfam a partição pessoal — o vazio honesto que um
+  canvas alimentado por elas mostra; (3) a escrita pessoal nunca aterrissa
+  no scope do workspace.
+- **Uma source Postgres registra o provider pgvector no boot** (`i-069`, a
+  causa raiz do "recall vazio" de 23:47 — reproduzida byte a byte com as
+  linhas de produção). O MCP hospedado instalava
+  `dna-sdk[search-pgvector,embed-onnx]` para busca semântica, mas NENHUM
+  boot path registrava `PgVecRecordSearchProvider` — `_register_provider`
+  só conhecia sqlite-vec, ausente do container — então o recall de produção
+  rodava PERMANENTEMENTE no fallback lexical degradado, que pontua por
+  interseção literal de tokens (`search_engine._lexical_search`) e é
+  estruturalmente cego a meta-queries: `recall("minhas memórias")` devolvia
+  um `[]` honesto com as memórias intactas na partição certa, enquanto
+  `recall("Barna")` as achava — dependência de QUERY, nunca defeito de
+  partição/versão (forense i-069). Agora `_register_provider` tenta o braço
+  Postgres primeiro: a source responde o novo
+  `SqlAlchemySource.pg_search_binding()` (o par `(dsn, schema)` derivado da
+  PRÓPRIA engine — nunca re-parse de env) e o provider registra com pool,
+  migrações do store E `CREATE EXTENSION vector` todos lazy (primeiro
+  search) — custo de boot medido em ZERO (mediana idêntica com/sem;
+  `__init__` = 0.28µs). Banco sem a extensão → o primeiro search falha e o
+  kernel degrada fail-soft ao lexical com warning damped (comportamento de
+  hoje, inalterado). OSS intocado: source não-Postgres ou sem extras →
+  exatamente o caminho de hoje (sqlite-vec quando presente, senão lexical).
+  E honestidade no degradado: o docstring da tool `recall` agora instrui o
+  host — `degraded: true` + `semantic: false` = busca LITERAL; um vazio
+  nesse modo só prova que nenhuma memória compartilha palavra com a query,
+  nunca que memórias não existem (o copiloto de 23:47 disse "não encontrei"
+  sem saber que estava cego semanticamente). Testes: o par PG-gated pina a
+  cura (meta-query acha as DUAS memórias com o provider; remover o registro
+  mata o teste) e a cegueira honesta do fallback (meta-query vazia + query
+  literal achando, o shape de 23:47 como regressão permanente).
+
 ## [0.25.0] — 2026-07-21
 
 A memória fica visível: hits de recall com campos de display + `personal`

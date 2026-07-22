@@ -88,9 +88,10 @@ from dna.application.runtime import _collect  # sdlc_digest_impl (below) uses it
 
 async def boot_live(scope: str | None = None, base_dir: str | None = None) -> LiveDna:
     """Boot the kernel against the configured source and register the search
-    provider (semantic recall when the ``search-sqlite`` extra is present;
-    honest lexical fallback otherwise). Reuses the CLI's own boot path so the
-    server sees EXACTLY the DNA the ``dna`` CLI sees."""
+    provider (pgvector on a Postgres source, sqlite-vec when the
+    ``search-sqlite`` extra is present; honest lexical fallback otherwise).
+    Reuses the CLI's own boot path so the server sees EXACTLY the DNA the
+    ``dna`` CLI sees."""
     if base_dir:
         # Programmatic override (tests / embedding). The CLI serve path relies
         # purely on DNA_SOURCE_URL / DNA_BASE_DIR from the environment.
@@ -685,7 +686,13 @@ def build_server(
         ``personal=true`` recalls YOUR OWN private memory (keyed on your verified
         identity, portable across workspaces + clients) unioned with the shared
         base defaults — never any workspace's memory. The default (``false``)
-        recalls the workspace's shared memory, unchanged."""
+        recalls the workspace's shared memory, unchanged.
+
+        The result reports its own mode: ``degraded: true`` + ``semantic:
+        false`` means the search was a LITERAL token match, not semantic
+        similarity — an empty result in that mode only proves no stored memory
+        shares a word with the query. When relaying such an empty result, say
+        the search was literal-only; never assert that no memories exist."""
         if personal:
             oid, family = await _personal_guard("read")
             return await recall_impl(

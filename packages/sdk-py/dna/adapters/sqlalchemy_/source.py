@@ -341,6 +341,30 @@ class SqlAlchemySource(WritableSourcePort):
         return expr, (str(val) if not isinstance(val, str) else val)
 
     # ------------------------------------------------------------------
+    # Search wiring (i-069)
+    # ------------------------------------------------------------------
+
+    def pg_search_binding(self) -> tuple[str, str] | None:
+        """The ``(dsn, schema)`` pair for wiring a pgvector search provider
+        NEXT TO this source — ``None`` on sqlite.
+
+        The scale search adapter (:class:`~dna.adapters.search.pgvector.
+        PgVecRecordSearchProvider`) reuses the SAME Postgres this source
+        already runs on; this method is the one sanctioned way for a boot
+        path to derive its connection from the source instead of re-parsing
+        environment URLs. The DSN is rendered DRIVERLESS
+        (``postgresql://…``, password preserved) because the provider speaks
+        native asyncpg, not SQLAlchemy; the schema falls back to ``public``,
+        matching the provider's own default.
+        """
+        if not self._is_pg:
+            return None
+        dsn = self._engine.url.set(drivername="postgresql").render_as_string(
+            hide_password=False
+        )
+        return dsn, (self._schema or "public")
+
+    # ------------------------------------------------------------------
     # Migrations — Alembic (i-038)
     # ------------------------------------------------------------------
 
@@ -737,7 +761,8 @@ class SqlAlchemySource(WritableSourcePort):
         order_by=None, tenant=None,
     ):
         from dna.kernel.protocols import (
-            QueryError, _apply_order_by, _match_filter, _project_doc,
+            QueryError, _apply_order_by, _match_filter, _page_unordered_union,
+            _project_doc,
         )
         if filter is not None and not isinstance(filter, dict):
             raise QueryError(f"filter must be dict, got {type(filter).__name__}")
@@ -768,9 +793,19 @@ class SqlAlchemySource(WritableSourcePort):
                 kind_docs = [x for x in kind_docs if _match_filter(x, filter)]
             if order_by:
                 kind_docs = _apply_order_by(kind_docs, order_by)
-            start = offset or 0
-            end = (start + limit) if limit is not None else None
-            for doc in kind_docs[start:end]:
+                start = offset or 0
+                end = (start + limit) if limit is not None else None
+                kind_docs = kind_docs[start:end]
+            else:
+                # i-069: unordered limited union — the overlay (the caller's
+                # OWN partition) must survive the cut; see _page_unordered_union.
+                overlay_ids = frozenset(
+                    id(x) for x in (overlay_docs if tenant else ())
+                )
+                kind_docs = _page_unordered_union(
+                    kind_docs, overlay_ids, offset, limit,
+                )
+            for doc in kind_docs:
                 yield _project_doc(doc, projection) if projection else doc
             return
 
@@ -804,10 +839,19 @@ class SqlAlchemySource(WritableSourcePort):
                 docs.extend(overlay)
                 if order_by:
                     docs = _apply_order_by(docs, order_by)
-                if offset:
-                    docs = docs[int(offset):]
-                if limit is not None:
-                    docs = docs[: int(limit)]
+                    if offset:
+                        docs = docs[int(offset):]
+                    if limit is not None:
+                        docs = docs[: int(limit)]
+                else:
+                    # i-069: unordered limited union — a plain [:limit] cut
+                    # starved the overlay (the caller's OWN partition, e.g.
+                    # personal:<oid>) the moment the base leg alone reached
+                    # the limit: a personal recall's lexical scan then read
+                    # N base rows and NONE of the caller's own memories.
+                    docs = _page_unordered_union(
+                        docs, frozenset(id(x) for x in overlay), offset, limit,
+                    )
 
             # Fast-path bundle-override exclusion (parity with raw PG):
             # docs whose bundle entries are detected by a reader that

@@ -1047,11 +1047,20 @@ def _resolve_memory_target(
     :data:`~dna.memory.personal.MemoryScope` (ADR-personal-memory §3.3 / §5).
 
     * ``personal`` → ``tenant = personal:<oid>`` (oid resolved SERVER-SIDE by the
-      surface, fail-closed on missing identity), and the scope defaults to the
+      surface, fail-closed on missing identity), and the scope is PINNED to the
       shared **base** scope (``live.base_scope``) so recall UNIONs the base ``''``
       ``_lib`` defaults (ratified #4) rather than a workspace's data — the personal
       partition is workspace-independent (the same partition in every workspace +
-      client).
+      client). A caller-passed ``scope`` is deliberately IGNORED here (i-069):
+      every personal WRITE lands at ``base_scope`` (this same resolver), so a
+      personal READ that honored a forwarded workspace scope (e.g. the console's
+      ``tenant-<ws>`` — the 0.25.0 ``GET /v1/memories/personal`` face forwards its
+      ``scope`` query param) would target a (scope, partition) pair nothing ever
+      writes to and return an honest-looking EMPTY result while the user's
+      memories sit in ``base_scope`` — reads and writes must resolve the SAME
+      home, structurally. (Local single-user flexibility is untouched: the CLI's
+      ``--personal --scope X`` composes its tenant directly and never routes
+      through this resolver.)
     * ``workspace`` (default) → the current behavior unchanged: scope defaults to
       ``default_scope(tenant)``, tenant is the resolved workspace id. A raw
       ``tenant`` naming the reserved ``personal:`` scheme is REJECTED here
@@ -1069,7 +1078,7 @@ def _resolve_memory_target(
             memory_scope=PERSONAL_SCOPE, oid=oid, workspace_tenant=tenant,
             family=family,
         )
-        return scope or live.base_scope, tn
+        return live.base_scope, tn
     assert_no_personal_override(tenant)
     return scope or live.default_scope(tenant), tenant
 
