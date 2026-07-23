@@ -100,6 +100,17 @@ spec:
             - ag-ui
             description: Wire protocol the copilot backend speaks. Only ag-ui
               (AG-UI protocol) today.
+          framework:
+            type: string
+            enum:
+            - langchain
+            - maf
+            - agno
+            - deepagents
+            default: langchain
+            description: The self-hosted serving framework the dna.runtime
+              port builds on; distinct from hosting.target which selects a
+              MANAGED host (foundry/langgraph-platform/agentos).
       tenant:
         type: object
         additionalProperties: false
@@ -399,7 +410,7 @@ spec:
       widget: code
       language: yaml
       label: Serving
-      help: How the backend is served ({transport}).
+      help: How the backend is served ({transport, framework}).
       height: 120
       order: 20
     tenant:
