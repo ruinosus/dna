@@ -29,6 +29,17 @@ from dna.adapters._migrations import run_migrations
 pytestmark = pytest.mark.asyncio
 
 
+async def test_public_seam_reexports_the_real_runner():
+    """`dna.migrations` is the stable public name for out-of-tree consumers
+    (dna-cloud's copilot, a future DNA Live / Marketplace). It MUST be the same
+    object as the internal runner — a copy would drift (mutation: the re-export
+    points elsewhere → dies)."""
+    import dna.migrations as public
+
+    assert public.run_migrations is run_migrations
+    assert set(public.__all__) == {"run_migrations", "PayloadT"}
+
+
 # ---------------------------------------------------------------------------
 # 1. Helper unit tests (no real DB — recording fakes)
 # ---------------------------------------------------------------------------
