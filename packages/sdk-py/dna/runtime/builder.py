@@ -75,4 +75,15 @@ async def build_copilot(
         store=store,
     )
     app = await build_runtime(copilot, base_dir=base_dir, scope=scope, hooks=hooks)
+    # Fail loud rather than silently return None: this LangChain-shaped shim can
+    # only surface a LangGraph graph. A copilot whose `serving.framework` selects
+    # a non-LangGraph backend (e.g. maf, whose AGUIApp.graph is None) must be
+    # built through `build_runtime` and served via `AGUIApp.attach`, not this
+    # back-compat entry point.
+    if app.graph is None:
+        raise RuntimeError(
+            f"build_copilot() (the back-compat shim) cannot serve copilot "
+            f"{copilot!r}: its serving.framework resolves to a non-LangGraph "
+            f"backend with no `.graph`. Use build_runtime(...) + AGUIApp.attach."
+        )
     return app.graph
