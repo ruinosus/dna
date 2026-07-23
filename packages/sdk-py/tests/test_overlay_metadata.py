@@ -6,7 +6,7 @@ merge and which fields are tenant-specific.
 """
 from __future__ import annotations
 
-from dna.kernel.layer_resolver import (
+from dna.kernel.compose.layer_resolver import (
     DefaultLayerResolver,
     _stamp_overlay_metadata,
 )

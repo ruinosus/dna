@@ -72,7 +72,7 @@ class InstanceBuilder:
 
         # Apply layers if provided
         if layers and layer_docs:
-            from dna.kernel.layer_resolver import DefaultLayerResolver
+            from dna.kernel.compose.layer_resolver import DefaultLayerResolver
             from dna.kernel.protocols import LayerPolicy
 
             # Declared Kind-name → alias map from the live registry, so the

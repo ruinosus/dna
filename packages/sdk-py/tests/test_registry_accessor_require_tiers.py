@@ -17,7 +17,7 @@ import types
 
 import pytest
 
-from dna.kernel.registry_accessor import _REQUIRE_TIERS_ENV, RegistryAccessor
+from dna.kernel.registry.accessor import _REQUIRE_TIERS_ENV, RegistryAccessor
 
 
 def _boom_slice() -> types.SimpleNamespace:

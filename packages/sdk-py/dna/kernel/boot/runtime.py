@@ -10,8 +10,8 @@ backwards compatibility during the transition.
 from __future__ import annotations
 from typing import Any
 
-from . import Kernel
-from .protocols import SourcePort
+from dna.kernel import Kernel
+from dna.kernel.protocols import SourcePort
 
 
 class Runtime(Kernel):

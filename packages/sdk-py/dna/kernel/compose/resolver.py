@@ -360,7 +360,7 @@ class CompositionResolver:
         """Walk ``Genome.spec.parent_scope`` transitively → ordered chain of
         ``(scope, tenant)`` pairs, HIGHEST priority first. Cycle-guarded; depth
         capped at MAX_RESOLUTION_DEPTH; missing Genome terminates the walk."""
-        from dna.kernel.resolver import MAX_RESOLUTION_DEPTH
+        from dna.kernel.query.resolver import MAX_RESOLUTION_DEPTH
         k = self._k
         chain: list[tuple[str, str | None]] = []
         visited: set[str] = set()
@@ -412,7 +412,7 @@ class CompositionResolver:
         ``(scope, kind)`` — from the scope's LayerPolicy composition_rules, else
         the inherit-by-default denylist (everything inherits from _lib
         except the per-scope ledger + structural Kinds)."""
-        from dna.kernel.resolver import DEFAULT_NON_INHERITABLE_KINDS_V1
+        from dna.kernel.query.resolver import DEFAULT_NON_INHERITABLE_KINDS_V1
         k = self._k
         if k._source is not None:
             try:
@@ -454,7 +454,7 @@ class CompositionResolver:
         """Resolve a doc through the composition chain (Phase 17). Returns a
         ResolvedDocument with merged doc + full provenance. Bootstrap Kinds
         bypass inheritance (local-only)."""
-        from dna.kernel.resolver import (
+        from dna.kernel.query.resolver import (
             BOOTSTRAP_KINDS,
             ResolutionLayer,
             ResolutionPath,
@@ -625,7 +625,7 @@ class CompositionResolver:
         """Clone an inherited doc into ``target_scope`` as a local override
         (Phase 17). Raises if the doc isn't inherited / target exists (without
         overwrite). Clones spec + bundle entries atomically."""
-        from dna.kernel.resolver import BOOTSTRAP_KINDS
+        from dna.kernel.query.resolver import BOOTSTRAP_KINDS
         k = self._k
 
         if kind in BOOTSTRAP_KINDS:

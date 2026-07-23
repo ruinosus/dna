@@ -1,5 +1,5 @@
 """Tests for evidence auto-capture via post_save hook."""
-from dna.kernel.evidence_capture import extract_suite
+from dna.kernel.write.evidence import extract_suite
 from dna.extensions.evidence.builder import compute_content_hash
 
 

@@ -95,7 +95,7 @@ class LayerPolicyEnforcer:
         # the write port accepted the key ONLY by alias, so ``Agent: locked``
         # (keyed by Kind name) locked the merge but was silently ignored
         # here — the declared protection held on one port and not the other.
-        from dna.kernel.layer_resolver import match_policy_key
+        from dna.kernel.compose.layer_resolver import match_policy_key
         policy_str = "open"
         try:
             layer_policy_docs = mi_base._all("LayerPolicy")

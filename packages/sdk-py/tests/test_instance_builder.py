@@ -7,9 +7,9 @@ read from the COPY, not the original kernel.
 from __future__ import annotations
 
 from dna.kernel import Kernel
-from dna.kernel.instance_builder import InstanceBuilder
-from dna.kernel.invalidation import InvalidationController
-from dna.kernel.composition_resolver import CompositionResolver
+from dna.kernel.compose.instance_builder import InstanceBuilder
+from dna.kernel.boot.invalidation import InvalidationController
+from dna.kernel.compose.resolver import CompositionResolver
 
 
 def test_kernel_wires_builder():

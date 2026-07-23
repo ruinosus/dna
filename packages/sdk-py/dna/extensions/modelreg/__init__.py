@@ -26,7 +26,7 @@ regardless of the caller's scope.
 """
 from __future__ import annotations
 
-from dna.kernel.descriptor_loader import load_descriptors
+from dna.kernel.source.descriptor_loader import load_descriptors
 from dna.kernel.protocols import ExtensionHost
 
 

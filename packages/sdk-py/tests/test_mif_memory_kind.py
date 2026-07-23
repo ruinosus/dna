@@ -52,7 +52,7 @@ import yaml
 
 from dna.kernel import Kernel
 from dna.kernel.bundle.handle import FilesystemBundleHandle
-from dna.kernel.generic_rw import GenericBundleReader, GenericBundleWriter
+from dna.kernel.source.generic_rw import GenericBundleReader, GenericBundleWriter
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 FIXTURE_BASE = REPO_ROOT / "tests" / "golden-fixtures" / "mif" / "memories"

@@ -33,7 +33,7 @@ account sits above every workspace it owns, so it cannot live inside one.
 """
 from __future__ import annotations
 
-from dna.kernel.descriptor_loader import load_descriptors
+from dna.kernel.source.descriptor_loader import load_descriptors
 from dna.kernel.protocols import ExtensionHost
 
 

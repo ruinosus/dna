@@ -9,7 +9,7 @@ by test_eventbus.py via the kernel delegators.
 from __future__ import annotations
 
 from dna.kernel import Kernel
-from dna.kernel.invalidation import InvalidationController
+from dna.kernel.boot.invalidation import InvalidationController
 
 
 class _StubHolder:

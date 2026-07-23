@@ -3,7 +3,7 @@
 The microkernel must work with ZERO extensions loaded. Historically the
 kernel lazy-imported ``dna.extensions.helix.layers`` for its
 CORE function (layer resolution) — that resolver now lives at
-``dna.kernel.layer_resolver``. This test is the ratchet that
+``dna.kernel.compose.layer_resolver``. This test is the ratchet that
 keeps the boundary inverted: it AST-walks every module in
 ``dna/kernel/`` and FAILS if any of them imports
 ``dna.extensions.*`` (or escapes relatively via

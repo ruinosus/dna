@@ -26,8 +26,8 @@ logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from dna.kernel.prompt.builder import PromptBuilder, PromptExplanation
-    from dna.kernel.composition_resolver import CompositionEngine
-    from dna.kernel.navigator import Navigator
+    from dna.kernel.compose.resolver import CompositionEngine
+    from dna.kernel.query.navigator import Navigator
     from dna.kernel.lock.manager import LockManager
     from dna.kernel.lock import Lockfile
     from dna.kernel.reports import ReportBuilder
@@ -196,7 +196,7 @@ class ManifestInstance:
     def composition(self) -> CompositionEngine:
         """Namespace: ``mi.composition.validate()``."""
         if self._composition_engine is None:
-            from dna.kernel.composition_resolver import CompositionEngine
+            from dna.kernel.compose.resolver import CompositionEngine
             self._composition_engine = CompositionEngine(self)
         return self._composition_engine
 
@@ -204,7 +204,7 @@ class ManifestInstance:
     def nav(self) -> Navigator:
         """Namespace: ``mi.nav.describe()`` / ``summary()`` / ``inventory()``."""
         if self._navigator is None:
-            from dna.kernel.navigator import Navigator
+            from dna.kernel.query.navigator import Navigator
             self._navigator = Navigator(self)
         return self._navigator
 
@@ -226,7 +226,7 @@ class ManifestInstance:
 
     def profile_for(self, doc: Any):
         """Find the CompositionProfile for a doc's kind (via alias)."""
-        from dna.kernel.composition_resolver import profile_for_orchestrator
+        from dna.kernel.compose.resolver import profile_for_orchestrator
         kp = self._kinds.get((doc.api_version, doc.kind))
         if not kp:
             return None

@@ -9,7 +9,7 @@ with ``Agent: locked`` (keyed by name) locked the merge but was SILENTLY
 ignored on write — worse than not holding at all: false confidence.
 
 The repaired contract, pinned here: both ports resolve the key through the
-SAME resolver (``dna.kernel.layer_resolver.match_policy_key``). Properties:
+SAME resolver (``dna.kernel.compose.layer_resolver.match_policy_key``). Properties:
 
 * the same policy locks READ **and** WRITE — keyed by Kind NAME;
 * the same policy locks READ **and** WRITE — keyed by declared ALIAS;
@@ -24,8 +24,8 @@ from __future__ import annotations
 
 import pytest
 
-from dna.kernel.layer_policy import LayerPolicyEnforcer
-from dna.kernel.layer_resolver import DefaultLayerResolver, match_policy_key
+from dna.kernel.compose.layer_policy import LayerPolicyEnforcer
+from dna.kernel.compose.layer_resolver import DefaultLayerResolver, match_policy_key
 from dna.kernel.protocols import LayerPolicy, LayerPolicyViolationError
 
 # ── harnesses: one per port, same declared world ────────────────────────────

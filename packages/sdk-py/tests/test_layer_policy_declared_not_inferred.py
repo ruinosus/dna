@@ -32,7 +32,7 @@ import warnings
 import pytest
 import yaml
 
-from dna.kernel.layer_resolver import DefaultLayerResolver
+from dna.kernel.compose.layer_resolver import DefaultLayerResolver
 from dna.kernel.protocols import LayerPolicy
 
 

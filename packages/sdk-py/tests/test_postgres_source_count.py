@@ -203,7 +203,7 @@ PARITY_CASES = [
 class TestCountParity:
     @pytest.mark.parametrize("scope,kw", PARITY_CASES)
     async def test_native_matches_protocol_default(self, source, scope, kw):
-        from dna.kernel.query_fallback import count_via_query
+        from dna.kernel.query.fallback import count_via_query
         native = await source.count(scope, "Story", **kw)
         fallback = await count_via_query(source, scope, "Story", **kw)
         assert native == fallback, f"parity broke for {scope} {kw}"

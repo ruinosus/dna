@@ -1,7 +1,7 @@
 """Bi-temporal invalidation guard (i-046) — never resurrect a superseded memory."""
 from __future__ import annotations
 
-from dna.kernel.bitemporal_guard import preserve_bitemporal_invalidation
+from dna.kernel.write.bitemporal_guard import preserve_bitemporal_invalidation
 
 
 def test_preserves_valid_to_when_incoming_drops_it():

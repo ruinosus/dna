@@ -17,7 +17,7 @@ import pytest
 from dna.kernel import Kernel
 from dna.kernel.document import Document
 from dna.kernel.kinds.base import KindBase
-from dna.kernel.nav_kernel import (
+from dna.kernel.query.nav import (
     scope_inventory_async,
     validate_composition_async,
 )

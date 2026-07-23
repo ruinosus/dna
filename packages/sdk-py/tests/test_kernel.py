@@ -7,7 +7,7 @@ from pathlib import Path
 from dna.kernel import Kernel
 from dna.kernel.instance import ManifestInstance
 from dna.kernel.protocols import LayerPolicy
-from dna.kernel.layer_resolver import DefaultLayerResolver, deep_merge
+from dna.kernel.compose.layer_resolver import DefaultLayerResolver, deep_merge
 
 
 BASE_DIR = Path(__file__).parent.parent.parent.parent / "scopes" / "open-swe" / ".dna"

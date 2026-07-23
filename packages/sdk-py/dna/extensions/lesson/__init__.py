@@ -37,7 +37,7 @@ _API_VERSION = "github.com/ruinosus/dna/lesson/v1"
 _ORIGIN = "github.com/ruinosus/dna/lesson"
 
 
-from dna.kernel.generic_rw import MarkdownBundleReader
+from dna.kernel.source.generic_rw import MarkdownBundleReader
 
 
 class LessonKind(KindBase):

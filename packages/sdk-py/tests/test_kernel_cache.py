@@ -11,7 +11,7 @@ import asyncio
 
 import pytest
 
-from dna.kernel.kernel_cache import KernelCache
+from dna.kernel.boot.cache import KernelCache
 
 
 @pytest.mark.asyncio

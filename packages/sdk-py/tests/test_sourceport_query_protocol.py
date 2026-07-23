@@ -3,7 +3,7 @@
 Story s-sourceport-query-protocol (Feature f-source-as-query, Epic
 e-production-viable-kernel). s-sourceport-contract-cleanup moved the
 fallback OUT of the Protocol body into
-``dna.kernel.query_fallback.query_via_load_all`` (the Protocol
+``dna.kernel.query.fallback.query_via_load_all`` (the Protocol
 declares signatures only). These tests verify (a) the Protocol surface
 is correct and (b) the fallback semantics match what concrete adapters
 MUST also satisfy.
@@ -20,7 +20,7 @@ from typing import Any
 
 import pytest
 
-from dna.kernel.query_fallback import query_via_load_all
+from dna.kernel.query.fallback import query_via_load_all
 from dna.kernel.protocols import (
     SourcePort,
     QueryError,

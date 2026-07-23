@@ -10,7 +10,7 @@ s-kernel-decompose-god-object: the cache mechanism moved from Kernel into the
 """
 from __future__ import annotations
 
-from dna.kernel.kernel_cache import KernelCache
+from dna.kernel.boot.cache import KernelCache
 
 
 def test_evicts_oldest_over_max() -> None:

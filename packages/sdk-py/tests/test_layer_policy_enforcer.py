@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import pytest
 
-from dna.kernel.layer_policy import LayerPolicyEnforcer
+from dna.kernel.compose.layer_policy import LayerPolicyEnforcer
 from dna.kernel.protocols import LayerPolicy, LayerPolicyViolationError
 
 

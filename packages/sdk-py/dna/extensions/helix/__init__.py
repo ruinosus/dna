@@ -9,7 +9,7 @@ from typing import Any
 
 import yaml
 
-from dna.kernel.descriptor_loader import load_descriptors
+from dna.kernel.source.descriptor_loader import load_descriptors
 from dna.kernel.kinds.base import KindBase
 from dna.kernel.models import (
     TypedAgent, TypedActor, TypedUseCase,
@@ -981,11 +981,11 @@ class AgentWriter(WriterPort):
         return self._entries(raw, "")
 
     def write(self, bundle: BundleHandle, raw: dict) -> None:
-        from dna.kernel.writer_helpers import write_entries_to_handle
+        from dna.kernel.write.helpers import write_entries_to_handle
         write_entries_to_handle(bundle, self._entries(raw, bundle.name))
 
 
-from dna.kernel.composition_resolver import (
+from dna.kernel.compose.resolver import (
     CompositionProfile,
     CompositionSlot,
     HealthCheckHint,

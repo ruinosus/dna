@@ -43,7 +43,7 @@ from dna.extensions.eval.runner import (
     compare,
     run_suite,
 )
-from dna.kernel.descriptor_loader import load_descriptors
+from dna.kernel.source.descriptor_loader import load_descriptors
 from dna.kernel.protocols import ExtensionHost
 
 

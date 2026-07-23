@@ -12,14 +12,14 @@ from __future__ import annotations
 
 from typing import Any
 
-from dna.kernel.descriptor_loader import load_descriptors
+from dna.kernel.source.descriptor_loader import load_descriptors
 from dna.kernel.protocols import ExtensionHost, StorageDescriptor
 from dna.kernel.kinds.base import KindBase
 # should_capture is generic policy-evaluation logic that now lives in the
 # kernel (s-invert-evidence-capture-dep) so the microkernel's evidence-capture
 # handler needs no extension import. Re-exported here as the extension's
 # public API (the gaia worker + existing callers import it from this module).
-from dna.kernel.evidence_capture import should_capture
+from dna.kernel.write.evidence import should_capture
 
 
 # ───────────────────────────────────────────────────────────────────────
@@ -108,5 +108,5 @@ class EvidenceExtension:
             kernel.kind_from_descriptor(raw)
 
         # Register evidence auto-capture on post_save
-        from dna.kernel.evidence_capture import make_evidence_capture_handler
+        from dna.kernel.write.evidence import make_evidence_capture_handler
         kernel.on("post_save", make_evidence_capture_handler(kernel))

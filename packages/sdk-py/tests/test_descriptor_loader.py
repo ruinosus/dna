@@ -6,7 +6,7 @@ import textwrap
 
 import pytest
 
-from dna.kernel.descriptor_loader import load_descriptors
+from dna.kernel.source.descriptor_loader import load_descriptors
 
 
 @pytest.fixture()

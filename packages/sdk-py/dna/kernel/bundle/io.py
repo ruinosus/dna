@@ -140,19 +140,19 @@ class BundleIO:
         if writer:
             raw_files = writer.serialize(raw)
         elif sd.pattern == StoragePattern.YAML:
-            from dna.kernel.generic_rw import safe_yaml_dump
+            from dna.kernel.source.generic_rw import safe_yaml_dump
             content = safe_yaml_dump(raw)
             container = f"{sd.container}/" if sd.container else ""
             return {"files": [{"relativePath": f"{container}{name}.yaml", "content": content}]}
         elif sd.pattern == StoragePattern.ROOT:
-            from dna.kernel.generic_rw import safe_yaml_dump
+            from dna.kernel.source.generic_rw import safe_yaml_dump
             return {"files": [{"relativePath": sd.marker, "content": safe_yaml_dump(raw)}]}
         elif sd.pattern == StoragePattern.STANDALONE:
             spec = raw.get("spec", {})
             content = str(spec.get(sd.body_field, "")) if sd.body_field else ""
             return {"files": [{"relativePath": sd.marker, "content": content}]}
         else:
-            from dna.kernel.generic_rw import safe_yaml_dump
+            from dna.kernel.source.generic_rw import safe_yaml_dump
             raw_files = [{"relativePath": sd.marker or f"{name}.yaml", "content": safe_yaml_dump(raw)}]
 
         if sd.pattern == StoragePattern.BUNDLE:

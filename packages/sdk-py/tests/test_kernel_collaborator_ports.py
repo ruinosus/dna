@@ -37,13 +37,13 @@ from dna.kernel.collaborator_ports import (
     QueryEngineHost,
     SourceSyncHost,
 )
-from dna.kernel.composition_resolver import CompositionResolver
-from dna.kernel.instance_builder import InstanceBuilder
-from dna.kernel.invalidation import InvalidationController
-from dna.kernel.layer_policy import LayerPolicyEnforcer
+from dna.kernel.compose.resolver import CompositionResolver
+from dna.kernel.compose.instance_builder import InstanceBuilder
+from dna.kernel.boot.invalidation import InvalidationController
+from dna.kernel.compose.layer_policy import LayerPolicyEnforcer
 from dna.kernel.protocols import StoragePattern
-from dna.kernel.query_engine import QueryEngine
-from dna.kernel.source_sync import SourceSync
+from dna.kernel.query.engine import QueryEngine
+from dna.kernel.source.sync import SourceSync
 
 
 # --------------------------------------------------------------------------

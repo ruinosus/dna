@@ -42,7 +42,7 @@ from dna.extensions.automation.write_guards import (
     register_write_guards,
     validate_cron_expression,
 )
-from dna.kernel.descriptor_loader import load_descriptors
+from dna.kernel.source.descriptor_loader import load_descriptors
 from dna.kernel.protocols import ExtensionHost
 
 

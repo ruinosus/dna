@@ -3,7 +3,7 @@
 Two-planes F2 (spec docs/superpowers/specs/2026-06-09-kinds-two-planes-design.md
 D2). s-sourceport-contract-cleanup: o fallback saiu do corpo do Protocol —
 ``count_via_query`` (ride ``source.query``) + ``query_via_load_all`` vivem em
-``dna.kernel.query_fallback``. SQL adapters fazem override com
+``dna.kernel.query.fallback``. SQL adapters fazem override com
 ``SELECT count(*) … GROUP BY`` nativo (Task 3).
 
 NOTE: ``FilesystemSource`` / ``CompositeFilesystemSource`` carry explicit
@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 
-from dna.kernel.query_fallback import count_via_query, query_via_load_all
+from dna.kernel.query.fallback import count_via_query, query_via_load_all
 
 
 # ---------------------------------------------------------------------------

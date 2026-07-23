@@ -20,7 +20,7 @@ from typing import Any
 
 import pytest
 
-from dna.kernel.query_fallback import count_via_query, query_via_load_all
+from dna.kernel.query.fallback import count_via_query, query_via_load_all
 
 FIXTURE = Path(__file__).parent / "goldens" / "f2-query.json"
 
