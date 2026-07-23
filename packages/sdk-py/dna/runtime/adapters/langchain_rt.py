@@ -128,12 +128,27 @@ class LangChainRuntime:
         # kill raw os.environ reads for model/mcp/persistence in the runtime).
         model = model_hint or "gpt-5-mini"
 
+        # Persistence: the host wins if it injected a checkpointer (it owns
+        # that connection's lifecycle — e.g. dna-cloud's `open_checkpointer`
+        # holds the CM across the app lifespan for a clean shutdown). Only
+        # when it did NOT do we fall back to resolving `ctx.persistence`
+        # declaratively (`dna.runtime.persistence.resolve_persistence`) —
+        # DSN via the `ref -> DNA_<REF>_URL` convention, never a raw env
+        # read here.
+        checkpointer, store = hooks.checkpointer, hooks.store
+        if checkpointer is None:
+            from dna.runtime.persistence import resolve_persistence
+
+            checkpointer, store = await resolve_persistence(
+                getattr(ctx, "persistence", None)
+            )
+
         graph = create_agent(
             model=init_chat_model(f"openai:{model}"),
             tools=tools,
             middleware=middleware,
-            checkpointer=hooks.checkpointer,
-            store=hooks.store,
+            checkpointer=checkpointer,
+            store=store,
         )
 
         return _LangGraphAGUIApp(graph=graph, agent_name=getattr(ctx, "name", "agent"))

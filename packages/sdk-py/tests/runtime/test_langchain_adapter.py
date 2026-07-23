@@ -49,6 +49,21 @@ def _stub_no_mcp_discovery(monkeypatch):
     return calls
 
 
+def _stub_no_persistence_resolution(monkeypatch):
+    # The fixture's memory-copilot declares `persistence.{checkpoint,memory}`
+    # on Postgres (ref `primary-pg`) — since these tests pass no
+    # `hooks.checkpointer`, the adapter now resolves it declaratively
+    # (Task 4). Stub the resolver so this parity test never dials real
+    # Postgres — `resolve_persistence`'s own DSN/env-var behavior is covered
+    # by test_declarative_config.py.
+    async def fake_resolve_persistence(_persistence):
+        return None, None
+
+    monkeypatch.setattr(
+        "dna.runtime.persistence.resolve_persistence", fake_resolve_persistence
+    )
+
+
 def test_build_returns_aguiapp_with_a_compiled_graph(tmp_path, monkeypatch):
     # init_chat_model constructs a real ChatOpenAI client at build time (it
     # doesn't call out to the network to do so, but it does require an
@@ -56,6 +71,7 @@ def test_build_returns_aguiapp_with_a_compiled_graph(tmp_path, monkeypatch):
     # key is enough to let assembly (create_agent(...)) complete.
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test-not-a-real-key")
     calls = _stub_no_mcp_discovery(monkeypatch)
+    _stub_no_persistence_resolution(monkeypatch)
 
     ctx = _build_ctx(tmp_path)
     hooks = RuntimeHooks(mcp_auth=lambda: {}, compose=_compose)
@@ -72,6 +88,7 @@ def test_build_returns_aguiapp_with_a_compiled_graph(tmp_path, monkeypatch):
 def test_attach_registers_the_agui_route(tmp_path, monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test-not-a-real-key")
     _stub_no_mcp_discovery(monkeypatch)
+    _stub_no_persistence_resolution(monkeypatch)
 
     ctx = _build_ctx(tmp_path)
     hooks = RuntimeHooks(mcp_auth=lambda: {}, compose=_compose)
