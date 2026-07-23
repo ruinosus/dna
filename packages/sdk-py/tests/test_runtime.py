@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from dna import Kernel
-from dna.kernel.runtime import Runtime
+from dna.kernel.boot.runtime import Runtime
 
 
 BASE_DIR = Path(__file__).parent.parent.parent.parent / "scopes" / "open-swe" / ".dna"

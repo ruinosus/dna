@@ -26,7 +26,7 @@ Production behaviors (each mirrors the raw adapter that pioneered it):
     checkpoints ``dna_versions_seq`` and fires ``pg_notify`` on
     ``KERNEL_EVENTBUS_CHANNEL`` **inside the same transaction** as the
     data write — Phase 15.1 semantics. The NOTIFY payload is built by
-    ``dna.kernel.eventbus.build_notify_payload`` — the same producer
+    ``dna.kernel.boot.eventbus.build_notify_payload`` — the same producer
     contract the retired raw ``PostgresSource`` used, now co-located with
     the channel constant. SQLite gets :class:`_NullEventEmitter` (no bus
     — H2).
@@ -76,7 +76,7 @@ from dna.kernel.protocols import WritableSourcePort
 # Single source of truth for the Phase 15.1 event contract — the payload
 # builder + channel name live with the KernelEventBus contract itself
 # (dna/kernel/eventbus.py), shared with the PostgresEventBus subscriber.
-from dna.kernel.eventbus import KERNEL_EVENTBUS_CHANNEL, build_notify_payload
+from dna.kernel.boot.eventbus import KERNEL_EVENTBUS_CHANNEL, build_notify_payload
 
 if TYPE_CHECKING:
     from dna.kernel.capabilities import SourceCapabilities
@@ -122,7 +122,7 @@ class _PgOutboxEmitter:
       2. UPSERT ``dna_versions_seq`` (per-(scope, tenant) checkpoint).
       3. ``pg_notify`` on :data:`KERNEL_EVENTBUS_CHANNEL`.
 
-    The payload is produced by ``dna.kernel.eventbus.build_notify_payload``
+    The payload is produced by ``dna.kernel.boot.eventbus.build_notify_payload``
     (the shared producer contract), so ``PostgresEventBus`` subscribers
     see the exact same wire shape the retired raw adapter emitted.
     """
@@ -534,7 +534,7 @@ class SqlAlchemySource(WritableSourcePort):
         instead of letting the broken marker silently wipe the doc."""
         import warnings as _w
 
-        from dna.kernel.generic_rw import FrontmatterParseWarning
+        from dna.kernel.source.generic_rw import FrontmatterParseWarning
 
         with _w.catch_warnings(record=True) as caught:
             _w.simplefilter("always", FrontmatterParseWarning)
@@ -583,7 +583,7 @@ class SqlAlchemySource(WritableSourcePort):
             val: str | bytes = bytes(cb) if cb else e.content
             entries_by_key.setdefault((e.kind, e.name), {})[e.entry_path] = val
 
-        from dna.kernel.bundle_handle import DictBundleHandle
+        from dna.kernel.bundle.handle import DictBundleHandle
         out: list[dict[str, Any]] = []
         for r in doc_rows:
             entries = entries_by_key.get((r.kind, r.name))
@@ -685,7 +685,7 @@ class SqlAlchemySource(WritableSourcePort):
                     cb = e.content_binary if self._is_pg else None
                     entries[e.entry_path] = bytes(cb) if cb else e.content
                 if entries and effective_readers:
-                    from dna.kernel.bundle_handle import DictBundleHandle
+                    from dna.kernel.bundle.handle import DictBundleHandle
                     handle = DictBundleHandle(name, entries)
                     for reader in effective_readers:
                         try:
@@ -868,7 +868,7 @@ class SqlAlchemySource(WritableSourcePort):
                     )
                 )).all()
                 if erows:
-                    from dna.kernel.bundle_handle import DictBundleHandle
+                    from dna.kernel.bundle.handle import DictBundleHandle
                     entries_by_name: dict[str, dict[str, str]] = {}
                     for e in erows:
                         entries_by_name.setdefault(e.name, {})[e.entry_path] = e.content
@@ -923,7 +923,7 @@ class SqlAlchemySource(WritableSourcePort):
         protocol default (``-count, key-is-None, str(key)``).
         """
         from dna.kernel.protocols import QueryError
-        from dna.kernel.query_fallback import count_via_query
+        from dna.kernel.query.fallback import count_via_query
 
         if filter is not None and not isinstance(filter, dict):
             raise QueryError(f"filter must be dict, got {type(filter).__name__}")
@@ -1013,7 +1013,7 @@ class SqlAlchemySource(WritableSourcePort):
         _net_binary: dict[str, bytes] = {}
         _net_spec = raw.get("spec")
         if isinstance(_net_spec, dict) and _net_spec.get("source_files"):
-            from dna.kernel.writer_helpers import pop_source_files_as_entries
+            from dna.kernel.write.helpers import pop_source_files_as_entries
             for _e in pop_source_files_as_entries(_net_spec, kind):
                 if "content_bytes" in _e:
                     _net_binary[_e["relativePath"]] = _e["content_bytes"]
@@ -1024,7 +1024,7 @@ class SqlAlchemySource(WritableSourcePort):
         # identical logic to both raw adapters).
         bundle_text: dict[str, str] | None = None
         bundle_bin: dict[str, bytes] | None = None
-        from dna.kernel.bundle_handle import DictBundleHandle
+        from dna.kernel.bundle.handle import DictBundleHandle
         for w in self._writers:
             if w.can_write(raw):
                 handle = DictBundleHandle(name, {})

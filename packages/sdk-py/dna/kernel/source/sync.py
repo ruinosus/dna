@@ -50,7 +50,7 @@ class SourceSync:
         """
         import hashlib
         from types import SimpleNamespace
-        from dna.kernel.kind_base import KindBase
+        from dna.kernel.kinds.base import KindBase
 
         k = self._k
         src = source if source is not None else k._source

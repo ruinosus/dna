@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from dna.kernel.generic_rw import GenericBundleReader, GenericBundleWriter
+from dna.kernel.source.generic_rw import GenericBundleReader, GenericBundleWriter
 from dna.kernel.protocols import BodyMode, StorageDescriptor
-from dna.kernel.bundle_handle import FilesystemBundleHandle
+from dna.kernel.bundle.handle import FilesystemBundleHandle
 
 
 # ---------------------------------------------------------------------------
@@ -424,7 +424,7 @@ class TestLiteralBlockScalarRoundtrip:
 
     def test_roundtrip_markdown_in_quoted_scalar(self) -> None:
         import yaml
-        from dna.kernel.generic_rw import safe_yaml_dump
+        from dna.kernel.source.generic_rw import safe_yaml_dump
 
         # Worst-case payload: markdown tables, embedded quotes, the literal
         # two-char sequence `\n` (backslash-n), and many lines.

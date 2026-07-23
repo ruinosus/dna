@@ -22,7 +22,7 @@ import pytest
 
 def _kind_port(kind_name: str):
     """Synthesize the DeclarativeKindPort for a shipped helix descriptor."""
-    from dna.kernel.descriptor_loader import load_descriptors
+    from dna.kernel.source.descriptor_loader import load_descriptors
     from dna.kernel.meta import DeclarativeKindPort
     from dna.kernel.models import TypedKindDefinition
 

@@ -11,7 +11,7 @@ import json
 from pathlib import Path
 
 from dna.kernel import Kernel
-from dna.kernel.bundle_handle import FilesystemBundleHandle
+from dna.kernel.bundle.handle import FilesystemBundleHandle
 from dna.extensions.sdlc import HtmlArtifactReader, HtmlArtifactWriter
 
 

@@ -214,7 +214,7 @@ class SourceCapabilities:
     - ``query_pushdown`` — implements ``query``/``count`` natively
       (entry points exist; FS is "native but in-memory"). When False
       the kernel serves queries via its load_all fallback
-      (``dna.kernel.query_fallback``).
+      (``dna.kernel.query.fallback``).
     - ``tenant_layer_writes`` — writes accept BOTH first-class
       ``tenant`` and ``layer`` kwargs (the modern Phase-2 contract).
     - ``write_kwargs`` / ``delete_kwargs`` — exactly which optional

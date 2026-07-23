@@ -490,7 +490,7 @@ def _load_apply_input(path: str, kernel) -> dict:
     """Load `dna doc apply` input — bundle dir, marker file, or YAML/JSON."""
     import yaml as _yaml
     from pathlib import Path as _Path
-    from dna.kernel.generic_rw import _parse_frontmatter, _parse_body  # noqa: F401
+    from dna.kernel.source.generic_rw import _parse_frontmatter, _parse_body  # noqa: F401
     p = _Path(path)
 
     if p.is_dir():
@@ -561,7 +561,7 @@ def _build_raw_from_marker(
     extra_source_files: "dict[str, str] | None" = None,
 ) -> dict:
     """Build the canonical raw doc dict from a parsed marker file."""
-    from dna.kernel.generic_rw import _parse_body
+    from dna.kernel.source.generic_rw import _parse_body
 
     kind_name: str | None = fm.get("kind")
     if not kind_name:
@@ -803,7 +803,7 @@ def _apply_one(s, raw: dict, *, path: str, doc_index: int | None,
         # PromptBudgetExceededError already includes model, cap, and
         # actionable advice — prepending "write failed:" would obscure it.
         try:
-            from dna.kernel.prompt_budget import PromptBudgetExceededError
+            from dna.kernel.prompt.budget import PromptBudgetExceededError
             if isinstance(e, PromptBudgetExceededError):
                 click.secho(str(e), fg="red", err=True)
                 raise SystemExit(1)

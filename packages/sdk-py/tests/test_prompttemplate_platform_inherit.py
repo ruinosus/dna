@@ -20,7 +20,7 @@ from dna.adapters.filesystem.writable import FilesystemWritableSource
 
 def test_prompttemplate_in_inheritable_sets():
     # Membership lock (Py kernel + V1 resolver mirror).
-    from dna.kernel.resolver import DEFAULT_INHERITABLE_KINDS_V1
+    from dna.kernel.query.resolver import DEFAULT_INHERITABLE_KINDS_V1
 
     # _INHERITABLE_KINDS is now a derived instance property
     # (s-kernel-kindport-classification-attrs).

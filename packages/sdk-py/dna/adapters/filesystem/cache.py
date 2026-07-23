@@ -10,7 +10,7 @@ import aiofiles
 import yaml
 
 from dna.kernel.protocols import CacheItem
-from dna.kernel.bundle_handle import FilesystemBundleHandle
+from dna.kernel.bundle.handle import FilesystemBundleHandle
 
 logger = logging.getLogger(__name__)
 

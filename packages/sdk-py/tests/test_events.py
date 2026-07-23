@@ -1,6 +1,6 @@
 # python/tests/test_events.py
 """Tests for kernel event type derivation."""
-from dna.kernel.events import derive_event_type
+from dna.kernel.boot.events import derive_event_type
 
 
 def test_eval_run_always_completed():
@@ -32,5 +32,5 @@ def test_generic_kind_update():
 
 
 def test_delete_event():
-    from dna.kernel.events import DELETE_EVENT_TYPE
+    from dna.kernel.boot.events import DELETE_EVENT_TYPE
     assert DELETE_EVENT_TYPE == "document_deleted"

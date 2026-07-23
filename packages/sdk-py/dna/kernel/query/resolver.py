@@ -234,7 +234,7 @@ def _merge_spec_subtree(
     """Recursive worker for :func:`merge_field_level`.
 
     Merge semantics (MUST stay consistent with
-    ``dna.kernel.layer_resolver.deep_merge`` — the overlay engine):
+    ``dna.kernel.compose.layer_resolver.deep_merge`` — the overlay engine):
 
       - dict onto dict   → merge recursively, key by key;
       - list onto ANY    → the higher-priority list REPLACES wholesale

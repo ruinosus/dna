@@ -86,7 +86,7 @@ def _scan_tree(root: Path, readers: list, writers: list | None = None) -> list[S
     extent is unknowable and the scan falls back to the conservative
     historic semantics: the whole subtree is the bundle.
     """
-    from dna.kernel.bundle_handle import FilesystemBundleHandle
+    from dna.kernel.bundle.handle import FilesystemBundleHandle
 
     found: list[ScannedDoc] = []
 

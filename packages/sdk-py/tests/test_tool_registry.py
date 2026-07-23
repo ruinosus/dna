@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from dna.kernel import Kernel
 from dna.kernel.protocols import ToolDefinition
-from dna.kernel.tool_registry import ToolRegistry
+from dna.kernel.registry.tool import ToolRegistry
 
 
 def _td(name: str, group: str | None = None) -> ToolDefinition:

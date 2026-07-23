@@ -27,7 +27,7 @@ from pathlib import Path
 import pytest
 
 from dna.kernel import Kernel
-from dna.kernel.bundle_io import BundleIO
+from dna.kernel.bundle.io import BundleIO
 from dna.kernel.collaborator_ports import (
     BundleIOHost,
     CompositionResolverHost,
@@ -37,13 +37,13 @@ from dna.kernel.collaborator_ports import (
     QueryEngineHost,
     SourceSyncHost,
 )
-from dna.kernel.composition_resolver import CompositionResolver
-from dna.kernel.instance_builder import InstanceBuilder
-from dna.kernel.invalidation import InvalidationController
-from dna.kernel.layer_policy import LayerPolicyEnforcer
+from dna.kernel.compose.resolver import CompositionResolver
+from dna.kernel.compose.instance_builder import InstanceBuilder
+from dna.kernel.boot.invalidation import InvalidationController
+from dna.kernel.compose.layer_policy import LayerPolicyEnforcer
 from dna.kernel.protocols import StoragePattern
-from dna.kernel.query_engine import QueryEngine
-from dna.kernel.source_sync import SourceSync
+from dna.kernel.query.engine import QueryEngine
+from dna.kernel.source.sync import SourceSync
 
 
 # --------------------------------------------------------------------------
@@ -304,14 +304,16 @@ async def test_missing_member_breaks_the_collaborator():
 # --------------------------------------------------------------------------
 
 # (module basename in dna/kernel) -> class holding the back-ref.
+# module PATH (relative to _KERNEL_DIR) → collaborator class. Paths carry the
+# subpackage since the kernel reorg (kernel/prompt, kernel/compose, …).
 _MIGRATED_COLLABORATORS = {
-    "instance_builder": "InstanceBuilder",
-    "query_engine": "QueryEngine",
-    "composition_resolver": "CompositionResolver",
-    "bundle_io": "BundleIO",
-    "source_sync": "SourceSync",
-    "layer_policy": "LayerPolicyEnforcer",
-    "invalidation": "InvalidationController",
+    "compose/instance_builder": "InstanceBuilder",
+    "query/engine": "QueryEngine",
+    "compose/resolver": "CompositionResolver",
+    "bundle/io": "BundleIO",
+    "source/sync": "SourceSync",
+    "compose/layer_policy": "LayerPolicyEnforcer",
+    "boot/invalidation": "InvalidationController",
 }
 
 _KERNEL_DIR = Path(__file__).resolve().parents[1] / "dna" / "kernel"

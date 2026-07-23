@@ -30,8 +30,8 @@ import pytest
 
 from dna.extensions.sdlc import SdlcExtension
 from dna.kernel import Kernel
-from dna.kernel.descriptor_loader import load_descriptors
-from dna.kernel.kind_base import KindBase
+from dna.kernel.source.descriptor_loader import load_descriptors
+from dna.kernel.kinds.base import KindBase
 from dna.kernel.protocols import StoragePattern, TenantScope
 
 # ---------------------------------------------------------------------------

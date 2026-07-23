@@ -35,7 +35,7 @@ land in later stories; here we ship just the five data Kinds.
 """
 from __future__ import annotations
 
-from dna.kernel.descriptor_loader import load_descriptors
+from dna.kernel.source.descriptor_loader import load_descriptors
 from dna.kernel.protocols import ExtensionHost
 
 

@@ -10,7 +10,7 @@ from __future__ import annotations
 import pytest
 
 from dna.kernel import Kernel
-from dna.kernel.composition_resolver import CompositionResolver
+from dna.kernel.compose.resolver import CompositionResolver
 
 
 def test_kernel_wires_collaborator():

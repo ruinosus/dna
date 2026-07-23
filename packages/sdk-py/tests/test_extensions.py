@@ -9,7 +9,7 @@ from __future__ import annotations
 import pytest
 
 from dna.kernel import Kernel
-from dna.kernel.bundle_handle import FilesystemBundleHandle
+from dna.kernel.bundle.handle import FilesystemBundleHandle
 from dna.kernel.document import Document
 
 

@@ -323,7 +323,7 @@ def _tier_doc(tier_id: str, *, families: list[str], sdlc_mode: str,
               memory_mode: str = "read") -> dict:
     return {
         "apiVersion": "github.com/ruinosus/dna/cloud/v1",
-        "kind": "Tier",
+        "kind": "PricingPlan",
         "metadata": {"name": tier_id},
         "spec": {
             "tier_id": tier_id,
@@ -346,11 +346,11 @@ async def _seed_tiers(dna_dir) -> None:
     # Free KEEPS `sdlc` in families (reads pass the family gate) but sdlc_mode=read
     # → a WRITE is denied by the finer gate, not the family gate.
     await live.kernel.write_document(
-        "_lib", "Tier", "free",
+        "_lib", "PricingPlan", "free",
         _tier_doc("free", families=["definitions", "sdlc", "memory"],
                   sdlc_mode="read"))
     await live.kernel.write_document(
-        "_lib", "Tier", "pro",
+        "_lib", "PricingPlan", "pro",
         _tier_doc("pro", families=["definitions", "sdlc", "memory", "emit"],
                   sdlc_mode="write", memory_mode="write"))
 

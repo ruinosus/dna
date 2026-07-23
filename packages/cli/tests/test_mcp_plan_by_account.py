@@ -86,7 +86,7 @@ def _tier_doc(tier_id: str, *, calls_per_day: int | None, families: list[str],
     """A Tier doc — caps live HERE (the doc), never in code."""
     return {
         "apiVersion": "github.com/ruinosus/dna/cloud/v1",
-        "kind": "Tier",
+        "kind": "PricingPlan",
         "metadata": {"name": tier_id},
         "spec": {
             "tier_id": tier_id,
@@ -108,7 +108,7 @@ def _account_plan_doc(account_id: str, tier_id: str) -> dict:
     workspace whose ``account_id`` matches."""
     return {
         "apiVersion": "github.com/ruinosus/dna/cloud/v1",
-        "kind": "AccountPlan",
+        "kind": "PlanBinding",
         "metadata": {"name": account_id},
         "spec": {"account_id": account_id, "tier_id": tier_id,
                  "source": "stripe", "status": "active"},
@@ -146,12 +146,12 @@ async def _seed(
 
     live = await M.boot_live(base_dir=str(dna_dir))
     await live.kernel.write_document(
-        "_lib", "Tier", "free",
+        "_lib", "PricingPlan", "free",
         _tier_doc("free", calls_per_day=2,
                   families=["definitions", "sdlc", "memory"], memory_mode="read"),
     )
     await live.kernel.write_document(
-        "_lib", "Tier", "pro",
+        "_lib", "PricingPlan", "pro",
         _tier_doc("pro", calls_per_day=10000,
                   families=["definitions", "sdlc", "memory", "emit"],
                   memory_mode="write"),
@@ -164,7 +164,7 @@ async def _seed(
     if account_plan is not None:
         account_id, tier_id = account_plan
         await live.kernel.write_document(
-            "_lib", "AccountPlan", account_id,
+            "_lib", "PlanBinding", account_id,
             _account_plan_doc(account_id, tier_id),
         )
 

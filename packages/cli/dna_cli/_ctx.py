@@ -104,7 +104,7 @@ async def _build_holder_async(scope: str | None = None):
     # scopes-root directory, so ``LocalResolver`` is meaningless there — wire
     # resolvers ONLY when the source exposes a filesystem base_dir.
     if getattr(source, "supports_readers", False):
-        from dna.kernel.kernel_bootstrap import wire_filesystem_resolvers
+        from dna.kernel.boot.bootstrap import wire_filesystem_resolvers
 
         wire_filesystem_resolvers(kernel, str(getattr(source, "base_dir", ".dna")))
 

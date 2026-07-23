@@ -10,7 +10,7 @@ from __future__ import annotations
 import pytest
 
 from dna.kernel import Kernel
-from dna.kernel.bundle_io import BundleIO
+from dna.kernel.bundle.io import BundleIO
 
 
 def _kernel():

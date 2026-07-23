@@ -148,7 +148,7 @@ def _load_embedded_pack() -> OnboardingPack:
     """The onboarding scope shipped inside dna-cli (the default pack)."""
     from dna.extensions.agentskills import SkillReader
     from dna.extensions.agentsmd import AgentDefinitionReader
-    from dna.kernel.bundle_handle import FilesystemBundleHandle
+    from dna.kernel.bundle.handle import FilesystemBundleHandle
 
     root = _onboarding_root()
     skill = SkillReader().read(FilesystemBundleHandle(root / "skills" / SKILL_NAME))
@@ -324,7 +324,7 @@ def _materialize_skills(
     its step ids are ``skill[<tool>:<name>]`` (unique in ``--json``).
     """
     from dna.extensions.agentskills import SkillWriter
-    from dna.kernel.bundle_handle import FilesystemBundleHandle
+    from dna.kernel.bundle.handle import FilesystemBundleHandle
 
     writer = SkillWriter()
     results: list[tuple[str, str, str]] = []
@@ -354,7 +354,7 @@ def _materialize_agents_md(
     default conventions file rather than an agent-blind root.
     """
     from dna.extensions.agentsmd import AgentDefinitionReader, AgentDefinitionWriter
-    from dna.kernel.bundle_handle import FilesystemBundleHandle
+    from dna.kernel.bundle.handle import FilesystemBundleHandle
 
     detail = "AGENTS.md"
     raw = pack.agents_raw

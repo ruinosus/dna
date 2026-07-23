@@ -5,8 +5,8 @@ import pytest
 from pathlib import Path
 
 from dna.kernel import Kernel
-from dna.kernel.generic_rw import GenericBundleReader, GenericBundleWriter
-from dna.kernel.bundle_handle import FilesystemBundleHandle
+from dna.kernel.source.generic_rw import GenericBundleReader, GenericBundleWriter
+from dna.kernel.bundle.handle import FilesystemBundleHandle
 from dna.extensions.guardrails import GuardrailKind
 
 

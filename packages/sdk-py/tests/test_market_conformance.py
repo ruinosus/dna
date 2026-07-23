@@ -46,7 +46,7 @@ import pytest
 import yaml
 
 from dna.kernel import Kernel
-from dna.kernel.bundle_handle import FilesystemBundleHandle
+from dna.kernel.bundle.handle import FilesystemBundleHandle
 from dna.adapters.filesystem import FilesystemSource, FilesystemCache
 
 REPO_ROOT = Path(__file__).resolve().parents[3]

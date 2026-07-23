@@ -20,11 +20,11 @@
 apiVersion: github.com/ruinosus/dna/core/v1
 kind: KindDefinition
 metadata:
-  name: tier
+  name: pricing-plan
 spec:
   target_api_version: github.com/ruinosus/dna/cloud/v1
-  target_kind: Tier
-  alias: cloud-tier
+  target_kind: PricingPlan
+  alias: cloud-pricing-plan
   origin: github.com/ruinosus/dna/cloud
   tenant_scope: global
   plane: record

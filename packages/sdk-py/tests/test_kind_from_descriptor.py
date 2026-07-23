@@ -93,7 +93,7 @@ def test_kernel_embeddable_kinds_empty_without_declarations():
 def test_kernel_embeddable_kinds_sees_class_declared_fields():
     """KindBase.embed_fields (the parity hook for not-yet-migrated classes)
     must feed the same derivation."""
-    from dna.kernel.kind_base import KindBase
+    from dna.kernel.kinds.base import KindBase
     from dna.kernel.protocols import StorageDescriptor
 
     class _EmbCls(KindBase):

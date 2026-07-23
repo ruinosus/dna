@@ -3,7 +3,7 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock
 
 from dna.kernel import Kernel
-from dna.kernel.kind_base import KindBase
+from dna.kernel.kinds.base import KindBase
 from dna.kernel.protocols import StorageDescriptor
 
 # -- reuse do harness (pytest põe tests/ no sys.path; SEM prefixo tests.) --

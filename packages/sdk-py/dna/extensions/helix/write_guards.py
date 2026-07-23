@@ -87,7 +87,7 @@ async def prompt_budget_guard(ctx: PreSaveContext) -> None:
       DATA: writing a profile with a cap arms the guard.
 
     Token estimate: conservative chars/3.5 heuristic
-    (``dna.kernel.prompt_budget``) — over-counts on purpose so the guard
+    (``dna.kernel.prompt.budget``) — over-counts on purpose so the guard
     never under-blocks. Fail-open on uncounted text (instruction_file /
     non-string body): warn + proceed, never block on text we didn't count.
     ``DNA_PROMPT_BUDGET_ENFORCE=0`` downgrades the veto to a warn
@@ -112,7 +112,7 @@ async def prompt_budget_guard(ctx: PreSaveContext) -> None:
         model_id = spec.get("model")
         if not model_id or not isinstance(model_id, str):
             return  # PASS — no model declared, nothing to enforce against.
-    from dna.kernel.prompt_budget import (  # noqa: PLC0415
+    from dna.kernel.prompt.budget import (  # noqa: PLC0415
         evaluate_instruction_budget, PromptBudgetExceededError,
     )
     profile = await ctx.kernel.model_profile(model_id)

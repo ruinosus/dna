@@ -21,16 +21,16 @@ import types
 import pytest
 
 from dna.kernel import Kernel
-from dna.kernel.catalog_cache import CatalogCache
+from dna.kernel.catalog.cache import CatalogCache
 from dna.kernel.collaborator_ports import (
     CatalogCacheHost,
     RegistryAccessorHost,
     SearchEngineHost,
     SourceFacadeHost,
 )
-from dna.kernel.registry_accessor import RegistryAccessor
-from dna.kernel.search_engine import SearchEngine
-from dna.kernel.source_facade import SourceFacade
+from dna.kernel.registry.accessor import RegistryAccessor
+from dna.kernel.query.search import SearchEngine
+from dna.kernel.source.facade import SourceFacade
 
 _GOD_MEMBER = "hooks"
 

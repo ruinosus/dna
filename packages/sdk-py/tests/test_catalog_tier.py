@@ -11,7 +11,7 @@ deduped by scope (mandatory wins, tenant=None), ``exclude`` dropped, sorted.
 """
 from __future__ import annotations
 
-from dna.kernel.catalog_tier import resolve_catalog_scopes
+from dna.kernel.catalog.pricing_plan import resolve_catalog_scopes
 
 
 class _P:

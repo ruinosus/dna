@@ -57,11 +57,11 @@
 apiVersion: github.com/ruinosus/dna/core/v1
 kind: KindDefinition
 metadata:
-  name: account-plan
+  name: plan-binding
 spec:
   target_api_version: github.com/ruinosus/dna/cloud/v1
-  target_kind: AccountPlan
-  alias: cloud-account-plan
+  target_kind: PlanBinding
+  alias: cloud-plan-binding
   origin: github.com/ruinosus/dna/cloud
   tenant_scope: global
   plane: record

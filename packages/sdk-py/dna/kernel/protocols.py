@@ -14,7 +14,7 @@ from enum import Enum, StrEnum
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, Protocol, runtime_checkable
 
-from dna.kernel.bundle_handle import BundleHandle  # noqa: F401  re-exported for typing
+from dna.kernel.bundle.handle import BundleHandle  # noqa: F401  re-exported for typing
 
 if TYPE_CHECKING:
     from dna.kernel.capabilities import SourceCapabilities
@@ -763,7 +763,7 @@ class SourcePort(Protocol):
             impls in parity and declare ``query_pushdown=True`` in
             their ``SourceCapabilities``. Sources without a native
             impl are served by the kernel via the load_all fallback in
-            ``dna.kernel.query_fallback.query_via_load_all``
+            ``dna.kernel.query.fallback.query_via_load_all``
             (s-sourceport-contract-cleanup: the fallback used to be a
             ~60-line concrete body HERE, reaching back into the
             mediator via ``getattr(self, "_kernel")`` — the Protocol
@@ -785,7 +785,7 @@ class SourcePort(Protocol):
             ``{"total": int, "groups": list[{"key", "count"}] | None}`` —
             groups ordenados por count DESC; key None agrupa docs sem o campo.
 
-        Fallbacks vivem em ``dna.kernel.query_fallback``
+        Fallbacks vivem em ``dna.kernel.query.fallback``
         (``count_via_query`` ride o ``query`` do adapter;
         ``count_via_load_all`` é o caminho kernel-side p/ sources sem
         query nativo). Adapters SQL fazem override com
@@ -901,7 +901,7 @@ class ReaderPort(Protocol):
     Phase 8 (PR1) — ``detect`` and ``read`` now receive a
     ``BundleHandle`` instead of a ``pathlib.Path``. The handle abstracts
     over filesystem, Postgres, S3, in-memory dict — same reader works
-    regardless of where the bundle lives. See ``dna.kernel.bundle_handle``.
+    regardless of where the bundle lives. See ``dna.kernel.bundle.handle``.
 
     Backward-compat: ``BundleHandle.path`` returns the underlying
     filesystem ``Path`` when FS-backed (``None`` otherwise) — escape
@@ -944,7 +944,7 @@ class WriterPort(Protocol):
     COHERENT: ``write(bundle, raw)`` must produce exactly the entries
     ``serialize(raw)`` returns (the canonical implementation is
     ``write_entries_to_handle(bundle, self.serialize(raw))`` from
-    ``dna.kernel.writer_helpers``). The round-trip conformance
+    ``dna.kernel.write.helpers``). The round-trip conformance
     suite (``dna.testing.reader_writer_conformance_suite``)
     enforces this equivalence for every registered pair.
     """
@@ -1302,7 +1302,7 @@ class ExtensionHost(Protocol):
     ``kind(kp)``              a KindPort (identity + composition of a Kind)
     ``kind_from_descriptor``  a record Kind from a ``kinds/*.kind.yaml``
                               descriptor dict (F3 — Kinds as data). Pair it
-                              with ``dna.kernel.descriptor_loader.
+                              with ``dna.kernel.source.descriptor_loader.
                               load_descriptors(package)`` to read the package
                               data files.
     ``reader(r)``             a ReaderPort (detect/scan a bundle format)
@@ -1357,7 +1357,7 @@ class TemplateProvider(Protocol):
     (``isinstance(ext, TemplateProvider)`` — or the historical
     ``hasattr(ext, "templates")``) and aggregates the entries so UIs
     (Studio, CLI) can offer ``scaffold()`` for any extension-shipped
-    file tree. See ``dna.kernel.templates.Template``.
+    file tree. See ``dna.kernel.compose.templates.Template``.
     """
 
     def templates(self) -> list["Template"]: ...
@@ -1382,7 +1382,7 @@ class Extension(Protocol):
     When present, ``Kernel.list_templates()`` aggregates entries from
     every loaded extension so UIs (Tauri Studio, CLI) can offer
     ``scaffold()`` for any extension-shipped file tree. See
-    ``dna.kernel.templates.Template`` for the payload shape.
+    ``dna.kernel.compose.templates.Template`` for the payload shape.
     """
 
     name: str
@@ -1396,7 +1396,7 @@ class Extension(Protocol):
 # port types. The ``templates()`` method on Extension is intentionally kept
 # OFF the Protocol body (feature-tested via ``hasattr``) to preserve
 # backwards compatibility with third-party extensions that predate Phase 0.
-from dna.kernel.templates import Template  # noqa: E402  re-export
+from dna.kernel.compose.templates import Template  # noqa: E402  re-export
 
 __all__ = [
     "EXTENSIONS_ENTRY_POINT_GROUP",
@@ -1503,7 +1503,7 @@ SOURCE_PORT_CORE_MEMBERS: tuple[str, ...] = (
 
 # SourcePort members the kernel serves via fallbacks when the adapter
 # doesn't implement them (granular reads → iterate load_all; query/count →
-# ``dna.kernel.query_fallback``). Their absence is legitimate —
+# ``dna.kernel.query.fallback``). Their absence is legitimate —
 # the adapter just declares ``granular_*=False`` / ``query_pushdown=False``
 # in its SourceCapabilities.
 SOURCE_PORT_FALLBACK_MEMBERS: tuple[str, ...] = (

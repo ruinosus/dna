@@ -18,7 +18,7 @@ do ``_lib`` porque ``LottieAsset`` estava declarado TENANTED.
 """
 from dna.kernel import Kernel
 from dna.kernel.protocols import TenantScope
-from dna.kernel.resolver import DEFAULT_INHERITABLE_KINDS_V1
+from dna.kernel.query.resolver import DEFAULT_INHERITABLE_KINDS_V1
 
 
 def test_inheritable_kinds_never_tenanted():

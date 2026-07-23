@@ -11,7 +11,7 @@ not require the Kind to be registered by the SAME extension that fires it.
 This guard never vetoes — it MUTATES ``ctx.raw`` in place (preserving
 ``valid_to``/``superseded_by_memory``) so the write proceeds with the
 corrected payload. The pure helper stays in
-``dna.kernel.bitemporal_guard`` (generic bitemporal utility).
+``dna.kernel.write.bitemporal_guard`` (generic bitemporal utility).
 """
 from __future__ import annotations
 
@@ -50,7 +50,7 @@ async def bitemporal_engram_guard(ctx: PreSaveContext) -> None:
     except Exception:  # noqa: BLE001 — guard read must never block a write
         existing = None
     if isinstance(existing, dict):
-        from dna.kernel.bitemporal_guard import (  # noqa: PLC0415
+        from dna.kernel.write.bitemporal_guard import (  # noqa: PLC0415
             preserve_bitemporal_invalidation,
         )
         if preserve_bitemporal_invalidation(spec, existing.get("spec")):

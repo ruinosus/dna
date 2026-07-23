@@ -87,7 +87,7 @@ class _MemorySource:
         filter=None, projection=None, limit=None, offset=None,
         order_by=None, tenant=None,
     ):
-        from dna.kernel.query_fallback import query_via_load_all
+        from dna.kernel.query.fallback import query_via_load_all
         async for row in query_via_load_all(
             self, scope, kind,
             filter=filter, projection=projection, limit=limit,
@@ -98,7 +98,7 @@ class _MemorySource:
     async def count(self, scope, kind, *, filter=None, group_by=None, tenant=None):
         # F2 — count is a SourcePort member now; runtime_checkable
         # isinstance(WritableSourcePort) requires it on the fake.
-        from dna.kernel.query_fallback import count_via_query
+        from dna.kernel.query.fallback import count_via_query
         return await count_via_query(
             self, scope, kind, filter=filter, group_by=group_by, tenant=tenant,
         )

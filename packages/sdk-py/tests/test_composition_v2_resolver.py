@@ -26,7 +26,7 @@ from typing import Any
 import pytest
 
 from dna.kernel import Kernel
-from dna.kernel.resolver import (
+from dna.kernel.query.resolver import (
     BOOTSTRAP_KINDS,
     DEFAULT_INHERITABLE_KINDS_V1,
     ResolutionLayer,

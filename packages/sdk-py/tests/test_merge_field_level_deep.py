@@ -23,8 +23,8 @@ nothing a resolver refactor can move out from under them.
 """
 from __future__ import annotations
 
-from dna.kernel.layer_resolver import deep_merge
-from dna.kernel.resolver import ResolutionLayer, merge_field_level
+from dna.kernel.compose.layer_resolver import deep_merge
+from dna.kernel.query.resolver import ResolutionLayer, merge_field_level
 
 
 def _layer(scope: str) -> ResolutionLayer:

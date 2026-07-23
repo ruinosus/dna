@@ -14,7 +14,7 @@ import asyncio
 
 import pytest
 
-from dna.kernel.module_lock import resolve_lockfile_root
+from dna.kernel.lock.module import resolve_lockfile_root
 
 
 # ── module_lock.resolve_lockfile_root ────────────────────────────────

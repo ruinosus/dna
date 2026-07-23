@@ -26,7 +26,7 @@ import tempfile
 from pathlib import Path
 
 from dna.extensions.helix import _SPEC_FIELDS, AgentReader
-from dna.kernel.bundle_handle import FilesystemBundleHandle
+from dna.kernel.bundle.handle import FilesystemBundleHandle
 from dna.kernel.models import AgentSpec
 
 

@@ -22,7 +22,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from dna.kernel.kind_base import KindBase
+from dna.kernel.kinds.base import KindBase
 from dna.kernel.protocols import StorageDescriptor, TenantScope
 
 

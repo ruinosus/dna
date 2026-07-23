@@ -50,10 +50,10 @@ from typing import Any
 
 import yaml
 
-from dna.kernel.descriptor_loader import load_descriptors
-from dna.kernel.kind_base import KindBase
+from dna.kernel.source.descriptor_loader import load_descriptors
+from dna.kernel.kinds.base import KindBase
 from dna.kernel.protocols import ExtensionHost, StorageDescriptor, SYSTEM_SCOPE, TenantScope, ReaderPort, WriterPort
-from dna.kernel.bundle_handle import BundleHandle
+from dna.kernel.bundle.handle import BundleHandle
 
 
 _API_VERSION = "github.com/ruinosus/dna/tenant/v1"
@@ -246,7 +246,7 @@ class TenantWriter(WriterPort):
             spec = dict(spec) if spec else {}
         # L3 (s-writer-binary-entries) — let optional source_files
         # ride along. Unlikely needed for Tenant but kept for symmetry.
-        from dna.kernel.writer_helpers import pop_source_files_as_entries
+        from dna.kernel.write.helpers import pop_source_files_as_entries
         extra_entries = pop_source_files_as_entries(spec, "Tenant")
         meta = dict(raw.get("metadata", {}) or {})
         clean_spec = {k: v for k, v in spec.items() if v is not None and v != "" and v != [] and v != {}}
@@ -280,7 +280,7 @@ class TenantWriter(WriterPort):
         ]
 
     def write(self, bundle: BundleHandle, raw: dict) -> None:
-        from dna.kernel.writer_helpers import write_entries_to_handle
+        from dna.kernel.write.helpers import write_entries_to_handle
         write_entries_to_handle(bundle, self.serialize(raw))
 
 
@@ -452,7 +452,7 @@ class TenantMembershipWriter(WriterPort):
         spec = raw.get("spec", {}) or {}
         if not isinstance(spec, dict):
             spec = dict(spec) if spec else {}
-        from dna.kernel.writer_helpers import pop_source_files_as_entries
+        from dna.kernel.write.helpers import pop_source_files_as_entries
         extra_entries = pop_source_files_as_entries(spec, "TenantMembership")
         meta = dict(raw.get("metadata", {}) or {})
         clean_spec = {k: v for k, v in spec.items() if v is not None and v != "" and v != [] and v != {}}
@@ -482,7 +482,7 @@ class TenantMembershipWriter(WriterPort):
         ]
 
     def write(self, bundle: BundleHandle, raw: dict) -> None:
-        from dna.kernel.writer_helpers import write_entries_to_handle
+        from dna.kernel.write.helpers import write_entries_to_handle
         write_entries_to_handle(bundle, self.serialize(raw))
 
 

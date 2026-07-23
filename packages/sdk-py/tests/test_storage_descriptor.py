@@ -291,7 +291,7 @@ class TestDeferredGenericRegistration:
     def test_custom_kind_gets_generic_reader(self, tmp_path):
         """A custom kind with StorageDescriptor but no custom Reader gets a generic one."""
         from dna.kernel import Kernel
-        from dna.kernel.kind_base import KindBase
+        from dna.kernel.kinds.base import KindBase
         from dna.kernel.protocols import StorageDescriptor, BodyMode
         from dna.adapters.filesystem import FilesystemSource, FilesystemCache
 

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import warnings
 
-from dna.kernel.layer_resolver import (
+from dna.kernel.compose.layer_resolver import (
     DefaultLayerResolver,
     _merge_timeline_arrays,
 )

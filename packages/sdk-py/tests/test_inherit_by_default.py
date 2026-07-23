@@ -10,7 +10,7 @@ import asyncio
 from pathlib import Path
 
 from dna.kernel import Kernel
-from dna.kernel.resolver import DEFAULT_NON_INHERITABLE_KINDS_V1
+from dna.kernel.query.resolver import DEFAULT_NON_INHERITABLE_KINDS_V1
 from dna.extensions.helix import HelixExtension
 from dna.extensions.sdlc import SdlcExtension
 from dna.adapters.filesystem import FilesystemCache

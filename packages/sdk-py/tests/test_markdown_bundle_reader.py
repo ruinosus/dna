@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import pytest
 
-from dna.kernel.generic_rw import MarkdownBundleReader
+from dna.kernel.source.generic_rw import MarkdownBundleReader
 
 
 class _MemBundle:

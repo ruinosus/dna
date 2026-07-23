@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import pytest
 
-from dna.kernel.references import (
+from dna.kernel.query.references import (
     DeclaredReference,
     declared_references,
     reference_values,

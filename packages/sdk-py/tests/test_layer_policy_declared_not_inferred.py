@@ -32,7 +32,7 @@ import warnings
 import pytest
 import yaml
 
-from dna.kernel.layer_resolver import DefaultLayerResolver
+from dna.kernel.compose.layer_resolver import DefaultLayerResolver
 from dna.kernel.protocols import LayerPolicy
 
 
@@ -178,7 +178,7 @@ def _fs_scope_with_policy_key(tmp_path, policy_key: str):
 def _bare_kernel(base_dir):
     from dna.adapters.filesystem import FilesystemSource
     from dna.kernel import Kernel
-    from dna.kernel.kind_base import KindBase
+    from dna.kernel.kinds.base import KindBase
     from dna.kernel.protocols import StorageDescriptor
 
     class _RootStub(KindBase):

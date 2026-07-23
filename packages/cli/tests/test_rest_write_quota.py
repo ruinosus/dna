@@ -79,7 +79,7 @@ def _tier_doc(tier_id: str, *, memory_mode: str, calls_per_day: int | None = 100
               rate_per_sec: int = 1000) -> dict:
     return {
         "apiVersion": "github.com/ruinosus/dna/cloud/v1",
-        "kind": "Tier",
+        "kind": "PricingPlan",
         "metadata": {"name": tier_id},
         "spec": {
             "tier_id": tier_id,
@@ -113,9 +113,9 @@ def _plan_docs(workspace_id: str, account_id: str, tier_id: str) -> list[tuple[s
                 "account_id": account_id,
             },
         }),
-        ("AccountPlan", account_id, {
+        ("PlanBinding", account_id, {
             "apiVersion": "github.com/ruinosus/dna/cloud/v1",
-            "kind": "AccountPlan",
+            "kind": "PlanBinding",
             "metadata": {"name": account_id},
             "spec": {"account_id": account_id, "tier_id": tier_id,
                      "source": "stripe", "status": "active"},
@@ -141,8 +141,8 @@ def _seed_tiers(dna_dir, *, free_cpd: int | None = 1000,
     """The canonical product shape: Free = memory READ-only, Pro = write."""
     _seed(
         dna_dir,
-        ("Tier", "free", _tier_doc("free", memory_mode="read", calls_per_day=free_cpd)),
-        ("Tier", "pro", _tier_doc("pro", memory_mode="write", calls_per_day=pro_cpd)),
+        ("PricingPlan", "free", _tier_doc("free", memory_mode="read", calls_per_day=free_cpd)),
+        ("PricingPlan", "pro", _tier_doc("pro", memory_mode="write", calls_per_day=pro_cpd)),
     )
 
 

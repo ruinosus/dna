@@ -29,7 +29,7 @@ from typing import Any
 import pytest
 import yaml
 
-from dna.kernel.kind_definition_schema import (
+from dna.kernel.kinds.schema import (
     kind_definition_schema,
     validate_kind_definition,
 )

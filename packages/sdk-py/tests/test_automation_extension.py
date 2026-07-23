@@ -28,7 +28,7 @@ from dna.extensions.automation import (
 )
 from dna.kernel import Kernel
 from dna.kernel.hooks import KNOWN_HOOK_NAMES
-from dna.kernel.resolver import DEFAULT_INHERITABLE_KINDS_V1
+from dna.kernel.query.resolver import DEFAULT_INHERITABLE_KINDS_V1
 from tests.test_kernel_invalidate_modes import _FakeWritableSource
 
 _KEY = ("github.com/ruinosus/dna/automation/v1", "Automation")

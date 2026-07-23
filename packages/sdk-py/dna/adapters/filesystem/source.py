@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any
 import aiofiles
 import yaml
 
-from dna.kernel.bundle_handle import FilesystemBundleHandle
+from dna.kernel.bundle.handle import FilesystemBundleHandle
 from dna.kernel.protocols import SourcePort
 
 if TYPE_CHECKING:
@@ -223,7 +223,7 @@ class FilesystemSource(SourcePort):
         FS scopes grow (e.g., index by kind via directory layout). For
         now: correct semantics via shared helpers.
         """
-        from dna.kernel.query_fallback import query_via_load_all
+        from dna.kernel.query.fallback import query_via_load_all
         async for row in query_via_load_all(
             self, scope, kind,
             filter=filter, projection=projection, limit=limit,
@@ -239,7 +239,7 @@ class FilesystemSource(SourcePort):
         """F2 — rides ``self.query`` via the shared aggregation helper
         (``query_fallback.count_via_query``). FS é dev-mode com scopes
         pequenos; push-down é dos adapters SQL."""
-        from dna.kernel.query_fallback import count_via_query
+        from dna.kernel.query.fallback import count_via_query
         return await count_via_query(
             self, scope, kind, filter=filter, group_by=group_by, tenant=tenant,
         )

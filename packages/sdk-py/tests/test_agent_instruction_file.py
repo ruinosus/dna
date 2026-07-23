@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from dna.extensions.helix import AgentReader, AgentWriter
-from dna.kernel.bundle_handle import FilesystemBundleHandle
+from dna.kernel.bundle.handle import FilesystemBundleHandle
 from dna.kernel.models import AgentSpec
 
 

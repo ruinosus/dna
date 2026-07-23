@@ -102,7 +102,7 @@ class QueryEngine:
         # LIVE readers explicitly (this replaces the old Protocol-default's
         # ``getattr(self, "_kernel")`` reach-back).
         from dna.kernel.capabilities import source_capabilities
-        from dna.kernel.query_fallback import query_via_load_all
+        from dna.kernel.query.fallback import query_via_load_all
         _pushdown = source_capabilities(k._source).query_pushdown
 
         def _source_query(sc: str, tn: str | None):
@@ -276,7 +276,7 @@ class QueryEngine:
         k = self._k
         assert k._source, "No source registered. Call kernel.source(src) first."
         from dna.kernel.capabilities import source_capabilities
-        from dna.kernel.query_fallback import count_via_load_all
+        from dna.kernel.query.fallback import count_via_load_all
         _pushdown = source_capabilities(k._source).query_pushdown
         effective_tenant = tenant if tenant is not None else k.tenant
         target_scopes = list(scopes) if scopes is not None else [scope]

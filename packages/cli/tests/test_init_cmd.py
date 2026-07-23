@@ -190,7 +190,7 @@ def test_init_force_overwrites_files_but_never_the_board(runner, project):
 
 def test_generated_agents_md_parses_via_agentsmd_reader(runner, project):
     from dna.extensions.agentsmd import AgentDefinitionReader
-    from dna.kernel.bundle_handle import FilesystemBundleHandle
+    from dna.kernel.bundle.handle import FilesystemBundleHandle
 
     assert runner.invoke(init, []).exit_code == 0
     reader = AgentDefinitionReader()
@@ -208,7 +208,7 @@ def test_generated_agents_md_parses_via_agentsmd_reader(runner, project):
 
 def test_materialized_skill_roundtrips_via_agentskills_reader(runner, project):
     from dna.extensions.agentskills import SkillReader
-    from dna.kernel.bundle_handle import FilesystemBundleHandle
+    from dna.kernel.bundle.handle import FilesystemBundleHandle
 
     assert runner.invoke(init, []).exit_code == 0
     reader = SkillReader()

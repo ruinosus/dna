@@ -39,7 +39,7 @@ if TYPE_CHECKING:  # pragma: no cover — typing-only, no runtime import cost
     import asyncio
 
     from dna.kernel.document import Document
-    from dna.kernel.kernel_cache import KernelCache
+    from dna.kernel.boot.cache import KernelCache
     from dna.kernel.protocols import (
         CachePort,
         KindPort,

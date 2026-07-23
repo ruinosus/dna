@@ -18,7 +18,7 @@ from dna.kernel.protocols import (
     StorageDescriptor,
     WriterPort,
 )
-from dna.kernel.bundle_handle import BundleHandle
+from dna.kernel.bundle.handle import BundleHandle
 
 # Fields that belong in metadata rather than spec
 _META_FIELDS = {"name", "description", "labels"}

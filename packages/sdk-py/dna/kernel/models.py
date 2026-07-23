@@ -1183,7 +1183,7 @@ class TypedKindDefinition:
         # catches typo'd/unknown spec fields and wrong types the
         # hand-rolled checks silently ignored. apiVersion/kind are folded
         # in with their defaults so partial raws keep working.
-        from dna.kernel.kind_definition_schema import (
+        from dna.kernel.kinds.schema import (
             validate_kind_definition,
         )
         validate_kind_definition({**raw, "apiVersion": av, "kind": kn})

@@ -461,9 +461,9 @@ def _from_json_ld(entry: dict[str, Any]) -> dict[str, Any]:
 def _render_mif_markdown(doc: dict[str, Any]) -> str:
     """Serialize a MIF doc to its Markdown frontmatter profile — the real
     MIF file shape (frontmatter + body), reusing the SDK's own safe YAML
-    dumper (``dna.kernel.generic_rw.safe_yaml_dump``) for the same
+    dumper (``dna.kernel.source.generic_rw.safe_yaml_dump``) for the same
     round-trip-robust scalar styling every DNA bundle marker gets."""
-    from dna.kernel.generic_rw import safe_yaml_dump
+    from dna.kernel.source.generic_rw import safe_yaml_dump
 
     fm = {k: v for k, v in doc.items() if k != "content"}
     content = doc.get("content") or ""
@@ -482,7 +482,7 @@ def _validate_mif_doc(doc: dict[str, Any], source: str) -> None:
 
 
 def _read_mif_md(md_path: Path) -> dict[str, Any]:
-    from dna.kernel.generic_rw import _parse_frontmatter
+    from dna.kernel.source.generic_rw import _parse_frontmatter
 
     text = md_path.read_text(encoding="utf-8")
     fm, body = _parse_frontmatter(text, source=str(md_path))

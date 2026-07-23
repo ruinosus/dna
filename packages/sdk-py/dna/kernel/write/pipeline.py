@@ -177,7 +177,7 @@ class WritePipeline:
         if mode == "off" or port is None or not isinstance(raw, dict):
             return
 
-        from dna.kernel.references import (  # noqa: PLC0415
+        from dna.kernel.query.references import (  # noqa: PLC0415
             declared_references, reference_values,
         )
 
@@ -328,7 +328,7 @@ class WritePipeline:
         if not host.hooks.has("post_save"):
             return
         from dna.kernel.hooks import HookContext
-        from dna.kernel.events import derive_event_type
+        from dna.kernel.boot.events import derive_event_type
         # Parity with typescript/src/kernel/index.ts::_emitPostSave:
         # scope is a HookContext top-level field (subscribers like
         # EvidenceCaptureHook read ctx.scope directly — stuffing it into

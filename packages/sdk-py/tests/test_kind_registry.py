@@ -9,7 +9,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from dna.kernel import Kernel
-from dna.kernel.kind_registry import KindRegistry
+from dna.kernel.kinds.registry import KindRegistry
 
 
 def _kp(kind, alias, container, api="x/v1"):

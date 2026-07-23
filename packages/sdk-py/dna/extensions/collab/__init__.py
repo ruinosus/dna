@@ -6,7 +6,7 @@ They enable audit trails, discussions, and status-change history.
 from __future__ import annotations
 from typing import Any
 from dna.kernel.protocols import ExtensionHost, StorageDescriptor
-from dna.kernel.kind_base import KindBase
+from dna.kernel.kinds.base import KindBase
 
 
 class CommentKind(KindBase):

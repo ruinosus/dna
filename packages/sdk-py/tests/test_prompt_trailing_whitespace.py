@@ -109,7 +109,7 @@ class TestPromptKernelLazyPath:
         from types import SimpleNamespace
 
         from dna.kernel.document import Document
-        from dna.kernel.prompt_kernel import build_prompt_async
+        from dna.kernel.prompt.engine import build_prompt_async
 
         agent_raw = {
             "apiVersion": "v1", "kind": "Agent",

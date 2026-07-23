@@ -98,8 +98,8 @@ async def validate_composition_async(
     (``KindRegistry.resolve_dep_filter_target``) do
     ``mi.composition.validate()`` — só muda o plano de entrada.
     """
-    from dna.kernel.composition_resolver import validate_refs
-    from dna.kernel.kind_registry import KindRegistry
+    from dna.kernel.compose.resolver import validate_refs
+    from dna.kernel.kinds.registry import KindRegistry
 
     docs_by_kind = await _docs_by_kind(kernel, scope, tenant=tenant)
     all_docs = [d for docs in docs_by_kind.values() for d in docs]
@@ -151,7 +151,7 @@ async def scope_inventory_async(
         for d in docs:
             doc_index[(d.kind, d.name)] = True
 
-    from dna.kernel.kind_registry import KindRegistry
+    from dna.kernel.kinds.registry import KindRegistry
     registry = KindRegistry(kernel._kinds)
 
     def _resolve_kind(filter_value: str) -> str | None:

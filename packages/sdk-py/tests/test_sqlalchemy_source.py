@@ -95,7 +95,7 @@ def test_notify_payload_builder_is_shared():
     the same objects the PostgresEventBus subscriber side reads."""
     _require_sqlalchemy()
     from dna.adapters import sqlalchemy_ as sam
-    from dna.kernel import eventbus as ebm
+    from dna.kernel.boot import eventbus as ebm
 
     assert sam.source.build_notify_payload is ebm.build_notify_payload
     assert sam.source.KERNEL_EVENTBUS_CHANNEL == ebm.KERNEL_EVENTBUS_CHANNEL
@@ -211,7 +211,7 @@ class _CorruptMarkerReader:
         return handle.exists("STORY.md")
 
     def read(self, handle) -> dict:
-        from dna.kernel.generic_rw import FrontmatterParseWarning
+        from dna.kernel.source.generic_rw import FrontmatterParseWarning
         warnings.warn("bad frontmatter", FrontmatterParseWarning, stacklevel=2)
         return {
             "apiVersion": "github.com/ruinosus/dna/sdlc/v1", "kind": "Story",
@@ -229,7 +229,7 @@ class _HealthyMarkerReader(_CorruptMarkerReader):
 
 @pytest.mark.asyncio
 async def test_frontmatter_net_falls_back_to_canonical_row(sa_sqlite):
-    from dna.kernel.generic_rw import FrontmatterParseWarning
+    from dna.kernel.source.generic_rw import FrontmatterParseWarning
 
     raw = _story("s-fm", description="precious spec field")
     await sa_sqlite.save_document("fmnet", "Story", "s-fm", raw)
@@ -406,7 +406,7 @@ async def test_pg_write_emits_outbox_seq_and_notify_with_raw_parity(sa_pg):
     dna_versions_seq + fires pg_notify — and the received payload is
     byte-identical to what the raw adapter's builder produces."""
     import asyncpg
-    from dna.kernel.eventbus import (
+    from dna.kernel.boot.eventbus import (
         KERNEL_EVENTBUS_CHANNEL, build_notify_payload as _build_notify_payload,
     )
 

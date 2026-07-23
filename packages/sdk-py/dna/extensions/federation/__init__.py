@@ -32,7 +32,7 @@ from __future__ import annotations
 from typing import Any, Iterable, Mapping
 
 from dna.kernel.protocols import ExtensionHost, StorageDescriptor
-from dna.kernel.kind_base import KindBase
+from dna.kernel.kinds.base import KindBase
 
 _API_VERSION = "github.com/ruinosus/dna/federation/v1"
 _ORIGIN = "github.com/ruinosus/dna/federation"

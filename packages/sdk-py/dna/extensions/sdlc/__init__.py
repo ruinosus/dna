@@ -26,9 +26,9 @@ no longer parses; legacy YAMLs must be migrated.
 """
 from __future__ import annotations
 from typing import Any
-from dna.kernel.descriptor_loader import load_descriptors
+from dna.kernel.source.descriptor_loader import load_descriptors
 from dna.kernel.protocols import ExtensionHost, ReaderPort, StorageDescriptor, TenantScope, WriterPort
-from dna.kernel.kind_base import KindBase
+from dna.kernel.kinds.base import KindBase
 
 
 # ---------------------------------------------------------------------------

@@ -32,7 +32,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from dna.kernel import Kernel
-from dna.kernel.kind_base import KindBase
+from dna.kernel.kinds.base import KindBase
 from dna.kernel.protocols import StorageDescriptor, TenantScope
 
 # pytest puts tests/ on sys.path → import the canonical fake source directly.

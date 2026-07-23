@@ -24,7 +24,7 @@ from click.testing import CliRunner
 
 from dna_cli._ctx import SESSION_PROVIDER_KEY
 from dna_cli.doc_cmd import doc
-from dna.kernel.prompt_budget import PromptBudgetExceededError
+from dna.kernel.prompt.budget import PromptBudgetExceededError
 
 
 @pytest.fixture

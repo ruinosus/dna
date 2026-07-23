@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from dna.kernel.module_lock import (
+from dna.kernel.lock.module import (
     LOCKFILE_VERSION,
     OutdatedReport,
     GenomeEntry,

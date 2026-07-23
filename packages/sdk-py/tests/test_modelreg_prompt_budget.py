@@ -30,7 +30,7 @@ from dna.adapters.filesystem.writable import FilesystemWritableSource
 from dna.extensions.helix import HelixExtension
 from dna.extensions.modelreg import ModelRegExtension
 from dna.kernel import Kernel
-from dna.kernel.prompt_budget import PromptBudgetExceededError
+from dna.kernel.prompt.budget import PromptBudgetExceededError
 from dna.kernel.protocols import TenantScope
 
 

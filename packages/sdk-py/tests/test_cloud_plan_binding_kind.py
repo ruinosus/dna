@@ -16,8 +16,8 @@ its failure mode impossible.
 What is covered:
 
 1. the ``cloud`` extension registers AccountPlan from its descriptor
-   (``kinds/account-plan.kind.yaml`` — record plane, GLOBAL, alias
-   ``cloud-account-plan``), and ``WorkspacePlan`` is GONE and WRITE-BLOCKED
+   (``kinds/plan-binding.kind.yaml`` — record plane, GLOBAL, alias
+   ``cloud-plan-binding``), and ``WorkspacePlan`` is GONE and WRITE-BLOCKED
    (tombstoned in ``Kernel._REMOVED_KINDS``, not silently deleted);
 2. ``kernel.account_plan`` resolves by ``spec.account_id`` — the assignment
    comes from the DOC dna-cloud writes, never a literal;
@@ -51,7 +51,7 @@ def _account_plan(account_id: str, *, tier_id: str, source: str = "stripe",
     Stripe webhook writes — never in code."""
     return {
         "apiVersion": _CLOUD_API,
-        "kind": "AccountPlan",
+        "kind": "PlanBinding",
         "metadata": {"name": account_id},
         "spec": {
             "account_id": account_id,
@@ -99,9 +99,9 @@ async def _kernel(tmp_path) -> Kernel:
 def test_account_plan_kind_registered_from_descriptor():
     k = Kernel()
     k.load(CloudExtension())
-    kp = k.kind_port_for("AccountPlan")
+    kp = k.kind_port_for("PlanBinding")
     assert kp is not None
-    assert kp.alias == "cloud-account-plan"
+    assert kp.alias == "cloud-plan-binding"
     assert kp.plane == "record"
     # GLOBAL — a shared base registry, no per-tenant override. It HAS to be: an
     # account sits above every workspace it owns.
@@ -116,8 +116,8 @@ def test_cloud_registers_tier_and_account_plan_and_no_workspace_plan():
     never registered here."""
     k = Kernel()
     k.load(CloudExtension())
-    assert k.kind_port_for("Tier") is not None
-    assert k.kind_port_for("AccountPlan") is not None
+    assert k.kind_port_for("PricingPlan") is not None
+    assert k.kind_port_for("PlanBinding") is not None
     assert k.kind_port_for("WorkspacePlan") is None
     assert k.kind_port_for("TenantPlan") is None
     assert k.kind_port_for("Plan") is None
@@ -135,7 +135,7 @@ def test_workspace_plan_is_tombstoned_not_silently_deleted():
     turns that into a loud failure, and the note tells the writer where to go."""
     assert "WorkspacePlan" in Kernel._REMOVED_KINDS
     note = Kernel._REMOVED_KIND_NOTES["WorkspacePlan"]
-    assert "AccountPlan" in note
+    assert "PlanBinding" in note
 
 
 @pytest.mark.asyncio
@@ -150,7 +150,7 @@ async def test_writing_a_workspace_plan_is_refused(tmp_path):
         )
     # The error must NAME the replacement — a blocked writer has to learn where
     # the data went, not merely that it is blocked.
-    assert "AccountPlan" in str(exc.value)
+    assert "PlanBinding" in str(exc.value)
 
 
 # ---------------------------------------------------------------------------
@@ -160,7 +160,7 @@ async def test_writing_a_workspace_plan_is_refused(tmp_path):
 @pytest.mark.asyncio
 async def test_account_plan_resolves_from_doc(tmp_path):
     k = await _kernel(tmp_path)
-    await k.write_document("_lib", "AccountPlan", "acct-acme",
+    await k.write_document("_lib", "PlanBinding", "acct-acme",
                            _account_plan("acct-acme", tier_id="pro"))
 
     plan = await k.account_plan("acct-acme")
@@ -174,7 +174,7 @@ async def test_account_plan_resolves_from_doc(tmp_path):
 @pytest.mark.asyncio
 async def test_account_plan_unknown_account_returns_none(tmp_path):
     k = await _kernel(tmp_path)
-    await k.write_document("_lib", "AccountPlan", "acct-acme",
+    await k.write_document("_lib", "PlanBinding", "acct-acme",
                            _account_plan("acct-acme", tier_id="pro"))
     assert await k.account_plan("acct-globex") is None
 
@@ -183,11 +183,11 @@ async def test_account_plan_unknown_account_returns_none(tmp_path):
 async def test_account_plan_assignment_is_data_not_code(tmp_path):
     """Rewrite the assignment, re-read, new tier — no redeploy."""
     k = await _kernel(tmp_path)
-    await k.write_document("_lib", "AccountPlan", "acct-acme",
+    await k.write_document("_lib", "PlanBinding", "acct-acme",
                            _account_plan("acct-acme", tier_id="pro"))
     assert (await k.account_plan("acct-acme"))["spec"]["tier_id"] == "pro"
     await k.write_document(
-        "_lib", "AccountPlan", "acct-acme",
+        "_lib", "PlanBinding", "acct-acme",
         _account_plan("acct-acme", tier_id="free", status="canceled"),
     )
     assert (await k.account_plan("acct-acme"))["spec"]["tier_id"] == "free"
@@ -203,7 +203,7 @@ async def test_account_id_is_an_opaque_key_of_any_shape(tmp_path):
     k = await _kernel(tmp_path)
     for account_id in ("c5b891f7-65c2-4417-a5af-22cab24dc1d5",
                        "org_01HXYZABCDEF", "example.com"):
-        await k.write_document("_lib", "AccountPlan", account_id,
+        await k.write_document("_lib", "PlanBinding", account_id,
                                _account_plan(account_id, tier_id="enterprise"))
         plan = await k.account_plan(account_id)
         assert plan is not None
@@ -223,7 +223,7 @@ async def test_one_account_plan_covers_every_workspace_the_account_owns(tmp_path
     own doc, and the third (created later) would have been stranded on Free until
     something remembered to fan out to it."""
     k = await _kernel(tmp_path)
-    await k.write_document("_lib", "AccountPlan", "acct-acme",
+    await k.write_document("_lib", "PlanBinding", "acct-acme",
                            _account_plan("acct-acme", tier_id="pro"))
     for ws in ("ws-aaa", "ws-bbb", "ws-ccc"):
         await k.write_document("_lib", "Workspace", ws,
@@ -240,7 +240,7 @@ async def test_a_new_workspace_needs_no_second_write_to_be_covered(tmp_path):
     """Creating the second workspace is not a second charge and not a second
     write. Assert the AccountPlan doc is untouched by the new workspace."""
     k = await _kernel(tmp_path)
-    await k.write_document("_lib", "AccountPlan", "acct-acme",
+    await k.write_document("_lib", "PlanBinding", "acct-acme",
                            _account_plan("acct-acme", tier_id="pro"))
     before = await k.account_plan("acct-acme")
 
@@ -265,7 +265,7 @@ async def test_workspace_without_account_id_resolves_to_no_plan(tmp_path):
     Crucially it does not get a plan even though a paid AccountPlan exists in the
     same store: "no account" must never degrade into "some account"."""
     k = await _kernel(tmp_path)
-    await k.write_document("_lib", "AccountPlan", "acct-acme",
+    await k.write_document("_lib", "PlanBinding", "acct-acme",
                            _account_plan("acct-acme", tier_id="pro"))
     await k.write_document("_lib", "Workspace", "ws-orphan",
                            _workspace("ws-orphan", account_id=None))
@@ -279,7 +279,7 @@ async def test_workspace_without_account_id_resolves_to_no_plan(tmp_path):
 @pytest.mark.asyncio
 async def test_unknown_workspace_resolves_to_no_account(tmp_path):
     k = await _kernel(tmp_path)
-    await k.write_document("_lib", "AccountPlan", "acct-acme",
+    await k.write_document("_lib", "PlanBinding", "acct-acme",
                            _account_plan("acct-acme", tier_id="pro"))
     assert await k.account_for_workspace("ws-does-not-exist") is None
 
@@ -296,8 +296,8 @@ async def test_blank_account_key_cannot_match_a_blank_keyed_doc(tmp_path):
     k = await _kernel(tmp_path)
     # Write the malformed doc past schema validation, as a raw source write would.
     await k.write_document(
-        "_lib", "AccountPlan", "blank",
-        {"apiVersion": _CLOUD_API, "kind": "AccountPlan",
+        "_lib", "PlanBinding", "blank",
+        {"apiVersion": _CLOUD_API, "kind": "PlanBinding",
          "metadata": {"name": "blank"},
          "spec": {"account_id": "", "tier_id": "enterprise"}},
     )
@@ -320,7 +320,7 @@ async def test_one_accounts_plan_never_reaches_another_accounts_workspace(tmp_pa
     resolution path may give a Globex workspace Acme's tier — not by ordering,
     not by fallback, not by "the only plan in the store"."""
     k = await _kernel(tmp_path)
-    await k.write_document("_lib", "AccountPlan", "acct-acme",
+    await k.write_document("_lib", "PlanBinding", "acct-acme",
                            _account_plan("acct-acme", tier_id="pro"))
     await k.write_document("_lib", "Workspace", "ws-acme",
                            _workspace("ws-acme", account_id="acct-acme"))
@@ -346,7 +346,7 @@ async def test_a_guest_workspace_does_not_inherit_the_payers_plan(tmp_path):
     the workspace's OWN ``account_id``, so membership is irrelevant and the guest
     workspace stays on its founder's account."""
     k = await _kernel(tmp_path)
-    await k.write_document("_lib", "AccountPlan", "acct-acme",
+    await k.write_document("_lib", "PlanBinding", "acct-acme",
                            _account_plan("acct-acme", tier_id="pro"))
     # Founded by Globex; Acme's owner merely holds a membership in it.
     await k.write_document("_lib", "Workspace", "ws-globex-founded",
@@ -372,7 +372,7 @@ async def test_legacy_workspace_resolves_once_its_account_is_backfilled(tmp_path
     special case anywhere in the resolver."""
     k = await _kernel(tmp_path)
     tid = "c5b891f7-65c2-4417-a5af-22cab24dc1d5"
-    await k.write_document("_lib", "AccountPlan", tid,
+    await k.write_document("_lib", "PlanBinding", tid,
                            _account_plan(tid, tier_id="pro"))
     await k.write_document("_lib", "Workspace", tid,
                            _workspace(tid, account_id=tid))
@@ -397,7 +397,7 @@ async def test_there_is_no_workspace_id_is_its_own_account_fallback(tmp_path):
     writing the fact down, not by a rule that would outlive it."""
     k = await _kernel(tmp_path)
     tid = "c5b891f7-65c2-4417-a5af-22cab24dc1d5"
-    await k.write_document("_lib", "AccountPlan", tid,
+    await k.write_document("_lib", "PlanBinding", tid,
                            _account_plan(tid, tier_id="pro"))
     # The SAME workspace, but its account_id was never backfilled.
     await k.write_document("_lib", "Workspace", tid,

@@ -9,7 +9,7 @@ representative Kinds.
 from __future__ import annotations
 
 from dna.kernel import Kernel
-from dna.kernel.kind_base import KindBase
+from dna.kernel.kinds.base import KindBase
 
 
 # The original hardcoded frozensets (pre-refactor), locked here as the oracle.

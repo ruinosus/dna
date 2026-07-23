@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from dna.kernel.templates import Template, materialize
+from dna.kernel.compose.templates import Template, materialize
 
 
 def test_template_dataclass_roundtrip():
@@ -124,7 +124,7 @@ def test_extension_with_templates_returns_list():
 def test_template_reexported_from_protocols():
     """Template must be importable from kernel.protocols for API convenience."""
     from dna.kernel.protocols import Template as ProtocolsTemplate
-    from dna.kernel.templates import Template as TemplatesTemplate
+    from dna.kernel.compose.templates import Template as TemplatesTemplate
 
     # Same class object (re-export, not re-definition)
     assert ProtocolsTemplate is TemplatesTemplate
@@ -207,7 +207,7 @@ def test_materialize_rejects_invalid_on_conflict(tmp_path):
     )
     import pytest
     with pytest.raises(ValueError, match="unknown on_conflict"):
-        from dna.kernel.templates import materialize
+        from dna.kernel.compose.templates import materialize
         materialize(t, target_root=tmp_path / "dst", on_conflict="overwite")  # noqa: typo intentional
 
 

@@ -36,7 +36,7 @@ import json
 import logging
 from typing import Any, TYPE_CHECKING
 
-from dna.kernel.eventbus import (
+from dna.kernel.boot.eventbus import (
     KERNEL_EVENTBUS_CHANNEL,
     KernelEvent,
     KernelEventBus,

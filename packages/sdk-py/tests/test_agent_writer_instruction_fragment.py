@@ -9,7 +9,7 @@ fix (every write path benefits; the CLI band-aids become redundant).
 from __future__ import annotations
 
 from dna.extensions.helix import AgentWriter
-from dna.kernel.bundle_handle import DictBundleHandle
+from dna.kernel.bundle.handle import DictBundleHandle
 
 
 def _raw(spec):

@@ -18,7 +18,7 @@ see the descriptor header for the honest subset notes — what was cut
 """
 from __future__ import annotations
 
-from dna.kernel.descriptor_loader import load_descriptors
+from dna.kernel.source.descriptor_loader import load_descriptors
 from dna.kernel.protocols import ExtensionHost
 
 

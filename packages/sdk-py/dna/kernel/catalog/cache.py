@@ -93,8 +93,8 @@ class CatalogCache:
         across all scopes + read the tenant lockfile, then delegate to the pure
         ``resolve_catalog_scopes``. The base scope is excluded here so the cached
         value never carries it."""
-        from dna.kernel.catalog_tier import resolve_catalog_scopes
-        from dna.kernel.module_lock import (
+        from dna.kernel.catalog.pricing_plan import resolve_catalog_scopes
+        from dna.kernel.lock.module import (
             load_lockfile, resolve_lockfile_root,
         )
 

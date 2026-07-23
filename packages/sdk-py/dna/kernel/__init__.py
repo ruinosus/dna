@@ -16,7 +16,7 @@ from dna.kernel.errors import (
     ExtensionLoadError, KindRegistrationError, ReaderRegistrationError,
     WriterRegistrationError,
 )
-from dna.kernel.kind_registry import (
+from dna.kernel.kinds.registry import (
     # _load_kind_docs moved into the KindRegistry module with the registration
     # funnel (s-kernel-decomp-f3-kindregistry); re-exported here so the historical
     # ``from dna.kernel import _load_kind_docs`` importer keeps working.
@@ -33,7 +33,7 @@ from dna.kernel.protocols import (
     SYSTEM_SCOPE, Template, ToolDefinition, WritableSourcePort, WriterPort,
 )
 from dna.kernel.instance import ManifestInstance  # noqa: F401 — used in deferred-eval annotations
-from dna.kernel.templates import OnConflict
+from dna.kernel.compose.templates import OnConflict
 
 logger = logging.getLogger(__name__)
 
@@ -196,7 +196,7 @@ class Kernel:
         # lookups extracted to a collaborator (kernel-decompose-continue). The
         # ``_kinds`` property below proxies to it so the ~20 inline access sites
         # (and registration in kind()/load()/_register_*) keep mutating one dict.
-        from dna.kernel.kind_registry import KindRegistry
+        from dna.kernel.kinds.registry import KindRegistry
         # s-kernel-decomp-f3-kindregistry — the registry now OWNS the
         # registration funnel (kind()/kind_from_descriptor/2-phase load); it
         # reaches the wider kernel (hooks, _readers rescan gate, generic-rw
@@ -210,18 +210,18 @@ class Kernel:
         # register time. Extracted to the ToolRegistry collaborator
         # (kernel-decompose-continue); one registry shared across with_tenant
         # copies (tools are global, not tenant-scoped).
-        from dna.kernel.tool_registry import ToolRegistry
+        from dna.kernel.registry.tool import ToolRegistry
         self._toolreg = ToolRegistry()
 
         # s-kernel-decompose-god-object — layer-write policy enforcement
         # (LOCKED/RESTRICTED/OPEN) extracted to a collaborator
         # (kernel-decompose-continue), holding a back-ref to this kernel.
-        from dna.kernel.layer_policy import LayerPolicyEnforcer
+        from dna.kernel.compose.layer_policy import LayerPolicyEnforcer
         self._layerpol = LayerPolicyEnforcer(self)
 
         # s-kernel-decompose-god-object — bundle-entry + document serialization
         # I/O extracted to a collaborator (kernel-decompose-continue).
-        from dna.kernel.bundle_io import BundleIO
+        from dna.kernel.bundle.io import BundleIO
         self._bundleio = BundleIO(self)
 
         # s-kernel-decompose-god-object — the Composition-V2 engine (Phase 17:
@@ -229,7 +229,7 @@ class Kernel:
         # extracted to a collaborator (kernel-decompose-continue), back-ref to
         # this kernel. ``_layer_observers`` stays kernel state (shared with
         # _invalidate_internal); the resolver reads/writes it via the back-ref.
-        from dna.kernel.composition_resolver import CompositionResolver
+        from dna.kernel.compose.resolver import CompositionResolver
         self._composition = CompositionResolver(self)
 
         # s-kernel-decompose-god-object — cache-coherence fan-out (write-observer
@@ -237,7 +237,7 @@ class Kernel:
         # collaborator (kernel-decompose-continue); all batch/observer/holder
         # state stays on the kernel (preserves with_tenant shallow-copy). The
         # kernel keeps write_document/delete_document (its mediation core).
-        from dna.kernel.invalidation import InvalidationController
+        from dna.kernel.boot.invalidation import InvalidationController
         self._invctl = InvalidationController(self)
 
         # s-kernel-decomp-f2-writepipeline — the fat document write/delete
@@ -248,13 +248,13 @@ class Kernel:
         # validation, _REMOVED_KINDS block, record-plane demotion, OTel span).
         # It receives the narrow ``WriteHost`` Protocol — the kernel satisfies
         # it structurally; all side effects route THROUGH the host.
-        from dna.kernel.write_pipeline import WritePipeline
+        from dna.kernel.write.pipeline import WritePipeline
         self._write_pipeline = WritePipeline(self)
 
         # s-kernel-decompose-god-object — ManifestInstance construction
         # (build/instance/instance_async/resolve_layers + rescan helpers)
         # extracted to a collaborator (kernel-decompose-continue), back-ref.
-        from dna.kernel.instance_builder import InstanceBuilder
+        from dna.kernel.compose.instance_builder import InstanceBuilder
         self._builder = InstanceBuilder(self)
         self._profiles: list = []  # CompositionProfile objects
         self._extensions: list[Extension] = []
@@ -285,7 +285,7 @@ class Kernel:
         # (base MI + granular list/doc) extracted to a collaborator. Created
         # eagerly so ``with_tenant`` shallow copies share ONE cache (granular
         # keys carry the tenant; the base tier is pre-tenant → safe to share).
-        from dna.kernel.kernel_cache import KernelCache
+        from dna.kernel.boot.cache import KernelCache
         self._kcache = KernelCache(
             base_max=self._BASE_INSTANCE_MAX,
             list_ttl=self._GRANULAR_LIST_TTL,
@@ -296,14 +296,14 @@ class Kernel:
         # s-kernel-decompose-god-object — the source-sync engine (s-sync-s1..s5:
         # digest_manifest / diff_manifests / push_scope) extracted to a
         # collaborator holding a back-ref to this kernel.
-        from dna.kernel.source_sync import SourceSync
+        from dna.kernel.source.sync import SourceSync
         self._sync = SourceSync(self)
 
         # s-kernel-decompose-god-object — the read surface (query push-down +
         # get_document + the two sync wrappers) extracted to a STATELESS back-ref
         # collaborator (kernel-decompose-continue). It reads ``tenant`` for the
         # query tenant auto-stamp, so ``with_tenant`` rebinds it to the copy.
-        from dna.kernel.query_engine import QueryEngine
+        from dna.kernel.query.engine import QueryEngine
         self._query = QueryEngine(self)
 
         # Two-planes F2 (D2) — the registered RecordSearchProvider for
@@ -349,10 +349,10 @@ class Kernel:
         #    stays kernel-owned + shared by identity across with_tenant copies
         #    (spec Risk #3); the collaborator is stateless compute over it.
         #  - SourceFacade: read-only source-adapter introspection.
-        from dna.kernel.registry_accessor import RegistryAccessor
-        from dna.kernel.search_engine import SearchEngine
-        from dna.kernel.catalog_cache import CatalogCache
-        from dna.kernel.source_facade import SourceFacade
+        from dna.kernel.registry.accessor import RegistryAccessor
+        from dna.kernel.query.search import SearchEngine
+        from dna.kernel.catalog.cache import CatalogCache
+        from dna.kernel.source.facade import SourceFacade
         self._registry = RegistryAccessor(self)
         self._search = SearchEngine(self)
         self._catalog = CatalogCache(self)
@@ -393,14 +393,14 @@ class Kernel:
         # (_kcache / _toolreg / _kindreg) stay shared — their state is global
         # across tenant views. (Pre-extraction these were methods bound to the
         # copy via self; rebinding restores that exactly.)
-        from dna.kernel.source_sync import SourceSync
-        from dna.kernel.layer_policy import LayerPolicyEnforcer
-        from dna.kernel.bundle_io import BundleIO
-        from dna.kernel.composition_resolver import CompositionResolver
-        from dna.kernel.invalidation import InvalidationController
-        from dna.kernel.instance_builder import InstanceBuilder
-        from dna.kernel.query_engine import QueryEngine
-        from dna.kernel.write_pipeline import WritePipeline
+        from dna.kernel.source.sync import SourceSync
+        from dna.kernel.compose.layer_policy import LayerPolicyEnforcer
+        from dna.kernel.bundle.io import BundleIO
+        from dna.kernel.compose.resolver import CompositionResolver
+        from dna.kernel.boot.invalidation import InvalidationController
+        from dna.kernel.compose.instance_builder import InstanceBuilder
+        from dna.kernel.query.engine import QueryEngine
+        from dna.kernel.write.pipeline import WritePipeline
         new._sync = SourceSync(new)
         new._layerpol = LayerPolicyEnforcer(new)
         new._bundleio = BundleIO(new)
@@ -416,10 +416,10 @@ class Kernel:
         # through the copy so the tenant auto-stamp is the copy's), so they point
         # at THIS copy. The ``_catalog_cache`` DICT itself stays SHARED (copied by
         # reference above) — only the stateless compute wrapper is rebound.
-        from dna.kernel.registry_accessor import RegistryAccessor
-        from dna.kernel.search_engine import SearchEngine
-        from dna.kernel.catalog_cache import CatalogCache
-        from dna.kernel.source_facade import SourceFacade
+        from dna.kernel.registry.accessor import RegistryAccessor
+        from dna.kernel.query.search import SearchEngine
+        from dna.kernel.catalog.cache import CatalogCache
+        from dna.kernel.source.facade import SourceFacade
         new._registry = RegistryAccessor(new)
         new._search = SearchEngine(new)
         new._catalog = CatalogCache(new)
@@ -1072,7 +1072,7 @@ class Kernel:
     #   consumidores runtime (nenhum worker/activity o rodava), 1 doc órfão.
     #   As famílias *Experiment/*Run vivas (autoagent/autolab/eval-evolve) são
     #   subsistemas distintos e ficam. recovery: git history.
-    # WorkspacePlan → RE-KEYED to AccountPlan (s-account-scoped-plan). The
+    # WorkspacePlan → RE-KEYED to PlanBinding (s-account-scoped-plan). The
     #   subscription belongs to the BILLING ACCOUNT, not to a workspace: one plan
     #   covers every workspace the account owns, so a second workspace is never a
     #   second charge. Keying the plan per workspace forced the biller to FAN OUT
@@ -1109,8 +1109,8 @@ class Kernel:
         "OracleVerdict": "migrated to StatusReport (refactor 2026-05-11)",
         "Oracle": "never a registered Kind — UA naming convention only",
         "WorkspacePlan": (
-            "RE-KEYED to AccountPlan (s-account-scoped-plan) — the subscription "
-            "belongs to the BILLING ACCOUNT, not to a workspace: one AccountPlan "
+            "RE-KEYED to PlanBinding (s-account-scoped-plan) — the subscription "
+            "belongs to the BILLING ACCOUNT, not to a workspace: one PlanBinding "
             "covers every Workspace whose `account_id` matches, so a second "
             "workspace is never a second charge. Write "
             "AccountPlan{account_id, tier_id} (PUT /v1/account-plan) and read it "
@@ -1666,9 +1666,9 @@ class Kernel:
 
         Raises ``KeyError`` if no loaded extension advertises a template
         with the given id. ``on_conflict`` is passed through to
-        :func:`dna.kernel.templates.materialize`.
+        :func:`dna.kernel.compose.templates.materialize`.
         """
-        from dna.kernel.templates import materialize
+        from dna.kernel.compose.templates import materialize
         for t in self.list_templates():
             if t.id == template_id:
                 return materialize(
@@ -1683,7 +1683,7 @@ class Kernel:
         if self._generics_resolved:
             return
         self._generics_resolved = True
-        from dna.kernel.generic_rw import GenericBundleReader, GenericBundleWriter
+        from dna.kernel.source.generic_rw import GenericBundleReader, GenericBundleWriter
         from dna.kernel.protocols import StoragePattern
         for kp in self._kinds.values():
             sd = getattr(kp, 'storage', None)
@@ -1830,7 +1830,7 @@ class Kernel:
     ) -> "dict[str, list[tuple[str, str]]]":
         """s-sync-s4 — set-diff two digest manifests. Pure + O(n). Delegates to
         ``SourceSync.diff_manifests`` (s-kernel-decompose-god-object)."""
-        from dna.kernel.source_sync import SourceSync
+        from dna.kernel.source.sync import SourceSync
         return SourceSync.diff_manifests(a, b)
 
     async def push_scope(
@@ -2042,7 +2042,7 @@ class Kernel:
         F1 ``FakeKernelSlice`` guard (whose composition fake exposes no ``query``).
         It is a thin aggregation over the ``query`` facade + ``_compute_resolution_chain``.
         """
-        from dna.kernel.resolver import DEFAULT_INHERITABLE_KINDS_V1
+        from dna.kernel.query.resolver import DEFAULT_INHERITABLE_KINDS_V1
 
         # Parent chain: derived from Genome.parent_scope + V1 fallback.
         chain = await self._compute_resolution_chain(scope, None)
@@ -2578,7 +2578,7 @@ class Kernel:
         ``build_quick_manifest`` (kernel decomposition, Fase 4 —
         ``s-kernel-decomp-f4-bootstrap``). ``cls`` is threaded through so a
         subclass (e.g. ``Runtime``) is what gets built."""
-        from dna.kernel.kernel_bootstrap import build_quick_manifest
+        from dna.kernel.boot.bootstrap import build_quick_manifest
         return build_quick_manifest(scope, base_dir, cls=cls)
 
     @classmethod
@@ -2591,7 +2591,7 @@ class Kernel:
         ``validate_dep_filters`` gate. ``cls`` is threaded through so a subclass
         (e.g. ``Runtime``) is what gets built. See the collaborator module for
         the full recipe + rationale."""
-        from dna.kernel.kernel_bootstrap import build_auto_kernel
+        from dna.kernel.boot.bootstrap import build_auto_kernel
         return build_auto_kernel(source, cls=cls)
 
     @classmethod
@@ -2614,5 +2614,5 @@ class Kernel:
         a short-lived event loop, so call it during startup, not from inside a
         running loop.
         """
-        from dna.kernel.kernel_bootstrap import build_from_config
+        from dna.kernel.boot.bootstrap import build_from_config
         return build_from_config(path, cls=cls)
