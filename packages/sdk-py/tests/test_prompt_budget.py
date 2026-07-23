@@ -1,4 +1,4 @@
-from dna.kernel.prompt_budget import (
+from dna.kernel.prompt.budget import (
     estimate_tokens, evaluate_instruction_budget, PromptBudgetExceededError,
 )
 

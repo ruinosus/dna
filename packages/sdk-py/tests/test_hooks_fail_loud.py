@@ -91,7 +91,7 @@ async def test_build_prompt_async_reaches_async_post_build_prompt_listener():
     """The kernel's async build path fires emit_async — an async
     post_build_prompt listener is awaited, not silently skipped."""
     from dna.kernel.document import Document
-    from dna.kernel.prompt_kernel import build_prompt_async
+    from dna.kernel.prompt.engine import build_prompt_async
 
     agent_raw = {
         "apiVersion": "v1", "kind": "Agent",

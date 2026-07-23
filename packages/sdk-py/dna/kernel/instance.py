@@ -25,7 +25,7 @@ from dna.kernel.protocols import CompositionResult, KindPort, SourcePort
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from dna.kernel.prompt_builder import PromptBuilder, PromptExplanation
+    from dna.kernel.prompt.builder import PromptBuilder, PromptExplanation
     from dna.kernel.composition_resolver import CompositionEngine
     from dna.kernel.navigator import Navigator
     from dna.kernel.lock_manager import LockManager
@@ -188,7 +188,7 @@ class ManifestInstance:
     def prompt(self) -> PromptBuilder:
         """Namespace: ``mi.prompt.build()``."""
         if self._prompt_builder is None:
-            from dna.kernel.prompt_builder import PromptBuilder
+            from dna.kernel.prompt.builder import PromptBuilder
             self._prompt_builder = PromptBuilder(self)
         return self._prompt_builder
 

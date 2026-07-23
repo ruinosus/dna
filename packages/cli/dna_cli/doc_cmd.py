@@ -803,7 +803,7 @@ def _apply_one(s, raw: dict, *, path: str, doc_index: int | None,
         # PromptBudgetExceededError already includes model, cap, and
         # actionable advice — prepending "write failed:" would obscure it.
         try:
-            from dna.kernel.prompt_budget import PromptBudgetExceededError
+            from dna.kernel.prompt.budget import PromptBudgetExceededError
             if isinstance(e, PromptBudgetExceededError):
                 click.secho(str(e), fg="red", err=True)
                 raise SystemExit(1)

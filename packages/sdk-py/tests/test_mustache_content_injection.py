@@ -31,7 +31,7 @@ from pathlib import Path
 import pytest
 
 from dna.kernel import Kernel
-from dna.kernel.prompt_builder import _LIT_CLOSE, _LIT_OPEN, _two_pass_mustache
+from dna.kernel.prompt.builder import _LIT_CLOSE, _LIT_OPEN, _two_pass_mustache
 
 # ── unit level: the pure two-pass renderer ──────────────────────────────────
 
