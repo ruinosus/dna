@@ -35,7 +35,7 @@ spec:
     \ p\xFAblico re-exporta o runner real, e o dna-cloud consome sem arquivo"
   definition_of_done_source: cli-create
   created_at: '2026-07-23T14:19:36+00:00'
-  updated_at: '2026-07-23T14:19:49+00:00'
+  updated_at: '2026-07-23T14:42:09+00:00'
   timeline:
   - at: '2026-07-23T14:19:36+00:00'
     actor: claude-code
@@ -48,6 +48,16 @@ spec:
     source: cli
     from: todo
     to: in-progress
+  - at: '2026-07-23T14:42:09+00:00'
+    actor: claude-code
+    type: decision
+    source: cli
+    summary: "MCP seam completo: build_mcp_server(auth_providers=) sim\xE9trico ao\
+      \ REST + build_http_app/parse_auth_providers p\xFAblicos em serving. As duas\
+      \ camadas (porta auth=<provider> + a\xE7\xFAcar declarativo) nos dois faces,\
+      \ como SDK maduro. 9 testes serving + 31 mcp/idp verdes. Consumido pelo apps/mcp\
+      \ file-free."
+    commit_ref: 5bcd2f2c550777723d8c436cda88006646df74d5
   produces:
   - kind: Plan
     name: plan-s-serving-seams-for-apps
