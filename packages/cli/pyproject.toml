@@ -1,6 +1,6 @@
 [project]
 name = "dna-cli"
-version = "0.28.0"
+version = "0.28.1"
 description = "DNA command-line interface — the `dna` binary for the declarative SDLC + document CRUD (kernel-local, no service required)"
 readme = "README.md"
 license = "MIT"
