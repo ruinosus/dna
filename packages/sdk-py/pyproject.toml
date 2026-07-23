@@ -98,6 +98,17 @@ runtime = [
     "langchain-openai==1.3.5",
     "langchain-mcp-adapters==0.3.0",
 ]
+# C0 — the Microsoft Agent Framework runtime backend (dna.runtime adapter
+# "maf"). agent-framework = the agent runtime; agent-framework-ag-ui = the
+# AG-UI bridge (first-party, agent_framework.ag_ui). Both distribution names
+# confirmed live on PyPI (HTTP 200 on the JSON API); latest as of this pin
+# check: agent-framework 1.12.1, agent-framework-ag-ui 1.0.0. Left unpinned —
+# pin once the adapter's actual API surface against a specific version is
+# verified live in Task 5. Deliberately OUT of `all`/`dev`, same rationale as
+# `runtime`: heavy, and only the maf adapter imports it (deferred import
+# inside dna.runtime.port._ensure_runtimes / the adapter's own build()).
+# Install to use the MAF backend: pip install "dna-sdk[maf]".
+maf = ["agent-framework", "agent-framework-ag-ui"]
 all = ["dna-sdk[postgres,sqlite,sql]"]
 dev = [
     "pytest>=7.0",
