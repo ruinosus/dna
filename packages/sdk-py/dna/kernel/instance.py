@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from dna.kernel.prompt.builder import PromptBuilder, PromptExplanation
     from dna.kernel.composition_resolver import CompositionEngine
     from dna.kernel.navigator import Navigator
-    from dna.kernel.lock_manager import LockManager
+    from dna.kernel.lock.manager import LockManager
     from dna.kernel.lock import Lockfile
     from dna.kernel.reports import ReportBuilder
 
@@ -212,7 +212,7 @@ class ManifestInstance:
     def lock(self) -> LockManager:
         """Namespace: ``mi.lock.generate()``."""
         if self._lock_manager is None:
-            from dna.kernel.lock_manager import LockManager
+            from dna.kernel.lock.manager import LockManager
             self._lock_manager = LockManager(self)
         return self._lock_manager
 

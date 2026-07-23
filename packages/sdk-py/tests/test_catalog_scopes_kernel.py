@@ -11,7 +11,7 @@ import asyncio
 import pytest
 
 from dna.kernel import Kernel
-from dna.kernel.module_lock import (
+from dna.kernel.lock.module import (
     GenomeEntry,
     GenomeLockfile,
     resolve_lockfile_root,
