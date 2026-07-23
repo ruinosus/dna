@@ -19,7 +19,6 @@ def test_unknown_runtime_names_available():
     assert "nope" in str(e.value)
 
 
-@pytest.mark.xfail(reason="adapters land in Tasks 2 & 5")
 def test_builtins_langchain_and_maf_register():
     # _ensure_runtimes registers the two built-ins lazily
     assert "langchain" in available_runtimes()
