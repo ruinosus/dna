@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any
 import aiofiles
 import yaml
 
-from dna.kernel.bundle_handle import FilesystemBundleHandle
+from dna.kernel.bundle.handle import FilesystemBundleHandle
 from dna.kernel.protocols import SourcePort
 
 if TYPE_CHECKING:

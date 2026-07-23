@@ -64,7 +64,7 @@ import yaml
 
 from dna.kernel.kinds.base import KindBase
 from dna.kernel.protocols import ExtensionHost, StorageDescriptor, WriterPort
-from dna.kernel.bundle_handle import BundleHandle
+from dna.kernel.bundle.handle import BundleHandle
 from dna.kernel.generic_rw import MarkdownBundleReader
 
 

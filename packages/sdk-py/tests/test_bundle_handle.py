@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from dna.kernel.bundle_handle import (
+from dna.kernel.bundle.handle import (
     BundleHandle,
     DictBundleHandle,
     FilesystemBundleHandle,

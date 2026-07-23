@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from dna.kernel.bundle_handle import FilesystemBundleHandle
+from dna.kernel.bundle.handle import FilesystemBundleHandle
 
 
 def _make_agent_bundle(tmp: Path, name: str, frontmatter: str, body: str) -> Path:

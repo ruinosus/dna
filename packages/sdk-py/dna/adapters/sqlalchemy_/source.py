@@ -583,7 +583,7 @@ class SqlAlchemySource(WritableSourcePort):
             val: str | bytes = bytes(cb) if cb else e.content
             entries_by_key.setdefault((e.kind, e.name), {})[e.entry_path] = val
 
-        from dna.kernel.bundle_handle import DictBundleHandle
+        from dna.kernel.bundle.handle import DictBundleHandle
         out: list[dict[str, Any]] = []
         for r in doc_rows:
             entries = entries_by_key.get((r.kind, r.name))
@@ -685,7 +685,7 @@ class SqlAlchemySource(WritableSourcePort):
                     cb = e.content_binary if self._is_pg else None
                     entries[e.entry_path] = bytes(cb) if cb else e.content
                 if entries and effective_readers:
-                    from dna.kernel.bundle_handle import DictBundleHandle
+                    from dna.kernel.bundle.handle import DictBundleHandle
                     handle = DictBundleHandle(name, entries)
                     for reader in effective_readers:
                         try:
@@ -868,7 +868,7 @@ class SqlAlchemySource(WritableSourcePort):
                     )
                 )).all()
                 if erows:
-                    from dna.kernel.bundle_handle import DictBundleHandle
+                    from dna.kernel.bundle.handle import DictBundleHandle
                     entries_by_name: dict[str, dict[str, str]] = {}
                     for e in erows:
                         entries_by_name.setdefault(e.name, {})[e.entry_path] = e.content
@@ -1024,7 +1024,7 @@ class SqlAlchemySource(WritableSourcePort):
         # identical logic to both raw adapters).
         bundle_text: dict[str, str] | None = None
         bundle_bin: dict[str, bytes] | None = None
-        from dna.kernel.bundle_handle import DictBundleHandle
+        from dna.kernel.bundle.handle import DictBundleHandle
         for w in self._writers:
             if w.can_write(raw):
                 handle = DictBundleHandle(name, {})

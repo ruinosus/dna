@@ -14,7 +14,7 @@ from enum import Enum, StrEnum
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, Protocol, runtime_checkable
 
-from dna.kernel.bundle_handle import BundleHandle  # noqa: F401  re-exported for typing
+from dna.kernel.bundle.handle import BundleHandle  # noqa: F401  re-exported for typing
 
 if TYPE_CHECKING:
     from dna.kernel.capabilities import SourceCapabilities
@@ -901,7 +901,7 @@ class ReaderPort(Protocol):
     Phase 8 (PR1) — ``detect`` and ``read`` now receive a
     ``BundleHandle`` instead of a ``pathlib.Path``. The handle abstracts
     over filesystem, Postgres, S3, in-memory dict — same reader works
-    regardless of where the bundle lives. See ``dna.kernel.bundle_handle``.
+    regardless of where the bundle lives. See ``dna.kernel.bundle.handle``.
 
     Backward-compat: ``BundleHandle.path`` returns the underlying
     filesystem ``Path`` when FS-backed (``None`` otherwise) — escape

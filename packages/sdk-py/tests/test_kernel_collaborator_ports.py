@@ -27,7 +27,7 @@ from pathlib import Path
 import pytest
 
 from dna.kernel import Kernel
-from dna.kernel.bundle_io import BundleIO
+from dna.kernel.bundle.io import BundleIO
 from dna.kernel.collaborator_ports import (
     BundleIOHost,
     CompositionResolverHost,

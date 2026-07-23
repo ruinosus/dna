@@ -30,7 +30,7 @@ import yaml
 
 from dna.kernel.kinds.base import KindBase
 from dna.kernel.protocols import ExtensionHost, StorageDescriptor, TenantScope, WriterPort
-from dna.kernel.bundle_handle import BundleHandle
+from dna.kernel.bundle.handle import BundleHandle
 
 
 _API_VERSION = "github.com/ruinosus/dna/lesson/v1"

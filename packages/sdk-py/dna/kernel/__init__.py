@@ -221,7 +221,7 @@ class Kernel:
 
         # s-kernel-decompose-god-object — bundle-entry + document serialization
         # I/O extracted to a collaborator (kernel-decompose-continue).
-        from dna.kernel.bundle_io import BundleIO
+        from dna.kernel.bundle.io import BundleIO
         self._bundleio = BundleIO(self)
 
         # s-kernel-decompose-god-object — the Composition-V2 engine (Phase 17:
@@ -395,7 +395,7 @@ class Kernel:
         # copy via self; rebinding restores that exactly.)
         from dna.kernel.source_sync import SourceSync
         from dna.kernel.layer_policy import LayerPolicyEnforcer
-        from dna.kernel.bundle_io import BundleIO
+        from dna.kernel.bundle.io import BundleIO
         from dna.kernel.composition_resolver import CompositionResolver
         from dna.kernel.invalidation import InvalidationController
         from dna.kernel.instance_builder import InstanceBuilder

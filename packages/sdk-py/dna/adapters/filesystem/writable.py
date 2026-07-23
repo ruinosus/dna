@@ -10,7 +10,7 @@ import aiofiles
 import yaml
 
 from dna.adapters.filesystem.source import FilesystemSource, fs_tenant_segment
-from dna.kernel.bundle_handle import FilesystemBundleHandle
+from dna.kernel.bundle.handle import FilesystemBundleHandle
 from dna.kernel.protocols import WritableSourcePort
 
 if TYPE_CHECKING:

@@ -14,7 +14,7 @@ from pathlib import Path
 import pytest
 
 from dna.kernel import Kernel
-from dna.kernel.bundle_handle import FilesystemBundleHandle
+from dna.kernel.bundle.handle import FilesystemBundleHandle
 from dna.adapters.filesystem import FilesystemSource, FilesystemCache
 from dna.extensions.agentsmd import AgentDefinitionReader
 

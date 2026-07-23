@@ -7,7 +7,7 @@ import pytest
 
 from dna.kernel.generic_rw import GenericBundleReader, GenericBundleWriter
 from dna.kernel.protocols import BodyMode, StorageDescriptor
-from dna.kernel.bundle_handle import FilesystemBundleHandle
+from dna.kernel.bundle.handle import FilesystemBundleHandle
 
 
 # ---------------------------------------------------------------------------

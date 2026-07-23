@@ -10,7 +10,7 @@ from dna.extensions.tenant import (
     TenantExtension, TenantKind, TenantReader, TenantWriter,
     validate_slug, PLATFORM_SCOPE,
 )
-from dna.kernel.bundle_handle import DictBundleHandle
+from dna.kernel.bundle.handle import DictBundleHandle
 
 
 # ── slug validation ──────────────────────────────────────────────────

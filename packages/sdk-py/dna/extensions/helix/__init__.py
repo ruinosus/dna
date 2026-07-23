@@ -18,7 +18,7 @@ from dna.kernel.models import (
 )
 from dna.kernel.preview import PreviewBlock
 from dna.kernel.protocols import ExtensionHost, StorageDescriptor, ReaderPort, WriterPort
-from dna.kernel.bundle_handle import BundleHandle
+from dna.kernel.bundle.handle import BundleHandle
 
 
 def _literal_enum_schema(resolved: Any) -> dict[str, Any] | None:
