@@ -61,3 +61,45 @@ def test_api_serve_warns_it_is_deprecated_for_production():
     src = inspect.getsource(api_serve.callback)
     assert 'DEPRECATED for production' in src
     assert 'build_rest_app' in src  # the warning points hosts at the public factory
+
+
+# ── build_rest_app(auth="config") is FILE-FREE: providers come from the CALLER ──
+# The core builder does NO config-file I/O — reading a dna.config.yaml is the CLI's
+# job. An in-process host (dna-cloud) passes providers built from its OWN env via
+# `auth_providers=`. These lock that seam (mutation: the core falls back to a file,
+# or drops the auth_providers path → dies).
+import pytest
+
+
+def test_build_rest_app_config_builds_from_auth_providers_without_a_file(tmp_path, monkeypatch):
+    from fastapi import FastAPI
+
+    monkeypatch.chdir(tmp_path)  # a dna.config.yaml here would prove file-reading
+    app = serving.build_rest_app(
+        auth="config",
+        auth_providers=[
+            {
+                "type": "entra",
+                "name": "entra-multitenant",
+                "issuer": "https://login.microsoftonline.com/organizations/v2.0",
+                "audience": "aud-x",
+                "tenant_claim": "tid",
+            }
+        ],
+    )
+    assert isinstance(app, FastAPI)  # verifier built from the mappings, no exception
+    assert not (tmp_path / "dna.config.yaml").exists()  # the core touched no file
+
+
+def test_build_rest_app_config_without_providers_or_verifier_fails_loud(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)  # no dna.config.yaml to silently fall back to
+    with pytest.raises(RuntimeError, match="auth_providers"):
+        serving.build_rest_app(auth="config")
+
+
+def test_build_rest_app_config_parses_provider_mappings(tmp_path, monkeypatch):
+    # A malformed mapping flows through parse_auth_providers → ValueError, proving
+    # the auth_providers really drive provider parsing (not silently ignored).
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(ValueError):
+        serving.build_rest_app(auth="config", auth_providers=[{"issuer": "https://i"}])  # no type

@@ -104,6 +104,10 @@ def serve(scope: str | None, base_dir: str | None, host: str, port: int,
     )
     from dna_cli._rest_api import build_app
 
+    # The CLI is ONE consumer of the core builder: it reads the providers from the
+    # file (its input source) and HANDS them to build_app. File I/O lives here, not
+    # in the core — an in-process caller (dna-cloud) passes auth_providers from env.
+    providers = None
     if auth == "config":
         # Fail loud NOW (not on the first request) if the provider config is missing.
         try:
@@ -121,6 +125,7 @@ def serve(scope: str | None, base_dir: str | None, host: str, port: int,
         app = build_app(
             scope=scope, base_dir=base_dir, auth=auth, token=token,
             cors_origins=list(cors_origins) or None,
+            auth_providers=providers,
             token_scopes=list(token_scopes) or None,
         )
     except RuntimeError as exc:
