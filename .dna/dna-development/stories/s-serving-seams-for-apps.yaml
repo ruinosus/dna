@@ -1,0 +1,55 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-serving-seams-for-apps
+spec:
+  title: "Seams p\xFAblicos pra apps out-of-tree comporem serving sem arquivo: build_rest_app"
+  description: "Seams p\xFAblicos pra apps out-of-tree comporem serving sem arquivo:\
+    \ build_rest_app(auth_providers) + dna.migrations; + fixes de runtime que o dna-cloud\
+    \ precisa"
+  status: in-progress
+  feature: f-copilot-mcp-apps
+  priority: high
+  labels:
+  - serving
+  - migrations
+  - runtime
+  reporter: claude-code
+  acceptance_criteria:
+  - "Dado que build_rest_app(auth=config) s\xF3 montava o verifier lendo dna.config.yaml\
+    \ de disco (file I/O no core) e escondia _multi_provider_verifier no privado,\
+    \ quando esta story fecha, ent\xE3o build_rest_app aceita auth_providers (mappings\
+    \ ou ProviderConfig) e constr\xF3i o verifier internamente SEM I/O de arquivo,\
+    \ e a CLI (api_cmd) l\xEA o arquivo e passa auth_providers \u2014 a CLI \xE9 UM\
+    \ consumidor, n\xE3o o caminho"
+  - "Dado que run_migrations vivia escondido em dna.adapters._migrations, quando esta\
+    \ story fecha, ent\xE3o dna.migrations exp\xF5e o motor como seam p\xFAblico NEUTRO\
+    \ (zero men\xE7\xE3o a consumidor), consum\xEDvel por dna-cloud e futuros DNA\
+    \ Live/Marketplace, cada um com sua pr\xF3pria control table"
+  - "Dado o copiloto do dna-cloud, quando ele roda contra o runtime, ent\xE3o mcp_tools\
+    \ resolve multi-workspace pelo PATH da URL e langchain_rt/maf_rt honram DNA_MCP_URL\
+    \ do ambiente (endpoint \xE9 config de deploy, n\xE3o declarativo)"
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - "testes do SDK verdes (serving public api + schema migrations contract), o seam\
+    \ p\xFAblico re-exporta o runner real, e o dna-cloud consome sem arquivo"
+  definition_of_done_source: cli-create
+  created_at: '2026-07-23T14:19:36+00:00'
+  updated_at: '2026-07-23T14:19:49+00:00'
+  timeline:
+  - at: '2026-07-23T14:19:36+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-23T14:19:49+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  produces:
+  - kind: Plan
+    name: plan-s-serving-seams-for-apps
+    role: implementation
+    at: '2026-07-23T14:19:49+00:00'
