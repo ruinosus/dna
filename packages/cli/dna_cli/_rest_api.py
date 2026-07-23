@@ -175,6 +175,7 @@ def build_app(
     token: str | None = None,
     cors_origins: list[str] | None = None,
     verifier: Any = None,
+    auth_providers: Any = None,
     token_scopes: list[str] | None = None,
     quota_store: Any = None,
 ) -> Any:
@@ -192,9 +193,16 @@ def build_app(
         ``Authorization: Bearer <token>``; the expected token is ``token`` (arg)
         or ``DNA_API_TOKEN`` (env). A shared token for the MVP.
       * ``"config"`` — the Model B (ADR §2.2 / S2.4) verified-identity path: every
-        request carries a bearer JWT verified by the pluggable N-provider layer
-        (``verifier``, or built from ``dna.config.yaml``'s ``auth.providers[]``);
-        the token→identity middleware then BINDS the effective workspace from the
+        request carries a bearer JWT verified by the pluggable N-provider layer.
+        The provider layer comes from ``auth_providers`` (a list of provider
+        mappings — ``{type, issuer, audience, tenant_claim, …}`` — or already-parsed
+        :class:`ProviderConfig` objects), OR a fully-built ``verifier``. This core
+        builder does NO file I/O: reading providers from a ``dna.config.yaml`` is a
+        CLI concern (``api_cmd`` loads the file and passes ``auth_providers=`` here),
+        and an in-process composer (e.g. dna-cloud's apps) passes providers built
+        from its own environment — the CLI is ONE consumer of this seam, not the
+        only path. Passing neither under ``"config"`` is a loud error.
+        The token→identity middleware then BINDS the effective workspace from the
         identity's active :class:`WorkspaceMembership` (the ``tenant`` query param
         is OVERWRITTEN from membership, never trusted from the caller) — mirroring
         the MCP ``--auth config`` path. A no-membership / cross-workspace request is
@@ -417,15 +425,32 @@ def build_app(
             resolve_workspace,
         )
 
+        # Build the N-provider verifier from what the CALLER supplied — never from
+        # a file. Either a prebuilt ``verifier``, or ``auth_providers`` (raw provider
+        # mappings, which we parse, or already-parsed ``ProviderConfig`` objects).
+        # Reading a dna.config.yaml is the CLI's job (api_cmd passes auth_providers=).
+        if verifier is None:
+            if not auth_providers:
+                raise RuntimeError(
+                    "build_app(auth='config') needs `auth_providers` (a list of "
+                    "provider mappings / ProviderConfig) or a prebuilt `verifier`. "
+                    "Reading providers from a dna.config.yaml is a CLI concern — "
+                    "api_cmd loads the file and passes auth_providers= here; an "
+                    "in-process caller passes providers from its own environment."
+                )
+            from dna_cli._mcp_auth import _multi_provider_verifier, parse_auth_providers
+
+            _provs = auth_providers
+            if isinstance(_provs, dict):  # the whole {"providers": [...]} mapping
+                _provs = parse_auth_providers(_provs)
+            elif _provs and isinstance(_provs[0], dict):  # a list of provider mappings
+                _provs = parse_auth_providers({"providers": list(_provs)})
+            # else: already a list[ProviderConfig]
+            verifier = _multi_provider_verifier(list(_provs))
+
         _verifier_state: dict[str, Any] = {"v": verifier}
 
         def _get_verifier() -> Any:
-            if _verifier_state["v"] is None:
-                from dna_cli._mcp_auth import (
-                    _multi_provider_verifier,
-                    providers_from_config,
-                )
-                _verifier_state["v"] = _multi_provider_verifier(providers_from_config())
             return _verifier_state["v"]
 
         @app.middleware("http")

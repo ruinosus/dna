@@ -197,7 +197,7 @@ def _with_memory_card(data: dict[str, Any]) -> Any:
 
 def build_server(
     scope: str | None = None, base_dir: str | None = None, auth: Any = None,
-    graph_config: Any = None, quota_store: Any = None,
+    graph_config: Any = None, quota_store: Any = None, auth_providers: Any = None,
 ) -> Any:
     """Build the DNA MCP server (a ``FastMCP`` instance) with every tool +
     resource wired. ``scope`` fixes the default scope (else the source's sole /
@@ -240,6 +240,21 @@ def build_server(
             "the MCP server needs the optional 'fastmcp' dependency — install it "
             "with:  pip install 'dna-cli[mcp]'"
         ) from exc
+
+    # The declarative-config SUGAR (mirrors build_rest_app's auth_providers=): a
+    # host may hand raw provider mappings (or ProviderConfig objects) instead of a
+    # pre-built provider, and we assemble the N-provider auth layer via the SAME
+    # public factory (build_auth_from_config). The `auth=<provider>` PORT still
+    # works for jwt/azure/custom providers — this only fills in when auth is unset.
+    if auth is None and auth_providers is not None:
+        from dna_cli._mcp_auth import build_auth_from_config, parse_auth_providers
+
+        _provs = auth_providers
+        if isinstance(_provs, dict):  # the whole {"providers": [...]} mapping
+            _provs = parse_auth_providers(_provs)
+        elif _provs and isinstance(_provs[0], dict):  # a list of provider mappings
+            _provs = parse_auth_providers({"providers": list(_provs)})
+        auth = build_auth_from_config(list(_provs))
 
     # MCP Apps (SEP-1865): the memory card. The static template
     # `ui://dna/memory-list` (dna.emit.mcp_ui.memory_list_card_html — public,

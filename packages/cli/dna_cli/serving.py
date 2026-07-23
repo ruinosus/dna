@@ -28,9 +28,21 @@ from __future__ import annotations
 from dna_cli._mcp_server import build_server as build_mcp_server
 from dna_cli._rest_api import build_app as build_rest_app
 
-# The auth providers a host wires into the factories (built from its env/config).
+# The MCP HTTP wrapper: a Starlette ASGI app over the FastMCP server that ALSO
+# accepts the per-workspace URL `/w/<id>/mcp` (ADR Model B) beside the bare
+# `/mcp`. A host that serves the MCP endpoint over HTTP itself (apps/mcp) needs
+# this to keep multi-workspace routing — `build_mcp_server` alone is just /mcp.
+from dna_cli._mcp_server import build_http_app
+
+# The auth layer — TWO tiers a host composes with:
+#   • the FACTORIES that build a provider/auth object from env/config
+#     (`*_from_env`, `build_auth_from_config`), passed to the `auth=` PORT; and
+#   • `parse_auth_providers`, the pure-core dict→ProviderConfig parser, so a host
+#     can turn its OWN env into providers WITHOUT a dna.config.yaml — the same
+#     providers the `auth_providers=` sugar on build_mcp_server/build_rest_app takes.
 from dna_cli._mcp_auth import (
     build_auth_from_config,
+    parse_auth_providers,
     azure_provider_from_env,
     jwt_provider_from_env,
 )
@@ -42,7 +54,9 @@ from dna_cli._mcp_quota import store_from_env as quota_store_from_env
 __all__ = [
     "build_mcp_server",
     "build_rest_app",
+    "build_http_app",
     "build_auth_from_config",
+    "parse_auth_providers",
     "azure_provider_from_env",
     "jwt_provider_from_env",
     "quota_store_from_env",

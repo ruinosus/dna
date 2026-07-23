@@ -162,13 +162,20 @@ class MafRuntime:
         # credential (verified: MCPStreamableHTTPTool.__init__ stores config and
         # connects on first run). allowed_tools = the server's declared
         # allowlist (i-038); approval_mode = the HITL projection.
+        # The MCP ENDPOINT is a deployment concern (like a DSN): the federation
+        # def carries a neutral placeholder url; the real endpoint is injected
+        # per-environment via DNA_MCP_URL (same pattern as auth.env). env wins;
+        # the def's url is the declarative default. (Mirrors langchain_rt.)
+        import os
+
+        endpoint = os.environ.get("DNA_MCP_URL")
         tools = []
         for s in mcp_servers:
             allowed = sorted(getattr(s, "allowed_tools", None) or [])
             tools.append(
                 MCPStreamableHTTPTool(
                     name=f"mcp_{s.ref}",
-                    url=s.url,
+                    url=endpoint or s.url,
                     allowed_tools=allowed,
                     approval_mode=_approval_mode(allowed, confirm),
                     header_provider=header_provider,

@@ -1,0 +1,16 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-serving-seams-for-apps
+spec:
+  title: 'Plano: s-serving-seams-for-apps'
+  date: '2026-07-23'
+  status: accepted
+  story_ref: s-serving-seams-for-apps
+  journey_phase: plan
+  body: "1) _rest_api.build_app: +auth_providers, remove o fallback providers_from_config,\
+    \ api_cmd passa os providers. 2) dna/migrations.py re-exporta run_migrations+PayloadT.\
+    \ 3) commit dos fixes de runtime (mcp_tools/langchain_rt/maf_rt) j\xE1 soltos.\
+    \ Verificado: 100+ testes serving + 6 migrations contract."
+  created_at: '2026-07-23T14:19:41+00:00'
+  updated_at: '2026-07-23T14:19:41+00:00'

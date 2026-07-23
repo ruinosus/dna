@@ -100,7 +100,16 @@ class LangChainRuntime:
                 "LangChainRuntime requires the mounted agent to federate at "
                 "least one MCP server"
             )
-        mcp_url = mcp_servers[0].url
+        # The MCP ENDPOINT is a deployment concern (like a DSN), not declarative
+        # policy: the federation def carries a neutral placeholder url, and the
+        # real endpoint is injected per-environment via DNA_MCP_URL (the same
+        # env-adapter pattern the auth token `auth.env: DNA_MCP_TOKEN` uses). So
+        # env wins; the def's url is only the declarative default when no
+        # endpoint override is set. (Corrects a C0 over-reach that read the
+        # placeholder literally and dialed an unresolvable host.)
+        import os
+
+        mcp_url = os.environ.get("DNA_MCP_URL") or mcp_servers[0].url
 
         # MCP tool discovery is LAZY — deferred to DnaMcpToolsMiddleware's
         # first authenticated model call (the per-request bearer is only
