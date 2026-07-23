@@ -11,7 +11,7 @@ from pathlib import Path
 
 from dna.kernel import Kernel
 from dna.kernel.document import Document
-from dna.kernel.kind_base import KindBase
+from dna.kernel.kinds.base import KindBase
 from dna.kernel.protocols import ReaderPort, ResolveError, StorageDescriptor
 from dna.adapters.filesystem import FilesystemSource
 

@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from dna.kernel.kind_base import KindBase
+from dna.kernel.kinds.base import KindBase
 
 
 class _K(KindBase):

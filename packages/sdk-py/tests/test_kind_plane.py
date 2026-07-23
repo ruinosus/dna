@@ -1,5 +1,5 @@
 """F1 two-planes (spec 2026-06-09): KindBase.plane default + override."""
-from dna.kernel.kind_base import KindBase
+from dna.kernel.kinds.base import KindBase
 from dna.kernel.protocols import StorageDescriptor
 
 

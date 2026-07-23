@@ -14,7 +14,7 @@ from typing import Any
 import yaml
 
 from dna.kernel.models import TypedKindDefinition
-from dna.kernel.kind_base import KindBase
+from dna.kernel.kinds.base import KindBase
 from dna.kernel.preview import PreviewBlock
 from dna.kernel.protocols import ExtensionHost, StorageDescriptor, ReaderPort, WriterPort
 from dna.kernel.bundle_handle import BundleHandle

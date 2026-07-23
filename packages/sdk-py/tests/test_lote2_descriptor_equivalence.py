@@ -55,7 +55,7 @@ import pytest
 
 from dna.extensions.sdlc import SdlcExtension
 from dna.kernel import Kernel
-from dna.kernel.kind_base import KindBase
+from dna.kernel.kinds.base import KindBase
 from dna.kernel.protocols import TenantScope
 
 GOLDEN_DIR = Path(__file__).parent / "goldens" / "lote2"

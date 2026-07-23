@@ -18,7 +18,7 @@ from dna.kernel import (
     Kernel, VERSION_CHURN_RETENTION, VERSION_CHURN_KINDS,
 )
 from dna.kernel.capabilities import write_kwarg_support
-from dna.kernel.kind_base import KindBase
+from dna.kernel.kinds.base import KindBase
 from dna.kernel.protocols import StorageDescriptor
 
 

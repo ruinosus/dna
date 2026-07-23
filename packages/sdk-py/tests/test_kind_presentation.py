@@ -16,7 +16,7 @@ import typing
 import pytest
 
 from dna.kernel import protocols as P
-from dna.kernel.kind_base import KindBase
+from dna.kernel.kinds.base import KindBase
 from dna.kernel.protocols import (
     KindPort,
     KindPresentation,

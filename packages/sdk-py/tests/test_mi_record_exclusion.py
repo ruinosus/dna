@@ -5,7 +5,7 @@ in CompositionResult instead of false-``missing`` (spec D6).
 import pytest
 
 from dna.kernel import Kernel
-from dna.kernel.kind_base import KindBase
+from dna.kernel.kinds.base import KindBase
 from dna.kernel.protocols import CompositionResult, StorageDescriptor
 
 # -- reuse do harness (pytest põe tests/ no sys.path; SEM prefixo tests.) --

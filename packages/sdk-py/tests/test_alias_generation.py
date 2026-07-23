@@ -25,8 +25,8 @@ import pytest
 
 from dna.kernel import Kernel
 from dna.kernel.errors import KindRegistrationError
-from dna.kernel.kind_base import KindBase
-from dna.kernel.kind_registry import (
+from dna.kernel.kinds.base import KindBase
+from dna.kernel.kinds.registry import (
     generate_alias,
     kebab_kind_name,
 )
@@ -133,7 +133,7 @@ def test_explicit_alias_ratchet_is_shrink_only():
     """Todo port builtin com alias digitado à mão está no allowlist frozen.
     Kind NOVO deve OMITIR alias (geração) — adicionar nome aqui é proibido;
     a lista só encolhe conforme classes migram pra geração."""
-    from dna.kernel.kind_registry import EXPLICIT_ALIAS_ALLOWLIST
+    from dna.kernel.kinds.registry import EXPLICIT_ALIAS_ALLOWLIST
     k = Kernel.auto()
     explicit = {
         kp.alias
@@ -195,7 +195,7 @@ def test_validate_dep_filters_kind_eq_format_rejected_for_builtin():
 
 def test_validate_dep_filters_declarative_only_warns(caplog):
     import logging
-    from dna.kernel.kind_base import KindBase as KB
+    from dna.kernel.kinds.base import KindBase as KB
 
     class _ScopeKind(KB):
         api_version = "scoped.test/v1"

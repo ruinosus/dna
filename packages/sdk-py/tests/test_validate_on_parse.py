@@ -10,7 +10,7 @@ import jsonschema
 import pytest
 
 from dna.kernel import Kernel
-from dna.kernel.kind_base import KindBase
+from dna.kernel.kinds.base import KindBase
 from dna.kernel.protocols import StorageDescriptor
 
 

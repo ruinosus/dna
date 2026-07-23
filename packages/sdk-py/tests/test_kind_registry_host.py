@@ -20,8 +20,8 @@ import types
 
 from dna.kernel import Kernel
 from dna.kernel.collaborator_ports import RegistryHost
-from dna.kernel.kind_base import KindBase
-from dna.kernel.kind_registry import KindRegistry
+from dna.kernel.kinds.base import KindBase
+from dna.kernel.kinds.registry import KindRegistry
 from dna.kernel.protocols import StorageDescriptor
 
 

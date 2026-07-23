@@ -7,7 +7,7 @@ from pathlib import Path
 import yaml
 from typing import Any
 
-from dna.kernel.kind_base import KindBase
+from dna.kernel.kinds.base import KindBase
 from dna.kernel.models import TypedSkill
 from dna.kernel.preview import PreviewBlock
 from dna.kernel.protocols import ExtensionHost, StorageDescriptor, ReaderPort, WriterPort

@@ -7,7 +7,7 @@ from __future__ import annotations
 import pytest
 
 from dna.kernel.studio_ui import StudioUIMetadata
-from dna.kernel.kind_base import KindBase
+from dna.kernel.kinds.base import KindBase
 
 
 def test_kind_base_ui_defaults_to_none():

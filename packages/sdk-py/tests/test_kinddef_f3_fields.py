@@ -1,7 +1,7 @@
 """F3: campos novos do KindDefinitionSpec (spec D2)."""
 from types import SimpleNamespace
 
-from dna.kernel.kind_base import KindBase
+from dna.kernel.kinds.base import KindBase
 from dna.kernel.meta import DeclarativeKindPort
 from dna.kernel.models import TypedKindDefinition
 from dna.kernel.protocols import TenantScope

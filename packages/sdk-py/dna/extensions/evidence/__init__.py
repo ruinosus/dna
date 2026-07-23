@@ -14,7 +14,7 @@ from typing import Any
 
 from dna.kernel.descriptor_loader import load_descriptors
 from dna.kernel.protocols import ExtensionHost, StorageDescriptor
-from dna.kernel.kind_base import KindBase
+from dna.kernel.kinds.base import KindBase
 # should_capture is generic policy-evaluation logic that now lives in the
 # kernel (s-invert-evidence-capture-dep) so the microkernel's evidence-capture
 # handler needs no extension import. Re-exported here as the extension's

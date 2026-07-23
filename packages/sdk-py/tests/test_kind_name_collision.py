@@ -29,8 +29,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 from dna.kernel import Kernel
 from dna.kernel.errors import KindRegistrationError
-from dna.kernel.kind_base import KindBase
-from dna.kernel.kind_registry import KIND_NAME_COLLISION_ALLOWLIST
+from dna.kernel.kinds.base import KindBase
+from dna.kernel.kinds.registry import KIND_NAME_COLLISION_ALLOWLIST
 from dna.kernel.protocols import StorageDescriptor
 
 # -- reuse do harness (pytest põe tests/ no sys.path; SEM prefixo tests.) --
@@ -161,7 +161,7 @@ def test_ambiguous_bare_lookup_warns_once(caplog):
     kr._AMBIGUOUS_LOOKUP_WARNED.discard("Reference")  # cache é process-wide
     k, _src, _h = _wire_reference_pair()
     import logging
-    with caplog.at_level(logging.WARNING, logger="dna.kernel.kind_registry"):
+    with caplog.at_level(logging.WARNING, logger="dna.kernel.kinds.registry"):
         k._kindreg.port_for("Reference")
         k._kindreg.port_for("Reference")
     hits = [r for r in caplog.records if "ambiguous" in r.getMessage().lower()]

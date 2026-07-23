@@ -19,7 +19,7 @@ from pathlib import Path as _Path
 from typing import Any
 
 from dna.kernel.models import TypedSafetyPolicy
-from dna.kernel.kind_base import KindBase
+from dna.kernel.kinds.base import KindBase
 from dna.kernel.preview import PreviewBlock
 from dna.kernel.protocols import ExtensionHost, BodyMode, StorageDescriptor
 from dna.kernel.templates import Template

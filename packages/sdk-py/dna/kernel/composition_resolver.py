@@ -49,7 +49,7 @@ from collections import OrderedDict
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Container, Iterable, Literal, Mapping
 
-from dna.kernel.kind_registry import KindRegistry
+from dna.kernel.kinds.registry import KindRegistry
 from dna.kernel.protocols import CompositionResult
 
 if TYPE_CHECKING:  # pragma: no cover

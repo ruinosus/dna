@@ -51,7 +51,7 @@ from typing import Any
 import yaml
 
 from dna.kernel.descriptor_loader import load_descriptors
-from dna.kernel.kind_base import KindBase
+from dna.kernel.kinds.base import KindBase
 from dna.kernel.protocols import ExtensionHost, StorageDescriptor, SYSTEM_SCOPE, TenantScope, ReaderPort, WriterPort
 from dna.kernel.bundle_handle import BundleHandle
 

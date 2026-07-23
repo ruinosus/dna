@@ -15,7 +15,7 @@ import asyncio
 from types import SimpleNamespace
 
 from dna.kernel import Kernel
-from dna.kernel.kind_base import KindBase
+from dna.kernel.kinds.base import KindBase
 from dna.kernel.meta import DeclarativeKindPort
 
 

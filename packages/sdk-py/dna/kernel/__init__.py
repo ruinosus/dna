@@ -16,7 +16,7 @@ from dna.kernel.errors import (
     ExtensionLoadError, KindRegistrationError, ReaderRegistrationError,
     WriterRegistrationError,
 )
-from dna.kernel.kind_registry import (
+from dna.kernel.kinds.registry import (
     # _load_kind_docs moved into the KindRegistry module with the registration
     # funnel (s-kernel-decomp-f3-kindregistry); re-exported here so the historical
     # ``from dna.kernel import _load_kind_docs`` importer keeps working.
@@ -196,7 +196,7 @@ class Kernel:
         # lookups extracted to a collaborator (kernel-decompose-continue). The
         # ``_kinds`` property below proxies to it so the ~20 inline access sites
         # (and registration in kind()/load()/_register_*) keep mutating one dict.
-        from dna.kernel.kind_registry import KindRegistry
+        from dna.kernel.kinds.registry import KindRegistry
         # s-kernel-decomp-f3-kindregistry — the registry now OWNS the
         # registration funnel (kind()/kind_from_descriptor/2-phase load); it
         # reaches the wider kernel (hooks, _readers rescan gate, generic-rw
