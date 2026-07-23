@@ -7,7 +7,7 @@ spec:
   description: "Seams p\xFAblicos pra apps out-of-tree comporem serving sem arquivo:\
     \ build_rest_app(auth_providers) + dna.migrations; + fixes de runtime que o dna-cloud\
     \ precisa"
-  status: in-progress
+  status: review
   feature: f-copilot-mcp-apps
   priority: high
   labels:
@@ -35,7 +35,7 @@ spec:
     \ p\xFAblico re-exporta o runner real, e o dna-cloud consome sem arquivo"
   definition_of_done_source: cli-create
   created_at: '2026-07-23T14:19:36+00:00'
-  updated_at: '2026-07-23T14:42:09+00:00'
+  updated_at: '2026-07-23T14:44:08+00:00'
   timeline:
   - at: '2026-07-23T14:19:36+00:00'
     actor: claude-code
@@ -58,6 +58,18 @@ spec:
       \ como SDK maduro. 9 testes serving + 31 mcp/idp verdes. Consumido pelo apps/mcp\
       \ file-free."
     commit_ref: 5bcd2f2c550777723d8c436cda88006646df74d5
+  - at: '2026-07-23T14:43:23+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/218'
+    pr_url: https://github.com/ruinosus/dna/pull/218
+  - at: '2026-07-23T14:44:08+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
   produces:
   - kind: Plan
     name: plan-s-serving-seams-for-apps
