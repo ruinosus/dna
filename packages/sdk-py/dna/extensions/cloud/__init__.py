@@ -3,13 +3,13 @@
 Registers 2 Kinds, from descriptors (F3 — record Kinds are data, not
 classes):
 
-  - Tier (``cloud-tier``) — one DNA Cloud plan's hard caps
+  - Tier (``cloud-pricing-plan``) — one DNA Cloud plan's hard caps
     (``calls_per_day``, ``rate_per_sec``, ``max_tenants``) + the feature
     families it unlocks + price, as a first-class GLOBAL Kind so limits are
     project data, not implicit knowledge. NOT named ``Plan`` — that alias
     belongs to the SDLC implementation-plan Kind; a pricing plan is a Tier.
     Free / Pro / Enterprise are tiers.
-  - AccountPlan (``cloud-account-plan``) — the BILLING ACCOUNT→Tier assignment:
+  - AccountPlan (``cloud-plan-binding``) — the BILLING ACCOUNT→Tier assignment:
     which Tier a given account is currently on. **The subscription belongs to
     the account, not to a workspace** — ONE AccountPlan covers EVERY workspace
     whose ``Workspace.account_id`` matches, so a second workspace is never a
@@ -44,7 +44,7 @@ class CloudExtension:
     version = "1.0.0"
 
     def register(self, kernel: ExtensionHost) -> None:
-        # F3: Tier ships as kinds/tier.kind.yaml package data (byte-identical
+        # F3: Tier ships as kinds/pricing-plan.kind.yaml package data (byte-identical
         # package data), registered through the SAME funnel as per-scope
         # KindDefinitions (plane lint + digest idempotency + builtin conflict
         # marker).

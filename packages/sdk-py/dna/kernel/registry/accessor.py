@@ -129,7 +129,7 @@ class RegistryAccessor:
         """
         try:
             rows = [
-                r async for r in self._k.query(self._TIER_REGISTRY_SCOPE, "Tier")
+                r async for r in self._k.query(self._TIER_REGISTRY_SCOPE, "PricingPlan")
             ]
         except Exception as e:  # noqa: BLE001
             # fail-soft: registry read — but a silent None here disables the
@@ -187,7 +187,7 @@ class RegistryAccessor:
         try:
             rows = [
                 r async for r in self._k.query(
-                    self._ACCOUNT_PLAN_REGISTRY_SCOPE, "AccountPlan"
+                    self._ACCOUNT_PLAN_REGISTRY_SCOPE, "PlanBinding"
                 )
             ]
         except Exception as e:  # noqa: BLE001

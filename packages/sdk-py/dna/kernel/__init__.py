@@ -1072,7 +1072,7 @@ class Kernel:
     #   consumidores runtime (nenhum worker/activity o rodava), 1 doc órfão.
     #   As famílias *Experiment/*Run vivas (autoagent/autolab/eval-evolve) são
     #   subsistemas distintos e ficam. recovery: git history.
-    # WorkspacePlan → RE-KEYED to AccountPlan (s-account-scoped-plan). The
+    # WorkspacePlan → RE-KEYED to PlanBinding (s-account-scoped-plan). The
     #   subscription belongs to the BILLING ACCOUNT, not to a workspace: one plan
     #   covers every workspace the account owns, so a second workspace is never a
     #   second charge. Keying the plan per workspace forced the biller to FAN OUT
@@ -1109,8 +1109,8 @@ class Kernel:
         "OracleVerdict": "migrated to StatusReport (refactor 2026-05-11)",
         "Oracle": "never a registered Kind — UA naming convention only",
         "WorkspacePlan": (
-            "RE-KEYED to AccountPlan (s-account-scoped-plan) — the subscription "
-            "belongs to the BILLING ACCOUNT, not to a workspace: one AccountPlan "
+            "RE-KEYED to PlanBinding (s-account-scoped-plan) — the subscription "
+            "belongs to the BILLING ACCOUNT, not to a workspace: one PlanBinding "
             "covers every Workspace whose `account_id` matches, so a second "
             "workspace is never a second charge. Write "
             "AccountPlan{account_id, tier_id} (PUT /v1/account-plan) and read it "

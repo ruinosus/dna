@@ -385,7 +385,7 @@ def _tier_doc(tier_id: str, *, calls_per_day: int | None, families: list[str],
     test_cloud_tier_kind.py)."""
     return {
         "apiVersion": "github.com/ruinosus/dna/cloud/v1",
-        "kind": "Tier",
+        "kind": "PricingPlan",
         "metadata": {"name": tier_id},
         "spec": {
             "tier_id": tier_id,
@@ -410,12 +410,12 @@ async def _seed_tiers(dna_dir, *, free_calls_per_day: int,
 
     live = await M.boot_live(base_dir=str(dna_dir))
     await live.kernel.write_document(
-        "_lib", "Tier", "free",
+        "_lib", "PricingPlan", "free",
         _tier_doc("free", calls_per_day=free_calls_per_day, families=free_families,
                   memory_mode="read"),
     )
     await live.kernel.write_document(
-        "_lib", "Tier", "pro",
+        "_lib", "PricingPlan", "pro",
         _tier_doc("pro", calls_per_day=10000,
                   families=["definitions", "sdlc", "memory", "emit"],
                   memory_mode="write"),

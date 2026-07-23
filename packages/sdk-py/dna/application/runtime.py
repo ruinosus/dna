@@ -1363,13 +1363,13 @@ async def set_account_plan_impl(
 
     raw = {
         "apiVersion": _CLOUD_API,
-        "kind": "AccountPlan",
+        "kind": "PlanBinding",
         "metadata": {"name": account_id},
         "spec": spec,
     }
     # GLOBAL kind → no tenant kwarg (a tenant on a GLOBAL write is rejected).
     await live.kernel.write_document(
-        _ACCOUNT_PLAN_SCOPE, "AccountPlan", account_id, raw, invalidate_mode="doc"
+        _ACCOUNT_PLAN_SCOPE, "PlanBinding", account_id, raw, invalidate_mode="doc"
     )
     return {
         "scope": _ACCOUNT_PLAN_SCOPE,

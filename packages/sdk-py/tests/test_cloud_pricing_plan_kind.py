@@ -3,8 +3,8 @@
 Covers the declarative-caps contract shipped as the `cloud` extension:
 
 1. The ``cloud`` extension registers Tier from its descriptor
-   (``kinds/tier.kind.yaml`` — record plane, GLOBAL, generated-convention
-   alias ``cloud-tier``). NOT named ``Plan`` — that alias belongs to the
+   (``kinds/pricing-plan.kind.yaml`` — record plane, GLOBAL, generated-convention
+   alias ``cloud-pricing-plan``). NOT named ``Plan`` — that alias belongs to the
    SDLC implementation-plan Kind.
 2. ``kernel.tier`` resolves a Tier from ``_lib`` by ``tier_id`` then
    ``aliases[]``, returning the RAW DICT row whose ``spec`` carries the
@@ -30,7 +30,7 @@ def _tier(tier_id: str, *, display_name: str, price: float,
     """Build a Tier doc. Caps live HERE (the doc), never in the code."""
     return {
         "apiVersion": "github.com/ruinosus/dna/cloud/v1",
-        "kind": "Tier",
+        "kind": "PricingPlan",
         "metadata": {"name": tier_id},
         "spec": {
             "tier_id": tier_id,
@@ -55,12 +55,12 @@ async def _kernel(tmp_path) -> Kernel:
     # Tiers live in the _lib scope (tiers/<tier_id>.yaml) — kernel.tier
     # queries _lib directly regardless of caller scope.
     await k.write_document(
-        "_lib", "Tier", "free",
+        "_lib", "PricingPlan", "free",
         _tier("free", display_name="Free", price=0, calls_per_day=100,
               memory_mode="read", aliases=["starter"]),
     )
     await k.write_document(
-        "_lib", "Tier", "pro",
+        "_lib", "PricingPlan", "pro",
         _tier("pro", display_name="Pro", price=29, calls_per_day=10000,
               memory_mode="write"),
     )
@@ -74,10 +74,10 @@ async def _kernel(tmp_path) -> Kernel:
 def test_tier_kind_registered_from_descriptor():
     k = Kernel()
     k.load(CloudExtension())
-    kp = k.kind_port_for("Tier")
+    kp = k.kind_port_for("PricingPlan")
     assert kp is not None
-    # Explicit alias `cloud-tier` — NOT `Plan` (that alias belongs to SDLC).
-    assert kp.alias == "cloud-tier"
+    # Explicit alias `cloud-pricing-plan` — NOT `Plan` (that alias belongs to SDLC).
+    assert kp.alias == "cloud-pricing-plan"
     assert kp.plane == "record"
     # GLOBAL — a shared base registry, no per-tenant override.
     assert kp.scope == TenantScope.GLOBAL
@@ -91,7 +91,7 @@ def test_cloud_registers_tier_not_plan():
     the cloud extension, Tier exists and Plan is absent."""
     k = Kernel()
     k.load(CloudExtension())
-    assert k.kind_port_for("Tier") is not None
+    assert k.kind_port_for("PricingPlan") is not None
     assert k.kind_port_for("Plan") is None
 
 
@@ -142,7 +142,7 @@ async def test_tier_cap_is_data_not_code(tmp_path):
     assert (await k.tier("free"))["spec"]["calls_per_day"] == 100
     # Edit the Free plan's daily quota — a file edit, no redeploy.
     await k.write_document(
-        "_lib", "Tier", "free",
+        "_lib", "PricingPlan", "free",
         _tier("free", display_name="Free", price=0, calls_per_day=250,
               memory_mode="read", aliases=["starter"]),
     )
