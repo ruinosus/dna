@@ -95,7 +95,7 @@ def test_notify_payload_builder_is_shared():
     the same objects the PostgresEventBus subscriber side reads."""
     _require_sqlalchemy()
     from dna.adapters import sqlalchemy_ as sam
-    from dna.kernel import eventbus as ebm
+    from dna.kernel.boot import eventbus as ebm
 
     assert sam.source.build_notify_payload is ebm.build_notify_payload
     assert sam.source.KERNEL_EVENTBUS_CHANNEL == ebm.KERNEL_EVENTBUS_CHANNEL

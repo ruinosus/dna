@@ -157,7 +157,7 @@ def test_bare_lookup_prefers_extension_over_per_scope_declarative():
 
 
 def test_ambiguous_bare_lookup_warns_once(caplog):
-    from dna.kernel import kind_registry as kr
+    from dna.kernel.kinds import registry as kr
     kr._AMBIGUOUS_LOOKUP_WARNED.discard("Reference")  # cache é process-wide
     k, _src, _h = _wire_reference_pair()
     import logging

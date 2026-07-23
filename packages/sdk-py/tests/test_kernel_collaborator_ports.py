@@ -304,14 +304,16 @@ async def test_missing_member_breaks_the_collaborator():
 # --------------------------------------------------------------------------
 
 # (module basename in dna/kernel) -> class holding the back-ref.
+# module PATH (relative to _KERNEL_DIR) → collaborator class. Paths carry the
+# subpackage since the kernel reorg (kernel/prompt, kernel/compose, …).
 _MIGRATED_COLLABORATORS = {
-    "instance_builder": "InstanceBuilder",
-    "query_engine": "QueryEngine",
-    "composition_resolver": "CompositionResolver",
-    "bundle_io": "BundleIO",
-    "source_sync": "SourceSync",
-    "layer_policy": "LayerPolicyEnforcer",
-    "invalidation": "InvalidationController",
+    "compose/instance_builder": "InstanceBuilder",
+    "query/engine": "QueryEngine",
+    "compose/resolver": "CompositionResolver",
+    "bundle/io": "BundleIO",
+    "source/sync": "SourceSync",
+    "compose/layer_policy": "LayerPolicyEnforcer",
+    "boot/invalidation": "InvalidationController",
 }
 
 _KERNEL_DIR = Path(__file__).resolve().parents[1] / "dna" / "kernel"
