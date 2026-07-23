@@ -62,6 +62,19 @@ def test_build_does_zero_boot_discovery(tmp_path, monkeypatch):
         "dna.runtime.middleware.mcp_tools_mw.load_mcp_tools", spy_load_mcp_tools
     )
 
+    # The fixture's memory-copilot declares `persistence.{checkpoint,memory}`
+    # on Postgres (ref `primary-pg`) — since this caller passes no
+    # `hooks.checkpointer`, the adapter now resolves it declaratively
+    # (Task 4). Stub the resolver so this test never dials real Postgres —
+    # `resolve_persistence`'s own DSN/env-var behavior is covered by
+    # test_declarative_config.py.
+    async def fake_resolve_persistence(_persistence):
+        return None, None
+
+    monkeypatch.setattr(
+        "dna.runtime.persistence.resolve_persistence", fake_resolve_persistence
+    )
+
     async def compose(_):
         return "PROMPT"
 

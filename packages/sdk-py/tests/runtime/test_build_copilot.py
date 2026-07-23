@@ -40,6 +40,19 @@ def test_build_copilot_compiles_with_the_dna_stack(tmp_path, monkeypatch):
         "dna.runtime.middleware.mcp_tools_mw.load_mcp_tools", fake_load_mcp_tools
     )
 
+    # The fixture's memory-copilot declares `persistence.{checkpoint,memory}`
+    # on Postgres (ref `primary-pg`) — since these callers pass no
+    # `hooks.checkpointer`, the adapter now resolves it declaratively
+    # (Task 4). Stub the resolver so this parity test stays a pure
+    # in-process build with no real Postgres — `resolve_persistence`'s own
+    # DSN/env-var behavior is covered by test_declarative_config.py.
+    async def fake_resolve_persistence(_persistence):
+        return None, None
+
+    monkeypatch.setattr(
+        "dna.runtime.persistence.resolve_persistence", fake_resolve_persistence
+    )
+
     async def compose(_):
         return "PROMPT"
 

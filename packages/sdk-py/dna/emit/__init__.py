@@ -137,6 +137,23 @@ class EmitMcpServer:
 
 
 @dataclass
+class EmitServing:
+    """A neutral projection of ONE ``Copilot.spec.serving`` block.
+
+    Filled by :func:`build_copilot_context` from the Copilot's ``serving``
+    block. ``framework`` selects the self-hosted `dna.runtime` backend
+    (``dna.runtime.port.get_runtime(ctx.serving.framework)``) — distinct from
+    ``EmitContext.hosting.target``, which selects a MANAGED host
+    (foundry/langgraph-platform/agentos).
+    """
+
+    #: The self-hosted serving framework the dna.runtime port builds on
+    #: (``langchain`` | ``maf`` | ``agno`` | ``deepagents``). Defaults to
+    #: ``"langchain"`` when the Copilot declares no ``serving.framework``.
+    framework: str = "langchain"
+
+
+@dataclass
 class EmitContext:
     """Runtime-agnostic view of ONE composed DNA agent.
 
@@ -188,6 +205,14 @@ class EmitContext:
     #: (MS Agent Framework) target emits a ``WorkflowBuilder`` chain + a
     #: workflow-level escalation node when present. Empty = plain single-agent app.
     workflow: list[str] = field(default_factory=list)
+    #: How the copilot backend is served (``Copilot.serving``): the wire
+    #: transport (``EmitMcpServer``-style projection lives elsewhere) plus
+    #: ``framework`` — the self-hosted `dna.runtime` backend selector
+    #: (``dna.runtime.builder.build_runtime`` reads ``serving.framework``).
+    #: Defaults to the langchain framework when the Copilot's ``serving``
+    #: block omits ``framework`` (or for a single-agent ctx, which declares no
+    #: ``serving`` at all).
+    serving: EmitServing = field(default_factory=EmitServing)
     # ── frontend projections (filled by build_copilot_context) ───────────────
     #: The console kind (``Copilot.frontend.console``, e.g. ``"copilotkit"``), or
     #: None when the copilot declares no ``frontend`` block (backend-only). The
@@ -542,6 +567,9 @@ def build_copilot_context(
 
     workflow_block = _spec_get(cspec, "workflow") or {}
     ctx.workflow = list(_spec_get(workflow_block, "chain") or [])
+
+    serving_block = _spec_get(cspec, "serving") or {}
+    ctx.serving = EmitServing(framework=_spec_get(serving_block, "framework") or "langchain")
     # ── frontend projection (Chunk 5) ───────────────────────────────────────
     # The Copilot's `frontend` + `hitl.approval_card` blocks — consumed ONLY by
     # the frontend emit (dna.emit.frontend); the backend scaffold ignores them.

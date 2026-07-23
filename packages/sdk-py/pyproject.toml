@@ -98,6 +98,19 @@ runtime = [
     "langchain-openai==1.3.5",
     "langchain-mcp-adapters==0.3.0",
 ]
+# C0 — the Microsoft Agent Framework runtime backend (dna.runtime adapter
+# "maf"). agent-framework = the agent runtime (pulls agent-framework-core +
+# agent-framework-foundry for FoundryChatClient); agent-framework-ag-ui = the
+# AG-UI bridge (agent_framework.ag_ui.add_agent_framework_fastapi_endpoint).
+# PINNED to the versions the Task 5 adapter's API surface was verified live
+# against: MCPStreamableHTTPTool(header_provider=…, approval_mode=…) construction
+# proven non-dialing, FoundryChatClient(model=, credential=).as_agent(…), and the
+# AG-UI endpoint's SupportsAgentRun contract — all against agent-framework
+# 1.12.1 (core 1.12.1 / foundry 1.10.3) + agent-framework-ag-ui 1.0.0.
+# Deliberately OUT of `all`/`dev`, same rationale as `runtime`: heavy, and only
+# the maf adapter imports it (deferred import inside the adapter's build()).
+# Install to use the MAF backend: pip install "dna-sdk[maf]".
+maf = ["agent-framework==1.12.1", "agent-framework-ag-ui==1.0.0"]
 all = ["dna-sdk[postgres,sqlite,sql]"]
 dev = [
     "pytest>=7.0",
