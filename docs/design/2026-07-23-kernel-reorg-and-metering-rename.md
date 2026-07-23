@@ -72,6 +72,32 @@ surface). The subpackaging must keep `dna.kernel.<PublicName>` working — the
 `__init__.py` re-exports every public symbol from its new subpackage home, so NO
 consumer import changes. This is the safety net: the refactor is internal-only.
 
+### ⚠️ Scope reality (dependency analysis, 2026-07-23)
+
+The dep graph + a consumer survey ran. Two findings resize this effort:
+
+1. **59 modules, 105 intra-kernel edges.** Core primitives (stay top-level):
+   `protocols` (fan-in 20), `collaborator_ports` (12), `document` (9),
+   `instance` (8), `capabilities` (6), `preview` (6), `hooks`, `errors`. 21 leaf
+   modules (no intra-kernel deps) move first.
+2. **Consumers import by MODULE PATH, not symbol.** `from dna.kernel.protocols
+   import …` (84 uses), `dna.kernel.instance`, `.hooks`, `.kind_base`, … — **50
+   SDK files** + the CLI + dna-cloud all reference `dna.kernel.<module>` paths.
+   The `kernel/__init__.py` barely re-exports. So moving a module BREAKS those
+   paths everywhere — a symbol re-export in `__init__` does NOT save a
+   `from dna.kernel.instance import X`.
+
+**Consequence:** this is NOT an internal-only refactor like the copilot/web apps.
+It is a **coordinated cross-repo change** — move the modules, then update every
+`dna.kernel.<module>` path across the SDK (50 files), the CLI, AND dna-cloud, with
+compat shims (`dna/kernel/<old>.py` re-importing from the new home) if a phased
+rollout is wanted. It ships as 0.29.0 and dna-cloud bumps its pin in lockstep.
+
+This is a DEDICATED, focused effort with a clean test env — the analysis here
+(dep graph + import survey) de-risks it, but executing 59 moves + ~200 consumer
+import updates against a non-clean baseline at the tail of a long session is
+exactly the recklessness this spec's discipline section warns against.
+
 ---
 
 ## Execution discipline (why this is a dedicated effort, not improvised)
