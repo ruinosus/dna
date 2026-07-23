@@ -30,18 +30,48 @@ def build_headers_provider(auth: Callable[[], dict]) -> Callable[[], dict]:
     return provider
 
 
+def _workspace_scoped_path(path: str, workspace: str) -> str:
+    """Splice the DNA per-workspace selector into the MCP URL path:
+    ``/mcp`` → ``/w/<workspace>/mcp``. The DNA MCP server mounts the SAME app
+    at both ``/mcp`` (falls back to the identity's sole/default membership) and
+    ``/w/{workspace_id}/mcp``; a MULTI-workspace identity that hits the bare
+    ``/mcp`` naming no workspace is rejected (CrossWorkspaceError), so the
+    caller must name one — and the server resolves it from the PATH, never a
+    header. Idempotent: a path already carrying ``/w/`` is left untouched."""
+    if not workspace or "/w/" in path:
+        return path
+    suffix = "/mcp"
+    if path.endswith(suffix):
+        return f"{path[: -len(suffix)]}/w/{workspace}{suffix}"
+    return f"{path.rstrip('/')}/w/{workspace}"
+
+
 class _HeadersProviderAuth(httpx.Auth):
     """httpx.Auth adapter that calls `headers_provider()` on every outgoing
     HTTP request. httpx drives `auth_flow` per request (not once at client
     construction), so this is what makes the bearer genuinely per-request
-    rather than a value snapshotted when the MCP session was opened."""
+    rather than a value snapshotted when the MCP session was opened.
+
+    It ALSO names the per-request workspace: when the provider carries an
+    ``X-DNA-Workspace`` value it rewrites the URL to ``/w/<id>/mcp`` (the DNA
+    server resolves the workspace from the path, never that header), so a
+    multi-workspace identity is not rejected for naming none. Tool DISCOVERY
+    (build time, no request context → no workspace header) keeps the bare
+    ``/mcp`` — schemas are workspace-independent — and only per-request tool
+    CALLS get the scoped path."""
 
     def __init__(self, headers_provider: Callable[[], dict]) -> None:
         self._headers_provider = headers_provider
 
     def auth_flow(self, request: httpx.Request):
-        for key, value in self._headers_provider().items():
+        headers = self._headers_provider()
+        for key, value in headers.items():
             request.headers[key] = value
+        workspace = (headers.get("X-DNA-Workspace") or "").strip()
+        if workspace:
+            scoped = _workspace_scoped_path(request.url.path, workspace)
+            if scoped != request.url.path:
+                request.url = request.url.copy_with(path=scoped)
         yield request
 
 
