@@ -226,6 +226,7 @@ const COVERED: Record<string, string> = {
   "GET /v1/agents/{name}/prompt": "agentPrompt",
   "GET /v1/tools": "listTools",
   "GET /v1/genome": "genomeView",
+  "GET /v1/definitions/{kind}/{name}": "readDefinition",
   "GET /v1/memories": "listMemories",
   "GET /v1/memories/personal": "listPersonalMemories",
   "GET /v1/memories/search": "searchMemories",
@@ -242,6 +243,8 @@ const COVERED: Record<string, string> = {
   "GET /v1/workspaces": "listWorkspaces",
   "GET /v1/workspaces/{workspace_id}/members": "listWorkspaceMembers",
   // -- writes --
+  "PUT /v1/definitions/{kind}/{name}": "applyDefinition",
+  "DELETE /v1/definitions/{kind}/{name}": "revertDefinition",
   "POST /v1/memories": "rememberMemory",
   "POST /v1/memories/import": "importMemories",
   "DELETE /v1/memories/{name}": "deleteMemory",

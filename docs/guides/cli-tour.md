@@ -204,6 +204,17 @@ $ dna genome view dna-cloud
 $ dna genome view dna-cloud --json   # machine-readable
 ```
 
+## `dna definition` — customize a tenant's Strain
+
+[Reference →](../reference/cli/definition.md)
+
+`dna definition get <kind> <name> --tenant <wid>` shows a definition as the tenant
+sees it (effective vs base). `dna definition set <kind> <name> --file spec.yaml
+--tenant <wid>` writes a copy-on-write override into the tenant's scope — the
+mutation is vetoed by LayerPolicy for locked Kinds or non-overlayable fields.
+`dna definition revert <kind> <name> --tenant <wid>` removes it. The REST face
+exposes the same surface at `GET|PUT|DELETE /v1/definitions/{kind}/{name}`.
+
 ## `dna kind` — list and inspect registered Kinds
 
 [Reference →](../reference/cli/kind.md)

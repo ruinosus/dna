@@ -156,6 +156,41 @@ class GenomeViewResponse(BaseModel):
     policies: dict[str, dict[str, str]] = Field(default_factory=dict)
 
 
+# ── definitions (read/apply/revert a tenant-layer override) ──────────────────
+
+
+class DefinitionView(BaseModel):
+    """``GET /v1/definitions/{kind}/{name}`` — the tenant's view of one
+    definition: the effective (composed) spec, the inherited base spec,
+    whether the tenant has an override, and the Kind's edit schema. The
+    ``pattern``/``body_field``/``bundle_entries`` fields carry the Kind's
+    storage taxonomy so the editor is honest about a BUNDLE Kind's files
+    being read-only for now (fork is a later plane)."""
+
+    kind: str
+    name: str
+    overridden: bool
+    overlayable: bool
+    effective: dict[str, Any]
+    base: dict[str, Any] | None = None
+    ui_schema: dict[str, Any] = Field(default_factory=dict)
+    overlayable_fields: list[str] = Field(default_factory=list)
+    pattern: str = ""
+    body_field: str | None = None
+    bundle_entries: list[str] = Field(default_factory=list)
+
+
+class DefinitionWriteResponse(BaseModel):
+    """``PUT``/``DELETE /v1/definitions/{kind}/{name}`` — the write result.
+    ``version`` is set on apply (the write's document version), absent on
+    revert."""
+
+    kind: str
+    name: str
+    version: str | None = None
+    overridden: bool
+
+
 # ── memory ──────────────────────────────────────────────────────────────────
 
 

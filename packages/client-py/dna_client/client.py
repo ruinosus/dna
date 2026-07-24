@@ -207,6 +207,41 @@ class DnaClient:
         contents) + the tenant LayerPolicy, composed live."""
         return self._get("/v1/genome", scope=scope, tenant=tenant)
 
+    def read_definition(
+        self, kind: str, name: str, *,
+        scope: str | None = None, tenant: str | None = None,
+    ) -> JsonObject:
+        """Read one definition as the tenant sees it: the effective (composed)
+        spec, the inherited base spec, whether the tenant has an override, and
+        the Kind's edit schema (``ui_schema`` + overlayable fields) — what a
+        customization editor renders. 404 for an unknown (kind, name)."""
+        return self._get(f"/v1/definitions/{kind}/{name}", scope=scope, tenant=tenant)
+
+    # -- definitions (writes) -------------------------------------------------
+
+    def apply_definition(
+        self, kind: str, name: str, spec: dict[str, Any], *,
+        scope: str | None = None, tenant: str | None = None,
+    ) -> JsonObject:
+        """Persist a tenant override of a definition (the editor's Save) — a
+        tenant-layer write. A LOCKED Kind/field is vetoed by the kernel's
+        LayerPolicy check and surfaces as a 403 :class:`DnaApiError`."""
+        return self._write(
+            "PUT", f"/v1/definitions/{kind}/{name}", {"spec": spec},
+            scope=scope, tenant=tenant,
+        )
+
+    def revert_definition(
+        self, kind: str, name: str, *,
+        scope: str | None = None, tenant: str | None = None,
+    ) -> JsonObject:
+        """Revert a tenant override — deletes the tenant-layer doc so reads
+        fall back to the inherited base (the editor's "Reset to default")."""
+        return self.request(
+            "DELETE", f"/v1/definitions/{kind}/{name}",
+            params={"scope": scope, "tenant": tenant},
+        )
+
     # -- memory (reads) ------------------------------------------------------
 
     def list_memories(
