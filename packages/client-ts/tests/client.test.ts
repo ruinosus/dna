@@ -227,6 +227,8 @@ const COVERED: Record<string, string> = {
   "GET /v1/tools": "listTools",
   "GET /v1/genome": "genomeView",
   "GET /v1/definitions/{kind}/{name}": "readDefinition",
+  "GET /v1/definitions/{kind}/{name}/entries": "listBundleEntries",
+  "GET /v1/definitions/{kind}/{name}/entries/{entry}": "readBundleEntry",
   "GET /v1/memories": "listMemories",
   "GET /v1/memories/personal": "listPersonalMemories",
   "GET /v1/memories/search": "searchMemories",
@@ -245,6 +247,8 @@ const COVERED: Record<string, string> = {
   // -- writes --
   "PUT /v1/definitions/{kind}/{name}": "applyDefinition",
   "DELETE /v1/definitions/{kind}/{name}": "revertDefinition",
+  "PUT /v1/definitions/{kind}/{name}/entries/{entry}": "writeBundleEntry",
+  "DELETE /v1/definitions/{kind}/{name}/entries/{entry}": "revertBundleEntry",
   "POST /v1/memories": "rememberMemory",
   "POST /v1/memories/import": "importMemories",
   "DELETE /v1/memories/{name}": "deleteMemory",

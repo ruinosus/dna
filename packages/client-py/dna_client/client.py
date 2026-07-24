@@ -242,6 +242,52 @@ class DnaClient:
             params={"scope": scope, "tenant": tenant},
         )
 
+    # -- definitions (bundle entries — fork a bundle-file, plane B) ----------
+
+    def list_bundle_entries(
+        self, kind: str, name: str, *,
+        scope: str | None = None, tenant: str | None = None,
+    ) -> JsonObject:
+        """List a bundle document's entry files (base ∪ tenant overlay), each
+        flagged ``overridden`` — whether THIS tenant forked that specific file."""
+        return self._get(
+            f"/v1/definitions/{kind}/{name}/entries", scope=scope, tenant=tenant
+        )
+
+    def read_bundle_entry(
+        self, kind: str, name: str, entry: str, *,
+        scope: str | None = None, tenant: str | None = None,
+    ) -> JsonObject:
+        """Read one bundle entry's effective content (tenant overlay wins over
+        base), plus whether THIS tenant forked it and whether it's binary."""
+        return self._get(
+            f"/v1/definitions/{kind}/{name}/entries/{entry}",
+            scope=scope, tenant=tenant,
+        )
+
+    def write_bundle_entry(
+        self, kind: str, name: str, entry: str, content: str, *,
+        scope: str | None = None, tenant: str | None = None,
+    ) -> JsonObject:
+        """Fork one bundle entry into the tenant layer. A LOCKED Kind is
+        vetoed by the kernel's LayerPolicy check and surfaces as a 403
+        :class:`DnaApiError`."""
+        return self._write(
+            "PUT", f"/v1/definitions/{kind}/{name}/entries/{entry}",
+            {"content": content}, scope=scope, tenant=tenant,
+        )
+
+    def revert_bundle_entry(
+        self, kind: str, name: str, entry: str, *,
+        scope: str | None = None, tenant: str | None = None,
+    ) -> JsonObject:
+        """Revert a tenant's fork of one bundle entry — reads fall back to the
+        inherited base file."""
+        return self.request(
+            "DELETE", f"/v1/definitions/{kind}/{name}/entries/{entry}",
+            params={"scope": scope, "tenant": tenant},
+        )
+
     # -- memory (reads) ------------------------------------------------------
 
     def list_memories(

@@ -191,6 +191,61 @@ class DefinitionWriteResponse(BaseModel):
     overridden: bool
 
 
+# ── bundle entries (list/read/write/revert a bundle-file fork — plane B) ────
+#
+# A bundle-pattern Kind (Skill, and any future bundle Kind) stores MULTIPLE
+# files per document (SKILL.md + scripts/…), not a single spec — these are the
+# file-grained twin of DefinitionView/DefinitionWriteResponse above, generic
+# over any bundle Kind, with the SAME LayerPolicy governance (a fork on a
+# LOCKED Kind is vetoed, 403).
+
+
+class BundleEntrySummary(BaseModel):
+    entry: str
+    overridden: bool
+
+
+class BundleEntriesView(BaseModel):
+    """``GET /v1/definitions/{kind}/{name}/entries`` — a bundle document's
+    entry files (base ∪ tenant overlay), each flagged ``overridden`` —
+    whether THIS tenant forked that specific file."""
+
+    kind: str
+    name: str
+    entries: list[BundleEntrySummary]
+
+
+class BundleEntryView(BaseModel):
+    """``GET /v1/definitions/{kind}/{name}/entries/{entry}`` — one bundle
+    entry's effective content (tenant overlay wins over base), whether this
+    tenant forked it, and whether it's binary (a decode failure — reported
+    honestly rather than mangling bytes into ``content``)."""
+
+    kind: str
+    name: str
+    entry: str
+    content: str
+    overridden: bool
+    binary: bool
+
+
+class WriteBundleEntryRequest(BaseModel):
+    """``PUT /v1/definitions/{kind}/{name}/entries/{entry}`` — the fork's new
+    content. The request body is exactly ``{"content": "..."}``."""
+
+    content: str
+
+
+class BundleEntryWriteResponse(BaseModel):
+    """``PUT``/``DELETE /v1/definitions/{kind}/{name}/entries/{entry}`` — the
+    write result."""
+
+    kind: str
+    name: str
+    entry: str
+    overridden: bool
+
+
 # ── memory ──────────────────────────────────────────────────────────────────
 
 

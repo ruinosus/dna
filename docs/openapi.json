@@ -909,6 +909,119 @@
         "title": "Body_set_project_member_v1_projects__slug__members_post",
         "type": "object"
       },
+      "BundleEntriesView": {
+        "description": "``GET /v1/definitions/{kind}/{name}/entries`` — a bundle document's\nentry files (base ∪ tenant overlay), each flagged ``overridden`` —\nwhether THIS tenant forked that specific file.",
+        "properties": {
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/BundleEntrySummary"
+            },
+            "title": "Entries",
+            "type": "array"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "name",
+          "entries"
+        ],
+        "title": "BundleEntriesView",
+        "type": "object"
+      },
+      "BundleEntrySummary": {
+        "properties": {
+          "entry": {
+            "title": "Entry",
+            "type": "string"
+          },
+          "overridden": {
+            "title": "Overridden",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "entry",
+          "overridden"
+        ],
+        "title": "BundleEntrySummary",
+        "type": "object"
+      },
+      "BundleEntryView": {
+        "description": "``GET /v1/definitions/{kind}/{name}/entries/{entry}`` — one bundle\nentry's effective content (tenant overlay wins over base), whether this\ntenant forked it, and whether it's binary (a decode failure — reported\nhonestly rather than mangling bytes into ``content``).",
+        "properties": {
+          "binary": {
+            "title": "Binary",
+            "type": "boolean"
+          },
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "entry": {
+            "title": "Entry",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "overridden": {
+            "title": "Overridden",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "kind",
+          "name",
+          "entry",
+          "content",
+          "overridden",
+          "binary"
+        ],
+        "title": "BundleEntryView",
+        "type": "object"
+      },
+      "BundleEntryWriteResponse": {
+        "description": "``PUT``/``DELETE /v1/definitions/{kind}/{name}/entries/{entry}`` — the\nwrite result.",
+        "properties": {
+          "entry": {
+            "title": "Entry",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "overridden": {
+            "title": "Overridden",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "kind",
+          "name",
+          "entry",
+          "overridden"
+        ],
+        "title": "BundleEntryWriteResponse",
+        "type": "object"
+      },
       "CreateProjectResponse": {
         "description": "``POST /v1/projects`` — the created project. ``scope`` is DERIVED from the\nworkspace (never caller-supplied).",
         "properties": {
@@ -3201,6 +3314,20 @@
         },
         "title": "WorkspacesResponse",
         "type": "object"
+      },
+      "WriteBundleEntryRequest": {
+        "description": "``PUT /v1/definitions/{kind}/{name}/entries/{entry}`` — the fork's new\ncontent. The request body is exactly ``{\"content\": \"...\"}``.",
+        "properties": {
+          "content": {
+            "title": "Content",
+            "type": "string"
+          }
+        },
+        "required": [
+          "content"
+        ],
+        "title": "WriteBundleEntryRequest",
+        "type": "object"
       }
     }
   },
@@ -3949,6 +4076,427 @@
           }
         },
         "summary": "Put Definition"
+      }
+    },
+    "/v1/definitions/{kind}/{name}/entries": {
+      "get": {
+        "description": "List a bundle document's entry files (base ∪ tenant overlay), each\nflagged ``overridden`` — whether THIS tenant forked that specific\nfile. 404 for a non-bundle Kind or an unknown (kind, name).",
+        "operationId": "list_bundle_entries_v1_definitions__kind___name__entries_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scope"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tenant"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BundleEntriesView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Bundle Entries"
+      }
+    },
+    "/v1/definitions/{kind}/{name}/entries/{entry}": {
+      "delete": {
+        "description": "Revert a tenant's fork of one bundle entry — deletes the\ntenant-layer file so reads fall back to the inherited base (the\neditor's \"Reset to default\", file-grained).",
+        "operationId": "delete_bundle_entry_v1_definitions__kind___name__entries__entry__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entry",
+            "required": true,
+            "schema": {
+              "title": "Entry",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scope"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tenant"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BundleEntryWriteResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Bundle Entry"
+      },
+      "get": {
+        "description": "Read one bundle entry's effective content (tenant overlay wins over\nbase), plus whether THIS tenant forked it and whether it's binary\n(reported honestly rather than mangling bytes into ``content``). 404\nfor a non-bundle Kind or an unknown entry (the kernel's fetch raises\n``FileNotFoundError`` for a missing file, ``ValueError`` for a\nnon-bundle Kind — both map to the same 404 the caller sees).",
+        "operationId": "get_bundle_entry_v1_definitions__kind___name__entries__entry__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entry",
+            "required": true,
+            "schema": {
+              "title": "Entry",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scope"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tenant"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BundleEntryView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Bundle Entry"
+      },
+      "put": {
+        "description": "Fork one bundle entry into the tenant layer (the editor's\nfile-level Save) — a tenant-layer write via the SAME core\n``write_bundle_entry_impl`` the CLI uses. A LOCKED Kind is vetoed by\nthe kernel's LayerPolicy check, surfaced here as 403 (never silently\ndropped).",
+        "operationId": "put_bundle_entry_v1_definitions__kind___name__entries__entry__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entry",
+            "required": true,
+            "schema": {
+              "title": "Entry",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scope"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tenant"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WriteBundleEntryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BundleEntryWriteResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Bundle Entry"
       }
     },
     "/v1/genome": {
