@@ -47,7 +47,12 @@ jobs:
       - name: Install
         run: |
           uv venv
-          uv pip install -e ".[dev]"
+          # [runtime] (langchain/langgraph) + fastapi + ag-ui-langgraph so the
+          # dna.runtime adapter/middleware suite (tests/runtime/) RUNS here. It
+          # is guarded by tests/runtime/conftest.py, so the base/postgres jobs
+          # that skip these deps still collect cleanly. The `maf` extra
+          # (agent-framework) stays out — its tests importorskip it.
+          uv pip install -e ".[dev,runtime]" fastapi "ag-ui-langgraph==0.0.42"
       - name: Test
         run: uv run --no-project pytest tests -q --timeout=120 -p no:cacheprovider
 

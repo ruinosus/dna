@@ -166,7 +166,7 @@ def _attr(port: object, name: str):
 def _load_kinds() -> list[dict]:
     """Every registered Kind as a plain sorted dict — the logical entities."""
     from dna.kernel import Kernel
-    from dna.kernel.references import declared_references
+    from dna.kernel.query.references import declared_references
 
     kinds: list[dict] = []
     for port in Kernel.auto().kind_ports():

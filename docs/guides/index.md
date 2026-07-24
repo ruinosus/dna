@@ -56,7 +56,7 @@ first if you have never loaded a scope.
 
 - **[The DNA Cloud starter catalog & BYO-DNA](dna-cloud-catalog.md)** — the
   three `_lib` starter agents every tenant inherits, and how a Pro tenant
-  authors + pushes their own agent as a tenant overlay (gated by Tier caps).
+  authors + pushes their own agent as a tenant overlay (gated by PricingPlan caps).
 
 ## Lifecycle
 

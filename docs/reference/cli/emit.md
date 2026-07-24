@@ -35,5 +35,5 @@ dna emit [OPTIONS] [AGENT]
 | `--out`, `-o` | Write the artifact to this file instead of stdout. |
 | `--provider` | Override the provider the target binds (e.g. AzureOpenAI, OpenAI). |
 | `--scope` | Scope holding the agent (default: env / sole scope). |
-| `--target`, `-t` | Runtime to emit for (e.g. agent-framework). See --list-targets. When AGENT is a Copilot, picks the servable runtime (agno default; agent-framework; langgraph). |
+| `--target`, `-t` | Runtime to emit for (e.g. agent-framework). See --list-targets. When AGENT is a Copilot, picks the servable runtime (agno default; agent-framework). The langgraph copilot scaffold is retired — use dna.runtime.build_copilot instead. |
 
