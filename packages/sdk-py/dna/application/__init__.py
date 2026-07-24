@@ -53,6 +53,7 @@ from dna.application.runtime import (
     list_workspace_members_impl,
     list_workspaces_impl,
     list_templates_impl,
+    list_bundle_entries_impl,
     list_members_impl,
     list_memories_impl,
     list_orgs_impl,
@@ -66,14 +67,17 @@ from dna.application.runtime import (
     ensure_workspace_scope_genome,
     provision_tenant_owner_impl,
     provision_workspace_owner_impl,
+    read_bundle_entry_impl,
     read_definition_impl,
     recall_impl,
     remember_impl,
     remove_member_impl,
+    revert_bundle_entry_impl,
     revert_definition_impl,
     revoke_workspace_member_impl,
     set_member_impl,
     set_account_plan_impl,
+    write_bundle_entry_impl,
 )
 
 __all__ = [
@@ -99,6 +103,11 @@ __all__ = [
     "read_definition_impl",
     "apply_definition_impl",
     "revert_definition_impl",
+    # bundle entries: list/read/write/revert a bundle-file fork (plane B — s-strain-bundle-fork)
+    "list_bundle_entries_impl",
+    "read_bundle_entry_impl",
+    "write_bundle_entry_impl",
+    "revert_bundle_entry_impl",
     # toolkit (Spec Kit Layer 3 — PromptTemplates + Skills served live)
     "list_templates_impl",
     "get_template_impl",

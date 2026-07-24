@@ -395,6 +395,118 @@ async def revert_definition_impl(
     return {"kind": kind, "name": name, "overridden": False}
 
 
+# ── bundle entries: list/read/write/revert a bundle-file fork (plane B) ─────
+#
+# A bundle-pattern Kind (Skill, and any future bundle Kind) stores MULTIPLE
+# files per document (SKILL.md + scripts/…), not a single spec — plane A's
+# apply/revert_definition_impl only ever touch the ONE spec doc, so they can't
+# fork an individual file. These four use-cases are the file-grained twin,
+# generic over ANY bundle Kind (routed by ``KindPort.storage.pattern``, never
+# Skill-specific), with the SAME LayerPolicy governance as plane A: a fork on a
+# LOCKED Kind raises ``LayerPolicyViolationError`` (see ``_check_entry_layer_policy``).
+
+
+def _require_bundle_kind(live: LiveDna, kind: str) -> None:
+    """Raise ValueError unless ``kind``'s StorageDescriptor pattern is
+    ``"bundle"`` — a non-bundle Kind (Agent, PromptTemplate, …) has no file
+    entries to list/fork."""
+    port = live.kernel.kind_port_for(kind)
+    pat = getattr(getattr(port, "storage", None), "pattern", None)
+    pat = getattr(pat, "value", pat)
+    if str(pat) != "bundle":
+        raise ValueError(f"Kind {kind!r} is not a bundle Kind (pattern={pat!r}); no file entries.")
+
+
+async def _check_entry_layer_policy(
+    live: LiveDna, scope: str, kind: str, name: str, tenant: str,
+) -> None:
+    """Route a bundle-entry fork through the SAME layer-policy gate
+    ``write_document`` runs for a spec override (``WritePipeline.write``,
+    ``dna/kernel/write/pipeline.py`` — ``host._check_layer_policy_async(scope,
+    kind, name, raw, policy_check_layer)``).
+
+    ``BundleIO.write_async`` (``dna/kernel/bundle/io.py``) writes bundle-entry
+    ROWS directly through the source adapter's ``BundleEntryWritable``
+    capability — it never goes through ``WritePipeline``, so it does NOT run
+    this check on its own. Reusing the kernel's own ``_check_layer_policy_async``
+    (rather than reimplementing LOCKED/RESTRICTED/OPEN logic here) keeps a
+    fork's governance identical to a spec-override write: a LOCKED Kind vetoes
+    either one. The ``raw`` passed is minimal (no real spec content is being
+    checked — only the Kind/name/layer triple matters for the LOCKED/OPEN
+    gate); RESTRICTED's "new top-level spec key" diff is a no-op against an
+    empty ``spec``, which is correct here — that rule polices spec shape, and a
+    bundle entry has no spec.
+    """
+    raw = {"kind": kind, "metadata": {"name": name}, "spec": {}}
+    await live.kernel._check_layer_policy_async(scope, kind, name, raw, ("tenant", tenant))
+
+
+async def list_bundle_entries_impl(
+    live: LiveDna, *, scope: str, tenant: str | None, kind: str, name: str,
+) -> dict[str, Any]:
+    """List a bundle document's entry files (base ∪ tenant overlay), each
+    flagged ``overridden`` — whether the TENANT layer forked that specific
+    file (mirrors ``_tenant_layer_doc_exists``'s doc-presence contract, but at
+    file grain: presence in the tenant-only listing, not a content diff)."""
+    _require_bundle_kind(live, kind)
+    forked = set(
+        live.kernel.list_bundle_entries(scope, kind, name, tenant=tenant, only_tenant=True)
+    ) if tenant else set()
+    allp = live.kernel.list_bundle_entries(scope, kind, name, tenant=tenant)
+    return {
+        "kind": kind, "name": name,
+        "entries": [{"entry": e, "overridden": e in forked} for e in allp],
+    }
+
+
+async def read_bundle_entry_impl(
+    live: LiveDna, *, scope: str, tenant: str | None, kind: str, name: str, entry: str,
+) -> dict[str, Any]:
+    """Read one bundle entry's effective content (tenant overlay wins over
+    base), plus whether THIS tenant forked it and whether it's binary (decode
+    failure — reported honestly rather than mangling bytes into ``content``)."""
+    _require_bundle_kind(live, kind)
+    raw = live.kernel.fetch_bundle_entry(scope, kind, name, entry, tenant=tenant)  # bytes
+    forked = bool(tenant) and entry in set(
+        live.kernel.list_bundle_entries(scope, kind, name, tenant=tenant, only_tenant=True)
+    )
+    try:
+        content, binary = raw.decode("utf-8"), False
+    except UnicodeDecodeError:
+        content, binary = "", True
+    return {
+        "kind": kind, "name": name, "entry": entry,
+        "content": content, "overridden": forked, "binary": binary,
+    }
+
+
+async def write_bundle_entry_impl(
+    live: LiveDna, *, scope: str, tenant: str, kind: str, name: str, entry: str, content: str,
+) -> dict[str, Any]:
+    """Fork one bundle entry into the tenant layer. Governance parity with
+    plane A: routes through ``_check_entry_layer_policy`` first, so a LOCKED
+    Kind raises ``LayerPolicyViolationError`` (the face maps it to 403) BEFORE
+    anything is written."""
+    if not (tenant or "").strip():
+        raise ValueError("tenant is required to fork a bundle entry")
+    _require_bundle_kind(live, kind)
+    await _check_entry_layer_policy(live, scope, kind, name, tenant)
+    await live.kernel.write_bundle_entry_async(scope, kind, name, entry, content, tenant=tenant)
+    return {"kind": kind, "name": name, "entry": entry, "overridden": True}
+
+
+async def revert_bundle_entry_impl(
+    live: LiveDna, *, scope: str, tenant: str, kind: str, name: str, entry: str,
+) -> dict[str, Any]:
+    """Remove the tenant's fork of one bundle entry → reads fall back to the
+    inherited base file."""
+    if not (tenant or "").strip():
+        raise ValueError("tenant is required to revert a bundle entry")
+    _require_bundle_kind(live, kind)
+    live.kernel.delete_bundle_entry(scope, kind, name, entry, tenant=tenant)
+    return {"kind": kind, "name": name, "entry": entry, "overridden": False}
+
+
 # ── toolkit: PromptTemplates + Skills (the Spec Kit Layer 3 surface) ─────────
 #
 # The ingested Spec Kit toolkit (``dna specify install-templates``) lands as
