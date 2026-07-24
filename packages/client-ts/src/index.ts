@@ -157,6 +157,12 @@ export class DnaClient {
     return this.unwrap(await this.raw.GET("/v1/tools", { params: { query: this.q(query) } }));
   }
 
+  /** The derived Genome view of a scope: identity + ships (the scope's own
+   * contents) + the tenant LayerPolicy, composed live. */
+  async genomeView(query?: ScopeTenant) {
+    return this.unwrap(await this.raw.GET("/v1/genome", { params: { query: this.q(query) } }));
+  }
+
   // ── memory (reads) ────────────────────────────────────────────────────────
 
   /** List the tenant's memory — base + the tenant's OWN overlay. */

@@ -1,0 +1,19 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-069-split-server-faces
+spec:
+  description: "dna-cli hospeda faces de SERVIDOR HTTP (api serve=FastAPI, mcp serve=FastMCP)\
+    \ alem da CLI \u2014 o nome engana. Separar em packages proprios (dna-api, dna-mcp).\
+    \ A logica ja esta no core (dna.application/*_impl); so os adapters finos de transporte\
+    \ mudam de casa. Pronto: dna-api+dna-mcp publicaveis, dna-cli so CLI, pins do\
+    \ dna-cloud atualizados, ADR do split."
+  type: task
+  severity: medium
+  status: open
+  timeline:
+  - at: '2026-07-24T14:49:03+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

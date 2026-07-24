@@ -42,6 +42,7 @@ from dna.application.runtime import (
     get_adr_impl,
     get_project_impl,
     get_skill_impl,
+    genome_view_impl,
     get_template_impl,
     get_tool_impl,
     import_memories_impl,
@@ -90,6 +91,7 @@ __all__ = [
     "list_agents_impl",
     "list_tools_impl",
     "get_tool_impl",
+    "genome_view_impl",
     # toolkit (Spec Kit Layer 3 — PromptTemplates + Skills served live)
     "list_templates_impl",
     "get_template_impl",

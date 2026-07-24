@@ -132,6 +132,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/genome": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Genome
+         * @description The DERIVED Genome view of a scope: identity + ships (the scope's own
+         *     contents, enumerated live = no drift) + the tenant LayerPolicy. One call
+         *     composes what the portal's /console/genome panel renders.
+         */
+        get: operations["genome_v1_genome_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/insights": {
         parameters: {
             query?: never;
@@ -1115,6 +1137,44 @@ export interface components {
             /** Tenant */
             tenant?: string | null;
         };
+        /** GenomeIdentity */
+        GenomeIdentity: {
+            /** Default Agent */
+            default_agent?: string | null;
+            /** Tags */
+            tags?: string[];
+            /** Version */
+            version?: string | null;
+            /** Visibility */
+            visibility?: string | null;
+        };
+        /**
+         * GenomeShips
+         * @description The module's contents, enumerated live from the scope (not a stored list).
+         */
+        GenomeShips: {
+            /** Agents */
+            agents?: string[];
+            /** Copilots */
+            copilots?: string[];
+            /** Federations */
+            federations?: string[];
+            /** Tools */
+            tools?: string[];
+        };
+        /** GenomeViewResponse */
+        GenomeViewResponse: {
+            identity: components["schemas"]["GenomeIdentity"];
+            /** Policies */
+            policies?: {
+                [key: string]: {
+                    [key: string]: string;
+                };
+            };
+            /** Scope */
+            scope: string;
+            ships: components["schemas"]["GenomeShips"];
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -2036,6 +2096,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BoardItemResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    genome_v1_genome_get: {
+        parameters: {
+            query?: {
+                scope?: string | null;
+                tenant?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GenomeViewResponse"];
                 };
             };
             /** @description Validation Error */

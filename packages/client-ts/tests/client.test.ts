@@ -225,6 +225,7 @@ const COVERED: Record<string, string> = {
   "GET /v1/agents": "listAgents",
   "GET /v1/agents/{name}/prompt": "agentPrompt",
   "GET /v1/tools": "listTools",
+  "GET /v1/genome": "genomeView",
   "GET /v1/memories": "listMemories",
   "GET /v1/memories/personal": "listPersonalMemories",
   "GET /v1/memories/search": "searchMemories",

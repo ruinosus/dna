@@ -163,6 +163,70 @@ async def list_tools_impl(
     return {"scope": mi.scope, "tools": tools}
 
 
+def _doc_spec(d: Any) -> dict[str, Any]:
+    s = getattr(d, "spec", None)
+    if isinstance(s, dict):
+        return s
+    raw = getattr(d, "_raw", None) or {}
+    return raw.get("spec", {}) if isinstance(raw, dict) else {}
+
+
+async def genome_view_impl(
+    live: LiveDna, scope: str | None = None, tenant: str | None = None
+) -> dict[str, Any]:
+    """The DERIVED Genome view of a scope: the Genome identity + the module's
+    contents (ships) + the tenant LayerPolicy — composed live so nothing drifts.
+
+    Definition-plane Kinds (Genome, Agent, MCPFederation, LayerPolicy) come from
+    ``mi.documents``; record-plane Kinds (Copilot, Tool) from ``kernel.query``.
+    """
+    mi = await live.mi(scope, tenant)
+    sc = mi.scope
+
+    genome_spec: dict[str, Any] = {}
+    agents: list[str] = []
+    federations: list[str] = []
+    policies: dict[str, Any] = {}
+    for d in mi.documents:
+        k = getattr(d, "kind", None)
+        n = getattr(d, "name", None)
+        if k == "Genome":
+            genome_spec = _doc_spec(d)
+        elif k == "Agent" and n:
+            agents.append(n)
+        elif k == "MCPFederation" and n:
+            federations.append(n)
+        elif k == "LayerPolicy":
+            s = _doc_spec(d)
+            policies[s.get("layer_id") or n or "?"] = s.get("policies", {}) or {}
+
+    async def _record_names(kind: str) -> list[str]:
+        out: list[str] = []
+        async for row in live.kernel.query(sc, kind, tenant=tenant):
+            if isinstance(row, dict):
+                name = row.get("name") or (row.get("metadata", {}) or {}).get("name")
+                if name:
+                    out.append(name)
+        return sorted(out)
+
+    return {
+        "scope": sc,
+        "identity": {
+            "version": genome_spec.get("version"),
+            "visibility": genome_spec.get("visibility"),
+            "default_agent": genome_spec.get("default_agent"),
+            "tags": genome_spec.get("tags") or [],
+        },
+        "ships": {
+            "copilots": await _record_names("Copilot"),
+            "agents": sorted(agents),
+            "tools": await _record_names("Tool"),
+            "federations": sorted(federations),
+        },
+        "policies": policies,
+    }
+
+
 async def get_tool_impl(
     live: LiveDna, name: str, scope: str | None = None, tenant: str | None = None
 ) -> dict[str, Any]:

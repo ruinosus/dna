@@ -20,6 +20,7 @@ These pages are **generated from the Click command definitions** by
 | [`dna emit`](emit.md) | Emit a DNA agent as a target runtime's native artifact (the de-para). |
 | [`dna eval`](eval.md) | Run EvalSuites locally (offline, deterministic) and compare runs against a pinned EvalBaseline. |
 | [`dna explain`](explain.md) | Show per-section provenance for a composed agent prompt. |
+| [`dna genome`](genome.md) | The Genome view — a module's identity, contents (ships), and Strain policy. |
 | [`dna init`](init.md) | Make a project agent-ready: board + skill + AGENTS.md + git hooks. |
 | [`dna install`](install.md) | Install bundles/Kinds from a repository into the local source. |
 | [`dna intel`](intel.md) | Portfolio intelligence — run passes, inspect sources + insights. |

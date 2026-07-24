@@ -1019,6 +1019,118 @@
         "title": "DeleteMemoryResponse",
         "type": "object"
       },
+      "GenomeIdentity": {
+        "properties": {
+          "default_agent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Agent"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          },
+          "visibility": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visibility"
+          }
+        },
+        "title": "GenomeIdentity",
+        "type": "object"
+      },
+      "GenomeShips": {
+        "description": "The module's contents, enumerated live from the scope (not a stored list).",
+        "properties": {
+          "agents": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Agents",
+            "type": "array"
+          },
+          "copilots": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Copilots",
+            "type": "array"
+          },
+          "federations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Federations",
+            "type": "array"
+          },
+          "tools": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tools",
+            "type": "array"
+          }
+        },
+        "title": "GenomeShips",
+        "type": "object"
+      },
+      "GenomeViewResponse": {
+        "properties": {
+          "identity": {
+            "$ref": "#/components/schemas/GenomeIdentity"
+          },
+          "policies": {
+            "additionalProperties": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "title": "Policies",
+            "type": "object"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "ships": {
+            "$ref": "#/components/schemas/GenomeShips"
+          }
+        },
+        "required": [
+          "scope",
+          "identity",
+          "ships"
+        ],
+        "title": "GenomeViewResponse",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -3409,6 +3521,85 @@
           }
         },
         "summary": "Board Item"
+      }
+    },
+    "/v1/genome": {
+      "get": {
+        "description": "The DERIVED Genome view of a scope: identity + ships (the scope's own\ncontents, enumerated live = no drift) + the tenant LayerPolicy. One call\ncomposes what the portal's /console/genome panel renders.",
+        "operationId": "genome_v1_genome_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scope"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tenant"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenomeViewResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Genome"
       }
     },
     "/v1/insights": {

@@ -22,6 +22,7 @@ from dna_cli import (
     emit_cmd,
     eval_cmd,
     explain_cmd,
+    genome_cmd,
     init_cmd,
     install_cmd,
     intel_cmd,
@@ -74,6 +75,7 @@ main.add_command(research_cmd.research)
 main.add_command(recall_cmd.recall)
 main.add_command(recall_cmd.search)
 main.add_command(memory_cmd.memory)
+main.add_command(genome_cmd.genome)
 # Importing testkit_cmd registers `sdlc test-guide` + `sdlc test-run` on the
 # sdlc group via its decorators (TESTS as first-class SDLC).
 from dna_cli import testkit_cmd as _testkit_cmd  # noqa: E402,F401
