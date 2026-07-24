@@ -17,7 +17,7 @@ event loop for host code that wants a batteries-included entry point.
 
 ## Runtime
 
-::: dna.kernel.runtime.Runtime
+::: dna.kernel.boot.runtime.Runtime
     options:
       show_root_heading: true
       show_source: false
