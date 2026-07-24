@@ -144,6 +144,33 @@ dna definition get [OPTIONS] KIND NAME
 | `--scope` | Scope to read KIND/NAME from. |
 | `--tenant` | Read as this tenant's overlay (overrides DNA_TENANT). |
 
+## `dna definition reconcile`
+
+Diff each of the tenant's forked bundle entries against the CURRENT
+base — a fork can drift because the base moved on, not just because the
+tenant edited it. READ-only: resolve a diverged entry with the existing
+`dna definition entry set` (edit) or `entry revert` (take-base).
+
+```text
+dna definition reconcile [OPTIONS] KIND NAME
+```
+
+**Arguments**
+
+| Argument | Required |
+| --- | --- |
+| `KIND` | yes |
+| `NAME` | yes |
+
+**Options**
+
+| Option | Description |
+| --- | --- |
+| `--help` | Show this message and exit. |
+| `--json` | Machine-readable JSON. |
+| `--scope` | Scope to reconcile KIND/NAME's forks against. |
+| `--tenant` | Reconcile this tenant's overlay (overrides DNA_TENANT). |
+
 ## `dna definition revert`
 
 Remove the tenant override for KIND/NAME → reads fall back to the base.
