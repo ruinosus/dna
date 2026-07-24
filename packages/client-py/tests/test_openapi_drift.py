@@ -78,6 +78,7 @@ _COVERED: dict[tuple[str, str], str] = {
     ("GET", "/v1/agents"): "list_agents",
     ("GET", "/v1/agents/{name}/prompt"): "agent_prompt",
     ("GET", "/v1/tools"): "list_tools",
+    ("GET", "/v1/genome"): "genome_view",
     ("GET", "/v1/memories"): "list_memories",
     ("GET", "/v1/memories/personal"): "list_personal_memories",
     ("GET", "/v1/memories/search"): "search_memories",

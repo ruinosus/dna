@@ -200,6 +200,13 @@ class DnaClient:
         """List a scope's Tool Kind surfaces (name + description), tenant-aware."""
         return self._get("/v1/tools", scope=scope, tenant=tenant)
 
+    def genome_view(
+        self, *, scope: str | None = None, tenant: str | None = None
+    ) -> JsonObject:
+        """The derived Genome view of a scope: identity + ships (the scope's own
+        contents) + the tenant LayerPolicy, composed live."""
+        return self._get("/v1/genome", scope=scope, tenant=tenant)
+
     # -- memory (reads) ------------------------------------------------------
 
     def list_memories(

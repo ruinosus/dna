@@ -191,6 +191,19 @@ composes into agent prompts), and the tree inventories the composition
 plane — records are reached with `dna doc list Doc --scope docs` and the
 [`dna docs`](#dna-docs-browse-the-in-product-doc-corpus) group below.
 
+## `dna genome view` — the derived Genome view
+
+`dna genome view <scope>` composes a scope's Genome into one picture — its
+**identity** (version, default agent, tags), its **ships** (the copilots, agents,
+tools and federations the scope actually contains), and its **tenant LayerPolicy**
+(what a tenant overlay may customize vs. what is pinned). Nothing is a stored
+list: the ships are enumerated live from the scope, so the view never drifts.
+
+```console
+$ dna genome view dna-cloud
+$ dna genome view dna-cloud --json   # machine-readable
+```
+
 ## `dna kind` — list and inspect registered Kinds
 
 [Reference →](../reference/cli/kind.md)
