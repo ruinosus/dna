@@ -65,3 +65,42 @@ async def test_delete_reverts_to_base(kernel: Kernel) -> None:
     # falls back to base
     assert kernel.fetch_bundle_entry(_SCOPE, "Skill", "greeter", "scripts/hello.py", tenant=_WID) \
         == b"print('base')\n"
+
+
+@pytest.mark.asyncio
+async def test_write_bundle_entry_traversal_blocked(kernel: Kernel, tmp_path: Path) -> None:
+    """A crafted `entry` with '..' segments must never write outside the
+    bundle root — regression for the write/delete guard that previously only
+    checked against `base_dir` as a whole (letting a tenant clobber a
+    DIFFERENT bundle, including the shared base other tenants inherit).
+
+    bundle_root for (scope, "Skill", "greeter") is `<base>/test-bundle/skills
+    /greeter`; `../../victim/SKILL.md` resolves to `<base>/test-bundle/victim
+    /SKILL.md` — a sibling bundle dir, which must remain untouched."""
+    victim_dir = tmp_path / ".dna" / _SCOPE / "victim"
+    victim_dir.mkdir(parents=True)
+    victim_file = victim_dir / "SKILL.md"
+    victim_file.write_text("original\n")
+
+    traversal_entry = "../../victim/SKILL.md"
+    with pytest.raises(FileNotFoundError):
+        await kernel.write_bundle_entry_async(
+            _SCOPE, "Skill", "greeter", traversal_entry, "pwned\n")
+    assert victim_file.read_text() == "original\n"
+    assert not (tmp_path / ".dna" / _SCOPE / "victim" / "SKILL.md.tmp").exists()
+
+
+@pytest.mark.asyncio
+async def test_delete_bundle_entry_traversal_blocked(kernel: Kernel, tmp_path: Path) -> None:
+    """Same guard, delete side: a traversal `entry` must raise rather than
+    deleting a file outside the bundle root."""
+    victim_dir = tmp_path / ".dna" / _SCOPE / "victim"
+    victim_dir.mkdir(parents=True)
+    victim_file = victim_dir / "SKILL.md"
+    victim_file.write_text("original\n")
+
+    traversal_entry = "../../victim/SKILL.md"
+    with pytest.raises(FileNotFoundError):
+        kernel.delete_bundle_entry(_SCOPE, "Skill", "greeter", traversal_entry)
+    assert victim_file.exists()
+    assert victim_file.read_text() == "original\n"

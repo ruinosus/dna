@@ -410,6 +410,36 @@ class FilesystemSource(SourcePort):
     async def close(self) -> None:
         pass
 
+    def _bundle_root(
+        self,
+        scope: str,
+        container: str,
+        name: str,
+        *,
+        tenant: str | None = None,
+    ) -> Path:
+        """Resolve the ``<container>/<name>`` bundle root directory — the
+        tenant overlay layout when ``tenant`` is truthy, else the shared
+        base layer.
+
+        Single source of truth for bundle-root path construction, used by
+        ``fetch_bundle_entry``, ``write_bundle_entry``, ``delete_bundle_entry``
+        and ``list_bundle_entries`` alike, so the path-traversal guard
+        (``resolved.relative_to(bundle_root)``) is anchored on the SAME
+        directory everywhere and can never drift out of sync between the
+        four bundle-entry primitives (it previously did: write/delete only
+        guarded against escaping ``base_dir`` as a whole, which let a
+        crafted ``entry`` like ``"../../../../<other>/SKILL.md"`` escape a
+        tenant's own bundle and clobber a DIFFERENT bundle's — including the
+        shared base bundle other tenants inherit from).
+        """
+        if tenant:
+            return (
+                self.base_dir / "tenants" / fs_tenant_segment(tenant) / "scopes" / scope
+                / container / name
+            ).resolve()
+        return (self.base_dir / scope / container / name).resolve()
+
     def write_bundle_entry(
         self,
         scope: str,
@@ -435,22 +465,20 @@ class FilesystemSource(SourcePort):
         filesystem layout namespaces bundles by ``container``.
         """
         del kind
-        if tenant:
-            target = (
-                self.base_dir / "tenants" / fs_tenant_segment(tenant) / "scopes" / scope
-                / container / name / entry
-            )
-        else:
-            target = self.base_dir / scope / container / name / entry
+        bundle_root = self._bundle_root(scope, container, name, tenant=tenant)
+        target = bundle_root / entry
         # Path-traversal guard: the resolved path MUST stay under the
-        # base_dir even if `entry` contains '..' segments.
-        resolved = target.resolve()
-        base_resolved = self.base_dir.resolve()
+        # BUNDLE ROOT (the <container>/<name> dir) — not merely under
+        # base_dir as a whole — matching fetch_bundle_entry's guard exactly,
+        # else `entry` could contain '..' segments that escape into a
+        # different tenant's or the shared base bundle.
         try:
-            resolved.relative_to(base_resolved)
-        except ValueError as e:
-            raise ValueError(
-                f"path traversal blocked: entry={entry!r} resolves outside base_dir"
+            resolved = target.resolve()
+            resolved.relative_to(bundle_root)
+        except (OSError, ValueError) as e:
+            raise FileNotFoundError(
+                f"Bundle entry not found: scope={scope!r} container={container!r} "
+                f"name={name!r} entry={entry!r} tenant={tenant!r}"
             ) from e
         target.parent.mkdir(parents=True, exist_ok=True)
         # Atomic write: tmp file + rename. Same dir to avoid cross-FS
@@ -494,17 +522,14 @@ class FilesystemSource(SourcePort):
         sub-directory), so collision is impossible at this layer.
         """
         del kind  # not needed on filesystem; container path disambiguates
-        candidates: list[Path] = []
+        roots: list[Path] = []
         if tenant:
-            candidates.append(
-                self.base_dir / "tenants" / fs_tenant_segment(tenant) / "scopes" / scope
-                / container / name / entry
-            )
-        candidates.append(self.base_dir / scope / container / name / entry)
-        for cand in candidates:
+            roots.append(self._bundle_root(scope, container, name, tenant=tenant))
+        roots.append(self._bundle_root(scope, container, name, tenant=None))
+        for bundle_root in roots:
+            cand = bundle_root / entry
             try:
                 resolved = cand.resolve()
-                bundle_root = cand.parent.resolve()
                 resolved.relative_to(bundle_root)  # path traversal guard
             except (OSError, ValueError):
                 continue
@@ -536,10 +561,9 @@ class FilesystemSource(SourcePort):
         filesystem layout already namespaces bundles by ``container``.
         """
         del kind
-        base_dir = self.base_dir / scope / container / name
+        base_dir = self._bundle_root(scope, container, name, tenant=None)
         tenant_dir = (
-            self.base_dir / "tenants" / fs_tenant_segment(tenant) / "scopes" / scope
-            / container / name
+            self._bundle_root(scope, container, name, tenant=tenant)
             if tenant else None
         )
         if only_tenant:
@@ -574,21 +598,17 @@ class FilesystemSource(SourcePort):
         ``fetch_bundle_entry``).
         """
         del kind
-        if tenant:
-            target = (
-                self.base_dir / "tenants" / fs_tenant_segment(tenant) / "scopes" / scope
-                / container / name / entry
-            )
-        else:
-            target = self.base_dir / scope / container / name / entry
-        # Path-traversal guard, same shape as write_bundle_entry.
-        resolved = target.resolve()
-        base_resolved = self.base_dir.resolve()
+        bundle_root = self._bundle_root(scope, container, name, tenant=tenant)
+        target = bundle_root / entry
+        # Path-traversal guard, same shape as write_bundle_entry /
+        # fetch_bundle_entry — confined to the bundle root, not base_dir.
         try:
-            resolved.relative_to(base_resolved)
-        except ValueError as e:
-            raise ValueError(
-                f"path traversal blocked: entry={entry!r} resolves outside base_dir"
+            resolved = target.resolve()
+            resolved.relative_to(bundle_root)
+        except (OSError, ValueError) as e:
+            raise FileNotFoundError(
+                f"Bundle entry not found: scope={scope!r} container={container!r} "
+                f"name={name!r} entry={entry!r} tenant={tenant!r}"
             ) from e
         if not resolved.is_file():
             return False

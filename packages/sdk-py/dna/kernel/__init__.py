@@ -963,7 +963,9 @@ class Kernel:
         see that docstring for policy mode details.
 
         Delegates to ``self._layerpol`` (LayerPolicyEnforcer;
-        s-kernel-decompose-god-object). Only ``write_document`` calls this.
+        s-kernel-decompose-god-object). Called by ``write_document`` and,
+        via ``_check_entry_layer_policy`` → ``write_bundle_entry_impl``, by
+        the bundle-entry fork path (s-strain-bundle-fork B1).
         """
         return await self._layerpol.check_async(scope, kind, name, raw, layer)
 
