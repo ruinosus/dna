@@ -28,9 +28,9 @@ dna definition get [OPTIONS] KIND NAME
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
-| `--json` |  |
-| `--scope` |  |
-| `--tenant` |  |
+| `--json` | Machine-readable JSON. |
+| `--scope` | Scope to read KIND/NAME from. |
+| `--tenant` | Read as this tenant's overlay (overrides DNA_TENANT). |
 
 ## `dna definition revert`
 
@@ -52,8 +52,8 @@ dna definition revert [OPTIONS] KIND NAME
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
-| `--scope` |  |
-| `--tenant` |  |
+| `--scope` | Scope to remove the override from. |
+| `--tenant` | Revert this tenant's overlay. |
 
 ## `dna definition set`
 
@@ -76,6 +76,6 @@ dna definition set [OPTIONS] KIND NAME
 | --- | --- |
 | `--file` | YAML/JSON file whose top-level `spec:` (or the whole doc) is the override spec. |
 | `--help` | Show this message and exit. |
-| `--scope` |  |
-| `--tenant` |  |
+| `--scope` | Scope to write the override into. |
+| `--tenant` | Write as this tenant's overlay. |
 

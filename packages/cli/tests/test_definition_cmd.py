@@ -103,6 +103,29 @@ def test_get_human_readable_output_does_not_crash(dna_dir, runner):
     assert "overridden=False" in r.output
 
 
+def test_get_unknown_name_fails_clean_not_a_traceback(dna_dir, runner):
+    """Fix-now: `get` on an unknown kind/name must exit non-zero with a clean
+    `fail()`-wrapped message — NOT a raw Python traceback from the impl's
+    ``ValueError``."""
+    _seed_layer_policy(dna_dir)
+    r = runner.invoke(definition, ["get", "Agent", "no-such-agent", "--scope", _SCOPE])
+    assert r.exit_code != 0, r.output
+    combined = r.output + (r.stderr if r.stderr_bytes is not None else "")
+    assert "Traceback" not in combined
+    assert "no-such-agent" in combined
+
+
+def test_revert_unknown_name_fails_clean_not_a_traceback(dna_dir, runner):
+    """Same fix-now guard for `revert` on an unknown kind/name."""
+    _seed_layer_policy(dna_dir)
+    r = runner.invoke(definition, [
+        "revert", "Agent", "no-such-agent", "--scope", _SCOPE, "--tenant", _WID,
+    ])
+    assert r.exit_code != 0, r.output
+    combined = r.output + (r.stderr if r.stderr_bytes is not None else "")
+    assert "Traceback" not in combined
+
+
 # ── set ──────────────────────────────────────────────────────────────────
 
 

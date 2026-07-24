@@ -74,6 +74,29 @@ async def test_apply_then_read_shows_override(live: LiveDna) -> None:
 
 
 @pytest.mark.asyncio
+async def test_apply_with_spec_equal_to_base_still_shows_overridden(live: LiveDna) -> None:
+    """The ``overridden`` contract is doc PRESENCE, not a spec-value diff: an
+    override whose composed spec happens to MATCH base (identical-value / a
+    merge-to-base edit) must still report overridden=True — the tenant-layer doc
+    exists, so a spec-diff would (incorrectly) say False and orphan the editor's
+    Revert affordance. Reverting then correctly clears the flag."""
+    await apply_definition_impl(
+        live, scope=_BASE, tenant=_WID, kind="Agent", name="assistant",
+        spec={"instruction": "Base agent."})
+    out = await read_definition_impl(
+        live, scope=_BASE, tenant=_WID, kind="Agent", name="assistant")
+    assert out["overridden"] is True
+    assert out["effective"]["instruction"] == "Base agent."
+    assert out["base"]["instruction"] == "Base agent."
+
+    await revert_definition_impl(
+        live, scope=_BASE, tenant=_WID, kind="Agent", name="assistant")
+    out = await read_definition_impl(
+        live, scope=_BASE, tenant=_WID, kind="Agent", name="assistant")
+    assert out["overridden"] is False
+
+
+@pytest.mark.asyncio
 async def test_revert_falls_back_to_base(live: LiveDna) -> None:
     await apply_definition_impl(
         live, scope=_BASE, tenant=_WID, kind="Agent", name="assistant",

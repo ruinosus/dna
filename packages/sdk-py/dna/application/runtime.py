@@ -263,6 +263,62 @@ def _api_version_for_kind(live: LiveDna, kind: str) -> str:
     return getattr(port, "api_version", None) or "github.com/ruinosus/dna/v1"
 
 
+async def _tenant_layer_doc_exists(
+    live: LiveDna, scope: str, tenant: str | None, kind: str, name: str,
+) -> bool:
+    """Whether a TENANT-layer document exists for (scope, kind, name) — the
+    correct ``overridden`` signal: ``apply_definition_impl`` writes exactly this
+    doc, ``revert_definition_impl`` deletes exactly this doc, so doc PRESENCE is
+    the contract both ends agree on. A spec-value diff against base is the WRONG
+    signal — it false-negatives on an identical-value override (the composed
+    spec equals base even though a tenant-layer doc exists), orphaning the
+    editor's Revert affordance.
+
+    THREE tempting probes were checked against the resolver/adapters and
+    rejected because they all bake in a tenant→base FALLBACK, so they read
+    True even when NO tenant doc exists:
+
+    * ``kernel.get_document(scope, kind, name, tenant=tenant)`` /
+      ``kernel.query(scope, kind, tenant=tenant)`` — both source adapters'
+      tenant path (``FilesystemSource.load_one`` / the SQLAlchemy adapter's
+      ``query``/``_load_view``) explicitly falls back to the BASE doc when the
+      tenant overlay has none (a "union, overlay shadows base" read model, by
+      design — it's what makes an EFFECTIVE read tenant-aware). Also, once
+      falling back cross-scope for an inheritable Kind, it preserves the
+      tenant while walking to a PARENT scope — a false positive for a tenant
+      override authored elsewhere.
+    * ``resolve_document(...).is_inherited`` — ``primary.scope != scope``
+      (cross-SCOPE only); a tenant with no override still resolves at THIS
+      scope via its ``(scope, None)`` base layer, so it stays False either way
+      (see ``test_dna_cloud_catalog_overlay.py``'s ``TestByoTenantOverlay``).
+    * ``resolve_document(...).provenance.steps[0].found`` — LOOKS like a
+      direct per-layer probe, but each layer is populated by
+      ``kernel._granular_doc_cached`` → ``source.load_one``, i.e. the SAME
+      tenant→base-falling-back read as ``get_document`` above — the layer
+      that's nominally "(scope, tenant)" still reports ``found=True`` off a
+      pure-base doc.
+
+    The one primitive that does NOT fall back is ``SourcePort.load_layer``
+    (``FilesystemSource``: reads only ``tenants/<T>/scopes/<S>/``;
+    the SQLAlchemy adapter: ``WHERE tenant = T`` with no ``OR tenant IS
+    NULL``) — used internally by ``instance_builder`` for the same reason.
+    Reaching ``kernel._source``/``kernel._readers`` mirrors that internal
+    call exactly (``compose/instance_builder.py``'s ``load_layer`` call)."""
+    if not tenant:
+        return False
+    source = getattr(live.kernel, "_source", None)
+    if source is None:
+        return False
+    overlay_docs = await source.load_layer(
+        scope, "tenant", tenant, readers=list(getattr(live.kernel, "_readers", []) or []),
+    )
+    return any(
+        d.get("kind") == kind
+        and ((d.get("metadata") or {}).get("name") == name or d.get("name") == name)
+        for d in overlay_docs
+    )
+
+
 async def read_definition_impl(
     live: LiveDna, *, scope: str, tenant: str | None, kind: str, name: str,
 ) -> dict[str, Any]:
@@ -280,6 +336,7 @@ async def read_definition_impl(
     effective = _doc_spec_from_mi(eff_mi, kind, name)
     if effective is None and base is None:
         raise ValueError(f"no {kind} named {name!r} in scope {scope!r}")
+    overridden = await _tenant_layer_doc_exists(live, scope, tenant, kind, name)
     port = live.kernel.kind_port_for(kind)
     ui_schema = dict(getattr(port, "ui_schema", {}) or {}) if port else {}
     overlayable = sorted(getattr(port, "OVERLAYABLE_FIELDS", frozenset()) or []) if port else []
@@ -300,7 +357,7 @@ async def read_definition_impl(
             bundle_entries = []
     return {
         "kind": kind, "name": name,
-        "overridden": effective != base and base is not None,
+        "overridden": overridden,
         "overlayable": bool(overlayable),
         "effective": effective if effective is not None else (base or {}),
         "base": base,
