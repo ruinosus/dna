@@ -120,8 +120,8 @@ cannot read another workspace's rows.
 ### Billing keys on the account, not the workspace
 
 **The subscription belongs to the billing account.** An
-[`AccountPlan`](../reference/kinds/record.md#accountplan) (`cloud-account-plan`)
-maps an `account_id` to its current `Tier`, and that one assignment covers *every*
+[`PlanBinding`](../reference/kinds/record.md#planbinding) (`cloud-plan-binding`)
+maps an `account_id` to its current `PricingPlan`, and that one assignment covers *every*
 workspace the account owns — creating a second workspace is not a second charge.
 DNA Cloud's Stripe webhook writes it (`PUT /v1/account-plan`); the MCP quota guard
 resolves **workspace → `account_id` → plan**, taking the account from the
@@ -220,7 +220,7 @@ invitee is still `pending` and by definition holds no active membership yet.
 
 The Model-B workspace stack above is **shipped and live** end to end:
 `Workspace` + `WorkspaceMembership` and the zero-migration seed (F1);
-membership-decides-access resolution (F2); `AccountPlan` billing (F4); and the
+membership-decides-access resolution (F2); `PlanBinding` billing (F4); and the
 cross-org invite flow plus `/w/<id>/mcp` URL selection (F3). Every claim on this
 page traces to merged code in the DNA SDK.
 

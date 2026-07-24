@@ -8,7 +8,7 @@ DNA Cloud ships two things a customer consumes over MCP:
    overlay** on top of that base (the product, and the moat).
 
 Both are the same mechanism you already know: `_lib` inheritance for the
-catalog, tenant overlays for the customer's DNA, and the [Tier](../reference/kinds/index.md)
+catalog, tenant overlays for the customer's DNA, and the [PricingPlan](../reference/kinds/index.md)
 caps for plan gating. There is **zero new architecture** here — see
 `adr-dna-cloud-content`.
 
@@ -76,7 +76,7 @@ isolation is proved by `packages/sdk-py/tests/test_dna_cloud_catalog_overlay.py`
 ### Gated by your plan
 
 Authoring + emit is a **Pro** capability; **Free** reads the base catalog. The
-caps are declared on the `Tier` Kind (`examples/dna-cloud/.dna/_lib/tiers/`):
+caps are declared on the `PricingPlan` Kind (`examples/dna-cloud/.dna/_lib/tiers/`):
 
 | Plan | `feature_families` | Catalog | BYO overlay |
 |------|--------------------|---------|-------------|

@@ -382,24 +382,25 @@ of a narrow domain Kind carried by an extension: your equivalent might be
 
 ## DNA Cloud
 
-### Tier
+### PricingPlan
 
-A [`Tier`](../reference/kinds/record.md#tier) (`cloud-tier`) declares one
-DNA Cloud pricing plan as data: its hard caps (`calls_per_day`,
+A [`PricingPlan`](../reference/kinds/record.md#pricingplan) (`cloud-pricing-plan`)
+declares one DNA Cloud pricing plan as data: its hard caps (`calls_per_day`,
 `rate_per_sec`, `max_tenants`), the feature families it unlocks
 (definitions / sdlc / memory / emit), `memory_mode`, and price. The hosted
-MCP server resolves a request's tier and enforces the caps at the same seam
+MCP server resolves a request's plan and enforces the caps at the same seam
 that binds a token to a tenant — so changing a limit is a file edit, not a
-redeploy. Free and Pro ship as seed docs.
+redeploy. Free and Pro ship as seed docs. (The Kind was renamed from `Tier` in
+0.29.0; its storage container stays `tiers` and the binding field stays `tier_id`.)
 
-### AccountPlan
+### PlanBinding
 
-An [`AccountPlan`](../reference/kinds/record.md#accountplan)
-(`cloud-account-plan`) maps a DNA Cloud **billing account** to its current
-`Tier` — the billing→enforcement bridge.
+A [`PlanBinding`](../reference/kinds/record.md#planbinding)
+(`cloud-plan-binding`) maps a DNA Cloud **billing account** to its current
+`PricingPlan` — the billing→enforcement bridge.
 
 **The subscription belongs to the account, not to a workspace.** One
-`AccountPlan` covers *every* workspace whose `Workspace.account_id` matches, so
+`PlanBinding` covers *every* workspace whose `Workspace.account_id` matches, so
 creating a second workspace is never a second charge and needs no billing write
 at all. The account is an opaque id recorded on the workspace at creation from
 the caller's verified account claim — whatever the IdP block's `tenant_claim`
@@ -411,17 +412,19 @@ DNA Cloud's Stripe webhook writes the doc on subscribe / cancel
 (`PUT /v1/account-plan`); the MCP server resolves **workspace → `account_id` →
 plan** (`kernel.account_for_workspace` then `kernel.account_plan`) when the token
 carries no explicit `plan` claim. A workspace with no resolvable account falls to
-the **Free floor** — fail-closed, never another account's tier and never a paid
+the **Free floor** — fail-closed, never another account's plan and never a paid
 default. Zero Stripe or billing code lives in the OSS SDK; it only reads the
 assignment.
 
-`AccountPlan` replaces the retired per-workspace `WorkspacePlan`, which is now a
+`PlanBinding` replaces the retired per-workspace `WorkspacePlan`, which is now a
 write-block tombstone in `Kernel._REMOVED_KINDS`. Keying the plan per workspace
 forced whoever owned billing to fan out one doc per workspace, and workspace
 enumeration is by *membership*, not ownership — so a workspace somebody else
 founded and invited you into would have been swept into that fan-out and handed a
-tier the account never bought. Re-keying on the account removes the question
-instead of answering it: one write, one truth.
+plan the account never bought. Re-keying on the account removes the question
+instead of answering it: one write, one truth. (Renamed from `AccountPlan` in
+0.29.0; the `_lib` storage container stays `account-plans/<account_id>.yaml` and
+the REST op stays `PUT /v1/account-plan`.)
 
 ## Intelligence layer
 
