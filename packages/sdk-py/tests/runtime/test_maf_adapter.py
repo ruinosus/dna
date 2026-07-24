@@ -13,6 +13,11 @@ from pathlib import Path
 import pytest
 from fastapi import FastAPI
 
+# The `maf` extra (agent-framework) is heavy and stays OUT of CI even in the
+# runtime job — skip this module unless it's installed, rather than fail the
+# `dna.runtime.adapters.maf_rt` import below.
+pytest.importorskip("agent_framework")
+
 from dna.emit import build_copilot_context
 from dna.kernel import Kernel
 from dna.runtime.adapters import maf_rt
