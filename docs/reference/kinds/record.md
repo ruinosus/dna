@@ -36,27 +36,6 @@ An ADR captures ONE architectural decision with its context, rationale, and cons
 | `title` | string | yes | Decision headline — start with imperative verb. |
 | `updated_at` | string |  |  |
 
-## AccountPlan
-
-- **Alias:** `cloud-account-plan`
-- **apiVersion:** `github.com/ruinosus/dna/cloud/v1`
-- **Plane:** record
-
-An AccountPlan maps one DNA Cloud BILLING ACCOUNT to its current Tier as GLOBAL declarative data, so enforcement follows billing state without a redeploy. The subscription is per ACCOUNT — one AccountPlan covers every Workspace whose `account_id` matches, so a second workspace is never a second charge. It replaces the retired per-workspace WorkspacePlan, which forced an unsafe fan-out. dna-cloud's Stripe webhook writes it on subscribe/cancel; the MCP server resolves workspace → account_id → AccountPlan via kernel.account_plan(account_id) when the token carries no explicit plan claim. A workspace with no resolvable account gets the Free floor (fail-closed) — never another account's tier.
-
-**Spec fields**
-
-| Field | Type | Required | Description |
-| --- | --- | --- | --- |
-| `account_id` | string | yes | The BILLING ACCOUNT this assignment is for — the opaque id recorded on every Workspace the account owns (Workspace.account_id). One plan covers ALL of them. The doc name SHOULD equal it; kernel.account_plan() matches on this field. Opaque - matched, never parsed. |
-| `notes` | string \| null |  | Free-form operator notes. |
-| `source` | string |  | Where the assignment came from, e.g. stripe / manual / trial. |
-| `status` | string |  | The billing status of the assignment, e.g. active / past_due / canceled. |
-| `stripe_customer_id` | string |  | The Stripe customer id backing the assignment (dna-cloud writes it; the OSS SDK never calls Stripe). |
-| `stripe_subscription_id` | string |  | The Stripe subscription id backing the assignment (dna-cloud writes it; the OSS SDK never calls Stripe). |
-| `tier_id` | string | yes | The assigned Tier's id, e.g. free, pro, enterprise. Resolved to caps via kernel.tier(tier_id) — never a literal in code. |
-| `updated_at` | string |  | When dna-cloud last wrote this assignment (ISO 8601). |
-
 ## AgentSession
 
 - **Alias:** `sdlc-agent-session`
@@ -784,6 +763,27 @@ A Plan is a pointer to an implementation plan document on disk. Usually descends
 | `tags` | array |  |  |
 | `title` | string | yes |  |
 
+## PlanBinding
+
+- **Alias:** `cloud-plan-binding`
+- **apiVersion:** `github.com/ruinosus/dna/cloud/v1`
+- **Plane:** record
+
+An AccountPlan maps one DNA Cloud BILLING ACCOUNT to its current Tier as GLOBAL declarative data, so enforcement follows billing state without a redeploy. The subscription is per ACCOUNT — one AccountPlan covers every Workspace whose `account_id` matches, so a second workspace is never a second charge. It replaces the retired per-workspace WorkspacePlan, which forced an unsafe fan-out. dna-cloud's Stripe webhook writes it on subscribe/cancel; the MCP server resolves workspace → account_id → AccountPlan via kernel.account_plan(account_id) when the token carries no explicit plan claim. A workspace with no resolvable account gets the Free floor (fail-closed) — never another account's tier.
+
+**Spec fields**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `account_id` | string | yes | The BILLING ACCOUNT this assignment is for — the opaque id recorded on every Workspace the account owns (Workspace.account_id). One plan covers ALL of them. The doc name SHOULD equal it; kernel.account_plan() matches on this field. Opaque - matched, never parsed. |
+| `notes` | string \| null |  | Free-form operator notes. |
+| `source` | string |  | Where the assignment came from, e.g. stripe / manual / trial. |
+| `status` | string |  | The billing status of the assignment, e.g. active / past_due / canceled. |
+| `stripe_customer_id` | string |  | The Stripe customer id backing the assignment (dna-cloud writes it; the OSS SDK never calls Stripe). |
+| `stripe_subscription_id` | string |  | The Stripe subscription id backing the assignment (dna-cloud writes it; the OSS SDK never calls Stripe). |
+| `tier_id` | string | yes | The assigned Tier's id, e.g. free, pro, enterprise. Resolved to caps via kernel.tier(tier_id) — never a literal in code. |
+| `updated_at` | string |  | When dna-cloud last wrote this assignment (ISO 8601). |
+
 ## Postmortem
 
 - **Alias:** `sdlc-postmortem`
@@ -815,6 +815,32 @@ A Postmortem captures a factual analysis of an incident that happened — timeli
 | `updated_at` | string |  |  |
 | `what_went_well` | array |  | Detection / response things that worked. |
 | `what_went_wrong` | array |  | Detection / response things that didn't work. |
+
+## PricingPlan
+
+- **Alias:** `cloud-pricing-plan`
+- **apiVersion:** `github.com/ruinosus/dna/cloud/v1`
+- **Plane:** record
+
+A Tier declares one DNA Cloud plan's hard caps (calls/day, rate, tenants) and which feature families it unlocks, as GLOBAL declarative data so changing a limit is a file edit, not a redeploy. Resolve it via kernel.tier(id_or_alias); the quota enforcer reads the caps from here and never hardcodes them.
+
+**Spec fields**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `aliases` | array |  | Alternate ids that resolve to this tier (legacy plan names). kernel.tier() matches these on pass 2. |
+| `calls_per_day` | integer \| null |  | Daily call quota. Null = unlimited (enterprise). THE value the quota enforcer reads — never hardcode it in code. |
+| `display_name` | string | yes | Human-facing plan name, e.g. Free, Pro, Enterprise. |
+| `feature_families` | array |  | Tool families this tier unlocks, e.g. [definitions, sdlc, memory, emit]. |
+| `max_tenants` | integer \| null |  | Number of tenants the plan allows. Null = unlimited. |
+| `memory_mode` | string |  | Memory access level granted by the tier — none, read, or write. |
+| `notes` | string \| null |  | Free-form operator notes. |
+| `overage_per_1k_usd` | number \| null |  | USD charged per 1k calls above the daily quota. Null = no overage (hard cap). |
+| `price_usd_month` | number |  | Flat monthly price in USD (0 for the free tier). |
+| `rate_per_sec` | integer \| null |  | Per-second rate limit. Null = unmetered. |
+| `sdlc_mode` | string |  | SDLC board access level granted by the tier — none, read, or write. Read = list/digest/ADR; write = create/transition/comment. |
+| `sla` | boolean |  | True when the tier includes a support/uptime SLA (enterprise). |
+| `tier_id` | string | yes | Canonical tier id, e.g. free, pro, enterprise. The doc name SHOULD equal the tier_id; kernel.tier() matches on this field first. |
 
 ## Project
 
@@ -1162,32 +1188,6 @@ A Task is a granular work item (horas-dias) typically as sub-item of a Story. Fo
 | `timeline` | array |  | Append-only activity log. Auto-stamped by the CLI on every status flip / groom / artifact write; populated by AgentSession capture for decision + artifact_produced events. Render in Studio as activity stream. |
 | `title` | string | yes |  |
 | `updated_at` | string |  |  |
-
-## Tier
-
-- **Alias:** `cloud-tier`
-- **apiVersion:** `github.com/ruinosus/dna/cloud/v1`
-- **Plane:** record
-
-A Tier declares one DNA Cloud plan's hard caps (calls/day, rate, tenants) and which feature families it unlocks, as GLOBAL declarative data so changing a limit is a file edit, not a redeploy. Resolve it via kernel.tier(id_or_alias); the quota enforcer reads the caps from here and never hardcodes them.
-
-**Spec fields**
-
-| Field | Type | Required | Description |
-| --- | --- | --- | --- |
-| `aliases` | array |  | Alternate ids that resolve to this tier (legacy plan names). kernel.tier() matches these on pass 2. |
-| `calls_per_day` | integer \| null |  | Daily call quota. Null = unlimited (enterprise). THE value the quota enforcer reads — never hardcode it in code. |
-| `display_name` | string | yes | Human-facing plan name, e.g. Free, Pro, Enterprise. |
-| `feature_families` | array |  | Tool families this tier unlocks, e.g. [definitions, sdlc, memory, emit]. |
-| `max_tenants` | integer \| null |  | Number of tenants the plan allows. Null = unlimited. |
-| `memory_mode` | string |  | Memory access level granted by the tier — none, read, or write. |
-| `notes` | string \| null |  | Free-form operator notes. |
-| `overage_per_1k_usd` | number \| null |  | USD charged per 1k calls above the daily quota. Null = no overage (hard cap). |
-| `price_usd_month` | number |  | Flat monthly price in USD (0 for the free tier). |
-| `rate_per_sec` | integer \| null |  | Per-second rate limit. Null = unmetered. |
-| `sdlc_mode` | string |  | SDLC board access level granted by the tier — none, read, or write. Read = list/digest/ADR; write = create/transition/comment. |
-| `sla` | boolean |  | True when the tier includes a support/uptime SLA (enterprise). |
-| `tier_id` | string | yes | Canonical tier id, e.g. free, pro, enterprise. The doc name SHOULD equal the tier_id; kernel.tier() matches on this field first. |
 
 ## Tool
 

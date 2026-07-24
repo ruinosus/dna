@@ -89,7 +89,6 @@ Declarative Kind descriptor — the format of builtin `kinds/*.kind.yaml` packag
 | Kind | Alias | apiVersion |
 | --- | --- | --- |
 | [ADR](record.md#adr) | `sdlc-adr` | `github.com/ruinosus/dna/sdlc/v1` |
-| [AccountPlan](record.md#accountplan) | `cloud-account-plan` | `github.com/ruinosus/dna/cloud/v1` |
 | [AgentSession](record.md#agentsession) | `sdlc-agent-session` | `github.com/ruinosus/dna/sdlc/v1` |
 | [AuditLog](record.md#auditlog) | `audit-auditlog` | `github.com/ruinosus/dna/audit/v1` |
 | [Automation](record.md#automation) | `dna-automation` | `github.com/ruinosus/dna/automation/v1` |
@@ -118,7 +117,9 @@ Declarative Kind descriptor — the format of builtin `kinds/*.kind.yaml` packag
 | [Narrative](record.md#narrative) | `sdlc-narrative` | `github.com/ruinosus/dna/sdlc/v1` |
 | [Organization](record.md#organization) | `portfolio-org` | `github.com/ruinosus/dna/portfolio/v1` |
 | [Plan](record.md#plan) | `sdlc-plan` | `github.com/ruinosus/dna/sdlc/v1` |
+| [PlanBinding](record.md#planbinding) | `cloud-plan-binding` | `github.com/ruinosus/dna/cloud/v1` |
 | [Postmortem](record.md#postmortem) | `sdlc-postmortem` | `github.com/ruinosus/dna/sdlc/v1` |
+| [PricingPlan](record.md#pricingplan) | `cloud-pricing-plan` | `github.com/ruinosus/dna/cloud/v1` |
 | [Project](record.md#project) | `portfolio-project` | `github.com/ruinosus/dna/portfolio/v1` |
 | [PromptTemplate](record.md#prompttemplate) | `sdlc-prompt-template` | `github.com/ruinosus/dna/sdlc/v1` |
 | [Reference](record.md#reference) | `sdlc-reference` | `github.com/ruinosus/dna/sdlc/v1` |
@@ -132,7 +133,6 @@ Declarative Kind descriptor — the format of builtin `kinds/*.kind.yaml` packag
 | [StatusReport](record.md#statusreport) | `sdlc-status-report` | `github.com/ruinosus/dna/sdlc/v1` |
 | [Story](record.md#story) | `sdlc-story` | `github.com/ruinosus/dna/sdlc/v1` |
 | [Task](record.md#task) | `sdlc-task` | `github.com/ruinosus/dna/sdlc/v1` |
-| [Tier](record.md#tier) | `cloud-tier` | `github.com/ruinosus/dna/cloud/v1` |
 | [Tool](record.md#tool) | `helix-tool` | `github.com/ruinosus/dna/v1` |
 | [WorkflowEvent](record.md#workflowevent) | `sdlc-workflow-event` | `github.com/ruinosus/dna/sdlc/v1` |
 | [Workspace](record.md#workspace) | `tenant-workspace` | `github.com/ruinosus/dna/tenant/v1` |
