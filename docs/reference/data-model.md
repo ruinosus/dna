@@ -65,7 +65,7 @@ would be the whole problem. Four tiers, strongest first:
 
 `*` on a label marks a polymorphic reference (several possible target Kinds).
 
-**112 edges: 15 declared, 66 composition-only, 31 inferred** — plus 18 reference-shaped fields left unresolved and 6 known-undeclarable ones.
+**111 edges: 15 declared, 66 composition-only, 30 inferred** — plus 20 reference-shaped fields left unresolved and 6 known-undeclarable ones.
 
 !!! warning "Only the declared tier cannot dangle"
 
@@ -144,17 +144,6 @@ erDiagram
     UserRoleAssignment
     AuditLog }o..}o Role : "roles (inferred)"
     UserRoleAssignment }o..}o Role : "roles (inferred)"
-```
-
-#### `cloud` (2 edges)
-
-```mermaid
-erDiagram
-    AccountPlan
-    IntelSource
-    Tier
-    AccountPlan }o..|| IntelSource : "source (inferred)"
-    AccountPlan }o..|| Tier : "tier_id (inferred)"
 ```
 
 #### `eval` (3 edges)
@@ -389,7 +378,7 @@ erDiagram
     TestRun }o..|| TestGuide : "guide_ref (inferred)"
 ```
 
-Groups with fewer than 2 edges (listed, not drawn): `agentskills`, `intel`, `kinddef`, `lesson`, `research`.
+Groups with fewer than 2 edges (listed, not drawn): `agentskills`, `cloud`, `intel`, `kinddef`, `lesson`, `research`.
 
 ### Declared edges (`x-dna-ref`)
 
@@ -495,8 +484,6 @@ name against the Kind registry — useful, and fallible.
 
 | From | Field | To | Cardinality | Cross-group |
 | --- | --- | --- | --- | --- |
-| `AccountPlan` | `source` | `IntelSource` | one | yes |
-| `AccountPlan` | `tier_id` | `Tier` | one |  |
 | `Actor` | `role` | `Role` | one | yes |
 | `Agent` | `promptTemplate` | `PromptTemplate` | one | yes |
 | `AuditLog` | `roles` | `Role` | many | yes |
@@ -512,6 +499,7 @@ name against the Kind registry — useful, and fallible.
 | `KindDefinition` | `docs` | `Doc` | one | yes |
 | `Lesson` | `skill` | `Skill` | one | yes |
 | `Narrative` | `actor` | `Actor` | one | yes |
+| `PlanBinding` | `source` | `IntelSource` | one | yes |
 | `Research` | `sources` | `IntelSource` | many | yes |
 | `Retrospective` | `actor` | `Actor` | one | yes |
 | `Skill` | `references` | `Reference` | one | yes |
@@ -557,15 +545,17 @@ cleverer.
 
 | Kind | Field | Why unresolved |
 | --- | --- | --- |
-| `AccountPlan` | `account_id` | reference-shaped, but `account` matches no registered Kind |
-| `AccountPlan` | `stripe_customer_id` | reference-shaped, but `stripe_customer` matches no registered Kind |
-| `AccountPlan` | `stripe_subscription_id` | reference-shaped, but `stripe_subscription` matches no registered Kind |
 | `AuditLog` | `request_id` | reference-shaped, but `request` matches no registered Kind |
 | `Engram` | `affect_evidence_refs` | reference-shaped, but `affect_evidence` matches no registered Kind |
 | `Evidence` | `document_ref` | reference-shaped, but `document` matches no registered Kind |
 | `Feature` | `sprint_ref` | reference-shaped, but `sprint` matches no registered Kind |
 | `LayerPolicy` | `layer_id` | reference-shaped, but `layer` matches no registered Kind |
 | `ModelProfile` | `model_id` | reference-shaped, but `model` matches no registered Kind |
+| `PlanBinding` | `account_id` | reference-shaped, but `account` matches no registered Kind |
+| `PlanBinding` | `stripe_customer_id` | reference-shaped, but `stripe_customer` matches no registered Kind |
+| `PlanBinding` | `stripe_subscription_id` | reference-shaped, but `stripe_subscription` matches no registered Kind |
+| `PlanBinding` | `tier_id` | reference-shaped, but `tier` matches no registered Kind |
+| `PricingPlan` | `tier_id` | reference-shaped, but `tier` matches no registered Kind |
 | `Project` | `intel_source_refs` | reference-shaped, but `intel_source` matches no registered Kind |
 | `Research` | `scope_ref` | reference-shaped, but `scope` matches no registered Kind |
 | `Story` | `sprint_ref` | reference-shaped, but `sprint` matches no registered Kind |
@@ -590,12 +580,12 @@ rather than silently dropped, so the suppression is auditable.
 | `Tenant` | `plan` | billing/feature tier (a Tier `tier_id`), not the SDLC `Plan` Kind |
 | `Workspace` | `plan_ref` | DEPRECATED and never read — billing is per ACCOUNT (workspace → account_id → AccountPlan); also not the SDLC `Plan` Kind |
 
-### Kinds with no reference edge (16)
+### Kinds with no reference edge (17)
 
 Standalone documents — configuration, composition-plane behaviour, or
 record Kinds whose links are simply not modelled yet.
 
-`AgentDefinition`, `Automation`, `Canvas`, `Changelog`, `Comment`, `Copilot`, `Genome`, `Hook`, `HtmlArtifact`, `LayerPolicy`, `MCPFederation`, `ModelProfile`, `Setting`, `UserProfile`, `Workspace`, `WorkspaceMembership`
+`AgentDefinition`, `Automation`, `Canvas`, `Changelog`, `Comment`, `Copilot`, `Genome`, `Hook`, `HtmlArtifact`, `LayerPolicy`, `MCPFederation`, `ModelProfile`, `PricingPlan`, `Setting`, `UserProfile`, `Workspace`, `WorkspaceMembership`
 
 ## Physical model — the real tables
 
