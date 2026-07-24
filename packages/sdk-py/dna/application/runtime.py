@@ -450,9 +450,9 @@ async def list_bundle_entries_impl(
     file grain: presence in the tenant-only listing, not a content diff)."""
     _require_bundle_kind(live, kind)
     forked = set(
-        live.kernel.list_bundle_entries(scope, kind, name, tenant=tenant, only_tenant=True)
+        await live.kernel.list_bundle_entries_async(scope, kind, name, tenant=tenant, only_tenant=True)
     ) if tenant else set()
-    allp = live.kernel.list_bundle_entries(scope, kind, name, tenant=tenant)
+    allp = await live.kernel.list_bundle_entries_async(scope, kind, name, tenant=tenant)
     return {
         "kind": kind, "name": name,
         "entries": [{"entry": e, "overridden": e in forked} for e in allp],
@@ -466,9 +466,9 @@ async def read_bundle_entry_impl(
     base), plus whether THIS tenant forked it and whether it's binary (decode
     failure — reported honestly rather than mangling bytes into ``content``)."""
     _require_bundle_kind(live, kind)
-    raw = live.kernel.fetch_bundle_entry(scope, kind, name, entry, tenant=tenant)  # bytes
+    raw = await live.kernel.fetch_bundle_entry_async(scope, kind, name, entry, tenant=tenant)  # bytes
     forked = bool(tenant) and entry in set(
-        live.kernel.list_bundle_entries(scope, kind, name, tenant=tenant, only_tenant=True)
+        await live.kernel.list_bundle_entries_async(scope, kind, name, tenant=tenant, only_tenant=True)
     )
     try:
         content, binary = raw.decode("utf-8"), False
@@ -503,7 +503,7 @@ async def revert_bundle_entry_impl(
     if not (tenant or "").strip():
         raise ValueError("tenant is required to revert a bundle entry")
     _require_bundle_kind(live, kind)
-    live.kernel.delete_bundle_entry(scope, kind, name, entry, tenant=tenant)
+    await live.kernel.delete_bundle_entry_async(scope, kind, name, entry, tenant=tenant)
     return {"kind": kind, "name": name, "entry": entry, "overridden": False}
 
 
