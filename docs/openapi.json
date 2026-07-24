@@ -771,6 +771,20 @@
         "title": "Body_put_account_plan_v1_account_plan_put",
         "type": "object"
       },
+      "Body_put_definition_v1_definitions__kind___name__put": {
+        "properties": {
+          "spec": {
+            "additionalProperties": true,
+            "title": "Spec",
+            "type": "object"
+          }
+        },
+        "required": [
+          "spec"
+        ],
+        "title": "Body_put_definition_v1_definitions__kind___name__put",
+        "type": "object"
+      },
       "Body_remember_memory_v1_memories_post": {
         "properties": {
           "affect": {
@@ -988,6 +1002,123 @@
           "slug"
         ],
         "title": "CreateWorkspaceResponse",
+        "type": "object"
+      },
+      "DefinitionView": {
+        "description": "``GET /v1/definitions/{kind}/{name}`` — the tenant's view of one\ndefinition: the effective (composed) spec, the inherited base spec,\nwhether the tenant has an override, and the Kind's edit schema. The\n``pattern``/``body_field``/``bundle_entries`` fields carry the Kind's\nstorage taxonomy so the editor is honest about a BUNDLE Kind's files\nbeing read-only for now (fork is a later plane).",
+        "properties": {
+          "base": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base"
+          },
+          "body_field": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body Field"
+          },
+          "bundle_entries": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Bundle Entries",
+            "type": "array"
+          },
+          "effective": {
+            "additionalProperties": true,
+            "title": "Effective",
+            "type": "object"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "overlayable": {
+            "title": "Overlayable",
+            "type": "boolean"
+          },
+          "overlayable_fields": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Overlayable Fields",
+            "type": "array"
+          },
+          "overridden": {
+            "title": "Overridden",
+            "type": "boolean"
+          },
+          "pattern": {
+            "default": "",
+            "title": "Pattern",
+            "type": "string"
+          },
+          "ui_schema": {
+            "additionalProperties": true,
+            "title": "Ui Schema",
+            "type": "object"
+          }
+        },
+        "required": [
+          "kind",
+          "name",
+          "overridden",
+          "overlayable",
+          "effective"
+        ],
+        "title": "DefinitionView",
+        "type": "object"
+      },
+      "DefinitionWriteResponse": {
+        "description": "``PUT``/``DELETE /v1/definitions/{kind}/{name}`` — the write result.\n``version`` is set on apply (the write's document version), absent on\nrevert.",
+        "properties": {
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "overridden": {
+            "title": "Overridden",
+            "type": "boolean"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          }
+        },
+        "required": [
+          "kind",
+          "name",
+          "overridden"
+        ],
+        "title": "DefinitionWriteResponse",
         "type": "object"
       },
       "DeleteMemoryResponse": {
@@ -3521,6 +3652,303 @@
           }
         },
         "summary": "Board Item"
+      }
+    },
+    "/v1/definitions/{kind}/{name}": {
+      "delete": {
+        "description": "Revert a tenant override — deletes the tenant-layer doc so reads\nfall back to the inherited base (the editor's \"Reset to default\").",
+        "operationId": "delete_definition_v1_definitions__kind___name__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scope"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tenant"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DefinitionWriteResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Definition"
+      },
+      "get": {
+        "description": "Read a definition as the tenant sees it: the effective (composed)\nspec, the inherited base spec, whether the tenant has an override, and\nthe Kind's edit schema (ui_schema + overlayable fields) — what the\nportal's customization editor renders. 404 for an unknown (kind, name).",
+        "operationId": "get_definition_v1_definitions__kind___name__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scope"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tenant"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DefinitionView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Definition"
+      },
+      "put": {
+        "description": "Persist a tenant override of a definition (the editor's Save) — a\ntenant-layer write via the SAME core ``apply_definition_impl`` the CLI\nuses. A LOCKED Kind/field is vetoed by the kernel's LayerPolicy check,\nsurfaced here as 403 (never silently dropped).",
+        "operationId": "put_definition_v1_definitions__kind___name__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scope"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tenant"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_put_definition_v1_definitions__kind___name__put"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DefinitionWriteResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Definition"
       }
     },
     "/v1/genome": {

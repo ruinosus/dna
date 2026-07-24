@@ -132,6 +132,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/definitions/{kind}/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Definition
+         * @description Read a definition as the tenant sees it: the effective (composed)
+         *     spec, the inherited base spec, whether the tenant has an override, and
+         *     the Kind's edit schema (ui_schema + overlayable fields) — what the
+         *     portal's customization editor renders. 404 for an unknown (kind, name).
+         */
+        get: operations["get_definition_v1_definitions__kind___name__get"];
+        /**
+         * Put Definition
+         * @description Persist a tenant override of a definition (the editor's Save) — a
+         *     tenant-layer write via the SAME core ``apply_definition_impl`` the CLI
+         *     uses. A LOCKED Kind/field is vetoed by the kernel's LayerPolicy check,
+         *     surfaced here as 403 (never silently dropped).
+         */
+        put: operations["put_definition_v1_definitions__kind___name__put"];
+        post?: never;
+        /**
+         * Delete Definition
+         * @description Revert a tenant override — deletes the tenant-layer doc so reads
+         *     fall back to the inherited base (the editor's "Reset to default").
+         */
+        delete: operations["delete_definition_v1_definitions__kind___name__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/genome": {
         parameters: {
             query?: never;
@@ -1044,6 +1079,13 @@ export interface components {
             /** Tier Id */
             tier_id: string;
         };
+        /** Body_put_definition_v1_definitions__kind___name__put */
+        Body_put_definition_v1_definitions__kind___name__put: {
+            /** Spec */
+            spec: {
+                [key: string]: unknown;
+            };
+        };
         /** Body_remember_memory_v1_memories_post */
         Body_remember_memory_v1_memories_post: {
             /**
@@ -1127,6 +1169,64 @@ export interface components {
             slug: string;
             /** Workspace Id */
             workspace_id: string;
+        };
+        /**
+         * DefinitionView
+         * @description ``GET /v1/definitions/{kind}/{name}`` — the tenant's view of one
+         *     definition: the effective (composed) spec, the inherited base spec,
+         *     whether the tenant has an override, and the Kind's edit schema. The
+         *     ``pattern``/``body_field``/``bundle_entries`` fields carry the Kind's
+         *     storage taxonomy so the editor is honest about a BUNDLE Kind's files
+         *     being read-only for now (fork is a later plane).
+         */
+        DefinitionView: {
+            /** Base */
+            base?: {
+                [key: string]: unknown;
+            } | null;
+            /** Body Field */
+            body_field?: string | null;
+            /** Bundle Entries */
+            bundle_entries?: string[];
+            /** Effective */
+            effective: {
+                [key: string]: unknown;
+            };
+            /** Kind */
+            kind: string;
+            /** Name */
+            name: string;
+            /** Overlayable */
+            overlayable: boolean;
+            /** Overlayable Fields */
+            overlayable_fields?: string[];
+            /** Overridden */
+            overridden: boolean;
+            /**
+             * Pattern
+             * @default
+             */
+            pattern: string;
+            /** Ui Schema */
+            ui_schema?: {
+                [key: string]: unknown;
+            };
+        };
+        /**
+         * DefinitionWriteResponse
+         * @description ``PUT``/``DELETE /v1/definitions/{kind}/{name}`` — the write result.
+         *     ``version`` is set on apply (the write's document version), absent on
+         *     revert.
+         */
+        DefinitionWriteResponse: {
+            /** Kind */
+            kind: string;
+            /** Name */
+            name: string;
+            /** Overridden */
+            overridden: boolean;
+            /** Version */
+            version?: string | null;
         };
         /** DeleteMemoryResponse */
         DeleteMemoryResponse: {
@@ -2096,6 +2196,121 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BoardItemResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_definition_v1_definitions__kind___name__get: {
+        parameters: {
+            query?: {
+                scope?: string | null;
+                tenant?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                kind: string;
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DefinitionView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_definition_v1_definitions__kind___name__put: {
+        parameters: {
+            query?: {
+                scope?: string | null;
+                tenant?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                kind: string;
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Body_put_definition_v1_definitions__kind___name__put"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DefinitionWriteResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_definition_v1_definitions__kind___name__delete: {
+        parameters: {
+            query?: {
+                scope?: string | null;
+                tenant?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                kind: string;
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DefinitionWriteResponse"];
                 };
             };
             /** @description Validation Error */

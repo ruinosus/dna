@@ -79,6 +79,7 @@ _COVERED: dict[tuple[str, str], str] = {
     ("GET", "/v1/agents/{name}/prompt"): "agent_prompt",
     ("GET", "/v1/tools"): "list_tools",
     ("GET", "/v1/genome"): "genome_view",
+    ("GET", "/v1/definitions/{kind}/{name}"): "read_definition",
     ("GET", "/v1/memories"): "list_memories",
     ("GET", "/v1/memories/personal"): "list_personal_memories",
     ("GET", "/v1/memories/search"): "search_memories",
@@ -95,6 +96,8 @@ _COVERED: dict[tuple[str, str], str] = {
     ("GET", "/v1/workspaces"): "list_workspaces",
     ("GET", "/v1/workspaces/{workspace_id}/members"): "list_workspace_members",
     # -- writes --------------------------------------------------------------
+    ("PUT", "/v1/definitions/{kind}/{name}"): "apply_definition",
+    ("DELETE", "/v1/definitions/{kind}/{name}"): "revert_definition",
     ("POST", "/v1/memories"): "remember_memory",
     ("POST", "/v1/memories/import"): "import_memories",
     ("DELETE", "/v1/memories/{name}"): "delete_memory",

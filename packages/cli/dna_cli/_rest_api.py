@@ -255,6 +255,7 @@ def build_app(
         WorkspaceMemberNotFound,
         accept_invites_impl,
         adopt_workspace_scope_on_access,
+        apply_definition_impl,
         board_item_impl,
         board_summary_impl,
         compose_prompt_impl,
@@ -274,14 +275,17 @@ def build_app(
         list_workspaces_impl,
         provision_tenant_owner_impl,
         provision_workspace_owner_impl,
+        read_definition_impl,
         recall_impl,
         remember_impl,
         remove_member_impl,
+        revert_definition_impl,
         revoke_workspace_member_impl,
         set_member_impl,
         set_account_plan_impl,
     )
     from dna.application.live import parse_scope_grants
+    from dna.kernel.protocols import LayerPolicyViolationError
     from dna.tenancy import Identity
     from dna_cli._mcp_server import boot_live
     # The intel face delegates to the CORE engine (adr-faces-reorg: logic in the
@@ -720,6 +724,74 @@ def build_app(
         contents, enumerated live = no drift) + the tenant LayerPolicy. One call
         composes what the portal's /console/genome panel renders."""
         return await genome_view_impl(await _live(), scope, tenant)
+
+    # -- definitions (read/apply/revert a tenant-layer override) -------------
+    # The strain-customization write path (s-strain-customization-ui): a
+    # tenant-layer write is the ONE mechanism that gets LayerPolicy
+    # enforcement for free (a LOCKED Kind/field vetoes the write at the
+    # kernel, not here). These three thin routes reuse the SAME core
+    # ``*_definition_impl`` use-cases Task 1 added — zero business logic here.
+
+    @app.get("/v1/definitions/{kind}/{name}", dependencies=guarded,
+             response_model=m.DefinitionView)
+    async def get_definition(
+        kind: str, name: str,
+        scope: str | None = Query(default=None),
+        tenant: str | None = Query(default=None),
+    ) -> dict[str, Any]:
+        """Read a definition as the tenant sees it: the effective (composed)
+        spec, the inherited base spec, whether the tenant has an override, and
+        the Kind's edit schema (ui_schema + overlayable fields) — what the
+        portal's customization editor renders. 404 for an unknown (kind, name)."""
+        live = await _live()
+        try:
+            return await read_definition_impl(
+                live, scope=scope or live.base_scope, tenant=tenant,
+                kind=kind, name=name,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from None
+
+    @app.put("/v1/definitions/{kind}/{name}", dependencies=guarded,
+             response_model=m.DefinitionWriteResponse)
+    async def put_definition(
+        kind: str, name: str,
+        spec: dict[str, Any] = Body(..., embed=True),
+        scope: str | None = Query(default=None),
+        tenant: str | None = Query(default=None),
+    ) -> dict[str, Any]:
+        """Persist a tenant override of a definition (the editor's Save) — a
+        tenant-layer write via the SAME core ``apply_definition_impl`` the CLI
+        uses. A LOCKED Kind/field is vetoed by the kernel's LayerPolicy check,
+        surfaced here as 403 (never silently dropped)."""
+        live = await _live()
+        try:
+            return await apply_definition_impl(
+                live, scope=scope or live.base_scope, tenant=tenant,
+                kind=kind, name=name, spec=spec,
+            )
+        except LayerPolicyViolationError as exc:
+            raise HTTPException(status_code=403, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from None
+
+    @app.delete("/v1/definitions/{kind}/{name}", dependencies=guarded,
+                response_model=m.DefinitionWriteResponse)
+    async def delete_definition(
+        kind: str, name: str,
+        scope: str | None = Query(default=None),
+        tenant: str | None = Query(default=None),
+    ) -> dict[str, Any]:
+        """Revert a tenant override — deletes the tenant-layer doc so reads
+        fall back to the inherited base (the editor's "Reset to default")."""
+        live = await _live()
+        try:
+            return await revert_definition_impl(
+                live, scope=scope or live.base_scope, tenant=tenant,
+                kind=kind, name=name,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from None
 
     # -- memory (list + search + the two guarded writes: remember + delete) --
 

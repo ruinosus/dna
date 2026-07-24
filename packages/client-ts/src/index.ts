@@ -163,6 +163,53 @@ export class DnaClient {
     return this.unwrap(await this.raw.GET("/v1/genome", { params: { query: this.q(query) } }));
   }
 
+  /**
+   * Read one definition as the tenant sees it: the effective (composed)
+   * spec, the inherited base spec, whether the tenant has an override, and
+   * the Kind's edit schema (`ui_schema` + overlayable fields) — what a
+   * customization editor renders. 404 for an unknown (kind, name).
+   */
+  async readDefinition(kind: string, name: string, query?: ScopeTenant) {
+    return this.unwrap(
+      await this.raw.GET("/v1/definitions/{kind}/{name}", {
+        params: { path: { kind, name }, query: this.q(query) },
+      }),
+    );
+  }
+
+  // ── definitions (writes) ──────────────────────────────────────────────────
+
+  /**
+   * Persist a tenant override of a definition (the editor's Save) — a
+   * tenant-layer write. A LOCKED Kind/field is vetoed by the kernel's
+   * LayerPolicy check and surfaces as a 403 {@link DnaApiError}.
+   */
+  async applyDefinition(
+    kind: string,
+    name: string,
+    spec: Record<string, unknown>,
+    query?: ScopeTenant,
+  ) {
+    return this.unwrap(
+      await this.raw.PUT("/v1/definitions/{kind}/{name}", {
+        params: { path: { kind, name }, query: this.q(query) },
+        body: { spec },
+      }),
+    );
+  }
+
+  /**
+   * Revert a tenant override — deletes the tenant-layer doc so reads fall
+   * back to the inherited base (the editor's "Reset to default").
+   */
+  async revertDefinition(kind: string, name: string, query?: ScopeTenant) {
+    return this.unwrap(
+      await this.raw.DELETE("/v1/definitions/{kind}/{name}", {
+        params: { path: { kind, name }, query: this.q(query) },
+      }),
+    );
+  }
+
   // ── memory (reads) ────────────────────────────────────────────────────────
 
   /** List the tenant's memory — base + the tenant's OWN overlay. */
