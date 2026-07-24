@@ -17,12 +17,14 @@ never a re-implementation.
 """
 from __future__ import annotations
 
+import inspect
 import logging
 
 from datetime import datetime, timezone
 from typing import Any
 
 from dna.application.live import LiveDna
+from dna.kernel.protocols import LayerPolicyViolationError  # noqa: F401  (re-exported for the face)
 
 logger = logging.getLogger(__name__)
 
@@ -238,6 +240,102 @@ async def get_tool_impl(
         available = sorted(filter(None, (s["name"] for s in map(_tool_surface, rows))))
         raise ValueError(f"tool {name!r} not found in scope {mi.scope!r}; available: {available}")
     return {"scope": mi.scope, **surface}
+
+
+# ── definitions (read/apply/revert a tenant override) — s-strain-customization-ui
+
+
+def _doc_spec_from_mi(mi: Any, kind: str, name: str) -> dict[str, Any] | None:
+    """Return the spec dict for (kind, name) from a materialized ManifestInstance,
+    or None if absent. Filters ``mi.documents`` by (kind, name) then reuses
+    ``_doc_spec`` for the shape-tolerant spec extraction — DRY with
+    ``genome_view_impl``."""
+    for d in mi.documents:
+        if getattr(d, "kind", None) == kind and getattr(d, "name", None) == name:
+            return _doc_spec(d)
+    return None
+
+
+def _api_version_for_kind(live: LiveDna, kind: str) -> str:
+    """The apiVersion a write for `kind` should carry — taken from the registered
+    KindPort's descriptor, falling back to the DNA v1 API string."""
+    port = live.kernel.kind_port_for(kind)
+    return getattr(port, "api_version", None) or "github.com/ruinosus/dna/v1"
+
+
+async def read_definition_impl(
+    live: LiveDna, *, scope: str, tenant: str | None, kind: str, name: str,
+) -> dict[str, Any]:
+    """Read a definition as the tenant sees it: the effective (composed) spec, the
+    inherited base spec, whether the tenant has an override, and the Kind's edit
+    schema (ui_schema + overlayable fields) so the portal can render a form.
+
+    Also returns the Kind's storage taxonomy (``pattern``/``body_field``/
+    ``bundle_entries``) so the future editor is honest about a BUNDLE-pattern
+    Kind's files being read-only here (plane B forks them) and about the
+    marketplace (plane C) being future."""
+    base_mi = await live.mi(scope)                 # no tenant → base only
+    eff_mi = await live.mi(scope, tenant) if tenant else base_mi
+    base = _doc_spec_from_mi(base_mi, kind, name)
+    effective = _doc_spec_from_mi(eff_mi, kind, name)
+    if effective is None and base is None:
+        raise ValueError(f"no {kind} named {name!r} in scope {scope!r}")
+    port = live.kernel.kind_port_for(kind)
+    ui_schema = dict(getattr(port, "ui_schema", {}) or {}) if port else {}
+    overlayable = sorted(getattr(port, "OVERLAYABLE_FIELDS", frozenset()) or []) if port else []
+    # Storage taxonomy — so the editor is honest about planes B/C (bundle files, add).
+    storage = getattr(port, "storage", None) if port else None
+    pattern = str(getattr(getattr(storage, "pattern", None), "value", getattr(storage, "pattern", "")) or "")
+    body_field = getattr(storage, "body_field", None) if storage else None
+    bundle_entries: list[str] = []
+    if pattern == "bundle" and effective is not None:
+        # List the bundle's entry files (read-only in A — plane B forks them). Best-effort:
+        # a missing/never-written bundle simply yields []. Uses the kernel bundle facade if present.
+        try:
+            lister = getattr(live.kernel, "list_bundle_entries", None)
+            if lister is not None:
+                res = lister(scope, kind, name, tenant=tenant)
+                bundle_entries = sorted(await res) if inspect.isawaitable(res) else sorted(res)
+        except Exception:  # noqa: BLE001 — entry listing is advisory, never fails the read
+            bundle_entries = []
+    return {
+        "kind": kind, "name": name,
+        "overridden": effective != base and base is not None,
+        "overlayable": bool(overlayable),
+        "effective": effective if effective is not None else (base or {}),
+        "base": base,
+        "ui_schema": ui_schema,
+        "overlayable_fields": list(overlayable),
+        "pattern": pattern,
+        "body_field": body_field,
+        "bundle_entries": bundle_entries,
+    }
+
+
+async def apply_definition_impl(
+    live: LiveDna, *, scope: str, tenant: str, kind: str, name: str, spec: dict[str, Any],
+) -> dict[str, Any]:
+    """Persist a tenant override via a tenant-layer write. The write pipeline's
+    layer-policy check vetoes a LOCKED Kind / non-overlayable field, raising
+    LayerPolicyViolationError (the face maps it to 403)."""
+    if not (tenant or "").strip():
+        raise ValueError("tenant is required to write a definition override")
+    api_version = _api_version_for_kind(live, kind)
+    raw = {"apiVersion": api_version, "kind": kind,
+           "metadata": {"name": name}, "spec": dict(spec or {})}
+    version = await live.kernel.write_document(
+        scope, kind, name, raw, tenant=tenant, invalidate_mode="doc")
+    return {"kind": kind, "name": name, "version": version, "overridden": True}
+
+
+async def revert_definition_impl(
+    live: LiveDna, *, scope: str, tenant: str, kind: str, name: str,
+) -> dict[str, Any]:
+    """Remove the tenant override → reads fall back to the inherited base."""
+    if not (tenant or "").strip():
+        raise ValueError("tenant is required to revert a definition override")
+    await live.kernel.delete_document(scope, kind, name, tenant=tenant)
+    return {"kind": kind, "name": name, "overridden": False}
 
 
 # ── toolkit: PromptTemplates + Skills (the Spec Kit Layer 3 surface) ─────────
