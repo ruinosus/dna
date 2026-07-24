@@ -260,6 +260,7 @@ def build_app(
         compose_prompt_impl,
         create_project_impl,
         create_workspace_impl,
+        genome_view_impl,
         get_project_impl,
         import_memories_impl,
         invite_member_impl,
@@ -709,6 +710,16 @@ def build_app(
     ) -> dict[str, Any]:
         """List a scope's Tool Kind surfaces (name + description), tenant-aware."""
         return await list_tools_impl(await _live(), scope, tenant)
+
+    @app.get("/v1/genome", dependencies=guarded, response_model=m.GenomeViewResponse)
+    async def genome(
+        scope: str | None = Query(default=None),
+        tenant: str | None = Query(default=None),
+    ) -> dict[str, Any]:
+        """The DERIVED Genome view of a scope: identity + ships (the scope's own
+        contents, enumerated live = no drift) + the tenant LayerPolicy. One call
+        composes what the portal's /console/genome panel renders."""
+        return await genome_view_impl(await _live(), scope, tenant)
 
     # -- memory (list + search + the two guarded writes: remember + delete) --
 

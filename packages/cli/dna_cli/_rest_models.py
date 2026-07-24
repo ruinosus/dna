@@ -128,6 +128,34 @@ class ToolsResponse(BaseModel):
     tools: list[ToolSummary]
 
 
+# ── genome view (identity + ships + tenant LayerPolicy) ──────────────────────
+
+
+class GenomeIdentity(BaseModel):
+    version: str | None = None
+    visibility: str | None = None
+    default_agent: str | None = None
+    tags: list[str] = Field(default_factory=list)
+
+
+class GenomeShips(BaseModel):
+    """The module's contents, enumerated live from the scope (not a stored list)."""
+
+    copilots: list[str] = Field(default_factory=list)
+    agents: list[str] = Field(default_factory=list)
+    tools: list[str] = Field(default_factory=list)
+    federations: list[str] = Field(default_factory=list)
+
+
+class GenomeViewResponse(BaseModel):
+    scope: str
+    identity: GenomeIdentity
+    ships: GenomeShips
+    # layer_id → {kind-alias → open|restricted|locked}. Genuinely dynamic map,
+    # so the values stay loose per the fidelity contract.
+    policies: dict[str, dict[str, str]] = Field(default_factory=dict)
+
+
 # ── memory ──────────────────────────────────────────────────────────────────
 
 
