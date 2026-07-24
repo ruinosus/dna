@@ -215,6 +215,15 @@ mutation is vetoed by LayerPolicy for locked Kinds or non-overlayable fields.
 `dna definition revert <kind> <name> --tenant <wid>` removes it. The REST face
 exposes the same surface at `GET|PUT|DELETE /v1/definitions/{kind}/{name}`.
 
+For a bundle-pattern Kind (e.g. a Skill, stored as a directory of files rather
+than one YAML doc), `dna definition entries <kind> <name>` lists its entry
+files (base ∪ tenant overlay), each flagged whether THIS tenant forked it. The
+`dna definition entry get|set|revert <kind> <name> <entry>` sub-group reads,
+forks (`set --file <f>`), or reverts ONE entry file — the same Strain mutation
+as `get`/`set`/`revert` above, at file grain; a LOCKED Kind vetoes `entry set`
+exactly like `set`. The REST face mirrors this at
+`GET|PUT|DELETE /v1/definitions/{kind}/{name}/entries[/{entry}]`.
+
 ## `dna kind` — list and inspect registered Kinds
 
 [Reference →](../reference/cli/kind.md)

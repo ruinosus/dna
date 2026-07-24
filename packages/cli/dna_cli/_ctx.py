@@ -453,6 +453,62 @@ class _LocalClient:
             tenant=effective_tenant, kind=kind, name=name,
         )
 
+    # -- bundle entries (s-strain-bundle-fork / Task 5) -----------------------
+    #
+    # Local twins of ``read_definition`` / ``apply_definition`` /
+    # ``revert_definition`` above, but calling the bundle-entry use-cases
+    # (``dna.application.{list,read,write,revert}_bundle_entry(ies)_impl``,
+    # Task 2) — file-grain forking within a bundle-pattern Kind (Skill, ...)
+    # rather than whole-document spec overrides.
+
+    async def list_bundle_entries(
+        self, kind: str, name: str, *,
+        scope: str | None = None, tenant: str | None = None,
+    ) -> dict:
+        from dna.application import list_bundle_entries_impl
+
+        effective_tenant = tenant if tenant is not None else self._tenant
+        return await list_bundle_entries_impl(
+            self._live(), scope=scope or self._holder.scope,
+            tenant=effective_tenant, kind=kind, name=name,
+        )
+
+    async def read_bundle_entry(
+        self, kind: str, name: str, entry: str, *,
+        scope: str | None = None, tenant: str | None = None,
+    ) -> dict:
+        from dna.application import read_bundle_entry_impl
+
+        effective_tenant = tenant if tenant is not None else self._tenant
+        return await read_bundle_entry_impl(
+            self._live(), scope=scope or self._holder.scope,
+            tenant=effective_tenant, kind=kind, name=name, entry=entry,
+        )
+
+    async def write_bundle_entry(
+        self, kind: str, name: str, entry: str, content: str, *,
+        scope: str | None = None, tenant: str | None = None,
+    ) -> dict:
+        from dna.application import write_bundle_entry_impl
+
+        effective_tenant = tenant if tenant is not None else self._tenant
+        return await write_bundle_entry_impl(
+            self._live(), scope=scope or self._holder.scope,
+            tenant=effective_tenant, kind=kind, name=name, entry=entry, content=content,
+        )
+
+    async def revert_bundle_entry(
+        self, kind: str, name: str, entry: str, *,
+        scope: str | None = None, tenant: str | None = None,
+    ) -> dict:
+        from dna.application import revert_bundle_entry_impl
+
+        effective_tenant = tenant if tenant is not None else self._tenant
+        return await revert_bundle_entry_impl(
+            self._live(), scope=scope or self._holder.scope,
+            tenant=effective_tenant, kind=kind, name=name, entry=entry,
+        )
+
 
 @contextmanager
 def dna_client(timeout: float = 30.0, tenant: str | None = None):
