@@ -81,6 +81,16 @@ class BundleEntryReadable(Protocol):
         kind: str | None = None,
     ) -> bytes | Awaitable[bytes]: ...
 
+    def list_bundle_entries(
+        self, scope: str, container: str, name: str,
+        *, tenant: str | None = None, only_tenant: bool = False,
+        kind: str | None = None,
+    ) -> list[str] | Awaitable[list[str]]:
+        """List entry paths for a bundle. Composed = tenant overlay ∪ base
+        (tenant rows shadow base by path). ``only_tenant`` returns just the
+        tenant's own override rows. Empty list when the bundle is absent."""
+        ...
+
 
 @runtime_checkable
 class BundleEntryWritable(Protocol):
@@ -126,6 +136,15 @@ class BundleEntryWritable(Protocol):
         tenant: str | None = None,
         kind: str | None = None,
     ) -> None | Awaitable[None]: ...
+
+    def delete_bundle_entry(
+        self, scope: str, container: str, name: str, entry: str,
+        *, tenant: str | None = None, kind: str | None = None,
+    ) -> bool | Awaitable[bool]:
+        """Delete ONE entry row for ``tenant`` (base sentinel '' when None).
+        Returns True if a row existed. Reverting a tenant fork deletes the
+        tenant row so the base entry composes through again."""
+        ...
 
 
 @runtime_checkable

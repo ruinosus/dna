@@ -250,6 +250,37 @@ class CompositeFilesystemSource(WritableSourcePort):
             tenant=tenant, kind=kind,
         )
 
+    def list_bundle_entries(
+        self,
+        scope: str,
+        container: str,
+        name: str,
+        *,
+        tenant: str | None = None,
+        only_tenant: bool = False,
+        kind: str | None = None,
+    ) -> list[str]:
+        """s-strain-bundle-fork B1 — delegate to the per-scope child source."""
+        return self._route(scope).list_bundle_entries(
+            scope, container, name,
+            tenant=tenant, only_tenant=only_tenant, kind=kind,
+        )
+
+    def delete_bundle_entry(
+        self,
+        scope: str,
+        container: str,
+        name: str,
+        entry: str,
+        *,
+        tenant: str | None = None,
+        kind: str | None = None,
+    ) -> bool:
+        """s-strain-bundle-fork B1 — delegate to the per-scope child source."""
+        return self._route(scope).delete_bundle_entry(
+            scope, container, name, entry, tenant=tenant, kind=kind,
+        )
+
     # ── WritableSourcePort ────────────────────────────────────────────
 
     async def save_document(

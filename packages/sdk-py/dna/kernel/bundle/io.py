@@ -113,6 +113,116 @@ class BundleIO:
         if inspect.isawaitable(result):
             await result
 
+    def list_sync(
+        self, scope: str, kind: str, name: str, *,
+        tenant: str | None = None, only_tenant: bool = False,
+    ) -> list[str]:
+        """s-strain-bundle-fork B1 — list entry paths for a bundle (sync).
+        Mirrors ``fetch_sync``'s dispatch shape."""
+        k = self._k
+        sd = k.storage_for_kind(kind)
+        if sd is None or not sd.container:
+            raise ValueError(
+                f"Kind {kind!r} is not registered or has no bundle container."
+            )
+        from dna.kernel.capabilities import BundleEntryReadable
+        if not isinstance(k._source, BundleEntryReadable):
+            raise NotImplementedError(
+                f"Source adapter {type(k._source).__name__} does not "
+                f"implement BundleEntryReadable. Capability Protocol at "
+                f"dna.kernel.capabilities.BundleEntryReadable — "
+                f"add a `list_bundle_entries(scope, container, name, "
+                f"*, tenant, only_tenant, kind)` method to your source adapter."
+            )
+        from dna.kernel import _run_sync_helper
+        return _run_sync_helper(
+            k._source.list_bundle_entries(  # type: ignore[attr-defined]
+                scope, sd.container, name,
+                tenant=tenant, only_tenant=only_tenant, kind=kind,
+            ),
+            loop=k._main_loop,
+        )
+
+    async def list_async(
+        self, scope: str, kind: str, name: str, *,
+        tenant: str | None = None, only_tenant: bool = False,
+    ) -> list[str]:
+        """Async variant of ``list_sync`` — use inside an event loop so a
+        Postgres source uses the loop's pool directly (no thread round-trip)."""
+        k = self._k
+        sd = k.storage_for_kind(kind)
+        if sd is None or not sd.container:
+            raise ValueError(
+                f"Kind {kind!r} is not registered or has no bundle container."
+            )
+        from dna.kernel.capabilities import BundleEntryReadable
+        if not isinstance(k._source, BundleEntryReadable):
+            raise NotImplementedError(
+                f"Source adapter {type(k._source).__name__} does not implement "
+                "list_bundle_entries."
+            )
+        result = k._source.list_bundle_entries(
+            scope, sd.container, name,
+            tenant=tenant, only_tenant=only_tenant, kind=kind,
+        )
+        if inspect.isawaitable(result):
+            return await result
+        return result
+
+    def delete_sync(
+        self, scope: str, kind: str, name: str, entry: str, *,
+        tenant: str | None = None,
+    ) -> bool:
+        """s-strain-bundle-fork B1 — delete ONE bundle entry row (sync).
+        Mirrors ``fetch_sync``'s dispatch shape. Returns True if a row
+        existed."""
+        k = self._k
+        sd = k.storage_for_kind(kind)
+        if sd is None or not sd.container:
+            raise ValueError(
+                f"Kind {kind!r} is not registered or has no bundle container."
+            )
+        from dna.kernel.capabilities import BundleEntryWritable
+        if not isinstance(k._source, BundleEntryWritable):
+            raise NotImplementedError(
+                f"Source adapter {type(k._source).__name__} does not "
+                f"implement BundleEntryWritable. Capability Protocol at "
+                f"dna.kernel.capabilities.BundleEntryWritable — "
+                f"add a `delete_bundle_entry(scope, container, name, entry, "
+                f"*, tenant, kind)` method to your source adapter."
+            )
+        from dna.kernel import _run_sync_helper
+        return _run_sync_helper(
+            k._source.delete_bundle_entry(  # type: ignore[attr-defined]
+                scope, sd.container, name, entry, tenant=tenant, kind=kind,
+            ),
+            loop=k._main_loop,
+        )
+
+    async def delete_async(
+        self, scope: str, kind: str, name: str, entry: str, *,
+        tenant: str | None = None,
+    ) -> bool:
+        """Async variant of ``delete_sync``."""
+        k = self._k
+        sd = k.storage_for_kind(kind)
+        if sd is None or not sd.container:
+            raise ValueError(
+                f"Kind {kind!r} is not registered or has no bundle container."
+            )
+        from dna.kernel.capabilities import BundleEntryWritable
+        if not isinstance(k._source, BundleEntryWritable):
+            raise NotImplementedError(
+                f"Source adapter {type(k._source).__name__} does not implement "
+                "delete_bundle_entry."
+            )
+        result = k._source.delete_bundle_entry(  # type: ignore[attr-defined]
+            scope, sd.container, name, entry, tenant=tenant, kind=kind,
+        )
+        if inspect.isawaitable(result):
+            return await result
+        return result
+
     def serialize(self, scope: str, kind: str, name: str, raw: dict) -> dict:
         """Serialize a document to files without writing. Returns
         ``{"files": [{"relativePath": str, "content": str}]}``."""

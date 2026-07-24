@@ -1537,6 +1537,44 @@ class SqlAlchemySource(WritableSourcePort):
             ))
         self.invalidate_view(scope)
 
+    async def list_bundle_entries(
+        self, scope: str, container: str, name: str,
+        *, tenant: str | None = None, only_tenant: bool = False,
+        kind: str | None = None,
+    ) -> list[str]:
+        """s-strain-bundle-fork B1 — list entry paths for a bundle. Composed
+        (default) = tenant overlay ∪ base; ``only_tenant`` restricts to the
+        tenant's own override rows (base sentinel ``""`` when no tenant)."""
+        b = self.bundle_entries
+        kind_key = kind or container
+        tenants = [tenant or ""] if only_tenant else ([tenant, ""] if tenant else [""])
+        async with self._engine.connect() as conn:
+            rows = await conn.execute(
+                sa.select(b.c.entry_path).where(
+                    b.c.scope == scope, b.c.kind == kind_key, b.c.name == name,
+                    b.c.tenant.in_(tenants),
+                )
+            )
+            return sorted({r.entry_path for r in rows})
+
+    async def delete_bundle_entry(
+        self, scope: str, container: str, name: str, entry: str,
+        *, tenant: str | None = None, kind: str | None = None,
+    ) -> bool:
+        """s-strain-bundle-fork B1 — delete ONE entry row for ``tenant``
+        (base sentinel ``""`` when None). Returns True if a row existed."""
+        b = self.bundle_entries
+        kind_key = kind or container
+        async with self._engine.begin() as conn:
+            res = await conn.execute(
+                b.delete().where(
+                    b.c.scope == scope, b.c.kind == kind_key, b.c.name == name,
+                    b.c.entry_path == entry, b.c.tenant == (tenant or ""),
+                )
+            )
+        self.invalidate_view(scope)
+        return (res.rowcount or 0) > 0
+
     # ------------------------------------------------------------------
     # Capabilities
     # ------------------------------------------------------------------

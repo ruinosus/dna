@@ -514,3 +514,83 @@ class FilesystemSource(SourcePort):
             f"Bundle entry not found: scope={scope!r} container={container!r} "
             f"name={name!r} entry={entry!r} tenant={tenant!r}"
         )
+
+    def list_bundle_entries(
+        self,
+        scope: str,
+        container: str,
+        name: str,
+        *,
+        tenant: str | None = None,
+        only_tenant: bool = False,
+        kind: str | None = None,
+    ) -> list[str]:
+        """s-strain-bundle-fork B1 — list entry paths for a bundle.
+
+        Composed (default): union of the tenant overlay dir + the base
+        bundle dir, relative entry paths, deduped + sorted. ``only_tenant``
+        restricts to just the tenant overlay dir (or the base dir when no
+        tenant, mirroring the SQL adapters' ``tenant or ""`` sentinel).
+
+        ``kind`` is accepted for protocol parity but ignored — the
+        filesystem layout already namespaces bundles by ``container``.
+        """
+        del kind
+        base_dir = self.base_dir / scope / container / name
+        tenant_dir = (
+            self.base_dir / "tenants" / fs_tenant_segment(tenant) / "scopes" / scope
+            / container / name
+            if tenant else None
+        )
+        if only_tenant:
+            dirs = [tenant_dir if tenant_dir is not None else base_dir]
+        else:
+            dirs = ([tenant_dir] if tenant_dir is not None else []) + [base_dir]
+        entries: set[str] = set()
+        for d in dirs:
+            if not d.is_dir():
+                continue
+            for p in d.rglob("*"):
+                if p.is_file():
+                    entries.add(p.relative_to(d).as_posix())
+        return sorted(entries)
+
+    def delete_bundle_entry(
+        self,
+        scope: str,
+        container: str,
+        name: str,
+        entry: str,
+        *,
+        tenant: str | None = None,
+        kind: str | None = None,
+    ) -> bool:
+        """s-strain-bundle-fork B1 — delete ONE entry file for ``tenant``
+        (the base bundle dir when ``tenant`` is None). Returns True if the
+        file existed. Reverting a tenant fork deletes the tenant-scoped
+        copy so ``fetch_bundle_entry`` falls back to the base layer again.
+
+        ``kind`` is accepted for protocol parity but ignored (see
+        ``fetch_bundle_entry``).
+        """
+        del kind
+        if tenant:
+            target = (
+                self.base_dir / "tenants" / fs_tenant_segment(tenant) / "scopes" / scope
+                / container / name / entry
+            )
+        else:
+            target = self.base_dir / scope / container / name / entry
+        # Path-traversal guard, same shape as write_bundle_entry.
+        resolved = target.resolve()
+        base_resolved = self.base_dir.resolve()
+        try:
+            resolved.relative_to(base_resolved)
+        except ValueError as e:
+            raise ValueError(
+                f"path traversal blocked: entry={entry!r} resolves outside base_dir"
+            ) from e
+        if not resolved.is_file():
+            return False
+        resolved.unlink()
+        return True
