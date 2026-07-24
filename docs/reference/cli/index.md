@@ -17,6 +17,7 @@ These pages are **generated from the Click command definitions** by
 | [`dna kind`](kind.md) | List + inspect registered Kinds. |
 | [`dna source`](source.md) | Source-level operations: declarative replicas, introspection. |
 | [`dna api`](api.md) | Expose the live DNA (definitions + memory) over a REST read-API. |
+| [`dna definition`](definition.md) | Read and customize a tenant's definition overrides (the Strain). |
 | [`dna emit`](emit.md) | Emit a DNA agent as a target runtime's native artifact (the de-para). |
 | [`dna eval`](eval.md) | Run EvalSuites locally (offline, deterministic) and compare runs against a pinned EvalBaseline. |
 | [`dna explain`](explain.md) | Show per-section provenance for a composed agent prompt. |

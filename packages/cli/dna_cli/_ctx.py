@@ -401,6 +401,58 @@ class _LocalClient:
     def docs(self, scope: str) -> _LocalDocs:
         return _LocalDocs(self, scope)
 
+    # -- definitions (s-strain-customization-ui) -----------------------------
+    #
+    # These mirror the upstream ``DnaClient.read_definition`` /
+    # ``apply_definition`` / ``revert_definition`` (packages/client-py) in
+    # name and signature, but call the SHARED use-cases
+    # (``dna.application.{read,apply,revert}_definition_impl``) directly
+    # against the already-booted local kernel instead of an HTTP round trip
+    # — the same "local twin of the remote surface" shape as ``docs()``.
+
+    def _live(self) -> Any:
+        from dna.application.live import LiveDna
+
+        return LiveDna(
+            base_scope=self._holder.scope, kernel=self._holder.kernel, provider=None,
+        )
+
+    async def read_definition(
+        self, kind: str, name: str, *,
+        scope: str | None = None, tenant: str | None = None,
+    ) -> dict:
+        from dna.application import read_definition_impl
+
+        effective_tenant = tenant if tenant is not None else self._tenant
+        return await read_definition_impl(
+            self._live(), scope=scope or self._holder.scope,
+            tenant=effective_tenant, kind=kind, name=name,
+        )
+
+    async def apply_definition(
+        self, kind: str, name: str, spec: dict, *,
+        scope: str | None = None, tenant: str | None = None,
+    ) -> dict:
+        from dna.application import apply_definition_impl
+
+        effective_tenant = tenant if tenant is not None else self._tenant
+        return await apply_definition_impl(
+            self._live(), scope=scope or self._holder.scope,
+            tenant=effective_tenant, kind=kind, name=name, spec=spec,
+        )
+
+    async def revert_definition(
+        self, kind: str, name: str, *,
+        scope: str | None = None, tenant: str | None = None,
+    ) -> dict:
+        from dna.application import revert_definition_impl
+
+        effective_tenant = tenant if tenant is not None else self._tenant
+        return await revert_definition_impl(
+            self._live(), scope=scope or self._holder.scope,
+            tenant=effective_tenant, kind=kind, name=name,
+        )
+
 
 @contextmanager
 def dna_client(timeout: float = 30.0, tenant: str | None = None):
