@@ -107,6 +107,30 @@ def entries(kind: str, name: str, scope: str | None, tenant: str | None, as_json
         click.echo(f"  {e['entry']}  overridden={e['overridden']}")
 
 
+@definition.command("reconcile")
+@click.argument("kind")
+@click.argument("name")
+@click.option("--scope", default=None, help="Scope to reconcile KIND/NAME's forks against.")
+@click.option("--tenant", default=None, help="Reconcile this tenant's overlay (overrides DNA_TENANT).")
+@click.option("--json", "as_json", is_flag=True, help="Machine-readable JSON.")
+def reconcile(kind: str, name: str, scope: str | None, tenant: str | None, as_json: bool) -> None:
+    """Diff each of the tenant's forked bundle entries against the CURRENT
+    base — a fork can drift because the base moved on, not just because the
+    tenant edited it. READ-only: resolve a diverged entry with the existing
+    `dna definition entry set` (edit) or `entry revert` (take-base)."""
+    with dna_client() as dna:
+        try:
+            body = run_async(dna.reconcile_forks(kind, name, scope=scope, tenant=tenant))
+        except Exception as exc:  # noqa: BLE001 — surface a clean message, not a traceback
+            raise fail(f"reconcile failed: {exc}") from exc
+    if as_json:
+        print_json(body)
+        return
+    click.echo(f"{kind}/{name} reconcile:")
+    for f in body.get("files", []):
+        click.echo(f"  {f['entry']}  {f['status']}  binary={f['binary']}")
+
+
 @click.group("entry")
 def entry_group() -> None:
     """Read and fork ONE bundle entry file within a tenant's Strain."""

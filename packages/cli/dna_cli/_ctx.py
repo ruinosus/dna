@@ -509,6 +509,18 @@ class _LocalClient:
             tenant=effective_tenant, kind=kind, name=name, entry=entry,
         )
 
+    async def reconcile_forks(
+        self, kind: str, name: str, *,
+        scope: str | None = None, tenant: str | None = None,
+    ) -> dict:
+        from dna.application import reconcile_forks_impl
+
+        effective_tenant = tenant if tenant is not None else self._tenant
+        return await reconcile_forks_impl(
+            self._live(), scope=scope or self._holder.scope,
+            tenant=effective_tenant, kind=kind, name=name,
+        )
+
 
 @contextmanager
 def dna_client(timeout: float = 30.0, tenant: str | None = None):

@@ -279,6 +279,7 @@ def build_app(
         read_bundle_entry_impl,
         read_definition_impl,
         recall_impl,
+        reconcile_forks_impl,
         remember_impl,
         remove_member_impl,
         revert_bundle_entry_impl,
@@ -898,6 +899,35 @@ def build_app(
             )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from None
+
+    # -- reconcile (2-way diff of a tenant's forks vs base-NOW, plane B2) ----
+    # READ-only — no new write route. A tenant's fork can drift because the
+    # BASE moved on (an upstream release), not because the tenant changed
+    # anything; this is the file-grained "what changed under me" view. The
+    # three resolutions an editor offers over this are all EXISTING B1
+    # routes: keep = no-op, take-base = the DELETE above, edit = the PUT
+    # above. Thin delegate to the SAME core ``reconcile_forks_impl``.
+
+    @app.get("/v1/definitions/{kind}/{name}/reconcile", dependencies=guarded,
+             response_model=m.ReconcileView)
+    async def reconcile_forks(
+        kind: str, name: str,
+        scope: str | None = Query(default=None),
+        tenant: str | None = Query(default=None),
+    ) -> dict[str, Any]:
+        """For each of the tenant's forked bundle-entry files, diff the
+        fork's content (``mine``) against the base's CURRENT content
+        (``base``) — ``identical`` only when a base exists and its bytes
+        match; a tenant-added file (no base at all) is always
+        ``diverged`` with ``base: None``. 404 for a non-bundle Kind."""
+        live = await _live()
+        try:
+            return await reconcile_forks_impl(
+                live, scope=scope or live.base_scope, tenant=tenant,
+                kind=kind, name=name,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from None
 
     # -- memory (list + search + the two guarded writes: remember + delete) --
 

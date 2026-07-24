@@ -228,6 +228,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/definitions/{kind}/{name}/reconcile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Reconcile Forks
+         * @description For each of the tenant's forked bundle-entry files, diff the
+         *     fork's content (``mine``) against the base's CURRENT content
+         *     (``base``) — ``identical`` only when a base exists and its bytes
+         *     match; a tenant-added file (no base at all) is always
+         *     ``diverged`` with ``base: None``. 404 for a non-bundle Kind.
+         */
+        get: operations["reconcile_forks_v1_definitions__kind___name__reconcile_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/genome": {
         parameters: {
             query?: never;
@@ -1920,6 +1944,35 @@ export interface components {
              */
             semantic: boolean;
         };
+        /** ReconcileFileEntry */
+        ReconcileFileEntry: {
+            /** Base */
+            base?: string | null;
+            /**
+             * Binary
+             * @default false
+             */
+            binary: boolean;
+            /** Entry */
+            entry: string;
+            /** Mine */
+            mine?: string | null;
+            /** Status */
+            status: string;
+        };
+        /**
+         * ReconcileView
+         * @description ``GET /v1/definitions/{kind}/{name}/reconcile`` — per forked entry, the
+         *     tenant's fork content vs the base's CURRENT content.
+         */
+        ReconcileView: {
+            /** Files */
+            files: components["schemas"]["ReconcileFileEntry"][];
+            /** Kind */
+            kind: string;
+            /** Name */
+            name: string;
+        };
         /** RememberResponse */
         RememberResponse: {
             /** Indexed */
@@ -2593,6 +2646,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BundleEntryWriteResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reconcile_forks_v1_definitions__kind___name__reconcile_get: {
+        parameters: {
+            query?: {
+                scope?: string | null;
+                tenant?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                kind: string;
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReconcileView"];
                 };
             };
             /** @description Validation Error */

@@ -376,3 +376,92 @@ def test_entry_revert_unknown_kind_fails_clean_not_a_traceback(dna_dir, runner):
     assert r.exit_code != 0, r.output
     combined = r.output + (r.stderr if r.stderr_bytes is not None else "")
     assert "Traceback" not in combined
+
+
+# ── reconcile (Task 10 — s-strain-bundle-fork B2/reconcile) ────────────────
+#
+# A tenant's fork can drift because the BASE moved on (an upstream release),
+# not just because the tenant edited it — this is the file-grained "what
+# changed under me" view, READ-only. `dna definition reconcile` lists each
+# forked entry's status; resolving a divergence uses the EXISTING `entry set`
+# / `entry revert` commands above, not a new write path.
+
+
+def test_reconcile_flags_entry_diverged_after_base_moves_on(dna_dir, runner):
+    _seed_skill_bundle(dna_dir)
+    _seed_skill_layer_policy(dna_dir, skill_policy="open")
+
+    fork_file = dna_dir.parent / "fork.py"
+    fork_file.write_text("print('mine')\n")
+    fork = runner.invoke(definition, [
+        "entry", "set", "Skill", _SKILL, "scripts/hello.py",
+        "--file", str(fork_file), "--scope", _SCOPE, "--tenant", _WID,
+    ])
+    assert fork.exit_code == 0, fork.output
+
+    # The base moves on (an upstream release), independent of the tenant's fork.
+    (dna_dir / _SCOPE / "skills" / _SKILL / "scripts" / "hello.py").write_text(
+        "print('new base')\n"
+    )
+
+    r = runner.invoke(definition, [
+        "reconcile", "Skill", _SKILL, "--scope", _SCOPE, "--tenant", _WID, "--json",
+    ])
+    assert r.exit_code == 0, r.output
+    body = json.loads(r.output)
+    assert body["kind"] == "Skill"
+    assert body["name"] == _SKILL
+    assert body["files"] == [{
+        "entry": "scripts/hello.py", "status": "diverged",
+        "base": "print('new base')\n", "mine": "print('mine')\n", "binary": False,
+    }]
+
+
+def test_reconcile_identical_when_fork_matches_base(dna_dir, runner):
+    _seed_skill_bundle(dna_dir)
+    _seed_skill_layer_policy(dna_dir, skill_policy="open")
+
+    fork_file = dna_dir.parent / "fork.py"
+    fork_file.write_text(HELLO_PY_BASE)
+    fork = runner.invoke(definition, [
+        "entry", "set", "Skill", _SKILL, "scripts/hello.py",
+        "--file", str(fork_file), "--scope", _SCOPE, "--tenant", _WID,
+    ])
+    assert fork.exit_code == 0, fork.output
+
+    r = runner.invoke(definition, [
+        "reconcile", "Skill", _SKILL, "--scope", _SCOPE, "--tenant", _WID, "--json",
+    ])
+    assert r.exit_code == 0, r.output
+    body = json.loads(r.output)
+    assert body["files"] == [{
+        "entry": "scripts/hello.py", "status": "identical",
+        "base": HELLO_PY_BASE, "mine": HELLO_PY_BASE, "binary": False,
+    }]
+
+
+def test_reconcile_human_readable_output_does_not_crash(dna_dir, runner):
+    _seed_skill_bundle(dna_dir)
+    _seed_skill_layer_policy(dna_dir, skill_policy="open")
+
+    fork_file = dna_dir.parent / "fork.py"
+    fork_file.write_text("print('mine')\n")
+    runner.invoke(definition, [
+        "entry", "set", "Skill", _SKILL, "scripts/hello.py",
+        "--file", str(fork_file), "--scope", _SCOPE, "--tenant", _WID,
+    ])
+
+    r = runner.invoke(definition, ["reconcile", "Skill", _SKILL, "--scope", _SCOPE, "--tenant", _WID])
+    assert r.exit_code == 0, r.output
+    assert "scripts/hello.py" in r.output
+
+
+def test_reconcile_unknown_kind_fails_clean_not_a_traceback(dna_dir, runner):
+    _seed_skill_bundle(dna_dir)
+    _seed_skill_layer_policy(dna_dir, skill_policy="open")
+    r = runner.invoke(definition, [
+        "reconcile", "MCPFederation", _FEDERATION, "--scope", _SCOPE, "--tenant", _WID,
+    ])
+    assert r.exit_code != 0, r.output
+    combined = r.output + (r.stderr if r.stderr_bytes is not None else "")
+    assert "Traceback" not in combined

@@ -2675,6 +2675,78 @@
         "title": "RecallResponse",
         "type": "object"
       },
+      "ReconcileFileEntry": {
+        "properties": {
+          "base": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base"
+          },
+          "binary": {
+            "default": false,
+            "title": "Binary",
+            "type": "boolean"
+          },
+          "entry": {
+            "title": "Entry",
+            "type": "string"
+          },
+          "mine": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mine"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entry",
+          "status"
+        ],
+        "title": "ReconcileFileEntry",
+        "type": "object"
+      },
+      "ReconcileView": {
+        "description": "``GET /v1/definitions/{kind}/{name}/reconcile`` — per forked entry, the\ntenant's fork content vs the base's CURRENT content.",
+        "properties": {
+          "files": {
+            "items": {
+              "$ref": "#/components/schemas/ReconcileFileEntry"
+            },
+            "title": "Files",
+            "type": "array"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "name",
+          "files"
+        ],
+        "title": "ReconcileView",
+        "type": "object"
+      },
       "RememberResponse": {
         "properties": {
           "indexed": {
@@ -4497,6 +4569,103 @@
           }
         },
         "summary": "Put Bundle Entry"
+      }
+    },
+    "/v1/definitions/{kind}/{name}/reconcile": {
+      "get": {
+        "description": "For each of the tenant's forked bundle-entry files, diff the\nfork's content (``mine``) against the base's CURRENT content\n(``base``) — ``identical`` only when a base exists and its bytes\nmatch; a tenant-added file (no base at all) is always\n``diverged`` with ``base: None``. 404 for a non-bundle Kind.",
+        "operationId": "reconcile_forks_v1_definitions__kind___name__reconcile_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scope"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tenant"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReconcileView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reconcile Forks"
       }
     },
     "/v1/genome": {

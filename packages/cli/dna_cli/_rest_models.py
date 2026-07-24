@@ -246,6 +246,32 @@ class BundleEntryWriteResponse(BaseModel):
     overridden: bool
 
 
+# ── reconcile (2-way diff of a tenant's forks vs base-NOW — plane B2) ───────
+#
+# A tenant's fork can drift not because the tenant changed anything, but
+# because the BASE moved on (an upstream release). This is the file-grained
+# twin of "what did I change vs what changed under me" — READ-only: the three
+# resolutions an editor offers over this view are all EXISTING B1 primitives
+# (keep = no-op, take-base = the DELETE, edit = the PUT). No new write route.
+
+
+class ReconcileFileEntry(BaseModel):
+    entry: str
+    status: str  # "identical" | "diverged"
+    base: str | None = None
+    mine: str | None = None
+    binary: bool = False
+
+
+class ReconcileView(BaseModel):
+    """``GET /v1/definitions/{kind}/{name}/reconcile`` — per forked entry, the
+    tenant's fork content vs the base's CURRENT content."""
+
+    kind: str
+    name: str
+    files: list[ReconcileFileEntry]
+
+
 # ── memory ──────────────────────────────────────────────────────────────────
 
 

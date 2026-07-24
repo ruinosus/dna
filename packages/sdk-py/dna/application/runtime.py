@@ -507,6 +507,75 @@ async def revert_bundle_entry_impl(
     return {"kind": kind, "name": name, "entry": entry, "overridden": False}
 
 
+async def reconcile_forks_impl(
+    live: LiveDna, *, scope: str, tenant: str | None, kind: str, name: str,
+) -> dict[str, Any]:
+    """s-strain-bundle-fork B2 (reconcile) — a 2-way diff of each of the
+    tenant's forked bundle-entry files (``list_bundle_entries_async(...,
+    only_tenant=True)``, B1's per-tenant fork listing) against the CURRENT
+    base, i.e. base-NOW, not the base at fork time. This is what makes
+    reconciliation meaningful: the base may have moved on since the tenant
+    forked (an upstream release), so a fork that still matches what the
+    tenant originally copied can nonetheless have DIVERGED from the base
+    that exists today.
+
+    READ-only: this use-case never writes anything. The three resolutions a
+    caller/editor offers over its output are all EXISTING B1 primitives —
+    keep (no-op), take-base (``revert_bundle_entry_impl`` — the DELETE),
+    edit (``write_bundle_entry_impl`` — the PUT).
+
+    Per entry:
+      - ``mine``  — the tenant's fork content (``fetch_bundle_entry_async(...,
+        tenant=tenant)``).
+      - ``base``  — the base's CURRENT content (``fetch_bundle_entry_async(...,
+        tenant=None)``); ``None`` when the base has no such file at all — a
+        ``FileNotFoundError`` there means the tenant ADDED a file the base
+        never had (not a "deleted upstream" case B1 exposes any other way).
+      - ``status`` — ``"identical"`` only when a base exists AND its raw bytes
+        equal the fork's; every other case (content differs, or no base) is
+        ``"diverged"``.
+      - ``binary`` — set when either side fails UTF-8 decode; ``base``/``mine``
+        are reported ``None`` rather than mangling bytes into a text field
+        (mirrors ``read_bundle_entry_impl``'s honesty contract).
+
+    Uses the kernel's ``_async`` methods throughout (not the sync twins) —
+    B1's lesson (Task 3): the sync bundle methods raise ``RuntimeError`` when
+    called from inside a running event loop against the Postgres source.
+    """
+    _require_bundle_kind(live, kind)
+    files: list[dict[str, Any]] = []
+    forked = sorted(
+        await live.kernel.list_bundle_entries_async(scope, kind, name, tenant=tenant, only_tenant=True)
+    )
+    for entry in forked:
+        mine_b = await live.kernel.fetch_bundle_entry_async(scope, kind, name, entry, tenant=tenant)
+        try:
+            base_b: bytes | None = await live.kernel.fetch_bundle_entry_async(
+                scope, kind, name, entry, tenant=None
+            )
+        except FileNotFoundError:
+            base_b = None  # tenant ADDED a file the base never had
+
+        binary = False
+
+        def _dec(b: bytes | None) -> str | None:
+            nonlocal binary
+            if b is None:
+                return None
+            try:
+                return b.decode("utf-8")
+            except UnicodeDecodeError:
+                binary = True
+                return None
+
+        mine, base = _dec(mine_b), _dec(base_b)
+        status = "identical" if (base_b is not None and mine_b == base_b) else "diverged"
+        files.append({
+            "entry": entry, "status": status, "base": base, "mine": mine, "binary": binary,
+        })
+    return {"kind": kind, "name": name, "files": files}
+
+
 # ── toolkit: PromptTemplates + Skills (the Spec Kit Layer 3 surface) ─────────
 #
 # The ingested Spec Kit toolkit (``dna specify install-templates``) lands as
