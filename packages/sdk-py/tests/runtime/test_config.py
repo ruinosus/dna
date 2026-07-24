@@ -1,3 +1,4 @@
+import asyncio
 import shutil
 from pathlib import Path
 
@@ -20,7 +21,12 @@ def test_derives_allowlist_model_confirm_from_def(tmp_path):
     # Uses the committed dna-cloud-dev-shaped fixture (copy the memory-copilot
     # + memory-agent + dna-mcp federation + tool docs into tmp_path/.dna).
     base_dir = _copy_fixture(tmp_path)
-    cfg = copilot_config("memory-copilot", base_dir=str(base_dir), scope="dna-cloud-dev")
+    # copilot_config is async now (reads the def from the env-configured source;
+    # base_dir is the filesystem fallback used here). Drive it with asyncio.run,
+    # the same pattern test_build_copilot.py uses.
+    cfg = asyncio.run(
+        copilot_config("memory-copilot", base_dir=str(base_dir), scope="dna-cloud-dev")
+    )
     assert cfg.model == "gpt-5-mini"
     # config.py sorts `confirm_tools` at the source (dna.emit._project_hitl_intent
     # returns a set, so raw iteration order is not stable across process

@@ -15,11 +15,9 @@ from typing import Any
 from dna.runtime.port import AGUIApp, RuntimeHooks, get_runtime
 
 
-def _compose_ctx(copilot: str, *, base_dir: str, scope: str) -> Any:
+def _compose_ctx(mi: Any, copilot: str) -> Any:
     from dna.emit import build_copilot_context
-    from dna.kernel import Kernel
 
-    mi = Kernel.quick(scope, base_dir=base_dir)
     return build_copilot_context(mi, copilot)
 
 
@@ -31,16 +29,20 @@ async def build_runtime(
     hooks: RuntimeHooks,
 ) -> AGUIApp:
     """Compose `copilot`'s full `EmitContext` and build the `AGUIApp` its
-    `serving.framework` names (`ctx.serving.framework`, default
-    `"langchain"` — the field lands in Task 3; until then every copilot
-    dispatches to the LangChain adapter)."""
-    # `_compose_ctx` is sync and internally bridges to async kernel I/O via a
-    # sync-over-async helper that raises loudly when it detects it's already
-    # inside a running loop (this coroutine's own). Offload to a worker
-    # thread so that bridge sees no running loop and can drive its own
-    # asyncio.run safely — no nested-loop conflict. (Same bridge
-    # `copilot_config`/the old `build_copilot` used.)
-    ctx = await asyncio.to_thread(_compose_ctx, copilot, base_dir=base_dir, scope=scope)
+    `serving.framework` names (`ctx.serving.framework`, default `"langchain"`).
+
+    The def is read from the ENV-configured source (``DNA_SOURCE_URL`` >
+    ``base_dir``) via ``build_env_mi`` — a published deploy reads Postgres, not
+    a filesystem path baked into the image. ``base_dir`` is the local fallback.
+    """
+    # Build the instance on THIS loop (build_env_mi sets kernel._main_loop for
+    # the loop-bound SQL connection), then offload the sync-over-async
+    # `build_copilot_context` to a worker thread: its kernel reads dispatch back
+    # to this loop, so a Postgres connection stays on its owning loop.
+    from dna.runtime.config import build_env_mi
+
+    mi = await build_env_mi(base_dir=base_dir, scope=scope)
+    ctx = await asyncio.to_thread(_compose_ctx, mi, copilot)
 
     framework = getattr(getattr(ctx, "serving", None), "framework", None) or "langchain"
     return await get_runtime(framework).build(ctx, hooks)
