@@ -963,7 +963,9 @@ class Kernel:
         see that docstring for policy mode details.
 
         Delegates to ``self._layerpol`` (LayerPolicyEnforcer;
-        s-kernel-decompose-god-object). Only ``write_document`` calls this.
+        s-kernel-decompose-god-object). Called by ``write_document`` and,
+        via ``_check_entry_layer_policy`` → ``write_bundle_entry_impl``, by
+        the bundle-entry fork path (s-strain-bundle-fork B1).
         """
         return await self._layerpol.check_async(scope, kind, name, raw, layer)
 
@@ -1797,6 +1799,88 @@ class Kernel:
         Delegates to ``self._bundleio`` (s-kernel-decompose-god-object).
         """
         await self._bundleio.write_async(scope, kind, name, entry, content, tenant=tenant)
+
+    def list_bundle_entries(
+        self,
+        scope: str,
+        kind: str,
+        name: str,
+        *,
+        tenant: str | None = None,
+        only_tenant: bool = False,
+    ) -> list[str]:
+        """s-strain-bundle-fork B1 — list every entry path of a bundle.
+
+        Generic per-tenant primitive (routed by kind/container — never
+        Skill-specific): default composes the tenant overlay ∪ the base
+        layer (tenant rows shadow base by path). ``only_tenant=True``
+        returns just the tenant's OWN override rows (used to answer "what
+        did this tenant fork?"). Sorted, deduped. Empty list when the
+        bundle is absent.
+
+        Raises:
+          - ``ValueError`` if the kind is not registered.
+          - ``NotImplementedError`` if the source adapter doesn't
+            implement ``BundleEntryReadable.list_bundle_entries``.
+
+        Delegates to ``self._bundleio`` (s-kernel-decompose-god-object).
+        """
+        return self._bundleio.list_sync(
+            scope, kind, name, tenant=tenant, only_tenant=only_tenant,
+        )
+
+    async def list_bundle_entries_async(
+        self,
+        scope: str,
+        kind: str,
+        name: str,
+        *,
+        tenant: str | None = None,
+        only_tenant: bool = False,
+    ) -> list[str]:
+        """Async variant of `list_bundle_entries`. Delegates to
+        ``self._bundleio`` (s-kernel-decompose-god-object)."""
+        return await self._bundleio.list_async(
+            scope, kind, name, tenant=tenant, only_tenant=only_tenant,
+        )
+
+    def delete_bundle_entry(
+        self,
+        scope: str,
+        kind: str,
+        name: str,
+        entry: str,
+        *,
+        tenant: str | None = None,
+    ) -> bool:
+        """s-strain-bundle-fork B1 — delete ONE bundle entry row for
+        ``tenant`` (base sentinel ``""`` when None).
+
+        Generic per-tenant primitive: reverting a tenant fork deletes the
+        tenant-scoped row/file so ``fetch_bundle_entry`` composes through
+        to the base layer again. Returns True if a row/file existed.
+
+        Raises:
+          - ``ValueError`` if the kind is not registered.
+          - ``NotImplementedError`` if the source adapter doesn't
+            implement ``BundleEntryWritable.delete_bundle_entry``.
+
+        Delegates to ``self._bundleio`` (s-kernel-decompose-god-object).
+        """
+        return self._bundleio.delete_sync(scope, kind, name, entry, tenant=tenant)
+
+    async def delete_bundle_entry_async(
+        self,
+        scope: str,
+        kind: str,
+        name: str,
+        entry: str,
+        *,
+        tenant: str | None = None,
+    ) -> bool:
+        """Async variant of `delete_bundle_entry`. Delegates to
+        ``self._bundleio`` (s-kernel-decompose-god-object)."""
+        return await self._bundleio.delete_async(scope, kind, name, entry, tenant=tenant)
 
     async def digest_manifest(
         self, scope: str, *, tenant: str | None = None,

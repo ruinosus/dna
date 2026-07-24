@@ -205,3 +205,174 @@ def test_revert_falls_back_to_base(dna_dir, runner, tmp_path):
     get_body = json.loads(get_result.output)
     assert get_body["overridden"] is False
     assert "Answer using the runbook" in get_body["effective"]["instruction"]
+
+
+# ── entries / entry (Task 5 — s-strain-bundle-fork B5) ─────────────────────
+#
+# The concierge scope ships no bundle-pattern Kind of its own, so these tests
+# seed ONE Skill bundle directly on disk (SKILL.md + scripts/hello.py) — the
+# same shape ``test_bundle_entries_rest.py`` uses for the REST surface (Task
+# 4). Kind alias for LayerPolicy purposes: ``SkillKind.alias =
+# "agentskills-skill"`` (i-049).
+
+_SKILL = "greeter"
+SKILL_MD_BASE = "---\nname: greeter\n---\nBase.\n"
+HELLO_PY_BASE = "print('base')\n"
+
+
+def _seed_skill_bundle(dna_dir) -> None:
+    """A base Skill bundle — a bundle-pattern Kind's base file IS the
+    document, no ``write_document`` call needed (mirrors
+    ``test_bundle_entries_rest.py``'s ``_seed_skill_bundle``)."""
+    d = dna_dir / _SCOPE / "skills" / _SKILL
+    (d / "scripts").mkdir(parents=True)
+    (d / "SKILL.md").write_text(SKILL_MD_BASE)
+    (d / "scripts" / "hello.py").write_text(HELLO_PY_BASE)
+
+
+def _seed_skill_layer_policy(dna_dir, *, skill_policy: str) -> None:
+    """LayerPolicy keyed by Kind ALIAS (i-049): SkillKind.alias =
+    "agentskills-skill". Separate from ``_seed_layer_policy`` above (a
+    LayerPolicy doc is one per (layer_id, scope) — a test picks one shape)."""
+    from dna_cli import _mcp_server as M
+
+    raw = {
+        "apiVersion": "github.com/ruinosus/dna/policy/v1",
+        "kind": "LayerPolicy",
+        "metadata": {"name": "tenant-default"},
+        "spec": {"layer_id": "tenant", "policies": {"agentskills-skill": skill_policy}},
+    }
+
+    async def go():
+        live = await M.boot_live(base_dir=str(dna_dir))
+        await live.kernel.write_document(_SCOPE, "LayerPolicy", "tenant-default", raw)
+
+    asyncio.run(go())
+
+
+def test_entries_lists_both_files_not_overridden(dna_dir, runner):
+    _seed_skill_bundle(dna_dir)
+    _seed_skill_layer_policy(dna_dir, skill_policy="open")
+    r = runner.invoke(definition, ["entries", "Skill", _SKILL, "--scope", _SCOPE, "--json"])
+    assert r.exit_code == 0, r.output
+    body = json.loads(r.output)
+    assert body["kind"] == "Skill"
+    assert body["name"] == _SKILL
+    by_entry = {e["entry"]: e["overridden"] for e in body["entries"]}
+    assert by_entry == {"SKILL.md": False, "scripts/hello.py": False}
+
+
+def test_entries_human_readable_output_does_not_crash(dna_dir, runner):
+    _seed_skill_bundle(dna_dir)
+    _seed_skill_layer_policy(dna_dir, skill_policy="open")
+    r = runner.invoke(definition, ["entries", "Skill", _SKILL, "--scope", _SCOPE])
+    assert r.exit_code == 0, r.output
+    assert "scripts/hello.py" in r.output
+
+
+def test_entries_unknown_kind_fails_clean_not_a_traceback(dna_dir, runner):
+    """`entries` against a non-bundle Kind (MCPFederation stores one YAML
+    doc, not a bundle) must exit non-zero with a clean `fail()`-wrapped
+    message — NOT a raw Python traceback."""
+    _seed_skill_bundle(dna_dir)
+    _seed_skill_layer_policy(dna_dir, skill_policy="open")
+    r = runner.invoke(definition, ["entries", "MCPFederation", _FEDERATION, "--scope", _SCOPE])
+    assert r.exit_code != 0, r.output
+    combined = r.output + (r.stderr if r.stderr_bytes is not None else "")
+    assert "Traceback" not in combined
+
+
+def test_entry_set_then_get_then_revert_round_trips(dna_dir, runner, tmp_path):
+    _seed_skill_bundle(dna_dir)
+    _seed_skill_layer_policy(dna_dir, skill_policy="open")
+
+    before = runner.invoke(definition, [
+        "entry", "get", "Skill", _SKILL, "scripts/hello.py",
+        "--scope", _SCOPE, "--tenant", _WID, "--json",
+    ])
+    assert before.exit_code == 0, before.output
+    before_body = json.loads(before.output)
+    assert before_body["overridden"] is False
+    assert before_body["content"] == HELLO_PY_BASE
+
+    content_file = tmp_path / "hello.py"
+    content_file.write_text("print('mine')\n")
+
+    set_result = runner.invoke(definition, [
+        "entry", "set", "Skill", _SKILL, "scripts/hello.py",
+        "--file", str(content_file), "--scope", _SCOPE, "--tenant", _WID,
+    ])
+    assert set_result.exit_code == 0, set_result.output
+    set_body = json.loads(set_result.output)
+    assert set_body["overridden"] is True
+    assert set_body["entry"] == "scripts/hello.py"
+
+    get_result = runner.invoke(definition, [
+        "entry", "get", "Skill", _SKILL, "scripts/hello.py",
+        "--scope", _SCOPE, "--tenant", _WID, "--json",
+    ])
+    assert get_result.exit_code == 0, get_result.output
+    get_body = json.loads(get_result.output)
+    assert get_body["overridden"] is True
+    assert get_body["content"] == "print('mine')\n"
+    assert get_body["binary"] is False
+
+    # A different tenant (no fork) still reads the unmodified base.
+    other = runner.invoke(definition, [
+        "entry", "get", "Skill", _SKILL, "scripts/hello.py",
+        "--scope", _SCOPE, "--tenant", "ws-other0000000000000000002", "--json",
+    ])
+    assert other.exit_code == 0, other.output
+    other_body = json.loads(other.output)
+    assert other_body["overridden"] is False
+    assert other_body["content"] == HELLO_PY_BASE
+
+    revert_result = runner.invoke(definition, [
+        "entry", "revert", "Skill", _SKILL, "scripts/hello.py",
+        "--scope", _SCOPE, "--tenant", _WID,
+    ])
+    assert revert_result.exit_code == 0, revert_result.output
+    assert json.loads(revert_result.output)["overridden"] is False
+
+    after_result = runner.invoke(definition, [
+        "entry", "get", "Skill", _SKILL, "scripts/hello.py",
+        "--scope", _SCOPE, "--tenant", _WID, "--json",
+    ])
+    assert after_result.exit_code == 0, after_result.output
+    after_body = json.loads(after_result.output)
+    assert after_body["overridden"] is False
+    assert after_body["content"] == HELLO_PY_BASE
+
+
+def test_entry_set_locked_skill_surfaces_veto_not_swallowed(dna_dir, runner, tmp_path):
+    """Central constraint this task exists to protect: `entry set` against a
+    LOCKED Kind (Skill, alias "agentskills-skill") does not silently no-op —
+    it exits non-zero with the LayerPolicy veto message visible (the CLI-side
+    mirror of the REST 403)."""
+    _seed_skill_bundle(dna_dir)
+    _seed_skill_layer_policy(dna_dir, skill_policy="locked")
+
+    content_file = tmp_path / "hello.py"
+    content_file.write_text("print('evil')\n")
+
+    r = runner.invoke(definition, [
+        "entry", "set", "Skill", _SKILL, "scripts/hello.py",
+        "--file", str(content_file), "--scope", _SCOPE, "--tenant", _WID,
+    ])
+    assert r.exit_code != 0, r.output
+    combined = r.output + (r.stderr if r.stderr_bytes is not None else "")
+    assert "agentskills-skill" in combined and "LOCKED" in combined, combined
+
+
+def test_entry_revert_unknown_kind_fails_clean_not_a_traceback(dna_dir, runner):
+    """Same fix-now guard as `revert` on an unknown kind/name: `entry revert`
+    against a non-bundle Kind (MCPFederation) must not leak a traceback."""
+    _seed_skill_bundle(dna_dir)
+    _seed_skill_layer_policy(dna_dir, skill_policy="open")
+    r = runner.invoke(definition, [
+        "entry", "revert", "MCPFederation", _FEDERATION, "config.yaml",
+        "--scope", _SCOPE, "--tenant", _WID,
+    ])
+    assert r.exit_code != 0, r.output
+    combined = r.output + (r.stderr if r.stderr_bytes is not None else "")
+    assert "Traceback" not in combined

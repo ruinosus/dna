@@ -266,6 +266,7 @@ def build_app(
         import_memories_impl,
         invite_member_impl,
         list_agents_impl,
+        list_bundle_entries_impl,
         list_members_impl,
         list_orgs_impl,
         list_projects_impl,
@@ -275,14 +276,17 @@ def build_app(
         list_workspaces_impl,
         provision_tenant_owner_impl,
         provision_workspace_owner_impl,
+        read_bundle_entry_impl,
         read_definition_impl,
         recall_impl,
         remember_impl,
         remove_member_impl,
+        revert_bundle_entry_impl,
         revert_definition_impl,
         revoke_workspace_member_impl,
         set_member_impl,
         set_account_plan_impl,
+        write_bundle_entry_impl,
     )
     from dna.application.live import parse_scope_grants
     from dna.kernel.protocols import LayerPolicyViolationError
@@ -297,6 +301,14 @@ def build_app(
     # fastapi) so ``import dna_cli`` stays FastAPI/pydantic-face-free. See
     # ``dna_cli._rest_models`` for the fidelity contract.
     from dna_cli import _rest_models as m
+    # ``m.WriteBundleEntryRequest`` is used as a PARAMETER annotation (not just a
+    # response_model= kwarg), and `from __future__ import annotations` turns that
+    # annotation into the STRING "m.WriteBundleEntryRequest" — resolved by
+    # FastAPI/typing.get_type_hints against the module globals. `m` is a local
+    # import inside build_app, so it must be published the same way `Request`
+    # is above, or the annotation fails to resolve and the body param silently
+    # degrades to an unannotated (required, missing) query param.
+    globals()["m"] = m
 
     app = FastAPI(
         title="DNA REST read-API",
@@ -789,6 +801,100 @@ def build_app(
             return await revert_definition_impl(
                 live, scope=scope or live.base_scope, tenant=tenant,
                 kind=kind, name=name,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from None
+
+    # -- bundle entries (list/read/write/revert a bundle-file fork, plane B) -
+    # A bundle-pattern Kind (Skill, and any future bundle Kind) stores MULTIPLE
+    # files per document, not a single spec — these routes are the file-grained
+    # twin of the three definition routes above, generic over any bundle Kind
+    # (routed by the Kind's StorageDescriptor pattern, never Skill-specific),
+    # with the SAME LayerPolicy governance: a fork on a LOCKED Kind is vetoed
+    # (403). Zero business logic here — thin delegates to the SAME core
+    # ``*_bundle_entry(ies)_impl`` use-cases Task 2 added. ``{entry:path}``
+    # captures the entry's own ``/`` (e.g. ``scripts/hello.py``).
+
+    @app.get("/v1/definitions/{kind}/{name}/entries", dependencies=guarded,
+             response_model=m.BundleEntriesView)
+    async def list_bundle_entries(
+        kind: str, name: str,
+        scope: str | None = Query(default=None),
+        tenant: str | None = Query(default=None),
+    ) -> dict[str, Any]:
+        """List a bundle document's entry files (base ∪ tenant overlay), each
+        flagged ``overridden`` — whether THIS tenant forked that specific
+        file. 404 for a non-bundle Kind or an unknown (kind, name)."""
+        live = await _live()
+        try:
+            return await list_bundle_entries_impl(
+                live, scope=scope or live.base_scope, tenant=tenant,
+                kind=kind, name=name,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from None
+
+    @app.get("/v1/definitions/{kind}/{name}/entries/{entry:path}",
+             dependencies=guarded, response_model=m.BundleEntryView)
+    async def get_bundle_entry(
+        kind: str, name: str, entry: str,
+        scope: str | None = Query(default=None),
+        tenant: str | None = Query(default=None),
+    ) -> dict[str, Any]:
+        """Read one bundle entry's effective content (tenant overlay wins over
+        base), plus whether THIS tenant forked it and whether it's binary
+        (reported honestly rather than mangling bytes into ``content``). 404
+        for a non-bundle Kind or an unknown entry (the kernel's fetch raises
+        ``FileNotFoundError`` for a missing file, ``ValueError`` for a
+        non-bundle Kind — both map to the same 404 the caller sees)."""
+        live = await _live()
+        try:
+            return await read_bundle_entry_impl(
+                live, scope=scope or live.base_scope, tenant=tenant,
+                kind=kind, name=name, entry=entry,
+            )
+        except (ValueError, FileNotFoundError) as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from None
+
+    @app.put("/v1/definitions/{kind}/{name}/entries/{entry:path}",
+             dependencies=guarded, response_model=m.BundleEntryWriteResponse)
+    async def put_bundle_entry(
+        kind: str, name: str, entry: str,
+        body: m.WriteBundleEntryRequest,
+        scope: str | None = Query(default=None),
+        tenant: str | None = Query(default=None),
+    ) -> dict[str, Any]:
+        """Fork one bundle entry into the tenant layer (the editor's
+        file-level Save) — a tenant-layer write via the SAME core
+        ``write_bundle_entry_impl`` the CLI uses. A LOCKED Kind is vetoed by
+        the kernel's LayerPolicy check, surfaced here as 403 (never silently
+        dropped)."""
+        live = await _live()
+        try:
+            return await write_bundle_entry_impl(
+                live, scope=scope or live.base_scope, tenant=tenant,
+                kind=kind, name=name, entry=entry, content=body.content,
+            )
+        except LayerPolicyViolationError as exc:
+            raise HTTPException(status_code=403, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from None
+
+    @app.delete("/v1/definitions/{kind}/{name}/entries/{entry:path}",
+                dependencies=guarded, response_model=m.BundleEntryWriteResponse)
+    async def delete_bundle_entry(
+        kind: str, name: str, entry: str,
+        scope: str | None = Query(default=None),
+        tenant: str | None = Query(default=None),
+    ) -> dict[str, Any]:
+        """Revert a tenant's fork of one bundle entry — deletes the
+        tenant-layer file so reads fall back to the inherited base (the
+        editor's "Reset to default", file-grained)."""
+        live = await _live()
+        try:
+            return await revert_bundle_entry_impl(
+                live, scope=scope or live.base_scope, tenant=tenant,
+                kind=kind, name=name, entry=entry,
             )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from None

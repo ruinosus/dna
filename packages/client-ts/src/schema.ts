@@ -167,6 +167,67 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/definitions/{kind}/{name}/entries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Bundle Entries
+         * @description List a bundle document's entry files (base ∪ tenant overlay), each
+         *     flagged ``overridden`` — whether THIS tenant forked that specific
+         *     file. 404 for a non-bundle Kind or an unknown (kind, name).
+         */
+        get: operations["list_bundle_entries_v1_definitions__kind___name__entries_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/definitions/{kind}/{name}/entries/{entry}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Bundle Entry
+         * @description Read one bundle entry's effective content (tenant overlay wins over
+         *     base), plus whether THIS tenant forked it and whether it's binary
+         *     (reported honestly rather than mangling bytes into ``content``). 404
+         *     for a non-bundle Kind or an unknown entry (the kernel's fetch raises
+         *     ``FileNotFoundError`` for a missing file, ``ValueError`` for a
+         *     non-bundle Kind — both map to the same 404 the caller sees).
+         */
+        get: operations["get_bundle_entry_v1_definitions__kind___name__entries__entry__get"];
+        /**
+         * Put Bundle Entry
+         * @description Fork one bundle entry into the tenant layer (the editor's
+         *     file-level Save) — a tenant-layer write via the SAME core
+         *     ``write_bundle_entry_impl`` the CLI uses. A LOCKED Kind is vetoed by
+         *     the kernel's LayerPolicy check, surfaced here as 403 (never silently
+         *     dropped).
+         */
+        put: operations["put_bundle_entry_v1_definitions__kind___name__entries__entry__put"];
+        post?: never;
+        /**
+         * Delete Bundle Entry
+         * @description Revert a tenant's fork of one bundle entry — deletes the
+         *     tenant-layer file so reads fall back to the inherited base (the
+         *     editor's "Reset to default", file-grained).
+         */
+        delete: operations["delete_bundle_entry_v1_definitions__kind___name__entries__entry__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/genome": {
         parameters: {
             query?: never;
@@ -1134,6 +1195,63 @@ export interface components {
             user: string;
         };
         /**
+         * BundleEntriesView
+         * @description ``GET /v1/definitions/{kind}/{name}/entries`` — a bundle document's
+         *     entry files (base ∪ tenant overlay), each flagged ``overridden`` —
+         *     whether THIS tenant forked that specific file.
+         */
+        BundleEntriesView: {
+            /** Entries */
+            entries: components["schemas"]["BundleEntrySummary"][];
+            /** Kind */
+            kind: string;
+            /** Name */
+            name: string;
+        };
+        /** BundleEntrySummary */
+        BundleEntrySummary: {
+            /** Entry */
+            entry: string;
+            /** Overridden */
+            overridden: boolean;
+        };
+        /**
+         * BundleEntryView
+         * @description ``GET /v1/definitions/{kind}/{name}/entries/{entry}`` — one bundle
+         *     entry's effective content (tenant overlay wins over base), whether this
+         *     tenant forked it, and whether it's binary (a decode failure — reported
+         *     honestly rather than mangling bytes into ``content``).
+         */
+        BundleEntryView: {
+            /** Binary */
+            binary: boolean;
+            /** Content */
+            content: string;
+            /** Entry */
+            entry: string;
+            /** Kind */
+            kind: string;
+            /** Name */
+            name: string;
+            /** Overridden */
+            overridden: boolean;
+        };
+        /**
+         * BundleEntryWriteResponse
+         * @description ``PUT``/``DELETE /v1/definitions/{kind}/{name}/entries/{entry}`` — the
+         *     write result.
+         */
+        BundleEntryWriteResponse: {
+            /** Entry */
+            entry: string;
+            /** Kind */
+            kind: string;
+            /** Name */
+            name: string;
+            /** Overridden */
+            overridden: boolean;
+        };
+        /**
          * CreateProjectResponse
          * @description ``POST /v1/projects`` — the created project. ``scope`` is DERIVED from the
          *     workspace (never caller-supplied).
@@ -1998,6 +2116,15 @@ export interface components {
              */
             workspaces: components["schemas"]["WorkspaceSummary"][];
         };
+        /**
+         * WriteBundleEntryRequest
+         * @description ``PUT /v1/definitions/{kind}/{name}/entries/{entry}`` — the fork's new
+         *     content. The request body is exactly ``{"content": "..."}``.
+         */
+        WriteBundleEntryRequest: {
+            /** Content */
+            content: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -2311,6 +2438,161 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DefinitionWriteResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_bundle_entries_v1_definitions__kind___name__entries_get: {
+        parameters: {
+            query?: {
+                scope?: string | null;
+                tenant?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                kind: string;
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BundleEntriesView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_bundle_entry_v1_definitions__kind___name__entries__entry__get: {
+        parameters: {
+            query?: {
+                scope?: string | null;
+                tenant?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                kind: string;
+                name: string;
+                entry: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BundleEntryView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_bundle_entry_v1_definitions__kind___name__entries__entry__put: {
+        parameters: {
+            query?: {
+                scope?: string | null;
+                tenant?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                kind: string;
+                name: string;
+                entry: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WriteBundleEntryRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BundleEntryWriteResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_bundle_entry_v1_definitions__kind___name__entries__entry__delete: {
+        parameters: {
+            query?: {
+                scope?: string | null;
+                tenant?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                kind: string;
+                name: string;
+                entry: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BundleEntryWriteResponse"];
                 };
             };
             /** @description Validation Error */

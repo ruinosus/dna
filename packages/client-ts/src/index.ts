@@ -210,6 +210,63 @@ export class DnaClient {
     );
   }
 
+  // ── definitions (bundle entries — fork a bundle-file, plane B) ───────────
+
+  /**
+   * List a bundle document's entry files (base ∪ tenant overlay), each
+   * flagged `overridden` — whether THIS tenant forked that specific file.
+   */
+  async listBundleEntries(kind: string, name: string, query?: ScopeTenant) {
+    return this.unwrap(
+      await this.raw.GET("/v1/definitions/{kind}/{name}/entries", {
+        params: { path: { kind, name }, query: this.q(query) },
+      }),
+    );
+  }
+
+  /**
+   * Read one bundle entry's effective content (tenant overlay wins over
+   * base), plus whether this tenant forked it and whether it's binary.
+   */
+  async readBundleEntry(kind: string, name: string, entry: string, query?: ScopeTenant) {
+    return this.unwrap(
+      await this.raw.GET("/v1/definitions/{kind}/{name}/entries/{entry}", {
+        params: { path: { kind, name, entry }, query: this.q(query) },
+      }),
+    );
+  }
+
+  /**
+   * Fork one bundle entry into the tenant layer. A LOCKED Kind is vetoed by
+   * the kernel's LayerPolicy check and surfaces as a 403 {@link DnaApiError}.
+   */
+  async writeBundleEntry(
+    kind: string,
+    name: string,
+    entry: string,
+    content: string,
+    query?: ScopeTenant,
+  ) {
+    return this.unwrap(
+      await this.raw.PUT("/v1/definitions/{kind}/{name}/entries/{entry}", {
+        params: { path: { kind, name, entry }, query: this.q(query) },
+        body: { content },
+      }),
+    );
+  }
+
+  /**
+   * Revert a tenant's fork of one bundle entry — reads fall back to the
+   * inherited base file.
+   */
+  async revertBundleEntry(kind: string, name: string, entry: string, query?: ScopeTenant) {
+    return this.unwrap(
+      await this.raw.DELETE("/v1/definitions/{kind}/{name}/entries/{entry}", {
+        params: { path: { kind, name, entry }, query: this.q(query) },
+      }),
+    );
+  }
+
   // ── memory (reads) ────────────────────────────────────────────────────────
 
   /** List the tenant's memory — base + the tenant's OWN overlay. */
