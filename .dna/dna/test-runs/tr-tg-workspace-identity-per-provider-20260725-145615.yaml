@@ -1,0 +1,11 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-workspace-identity-per-provider-20260725-145615
+spec:
+  guide_ref: tg-workspace-identity-per-provider
+  outcome: pass
+  verifies:
+  - Story/s-workspace-identity-per-provider
+  executed_by: claude-code
+  executed_at: '2026-07-25T14:56:15+00:00'

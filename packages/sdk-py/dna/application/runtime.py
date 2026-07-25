@@ -2149,6 +2149,7 @@ async def provision_workspace_owner_impl(
     boundary — no ``tenant`` kwarg)."""
     from dna.tenancy import (
         account_id_from_claims,
+        identity_claim_key,
         identity_from_token,
         membership_matches_identity,
         normalize_email,
@@ -2163,7 +2164,14 @@ async def provision_workspace_owner_impl(
     if not email:
         raise ValueError("the verified identity must carry an email claim")
     if not identity.oid:
-        raise ValueError("the verified identity must carry an oid claim")
+        # Name the claim THIS provider's durable identity lives in — `oid` for
+        # Entra, `sub` for a consumer-lane IdP (i-072). A denial that names the
+        # wrong claim sends the integrator hunting for a claim their IdP will
+        # never issue.
+        raise ValueError(
+            "the verified identity must carry a durable identity claim "
+            f"({identity_claim_key(claims or {})!r})"
+        )
 
     raw_grants, memberships = await _workspace_grants(live)
 
@@ -2524,6 +2532,7 @@ async def create_workspace_impl(
     WorkspaceMembership are the tenancy boundary, they cannot live inside it)."""
     from dna.tenancy import (
         account_id_from_claims,
+        identity_claim_key,
         identity_from_token,
         normalize_email,
         workspace_membership_name,
@@ -2538,7 +2547,14 @@ async def create_workspace_impl(
     if not email:
         raise ValueError("the verified identity must carry an email claim")
     if not identity.oid:
-        raise ValueError("the verified identity must carry an oid claim")
+        # See the twin in provision_workspace_owner_impl (i-072): the claim named
+        # here is the one THIS provider keys on — `oid` for Entra, `sub` for a
+        # consumer-lane IdP — and it is the SAME key the MCP/REST doors will
+        # later derive from the token, so the grant written below matches.
+        raise ValueError(
+            "the verified identity must carry a durable identity claim "
+            f"({identity_claim_key(claims or {})!r})"
+        )
 
     # The BILLING ACCOUNT, stamped ONCE, HERE, from the VERIFIED claims — the
     # only moment a workspace learns who pays for it. None is a legitimate answer
