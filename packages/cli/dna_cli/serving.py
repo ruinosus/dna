@@ -45,6 +45,13 @@ from dna_cli._mcp_auth import (
     parse_auth_providers,
     azure_provider_from_env,
     jwt_provider_from_env,
+    # Lane B (identity front-door Option X) — the consumer surface a host mounts
+    # at /consumer through ``build_http_app(lane_b_server=…)``. Exported here
+    # because a host could NOT wire that lane through the public seam otherwise:
+    # `build_http_app` accepts the lane-B server but the factory that builds it
+    # lived only in the private module, so dna-cloud's /consumer silently went
+    # unmounted at the monolith cutover (i-066).
+    workos_provider_from_env,
 )
 
 # The metering counter a host spends quota against (durable when a Postgres DSN
@@ -59,5 +66,6 @@ __all__ = [
     "parse_auth_providers",
     "azure_provider_from_env",
     "jwt_provider_from_env",
+    "workos_provider_from_env",
     "quota_store_from_env",
 ]
