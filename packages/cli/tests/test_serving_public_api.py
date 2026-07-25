@@ -39,6 +39,11 @@ def test_all_is_the_complete_public_surface():
         "parse_auth_providers",
         "azure_provider_from_env",
         "jwt_provider_from_env",
+        # Lane B's factory (i-066) — a deliberate addition to the public
+        # surface: `build_http_app` accepts a `lane_b_server`, but the factory
+        # that builds one lived only in the private module, so a host could not
+        # mount the consumer lane through this seam at all.
+        "workos_provider_from_env",
         "quota_store_from_env",
     }
     assert set(serving.__all__) == expected
