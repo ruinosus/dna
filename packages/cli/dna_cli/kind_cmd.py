@@ -20,14 +20,14 @@ def kind() -> None:
 @click.option("--json", "as_json", is_flag=True, help="JSON output.")
 @click.option(
     "--scope",
-    default="dna-development",
-    show_default=True,
-    help="Scope to enumerate kinds from.",
+    default=None,
+    help="Scope to enumerate kinds from (default: env / sole scope).",
 )
 @click.option("--tenant", default=None, help="Route as this tenant.")
-def list_kinds(as_json: bool, scope: str, tenant: str | None) -> None:
+def list_kinds(as_json: bool, scope: str | None, tenant: str | None) -> None:
     """List all Kinds registered on the kernel (in the given scope)."""
     with dna_client(tenant=tenant) as dna:
+        scope = scope or dna.default_scope
         try:
             body = run_async(dna.scopes.kinds(scope))
         except Exception as e:  # noqa: BLE001

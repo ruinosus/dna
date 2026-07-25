@@ -22,7 +22,7 @@ dna intel list [OPTIONS]
 | --- | --- |
 | `--help` | Show this message and exit. |
 | `--json` | Machine-readable output. |
-| `--scope` | _(default: `dna-development`)_ |
+| `--scope` | Scope holding the intel docs (default: env / sole scope). |
 | `--source` | Filter by originating IntelSource. |
 | `--state` |  |
 | `--tenant` | Tenant (default: $DNA_TENANT or 'demo'). |
@@ -45,7 +45,7 @@ dna intel metrics [OPTIONS]
 | --- | --- |
 | `--help` | Show this message and exit. |
 | `--json` | Machine-readable output. |
-| `--scope` | _(default: `dna-development`)_ |
+| `--scope` | Scope holding the intel docs (default: env / sole scope). |
 | `--source` | Restrict to one originating IntelSource. |
 | `--tenant` | Tenant (default: $DNA_TENANT or 'demo'). |
 
@@ -76,7 +76,7 @@ dna intel run [OPTIONS] SOURCE
 | `--analyzer` | Which analyzer runs the pass: 'llm' researches the source live via the LLM, 'seed' uses the offline curated insights, 'auto' picks the LLM when OPENAI_API_KEY is set (else seed). _(default: `auto`)_ |
 | `--help` | Show this message and exit. |
 | `--json` | Machine-readable output. |
-| `--scope` | _(default: `dna-development`)_ |
+| `--scope` | Scope holding the intel docs (default: env / sole scope). |
 | `--tenant` | Tenant (default: $DNA_TENANT or 'demo'). |
 
 ## `dna intel sources`
@@ -93,6 +93,6 @@ dna intel sources [OPTIONS]
 | --- | --- |
 | `--help` | Show this message and exit. |
 | `--json` | Machine-readable output. |
-| `--scope` | _(default: `dna-development`)_ |
+| `--scope` | Scope holding the intel docs (default: env / sole scope). |
 | `--tenant` | Tenant (default: $DNA_TENANT or 'demo'). |
 

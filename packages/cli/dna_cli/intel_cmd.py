@@ -38,10 +38,10 @@ def intel() -> None:
 
 
 @intel.command("sources")
-@click.option("--scope", default=engine.DEFAULT_SCOPE, show_default=True)
+@click.option("--scope", default=None, help="Scope holding the intel docs (default: env / sole scope).")
 @click.option("--tenant", default=None, help=f"Tenant (default: $DNA_TENANT or {DEFAULT_TENANT!r}).")
 @click.option("--json", "as_json", is_flag=True, help="Machine-readable output.")
-def cmd_sources(scope: str, tenant: str | None, as_json: bool) -> None:
+def cmd_sources(scope: str | None, tenant: str | None, as_json: bool) -> None:
     """List the watched IntelSource docs (the Direction stage)."""
     t = _tenant(tenant)
     with dna_session(scope) as s:
@@ -50,7 +50,7 @@ def cmd_sources(scope: str, tenant: str | None, as_json: bool) -> None:
         print_json(rows)
         return
     if not rows:
-        click.echo(f"(no IntelSource docs in {scope} for tenant={t})")
+        click.echo(f"(no IntelSource docs in {s.scope} for tenant={t})")
         return
     click.echo(f"{'name':24s} {'type':8s} {'cadence':8s} {'thr':>4s}  pirs")
     click.echo("-" * 72)
@@ -64,7 +64,7 @@ def cmd_sources(scope: str, tenant: str | None, as_json: bool) -> None:
 
 @intel.command("run")
 @click.argument("source")
-@click.option("--scope", default=engine.DEFAULT_SCOPE, show_default=True)
+@click.option("--scope", default=None, help="Scope holding the intel docs (default: env / sole scope).")
 @click.option("--tenant", default=None, help=f"Tenant (default: $DNA_TENANT or {DEFAULT_TENANT!r}).")
 @click.option(
     "--analyzer",
@@ -79,7 +79,7 @@ def cmd_sources(scope: str, tenant: str | None, as_json: bool) -> None:
 )
 @click.option("--json", "as_json", is_flag=True, help="Machine-readable output.")
 def cmd_run(
-    source: str, scope: str, tenant: str | None, analyzer: str, as_json: bool,
+    source: str, scope: str | None, tenant: str | None, analyzer: str, as_json: bool,
 ) -> None:
     """Run one intel pass over SOURCE: pass → rank → suppress → deliver.
 
@@ -131,13 +131,13 @@ def cmd_run(
 
 
 @intel.command("list")
-@click.option("--scope", default=engine.DEFAULT_SCOPE, show_default=True)
+@click.option("--scope", default=None, help="Scope holding the intel docs (default: env / sole scope).")
 @click.option("--tenant", default=None, help=f"Tenant (default: $DNA_TENANT or {DEFAULT_TENANT!r}).")
 @click.option("--state", type=click.Choice(list(engine.VALID_STATES)), default=None)
 @click.option("--source", "source_ref", default=None, help="Filter by originating IntelSource.")
 @click.option("--json", "as_json", is_flag=True, help="Machine-readable output.")
 def cmd_list(
-    scope: str, tenant: str | None, state: str | None, source_ref: str | None,
+    scope: str | None, tenant: str | None, state: str | None, source_ref: str | None,
     as_json: bool,
 ) -> None:
     """List produced IntelInsight docs (ranked, feedback state)."""
@@ -150,7 +150,7 @@ def cmd_list(
         print_json(rows)
         return
     if not rows:
-        click.echo(f"(no IntelInsight docs in {scope} for tenant={t})")
+        click.echo(f"(no IntelInsight docs in {s.scope} for tenant={t})")
         return
     click.echo(f"{'score':>5s} {'state':10s} {'source':18s}  title")
     click.echo("-" * 90)
@@ -162,11 +162,11 @@ def cmd_list(
 
 
 @intel.command("metrics")
-@click.option("--scope", default=engine.DEFAULT_SCOPE, show_default=True)
+@click.option("--scope", default=None, help="Scope holding the intel docs (default: env / sole scope).")
 @click.option("--tenant", default=None, help=f"Tenant (default: $DNA_TENANT or {DEFAULT_TENANT!r}).")
 @click.option("--source", "source_ref", default=None, help="Restrict to one originating IntelSource.")
 @click.option("--json", "as_json", is_flag=True, help="Machine-readable output.")
-def cmd_metrics(scope: str, tenant: str | None, source_ref: str | None, as_json: bool) -> None:
+def cmd_metrics(scope: str | None, tenant: str | None, source_ref: str | None, as_json: bool) -> None:
     """Feedback KPIs — precision (actioned ÷ actioned+dismissed) + noise rate.
 
     Read-only; delegates the arithmetic to the core ``feedback_metrics``. The
@@ -182,7 +182,7 @@ def cmd_metrics(scope: str, tenant: str | None, source_ref: str | None, as_json:
         return
     counts = m["counts"]
     click.secho(
-        f"\n📊 intel feedback — scope={scope}, tenant={t}"
+        f"\n📊 intel feedback — scope={s.scope}, tenant={t}"
         + (f", source={source_ref}" if source_ref else ""),
         bold=True,
     )
