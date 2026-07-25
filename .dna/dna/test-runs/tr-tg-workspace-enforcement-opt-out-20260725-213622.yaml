@@ -1,0 +1,12 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-workspace-enforcement-opt-out-20260725-213622
+spec:
+  guide_ref: tg-workspace-enforcement-opt-out
+  outcome: pass
+  verifies:
+  - Story/s-workspace-enforcement-opt-out
+  executed_by: claude-code
+  executed_at: '2026-07-25T21:36:22+00:00'
+  notes: 43 (sdk-py) + 32 (cli) novos verdes; suites cheias 3578 e 1128 verdes com 1 falha PRE-EXISTENTE cada (confirmadas via git stash); quebra deliberada do default derrubou 20 (sdk-py) e 15 (cli, incl. 3 testes de seguranca pre-existentes) e foi restaurada; brand/data-model/docs-coverage guards clean; reference gerada sem drift

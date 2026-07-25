@@ -11,6 +11,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### ✨ Novidades
+
+- **`DNA_WORKSPACE_ENFORCEMENT` — desligamento explícito da fronteira de
+  workspace** (`i-074`, `s-workspace-enforcement-opt-out`). Um deployment de UM
+  operador ficava trancado do lado de fora: sem `WorkspaceMembership` própria,
+  toda a superfície com tenancy (memória compartilhada, o registry, o board
+  SDLC) era negada. A nova variável abre a fronteira de forma explícita —
+  **default é `enforce`** e o único literal que muda algo é `open`; `0`,
+  `false`, `off`, `1`, `true` e qualquer erro de digitação *enforçam* (não é
+  booleano, e um valor não reconhecido é ignorado com log). Com `open` a
+  resolução ainda RODA — só a negação é desarmada: as três negações de
+  membership (nenhuma ativa / não é membro do workspace pedido / pertence a
+  vários e não nomeou nenhum) viram passagem do seletor não verificado, nos
+  DOIS portões (MCP e REST `--auth config`). O resto continua de pé:
+  verificação do token, derivação da identidade durável por provider, o guard
+  de identidade pessoal, o scope binding e o plano/quota. **Toda chamada
+  continua medida**: uma chamada que não resolve workspace mede contra a
+  IDENTIDADE verificada do chamador (a partição reservada `personal:`), nunca
+  um balde compartilhado — e um token sem subject durável não é atribuível e
+  segue negado. Um portão rodando aberto avisa no boot (WARNING).
+
 ## [0.26.0] — 2026-07-22
 
 O plano é por CONTA (#190): `AccountPlan` chaveado por account_id

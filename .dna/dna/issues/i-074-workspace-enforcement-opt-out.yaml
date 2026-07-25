@@ -1,0 +1,15 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-074-workspace-enforcement-opt-out
+spec:
+  description: Um deployment single-user precisa poder servir todas as tools sem exigir membership de workspace — desligamento explicito e configuravel, default ligado, mantendo a medicao
+  type: task
+  severity: high
+  status: open
+  timeline:
+  - at: '2026-07-25T20:54:55+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

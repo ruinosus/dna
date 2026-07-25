@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-workspace-enforcement-opt-out
+spec:
+  title: 'Plano: s-workspace-enforcement-opt-out'
+  date: '2026-07-25'
+  status: accepted
+  story_ref: s-workspace-enforcement-opt-out
+  journey_phase: plan
+  body: 'Knob DNA_WORKSPACE_ENFORCEMENT (values: enforce=default, open). Pure core in dna.tenancy.enforcement (sdk-py, no dna_cli import): mode reader with an explicit single-token allowlist so unset/empty/misspelt/falsey => enforce, plus a one-shot boot announcement. Glue: dna_cli._mcp_auth.enforce_workspace_from_context and _rest_api._config_auth catch CrossWorkspaceError and, ONLY when the mode is open, fall through to the unverified selector instead of denying. Metering: when an authenticated request resolves NO workspace, the quota key becomes the identity partition personal_tenant(oid, family) — derived from verified claims only, provider-family namespaced, reserved scheme so it cannot collide with a workspace id; an identity with no durable subject is still DENIED (never a shared bucket). TDD: default-is-enforce test first, then deliberate-break evidence.'
+  created_at: '2026-07-25T21:00:42+00:00'
+  updated_at: '2026-07-25T21:00:42+00:00'

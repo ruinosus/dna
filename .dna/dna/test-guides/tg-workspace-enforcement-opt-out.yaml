@@ -1,0 +1,29 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-workspace-enforcement-opt-out
+spec:
+  description: 'Verifica o switch DNA_WORKSPACE_ENFORCEMENT: default e enforce (fail-closed inalterado), ''open'' desarma so a negacao de membership nas duas faces, toda chamada continua medida por identidade, e o guard do default e provado por quebra deliberada'
+  kind_of_test: manual
+  status: active
+  steps:
+  - action: packages/sdk-py/.venv/bin/python -m pytest tests/test_workspace_enforcement.py -q
+    expected: 43 passed — default e enforce para unset/vazio/typo/falsey/truthy; so 'open' abre; boot message; chave de medicao por identidade
+  - action: packages/cli/.venv/bin/python -m pytest tests/test_workspace_enforcement_optout.py -q
+    expected: 32 passed — as tres negacoes de membership por default; as tres neutralizadas com open; e2e MCP sobre JWT/HTTP real (nega, serve, mede, nao pooleia) e REST TestClient (403 -> 200)
+  - action: flip do default para OPEN em dna/tenancy/enforcement.py + pytest tests/test_workspace_enforcement_optout.py tests/test_workspace_isolation.py tests/test_workspace_glue.py
+    expected: 15 failed — incluindo TRES testes de seguranca PRE-EXISTENTES (test_no_membership_denied, test_configured_grants_deny_non_member, test_consumer_lane_still_denies_a_stranger); restaurar -> 46 passed
+  - action: packages/cli/.venv/bin/python -m pytest tests -q
+    expected: 1128 passed, 1 falha PRE-EXISTENTE (test_store_from_env_selects_the_durable_store_for_a_postgres_source, falta o extra [quota] local — confirmada com git stash)
+  - action: packages/sdk-py/.venv/bin/python -m pytest tests -q --timeout=120
+    expected: 3578 passed, 1 falha PRE-EXISTENTE (test_claude_export_roundtrip, confirmada com git stash)
+  - action: python3 scripts/brand_guard.py --self-test && python3 scripts/brand_guard.py
+    expected: 'brand_guard: clean'
+  - action: python scripts/gen_cli_docs.py && python scripts/gen_kinds_docs.py && git diff --exit-code -- docs/reference/cli docs/reference/kinds
+    expected: sem drift (nenhuma flag/Kind/schema mudou)
+  - action: python scripts/data_model_guard.py && python scripts/docs_coverage_guard.py
+    expected: ambos clean
+  verifies:
+  - Story/s-workspace-enforcement-opt-out
+  created_at: '2026-07-25T21:36:03+00:00'
+  updated_at: '2026-07-25T21:36:03+00:00'

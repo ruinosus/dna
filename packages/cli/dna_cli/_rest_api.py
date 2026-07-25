@@ -39,9 +39,14 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 import secrets
 from typing import Any
+
+from dna.tenancy.enforcement import enforcement_boot_message
+
+logger = logging.getLogger(__name__)
 
 # NOTE: no top-level ``import fastapi`` — it is optional. ``build_app`` imports it
 # lazily so the base CLI/SDK install never requires it (guarded by a test).
@@ -311,6 +316,14 @@ def build_app(
     # degrades to an unannotated (required, missing) query param.
     globals()["m"] = m
 
+    # LOUD, NOT SILENT (i-074): this door shares the workspace boundary with the
+    # MCP one, so it announces the same thing at boot — silent in the default
+    # (enforcing) posture, and loud when the boundary is open or when the knob
+    # carries a value this build does not recognise. See dna.tenancy.enforcement.
+    _enforcement_line = enforcement_boot_message()
+    if _enforcement_line:
+        logger.warning("%s", _enforcement_line)
+
     app = FastAPI(
         title="DNA REST read-API",
         version="1",
@@ -439,8 +452,11 @@ def build_app(
         from dna.tenancy import (
             CrossWorkspaceError,
             Membership,
+            UnmeterableIdentityError,
+            enforcement_is_open,
             identity_from_token,
             resolve_workspace,
+            unenforced_metering_key,
         )
 
         # Build the N-provider verifier from what the CALLER supplied — never from
@@ -550,7 +566,26 @@ def build_app(
                     memberships=memberships,
                 )
             except CrossWorkspaceError as exc:
-                return JSONResponse({"detail": str(exc)}, status_code=403)
+                # The opt-out (i-074). This face shares the seam with MCP and must
+                # share the switch: an operator whose MCP works but whose read-API
+                # 403s has an opt-out they cannot trust. Default (and any
+                # unrecognised value) → the 403 stands.
+                if not enforcement_is_open():
+                    return JSONResponse({"detail": str(exc)}, status_code=403)
+                # Serve it — but only once the call can be ATTRIBUTED. The
+                # membership-less caller resolves no workspace, so the plan gate
+                # below would otherwise meter every such identity into one shared
+                # bucket; stash the identity key it must use instead. A token with
+                # no durable subject cannot be attributed and keeps the denial.
+                try:
+                    request.state.unenforced_metering_key = unenforced_metering_key(
+                        claims
+                    )
+                except UnmeterableIdentityError as unmeterable:
+                    return JSONResponse(
+                        {"detail": str(unmeterable)}, status_code=403
+                    )
+                workspace = requested  # the unverified selector, at face value.
 
             # Bind the physical scope too (defense-in-depth, mirror the MCP guard):
             # an explicit `scope=` naming another workspace's scope is denied.
@@ -652,6 +687,14 @@ def build_app(
             return  # local / OSS self-host: the plan gate does not exist.
         if auth == "token" and tenant is None and quota_tenant is None:
             return  # the shared bearer's own service op — see the note above.
+        if tenant is None and quota_tenant is None:
+            # An authenticated call that resolved NO workspace — which happens
+            # only once the workspace boundary was explicitly opened (i-074).
+            # It still counts, against the caller's own identity: the middleware
+            # already derived that key from the verified claims. Without it the
+            # metering key would be `None`, i.e. ONE bucket shared by every
+            # membership-less identity.
+            quota_tenant = getattr(request.state, "unenforced_metering_key", None)
         claims = _actor_claims_from_state(request)
         try:
             # Resolved through the MODULE (not a from-import) so the shared

@@ -124,6 +124,46 @@ physical `(scope, tenant = workspace_id)` key gives defence in depth: a resolved
 workspace defaults to — and may name — only its own scope, so even a bug upstream
 cannot read another workspace's rows.
 
+### Opting out of the boundary (`DNA_WORKSPACE_ENFORCEMENT`)
+
+Fail-closed is the right default, and for a **single-operator deployment** it is
+also a door with no key: the one person the deployment serves is denied the whole
+tenant-scoped surface — shared memory, the registry, the SDLC board — until they
+grant themselves a membership. `DNA_WORKSPACE_ENFORCEMENT` is the explicit way
+out.
+
+| Value | Effect |
+|---|---|
+| *(unset — the default)* | Enforce. Everything above, unchanged. |
+| `enforce` | The same thing, said out loud. |
+| `open` | The membership boundary stops **denying**. |
+| anything else | Enforce, and the door logs that it ignored the value. |
+
+**It is not a boolean.** `0`, `false`, `off`, `1`, `true` and every misspelling
+all *enforce* — exactly one literal opens the boundary, because "`=0`" reads as
+"enforcement off" to one operator and "not open" to another, and only one of
+those misreadings is safe.
+
+With `open`, resolution still runs — only its denial is disarmed. An identity
+that unambiguously belongs to a workspace still resolves to it (and to its
+account's plan), so nothing has to be flipped back when memberships appear. Three
+denials become a fall-through to the caller's *unverified* workspace selector:
+holding no active membership at all, naming a workspace you are not a member of,
+and belonging to several while naming none.
+
+Everything else stands. The token is still verified, the durable subject is still
+derived per provider, personal memory still fails closed on a missing identity,
+the scope binding still applies, and **every call is still metered**: a request
+that resolves no workspace meters against the caller's own verified identity
+(the reserved `personal:` partition), never a shared bucket. A token carrying no
+durable subject cannot be attributed to anyone and is therefore still denied —
+pooling those calls would count one identity's usage against another's.
+
+Both doors share the switch — the MCP bridge and the REST `--auth config`
+middleware — so an operator never gets one face working and the other refusing.
+A door running with the boundary open says so at boot, at `WARNING`. Restoring
+the boundary is unsetting the variable; nothing else changes.
+
 ### Billing keys on the account, not the workspace
 
 **The subscription belongs to the billing account.** An

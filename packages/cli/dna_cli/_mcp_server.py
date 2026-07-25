@@ -42,9 +42,12 @@ install never carries it — ``import dna_cli`` stays MCP-free.
 """
 from __future__ import annotations
 
+import logging
 import os
 from datetime import datetime, timezone
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 # NOTE: no top-level ``import fastmcp`` — it is optional. ``build_server`` imports
 # it lazily so the base CLI/SDK install never requires it.
@@ -82,6 +85,7 @@ from dna.application import (  # noqa: F401 — re-exported for the faces + test
 )
 from dna.application.live import parse_scope_grants
 from dna.application.runtime import _collect  # sdlc_digest_impl (below) uses it
+from dna.tenancy.enforcement import enforcement_boot_message
 
 
 # ── live DNA handle (composition root) ─────────────────────────────────────
@@ -241,6 +245,14 @@ def build_server(
             "with:  pip install 'dna-cli[mcp]'"
         ) from exc
 
+    # LOUD, NOT SILENT (i-074): a door running with the workspace boundary opened
+    # must say so at boot — an operator may never discover that from behaviour.
+    # Silent in the default (enforcing) posture; also speaks up when the knob
+    # carries a value this build does not recognise (it enforces, and says so).
+    _enforcement_line = enforcement_boot_message()
+    if _enforcement_line:
+        logger.warning("%s", _enforcement_line)
+
     # The declarative-config SUGAR (mirrors build_rest_app's auth_providers=): a
     # host may hand raw provider mappings (or ProviderConfig objects) instead of a
     # pre-built provider, and we assemble the N-provider auth layer via the SAME
@@ -283,7 +295,9 @@ def build_server(
         enforce_workspace_from_context,
         token_has_explicit_plan_claim,
         token_present_in_context,
+        unenforced_metering_key_from_context,
     )
+    from dna.tenancy.enforcement import UnmeterableIdentityError
     from dna.memory.personal import (
         PersonalIdentityRequired,
         PersonalOverrideRejected,
@@ -417,11 +431,26 @@ def build_server(
         # `enforce_plan` (`resolve_metered_tier` carries the two hops); this
         # face only maps its exceptions to ToolError.
         tier = enforce_tier_from_context()
+        # The METERING key. Normally it is the resolved workspace. An
+        # authenticated call that resolves NO workspace only happens once the
+        # workspace boundary has been explicitly opened (i-074), and it must
+        # still be counted — "só registra os chamados" is the requirement — so it
+        # meters against the caller's own verified IDENTITY. Never `None`, which
+        # `quota_key` would collapse into a single '-' bucket shared by every
+        # membership-less identity. A token with no durable subject cannot be
+        # attributed and is denied rather than pooled.
+        try:
+            quota_tenant = (
+                None if tenant is not None else unenforced_metering_key_from_context()
+            )
+        except UnmeterableIdentityError as exc:
+            raise ToolError(str(exc)) from None
         try:
             await enforce_plan(
                 kernel, tenant=tenant, family=family, store=quota,
                 claimed_tier=tier if token_has_explicit_plan_claim() else None,
                 memory_op=memory_op, sdlc_op=sdlc_op,
+                quota_tenant=quota_tenant,
             )
         except (OverQuotaError, FeatureNotInPlanError, MemoryModeError,
                 SdlcModeError, TierRegistryUnavailableError) as exc:

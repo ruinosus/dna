@@ -1,0 +1,83 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-workspace-enforcement-opt-out
+spec:
+  title: Explicit, configurable opt-out of workspace-membership enforcement (default ENFO
+  description: Explicit, configurable opt-out of workspace-membership enforcement (default ENFORCE) so a single-operator deployment can serve the whole MCP/REST surface while every call is still metered per identity
+  status: in-progress
+  feature: f-dna-hosting
+  acceptance_criteria:
+  - Given DNA_WORKSPACE_ENFORCEMENT is unset/empty/misspelt/falsey, When an authenticated identity with no active membership calls a tool, Then it is denied exactly as today (fail-closed)
+  - Given DNA_WORKSPACE_ENFORCEMENT=open, When an authenticated identity with no active membership calls a tool, Then the call is served against the unverified selector AND metered under a stable, identity-derived key that can never collide with another identity
+  - Given DNA_WORKSPACE_ENFORCEMENT=open, When a door boots, Then it announces the open boundary at WARNING in the same register as the other startup lines
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - code+tests (default-is-enforce test + deliberate-break evidence) + docs (tenancy concepts guide) + brand guard + cli/sdk suites green
+  definition_of_done_source: cli-create
+  created_at: '2026-07-25T21:00:27+00:00'
+  updated_at: '2026-07-25T21:36:27+00:00'
+  timeline:
+  - at: '2026-07-25T21:00:27+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-25T21:00:49+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-25T21:34:40+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'Decisao 1 — o knob NAO e booleano. DNA_WORKSPACE_ENFORCEMENT tem uma allowlist de um literal so (''open''); unset/vazio/erro de digitacao/0/false/off/1/true/on TODOS enforcam. Motivo: ''=0'' le como ''enforcement off'' pra um operador e ''not open'' pra outro, e so uma dessas leituras erradas e segura. Um valor nao reconhecido enforca E loga que foi ignorado (nao e silencioso).'
+    commit_ref: 501aca931a959ed7d338539babb2837a54d051eb
+  - at: '2026-07-25T21:34:54+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'Decisao 2 — resolve_workspace/workspace_for_identity NAO foram tocados (estao golden-locked com gemeo TS em tests/golden-fixtures/workspace-resolution). O switch fica FORA do resolver puro, nas duas faces: elas capturam CrossWorkspaceError e, so com o knob aberto, caem para o seletor NAO verificado. A resolucao continua rodando — so a negacao e desarmada — entao uma identidade que pertence inequivocamente a um workspace continua resolvendo pra ele (e pro plano da conta dele), sem precisar destravar nada quando memberships aparecerem.'
+    commit_ref: 501aca931a959ed7d338539babb2837a54d051eb
+  - at: '2026-07-25T21:35:09+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'Decisao 3 — a chave de medicao quando nenhum workspace resolve e personal_tenant(subject_duravel, family=provider_type): personal:<oid> (Entra) / personal:workos:<sub> etc. Reusa a UNICA derivacao per-provider (identity_claim_key, licao do i-072) e o esquema RESERVADO ''personal:'' — logo nao colide com nenhum workspace id, nao colide entre providers com o mesmo literal, e e estavel. Um token sem subject duravel levanta UnmeterableIdentityError e continua NEGADO mesmo com a fronteira aberta: a alternativa era quota_key(None, tier) = ''-::free'', um balde unico compartilhado por toda identidade sem membership — medir a usage de um contra o outro e pior que negar.'
+    commit_ref: 501aca931a959ed7d338539babb2837a54d051eb
+  - at: '2026-07-25T21:35:25+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: Decisao 4 — a face REST compartilha o seam (_rest_api._config_auth chama o mesmo resolve_workspace e responde 403), entao o opt-out cobre ela tambem. Deixar o REST enforcado significaria o mesmo operador com MCP funcionando e read-API 403ando — um opt-out em que o operador nao pode confiar e pior que nenhum; e o portal le pelo REST. As lanes --auth token e --auth none nao sao tocadas (nunca chegaram nesse seam).
+    commit_ref: 501aca931a959ed7d338539babb2837a54d051eb
+  - at: '2026-07-25T21:36:08+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-workspace-enforcement-opt-out
+    summary: TestGuide tg-workspace-enforcement-opt-out (manual)
+  - at: '2026-07-25T21:36:27+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-workspace-enforcement-opt-out-20260725-213622
+    summary: TestRun tr-tg-workspace-enforcement-opt-out-20260725-213622 → pass
+    outcome: pass
+  produces:
+  - kind: Plan
+    name: plan-s-workspace-enforcement-opt-out
+    role: implementation
+    at: '2026-07-25T21:00:49+00:00'
+  - kind: TestGuide
+    name: tg-workspace-enforcement-opt-out
+    role: test-guide
+    at: '2026-07-25T21:36:08+00:00'
+  - kind: TestRun
+    name: tr-tg-workspace-enforcement-opt-out-20260725-213622
+    role: test-run
+    at: '2026-07-25T21:36:27+00:00'

@@ -943,9 +943,22 @@ async def enforce_workspace_from_context(live: Any, requested: str | None) -> st
     key and a request with no active membership is denied (fail-closed).
 
     Raises :class:`dna.tenancy.resolution.CrossWorkspaceError` on a no-membership /
-    cross-workspace authenticated request (surfaced as a tool error by the caller).
+    cross-workspace authenticated request (surfaced as a tool error by the caller)
+    — **unless** the operator has explicitly opened the boundary
+    (``DNA_WORKSPACE_ENFORCEMENT=open``, i-074), in which case the resolution still
+    RUNS but its denial is disarmed: the effective selector passes through
+    unverified, exactly as it does for an unauthenticated stdio caller. Only the
+    denial changes. An identity that unambiguously belongs somewhere still resolves
+    to its workspace (so its account's plan still applies), and the contradictory-
+    selector refusal above — which is about a self-contradicting REQUEST, not about
+    membership — is deliberately untouched. See ``dna.tenancy.enforcement``.
     """
-    from dna.tenancy.resolution import Membership, resolve_workspace
+    from dna.tenancy.enforcement import enforcement_is_open
+    from dna.tenancy.resolution import (
+        CrossWorkspaceError,
+        Membership,
+        resolve_workspace,
+    )
 
     if not token_present_in_context():
         return requested  # stdio / local → identity passthrough (base path).
@@ -964,12 +977,39 @@ async def enforce_workspace_from_context(live: Any, requested: str | None) -> st
         return enforce_tenant_from_context(effective_requested)
 
     memberships = [Membership.from_spec(g.get("spec") or {}) for g in grants_raw]
-    return resolve_workspace(
-        token_present=True,
-        identity=identity,
-        requested=effective_requested,
-        memberships=memberships,
-    )
+    try:
+        return resolve_workspace(
+            token_present=True,
+            identity=identity,
+            requested=effective_requested,
+            memberships=memberships,
+        )
+    except CrossWorkspaceError:
+        if not enforcement_is_open():
+            raise  # the DEFAULT, and the whole security property — fail closed.
+        return effective_requested
+
+
+def unenforced_metering_key_from_context() -> str:
+    """The metering key for the CURRENT request when it resolved NO workspace.
+
+    The context reader for :func:`dna.tenancy.unenforced_metering_key` — the pure
+    policy lives in the core (one derivation, shared with the REST face, which
+    passes the claims its own middleware verified). With the workspace boundary
+    open a call can be served without a workspace answering for it, but it must
+    still count against somebody: the verified identity is the only thing such a
+    request is guaranteed to carry, so it meters against that.
+
+    Raises :class:`dna.tenancy.UnmeterableIdentityError` when the token carries no
+    durable subject — pooling those calls into a shared bucket would meter one
+    identity's usage against another's, which is worse than a denial.
+    """
+    from fastmcp.server.dependencies import get_access_token
+
+    from dna.tenancy.enforcement import unenforced_metering_key
+
+    token = get_access_token()
+    return unenforced_metering_key(getattr(token, "claims", None) or {})
 
 
 def entra_obo_assertion_from_context() -> tuple[str | None, str | None]:
