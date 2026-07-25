@@ -21,6 +21,46 @@ if TYPE_CHECKING:
 _SAFE_SEGMENT = re.compile(r"^[a-zA-Z0-9_\-.]+$")
 
 
+# ── readable, round-trip-safe YAML (i-070) ───────────────────────────────────
+#
+# Plain ``yaml.dump`` escapes every non-ASCII char (``é`` → ``\xE9``, ``→`` →
+# ``→``), which forces double-quoted style; a double-quoted string wrapped
+# at the default width=80 then continues with a trailing ``\`` and a leading
+# ``\ `` on the next line. Authored content (a Story body, an ADR context) came
+# out unreadable — and per ResearchWriter's note that shape can even fail to
+# round-trip on markdown-ish text ("unexpected end of stream").
+#
+# Every other writer here (research, tenant, kinddef, safety, recognizer,
+# lesson, helix, emit) already passes ``allow_unicode=True``; this generic doc
+# writer — which persists the whole SDLC board and every plain-YAML Kind — is
+# brought in line, and additionally emits multi-line strings as block literals
+# (``|``), which never escape and round-trip cleanly.
+class _BlockLiteralDumper(yaml.SafeDumper):
+    pass
+
+
+def _str_block_literal_representer(dumper, value):
+    style = "|" if "\n" in value else None
+    return dumper.represent_scalar("tag:yaml.org,2002:str", value, style=style)
+
+
+_BlockLiteralDumper.add_representer(str, _str_block_literal_representer)
+
+#: Wide enough that authored prose is never split mid-sentence; block literals
+#: carry anything longer.
+_YAML_WIDTH = 4096
+
+
+def _dump_yaml(data: Any, *, sort_keys: bool = False) -> str:
+    """Serialize a document to readable YAML — unicode verbatim, no ``\\``
+    continuations, block literals for multi-line strings."""
+    return yaml.dump(
+        data, Dumper=_BlockLiteralDumper,
+        default_flow_style=False, sort_keys=sort_keys,
+        allow_unicode=True, width=_YAML_WIDTH,
+    )
+
+
 def _is_path_safe(s: str) -> bool:
     """Allow only ``[a-zA-Z0-9_\\-.]+`` and forbid the literal ``..``
     sequence (which would otherwise pass the char-class regex since
@@ -256,7 +296,7 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
                         f"at {versioned_path}. Bump and republish."
                     )
                 versions_dir.mkdir(parents=True, exist_ok=True)
-                content = yaml.dump(raw, default_flow_style=False, sort_keys=False)
+                content = _dump_yaml(raw)
                 async with aiofiles.open(versioned_path, "w", encoding="utf-8") as f:
                     await f.write(content)
                 # Update the latest-stable mirror too
@@ -265,7 +305,7 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
                 return spec_version
             # Unversioned (Phase 9 path): write only the bare manifest.yaml.
             path = scope_dir / "manifest.yaml"
-            content = yaml.dump(raw, default_flow_style=False, sort_keys=False)
+            content = _dump_yaml(raw)
             async with aiofiles.open(path, "w", encoding="utf-8") as f:
                 await f.write(content)
             return "1"
@@ -287,7 +327,7 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
             parent = scope_dir
         parent.mkdir(parents=True, exist_ok=True)
         path = parent / f"{name}.yaml"
-        content = yaml.dump(raw, default_flow_style=False, sort_keys=False)
+        content = _dump_yaml(raw)
         async with aiofiles.open(path, "w", encoding="utf-8") as f:
             await f.write(content)
         return "1"
@@ -353,7 +393,7 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
     async def save_manifest(self, scope: str, manifest: dict[str, Any]) -> str:
         path = self.base_dir / scope / "manifest.yaml"
         path.parent.mkdir(parents=True, exist_ok=True)
-        content = yaml.dump(manifest, default_flow_style=False)
+        content = _dump_yaml(manifest, sort_keys=True)
         async with aiofiles.open(path, "w", encoding="utf-8") as f:
             await f.write(content)
         return "1"
@@ -519,7 +559,7 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
         spec["deprecated"] = True
         if message:
             spec["deprecated_message"] = message
-        new_text = yaml.dump(raw, default_flow_style=False, sort_keys=False)
+        new_text = _dump_yaml(raw)
         vm.write_text(new_text)
         # Mirror to latest pointer when applicable
         latest = scope_dir / "manifest.yaml"
