@@ -3,10 +3,8 @@ kind: Story
 metadata:
   name: s-speckit-mcp-apps-memory-card-t009
 spec:
-  description: "[US1] Grep-guard \xA73: `TODO`/`deferred`/`follow-up`/`coming soon`\
-    \ em `mcp_ui.py` e no template quebra o teste (muta\xE7\xE3o: TODO plantado \u2192\
-    \ morre) em `packages/sdk-py/tests/test_emit_mcp_ui.py`"
-  title: "[US1] Grep-guard \xA73: `TODO`/`deferred`/`follow-up`/`coming soon` em `mcp_ui.py` "
+  description: '[US1] Grep-guard §3: `TODO`/`deferred`/`follow-up`/`coming soon` em `mcp_ui.py` e no template quebra o teste (mutação: TODO plantado → morre) em `packages/sdk-py/tests/test_emit_mcp_ui.py`'
+  title: '[US1] Grep-guard §3: `TODO`/`deferred`/`follow-up`/`coming soon` em `mcp_ui.py` '
   status: done
   feature: f-copilot-mcp-apps
   labels:
@@ -46,15 +44,13 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-speckit-mcp-apps-sdk-20260721-201420
-    summary: "TestRun tr-tg-speckit-mcp-apps-sdk-20260721-201420 \u2192 pass"
+    summary: TestRun tr-tg-speckit-mcp-apps-sdk-20260721-201420 → pass
     outcome: pass
   - at: '2026-07-21T20:18:07+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "T009 no commit a126050: grep-guard \xA73 execut\xE1vel (test_grep_guard_rule_3)\
-      \ sobre mcp_ui.py + template fora da regi\xE3o vendorizada; TODO plantado \u2192\
-      \ morre (confirmado)."
+    summary: 'T009 no commit a126050: grep-guard §3 executável (test_grep_guard_rule_3) sobre mcp_ui.py + template fora da região vendorizada; TODO plantado → morre (confirmado).'
     commit_ref: ee11c11a89e2282556416387fdff80abc96a8136
   - at: '2026-07-21T20:21:29+00:00'
     actor: claude-code
@@ -69,7 +65,7 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-speckit-mcp-apps-render-smoke-20260721-202227
-    summary: "TestRun tr-tg-speckit-mcp-apps-render-smoke-20260721-202227 \u2192 pass"
+    summary: TestRun tr-tg-speckit-mcp-apps-render-smoke-20260721-202227 → pass
     outcome: pass
   - at: '2026-07-21T20:26:50+00:00'
     actor: claude-code
@@ -78,6 +74,6 @@ spec:
     from: todo
     to: done
     commit_ref: a126050
-    summary: "grep-guard \xA73 execut\xE1vel (TODO plantado morre)"
+    summary: grep-guard §3 executável (TODO plantado morre)
   updated_at: '2026-07-21T20:26:50+00:00'
   closed_at: '2026-07-21T20:26:41+00:00'

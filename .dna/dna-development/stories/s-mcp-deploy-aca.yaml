@@ -4,48 +4,33 @@ metadata:
   name: s-mcp-deploy-aca
 spec:
   title: Deploy DNA MCP on Azure Container Apps + Entra ID (azd up recipe)
-  description: 'Containerize `dna mcp serve --transport http` and ship an azd/bicep
-    recipe: Container App + HTTPS ingress + user-assigned Managed Identity (ACR pull,
-    no secrets) + Entra-JWT auth env (DNA_MCP_JWKS_URI/ISSUER/AUDIENCE/RESOURCE_URL/AUTH_SERVERS
-    + DNA_MCP_TENANT_CLAIM) + mounted DNA source. Runbook documents the Entra app
-    registration + `azd up` + a post-deploy smoke (an MCP client connects over HTTPS
-    with an Entra token). Owner runs the real `azd up`; local proof = az bicep build
-    + docker build + serve boots.'
+  description: 'Containerize `dna mcp serve --transport http` and ship an azd/bicep recipe: Container App + HTTPS ingress + user-assigned Managed Identity (ACR pull, no secrets) + Entra-JWT auth env (DNA_MCP_JWKS_URI/ISSUER/AUDIENCE/RESOURCE_URL/AUTH_SERVERS + DNA_MCP_TENANT_CLAIM) + mounted DNA source. Runbook documents the Entra app registration + `azd up` + a post-deploy smoke (an MCP client connects over HTTPS with an Entra token). Owner runs the real `azd up`; local proof = az bicep build + docker build + serve boots.'
   status: done
   feature: f-dna-hosting
   acceptance_criteria:
-  - text: deploy/azure/Dockerfile containerizes 'dna mcp serve --transport http' on
-      python:3.12-slim, uvicorn, port 8080
+  - text: deploy/azure/Dockerfile containerizes 'dna mcp serve --transport http' on python:3.12-slim, uvicorn, port 8080
     done: true
     done_at: '2026-07-11T17:22:16+00:00'
     done_by: story-done-auto
-  - text: deploy/azure bicep provisions a Container App with external HTTPS ingress,
-      a user-assigned Managed Identity (AcrPull, no secrets), the Entra-JWT auth env
-      vars, and a mounted DNA source
+  - text: deploy/azure bicep provisions a Container App with external HTTPS ingress, a user-assigned Managed Identity (AcrPull, no secrets), the Entra-JWT auth env vars, and a mounted DNA source
     done: true
     done_at: '2026-07-11T17:22:16+00:00'
     done_by: story-done-auto
-  - text: az bicep build is clean on all bicep; docker build succeeds (or validated
-      by inspection); 'dna mcp serve --transport http' boots and answers MCP initialize
-      locally
+  - text: az bicep build is clean on all bicep; docker build succeeds (or validated by inspection); 'dna mcp serve --transport http' boots and answers MCP initialize locally
     done: true
     done_at: '2026-07-11T17:22:16+00:00'
     done_by: story-done-auto
-  - text: 'deploy/azure/README.md is a runbook: azd up step-by-step, the Entra app-registration
-      the owner configures, and a post-deploy smoke test'
+  - text: 'deploy/azure/README.md is a runbook: azd up step-by-step, the Entra app-registration the owner configures, and a post-deploy smoke test'
     done: true
     done_at: '2026-07-11T17:22:16+00:00'
     done_by: story-done-auto
-  - text: docs published on the site (mkdocs build --strict green), CHANGELOG [Unreleased]
-      updated, brand + gitleaks guards green
+  - text: docs published on the site (mkdocs build --strict green), CHANGELOG [Unreleased] updated, brand + gitleaks guards green
     done: true
     done_at: '2026-07-11T17:22:16+00:00'
     done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - text: "az bicep build clean + docker build ok + serve boots locally (TestGuide+TestRun\
-      \ recorded); mkdocs --strict + guards green; PR opened via story pr --base main\
-      \ (NOT merged \u2014 CI frozen)"
+  - text: az bicep build clean + docker build ok + serve boots locally (TestGuide+TestRun recorded); mkdocs --strict + guards green; PR opened via story pr --base main (NOT merged — CI frozen)
     done: true
     done_at: '2026-07-11T17:22:16+00:00'
     done_by: story-done-auto
@@ -68,16 +53,7 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: "Built the recipe under deploy/azure/ (mirrored the sibling Foundry app's\
-      \ ACA+Entra IaC, trimmed to the MCP server): Dockerfile (python:3.12-slim, non-root,\
-      \ port 8080, dna-cli[mcp] from source) + entrypoint.sh + azure.yaml + main.bicep\
-      \ + resources.bicep (Container App w/ external HTTPS ingress + user-assigned\
-      \ Managed Identity for AcrPull + Log Analytics + ACR + Azure Files source share\
-      \ mounted RO at /mnt/dna). Entra-JWT env derived from the tenant id via environment()\
-      \ (cloud-portable) and wired to the existing --auth jwt provider \u2014 auth\
-      \ code untouched (parallel agent owns it). Plus a baked demo scope, dna.config.sample.yaml\
-      \ (declarative auth.providers:[entra] sketch), scripts/push-scope.sh, README\
-      \ runbook, a site guide, mkdocs nav + CHANGELOG."
+    summary: 'Built the recipe under deploy/azure/ (mirrored the sibling Foundry app''s ACA+Entra IaC, trimmed to the MCP server): Dockerfile (python:3.12-slim, non-root, port 8080, dna-cli[mcp] from source) + entrypoint.sh + azure.yaml + main.bicep + resources.bicep (Container App w/ external HTTPS ingress + user-assigned Managed Identity for AcrPull + Log Analytics + ACR + Azure Files source share mounted RO at /mnt/dna). Entra-JWT env derived from the tenant id via environment() (cloud-portable) and wired to the existing --auth jwt provider — auth code untouched (parallel agent owns it). Plus a baked demo scope, dna.config.sample.yaml (declarative auth.providers:[entra] sketch), scripts/push-scope.sh, README runbook, a site guide, mkdocs nav + CHANGELOG.'
     commit_ref: 9d659f72a1bcf5083aa0e32aa1152fe9f850eb77
   - at: '2026-07-11T16:51:34+00:00'
     actor: claude-code
@@ -92,7 +68,7 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-mcp-deploy-aca-20260711-165202
-    summary: "TestRun tr-tg-mcp-deploy-aca-20260711-165202 \u2192 partial"
+    summary: TestRun tr-tg-mcp-deploy-aca-20260711-165202 → partial
     outcome: partial
   - at: '2026-07-11T17:22:20+00:00'
     actor: claude-code
@@ -103,8 +79,7 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: infra recipe (bicep/docker); smoke = runbook deploy/azure/README.md (PRM
-      200 / unauth 401 / authed 200)
+    summary: infra recipe (bicep/docker); smoke = runbook deploy/azure/README.md (PRM 200 / unauth 401 / authed 200)
   - at: '2026-07-11T17:25:05+00:00'
     actor: claude-code
     type: status_change

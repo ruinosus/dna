@@ -10,5 +10,4 @@ spec:
   executed_by: claude-code
   executed_at: '2026-07-11T06:56:08+00:00'
   evidence:
-  - dna sdlc epic create espelha feature create (kernel.write_document + timeline);
-    CLI tests create/timeline/show/required-options; CI 11/11
+  - dna sdlc epic create espelha feature create (kernel.write_document + timeline); CLI tests create/timeline/show/required-options; CI 11/11

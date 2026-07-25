@@ -3,9 +3,8 @@ kind: Story
 metadata:
   name: s-dna-mcp-server-mvp
 spec:
-  title: "MCP server MVP \u2014 one stdio server exposing definitions + SDLC + memory"
-  description: 'Build the thin MCP server (dna mcp serve, [mcp] extra) exposing DNA
-    live over stdio: definitions, SDLC and memory tools + resources.'
+  title: MCP server MVP — one stdio server exposing definitions + SDLC + memory
+  description: 'Build the thin MCP server (dna mcp serve, [mcp] extra) exposing DNA live over stdio: definitions, SDLC and memory tools + resources.'
   status: done
   feature: f-dna-mcp-server
   priority: high
@@ -13,52 +12,41 @@ spec:
   - mcp
   - runtime
   acceptance_criteria:
-  - text: Given a configured DNA source, When an MCP client calls compose_prompt(scope,agent),
-      Then it returns the live-composed Soul+Guardrail+instruction prompt
+  - text: Given a configured DNA source, When an MCP client calls compose_prompt(scope,agent), Then it returns the live-composed Soul+Guardrail+instruction prompt
     done: true
     done_at: '2026-07-11T15:15:55+00:00'
     done_by: story-done-auto
-  - text: Given a scope with a tenant overlay, When compose_prompt is called with
-      tenant=X, Then the returned prompt reflects the tenant overlay (recovering what
-      emit drops)
+  - text: Given a scope with a tenant overlay, When compose_prompt is called with tenant=X, Then the returned prompt reflects the tenant overlay (recovering what emit drops)
     done: true
     done_at: '2026-07-11T15:15:55+00:00'
     done_by: story-done-auto
-  - text: Given the same single server, When a client calls sdlc_digest / list_stories
-      / get_adr, Then it returns the board data (the self-describing SDLC)
+  - text: Given the same single server, When a client calls sdlc_digest / list_stories / get_adr, Then it returns the board data (the self-describing SDLC)
     done: true
     done_at: '2026-07-11T15:15:55+00:00'
     done_by: story-done-auto
-  - text: Given the same single server, When a client calls recall(query), Then it
-      returns the matching DNA memory
+  - text: Given the same single server, When a client calls recall(query), Then it returns the matching DNA memory
     done: true
     done_at: '2026-07-11T15:15:55+00:00'
     done_by: story-done-auto
-  - text: Given the base install without the [mcp] extra, When dna is imported/run,
-      Then nothing breaks (mcp imported lazily)
+  - text: Given the base install without the [mcp] extra, When dna is imported/run, Then nothing breaks (mcp imported lazily)
     done: true
     done_at: '2026-07-11T15:15:55+00:00'
     done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - text: 'Code: dna_mcp server module + dna mcp serve CLI + [mcp] optional extra
-      on dna-cli (lazy import)'
+  - text: 'Code: dna_mcp server module + dna mcp serve CLI + [mcp] optional extra on dna-cli (lazy import)'
     done: true
     done_at: '2026-07-11T15:15:55+00:00'
     done_by: story-done-auto
-  - text: "Tests: in-process test instantiating the server and calling compose_prompt\
-      \ (incl. tenant), sdlc_digest, list_agents, recall \u2014 one smoke proving\
-      \ definitions+SDLC+memory from the SAME server"
+  - text: 'Tests: in-process test instantiating the server and calling compose_prompt (incl. tenant), sdlc_digest, list_agents, recall — one smoke proving definitions+SDLC+memory from the SAME server'
     done: true
     done_at: '2026-07-11T15:15:55+00:00'
     done_by: story-done-auto
-  - text: "Docs: guide 'The MCP server \u2014 DNA as a live layer' (emit vs MCP, static/dynamic\
-      \ table, how a client connects) + mkdocs nav; mkdocs build --strict green"
+  - text: 'Docs: guide ''The MCP server — DNA as a live layer'' (emit vs MCP, static/dynamic table, how a client connects) + mkdocs nav; mkdocs build --strict green'
     done: true
     done_at: '2026-07-11T15:15:55+00:00'
     done_by: story-done-auto
-  - text: 'CI: suites + guards + mkdocs --strict green (11/11); CHANGELOG [Unreleased]
-      updated; base install unaffected'
+  - text: 'CI: suites + guards + mkdocs --strict green (11/11); CHANGELOG [Unreleased] updated; base install unaffected'
     done: true
     done_at: '2026-07-11T15:15:55+00:00'
     done_by: story-done-auto
@@ -75,9 +63,7 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: Iniciando o MVP. Server unico em dna_cli/_mcp_server.py + dna mcp serve;
-      reuso dos cores puros (build_prompt, ToolLibrary, _digest.build_digest, dna.memory).
-      Extra [mcp] em dna-cli, import lazy.
+    summary: Iniciando o MVP. Server unico em dna_cli/_mcp_server.py + dna mcp serve; reuso dos cores puros (build_prompt, ToolLibrary, _digest.build_digest, dna.memory). Extra [mcp] em dna-cli, import lazy.
   - at: '2026-07-11T14:44:28+00:00'
     actor: claude-code
     type: status_change
@@ -97,44 +83,25 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-dna-mcp-server-mvp-20260711-150302
-    summary: "TestRun tr-tg-dna-mcp-server-mvp-20260711-150302 \u2192 pass"
+    summary: TestRun tr-tg-dna-mcp-server-mvp-20260711-150302 → pass
     outcome: pass
   - at: '2026-07-11T15:03:27+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "Constru\xED o server em dna_cli/_mcp_server.py (impls puros + wiring\
-      \ FastMCP) + comando dna mcp serve (mcp_cmd.py). 10 tools: compose_prompt (tenant-aware\
-      \ \u2014 a killer feature que recupera o que o emit perde), list_agents/list_tools/get_tool,\
-      \ sdlc_digest (reusa _digest.build_digest)/list_stories/get_adr, recall/remember/consolidate\
-      \ (dna.memory verbs) + 2 resources (dna://{scope}/manifest e /agents). Server\
-      \ UNICO expoe as 3 faces. Adaptadores finos sobre cores testados \u2014 zero\
-      \ l\xF3gica de neg\xF3cio nova."
+    summary: 'Construí o server em dna_cli/_mcp_server.py (impls puros + wiring FastMCP) + comando dna mcp serve (mcp_cmd.py). 10 tools: compose_prompt (tenant-aware — a killer feature que recupera o que o emit perde), list_agents/list_tools/get_tool, sdlc_digest (reusa _digest.build_digest)/list_stories/get_adr, recall/remember/consolidate (dna.memory verbs) + 2 resources (dna://{scope}/manifest e /agents). Server UNICO expoe as 3 faces. Adaptadores finos sobre cores testados — zero lógica de negócio nova.'
     commit_ref: b4c1859f8196682747e91bc6e75a8f76e86bbc87
   - at: '2026-07-11T15:03:30+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "Decis\xE3o de base: FastMCP (framework standalone 'fastmcp'), por dire\xE7\
-      \xE3o do dono. Motivo = custo da Fase 2: FastMCP j\xE1 traz transporte NATIVO\
-      \ (stdio+Streamable HTTP) e auth built-in (OAuth 2.1 + DCR + OAuthProxy p/ WorkOS/Auth0\
-      \ + JWT scope enforcement). Logo Fase 2 vira habilitar+bridge, n\xE3o construir.\
-      \ Reescrevi s-mcp-remote-transport e s-mcp-oauth-auth pra refletir (o trabalho\
-      \ real do OAuth vira o bridge scope->Tenant Kind). Registrei no ADR. Tools com\
-      \ run_in_thread=False p/ rodar no loop do server (kernel binding)."
+    summary: 'Decisão de base: FastMCP (framework standalone ''fastmcp''), por direção do dono. Motivo = custo da Fase 2: FastMCP já traz transporte NATIVO (stdio+Streamable HTTP) e auth built-in (OAuth 2.1 + DCR + OAuthProxy p/ WorkOS/Auth0 + JWT scope enforcement). Logo Fase 2 vira habilitar+bridge, não construir. Reescrevi s-mcp-remote-transport e s-mcp-oauth-auth pra refletir (o trabalho real do OAuth vira o bridge scope->Tenant Kind). Registrei no ADR. Tools com run_in_thread=False p/ rodar no loop do server (kernel binding).'
     commit_ref: b4c1859f8196682747e91bc6e75a8f76e86bbc87
   - at: '2026-07-11T15:03:33+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "Prova end-to-end: cliente MCP real (mcp SDK) conectou via stdio ao 'dna\
-      \ mcp serve', listou os 10 tools, comp\xF4s o prompt ao vivo (persona do Soul\
-      \ presente) e leu o resource manifest. Testes: 10/10 em test_mcp_server.py (inclui\
-      \ overlay de tenant real via kernel.with_tenant + smoke 'um server, 3 faces'\
-      \ via FastMCP Client). Gates: mkdocs --strict 0, brand_guard limpo, docs_coverage\
-      \ limpo, CLI suite 442 passed, guia 'The MCP server \u2014 DNA as a live layer'\
-      \ + CHANGELOG [Unreleased] + refer\xEAncia CLI regenerada. TestGuide+TestRun(pass)\
-      \ registrados."
+    summary: 'Prova end-to-end: cliente MCP real (mcp SDK) conectou via stdio ao ''dna mcp serve'', listou os 10 tools, compôs o prompt ao vivo (persona do Soul presente) e leu o resource manifest. Testes: 10/10 em test_mcp_server.py (inclui overlay de tenant real via kernel.with_tenant + smoke ''um server, 3 faces'' via FastMCP Client). Gates: mkdocs --strict 0, brand_guard limpo, docs_coverage limpo, CLI suite 442 passed, guia ''The MCP server — DNA as a live layer'' + CHANGELOG [Unreleased] + referência CLI regenerada. TestGuide+TestRun(pass) registrados.'
     commit_ref: b4c1859f8196682747e91bc6e75a8f76e86bbc87
   - at: '2026-07-11T15:04:34+00:00'
     actor: claude-code
@@ -146,10 +113,7 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: "PR #64 aberto (base main). MVP completo: 10 tools + 2 resources sobre\
-      \ FastMCP (stdio), defini\xE7\xF5es+SDLC+mem\xF3ria num server \xFAnico; Fase\
-      \ 2 (remoto+OAuth) filada como todo. Aguardando merge do dono \u2014 N\xC3O\
-      \ mergear."
+    summary: 'PR #64 aberto (base main). MVP completo: 10 tools + 2 resources sobre FastMCP (stdio), definições+SDLC+memória num server único; Fase 2 (remoto+OAuth) filada como todo. Aguardando merge do dono — NÃO mergear.'
   - at: '2026-07-11T15:05:29+00:00'
     actor: claude-code
     type: status_change
@@ -169,13 +133,13 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-mcp-c-20260711-151549
-    summary: "TestRun tr-tg-mcp-c-20260711-151549 \u2192 pass"
+    summary: TestRun tr-tg-mcp-c-20260711-151549 → pass
     outcome: pass
   - at: '2026-07-11T15:15:59+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "PR #64 merged \u2014 a face runtime"
+    summary: 'PR #64 merged — a face runtime'
   - at: '2026-07-11T15:16:05+00:00'
     actor: claude-code
     type: status_change

@@ -3,10 +3,8 @@ kind: Story
 metadata:
   name: s-speckit-mcp-apps-memory-card-t002
 spec:
-  description: "Vendorizar a lib `@modelcontextprotocol/ext-apps` como asset embut\xED\
-    vel (para bundle inline no HTML; nenhum CDN) em `packages/sdk-py/dna/emit/`"
-  title: "Vendorizar a lib `@modelcontextprotocol/ext-apps` como asset embut\xEDvel\
-    \ (para bun"
+  description: Vendorizar a lib `@modelcontextprotocol/ext-apps` como asset embutível (para bundle inline no HTML; nenhum CDN) em `packages/sdk-py/dna/emit/`
+  title: Vendorizar a lib `@modelcontextprotocol/ext-apps` como asset embutível (para bun
   status: done
   feature: f-copilot-mcp-apps
   labels:
@@ -48,12 +46,7 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: "T002 no commit 5f54432: ext-apps@1.7.4 vendorizada em dna/emit/_vendor\
-      \ (IIFE autocontido 374KB, esbuild sobre app-with-deps.js do tarball npm oficial;\
-      \ globalThis.DnaExtApps.App verificado carregando via eval em node) + LICENSE\
-      \ verbatim. Decis\xE3o: vendorizar no repo (n\xE3o baixar em build de teste)\
-      \ \u2014 o template \xE9 fun\xE7\xE3o pura do asset commitado, mantendo o golden\
-      \ byte-stable."
+    summary: 'T002 no commit 5f54432: ext-apps@1.7.4 vendorizada em dna/emit/_vendor (IIFE autocontido 374KB, esbuild sobre app-with-deps.js do tarball npm oficial; globalThis.DnaExtApps.App verificado carregando via eval em node) + LICENSE verbatim. Decisão: vendorizar no repo (não baixar em build de teste) — o template é função pura do asset commitado, mantendo o golden byte-stable.'
     commit_ref: 5f544323217f8a036e575b69b5fef4a7d6183319
   - at: '2026-07-21T20:12:33+00:00'
     actor: claude-code
@@ -68,7 +61,7 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-speckit-mcp-apps-sdk-20260721-201420
-    summary: "TestRun tr-tg-speckit-mcp-apps-sdk-20260721-201420 \u2192 pass"
+    summary: TestRun tr-tg-speckit-mcp-apps-sdk-20260721-201420 → pass
     outcome: pass
   - at: '2026-07-21T20:20:48+00:00'
     actor: claude-code
@@ -83,7 +76,7 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-speckit-mcp-apps-render-smoke-20260721-202227
-    summary: "TestRun tr-tg-speckit-mcp-apps-render-smoke-20260721-202227 \u2192 pass"
+    summary: TestRun tr-tg-speckit-mcp-apps-render-smoke-20260721-202227 → pass
     outcome: pass
   - at: '2026-07-21T20:24:49+00:00'
     actor: claude-code

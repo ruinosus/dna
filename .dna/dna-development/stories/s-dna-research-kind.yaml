@@ -3,21 +3,8 @@ kind: Story
 metadata:
   name: s-dna-research-kind
 spec:
-  title: "Trazer o Research Kind (s\xEDntese curada de N References com findings evidence-rat"
-  description: "Trazer o Research Kind (s\xEDntese curada de N References com findings\
-    \ evidence-rated + recommendations + citation graph) do SDK upstream pro DNA \u2014\
-    \ infraestrutura de conhecimento agent-facing, a resposta declarativa/curada do\
-    \ DNA ao problema OpenWiki/DeepWiki. Porta a extension research (Py 762loc + twin\
-    \ research.ts) + CLI 'dna research list/show/create', kernel-bound. Decis\xF5\
-    es ratificadas (Barna): (1) namespace github.com/ruinosus/dna/research/v1; (2)\
-    \ tenancy PERMISSIVA (research \xE9 conhecimento autorado do repo, n\xE3o dado\
-    \ per-cliente \u2014 dna research create sem tenant obrigat\xF3rio); (3) recall\
-    \ sem\xE2ntico DEGRADA pra query lexical/estruturada (kernel.query) \u2014 servidor\
-    \ de embeddings n\xE3o viajou; recall via pgvector \xE9 futuro documentado. Reference\
-    \ companion j\xE1 existe via extension sdlc. Engenharia: verificar ratchet F3\
-    \ descriptor-vs-classe (prov\xE1vel classe com exce\xE7\xE3o registrada \u2014\
-    \ tem l\xF3gica comput\xE1vel). Payoff imediato: capturar as 3 pesquisas de hoje\
-    \ (doc-frameworks, exemplar-repos, openwiki-analysis) como Research docs."
+  title: Trazer o Research Kind (síntese curada de N References com findings evidence-rat
+  description: 'Trazer o Research Kind (síntese curada de N References com findings evidence-rated + recommendations + citation graph) do SDK upstream pro DNA — infraestrutura de conhecimento agent-facing, a resposta declarativa/curada do DNA ao problema OpenWiki/DeepWiki. Porta a extension research (Py 762loc + twin research.ts) + CLI ''dna research list/show/create'', kernel-bound. Decisões ratificadas (Barna): (1) namespace github.com/ruinosus/dna/research/v1; (2) tenancy PERMISSIVA (research é conhecimento autorado do repo, não dado per-cliente — dna research create sem tenant obrigatório); (3) recall semântico DEGRADA pra query lexical/estruturada (kernel.query) — servidor de embeddings não viajou; recall via pgvector é futuro documentado. Reference companion já existe via extension sdlc. Engenharia: verificar ratchet F3 descriptor-vs-classe (provável classe com exceção registrada — tem lógica computável). Payoff imediato: capturar as 3 pesquisas de hoje (doc-frameworks, exemplar-repos, openwiki-analysis) como Research docs.'
   status: done
   feature: f-dna-1.0-readiness
   priority: high
@@ -30,18 +17,13 @@ spec:
   reporter: claude-code
   business_value: 600
   acceptance_criteria:
-  - text: "Extension research registrada (Py+TS), Kind Research parse\xE1vel/grav\xE1\
-      vel; dna research list/show/create funciona no repo puro (filesystem, sem servi\xE7\
-      os) com tenancy permissiva; sources aponta pra Reference docs; recall degrada\
-      \ lexical sem crash; 3 pesquisas de hoje capturadas como Research reais com\
-      \ fontes; paridade Py\u2194TS verde; CI 7/7"
+  - text: Extension research registrada (Py+TS), Kind Research parseável/gravável; dna research list/show/create funciona no repo puro (filesystem, sem serviços) com tenancy permissiva; sources aponta pra Reference docs; recall degrada lexical sem crash; 3 pesquisas de hoje capturadas como Research reais com fontes; paridade Py↔TS verde; CI 7/7
     done: true
     done_at: '2026-07-09T13:10:42+00:00'
     done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - text: PR merged via dna sdlc story pr; posicionamento DNA-vs-OpenWiki documentado
-      no concepts; 3 Research docs no dna-development
+  - text: PR merged via dna sdlc story pr; posicionamento DNA-vs-OpenWiki documentado no concepts; 3 Research docs no dna-development
     done: true
     done_at: '2026-07-09T13:10:42+00:00'
     done_by: story-done-auto
@@ -76,12 +58,7 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: "Portado ResearchKind (Py+TS twin, alias gerado research-research), tenancy\
-      \ PERMISSIVA (sem scope declarado). Reference reusado do sdlc (n\xE3o duplicado).\
-      \ CLI dna research list/show/create kernel-bound; recall degrada lexical (sem\
-      \ embeddings). 3 Research reais capturadas + docs/concepts/agent-knowledge.md.\
-      \ Gates locais verdes: sdk-py 2731 pass, cli 255, sdk-ts 1211 pass+typecheck,\
-      \ brand_guard clean. PR #8."
+    summary: 'Portado ResearchKind (Py+TS twin, alias gerado research-research), tenancy PERMISSIVA (sem scope declarado). Reference reusado do sdlc (não duplicado). CLI dna research list/show/create kernel-bound; recall degrada lexical (sem embeddings). 3 Research reais capturadas + docs/concepts/agent-knowledge.md. Gates locais verdes: sdk-py 2731 pass, cli 255, sdk-ts 1211 pass+typecheck, brand_guard clean. PR #8.'
     commit_ref: f50e0411679299221c3a41c618bbd85866b4937c
   - at: '2026-07-09T13:10:40+00:00'
     actor: claude-code
@@ -96,17 +73,13 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-s-dna-research-kind-20260709-131041
-    summary: "TestRun tr-tg-s-dna-research-kind-20260709-131041 \u2192 pass"
+    summary: TestRun tr-tg-s-dna-research-kind-20260709-131041 → pass
     outcome: pass
   - at: '2026-07-09T13:10:42+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "PR #8 merged (7/7). Research Kind no DNA: extension Py+TS, CLI dna research,\
-      \ tenancy permissiva, alias gerado (research-research), Reference do sdlc reusado,\
-      \ recall degrada lexical. 3 pesquisas de hoje capturadas como Research reais\
-      \ com fontes \u2014 a resposta declarativa/curada do DNA ao OpenWiki. Concepts\
-      \ doc agent-knowledge criado."
+    summary: 'PR #8 merged (7/7). Research Kind no DNA: extension Py+TS, CLI dna research, tenancy permissiva, alias gerado (research-research), Reference do sdlc reusado, recall degrada lexical. 3 pesquisas de hoje capturadas como Research reais com fontes — a resposta declarativa/curada do DNA ao OpenWiki. Concepts doc agent-knowledge criado.'
   - at: '2026-07-09T13:10:43+00:00'
     actor: claude-code
     type: status_change

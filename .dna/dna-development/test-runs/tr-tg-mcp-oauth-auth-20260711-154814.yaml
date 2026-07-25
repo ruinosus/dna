@@ -9,7 +9,4 @@ spec:
   - Story/s-mcp-oauth-auth
   executed_by: claude-code
   executed_at: '2026-07-11T15:48:14+00:00'
-  notes: "pytest packages/cli/tests/test_mcp_auth.py \u2192 15 passed; real RSA-signed\
-    \ JWTs: acme vs globex tenant-scoped compose_prompt, cross-tenant denied, tenant-less\
-    \ denied, unauthenticated rejected, PRM (RFC 9728) discoverable; bridge unit policy\
-    \ green."
+  notes: 'pytest packages/cli/tests/test_mcp_auth.py → 15 passed; real RSA-signed JWTs: acme vs globex tenant-scoped compose_prompt, cross-tenant denied, tenant-less denied, unauthenticated rejected, PRM (RFC 9728) discoverable; bridge unit policy green.'

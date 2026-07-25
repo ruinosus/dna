@@ -3,10 +3,8 @@ kind: Feature
 metadata:
   name: f-dna-1.0-readiness
 spec:
-  title: "DNA 1.0 readiness \u2014 production adapter, blessed API, public CI, go-public\
-    \ gate"
-  description: First feature tracked inside the DNA repo itself (dogfood since day
-    one). Covers the path from private extracted core to a public 1.0-ready SDK.
+  title: DNA 1.0 readiness — production adapter, blessed API, public CI, go-public gate
+  description: First feature tracked inside the DNA repo itself (dogfood since day one). Covers the path from private extracted core to a public 1.0-ready SDK.
   status: done
   reporter: claude-code
   priority: high

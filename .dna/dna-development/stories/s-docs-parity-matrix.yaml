@@ -3,12 +3,8 @@ kind: Story
 metadata:
   name: s-docs-parity-matrix
 spec:
-  title: "Matriz de paridade Py\u2194TS GERADA do conformance kit / port-surface-parity\
-    \ fixture"
-  description: "Matriz de paridade Py\u2194TS GERADA do conformance kit / port-surface-parity\
-    \ fixture, publicada como p\xE1gina do site (modelo OTel spec-compliance-matrix):\
-    \ linhas=capabilities/Kinds/port-contracts, colunas=Python+TypeScript, legenda\
-    \ +/-/N-A. Prova '1:1 parity' em vez de afirmar. Depende de s-docs-diataxis-site."
+  title: Matriz de paridade Py↔TS GERADA do conformance kit / port-surface-parity fixture
+  description: 'Matriz de paridade Py↔TS GERADA do conformance kit / port-surface-parity fixture, publicada como página do site (modelo OTel spec-compliance-matrix): linhas=capabilities/Kinds/port-contracts, colunas=Python+TypeScript, legenda +/-/N-A. Prova ''1:1 parity'' em vez de afirmar. Depende de s-docs-diataxis-site.'
   status: done
   feature: f-dna-docs
   priority: medium
@@ -18,8 +14,7 @@ spec:
   reporter: claude-code
   business_value: 400
   acceptance_criteria:
-  - text: "p\xE1gina parity-matrix gerada do kit/fixture (n\xE3o hand-kept), no site;\
-      \ regenera no CI; build strict verde; CI 7/7"
+  - text: página parity-matrix gerada do kit/fixture (não hand-kept), no site; regenera no CI; build strict verde; CI 7/7
     done: true
     done_at: '2026-07-09T15:11:06+00:00'
     done_by: story-done-auto
@@ -57,16 +52,13 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-s-docs-parity-matrix-20260709-151104
-    summary: "TestRun tr-tg-s-docs-parity-matrix-20260709-151104 \u2192 pass"
+    summary: TestRun tr-tg-s-docs-parity-matrix-20260709-151104 → pass
     outcome: pass
   - at: '2026-07-09T15:11:06+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "PR #11 merged (10/10). P\xE1gina parity-matrix GERADA da fixture port-surface-parity\
-      \ (149 compartilhados / 39 assimetrias justificadas), estilo OTel, \u2705/\u26A0\
-      \uFE0F/\u2796. Regenera no CI docs-build + guard pytest anti-drift. Prova 1:1\
-      \ parity em vez de afirmar."
+    summary: 'PR #11 merged (10/10). Página parity-matrix GERADA da fixture port-surface-parity (149 compartilhados / 39 assimetrias justificadas), estilo OTel, ✅/⚠️/➖. Regenera no CI docs-build + guard pytest anti-drift. Prova 1:1 parity em vez de afirmar.'
   - at: '2026-07-09T15:11:08+00:00'
     actor: claude-code
     type: status_change

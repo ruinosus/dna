@@ -3,13 +3,7 @@ kind: Issue
 metadata:
   name: i-020-ts-record-tenant-overlay
 spec:
-  description: "TS record-plane tenant overlay merge not applied. In the TS SDK, record-plane\
-    \ reads do not apply the tenant overlay merge: kernel.query(scope, kind, {tenant})\
-    \ returns the base doc; mi._one/_all (sync, filter mi.documents) never see the\
-    \ overlay. Py applies it via query_list_sync. Affects ALL record Kinds (EvalCase,\
-    \ Story, \u2026); surfaced by f-dna-tools-as-data (Tool became record-plane).\
-    \ Fix: TS record query path should merge base+tenant overlay like Py. Unblocks\
-    \ the skipped TS tools-as-data tenant-overlay test."
+  description: 'TS record-plane tenant overlay merge not applied. In the TS SDK, record-plane reads do not apply the tenant overlay merge: kernel.query(scope, kind, {tenant}) returns the base doc; mi._one/_all (sync, filter mi.documents) never see the overlay. Py applies it via query_list_sync. Affects ALL record Kinds (EvalCase, Story, …); surfaced by f-dna-tools-as-data (Tool became record-plane). Fix: TS record query path should merge base+tenant overlay like Py. Unblocks the skipped TS tools-as-data tenant-overlay test.'
   type: enhancement
   severity: medium
   status: open

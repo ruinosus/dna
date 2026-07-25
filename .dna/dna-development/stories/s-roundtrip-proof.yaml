@@ -4,9 +4,7 @@ metadata:
   name: s-roundtrip-proof
 spec:
   title: 'A prova: Circulo A (round-trip interno, fidelidade de campo) ligado ao memory_co'
-  description: "A prova: Circulo A (round-trip interno, fidelidade de campo) ligado\
-    \ ao memory_conformance_suite, e Circulo B (import real de export do Claude via\
-    \ adaptador fino) \u2014 a demo que vende."
+  description: 'A prova: Circulo A (round-trip interno, fidelidade de campo) ligado ao memory_conformance_suite, e Circulo B (import real de export do Claude via adaptador fino) — a demo que vende.'
   status: in-progress
   feature: f-portable-memory
   priority: medium
@@ -16,56 +14,33 @@ spec:
   - testing
   reporter: claude-code
   acceptance_criteria:
-  - text: Dado N Engrams semeados, quando export -> import -> diff semantico dos specs,
-      entao 100% dos campos da secao 2 sobrevivem, x-dna voltam identicos, a cadeia
-      supersede/valid_to e preservada e nao ha duplicatas
+  - text: Dado N Engrams semeados, quando export -> import -> diff semantico dos specs, entao 100% dos campos da secao 2 sobrevivem, x-dna voltam identicos, a cadeia supersede/valid_to e preservada e nao ha duplicatas
     done: true
     done_at: '2026-07-19T20:51:08+00:00'
     done_by: claude-code
-    evidence: commit 29374e5 + TestRun tr-tg-roundtrip-proof-20260719-205050; AC1/AC2
-      pelo caso interchange_round_trip (fidelidade derivada do descritor, 4 mutantes
-      mortos); AC3 alvo em rank 1 com embed-onnx (semantic=True, degraded=False) em
-      corpus de 14; AC4 adaptador com 142 linhas / 80 de codigo
-  - text: Dado o Circulo A, entao esta ligado ao memory_conformance_suite como caso
-      'interchange round-trip'
+    evidence: commit 29374e5 + TestRun tr-tg-roundtrip-proof-20260719-205050; AC1/AC2 pelo caso interchange_round_trip (fidelidade derivada do descritor, 4 mutantes mortos); AC3 alvo em rank 1 com embed-onnx (semantic=True, degraded=False) em corpus de 14; AC4 adaptador com 142 linhas / 80 de codigo
+  - text: Dado o Circulo A, entao esta ligado ao memory_conformance_suite como caso 'interchange round-trip'
     done: true
     done_at: '2026-07-19T20:51:08+00:00'
     done_by: claude-code
-    evidence: commit 29374e5 + TestRun tr-tg-roundtrip-proof-20260719-205050; AC1/AC2
-      pelo caso interchange_round_trip (fidelidade derivada do descritor, 4 mutantes
-      mortos); AC3 alvo em rank 1 com embed-onnx (semantic=True, degraded=False) em
-      corpus de 14; AC4 adaptador com 142 linhas / 80 de codigo
-  - text: Dado um export de memoria do Claude, quando passado pelo adaptador claude-export
-      -> MIF e importado com --as both --personal, entao um recall por PARAFRASE (sem
-      token compartilhado) do fato importado retorna hit no top-3 com embed-onnx
+    evidence: commit 29374e5 + TestRun tr-tg-roundtrip-proof-20260719-205050; AC1/AC2 pelo caso interchange_round_trip (fidelidade derivada do descritor, 4 mutantes mortos); AC3 alvo em rank 1 com embed-onnx (semantic=True, degraded=False) em corpus de 14; AC4 adaptador com 142 linhas / 80 de codigo
+  - text: Dado um export de memoria do Claude, quando passado pelo adaptador claude-export -> MIF e importado com --as both --personal, entao um recall por PARAFRASE (sem token compartilhado) do fato importado retorna hit no top-3 com embed-onnx
     done: true
     done_at: '2026-07-19T20:51:08+00:00'
     done_by: claude-code
-    evidence: commit 29374e5 + TestRun tr-tg-roundtrip-proof-20260719-205050; AC1/AC2
-      pelo caso interchange_round_trip (fidelidade derivada do descritor, 4 mutantes
-      mortos); AC3 alvo em rank 1 com embed-onnx (semantic=True, degraded=False) em
-      corpus de 14; AC4 adaptador com 142 linhas / 80 de codigo
-  - text: Dado o adaptador, entao tem menos de ~150 LOC (a metrica de 'formato novo
-      custa pouco')
+    evidence: commit 29374e5 + TestRun tr-tg-roundtrip-proof-20260719-205050; AC1/AC2 pelo caso interchange_round_trip (fidelidade derivada do descritor, 4 mutantes mortos); AC3 alvo em rank 1 com embed-onnx (semantic=True, degraded=False) em corpus de 14; AC4 adaptador com 142 linhas / 80 de codigo
+  - text: Dado o adaptador, entao tem menos de ~150 LOC (a metrica de 'formato novo custa pouco')
     done: true
     done_at: '2026-07-19T20:51:08+00:00'
     done_by: claude-code
-    evidence: commit 29374e5 + TestRun tr-tg-roundtrip-proof-20260719-205050; AC1/AC2
-      pelo caso interchange_round_trip (fidelidade derivada do descritor, 4 mutantes
-      mortos); AC3 alvo em rank 1 com embed-onnx (semantic=True, degraded=False) em
-      corpus de 14; AC4 adaptador com 142 linhas / 80 de codigo
+    evidence: commit 29374e5 + TestRun tr-tg-roundtrip-proof-20260719-205050; AC1/AC2 pelo caso interchange_round_trip (fidelidade derivada do descritor, 4 mutantes mortos); AC3 alvo em rank 1 com embed-onnx (semantic=True, degraded=False) em corpus de 14; AC4 adaptador com 142 linhas / 80 de codigo
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - text: Circulo A e B verdes na suite; metricas registradas (fidelidade de campo,
-      preservacao bi-temporal, recuperabilidade por parafrase, idempotencia, LOC do
-      adaptador); Circulo C explicitamente fora
+  - text: Circulo A e B verdes na suite; metricas registradas (fidelidade de campo, preservacao bi-temporal, recuperabilidade por parafrase, idempotencia, LOC do adaptador); Circulo C explicitamente fora
     done: true
     done_at: '2026-07-19T20:51:08+00:00'
     done_by: claude-code
-    evidence: commit 29374e5 + TestRun tr-tg-roundtrip-proof-20260719-205050; AC1/AC2
-      pelo caso interchange_round_trip (fidelidade derivada do descritor, 4 mutantes
-      mortos); AC3 alvo em rank 1 com embed-onnx (semantic=True, degraded=False) em
-      corpus de 14; AC4 adaptador com 142 linhas / 80 de codigo
+    evidence: commit 29374e5 + TestRun tr-tg-roundtrip-proof-20260719-205050; AC1/AC2 pelo caso interchange_round_trip (fidelidade derivada do descritor, 4 mutantes mortos); AC3 alvo em rank 1 com embed-onnx (semantic=True, degraded=False) em corpus de 14; AC4 adaptador com 142 linhas / 80 de codigo
   definition_of_done_source: cli-create
   created_at: '2026-07-19T14:26:01+00:00'
   updated_at: '2026-07-19T20:51:08+00:00'
@@ -85,42 +60,28 @@ spec:
     actor: claude-code
     type: decision
     source: cli
-    summary: "Circulo B fica BLOQUEADO aguardando um export de memoria real do Claude.\
-      \ Nao existe amostra no repo nem especificacao do formato no design (so a mencao\
-      \ a Import Tool da Anthropic). Construir o adaptador contra um formato inventado\
-      \ o validaria contra a propria ficcao \u2014 o criterio de aceite (recall por\
-      \ parafrase de um fato vindo do Claude) perderia todo valor probatorio. Founder\
-      \ vai fornecer o arquivo. Circulo A nao depende disso e segue agora."
+    summary: Circulo B fica BLOQUEADO aguardando um export de memoria real do Claude. Nao existe amostra no repo nem especificacao do formato no design (so a mencao a Import Tool da Anthropic). Construir o adaptador contra um formato inventado o validaria contra a propria ficcao — o criterio de aceite (recall por parafrase de um fato vindo do Claude) perderia todo valor probatorio. Founder vai fornecer o arquivo. Circulo A nao depende disso e segue agora.
     commit_ref: 522b6c74b71f40791e4a17b464e914d12c2276a3
   - at: '2026-07-19T20:43:00+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "Metricas do DoD medidas (nao estimadas):\n\nCIRCULO A (caso interchange_round_trip\
-      \ no memory_conformance_suite, requires=always):\n- Fidelidade de campo: 22/22\
-      \ propriedades declaradas do descritor Engram sobrevivem com o MESMO VALOR.\
-      \ A lista de campos e derivada do descritor em tempo de execucao, entao um Kind\
-      \ que ganhe campo faz o caso FALHAR em vez de virar falso verde.\n- Preservacao\
-      \ bi-temporal: valid_from, valid_to e superseded_by_memory preservados.\n- Idempotencia:\
-      \ o primeiro round-trip NORMALIZA (carimba defaults e espelha summary em body);\
-      \ do ciclo 2 em diante e ponto fixo. Asserir spec==back seria falso; asserir\
-      \ nada esconderia crescimento sem limite.\n- Mutacao: 4 mutantes (cofre sem\
-      \ affect, cofre sem surface_count, to_mif sem validUntil assimetrico, id pin\
-      \ removido) \u2014 todos mortos. Duas versoes anteriores das minhas proprias\
-      \ asser\xE7\xF5es SOBREVIVERAM a mutacao e foram reescritas: a checagem de fidelidade\
-      \ testava presenca, nao valor, e o from_mif carimba defaults, entao um campo\
-      \ que parava de ser carregado reaparecia com o default.\n\nCIRCULO B (adaptador\
-      \ claude-export -> MIF):\n- LOC: 142 totais / 80 de codigo real (AC pedia <~150).\n\
-      - Perda de prosa na segmentacao: ZERO (verificado contra o export REAL do founder,\
-      \ 11 unidades; as unicas palavras ausentes do content sao as dos cabecalhos,\
-      \ que vivem em title).\n- Determinismo: ids identicos entre execucoes; id derivado\
-      \ do conteudo, nao do created, entao reimportar um export posterior deduplica\
-      \ em vez de bifurcar.\n- Recuperabilidade por parafrase: alvo em RANK 1 com\
-      \ embed-onnx, semantic=True, degraded=False, em corpus de 14 memorias.\n\nRESSALVA\
-      \ MEDIDA, que muda o valor da AC: 'hit no top-3' NAO discrimina. Com --no-semantic\
-      \ o fato ainda cai em rank 2 \u2014 nao porque o BM25 casou (nao ha palavra\
-      \ em comum) mas porque, sem nada casando, a ordem cai nos desempates de retencao/confianca.\
-      \ Por isso o teste asserta RANK 1, que e o que o plano semantico de fato compra."
+    summary: |-
+      Metricas do DoD medidas (nao estimadas):
+
+      CIRCULO A (caso interchange_round_trip no memory_conformance_suite, requires=always):
+      - Fidelidade de campo: 22/22 propriedades declaradas do descritor Engram sobrevivem com o MESMO VALOR. A lista de campos e derivada do descritor em tempo de execucao, entao um Kind que ganhe campo faz o caso FALHAR em vez de virar falso verde.
+      - Preservacao bi-temporal: valid_from, valid_to e superseded_by_memory preservados.
+      - Idempotencia: o primeiro round-trip NORMALIZA (carimba defaults e espelha summary em body); do ciclo 2 em diante e ponto fixo. Asserir spec==back seria falso; asserir nada esconderia crescimento sem limite.
+      - Mutacao: 4 mutantes (cofre sem affect, cofre sem surface_count, to_mif sem validUntil assimetrico, id pin removido) — todos mortos. Duas versoes anteriores das minhas proprias asserções SOBREVIVERAM a mutacao e foram reescritas: a checagem de fidelidade testava presenca, nao valor, e o from_mif carimba defaults, entao um campo que parava de ser carregado reaparecia com o default.
+
+      CIRCULO B (adaptador claude-export -> MIF):
+      - LOC: 142 totais / 80 de codigo real (AC pedia <~150).
+      - Perda de prosa na segmentacao: ZERO (verificado contra o export REAL do founder, 11 unidades; as unicas palavras ausentes do content sao as dos cabecalhos, que vivem em title).
+      - Determinismo: ids identicos entre execucoes; id derivado do conteudo, nao do created, entao reimportar um export posterior deduplica em vez de bifurcar.
+      - Recuperabilidade por parafrase: alvo em RANK 1 com embed-onnx, semantic=True, degraded=False, em corpus de 14 memorias.
+
+      RESSALVA MEDIDA, que muda o valor da AC: 'hit no top-3' NAO discrimina. Com --no-semantic o fato ainda cai em rank 2 — nao porque o BM25 casou (nao ha palavra em comum) mas porque, sem nada casando, a ordem cai nos desempates de retencao/confianca. Por isso o teste asserta RANK 1, que e o que o plano semantico de fato compra.
     commit_ref: 522b6c74b71f40791e4a17b464e914d12c2276a3
   - at: '2026-07-19T20:50:38+00:00'
     actor: claude-code
@@ -135,7 +96,7 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-roundtrip-proof-20260719-205050
-    summary: "TestRun tr-tg-roundtrip-proof-20260719-205050 \u2192 pass"
+    summary: TestRun tr-tg-roundtrip-proof-20260719-205050 → pass
     outcome: pass
   - at: '2026-07-19T20:51:09+00:00'
     actor: claude-code
@@ -143,10 +104,7 @@ spec:
     source: cli
     marked_ac: 4
     marked_dod: 1
-    evidence: commit 29374e5 + TestRun tr-tg-roundtrip-proof-20260719-205050; AC1/AC2
-      pelo caso interchange_round_trip (fidelidade derivada do descritor, 4 mutantes
-      mortos); AC3 alvo em rank 1 com embed-onnx (semantic=True, degraded=False) em
-      corpus de 14; AC4 adaptador com 142 linhas / 80 de codigo
+    evidence: commit 29374e5 + TestRun tr-tg-roundtrip-proof-20260719-205050; AC1/AC2 pelo caso interchange_round_trip (fidelidade derivada do descritor, 4 mutantes mortos); AC3 alvo em rank 1 com embed-onnx (semantic=True, degraded=False) em corpus de 14; AC4 adaptador com 142 linhas / 80 de codigo
     by: claude-code
   produces:
   - kind: Plan

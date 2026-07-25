@@ -10,5 +10,4 @@ spec:
   executed_by: claude-code
   executed_at: '2026-07-11T15:15:49+00:00'
   evidence:
-  - "PR #64; cliente MCP real via stdio \u2192 compose_prompt(tenant) live + SDLC\
-    \ + mem\xF3ria do mesmo server FastMCP"
+  - 'PR #64; cliente MCP real via stdio → compose_prompt(tenant) live + SDLC + memória do mesmo server FastMCP'

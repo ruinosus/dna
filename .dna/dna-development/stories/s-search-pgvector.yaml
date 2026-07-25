@@ -3,12 +3,8 @@ kind: Story
 metadata:
   name: s-search-pgvector
 spec:
-  title: "Adapter pgvector do RecordSearchProvider (escala) reusando o Postgres do\
-    \ DNA \u2014 p"
-  description: "Adapter pgvector do RecordSearchProvider (escala) reusando o Postgres\
-    \ do DNA \u2014 porta o RRF lib-puro do upstream; mesma interface do sqlite-vec,\
-    \ promove sem trocar contrato; DDL dono via migration contract. Passa o MESMO\
-    \ provider conformance kit. Depende de s-record-search-sqlite."
+  title: Adapter pgvector do RecordSearchProvider (escala) reusando o Postgres do DNA — p
+  description: Adapter pgvector do RecordSearchProvider (escala) reusando o Postgres do DNA — porta o RRF lib-puro do upstream; mesma interface do sqlite-vec, promove sem trocar contrato; DDL dono via migration contract. Passa o MESMO provider conformance kit. Depende de s-record-search-sqlite.
   status: done
   feature: f-dna-search-memory
   priority: medium
@@ -20,8 +16,7 @@ spec:
   reporter: claude-code
   business_value: 400
   acceptance_criteria:
-  - text: PgRecordSearchProvider passa o conformance kit do provider; mesma interface;
-      DDL dono; CI verde (pg job)
+  - text: PgRecordSearchProvider passa o conformance kit do provider; mesma interface; DDL dono; CI verde (pg job)
     done: true
     done_at: '2026-07-09T18:48:25+00:00'
     done_by: story-done-auto
@@ -56,16 +51,7 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: "PgVecRecordSearchProvider implementado: dense (pgvector <=> cosine,\
-      \ IVFFlat) + lexical (tsvector generated col + ts_rank, GIN) + RRF reusado.\
-      \ DDL dono via build_pg_migrations + run_migrations (control table dna_search_migrations,\
-      \ CREATE EXTENSION vector como 1a statement, re-boot no-op). Overlay/tenant-aware\
-      \ espelhando o SqliteVec. Py-primary por design (assimetria justificada no m\xF3\
-      dulo + conformance-kit.md; paridade comportamental via o kit compartilhado +\
-      \ RRF bit-id\xEAntico). Conformance kit (8 casos) + idempot\xEAncia + identity-mismatch\
-      \ em test_pgvector_search_conformance.py, gated no DATABASE_URL. CI postgres\
-      \ job: imagem pgvector/pgvector:pg16 \u2014 rodou de verdade (68 passed). PR\
-      \ #15, todos os checks verdes."
+    summary: 'PgVecRecordSearchProvider implementado: dense (pgvector <=> cosine, IVFFlat) + lexical (tsvector generated col + ts_rank, GIN) + RRF reusado. DDL dono via build_pg_migrations + run_migrations (control table dna_search_migrations, CREATE EXTENSION vector como 1a statement, re-boot no-op). Overlay/tenant-aware espelhando o SqliteVec. Py-primary por design (assimetria justificada no módulo + conformance-kit.md; paridade comportamental via o kit compartilhado + RRF bit-idêntico). Conformance kit (8 casos) + idempotência + identity-mismatch em test_pgvector_search_conformance.py, gated no DATABASE_URL. CI postgres job: imagem pgvector/pgvector:pg16 — rodou de verdade (68 passed). PR #15, todos os checks verdes.'
     commit_ref: f33c2205f5c1e0b0400f036483406b08e26cf99c
   - at: '2026-07-09T18:44:08+00:00'
     actor: claude-code
@@ -86,17 +72,13 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-s-search-pgvector-20260709-184824
-    summary: "TestRun tr-tg-s-search-pgvector-20260709-184824 \u2192 pass"
+    summary: TestRun tr-tg-s-search-pgvector-20260709-184824 → pass
     outcome: pass
   - at: '2026-07-09T18:48:26+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "PR #15 merged. PgVecRecordSearchProvider (escala) reusa Postgres, passa\
-      \ o MESMO conformance kit contra pgvector real no CI (68 passed) \u2014 prova\
-      \ sqlite-vec e pgvector no mesmo contrato. IVFFlat + tsvector/GIN + RRF reusado;\
-      \ DDL dono (CREATE EXTENSION vector 1\xAA stmt); Py-primary justificado (adapter\
-      \ servidor). CI usa pgvector/pgvector:pg16."
+    summary: 'PR #15 merged. PgVecRecordSearchProvider (escala) reusa Postgres, passa o MESMO conformance kit contra pgvector real no CI (68 passed) — prova sqlite-vec e pgvector no mesmo contrato. IVFFlat + tsvector/GIN + RRF reusado; DDL dono (CREATE EXTENSION vector 1ª stmt); Py-primary justificado (adapter servidor). CI usa pgvector/pgvector:pg16.'
   - at: '2026-07-09T18:48:28+00:00'
     actor: claude-code
     type: status_change

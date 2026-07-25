@@ -3,10 +3,9 @@ kind: Reference
 metadata:
   name: ref-langfuse-prompt-mgmt
 spec:
-  title: "Langfuse \u2014 Prompt Management"
+  title: Langfuse — Prompt Management
   kind_of: web
-  summary: Open-source LLM-engineering platform (tracing + prompt management + evals);
-    name+version prompt versioning with deployment labels (production).
+  summary: Open-source LLM-engineering platform (tracing + prompt management + evals); name+version prompt versioning with deployment labels (production).
   key_quotes: []
   cited_by: []
   owner: claude-code

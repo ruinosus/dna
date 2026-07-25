@@ -3,10 +3,8 @@ kind: Feature
 metadata:
   name: f-dna-emitters
 spec:
-  title: "Runtime emitters (DNA \u2192 native artifact)"
-  description: A pluggable EmitterPort/registry that materializes a DNA agent definition
-    into the native artifact of a target runtime. agent-framework is the first target;
-    bedrock/vertex/openai plug in behind the same port.
+  title: Runtime emitters (DNA → native artifact)
+  description: A pluggable EmitterPort/registry that materializes a DNA agent definition into the native artifact of a target runtime. agent-framework is the first target; bedrock/vertex/openai plug in behind the same port.
   status: in-development
   epic: e-dna-portability
   reporter: claude-code

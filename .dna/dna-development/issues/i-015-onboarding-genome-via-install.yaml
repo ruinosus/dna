@@ -3,14 +3,7 @@ kind: Issue
 metadata:
   name: i-015-onboarding-genome-via-install
 spec:
-  description: "Follow-up de s-dna-init-agent-ready: oferecer o Genome de onboarding\
-    \ tamb\xE9m via canal dna install github: (ex.: dna init --from github:owner/repo/path,\
-    \ ou publicar o onboarding-scope como scope instal\xE1vel). Hoje o Genome viaja\
-    \ como package-data do dna-cli e o init projeta as Kinds nos diret\xF3rios de\
-    \ tools; um canal install permitiria vers\xF5es atualizadas do onboarding sem\
-    \ re-release do dna-cli e onboarding customizado por organiza\xE7\xE3o. Sem\xE2\
-    ntica distinta do install atual (que escreve no source .dna/, n\xE3o em proje\xE7\
-    \xF5es .claude/.github/...) \u2014 precisa de design pr\xF3prio."
+  description: 'Follow-up de s-dna-init-agent-ready: oferecer o Genome de onboarding também via canal dna install github: (ex.: dna init --from github:owner/repo/path, ou publicar o onboarding-scope como scope instalável). Hoje o Genome viaja como package-data do dna-cli e o init projeta as Kinds nos diretórios de tools; um canal install permitiria versões atualizadas do onboarding sem re-release do dna-cli e onboarding customizado por organização. Semântica distinta do install atual (que escreve no source .dna/, não em projeções .claude/.github/...) — precisa de design próprio.'
   type: enhancement
   severity: low
   status: resolved
@@ -32,24 +25,18 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: "Design fechado em s-onboarding-genome-install: dna init --from <uri>\
-      \ (github:/local:) = proje\xE7\xE3o com reuso do fetch+scan+validate do install;\
-      \ install continua sendo o canal de board. Resolve \xE9 done-on-merge do PR\
-      \ da story."
+    summary: 'Design fechado em s-onboarding-genome-install: dna init --from <uri> (github:/local:) = projeção com reuso do fetch+scan+validate do install; install continua sendo o canal de board. Resolve é done-on-merge do PR da story.'
   - at: '2026-07-10T20:23:36+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: 'PR #41 (feat/s-onboarding-genome-install) implementa dna init --from;
-      esta issue resolve done-on-merge do PR.'
+    summary: 'PR #41 (feat/s-onboarding-genome-install) implementa dna init --from; esta issue resolve done-on-merge do PR.'
   - at: '2026-07-10T20:58:02+00:00'
     actor: claude-code
     type: status_change
     source: cli
     from: in-progress
     to: resolved
-    summary: "dna init --from shipado no PR #41 (pack distribu\xEDdo via github:/local:,\
-      \ exemplo p\xFAblico examples/onboarding-pack)"
+    summary: 'dna init --from shipado no PR #41 (pack distribuído via github:/local:, exemplo público examples/onboarding-pack)'
   closed_at: '2026-07-10T20:58:02+00:00'
-  resolution: "dna init --from shipado no PR #41 (pack distribu\xEDdo via github:/local:,\
-    \ exemplo p\xFAblico examples/onboarding-pack)"
+  resolution: 'dna init --from shipado no PR #41 (pack distribuído via github:/local:, exemplo público examples/onboarding-pack)'

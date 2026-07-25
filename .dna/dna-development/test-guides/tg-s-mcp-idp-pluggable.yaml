@@ -3,7 +3,7 @@ kind: TestGuide
 metadata:
   name: tg-s-mcp-idp-pluggable
 spec:
-  description: "N-provider IdP + claim\u2192tenant bridge"
+  description: N-provider IdP + claim→tenant bridge
   kind_of_test: integration
   status: active
   steps:

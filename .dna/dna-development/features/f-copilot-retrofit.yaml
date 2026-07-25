@@ -4,12 +4,7 @@ metadata:
   name: f-copilot-retrofit
 spec:
   title: Retrofit foundry-assured + the Agno KB reference app onto the emitter
-  description: "Absorption phase 7 \u2014 validation that the emitter REPRODUCES the\
-    \ two hand-built references: emit foundry's .dna/helpdesk agents + the KB reference\
-    \ app's agents from the Copilot emit, diff against the hand-written backends (converge\
-    \ modulo per-app tool bodies). Closes the loop: the two apps become emitted consumers,\
-    \ single evolution point achieved. Depends on f-copilot-agentframework-target\
-    \ (foundry=MS-AF) + f-mcpfederation-rbac + f-copilot-frontend-scaffold."
+  description: 'Absorption phase 7 — validation that the emitter REPRODUCES the two hand-built references: emit foundry''s .dna/helpdesk agents + the KB reference app''s agents from the Copilot emit, diff against the hand-written backends (converge modulo per-app tool bodies). Closes the loop: the two apps become emitted consumers, single evolution point achieved. Depends on f-copilot-agentframework-target (foundry=MS-AF) + f-mcpfederation-rbac + f-copilot-frontend-scaffold.'
   status: in-development
   epic: e-dna-copilot-absorption
   reporter: claude-code
@@ -34,6 +29,4 @@ spec:
     source: cli
     from: discovery
     to: in-development
-  narrative_line: 'Phase 7 retrofit shipped: 2 reference-shaped Copilot fixtures +
-    17 CONVERGES/PER-APP/GAP validation tests + findings report. Thesis VALIDATED;
-    fixed Agno knowledge= binding, documented MCP RBAC role-floor emission as follow-up.'
+  narrative_line: 'Phase 7 retrofit shipped: 2 reference-shaped Copilot fixtures + 17 CONVERGES/PER-APP/GAP validation tests + findings report. Thesis VALIDATED; fixed Agno knowledge= binding, documented MCP RBAC role-floor emission as follow-up.'

@@ -3,8 +3,7 @@ kind: TestGuide
 metadata:
   name: tg-consumer-lane-memory-key
 spec:
-  description: Verifica que a lane consumidor (WorkOS) alcanca memoria pessoal, na
-    familia propria workos
+  description: Verifica que a lane consumidor (WorkOS) alcanca memoria pessoal, na familia propria workos
   kind_of_test: manual
   status: active
   steps:
@@ -17,13 +16,11 @@ spec:
   - action: sem regressao
     expected: Entra segue personal:<oid>; type google segue personal:google:<sub>
   - action: disjuncao
-    expected: personal:workos:X, personal:google:X e personal:<oid> mutuamente disjuntos
-      para o mesmo X
+    expected: personal:workos:X, personal:google:X e personal:<oid> mutuamente disjuntos para o mesmo X
   - action: act-on-behalf
     expected: subject com forma WorkOS levanta ActOnBehalfUnavailable sem vazar subject
   - action: mutation test
-    expected: reverter o mapa de familia e reverter o carimbo fazem os testes corretos
-      falharem
+    expected: reverter o mapa de familia e reverter o carimbo fazem os testes corretos falharem
   verifies:
   - Story/s-consumer-lane-memory-key
   created_at: '2026-07-19T17:28:35+00:00'

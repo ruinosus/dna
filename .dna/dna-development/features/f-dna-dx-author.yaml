@@ -4,9 +4,7 @@ metadata:
   name: f-dna-dx-author
 spec:
   title: Autorar sem vazar internals
-  description: "Layouts nomeados, scaffolding de novo Kind/scope, e Soul single-file.\
-    \ Reduz o atrito de AUTORAR conte\xFAdo DNA. Fica pra PRs seguintes (stories em\
-    \ todo nesta PR)."
+  description: Layouts nomeados, scaffolding de novo Kind/scope, e Soul single-file. Reduz o atrito de AUTORAR conteúdo DNA. Fica pra PRs seguintes (stories em todo nesta PR).
   status: discovery
   epic: e-dna-dx
   reporter: claude-code

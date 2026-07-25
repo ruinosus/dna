@@ -3,10 +3,9 @@ kind: Reference
 metadata:
   name: ref-ms-agent-framework-declarative
 spec:
-  title: "Microsoft agent-framework \u2014 declarative agents (Learn)"
+  title: Microsoft agent-framework — declarative agents (Learn)
   kind_of: web
-  summary: 'AgentFactory.create_agent_from_yaml loads a declarative PromptAgent (kind:
-    Prompt). Fields: kind/name/displayName/description/instructions/model/tools/inputSchema/outputSchema.'
+  summary: 'AgentFactory.create_agent_from_yaml loads a declarative PromptAgent (kind: Prompt). Fields: kind/name/displayName/description/instructions/model/tools/inputSchema/outputSchema.'
   key_quotes: []
   cited_by: []
   owner: claude-code

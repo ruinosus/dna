@@ -9,6 +9,4 @@ spec:
   - Story/s-mcp-remote-transport
   executed_by: claude-code
   executed_at: '2026-07-11T15:48:07+00:00'
-  notes: "pytest packages/cli/tests/test_mcp_transport.py \u2192 2 passed; a web-style\
-    \ FastMCP Client over an http:// URL reaches all 10 tools + manifest resource\
-    \ and composes live; full CLI suite 474 passed; mkdocs build --strict exit 0."
+  notes: pytest packages/cli/tests/test_mcp_transport.py → 2 passed; a web-style FastMCP Client over an http:// URL reaches all 10 tools + manifest resource and composes live; full CLI suite 474 passed; mkdocs build --strict exit 0.

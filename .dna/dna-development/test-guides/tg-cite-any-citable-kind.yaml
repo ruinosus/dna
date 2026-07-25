@@ -3,13 +3,12 @@ kind: TestGuide
 metadata:
   name: tg-cite-any-citable-kind
 spec:
-  description: 'Product smoke: dna sdlc cite grounds a work item with any citable
-    Kind (the CLI is the product surface).'
+  description: 'Product smoke: dna sdlc cite grounds a work item with any citable Kind (the CLI is the product surface).'
   kind_of_test: smoke
   status: active
   steps:
   - action: 'Run: dna sdlc cite Research/<name> --from ADR/<name>'
-    expected: "CLI prints 'CITED Research/<name> \u2190 ADR/<name>'; exit 0"
+    expected: CLI prints 'CITED Research/<name> ← ADR/<name>'; exit 0
   - action: 'Inspect the cited doc: dna doc show Research <name>'
     expected: spec.cited_by contains 'ADR/<name>' (the back-ref)
   - action: 'Inspect the caller: dna doc show ADR <name>'

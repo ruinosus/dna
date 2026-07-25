@@ -3,15 +3,11 @@ kind: Reference
 metadata:
   name: ref-dna-portability-spike
 spec:
-  title: "DNA\u2194agent-framework portability spike (round-trip byte-equal)"
+  title: DNA↔agent-framework portability spike (round-trip byte-equal)
   kind_of: internal-doc
-  summary: "The ratified spike (foundry PR #123 + comparison.html scorecard) that\
-    \ proved DNA\u2192agent-framework emit: the DNA Kernel composes Soul+Guardrail+delta,\
-    \ the emitter materializes the PromptAgent YAML AgentFactory loads, and the emitted\
-    \ instructions are BYTE-EQUAL to the DNA-composed prompt."
+  summary: 'The ratified spike (foundry PR #123 + comparison.html scorecard) that proved DNA→agent-framework emit: the DNA Kernel composes Soul+Guardrail+delta, the emitter materializes the PromptAgent YAML AgentFactory loads, and the emitted instructions are BYTE-EQUAL to the DNA-composed prompt.'
   key_quotes:
-  - the emitted instructions are byte-equal to the DNA-composed prompt; AF-native
-    and DNA->AF both produce a live agent-framework Agent
+  - the emitted instructions are byte-equal to the DNA-composed prompt; AF-native and DNA->AF both produce a live agent-framework Agent
   cited_by:
   - ADR/adr-dna-pivot-portability
   owner: claude-code

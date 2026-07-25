@@ -10,5 +10,4 @@ spec:
   executed_by: claude-code
   executed_at: '2026-07-11T06:55:26+00:00'
   evidence:
-  - "sa\xEDda sem trailing newlines nos 3 builders Py + TS; test_prompt_trailing_whitespace\
-    \ verde + novos testes travam 'no trailing newline'; CI 11/11"
+  - saída sem trailing newlines nos 3 builders Py + TS; test_prompt_trailing_whitespace verde + novos testes travam 'no trailing newline'; CI 11/11

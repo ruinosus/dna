@@ -38,13 +38,35 @@ logger = logging.getLogger("dna.intel.engine")
 SOURCE_KIND = "IntelSource"
 INSIGHT_KIND = "IntelInsight"
 INSIGHT_API_VERSION = "github.com/ruinosus/dna/intel/v1"
-DEFAULT_SCOPE = "dna-development"
 
 VALID_STATES = ("new", "actioned", "dismissed", "snoozed")
 
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+async def _resolve_scope(kernel: Any, scope: str | None) -> str:
+    """Resolve an explicit ``scope`` or, when omitted, the SOLE scope in the
+    kernel's source.
+
+    The intel engine is a neutral SDK component — it must never guess a
+    branded default (an adopter repo's board scope has an arbitrary name).
+    Mirrors the CLI's own "sole/first scope" convention
+    (``dna_cli._ctx._build_holder_async``), but here it's the ENGINE that
+    resolves it (via ``kernel.list_scopes_async``), so non-CLI callers get
+    the same honesty. Raises ``ValueError`` when resolution is ambiguous (0
+    or 2+ scopes) — an explicit error beats a silently wrong default."""
+    if scope is not None:
+        return scope
+    scopes = await kernel.list_scopes_async()
+    if len(scopes) == 1:
+        return scopes[0]
+    raise ValueError(
+        "intel: no scope= given and the source has "
+        f"{len(scopes)} scope(s) {scopes!r} — cannot pick a default; "
+        "pass scope= explicitly."
+    )
 
 
 def _slug(text: str, *, maxlen: int = 48) -> str:
@@ -127,7 +149,7 @@ async def run_pass(
     kernel: Any,
     source_name: str,
     *,
-    scope: str = DEFAULT_SCOPE,
+    scope: str | None = None,
     analyzer: Analyzer | None = None,
     tenant: str | None = None,
 ) -> PassResult:
@@ -138,9 +160,13 @@ async def run_pass(
     ``threshold``, and persists the survivors as ``IntelInsight`` docs
     (``state='new'``, stamping ``score``, ``source_ref`` and ``created_at``).
 
+    ``scope`` defaults to the kernel's sole scope when omitted (see
+    :func:`_resolve_scope`) — raises ``ValueError`` if that's ambiguous.
+
     Returns a :class:`PassResult`; the suppressed list is kept for auditability
     (it is NOT written). Raises ``LookupError`` if the source doc is absent.
     """
+    scope = await _resolve_scope(kernel, scope)
     analyzer = analyzer or SeedAnalyzer()
 
     raw = await kernel.get_document(scope, SOURCE_KIND, source_name, tenant=tenant)
@@ -522,10 +548,14 @@ async def _record_feedback(
 
 
 async def list_sources(
-    kernel: Any, *, scope: str = DEFAULT_SCOPE, tenant: str | None = None,
+    kernel: Any, *, scope: str | None = None, tenant: str | None = None,
 ) -> list[dict[str, Any]]:
     """List ``IntelSource`` docs in ``scope`` (tenant-aware), projected to the
-    surface the CLI/REST render."""
+    surface the CLI/REST render.
+
+    ``scope`` defaults to the kernel's sole scope when omitted — see
+    :func:`_resolve_scope`."""
+    scope = await _resolve_scope(kernel, scope)
     out: list[dict[str, Any]] = []
     async for row in kernel.query(scope, SOURCE_KIND, tenant=tenant):
         if not isinstance(row, dict):
@@ -548,14 +578,18 @@ async def list_sources(
 async def list_insights(
     kernel: Any,
     *,
-    scope: str = DEFAULT_SCOPE,
+    scope: str | None = None,
     tenant: str | None = None,
     state: str | None = None,
     source_ref: str | None = None,
 ) -> list[dict[str, Any]]:
     """List ``IntelInsight`` docs in ``scope`` (tenant-aware), optionally
     filtered by ``state`` and/or ``source_ref``, projected to the render
-    surface and sorted by score descending."""
+    surface and sorted by score descending.
+
+    ``scope`` defaults to the kernel's sole scope when omitted — see
+    :func:`_resolve_scope`."""
+    scope = await _resolve_scope(kernel, scope)
     out: list[dict[str, Any]] = []
     async for row in kernel.query(scope, INSIGHT_KIND, tenant=tenant):
         if not isinstance(row, dict):
@@ -593,14 +627,18 @@ async def set_insight_state(
     name: str,
     state: str,
     *,
-    scope: str = DEFAULT_SCOPE,
+    scope: str | None = None,
     tenant: str | None = None,
 ) -> dict[str, Any]:
     """The feedback transition: set an insight's ``state`` (new|actioned|
     dismissed|snoozed) via read-modify-write through the kernel.
 
+    ``scope`` defaults to the kernel's sole scope when omitted — see
+    :func:`_resolve_scope`.
+
     Raises ``ValueError`` on an invalid state, ``InsightNotFound`` if the doc is
     absent for this (scope, tenant)."""
+    scope = await _resolve_scope(kernel, scope)
     if state not in VALID_STATES:
         raise ValueError(
             f"invalid state {state!r} — must be one of {', '.join(VALID_STATES)}"
@@ -629,7 +667,7 @@ async def set_insight_state(
 async def feedback_metrics(
     kernel: Any,
     *,
-    scope: str = DEFAULT_SCOPE,
+    scope: str | None = None,
     tenant: str | None = None,
     source_ref: str | None = None,
 ) -> dict[str, Any]:
@@ -638,7 +676,11 @@ async def feedback_metrics(
     Counts ``IntelInsight`` docs per state (optionally for one ``source_ref``)
     and derives the precision (``actioned / (actioned+dismissed)``) and the
     product KPI noise-rate (``dismissed / (actioned+dismissed)``). Faces render
-    this; the arithmetic is the pure :func:`feedback.summarize_states`."""
+    this; the arithmetic is the pure :func:`feedback.summarize_states`.
+
+    ``scope`` defaults to the kernel's sole scope when omitted — see
+    :func:`_resolve_scope`."""
+    scope = await _resolve_scope(kernel, scope)
     counts: dict[str, int] = {s: 0 for s in VALID_STATES}
     async for row in kernel.query(scope, INSIGHT_KIND, tenant=tenant):
         if not isinstance(row, dict):

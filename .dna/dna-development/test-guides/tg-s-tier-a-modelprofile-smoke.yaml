@@ -7,12 +7,9 @@ spec:
   kind_of_test: smoke
   status: active
   steps:
-  - action: 'No Studio, valide: Kind ModelProfile registrado Py+TS; veto hook de prompt-budget
-      no write path (voice/strict veta, chat warna) testado; nunca-hardcode documentado;
-      prosa cobrindo o Kind (guard verde); CI verde'
-    where: "<rota/tela \u2014 ex. /scopes/:scope/...>"
-    expected: "<o que voc\xEA V\xCA quando est\xE1 certo (marque \u2717 S\xD3 se estiver\
-      \ quebrado)>"
+  - action: 'No Studio, valide: Kind ModelProfile registrado Py+TS; veto hook de prompt-budget no write path (voice/strict veta, chat warna) testado; nunca-hardcode documentado; prosa cobrindo o Kind (guard verde); CI verde'
+    where: <rota/tela — ex. /scopes/:scope/...>
+    expected: <o que você VÊ quando está certo (marque ✗ SÓ se estiver quebrado)>
   verifies:
   - Story/s-tier-a-modelprofile
   created_at: '2026-07-09T23:21:16+00:00'

@@ -3,14 +3,7 @@ kind: Kaizen
 metadata:
   name: kz-001-sdlc-expressiveness-gap-dna
 spec:
-  body: "SDLC expressiveness gap: 'dna sdlc cite' resolves Reference/<name> ONLY (it\
-    \ does get_doc('Reference', ref_name)), so a Research/ADR/Epic cannot cite a Research\
-    \ Kind directly \u2014 the decision-grounds-in-research relationship can't live\
-    \ in the structured citation graph without bridging through a synthetic Reference\
-    \ doc (ref-agent-config-landscape-2026). Improvement: teach 'cite' (and uncite)\
-    \ to accept a citable target of any Kind that carries spec.cited_by (Research\
-    \ already has a citation model), or add a first-class 'grounds' link Research\u2194\
-    ADR."
+  body: 'SDLC expressiveness gap: ''dna sdlc cite'' resolves Reference/<name> ONLY (it does get_doc(''Reference'', ref_name)), so a Research/ADR/Epic cannot cite a Research Kind directly — the decision-grounds-in-research relationship can''t live in the structured citation graph without bridging through a synthetic Reference doc (ref-agent-config-landscape-2026). Improvement: teach ''cite'' (and uncite) to accept a citable target of any Kind that carries spec.cited_by (Research already has a citation model), or add a first-class ''grounds'' link Research↔ADR.'
   work_item: Story/s-oas-alignment-research
   status: observed
   actor: claude-code

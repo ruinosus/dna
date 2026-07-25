@@ -8,12 +8,6 @@ spec:
   status: accepted
   story_ref: s-sdlc-git-symbiosis
   journey_phase: plan
-  body: "1) Trailer Work-Item + Co-Authored-By dna-sdlc[bot] (tool identity, decision\
-    \ na timeline); 2) hook prepare-commit-msg versionado + dna sdlc hooks install\
-    \ (core.hooksPath), alimentado por .dna/active-story.txt; 3) volta: story show\
-    \ ganha se\xE7\xE3o Commits via git log --grep do trailer; 4) layout: scope move\
-    \ pra raiz .dna/dna-development (CLI default ./.dna sem env var); 5) docs. Self-aplica\xE7\
-    \xE3o: os commits finais da story j\xE1 saem carimbados pelo pr\xF3prio sistema.\
-    \ Gate: CI 6/6."
+  body: '1) Trailer Work-Item + Co-Authored-By dna-sdlc[bot] (tool identity, decision na timeline); 2) hook prepare-commit-msg versionado + dna sdlc hooks install (core.hooksPath), alimentado por .dna/active-story.txt; 3) volta: story show ganha seção Commits via git log --grep do trailer; 4) layout: scope move pra raiz .dna/dna-development (CLI default ./.dna sem env var); 5) docs. Self-aplicação: os commits finais da story já saem carimbados pelo próprio sistema. Gate: CI 6/6.'
   created_at: '2026-07-08T21:07:27+00:00'
   updated_at: '2026-07-08T21:07:27+00:00'

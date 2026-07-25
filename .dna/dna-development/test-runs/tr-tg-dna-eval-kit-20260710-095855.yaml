@@ -9,13 +9,4 @@ spec:
   - Story/s-dna-eval-kit
   executed_by: claude-code
   executed_at: '2026-07-10T09:58:55+00:00'
-  notes: "Executado offline em examples/hello-genome (2026-07-10). Passo 1: run \u2192\
-    \ '2 passed \xB7 0 failed \xB7 0 errored \xB7 0 skipped (total 2)', exit 0. Passo\
-    \ 2: --save --json \u2192 saved=true, EvalRun run-greeter-suite-20260710-095826\
-    \ gravado em eval-runs/. Passo 3: pin \u2192 'pinned: EvalBaseline/baseline-greeter-suite\
-    \ \u2192 EvalRun/run-greeter-suite-20260710-095826'. Passo 4: re-run --baseline\
-    \ \u2192 '0 regression(s) \xB7 0 improvement(s) \xB7 2 unchanged', exit 0. Passo\
-    \ 5: greeter.yaml Helio\u2192Anonymous \u2192 '\u2717 greeter-identity [failed]\
-    \ \xB7 contains: text does not contain Helio' + '\u2717 REGRESSION: greeter-identity',\
-    \ exit 1 (gate pega a regress\xE3o); revertido. Passo 6: list \u2192 suite, run\
-    \ e baseline listados. Zero LLM, zero rede."
+  notes: 'Executado offline em examples/hello-genome (2026-07-10). Passo 1: run → ''2 passed · 0 failed · 0 errored · 0 skipped (total 2)'', exit 0. Passo 2: --save --json → saved=true, EvalRun run-greeter-suite-20260710-095826 gravado em eval-runs/. Passo 3: pin → ''pinned: EvalBaseline/baseline-greeter-suite → EvalRun/run-greeter-suite-20260710-095826''. Passo 4: re-run --baseline → ''0 regression(s) · 0 improvement(s) · 2 unchanged'', exit 0. Passo 5: greeter.yaml Helio→Anonymous → ''✗ greeter-identity [failed] · contains: text does not contain Helio'' + ''✗ REGRESSION: greeter-identity'', exit 1 (gate pega a regressão); revertido. Passo 6: list → suite, run e baseline listados. Zero LLM, zero rede.'

@@ -24,10 +24,4 @@ spec:
   - Story/s-speckit-mcp-apps-memory-card-t021
   executed_by: claude
   executed_at: '2026-07-21T20:22:27+00:00'
-  notes: "Smoke executado em 2026-07-21, automatizado (chrome headless via playwright;\
-    \ runner humano do Claude.ai fica em t015). Transcript: rendered summaries: ['The\
-    \ memory card renders in every MCP Apps host']; footer: '1 memory \xB7 your context,\
-    \ portable across every AI client'; scope badge: {hidden:false,text:'concierge'};\
-    \ interactive elements in card: 0; recall hits rendered: ['rem-b049b2f75a-the-memory-card-renders-in-every-mcp-app'];\
-    \ empty state: 'No memories yet \u2014 anything you ask DNA to remember will appe\u2026\
-    '; SMOKE PASS."
+  notes: 'Smoke executado em 2026-07-21, automatizado (chrome headless via playwright; runner humano do Claude.ai fica em t015). Transcript: rendered summaries: [''The memory card renders in every MCP Apps host'']; footer: ''1 memory · your context, portable across every AI client''; scope badge: {hidden:false,text:''concierge''}; interactive elements in card: 0; recall hits rendered: [''rem-b049b2f75a-the-memory-card-renders-in-every-mcp-app'']; empty state: ''No memories yet — anything you ask DNA to remember will appe…''; SMOKE PASS.'

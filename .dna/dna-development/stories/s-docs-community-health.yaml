@@ -3,17 +3,8 @@ kind: Story
 metadata:
   name: s-docs-community-health
 spec:
-  title: 'Fechar o GitHub Community Standards checklist: CONTRIBUTING.md (build/test
-    Py+TS'
-  description: "Fechar o GitHub Community Standards checklist: CONTRIBUTING.md (build/test\
-    \ Py+TS, rodar conformance kit, CONTRATO DE PARIDADE Py\u2194TS como gate, dna\
-    \ sdlc workflow, hooks install), SECURITY.md (Private Vulnerability Reporting\
-    \ \u2014 DNA executa config declarada, inje\xE7\xE3o via manifesto \xE9 vetor\
-    \ real; vers\xF5es suportadas), CODE_OF_CONDUCT.md (Contributor Covenant 2.1),\
-    \ CHANGELOG.md (Keep a Changelog + SemVer, se\xE7\xE3o Unreleased), .github/ISSUE_TEMPLATE/\
-    \ (bug + feature como YAML forms + config.yml apontando Discussions), .github/PULL_REQUEST_TEMPLATE.md\
-    \ (checklist: testes, paridade Py\u2194TS, conformance kit, changelog). N\xC3\
-    O tocar README nem docs/ (\xE9 da story do site)."
+  title: 'Fechar o GitHub Community Standards checklist: CONTRIBUTING.md (build/test Py+TS'
+  description: 'Fechar o GitHub Community Standards checklist: CONTRIBUTING.md (build/test Py+TS, rodar conformance kit, CONTRATO DE PARIDADE Py↔TS como gate, dna sdlc workflow, hooks install), SECURITY.md (Private Vulnerability Reporting — DNA executa config declarada, injeção via manifesto é vetor real; versões suportadas), CODE_OF_CONDUCT.md (Contributor Covenant 2.1), CHANGELOG.md (Keep a Changelog + SemVer, seção Unreleased), .github/ISSUE_TEMPLATE/ (bug + feature como YAML forms + config.yml apontando Discussions), .github/PULL_REQUEST_TEMPLATE.md (checklist: testes, paridade Py↔TS, conformance kit, changelog). NÃO tocar README nem docs/ (é da story do site).'
   status: done
   feature: f-dna-docs
   priority: high
@@ -23,9 +14,7 @@ spec:
   reporter: claude-code
   business_value: 500
   acceptance_criteria:
-  - text: GitHub Community Standards 100% verde; SECURITY com PVR; CONTRIBUTING cobre
-      paridade+conformance+CLI; issue forms YAML + PR template; CHANGELOG Keep-a-Changelog;
-      CI 7/7
+  - text: GitHub Community Standards 100% verde; SECURITY com PVR; CONTRIBUTING cobre paridade+conformance+CLI; issue forms YAML + PR template; CHANGELOG Keep-a-Changelog; CI 7/7
     done: true
     done_at: '2026-07-09T14:57:13+00:00'
     done_by: story-done-auto
@@ -54,12 +43,7 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: 'Iniciando build da story de community-health. Li README/AGENTS.md/workflows/brand_guard/research
-      docs. Vou escrever: CONTRIBUTING (build+test Py/TS/CLI, conformance kit dna.testing,
-      contrato de paridade Py<->TS como gate, fluxo dna sdlc), SECURITY (Private Vulnerability
-      Reporting + threat model: manifesto malicioso e vetor de injecao), CODE_OF_CONDUCT
-      (Contributor Covenant 2.1), CHANGELOG (Keep a Changelog + SemVer), issue forms
-      YAML + config, PR template, CODEOWNERS. Hooks instalados no worktree.'
+    summary: 'Iniciando build da story de community-health. Li README/AGENTS.md/workflows/brand_guard/research docs. Vou escrever: CONTRIBUTING (build+test Py/TS/CLI, conformance kit dna.testing, contrato de paridade Py<->TS como gate, fluxo dna sdlc), SECURITY (Private Vulnerability Reporting + threat model: manifesto malicioso e vetor de injecao), CODE_OF_CONDUCT (Contributor Covenant 2.1), CHANGELOG (Keep a Changelog + SemVer), issue forms YAML + config, PR template, CODEOWNERS. Hooks instalados no worktree.'
     commit_ref: 2968ececbcf6b1c347db4db4918978a40419264a
   - at: '2026-07-09T14:05:19+00:00'
     actor: claude-code
@@ -74,7 +58,7 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-s-docs-community-health-20260709-140535
-    summary: "TestRun tr-tg-s-docs-community-health-20260709-140535 \u2192 pass"
+    summary: TestRun tr-tg-s-docs-community-health-20260709-140535 → pass
     outcome: pass
   - at: '2026-07-09T14:57:12+00:00'
     actor: claude-code
@@ -89,16 +73,13 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-s-docs-community-health-20260709-145712
-    summary: "TestRun tr-tg-s-docs-community-health-20260709-145712 \u2192 pass"
+    summary: TestRun tr-tg-s-docs-community-health-20260709-145712 → pass
     outcome: pass
   - at: '2026-07-09T14:57:14+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "PR #9 merged (7/7 p\xF3s-rebase no main desbloqueado). Community Standards:\
-      \ CONTRIBUTING (contrato de paridade + conformance kit + fluxo dna sdlc), SECURITY\
-      \ (PVR + modelo de amea\xE7a de manifesto), CODE_OF_CONDUCT, CHANGELOG, issue\
-      \ forms + PR template + CODEOWNERS."
+    summary: 'PR #9 merged (7/7 pós-rebase no main desbloqueado). Community Standards: CONTRIBUTING (contrato de paridade + conformance kit + fluxo dna sdlc), SECURITY (PVR + modelo de ameaça de manifesto), CODE_OF_CONDUCT, CHANGELOG, issue forms + PR template + CODEOWNERS.'
   - at: '2026-07-09T14:57:15+00:00'
     actor: claude-code
     type: status_change

@@ -3,15 +3,7 @@ kind: Issue
 metadata:
   name: i-006-source-diff-push-base-layer-empty
 spec:
-  description: "dna source diff/push always report 'in sync' on real adapters: SourceSync.digest_manifest()\
-    \ reads load_layer(scope,'tenant','__base__'), but FileSystemSource/SQLite load_layer\
-    \ treat '__base__' as a tenant overlay dir/row (tenants/__base__/scopes/<s> or\
-    \ layer_documents), never the BASE scope docs \u2014 so both sides digest to {}\
-    \ and diff/push are no-ops. Repro: any scope on FS, remove a doc in the copy,\
-    \ 'dna source diff fs://<copy> --scope <s>' \u2192 'in sync (0 diffs)'. Tests\
-    \ pass because test_digest_manifest.py fakes load_layer to return base docs regardless\
-    \ of layer_value. Fix: digest_manifest should read the base layer via load_all\
-    \ (or adapters must map __base__ to base). Found while writing docs cli-tour (s-docs-cli-tour-kinds-prose)."
+  description: 'dna source diff/push always report ''in sync'' on real adapters: SourceSync.digest_manifest() reads load_layer(scope,''tenant'',''__base__''), but FileSystemSource/SQLite load_layer treat ''__base__'' as a tenant overlay dir/row (tenants/__base__/scopes/<s> or layer_documents), never the BASE scope docs — so both sides digest to {} and diff/push are no-ops. Repro: any scope on FS, remove a doc in the copy, ''dna source diff fs://<copy> --scope <s>'' → ''in sync (0 diffs)''. Tests pass because test_digest_manifest.py fakes load_layer to return base docs regardless of layer_value. Fix: digest_manifest should read the base layer via load_all (or adapters must map __base__ to base). Found while writing docs cli-tour (s-docs-cli-tour-kinds-prose).'
   type: bug
   severity: high
   status: resolved
@@ -26,19 +18,7 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: "Fix na s-fix-source-diff-push: digest_manifest agora l\xEA a BASE via\
-      \ load_all (o mesmo caminho do reader/scan normal); tenant expl\xEDcito continua\
-      \ lendo o overlay via load_layer; scope ausente digesta {} (bootstrap de r\xE9\
-      plica). Duas pernas extras achadas pelos testes contra adapters reais: push_scope\
-      \ publica drafts em targets draft-staged (sqlite \u2014 sem isso o doc pushed\
-      \ ficava draft invis\xEDvel e nunca convergia) e _load_bundle_entries passa\
-      \ tenant= como keyword (kw-only no sqlite). Bonus: build_source_from_env do\
-      \ CLI mutilava fs://./x em /x absoluto (netloc descartado) \u2014 outro caminho\
-      \ p/ falso 'in sync', consertado + testado. Fakes des-mascarados (base atr\xE1\
-      s de load_all, load_layer overlay-only), 6 testes red\u2192green contra FS+sqlite\
-      \ reais, caso novo no conformance kit (base_never_served_by_load_layer, 7 adapters),\
-      \ cli-tour atualizado com o transcript real diff\u2192push\u2192re-diff. TestGuide\
-      \ tg-source-diff-push-i006 + TestRun pass."
+    summary: 'Fix na s-fix-source-diff-push: digest_manifest agora lê a BASE via load_all (o mesmo caminho do reader/scan normal); tenant explícito continua lendo o overlay via load_layer; scope ausente digesta {} (bootstrap de réplica). Duas pernas extras achadas pelos testes contra adapters reais: push_scope publica drafts em targets draft-staged (sqlite — sem isso o doc pushed ficava draft invisível e nunca convergia) e _load_bundle_entries passa tenant= como keyword (kw-only no sqlite). Bonus: build_source_from_env do CLI mutilava fs://./x em /x absoluto (netloc descartado) — outro caminho p/ falso ''in sync'', consertado + testado. Fakes des-mascarados (base atrás de load_all, load_layer overlay-only), 6 testes red→green contra FS+sqlite reais, caso novo no conformance kit (base_never_served_by_load_layer, 7 adapters), cli-tour atualizado com o transcript real diff→push→re-diff. TestGuide tg-source-diff-push-i006 + TestRun pass.'
   - at: '2026-07-09T23:46:34+00:00'
     actor: claude-code
     type: status_change

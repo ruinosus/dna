@@ -4,25 +4,20 @@ metadata:
   name: s-pkg-source-scheme
 spec:
   title: pkg:// source scheme for dna.config.yaml
-  description: 'source_from_url / sourceFromUrl resolve pkg://<package>[/<subpath>]
-    to a read-only scope embedded as package-data; Kernel.from_config accepts source:
-    pkg://app.'
+  description: 'source_from_url / sourceFromUrl resolve pkg://<package>[/<subpath>] to a read-only scope embedded as package-data; Kernel.from_config accepts source: pkg://app.'
   status: done
   feature: f-dna-scope-packaging
   owner: claude-code
   acceptance_criteria:
-  - text: 'Given dna.config.yaml with source: pkg://app, When Kernel.from_config()
-      boots, Then the scope embedded in package ''app'' resolves read-only'
+  - text: 'Given dna.config.yaml with source: pkg://app, When Kernel.from_config() boots, Then the scope embedded in package ''app'' resolves read-only'
     done: true
     done_at: '2026-07-11T12:11:20+00:00'
     done_by: story-done-auto
-  - text: Given pkg://app/.dna subpath form, When resolving, Then the declared subpath
-      is used
+  - text: Given pkg://app/.dna subpath form, When resolving, Then the declared subpath is used
     done: true
     done_at: '2026-07-11T12:11:20+00:00'
     done_by: story-done-auto
-  - text: Given a missing package/subpath, When resolving pkg://, Then it fails loud
-      with the supported set
+  - text: Given a missing package/subpath, When resolving pkg://, Then it fails loud with the supported set
     done: true
     done_at: '2026-07-11T12:11:20+00:00'
     done_by: story-done-auto
@@ -63,10 +58,7 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: 'Shipped pkg://<package>[/<subpath>] in source_from_url + sourceFromUrl
-      (read-only FilesystemSource); subpath defaults to .dna. Example dna.config.yaml
-      uses source: pkg://acme_support_bot and Kernel.from_config resolves it end-to-end
-      (test proves it from an empty CWD).'
+    summary: 'Shipped pkg://<package>[/<subpath>] in source_from_url + sourceFromUrl (read-only FilesystemSource); subpath defaults to .dna. Example dna.config.yaml uses source: pkg://acme_support_bot and Kernel.from_config resolves it end-to-end (test proves it from an empty CWD).'
     commit_ref: ae2b359c999461306cc2c682737e0d02111aa1ee
   - at: '2026-07-11T11:14:18+00:00'
     actor: claude-code
@@ -81,14 +73,13 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-scope-as-package-data-20260711-111443
-    summary: "TestRun tr-tg-scope-as-package-data-20260711-111443 \u2192 pass"
+    summary: TestRun tr-tg-scope-as-package-data-20260711-111443 → pass
     outcome: pass
   - at: '2026-07-11T11:16:53+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: 'PR #53 opened. pkg:// scheme shipped + Kernel.from_config resolves it
-      end-to-end.'
+    summary: 'PR #53 opened. pkg:// scheme shipped + Kernel.from_config resolves it end-to-end.'
   - at: '2026-07-11T11:16:56+00:00'
     actor: claude-code
     type: status_change
@@ -108,7 +99,7 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-s-pkg-source-scheme-c-20260711-121117
-    summary: "TestRun tr-tg-s-pkg-source-scheme-c-20260711-121117 \u2192 pass"
+    summary: TestRun tr-tg-s-pkg-source-scheme-c-20260711-121117 → pass
     outcome: pass
   - at: '2026-07-11T12:11:23+00:00'
     actor: claude-code

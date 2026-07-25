@@ -4,9 +4,7 @@ metadata:
   name: f-dna-scope-packaging
 spec:
   title: Ship a scope with your app (package-data resolution)
-  description: "First-class way for a DNA scope to travel with a deployed app \u2014\
-    \ resolve scope as package data (importlib.resources / pkg://), identical from\
-    \ source/wheel/Docker."
+  description: First-class way for a DNA scope to travel with a deployed app — resolve scope as package data (importlib.resources / pkg://), identical from source/wheel/Docker.
   status: in-development
   owner: claude-code
   reporter: claude-code

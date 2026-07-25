@@ -3,11 +3,8 @@ kind: Story
 metadata:
   name: s-intel-operate-tools
 spec:
-  title: "O bra\xE7o 'operar' da vis\xE3o: transformar um insight ACEITO em a\xE7\xE3\
-    o numa ferramenta"
-  description: "O bra\xE7o 'operar' da vis\xE3o: transformar um insight ACEITO em\
-    \ a\xE7\xE3o numa ferramenta existente do usu\xE1rio (GitHub issue/PR-comment,\
-    \ Jira/ADO) via federa\xE7\xE3o MCP \u2014 n\xE3o competir, operar."
+  title: 'O braço ''operar'' da visão: transformar um insight ACEITO em ação numa ferramenta'
+  description: 'O braço ''operar'' da visão: transformar um insight ACEITO em ação numa ferramenta existente do usuário (GitHub issue/PR-comment, Jira/ADO) via federação MCP — não competir, operar.'
   status: todo
   feature: f-dna-cloud-intelligence
   priority: low
@@ -17,15 +14,12 @@ spec:
   reporter: claude-code
   business_value: 400
   acceptance_criteria:
-  - Um insight aceito pode abrir uma issue/PR-comment na ferramenta conectada (opt-in
-    por ferramenta).
-  - "A a\xE7\xE3o carrega o rationale + cita\xE7\xE3o do insight (rastre\xE1vel de\
-    \ volta ao pass)."
-  - "Nada \xE9 escrito em ferramenta externa sem aceite expl\xEDcito do usu\xE1rio\
-    \ (mesmo invariante HITL)."
+  - Um insight aceito pode abrir uma issue/PR-comment na ferramenta conectada (opt-in por ferramenta).
+  - A ação carrega o rationale + citação do insight (rastreável de volta ao pass).
+  - Nada é escrito em ferramenta externa sem aceite explícito do usuário (mesmo invariante HITL).
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - "Ao menos 1 integra\xE7\xE3o real ponta-a-ponta (GitHub) via MCP."
+  - Ao menos 1 integração real ponta-a-ponta (GitHub) via MCP.
   - Opt-in + escopo de credencial documentados.
   definition_of_done_source: cli-create
   created_at: '2026-07-12T13:39:17+00:00'

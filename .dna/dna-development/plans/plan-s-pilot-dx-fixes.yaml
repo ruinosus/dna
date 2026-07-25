@@ -8,9 +8,6 @@ spec:
   status: accepted
   story_ref: s-pilot-dx-fixes
   journey_phase: plan
-  body: "i-014 red\u2192green (match exato de \xEDndice); i-013 strip no reader +\
-    \ sweep de outros bundles; i-012 resolu\xE7\xE3o de scope default (env > Genome/auto-detect\
-    \ > hardcoded) com preced\xEAncia documentada e testes em repo-de-nome-arbitr\xE1\
-    rio. Worktree dna-wt-dxfix; PR via story pr."
+  body: i-014 red→green (match exato de índice); i-013 strip no reader + sweep de outros bundles; i-012 resolução de scope default (env > Genome/auto-detect > hardcoded) com precedência documentada e testes em repo-de-nome-arbitrário. Worktree dna-wt-dxfix; PR via story pr.
   created_at: '2026-07-10T17:11:57+00:00'
   updated_at: '2026-07-10T17:11:57+00:00'

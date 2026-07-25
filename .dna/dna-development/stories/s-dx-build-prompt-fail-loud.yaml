@@ -4,8 +4,7 @@ metadata:
   name: s-dx-build-prompt-fail-loud
 spec:
   title: 'build_prompt fail-loud: raise AgentNotFound em vez de retornar string placeholde'
-  description: 'build_prompt fail-loud: raise AgentNotFound em vez de retornar string
-    placeholder.'
+  description: 'build_prompt fail-loud: raise AgentNotFound em vez de retornar string placeholder.'
   status: done
   feature: f-dna-dx-consume
   priority: high
@@ -14,16 +13,13 @@ spec:
   - sdk
   reporter: claude-code
   acceptance_criteria:
-  - text: build_prompt(agent=X) num agente inexistente LEVANTA AgentNotFound (tipado,
-      exportado no publico dna) em vez de retornar 'Agent X not found'; async + record-plane
-      (prompt_kernel) em paridade; TS throw twin.
+  - text: build_prompt(agent=X) num agente inexistente LEVANTA AgentNotFound (tipado, exportado no publico dna) em vez de retornar 'Agent X not found'; async + record-plane (prompt_kernel) em paridade; TS throw twin.
     done: true
     done_at: '2026-07-11T06:53:55+00:00'
     done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - text: AgentNotFound em Py (LookupError) + TS (Error, .agent); call-sites/testes
-      antigos atualizados; suites Py+TS verdes; CHANGELOG breaking.
+  - text: AgentNotFound em Py (LookupError) + TS (Error, .agent); call-sites/testes antigos atualizados; suites Py+TS verdes; CHANGELOG breaking.
     done: true
     done_at: '2026-07-11T06:53:55+00:00'
     done_by: story-done-auto
@@ -46,11 +42,7 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: 'Implementado: AgentNotFound(LookupError, .agent) em errors.py exportado
-      no dna publico; raise nos 2 builders MI (build/build_async) + prompt_kernel
-      record-plane; TS AgentNotFound(Error,.agent)+throw. Atualizei test_kernel, test_error_handling
-      e test_dx_quickwins (Py) + kernel.test.ts (TS). Full suite Py 2837 pass, TS
-      1375 pass.'
+    summary: 'Implementado: AgentNotFound(LookupError, .agent) em errors.py exportado no dna publico; raise nos 2 builders MI (build/build_async) + prompt_kernel record-plane; TS AgentNotFound(Error,.agent)+throw. Atualizei test_kernel, test_error_handling e test_dx_quickwins (Py) + kernel.test.ts (TS). Full suite Py 2837 pass, TS 1375 pass.'
     commit_ref: 52b7db57f85dbf8b630cbf3f552837f8f8972ae2
   - at: '2026-07-11T06:37:07+00:00'
     actor: claude-code
@@ -87,7 +79,7 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-s-dx-build-prompt-fail-loud-20260711-065512
-    summary: "TestRun tr-tg-s-dx-build-prompt-fail-loud-20260711-065512 \u2192 pass"
+    summary: TestRun tr-tg-s-dx-build-prompt-fail-loud-20260711-065512 → pass
     outcome: pass
   - at: '2026-07-11T06:55:16+00:00'
     actor: claude-code

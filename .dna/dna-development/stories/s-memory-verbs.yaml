@@ -3,15 +3,8 @@ kind: Story
 metadata:
   name: s-memory-verbs
 spec:
-  title: "Mem\xF3ria = Kinds existentes (LessonLearned/Research/Evidence) recall-eados\
-    \ pelo R"
-  description: "Mem\xF3ria = Kinds existentes (LessonLearned/Research/Evidence) recall-eados\
-    \ pelo RecordSearchProvider. Verbos declarativos: remember (write\u2192index),\
-    \ recall (search h\xEDbrido overlay-aware), forget (rebaixa/arquiva bi-temporal,\
-    \ nunca hard-delete), consolidate (opcional, sem LLM no core). Porta o scoring\
-    \ DETERMIN\xCDSTICO puro (ecforia/BM25/decay/encoding-context/CoALA) como extension\
-    \ DNA; bi-temporalidade (valid_from/valid_to j\xE1 no schema). Deixa scribes LLM/schedulers\
-    \ de fora. CLI dna memory. Depende de s-record-search-sqlite."
+  title: Memória = Kinds existentes (LessonLearned/Research/Evidence) recall-eados pelo R
+  description: 'Memória = Kinds existentes (LessonLearned/Research/Evidence) recall-eados pelo RecordSearchProvider. Verbos declarativos: remember (write→index), recall (search híbrido overlay-aware), forget (rebaixa/arquiva bi-temporal, nunca hard-delete), consolidate (opcional, sem LLM no core). Porta o scoring DETERMINÍSTICO puro (ecforia/BM25/decay/encoding-context/CoALA) como extension DNA; bi-temporalidade (valid_from/valid_to já no schema). Deixa scribes LLM/schedulers de fora. CLI dna memory. Depende de s-record-search-sqlite.'
   status: done
   feature: f-dna-search-memory
   priority: medium
@@ -23,9 +16,7 @@ spec:
   reporter: claude-code
   business_value: 500
   acceptance_criteria:
-  - text: "verbos remember/recall/forget/consolidate sobre os Kinds via provider;\
-      \ scoring determin\xEDstico portado (fun\xE7\xF5es puras testadas); bi-temporalidade\
-      \ wired; CLI dna memory; paridade Py\u2194TS; CI verde"
+  - text: verbos remember/recall/forget/consolidate sobre os Kinds via provider; scoring determinístico portado (funções puras testadas); bi-temporalidade wired; CLI dna memory; paridade Py↔TS; CI verde
     done: true
     done_at: '2026-07-09T19:06:39+00:00'
     done_by: story-done-auto
@@ -54,31 +45,13 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: "build: iniciando implementa\xE7\xE3o. Decis\xE3o de local: m\xF3dulo\
-      \ lib puro `dna/memory/` (n\xE3o extension) \u2014 os verbos consomem o kernel\
-      \ + Kinds existentes (LessonLearned/Research/Evidence) sem registrar Kind novo;\
-      \ o scoring \xE9 matem\xE1tica pura. Porto do upstream cognitive layer: ecphory\
-      \ (Lei da Ecforia), retrieval (BM25\xD7recency\xD7affect\xD7surface_damp), decay\
-      \ (Ebbinghaus), encoding_context (stamper determin\xEDstico), memory_type (CoALA).\
-      \ FORA: scribes LLM, schedulers, deep_sleep, workers, holder global, narrador.\
-      \ Verbos: remember/recall/forget/consolidate. CLI dna memory. Paridade TS via\
-      \ fixture JSON compartilhada."
+    summary: 'build: iniciando implementação. Decisão de local: módulo lib puro `dna/memory/` (não extension) — os verbos consomem o kernel + Kinds existentes (LessonLearned/Research/Evidence) sem registrar Kind novo; o scoring é matemática pura. Porto do upstream cognitive layer: ecphory (Lei da Ecforia), retrieval (BM25×recency×affect×surface_damp), decay (Ebbinghaus), encoding_context (stamper determinístico), memory_type (CoALA). FORA: scribes LLM, schedulers, deep_sleep, workers, holder global, narrador. Verbos: remember/recall/forget/consolidate. CLI dna memory. Paridade TS via fixture JSON compartilhada.'
     commit_ref: 52bd7471433619fe7a51e8cfcf3e525acc4fa999
   - at: '2026-07-09T18:53:04+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "build: completo. M\xF3dulo lib puro dna/memory/ (policy/decay/retrieval/ecphory/encoding_context/memory_type\
-      \ + verbs). 4 verbos: remember (write+enrich encoding-context/CoALA/valid_from+index),\
-      \ recall (kernel.search h\xEDbrido, bi-temporal filter via currently_valid,\
-      \ re-score reten\xE7\xE3o Ebbinghaus\xD7affect, reconsolida\xE7\xE3o leve cues+confidence\
-      \ fail-soft), forget (seta valid_to, nunca hard-delete, idempotente+superseded_by),\
-      \ consolidate (decay determin\xEDstico, sem LLM, reporta/soft-arquiva stale).\
-      \ CLI dna memory remember/recall/forget/list/consolidate provado offline (fake\
-      \ embedder). Paridade Py<->TS das fun\xE7\xF5es puras via fixture JSON compartilhada.\
-      \ Gates: sdk-py 2800 pass, sdk-ts 1251 pass+typecheck, cli 262 pass, brand_guard+self-test\
-      \ limpos, mkdocs --strict OK. FORA (documentado): scribes LLM, schedulers, deep_sleep,\
-      \ workers."
+    summary: 'build: completo. Módulo lib puro dna/memory/ (policy/decay/retrieval/ecphory/encoding_context/memory_type + verbs). 4 verbos: remember (write+enrich encoding-context/CoALA/valid_from+index), recall (kernel.search híbrido, bi-temporal filter via currently_valid, re-score retenção Ebbinghaus×affect, reconsolidação leve cues+confidence fail-soft), forget (seta valid_to, nunca hard-delete, idempotente+superseded_by), consolidate (decay determinístico, sem LLM, reporta/soft-arquiva stale). CLI dna memory remember/recall/forget/list/consolidate provado offline (fake embedder). Paridade Py<->TS das funções puras via fixture JSON compartilhada. Gates: sdk-py 2800 pass, sdk-ts 1251 pass+typecheck, cli 262 pass, brand_guard+self-test limpos, mkdocs --strict OK. FORA (documentado): scribes LLM, schedulers, deep_sleep, workers.'
     commit_ref: 52bd7471433619fe7a51e8cfcf3e525acc4fa999
   - at: '2026-07-09T18:54:18+00:00'
     actor: claude-code
@@ -105,17 +78,13 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-s-memory-verbs-20260709-190637
-    summary: "TestRun tr-tg-s-memory-verbs-20260709-190637 \u2192 pass"
+    summary: TestRun tr-tg-s-memory-verbs-20260709-190637 → pass
     outcome: pass
   - at: '2026-07-09T19:06:40+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "PR #16 merged. Verbos remember/recall/forget/consolidate (dna/memory\
-      \ + CLI dna memory) sobre Kinds existentes via provider; scoring determin\xED\
-      stico puro portado (ecforia/BM25/decay/encoding-context/CoALA) SEM scribes LLM/schedulers;\
-      \ bi-temporalidade wired (recall exclui forgotten, forget=valid_to nunca hard-delete);\
-      \ paridade Py\u2194TS por fixture. Ciclo completo provado offline."
+    summary: 'PR #16 merged. Verbos remember/recall/forget/consolidate (dna/memory + CLI dna memory) sobre Kinds existentes via provider; scoring determinístico puro portado (ecforia/BM25/decay/encoding-context/CoALA) SEM scribes LLM/schedulers; bi-temporalidade wired (recall exclui forgotten, forget=valid_to nunca hard-delete); paridade Py↔TS por fixture. Ciclo completo provado offline.'
   - at: '2026-07-09T19:06:41+00:00'
     actor: claude-code
     type: status_change

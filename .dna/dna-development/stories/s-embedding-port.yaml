@@ -3,17 +3,8 @@ kind: Story
 metadata:
   name: s-embedding-port
 spec:
-  title: 'EmbeddingPort (nova porta): embed(texts)->vectors, dims, model_id. Protocol
-    Py +'
-  description: "EmbeddingPort (nova porta): embed(texts)->vectors, dims, model_id.\
-    \ Protocol Py + interface TS (paridade, entra na fixture port-surface-parity).\
-    \ Adapters: (1) FAKE determin\xEDstico hash-based (zero deps ML, o piso que roda\
-    \ no CI/offline default); (2) ONNX all-MiniLM-L6-v2 opt-in \u2014 fastembed(Py)\
-    \ + transformers.js/@huggingface/transformers(TS) rodando o MESMO artefato ONNX\
-    \ fixado por model_id@revision, lazy-download+cache estilo Chroma (nunca no install),\
-    \ paridade por sa\xEDda (cosine ~1). Registro no kernel (kernel.embed facade +\
-    \ register EmbeddingPort). Extras: dna[embed-onnx] / @dna/embed-onnx; core zero-deps-pesadas\
-    \ (teste guard: install default n\xE3o importa onnx/torch)."
+  title: 'EmbeddingPort (nova porta): embed(texts)->vectors, dims, model_id. Protocol Py +'
+  description: 'EmbeddingPort (nova porta): embed(texts)->vectors, dims, model_id. Protocol Py + interface TS (paridade, entra na fixture port-surface-parity). Adapters: (1) FAKE determinístico hash-based (zero deps ML, o piso que roda no CI/offline default); (2) ONNX all-MiniLM-L6-v2 opt-in — fastembed(Py) + transformers.js/@huggingface/transformers(TS) rodando o MESMO artefato ONNX fixado por model_id@revision, lazy-download+cache estilo Chroma (nunca no install), paridade por saída (cosine ~1). Registro no kernel (kernel.embed facade + register EmbeddingPort). Extras: dna[embed-onnx] / @dna/embed-onnx; core zero-deps-pesadas (teste guard: install default não importa onnx/torch).'
   status: done
   feature: f-dna-search-memory
   priority: high
@@ -25,9 +16,7 @@ spec:
   reporter: claude-code
   business_value: 500
   acceptance_criteria:
-  - text: "EmbeddingPort declarado Py+TS + na fixture de paridade; kernel.embed()\
-      \ funciona com o fake no CI offline; adapter ONNX opt-in com paridade Py\u2194\
-      TS por sa\xEDda; core sem deps pesadas (guard); CI verde"
+  - text: EmbeddingPort declarado Py+TS + na fixture de paridade; kernel.embed() funciona com o fake no CI offline; adapter ONNX opt-in com paridade Py↔TS por saída; core sem deps pesadas (guard); CI verde
     done: true
     done_at: '2026-07-09T17:36:32+00:00'
     done_by: story-done-auto
@@ -65,16 +54,13 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-s-embedding-port-20260709-173631
-    summary: "TestRun tr-tg-s-embedding-port-20260709-173631 \u2192 pass"
+    summary: TestRun tr-tg-s-embedding-port-20260709-173631 → pass
     outcome: pass
   - at: '2026-07-09T17:36:33+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "PR #13 merged (10 checks). EmbeddingPort Py+TS; fake determin\xEDstico\
-      \ bit-exato (golden m\xFAtuo = prova cross-lang, zero deps ML, default CI);\
-      \ ONNX all-MiniLM opt-in cosine 1.000000 Py\u2194TS (lazy-download, network-gated);\
-      \ kernel.embed() + registro; guard de import; extras embed-onnx."
+    summary: 'PR #13 merged (10 checks). EmbeddingPort Py+TS; fake determinístico bit-exato (golden mútuo = prova cross-lang, zero deps ML, default CI); ONNX all-MiniLM opt-in cosine 1.000000 Py↔TS (lazy-download, network-gated); kernel.embed() + registro; guard de import; extras embed-onnx.'
   - at: '2026-07-09T17:36:35+00:00'
     actor: claude-code
     type: status_change

@@ -3,19 +3,8 @@ kind: Story
 metadata:
   name: s-dna-eval-kit
 spec:
-  title: "Eval Kinds + runner LOCAL (Tier B, item 2): a autoria de avalia\xE7\xE3\
-    o como dados \u2014 "
-  description: "Eval Kinds + runner LOCAL (Tier B, item 2): a autoria de avalia\xE7\
-    \xE3o como dados \u2014 EvalCase/EvalSuite/EvalRun/Baseline do SDK upstream (extension\
-    \ eval, 752loc; a autoria \xE9 declarativa, o runner l\xE1 era Temporal/servi\xE7\
-    o e N\xC3O viaja). EVOLU\xC7\xC3O: runner S\xCDNCRONO local no SDK ('rode seus\
-    \ evals offline') \u2014 dna eval run <suite> executa os cases contra um alvo\
-    \ plug\xE1vel (callable/porta EvalTargetPort \u2014 o default \xC9 o pr\xF3prio\
-    \ kernel: build_prompt/composi\xE7\xE3o como alvo avali\xE1vel determin\xEDstico;\
-    \ alvo-LLM \xE9 do host, extension point documentado como sempre), grava EvalRun\
-    \ doc com resultados, compara com Baseline. Paridade TS dos Kinds (runner Py-primary\
-    \ justificado se for o caso). Prosa + guards. Evals s\xE3o o assunto do momento\
-    \ em agentic \u2014 e o testkit (TestGuide/TestRun) j\xE1 \xE9 primo no repo."
+  title: 'Eval Kinds + runner LOCAL (Tier B, item 2): a autoria de avaliação como dados — '
+  description: 'Eval Kinds + runner LOCAL (Tier B, item 2): a autoria de avaliação como dados — EvalCase/EvalSuite/EvalRun/Baseline do SDK upstream (extension eval, 752loc; a autoria é declarativa, o runner lá era Temporal/serviço e NÃO viaja). EVOLUÇÃO: runner SÍNCRONO local no SDK (''rode seus evals offline'') — dna eval run <suite> executa os cases contra um alvo plugável (callable/porta EvalTargetPort — o default É o próprio kernel: build_prompt/composição como alvo avaliável determinístico; alvo-LLM é do host, extension point documentado como sempre), grava EvalRun doc com resultados, compara com Baseline. Paridade TS dos Kinds (runner Py-primary justificado se for o caso). Prosa + guards. Evals são o assunto do momento em agentic — e o testkit (TestGuide/TestRun) já é primo no repo.'
   status: done
   feature: f-dna-ecosystem
   priority: high
@@ -27,10 +16,7 @@ spec:
   reporter: claude-code
   business_value: 600
   acceptance_criteria:
-  - text: "Kinds Eval* registrados (descriptor se ratchet permitir) Py+TS; dna eval\
-      \ run executa suite local offline (alvo determin\xEDstico default) e grava EvalRun;\
-      \ baseline compare funciona; alvo-LLM documentado como extension point; smoke\
-      \ real --product; prosa (guard) + reference regen; CI verde"
+  - text: Kinds Eval* registrados (descriptor se ratchet permitir) Py+TS; dna eval run executa suite local offline (alvo determinístico default) e grava EvalRun; baseline compare funciona; alvo-LLM documentado como extension point; smoke real --product; prosa (guard) + reference regen; CI verde
     done: true
     done_at: '2026-07-10T10:11:51+00:00'
     done_by: story-done-auto
@@ -59,36 +45,13 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: "Plano (worktree feat/s-dna-eval-kit): (1) 4 Kinds como DESCRIPTORS (ratchet\
-      \ F3 \u2014 record plane): eval-case/eval-suite/eval-run/eval-baseline em sdk-py\
-      \ dna/extensions/eval/kinds/ + espelho byte-id\xEAntico em sdk-ts src/extensions/eval/kinds/;\
-      \ aliases pela conven\xE7\xE3o gerada (eval-eval-case, \u2026); tenancy permissiva\
-      \ (n\xE3o-declarada, precedente Automation/Evidence). (2) Runner local s\xED\
-      ncrono puro sobre o kernel: dna/extensions/eval/runner.py \u2014 EvalTargetPort\
-      \ (Protocol pequeno), default PromptCompositionTarget (mi.build_prompt determin\xED\
-      stico, offline), apply_checks (contains/regex/equals/length), run_suite \u2192\
-      \ raw EvalRun; compare(run, baseline) \u2192 regressions/improvements/unchanged.\
-      \ (3) CLI dna eval run/list/show/pin. (4) TS: extens\xE3o eval.ts registra os\
-      \ descriptors (Kinds twins); runner Py-primary \u2014 justificativa: execu\xE7\
-      \xE3o \xE9 lib do host, mesmo padr\xE3o Automation (declara\xE7\xE3o viaja,\
-      \ execu\xE7\xE3o n\xE3o). (5) Prosa: fam\xEDlia Evaluation no builtin-kinds.md\
-      \ + guides/evaluating-agents.md (inclui extension point LLM ~15 linhas); coverage\
-      \ guard sem allowlist nova. (6) Regen reference (kinds+cli+parity). (7) Smoke\
-      \ real offline no hello-genome (suite\u2192run\u2192pin\u2192re-run vs baseline)\
-      \ + TestGuide --product + TestRun."
+    summary: 'Plano (worktree feat/s-dna-eval-kit): (1) 4 Kinds como DESCRIPTORS (ratchet F3 — record plane): eval-case/eval-suite/eval-run/eval-baseline em sdk-py dna/extensions/eval/kinds/ + espelho byte-idêntico em sdk-ts src/extensions/eval/kinds/; aliases pela convenção gerada (eval-eval-case, …); tenancy permissiva (não-declarada, precedente Automation/Evidence). (2) Runner local síncrono puro sobre o kernel: dna/extensions/eval/runner.py — EvalTargetPort (Protocol pequeno), default PromptCompositionTarget (mi.build_prompt determinístico, offline), apply_checks (contains/regex/equals/length), run_suite → raw EvalRun; compare(run, baseline) → regressions/improvements/unchanged. (3) CLI dna eval run/list/show/pin. (4) TS: extensão eval.ts registra os descriptors (Kinds twins); runner Py-primary — justificativa: execução é lib do host, mesmo padrão Automation (declaração viaja, execução não). (5) Prosa: família Evaluation no builtin-kinds.md + guides/evaluating-agents.md (inclui extension point LLM ~15 linhas); coverage guard sem allowlist nova. (6) Regen reference (kinds+cli+parity). (7) Smoke real offline no hello-genome (suite→run→pin→re-run vs baseline) + TestGuide --product + TestRun.'
     commit_ref: ddd27e1f8b3bbdc2b0e1dbbcb15b6e6f5e273c38
   - at: '2026-07-10T09:57:31+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "Build conclu\xEDdo nos 4 slices (sdk-py 91be9b0, sdk-ts 34966bd, cli\
-      \ 4ef3fe1, docs+example): 4 Kinds como descriptors byte-id\xEAnticos Py\u2194\
-      TS (aliases gerados eval-eval-*, schemas estritos, tenancy permissiva), runner\
-      \ puro offline (PromptCompositionTarget default + EvalTargetPort p/ host), CLI\
-      \ dna eval run/list/show/pin com gate de regress\xE3o (exit 1 S\xD3 em regress\xE3\
-      o quando --baseline). Gates locais: sdk-py 2925 passed, sdk-ts 1318 pass + typecheck,\
-      \ cli 296 passed, brand+coverage guards clean, reference regen (drift zero),\
-      \ mkdocs --strict verde. Agora: smoke real --product no hello-genome + TestGuide/TestRun."
+    summary: 'Build concluído nos 4 slices (sdk-py 91be9b0, sdk-ts 34966bd, cli 4ef3fe1, docs+example): 4 Kinds como descriptors byte-idênticos Py↔TS (aliases gerados eval-eval-*, schemas estritos, tenancy permissiva), runner puro offline (PromptCompositionTarget default + EvalTargetPort p/ host), CLI dna eval run/list/show/pin com gate de regressão (exit 1 SÓ em regressão quando --baseline). Gates locais: sdk-py 2925 passed, sdk-ts 1318 pass + typecheck, cli 296 passed, brand+coverage guards clean, reference regen (drift zero), mkdocs --strict verde. Agora: smoke real --product no hello-genome + TestGuide/TestRun.'
     commit_ref: 84d2e41d6b563439e8916359d9a3bdf1907c7c40
   - at: '2026-07-10T09:58:03+00:00'
     actor: claude-code
@@ -103,7 +66,7 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-dna-eval-kit-20260710-095855
-    summary: "TestRun tr-tg-dna-eval-kit-20260710-095855 \u2192 pass"
+    summary: TestRun tr-tg-dna-eval-kit-20260710-095855 → pass
     outcome: pass
   - at: '2026-07-10T09:59:47+00:00'
     actor: claude-code
@@ -115,15 +78,7 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: "Smoke real --product executado (tg-dna-eval-kit \u2192 TestRun tr-tg-dna-eval-kit-20260710-095855\
-      \ PASS): hello-genome offline \u2014 run (2 passed, exit 0) \u2192 --save (EvalRun\
-      \ run-greeter-suite-20260710-095826 em eval-runs/) \u2192 pin (EvalBaseline/baseline-greeter-suite)\
-      \ \u2192 re-run --baseline (0 regressions, exit 0) \u2192 quebra proposital\
-      \ do greeter (Helio\u2192Anonymous) \u2192 '\u2717 REGRESSION: greeter-identity',\
-      \ exit 1 \u2192 revertido \u2192 list mostra suite/run/baseline. PR aberto via\
-      \ story pr: https://github.com/ruinosus/dna/pull/27 (base main). 9 checks: 8\
-      \ verdes na primeira leva, aguardando sdk-py. Story fica em review at\xE9 o\
-      \ merge (n\xE3o mergeio \u2014 gate do chamador)."
+    summary: 'Smoke real --product executado (tg-dna-eval-kit → TestRun tr-tg-dna-eval-kit-20260710-095855 PASS): hello-genome offline — run (2 passed, exit 0) → --save (EvalRun run-greeter-suite-20260710-095826 em eval-runs/) → pin (EvalBaseline/baseline-greeter-suite) → re-run --baseline (0 regressions, exit 0) → quebra proposital do greeter (Helio→Anonymous) → ''✗ REGRESSION: greeter-identity'', exit 1 → revertido → list mostra suite/run/baseline. PR aberto via story pr: https://github.com/ruinosus/dna/pull/27 (base main). 9 checks: 8 verdes na primeira leva, aguardando sdk-py. Story fica em review até o merge (não mergeio — gate do chamador).'
     commit_ref: 187c7cc2b022317f56d5590161ddf22084b35508
   - at: '2026-07-10T10:03:29+00:00'
     actor: claude-code
@@ -135,21 +90,13 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: "CI do PR #27 100% verde: sdk-py (2m32s), sdk-ts, cli, postgres, brand-guard,\
-      \ gitleaks, commit-emails, docs-build (drift+coverage guards), docs-links \u2014\
-      \ 9/9 pass (deploy = skipping, s\xF3 roda no main). Pronto pra merge; story\
-      \ em review aguardando."
+    summary: 'CI do PR #27 100% verde: sdk-py (2m32s), sdk-ts, cli, postgres, brand-guard, gitleaks, commit-emails, docs-build (drift+coverage guards), docs-links — 9/9 pass (deploy = skipping, só roda no main). Pronto pra merge; story em review aguardando.'
     commit_ref: f35d7eb0a3536f54c535e8b93c24552086d2b31f
   - at: '2026-07-10T10:11:55+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "PR #27 merged (9/9; TestGuide --product com smoke real incluindo regress\xE3\
-      o de verdade capturada exit 1). 4 Kinds descriptors byte-par (EvalCase/Suite/Run/EvalBaseline);\
-      \ runner local s\xEDncrono com EvalTargetPort (default = kernel como sistema\
-      \ avali\xE1vel); compare com exit codes CI-friendly (regress\xE3o-only com baseline);\
-      \ dna eval run/list/show/pin; subset Temporal/judge-LLM cortado com nota honesta;\
-      \ runner TS Py-primary justificado (descriptors = contrato cross-lang)."
+    summary: 'PR #27 merged (9/9; TestGuide --product com smoke real incluindo regressão de verdade capturada exit 1). 4 Kinds descriptors byte-par (EvalCase/Suite/Run/EvalBaseline); runner local síncrono com EvalTargetPort (default = kernel como sistema avaliável); compare com exit codes CI-friendly (regressão-only com baseline); dna eval run/list/show/pin; subset Temporal/judge-LLM cortado com nota honesta; runner TS Py-primary justificado (descriptors = contrato cross-lang).'
   - at: '2026-07-10T10:11:57+00:00'
     actor: claude-code
     type: status_change

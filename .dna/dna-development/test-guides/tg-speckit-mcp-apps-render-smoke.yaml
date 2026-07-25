@@ -3,26 +3,18 @@ kind: TestGuide
 metadata:
   name: tg-speckit-mcp-apps-render-smoke
 spec:
-  description: "Smoke de produto do card de mem\xF3ria MCP Apps (lado SDK): o card\
-    \ renderiza DE VERDADE num host real (basic-host oficial do ext-apps). Roteiro\
-    \ do quickstart \xA73. NOTA: executado de forma automatizada (chrome headless\
-    \ via playwright) com asser\xE7\xF5es no DOM do card; a aceita\xE7\xE3o HUMANA\
-    \ final (custom connector no Claude.ai, fundador) \xE9 a story t015 e continua\
-    \ aberta."
+  description: 'Smoke de produto do card de memória MCP Apps (lado SDK): o card renderiza DE VERDADE num host real (basic-host oficial do ext-apps). Roteiro do quickstart §3. NOTA: executado de forma automatizada (chrome headless via playwright) com asserções no DOM do card; a aceitação HUMANA final (custom connector no Claude.ai, fundador) é a story t015 e continua aberta.'
   kind_of_test: smoke
   status: active
   steps:
-  - action: "subir dna mcp serve --transport http --port 3001 com um .dna semeado\
-      \ (1 mem\xF3ria)"
-    expected: "initialize responde com a extens\xE3o io.modelcontextprotocol/ui anunciada"
+  - action: subir dna mcp serve --transport http --port 3001 com um .dna semeado (1 memória)
+    expected: initialize responde com a extensão io.modelcontextprotocol/ui anunciada
   - action: abrir o basic-host (localhost:8080), selecionar list_memories, Call Tool
-    expected: "o card ui://dna/memory-list renderiza no iframe sandbox com a mem\xF3\
-      ria semeada, footer '1 memory', badge do scope; ZERO elementos interativos (s\xF3\
-      \ leitura)"
-  - action: "chamar recall com query que casa a mem\xF3ria"
+    expected: o card ui://dna/memory-list renderiza no iframe sandbox com a memória semeada, footer '1 memory', badge do scope; ZERO elementos interativos (só leitura)
+  - action: chamar recall com query que casa a memória
     expected: o MESMO card renderiza os hits
-  - action: "forget na mem\xF3ria semeada e list_memories de novo"
-    expected: "empty state honesto 'No memories yet\u2026'"
+  - action: forget na memória semeada e list_memories de novo
+    expected: empty state honesto 'No memories yet…'
   verifies:
   - Story/s-speckit-mcp-apps-memory-card-t001
   - Story/s-speckit-mcp-apps-memory-card-t002

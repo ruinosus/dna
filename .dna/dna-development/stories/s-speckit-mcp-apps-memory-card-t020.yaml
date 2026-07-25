@@ -3,10 +3,8 @@ kind: Story
 metadata:
   name: s-speckit-mcp-apps-memory-card-t020
 spec:
-  description: "[US3] Teste: `content` textual de `list_memories`/`recall` byte-id\xEA\
-    ntico \xE0 baseline de T005 num cliente sem a extens\xE3o, em `packages/cli/tests/test_mcp_apps.py`"
-  title: "[US3] Teste: `content` textual de `list_memories`/`recall` byte-id\xEAntico\
-    \ \xE0 basel"
+  description: '[US3] Teste: `content` textual de `list_memories`/`recall` byte-idêntico à baseline de T005 num cliente sem a extensão, em `packages/cli/tests/test_mcp_apps.py`'
+  title: '[US3] Teste: `content` textual de `list_memories`/`recall` byte-idêntico à basel'
   status: done
   feature: f-copilot-mcp-apps
   labels:
@@ -47,9 +45,7 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: "T020 no commit 4230268: degrada\xE7\xE3o US3 travada \u2014 os dois\
-      \ tools byte-id\xEAnticos \xE0 baseline de T005 num cliente sem a extens\xE3\
-      o; content autossuficiente (json == structured_content)."
+    summary: 'T020 no commit 4230268: degradação US3 travada — os dois tools byte-idênticos à baseline de T005 num cliente sem a extensão; content autossuficiente (json == structured_content).'
     commit_ref: 423026831b497b9fa8e39f3021268c436c667ac5
   - at: '2026-07-21T20:13:50+00:00'
     actor: claude-code
@@ -64,7 +60,7 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-speckit-mcp-apps-sdk-20260721-201420
-    summary: "TestRun tr-tg-speckit-mcp-apps-sdk-20260721-201420 \u2192 pass"
+    summary: TestRun tr-tg-speckit-mcp-apps-sdk-20260721-201420 → pass
     outcome: pass
   - at: '2026-07-21T20:22:04+00:00'
     actor: claude-code
@@ -79,7 +75,7 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-speckit-mcp-apps-render-smoke-20260721-202227
-    summary: "TestRun tr-tg-speckit-mcp-apps-render-smoke-20260721-202227 \u2192 pass"
+    summary: TestRun tr-tg-speckit-mcp-apps-render-smoke-20260721-202227 → pass
     outcome: pass
   - at: '2026-07-21T20:28:42+00:00'
     actor: claude-code
@@ -88,6 +84,5 @@ spec:
     from: in-progress
     to: done
     commit_ref: '4230268'
-    summary: "degrada\xE7\xE3o US3 travada: bytes id\xEAnticos \xE0 baseline num cliente\
-      \ sem a extens\xE3o"
+    summary: 'degradação US3 travada: bytes idênticos à baseline num cliente sem a extensão'
   closed_at: '2026-07-21T20:28:32+00:00'

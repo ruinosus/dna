@@ -4,10 +4,7 @@ metadata:
   name: e-dna-dx
 spec:
   title: DNA developer experience
-  description: "Make consuming, configuring and authoring DNA trivial. Diagn\xF3stico\
-    \ ancorado no consumidor real (foundry apps/backend/app/agents/prompts.py, 166\
-    \ linhas de plumbing defensivo): fail-loud prompt building, output limpo, load_prompts,\
-    \ dna.config.yaml. Dogfood do pr\xF3prio board (dna sdlc)."
+  description: 'Make consuming, configuring and authoring DNA trivial. Diagnóstico ancorado no consumidor real (foundry apps/backend/app/agents/prompts.py, 166 linhas de plumbing defensivo): fail-loud prompt building, output limpo, load_prompts, dna.config.yaml. Dogfood do próprio board (dna sdlc).'
   status: done
   reporter: claude-code
   priority: high

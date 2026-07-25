@@ -4,25 +4,20 @@ metadata:
   name: s-scope-as-package-data
 spec:
   title: Resolve scope from package data via anchor
-  description: load_prompts gains anchor= to resolve a scope embedded as package-data
-    (importlib.resources); TS twin resolves relative to the module.
+  description: load_prompts gains anchor= to resolve a scope embedded as package-data (importlib.resources); TS twin resolves relative to the module.
   status: done
   feature: f-dna-scope-packaging
   owner: claude-code
   acceptance_criteria:
-  - text: Given a package that embeds a scope as package-data, When load_prompts(scope,
-      anchor='pkg') is called from a different CWD, Then the scope resolves without
-      path navigation or the file being in cwd
+  - text: Given a package that embeds a scope as package-data, When load_prompts(scope, anchor='pkg') is called from a different CWD, Then the scope resolves without path navigation or the file being in cwd
     done: true
     done_at: '2026-07-11T12:11:03+00:00'
     done_by: story-done-auto
-  - text: Given base_dir/DNA_BASE_DIR/anchor all set, When resolving, Then precedence
-      is base_dir > DNA_BASE_DIR > anchor > default .dna
+  - text: Given base_dir/DNA_BASE_DIR/anchor all set, When resolving, Then precedence is base_dir > DNA_BASE_DIR > anchor > default .dna
     done: true
     done_at: '2026-07-11T12:11:03+00:00'
     done_by: story-done-auto
-  - text: Given anchor points to a missing package/subpath, When resolving, Then it
-      fails loud with a didactic message
+  - text: Given anchor points to a missing package/subpath, When resolving, Then it fails loud with a didactic message
     done: true
     done_at: '2026-07-11T12:11:03+00:00'
     done_by: story-done-auto
@@ -63,11 +58,7 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: 'Shipped the anchor resolver: new dna.package_scope (Py) + package-scope.ts
-      (TS), load_prompts(scope, *, anchor=) + loadPrompts(scope, {anchor}). Precedence
-      base_dir > DNA_BASE_DIR > anchor > .dna in one helper. Fail-loud PackageScopeNotFound
-      with packaging-oriented messages. Exported anchor_scopes_root/PackageScopeNotFound
-      in both SDKs.'
+    summary: 'Shipped the anchor resolver: new dna.package_scope (Py) + package-scope.ts (TS), load_prompts(scope, *, anchor=) + loadPrompts(scope, {anchor}). Precedence base_dir > DNA_BASE_DIR > anchor > .dna in one helper. Fail-loud PackageScopeNotFound with packaging-oriented messages. Exported anchor_scopes_root/PackageScopeNotFound in both SDKs.'
     commit_ref: ae2b359c999461306cc2c682737e0d02111aa1ee
   - at: '2026-07-11T11:14:17+00:00'
     actor: claude-code
@@ -82,14 +73,13 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-scope-as-package-data-20260711-111443
-    summary: "TestRun tr-tg-scope-as-package-data-20260711-111443 \u2192 pass"
+    summary: TestRun tr-tg-scope-as-package-data-20260711-111443 → pass
     outcome: pass
   - at: '2026-07-11T11:16:48+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: 'PR #53 opened (https://github.com/ruinosus/dna/pull/53). anchor resolver
-      + package-data shipped, tests + docs green.'
+    summary: 'PR #53 opened (https://github.com/ruinosus/dna/pull/53). anchor resolver + package-data shipped, tests + docs green.'
   - at: '2026-07-11T11:16:51+00:00'
     actor: claude-code
     type: status_change
@@ -109,7 +99,7 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-s-scope-as-package-data-c-20260711-121059
-    summary: "TestRun tr-tg-s-scope-as-package-data-c-20260711-121059 \u2192 pass"
+    summary: TestRun tr-tg-s-scope-as-package-data-c-20260711-121059 → pass
     outcome: pass
   - at: '2026-07-11T12:11:06+00:00'
     actor: claude-code

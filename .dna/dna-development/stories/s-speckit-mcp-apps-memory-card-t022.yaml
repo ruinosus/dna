@@ -3,10 +3,8 @@ kind: Story
 metadata:
   name: s-speckit-mcp-apps-memory-card-t022
 spec:
-  description: "Entrada de CHANGELOG.md do lado SDK (sem nenhuma men\xE7\xE3o a trabalho\
-    \ futuro \u2014 regra \xA73; futuro vive em i-060/i-061/i-062)"
-  title: "Entrada de CHANGELOG.md do lado SDK (sem nenhuma men\xE7\xE3o a trabalho\
-    \ futuro \u2014 regr"
+  description: Entrada de CHANGELOG.md do lado SDK (sem nenhuma menção a trabalho futuro — regra §3; futuro vive em i-060/i-061/i-062)
+  title: Entrada de CHANGELOG.md do lado SDK (sem nenhuma menção a trabalho futuro — regr
   status: done
   feature: f-copilot-mcp-apps
   labels:
@@ -32,9 +30,7 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: "T022 no commit ee11c11: entrada Unreleased no CHANGELOG.md no estilo\
-      \ da casa \u2014 tr\xEAs blocos (modelo final, zero regress\xE3o, regra \xA7\
-      3 como teste); nenhuma men\xE7\xE3o a trabalho futuro (futuro vive em i-060/i-061/i-062)."
+    summary: 'T022 no commit ee11c11: entrada Unreleased no CHANGELOG.md no estilo da casa — três blocos (modelo final, zero regressão, regra §3 como teste); nenhuma menção a trabalho futuro (futuro vive em i-060/i-061/i-062).'
     commit_ref: ee11c11a89e2282556416387fdff80abc96a8136
   - at: '2026-07-21T20:29:13+00:00'
     actor: claude-code
@@ -43,5 +39,5 @@ spec:
     from: in-progress
     to: done
     commit_ref: ee11c11
-    summary: "CHANGELOG Unreleased no estilo da casa, sem men\xE7\xE3o a futuro"
+    summary: CHANGELOG Unreleased no estilo da casa, sem menção a futuro
   closed_at: '2026-07-21T20:29:04+00:00'

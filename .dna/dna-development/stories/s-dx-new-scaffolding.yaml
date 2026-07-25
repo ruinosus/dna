@@ -20,7 +20,7 @@ spec:
     done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - text: "Design + impl + testes; docs. (PR futura \u2014 nao nesta.)"
+  - text: Design + impl + testes; docs. (PR futura — nao nesta.)
     done: true
     done_at: '2026-07-11T10:14:12+00:00'
     done_by: story-done-auto
@@ -57,13 +57,13 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-s-dx-new-scaffolding-20260711-072910
-    summary: "TestRun tr-tg-s-dx-new-scaffolding-20260711-072910 \u2192 pass"
+    summary: TestRun tr-tg-s-dx-new-scaffolding-20260711-072910 → pass
     outcome: pass
   - at: '2026-07-11T07:31:31+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "Coberta pela PR #49 (author DX \u2014 3 stories numa PR coesa). https://github.com/ruinosus/dna/pull/49"
+    summary: 'Coberta pela PR #49 (author DX — 3 stories numa PR coesa). https://github.com/ruinosus/dna/pull/49'
   - at: '2026-07-11T07:31:33+00:00'
     actor: claude-code
     type: status_change
@@ -83,7 +83,7 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-s-dx-new-scaffolding-close-20260711-101409
-    summary: "TestRun tr-tg-s-dx-new-scaffolding-close-20260711-101409 \u2192 pass"
+    summary: TestRun tr-tg-s-dx-new-scaffolding-close-20260711-101409 → pass
     outcome: pass
   - at: '2026-07-11T10:14:14+00:00'
     actor: claude-code

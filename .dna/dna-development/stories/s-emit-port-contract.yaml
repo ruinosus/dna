@@ -3,13 +3,8 @@ kind: Story
 metadata:
   name: s-emit-port-contract
 spec:
-  title: Elevar o EmitterPort a porta de primeira classe DOCUMENTADA (ao lado dos
-    5 ports
-  description: "Elevar o EmitterPort a porta de primeira classe DOCUMENTADA (ao lado\
-    \ dos 5 ports do kernel): protocolo/ABC expl\xEDcito, contrato do de-para (build_emit_context\
-    \ \u2192 emit(ctx) \u2192 artefato), guia de 'como escrever um emissor', e a garantia\
-    \ byte-equal do instruction como invariante do contrato. Os 3 targets (agent-framework/bedrock/vertex)\
-    \ j\xE1 plugam; falta formalizar o contrato."
+  title: Elevar o EmitterPort a porta de primeira classe DOCUMENTADA (ao lado dos 5 ports
+  description: 'Elevar o EmitterPort a porta de primeira classe DOCUMENTADA (ao lado dos 5 ports do kernel): protocolo/ABC explícito, contrato do de-para (build_emit_context → emit(ctx) → artefato), guia de ''como escrever um emissor'', e a garantia byte-equal do instruction como invariante do contrato. Os 3 targets (agent-framework/bedrock/vertex) já plugam; falta formalizar o contrato.'
   status: done
   feature: f-dna-emitters
   priority: medium
@@ -18,7 +13,7 @@ spec:
   - docs
   reporter: claude-code
   acceptance_criteria:
-  - text: "EmitterPort \xE9 protocolo/ABC documentado com o contrato expl\xEDcito"
+  - text: EmitterPort é protocolo/ABC documentado com o contrato explícito
     done: true
     done_at: '2026-07-11T17:21:19+00:00'
     done_by: story-done-auto
@@ -28,8 +23,7 @@ spec:
     done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - text: "docs + paridade Py/TS do protocolo; novo target pluga s\xF3 implementando\
-      \ o contrato"
+  - text: docs + paridade Py/TS do protocolo; novo target pluga só implementando o contrato
     done: true
     done_at: '2026-07-11T17:21:19+00:00'
     done_by: story-done-auto
@@ -52,15 +46,7 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: "Contrato formal do EmitterPort + invariante byte-equal como m\xE9todo\
-      \ inherit\xE1vel (extract_instructions), rodado por um teste gen\xE9rico sobre\
-      \ available_targets(). Mecanismo de scaffold p/ code-first: ScaffoldEmitter\
-      \ base + biblioteca {framework \xD7 caso} em emit/scaffolds/<fw>/<caso>.py.tmpl\
-      \ + select_scaffold(framework, ctx) classificando por sinais do DNA (sem tools\u2192\
-      prompt-only; com tools\u2192with-tools; output_schema\u2192structured-output).\
-      \ Prova com openai-agents (2 casos: prompt-only + with-tools). Scaffold \xE9\
-      \ sele\xE7\xE3o+fill de template curado, nunca codegen ad-hoc. Promover Scaffold\
-      \ a Kind = futuro; MVP package-data."
+    summary: 'Contrato formal do EmitterPort + invariante byte-equal como método inheritável (extract_instructions), rodado por um teste genérico sobre available_targets(). Mecanismo de scaffold p/ code-first: ScaffoldEmitter base + biblioteca {framework × caso} em emit/scaffolds/<fw>/<caso>.py.tmpl + select_scaffold(framework, ctx) classificando por sinais do DNA (sem tools→prompt-only; com tools→with-tools; output_schema→structured-output). Prova com openai-agents (2 casos: prompt-only + with-tools). Scaffold é seleção+fill de template curado, nunca codegen ad-hoc. Promover Scaffold a Kind = futuro; MVP package-data.'
     commit_ref: 1a2601995f3612069fe51308a1e800a96fea6041
   - at: '2026-07-11T15:52:09+00:00'
     actor: claude-code
@@ -75,14 +61,13 @@ spec:
     source: cli
     kind: TestRun
     name: tr-emit-port-contract-smoke-20260711-155233
-    summary: "TestRun tr-emit-port-contract-smoke-20260711-155233 \u2192 pass"
+    summary: TestRun tr-emit-port-contract-smoke-20260711-155233 → pass
     outcome: pass
   - at: '2026-07-11T17:21:23+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "EmitterPort + ScaffoldEmitter shipped, PR #67 merged (byte-identical\
-      \ Py\u2194TS templates)"
+    summary: 'EmitterPort + ScaffoldEmitter shipped, PR #67 merged (byte-identical Py↔TS templates)'
   - at: '2026-07-11T17:21:31+00:00'
     actor: claude-code
     type: status_change

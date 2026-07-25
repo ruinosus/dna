@@ -3,15 +3,8 @@ kind: Story
 metadata:
   name: s-github-issues-bridge
 spec:
-  title: "A ponte DNA\u2194GitHub Issues (pergunta do Barna 2026-07-10): GitHub Issues\
-    \ s\xE3o arte"
-  description: "A ponte DNA\u2194GitHub Issues (pergunta do Barna 2026-07-10): GitHub\
-    \ Issues s\xE3o artefato do dom\xEDnio github.com \u2014 o DNA faz PONTE com proveni\xEA\
-    ncia, n\xE3o substitui\xE7\xE3o (mesma filosofia do story pr): dna sdlc issue\
-    \ publish <i-x> (cria GH issue via gh com footer \U0001F9EC+Work-Item, grava github_number/url\
-    \ no doc), issue import <#N> (GH\u2192Issue doc com proveni\xEAncia), sync leve\
-    \ (resolve fecha l\xE1 com comment; fechada l\xE1 vira nota aqui). Testes com\
-    \ gh mockado + smoke real contra ruinosus/dna."
+  title: 'A ponte DNA↔GitHub Issues (pergunta do Barna 2026-07-10): GitHub Issues são arte'
+  description: 'A ponte DNA↔GitHub Issues (pergunta do Barna 2026-07-10): GitHub Issues são artefato do domínio github.com — o DNA faz PONTE com proveniência, não substituição (mesma filosofia do story pr): dna sdlc issue publish <i-x> (cria GH issue via gh com footer 🧬+Work-Item, grava github_number/url no doc), issue import <#N> (GH→Issue doc com proveniência), sync leve (resolve fecha lá com comment; fechada lá vira nota aqui). Testes com gh mockado + smoke real contra ruinosus/dna.'
   status: done
   feature: f-dna-issues-round1
   priority: high
@@ -21,10 +14,7 @@ spec:
   reporter: claude-code
   business_value: 500
   acceptance_criteria:
-  - text: "publish/import/sync funcionam (smoke real: publicar uma issue do board\
-      \ no GitHub e import\xE1-la de volta round-trip); campos de proveni\xEAncia\
-      \ no Issue doc; degrada\xE7\xE3o honesta sem gh; prosa (guard) + reference regen;\
-      \ CI verde"
+  - text: 'publish/import/sync funcionam (smoke real: publicar uma issue do board no GitHub e importá-la de volta round-trip); campos de proveniência no Issue doc; degradação honesta sem gh; prosa (guard) + reference regen; CI verde'
     done: true
     done_at: '2026-07-10T12:25:51+00:00'
     done_by: story-done-auto
@@ -53,23 +43,13 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: "Recon done: Issue \xE9 class Kind (Py+TS twin, n\xE3o descriptor \u2014\
-      \ paridade por conven\xE7\xE3o). Write-path validation (#29) enforce ON \u2192\
-      \ github_* entra no schema dos DOIS lados antes de qualquer write. Plano de\
-      \ m\xF3dulos: _github_bridge.py (builders puros + gh plumbing, espelho do _git_symbiosis)\
-      \ + issue_bridge_cmd.py (publish/import/sync no issue_group, espelho do pr_cmd)\
-      \ + resolve ganha close best-effort fail-soft."
+    summary: 'Recon done: Issue é class Kind (Py+TS twin, não descriptor — paridade por convenção). Write-path validation (#29) enforce ON → github_* entra no schema dos DOIS lados antes de qualquer write. Plano de módulos: _github_bridge.py (builders puros + gh plumbing, espelho do _git_symbiosis) + issue_bridge_cmd.py (publish/import/sync no issue_group, espelho do pr_cmd) + resolve ganha close best-effort fail-soft.'
     commit_ref: fbf6ff29984dcfd9d881f159f4fc043587c3ff81
   - at: '2026-07-10T12:15:06+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "Build core pronto: schema Issue +github_number/url/state/synced_at (Py+TS),\
-      \ _github_bridge.py (builders puros + gh plumbing fail-loud/fail-soft), issue\
-      \ publish/import/sync no issue_group, resolve fecha o twin best-effort. 27 testes\
-      \ novos (gh 100% mockado); suites completas verdes: sdk-py 2944 pass, cli 329\
-      \ pass, ts 1329 pass + typecheck. Agora: prosa sdlc.md (tri\xE2ngulo commits+PRs+issues)\
-      \ + reference regen + guards + smoke real."
+    summary: 'Build core pronto: schema Issue +github_number/url/state/synced_at (Py+TS), _github_bridge.py (builders puros + gh plumbing fail-loud/fail-soft), issue publish/import/sync no issue_group, resolve fecha o twin best-effort. 27 testes novos (gh 100% mockado); suites completas verdes: sdk-py 2944 pass, cli 329 pass, ts 1329 pass + typecheck. Agora: prosa sdlc.md (triângulo commits+PRs+issues) + reference regen + guards + smoke real.'
     commit_ref: fbf6ff29984dcfd9d881f159f4fc043587c3ff81
   - at: '2026-07-10T12:17:38+00:00'
     actor: claude-code
@@ -84,7 +64,7 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-github-issues-bridge-smoke-20260710-122002
-    summary: "TestRun tr-tg-github-issues-bridge-smoke-20260710-122002 \u2192 pass"
+    summary: TestRun tr-tg-github-issues-bridge-smoke-20260710-122002 → pass
     outcome: pass
   - at: '2026-07-10T12:20:40+00:00'
     actor: claude-code
@@ -96,13 +76,7 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: "Smoke real DONE + PR #31 aberto (via story pr). Round-trip: publish\
-      \ i-005 \u2192 ruinosus/dna#30 (footer \U0001F9EC + doc link verificados no\
-      \ GitHub) \u2192 import de volta em scope tempor\xE1rio (i-001-gh30-\u2026,\
-      \ proveni\xEAncia id\xEAntica) \u2192 re-publish/re-import idempotentes \u2192\
-      \ sync open. Degrada\xE7\xE3o verificada ao vivo (PATH sem gh \u2192 erro did\xE1\
-      tico). Decis\xE3o: #30 fica ABERTA como primeira issue p\xFAblica do backlog.\
-      \ Marco review; done s\xF3 no merge."
+    summary: 'Smoke real DONE + PR #31 aberto (via story pr). Round-trip: publish i-005 → ruinosus/dna#30 (footer 🧬 + doc link verificados no GitHub) → import de volta em scope temporário (i-001-gh30-…, proveniência idêntica) → re-publish/re-import idempotentes → sync open. Degradação verificada ao vivo (PATH sem gh → erro didático). Decisão: #30 fica ABERTA como primeira issue pública do backlog. Marco review; done só no merge.'
     commit_ref: 391efea7520c12cbfe7dd7fa41b4f5258faa900a
   - at: '2026-07-10T12:20:57+00:00'
     actor: claude-code
@@ -114,12 +88,7 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: "PR #31 merged (9/9; smoke real: i-005 publicada como issue p\xFAblica\
-      \ #30 com footer+Work-Item, deixada ABERTA como primeiro backlog p\xFAblico;\
-      \ round-trip publish/import/sync provado; degrada\xE7\xE3o sem gh did\xE1tica).\
-      \ O tri\xE2ngulo da symbiosis fechou: commits (trailers) + PRs (story pr) +\
-      \ issues (bridge). Proveni\xEAncia no schema do Issue (write-path #29 validou\
-      \ ao vivo)."
+    summary: 'PR #31 merged (9/9; smoke real: i-005 publicada como issue pública #30 com footer+Work-Item, deixada ABERTA como primeiro backlog público; round-trip publish/import/sync provado; degradação sem gh didática). O triângulo da symbiosis fechou: commits (trailers) + PRs (story pr) + issues (bridge). Proveniência no schema do Issue (write-path #29 validou ao vivo).'
   - at: '2026-07-10T12:26:00+00:00'
     actor: claude-code
     type: status_change

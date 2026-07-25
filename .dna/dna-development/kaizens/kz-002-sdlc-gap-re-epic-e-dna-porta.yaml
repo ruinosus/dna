@@ -3,13 +3,7 @@ kind: Kaizen
 metadata:
   name: kz-002-sdlc-gap-re-epic-e-dna-porta
 spec:
-  body: "SDLC gap (re: epic e-dna-portability): 'dna sdlc epic show <e>' reads the\
-    \ epic's FORWARD spec.features[], but 'feature create --epic <e>' only sets the\
-    \ feature's BACK-ref spec.epic \u2014 so a correctly-linked epic prints '(no features\
-    \ linked)'. Canonical link works ('dna sdlc list Feature' + semantic recall resolve\
-    \ it); only epic show is blind. Fix: feature create --epic should also append\
-    \ to epic.spec.features[], OR epic show should resolve by back-ref like 'list'\
-    \ does."
+  body: 'SDLC gap (re: epic e-dna-portability): ''dna sdlc epic show <e>'' reads the epic''s FORWARD spec.features[], but ''feature create --epic <e>'' only sets the feature''s BACK-ref spec.epic — so a correctly-linked epic prints ''(no features linked)''. Canonical link works (''dna sdlc list Feature'' + semantic recall resolve it); only epic show is blind. Fix: feature create --epic should also append to epic.spec.features[], OR epic show should resolve by back-ref like ''list'' does.'
   work_item: Story/s-emit-agent-framework
   status: observed
   actor: claude-code

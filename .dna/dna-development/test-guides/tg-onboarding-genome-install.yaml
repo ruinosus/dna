@@ -3,24 +3,18 @@ kind: TestGuide
 metadata:
   name: tg-onboarding-genome-install
 spec:
-  description: "Smoke de produto do dna init --from: consumir o onboarding pack de\
-    \ exemplo do pr\xF3prio repo via distribui\xE7\xE3o github: num projeto scratch"
+  description: 'Smoke de produto do dna init --from: consumir o onboarding pack de exemplo do próprio repo via distribuição github: num projeto scratch'
   kind_of_test: smoke
   status: active
   steps:
-  - action: 'num dir scratch com git init, rodar: dna init --from github:ruinosus/dna/examples/onboarding-pack@<ref>
-      --tools all'
-    expected: "7 created (board + 4 proje\xE7\xF5es acme-conventions + AGENTS.md +\
-      \ hooks), header mostra o pack com commit pinado, aviso 'review the projected\
-      \ files before committing' presente"
-  - action: 'comparar bytes: .claude/skills/acme-conventions/SKILL.md e AGENTS.md
-      vs examples/onboarding-pack/ do repo'
-    expected: "byte-id\xEAnticos (writers byte-fi\xE9is, SKILL.md writer-can\xF4nico)"
+  - action: 'num dir scratch com git init, rodar: dna init --from github:ruinosus/dna/examples/onboarding-pack@<ref> --tools all'
+    expected: 7 created (board + 4 projeções acme-conventions + AGENTS.md + hooks), header mostra o pack com commit pinado, aviso 'review the projected files before committing' presente
+  - action: 'comparar bytes: .claude/skills/acme-conventions/SKILL.md e AGENTS.md vs examples/onboarding-pack/ do repo'
+    expected: byte-idênticos (writers byte-fiéis, SKILL.md writer-canônico)
   - action: re-rodar o mesmo comando
-    expected: "0 created \xB7 7 skipped (idempot\xEAncia preservada com --from)"
+    expected: 0 created · 7 skipped (idempotência preservada com --from)
   - action: rodar dna install do MESMO ref num scope
-    expected: "docs do pack entram no source com installed.lock (canal de board composto\
-      \ com o canal de proje\xE7\xE3o)"
+    expected: docs do pack entram no source com installed.lock (canal de board composto com o canal de projeção)
   verifies:
   - Story/s-onboarding-genome-install
   created_at: '2026-07-10T20:22:27+00:00'

@@ -3,18 +3,8 @@ kind: Story
 metadata:
   name: s-mcp-idp-pluggable
 spec:
-  title: Fecha o loop OAuth 2.1 end-to-end com IdP REAL, via uma camada de provider
-    PLUGG
-  description: "Fecha o loop OAuth 2.1 end-to-end com IdP REAL, via uma camada de\
-    \ provider PLUGGABLE (N providers). Hoje s\xF3 o Resource Server (valida JWT)\
-    \ roda; falta o Authorization Server real. DESIGN CHAVE: provider \xE9 CONFIG,\
-    \ n\xE3o c\xF3digo \u2014 cada IdP exp\xF5e JWKS/OIDC discovery, ent\xE3o um registry\
-    \ declarativo (dna.config.yaml: {type, issuer, jwks_uri, audience, tenant_claim})\
-    \ cobre Entra/Clerk/WorkOS/Auth0/OIDC-gen\xE9rico sem c\xF3digo por-provider.\
-    \ O bridge claim->tenant \xE9 POR provider (Entra=tid, Clerk=org_id, etc.). REFER\xCA\
-    NCIA: Azure Entra ID primeiro (o foundry j\xE1 usa entraTenantId/entraApiClientId;\
-    \ deploy Azure via azd; e o tid do Entra mapeia LIMPO pra tenant do DNA). FastMCP:\
-    \ JWTVerifier aponta pra qualquer JWKS; OAuthProxy pros sem-DCR."
+  title: Fecha o loop OAuth 2.1 end-to-end com IdP REAL, via uma camada de provider PLUGG
+  description: 'Fecha o loop OAuth 2.1 end-to-end com IdP REAL, via uma camada de provider PLUGGABLE (N providers). Hoje só o Resource Server (valida JWT) roda; falta o Authorization Server real. DESIGN CHAVE: provider é CONFIG, não código — cada IdP expõe JWKS/OIDC discovery, então um registry declarativo (dna.config.yaml: {type, issuer, jwks_uri, audience, tenant_claim}) cobre Entra/Clerk/WorkOS/Auth0/OIDC-genérico sem código por-provider. O bridge claim->tenant é POR provider (Entra=tid, Clerk=org_id, etc.). REFERÊNCIA: Azure Entra ID primeiro (o foundry já usa entraTenantId/entraApiClientId; deploy Azure via azd; e o tid do Entra mapeia LIMPO pra tenant do DNA). FastMCP: JWTVerifier aponta pra qualquer JWKS; OAuthProxy pros sem-DCR.'
   status: done
   feature: f-dna-mcp-server
   priority: high
@@ -24,29 +14,25 @@ spec:
   - mcp
   reporter: claude-code
   acceptance_criteria:
-  - text: "camada de provider config-driven (N providers) \u2014 adicionar um IdP\
-      \ = config, n\xE3o c\xF3digo"
+  - text: camada de provider config-driven (N providers) — adicionar um IdP = config, não código
     done: true
     done_at: '2026-07-11T17:21:44+00:00'
     done_by: story-done-auto
-  - text: "Azure Entra ID como 1\xBA provider concreto, end-to-end (login real \u2192\
-      \ token \u2192 RS valida \u2192 tenant scoped por tid)"
+  - text: Azure Entra ID como 1º provider concreto, end-to-end (login real → token → RS valida → tenant scoped por tid)
     done: true
     done_at: '2026-07-11T17:21:44+00:00'
     done_by: story-done-auto
-  - text: "generic OIDC + Clerk/WorkOS documentados como varia\xE7\xF5es de config;\
-      \ mapeamento claim->tenant por provider"
+  - text: generic OIDC + Clerk/WorkOS documentados como variações de config; mapeamento claim->tenant por provider
     done: true
     done_at: '2026-07-11T17:21:44+00:00'
     done_by: story-done-auto
-  - text: "teste de integra\xE7\xE3o ponta-a-ponta com um IdP real (ou emulado fielmente)"
+  - text: teste de integração ponta-a-ponta com um IdP real (ou emulado fielmente)
     done: true
     done_at: '2026-07-11T17:21:44+00:00'
     done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - text: "OAuth 2.1 COMPLETO (AS+RS), n\xE3o s\xF3 o RS; guia multi-provider; ADR\
-      \ atualizado"
+  - text: OAuth 2.1 COMPLETO (AS+RS), não só o RS; guia multi-provider; ADR atualizado
     done: true
     done_at: '2026-07-11T17:21:44+00:00'
     done_by: story-done-auto
@@ -63,9 +49,7 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: Generalizando o RS single-env-provider para camada N-provider config-driven;
-      Entra como 1o concreto. Multi-issuer via composite verifier (routing por iss),
-      claim->tenant por provider via stamp no token.
+    summary: Generalizando o RS single-env-provider para camada N-provider config-driven; Entra como 1o concreto. Multi-issuer via composite verifier (routing por iss), claim->tenant por provider via stamp no token.
   - at: '2026-07-11T16:23:36+00:00'
     actor: claude-code
     type: status_change
@@ -76,18 +60,7 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: 'Implementado: (1) config.py/config.ts aceitam auth: como passthrough
-      opaco (parity Py+TS, +2 testes cada). (2) _mcp_auth.py ganhou a camada pura
-      N-provider: ProviderConfig + parse_auth_providers (defaults por tipo entra=tid/clerk=org_id/workos=org_id/oidc=obrigatorio,
-      JWKS derivado do issuer, Entra common relaxa issuer->audience-only, fail-loud)
-      + select_provider_for_issuer. (3) Composite verifier multi-issuer: tenta cada
-      JWTVerifier, roteia por iss, e CARIMBA o tenant_claim do provider que casou
-      no token.claims -> bridge le o claim certo por-provider sem estado global (sobrevive
-      Entra common). (4) build_auth_from_config + providers_from_config; PRM lista
-      todos os issuers. (5) mcp_cmd: --auth config. Provas: 19 testes novos (parse/routing/e2e
-      2-providers emulados/cross-tenant/PRM) verdes + Entra e2e real DEFERIDO (skip
-      requires DNA_MCP_ENTRA_E2E) pro azd up. Falta: docs guia multi-provider, ADR,
-      CHANGELOG.'
+    summary: 'Implementado: (1) config.py/config.ts aceitam auth: como passthrough opaco (parity Py+TS, +2 testes cada). (2) _mcp_auth.py ganhou a camada pura N-provider: ProviderConfig + parse_auth_providers (defaults por tipo entra=tid/clerk=org_id/workos=org_id/oidc=obrigatorio, JWKS derivado do issuer, Entra common relaxa issuer->audience-only, fail-loud) + select_provider_for_issuer. (3) Composite verifier multi-issuer: tenta cada JWTVerifier, roteia por iss, e CARIMBA o tenant_claim do provider que casou no token.claims -> bridge le o claim certo por-provider sem estado global (sobrevive Entra common). (4) build_auth_from_config + providers_from_config; PRM lista todos os issuers. (5) mcp_cmd: --auth config. Provas: 19 testes novos (parse/routing/e2e 2-providers emulados/cross-tenant/PRM) verdes + Entra e2e real DEFERIDO (skip requires DNA_MCP_ENTRA_E2E) pro azd up. Falta: docs guia multi-provider, ADR, CHANGELOG.'
     commit_ref: 9d659f72a1bcf5083aa0e32aa1152fe9f850eb77
   - at: '2026-07-11T16:38:36+00:00'
     actor: claude-code
@@ -102,7 +75,7 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-s-mcp-idp-pluggable-c-20260711-163902
-    summary: "TestRun tr-tg-s-mcp-idp-pluggable-c-20260711-163902 \u2192 pass"
+    summary: TestRun tr-tg-s-mcp-idp-pluggable-c-20260711-163902 → pass
     outcome: pass
   - at: '2026-07-11T16:40:14+00:00'
     actor: claude-code
@@ -114,13 +87,7 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: "PR #68 aberto (base main). AC1 (config-driven N-provider) e AC3 (OIDC/Clerk/WorkOS\
-      \ documentados + claim->tenant por provider) DONE. AC4 (integra\xE7\xE3o ponta-a-ponta\
-      \ com IdP fielmente emulado) DONE via 2 issuers OIDC emulados. AC2 (Entra login\
-      \ REAL end-to-end) parcialmente: a camada Entra existe e valida; o login Azure\
-      \ real->token->server fica DEFERIDO pro azd up do dono (requires_azure skip\
-      \ + passo documentado no guia), pois exige app registration viva e nao roda\
-      \ em CI. NAO mergear."
+    summary: 'PR #68 aberto (base main). AC1 (config-driven N-provider) e AC3 (OIDC/Clerk/WorkOS documentados + claim->tenant por provider) DONE. AC4 (integração ponta-a-ponta com IdP fielmente emulado) DONE via 2 issuers OIDC emulados. AC2 (Entra login REAL end-to-end) parcialmente: a camada Entra existe e valida; o login Azure real->token->server fica DEFERIDO pro azd up do dono (requires_azure skip + passo documentado no guia), pois exige app registration viva e nao roda em CI. NAO mergear.'
   - at: '2026-07-11T16:40:34+00:00'
     actor: claude-code
     type: status_change
@@ -131,19 +98,13 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: "CI 11/11 verde no PR #68 (brand-guard, gitleaks, commit-emails, cli\
-      \ 3.12/3.13, sdk-py 3.12/3.13, sdk-ts, docs-build, docs-links, postgres; deploy=skipping).\
-      \ Rebase em cima do main novo (EmitterPort PR #67 mergeado) \u2014 unico conflito\
-      \ era CHANGELOG [Unreleased] (resolvido mantendo as duas entradas). PR pronto\
-      \ pra review; NAO mergeado (pre-1.0, ordem do dono). Territorio: so auth do\
-      \ MCP + config passthrough + docs/ADR/CHANGELOG; dna/emit/ intocado."
+    summary: 'CI 11/11 verde no PR #68 (brand-guard, gitleaks, commit-emails, cli 3.12/3.13, sdk-py 3.12/3.13, sdk-ts, docs-build, docs-links, postgres; deploy=skipping). Rebase em cima do main novo (EmitterPort PR #67 mergeado) — unico conflito era CHANGELOG [Unreleased] (resolvido mantendo as duas entradas). PR pronto pra review; NAO mergeado (pre-1.0, ordem do dono). Territorio: so auth do MCP + config passthrough + docs/ADR/CHANGELOG; dna/emit/ intocado.'
     commit_ref: 0e2c8dd2929e76a43f1d86e27dcb987f9d90779a
   - at: '2026-07-11T17:21:49+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "camada N-provider IdP (Entra/Clerk/WorkOS) + claim\u2192tenant bridge,\
-      \ PR #68 merged"
+    summary: 'camada N-provider IdP (Entra/Clerk/WorkOS) + claim→tenant bridge, PR #68 merged'
   - at: '2026-07-11T17:23:32+00:00'
     actor: claude-code
     type: artifact_produced
@@ -157,13 +118,13 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-s-mcp-idp-pluggable-20260711-172336
-    summary: "TestRun tr-tg-s-mcp-idp-pluggable-20260711-172336 \u2192 pass"
+    summary: TestRun tr-tg-s-mcp-idp-pluggable-20260711-172336 → pass
     outcome: pass
   - at: '2026-07-11T17:23:44+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "N-provider IdP + claim\u2192tenant bridge \u2014 tests green in CI"
+    summary: N-provider IdP + claim→tenant bridge — tests green in CI
   - at: '2026-07-11T17:25:54+00:00'
     actor: claude-code
     type: comment
@@ -173,8 +134,7 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: "backend/lib sem UI: coberto por TestRun de integra\xE7\xE3o (tg-s-mcp-idp-pluggable)\
-      \ + suite verde no CI; product-smoke n\xE3o se aplica"
+    summary: 'backend/lib sem UI: coberto por TestRun de integração (tg-s-mcp-idp-pluggable) + suite verde no CI; product-smoke não se aplica'
   - at: '2026-07-11T17:26:57+00:00'
     actor: claude-code
     type: status_change

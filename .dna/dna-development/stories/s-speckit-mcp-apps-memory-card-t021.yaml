@@ -3,10 +3,8 @@ kind: Story
 metadata:
   name: s-speckit-mcp-apps-memory-card-t021
 spec:
-  description: "Rodar a valida\xE7\xE3o completa de `specs/001-mcp-apps-memory-card/quickstart.md`\
-    \ (test-gate + degrada\xE7\xE3o + smoke)"
-  title: "Rodar a valida\xE7\xE3o completa de `specs/001-mcp-apps-memory-card/quickstart.md`\
-    \ (te"
+  description: Rodar a validação completa de `specs/001-mcp-apps-memory-card/quickstart.md` (test-gate + degradação + smoke)
+  title: Rodar a validação completa de `specs/001-mcp-apps-memory-card/quickstart.md` (te
   status: done
   feature: f-copilot-mcp-apps
   labels:
@@ -45,17 +43,13 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-speckit-mcp-apps-sdk-20260721-201420
-    summary: "TestRun tr-tg-speckit-mcp-apps-sdk-20260721-201420 \u2192 pass"
+    summary: TestRun tr-tg-speckit-mcp-apps-sdk-20260721-201420 → pass
     outcome: pass
   - at: '2026-07-21T20:19:06+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "T021: valida\xE7\xE3o completa do quickstart \u2014 par do gate 17 passed;\
-      \ su\xEDtes completas sdk-py 3388/195skip/4xfail e cli 995/14skip (baseline\
-      \ main limpo: 3385/990 \u2014 zero falha nova); degrada\xE7\xE3o byte a byte\
-      \ verde; smoke basic-host PASS; wheel carrega dna/emit/_vendor/*. TestRun tr-tg-speckit-mcp-apps-sdk-20260721-201420\
-      \ outcome=pass."
+    summary: 'T021: validação completa do quickstart — par do gate 17 passed; suítes completas sdk-py 3388/195skip/4xfail e cli 995/14skip (baseline main limpo: 3385/990 — zero falha nova); degradação byte a byte verde; smoke basic-host PASS; wheel carrega dna/emit/_vendor/*. TestRun tr-tg-speckit-mcp-apps-sdk-20260721-201420 outcome=pass.'
     commit_ref: ee11c11a89e2282556416387fdff80abc96a8136
   - at: '2026-07-21T20:22:10+00:00'
     actor: claude-code
@@ -70,7 +64,7 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-speckit-mcp-apps-render-smoke-20260721-202227
-    summary: "TestRun tr-tg-speckit-mcp-apps-render-smoke-20260721-202227 \u2192 pass"
+    summary: TestRun tr-tg-speckit-mcp-apps-render-smoke-20260721-202227 → pass
     outcome: pass
   - at: '2026-07-21T20:28:58+00:00'
     actor: claude-code
@@ -79,7 +73,6 @@ spec:
     from: todo
     to: done
     commit_ref: ee11c11
-    summary: "quickstart validado: gate 17 verdes; su\xEDtes completas sem falha nova;\
-      \ smoke PASS"
+    summary: 'quickstart validado: gate 17 verdes; suítes completas sem falha nova; smoke PASS'
   updated_at: '2026-07-21T20:28:58+00:00'
   closed_at: '2026-07-21T20:28:48+00:00'

@@ -10,6 +10,4 @@ spec:
   executed_by: claude-code
   executed_at: '2026-07-11T06:55:12+00:00'
   evidence:
-  - build_prompt levanta AgentNotFound (Py LookupError + TS Error.agent) em vez de
-    retornar string; test_kernel + test_error_handling + kernel.test.ts atualizados;
-    CI 11/11 verde
+  - build_prompt levanta AgentNotFound (Py LookupError + TS Error.agent) em vez de retornar string; test_kernel + test_error_handling + kernel.test.ts atualizados; CI 11/11 verde

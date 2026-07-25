@@ -5,9 +5,7 @@ metadata:
 spec:
   title: Google Open Knowledge Format (OKF)
   kind_of: web
-  summary: "Vendor-neutral markdown+YAML spec (v0.1, Jun 2026, Apache-2.0) for curated\
-    \ agent knowledge \u2014 the knowledge layer peer to MCP/A2A (interop) and AGENTS.md/SKILL.md\
-    \ (instructions/skills)."
+  summary: Vendor-neutral markdown+YAML spec (v0.1, Jun 2026, Apache-2.0) for curated agent knowledge — the knowledge layer peer to MCP/A2A (interop) and AGENTS.md/SKILL.md (instructions/skills).
   key_quotes: []
   cited_by: []
   owner: claude-code

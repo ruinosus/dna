@@ -3,10 +3,8 @@ kind: Story
 metadata:
   name: s-speckit-mcp-apps-memory-card-t012
 spec:
-  description: '[US1] Registrar o recurso `ui://dna/memory-list` (`@mcp.resource`,
-    mimeType `text/html;profile=mcp-app`) em `packages/cli/dna_cli/_mcp_server.py`'
-  title: '[US1] Registrar o recurso `ui://dna/memory-list` (`@mcp.resource`, mimeType
-    `tex'
+  description: '[US1] Registrar o recurso `ui://dna/memory-list` (`@mcp.resource`, mimeType `text/html;profile=mcp-app`) em `packages/cli/dna_cli/_mcp_server.py`'
+  title: '[US1] Registrar o recurso `ui://dna/memory-list` (`@mcp.resource`, mimeType `tex'
   status: done
   feature: f-copilot-mcp-apps
   labels:
@@ -45,14 +43,13 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-speckit-mcp-apps-sdk-20260721-201420
-    summary: "TestRun tr-tg-speckit-mcp-apps-sdk-20260721-201420 \u2192 pass"
+    summary: TestRun tr-tg-speckit-mcp-apps-sdk-20260721-201420 → pass
     outcome: pass
   - at: '2026-07-21T20:18:46+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "T012 no commit 524bbf0: @server.resource(UI_MEMORY_LIST_URI, mime_type=MCP_APP_MIME)\
-      \ em build_server; initialize passa a anunciar a extens\xE3o io.modelcontextprotocol/ui."
+    summary: 'T012 no commit 524bbf0: @server.resource(UI_MEMORY_LIST_URI, mime_type=MCP_APP_MIME) em build_server; initialize passa a anunciar a extensão io.modelcontextprotocol/ui.'
     commit_ref: ee11c11a89e2282556416387fdff80abc96a8136
   - at: '2026-07-21T20:21:46+00:00'
     actor: claude-code
@@ -67,7 +64,7 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-speckit-mcp-apps-render-smoke-20260721-202227
-    summary: "TestRun tr-tg-speckit-mcp-apps-render-smoke-20260721-202227 \u2192 pass"
+    summary: TestRun tr-tg-speckit-mcp-apps-render-smoke-20260721-202227 → pass
     outcome: pass
   - at: '2026-07-21T20:27:53+00:00'
     actor: claude-code
@@ -76,7 +73,6 @@ spec:
     from: todo
     to: done
     commit_ref: 524bbf0
-    summary: recurso ui://dna/memory-list registrado (@server.resource, mimeType da
-      spec)
+    summary: recurso ui://dna/memory-list registrado (@server.resource, mimeType da spec)
   updated_at: '2026-07-21T20:27:53+00:00'
   closed_at: '2026-07-21T20:27:43+00:00'

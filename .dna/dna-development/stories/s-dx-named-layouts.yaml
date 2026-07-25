@@ -13,14 +13,13 @@ spec:
   - sdk
   reporter: claude-code
   acceptance_criteria:
-  - text: Autor referencia um layout por nome (nao por path interno); resolvido pelo
-      kernel.
+  - text: Autor referencia um layout por nome (nao por path interno); resolvido pelo kernel.
     done: true
     done_at: '2026-07-11T10:13:56+00:00'
     done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - text: "Design + impl + testes Py/TS; docs. (PR futura \u2014 nao nesta.)"
+  - text: Design + impl + testes Py/TS; docs. (PR futura — nao nesta.)
     done: true
     done_at: '2026-07-11T10:13:56+00:00'
     done_by: story-done-auto
@@ -37,8 +36,7 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: "Iniciando dimens\xE3o AUTHOR do e-dna-dx. Story 1 de 3 (layouts, scaffolding,\
-      \ single-file soul) numa PR coesa."
+    summary: Iniciando dimensão AUTHOR do e-dna-dx. Story 1 de 3 (layouts, scaffolding, single-file soul) numa PR coesa.
   - at: '2026-07-11T07:07:42+00:00'
     actor: claude-code
     type: status_change
@@ -49,14 +47,7 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: "Impl: campo spec 'layout' no Agent (Py models.py + TS zod). Nova extens\xE3\
-      o de KindPort: layout_template(name)/layout_names() em KindBase (Py+TS), implementada\
-      \ em AgentKind com presets AGENT_LAYOUTS (default/instruction-first/persona-first).\
-      \ Cascata em prompt_builder: raw promptTemplate > layout nomeado > kind default\
-      \ > instruction. UnknownLayout (fail-loud) exportado no root do pacote (Py+TS).\
-      \ Alinhei diverg\xEAncia i-213/i-011: TS promptTemplate() agora inclui o bloco\
-      \ de guardrails (Python era a refer\xEAncia sem\xE2ntica). Testes: test_named_layouts.py\
-      \ (11) + named-layouts.test.ts (5) verdes. Suites Py/TS + typecheck TS OK."
+    summary: 'Impl: campo spec ''layout'' no Agent (Py models.py + TS zod). Nova extensão de KindPort: layout_template(name)/layout_names() em KindBase (Py+TS), implementada em AgentKind com presets AGENT_LAYOUTS (default/instruction-first/persona-first). Cascata em prompt_builder: raw promptTemplate > layout nomeado > kind default > instruction. UnknownLayout (fail-loud) exportado no root do pacote (Py+TS). Alinhei divergência i-213/i-011: TS promptTemplate() agora inclui o bloco de guardrails (Python era a referência semântica). Testes: test_named_layouts.py (11) + named-layouts.test.ts (5) verdes. Suites Py/TS + typecheck TS OK.'
     commit_ref: ffb39ee41812f934a96b31d09eab3e5cc272bbf4
   - at: '2026-07-11T07:28:46+00:00'
     actor: claude-code
@@ -71,7 +62,7 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-s-dx-named-layouts-20260711-072848
-    summary: "TestRun tr-tg-s-dx-named-layouts-20260711-072848 \u2192 pass"
+    summary: TestRun tr-tg-s-dx-named-layouts-20260711-072848 → pass
     outcome: pass
   - at: '2026-07-11T07:30:54+00:00'
     actor: claude-code
@@ -103,7 +94,7 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-s-dx-named-layouts-close-20260711-101353
-    summary: "TestRun tr-tg-s-dx-named-layouts-close-20260711-101353 \u2192 pass"
+    summary: TestRun tr-tg-s-dx-named-layouts-close-20260711-101353 → pass
     outcome: pass
   - at: '2026-07-11T10:13:58+00:00'
     actor: claude-code

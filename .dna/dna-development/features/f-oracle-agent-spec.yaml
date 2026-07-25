@@ -4,9 +4,7 @@ metadata:
   name: f-oracle-agent-spec
 spec:
   title: Oracle Agent Spec alignment
-  description: "Decide and document whether DNA emits THROUGH the Oracle Agent Spec\
-    \ (DNA \u2192 OAS \u2192 runtimes via OAS adapters) or emits DIRECT per runtime,\
-    \ and where DNA's schema should align to OAS."
+  description: Decide and document whether DNA emits THROUGH the Oracle Agent Spec (DNA → OAS → runtimes via OAS adapters) or emits DIRECT per runtime, and where DNA's schema should align to OAS.
   status: in-development
   epic: e-dna-portability
   reporter: claude-code

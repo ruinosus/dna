@@ -3,18 +3,14 @@ kind: TestGuide
 metadata:
   name: tg-dna-mcp-server-mvp
 spec:
-  description: Verify the DNA MCP server (dna mcp serve) exposes definitions + SDLC
-    + memory live over MCP (FastMCP, stdio).
+  description: Verify the DNA MCP server (dna mcp serve) exposes definitions + SDLC + memory live over MCP (FastMCP, stdio).
   kind_of_test: integration
   status: active
   steps:
   - action: 'Run the CLI test suite: pytest packages/cli/tests/test_mcp_server.py'
-    expected: "10 passed (compose_prompt live+tenant, list_agents/list_tools/get_tool,\
-      \ sdlc_digest/list_stories/get_adr, remember\u2192recall, one-server smoke,\
-      \ lazy-import guard)"
+    expected: 10 passed (compose_prompt live+tenant, list_agents/list_tools/get_tool, sdlc_digest/list_stories/get_adr, remember→recall, one-server smoke, lazy-import guard)
   - action: Connect a real MCP client over stdio to 'dna mcp serve'
-    expected: client.list_tools() returns all 10 tools; compose_prompt composes the
-      Soul persona; resources dna://{scope}/manifest + agents listed and readable
+    expected: client.list_tools() returns all 10 tools; compose_prompt composes the Soul persona; resources dna://{scope}/manifest + agents listed and readable
   - action: Import dna_cli WITHOUT the [mcp] extra
     expected: no fastmcp/mcp in sys.modules (base install unaffected)
   - action: mkdocs build --strict

@@ -10,5 +10,4 @@ spec:
   executed_by: claude-code
   executed_at: '2026-07-11T14:42:05+00:00'
   evidence:
-  - "PR #62; 1 fonte \u2192 3 runtimes (af==bd==vx==composed byte-id\xEAntico); ADK\
-    \ AgentConfig schema-v\xE1lido"
+  - 'PR #62; 1 fonte → 3 runtimes (af==bd==vx==composed byte-idêntico); ADK AgentConfig schema-válido'

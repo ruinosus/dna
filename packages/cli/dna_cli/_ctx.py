@@ -356,12 +356,12 @@ class _LocalScopes:
             by_kind.setdefault(d.kind, []).append(d.name)
         return {k: sorted(v) for k, v in by_kind.items()}
 
-    async def kinds(self, scope: str) -> dict[str, list]:
+    async def kinds(self, scope: str | None) -> dict[str, list]:
         del scope  # kinds are kernel-global in the local facade
         kernel = self._c._holder.kernel
         return {kp.kind: [] for kp in kernel._kinds.values() if getattr(kp, "kind", None)}
 
-    async def kind_schema(self, scope: str, kind: str) -> dict:
+    async def kind_schema(self, scope: str | None, kind: str) -> dict:
         del scope
         kernel = self._c._holder.kernel
         kp = next(
@@ -397,6 +397,16 @@ class _LocalClient:
         self._holder = holder
         self._tenant = tenant
         self.scopes = _LocalScopes(self)
+
+    @property
+    def default_scope(self) -> str:
+        """The scope ``_build_holder_async`` already resolved (env
+        ``DNA_SCOPE_DEFAULT``, else the source's sole/first scope — never a
+        branded literal). Callers that need a scope but received ``None``
+        from a ``--scope`` option reuse THIS instead of hardcoding a
+        default — the same ``scope or self._holder.scope`` idiom every
+        method below applies inline."""
+        return self._holder.scope
 
     def docs(self, scope: str) -> _LocalDocs:
         return _LocalDocs(self, scope)

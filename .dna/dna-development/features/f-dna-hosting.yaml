@@ -3,12 +3,8 @@ kind: Feature
 metadata:
   name: f-dna-hosting
 spec:
-  title: "DNA hosted \u2014 the MCP server on Azure Container Apps + Entra"
-  description: "Ship the self-host recipe that runs `dna mcp serve --transport http\
-    \ --auth jwt` hosted on Azure Container Apps: Dockerfile + azd/bicep (Container\
-    \ App + HTTPS ingress + user-assigned Managed Identity + Entra-JWT env) + runbook.\
-    \ Phase A of DNA-hosted \u2014 the base the DNA Cloud multi-tenant offering builds\
-    \ on. Mirrors the sibling Foundry app's ACA+Entra IaC pattern."
+  title: DNA hosted — the MCP server on Azure Container Apps + Entra
+  description: 'Ship the self-host recipe that runs `dna mcp serve --transport http --auth jwt` hosted on Azure Container Apps: Dockerfile + azd/bicep (Container App + HTTPS ingress + user-assigned Managed Identity + Entra-JWT env) + runbook. Phase A of DNA-hosted — the base the DNA Cloud multi-tenant offering builds on. Mirrors the sibling Foundry app''s ACA+Entra IaC pattern.'
   status: in-development
   epic: e-dna-portability
   reporter: claude-code

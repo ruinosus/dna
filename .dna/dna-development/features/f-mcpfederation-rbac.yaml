@@ -4,10 +4,7 @@ metadata:
   name: f-mcpfederation-rbac
 spec:
   title: MCPFederation read/write tool split + min-role RBAC
-  description: "Absorption phase 6a \u2014 the one genuinely-new Kind work. Extend\
-    \ MCPFederation (today a flat allowed_tools allowlist) with read/write tool governance\
-    \ + a per-tool role floor, matching foundry's richer registry (McpServer read_tools/write_tools/min_role)\
-    \ so the retrofit doesn't lose foundry's RBAC. Prereq for f-copilot-retrofit."
+  description: Absorption phase 6a — the one genuinely-new Kind work. Extend MCPFederation (today a flat allowed_tools allowlist) with read/write tool governance + a per-tool role floor, matching foundry's richer registry (McpServer read_tools/write_tools/min_role) so the retrofit doesn't lose foundry's RBAC. Prereq for f-copilot-retrofit.
   status: discovery
   epic: e-dna-copilot-absorption
   reporter: claude-code

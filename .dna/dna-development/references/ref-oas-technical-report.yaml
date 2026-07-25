@@ -5,9 +5,7 @@ metadata:
 spec:
   title: Open Agent Specification technical report (arXiv 2510.04173)
   kind_of: paper
-  summary: "Oracle's technical report; validates author-once\u2192transpile across\
-    \ four runtimes (LangGraph, AutoGen, CrewAI, WayFlow). Agent carries system_prompt\
-    \ + llm_config; typed tools ServerTool/ClientTool/RemoteTool/MCPTool."
+  summary: Oracle's technical report; validates author-once→transpile across four runtimes (LangGraph, AutoGen, CrewAI, WayFlow). Agent carries system_prompt + llm_config; typed tools ServerTool/ClientTool/RemoteTool/MCPTool.
   key_quotes: []
   cited_by:
   - ADR/adr-dna-pivot-portability

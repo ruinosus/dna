@@ -3,11 +3,9 @@ kind: Reference
 metadata:
   name: ref-bedrock-agentcore
 spec:
-  title: "AWS Bedrock AgentCore \u2014 use any agent framework"
+  title: AWS Bedrock AgentCore — use any agent framework
   kind_of: web
-  summary: "AWS platform to deploy/operate agents built with ANY framework (CrewAI,\
-    \ LangGraph, LlamaIndex, Google ADK, OpenAI Agents SDK, Strands) \u2014 the 'runtime\
-    \ is swappable' substrate."
+  summary: AWS platform to deploy/operate agents built with ANY framework (CrewAI, LangGraph, LlamaIndex, Google ADK, OpenAI Agents SDK, Strands) — the 'runtime is swappable' substrate.
   key_quotes: []
   cited_by: []
   owner: claude-code

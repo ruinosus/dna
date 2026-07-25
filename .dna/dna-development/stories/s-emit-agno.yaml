@@ -8,11 +8,8 @@ spec:
   status: todo
   feature: f-dna-emitters
   acceptance_criteria:
-  - Given the concierge DNA agent, When I run dna emit --target agno, Then it emits
-    Agent(name, model, instructions=INSTRUCTIONS, tools=[]) source that py_compiles
-    with instruction byte-equal to build_prompt
-  - Given a tools/no-tools agent, When emitting, Then with-tools/prompt-only scaffolds
-    are selected
+  - Given the concierge DNA agent, When I run dna emit --target agno, Then it emits Agent(name, model, instructions=INSTRUCTIONS, tools=[]) source that py_compiles with instruction byte-equal to build_prompt
+  - Given a tools/no-tools agent, When emitting, Then with-tools/prompt-only scaffolds are selected
   acceptance_criteria_source: cli-create
   definition_of_done:
   - 'Code: AgnoEmitter Py+TS twin + 2 scaffolds each, registered'
@@ -32,8 +29,5 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: 'Built AgnoEmitter (Py+TS twin). Passo 0: Agent(name, model, instructions,
-      tools=[]) from agno.agent; Agno auto-wraps plain callables as tools so with-tools
-      stubs are bare functions. Model coordinate preserved as string. 5 py + 4 ts
-      tests green.'
+    summary: 'Built AgnoEmitter (Py+TS twin). Passo 0: Agent(name, model, instructions, tools=[]) from agno.agent; Agno auto-wraps plain callables as tools so with-tools stubs are bare functions. Model coordinate preserved as string. 5 py + 4 ts tests green.'
     commit_ref: 6721f20bfa6a9430b52d4d97063ae8b795b1cbcf

@@ -5,8 +5,7 @@ metadata:
 spec:
   insight: sdlc-digest
   question: O que aconteceu em dna-development last 24h?
-  verdict: "38 conclu\xEDdo(s) \xB7 6 decis\xE3o(\xF5es) \xB7 2 achado(s) \xB7 8 release(s)\
-    \ \u2014 nada precisa da sua aten\xE7\xE3o."
+  verdict: 38 concluído(s) · 6 decisão(ões) · 2 achado(s) · 8 release(s) — nada precisa da sua atenção.
   confidence: certain
   rag_status: green
   metrics:
@@ -25,117 +24,103 @@ spec:
       completed:
       - kind: Issue
         name: i-010-ts-resolver-legacy-shorthand-parity
-        title: 'Parity follow-up de i-009: sdk-py agora REJEITA o dep shorthand legado
-          (''skills:'
+        title: 'Parity follow-up de i-009: sdk-py agora REJEITA o dep shorthand legado (''skills:'
         to: resolved
         at: '2026-07-10T13:57:25+00:00'
         commit_ref: null
       - kind: Issue
         name: i-005-docstring-coverage-gaps
-        title: "Gaps de cobertura de docstring/TSDoc catalogados na gera\xE7\xE3o\
-          \ da API-ref (PR #12),"
+        title: 'Gaps de cobertura de docstring/TSDoc catalogados na geração da API-ref (PR #12),'
         to: resolved
         at: '2026-07-10T13:58:00+00:00'
         commit_ref: null
       - kind: Story
         name: s-zero-the-board
-        title: "Fechamento de ciclo \u2014 as 2 \xFAltimas issues do board: i-005\
-          \ (docstrings: Kernel 6 "
+        title: 'Fechamento de ciclo — as 2 últimas issues do board: i-005 (docstrings: Kernel 6 '
         to: done
         at: '2026-07-10T14:06:18+00:00'
         commit_ref: b2c608c2fa25dafa53aaac19997a66921448f001
       - kind: Story
         name: s-py312-floor
-        title: 'O PRIMEIRO consumidor real (piloto foundry-assured) bateu no floor:
-          o backend de'
+        title: 'O PRIMEIRO consumidor real (piloto foundry-assured) bateu no floor: o backend de'
         to: done
         at: '2026-07-10T14:29:23+00:00'
         commit_ref: 759e99e4352544aa64225b069eb54a7de7d3d9cf
       - kind: Story
         name: s-pilot-foundry-assured
-        title: "O PILOTO: primeiro consumidor real do DNA \u2014 o repo p\xFAblico\
-          \ foundry-assured (conc"
+        title: 'O PILOTO: primeiro consumidor real do DNA — o repo público foundry-assured (conc'
         to: done
         at: '2026-07-10T14:52:13+00:00'
         commit_ref: 3628a9ee0ccb17319f9f2e21605417ff8295ba2a
       - kind: Issue
         name: i-011-soul-inlining-build-prompt
-        title: "Achado do piloto foundry-assured (PR #104 de l\xE1): ao probar a decomposi\xE7\
-          \xE3o do CO"
+        title: 'Achado do piloto foundry-assured (PR #104 de lá): ao probar a decomposição do CO'
         to: resolved
         at: '2026-07-10T15:32:55+00:00'
         commit_ref: null
       - kind: Story
         name: s-pilot-foundry-phase2
-        title: "Fase 2 do piloto (ratificada Barna p\xF3s-merge do foundry#104): (1)\
-          \ BOOTSTRAP do d"
+        title: 'Fase 2 do piloto (ratificada Barna pós-merge do foundry#104): (1) BOOTSTRAP do d'
         to: done
         at: '2026-07-10T17:12:27+00:00'
         commit_ref: f074b6a91e7678a9ce232ce626ea633a7709a564
       - kind: Issue
         name: i-014-story-check-ac-greedy-match
-        title: "Feedback do piloto fase-2: 'dna sdlc story check --ac 1 --ac 2' marcou\
-          \ 3 ACs \u2014 m"
+        title: 'Feedback do piloto fase-2: ''dna sdlc story check --ac 1 --ac 2'' marcou 3 ACs — m'
         to: resolved
         at: '2026-07-10T17:41:31+00:00'
         commit_ref: null
       - kind: Issue
         name: i-013-soul-trailing-newline-leak
-        title: 'Feedback do piloto fase-2: SOUL.md com newline final vaza \n\n\n no
-          prompt compo'
+        title: 'Feedback do piloto fase-2: SOUL.md com newline final vaza \n\n\n no prompt compo'
         to: resolved
         at: '2026-07-10T17:41:54+00:00'
         commit_ref: null
       - kind: Issue
         name: i-012-sdlc-scope-default-config
-        title: 'Feedback do piloto fase-2 (repo terceiro): todo verbo dna sdlc exige
-          --scope rep'
+        title: 'Feedback do piloto fase-2 (repo terceiro): todo verbo dna sdlc exige --scope rep'
         to: resolved
         at: '2026-07-10T17:41:57+00:00'
         commit_ref: null
       - kind: Story
         name: s-pilot-dx-fixes
-        title: "Queimar as 3 fric\xE7\xF5es DX do piloto fase-2: i-012 (scope default\
-          \ configur\xE1vel \u2014 e"
+        title: 'Queimar as 3 fricções DX do piloto fase-2: i-012 (scope default configurável — e'
         to: done
         at: '2026-07-10T17:49:10+00:00'
         commit_ref: 0e5c9b0800b9980a1995758da97c22146bd0d861
       - kind: Story
         name: s-publish-registries
-        title: "Publica\xE7\xE3o nos registries (ratificado Barna, evid\xEAncia: 2\
-          \ consumidor-PRs no pilo"
+        title: 'Publicação nos registries (ratificado Barna, evidência: 2 consumidor-PRs no pilo'
         to: done
         at: '2026-07-10T18:53:05+00:00'
         commit_ref: dd692ee0ffcd4e469295106cd5047f251beffcbc
       - kind: Story
         name: s-memory-semantic-recall
-        title: "Semantic recall na mem\xF3ria: quando um RecordSearchProvider + EmbeddingPort\
-          \ est\xE3o"
+        title: 'Semantic recall na memória: quando um RecordSearchProvider + EmbeddingPort estão'
         to: done
         at: '2026-07-10T19:52:14+00:00'
         commit_ref: d6bdf441585002a697433ec2bc10fe9606a18c1c
       - kind: Story
         name: s-dna-init-agent-ready
-        title: "dna init \u2014 multi-tool agent-ready onboarding para projetos consumidores"
+        title: dna init — multi-tool agent-ready onboarding para projetos consumidores
         to: done
         at: '2026-07-10T19:52:20+00:00'
         commit_ref: d6bdf441585002a697433ec2bc10fe9606a18c1c
       - kind: Story
         name: s-onboarding-genome-install
-        title: "dna init --from: onboarding Genome via distribui\xE7\xE3o remota"
+        title: 'dna init --from: onboarding Genome via distribuição remota'
         to: done
         at: '2026-07-10T20:57:30+00:00'
         commit_ref: eb67539a46b513585d18977438a973c08e05c0ec
       - kind: Story
         name: s-memory-conformance-kit
-        title: "Kit p\xFAblico de conformance de mem\xF3ria em dna.testing"
+        title: Kit público de conformance de memória em dna.testing
         to: done
         at: '2026-07-10T20:57:37+00:00'
         commit_ref: eb67539a46b513585d18977438a973c08e05c0ec
       - kind: Issue
         name: i-015-onboarding-genome-via-install
-        title: "Follow-up de s-dna-init-agent-ready: oferecer o Genome de onboarding\
-          \ tamb\xE9m via "
+        title: 'Follow-up de s-dna-init-agent-ready: oferecer o Genome de onboarding também via '
         to: resolved
         at: '2026-07-10T20:58:02+00:00'
         commit_ref: null
@@ -147,29 +132,25 @@ spec:
         commit_ref: 0ea9396a4b4b76ca58a1e7fe8b4d1e3a360cb60f
       - kind: Issue
         name: i-016-install-root-agents-md-hides-skills
-        title: "dna install de uma \xE1rvore com AGENTS.md na RAIZ instala s\xF3 o\
-          \ AgentDefinition: _s"
+        title: 'dna install de uma árvore com AGENTS.md na RAIZ instala só o AgentDefinition: _s'
         to: resolved
         at: '2026-07-10T22:41:44+00:00'
         commit_ref: null
       - kind: Issue
         name: i-017-init-from-network-test-post-merge
-        title: "P\xF3s-merge do PR #41: adicionar teste requires_network em test_init_cmd.py\
-          \ (ou te"
+        title: 'Pós-merge do PR #41: adicionar teste requires_network em test_init_cmd.py (ou te'
         to: resolved
         at: '2026-07-10T22:41:46+00:00'
         commit_ref: null
       - kind: Story
         name: s-docs-init-install-completeness
-        title: 'Docs: clarify dna init (project) vs dna install (source-write) + completeness
-          pa'
+        title: 'Docs: clarify dna init (project) vs dna install (source-write) + completeness pa'
         to: done
         at: '2026-07-11T05:25:57+00:00'
         commit_ref: 52b7db57f85dbf8b630cbf3f552837f8f8972ae2
       - kind: Story
         name: s-dx-build-prompt-fail-loud
-        title: 'build_prompt fail-loud: raise AgentNotFound em vez de retornar string
-          placeholde'
+        title: 'build_prompt fail-loud: raise AgentNotFound em vez de retornar string placeholde'
         to: done
         at: '2026-07-11T06:55:20+00:00'
         commit_ref: 254dc20a4a773bf53a497d0f6d3b4193fd9a50e0
@@ -187,22 +168,19 @@ spec:
         commit_ref: 254dc20a4a773bf53a497d0f6d3b4193fd9a50e0
       - kind: Story
         name: s-dx-kernel-from-config
-        title: 'Config declarativa de ports: dna.config.yaml + Kernel.from_config
-          + factory URL-'
+        title: 'Config declarativa de ports: dna.config.yaml + Kernel.from_config + factory URL-'
         to: done
         at: '2026-07-11T06:56:02+00:00'
         commit_ref: 254dc20a4a773bf53a497d0f6d3b4193fd9a50e0
       - kind: Story
         name: s-dx-epic-create
-        title: "dna sdlc epic create \u2014 fecha o ultimo gap de CRUD do board (papercut\
-          \ sentido na "
+        title: 'dna sdlc epic create — fecha o ultimo gap de CRUD do board (papercut sentido na '
         to: done
         at: '2026-07-11T06:56:16+00:00'
         commit_ref: 254dc20a4a773bf53a497d0f6d3b4193fd9a50e0
       - kind: Story
         name: s-dx-html-artifact-kind
-        title: Adicionar o HtmlArtifact Kind (bundle HTML) com reader/writer e paridade
-          Py/TS.
+        title: Adicionar o HtmlArtifact Kind (bundle HTML) com reader/writer e paridade Py/TS.
         to: done
         at: '2026-07-11T10:13:47+00:00'
         commit_ref: 1169a35c041ca3d564f45b659bda351a22347142
@@ -244,20 +222,19 @@ spec:
         commit_ref: 4bb5189ae2e8cd984c7f6e04666e2ed69436e167
       - kind: Story
         name: s-tool-kind-descriptor
-        title: "Tool Kind \u2192 record-plane descriptor (kinds/tool.kind.yaml, Py\u2194\
-          TS byte-identical)"
+        title: Tool Kind → record-plane descriptor (kinds/tool.kind.yaml, Py↔TS byte-identical)
         to: done
         at: '2026-07-11T12:16:41+00:00'
         commit_ref: dd29c420fdb1c5551be12dbb38daad45c66bf5a6
       - kind: Story
         name: s-load-tools-helper
-        title: "dna.load_tools / loadTools \u2192 ToolLibrary (mirror load_prompts)"
+        title: dna.load_tools / loadTools → ToolLibrary (mirror load_prompts)
         to: done
         at: '2026-07-11T12:16:58+00:00'
         commit_ref: dd29c420fdb1c5551be12dbb38daad45c66bf5a6
       - kind: Story
         name: s-dna-new-tool
-        title: "dna new tool <name> \u2014 scaffold a Tool descriptor into a scope"
+        title: dna new tool <name> — scaffold a Tool descriptor into a scope
         to: done
         at: '2026-07-11T12:17:16+00:00'
         commit_ref: dd29c420fdb1c5551be12dbb38daad45c66bf5a6
@@ -269,69 +246,52 @@ spec:
         commit_ref: e8c82599964d99e0bfd63d12ba33a3b405038096
       - kind: Story
         name: s-oas-alignment-research
-        title: "Oracle Agent Spec alignment \u2014 verdict"
+        title: Oracle Agent Spec alignment — verdict
         to: done
         at: '2026-07-11T13:17:19+00:00'
         commit_ref: e8c82599964d99e0bfd63d12ba33a3b405038096
       decided:
       - kind: Story
         name: s-dna-init-agent-ready
-        title: "dna init \u2014 multi-tool agent-ready onboarding para projetos consumidores"
+        title: dna init — multi-tool agent-ready onboarding para projetos consumidores
         at: '2026-07-10T19:11:50+00:00'
-        summary: "Explora\xE7\xE3o conclu\xEDda. Decis\xF5es de design: (1) Genome\
-          \ de onboarding embarcado como package-data em dna_cli/data/onboarding-scope/\
-          \ com skills/dna-sdlc-cli/SKILL.m"
+        summary: 'Exploração concluída. Decisões de design: (1) Genome de onboarding embarcado como package-data em dna_cli/data/onboarding-scope/ com skills/dna-sdlc-cli/SKILL.m'
       - kind: Story
         name: s-dna-init-agent-ready
-        title: "dna init \u2014 multi-tool agent-ready onboarding para projetos consumidores"
+        title: dna init — multi-tool agent-ready onboarding para projetos consumidores
         at: '2026-07-10T19:17:37+00:00'
-        summary: "Implementa\xE7\xE3o core pronta: init_cmd.py (board via kernel.write_document\
-          \ + skill via SkillReader\u2192SkillWriter + AGENTS.md via AgentDefinitionReader\u2192\
-          Writer + hooks"
+        summary: 'Implementação core pronta: init_cmd.py (board via kernel.write_document + skill via SkillReader→SkillWriter + AGENTS.md via AgentDefinitionReader→Writer + hooks'
       - kind: Story
         name: s-dna-init-agent-ready
-        title: "dna init \u2014 multi-tool agent-ready onboarding para projetos consumidores"
+        title: dna init — multi-tool agent-ready onboarding para projetos consumidores
         at: '2026-07-10T19:26:04+00:00'
-        summary: "AMPLIA\xC7\xC3O DE ESCOPO ratificada: dna init vira MULTI-FERRAMENTA.\
-          \ Evid\xEAncia capturada em Research/rsh-cross-tool-agent-standards: AGENTS.md\
-          \ \xE9 O padr\xE3o de instru\xE7\xF5"
+        summary: 'AMPLIAÇÃO DE ESCOPO ratificada: dna init vira MULTI-FERRAMENTA. Evidência capturada em Research/rsh-cross-tool-agent-standards: AGENTS.md é O padrão de instruçõ'
       - kind: Story
         name: s-onboarding-genome-install
-        title: "dna init --from: onboarding Genome via distribui\xE7\xE3o remota"
+        title: 'dna init --from: onboarding Genome via distribuição remota'
         at: '2026-07-10T20:09:11+00:00'
-        summary: "Decis\xE3o de scan: _scan_tree do install para de recursar quando\
-          \ um reader clama um dir \u2014 AGENTS.md na raiz do pack esconderia as\
-          \ skills. Solu\xE7\xE3o sem tocar no ins"
+        summary: 'Decisão de scan: _scan_tree do install para de recursar quando um reader clama um dir — AGENTS.md na raiz do pack esconderia as skills. Solução sem tocar no ins'
       - kind: ADR
         name: adr-dna-pivot-portability
-        title: "DNA pivot: prompt-manager \u2192 vendor-neutral portability layer\
-          \ (author once, emit "
+        title: 'DNA pivot: prompt-manager → vendor-neutral portability layer (author once, emit '
         at: '2026-07-11T12:50:08+00:00'
-        summary: 'Pivot DNA into a vendor-neutral de-para layer: the Agent/Soul/Guardrail/Tool
-          Kinds are the neutral source, emitters materialize each runtime''s native
-          artifact ('
+        summary: 'Pivot DNA into a vendor-neutral de-para layer: the Agent/Soul/Guardrail/Tool Kinds are the neutral source, emitters materialize each runtime''s native artifact ('
       - kind: Story
         name: s-sdlc-delegator-digest
-        title: "dna sdlc digest \u2014 retrospective board-native digest"
+        title: dna sdlc digest — retrospective board-native digest
         at: '2026-07-11T13:44:41+00:00'
-        summary: "Implementado: dna_cli/_digest.py (agregador PURO build_digest +\
-          \ resolve_since, kernel-free) + comando 'digest' isolado no fim de sdlc_cmd.py\
-          \ (n\xE3o toca cite/epic"
+        summary: 'Implementado: dna_cli/_digest.py (agregador PURO build_digest + resolve_since, kernel-free) + comando ''digest'' isolado no fim de sdlc_cmd.py (não toca cite/epic'
       found:
       - kind: Kaizen
         name: kz-001-sdlc-expressiveness-gap-dna
         title: kz-001-sdlc-expressiveness-gap-dna
         at: '2026-07-11T12:51:29+00:00'
-        body: 'SDLC expressiveness gap: ''dna sdlc cite'' resolves Reference/<name>
-          ONLY (it does get_doc(''Reference'', ref_name)), so a Research/ADR/Epic
-          cannot cite a Research '
+        body: 'SDLC expressiveness gap: ''dna sdlc cite'' resolves Reference/<name> ONLY (it does get_doc(''Reference'', ref_name)), so a Research/ADR/Epic cannot cite a Research '
       - kind: Kaizen
         name: kz-002-sdlc-gap-re-epic-e-dna-porta
         title: kz-002-sdlc-gap-re-epic-e-dna-porta
         at: '2026-07-11T12:54:00+00:00'
-        body: 'SDLC gap (re: epic e-dna-portability): ''dna sdlc epic show <e>'' reads
-          the epic''s FORWARD spec.features[], but ''feature create --epic <e>'' only
-          sets the feature'''
+        body: 'SDLC gap (re: epic e-dna-portability): ''dna sdlc epic show <e>'' reads the epic''s FORWARD spec.features[], but ''feature create --epic <e>'' only sets the feature'''
       progressed:
       - kind: Epic
         name: e-dna-dx
@@ -350,7 +310,7 @@ spec:
         at: '2026-07-11T12:31:01+00:00'
       - kind: Feature
         name: f-dna-emitters
-        title: "Runtime emitters (DNA \u2192 native artifact)"
+        title: Runtime emitters (DNA → native artifact)
         to: in-development
         at: '2026-07-11T12:31:14+00:00'
       - kind: Feature
@@ -360,7 +320,7 @@ spec:
         at: '2026-07-11T12:31:16+00:00'
       - kind: Feature
         name: f-sdlc-digest
-        title: "SDLC Digest \u2014 o que aconteceu enquanto voc\xEA estava fora"
+        title: SDLC Digest — o que aconteceu enquanto você estava fora
         to: in-development
         at: '2026-07-11T13:37:53+00:00'
       releases:
@@ -677,12 +637,7 @@ spec:
         name: tr-tg-s-oas-alignment-research-c-20260711-131707
         work_item: Story/s-oas-alignment-research
         at: '2026-07-11T13:17:10+00:00'
-  heuristic_explanation: "Retrospective digest do scope dna-development na janela\
-    \ last 24h (2026-07-10T13:49:22.519505+00:00 \u2192 2026-07-11T13:49:22.519505+00:00).\
-    \ Varreu as timelines de Story, Feature, Epic, Issue, ADR, Kaizen, Spike, Bug,\
-    \ Task, Initiative: 38 terminais, 6 decis\xF5es, 2 achados, 6 avan\xE7os, 8 releases,\
-    \ 74 artefatos. Aten\xE7\xE3o (0): 0 blocked, 0 em review, 0 decis\xF5es-do-dono,\
-    \ 0 perguntas abertas. RAG=green (red=blocked; amber=pend\xEAncias; green=limpo)."
+  heuristic_explanation: 'Retrospective digest do scope dna-development na janela last 24h (2026-07-10T13:49:22.519505+00:00 → 2026-07-11T13:49:22.519505+00:00). Varreu as timelines de Story, Feature, Epic, Issue, ADR, Kaizen, Spike, Bug, Task, Initiative: 38 terminais, 6 decisões, 2 achados, 6 avanços, 8 releases, 74 artefatos. Atenção (0): 0 blocked, 0 em review, 0 decisões-do-dono, 0 perguntas abertas. RAG=green (red=blocked; amber=pendências; green=limpo).'
   evidence_refs:
   - Issue/i-010-ts-resolver-legacy-shorthand-parity
   - Issue/i-005-docstring-coverage-gaps

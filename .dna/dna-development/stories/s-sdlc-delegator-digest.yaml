@@ -3,11 +3,8 @@ kind: Story
 metadata:
   name: s-sdlc-delegator-digest
 spec:
-  title: "dna sdlc digest \u2014 retrospective board-native digest"
-  description: "Comando 'dna sdlc digest [--since <ref>] [--scope] [--save] [--json]'\
-    \ que agrega os eventos de timeline dos work items numa janela e produz um digest\
-    \ de uma tela agrupado (Conclu\xEDdo / Decidido / Achado / Precisa de voc\xEA\
-    ), persist\xEDvel como StatusReport."
+  title: dna sdlc digest — retrospective board-native digest
+  description: Comando 'dna sdlc digest [--since <ref>] [--scope] [--save] [--json]' que agrega os eventos de timeline dos work items numa janela e produz um digest de uma tela agrupado (Concluído / Decidido / Achado / Precisa de você), persistível como StatusReport.
   status: done
   feature: f-sdlc-digest
   owner: claude-code
@@ -17,35 +14,25 @@ spec:
   - observability
   - cli
   acceptance_criteria:
-  - text: "dna sdlc digest agrega eventos de timeline (status\u2192done/review/blocked,\
-      \ decis\xF5es/ADRs, features/\xE9picos que avan\xE7aram, issues/kaizen, artefatos,\
-      \ releases) numa janela --since que aceita ISO | Nh/Nd/Nw | last-digest, default\
-      \ 24h"
+  - text: dna sdlc digest agrega eventos de timeline (status→done/review/blocked, decisões/ADRs, features/épicos que avançaram, issues/kaizen, artefatos, releases) numa janela --since que aceita ISO | Nh/Nd/Nw | last-digest, default 24h
     done: true
     done_at: '2026-07-11T14:10:52+00:00'
     done_by: story-done-auto
-  - text: "Se\xE7\xE3o 'PRECISA DA SUA ATEN\xC7\xC3O' lista blocked (com motivo),\
-      \ stories em review com PR aberto, decis\xF5es-do-dono pendentes e perguntas\
-      \ em aberto \u2014 primeiro e destacado"
+  - text: Seção 'PRECISA DA SUA ATENÇÃO' lista blocked (com motivo), stories em review com PR aberto, decisões-do-dono pendentes e perguntas em aberto — primeiro e destacado
     done: true
     done_at: '2026-07-11T14:10:52+00:00'
     done_by: story-done-auto
-  - text: "Sa\xEDda de UMA tela agrupada (Conclu\xEDdo/Decidido/Achado/Precisa de\
-      \ voc\xEA); --json estruturado; --save persiste StatusReport 'digest-<data>'\
-      \ query\xE1vel via cognitive search/recall"
+  - text: Saída de UMA tela agrupada (Concluído/Decidido/Achado/Precisa de você); --json estruturado; --save persiste StatusReport 'digest-<data>' queryável via cognitive search/recall
     done: true
     done_at: '2026-07-11T14:10:52+00:00'
     done_by: story-done-auto
-  - text: "Help/docs distinguem digest (o que j\xE1 aconteceu, pra tr\xE1s) de brief\
-      \ (pr\xF3ximos passos, pra frente)"
+  - text: Help/docs distinguem digest (o que já aconteceu, pra trás) de brief (próximos passos, pra frente)
     done: true
     done_at: '2026-07-11T14:10:52+00:00'
     done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - text: "L\xF3gica de agrega\xE7\xE3o pura + unit-testada; suites Py + guards +\
-      \ mkdocs build --strict verdes; doc-guia + CHANGELOG [Unreleased]; digest real\
-      \ do board de hoje capturado no TestRun"
+  - text: Lógica de agregação pura + unit-testada; suites Py + guards + mkdocs build --strict verdes; doc-guia + CHANGELOG [Unreleased]; digest real do board de hoje capturado no TestRun
     done: true
     done_at: '2026-07-11T14:10:52+00:00'
     done_by: story-done-auto
@@ -68,17 +55,7 @@ spec:
     actor: claude-code
     type: decision
     source: cli
-    summary: "Implementado: dna_cli/_digest.py (agregador PURO build_digest + resolve_since,\
-      \ kernel-free) + comando 'digest' isolado no fim de sdlc_cmd.py (n\xE3o toca\
-      \ cite/epic show). Janela --since aceita ISO|Nh/Nd/Nw|last-digest|default-24h.\
-      \ Agrega Story/Feature/Epic/Issue/ADR/Kaizen/Spike/Bug/Task/Initiative \u2192\
-      \ Conclu\xEDdo/Decidido/Achado/Precisa-de-voc\xEA + Avan\xE7ou/Releases/Artefatos.\
-      \ Decidi (1) ADR aceito conta como DECIS\xC3O, n\xE3o Conclu\xEDdo (evita double-count);\
-      \ (2) 'Precisa de voc\xEA' \xE9 current-state (n\xE3o-windowed) \u2014 um blocked\
-      \ de 3 dias atr\xE1s ainda precisa de aten\xE7\xE3o; (3) dedupe kaizen-event\
-      \ vs Kaizen-doc preferindo o doc can\xF4nico. --save persiste StatusReport digest-<data>\
-      \ (insight='sdlc-digest', verdict+heuristic embedded p/ recall). 23 unit tests\
-      \ verdes."
+    summary: 'Implementado: dna_cli/_digest.py (agregador PURO build_digest + resolve_since, kernel-free) + comando ''digest'' isolado no fim de sdlc_cmd.py (não toca cite/epic show). Janela --since aceita ISO|Nh/Nd/Nw|last-digest|default-24h. Agrega Story/Feature/Epic/Issue/ADR/Kaizen/Spike/Bug/Task/Initiative → Concluído/Decidido/Achado/Precisa-de-você + Avançou/Releases/Artefatos. Decidi (1) ADR aceito conta como DECISÃO, não Concluído (evita double-count); (2) ''Precisa de você'' é current-state (não-windowed) — um blocked de 3 dias atrás ainda precisa de atenção; (3) dedupe kaizen-event vs Kaizen-doc preferindo o doc canônico. --save persiste StatusReport digest-<data> (insight=''sdlc-digest'', verdict+heuristic embedded p/ recall). 23 unit tests verdes.'
     commit_ref: f0aa9c7c3ba9eb8142fd4f5b5789f95313771a5e
   - at: '2026-07-11T13:50:00+00:00'
     actor: claude-code
@@ -93,7 +70,7 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-s-sdlc-delegator-digest-20260711-135015
-    summary: "TestRun tr-tg-s-sdlc-delegator-digest-20260711-135015 \u2192 pass"
+    summary: TestRun tr-tg-s-sdlc-delegator-digest-20260711-135015 → pass
     outcome: pass
   - at: '2026-07-11T14:10:44+00:00'
     actor: claude-code
@@ -108,7 +85,7 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-digest-c-20260711-141047
-    summary: "TestRun tr-tg-digest-c-20260711-141047 \u2192 pass"
+    summary: TestRun tr-tg-digest-c-20260711-141047 → pass
     outcome: pass
   - at: '2026-07-11T14:10:55+00:00'
     actor: claude-code

@@ -3,9 +3,7 @@ kind: Story
 metadata:
   name: s-speckit-mcp-apps-memory-card-t005
 spec:
-  description: "Capturar a baseline byte a byte do `content` textual de `list_memories`/`recall`\
-    \ como fixture em `packages/cli/tests/test_mcp_apps.py` (pr\xE9-requisito do gate\
-    \ de zero regress\xE3o)"
+  description: Capturar a baseline byte a byte do `content` textual de `list_memories`/`recall` como fixture em `packages/cli/tests/test_mcp_apps.py` (pré-requisito do gate de zero regressão)
   title: Capturar a baseline byte a byte do `content` textual de `list_memories`/`recall`
   status: done
   feature: f-copilot-mcp-apps
@@ -47,11 +45,7 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: "T005 no commit 3202530: baseline capturada em main limpo ANTES de qualquer\
-      \ mudan\xE7a (script contra a \xE1rvore intocada, fastmcp 3.4.4): fixtures/mcp_apps/list_memories.content.txt\
-      \ (342 bytes, json.dumps com espa\xE7os) + recall.content.txt (151 bytes, serializa\xE7\
-      \xE3o compacta do FastMCP \u2014 por isso recall N\xC3O \xE9 embrulhado em ToolResult).\
-      \ Muta\xE7\xE3o separators=(',',':') \u2192 teste morre (1 failed), revertida."
+    summary: 'T005 no commit 3202530: baseline capturada em main limpo ANTES de qualquer mudança (script contra a árvore intocada, fastmcp 3.4.4): fixtures/mcp_apps/list_memories.content.txt (342 bytes, json.dumps com espaços) + recall.content.txt (151 bytes, serialização compacta do FastMCP — por isso recall NÃO é embrulhado em ToolResult). Mutação separators=('','','':'') → teste morre (1 failed), revertida.'
     commit_ref: 3202530f40c3a527dad8e436dc6290d9b2298a19
   - at: '2026-07-21T20:12:50+00:00'
     actor: claude-code
@@ -66,7 +60,7 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-speckit-mcp-apps-sdk-20260721-201420
-    summary: "TestRun tr-tg-speckit-mcp-apps-sdk-20260721-201420 \u2192 pass"
+    summary: TestRun tr-tg-speckit-mcp-apps-sdk-20260721-201420 → pass
     outcome: pass
   - at: '2026-07-21T20:21:06+00:00'
     actor: claude-code
@@ -81,7 +75,7 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-speckit-mcp-apps-render-smoke-20260721-202227
-    summary: "TestRun tr-tg-speckit-mcp-apps-render-smoke-20260721-202227 \u2192 pass"
+    summary: TestRun tr-tg-speckit-mcp-apps-render-smoke-20260721-202227 → pass
     outcome: pass
   - at: '2026-07-21T20:25:35+00:00'
     actor: claude-code

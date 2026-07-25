@@ -3,10 +3,8 @@ kind: Feature
 metadata:
   name: f-console-backend
 spec:
-  title: "Console backend \u2014 portfolio REST + demo seed"
-  description: Thin REST read-endpoints (orgs/projects/project-detail/repos/board/insights-source-filter)
-    over the 5 portfolio Kinds, mirroring the intel face; plus a seeded demo portfolio
-    (tenant demo) so the DNA Cloud portal reads REAL data.
+  title: Console backend — portfolio REST + demo seed
+  description: Thin REST read-endpoints (orgs/projects/project-detail/repos/board/insights-source-filter) over the 5 portfolio Kinds, mirroring the intel face; plus a seeded demo portfolio (tenant demo) so the DNA Cloud portal reads REAL data.
   status: discovery
   epic: e-portfolio-console
   reporter: claude-code

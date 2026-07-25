@@ -3,7 +3,7 @@ kind: Story
 metadata:
   name: s-dna-new-tool
 spec:
-  title: "dna new tool <name> \u2014 scaffold a Tool descriptor into a scope"
+  title: dna new tool <name> — scaffold a Tool descriptor into a scope
   description: Reuse the dna new group; idempotent/--force via kernel.write_document
   status: done
   feature: f-dna-tools-as-data
@@ -11,8 +11,7 @@ spec:
   labels:
   - cli
   acceptance_criteria:
-  - text: dna new tool <name> writes a valid Tool doc through kernel.write_document;
-      idempotent; --force overwrites; --description/--type wiring
+  - text: dna new tool <name> writes a valid Tool doc through kernel.write_document; idempotent; --force overwrites; --description/--type wiring
     done: true
     done_at: '2026-07-11T12:17:09+00:00'
     done_by: story-done-auto
@@ -35,10 +34,7 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: "dna new tool <name> adicionado ao grupo 'new' (mesmo _write\u2192kernel.write_document,\
-      \ idempotente/--force). Op\xE7\xF5es -d (metadata.description agent-facing)\
-      \ e --type. 4 testes CLI (v\xE1lido+readable via load_tools, json, idempotente,\
-      \ force)."
+    summary: dna new tool <name> adicionado ao grupo 'new' (mesmo _write→kernel.write_document, idempotente/--force). Opções -d (metadata.description agent-facing) e --type. 4 testes CLI (válido+readable via load_tools, json, idempotente, force).
     commit_ref: fec9824409b71804205826e6b506a7d59d1605b0
   - at: '2026-07-11T11:21:29+00:00'
     actor: claude-code
@@ -65,7 +61,7 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-s-dna-new-tool-c-20260711-121706
-    summary: "TestRun tr-tg-s-dna-new-tool-c-20260711-121706 \u2192 pass"
+    summary: TestRun tr-tg-s-dna-new-tool-c-20260711-121706 → pass
     outcome: pass
   - at: '2026-07-11T12:17:12+00:00'
     actor: claude-code

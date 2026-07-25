@@ -3,13 +3,8 @@ kind: Feature
 metadata:
   name: f-sdlc-digest
 spec:
-  title: "SDLC Digest \u2014 o que aconteceu enquanto voc\xEA estava fora"
-  description: "Um comando retrospectivo 'dna sdlc digest' board-native para o fluxo\
-    \ de quem DELEGA e revisa no fim: agrega os eventos das timelines de todos os\
-    \ work items numa janela (--since), agrupa em Conclu\xEDdo / Decidido / Achado\
-    \ / Precisa de voc\xEA, e persiste (--save) como StatusReport query\xE1vel. Ortogonal\
-    \ ao piv\xF4 \u2014 feature standalone (uma capability coesa; n\xE3o h\xE1 features-irm\xE3\
-    s planejadas \u2192 altitude de Feature, n\xE3o Epic)."
+  title: SDLC Digest — o que aconteceu enquanto você estava fora
+  description: 'Um comando retrospectivo ''dna sdlc digest'' board-native para o fluxo de quem DELEGA e revisa no fim: agrega os eventos das timelines de todos os work items numa janela (--since), agrupa em Concluído / Decidido / Achado / Precisa de você, e persiste (--save) como StatusReport queryável. Ortogonal ao pivô — feature standalone (uma capability coesa; não há features-irmãs planejadas → altitude de Feature, não Epic).'
   status: in-development
   owner: claude-code
   reporter: claude-code

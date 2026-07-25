@@ -3,13 +3,8 @@ kind: Story
 metadata:
   name: s-tier-a-doc-kind
 spec:
-  title: "Tier A: trazer o Doc Kind do upstream \u2014 fecha a degrada\xE7\xE3o conhecida\
-    \ do grupo dn"
-  description: "Tier A: trazer o Doc Kind do upstream \u2014 fecha a degrada\xE7\xE3\
-    o conhecida do grupo dna docs (o cli-tour documentou o workaround via KindDefinition\
-    \ manual; com o Kind nativo o grupo funciona out-of-the-box). Extension doc (497loc\
-    \ upstream, avaliar o que \xE9 core vs service) + paridade TS + prosa (atualizar\
-    \ o bloco do cli-tour removendo o workaround)."
+  title: 'Tier A: trazer o Doc Kind do upstream — fecha a degradação conhecida do grupo dn'
+  description: 'Tier A: trazer o Doc Kind do upstream — fecha a degradação conhecida do grupo dna docs (o cli-tour documentou o workaround via KindDefinition manual; com o Kind nativo o grupo funciona out-of-the-box). Extension doc (497loc upstream, avaliar o que é core vs service) + paridade TS + prosa (atualizar o bloco do cli-tour removendo o workaround).'
   status: done
   feature: f-dna-1.0-readiness
   priority: medium
@@ -21,8 +16,7 @@ spec:
   reporter: claude-code
   business_value: 400
   acceptance_criteria:
-  - text: Doc Kind registrado; dna docs list/show funciona sem KindDefinition manual;
-      cli-tour atualizado; prosa/guard verdes; CI verde
+  - text: Doc Kind registrado; dna docs list/show funciona sem KindDefinition manual; cli-tour atualizado; prosa/guard verdes; CI verde
     done: true
     done_at: '2026-07-09T23:12:00+00:00'
     done_by: story-done-auto
@@ -51,16 +45,7 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: "Doc Kind portado como descriptor puro (dna/extensions/doc/kinds/doc.kind.yaml,\
-      \ byte-id\xEAntico Py\u2194TS): plane record, schema strict, bundle docs/<name>/DOC.md\
-      \ via generic RW (body_field: body) \u2014 zero classe. Subset core: body/icon/subtitle/summary/order/locale/enabled/kind_of/category\
-      \ (+tags); cortado o que era help-center do produto upstream (data_sections/live_diagrams/assets/featured/template/ui_schema).\
-      \ Alias dna-doc (saiu do grandfather do strict-schema lint \u2014 ratchet encolheu).\
-      \ Out-of-the-box provado: dna docs list/show num scope s\xF3 com Genome+DOC.md,\
-      \ sem KindDefinition. cli-tour reescrito (workaround\u2192nativo; KindDefinition\
-      \ virou demo de extens\xE3o com Snippet), prosa no builtin-kinds.md (Domain\
-      \ content), reference regenerada, coverage+brand guards e mkdocs --strict verdes.\
-      \ Rodando suites completas."
+    summary: 'Doc Kind portado como descriptor puro (dna/extensions/doc/kinds/doc.kind.yaml, byte-idêntico Py↔TS): plane record, schema strict, bundle docs/<name>/DOC.md via generic RW (body_field: body) — zero classe. Subset core: body/icon/subtitle/summary/order/locale/enabled/kind_of/category (+tags); cortado o que era help-center do produto upstream (data_sections/live_diagrams/assets/featured/template/ui_schema). Alias dna-doc (saiu do grandfather do strict-schema lint — ratchet encolheu). Out-of-the-box provado: dna docs list/show num scope só com Genome+DOC.md, sem KindDefinition. cli-tour reescrito (workaround→nativo; KindDefinition virou demo de extensão com Snippet), prosa no builtin-kinds.md (Domain content), reference regenerada, coverage+brand guards e mkdocs --strict verdes. Rodando suites completas.'
     commit_ref: 3565d3bb758a266de6e300f817b0afbae91fc09f
   - at: '2026-07-09T23:03:24+00:00'
     actor: claude-code
@@ -75,7 +60,7 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-s-tier-a-doc-kind-20260709-230337
-    summary: "TestRun tr-tg-s-tier-a-doc-kind-20260709-230337 \u2192 pass"
+    summary: TestRun tr-tg-s-tier-a-doc-kind-20260709-230337 → pass
     outcome: pass
   - at: '2026-07-09T23:05:22+00:00'
     actor: claude-code
@@ -93,34 +78,26 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: "PR https://github.com/ruinosus/dna/pull/22 aberto (base main) e story\
-      \ em review. CI: brand-guard, commit-emails, gitleaks, cli, postgres, sdk-ts,\
-      \ docs-build (drift+coverage guards) e docs-links verdes; aguardando s\xF3 sdk-py.\
-      \ Testkit registrado: tg-s-tier-a-doc-kind (5 passos) + tr pass. N\xC3O vou\
-      \ mergear \u2014 done-on-merge fica com o Barna."
+    summary: 'PR https://github.com/ruinosus/dna/pull/22 aberto (base main) e story em review. CI: brand-guard, commit-emails, gitleaks, cli, postgres, sdk-ts, docs-build (drift+coverage guards) e docs-links verdes; aguardando só sdk-py. Testkit registrado: tg-s-tier-a-doc-kind (5 passos) + tr pass. NÃO vou mergear — done-on-merge fica com o Barna.'
     commit_ref: 29e4ef80f32d07c76aea5dc0891df14f6d910317
   - at: '2026-07-09T23:12:03+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "PR #22 merged (10/10; TestGuide/TestRun do agente). Doc Kind descriptor\
-      \ puro byte-par Py\u2194TS; dna docs out-of-the-box (e2e en/pt-BR pinado); cli-tour\
-      \ re-executado (workaround\u2192demo de extens\xE3o); strict-schema ratchet\
-      \ encolheu; subset service-bound cortado com nota honesta."
+    summary: 'PR #22 merged (10/10; TestGuide/TestRun do agente). Doc Kind descriptor puro byte-par Py↔TS; dna docs out-of-the-box (e2e en/pt-BR pinado); cli-tour re-executado (workaround→demo de extensão); strict-schema ratchet encolheu; subset service-bound cortado com nota honesta.'
   - at: '2026-07-10T00:08:24+00:00'
     actor: claude-code
     type: artifact_produced
     source: cli
     kind: TestRun
     name: tr-tg-s-tier-a-doc-kind-20260710-000823
-    summary: "TestRun tr-tg-s-tier-a-doc-kind-20260710-000823 \u2192 pass"
+    summary: TestRun tr-tg-s-tier-a-doc-kind-20260710-000823 → pass
     outcome: pass
   - at: '2026-07-10T00:08:26+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "PR #22 merged (fechamento formal \u2014 o gate pedia TestRun na guide\
-      \ --product do agente, registrado agora)."
+    summary: 'PR #22 merged (fechamento formal — o gate pedia TestRun na guide --product do agente, registrado agora).'
   - at: '2026-07-10T00:11:45+00:00'
     actor: claude-code
     type: artifact_produced
@@ -134,14 +111,13 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-s-tier-a-doc-kind-smoke-20260710-001146
-    summary: "TestRun tr-tg-s-tier-a-doc-kind-smoke-20260710-001146 \u2192 pass"
+    summary: TestRun tr-tg-s-tier-a-doc-kind-smoke-20260710-001146 → pass
     outcome: pass
   - at: '2026-07-10T00:11:48+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: 'PR #22 merged; smoke de produto executado pelo orquestrador (out-of-the-box
-      provado ao vivo). Tier A COMPLETO: Doc + ModelProfile + Automation.'
+    summary: 'PR #22 merged; smoke de produto executado pelo orquestrador (out-of-the-box provado ao vivo). Tier A COMPLETO: Doc + ModelProfile + Automation.'
   - at: '2026-07-10T00:11:50+00:00'
     actor: claude-code
     type: status_change

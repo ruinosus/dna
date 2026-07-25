@@ -3,15 +3,7 @@ kind: Issue
 metadata:
   name: i-003-story-desc-brand-guard-trap
 spec:
-  description: "Trap de processo recorrente (achado no PR #8): ao portar coisas do\
-    \ repo upstream, eu descrevo a story citando o nome do repo-m\xE3e (ex.: 'trazer\
-    \ X do <upstream>'), e esse texto vira YAML tracked em .dna/ \u2014 que o brand_guard\
-    \ varre. Resultado: a pr\xF3pria story de um port quebra o CI. Mitiga\xE7\xE3\
-    o de processo (n\xE3o de c\xF3digo): ao filar stories de port, referir 'upstream\
-    \ SDK' / 'the source project', nunca o nome proibido. Op\xE7\xE3o t\xE9cnica futura:\
-    \ brand_guard poderia ter allowlist de contexto pra descri\xE7\xF5es de story,\
-    \ MAS isso enfraquece o guard \u2014 prefiro a disciplina de escrita. Registrar\
-    \ aqui pra n\xE3o recorrer."
+  description: 'Trap de processo recorrente (achado no PR #8): ao portar coisas do repo upstream, eu descrevo a story citando o nome do repo-mãe (ex.: ''trazer X do <upstream>''), e esse texto vira YAML tracked em .dna/ — que o brand_guard varre. Resultado: a própria story de um port quebra o CI. Mitigação de processo (não de código): ao filar stories de port, referir ''upstream SDK'' / ''the source project'', nunca o nome proibido. Opção técnica futura: brand_guard poderia ter allowlist de contexto pra descrições de story, MAS isso enfraquece o guard — prefiro a disciplina de escrita. Registrar aqui pra não recorrer.'
   type: task
   severity: low
   status: resolved
@@ -27,10 +19,7 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: "RESOLVIDO como processo institucionalizado: a disciplina ('upstream\
-      \ SDK', nunca o nome) est\xE1 nos prompts de todos os agentes desde ent\xE3\
-      o (zero recorr\xEAncia em ~15 PRs), no CONTRIBUTING (\xA7 secret/brand hygiene)\
-      \ e o brand_guard pega qualquer deslize no CI. O registro cumpriu o papel."
+    summary: 'RESOLVIDO como processo institucionalizado: a disciplina (''upstream SDK'', nunca o nome) está nos prompts de todos os agentes desde então (zero recorrência em ~15 PRs), no CONTRIBUTING (§ secret/brand hygiene) e o brand_guard pega qualquer deslize no CI. O registro cumpriu o papel.'
   - at: '2026-07-10T10:51:26+00:00'
     actor: claude-code
     type: status_change

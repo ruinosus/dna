@@ -3,16 +3,7 @@ kind: Issue
 metadata:
   name: i-009-market-demo-dep-shorthand-granularity
 spec:
-  description: "Genome dep 'github:anthropics/skills/skills@main' do market-demo usa\
-    \ o shorthand legado 'skills: [...]' que LocalResolver._collect_requested n\xE3\
-    o l\xEA (s\xF3 v3 'items:'), caindo em _resolve_all \u2014 que assume layout <categoria>/<item>\
-    \ 2-n\xEDveis e, apontado direto pra skills/, retorna os SUBDIRET\xD3RIOS dos\
-    \ bundles (references/, scripts/) em vez dos bundles. O demo n\xE3o quebra porque\
-    \ os skills est\xE3o vendorizados no disco do scope; o dep \xE9 decorativo. Fix:\
-    \ aceitar o shorthand em _collect_requested ou migrar o fixture pro formato items:\
-    \ \u2014 e decidir a sem\xE2ntica de _resolve_all para \xE1rvores rasas (bundle\
-    \ no primeiro n\xEDvel). Encontrado durante s-dna-install (o fetch do install\
-    \ contorna isso escaneando a \xE1rvore com readers)."
+  description: 'Genome dep ''github:anthropics/skills/skills@main'' do market-demo usa o shorthand legado ''skills: [...]'' que LocalResolver._collect_requested não lê (só v3 ''items:''), caindo em _resolve_all — que assume layout <categoria>/<item> 2-níveis e, apontado direto pra skills/, retorna os SUBDIRETÓRIOS dos bundles (references/, scripts/) em vez dos bundles. O demo não quebra porque os skills estão vendorizados no disco do scope; o dep é decorativo. Fix: aceitar o shorthand em _collect_requested ou migrar o fixture pro formato items: — e decidir a semântica de _resolve_all para árvores rasas (bundle no primeiro nível). Encontrado durante s-dna-install (o fetch do install contorna isso escaneando a árvore com readers).'
   type: bug
   severity: low
   status: resolved
@@ -26,18 +17,7 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: "Fix em f988fbc (branch feat/s-small-bug-fixes). Decis\xE3o de contrato:\
-      \ o shorthand 'skills: [...]' \xE9 formato MORTO (zero docs, zero schema, zero\
-      \ resolvers) \u2192 REJEITADO com ResolveError did\xE1tico via reject_legacy_shorthand()\
-      \ em local._collect_requested (compartilhado por github+http; github agora chama\
-      \ _collect_requested incondicionalmente \u2014 antes era gated em dep.get('items'),\
-      \ pulando o check exatamente no caso do bug). Pelo kernel a rejei\xE7\xE3o cai\
-      \ em mi.resolve_errors (relato alto, sem crash) e o fallback de granularidade\
-      \ errada N\xC3O acontece. Fixture market-demo migrado pro v3 items: (nomes acham\
-      \ os bundles via fallback source/name p/ \xE1rvore rasa). TDD: TestLegacyDepShorthandRejected\
-      \ em test_dependency_resolution.py (3 red + 1 controle). Sem\xE2ntica geral\
-      \ de _resolve_all p/ \xE1rvores rasas fica como poss\xEDvel follow-up \u2014\
-      \ o caminho silencioso foi eliminado."
+    summary: 'Fix em f988fbc (branch feat/s-small-bug-fixes). Decisão de contrato: o shorthand ''skills: [...]'' é formato MORTO (zero docs, zero schema, zero resolvers) → REJEITADO com ResolveError didático via reject_legacy_shorthand() em local._collect_requested (compartilhado por github+http; github agora chama _collect_requested incondicionalmente — antes era gated em dep.get(''items''), pulando o check exatamente no caso do bug). Pelo kernel a rejeição cai em mi.resolve_errors (relato alto, sem crash) e o fallback de granularidade errada NÃO acontece. Fixture market-demo migrado pro v3 items: (nomes acham os bundles via fallback source/name p/ árvore rasa). TDD: TestLegacyDepShorthandRejected em test_dependency_resolution.py (3 red + 1 controle). Semântica geral de _resolve_all p/ árvores rasas fica como possível follow-up — o caminho silencioso foi eliminado.'
   - at: '2026-07-10T11:08:40+00:00'
     actor: claude-code
     type: status_change

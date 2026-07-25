@@ -8,7 +8,6 @@ spec:
   status: accepted
   story_ref: s-dna-new-tool
   journey_phase: plan
-  body: "Reusar new_cmd.py: comando new_tool com skeleton Tool v\xE1lido + placeholder\
-    \ input_schema; teste CLI mirror test_new_cmd."
+  body: 'Reusar new_cmd.py: comando new_tool com skeleton Tool válido + placeholder input_schema; teste CLI mirror test_new_cmd.'
   created_at: '2026-07-11T11:21:26+00:00'
   updated_at: '2026-07-11T11:21:26+00:00'
