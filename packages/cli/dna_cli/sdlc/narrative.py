@@ -10,10 +10,10 @@ import click
 
 from dna_cli._ctx import fail, open_session
 from dna_cli.sdlc._common import (
-    DEFAULT_SCOPE,
     _build_raw,
     _cli_actor,
     _now_iso,
+    _scope_callback,
     _scope_option,
 )
 from dna_cli.sdlc._root import sdlc
@@ -39,7 +39,8 @@ def narrative_group() -> None:
 
 
 @narrative_group.command("status")
-@click.option("--scope", default=DEFAULT_SCOPE, show_default=True)
+@click.option("--scope", default=None, callback=_scope_callback,
+              help="Scope holding the Narrative (default: env / sole scope).")
 def cmd_narrative_status(scope: str) -> None:
     """Report cadence: how long since the last Narrative was written,
     how many SDLC events accumulated since, and a suggestion if it's
@@ -151,7 +152,8 @@ def cmd_narrative_status(scope: str) -> None:
 @click.option("--intent", "author_intent", default="daily",
               type=click.Choice(["daily", "weekly", "release", "retro", "incident", "freeform"]),
               help="Author intent (drives Studio grouping).")
-@click.option("--scope", default=DEFAULT_SCOPE, show_default=True)
+@click.option("--scope", default=None, callback=_scope_callback,
+              help="Scope holding the Narrative (default: env / sole scope).")
 def cmd_narrative_new(
     slug: str, title: str | None, author_intent: str, scope: str,
 ) -> None:

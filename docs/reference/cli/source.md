@@ -103,7 +103,7 @@ dna source replica add [OPTIONS] REPLICA_ID
 | `--help` | Show this message and exit. |
 | `--kinds` | Comma-separated Kind allowlist. Omit = all kinds. |
 | `--replica` | Destination URL (`fs://path` or `file://path`). |
-| `--scopes` | Comma-separated scope allowlist (e.g. dna-development). |
+| `--scopes` | Comma-separated scope allowlist (e.g. my-board). |
 
 ### `dna source replica disable`
 

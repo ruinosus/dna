@@ -2,7 +2,7 @@
 
 DNA tracks its own software lifecycle **as DNA documents**. This repository's
 Stories, Features and Issues live in
-[`.dna/dna-development/`](https://github.com/ruinosus/dna/tree/main/.dna/dna-development) —
+[`.dna/dna/`](https://github.com/ruinosus/dna/tree/main/.dna/dna) —
 the repo *is* the project, so its scope sits at the root, right where the
 CLI's default source `./.dna` resolves. This is the SDLC methodology as a
 first-class, dogfooded pillar: the trail from idea to shipped commit is
@@ -18,7 +18,11 @@ adopter repo whose board scope has its own name (`foundry-dev`, ...):
    structure (a `stories/`, `features/`, `epics/`, `issues/` or
    `roadmaps/` container), that scope is used (the CLI logs the choice
    to stderr);
-4. fallback `dna-development` (this repo's own board — compat).
+4. otherwise, a clear error naming both escape hatches (`--scope` /
+   `DNA_SDLC_SCOPE`) — no branded fallback: hardcoding this repo's own
+   board name in the neutral CLI would be the same open-core branding
+   leak already removed everywhere else (an adopter's board has an
+   arbitrary name).
 
 The loop end to end: a Story is created, started through a **plan gate**
 (`story start` refuses to run without `--plan`/`--plan-doc`/`--plan-file`),

@@ -41,7 +41,7 @@ dna sdlc adr accept [OPTIONS] NAME
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ### `dna sdlc adr create`
 
@@ -66,7 +66,7 @@ dna sdlc adr create [OPTIONS] NAME
 | `--context` | WHY we needed to decide (→ spec.context). |
 | `--decision` | WHAT we decided (→ spec.decision). |
 | `--help` | Show this message and exit. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 | `--status` | _(default: `proposed`)_ |
 | `--title` | Decision headline (→ spec.title). |
 
@@ -89,7 +89,7 @@ dna sdlc adr deprecate [OPTIONS] NAME
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ### `dna sdlc adr propose`
 
@@ -110,7 +110,7 @@ dna sdlc adr propose [OPTIONS] NAME
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ### `dna sdlc adr supersede`
 
@@ -132,7 +132,7 @@ dna sdlc adr supersede [OPTIONS] NAME
 | --- | --- |
 | `--by` | ADR name that supersedes this one (→ spec.superseded_by). |
 | `--help` | Show this message and exit. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ## `dna sdlc artifact`
 
@@ -170,7 +170,7 @@ dna sdlc artifact create [OPTIONS] NAME
 | `--from` | Path to the .html file to store (read byte-faithful). |
 | `--help` | Show this message and exit. |
 | `--published-url` | Canonical hosted URL (e.g. a claude.ai artifact link) — the gallery renders it as a clickable link. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 | `--source` | Provenance/context (e.g. 'design doc do épico e-dna-dx'). |
 | `--title` | Human title for the artifact. |
 
@@ -188,7 +188,7 @@ dna sdlc artifact list [OPTIONS]
 | --- | --- |
 | `--help` | Show this message and exit. |
 | `--json` |  |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ### `dna sdlc artifact show`
 
@@ -210,7 +210,7 @@ dna sdlc artifact show [OPTIONS] NAME
 | --- | --- |
 | `--help` | Show this message and exit. |
 | `--html` | Print the raw HTML to stdout. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ## `dna sdlc backfill`
 
@@ -243,7 +243,7 @@ dna sdlc backfill [OPTIONS] PATTERN
 | `--from` | Directory containing markdown files to back-fill from. |
 | `--help` | Show this message and exit. |
 | `--kind` | Generate Spec or Plan docs (auto: infer from path — specs/ → Spec, plans/ → Plan). _(default: `auto`)_ |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ## `dna sdlc brief`
 
@@ -266,7 +266,7 @@ dna sdlc brief [OPTIONS]
 | `--help` | Show this message and exit. |
 | `--json` | Structured output for programmatic use. |
 | `--limit` | Max items in the recent-sessions / recent-lessons sections. _(default: `5`)_ |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ## `dna sdlc bug`
 
@@ -306,7 +306,7 @@ dna sdlc bug create [OPTIONS] NAME
 | `--labels` | Comma-separated labels. |
 | `--owner` |  |
 | `--related-feature` | Feature name (→ spec.related_feature). |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 | `--severity` | _(default: `medium`)_ |
 | `--status` | _(default: `open`)_ |
 | `--steps` | Comma-separated repro steps (→ spec.repro_steps). |
@@ -330,7 +330,7 @@ dna sdlc bug regress [OPTIONS] NAME
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ### `dna sdlc bug resolve`
 
@@ -352,7 +352,7 @@ dna sdlc bug resolve [OPTIONS] NAME
 | --- | --- |
 | `--help` | Show this message and exit. |
 | `--resolution` | How was it resolved? (timeline summary). |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ### `dna sdlc bug start`
 
@@ -373,7 +373,7 @@ dna sdlc bug start [OPTIONS] NAME
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ### `dna sdlc bug triage`
 
@@ -394,7 +394,7 @@ dna sdlc bug triage [OPTIONS] NAME
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ### `dna sdlc bug wontfix`
 
@@ -415,7 +415,7 @@ dna sdlc bug wontfix [OPTIONS] NAME
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ## `dna sdlc changelog`
 
@@ -450,7 +450,7 @@ dna sdlc changelog release [OPTIONS]
 | `--fixed` | Keep-a-Changelog 'fixed' entry (repeatable). |
 | `--help` | Show this message and exit. |
 | `--removed` | Keep-a-Changelog 'removed' entry (repeatable). |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 | `--security` | Keep-a-Changelog 'security' entry (repeatable). |
 | `--version` | SemVer for this release (e.g. 1.4.0). |
 
@@ -467,7 +467,7 @@ dna sdlc changelog show [OPTIONS]
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ### `dna sdlc changelog unreleased`
 
@@ -487,7 +487,7 @@ dna sdlc changelog unreleased [OPTIONS]
 | `--fixed` | Keep-a-Changelog 'fixed' entry (repeatable). |
 | `--help` | Show this message and exit. |
 | `--removed` | Keep-a-Changelog 'removed' entry (repeatable). |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 | `--security` | Keep-a-Changelog 'security' entry (repeatable). |
 
 ## `dna sdlc cite`
@@ -519,7 +519,7 @@ dna sdlc cite [OPTIONS] CITED
 | --- | --- |
 | `--from` | Kind/name of the doc that cites this source (e.g. ADR/0007-emit). |
 | `--help` | Show this message and exit. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ## `dna sdlc current`
 
@@ -530,7 +530,7 @@ confirm visually.
 
 Output format (compact, copy-paste-friendly):
 
-    🚧 in-progress now (scope: dna-development)
+    🚧 in-progress now (scope: my-board)
       📖 s-vibe-commit-trace                "Studio commit_ref link..."
       🚀 f-activity-timeline                "Activity Timeline..."
 
@@ -546,7 +546,7 @@ dna sdlc current [OPTIONS]
 | --- | --- |
 | `--help` | Show this message and exit. |
 | `--json` |  |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ## `dna sdlc demand`
 
@@ -585,7 +585,7 @@ dna sdlc demand [OPTIONS] TITLE
 | `--owner` | _(default: `claude-code`)_ |
 | `--priority` |  |
 | `--reporter` | Who filed the demand (defaults to actor). |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 | `--slug` | Force a specific Story slug (auto-derived from title otherwise). |
 | `--so-that` | User-story 'so that <benefit>' slot. |
 | `--want` | User-story 'I want <goal>' slot. |
@@ -616,7 +616,7 @@ dna sdlc digest [OPTIONS]
 | `--help` | Show this message and exit. |
 | `--json` | Saída estruturada (o dict do agregador). |
 | `--save` | Persiste o digest como StatusReport 'digest-<data>' (durável + queryável via `dna cognitive search`/`recall`). |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 | `--since` | Janela para trás: ISO-8601, um span (24h/3d/2w) ou 'last-digest' (desde o último digest salvo). Default: 24h. |
 
 ## `dna sdlc epic`
@@ -671,7 +671,7 @@ dna sdlc epic create [OPTIONS] NAME
 | `--labels` | Comma-separated labels. |
 | `--priority` |  |
 | `--reporter` | Actor who filed it. Defaults to DNA_CLI_REPORTER env or 'claude-code'. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 | `--status` | _(default: `planning`)_ |
 | `--title` | Short title shown on roadmap cards. |
 
@@ -694,7 +694,7 @@ dna sdlc epic ship [OPTIONS] NAME
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ### `dna sdlc epic show`
 
@@ -715,7 +715,7 @@ dna sdlc epic show [OPTIONS] NAME
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ## `dna sdlc epic-reopen`
 
@@ -737,7 +737,7 @@ dna sdlc epic-reopen [OPTIONS] NAME
 | --- | --- |
 | `--help` | Show this message and exit. |
 | `--reason` | Why reopen? _(default: `reopened`)_ |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 | `--to` | Status to flip back to (default: planning). _(default: `planning`)_ |
 
 ## `dna sdlc extract-decisions`
@@ -761,7 +761,7 @@ dna sdlc extract-decisions [OPTIONS]
 | --- | --- |
 | `--dry-run` | Print matches but don't write. |
 | `--help` | Show this message and exit. |
-| `--scope` | Scope to walk. _(default: `dna-development`)_ |
+| `--scope` | Scope to walk (default: env / sole scope). |
 
 ## `dna sdlc feature`
 
@@ -799,7 +799,7 @@ dna sdlc feature cancel [OPTIONS] NAME
 | --- | --- |
 | `--help` | Show this message and exit. |
 | `--reason` | Why is the Feature cancelled? |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ### `dna sdlc feature create`
 
@@ -841,7 +841,7 @@ dna sdlc feature create [OPTIONS] NAME
 | `--owner` |  |
 | `--priority` |  |
 | `--reporter` | Actor who filed it. Defaults to DNA_CLI_REPORTER env or 'claude-code'. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 | `--status` | _(default: `discovery`)_ |
 | `--target-milestone` | Milestone name this Feature is scheduled into. |
 | `--target-package` | Owner/name of the Genome this Feature targets (for the per-Genome roadmap widget). |
@@ -868,7 +868,7 @@ dna sdlc feature narrate-all [OPTIONS]
 | `--help` | Show this message and exit. |
 | `--only-empty` | Only update Features without an existing narrative_line. |
 | `--overwrite` | Force overwrite even if Feature already has a narrative_line. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ### `dna sdlc feature narrative`
 
@@ -892,7 +892,7 @@ dna sdlc feature narrative [OPTIONS] NAME
 | --- | --- |
 | `--help` | Show this message and exit. |
 | `--line` | One-sentence prose summary of what this Feature has been DOING. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ### `dna sdlc feature reopen`
 
@@ -915,7 +915,7 @@ dna sdlc feature reopen [OPTIONS] NAME
 | --- | --- |
 | `--help` | Show this message and exit. |
 | `--reason` | Why reopen? _(default: `reopened`)_ |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 | `--to` | Status to flip back to (default: discovery). _(default: `discovery`)_ |
 
 ### `dna sdlc feature ship`
@@ -942,7 +942,7 @@ dna sdlc feature ship [OPTIONS] NAME
 | `--commit-ref` | Git SHA shipped with this Feature. Auto-detected from HEAD when omitted. |
 | `--force` | Mark done even when children Stories aren't all done. |
 | `--help` | Show this message and exit. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 | `--summary` | One-line description (lands on the timeline event). |
 
 ### `dna sdlc feature show`
@@ -967,7 +967,7 @@ dna sdlc feature show [OPTIONS] NAME
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ### `dna sdlc feature start`
 
@@ -993,7 +993,7 @@ dna sdlc feature start [OPTIONS] NAME
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ## `dna sdlc gallery`
 
@@ -1028,7 +1028,7 @@ dna sdlc gallery [OPTIONS]
 | `--html` | Gera UM arquivo HTML self-contained (cards por artifact, chip de status, link publicado) — o painel que o dono abre. |
 | `--json` | Saída estruturada (o dict do agregador build_gallery). |
 | `--open` | Abre o HTML gerado no browser (implica --html se ausente, usando um arquivo temporário). |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ## `dna sdlc hooks`
 
@@ -1129,7 +1129,7 @@ dna sdlc initiative cancel [OPTIONS] NAME
 | --- | --- |
 | `--help` | Show this message and exit. |
 | `--reason` | Short cancel reason (mandatory). |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ### `dna sdlc initiative create`
 
@@ -1171,7 +1171,7 @@ dna sdlc initiative create [OPTIONS] NAME
 | `--owner` | Actor name accountable (typically PM or Product Lead). |
 | `--priority` | Board priority. |
 | `--reporter` | Actor who filed it. Defaults to DNA_CLI_REPORTER or claude-code. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 | `--status` | _(default: `proposed`)_ |
 | `--target-value` | e.g. '+30% MAU' or '<200ms p95'. |
 | `--theme-ref` | Optional Theme/OKR Objective slug (upstream OKR). |
@@ -1196,7 +1196,7 @@ dna sdlc initiative ship [OPTIONS] NAME
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ## `dna sdlc issue`
 
@@ -1237,7 +1237,7 @@ dna sdlc issue comment [OPTIONS] NAME
 | --- | --- |
 | `--body` | The comment / finding / decision text. |
 | `--help` | Show this message and exit. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 | `--type` | Defaults to 'comment'; decision-shaped bodies auto-promote. |
 
 ### `dna sdlc issue file`
@@ -1257,7 +1257,7 @@ dna sdlc issue file [OPTIONS]
 | `--owner` |  |
 | `--related-feature` | Feature name (optional). |
 | `--related-finding` | Finding name (optional, eval-derived). |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 | `--severity` | _(default: `medium`)_ |
 | `--slug` | Short kebab-case slug, e.g. 'date-postgres-bug'. |
 | `--type` | _(default: `bug`)_ |
@@ -1288,7 +1288,7 @@ dna sdlc issue import [OPTIONS] REF
 | --- | --- |
 | `--help` | Show this message and exit. |
 | `--repo` | GitHub repo 'owner/name' (default: derivado do remote origin). |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ### `dna sdlc issue publish`
 
@@ -1316,7 +1316,7 @@ dna sdlc issue publish [OPTIONS] NAME
 | `--dry-run` | Só imprime title + body montados; não chama gh. |
 | `--help` | Show this message and exit. |
 | `--repo` | GitHub repo 'owner/name' (default: derivado do remote origin). |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ### `dna sdlc issue resolve`
 
@@ -1339,7 +1339,7 @@ dna sdlc issue resolve [OPTIONS] NAME
 | `--allow-no-produces` | Silencia o warn de outputs vazios (produces[] + back-refs). |
 | `--help` | Show this message and exit. |
 | `--resolution` | How was it resolved? |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ### `dna sdlc issue start`
 
@@ -1360,7 +1360,7 @@ dna sdlc issue start [OPTIONS] NAME
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ### `dna sdlc issue sync`
 
@@ -1386,7 +1386,7 @@ dna sdlc issue sync [OPTIONS] NAME
 | --- | --- |
 | `--help` | Show this message and exit. |
 | `--repo` | GitHub repo 'owner/name' (default: derivado do remote origin). |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ### `dna sdlc issue triage`
 
@@ -1407,7 +1407,7 @@ dna sdlc issue triage [OPTIONS] NAME
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ## `dna sdlc journey`
 
@@ -1459,7 +1459,7 @@ dna sdlc journey close-cycle [OPTIONS] PARENT_REF
 | `--help` | Show this message and exit. |
 | `--next-summary` | Optional summary for the new discover entry. |
 | `--no-narrative` | Skip the auto-Narrative synthesis. By default a retro Narrative is written summarizing the closed cycle. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 | `--show-only` | Print the seed prompt to stdout without writing a new entry. Useful for previewing. |
 
 ### `dna sdlc journey current`
@@ -1477,7 +1477,7 @@ dna sdlc journey current [OPTIONS]
 | --- | --- |
 | `--help` | Show this message and exit. |
 | `--parent` | Filter to a specific anchor doc. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ### `dna sdlc journey enter`
 
@@ -1505,7 +1505,7 @@ dna sdlc journey enter [OPTIONS] {discover|specify|plan|build|reflect}
 | `--parent` | Anchor doc (Feature/f-X or Epic/e-X) grouping siblings. |
 | `--reason` | Reason for --force override. Stored in entry.spec.force_reason for audit. |
 | `--ref` | Doc representing this phase (Kind/name, e.g. Plan/foo). |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 | `--skip-from` | Previous phase you skipped to land here (honest about cut corners, e.g. --skip-from discover). |
 | `--summary` | 1-2 sentence note about what's happening here. |
 
@@ -1530,7 +1530,7 @@ dna sdlc journey list [OPTIONS]
 | `--help` | Show this message and exit. |
 | `--json` |  |
 | `--parent` | Anchor doc to show the trajectory of. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ### `dna sdlc journey transition`
 
@@ -1564,7 +1564,7 @@ dna sdlc journey transition [OPTIONS] {discover|specify|plan|build|reflect}
 | `--parent` | Anchor doc grouping siblings (must match the open entry). |
 | `--reason` | Reason for --force override. Stored in entry.spec.force_reason for audit. |
 | `--ref` | Doc representing the NEXT phase. Defaults to previous entry's ref if --keep-ref. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 | `--skip-from` | Override the auto-detected skip-from phase. Use when you want to mark MORE skipped phases than the prev entry implies (e.g. honest self-assessment of cut corners). By default, skipped_phases is computed from prev_phase → next_phase. |
 | `--summary` |  |
 
@@ -1621,7 +1621,7 @@ dna sdlc kaizen flag [OPTIONS] WORK_ITEM
 | `--help` | Show this message and exit. |
 | `--issue` | Optional Issue/Story slug that captured the improvement (e.g. i-042). Linked on the event so it's traceable. |
 | `--label` | Free-form theme tag (repeatable). Lands on the Kaizen doc and is weighted into semantic-search source text. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ### `dna sdlc kaizen resolve`
 
@@ -1644,7 +1644,7 @@ dna sdlc kaizen resolve [OPTIONS] NAME
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ### `dna sdlc kaizen route`
 
@@ -1669,7 +1669,7 @@ dna sdlc kaizen route [OPTIONS] NAME
 | --- | --- |
 | `--help` | Show this message and exit. |
 | `--issue` | Issue/Story slug que rastreia o fix (e.g. i-042). |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ## `dna sdlc list`
 
@@ -1694,7 +1694,7 @@ dna sdlc list [OPTIONS] {Roadmap|Epic|Feature|Story|Issue|Spec|Plan}
 | `--help` | Show this message and exit. |
 | `--json` |  |
 | `--owner` | Filter by spec.owner. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 | `--status` | Filter by spec.status. |
 
 ## `dna sdlc narrative`
@@ -1743,7 +1743,7 @@ dna sdlc narrative add-decision [OPTIONS] NAME
 | `--decision` | 1-sentence summary of WHAT was decided. |
 | `--help` | Show this message and exit. |
 | `--reason` | WHY — the tradeoff or driving constraint. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 | `--trade-offs` | Optional: what we gave up to make this choice. |
 
 ### `dna sdlc narrative add-open-item`
@@ -1772,7 +1772,7 @@ dna sdlc narrative add-open-item [OPTIONS] NAME
 | `--blocker` | What's blocking it (1-liner). |
 | `--help` | Show this message and exit. |
 | `--owner` | Who's on this (actor name). |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 | `--title` | Short description of the open work item. |
 
 ### `dna sdlc narrative add-paragraph`
@@ -1799,7 +1799,7 @@ dna sdlc narrative add-paragraph [OPTIONS] NAME
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 | `--text` | Past-tense paragraph of what shipped (no bullets). |
 
 ### `dna sdlc narrative new`
@@ -1825,7 +1825,7 @@ dna sdlc narrative new [OPTIONS] SLUG
 | --- | --- |
 | `--help` | Show this message and exit. |
 | `--intent` | Author intent (drives Studio grouping). _(default: `daily`)_ |
-| `--scope` | _(default: `dna-development`)_ |
+| `--scope` | Scope holding the Narrative (default: env / sole scope). |
 | `--title` | Optional title; falls back to slug. |
 
 ### `dna sdlc narrative status`
@@ -1843,7 +1843,7 @@ dna sdlc narrative status [OPTIONS]
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
-| `--scope` | _(default: `dna-development`)_ |
+| `--scope` | Scope holding the Narrative (default: env / sole scope). |
 
 ## `dna sdlc next`
 
@@ -1858,7 +1858,7 @@ dna sdlc next [OPTIONS]
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ## `dna sdlc plan`
 
@@ -1893,7 +1893,7 @@ dna sdlc plan accept [OPTIONS] NAME
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ### `dna sdlc plan create`
 
@@ -1922,7 +1922,7 @@ dna sdlc plan create [OPTIONS] NAME
 | `--body-file` | Lê o body de um markdown (plano RICO: superpowers/bmad/à mão). Mutuamente exclusivo com --body. |
 | `--help` | Show this message and exit. |
 | `--methodology` | Metodologia que produziu o plano (carimba spec.methodology). Opt-in. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 | `--spec` | Parent Spec (spec_ref). |
 | `--status` | _(default: `accepted`)_ |
 | `--story` | Story this plan attacks (slug or Story/<slug>) — lights up its `plan` phase. |
@@ -1947,7 +1947,7 @@ dna sdlc plan deprecate [OPTIONS] NAME
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ### `dna sdlc plan propose`
 
@@ -1968,7 +1968,7 @@ dna sdlc plan propose [OPTIONS] NAME
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ### `dna sdlc plan supersede`
 
@@ -1990,7 +1990,7 @@ dna sdlc plan supersede [OPTIONS] NAME
 | --- | --- |
 | `--by` | Plan name that supersedes this one (→ spec.superseded_by). |
 | `--help` | Show this message and exit. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ## `dna sdlc pr-footer`
 
@@ -2051,7 +2051,7 @@ dna sdlc produces add [OPTIONS] WORK_ITEM ARTIFACT
 | --- | --- |
 | `--help` | Show this message and exit. |
 | `--role` | Role hint (visual-spec, plan, investigation, ...). |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ### `dna sdlc produces list`
 
@@ -2073,7 +2073,7 @@ dna sdlc produces list [OPTIONS] WORK_ITEM
 | --- | --- |
 | `--help` | Show this message and exit. |
 | `--json` |  |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ### `dna sdlc produces rm`
 
@@ -2095,7 +2095,7 @@ dna sdlc produces rm [OPTIONS] WORK_ITEM ARTIFACT
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ## `dna sdlc reference`
 
@@ -2134,7 +2134,7 @@ dna sdlc reference create [OPTIONS] NAME
 | `--kind-of` |  |
 | `--quote` | Verbatim key quote (max ~500 chars). Repeat for multiple. |
 | `--relevance` | Why this matters for THIS project. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 | `--summary` | 1-2 sentence summary of what this source says. |
 | `--tag` |  |
 | `--title` |  |
@@ -2154,7 +2154,7 @@ dna sdlc reference list [OPTIONS]
 | --- | --- |
 | `--help` | Show this message and exit. |
 | `--kind-of` |  |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ### `dna sdlc reference show`
 
@@ -2175,7 +2175,7 @@ dna sdlc reference show [OPTIONS] NAME
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ## `dna sdlc spec`
 
@@ -2208,7 +2208,7 @@ dna sdlc spec accept [OPTIONS] NAME
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ### `dna sdlc spec create`
 
@@ -2230,7 +2230,7 @@ dna sdlc spec create [OPTIONS] NAME
 | `--date` | Date (ISO-8601; → spec.date). Defaults to now. |
 | `--desc` | Short description (→ spec.description). |
 | `--help` | Show this message and exit. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 | `--status` | _(default: `draft`)_ |
 | `--title` | Title (→ spec.title). |
 
@@ -2251,7 +2251,7 @@ dna sdlc spec deprecate [OPTIONS] NAME
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ### `dna sdlc spec propose`
 
@@ -2270,7 +2270,7 @@ dna sdlc spec propose [OPTIONS] NAME
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ### `dna sdlc spec supersede`
 
@@ -2290,7 +2290,7 @@ dna sdlc spec supersede [OPTIONS] NAME
 | --- | --- |
 | `--by` | Spec name that supersedes this one (→ spec.superseded_by). |
 | `--help` | Show this message and exit. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ## `dna sdlc spike`
 
@@ -2325,7 +2325,7 @@ dna sdlc spike abandon [OPTIONS] NAME
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ### `dna sdlc spike answer`
 
@@ -2349,7 +2349,7 @@ dna sdlc spike answer [OPTIONS] NAME
 | `--follow-up-story` | Story this spike hands off to (→ spec.follow_up_story). |
 | `--help` | Show this message and exit. |
 | `--recommendation` | Recommended next step (→ spec.recommendation). |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ### `dna sdlc spike comment`
 
@@ -2375,7 +2375,7 @@ dna sdlc spike comment [OPTIONS] NAME
 | --- | --- |
 | `--body` | The comment / finding / decision text. |
 | `--help` | Show this message and exit. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 | `--type` | Defaults to 'comment'; decision-shaped bodies auto-promote. |
 
 ### `dna sdlc spike create`
@@ -2405,7 +2405,7 @@ dna sdlc spike create [OPTIONS] NAME
 | `--question` | The ONE question this spike answers (→ spec.question_to_answer). |
 | `--references` | Comma-separated Reference names (→ spec.references). |
 | `--research-refs` | Comma-separated Research names (→ spec.research_refs). |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 | `--status` | _(default: `proposed`)_ |
 | `--time-box` | Time budget in hours (→ spec.time_box_hours). |
 | `--title` | Short title. Derived from --question first line (≤80) when omitted. |
@@ -2438,7 +2438,7 @@ dna sdlc spike link [OPTIONS] NAME
 | `--reference` | Reference to attach (→ references[]). |
 | `--related-spike` | Related Spike (→ related_spikes[]). |
 | `--research` | Research doc to attach (→ research_refs[]). |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 | `--spec` | Spec this spike produced (→ follow_up_spec). |
 
 ### `dna sdlc spike start`
@@ -2460,7 +2460,7 @@ dna sdlc spike start [OPTIONS] NAME
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ## `dna sdlc story`
 
@@ -2496,7 +2496,7 @@ dna sdlc story block [OPTIONS] NAME
 | --- | --- |
 | `--help` | Show this message and exit. |
 | `--reason` | Why is it blocked? |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ### `dna sdlc story cancel`
 
@@ -2520,7 +2520,7 @@ dna sdlc story cancel [OPTIONS] NAME
 | --- | --- |
 | `--help` | Show this message and exit. |
 | `--reason` | Why is the Story cancelled? |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ### `dna sdlc story check`
 
@@ -2552,7 +2552,7 @@ dna sdlc story check [OPTIONS] NAME
 | `--dod` | Definition-of-done item to mark done: 1-based index (exact) or text substring (repeatable). |
 | `--evidence` | Evidence the item is satisfied (PR #, commit sha, link, or prose). Stored per-item. |
 | `--help` | Show this message and exit. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ### `dna sdlc story comment`
 
@@ -2581,7 +2581,7 @@ dna sdlc story comment [OPTIONS] NAME
 | `--body` | Comment text (lands on the timeline event). |
 | `--commit-ref` | Optional Git SHA to associate. Auto-detected from HEAD when omitted. |
 | `--help` | Show this message and exit. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 | `--type` | Event type — 'comment' or 'decision'. When omitted, auto-detected: comments matching decision patterns ('decidi X porque Y', 'optei por...') are promoted to decisions automatically. |
 
 ### `dna sdlc story commits`
@@ -2613,7 +2613,7 @@ dna sdlc story commits [OPTIONS] NAME
 | --- | --- |
 | `--help` | Show this message and exit. |
 | `--json` |  |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ### `dna sdlc story create`
 
@@ -2652,7 +2652,7 @@ dna sdlc story create [OPTIONS] NAME
 | `--owner` |  |
 | `--priority` | Board priority (default: medium when set; else field omitted). |
 | `--reporter` | Actor who filed it. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 | `--sprint` | Sprint identifier. |
 | `--status` | _(default: `todo`)_ |
 | `--title` | Short Jira-style title shown on cards. Falls back to first line of --desc (truncated to 80 chars) when omitted. |
@@ -2682,7 +2682,7 @@ dna sdlc story done [OPTIONS] NAME
 | `--no-commit` | Story sem código (silencia o aviso de commit de entrega + isenta o test gate). |
 | `--no-narrate` | Silencia o warn de narração. |
 | `--note` | Narra esta transição (appenda comment inline na MESMA chamada). |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 | `--summary` | One-line description of what shipped (lands on the timeline event). |
 
 ### `dna sdlc story groom`
@@ -2716,7 +2716,7 @@ dna sdlc story groom [OPTIONS] NAME
 | `--priority` |  |
 | `--release-target` | Epic name OR 'owner/pkg@semver'. |
 | `--reporter` |  |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 | `--sprint` |  |
 | `--title` | Retitle the Story (e.g. a cli-create title that came in truncated/desc-shaped — `story pr` builds the PR title from it). |
 
@@ -2747,7 +2747,7 @@ dna sdlc story pr [OPTIONS] NAME
 | `--dry-run` | Só imprime title + body montados; não chama gh. |
 | `--head` | Head branch (default: a branch corrente — default do próprio gh). |
 | `--help` | Show this message and exit. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ### `dna sdlc story reopen`
 
@@ -2771,7 +2771,7 @@ dna sdlc story reopen [OPTIONS] NAME
 | --- | --- |
 | `--help` | Show this message and exit. |
 | `--reason` | Why reopen? _(default: `reopened`)_ |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 | `--to` | Status to flip back to (default: todo). _(default: `todo`)_ |
 
 ### `dna sdlc story review`
@@ -2806,7 +2806,7 @@ dna sdlc story review [OPTIONS] NAME
 | `--no-pr` | Escape do guard de PR (i-133): marca review mesmo sem PR aberto na branch corrente. Exige --reason. |
 | `--note` | Narra esta transição (appenda comment inline na MESMA chamada). |
 | `--reason` | Por que está marcando review sem PR aberto (vai pro timeline). |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ### `dna sdlc story show`
 
@@ -2832,7 +2832,7 @@ dna sdlc story show [OPTIONS] NAME
 | --- | --- |
 | `--help` | Show this message and exit. |
 | `--json` | Emit the raw spec as JSON. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ### `dna sdlc story start`
 
@@ -2871,7 +2871,7 @@ dna sdlc story start [OPTIONS] NAME
 | `--plan` | Plano de ataque (1-3 linhas). Cria Plan/plan-<story> linkado → fase `plan` acende. |
 | `--plan-doc` | Linka um Plan existente (trabalho grande) em vez de criar inline. |
 | `--plan-file` | Cria Plan/plan-<story> com o body = conteúdo deste markdown (plano RICO de qualquer metodologia: superpowers, bmad, à mão). |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 | `--skip-reason` | Motivo do skip (com --no-plan) — registrado honestamente na jornada. |
 
 ## `dna sdlc task`
@@ -2908,7 +2908,7 @@ dna sdlc task block [OPTIONS] NAME
 | --- | --- |
 | `--help` | Show this message and exit. |
 | `--reason` | Why is it blocked? (→ spec.blocked_reason). |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ### `dna sdlc task cancel`
 
@@ -2929,7 +2929,7 @@ dna sdlc task cancel [OPTIONS] NAME
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ### `dna sdlc task create`
 
@@ -2956,7 +2956,7 @@ dna sdlc task create [OPTIONS] NAME
 | `--help` | Show this message and exit. |
 | `--labels` | Comma-separated labels. |
 | `--owner` |  |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 | `--status` | _(default: `todo`)_ |
 
 ### `dna sdlc task done`
@@ -2978,7 +2978,7 @@ dna sdlc task done [OPTIONS] NAME
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ### `dna sdlc task start`
 
@@ -2999,7 +2999,7 @@ dna sdlc task start [OPTIONS] NAME
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ## `dna sdlc test-guide`
 
@@ -3041,7 +3041,7 @@ dna sdlc test-guide create [OPTIONS] NAME
 | `--kind-of-test` | _(default: `manual`)_ |
 | `--owner` | Actor who owns this guide. |
 | `--product` | Scaffold a UI-first PRODUCT smoke: forces kind_of_test=smoke and (with --from-ac) generates leigo-proof steps with a 'where' route + observable 'expected'. The tester marks ✗ ONLY if the product is broken — never author a step that forces a failure. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 | `--step` | A step as 'action :: expected' (repeatable). |
 | `--verifies` | Work item this guide verifies, e.g. 'Story/s-x' (repeatable). |
 
@@ -3085,7 +3085,7 @@ dna sdlc test-run record [OPTIONS] GUIDE
 | `--name` | Run doc name (default: tr-<guide>-<timestamp>). |
 | `--note` | Free-text notes on the run. |
 | `--outcome` |  |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 | `--screenshot` | Print de evidência (imagem). Repetível. Uploadado como Asset. |
 
 ## `dna sdlc uncite`
@@ -3108,5 +3108,5 @@ dna sdlc uncite [OPTIONS] CITED
 | --- | --- |
 | `--from` |  |
 | `--help` | Show this message and exit. |
-| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source, else dna-development). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 

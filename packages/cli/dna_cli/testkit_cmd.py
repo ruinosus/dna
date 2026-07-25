@@ -22,7 +22,6 @@ import click
 
 from dna_cli._ctx import fail, open_session
 from dna_cli.sdlc_cmd import (
-    DEFAULT_SCOPE,
     _append_produces,
     _append_timeline,
     _cli_actor,

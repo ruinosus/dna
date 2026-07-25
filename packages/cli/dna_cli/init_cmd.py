@@ -48,7 +48,7 @@ artifact: a Skill IS agent instructions — installing a third-party pack
 is installing a dependency, and the summary says so ("review before
 committing").
 
-Design evidence: Research/rsh-cross-tool-agent-standards (dna-development
+Design evidence: Research/rsh-cross-tool-agent-standards (dna
 board) — the cross-tool adoption facts behind the multi-tool projection.
 
 Idempotent by default: an existing file is never overwritten without

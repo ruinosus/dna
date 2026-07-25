@@ -1477,7 +1477,7 @@ def build_app(
 
     @app.get("/v1/board", dependencies=guarded, response_model=m.BoardResponse)
     async def board(
-        scope: str = Query(..., description="A project's board_scope (e.g. dna-development)."),
+        scope: str = Query(..., description="A project's board_scope (e.g. my-board)."),
         tenant: str | None = Query(default=None),
         recent: int = Query(default=6, ge=0, le=50),
     ) -> dict[str, Any]:
