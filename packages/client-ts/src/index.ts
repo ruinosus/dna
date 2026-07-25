@@ -267,6 +267,25 @@ export class DnaClient {
     );
   }
 
+  // ── reconcile (2-way diff of a tenant's forks vs base-NOW, plane B2) ────
+
+  /**
+   * For each of the tenant's forked bundle-entry files, diff the fork's
+   * content against the base's CURRENT content — READ-only. A file the
+   * tenant forked that the base has since changed underneath it comes back
+   * `"diverged"` even if the fork itself is untouched; a tenant-added file
+   * (no base at all) is always `"diverged"` with `base: null`. Resolve with
+   * the EXISTING bundle-entry primitives: keep = no-op, take-base =
+   * {@link DnaClient.revertBundleEntry}, edit = {@link DnaClient.writeBundleEntry}.
+   */
+  async reconcileForks(kind: string, name: string, query?: ScopeTenant) {
+    return this.unwrap(
+      await this.raw.GET("/v1/definitions/{kind}/{name}/reconcile", {
+        params: { path: { kind, name }, query: this.q(query) },
+      }),
+    );
+  }
+
   // ── memory (reads) ────────────────────────────────────────────────────────
 
   /** List the tenant's memory — base + the tenant's OWN overlay. */

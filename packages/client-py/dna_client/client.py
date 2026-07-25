@@ -288,6 +288,24 @@ class DnaClient:
             params={"scope": scope, "tenant": tenant},
         )
 
+    # -- reconcile (2-way diff of a tenant's forks vs base-NOW, plane B2) ----
+
+    def reconcile_forks(
+        self, kind: str, name: str, *,
+        scope: str | None = None, tenant: str | None = None,
+    ) -> JsonObject:
+        """For each of the tenant's forked bundle-entry files, diff the
+        fork's content against the base's CURRENT content — READ-only. A
+        file the tenant forked that the base has since changed underneath
+        it comes back ``"diverged"`` even if the fork itself is untouched;
+        a tenant-added file (no base at all) is always ``"diverged"`` with
+        ``base: None``. Resolve with the EXISTING bundle-entry primitives:
+        keep = no-op, take-base = :meth:`revert_bundle_entry`, edit =
+        :meth:`write_bundle_entry`."""
+        return self._get(
+            f"/v1/definitions/{kind}/{name}/reconcile", scope=scope, tenant=tenant
+        )
+
     # -- memory (reads) ------------------------------------------------------
 
     def list_memories(

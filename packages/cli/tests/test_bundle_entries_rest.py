@@ -267,3 +267,87 @@ def test_revert_without_tenant_is_400(dna_dir):
     with _client(dna_dir) as c:
         r = c.delete(f"/v1/definitions/Skill/{_SKILL}/entries/scripts/hello.py")
         assert r.status_code == 400, r.text
+
+
+# ── GET (reconcile — Task 10, s-strain-bundle-fork B2) ─────────────────────
+
+
+def test_reconcile_diverged_when_base_moves_on_after_fork(dna_dir):
+    """The central case this task exists for: the tenant's fork content is
+    UNCHANGED, but the base has moved on since the fork (an upstream
+    release) — the 2-way diff is against base-NOW, not the base at fork
+    time, so this must read "diverged", not "identical"."""
+    _seed_layer_policy(dna_dir, skill_policy="open")
+    with _client(dna_dir) as c:
+        put = c.put(
+            f"/v1/definitions/Skill/{_SKILL}/entries/scripts/hello.py",
+            params={"tenant": _WID},
+            json={"content": "print('mine')\n"},
+        )
+        assert put.status_code == 200, put.text
+
+        (dna_dir / _SCOPE / "skills" / _SKILL / "scripts" / "hello.py").write_text(
+            "print('new base')\n"
+        )
+
+        r = c.get(
+            f"/v1/definitions/Skill/{_SKILL}/reconcile", params={"tenant": _WID}
+        )
+        assert r.status_code == 200, r.text
+        body = r.json()
+        assert body["kind"] == "Skill"
+        assert body["name"] == _SKILL
+        assert body["files"] == [{
+            "entry": "scripts/hello.py", "status": "diverged",
+            "base": "print('new base')\n", "mine": "print('mine')\n", "binary": False,
+        }]
+
+
+def test_reconcile_identical_when_fork_matches_current_base(dna_dir):
+    _seed_layer_policy(dna_dir, skill_policy="open")
+    with _client(dna_dir) as c:
+        put = c.put(
+            f"/v1/definitions/Skill/{_SKILL}/entries/scripts/hello.py",
+            params={"tenant": _WID},
+            json={"content": HELLO_PY_BASE},
+        )
+        assert put.status_code == 200, put.text
+
+        r = c.get(
+            f"/v1/definitions/Skill/{_SKILL}/reconcile", params={"tenant": _WID}
+        )
+        assert r.status_code == 200, r.text
+        assert r.json()["files"] == [{
+            "entry": "scripts/hello.py", "status": "identical",
+            "base": HELLO_PY_BASE, "mine": HELLO_PY_BASE, "binary": False,
+        }]
+
+
+def test_reconcile_tenant_added_file_has_no_base(dna_dir):
+    """A file the tenant forked that the base bundle never had — `base` comes
+    back `None`, never mangled — and is always `diverged` (there is no base
+    to be identical to)."""
+    _seed_layer_policy(dna_dir, skill_policy="open")
+    with _client(dna_dir) as c:
+        put = c.put(
+            f"/v1/definitions/Skill/{_SKILL}/entries/scripts/extra.py",
+            params={"tenant": _WID},
+            json={"content": "print('mine only')\n"},
+        )
+        assert put.status_code == 200, put.text
+
+        r = c.get(
+            f"/v1/definitions/Skill/{_SKILL}/reconcile", params={"tenant": _WID}
+        )
+        assert r.status_code == 200, r.text
+        assert r.json()["files"] == [{
+            "entry": "scripts/extra.py", "status": "diverged",
+            "base": None, "mine": "print('mine only')\n", "binary": False,
+        }]
+
+
+def test_reconcile_404_for_non_bundle_kind(dna_dir):
+    _seed_layer_policy(dna_dir, skill_policy="open")
+    with _client(dna_dir) as c:
+        r = c.get("/v1/definitions/MCPFederation/dna-mcp/reconcile")
+        assert r.status_code == 404, r.text

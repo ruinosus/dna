@@ -229,6 +229,7 @@ const COVERED: Record<string, string> = {
   "GET /v1/definitions/{kind}/{name}": "readDefinition",
   "GET /v1/definitions/{kind}/{name}/entries": "listBundleEntries",
   "GET /v1/definitions/{kind}/{name}/entries/{entry}": "readBundleEntry",
+  "GET /v1/definitions/{kind}/{name}/reconcile": "reconcileForks",
   "GET /v1/memories": "listMemories",
   "GET /v1/memories/personal": "listPersonalMemories",
   "GET /v1/memories/search": "searchMemories",

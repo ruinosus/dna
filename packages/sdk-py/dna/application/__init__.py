@@ -70,6 +70,7 @@ from dna.application.runtime import (
     read_bundle_entry_impl,
     read_definition_impl,
     recall_impl,
+    reconcile_forks_impl,
     remember_impl,
     remove_member_impl,
     revert_bundle_entry_impl,
@@ -108,6 +109,7 @@ __all__ = [
     "read_bundle_entry_impl",
     "write_bundle_entry_impl",
     "revert_bundle_entry_impl",
+    "reconcile_forks_impl",
     # toolkit (Spec Kit Layer 3 — PromptTemplates + Skills served live)
     "list_templates_impl",
     "get_template_impl",
