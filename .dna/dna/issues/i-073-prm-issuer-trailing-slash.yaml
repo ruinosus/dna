@@ -1,0 +1,42 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-073-prm-issuer-trailing-slash
+spec:
+  description: O PRM anuncia authorization_servers com barra final (pydantic AnyHttpUrl), divergindo do issuer que o proprio AS publica — quebra a validacao RFC 8414 3.3 em clientes estritos
+  type: bug
+  severity: high
+  status: open
+  timeline:
+  - at: '2026-07-25T19:03:08+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
+  - at: '2026-07-25T19:03:32+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: |-
+      Evidencia coletada contra a porta publicada do DNA Cloud (mcp.dnacloud.io/mcp), 25/07/2026.
+
+      O que servimos:
+        GET /.well-known/oauth-protected-resource/mcp
+        authorization_servers: ['https://palatial-aquarium-63-staging.authkit.app/']   <- barra final
+
+      O que o proprio authorization server publica:
+        GET https://palatial-aquarium-63-staging.authkit.app/.well-known/oauth-authorization-server
+        issuer: 'https://palatial-aquarium-63-staging.authkit.app'                     <- sem barra
+
+      RFC 8414 3.3 manda o cliente comparar o issuer devolvido com o identificador usado para montar a URL de metadata, por igualdade exata de string. Um cliente estrito rejeita — e o sintoma e exatamente 'o consentimento passa, parece tudo certo, e o cliente nunca manda a requisicao'.
+
+      Origem: a env DNA_MCP_AUTH_SERVERS chega correta ao container (verificado: sem barra). A barra entra na serializacao — RemoteAuthProvider do FastMCP tipa authorization_servers como list[AnyHttpUrl], e pydantic normaliza 'https://host' para 'https://host/'. Confirmado isolado:
+        TypeAdapter(AnyHttpUrl).validate_python('https://host') -> https://host/
+
+      Comparacao empirica com servidores MCP que funcionam no VS Code (ambos SEM barra):
+        mcp.sentry.dev  -> ['https://mcp.sentry.dev']
+        mcp.linear.app  -> ['https://mcp.linear.app']
+
+      Nao ha workaround por configuracao: qualquer URL de host puro recebe a barra na coercao de tipo. O conserto e no SDK (serializar o identificador verbatim, ou pos-processar a rota do PRM) ou upstream no FastMCP.
+
+      Honestidade sobre causalidade: isto e uma violacao de spec real e comprovada do nosso lado, mas NAO esta provado que e a causa do loop do VS Code — falta o log do cliente. Vale consertar de qualquer forma.

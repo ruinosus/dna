@@ -353,3 +353,135 @@ def test_protected_resource_metadata_advertised(dna_dir, http_server, free_port)
         # RFC 9728: the document names the resource + its authorization server(s).
         assert "resource" in meta
         assert "authorization_servers" in meta
+
+
+# ── i-073: the PRM must advertise the AS identifier VERBATIM ───────────────
+#
+# RFC 8414 §3.3 makes the client compare the `issuer` the authorization server
+# publishes against the identifier it was given, by EXACT STRING equality. FastMCP
+# types `authorization_servers` as `list[AnyHttpUrl]`, and pydantic normalizes a
+# bare-host URL — `https://host` becomes `https://host/`. A door configured with
+# `https://as.example` therefore advertised `https://as.example/`, which disagrees
+# with the `issuer` that same AS publishes, and a strict client silently walks away
+# ("consent succeeds, then not a single request reaches the server").
+#
+# Verbatim means VERBATIM — not "strip trailing slashes": an identifier configured
+# WITH a path or WITH a trailing slash must round-trip byte-identical too.
+
+_AS_BARE = "https://as-bare.example"          # pydantic would append "/"
+_AS_SLASHED = "https://as-slashed.example/"   # already slashed — must stay slashed
+_AS_PATHED = "https://as-pathed.example/tenant/x"  # path — must stay intact
+
+
+def test_prm_advertises_authorization_servers_verbatim(dna_dir, http_server, free_port):
+    """The serialized PRM body carries each configured authorization-server
+    identifier byte for byte — no pydantic canonicalization, in either direction."""
+    import httpx
+
+    verifier, _ = _verifier_and_tokens()
+    port = free_port()
+    base_url = f"http://127.0.0.1:{port}"
+    provider = A.resource_server(
+        verifier,
+        base_url=base_url,
+        authorization_servers=[_AS_BARE, _AS_SLASHED, _AS_PATHED],
+        scopes_supported=["openid", "profile"],
+    )
+    server = M.build_server(base_dir=str(dna_dir), auth=provider)
+
+    with http_server(server, port=port):
+        resp = httpx.get(
+            f"{base_url}/.well-known/oauth-protected-resource/mcp", timeout=10
+        )
+    assert resp.status_code == 200, resp.text
+    meta = resp.json()
+    # The assertion is on the SERIALIZED body — a Python-object check would pass
+    # against the bug, because the coercion happens at serialization time.
+    assert meta["authorization_servers"] == [_AS_BARE, _AS_SLASHED, _AS_PATHED]
+    # …and the raw bytes really do carry the un-slashed identifier.
+    assert f'"{_AS_BARE}"' in resp.text
+    # Every OTHER field of the document is untouched by the fix.
+    assert meta["resource"] == f"{base_url}/mcp"
+    assert meta["scopes_supported"] == ["openid", "profile"]
+    assert meta["bearer_methods_supported"] == ["header"]
+
+
+def test_prm_route_still_answers_cors_preflight(dna_dir, http_server, free_port):
+    """The wrapper sits in the ASGI path of the PRM route, so the non-JSON
+    responses it also carries (the CORS preflight FastMCP mounts on the same
+    route) must pass through untouched."""
+    import httpx
+
+    verifier, _ = _verifier_and_tokens()
+    port = free_port()
+    base_url = f"http://127.0.0.1:{port}"
+    provider = A.resource_server(
+        verifier, base_url=base_url, authorization_servers=[_AS_BARE]
+    )
+    server = M.build_server(base_dir=str(dna_dir), auth=provider)
+
+    with http_server(server, port=port):
+        resp = httpx.options(
+            f"{base_url}/.well-known/oauth-protected-resource/mcp",
+            headers={
+                "Origin": "https://client.example",
+                "Access-Control-Request-Method": "GET",
+            },
+            timeout=10,
+        )
+    assert resp.status_code == 200, resp.text
+    assert resp.headers.get("access-control-allow-origin") == "*"
+
+
+def _prm_body(provider, *, mcp_path: str = "/mcp") -> dict:
+    """GET the provider's PRM document in-process (no socket) and return the
+    parsed body — the serialized bytes, not a Python model."""
+    import httpx
+    from starlette.applications import Starlette
+
+    routes = provider.get_routes(mcp_path)
+    prm = [r for r in routes if r.path.startswith("/.well-known/oauth-protected-resource")]
+    assert len(prm) == 1, [r.path for r in routes]
+    transport = httpx.ASGITransport(app=Starlette(routes=routes))
+
+    async def go():
+        async with httpx.AsyncClient(
+            transport=transport, base_url="http://door.test"
+        ) as client:
+            resp = await client.get(prm[0].path)
+            assert resp.status_code == 200, resp.text
+            return resp.json()
+
+    return asyncio.run(go())
+
+
+def test_workos_lane_advertises_the_authkit_domain_verbatim(monkeypatch):
+    """The live regression (i-073): the consumer lane's AuthKit domain is a BARE
+    host, and the AS itself publishes that exact string as its `issuer` — so the
+    PRM must not append a slash to it."""
+    domain = "https://tenant-slug.authkit.app"
+    monkeypatch.setenv("DNA_MCP_WORKOS_AUTHKIT_DOMAIN", domain)
+    monkeypatch.setenv("DNA_MCP_WORKOS_RESOURCE_URL", "https://door.test/consumer")
+    monkeypatch.setenv("DNA_MCP_WORKOS_AUDIENCE", "client_test")
+    monkeypatch.delenv("DNA_MCP_WORKOS_SCOPES_SUPPORTED", raising=False)
+
+    meta = _prm_body(A.workos_provider_from_env(), mcp_path="/consumer")
+    assert meta["authorization_servers"] == [domain]
+    assert meta["scopes_supported"] == ["openid", "profile", "email"]
+
+
+def test_build_auth_from_config_advertises_issuers_verbatim(monkeypatch):
+    """The `--auth config` (multi-provider) path funnels through the same seam —
+    every provider's issuer reaches PRM byte-identical."""
+    monkeypatch.delenv("DNA_MCP_SCOPES_SUPPORTED", raising=False)
+    provs = [
+        A.ProviderConfig(
+            type="oidc", tenant_claim="org_id",
+            issuer=_AS_BARE, audience="dna-mcp",
+            jwks_uri=f"{_AS_BARE}/.well-known/jwks.json",
+        )
+    ]
+    provider = A.build_auth_from_config(
+        provs, resource_url="https://door.test", authorization_servers=[_AS_BARE]
+    )
+    assert _prm_body(provider)["authorization_servers"] == [_AS_BARE]

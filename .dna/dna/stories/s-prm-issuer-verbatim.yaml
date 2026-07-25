@@ -1,0 +1,76 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-prm-issuer-verbatim
+spec:
+  title: PRM advertises authorization_servers verbatim
+  description: 'i-073: the PRM (RFC 9728) must advertise each authorization-server identifier exactly as configured — pydantic AnyHttpUrl adds a trailing slash to a bare host, breaking RFC 8414 3.3 exact-string comparison in strict MCP clients'
+  status: in-progress
+  feature: f-dna-mcp-server
+  acceptance_criteria:
+  - Given DNA_MCP_AUTH_SERVERS=https://as.example (no trailing slash), When a client GETs /.well-known/oauth-protected-resource/mcp, Then the serialized JSON authorization_servers is exactly ['https://as.example']
+  - Given a configured authorization server WITH a path or trailing slash, When the PRM is served, Then that value round-trips byte-identical (verbatim, never stripped)
+  - Given the rest of the PRM document, When the fix is applied, Then resource / scopes_supported / bearer_methods_supported are unchanged
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - 'Code: a thin RemoteAuthProvider subclass in dna_cli/_mcp_auth.py, no FastMCP fork/vendoring'
+  - 'Tests: a failing-first test asserting on the serialized JSON body of the real route; CLI auth + serving suites green'
+  - 'CI: brand guard clean; no generated-surface drift'
+  definition_of_done_source: cli-create
+  created_at: '2026-07-25T19:11:29+00:00'
+  updated_at: '2026-07-25T19:23:04+00:00'
+  timeline:
+  - at: '2026-07-25T19:11:29+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-25T19:11:49+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-25T19:22:19+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: |-
+      Analise confirmada contra o FastMCP 3.4.4 instalado (nao de memoria): RemoteAuthProvider.get_routes -> mcp.server.auth.routes.create_protected_resource_routes -> ProtectedResourceMetadata, cujo campo authorization_servers e list[AnyHttpUrl]. A coercao acontece na SERIALIZACAO (PydanticJSONResponse), nao no __init__ — por isso o teste tinha de assertar sobre o corpo JSON servido, nao sobre o objeto Python. Medido: 'https://host' -> 'https://host/'; ':443' e removido; host e minusculado; caminho e barra final ja existentes passam intactos.
+
+      Fix: subclasse fina de RemoteAuthProvider dentro de resource_server() — o FastMCP monta as rotas como hoje e a rota do PRM tem seu app ASGI envolvido por _VerbatimAuthorizationServers, que reescreve APENAS o array authorization_servers com as strings configuradas (e corrige o Content-Length). Sem fork/vendor do FastMCP e sem reescrever o schema. Verbatim e verbatim: nao ha strip de barra.
+
+      Auditoria dos outros identificadores anunciados:
+       - resource: derivado como base_url.rstrip('/') + '/' + mcp_path, entao com um mount path nao-vazio nunca ganha barra final. Sao.
+       - jwks_uri: create_protected_resource_routes nunca o passa — o documento PRM do DNA nao carrega esse campo. Nada a quebrar.
+       - metadata do authorization server (Lane A / AzureProvider OAuthProxy): a porta E o proprio AS, e PRM.authorization_servers e AS.issuer recebem a MESMA coercao ('https://door/'), entao concordam por igualdade exata de string. Sao — nao mexi.
+       - resource_name / resource_documentation: o DNA nunca os passa (ausentes do documento).
+    commit_ref: f266aa8dbe020d6312c4b21903b7ef0c6a5ff036
+  - at: '2026-07-25T19:22:42+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-prm-issuer-verbatim
+    summary: TestGuide tg-prm-issuer-verbatim (manual)
+  - at: '2026-07-25T19:23:04+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-prm-issuer-verbatim-20260725-192259
+    summary: TestRun tr-tg-prm-issuer-verbatim-20260725-192259 → pass
+    outcome: pass
+  produces:
+  - kind: Plan
+    name: plan-s-prm-issuer-verbatim
+    role: implementation
+    at: '2026-07-25T19:11:49+00:00'
+  - kind: TestGuide
+    name: tg-prm-issuer-verbatim
+    role: test-guide
+    at: '2026-07-25T19:22:42+00:00'
+  - kind: TestRun
+    name: tr-tg-prm-issuer-verbatim-20260725-192259
+    role: test-run
+    at: '2026-07-25T19:23:04+00:00'
