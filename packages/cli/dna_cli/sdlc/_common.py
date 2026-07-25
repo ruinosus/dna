@@ -27,8 +27,6 @@ from dna.application.sdlc import (
     build_raw as _core_build_raw,
 )
 
-DEFAULT_SCOPE = "dna-development"
-
 # Journey phases + methodologies — defined early because story/plan command
 # decorators (cmd_story_start, cmd_plan_create) reference them in click.Choice.
 VALID_JOURNEY_PHASES = ("discover", "specify", "plan", "build", "reflect")
@@ -284,22 +282,32 @@ def _resolve_scope_default() -> str:
       1. --scope explicit          (click passes it through; this helper
                                     only runs when the flag is absent)
       2. env DNA_SDLC_SCOPE
-      3. auto-detect               (sole SDLC scope in the source)
-      4. DEFAULT_SCOPE             ('dna-development' — compat fallback)
+      3. auto-detect                (sole SDLC scope in the source)
+      4. a clear, actionable error  (no branded fallback — an adopter's
+                                    board has an arbitrary name; hardcoding
+                                    THIS repo's board name here would be
+                                    the same open-core branding leak i-071
+                                    removed everywhere else. Mirrors
+                                    ``dna.extensions.intel.engine._resolve_scope``,
+                                    which raises ``ValueError`` for the same
+                                    reason.)
     """
     env = os.environ.get("DNA_SDLC_SCOPE")
     if env:
         return env
     detected = _autodetect_sdlc_scope()
     if detected is not None:
-        if detected != DEFAULT_SCOPE:
-            click.secho(
-                f"scope: {detected} (auto-detected sole SDLC scope; "
-                f"override with --scope or DNA_SDLC_SCOPE)",
-                fg="cyan", err=True,
-            )
+        click.secho(
+            f"scope: {detected} (auto-detected sole SDLC scope; "
+            f"override with --scope or DNA_SDLC_SCOPE)",
+            fg="cyan", err=True,
+        )
         return detected
-    return DEFAULT_SCOPE
+    raise fail(
+        "sdlc: no --scope given and I can't auto-detect one (the source "
+        "has 0 or 2+ scopes with SDLC structure) — pass --scope explicitly "
+        "or set DNA_SDLC_SCOPE."
+    )
 
 
 def _scope_callback(ctx: Any, param: Any, value: str | None) -> str:
@@ -311,8 +319,8 @@ def _scope_option(f):
     return click.option(
         "--scope", default=None, callback=_scope_callback,
         help="Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else "
-             "the auto-detected sole SDLC scope in the source, else "
-             "dna-development).",
+             "the auto-detected sole SDLC scope in the source; required "
+             "if neither resolves).",
     )(f)
 
 

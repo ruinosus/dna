@@ -9,7 +9,7 @@ subscribers (host platforms wire the replica engine at boot).
 Subcommands::
 
     dna source replica add <id> --replica fs://./examples \\
-        --scopes dna-development [--kinds Story,Feature]
+        --scopes my-board [--kinds Story,Feature]
     dna source replica list
     dna source replica show <id>
     dna source replica drop <id>
@@ -275,7 +275,7 @@ def replica() -> None:
 @click.option("--replica", "replica_url", required=True,
               help="Destination URL (fs://path or file://path).")
 @click.option("--scopes", required=True,
-              help="Comma-separated scope allowlist (e.g. dna-development).")
+              help="Comma-separated scope allowlist (e.g. my-board).")
 @click.option("--kinds", default=None,
               help="Comma-separated Kind allowlist. Omit = all kinds.")
 @click.option("--config", "config_path", default=None, type=click.Path(),

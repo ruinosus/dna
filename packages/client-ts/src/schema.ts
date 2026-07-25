@@ -2317,7 +2317,7 @@ export interface operations {
     board_v1_board_get: {
         parameters: {
             query: {
-                /** @description A project's board_scope (e.g. dna-development). */
+                /** @description A project's board_scope (e.g. my-board). */
                 scope: string;
                 tenant?: string | null;
                 recent?: number;

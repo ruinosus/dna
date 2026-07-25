@@ -5,7 +5,7 @@ metadata:
 spec:
   title: Renomear o scope do board SDLC do SDK de dna-development para dna (scope=produto
   description: Renomear o scope do board SDLC do SDK de dna-development para dna (scope=produto; o -development vaza ambiente no nome, igual corrigido no dna-cloud em 2026-07-24). Follow-up.
-  status: todo
+  status: in-progress
   feature: f-dna-dx-configure
   priority: medium
   labels:
@@ -21,10 +21,21 @@ spec:
   - git mv .dna/dna-development -> .dna/dna (preserva historico) + referencias atualizadas + dna sdlc brief verde no scope dna + PR no repo dna. Fazer DEPOIS do epico Strain.
   definition_of_done_source: cli-create
   created_at: '2026-07-24T23:58:52+00:00'
-  updated_at: '2026-07-24T23:58:52+00:00'
+  updated_at: '2026-07-25T11:02:13+00:00'
   timeline:
   - at: '2026-07-24T23:58:52+00:00'
     actor: claude-code
     type: status_change
     source: cli
     to: todo
+  - at: '2026-07-25T11:02:13+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  produces:
+  - kind: Plan
+    name: plan-s-rename-sdk-board-scope
+    role: implementation
+    at: '2026-07-25T11:02:13+00:00'

@@ -20,7 +20,8 @@ Subcommands::
 
 Scope resolution (i-012) — every verb resolves its scope with the same
 precedence: ``--scope`` flag > env ``DNA_SDLC_SCOPE`` > auto-detected
-sole SDLC scope in the source > ``dna-development`` (compat fallback).
+sole SDLC scope in the source > a clear error (no branded fallback —
+pass ``--scope`` or set ``DNA_SDLC_SCOPE``).
 """
 from __future__ import annotations
 
@@ -72,7 +73,6 @@ from dna.application.sdlc import (  # noqa: E402, F401 — enums re-exported for
 # keeps resolving, the same idiom kernel/__init__.py adopted during its own
 # decomposition.
 from dna_cli.sdlc._common import (  # noqa: F401 — re-exported for back-compat
-    DEFAULT_SCOPE,
     VALID_JOURNEY_METHODOLOGIES,
     VALID_JOURNEY_PHASES,
     _POST_TRANSITION_HOOKS,
@@ -196,7 +196,7 @@ def cmd_current(scope: str, as_json: bool) -> None:
 
     Output format (compact, copy-paste-friendly):
 
-        🚧 in-progress now (scope: dna-development)
+        🚧 in-progress now (scope: my-board)
           📖 s-vibe-commit-trace                "Studio commit_ref link..."
           🚀 f-activity-timeline                "Activity Timeline..."
 
@@ -2718,8 +2718,8 @@ def cmd_epic_show(name: str, scope: str) -> None:
 
 
 @sdlc.command("extract-decisions")
-@click.option("--scope", default=DEFAULT_SCOPE, show_default=True,
-              help="Scope to walk.")
+@click.option("--scope", default=None, callback=_scope_callback,
+              help="Scope to walk (default: env / sole scope).")
 @click.option("--dry-run", is_flag=True,
               help="Print matches but don't write.")
 def cmd_sdlc_extract_decisions(scope: str, dry_run: bool) -> None:

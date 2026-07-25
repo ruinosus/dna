@@ -14,7 +14,7 @@ tenant's overlay. Works against either backend the runtime is pointed at:
 
 Env knobs (all optional; the defaults seed the ``demo`` FS tenant):
 
-    DNA_SEED_SCOPE   scope to seed        (default ``dna-development``)
+    DNA_SEED_SCOPE   scope to seed        (default ``dna``)
     DNA_SEED_TENANT  tenant to seed into  (default ``demo``)
     DNA_SEED_ORG     org the memberships are scoped to (default ``barnabe-labs``)
     DNA_SEED_PROJECT project slug the project grants target (default ``dna``)
@@ -35,7 +35,7 @@ from datetime import datetime, timezone
 
 PORTFOLIO_API = "github.com/ruinosus/dna/portfolio/v1"
 
-SCOPE = os.environ.get("DNA_SEED_SCOPE", "dna-development")
+SCOPE = os.environ.get("DNA_SEED_SCOPE", "dna")
 TENANT = os.environ.get("DNA_SEED_TENANT", "demo")
 ORG = os.environ.get("DNA_SEED_ORG", "barnabe-labs")
 PROJECT = os.environ.get("DNA_SEED_PROJECT", "dna")

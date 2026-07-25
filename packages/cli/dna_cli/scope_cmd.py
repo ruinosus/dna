@@ -57,8 +57,31 @@ def tree(scope_name: str | None, as_json: bool, tenant: str | None) -> None:
     """
     from dna_cli._ctx import dna_client, run_async
 
-    target = scope_name or "dna-development"
     with dna_client(tenant=tenant) as dna:
+        if scope_name is not None:
+            target = scope_name
+        else:
+            # i-071-class fix: no branded fallback — resolve the SOLE scope
+            # (mirrors dna_cli.sdlc._common._autodetect_sdlc_scope / the
+            # neutral intel engine's _resolve_scope), else a clear error.
+            try:
+                scopes = run_async(dna.scopes.list())
+            except Exception as e:  # noqa: BLE001
+                click.secho(f"scopes.list failed: {e}", err=True, fg="red")
+                raise click.exceptions.Exit(1) from e
+            if isinstance(scopes, dict):
+                scopes = scopes.get("scopes") or list(scopes.keys())
+            names = [s if isinstance(s, str) else (s.get("scope") or s.get("name")) for s in scopes]
+            names = [n for n in names if n]
+            if len(names) != 1:
+                click.secho(
+                    "scope tree: no scope given and the source has "
+                    f"{len(names)} scope(s) {names!r} — cannot pick a "
+                    "default; pass one explicitly (dna scope tree <scope_name>).",
+                    err=True, fg="red",
+                )
+                raise click.exceptions.Exit(1)
+            target = names[0]
         try:
             by_kind = run_async(dna.scopes.tree(target))
         except Exception as e:  # noqa: BLE001

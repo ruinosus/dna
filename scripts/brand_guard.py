@@ -62,7 +62,7 @@ ALLOWLIST: dict[str, frozenset[str]] = {
     # Pilot story cites foundry-assured's agent block names verbatim
     # (triage/retrieve/resolve/concierge×3/<this>/selfwiki/platform) — the
     # word there is THAT repo's agent name, not an internal brand token.
-    ".dna/dna-development/stories/s-pilot-foundry-assured.yaml": frozenset(
+    ".dna/dna/stories/s-pilot-foundry-assured.yaml": frozenset(
         {_BRAND2}
     ),
 }

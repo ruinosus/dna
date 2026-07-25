@@ -384,7 +384,7 @@ A Research is a curated synthesis of N external sources (Reference docs) with ob
 | `reference_baselines` | array |  | Recipe phase: Research names to NOT duplicate. |
 | `research_blocks` | array |  | Recipe phase: structured question blocks. Each block has title + list of questions. |
 | `retracted_reason` | string |  | Why this Research was retracted (audit trail). |
-| `scope_ref` | string |  | Scope this research informs (e.g. 'dna-development'). |
+| `scope_ref` | string |  | Scope this research informs (e.g. 'my-board'). |
 | `sources` | array |  | Reference doc names this research synthesizes from. Each entry should resolve to a Reference doc (sdlc-reference Kind). |
 | `status` | string | yes | Lifecycle: brief\|ready (recipe phase) → draft\|published (output phase) → superseded\|retracted (terminal). |
 | `superseded_by` | string |  | Name of newer Research that replaces this one. |

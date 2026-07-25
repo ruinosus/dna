@@ -10,7 +10,7 @@ File format (single line, plain text)::
 
 Examples::
 
-    dna-development:s-foo
+    my-board:s-foo
     hr-screening:s-bar
 
 A trailing newline is optional. The file is gitignored — it is per-

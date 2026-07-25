@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-rename-sdk-board-scope
+spec:
+  title: 'Plano: s-rename-sdk-board-scope'
+  date: '2026-07-25'
+  status: accepted
+  story_ref: s-rename-sdk-board-scope
+  journey_phase: plan
+  body: git mv .dna/dna-development -> .dna/dna (578 docs) + varrer referencias funcionais (sdlc_cmd fallback, active-story.txt, hooks, tests) + docs. Verificar dna sdlc brief no scope dna.
+  created_at: '2026-07-25T11:02:03+00:00'
+  updated_at: '2026-07-25T11:02:03+00:00'

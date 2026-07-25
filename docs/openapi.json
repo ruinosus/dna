@@ -3670,12 +3670,12 @@
         "operationId": "board_v1_board_get",
         "parameters": [
           {
-            "description": "A project's board_scope (e.g. dna-development).",
+            "description": "A project's board_scope (e.g. my-board).",
             "in": "query",
             "name": "scope",
             "required": true,
             "schema": {
-              "description": "A project's board_scope (e.g. dna-development).",
+              "description": "A project's board_scope (e.g. my-board).",
               "title": "Scope",
               "type": "string"
             }

@@ -213,7 +213,7 @@ class ResearchKind(KindBase):
                 },
                 "scope_ref": {
                     "type": "string",
-                    "description": "Scope this research informs (e.g. 'dna-development').",
+                    "description": "Scope this research informs (e.g. 'my-board').",
                 },
                 "visibility": {
                     "type": "string",

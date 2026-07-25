@@ -112,6 +112,45 @@ def _isolated_active_story(monkeypatch, tmp_path):
     )
 
 
+@pytest.fixture(autouse=True)
+def _isolated_sdlc_scope(monkeypatch):
+    """Short-circuit ``--scope`` resolution to a fixed dummy value (autouse).
+
+    Every ``dna sdlc`` verb resolves an absent ``--scope`` via
+    ``_resolve_scope_default()``: env ``DNA_SDLC_SCOPE`` > auto-detect
+    (probes the REAL filesystem via ``DNA_SOURCE_URL``/CWD, even when a
+    test fakes the kernel session via ``SESSION_PROVIDER_KEY`` and never
+    opens a real source for reads/writes) > a raised error (no branded
+    fallback, s-rename-sdk-board-scope). Without this isolation, running
+    the suite from this repo's root auto-detects the repo's OWN board
+    scope (``.dna/dna``) and ``click.secho``'s the "auto-detected sole
+    SDLC scope" notice, which ``CliRunner`` mixes into ``result.output``
+    and breaks any assertion that doesn't expect it (exact-match /
+    JSON-parse) — and a repo checked out with 0 or 2+ scopes would raise
+    outright. Pre-rename this was masked by coincidence: the notice was
+    only suppressed when the detected scope equalled the branded compat
+    fallback ('dna-development'), which happened to be exactly this
+    repo's real board name; removing that branded fallback exposed the
+    missing isolation. Setting ``DNA_SDLC_SCOPE`` short-circuits before
+    any filesystem probe, restoring deterministic, silent resolution for
+    tests that don't care which scope string comes back (they fake the
+    session and never validate it).
+
+    Tests that need real control over scope resolution already
+    ``monkeypatch.setenv``/``delenv("DNA_SDLC_SCOPE", ...)`` themselves —
+    those calls run in the test body, after this fixture, and simply win.
+
+    The dummy value is ``'dna-development'`` — not a branding choice
+    (that literal is banned from PRODUCTION code, guarded by
+    ``test_no_branded_scope_default_cli.py``), just matching the scope
+    literal a large slice of the pre-existing CLI test suite already
+    hardcodes into its fake-session store keys (e.g.
+    ``store[("dna-development", "Issue", name)]``), so this fixture
+    doesn't force an unrelated rewrite of every one of those fixtures.
+    """
+    monkeypatch.setenv("DNA_SDLC_SCOPE", "dna-development")
+
+
 # --- MCP HTTP harness (transport + auth stories) ---------------------------
 #
 # Run a built FastMCP server over a REAL Streamable-HTTP socket (uvicorn on a
