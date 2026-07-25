@@ -362,6 +362,24 @@ multi-provider layer) the claim key is **per provider** — each block's
 the composite verifier binds the right one to each token automatically. Either
 way: auth + multi-tenant in one mechanism — the token IS the tenancy.
 
+### Serving one operator — `DNA_WORKSPACE_ENFORCEMENT`
+
+Once `WorkspaceMembership` grants exist, the tenancy dimension is resolved from
+the caller's *membership*, and an authenticated identity holding none is denied
+the whole tenant-scoped surface. That is correct with two identities and useless
+with one, so a single-operator deployment can opt out explicitly:
+
+| Env var | Meaning |
+|---|---|
+| `DNA_WORKSPACE_ENFORCEMENT` | unset (**default**) or `enforce` → the membership boundary denies, as above. `open` → it stops denying; the caller's workspace selector is taken at face value. Any other value enforces, and the door logs that it ignored it. |
+
+It is **not** a boolean — `0`/`false`/`off`/`1`/`true` all enforce. Only the
+literal `open` changes anything, and a door running open announces it at boot.
+Authentication, scope binding, the plan gates and **metering** are untouched: a
+call that resolves no workspace meters against the caller's own verified
+identity. Full semantics — including which denials are neutralised and which
+stay — in [Tenancy and layers](../concepts/tenancy-layers.md#opting-out-of-the-boundary-dna_workspace_enforcement).
+
 ## Why this completes the thesis
 
 DNA is a **vendor-neutral intelligence layer with no runtime**. `emit` proved

@@ -29,6 +29,17 @@ from dna.tenancy.accounts import (
     namespaced_account_id,
     provider_type_from_claims,
 )
+from dna.tenancy.enforcement import (
+    ENFORCE,
+    KNOWN_MODES,
+    OPEN,
+    WORKSPACE_ENFORCEMENT_ENV,
+    UnmeterableIdentityError,
+    enforcement_boot_message,
+    enforcement_is_open,
+    unenforced_metering_key,
+    workspace_enforcement,
+)
 from dna.tenancy.invites import (
     AcceptResult,
     INVITE_ROLES,
@@ -102,6 +113,17 @@ __all__ = [
     "normalize_email",
     "resolve_workspace",
     "workspace_for_identity",
+    # enforcement (i-074) — the explicit opt-out of the membership boundary.
+    # DEFAULT IS ENFORCE; `open` is the only value that changes anything.
+    "ENFORCE",
+    "KNOWN_MODES",
+    "OPEN",
+    "WORKSPACE_ENFORCEMENT_ENV",
+    "UnmeterableIdentityError",
+    "enforcement_boot_message",
+    "enforcement_is_open",
+    "unenforced_metering_key",
+    "workspace_enforcement",
     # invites (F3)
     "AcceptResult",
     "INVITE_ROLES",
