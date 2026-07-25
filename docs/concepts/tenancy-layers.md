@@ -96,11 +96,18 @@ new name for the same rows.
 The resolution is a pure, transport-agnostic policy (`dna.tenancy.resolution`,
 with a 1:1 TypeScript twin — both driven by shared parity fixtures):
 
-1. A verified token is distilled to an **identity** — the durable `oid`, the
+1. A verified token is distilled to an **identity** — the durable subject, the
    verified `email` (from `email` / `preferred_username` / `upn`), and the `tid`
    as *provenance only*. The `tid` is deliberately **not** the tenant.
+   **Which claim carries the durable subject is per provider**
+   (`dna.tenancy.identity_claim_key`), read from the provider stamp the verifier
+   writes: Entra keys on `oid`, a consumer-lane IdP (WorkOS, Clerk, Auth0,
+   Google) on its `sub` — the same providers, and the same durability claim,
+   that the billing person lane rests on. A token whose provider is unstamped or
+   unknown keeps `oid`, so a single-lane deployment is unaffected. Entra is
+   deliberately *not* `sub`-keyed: its `sub` is pairwise (per user *per app*).
 2. The identity is matched against the `WorkspaceMembership` grants. An **active**
-   grant matches on the durable `oid` once bound; while still unbound (a freshly
+   grant matches on the durable subject once bound; while still unbound (a freshly
    seeded owner, or a not-yet-accepted invite that is already active) it matches
    on the **verified email**. A `pending` invite authorizes nothing.
 3. The resolved workspace id is the tenancy key. A caller may *select* among the
@@ -205,9 +212,13 @@ The accept step is impersonation-proof by construction:
 - Matching is only ever on a **verified** email claim (Entra's
   `email`+`email_verified`, or the verified `preferred_username`/`upn` UPN) — never
   a caller-supplied field. An unverified email accepts nothing (fail-closed).
-- The bind key is the durable `oid`. Once a grant is bound, it matches *only* on
-  that `oid` — so a different identity that later controls the same email can
-  **not** hijack the membership. A token with no `oid` binds nothing.
+- The bind key is the durable subject (`oid` for Entra, `sub` for a consumer-lane
+  IdP — see step 1 above). Once a grant is bound, it matches *only* on that
+  value — so a different identity that later controls the same email can **not**
+  hijack the membership. A token carrying no durable subject binds nothing. The
+  key is derived in one place in the core, so the id written when a workspace is
+  *created* is byte-identical to the one the MCP and REST doors later derive from
+  the token.
 - The whole decision is the pure `dna.tenancy.invites` policy (with a 1:1
   TypeScript twin, driven by shared parity fixtures), so both runtimes agree.
 

@@ -827,10 +827,20 @@ def identity_from_context() -> Any:
     request, or ``None`` when there is no token (stdio / unauthenticated).
 
     Reads the request's access token via FastMCP's ``get_access_token`` and
-    distills ONLY verified claims (oid / email / preferred_username / upn / tid).
-    The per-provider tenant-claim markers stamped by the multi-provider composite
-    are irrelevant here — the identity is read from the standard Entra identity
-    claims, not the (now-demoted) tenant claim."""
+    distills ONLY verified claims (the provider's durable subject / email /
+    preferred_username / upn / tid). The per-provider TENANT-claim marker stamped
+    by the multi-provider composite is irrelevant here — the identity is not the
+    (now-demoted) tenant claim.
+
+    The provider-FAMILY/TYPE stamp on the same claims IS relevant, and the core
+    reads it itself: ``identity_from_token`` resolves the durable subject through
+    :func:`dna.tenancy.identity_claim_key` — ``oid`` for Entra, ``sub`` for a
+    consumer-lane IdP (i-072). That derivation deliberately lives in the core and
+    NOT here, because the same key is written by the workspace CREATION path in
+    sdk-py, which cannot see this package; a second derivation here (or an
+    ``oid_claim=`` computed from ``DNA_MCP_OID_CLAIM``, which is the PERSONAL
+    axis's per-process knob) would let a grant bound by one face match nobody on
+    the next."""
     from dna.tenancy.resolution import identity_from_token
 
     try:

@@ -19,9 +19,11 @@ in ``dna.application.live``. Here is only the decision.
 
 Security notes:
 
-* ``identity_from_token`` reads ONLY verified Entra token claims (``oid`` /
-  ``email`` / ``preferred_username`` / ``upn`` / ``tid``). The email is an
-  IdP-vouched claim — matching a membership on it is impersonation-proof.
+* ``identity_from_token`` reads ONLY verified token claims: the provider's
+  durable subject (:func:`identity_claim_key` — ``oid`` for Entra, ``sub`` for
+  a consumer-lane IdP), the ``email``/``preferred_username``/``upn``, and the
+  ``tid``. The email is an IdP-vouched claim — matching a membership on it is
+  impersonation-proof.
 * ``oid`` is the durable key; email is the invite handle. A membership whose
   ``identity_oid`` is already bound matches ONLY on ``oid`` (a later email
   reassignment cannot hijack it). A still-unbound but ``active`` grant (the F1
@@ -36,8 +38,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Iterable
 
-# The Entra claims an identity is read from. ``oid`` is the durable subject; the
-# email is taken from the first present of these verified claims.
+from dna.tenancy.accounts import (
+    PROVIDER_ACCOUNT_NAMESPACES,
+    provider_type_from_claims,
+)
+
+# The claims an identity is read from. ``oid`` is Entra's durable subject and the
+# back-compat default for any token whose provider is unknown or has no durable
+# subject of its own (see :func:`identity_claim_key`); the email is taken from
+# the first present of these verified claims.
 DEFAULT_OID_CLAIM = "oid"
 DEFAULT_EMAIL_CLAIMS = ("email", "preferred_username", "upn")
 DEFAULT_TID_CLAIM = "tid"
@@ -65,10 +74,14 @@ def normalize_email(email: str | None) -> str:
 class Identity:
     """A VERIFIED caller identity, distilled from an IdP token.
 
-    ``oid`` — the stable Entra object id (the durable key). ``email`` — the
-    verified email/``preferred_username`` (the invite handle). ``tid`` — the
-    Azure org the token came from: **provenance only** under Model B, never the
-    tenant."""
+    ``oid`` — the provider's DURABLE subject (the key a grant binds): the Entra
+    object id, or a consumer-lane IdP's ``sub`` — whichever
+    :func:`identity_claim_key` names for the token. The field keeps the name
+    ``oid`` because that is what the ``WorkspaceMembership.identity_oid`` column
+    is called; it does not mean the value came from an Entra ``oid`` claim.
+    ``email`` — the verified email/``preferred_username`` (the invite handle).
+    ``tid`` — the Azure org the token came from: **provenance only** under Model
+    B, never the tenant."""
 
     oid: str | None = None
     email: str | None = None
@@ -101,6 +114,42 @@ class Membership:
         )
 
 
+def identity_claim_key(
+    claims: dict[str, Any] | None, *, provider_type: str | None = None
+) -> str:
+    """Which claim carries this token's DURABLE identity — the key a
+    :class:`Membership` binds and every face must agree on.
+
+    "Durable" is not a guess: it is read from the provider stamp the verifier
+    writes (:func:`~dna.tenancy.accounts.provider_type_from_claims`) against the
+    provider table this package already declares
+    (:data:`~dna.tenancy.accounts.PROVIDER_ACCOUNT_NAMESPACES`). A provider with
+    a ``subject_claim`` is one whose subject the table already asserts is stable
+    and issuer-unique — the same assertion the billing consumer lane rests on —
+    so ``sub`` for WorkOS/Clerk/Auth0/Google. Everything else, including Entra
+    (whose ``sub`` is PAIRWISE — per user *per app* — and therefore NOT durable
+    across DNA's faces) and any unstamped or unknown token, keeps
+    :data:`DEFAULT_OID_CLAIM`. That fallback is what makes this change invisible
+    to every existing single-lane deployment.
+
+    Why it lives HERE and not in the transport glue (i-072): the durable key is
+    written by the CREATION path (``create_workspace_impl``) and read by the MCP
+    and REST doors. If those derivations could disagree — a per-face env knob, a
+    vendor branch in one package but not the other — a grant bound by one face
+    would match nobody on the next, which is the bug this fixes wearing a
+    different hat. One derivation, in the core, from the token itself.
+
+    (``dna_cli``'s ``DNA_MCP_OID_CLAIM`` remains a PERSONAL-memory knob for
+    exactly that reason: it is per-process, and sdk-py's creation path cannot
+    see it, so honoring it here would re-split the key.)"""
+    ns = PROVIDER_ACCOUNT_NAMESPACES.get(
+        provider_type_from_claims(claims, provider_type=provider_type) or ""
+    )
+    if ns is not None and ns.subject_claim:
+        return ns.subject_claim
+    return DEFAULT_OID_CLAIM
+
+
 def identity_from_token(
     claims: dict[str, Any] | None,
     *,
@@ -110,12 +159,14 @@ def identity_from_token(
 ) -> Identity:
     """Distill a verified token's ``claims`` into an :class:`Identity`.
 
-    Reads ONLY verified claims: the durable ``oid``, the email from the first
-    present of ``email_claims`` (default email/preferred_username/upn), and the
-    ``tid`` (provenance). Missing claims become ``None`` — the resolver then
-    fails closed on an identity that can match no membership."""
+    Reads ONLY verified claims: the durable subject (the claim
+    :func:`identity_claim_key` names for this token's provider — an explicit
+    ``oid_claim`` overrides it), the email from the first present of
+    ``email_claims`` (default email/preferred_username/upn), and the ``tid``
+    (provenance). Missing claims become ``None`` — the resolver then fails closed
+    on an identity that can match no membership."""
     claims = claims or {}
-    oid_key = oid_claim or DEFAULT_OID_CLAIM
+    oid_key = oid_claim or identity_claim_key(claims)
     tid_key = tid_claim or DEFAULT_TID_CLAIM
     email_keys = tuple(email_claims) if email_claims is not None else DEFAULT_EMAIL_CLAIMS
 

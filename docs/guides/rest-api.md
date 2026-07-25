@@ -58,6 +58,16 @@ the config-auth workspace bind** — they name the workspace in the path and do
 their own RBAC, so a caller who holds no active membership yet (an invitee, or the
 founder before bootstrap) can still reach them.
 
+The `claims` below are written as Entra's (`{oid, email, tid, …}`) because that is
+the common case, but the **durable subject is read per provider**: send the
+provider stamp (`_dna_provider_type` / `_dna_provider_family`) with the claims and
+a consumer-lane sign-in keys on its `sub` instead
+(`dna.tenancy.identity_claim_key` — see
+[Tenancy layers](../concepts/tenancy-layers.md)).
+Do not remap another IdP's subject into a claim named `oid`: the stamp is what
+keeps the grant written here on the same key the MCP/REST doors derive from the
+token.
+
 - `POST /v1/workspaces` — **create a workspace and its first owner**. Body
   `{name, slug?, claims: {oid, email, tid, …}}`. The `workspace_id` is **minted by
   the server** — opaque, unguessable, never derived from the Azure `tid`, and

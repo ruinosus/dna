@@ -102,3 +102,92 @@ def test_configured_grants_deny_non_member(monkeypatch):
     live = _FakeLive(grants=grants)
     with pytest.raises(CrossWorkspaceError, match="no active workspace membership"):
         _run(A.enforce_workspace_from_context(live, None))
+
+
+# ── the CONSUMER lane reaches the resolver at all (i-072) ──────────────────
+#
+# The glue's own half of the bug: `identity_from_context()` called
+# `identity_from_token(claims)` with no provider context, so a WorkOS/AuthKit
+# access token (durable subject in `sub`, no `oid`, no `email`) arrived at the
+# resolver as Identity(oid=None, email=None) and EVERY metered tool call on that
+# door was denied. These tests drive the REAL `identity_from_context` (not the
+# stub `_patch_token` installs) over a fake FastMCP token.
+
+#: A WorkOS/AuthKit ACCESS token as issued — plus the family stamp the composite
+#: verifier (and `workos_provider_from_env`) writes onto the verified claims.
+_AUTHKIT_CLAIMS = {
+    "iss": "https://api.workos.com/user_management/client_x",
+    "sub": "user_01JQGLUEWORKOSUSER",
+    "org_id": "org_01JQGLUE",
+    "sid": "session_01JQGLUE",
+    "_dna_provider_family": "workos",
+}
+
+
+class _FakeToken:
+    def __init__(self, claims: dict):
+        self.claims = claims
+
+
+@pytest.fixture
+def patch_access_token(monkeypatch):
+    """Install a fake ``get_access_token`` (the REAL identity_from_context runs)."""
+    import fastmcp.server.dependencies as deps
+
+    def _install(claims: dict | None):
+        monkeypatch.setattr(
+            deps, "get_access_token",
+            lambda: (None if claims is None else _FakeToken(claims)),
+        )
+    return _install
+
+
+def test_identity_from_context_reads_the_consumer_lane_subject(patch_access_token):
+    patch_access_token(_AUTHKIT_CLAIMS)
+    ident = A.identity_from_context()
+    assert ident.oid == "user_01JQGLUEWORKOSUSER"
+    assert ident.email is None  # an access token carries none — and needs none.
+
+
+def test_identity_from_context_entra_is_unchanged(patch_access_token):
+    patch_access_token({"oid": "oid-alice", "email": "alice@a.com", "tid": "org-a",
+                        "sub": "pairwise-and-ignored"})
+    ident = A.identity_from_context()
+    assert (ident.oid, ident.email, ident.tid) == ("oid-alice", "alice@a.com", "org-a")
+
+
+def test_identity_from_context_no_token(patch_access_token):
+    patch_access_token(None)
+    assert A.identity_from_context() is None
+
+
+def test_consumer_lane_resolves_its_workspace_end_to_end(
+    monkeypatch, patch_access_token
+):
+    """The whole seam every metered tool passes through (`_guard` → `_workspace`
+    → `enforce_workspace_from_context`), with a real WorkOS token."""
+    monkeypatch.setattr(A, "token_present_in_context", lambda: True)
+    monkeypatch.setattr(A, "workspace_selector_from_context", lambda: None)
+    patch_access_token(_AUTHKIT_CLAIMS)
+    grants = [
+        {"spec": {"workspace_id": "ws-consumer",
+                  "identity_email": "consumer@example.com",
+                  "identity_oid": "user_01JQGLUEWORKOSUSER",
+                  "role": "owner", "status": "active"}},
+    ]
+    assert _run(A.enforce_workspace_from_context(_FakeLive(grants), None)) == "ws-consumer"
+
+
+def test_consumer_lane_still_denies_a_stranger(monkeypatch, patch_access_token):
+    from dna.tenancy.resolution import CrossWorkspaceError
+
+    monkeypatch.setattr(A, "token_present_in_context", lambda: True)
+    monkeypatch.setattr(A, "workspace_selector_from_context", lambda: None)
+    patch_access_token(_AUTHKIT_CLAIMS)
+    grants = [
+        {"spec": {"workspace_id": "ws-a", "identity_email": "alice@a.com",
+                  "identity_oid": "user_SOMEONE_ELSE", "role": "owner",
+                  "status": "active"}},
+    ]
+    with pytest.raises(CrossWorkspaceError, match="no active workspace membership"):
+        _run(A.enforce_workspace_from_context(_FakeLive(grants), None))

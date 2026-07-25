@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-workspace-identity-per-provider
+spec:
+  title: 'Plano: s-workspace-identity-per-provider'
+  date: '2026-07-25'
+  status: accepted
+  story_ref: s-workspace-identity-per-provider
+  journey_phase: plan
+  body: 'TDD. (1) RED in packages/sdk-py/tests/test_workspace_resolution.py: a WorkOS-stamped claim set (sub/org_id/sid, no oid, no email) must distill to Identity(oid=sub) and resolve against a grant bound to that sub; plus the Entra/unstamped back-compat cases. (2) RED in packages/cli/tests: identity_from_context() over a fake FastMCP token with the workos family stamp, and enforce_workspace_from_context end-to-end. (3) GREEN: make dna.tenancy.resolution.identity_from_token provider-aware by DEFAULT — the claim it reads is looked up from the provider stamp via dna.tenancy.accounts (provider_type_from_claims + PROVIDER_ACCOUNT_NAMESPACES[...].subject_claim), falling back to ''oid''. An explicit oid_claim= still wins. That single change reaches every live path (MCP seam, REST bind, runtime creation/accept) with no call-site churn and keeps sdk-py free of dna_cli. (4) Also fix the creation path''s error message so it names the claim the caller''s provider actually needs. (5) Run sdk-py + cli suites + brand guard.'
+  created_at: '2026-07-25T14:28:01+00:00'
+  updated_at: '2026-07-25T14:28:01+00:00'

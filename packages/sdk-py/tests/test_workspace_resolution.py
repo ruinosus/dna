@@ -24,6 +24,7 @@ from dna.tenancy.resolution import (
     Identity,
     Membership,
     active_workspaces_for,
+    identity_claim_key,
     identity_from_token,
     membership_matches_identity,
     normalize_email,
@@ -111,6 +112,104 @@ def test_identity_from_token_missing_claims_are_none():
     ident = identity_from_token({})
     assert ident.oid is None and ident.email is None and ident.tid is None
     assert identity_from_token(None).oid is None
+
+
+# ── the durable identity claim is PER PROVIDER (i-072) ─────────────────────
+#
+# The bug this section exists to keep dead: the workspace axis read the Entra
+# `oid` claim for EVERY provider, so a consumer-lane token (WorkOS/AuthKit,
+# Google, Clerk, Auth0 — durable subject in `sub`, and for an access token no
+# email at all) distilled to Identity(oid=None, email=None), matched no grant,
+# and every request on that door was denied. These claim sets are the ones the
+# IdPs actually issue.
+
+#: A WorkOS/AuthKit ACCESS token, as documented: `sub` is the WorkOS user id,
+#: there is no `oid` and no `email` (email lives only in the id_token).
+_AUTHKIT_CLAIMS = {
+    "iss": "https://api.workos.com/user_management/client_x",
+    "sub": "user_01JQTESTWORKOSUSERID",
+    "org_id": "org_01JQTESTORG",
+    "sid": "session_01JQTEST",
+    "_dna_provider_type": "workos",
+    "_dna_provider_family": "workos",
+}
+
+
+def test_identity_claim_key_per_provider():
+    # Consumer lanes key on their durable subject...
+    assert identity_claim_key(_AUTHKIT_CLAIMS) == "sub"
+    assert identity_claim_key({"_dna_provider_type": "google"}) == "sub"
+    assert identity_claim_key({"_dna_provider_type": "clerk"}) == "sub"
+    assert identity_claim_key({"_dna_provider_type": "auth0"}) == "sub"
+    # ...Entra keeps the `oid` (its `sub` is PAIRWISE — per user PER APP — so it
+    # is not durable across DNA's faces and must never become a grant key).
+    assert identity_claim_key({"_dna_provider_type": "entra"}) == "oid"
+    # Unstamped / unknown provider → the Entra default, unchanged.
+    assert identity_claim_key({}) == "oid"
+    assert identity_claim_key(None) == "oid"
+    assert identity_claim_key({"_dna_provider_type": "oidc"}) == "oid"
+    # The coarser FAMILY stamp is honored too — the single-env-provider Lane-B
+    # path (`workos_provider_from_env`) stamps only that one.
+    assert identity_claim_key({"_dna_provider_family": "workos"}) == "sub"
+    assert identity_claim_key({"_dna_provider_family": "microsoft"}) == "oid"
+
+
+def test_identity_from_token_reads_the_consumer_lane_subject():
+    ident = identity_from_token(_AUTHKIT_CLAIMS)
+    assert ident.oid == "user_01JQTESTWORKOSUSERID"
+    # No email on an access token — and that is FINE now: the durable oid alone
+    # matches a bound grant (the email is only the invite handle).
+    assert ident.email is None
+    assert ident.tid is None
+
+
+def test_identity_from_token_entra_is_unchanged_by_the_provider_seam():
+    """Back-compat: an Entra token still reads `oid`, and its `sub` is ignored
+    even when the provider is stamped."""
+    claims = {"_dna_provider_type": "entra", "oid": "oid-e", "sub": "pairwise-sub",
+              "email": "e@x.com", "tid": "tid-1"}
+    assert identity_from_token(claims).oid == "oid-e"
+    # …and an UNSTAMPED token behaves exactly as it always did.
+    assert identity_from_token({"oid": "oid-e", "sub": "s"}).oid == "oid-e"
+
+
+def test_explicit_oid_claim_still_wins_over_the_provider_seam():
+    """A caller that names the claim keeps full control (the parameter is the
+    escape hatch for an exotic deployment)."""
+    ident = identity_from_token(_AUTHKIT_CLAIMS | {"custom": "c1"}, oid_claim="custom")
+    assert ident.oid == "c1"
+
+
+def test_consumer_lane_resolves_a_grant_bound_to_its_subject():
+    """End-to-end on the pure resolver: the grant the creation path binds for a
+    WorkOS identity is the one the MCP door matches — the same durable key."""
+    grant = Membership(
+        workspace_id="ws-a",
+        identity_email="consumer@example.com",
+        identity_oid="user_01JQTESTWORKOSUSERID",
+        role="owner",
+        status="active",
+    )
+    assert resolve_workspace(
+        token_present=True,
+        identity=identity_from_token(_AUTHKIT_CLAIMS),
+        requested=None,
+        memberships=[grant],
+    ) == "ws-a"
+
+
+def test_consumer_lane_still_fails_closed_without_a_grant():
+    """The fix widens WHICH claim is durable, never WHO is authorized."""
+    stranger = Membership(
+        workspace_id="ws-a", identity_oid="user_SOMEONE_ELSE", status="active",
+    )
+    with pytest.raises(CrossWorkspaceError, match="no active workspace membership"):
+        resolve_workspace(
+            token_present=True,
+            identity=identity_from_token(_AUTHKIT_CLAIMS),
+            requested=None,
+            memberships=[stranger],
+        )
 
 
 def test_normalize_email():

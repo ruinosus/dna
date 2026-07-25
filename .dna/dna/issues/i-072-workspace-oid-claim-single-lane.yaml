@@ -1,0 +1,15 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-072-workspace-oid-claim-single-lane
+spec:
+  description: 'Workspace resolution reads the Entra ''oid'' claim for EVERY provider, so a consumer-lane identity can never resolve a workspace. dna.tenancy.resolution.identity_from_token(claims) defaults to ''oid'' on every live path: the MCP tool-call seam (dna_cli._mcp_auth.identity_from_context), the REST verified-identity bind (_rest_api config-auth middleware) and the workspace creation/accept impls (dna.application.runtime). A consumer-lane access token (WorkOS/AuthKit, Google, Clerk, Auth0) carries no ''oid'' — its durable subject is ''sub'' — and no email either (email lives in the id_token the server never sees). Result: Identity(oid=None, email=None) matches no WorkspaceMembership and workspace_for_identity raises CrossWorkspaceError, so EVERY metered tool call on a consumer-lane door is denied; creation fails earlier with ValueError(''the verified identity must carry an oid claim''). The personal-memory axis got a per-family claim seam (s-consumer-lane-memory-key); the workspace axis never did. Fix: derive the durable identity claim from the provider stamp the verifier already writes, via the provider table dna.tenancy.accounts already declares (AccountNamespace.subject_claim), in ONE core place so every face and the creation path agree on the same durable key.'
+  type: bug
+  severity: high
+  status: open
+  timeline:
+  - at: '2026-07-25T14:27:16+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

@@ -1,0 +1,69 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-workspace-identity-per-provider
+spec:
+  title: Durable workspace identity per provider — the consumer lane can resolve a workspace
+  description: Derive the durable identity claim from the token's provider stamp on the workspace axis, so a consumer-lane (WorkOS/Google/Clerk/Auth0) identity resolves and binds the same key on every face. Fixes i-072.
+  status: in-progress
+  feature: f-dna-hosting
+  acceptance_criteria:
+  - Given a verified token stamped with a provider whose durable subject is 'sub' (WorkOS/Google/Clerk/Auth0), When the workspace axis distills its identity, Then Identity.oid is the token's 'sub' and an active WorkspaceMembership bound to that value resolves the workspace.
+  - Given an Entra token (or claims with no provider stamp), When the workspace axis distills its identity, Then Identity.oid is still read from the 'oid' claim — byte-identical behaviour to before.
+  - Given a consumer-lane identity creating its first workspace (POST /v1/workspaces) or reconciling ownership (provision-owner), When the claims carry the provider stamp and its durable subject, Then the call succeeds and the grant binds the SAME durable key the MCP door derives — no ValueError('must carry an oid claim').
+  - Given the MCP tool-call seam, the REST verified-identity bind and the creation impls, When each resolves an identity, Then all three use ONE core derivation so a grant bound by one is matched by the others.
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - 'Code: one provider-aware derivation in dna.tenancy (core), consumed by dna_cli._mcp_auth.identity_from_context, dna_cli._rest_api''s config-auth bind and dna.application.runtime; no vendor branch outside the existing provider table.'
+  - 'Tests: RED-first coverage for the consumer lane in packages/sdk-py/tests (pure) and packages/cli/tests (glue) — the blind spot that let this ship; sdk-py tests must not import dna_cli.'
+  - 'CI: sdk-py + cli suites green, brand guard green, golden fixtures unchanged.'
+  - 'Docs: the tenancy docstrings state that the durable key is per provider, and that DNA_MCP_OID_CLAIM stays a personal-axis knob.'
+  definition_of_done_source: cli-create
+  created_at: '2026-07-25T14:27:45+00:00'
+  updated_at: '2026-07-25T14:56:20+00:00'
+  timeline:
+  - at: '2026-07-25T14:27:45+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-25T14:28:08+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-25T14:55:35+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'Desvio deliberado da recomendacao original (que dizia: so mexer no glue do CLI, dna/tenancy/resolution.py nao precisa mudar). Verifiquei a recomendacao e ela conserta so metade: sdk-py NAO pode importar dna_cli, entao um seam vivendo em _mcp_auth nunca alcanca create_workspace_impl / provision_workspace_owner_impl — o consumidor continuaria sem conseguir CRIAR workspace nenhum, e pior, o par ''chave escrita na criacao'' vs ''chave derivada na porta'' poderia divergir. Alem disso ha um terceiro call site vivo que a recomendacao nao cita: o bind de identidade verificada do REST (_rest_api.py, middleware --auth config). Coloquei UMA derivacao no core (dna.tenancy.identity_claim_key), lida do carimbo de provider que o verificador ja escreve, contra a tabela PROVIDER_ACCOUNT_NAMESPACES que dna.tenancy.accounts JA declara (subject_claim) — nenhum conhecimento de vendor novo entrou no repo, e identity_from_token passou a consultar isso por padrao, o que conserta os tres caminhos sem tocar em nenhum call site. Nao liguei DNA_MCP_OID_CLAIM no eixo de workspace de proposito: e um knob por processo do eixo PESSOAL, e sdk-py nao o enxerga — honra-lo so na face MCP re-quebraria a chave em duas.'
+    commit_ref: f7135a3f5a779157f27bb59873454463736d35ec
+  - at: '2026-07-25T14:56:04+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-workspace-identity-per-provider
+    summary: TestGuide tg-workspace-identity-per-provider (manual)
+  - at: '2026-07-25T14:56:20+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-workspace-identity-per-provider-20260725-145615
+    summary: TestRun tr-tg-workspace-identity-per-provider-20260725-145615 → pass
+    outcome: pass
+  produces:
+  - kind: Plan
+    name: plan-s-workspace-identity-per-provider
+    role: implementation
+    at: '2026-07-25T14:28:08+00:00'
+  - kind: TestGuide
+    name: tg-workspace-identity-per-provider
+    role: test-guide
+    at: '2026-07-25T14:56:04+00:00'
+  - kind: TestRun
+    name: tr-tg-workspace-identity-per-provider-20260725-145615
+    role: test-run
+    at: '2026-07-25T14:56:20+00:00'
