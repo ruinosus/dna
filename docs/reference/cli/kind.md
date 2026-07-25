@@ -27,7 +27,7 @@ dna kind describe [OPTIONS] KIND_NAME
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
-| `--scope` | _(default: `dna-development`)_ |
+| `--scope` | Scope to look up the Kind in (default: env / sole scope). |
 | `--tenant` | Route as this tenant. |
 
 ## `dna kind list`

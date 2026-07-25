@@ -54,14 +54,15 @@ def doc() -> None:
 
 @doc.command("list")
 @click.argument("kind_name")
-@click.option("--scope", default="dna-development")
+@click.option("--scope", default=None, help="Scope to list documents from (default: env / sole scope).")
 @click.option("--tenant", default=None, help="Bind to this tenant (overrides DNA_TENANT).")
 @click.option("--json", "as_json", is_flag=True)
 def list_docs(
-    kind_name: str, scope: str, tenant: str | None, as_json: bool,
+    kind_name: str, scope: str | None, tenant: str | None, as_json: bool,
 ) -> None:
     """List documents of a Kind in the scope."""
     with dna_client(tenant=tenant) as dna:
+        scope = scope or dna.default_scope
         try:
             body = run_async(dna.docs(scope).list(kind=kind_name))
         except Exception as e:  # noqa: BLE001
@@ -86,13 +87,14 @@ def list_docs(
 @doc.command("show")
 @click.argument("kind_name")
 @click.argument("doc_name")
-@click.option("--scope", default="dna-development")
+@click.option("--scope", default=None, help="Scope to read the document from (default: env / sole scope).")
 @click.option("--tenant", default=None, help="Bind to this tenant (overrides DNA_TENANT).")
 def show(
-    kind_name: str, doc_name: str, scope: str, tenant: str | None,
+    kind_name: str, doc_name: str, scope: str | None, tenant: str | None,
 ) -> None:
     """Print the full document (raw frontmatter + spec) as JSON."""
     with dna_client(tenant=tenant) as dna:
+        scope = scope or dna.default_scope
         try:
             doc_body = run_async(dna.docs(scope).get(kind_name, doc_name))
         except Exception as e:  # noqa: BLE001
@@ -172,14 +174,14 @@ def _coerce_value(value: str, schema_type: str | None) -> object:
 @click.argument("kind_name")
 @click.argument("doc_name")
 @click.argument("fields", nargs=-1)
-@click.option("--scope", default="dna-development")
+@click.option("--scope", default=None, help="Scope to write the document into (default: env / sole scope).")
 @click.option("--tenant", default=None, help="Bind the write to this tenant.")
 @click.option("--dry-run", is_flag=True, help="Validate without writing.")
 def make_doc(
     kind_name: str,
     doc_name: str,
     fields: tuple,
-    scope: str,
+    scope: str | None,
     tenant: str | None,
     dry_run: bool,
 ) -> None:
@@ -194,6 +196,7 @@ def make_doc(
       labels=                        → [] (empty array on empty value)
     """
     with dna_client(tenant=tenant) as dna:
+        scope = scope or dna.default_scope
         descriptor = _fetch_kind_descriptor(dna, scope, kind_name)
         schema = descriptor.get("schema") or {}
         schema_props = (schema.get("properties") or {}) if isinstance(schema, dict) else {}
@@ -237,7 +240,7 @@ def make_doc(
 @click.argument("kind_name")
 @click.argument("doc_name")
 @click.argument("new_status")
-@click.option("--scope", default="dna-development")
+@click.option("--scope", default=None, help="Scope holding the document (default: env / sole scope).")
 @click.option("--tenant", default=None)
 @click.option("--commit-ref", default=None, help="Git SHA to stamp on transition.")
 @click.option("--reason", default=None, help="Optional reason string.")
@@ -245,7 +248,7 @@ def transition(
     kind_name: str,
     doc_name: str,
     new_status: str,
-    scope: str,
+    scope: str | None,
     tenant: str | None,
     commit_ref: str | None,
     reason: str | None,
@@ -257,6 +260,7 @@ def transition(
     and a timeline entry.
     """
     with dna_client(tenant=tenant) as dna:
+        scope = scope or dna.default_scope
         descriptor = _fetch_kind_descriptor(dna, scope, kind_name)
         schema = descriptor.get("schema") or {}
         schema_props = (schema.get("properties") or {}) if isinstance(schema, dict) else {}
@@ -322,11 +326,12 @@ def transition(
 
 @doc.command("fields")
 @click.argument("kind_name")
-@click.option("--scope", default="dna-development")
+@click.option("--scope", default=None, help="Scope holding the Kind (default: env / sole scope).")
 @click.option("--tenant", default=None)
-def fields_help(kind_name: str, scope: str, tenant: str | None) -> None:
+def fields_help(kind_name: str, scope: str | None, tenant: str | None) -> None:
     """List the fields a Kind accepts (with type + enum + required marker)."""
     with dna_client(tenant=tenant) as dna:
+        scope = scope or dna.default_scope
         descriptor = _fetch_kind_descriptor(dna, scope, kind_name)
     schema = descriptor.get("schema") or {}
     if not isinstance(schema, dict):
@@ -353,20 +358,21 @@ def fields_help(kind_name: str, scope: str, tenant: str | None) -> None:
 @click.argument("kind_name")
 @click.argument("doc_name")
 @click.option("--spec", "spec_path", default=None, help="Path to JSON file (or `-` for stdin).")
-@click.option("--scope", default="dna-development")
+@click.option("--scope", default=None, help="Scope to write the document into (default: env / sole scope).")
 @click.option("--tenant", default=None, help="Bind the write to this tenant (overrides DNA_TENANT).")
 @click.option("--dry-run", is_flag=True, help="Validate without writing.")
 def create(
     kind_name: str,
     doc_name: str,
     spec_path: str | None,
-    scope: str,
+    scope: str | None,
     tenant: str | None,
     dry_run: bool,
 ) -> None:
     """Create a new document via the kernel WriterPort."""
     spec = _read_spec(spec_path)
     with dna_client(tenant=tenant) as dna:
+        scope = scope or dna.default_scope
         descriptor = _fetch_kind_descriptor(dna, scope, kind_name)
         api_version = descriptor.get("api_version") or "github.com/ruinosus/dna/v1"
 
@@ -393,23 +399,24 @@ def create(
 @doc.command("delete")
 @click.argument("kind_name")
 @click.argument("doc_name")
-@click.option("--scope", default="dna-development")
+@click.option("--scope", default=None, help="Scope to delete the document from (default: env / sole scope).")
 @click.option("--tenant", default=None, help="Bind the delete to this tenant (overrides DNA_TENANT).")
 @click.option("--yes", is_flag=True, help="Skip confirmation.")
 def delete(
-    kind_name: str, doc_name: str, scope: str, tenant: str | None, yes: bool,
+    kind_name: str, doc_name: str, scope: str | None, tenant: str | None, yes: bool,
 ) -> None:
     """Delete a document from the scope. Asks for confirmation unless --yes."""
     _eff, _warn = _tenant_write_note(tenant)  # i-020: show effective tenant
     if _warn:
         click.secho(f"  ⚠ {_warn}", fg="yellow", err=True)
     suffix = f" (tenant={_eff})" if _eff else " (tenant=unbound/global)"
-    if not yes:
-        click.confirm(
-            f"Delete {kind_name}/{doc_name} from scope {scope}{suffix}?",
-            abort=True,
-        )
     with dna_client(tenant=tenant) as dna:
+        scope = scope or dna.default_scope
+        if not yes:
+            click.confirm(
+                f"Delete {kind_name}/{doc_name} from scope {scope}{suffix}?",
+                abort=True,
+            )
         try:
             run_async(dna.docs(scope).delete(kind_name, doc_name))
         except Exception as e:  # noqa: BLE001

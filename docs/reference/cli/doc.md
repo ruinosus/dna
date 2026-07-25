@@ -60,7 +60,7 @@ dna doc create [OPTIONS] KIND_NAME DOC_NAME
 | --- | --- |
 | `--dry-run` | Validate without writing. |
 | `--help` | Show this message and exit. |
-| `--scope` | _(default: `dna-development`)_ |
+| `--scope` | Scope to write the document into (default: env / sole scope). |
 | `--spec` | Path to JSON file (or `-` for stdin). |
 | `--tenant` | Bind the write to this tenant (overrides DNA_TENANT). |
 
@@ -84,7 +84,7 @@ dna doc delete [OPTIONS] KIND_NAME DOC_NAME
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
-| `--scope` | _(default: `dna-development`)_ |
+| `--scope` | Scope to delete the document from (default: env / sole scope). |
 | `--tenant` | Bind the delete to this tenant (overrides DNA_TENANT). |
 | `--yes` | Skip confirmation. |
 
@@ -107,7 +107,7 @@ dna doc fields [OPTIONS] KIND_NAME
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
-| `--scope` | _(default: `dna-development`)_ |
+| `--scope` | Scope holding the Kind (default: env / sole scope). |
 | `--tenant` |  |
 
 ## `dna doc list`
@@ -130,7 +130,7 @@ dna doc list [OPTIONS] KIND_NAME
 | --- | --- |
 | `--help` | Show this message and exit. |
 | `--json` |  |
-| `--scope` | _(default: `dna-development`)_ |
+| `--scope` | Scope to list documents from (default: env / sole scope). |
 | `--tenant` | Bind to this tenant (overrides DNA_TENANT). |
 
 ## `dna doc make`
@@ -163,7 +163,7 @@ dna doc make [OPTIONS] KIND_NAME DOC_NAME [FIELDS]...
 | --- | --- |
 | `--dry-run` | Validate without writing. |
 | `--help` | Show this message and exit. |
-| `--scope` | _(default: `dna-development`)_ |
+| `--scope` | Scope to write the document into (default: env / sole scope). |
 | `--tenant` | Bind the write to this tenant. |
 
 ## `dna doc show`
@@ -186,7 +186,7 @@ dna doc show [OPTIONS] KIND_NAME DOC_NAME
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
-| `--scope` | _(default: `dna-development`)_ |
+| `--scope` | Scope to read the document from (default: env / sole scope). |
 | `--tenant` | Bind to this tenant (overrides DNA_TENANT). |
 
 ## `dna doc transition`
@@ -216,6 +216,6 @@ dna doc transition [OPTIONS] KIND_NAME DOC_NAME NEW_STATUS
 | `--commit-ref` | Git SHA to stamp on transition. |
 | `--help` | Show this message and exit. |
 | `--reason` | Optional reason string. |
-| `--scope` | _(default: `dna-development`)_ |
+| `--scope` | Scope holding the document (default: env / sole scope). |
 | `--tenant` |  |
 

@@ -63,11 +63,11 @@ def research() -> None:
 @research.command("list")
 @click.option("--status", type=click.Choice(list(("brief", "ready", "draft", "published", "superseded", "retracted"))))
 @click.option("--methodology", default=None)
-@click.option("--scope", default="dna-development")
+@click.option("--scope", default=None, help="Scope to list Research docs from (default: env / sole scope).")
 @click.option("--tenant", default=None, help="Optional tenant (Research is PERMISSIVE — omit for base docs).")
 @click.option("--json", "as_json", is_flag=True, help="Machine-readable output.")
 def cmd_list(
-    status: str | None, methodology: str | None, scope: str, tenant: str | None,
+    status: str | None, methodology: str | None, scope: str | None, tenant: str | None,
     as_json: bool,
 ) -> None:
     """List Research docs in the scope, with key metadata."""
@@ -108,10 +108,10 @@ def cmd_list(
 
 @research.command("show")
 @click.argument("name")
-@click.option("--scope", default="dna-development")
+@click.option("--scope", default=None, help="Scope to read the Research doc from (default: env / sole scope).")
 @click.option("--tenant", default=None, help="Optional tenant (Research is PERMISSIVE).")
 @click.option("--full", is_flag=True, help="Print all findings + recommendations.")
-def cmd_show(name: str, scope: str, tenant: str | None, full: bool) -> None:
+def cmd_show(name: str, scope: str | None, tenant: str | None, full: bool) -> None:
     """Show a Research doc + its citation graph."""
     with dna_session(scope) as s:
         doc = s.get_doc("Research", name, tenant=tenant)
@@ -212,10 +212,10 @@ def _validate_spec_or_die(path: str, spec: dict[str, Any]) -> None:
 
 @research.command("create")
 @click.argument("path")
-@click.option("--scope", default="dna-development")
+@click.option("--scope", default=None, help="Scope to write the Research doc into (default: env / sole scope).")
 @click.option("--tenant", default=None, help="Optional tenant (Research is PERMISSIVE — omit for base docs).")
 @click.option("--status", default=None, help="Override spec.status (else the file's value, else 'draft').")
-def cmd_create(path: str, scope: str, tenant: str | None, status: str | None) -> None:
+def cmd_create(path: str, scope: str | None, tenant: str | None, status: str | None) -> None:
     """Create/upsert a Research doc from a YAML/JSON file.
 
     First-class research authoring (no ``dna doc apply`` needed). Validates
@@ -250,20 +250,20 @@ def cmd_create(path: str, scope: str, tenant: str | None, status: str | None) ->
     with dna_session(scope) as s:
         existing = s.get_doc("Research", name, tenant=tenant)
         action = "UPDATED" if existing else "CREATED"
-        s.run(s.kernel.write_document(scope, "Research", name, raw, tenant=tenant))
+        s.run(s.kernel.write_document(s.scope, "Research", name, raw, tenant=tenant))
     suffix = f" (tenant={tenant})" if tenant else ""
     click.secho(f"{action} Research/{name}{suffix}", fg="green")
 
 
 @research.command("recall")
 @click.argument("query")
-@click.option("--scope", default="dna-development", help="Scope to search.")
+@click.option("--scope", default=None, help="Scope to search (default: env / sole scope).")
 @click.option("--tenant", default=None, help="Tenant overlay (base ∪ overlay).")
 @click.option("-k", "--limit", "k", default=10, show_default=True, help="Max hits.")
 @click.option("--json", "as_json", is_flag=True, help="Machine-readable output.")
 @click.pass_context
 def cmd_recall(
-    ctx: click.Context, query: str, scope: str, tenant: str | None,
+    ctx: click.Context, query: str, scope: str | None, tenant: str | None,
     k: int, as_json: bool,
 ) -> None:
     """Semantic recall over the Research catalog (resolves i-004).

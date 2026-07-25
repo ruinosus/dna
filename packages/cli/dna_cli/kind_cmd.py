@@ -65,13 +65,14 @@ def list_kinds(as_json: bool, scope: str | None, tenant: str | None) -> None:
 @click.argument("kind_name")
 @click.option(
     "--scope",
-    default="dna-development",
-    show_default=True,
+    default=None,
+    help="Scope to look up the Kind in (default: env / sole scope).",
 )
 @click.option("--tenant", default=None, help="Route as this tenant.")
-def describe(kind_name: str, scope: str, tenant: str | None) -> None:
+def describe(kind_name: str, scope: str | None, tenant: str | None) -> None:
     """Show the JSON Schema + storage descriptor for a Kind."""
     with dna_client(tenant=tenant) as dna:
+        scope = scope or dna.default_scope
         try:
             descriptor = run_async(dna.scopes.kind_schema(scope, kind_name))
         except Exception as e:  # noqa: BLE001

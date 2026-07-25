@@ -31,7 +31,7 @@ dna research create [OPTIONS] PATH
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
-| `--scope` | _(default: `dna-development`)_ |
+| `--scope` | Scope to write the Research doc into (default: env / sole scope). |
 | `--status` | Override spec.status (else the file's value, else 'draft'). |
 | `--tenant` | Optional tenant (Research is PERMISSIVE — omit for base docs). |
 
@@ -50,7 +50,7 @@ dna research list [OPTIONS]
 | `--help` | Show this message and exit. |
 | `--json` | Machine-readable output. |
 | `--methodology` |  |
-| `--scope` | _(default: `dna-development`)_ |
+| `--scope` | Scope to list Research docs from (default: env / sole scope). |
 | `--status` |  |
 | `--tenant` | Optional tenant (Research is PERMISSIVE — omit for base docs). |
 
@@ -81,7 +81,7 @@ dna research recall [OPTIONS] QUERY
 | --- | --- |
 | `--help` | Show this message and exit. |
 | `--json` | Machine-readable output. |
-| `--scope` | Scope to search. _(default: `dna-development`)_ |
+| `--scope` | Scope to search (default: env / sole scope). |
 | `--tenant` | Tenant overlay (base ∪ overlay). |
 | `-k`, `--limit` | Max hits. _(default: `10`)_ |
 
@@ -105,6 +105,6 @@ dna research show [OPTIONS] NAME
 | --- | --- |
 | `--full` | Print all findings + recommendations. |
 | `--help` | Show this message and exit. |
-| `--scope` | _(default: `dna-development`)_ |
+| `--scope` | Scope to read the Research doc from (default: env / sole scope). |
 | `--tenant` | Optional tenant (Research is PERMISSIVE). |
 
