@@ -6,10 +6,19 @@ spec:
   description: 'O writer do filesystem (adapters/filesystem/writable.py, 5 call sites) chama yaml.dump SEM allow_unicode nem width. Resultado: todo char nao-ASCII vira escape (\u2192, \xED), o que forca aspas duplas, que ao quebrar em width=80 usam a barra de continuacao (\) + ''\ '' na linha seguinte. Todo doc YAML com acento/seta fica ilegivel (body de Plan/ADR/Story). Afeta QUALQUER usuario do SDK, nao so o board da DNA. Fix: allow_unicode=True + width grande + (bonus) representer de bloco literal |- para multi-linha; re-serializar os docs existentes.'
   type: bug
   severity: high
-  status: open
+  status: resolved
   timeline:
   - at: '2026-07-25T08:38:31+00:00'
     actor: claude-code
     type: status_change
     source: cli
     to: open
+  - at: '2026-07-25T08:44:07+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: open
+    to: resolved
+    summary: 'Writer do filesystem agora usa _dump_yaml (allow_unicode=True + width=4096 + bloco literal | pra multi-linha) nos 5 call sites; 3 testes novos (unicode verbatim, sem barra de continuacao, bloco literal round-trip). Board re-serializado: 526 docs, 0 unsafe (round-trip guard verificou dado identico). Zero barras de continuacao restantes. Commits 3a8e370 + 1020381.'
+  closed_at: '2026-07-25T08:44:07+00:00'
+  resolution: 'Writer do filesystem agora usa _dump_yaml (allow_unicode=True + width=4096 + bloco literal | pra multi-linha) nos 5 call sites; 3 testes novos (unicode verbatim, sem barra de continuacao, bloco literal round-trip). Board re-serializado: 526 docs, 0 unsafe (round-trip guard verificou dado identico). Zero barras de continuacao restantes. Commits 3a8e370 + 1020381.'
