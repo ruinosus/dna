@@ -7,14 +7,9 @@ spec:
   kind_of_test: smoke
   status: active
   steps:
-  - action: "No Studio, valide: dna sdlc funcionando no foundry (story criada/narrada/PR\
-      \ assinado NATIVAMENTE de l\xE1); CONCIERGE decomposto em Soul+variantes e guardrails\
-      \ extra\xEDdos onde natural; eval suite atualizada como guarda sem\xE2ntica\
-      \ (viola\xE7\xE3o plantada \u2192 exit 1); testes deles verdes; PR aberto l\xE1\
-      \ aguardando Barna"
-    where: "<rota/tela \u2014 ex. /scopes/:scope/...>"
-    expected: "<o que voc\xEA V\xCA quando est\xE1 certo (marque \u2717 S\xD3 se estiver\
-      \ quebrado)>"
+  - action: 'No Studio, valide: dna sdlc funcionando no foundry (story criada/narrada/PR assinado NATIVAMENTE de lá); CONCIERGE decomposto em Soul+variantes e guardrails extraídos onde natural; eval suite atualizada como guarda semântica (violação plantada → exit 1); testes deles verdes; PR aberto lá aguardando Barna'
+    where: <rota/tela — ex. /scopes/:scope/...>
+    expected: <o que você VÊ quando está certo (marque ✗ SÓ se estiver quebrado)>
   verifies:
   - Story/s-pilot-foundry-phase2
   created_at: '2026-07-10T17:12:19+00:00'

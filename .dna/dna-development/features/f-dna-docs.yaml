@@ -3,14 +3,8 @@ kind: Feature
 metadata:
   name: f-dna-docs
 spec:
-  title: "Documenta\xE7\xE3o p\xFAblica completa \u2014 MkDocs Material + Di\xE1taxis\
-    \ + API-ref dual-language + parity matrix"
-  description: "Documenta\xE7\xE3o de padr\xE3o de mercado antes de abrir (decis\xE3\
-    o Barna 2026-07-09): stack MkDocs+Material+mkdocstrings(Py)+TypeDoc(TS), IA Di\xE1\
-    taxis, site no GitHub Pages, API-ref autogerada por linguagem, matriz de paridade\
-    \ Py\u2194TS gerada do conformance kit, CI de docs (lychee+build strict+doctest).\
-    \ Fundamentada nas pesquisas rsh-doc-frameworks-oss + rsh-exemplar-sdk-repos (consult\xE1\
-    veis no pr\xF3prio repo via dna research show)."
+  title: Documentação pública completa — MkDocs Material + Diátaxis + API-ref dual-language + parity matrix
+  description: 'Documentação de padrão de mercado antes de abrir (decisão Barna 2026-07-09): stack MkDocs+Material+mkdocstrings(Py)+TypeDoc(TS), IA Diátaxis, site no GitHub Pages, API-ref autogerada por linguagem, matriz de paridade Py↔TS gerada do conformance kit, CI de docs (lychee+build strict+doctest). Fundamentada nas pesquisas rsh-doc-frameworks-oss + rsh-exemplar-sdk-repos (consultáveis no próprio repo via dna research show).'
   status: done
   epic: e-dna-public-extraction
   reporter: claude-code

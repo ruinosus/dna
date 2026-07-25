@@ -7,13 +7,9 @@ spec:
   kind_of_test: smoke
   status: active
   steps:
-  - action: "No Studio, valide: prompts.py substitu\xEDdo por composi\xE7\xE3o DNA\
-      \ (paridade byte/equivalente dos 9 prompts provada por teste); backend instala\
-      \ dna-sdk via git pinada e sobe; eval suite verde no CI deles; ADR escrito;\
-      \ PR aberto NO foundry-assured aguardando review do Barna"
-    where: "<rota/tela \u2014 ex. /scopes/:scope/...>"
-    expected: "<o que voc\xEA V\xCA quando est\xE1 certo (marque \u2717 S\xD3 se estiver\
-      \ quebrado)>"
+  - action: 'No Studio, valide: prompts.py substituído por composição DNA (paridade byte/equivalente dos 9 prompts provada por teste); backend instala dna-sdk via git pinada e sobe; eval suite verde no CI deles; ADR escrito; PR aberto NO foundry-assured aguardando review do Barna'
+    where: <rota/tela — ex. /scopes/:scope/...>
+    expected: <o que você VÊ quando está certo (marque ✗ SÓ se estiver quebrado)>
   verifies:
   - Story/s-pilot-foundry-assured
   created_at: '2026-07-10T14:52:04+00:00'

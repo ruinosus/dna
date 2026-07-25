@@ -4,13 +4,7 @@ metadata:
   name: e-dna-portability
 spec:
   title: DNA as a vendor-neutral portability layer (Terraform for agents)
-  description: 'Pivot DNA from a prompt-manager into a vendor-neutral DE-PARA layer:
-    author an agent ONCE in DNA (Agent/Soul/Guardrail/Tool Kinds as the neutral source)
-    and EMIT the native artifact each runtime consumes. First proven target: Microsoft
-    agent-framework (declarative PromptAgent, round-trip byte-equal in the spike).
-    Next targets pluggable (bedrock/vertex/openai). Aligns to the Oracle Agent Spec
-    where it makes sense rather than reinventing a neutral schema. The value is portability
-    / anti-lock-in as runtimes proliferate in 2026.'
+  description: 'Pivot DNA from a prompt-manager into a vendor-neutral DE-PARA layer: author an agent ONCE in DNA (Agent/Soul/Guardrail/Tool Kinds as the neutral source) and EMIT the native artifact each runtime consumes. First proven target: Microsoft agent-framework (declarative PromptAgent, round-trip byte-equal in the spike). Next targets pluggable (bedrock/vertex/openai). Aligns to the Oracle Agent Spec where it makes sense rather than reinventing a neutral schema. The value is portability / anti-lock-in as runtimes proliferate in 2026.'
   status: in-progress
   reporter: claude-code
   priority: highest

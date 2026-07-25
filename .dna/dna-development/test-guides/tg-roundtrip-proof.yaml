@@ -3,15 +3,13 @@ kind: TestGuide
 metadata:
   name: tg-roundtrip-proof
 spec:
-  description: Circulo A (round-trip de campo no conformance kit) e Circulo B (adaptador
-    claude-export -> MIF + recall por parafrase)
+  description: Circulo A (round-trip de campo no conformance kit) e Circulo B (adaptador claude-export -> MIF + recall por parafrase)
   kind_of_test: manual
   status: active
   steps:
   - action: pytest packages/sdk-py/tests/test_memory_conformance_kit.py -k interchange
     expected: 2 passed (legs com e sem search provider)
-  - action: 'mutacao: remover affect do cofre / remover surface_count / to_mif sem
-      validUntil assimetrico / remover o id pin'
+  - action: 'mutacao: remover affect do cofre / remover surface_count / to_mif sem validUntil assimetrico / remover o id pin'
     expected: os 4 mutantes morrem
   - action: pytest packages/sdk-py/tests/test_claude_export_roundtrip.py
     expected: 8 passed, incluindo o alvo em rank 1 com semantic=True e degraded=False

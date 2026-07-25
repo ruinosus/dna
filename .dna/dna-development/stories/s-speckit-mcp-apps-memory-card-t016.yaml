@@ -3,10 +3,8 @@ kind: Story
 metadata:
   name: s-speckit-mcp-apps-memory-card-t016
 spec:
-  description: "[US2] Release do SDK com US1 (tag `vX.Y.Z` \u2192 publica `dna-sdk`/`dna-cli`\
-    \ no PyPI) \u2014 pr\xE9-requisito do trem de pin (repo `ruinosus/dna`)"
-  title: "[US2] Release do SDK com US1 (tag `vX.Y.Z` \u2192 publica `dna-sdk`/`dna-cli`\
-    \ no PyPI"
+  description: '[US2] Release do SDK com US1 (tag `vX.Y.Z` → publica `dna-sdk`/`dna-cli` no PyPI) — pré-requisito do trem de pin (repo `ruinosus/dna`)'
+  title: '[US2] Release do SDK com US1 (tag `vX.Y.Z` → publica `dna-sdk`/`dna-cli` no PyPI'
   status: todo
   feature: f-copilot-mcp-apps
   labels:

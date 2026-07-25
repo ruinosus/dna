@@ -3,10 +3,8 @@ kind: Story
 metadata:
   name: s-speckit-mcp-apps-memory-card-t013
 spec:
-  description: "[US1] Apontar o template na declara\xE7\xE3o de `list_memories` e\
-    \ `recall` via FastMCP 3 (`app=AppConfig(resource_uri=\u2026)`) em `packages/cli/dna_cli/_mcp_server.py`"
-  title: "[US1] Apontar o template na declara\xE7\xE3o de `list_memories` e `recall`\
-    \ via FastMCP"
+  description: '[US1] Apontar o template na declaração de `list_memories` e `recall` via FastMCP 3 (`app=AppConfig(resource_uri=…)`) em `packages/cli/dna_cli/_mcp_server.py`'
+  title: '[US1] Apontar o template na declaração de `list_memories` e `recall` via FastMCP'
   status: done
   feature: f-copilot-mcp-apps
   labels:
@@ -56,15 +54,13 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-speckit-mcp-apps-sdk-20260721-201420
-    summary: "TestRun tr-tg-speckit-mcp-apps-sdk-20260721-201420 \u2192 pass"
+    summary: TestRun tr-tg-speckit-mcp-apps-sdk-20260721-201420 → pass
     outcome: pass
   - at: '2026-07-21T20:18:53+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "T013 no commit 524bbf0: app=AppConfig(resource_uri=ui://dna/memory-list)\
-      \ na declara\xE7\xE3o de list_memories e recall \u2014 fastmcp.apps.AppConfig\
-      \ (3.4.4), API real igual \xE0 assumida no plan (zero diverg\xEAncia)."
+    summary: 'T013 no commit 524bbf0: app=AppConfig(resource_uri=ui://dna/memory-list) na declaração de list_memories e recall — fastmcp.apps.AppConfig (3.4.4), API real igual à assumida no plan (zero divergência).'
     commit_ref: ee11c11a89e2282556416387fdff80abc96a8136
   - at: '2026-07-21T20:21:52+00:00'
     actor: claude-code
@@ -79,7 +75,7 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-speckit-mcp-apps-render-smoke-20260721-202227
-    summary: "TestRun tr-tg-speckit-mcp-apps-render-smoke-20260721-202227 \u2192 pass"
+    summary: TestRun tr-tg-speckit-mcp-apps-render-smoke-20260721-202227 → pass
     outcome: pass
   - at: '2026-07-21T20:28:09+00:00'
     actor: claude-code
@@ -88,6 +84,5 @@ spec:
     from: in-progress
     to: done
     commit_ref: 524bbf0
-    summary: "app=AppConfig(resource_uri=\u2026) nas declara\xE7\xF5es \u2014 FastMCP\
-      \ 3, API real = plan"
+    summary: app=AppConfig(resource_uri=…) nas declarações — FastMCP 3, API real = plan
   closed_at: '2026-07-21T20:27:59+00:00'

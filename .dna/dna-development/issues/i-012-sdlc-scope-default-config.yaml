@@ -3,12 +3,7 @@ kind: Issue
 metadata:
   name: i-012-sdlc-scope-default-config
 spec:
-  description: "Feedback do piloto fase-2 (repo terceiro): todo verbo dna sdlc exige\
-    \ --scope repetido \u2014 o default \xE9 hardcoded 'dna-development' (funciona\
-    \ no nosso repo por coincid\xEAncia de nome). Num repo adotante o atrito \xE9\
-    \ constante. Fix: resolu\xE7\xE3o de scope default configur\xE1vel \u2014 env\
-    \ DNA_SDLC_SCOPE e/ou declarado no Genome do scope de board (ex.: spec.sdlc_default:\
-    \ true) e/ou o \xFAnico scope com Kinds SDLC no source. Preced\xEAncia documentada."
+  description: 'Feedback do piloto fase-2 (repo terceiro): todo verbo dna sdlc exige --scope repetido — o default é hardcoded ''dna-development'' (funciona no nosso repo por coincidência de nome). Num repo adotante o atrito é constante. Fix: resolução de scope default configurável — env DNA_SDLC_SCOPE e/ou declarado no Genome do scope de board (ex.: spec.sdlc_default: true) e/ou o único scope com Kinds SDLC no source. Precedência documentada.'
   type: enhancement
   severity: medium
   status: resolved
@@ -24,16 +19,7 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: "Fix: _resolve_scope_default \u2014 helper \xDANICO roteado pelo decorator\
-      \ _scope_option que todos os 90+ verbos sdlc usam (callback click, default=None).\
-      \ Preced\xEAncia documentada (docstring + docs/guides/sdlc.md): 1) --scope expl\xED\
-      cito; 2) env DNA_SDLC_SCOPE; 3) auto-detect do \xDANICO scope com estrutura\
-      \ SDLC no source (containers stories/features/epics/issues/roadmaps; enumera\xE7\
-      \xE3o espelha FilesystemWritableSource.list_scopes \u2014 ignora ocultos + tenants/_legacy;\
-      \ log informativo no stderr quando difere do default); 4) fallback dna-development\
-      \ (compat; ambiguidade nunca chuta). Smoke real num scratch com scope 'foundry-dev':\
-      \ create/list/check funcionaram sem --scope. 8 testes (test_sdlc_scope_default.py).\
-      \ CLI reference regenerado (drift guard). Commits 9b46bb3 + 9bde7f0."
+    summary: 'Fix: _resolve_scope_default — helper ÚNICO roteado pelo decorator _scope_option que todos os 90+ verbos sdlc usam (callback click, default=None). Precedência documentada (docstring + docs/guides/sdlc.md): 1) --scope explícito; 2) env DNA_SDLC_SCOPE; 3) auto-detect do ÚNICO scope com estrutura SDLC no source (containers stories/features/epics/issues/roadmaps; enumeração espelha FilesystemWritableSource.list_scopes — ignora ocultos + tenants/_legacy; log informativo no stderr quando difere do default); 4) fallback dna-development (compat; ambiguidade nunca chuta). Smoke real num scratch com scope ''foundry-dev'': create/list/check funcionaram sem --scope. 8 testes (test_sdlc_scope_default.py). CLI reference regenerado (drift guard). Commits 9b46bb3 + 9bde7f0.'
   - at: '2026-07-10T17:41:57+00:00'
     actor: claude-code
     type: status_change

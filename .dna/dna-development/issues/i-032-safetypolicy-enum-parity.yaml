@@ -3,12 +3,7 @@ kind: Issue
 metadata:
   name: i-032-safetypolicy-enum-parity
 spec:
-  description: 'SafetyPolicy tem gap latente Py<->TS: TS SafetyPolicySpecSchema usa
-    z.enum (severity error|warn, action mask|block|log) -> schema() emite enum; Py
-    SafetyPolicySpec usa bare str -> emite {type:string}. Pre-existente (nao introduzido
-    pelo i-031). O gerador generico Literal->enum ja existe (i-031), entao o fix e
-    tipar os campos de SafetyPolicySpec como Literal + regenerar docs/reference +
-    checar valores identicos ao TS. Fora do escopo de i-031 (que mirou Guardrail severity).'
+  description: 'SafetyPolicy tem gap latente Py<->TS: TS SafetyPolicySpecSchema usa z.enum (severity error|warn, action mask|block|log) -> schema() emite enum; Py SafetyPolicySpec usa bare str -> emite {type:string}. Pre-existente (nao introduzido pelo i-031). O gerador generico Literal->enum ja existe (i-031), entao o fix e tipar os campos de SafetyPolicySpec como Literal + regenerar docs/reference + checar valores identicos ao TS. Fora do escopo de i-031 (que mirou Guardrail severity).'
   type: bug
   severity: medium
   status: open

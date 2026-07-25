@@ -3,15 +3,7 @@ kind: Issue
 metadata:
   name: i-046-double-mustache-render
 spec:
-  description: "_mustache_render_async renderiza DUAS vezes (chevron.render(chevron.render(t,\
-    \ ctx), ctx)) para resolver refs de chevron dentro de conteudo. Efeito colateral:\
-    \ conteudo de usuario contendo {{ e interpretado como template na segunda passada\
-    \ \u2014 um Skill cujo texto ensina sintaxe Mustache, ou contenha {{jinja}} de\
-    \ outro sistema, e re-expandido silenciosamente. E injecao de template de baixa\
-    \ severidade hoje (fontes confiaveis) mas vira superficie real no multi-tenant\
-    \ onde o overlay do tenant e input de terceiro. Pronto quando: a segunda passada\
-    \ so re-renderiza o que a PRIMEIRA introduziu (ou escaping explicito), com teste\
-    \ provando que conteudo com {{ literal sobrevive intacto."
+  description: '_mustache_render_async renderiza DUAS vezes (chevron.render(chevron.render(t, ctx), ctx)) para resolver refs de chevron dentro de conteudo. Efeito colateral: conteudo de usuario contendo {{ e interpretado como template na segunda passada — um Skill cujo texto ensina sintaxe Mustache, ou contenha {{jinja}} de outro sistema, e re-expandido silenciosamente. E injecao de template de baixa severidade hoje (fontes confiaveis) mas vira superficie real no multi-tenant onde o overlay do tenant e input de terceiro. Pronto quando: a segunda passada so re-renderiza o que a PRIMEIRA introduziu (ou escaping explicito), com teste provando que conteudo com {{ literal sobrevive intacto.'
   type: bug
   severity: medium
   status: resolved
@@ -27,13 +19,6 @@ spec:
     source: cli
     from: open
     to: resolved
-    summary: 'PR #197, v0.22.0. So a instruction do proprio agente mantem delimitadores
-      vivos; todo outro valor protegido por sentinelas na passada 1 e restaurado na
-      2. O caso legitimo (open-swe, ref dentro de instruction) verificado ANTES e
-      pinado. {{ literal em Skill sobrevive intacto, provado unit + fim-a-fim. 3 mutantes
-      mortos.'
+    summary: 'PR #197, v0.22.0. So a instruction do proprio agente mantem delimitadores vivos; todo outro valor protegido por sentinelas na passada 1 e restaurado na 2. O caso legitimo (open-swe, ref dentro de instruction) verificado ANTES e pinado. {{ literal em Skill sobrevive intacto, provado unit + fim-a-fim. 3 mutantes mortos.'
   closed_at: '2026-07-21T14:05:59+00:00'
-  resolution: 'PR #197, v0.22.0. So a instruction do proprio agente mantem delimitadores
-    vivos; todo outro valor protegido por sentinelas na passada 1 e restaurado na
-    2. O caso legitimo (open-swe, ref dentro de instruction) verificado ANTES e pinado.
-    {{ literal em Skill sobrevive intacto, provado unit + fim-a-fim. 3 mutantes mortos.'
+  resolution: 'PR #197, v0.22.0. So a instruction do proprio agente mantem delimitadores vivos; todo outro valor protegido por sentinelas na passada 1 e restaurado na 2. O caso legitimo (open-swe, ref dentro de instruction) verificado ANTES e pinado. {{ literal em Skill sobrevive intacto, provado unit + fim-a-fim. 3 mutantes mortos.'

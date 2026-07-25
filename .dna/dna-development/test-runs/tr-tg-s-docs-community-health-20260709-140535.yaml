@@ -9,6 +9,4 @@ spec:
   - Story/s-docs-community-health
   executed_by: claude-code
   executed_at: '2026-07-09T14:05:35+00:00'
-  notes: brand_guard self-test + scan of 9 new files clean; issue forms valid YAML;
-    CONTRIBUTING covers build/test/conformance/parity/sdlc; SECURITY covers PVR +
-    threat model.
+  notes: brand_guard self-test + scan of 9 new files clean; issue forms valid YAML; CONTRIBUTING covers build/test/conformance/parity/sdlc; SECURITY covers PVR + threat model.

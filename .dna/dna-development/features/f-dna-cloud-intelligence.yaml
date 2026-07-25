@@ -4,9 +4,7 @@ metadata:
   name: f-dna-cloud-intelligence
 spec:
   title: Portfolio intelligence layer
-  description: "Automatic research + insights over the user's N apps/use-cases, operating\
-    \ existing tools (Jira/ADO/GitHub) via MCPFederation \u2014 not a tracker. Turns\
-    \ DNA Cloud from passive storage into proactive intelligence. ADR: adr-dna-cloud-intelligence-layer."
+  description: 'Automatic research + insights over the user''s N apps/use-cases, operating existing tools (Jira/ADO/GitHub) via MCPFederation — not a tracker. Turns DNA Cloud from passive storage into proactive intelligence. ADR: adr-dna-cloud-intelligence-layer.'
   status: in-development
   epic: e-dna-portability
   reporter: claude-code

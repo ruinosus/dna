@@ -3,11 +3,8 @@ kind: Story
 metadata:
   name: s-mif-passthrough-kind
 spec:
-  title: Registrar mif-spec.dev/v1 . Memory como Kind de passthrough (plano record),
-    apli
-  description: 'Registrar mif-spec.dev/v1 . Memory como Kind de passthrough (plano
-    record), aplicando a regra normativa #3: um Kind que o DNA nao inventou viaja
-    sob o namespace do dono, inalterado. Base ja rascunhada em docs/design/mif-memory.kind.yaml.'
+  title: Registrar mif-spec.dev/v1 . Memory como Kind de passthrough (plano record), apli
+  description: 'Registrar mif-spec.dev/v1 . Memory como Kind de passthrough (plano record), aplicando a regra normativa #3: um Kind que o DNA nao inventou viaja sob o namespace do dono, inalterado. Base ja rascunhada em docs/design/mif-memory.kind.yaml.'
   status: in-progress
   feature: f-portable-memory
   priority: high
@@ -17,17 +14,12 @@ spec:
   - interchange
   reporter: claude-code
   acceptance_criteria:
-  - Dado o descritor movido de docs/design para o path de extensao real, quando registrado,
-    entao registra mif-spec.dev/v1 . Memory no plano record, com espelho TS e golden
-    de hash-parity
-  - Dado um .memory.json de exemplo do MIF (Level 1 e 2), quando validado, entao passa
-    sem deformacao
-  - Dado o bloco extensions, entao aceita additionalProperties (o cofre onde x-dna.*
-    viaja)
+  - Dado o descritor movido de docs/design para o path de extensao real, quando registrado, entao registra mif-spec.dev/v1 . Memory no plano record, com espelho TS e golden de hash-parity
+  - Dado um .memory.json de exemplo do MIF (Level 1 e 2), quando validado, entao passa sem deformacao
+  - Dado o bloco extensions, entao aceita additionalProperties (o cofre onde x-dna.* viaja)
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - Golden de hash-parity Py<->TS verde; validacao do exemplo MIF verde; nenhum campo
-    DNA-flavored injetado no schema do MIF
+  - Golden de hash-parity Py<->TS verde; validacao do exemplo MIF verde; nenhum campo DNA-flavored injetado no schema do MIF
   definition_of_done_source: cli-create
   created_at: '2026-07-19T14:25:33+00:00'
   updated_at: '2026-07-19T19:19:37+00:00'
@@ -47,18 +39,7 @@ spec:
     actor: claude-code
     type: decision
     source: cli
-    summary: "A story buscou a spec REAL do MIF v1.0.0 ao vivo em vez de confiar no\
-      \ descritor rascunhado, e achou o rascunho substancialmente errado: o campo\
-      \ temporal e validUntil (nao validTo); relationships[].type e string kebab-case\
-      \ aberta (nao enum fechado) e 4 dos 9 valores do rascunho nao existem (related-to,\
-      \ caused-by, documents, references \u2014 os reais incluem relates-to, uses,\
-      \ created-by, mentioned-in); o id do perfil Markdown e UUID puro (o urn:mif:\
-      \ e o @id do JSON-LD, outra coisa); e o naming .memory.md era convencao do draft\
-      \ 0.1.0, nao da v1.0. Consequencia que passou perto: a tabela de mapeamento\
-      \ secao 2 do design \u2014 que e a BASE da story s-memory-interchange-verbs\
-      \ \u2014 usava validTo e related-to. Seguir o design teria produzido MIF invalido.\
-      \ A tabela foi corrigida na fonte e ganhou um aviso no topo mandando conferir\
-      \ contra o descritor real, nao contra ela."
+    summary: 'A story buscou a spec REAL do MIF v1.0.0 ao vivo em vez de confiar no descritor rascunhado, e achou o rascunho substancialmente errado: o campo temporal e validUntil (nao validTo); relationships[].type e string kebab-case aberta (nao enum fechado) e 4 dos 9 valores do rascunho nao existem (related-to, caused-by, documents, references — os reais incluem relates-to, uses, created-by, mentioned-in); o id do perfil Markdown e UUID puro (o urn:mif: e o @id do JSON-LD, outra coisa); e o naming .memory.md era convencao do draft 0.1.0, nao da v1.0. Consequencia que passou perto: a tabela de mapeamento secao 2 do design — que e a BASE da story s-memory-interchange-verbs — usava validTo e related-to. Seguir o design teria produzido MIF invalido. A tabela foi corrigida na fonte e ganhou um aviso no topo mandando conferir contra o descritor real, nao contra ela.'
     commit_ref: 983afe16f90784936911addc2632c0b99bc42fdd
   - at: '2026-07-19T19:19:28+00:00'
     actor: claude-code
@@ -73,7 +54,7 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-mif-passthrough-kind-20260719-191933
-    summary: "TestRun tr-tg-mif-passthrough-kind-20260719-191933 \u2192 pass"
+    summary: TestRun tr-tg-mif-passthrough-kind-20260719-191933 → pass
     outcome: pass
   - at: '2026-07-19T19:19:48+00:00'
     actor: claude-code

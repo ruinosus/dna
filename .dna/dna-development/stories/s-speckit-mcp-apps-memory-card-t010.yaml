@@ -3,13 +3,8 @@ kind: Story
 metadata:
   name: s-speckit-mcp-apps-memory-card-t010
 spec:
-  description: "[US1] Reescrever `memory_list_card_html()` como template EST\xC1TICO\
-    \ em `packages/sdk-py/dna/emit/mcp_ui.py`: HTML + JS inline (ext-apps bundlada\
-    \ de T002), JS consome `app.ontoolresult` \u2192 renderiza `structured_content`;\
-    \ empty state honesto (\"nenhuma mem\xF3ria\"); campo ausente \u2192 vazio-honesto;\
-    \ tudo escapado; zero dado de tenant/segredo/token"
-  title: "[US1] Reescrever `memory_list_card_html()` como template EST\xC1TICO em\
-    \ `packages/s"
+  description: '[US1] Reescrever `memory_list_card_html()` como template ESTÁTICO em `packages/sdk-py/dna/emit/mcp_ui.py`: HTML + JS inline (ext-apps bundlada de T002), JS consome `app.ontoolresult` → renderiza `structured_content`; empty state honesto ("nenhuma memória"); campo ausente → vazio-honesto; tudo escapado; zero dado de tenant/segredo/token'
+  title: '[US1] Reescrever `memory_list_card_html()` como template ESTÁTICO em `packages/s'
   status: done
   feature: f-copilot-mcp-apps
   labels:
@@ -59,18 +54,13 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-speckit-mcp-apps-sdk-20260721-201420
-    summary: "TestRun tr-tg-speckit-mcp-apps-sdk-20260721-201420 \u2192 pass"
+    summary: TestRun tr-tg-speckit-mcp-apps-sdk-20260721-201420 → pass
     outcome: pass
   - at: '2026-07-21T20:18:34+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "T010 no commit a126050: memory_list_card_html() virou template est\xE1\
-      tico zero-arg \u2014 ext-apps embutida entre sentinelas, JS consome app.ontoolresult\
-      \ \u2192 structuredContent (memories/hits), dado s\xF3 entra via textContent,\
-      \ vazio-honesto, empty state honesto, zero a\xE7\xE3o. O card COM dados do canvas\
-      \ virou memory_canvas_card_html (bytes id\xEAnticos; scaffold langgraph + golden\
-      \ do copilot_agent acompanharam \u2014 diff de 2 linhas)."
+    summary: 'T010 no commit a126050: memory_list_card_html() virou template estático zero-arg — ext-apps embutida entre sentinelas, JS consome app.ontoolresult → structuredContent (memories/hits), dado só entra via textContent, vazio-honesto, empty state honesto, zero ação. O card COM dados do canvas virou memory_canvas_card_html (bytes idênticos; scaffold langgraph + golden do copilot_agent acompanharam — diff de 2 linhas).'
     commit_ref: ee11c11a89e2282556416387fdff80abc96a8136
   - at: '2026-07-21T20:21:34+00:00'
     actor: claude-code
@@ -85,7 +75,7 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-speckit-mcp-apps-render-smoke-20260721-202227
-    summary: "TestRun tr-tg-speckit-mcp-apps-render-smoke-20260721-202227 \u2192 pass"
+    summary: TestRun tr-tg-speckit-mcp-apps-render-smoke-20260721-202227 → pass
     outcome: pass
   - at: '2026-07-21T20:27:05+00:00'
     actor: claude-code
@@ -94,5 +84,5 @@ spec:
     from: in-progress
     to: done
     commit_ref: a126050
-    summary: "memory_list_card_html vira template est\xE1tico; canvas vira memory_canvas_card_html"
+    summary: memory_list_card_html vira template estático; canvas vira memory_canvas_card_html
   closed_at: '2026-07-21T20:26:56+00:00'

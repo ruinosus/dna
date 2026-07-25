@@ -9,6 +9,4 @@ spec:
   - Story/s-console-rest-seed
   executed_by: claude-code
   executed_at: '2026-07-13T12:25:27+00:00'
-  notes: sdk-py 3092 passed / cli 566 passed / REST 22 passed; brand_guard + docs_coverage_guard
-    clean; live curl smoke on :8091 confirmed orgs/projects/project-detail(resolved
-    repos)/repos/board(real)/insights?source=dna.
+  notes: sdk-py 3092 passed / cli 566 passed / REST 22 passed; brand_guard + docs_coverage_guard clean; live curl smoke on :8091 confirmed orgs/projects/project-detail(resolved repos)/repos/board(real)/insights?source=dna.

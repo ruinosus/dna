@@ -4,9 +4,7 @@ metadata:
   name: f-dna-client
 spec:
   title: Official DNA API client (TS + Py, generated from OpenAPI)
-  description: Typed read client generated from the dna api serve OpenAPI so consumers
-    don't hand-roll HTTP (dna-cloud's rest-client.ts is the first to replace). Drift-tested
-    against the FastAPI routes. Published with the release.
+  description: Typed read client generated from the dna api serve OpenAPI so consumers don't hand-roll HTTP (dna-cloud's rest-client.ts is the first to replace). Drift-tested against the FastAPI routes. Published with the release.
   status: discovery
   epic: e-dna-portability
   reporter: claude-code

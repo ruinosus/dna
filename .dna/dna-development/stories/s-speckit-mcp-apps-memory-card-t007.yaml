@@ -3,11 +3,8 @@ kind: Story
 metadata:
   name: s-speckit-mcp-apps-memory-card-t007
 spec:
-  description: "[US1] Teste: `resources/read` de `ui://dna/memory-list` responde com\
-    \ mimeType `text/html;profile=mcp-app` (muta\xE7\xE3o: registro removido \u2192\
-    \ morre) em `packages/cli/tests/test_mcp_apps.py`"
-  title: '[US1] Teste: `resources/read` de `ui://dna/memory-list` responde com mimeType
-    `t'
+  description: '[US1] Teste: `resources/read` de `ui://dna/memory-list` responde com mimeType `text/html;profile=mcp-app` (mutação: registro removido → morre) em `packages/cli/tests/test_mcp_apps.py`'
+  title: '[US1] Teste: `resources/read` de `ui://dna/memory-list` responde com mimeType `t'
   status: done
   feature: f-copilot-mcp-apps
   labels:
@@ -47,15 +44,13 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-speckit-mcp-apps-sdk-20260721-201420
-    summary: "TestRun tr-tg-speckit-mcp-apps-sdk-20260721-201420 \u2192 pass"
+    summary: TestRun tr-tg-speckit-mcp-apps-sdk-20260721-201420 → pass
     outcome: pass
   - at: '2026-07-21T20:17:52+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "T007 no commit 524bbf0: resources/read de ui://dna/memory-list responde\
-      \ mimeType text/html;profile=mcp-app, byte-igual a memory_list_card_html();\
-      \ muta\xE7\xE3o registro-removido \u2192 morre (confirmada)."
+    summary: 'T007 no commit 524bbf0: resources/read de ui://dna/memory-list responde mimeType text/html;profile=mcp-app, byte-igual a memory_list_card_html(); mutação registro-removido → morre (confirmada).'
     commit_ref: ee11c11a89e2282556416387fdff80abc96a8136
   - at: '2026-07-21T20:21:17+00:00'
     actor: claude-code
@@ -70,7 +65,7 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-speckit-mcp-apps-render-smoke-20260721-202227
-    summary: "TestRun tr-tg-speckit-mcp-apps-render-smoke-20260721-202227 \u2192 pass"
+    summary: TestRun tr-tg-speckit-mcp-apps-render-smoke-20260721-202227 → pass
     outcome: pass
   - at: '2026-07-21T20:26:19+00:00'
     actor: claude-code
@@ -79,7 +74,6 @@ spec:
     from: todo
     to: done
     commit_ref: 524bbf0
-    summary: "resources/read de ui://dna/memory-list responde text/html;profile=mcp-app\
-      \ (muta\xE7\xE3o morta)"
+    summary: resources/read de ui://dna/memory-list responde text/html;profile=mcp-app (mutação morta)
   updated_at: '2026-07-21T20:26:19+00:00'
   closed_at: '2026-07-21T20:26:10+00:00'

@@ -3,9 +3,7 @@ kind: Issue
 metadata:
   name: i-027-i-intel-engine-ts-parity
 spec:
-  description: "Paridade TS do engine intel (analyzer/ranker/engine.run_pass). Kinds\
-    \ ja tem paridade; engine foi Python-first no skeleton. Funcoes puras dict-in/dict-out\
-    \ + analyzer por protocolo \u2192 twin TS e espelho direto."
+  description: Paridade TS do engine intel (analyzer/ranker/engine.run_pass). Kinds ja tem paridade; engine foi Python-first no skeleton. Funcoes puras dict-in/dict-out + analyzer por protocolo → twin TS e espelho direto.
   type: task
   severity: medium
   status: open

@@ -5,9 +5,7 @@ metadata:
 spec:
   title: MCP + A2A under the Linux Foundation (agent protocol stack)
   kind_of: web
-  summary: "MCP (agent\u2192tool) and A2A (agent\u2192agent, v1.0 Apr 2026) are the\
-    \ interop protocols, both Linux-Foundation-stewarded (Agentic AI Foundation /\
-    \ LF AI & Data)."
+  summary: MCP (agent→tool) and A2A (agent→agent, v1.0 Apr 2026) are the interop protocols, both Linux-Foundation-stewarded (Agentic AI Foundation / LF AI & Data).
   key_quotes: []
   cited_by: []
   owner: claude-code

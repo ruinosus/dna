@@ -3,25 +3,15 @@ kind: Story
 metadata:
   name: s-consumer-lane-memory-key
 spec:
-  title: Fechar o gap que deixa a lane consumidor (WorkOS/Gmail) sem memoria pessoal.
-    O S
-  description: "Fechar o gap que deixa a lane consumidor (WorkOS/Gmail) sem memoria\
-    \ pessoal. O SDK ja tem a maquina completa (identity_claim_for_family: Entra le\
-    \ oid, Google le sub; personal_tenant suporta family=google -> personal:google:<sub>;\
-    \ testes existem), mas ela nunca engata na Lane B por dois motivos: (1) o marcador\
-    \ de familia so e carimbado dentro de _multi_provider_verifier, e workos_provider_from_env()\
-    \ devolve um JWTVerifier cru sem carimbo, entao personal_key_family cai no default\
-    \ entra e procura oid; (2) _PROVIDER_FAMILY nao mapeia workos. Era o item P2 do\
-    \ design identity-frontdoor: o mount subiu, a metade da identidade nao.\n\nMORA\
-    \ NESTA FEATURE por carona de release: e uma correcao de SDK que precisa do mesmo\
-    \ ciclo release -> bump de pin -> azd up que as Stories 1-4, nao por afinidade\
-    \ tematica.\n\nDECISAO (founder, 2026-07-19): chavear no sub do WorkOS (o user\
-    \ id user_...), aceitando que as particoes ficam no namespace do WorkOS \u2014\
-    \ trocar de IdP orfanaria a memoria pessoal. Escolhido por simplicidade, com zero\
-    \ usuarios o custo de mudar de ideia e minimo hoje.\n\nFORA DE ESCOPO: a metade\
-    \ de workspace (usuario consumidor tambem nao tem WorkspaceMembership) \u2014\
-    \ decisao separada; e a correcao do comentario falso no lib/copilot.ts do dna-cloud\
-    \ (issue propria)."
+  title: Fechar o gap que deixa a lane consumidor (WorkOS/Gmail) sem memoria pessoal. O S
+  description: |-
+    Fechar o gap que deixa a lane consumidor (WorkOS/Gmail) sem memoria pessoal. O SDK ja tem a maquina completa (identity_claim_for_family: Entra le oid, Google le sub; personal_tenant suporta family=google -> personal:google:<sub>; testes existem), mas ela nunca engata na Lane B por dois motivos: (1) o marcador de familia so e carimbado dentro de _multi_provider_verifier, e workos_provider_from_env() devolve um JWTVerifier cru sem carimbo, entao personal_key_family cai no default entra e procura oid; (2) _PROVIDER_FAMILY nao mapeia workos. Era o item P2 do design identity-frontdoor: o mount subiu, a metade da identidade nao.
+
+    MORA NESTA FEATURE por carona de release: e uma correcao de SDK que precisa do mesmo ciclo release -> bump de pin -> azd up que as Stories 1-4, nao por afinidade tematica.
+
+    DECISAO (founder, 2026-07-19): chavear no sub do WorkOS (o user id user_...), aceitando que as particoes ficam no namespace do WorkOS — trocar de IdP orfanaria a memoria pessoal. Escolhido por simplicidade, com zero usuarios o custo de mudar de ideia e minimo hoje.
+
+    FORA DE ESCOPO: a metade de workspace (usuario consumidor tambem nao tem WorkspaceMembership) — decisao separada; e a correcao do comentario falso no lib/copilot.ts do dna-cloud (issue propria).
   status: done
   feature: f-portable-memory
   priority: high
@@ -31,40 +21,29 @@ spec:
   - auth
   reporter: claude-code
   acceptance_criteria:
-  - text: "Dado um token da Lane B (WorkOS), quando chega ao MCP, entao os claims\
-      \ carregam o marcador de familia google \u2014 carimbado em workos_provider_from_env()\
-      \ espelhando o que _multi_provider_verifier ja faz"
+  - text: Dado um token da Lane B (WorkOS), quando chega ao MCP, entao os claims carregam o marcador de familia google — carimbado em workos_provider_from_env() espelhando o que _multi_provider_verifier ja faz
     done: true
     done_at: '2026-07-19T18:33:20+00:00'
     done_by: story-done-auto
-  - text: Dado o caminho config-driven (auth.providers[]), entao _PROVIDER_FAMILY
-      mapeia workos -> google, de modo que as duas rotas resolvem identico
+  - text: Dado o caminho config-driven (auth.providers[]), entao _PROVIDER_FAMILY mapeia workos -> google, de modo que as duas rotas resolvem identico
     done: true
     done_at: '2026-07-19T18:33:20+00:00'
     done_by: story-done-auto
-  - text: Dado um usuario da lane consumidor chamando recall com personal=true, entao
-      a memoria pessoal resolve para personal:google:<sub do WorkOS> e NAO e negada
-      por falta de claim oid
+  - text: Dado um usuario da lane consumidor chamando recall com personal=true, entao a memoria pessoal resolve para personal:google:<sub do WorkOS> e NAO e negada por falta de claim oid
     done: true
     done_at: '2026-07-19T18:33:20+00:00'
     done_by: story-done-auto
-  - text: "Dado um usuario da lane Entra, entao o comportamento e inalterado (personal:<oid>)\
-      \ \u2014 sem regressao"
+  - text: Dado um usuario da lane Entra, entao o comportamento e inalterado (personal:<oid>) — sem regressao
     done: true
     done_at: '2026-07-19T18:33:20+00:00'
     done_by: story-done-auto
-  - text: Dado os dois provedores, entao as particoes seguem estruturalmente disjuntas
-      (personal:google:<id> vs personal:<oid>), sem colisao possivel
+  - text: Dado os dois provedores, entao as particoes seguem estruturalmente disjuntas (personal:google:<id> vs personal:<oid>), sem colisao possivel
     done: true
     done_at: '2026-07-19T18:33:20+00:00'
     done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - text: Testes cobrindo as duas lanes; a suite dual-memory-key existente verde;
-      nenhuma mudanca necessaria no dna-cloud; documentado no codigo que a chave e
-      o user id do WorkOS (NAO o sub do Google, apesar do que os comentarios dos dois
-      repos afirmam) e a consequencia de portabilidade de IdP registrada; sem fallback
-      para email como chave pessoal (violaria INV-PERSONAL)
+  - text: Testes cobrindo as duas lanes; a suite dual-memory-key existente verde; nenhuma mudanca necessaria no dna-cloud; documentado no codigo que a chave e o user id do WorkOS (NAO o sub do Google, apesar do que os comentarios dos dois repos afirmam) e a consequencia de portabilidade de IdP registrada; sem fallback para email como chave pessoal (violaria INV-PERSONAL)
     done: true
     done_at: '2026-07-19T18:33:20+00:00'
     done_by: story-done-auto
@@ -81,9 +60,7 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: "Empilhada em feat/engram-rename porque o board e versionado \u2014 os\
-      \ registros da feature vivem naquela branch. O codigo e independente (mexe so\
-      \ em _mcp_auth.py)."
+    summary: Empilhada em feat/engram-rename porque o board e versionado — os registros da feature vivem naquela branch. O codigo e independente (mexe so em _mcp_auth.py).
   - at: '2026-07-19T16:41:09+00:00'
     actor: claude-code
     type: status_change
@@ -103,7 +80,7 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-consumer-lane-memory-key-20260719-172843
-    summary: "TestRun tr-tg-consumer-lane-memory-key-20260719-172843 \u2192 pass"
+    summary: TestRun tr-tg-consumer-lane-memory-key-20260719-172843 → pass
     outcome: pass
   - at: '2026-07-19T17:29:06+00:00'
     actor: claude-code
@@ -115,8 +92,7 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: Review independente; a familia propria para WorkOS removeu a causa da
-      colisao em vez de mitigar.
+    summary: Review independente; a familia propria para WorkOS removeu a causa da colisao em vez de mitigar.
   - at: '2026-07-19T17:29:19+00:00'
     actor: claude-code
     type: status_change
@@ -130,9 +106,7 @@ spec:
     from: review
     to: done
     commit_ref: 980d7b42cbb6a45193fbd04dbfc91ec863fa93b1
-    summary: 'Lane consumidor (WorkOS/Gmail) alcanca memoria pessoal em familia propria
-      personal:workos:<sub>; PR #163 mesclado. A familia propria removeu a causa da
-      colisao com type google em vez de mitigar.'
+    summary: 'Lane consumidor (WorkOS/Gmail) alcanca memoria pessoal em familia propria personal:workos:<sub>; PR #163 mesclado. A familia propria removeu a causa da colisao com type google em vez de mitigar.'
   produces:
   - kind: Plan
     name: plan-s-consumer-lane-memory-key

@@ -9,10 +9,4 @@ spec:
   - Story/s-memory-conformance-kit
   executed_by: claude-code
   executed_at: '2026-07-10T20:26:37+00:00'
-  notes: "Executado em scratch project real fora do repo (scratchpad/memkit-consumer,\
-    \ venv pr\xF3pria, sdk editable sem extras). Sa\xEDda: 'verb suite \xD7 TinyMemorySearchProvider:\
-    \ 9 passed, 1 skipped (expected)' + 'verb suite \xD7 no provider: 8 passed, 2\
-    \ skipped (expected)' + 'scoring suite \xD7 fake floor: 7 passed' + 'scoring suite\
-    \ \xD7 custom embedder: 7 passed' + 'PRODUCT SMOKE: PASS'. Skips capability-aware\
-    \ exatos e sim\xE9tricos; uni\xE3o dos passed cobre os 10 casos do verb suite.\
-    \ Nenhuma API privada usada."
+  notes: 'Executado em scratch project real fora do repo (scratchpad/memkit-consumer, venv própria, sdk editable sem extras). Saída: ''verb suite × TinyMemorySearchProvider: 9 passed, 1 skipped (expected)'' + ''verb suite × no provider: 8 passed, 2 skipped (expected)'' + ''scoring suite × fake floor: 7 passed'' + ''scoring suite × custom embedder: 7 passed'' + ''PRODUCT SMOKE: PASS''. Skips capability-aware exatos e simétricos; união dos passed cobre os 10 casos do verb suite. Nenhuma API privada usada.'

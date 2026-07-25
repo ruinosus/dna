@@ -3,25 +3,8 @@ kind: Story
 metadata:
   name: s-docs-diagrams
 spec:
-  title: "Diagramas Mermaid nas p\xE1ginas EXISTENTES da doc (pedido Barna 2026-07-09\
-    \ \u2014 'sent"
-  description: "Diagramas Mermaid nas p\xE1ginas EXISTENTES da doc (pedido Barna 2026-07-09\
-    \ \u2014 'senti falta de algo VISUAL para ports, kinds etc'): (1) concepts/microkernel-ports.md\
-    \ \u2014 o diagrama-assinatura do projeto: kernel mediador no centro, 5 ports\
-    \ (Source/Cache/Resolver/Reader-Writer/Kind) + EmbeddingPort/RecordSearchProvider,\
-    \ adapters plugados, extensions registrando Kinds; (2) concepts/kinds.md \u2014\
-    \ anatomia de um Kind (apiVersion/kind/metadata/spec) + fluxo de composi\xE7\xE3\
-    o (Agent + Soul + Skills + Guardrails \u2192 prompt composto); (3) concepts/thesis.md\
-    \ \u2014 o paralelo CRD\u2194Kind lado a lado (2 colunas visuais); (4) concepts/market-fidelity.md\
-    \ \u2014 round-trip bundle nativo\u2192reader\u2192typed doc\u2192writer\u2192\
-    byte-id\xEAntico; (5) concepts/tenancy-layers.md \u2014 base \u222A overlay com\
-    \ shadow; (6) guides/sdlc.md \u2014 o ciclo story\u2192plan\u2192build(commits\
-    \ carimbados)\u2192test-gate\u2192done + a symbiosis git\u2194SDLC; (7) README\
-    \ \u2014 1 diagrama hero compacto da arquitetura (GitHub renderiza mermaid nativo).\
-    \ Config superfences/mermaid no mkdocs.yml vem da story irm\xE3 s-docs-search-memory-prose\
-    \ (que est\xE1 adicionando) \u2014 se ela n\xE3o tiver mergeado ainda, incluir\
-    \ aqui com merge cuidadoso. Diagramas simples (~10 n\xF3s), sem cores custom,\
-    \ leg\xEDveis no tema claro/escuro."
+  title: Diagramas Mermaid nas páginas EXISTENTES da doc (pedido Barna 2026-07-09 — 'sent
+  description: 'Diagramas Mermaid nas páginas EXISTENTES da doc (pedido Barna 2026-07-09 — ''senti falta de algo VISUAL para ports, kinds etc''): (1) concepts/microkernel-ports.md — o diagrama-assinatura do projeto: kernel mediador no centro, 5 ports (Source/Cache/Resolver/Reader-Writer/Kind) + EmbeddingPort/RecordSearchProvider, adapters plugados, extensions registrando Kinds; (2) concepts/kinds.md — anatomia de um Kind (apiVersion/kind/metadata/spec) + fluxo de composição (Agent + Soul + Skills + Guardrails → prompt composto); (3) concepts/thesis.md — o paralelo CRD↔Kind lado a lado (2 colunas visuais); (4) concepts/market-fidelity.md — round-trip bundle nativo→reader→typed doc→writer→byte-idêntico; (5) concepts/tenancy-layers.md — base ∪ overlay com shadow; (6) guides/sdlc.md — o ciclo story→plan→build(commits carimbados)→test-gate→done + a symbiosis git↔SDLC; (7) README — 1 diagrama hero compacto da arquitetura (GitHub renderiza mermaid nativo). Config superfences/mermaid no mkdocs.yml vem da story irmã s-docs-search-memory-prose (que está adicionando) — se ela não tiver mergeado ainda, incluir aqui com merge cuidadoso. Diagramas simples (~10 nós), sem cores custom, legíveis no tema claro/escuro.'
   status: done
   feature: f-dna-docs
   priority: high
@@ -30,9 +13,7 @@ spec:
   reporter: claude-code
   business_value: 400
   acceptance_criteria:
-  - text: "7 diagramas nas p\xE1ginas listadas; mermaid renderiza no site (config\
-      \ superfences) e no GitHub; mkdocs build --strict verde; diagramas leg\xEDveis\
-      \ (revis\xE3o visual do Barna no PR)"
+  - text: 7 diagramas nas páginas listadas; mermaid renderiza no site (config superfences) e no GitHub; mkdocs build --strict verde; diagramas legíveis (revisão visual do Barna no PR)
     done: true
     done_at: '2026-07-09T22:07:00+00:00'
     done_by: story-done-auto
@@ -73,15 +54,7 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: "8 diagramas Mermaid entregues (PR #20, checks 10/10 verdes): assinatura\
-      \ microkernel-ports (kernel mediador + 5 ports + search plane + adapters), kinds\
-      \ (anatomia + composi\xE7\xE3o), thesis (pain\xE9is espelhados CRD\u2194Kind),\
-      \ market-fidelity (round-trip byte-id\xEAntico), tenancy-layers (base \u222A\
-      \ overlay shadow por kind,name), sdlc (loop com plan gate/test gate/dna-sdlc[bot])\
-      \ e README hero. Sintaxe validada + render verificado em browser real (light\
-      \ e slate, SVG no shadow root fechado). B\xF4nus: allowlist kind:TestRun removida\
-      \ do coverage guard (prose do sdlc agora cobre). PR aguardando revis\xE3o visual\
-      \ do Barna \u2014 n\xE3o mergeei de prop\xF3sito."
+    summary: '8 diagramas Mermaid entregues (PR #20, checks 10/10 verdes): assinatura microkernel-ports (kernel mediador + 5 ports + search plane + adapters), kinds (anatomia + composição), thesis (painéis espelhados CRD↔Kind), market-fidelity (round-trip byte-idêntico), tenancy-layers (base ∪ overlay shadow por kind,name), sdlc (loop com plan gate/test gate/dna-sdlc[bot]) e README hero. Sintaxe validada + render verificado em browser real (light e slate, SVG no shadow root fechado). Bônus: allowlist kind:TestRun removida do coverage guard (prose do sdlc agora cobre). PR aguardando revisão visual do Barna — não mergeei de propósito.'
     commit_ref: b83edc06b39b891a51e66ee5b8c24197ec619fad
   - at: '2026-07-09T22:06:58+00:00'
     actor: claude-code
@@ -96,17 +69,13 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-s-docs-diagrams-20260709-220659
-    summary: "TestRun tr-tg-s-docs-diagrams-20260709-220659 \u2192 pass"
+    summary: TestRun tr-tg-s-docs-diagrams-20260709-220659 → pass
     outcome: pass
   - at: '2026-07-09T22:07:01+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "PR #20 merged com aprova\xE7\xE3o VISUAL do Barna. 8 diagramas Mermaid\
-      \ em 7 p\xE1ginas (assinatura kernel+ports, anatomia Kind+composi\xE7\xE3o,\
-      \ CRD\u2194Kind espelhado, market-fidelity round-trip, tenancy overlay, loop\
-      \ SDLC com dna-sdlc[bot], hero README). Render provado light+dark. B\xF4nus:\
-      \ allowlist shrink (TestRun)."
+    summary: 'PR #20 merged com aprovação VISUAL do Barna. 8 diagramas Mermaid em 7 páginas (assinatura kernel+ports, anatomia Kind+composição, CRD↔Kind espelhado, market-fidelity round-trip, tenancy overlay, loop SDLC com dna-sdlc[bot], hero README). Render provado light+dark. Bônus: allowlist shrink (TestRun).'
   - at: '2026-07-09T22:07:03+00:00'
     actor: claude-code
     type: status_change

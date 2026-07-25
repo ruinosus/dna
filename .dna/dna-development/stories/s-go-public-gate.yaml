@@ -3,11 +3,8 @@ kind: Story
 metadata:
   name: s-go-public-gate
 spec:
-  title: 'The explicit gate to flip ruinosus/dna to public: all f-dna-1.0-readiness
-    storie'
-  description: 'The explicit gate to flip ruinosus/dna to public: all f-dna-1.0-readiness
-    stories done, CI green, final review of README/docs, and the owner''s explicit
-    approval. Nothing flips without it.'
+  title: 'The explicit gate to flip ruinosus/dna to public: all f-dna-1.0-readiness storie'
+  description: 'The explicit gate to flip ruinosus/dna to public: all f-dna-1.0-readiness stories done, CI green, final review of README/docs, and the owner''s explicit approval. Nothing flips without it.'
   status: done
   feature: f-dna-1.0-readiness
   priority: high
@@ -39,67 +36,37 @@ spec:
     actor: claude-code
     type: decision
     source: cli
-    summary: "ITEM NOVO NO CHECKLIST (achado 2026-07-08): metadados de commit tinham\
-      \ 27 identidades com o e-mail corporativo interno (gitconfig global da m\xE1\
-      quina; brand-guard varre arquivos, n\xE3o commits). Mitigado daqui pra frente:\
-      \ config local do repo = ruinosus <3090620+ruinosus@users.noreply.github.com>\
-      \ + squash-merge lava PRs. PENDENTE pr\xE9-p\xFAblico: (1) rewrite da hist\xF3\
-      ria (filter-branch/filter-repo trocando o e-mail; requer aprova\xE7\xE3o expl\xED\
-      cita do Barna \u2014 for\xE7a SHAs novos, commit-refs antigos nas timelines\
-      \ dangleiam, aceit\xE1vel); (2) estender o guard: job de CI que valida author/committer\
-      \ emails do range do PR contra denylist corporativa."
+    summary: 'ITEM NOVO NO CHECKLIST (achado 2026-07-08): metadados de commit tinham 27 identidades com o e-mail corporativo interno (gitconfig global da máquina; brand-guard varre arquivos, não commits). Mitigado daqui pra frente: config local do repo = ruinosus <3090620+ruinosus@users.noreply.github.com> + squash-merge lava PRs. PENDENTE pré-público: (1) rewrite da história (filter-branch/filter-repo trocando o e-mail; requer aprovação explícita do Barna — força SHAs novos, commit-refs antigos nas timelines dangleiam, aceitável); (2) estender o guard: job de CI que valida author/committer emails do range do PR contra denylist corporativa.'
     commit_ref: 967845cbbbb233fde46fc393581f58002a31b581
   - at: '2026-07-08T21:40:16+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "Checklist update: hist\xF3ria REESCRITA e verificada limpa (2026-07-08)\
-      \ \u2014 git log --all em todas as refs: s\xF3 ruinosus-noreply + noreply@github.com,\
-      \ zero e-mail corporativo; backups do filter-branch expurgados; remoto s\xF3\
-      \ com main. Resta do item: o job de CI validando e-mails de commit do range\
-      \ do PR (denylist corporativa)."
+    summary: 'Checklist update: história REESCRITA e verificada limpa (2026-07-08) — git log --all em todas as refs: só ruinosus-noreply + noreply@github.com, zero e-mail corporativo; backups do filter-branch expurgados; remoto só com main. Resta do item: o job de CI validando e-mails de commit do range do PR (denylist corporativa).'
     commit_ref: 120c348df290cd14cac3ed55cd5e3ffcdb63bfe7
   - at: '2026-07-09T10:22:55+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "Executando o item do checklist: job de CI (guards.yml) validando author/committer\
-      \ emails de todos os commits do range do PR contra denylist corporativa (o buraco\
-      \ que o rewrite tapou manualmente \u2014 agora vira guard permanente). Extens\xE3\
-      o do scripts/brand_guard.py (--commits BASE..HEAD) pra manter o self-test e\
-      \ rodar local tamb\xE9m."
+    summary: 'Executando o item do checklist: job de CI (guards.yml) validando author/committer emails de todos os commits do range do PR contra denylist corporativa (o buraco que o rewrite tapou manualmente — agora vira guard permanente). Extensão do scripts/brand_guard.py (--commits BASE..HEAD) pra manter o self-test e rodar local também.'
     commit_ref: 0265a7fdcd17ac24f7c8147e61edbb87af37b95d
   - at: '2026-07-09T10:38:00+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "CHECKLIST T\xC9CNICO COMPLETO (2026-07-09): CI 7 checks em todo PR (suites\
-      \ + brand-guard zero-literal que cobre a si mesmo + commit-emails + gitleaks)\
-      \ \xB7 hist\xF3ria reescrita e guardada permanentemente \xB7 repo agent-ready\
-      \ (AGENTS.md/skill/plugin) \xB7 SDLC self-hosted com trailers e PRs assinados\
-      \ \xB7 blessed API travada em fixture \xB7 adapters com conformance kits. O\
-      \ que resta nesta story \xE9 s\xF3 a DECIS\xC3O: revis\xE3o final do Barna no\
-      \ repo + 'pode abrir' registrado aqui."
+    summary: 'CHECKLIST TÉCNICO COMPLETO (2026-07-09): CI 7 checks em todo PR (suites + brand-guard zero-literal que cobre a si mesmo + commit-emails + gitleaks) · história reescrita e guardada permanentemente · repo agent-ready (AGENTS.md/skill/plugin) · SDLC self-hosted com trailers e PRs assinados · blessed API travada em fixture · adapters com conformance kits. O que resta nesta story é só a DECISÃO: revisão final do Barna no repo + ''pode abrir'' registrado aqui.'
     commit_ref: 366b4f49852340450e98eb6fc5a41597046814aa
   - at: '2026-07-09T16:48:05+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "BLOQUEADO por decis\xE3o do Barna (2026-07-09): go-public espera f-dna-search-memory\
-      \ (busca sem\xE2ntica + mem\xF3ria embarc\xE1vel) ficar pronto \u2014 o repo\
-      \ abre COM busca sem\xE2ntica funcionando. Checklist t\xE9cnico do gate segue\
-      \ completo; s\xF3 aguarda a feature."
+    summary: 'BLOQUEADO por decisão do Barna (2026-07-09): go-public espera f-dna-search-memory (busca semântica + memória embarcável) ficar pronto — o repo abre COM busca semântica funcionando. Checklist técnico do gate segue completo; só aguarda a feature.'
     commit_ref: c42368304ec4a306d3794c626eb4f1a6ee4a5b30
   - at: '2026-07-09T19:07:02+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "DESBLOQUEADO (2026-07-09): f-dna-search-memory SHIPPED \u2014 busca\
-      \ sem\xE2ntica embarc\xE1vel (sqlite-vec offline + pgvector escala, mesmo conformance\
-      \ kit) + mem\xF3ria declarativa (verbos remember/recall/forget/consolidate,\
-      \ ecforia/decay/bi-temporalidade, sem servidor). O repo abre COM busca sem\xE2\
-      ntica funcionando, como pedido. Checklist t\xE9cnico 100%; s\xF3 falta a DECIS\xC3\
-      O do Barna: revis\xE3o final + 'pode publicar'."
+    summary: 'DESBLOQUEADO (2026-07-09): f-dna-search-memory SHIPPED — busca semântica embarcável (sqlite-vec offline + pgvector escala, mesmo conformance kit) + memória declarativa (verbos remember/recall/forget/consolidate, ecforia/decay/bi-temporalidade, sem servidor). O repo abre COM busca semântica funcionando, como pedido. Checklist técnico 100%; só falta a DECISÃO do Barna: revisão final + ''pode publicar''.'
     commit_ref: f01acbbd402b97b73d9754beeda6d04897499e8e
   - at: '2026-07-09T20:39:18+00:00'
     actor: claude-code
@@ -111,12 +78,7 @@ spec:
     actor: claude-code
     type: decision
     source: cli
-    summary: "APROVA\xC7\xC3O DO BARNA REGISTRADA (2026-07-09): 'pode publicar' \u2014\
-      \ com e-mail pessoal na hist\xF3ria aceito explicitamente (12 commits, decis\xE3\
-      o dele) e branch protection configurada antes do flip (PR+9 checks obrigat\xF3\
-      rios, force-push/dele\xE7\xE3o bloqueados, admin bypass p/ bookkeeping). Visibilidade\
-      \ flipada: github.com/ruinosus/dna \xE9 P\xDABLICO. Pages habilitado (build\
-      \ via workflow)."
+    summary: 'APROVAÇÃO DO BARNA REGISTRADA (2026-07-09): ''pode publicar'' — com e-mail pessoal na história aceito explicitamente (12 commits, decisão dele) e branch protection configurada antes do flip (PR+9 checks obrigatórios, force-push/deleção bloqueados, admin bypass p/ bookkeeping). Visibilidade flipada: github.com/ruinosus/dna é PÚBLICO. Pages habilitado (build via workflow).'
     commit_ref: 848587b794baab735187c88206a386ebd31ee6ec
   - at: '2026-07-09T20:39:20+00:00'
     actor: claude-code
@@ -131,16 +93,13 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-s-go-public-gate-20260709-203921
-    summary: "TestRun tr-tg-s-go-public-gate-20260709-203921 \u2192 pass"
+    summary: TestRun tr-tg-s-go-public-gate-20260709-203921 → pass
     outcome: pass
   - at: '2026-07-09T20:39:23+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "PUBLICADO 2026-07-09. Verifica\xE7\xE3o final pr\xE9-flip: brand-guard\
-      \ (arquivos+identidades) limpo, zero segredos, branch protection no lugar. Aprova\xE7\
-      \xE3o expl\xEDcita do Barna na timeline. github.com/ruinosus/dna \xE9 p\xFA\
-      blico; Pages habilitado."
+    summary: 'PUBLICADO 2026-07-09. Verificação final pré-flip: brand-guard (arquivos+identidades) limpo, zero segredos, branch protection no lugar. Aprovação explícita do Barna na timeline. github.com/ruinosus/dna é público; Pages habilitado.'
   - at: '2026-07-09T20:39:24+00:00'
     actor: claude-code
     type: status_change

@@ -3,17 +3,8 @@ kind: Story
 metadata:
   name: s-docs-search-memory-prose
 spec:
-  title: 'A prosa (concepts/guides/getting-started/README) foi escrita no PR #10,
-    ANTES de'
-  description: "A prosa (concepts/guides/getting-started/README) foi escrita no PR\
-    \ #10, ANTES de search/memory (#13-#16) \u2014 a reference autogerada se manteve\
-    \ fresca (drift-guard funcionou), mas a prosa n\xE3o cobre a capability nova.\
-    \ Escrever: concepts/search-and-memory.md (EmbeddingPort + RecordSearchProvider,\
-    \ offline-first sqlite-vec+FTS5+RRF vs pgvector escala, verbos remember/recall/forget/consolidate,\
-    \ ecforia/decay, bi-temporalidade \u2014 e o posicionamento curado-vs-gerado j\xE1\
-    \ esbo\xE7ado em agent-knowledge.md); guides/semantic-recall.md (como usar dna\
-    \ recall/search/memory + registrar providers + extras); toque no getting-started\
-    \ e no README (1 se\xE7\xE3o curta na landing). Consultar rsh-memory-similarity-evolution."
+  title: 'A prosa (concepts/guides/getting-started/README) foi escrita no PR #10, ANTES de'
+  description: 'A prosa (concepts/guides/getting-started/README) foi escrita no PR #10, ANTES de search/memory (#13-#16) — a reference autogerada se manteve fresca (drift-guard funcionou), mas a prosa não cobre a capability nova. Escrever: concepts/search-and-memory.md (EmbeddingPort + RecordSearchProvider, offline-first sqlite-vec+FTS5+RRF vs pgvector escala, verbos remember/recall/forget/consolidate, ecforia/decay, bi-temporalidade — e o posicionamento curado-vs-gerado já esboçado em agent-knowledge.md); guides/semantic-recall.md (como usar dna recall/search/memory + registrar providers + extras); toque no getting-started e no README (1 seção curta na landing). Consultar rsh-memory-similarity-evolution.'
   status: done
   feature: f-dna-docs
   priority: high
@@ -22,15 +13,11 @@ spec:
   reporter: claude-code
   business_value: 400
   acceptance_criteria:
-  - text: Concept + guide novos; getting-started e README mencionam a capability;
-      mkdocs build --strict verde; lychee verde; nav atualizada
+  - text: Concept + guide novos; getting-started e README mencionam a capability; mkdocs build --strict verde; lychee verde; nav atualizada
     done: true
     done_at: '2026-07-09T21:27:37+00:00'
     done_by: claude-code
-    evidence: "PR #18 \u2014 concept (search-and-memory.md) + guide (semantic-recall.md)\
-      \ new; first-kind next-steps + README landing section mention the capability;\
-      \ mkdocs build --strict green in docs-build check; docs-links (lychee) green;\
-      \ nav updated (Concepts + How-to guides). All 9 PR checks green."
+    evidence: 'PR #18 — concept (search-and-memory.md) + guide (semantic-recall.md) new; first-kind next-steps + README landing section mention the capability; mkdocs build --strict green in docs-build check; docs-links (lychee) green; nav updated (Concepts + How-to guides). All 9 PR checks green.'
   acceptance_criteria_source: cli-create
   definition_of_done:
   - text: PR merged via dna sdlc story pr
@@ -62,14 +49,7 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: "Prose written + shipped to PR #18: concepts/search-and-memory.md (two\
-      \ ports + offline-first + memory-as-Kinds + 2 Mermaid diagrams), guides/semantic-recall.md\
-      \ (all examples executed for real, incl. honest-degradation capture from a bare\
-      \ venv + 1 sequence diagram), first-kind next-steps bullet, README landing section,\
-      \ mkdocs nav + mermaid superfence. Gates: brand_guard+self-test clean, mkdocs\
-      \ build --strict green, diagrams confirmed rendering in-browser. One CI wrinkle:\
-      \ gitleaks false-positive (the concept's fake-embedder sentence matched generic-api-key)\
-      \ \u2014 reworded + amended + force-pushed; gitleaks now green."
+    summary: 'Prose written + shipped to PR #18: concepts/search-and-memory.md (two ports + offline-first + memory-as-Kinds + 2 Mermaid diagrams), guides/semantic-recall.md (all examples executed for real, incl. honest-degradation capture from a bare venv + 1 sequence diagram), first-kind next-steps bullet, README landing section, mkdocs nav + mermaid superfence. Gates: brand_guard+self-test clean, mkdocs build --strict green, diagrams confirmed rendering in-browser. One CI wrinkle: gitleaks false-positive (the concept''s fake-embedder sentence matched generic-api-key) — reworded + amended + force-pushed; gitleaks now green.'
     commit_ref: ab9f741d4a81b1add3b5941cdf6ed6e7ec70a768
   - at: '2026-07-09T21:27:22+00:00'
     actor: claude-code
@@ -83,10 +63,7 @@ spec:
     source: cli
     marked_ac: 1
     marked_dod: 0
-    evidence: "PR #18 \u2014 concept (search-and-memory.md) + guide (semantic-recall.md)\
-      \ new; first-kind next-steps + README landing section mention the capability;\
-      \ mkdocs build --strict green in docs-build check; docs-links (lychee) green;\
-      \ nav updated (Concepts + How-to guides). All 9 PR checks green."
+    evidence: 'PR #18 — concept (search-and-memory.md) + guide (semantic-recall.md) new; first-kind next-steps + README landing section mention the capability; mkdocs build --strict green in docs-build check; docs-links (lychee) green; nav updated (Concepts + How-to guides). All 9 PR checks green.'
     by: claude-code
   - at: '2026-07-09T21:35:30+00:00'
     actor: claude-code
@@ -101,17 +78,13 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-s-docs-search-memory-prose-20260709-213531
-    summary: "TestRun tr-tg-s-docs-search-memory-prose-20260709-213531 \u2192 pass"
+    summary: TestRun tr-tg-s-docs-search-memory-prose-20260709-213531 → pass
     outcome: pass
   - at: '2026-07-09T21:35:33+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "PR #18 merged. Concept search-and-memory + guide semantic-recall (exemplos\
-      \ reais executados) + toques README/getting-started + 3 diagramas Mermaid (render\
-      \ verificado em browser) + config superfences. Kaizen do agente: gitleaks escaneia\
-      \ HIST\xD3RIA \u2014 fix pr\xE9-merge exige rewrite (amend+force-with-lease),\
-      \ n\xE3o append; nunca citar string secret-looking em narra\xE7\xE3o/commit."
+    summary: 'PR #18 merged. Concept search-and-memory + guide semantic-recall (exemplos reais executados) + toques README/getting-started + 3 diagramas Mermaid (render verificado em browser) + config superfences. Kaizen do agente: gitleaks escaneia HISTÓRIA — fix pré-merge exige rewrite (amend+force-with-lease), não append; nunca citar string secret-looking em narração/commit.'
   - at: '2026-07-09T21:35:35+00:00'
     actor: claude-code
     type: status_change

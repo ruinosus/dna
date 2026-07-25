@@ -3,8 +3,7 @@ kind: TestGuide
 metadata:
   name: tg-engram-rename
 spec:
-  description: 'Verifica o rename LessonLearned -> Engram: identidade, paridade Py<->TS,
-    os conjuntos que falham abertos, e a migracao de filesystem'
+  description: 'Verifica o rename LessonLearned -> Engram: identidade, paridade Py<->TS, os conjuntos que falham abertos, e a migracao de filesystem'
   kind_of_test: manual
   status: active
   steps:
@@ -15,17 +14,13 @@ spec:
   - action: descritor
     expected: sha256 identico nos pares py/ts de engram.kind.yaml
   - action: identidade
-    expected: github.com/ruinosus/dna/v1 . Engram em extensions/helix; lesson-learned.kind.yaml
-      removido dos dois lados
+    expected: github.com/ruinosus/dna/v1 . Engram em extensions/helix; lesson-learned.kind.yaml removido dos dois lados
   - action: fail-open sets
-    expected: Engram presente nos quatro (resolver Py+TS, write_guards, VERSION_CHURN_KINDS,
-      intel engine) COM teste que falha se regredir
+    expected: Engram presente nos quatro (resolver Py+TS, write_guards, VERSION_CHURN_KINDS, intel engine) COM teste que falha se regredir
   - action: mutation test
-    expected: remover Engram de VERSION_CHURN_KINDS faz os testes novos falharem;
-      restaurar faz passarem
+    expected: remover Engram de VERSION_CHURN_KINDS faz os testes novos falharem; restaurar faz passarem
   - action: migracao FS
-    expected: dry-run default, idempotente, orphan (kind novo + apiVersion velho)
-      reportado como erro, escrita atomica, newline preservada (hexdump)
+    expected: dry-run default, idempotente, orphan (kind novo + apiVersion velho) reportado como erro, escrita atomica, newline preservada (hexdump)
   - action: drift guards
     expected: kinds/cli/parity/openapi/docs-coverage/brand todos limpos
   verifies:

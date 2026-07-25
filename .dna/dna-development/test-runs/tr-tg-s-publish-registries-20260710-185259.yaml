@@ -10,7 +10,4 @@ spec:
   executed_by: claude-code
   executed_at: '2026-07-10T18:52:59+00:00'
   evidence:
-  - "smoke: venv limpo + 'pip install dna-sdk dna-cli' (PyPI real) \u2192 from dna\
-    \ import Kernel OK + dna --help OK; projeto npm limpo + 'npm i dna-sdk' (registry\
-    \ real) \u2192 import('dna-sdk').Kernel \xE9 function. 3/3 pacotes instal\xE1\
-    veis do p\xFAblico."
+  - 'smoke: venv limpo + ''pip install dna-sdk dna-cli'' (PyPI real) → from dna import Kernel OK + dna --help OK; projeto npm limpo + ''npm i dna-sdk'' (registry real) → import(''dna-sdk'').Kernel é function. 3/3 pacotes instaláveis do público.'

@@ -3,28 +3,19 @@ kind: TestGuide
 metadata:
   name: tg-s-tier-a-modelprofile
 spec:
-  description: Roteiro de teste de s-tier-a-modelprofile (ModelProfile Kind + prompt-budget
-    veto hook).
+  description: Roteiro de teste de s-tier-a-modelprofile (ModelProfile Kind + prompt-budget veto hook).
   kind_of_test: regression
   status: active
   steps:
-  - action: "pytest tests/test_modelreg_prompt_budget.py \u2014 Kind registrado do\
-      \ descriptor (alias modelreg-model-profile, record, GLOBAL) + kernel.model_profile\
-      \ resolve id\u2192alias + guard 3 caminhos (VETO voice/realtime, WARN chat,\
-      \ PASS opt-in) + kill-switch"
+  - action: pytest tests/test_modelreg_prompt_budget.py — Kind registrado do descriptor (alias modelreg-model-profile, record, GLOBAL) + kernel.model_profile resolve id→alias + guard 3 caminhos (VETO voice/realtime, WARN chat, PASS opt-in) + kill-switch
     where: packages/sdk-py
-    expected: "9 passed; veto N\xC3O persiste o doc; erro did\xE1tico cita agent+cap+model+'never\
-      \ hardcode caps'"
-  - action: "bun test tests/modelreg-prompt-budget.test.ts \u2014 twin TS (estimator\
-      \ + Kind + 3 caminhos via kernel.writeDocument real + modelProfile + _DEFAULT_REALTIME_MODEL)"
+    expected: 9 passed; veto NÃO persiste o doc; erro didático cita agent+cap+model+'never hardcode caps'
+  - action: bun test tests/modelreg-prompt-budget.test.ts — twin TS (estimator + Kind + 3 caminhos via kernel.writeDocument real + modelProfile + _DEFAULT_REALTIME_MODEL)
     where: packages/sdk-ts
     expected: 14 pass, 0 fail
-  - action: "Suites completas + guards: pytest full, bun test + typecheck, cli, brand_guard,\
-      \ docs_coverage_guard (+self-tests), mkdocs build --strict; descriptor hash\
-      \ parity Py\u2194TS"
+  - action: 'Suites completas + guards: pytest full, bun test + typecheck, cli, brand_guard, docs_coverage_guard (+self-tests), mkdocs build --strict; descriptor hash parity Py↔TS'
     where: repo root
-    expected: "tudo verde; coverage guard SEM entrada nova de allowlist; descriptor\
-      \ byte-id\xEAntico"
+    expected: tudo verde; coverage guard SEM entrada nova de allowlist; descriptor byte-idêntico
   verifies:
   - Story/s-tier-a-modelprofile
   owner: claude-code

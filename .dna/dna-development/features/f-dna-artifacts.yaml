@@ -4,9 +4,7 @@ metadata:
   name: f-dna-artifacts
 spec:
   title: Governed HTML artifacts
-  description: "HtmlArtifact Kind: bundle de HTML como output de primeira classe,\
-    \ linkavel a work items via produces[]. Nasceu da necessidade de guardar o design\
-    \ doc do proprio e-dna-dx e vincula-lo ao epico \u2014 dogfood."
+  description: 'HtmlArtifact Kind: bundle de HTML como output de primeira classe, linkavel a work items via produces[]. Nasceu da necessidade de guardar o design doc do proprio e-dna-dx e vincula-lo ao epico — dogfood.'
   status: discovery
   epic: e-dna-dx
   reporter: claude-code

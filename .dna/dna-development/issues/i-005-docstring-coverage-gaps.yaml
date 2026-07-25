@@ -3,15 +3,7 @@ kind: Issue
 metadata:
   name: i-005-docstring-coverage-gaps
 spec:
-  description: "Gaps de cobertura de docstring/TSDoc catalogados na gera\xE7\xE3o\
-    \ da API-ref (PR #12), n\xE3o inventados: Python \u2014 Kernel tem 6 m\xE9todos\
-    \ p\xFAblicos sem docstring (cache/load/reader/resolver/source/writer, os port-registers),\
-    \ ManifestInstance ~19 (helpers de viz: ascii_tree, *_mermaid, health, impact,\
-    \ matrix, list_kinds); Document coberto. TSDoc \u2014 14 tipos referenciados mas\
-    \ n\xE3o re-exportados de src/index.ts (Raw, TenantScope, PreviewResult, BuildPromptOpts,\
-    \ SourceCapabilities, KindLike...) geram broken-xref no TypeDoc: exportar ou marcar\
-    \ intentionallyNotExported. Preencher docstrings melhora a API-ref autogerada\
-    \ (a fonte \xE9 a verdade). N\xE3o-bloqueante."
+  description: 'Gaps de cobertura de docstring/TSDoc catalogados na geração da API-ref (PR #12), não inventados: Python — Kernel tem 6 métodos públicos sem docstring (cache/load/reader/resolver/source/writer, os port-registers), ManifestInstance ~19 (helpers de viz: ascii_tree, *_mermaid, health, impact, matrix, list_kinds); Document coberto. TSDoc — 14 tipos referenciados mas não re-exportados de src/index.ts (Raw, TenantScope, PreviewResult, BuildPromptOpts, SourceCapabilities, KindLike...) geram broken-xref no TypeDoc: exportar ou marcar intentionallyNotExported. Preencher docstrings melhora a API-ref autogerada (a fonte é a verdade). Não-bloqueante.'
   type: task
   severity: low
   status: resolved
@@ -33,24 +25,7 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: "Fix: Python \u2014 26 docstrings reais (mkdocstrings renderiza conte\xFA\
-      do, n\xE3o assinatura nua): Kernel 6 port-registers (source com o boot gate\
-      \ de valida\xE7\xE3o estrutural, cache, resolver por scheme, reader/writer com\
-      \ o gate H1 de conformance, load com o contrato fail-loud de Extension) + ManifestInstance\
-      \ 20 helpers (root, default_agent, list_kinds, get, describe, summary, 8 geradores\
-      \ *_mermaid, export_diagrams_md, matrix, matrix_markdown, impact, health, ascii_tree).\
-      \ TSDoc \u2014 15 broken-xref (o relat\xF3rio #12 listava 14; ManifestInstanceOpts\
-      \ entrou desde ent\xE3o) triados tipo a tipo: 11 re-exportados de src/index.ts\
-      \ por serem referenciados por API j\xE1 p\xFAblica (Raw, TenantScope, PreviewResult,\
-      \ PreviewBlockKind, BuildPromptOpts, SourceCapabilities, KindLike, AsyncEventHandler,\
-      \ CompositionProfile, BundleHandle, LayerSource; + 2\xAA ordem CompositionSlot,\
-      \ HealthCheck/Quadrant/TimelineHint, sourceCapabilities, deriveCapabilities)\
-      \ e 4 marcados intentionallyNotExported no typedoc.json (CompositionResolverHost\
-      \ \u2014 collaborator-ports s\xE3o internals por decis\xE3o registrada na fixture;\
-      \ QueryableInstance; ManifestInstanceOpts; DeclarativeMarker). Fixtures blessed_query_surface/port-surface\
-      \ intactas \u2014 re-export de tipo n\xE3o adiciona membro de MI nem de port\
-      \ (suites verdes). TypeDoc: 0 warnings. mkdocs build --strict: verde. Commit\
-      \ 67fb938."
+    summary: 'Fix: Python — 26 docstrings reais (mkdocstrings renderiza conteúdo, não assinatura nua): Kernel 6 port-registers (source com o boot gate de validação estrutural, cache, resolver por scheme, reader/writer com o gate H1 de conformance, load com o contrato fail-loud de Extension) + ManifestInstance 20 helpers (root, default_agent, list_kinds, get, describe, summary, 8 geradores *_mermaid, export_diagrams_md, matrix, matrix_markdown, impact, health, ascii_tree). TSDoc — 15 broken-xref (o relatório #12 listava 14; ManifestInstanceOpts entrou desde então) triados tipo a tipo: 11 re-exportados de src/index.ts por serem referenciados por API já pública (Raw, TenantScope, PreviewResult, PreviewBlockKind, BuildPromptOpts, SourceCapabilities, KindLike, AsyncEventHandler, CompositionProfile, BundleHandle, LayerSource; + 2ª ordem CompositionSlot, HealthCheck/Quadrant/TimelineHint, sourceCapabilities, deriveCapabilities) e 4 marcados intentionallyNotExported no typedoc.json (CompositionResolverHost — collaborator-ports são internals por decisão registrada na fixture; QueryableInstance; ManifestInstanceOpts; DeclarativeMarker). Fixtures blessed_query_surface/port-surface intactas — re-export de tipo não adiciona membro de MI nem de port (suites verdes). TypeDoc: 0 warnings. mkdocs build --strict: verde. Commit 67fb938.'
   - at: '2026-07-10T13:58:00+00:00'
     actor: claude-code
     type: status_change

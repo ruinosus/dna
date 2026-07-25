@@ -4,11 +4,7 @@ metadata:
   name: f-copilot-frontend-scaffold
 spec:
   title: Shared CopilotKit frontend scaffold + per-runtime resume-adapter
-  description: "Absorption phase 5. Emit the ~95%-generic CopilotKit v2 console (chat\
-    \ + canvas/panel + approval-card + suggested-prompts + HttpAgent bridge) ONE shared\
-    \ scaffold + a tiny per-runtime resume-adapter. TS-only golden family (breaks\
-    \ the Py<->TS twin \u2014 governed separately per absorption spec \xA77). Depends\
-    \ on f-dna-copilot-emitter."
+  description: Absorption phase 5. Emit the ~95%-generic CopilotKit v2 console (chat + canvas/panel + approval-card + suggested-prompts + HttpAgent bridge) ONE shared scaffold + a tiny per-runtime resume-adapter. TS-only golden family (breaks the Py<->TS twin — governed separately per absorption spec §7). Depends on f-dna-copilot-emitter.
   status: in-development
   epic: e-dna-copilot-absorption
   reporter: claude-code
@@ -33,7 +29,4 @@ spec:
     source: cli
     from: discovery
     to: in-development
-  narrative_line: 'Tenant contract finalized: route.ts stamps 3 trusted server-to-server
-    headers (X-DNA-Tenant + X-DNA-Workspace + X-Tenant-OID) from the portal session,
-    never the browser; console sends none. All tests green Py+TS, tsc clean, brand_guard
-    clean. Branch pushed.'
+  narrative_line: 'Tenant contract finalized: route.ts stamps 3 trusted server-to-server headers (X-DNA-Tenant + X-DNA-Workspace + X-Tenant-OID) from the portal session, never the browser; console sends none. All tests green Py+TS, tsc clean, brand_guard clean. Branch pushed.'

@@ -3,16 +3,8 @@ kind: Feature
 metadata:
   name: f-dna-search-memory
 spec:
-  title: "Busca sem\xE2ntica + mem\xF3ria embarc\xE1vel (server-free) \u2014 evolu\xE7\
-    \xE3o atr\xE1s do RecordSearchProvider"
-  description: "Trazer mem\xF3ria + busca por similaridade pro DNA como EVOLU\xC7\xC3\
-    O (n\xE3o c\xF3pia): embeddable-first, sem servidor obrigat\xF3rio, atr\xE1s do\
-    \ port RecordSearchProvider que j\xE1 existe. Fundamentado em rsh-memory-similarity-evolution.\
-    \ Default offline sqlite-vec+FTS5+RRF (Py+TS), embeddings ONNX all-MiniLM (paridade\
-    \ por artefato) + fake determin\xEDstico p/ CI, pgvector como escala reusando\
-    \ Postgres, mem\xF3ria = Kinds existentes recall-eados pelo provider com verbos\
-    \ + bi-temporalidade. Core zero-deps-pesadas; tudo pesado \xE9 extra opt-in. Decis\xE3\
-    o Barna: feature COMPLETA (2 ondas) + PR\xC9-P\xDABLICO (go-public espera isto)."
+  title: Busca semântica + memória embarcável (server-free) — evolução atrás do RecordSearchProvider
+  description: 'Trazer memória + busca por similaridade pro DNA como EVOLUÇÃO (não cópia): embeddable-first, sem servidor obrigatório, atrás do port RecordSearchProvider que já existe. Fundamentado em rsh-memory-similarity-evolution. Default offline sqlite-vec+FTS5+RRF (Py+TS), embeddings ONNX all-MiniLM (paridade por artefato) + fake determinístico p/ CI, pgvector como escala reusando Postgres, memória = Kinds existentes recall-eados pelo provider com verbos + bi-temporalidade. Core zero-deps-pesadas; tudo pesado é extra opt-in. Decisão Barna: feature COMPLETA (2 ondas) + PRÉ-PÚBLICO (go-public espera isto).'
   status: done
   epic: e-dna-public-extraction
   reporter: claude-code

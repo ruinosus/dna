@@ -1,0 +1,15 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-070-yaml-writer-unreadable-escapes
+spec:
+  description: 'O writer do filesystem (adapters/filesystem/writable.py, 5 call sites) chama yaml.dump SEM allow_unicode nem width. Resultado: todo char nao-ASCII vira escape (\u2192, \xED), o que forca aspas duplas, que ao quebrar em width=80 usam a barra de continuacao (\) + ''\ '' na linha seguinte. Todo doc YAML com acento/seta fica ilegivel (body de Plan/ADR/Story). Afeta QUALQUER usuario do SDK, nao so o board da DNA. Fix: allow_unicode=True + width grande + (bonus) representer de bloco literal |- para multi-linha; re-serializar os docs existentes.'
+  type: bug
+  severity: high
+  status: open
+  timeline:
+  - at: '2026-07-25T08:38:31+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

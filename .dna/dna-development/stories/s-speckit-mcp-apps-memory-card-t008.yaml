@@ -3,11 +3,8 @@ kind: Story
 metadata:
   name: s-speckit-mcp-apps-memory-card-t008
 spec:
-  description: "[US1] Teste: o HTML do template n\xE3o cont\xE9m dados de mem\xF3\
-    ria (muta\xE7\xE3o: dados assados de volta \u2192 morre) nem URL externa (muta\xE7\
-    \xE3o: CDN de volta \u2192 morre) em `packages/sdk-py/tests/test_emit_mcp_ui.py`"
-  title: "[US1] Teste: o HTML do template n\xE3o cont\xE9m dados de mem\xF3ria (muta\xE7\
-    \xE3o: dados assa"
+  description: '[US1] Teste: o HTML do template não contém dados de memória (mutação: dados assados de volta → morre) nem URL externa (mutação: CDN de volta → morre) em `packages/sdk-py/tests/test_emit_mcp_ui.py`'
+  title: '[US1] Teste: o HTML do template não contém dados de memória (mutação: dados assa'
   status: done
   feature: f-copilot-mcp-apps
   labels:
@@ -47,16 +44,13 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-speckit-mcp-apps-sdk-20260721-201420
-    summary: "TestRun tr-tg-speckit-mcp-apps-sdk-20260721-201420 \u2192 pass"
+    summary: TestRun tr-tg-speckit-mcp-apps-sdk-20260721-201420 → pass
     outcome: pass
   - at: '2026-07-21T20:17:58+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "T008 no commit a126050: template zero-arg sem nenhum dado de mem\xF3\
-      ria (fixture strings ausentes; muta\xE7\xE3o dados-assados \u2192 morre) e sem\
-      \ URL externa (fora da regi\xE3o vendorizada zero http(s)://; regi\xE3o vendorizada\
-      \ byte-igual ao asset commitado; muta\xE7\xE3o CDN \u2192 morre)."
+    summary: 'T008 no commit a126050: template zero-arg sem nenhum dado de memória (fixture strings ausentes; mutação dados-assados → morre) e sem URL externa (fora da região vendorizada zero http(s)://; região vendorizada byte-igual ao asset commitado; mutação CDN → morre).'
     commit_ref: ee11c11a89e2282556416387fdff80abc96a8136
   - at: '2026-07-21T20:21:23+00:00'
     actor: claude-code
@@ -71,7 +65,7 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-speckit-mcp-apps-render-smoke-20260721-202227
-    summary: "TestRun tr-tg-speckit-mcp-apps-render-smoke-20260721-202227 \u2192 pass"
+    summary: TestRun tr-tg-speckit-mcp-apps-render-smoke-20260721-202227 → pass
     outcome: pass
   - at: '2026-07-21T20:26:35+00:00'
     actor: claude-code
@@ -80,6 +74,6 @@ spec:
     from: todo
     to: done
     commit_ref: a126050
-    summary: "template sem dados de mem\xF3ria e sem URL externa (muta\xE7\xF5es mortas)"
+    summary: template sem dados de memória e sem URL externa (mutações mortas)
   updated_at: '2026-07-21T20:26:35+00:00'
   closed_at: '2026-07-21T20:26:25+00:00'

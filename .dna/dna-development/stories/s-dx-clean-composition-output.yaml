@@ -13,15 +13,13 @@ spec:
   - sdk
   reporter: claude-code
   acceptance_criteria:
-  - text: build_prompt sem newlines finais espurios; consumidor nao precisa de .rstrip;
-      paridade async + record-plane + TS.
+  - text: build_prompt sem newlines finais espurios; consumidor nao precisa de .rstrip; paridade async + record-plane + TS.
     done: true
     done_at: '2026-07-11T06:54:00+00:00'
     done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - text: rstrip em ambos builders Py + prompt_kernel + TS; goldens/testes de trailing
-      whitespace revisados; suites verdes; CHANGELOG.
+  - text: rstrip em ambos builders Py + prompt_kernel + TS; goldens/testes de trailing whitespace revisados; suites verdes; CHANGELOG.
     done: true
     done_at: '2026-07-11T06:54:00+00:00'
     done_by: story-done-auto
@@ -44,10 +42,7 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: 'Implementado: rstrip(''\n'') no retorno de PromptBuilder.build/build_async
-      + prompt_kernel.build_prompt_async (Py) e /\n+$/ no TS build(). test_prompt_trailing_whitespace
-      continua verde (asserts nao dependem do trailing). Teste novo trava ''not text.endswith(newline)''
-      em ambos runtimes.'
+    summary: 'Implementado: rstrip(''\n'') no retorno de PromptBuilder.build/build_async + prompt_kernel.build_prompt_async (Py) e /\n+$/ no TS build(). test_prompt_trailing_whitespace continua verde (asserts nao dependem do trailing). Teste novo trava ''not text.endswith(newline)'' em ambos runtimes.'
     commit_ref: 52b7db57f85dbf8b630cbf3f552837f8f8972ae2
   - at: '2026-07-11T06:37:45+00:00'
     actor: claude-code
@@ -73,7 +68,7 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-s-dx-clean-composition-output-20260711-065526
-    summary: "TestRun tr-tg-s-dx-clean-composition-output-20260711-065526 \u2192 pass"
+    summary: TestRun tr-tg-s-dx-clean-composition-output-20260711-065526 → pass
     outcome: pass
   - at: '2026-07-11T06:55:30+00:00'
     actor: claude-code

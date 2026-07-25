@@ -3,10 +3,8 @@ kind: Feature
 metadata:
   name: f-dna-dx-consume
 spec:
-  title: "Consumir um prompt \xE9 trivial"
-  description: 'Colapsar o shim de 166 linhas do consumidor: build_prompt fail-loud,
-    output limpo, e um helper load_prompts que devolve prompts compostos e limpos,
-    levantando em falta.'
+  title: Consumir um prompt é trivial
+  description: 'Colapsar o shim de 166 linhas do consumidor: build_prompt fail-loud, output limpo, e um helper load_prompts que devolve prompts compostos e limpos, levantando em falta.'
   status: discovery
   epic: e-dna-dx
   reporter: claude-code

@@ -9,7 +9,4 @@ spec:
   - Story/s-dna-mcp-server-mvp
   executed_by: claude-code
   executed_at: '2026-07-11T15:03:02+00:00'
-  notes: 10/10 pytest green (packages/cli/tests/test_mcp_server.py); real stdio MCP
-    client reached all 10 tools + compose_prompt persona + manifest/agents resources;
-    base import pulls no fastmcp/mcp; mkdocs --strict exit 0; brand_guard + docs_coverage_guard
-    clean; full CLI suite 442 passed.
+  notes: 10/10 pytest green (packages/cli/tests/test_mcp_server.py); real stdio MCP client reached all 10 tools + compose_prompt persona + manifest/agents resources; base import pulls no fastmcp/mcp; mkdocs --strict exit 0; brand_guard + docs_coverage_guard clean; full CLI suite 442 passed.

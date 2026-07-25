@@ -7,12 +7,9 @@ spec:
   kind_of_test: smoke
   status: active
   steps:
-  - action: 'No Studio, valide: Hook instala com 1 comando e carimba Work-Item+coautores
-      em commit real; story show lista commits pelo trailer; scope na raiz .dna/dna-development
-      com CLI funcionando sem env var (default ./.dna); CI 6/6 verde'
-    where: "<rota/tela \u2014 ex. /scopes/:scope/...>"
-    expected: "<o que voc\xEA V\xCA quando est\xE1 certo (marque \u2717 S\xD3 se estiver\
-      \ quebrado)>"
+  - action: 'No Studio, valide: Hook instala com 1 comando e carimba Work-Item+coautores em commit real; story show lista commits pelo trailer; scope na raiz .dna/dna-development com CLI funcionando sem env var (default ./.dna); CI 6/6 verde'
+    where: <rota/tela — ex. /scopes/:scope/...>
+    expected: <o que você VÊ quando está certo (marque ✗ SÓ se estiver quebrado)>
   verifies:
   - Story/s-sdlc-git-symbiosis
   created_at: '2026-07-08T21:37:31+00:00'

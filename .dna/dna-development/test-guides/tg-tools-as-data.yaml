@@ -3,16 +3,13 @@ kind: TestGuide
 metadata:
   name: tg-tools-as-data
 spec:
-  description: 'Verify tools-as-data end to end: Tool descriptor migration, load_tools/loadTools
-    surface, dna new tool, tenant override, and Py<->TS byte-identical dogfood.'
+  description: 'Verify tools-as-data end to end: Tool descriptor migration, load_tools/loadTools surface, dna new tool, tenant override, and Py<->TS byte-identical dogfood.'
   kind_of_test: e2e
   status: active
   steps:
-  - action: helix registers Tool from kinds/tool.kind.yaml on both runtimes (plane=record,
-      alias helix-tool)
+  - action: helix registers Tool from kinds/tool.kind.yaml on both runtimes (plane=record, alias helix-tool)
     expected: descriptor ratchet + hash-parity + kind-registry-parity green
-  - action: load_tools(scope)[name] / loadTools(scope).get(name) return {description,
-      parameters}
+  - action: load_tools(scope)[name] / loadTools(scope).get(name) return {description, parameters}
     expected: matches metadata.description + spec.input_schema; ToolNotFound on miss
   - action: python read_py.py and bun read_ts.ts on the SAME generate-artifact Tool
     expected: byte-identical JSON, both == expected-surface.json

@@ -3,17 +3,7 @@ kind: Issue
 metadata:
   name: i-050-quota-counts-denied-calls
 spec:
-  description: "BILLING. enforce_quota INCREMENTA ANTES DE NEGAR: acima do cap a chamada\
-    \ e negada E contada no dna_quota_counters. O job de overage do dna-cloud (#99)\
-    \ le SUM(calls) - included e cobra o excedente \u2014 ou seja, pode cobrar overage\
-    \ por chamadas que o cliente NUNCA conseguiu executar (foram 429). Enquanto o\
-    \ SDK hard-capa e nao existe overage, o dano e zero (o job nunca ve excedente\
-    \ de tenant capado... FALSO: ve exatamente as negadas acima do cap). Reconciliacao\
-    \ necessaria: quando overage billing esta ativo, permitir-e-cobrar acima do cap\
-    \ (soft cap), OU o contador separar aceitas de negadas e o job cobrar so aceitas.\
-    \ Achado do trabalho da i-039 do dna-cloud (2026-07-21). Decisao de produto embutida:\
-    \ soft cap com cobranca vs hard cap sem overage \u2014 hoje o codigo faz um hibrido\
-    \ errado dos dois."
+  description: 'BILLING. enforce_quota INCREMENTA ANTES DE NEGAR: acima do cap a chamada e negada E contada no dna_quota_counters. O job de overage do dna-cloud (#99) le SUM(calls) - included e cobra o excedente — ou seja, pode cobrar overage por chamadas que o cliente NUNCA conseguiu executar (foram 429). Enquanto o SDK hard-capa e nao existe overage, o dano e zero (o job nunca ve excedente de tenant capado... FALSO: ve exatamente as negadas acima do cap). Reconciliacao necessaria: quando overage billing esta ativo, permitir-e-cobrar acima do cap (soft cap), OU o contador separar aceitas de negadas e o job cobrar so aceitas. Achado do trabalho da i-039 do dna-cloud (2026-07-21). Decisao de produto embutida: soft cap com cobranca vs hard cap sem overage — hoje o codigo faz um hibrido errado dos dois.'
   type: bug
   severity: high
   status: resolved
@@ -29,18 +19,6 @@ spec:
     source: cli
     from: open
     to: resolved
-    summary: "PR #201. try_incr_day com o cap DENTRO do INSERT..ON CONFLICT (avaliado\
-      \ sob row lock \u2014 atomico); negada nao toca o contador que o billing le.\
-      \ Prova de concorrencia: 512 tentativas/cap 100 => exatamente 100 admitidas;\
-      \ o mutante check-then-increment (equivalente single-thread) admitiu 161/512\
-      \ e SO o teste de concorrencia pegou. incr_day incondicional mantido como primitivo\
-      \ do futuro soft cap (b) \u2014 que muda contrato de produto e fica para decisao\
-      \ do fundador. Chega a producao no proximo release+pin."
+    summary: 'PR #201. try_incr_day com o cap DENTRO do INSERT..ON CONFLICT (avaliado sob row lock — atomico); negada nao toca o contador que o billing le. Prova de concorrencia: 512 tentativas/cap 100 => exatamente 100 admitidas; o mutante check-then-increment (equivalente single-thread) admitiu 161/512 e SO o teste de concorrencia pegou. incr_day incondicional mantido como primitivo do futuro soft cap (b) — que muda contrato de produto e fica para decisao do fundador. Chega a producao no proximo release+pin.'
   closed_at: '2026-07-21T15:26:10+00:00'
-  resolution: "PR #201. try_incr_day com o cap DENTRO do INSERT..ON CONFLICT (avaliado\
-    \ sob row lock \u2014 atomico); negada nao toca o contador que o billing le. Prova\
-    \ de concorrencia: 512 tentativas/cap 100 => exatamente 100 admitidas; o mutante\
-    \ check-then-increment (equivalente single-thread) admitiu 161/512 e SO o teste\
-    \ de concorrencia pegou. incr_day incondicional mantido como primitivo do futuro\
-    \ soft cap (b) \u2014 que muda contrato de produto e fica para decisao do fundador.\
-    \ Chega a producao no proximo release+pin."
+  resolution: 'PR #201. try_incr_day com o cap DENTRO do INSERT..ON CONFLICT (avaliado sob row lock — atomico); negada nao toca o contador que o billing le. Prova de concorrencia: 512 tentativas/cap 100 => exatamente 100 admitidas; o mutante check-then-increment (equivalente single-thread) admitiu 161/512 e SO o teste de concorrencia pegou. incr_day incondicional mantido como primitivo do futuro soft cap (b) — que muda contrato de produto e fica para decisao do fundador. Chega a producao no proximo release+pin.'

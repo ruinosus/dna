@@ -10,5 +10,4 @@ spec:
   executed_by: claude-code
   executed_at: '2026-07-11T14:10:47+00:00'
   evidence:
-  - "PR #59; dna sdlc digest --since 24h consolidou 38 done + ADR piv\xF4 + kaizen\
-    \ + 8 releases"
+  - 'PR #59; dna sdlc digest --since 24h consolidou 38 done + ADR pivô + kaizen + 8 releases'

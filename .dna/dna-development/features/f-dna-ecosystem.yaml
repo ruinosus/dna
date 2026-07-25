@@ -3,12 +3,8 @@ kind: Feature
 metadata:
   name: f-dna-ecosystem
 spec:
-  title: "Tier B \u2014 ecossistema: dna install, distribui\xE7\xE3o de scopes, eval\
-    \ kit"
-  description: "A jogada de ecossistema do repo p\xFAblico (ratificado Barna): como\
-    \ terceiros CONSOMEM e COMPARTILHAM Kinds/scopes. Come\xE7a pelo dna install github:owner/repo\
-    \ (evolu\xE7\xE3o do source-as-distribution do SDK upstream, reusando o GitHubResolver/ResolverPort\
-    \ + lock_manager que j\xE1 viajaram); depois eval Kinds + runner local."
+  title: 'Tier B — ecossistema: dna install, distribuição de scopes, eval kit'
+  description: 'A jogada de ecossistema do repo público (ratificado Barna): como terceiros CONSOMEM e COMPARTILHAM Kinds/scopes. Começa pelo dna install github:owner/repo (evolução do source-as-distribution do SDK upstream, reusando o GitHubResolver/ResolverPort + lock_manager que já viajaram); depois eval Kinds + runner local.'
   status: done
   epic: e-dna-public-extraction
   reporter: claude-code

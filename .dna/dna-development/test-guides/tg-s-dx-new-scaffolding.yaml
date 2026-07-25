@@ -7,12 +7,10 @@ spec:
   kind_of_test: smoke
   status: active
   steps:
-  - action: Run 'dna new soul warm-host' then 'dna new agent concierge --soul warm-host
-      --layout persona-first' in a scope
-    expected: 'both created; souls/warm-host/SOUL.md is single-file; agents/concierge/AGENT.md
-      has layout: persona-first and no Mustache'
+  - action: Run 'dna new soul warm-host' then 'dna new agent concierge --soul warm-host --layout persona-first' in a scope
+    expected: 'both created; souls/warm-host/SOUL.md is single-file; agents/concierge/AGENT.md has layout: persona-first and no Mustache'
   - action: Compose the scaffolded agent (build_prompt)
-    expected: "real prompt with Soul before instruction \u2014 zero Mustache authored"
+    expected: real prompt with Soul before instruction — zero Mustache authored
   - action: Re-run 'dna new soul warm-host' without --force
     expected: refuses with 'already exists' (idempotent)
   verifies:

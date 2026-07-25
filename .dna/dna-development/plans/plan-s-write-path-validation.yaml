@@ -8,8 +8,6 @@ spec:
   status: accepted
   story_ref: s-write-path-validation
   journey_phase: plan
-  body: "Generalizar o guard write-time do Automation: write_document valida spec\
-    \ vs schema() do Kind; warn\u2192enforce se backcompat exigir; dedup do guard\
-    \ Automation; paridade TS. Worktree dna-wt-wpv; PR via story pr."
+  body: 'Generalizar o guard write-time do Automation: write_document valida spec vs schema() do Kind; warn→enforce se backcompat exigir; dedup do guard Automation; paridade TS. Worktree dna-wt-wpv; PR via story pr.'
   created_at: '2026-07-10T10:51:32+00:00'
   updated_at: '2026-07-10T10:51:32+00:00'

@@ -3,14 +3,7 @@ kind: Issue
 metadata:
   name: i-011-soul-inlining-build-prompt
 spec:
-  description: "Achado do piloto foundry-assured (PR #104 de l\xE1): ao probar a decomposi\xE7\
-    \xE3o do CONCIERGE em Soul, o campo soul do Agent N\xC3O inlinou no build_prompt\
-    \ (commit 3628a9e). Investigar: \xE9 gap real no template default do Agent (o\
-    \ twin interno tinha o soul via dep_filters/template \u2014 e o i-213 j\xE1 apontava\
-    \ diverg\xEAncia de template TS), \xE9 opt-in n\xE3o documentado, ou uso errado\
-    \ do piloto? Se gap: consertar template+teste; se opt-in: documentar no guide.\
-    \ O piloto contornou com instruction-only (fidelidade byte mantida) e registrou\
-    \ decomposi\xE7\xE3o como follow-up no ADR deles."
+  description: 'Achado do piloto foundry-assured (PR #104 de lá): ao probar a decomposição do CONCIERGE em Soul, o campo soul do Agent NÃO inlinou no build_prompt (commit 3628a9e). Investigar: é gap real no template default do Agent (o twin interno tinha o soul via dep_filters/template — e o i-213 já apontava divergência de template TS), é opt-in não documentado, ou uso errado do piloto? Se gap: consertar template+teste; se opt-in: documentar no guide. O piloto contornou com instruction-only (fidelidade byte mantida) e registrou decomposição como follow-up no ADR deles.'
   type: question
   severity: medium
   status: resolved
@@ -26,17 +19,7 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: "N\xC3O REPRODUZ \u2014 investigado pelo orquestrador com prova: agent\
-      \ bundle (AGENT.md) E agent YAML standalone, ambos com soul: hero-soul referenciando\
-      \ souls/hero-soul/SOUL.md \u2192 build_prompt INLINA o conte\xFAdo do soul nas\
-      \ duas variantes (SOUL_MARKER presente; outputs verbatim na investiga\xE7\xE3\
-      o). O probe do agente do piloto estava incorreto (provavelmente autorou o Soul\
-      \ fora do layout can\xF4nico souls/<name>/SOUL.md). O motivo REAL de n\xE3o\
-      \ decompor no piloto permanece v\xE1lido e \xE9 outro: fidelidade byte da concatena\xE7\
-      \xE3o single-space do CONCIERGE \u2014 restri\xE7\xE3o do PR de migra\xE7\xE3\
-      o, n\xE3o do DNA. Follow-up correto: P\xD3S-merge do foundry#104, decompor um\
-      \ agent em Soul livremente (a trava byte \xE9 s\xF3 da migra\xE7\xE3o; depois\
-      \ os prompts evoluem \u2014 que \xE9 a tese)."
+    summary: 'NÃO REPRODUZ — investigado pelo orquestrador com prova: agent bundle (AGENT.md) E agent YAML standalone, ambos com soul: hero-soul referenciando souls/hero-soul/SOUL.md → build_prompt INLINA o conteúdo do soul nas duas variantes (SOUL_MARKER presente; outputs verbatim na investigação). O probe do agente do piloto estava incorreto (provavelmente autorou o Soul fora do layout canônico souls/<name>/SOUL.md). O motivo REAL de não decompor no piloto permanece válido e é outro: fidelidade byte da concatenação single-space do CONCIERGE — restrição do PR de migração, não do DNA. Follow-up correto: PÓS-merge do foundry#104, decompor um agent em Soul livremente (a trava byte é só da migração; depois os prompts evoluem — que é a tese).'
   - at: '2026-07-10T15:32:55+00:00'
     actor: claude-code
     type: status_change

@@ -3,10 +3,8 @@ kind: Feature
 metadata:
   name: f-dna-dx-configure
 spec:
-  title: "Configurar ports \xE9 declarativo (dna.config.yaml)"
-  description: "Kernel.from_config + dna.config.yaml (source/search/embedding), factory\
-    \ URL\u2192source p\xFAblico suportando file/sqlite/postgresql, e o CLI consumindo\
-    \ a mesma superf\xEDcie. Inclui o papercut de DX epic create."
+  title: Configurar ports é declarativo (dna.config.yaml)
+  description: Kernel.from_config + dna.config.yaml (source/search/embedding), factory URL→source público suportando file/sqlite/postgresql, e o CLI consumindo a mesma superfície. Inclui o papercut de DX epic create.
   status: discovery
   epic: e-dna-dx
   reporter: claude-code

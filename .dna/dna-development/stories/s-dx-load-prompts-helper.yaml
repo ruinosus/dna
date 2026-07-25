@@ -13,16 +13,13 @@ spec:
   - sdk
   reporter: claude-code
   acceptance_criteria:
-  - text: dna.load_prompts(scope, base_dir=None) + twin TS retornando PromptLibrary
-      mapeavel (composto+limpo, levanta em falta); resolve base_dir Kernel.quick/DNA_BASE_DIR;
-      exportado publico.
+  - text: dna.load_prompts(scope, base_dir=None) + twin TS retornando PromptLibrary mapeavel (composto+limpo, levanta em falta); resolve base_dir Kernel.quick/DNA_BASE_DIR; exportado publico.
     done: true
     done_at: '2026-07-11T06:54:06+00:00'
     done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - text: PromptLibrary+load_prompts Py+TS; teste mini-consumidor provando colapso
-      166->~5; suites verdes; docs Consuming prompts.
+  - text: PromptLibrary+load_prompts Py+TS; teste mini-consumidor provando colapso 166->~5; suites verdes; docs Consuming prompts.
     done: true
     done_at: '2026-07-11T06:54:06+00:00'
     done_by: story-done-auto
@@ -45,10 +42,7 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: "Implementado: dna/prompts.py (PromptLibrary Mapping lazy+cached + load_prompts)\
-      \ e src/prompts.ts (PromptLibrary.get async + loadPrompts). Teste mini-consumidor\
-      \ prova o colapso: prompts = load_prompts(scope); TRIAGE = prompts['swe-agent']\
-      \ \u2014 2 linhas vs 166 do foundry. Exportado em __all__ (Py) e index.ts (TS)."
+    summary: 'Implementado: dna/prompts.py (PromptLibrary Mapping lazy+cached + load_prompts) e src/prompts.ts (PromptLibrary.get async + loadPrompts). Teste mini-consumidor prova o colapso: prompts = load_prompts(scope); TRIAGE = prompts[''swe-agent''] — 2 linhas vs 166 do foundry. Exportado em __all__ (Py) e index.ts (TS).'
     commit_ref: 52b7db57f85dbf8b630cbf3f552837f8f8972ae2
   - at: '2026-07-11T06:37:48+00:00'
     actor: claude-code
@@ -74,7 +68,7 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-s-dx-load-prompts-helper-20260711-065540
-    summary: "TestRun tr-tg-s-dx-load-prompts-helper-20260711-065540 \u2192 pass"
+    summary: TestRun tr-tg-s-dx-load-prompts-helper-20260711-065540 → pass
     outcome: pass
   - at: '2026-07-11T06:55:44+00:00'
     actor: claude-code

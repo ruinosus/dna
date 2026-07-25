@@ -3,12 +3,8 @@ kind: Story
 metadata:
   name: s-docs-api-reference
 spec:
-  title: 'API reference autogerada dual-language wired no site MkDocs: mkdocstrings
-    pra Py'
-  description: "API reference autogerada dual-language wired no site MkDocs: mkdocstrings\
-    \ pra Python (::: dna.kernel... inline) + TypeDoc\u2192markdown pra TS em /reference/typescript/,\
-    \ docstrings/TSDoc como fonte \xFAnica. + reference do CLI dna gerada dos command\
-    \ defs + reference dos Kinds do JSON Schema. Depende de s-docs-diataxis-site."
+  title: 'API reference autogerada dual-language wired no site MkDocs: mkdocstrings pra Py'
+  description: 'API reference autogerada dual-language wired no site MkDocs: mkdocstrings pra Python (::: dna.kernel... inline) + TypeDoc→markdown pra TS em /reference/typescript/, docstrings/TSDoc como fonte única. + reference do CLI dna gerada dos command defs + reference dos Kinds do JSON Schema. Depende de s-docs-diataxis-site.'
   status: done
   feature: f-dna-docs
   priority: high
@@ -19,8 +15,7 @@ spec:
   reporter: claude-code
   business_value: 500
   acceptance_criteria:
-  - text: "API-ref Py e TS geradas da fonte, naveg\xE1veis no site; CLI ref gerada;\
-      \ sem duplica\xE7\xE3o manual; build strict verde; CI 7/7"
+  - text: API-ref Py e TS geradas da fonte, navegáveis no site; CLI ref gerada; sem duplicação manual; build strict verde; CI 7/7
     done: true
     done_at: '2026-07-09T16:00:42+00:00'
     done_by: story-done-auto
@@ -49,15 +44,7 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: 'Built the source-generated Reference quadrant: (1) Python API via mkdocstrings
-      inline (::: dna.kernel...), 6 authored stub pages over Kernel/Document/MI/ports/extensions/testing;
-      (2) TypeScript API via TypeDoc + typedoc-plugin-markdown from src/index.ts TSDoc
-      (168 pages, disableSources for cross-env determinism); (3) CLI ref generated
-      from the Click tree (scripts/gen_cli_docs.py, 8 group pages); (4) Kinds ref
-      from the live registered Kinds'' schemas (scripts/gen_kinds_docs.py). Py and
-      TS wired as sibling trees (never fused) via literate-nav. mkdocs build --strict
-      green with 0 warnings; generators idempotent+deterministic; docs.yml regenerates
-      + drift-guards before build. brand_guard clean.'
+    summary: 'Built the source-generated Reference quadrant: (1) Python API via mkdocstrings inline (::: dna.kernel...), 6 authored stub pages over Kernel/Document/MI/ports/extensions/testing; (2) TypeScript API via TypeDoc + typedoc-plugin-markdown from src/index.ts TSDoc (168 pages, disableSources for cross-env determinism); (3) CLI ref generated from the Click tree (scripts/gen_cli_docs.py, 8 group pages); (4) Kinds ref from the live registered Kinds'' schemas (scripts/gen_kinds_docs.py). Py and TS wired as sibling trees (never fused) via literate-nav. mkdocs build --strict green with 0 warnings; generators idempotent+deterministic; docs.yml regenerates + drift-guards before build. brand_guard clean.'
     commit_ref: e2df023f6b6e45de7185843556a366e7980c1deb
   - at: '2026-07-09T15:27:10+00:00'
     actor: claude-code
@@ -72,7 +59,7 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-s-docs-api-reference-20260709-152720
-    summary: "TestRun tr-tg-s-docs-api-reference-20260709-152720 \u2192 pass"
+    summary: TestRun tr-tg-s-docs-api-reference-20260709-152720 → pass
     outcome: pass
   - at: '2026-07-09T15:28:08+00:00'
     actor: claude-code
@@ -99,17 +86,13 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-s-docs-api-reference-20260709-160041
-    summary: "TestRun tr-tg-s-docs-api-reference-20260709-160041 \u2192 pass"
+    summary: TestRun tr-tg-s-docs-api-reference-20260709-160041 → pass
     outcome: pass
   - at: '2026-07-09T16:00:43+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "PR #12 merged (10 checks). API-ref autogerada da fonte: mkdocstrings\
-      \ (Py, 6 p\xE1ginas inline) + TypeDoc\u2192md (TS, 168 p\xE1ginas de src/index.ts)\
-      \ + CLI ref (8 grupos dos command defs) + Kinds ref (do schema por plane). Py\
-      \ e TS irm\xE3os nunca fundidos (literate-nav). Gaps de docstring/TSDoc catalogados\
-      \ como follow-up."
+    summary: 'PR #12 merged (10 checks). API-ref autogerada da fonte: mkdocstrings (Py, 6 páginas inline) + TypeDoc→md (TS, 168 páginas de src/index.ts) + CLI ref (8 grupos dos command defs) + Kinds ref (do schema por plane). Py e TS irmãos nunca fundidos (literate-nav). Gaps de docstring/TSDoc catalogados como follow-up.'
   - at: '2026-07-09T16:00:45+00:00'
     actor: claude-code
     type: status_change

@@ -13,8 +13,8 @@ spec:
   reporter: claude-code
   business_value: 400
   acceptance_criteria:
-  - "Repo dna-cloud criado, separado, consome dna-sdk do PyPI, sem l\xF3gica de kernel"
-  - "Skeleton do portal + README + CI m\xEDnimo"
+  - Repo dna-cloud criado, separado, consome dna-sdk do PyPI, sem lógica de kernel
+  - Skeleton do portal + README + CI mínimo
   acceptance_criteria_source: cli-create
   definition_of_done:
   - repo bootstrap + CI + doc de boundary open-core
@@ -33,9 +33,6 @@ spec:
     source: cli
     from: blocked
     to: cancelled
-    summary: "Duplicata \u2014 a decomposi\xE7\xE3o de f-dna-cloud j\xE1 existia (s-dna-cloud-plans/quota-enforcement/portal/billing,\
-      \ filadas no #69). N\xE3o checei antes de filar."
+    summary: 'Duplicata — a decomposição de f-dna-cloud já existia (s-dna-cloud-plans/quota-enforcement/portal/billing, filadas no #69). Não checei antes de filar.'
   closed_at: '2026-07-11T18:03:03+00:00'
-  cancelled_reason: "Duplicata \u2014 a decomposi\xE7\xE3o de f-dna-cloud j\xE1 existia\
-    \ (s-dna-cloud-plans/quota-enforcement/portal/billing, filadas no #69). N\xE3\
-    o checei antes de filar."
+  cancelled_reason: 'Duplicata — a decomposição de f-dna-cloud já existia (s-dna-cloud-plans/quota-enforcement/portal/billing, filadas no #69). Não checei antes de filar.'

@@ -3,7 +3,7 @@ kind: Story
 metadata:
   name: s-load-tools-helper
 spec:
-  title: "dna.load_tools / loadTools \u2192 ToolLibrary (mirror load_prompts)"
+  title: dna.load_tools / loadTools → ToolLibrary (mirror load_prompts)
   description: Lazy fail-loud mapping name -> {description, parameters}
   status: done
   feature: f-dna-tools-as-data
@@ -12,9 +12,7 @@ spec:
   - helper
   - ts-parity
   acceptance_criteria:
-  - text: load_tools(scope) returns ToolLibrary; lib['name'] -> {description, parameters};
-      missing tool raises ToolNotFound; exported at package root Py+TS; TS twin loadTools/ToolLibrary/ToolNotFound
-      async-parity
+  - text: load_tools(scope) returns ToolLibrary; lib['name'] -> {description, parameters}; missing tool raises ToolNotFound; exported at package root Py+TS; TS twin loadTools/ToolLibrary/ToolNotFound async-parity
     done: true
     done_at: '2026-07-11T12:16:51+00:00'
     done_by: story-done-auto
@@ -37,12 +35,7 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: "load_tools/loadTools \u2192 ToolLibrary espelhando load_prompts. Superf\xED\
-      cie agent-facing = {description: metadata.description, parameters: spec.input_schema}\
-      \ \u2014 de onde a descri\xE7\xE3o realmente vive (confirmado no github-search.yaml).\
-      \ ToolNotFound (LookupError) exportado Py+TS. Py get sync (Mapping); TS get\
-      \ sync (record read n\xE3o precisa async, s\xF3 loadTools \xE9 async). L\xEA\
-      \ via mi._one/_all (blessed interno, tenant-aware no Py)."
+    summary: 'load_tools/loadTools → ToolLibrary espelhando load_prompts. Superfície agent-facing = {description: metadata.description, parameters: spec.input_schema} — de onde a descrição realmente vive (confirmado no github-search.yaml). ToolNotFound (LookupError) exportado Py+TS. Py get sync (Mapping); TS get sync (record read não precisa async, só loadTools é async). Lê via mi._one/_all (blessed interno, tenant-aware no Py).'
     commit_ref: fec9824409b71804205826e6b506a7d59d1605b0
   - at: '2026-07-11T11:21:23+00:00'
     actor: claude-code
@@ -69,7 +62,7 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-s-load-tools-helper-c-20260711-121648
-    summary: "TestRun tr-tg-s-load-tools-helper-c-20260711-121648 \u2192 pass"
+    summary: TestRun tr-tg-s-load-tools-helper-c-20260711-121648 → pass
     outcome: pass
   - at: '2026-07-11T12:16:54+00:00'
     actor: claude-code

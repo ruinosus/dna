@@ -10,5 +10,4 @@ spec:
   executed_by: claude-code
   executed_at: '2026-07-11T06:55:40+00:00'
   evidence:
-  - dna.load_prompts + PromptLibrary (Py) e loadPrompts (TS); mini-consumidor prova
-    shim 166 linhas -> 2; CI 11/11 verde
+  - dna.load_prompts + PromptLibrary (Py) e loadPrompts (TS); mini-consumidor prova shim 166 linhas -> 2; CI 11/11 verde

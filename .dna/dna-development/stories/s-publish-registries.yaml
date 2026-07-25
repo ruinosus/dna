@@ -3,22 +3,8 @@ kind: Story
 metadata:
   name: s-publish-registries
 spec:
-  title: "Publica\xE7\xE3o nos registries (ratificado Barna, evid\xEAncia: 2 consumidor-PRs\
-    \ no pilo"
-  description: "Publica\xE7\xE3o nos registries (ratificado Barna, evid\xEAncia: 2\
-    \ consumidor-PRs no piloto): PyPI dna-sdk + dna-cli (livres, verificados) e npm\
-    \ dna-sdk UNSCOPED (livre; espelha o PyPI; decis\xE3o ratificada \u2014 o termo\
-    \ SDK validado no enquadramento spec-first \xE0 la OTel opentelemetry-sdk). Lado\
-    \ repo: (1) rename TS @dna/sdk\u2192dna-sdk + build de publica\xE7\xE3o (tsc emit\
-    \ dist+d.ts, exports map, files) \u2014 npm publica JS compilado, n\xE3o TS cru;\
-    \ (2) dna-cli depend\xEAncia dna-sdk com constraint semver (resolve no PyPI; workspace\
-    \ source segue p/ dev); (3) release.yml tag-triggered v*: uv build sdist/wheel\
-    \ (sdk+cli) \u2192 PyPI via TRUSTED PUBLISHING (OIDC, zero token) \u2192 npm publish\
-    \ com provenance (token NPM_TOKEN como secret p/ o primeiro publish; OIDC depois);\
-    \ (4) sweep de docs/exemplos @dna/sdk\u2192dna-sdk + install one-liners (git-dep\
-    \ vira alternativa); (5) CHANGELOG Unreleased\u21920.1.0. Lado Barna (contas):\
-    \ PyPI pending publishers + npm token \u2014 checklist entregue \xE0 parte. Publica\xE7\
-    \xE3o real = tag v0.1.0 AP\xD3S o Barna configurar os registries."
+  title: 'Publicação nos registries (ratificado Barna, evidência: 2 consumidor-PRs no pilo'
+  description: 'Publicação nos registries (ratificado Barna, evidência: 2 consumidor-PRs no piloto): PyPI dna-sdk + dna-cli (livres, verificados) e npm dna-sdk UNSCOPED (livre; espelha o PyPI; decisão ratificada — o termo SDK validado no enquadramento spec-first à la OTel opentelemetry-sdk). Lado repo: (1) rename TS @dna/sdk→dna-sdk + build de publicação (tsc emit dist+d.ts, exports map, files) — npm publica JS compilado, não TS cru; (2) dna-cli dependência dna-sdk com constraint semver (resolve no PyPI; workspace source segue p/ dev); (3) release.yml tag-triggered v*: uv build sdist/wheel (sdk+cli) → PyPI via TRUSTED PUBLISHING (OIDC, zero token) → npm publish com provenance (token NPM_TOKEN como secret p/ o primeiro publish; OIDC depois); (4) sweep de docs/exemplos @dna/sdk→dna-sdk + install one-liners (git-dep vira alternativa); (5) CHANGELOG Unreleased→0.1.0. Lado Barna (contas): PyPI pending publishers + npm token — checklist entregue à parte. Publicação real = tag v0.1.0 APÓS o Barna configurar os registries.'
   status: done
   feature: f-dna-ecosystem
   priority: high
@@ -30,17 +16,13 @@ spec:
   reporter: claude-code
   business_value: 700
   acceptance_criteria:
-  - text: "Pacote npm builda e empacota (npm pack v\xE1lido, dist+types, name dna-sdk);\
-      \ wheels/sdist buildam limpos; release.yml completo (dry-run validado onde poss\xED\
-      vel); docs 100% no nome novo (guard verde); constraint do cli correta; CHANGELOG\
-      \ 0.1.0"
+  - text: Pacote npm builda e empacota (npm pack válido, dist+types, name dna-sdk); wheels/sdist buildam limpos; release.yml completo (dry-run validado onde possível); docs 100% no nome novo (guard verde); constraint do cli correta; CHANGELOG 0.1.0
     done: true
     done_at: '2026-07-10T18:52:07+00:00'
     done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - text: PR merged; checklist de contas entregue ao Barna; tag v0.1.0 aguardando
-      config dele
+  - text: PR merged; checklist de contas entregue ao Barna; tag v0.1.0 aguardando config dele
     done: true
     done_at: '2026-07-10T18:52:07+00:00'
     done_by: story-done-auto
@@ -63,33 +45,13 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: "Plano (worktree feat/s-publish-registries): (A) rename npm @dna/sdk\u2192\
-      dna-sdk + tsconfig.build.json (tsc emit dist/ ESM+d.ts, rootDir src) + copy\
-      \ de assets runtime (extensions/*/kinds/*.kind.yaml + DOCS*.md, carregados via\
-      \ import.meta.url \u2014 precisam viajar no dist) + exports map/files/engines/license/repository\
-      \ no package.json + bun.lock regen; valida\xE7\xE3o npm pack --dry-run + smoke\
-      \ do tarball em projeto scratch com Node. (B) cli: dna-sdk>=0.1,<0.2 com uv.sources\
-      \ path pra dev documentado. (C) release.yml tag v* \u2014 build-py (uv build\
-      \ sdk+cli) \u2192 publish-pypi (trusted publishing, env pypi) + publish-npm\
-      \ (bun run build + npm publish --provenance, NPM_TOKEN) com sanity tag==vers\xF5\
-      es. (D) CHANGELOG 0.1.0, sweep docs/exemplos (14 arquivos), install one-liners\
-      \ pip/npm prim\xE1rio + git-dep alternativa, RELEASING.md com checklist de contas\
-      \ do dono. Gates: suites TS+Py+cli, guards, mkdocs --strict, typedoc regen."
+    summary: 'Plano (worktree feat/s-publish-registries): (A) rename npm @dna/sdk→dna-sdk + tsconfig.build.json (tsc emit dist/ ESM+d.ts, rootDir src) + copy de assets runtime (extensions/*/kinds/*.kind.yaml + DOCS*.md, carregados via import.meta.url — precisam viajar no dist) + exports map/files/engines/license/repository no package.json + bun.lock regen; validação npm pack --dry-run + smoke do tarball em projeto scratch com Node. (B) cli: dna-sdk>=0.1,<0.2 com uv.sources path pra dev documentado. (C) release.yml tag v* — build-py (uv build sdk+cli) → publish-pypi (trusted publishing, env pypi) + publish-npm (bun run build + npm publish --provenance, NPM_TOKEN) com sanity tag==versões. (D) CHANGELOG 0.1.0, sweep docs/exemplos (14 arquivos), install one-liners pip/npm primário + git-dep alternativa, RELEASING.md com checklist de contas do dono. Gates: suites TS+Py+cli, guards, mkdocs --strict, typedoc regen.'
     commit_ref: f47f948830f83450ccecd40a1198d5f00b387c6b
   - at: '2026-07-10T18:19:40+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "Build+gates verdes: sdk-ts bun test 1337 pass + typecheck; sdk-py 2756\
-      \ pass; cli 341 pass; brand/coverage/drift guards limpos; mkdocs --strict OK.\
-      \ npm pack = 239 files/366kB (dist JS+d.ts + 37 assets runtime kind.yaml/DOCS.md\
-      \ + LICENSE/README); smoke do tarball sob Node 22: quickInstance no hello-genome\
-      \ + 69 Kinds registrados (descriptors carregam do dist). uv build: 4 artifacts\
-      \ limpos; wheel do dna-cli carrega dna-sdk<0.2,>=0.1. Requisito atualizado aplicado:\
-      \ publish-pypi dividido em publish-pypi-sdk (env pypi) + publish-pypi-cli (env\
-      \ pypi-cli) com artifacts separados dist-sdk-py/dist-cli \u2014 PyPI s\xF3 aceita\
-      \ um pending publisher por tupla owner+repo+workflow+environment; RELEASING.md\
-      \ reflete os dois environments."
+    summary: 'Build+gates verdes: sdk-ts bun test 1337 pass + typecheck; sdk-py 2756 pass; cli 341 pass; brand/coverage/drift guards limpos; mkdocs --strict OK. npm pack = 239 files/366kB (dist JS+d.ts + 37 assets runtime kind.yaml/DOCS.md + LICENSE/README); smoke do tarball sob Node 22: quickInstance no hello-genome + 69 Kinds registrados (descriptors carregam do dist). uv build: 4 artifacts limpos; wheel do dna-cli carrega dna-sdk<0.2,>=0.1. Requisito atualizado aplicado: publish-pypi dividido em publish-pypi-sdk (env pypi) + publish-pypi-cli (env pypi-cli) com artifacts separados dist-sdk-py/dist-cli — PyPI só aceita um pending publisher por tupla owner+repo+workflow+environment; RELEASING.md reflete os dois environments.'
     commit_ref: f47f948830f83450ccecd40a1198d5f00b387c6b
   - at: '2026-07-10T18:21:15+00:00'
     actor: claude-code
@@ -107,42 +69,25 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: "PR #36 aberto, checks 12/12 verdes (sdk-ts, sdk-py 3.12+3.13, cli 3.12+3.13,\
-      \ postgres, brand-guard, commit-emails, gitleaks, docs-build, docs-links; deploy=skip\
-      \ \xE9 main-only). N\xC3O mergeado e NENHUMA tag criada \u2014 publica\xE7\xE3\
-      o real \xE9 a tag v0.1.0 ap\xF3s o dono configurar PyPI pending publishers (dna-sdk\u2192\
-      env pypi, dna-cli\u2192env pypi-cli) + NPM_TOKEN (checklist em RELEASING.md)."
+    summary: 'PR #36 aberto, checks 12/12 verdes (sdk-ts, sdk-py 3.12+3.13, cli 3.12+3.13, postgres, brand-guard, commit-emails, gitleaks, docs-build, docs-links; deploy=skip é main-only). NÃO mergeado e NENHUMA tag criada — publicação real é a tag v0.1.0 após o dono configurar PyPI pending publishers (dna-sdk→env pypi, dna-cli→env pypi-cli) + NPM_TOKEN (checklist em RELEASING.md).'
     commit_ref: 6b7ee3713a32ff8453d7c78929380d8a6e784b5e
   - at: '2026-07-10T18:30:16+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "Rework do release (config real dos registries): (1) PyPI deduplica pending\
-      \ publishers pela tupla completa owner+repo+FILENAME do workflow+environment\
-      \ \u2192 dois arquivos: release.yml (build+publish dna-sdk env pypi + job npm\
-      \ + sanity) e release-cli.yml (build+publish dna-cli env pypi-cli + sanity).\
-      \ (2) npm sem token/secret: primeiro publish do dna-sdk ser\xE1 manual/local\
-      \ pelo dono (npm login + npm publish), depois Trusted Publisher OIDC nas settings\
-      \ do pacote; o job publish-npm usa OIDC puro (node 24 + npm@latest >=11.5.1,\
-      \ sem NODE_AUTH_TOKEN) com guard step que SKIPA se npm view dna-sdk@vers\xE3\
-      o j\xE1 existir (idempotente p\xF3s-publish manual). RELEASING.md e CHANGELOG\
-      \ atualizados. YAMLs validados, guards+mkdocs verdes."
+    summary: 'Rework do release (config real dos registries): (1) PyPI deduplica pending publishers pela tupla completa owner+repo+FILENAME do workflow+environment → dois arquivos: release.yml (build+publish dna-sdk env pypi + job npm + sanity) e release-cli.yml (build+publish dna-cli env pypi-cli + sanity). (2) npm sem token/secret: primeiro publish do dna-sdk será manual/local pelo dono (npm login + npm publish), depois Trusted Publisher OIDC nas settings do pacote; o job publish-npm usa OIDC puro (node 24 + npm@latest >=11.5.1, sem NODE_AUTH_TOKEN) com guard step que SKIPA se npm view dna-sdk@versão já existir (idempotente pós-publish manual). RELEASING.md e CHANGELOG atualizados. YAMLs validados, guards+mkdocs verdes.'
     commit_ref: 6cf88d68b461f8531c8ff4e1813c97dc083f1de3
   - at: '2026-07-10T18:52:06+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "Publica\xE7\xE3o REAL conclu\xEDda: dna-sdk 0.1.0 no PyPI (OIDC) + npm\
-      \ (manual 1a vez); dna-cli 0.1.0 no PyPI (OIDC, ap\xF3s fix do environment pypi-cli\
-      \ no pending publisher). Tag v0.1.0. Falta s\xF3 o Trusted Publisher do npm\
-      \ (config de conta) p/ releases 100% autom\xE1ticas."
+    summary: 'Publicação REAL concluída: dna-sdk 0.1.0 no PyPI (OIDC) + npm (manual 1a vez); dna-cli 0.1.0 no PyPI (OIDC, após fix do environment pypi-cli no pending publisher). Tag v0.1.0. Falta só o Trusted Publisher do npm (config de conta) p/ releases 100% automáticas.'
     commit_ref: dd692ee0ffcd4e469295106cd5047f251beffcbc
   - at: '2026-07-10T18:52:09+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: 3 pacotes publicados nos 2 registries; release = tag-only daqui em diante
-      (RELEASING.md)
+    summary: 3 pacotes publicados nos 2 registries; release = tag-only daqui em diante (RELEASING.md)
   - at: '2026-07-10T18:52:58+00:00'
     actor: claude-code
     type: artifact_produced
@@ -156,14 +101,13 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-s-publish-registries-20260710-185259
-    summary: "TestRun tr-tg-s-publish-registries-20260710-185259 \u2192 pass"
+    summary: TestRun tr-tg-s-publish-registries-20260710-185259 → pass
     outcome: pass
   - at: '2026-07-10T18:53:03+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: 3 pacotes publicados nos 2 registries; release = tag-only daqui em diante
-      (RELEASING.md)
+    summary: 3 pacotes publicados nos 2 registries; release = tag-only daqui em diante (RELEASING.md)
   - at: '2026-07-10T18:53:05+00:00'
     actor: claude-code
     type: status_change

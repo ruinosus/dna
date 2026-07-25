@@ -3,10 +3,7 @@ kind: Issue
 metadata:
   name: i-014-story-check-ac-greedy-match
 spec:
-  description: "Feedback do piloto fase-2: 'dna sdlc story check --ac 1 --ac 2' marcou\
-    \ 3 ACs \u2014 matching de \xEDndice/substring aparentemente guloso (1 casa 1\
-    \ e possivelmente 10/11, ou substring do texto). Red\u2192green: reproduzir com\
-    \ story de 3+ ACs, corrigir pra match exato de \xEDndice."
+  description: 'Feedback do piloto fase-2: ''dna sdlc story check --ac 1 --ac 2'' marcou 3 ACs — matching de índice/substring aparentemente guloso (1 casa 1 e possivelmente 10/11, ou substring do texto). Red→green: reproduzir com story de 3+ ACs, corrigir pra match exato de índice.'
   type: bug
   severity: medium
   status: resolved
@@ -22,13 +19,7 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: "Fix: seletor num\xE9rico em _mark_checklist_items agora \xE9 match EXATO\
-      \ de \xEDndice (int) \u2014 sem fallback de substring (era isso: '--ac 1' tamb\xE9\
-      m casava qualquer item cujo TEXTO contivesse '1', ex. 'API v1', '10 retries';\
-      \ o repro do piloto '--ac 1 --ac 2' marcava 3/3). --dod compartilha a fun\xE7\
-      \xE3o \u2014 mesmo fix. Red\u2192green em test_story_check.py (5 testes novos,\
-      \ incluindo out-of-range e substring preservado). Smoke real: '\u2713 checked\
-      \ 2 AC' com 2 'done: true' no YAML. Commit 48ed56c."
+    summary: 'Fix: seletor numérico em _mark_checklist_items agora é match EXATO de índice (int) — sem fallback de substring (era isso: ''--ac 1'' também casava qualquer item cujo TEXTO contivesse ''1'', ex. ''API v1'', ''10 retries''; o repro do piloto ''--ac 1 --ac 2'' marcava 3/3). --dod compartilha a função — mesmo fix. Red→green em test_story_check.py (5 testes novos, incluindo out-of-range e substring preservado). Smoke real: ''✓ checked 2 AC'' com 2 ''done: true'' no YAML. Commit 48ed56c.'
   - at: '2026-07-10T17:41:31+00:00'
     actor: claude-code
     type: status_change

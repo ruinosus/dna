@@ -1,0 +1,15 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-071-debrand-hardcoded-scope-default
+spec:
+  description: 'O SDK neutro tem o scope de dogfood da DNA HARDCODED como default: intel/engine.py:41 DEFAULT_SCOPE=''dna-development'' (usado como default de parametro em 5+ funcoes do engine) e kind_cmd.py:23 default=''dna-development'' (enquanto mcp/api/emit/explain usam default=None + auto-detect). Alem do fallback final de compat na resolucao do scope SDLC. Um terceiro que faz pip install dna-sdk recebe o board de desenvolvimento DA DNA como default. Vazamento de branding no open-core (mesma classe do Spec C de metering). Fix = DESBRANDAR (resolucao neutra: sole scope auto-detectado / scope explicito), nao renomear pra ''dna''.'
+  type: bug
+  severity: high
+  status: open
+  timeline:
+  - at: '2026-07-25T08:38:36+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

@@ -3,13 +3,13 @@ kind: Issue
 metadata:
   name: i-024-cloud-open-core-boundary
 spec:
-  description: "DECIS\xC3O 4/6 \xB7 DNA Cloud (ref: adr-dna-cloud-saas). Fronteira\
-    \ open-core: o que \xE9 OSS (gr\xE1tis) vs pago?\nPROPOSTA:\n- OSS (repo p\xFA\
-    blico, nunca capado): SDK/CLI/kernel/emit/MCP self-host \u2014 tudo que j\xE1\
-    \ \xE9 p\xFAblico hoje.\n- PAGO (DNA Cloud): hospedagem multi-tenant gerenciada,\
-    \ portal, billing, quota, SSO enterprise, overlays-as-a-service, SLA/support.\n\
-    - Regra: o core nunca perde feature; o pago \xE9 conveni\xEAncia + escala gerenciada.\n\
-    Confirma essa linha (SIM), ou quer mover algo pra um lado?:"
+  description: |-
+    DECISÃO 4/6 · DNA Cloud (ref: adr-dna-cloud-saas). Fronteira open-core: o que é OSS (grátis) vs pago?
+    PROPOSTA:
+    - OSS (repo público, nunca capado): SDK/CLI/kernel/emit/MCP self-host — tudo que já é público hoje.
+    - PAGO (DNA Cloud): hospedagem multi-tenant gerenciada, portal, billing, quota, SSO enterprise, overlays-as-a-service, SLA/support.
+    - Regra: o core nunca perde feature; o pago é conveniência + escala gerenciada.
+    Confirma essa linha (SIM), ou quer mover algo pra um lado?:
   type: question
   severity: high
   status: resolved
@@ -27,8 +27,6 @@ spec:
     source: cli
     from: open
     to: resolved
-    summary: "Duplicado \u2014 as 6 decis\xF5es j\xE1 vivem em ADR/adr-dna-cloud-saas\
-      \ (\xA7 Open decisions, status proposed). Decidir l\xE1, n\xE3o como Issue."
+    summary: Duplicado — as 6 decisões já vivem em ADR/adr-dna-cloud-saas (§ Open decisions, status proposed). Decidir lá, não como Issue.
   closed_at: '2026-07-11T17:48:06+00:00'
-  resolution: "Duplicado \u2014 as 6 decis\xF5es j\xE1 vivem em ADR/adr-dna-cloud-saas\
-    \ (\xA7 Open decisions, status proposed). Decidir l\xE1, n\xE3o como Issue."
+  resolution: Duplicado — as 6 decisões já vivem em ADR/adr-dna-cloud-saas (§ Open decisions, status proposed). Decidir lá, não como Issue.

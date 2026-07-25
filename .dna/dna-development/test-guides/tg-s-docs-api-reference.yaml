@@ -7,12 +7,9 @@ spec:
   kind_of_test: smoke
   status: active
   steps:
-  - action: "No Studio, valide: API-ref Py e TS geradas da fonte, naveg\xE1veis no\
-      \ site; CLI ref gerada; sem duplica\xE7\xE3o manual; build strict verde; CI\
-      \ 7/7"
-    where: "<rota/tela \u2014 ex. /scopes/:scope/...>"
-    expected: "<o que voc\xEA V\xCA quando est\xE1 certo (marque \u2717 S\xD3 se estiver\
-      \ quebrado)>"
+  - action: 'No Studio, valide: API-ref Py e TS geradas da fonte, navegáveis no site; CLI ref gerada; sem duplicação manual; build strict verde; CI 7/7'
+    where: <rota/tela — ex. /scopes/:scope/...>
+    expected: <o que você VÊ quando está certo (marque ✗ SÓ se estiver quebrado)>
   verifies:
   - Story/s-docs-api-reference
   created_at: '2026-07-09T16:00:40+00:00'

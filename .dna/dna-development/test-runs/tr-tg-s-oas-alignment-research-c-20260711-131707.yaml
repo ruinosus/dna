@@ -10,5 +10,4 @@ spec:
   executed_by: claude-code
   executed_at: '2026-07-11T13:17:07+00:00'
   evidence:
-  - 'PR #56; dna emit agent-framework byte-equal + carrega no AgentFactory; veredito
-    OAS no ADR'
+  - 'PR #56; dna emit agent-framework byte-equal + carrega no AgentFactory; veredito OAS no ADR'

@@ -3,10 +3,8 @@ kind: Feature
 metadata:
   name: f-foundry-emit-adoption
 spec:
-  title: "Foundry autora em DNA \u2192 emite agent-framework nativo (modelo Terraform)"
-  description: "Marcador de produto: ado\xE7\xE3o do emissor DNA\u2192agent-framework\
-    \ como fluxo de autoria da foundry (modelo Terraform: autora declarativo, emite\
-    \ runtime nativo). Decis\xE3o de produto do dono; ainda n\xE3o implementado."
+  title: Foundry autora em DNA → emite agent-framework nativo (modelo Terraform)
+  description: 'Marcador de produto: adoção do emissor DNA→agent-framework como fluxo de autoria da foundry (modelo Terraform: autora declarativo, emite runtime nativo). Decisão de produto do dono; ainda não implementado.'
   status: discovery
   epic: e-dna-portability
   reporter: claude-code

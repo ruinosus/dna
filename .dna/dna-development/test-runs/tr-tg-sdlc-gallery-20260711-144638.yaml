@@ -9,11 +9,7 @@ spec:
   - Story/s-sdlc-gallery
   executed_by: claude-code
   executed_at: '2026-07-11T14:46:38+00:00'
-  notes: "Rodado ao vivo: 'dna sdlc gallery' listou os 6 HtmlArtifacts agrupados (Decis\xF5\
-    es 1 / Shipado 2 / Em andamento 3); ha-dna-vs-agentframework sob Decis\xF5es linkado\
-    \ ao ADR. '--html' gerou painel self-contained (0 refs CDN, 5 links claude.ai\
-    \ clic\xE1veis, 6 cards) \u2014 verificado via screenshot no browser. Os 5 prot\xF3\
-    tipos presentes com published_url."
+  notes: 'Rodado ao vivo: ''dna sdlc gallery'' listou os 6 HtmlArtifacts agrupados (Decisões 1 / Shipado 2 / Em andamento 3); ha-dna-vs-agentframework sob Decisões linkado ao ADR. ''--html'' gerou painel self-contained (0 refs CDN, 5 links claude.ai clicáveis, 6 cards) — verificado via screenshot no browser. Os 5 protótipos presentes com published_url.'
   evidence:
   - HtmlArtifact/ha-dna-dx-antes-depois
   - HtmlArtifact/ha-tenant-overlays

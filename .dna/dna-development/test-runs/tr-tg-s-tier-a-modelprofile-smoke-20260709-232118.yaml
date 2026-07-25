@@ -10,7 +10,4 @@ spec:
   executed_by: claude-code
   executed_at: '2026-07-09T23:21:18+00:00'
   evidence:
-  - "smoke-produto:test_modelreg_prompt_budget.py::caminho-veto roda write_document\
-    \ REAL contra kernel+fs (n\xE3o mock) e o erro did\xE1tico PromptBudgetExceededError\
-    \ aparece; equivalente TS via writeDocument real (14 casos); validado por mim\
-    \ orquestrador revisando os asserts do PR #23"
+  - 'smoke-produto:test_modelreg_prompt_budget.py::caminho-veto roda write_document REAL contra kernel+fs (não mock) e o erro didático PromptBudgetExceededError aparece; equivalente TS via writeDocument real (14 casos); validado por mim orquestrador revisando os asserts do PR #23'

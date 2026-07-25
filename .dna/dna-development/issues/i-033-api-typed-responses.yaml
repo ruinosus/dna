@@ -3,9 +3,7 @@ kind: Issue
 metadata:
   name: i-033-api-typed-responses
 spec:
-  description: REST read-API handlers return dict[str,Any] -> opaque OpenAPI response
-    schemas -> dna-client response bodies are untyped. Add Pydantic response_model
-    per /v1 endpoint so the clients (+ drift test) get typed responses.
+  description: REST read-API handlers return dict[str,Any] -> opaque OpenAPI response schemas -> dna-client response bodies are untyped. Add Pydantic response_model per /v1 endpoint so the clients (+ drift test) get typed responses.
   type: task
   severity: medium
   status: open

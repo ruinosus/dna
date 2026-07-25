@@ -3,16 +3,8 @@ kind: Story
 metadata:
   name: s-mcp-remote-transport
 spec:
-  title: "Phase 2 \u2014 Streamable HTTP transport (host the MCP server remotely)"
-  description: "ENABLE + configure FastMCP's NATIVE Streamable HTTP transport (the\
-    \ same FastMCP server already serves stdio AND http via run(transport='http'|'sse'|'stdio'))\
-    \ so the DNA MCP server becomes hostable/remote \u2014 unblocking WEB clients\
-    \ (Claude web, ChatGPT) that cannot spawn a local stdio process. Because FastMCP\
-    \ ships the transport, the work is enablement + deployment (a --transport http\
-    \ option on `dna mcp serve`, host/port/path config, a deploy story), NOT implementing\
-    \ a transport. The MVP stays stdio (local: Claude Code/Cursor/Copilot); this makes\
-    \ the SAME server reachable over HTTP. Verified against current FastMCP docs (gofastmcp.com):\
-    \ Streamable HTTP is the current standard remote transport (MCP spec 2025-06-18)."
+  title: Phase 2 — Streamable HTTP transport (host the MCP server remotely)
+  description: 'ENABLE + configure FastMCP''s NATIVE Streamable HTTP transport (the same FastMCP server already serves stdio AND http via run(transport=''http''|''sse''|''stdio'')) so the DNA MCP server becomes hostable/remote — unblocking WEB clients (Claude web, ChatGPT) that cannot spawn a local stdio process. Because FastMCP ships the transport, the work is enablement + deployment (a --transport http option on `dna mcp serve`, host/port/path config, a deploy story), NOT implementing a transport. The MVP stays stdio (local: Claude Code/Cursor/Copilot); this makes the SAME server reachable over HTTP. Verified against current FastMCP docs (gofastmcp.com): Streamable HTTP is the current standard remote transport (MCP spec 2025-06-18).'
   status: done
   feature: f-dna-mcp-server
   priority: medium
@@ -22,14 +14,11 @@ spec:
   - remote
   - phase-2
   acceptance_criteria:
-  - text: "Given the server, When run with --transport http, Then FastMCP serves the\
-      \ MCP protocol over Streamable HTTP at the standard path (no new transport code\
-      \ \u2014 FastMCP native)"
+  - text: Given the server, When run with --transport http, Then FastMCP serves the MCP protocol over Streamable HTTP at the standard path (no new transport code — FastMCP native)
     done: true
     done_at: '2026-07-11T17:22:05+00:00'
     done_by: story-done-auto
-  - text: Given a WEB MCP client (no local stdio), When it connects over HTTP, Then
-      it reaches the same tools/resources as the stdio MVP
+  - text: Given a WEB MCP client (no local stdio), When it connects over HTTP, Then it reaches the same tools/resources as the stdio MVP
     done: true
     done_at: '2026-07-11T17:22:05+00:00'
     done_by: story-done-auto
@@ -39,9 +28,7 @@ spec:
     done: true
     done_at: '2026-07-11T17:22:05+00:00'
     done_by: story-done-auto
-  - text: 'Code: expand the --transport choice to FastMCP''s stdio|http|sse + host/port/path
-      options; a deployment note. Docs: hosting guide; Tests: HTTP smoke via FastMCP
-      Client; CI green'
+  - text: 'Code: expand the --transport choice to FastMCP''s stdio|http|sse + host/port/path options; a deployment note. Docs: hosting guide; Tests: HTTP smoke via FastMCP Client; CI green'
     done: true
     done_at: '2026-07-11T17:22:05+00:00'
     done_by: story-done-auto
@@ -73,19 +60,13 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-mcp-remote-transport-20260711-154807
-    summary: "TestRun tr-tg-mcp-remote-transport-20260711-154807 \u2192 pass"
+    summary: TestRun tr-tg-mcp-remote-transport-20260711-154807 → pass
     outcome: pass
   - at: '2026-07-11T15:49:00+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "Built: expanded 'dna mcp serve --transport' to stdio|http|sse|streamable-http\
-      \ + added --host/--port/--path (FastMCP-native Streamable HTTP, MCP spec 2025-06-18).\
-      \ Same server, both transports. Proof: test_mcp_transport.py drives a FastMCP\
-      \ Client over a REAL http:// socket (uvicorn on a free port, clean shutdown\
-      \ harness in conftest) \u2014 reaches all 10 tools + the manifest resource and\
-      \ composes a prompt live. Web-client config (Claude web/ChatGPT) documented\
-      \ in the guide. All 27 MCP tests + 474 CLI suite green; mkdocs --strict clean."
+    summary: 'Built: expanded ''dna mcp serve --transport'' to stdio|http|sse|streamable-http + added --host/--port/--path (FastMCP-native Streamable HTTP, MCP spec 2025-06-18). Same server, both transports. Proof: test_mcp_transport.py drives a FastMCP Client over a REAL http:// socket (uvicorn on a free port, clean shutdown harness in conftest) — reaches all 10 tools + the manifest resource and composes a prompt live. Web-client config (Claude web/ChatGPT) documented in the guide. All 27 MCP tests + 474 CLI suite green; mkdocs --strict clean.'
     commit_ref: 1a2601995f3612069fe51308a1e800a96fea6041
   - at: '2026-07-11T15:50:36+00:00'
     actor: claude-code
@@ -97,8 +78,7 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: 'PR #66 (base main) covers transport + auth. CI must be 11/11 before
-      merge; do NOT merge.'
+    summary: 'PR #66 (base main) covers transport + auth. CI must be 11/11 before merge; do NOT merge.'
   - at: '2026-07-11T15:51:44+00:00'
     actor: claude-code
     type: status_change
@@ -123,13 +103,13 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-s-mcp-remote-transport-20260711-172419
-    summary: "TestRun tr-tg-s-mcp-remote-transport-20260711-172419 \u2192 pass"
+    summary: TestRun tr-tg-s-mcp-remote-transport-20260711-172419 → pass
     outcome: pass
   - at: '2026-07-11T17:24:27+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "MCP HTTP remote transport \u2014 tests green in CI"
+    summary: MCP HTTP remote transport — tests green in CI
   - at: '2026-07-11T17:26:12+00:00'
     actor: claude-code
     type: comment
@@ -139,8 +119,7 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: "backend/lib sem UI: coberto por TestRun de integra\xE7\xE3o (tg-s-mcp-remote-transport)\
-      \ + suite verde no CI; product-smoke n\xE3o se aplica"
+    summary: 'backend/lib sem UI: coberto por TestRun de integração (tg-s-mcp-remote-transport) + suite verde no CI; product-smoke não se aplica'
   - at: '2026-07-11T17:27:23+00:00'
     actor: claude-code
     type: status_change

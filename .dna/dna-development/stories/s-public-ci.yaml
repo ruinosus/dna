@@ -3,13 +3,8 @@ kind: Story
 metadata:
   name: s-public-ci
 spec:
-  title: 'GitHub Actions for this repo: pytest (sdk-py + cli) + bun test + typecheck
-    + bra'
-  description: 'GitHub Actions for this repo: pytest (sdk-py + cli) + bun test + typecheck
-    + brand grep-guard (internal brand tokens (redacted; see scripts/brand_guard.py); allowlist: a stock ticker in
-    the real xlsx skill fixture) + secret scan (gitleaks). Demos that clone external
-    repos must be offline-safe in CI. De-noise ajv ''unknown format'' warnings (strict:false
-    parity with Py).'
+  title: 'GitHub Actions for this repo: pytest (sdk-py + cli) + bun test + typecheck + bra'
+  description: 'GitHub Actions for this repo: pytest (sdk-py + cli) + bun test + typecheck + brand grep-guard (internal brand tokens (redacted; see scripts/brand_guard.py); allowlist: a stock ticker in the real xlsx skill fixture) + secret scan (gitleaks). Demos that clone external repos must be offline-safe in CI. De-noise ajv ''unknown format'' warnings (strict:false parity with Py).'
   status: done
   feature: f-dna-1.0-readiness
   priority: high
@@ -19,8 +14,7 @@ spec:
   reporter: claude-code
   business_value: 600
   acceptance_criteria:
-  - text: CI green on main; guard fails on planted brand token; gitleaks wired; ajv
-      warnings gone
+  - text: CI green on main; guard fails on planted brand token; gitleaks wired; ajv warnings gone
     done: true
     done_at: '2026-07-08T19:33:13+00:00'
     done_by: story-done-auto
@@ -49,31 +43,13 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: "Build conclu\xEDdo nos gates locais. (1) 3 workflows: python.yml (sdk-py\
-      \ base sem PG + job postgres com service postgres:16 rodando s\xF3 -m requires_postgres\
-      \ + job cli), typescript.yml (bun test + tsc), guards.yml (brand_guard self-test+scan,\
-      \ gitleaks). (2) scripts/brand_guard.py stdlib: allowlist expl\xEDcita por arquivo+palavra\
-      \ (ticker no xlsx SKILL.md); self-test com 7 tokens\
-      \ plantados. Nota: usei \\baap prefix-boundary (o \\baap\\b da spec N\xC3O pega\
-      \ o ticker \u2014 allowlist ficaria morta). (3) DNA_OFFLINE=1 no conftest for\xE7\
-      a requires_network a skipar em CI (runner TEM rede; test_github_real clonaria\
-      \ anthropics/skills). demo.py do market \xE9 100% local (fixtures commitados)\
-      \ \u2014 nada a mudar. (4) ajv de-noise: createAjv() em kind_base.ts com formats\
-      \ stub annotation-only (date-time/date/email/markdown) = paridade com jsonschema\
-      \ py; 14.262 linhas de warning \u2192 0. (5) Validei o job postgres contra postgres:16\
-      \ descart\xE1vel e achei 2 quebras pr\xE9-existentes: import de dna.adapters.postgres.writable\
-      \ (nome pr\xE9-extra\xE7\xE3o, nunca existiu) \u2014 consertei nos testes (PostgresSource\
-      \ + pool, fallback DATABASE_URL); e leak de conex\xE3o em _acquire_safe (adapters/,\
-      \ \xE1rea do agente sqla) \u2192 i-001-pg-acquire-safe-conn-leak + skip referenciado.\
-      \ Gates: pytest 2653 pass, pg-marked 54 pass em 8s, cli 198 pass, bun 1203 pass\
-      \ + typecheck limpo, gitleaks hist\xF3rico+tree sem leaks (sem necessidade de\
-      \ .gitleaks.toml), brand_guard verde."
+    summary: 'Build concluído nos gates locais. (1) 3 workflows: python.yml (sdk-py base sem PG + job postgres com service postgres:16 rodando só -m requires_postgres + job cli), typescript.yml (bun test + tsc), guards.yml (brand_guard self-test+scan, gitleaks). (2) scripts/brand_guard.py stdlib: allowlist explícita por arquivo+palavra (ticker no xlsx SKILL.md); self-test com 7 tokens plantados. Nota: usei \baap prefix-boundary (o \baap\b da spec NÃO pega o ticker — allowlist ficaria morta). (3) DNA_OFFLINE=1 no conftest força requires_network a skipar em CI (runner TEM rede; test_github_real clonaria anthropics/skills). demo.py do market é 100% local (fixtures commitados) — nada a mudar. (4) ajv de-noise: createAjv() em kind_base.ts com formats stub annotation-only (date-time/date/email/markdown) = paridade com jsonschema py; 14.262 linhas de warning → 0. (5) Validei o job postgres contra postgres:16 descartável e achei 2 quebras pré-existentes: import de dna.adapters.postgres.writable (nome pré-extração, nunca existiu) — consertei nos testes (PostgresSource + pool, fallback DATABASE_URL); e leak de conexão em _acquire_safe (adapters/, área do agente sqla) → i-001-pg-acquire-safe-conn-leak + skip referenciado. Gates: pytest 2653 pass, pg-marked 54 pass em 8s, cli 198 pass, bun 1203 pass + typecheck limpo, gitleaks histórico+tree sem leaks (sem necessidade de .gitleaks.toml), brand_guard verde.'
     commit_ref: 3ab6f0b1e8b77623195248396df8f6f3076260ab
   - at: '2026-07-08T19:23:00+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "PR https://github.com/ruinosus/dna/pull/1 aberto \u2014 done on merge"
+    summary: PR https://github.com/ruinosus/dna/pull/1 aberto — done on merge
   - at: '2026-07-08T19:23:01+00:00'
     actor: claude-code
     type: status_change
@@ -84,26 +60,13 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: "CI real reprovou 4 jobs no PR #1 \u2014 2 causas: (1) TypeVar(default=...)\
-      \ (PEP 696) em dna/kernel/document.py \xE9 stdlib s\xF3 no 3.13+; eu pinei 3.12\
-      \ no workflow mas rodei 3.13 local. Fix: workflows \u2192 3.13 + requires-python\
-      \ >=3.13,<3.14 no sdk-py e cli (floor 3.13 em vez de typing_extensions \u2014\
-      \ SDK novo). (2) gitleaks-action@v2 morre com 403 em GET /pulls/1/commits (token\
-      \ de workflow sem perms em pull_request) \u2014 troquei pela release bin\xE1\
-      ria pinada v8.30.1 (gitleaks detect --redact, sem token). Gates re-rodados:\
-      \ yaml lint ok, tarball URL 200, sdk-py 2653 pass, cli 198 pass. Aguardando\
-      \ checks do PR."
+    summary: 'CI real reprovou 4 jobs no PR #1 — 2 causas: (1) TypeVar(default=...) (PEP 696) em dna/kernel/document.py é stdlib só no 3.13+; eu pinei 3.12 no workflow mas rodei 3.13 local. Fix: workflows → 3.13 + requires-python >=3.13,<3.14 no sdk-py e cli (floor 3.13 em vez de typing_extensions — SDK novo). (2) gitleaks-action@v2 morre com 403 em GET /pulls/1/commits (token de workflow sem perms em pull_request) — troquei pela release binária pinada v8.30.1 (gitleaks detect --redact, sem token). Gates re-rodados: yaml lint ok, tarball URL 200, sdk-py 2653 pass, cli 198 pass. Aguardando checks do PR.'
     commit_ref: 7f1495dbdda5ef92d0b2b2a29130c32052503149
   - at: '2026-07-08T19:31:48+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "PR #1 100% verde no CI real do GitHub: brand-guard 5s, gitleaks 9s (8\
-      \ commits, no leaks), cli 14s, postgres 40s (service container ok), sdk-ts 41s,\
-      \ sdk-py 1m53s. Fixes que fecharam: python 3.13 nos 3 jobs + requires-python\
-      \ >=3.13 (PEP 696 TypeVar default) e gitleaks bin\xE1rio pinado v8.30.1 no lugar\
-      \ da action (403 no token de pull_request). PR pronto pra merge \u2014 done\
-      \ on merge."
+    summary: 'PR #1 100% verde no CI real do GitHub: brand-guard 5s, gitleaks 9s (8 commits, no leaks), cli 14s, postgres 40s (service container ok), sdk-ts 41s, sdk-py 1m53s. Fixes que fecharam: python 3.13 nos 3 jobs + requires-python >=3.13 (PEP 696 TypeVar default) e gitleaks binário pinado v8.30.1 no lugar da action (403 no token de pull_request). PR pronto pra merge — done on merge.'
     commit_ref: 7f1495dbdda5ef92d0b2b2a29130c32052503149
   - at: '2026-07-08T19:33:13+00:00'
     actor: claude-code
@@ -118,16 +81,13 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-s-public-ci-20260708-193313
-    summary: "TestRun tr-tg-s-public-ci-20260708-193313 \u2192 pass"
+    summary: TestRun tr-tg-s-public-ci-20260708-193313 → pass
     outcome: pass
   - at: '2026-07-08T19:33:14+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "PR #1 merged (primeiro PR do repo). 6/6 checks verdes no runner real.\
-      \ Incidente valioso: runner pegou floor de Python desonesto (TypeVar default=PEP\
-      \ 696 exige 3.13; requires-python corrigido) + gitleaks action sem perms de\
-      \ PR (bin\xE1rio pinado). CI \xE9 o gate daqui pra frente."
+    summary: 'PR #1 merged (primeiro PR do repo). 6/6 checks verdes no runner real. Incidente valioso: runner pegou floor de Python desonesto (TypeVar default=PEP 696 exige 3.13; requires-python corrigido) + gitleaks action sem perms de PR (binário pinado). CI é o gate daqui pra frente.'
   - at: '2026-07-08T19:33:14+00:00'
     actor: claude-code
     type: status_change

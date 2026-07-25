@@ -3,11 +3,8 @@ kind: Feature
 metadata:
   name: f-portfolio-kinds
 spec:
-  title: "Portfolio console \u2014 Kind data foundation (5 record Kinds)"
-  description: "The 5 descriptor Kinds behind the portfolio console (adr-portfolio-project-model):\
-    \ Organization / Project / Repo / Membership / Role. Project is the multi-repo\
-    \ container (N\u2014N repo_refs); Role ladder as data. Data foundation only \u2014\
-    \ console UI + resolve_role + enterprise SSO/SCIM land later."
+  title: Portfolio console — Kind data foundation (5 record Kinds)
+  description: 'The 5 descriptor Kinds behind the portfolio console (adr-portfolio-project-model): Organization / Project / Repo / Membership / Role. Project is the multi-repo container (N—N repo_refs); Role ladder as data. Data foundation only — console UI + resolve_role + enterprise SSO/SCIM land later.'
   status: discovery
   epic: e-portfolio-console
   reporter: claude-code

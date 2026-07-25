@@ -9,7 +9,4 @@ spec:
   - Story/s-engram-migration-postgres
   executed_by: claude-code
   executed_at: '2026-07-19T17:26:09+00:00'
-  notes: Todos os passos executados manualmente nesta sessao (worktree /private/tmp/dna-pg-migration).
-    Suite completa do SDK (packages/sdk-py) verde exceto a falha pre-existente/nao-relacionada
-    de test_pgvector_memory_conformance.py (extensao pgvector ausente neste Postgres
-    local de dev).
+  notes: Todos os passos executados manualmente nesta sessao (worktree /private/tmp/dna-pg-migration). Suite completa do SDK (packages/sdk-py) verde exceto a falha pre-existente/nao-relacionada de test_pgvector_memory_conformance.py (extensao pgvector ausente neste Postgres local de dev).

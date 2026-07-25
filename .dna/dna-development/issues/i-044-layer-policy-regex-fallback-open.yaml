@@ -3,16 +3,7 @@ kind: Issue
 metadata:
   name: i-044-layer-policy-regex-fallback-open
 spec:
-  description: "layer_resolver._policy_for_kind casa a politica de camada (open/restricted/locked)\
-    \ por manipulacao de string: match exato, depois sufixo, depois CamelCase->kebab\
-    \ por regex e sufixo de novo \u2014 e no fim cai em LayerPolicy.OPEN silenciosamente.\
-    \ Um alias que nao bate degrada de LOCKED para OPEN sem aviso. E a mesma natureza\
-    \ do dna_edges (relacao derivada de string em vez de declarada), so que em seguranca\
-    \ de composicao: a protecao mais forte do sistema pode evaporar por um typo de\
-    \ alias. Pronto quando: a relacao doc->politica e declarada (nao inferida de nome),\
-    \ ou no minimo o fallback e BARULHENTO (warn com nome do Kind + politica assumida)\
-    \ e um teste prova que alias nao-casado nao passa despercebido. Mutacao obrigatoria:\
-    \ um alias quebrado deve derrubar teste."
+  description: 'layer_resolver._policy_for_kind casa a politica de camada (open/restricted/locked) por manipulacao de string: match exato, depois sufixo, depois CamelCase->kebab por regex e sufixo de novo — e no fim cai em LayerPolicy.OPEN silenciosamente. Um alias que nao bate degrada de LOCKED para OPEN sem aviso. E a mesma natureza do dna_edges (relacao derivada de string em vez de declarada), so que em seguranca de composicao: a protecao mais forte do sistema pode evaporar por um typo de alias. Pronto quando: a relacao doc->politica e declarada (nao inferida de nome), ou no minimo o fallback e BARULHENTO (warn com nome do Kind + politica assumida) e um teste prova que alias nao-casado nao passa despercebido. Mutacao obrigatoria: um alias quebrado deve derrubar teste.'
   type: bug
   severity: high
   status: resolved
@@ -28,12 +19,6 @@ spec:
     source: cli
     from: open
     to: resolved
-    summary: 'PR #197, v0.22.0. Lookup pelo alias DECLARADO do registro; fallback
-      OPEN barulhento (UserWarning nomeando Kind + politica assumida); detector de
-      typo no build. Alias quebrado derruba teste. Restante (politica no KindPort)
-      e a i-049, que tambem cobre a assimetria leitura/escrita achada no caminho.'
+    summary: 'PR #197, v0.22.0. Lookup pelo alias DECLARADO do registro; fallback OPEN barulhento (UserWarning nomeando Kind + politica assumida); detector de typo no build. Alias quebrado derruba teste. Restante (politica no KindPort) e a i-049, que tambem cobre a assimetria leitura/escrita achada no caminho.'
   closed_at: '2026-07-21T14:05:50+00:00'
-  resolution: 'PR #197, v0.22.0. Lookup pelo alias DECLARADO do registro; fallback
-    OPEN barulhento (UserWarning nomeando Kind + politica assumida); detector de typo
-    no build. Alias quebrado derruba teste. Restante (politica no KindPort) e a i-049,
-    que tambem cobre a assimetria leitura/escrita achada no caminho.'
+  resolution: 'PR #197, v0.22.0. Lookup pelo alias DECLARADO do registro; fallback OPEN barulhento (UserWarning nomeando Kind + politica assumida); detector de typo no build. Alias quebrado derruba teste. Restante (politica no KindPort) e a i-049, que tambem cobre a assimetria leitura/escrita achada no caminho.'

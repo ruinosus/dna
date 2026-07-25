@@ -3,11 +3,8 @@ kind: Story
 metadata:
   name: s-intel-dedup-memory
 spec:
-  title: "Nunca mostrar o mesmo insight duas vezes: dedup sem\xE2ntico do candidato\
-    \ contra a "
-  description: "Nunca mostrar o mesmo insight duas vezes: dedup sem\xE2ntico do candidato\
-    \ contra a mem\xF3ria (LessonLearned) do que j\xE1 foi surfado/agido/dispensado\
-    \ \u2014 repeti\xE7\xE3o \xE9 a fonte #1 de ru\xEDdo."
+  title: 'Nunca mostrar o mesmo insight duas vezes: dedup semântico do candidato contra a '
+  description: 'Nunca mostrar o mesmo insight duas vezes: dedup semântico do candidato contra a memória (LessonLearned) do que já foi surfado/agido/dispensado — repetição é a fonte #1 de ruído.'
   status: review
   feature: f-dna-cloud-intelligence
   priority: high
@@ -18,18 +15,14 @@ spec:
   reporter: claude-code
   business_value: 700
   acceptance_criteria:
-  - "Cada insight surfado \xE9 gravado na mem\xF3ria (co-pillar) com estado: surfado\
-    \ | agido | dispensado."
-  - "Candidato novo \xE9 matcheado semanticamente contra o hist\xF3rico; duplicata\
-    \ (mesmo tema/mesma a\xE7\xE3o) \xE9 dropada antes da entrega."
-  - "Insight j\xE1 'agido' ou 'dispensado' pelo usu\xE1rio NUNCA reaparece (a n\xE3\
-    o ser que o contexto mude materialmente)."
+  - 'Cada insight surfado é gravado na memória (co-pillar) com estado: surfado | agido | dispensado.'
+  - Candidato novo é matcheado semanticamente contra o histórico; duplicata (mesmo tema/mesma ação) é dropada antes da entrega.
+  - Insight já 'agido' ou 'dispensado' pelo usuário NUNCA reaparece (a não ser que o contexto mude materialmente).
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - "Dedup testado: rodar 2x o mesmo research \u2192 2\xAA vez entrega 0 insights\
-    \ novos."
-  - "Tenant-isolado (usa o co-pillar de mem\xF3ria, respeita o Tier memory_mode)."
-  - "M\xE9trica: taxa de dedup por pass."
+  - 'Dedup testado: rodar 2x o mesmo research → 2ª vez entrega 0 insights novos.'
+  - Tenant-isolado (usa o co-pillar de memória, respeita o Tier memory_mode).
+  - 'Métrica: taxa de dedup por pass.'
   definition_of_done_source: cli-create
   created_at: '2026-07-12T13:39:03+00:00'
   updated_at: '2026-07-12T19:14:03+00:00'
@@ -49,23 +42,13 @@ spec:
     actor: claude-code
     type: decision
     source: cli
-    summary: "Core landed: pure dna/extensions/intel/dedup.py (normalized_key floor\
-      \ + insight_text + dedup_partition) wired into engine.run_pass step 4. Before\
-      \ writing survivors it loads existing IntelInsight for the source (all states)\
-      \ and drops duplicates via key OR cosine (>=0.97) over kernel.embed \u2014 the\
-      \ co-pillar semantic space. Chose kernel.embed + dna.memory.semantic.cosine_similarity\
-      \ (deterministic fake floor offline) over a search-provider recall so dedup\
-      \ works with zero extras; the normalized_key is the degrade-gracefully floor.\
-      \ Test test_rerun_pass_yields_zero_new_insights: run pass 2x -> 2nd yields kept\
-      \ 0, deduped 7, docs unchanged at 7. dedup_rate metric on PassResult. Faces\
-      \ untouched (still thin)."
+    summary: 'Core landed: pure dna/extensions/intel/dedup.py (normalized_key floor + insight_text + dedup_partition) wired into engine.run_pass step 4. Before writing survivors it loads existing IntelInsight for the source (all states) and drops duplicates via key OR cosine (>=0.97) over kernel.embed — the co-pillar semantic space. Chose kernel.embed + dna.memory.semantic.cosine_similarity (deterministic fake floor offline) over a search-provider recall so dedup works with zero extras; the normalized_key is the degrade-gracefully floor. Test test_rerun_pass_yields_zero_new_insights: run pass 2x -> 2nd yields kept 0, deduped 7, docs unchanged at 7. dedup_rate metric on PassResult. Faces untouched (still thin).'
     commit_ref: 54dafad5e6b1d1fadda53db5768d8f633c76c0f2
   - at: '2026-07-12T19:13:58+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "PR #91 opened \u2014 https://github.com/ruinosus/dna/pull/91. Core dedup\
-      \ + tests green; docs regen + guards clean."
+    summary: 'PR #91 opened — https://github.com/ruinosus/dna/pull/91. Core dedup + tests green; docs regen + guards clean.'
   - at: '2026-07-12T19:14:03+00:00'
     actor: claude-code
     type: status_change

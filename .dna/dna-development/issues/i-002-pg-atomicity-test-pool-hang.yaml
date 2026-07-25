@@ -3,13 +3,7 @@ kind: Issue
 metadata:
   name: i-002-pg-atomicity-test-pool-hang
 spec:
-  description: "tests/test_postgres_source.py::TestPhase15_1OutboxWrites::test_write_atomicity_no_partial_state\
-    \ times out (pytest-timeout 120s) with 'Pool.close() is taking over 60 seconds'\
-    \ \u2014 the raw PostgresSource asyncpg-pool-under-test hang class documented\
-    \ upstream as i-093 (the new SqlAlchemySource passes the equivalent scenarios\
-    \ under the SQLAlchemy pool, evidence it's a raw-pool artifact). Reproduced on\
-    \ base commit ee2d2a3 with DATABASE_URL set (pre-existing; found while gating\
-    \ s-sqlalchemy-source-production)."
+  description: tests/test_postgres_source.py::TestPhase15_1OutboxWrites::test_write_atomicity_no_partial_state times out (pytest-timeout 120s) with 'Pool.close() is taking over 60 seconds' — the raw PostgresSource asyncpg-pool-under-test hang class documented upstream as i-093 (the new SqlAlchemySource passes the equivalent scenarios under the SQLAlchemy pool, evidence it's a raw-pool artifact). Reproduced on base commit ee2d2a3 with DATABASE_URL set (pre-existing; found while gating s-sqlalchemy-source-production).
   type: bug
   severity: medium
   status: resolved
@@ -25,27 +19,9 @@ spec:
     source: cli
     from: open
     to: resolved
-    summary: "Resolvida por REMO\xC7\xC3O do c\xF3digo afetado (s-retire-raw-sql-adapters):\
-      \ o hang era da classe asyncpg-pool-under-test do PostgresSource cru (upstream\
-      \ i-093); o adapter e o teste que travava (test_postgres_source.py::TestPhase15_1OutboxWrites::test_write_atomicity_no_partial_state)\
-      \ foram removidos. O caminho SQL Py \xE9 o SqlAlchemySource, que N\xC3O apresenta\
-      \ o defeito \u2014 evid\xEAncia: os cen\xE1rios equivalentes de atomicidade/outbox\
-      \ (test_pg_write_emits_outbox_seq_and_notify_with_raw_parity, failed-write rollback\
-      \ sem estado parcial) passam sob o pool do SQLAlchemy contra PG real, e a matriz\
-      \ de conformance roda bundle_entry_round_trip no dialeto pg SEM o skip i-093\
-      \ (o skip morreu com o cru \u2014 prova positiva de que era artefato do pool\
-      \ cru, n\xE3o de schema/sem\xE2ntica)."
+    summary: 'Resolvida por REMOÇÃO do código afetado (s-retire-raw-sql-adapters): o hang era da classe asyncpg-pool-under-test do PostgresSource cru (upstream i-093); o adapter e o teste que travava (test_postgres_source.py::TestPhase15_1OutboxWrites::test_write_atomicity_no_partial_state) foram removidos. O caminho SQL Py é o SqlAlchemySource, que NÃO apresenta o defeito — evidência: os cenários equivalentes de atomicidade/outbox (test_pg_write_emits_outbox_seq_and_notify_with_raw_parity, failed-write rollback sem estado parcial) passam sob o pool do SQLAlchemy contra PG real, e a matriz de conformance roda bundle_entry_round_trip no dialeto pg SEM o skip i-093 (o skip morreu com o cru — prova positiva de que era artefato do pool cru, não de schema/semântica).'
   closed_at: '2026-07-10T13:23:15+00:00'
-  resolution: "Resolvida por REMO\xC7\xC3O do c\xF3digo afetado (s-retire-raw-sql-adapters):\
-    \ o hang era da classe asyncpg-pool-under-test do PostgresSource cru (upstream\
-    \ i-093); o adapter e o teste que travava (test_postgres_source.py::TestPhase15_1OutboxWrites::test_write_atomicity_no_partial_state)\
-    \ foram removidos. O caminho SQL Py \xE9 o SqlAlchemySource, que N\xC3O apresenta\
-    \ o defeito \u2014 evid\xEAncia: os cen\xE1rios equivalentes de atomicidade/outbox\
-    \ (test_pg_write_emits_outbox_seq_and_notify_with_raw_parity, failed-write rollback\
-    \ sem estado parcial) passam sob o pool do SQLAlchemy contra PG real, e a matriz\
-    \ de conformance roda bundle_entry_round_trip no dialeto pg SEM o skip i-093 (o\
-    \ skip morreu com o cru \u2014 prova positiva de que era artefato do pool cru,\
-    \ n\xE3o de schema/sem\xE2ntica)."
+  resolution: 'Resolvida por REMOÇÃO do código afetado (s-retire-raw-sql-adapters): o hang era da classe asyncpg-pool-under-test do PostgresSource cru (upstream i-093); o adapter e o teste que travava (test_postgres_source.py::TestPhase15_1OutboxWrites::test_write_atomicity_no_partial_state) foram removidos. O caminho SQL Py é o SqlAlchemySource, que NÃO apresenta o defeito — evidência: os cenários equivalentes de atomicidade/outbox (test_pg_write_emits_outbox_seq_and_notify_with_raw_parity, failed-write rollback sem estado parcial) passam sob o pool do SQLAlchemy contra PG real, e a matriz de conformance roda bundle_entry_round_trip no dialeto pg SEM o skip i-093 (o skip morreu com o cru — prova positiva de que era artefato do pool cru, não de schema/semântica).'
   produces:
   - kind: TestRun
     name: tr-tg-raw-to-sa-swap-20260710-132225

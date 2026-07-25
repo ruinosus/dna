@@ -3,11 +3,7 @@ kind: Issue
 metadata:
   name: i-007-scope-detect-legacy-manifest-marker
 spec:
-  description: "dna scope detect walks up looking for .dna/<scope>/manifest.yaml \u2014\
-    \ a legacy marker that predates the Genome rename. Scopes rooted by Genome.yaml\
-    \ (all current ones, incl. dna-development and examples/hello-genome) are never\
-    \ detected: the command always prints '(no DNA scope found)' and exits 1. Fix:\
-    \ detect Genome.yaml (or either marker). Found while writing docs cli-tour (s-docs-cli-tour-kinds-prose)."
+  description: 'dna scope detect walks up looking for .dna/<scope>/manifest.yaml — a legacy marker that predates the Genome rename. Scopes rooted by Genome.yaml (all current ones, incl. dna-development and examples/hello-genome) are never detected: the command always prints ''(no DNA scope found)'' and exits 1. Fix: detect Genome.yaml (or either marker). Found while writing docs cli-tour (s-docs-cli-tour-kinds-prose).'
   type: bug
   severity: low
   status: resolved
@@ -22,12 +18,7 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: "Fix em 39d0b41 (branch feat/s-small-bug-fixes): _detect agora aceita\
-      \ Genome.yaml (can\xF4nico) OU manifest.yaml (legado) \u2014 mesmo contrato\
-      \ dual-marker de dna install e do composite source. TDD: packages/cli/tests/test_scope_detect.py\
-      \ (red provou exit 1 em scope Genome.yaml). Smoke real: 'dna scope detect' em\
-      \ examples/hello-genome imprime 'hello-genome' exit 0; de dir aninhado em scopes/market-integration/.dna/market-demo/skills\
-      \ imprime 'market-demo' exit 0. Doc gerado regenerado."
+    summary: 'Fix em 39d0b41 (branch feat/s-small-bug-fixes): _detect agora aceita Genome.yaml (canônico) OU manifest.yaml (legado) — mesmo contrato dual-marker de dna install e do composite source. TDD: packages/cli/tests/test_scope_detect.py (red provou exit 1 em scope Genome.yaml). Smoke real: ''dna scope detect'' em examples/hello-genome imprime ''hello-genome'' exit 0; de dir aninhado em scopes/market-integration/.dna/market-demo/skills imprime ''market-demo'' exit 0. Doc gerado regenerado.'
   - at: '2026-07-10T11:08:23+00:00'
     actor: claude-code
     type: status_change

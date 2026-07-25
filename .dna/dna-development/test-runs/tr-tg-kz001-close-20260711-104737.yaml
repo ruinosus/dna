@@ -10,5 +10,4 @@ spec:
   executed_by: claude-code
   executed_at: '2026-07-11T10:47:37+00:00'
   evidence:
-  - 'PR #52 merged, CI 11/11; CLI boot registra LocalResolver = Kernel.quick; local:
-    deps resolvem no eval'
+  - 'PR #52 merged, CI 11/11; CLI boot registra LocalResolver = Kernel.quick; local: deps resolvem no eval'

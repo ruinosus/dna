@@ -4,13 +4,7 @@ metadata:
   name: s-fix-source-diff-push
 spec:
   title: 'Fix do i-006 (high, achado pelo cli-tour): dna source diff/push SEMPRE reportam '
-  description: "Fix do i-006 (high, achado pelo cli-tour): dna source diff/push SEMPRE\
-    \ reportam in-sync em adapters reais \u2014 digest_manifest l\xEA load_layer(scope,'tenant','__base__'),\
-    \ que FS/sqlite tratam como overlay de tenant (nunca a base), ent\xE3o ambos os\
-    \ lados digestam {}. Os testes passavam porque os fakes ignoram layer_value. Fix:\
-    \ ler a BASE de verdade (load_all/caminho correto do reader), + testes contra\
-    \ adapter REAL (fs e sqlite) que reproduzem o bug antes do fix (red\u2192green),\
-    \ + caso no conformance kit se generalizar."
+  description: 'Fix do i-006 (high, achado pelo cli-tour): dna source diff/push SEMPRE reportam in-sync em adapters reais — digest_manifest lê load_layer(scope,''tenant'',''__base__''), que FS/sqlite tratam como overlay de tenant (nunca a base), então ambos os lados digestam {}. Os testes passavam porque os fakes ignoram layer_value. Fix: ler a BASE de verdade (load_all/caminho correto do reader), + testes contra adapter REAL (fs e sqlite) que reproduzem o bug antes do fix (red→green), + caso no conformance kit se generalizar.'
   status: done
   feature: f-dna-1.0-readiness
   priority: high
@@ -21,9 +15,7 @@ spec:
   reporter: claude-code
   business_value: 500
   acceptance_criteria:
-  - text: "diff/push detectam diverg\xEAncia real contra fs E sqlite (testes red\u2192\
-      green); fakes de teste corrigidos ou substitu\xEDdos por adapters reais; i-006\
-      \ resolvido; CI verde"
+  - text: diff/push detectam divergência real contra fs E sqlite (testes red→green); fakes de teste corrigidos ou substituídos por adapters reais; i-006 resolvido; CI verde
     done: true
     done_at: '2026-07-09T23:52:11+00:00'
     done_by: story-done-auto
@@ -52,29 +44,13 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: "Root cause confirmado em kernel/source_sync.py: digest_manifest lia\
-      \ a base via load_layer(scope,'tenant','__base__') \u2014 FS resolve isso p/\
-      \ tenants/__base__/scopes/<s> (nunca existe) e sqlite p/ layer_documents (overlay\
-      \ rows), ent\xE3o AMBOS os lados digestavam {} e diff/push eram no-ops por constru\xE7\
-      \xE3o. RED primeiro: 6 testes novos contra FilesystemSource+SqliteSource reais\
-      \ (test_source_sync_real_adapters.py), todos falhando com 'assert {}' antes\
-      \ do fix."
+    summary: 'Root cause confirmado em kernel/source_sync.py: digest_manifest lia a base via load_layer(scope,''tenant'',''__base__'') — FS resolve isso p/ tenants/__base__/scopes/<s> (nunca existe) e sqlite p/ layer_documents (overlay rows), então AMBOS os lados digestavam {} e diff/push eram no-ops por construção. RED primeiro: 6 testes novos contra FilesystemSource+SqliteSource reais (test_source_sync_real_adapters.py), todos falhando com ''assert {}'' antes do fix.'
     commit_ref: 3c50b05701013aea69fc07c7a1926982a99ebdf2
   - at: '2026-07-09T23:45:32+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "Fix em 3 pernas (todas expostas pelos adapters reais): (1) base via\
-      \ load_all (tenant expl\xEDcito continua load_layer overlay; scope ausente digesta\
-      \ {} p/ bootstrap de r\xE9plica); (2) push_scope publica drafts em targets draft-staged\
-      \ (sqlite) \u2014 mesmo padr\xE3o de sync/apply._save_and_publish; sem isso\
-      \ o doc pushed ficava draft invis\xEDvel e o push nunca convergia; (3) _load_bundle_entries\
-      \ com tenant= keyword (kw-only no sqlite, drift de assinatura latente). Bonus\
-      \ achado: fs://./copy era mutilado pelo build_source_from_env (netloc descartado\
-      \ \u2192 /copy absoluto \u2192 falso in-sync); consertado + testado. Fakes des-mascarados\
-      \ (base atr\xE1s de load_all) + caso novo no conformance kit base_never_served_by_load_layer\
-      \ rodando em 7 adapters. Gates: sdk-py 2834 passed/0 failed, cli 271 passed,\
-      \ sdk-ts 0 fail + typecheck ok, brand_guard clean, mkdocs --strict ok."
+    summary: 'Fix em 3 pernas (todas expostas pelos adapters reais): (1) base via load_all (tenant explícito continua load_layer overlay; scope ausente digesta {} p/ bootstrap de réplica); (2) push_scope publica drafts em targets draft-staged (sqlite) — mesmo padrão de sync/apply._save_and_publish; sem isso o doc pushed ficava draft invisível e o push nunca convergia; (3) _load_bundle_entries com tenant= keyword (kw-only no sqlite, drift de assinatura latente). Bonus achado: fs://./copy era mutilado pelo build_source_from_env (netloc descartado → /copy absoluto → falso in-sync); consertado + testado. Fakes des-mascarados (base atrás de load_all) + caso novo no conformance kit base_never_served_by_load_layer rodando em 7 adapters. Gates: sdk-py 2834 passed/0 failed, cli 271 passed, sdk-ts 0 fail + typecheck ok, brand_guard clean, mkdocs --strict ok.'
     commit_ref: 3c50b05701013aea69fc07c7a1926982a99ebdf2
   - at: '2026-07-09T23:45:54+00:00'
     actor: claude-code
@@ -89,7 +65,7 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-source-diff-push-i006-20260709-234616
-    summary: "TestRun tr-tg-source-diff-push-i006-20260709-234616 \u2192 pass"
+    summary: TestRun tr-tg-source-diff-push-i006-20260709-234616 → pass
     outcome: pass
   - at: '2026-07-09T23:47:21+00:00'
     actor: claude-code
@@ -107,12 +83,7 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: "PR #24 merged (9/9; TestGuide/TestRun --product do agente com smoke\
-      \ real diff\u2192push\u2192re-diff). Root cause confirmado (load_layer sentinel\
-      \ nunca era a base); fix exp\xF4s +3 bugs reais (push sem publish de drafts,\
-      \ kwarg drift, CLI mutilando fs://./path); caso permanente no conformance kit\
-      \ (base_never_served_by_load_layer, 7 adapters); i-006 resolvida; cli-tour com\
-      \ transcript real."
+    summary: 'PR #24 merged (9/9; TestGuide/TestRun --product do agente com smoke real diff→push→re-diff). Root cause confirmado (load_layer sentinel nunca era a base); fix expôs +3 bugs reais (push sem publish de drafts, kwarg drift, CLI mutilando fs://./path); caso permanente no conformance kit (base_never_served_by_load_layer, 7 adapters); i-006 resolvida; cli-tour com transcript real.'
   - at: '2026-07-09T23:52:16+00:00'
     actor: claude-code
     type: status_change

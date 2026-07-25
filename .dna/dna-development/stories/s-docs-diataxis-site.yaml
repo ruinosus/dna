@@ -3,16 +3,8 @@ kind: Story
 metadata:
   name: s-docs-diataxis-site
 spec:
-  title: "Reorganizar docs/ na IA Di\xE1taxis (getting-started TUTORIAIS / concepts\
-    \ EXPLICA\xC7\xC3"
-  description: "Reorganizar docs/ na IA Di\xE1taxis (getting-started TUTORIAIS / concepts\
-    \ EXPLICA\xC7\xC3O com a TESE-primer 'CRDs for agent behavior' / guides HOW-TO\
-    \ / reference), apertar o README pra LANDING (tagline+badges enxutas+tese em destaque+quickstart+status\
-    \ pr\xE9-1.0+link pro site, migrando manual pro site), montar o site MkDocs+Material\
-    \ (mkdocs.yml, nav, tema, GitHub Pages deploy workflow condicionado a p\xFAblico)\
-    \ + CI de docs (lychee link-check + mkdocs build --strict). Mapear os 6 guias\
-    \ existentes nos quadrantes. Consultar rsh-doc-frameworks-oss e rsh-exemplar-sdk-repos\
-    \ (dna research show). N\xC3O fazer API-ref nem parity-matrix (stories separadas)."
+  title: Reorganizar docs/ na IA Diátaxis (getting-started TUTORIAIS / concepts EXPLICAÇÃ
+  description: Reorganizar docs/ na IA Diátaxis (getting-started TUTORIAIS / concepts EXPLICAÇÃO com a TESE-primer 'CRDs for agent behavior' / guides HOW-TO / reference), apertar o README pra LANDING (tagline+badges enxutas+tese em destaque+quickstart+status pré-1.0+link pro site, migrando manual pro site), montar o site MkDocs+Material (mkdocs.yml, nav, tema, GitHub Pages deploy workflow condicionado a público) + CI de docs (lychee link-check + mkdocs build --strict). Mapear os 6 guias existentes nos quadrantes. Consultar rsh-doc-frameworks-oss e rsh-exemplar-sdk-repos (dna research show). NÃO fazer API-ref nem parity-matrix (stories separadas).
   status: done
   feature: f-dna-docs
   priority: high
@@ -22,9 +14,7 @@ spec:
   reporter: claude-code
   business_value: 600
   acceptance_criteria:
-  - text: "docs/ reorganizado por Di\xE1taxis; tese-primer escrita; README vira landing\
-      \ enxuta; mkdocs build --strict verde; site naveg\xE1vel local; deploy workflow\
-      \ pronto (Pages ativa no go-public); lychee sem link morto; CI 7/7+build"
+  - text: docs/ reorganizado por Diátaxis; tese-primer escrita; README vira landing enxuta; mkdocs build --strict verde; site navegável local; deploy workflow pronto (Pages ativa no go-public); lychee sem link morto; CI 7/7+build
     done: true
     done_at: '2026-07-09T14:54:54+00:00'
     done_by: story-done-auto
@@ -62,16 +52,13 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-s-docs-diataxis-site-20260709-145454
-    summary: "TestRun tr-tg-s-docs-diataxis-site-20260709-145454 \u2192 pass"
+    summary: TestRun tr-tg-s-docs-diataxis-site-20260709-145454 → pass
     outcome: pass
   - at: '2026-07-09T14:54:55+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "PR #10 merged. docs/ reorganizado por Di\xE1taxis (getting-started/concepts/guides/reference);\
-      \ tese como primer estilo CloudEvents (spec+teaching, CRD analogy, spec-vs-status);\
-      \ README virou landing enxuta; site MkDocs+Material + CI de docs (build --strict\
-      \ + lychee). Deploy Pages pronto, gated main-only (publica no go-public)."
+    summary: 'PR #10 merged. docs/ reorganizado por Diátaxis (getting-started/concepts/guides/reference); tese como primer estilo CloudEvents (spec+teaching, CRD analogy, spec-vs-status); README virou landing enxuta; site MkDocs+Material + CI de docs (build --strict + lychee). Deploy Pages pronto, gated main-only (publica no go-public).'
   - at: '2026-07-09T14:54:56+00:00'
     actor: claude-code
     type: status_change

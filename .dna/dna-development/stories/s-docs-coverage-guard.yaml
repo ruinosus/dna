@@ -3,19 +3,8 @@ kind: Story
 metadata:
   name: s-docs-coverage-guard
 spec:
-  title: "Guard determin\xEDstico de COBERTURA de prosa (a resposta do DNA ao drift\
-    \ prosa-vs-"
-  description: "Guard determin\xEDstico de COBERTURA de prosa (a resposta do DNA ao\
-    \ drift prosa-vs-feature, insight Barna 2026-07-09): scripts/docs_coverage_guard.py\
-    \ enumera as fontes-de-verdade machine-readable (grupos do CLI via Click tree;\
-    \ Kinds p\xFAblicos via kernel; ports/verbos da superf\xEDcie blessed se couber)\
-    \ e exige que cada item seja mencionado em >=1 p\xE1gina de PROSA (docs/concepts|guides|getting-started,\
-    \ n\xE3o a reference autogerada). Allowlist expl\xEDcita por item com justificativa\
-    \ (estilo brand_guard). Self-test (planta um comando fake sem prosa \u2192 falha).\
-    \ Job no docs.yml. Ratchet: allowlist s\xF3 encolhe. No primeiro run DEVE acusar\
-    \ exatamente o gap de search/memory (self-valida\xE7\xE3o) \u2014 rode ANTES da\
-    \ story irm\xE3 mergear pra provar, mas o merge final passa verde (a irm\xE3 fecha\
-    \ o gap)."
+  title: Guard determinístico de COBERTURA de prosa (a resposta do DNA ao drift prosa-vs-
+  description: 'Guard determinístico de COBERTURA de prosa (a resposta do DNA ao drift prosa-vs-feature, insight Barna 2026-07-09): scripts/docs_coverage_guard.py enumera as fontes-de-verdade machine-readable (grupos do CLI via Click tree; Kinds públicos via kernel; ports/verbos da superfície blessed se couber) e exige que cada item seja mencionado em >=1 página de PROSA (docs/concepts|guides|getting-started, não a reference autogerada). Allowlist explícita por item com justificativa (estilo brand_guard). Self-test (planta um comando fake sem prosa → falha). Job no docs.yml. Ratchet: allowlist só encolhe. No primeiro run DEVE acusar exatamente o gap de search/memory (self-validação) — rode ANTES da story irmã mergear pra provar, mas o merge final passa verde (a irmã fecha o gap).'
   status: done
   feature: f-dna-docs
   priority: high
@@ -26,9 +15,7 @@ spec:
   reporter: claude-code
   business_value: 500
   acceptance_criteria:
-  - text: "Guard enumera CLI+Kinds da fonte; falha com item p\xFAblico sem prosa;\
-      \ self-test verde; wired no CI; allowlist justificada; prova de que acusou o\
-      \ gap search/memory antes do fix"
+  - text: Guard enumera CLI+Kinds da fonte; falha com item público sem prosa; self-test verde; wired no CI; allowlist justificada; prova de que acusou o gap search/memory antes do fix
     done: true
     done_at: '2026-07-09T21:06:29+00:00'
     done_by: story-done-auto
@@ -57,18 +44,7 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: "Guard escrito (scripts/docs_coverage_guard.py, estilo brand_guard: stdlib\
-      \ puro, allowlist justificada, self-test, --all report-only). Enumera 10 grupos\
-      \ CLI (Click tree, mecanismo do gen_cli_docs) + 63 Kinds (Kernel.auto(), mecanismo\
-      \ do gen_kinds_docs) = 73 itens vs 17 p\xE1ginas de prosa. Decis\xF5es de matching:\
-      \ CLI cobre s\xF3 men\xE7\xE3o invocation-shaped ('dna <group>', ci) \u2014\
-      \ palavra solta 'search'/'memory' N\xC3O conta (esconderia exatamente o gap\
-      \ motivador); Kind cobre nome exato case-SENSITIVE com plural tolerado, ou alias\
-      \ ci. README conta como prosa; docs/reference/** nunca (tautol\xF3gico). PROVA:\
-      \ --all acusa 51 gaps incluindo cli:search/recall/memory (o gap motivador).\
-      \ Allowlist: 3 tempor\xE1rias (irm\xE3 s-docs-search-memory-prose), 6 CLI gaps\
-      \ pr\xE9-existentes (achado!), 28 SDLC machinery, 14 composition-plane sem prosa\
-      \ (achado!). Self-test + guard real + brand_guard + mkdocs --strict todos verdes."
+    summary: 'Guard escrito (scripts/docs_coverage_guard.py, estilo brand_guard: stdlib puro, allowlist justificada, self-test, --all report-only). Enumera 10 grupos CLI (Click tree, mecanismo do gen_cli_docs) + 63 Kinds (Kernel.auto(), mecanismo do gen_kinds_docs) = 73 itens vs 17 páginas de prosa. Decisões de matching: CLI cobre só menção invocation-shaped (''dna <group>'', ci) — palavra solta ''search''/''memory'' NÃO conta (esconderia exatamente o gap motivador); Kind cobre nome exato case-SENSITIVE com plural tolerado, ou alias ci. README conta como prosa; docs/reference/** nunca (tautológico). PROVA: --all acusa 51 gaps incluindo cli:search/recall/memory (o gap motivador). Allowlist: 3 temporárias (irmã s-docs-search-memory-prose), 6 CLI gaps pré-existentes (achado!), 28 SDLC machinery, 14 composition-plane sem prosa (achado!). Self-test + guard real + brand_guard + mkdocs --strict todos verdes.'
     commit_ref: 7dc4c5db87c433451406e6234424d533f59811d9
   - at: '2026-07-09T21:01:37+00:00'
     actor: claude-code
@@ -89,17 +65,13 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-s-docs-coverage-guard-20260709-210627
-    summary: "TestRun tr-tg-s-docs-coverage-guard-20260709-210627 \u2192 pass"
+    summary: TestRun tr-tg-s-docs-coverage-guard-20260709-210627 → pass
     outcome: pass
   - at: '2026-07-09T21:06:30+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "PR #17 merged. docs_coverage_guard.py enumera CLI (Click tree) + Kinds\
-      \ (registry) da FONTE e exige men\xE7\xE3o em prosa; self-test; acusou o gap\
-      \ real de search/memory pr\xE9-fix (a prova de valor); allowlist tempor\xE1\
-      ria marcada \u2014 removo quando a prosa (story irm\xE3) mergear. Institucionaliza\
-      \ o insight do Barna: feature sem doc n\xE3o passa no CI."
+    summary: 'PR #17 merged. docs_coverage_guard.py enumera CLI (Click tree) + Kinds (registry) da FONTE e exige menção em prosa; self-test; acusou o gap real de search/memory pré-fix (a prova de valor); allowlist temporária marcada — removo quando a prosa (story irmã) mergear. Institucionaliza o insight do Barna: feature sem doc não passa no CI.'
   - at: '2026-07-09T21:06:32+00:00'
     actor: claude-code
     type: status_change

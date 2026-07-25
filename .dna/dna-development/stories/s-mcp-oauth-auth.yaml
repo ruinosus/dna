@@ -3,23 +3,8 @@ kind: Story
 metadata:
   name: s-mcp-oauth-auth
 spec:
-  title: "Phase 2 \u2014 OAuth 2.1 (MCP Authorization) with scopes bound to DNA tenancy"
-  description: "ENABLE FastMCP's BUILT-IN OAuth 2.1 auth and BRIDGE its token scopes/claims\
-    \ to DNA tenancy (the Tenant Kind + inheritance) \u2014 the real Phase-2 work\
-    \ is the auth<->tenancy BRIDGE, not building OAuth. FastMCP (verified at gofastmcp.com)\
-    \ ships: full OAuth 2.1 servers with Dynamic Client Registration (DCR); an OAuthProxy\
-    \ that bridges providers WITHOUT DCR (WorkOS, Auth0, ...) to MCP's DCR-compliant\
-    \ protocol; JWT TokenVerifier + scope enforcement (server auth=..., require_scopes\
-    \ / per-tool auth=AuthCheck). It conforms to the current MCP Authorization spec\
-    \ (revision 2025-11-25): server as OAuth 2.1 Resource Server, mandatory PKCE,\
-    \ Protected Resource Metadata (RFC 9728), Resource Indicators (RFC 8707), Auth\
-    \ Server Metadata (RFC 8414), DCR (RFC 7591). KEY POINT: map the token's scopes/claims\
-    \ to a DNA tenant so a client/tenant token composes/reads ONLY what is theirs\
-    \ \u2014 auth + multi-tenant in one mechanism, via FastMCP's per-tool/require_scopes\
-    \ hooks. Auth is HTTP-only, so this pairs with s-mcp-remote-transport. Re-verify\
-    \ the FastMCP + MCP Authorization spec versions are current at implementation\
-    \ time (do not assume). Sources: gofastmcp.com/servers/auth, gofastmcp.com/clients/auth/oauth;\
-    \ modelcontextprotocol.io/specification/2025-11-25/basic/authorization; RFC 9728/8707/8414/7591."
+  title: Phase 2 — OAuth 2.1 (MCP Authorization) with scopes bound to DNA tenancy
+  description: 'ENABLE FastMCP''s BUILT-IN OAuth 2.1 auth and BRIDGE its token scopes/claims to DNA tenancy (the Tenant Kind + inheritance) — the real Phase-2 work is the auth<->tenancy BRIDGE, not building OAuth. FastMCP (verified at gofastmcp.com) ships: full OAuth 2.1 servers with Dynamic Client Registration (DCR); an OAuthProxy that bridges providers WITHOUT DCR (WorkOS, Auth0, ...) to MCP''s DCR-compliant protocol; JWT TokenVerifier + scope enforcement (server auth=..., require_scopes / per-tool auth=AuthCheck). It conforms to the current MCP Authorization spec (revision 2025-11-25): server as OAuth 2.1 Resource Server, mandatory PKCE, Protected Resource Metadata (RFC 9728), Resource Indicators (RFC 8707), Auth Server Metadata (RFC 8414), DCR (RFC 7591). KEY POINT: map the token''s scopes/claims to a DNA tenant so a client/tenant token composes/reads ONLY what is theirs — auth + multi-tenant in one mechanism, via FastMCP''s per-tool/require_scopes hooks. Auth is HTTP-only, so this pairs with s-mcp-remote-transport. Re-verify the FastMCP + MCP Authorization spec versions are current at implementation time (do not assume). Sources: gofastmcp.com/servers/auth, gofastmcp.com/clients/auth/oauth; modelcontextprotocol.io/specification/2025-11-25/basic/authorization; RFC 9728/8707/8414/7591.'
   status: done
   feature: f-dna-mcp-server
   priority: medium
@@ -31,35 +16,25 @@ spec:
   - multi-tenant
   - phase-2
   acceptance_criteria:
-  - text: Given a FastMCP token whose scope/claim maps to tenant=acme, When the client
-      calls compose_prompt for a foo-tenant resource, Then access is denied (FastMCP
-      require_scopes/per-tool auth bridged to DNA tenancy)
+  - text: Given a FastMCP token whose scope/claim maps to tenant=acme, When the client calls compose_prompt for a foo-tenant resource, Then access is denied (FastMCP require_scopes/per-tool auth bridged to DNA tenancy)
     done: true
     done_at: '2026-07-11T17:21:55+00:00'
     done_by: story-done-auto
-  - text: Given an MCP client, When it discovers the HTTP server, Then FastMCP advertises
-      Protected Resource Metadata (RFC 9728) and validates access tokens per OAuth
-      2.1 (PKCE required, Resource Indicators RFC 8707)
+  - text: Given an MCP client, When it discovers the HTTP server, Then FastMCP advertises Protected Resource Metadata (RFC 9728) and validates access tokens per OAuth 2.1 (PKCE required, Resource Indicators RFC 8707)
     done: true
     done_at: '2026-07-11T17:21:55+00:00'
     done_by: story-done-auto
-  - text: Given a provider without DCR (WorkOS/Auth0), When wired via FastMCP's OAuthProxy,
-      Then the client completes the OAuth 2.1 flow without that provider implementing
-      MCP DCR
+  - text: Given a provider without DCR (WorkOS/Auth0), When wired via FastMCP's OAuthProxy, Then the client completes the OAuth 2.1 flow without that provider implementing MCP DCR
     done: true
     done_at: '2026-07-11T17:21:55+00:00'
     done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - text: Design + owner approval BEFORE implementation (todo Phase-2 story); re-verify
-      the FastMCP auth API + MCP Authorization spec revision are current and cite
-      sources
+  - text: Design + owner approval BEFORE implementation (todo Phase-2 story); re-verify the FastMCP auth API + MCP Authorization spec revision are current and cite sources
     done: true
     done_at: '2026-07-11T17:21:55+00:00'
     done_by: story-done-auto
-  - text: 'Code: enable FastMCP auth=... (OAuth server / OAuthProxy / JWT verifier)
-      + the scope/claim -> DNA Tenant BRIDGE; Tests: cross-tenant denial + PRM discovery
-      via FastMCP Client; Docs: auth guide; CI green'
+  - text: 'Code: enable FastMCP auth=... (OAuth server / OAuthProxy / JWT verifier) + the scope/claim -> DNA Tenant BRIDGE; Tests: cross-tenant denial + PRM discovery via FastMCP Client; Docs: auth guide; CI green'
     done: true
     done_at: '2026-07-11T17:21:55+00:00'
     done_by: story-done-auto
@@ -85,14 +60,13 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-mcp-oauth-auth-20260711-154814
-    summary: "TestRun tr-tg-mcp-oauth-auth-20260711-154814 \u2192 pass"
+    summary: TestRun tr-tg-mcp-oauth-auth-20260711-154814 → pass
     outcome: pass
   - at: '2026-07-11T15:48:38+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "Enabling FastMCP's built-in OAuth 2.1/JWT and bridging token claims\
-      \ to DNA tenancy \u2014 the real Phase-2 work is the auth<->tenancy bridge."
+    summary: Enabling FastMCP's built-in OAuth 2.1/JWT and bridging token claims to DNA tenancy — the real Phase-2 work is the auth<->tenancy bridge.
   - at: '2026-07-11T15:48:42+00:00'
     actor: claude-code
     type: status_change
@@ -103,26 +77,13 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: "Built the auth<->tenancy BRIDGE (dna_cli._mcp_auth) \u2014 the DNA-specific\
-      \ value. Provider for the MVP: JWT bearer Resource Server (FastMCP JWTVerifier,\
-      \ env-configured; RemoteAuthProvider wrapper advertises PRM RFC 9728; provider-agnostic\
-      \ seam for a later WorkOS/Auth0 OAuthProxy). BRIDGE: verified token's claim\
-      \ 'tenant' (configurable) or scope 'tenant:<x>' -> a DNA tenant, injected into\
-      \ EVERY tool's data access (mi(scope,tenant)/with_tenant/kernel.query(tenant=));\
-      \ cross-tenant request DENIED, tenant-less token DENIED (fail closed); no-auth\
-      \ = identity (stdio base untouched). Proof over real RSA JWTs + HTTP: acme vs\
-      \ globex get tenant-scoped compose_prompt (acme sees overlay, globex doesn't);\
-      \ acme->globex denied; tenant-less denied; unauthenticated rejected; PRM discoverable.\
-      \ 15 auth tests green. ADR adr-dna-mcp-runtime-face updated with the bridge\
-      \ decision + provider choice + spec revisions (MCP Authorization 2025-11-25,\
-      \ FastMCP 3.4)."
+    summary: 'Built the auth<->tenancy BRIDGE (dna_cli._mcp_auth) — the DNA-specific value. Provider for the MVP: JWT bearer Resource Server (FastMCP JWTVerifier, env-configured; RemoteAuthProvider wrapper advertises PRM RFC 9728; provider-agnostic seam for a later WorkOS/Auth0 OAuthProxy). BRIDGE: verified token''s claim ''tenant'' (configurable) or scope ''tenant:<x>'' -> a DNA tenant, injected into EVERY tool''s data access (mi(scope,tenant)/with_tenant/kernel.query(tenant=)); cross-tenant request DENIED, tenant-less token DENIED (fail closed); no-auth = identity (stdio base untouched). Proof over real RSA JWTs + HTTP: acme vs globex get tenant-scoped compose_prompt (acme sees overlay, globex doesn''t); acme->globex denied; tenant-less denied; unauthenticated rejected; PRM discoverable. 15 auth tests green. ADR adr-dna-mcp-runtime-face updated with the bridge decision + provider choice + spec revisions (MCP Authorization 2025-11-25, FastMCP 3.4).'
     commit_ref: 1a2601995f3612069fe51308a1e800a96fea6041
   - at: '2026-07-11T15:51:48+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "PR #66 (base main) \u2014 auth<->tenancy bridge. CI must be 11/11 before\
-      \ merge; do NOT merge."
+    summary: 'PR #66 (base main) — auth<->tenancy bridge. CI must be 11/11 before merge; do NOT merge.'
   - at: '2026-07-11T15:51:51+00:00'
     actor: claude-code
     type: status_change
@@ -147,13 +108,13 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-s-mcp-oauth-auth-20260711-172357
-    summary: "TestRun tr-tg-s-mcp-oauth-auth-20260711-172357 \u2192 pass"
+    summary: TestRun tr-tg-s-mcp-oauth-auth-20260711-172357 → pass
     outcome: pass
   - at: '2026-07-11T17:24:05+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "OAuth 2.1 Resource Server (JWT + PRM) \u2014 tests green in CI"
+    summary: OAuth 2.1 Resource Server (JWT + PRM) — tests green in CI
   - at: '2026-07-11T17:26:03+00:00'
     actor: claude-code
     type: comment
@@ -163,8 +124,7 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: "backend/lib sem UI: coberto por TestRun de integra\xE7\xE3o (tg-s-mcp-oauth-auth)\
-      \ + suite verde no CI; product-smoke n\xE3o se aplica"
+    summary: 'backend/lib sem UI: coberto por TestRun de integração (tg-s-mcp-oauth-auth) + suite verde no CI; product-smoke não se aplica'
   - at: '2026-07-11T17:27:10+00:00'
     actor: claude-code
     type: status_change

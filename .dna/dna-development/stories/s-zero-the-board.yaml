@@ -3,15 +3,8 @@ kind: Story
 metadata:
   name: s-zero-the-board
 spec:
-  title: "Fechamento de ciclo \u2014 as 2 \xFAltimas issues do board: i-005 (docstrings:\
-    \ Kernel 6 "
-  description: "Fechamento de ciclo \u2014 as 2 \xFAltimas issues do board: i-005\
-    \ (docstrings: Kernel 6 m\xE9todos p\xFAblicos sem docstring, ManifestInstance\
-    \ ~19 helpers de viz, + TSDoc: 14 tipos referenciados n\xE3o re-exportados de\
-    \ src/index.ts gerando broken-xref no TypeDoc) e i-010 (twin TS do resolver ainda\
-    \ aceita o dep shorthand legado que o Py rejeita desde #28 \u2014 portar reject_legacy_shorthand).\
-    \ O resolve da i-005 fecha a issue p\xFAblica GitHub #30 AUTOMATICAMENTE pela\
-    \ ponte (#31) \u2014 o processo completo demonstrado em p\xFAblico."
+  title: 'Fechamento de ciclo — as 2 últimas issues do board: i-005 (docstrings: Kernel 6 '
+  description: 'Fechamento de ciclo — as 2 últimas issues do board: i-005 (docstrings: Kernel 6 métodos públicos sem docstring, ManifestInstance ~19 helpers de viz, + TSDoc: 14 tipos referenciados não re-exportados de src/index.ts gerando broken-xref no TypeDoc) e i-010 (twin TS do resolver ainda aceita o dep shorthand legado que o Py rejeita desde #28 — portar reject_legacy_shorthand). O resolve da i-005 fecha a issue pública GitHub #30 AUTOMATICAMENTE pela ponte (#31) — o processo completo demonstrado em público.'
   status: done
   feature: f-dna-sql-consolidation
   priority: medium
@@ -23,11 +16,7 @@ spec:
   reporter: claude-code
   business_value: 300
   acceptance_criteria:
-  - text: "Docstrings preenchidas (mkdocstrings renderiza conte\xFAdo real, n\xE3\
-      o assinatura nua); TSDoc: tipos exportados ou intentionallyNotExported (TypeDoc\
-      \ sem broken-xref); shorthand rejeitado no TS com red\u2192green espelhando\
-      \ o Py; i-005 e i-010 resolvidas via CLI; a #30 fechada no GitHub pela ponte\
-      \ (prova no relat\xF3rio); CI verde"
+  - text: 'Docstrings preenchidas (mkdocstrings renderiza conteúdo real, não assinatura nua); TSDoc: tipos exportados ou intentionallyNotExported (TypeDoc sem broken-xref); shorthand rejeitado no TS com red→green espelhando o Py; i-005 e i-010 resolvidas via CLI; a #30 fechada no GitHub pela ponte (prova no relatório); CI verde'
     done: true
     done_at: '2026-07-10T14:06:11+00:00'
     done_by: story-done-auto
@@ -56,34 +45,13 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: "Worktree feat/s-zero-the-board montado; venvs py+ts ok. Levantei o estado\
-      \ ATUAL: Kernel 6 m\xE9todos sem docstring (source/cache/resolver/reader/writer/load),\
-      \ ManifestInstance 20 (root, default_agent, list_kinds, get, describe, summary,\
-      \ 8x *_mermaid, export_diagrams_md, matrix, matrix_markdown, impact, health,\
-      \ ascii_tree), TypeDoc 15 broken-xref (o relat\xF3rio #12 dizia 14 \u2014 ManifestInstanceOpts\
-      \ entrou desde ent\xE3o). i-010: TS github delega pro LocalResolver (rejei\xE7\
-      \xE3o no _collectRequested cobre local+github); http TS tem _collectRequested\
-      \ pr\xF3prio \u2014 recebe a chamada expl\xEDcita como o Py. Ordem: i-010 red\u2192\
-      green primeiro, docstrings depois, regen docs, gates, PR."
+    summary: 'Worktree feat/s-zero-the-board montado; venvs py+ts ok. Levantei o estado ATUAL: Kernel 6 métodos sem docstring (source/cache/resolver/reader/writer/load), ManifestInstance 20 (root, default_agent, list_kinds, get, describe, summary, 8x *_mermaid, export_diagrams_md, matrix, matrix_markdown, impact, health, ascii_tree), TypeDoc 15 broken-xref (o relatório #12 dizia 14 — ManifestInstanceOpts entrou desde então). i-010: TS github delega pro LocalResolver (rejeição no _collectRequested cobre local+github); http TS tem _collectRequested próprio — recebe a chamada explícita como o Py. Ordem: i-010 red→green primeiro, docstrings depois, regen docs, gates, PR.'
     commit_ref: dc6ceaf3026ff9ba7fbb30403b2832c739a6fe2d
   - at: '2026-07-10T13:57:07+00:00'
     actor: claude-code
     type: comment
     source: cli
-    summary: "Build completo nos 2 fronts. i-010: rejectLegacyShorthand portado pro\
-      \ TS (local.ts, mensagem espelhando byte a byte a receita do Py; http._collectRequested;\
-      \ github rejeita ANTES do clone \u2014 Py rejeita p\xF3s-fetch, mesmo contrato,\
-      \ sem round-trip perdido). Red: 3 fail provando fall-through silencioso; green:\
-      \ 12 pass. i-005: 26 docstrings Py (6 Kernel port-registers + 20 MI viz helpers);\
-      \ TS: 15 broken-xref (relat\xF3rio dizia 14 \u2014 ManifestInstanceOpts entrou\
-      \ depois) \u2192 11 re-exportados como superf\xEDcie p\xFAblica leg\xEDtima\
-      \ (Raw/TenantScope/PreviewResult/PreviewBlockKind/BuildPromptOpts/SourceCapabilities/KindLike/AsyncEventHandler/CompositionProfile/BundleHandle/LayerSource\
-      \ + 2\xAA ordem CompositionSlot/hints/sourceCapabilities/deriveCapabilities)\
-      \ e 4 intentionallyNotExported (CompositionResolverHost=collaborator-ports internals,\
-      \ QueryableInstance, ManifestInstanceOpts, DeclarativeMarker). Fixtures blessed/port-surface\
-      \ intactas (re-exports de tipo n\xE3o adicionam membro; suites verdes). Gates:\
-      \ py 2771 pass, ts 1333 pass, cli 329 pass, brand+coverage guards limpos, mkdocs\
-      \ --strict verde, TypeDoc 0 warnings."
+    summary: 'Build completo nos 2 fronts. i-010: rejectLegacyShorthand portado pro TS (local.ts, mensagem espelhando byte a byte a receita do Py; http._collectRequested; github rejeita ANTES do clone — Py rejeita pós-fetch, mesmo contrato, sem round-trip perdido). Red: 3 fail provando fall-through silencioso; green: 12 pass. i-005: 26 docstrings Py (6 Kernel port-registers + 20 MI viz helpers); TS: 15 broken-xref (relatório dizia 14 — ManifestInstanceOpts entrou depois) → 11 re-exportados como superfície pública legítima (Raw/TenantScope/PreviewResult/PreviewBlockKind/BuildPromptOpts/SourceCapabilities/KindLike/AsyncEventHandler/CompositionProfile/BundleHandle/LayerSource + 2ª ordem CompositionSlot/hints/sourceCapabilities/deriveCapabilities) e 4 intentionallyNotExported (CompositionResolverHost=collaborator-ports internals, QueryableInstance, ManifestInstanceOpts, DeclarativeMarker). Fixtures blessed/port-surface intactas (re-exports de tipo não adicionam membro; suites verdes). Gates: py 2771 pass, ts 1333 pass, cli 329 pass, brand+coverage guards limpos, mkdocs --strict verde, TypeDoc 0 warnings.'
     commit_ref: 67fb938779a5bd82b4fb5a140c83bd955be5bd45
   - at: '2026-07-10T13:58:49+00:00'
     actor: claude-code
@@ -98,7 +66,7 @@ spec:
     source: cli
     kind: TestRun
     name: tr-tg-zero-the-board-20260710-135901
-    summary: "TestRun tr-tg-zero-the-board-20260710-135901 \u2192 pass"
+    summary: TestRun tr-tg-zero-the-board-20260710-135901 → pass
     outcome: pass
   - at: '2026-07-10T13:59:33+00:00'
     actor: claude-code
@@ -116,12 +84,7 @@ spec:
     actor: claude-code
     type: comment
     source: cli
-    summary: "PR #33 merged (9/9). 26 docstrings Py (a API-ref p\xFAblica renderiza\
-      \ 'boot gate, not a plain setter'); TypeDoc 0 errors 0 warnings (11 tipos re-exportados\
-      \ + 4 intentionallyNotExported, fixture intacta por constru\xE7\xE3o); shorthand\
-      \ TS rejeitado red\u2192green (delta documentado: TS rejeita ANTES do clone);\
-      \ i-010 e i-005 resolvidas \u2014 A PONTE FECHOU A #30 NO GITHUB AUTOMATICAMENTE\
-      \ com o coment\xE1rio assinado. BOARD DE ISSUES ZERADO."
+    summary: 'PR #33 merged (9/9). 26 docstrings Py (a API-ref pública renderiza ''boot gate, not a plain setter''); TypeDoc 0 errors 0 warnings (11 tipos re-exportados + 4 intentionallyNotExported, fixture intacta por construção); shorthand TS rejeitado red→green (delta documentado: TS rejeita ANTES do clone); i-010 e i-005 resolvidas — A PONTE FECHOU A #30 NO GITHUB AUTOMATICAMENTE com o comentário assinado. BOARD DE ISSUES ZERADO.'
   - at: '2026-07-10T14:06:18+00:00'
     actor: claude-code
     type: status_change

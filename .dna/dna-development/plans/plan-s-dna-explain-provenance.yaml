@@ -8,11 +8,6 @@ spec:
   status: accepted
   story_ref: s-dna-explain-provenance
   journey_phase: plan
-  body: "Part B \u2014 dna explain: (1) build_prompt(explain=True) returns (prompt,\
-    \ ProvenanceMap) reconstructing sections from layout+dep_filters+flatten, resolving\
-    \ each contributing doc via kernel.resolve_document for layer/overlay origin +\
-    \ content hash; (2) byte-equality gate asserts explain-mode prompt == plain build_prompt;\
-    \ (3) dna explain CLI prints section|source|hash|version|origin table w/ OVERRIDDEN\
-    \ markers; (4) Py+TS parity + docs regen."
+  body: 'Part B — dna explain: (1) build_prompt(explain=True) returns (prompt, ProvenanceMap) reconstructing sections from layout+dep_filters+flatten, resolving each contributing doc via kernel.resolve_document for layer/overlay origin + content hash; (2) byte-equality gate asserts explain-mode prompt == plain build_prompt; (3) dna explain CLI prints section|source|hash|version|origin table w/ OVERRIDDEN markers; (4) Py+TS parity + docs regen.'
   created_at: '2026-07-13T11:03:21+00:00'
   updated_at: '2026-07-13T11:03:21+00:00'

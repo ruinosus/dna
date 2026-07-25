@@ -15,11 +15,9 @@ spec:
   reporter: claude-code
   business_value: 700
   acceptance_criteria:
-  - Nova extension 'cloud' registra o Kind Plan via descriptor kinds/plan.kind.yaml
-    (record-plane, tenant_scope global)
-  - "Descriptor byte-id\xEAntico Py\u2194TS (coberto por test_descriptor_hash_parity)"
-  - "Seed docs: Free (~100 calls/dia, 1 tenant, memory read-only) e Pro (~10k calls/dia,\
-    \ 5 tenants, $29/m\xEAs, families definitions/sdlc/memory/emit)"
+  - Nova extension 'cloud' registra o Kind Plan via descriptor kinds/plan.kind.yaml (record-plane, tenant_scope global)
+  - Descriptor byte-idêntico Py↔TS (coberto por test_descriptor_hash_parity)
+  - 'Seed docs: Free (~100 calls/dia, 1 tenant, memory read-only) e Pro (~10k calls/dia, 5 tenants, $29/mês, families definitions/sdlc/memory/emit)'
   - dna doc list Plan lista os dois; show exibe caps + families
   acceptance_criteria_source: cli-create
   definition_of_done:
@@ -39,9 +37,6 @@ spec:
     source: cli
     from: todo
     to: cancelled
-    summary: "Duplicata \u2014 a decomposi\xE7\xE3o de f-dna-cloud j\xE1 existia (s-dna-cloud-plans/quota-enforcement/portal/billing,\
-      \ filadas no #69). N\xE3o checei antes de filar."
+    summary: 'Duplicata — a decomposição de f-dna-cloud já existia (s-dna-cloud-plans/quota-enforcement/portal/billing, filadas no #69). Não checei antes de filar.'
   closed_at: '2026-07-11T18:02:53+00:00'
-  cancelled_reason: "Duplicata \u2014 a decomposi\xE7\xE3o de f-dna-cloud j\xE1 existia\
-    \ (s-dna-cloud-plans/quota-enforcement/portal/billing, filadas no #69). N\xE3\
-    o checei antes de filar."
+  cancelled_reason: 'Duplicata — a decomposição de f-dna-cloud já existia (s-dna-cloud-plans/quota-enforcement/portal/billing, filadas no #69). Não checei antes de filar.'

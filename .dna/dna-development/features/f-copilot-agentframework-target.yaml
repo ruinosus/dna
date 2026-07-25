@@ -4,11 +4,7 @@ metadata:
   name: f-copilot-agentframework-target
 spec:
   title: MS Agent Framework scaffold case + workflow capability
-  description: "Absorption phase 4 + 6b. A second per-runtime copilot scaffold case\
-    \ (Microsoft Agent Framework: as_agent + add_agent_framework_fastapi_endpoint\
-    \ serving + request_info HITL) proving the emitter is runtime-agnostic. Includes\
-    \ the workflow capability (WorkflowBuilder chain) that foundry's workflow-level\
-    \ HITL depends on (absorption \xA76.1/\xA76.5). Depends on f-dna-copilot-emitter."
+  description: 'Absorption phase 4 + 6b. A second per-runtime copilot scaffold case (Microsoft Agent Framework: as_agent + add_agent_framework_fastapi_endpoint serving + request_info HITL) proving the emitter is runtime-agnostic. Includes the workflow capability (WorkflowBuilder chain) that foundry''s workflow-level HITL depends on (absorption §6.1/§6.5). Depends on f-dna-copilot-emitter.'
   status: in-development
   epic: e-dna-copilot-absorption
   reporter: claude-code
@@ -33,7 +29,4 @@ spec:
     source: cli
     from: discovery
     to: in-development
-  narrative_line: "MS Agent Framework copilot scaffold case (2nd runtime) + Copilot\
-    \ workflow{chain} field \u2014 WorkflowBuilder chain + request_info HITL; byte-equal\
-    \ goldens + full Py/TS parity, brand-guard clean. Unblocks f-copilot-retrofit\
-    \ (foundry=MS-AF)."
+  narrative_line: MS Agent Framework copilot scaffold case (2nd runtime) + Copilot workflow{chain} field — WorkflowBuilder chain + request_info HITL; byte-equal goldens + full Py/TS parity, brand-guard clean. Unblocks f-copilot-retrofit (foundry=MS-AF).

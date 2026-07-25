@@ -3,14 +3,8 @@ kind: Feature
 metadata:
   name: f-dna-tools-as-data
 spec:
-  title: "Tools as data \u2014 the Tool Kind as a descriptor + load_tools consumer"
-  description: "Move the agent-facing tool surface (the description= the model reads\
-    \ + the params JSON-schema) into the declarative plane: migrate the class-based\
-    \ helix-tool Kind to a record-plane descriptor (kinds/tool.kind.yaml, byte-identical\
-    \ Py/TS), add dna.load_tools/loadTools (ToolLibrary, mirroring load_prompts),\
-    \ a 'dna new tool' scaffold, prove tenant-override of a tool description, and\
-    \ dogfood cross-language parity (same Tool doc read identically by Py + TS \u2014\
-    \ the SDK TS's first real shared-descriptor consumer)."
+  title: Tools as data — the Tool Kind as a descriptor + load_tools consumer
+  description: 'Move the agent-facing tool surface (the description= the model reads + the params JSON-schema) into the declarative plane: migrate the class-based helix-tool Kind to a record-plane descriptor (kinds/tool.kind.yaml, byte-identical Py/TS), add dna.load_tools/loadTools (ToolLibrary, mirroring load_prompts), a ''dna new tool'' scaffold, prove tenant-override of a tool description, and dogfood cross-language parity (same Tool doc read identically by Py + TS — the SDK TS''s first real shared-descriptor consumer).'
   status: discovery
   reporter: claude-code
   priority: high

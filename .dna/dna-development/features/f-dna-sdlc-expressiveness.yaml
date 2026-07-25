@@ -3,11 +3,8 @@ kind: Feature
 metadata:
   name: f-dna-sdlc-expressiveness
 spec:
-  title: "SDLC expressiveness \u2014 cite any citable Kind + epic show forward features"
-  description: "Two kaizen fixes found dogfooding the DNA board: (1) 'dna sdlc cite'\
-    \ s\xF3 resolvia Reference/<name>; generaliza pra qualquer Kind cit\xE1vel (Research,\
-    \ ADR, ...). (2) 'epic show' lia o forward link nunca populado (epic.spec.features[]);\
-    \ conserta via reverse-lookup por feature.spec.epic."
+  title: SDLC expressiveness — cite any citable Kind + epic show forward features
+  description: 'Two kaizen fixes found dogfooding the DNA board: (1) ''dna sdlc cite'' só resolvia Reference/<name>; generaliza pra qualquer Kind citável (Research, ADR, ...). (2) ''epic show'' lia o forward link nunca populado (epic.spec.features[]); conserta via reverse-lookup por feature.spec.epic.'
   status: in-development
   epic: e-dna-portability
   reporter: claude-code
