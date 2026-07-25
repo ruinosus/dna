@@ -1,0 +1,12 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-prm-issuer-verbatim-20260725-192259
+spec:
+  guide_ref: tg-prm-issuer-verbatim
+  outcome: pass
+  verifies:
+  - Story/s-prm-issuer-verbatim
+  executed_by: claude-code
+  executed_at: '2026-07-25T19:22:59+00:00'
+  notes: 23 passed in packages/cli/tests/test_mcp_auth.py; full CLI suite 1096 passed / 1 pre-existing env failure (test_mcp_quota durable store needs the optional dna-cli[quota] psycopg driver, fails identically on a clean checkout); brand_guard clean; no generated-surface drift.

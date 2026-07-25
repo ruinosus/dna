@@ -1,0 +1,19 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-prm-issuer-verbatim
+spec:
+  description: The PRM advertises every configured authorization-server identifier byte-identical, proven on the serialized JSON body and proven to bite when the fix is reverted.
+  kind_of_test: manual
+  status: active
+  steps:
+  - action: cd packages/cli && .venv/bin/python -m pytest tests/test_mcp_auth.py -q
+    expected: 23 passed
+  - action: revert the wrapper (early return in _VerbatimAuthServersResourceServer.get_routes) then rerun
+    expected: 3 failed — the three verbatim guards
+  - action: python3 scripts/brand_guard.py
+    expected: 'brand_guard: clean'
+  verifies:
+  - Story/s-prm-issuer-verbatim
+  created_at: '2026-07-25T19:22:37+00:00'
+  updated_at: '2026-07-25T19:22:37+00:00'

@@ -35,6 +35,7 @@ The policy in one paragraph — **the token is authoritative**:
 """
 from __future__ import annotations
 
+import json
 import os
 from dataclasses import dataclass
 from typing import Any
@@ -1349,6 +1350,90 @@ def workos_provider_from_env() -> Any:
     )
 
 
+# ── PRM: the authorization-server identifier must be advertised VERBATIM ───
+#
+# RFC 8414 §3.3 makes the client compare the ``issuer`` the authorization server
+# publishes against the identifier it was handed, by **exact string equality**.
+# FastMCP builds the RFC 9728 document from ``ProtectedResourceMetadata``, whose
+# ``authorization_servers`` field is typed ``list[AnyHttpUrl]`` — so pydantic
+# CANONICALIZES every identifier on the way out: a bare host gains a trailing
+# slash (``https://host`` → ``https://host/``), a default port is dropped, the
+# host is lower-cased. A door configured with the AS's own issuer string then
+# advertised something the AS never published, and a strict client silently
+# walked away — the i-073 symptom: "consent succeeds, everything looks fine, and
+# the client never sends a single request to the server".
+#
+# The fix corrects exactly ONE field's serialization: FastMCP still builds the
+# whole document (we do not fork it, nor hand-roll the schema), and the wrapper
+# below replaces the serialized ``authorization_servers`` array with the
+# configured strings. **Verbatim means verbatim** — an identifier configured WITH
+# a path or WITH a trailing slash round-trips byte-identical too; this never
+# "strips trailing slashes".
+
+_PRM_WELL_KNOWN_PREFIX = "/.well-known/oauth-protected-resource"
+
+
+class _VerbatimAuthorizationServers:
+    """ASGI wrapper over a PRM route that re-serializes ``authorization_servers``.
+
+    Buffers the wrapped app's response, and — only when the body is a JSON object
+    that actually carries ``authorization_servers`` — swaps that one array for the
+    configured identifiers and fixes ``Content-Length``. Every other response the
+    route can produce (the CORS preflight, an error) passes through untouched.
+    """
+
+    def __init__(self, app: Any, authorization_servers: list[str]) -> None:
+        self._app = app
+        self._authorization_servers = list(authorization_servers)
+
+    def _rewrite(self, body: bytes) -> bytes:
+        if not body:
+            return body
+        try:
+            doc = json.loads(body)
+        except (ValueError, UnicodeDecodeError):
+            return body  # not JSON (preflight / plain-text error) → untouched.
+        if not isinstance(doc, dict) or "authorization_servers" not in doc:
+            return body
+        doc["authorization_servers"] = list(self._authorization_servers)
+        # Same compact shape pydantic emits; dict order is insertion order, so the
+        # document's field order is preserved.
+        return json.dumps(doc, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+
+    async def __call__(self, scope: Any, receive: Any, send: Any) -> None:
+        if scope.get("type") != "http":
+            await self._app(scope, receive, send)
+            return
+
+        start: dict[str, Any] | None = None
+        chunks: list[bytes] = []
+
+        async def capture(message: dict[str, Any]) -> None:
+            nonlocal start
+            if message["type"] == "http.response.start":
+                start = message
+                return  # held back until the body is known (Content-Length).
+            if message["type"] == "http.response.body":
+                chunks.append(message.get("body", b"") or b"")
+                if message.get("more_body", False):
+                    return
+                body = self._rewrite(b"".join(chunks))
+                headers = [
+                    (k, v)
+                    for k, v in (start or {}).get("headers", [])
+                    if k.lower() != b"content-length"
+                ]
+                headers.append((b"content-length", str(len(body)).encode("latin-1")))
+                await send({**(start or {}), "headers": headers})
+                await send(
+                    {"type": "http.response.body", "body": body, "more_body": False}
+                )
+                return
+            await send(message)
+
+        await self._app(scope, receive, capture)
+
+
 def resource_server(
     token_verifier: Any,
     *,
@@ -1363,10 +1448,47 @@ def resource_server(
     ``JWTVerifier`` (the MVP) or, later, a WorkOS/Auth0 ``OAuthProxy`` — the DNA
     tenancy bridge above reads the tenant off whatever verified token comes back,
     so nothing downstream changes.
+
+    The returned provider is a thin ``RemoteAuthProvider`` subclass that advertises
+    each authorization-server identifier **exactly as configured** — see
+    :class:`_VerbatimAuthorizationServers` for why (RFC 8414 §3.3 / i-073).
     """
     from fastmcp.server.auth import RemoteAuthProvider
+    from starlette.routing import Route
 
-    return RemoteAuthProvider(
+    verbatim = [str(s) for s in authorization_servers]
+
+    class _VerbatimAuthServersResourceServer(RemoteAuthProvider):  # type: ignore[valid-type,misc]
+        """``RemoteAuthProvider`` that serializes ``authorization_servers`` verbatim.
+
+        FastMCP builds its routes exactly as before; this only wraps the PRM
+        route's ASGI app so the ONE coerced field carries the configured strings.
+        Nothing else about the document — ``resource``, ``scopes_supported``,
+        ``bearer_methods_supported`` — is touched, and a FastMCP that changes the
+        rest of the schema keeps working.
+        """
+
+        def get_routes(self, mcp_path: str | None = None) -> list[Any]:  # type: ignore[override]
+            routes = super().get_routes(mcp_path)
+            wrapped: list[Any] = []
+            for route in routes:
+                if isinstance(route, Route) and route.path.startswith(
+                    _PRM_WELL_KNOWN_PREFIX
+                ):
+                    wrapped.append(
+                        Route(
+                            route.path,
+                            endpoint=_VerbatimAuthorizationServers(route.app, verbatim),
+                            methods=sorted(route.methods or ["GET"]),
+                            name=route.name,
+                            include_in_schema=route.include_in_schema,
+                        )
+                    )
+                else:
+                    wrapped.append(route)
+            return wrapped
+
+    return _VerbatimAuthServersResourceServer(
         token_verifier=token_verifier,
         authorization_servers=authorization_servers,
         base_url=base_url,
