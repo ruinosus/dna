@@ -164,7 +164,7 @@ runtime the way a hand-mirrored kernel can.
 ## Your git log is your SDLC
 
 This repo tracks its own lifecycle as DNA documents (`dna sdlc`): its
-Stories/Features/Issues live in [`.dna/dna-development/`](.dna/dna-development/),
+Stories/Features/Issues live in [`.dna/dna/`](.dna/dna/),
 and a versioned `prepare-commit-msg` hook stamps every commit born under a
 Story with a `Work-Item:` trailer — so tracing the work back is a `git log`
 query, not bookkeeping. The same convention signs the PRs.
@@ -180,7 +180,7 @@ file per scope, with pgvector as the same-contract scale adapter.
 ```console
 $ dna recall "reciprocal rank fusion" --kind Story -k 1
 
-🔎 hybrid (dense+lexical+RRF) · scope=dna-development · 'reciprocal rank fusion'
+🔎 hybrid (dense+lexical+RRF) · scope=dna · 'reciprocal rank fusion'
    1. Story/s-search-pgvector  (0.0297)
 ```
 
@@ -218,7 +218,7 @@ dna/
 ├── scopes/              # Fixture scopes, incl. 31 real marketplace skills
 ├── scripts/             # Repo guards + versioned git hooks (git-hooks/)
 ├── tests/               # Golden fixtures (behavioral + market conformance)
-├── .dna/                # This repo's own SDLC scope (dna-development)
+├── .dna/                # This repo's own SDLC scope (dna)
 └── LICENSE              # MIT
 ```
 

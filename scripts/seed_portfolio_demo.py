@@ -5,7 +5,7 @@ Mirrors how the intel ``IntelSource`` was seeded at ``.dna/tenants/demo/…``:
 writes each portfolio doc through ``kernel.write_document`` (so schema
 validation + cache invalidation fire, the same funnel every writer uses), bound
 to tenant ``demo`` so the FS source routes them into the tenant overlay layout
-``.dna/tenants/demo/scopes/dna-development/<container>/``. Those YAMLs are
+``.dna/tenants/demo/scopes/dna/<container>/``. Those YAMLs are
 FS-tracked and must be COMMITTED (the DNA source is the git-tracked ``.dna/``,
 not a database).
 
@@ -22,7 +22,7 @@ from __future__ import annotations
 import asyncio
 import os
 
-SCOPE = "dna-development"
+SCOPE = "dna"
 TENANT = "demo"
 PORTFOLIO_API = "github.com/ruinosus/dna/portfolio/v1"
 INTEL_API = "github.com/ruinosus/dna/intel/v1"
@@ -58,7 +58,7 @@ PROJECTS = [
     _doc(PORTFOLIO_API, "Project", "dna", {
         "slug": "dna",
         "org_ref": "barnabe-labs",
-        "board_scope": "dna-development",
+        "board_scope": "dna",
         "repo_refs": ["dna", "dna-cloud"],          # multi-repo — the showcase
         "intel_source_refs": ["dna"],
         "visibility": "private",
