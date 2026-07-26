@@ -17,7 +17,6 @@ never a re-implementation.
 """
 from __future__ import annotations
 
-import inspect
 import logging
 
 from datetime import datetime, timezone
@@ -245,15 +244,50 @@ async def get_tool_impl(
 # ── definitions (read/apply/revert a tenant override) — s-strain-customization-ui
 
 
-def _doc_spec_from_mi(mi: Any, kind: str, name: str) -> dict[str, Any] | None:
-    """Return the spec dict for (kind, name) from a materialized ManifestInstance,
-    or None if absent. Filters ``mi.documents`` by (kind, name) then reuses
-    ``_doc_spec`` for the shape-tolerant spec extraction — DRY with
-    ``genome_view_impl``."""
+async def _doc_spec_for(
+    live: LiveDna, mi: Any, kind: str, name: str, *, tenant: str | None = None,
+) -> dict[str, Any] | None:
+    """Return the spec dict for (kind, name) as ``mi`` sees it, or None if absent
+    — across BOTH document planes.
+
+    i-076: this used to walk ``mi.documents`` and stop there, which silently
+    404'd every RECORD-plane Kind (Tool, Copilot, and every SDLC/descriptor
+    Kind). ``instance_builder`` deliberately drops ``plane="record"`` docs from
+    the materialization — the MI is O(composition), and a record Kind never
+    composes into a prompt, so parsing them into every instance would be pure
+    waste. The definitions API inherited that exclusion as a bug:
+    ``apply_definition_impl`` writes those Kinds happily (registry lookup +
+    ``write_document``, both plane-agnostic), so the surface was WRITE-ONLY for
+    them — an override a user could save and never read back.
+
+    Widening the composed set would trade the correctness bug for a latency
+    regression on every request, so the fix goes the other way. The definitions
+    path knows exactly which ``(kind, name)`` it wants, so a record Kind gets a
+    TARGETED read — ``kernel.get_document``, keyed by (scope, kind, name, tenant)
+    and L2-cached — while the composition plane keeps its in-memory walk
+    unchanged, with no extra roundtrip on either the hit or the miss path.
+
+    The raw dict is read straight off the record plane rather than through
+    ``mi.one_async``: the caller wants a spec, not a validated ``Document``, so
+    skipping the per-read ``_parse_doc`` saves ~1.5ms per record read.
+
+    ``_doc_spec`` still does the shape-tolerant extraction for materialized docs
+    — DRY with ``genome_view_impl``.
+    """
     for d in mi.documents:
         if getattr(d, "kind", None) == kind and getattr(d, "name", None) == name:
             return _doc_spec(d)
-    return None
+    plane_of = getattr(live.kernel, "kind_plane", None)
+    if not callable(plane_of) or plane_of(kind) != "record":
+        # A composition Kind absent from the composed set is genuinely absent —
+        # falling back to the record plane here would bypass layer resolution and
+        # dress a materialization error up as a successful read.
+        return None
+    raw = await live.kernel.get_document(mi.scope, kind, name, tenant=tenant)
+    if not isinstance(raw, dict):
+        return None
+    spec = raw.get("spec")
+    return spec if isinstance(spec, dict) else {}
 
 
 def _api_version_for_kind(live: LiveDna, kind: str) -> str:
@@ -332,8 +366,8 @@ async def read_definition_impl(
     marketplace (plane C) being future."""
     base_mi = await live.mi(scope)                 # no tenant → base only
     eff_mi = await live.mi(scope, tenant) if tenant else base_mi
-    base = _doc_spec_from_mi(base_mi, kind, name)
-    effective = _doc_spec_from_mi(eff_mi, kind, name)
+    base = await _doc_spec_for(live, base_mi, kind, name)
+    effective = await _doc_spec_for(live, eff_mi, kind, name, tenant=tenant)
     if effective is None and base is None:
         raise ValueError(f"no {kind} named {name!r} in scope {scope!r}")
     overridden = await _tenant_layer_doc_exists(live, scope, tenant, kind, name)
@@ -347,12 +381,20 @@ async def read_definition_impl(
     bundle_entries: list[str] = []
     if pattern == "bundle" and effective is not None:
         # List the bundle's entry files (read-only in A — plane B forks them). Best-effort:
-        # a missing/never-written bundle simply yields []. Uses the kernel bundle facade if present.
+        # a missing/never-written bundle simply yields [].
+        #
+        # The ``_async`` facade, never the sync twin — B1's lesson (see
+        # ``reconcile_forks_impl``): the sync bundle helpers raise from inside a
+        # running event loop against a loop-bound SQL source, and this function is
+        # always awaited. Going through the sync twin therefore raised on EVERY
+        # call in a real deployment, was swallowed by the advisory ``except``, and
+        # reported ``[]`` for every bundle Kind — silently, bar a stray "coroutine
+        # was never awaited" RuntimeWarning. Latent until i-076: only composition
+        # Kinds used to reach this block, and 18 record Kinds are bundle-pattern.
         try:
-            lister = getattr(live.kernel, "list_bundle_entries", None)
+            lister = getattr(live.kernel, "list_bundle_entries_async", None)
             if lister is not None:
-                res = lister(scope, kind, name, tenant=tenant)
-                bundle_entries = sorted(await res) if inspect.isawaitable(res) else sorted(res)
+                bundle_entries = sorted(await lister(scope, kind, name, tenant=tenant))
         except Exception:  # noqa: BLE001 — entry listing is advisory, never fails the read
             bundle_entries = []
     return {

@@ -1,0 +1,11 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-definitions-read-record-plane-20260726-054435
+spec:
+  guide_ref: tg-definitions-read-record-plane
+  outcome: pass
+  verifies:
+  - Story/s-definitions-read-record-plane
+  executed_by: claude-code
+  executed_at: '2026-07-26T05:44:35+00:00'

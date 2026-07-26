@@ -1,0 +1,15 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-076-definitions-read-404s-for-record-plane-kinds
+spec:
+  description: GET definitions 404s for every record-plane Kind (35 of 76). read_definition_impl resolves the doc out of mi.documents, but the instance builder deliberately excludes plane='record' Kinds from the MI materialization (a perf decision). PUT works (registry lookup + kernel.write_document are plane-agnostic), so the API is WRITE-ONLY for Tool/Copilot/... — a user saves an override they can never read back, and a schema-driven editor renders a blank form.
+  type: bug
+  severity: high
+  status: open
+  timeline:
+  - at: '2026-07-26T05:17:22+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

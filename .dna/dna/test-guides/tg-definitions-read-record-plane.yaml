@@ -1,0 +1,23 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-definitions-read-record-plane
+spec:
+  description: Prove the definitions API reads record-plane Kinds, that the write-then-read round trip closes, and that the guard bites when the fix is reverted.
+  kind_of_test: manual
+  status: active
+  steps:
+  - action: cd packages/sdk-py && .venv/bin/python -m pytest tests/test_definition_impls.py -q
+    expected: 9 passed, no warnings
+  - action: Break the record-plane branch + revert the async bundle lister, rerun
+    expected: 4 failed (Tool, Copilot, round-trip, bundle entries)
+  - action: cd packages/sdk-py && .venv/bin/python -m pytest tests -q --timeout=180
+    expected: 3583 passed, 1 pre-existing failure (test_claude_export_roundtrip, fails on main too)
+  - action: cd packages/cli && .venv/bin/python -m pytest tests -q
+    expected: 1128 passed, 1 pre-existing failure (test_mcp_quota, i-057)
+  - action: python3 scripts/brand_guard.py + gen_cli_docs.py + gen_kinds_docs.py + data_model_guard.py + docs_coverage_guard.py
+    expected: all clean, no regenerated output
+  verifies:
+  - Story/s-definitions-read-record-plane
+  created_at: '2026-07-26T05:44:14+00:00'
+  updated_at: '2026-07-26T05:44:14+00:00'
