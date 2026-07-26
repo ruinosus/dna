@@ -1,0 +1,185 @@
+"""``dna_cli._mcp_documents`` — the GENERIC document tools on the MCP face.
+
+Four tools that replace what would otherwise be four hand-written tools per
+Kind. The MCP face had 21 hand-written tools and no loop over the Kind registry:
+of the 76 registered Kinds (49 record-plane, most declared purely by a
+``*.kind.yaml`` descriptor) only the handful somebody wrote tools for was
+reachable by an agent. These four are resolved from the registry AT CALL TIME,
+so a Kind that exists is a Kind an agent can use:
+
+    list_kinds      — the catalog: what can I act on in this scope?
+    list_documents  — the documents of one Kind
+    get_document    — one document, verbatim
+    write_document  — create/update one document
+
+This module is a THIN adapter, exactly like the rest of the face. The behavior
+lives in the core (``dna.application.documents``); what lives HERE is the
+MCP-edge concern that core cannot own — the plan/tenancy seam:
+
+* every tool passes the SAME ``_guard`` the hand-written tools pass (workspace
+  resolution + membership, scope binding, tier → caps → quota), so the generic
+  surface opens no path a hand-written tool does not already honor;
+* the metered FAMILY is derived from the target Kind
+  (``documents.family_for_kind``), never chosen by the caller — so an ``sdlc``
+  write cannot be reached through a "document" tool by a tier that grants
+  ``sdlc_mode: read``;
+* a WRITE additionally requires the tier to grant ``write`` for that family's
+  access mode (``_mcp_quota.enforce_family_mode``), fail closed.
+
+Registered from ``_mcp_server.build_server`` the same way the ``graph.*`` tools
+are (``register_graph_tools``): a ``guard`` callable is injected, so this module
+never reaches into the server's closure and can be tested against a fake guard.
+"""
+from __future__ import annotations
+
+from typing import Any, Awaitable, Callable
+
+from dna.application import documents as D
+
+#: The signature ``_mcp_server`` injects: ``guard(family, scope=…, family_op=…)``
+#: → the resolved workspace (or None). Raises the face's ``ToolError`` on denial.
+GuardFn = Callable[..., Awaitable[Any]]
+
+#: ``plan_families()`` → the feature families the caller's tier unlocks, or
+#: ``None`` when the call is unmetered (stdio / self-host) or the source
+#: configured no tiers. ``list_kinds`` uses it to report an HONEST catalog.
+PlanFamiliesFn = Callable[[], Awaitable[Any]]
+
+
+def register_document_tools(
+    server: Any,
+    *,
+    live: Callable[[], Awaitable[Any]],
+    guard: GuardFn,
+    plan_families: PlanFamiliesFn,
+) -> list[str]:
+    """Register the four generic document tools on ``server``. Returns their
+    names (the boot log prints them, like the graph tools)."""
+    from fastmcp.exceptions import ToolError
+
+    async def _resolved(kind: str, api_version: str | None) -> Any:
+        """The target Kind's port, or ``None`` when the name is unknown.
+
+        Resolution happens BEFORE the guard because the guard needs the family
+        the port implies. An unknown/ambiguous name yields ``None`` here and is
+        refused AFTER the guard has run, so probing Kind names still costs the
+        caller a metered call instead of being a free oracle over the registry."""
+        try:
+            return D.resolve_kind_port((await live()).kernel, kind, api_version)
+        except (D.UnknownKindError, D.AmbiguousKindError):
+            return None
+
+    async def _guard_for(
+        kind: str, api_version: str | None, *, scope: str | None,
+        family_op: str,
+    ) -> tuple[Any, Any]:
+        """Resolve the port, meter the call against ITS family, return both.
+
+        The single seam every generic tool goes through. When the Kind name did
+        not resolve, the call is still metered as ``definitions`` and then the
+        real resolution error is re-raised as a clean ToolError."""
+        port = await _resolved(kind, api_version)
+        tenant = await guard(
+            D.family_for_kind(port), scope=scope, family_op=family_op,
+        )
+        if port is None:  # metered, now say why it cannot proceed.
+            try:
+                port = D.resolve_kind_port(
+                    (await live()).kernel, kind, api_version)
+            except (D.UnknownKindError, D.AmbiguousKindError) as exc:
+                raise ToolError(str(exc)) from None
+        return port, tenant
+
+    @server.tool(run_in_thread=False)
+    async def list_kinds(scope: str | None = None) -> dict[str, Any]:
+        """List the Kinds this source serves — the catalog behind
+        ``list_documents`` / ``get_document`` / ``write_document``.
+
+        Each entry carries the Kind's ``alias``, ``api_version``, ``plane``
+        (``composition`` = it composes into prompts, ``record`` = it does not),
+        ``tenant_scope``, ``storage_pattern``, the quota ``family`` a call on it
+        is metered under, and ``writable`` + ``write_refusal`` — so a Kind the
+        generic write refuses (a BOOTSTRAP Kind: Genome / LayerPolicy /
+        KindDefinition) is visible before you try.
+
+        Over an authenticated server the catalog reports only the Kinds your
+        plan's feature families unlock (``filtered_by_plan: true``) — an honest
+        short list beats a long one whose entries answer 403."""
+        # Metered as `definitions`: the catalog is a read OF THE REGISTRY, not
+        # of any one family's documents — the same call the `dna://{scope}/
+        # manifest` resource already guards under that family.
+        tenant = await guard("definitions", scope=scope)
+        return await D.list_kinds_impl(
+            await live(), scope=scope, tenant=tenant,
+            families=await plan_families(),
+        )
+
+    @server.tool(run_in_thread=False)
+    async def list_documents(
+        kind: str, scope: str | None = None, api_version: str | None = None,
+        limit: int = 50, offset: int = 0,
+    ) -> dict[str, Any]:
+        """List the documents of one Kind in a scope (name only — read one with
+        ``get_document``). Pass ``api_version`` when a Kind NAME is registered
+        under more than one (the tool says so rather than guessing). Paged:
+        ``limit`` (max 500) + ``offset``, with an honest ``has_more``."""
+        port, tenant = await _guard_for(
+            kind, api_version, scope=scope, family_op="read")
+        return await D.list_documents_impl(
+            await live(), kind=port.kind, api_version=port.api_version,
+            scope=scope, tenant=tenant, limit=limit, offset=offset,
+        )
+
+    @server.tool(run_in_thread=False)
+    async def get_document(
+        kind: str, name: str, scope: str | None = None,
+        api_version: str | None = None,
+    ) -> dict[str, Any]:
+        """Read one document verbatim (``apiVersion`` / ``kind`` / ``metadata``
+        / ``spec``), as your layer sees it — the per-tenant overlay wins over the
+        inherited base, live, with no redeploy. Works for EVERY registered Kind,
+        including the bootstrap ones the generic write refuses."""
+        port, tenant = await _guard_for(
+            kind, api_version, scope=scope, family_op="read")
+        try:
+            return await D.get_document_impl(
+                await live(), kind=port.kind, api_version=port.api_version,
+                name=name, scope=scope, tenant=tenant,
+            )
+        except LookupError as exc:
+            raise ToolError(str(exc)) from None
+
+    @server.tool(run_in_thread=False)
+    async def write_document(
+        kind: str, name: str, spec: dict[str, Any],
+        scope: str | None = None, api_version: str | None = None,
+    ) -> dict[str, Any]:
+        """Create or update one document of any Kind — ``spec`` is the document
+        body (the ``apiVersion``/``kind``/``metadata`` envelope is built from the
+        registered Kind, so you cannot write into another Kind's namespace).
+
+        The write goes through the kernel's own pipeline: the Kind's JSON Schema
+        validates it, the operator's LayerPolicy (and the Kind's overlayable-field
+        allowlist) may veto it, references are checked and the ``pre_save`` hooks
+        can refuse it — identical to every hand-written write tool.
+
+        Two refusals are this tool's own, and both fail CLOSED: a BOOTSTRAP Kind
+        (Genome / LayerPolicy / KindDefinition — see ``list_kinds``) is never
+        writable here, and over an authenticated server the write needs your plan
+        to grant ``write`` for the target Kind's family (``sdlc_mode`` for the
+        board, ``memory_mode`` for memory, ``definitions_mode`` otherwise)."""
+        port, tenant = await _guard_for(
+            kind, api_version, scope=scope, family_op="write")
+        try:
+            return await D.write_document_impl(
+                await live(), kind=port.kind, api_version=port.api_version,
+                name=name, spec=spec, scope=scope, tenant=tenant,
+            )
+        except D.BootstrapKindWriteRefused as exc:
+            raise ToolError(str(exc)) from None
+        except (ValueError, LookupError, PermissionError) as exc:
+            # Schema violation / LayerPolicy veto / tenancy rule — the kernel's
+            # own refusals, surfaced verbatim instead of masked as a 500.
+            raise ToolError(f"{type(exc).__name__}: {exc}") from None
+
+    return ["list_kinds", "list_documents", "get_document", "write_document"]

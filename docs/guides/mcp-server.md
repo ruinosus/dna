@@ -63,6 +63,57 @@ unrestricted, exactly like `remember`.
 
 - `recall(query, scope?, k?)` · `remember(summary, …)` · `consolidate(apply?)`.
 
+**Documents** — every registered Kind, generically:
+
+The tools above each name one Kind. These four name none — they loop over the
+**Kind registry at call time**, so a Kind that exists is a Kind an agent can use,
+with no hand-written tool for it. That matters because most Kinds have none: of
+the Kinds a stock kernel registers, only a handful are covered above, and most
+are declared purely by a `*.kind.yaml` descriptor.
+
+- `list_kinds(scope?)` — the catalog. Per Kind: `alias`, `api_version`, `plane`
+  (`composition` = it composes into prompts, `record` = it does not),
+  `tenant_scope`, `storage_pattern`, the quota `family` a call on it is metered
+  under, and `writable` + `write_refusal`.
+- `list_documents(kind, scope?, api_version?, limit?, offset?)` — the documents
+  of one Kind (paged, with an honest `has_more`).
+- `get_document(kind, name, scope?, api_version?)` — one document verbatim, as
+  your layer sees it (the per-tenant overlay wins, live).
+- `write_document(kind, name, spec, scope?, api_version?)` — create/update one
+  document. The `apiVersion`/`kind`/`metadata` envelope is built from the
+  **registered Kind**, so a caller cannot write into another Kind's namespace.
+
+The write goes through `kernel.write_document` like every other write path —
+schema validation, the LayerPolicy gate (Kind-level *and* the per-field
+overlayable-fields allowlist), reference validation and the `pre_save` veto
+hooks all apply. Two refusals are the generic tool's own, and both **fail
+closed**:
+
+- **Bootstrap Kinds are never written generically** — `Genome`, `LayerPolicy`
+  and `KindDefinition`, i.e. exactly the Kinds the kernel marks
+  `is_overlayable: false`. Their documents declare what a scope *is* (its
+  identity and `parent_scope` inheritance; the operator's own override policy;
+  the definition of a Kind itself), so a tool that can write *any* document must
+  not be the tool that rewrites the frame every other document is validated
+  against. They stay fully **readable**. The set is derived from the registry, so
+  a Kind that declares `is_overlayable: false` in its descriptor is covered on
+  arrival.
+- **An ambiguous bare Kind name is refused** — when a name is registered under
+  more than one `apiVersion` (a per-scope `KindDefinition` shadowing a builtin),
+  the tool asks for `api_version` instead of guessing: the resolved Kind decides
+  both what is written and how the call is metered.
+
+Over an authenticated server the metering is derived from the **target Kind**,
+not from which tool was called — so a board Kind is metered as `sdlc` and gated
+by `sdlc_mode` even when reached through `write_document`, and a `read` tier
+cannot smuggle a board write through the generic door. A generic **write**
+additionally requires the plan to grant `write` for that family's access mode
+(`sdlc_mode` / `memory_mode` / `definitions_mode`); a plan that never declared
+one grants `none`. `list_kinds` reports only the Kinds your plan's feature
+families unlock (`filtered_by_plan: true`) — a short honest catalog beats a long
+one whose entries answer 403. The stdio / local (no-token) path is unmetered and
+unrestricted, exactly like the rest of the face.
+
 **Resources** (beyond tools):
 
 - `dna://{scope}/manifest` — the scope's Kinds → document names.

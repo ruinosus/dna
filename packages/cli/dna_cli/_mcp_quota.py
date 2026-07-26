@@ -84,6 +84,18 @@ class SdlcModeError(PermissionError):
     ``write`` (Pro). Read straight from the ``Tier`` spec — never hardcoded."""
 
 
+class DocumentModeError(PermissionError):
+    """The tier's ``<family>_mode`` does not grant the attempted GENERIC document
+    op (403) — the family-agnostic sibling of :class:`MemoryModeError` /
+    :class:`SdlcModeError`.
+
+    Raised by :func:`enforce_family_mode` for a family that has no first-class
+    gate of its own (``definitions``, ``emit``). The generic document tools span
+    every family at once, so they cannot ride a per-family exception type the
+    way the hand-written tools do; the message still NAMES the cap the tier
+    would have to declare (e.g. ``definitions_mode: write``)."""
+
+
 # An access level is a total order: none < read < write. A tool declares the level
 # it NEEDS; the tier GRANTS a level. Shared by the memory + sdlc mode gates.
 _ACCESS_MODE_RANK: dict[str, int] = {"none": 0, "read": 1, "write": 2}
@@ -141,6 +153,53 @@ def enforce_sdlc_mode(*, caps: dict[str, Any], tier: str, op: str) -> None:
     _enforce_mode(
         caps=caps, tier=tier, op=op, field="sdlc_mode", label="sdlc",
         error=SdlcModeError,
+    )
+
+
+#: Families that own a first-class mode gate + exception type. A generic
+#: document call on one of these raises the SAME error the hand-written tool for
+#: that family raises, so a denial reads identically whichever door produced it.
+_FAMILY_MODE_ERRORS: dict[str, type[PermissionError]] = {
+    "memory": MemoryModeError,
+    "sdlc": SdlcModeError,
+}
+
+
+def enforce_family_mode(
+    *, caps: dict[str, Any], tier: str, family: str, op: str,
+) -> None:
+    """Gate one GENERIC document call against the tier's ``<family>_mode``.
+
+    The uniform rule the generic document tools are metered by
+    (``s-mcp-generic-document-tools``). One tool spans every feature family, so
+    the family is derived from the TARGET KIND
+    (``dna.application.documents.family_for_kind``) and this gate then applies
+    that family's access mode — ``sdlc_mode`` for a board Kind, ``memory_mode``
+    for an Engram, ``definitions_mode`` for everything else. There is no
+    per-tool special case to get wrong, and a caller cannot pick its family by
+    picking a tool.
+
+    Read (``op='read'``) and write (``op='write'``) are deliberately asymmetric:
+
+    * a **write** ALWAYS requires an explicitly granted ``write`` — a plan that
+      never declared the family's mode grants ``none`` (the Kind's schema
+      default) and the write is refused. Fail closed: the generic write is new
+      capability, and a plan written before it existed cannot have consented to
+      it. The message names the missing cap, so granting it is a one-line plan
+      edit rather than a code change.
+    * a **read** is enforced only when the tier actually DECLARES that family's
+      mode. Reads were already governed by the coarse ``feature_families`` gate
+      on every existing tool; retro-denying them on plans that never spoke about
+      modes would break configured deployments to no security end.
+
+    Empty ``caps`` (an unconfigured / OSS source) enforces nothing, exactly like
+    :func:`enforce_quota` — the self-host path is never capped."""
+    field = f"{family}_mode"
+    if op == "read" and field not in caps:
+        return  # the plan never spoke about this family's modes — see above.
+    _enforce_mode(
+        caps=caps, tier=tier, op=op, field=field, label=family,
+        error=_FAMILY_MODE_ERRORS.get(family, DocumentModeError),
     )
 
 
@@ -881,6 +940,7 @@ async def enforce_plan(
     claimed_tier: str | None = None,
     memory_op: str | None = None,
     sdlc_op: str | None = None,
+    family_op: str | None = None,
     quota_tenant: str | None = None,
 ) -> str:
     """Meter ONE authenticated call against the caller's plan — the shared core.
@@ -893,7 +953,9 @@ async def enforce_plan(
     2. resolve its caps (:func:`resolve_tier_caps` — Free-doc fallback, empty
        caps = OSS no-op, ``DNA_QUOTA_REQUIRE_TIERS`` fail-closed),
     3. the PRE-COUNTER gates — ``memory_op``/``sdlc_op`` against the tier's
-       ``memory_mode``/``sdlc_mode`` (a denied write costs no quota),
+       ``memory_mode``/``sdlc_mode`` (a denied write costs no quota), and
+       ``family_op`` against ``<family>_mode`` for a GENERIC document call whose
+       family was derived from the target Kind (:func:`enforce_family_mode`),
     4. :func:`enforce_quota` — family gate, rate window, daily cap (the i-050
        honesty lives there: a denied call is never counted).
 
@@ -901,7 +963,8 @@ async def enforce_plan(
     tenancy resolves no workspace but usage meters per ``personal:<oid>``
     partition). Raises the quota exception family
     (:class:`FeatureNotInPlanError` / :class:`MemoryModeError` /
-    :class:`SdlcModeError` / :class:`OverQuotaError`) or
+    :class:`SdlcModeError` / :class:`DocumentModeError` /
+    :class:`OverQuotaError`) or
     :class:`TierRegistryUnavailableError`; each face maps them to its transport.
     Returns the resolved tier id (observability / tests).
 
@@ -916,6 +979,8 @@ async def enforce_plan(
         enforce_memory_mode(caps=caps, tier=tier, op=memory_op)
     if sdlc_op is not None:
         enforce_sdlc_mode(caps=caps, tier=tier, op=sdlc_op)
+    if family_op is not None:
+        enforce_family_mode(caps=caps, tier=tier, family=family, op=family_op)
     enforce_quota(
         caps=caps,
         tenant=quota_tenant if quota_tenant is not None else tenant,

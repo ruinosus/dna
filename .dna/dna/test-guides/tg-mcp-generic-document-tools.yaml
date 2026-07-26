@@ -1,0 +1,35 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-mcp-generic-document-tools
+spec:
+  description: 'Verify the four generic, registry-driven document tools on the MCP face: the payoff (a Kind with no hand-written tool is listable/readable/writable), and that every refusal actually bites (bootstrap Kinds, the derived quota family + <family>_mode write gate, ambiguous Kind names, plan-filtered catalog, cross-workspace scope binding) — each proved by disabling it and watching the test go red.'
+  kind_of_test: manual
+  status: active
+  steps:
+  - action: cd packages/cli && ./.venv/bin/python -m pytest tests/test_mcp_generic_documents.py -q
+    expected: 22 passed
+  - action: cd packages/cli && DNA_OFFLINE=1 ./.venv/bin/python -m pytest tests -q
+    expected: only the pre-existing test_store_from_env_selects_the_durable_store_for_a_postgres_source failure (no psycopg2 in the venv), confirmed by stashing
+  - action: cd packages/sdk-py && DNA_OFFLINE=1 ./.venv/bin/python -m pytest tests -q
+    expected: 3555 passed, 221 skipped, 4 xfailed
+  - action: disable the bootstrap refusal in write_document_impl, run -k bootstrap
+    expected: '4 failed (3 core + 1 over the face); restore :: green'
+  - action: disable enforce_family_mode in enforce_plan, run -k 'read_tier or definitions_mode'
+    expected: '2 failed (the sdlc write goes through on sdlc_mode=read); restore :: green'
+  - action: drop scope= from the guard call in _mcp_documents, run -k cross_workspace
+    expected: '1 failed; restore :: green'
+  - action: make resolve_kind_port fall back to matches[0], run -k ambiguous
+    expected: '1 failed; restore :: green'
+  - action: force families=None in the list_kinds tool, run -k filtered_by_the_plan
+    expected: '1 failed; restore :: green'
+  - action: disable the sdlc namespace branch of family_for_kind, run -k 'family_for_kind or read_tier'
+    expected: '2 failed; restore :: green'
+  - action: python3 scripts/brand_guard.py; scripts/docs_coverage_guard.py; scripts/data_model_guard.py
+    expected: all clean
+  - action: 'payoff: build_server(scope=dna, base_dir=repo/.dna) over an in-memory MCP client; list_kinds/list_documents/get_document for Kaizen, StatusReport, HtmlArtifact'
+    expected: 25 tools (4 new), 76 Kinds catalogued, real documents listed + read, Genome write refused
+  verifies:
+  - Story/s-mcp-generic-document-tools
+  created_at: '2026-07-26T07:18:37+00:00'
+  updated_at: '2026-07-26T07:18:37+00:00'

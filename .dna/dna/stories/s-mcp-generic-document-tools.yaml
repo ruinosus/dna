@@ -1,0 +1,84 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-mcp-generic-document-tools
+spec:
+  title: 'The MCP face has 21 hand-written tools and no loop over the Kind registry: 76 re'
+  description: 'The MCP face has 21 hand-written tools and no loop over the Kind registry: 76 registered Kinds (49 record-plane, 35 declared purely by a .kind.yaml descriptor) are invisible to any agent over MCP unless someone hand-writes tools for them. The CLI already solved this generically in-process (_ctx._LocalDocs, ~1310 generic lines of ''dna doc'' serving every Kind) but never served it. Add four registry-driven, generic-over-Kind tools on the MCP face — list_kinds / list_documents / get_document / write_document — routed through the existing _guard tenancy+quota seam, scope binding and kernel.write_document, with the generic write failing CLOSED on the bootstrap Kinds (KindDefinition / LayerPolicy / Genome) and metered by the family DERIVED from the target Kind so an sdlc write can never be reached on a tier granting sdlc_mode: read.'
+  status: in-progress
+  feature: f-dna-mcp-server
+  acceptance_criteria:
+  - Given a Kind with no hand-written MCP tool (e.g. ModelProfile), When an agent calls list_kinds/list_documents/get_document against a real scope, Then it discovers, lists and reads that Kind's documents
+  - 'Given a caller whose tier grants sdlc_mode: read, When it calls write_document for an SDLC Kind, Then the write is DENIED by the sdlc_mode gate (the generic tool opens no path the hand-written SDLC write tools do not honor)'
+  - Given any caller, When it calls write_document for a bootstrap Kind (KindDefinition / LayerPolicy / Genome — the Kinds the kernel marks is_overlayable=False), Then the write is refused fail-closed with a message naming the Kind and the reason
+  - Given an authenticated caller bound to a workspace, When it names another workspace's scope on any generic tool, Then the existing scope-binding denies it (no new bypass)
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - code+tests (RED then GREEN, plus deliberate-break evidence for every refusal) + docs (mcp-server guide) + generated Kinds reference regenerated + full CLI and SDK suites green
+  definition_of_done_source: cli-create
+  created_at: '2026-07-26T06:52:29+00:00'
+  updated_at: '2026-07-26T07:21:53+00:00'
+  timeline:
+  - at: '2026-07-26T06:52:29+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-26T06:52:54+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-26T07:17:53+00:00'
+    actor: claude-code
+    type: decision
+    source: cli
+    summary: 'Decidi derivar o conjunto de refuse do generic write de KindPort.is_overlayable=False em vez de digitar {Genome, LayerPolicy, KindDefinition}, porque uma lista digitada seria exatamente a doenca que esta feature cura — e porque o kernel ja declara esse marcador (''nenhuma layer forka este Kind''). Medido: a derivacao da hoje precisamente os tres Kinds de bootstrap; o teste trava isso como ratchet, entao um Kind novo que declare is_overlayable: false no descriptor aparece coberto e visivel.'
+    commit_ref: 13ccf1ebddaa979d897f1740b56774b4531c37db
+  - at: '2026-07-26T07:17:59+00:00'
+    actor: claude-code
+    type: decision
+    source: cli
+    summary: 'Decidi que a familia de quota vem do KIND ALVO (family_for_kind sobre o namespace do apiVersion + MEMORY_KINDS do SDK), nunca da escolha de ferramenta: o MESMO port resolvido fornece o apiVersion escrito e a familia medida, entao medidor e escrita nao podem divergir. E nome de Kind ambiguo e RECUSADO sem api_version — adivinhar deixaria o registry escolher a familia de cobranca do chamador. Regra uniforme no write: exige <family>_mode == write (sdlc_mode/memory_mode ja existiam; adicionei definitions_mode/emit_mode ao descriptor PricingPlan para que a permissao seja declaravel em vez de beco sem saida). Plano que nao declarou o modo concede none — fail closed.'
+    commit_ref: 13ccf1ebddaa979d897f1740b56774b4531c37db
+  - at: '2026-07-26T07:18:04+00:00'
+    actor: claude-code
+    type: decision
+    source: cli
+    summary: 'Decidi que list_kinds reporta APENAS os Kinds cuja familia o plano do chamador desbloqueia (filtered_by_plan: true), nao o registry inteiro: um catalogo de 76 Kinds dos quais 60 respondem 403 na chamada seguinte custa ao agente 60 round-trips e ao operador 60 unidades medidas. Catalogo honesto e curto ganha de catalogo inflado. Sem token (stdio/self-host) nada e medido, logo tudo e acionavel e tudo aparece.'
+    commit_ref: 13ccf1ebddaa979d897f1740b56774b4531c37db
+  - at: '2026-07-26T07:18:42+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-mcp-generic-document-tools
+    summary: TestGuide tg-mcp-generic-document-tools (manual)
+  - at: '2026-07-26T07:19:10+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-mcp-generic-document-tools-20260726-071905
+    summary: TestRun tr-tg-mcp-generic-document-tools-20260726-071905 → pass
+    outcome: pass
+  - at: '2026-07-26T07:21:53+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/238 (base main). Evidencia completa no corpo do PR: 22/22 novos testes, suite CLI 1148 (1 falha pre-existente de psycopg2 confirmada por stash), suite SDK 3555, guards limpos, e os seis breaks deliberados vermelhos-e-restaurados.'
+    commit_ref: 8d63ccf410403f8f295ad059dfa182d9efac9da6
+  produces:
+  - kind: Plan
+    name: plan-s-mcp-generic-document-tools
+    role: implementation
+    at: '2026-07-26T06:52:54+00:00'
+  - kind: TestGuide
+    name: tg-mcp-generic-document-tools
+    role: test-guide
+    at: '2026-07-26T07:18:42+00:00'
+  - kind: TestRun
+    name: tr-tg-mcp-generic-document-tools-20260726-071905
+    role: test-run
+    at: '2026-07-26T07:19:10+00:00'
