@@ -830,7 +830,9 @@ A Tier declares one DNA Cloud plan's hard caps (calls/day, rate, tenants) and wh
 | --- | --- | --- | --- |
 | `aliases` | array |  | Alternate ids that resolve to this tier (legacy plan names). kernel.tier() matches these on pass 2. |
 | `calls_per_day` | integer \| null |  | Daily call quota. Null = unlimited (enterprise). THE value the quota enforcer reads — never hardcode it in code. |
+| `definitions_mode` | string |  | Definitions access level granted by the tier — the read-vs-write refinement of the `definitions` feature family, sibling of memory_mode/sdlc_mode. Only the GENERIC document tools consult it, and only on a WRITE — a plan that omits it grants none, so writing an Agent/Soul/Tool/ModelProfile through the generic tool is refused until the operator declares write here. Reads keep riding the coarse feature_families gate. |
 | `display_name` | string | yes | Human-facing plan name, e.g. Free, Pro, Enterprise. |
+| `emit_mode` | string |  | Emit access level granted by the tier — the same read-vs-write refinement for the `emit` feature family. Same rule as definitions_mode - consulted by the generic document tools on a write, and omitting it grants none. |
 | `feature_families` | array |  | Tool families this tier unlocks, e.g. [definitions, sdlc, memory, emit]. |
 | `max_tenants` | integer \| null |  | Number of tenants the plan allows. Null = unlimited. |
 | `memory_mode` | string |  | Memory access level granted by the tier — none, read, or write. |

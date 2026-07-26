@@ -1,0 +1,12 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-mcp-generic-document-tools-20260726-071905
+spec:
+  guide_ref: tg-mcp-generic-document-tools
+  outcome: pass
+  verifies:
+  - Story/s-mcp-generic-document-tools
+  executed_by: claude-code
+  executed_at: '2026-07-26T07:19:05+00:00'
+  notes: 22/22 new tests green; CLI suite 1148 passed with one pre-existing psycopg2 failure (verified by stashing); SDK suite 3555 passed. All six deliberate breaks went red and were restored. Payoff demonstrated against this repo's own .dna/dna board scope.

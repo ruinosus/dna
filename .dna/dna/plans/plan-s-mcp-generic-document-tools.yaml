@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-mcp-generic-document-tools
+spec:
+  title: 'Plano: s-mcp-generic-document-tools'
+  date: '2026-07-26'
+  status: accepted
+  story_ref: s-mcp-generic-document-tools
+  journey_phase: plan
+  body: '1) TDD RED: new packages/cli/tests/test_mcp_generic_documents.py covering (a) the four tools over a real fixture scope for a Kind with no hand-written tool, (b) bootstrap-write refusal derived from KindPort.is_overlayable=False, (c) sdlc write denied on sdlc_mode=read via the DERIVED family, (d) cross-scope binding still denies. 2) Core use-cases in a NEW dna/application/documents.py (transport-agnostic, so REST can reuse): resolve_kind_port / family_for_kind / is_bootstrap_kind / list_kinds_impl / list_documents_impl / get_document_impl / write_document_impl; the write refuses bootstrap Kinds in the CORE so no face can reopen it. 3) _mcp_quota: enforce_family_mode (generic over <family>_mode, reusing _enforce_mode) + a family_op parameter on enforce_plan; add definitions_mode/emit_mode to the PricingPlan descriptor so the uniform write rule is opt-in-able. 4) dna_cli/_mcp_documents.py registers the four tools, mirroring register_graph_tools; wired from build_server. 5) Docs + regenerate docs/reference/kinds. 6) Deliberate-break evidence for each refusal.'
+  created_at: '2026-07-26T06:52:47+00:00'
+  updated_at: '2026-07-26T06:52:47+00:00'

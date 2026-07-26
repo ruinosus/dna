@@ -12,6 +12,19 @@ both import these use-cases and only translate transport + edge validation
 (auth/quota, request/response shaping, JSON-RPC).
 """
 from dna.application.live import LiveDna
+from dna.application.documents import (
+    AmbiguousKindError,
+    BootstrapKindWriteRefused,
+    UnknownKindError,
+    bootstrap_kinds,
+    family_for_kind,
+    get_document_impl,
+    is_bootstrap_kind,
+    list_documents_impl,
+    list_kinds_impl,
+    resolve_kind_port,
+    write_document_impl,
+)
 from dna.application.sdlc import (
     InvalidTransition,
     add_comment,
@@ -83,6 +96,20 @@ from dna.application.runtime import (
 
 __all__ = [
     "LiveDna",
+    # generic, registry-driven document CRUD (s-mcp-generic-document-tools) —
+    # the ONE path any face serves "every Kind" through, instead of N
+    # hand-written per-Kind tools.
+    "list_kinds_impl",
+    "list_documents_impl",
+    "get_document_impl",
+    "write_document_impl",
+    "resolve_kind_port",
+    "family_for_kind",
+    "bootstrap_kinds",
+    "is_bootstrap_kind",
+    "AmbiguousKindError",
+    "BootstrapKindWriteRefused",
+    "UnknownKindError",
     # SDLC write core (shared by the CLI + the MCP write tools)
     "InvalidTransition",
     "create_story",

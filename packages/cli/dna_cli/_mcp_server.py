@@ -18,6 +18,8 @@ Copilot, agent-framework, Bedrock AgentCore) reaches it:
     SDLC (read)  sdlc_digest · list_stories · get_adr
     SDLC (write) create_story · create_issue · set_status · comment · create_feature
     memory       recall · remember · consolidate · list_memories · forget
+    documents    list_kinds · list_documents · get_document · write_document
+                 (GENERIC — a loop over the Kind registry, not a per-Kind tool)
     resources    dna://{scope}/manifest · dna://{scope}/agents
 
 DNA already *consumes* MCP (the ``MCPFederation`` Kind pulls external tools into
@@ -304,12 +306,15 @@ def build_server(
         personal_tenant,
     )
     from dna_cli._mcp_quota import (
+        DocumentModeError,
         FeatureNotInPlanError,
         MemoryModeError,
         OverQuotaError,
         SdlcModeError,
         TierRegistryUnavailableError,
         enforce_plan,
+        resolve_metered_tier,
+        resolve_tier_caps,
         store_from_env,
     )
     from dna.tenancy.resolution import CrossWorkspaceError
@@ -343,7 +348,7 @@ def build_server(
     async def _guard(
         family: str, requested: str | None = None, *,
         scope: str | None = None, memory_op: str | None = None,
-        sdlc_op: str | None = None,
+        sdlc_op: str | None = None, family_op: str | None = None,
     ) -> str | None:
         """The single tenancy + quota seam every tool passes through.
 
@@ -364,7 +369,11 @@ def build_server(
            consolidate) additionally enforces the tier's ``memory_mode`` — the
            read-vs-write refinement of the coarse ``memory`` feature-family gate
            (Free=read/recall-only, Pro=write/remember+consolidate), read from the
-           Tier spec (zero hardcode).
+           Tier spec (zero hardcode). ``family_op`` is that same refinement made
+           GENERIC over the family (``<family>_mode``) — what the
+           registry-driven document tools pass, since one of those tools spans
+           every family and its family comes from the TARGET KIND, not from
+           which tool was called.
 
         Tier resolution order — **token plan claim → AccountPlan store → Free**:
         an explicit ``plan`` claim on the token WINS (the store is not consulted);
@@ -449,13 +458,39 @@ def build_server(
             await enforce_plan(
                 kernel, tenant=tenant, family=family, store=quota,
                 claimed_tier=tier if token_has_explicit_plan_claim() else None,
-                memory_op=memory_op, sdlc_op=sdlc_op,
+                memory_op=memory_op, sdlc_op=sdlc_op, family_op=family_op,
                 quota_tenant=quota_tenant,
             )
         except (OverQuotaError, FeatureNotInPlanError, MemoryModeError,
-                SdlcModeError, TierRegistryUnavailableError) as exc:
+                SdlcModeError, DocumentModeError,
+                TierRegistryUnavailableError) as exc:
             raise ToolError(str(exc)) from None
         return tenant
+
+    async def _plan_families() -> list[str] | None:
+        """The feature families the CURRENT caller's tier unlocks — the filter
+        ``list_kinds`` reports an honest catalog through.
+
+        ``None`` means "no plan is gating this call": the unmetered stdio /
+        self-host path (no token), or a source that seeded no ``Tier`` docs at
+        all. It reuses the SAME resolution the guard meters with
+        (``resolve_metered_tier`` → ``resolve_tier_caps``), so the catalog and
+        the enforcement can never disagree about what is unlocked."""
+        if not token_present_in_context():
+            return None
+        live = await _live()
+        tier = await resolve_metered_tier(
+            live.kernel, tenant=await _workspace(),
+            claimed_tier=(
+                enforce_tier_from_context()
+                if token_has_explicit_plan_claim() else None
+            ),
+        )
+        caps = await resolve_tier_caps(live.kernel, tier)
+        families = caps.get("feature_families")
+        if isinstance(families, list) and families:
+            return [str(f) for f in families]
+        return None
 
     async def _personal_guard(memory_op: str) -> tuple[str, str]:
         """The tenancy + quota seam for a PERSONAL memory call — the identity twin
@@ -521,6 +556,10 @@ def build_server(
             "(create_story/create_issue/set_status/comment/create_feature), so an "
             "agent can create + manage the board over MCP — and declarative MEMORY "
             "(recall/remember/consolidate/list_memories/forget). "
+            "Beyond those named surfaces it exposes EVERY registered Kind "
+            "generically (list_kinds/list_documents/get_document/write_document), "
+            "resolved from the Kind registry at call time — so a Kind that exists "
+            "is a Kind you can use, without a hand-written tool for it. "
             "Unlike a static emit "
             "artifact, compose_prompt composes on demand — so per-tenant overlays "
             "and no-deploy changes are preserved."
@@ -817,6 +856,21 @@ def build_server(
         return await forget_impl(
             await _live(), name, scope, tenant=await _guard("memory", scope=scope, memory_op="write")
         )
+
+    # -- documents (GENERIC, registry-driven — every Kind, not a hand-written list)
+    #
+    # The tools above name ONE Kind each. These four name none: they loop over
+    # the Kind registry at call time, so the 76 registered Kinds (49 of them
+    # record-plane, most declared purely by a `*.kind.yaml` descriptor) stop
+    # being invisible to an agent just because nobody hand-wrote tools for them.
+    # Same `_guard` seam as everything else — with the metered family DERIVED
+    # from the target Kind, so a generic tool can never be the cheap door into a
+    # family the caller's tier gates (see `dna_cli._mcp_documents`).
+    from dna_cli._mcp_documents import register_document_tools
+
+    register_document_tools(
+        server, live=_live, guard=_guard, plan_families=_plan_families,
+    )
 
     # -- resources (prove resources beyond tools) ----------------------------
 
