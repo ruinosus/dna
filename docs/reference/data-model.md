@@ -611,6 +611,7 @@ erDiagram
     dna_bundle_entries {
         TEXT scope PK
         TEXT kind PK
+        TEXT api_version PK
         TEXT name PK
         TEXT entry_path PK
         TEXT content
@@ -621,6 +622,7 @@ erDiagram
     dna_documents {
         TEXT scope PK
         TEXT kind PK
+        TEXT api_version PK
         TEXT name PK
         TEXT content
         INTEGER version
@@ -658,6 +660,7 @@ erDiagram
         INTEGER id PK
         TEXT scope
         TEXT kind
+        TEXT api_version
         TEXT name
         TEXT content
         INTEGER version
@@ -702,6 +705,7 @@ prefix, SQLite's do not, and Postgres has tables SQLite lacks.
 | --- | --- | --- | --- |
 | `scope` | `TEXT` | PK |  |
 | `kind` | `TEXT` | PK |  |
+| `api_version` | `TEXT` | PK |  |
 | `name` | `TEXT` | PK |  |
 | `entry_path` | `TEXT` | PK |  |
 | `content` | `TEXT` |  |  |
@@ -715,6 +719,7 @@ prefix, SQLite's do not, and Postgres has tables SQLite lacks.
 | --- | --- | --- | --- |
 | `scope` | `TEXT` | PK |  |
 | `kind` | `TEXT` | PK |  |
+| `api_version` | `TEXT` | PK |  |
 | `name` | `TEXT` | PK |  |
 | `content` | `TEXT` |  |  |
 | `version` | `INTEGER` |  |  |
@@ -764,6 +769,7 @@ prefix, SQLite's do not, and Postgres has tables SQLite lacks.
 | `id` | `INTEGER` | PK |  |
 | `scope` | `TEXT` |  |  |
 | `kind` | `TEXT` |  |  |
+| `api_version` | `TEXT` |  |  |
 | `name` | `TEXT` |  |  |
 | `content` | `TEXT` |  |  |
 | `version` | `INTEGER` |  |  |

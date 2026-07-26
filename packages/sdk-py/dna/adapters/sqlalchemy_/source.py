@@ -52,11 +52,25 @@ Production behaviors (each mirrors the raw adapter that pioneered it):
     ``save_layer_document`` / ``delete_layer_document`` / ``list_layers``
     / ``list_tenants`` — full parity with the raw adapters.
 
+**The row key carries the Kind's identity** (revision
+``0003_api_version``): a Kind is ``(apiVersion, kind)``, so ``documents``,
+``versions`` and ``bundle_entries`` key on ``(scope, kind, api_version,
+name[, tenant])``. Two workspaces may each declare a ``Deal`` under their
+own namespace, and before the column the second save simply OVERWROTE the
+first. Writes always know their apiVersion (they hold the document);
+reads take it as an OPTIONAL pin, and omitting it matches any Kind —
+exactly the pre-column behaviour, which is why every shipped Kind (each
+unique by name in its scope) resolves identically. Unpinned MUTATIONS on
+a name that really does resolve to two Kinds are refused rather than
+guessed (``_refuse_ambiguous_name``). ``''`` in the column is not an
+apiVersion: it records that the stored document declares none.
+
 Honesty markers: every place the two dialects could NOT be expressed as
 one Core construct is tagged ``# [dialect]``. Known inherited limitation:
 the SQLite ``documents`` PK lacks ``tenant`` (i-092) — a tenant overlay
 publish clobbers the base row. Schema debt, not a Core limitation (the
-conformance matrix carries the strict xfail).
+conformance matrix carries the strict xfail), and deliberately untouched
+by 0003: widening one key at a time is what makes each change auditable.
 """
 from __future__ import annotations
 
@@ -93,6 +107,12 @@ _PG_NUMERIC_RE = r"^-?[0-9]+(\.[0-9]+)?$"
 # trusted-config-only, never request input.
 _VALID_SCHEMA_IDENT = re.compile(r"^[a-z_][a-z0-9_]*$")
 
+#: ``bundle_entries`` PK — identical on both dialects (revision 0003 added
+#: ``api_version``; a bundle entry belongs to a document, hence to its Kind).
+_BUNDLE_CONFLICT_COLS = [
+    "scope", "kind", "api_version", "name", "entry_path", "tenant",
+]
+
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -101,6 +121,18 @@ def _now() -> str:
 def _doc_name(raw: dict) -> str | None:
     meta = raw.get("metadata") or {}
     return meta.get("name") or raw.get("name")
+
+
+def _doc_api_version(raw: dict) -> str:
+    """The apiVersion the document DECLARES, or ``''`` when it declares none.
+
+    ``''`` is not a default apiVersion and is never treated as one: it records
+    that the stored document states nothing. Reads that do not pin an
+    apiVersion match it exactly as they matched everything before the column
+    existed.
+    """
+    value = raw.get("apiVersion")
+    return value if isinstance(value, str) else ""
 
 
 class _NullEventEmitter:
@@ -281,10 +313,65 @@ class SqlAlchemySource(WritableSourcePort):
         return _insert(table)
 
     def _doc_conflict_cols(self) -> list[str]:
-        # [dialect] documents PK: pg = (scope,kind,name,tenant);
-        # sqlite = (scope,kind,name) — i-092 lives HERE, in the schema.
-        return ["scope", "kind", "name", "tenant"] if self._is_pg \
-            else ["scope", "kind", "name"]
+        # [dialect] documents PK: pg = (scope,kind,api_version,name,tenant);
+        # sqlite = (scope,kind,api_version,name) — i-092 lives HERE, in the
+        # schema. ``api_version`` is in the key on both since 0003: a Kind is
+        # identified by (apiVersion, kind), so two workspaces' `Deal`s must not
+        # arbitrate for the same row.
+        return ["scope", "kind", "api_version", "name", "tenant"] if self._is_pg \
+            else ["scope", "kind", "api_version", "name"]
+
+    @staticmethod
+    def _api_version_where(
+        col: sa.Column, api_version: str | None,
+    ) -> list[sa.ColumnElement]:
+        """Pin a query to ONE Kind, or leave it as wide as it always was.
+
+        ``None`` means the caller has no apiVersion in hand and gets the
+        pre-column behaviour: match the name under any Kind. That is what keeps
+        every shipped Kind — all of which are unique by name in their scope —
+        resolving byte-identically. A value pins the row EXACTLY.
+        """
+        return [] if api_version is None else [col == api_version]
+
+    async def _refuse_ambiguous_name(
+        self, conn, table: sa.Table, scope: str, kind: str, name: str,
+        tenant: str | None, api_version: str | None, *, verb: str,
+        extra: list[sa.ColumnElement] | None = None,
+    ) -> None:
+        """Refuse an unpinned MUTATION whose name resolves to two Kinds.
+
+        Before ``api_version`` was part of the key the table could hold only one
+        row per name, so an unpinned delete or publish was unambiguous by
+        construction. Now that both rows can exist, an unpinned mutation would
+        have to either pick one (a delete that misses, a publish that promotes
+        the wrong document) or take both (a delete that reaches into a Kind the
+        caller never named). Neither is defensible, so the caller is told to say
+        which — the same refusal the generic document surface already makes for
+        an ambiguous bare Kind name (``dna.application.documents``).
+
+        READS are deliberately not covered: a read that matches both is a
+        widened answer, not a wrong one, and the caller can tell the two apart
+        by the ``apiVersion`` each document carries.
+        """
+        if api_version is not None:
+            return
+        found = (await conn.execute(
+            sa.select(table.c.api_version).distinct().where(
+                table.c.scope == scope, table.c.kind == kind,
+                table.c.name == name,
+                self._tenant_where(table.c.tenant, tenant),
+                *(extra or []),
+            )
+        )).scalars().all()
+        if len(found) > 1:
+            raise ValueError(
+                f"ambiguous: {kind} {name!r} in scope {scope!r} "
+                f"(tenant={tenant!r}) exists under {len(found)} apiVersions "
+                f"({', '.join(sorted(found))}). A Kind is identified by "
+                f"(apiVersion, kind), so this {verb} cannot tell which one you "
+                f"mean — pass api_version=... to say."
+            )
 
     def _json_expr(self, path: str) -> sa.ColumnElement:
         """Dotted field path → SQL expression over documents.content.
@@ -561,12 +648,14 @@ class SqlAlchemySource(WritableSourcePort):
             if r not in effective_readers:
                 effective_readers.append(r)
         d, b = self.documents, self.bundle_entries
-        entry_cols = [b.c.kind, b.c.name, b.c.entry_path, b.c.content]
+        entry_cols = [
+            b.c.kind, b.c.api_version, b.c.name, b.c.entry_path, b.c.content,
+        ]
         if self._is_pg:
             entry_cols.append(b.c.content_binary)  # [dialect]
         async with self._engine.connect() as conn:
             doc_rows = (await conn.execute(
-                sa.select(d.c.kind, d.c.name, d.c.content).where(
+                sa.select(d.c.kind, d.c.api_version, d.c.name, d.c.content).where(
                     d.c.scope == scope,
                     self._tenant_where(d.c.tenant, tenant),
                 )
@@ -577,16 +666,21 @@ class SqlAlchemySource(WritableSourcePort):
                     b.c.tenant == (tenant or ""),  # bundle sentinel is '' on BOTH
                 )
             )).all()
-        entries_by_key: dict[tuple[str, str], dict[str, Any]] = {}
+        # Keyed by (kind, apiVersion, name): two Kinds sharing a name have
+        # separate entry sets, and merging them would hand one Kind's bundle to
+        # the other's reader.
+        entries_by_key: dict[tuple[str, str, str], dict[str, Any]] = {}
         for e in entry_rows:
             cb = e.content_binary if self._is_pg else None
             val: str | bytes = bytes(cb) if cb else e.content
-            entries_by_key.setdefault((e.kind, e.name), {})[e.entry_path] = val
+            entries_by_key.setdefault(
+                (e.kind, e.api_version, e.name), {},
+            )[e.entry_path] = val
 
         from dna.kernel.bundle.handle import DictBundleHandle
         out: list[dict[str, Any]] = []
         for r in doc_rows:
-            entries = entries_by_key.get((r.kind, r.name))
+            entries = entries_by_key.get((r.kind, r.api_version, r.name))
             if entries and effective_readers:
                 handle = DictBundleHandle(r.name, entries)
                 matched = False
@@ -654,7 +748,18 @@ class SqlAlchemySource(WritableSourcePort):
         self, scope: str, kind: str, name: str, *,
         readers: list | None = None,
         tenant: str | None = None,
+        api_version: str | None = None,
     ) -> dict[str, Any] | None:
+        """Load ONE document with its bundle.
+
+        ``api_version`` resolves the Kind EXACTLY. Two workspaces may each
+        declare a ``Deal`` under their own namespace, and since revision 0003
+        both of their documents can really be in the table at once — so a
+        bare-name lookup answers with whichever row the database returns first.
+        Passing the apiVersion makes the answer the caller's own Kind, and a
+        pin that matches nothing returns ``None`` rather than someone else's
+        document. Omitting it keeps the pre-column behaviour exactly.
+        """
         effective_readers = list(self._readers)
         for r in (readers or []):
             if r not in effective_readers:
@@ -667,16 +772,20 @@ class SqlAlchemySource(WritableSourcePort):
         async with self._engine.connect() as conn:
             for t in tenant_candidates:
                 row = (await conn.execute(
-                    sa.select(d.c.content).where(
+                    sa.select(d.c.content, d.c.api_version).where(
                         d.c.scope == scope, d.c.kind == kind, d.c.name == name,
+                        *self._api_version_where(d.c.api_version, api_version),
                         self._tenant_where(d.c.tenant, t),
                     )
                 )).first()
                 if row is None:
                     continue
+                # The entries belong to the document just found — key them on
+                # ITS apiVersion, never on the (possibly absent) argument.
                 erows = (await conn.execute(
                     sa.select(*entry_cols).where(
                         b.c.scope == scope, b.c.kind == kind, b.c.name == name,
+                        b.c.api_version == row.api_version,
                         b.c.tenant == (t or ""),
                     )
                 )).all()
@@ -1052,6 +1161,11 @@ class SqlAlchemySource(WritableSourcePort):
         content = json.dumps(raw)  # source_files already popped → no bloat
         d, v = self.documents, self.versions
         doc_tenant = self._doc_tenant(tenant)
+        # The write HOLDS the document, so it always knows the exact Kind —
+        # no port kwarg needed and no registry lookup. Every key below is
+        # widened with it so a `Deal` in one namespace cannot overwrite a
+        # `Deal` in another.
+        api_version = _doc_api_version(raw)
         spec_version = None
         if kind == "Genome":
             spec_version = ((raw.get("spec") or {}).get("version")) or None
@@ -1067,7 +1181,8 @@ class SqlAlchemySource(WritableSourcePort):
                 # overwritten with the real content by the upsert at the end of
                 # this same transaction, so nothing observes the placeholder.
                 claim = self._upsert(d).values(
-                    scope=scope, kind=kind, name=name, content=content,
+                    scope=scope, kind=kind, api_version=api_version, name=name,
+                    content=content,
                     version=0, updated_at=_now(), tenant=doc_tenant,
                 ).on_conflict_do_nothing(
                     index_elements=self._doc_conflict_cols(),
@@ -1084,7 +1199,8 @@ class SqlAlchemySource(WritableSourcePort):
             if spec_version:
                 dup = (await conn.execute(
                     sa.select(sa.literal(1)).where(
-                        v.c.scope == scope, v.c.kind == kind, v.c.name == name,
+                        v.c.scope == scope, v.c.kind == kind,
+                        v.c.api_version == api_version, v.c.name == name,
                         self._tenant_where(v.c.tenant, tenant),
                         v.c.semver == spec_version,
                     ).limit(1)
@@ -1098,24 +1214,27 @@ class SqlAlchemySource(WritableSourcePort):
                     )
             next_version = (await conn.execute(
                 sa.select(sa.func.coalesce(sa.func.max(v.c.version), 0)).where(
-                    v.c.scope == scope, v.c.kind == kind, v.c.name == name,
+                    v.c.scope == scope, v.c.kind == kind,
+                    v.c.api_version == api_version, v.c.name == name,
                     self._tenant_where(v.c.tenant, tenant),
                 )
             )).scalar_one() + 1
             await conn.execute(v.insert().values(
-                scope=scope, kind=kind, name=name, content=content,
+                scope=scope, kind=kind, api_version=api_version, name=name,
+                content=content,
                 version=next_version, is_draft=True, author=author,
                 created_at=_now(), tenant=doc_tenant, semver=spec_version,
             ))
             if version_retention is not None and version_retention >= 0:
                 await conn.execute(v.delete().where(
-                    v.c.scope == scope, v.c.kind == kind, v.c.name == name,
+                    v.c.scope == scope, v.c.kind == kind,
+                    v.c.api_version == api_version, v.c.name == name,
                     self._tenant_where(v.c.tenant, tenant),
                     v.c.version <= next_version - version_retention,
                 ))
             if bundle_text is not None or bundle_bin is not None:
                 await self._replace_bundle_entries(
-                    conn, scope, kind, name, tenant_val,
+                    conn, scope, kind, api_version, name, tenant_val,
                     bundle_text or {}, bundle_bin or {},
                 )
             # Auto-publish — UPSERT into documents in the same transaction.
@@ -1123,7 +1242,8 @@ class SqlAlchemySource(WritableSourcePort):
             # kernel.write_document never calls publish(), so a draft-only
             # save would leave kernel writes invisible.
             ins = self._upsert(d).values(
-                scope=scope, kind=kind, name=name, content=content,
+                scope=scope, kind=kind, api_version=api_version, name=name,
+                content=content,
                 version=next_version, updated_at=_now(), tenant=doc_tenant,
             )
             await conn.execute(ins.on_conflict_do_update(
@@ -1144,12 +1264,14 @@ class SqlAlchemySource(WritableSourcePort):
         return str(next_version)
 
     async def _replace_bundle_entries(
-        self, conn, scope: str, kind: str, name: str, tenant_val: str,
+        self, conn, scope: str, kind: str, api_version: str, name: str,
+        tenant_val: str,
         text_entries: dict[str, str], bin_entries: dict[str, bytes],
     ) -> None:
         b = self.bundle_entries
         key = [
-            b.c.scope == scope, b.c.kind == kind, b.c.name == name,
+            b.c.scope == scope, b.c.kind == kind,
+            b.c.api_version == api_version, b.c.name == name,
             b.c.tenant == tenant_val,
         ]
         if self._is_pg:
@@ -1169,7 +1291,8 @@ class SqlAlchemySource(WritableSourcePort):
         ts = _now()
         for entry_path, body in {**text_entries, **bin_entries}.items():
             values: dict[str, Any] = dict(
-                scope=scope, kind=kind, name=name, entry_path=entry_path,
+                scope=scope, kind=kind, api_version=api_version, name=name,
+                entry_path=entry_path,
                 updated_at=ts, tenant=tenant_val,
             )
             set_: dict[str, Any] = {"updated_at": ts}
@@ -1182,19 +1305,35 @@ class SqlAlchemySource(WritableSourcePort):
                 set_["content"] = body
             ins = self._upsert(b).values(**values)
             await conn.execute(ins.on_conflict_do_update(
-                index_elements=["scope", "kind", "name", "entry_path", "tenant"],
+                index_elements=_BUNDLE_CONFLICT_COLS,
                 set_=set_,
             ))
 
     async def publish(
         self, scope: str, kind: str, name: str, *, tenant: str | None = None,
+        api_version: str | None = None,
     ) -> str:
+        """Promote the newest draft to the published ``documents`` row.
+
+        ``api_version`` pins WHICH Kind's draft is promoted. Without it a name
+        that two Kinds share would promote whichever draft happens to have the
+        higher version number — a publish that silently republishes the other
+        workspace's content — so that case is refused rather than guessed. The
+        published row is always written under the DRAFT'S OWN apiVersion, never
+        under a value supplied by the caller, so publish cannot mint a row that
+        contradicts the document it is publishing.
+        """
         v, d = self.versions, self.documents
         tenant_val = tenant or ""
         async with self._engine.begin() as conn:
+            await self._refuse_ambiguous_name(
+                conn, v, scope, kind, name, tenant, api_version, verb="publish",
+                extra=[v.c.is_draft.is_(True)],
+            )
             row = (await conn.execute(
-                sa.select(v.c.id, v.c.content, v.c.version).where(
+                sa.select(v.c.id, v.c.content, v.c.version, v.c.api_version).where(
                     v.c.scope == scope, v.c.kind == kind, v.c.name == name,
+                    *self._api_version_where(v.c.api_version, api_version),
                     self._tenant_where(v.c.tenant, tenant),
                     v.c.is_draft.is_(True),
                 ).order_by(v.c.version.desc()).limit(1)
@@ -1202,7 +1341,8 @@ class SqlAlchemySource(WritableSourcePort):
             if row is None:
                 raise ValueError("no_draft")
             ins = self._upsert(d).values(
-                scope=scope, kind=kind, name=name, content=row.content,
+                scope=scope, kind=kind, api_version=row.api_version, name=name,
+                content=row.content,
                 version=row.version, updated_at=_now(),
                 tenant=self._doc_tenant(tenant),
             )
@@ -1231,17 +1371,11 @@ class SqlAlchemySource(WritableSourcePort):
         layer: tuple[str, str] | None = None,
         api_version: str | None = None,
     ) -> None:
-        # ``api_version`` is ACCEPTED and deliberately unused here. The row key
-        # is (scope, kind, name, tenant) — the `documents` table has no
-        # apiVersion column — so two Kinds sharing a name in one scope are
-        # already indistinguishable to this adapter on SAVE as well as on
-        # delete. That is a schema constraint, not a routing choice, and closing
-        # it means a migration adding the column to `documents` / `versions` /
-        # `bundle_entries` plus every index and every query that keys on it.
-        # Accepting the kwarg keeps the port contract uniform (the kernel passes
-        # it to whoever declares it) and the day the column lands this is the
-        # one place that needs the WHERE clause.
-        del api_version
+        # ``api_version`` now has a column to land in (revision 0003): the row
+        # key is (scope, kind, api_version, name, tenant), so this pins the
+        # delete to the exact Kind instead of to whichever row the bare name
+        # reaches. Unpinned deletes keep working — and are refused, not guessed,
+        # when the name really does resolve to two Kinds.
         if layer is not None:
             if layer[0] == "tenant" and tenant is None:
                 tenant = layer[1]
@@ -1254,8 +1388,12 @@ class SqlAlchemySource(WritableSourcePort):
         d, v, b = self.documents, self.versions, self.bundle_entries
         tenant_val = tenant or ""
         async with self._engine.begin() as conn:
+            await self._refuse_ambiguous_name(
+                conn, d, scope, kind, name, tenant, api_version, verb="delete",
+            )
             key = lambda t: [  # noqa: E731
                 t.c.scope == scope, t.c.kind == kind, t.c.name == name,
+                *self._api_version_where(t.c.api_version, api_version),
             ]
             row = (await conn.execute(
                 sa.select(sa.literal(1)).where(
@@ -1344,25 +1482,31 @@ class SqlAlchemySource(WritableSourcePort):
     # Versions / drafts / scopes
     # ------------------------------------------------------------------
 
-    async def list_versions(self, scope: str, kind: str, name: str) -> list[dict]:
+    async def list_versions(
+        self, scope: str, kind: str, name: str, *,
+        api_version: str | None = None,
+    ) -> list[dict]:
         v = self.versions
         async with self._engine.connect() as conn:
             rows = (await conn.execute(
                 sa.select(v.c.id, v.c.version, v.c.is_draft, v.c.author,
                           v.c.created_at).where(
                     v.c.scope == scope, v.c.kind == kind, v.c.name == name,
+                    *self._api_version_where(v.c.api_version, api_version),
                 ).order_by(v.c.version.desc())
             )).mappings().all()
         return [dict(r) for r in rows]
 
     async def get_version(
-        self, scope: str, kind: str, name: str, version_id: str,
+        self, scope: str, kind: str, name: str, version_id: str, *,
+        api_version: str | None = None,
     ) -> dict:
         v = self.versions
         async with self._engine.connect() as conn:
             row = (await conn.execute(
                 sa.select(v).where(
                     v.c.scope == scope, v.c.kind == kind, v.c.name == name,
+                    *self._api_version_where(v.c.api_version, api_version),
                     v.c.version == int(version_id),
                 )
             )).mappings().first()
@@ -1374,15 +1518,21 @@ class SqlAlchemySource(WritableSourcePort):
 
     async def load_drafts(self, scope: str) -> list[dict]:
         v = self.versions
+        # Grouped by (kind, apiVersion, name): two Kinds sharing a name keep
+        # separate drafts, and collapsing them would hide one of the two.
         latest = sa.select(
-            v.c.kind, v.c.name, sa.func.max(v.c.version).label("max_v"),
+            v.c.kind, v.c.api_version, v.c.name,
+            sa.func.max(v.c.version).label("max_v"),
         ).where(
             v.c.scope == scope, v.c.is_draft.is_(True),
-        ).group_by(v.c.kind, v.c.name).subquery()
+        ).group_by(v.c.kind, v.c.api_version, v.c.name).subquery()
         stmt = sa.select(
-            v.c.kind, v.c.name, v.c.content, v.c.version, v.c.created_at,
+            v.c.kind, v.c.api_version, v.c.name, v.c.content, v.c.version,
+            v.c.created_at,
         ).join(latest, sa.and_(
-            v.c.kind == latest.c.kind, v.c.name == latest.c.name,
+            v.c.kind == latest.c.kind,
+            v.c.api_version == latest.c.api_version,
+            v.c.name == latest.c.name,
             v.c.version == latest.c.max_v,
         )).where(v.c.scope == scope, v.c.is_draft.is_(True))
         async with self._engine.connect() as conn:
@@ -1464,7 +1614,7 @@ class SqlAlchemySource(WritableSourcePort):
         v, d = self.versions, self.documents
         async with self._engine.begin() as conn:
             row = (await conn.execute(
-                sa.select(v.c.content).where(
+                sa.select(v.c.content, v.c.api_version).where(
                     v.c.scope == scope, v.c.kind == "Genome", v.c.name == scope,
                     self._tenant_where(v.c.tenant, tenant),
                     v.c.semver == version,
@@ -1480,12 +1630,16 @@ class SqlAlchemySource(WritableSourcePort):
             new_content = json.dumps(raw)
             await conn.execute(v.update().where(
                 v.c.scope == scope, v.c.kind == "Genome", v.c.name == scope,
+                v.c.api_version == row.api_version,
                 self._tenant_where(v.c.tenant, tenant),
                 v.c.semver == version,
             ).values(content=new_content))
+            # Mirror to the published pointer of the SAME Kind — the archived
+            # row's own apiVersion, never a bare-name match.
             latest = (await conn.execute(
                 sa.select(d.c.content).where(
                     d.c.scope == scope, d.c.kind == "Genome", d.c.name == scope,
+                    d.c.api_version == row.api_version,
                     self._tenant_where(d.c.tenant, tenant),
                 )
             )).first()
@@ -1496,6 +1650,7 @@ class SqlAlchemySource(WritableSourcePort):
                         await conn.execute(d.update().where(
                             d.c.scope == scope, d.c.kind == "Genome",
                             d.c.name == scope,
+                            d.c.api_version == row.api_version,
                             self._tenant_where(d.c.tenant, tenant),
                         ).values(content=new_content))
                 except Exception:  # noqa: BLE001
@@ -1510,6 +1665,7 @@ class SqlAlchemySource(WritableSourcePort):
     async def fetch_bundle_entry(
         self, scope: str, container: str, name: str, entry: str,
         *, tenant: str | None = None, kind: str | None = None,
+        api_version: str | None = None,
     ) -> bytes:
         b = self.bundle_entries
         kind_key = kind or container
@@ -1523,6 +1679,7 @@ class SqlAlchemySource(WritableSourcePort):
                     sa.select(*cols).where(
                         b.c.scope == scope, b.c.kind == kind_key,
                         b.c.name == name, b.c.entry_path == entry,
+                        *self._api_version_where(b.c.api_version, api_version),
                         b.c.tenant == tenant_val,
                     ).limit(1)
                 )).first()
@@ -1536,40 +1693,81 @@ class SqlAlchemySource(WritableSourcePort):
                 return bytes(content or b"")
         raise FileNotFoundError(
             f"Bundle entry not found: scope={scope!r} container={container!r} "
-            f"kind={kind!r} name={name!r} entry={entry!r} tenant={tenant!r}"
+            f"kind={kind!r} name={name!r} entry={entry!r} tenant={tenant!r} "
+            f"api_version={api_version!r}"
         )
+
+    async def _owning_api_version(
+        self, conn, scope: str, kind: str, name: str, tenant_val: str,
+    ) -> str:
+        """The apiVersion of the document a bundle entry belongs to.
+
+        A bundle entry is a FILE inside a document's bundle; it carries no
+        apiVersion of its own. Callers that reach this surface directly (the
+        Strain file-fork editor, the bundle-overlay paths) pass a container and
+        a name, not a document — so when they do not pin the Kind the owner is
+        looked up: the published ``documents`` row first, then the newest
+        ``versions`` row. ``''`` when neither exists, which is the same value
+        the migration records for an orphan.
+        """
+        d, v = self.documents, self.versions
+        row = (await conn.execute(
+            sa.select(d.c.api_version).where(
+                d.c.scope == scope, d.c.kind == kind, d.c.name == name,
+                self._tenant_where(d.c.tenant, tenant_val or None),
+            ).limit(1)
+        )).first()
+        if row is not None:
+            return row.api_version
+        row = (await conn.execute(
+            sa.select(v.c.api_version).where(
+                v.c.scope == scope, v.c.kind == kind, v.c.name == name,
+                self._tenant_where(v.c.tenant, tenant_val or None),
+            ).order_by(v.c.version.desc()).limit(1)
+        )).first()
+        return row.api_version if row is not None else ""
 
     async def write_bundle_entry(
         self, scope: str, container: str, name: str, entry: str,
         content: bytes | str,
         *, tenant: str | None = None, kind: str | None = None,
+        api_version: str | None = None,
     ) -> None:
         b = self.bundle_entries
-        values: dict[str, Any] = dict(
-            scope=scope, kind=(kind or container), name=name, entry_path=entry,
-            updated_at=_now(), tenant=(tenant or ""),
-        )
+        kind_key = kind or container
+        tenant_val = tenant or ""
         set_: dict[str, Any]
-        if self._is_pg:
-            # [dialect] pg: text → content, bytes → content_binary.
-            is_text = isinstance(content, str)
-            values.update(
-                content=content if is_text else "",
-                content_binary=None if is_text else content,
-            )
-        else:
-            # [dialect] sqlite: single flexible-affinity column.
-            values.update(content=content)
-        ins = self._upsert(b).values(**values)
-        set_ = {
-            "content": ins.excluded.content,
-            "updated_at": ins.excluded.updated_at,
-        }
-        if self._is_pg:
-            set_["content_binary"] = ins.excluded.content_binary  # [dialect]
         async with self._engine.begin() as conn:
+            # A WRITE has to commit to one Kind — "any" is not a value a row
+            # can hold. When the caller does not pin it, inherit the owning
+            # document's apiVersion rather than inventing one.
+            owner = api_version if api_version is not None else \
+                await self._owning_api_version(
+                    conn, scope, kind_key, name, tenant_val,
+                )
+            values: dict[str, Any] = dict(
+                scope=scope, kind=kind_key, api_version=owner, name=name,
+                entry_path=entry, updated_at=_now(), tenant=tenant_val,
+            )
+            if self._is_pg:
+                # [dialect] pg: text → content, bytes → content_binary.
+                is_text = isinstance(content, str)
+                values.update(
+                    content=content if is_text else "",
+                    content_binary=None if is_text else content,
+                )
+            else:
+                # [dialect] sqlite: single flexible-affinity column.
+                values.update(content=content)
+            ins = self._upsert(b).values(**values)
+            set_ = {
+                "content": ins.excluded.content,
+                "updated_at": ins.excluded.updated_at,
+            }
+            if self._is_pg:
+                set_["content_binary"] = ins.excluded.content_binary  # [dialect]
             await conn.execute(ins.on_conflict_do_update(
-                index_elements=["scope", "kind", "name", "entry_path", "tenant"],
+                index_elements=_BUNDLE_CONFLICT_COLS,
                 set_=set_,
             ))
         self.invalidate_view(scope)
@@ -1577,7 +1775,7 @@ class SqlAlchemySource(WritableSourcePort):
     async def list_bundle_entries(
         self, scope: str, container: str, name: str,
         *, tenant: str | None = None, only_tenant: bool = False,
-        kind: str | None = None,
+        kind: str | None = None, api_version: str | None = None,
     ) -> list[str]:
         """s-strain-bundle-fork B1 — list entry paths for a bundle. Composed
         (default) = tenant overlay ∪ base; ``only_tenant`` restricts to the
@@ -1589,6 +1787,7 @@ class SqlAlchemySource(WritableSourcePort):
             rows = await conn.execute(
                 sa.select(b.c.entry_path).where(
                     b.c.scope == scope, b.c.kind == kind_key, b.c.name == name,
+                    *self._api_version_where(b.c.api_version, api_version),
                     b.c.tenant.in_(tenants),
                 )
             )
@@ -1597,6 +1796,7 @@ class SqlAlchemySource(WritableSourcePort):
     async def delete_bundle_entry(
         self, scope: str, container: str, name: str, entry: str,
         *, tenant: str | None = None, kind: str | None = None,
+        api_version: str | None = None,
     ) -> bool:
         """s-strain-bundle-fork B1 — delete ONE entry row for ``tenant``
         (base sentinel ``""`` when None). Returns True if a row existed."""
@@ -1606,7 +1806,9 @@ class SqlAlchemySource(WritableSourcePort):
             res = await conn.execute(
                 b.delete().where(
                     b.c.scope == scope, b.c.kind == kind_key, b.c.name == name,
-                    b.c.entry_path == entry, b.c.tenant == (tenant or ""),
+                    b.c.entry_path == entry,
+                    *self._api_version_where(b.c.api_version, api_version),
+                    b.c.tenant == (tenant or ""),
                 )
             )
         self.invalidate_view(scope)
@@ -1636,4 +1838,7 @@ class SqlAlchemySource(WritableSourcePort):
             tenant_layer_writes=True,
             write_kwargs=SAVE_OPTIONAL_KWARGS,
             delete_kwargs=DELETE_OPTIONAL_KWARGS,
+            # (scope, kind, api_version, name[, tenant]) is the row key since
+            # revision 0003 — the store itself keeps two Kinds apart.
+            api_version_identity=True,
         )

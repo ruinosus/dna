@@ -260,6 +260,17 @@ class SourceCapabilities:
     tenant_layer_writes: bool = False
     write_kwargs: frozenset[str] = frozenset()
     delete_kwargs: frozenset[str] = frozenset()
+    # The store keys a document on (scope, kind, apiVersion, name) — its OWN
+    # identity, matching the registry's (api_version, kind). Adapters that
+    # declare it can hold two Kinds sharing a name in one scope; adapters that
+    # do not resolve identity some other way and cannot. The filesystem adapter
+    # is the second case on purpose: a document's path is `<container>/<name>`,
+    # and the container comes from the kernel's StorageDescriptor registry, so
+    # two Kinds are distinct on disk only insofar as the registry gives them
+    # distinct containers. That is a real difference in what the two stores
+    # guarantee, so the conformance kit gates the two-Kinds case on this flag
+    # rather than pretending the adapters agree.
+    api_version_identity: bool = False
 
     @property
     def granular(self) -> bool:
@@ -356,6 +367,12 @@ def derive_capabilities(source: object, *, label: str) -> SourceCapabilities:
         tenant_layer_writes=("tenant" in write_kwargs and "layer" in write_kwargs),
         write_kwargs=write_kwargs,
         delete_kwargs=delete_kwargs,
+        # Probed on the READ resolver, not on a write: an adapter that can be
+        # ASKED for one Kind's document by (kind, apiVersion, name) is one that
+        # keys rows that way. A store whose identity is registry-mediated (the
+        # filesystem's `<container>/<name>` path) has nothing to answer such a
+        # question with, and so does not accept the argument.
+        api_version_identity="api_version" in _probe_params(source, "load_one"),
     )
 
 

@@ -660,6 +660,16 @@ class SourcePort(Protocol):
 
         Tenant: idem ``list_doc_refs``. Overlay shadows base quando
         ambos existem.
+
+        ``api_version`` resolves the Kind EXACTLY. A Kind is identified by
+        ``(apiVersion, kind)``, and a store whose row key carries that identity
+        (``SourceCapabilities.api_version_identity``) can really hold two
+        workspaces' ``Deal`` documents under one name — a bare lookup then
+        answers with whichever row comes back first. Optional, and declared
+        through that capability: an adapter whose identity is mediated
+        otherwise (the filesystem's ``<container>/<name>`` path, resolved
+        through the StorageDescriptor registry) does not accept it, and the
+        kernel does not pass it.
         """
         ...
 
