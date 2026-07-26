@@ -22,3 +22,5 @@ spec:
     summary: 'PR #201. try_incr_day com o cap DENTRO do INSERT..ON CONFLICT (avaliado sob row lock — atomico); negada nao toca o contador que o billing le. Prova de concorrencia: 512 tentativas/cap 100 => exatamente 100 admitidas; o mutante check-then-increment (equivalente single-thread) admitiu 161/512 e SO o teste de concorrencia pegou. incr_day incondicional mantido como primitivo do futuro soft cap (b) — que muda contrato de produto e fica para decisao do fundador. Chega a producao no proximo release+pin.'
   closed_at: '2026-07-21T15:26:10+00:00'
   resolution: 'PR #201. try_incr_day com o cap DENTRO do INSERT..ON CONFLICT (avaliado sob row lock — atomico); negada nao toca o contador que o billing le. Prova de concorrencia: 512 tentativas/cap 100 => exatamente 100 admitidas; o mutante check-then-increment (equivalente single-thread) admitiu 161/512 e SO o teste de concorrencia pegou. incr_day incondicional mantido como primitivo do futuro soft cap (b) — que muda contrato de produto e fica para decisao do fundador. Chega a producao no proximo release+pin.'
+  created_at: '2026-07-21T12:50:52+00:00'
+  updated_at: '2026-07-21T15:26:10+00:00'

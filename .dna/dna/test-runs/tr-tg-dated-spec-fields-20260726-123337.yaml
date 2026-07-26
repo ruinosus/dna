@@ -1,0 +1,12 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-dated-spec-fields-20260726-123337
+spec:
+  guide_ref: tg-dated-spec-fields
+  outcome: pass
+  verifies:
+  - Story/s-stamp-dated-spec-fields
+  executed_by: claude-code
+  executed_at: '2026-07-26T12:33:37+00:00'
+  notes: 'sdk-py 3685 passed / cli 1173 passed (1 pre-existing failure: test_mcp_quota::test_store_from_env_selects_the_durable_store_for_a_postgres_source, red on clean main too). Guard bite reproduced and reverted. Digest found 0 -> 11 on the dna board.'

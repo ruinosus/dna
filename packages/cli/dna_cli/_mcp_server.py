@@ -705,14 +705,17 @@ def build_server(
     @server.tool(run_in_thread=False)
     async def create_issue(
         slug: str, description: str, type: str = "bug", severity: str = "medium",
-        feature: str | None = None, scope: str | None = None,
+        title: str | None = None, feature: str | None = None,
+        scope: str | None = None,
     ) -> dict[str, Any]:
         """File an Issue (bug / enhancement / question / task) with an
-        auto-incremented ``i-NNN-<slug>`` name. Returns ``{kind, name, type,
-        severity}``. A write op — needs ``sdlc_mode='write'``."""
+        auto-incremented ``i-NNN-<slug>`` name. ``title`` is the short card
+        label (falls back to the description when omitted). Returns
+        ``{kind, name, type, severity}``. A write op — needs
+        ``sdlc_mode='write'``."""
         return await create_issue_impl(
             await _live(), slug, description=description, issue_type=type,
-            severity=severity, related_feature=feature, scope=scope,
+            severity=severity, title=title, related_feature=feature, scope=scope,
             tenant=await _guard("sdlc", scope=scope, sdlc_op="write"),
         )
 

@@ -245,6 +245,30 @@ dna sdlc backfill [OPTIONS] PATTERN
 | `--kind` | Generate Spec or Plan docs (auto: infer from path — specs/ → Spec, plans/ → Plan). _(default: `auto`)_ |
 | `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
+## `dna sdlc backfill-dates`
+
+Stamp the dates a document was filed without.
+
+Repairs ``created_at`` / ``updated_at`` on every board Kind a read surface
+dates by (the digest's windows, the derived journey, recency sorts), taking
+the value from the document's own timeline, else from the commit that added
+its file. Documents with neither are LEFT ALONE and listed — inventing
+"now" would date them all as filed today and skew every digest window from
+here on. Idempotent; ``--dry-run`` previews.
+
+```text
+dna sdlc backfill-dates [OPTIONS]
+```
+
+**Options**
+
+| Option | Description |
+| --- | --- |
+| `--dry-run` | Report what would be stamped, write nothing. |
+| `--help` | Show this message and exit. |
+| `--kind` | Repair a single Kind (default: every Kind that a read surface dates — see DATED_SPEC_FIELDS). |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
+
 ## `dna sdlc brief`
 
 Session-start briefing — one screen with everything the next session
@@ -1260,6 +1284,7 @@ dna sdlc issue file [OPTIONS]
 | `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 | `--severity` | _(default: `medium`)_ |
 | `--slug` | Short kebab-case slug, e.g. 'date-postgres-bug'. |
+| `--title` | Short Jira-style title shown on cards. Omitted from the doc when absent — every read surface already falls back to --desc. |
 | `--type` | _(default: `bug`)_ |
 
 ### `dna sdlc issue import`

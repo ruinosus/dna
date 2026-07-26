@@ -15,106 +15,23 @@ enforcement is asserted to fire (missing required → exit != 0).
 """
 from __future__ import annotations
 
-from contextlib import contextmanager
+import contextlib
 
 import pytest
-from click.testing import CliRunner
 
 from dna_cli._ctx import SESSION_PROVIDER_KEY
 from dna_cli.sdlc_cmd import sdlc
 
-
-@pytest.fixture
-def runner(session_obj):
-    """CliRunner whose invokes carry the injected session by default.
-
-    An explicit ``obj=`` at a call site wins (setdefault) — used by tests
-    that build their own fake.
-    """
-    r = CliRunner()
-    _orig = r.invoke
-
-    def _invoke(*args, **kwargs):
-        kwargs.setdefault("obj", session_obj)
-        return _orig(*args, **kwargs)
-
-    r.invoke = _invoke  # type: ignore[method-assign]
-    return r
-
-
-class _FakeDocView:
-    def __init__(self, raw: dict):
-        self._raw = raw
-        self.name = raw.get("metadata", {}).get("name")
-        self.kind = raw.get("kind")
-        self.spec = raw.get("spec") or {}
-
-
-class _FakeKernel:
-    """Records write_document calls into the shared store."""
-
-    def __init__(self, store: dict):
-        self._store = store
-        # doc_cmd._stamp_created_at_if_in_schema walks kernel._kinds; empty
-        # dict makes it a no-op (returns early), which is fine for the test.
-        self._kinds: dict = {}
-
-    def with_tenant(self, tenant):
-        return self
-
-    async def write_document(self, scope, kind, name, raw, **_):
-        self._store[(scope, kind, name)] = raw
-        return "v1"
-
-
-class _FakeSession:
-    """Drop-in for ClientSession backed by an in-memory dict store."""
-
-    def __init__(self, store: dict, scope: str):
-        self._store = store
-        self.scope = scope
-        self.kernel = _FakeKernel(store)
-        self.holder = type("_H", (), {"reload": lambda self: None})()
-
-    def get_doc(self, kind, name, *, tenant=None):
-        raw = self._store.get((self.scope, kind, name))
-        return _FakeDocView(raw) if raw is not None else None
-
-    def query_list(self, kind, *, tenant=None):
-        return [
-            _FakeDocView(raw)
-            for (sc, kd, _nm), raw in self._store.items()
-            if sc == self.scope and kd == kind
-        ]
-
-    def run(self, coro):
-        import asyncio
-
-        # Use a throwaway loop and tear it down cleanly so we don't pollute
-        # the process-global current-loop (other test files' fakes call
-        # asyncio.get_event_loop() and break on a leaked/half-open loop).
-        loop = asyncio.new_event_loop()
-        try:
-            return loop.run_until_complete(coro)
-        finally:
-            loop.close()
+from conftest import FakeSession
 
 
 @pytest.fixture
-def store():
-    """The in-memory backing dict the fake session reads/writes."""
-    return {}
-
-
-@pytest.fixture
-def session_obj(store):
-    """The ctx.obj to inject: a session factory over the backing store."""
-
-    @contextmanager
-    def _fake(scope=None, *, tenant=None, timeout=30.0):
-        yield _FakeSession(store, scope or "dna-development")
-
-    return {SESSION_PROVIDER_KEY: _fake}
+def runner(sdlc_runner):
+    """The shared fake-session CliRunner (``conftest.sdlc_runner``), under the
+    name this module's tests already use. The harness itself (``store`` /
+    ``session_obj`` / the fake kernel) moved to ``conftest.py`` when the
+    dated-spec-field guard (i-078) needed the same fixtures."""
+    return sdlc_runner
 
 
 # ---------------------------------------------------------------------------
@@ -356,7 +273,7 @@ def test_issue_start_transition(runner, store):
 
 def _doc_fake_session(store: dict, scope: str):
     """Mirror of _FakeSession but matching doc_cmd's dna_session surface."""
-    return _FakeSession(store, scope)
+    return FakeSession(store, scope)
 
 
 def test_doc_apply_multi_document(runner, tmp_path):
@@ -364,9 +281,9 @@ def test_doc_apply_multi_document(runner, tmp_path):
 
     backing: dict = {}
 
-    @contextmanager
+    @contextlib.contextmanager
     def _fake_dna_session(scope=None):
-        yield _FakeSession(backing, scope or "dna-development")
+        yield FakeSession(backing, scope or "dna-development")
 
     doc_obj = {SESSION_PROVIDER_KEY: _fake_dna_session}
 
@@ -396,9 +313,9 @@ def test_doc_apply_single_document_unchanged_behavior(runner, tmp_path):
 
     backing: dict = {}
 
-    @contextmanager
+    @contextlib.contextmanager
     def _fake_dna_session(scope=None):
-        yield _FakeSession(backing, scope or "dna-development")
+        yield FakeSession(backing, scope or "dna-development")
 
     doc_obj = {SESSION_PROVIDER_KEY: _fake_dna_session}
 
@@ -420,9 +337,9 @@ def test_doc_apply_multi_document_missing_name_fails(runner, tmp_path):
 
     backing: dict = {}
 
-    @contextmanager
+    @contextlib.contextmanager
     def _fake_dna_session(scope=None):
-        yield _FakeSession(backing, scope or "dna-development")
+        yield FakeSession(backing, scope or "dna-development")
 
     doc_obj = {SESSION_PROVIDER_KEY: _fake_dna_session}
 

@@ -1,0 +1,21 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-dated-spec-fields
+spec:
+  description: Every work-item write path stamps the spec fields a read surface dates by; the guard bites when one stops; the backfill makes filed Issues visible in the digest.
+  kind_of_test: manual
+  status: active
+  steps:
+  - action: cd packages/sdk-py && pytest tests/test_dated_spec_fields.py
+    expected: 24 passed
+  - action: cd packages/cli && pytest tests/test_dated_spec_fields_cli.py tests/test_backfill_dates_cli.py
+    expected: 26 passed
+  - action: remove the created_at stamp from build_issue_spec and from _stamp_create, re-run both guard suites
+    expected: 2 failures in sdk-py and 8 in cli, each naming the Kind and the field
+  - action: dna sdlc digest --since 3d before and after the backfill
+    expected: found goes from 0 to 11
+  verifies:
+  - Story/s-stamp-dated-spec-fields
+  created_at: '2026-07-26T12:33:11+00:00'
+  updated_at: '2026-07-26T12:33:11+00:00'

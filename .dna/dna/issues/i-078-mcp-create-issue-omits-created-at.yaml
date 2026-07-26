@@ -1,0 +1,54 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-078-mcp-create-issue-omits-created-at
+spec:
+  description: create_issue via MCP grava a Issue sem spec.created_at, entao ela nunca aparece no 'found' do sdlc_digest
+  type: bug
+  severity: medium
+  status: open
+  timeline:
+  - at: '2026-07-26T11:22:10+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
+  - at: '2026-07-26T11:22:36+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: |-
+      Medido contra a porta publicada em 26/07/2026, com documentos criados por um cliente MCP real.
+
+      Sintoma reportado pelo founder: sdlc_digest volta zerado enquanto list_stories enxerga a atividade da mesma janela.
+
+      Investigacao — as hipoteses obvias caem:
+      - Fonte de dados: NAO. _collect devolve os 3 documentos (Story 1, Feature 1, Issue 1) do mesmo Postgres que list_stories le.
+      - Excecao engolida no laco por Kind ('except Exception: continue', _mcp_server.py:172): NAO. Exercitei cada Kind com a excecao exposta — nenhuma levantou.
+      - Mismatch de chave de evento: NAO. O MCP grava 'type' e o agregador le ev.get('type') (_digest.py:257). Batem.
+      - Timezone/janela: NAO. Os eventos tem 'at' em UTC com offset e caem na janela.
+      - build_digest quebrado: NAO. Rodado direto sobre os documentos reais devolveu completed:3.
+
+      A causa real: a Issue criada pelo MCP NAO tem spec.created_at. Story e Feature criadas pelo mesmo cliente na mesma sessao TEM. Chaves observadas:
+        Story:   [acceptance_criteria, ..., created_at, ...]
+        Feature: [closed_at, created_at, description, ...]
+        Issue:   [closed_at, description, resolution, severity, status, timeline, type, updated_at]   <- sem created_at
+
+      E _digest.py:234,243 data uma Issue registrada exatamente por spec.created_at:
+          created = parse_iso_utc(spec.get('created_at'))
+          if kind in ('Kaizen','Issue') and _in_window(created, since, until): _add_found(...)
+
+      Sem o campo, a Issue nunca entra em 'found' — nao e questao de janela, e permanente.
+
+      Duas coisas do relatorio que NAO sao bug e vale registrar para nao virarem cacada:
+      1. 'progressed' e definido como movimento de Feature/Epic/Initiative (_digest.py:193), NAO de Story. Uma Story indo todo->in-progress nunca conta ali. O nome sugere o contrario e induziu o erro de leitura — vale renomear ou documentar na saida da tool.
+      2. O agregador mantem apenas o ESTADO MAIS RECENTE por documento (_digest.py:202). Quem transiciona ate um status terminal na mesma janela aparece so em 'completed', nunca em 'progressed'.
+
+      Correcao: create_issue deve carimbar created_at como create_story/create_feature fazem. Vale uma guarda que exija created_at em todo Kind de work-item que o digest data por esse campo.
+  - at: '2026-07-26T12:32:50+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'Nao e especifico do MCP: cmd_issue_file (CLI) montava o mesmo spec a mao e tambem omitia created_at. Medido: 79 docs sem created_at no board do dna, 120 no do dna-cloud (51 deles Issues). Corrigido em Story/s-stamp-dated-spec-fields: build_issue_spec carimba created_at/updated_at e aceita title, o CLI passa a usar o MESMO builder, o MCP create_issue ganha title, set_status/comment auto-curam docs legados a partir da propria timeline, e o registro DATED_SPEC_FIELDS + duas suites de guard impedem a classe. Prova: digest --since 3d foi de found=0 para found=11.'
+  created_at: '2026-07-26T11:22:10+00:00'
+  updated_at: '2026-07-26T11:22:36+00:00'

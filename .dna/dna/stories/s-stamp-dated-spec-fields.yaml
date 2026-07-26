@@ -1,0 +1,82 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-stamp-dated-spec-fields
+spec:
+  title: Every work-item write path stamps the spec fields a read surface dates by — Issu
+  description: Every work-item write path stamps the spec fields a read surface dates by — Issue was invisible in the digest's 'found' bucket because build_issue_spec and cmd_issue_file never wrote created_at (i-078). Fix at the source, backfill the existing boards, and add a guard so the class cannot recur.
+  status: review
+  feature: f-sdlc-digest
+  acceptance_criteria:
+  - Given an Issue filed via the MCP create_issue tool or the dna sdlc issue file CLI, When it is written, Then spec.created_at and spec.updated_at are stamped and a title may be supplied
+  - Given a board whose Issues predate the fix, When the backfill runs, Then each Issue's created_at is derived from an honest historical signal (first timeline event, else git first-commit date of the file), never from 'now'
+  - Given a work-item builder that omits a spec field a read surface dates/sorts/filters by, When the test suite runs, Then a guard fails naming the Kind and the field
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - code+tests (RED then GREEN)+guard proven to bite+docs regenerated+both boards backfilled+PRs opened in dna and dna-cloud
+  definition_of_done_source: cli-create
+  created_at: '2026-07-26T12:03:41+00:00'
+  updated_at: '2026-07-26T12:40:16+00:00'
+  timeline:
+  - at: '2026-07-26T12:03:41+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-26T12:04:04+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-26T12:32:40+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'Auditoria empirica, nao por leitura: o guard parametrizado sobre TODOS os create verbs do ''dna sdlc'' rodou vermelho so no Issue (12 casos, 11 verdes de primeira). Unico builder com o buraco = Issue, nas DUAS faces (build_issue_spec no core e cmd_issue_file no CLI, que montava um dict identico a mao). Spike/Bug/Task/ADR/Spec ja passam por _stamp_create; Story/Feature/Epic/Initiative/Plan carimbam inline; Kaizen carimba created_at. Engram (memory.verbs), StatusReport (generated_at) e AgentSession (started_at, adapter fora desta distribuicao) auditados e limpos.'
+    commit_ref: e2bc0e365cc8704f504e7a9267d2a1af4817d6a0
+  - at: '2026-07-26T12:32:45+00:00'
+    actor: claude-code
+    type: decision
+    source: cli
+    summary: 'Decidi datar o backfill pela primeira entrada da timeline, com fallback no commit que ADICIONOU o arquivo, e deixar sem data (reportando) quando nao ha nenhum dos dois. Carimbar ''now'' faria 51 Issues do dna-cloud parecerem abertas hoje: entrariam todas na janela atual do digest e sumiriam das janelas a que pertencem — uma versao mais barulhenta do proprio i-078. Verificado: created_at/updated_at estao em KindBase.VOLATILE_SPEC_FIELDS, entao canonical_digest (a identidade que o source-sync compara) NAO muda com o backfill — teste em test_dated_spec_fields.py prova.'
+    commit_ref: e2bc0e365cc8704f504e7a9267d2a1af4817d6a0
+  - at: '2026-07-26T12:33:17+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-dated-spec-fields
+    summary: TestGuide tg-dated-spec-fields (manual)
+  - at: '2026-07-26T12:33:42+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-dated-spec-fields-20260726-123337
+    summary: TestRun tr-tg-dated-spec-fields-20260726-123337 → pass
+    outcome: pass
+  - at: '2026-07-26T12:40:09+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: PR https://github.com/ruinosus/dna/pull/241 (fix + guard + backfill verb + board data) e o par de dados em https://github.com/ruinosus/dna-cloud/pull/153 (77 docs, 51 Issues). sdk-py 3685 passed, cli 1173 passed com 1 falha pre-existente (test_mcp_quota postgres store). Guard provado mordendo e revertido. Digest found 0->11 no dna, 0->51 no dna-cloud.
+  - at: '2026-07-26T12:40:16+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
+  produces:
+  - kind: Plan
+    name: plan-s-stamp-dated-spec-fields
+    role: implementation
+    at: '2026-07-26T12:04:04+00:00'
+  - kind: TestGuide
+    name: tg-dated-spec-fields
+    role: test-guide
+    at: '2026-07-26T12:33:17+00:00'
+  - kind: TestRun
+    name: tr-tg-dated-spec-fields-20260726-123337
+    role: test-run
+    at: '2026-07-26T12:33:42+00:00'
