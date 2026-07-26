@@ -1,0 +1,68 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-definitions-read-record-plane
+spec:
+  title: Definitions read works for record-plane Kinds
+  description: Make read_definition_impl resolve a document for record-plane Kinds via a targeted kernel read, so the generic definitions API works for all registered Kinds — not just the composition-plane subset.
+  status: in-progress
+  feature: f-dna-hosting
+  priority: high
+  acceptance_criteria:
+  - Given a record-plane Kind (Tool/Copilot) with a base document in a scope, When read_definition_impl is called for it, Then it returns the document's spec plus the Kind's ui_schema instead of raising ValueError.
+  - Given a tenant writes an override for a record-plane Kind via apply_definition_impl, When read_definition_impl is called for the same (kind, name) with that tenant, Then it returns overridden=true, the tenant's effective spec and the untouched base spec.
+  - Given a composition-plane Kind, When read_definition_impl is called, Then behaviour and cost are unchanged (no extra kernel roundtrip on the hit path).
+  acceptance_criteria_source: claude-code
+  definition_of_done:
+  - 'Code: targeted per-(kind,name) read on the definitions path; the instance builder''s record-plane exclusion stays intact.'
+  - 'Tests: RED-then-GREEN unit tests for record-plane read and write-then-read round trip; existing definition/compose/REST suites green.'
+  - 'Docs: no public-API surface change; PR states the latency characteristics.'
+  definition_of_done_source: claude-code
+  created_at: '2026-07-26T05:18:24+00:00'
+  updated_at: '2026-07-26T05:44:40+00:00'
+  timeline:
+  - at: '2026-07-26T05:18:24+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-26T05:18:44+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-07-26T05:43:54+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'Diagnosis confirmed, and WIDER than filed: kernel.kind_plane reports 49 of 76 registered Kinds as plane=record (Tool, Copilot, and the whole SDLC surface — Story/Issue/Feature/Epic/Plan/ADR/Spec/Task/Memory/PromptTemplate/...), not 35. Every one of them 404''d on read while PUT succeeded. Fix: _doc_spec_for keeps the in-memory mi.documents walk for composition Kinds (byte-identical, no extra roundtrip on hit OR miss) and, only on a miss for a plane=record Kind, does a targeted kernel.get_document(scope, kind, name, tenant) — the indexed, L2-cached single-row read. instance_builder''s record exclusion is untouched. Read the raw dict rather than mi.one_async on purpose: one_async parses a validated Document per read (measured ~1.5ms) and the caller only wants a spec dict. Second bug found by the fix: read_definition_impl''s bundle_entries listing went through the SYNC kernel.list_bundle_entries, whose _run_sync_helper raises against a loop-bound SQL source; the advisory except swallowed it, so EVERY bundle Kind reported [] in production (plus a stray ''coroutine was never awaited'' RuntimeWarning). Latent while only composition Kinds reached the block; 18 record Kinds are bundle-pattern, so the fix dragged it into the light. Switched to list_bundle_entries_async, matching list_bundle_entries_impl/reconcile_forks_impl.'
+    commit_ref: 13ccf1ebddaa979d897f1740b56774b4531c37db
+  - at: '2026-07-26T05:44:24+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-definitions-read-record-plane
+    summary: TestGuide tg-definitions-read-record-plane (manual)
+  - at: '2026-07-26T05:44:40+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-definitions-read-record-plane-20260726-054435
+    summary: TestRun tr-tg-definitions-read-record-plane-20260726-054435 → pass
+    outcome: pass
+  produces:
+  - kind: Plan
+    name: plan-s-definitions-read-record-plane
+    role: implementation
+    at: '2026-07-26T05:18:44+00:00'
+  - kind: TestGuide
+    name: tg-definitions-read-record-plane
+    role: test-guide
+    at: '2026-07-26T05:44:24+00:00'
+  - kind: TestRun
+    name: tr-tg-definitions-read-record-plane-20260726-054435
+    role: test-run
+    at: '2026-07-26T05:44:40+00:00'
