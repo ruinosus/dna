@@ -169,6 +169,13 @@ CORE_TRAITS: dict[str, str] = {
         "A write of this Kind must trace to a Spec when the scope's constitution "
         "demands it (the spec-kit governance guard)."
     ),
+    "record.append-only": (
+        "An audit / evidence record: it may be WRITTEN and READ but never "
+        "deleted through a generic tool. The record is what proves what "
+        "happened, so deleting it is the first move of anyone with something "
+        "to hide — and unlike a bad write, it is not recoverable by writing a "
+        "better one."
+    ),
     "memory.recallable": (
         "Participates in `recall` / `remember` / the memory index — the set the "
         "memory verbs search. DISTINCT from `embed:`, which declares WHICH "

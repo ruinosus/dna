@@ -131,6 +131,26 @@ class _Visitor(ast.NodeVisitor):
         members = _string_members(node)
         if members is not None:
             self._record(node, symbol, members)
+        # A per-Kind TABLE hides its memberships in the values as well as the
+        # keys (``{"sdlc.work-item": ("Story", "Issue", ...)}`` keys on traits
+        # and lists Kinds). Looking only at the outer literal would let the
+        # biggest tables through.
+        inner = node.args[0] if (
+            isinstance(node, ast.Call) and len(node.args) == 1
+        ) else node
+        if isinstance(inner, ast.Dict):
+            for key, value in zip(inner.keys, inner.values):
+                if isinstance(key, ast.Constant):
+                    label = repr(key.value)
+                elif isinstance(key, ast.Name):
+                    label = key.id      # a table keyed on a named constant
+                elif isinstance(key, ast.Attribute):
+                    label = key.attr
+                else:
+                    label = "?"
+                nested = _string_members(value)
+                if nested is not None:
+                    self._record(value, f"{symbol}[{label}]", nested)
 
     # -- scopes ----------------------------------------------------------
 

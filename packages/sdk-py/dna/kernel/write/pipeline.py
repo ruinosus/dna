@@ -439,6 +439,7 @@ class WritePipeline:
         layer: tuple[str, str] | None,
         invalidate_mode: str,
         write_class: str = "substantive",
+        if_absent: bool = False,
     ) -> str | None:
         """Real write_document body — the facade (``Kernel.write_document``) owns
         the OTel span + mode validation + record-plane demotion; the fat logic
@@ -505,6 +506,20 @@ class WritePipeline:
                 _retention = VERSION_CHURN_RETENTION
             if _retention is not None:
                 kwargs["version_retention"] = _retention
+        if if_absent:
+            # An ATOMIC create. Refuse rather than degrade: a caller that asked
+            # for "create or fail" and silently got an upsert would believe it
+            # holds a guarantee it does not, which is worse than not offering
+            # the guarantee at all.
+            if not ws.if_absent:
+                raise NotImplementedError(
+                    f"{type(src).__name__} does not support if_absent writes "
+                    f"(it declares write_kwargs without 'if_absent'), so this "
+                    f"kernel cannot promise an atomic create against it. Use "
+                    f"read-then-write and accept the race, or run against an "
+                    f"adapter that declares the kwarg."
+                )
+            kwargs["if_absent"] = True
         # Compute effective layer for cache + hook tracking
         # (adapter receives tenant + residual_layer separately when supported)
         adapter_layer = residual_layer
@@ -651,6 +666,15 @@ class WritePipeline:
         # s-kernel-capability-protocols — memoized kwarg probe (see write_document).
         ws = write_kwarg_support(src)
         kwargs: dict = {}
+        if ws.api_version_delete and api_version:
+            # i-081: route the delete by the EXACT Kind. Without it the adapter
+            # resolves a bare Kind NAME, and two workspaces may each declare a
+            # `Deal` under their own namespace — the delete then looks in the
+            # other Kind's container, finds nothing, and the caller is told it
+            # succeeded. Passed only when the adapter DECLARES the kwarg
+            # (``delete_kwargs``), so an adapter that has not adopted it is
+            # unaffected.
+            kwargs["api_version"] = api_version
         if ws.tenant_delete:
             kwargs["tenant"] = effective_tenant
             if ws.layer_delete:

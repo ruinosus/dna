@@ -291,6 +291,7 @@ class CompositeFilesystemSource(WritableSourcePort):
         layer: tuple[str, str] | None = None,
         write_class: str = "substantive",
         version_retention: int | None = None,
+        if_absent: bool = False,
     ) -> str:
         # write_class + version_retention ride the WritableSourcePort
         # contract (F2 T7 conformance) — delegated to the child,
@@ -299,6 +300,7 @@ class CompositeFilesystemSource(WritableSourcePort):
             scope, kind, name, raw,
             author=author, tenant=tenant, layer=layer,
             write_class=write_class, version_retention=version_retention,
+            if_absent=if_absent,
         )
 
     async def delete_document(
@@ -306,9 +308,11 @@ class CompositeFilesystemSource(WritableSourcePort):
         *,
         tenant: str | None = None,
         layer: tuple[str, str] | None = None,
+        api_version: str | None = None,
     ) -> None:
         await self._route(scope).delete_document(
             scope, kind, name, tenant=tenant, layer=layer,
+            api_version=api_version,
         )
 
     async def save_manifest(self, scope: str, manifest: dict[str, Any]) -> str:

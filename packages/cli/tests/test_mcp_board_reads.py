@@ -51,9 +51,13 @@ async def _seed_board(live: Any) -> None:
                          ("s-shut", "done")):
         await S.create_story(
             live.kernel, _SCOPE, name, feature="f-board",
-            description=f"desc of {name}", title=name.upper())
+            description=f"desc of {name}", title=name.upper(),
+            acceptance_criteria=["Given X, when Y, then Z"],
+            definition_of_done=["code+tests"])
         if status != "todo":
-            await S.set_status(live.kernel, _SCOPE, "Story", name, status)
+            await S.set_status(
+                live.kernel, _SCOPE, "Story", name, status,
+                no_code=True, gate_reason="read-face fixture, no product surface")
 
 
 class _CountingKernel:

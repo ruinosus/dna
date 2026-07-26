@@ -10,7 +10,7 @@ unit-tested in isolation: ``build_digest`` takes already-loaded work-item docs
 (plus optional open-PR + git-tag context) and a time window, walks every
 timeline, and returns a structured digest grouped into
 
-    completed · decided · found · progressed · artifacts · releases
+    completed · decided · found · parents_progressed · artifacts · releases
     + attention{ blocked, review_awaiting, owner_decisions, open_questions }
 
 The CLI command (``sdlc_cmd.py``) owns only the impure edges: opening a kernel
@@ -111,10 +111,8 @@ def resolve_since(
 _TERMINAL_TO = {
     "done", "shipped", "resolved", "accepted", "merged", "closed", "answered",
 }
-# Feature/Epic movement into an active (non-terminal) state = progress.
+# Rollup-level movement into an active (non-terminal) state.
 _PROGRESS_TO = {"in-progress", "in-development", "planning", "triaged", "proposed"}
-
-_PROGRESS_KINDS = {"Feature", "Epic", "Initiative"}
 
 
 def _title(spec: dict[str, Any], name: str) -> str:
@@ -195,8 +193,14 @@ def build_digest(
     tags: list[dict] | None = None,
     absent: list[str] | None = None,
     unreadable: list[dict[str, str]] | None = None,
+    kernel: Any = None,
 ) -> dict[str, Any]:
     """Aggregate work-item timelines into a retrospective digest.
+
+    ``kernel`` (optional) supplies the trait-derived bucket memberships — which
+    Kinds are rollups, which are filed, which are decisions. This aggregator is
+    PURE by design (documents in, digest out), so a caller without one gets the
+    documented pre-trait fallback; every real caller has a kernel and passes it.
 
     ``docs`` is a list of ``{"kind", "name", "spec"}`` dicts (record-plane +
     lifecycle Kinds alike). ``since``/``until`` bound the window (aware UTC).
@@ -207,7 +211,15 @@ def build_digest(
       * ``completed``  — items that reached a terminal status IN the window
       * ``decided``    — ADRs created + ``decision`` timeline events in window
       * ``found``      — Kaizens + Issues filed in window
-      * ``progressed`` — Feature/Epic/Initiative movement in window
+      * ``parents_progressed`` — movement of the ROLLUP levels (Feature / Epic
+        / Initiative — everything carrying ``sdlc.rollup``) in the window.
+        RENAMED from ``progressed`` (item 3): the old name reads as "work
+        progressed", and a reader who has just watched three Stories move and
+        sees ``progressed: 0`` concludes the digest is broken — which is exactly
+        the debugging session it cost. Story movement is not in this bucket by
+        DESIGN (a Story moving to in-progress is routine; a Feature moving is
+        roadmap news), so the fix is the name, not the semantics. ``progressed``
+        is still emitted as a deprecated alias so nothing breaks on the rename.
       * ``artifacts``  — ``artifact_produced`` events in window
       * ``releases``   — git tags dated in window
       * ``attention``  — CURRENT outstanding state (not windowed): what the
@@ -230,10 +242,33 @@ def build_digest(
     its ``verdict``, and is never ``green`` — an unread board is not a clean one.
     ``red`` still wins: partial DEGRADES the signal rather than overwriting it.
     """
+    from dna.application.sdlc_family import (
+        TRAIT_DECISION,
+        TRAIT_FILED,
+        TRAIT_ROLLUP,
+        filed_kinds,
+        rollup_kinds,
+    )
+    from dna.application.sdlc_family import FALLBACK_FAMILIES as _FALLBACK
+
+    # WHICH Kinds belong to each bucket is DECLARED on the Kinds, not listed
+    # here (item 13). ``kernel`` is optional because this aggregator is pure by
+    # design — a caller with no kernel gets the documented pre-trait fallback.
+    _rollup = frozenset(rollup_kinds(kernel) if kernel is not None
+                        else _FALLBACK[TRAIT_ROLLUP])
+    _filed = frozenset(filed_kinds(kernel) if kernel is not None
+                       else _FALLBACK[TRAIT_FILED])
+    _decision = frozenset(
+        (kernel.kinds_with_trait(TRAIT_DECISION) if kernel is not None
+         else _FALLBACK[TRAIT_DECISION])
+    )
+
     completed: list[dict] = []
     decided: list[dict] = []
     found: list[dict] = []
-    progressed: dict[str, dict] = {}   # keyed by kind/name → keep latest
+    # Keyed by kind/name → keep latest. Renamed from ``progressed`` (item 3):
+    # see the ``parents_progressed`` note in the docstring above.
+    parents_progressed: dict[str, dict] = {}
     artifacts: list[dict] = []
     attention_blocked: list[dict] = []
     attention_review: list[dict] = []
@@ -243,9 +278,7 @@ def build_digest(
     # Process the canonical Kaizen/Issue docs BEFORE other docs' timelines so a
     # first-class doc (e.g. `kz-001`) wins the found-dedupe over the same
     # observation echoed as a `kaizen` timeline event on a Story.
-    docs = sorted(
-        docs, key=lambda d: 0 if d.get("kind") in ("Kaizen", "Issue") else 1
-    )
+    docs = sorted(docs, key=lambda d: 0 if d.get("kind") in _filed else 1)
 
     completed_keys: set[str] = set()
     found_seen: set[str] = set()   # dedupe kaizen event vs Kaizen doc twin
@@ -268,13 +301,13 @@ def build_digest(
         created = parse_iso_utc(spec.get(_creation_field(kind)))
 
         # ── doc-level windowed signals ──
-        if kind == "ADR" and _in_window(created, since, until):
+        if kind in _decision and _in_window(created, since, until):
             decided.append({
                 "kind": kind, "name": name, "title": title,
                 "at": created.isoformat(),
                 "summary": str(spec.get("decision") or spec.get("context") or "")[:160],
             })
-        if kind in ("Kaizen", "Issue") and _in_window(created, since, until):
+        if kind in _filed and _in_window(created, since, until):
             body = spec.get("body") or spec.get("description") or ""
             _add_found({
                 "kind": kind, "name": name, "title": title,
@@ -294,15 +327,16 @@ def build_digest(
                 # ADR acceptance is a DECISION (surfaced in `decided` via the
                 # doc-level signal), not a "completed" work item — keep it out
                 # of the shipped bucket so it isn't double-counted.
-                if to in _TERMINAL_TO and kind != "ADR" and key not in completed_keys:
+                if (to in _TERMINAL_TO and kind not in _decision
+                        and key not in completed_keys):
                     completed_keys.add(key)
                     completed.append({
                         "kind": kind, "name": name, "title": title,
                         "to": to, "at": at.isoformat(),
                         "commit_ref": ev.get("commit_ref"),
                     })
-                elif kind in _PROGRESS_KINDS and to in _PROGRESS_TO:
-                    progressed[key] = {
+                elif kind in _rollup and to in _PROGRESS_TO:
+                    parents_progressed[key] = {
                         "kind": kind, "name": name, "title": title,
                         "to": to, "at": at.isoformat(),
                     }
@@ -352,8 +386,10 @@ def build_digest(
                 )[:120],
             })
 
-    # Drop items from `progressed` that also completed in the window.
-    progressed_list = [v for k, v in progressed.items() if k not in completed_keys]
+    # Drop items that also completed in the window.
+    progressed_list = [
+        v for k, v in parents_progressed.items() if k not in completed_keys
+    ]
 
     releases = []
     for t in tags or []:
@@ -378,6 +414,9 @@ def build_digest(
         "completed": len(completed),
         "decided": len(decided),
         "found": len(found),
+        "parents_progressed": len(progressed_list),
+        # Deprecated alias (item 3). Kept so no shipped consumer breaks on the
+        # rename; remove once the portal + digest renderers have moved.
         "progressed": len(progressed_list),
         "artifacts": len(artifacts),
         "releases": len(releases),
@@ -407,7 +446,8 @@ def build_digest(
         "completed": completed,
         "decided": decided,
         "found": found,
-        "progressed": progressed_list,
+        "parents_progressed": progressed_list,
+        "progressed": progressed_list,   # deprecated alias — see counts above
         "artifacts": artifacts,
         "releases": releases,
         "attention": attention,

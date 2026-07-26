@@ -27,6 +27,7 @@ from __future__ import annotations
 from typing import Any
 
 __all__ = [
+    "FALLBACK_FAMILIES",
     "TRAIT_DATED",
     "TRAIT_DATED_CREATE_ONLY",
     "TRAIT_DECISION",
@@ -58,6 +59,28 @@ TRAIT_DATED = "sdlc.dated"
 TRAIT_DATED_CREATE_ONLY = "sdlc.dated-create-only"
 
 
+#: The KERNEL-LESS fallback memberships — what each family was before the trait.
+#:
+#: A handful of callers are pure by design (``dna_cli._digest.build_digest``
+#: takes documents and a window, not a kernel) and a few take a narrow duck-typed
+#: kernel. They get this, which is the PRE-TRAIT behavior verbatim, so nothing
+#: they could do before stops working.
+#:
+#: It is the one literal Kind-name table this module keeps, and it does not get
+#: to drift: ``test_sdlc_family_is_declarative`` asserts every entry equals what
+#: a live registry derives. A fallback nobody checks is just the fourteenth list.
+FALLBACK_FAMILIES: dict[str, tuple[str, ...]] = {
+    TRAIT_WORK_ITEM: (
+        "Bug", "Epic", "Feature", "Initiative", "Issue", "Spike", "Story", "Task",
+    ),
+    TRAIT_DECISION: ("ADR",),
+    TRAIT_OBSERVATION: ("Kaizen",),
+    TRAIT_ROLLUP: ("Epic", "Feature", "Initiative"),
+    TRAIT_FILED: ("Bug", "Issue", "Kaizen"),
+    TRAIT_JOURNEY_DERIVED: ("Issue", "Spike", "Story"),
+}
+
+
 def _sorted(names: frozenset[str]) -> tuple[str, ...]:
     """Deterministic order — a digest that walks Kinds in set order would emit
     a different `absent` list on every process."""
@@ -75,11 +98,12 @@ def _with_trait(kernel: Any, trait: str) -> frozenset[str]:
     exactly, so nothing it could do before stops working."""
     ask = getattr(kernel, "kinds_with_trait", None)
     if ask is None:
-        return frozenset()
+        return frozenset(FALLBACK_FAMILIES.get(trait, ()))
     try:
-        return frozenset(ask(trait))
+        found = frozenset(ask(trait))
     except Exception:  # noqa: BLE001 — a registry that cannot answer says nothing
-        return frozenset()
+        return frozenset(FALLBACK_FAMILIES.get(trait, ()))
+    return found or frozenset(FALLBACK_FAMILIES.get(trait, ()))
 
 
 def work_item_kinds(kernel: Any) -> tuple[str, ...]:

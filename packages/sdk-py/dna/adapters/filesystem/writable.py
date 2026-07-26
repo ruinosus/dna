@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import re
+import os
 import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -269,6 +270,7 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
         layer: tuple[str, str] | None = None,
         write_class: str = "substantive",
         version_retention: int | None = None,
+        if_absent: bool = False,
     ) -> str:
         # version_retention rides the WritableSourcePort contract for parity; the FS
         # adapter has no version-history table (each write replaces the file in
@@ -294,6 +296,15 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
         # 'latest' convention). Republish of an existing version raises so
         # the harness can surface 409 version_already_published.
         is_root = self._kind_is_root(kind)
+        if is_root and if_absent:
+            # A root Kind's document IS the scope's manifest, written through a
+            # versioned/mirrored path with its own already-published refusal.
+            # Rather than bolt a second, subtly different claim onto it, refuse
+            # the combination by name: silently ignoring `if_absent` would hand
+            # back the atomicity guarantee the caller asked for and did not get.
+            path = scope_dir / "manifest.yaml"
+            if path.exists():
+                raise self._taken(scope, kind, name)
         if is_root:
             scope_dir.mkdir(parents=True, exist_ok=True)
             spec_version = (raw.get("spec") or {}).get("version")
@@ -330,6 +341,13 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
                     dest = scope_dir / subdir / name
                 else:
                     dest = scope_dir / name
+                if if_absent:
+                    # ``mkdir`` without ``exist_ok`` is the atomic claim for a
+                    # bundle: the directory IS the document's identity, and the
+                    # syscall either creates it or fails. Claiming it before the
+                    # writer runs means two concurrent creates cannot both
+                    # believe the name was free.
+                    self._claim_bundle(dest, scope, kind, name)
                 w.write(FilesystemBundleHandle(dest), raw)
                 return "1"
 
@@ -341,9 +359,60 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
         parent.mkdir(parents=True, exist_ok=True)
         path = parent / f"{name}.yaml"
         content = _dump_yaml(raw)
+        if if_absent:
+            # O_CREAT|O_EXCL — one syscall that both tests and creates. A
+            # ``path.exists()`` check followed by a write is exactly the race
+            # this exists to close.
+            self._claim_file(path, content, scope, kind, name)
+            return "1"
         async with aiofiles.open(path, "w", encoding="utf-8") as f:
             await f.write(content)
         return "1"
+
+    @staticmethod
+    def _taken(scope: str, kind: str, name: str) -> Exception:
+        from dna.kernel.errors import DocumentNameTaken
+
+        return DocumentNameTaken(
+            f"{kind} {name!r} already exists in scope {scope!r} — an if_absent "
+            f"write refuses to replace it. Pick a free name, or use an update "
+            f"verb if you meant to change the document that is there."
+        )
+
+    def _claim_file(
+        self, path: Path, content: str, scope: str, kind: str, name: str,
+    ) -> None:
+        """Create ``path`` with its content, or raise if it already exists."""
+        try:
+            fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o644)
+        except FileExistsError:
+            raise self._taken(scope, kind, name) from None
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as fh:
+                fh.write(content)
+        except BaseException:
+            # The claim succeeded and the write did not: leaving a zero-byte
+            # file would make the name permanently unusable by a later create
+            # AND parse as an empty document. Release it.
+            path.unlink(missing_ok=True)
+            raise
+
+    def _claim_bundle(
+        self, dest: Path, scope: str, kind: str, name: str,
+    ) -> None:
+        """Create the bundle directory, or raise if it already exists.
+
+        Also refuses when a SINGLE-FILE document of the same name is already
+        there (``<name>.yaml`` / ``<name>.md``): the loader would find it, so it
+        holds the name even though this Kind stores bundles."""
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        for sibling in (dest.with_suffix(".yaml"), dest.with_suffix(".md")):
+            if sibling.exists():
+                raise self._taken(scope, kind, name)
+        try:
+            dest.mkdir()
+        except FileExistsError:
+            raise self._taken(scope, kind, name) from None
 
     def _kind_is_root(self, kind: str) -> bool:
         """True iff the registered KindPort for ``kind`` is a "root-shaped"
@@ -377,21 +446,21 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
         *,
         tenant: str | None = None,
         layer: tuple[str, str] | None = None,
+        api_version: str | None = None,
     ) -> None:
         # Phase 2b: tenant routes to dedicated layout (see save_document).
         _validate_layer_segments(layer)
         _validate_tenant_path(tenant)
-        # i-080 residual: a DELETE carries no document, so there is no
-        # apiVersion to route by and this stays a bare-name lookup. When two
-        # workspaces own a Kind of the same name, deleting one workspace's
-        # document may look inside the other Kind's container and find nothing
-        # — a delete that MISSES, never one that hits the wrong document (the
-        # SCOPE, not the container, is the isolation boundary). Closing it means
-        # threading ``api_version`` through ``WritableSourcePort.delete_document``,
-        # i.e. a port-contract change across every adapter and the conformance
-        # kit. The bare lookup now at least WARNS on the ambiguity
-        # (``KindRegistry.port_for``).
-        subdir = self._subdir_for(kind)
+        # i-080's residual, now closed: a DELETE carries no document, so this
+        # was a BARE-name lookup. Two workspaces may each declare a `Deal` under
+        # their own namespace — that is what namespacing is for — and the bare
+        # lookup routed both to whichever port the registry resolved, so a
+        # delete could look inside the other Kind's container and find nothing.
+        # The caller was then told the delete succeeded. ``api_version`` now
+        # resolves the Kind exactly, mirroring ``save_document`` (which has
+        # always had it, because it holds the document). ``None`` keeps the old
+        # bare behaviour for a caller that genuinely does not know.
+        subdir = self._subdir_for(kind, api_version=api_version)
         scope_dir = self._target_dir(scope, layer, tenant=tenant)
 
         if subdir:

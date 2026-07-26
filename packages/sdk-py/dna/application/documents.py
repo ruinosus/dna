@@ -59,10 +59,16 @@ __all__ = [
     "BootstrapKindWriteRefused",
     "ConcurrentWriteError",
     "DEFAULT_FAMILY",
+    "DeleteRefused",
+    "TRAIT_APPEND_ONLY",
+    "UnknownDocumentError",
     "UnknownKindError",
     "bootstrap_kinds",
+    "delete_document_impl",
+    "delete_refusal",
     "family_for_kind",
     "get_document_impl",
+    "is_append_only_kind",
     "is_bootstrap_kind",
     "list_documents_impl",
     "list_kinds_impl",
@@ -91,6 +97,15 @@ class ConcurrentWriteError(ValueError):
 
     Subclasses ``ValueError`` so every face that already maps write-path vetoes
     to an honest client refusal surfaces it with no new wiring."""
+
+
+class UnknownDocumentError(LookupError):
+    """A generic delete named a document that is not there.
+
+    Distinct from :class:`UnknownKindError`: the Kind resolved fine, the
+    document did not. Returning quietly would report success for a delete that
+    did nothing — which is exactly how a caller convinces itself something is
+    gone."""
 
 
 class BootstrapKindWriteRefused(PermissionError):
@@ -178,6 +193,82 @@ def bootstrap_write_refusal(port: Any) -> str:
         f"document is validated and composed against. Use the purpose-built "
         f"path for this Kind (it is still READABLE here)."
     )
+
+
+#: A Kind carrying this trait is an audit / evidence record: writable and
+#: readable, never deletable through a generic tool.
+TRAIT_APPEND_ONLY = "record.append-only"
+
+
+class DeleteRefused(PermissionError):
+    """A generic delete targeted a Kind that must not be deleted this way.
+
+    A ``PermissionError`` for the same reason :class:`BootstrapKindWriteRefused`
+    is: it is a policy refusal, not a bug and not a quota denial, and every face
+    already maps it to an honest client-facing denial."""
+
+
+def _port_traits(port: Any) -> frozenset[str]:
+    from dna.kernel.kinds.traits import port_traits
+
+    return port_traits(port)
+
+
+def is_append_only_kind(port: Any) -> bool:
+    """Whether ``port`` declares :data:`TRAIT_APPEND_ONLY`."""
+    if port is None:
+        return False
+    from dna.kernel.kinds.traits import port_has_trait
+
+    return port_has_trait(port, TRAIT_APPEND_ONLY)
+
+
+def delete_refusal(port: Any) -> str | None:
+    """Why a generic DELETE of ``port``'s Kind is refused, or ``None``.
+
+    Two categories, and both refusals are DERIVED (from ``is_overlayable`` and
+    from a declared trait) rather than from a list of Kind names, so a Kind that
+    arrives later — including one a tenant declares in a ``.kind.yaml`` — is
+    covered on arrival rather than the next time somebody remembers.
+
+    **1. Bootstrap Kinds** — Genome, LayerPolicy, KindDefinition. The generic
+    write already refuses these because they declare what the scope IS. Delete
+    is strictly worse than write here, and the asymmetry is the point: a bad
+    Genome is recoverable by writing a better one, but deleting a KindDefinition
+    leaves every document of that Kind on disk with nothing left that can
+    validate, compose or even name them — and the thing that would have told you
+    what the orphans were is what you just deleted.
+
+    **2. Append-only records** — AuditLog, Evidence, WorkflowEvent. The record is
+    what proves what happened. Deleting it is the first move of anyone with
+    something to hide, and there is no "write a better one" for a fact.
+
+    Everything else is deletable, and deliberately so: a memory, a Story, a
+    Skill, a tenant's own document are all things whose owner may legitimately
+    want gone, and a delete they cannot perform is a delete they will perform by
+    hand against the database."""
+    if port is None:
+        return None
+    if is_bootstrap_kind(port):
+        return (
+            f"{port.kind!r} is a BOOTSTRAP Kind: its documents declare what this "
+            f"scope IS (identity + inheritance, the operator's layer policy, or "
+            f"the definition of a Kind itself). The generic delete refuses it. "
+            f"Deleting one is worse than writing a bad one: a bad Genome is "
+            f"fixed by writing a better Genome, but deleting a KindDefinition "
+            f"leaves every document of that Kind in place with nothing left to "
+            f"validate, compose or name them — and what would have told you what "
+            f"they were is what you deleted. Use the purpose-built path."
+        )
+    if is_append_only_kind(port):
+        return (
+            f"{port.kind!r} is an APPEND-ONLY record: it is the evidence of what "
+            f"happened. It can be written and read here, never deleted — "
+            f"deleting the audit trail is the first move of anyone with "
+            f"something to hide, and unlike a bad write there is no better "
+            f"version to replace it with. Supersede it with a new record."
+        )
+    return None
 
 
 # ── the metering family, derived from the Kind ──────────────────────────────
@@ -377,15 +468,32 @@ async def list_kinds_impl(
     unit — so the honest, shorter list wins. ``None`` (the unmetered stdio /
     self-host path, where nothing is gated) reports everything.
 
-    Each entry also carries ``writable`` + ``write_refusal``, so a generic write
-    that would be refused is visible BEFORE it is attempted."""
+    Each entry carries ``writable`` + ``write_refusal`` AND ``deletable`` +
+    ``delete_refusal``, so an operation that would be refused is visible BEFORE
+    it is attempted. Delete needed its own pair rather than riding on
+    ``writable``: the two refusals do not coincide (an AuditLog is writable and
+    never deletable) and a face that inferred one from the other would be
+    guessing about the more destructive of the two.
+
+    ``filtered_by_plan`` reports whether the catalog was actually SHORTENED, not
+    whether a filter was configured. It used to be ``allowed is not None`` — true
+    on every metered call, including the two shipped plans where it filters
+    nothing (``family_for_kind`` only ever answers definitions / sdlc / memory,
+    and Free and Pro both grant all three). A flag that is true when nothing
+    happened teaches its reader to ignore it, and this one is the caller's only
+    signal that the catalog it is looking at is partial. ``filtered_out`` names
+    the count, so "the plan filtered nothing" and "the plan hid 40 Kinds" are
+    finally different answers."""
     allowed = frozenset(families) if families is not None else None
     entries: list[dict[str, Any]] = []
+    filtered_out = 0
     for port in live.kernel.kind_ports():
         family = family_for_kind(port)
         if allowed is not None and family not in allowed:
+            filtered_out += 1
             continue
         refusal = bootstrap_write_refusal(port) if is_bootstrap_kind(port) else None
+        del_refusal = delete_refusal(port)
         storage = getattr(port, "storage", None)
         entries.append({
             "kind": port.kind,
@@ -396,15 +504,20 @@ async def list_kinds_impl(
             "display_label": getattr(port, "display_label", None),
             "tenant_scope": _enum_value(getattr(port, "scope", None)),
             "storage_pattern": _enum_value(getattr(storage, "pattern", None)),
+            "traits": sorted(_port_traits(port)),
             "writable": refusal is None,
             "write_refusal": refusal,
+            "deletable": del_refusal is None,
+            "delete_refusal": del_refusal,
         })
     entries.sort(key=lambda e: (e["kind"], e["api_version"]))
     return {
         "scope": scope or live.default_scope(tenant),
         "kinds": entries,
         "count": len(entries),
-        "filtered_by_plan": allowed is not None,
+        # TRUE only when the plan actually removed something (item 4).
+        "filtered_by_plan": filtered_out > 0,
+        "filtered_out": filtered_out,
     }
 
 
@@ -595,4 +708,66 @@ async def write_document_impl(
         "merged": bool(merge) and existing is not None,
         # Chain this into the next write's ``if_match`` — no re-read needed.
         "etag": spec_etag(new_spec),
+    }
+
+
+async def delete_document_impl(
+    live: LiveDna, *, kind: str, name: str, api_version: str,
+    scope: str | None = None, tenant: str | None = None,
+    if_match: str | None = None,
+) -> dict[str, Any]:
+    """Delete one document — the generic delete the faces were missing.
+
+    ``kernel.delete_document`` has always existed; REST reaches it through four
+    narrow routes and ``dna doc delete`` uses it, but the MCP face had NO delete
+    at all. An agent that could create and update every Kind could remove
+    nothing, so the only way to undo a mistaken write was a human with database
+    access. This is the same operation, through the same guards.
+
+    Refuses per :func:`delete_refusal` — bootstrap Kinds and append-only records
+    — and the refusal is REPORTED in ``list_kinds`` (``deletable`` /
+    ``delete_refusal``) so it is visible before it is attempted rather than
+    discovered by being denied.
+
+    ``if_match`` is the same optimistic-concurrency guard the generic write
+    takes, and it matters more here: a write that races loses one edit, a delete
+    that races destroys a document its author never saw. It is OPTIONAL rather
+    than required because a caller that has just read the document to decide it
+    should go can pass the etag, while one deleting by name (a cleanup script)
+    genuinely has nothing to match on — requiring it would only push that caller
+    into an extra read whose result it ignores.
+
+    ``api_version`` is REQUIRED, unlike the write path where it can be inferred
+    from the document. A delete carries no document, and a bare Kind name can
+    resolve to two ports once two workspaces each declare a `Deal` in their own
+    namespace — so the caller states which Kind it means, and the pin travels
+    all the way down to the adapter (:meth:`WritableSourcePort.delete_document`).
+    """
+    port = resolve_kind_port(live.kernel, kind, api_version)
+    refusal = delete_refusal(port)
+    if refusal is not None:
+        raise DeleteRefused(refusal)
+    sc = scope or live.default_scope(tenant)
+    write_tenant = _write_tenant(port, tenant)
+    existing = await live.kernel.get_document(sc, port.kind, name)
+    if existing is None:
+        raise UnknownDocumentError(
+            f"{port.kind} {name!r} not found in scope {sc!r} — nothing to delete"
+        )
+    if if_match is not None:
+        current = spec_etag((existing.get("spec") or {}) if isinstance(existing, dict) else {})
+        if current != if_match:
+            raise ConcurrentWriteError(
+                f"if_match {if_match!r} does not match the stored document "
+                f"(etag {current!r}): {port.kind} {name!r} changed since you read "
+                f"it. Re-read it and decide again — a delete that races destroys "
+                f"an edit its author never saw."
+            )
+    await live.kernel.delete_document(
+        sc, port.kind, name, tenant=write_tenant,
+        api_version=port.api_version, invalidate_mode="doc",
+    )
+    return {
+        "scope": sc, "kind": port.kind, "api_version": port.api_version,
+        "name": name, "tenant": write_tenant, "deleted": True,
     }

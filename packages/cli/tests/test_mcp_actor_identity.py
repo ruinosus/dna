@@ -128,7 +128,8 @@ def test_an_authenticated_write_records_the_verified_email(dna_dir, http_server)
         async with Client(url, auth=BearerAuth(token)) as client:
             await client.call_tool("create_story", {
                 "name": "s-attributed", "feature": "f-x",
-                "description": "who wrote this?", "scope": _SCOPE})
+                "description": "who wrote this?", "scope": _SCOPE,
+                "ac": ["Given X, when Y, then Z"], "dod": ["code+tests"]})
             await client.call_tool("comment", {
                 "kind": "Story", "name": "s-attributed",
                 "body": "narrating as myself", "scope": _SCOPE})
@@ -233,7 +234,8 @@ def test_a_local_stdio_write_is_marked_local_not_mcp(dna_dir):
         async with Client(server) as client:
             await client.call_tool("create_story", {
                 "name": "s-local", "feature": "f-demo", "description": "d",
-                "scope": _SCOPE})
+                "scope": _SCOPE,
+                "ac": ["Given X, when Y, then Z"], "dod": ["code+tests"]})
 
     asyncio.run(go())
     events = _timeline(dna_dir, "Story", "s-local")

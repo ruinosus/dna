@@ -19,6 +19,7 @@ Copilot, agent-framework, Bedrock AgentCore) reaches it:
     SDLC (write) create_story · create_issue · set_status · comment · create_feature
     memory       recall · remember · consolidate · list_memories · forget
     documents    list_kinds · list_documents · get_document · write_document
+                 · delete_document
                  (GENERIC — a loop over the Kind registry, not a per-Kind tool)
     resources    dna://{scope}/manifest · dna://{scope}/agents
 
@@ -146,7 +147,7 @@ async def boot_live(scope: str | None = None, base_dir: str | None = None) -> Li
 # into ``dna.application`` (re-exported at the top of this module).
 # ``sdlc_digest_impl`` DELIBERATELY stays here: unlike its siblings it depends
 # on CLI-internal machinery — the digest aggregator ``dna_cli._digest.build_digest``
-# / ``resolve_since`` and the kind list ``dna_cli.sdlc_cmd._DIGEST_KINDS`` — and
+# / ``resolve_since`` and the kind derivation ``dna_cli.sdlc_cmd._digest_kinds`` — and
 # moving it cleanly into the core would mean relocating that aggregator too. It
 # still delegates the raw fetch to the core ``_collect`` (imported above). It is
 # MCP-only (no REST twin), so living here keeps both faces green.
@@ -174,7 +175,7 @@ async def sdlc_digest_impl(
     Still fail-soft by design: one broken Kind must not deny the delegator the
     nine that worked. What changes is that the result says which nine."""
     from dna_cli._digest import build_digest, resolve_since
-    from dna_cli.sdlc_cmd import _DIGEST_KINDS
+    from dna_cli.sdlc_cmd import _digest_kinds
 
     sc = scope or live.default_scope(tenant)
     now = datetime.now(timezone.utc)
@@ -187,7 +188,7 @@ async def sdlc_digest_impl(
     docs: list[dict[str, Any]] = []
     absent: list[str] = []
     unreadable: list[dict[str, str]] = []
-    for kind in _DIGEST_KINDS:
+    for kind in _digest_kinds(live.kernel):
         if kind not in registered:
             absent.append(kind)
             continue
@@ -202,7 +203,7 @@ async def sdlc_digest_impl(
                 {"kind": kind, "error": f"{type(exc).__name__}: {exc}"})
     return build_digest(
         docs=docs, since=since_dt, until=now, since_label=label, scope=sc,
-        absent=absent, unreadable=unreadable,
+        absent=absent, unreadable=unreadable, kernel=live.kernel,
     )
 
 
@@ -514,9 +515,10 @@ def build_server(
             if tenant:
                 raise ToolError(
                     f"request is bound to workspace {tenant!r} (scope "
-                    f"{live.default_scope(tenant)!r}); scope {scope!r} is not "
-                    f"granted to it. A workspace reaches another scope only "
-                    f"through an active WorkspaceScopeGrant row"
+                    f"{live.default_scope(tenant)!r}); cross-workspace access "
+                    f"to scope {scope!r} is denied — it is not granted to this "
+                    f"workspace. A workspace reaches another scope only through "
+                    f"an active WorkspaceScopeGrant row"
                     + (f" (granted: {sorted(granted)})" if granted else
                        " (this workspace has none)")
                 )
@@ -840,19 +842,44 @@ def build_server(
     @server.tool(run_in_thread=False)
     async def set_status(
         kind: str, name: str, status: str, reason: str | None = None,
-        scope: str | None = None,
+        scope: str | None = None, commit_ref: str | None = None,
+        allow_no_tests: bool = False, no_code: bool = False,
+        gate_reason: str | None = None,
     ) -> dict[str, Any]:
-        """Transition a board item's status. ``kind`` is Story / Issue / Feature /
-        Epic; ``status`` must be a valid status for that Kind (e.g. Story:
+        """Transition a board item's status.
+
+        ``kind`` is any board work item — Story / Issue / Feature / Epic / Spike
+        / Bug / Task / Initiative — and ``status`` must be a valid status for
+        THAT Kind, read from the Kind's own schema (Story:
         todo/in-progress/review/done/blocked; Issue: open/triaged/resolved;
-        Feature: discovery/in-development/done). An invalid target is refused. Pass
-        ``reason`` to record a block reason / resolution. A write op —
-        ``sdlc_mode='write'``."""
+        Feature: discovery/in-development/done; ...). An invalid target is
+        refused and the refusal lists the valid set. ``list_kinds`` shows which
+        Kinds carry the work-item trait. Pass ``reason`` to record a block reason
+        / resolution. A write op — ``sdlc_mode='write'``.
+
+        **Closing a gated item requires evidence.** A Kind that declares
+        ``sdlc.test-gated`` (Story today) refuses a close without a passing
+        product-lane TestRun verifying it — the SAME refusal ``dna sdlc story
+        done`` makes, because a methodology gate that only the CLI enforces is
+        not a gate. Two escapes, and both REQUIRE ``gate_reason``, which is
+        written to the item's timeline as an ``exception`` event: an exception
+        nobody recorded is indistinguishable from skipping the gate.
+
+        * ``allow_no_tests`` — a registered exception.
+        * ``no_code`` — the item has no code for a product smoke to exercise.
+
+        ``commit_ref`` records the shipping commit on the transition event.
+        The result carries ``warnings`` for the non-blocking guards (closing with
+        no shipping commit, skipping review, no narration since the last
+        transition, no linked outputs) — over MCP there is no stderr for them to
+        go to."""
         tenant = await _guard("sdlc", scope=scope, sdlc_op="write")
         async with _refusing():
             return await set_status_impl(
                 await _live(), kind, name, status, reason=reason, scope=scope,
                 tenant=tenant, actor=actor_from_context(),
+                commit_ref=commit_ref, allow_no_tests=allow_no_tests,
+                no_code=no_code, gate_reason=gate_reason,
             )
 
     @server.tool(run_in_thread=False)

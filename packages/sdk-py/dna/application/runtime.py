@@ -1431,10 +1431,12 @@ async def board_summary_impl(
     }
 
 
-# The SDLC work-item Kinds a board card can point at, probed in this order when
-# the caller does not pin a ``kind`` (Story/Feature dominate the board; the rest
-# are reachable so a drawer over any work item resolves).
-_BOARD_ITEM_KINDS: tuple[str, ...] = ("Story", "Feature", "Epic", "Issue", "Spike")
+# The SDLC work-item Kinds a board card can point at, probed when the caller does
+# not pin a ``kind`` — DERIVED from the ``sdlc.work-item`` trait
+# (``sdlc_family.board_probe_order``). It used to be five names while the gallery
+# walked nine and the digest ten: three lists, one intent. A drawer over Bug /
+# Task / Initiative now resolves because those Kinds DECLARE they are work items,
+# not because somebody remembered this tuple.
 
 
 class BoardItemNotFound(LookupError):
@@ -1482,11 +1484,13 @@ async def board_item_impl(
     drawer. Reuses the SAME ``kernel.get_document`` doc-read primitive
     ``get_adr_impl`` uses (no new query logic): with an explicit ``kind`` it reads
     that one Kind; otherwise it probes the SDLC work-item Kinds
-    (:data:`_BOARD_ITEM_KINDS`) and returns the first match. Tenant-aware — a
+    (``sdlc_family.board_probe_order``) and returns the first match. Tenant-aware — a
     tenant sees the shared base plus its OWN overlay only. Raises
     :class:`BoardItemNotFound` when ``name`` is unknown for this (scope, tenant).
     """
-    candidates = [kind] if kind else list(_BOARD_ITEM_KINDS)
+    from dna.application.sdlc_family import board_probe_order
+
+    candidates = [kind] if kind else list(board_probe_order(live.kernel))
     for k in candidates:
         raw = await live.kernel.get_document(scope, k, name, tenant=tenant)
         if raw is not None:

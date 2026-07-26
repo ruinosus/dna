@@ -120,7 +120,8 @@ def test_a_stale_if_match_is_an_honest_refusal_not_a_500(dna_dir):
 
 _BOARD_TOOLS = [
     ("create_story", "create_story_impl",
-     {"name": "s-x", "feature": "f-x", "description": "d"}),
+     {"name": "s-x", "feature": "f-x", "description": "d",
+      "ac": ["Given X, when Y, then Z"], "dod": ["code+tests"]}),
     ("create_issue", "create_issue_impl", {"slug": "x", "description": "d"}),
     ("create_feature", "create_feature_impl",
      {"name": "f-x", "title": "t", "description": "d"}),
@@ -163,6 +164,7 @@ def test_a_create_over_an_existing_story_is_refused_by_name(dna_dir):
         "ac": ["Given A, when B, then C"], "dod": ["merged"], "scope": _SCOPE})
     msg = _refused(server, "create_story", {
         "name": "s-mine", "feature": "f-other", "description": "a guess",
+        "ac": ["Given X, when Y, then Z"], "dod": ["code+tests"],
         "scope": _SCOPE})
     assert "DocumentExists" in msg
     assert "s-mine" in msg          # names the existing document

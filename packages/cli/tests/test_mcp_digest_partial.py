@@ -142,7 +142,7 @@ def test_a_kind_the_source_does_not_register_is_absent_not_failed(
     import dna_cli.sdlc_cmd as SC
     from dna_cli import _mcp_server as M
 
-    monkeypatch.setattr(SC, "_DIGEST_KINDS", ("Story", "Nonesuch"))
+    monkeypatch.setattr(SC, "_digest_kinds", lambda kernel=None: ("Story", "Nonesuch"))
 
     async def go():
         live = await M.boot_live(base_dir=str(dna_dir))

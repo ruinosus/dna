@@ -1457,14 +1457,42 @@ class WritableSourcePort(SourcePort, Protocol):
         layer: tuple[str, str] | None = None,
         write_class: str = "substantive",
         version_retention: int | None = None,
-    ) -> str: ...
+        if_absent: bool = False,
+    ) -> str:
+        """Persist one document (an UPSERT by default).
+
+        ``if_absent=True`` makes it an ATOMIC CREATE: the write claims the name
+        or raises ``dna.kernel.errors.DocumentNameTaken``, never overwrites.
+        Read-then-write cannot give that guarantee — two callers can both read
+        "free" in the same instant — and the two shipped adapters can: a
+        composite primary key on the SQL side, ``O_CREAT|O_EXCL`` (files) or
+        ``mkdir`` (bundles) on the filesystem. Optional, declared through
+        ``SourceCapabilities.write_kwargs``."""
+        ...
 
     async def delete_document(
         self, scope: str, kind: str, name: str,
         *,
         tenant: str | None = None,
         layer: tuple[str, str] | None = None,
-    ) -> None: ...
+        api_version: str | None = None,
+    ) -> None:
+        """Delete one document.
+
+        ``api_version`` resolves the Kind EXACTLY. A delete carries no document,
+        so it used to route by bare Kind NAME — and two workspaces may each
+        declare a ``Deal`` under their own namespace, which is precisely what
+        namespacing the apiVersion is for. A bare lookup then resolves whichever
+        port the registry returns first, so the delete can look inside the OTHER
+        Kind's container. The blast radius is a delete that MISSES, never one
+        that reaches another workspace (the scope, not the container, is the
+        isolation boundary) — but a delete that silently does nothing is its own
+        failure, and the caller is told it succeeded.
+
+        Optional, and declared through ``SourceCapabilities.delete_kwargs``: an
+        adapter that does not accept it keeps working, and the kernel simply
+        does not pass it."""
+        ...
 
     async def save_manifest(self, scope: str, manifest: dict) -> str: ...
 

@@ -271,10 +271,25 @@ class SourceCapabilities:
 # ``write_kwargs``/``delete_kwargs`` declarations are validated against these
 # by the conformance test (an adapter can't declare a kwarg that isn't part
 # of the port contract).
+# ``if_absent`` (i-081): an ATOMIC create — the write claims the name or raises
+# ``DocumentNameTaken``. Both shipped adapters can do it (a composite primary key
+# on the SQL side, O_CREAT|O_EXCL / mkdir on the filesystem), which is what makes
+# "create is never an update" true under concurrency instead of only under
+# read-then-write. Optional, so an adapter that has not adopted it is unaffected
+# and the kernel simply never asks for the guarantee.
 SAVE_OPTIONAL_KWARGS = frozenset(
-    {"author", "tenant", "layer", "write_class", "version_retention"}
+    {"author", "tenant", "layer", "write_class", "version_retention", "if_absent"}
 )
-DELETE_OPTIONAL_KWARGS = frozenset({"tenant", "layer"})
+# ``api_version`` (i-081 / #244 follow-up): a DELETE carries no document, so
+# before this it had no apiVersion and routed by BARE Kind name. Two
+# workspaces may each declare a `Deal` in their own namespace — that is what
+# namespacing is FOR — and a bare lookup then resolves whichever port the
+# registry happens to return, so a delete can look in the WRONG Kind's
+# container. The blast radius is a delete that MISSES, never one that hits
+# another scope (the scope, not the container, is the isolation boundary) —
+# but "the file is still there" is its own failure. Optional so an adapter
+# that does not declare it keeps working unchanged.
+DELETE_OPTIONAL_KWARGS = frozenset({"tenant", "layer", "api_version"})
 
 
 def _probe_params(source: object, method_name: str) -> set[str]:
@@ -482,8 +497,10 @@ class WriteKwargSupport:
     layer_save: bool      # save_document accepts `layer`
     layer_delete: bool    # delete_document accepts `layer`
     tenant_delete: bool   # delete_document accepts `tenant`
+    api_version_delete: bool  # delete_document accepts `api_version` (i-081)
     write_class: bool     # save_document accepts `write_class` (s-buswrite-class-substantive-cue)
     version_retention: bool  # save_document accepts `version_retention` (s-version-prune-record-plane-churn)
+    if_absent: bool       # save_document accepts `if_absent` — an ATOMIC create (i-081)
 
 
 _WRITE_KWARG_CACHE_ATTR = "_dna_write_kwarg_support"
@@ -511,8 +528,10 @@ def write_kwarg_support(source: object) -> WriteKwargSupport:
         layer_save="layer" in caps.write_kwargs,
         layer_delete="layer" in caps.delete_kwargs,
         tenant_delete="tenant" in caps.delete_kwargs,
+        api_version_delete="api_version" in caps.delete_kwargs,
         write_class="write_class" in caps.write_kwargs,
         version_retention="version_retention" in caps.write_kwargs,
+        if_absent="if_absent" in caps.write_kwargs,
     )
     try:
         setattr(source, _WRITE_KWARG_CACHE_ATTR, support)

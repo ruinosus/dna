@@ -28,6 +28,7 @@ same ``_guard`` tenancy + quota seam every other tool passes through; the LiveDn
 """
 from __future__ import annotations
 
+import logging
 import re
 from datetime import datetime, timezone
 from typing import Any
@@ -43,6 +44,7 @@ from dna.application.gates import (
     refuse_without_exit_criteria,
 )
 from dna.application.live import LiveDna
+from dna.kernel.errors import DocumentNameTaken
 from dna.application.sdlc_family import (
     dated_spec_fields,
     status_enum_for,
@@ -51,6 +53,8 @@ from dna.application.sdlc_family import (
 )
 
 # ── constants (single source of truth — the CLI imports these) ─────────────
+
+logger = logging.getLogger(__name__)
 
 SDLC_API_VERSION = "github.com/ruinosus/dna/sdlc/v1"
 
@@ -629,50 +633,88 @@ async def create_issue(
     """File an Issue with an auto-incremented ``i-NNN-<slug>`` name — the shared
     core behind ``dna sdlc issue file`` + the MCP ``create_issue`` tool.
 
-    **The numbering is a hint, the probe is the guarantee.** ``max(i-NNN) + 1`` is
-    only correct if the enumeration saw every Issue; a concurrent writer or a
-    replica that has not caught up yields a number that is already taken, and the
-    write then lands ON TOP of a live Issue. So the computed number is a starting
-    point and each candidate name is probed (``kernel.get_document``) until one is
-    free. The enumeration itself stays O(N) rows — that is documented rather than
-    hidden — but it now pushes a ``projection`` down, so it moves N names instead
-    of N full Issue specs. What remains is the genuinely concurrent race: two
-    ``create_issue`` calls can still probe the same free name in the same instant
-    and one will overwrite the other. Closing THAT needs a unique constraint or a
-    lock in the kernel's write path, which is a kernel change, not a change
-    here."""
+    **The numbering is a hint; the WRITE is the guarantee.** ``max(i-NNN) + 1``
+    is only correct if the enumeration saw every Issue, and a concurrent writer
+    or a lagging replica yields a number that is already taken. #242 closed the
+    non-concurrent half by probing each candidate before writing, and documented
+    what it could not close: two calls can still probe the same free name in the
+    same instant, and one overwrites the other. That needed "a unique constraint
+    or a lock in the kernel's write path".
+
+    It has one now. The write is an ATOMIC CREATE (``if_absent=True``): it claims
+    the name or raises ``DocumentNameTaken``, arbitrated by the SQL adapter's
+    composite primary key or the filesystem's ``O_CREAT|O_EXCL`` / ``mkdir``. So
+    the loop no longer *probes and hopes* — it tries to WRITE, and a loser
+    simply takes the next number. Two concurrent creates now produce two Issues,
+    which is the correct outcome and was not previously reachable.
+
+    An adapter that does not support ``if_absent`` falls back to the #242
+    behavior (probe, then a plain write) rather than failing: the race stays
+    open there, exactly as documented, but nothing that worked stops working.
+
+    The enumeration is still O(N) rows — documented rather than hidden — though
+    it pushes a ``projection`` down, so it moves N names instead of N full Issue
+    specs. Closing THAT wants an allocator/sequence Kind, which is a data-model
+    decision rather than a fix."""
     names: list[str] = []
     async for row in kernel.query(scope, "Issue", projection=["name"]):
         meta = row.get("metadata") if isinstance(row, dict) else None
         nm = (meta or {}).get("name") if isinstance(meta, dict) else None
         names.append(nm or (row.get("name") if isinstance(row, dict) else "") or "")
     n = next_issue_number(names)
-    name = f"i-{n:03d}-{slug}"
-    if not overwrite:
-        # Step past any name the enumeration missed. Bounded so a pathological
-        # source can never spin: 1000 consecutive taken names means something is
-        # wrong that a 1001st probe will not fix.
-        for candidate_n in range(n, n + 1000):
-            candidate = f"i-{candidate_n:03d}-{slug}"
-            if await existing_or_none(
-                    kernel, scope, "Issue", candidate) is None:
-                name = candidate
-                break
-        else:  # pragma: no cover — 1000 consecutive collisions
-            raise DocumentExists(
-                f"no free Issue name found for slug {slug!r} in scope {scope!r} "
-                f"after 1000 probes from i-{n:03d} — the source is reporting "
-                f"every candidate as taken."
-            )
     ni = now_iso(now)
     spec = build_issue_spec(
         description=description, issue_type=issue_type, severity=severity,
         title=title, owner=owner, related_feature=related_feature,
         now=ni, actor=actor, source=source,
     )
-    raw = build_raw("Issue", name, spec)
-    await kernel.write_document(scope, "Issue", name, raw, invalidate_mode="doc")
-    return {"kind": "Issue", "name": name, "type": issue_type, "severity": severity}
+
+    if overwrite:
+        name = f"i-{n:03d}-{slug}"
+        await kernel.write_document(
+            scope, "Issue", name, build_raw("Issue", name, spec),
+            invalidate_mode="doc",
+        )
+        return {"kind": "Issue", "name": name, "type": issue_type,
+                "severity": severity}
+
+    # Bounded so a pathological source can never spin: 1000 consecutive taken
+    # names means something is wrong that a 1001st attempt will not fix.
+    atomic = True
+    for candidate_n in range(n, n + 1000):
+        name = f"i-{candidate_n:03d}-{slug}"
+        raw = build_raw("Issue", name, spec)
+        if atomic:
+            try:
+                await kernel.write_document(
+                    scope, "Issue", name, raw, invalidate_mode="doc",
+                    if_absent=True,
+                )
+                return {"kind": "Issue", "name": name, "type": issue_type,
+                        "severity": severity}
+            except NotImplementedError:
+                # This adapter cannot promise an atomic create. Degrade to the
+                # #242 probe-then-write for the REST of the loop, and say so
+                # only here — degrading silently per attempt would hide which
+                # guarantee is actually in force.
+                atomic = False
+                logger.info(
+                    "create_issue: source does not support atomic creates; "
+                    "falling back to probe-then-write (the concurrent race "
+                    "documented in #242 remains open on this adapter)"
+                )
+            except DocumentNameTaken:
+                continue  # somebody else took it between our read and our write
+        if await existing_or_none(kernel, scope, "Issue", name) is None:
+            await kernel.write_document(
+                scope, "Issue", name, raw, invalidate_mode="doc")
+            return {"kind": "Issue", "name": name, "type": issue_type,
+                    "severity": severity}
+    raise DocumentExists(  # pragma: no cover — 1000 consecutive collisions
+        f"no free Issue name found for slug {slug!r} in scope {scope!r} "
+        f"after 1000 attempts from i-{n:03d} — the source is reporting every "
+        f"candidate as taken."
+    )
 
 
 async def create_feature(

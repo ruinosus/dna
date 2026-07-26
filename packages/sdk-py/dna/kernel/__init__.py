@@ -23,6 +23,7 @@ from dna.kernel.kinds.registry import (
     _load_kind_docs,  # noqa: F401
 )
 from dna.kernel.protocols import (
+    BOOTSTRAP_KIND_NAMES,
     CachePort, DEFAULT_BASE_SCOPE, Extension,
     EXTENSIONS_ENTRY_POINT_GROUP,  # noqa: F401 — re-exported for historical `from dna.kernel import EXTENSIONS_ENTRY_POINT_GROUP` importers (boot recipe moved to kernel_bootstrap, s-kernel-decomp-f4)
     ExtensionHost,  # noqa: F401 — re-exported registration-time host slice (s-dna-extension-host-contract)
@@ -1238,7 +1239,13 @@ class Kernel:
     # non-overlayable AND non-inheritable BY DEFINITION (mirrors
     # resolver.BOOTSTRAP_KINDS). Unioned into the derived sets so the classification
     # is identical even on a minimal kernel that hasn't registered them yet.
-    _BOOTSTRAP_KINDS: frozenset[str] = frozenset({"Genome", "KindDefinition", "LayerPolicy"})
+    # The ONE definition lives in ``dna.kernel.protocols.BOOTSTRAP_KIND_NAMES``
+    # (the lowest layer that can hold it, and the order-significant one the
+    # loader uses). There were FOUR byte-identical copies of this triple in
+    # the tree; the v1.3 Milestone->Epic rename is the standing proof of what
+    # happens when a Kind list has copies — it updated one and missed another,
+    # and Epic silently inherited across scopes for a release.
+    _BOOTSTRAP_KINDS: frozenset[str] = frozenset(BOOTSTRAP_KIND_NAMES)
 
     @property
     def _NON_OVERLAYABLE_KINDS(self) -> frozenset[str]:
@@ -1311,8 +1318,16 @@ class Kernel:
         layer: tuple[str, str] | None = None,
         invalidate_mode: str = "scope",
         write_class: str = "substantive",
+        if_absent: bool = False,
     ) -> str | None:
         """Persist a document through the registered WritableSourcePort.
+
+        ``if_absent=True`` requests an ATOMIC CREATE: the write claims the name
+        or raises :class:`dna.kernel.errors.DocumentNameTaken`. Requires an
+        adapter that declares the ``if_absent`` write kwarg; one that does not
+        gets a :class:`NotImplementedError` rather than a silently ordinary
+        upsert, because a caller asking for the guarantee must not be told it
+        got one it did not.
 
         Public facade (Fase 2, s-kernel-decomp-f2-writepipeline): this method
         owns the guardrails — ``invalidate_mode`` validation, the
@@ -1399,6 +1414,7 @@ class Kernel:
                 tenant=tenant, layer=layer,
                 invalidate_mode=invalidate_mode,
                 write_class=write_class,
+                if_absent=if_absent,
             )
 
     async def _write_document_inner(
@@ -1410,6 +1426,7 @@ class Kernel:
         layer: tuple[str, str] | None,
         invalidate_mode: str,
         write_class: str = "substantive",
+        if_absent: bool = False,
     ) -> str | None:
         """Real write_document body — thin delegator to ``WritePipeline.write``
         (Fase 2, s-kernel-decomp-f2-writepipeline). The outer ``write_document``
@@ -1423,6 +1440,7 @@ class Kernel:
             tenant=tenant, layer=layer,
             invalidate_mode=invalidate_mode,
             write_class=write_class,
+            if_absent=if_absent,
         )
 
     async def delete_document(

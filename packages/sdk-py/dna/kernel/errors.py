@@ -47,6 +47,24 @@ class KernelRefusal(Exception):
     """
 
 
+class DocumentNameTaken(KernelRefusal, FileExistsError):
+    """An ``if_absent`` write lost the race: the name was already taken.
+
+    The ATOMIC half of "create is never an update". ``refuse_if_exists`` closed
+    the whole class of NON-concurrent overwrites — the guessed name, the retry,
+    the stale board — by reading before writing, and said in its own docstring
+    that the genuinely concurrent race stayed open because the kernel had no
+    unique-name constraint to lean on. It does now: both shipped adapters can
+    claim a name atomically (a composite primary key on the SQL side,
+    ``O_CREAT|O_EXCL`` / ``mkdir`` on the filesystem), so an ``if_absent`` write
+    either creates the document or raises this — never overwrites.
+
+    A ``KernelRefusal`` so every face relays it as an honest denial, and a
+    ``FileExistsError`` so a caller allocating a name (``create_issue``) can
+    catch the standard exception and try the next one.
+    """
+
+
 class KernelRegistrationError(ValueError):
     """Base class for kernel registration validation failures."""
 

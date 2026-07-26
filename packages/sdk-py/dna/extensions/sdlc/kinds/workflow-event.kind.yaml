@@ -28,6 +28,7 @@ spec:
   target_kind: WorkflowEvent
   alias: sdlc-workflow-event
   origin: github.com/ruinosus/dna/sdlc
+  traits: [record.append-only]
   tenant_scope: global
   plane: record
   prompt_target: false

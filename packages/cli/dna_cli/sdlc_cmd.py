@@ -594,23 +594,24 @@ def cmd_story_create(
     are the root of the silent-skip-DoD pattern user flagged in chat.
     Override with --allow-no-ac-dod only for back-compat backfills.
     """
-    if not allow_no_ac_dod:
-        missing = []
-        if not acceptance_criteria:
-            missing.append("--ac (acceptance criterion, repeatable)")
-        if not definition_of_done:
-            missing.append("--dod (definition-of-done item, repeatable)")
-        if missing:
-            raise click.UsageError(
-                "Story create rejected — missing exit criteria:\n"
-                + "\n".join(f"  • {m}" for m in missing)
-                + "\n\nFill with --ac / --dod (each repeatable). Examples:\n"
-                  "  --ac 'Given X, when Y, then Z'\n"
-                  "  --dod 'Code merged + tests >90% coverage'\n"
-                  "  --dod 'Docs updated in CLAUDE.md'\n\n"
-                  "Backfill / exception: pass --allow-no-ac-dod (rare; use for\n"
-                  "back-compat scripts only, not for new dev work)."
-            )
+    # The AC/DoD gate is the SHARED core's (decision A) — the CLI no longer owns
+    # a private copy, so the MCP `create_story` tool refuses exactly what this
+    # command refuses. The CLI keeps the --ac / --dod vocabulary in the message.
+    from dna.application.gates import MethodologyRefusal, refuse_without_exit_criteria
+
+    try:
+        refuse_without_exit_criteria(
+            kind="Story", name=name,
+            acceptance_criteria=acceptance_criteria,
+            definition_of_done=definition_of_done,
+            allow_no_ac_dod=allow_no_ac_dod,
+        )
+    except MethodologyRefusal as exc:
+        raise click.UsageError(
+            str(exc).replace("acceptance_criteria (", "--ac (")
+                    .replace("definition_of_done (", "--dod (")
+                    .replace("allow_no_ac_dod", "--allow-no-ac-dod")
+        ) from None
     # Derive title from description when omitted — Studio's StoryCard
     # falls back to truncated description otherwise, which makes cards
     # nearly unreadable. ALWAYS populate title so the board surfaces a
@@ -657,6 +658,22 @@ def cmd_story_create(
 
     raw = _build_raw("Story", name, spec)
     with open_session(scope) as s:
+        # CREATE means create (item 9). This command hand-builds its spec and
+        # wrote it with a bare ``write_document`` — an UPSERT keyed on the name —
+        # so `story create` on a name already taken silently replaced that
+        # Story's status, timeline, acceptance_criteria and definition_of_done
+        # and printed CREATED. #242 closed exactly this hole on the MCP side and
+        # the CLI kept it, which is the more dangerous of the two: a person
+        # typing a name they used last month gets no second chance.
+        #
+        # The refusal is the shared core's ``refuse_if_exists`` — same check,
+        # same message, same pointer at the verbs that DO update.
+        from dna.application.sdlc import DocumentExists, refuse_if_exists
+
+        try:
+            s.run(refuse_if_exists(s.kernel, scope, "Story", name))
+        except DocumentExists as exc:
+            raise fail(str(exc)) from None
         s.run(s.kernel.write_document(scope, "Story", name, raw))
     click.secho(f"CREATED Story/{name} (feature: {feature}, status: {status})", fg="green")
 
@@ -967,23 +984,43 @@ def cmd_story_start(
     click.secho(f"📍 journey: Story/{name} → in-progress (derived)", fg="cyan")
 
 
+# ── methodology gates — the CLI DELEGATES, it does not own them ──────────────
+#
+# These four were the CLI's private guards, and only the CLI's: the MCP
+# `set_status(Story,"done")` tool wrote straight through them. They now live in
+# ``dna.application.gates``, where both faces reach them (decision A); what
+# stays here is the CLI's own vocabulary — pt-BR phrasing, --flag names, the
+# stderr rendering — wrapped around the shared decision. See the gates module
+# for which guards are genuinely CLI-only (the git hook, the active-story
+# pointer, the `gh` PR check) and why.
+
+
 def story_done_guard(
     prev_status: str | None, commit_ref: str | None, no_commit: bool,
 ) -> list[str]:
     """Honest warnings for `story done` (i-034). done = shipped + accepted:
     (a) no shipping commit, (b) skipping review (the review→done flow that
-    keeps work-in-review out of limbo). Warns — does not hard-block."""
+    keeps work-in-review out of limbo). Warns — does not hard-block.
+
+    The DECISION is ``gates.shipping_warnings``; the wording stays pt-BR + flag
+    names because this is what a person at a terminal reads."""
+    from dna.application.gates import shipping_warnings
+
     warns: list[str] = []
-    if not no_commit and not commit_ref:
-        warns.append(
-            'done sem commit de entrega — done = shipped. '
-            'Passe --commit-ref <sha> (pós-merge) ou --no-commit (story sem código).'
-        )
-    if prev_status and prev_status != "review":
-        warns.append(
-            f'done sem passar por review (estava "{prev_status}") — '
-            'fluxo de mercado: PR aberto → review → done (pós-merge).'
-        )
+    for w in shipping_warnings(
+        prev_status=prev_status, commit_ref=commit_ref, no_code=no_commit,
+    ):
+        if "shipping commit" in w:
+            warns.append(
+                'done sem commit de entrega — done = shipped. '
+                'Passe --commit-ref <sha> (pós-merge) ou --no-commit '
+                '(story sem código).'
+            )
+        else:
+            warns.append(
+                f'done sem passar por review (estava "{prev_status}") — '
+                'fluxo de mercado: PR aberto → review → done (pós-merge).'
+            )
     return warns
 
 
@@ -993,8 +1030,29 @@ def done_blocks_on_missing_tests(
     """s-sdlc-tests-required-on-done: whether ``story done`` must REFUSE for
     missing tests. Blocks ONLY when the Story has code (not ``--no-commit``), the
     escape hatch is off (``--allow-no-tests``), and no passing TestRun verifies
-    it. Mirrors the AC/DoD guard on ``story create``."""
-    return (not no_commit) and (not allow_no_tests) and (not has_passing_run)
+    it. Mirrors the AC/DoD guard on ``story create``.
+
+    The predicate is now ``gates.refuse_close_without_tests`` inverted: the
+    shared core RAISES, this returns a bool because the CLI wants to print its
+    own message and exit 1. One decision, two renderings."""
+    from dna.application.gates import (
+        MethodologyRefusal,
+        refuse_close_without_tests,
+    )
+
+    try:
+        refuse_close_without_tests(
+            kind="Story", name="", status="done",
+            has_passing_run=has_passing_run,
+            allow_no_tests=allow_no_tests, no_code=no_commit,
+            # The CLI's flags are the registered exception; it does not (yet)
+            # collect a reason, so pass a standing one rather than making the
+            # core refuse the escape for a missing reason the CLI never asks for.
+            reason="--allow-no-tests" if allow_no_tests else "--no-commit",
+        )
+    except MethodologyRefusal:
+        return True
+    return False
 
 
 # ── FOCUS feed completeness guards (WARN-only, mirror story_done_guard) ───────
@@ -1004,35 +1062,27 @@ def done_blocks_on_missing_tests(
 # done/ship/resolve (produces).
 
 def _has_narration_since_last_status_change(timeline: list[dict[str, Any]] | None) -> bool:
-    """True se há comment/decision DEPOIS do último status_change na timeline."""
-    if not isinstance(timeline, list):
-        return False
-    last_status_idx = None
-    for i in range(len(timeline) - 1, -1, -1):
-        ev = timeline[i]
-        if isinstance(ev, dict) and ev.get("type") == "status_change":
-            last_status_idx = i
-            break
-    if last_status_idx is None:
-        return False
-    for ev in timeline[last_status_idx + 1:]:
-        if isinstance(ev, dict) and ev.get("type") in ("comment", "decision"):
-            return True
-    return False
+    """True se há comment/decision DEPOIS do último status_change na timeline.
+    Delegates to the shared ``gates.has_narration_since_last_status_change``."""
+    from dna.application.gates import has_narration_since_last_status_change
+
+    return has_narration_since_last_status_change(timeline)
 
 
 def narration_guard(spec: dict[str, Any]) -> list[str]:
     """WARN se não há narração (comment/decision) desde o último status_change.
-    Feed FOCUS fica mudo ('start→silêncio→done') sem isso (i-114)."""
-    warns: list[str] = []
-    timeline = spec.get("timeline") if isinstance(spec, dict) else None
-    if not _has_narration_since_last_status_change(timeline if isinstance(timeline, list) else []):
-        warns.append(
-            "nenhuma narração (comment/decision) desde a última mudança de status — "
-            "o feed FOCUS fica mudo. Narre o porquê: `story comment <id> --body \"...\"` "
-            "ou use --note \"...\" aqui."
-        )
-    return warns
+    Feed FOCUS fica mudo ('start→silêncio→done') sem isso (i-114).
+
+    Decision: ``gates.narration_warnings`` (shared); wording: the CLI's."""
+    from dna.application.gates import narration_warnings
+
+    if not narration_warnings(spec):
+        return []
+    return [
+        "nenhuma narração (comment/decision) desde a última mudança de status — "
+        "o feed FOCUS fica mudo. Narre o porquê: `story comment <id> --body \"...\"` "
+        "ou use --note \"...\" aqui."
+    ]
 
 
 _OUTPUT_BACKREF_FIELDS = (
@@ -1058,15 +1108,18 @@ def _has_linked_outputs(spec: dict[str, Any]) -> bool:
 
 def produces_guard(spec: dict[str, Any]) -> list[str]:
     """WARN se o item fecha sem nenhum output linkado (i-113). O painel de
-    outputs do FOCUS fica vazio."""
-    warns: list[str] = []
-    if not _has_linked_outputs(spec):
-        warns.append(
-            "fechando sem nenhum output linkado (produces[] + back-refs vazios) — "
-            "o painel de outputs do FOCUS fica vazio. Linke: "
-            "`sdlc produces add <Kind>/<wi> <Kind>/<ref>` (Spec/Plan/HtmlArtifact/...)."
-        )
-    return warns
+    outputs do FOCUS fica vazio.
+
+    Decision: ``gates.produces_warnings`` (shared); wording: the CLI's."""
+    from dna.application.gates import produces_warnings
+
+    if not produces_warnings(spec):
+        return []
+    return [
+        "fechando sem nenhum output linkado (produces[] + back-refs vazios) — "
+        "o painel de outputs do FOCUS fica vazio. Linke: "
+        "`sdlc produces add <Kind>/<wi> <Kind>/<ref>` (Spec/Plan/HtmlArtifact/...)."
+    ]
 
 
 @story_group.command("done")
@@ -2738,7 +2791,10 @@ def cmd_sdlc_extract_decisions(scope: str, dry_run: bool) -> None:
     promoted = 0
     scanned = 0
     with open_session(scope) as s:
-        for kind in ("Story", "Feature", "Epic", "Issue"):
+        # DERIVED from the `sdlc.work-item` trait — a decision recorded on a
+        # Spike or an Initiative timeline was invisible to `extract-decisions`
+        # purely because those two Kinds were not in this tuple.
+        for kind in _work_item_kinds(s.kernel):
             try:
                 docs = s.query_list(kind)
             except Exception:  # noqa: BLE001
@@ -3842,11 +3898,25 @@ def cmd_plan_supersede(name: str, superseded_by: str, scope: str) -> None:
 # A work item is a HUB: attach artifacts of ANY Kind via spec.produces[].
 # resolve_work_item_outputs (sdk-py) unifies produces[] ∪ legacy back-refs;
 # the derived journey + FOCUS panel read the same.
-_WORK_ITEM_KINDS = {"Story", "Spike", "Feature", "Epic", "Issue"}
-# Kinds that can AUTHOR an output via `produces add`. Superset of work items:
-# an ADR (a decision record) legitimately produces its decision-visualisation
-# HtmlArtifact — the gallery buckets ADR-produced artifacts as "decisões".
-_PRODUCER_KINDS = _WORK_ITEM_KINDS | {"ADR"}
+# DERIVED from the `sdlc.work-item` trait. This used to be five Kinds while the
+# gallery walked nine and the digest ten — same intent, three memberships.
+def _work_item_kinds(kernel: Any = None) -> frozenset[str]:
+    from dna.application.sdlc_family import work_item_kinds
+
+    return frozenset(work_item_kinds(kernel))
+
+
+def _producer_kinds(kernel: Any = None) -> tuple[str, ...]:
+    """Kinds that can AUTHOR an output via `produces add` — work items plus
+    recorded decisions: an ADR legitimately produces the HtmlArtifact that
+    visualises it, and the gallery buckets those as "decisões"."""
+    from dna.application.sdlc_family import producer_kinds
+
+    return producer_kinds(kernel)
+
+
+_WORK_ITEM_KINDS = _work_item_kinds()
+_PRODUCER_KINDS = frozenset(_producer_kinds())
 
 
 def _split_ref(ref: str) -> tuple[str, str]:
@@ -4206,12 +4276,23 @@ def changelog_show(scope):
 # a kernel); this command owns only the impure edges: kernel session, gh/git
 # context, rendering, and the StatusReport persistence.
 
-# The Kinds whose timelines the digest walks. Some may be absent in a given
-# distribution — the walk is fail-soft per kind (like `extract-decisions`).
-_DIGEST_KINDS = (
-    "Story", "Feature", "Epic", "Issue", "ADR", "Kaizen",
-    "Spike", "Bug", "Task", "Initiative",
-)
+# The Kinds whose timelines the digest walks — DERIVED from the traits each
+# Kind declares (`sdlc.work-item` ∪ `sdlc.decision` ∪ `sdlc.observation`), not
+# listed here. This tuple was one of thirteen work-item lists with thirteen
+# memberships; adding a work item now means declaring a trait on that Kind and
+# nothing else. Some Kinds may be absent in a given distribution — the walk is
+# fail-soft per kind (like `extract-decisions`).
+#
+# Callers with a kernel should use ``digest_kinds(kernel)``; this module-level
+# value resolves through the kernel-less fallback so importers that only want
+# the names (the MCP face's coverage report) keep working at import time.
+def _digest_kinds(kernel: Any = None) -> tuple[str, ...]:
+    from dna.application.sdlc_family import digest_kinds
+
+    return digest_kinds(kernel)
+
+
+_DIGEST_KINDS = _digest_kinds()
 
 
 def _gh_open_prs_with_url() -> list[dict[str, Any]] | None:
@@ -4425,7 +4506,7 @@ def cmd_digest(since_spec: str | None, save: bool, as_json: bool, scope: str) ->
             raise click.UsageError(str(exc)) from exc
 
         docs: list[dict[str, Any]] = []
-        for kind in _DIGEST_KINDS:
+        for kind in _digest_kinds(s.kernel):
             try:
                 for d in s.query_list(kind):
                     docs.append({
@@ -4440,7 +4521,7 @@ def cmd_digest(since_spec: str | None, save: bool, as_json: bool, scope: str) ->
 
         dg = build_digest(
             docs=docs, since=since, until=now, since_label=since_label,
-            scope=scope, open_prs=open_prs, tags=tags,
+            scope=scope, open_prs=open_prs, tags=tags, kernel=s.kernel,
         )
 
         saved_name: str | None = None
@@ -4472,12 +4553,12 @@ def cmd_digest(since_spec: str | None, save: bool, as_json: bool, scope: str) ->
 # a kernel); this command owns only the impure edges: kernel session, gh PRs,
 # rendering, and file output.
 
-# The work-item Kinds whose produces[]/back-refs the gallery walks. Some may
-# be absent in a given distribution — the walk is fail-soft per kind.
-_GALLERY_WI_KINDS = (
-    "Story", "Feature", "Epic", "Issue", "Spike",
-    "Bug", "Task", "Initiative", "ADR",
-)
+# The work-item Kinds whose produces[]/back-refs the gallery walks — DERIVED
+# (`sdlc.work-item` ∪ `sdlc.decision`: an ADR is not assigned, but it does
+# produce the artifact that visualises its decision). This tuple and
+# ``_gallery.WORK_ITEM_KINDS`` used to be byte-identical duplicates that nothing
+# linked; both now come from the same derivation. Fail-soft per kind.
+_GALLERY_WI_KINDS = _producer_kinds()
 
 
 def _render_gallery_text(g: dict[str, Any]) -> None:

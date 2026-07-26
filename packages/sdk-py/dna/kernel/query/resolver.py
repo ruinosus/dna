@@ -44,6 +44,8 @@ import copy
 from dataclasses import dataclass, field
 from typing import Any
 
+from dna.kernel.protocols import BOOTSTRAP_KIND_NAMES
+
 
 # ──────────────────────────────────────────────────────────────────────
 # Module-level constants — sensible defaults (V1 → V2 transition)
@@ -53,11 +55,7 @@ from typing import Any
 # Kinds excluded from inheritance regardless of LayerPolicy. Structural
 # (Genome = scope identity; LayerPolicy = the policy Kind itself;
 # KindDefinition = registered before docs parse, can't be overlaid).
-BOOTSTRAP_KINDS: frozenset[str] = frozenset({
-    "Genome",
-    "LayerPolicy",
-    "KindDefinition",
-})
+BOOTSTRAP_KINDS: frozenset[str] = frozenset(BOOTSTRAP_KIND_NAMES)
 
 
 # Scope inheritance default = DENYLIST (s-platform-inherit-by-default, 2026-06-06).

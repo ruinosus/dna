@@ -993,6 +993,7 @@ class SqlAlchemySource(WritableSourcePort):
         layer: tuple[str, str] | None = None,
         write_class: str = "substantive",
         version_retention: int | None = None,
+        if_absent: bool = False,
     ) -> str:
         if layer is not None:
             if layer[0] == "tenant" and tenant is None:
@@ -1056,6 +1057,30 @@ class SqlAlchemySource(WritableSourcePort):
             spec_version = ((raw.get("spec") or {}).get("version")) or None
 
         async with self._engine.begin() as conn:
+            if if_absent:
+                # The ATOMIC claim: INSERT the documents row FIRST, inside this
+                # transaction, letting the composite primary key
+                # (tenant, scope, kind, name) arbitrate. ``ON CONFLICT DO
+                # NOTHING`` + rowcount is one round trip that both tests and
+                # takes the name — a SELECT-then-INSERT would leave exactly the
+                # window two concurrent creates squeeze through. The row is
+                # overwritten with the real content by the upsert at the end of
+                # this same transaction, so nothing observes the placeholder.
+                claim = self._upsert(d).values(
+                    scope=scope, kind=kind, name=name, content=content,
+                    version=0, updated_at=_now(), tenant=doc_tenant,
+                ).on_conflict_do_nothing(
+                    index_elements=self._doc_conflict_cols(),
+                )
+                claimed = await conn.execute(claim)
+                if claimed.rowcount == 0:
+                    from dna.kernel.errors import DocumentNameTaken
+                    raise DocumentNameTaken(
+                        f"{kind} {name!r} already exists in scope {scope!r} "
+                        f"(tenant={tenant!r}) — an if_absent write refuses to "
+                        f"replace it. Pick a free name, or use an update verb "
+                        f"if you meant to change the document that is there."
+                    )
             if spec_version:
                 dup = (await conn.execute(
                     sa.select(sa.literal(1)).where(
@@ -1204,7 +1229,19 @@ class SqlAlchemySource(WritableSourcePort):
         *,
         tenant: str | None = None,
         layer: tuple[str, str] | None = None,
+        api_version: str | None = None,
     ) -> None:
+        # ``api_version`` is ACCEPTED and deliberately unused here. The row key
+        # is (scope, kind, name, tenant) — the `documents` table has no
+        # apiVersion column — so two Kinds sharing a name in one scope are
+        # already indistinguishable to this adapter on SAVE as well as on
+        # delete. That is a schema constraint, not a routing choice, and closing
+        # it means a migration adding the column to `documents` / `versions` /
+        # `bundle_entries` plus every index and every query that keys on it.
+        # Accepting the kwarg keeps the port contract uniform (the kernel passes
+        # it to whoever declares it) and the day the column lands this is the
+        # one place that needs the WHERE clause.
+        del api_version
         if layer is not None:
             if layer[0] == "tenant" and tenant is None:
                 tenant = layer[1]
