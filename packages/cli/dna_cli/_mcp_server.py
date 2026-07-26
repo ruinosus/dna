@@ -438,6 +438,10 @@ def build_server(
            caller-supplied ``scope`` pointing at another workspace's (or the
            vendor's) scope is a cross-workspace read and is denied. With
            multi-workspace off, no token, or no explicit ``scope`` this is a no-op.
+           A ``WorkspaceScopeGrant`` row can open a second scope, and it opens it
+           for what the row SAYS — ``read`` (i-082); the read/write axis is the
+           ``*_op`` this call already carries, so a cross-scope WRITE is refused
+           on the same grant that permits the cross-scope read.
         2. If there is NO token (stdio / local / ``auth=None``) → identity: return
            the workspace and meter NOTHING (the OSS/self-host path is untouched — the
            quota invariant mirrors the tenant bridge exactly).
@@ -502,14 +506,35 @@ def build_server(
         # prefix, so a leak is a row somebody wrote and can revoke. Only looked
         # up when a cross-scope read is actually being attempted, so the common
         # path (no ``scope``, or your own) costs nothing.
-        granted: frozenset[str] | None = None
+        #
+        # And a grant grants what it SAYS it grants (i-082). The Kind pins
+        # ``access`` to ``read``; the binder now asks, so the schema an operator
+        # reads and the answer the code gives are the same sentence. The
+        # read/write axis is not a new one to declare: it is the SAME ``*_op``
+        # every mutating tool already passes for the tier's write-mode gate, so
+        # a tool cannot be a write here and a read there — and a write tool that
+        # forgot its op is already broken for metering, loudly, upstream of this.
+        access = "write" if "write" in (memory_op, sdlc_op, family_op) else "read"
+        granted: dict[str, str] | None = None
         if tenant and scope and scope != live.default_scope(tenant):
             granted = await workspace_granted_scopes(live, tenant)
         if not live.scope_is_bound(
             scope, tenant, authenticated=True,
             granted_scopes=parse_scope_grants(os.environ.get("DNA_TOKEN_SCOPES")),
-            workspace_grants=granted,
+            workspace_grants=granted, access=access,
         ):
+            if tenant and granted and scope in granted:
+                # The scope IS granted — at a level that does not cover THIS
+                # call. Name the level, or the operator re-reads a row that
+                # plainly says the scope and concludes the grant is broken.
+                raise ToolError(
+                    f"scope {scope!r} is granted to workspace {tenant!r} for "
+                    f"{granted[scope]!r} access only; this call is a "
+                    f"{access!r} and is denied. A WorkspaceScopeGrant does not "
+                    f"carry cross-workspace WRITE — that is a different decision "
+                    f"from a cross-workspace read and is not a value the grant "
+                    f"schema can currently express."
+                )
             if tenant:
                 raise ToolError(
                     f"request is bound to workspace {tenant!r} (scope "

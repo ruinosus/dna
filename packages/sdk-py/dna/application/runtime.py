@@ -22,7 +22,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Any
 
-from dna.application.live import LiveDna
+from dna.application.live import SCOPE_ACCESS_DEFAULT, LiveDna
 from dna.kernel.protocols import LayerPolicyViolationError  # noqa: F401  (re-exported for the face)
 
 logger = logging.getLogger(__name__)
@@ -3059,19 +3059,29 @@ def scope_grant_name(workspace_id: str, scope: str) -> str:
 
 async def workspace_granted_scopes(
     live: LiveDna, workspace_id: str | None,
-) -> frozenset[str]:
-    """The extra scopes ``workspace_id`` may READ — its ACTIVE grant rows.
+) -> dict[str, str]:
+    """The extra scopes ``workspace_id`` may reach — its ACTIVE grant rows, each
+    mapped to the ACCESS LEVEL the row records (``{scope: access}``).
 
     Empty for a workspace with no grants, which is what makes this additive: the
     binder falls through to "your own scope only", exactly as before.
+
+    The level rides ALONG WITH the scope rather than being filtered out here
+    (i-082). A caller that asked for "the scopes I may read" and then used the
+    answer to authorize a write would be the exact bug this fix closes, and it
+    would be invisible at the call site; handing the binder the level instead
+    means the read/write decision is made in the one place that is audited for
+    it. ``access`` missing from a row reads as the Kind's default (``read``); an
+    unrecognised value is carried through verbatim so the binder — not this
+    reader — denies it.
 
     Fail-CLOSED on a read error. A grant that cannot be read is not a grant: an
     unreadable ``_lib`` must widen nobody's reach, and the caller still has its
     own scope. (The Kind being absent from a minimal distribution is the same
     answer for the same reason — no rows, no extra reach.)"""
     if not workspace_id:
-        return frozenset()
-    out: set[str] = set()
+        return {}
+    out: dict[str, str] = {}
     try:
         async for raw in live.kernel.query(
             _WORKSPACE_SCOPE, WORKSPACE_SCOPE_GRANT_KIND,
@@ -3085,14 +3095,16 @@ async def workspace_granted_scopes(
                 continue
             scope = spec.get("scope")
             if isinstance(scope, str) and scope.strip():
-                out.add(scope.strip())
+                out[scope.strip()] = str(
+                    spec.get("access") or SCOPE_ACCESS_DEFAULT
+                ).strip()
     except Exception as exc:  # noqa: BLE001 — an unreadable grant grants nothing
         logger.warning(
             "workspace_granted_scopes: reading %s in %s failed: %s: %s",
             WORKSPACE_SCOPE_GRANT_KIND, _WORKSPACE_SCOPE, type(exc).__name__, exc,
         )
-        return frozenset()
-    return frozenset(out)
+        return {}
+    return out
 
 
 async def grant_workspace_scope_impl(
@@ -3133,7 +3145,7 @@ async def grant_workspace_scope_impl(
             "workspace_id": ws,
             "scope": sc,
             "status": "active",
-            "access": "read",
+            "access": SCOPE_ACCESS_DEFAULT,
             "reason": reason,
             "granted_by": granted_by,
             "granted_at": stamp,
@@ -3189,7 +3201,7 @@ async def list_workspace_scope_grants_impl(
             "workspace_id": spec.get("workspace_id"),
             "scope": spec.get("scope"),
             "status": spec.get("status") or "active",
-            "access": spec.get("access") or "read",
+            "access": spec.get("access") or SCOPE_ACCESS_DEFAULT,
             "reason": spec.get("reason"),
             "granted_by": spec.get("granted_by"),
             "granted_at": spec.get("granted_at"),

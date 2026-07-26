@@ -73,10 +73,13 @@ spec:
         enum:
         - read
         default: read
-        description: What the grant permits. READ only, and the enum has one
-          member so widening it is a deliberate schema change with a reviewer -
-          a cross-workspace WRITE is a different decision than a cross-workspace
-          read and must not arrive as a value nobody noticed.
+        description: What the grant permits, and the binder ENFORCES it - a
+          request carries a read/write axis and this value is what answers it, so
+          the grant that opens a second scope for reading refuses a write to it.
+          READ only, and the enum has one member so widening it is a deliberate
+          schema change with a reviewer - a cross-workspace WRITE is a different
+          decision than a cross-workspace read and must not arrive as a value
+          nobody noticed.
       reason:
         type:
         - string

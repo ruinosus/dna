@@ -9,8 +9,37 @@ hands it to the shared use-cases.
 """
 from __future__ import annotations
 
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
-from typing import Any, Iterable
+from typing import Any
+
+#: The access levels a ``WorkspaceScopeGrant`` row can carry, weakest first, and
+#: the ONLY vocabulary the binder understands. The Kind's ``access`` enum
+#: currently has a single member (``read``) on purpose — widening it is meant to
+#: be a deliberate schema change with a reviewer — but the RANKING lives here so
+#: the binder can already answer "does this grant cover this call?" instead of
+#: not asking. Anything outside this table is unknown, and unknown is a denial.
+SCOPE_ACCESS_RANK: Mapping[str, int] = {"read": 0, "write": 1}
+
+#: The level a grant is read at when it records none (the Kind's own default,
+#: and the only safe reading of a grant shape that carries no access at all).
+SCOPE_ACCESS_DEFAULT = "read"
+
+
+def scope_access_covers(granted: str | None, requested: str) -> bool:
+    """True when a grant recorded at ``granted`` covers a ``requested`` call.
+
+    Fail-CLOSED on BOTH sides: a level this build does not know — whether it is
+    the one a row recorded or the one a call site asked for — is a denial, never
+    a fallback to the permissive answer. A grant that means nothing here must
+    grant nothing here."""
+    if granted is None:
+        return False
+    try:
+        return SCOPE_ACCESS_RANK[granted] >= SCOPE_ACCESS_RANK[requested]
+    except KeyError:
+        return False
+
 
 #: The conscious opt-out sentinel for a workspace-less credential's scope grant
 #: (see :meth:`LiveDna.scope_is_granted`). An operator that genuinely wants a
@@ -111,7 +140,8 @@ class LiveDna:
         *,
         authenticated: bool = False,
         granted_scopes: Iterable[str] | None = None,
-        workspace_grants: Iterable[str] | None = None,
+        workspace_grants: Mapping[str, str] | Iterable[str] | None = None,
+        access: str = SCOPE_ACCESS_DEFAULT,
     ) -> bool:
         """True when an explicitly ``requested`` scope is allowed for this caller.
 
@@ -143,6 +173,14 @@ class LiveDna:
 
         ``requested is None`` (the caller named no scope) is always allowed — it
         resolves to :meth:`default_scope`, which is itself workspace-bound.
+
+        ``access`` is the read/write axis of regime 2, and it constrains ONLY the
+        cross-scope grant (i-082). A workspace writes its own scope as it always
+        did; reaching ANOTHER scope now asks the grant what it actually permits,
+        because the ``WorkspaceScopeGrant`` Kind pins ``access`` to ``read`` and
+        an operator reading that schema is owed the guarantee it states. A caller
+        that names no ``access`` is asking to READ — the narrow answer, so a face
+        that forgets the axis cannot accidentally widen anybody's reach.
         """
         if requested is None:
             return True
@@ -173,15 +211,21 @@ class LiveDna:
                 return True
             if requested == self.default_scope(workspace):
                 return True
-            return self.workspace_scope_is_granted(requested, workspace_grants)
+            return self.workspace_scope_is_granted(
+                requested, workspace_grants, access=access,
+            )
         # Regime 3 — authenticated but workspace-less: explicit grant, or nothing.
         return self.scope_is_granted(requested, granted_scopes)
 
     def workspace_scope_is_granted(
-        self, requested: str, granted_scopes: Iterable[str] | None
+        self,
+        requested: str,
+        granted_scopes: Mapping[str, str] | Iterable[str] | None,
+        *,
+        access: str = SCOPE_ACCESS_DEFAULT,
     ) -> bool:
         """True when a ``WorkspaceScopeGrant`` names ``requested`` for this
-        workspace.
+        workspace **at or above** ``access``.
 
         Deliberately NOT :meth:`scope_is_granted`: that one honours
         :data:`SCOPE_GRANT_ALL` (``"*"``), which is an operator's conscious,
@@ -189,10 +233,25 @@ class LiveDna:
         wildcard reaching this path would let ONE data row grant a workspace
         every scope in the deployment — the exact unbounded blast radius the
         "grants are rows" design exists to avoid. ``"*"`` here is not a
-        wildcard; it is a scope literally named ``*``, and there isn't one."""
+        wildcard; it is a scope literally named ``*``, and there isn't one.
+
+        ``granted_scopes`` is a ``{scope: access}`` mapping — the shape
+        ``workspace_granted_scopes`` reads off the rows. A bare iterable of scope
+        names is still accepted and read as :data:`SCOPE_ACCESS_DEFAULT`: it
+        records no level, and the only safe reading of "no level recorded" is the
+        narrowest one, so a caller still on the older shape stays fail-closed for
+        writes instead of silently gaining them."""
         if not granted_scopes:
             return False
-        return requested in frozenset(granted_scopes)
+        if isinstance(granted_scopes, Mapping):
+            level = granted_scopes.get(requested)
+        else:
+            level = (
+                SCOPE_ACCESS_DEFAULT
+                if requested in frozenset(granted_scopes)
+                else None
+            )
+        return scope_access_covers(level, access)
 
     def scope_is_granted(
         self, requested: str, granted_scopes: Iterable[str] | None
