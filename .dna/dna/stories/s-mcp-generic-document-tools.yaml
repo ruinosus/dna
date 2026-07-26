@@ -17,7 +17,7 @@ spec:
   - code+tests (RED then GREEN, plus deliberate-break evidence for every refusal) + docs (mcp-server guide) + generated Kinds reference regenerated + full CLI and SDK suites green
   definition_of_done_source: cli-create
   created_at: '2026-07-26T06:52:29+00:00'
-  updated_at: '2026-07-26T07:19:10+00:00'
+  updated_at: '2026-07-26T07:21:53+00:00'
   timeline:
   - at: '2026-07-26T06:52:29+00:00'
     actor: claude-code
@@ -63,6 +63,12 @@ spec:
     name: tr-tg-mcp-generic-document-tools-20260726-071905
     summary: TestRun tr-tg-mcp-generic-document-tools-20260726-071905 → pass
     outcome: pass
+  - at: '2026-07-26T07:21:53+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/238 (base main). Evidencia completa no corpo do PR: 22/22 novos testes, suite CLI 1148 (1 falha pre-existente de psycopg2 confirmada por stash), suite SDK 3555, guards limpos, e os seis breaks deliberados vermelhos-e-restaurados.'
+    commit_ref: 8d63ccf410403f8f295ad059dfa182d9efac9da6
   produces:
   - kind: Plan
     name: plan-s-mcp-generic-document-tools
