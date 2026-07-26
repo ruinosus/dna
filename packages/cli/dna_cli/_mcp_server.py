@@ -744,7 +744,7 @@ def build_server(
         count). The Spec Kit templates ingested by ``dna specify
         install-templates`` surface here — servable to any MCP client. Pass
         ``tenant`` for the per-workspace/tenant view (the overlay wins, no redeploy)."""
-        return await list_templates_impl(await _live(), scope, await _guard("definitions", tenant))
+        return await list_templates_impl(await _live(), scope, await _guard("definitions", tenant, scope=scope))
 
     @server.tool(run_in_thread=False)
     async def get_template(
@@ -752,7 +752,7 @@ def build_server(
     ) -> dict[str, Any]:
         """Fetch one PromptTemplate's full body + variables. With ``tenant`` the
         per-workspace/tenant OVERLAY wins live — governance without redeploy."""
-        return await get_template_impl(await _live(), name, scope, await _guard("definitions", tenant))
+        return await get_template_impl(await _live(), name, scope, await _guard("definitions", tenant, scope=scope))
 
     @server.tool(run_in_thread=False)
     async def list_skills(
@@ -760,7 +760,7 @@ def build_server(
     ) -> dict[str, Any]:
         """List the Skills in a scope (name + description). The Spec Kit
         slash-command definitions ingested as Skills surface here."""
-        return await list_skills_impl(await _live(), scope, await _guard("definitions", tenant))
+        return await list_skills_impl(await _live(), scope, await _guard("definitions", tenant, scope=scope))
 
     @server.tool(run_in_thread=False)
     async def get_skill(
@@ -768,7 +768,7 @@ def build_server(
     ) -> dict[str, Any]:
         """Fetch one Skill's full instruction body + metadata. With ``tenant``
         the per-workspace/tenant OVERLAY wins live — no redeploy."""
-        return await get_skill_impl(await _live(), name, scope, await _guard("definitions", tenant))
+        return await get_skill_impl(await _live(), name, scope, await _guard("definitions", tenant, scope=scope))
 
     # -- SDLC ----------------------------------------------------------------
 
