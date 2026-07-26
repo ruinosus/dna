@@ -28,13 +28,33 @@ same ``_guard`` tenancy + quota seam every other tool passes through; the LiveDn
 """
 from __future__ import annotations
 
+import logging
 import re
 from datetime import datetime, timezone
 from typing import Any
 
+from dna.application.gates import (
+    GATE_EXIT_CRITERIA,
+    GATE_TEST_ON_CLOSE,
+    CLOSING_STATUSES,
+    closing_warnings,
+    has_passing_product_run,
+    kind_is_gated,
+    refuse_close_without_tests,
+    refuse_without_exit_criteria,
+)
 from dna.application.live import LiveDna
+from dna.kernel.errors import DocumentNameTaken
+from dna.application.sdlc_family import (
+    dated_spec_fields,
+    status_enum_for,
+    transitionable_kinds,
+    work_item_kinds,
+)
 
 # ── constants (single source of truth — the CLI imports these) ─────────────
+
+logger = logging.getLogger(__name__)
 
 SDLC_API_VERSION = "github.com/ruinosus/dna/sdlc/v1"
 
@@ -101,9 +121,19 @@ DATED_SPEC_FIELDS: dict[str, tuple[str, ...]] = {
     "Kaizen": ("created_at",),
 }
 
-# The valid target-status set per board Kind — the ``set_status`` tool refuses a
-# transition to any status outside its Kind's enum (the "don't allow invalid
-# transitions" invariant). Kept as a mapping so the tool is Kind-generic.
+# The KERNEL-LESS fallback for the valid target-status set per board Kind.
+#
+# The live answer is DERIVED: ``sdlc_family.status_enum_for(kernel, kind)`` reads
+# ``spec.properties.status.enum`` off the Kind's own schema — the place a Kind
+# already declares its arc — so ``set_status`` cannot validate against a
+# vocabulary the schema disagrees with, and the four board Kinds that had no
+# named write tool (Spike / Bug / Task / Initiative) became writable by
+# DECLARATION rather than by four more entries here.
+#
+# This map survives only for a caller with no kernel to ask (the pure
+# :func:`validate_transition`, which the CLI's own option parsing uses). It is
+# held to the derived table by ``test_sdlc_family_is_declarative``, so it cannot
+# drift the way the thirteen work-item lists did.
 _STATUS_ENUMS: dict[str, tuple[str, ...]] = {
     "Story": VALID_STORY_STATUS,
     "Issue": VALID_ISSUE_STATUS,
@@ -150,12 +180,41 @@ def now_iso(now: datetime | None = None) -> str:
     return (now or datetime.now(timezone.utc)).isoformat(timespec="seconds")
 
 
-def build_raw(kind: str, name: str, spec: dict[str, Any]) -> dict[str, Any]:
-    """The kernel document envelope for a board write (apiVersion + metadata)."""
+def build_raw(
+    kind: str, name: str, spec: dict[str, Any], *,
+    existing: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """The kernel document envelope for a board write (apiVersion + metadata).
+
+    ``existing`` is the document being UPDATED, when there is one. Pass it and
+    the envelope is carried forward instead of rebuilt:
+
+    * ``metadata`` keeps every key it had (``labels``, ``description``,
+      ``group``, ``icon``, anything an adapter or a human put there), with
+      ``name`` re-asserted. Without this, ``set_status`` and ``comment`` — the
+      two verbs that load-modify-write — replaced the whole mapping with
+      ``{"name": name}``, so a single status transition silently deleted every
+      other metadata key the document carried.
+    * ``apiVersion`` keeps the document's own. Forcing :data:`SDLC_API_VERSION`
+      re-homed any board document living under a different apiVersion (a
+      tenant-authored work-item Kind, a federated import) onto DNA's, which is
+      not a status change — it is a change of owner.
+
+    Omit ``existing`` for a CREATE, where there is nothing to carry forward and
+    the DNA envelope is the right default."""
+    api_version = SDLC_API_VERSION
+    metadata: dict[str, Any] = {"name": name}
+    if isinstance(existing, dict):
+        prior_av = existing.get("apiVersion")
+        if isinstance(prior_av, str) and prior_av:
+            api_version = prior_av
+        prior_meta = existing.get("metadata")
+        if isinstance(prior_meta, dict):
+            metadata = {**prior_meta, "name": name}
     return {
-        "apiVersion": SDLC_API_VERSION,
+        "apiVersion": api_version,
         "kind": kind,
-        "metadata": {"name": name},
+        "metadata": metadata,
         "spec": spec,
     }
 
@@ -367,18 +426,28 @@ def looks_like_decision(body: str) -> bool:
     )
 
 
-def validate_transition(kind: str, target: str) -> None:
+def validate_transition(
+    kind: str, target: str, *,
+    valid: tuple[str, ...] | None = None,
+    writable: tuple[str, ...] | None = None,
+) -> None:
     """Raise :class:`InvalidTransition` unless ``target`` is a valid status for
-    ``kind``. The Kind must itself be a writable board Kind."""
-    if kind not in _STATUS_ENUMS:
+    ``kind``. The Kind must itself be a transitionable board Kind.
+
+    ``valid`` / ``writable`` are the DERIVED answers, supplied by a caller that
+    has a kernel (:mod:`dna.application.sdlc_family` reads them off each Kind's
+    own schema and traits). Omit them and the pure fallback map applies —
+    correct for the four Kinds it lists, and honest about not knowing the rest."""
+    valid_for_kind = valid if valid is not None else _STATUS_ENUMS.get(kind)
+    if not valid_for_kind:
+        known = writable if writable is not None else tuple(sorted(_WRITABLE_KINDS))
         raise InvalidTransition(
             f"{kind!r} is not a status-bearing board Kind "
-            f"(writable: {sorted(_WRITABLE_KINDS)})"
+            f"(writable: {list(known)})"
         )
-    valid = _STATUS_ENUMS[kind]
-    if target not in valid:
+    if target not in valid_for_kind:
         raise InvalidTransition(
-            f"{target!r} is not a valid {kind} status — valid: {list(valid)}"
+            f"{target!r} is not a valid {kind} status — valid: {list(valid_for_kind)}"
         )
 
 
@@ -517,14 +586,29 @@ async def create_story(
     definition_of_done: list[str] | None = None,
     actor: str = "mcp", source: str = "mcp",
     now: datetime | None = None, overwrite: bool = False,
+    allow_no_ac_dod: bool = False,
 ) -> dict[str, Any]:
     """Create a Story doc — the shared core behind ``dna sdlc story create`` + the
     MCP ``create_story`` tool. Routes through ``kernel.write_document`` (hooks +
     cache fire) into the resolved (per-workspace) ``scope``.
 
     Refuses an existing ``name`` (:func:`refuse_if_exists`) — a create is never
-    an update."""
+    an update — and refuses a Story with no exit criteria when the Kind declares
+    ``sdlc.exit-criteria-required`` (:func:`gates.refuse_without_exit_criteria`).
+    That gate used to live in the CLI's ``cmd_story_create`` only, so the MCP
+    tool created criteria-less Stories the CLI would have rejected."""
+    # Existence first: when a caller both reuses a taken name AND omits its
+    # exit criteria, "that name is already s-one, status in-progress" is the
+    # more specific, more actionable fact — and it is the refusal that protects
+    # a live document.
     await refuse_if_exists(kernel, scope, "Story", name, overwrite=overwrite)
+    if kind_is_gated(kernel, "Story", GATE_EXIT_CRITERIA):
+        refuse_without_exit_criteria(
+            kind="Story", name=name,
+            acceptance_criteria=acceptance_criteria,
+            definition_of_done=definition_of_done,
+            allow_no_ac_dod=allow_no_ac_dod,
+        )
     ni = now_iso(now)
     spec = build_story_spec(
         title=title, description=description, feature=feature, status=status,
@@ -549,50 +633,88 @@ async def create_issue(
     """File an Issue with an auto-incremented ``i-NNN-<slug>`` name — the shared
     core behind ``dna sdlc issue file`` + the MCP ``create_issue`` tool.
 
-    **The numbering is a hint, the probe is the guarantee.** ``max(i-NNN) + 1`` is
-    only correct if the enumeration saw every Issue; a concurrent writer or a
-    replica that has not caught up yields a number that is already taken, and the
-    write then lands ON TOP of a live Issue. So the computed number is a starting
-    point and each candidate name is probed (``kernel.get_document``) until one is
-    free. The enumeration itself stays O(N) rows — that is documented rather than
-    hidden — but it now pushes a ``projection`` down, so it moves N names instead
-    of N full Issue specs. What remains is the genuinely concurrent race: two
-    ``create_issue`` calls can still probe the same free name in the same instant
-    and one will overwrite the other. Closing THAT needs a unique constraint or a
-    lock in the kernel's write path, which is a kernel change, not a change
-    here."""
+    **The numbering is a hint; the WRITE is the guarantee.** ``max(i-NNN) + 1``
+    is only correct if the enumeration saw every Issue, and a concurrent writer
+    or a lagging replica yields a number that is already taken. #242 closed the
+    non-concurrent half by probing each candidate before writing, and documented
+    what it could not close: two calls can still probe the same free name in the
+    same instant, and one overwrites the other. That needed "a unique constraint
+    or a lock in the kernel's write path".
+
+    It has one now. The write is an ATOMIC CREATE (``if_absent=True``): it claims
+    the name or raises ``DocumentNameTaken``, arbitrated by the SQL adapter's
+    composite primary key or the filesystem's ``O_CREAT|O_EXCL`` / ``mkdir``. So
+    the loop no longer *probes and hopes* — it tries to WRITE, and a loser
+    simply takes the next number. Two concurrent creates now produce two Issues,
+    which is the correct outcome and was not previously reachable.
+
+    An adapter that does not support ``if_absent`` falls back to the #242
+    behavior (probe, then a plain write) rather than failing: the race stays
+    open there, exactly as documented, but nothing that worked stops working.
+
+    The enumeration is still O(N) rows — documented rather than hidden — though
+    it pushes a ``projection`` down, so it moves N names instead of N full Issue
+    specs. Closing THAT wants an allocator/sequence Kind, which is a data-model
+    decision rather than a fix."""
     names: list[str] = []
     async for row in kernel.query(scope, "Issue", projection=["name"]):
         meta = row.get("metadata") if isinstance(row, dict) else None
         nm = (meta or {}).get("name") if isinstance(meta, dict) else None
         names.append(nm or (row.get("name") if isinstance(row, dict) else "") or "")
     n = next_issue_number(names)
-    name = f"i-{n:03d}-{slug}"
-    if not overwrite:
-        # Step past any name the enumeration missed. Bounded so a pathological
-        # source can never spin: 1000 consecutive taken names means something is
-        # wrong that a 1001st probe will not fix.
-        for candidate_n in range(n, n + 1000):
-            candidate = f"i-{candidate_n:03d}-{slug}"
-            if await existing_or_none(
-                    kernel, scope, "Issue", candidate) is None:
-                name = candidate
-                break
-        else:  # pragma: no cover — 1000 consecutive collisions
-            raise DocumentExists(
-                f"no free Issue name found for slug {slug!r} in scope {scope!r} "
-                f"after 1000 probes from i-{n:03d} — the source is reporting "
-                f"every candidate as taken."
-            )
     ni = now_iso(now)
     spec = build_issue_spec(
         description=description, issue_type=issue_type, severity=severity,
         title=title, owner=owner, related_feature=related_feature,
         now=ni, actor=actor, source=source,
     )
-    raw = build_raw("Issue", name, spec)
-    await kernel.write_document(scope, "Issue", name, raw, invalidate_mode="doc")
-    return {"kind": "Issue", "name": name, "type": issue_type, "severity": severity}
+
+    if overwrite:
+        name = f"i-{n:03d}-{slug}"
+        await kernel.write_document(
+            scope, "Issue", name, build_raw("Issue", name, spec),
+            invalidate_mode="doc",
+        )
+        return {"kind": "Issue", "name": name, "type": issue_type,
+                "severity": severity}
+
+    # Bounded so a pathological source can never spin: 1000 consecutive taken
+    # names means something is wrong that a 1001st attempt will not fix.
+    atomic = True
+    for candidate_n in range(n, n + 1000):
+        name = f"i-{candidate_n:03d}-{slug}"
+        raw = build_raw("Issue", name, spec)
+        if atomic:
+            try:
+                await kernel.write_document(
+                    scope, "Issue", name, raw, invalidate_mode="doc",
+                    if_absent=True,
+                )
+                return {"kind": "Issue", "name": name, "type": issue_type,
+                        "severity": severity}
+            except NotImplementedError:
+                # This adapter cannot promise an atomic create. Degrade to the
+                # #242 probe-then-write for the REST of the loop, and say so
+                # only here — degrading silently per attempt would hide which
+                # guarantee is actually in force.
+                atomic = False
+                logger.info(
+                    "create_issue: source does not support atomic creates; "
+                    "falling back to probe-then-write (the concurrent race "
+                    "documented in #242 remains open on this adapter)"
+                )
+            except DocumentNameTaken:
+                continue  # somebody else took it between our read and our write
+        if await existing_or_none(kernel, scope, "Issue", name) is None:
+            await kernel.write_document(
+                scope, "Issue", name, raw, invalidate_mode="doc")
+            return {"kind": "Issue", "name": name, "type": issue_type,
+                    "severity": severity}
+    raise DocumentExists(  # pragma: no cover — 1000 consecutive collisions
+        f"no free Issue name found for slug {slug!r} in scope {scope!r} "
+        f"after 1000 attempts from i-{n:03d} — the source is reporting every "
+        f"candidate as taken."
+    )
 
 
 async def create_feature(
@@ -622,23 +744,67 @@ async def create_feature(
 async def set_status(
     kernel: Any, scope: str, kind: str, name: str, status: str, *,
     reason: str | None = None, actor: str = "mcp", source: str = "mcp",
-    now: datetime | None = None,
+    now: datetime | None = None, tenant: str | None = None,
+    commit_ref: str | None = None,
+    allow_no_tests: bool = False, no_code: bool = False,
+    gate_reason: str | None = None,
+    skip_narration_warning: bool = False,
+    skip_produces_warning: bool = False,
 ) -> dict[str, Any]:
-    """Transition a Story / Issue / Feature to ``status`` (load-modify-write) —
-    the shared core behind the CLI's ``start`` / ``done`` / ``block`` / ``review``
-    / ``triage`` / ``resolve`` / ``ship`` verbs + the MCP ``set_status`` tool.
+    """Transition a board item to ``status`` (load-modify-write) — the shared
+    core behind the CLI's ``start`` / ``done`` / ``block`` / ``review`` /
+    ``triage`` / ``resolve`` / ``ship`` verbs + the MCP ``set_status`` tool.
 
-    Validates the target against the Kind's status enum (:func:`validate_transition`),
-    appends a ``status_change`` timeline event (with the ``from``), auto-stamps
-    ``closed_at`` on a terminal status and ``blocked_reason`` when ``reason`` is
-    given for a block. Raises ``LookupError`` if the doc is absent."""
-    validate_transition(kind, status)
+    Validates the target against the Kind's OWN declared status enum
+    (:func:`sdlc_family.status_enum_for`, falling back to the static map for a
+    Kind the registry does not know), appends a ``status_change`` timeline event
+    (with the ``from``), auto-stamps ``closed_at`` on a terminal status and
+    ``blocked_reason`` when ``reason`` is given for a block. Raises
+    ``LookupError`` if the doc is absent.
+
+    **The close gate runs here** (decision A). A Kind declaring
+    ``sdlc.test-gated`` refuses a CLOSING transition without a passing
+    product-lane TestRun, exactly as ``dna sdlc story done`` does — because a
+    gate only one face enforces is not a gate. The escapes (``allow_no_tests`` /
+    ``no_code``) require ``gate_reason``, which is written to the timeline as an
+    ``exception`` event.
+
+    Returns the transition plus ``warnings`` — the WARN-only guards (no shipping
+    commit, skipped review, no narration, no linked outputs) the CLI prints to
+    stderr. Over MCP there is no stderr, so they travel in the result."""
+    valid = status_enum_for(kernel, kind)
+    validate_transition(
+        kind, status, valid=valid,
+        writable=transitionable_kinds(kernel) if valid is None else None,
+    )
     existing = await kernel.get_document(scope, kind, name)
     if existing is None:
         raise LookupError(f"{kind} {name!r} not found in scope {scope!r}")
     spec = dict(existing.get("spec") or {}) if isinstance(existing, dict) else {}
     prev = spec.get("status")
     ni = now_iso(now)
+
+    closing = status in CLOSING_STATUSES
+    escape_reason: str | None = None
+    if closing and kind_is_gated(kernel, kind, GATE_TEST_ON_CLOSE):
+        escape_reason = refuse_close_without_tests(
+            kind=kind, name=name, status=status,
+            has_passing_run=await has_passing_product_run(
+                kernel, scope, kind, name, tenant=tenant,
+            ),
+            allow_no_tests=allow_no_tests, no_code=no_code,
+            reason=gate_reason,
+        )
+    warnings = (
+        closing_warnings(
+            spec, prev_status=prev, commit_ref=commit_ref, no_code=no_code,
+            skip_narration=skip_narration_warning,
+            skip_produces=skip_produces_warning,
+        )
+        if closing
+        else []
+    )
+
     backfill_created_at(spec)   # legacy docs self-heal from their own timeline
     spec["status"] = status
     spec["updated_at"] = ni
@@ -646,13 +812,27 @@ async def set_status(
         spec["closed_at"] = ni
     if reason:
         spec["blocked_reason" if status == "blocked" else "resolution"] = reason
+    if escape_reason:
+        # The escape is a RECORD, appended before the transition it licensed so
+        # the timeline reads in the order things happened.
+        append_event(
+            spec, "exception", summary=escape_reason, now=ni, actor=actor,
+            source=source, gate=GATE_TEST_ON_CLOSE,
+        )
     extra: dict[str, Any] = {"from": prev, "to": status}
     if reason:
         extra["summary"] = reason
+    if commit_ref:
+        extra["commit_ref"] = commit_ref
     append_event(spec, "status_change", now=ni, actor=actor, source=source, **extra)
-    raw = build_raw(kind, name, spec)
+    raw = build_raw(kind, name, spec, existing=existing)
     await kernel.write_document(scope, kind, name, raw, invalidate_mode="doc")
-    return {"kind": kind, "name": name, "from": prev, "to": status}
+    out: dict[str, Any] = {"kind": kind, "name": name, "from": prev, "to": status}
+    if warnings:
+        out["warnings"] = warnings
+    if escape_reason:
+        out["gate_exception"] = {"gate": GATE_TEST_ON_CLOSE, "reason": escape_reason}
+    return out
 
 
 async def add_comment(
@@ -663,11 +843,17 @@ async def add_comment(
     """Append a comment / decision to a board item's timeline WITHOUT changing
     status — the FOCUS-feed narration verb (``dna sdlc story comment`` /
     ``issue comment``) + the MCP ``comment`` tool. A decision-shaped body
-    auto-promotes to a ``decision`` event unless ``event_type`` is explicit."""
-    if kind not in _WRITABLE_KINDS:
+    auto-promotes to a ``decision`` event unless ``event_type`` is explicit.
+
+    Commentable = carries the ``sdlc.work-item`` trait, so the six board Kinds
+    the digest reads but no write tool could touch (Spike / Bug / Task /
+    Initiative, plus the two the CLI already handled) are reachable by
+    DECLARATION rather than by extending a tuple."""
+    commentable = work_item_kinds(kernel) or tuple(sorted(_WRITABLE_KINDS))
+    if kind not in commentable:
         raise InvalidTransition(
             f"{kind!r} is not a commentable board Kind "
-            f"(writable: {sorted(_WRITABLE_KINDS)})"
+            f"(writable: {list(commentable)})"
         )
     et = event_type or ("decision" if looks_like_decision(body) else "comment")
     if et not in ("comment", "decision"):
@@ -680,7 +866,7 @@ async def add_comment(
     backfill_created_at(spec)   # legacy docs self-heal from their own timeline
     append_event(spec, et, summary=body, now=ni, actor=actor, source=source)
     spec["updated_at"] = ni
-    raw = build_raw(kind, name, spec)
+    raw = build_raw(kind, name, spec, existing=existing)
     await kernel.write_document(scope, kind, name, raw, invalidate_mode="doc")
     return {"kind": kind, "name": name, "event_type": et}
 
@@ -701,7 +887,7 @@ async def create_story_impl(
     acceptance_criteria: list[str] | None = None,
     definition_of_done: list[str] | None = None,
     scope: str | None = None, tenant: str | None = None,
-    actor: str = "mcp",
+    actor: str = "mcp", allow_no_ac_dod: bool = False,
 ) -> dict[str, Any]:
     """LiveDna wrapper for :func:`create_story` — resolves the (per-workspace)
     scope and writes the GLOBAL board doc there."""
@@ -711,6 +897,7 @@ async def create_story_impl(
         title=title, priority=priority, labels=labels,
         acceptance_criteria=acceptance_criteria,
         definition_of_done=definition_of_done, actor=actor,
+        allow_no_ac_dod=allow_no_ac_dod,
     )
 
 
@@ -747,11 +934,18 @@ async def set_status_impl(
     live: LiveDna, kind: str, name: str, status: str, *,
     reason: str | None = None, scope: str | None = None,
     tenant: str | None = None, actor: str = "mcp",
+    commit_ref: str | None = None,
+    allow_no_tests: bool = False, no_code: bool = False,
+    gate_reason: str | None = None,
 ) -> dict[str, Any]:
-    """LiveDna wrapper for :func:`set_status`."""
+    """LiveDna wrapper for :func:`set_status` — including the close gate, which
+    is the whole point: the hosted write path enforces the same methodology the
+    workstation does."""
     sc = scope or live.default_scope(tenant)
     return await set_status(
         live.kernel, sc, kind, name, status, reason=reason, actor=actor,
+        commit_ref=commit_ref, allow_no_tests=allow_no_tests, no_code=no_code,
+        gate_reason=gate_reason,
     )
 
 

@@ -268,9 +268,20 @@ def test_parse_invalid_rejected(kernel, kind, missing):
 # --- embed (F3 D4) -----------------------------------------------------------
 
 def test_engram_declares_embed_fields(kernel):
-    """Mesmos campos do branch legado de source_text_for (summary + body) —
-    substitui a entrada no frozenset EMBEDDABLE_KINDS (ratchet D4)."""
-    assert _port(kernel, "Engram").embed_fields == ["summary", "body"]
+    """Os campos do branch legado de source_text_for, RECONCILIADOS com o lado
+    do cue (i-081, item 14).
+
+    Eram ``[summary, body]`` aqui e ``(area, title, summary, body)`` em
+    ``dna.memory.semantic.ENGRAM_TEXT_FIELDS`` — o recall montava o vetor da
+    query com quatro planos e comparava contra um vetor de documento que nunca
+    viu dois deles. Agora são os mesmos quatro, e
+    ``test_embeddable_is_not_recallable.py`` mantém os dois lados iguais."""
+    from dna.memory.semantic import ENGRAM_TEXT_FIELDS
+
+    assert _port(kernel, "Engram").embed_fields == list(ENGRAM_TEXT_FIELDS)
+    assert _port(kernel, "Engram").embed_fields == [
+        "area", "title", "summary", "body",
+    ]
 
 
 @pytest.mark.parametrize("kind", ["WorkflowEvent", "Retrospective"])

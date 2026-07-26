@@ -62,11 +62,54 @@ it with its own Kinds under the `tenant/v1` namespace:
 | `Workspace` | `github.com/ruinosus/dna/tenant/v1` | A named, collaborative tenancy space (alias `tenant-workspace`) |
 | `WorkspaceMembership` | `github.com/ruinosus/dna/tenant/v1` | An identity's role in a `Workspace` (alias `tenant-workspace-membership`) |
 | `KindNamespace` | `github.com/ruinosus/dna/tenant/v1` | Which workspace owns which `apiVersion` namespace (alias `tenant-kind-namespace`) |
+| `WorkspaceScopeGrant` | `github.com/ruinosus/dna/tenant/v1` | One extra scope a `Workspace` may read (alias `tenant-workspace-scope-grant`) |
 
 Because tenant is a kernel dimension rather than a naming convention, a
 tenant overlay for one scope does not leak into another — the base for a
 scope belongs to that scope, and each tenant sees the base plus its own
 diffs.
+
+## Reaching a second scope — `WorkspaceScopeGrant`
+
+A resolved workspace reads exactly one scope: its own. That is the right
+default and it stays the default. What it made unreachable is a legitimate
+case — one person whose hosted door binds them to workspace A while board B is
+also theirs — and the only lever used to be a process-wide environment variable
+that applies to the *credential*, not to the workspace.
+
+A **`WorkspaceScopeGrant`** is that permission as **data**: one row per
+`(workspace, scope)` pair, in the `_lib` scope alongside `Workspace` and
+`WorkspaceMembership`, carrying a reason, an author and a timestamp.
+
+```yaml
+apiVersion: github.com/ruinosus/dna/tenant/v1
+kind: WorkspaceScopeGrant
+metadata:
+  name: ws-acme--research-archive
+spec:
+  workspace_id: ws-acme
+  scope: research-archive
+  status: active          # `revoked` keeps the row and its history
+  access: read            # read-only; widening it is a schema change
+  reason: the shared research archive both teams cite
+  granted_by: ana@example.com
+```
+
+Two properties are load-bearing:
+
+* **Nothing is derived.** The scope binder checks *membership* against the
+  rows — no prefix rule, no "same account" inference, and deliberately **no
+  wildcard**. A leak is therefore always a row somebody wrote, which can be
+  listed, diffed and revoked; not a rule nobody can see. (The `*` sentinel that
+  `DNA_TOKEN_SCOPES` honours for a *workspace-less* service credential is
+  refused here by name: in a data row, one typo would grant every scope in the
+  deployment.)
+* **No grant means today's behavior, exactly.** A deployment that writes no
+  rows is unchanged.
+
+Revoking flips `status` to `revoked` rather than deleting the document — the
+evidence that access once existed is the half of an audit trail that matters
+after an incident.
 
 ## Workspaces — collaborative, identity-based tenancy
 

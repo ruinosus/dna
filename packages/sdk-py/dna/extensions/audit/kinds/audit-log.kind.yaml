@@ -28,6 +28,7 @@ spec:
   target_kind: AuditLog
   alias: audit-auditlog
   origin: github.com/ruinosus/dna/audit
+  traits: [record.append-only]
   tenant_scope: tenanted
   plane: record
   prompt_target: false

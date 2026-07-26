@@ -1431,10 +1431,12 @@ async def board_summary_impl(
     }
 
 
-# The SDLC work-item Kinds a board card can point at, probed in this order when
-# the caller does not pin a ``kind`` (Story/Feature dominate the board; the rest
-# are reachable so a drawer over any work item resolves).
-_BOARD_ITEM_KINDS: tuple[str, ...] = ("Story", "Feature", "Epic", "Issue", "Spike")
+# The SDLC work-item Kinds a board card can point at, probed when the caller does
+# not pin a ``kind`` — DERIVED from the ``sdlc.work-item`` trait
+# (``sdlc_family.board_probe_order``). It used to be five names while the gallery
+# walked nine and the digest ten: three lists, one intent. A drawer over Bug /
+# Task / Initiative now resolves because those Kinds DECLARE they are work items,
+# not because somebody remembered this tuple.
 
 
 class BoardItemNotFound(LookupError):
@@ -1482,11 +1484,13 @@ async def board_item_impl(
     drawer. Reuses the SAME ``kernel.get_document`` doc-read primitive
     ``get_adr_impl`` uses (no new query logic): with an explicit ``kind`` it reads
     that one Kind; otherwise it probes the SDLC work-item Kinds
-    (:data:`_BOARD_ITEM_KINDS`) and returns the first match. Tenant-aware — a
+    (``sdlc_family.board_probe_order``) and returns the first match. Tenant-aware — a
     tenant sees the shared base plus its OWN overlay only. Raises
     :class:`BoardItemNotFound` when ``name`` is unknown for this (scope, tenant).
     """
-    candidates = [kind] if kind else list(_BOARD_ITEM_KINDS)
+    from dna.application.sdlc_family import board_probe_order
+
+    candidates = [kind] if kind else list(board_probe_order(live.kernel))
     for k in candidates:
         raw = await live.kernel.get_document(scope, k, name, tenant=tenant)
         if raw is not None:
@@ -1557,19 +1561,53 @@ async def recall_impl(
 
     ``memory_scope="personal"`` recalls the caller's OWN private partition
     (``personal:<oid>``, oid server-derived) unioned with the base ``_lib``
-    defaults — never any workspace's memory (ADR-personal-memory)."""
+    defaults — never any workspace's memory (ADR-personal-memory). **A caller
+    ``scope`` is IGNORED on that branch** — deliberately, and now stated rather
+    than merely true: every personal WRITE lands at ``live.base_scope``, so a
+    personal read that honoured a forwarded workspace scope would target a
+    (scope, partition) pair nothing writes to and return an honest-looking EMPTY
+    result while the user's memories sat elsewhere. The response reports the
+    scope it actually read, so the drop is visible in the result, not only in
+    this docstring.
+
+    **The result reports whether it can see your last write.** ``recall`` is
+    read-your-writes ONLY when the index refresh succeeded: an Engram written a
+    moment ago is invisible to a provider-backed search until it is embedded. A
+    swallowed refresh failure therefore produced a confident, non-``degraded``
+    answer that could not contain the thing the caller had just stored — the one
+    failure a memory system must never report as success. The refresh outcome now
+    joins ``degraded`` / ``semantic`` in the envelope, and a failure sets
+    ``degraded`` too, because that is exactly what it is."""
     from dna.memory import recall
-    from dna.memory.verbs import MEMORY_KINDS
+    from dna.memory.verbs import recallable_kinds
 
     sc, tenant = _resolve_memory_target(live, scope, tenant, memory_scope, oid, family)
+    index_error: str | None = None
+    index_refreshed = False
     if live.provider is not None:
         try:
             from dna.memory import backfill_index
 
-            await backfill_index(live.kernel, sc, kinds=MEMORY_KINDS, tenant=tenant)
-        except Exception:  # noqa: BLE001 — indexing failure degrades to lexical
-            pass
+            await backfill_index(
+                live.kernel, sc, kinds=recallable_kinds(live.kernel), tenant=tenant,
+            )
+            index_refreshed = True
+        except Exception as exc:  # noqa: BLE001 — never break a read
+            index_error = f"{type(exc).__name__}: {exc}"
+            logger.warning(
+                "recall: index refresh failed for scope %s (tenant=%s): %s",
+                sc, tenant, index_error,
+            )
     res = await recall(live.kernel, sc, query, k=k, actor="mcp", tenant=tenant)
+    res = dict(res)
+    res["scope"] = sc
+    res["index_refreshed"] = index_refreshed
+    if index_error is not None:
+        # NOT read-your-writes: anything written since the last successful
+        # refresh cannot be in these results. Say so where the caller already
+        # looks for honesty about the mode.
+        res["degraded"] = True
+        res["index_error"] = index_error
     return res
 
 
@@ -2997,3 +3035,165 @@ def _email_slug(email: str) -> str:
 
     local = (email or "").split("@", 1)[0]
     return re.sub(r"[^a-z0-9]+", "-", local.lower()).strip("-") or "workspace"
+
+
+# ── workspace scope grants (decision B — a multi-scope reach, as DATA) ───────
+#
+# ``LiveDna.scope_is_bound`` allowed a workspace exactly its own scope. These two
+# functions are the DATA half: the rows an operator writes, read back for the
+# binder to VALIDATE against. Nothing here derives a grant — the reach is the set
+# of active rows, so a leak is a row somebody wrote rather than a rule nobody can
+# see. GLOBAL / ``_lib``-direct, like WorkspaceMembership: a rule about the
+# boundary cannot live inside the thing it bounds.
+
+WORKSPACE_SCOPE_GRANT_KIND = "WorkspaceScopeGrant"
+
+
+def scope_grant_name(workspace_id: str, scope: str) -> str:
+    """The document name for one grant — ``<workspace_id>--<scope>``.
+
+    One row per (workspace, scope) pair, so granting and revoking are each ONE
+    document, and the name itself says what it grants."""
+    return f"{workspace_id}--{scope}"
+
+
+async def workspace_granted_scopes(
+    live: LiveDna, workspace_id: str | None,
+) -> frozenset[str]:
+    """The extra scopes ``workspace_id`` may READ — its ACTIVE grant rows.
+
+    Empty for a workspace with no grants, which is what makes this additive: the
+    binder falls through to "your own scope only", exactly as before.
+
+    Fail-CLOSED on a read error. A grant that cannot be read is not a grant: an
+    unreadable ``_lib`` must widen nobody's reach, and the caller still has its
+    own scope. (The Kind being absent from a minimal distribution is the same
+    answer for the same reason — no rows, no extra reach.)"""
+    if not workspace_id:
+        return frozenset()
+    out: set[str] = set()
+    try:
+        async for raw in live.kernel.query(
+            _WORKSPACE_SCOPE, WORKSPACE_SCOPE_GRANT_KIND,
+        ):
+            spec = raw.get("spec") if isinstance(raw, dict) else None
+            if not isinstance(spec, dict):
+                continue
+            if spec.get("workspace_id") != workspace_id:
+                continue
+            if str(spec.get("status") or "active") != "active":
+                continue
+            scope = spec.get("scope")
+            if isinstance(scope, str) and scope.strip():
+                out.add(scope.strip())
+    except Exception as exc:  # noqa: BLE001 — an unreadable grant grants nothing
+        logger.warning(
+            "workspace_granted_scopes: reading %s in %s failed: %s: %s",
+            WORKSPACE_SCOPE_GRANT_KIND, _WORKSPACE_SCOPE, type(exc).__name__, exc,
+        )
+        return frozenset()
+    return frozenset(out)
+
+
+async def grant_workspace_scope_impl(
+    live: LiveDna, *, workspace_id: str, scope: str,
+    reason: str | None = None, granted_by: str | None = None,
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    """Write ONE ``WorkspaceScopeGrant`` row. Idempotent by name.
+
+    Refuses the ``*`` sentinel by name: it is meaningful for a workspace-LESS
+    service credential's env-var grant and meaningless here, and accepting it
+    silently would put an unbounded reach one typo away."""
+    from dna.application.live import SCOPE_GRANT_ALL
+
+    ws = (workspace_id or "").strip()
+    sc = (scope or "").strip()
+    if not ws or not sc:
+        raise ValueError("grant_workspace_scope: workspace_id and scope are required")
+    if sc == SCOPE_GRANT_ALL:
+        raise ValueError(
+            f"{SCOPE_GRANT_ALL!r} is not a grantable scope. A per-workspace grant "
+            f"enumerates the scopes it reaches — a wildcard row would make one "
+            f"typo grant every scope in the deployment, which is precisely what "
+            f"moving grants into auditable data was meant to prevent."
+        )
+    if sc == live.default_scope(ws):
+        raise ValueError(
+            f"workspace {ws!r} already reaches scope {sc!r} — it is its own. A "
+            f"grant row for it would record a permission nothing consults."
+        )
+    stamp = (now or datetime.now(timezone.utc)).isoformat(timespec="seconds")
+    name = scope_grant_name(ws, sc)
+    raw = {
+        "apiVersion": _TENANT_API,
+        "kind": WORKSPACE_SCOPE_GRANT_KIND,
+        "metadata": {"name": name},
+        "spec": {
+            "workspace_id": ws,
+            "scope": sc,
+            "status": "active",
+            "access": "read",
+            "reason": reason,
+            "granted_by": granted_by,
+            "granted_at": stamp,
+        },
+    }
+    await live.kernel.write_document(
+        _WORKSPACE_SCOPE, WORKSPACE_SCOPE_GRANT_KIND, name, raw,
+        invalidate_mode="doc",
+    )
+    return {"workspace_id": ws, "scope": sc, "status": "active", "name": name}
+
+
+async def revoke_workspace_scope_impl(
+    live: LiveDna, *, workspace_id: str, scope: str,
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    """Flip a grant to ``revoked``. The row STAYS — deleting it would erase the
+    evidence that the access ever existed, which is the half of an audit trail
+    that matters after an incident."""
+    name = scope_grant_name((workspace_id or "").strip(), (scope or "").strip())
+    existing = await live.kernel.get_document(
+        _WORKSPACE_SCOPE, WORKSPACE_SCOPE_GRANT_KIND, name,
+    )
+    if existing is None:
+        raise LookupError(
+            f"no scope grant {name!r} — workspace {workspace_id!r} was never "
+            f"granted scope {scope!r}"
+        )
+    spec = dict(existing.get("spec") or {})
+    spec["status"] = "revoked"
+    spec["revoked_at"] = (now or datetime.now(timezone.utc)).isoformat(
+        timespec="seconds")
+    raw = {**existing, "spec": spec}
+    await live.kernel.write_document(
+        _WORKSPACE_SCOPE, WORKSPACE_SCOPE_GRANT_KIND, name, raw,
+        invalidate_mode="doc",
+    )
+    return {"workspace_id": workspace_id, "scope": scope, "status": "revoked"}
+
+
+async def list_workspace_scope_grants_impl(
+    live: LiveDna, *, workspace_id: str | None = None,
+) -> dict[str, Any]:
+    """Every grant row (optionally for one workspace) — the audit read."""
+    rows: list[dict[str, Any]] = []
+    async for raw in live.kernel.query(_WORKSPACE_SCOPE, WORKSPACE_SCOPE_GRANT_KIND):
+        spec = raw.get("spec") if isinstance(raw, dict) else None
+        if not isinstance(spec, dict):
+            continue
+        if workspace_id and spec.get("workspace_id") != workspace_id:
+            continue
+        rows.append({
+            "workspace_id": spec.get("workspace_id"),
+            "scope": spec.get("scope"),
+            "status": spec.get("status") or "active",
+            "access": spec.get("access") or "read",
+            "reason": spec.get("reason"),
+            "granted_by": spec.get("granted_by"),
+            "granted_at": spec.get("granted_at"),
+            "revoked_at": spec.get("revoked_at"),
+        })
+    rows.sort(key=lambda r: (r["workspace_id"] or "", r["scope"] or ""))
+    return {"grants": rows, "count": len(rows)}

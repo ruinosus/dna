@@ -174,7 +174,9 @@ def test_set_status_terminal_stamps_closed_at(dna_dir):
         await W.create_story_impl(
             live, "s-finish-me", feature="f-demo", description="x",
             acceptance_criteria=["a"], definition_of_done=["b"], scope=_SCOPE)
-        await W.set_status_impl(live, "Story", "s-finish-me", "done", scope=_SCOPE)
+        await W.set_status_impl(
+            live, "Story", "s-finish-me", "done", scope=_SCOPE,
+            no_code=True, gate_reason="fixture Story with no code")
         return await live.kernel.get_document(_SCOPE, "Story", "s-finish-me")
 
     doc = asyncio.run(scenario())
@@ -426,7 +428,9 @@ def test_write_tier_create_story_ok(dna_dir, http_server):
             out = await client.call_tool(
                 "create_story",
                 {"name": "s-pro-write", "feature": "f-x",
-                 "description": "the board is writable over MCP", "scope": _SCOPE})
+                 "description": "the board is writable over MCP",
+                 "ac": ["Given X, when Y, then Z"], "dod": ["code+tests"],
+                 "scope": _SCOPE})
             assert out.structured_content["name"] == "s-pro-write"
             listed = await client.call_tool("list_stories", {"scope": _SCOPE})
             names = {s["name"] for s in listed.structured_content["stories"]}

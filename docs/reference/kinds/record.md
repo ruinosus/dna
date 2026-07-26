@@ -1318,3 +1318,24 @@ A WorkspaceMembership maps a verified identity (Entra oid + email + tid) to a wo
 | `status` | string | yes | Invite lifecycle — pending (invited, oid not yet bound) → active (accepted, oid bound). No membership / non-active → no access. |
 | `workspace_id` | string | yes | The workspace this grant is in — the tenant key (matches a Workspace.workspace_id). |
 
+## WorkspaceScopeGrant
+
+- **Alias:** `tenant-workspace-scope-grant`
+- **apiVersion:** `github.com/ruinosus/dna/tenant/v1`
+- **Plane:** record
+
+A WorkspaceScopeGrant records that one workspace may READ one scope that is not its own. It exists so a multi-scope reach is an auditable row rather than a process-wide env var or an inference - the binder validates against the rows and derives nothing, so a leak is always a wrong row somebody wrote. No wildcard - enumerate. GLOBAL declarative data in `_lib`, alongside Workspace and WorkspaceMembership.
+
+**Spec fields**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `access` | string |  | What the grant permits. READ only, and the enum has one member so widening it is a deliberate schema change with a reviewer - a cross-workspace WRITE is a different decision than a cross-workspace read and must not arrive as a value nobody noticed. |
+| `granted_at` | string \| null |  | ISO-8601 timestamp, stamped by the writer. |
+| `granted_by` | string \| null |  | Identity (email / oid) of whoever created the grant. |
+| `reason` | string \| null |  | Why this workspace may reach that scope. Free text, for the human reading the audit six months later. |
+| `revoked_at` | string \| null |  | ISO-8601 timestamp when status flipped to `revoked`. |
+| `scope` | string | yes | The single scope name this row grants. One scope per row on purpose - granting and revoking are then one document each, so an audit reads as a list of facts rather than a diff inside a list. |
+| `status` | string | yes | Only `active` grants anything. Revoking keeps the row (and its history) instead of deleting the evidence that access once existed. |
+| `workspace_id` | string | yes | The workspace this grant is FOR — the caller's resolved workspace_id (matches a Workspace.workspace_id / the tenant key). |
+

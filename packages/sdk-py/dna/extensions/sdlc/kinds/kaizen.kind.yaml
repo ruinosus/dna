@@ -30,6 +30,7 @@ spec:
   target_kind: Kaizen
   alias: sdlc-kaizen
   origin: github.com/ruinosus/dna/sdlc
+  traits: [sdlc.observation, sdlc.filed, sdlc.dated-create-only]
   # SDLC primitives are project-level, not per-tenant.
   tenant_scope: global
   # Record plane — pure typed document: cacheless writes, never composes

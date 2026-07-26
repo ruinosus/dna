@@ -46,7 +46,7 @@ readable, so it is reproduced from source rather than asserted:
 
 ## Logical model — Kinds and their references
 
-77 Kinds are registered. Each is a document, not a table: a
+78 Kinds are registered. Each is a document, not a table: a
 Kind costs a YAML descriptor and zero migrations, which is the point
 of an open type system. The cost is that references between Kinds are
 not database foreign keys — they are fields holding a name.
@@ -65,7 +65,7 @@ would be the whole problem. Four tiers, strongest first:
 
 `*` on a label marks a polymorphic reference (several possible target Kinds).
 
-**111 edges: 15 declared, 66 composition-only, 30 inferred** — plus 20 reference-shaped fields left unresolved and 6 known-undeclarable ones.
+**112 edges: 15 declared, 66 composition-only, 31 inferred** — plus 20 reference-shaped fields left unresolved and 6 known-undeclarable ones.
 
 !!! warning "Only the declared tier cannot dangle"
 
@@ -100,7 +100,7 @@ flowchart LR
     research["research (1 Kind)"]
     sdlc["sdlc (25 Kinds)"]
     soulspec["soulspec (1 Kind)"]
-    tenant["tenant (5 Kinds)"]
+    tenant["tenant (6 Kinds)"]
     testkit["testkit (2 Kinds)"]
     agentskills -->|1| sdlc
     audit -->|2| portfolio
@@ -128,7 +128,7 @@ flowchart LR
 
 ### Detail by group
 
-All 77 Kinds in one diagram is an unreadable hairball, so
+All 78 Kinds in one diagram is an unreadable hairball, so
 each group with at least 2 edges gets its
 own. A group carrying more than 20 edges is
 split again by tier, which keeps the enforced edges legible instead
@@ -356,15 +356,18 @@ erDiagram
     WorkflowEvent }o..|| Feature : "feature_ref (inferred)"
 ```
 
-#### `tenant` (2 edges)
+#### `tenant` (3 edges)
 
 ```mermaid
 erDiagram
     Role
     Tenant
     TenantMembership
+    Workspace
+    WorkspaceScopeGrant
     TenantMembership }o..|| Role : "role (inferred)"
     TenantMembership }o..|| Tenant : "tenant_slug (inferred)"
+    WorkspaceScopeGrant }o..|| Workspace : "workspace_id (inferred)"
 ```
 
 #### `testkit` (2 edges)
@@ -514,6 +517,7 @@ name against the Kind registry — useful, and fallible.
 | `WorkflowEvent` | `actor` | `Actor` | one | yes |
 | `WorkflowEvent` | `epic_ref` | `Epic` | one |  |
 | `WorkflowEvent` | `feature_ref` | `Feature` | one |  |
+| `WorkspaceScopeGrant` | `workspace_id` | `Workspace` | one |  |
 
 ## What this model cannot express
 
@@ -581,12 +585,12 @@ rather than silently dropped, so the suppression is auditable.
 | `Tenant` | `plan` | billing/feature tier (a Tier `tier_id`), not the SDLC `Plan` Kind |
 | `Workspace` | `plan_ref` | DEPRECATED and never read — billing is per ACCOUNT (workspace → account_id → AccountPlan); also not the SDLC `Plan` Kind |
 
-### Kinds with no reference edge (18)
+### Kinds with no reference edge (17)
 
 Standalone documents — configuration, composition-plane behaviour, or
 record Kinds whose links are simply not modelled yet.
 
-`AgentDefinition`, `Automation`, `Canvas`, `Changelog`, `Comment`, `Copilot`, `Genome`, `Hook`, `HtmlArtifact`, `KindNamespace`, `LayerPolicy`, `MCPFederation`, `ModelProfile`, `PricingPlan`, `Setting`, `UserProfile`, `Workspace`, `WorkspaceMembership`
+`AgentDefinition`, `Automation`, `Canvas`, `Changelog`, `Comment`, `Copilot`, `Genome`, `Hook`, `HtmlArtifact`, `KindNamespace`, `LayerPolicy`, `MCPFederation`, `ModelProfile`, `PricingPlan`, `Setting`, `UserProfile`, `WorkspaceMembership`
 
 ## Physical model — the real tables
 

@@ -238,6 +238,41 @@ class DeclarativeKindPort:
         self.OVERLAYABLE_FIELDS: frozenset[str] | None = (
             None if _overlayable is None else frozenset(_overlayable)
         )
+        # ---- Traits + class-parity fields (i-081) ----------------------------
+        # ``traits``: the open participation vocabulary. Same attribute name as
+        # KindBase.traits, so ``kernel.kinds_with_trait`` reads a descriptor
+        # Kind and a hand-written Kind through one getattr.
+        from dna.kernel.kinds.traits import normalize_traits
+
+        self.traits: frozenset[str] = normalize_traits(
+            getattr(spec, "traits", None) or None
+        )
+        # The six flags/values that used to exist ONLY on KindBase. Without
+        # them a YAML-declared Kind could not say what a class says, which is
+        # what kept 26 composition-plane Kinds hand-written and would have made
+        # a tenant-authored Kind permanently second-class.
+        self.is_schema_affecting: bool = bool(
+            getattr(spec, "is_schema_affecting", False)
+        )
+        self.is_catalog_identity: bool = bool(
+            getattr(spec, "is_catalog_identity", False)
+        )
+        self.validate_on_parse: bool = bool(getattr(spec, "validate_on_parse", False))
+        self.marker_shared_allowed: bool = bool(
+            getattr(spec, "marker_shared_allowed", False)
+        )
+        self.visible_in_backend: bool | None = getattr(spec, "visible_in_backend", None)
+        _retention = getattr(spec, "version_retention", None)
+        if _retention is not None:
+            # Only SET when declared: the write pipeline reads
+            # ``getattr(port, "version_retention", None)`` and falls back to the
+            # kernel's curated VERSION_CHURN_KINDS when absent. Setting None
+            # here would be indistinguishable, but setting it unconditionally
+            # invites a later `is not None` check to read "declared".
+            self.version_retention: int = int(_retention)
+        # ``layout_names`` is a METHOD on KindBase, so the descriptor field
+        # becomes a bound list the generated method returns.
+        self._layout_names: list[str] = list(getattr(spec, "layout_names", None) or ())
         # Schema-fragment composition (Story s-workitem-common-schema-fragment
         # re-scoped after architecture review): KindDefinition.spec.schema_fragments
         # is a list of namespaced fragment IDs (e.g. "sdlc/workitem-common").
@@ -350,7 +385,13 @@ class DeclarativeKindPort:
             subschema = props[key]
             if isinstance(subschema, dict):
                 try:
-                    jsonschema.validate(instance=value, schema=subschema)
+                    # Linear-time engine when available (decision C): a
+                    # spec_default is checked against the SAME authored
+                    # subschema — including its `pattern` — that will validate
+                    # every document, so it must run on the same engine.
+                    from dna.kernel.kinds.regex_engine import validate_instance
+
+                    validate_instance(value, subschema)
                 except jsonschema.ValidationError as e:
                     raise ValueError(
                         f"KindDefinition spec_defaults[{key!r}]={value!r} fails "
@@ -399,8 +440,11 @@ class DeclarativeKindPort:
                     "jsonschema is required to validate declarative kinds; "
                     "install with `pip install jsonschema>=4.0`"
                 ) from e
+            # Applied through the linear-time engine when `dna-sdk[re2]` is
+            # present (decision C) — same engine that accepted the pattern.
+            from dna.kernel.kinds.regex_engine import validate_instance
             try:
-                jsonschema.validate(instance=spec, schema=self._json_schema)
+                validate_instance(spec, self._json_schema)
             except jsonschema.ValidationError as e:
                 raise ValueError(
                     f"DeclarativeKind {self.kind!r} spec validation failed: {e.message} "
@@ -615,6 +659,12 @@ class DeclarativeKindPort:
 
     def prompt_template(self) -> str | None:
         return None
+
+    def layout_names(self) -> list[str]:
+        """The prompt layouts documents of this Kind may name (descriptor
+        ``layout_names``). Empty is KindBase's default — a Kind that declares
+        none has no layouts, which is what ``UnknownLayout`` reports."""
+        return list(self._layout_names)
 
     def preview(self, doc: Any) -> list[PreviewBlock]:
         """Preview blocks derived from the kind's JSON schema.

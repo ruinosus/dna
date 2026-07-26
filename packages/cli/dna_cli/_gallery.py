@@ -47,13 +47,18 @@ _TERMINAL_STATUS = {
 # A Story in these states is actively awaiting the delegator's eyes.
 _REVIEW_STATUS = {"review"}
 
-# The work-item Kinds whose produces[] we walk to build the reverse index.
-# (ADR is included even though it is not in _WORK_ITEM_KINDS for `produces
-# add` — an ADR still *produces* the HTML that visualises its decision.)
-WORK_ITEM_KINDS = (
-    "Story", "Feature", "Epic", "Issue", "Spike",
-    "Bug", "Task", "Initiative", "ADR",
-)
+# The work-item Kinds whose produces[] we walk to build the reverse index —
+# DERIVED (`sdlc.work-item` ∪ `sdlc.decision`: an ADR is not assigned to anyone
+# but it still PRODUCES the HTML that visualises its decision). This used to be
+# a literal tuple duplicated byte-for-byte in ``sdlc_cmd._GALLERY_WI_KINDS``,
+# with nothing linking the two; both now resolve through one derivation.
+def _work_item_kinds(kernel: Any = None) -> tuple[str, ...]:
+    from dna.application.sdlc_family import producer_kinds
+
+    return producer_kinds(kernel)
+
+
+WORK_ITEM_KINDS = _work_item_kinds()
 
 # Bucket order = render priority. First match wins when an artifact is
 # produced by more than one work item (rare; explicit produces[] first).

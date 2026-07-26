@@ -148,6 +148,18 @@ class KindBase:
     # covers still-class Kinds as well as descriptor-synthesized ports.
     embed_fields: list[str] | None = None
 
+    # ---- Traits (the open participation vocabulary) ------------------
+    # What this Kind PARTICIPATES in, for questions the kernel itself has no
+    # opinion about: ``sdlc.work-item``, ``memory.recallable``, ... Consumers
+    # ask ``kernel.kinds_with_trait(name)`` instead of carrying a literal
+    # Kind-name list, so adding a Kind to a family is a declaration, not
+    # thirteen edits in thirteen modules.
+    #
+    # Declarable from a descriptor as ``spec.traits`` — see KindDefinitionSpec /
+    # kind-definition.schema.json. The vocabulary is OPEN: an unregistered
+    # trait is legal (dna.kernel.kinds.traits explains why).
+    traits: frozenset[str] = frozenset()
+
     # ---- Optional presentation surface (KindPresentation) ----------
     # Typed home: dna.kernel.protocols.KindPresentation — the
     # capability Protocol for the optional UX/rendering members. These
@@ -239,12 +251,14 @@ class KindBase:
         schema = self.schema()
         if schema is None:
             return
-        import jsonschema  # local import — only loaded when a Kind opts in
+        # Applied through the linear-time engine when `dna-sdk[re2]` is present
+        # (decision C) — same engine that accepted the pattern at author time.
+        from dna.kernel.kinds.regex_engine import validate_instance
         if isinstance(raw, dict) and "apiVersion" in raw and isinstance(raw.get("spec"), dict):
             spec = raw["spec"]
         else:
             spec = raw or {}
-        jsonschema.validate(spec, schema)
+        validate_instance(spec, schema)
 
     def describe(self, doc: Any) -> str | None:
         """One-liner human description for tree views and lists."""

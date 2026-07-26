@@ -44,7 +44,26 @@ PRIORITY_CONSTITUTION = 50
 #: The canonical name `dna specify` writes the constitution Guardrail under.
 _CONSTITUTION_NAME = "speckit-constitution"
 _METHODOLOGY = "spec-kit"
-_GOVERNED_KINDS = {"Story", "Plan"}
+#: The trait a Kind declares to opt into the spec-kit constitution guard —
+#: "a write of this Kind must trace to a Spec when the scope's constitution
+#: demands it". Declared on Story + Plan today; a Kind joins by declaring, not by
+#: being added here.
+TRAIT_GOVERNED = "governance.spec-traced"
+
+#: The kernel-less fallback, held to the declarations by
+#: ``test_sdlc_family_is_declarative``.
+_GOVERNED_KINDS_FALLBACK = frozenset({"Story", "Plan"})
+
+
+def _governed_kinds(kernel: Any) -> frozenset[str]:
+    ask = getattr(kernel, "kinds_with_trait", None)
+    if ask is None:
+        return _GOVERNED_KINDS_FALLBACK
+    try:
+        found = frozenset(ask(TRAIT_GOVERNED))
+    except Exception:  # noqa: BLE001 — a registry that cannot answer says nothing
+        return _GOVERNED_KINDS_FALLBACK
+    return found or _GOVERNED_KINDS_FALLBACK
 
 
 class ConstitutionViolationError(Exception):
@@ -75,7 +94,8 @@ async def spec_kit_constitution_guard(ctx: "PreSaveContext") -> None:
     (tenant-resolved) scope declares ``severity: hard``. Otherwise warn (softer
     severities) or pass (no constitution / not spec-kit / already traceable).
     """
-    if ctx.kind not in _GOVERNED_KINDS or not isinstance(ctx.raw, dict):
+    if (ctx.kind not in _governed_kinds(getattr(ctx, "kernel", None))
+            or not isinstance(ctx.raw, dict)):
         return
     spec = ctx.raw.get("spec")
     if not isinstance(spec, dict) or not _is_spec_kit(ctx.kind, spec):

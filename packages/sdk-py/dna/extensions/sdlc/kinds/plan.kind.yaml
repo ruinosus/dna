@@ -18,6 +18,7 @@ spec:
   target_kind: Plan
   alias: sdlc-plan
   origin: github.com/ruinosus/dna/sdlc
+  traits: [sdlc.dated, governance.spec-traced]
   tenant_scope: global
   plane: record
   prompt_target: false

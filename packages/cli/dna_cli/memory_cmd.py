@@ -38,7 +38,12 @@ import click
 from dna_cli._ctx import dna_session, print_json, print_table
 from dna_cli.recall_cmd import _register_provider
 
-_MEMORY_KINDS = ("Engram", "Research", "Evidence")
+# The click.Choice vocabulary. Imported rather than retyped: this file used to
+# hold a private copy AND import the real MEMORY_KINDS forty lines later —
+# two sources of truth in one module. Option parsing happens at import time,
+# before any kernel exists, so this is the constant (the kernel-less
+# fallback), not the trait-derived answer.
+from dna.memory.verbs import MEMORY_KINDS as _MEMORY_KINDS
 
 #: The mif-memory passthrough Kind's own schema property vocabulary
 #: (packages/sdk-py/dna/extensions/mif/kinds/memory.kind.yaml) — the

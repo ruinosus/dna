@@ -56,6 +56,10 @@ ORIG_NON_INHERITABLE = frozenset({
     # reason Workspace does — the ownership registry is _lib-resident GLOBAL
     # data, read _lib-direct, never surfaced through per-scope inheritance.
     "KindNamespace",
+    # "WorkspaceScopeGrant" (i-081) — same reason again: a grant is _lib-resident
+    # GLOBAL data read _lib-direct. A rule ABOUT the tenancy boundary must not
+    # arrive in a child scope by inheritance.
+    "WorkspaceScopeGrant",
 })
 
 

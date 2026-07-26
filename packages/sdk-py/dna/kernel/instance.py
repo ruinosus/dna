@@ -20,7 +20,12 @@ from typing import Any, TYPE_CHECKING
 
 from dna.kernel.document import Document
 from dna.kernel.preview import PreviewBlock
-from dna.kernel.protocols import CompositionResult, KindPort, SourcePort
+from dna.kernel.protocols import (
+    BOOTSTRAP_KIND_NAMES,
+    CompositionResult,
+    KindPort,
+    SourcePort,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +71,13 @@ class ManifestInstance:
     # Bootstrap kinds — always eager-loaded in the documents list.
     # These are needed by mi.root, mi.kind_for, and the prompt builder
     # before any lazy lookup happens.
-    _BOOTSTRAP_KINDS = frozenset({"Genome", "KindDefinition", "LayerPolicy"})
+    # The ONE definition lives in ``dna.kernel.protocols.BOOTSTRAP_KIND_NAMES``
+    # (the lowest layer that can hold it, and the order-significant one the
+    # loader uses). There were FOUR byte-identical copies of this triple in
+    # the tree; the v1.3 Milestone->Epic rename is the standing proof of what
+    # happens when a Kind list has copies — it updated one and missed another,
+    # and Epic silently inherited across scopes for a release.
+    _BOOTSTRAP_KINDS = frozenset(BOOTSTRAP_KIND_NAMES)
 
     def __init__(
         self,

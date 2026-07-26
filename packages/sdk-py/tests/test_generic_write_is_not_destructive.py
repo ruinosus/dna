@@ -72,6 +72,8 @@ async def _seed_story(live: LiveDna, name: str = "s-one") -> dict[str, Any]:
     await S.create_story(
         live.kernel, _SCOPE, name, feature="f-one", description="d",
         title="T", actor="founder@example.test",
+        acceptance_criteria=["Given a seeded Story, when read, then it exists"],
+        definition_of_done=["seeded"],
     )
     return await live.kernel.get_document(_SCOPE, "Story", name)
 

@@ -249,4 +249,57 @@ def register_document_tools(
             # source / stale if_match — surfaced verbatim, never masked as a 500.
             raise ToolError(f"{type(exc).__name__}: {exc}") from None
 
-    return ["list_kinds", "list_documents", "get_document", "write_document"]
+    @server.tool(run_in_thread=False)
+    async def delete_document(
+        kind: str, name: str, api_version: str,
+        scope: str | None = None, if_match: str | None = None,
+    ) -> dict[str, Any]:
+        """DELETE one document of any Kind. Destructive and not undoable here.
+
+        The MCP face had no delete at all: an agent could create and update every
+        Kind and remove nothing, so undoing a mistaken write needed a human with
+        database access. This is ``kernel.delete_document`` — the same operation
+        ``dna doc delete`` and the REST routes already use — through the same
+        tenancy + quota guard as ``write_document``, and metered as a write.
+
+        ``api_version`` is REQUIRED here, unlike ``write_document`` where the
+        document supplies it. A delete carries no document, and a bare Kind NAME
+        can resolve to two ports once two workspaces each declare a Kind of the
+        same name in their own namespace — so you state which Kind you mean, and
+        that pin travels all the way to the storage adapter.
+
+        ``if_match`` (optional): the ``etag`` from ``get_document``. Pass it and
+        the delete is REFUSED if the document changed since you read it. It
+        matters more here than on a write: a write that races loses one edit, a
+        delete that races destroys a document its author never saw.
+
+        Two Kinds of thing are NEVER deletable here, and ``list_kinds`` reports
+        both per Kind (``deletable`` / ``delete_refusal``) so you can see it
+        before you try:
+
+        * BOOTSTRAP Kinds (Genome / LayerPolicy / KindDefinition) — deleting one
+          is worse than writing a bad one, because a bad Genome is fixed by
+          writing a better Genome while deleting a KindDefinition orphans every
+          document of that Kind with nothing left to name them;
+        * APPEND-ONLY records (AuditLog / Evidence / WorkflowEvent) — the record
+          is the evidence of what happened; supersede it, never delete it.
+
+        A document that is not there is an ERROR, not a quiet success: reporting
+        success for a delete that did nothing is how a caller convinces itself
+        something is gone."""
+        port, tenant = await _guard_for(
+            kind, api_version, scope=scope, family_op="write")
+        try:
+            return await D.delete_document_impl(
+                await live(), kind=port.kind, api_version=port.api_version,
+                name=name, scope=scope, tenant=tenant, if_match=if_match,
+            )
+        except D.DeleteRefused as exc:
+            raise ToolError(str(exc)) from None
+        except WRITE_REFUSALS as exc:
+            raise ToolError(f"{type(exc).__name__}: {exc}") from None
+
+    return [
+        "list_kinds", "list_documents", "get_document", "write_document",
+        "delete_document",
+    ]

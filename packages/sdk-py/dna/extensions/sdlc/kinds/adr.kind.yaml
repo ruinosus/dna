@@ -24,6 +24,7 @@ spec:
   target_kind: ADR
   alias: sdlc-adr
   origin: github.com/ruinosus/dna/sdlc
+  traits: [sdlc.decision, sdlc.dated]
   tenant_scope: global
   plane: record
   prompt_target: false

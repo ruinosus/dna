@@ -182,6 +182,9 @@ class FakeKernel:
     def with_tenant(self, tenant):
         return self
 
+    async def get_document(self, scope, kind, name):
+        return self._store.get((scope, kind, name))
+
     async def write_document(self, scope, kind, name, raw, **_):
         self._store[(scope, kind, name)] = raw
         return "v1"

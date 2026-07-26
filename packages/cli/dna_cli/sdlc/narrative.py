@@ -107,7 +107,11 @@ def cmd_narrative_status(scope: str) -> None:
 
             # Count SDLC events newer than the last narrative.
             event_count = 0
-            for kind in ("Story", "Feature", "Epic", "Issue"):
+            # DERIVED from the `sdlc.work-item` trait: every board Kind with a
+            # timeline counts, not the four somebody happened to type.
+            from dna.application.sdlc_family import work_item_kinds
+
+            for kind in work_item_kinds(s.kernel):
                 try:
                     docs = s.query_list(kind)
                 except Exception:  # noqa: BLE001

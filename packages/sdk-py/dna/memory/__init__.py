@@ -75,6 +75,8 @@ from dna.memory.personal import (
 )
 from dna.memory.verbs import (
     MEMORY_KINDS,
+    TRAIT_RECALLABLE,
+    recallable_kinds,
     backfill_index,
     consolidate,
     forget,
@@ -85,6 +87,8 @@ from dna.memory.verbs import (
 __all__ = [
     # verbs
     "MEMORY_KINDS",
+    "TRAIT_RECALLABLE",
+    "recallable_kinds",
     "remember",
     "recall",
     "forget",

@@ -39,6 +39,8 @@ spec:
   target_kind: Story
   alias: sdlc-story
   origin: github.com/ruinosus/dna/sdlc
+  traits: [sdlc.work-item, sdlc.journey-derived, sdlc.dated,
+           governance.spec-traced, sdlc.exit-criteria-required, sdlc.test-gated]
   tenant_scope: global
   plane: record
   prompt_target: false

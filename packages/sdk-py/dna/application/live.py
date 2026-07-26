@@ -111,6 +111,7 @@ class LiveDna:
         *,
         authenticated: bool = False,
         granted_scopes: Iterable[str] | None = None,
+        workspace_grants: Iterable[str] | None = None,
     ) -> bool:
         """True when an explicitly ``requested`` scope is allowed for this caller.
 
@@ -149,12 +150,49 @@ class LiveDna:
             # Regime 1 — unauthenticated/local. No tenancy exists to bind against.
             return True
         if workspace:
-            # Regime 2 — a resolved workspace may only reach its own scope.
+            # Regime 2 — a resolved workspace reaches its OWN scope, plus any
+            # scope explicitly GRANTED to it by a ``WorkspaceScopeGrant`` row
+            # (``workspace_grants``).
+            #
+            # ``granted_scopes`` — the CREDENTIAL's grant, an operator env var —
+            # is deliberately NOT consulted here, and the two arrive under two
+            # names so they cannot be confused at a call site. They answer
+            # different questions ("what may this token reach" vs "what may this
+            # workspace reach") and ORing them would make a permissive service
+            # token a back door into any workspace's data: the composition bug
+            # a two-mechanism design invites.
+            #
+            # The grant is DATA, and it is checked by membership, never derived:
+            # no prefix rule, no "same account" inference, no wildcard. A leak is
+            # therefore always a row somebody wrote — which can be listed,
+            # diffed and revoked — rather than a rule nobody can see. With no
+            # grants (``granted_scopes`` empty or None) this is byte-for-byte
+            # today's behavior, so nothing changes for a deployment that adds no
+            # rows.
             if not self.vendor_workspace:
                 return True
-            return requested == self.default_scope(workspace)
+            if requested == self.default_scope(workspace):
+                return True
+            return self.workspace_scope_is_granted(requested, workspace_grants)
         # Regime 3 — authenticated but workspace-less: explicit grant, or nothing.
         return self.scope_is_granted(requested, granted_scopes)
+
+    def workspace_scope_is_granted(
+        self, requested: str, granted_scopes: Iterable[str] | None
+    ) -> bool:
+        """True when a ``WorkspaceScopeGrant`` names ``requested`` for this
+        workspace.
+
+        Deliberately NOT :meth:`scope_is_granted`: that one honours
+        :data:`SCOPE_GRANT_ALL` (``"*"``), which is an operator's conscious,
+        process-level opt-out for a service credential with no workspace. A
+        wildcard reaching this path would let ONE data row grant a workspace
+        every scope in the deployment — the exact unbounded blast radius the
+        "grants are rows" design exists to avoid. ``"*"`` here is not a
+        wildcard; it is a scope literally named ``*``, and there isn't one."""
+        if not granted_scopes:
+            return False
+        return requested in frozenset(granted_scopes)
 
     def scope_is_granted(
         self, requested: str, granted_scopes: Iterable[str] | None

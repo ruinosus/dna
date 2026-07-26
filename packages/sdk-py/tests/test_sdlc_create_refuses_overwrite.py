@@ -92,10 +92,12 @@ async def test_the_refusal_points_at_the_update_verbs(kernel):
     """A refusal that does not say what to do instead just makes the agent retry
     with a different guess."""
     await S.create_story(
-        kernel, _SCOPE, "s-one", feature="f-x", description="d")
+        kernel, _SCOPE, "s-one", feature="f-x", description="d",
+        acceptance_criteria=["Given X"], definition_of_done=["done"])
     with pytest.raises(S.DocumentExists) as ei:
         await S.create_story(
-            kernel, _SCOPE, "s-one", feature="f-x", description="d")
+            kernel, _SCOPE, "s-one", feature="f-x", description="d",
+            acceptance_criteria=["Given X"], definition_of_done=["done"])
     msg = str(ei.value)
     assert "set_status" in msg and "comment" in msg
 
@@ -106,9 +108,11 @@ async def test_overwrite_is_reachable_but_only_by_name(kernel):
     backfill / migration), because refusing outright would only push such a
     caller into hand-rolling ``kernel.write_document`` with no timeline at all."""
     await S.create_story(
-        kernel, _SCOPE, "s-one", feature="f-x", description="the old one")
+        kernel, _SCOPE, "s-one", feature="f-x", description="the old one",
+        acceptance_criteria=["Given X"], definition_of_done=["done"])
     await S.create_story(
         kernel, _SCOPE, "s-one", feature="f-x", description="the new one",
+        acceptance_criteria=["Given X"], definition_of_done=["done"],
         overwrite=True)
     spec = (await kernel.get_document(_SCOPE, "Story", "s-one"))["spec"]
     assert spec["description"] == "the new one"

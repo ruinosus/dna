@@ -811,7 +811,15 @@ def cmd_journey_list(parent_ref: str, as_json: bool, scope: str) -> None:
     the same computation the Studio bar renders. Feature/Epic parents
     still list explicit WorkflowEvents (methodology ledger).
     """
-    if parent_ref.split("/", 1)[0] in {"Story", "Spike", "Issue"}:
+    from dna.application.sdlc_family import journey_derived_kinds
+
+    # DECLARED, not listed: a Kind whose journey derives from its own spec +
+    # timeline carries `sdlc.journey-derived`. Feature/Epic parents fall
+    # through to the WorkflowEvent ledger, unchanged. Resolved BEFORE the
+    # session opens (the branch decides whether to open one at all), so it
+    # reads the kernel-less fallback — which the family module holds equal
+    # to the live declarations.
+    if parent_ref.split("/", 1)[0] in journey_derived_kinds(None):
         # Kernel-local derivation — the same journey_derive computation the
         # upstream server route runs (s-journey-derived), no service needed.
         from dataclasses import asdict as _asdict

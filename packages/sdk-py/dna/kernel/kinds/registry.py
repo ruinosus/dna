@@ -183,6 +183,121 @@ EXPLICIT_ALIAS_ALLOWLIST: frozenset[str] = frozenset({
 # ambiguous the moment two api_versions share a kind name).
 KIND_NAME_COLLISION_ALLOWLIST: frozenset[str] = frozenset({"Reference"})
 
+# i-081 item 16 — the alias namespace convention, ENFORCED for descriptors.
+#
+# #244 made a tenant-authored Kind safe by namespacing its ``apiVersion``, and
+# left the ALIAS author-supplied: two tenants can both declare ``alias: deal``,
+# and since a duplicate alias is a registration ERROR, tenant A's Kind then
+# prevents tenant B's from registering at all. Whoever wins also owns the name
+# in every dep_filter, Mustache template and LayerPolicy key. Namespacing the
+# apiVersion and not the alias closes the door and leaves the window open.
+#
+# So a DESCRIPTOR's alias must start with its own ``origin``'s owner token
+# (``github.com/ruinosus/dna/sdlc`` -> ``sdlc-story``). The scope of the rule is
+# deliberate:
+#
+#   * DESCRIPTOR ports only. A descriptor is the tenant-authorable path and the
+#     one that arrives at runtime; a class Kind ships in the distribution and
+#     is reviewed.
+#   * NOTHING is renamed. The alias is a live wire format — dep_filters keys,
+#     Mustache variables, LayerPolicy documents on disk — so rewriting one
+#     breaks documents in the wild. The six builtin descriptors that predate
+#     the rule are allowlisted, exactly as they are.
+#
+# SHRINK-ONLY: never add an entry. A new descriptor names its alias after its
+# own origin, which costs nothing at authoring time and is the entire point.
+DESCRIPTOR_ALIAS_NAMESPACE_ALLOWLIST: frozenset[str] = frozenset({
+    # All three are the `helix` EXTENSION's Kinds, whose `origin` names the
+    # Kind's own domain (.../dna/copilot, .../dna/engram, .../dna/tool) rather
+    # than the extension that ships them. The alias is right and the origin is
+    # right; only the coincidence the rule looks for is missing. `helix-tool` in
+    # particular is a live `dep_filters` key on Agent AND UseCase — renaming it
+    # is a wire-format break to satisfy a naming rule, which is a bad trade.
+    "helix-copilot",
+    "helix-engram",
+    "helix-tool",
+})
+
+
+def alias_owner_tokens(origin: str) -> tuple[str, ...]:
+    """Every token of ``origin`` an alias may legitimately be namespaced to.
+
+    Deliberately GENEROUS: each path segment and each host label, kebab-cased.
+    ``github.com/ruinosus/dna/sdlc`` yields ``github-com``, ``github``, ``com``,
+    ``ruinosus``, ``dna``, ``sdlc`` — so both ``sdlc-story`` (the Kind's own
+    namespace) and ``dna-automation`` (the project that owns it) are legal ways
+    to say "mine".
+
+    Generous is the right shape here. The rule exists to stop a SECOND author
+    claiming a bare name like ``deal``, which is a collision because an alias is
+    unique across the whole registry. It is not a style guide, and narrowing it
+    to "the last segment only" would reject correct aliases while catching
+    nothing extra: what an attacker cannot do is put YOUR origin in THEIR
+    descriptor and have the rest of the system agree."""
+    import re as _re
+
+    tokens: list[str] = []
+    for part in (origin or "").split("/"):
+        part = part.strip()
+        if not part:
+            continue
+        kebab = _re.sub(r"[^a-z0-9]+", "-", part.lower()).strip("-")
+        if kebab:
+            tokens.append(kebab)
+        # A host contributes its labels too: `mif-spec.dev` is owned by `mif`.
+        for label in _re.split(r"[.-]", part.lower()):
+            label = _re.sub(r"[^a-z0-9]+", "", label)
+            if label and label not in tokens:
+                tokens.append(label)
+    return tuple(dict.fromkeys(tokens))
+
+
+def alias_owner_token(origin: str) -> str:
+    """The PREFERRED owner token — the last path segment of ``origin``.
+
+    What :func:`generate_alias` would use, and what a refusal suggests."""
+    tokens = [
+        t for t in (
+            (origin or "").split("/")[-1:] if origin else []
+        )
+    ]
+    from_tail = alias_owner_tokens(tokens[0]) if tokens else ()
+    return from_tail[0] if from_tail else ""
+
+
+def alias_namespace_violation(port: "KindPort") -> str | None:
+    """Why ``port``'s alias breaks the namespace convention, or ``None``.
+
+    Answers only for DESCRIPTOR ports (see the allowlist comment for why)."""
+    if not getattr(port, "__declarative__", False):
+        return None
+    alias = getattr(port, "alias", "") or ""
+    if alias in DESCRIPTOR_ALIAS_NAMESPACE_ALLOWLIST:
+        return None
+    origin = getattr(port, "origin", "")
+    tokens = alias_owner_tokens(origin)
+    if not tokens:
+        return (
+            f"alias {alias!r} cannot be namespace-checked: spec.origin "
+            f"({origin!r}) names no owner. Give the Kind an origin that "
+            f"identifies who owns it."
+        )
+    if any(alias == t or alias.startswith(f"{t}-") for t in tokens):
+        return None
+    preferred = alias_owner_token(origin)
+    return (
+        f"alias {alias!r} does not carry its namespace owner. spec.origin is "
+        f"{origin!r}, so the alias must start with one of "
+        f"{[t + '-' for t in tokens]} — e.g. "
+        f"{generate_alias(preferred, getattr(port, 'kind', 'X'))!r}.\n"
+        f"The apiVersion is namespaced and the alias was not, which leaves the "
+        f"collision open where it does the most damage: an alias is UNIQUE "
+        f"across the registry, so a second author claiming the same bare name "
+        f"cannot register their Kind at all — and whoever registered first owns "
+        f"that name in every dep_filter, Mustache template and LayerPolicy key."
+    )
+
+
 # warn-once cache for ambiguous lookups (module-level on the instance would be
 # fine too, but keep parity with _GLOBAL_KINDDEF_CONFLICT_WARNED's process-wide
 # semantics).
@@ -628,6 +743,16 @@ class KindRegistry:
         # (F3 spec D3) so the per-scope KindDefinition funnel
         # (register_kind_definitions) runs the SAME validation.
         self._lint_plane(k)
+        # i-081 item 16 — a descriptor's alias must carry its namespace owner.
+        # Raised here so BOTH funnels behave as they already do: a builtin
+        # descriptor fails the boot, a per-scope KindDefinition is caught by
+        # ``register_kind_definitions`` and warn-skipped (a user document never
+        # takes the process down).
+        _alias_problem = alias_namespace_violation(k)
+        if _alias_problem is not None:
+            raise KindRegistrationError(
+                f"Kind {getattr(k, 'kind', '?')!r}: {_alias_problem}"
+            )
         sd = getattr(k, "storage", None)
         if sd is not None and getattr(sd, "pattern", None) == StoragePattern.BUNDLE:
             new_pair = (sd.container, sd.marker)

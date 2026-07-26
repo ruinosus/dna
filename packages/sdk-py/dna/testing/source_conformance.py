@@ -338,6 +338,46 @@ async def _case_save_then_visible(ctx: _Ctx) -> None:
     )
 
 
+async def _case_if_absent_is_an_atomic_create(ctx: _Ctx) -> None:
+    """An ``if_absent`` save CLAIMS the name or raises — it never overwrites.
+
+    The conformance case rather than an adapter test because the guarantee is
+    what ``create_issue`` leans on to stop two concurrent files landing on one
+    name: an adapter that declares ``if_absent`` and then upserts anyway would
+    hand back a promise it does not keep, silently, on exactly the path that
+    destroys a document."""
+    from dna.kernel.errors import DocumentNameTaken
+
+    await ctx.seed_fixture()
+    raw = {
+        "apiVersion": "github.com/ruinosus/dna/sdlc/v1", "kind": "Story",
+        "metadata": {"name": "s-kit-claim"},
+        "spec": {"title": "the real one", "priority": 0},
+    }
+    await _aw(ctx.source.save_document(
+        FIXTURE_SCOPE, "Story", "s-kit-claim", raw, if_absent=True))
+    await ctx.publish("Story", "s-kit-claim")
+    intruder = {**raw, "spec": {"title": "a guess", "priority": 0}}
+    try:
+        await _aw(ctx.source.save_document(
+            FIXTURE_SCOPE, "Story", "s-kit-claim", intruder, if_absent=True))
+    except DocumentNameTaken:
+        pass
+    else:  # pragma: no cover — the failure being tested
+        raise AssertionError(
+            "if_absent save over a taken name did NOT raise DocumentNameTaken — "
+            "the adapter declares an atomic create it does not perform"
+        )
+    docs = await _aw(ctx.source.load_all(FIXTURE_SCOPE, None))
+    kept = [d for d in docs if _doc_name(d) == "s-kit-claim"]
+    assert kept, "the claimed document vanished"
+    spec = kept[0].get("spec") if isinstance(kept[0], dict) else {}
+    assert (spec or {}).get("title") == "the real one", (
+        "the refused if_absent write overwrote the document it was refusing to "
+        "replace"
+    )
+
+
 async def _case_delete_removes(ctx: _Ctx) -> None:
     await ctx.seed_fixture()
     await _aw(ctx.source.delete_document(FIXTURE_SCOPE, "Story", "s-alpha"))
@@ -347,6 +387,50 @@ async def _case_delete_removes(ctx: _Ctx) -> None:
     )
 
 
+async def _case_delete_by_api_version_removes(ctx: _Ctx) -> None:
+    """A delete that PINS the Kind must still remove the document (i-081).
+
+    ``api_version`` exists so a delete routes to the exact Kind rather than to
+    whichever port a bare NAME resolves to — two workspaces may each declare a
+    `Deal` under their own namespace. An adapter that declares the kwarg and
+    then routes somewhere else would turn "delete" into a silent no-op the
+    caller is told succeeded, which is why this is a conformance case and not a
+    filesystem test."""
+    await ctx.seed_fixture()
+    await _aw(ctx.source.delete_document(
+        FIXTURE_SCOPE, "Story", "s-alpha",
+        api_version="github.com/ruinosus/dna/sdlc/v1",
+    ))
+    docs = await _aw(ctx.source.load_all(FIXTURE_SCOPE, None))
+    assert "s-alpha" not in {_doc_name(d) for d in docs}, (
+        "delete_document(api_version=...) left the document in place — a "
+        "delete that misses and reports success"
+    )
+
+
+async def _case_delete_missing_raises_not_found(ctx: _Ctx) -> None:
+    """Deleting an absent document raises ``ValueError('not_found')``.
+
+    Two shipped call sites map exactly this to a 404 (the REST memory delete and
+    the member revoke). It was asserted by neither adapter's tests, so an
+    adapter that returned quietly would have turned a 404 into a 200."""
+    await ctx.seed_fixture()
+    try:
+        await _aw(ctx.source.delete_document(
+            FIXTURE_SCOPE, "Story", "s-does-not-exist"))
+    except ValueError as exc:
+        assert "not_found" in str(exc), (
+            f"delete of an absent document raised {exc!r}; callers map the "
+            f"literal 'not_found' to a 404"
+        )
+    else:  # pragma: no cover — the failure being tested
+        raise AssertionError(
+            "delete of an absent document returned quietly — a caller mapping "
+            "'not_found' to a 404 will answer 200 for a document that is not "
+            "there"
+        )
+
+
 async def _case_declared_write_kwargs_accepted(ctx: _Ctx) -> None:
     """Every kwarg the adapter DECLARES in write_kwargs/delete_kwargs must
     be accepted without TypeError — declared-but-rejected is a lie."""
@@ -354,6 +438,10 @@ async def _case_declared_write_kwargs_accepted(ctx: _Ctx) -> None:
     values: dict[str, Any] = {
         "author": "conformance-kit", "tenant": None, "layer": None,
         "write_class": "substantive", "version_retention": None,
+        "api_version": "github.com/ruinosus/dna/sdlc/v1",
+        # False, not True: this case proves the kwarg is ACCEPTED, and the
+        # atomic behaviour has its own case above.
+        "if_absent": False,
     }
     save_kwargs = {k: values[k] for k in ctx.caps.write_kwargs}
     raw = {
@@ -586,7 +674,15 @@ _CASES: list[tuple[str, str, Callable[[_Ctx], Any], Callable[[_Ctx], bool]]] = [
     ("count_total", "capabilities.query_pushdown",
      _case_count_pushdown, lambda c: c.caps.query_pushdown),
     ("save_then_visible", "writable", _case_save_then_visible, _writable),
+    ("if_absent_is_an_atomic_create", "writable",
+     _case_if_absent_is_an_atomic_create,
+     lambda c: c.writable and "if_absent" in c.caps.write_kwargs),
     ("delete_removes", "writable", _case_delete_removes, _writable),
+    ("delete_by_api_version_removes", "writable",
+     _case_delete_by_api_version_removes,
+     lambda c: c.writable and "api_version" in c.caps.delete_kwargs),
+    ("delete_missing_raises_not_found", "writable",
+     _case_delete_missing_raises_not_found, _writable),
     ("declared_write_kwargs_accepted", "writable",
      _case_declared_write_kwargs_accepted,
      lambda c: c.writable and bool(c.caps.write_kwargs or c.caps.delete_kwargs)),

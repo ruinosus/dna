@@ -406,7 +406,9 @@ def export_templates(out_dir, force, as_json, scope) -> None:
         projected.append(rel)
 
     with dna_session(scope) as s:
-        for kind in ("PromptTemplate", "Skill", "Guardrail"):
+        # The same three Kinds `_BODY_FIELD` maps, from ONE table — the loop
+        # and the mapping cannot disagree about which Kinds are exportable.
+        for kind in _BODY_FIELD:
             for doc in s.query_list(kind):
                 name = getattr(doc, "name", None) or (getattr(doc, "metadata", {}) or {}).get("name")
                 if not name or not str(name).startswith("speckit-"):
