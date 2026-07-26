@@ -112,7 +112,7 @@ packages = ["dna_cli"]
 # sibling package (editable), NOT from PyPI — the registry constraint above
 # is what published artifacts carry. Two paths, one name:
 #   dev  (this repo)  → ../sdk-py editable, always current
-#   user (pip/uv add) → PyPI dna-sdk>=0.29,<0.30
+#   user (pip/uv add) → PyPI dna-sdk>=0.30,<0.31
 [tool.uv.sources]
 dna-sdk = { path = "../sdk-py", editable = true }
 
