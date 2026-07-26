@@ -41,6 +41,11 @@ class _FakeKernel:
     def _alias_for(self, kind):
         return f"owner-{kind.lower()}"
 
+    def kind_port_for(self, kind, *, api_version=None):
+        # No registered port → no per-field allowlist (gate 3 is a no-op).
+        # The allowlist itself is covered by test_overlayable_fields.py.
+        return None
+
 
 def _enforcer(non_overlayable=frozenset()):
     return LayerPolicyEnforcer(_FakeKernel(non_overlayable))

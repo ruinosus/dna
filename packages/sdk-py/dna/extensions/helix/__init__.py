@@ -214,8 +214,8 @@ class GenomeKind(KindBase):
 
     Tenant overlay is field-level: only fields in ``OVERLAYABLE_FIELDS``
     accept layer overrides. Identity and versioning are structurally
-    non-overlayable. The kernel enforces this allowlist when resolving
-    layers.
+    non-overlayable. The kernel enforces this allowlist on both policy
+    ports (see the attribute's comment below).
 
     Phase 16 — sole root Kind. Module Kind class is fully deleted.
     """
@@ -239,10 +239,23 @@ class GenomeKind(KindBase):
     prompt_target_priority = 0
     flatten_in_context = False
 
-    # Tenant-overlayable fields. Identity and versioning are NOT here on
-    # purpose: a tenant overlay must not change owner, version, etc.
-    # Kernel enforces this allowlist in ``_apply_package_field_overlay``
-    # (commit 2). For now, the constant exists and tests can read it.
+    # Layer-overlayable fields. Identity and versioning are NOT here on
+    # purpose: an overlay must not change owner, version, etc.
+    #
+    # The kernel enforces this on BOTH policy ports — the write port
+    # (``LayerPolicyEnforcer._check_overlayable_fields``: raises) and the
+    # merge port (``DefaultLayerResolver``: drops the key with a warning).
+    # This comment used to promise enforcement "in
+    # ``_apply_package_field_overlay`` (commit 2)" — a function that never
+    # existed in this codebase, so for its whole life the allowlist was
+    # policy in name only, read by a portal to grey out inputs a direct API
+    # call could still write.
+    #
+    # Note that Genome also declares ``is_overlayable = False`` above, so a
+    # layer write of a Genome is refused by the structural gate before this
+    # allowlist is consulted — it stands as a belt-and-braces declaration of
+    # intent. The live exercise of the mechanism is any Kind declaring
+    # ``overlayable_fields`` in its ``.kind.yaml`` descriptor.
     OVERLAYABLE_FIELDS = frozenset({
         "default_agent",
         "default_llm",

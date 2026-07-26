@@ -339,7 +339,23 @@ async def read_definition_impl(
     overridden = await _tenant_layer_doc_exists(live, scope, tenant, kind, name)
     port = live.kernel.kind_port_for(kind)
     ui_schema = dict(getattr(port, "ui_schema", {}) or {}) if port else {}
-    overlayable = sorted(getattr(port, "OVERLAYABLE_FIELDS", frozenset()) or []) if port else []
+    # ``overlayable_fields`` is the RESOLVED set of fields this tenant may
+    # override, not the raw (and usually absent) declaration. A Kind that
+    # declares ``OVERLAYABLE_FIELDS`` narrows the form to those fields; a Kind
+    # that declares nothing places no per-field restriction, so every field
+    # the form can render is editable. Reporting ``[]`` for the second case —
+    # which is what this returned before the allowlist was enforced — makes a
+    # schema-driven editor disable EVERY input on ~75 of the ~76 Kinds.
+    declared = getattr(port, "OVERLAYABLE_FIELDS", None) if port else None
+    if declared is None:
+        overlayable = sorted(
+            set(ui_schema) | set(effective or {}) | set(base or {})
+        )
+    else:
+        overlayable = sorted(declared)
+    # Whether a layer may fork this Kind AT ALL (``KindPort.is_overlayable``),
+    # which is a different question from which of its fields may change.
+    kind_overlayable = bool(getattr(port, "is_overlayable", True)) if port else False
     # Storage taxonomy — so the editor is honest about planes B/C (bundle files, add).
     storage = getattr(port, "storage", None) if port else None
     pattern = str(getattr(getattr(storage, "pattern", None), "value", getattr(storage, "pattern", "")) or "")
@@ -358,7 +374,7 @@ async def read_definition_impl(
     return {
         "kind": kind, "name": name,
         "overridden": overridden,
-        "overlayable": bool(overlayable),
+        "overlayable": kind_overlayable,
         "effective": effective if effective is not None else (base or {}),
         "base": base,
         "ui_schema": ui_schema,
@@ -373,8 +389,12 @@ async def apply_definition_impl(
     live: LiveDna, *, scope: str, tenant: str, kind: str, name: str, spec: dict[str, Any],
 ) -> dict[str, Any]:
     """Persist a tenant override via a tenant-layer write. The write pipeline's
-    layer-policy check vetoes a LOCKED Kind / non-overlayable field, raising
-    LayerPolicyViolationError (the face maps it to 403)."""
+    layer-policy check vetoes a structurally non-overlayable Kind, a Kind
+    LOCKED/RESTRICTED for this layer by a LayerPolicy doc, and any field
+    outside the Kind's ``OVERLAYABLE_FIELDS`` allowlist whose value would
+    CHANGE — raising LayerPolicyViolationError (the face maps it to 403).
+    Submitting the whole effective spec is fine: a non-allowlisted field
+    written back at its inherited value is not a change."""
     if not (tenant or "").strip():
         raise ValueError("tenant is required to write a definition override")
     api_version = _api_version_for_kind(live, kind)

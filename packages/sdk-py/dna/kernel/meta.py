@@ -229,6 +229,15 @@ class DeclarativeKindPort:
         self.description_fallback_field: str | None = getattr(
             spec, "description_fallback_field", None
         )
+        # ``overlayable_fields`` → ``OVERLAYABLE_FIELDS``, the KindBase
+        # attribute name, so both policy ports read a descriptor Kind and a
+        # hand-written Kind identically. Undeclared stays None = no per-field
+        # restriction; a declared list — including an empty one — is honoured
+        # verbatim.
+        _overlayable = getattr(spec, "overlayable_fields", None)
+        self.OVERLAYABLE_FIELDS: frozenset[str] | None = (
+            None if _overlayable is None else frozenset(_overlayable)
+        )
         # Schema-fragment composition (Story s-workitem-common-schema-fragment
         # re-scoped after architecture review): KindDefinition.spec.schema_fragments
         # is a list of namespaced fragment IDs (e.g. "sdlc/workitem-common").

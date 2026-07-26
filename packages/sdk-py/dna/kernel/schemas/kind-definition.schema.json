@@ -179,6 +179,11 @@
           "default": true,
           "description": "A tenant overlay may fork this Kind (false only for structural bootstrap Kinds)."
         },
+        "overlayable_fields": {
+          "type": ["array", "null"],
+          "items": { "type": "string" },
+          "description": "Per-FIELD refinement of is_overlayable: the top-level spec keys a layer (a tenant overlay, a branch) may CHANGE. Enforced on the WRITE path — a layer write that changes any other key raises LayerPolicyViolationError — and intersected with the operator's LayerPolicy docs, so neither widens the other. Not applied when merging overlays already stored (that would retroactively rewrite existing deployments); it gates what a layer may AUTHOR. Writing a non-listed key back at its base value is not a change and stays allowed. Omit for no per-field restriction (the default: every spec key is overlayable); an explicit [] forbids every field change. Exposed on the port as OVERLAYABLE_FIELDS."
+        },
         "volatile_spec_fields": {
           "type": ["array", "null"],
           "items": { "type": "string" },

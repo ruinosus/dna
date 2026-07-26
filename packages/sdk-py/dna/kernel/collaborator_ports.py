@@ -58,13 +58,18 @@ if TYPE_CHECKING:  # pragma: no cover — typing-only, no runtime import cost
 
 @runtime_checkable
 class KindLookup(Protocol):
-    """Registered-Kind identity, plane, storage descriptor, alias, and the
-    lazy generic reader/writer wiring. Consumed by instance_builder,
-    composition_resolver, bundle_io, source_sync, layer_policy (``_alias_for``)."""
+    """Registered-Kind identity, plane, storage descriptor, alias, port lookup,
+    and the lazy generic reader/writer wiring. Consumed by instance_builder,
+    composition_resolver, bundle_io, source_sync, layer_policy (``_alias_for``
+    plus ``kind_port_for``, to read the Kind's ``OVERLAYABLE_FIELDS``)."""
 
     _kinds: "dict[tuple[str, str], KindPort]"
 
     def kind_plane(self, kind: str, *, api_version: str | None = None) -> str: ...
+
+    def kind_port_for(
+        self, kind: str, *, api_version: str | None = None,
+    ) -> "KindPort | None": ...
 
     def storage_for_kind(self, kind_name: str) -> "StorageDescriptor | None": ...
 
