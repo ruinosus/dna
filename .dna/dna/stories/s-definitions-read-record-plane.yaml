@@ -19,7 +19,7 @@ spec:
   - 'Docs: no public-API surface change; PR states the latency characteristics.'
   definition_of_done_source: claude-code
   created_at: '2026-07-26T05:18:24+00:00'
-  updated_at: '2026-07-26T05:44:40+00:00'
+  updated_at: '2026-07-26T05:47:10+00:00'
   timeline:
   - at: '2026-07-26T05:18:24+00:00'
     actor: claude-code
@@ -53,6 +53,12 @@ spec:
     name: tr-tg-definitions-read-record-plane-20260726-054435
     summary: TestRun tr-tg-definitions-read-record-plane-20260726-054435 → pass
     outcome: pass
+  - at: '2026-07-26T05:47:10+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/236 (base main). Corpo escrito à mão em vez de ''story pr'' porque o gerado não carrega root cause + números de latência, que eram requisito explícito da tarefa.'
+    commit_ref: 00fa17fedbf45645eaafe0ec68d43ae59c637ea7
   produces:
   - kind: Plan
     name: plan-s-definitions-read-record-plane
