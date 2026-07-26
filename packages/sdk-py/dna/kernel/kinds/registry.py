@@ -303,11 +303,40 @@ class KindRegistry:
         alias = getattr(port, "alias", None) if port is not None else None
         return alias if alias else kind.lower()
 
+    def _storage_port(
+        self, kind_name: str, api_version: str | None,
+    ) -> "KindPort | None":
+        """The port to route STORAGE by: exact on ``(api_version, kind)``, then
+        the bare-name lookup as a fallback.
+
+        The two-step is load-bearing in both directions.
+
+        * EXACT first (i-080): two workspaces may each own a Kind called
+          ``Deal`` in their own namespace, and a bare lookup would send both to
+          whichever port resolves — writing one workspace's documents into the
+          directory belonging to the other's Kind.
+        * FALLBACK second: real datasets hold documents whose ``apiVersion`` no
+          longer matches any registered port (legacy variants such as the
+          ``…/cognitive/v1`` Engram the MI builder already compensates for the
+          same way). Exact-only would give those documents NO container and
+          silently relocate them to the scope root, which is a far worse
+          outcome than the ambiguity the exact step is there to avoid."""
+        if api_version is not None:
+            exact = self._kinds.get((api_version, kind_name))
+            if exact is not None:
+                return exact
+            logger.debug(
+                "storage routing: no Kind registered for (%r, %r) — falling "
+                "back to the bare-name lookup (legacy apiVersion variant).",
+                api_version, kind_name,
+            )
+        return self.port_for(kind_name)
+
     def container_for(
         self, kind_name: str, *, api_version: str | None = None,
     ) -> "str | None":
         """Return the storage container directory for a kind, or None."""
-        kp = self.port_for(kind_name, api_version=api_version)
+        kp = self._storage_port(kind_name, api_version)
         if kp is None:
             return None
         sd = getattr(kp, "storage", None)
@@ -317,7 +346,7 @@ class KindRegistry:
         self, kind_name: str, *, api_version: str | None = None,
     ) -> "StorageDescriptor | None":
         """Return the StorageDescriptor for a kind, or None if unknown."""
-        kp = self.port_for(kind_name, api_version=api_version)
+        kp = self._storage_port(kind_name, api_version)
         return getattr(kp, "storage", None) if kp is not None else None
 
     def by_container(self, container: str) -> "str | None":

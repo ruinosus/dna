@@ -74,6 +74,10 @@ class RegistryAccessor:
     # memberships are: the tenancy boundary cannot live inside a tenant. Same
     # _lib-direct rationale.
     _WORKSPACE_REGISTRY_SCOPE = SYSTEM_SCOPE
+    # KindNamespace (namespace→workspace ownership, i-080) is GLOBAL for the
+    # same reason again: a namespace is owned ABOVE any one workspace, and the
+    # write path in EVERY scope consults it. Same _lib-direct rationale.
+    _KIND_NAMESPACE_REGISTRY_SCOPE = SYSTEM_SCOPE
 
     def __init__(self, kernel: "RegistryAccessorHost") -> None:
         self._k = kernel
@@ -302,6 +306,32 @@ class RegistryAccessor:
         except Exception as e:  # noqa: BLE001
             logger.warning("workspaces: registry query failed: %s", e)
             return []
+
+    async def kind_namespaces(self) -> list[dict]:
+        """Every ``KindNamespace`` claim from the _lib registry (i-080).
+
+        Returns the RAW DICT rows (callers read ``r["spec"]["namespace"]`` /
+        ``["owner"]``) — the full, unfiltered set; the ownership verdict is
+        computed in pure core (``kinds/namespaces.owner_of``).
+
+        **The one accessor here that does NOT fail soft.** Every other read on
+        this class degrades to ``None``/``[]`` because a missing profile means
+        "no profile". A missing CLAIM does not mean "no owner" — it is
+        indistinguishable, at this level, from "the registry is unreadable",
+        and the caller's verdict differs completely between the two: an empty
+        registry is a legitimate state (nobody has claimed anything yet, so
+        nothing may be declared), while an unreadable one must refuse rather
+        than pretend. So the exception PROPAGATES and
+        ``NamespaceOwnershipGate`` turns it into an explicit refusal that says
+        which of the two happened.
+
+        _lib-direct — KindNamespace is GLOBAL and NOT in ``_INHERITABLE_KINDS``,
+        so a per-scope query would silently no-op."""
+        return [
+            r async for r in self._k.query(
+                self._KIND_NAMESPACE_REGISTRY_SCOPE, "KindNamespace"
+            )
+        ]
 
     async def voice_policy(self, name: str = "default") -> dict | None:
         """Resolve a VoicePolicy from the _lib registry by metadata name.

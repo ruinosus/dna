@@ -191,8 +191,12 @@ class TestNonOverlayableKindsAllowlist:
     def test_module_constant_contains_expected_kinds(self) -> None:
         # Now a DERIVED instance property (s-kernel-kindport-classification-attrs):
         # read it off a fully-loaded kernel instead of the class.
+        # "KindNamespace" joined the set on i-080 — the namespace→workspace
+        # ownership record declares ``is_overlayable: false``, so no layer may
+        # fork it and the generic write path refuses it. Same class of Kind as
+        # the other three: it declares the FRAME, not content inside it.
         assert Kernel.auto()._NON_OVERLAYABLE_KINDS == frozenset(
-            {"Genome", "KindDefinition", "LayerPolicy"}
+            {"Genome", "KindDefinition", "LayerPolicy", "KindNamespace"}
         )
 
     @pytest.mark.asyncio

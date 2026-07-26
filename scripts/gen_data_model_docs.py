@@ -112,6 +112,11 @@ INFERENCE_DENYLIST: dict[tuple[str, str], str] = {
         "the request identity string from claims (email/sub, or 'dev-user'), "
         "not a reference to an `Actor` document"
     ),
+    ("Memory", "namespace"): (
+        "MIF's hierarchical memory scope path (`_semantic/decisions`, §10) — a "
+        "string axis inside the document, not the `KindNamespace` Kind, whose "
+        "alias `tenant-kind-namespace` merely ends in the same token"
+    ),
 }
 
 # --- known-undeclarable references -------------------------------------------

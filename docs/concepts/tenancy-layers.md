@@ -61,6 +61,7 @@ it with its own Kinds under the `tenant/v1` namespace:
 | `TenantMembership` | `github.com/ruinosus/dna/tenant/v1` | Who belongs to which tenant |
 | `Workspace` | `github.com/ruinosus/dna/tenant/v1` | A named, collaborative tenancy space (alias `tenant-workspace`) |
 | `WorkspaceMembership` | `github.com/ruinosus/dna/tenant/v1` | An identity's role in a `Workspace` (alias `tenant-workspace-membership`) |
+| `KindNamespace` | `github.com/ruinosus/dna/tenant/v1` | Which workspace owns which `apiVersion` namespace (alias `tenant-kind-namespace`) |
 
 Because tenant is a kernel dimension rather than a naming convention, a
 tenant overlay for one scope does not leak into another — the base for a
@@ -318,6 +319,52 @@ Three things worth knowing before you reach for it:
 - **It gates authoring, not composition.** The check runs on the write path.
   Overlay documents already stored are merged as written — enforcing the list
   on merge would retroactively rewrite content nobody edited.
+
+## Namespaces — who may declare a Kind
+
+A Kind's identity is the pair `(apiVersion, kind)`: both halves are the
+registry key. So when a workspace authors its own Kind, the `apiVersion` is
+what keeps it apart from everyone else's — two workspaces declaring `Deal`
+under one `apiVersion` are *the same Kind*, and the second one's documents
+would be validated against the first one's schema.
+
+DNA therefore gives a workspace its own `apiVersion` **namespace**, and the
+namespace is a **claimed, owned name** — `acme.example/v1`, not
+`tenant.<workspace-id>/v1`. The distinction matters because the `apiVersion`
+participates in the identity of every document: baking a database id into it
+would mean renaming, migrating or consolidating a workspace changes the
+identity of everything that workspace owns. A namespace is what every API
+versioning scheme already uses — the organisation's name, not its row id.
+
+A **`KindNamespace`** document records one claim: a namespace and the
+`workspace_id` that owns it. Three rules follow from it, all enforced on the
+write path (the same boundary as `LayerPolicy`, so one gate governs both):
+
+- **A claim is a prefix.** Claiming `acme.example` covers `acme.example/v1`,
+  `acme.example/v2` and `acme.example/crm/v1`. The most specific claim wins, so
+  delegating a sub-namespace is a longer claim. One workspace may own several
+  namespaces; two workspaces may never own one — two conflicting claims refuse
+  every write under that namespace rather than picking a winner.
+- **Reserved namespaces are not a list.** A namespace is reserved when a Kind
+  registered *from code* already lives in it — so `github.com/ruinosus/dna/**`
+  and every standard DNA consumes byte-faithful under its owner's name
+  (`agents.md`, `agentskills.io`, `soulspec.org`, `presidio`, `mif-spec.dev`)
+  are protected the day their Kind registers. Nothing to maintain, nothing to
+  drift. Per-scope Kinds reserve nothing, or the first Kind a workspace declared
+  would lock its own owner out of the second.
+- **Unclaimed is refused, not first-come.** A workspace that has claimed
+  nothing cannot declare a Kind anywhere. Who owns a name stays a recorded
+  decision instead of a race between writers.
+
+The check applies to *declaring* a Kind (writing a `KindDefinition`), never to
+using one — writing a `Story` under the `sdlc` namespace is ordinary traffic. A
+refusal is a `NamespaceOwnershipError`, a `LayerPolicyViolationError` (HTTP
+403) that names which namespace, which owner and why.
+
+`KindNamespace` is GLOBAL, `_lib`-resident and non-overlayable: the claim
+registry sits *above* any single workspace, so no layer may fork it and the
+generic write-any-document path refuses it. Claiming is a provisioning act,
+like minting a workspace id.
 
 ## The maxim: inheritable ⇒ never per-tenant-only
 

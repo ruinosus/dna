@@ -608,6 +608,23 @@ A Kaizen is a continuous-improvement observation noticed while working on someth
 | `updated_at` | string |  |  |
 | `work_item` | string |  | Kind/slug of the work item where this was observed (polymorphic — Story/Spike/Issue). |
 
+## KindNamespace
+
+- **Alias:** `tenant-kind-namespace`
+- **apiVersion:** `github.com/ruinosus/dna/tenant/v1`
+- **Plane:** record
+
+A KindNamespace records that a workspace owns an apiVersion namespace — the claim the write path checks before letting anyone declare a Kind in it. The namespace is a claimed NAME (`acme.example`), never the workspace id, because the apiVersion participates in every document's identity and a database id baked into it would make renaming a workspace rewrite the identity of everything it owns. Claims are prefixes and the most specific one wins; a namespace already occupied by a Kind registered from code is RESERVED and cannot be claimed at all. GLOBAL declarative data in `_lib`.
+
+**Spec fields**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `claimed_at` | string | yes | When the namespace was claimed (ISO 8601). The audit trail is the reason a claim is a document rather than a config entry. |
+| `namespace` | string | yes | The apiVersion PREFIX being claimed — everything before the version segment (`acme.example` claims `acme.example/v1`; a claim is a prefix, so it also covers `acme.example/crm/v1`). Never contains a version and never ends in `/`. |
+| `notes` | string \| null |  | Free-form operator note — why this namespace was granted, the ticket it came from. Never read by the enforcement path. |
+| `owner` | string | yes | The `workspace_id` of the workspace that owns this namespace. OPAQUE — matched whole, never parsed. It is the same value the kernel `tenant` column carries for that workspace, which is what lets the write path compare a writer to an owner without a lookup. |
+
 ## Membership
 
 - **Alias:** `portfolio-membership`

@@ -177,13 +177,24 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
         if not getattr(self, "_readers", None):
             self._readers = list(kernel._readers)
 
-    def _subdir_for(self, kind: str) -> str | None:
+    def _subdir_for(
+        self, kind: str, *, api_version: str | None = None,
+    ) -> str | None:
         """Resolve the on-disk subdirectory for a kind via the kernel's
         registered StorageDescriptor.
 
         Returns ``None`` when the kind resolves to an empty container
         (ROOT pattern, e.g. Module) or is not registered at all —
         meaning the caller writes at the scope root.
+
+        ``api_version`` resolves the Kind EXACTLY (i-080). Two workspaces may
+        each declare a ``Deal`` in their own namespace — that is what
+        namespacing the apiVersion is FOR — and a bare-name lookup then routes
+        both to whichever port the registry resolves, so one workspace's
+        documents land in the directory belonging to the other's Kind. The save
+        path holds the document and therefore its apiVersion, so it passes it;
+        ``None`` keeps the old bare behaviour for callers that genuinely have
+        no document in hand.
 
         Raises ``RuntimeError`` when no kernel has been bound yet: the
         adapter cannot route kinds without a StorageDescriptor registry.
@@ -194,7 +205,7 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
                 "kernel= at construction or call set_kernel(k) before "
                 "save_document/delete_document."
             )
-        sd = self._kernel.storage_for_kind(kind)
+        sd = self._kernel.storage_for_kind(kind, api_version=api_version)
         if sd is None:
             return None
         return sd.container or None
@@ -267,7 +278,9 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
         # emits no events, so it accepts and ignores it. (s-buswrite-class-substantive-cue)
         _validate_layer_segments(layer)
         _validate_tenant_path(tenant)
-        subdir = self._subdir_for(kind)
+        # i-080: route by the DOCUMENT's own apiVersion, not by the bare Kind
+        # name — two workspaces may each own a Kind called `Deal`.
+        subdir = self._subdir_for(kind, api_version=raw.get("apiVersion"))
         scope_dir = self._target_dir(scope, layer, tenant=tenant)
 
         # Phase 9c — root kinds (Module today) live at <scope_dir>/manifest.yaml
@@ -368,6 +381,16 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
         # Phase 2b: tenant routes to dedicated layout (see save_document).
         _validate_layer_segments(layer)
         _validate_tenant_path(tenant)
+        # i-080 residual: a DELETE carries no document, so there is no
+        # apiVersion to route by and this stays a bare-name lookup. When two
+        # workspaces own a Kind of the same name, deleting one workspace's
+        # document may look inside the other Kind's container and find nothing
+        # — a delete that MISSES, never one that hits the wrong document (the
+        # SCOPE, not the container, is the isolation boundary). Closing it means
+        # threading ``api_version`` through ``WritableSourcePort.delete_document``,
+        # i.e. a port-contract change across every adapter and the conformance
+        # kit. The bare lookup now at least WARNS on the ambiguity
+        # (``KindRegistry.port_for``).
         subdir = self._subdir_for(kind)
         scope_dir = self._target_dir(scope, layer, tenant=tenant)
 
