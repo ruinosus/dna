@@ -1,7 +1,7 @@
 apiVersion: github.com/ruinosus/dna/sdlc/v1
 kind: Issue
 metadata:
-  name: i-076-rest-definition-writes-are-unmetered
+  name: i-077-rest-definition-writes-are-unmetered
 spec:
   description: 'The REST face''s definition write routes (PUT/DELETE /v1/definitions/{kind}/{name}, and the bundle-entry write/revert twins) carry dependencies=guarded (authn) but never call _plan_gate — unlike every memory route, which does. So an authenticated caller on ANY tier can write a tenant-layer definition override over REST with no feature-family gate, no mode gate and no quota counted. Found while adding the generic MCP document tools (s-mcp-generic-document-tools): the MCP generic write is metered as definitions and requires definitions_mode=write, so the two faces now disagree — and the unmetered one is the permissive one. Fix: call _plan_gate(request, tenant=tenant, family=''definitions'', family_op=''write'') on those routes, through the same shared enforce_plan core the MCP guard uses.'
   type: bug

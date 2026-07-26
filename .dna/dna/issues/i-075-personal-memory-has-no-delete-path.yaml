@@ -1,0 +1,36 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-075-personal-memory-has-no-delete-path
+spec:
+  description: A particao pessoal de memoria pode ser escrita mas nunca apagada — forget e tenant-overlay-only, entao um Engram personal=true so some por decaimento de retention
+  type: bug
+  severity: high
+  status: open
+  timeline:
+  - at: '2026-07-26T03:51:40+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
+  - at: '2026-07-26T03:52:05+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: |-
+      Medido por um cliente MCP real (Claude) contra a porta publicada do DNA Cloud, 26/07/2026.
+
+      Comportamento: forget num Engram de workspace devolve forgotten:true; o MESMO forget num Engram criado com personal=true devolve forgotten:false. A ferramenta e descrita como 'tenant-scoped, your own overlay only', e a memoria pessoal vive na particao identity-keyed (personal:<oid> / personal:workos:<sub>), fora de qualquer overlay de tenant. Nao ha nenhuma outra ferramenta MCP que alcance essa particao.
+
+      Consequencia: um Engram pessoal e gravavel e NAO e apagavel pelo produto. O unico caminho e o decaimento de retention (observado funcionando: 1.0 em 25/07 -> 0.9782 em 26/07), ou seja, ele some quando o modelo decide, nao quando a pessoa decide.
+
+      Por que isto e mais que uma assimetria de API:
+      - A memoria pessoal e explicitamente vendida como 'seu contexto te acompanha em qualquer cliente' — ela e, por desenho, o dado MAIS pessoal do sistema, e e o unico sem caminho de remocao.
+      - Poder criar e nao poder apagar e um problema de direito sobre o proprio dado, nao de conveniencia. Qualquer regime de protecao de dados trata remocao como direito do titular, e 'espere o decaimento' nao e uma resposta.
+      - A assimetria e invisivel: forget ACEITA a chamada e responde forgotten:false, sem dizer que aquela particao esta fora do seu alcance. O usuario acredita ter apagado.
+
+      Duas perguntas de desenho, nesta ordem:
+      1. forget deve ganhar o eixo personal, como recall/remember/list ja tem? A simetria sugere que sim — as outras quatro ferramentas de memoria todas tem o flag.
+      2. Se a resposta for nao (por INV-PERSONAL ou outra invariante), entao forget precisa NEGAR alto quando o alvo esta na particao pessoal, em vez de devolver forgotten:false — hoje ele mente por omissao.
+
+      Mesmo que (1) demore, (2) e barato e para a mentira.
