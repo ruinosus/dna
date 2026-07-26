@@ -5,7 +5,7 @@ metadata:
 spec:
   title: Every work-item write path stamps the spec fields a read surface dates by — Issu
   description: Every work-item write path stamps the spec fields a read surface dates by — Issue was invisible in the digest's 'found' bucket because build_issue_spec and cmd_issue_file never wrote created_at (i-078). Fix at the source, backfill the existing boards, and add a guard so the class cannot recur.
-  status: in-progress
+  status: review
   feature: f-sdlc-digest
   acceptance_criteria:
   - Given an Issue filed via the MCP create_issue tool or the dna sdlc issue file CLI, When it is written, Then spec.created_at and spec.updated_at are stamped and a title may be supplied
@@ -16,7 +16,7 @@ spec:
   - code+tests (RED then GREEN)+guard proven to bite+docs regenerated+both boards backfilled+PRs opened in dna and dna-cloud
   definition_of_done_source: cli-create
   created_at: '2026-07-26T12:03:41+00:00'
-  updated_at: '2026-07-26T12:33:42+00:00'
+  updated_at: '2026-07-26T12:40:16+00:00'
   timeline:
   - at: '2026-07-26T12:03:41+00:00'
     actor: claude-code
@@ -56,6 +56,17 @@ spec:
     name: tr-tg-dated-spec-fields-20260726-123337
     summary: TestRun tr-tg-dated-spec-fields-20260726-123337 → pass
     outcome: pass
+  - at: '2026-07-26T12:40:09+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: PR https://github.com/ruinosus/dna/pull/241 (fix + guard + backfill verb + board data) e o par de dados em https://github.com/ruinosus/dna-cloud/pull/153 (77 docs, 51 Issues). sdk-py 3685 passed, cli 1173 passed com 1 falha pre-existente (test_mcp_quota postgres store). Guard provado mordendo e revertido. Digest found 0->11 no dna, 0->51 no dna-cloud.
+  - at: '2026-07-26T12:40:16+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
   produces:
   - kind: Plan
     name: plan-s-stamp-dated-spec-fields
