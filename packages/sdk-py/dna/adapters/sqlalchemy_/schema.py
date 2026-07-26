@@ -184,13 +184,24 @@ def build_metadata(*, is_pg: bool, schema: str | None = None) -> Tables:
         f"{p}documents", md,
         sa.Column("scope", sa.Text, primary_key=True, nullable=False),
         sa.Column("kind", sa.Text, primary_key=True, nullable=False),
+        # A Kind's identity is (apiVersion, kind) — that is the registry key,
+        # and tenant-authored Kinds depend on it: two workspaces may each
+        # declare a `Deal` under their own namespace. Keying rows on the bare
+        # Kind NAME made those two indistinguishable HERE, so a save silently
+        # overwrote and a delete silently reached into the other Kind's rows.
+        # In the PK on both dialects (revision 0003_api_version_identity).
+        # ``''`` is not a default apiVersion: it is the recorded fact that the
+        # stored document declares none (see the revision's backfill).
+        sa.Column("api_version", sa.Text, primary_key=True, nullable=False,
+                  server_default=sa.text("''")),
         sa.Column("name", sa.Text, primary_key=True, nullable=False),
         sa.Column("content", sa.Text, nullable=False),
         sa.Column("version", sa.Integer, nullable=False,
                   server_default=sa.text("1")),
         sa.Column("updated_at", sa.Text, nullable=False),
         doc_tenant,
-        sa.Index(f"{p}documents_tenant_idx", "tenant", "scope", "kind", "name"),
+        sa.Index(f"{p}documents_tenant_idx", "tenant", "scope", "kind",
+                 "api_version", "name"),
     )
 
     versions = sa.Table(
@@ -205,6 +216,11 @@ def build_metadata(*, is_pg: bool, schema: str | None = None) -> Tables:
                   nullable=not is_pg),
         sa.Column("scope", sa.Text, nullable=False),
         sa.Column("kind", sa.Text, nullable=False),
+        # Same identity widening as `documents`. `versions` has no business
+        # primary key (``id`` is a surrogate), so the column carries its weight
+        # through the indexes below and the semver uniqueness index.
+        sa.Column("api_version", sa.Text, nullable=False,
+                  server_default=sa.text("''")),
         sa.Column("name", sa.Text, nullable=False),
         sa.Column("content", sa.Text, nullable=False),
         sa.Column("version", sa.Integer, nullable=False),
@@ -229,12 +245,17 @@ def build_metadata(*, is_pg: bool, schema: str | None = None) -> Tables:
     )
     if is_pg:
         versions.append_constraint(
-            sa.Index(f"{p}versions_tenant_idx", "tenant", "scope", "kind", "name")
+            sa.Index(f"{p}versions_tenant_idx", "tenant", "scope", "kind",
+                     "api_version", "name")
         )
 
     bundle_cols: list[sa.Column] = [
         sa.Column("scope", sa.Text, primary_key=True, nullable=False),
         sa.Column("kind", sa.Text, primary_key=True, nullable=False),
+        # A bundle entry belongs to a document, hence to that document's Kind:
+        # without this the two `Deal`s' entries collide on one row.
+        sa.Column("api_version", sa.Text, primary_key=True, nullable=False,
+                  server_default=sa.text("''")),
         sa.Column("name", sa.Text, primary_key=True, nullable=False),
         sa.Column("entry_path", sa.Text, primary_key=True, nullable=False),
         sa.Column("content", sa.Text, nullable=False),
@@ -249,8 +270,10 @@ def build_metadata(*, is_pg: bool, schema: str | None = None) -> Tables:
         bundle_cols.append(sa.Column("content_binary", sa.LargeBinary, nullable=True))
     bundle_entries = sa.Table(
         f"{p}bundle_entries", md, *bundle_cols,
-        sa.Index(f"{p}bundle_entries_scope_kind_idx", "scope", "kind"),
-        sa.Index(f"{p}bundle_entries_tenant_idx", "tenant", "scope", "kind"),
+        sa.Index(f"{p}bundle_entries_scope_kind_idx", "scope", "kind",
+                 "api_version"),
+        sa.Index(f"{p}bundle_entries_tenant_idx", "tenant", "scope", "kind",
+                 "api_version"),
     )
 
     layer_documents = sa.Table(

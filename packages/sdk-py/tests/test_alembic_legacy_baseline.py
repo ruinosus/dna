@@ -40,6 +40,30 @@ def _legacy_sqlite_control(conn, version: int | None) -> None:
             )
 
 
+async def _build_pre_alembic_sqlite(db) -> None:
+    """A database in exactly the state the retired v1..8 ladder left it.
+
+    Built by running the schema up to ``BASELINE_REVISION`` — NOT to head —
+    and then swapping ``alembic_version`` for the retired control table. The
+    baseline is the frozen equivalent of the ladder's final state; every
+    revision after it is work a real legacy database has never seen, so
+    building at head and calling the result "legacy" would hand the stamp path
+    a database that is already ahead of where it claims to be (and the next
+    revision to ALTER an existing table would then fail on a duplicate).
+    """
+    from alembic import command
+
+    from dna.adapters.sqlalchemy_.migrate import build_config
+
+    eng = sa.create_engine(f"sqlite:///{db}")
+    with eng.begin() as c:
+        command.upgrade(build_config(None, connection=c), BASELINE_REVISION)
+    with eng.begin() as c:
+        c.exec_driver_sql("DROP TABLE alembic_version")
+        _legacy_sqlite_control(c, LEGACY_HEAD["sqlite"])
+    eng.dispose()
+
+
 def _head_revision() -> str:
     """The ladder's current head.
 
@@ -72,19 +96,9 @@ async def test_fully_migrated_legacy_sqlite_db_is_stamped_not_remigrated(tmp_pat
     from dna.adapters.sqlalchemy_ import SqlAlchemySource
 
     db = tmp_path / "legacy.db"
-    # Build the real pre-Alembic schema by running the baseline, then swap
-    # the control table for the retired one at its final version. That is
-    # byte-for-byte the state a v1..8 database is in (proven equivalent in
-    # the i-038 schema comparison).
-    src = SqlAlchemySource(f"sqlite+aiosqlite:///{db}")
-    await src.connect()
-    await src.close()
-
-    eng = sa.create_engine(f"sqlite:///{db}")
-    with eng.begin() as c:
-        c.exec_driver_sql("DROP TABLE alembic_version")
-        _legacy_sqlite_control(c, LEGACY_HEAD["sqlite"])
-    eng.dispose()
+    # Byte-for-byte the state a v1..8 database is in (proven equivalent in the
+    # i-038 schema comparison).
+    await _build_pre_alembic_sqlite(db)
 
     src = SqlAlchemySource(f"sqlite+aiosqlite:///{db}")
     applied = await src.run_schema_migrations()
@@ -145,15 +159,7 @@ async def test_stamped_database_then_boots_idempotently(tmp_path):
     from dna.adapters.sqlalchemy_ import SqlAlchemySource
 
     db = tmp_path / "reboot.db"
-    src = SqlAlchemySource(f"sqlite+aiosqlite:///{db}")
-    await src.connect()
-    await src.close()
-
-    eng = sa.create_engine(f"sqlite:///{db}")
-    with eng.begin() as c:
-        c.exec_driver_sql("DROP TABLE alembic_version")
-        _legacy_sqlite_control(c, LEGACY_HEAD["sqlite"])
-    eng.dispose()
+    await _build_pre_alembic_sqlite(db)
 
     # First boot after the stamp: adopt Alembic and come forward to head
     # (without replaying the baseline).

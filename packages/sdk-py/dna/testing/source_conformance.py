@@ -408,6 +408,60 @@ async def _case_delete_by_api_version_removes(ctx: _Ctx) -> None:
     )
 
 
+async def _case_two_kinds_one_name_stay_apart(ctx: _Ctx) -> None:
+    """Two Kinds sharing a NAME are two documents, not one.
+
+    A Kind is identified by ``(apiVersion, kind)``: two workspaces may each
+    declare a ``Deal`` under their own namespace, and a store that declares
+    ``api_version_identity`` says its row key carries that identity. If it does
+    not, the second save OVERWRITES the first — silently, with no error either
+    workspace can see — and the pinned delete the port already offers has
+    nothing to aim at.
+
+    Gated on the capability rather than run everywhere, because the adapters
+    genuinely differ: a filesystem store's identity is its path, and the path's
+    container comes from the kernel's StorageDescriptor registry, so two Kinds
+    are distinct on disk only insofar as the registry makes them so. Stating
+    that difference is the kit's job; hiding it is not.
+    """
+    await ctx.seed_fixture()
+    ns_a, ns_b = "a.conformance.example/v1", "b.conformance.example/v1"
+
+    def deal(api_version: str, title: str) -> dict[str, Any]:
+        return {
+            "apiVersion": api_version, "kind": "Deal",
+            "metadata": {"name": "d-kit"}, "spec": {"title": title},
+        }
+
+    await _aw(ctx.source.save_document(
+        FIXTURE_SCOPE, "Deal", "d-kit", deal(ns_a, "the A one")))
+    await _aw(ctx.source.save_document(
+        FIXTURE_SCOPE, "Deal", "d-kit", deal(ns_b, "the B one")))
+
+    docs = await _aw(ctx.source.load_all(FIXTURE_SCOPE))
+    deals = {d["apiVersion"] for d in docs if d.get("kind") == "Deal"}
+    assert deals == {ns_a, ns_b}, (
+        f"the scope holds Deals under {sorted(deals)}; expected both {ns_a} "
+        f"and {ns_b} — the second save overwrote the first, so the two Kinds "
+        "share one row"
+    )
+
+    one = await _aw(ctx.source.load_one(
+        FIXTURE_SCOPE, "Deal", "d-kit", api_version=ns_a))
+    assert one is not None and one["spec"]["title"] == "the A one", (
+        "load_one pinned to one apiVersion did not return that Kind's document"
+    )
+
+    await _aw(ctx.source.delete_document(
+        FIXTURE_SCOPE, "Deal", "d-kit", api_version=ns_a))
+    docs = await _aw(ctx.source.load_all(FIXTURE_SCOPE))
+    survivors = {d["apiVersion"] for d in docs if d.get("kind") == "Deal"}
+    assert survivors == {ns_b}, (
+        f"after deleting the {ns_a} Deal the survivors are {sorted(survivors)} "
+        "— the pinned delete either missed or took both Kinds"
+    )
+
+
 async def _case_delete_missing_raises_not_found(ctx: _Ctx) -> None:
     """Deleting an absent document raises ``ValueError('not_found')``.
 
@@ -681,6 +735,10 @@ _CASES: list[tuple[str, str, Callable[[_Ctx], Any], Callable[[_Ctx], bool]]] = [
     ("delete_by_api_version_removes", "writable",
      _case_delete_by_api_version_removes,
      lambda c: c.writable and "api_version" in c.caps.delete_kwargs),
+    ("two_kinds_one_name_stay_apart",
+     "writable + capabilities.api_version_identity",
+     _case_two_kinds_one_name_stay_apart,
+     lambda c: c.writable and c.caps.api_version_identity),
     ("delete_missing_raises_not_found", "writable",
      _case_delete_missing_raises_not_found, _writable),
     ("declared_write_kwargs_accepted", "writable",

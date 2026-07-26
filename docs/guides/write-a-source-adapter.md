@@ -213,6 +213,20 @@ The kit's `capabilities_declared_honestly` case asserts your declaration
 matches the reflection oracle (`derive_capabilities`) — a declaration
 that overclaims or underclaims fails.
 
+One capability is about your STORAGE MODEL rather than a method you
+implement: **`api_version_identity`**. A Kind is identified by
+`(apiVersion, kind)`, so two workspaces may each declare a `Deal` under
+their own namespace. Declare it when your row key carries that identity —
+`(scope, kind, apiVersion, name)` — so both documents can exist at once
+and a caller can ask for one of them; the oracle derives it from
+`load_one` accepting `api_version`. The built-in SQL adapter declares it.
+The filesystem adapter does NOT: a document's path is
+`<container>/<name>`, and the container comes from the kernel's
+`StorageDescriptor` registry, so two Kinds are distinct on disk only
+insofar as the registry gives them distinct containers. Neither answer is
+wrong; declaring it is what keeps the difference visible, and the kit's
+`two_kinds_one_name_stay_apart` case runs only for adapters that claim it.
+
 ### 3. Pass the boot gate
 
 `kernel.source(src)` validates the CORE surface by name

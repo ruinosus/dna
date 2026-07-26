@@ -373,6 +373,10 @@
         },
         {
           "py": "delete_kwargs"
+        },
+        {
+          "py": "api_version_identity",
+          "note": "The row key carries the Kind's own identity (scope, kind, apiVersion, name), so two Kinds sharing a name coexist and load_one/delete_document can be pinned to one of them. An adapter whose identity is registry-mediated — the filesystem path's container — declares False."
         }
       ]
     },
