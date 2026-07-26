@@ -51,6 +51,56 @@ VALID_ISSUE_TYPE = ("bug", "enhancement", "question", "task")
 VALID_ISSUE_SEVERITY = ("low", "medium", "high", "critical")
 VALID_PRIORITIES = ("highest", "high", "medium", "low", "lowest")
 
+# The spec fields a READ surface dates, sorts or filters a board document by —
+# the contract every write path owes the readers, per Kind.
+#
+# It exists because the reverse held for Issue and nobody noticed (i-078):
+# ``build_issue_spec`` never stamped ``created_at``, the Issue Kind's schema
+# declared it, and ``_digest.build_digest`` dates a filed Issue BY it —
+# ``parse_iso_utc(None)`` → ``_in_window`` False → **no Issue ever reached the
+# digest's ``found`` bucket**, permanently, in every window. A field that lives
+# in the schema and the reader but in no writer is invisible until someone
+# spends a session bisecting a digest.
+#
+# This is not documentation. ``_digest.build_digest`` reads a document's date
+# THROUGH this mapping, and two guard suites hold every write path to it:
+# ``packages/sdk-py/tests/test_dated_spec_fields.py`` (the pure builders below)
+# and ``packages/cli/tests/test_dated_spec_fields_cli.py`` (every
+# ``dna sdlc … create`` verb, which hand-builds its own specs). Adding a Kind
+# here without covering it in the CLI guard fails that suite by design.
+#
+# Who reads what, as of i-078:
+#   * ``created_at`` — ``_digest.build_digest`` (ADR → ``decided``; Kaizen +
+#     Issue → ``found``), ``dna.extensions.sdlc.journey_derive`` (the first
+#     phase of the derived journey for Story / Issue / Spike / Plan),
+#     ``dna_cli.sdlc.narrative`` (recency sort, after ``closed_at`` /
+#     ``updated_at``).
+#   * ``updated_at`` — ``dna_cli.sdlc.narrative`` recency sort; the board's
+#     "last touched" everywhere a document has not closed yet.
+#
+# Read-dated Kinds whose writers live OUTSIDE this core are deliberately absent
+# and were audited clean at i-078: ``Engram`` (``created_at``, stamped by
+# ``dna.memory.verbs.remember``), ``StatusReport`` (``generated_at``, stamped by
+# the digest's own writer) and ``AgentSession`` (``started_at``, whose capture
+# surface is a host-platform adapter that does not ship in this distribution).
+DATED_SPEC_FIELDS: dict[str, tuple[str, ...]] = {
+    "Story": ("created_at", "updated_at"),
+    "Issue": ("created_at", "updated_at"),
+    "Feature": ("created_at", "updated_at"),
+    "Epic": ("created_at", "updated_at"),
+    "Initiative": ("created_at", "updated_at"),
+    "Spike": ("created_at", "updated_at"),
+    "Bug": ("created_at", "updated_at"),
+    "Task": ("created_at", "updated_at"),
+    "ADR": ("created_at", "updated_at"),
+    "Spec": ("created_at", "updated_at"),
+    "Plan": ("created_at", "updated_at"),
+    # A Kaizen is an observation, not a work item — it has no `updated_at`
+    # arc; `kaizen route` / `resolve` stamp one on transition, the create does
+    # not, and no reader asks for it on a freshly observed Kaizen.
+    "Kaizen": ("created_at",),
+}
+
 # The valid target-status set per board Kind — the ``set_status`` tool refuses a
 # transition to any status outside its Kind's enum (the "don't allow invalid
 # transitions" invariant). Kept as a mapping so the tool is Kind-generic.
@@ -119,6 +169,105 @@ def append_event(
             entry[k] = v
     timeline.append(entry)
     spec["timeline"] = timeline
+
+
+def _timeline_stamps(spec: dict[str, Any]) -> list[str]:
+    """Every usable ``at`` on ``spec.timeline``, unordered."""
+    return [
+        ev["at"]
+        for ev in (spec.get("timeline") or [])
+        if isinstance(ev, dict) and isinstance(ev.get("at"), str) and ev["at"]
+    ]
+
+
+def earliest_timeline_at(spec: dict[str, Any]) -> str | None:
+    """The ``at`` of the earliest event on ``spec.timeline`` — ``None`` if the
+    timeline is empty or carries no usable stamp.
+
+    The honest stand-in for a ``created_at`` that was never written (i-078).
+    Every board write path appends a ``status_change`` event as the FIRST thing
+    it does, so the earliest ``at`` is the moment the document entered the
+    board — recorded by the writer itself, not inferred after the fact. Pure:
+    the caller decides what to do when it returns ``None``.
+
+    Deliberately takes the MINIMUM rather than ``timeline[0]``: the list is
+    append-ordered in practice, but a hand-edited or merged board can reorder
+    it, and the earliest stamp is the claim we actually want to make."""
+    stamps = _timeline_stamps(spec)
+    return min(stamps) if stamps else None
+
+
+def latest_timeline_at(spec: dict[str, Any]) -> str | None:
+    """The ``at`` of the most recent timeline event — the honest stand-in for a
+    missing ``updated_at`` (the last time the document demonstrably moved)."""
+    stamps = _timeline_stamps(spec)
+    return max(stamps) if stamps else None
+
+
+def backfill_created_at(spec: dict[str, Any]) -> bool:
+    """Self-heal a legacy document's missing ``created_at`` in place, from its
+    own timeline. Returns True when it stamped something.
+
+    Called on every load-modify-write (``set_status`` / ``add_comment``) so a
+    document filed before the i-078 fix repairs itself the next time anybody
+    touches it. It NEVER falls back to "now": that would date a months-old
+    Issue as filed today and pollute every future digest window — the exact
+    dishonesty the backfill exists to avoid. No timeline, no stamp."""
+    if spec.get("created_at"):
+        return False
+    first = earliest_timeline_at(spec)
+    if not first:
+        return False
+    spec["created_at"] = first
+    return True
+
+
+def plan_date_repair(
+    kind: str, spec: dict[str, Any], *,
+    git_added_at: str | None = None, git_touched_at: str | None = None,
+) -> tuple[dict[str, str], str]:
+    """Decide the honest repair for one already-written document.
+
+    Returns ``(fields_to_stamp, provenance)``; ``fields_to_stamp`` is empty
+    unless the document is genuinely missing something :data:`DATED_SPEC_FIELDS`
+    declares for its Kind. Pure — the caller supplies the git signals and does
+    the writing (``dna sdlc backfill-dates``).
+
+    The date is taken from the closest available witness to the event:
+
+    1. ``timeline`` — the document's OWN record, appended by the create path at
+       create time. Nothing is closer.
+    2. ``git_added_at`` — the commit that ADDED the file to the board. An
+       external witness, typically the same day, and verifiable by anyone with
+       the repo.
+    3. nothing → provenance ``undatable``, and the document is left alone.
+
+    ``now`` is deliberately NOT on that list. Stamping today's date on 51
+    Issues would make them all look filed today, put them all in the current
+    digest window, and hide them from every window they actually belong to —
+    a louder version of the bug this repairs (i-078). An undated document that
+    says so is honest; a confidently wrong date is not.
+    """
+    declared = DATED_SPEC_FIELDS.get(kind, ())
+    missing = [field for field in declared if not spec.get(field)]
+    if not missing:
+        return {}, "complete"
+
+    created = earliest_timeline_at(spec)
+    provenance = "timeline"
+    if not created:
+        created, provenance = git_added_at, "git"
+    if not created:
+        return {}, "undatable"
+
+    fields: dict[str, str] = {}
+    if "created_at" in missing:
+        fields["created_at"] = created
+    if "updated_at" in missing:
+        # The last movement the document can prove; a document that never moved
+        # was last updated when it was created.
+        fields["updated_at"] = latest_timeline_at(spec) or git_touched_at or created
+    return fields, provenance
 
 
 def next_issue_number(existing_names: list[str]) -> int:
@@ -207,24 +356,38 @@ def build_story_spec(
 
 def build_issue_spec(
     *, description: str, issue_type: str = "bug", severity: str = "medium",
-    status: str = "open", owner: str | None = None,
+    status: str = "open", title: str | None = None, owner: str | None = None,
     related_feature: str | None = None, related_finding: str | None = None,
     now: str, actor: str, source: str,
 ) -> dict[str, Any]:
-    """Build an Issue ``spec`` (type/severity/status + initial timeline event) —
-    the shape ``dna sdlc issue file`` writes."""
-    spec: dict[str, Any] = {
+    """Build an Issue ``spec`` (type/severity/status, created/updated stamps,
+    initial timeline event) — the exact shape ``dna sdlc issue file`` writes.
+
+    ``title`` is optional and NOT synthesized when absent: the Issue schema does
+    not require one and every read surface already falls back to the description
+    (``_digest._title``), so fabricating ``description[:80]`` would only write
+    the description twice under two keys.
+
+    The ``created_at`` / ``updated_at`` stamps are not cosmetic (i-078): the
+    digest dates a filed Issue by ``created_at``, so an Issue without one never
+    reaches its ``found`` bucket in any window. See :data:`DATED_SPEC_FIELDS`."""
+    spec: dict[str, Any] = {}
+    if title:
+        spec["title"] = title
+    spec.update({
         "description": description,
         "type": issue_type,
         "severity": severity,
         "status": status,
-    }
+    })
     if owner:
         spec["owner"] = owner
     if related_feature:
         spec["related_feature"] = related_feature
     if related_finding:
         spec["related_finding"] = related_finding
+    spec["created_at"] = now
+    spec["updated_at"] = now
     append_event(spec, "status_change", to=status, now=now, actor=actor, source=source)
     return spec
 
@@ -301,6 +464,7 @@ async def create_story(
 async def create_issue(
     kernel: Any, scope: str, slug: str, *, description: str,
     issue_type: str = "bug", severity: str = "medium",
+    title: str | None = None,
     related_feature: str | None = None, owner: str | None = None,
     actor: str = "mcp", source: str = "mcp",
     now: datetime | None = None,
@@ -317,7 +481,7 @@ async def create_issue(
     ni = now_iso(now)
     spec = build_issue_spec(
         description=description, issue_type=issue_type, severity=severity,
-        owner=owner, related_feature=related_feature,
+        title=title, owner=owner, related_feature=related_feature,
         now=ni, actor=actor, source=source,
     )
     raw = build_raw("Issue", name, spec)
@@ -366,6 +530,7 @@ async def set_status(
     spec = dict(existing.get("spec") or {}) if isinstance(existing, dict) else {}
     prev = spec.get("status")
     ni = now_iso(now)
+    backfill_created_at(spec)   # legacy docs self-heal from their own timeline
     spec["status"] = status
     spec["updated_at"] = ni
     if status in _TERMINAL_STATUS:
@@ -403,6 +568,7 @@ async def add_comment(
         raise LookupError(f"{kind} {name!r} not found in scope {scope!r}")
     spec = dict(existing.get("spec") or {}) if isinstance(existing, dict) else {}
     ni = now_iso(now)
+    backfill_created_at(spec)   # legacy docs self-heal from their own timeline
     append_event(spec, et, summary=body, now=ni, actor=actor, source=source)
     spec["updated_at"] = ni
     raw = build_raw(kind, name, spec)
@@ -441,14 +607,16 @@ async def create_story_impl(
 
 async def create_issue_impl(
     live: LiveDna, slug: str, *, description: str, issue_type: str = "bug",
-    severity: str = "medium", related_feature: str | None = None,
+    severity: str = "medium", title: str | None = None,
+    related_feature: str | None = None,
     scope: str | None = None, tenant: str | None = None, actor: str = "mcp",
 ) -> dict[str, Any]:
     """LiveDna wrapper for :func:`create_issue`."""
     sc = scope or live.default_scope(tenant)
     return await create_issue(
         live.kernel, sc, slug, description=description, issue_type=issue_type,
-        severity=severity, related_feature=related_feature, actor=actor,
+        severity=severity, title=title, related_feature=related_feature,
+        actor=actor,
     )
 
 

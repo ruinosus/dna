@@ -26,6 +26,8 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+from dna.application.sdlc import DATED_SPEC_FIELDS
+
 
 # ─── window parsing ───────────────────────────────────────────────────
 
@@ -121,6 +123,19 @@ def _title(spec: dict[str, Any], name: str) -> str:
 
 def _in_window(at: datetime | None, since: datetime, until: datetime) -> bool:
     return at is not None and since <= at <= until
+
+
+def _creation_field(kind: str) -> str:
+    """The spec field this digest dates a *newly filed* ``kind`` by.
+
+    Read through ``dna.application.sdlc.DATED_SPEC_FIELDS`` on purpose: that
+    registry is what the write-path guards enforce, so a Kind can only be dated
+    here by a field some builder is held to stamping. When the two drifted
+    apart — the reader wanting ``created_at``, no Issue writer producing it —
+    every filed Issue silently missed the ``found`` bucket (i-078). Kinds
+    outside the registry keep the historical default."""
+    fields = DATED_SPEC_FIELDS.get(kind)
+    return fields[0] if fields else "created_at"
 
 
 def _blocked_reason(spec: dict[str, Any]) -> str:
@@ -231,7 +246,7 @@ def build_digest(
         title = _title(spec, name)
         key = f"{kind}/{name}"
         status = spec.get("status")
-        created = parse_iso_utc(spec.get("created_at"))
+        created = parse_iso_utc(spec.get(_creation_field(kind)))
 
         # ── doc-level windowed signals ──
         if kind == "ADR" and _in_window(created, since, until):

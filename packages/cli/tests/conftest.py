@@ -151,6 +151,111 @@ def _isolated_sdlc_scope(monkeypatch):
     monkeypatch.setenv("DNA_SDLC_SCOPE", "dna-development")
 
 
+# --- Fake kernel session for `dna sdlc` write verbs ------------------------
+#
+# REAL creates against an in-memory store: the fake session is INJECTED through
+# the click context (``obj={SESSION_PROVIDER_KEY: fake}``, f-cli-session-injection)
+# — no reaching inside command modules. The write path (spec assembly, timeline
+# stamping, ``_build_raw``) runs for real; only the kernel boundary is faked.
+#
+# Lived in ``test_sdlc_workitem_cli.py`` until the dated-spec-field guard
+# (i-078) needed the same harness; hoisted here rather than copy-pasted.
+
+
+class FakeDocView:
+    def __init__(self, raw: dict):
+        self._raw = raw
+        self.name = raw.get("metadata", {}).get("name")
+        self.kind = raw.get("kind")
+        self.spec = raw.get("spec") or {}
+
+
+class FakeKernel:
+    """Records write_document calls into the shared store."""
+
+    def __init__(self, store: dict):
+        self._store = store
+        # doc_cmd._stamp_created_at_if_in_schema walks kernel._kinds; empty
+        # dict makes it a no-op (returns early), which is fine for the test.
+        self._kinds: dict = {}
+
+    def with_tenant(self, tenant):
+        return self
+
+    async def write_document(self, scope, kind, name, raw, **_):
+        self._store[(scope, kind, name)] = raw
+        return "v1"
+
+
+class FakeSession:
+    """Drop-in for ClientSession backed by an in-memory dict store."""
+
+    def __init__(self, store: dict, scope: str):
+        self._store = store
+        self.scope = scope
+        self.kernel = FakeKernel(store)
+        self.holder = type("_H", (), {"reload": lambda self: None})()
+
+    def get_doc(self, kind, name, *, tenant=None):
+        raw = self._store.get((self.scope, kind, name))
+        return FakeDocView(raw) if raw is not None else None
+
+    def query_list(self, kind, *, tenant=None):
+        return [
+            FakeDocView(raw)
+            for (sc, kd, _nm), raw in self._store.items()
+            if sc == self.scope and kd == kind
+        ]
+
+    def run(self, coro):
+        import asyncio
+
+        # Use a throwaway loop and tear it down cleanly so we don't pollute
+        # the process-global current-loop (other test files' fakes call
+        # asyncio.get_event_loop() and break on a leaked/half-open loop).
+        loop = asyncio.new_event_loop()
+        try:
+            return loop.run_until_complete(coro)
+        finally:
+            loop.close()
+
+
+@pytest.fixture
+def store():
+    """The in-memory backing dict the fake session reads/writes."""
+    return {}
+
+
+@pytest.fixture
+def session_obj(store):
+    """The ctx.obj to inject: a session factory over the backing store."""
+    from dna_cli._ctx import SESSION_PROVIDER_KEY
+
+    @contextlib.contextmanager
+    def _fake(scope=None, *, tenant=None, timeout=30.0):
+        yield FakeSession(store, scope or "dna-development")
+
+    return {SESSION_PROVIDER_KEY: _fake}
+
+
+@pytest.fixture
+def sdlc_runner(session_obj):
+    """CliRunner whose invokes carry the injected session by default.
+
+    An explicit ``obj=`` at a call site wins (setdefault) — used by tests
+    that build their own fake.
+    """
+    r = CliRunner()
+    _orig = r.invoke
+
+    def _invoke(*args, **kwargs):
+        kwargs.setdefault("obj", session_obj)
+        return _orig(*args, **kwargs)
+
+    r.invoke = _invoke  # type: ignore[method-assign]
+    return r
+
+
 # --- MCP HTTP harness (transport + auth stories) ---------------------------
 #
 # Run a built FastMCP server over a REAL Streamable-HTTP socket (uvicorn on a

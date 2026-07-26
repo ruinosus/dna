@@ -45,7 +45,7 @@ DNA stores, plus resources:
 - _Write_ (the dogfood loop — an agent creates + manages the board over its own
   interface): `create_story(name, feature, description, title?, priority?,
   labels?, ac?, dod?, scope?)` · `create_issue(slug, description, type?,
-  severity?, feature?, scope?)` · `set_status(kind, name, status, reason?,
+  severity?, title?, feature?, scope?)` · `set_status(kind, name, status, reason?,
   scope?)` · `comment(kind, name, body, type?, scope?)` · `create_feature(name,
   title, description, epic?, priority?, labels?, scope?)`.
 

@@ -62,6 +62,7 @@ from dna.application.sdlc import (  # noqa: E402, F401 — enums re-exported for
     VALID_PRIORITIES,
     VALID_STORY_STATUS,
     append_event as _core_append_event,
+    build_issue_spec as _core_build_issue_spec,
     build_raw as _core_build_raw,
     next_issue_number as _core_next_issue_number,
 )
@@ -2415,32 +2416,34 @@ def issue_group() -> None:
     type=click.Choice(VALID_ISSUE_SEVERITY), default="medium",
 )
 @click.option("--desc", "description", required=True)
+@click.option("--title", default=None,
+              help="Short Jira-style title shown on cards. Omitted from the "
+                   "doc when absent — every read surface already falls back "
+                   "to --desc.")
 @click.option("--owner", default=None)
 @click.option("--related-feature", default=None, help="Feature name (optional).")
 @click.option("--related-finding", default=None, help="Finding name (optional, eval-derived).")
 @_scope_option
 def cmd_issue_file(
     slug: str, issue_type: str, severity: str, description: str,
-    owner: str | None, related_feature: str | None, related_finding: str | None,
+    title: str | None, owner: str | None,
+    related_feature: str | None, related_finding: str | None,
     scope: str,
 ) -> None:
     """File a new Issue with auto-incremented i-NNN-<slug> name."""
     n = _next_issue_number(scope)
     name = f"i-{n:03d}-{slug}"
-    spec: dict[str, Any] = {
-        "description": description,
-        "type": issue_type,
-        "severity": severity,
-        "status": "open",
-    }
-    if owner:
-        spec["owner"] = owner
-    if related_feature:
-        spec["related_feature"] = related_feature
-    if related_finding:
-        spec["related_finding"] = related_finding
-    # v1.6: timeline event for the file (no `from`, status set to open).
-    _append_timeline(spec, "status_change", to="open")
+    # ONE builder for both faces (i-078). This command used to hand-assemble a
+    # spec that looked identical to `build_issue_spec`'s and diverged from it
+    # in the one field that mattered: neither stamped `created_at`, so fixing
+    # only the MCP tool would have left the CLI filing Issues the digest can
+    # never see. The shared core is the write path now.
+    spec = _core_build_issue_spec(
+        description=description, issue_type=issue_type, severity=severity,
+        status="open", title=title, owner=owner,
+        related_feature=related_feature, related_finding=related_finding,
+        now=_now_iso(), actor=_cli_actor(), source="cli",
+    )
 
     raw = _build_raw("Issue", name, spec)
     with open_session(scope) as s:
@@ -3078,6 +3081,14 @@ from dna_cli.sdlc.reference import (  # noqa: E402, F401 — re-exported for bac
     cmd_reference_show,
     cmd_uncite,
     reference_group,
+)
+
+
+# ─── backfill-dates — repair pre-i-078 documents ──────────────────────
+# Importing the module REGISTERS the command on the shared root.
+
+from dna_cli.sdlc.backfill_dates import (  # noqa: E402, F401 — re-exported for back-compat
+    cmd_backfill_dates,
 )
 
 
