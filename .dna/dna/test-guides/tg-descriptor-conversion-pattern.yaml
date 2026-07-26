@@ -1,0 +1,23 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-descriptor-conversion-pattern
+spec:
+  description: Prove the four descriptor-backed Kinds are byte-for-byte equivalent to the classes they replace, and that the equivalence guard actually bites.
+  kind_of_test: manual
+  status: active
+  steps:
+  - action: cd packages/sdk-py && .venv/bin/python -m pytest tests/test_descriptor_pattern_equivalence.py -q
+    expected: 79 passed — surface identical to the pre-conversion goldens, canonical digest unmoved
+  - action: perturb story.kind.yaml (drop dep_filters.owner) + plan.kind.yaml (truncate 80->40)
+    expected: 2 failed — test_dep_filters_match_golden[Story], test_summary_matches_golden_on_every_case[Plan]; restore -> 79 passed
+  - action: cd packages/sdk-py && .venv/bin/python -m pytest tests -q --timeout=180
+    expected: 3657 passed, 1 pre-existing failure (test_claude_export_roundtrip, semantic recall)
+  - action: cd packages/cli && .venv/bin/python -m pytest tests -q
+    expected: 1128 passed, 1 pre-existing failure (test_mcp_quota postgres store)
+  - action: python3 scripts/gen_kinds_docs.py --check + brand_guard + docs_coverage_guard + data_model_guard
+    expected: all clean, zero docs diff
+  verifies:
+  - Story/s-descriptor-conversion-pattern
+  created_at: '2026-07-26T08:10:37+00:00'
+  updated_at: '2026-07-26T08:10:37+00:00'

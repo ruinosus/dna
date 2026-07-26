@@ -15,7 +15,7 @@ spec:
   - code + equivalence goldens + regenerated kind docs + ratchet allowlist shrunk + full suites green in sdk-py and cli
   definition_of_done_source: cli-create
   created_at: '2026-07-26T07:31:39+00:00'
-  updated_at: '2026-07-26T07:31:59+00:00'
+  updated_at: '2026-07-26T08:10:52+00:00'
   timeline:
   - at: '2026-07-26T07:31:39+00:00'
     actor: claude-code
@@ -28,8 +28,37 @@ spec:
     source: cli
     from: todo
     to: in-progress
+  - at: '2026-07-26T08:10:09+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'Escolha dos 4 (spread deliberado, nao os 4 mais faceis): Comment = o mais simples E a unica extensao sem loop load_descriptors; Plan = dep_filters reais + storage BUNDLE + truncate; Story = o carro-chefe (248 linhas), o campo ui: (D1) e o schema montado a partir dos helpers VIVOS; Reference = o esquisito. ACHADO 1: a alegacao do censo (''nada que o descriptor nao expresse'') NAO e literalmente verdadeira — Reference tem to_card, que o formato nao tem campo pra dizer (dead code, dropado com precedente). ACHADO 2: 5 dos 23 (Bug, Task, Spike, Initiative, UserRoleAssignment) NAO tem summary override, entao herdam o eco do spec inteiro do KindBase — o port declarativo devolve None quando summary nao e declarado, e nav.py/navigator.py/compose/resolver.py CONSOMEM kp.summary(). Converter esses 5 muda payload; nao sao byte-for-byte. ACHADO 3: schema_fragments FUNCIONA e e a chave — Story puxa timeline/produces dos helpers vivos via o fragmento novo sdlc/work-item-activity, o que responde a objecao Tier-2 registrada contra sdlc-spike. Bug de ordem corrigido: o fragmento era registrado DEPOIS do loop de descriptors e DeclarativeKindPort pula ID desconhecido em silencio.'
+    commit_ref: db958233ee036e2949979c0d9b26db0fd71af7e6
+  - at: '2026-07-26T08:10:42+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-descriptor-conversion-pattern
+    summary: TestGuide tg-descriptor-conversion-pattern (manual)
+  - at: '2026-07-26T08:10:52+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-descriptor-conversion-pattern-20260726-081047
+    summary: TestRun tr-tg-descriptor-conversion-pattern-20260726-081047 → pass
+    outcome: pass
   produces:
   - kind: Plan
     name: plan-s-descriptor-conversion-pattern
     role: implementation
     at: '2026-07-26T07:31:59+00:00'
+  - kind: TestGuide
+    name: tg-descriptor-conversion-pattern
+    role: test-guide
+    at: '2026-07-26T08:10:42+00:00'
+  - kind: TestRun
+    name: tr-tg-descriptor-conversion-pattern-20260726-081047
+    role: test-run
+    at: '2026-07-26T08:10:52+00:00'
