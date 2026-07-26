@@ -1,0 +1,23 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-overlayable-fields-enforced
+spec:
+  description: Prove the per-field overlay allowlist is enforced on the write path, declarable from a descriptor, unrestricted by default, and that the merge port is deliberately left alone.
+  kind_of_test: manual
+  status: active
+  steps:
+  - action: cd packages/sdk-py && .venv/bin/python -m pytest tests/test_overlayable_fields.py -q
+    expected: 22 passed
+  - action: cd packages/sdk-py && .venv/bin/python -m pytest tests -q --timeout=180
+    expected: only the pre-existing network/CLI failure test_claude_export_roundtrip
+  - action: cd packages/cli && .venv/bin/python -m pytest tests -q
+    expected: only the pre-existing test_mcp_quota postgres-store failure
+  - action: python3 scripts/brand_guard.py; python scripts/gen_kinds_docs.py --check; python scripts/data_model_guard.py; python scripts/docs_coverage_guard.py
+    expected: all clean
+  - action: break gate 3 (offending = []) in layer_policy.py
+    expected: '5 tests red; restore :: green'
+  verifies:
+  - Story/s-overlayable-fields-enforced
+  created_at: '2026-07-26T06:35:28+00:00'
+  updated_at: '2026-07-26T06:35:28+00:00'
