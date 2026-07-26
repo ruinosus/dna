@@ -1,0 +1,103 @@
+# Reference — external citation artifact (web/paper/book/file/internal-doc).
+#
+# s-descriptor-conversion-pattern: replaces ReferenceKind (77 lines).
+#
+# This is the honest crack in the "23 Kinds override nothing the descriptor
+# cannot express" census: ReferenceKind also had a `to_card(doc)` method, and
+# the descriptor format has NO field for it. It was dead code — zero consumers
+# anywhere in the repo — so it is dropped, the same call the earlier descriptor
+# batches made for LessonLearned / StatusReport / Engram / PromptTemplate. The
+# lesson is that each remaining candidate needs its own read, not a sweep.
+#
+# cited_by_count is {count_of: cited_by} (the class did len(cited_by or [])).
+# `cited_by` itself is maintained by `dna sdlc cite`, never authored by hand.
+# Equivalence frozen in tests/test_descriptor_pattern_equivalence.py.
+apiVersion: github.com/ruinosus/dna/core/v1
+kind: KindDefinition
+metadata:
+  name: reference
+spec:
+  target_api_version: github.com/ruinosus/dna/sdlc/v1
+  target_kind: Reference
+  alias: sdlc-reference
+  origin: github.com/ruinosus/dna/sdlc
+  tenant_scope: global
+  plane: record
+  prompt_target: false
+  flatten_in_context: false
+  prompt_target_priority: 0
+  storage:
+    type: yaml
+    container: references
+  dep_filters: {}
+  schema:
+    type: object
+    required:
+    - title
+    - kind_of
+    - summary
+    properties:
+      title:
+        type: string
+      kind_of:
+        type: string
+        enum:
+        - web
+        - paper
+        - book
+        - file
+        - internal-doc
+        - other
+      url:
+        type: string
+      fetched_at:
+        type: string
+        format: date-time
+      summary:
+        type: string
+        description: 1-2 sentence what this source says.
+      key_quotes:
+        type: array
+        items:
+          type: string
+        default: []
+      relevance:
+        type: string
+        description: Why this matters for THIS project.
+      tags:
+        type: array
+        items:
+          type: string
+        default: []
+      cited_by:
+        type: array
+        items:
+          type: string
+        default: []
+        description: Auto-maintained by `dna sdlc cite`. Don't author by hand.
+      content_path:
+        type: string
+        description: Optional path to rich-content sidecar (e.g. docs/superpowers/research/<slug>.md)
+      owner:
+        type: string
+        default: claude-code
+      created_at:
+        type: string
+        format: date-time
+      updated_at:
+        type: string
+        format: date-time
+    additionalProperties: true
+  summary:
+    title: ''
+    kind_of: other
+    url: ''
+    cited_by_count:
+      count_of: cited_by
+  graph_style:
+    fill: '#6366F1'
+    stroke: '#4F46E5'
+    text_color: '#fff'
+  ascii_icon: 📚
+  display_label: References
+  docs: null

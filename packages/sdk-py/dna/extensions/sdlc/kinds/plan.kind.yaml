@@ -1,0 +1,122 @@
+# Plan — a concrete implementation plan, usually descended from a Spec.
+#
+# s-descriptor-conversion-pattern: replaces PlanKind (87 lines) whose only
+# overrides were dep_filters, schema and summary. Carries the batch's
+# BUNDLE storage case (plans/<slug>/PLAN.md, body in `body`) and
+# scope_inheritable: false (Plan is per-scope ledger, not inherited).
+#
+# The class's summary did `(title or "")[:80]`; that is the D2 projection
+# {path: title, default: "", truncate: 80} — resolve, then default on
+# missing/None, then truncate. Equivalence frozen in
+# tests/test_descriptor_pattern_equivalence.py.
+apiVersion: github.com/ruinosus/dna/core/v1
+kind: KindDefinition
+metadata:
+  name: plan
+spec:
+  target_api_version: github.com/ruinosus/dna/sdlc/v1
+  target_kind: Plan
+  alias: sdlc-plan
+  origin: github.com/ruinosus/dna/sdlc
+  tenant_scope: global
+  plane: record
+  prompt_target: false
+  flatten_in_context: false
+  prompt_target_priority: 0
+  scope_inheritable: false
+  storage:
+    type: bundle
+    container: plans
+    marker: PLAN.md
+    body_field: body
+  dep_filters:
+    spec_ref: sdlc-spec
+    epic: sdlc-epic
+  schema:
+    type: object
+    required:
+    - title
+    - date
+    - status
+    properties:
+      title:
+        type: string
+      date:
+        type: string
+        format: date
+      status:
+        type: string
+        enum:
+        - draft
+        - proposed
+        - accepted
+        - deprecated
+        - superseded
+      pattern:
+        type: string
+      body:
+        type: string
+        description: Markdown body (stored in PLAN.md).
+      origin:
+        type: string
+        description: Optional audit-only origin path.
+      spec_ref:
+        type: string
+        description: Name of the Spec this plan implements.
+        x-dna-ref: Spec
+      epic:
+        type: string
+        x-dna-ref: Epic
+      authors:
+        type: array
+        items:
+          type: string
+      tags:
+        type: array
+        items:
+          type: string
+      summary:
+        type: string
+      journey_phase:
+        type: string
+        enum:
+        - discover
+        - specify
+        - plan
+        - build
+        - verify
+        - reflect
+        description: Universal journey phase. A Plan typically lives in `plan` (decomposition) and may
+          transition to `build` once Stories start landing.
+      methodology:
+        type: string
+        enum:
+        - superpowers
+        - bmad
+        - spec-kit
+        - kiro
+        - rfc
+        - adr
+        - ad-hoc
+        - custom
+        description: Which planning methodology produced this plan (superpowers | bmad | spec-kit | ...).
+          Opt-in; lets the journey show the plan's origin honestly. The SDLC stays methodology-agnostic
+          — this only records it.
+    additionalProperties: true
+  summary:
+    title:
+      path: title
+      default: ''
+      truncate: 80
+    date: ''
+    status: draft
+    pattern: ''
+    spec_ref: ''
+  graph_style:
+    fill: '#06B6D4'
+    stroke: '#0891B2'
+    text_color: '#fff'
+  ascii_icon: 📋
+  display_label: Plans
+  docs: A Plan is a pointer to an implementation plan document on disk. Usually descends from a Spec (`spec_ref`).
+    Pattern-agnostic — DNA tracks pointer + metadata + refs, not the structure of the plan itself.

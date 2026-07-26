@@ -13,10 +13,22 @@ import jsonschema
 import pytest
 
 from dna.extensions.sdlc import (
-    StoryKind, FeatureKind, EpicKind, IssueKind,
+    FeatureKind, EpicKind, IssueKind, SdlcExtension,
     PRIORITIES, STORY_STATUSES, FEATURE_STATUSES, EPIC_STATUSES,
     ISSUE_STATUSES, ISSUE_TYPES, ISSUE_SEVERITIES,
 )
+from dna.kernel import Kernel
+
+
+def _story_port():
+    """Story is descriptor-backed now (kinds/story.kind.yaml,
+    s-descriptor-conversion-pattern) — resolve the registered port. Its
+    timeline/produces sub-schemas come from the SAME live helpers the still-class
+    Kinds below use, via the sdlc/work-item-activity schema fragment, which is
+    exactly what test_timeline_field_present_on_story_feature_epic_issue checks."""
+    k = Kernel()
+    k.load(SdlcExtension())
+    return k.kind_port_for("Story")
 
 
 # ─── Enum constant ─────────────────────────────────────────────────────
@@ -32,7 +44,7 @@ def test_priorities_jira_aligned():
 
 @pytest.fixture
 def story_schema() -> dict:
-    return StoryKind().schema()
+    return _story_port().schema()
 
 
 def test_story_has_all_v15_fields(story_schema):
@@ -124,7 +136,7 @@ def test_story_summary_includes_v15_fields():
         "priority": "high", "labels": ["a", "b"], "sprint_ref": "S2",
         "business_value": 500,
     }})()
-    summary = StoryKind().summary(raw_doc)
+    summary = _story_port().summary(raw_doc)
     assert summary["priority"] == "high"
     assert summary["labels"] == ["a", "b"]
     assert summary["sprint_ref"] == "S2"
@@ -133,7 +145,7 @@ def test_story_summary_includes_v15_fields():
 
 def test_story_summary_defaults_when_missing():
     raw_doc = type("D", (), {"spec": {"status": "todo"}})()
-    summary = StoryKind().summary(raw_doc)
+    summary = _story_port().summary(raw_doc)
     assert summary["priority"] == "medium"
     assert summary["labels"] == []
     assert summary["sprint_ref"] == ""
@@ -220,9 +232,9 @@ def test_issue_back_compat():
 
 def test_timeline_field_present_on_story_feature_epic_issue():
     """Timeline opt-in field on all 4 board Kinds."""
-    for KP in (StoryKind, FeatureKind, EpicKind, IssueKind):
-        schema = KP().schema()
-        assert "timeline" in schema["properties"], f"{KP.__name__} missing timeline"
+    for kp in (_story_port(), FeatureKind(), EpicKind(), IssueKind()):
+        schema = kp.schema()
+        assert "timeline" in schema["properties"], f"{kp.kind} missing timeline"
         tl = schema["properties"]["timeline"]
         assert tl["type"] == "array"
         assert tl["items"]["type"] == "object"
@@ -230,13 +242,13 @@ def test_timeline_field_present_on_story_feature_epic_issue():
 
 def test_timeline_entry_required_fields():
     """Each timeline entry requires at + actor + type."""
-    schema = StoryKind().schema()
+    schema = _story_port().schema()
     entry_schema = schema["properties"]["timeline"]["items"]
     assert set(entry_schema["required"]) == {"at", "actor", "type"}
 
 
 def test_timeline_entry_validates_status_change():
-    schema = StoryKind().schema()
+    schema = _story_port().schema()
     raw = {
         "description": "x", "status": "in-progress",
         "timeline": [{
@@ -252,7 +264,7 @@ def test_timeline_entry_validates_status_change():
 
 
 def test_timeline_entry_validates_decision():
-    schema = StoryKind().schema()
+    schema = _story_port().schema()
     raw = {
         "description": "x", "status": "todo",
         "timeline": [{
@@ -276,7 +288,7 @@ def test_timeline_type_is_open_vocabulary():
     `dna sdlc story pr`) — a closed enum vetoed the PR-URL stamp the first
     time the write path had teeth. Recognized names stay listed in the
     field's description."""
-    schema = StoryKind().schema()
+    schema = _story_port().schema()
     type_schema = schema["properties"]["timeline"]["items"]["properties"]["type"]
     assert "enum" not in type_schema
     for name in ("status_change", "groom", "comment", "decision",
@@ -296,7 +308,7 @@ def test_timeline_type_is_open_vocabulary():
 
 def test_timeline_additionalproperties_per_entry():
     """Custom keys per entry must round-trip (e.g. confidence on a decision)."""
-    schema = StoryKind().schema()
+    schema = _story_port().schema()
     raw = {
         "description": "x", "status": "todo",
         "timeline": [{
@@ -313,7 +325,7 @@ def test_timeline_additionalproperties_per_entry():
 
 def test_timeline_back_compat_missing_field_ok():
     """Pre-v1.6 docs without timeline still parse."""
-    schema = StoryKind().schema()
+    schema = _story_port().schema()
     raw = {"description": "x", "status": "todo"}
     jsonschema.validate(raw, schema)
 

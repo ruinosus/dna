@@ -1,0 +1,91 @@
+# Comment — a remark or status change attached to ANY document via target_ref.
+#
+# s-descriptor-conversion-pattern: replaces CommentKind, the simplest of the
+# 23 class-only Kinds (58 lines) and the only one whose extension had no
+# load_descriptors loop yet — so this file is also the proof that the pattern
+# lands in a virgin extension, not just in sdlc.
+#
+# dep_filters is declared EMPTY on purpose (not omitted): target_ref is
+# polymorphic — Story, Finding, EvalCase, Agent, anything — and a dep_filter
+# can only name ONE target Kind. Declaring `{}` rather than leaving it out
+# also reproduces the class's `dep_filters() -> {}` exactly, so the conversion
+# carries no falsy delta.
+#
+# The class's `body[:80] if body else ""` preview is the D2 projection
+# {path: body, default: "", truncate: 80}; note the summary KEY (body_preview)
+# differs from the source field (body), which is why it needs `path`.
+# Fields below are type-conditional: from_status/to_status apply when
+# type=status_change, assignee when type=assignment.
+# Equivalence frozen in tests/test_descriptor_pattern_equivalence.py.
+apiVersion: github.com/ruinosus/dna/core/v1
+kind: KindDefinition
+metadata:
+  name: comment
+spec:
+  target_api_version: github.com/ruinosus/dna/collab/v1
+  target_kind: Comment
+  alias: collab-comment
+  origin: github.com/ruinosus/dna/collab
+  plane: composition
+  prompt_target: false
+  flatten_in_context: false
+  prompt_target_priority: 0
+  storage:
+    type: yaml
+    container: comments
+  dep_filters: {}
+  schema:
+    type: object
+    required:
+    - target_ref
+    - author
+    - body
+    - type
+    - created_at
+    properties:
+      target_ref:
+        type: string
+        description: Kind:name of the target document
+      author:
+        type: string
+      body:
+        type: string
+      type:
+        type: string
+        enum:
+        - note
+        - status_change
+        - assignment
+        - system
+        default: note
+      created_at:
+        type: string
+        format: date-time
+      from_status:
+        type: string
+      to_status:
+        type: string
+      assignee:
+        type: string
+      edited_at:
+        type: string
+      attachments:
+        type: array
+        items:
+          type: string
+    additionalProperties: true
+  summary:
+    target_ref: ''
+    author: ''
+    type: note
+    body_preview:
+      path: body
+      default: ''
+      truncate: 80
+  graph_style:
+    fill: '#F59E0B'
+    stroke: '#D97706'
+    text_color: '#fff'
+  ascii_icon: 💬
+  display_label: Comments
+  docs: ''

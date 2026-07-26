@@ -81,13 +81,16 @@ STILL_CLASS_ALLOWLIST = frozenset({
     # applies_to = {paths:[…], filter_falsy:true} (leaf-keyed); default_visibility
     # = {path: defaults.visibility, default: shared}. The present-but-null
     # default_visibility delta is port-canonical, pinned in the equivalence test.
-    "sdlc-plan",
+    # sdlc-plan: migrated to a descriptor in s-descriptor-conversion-pattern
+    # ((title or "")[:80] summary = {path,default,truncate:80}).
     # sdlc-prompt-template: migrated to a descriptor in expr batch B (Chunk 4)
     # — ui_schema (D4 pass-through), describe {path: description} (D3),
     # description_fallback_field: body (D7), variables_count/body_length =
     # {count_of: …} (count_of over a string for body). The class's `or None`
     # empty-string describe coercion is the documented port-canonical delta.
-    "sdlc-reference",
+    # sdlc-reference: migrated to a descriptor in
+    # s-descriptor-conversion-pattern. Its dead to_card (zero consumers) was
+    # NOT migrated — same call the earlier batches made.
     # sdlc-retrospective: migrated to a descriptor in F3 lote-1.
     "sdlc-roadmap",
     "sdlc-spec",
@@ -98,7 +101,13 @@ STILL_CLASS_ALLOWLIST = frozenset({
                            # congelar uma cópia no descriptor forkaria o
                            # contrato de timeline e o parse validante passaria
                            # a rejeitar novos timeline types.
-    "sdlc-story",          # lote-2: precisa de D2-ui (StudioUIMetadata no descriptor)
+    # sdlc-story: migrated to a descriptor in s-descriptor-conversion-pattern.
+    # The lote-2 blocker ("precisa de D2-ui") went away when expr batch A
+    # shipped the D1 ui: field; the OTHER blocker — a schema built from the
+    # LIVE _timeline_field_schema/_produces_field_schema helpers, which a
+    # frozen YAML copy would fork — is solved by the sdlc/work-item-activity
+    # SCHEMA FRAGMENT (kernel/meta.py), the first descriptor in the repo to
+    # use one. The same fragment is what unblocks sdlc-spike/-bug/-task below.
     # sdlc-synthesizer-state: migrated to a descriptor in F3 lote-3, then
     # DELETED in censo-12-kinds (2026-07-20) along with the rest of the
     # cognition-engine family — DREAMER_METHODS went with it.

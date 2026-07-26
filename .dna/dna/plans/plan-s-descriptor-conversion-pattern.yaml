@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-descriptor-conversion-pattern
+spec:
+  title: 'Plano: s-descriptor-conversion-pattern'
+  date: '2026-07-26'
+  status: accepted
+  story_ref: s-descriptor-conversion-pattern
+  journey_phase: plan
+  body: 1) capture pre-conversion surface goldens for Comment/Task/Story/Reference (identity, flags, storage, dep_filters, schema, summary, describe, canonical digest of real docs); 2) write the equivalence suite against the goldens (green vs the classes); 3) convert to kinds/*.kind.yaml, delete the classes, wire register(); 4) prove the guard bites by perturbing a descriptor; 5) shrink the ratchet allowlist, regen kind docs, full suites.
+  created_at: '2026-07-26T07:31:52+00:00'
+  updated_at: '2026-07-26T07:31:52+00:00'

@@ -557,248 +557,24 @@ class FeatureKind(KindBase):
 # Story — granular task
 # ---------------------------------------------------------------------------
 
-class StoryKind(KindBase):
-    """Story — a developer-sized unit of work; child of a Feature."""
-
-    api_version = "github.com/ruinosus/dna/sdlc/v1"
-    scope = TenantScope.GLOBAL  # SDLC primitives are project-level, not per-tenant
-    kind = "Story"
-    alias = "sdlc-story"
-    scope_inheritable = False
-    model = dict
-    origin = "github.com/ruinosus/dna/sdlc"
-    storage = StorageDescriptor.yaml("stories")
-    graph_style = {"fill": "#F59E0B", "stroke": "#D97706", "text_color": "#fff"}
-    ascii_icon = "📖"
-    display_label = "Stories"
-    is_prompt_target = False
-    flatten_in_context = False
-    plane = "record"
-    prompt_target_priority = 0
-    docs = (
-        "A Story is a granular task: one developer, one PR, one estimate. "
-        "Lists acceptance criteria, dependencies (other Stories that must "
-        "land first), and rolls up to a Feature."
-    )
-
-    # P2L2 — Story is the bread-and-butter Plan-mode item. The SDLC
-    # board (mode-landing) is the primary surface; detail/edit live
-    # under /docs/Story/:name via the generic ExplorerPage.
-    from dna.kernel.studio_ui import StudioUIMetadata as _UI
-    ui = _UI(
-        mode="plan",
-        label={"en": "Stories", "pt-BR": "Histórias"},
-        icon="📖",
-        description={
-            "en": "Developer-sized work units. Child of Feature.",
-            "pt-BR": "Unidades de trabalho do dev. Filhos de Feature.",
-        },
-        breadcrumb=["Plan", "Stories"],
-        routes={
-            "list":   "docs/Story",
-            "detail": "docs/Story/:name",
-            "create": "kinds/Story/__new__",
-        },
-        permissions={
-            "list":   "any",
-            "detail": "any",
-            "create": ["po", "pm", "architect", "tech-lead", "maker"],
-            "edit":   ["po", "pm", "architect", "tech-lead", "maker"],
-        },
-        in_sidebar=False,  # SDLC board is the primary surface; Stories
-                            # detail-page is drilled into, not surfaced
-                            # at top of the sidebar.
-        display_order=12,
-    )
-
-    def dep_filters(self) -> dict[str, str]:
-        return {
-            "feature": "sdlc-feature",
-            "owner": "helix-actor",
-            "dependencies": "sdlc-story",
-            "spec_refs": "sdlc-spec",
-        }
-
-    def schema(self) -> dict[str, Any]:
-        return {
-            "type": "object",
-            "required": ["description", "status"],
-            "properties": {
-                "title": {
-                    "type": "string",
-                    "description": "Human-readable display name (Jira 'summary').",
-                },
-                "description": {"type": "string"},
-                # User-story slots (2026-05-11 UX audit): when populated, the
-                # Studio Board renders "As a <as_a>, I want <i_want>, so that
-                # <so_that>" as the primary content above `description`. The
-                # `description` field then becomes optional supporting detail
-                # rather than the whole narrative. Old Stories without these
-                # fields keep working — Board falls back to `description`.
-                "as_a": {
-                    "type": "string",
-                    "description": "Role: 'As a <role>'. INVEST/user-story format slot.",
-                },
-                "i_want": {
-                    "type": "string",
-                    "description": "Goal: 'I want <goal>'. INVEST/user-story format slot.",
-                },
-                "so_that": {
-                    "type": "string",
-                    "description": "Benefit: 'so that <benefit>'. INVEST/user-story format slot.",
-                },
-                "status": {"type": "string", "enum": list(STORY_STATUSES)},
-                "feature": {
-                    "type": "string", "description": "Parent Feature name",
-                    "x-dna-ref": "Feature",
-                },
-                "owner": {"type": "string", "description": "Actor name"},
-                "estimate": {
-                    "type": "number",
-                    "description": "Fibonacci story points (1, 2, 3, 5, 8, 13, 21)",
-                },
-                "acceptance_criteria": {
-                    "type": "array",
-                    "items": {
-                        "oneOf": [
-                            {"type": "string"},
-                            {
-                                "type": "object",
-                                "required": ["text"],
-                                "properties": {
-                                    "text": {"type": "string"},
-                                    "done": {"type": "boolean"},
-                                    "done_at": {"type": "string", "format": "date-time"},
-                                    "done_by": {"type": "string"},
-                                },
-                            },
-                        ],
-                    },
-                    "description": (
-                        "Acceptance criteria. Legacy: list[str]. New "
-                        "(s-ac-dod-checklist-state): list[{text, done?, "
-                        "done_at?, done_by?}] for per-item state tracking."
-                    ),
-                },
-                "dependencies": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "description": "Other Story names that must land first",
-                    "x-dna-ref": "Story",
-                },
-                "spec_refs": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "description": (
-                        "Spec docs (kind=Spec) this Story implements. M:N "
-                        "linkage between the planning axis (Story) and the "
-                        "design axis (Spec) — Jira/Confluence-shaped."
-                    ),
-                    "x-dna-ref": "Spec",
-                },
-                "closed_at": {"type": "string", "format": "date-time"},
-                "blocked_reason": {"type": "string"},
-                # v1.5 — board-grade fields (all opt; back-compat preserved).
-                "priority": {
-                    "type": "string", "enum": list(PRIORITIES),
-                    "description": "Board priority. Jira-aligned.",
-                },
-                "labels": {
-                    "type": "array", "items": {"type": "string"},
-                    "description": "Free-form tags for swim lanes / filters.",
-                },
-                "reporter": {
-                    "type": "string",
-                    "description": "Actor who filed it (vs `owner` who works on it).",
-                },
-                "watchers": {
-                    "type": "array", "items": {"type": "string"},
-                    "description": "Actor names subscribed to changes.",
-                },
-                "journey_phase": {
-                    "type": "string", "enum": list(JOURNEY_PHASES),
-                    "description": (
-                        "Universal journey phase (discover → specify → "
-                        "plan → build → reflect). Additive layer over "
-                        "Story/Feature/Epic status, Spec phase, etc. "
-                        "Lets the journey ledger pin this doc to one of "
-                        "five universal phases compatible with "
-                        "Superpowers / BMAD / Spec Kit / Kiro."
-                    ),
-                },
-                "created_at": {"type": "string", "format": "date-time"},
-                "updated_at": {"type": "string", "format": "date-time"},
-                "sprint_ref": {
-                    "type": "string",
-                    "description": "Sprint identifier (free-form, e.g. '2026-Q2-S2').",
-                },
-                "time_tracking": {
-                    "type": "object",
-                    "additionalProperties": False,
-                    "properties": {
-                        "logged_h": {"type": "number", "minimum": 0},
-                        "remaining_h": {"type": "number", "minimum": 0},
-                        "original_estimate_h": {"type": "number", "minimum": 0},
-                    },
-                },
-                "definition_of_done": {
-                    "type": "array",
-                    "items": {
-                        "oneOf": [
-                            {"type": "string"},
-                            {
-                                "type": "object",
-                                "required": ["text"],
-                                "properties": {
-                                    "text": {"type": "string"},
-                                    "done": {"type": "boolean"},
-                                    "done_at": {"type": "string", "format": "date-time"},
-                                    "done_by": {"type": "string"},
-                                },
-                            },
-                        ],
-                    },
-                    "description": (
-                        "Per-Story DoD. Same union shape as acceptance_criteria — "
-                        "legacy list[str] OR list[{text, done?, done_at?, done_by?}]."
-                    ),
-                },
-                "business_value": {
-                    "type": "number", "minimum": 0, "maximum": 1000,
-                    "description": "WSJF-style scalar for relative prioritization.",
-                },
-                "mockups": {
-                    "type": "array", "items": {"type": "string"},
-                    "description": "URLs/paths to design artifacts.",
-                },
-                "release_target": {
-                    "type": "string",
-                    "description": (
-                        "Epic name OR 'owner/pkg@semver' identifying the release "
-                        "this Story unblocks."
-                    ),
-                },
-                # v1.6 — Activity Timeline.
-                "produces": _produces_field_schema(),
-                "timeline": _timeline_field_schema(),
-            },
-            "additionalProperties": True,
-        }
-
-    def summary(self, doc: Any) -> dict[str, Any]:
-        spec = doc.spec if hasattr(doc, "spec") else doc
-        s = spec if isinstance(spec, dict) else {}
-        return {
-            "status": s.get("status", "todo"),
-            "feature": s.get("feature", ""),
-            "owner": s.get("owner", ""),
-            "estimate": s.get("estimate"),
-            "spec_refs": len(s.get("spec_refs", []) or []),
-            "priority": s.get("priority", "medium"),
-            "labels": s.get("labels", []) or [],
-            "sprint_ref": s.get("sprint_ref", ""),
-            "business_value": s.get("business_value"),
-        }
+# Story — DELETED as a class (s-descriptor-conversion-pattern). Synthesized
+# from kinds/story.kind.yaml via the load_descriptors loop in register().
+# 248 lines of Python for four things the descriptor says directly: schema,
+# summary, describe (none) and dep_filters — plus the D1 ``ui:`` field, which
+# is what the migration ratchet recorded as Story's blocker ("precisa de
+# D2-ui") before expr batch A shipped it.
+#
+# The timeline/produces sub-schemas are NOT frozen in the YAML: the descriptor
+# reaches the LIVE _timeline_field_schema() / _produces_field_schema() helpers
+# through the ``sdlc/work-item-activity`` schema fragment, so Bug/Task/Spike
+# (still classes, same helpers) and Story cannot drift apart. That is the
+# objection the ratchet recorded against sdlc-spike, answered.
+#
+# Equivalence with the extinct class — identity, flags, StudioUIMetadata,
+# storage, dep_filters, deep schema, summary/describe/canonical_digest over
+# REAL board documents — is frozen in
+# tests/test_descriptor_pattern_equivalence.py (goldens under
+# tests/goldens/descriptor_pattern/Story.golden.json).
 
 
 # ---------------------------------------------------------------------------
@@ -1059,93 +835,10 @@ class SpecKind(KindBase):
         }
 
 
-class PlanKind(KindBase):
-    """Plan — a concrete implementation plan tied (usually) to a Spec.
-
-    Same pattern-agnostic shape as Spec. The relationship Spec → Plan is
-    one-to-many in practice (a Spec may have a brainstorm, then multiple
-    iterative plans). Pattern-specific structure stays in markdown.
-    """
-
-    api_version = "github.com/ruinosus/dna/sdlc/v1"
-    scope = TenantScope.GLOBAL  # SDLC primitives are project-level, not per-tenant
-    kind = "Plan"
-    alias = "sdlc-plan"
-    scope_inheritable = False
-    model = dict
-    origin = "github.com/ruinosus/dna/sdlc"
-    storage = StorageDescriptor.bundle("plans", "PLAN.md", body_field="body")
-    graph_style = {"fill": "#06B6D4", "stroke": "#0891B2", "text_color": "#fff"}
-    ascii_icon = "📋"
-    display_label = "Plans"
-    is_prompt_target = False
-    flatten_in_context = False
-    plane = "record"
-    prompt_target_priority = 0
-    docs = (
-        "A Plan is a pointer to an implementation plan document on disk. "
-        "Usually descends from a Spec (`spec_ref`). Pattern-agnostic — "
-        "DNA tracks pointer + metadata + refs, not the structure of "
-        "the plan itself."
-    )
-
-    def dep_filters(self) -> dict[str, str]:
-        return {
-            "spec_ref": "sdlc-spec",
-            "epic": "sdlc-epic",
-        }
-
-    def schema(self) -> dict[str, Any]:
-        return {
-            "type": "object",
-            "required": ["title", "date", "status"],
-            "properties": {
-                "title": {"type": "string"},
-                "date": {"type": "string", "format": "date"},
-                "status": {"type": "string", "enum": list(ARTIFACT_STATUSES)},
-                "pattern": {"type": "string"},
-                "body": {"type": "string", "description": "Markdown body (stored in PLAN.md)."},
-                "origin": {"type": "string", "description": "Optional audit-only origin path."},
-                "spec_ref": {
-                    "type": "string",
-                    "description": "Name of the Spec this plan implements.",
-                    "x-dna-ref": "Spec",
-                },
-                "epic": {"type": "string", "x-dna-ref": "Epic"},
-                "authors": {"type": "array", "items": {"type": "string"}},
-                "tags": {"type": "array", "items": {"type": "string"}},
-                "summary": {"type": "string"},
-                "journey_phase": {
-                    "type": "string", "enum": list(JOURNEY_PHASES),
-                    "description": (
-                        "Universal journey phase. A Plan typically lives "
-                        "in `plan` (decomposition) and may transition to "
-                        "`build` once Stories start landing."
-                    ),
-                },
-                "methodology": {
-                    "type": "string", "enum": list(JOURNEY_METHODOLOGIES),
-                    "description": (
-                        "Which planning methodology produced this plan "
-                        "(superpowers | bmad | spec-kit | ...). Opt-in; lets "
-                        "the journey show the plan's origin honestly. The SDLC "
-                        "stays methodology-agnostic — this only records it."
-                    ),
-                },
-            },
-            "additionalProperties": True,
-        }
-
-    def summary(self, doc: Any) -> dict[str, Any]:
-        spec = doc.spec if hasattr(doc, "spec") else doc
-        s = spec if isinstance(spec, dict) else {}
-        return {
-            "title": (s.get("title") or "")[:80],
-            "date": s.get("date", ""),
-            "status": s.get("status", "draft"),
-            "pattern": s.get("pattern", ""),
-            "spec_ref": s.get("spec_ref", ""),
-        }
+# Plan — DELETED as a class (s-descriptor-conversion-pattern). Synthesized
+# from kinds/plan.kind.yaml. The `(title or "")[:80]` summary is the D2
+# projection {path: title, default: "", truncate: 80}. Equivalence frozen in
+# tests/test_descriptor_pattern_equivalence.py.
 
 
 # ---------------------------------------------------------------------------
@@ -1865,83 +1558,13 @@ def _workitem_common_schema() -> dict[str, Any]:
     }
 
 
-class ReferenceKind(KindBase):
-    """Reference — external citation artifact (web/paper/book/file/internal-doc).
-
-    Wraps external sources with metadata so SDLC docs can cite evidence
-    durably. Any other Kind (Story, Feature, Spec, Plan, Engram, etc.)
-    gains an optional ``spec.references: list[str]`` field naming
-    Reference doc slugs. CLI ``dna sdlc cite`` maintains the
-    bidirectional graph (Reference.spec.cited_by += caller_ref).
-
-    Spec: docs/superpowers/specs/2026-05-12-f-reference-citation-kind.md
-    """
-
-    api_version = "github.com/ruinosus/dna/sdlc/v1"
-    scope = TenantScope.GLOBAL
-    kind = "Reference"
-    alias = "sdlc-reference"
-    model = dict
-    origin = "github.com/ruinosus/dna/sdlc"
-    storage = StorageDescriptor.yaml("references")
-    graph_style = {"fill": "#6366F1", "stroke": "#4F46E5", "text_color": "#fff"}
-    ascii_icon = "📚"
-    display_label = "References"
-    is_prompt_target = False
-    flatten_in_context = False
-    plane = "record"
-    prompt_target_priority = 0
-
-    def dep_filters(self) -> dict[str, str]:
-        return {}
-
-    def schema(self) -> dict[str, Any]:
-        return {
-            "type": "object",
-            "required": ["title", "kind_of", "summary"],
-            "properties": {
-                "title": {"type": "string"},
-                "kind_of": {"type": "string", "enum": list(REFERENCE_KIND_OFS)},
-                "url": {"type": "string"},
-                "fetched_at": {"type": "string", "format": "date-time"},
-                "summary": {"type": "string", "description": "1-2 sentence what this source says."},
-                "key_quotes": {"type": "array", "items": {"type": "string"}, "default": []},
-                "relevance": {"type": "string", "description": "Why this matters for THIS project."},
-                "tags": {"type": "array", "items": {"type": "string"}, "default": []},
-                "cited_by": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "default": [],
-                    "description": "Auto-maintained by `dna sdlc cite`. Don't author by hand.",
-                },
-                "content_path": {
-                    "type": "string",
-                    "description": "Optional path to rich-content sidecar (e.g. docs/superpowers/research/<slug>.md)",
-                },
-                "owner": {"type": "string", "default": "claude-code"},
-                "created_at": {"type": "string", "format": "date-time"},
-                "updated_at": {"type": "string", "format": "date-time"},
-            },
-            "additionalProperties": True,
-        }
-
-    def summary(self, doc: Any) -> dict[str, Any]:
-        s = doc.spec if hasattr(doc, "spec") else doc
-        s = s if isinstance(s, dict) else {}
-        return {
-            "title": s.get("title", ""),
-            "kind_of": s.get("kind_of", "other"),
-            "url": s.get("url", ""),
-            "cited_by_count": len(s.get("cited_by") or []),
-        }
-
-    def to_card(self, doc: Any) -> dict[str, Any]:
-        s = doc.spec or {}
-        return {
-            "name": doc.name, "scope": doc.scope, "kind": "Reference",
-            "title": s.get("title"), "kind_of": s.get("kind_of"),
-            "url": s.get("url"), "cited_by_count": len(s.get("cited_by") or []),
-        }
+# Reference — DELETED as a class (s-descriptor-conversion-pattern).
+# Synthesized from kinds/reference.kind.yaml. cited_by_count is
+# {count_of: cited_by}. The class's `to_card` was NOT migrated: the descriptor
+# format has no field for it and it is dead code (zero consumers — same call
+# the earlier batches made for LessonLearned / StatusReport / Engram /
+# PromptTemplate). Equivalence frozen in
+# tests/test_descriptor_pattern_equivalence.py.
 
 
 # PromptTemplate — expr batch B (plan 2026-06-11-descriptor-expressiveness,
@@ -2183,20 +1806,24 @@ class SdlcExtension:
     version = "1.15.0"
 
     def register(self, kernel: ExtensionHost) -> None:
+        # Schema fragments FIRST. DeclarativeKindPort resolves fragment IDs in
+        # __init__ (load time) and SILENTLY SKIPS unknown ones, so a fragment
+        # registered after the load_descriptors loop below would be invisible
+        # to every descriptor that references it — story.kind.yaml would lose
+        # timeline/produces without a word. Ordering is load-bearing; the guard
+        # is test_the_fragment_registry_is_populated_before_descriptors_load.
+        self._register_schema_fragments()
+
         kernel.kind(RoadmapKind())
         kernel.kind(EpicKind())
         kernel.kind(FeatureKind())
-        kernel.kind(StoryKind())
         kernel.kind(IssueKind())
         kernel.kind(SpecKind())
-        kernel.kind(PlanKind())
         kernel.kind(AgentSessionKind())
         kernel.kind(BugKind())
         kernel.kind(TaskKind())
         kernel.kind(SpikeKind())
         kernel.kind(InitiativeKind())
-        # v1.10.0 — f-reference-citation-kind + f-semon-correct-memory
-        kernel.kind(ReferenceKind())
         # s-dx-html-artifact-kind — HTML page as a first-class work-item output.
         # Bundle Kind (custom reader/writer for byte-faithful HTML), mirroring
         # the Soul (SOUL.md + soul.json) mechanic.
@@ -2214,7 +1841,8 @@ class SdlcExtension:
         # (plane lint + digest idempotency + builtin conflict marker).
         # Structured as a loop so migration batches just drop files into
         # kinds/ — no per-Kind code. Pilot: Kaizen (v1.13.0 s-kaizen-kind,
-        # class twins deleted).
+        # class twins deleted). s-descriptor-conversion-pattern added Plan,
+        # Reference and Story (their classes deleted; see the tombstones above).
         for raw in load_descriptors("dna.extensions.sdlc"):
             kernel.kind_from_descriptor(raw)
 
@@ -2229,17 +1857,40 @@ class SdlcExtension:
         )
         register_write_guards(kernel)
 
-        # v1.11.0 — f-extended-work-item-kinds (KindDefinition-driven).
-        # Register the shared work-item common schema fragment so
-        # KindDefinitions can reference it via spec.schema_fragments:
-        # ["sdlc/workitem-common"]. Open-extension pattern: any other
-        # extension can register its own fragments (e.g.
-        # "medical/care-pathway-common") without modifying the SDK.
+    @staticmethod
+    def _register_schema_fragments() -> None:
+        """Publish this extension's named JSON-Schema fragments.
+
+        Open-extension primitive: any extension can register fragments (e.g.
+        "medical/care-pathway-common") without modifying the SDK, and any
+        KindDefinition — builtin descriptor or per-scope doc — can pull them in
+        via ``spec.schema_fragments``.
+
+        - ``sdlc/workitem-common`` (v1.11.0, f-extended-work-item-kinds): the
+          full work-item property set for per-scope KindDefinitions that want a
+          Story-shaped Kind without restating it.
+        - ``sdlc/work-item-activity`` (s-descriptor-conversion-pattern): just
+          ``timeline`` + ``produces``, read from the SAME live helpers the
+          still-class work-item Kinds (Bug, Task, Spike, Issue, Feature, Epic)
+          call. This is what lets a work-item Kind become a descriptor without
+          forking the timeline contract into a frozen YAML copy — the exact
+          objection the migration ratchet recorded against ``sdlc-spike``.
+        """
         try:
             from dna.kernel.meta import register_schema_fragment
-            register_schema_fragment(
-                "sdlc/workitem-common",
-                {"type": "object", "properties": _workitem_common_schema()},
-            )
-        except Exception:  # noqa: BLE001 — kernel may not expose API yet
-            pass
+        except Exception:  # noqa: BLE001 — kernel may not expose the API yet
+            return
+        register_schema_fragment(
+            "sdlc/workitem-common",
+            {"type": "object", "properties": _workitem_common_schema()},
+        )
+        register_schema_fragment(
+            "sdlc/work-item-activity",
+            {
+                "type": "object",
+                "properties": {
+                    "produces": _produces_field_schema(),
+                    "timeline": _timeline_field_schema(),
+                },
+            },
+        )
