@@ -1,4 +1,5 @@
-"""Boot-time registration errors raised by Kernel.
+"""Kernel error vocabulary — boot-time registration failures, and the marker
+base every deliberate REFUSAL shares.
 
 H1 — Boot-time validation. The Kernel's `kind/reader/writer/load`
 registration methods used to be `self._x.append(y)` no-ops with zero
@@ -12,6 +13,38 @@ runtime drift. They subclass ``ValueError`` so existing code that
 broadly catches ``ValueError`` still works.
 """
 from __future__ import annotations
+
+
+class KernelRefusal(Exception):
+    """Marker base for a DELIBERATE kernel refusal — "no, and here is why".
+
+    Not an error class in the usual sense: it says nothing about what went
+    wrong, only that the kernel *decided*. A schema veto, a LayerPolicy veto, a
+    tenancy rule, a read-only source, a retired Kind — each is a verdict the
+    caller can act on, and each therefore has to REACH the caller with its
+    reason intact.
+
+    It exists because every face was enumerating them instead, and getting the
+    enumeration wrong. The MCP write tool caught
+    ``(ValueError, LookupError, PermissionError)``; but
+    :class:`~dna.kernel.protocols.LayerPolicyViolationError`,
+    :class:`~dna.kernel.protocols.TenantNotAllowed`,
+    :class:`~dna.kernel.protocols.TenantRequired` and
+    :class:`~dna.kernel.protocols.InvalidTenantSlug` are plain ``Exception`` and
+    :class:`~dna.kernel.NotWritableError` is a ``RuntimeError``, so not one of
+    them matched — the likeliest refusal on a tenant write reached the client as
+    an unexplained failure. A marker base turns "catch the right N types" into
+    "catch one", and a refusal declared tomorrow is relayed by every face that
+    already exists.
+
+    **Additive, never a re-parenting.** Each refusal keeps the base it always
+    had (``ValueError`` for the schema veto, ``RuntimeError`` for the read-only
+    source), so code that catches them the old way is untouched. Guarded by
+    ``packages/sdk-py/tests/test_kernel_refusal_base.py``, which also pins the
+    kernel exceptions that are deliberately NOT refusals — so a new exception
+    type in these modules forces the decision instead of defaulting to
+    "uncaught".
+    """
 
 
 class KernelRegistrationError(ValueError):

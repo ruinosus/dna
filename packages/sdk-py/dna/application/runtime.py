@@ -1732,18 +1732,35 @@ async def forget_impl(
     ``valid_to`` memories, a forgotten memory disappears from both surfaces (no
     ghost).
 
-    Result mapping: a real demotion → ``forgotten: True``; an already-forgotten
-    memory (idempotent re-forget) → ``forgotten: False``; a name that does not
-    exist in the caller's layer (``forget`` raises ``KeyError``) → a clean
-    ``forgotten: False`` no-op, never a 500."""
+    Result mapping — THREE outcomes, not two. ``forgotten: bool`` answers only
+    "did this call change anything", and it answered ``False`` for two completely
+    different situations: the memory was already forgotten (nothing to do, the
+    caller is done) and no such memory exists in the layer being searched (the
+    caller is looking in the wrong place, or has the wrong name). Those want
+    different reactions, so ``outcome`` names which one happened:
+
+      * ``forgotten``          — it was live; it is now demoted.
+      * ``already_forgotten``  — idempotent re-forget; nothing left to do.
+      * ``not_found``          — no such memory in THIS layer. The commonest
+        cause is the partition: a personal Engram asked for without
+        ``memory_scope="personal"`` is invisible here — precisely the confusion
+        the collapsed boolean hid, and the reason the MCP ``forget`` tool went so
+        long without a ``personal`` parameter at all.
+
+    ``forgotten`` is kept, unchanged, for existing callers."""
     from dna.memory import forget
 
     sc, tenant = _resolve_memory_target(live, scope, tenant, memory_scope, oid, family)
     try:
         out = await forget(live.kernel, sc, name, kind=kind, tenant=tenant)
     except KeyError:
-        return {"kind": kind, "name": name, "forgotten": False}
-    return {"kind": kind, "name": name, "forgotten": not out["already_forgotten"]}
+        return {"kind": kind, "name": name, "forgotten": False,
+                "outcome": "not_found"}
+    already = bool(out["already_forgotten"])
+    return {
+        "kind": kind, "name": name, "forgotten": not already,
+        "outcome": "already_forgotten" if already else "forgotten",
+    }
 
 
 # ── cloud: the billing→enforcement bridge write (AccountPlan) ───────────────

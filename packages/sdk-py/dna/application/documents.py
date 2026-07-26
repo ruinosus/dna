@@ -47,6 +47,8 @@ module only classifies.
 """
 from __future__ import annotations
 
+import hashlib
+import json
 from typing import Any, Iterable
 
 from dna.application.live import LiveDna
@@ -55,6 +57,7 @@ from dna.memory.verbs import MEMORY_KINDS
 __all__ = [
     "AmbiguousKindError",
     "BootstrapKindWriteRefused",
+    "ConcurrentWriteError",
     "DEFAULT_FAMILY",
     "UnknownKindError",
     "bootstrap_kinds",
@@ -64,6 +67,7 @@ __all__ = [
     "list_documents_impl",
     "list_kinds_impl",
     "resolve_kind_port",
+    "spec_etag",
     "write_document_impl",
 ]
 
@@ -78,6 +82,15 @@ class UnknownKindError(LookupError):
 class AmbiguousKindError(ValueError):
     """The bare Kind name resolves to more than one registered port — the caller
     must disambiguate with ``api_version`` (see the module docstring)."""
+
+
+class ConcurrentWriteError(ValueError):
+    """An ``if_match`` guard on a generic write did not hold — the stored
+    document changed (or vanished) since the caller read it, so the write would
+    have silently overwritten somebody else's update.
+
+    Subclasses ``ValueError`` so every face that already maps write-path vetoes
+    to an honest client refusal surfaces it with no new wiring."""
 
 
 class BootstrapKindWriteRefused(PermissionError):
@@ -237,6 +250,102 @@ def _enum_value(value: Any) -> str | None:
     return str(getattr(value, "value", value))
 
 
+def spec_etag(spec: Any) -> str:
+    """A content fingerprint of a document ``spec`` — the optimistic-concurrency
+    token ``get_document`` returns and ``write_document`` checks (``if_match``).
+
+    Deliberately NOT the adapter's version id: ``kernel.write_document`` returns
+    one, but nothing on the READ path exposes it (``get_document`` yields the raw
+    document and nothing else), and version support is per-adapter — the
+    filesystem source has none. A hash of the content the tool actually writes is
+    available on every adapter, is derivable by the caller from the very read it
+    already made, and answers the only question that matters here: *is the spec I
+    based my update on still the stored spec?*
+
+    Keyed on the ``spec`` alone because the ``spec`` is all a generic write can
+    change — the envelope is rebuilt from the resolved Kind port every time. Sorted
+    keys + ``default=str`` make it stable across processes and tolerant of
+    non-JSON scalars a Kind may store."""
+    payload = json.dumps(spec or {}, sort_keys=True, default=str)
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:32]
+
+
+def _merged_spec(
+    stored: dict[str, Any], incoming: dict[str, Any], *, merge: bool,
+) -> dict[str, Any]:
+    """The spec to persist, given the stored one and the caller's.
+
+    **TOP-LEVEL merge, not deep.** A DNA spec's top level is scalars plus
+    self-contained collections (``timeline``, ``acceptance_criteria``, ``labels``,
+    ``produces``), and there is no correct generic answer for a nested list: append,
+    replace, or match by index? Deep-merging mappings has the mirror problem — a
+    caller could never replace a mapping wholesale, only accrete into it. Top level
+    is also the granularity the frame around this write already uses: a
+    ``RESTRICTED`` LayerPolicy is defined on "new TOP-LEVEL spec keys", and the
+    kernel's ``field_level`` composition merge overlays per top-level field. Matching
+    it means the generic write cannot express a shape the policy gate cannot reason
+    about.
+
+    ``None`` DELETES the key. Merge semantics cost the caller the ability to remove
+    a field by omitting it, so removal needs a word; JSON ``null`` is unambiguous
+    over every wire a face speaks, and no Kind's schema asks for a literal null
+    value. It applies to ``merge=False`` too, so the two modes never disagree about
+    what ``null`` means."""
+    out = dict(stored) if merge else {}
+    for key, value in (incoming or {}).items():
+        if value is None:
+            out.pop(key, None)
+        else:
+            out[key] = value
+    return out
+
+
+def _stamp_dates(
+    spec: dict[str, Any], kind: str, *, now: str, existed: bool,
+    caller_sent: frozenset[str],
+) -> None:
+    """Stamp the dated fields ``kind``'s read surfaces need — in place.
+
+    The field list is :data:`~dna.application.sdlc.DATED_SPEC_FIELDS`, the SAME
+    registry the digest reads a document's date THROUGH and the named write paths
+    are guarded against (i-078). Deriving from it rather than keeping a second list
+    is the whole point: a Kind a reader learns to date is dated by this path on the
+    day it is added there, and a Kind outside it gets nothing — many of those close
+    their schema (``Kaizen`` is ``additionalProperties: false``), so inventing
+    timestamps would be a write-time veto, not a cosmetic difference.
+
+    Three rules, in order of who is most likely to be right:
+
+    * a field the CALLER sent is left alone — importing a document with its real
+      dates has to stay possible; the stamp is a floor, not an override;
+    * ``updated_at`` is always ``now`` — this write IS the update, so the claim is
+      true by construction;
+    * ``created_at`` is stamped ``now`` only on a CREATE. On an update it is
+      recovered from the document's own timeline (``backfill_created_at``) and
+      otherwise left ABSENT. Falling back to ``now`` there would date a months-old
+      document as filed today, put it in the current digest window and hide it from
+      the one it belongs to — a louder version of the bug this repairs. That is the
+      identical rule ``plan_date_repair`` and ``set_status`` already hold.
+
+    No timeline event is appended. The generic write has no verb — it cannot know
+    whether this was a groom, a decision or a status flip, the ``type`` vocabulary
+    is verb-shaped, and a Kind may declare no ``timeline`` at all. Narrating a board
+    item is what ``comment`` / ``set_status`` are for; what this path owes the
+    readers is the dated fields above, and what it owes the document is to not
+    destroy the timeline somebody else wrote."""
+    from dna.application.sdlc import DATED_SPEC_FIELDS, backfill_created_at
+
+    declared = DATED_SPEC_FIELDS.get(kind, ())
+    if "updated_at" in declared and "updated_at" not in caller_sent:
+        spec["updated_at"] = now
+    if "created_at" in declared and "created_at" not in caller_sent:
+        if not spec.get("created_at"):
+            if existed:
+                backfill_created_at(spec)  # from its own timeline, or not at all
+            else:
+                spec["created_at"] = now
+
+
 def _write_tenant(port: Any, tenant: str | None) -> str | None:
     """The tenant to thread into ``kernel.write_document``.
 
@@ -303,30 +412,66 @@ async def list_documents_impl(
     live: LiveDna, *, kind: str, scope: str | None = None,
     tenant: str | None = None, api_version: str | None = None,
     limit: int = 50, offset: int = 0,
+    fields: Iterable[str] | None = None,
+    filter: dict[str, Any] | None = None,  # noqa: A002 — the kernel's own kwarg
+    order_by: Iterable[str] | None = None,
 ) -> dict[str, Any]:
-    """List the documents of one Kind in a scope (tenant-resolved).
+    """List the documents of one Kind in a scope (tenant-resolved), optionally
+    PROJECTED, FILTERED and ORDERED.
 
-    Pages through the kernel's own push-down query — one extra row is fetched to
-    answer ``has_more`` honestly instead of guessing from a full page."""
+    Names-only used to be the whole result, which made every question about a
+    board cost 1 + N calls: list the 51 Issues, then read each one to find the
+    open ones and discard most of what came back. ``fields`` / ``filter`` /
+    ``order_by`` are handed straight to ``kernel.query`` — the SAME push-down the
+    REST list surfaces use, so on Postgres the filter is a WHERE clause and the
+    projection trims each row before it travels, instead of being re-implemented
+    here over a full scan.
+
+    * ``fields`` — dotted paths (``spec.title``; unprefixed resolves under
+      ``spec.``, ``name`` is always included). A projected row travels as the
+      kernel shaped it: ``{"name": …, "spec": {…}}``.
+    * ``filter`` — field → value, ANDed; a single-key dict is an operator
+      (``{"status": {"in": [...]}}``). An unknown operator raises ``QueryError``
+      (a ``ValueError``) naming the valid set, rather than silently matching.
+    * ``order_by`` — dotted paths, ``-`` prefix for descending.
+
+    With no ``fields`` the result is byte-identical to before (``[{"name": …}]``),
+    so every existing caller is untouched; ``projected`` echoes what was asked
+    for, so a reader can tell a names-only page from a projected one.
+
+    Pages through the kernel's own query — one extra row is fetched to answer
+    ``has_more`` honestly instead of guessing from a full page. That extra row is
+    only fully meaningful WITH an ``order_by``: without one, ``kernel.query``'s
+    page is stable per adapter but not globally defined."""
     port = resolve_kind_port(live.kernel, kind, api_version)
     sc = scope or live.default_scope(tenant)
     limit = max(1, min(int(limit), 500))
     offset = max(0, int(offset))
+    projection = [str(f) for f in fields] if fields else None
     rows: list[dict[str, Any]] = []
     async for row in live.kernel.query(
         sc, port.kind, tenant=tenant, limit=limit + 1, offset=offset,
+        projection=projection, filter=filter or None,
+        order_by=[str(o) for o in order_by] if order_by else None,
     ):
         rows.append(row)
     has_more = len(rows) > limit
-    names = [n for n in (_row_name(r) for r in rows[:limit]) if n]
+    page = rows[:limit]
+    if projection is None:
+        documents: list[dict[str, Any]] = [
+            {"name": n} for n in (_row_name(r) for r in page) if n
+        ]
+    else:
+        documents = [r for r in page if isinstance(r, dict)]
     return {
         "scope": sc,
         "kind": port.kind,
         "api_version": port.api_version,
-        "documents": [{"name": n} for n in names],
-        "count": len(names),
+        "documents": documents,
+        "count": len(documents),
         "offset": offset,
         "has_more": has_more,
+        "projected": projection,
     }
 
 
@@ -343,35 +488,101 @@ async def get_document_impl(
     return {
         "scope": sc, "kind": port.kind, "api_version": port.api_version,
         "name": name, "document": raw,
+        # The optimistic-concurrency token for a follow-up write (see
+        # :func:`spec_etag`): pass it back as ``write_document``'s ``if_match``
+        # and a lost update becomes a refusal instead of a silent overwrite.
+        "etag": spec_etag(raw.get("spec") if isinstance(raw, dict) else None),
     }
 
 
 async def write_document_impl(
     live: LiveDna, *, kind: str, name: str, spec: dict[str, Any],
     scope: str | None = None, tenant: str | None = None,
-    api_version: str | None = None,
+    api_version: str | None = None, merge: bool = True,
+    if_match: str | None = None, now: str | None = None,
 ) -> dict[str, Any]:
-    """Create or update one document — through ``kernel.write_document``.
+    """Create or UPDATE one document — read-modify-merge, through
+    ``kernel.write_document``.
 
     Nothing about the write path is re-implemented here: schema validation, the
     LayerPolicy gate (Kind-level and the ``OVERLAYABLE_FIELDS`` per-field
     allowlist), reference validation, the ``pre_save`` veto hook and the
     invalidation fan-out are the kernel's, exactly as for the hand-written
-    tools. This use-case adds one thing the kernel cannot know — that the caller
-    is a GENERIC write-any-document tool — and refuses the bootstrap Kinds
-    accordingly (:class:`BootstrapKindWriteRefused`).
+    tools. This use-case adds the three things the kernel cannot know:
+
+    **1. the caller is a GENERIC write-any-document tool**, so the bootstrap
+    Kinds are refused (:class:`BootstrapKindWriteRefused`).
+
+    **2. an update is an update.** This path used to build the document from
+    scratch and hand it over, which made every write a REPLACE: updating one
+    field of a Story erased its ``timeline`` (append-only history), its status and
+    its parent Feature unless the caller re-sent all of them. It now reads the
+    stored document first and merges the caller's ``spec`` over it at the TOP
+    LEVEL (:func:`_merged_spec` — which also documents why not deep, and how an
+    explicit ``None`` clears a field). ``merge=False`` is the old behavior, kept
+    reachable but only by name: it REPLACES the spec and drops anything the caller
+    did not send.
+
+    **3. the read surfaces need the document dated.** :func:`_stamp_dates` stamps
+    exactly what :data:`~dna.application.sdlc.DATED_SPEC_FIELDS` declares for the
+    target Kind — the same registry ``sdlc_digest`` reads a document's date
+    through — so an ADR / Kaizen / Spike filed here is visible to the digest
+    instead of permanently missing from every window (i-078, one write path
+    later). It never forges a ``created_at`` onto an older document.
+
+    ``if_match`` (OPTIONAL) is the ``etag`` from :func:`get_document_impl`: when
+    given, the write proceeds only if the stored spec still hashes to it, else
+    :class:`ConcurrentWriteError`. Opt-in rather than mandatory, deliberately —
+    a CREATE has nothing to match, MCP tool calls are stateless (an agent that
+    never read the document has no token to send), and making it mandatory would
+    turn every first write into a two-call dance. What makes the default safe is
+    (2): without a token, concurrent writers no longer clobber each other's whole
+    document, only the individual fields both of them sent. A caller that cannot
+    tolerate even that reads first and passes the etag — and gets the next one
+    back from this call, so a chain of updates costs no extra reads.
 
     The ``apiVersion`` is taken from the resolved port, never from the caller:
     an agent cannot smuggle a document into a different Kind's namespace."""
+    from dna.application.sdlc import now_iso
+
     port = resolve_kind_port(live.kernel, kind, api_version)
     if is_bootstrap_kind(port):
         raise BootstrapKindWriteRefused(bootstrap_write_refusal(port))
     sc = scope or live.default_scope(tenant)
+    existing = await live.kernel.get_document(
+        sc, port.kind, name, tenant=tenant)
+    stored = (
+        dict(existing.get("spec") or {})
+        if isinstance(existing, dict) and isinstance(existing.get("spec"), dict)
+        else {}
+    )
+    if if_match is not None:
+        if existing is None:
+            raise ConcurrentWriteError(
+                f"if_match={if_match!r} was given but no {port.kind} named "
+                f"{name!r} exists in scope {sc!r} — if_match asserts you are "
+                f"updating a document you read; the document was deleted, or the "
+                f"name is wrong. Re-read it, or drop if_match to create."
+            )
+        current = spec_etag(stored)
+        if current != if_match:
+            raise ConcurrentWriteError(
+                f"{port.kind} {name!r} in scope {sc!r} changed since you read it "
+                f"(if_match={if_match!r}, now {current!r}) — refusing so your "
+                f"update does not overwrite somebody else's. Re-read the document "
+                f"with get_document and re-apply your change to the fresh etag."
+            )
+
+    new_spec = _merged_spec(stored, dict(spec or {}), merge=merge)
+    _stamp_dates(
+        new_spec, port.kind, now=now or now_iso(), existed=existing is not None,
+        caller_sent=frozenset(spec or {}),
+    )
     raw = {
         "apiVersion": port.api_version,
         "kind": port.kind,
         "metadata": {"name": name},
-        "spec": dict(spec or {}),
+        "spec": new_spec,
     }
     write_tenant = _write_tenant(port, tenant)
     version = await live.kernel.write_document(
@@ -380,4 +591,8 @@ async def write_document_impl(
     return {
         "scope": sc, "kind": port.kind, "api_version": port.api_version,
         "name": name, "version": version, "tenant": write_tenant,
+        "created": existing is None,
+        "merged": bool(merge) and existing is not None,
+        # Chain this into the next write's ``if_match`` — no re-read needed.
+        "etag": spec_etag(new_spec),
     }

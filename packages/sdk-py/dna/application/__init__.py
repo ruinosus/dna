@@ -15,6 +15,7 @@ from dna.application.live import LiveDna
 from dna.application.documents import (
     AmbiguousKindError,
     BootstrapKindWriteRefused,
+    ConcurrentWriteError,
     UnknownKindError,
     bootstrap_kinds,
     family_for_kind,
@@ -23,9 +24,11 @@ from dna.application.documents import (
     list_documents_impl,
     list_kinds_impl,
     resolve_kind_port,
+    spec_etag,
     write_document_impl,
 )
 from dna.application.sdlc import (
+    DocumentExists,
     InvalidTransition,
     add_comment,
     comment_impl,
@@ -35,6 +38,7 @@ from dna.application.sdlc import (
     create_issue_impl,
     create_story,
     create_story_impl,
+    refuse_if_exists,
     set_status,
     set_status_impl,
 )
@@ -104,14 +108,18 @@ __all__ = [
     "get_document_impl",
     "write_document_impl",
     "resolve_kind_port",
+    "spec_etag",
     "family_for_kind",
     "bootstrap_kinds",
     "is_bootstrap_kind",
     "AmbiguousKindError",
     "BootstrapKindWriteRefused",
+    "ConcurrentWriteError",
     "UnknownKindError",
     # SDLC write core (shared by the CLI + the MCP write tools)
+    "DocumentExists",
     "InvalidTransition",
+    "refuse_if_exists",
     "create_story",
     "create_issue",
     "create_feature",

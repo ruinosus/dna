@@ -15,7 +15,7 @@ the neutral MCP protocol, so any MCP client (Claude Code/Desktop, Cursor, GitHub
 Copilot, agent-framework, Bedrock AgentCore) reaches it:
 
     definitions  compose_prompt · list_agents · list_tools · get_tool
-    SDLC (read)  sdlc_digest · list_stories · get_adr
+    SDLC (read)  sdlc_digest · list_stories · get_adr · board_summary · board_item
     SDLC (write) create_story · create_issue · set_status · comment · create_feature
     memory       recall · remember · consolidate · list_memories · forget
     documents    list_kinds · list_documents · get_document · write_document
@@ -61,9 +61,12 @@ logger = logging.getLogger(__name__)
 # enforces MCP-edge concerns (auth/quota). The use-cases are re-exported here so
 # ``dna_cli._mcp_server.compose_prompt_impl`` (etc.) keep resolving for callers.
 from dna.application import (  # noqa: F401 — re-exported for the faces + tests
+    BoardItemNotFound,
     InvalidTransition,
     LiveDna,
     adopt_workspace_scope_on_access,
+    board_item_impl,
+    board_summary_impl,
     comment_impl,
     compose_prompt_impl,
     consolidate_impl,
@@ -151,7 +154,22 @@ async def sdlc_digest_impl(
     tenant: str | None = None,
 ) -> dict[str, Any]:
     """The retrospective board digest — what happened in a window. Reuses the
-    SAME pure aggregator ``dna sdlc digest`` uses (``_digest.build_digest``)."""
+    SAME pure aggregator ``dna sdlc digest`` uses (``_digest.build_digest``).
+
+    Reports its own COVERAGE. This loop used to be ``except Exception:
+    continue  # kind absent in this source``: the comment named one cause, the
+    code caught every cause, and the digest then reported ``rag_status: green``
+    and "nada precisa da sua atenção" for a board it had failed to read. Two
+    distinctions replace it:
+
+    * a Kind the source does not REGISTER is discovered from the Kind registry,
+      before any query — no exception needed, and not a failure (``absent``);
+    * anything a read RAISES is a failure, recorded with its type and message
+      (``unreadable``), which makes the digest visibly ``partial`` and never
+      green — the policy lives in ``build_digest``, so every caller inherits it.
+
+    Still fail-soft by design: one broken Kind must not deny the delegator the
+    nine that worked. What changes is that the result says which nine."""
     from dna_cli._digest import build_digest, resolve_since
     from dna_cli.sdlc_cmd import _DIGEST_KINDS
 
@@ -162,13 +180,27 @@ async def sdlc_digest_impl(
     except ValueError as exc:
         raise ValueError(str(exc)) from None
 
+    registered = {p.kind for p in live.kernel.kind_ports()}
     docs: list[dict[str, Any]] = []
+    absent: list[str] = []
+    unreadable: list[dict[str, str]] = []
     for kind in _DIGEST_KINDS:
+        if kind not in registered:
+            absent.append(kind)
+            continue
         try:
             docs.extend(await _collect(live, sc, kind, tenant))
-        except Exception:  # noqa: BLE001 — kind absent in this source
-            continue
-    return build_digest(docs=docs, since=since_dt, until=now, since_label=label, scope=sc)
+        except Exception as exc:  # noqa: BLE001 — one Kind must not deny the rest
+            logger.warning(
+                "sdlc_digest: reading %s in scope %s failed: %s: %s",
+                kind, sc, type(exc).__name__, exc,
+            )
+            unreadable.append(
+                {"kind": kind, "error": f"{type(exc).__name__}: {exc}"})
+    return build_digest(
+        docs=docs, since=since_dt, until=now, since_label=label, scope=sc,
+        absent=absent, unreadable=unreadable,
+    )
 
 
 # ── The memory result shape: data first, for every kind of host ────────────
@@ -287,10 +319,53 @@ def build_server(
     # The auth↔tenancy bridge: resolve the effective tenant from the current
     # token (identity when there is no token / no auth). CrossTenantError → a
     # clean MCP ToolError so the client sees the denial, not a masked 500.
+    from contextlib import asynccontextmanager as _asynccontextmanager
+
     from fastmcp.exceptions import ToolError
+
+    from dna.application.sdlc import DocumentExists
+    from dna.kernel.errors import KernelRefusal
+
+    # Everything a tool call may legitimately be REFUSED with — the ONE tuple
+    # every write tool relays through ``_refusing`` below.
+    #
+    # It is short because ``KernelRefusal`` is the kernel's own marker base for a
+    # deliberate verdict (schema veto, LayerPolicy veto, tenancy rule, read-only
+    # source, retired Kind). That base exists because THIS list used to be
+    # hand-enumerated per tool and was wrong: ``write_document`` caught
+    # ``(ValueError, LookupError, PermissionError)`` and therefore missed the
+    # LayerPolicy veto and every tenancy rule (plain ``Exception``;
+    # ``NotWritableError`` is a ``RuntimeError``), while the three board create
+    # tools and all five memory tools had no mapping at all — so the single
+    # likeliest refusal on a tenant write reached the client as an unexplained
+    # failure with no cause and no remedy.
+    #
+    # Deliberately NOT ``Exception``: a genuine bug must keep looking like a bug.
+    # A caller told "refused" stops investigating, so a crash reported as a policy
+    # decision costs more than a crash reported as a crash.
+    _REFUSALS: tuple[type[BaseException], ...] = (
+        KernelRefusal, InvalidTransition, DocumentExists,
+        ValueError, LookupError, PermissionError,
+    )
+
+    @_asynccontextmanager
+    async def _refusing():
+        """Relay a refusal to the client by NAME and reason, never as a 500.
+
+        The type name is part of the message on purpose: an agent that reads
+        ``LayerPolicyViolationError: layer 'tenant' LOCKED for alias X`` can tell
+        "the operator forbade this" from "your document is malformed" and act
+        differently. A bare reason string cannot carry that."""
+        try:
+            yield
+        except ToolError:
+            raise  # already an honest, client-facing denial (quota / tenancy).
+        except _REFUSALS as exc:
+            raise ToolError(f"{type(exc).__name__}: {exc}") from None
 
     from dna_cli._mcp_auth import (
         CrossTenantError,
+        actor_from_context,
         enforce_oid_from_context,
         enforce_personal_family_from_context,
         enforce_tier_from_context,
@@ -552,7 +627,8 @@ def build_server(
             "One server exposes everything DNA stores: agent DEFINITIONS composed "
             "live and tenant-aware (compose_prompt/list_agents/list_tools/get_tool), "
             "the self-describing SDLC board — READABLE "
-            "(sdlc_digest/list_stories/get_adr) AND WRITABLE "
+            "(sdlc_digest/list_stories/get_adr, and the whole board in one "
+            "call via board_summary/board_item) AND WRITABLE "
             "(create_story/create_issue/set_status/comment/create_feature), so an "
             "agent can create + manage the board over MCP — and declarative MEMORY "
             "(recall/remember/consolidate/list_memories/forget). "
@@ -682,6 +758,19 @@ def build_server(
     # ToolError; the stdio/OSS (no-token) path is unmetered + unrestricted. The
     # write logic is the shared `dna.application.sdlc` core the `dna sdlc` CLI
     # also calls — one write path through `kernel.write_document`.
+    #
+    # ATTRIBUTION (identity, not channel): every board write threads
+    # `actor=actor_from_context()` — the verified identity of THIS request, read
+    # server-side off the token. Before, all five tools left the core's
+    # `actor="mcp"` default in place, so every timeline row on every board ever
+    # written over MCP said "mcp": the founder, an autonomous agent and a paying
+    # customer were the same author, and the one question a timeline exists to
+    # answer ("who did this?") had no answer. `source` still says "mcp" — that is
+    # the channel, and it keeps its own field.
+    #
+    # Each tool relays refusals through `_refusing()`: three of the five had no
+    # `try` at all, so a LayerPolicy veto or a tenancy rule reached the client as
+    # an unexplained failure.
 
     @server.tool(run_in_thread=False)
     async def create_story(
@@ -694,13 +783,19 @@ def build_server(
         """Create a Story on the board. ``feature`` is the parent Feature; ``ac`` /
         ``dod`` are the acceptance-criteria / definition-of-done bullets (the exit
         criteria). Returns ``{kind, name, status, feature}``. A write op — needs a
-        tier whose ``sdlc_mode`` is ``write``."""
-        return await create_story_impl(
-            await _live(), name, feature=feature, description=description,
-            title=title, priority=priority, labels=labels,
-            acceptance_criteria=ac, definition_of_done=dod, scope=scope,
-            tenant=await _guard("sdlc", scope=scope, sdlc_op="write"),
-        )
+        tier whose ``sdlc_mode`` is ``write``.
+
+        CREATE means create: an existing ``name`` is REFUSED, naming the document
+        that is already there. To change one, use ``set_status`` (status),
+        ``comment`` (narration) or ``write_document`` (any field, merged)."""
+        tenant = await _guard("sdlc", scope=scope, sdlc_op="write")
+        async with _refusing():
+            return await create_story_impl(
+                await _live(), name, feature=feature, description=description,
+                title=title, priority=priority, labels=labels,
+                acceptance_criteria=ac, definition_of_done=dod, scope=scope,
+                tenant=tenant, actor=actor_from_context(),
+            )
 
     @server.tool(run_in_thread=False)
     async def create_issue(
@@ -709,15 +804,18 @@ def build_server(
         scope: str | None = None,
     ) -> dict[str, Any]:
         """File an Issue (bug / enhancement / question / task) with an
-        auto-incremented ``i-NNN-<slug>`` name. ``title`` is the short card
-        label (falls back to the description when omitted). Returns
-        ``{kind, name, type, severity}``. A write op — needs
+        auto-incremented ``i-NNN-<slug>`` name — the number steps past any name
+        already taken, so filing never lands on top of an existing Issue.
+        ``title`` is the short card label (falls back to the description when
+        omitted). Returns ``{kind, name, type, severity}``. A write op — needs
         ``sdlc_mode='write'``."""
-        return await create_issue_impl(
-            await _live(), slug, description=description, issue_type=type,
-            severity=severity, title=title, related_feature=feature, scope=scope,
-            tenant=await _guard("sdlc", scope=scope, sdlc_op="write"),
-        )
+        tenant = await _guard("sdlc", scope=scope, sdlc_op="write")
+        async with _refusing():
+            return await create_issue_impl(
+                await _live(), slug, description=description, issue_type=type,
+                severity=severity, title=title, related_feature=feature,
+                scope=scope, tenant=tenant, actor=actor_from_context(),
+            )
 
     @server.tool(run_in_thread=False)
     async def set_status(
@@ -731,13 +829,11 @@ def build_server(
         ``reason`` to record a block reason / resolution. A write op —
         ``sdlc_mode='write'``."""
         tenant = await _guard("sdlc", scope=scope, sdlc_op="write")
-        try:
+        async with _refusing():
             return await set_status_impl(
                 await _live(), kind, name, status, reason=reason, scope=scope,
-                tenant=tenant,
+                tenant=tenant, actor=actor_from_context(),
             )
-        except (InvalidTransition, LookupError) as exc:
-            raise ToolError(str(exc)) from None
 
     @server.tool(run_in_thread=False)
     async def comment(
@@ -749,13 +845,11 @@ def build_server(
         "decidi Y porque Z"). A decision-shaped body auto-promotes. A write op —
         ``sdlc_mode='write'``."""
         tenant = await _guard("sdlc", scope=scope, sdlc_op="write")
-        try:
+        async with _refusing():
             return await comment_impl(
                 await _live(), kind, name, body, event_type=type, scope=scope,
-                tenant=tenant,
+                tenant=tenant, actor=actor_from_context(),
             )
-        except (InvalidTransition, LookupError) as exc:
-            raise ToolError(str(exc)) from None
 
     @server.tool(run_in_thread=False)
     async def create_feature(
@@ -764,12 +858,52 @@ def build_server(
         scope: str | None = None,
     ) -> dict[str, Any]:
         """Create a Feature (a roadmap noun; optionally under an ``epic``). Returns
-        ``{kind, name, status}``. A write op — ``sdlc_mode='write'``."""
-        return await create_feature_impl(
-            await _live(), name, title=title, description=description, epic=epic,
-            priority=priority, labels=labels, scope=scope,
-            tenant=await _guard("sdlc", scope=scope, sdlc_op="write"),
-        )
+        ``{kind, name, status}``. A write op — ``sdlc_mode='write'``.
+
+        An existing ``name`` is REFUSED (see ``create_story``)."""
+        tenant = await _guard("sdlc", scope=scope, sdlc_op="write")
+        async with _refusing():
+            return await create_feature_impl(
+                await _live(), name, title=title, description=description,
+                epic=epic, priority=priority, labels=labels, scope=scope,
+                tenant=tenant, actor=actor_from_context(),
+            )
+
+    # -- SDLC reads: the whole board in ONE call ------------------------------
+    #
+    # `board_summary_impl` / `board_item_impl` have lived in the shared core and
+    # been served over REST for a long time; they were simply never wired here.
+    # Without them, "show me the board" over MCP is `list_documents` + one
+    # `get_document` per row — 1 + N metered calls for a question the core already
+    # answers in one. Same `_guard` seam, `sdlc` family, read op.
+
+    @server.tool(run_in_thread=False)
+    async def board_summary(
+        scope: str | None = None, recent: int = 6
+    ) -> dict[str, Any]:
+        """The whole board in ONE call: Story + Feature counts by status, totals,
+        every item (newest first) and the ``recent`` newest — the shape the DNA
+        Cloud console renders. Prefer this over listing and then reading each
+        document."""
+        tenant = await _guard("sdlc", scope=scope, sdlc_op="read")
+        live = await _live()
+        async with _refusing():
+            return await board_summary_impl(
+                live, scope or live.default_scope(tenant), tenant, recent)
+
+    @server.tool(run_in_thread=False)
+    async def board_item(
+        name: str, kind: str | None = None, scope: str | None = None,
+    ) -> dict[str, Any]:
+        """One work item's FULL detail by ``name`` — title, status, description,
+        acceptance_criteria, definition_of_done, the timeline, feature/epic refs
+        and produces. ``kind`` is a hint (Story / Feature / Epic / Issue / Spike);
+        omitted, the work-item Kinds are probed in order."""
+        tenant = await _guard("sdlc", scope=scope, sdlc_op="read")
+        live = await _live()
+        async with _refusing():
+            return await board_item_impl(
+                live, scope or live.default_scope(tenant), name, tenant, kind)
 
     # -- memory --------------------------------------------------------------
 
@@ -796,13 +930,14 @@ def build_server(
         the search was literal-only; never assert that no memories exist."""
         if personal:
             oid, family = await _personal_guard("read")
-            return await recall_impl(
-                await _live(), query, None, k, memory_scope="personal", oid=oid,
-                family=family,
-            )
-        return await recall_impl(
-            await _live(), query, scope, k, await _guard("memory", scope=scope, memory_op="read")
-        )
+            async with _refusing():
+                return await recall_impl(
+                    await _live(), query, None, k, memory_scope="personal",
+                    oid=oid, family=family,
+                )
+        tenant = await _guard("memory", scope=scope, memory_op="read")
+        async with _refusing():
+            return await recall_impl(await _live(), query, scope, k, tenant)
 
     @server.tool(run_in_thread=False)
     async def remember(
@@ -821,26 +956,58 @@ def build_server(
         workspace. The default (``false``) shares to the workspace, unchanged."""
         if personal:
             oid, family = await _personal_guard("write")
+            async with _refusing():
+                return await remember_impl(
+                    await _live(), summary, None, area=area, affect=affect,
+                    tags=tags, owner=owner, memory_scope="personal", oid=oid,
+                    family=family,
+                )
+        tenant = await _guard("memory", scope=scope, memory_op="write")
+        async with _refusing():
             return await remember_impl(
-                await _live(), summary, None, area=area, affect=affect, tags=tags,
-                owner=owner, memory_scope="personal", oid=oid, family=family,
+                await _live(), summary, scope, area=area, affect=affect,
+                tags=tags, owner=owner, tenant=tenant,
             )
-        return await remember_impl(
-            await _live(), summary, scope, area=area, affect=affect, tags=tags,
-            owner=owner, tenant=await _guard("memory", scope=scope, memory_op="write"),
-        )
+
+    # `personal=` on the three tools below (i-… follow-up): `recall` and
+    # `remember` have carried the flag since personal memory shipped, so a
+    # personal Engram could be written and read — and then never listed, never
+    # forgotten and never consolidated, because these three had no way to name
+    # the partition. `forget` was the worst of it: it answered `forgotten: false`
+    # for a memory it simply could not see, which is the same word it uses for
+    # "already forgotten" — so the caller could not tell "you have no such
+    # memory" from "there is nothing left to do".
 
     @server.tool(run_in_thread=False)
-    async def consolidate(scope: str | None = None, apply: bool = False) -> dict[str, Any]:
-        """Deterministic memory consolidation pass (retention re-score)."""
-        return await consolidate_impl(
-            await _live(), scope, apply=apply,
-            tenant=await _guard("memory", scope=scope, memory_op="write"),
-        )
+    async def consolidate(
+        scope: str | None = None, apply: bool = False, personal: bool = False,
+    ) -> dict[str, Any]:
+        """Deterministic memory consolidation pass (retention re-score).
+
+        ``personal=true`` consolidates ONLY your own private partition — never
+        the workspace's shared memory."""
+        if personal:
+            oid, family = await _personal_guard("write")
+            async with _refusing():
+                return await consolidate_impl(
+                    await _live(), None, apply=apply, memory_scope="personal",
+                    oid=oid, family=family,
+                )
+        tenant = await _guard("memory", scope=scope, memory_op="write")
+        async with _refusing():
+            return await consolidate_impl(
+                await _live(), scope, apply=apply, tenant=tenant)
 
     @server.tool(run_in_thread=False, app=memory_card_app)
-    async def list_memories(scope: str | None = None) -> dict[str, Any]:
+    async def list_memories(
+        scope: str | None = None, personal: bool = False,
+    ) -> dict[str, Any]:
         """List your stored memories (tenant-scoped). Read-only.
+
+        ``personal=true`` lists YOUR OWN private memories (identity-keyed,
+        portable across workspaces + clients) unioned with the shared base
+        defaults — each item's ``personal`` flag says which partition it came
+        from. The default (``false``) lists the workspace's shared memory.
 
         The declaration points the ``ui://dna/memory-list`` MCP Apps card
         (SEP-1865): a host that renders MCP Apps shows the memory list as a
@@ -848,17 +1015,43 @@ def build_server(
         ``structured_content`` — DNA's "your context follows you across every
         client" thesis made visible. Hosts without MCP Apps read the plain
         data from ``content``, unchanged (graceful degradation)."""
-        data = await list_memories_impl(
-            await _live(), scope, tenant=await _guard("memory", scope=scope, memory_op="read")
-        )
+        if personal:
+            oid, family = await _personal_guard("read")
+            async with _refusing():
+                data = await list_memories_impl(
+                    await _live(), None, memory_scope="personal", oid=oid,
+                    family=family,
+                )
+            return _with_memory_card(data)
+        tenant = await _guard("memory", scope=scope, memory_op="read")
+        async with _refusing():
+            data = await list_memories_impl(await _live(), scope, tenant=tenant)
         return _with_memory_card(data)
 
     @server.tool(run_in_thread=False)
-    async def forget(name: str, scope: str | None = None) -> dict[str, Any]:
-        """Delete one memory by name (tenant-scoped, your own overlay only). A write op."""
-        return await forget_impl(
-            await _live(), name, scope, tenant=await _guard("memory", scope=scope, memory_op="write")
-        )
+    async def forget(
+        name: str, scope: str | None = None, personal: bool = False,
+    ) -> dict[str, Any]:
+        """Forget one memory by name — a bi-temporal demotion (revivable), not a
+        hard delete, and only in your own layer. A write op.
+
+        ``personal=true`` forgets from YOUR OWN private partition; the default
+        (``false``) forgets from the workspace's shared memory.
+
+        The result's ``outcome`` distinguishes the three endings: ``forgotten``
+        (it was live, now it is not), ``already_forgotten`` (idempotent — nothing
+        to do) and ``not_found`` (no such memory in this layer — check the name,
+        or ``personal``). ``forgotten: bool`` is kept for existing callers."""
+        if personal:
+            oid, family = await _personal_guard("write")
+            async with _refusing():
+                return await forget_impl(
+                    await _live(), name, None, memory_scope="personal", oid=oid,
+                    family=family,
+                )
+        tenant = await _guard("memory", scope=scope, memory_op="write")
+        async with _refusing():
+            return await forget_impl(await _live(), name, scope, tenant=tenant)
 
     # -- documents (GENERIC, registry-driven — every Kind, not a hand-written list)
     #
