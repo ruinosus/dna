@@ -116,6 +116,24 @@ class KindBase:
     # default. False for the per-scope SDLC ledger + structural Kinds. Was the
     # negation of ``Kernel._NON_INHERITABLE_KINDS``.
     scope_inheritable: bool = True
+    # ``OVERLAYABLE_FIELDS``: the per-FIELD refinement of ``is_overlayable``.
+    # ``is_overlayable`` answers "may a layer fork this Kind at all"; this
+    # answers "which of its top-level spec keys may a layer CHANGE". Both
+    # policy ports enforce it (write → raises; merge → drops the key with a
+    # warning), and it composes with LayerPolicy docs by CONJUNCTION: a
+    # write must satisfy the operator's per-layer policy AND the Kind
+    # author's field allowlist — neither can widen the other.
+    #
+    # ``None`` (the default) means NO per-field restriction — every spec key
+    # is overlayable. That is deliberately not ``frozenset()``: an
+    # empty-set default would read as "nothing is overlayable" and freeze
+    # the spec of all ~75 Kinds that declare nothing. Declaring an explicit
+    # empty set IS meaningful (nothing may change) and is honoured.
+    #
+    # Declarable from a descriptor as ``spec.overlayable_fields`` — see
+    # KindDefinitionSpec / kind-definition.schema.json.
+    OVERLAYABLE_FIELDS: frozenset[str] | None = None
+
     # ``is_catalog_identity``: writing a doc of this Kind changes the Catalog
     # tier's scope/mandatory set for every tenant, so the kernel drops its
     # internal catalog cache after the write (s-write-path-despecialize —

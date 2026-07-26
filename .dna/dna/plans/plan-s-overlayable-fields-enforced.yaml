@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-overlayable-fields-enforced
+spec:
+  title: 'Plano: s-overlayable-fields-enforced'
+  date: '2026-07-26'
+  status: accepted
+  story_ref: s-overlayable-fields-enforced
+  journey_phase: plan
+  body: '1) RED: tests for write-port enforcement, merge-port drop, descriptor declaration, unrestricted default, and the runtime read payload. 2) KindBase.OVERLAYABLE_FIELDS = None (unrestricted). 3) LayerPolicyEnforcer._enforce: field check AFTER the LayerPolicy verdict; rule = a non-allowlisted top-level spec key may not CHANGE the base value. 4) DefaultLayerResolver: same rule, ignore-with-warning posture (matches LOCKED/RESTRICTED on the merge port). 5) Descriptor field overlayable_fields + both kind-definition.schema.json copies + DeclarativeKindPort. 6) runtime.read_definition_impl: return the resolved editable field set (declared allowlist, else every form field) so an undeclared Kind renders an editable form. 7) Regenerate docs/reference/kinds. 8) Full suites + deliberate-break evidence.'
+  created_at: '2026-07-26T06:05:29+00:00'
+  updated_at: '2026-07-26T06:05:29+00:00'

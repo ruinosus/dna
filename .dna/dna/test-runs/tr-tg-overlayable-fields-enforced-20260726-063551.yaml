@@ -1,0 +1,12 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-overlayable-fields-enforced-20260726-063551
+spec:
+  guide_ref: tg-overlayable-fields-enforced
+  outcome: pass
+  verifies:
+  - Story/s-overlayable-fields-enforced
+  executed_by: claude-code
+  executed_at: '2026-07-26T06:35:51+00:00'
+  notes: sdk-py 3599 passed / 1 pre-existing failure (test_claude_export_roundtrip, red on main too); cli 1128 passed / 1 pre-existing failure (test_mcp_quota, red on main too); new suite 22/22; three deliberate breaks (gate 3, descriptor wiring, read-payload default) each turned the matching tests red and were restored green; brand + kinds-docs + data-model + docs-coverage guards clean.

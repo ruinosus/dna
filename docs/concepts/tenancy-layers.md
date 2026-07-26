@@ -288,6 +288,37 @@ Not every Kind should be overridable by every layer. A **`LayerPolicy`**
 override which Kinds* — the guardrail on the override model. It is data, like
 everything else: a policy document, validated and versioned.
 
+## `overlayable_fields` — which *fields* of a Kind a layer may change
+
+`LayerPolicy` answers *whether* a layer may override a Kind. A Kind can go one
+level finer and declare *which of its spec fields* a layer may change, right
+next to `ui_schema` in its `.kind.yaml` descriptor:
+
+```yaml
+spec:
+  target_kind: Agent
+  # …
+  overlayable_fields: [instruction, model]
+```
+
+The two compose by **conjunction** and neither widens the other: a layer write
+must satisfy the operator's `LayerPolicy` *and* the Kind author's field list. A
+write that changes any other top-level spec key is refused with
+`LayerPolicyViolationError`.
+
+Three things worth knowing before you reach for it:
+
+- **Omitting it is the default and means *unrestricted*** — every spec field is
+  overlayable. Only declare the key when a field genuinely must not move; a
+  schema-driven editor renders exactly the fields you list as editable, so an
+  over-eager list is a form nobody can fill in.
+- **Writing a listed-out field back at its inherited value is not a change**,
+  so submitting a whole effective spec (read-only fields included) stays a
+  no-op rather than an error.
+- **It gates authoring, not composition.** The check runs on the write path.
+  Overlay documents already stored are merged as written — enforcing the list
+  on merge would retroactively rewrite content nobody edited.
+
 ## The maxim: inheritable ⇒ never per-tenant-only
 
 A design invariant worth stating plainly: a Kind that is an **inheritable

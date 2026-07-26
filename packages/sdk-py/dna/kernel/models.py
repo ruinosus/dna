@@ -1009,6 +1009,15 @@ class KindDefinitionSpec:
     # D7 ``description_fallback_field``: pass-through string attr telling Studio
     # which spec field acts as the card description fallback.
     description_fallback_field: str | None = None
+    # ``overlayable_fields``: the per-FIELD refinement of ``is_overlayable`` —
+    # which top-level spec keys a layer (a tenant overlay, a branch) may
+    # CHANGE. Enforced by BOTH policy ports (the write port raises, the merge
+    # port drops the key with a warning) and intersected with the operator's
+    # LayerPolicy docs; see ``KindBase.OVERLAYABLE_FIELDS`` for the full
+    # contract. Absent (None) = no per-field restriction, the default for
+    # every Kind; an explicit ``[]`` forbids every field change. The port
+    # exposes it as ``OVERLAYABLE_FIELDS``.
+    overlayable_fields: list[str] | None = None
 
     @classmethod
     def from_raw(cls, raw: dict[str, Any]) -> KindDefinitionSpec:
@@ -1077,6 +1086,15 @@ class KindDefinitionSpec:
                 "KindDefinition spec.spec_defaults must be a mapping, "
                 f"got {type(spec_defaults).__name__}"
             )
+        overlayable_fields = raw.get("overlayable_fields")
+        if overlayable_fields is not None and (
+            not isinstance(overlayable_fields, list)
+            or not all(isinstance(f, str) for f in overlayable_fields)
+        ):
+            raise ValueError(
+                "KindDefinition spec.overlayable_fields must be a list of "
+                f"spec field names, got {type(overlayable_fields).__name__}"
+            )
         return cls(
             target_api_version=raw["target_api_version"],
             target_kind=raw["target_kind"],
@@ -1113,6 +1131,7 @@ class KindDefinitionSpec:
             spec_defaults=spec_defaults,
             default_agent_field=raw.get("default_agent_field"),
             description_fallback_field=raw.get("description_fallback_field"),
+            overlayable_fields=overlayable_fields,
         )
 
     @staticmethod

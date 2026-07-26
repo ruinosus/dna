@@ -78,6 +78,7 @@ def _kindlookup(**over):
         _kinds={},
         kind_plane=lambda kind, *, api_version=None: "composition",
         storage_for_kind=lambda kn: None,
+        kind_port_for=lambda kind, *, api_version=None: None,
         _alias_for=lambda k: k,
         _ensure_generic_readers_writers=lambda: None,
     )
@@ -272,8 +273,11 @@ def test_fake_is_a_slice_not_the_kernel():
     lacks god-object members — proof this is a narrow interface, not the kernel."""
     fake = _slice(**_kindlookup(), **_docstore(), **_inheritance(), **_buildctx())
     members = {m for m in vars(fake) if not m.startswith("__")}
-    # instance_builder is the widest back-ref; still a small slice.
-    assert len(members) <= 24
+    # instance_builder is the widest back-ref; still a small slice. Raising
+    # this bound is the code-review event the collaborator-ports design asks
+    # for — 24 → 25 for ``KindLookup.kind_port_for``, which LayerPolicyEnforcer
+    # needs to read a Kind's OVERLAYABLE_FIELDS allowlist (gate 3).
+    assert len(members) <= 25
     # It is NOT a Kernel and lacks the god-object surface a Kernel exposes.
     assert not isinstance(fake, Kernel)
     for god in ("hooks", "_toolreg", "load", "write_document", "search", "auto"):

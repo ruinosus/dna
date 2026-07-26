@@ -178,6 +178,18 @@ class DefaultLayerResolver:
         # present, policy lookup is DECLARED, not inferred from name shape
         # (i-044) — the string heuristics below survive only as legacy
         # fallback for callers that can't supply the map.
+        #
+        # NOTE — the per-field ``KindPort.OVERLAYABLE_FIELDS`` allowlist is
+        # deliberately NOT enforced here; it is a WRITE-path gate only
+        # (``LayerPolicyEnforcer._check_overlayable_fields``). Unlike a
+        # LayerPolicy doc, which an operator opts into per scope, the
+        # allowlist is declared globally by the Kind author, so enforcing it
+        # on merge would retroactively rewrite every overlay already sitting
+        # in every deployment's source. It also breaks a real feature: a
+        # tenant-published Genome legitimately carries ``owner_tenant``, a
+        # field Genome's own allowlist excludes
+        # (test_load_manifest_tenant_phase9). Merge stays faithful to what is
+        # stored; the gate is on what may be authored.
         self._kind_aliases: dict[str, str] = dict(kind_aliases or {})
         # Kinds already warned about (unmatched-policy fallback) — one
         # warning per kind per resolver instance, not one per document.

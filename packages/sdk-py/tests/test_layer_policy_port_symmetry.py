@@ -61,6 +61,9 @@ class _FakeKernel:
     def _alias_for(self, kind):
         return _ALIAS if kind == _KIND else f"owner-{kind.lower()}"
 
+    def kind_port_for(self, kind, *, api_version=None):
+        return None  # no per-field allowlist — this suite is about policy keys
+
 
 def _write_allowed(policy_key: str) -> bool:
     """Attempt a WRITE of Skill/x to layer 'tenant-a' under a LayerPolicy doc
