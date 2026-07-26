@@ -527,6 +527,44 @@ class Kernel:
             if getattr(kp, "embed_fields", None) is not None
         )
 
+    def kinds_with_trait(self, trait: str) -> frozenset[str]:
+        """Kind NAMES whose port declares ``trait`` — the lookup that replaces a
+        literal Kind-name list.
+
+        The third instance of a mechanism the SDK already had twice —
+        :meth:`_classify_kinds` (derived, but only for booleans the kernel knows
+        by name) and ``register_schema_fragment`` (open + namespaced, but only
+        for schema) — generalised: an OPEN vocabulary resolved by lookup. A
+        consumer asks "which Kinds are work items?" and the Kinds answer, so
+        adding one to a family is a declaration on that Kind instead of an edit
+        in every module that has an opinion about it.
+
+        Returns names, not ports, because that is what the callers it replaces
+        used (``kind in _DIGEST_KINDS``). Use :meth:`kind_ports_with_trait` when
+        you need the port itself."""
+        from dna.kernel.kinds.traits import port_traits
+
+        return frozenset(
+            k
+            for kp in self.kind_ports()
+            if (k := getattr(kp, "kind", None)) is not None
+            and trait in port_traits(kp)
+        )
+
+    def kind_ports_with_trait(self, trait: str) -> list[KindPort]:
+        """The registered ports declaring ``trait``, in registration order."""
+        from dna.kernel.kinds.traits import port_traits
+
+        return [kp for kp in self.kind_ports() if trait in port_traits(kp)]
+
+    def traits_of(self, kind: str, *, api_version: str | None = None) -> frozenset[str]:
+        """Every trait declared by ``kind`` — ``frozenset()`` when the name is
+        not registered (an unknown Kind participates in nothing)."""
+        from dna.kernel.kinds.traits import port_traits
+
+        kp = self.kind_port_for(kind, api_version=api_version)
+        return port_traits(kp) if kp is not None else frozenset()
+
     def _kind_scope(self, kind: str, *, api_version: str | None = None):
         """Return the TenantScope for a registered kind, or None if unset.
 

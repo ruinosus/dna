@@ -148,6 +148,18 @@ class KindBase:
     # covers still-class Kinds as well as descriptor-synthesized ports.
     embed_fields: list[str] | None = None
 
+    # ---- Traits (the open participation vocabulary) ------------------
+    # What this Kind PARTICIPATES in, for questions the kernel itself has no
+    # opinion about: ``sdlc.work-item``, ``memory.recallable``, ... Consumers
+    # ask ``kernel.kinds_with_trait(name)`` instead of carrying a literal
+    # Kind-name list, so adding a Kind to a family is a declaration, not
+    # thirteen edits in thirteen modules.
+    #
+    # Declarable from a descriptor as ``spec.traits`` — see KindDefinitionSpec /
+    # kind-definition.schema.json. The vocabulary is OPEN: an unregistered
+    # trait is legal (dna.kernel.kinds.traits explains why).
+    traits: frozenset[str] = frozenset()
+
     # ---- Optional presentation surface (KindPresentation) ----------
     # Typed home: dna.kernel.protocols.KindPresentation — the
     # capability Protocol for the optional UX/rendering members. These

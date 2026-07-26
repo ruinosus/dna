@@ -47,6 +47,7 @@ spec:
   target_kind: Engram
   alias: helix-engram
   origin: github.com/ruinosus/dna/engram
+  traits: [memory.recallable]
   plane: record
   prompt_target: false
   flatten_in_context: false

@@ -11,7 +11,30 @@ the MCP server (``dna_cli._mcp_server``) and the REST API (``dna_cli._rest_api``
 both import these use-cases and only translate transport + edge validation
 (auth/quota, request/response shaping, JSON-RPC).
 """
+from dna.application.gates import (
+    GATE_EXIT_CRITERIA,
+    GATE_TEST_ON_CLOSE,
+    MethodologyRefusal,
+    closing_warnings,
+    has_passing_product_run,
+    kind_is_gated,
+    refuse_close_without_tests,
+    refuse_without_exit_criteria,
+)
 from dna.application.live import LiveDna
+from dna.application.sdlc_family import (
+    board_probe_order,
+    dated_spec_fields,
+    digest_kinds,
+    filed_kinds,
+    journey_derived_kinds,
+    producer_kinds,
+    rollup_kinds,
+    status_enum_for,
+    status_enums,
+    transitionable_kinds,
+    work_item_kinds,
+)
 from dna.application.documents import (
     AmbiguousKindError,
     BootstrapKindWriteRefused,
@@ -110,6 +133,25 @@ __all__ = [
     "resolve_kind_port",
     "spec_etag",
     "family_for_kind",
+    "GATE_EXIT_CRITERIA",
+    "GATE_TEST_ON_CLOSE",
+    "MethodologyRefusal",
+    "board_probe_order",
+    "closing_warnings",
+    "dated_spec_fields",
+    "digest_kinds",
+    "filed_kinds",
+    "has_passing_product_run",
+    "journey_derived_kinds",
+    "kind_is_gated",
+    "producer_kinds",
+    "refuse_close_without_tests",
+    "refuse_without_exit_criteria",
+    "rollup_kinds",
+    "status_enum_for",
+    "status_enums",
+    "transitionable_kinds",
+    "work_item_kinds",
     "bootstrap_kinds",
     "is_bootstrap_kind",
     "AmbiguousKindError",

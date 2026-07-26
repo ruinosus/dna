@@ -132,6 +132,7 @@ class ResearchKind(KindBase):
     alias = None
     alias_owner = "research"
     model = dict
+    traits = frozenset({"memory.recallable"})
     origin = _ORIGIN
     # PERMISSIVE tenancy — NO ``scope`` attribute declared. The write
     # pipeline treats an undeclared scope as permissive (base writes with

@@ -26,6 +26,7 @@ spec:
   target_kind: Evidence
   alias: evidence-evidence
   origin: github.com/ruinosus/dna/evidence
+  traits: [memory.recallable]
   plane: record
   prompt_target: false
   flatten_in_context: false

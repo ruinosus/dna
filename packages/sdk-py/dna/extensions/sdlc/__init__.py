@@ -297,6 +297,7 @@ class EpicKind(KindBase):
     scope = TenantScope.GLOBAL  # SDLC primitives are project-level, not per-tenant
     kind = "Epic"
     alias = "sdlc-epic"
+    traits = frozenset({"sdlc.work-item", "sdlc.rollup", "sdlc.dated"})
     # Per-scope ledger, exactly like its Roadmap/Feature/Story/Issue siblings —
     # an Epic in `_lib` must NOT leak into every child scope. This was MISSED by
     # the v1.3 Milestone→Epic rename: the classification stayed pinned to the
@@ -410,6 +411,7 @@ class FeatureKind(KindBase):
     scope = TenantScope.GLOBAL  # SDLC primitives are project-level, not per-tenant
     kind = "Feature"
     alias = "sdlc-feature"
+    traits = frozenset({"sdlc.work-item", "sdlc.rollup", "sdlc.dated"})
     scope_inheritable = False
     model = dict
     origin = "github.com/ruinosus/dna/sdlc"
@@ -594,6 +596,7 @@ class IssueKind(KindBase):
     scope = TenantScope.GLOBAL  # SDLC primitives are project-level, not per-tenant
     kind = "Issue"
     alias = "sdlc-issue"
+    traits = frozenset({"sdlc.work-item", "sdlc.filed", "sdlc.journey-derived", "sdlc.dated"})
     scope_inheritable = False
     model = dict
     origin = "github.com/ruinosus/dna/sdlc"
@@ -729,6 +732,7 @@ class SpecKind(KindBase):
     scope = TenantScope.GLOBAL  # SDLC primitives are project-level, not per-tenant
     kind = "Spec"
     alias = "sdlc-spec"
+    traits = frozenset({"sdlc.dated"})
     model = dict
     origin = "github.com/ruinosus/dna/sdlc"
     storage = StorageDescriptor.bundle("specs", "SPEC.md", body_field="body")
@@ -1029,6 +1033,7 @@ class BugKind(KindBase):
     scope = TenantScope.GLOBAL
     kind = "Bug"
     alias = "sdlc-bug"
+    traits = frozenset({"sdlc.work-item", "sdlc.filed", "sdlc.dated"})
     model = dict
     origin = "github.com/ruinosus/dna/sdlc"
     storage = StorageDescriptor.bundle("bugs", "BUG.md", body_field="body")
@@ -1102,6 +1107,7 @@ class TaskKind(KindBase):
     scope = TenantScope.GLOBAL
     kind = "Task"
     alias = "sdlc-task"
+    traits = frozenset({"sdlc.work-item", "sdlc.dated"})
     model = dict
     origin = "github.com/ruinosus/dna/sdlc"
     storage = StorageDescriptor.bundle("tasks", "TASK.md", body_field="body")
@@ -1166,6 +1172,7 @@ class SpikeKind(KindBase):
     scope = TenantScope.GLOBAL
     kind = "Spike"
     alias = "sdlc-spike"
+    traits = frozenset({"sdlc.work-item", "sdlc.journey-derived", "sdlc.dated"})
     model = dict
     origin = "github.com/ruinosus/dna/sdlc"
     storage = StorageDescriptor.bundle("spikes", "SPIKE.md", body_field="body")
@@ -1287,6 +1294,7 @@ class InitiativeKind(KindBase):
     scope = TenantScope.GLOBAL
     kind = "Initiative"
     alias = "sdlc-initiative"
+    traits = frozenset({"sdlc.work-item", "sdlc.rollup", "sdlc.dated"})
     model = dict
     origin = "github.com/ruinosus/dna/sdlc"
     storage = StorageDescriptor.bundle("initiatives", "INITIATIVE.md", body_field="body")

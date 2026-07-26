@@ -240,6 +240,41 @@
           "type": ["string", "null"],
           "description": "Human-friendly plural label (e.g. \"Kaizens\")."
         },
+        "traits": {
+          "type": ["array", "null"],
+          "items": { "type": "string", "minLength": 1 },
+          "description": "What this Kind PARTICIPATES in, e.g. [\"sdlc.work-item\"] / [\"memory.recallable\"]. Consumers ask `kernel.kinds_with_trait(name)` instead of carrying a literal Kind-name list, so adding a Kind to a family is a declaration rather than an edit in every module that has an opinion. OPEN vocabulary: an unregistered trait is legal; `<owner>.<name>` by convention (see dna.kernel.kinds.traits)."
+        },
+        "is_schema_affecting": {
+          "type": "boolean",
+          "description": "A write of this Kind invalidates the kernel's schema cache (Kernel._SCHEMA_INVALIDATING_KINDS). Refused on the record plane, exactly as for a class Kind."
+        },
+        "is_catalog_identity": {
+          "type": "boolean",
+          "description": "A write of this Kind changes the Catalog tier's scope/mandatory set, so the kernel drops its catalog cache after it."
+        },
+        "validate_on_parse": {
+          "type": "boolean",
+          "description": "parse() validates spec against schema() and raises on a malformed document (the loader turns that into a parse_error event). A descriptor Kind with a declared schema already validates; declaring this keeps a class \u2192 descriptor migration lossless and makes the intent readable."
+        },
+        "marker_shared_allowed": {
+          "type": "boolean",
+          "description": "This bundle Kind consents to sharing its (container, marker) pair with another Kind that also consents. Both sides must declare it."
+        },
+        "visible_in_backend": {
+          "type": ["boolean", "null"],
+          "description": "Explicit override of the storage-pattern default for backend visibility. Omit (null) to derive it (bundle/standalone \u2192 true, yaml/root \u2192 false)."
+        },
+        "version_retention": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "description": "How many version snapshots to keep for a machine-churn Kind. Omit for the kernel's curated default."
+        },
+        "layout_names": {
+          "type": ["array", "null"],
+          "items": { "type": "string", "minLength": 1 },
+          "description": "The prompt layouts documents of this Kind may name; UnknownLayout lists them back to the author."
+        },
         "updated_at": {
           "type": "string",
           "description": "Runtime-stamped volatile field (never authored) — allowed so write-stamped documents keep validating."

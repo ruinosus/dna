@@ -1018,6 +1018,45 @@ class KindDefinitionSpec:
     # every Kind; an explicit ``[]`` forbids every field change. The port
     # exposes it as ``OVERLAYABLE_FIELDS``.
     overlayable_fields: list[str] | None = None
+    # ---- Traits (the open participation vocabulary) ------------------------
+    # What this Kind participates in — ``["sdlc.work-item"]``,
+    # ``["memory.recallable"]``. Consumers ask ``kernel.kinds_with_trait(name)``
+    # rather than carrying a literal Kind-name list. Open vocabulary: an
+    # unregistered trait is legal (see dna.kernel.kinds.traits).
+    traits: list[str] | None = None
+    # ---- Parity fields (i-081): what a CLASS could say and a descriptor could
+    # not. Seven attributes existed only on ``KindBase``, so a YAML-declared
+    # Kind was structurally second-class: it could not invalidate the schema
+    # cache, validate on parse, share a bundle marker, hide from the backend,
+    # bound its version churn or name a prompt layout. Every one is optional
+    # and defaults to today's behavior.
+    #
+    # ``is_schema_affecting``: a write of this Kind invalidates the schema
+    # cache (Kernel._SCHEMA_INVALIDATING_KINDS). Refused on the record plane
+    # by the same lint that refuses it for classes.
+    is_schema_affecting: bool = False
+    # ``is_catalog_identity``: a write of this Kind changes the Catalog tier's
+    # scope/mandatory set, so the kernel drops its catalog cache after it.
+    is_catalog_identity: bool = False
+    # ``validate_on_parse``: parse() validates spec against schema() and raises
+    # on a malformed doc (which the loader turns into a parse_error event).
+    # NOTE the descriptor port ALREADY validates on parse whenever a schema is
+    # declared; declaring this is therefore a statement of intent that the
+    # ratchet + ``dna kind show`` can read, and it keeps class→descriptor
+    # migrations lossless.
+    validate_on_parse: bool = False
+    # ``marker_shared_allowed``: this bundle Kind consents to sharing its
+    # ``(container, marker)`` pair with another Kind that also consents.
+    marker_shared_allowed: bool = False
+    # ``visible_in_backend``: explicit override of the storage-pattern default
+    # (protocols.resolve_visible_in_backend). Tri-state — None = derive.
+    visible_in_backend: bool | None = None
+    # ``version_retention``: how many version snapshots to keep for a
+    # machine-churn Kind. None = the kernel's curated default.
+    version_retention: int | None = None
+    # ``layout_names``: the prompt layouts this Kind's documents may name
+    # (``UnknownLayout`` lists them). Empty = no layouts, today's default.
+    layout_names: list[str] | None = None
 
     @classmethod
     def from_raw(cls, raw: dict[str, Any]) -> KindDefinitionSpec:
@@ -1111,6 +1150,42 @@ class KindDefinitionSpec:
                 "KindDefinition spec.overlayable_fields must be a list of "
                 f"spec field names, got {type(overlayable_fields).__name__}"
             )
+        from dna.kernel.kinds.traits import normalize_traits
+
+        try:
+            traits = sorted(normalize_traits(raw.get("traits")))
+        except ValueError as e:
+            raise ValueError(f"KindDefinition spec.traits {e}") from e
+        layout_names = raw.get("layout_names")
+        if layout_names is not None and (
+            not isinstance(layout_names, list)
+            or not all(isinstance(f, str) for f in layout_names)
+        ):
+            raise ValueError(
+                "KindDefinition spec.layout_names must be a list of layout "
+                f"names, got {type(layout_names).__name__}"
+            )
+        version_retention = raw.get("version_retention")
+        if version_retention is not None:
+            if isinstance(version_retention, bool) or not isinstance(
+                version_retention, int
+            ):
+                raise ValueError(
+                    "KindDefinition spec.version_retention must be an integer "
+                    f"count of snapshots, got {type(version_retention).__name__}"
+                )
+            if version_retention < 1:
+                raise ValueError(
+                    "KindDefinition spec.version_retention must be >= 1 "
+                    f"(got {version_retention}); omit it to keep every version"
+                )
+        visible_in_backend = raw.get("visible_in_backend")
+        if visible_in_backend is not None and not isinstance(visible_in_backend, bool):
+            raise ValueError(
+                "KindDefinition spec.visible_in_backend must be a boolean "
+                f"(omit it to derive from storage), got "
+                f"{type(visible_in_backend).__name__}"
+            )
         return cls(
             target_api_version=raw["target_api_version"],
             target_kind=raw["target_kind"],
@@ -1148,6 +1223,15 @@ class KindDefinitionSpec:
             default_agent_field=raw.get("default_agent_field"),
             description_fallback_field=raw.get("description_fallback_field"),
             overlayable_fields=overlayable_fields,
+            # Traits + class-parity fields (i-081)
+            traits=traits or None,
+            is_schema_affecting=bool(raw.get("is_schema_affecting", False)),
+            is_catalog_identity=bool(raw.get("is_catalog_identity", False)),
+            validate_on_parse=bool(raw.get("validate_on_parse", False)),
+            marker_shared_allowed=bool(raw.get("marker_shared_allowed", False)),
+            visible_in_backend=visible_in_backend,
+            version_retention=version_retention,
+            layout_names=layout_names,
         )
 
     @staticmethod
