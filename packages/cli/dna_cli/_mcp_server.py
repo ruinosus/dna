@@ -507,10 +507,8 @@ def build_server(
             granted = await workspace_granted_scopes(live, tenant)
         if not live.scope_is_bound(
             scope, tenant, authenticated=True,
-            granted_scopes=(
-                granted if tenant
-                else parse_scope_grants(os.environ.get("DNA_TOKEN_SCOPES"))
-            ),
+            granted_scopes=parse_scope_grants(os.environ.get("DNA_TOKEN_SCOPES")),
+            workspace_grants=granted,
         ):
             if tenant:
                 raise ToolError(

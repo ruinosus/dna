@@ -12,7 +12,7 @@ RAW_FULL = {
     "metadata": {"name": "kz"},
     "spec": {
         "target_api_version": "github.com/ruinosus/dna/sdlc/v1", "target_kind": "KaizenLike",
-        "alias": "test-kaizenlike", "origin": "github.com/ruinosus/dna/sdlc",
+        "alias": "sdlc-test-kaizenlike", "origin": "github.com/ruinosus/dna/sdlc",
         "storage": {"type": "yaml", "container": "kaizens"},
         "schema": {"type": "object", "required": ["body"],
                    "properties": {"body": {"type": "string"},

@@ -23,9 +23,13 @@ Declarative Kind descriptor — the format of builtin `kinds/*.kind.yaml` packag
 | `embed` |  | Spec fields composing the doc's embedding text (semantic search source, F3 D4). |
 | `flatten_in_context` |  | True flattens the spec dict into the prompt context. |
 | `graph_style` |  | Colors for mermaid/graph visualizations, e.g. {fill, stroke, text_color}. |
+| `is_catalog_identity` |  | A write of this Kind changes the Catalog tier's scope/mandatory set, so the kernel drops its catalog cache after it. |
 | `is_overlayable` |  | A tenant overlay may fork this Kind (false only for structural bootstrap Kinds). |
 | `is_root` |  | True only for the scope-root identity Kind (one per scope). |
 | `is_runtime_artifact` |  | True for Kinds whose docs are PRODUCED by runtime workflows (eval runs, findings, ...) rather than authored — replication/seed/export tools skip them. |
+| `is_schema_affecting` |  | A write of this Kind invalidates the kernel's schema cache (Kernel._SCHEMA_INVALIDATING_KINDS). Refused on the record plane, exactly as for a class Kind. |
+| `layout_names` |  | The prompt layouts documents of this Kind may name; UnknownLayout lists them back to the author. |
+| `marker_shared_allowed` |  | This bundle Kind consents to sharing its (container, marker) pair with another Kind that also consents. Both sides must declare it. |
 | `origin` | yes | Registry namespace label of the owning extension/package, e.g. `github.com/ruinosus/dna/sdlc`. |
 | `overlayable_fields` |  | Per-FIELD refinement of is_overlayable: the top-level spec keys a layer (a tenant overlay, a branch) may CHANGE. Enforced on the WRITE path — a layer write that changes any other key raises LayerPolicyViolationError — and intersected with the operator's LayerPolicy docs, so neither widens the other. Not applied when merging overlays already stored (that would retroactively rewrite existing deployments); it gates what a layer may AUTHOR. Writing a non-listed key back at its base value is not a change and stays allowed. Omit for no per-field restriction (the default: every spec key is overlayable); an explicit [] forbids every field change. Exposed on the port as OVERLAYABLE_FIELDS. |
 | `plane` |  | composition = participates in agent composition (writes invalidate scope caches) · record = pure typed document (cacheless writes, never composes into prompts; cannot carry composition signals — the plane lint rejects contradictions). |
@@ -40,14 +44,18 @@ Declarative Kind descriptor — the format of builtin `kinds/*.kind.yaml` packag
 | `target_api_version` | yes | apiVersion namespace of the Kind being DEFINED (globally unique), e.g. `github.com/ruinosus/dna/sdlc/v1`. |
 | `target_kind` | yes | CamelCase name of the Kind being defined, e.g. `Kaizen`. Must be unique across api_versions (i-195). |
 | `tenant_scope` |  | Tenant enforcement for this Kind. Undeclared = permissive (base + per-tenant override). Máxima: an inheritable default-of-`_lib` Kind must NEVER be tenanted. |
+| `traits` |  | What this Kind PARTICIPATES in, e.g. ["sdlc.work-item"] / ["memory.recallable"]. Consumers ask `kernel.kinds_with_trait(name)` instead of carrying a literal Kind-name list, so adding a Kind to a family is a declaration rather than an edit in every module that has an opinion. OPEN vocabulary: an unregistered trait is legal; `<owner>.<name>` by convention (see dna.kernel.kinds.traits). |
 | `ui` |  | StudioUIMetadata mapping — generates Studio routes/sidebar/sitemap. Keys are validated strictly (⊆ StudioUIMetadata dataclass fields) by the hand-rolled check AND here (D1). |
 | `ui_schema` |  | Per-field widget-hint bag (field → {widget, label, help, language, height, order, ...}). Deliberately permissive — an explicitly UI-owned bag (D4). See docs/KIND-UI-HINTS.md. |
 | `updated_at` |  | Runtime-stamped volatile field (never authored) — allowed so write-stamped documents keep validating. |
+| `validate_on_parse` |  | parse() validates spec against schema() and raises on a malformed document (the loader turns that into a parse_error event). A descriptor Kind with a declared schema already validates; declaring this keeps a class → descriptor migration lossless and makes the intent readable. |
 | `version` |  | Runtime-stamped volatile field (never authored). |
+| `version_retention` |  | How many version snapshots to keep for a machine-churn Kind. Omit for the kernel's curated default. |
+| `visible_in_backend` |  | Explicit override of the storage-pattern default for backend visibility. Omit (null) to derive it (bundle/standalone → true, yaml/root → false). |
 | `volatile_spec_fields` |  | Extra write-/runtime-stamped spec fields excluded from the canonical digest, unioned with the base set {updated_at, version, created_at}. |
 | `workitem_common` |  | DEPRECATED back-compat shorthand for schema_fragments: ["sdlc/workitem-common"]. Python-only. |
 
-## Registered Kinds (77)
+## Registered Kinds (78)
 
 ### Composition plane
 
@@ -139,4 +147,5 @@ Declarative Kind descriptor — the format of builtin `kinds/*.kind.yaml` packag
 | [WorkflowEvent](record.md#workflowevent) | `sdlc-workflow-event` | `github.com/ruinosus/dna/sdlc/v1` |
 | [Workspace](record.md#workspace) | `tenant-workspace` | `github.com/ruinosus/dna/tenant/v1` |
 | [WorkspaceMembership](record.md#workspacemembership) | `tenant-workspace-membership` | `github.com/ruinosus/dna/tenant/v1` |
+| [WorkspaceScopeGrant](record.md#workspacescopegrant) | `tenant-workspace-scope-grant` | `github.com/ruinosus/dna/tenant/v1` |
 

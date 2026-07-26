@@ -238,9 +238,13 @@ A KindDefinition declaratively defines a brand-new kind without writing Python c
 | `embed` | array |  |  |
 | `flatten_in_context` | boolean |  |  |
 | `graph_style` | object |  |  |
+| `is_catalog_identity` | boolean |  |  |
 | `is_overlayable` | boolean |  |  |
 | `is_root` | boolean |  |  |
 | `is_runtime_artifact` | boolean |  |  |
+| `is_schema_affecting` | boolean |  |  |
+| `layout_names` | array |  |  |
+| `marker_shared_allowed` | boolean |  |  |
 | `origin` | string |  |  |
 | `overlayable_fields` | array |  |  |
 | `plane` | string |  |  |
@@ -256,8 +260,12 @@ A KindDefinition declaratively defines a brand-new kind without writing Python c
 | `target_kind` | string |  |  |
 | `tenant_scope` | string |  |  |
 | `tenant_scope_declared` | boolean |  |  |
+| `traits` | array |  |  |
 | `ui` | object |  |  |
 | `ui_schema` | object |  |  |
+| `validate_on_parse` | boolean |  |  |
+| `version_retention` | integer |  |  |
+| `visible_in_backend` | boolean |  |  |
 | `volatile_spec_fields` | array |  |  |
 | `workitem_common` | boolean |  |  |
 

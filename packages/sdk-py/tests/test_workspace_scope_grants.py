@@ -70,15 +70,15 @@ def test_a_grant_opens_exactly_the_scope_it_names():
     live = _live(_Kernel())
     granted = frozenset({"dna-development"})
     assert live.scope_is_bound(
-        "dna-development", "ws-a", authenticated=True, granted_scopes=granted,
+        "dna-development", "ws-a", authenticated=True, workspace_grants=granted,
     ) is True
     # ...and nothing else. Not a sibling, not a prefix, not the vendor's.
     assert live.scope_is_bound(
         "dna-development-staging", "ws-a", authenticated=True,
-        granted_scopes=granted,
+        workspace_grants=granted,
     ) is False
     assert live.scope_is_bound(
-        "tenant-ws-b", "ws-a", authenticated=True, granted_scopes=granted,
+        "tenant-ws-b", "ws-a", authenticated=True, workspace_grants=granted,
     ) is False
 
 
@@ -89,7 +89,7 @@ def test_the_wildcard_sentinel_is_not_honoured_for_a_workspace():
     live = _live(_Kernel())
     assert live.scope_is_bound(
         "some-other-scope", "ws-a", authenticated=True,
-        granted_scopes=frozenset({SCOPE_GRANT_ALL}),
+        workspace_grants=frozenset({SCOPE_GRANT_ALL}),
     ) is False
     # The workspace-LESS regime still honours it — that behavior is unchanged.
     assert live.scope_is_bound(
@@ -174,7 +174,7 @@ async def test_end_to_end_the_grant_is_what_flips_the_binder():
     live = _live(_Kernel())
     assert live.scope_is_bound(
         "dna-development", "ws-a", authenticated=True,
-        granted_scopes=await workspace_granted_scopes(live, "ws-a"),
+        workspace_grants=await workspace_granted_scopes(live, "ws-a"),
     ) is False
 
     await grant_workspace_scope_impl(
@@ -182,5 +182,16 @@ async def test_end_to_end_the_grant_is_what_flips_the_binder():
 
     assert live.scope_is_bound(
         "dna-development", "ws-a", authenticated=True,
-        granted_scopes=await workspace_granted_scopes(live, "ws-a"),
+        workspace_grants=await workspace_granted_scopes(live, "ws-a"),
     ) is True
+
+
+def test_a_credential_grant_never_widens_a_resolved_workspace():
+    """The two mechanisms answer different questions and arrive under different
+    names, so a call site cannot confuse them. ORing them would make a
+    permissive service token a back door into any workspace's data."""
+    live = _live(_Kernel())
+    assert live.scope_is_bound(
+        "tenant-ws-b", "ws-a", authenticated=True,
+        granted_scopes=frozenset({SCOPE_GRANT_ALL, "tenant-ws-b"}),
+    ) is False

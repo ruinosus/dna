@@ -83,3 +83,57 @@ def describe(kind_name: str, scope: str | None, tenant: str | None) -> None:
     # Descriptor: {kind, alias, api_version, display_label, schema,
     #              dep_filters, is_runtime_artifact, is_root, ...}
     print_json(descriptor)
+
+
+@kind.command("traits")
+@click.option("--json", "as_json", is_flag=True, help="JSON output.")
+@click.option("--trait", "one", default=None,
+              help="Show only which Kinds declare this trait.")
+def traits(as_json: bool, one: str | None) -> None:
+    """List the TRAITS Kinds declare, and which Kinds carry each.
+
+    A trait answers "does this Kind take part in X?" for an X the kernel has no
+    opinion about — ``sdlc.work-item``, ``memory.recallable``,
+    ``record.append-only``. Consumers ask ``kernel.kinds_with_trait(name)``
+    instead of carrying a literal Kind-name list, so adding a Kind to a family is
+    a declaration rather than an edit everywhere that family is consulted.
+
+    The vocabulary is OPEN: a trait no extension registered a description for is
+    still perfectly legal and still shows up here (with an empty description),
+    because an extension that ships a Kind and its one consumer must not have to
+    patch a core enum. Registration buys documentation, never a veto.
+
+    Reads the LOCAL kernel registry — traits are a property of the registered
+    Kinds, not of any scope's documents.
+    """
+    from dna.kernel import Kernel
+    from dna.kernel.kinds.traits import known_traits, port_traits
+
+    kernel = Kernel.auto()
+    declared: dict[str, list[str]] = {}
+    for port in kernel.kind_ports():
+        for trait in port_traits(port):
+            declared.setdefault(trait, []).append(getattr(port, "kind", "?"))
+    descriptions = known_traits()
+
+    names = sorted(set(declared) | set(descriptions))
+    if one:
+        names = [n for n in names if n == one]
+        if not names:
+            raise fail(
+                f"no trait named {one!r} — neither declared by a Kind nor "
+                f"registered. Known: {', '.join(sorted(set(declared) | set(descriptions)))}"
+            )
+    rows = [
+        {
+            "trait": n,
+            "kinds": ", ".join(sorted(declared.get(n, []))) or "(none)",
+            "count": len(declared.get(n, [])),
+            "description": descriptions.get(n, "(undocumented — legal, see `dna kind traits`)"),
+        }
+        for n in names
+    ]
+    if as_json:
+        print_json(rows)
+    else:
+        print_table(rows, ["trait", "count", "kinds"])

@@ -111,6 +111,7 @@ class LiveDna:
         *,
         authenticated: bool = False,
         granted_scopes: Iterable[str] | None = None,
+        workspace_grants: Iterable[str] | None = None,
     ) -> bool:
         """True when an explicitly ``requested`` scope is allowed for this caller.
 
@@ -150,7 +151,16 @@ class LiveDna:
             return True
         if workspace:
             # Regime 2 — a resolved workspace reaches its OWN scope, plus any
-            # scope explicitly GRANTED to it by a ``WorkspaceScopeGrant`` row.
+            # scope explicitly GRANTED to it by a ``WorkspaceScopeGrant`` row
+            # (``workspace_grants``).
+            #
+            # ``granted_scopes`` — the CREDENTIAL's grant, an operator env var —
+            # is deliberately NOT consulted here, and the two arrive under two
+            # names so they cannot be confused at a call site. They answer
+            # different questions ("what may this token reach" vs "what may this
+            # workspace reach") and ORing them would make a permissive service
+            # token a back door into any workspace's data: the composition bug
+            # a two-mechanism design invites.
             #
             # The grant is DATA, and it is checked by membership, never derived:
             # no prefix rule, no "same account" inference, no wildcard. A leak is
@@ -163,7 +173,7 @@ class LiveDna:
                 return True
             if requested == self.default_scope(workspace):
                 return True
-            return self.workspace_scope_is_granted(requested, granted_scopes)
+            return self.workspace_scope_is_granted(requested, workspace_grants)
         # Regime 3 — authenticated but workspace-less: explicit grant, or nothing.
         return self.scope_is_granted(requested, granted_scopes)
 
