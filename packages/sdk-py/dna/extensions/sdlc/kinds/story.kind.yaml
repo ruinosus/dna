@@ -1,0 +1,279 @@
+# Story — a developer-sized unit of work; child of a Feature.
+#
+# s-descriptor-conversion-pattern: replaces 248 lines of StoryKind Python that
+# overrode exactly four things — schema, summary, dep_filters and the Studio
+# `ui` block — all first-class descriptor fields. The class is gone; this file
+# is the single source.
+#
+# TWO things make this descriptor the interesting one of the batch:
+#
+#  1. `ui:` (D1, expr batch A). The migration ratchet recorded Story's blocker
+#     as "precisa de D2-ui (StudioUIMetadata no descriptor)". That field
+#     exists now; the port rebuilds the real dataclass, so /kinds/manifest
+#     output is byte-identical to the class version.
+#
+#  2. `schema_fragments: [sdlc/work-item-activity]` — the FIRST descriptor in
+#     the repo to reference a schema fragment. `timeline` and `produces` are
+#     deliberately ABSENT from the properties below: they are merged in from
+#     the LIVE _timeline_field_schema() / _produces_field_schema() helpers that
+#     Bug, Task, Spike, Issue, Feature and Epic (still classes) also call. A
+#     frozen YAML copy would fork the timeline contract the moment someone adds
+#     a TIMELINE_TYPE — which is precisely the objection the ratchet recorded
+#     against migrating sdlc-spike. The fragment answers it.
+#     Kind-declared properties win over fragment ones, so a Kind can still
+#     specialize a merged field.
+#
+# `summary` is the class's projection, term for term: spec_refs was
+# len(spec_refs or []) -> {count_of}, labels was `or []` -> {path, default}.
+#
+# Equivalence with the extinct class — identity, every flag, StudioUIMetadata,
+# storage, dep_filters, deep schema, and summary/describe/canonical_digest over
+# REAL documents from this repo's board — is frozen in
+# tests/test_descriptor_pattern_equivalence.py.
+apiVersion: github.com/ruinosus/dna/core/v1
+kind: KindDefinition
+metadata:
+  name: story
+spec:
+  target_api_version: github.com/ruinosus/dna/sdlc/v1
+  target_kind: Story
+  alias: sdlc-story
+  origin: github.com/ruinosus/dna/sdlc
+  tenant_scope: global
+  plane: record
+  prompt_target: false
+  flatten_in_context: false
+  prompt_target_priority: 0
+  scope_inheritable: false
+  storage:
+    type: yaml
+    container: stories
+  dep_filters:
+    feature: sdlc-feature
+    owner: helix-actor
+    dependencies: sdlc-story
+    spec_refs: sdlc-spec
+  schema_fragments:
+  - sdlc/work-item-activity
+  schema:
+    type: object
+    required:
+    - description
+    - status
+    properties:
+      title:
+        type: string
+        description: Human-readable display name (Jira 'summary').
+      description:
+        type: string
+      as_a:
+        type: string
+        description: 'Role: ''As a <role>''. INVEST/user-story format slot.'
+      i_want:
+        type: string
+        description: 'Goal: ''I want <goal>''. INVEST/user-story format slot.'
+      so_that:
+        type: string
+        description: 'Benefit: ''so that <benefit>''. INVEST/user-story format slot.'
+      status:
+        type: string
+        enum:
+        - needs-triage
+        - todo
+        - in-progress
+        - review
+        - done
+        - blocked
+        - deferred
+        - cancelled
+      feature:
+        type: string
+        description: Parent Feature name
+        x-dna-ref: Feature
+      owner:
+        type: string
+        description: Actor name
+      estimate:
+        type: number
+        description: Fibonacci story points (1, 2, 3, 5, 8, 13, 21)
+      acceptance_criteria:
+        type: array
+        items:
+          oneOf:
+          - type: string
+          - type: object
+            required:
+            - text
+            properties:
+              text:
+                type: string
+              done:
+                type: boolean
+              done_at:
+                type: string
+                format: date-time
+              done_by:
+                type: string
+        description: 'Acceptance criteria. Legacy: list[str]. New (s-ac-dod-checklist-state): list[{text,
+          done?, done_at?, done_by?}] for per-item state tracking.'
+      dependencies:
+        type: array
+        items:
+          type: string
+        description: Other Story names that must land first
+        x-dna-ref: Story
+      spec_refs:
+        type: array
+        items:
+          type: string
+        description: Spec docs (kind=Spec) this Story implements. M:N linkage between the planning axis
+          (Story) and the design axis (Spec) — Jira/Confluence-shaped.
+        x-dna-ref: Spec
+      closed_at:
+        type: string
+        format: date-time
+      blocked_reason:
+        type: string
+      priority:
+        type: string
+        enum:
+        - highest
+        - high
+        - medium
+        - low
+        - lowest
+        description: Board priority. Jira-aligned.
+      labels:
+        type: array
+        items:
+          type: string
+        description: Free-form tags for swim lanes / filters.
+      reporter:
+        type: string
+        description: Actor who filed it (vs `owner` who works on it).
+      watchers:
+        type: array
+        items:
+          type: string
+        description: Actor names subscribed to changes.
+      journey_phase:
+        type: string
+        enum:
+        - discover
+        - specify
+        - plan
+        - build
+        - verify
+        - reflect
+        description: Universal journey phase (discover → specify → plan → build → reflect). Additive layer
+          over Story/Feature/Epic status, Spec phase, etc. Lets the journey ledger pin this doc to one
+          of five universal phases compatible with Superpowers / BMAD / Spec Kit / Kiro.
+      created_at:
+        type: string
+        format: date-time
+      updated_at:
+        type: string
+        format: date-time
+      sprint_ref:
+        type: string
+        description: Sprint identifier (free-form, e.g. '2026-Q2-S2').
+      time_tracking:
+        type: object
+        additionalProperties: false
+        properties:
+          logged_h:
+            type: number
+            minimum: 0
+          remaining_h:
+            type: number
+            minimum: 0
+          original_estimate_h:
+            type: number
+            minimum: 0
+      definition_of_done:
+        type: array
+        items:
+          oneOf:
+          - type: string
+          - type: object
+            required:
+            - text
+            properties:
+              text:
+                type: string
+              done:
+                type: boolean
+              done_at:
+                type: string
+                format: date-time
+              done_by:
+                type: string
+        description: Per-Story DoD. Same union shape as acceptance_criteria — legacy list[str] OR list[{text,
+          done?, done_at?, done_by?}].
+      business_value:
+        type: number
+        minimum: 0
+        maximum: 1000
+        description: WSJF-style scalar for relative prioritization.
+      mockups:
+        type: array
+        items:
+          type: string
+        description: URLs/paths to design artifacts.
+      release_target:
+        type: string
+        description: Epic name OR 'owner/pkg@semver' identifying the release this Story unblocks.
+    additionalProperties: true
+  summary:
+    status: todo
+    feature: ''
+    owner: ''
+    estimate: null
+    spec_refs:
+      count_of: spec_refs
+    priority: medium
+    labels:
+      path: labels
+      default: []
+    sprint_ref: ''
+    business_value: null
+  ui:
+    mode: plan
+    display_order: 12
+    label:
+      en: Stories
+      pt-BR: Histórias
+    icon: 📖
+    description:
+      en: Developer-sized work units. Child of Feature.
+      pt-BR: Unidades de trabalho do dev. Filhos de Feature.
+    breadcrumb:
+    - Plan
+    - Stories
+    routes:
+      list: docs/Story
+      detail: docs/Story/:name
+      create: kinds/Story/__new__
+    permissions:
+      list: any
+      detail: any
+      create:
+      - po
+      - pm
+      - architect
+      - tech-lead
+      - maker
+      edit:
+      - po
+      - pm
+      - architect
+      - tech-lead
+      - maker
+  graph_style:
+    fill: '#F59E0B'
+    stroke: '#D97706'
+    text_color: '#fff'
+  ascii_icon: 📖
+  display_label: Stories
+  docs: 'A Story is a granular task: one developer, one PR, one estimate. Lists acceptance criteria, dependencies
+    (other Stories that must land first), and rolls up to a Feature.'

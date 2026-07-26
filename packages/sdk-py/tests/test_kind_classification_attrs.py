@@ -96,6 +96,12 @@ def test_representative_kind_attributes():
     # schema-only Kind
     ua = kinds["Agent"]
     assert ua.is_schema_affecting and ua.is_overlayable and ua.scope_inheritable
-    # ledger Kind: non-inheritable only
+    # ledger Kind: non-inheritable only. Story is descriptor-backed since
+    # s-descriptor-conversion-pattern, and a DeclarativeKindPort has NO
+    # ``is_schema_affecting`` attribute at all — by construction, a record Kind
+    # carries no composition signal. Read it the way the Kernel does
+    # (getattr + False default) rather than assuming the attribute exists; the
+    # derived-set equality tests above are the real oracle either way.
     story = kinds["Story"]
-    assert not story.is_schema_affecting and story.is_overlayable and not story.scope_inheritable
+    assert not getattr(story, "is_schema_affecting", False)
+    assert story.is_overlayable and not story.scope_inheritable

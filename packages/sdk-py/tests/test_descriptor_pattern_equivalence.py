@@ -281,19 +281,37 @@ def test_summary_on_a_bare_dict_is_the_documented_port_delta(ports, kind):
 
 # --- parse ------------------------------------------------------------------
 
+def _envelope(kind: str, case: dict) -> dict:
+    return {
+        "apiVersion": _golden(kind)["identity"]["api_version"],
+        "kind": kind,
+        "metadata": {"name": case["name"]},
+        "spec": case["spec"],
+    }
+
+
 @pytest.mark.parametrize("kind", ALL)
-def test_parse_round_trips_every_case(ports, kind):
+def test_parse_round_trips_every_real_document(ports, kind):
+    """Every real (non-probe) case still parses to itself, unchanged."""
     p = ports[kind]
-    g = _golden(kind)
     for label, case in _cases(kind):
-        raw = {
-            "apiVersion": g["identity"]["api_version"],
-            "kind": kind,
-            "metadata": {"name": case["name"]},
-            "spec": case["spec"],
-        }
+        if not case["spec"]:
+            continue  # the empty-spec probe — see the test below
+        raw = _envelope(kind, case)
         assert p.parse(dict(raw)) == raw, f"{kind} :: {label}"
         assert case["parse_roundtrip"] is True
+
+
+@pytest.mark.parametrize("kind", ALL)
+def test_the_empty_spec_probe_is_where_parse_starts_biting(ports, kind):
+    """The classes accepted an empty spec (pass-through); the port rejects it
+    because every one of the four declares ``required``. Pinned as the exact
+    boundary of the parse delta — and ``test_every_real_document_still_validates``
+    proves no document in this repo's board is on the wrong side of it."""
+    probe = next(c for _, c in _cases(kind) if not c["spec"])
+    assert probe["parse_roundtrip"] is True  # what the class did
+    with pytest.raises(ValueError, match="is a required property"):
+        ports[kind].parse(_envelope(kind, probe))
 
 
 @pytest.mark.parametrize("kind,missing", [

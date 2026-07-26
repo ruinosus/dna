@@ -16,8 +16,20 @@ from dna.extensions.sdlc import (
     RoadmapKind,
     SdlcExtension,
     STORY_STATUSES,
-    StoryKind,
 )
+
+
+def _port(kind: str):
+    """Story and Plan are descriptor-backed now (kinds/*.kind.yaml,
+    s-descriptor-conversion-pattern) — there is no class to instantiate.
+    Resolve the registered port through the real funnel instead; the surface
+    asserted below is identical (frozen in
+    tests/test_descriptor_pattern_equivalence.py)."""
+    k = Kernel()
+    k.load(SdlcExtension())
+    kp = k.kind_port_for(kind)
+    assert kp is not None, kind
+    return kp
 
 
 # --- Registration ----------------------------------------------------------
@@ -88,15 +100,15 @@ def test_agent_session_required_fields_tool_agnostic():
 
 
 def test_aliases_unique_and_namespaced():
-    from dna.extensions.sdlc import SpecKind, PlanKind
+    from dna.extensions.sdlc import SpecKind
     aliases = [
         RoadmapKind().alias,
         EpicKind().alias,
         FeatureKind().alias,
-        StoryKind().alias,
+        _port("Story").alias,
         IssueKind().alias,
         SpecKind().alias,
-        PlanKind().alias,
+        _port("Plan").alias,
     ]
     assert len(set(aliases)) == 7
     assert all(a.startswith("sdlc-") for a in aliases)
@@ -126,8 +138,7 @@ def test_spec_dep_filters_post_axis_flip():
 
 
 def test_plan_links_spec_via_spec_ref():
-    from dna.extensions.sdlc import PlanKind
-    deps = PlanKind().dep_filters()
+    deps = _port("Plan").dep_filters()
     assert deps["spec_ref"] == "sdlc-spec"
 
 
@@ -176,38 +187,36 @@ def test_spec_no_longer_carries_feature_axis():
 
 def test_plan_no_longer_carries_feature_axis():
     """Axis flip: Plan.feature removed. Plan still references its parent Spec via spec_ref."""
-    from dna.extensions.sdlc import PlanKind
-    schema = PlanKind().schema()
+    schema = _port("Plan").schema()
     assert "feature" not in schema["properties"]
-    assert "feature" not in PlanKind().dep_filters()
+    assert "feature" not in _port("Plan").dep_filters()
     # spec_ref → Spec relationship is preserved
-    assert PlanKind().dep_filters()["spec_ref"] == "sdlc-spec"
+    assert _port("Plan").dep_filters()["spec_ref"] == "sdlc-spec"
 
 
 def test_story_has_spec_refs_linkage():
     """Story.spec_refs[] is the M:N link from planning axis to design axis."""
-    from dna.extensions.sdlc import StoryKind
-    schema = StoryKind().schema()
+    schema = _port("Story").schema()
     spec_refs = schema["properties"]["spec_refs"]
     assert spec_refs["type"] == "array"
     assert spec_refs["items"]["type"] == "string"
-    assert StoryKind().dep_filters()["spec_refs"] == "sdlc-spec"
+    assert _port("Story").dep_filters()["spec_refs"] == "sdlc-spec"
 
 
 # --- Storage descriptors ---------------------------------------------------
 
 @pytest.mark.parametrize(
-    "kp_cls,container",
+    "kp,container",
     [
-        (RoadmapKind, "roadmaps"),
-        (EpicKind, "epics"),
-        (FeatureKind, "features"),
-        (StoryKind, "stories"),
-        (IssueKind, "issues"),
+        (RoadmapKind(), "roadmaps"),
+        (EpicKind(), "epics"),
+        (FeatureKind(), "features"),
+        (_port("Story"), "stories"),
+        (IssueKind(), "issues"),
     ],
 )
-def test_storage_yaml_pattern(kp_cls, container):
-    sd = kp_cls().storage
+def test_storage_yaml_pattern(kp, container):
+    sd = kp.storage
     assert sd.pattern.value == "yaml"
     assert sd.container == container
 
@@ -219,14 +228,14 @@ def test_spec_plan_storage_bundle():
     aligning with Skill / Soul / Doc convention. NO external file_path
     needed because the bundle IS the source of truth.
     """
-    from dna.extensions.sdlc import SpecKind, PlanKind
+    from dna.extensions.sdlc import SpecKind
     sp_sd = SpecKind().storage
     assert sp_sd.pattern.value == "bundle"
     assert sp_sd.container == "specs"
     assert sp_sd.marker == "SPEC.md"
     assert sp_sd.body_field == "body"
 
-    pl_sd = PlanKind().storage
+    pl_sd = _port("Plan").storage
     assert pl_sd.pattern.value == "bundle"
     assert pl_sd.container == "plans"
     assert pl_sd.marker == "PLAN.md"
@@ -273,7 +282,7 @@ def test_feature_status_enum():
 
 
 def test_story_status_and_estimate():
-    schema = StoryKind().schema()
+    schema = _port("Story").schema()
     statuses = schema["properties"]["status"]["enum"]
     assert set(statuses) == set(STORY_STATUSES)
     assert schema["properties"]["estimate"]["type"] == "number"
@@ -345,8 +354,7 @@ def test_roadmap_summary_counts_epics():
 
 def test_kinds_not_prompt_targets():
     """SDLC docs are organizational, never injected into prompts."""
-    for kp_cls in [RoadmapKind, EpicKind, FeatureKind, StoryKind, IssueKind]:
-        kp = kp_cls()
+    for kp in [RoadmapKind(), EpicKind(), FeatureKind(), _port("Story"), IssueKind()]:
         assert kp.is_prompt_target is False
         assert kp.flatten_in_context is False
         assert kp.is_root is False  # Phase 16 — only Genome is root
