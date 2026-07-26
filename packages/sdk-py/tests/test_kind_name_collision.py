@@ -158,7 +158,11 @@ def test_bare_lookup_prefers_extension_over_per_scope_declarative():
 
 def test_ambiguous_bare_lookup_warns_once(caplog):
     from dna.kernel.kinds import registry as kr
-    kr._AMBIGUOUS_LOOKUP_WARNED.discard("Reference")  # cache é process-wide
+    # i-080 item 5: the cache is process-wide AND now keyed by the AMBIGUITY
+    # (kind name + the colliding api_versions) rather than by the name alone,
+    # so a SECOND, different collision on the same name is audible instead of
+    # being swallowed for the life of the process. Clear it wholesale.
+    kr._AMBIGUOUS_LOOKUP_WARNED.clear()
     k, _src, _h = _wire_reference_pair()
     import logging
     with caplog.at_level(logging.WARNING, logger="dna.kernel.kinds.registry"):

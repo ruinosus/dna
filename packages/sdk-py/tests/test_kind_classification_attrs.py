@@ -26,7 +26,17 @@ ORIG_SCHEMA_INVALIDATING = frozenset({
     "Agent", "Skill", "Soul", "Guardrail",
     "SafetyPolicy", "Hook", "Recognizer",
 })
-ORIG_NON_OVERLAYABLE = frozenset({"Genome", "KindDefinition", "LayerPolicy"})
+# "KindNamespace" added on i-080: the record that says which workspace owns an
+# apiVersion namespace declares ``is_overlayable: false``, which is the kernel's
+# own marker for "no layer may fork this". It is the right classification for the
+# same reason Genome/LayerPolicy/KindDefinition carry it — a namespace claim is
+# an authorization record ABOVE any layer, and being non-overlayable is also what
+# makes the generic write-any-document path refuse it (``is_bootstrap_kind``), so
+# a workspace cannot grant itself a namespace through the tool it uses to write
+# ordinary content.
+ORIG_NON_OVERLAYABLE = frozenset({
+    "Genome", "KindDefinition", "LayerPolicy", "KindNamespace",
+})
 # "Memory" added on s-mif-passthrough-kind (mif-spec.dev/v1 · Memory): the
 # descriptor declares scope_inheritable: false — mirrors Engram (memory
 # partitioning is a write-path concern, not something that should inherit
@@ -42,6 +52,10 @@ ORIG_NON_INHERITABLE = frozenset({
     "Story", "Issue", "Feature", "Epic", "Milestone", "Roadmap",
     "Narrative", "VibeSession", "Engram", "Plan", "Memory",
     "Genome", "KindDefinition", "LayerPolicy",
+    # "KindNamespace" (i-080) declares scope_inheritable: false for the same
+    # reason Workspace does — the ownership registry is _lib-resident GLOBAL
+    # data, read _lib-direct, never surfaced through per-scope inheritance.
+    "KindNamespace",
 })
 
 

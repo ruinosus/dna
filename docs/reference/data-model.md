@@ -46,7 +46,7 @@ readable, so it is reproduced from source rather than asserted:
 
 ## Logical model — Kinds and their references
 
-76 Kinds are registered. Each is a document, not a table: a
+77 Kinds are registered. Each is a document, not a table: a
 Kind costs a YAML descriptor and zero migrations, which is the point
 of an open type system. The cost is that references between Kinds are
 not database foreign keys — they are fields holding a name.
@@ -100,7 +100,7 @@ flowchart LR
     research["research (1 Kind)"]
     sdlc["sdlc (25 Kinds)"]
     soulspec["soulspec (1 Kind)"]
-    tenant["tenant (4 Kinds)"]
+    tenant["tenant (5 Kinds)"]
     testkit["testkit (2 Kinds)"]
     agentskills -->|1| sdlc
     audit -->|2| portfolio
@@ -128,7 +128,7 @@ flowchart LR
 
 ### Detail by group
 
-All 76 Kinds in one diagram is an unreadable hairball, so
+All 77 Kinds in one diagram is an unreadable hairball, so
 each group with at least 2 edges gets its
 own. A group carrying more than 20 edges is
 split again by tier, which keeps the enforced edges legible instead
@@ -576,16 +576,17 @@ rather than silently dropped, so the suppression is auditable.
 | `AgentSession` | `tool` | provenance enum of the AI coding tool that produced the session (claude-code \| cursor \| cline \| …), not a `Tool` document |
 | `AuditLog` | `actor` | the request identity string from claims (email/sub, or 'dev-user'), not a reference to an `Actor` document |
 | `Copilot` | `tenant` | inbound-tenant handling mode for the emitted serving layer, not a reference to a `Tenant` document |
+| `Memory` | `namespace` | MIF's hierarchical memory scope path (`_semantic/decisions`, §10) — a string axis inside the document, not the `KindNamespace` Kind, whose alias `tenant-kind-namespace` merely ends in the same token |
 | `Organization` | `plan_ref` | the DNA Cloud Tier this org is on, not the SDLC `Plan` Kind |
 | `Tenant` | `plan` | billing/feature tier (a Tier `tier_id`), not the SDLC `Plan` Kind |
 | `Workspace` | `plan_ref` | DEPRECATED and never read — billing is per ACCOUNT (workspace → account_id → AccountPlan); also not the SDLC `Plan` Kind |
 
-### Kinds with no reference edge (17)
+### Kinds with no reference edge (18)
 
 Standalone documents — configuration, composition-plane behaviour, or
 record Kinds whose links are simply not modelled yet.
 
-`AgentDefinition`, `Automation`, `Canvas`, `Changelog`, `Comment`, `Copilot`, `Genome`, `Hook`, `HtmlArtifact`, `LayerPolicy`, `MCPFederation`, `ModelProfile`, `PricingPlan`, `Setting`, `UserProfile`, `Workspace`, `WorkspaceMembership`
+`AgentDefinition`, `Automation`, `Canvas`, `Changelog`, `Comment`, `Copilot`, `Genome`, `Hook`, `HtmlArtifact`, `KindNamespace`, `LayerPolicy`, `MCPFederation`, `ModelProfile`, `PricingPlan`, `Setting`, `UserProfile`, `Workspace`, `WorkspaceMembership`
 
 ## Physical model — the real tables
 

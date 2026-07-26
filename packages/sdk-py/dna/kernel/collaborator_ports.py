@@ -71,7 +71,9 @@ class KindLookup(Protocol):
         self, kind: str, *, api_version: str | None = None,
     ) -> "KindPort | None": ...
 
-    def storage_for_kind(self, kind_name: str) -> "StorageDescriptor | None": ...
+    def storage_for_kind(
+        self, kind_name: str, *, api_version: str | None = ...,
+    ) -> "StorageDescriptor | None": ...
 
     def _alias_for(self, kind: str) -> str: ...
 
@@ -271,6 +273,7 @@ __all__ = [
     "BundleIOHost",
     "SourceSyncHost",
     "LayerPolicyHost",
+    "NamespaceGateHost",
     "RegistryAccessorHost",
     "SearchEngineHost",
     "CatalogCacheHost",
@@ -293,10 +296,18 @@ class RegistryHost(Protocol):
     ``_loading_ext_owner`` (the per-``load()`` alias-owner context) is a LAZY
     member — set only inside ``kernel.load()`` and read via
     ``getattr(host, "_loading_ext_owner", None)`` — so it is intentionally NOT a
-    required Protocol attribute (a kernel outside a load() call lacks it)."""
+    required Protocol attribute (a kernel outside a load() call lacks it).
+
+    ``_writers`` joined this contract with the UNregistration path (i-080 item
+    3): a Kind that is dropped must take its auto-synthesized
+    ``GenericBundleWriter`` with it, or the next registration of the same Kind
+    name is skipped by the "already has a writer" check in
+    ``_ensure_generic_readers_writers`` and the stale writer keeps claiming it.
+    It is the exact mirror of the ``_readers`` membership already here."""
 
     hooks: Any
     _readers: list
+    _writers: list
     _generics_resolved: bool
 
     def _ensure_generic_readers_writers(self) -> None: ...
@@ -327,6 +338,11 @@ class WriteHost(Protocol):
         layer: tuple[str, str],
     ) -> None: ...
 
+    async def _check_namespace_ownership_async(
+        self, scope: str, kind: str, name: str, raw: dict, *,
+        tenant: str | None,
+    ) -> None: ...
+
     def _invalidate_granular_cache(
         self, scope: str, *, kind: str | None = ..., name: str | None = ...,
     ) -> None: ...
@@ -354,6 +370,23 @@ class RegistryAccessorHost(RecordQuery, Protocol):
     """RegistryAccessor — the three GLOBAL ``_lib``-direct registry reads
     (``model_profile`` / ``voice_policy`` / ``embedding_profile``). Needs only
     the ``query`` push-down; the ``_lib`` scope constants live on the accessor."""
+
+
+@runtime_checkable
+class NamespaceGateHost(Protocol):
+    """NamespaceOwnershipGate — the write-time namespace-ownership check (i-080
+    item 1). Three members, one per question the verdict needs answered: which
+    namespaces are RESERVED (derived from the live registry, never a list), who
+    CLAIMS the target namespace (the ``_lib`` KindNamespace registry), and who
+    the scope declares as its owner when the write carries no tenant
+    (``Genome.spec.owner_tenant`` on the base instance — the same read the
+    LayerPolicy check already makes)."""
+
+    def kind_ports(self) -> "list[KindPort]": ...
+
+    async def kind_namespaces(self) -> list[dict[str, Any]]: ...
+
+    async def _base_instance_cached_async(self, scope: str) -> Any: ...
 
 
 @runtime_checkable

@@ -71,15 +71,22 @@ def _live(dna_dir):
 
 def test_bootstrap_kinds_are_derived_from_the_registry(dna_dir):
     """The generic write's refusal set is DERIVED (``KindPort.is_overlayable``
-    is False), not a hand-typed list of names — and today that derivation is
-    exactly the three bootstrap Kinds. A new bootstrap Kind declaring
+    is False), not a hand-typed list of names. A new bootstrap Kind declaring
     ``is_overlayable: false`` in its descriptor is refused with no code change;
-    this assertion is the ratchet that makes such an arrival visible."""
+    this assertion is the ratchet that makes such an arrival visible — and it
+    fired for real on i-080: ``KindNamespace`` (which workspace owns which
+    apiVersion namespace) arrived as a descriptor and was refused by the generic
+    write on the day it registered, with nothing here or in the face edited to
+    make it so. That is exactly the property being ratcheted: a workspace must
+    not be able to grant itself a namespace through the tool it uses to write
+    ordinary content."""
     async def go():
         live = await _live(dna_dir)
         return D.bootstrap_kinds(live.kernel)
 
-    assert asyncio.run(go()) == {"Genome", "LayerPolicy", "KindDefinition"}
+    assert asyncio.run(go()) == {
+        "Genome", "LayerPolicy", "KindDefinition", "KindNamespace",
+    }
 
 
 def test_family_for_kind_is_derived_from_the_ports_api_version(dna_dir):

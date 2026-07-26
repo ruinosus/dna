@@ -1,0 +1,130 @@
+# KindNamespace — who owns an apiVersion namespace (record plane, i-080).
+#
+# A Kind's identity is `(apiVersion, kind)` — both halves are the registry key.
+# A workspace that authors its own Kind therefore needs its own apiVersion
+# NAMESPACE, or two workspaces declaring `Deal` are the same Kind and one of
+# them silently validates against the other's schema.
+#
+# THE NAMESPACE IS A CLAIMED, OWNED NAME — NOT THE WORKSPACE ID. The obvious
+# shortcut is to put the workspace id in the apiVersion
+# (`tenant.ws-3f9a.../v1`): collision-free, no infrastructure. It is refused on
+# purpose. The apiVersion PARTICIPATES IN THE IDENTITY of every document, so
+# baking a database identifier into it means renaming, migrating or
+# consolidating a workspace changes the identity of every document it owns.
+# Identity churn is cheap now and catastrophic later. A namespace is what every
+# API versioning scheme already uses: the organisation's NAME (`acme.example`),
+# not its row id — and this Kind is the registry that says which workspace holds
+# which name.
+#
+# WHAT A CLAIM COVERS. `namespace` is a PREFIX. Claiming `acme.example` owns
+# `acme.example/v1`, `acme.example/v2` and `acme.example/crm/v1` — one record
+# per organisation, not one per Kind or per version. Resolution walks from the
+# most specific prefix outward and the most specific claim wins, so delegating a
+# sub-namespace is a matter of writing a longer claim.
+#
+# ONE WORKSPACE MAY OWN SEVERAL. Nothing here constrains the count: a company
+# with two domains legitimately claims both. The inverse is what must be
+# impossible — two workspaces owning ONE namespace. Two claims naming the same
+# namespace with different owners resolve to a REFUSAL, not to a winner: an
+# ambiguous authorization record is never resolved by picking one.
+#
+# RESERVED NAMESPACES ARE NOT LISTED HERE, AND THAT IS THE POINT. A namespace is
+# reserved when a Kind registered FROM CODE already lives in it — an extension
+# class or a builtin `*.kind.yaml` descriptor. The live registry IS the reserved
+# list, so `github.com/ruinosus/dna/**` and every standard DNA consumes
+# byte-faithful under its owner's name (`agents.md`, `agentskills.io`,
+# `soulspec.org`, `presidio`, `mif-spec.dev`) are protected the day they are
+# registered, with no list to maintain and no way for the list to drift from
+# reality. Per-scope Kinds do NOT reserve anything — otherwise the first Kind a
+# workspace declared would lock its own owner out of the second.
+#
+# A CLAIM IS NOT SELF-SERVABLE. `is_overlayable: false` makes this a BOOTSTRAP
+# Kind: the generic write-any-document path refuses it (it declares what a
+# namespace IS, not content within one) and no layer may fork it. Claiming is an
+# operator/provisioning act, like minting a workspace id.
+#
+# GLOBAL and `_lib`-resident (`kind-namespaces/<name>.yaml`), for the same
+# reason Workspace is: the ownership boundary sits ABOVE any single workspace,
+# so it cannot live inside one.
+apiVersion: github.com/ruinosus/dna/core/v1
+kind: KindDefinition
+metadata:
+  name: kind-namespace
+spec:
+  target_api_version: github.com/ruinosus/dna/tenant/v1
+  target_kind: KindNamespace
+  alias: tenant-kind-namespace
+  origin: github.com/ruinosus/dna/tenant
+  tenant_scope: global
+  plane: record
+  prompt_target: false
+  flatten_in_context: false
+  prompt_target_priority: 0
+  scope_inheritable: false
+  is_overlayable: false
+  storage:
+    type: yaml
+    container: kind-namespaces
+  schema:
+    type: object
+    additionalProperties: false
+    required:
+    - namespace
+    - owner
+    - claimed_at
+    properties:
+      namespace:
+        type: string
+        description: The apiVersion PREFIX being claimed — everything before the
+          version segment (`acme.example` claims `acme.example/v1`; a claim is a
+          prefix, so it also covers `acme.example/crm/v1`). Never contains a
+          version and never ends in `/`.
+      owner:
+        type: string
+        description: The `workspace_id` of the workspace that owns this
+          namespace. OPAQUE — matched whole, never parsed. It is the same value
+          the kernel `tenant` column carries for that workspace, which is what
+          lets the write path compare a writer to an owner without a lookup.
+      claimed_at:
+        type: string
+        format: date-time
+        description: When the namespace was claimed (ISO 8601). The audit trail
+          is the reason a claim is a document rather than a config entry.
+      notes:
+        type:
+        - string
+        - 'null'
+        description: Free-form operator note — why this namespace was granted,
+          the ticket it came from. Never read by the enforcement path.
+  describe: '{namespace} → {owner}'
+  summary:
+    namespace: ''
+    owner: ''
+    claimed_at: ''
+  ui:
+    mode: govern
+    label:
+      en: Kind namespaces
+      pt-BR: Namespaces de Kind
+    icon: 🪪
+    description:
+      en: Which workspace owns which apiVersion namespace.
+      pt-BR: Qual workspace é dono de qual namespace de apiVersion.
+    routes:
+      list: docs/KindNamespace
+      detail: docs/KindNamespace/:name
+    permissions:
+      list: any
+      detail: any
+    in_sidebar: true
+    display_order: 57
+  ascii_icon: 🪪
+  display_label: Kind namespaces
+  docs: A KindNamespace records that a workspace owns an apiVersion namespace —
+    the claim the write path checks before letting anyone declare a Kind in it.
+    The namespace is a claimed NAME (`acme.example`), never the workspace id,
+    because the apiVersion participates in every document's identity and a
+    database id baked into it would make renaming a workspace rewrite the
+    identity of everything it owns. Claims are prefixes and the most specific
+    one wins; a namespace already occupied by a Kind registered from code is
+    RESERVED and cannot be claimed at all. GLOBAL declarative data in `_lib`.

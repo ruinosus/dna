@@ -1035,6 +1035,22 @@ class KindDefinitionSpec:
         schema = raw.get("schema") or {}
         if not isinstance(schema, dict):
             raise ValueError("KindDefinition spec.schema must be a dict (JSON Schema)")
+        # i-080 item 4 — the authored schema is validated HERE, at author time.
+        # "Is it a dict" was the only check, so a schema that is not a schema
+        # failed once PER DOCUMENT at parse time through the fail-soft
+        # parse_error channel — a log line far from the author. The guard also
+        # refuses a non-local ``$ref`` (nothing resolves it at validation time,
+        # and the error it raises is NOT a ValidationError, so it escapes the
+        # write path's handler) and a ``pattern`` with measured catastrophic
+        # backtracking. ``SchemaGuardError`` subclasses ``ValueError``, so both
+        # funnels keep their contract: builtin descriptors raise at boot,
+        # per-scope KindDefinitions warn + skip.
+        from dna.kernel.kinds.schema_guard import validate_authored_schema
+
+        try:
+            validate_authored_schema(schema)
+        except ValueError as e:
+            raise ValueError(f"KindDefinition spec.schema {e}") from e
         # ---- F3 fields (spec D2) ----------------------------------------
         plane = raw.get("plane", "composition")
         if plane not in ("composition", "record"):

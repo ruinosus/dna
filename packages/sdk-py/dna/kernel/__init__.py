@@ -251,6 +251,13 @@ class Kernel:
         from dna.kernel.write.pipeline import WritePipeline
         self._write_pipeline = WritePipeline(self)
 
+        # i-080 item 1 — namespace ownership: a KindDefinition write may only
+        # declare a Kind under an apiVersion namespace the writer owns. Sits at
+        # the same write-path boundary as the LayerPolicy check, deliberately
+        # (one boundary governs both). Stateless back-ref collaborator.
+        from dna.kernel.write.namespace_gate import NamespaceOwnershipGate
+        self._nsgate = NamespaceOwnershipGate(self)
+
         # s-kernel-decompose-god-object — ManifestInstance construction
         # (build/instance/instance_async/resolve_layers + rescan helpers)
         # extracted to a collaborator (kernel-decompose-continue), back-ref.
@@ -411,6 +418,10 @@ class Kernel:
         # reads new.tenant for tenant reconciliation; points at the copy so a
         # with_tenant kernel writes with its own bound tenant.
         new._write_pipeline = WritePipeline(new)
+        # reads new.tenant through the write path's effective tenant; points at
+        # the copy for the same reason the pipeline does.
+        from dna.kernel.write.namespace_gate import NamespaceOwnershipGate
+        new._nsgate = NamespaceOwnershipGate(new)
         # s-kernel-decomp-f5-satellites — the read-only leaf collaborators read
         # per-kernel state (search reads new.tenant; registry/catalog query
         # through the copy so the tenant auto-stamp is the copy's), so they point
@@ -856,7 +867,9 @@ class Kernel:
         """
         return tuple(self._readers)
 
-    def _target_locator(self, scope: str, kind: str, name: str) -> "str | Path":
+    def _target_locator(
+        self, scope: str, kind: str, name: str, *, api_version: str | None = None,
+    ) -> "str | Path":
         """Stable human-readable locator for a document.
 
         - Filesystem sources → absolute Path under <base_dir>/<scope>/<kind_dir>/<name>.
@@ -872,21 +885,23 @@ class Kernel:
 
         src = self._source
         if isinstance(src, FilesystemSource):
-            sd = self.storage_for_kind(kind)
+            sd = self.storage_for_kind(kind, api_version=api_version)
             subdir = sd.container if sd and sd.container else (kind.lower() + "s")
             return src.base_dir / scope / subdir / name
         scheme = getattr(src, "url_scheme", None) \
             or type(src).__name__.lower().removesuffix("source")
         return f"{scheme}://{scope}/{kind}/{name}"
 
-    async def _target_exists(self, scope: str, kind: str, name: str) -> bool:
+    async def _target_exists(
+        self, scope: str, kind: str, name: str, *, api_version: str | None = None,
+    ) -> bool:
         """Best-effort probe: is the target doc already present on disk/store?
 
         Filesystem sources check the computed path; other sources rely on
         WritableSourcePort.list_versions (non-empty = exists). Returns False
         on any adapter failure — this is a UI hint, not a correctness gate.
         """
-        target = self._target_locator(scope, kind, name)
+        target = self._target_locator(scope, kind, name, api_version=api_version)
         if isinstance(target, Path):
             return target.exists()
         src = self._source
@@ -1228,8 +1243,11 @@ class Kernel:
         can render "create" vs "overwrite" affordances.
         """
         payload = self.serialize_document(scope, kind, name, raw)
-        target = self._target_locator(scope, kind, name)
-        exists_already = await self._target_exists(scope, kind, name)
+        _api_version = raw.get("apiVersion") if isinstance(raw, dict) else None
+        target = self._target_locator(scope, kind, name, api_version=_api_version)
+        exists_already = await self._target_exists(
+            scope, kind, name, api_version=_api_version,
+        )
         return PreviewResult(
             target=target,
             files=payload["files"],
@@ -1480,6 +1498,17 @@ class Kernel:
         KindRegistry collaborator (s-kernel-decomp-f3-kindregistry)."""
         self._kindreg.register_kind(k)
 
+    def unregister_kind(self, api_version: str, kind: str) -> "KindPort | None":
+        """Drop a registered Kind by its ``(api_version, kind)`` key, returning
+        the removed port (``None`` if it was never registered).
+
+        The counterpart to :meth:`kind` that the per-scope KindDefinition funnel
+        always assumed existed and never had (i-080 item 3): without it,
+        creating a tenant Kind was hot but EDITING one required restarting the
+        process. See ``KindRegistry.unregister_kind`` for what goes with the
+        port (its auto-synthesized generic reader/writer)."""
+        return self._kindreg.unregister_kind(api_version, kind)
+
     def kind_from_descriptor(self, raw: dict[str, Any]) -> KindPort:
         """Register a BUILTIN Kind from a ``kinds/*.kind.yaml`` descriptor
         (KindDefinition package data). Thin facade over the KindRegistry funnel
@@ -1702,15 +1731,28 @@ class Kernel:
 
     # -- Kernel storage helpers -----------------------------------------------
 
-    def container_for_kind(self, kind_name: str) -> "str | None":
+    def container_for_kind(
+        self, kind_name: str, *, api_version: str | None = None,
+    ) -> "str | None":
         """Return the storage container directory for a kind, or None. Delegates
-        to ``self._kindreg``."""
-        return self._kindreg.container_for(kind_name)
+        to ``self._kindreg``.
 
-    def storage_for_kind(self, kind_name: str) -> "StorageDescriptor | None":
+        ``api_version`` resolves the Kind EXACTLY (i-195 / i-080). Two Kinds may
+        share a bare name — two workspaces each declaring ``Deal`` in their own
+        namespace is the whole point of namespacing — and the bare lookup then
+        picks ONE of them, which on a storage path means one workspace's
+        documents are written into the directory of the other's Kind. Every
+        caller holding the document (which carries its own apiVersion) should
+        pass it."""
+        return self._kindreg.container_for(kind_name, api_version=api_version)
+
+    def storage_for_kind(
+        self, kind_name: str, *, api_version: str | None = None,
+    ) -> "StorageDescriptor | None":
         """Return the StorageDescriptor for a kind, or None. Delegates to
-        ``self._kindreg``."""
-        return self._kindreg.storage_for(kind_name)
+        ``self._kindreg``. See :meth:`container_for_kind` for why a caller with
+        the document in hand must pass ``api_version``."""
+        return self._kindreg.storage_for(kind_name, api_version=api_version)
 
     def fetch_bundle_entry(
         self,
@@ -2623,6 +2665,27 @@ class Kernel:
         _lib-direct + fail-soft. Thin facade over the RegistryAccessor
         collaborator — mirrors ``workspace_memberships``."""
         return await self._registry.workspaces()
+
+    async def kind_namespaces(self) -> list[dict]:
+        """List every ``KindNamespace`` claim (namespace → owning workspace,
+        i-080) from the _lib registry. Returns the RAW DICT rows; the ownership
+        verdict is computed in pure core
+        (``dna.kernel.kinds.namespaces.owner_of``).
+
+        _lib-direct and — uniquely on this facade — NOT fail-soft: an unreadable
+        authorization registry is not an empty one, and the write gate needs to
+        tell the two apart. Thin facade over the RegistryAccessor collaborator."""
+        return await self._registry.kind_namespaces()
+
+    async def _check_namespace_ownership_async(
+        self, scope: str, kind: str, name: str, raw: dict, *,
+        tenant: str | None,
+    ) -> None:
+        """Namespace-ownership gate for a ``KindDefinition`` write (i-080 item
+        1). Delegates to ``self._nsgate``; see
+        ``dna.kernel.write.namespace_gate`` for the contract. A no-op for every
+        other Kind."""
+        return await self._nsgate.check(scope, kind, name, raw, tenant=tenant)
 
     # VoicePolicy is GLOBAL — _lib-resident like ModelProfile. Same
     # _lib-direct lookup rationale (a per-scope query would silently

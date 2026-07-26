@@ -522,6 +522,26 @@ class WritePipeline:
             await host._check_layer_policy_async(
                 scope, kind, name, raw, policy_check_layer,
             )
+        # --- namespace ownership (i-080 item 1) ---
+        # ONE boundary governs both write policies, which is why this sits here
+        # and not in a face. Two details are deliberate:
+        #
+        # * it runs AFTER the layer check, continuing that gate's own
+        #   coarse-to-fine rule: "this Kind may never be forked into a layer" is
+        #   broader than "you do not own this namespace", so a layer write keeps
+        #   the broader message;
+        # * but UNCONDITIONALLY, not only for layer writes. The layer check is
+        #   skipped entirely for a BASE write, and a workspace-authored Kind is
+        #   authored exactly there — KindDefinition is structurally
+        #   non-overlayable, so a workspace's Kind lives at the base of a scope
+        #   the workspace owns. Gating only layer writes would gate every path
+        #   except the one a tenant Kind actually takes.
+        #
+        # A no-op for every Kind but KindDefinition, and for an unattributed
+        # write — see dna.kernel.write.namespace_gate for the full contract.
+        await host._check_namespace_ownership_async(
+            scope, kind, name, raw, tenant=effective_tenant,
+        )
         # --- pre_save veto hooks (s-write-path-despecialize) ---
         # Kind-specific write rules (platform-agent fork guard, prompt-budget
         # enforcement, Kind-Writer contract, bitemporal Engram guard,
