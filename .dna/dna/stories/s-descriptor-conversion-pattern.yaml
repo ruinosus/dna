@@ -15,7 +15,7 @@ spec:
   - code + equivalence goldens + regenerated kind docs + ratchet allowlist shrunk + full suites green in sdk-py and cli
   definition_of_done_source: cli-create
   created_at: '2026-07-26T07:31:39+00:00'
-  updated_at: '2026-07-26T08:10:52+00:00'
+  updated_at: '2026-07-26T08:13:20+00:00'
   timeline:
   - at: '2026-07-26T07:31:39+00:00'
     actor: claude-code
@@ -49,6 +49,12 @@ spec:
     name: tr-tg-descriptor-conversion-pattern-20260726-081047
     summary: TestRun tr-tg-descriptor-conversion-pattern-20260726-081047 → pass
     outcome: pass
+  - at: '2026-07-26T08:13:20+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/239 (base main). Apresentado como PATTERN PROPOSAL — o fundador decide se os 19 restantes seguem.'
+    commit_ref: af77f0acf11267609417e6bbb6f4160cc5e55584
   produces:
   - kind: Plan
     name: plan-s-descriptor-conversion-pattern
