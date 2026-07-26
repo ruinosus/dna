@@ -14,7 +14,7 @@ spec:
   - failing test first; enforcement on write+merge ports; descriptor field + both JSON schema copies; regenerated kinds reference; full sdk-py + cli suites green; PR opened
   definition_of_done_source: cli-create
   created_at: '2026-07-26T06:05:15+00:00'
-  updated_at: '2026-07-26T06:36:14+00:00'
+  updated_at: '2026-07-26T06:37:35+00:00'
   timeline:
   - at: '2026-07-26T06:05:15+00:00'
     actor: claude-code
@@ -48,6 +48,12 @@ spec:
     source: cli
     summary: 'Design decision: option (a) — kernel-enforced per-field allowlist — but WRITE PATH ONLY, not both policy ports. I started with two-port symmetry (the i-049 lesson) and the full suite caught it: test_load_manifest_tenant_phase9 went red because a tenant-published Genome legitimately carries owner_tenant, a field Genome''s own allowlist excludes. So the declaration and reality had already drifted, precisely because nothing enforced it. A LayerPolicy doc is opted into per scope by the operator; the field allowlist is declared globally by the Kind author, so enforcing it on merge would retroactively rewrite overlays already stored everywhere. The gate belongs on what a layer may AUTHOR. Pinned by test_a_tenant_published_genome_still_merges_its_non_allowlisted_identity. Second finding worth recording: Genome sets is_overlayable=False, so gate 1 refuses every Genome layer write before gate 3 runs — its allowlist was unreachable, not merely unenforced.'
     commit_ref: 481a472300d8043ea1707ee72d08e581ca269649
+  - at: '2026-07-26T06:37:35+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: PR https://github.com/ruinosus/dna/pull/237 aberto (base main).
+    commit_ref: 1fd922d4fedcc544493ba0c3f528521f495a5a29
   produces:
   - kind: Plan
     name: plan-s-overlayable-fields-enforced
