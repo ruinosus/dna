@@ -1,0 +1,35 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-descriptor-conversion-pattern
+spec:
+  title: Convert 4 of the 23 class-only Kinds to .kind.yaml descriptors as a reviewable p
+  description: Convert 4 of the 23 class-only Kinds to .kind.yaml descriptors as a reviewable pattern proposal, with byte-for-byte equivalence goldens.
+  status: in-progress
+  feature: f-dna-sdlc-expressiveness
+  acceptance_criteria:
+  - Given the four converted Kinds, When the kernel registers them from descriptors, Then identity/flags/storage/dep_filters/schema/summary/describe and the canonical digest of a real document are identical to the pre-conversion class surface
+  - Given a perturbed descriptor, When the equivalence suite runs, Then it fails
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - code + equivalence goldens + regenerated kind docs + ratchet allowlist shrunk + full suites green in sdk-py and cli
+  definition_of_done_source: cli-create
+  created_at: '2026-07-26T07:31:39+00:00'
+  updated_at: '2026-07-26T07:31:59+00:00'
+  timeline:
+  - at: '2026-07-26T07:31:39+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-07-26T07:31:59+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  produces:
+  - kind: Plan
+    name: plan-s-descriptor-conversion-pattern
+    role: implementation
+    at: '2026-07-26T07:31:59+00:00'

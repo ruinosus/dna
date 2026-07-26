@@ -1,0 +1,211 @@
+{
+  "identity": {
+    "api_version": "github.com/ruinosus/dna/sdlc/v1",
+    "kind": "Reference",
+    "alias": "sdlc-reference",
+    "origin": "github.com/ruinosus/dna/sdlc",
+    "model": "dict",
+    "display_label": "References",
+    "ascii_icon": "📚",
+    "graph_style": {
+      "fill": "#6366F1",
+      "stroke": "#4F46E5",
+      "text_color": "#fff"
+    },
+    "docs": null
+  },
+  "flags": {
+    "plane": "record",
+    "scope": "global",
+    "scope_declared": true,
+    "is_prompt_target": false,
+    "flatten_in_context": false,
+    "prompt_target_priority": 0,
+    "is_root": false,
+    "is_runtime_artifact": false,
+    "is_schema_affecting": false,
+    "is_overlayable": true,
+    "scope_inheritable": true,
+    "is_catalog_identity": false,
+    "visible_in_backend": null,
+    "embed_fields": null,
+    "description_fallback_field": null,
+    "ui_schema": null,
+    "volatile_spec_fields": [
+      "created_at",
+      "updated_at",
+      "version"
+    ],
+    "marker_shared_allowed": false
+  },
+  "ui": null,
+  "storage": {
+    "pattern": "yaml",
+    "container": "references",
+    "marker": null,
+    "body_field": null,
+    "body_as": null
+  },
+  "dep_filters": {},
+  "dependencies": {},
+  "schema": {
+    "type": "object",
+    "required": [
+      "title",
+      "kind_of",
+      "summary"
+    ],
+    "properties": {
+      "title": {
+        "type": "string"
+      },
+      "kind_of": {
+        "type": "string",
+        "enum": [
+          "web",
+          "paper",
+          "book",
+          "file",
+          "internal-doc",
+          "other"
+        ]
+      },
+      "url": {
+        "type": "string"
+      },
+      "fetched_at": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "summary": {
+        "type": "string",
+        "description": "1-2 sentence what this source says."
+      },
+      "key_quotes": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "default": []
+      },
+      "relevance": {
+        "type": "string",
+        "description": "Why this matters for THIS project."
+      },
+      "tags": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "default": []
+      },
+      "cited_by": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "default": [],
+        "description": "Auto-maintained by `dna sdlc cite`. Don't author by hand."
+      },
+      "content_path": {
+        "type": "string",
+        "description": "Optional path to rich-content sidecar (e.g. docs/superpowers/research/<slug>.md)"
+      },
+      "owner": {
+        "type": "string",
+        "default": "claude-code"
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "date-time"
+      }
+    },
+    "additionalProperties": true
+  },
+  "prompt_template": null,
+  "docs_attr": null,
+  "cases": [
+    {
+      "label": ".dna/dna/references/ref-bedrock-agentcore.yaml",
+      "spec": {
+        "title": "AWS Bedrock AgentCore — use any agent framework",
+        "kind_of": "web",
+        "summary": "AWS platform to deploy/operate agents built with ANY framework (CrewAI, LangGraph, LlamaIndex, Google ADK, OpenAI Agents SDK, Strands) — the 'runtime is swappable' substrate.",
+        "key_quotes": [],
+        "cited_by": [],
+        "owner": "claude-code",
+        "created_at": "2026-07-11T12:47:56+00:00",
+        "updated_at": "2026-07-11T12:47:56+00:00",
+        "url": "https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/using-any-agent-framework.html",
+        "fetched_at": "2026-07-11T12:47:56+00:00",
+        "relevance": "Evidence for the definition/runtime decoupling trend DNA rides.",
+        "tags": [
+          "trend"
+        ]
+      },
+      "name": "ref-bedrock-agentcore",
+      "summary": {
+        "title": "AWS Bedrock AgentCore — use any agent framework",
+        "kind_of": "web",
+        "url": "https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/using-any-agent-framework.html",
+        "cited_by_count": 0
+      },
+      "describe": null,
+      "default_agent": null,
+      "layer_policies": null,
+      "canonical_digest": "f59ba8a6415d46e733bbebe3b2d6a8745923486587ab14c5f43e79699ed3701b",
+      "parse_roundtrip": true
+    },
+    {
+      "label": ".dna/dna/references/ref-agenta-prompt-mgmt.yaml",
+      "spec": {
+        "title": "Agenta — open-source prompt management",
+        "kind_of": "web",
+        "summary": "Open-source LLMOps with Git-like prompt versioning (variants/branches + commit history), eval, observability.",
+        "key_quotes": [],
+        "cited_by": [],
+        "owner": "claude-code",
+        "created_at": "2026-07-11T12:47:55+00:00",
+        "updated_at": "2026-07-11T12:47:55+00:00",
+        "url": "https://agenta.ai/blog/top-open-source-prompt-management-platforms",
+        "fetched_at": "2026-07-11T12:47:55+00:00",
+        "relevance": "Second mature prompt-manager reinforcing that prompt management is not DNA's edge.",
+        "tags": [
+          "prompt-managers"
+        ]
+      },
+      "name": "ref-agenta-prompt-mgmt",
+      "summary": {
+        "title": "Agenta — open-source prompt management",
+        "kind_of": "web",
+        "url": "https://agenta.ai/blog/top-open-source-prompt-management-platforms",
+        "cited_by_count": 0
+      },
+      "describe": null,
+      "default_agent": null,
+      "layer_policies": null,
+      "canonical_digest": "e51e1c2af000ddd3e29ae93f6ea1a9e6701f66e3a4bcfe9ed9c77fd62ba442f4",
+      "parse_roundtrip": true
+    },
+    {
+      "label": "fixture:reference-empty-spec",
+      "spec": {},
+      "name": "reference-empty",
+      "summary": {
+        "title": "",
+        "kind_of": "other",
+        "url": "",
+        "cited_by_count": 0
+      },
+      "describe": null,
+      "default_agent": null,
+      "layer_policies": null,
+      "canonical_digest": "a448ee159991716af515435363a36d1ae2abbdd54612104094b8beed61718b67",
+      "parse_roundtrip": true
+    }
+  ]
+}

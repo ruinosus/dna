@@ -1,0 +1,243 @@
+{
+  "identity": {
+    "api_version": "github.com/ruinosus/dna/sdlc/v1",
+    "kind": "Plan",
+    "alias": "sdlc-plan",
+    "origin": "github.com/ruinosus/dna/sdlc",
+    "model": "dict",
+    "display_label": "Plans",
+    "ascii_icon": "📋",
+    "graph_style": {
+      "fill": "#06B6D4",
+      "stroke": "#0891B2",
+      "text_color": "#fff"
+    },
+    "docs": "A Plan is a pointer to an implementation plan document on disk. Usually descends from a Spec (`spec_ref`). Pattern-agnostic — DNA tracks pointer + metadata + refs, not the structure of the plan itself."
+  },
+  "flags": {
+    "plane": "record",
+    "scope": "global",
+    "scope_declared": true,
+    "is_prompt_target": false,
+    "flatten_in_context": false,
+    "prompt_target_priority": 0,
+    "is_root": false,
+    "is_runtime_artifact": false,
+    "is_schema_affecting": false,
+    "is_overlayable": true,
+    "scope_inheritable": false,
+    "is_catalog_identity": false,
+    "visible_in_backend": null,
+    "embed_fields": null,
+    "description_fallback_field": null,
+    "ui_schema": null,
+    "volatile_spec_fields": [
+      "created_at",
+      "updated_at",
+      "version"
+    ],
+    "marker_shared_allowed": false
+  },
+  "ui": null,
+  "storage": {
+    "pattern": "bundle",
+    "container": "plans",
+    "marker": "PLAN.md",
+    "body_field": "body",
+    "body_as": "text"
+  },
+  "dep_filters": {
+    "spec_ref": "sdlc-spec",
+    "epic": "sdlc-epic"
+  },
+  "dependencies": {
+    "spec_ref": "sdlc-spec",
+    "epic": "sdlc-epic"
+  },
+  "schema": {
+    "type": "object",
+    "required": [
+      "title",
+      "date",
+      "status"
+    ],
+    "properties": {
+      "title": {
+        "type": "string"
+      },
+      "date": {
+        "type": "string",
+        "format": "date"
+      },
+      "status": {
+        "type": "string",
+        "enum": [
+          "draft",
+          "proposed",
+          "accepted",
+          "deprecated",
+          "superseded"
+        ]
+      },
+      "pattern": {
+        "type": "string"
+      },
+      "body": {
+        "type": "string",
+        "description": "Markdown body (stored in PLAN.md)."
+      },
+      "origin": {
+        "type": "string",
+        "description": "Optional audit-only origin path."
+      },
+      "spec_ref": {
+        "type": "string",
+        "description": "Name of the Spec this plan implements.",
+        "x-dna-ref": "Spec"
+      },
+      "epic": {
+        "type": "string",
+        "x-dna-ref": "Epic"
+      },
+      "authors": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "tags": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "summary": {
+        "type": "string"
+      },
+      "journey_phase": {
+        "type": "string",
+        "enum": [
+          "discover",
+          "specify",
+          "plan",
+          "build",
+          "verify",
+          "reflect"
+        ],
+        "description": "Universal journey phase. A Plan typically lives in `plan` (decomposition) and may transition to `build` once Stories start landing."
+      },
+      "methodology": {
+        "type": "string",
+        "enum": [
+          "superpowers",
+          "bmad",
+          "spec-kit",
+          "kiro",
+          "rfc",
+          "adr",
+          "ad-hoc",
+          "custom"
+        ],
+        "description": "Which planning methodology produced this plan (superpowers | bmad | spec-kit | ...). Opt-in; lets the journey show the plan's origin honestly. The SDLC stays methodology-agnostic — this only records it."
+      }
+    },
+    "additionalProperties": true
+  },
+  "prompt_template": null,
+  "docs_attr": "A Plan is a pointer to an implementation plan document on disk. Usually descends from a Spec (`spec_ref`). Pattern-agnostic — DNA tracks pointer + metadata + refs, not the structure of the plan itself.",
+  "cases": [
+    {
+      "label": ".dna/dna/plans/plan-s-blessed-query-surface.yaml",
+      "spec": {
+        "title": "Plano: s-blessed-query-surface",
+        "date": "2026-07-08",
+        "status": "accepted",
+        "story_ref": "s-blessed-query-surface",
+        "journey_phase": "plan",
+        "body": "Inventariar as superfícies de query (mi.documents vs mi.all/one deprecated vs kernel.query) nos 2 SDKs; decidir o conjunto blessed pré-1.0; docs 100% na superfície blessed; deprecations com guidance clara e prazo; testes de paridade da superfície. Worktree dna-wt-blessed; PR com CI 6/6.",
+        "created_at": "2026-07-08T19:47:00+00:00",
+        "updated_at": "2026-07-08T19:47:00+00:00"
+      },
+      "name": "plan-s-blessed-query-surface",
+      "summary": {
+        "title": "Plano: s-blessed-query-surface",
+        "date": "2026-07-08",
+        "status": "accepted",
+        "pattern": "",
+        "spec_ref": ""
+      },
+      "describe": null,
+      "default_agent": null,
+      "layer_policies": null,
+      "canonical_digest": "81c70b233b551c0b3cda5a66b25cdaab9f63ad7bafc18e98fbce0a0d330c923c",
+      "parse_roundtrip": true
+    },
+    {
+      "label": ".dna/dna/plans/plan-s-commit-email-guard.yaml",
+      "spec": {
+        "title": "Plano: s-commit-email-guard",
+        "date": "2026-07-09",
+        "status": "accepted",
+        "story_ref": "s-commit-email-guard",
+        "journey_phase": "plan",
+        "body": "Estender brand_guard.py (--commits + self-test com git init temporário + identidades plantadas) + job commit-emails no guards.yml; validar local contra a história real (limpa pós-rewrite); PR pelo story pr.",
+        "created_at": "2026-07-09T10:23:43+00:00",
+        "updated_at": "2026-07-09T10:23:43+00:00"
+      },
+      "name": "plan-s-commit-email-guard",
+      "summary": {
+        "title": "Plano: s-commit-email-guard",
+        "date": "2026-07-09",
+        "status": "accepted",
+        "pattern": "",
+        "spec_ref": ""
+      },
+      "describe": null,
+      "default_agent": null,
+      "layer_policies": null,
+      "canonical_digest": "c7c1c448c1d4f6d857d5913d5dd5b602abe6ba83b377c43d9af55236a5278cd8",
+      "parse_roundtrip": true
+    },
+    {
+      "label": "fixture:plan-long-title",
+      "spec": {
+        "title": "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+        "date": "2026-07-25",
+        "status": "draft",
+        "pattern": "superpowers",
+        "spec_ref": "sp-x",
+        "body": "Body."
+      },
+      "name": "plan-long-title",
+      "summary": {
+        "title": "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+        "date": "2026-07-25",
+        "status": "draft",
+        "pattern": "superpowers",
+        "spec_ref": "sp-x"
+      },
+      "describe": null,
+      "default_agent": null,
+      "layer_policies": null,
+      "canonical_digest": "97275d868229a371aed88e393e458e0159c09fa9e11eeb22570e7f79f90aeb6b",
+      "parse_roundtrip": true
+    },
+    {
+      "label": "fixture:plan-empty-spec",
+      "spec": {},
+      "name": "plan-empty",
+      "summary": {
+        "title": "",
+        "date": "",
+        "status": "draft",
+        "pattern": "",
+        "spec_ref": ""
+      },
+      "describe": null,
+      "default_agent": null,
+      "layer_policies": null,
+      "canonical_digest": "9aef51ad330df0bc77fd61507f6d5d4a76bb48edf7fe9cfcd9ac08eb6b7ab4b4",
+      "parse_roundtrip": true
+    }
+  ]
+}

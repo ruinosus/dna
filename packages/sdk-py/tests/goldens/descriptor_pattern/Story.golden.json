@@ -1,0 +1,923 @@
+{
+  "identity": {
+    "api_version": "github.com/ruinosus/dna/sdlc/v1",
+    "kind": "Story",
+    "alias": "sdlc-story",
+    "origin": "github.com/ruinosus/dna/sdlc",
+    "model": "dict",
+    "display_label": "Stories",
+    "ascii_icon": "📖",
+    "graph_style": {
+      "fill": "#F59E0B",
+      "stroke": "#D97706",
+      "text_color": "#fff"
+    },
+    "docs": "A Story is a granular task: one developer, one PR, one estimate. Lists acceptance criteria, dependencies (other Stories that must land first), and rolls up to a Feature."
+  },
+  "flags": {
+    "plane": "record",
+    "scope": "global",
+    "scope_declared": true,
+    "is_prompt_target": false,
+    "flatten_in_context": false,
+    "prompt_target_priority": 0,
+    "is_root": false,
+    "is_runtime_artifact": false,
+    "is_schema_affecting": false,
+    "is_overlayable": true,
+    "scope_inheritable": false,
+    "is_catalog_identity": false,
+    "visible_in_backend": null,
+    "embed_fields": null,
+    "description_fallback_field": null,
+    "ui_schema": null,
+    "volatile_spec_fields": [
+      "created_at",
+      "updated_at",
+      "version"
+    ],
+    "marker_shared_allowed": false
+  },
+  "ui": {
+    "to_dict": {
+      "mode": "plan",
+      "display_order": 12,
+      "label": {
+        "en": "Stories",
+        "pt-BR": "Histórias"
+      },
+      "icon": "📖",
+      "description": {
+        "en": "Developer-sized work units. Child of Feature.",
+        "pt-BR": "Unidades de trabalho do dev. Filhos de Feature."
+      },
+      "breadcrumb": [
+        "Plan",
+        "Stories"
+      ],
+      "routes": {
+        "list": "docs/Story",
+        "detail": "docs/Story/:name",
+        "create": "kinds/Story/__new__"
+      },
+      "permissions": {
+        "list": "any",
+        "detail": "any",
+        "create": [
+          "po",
+          "pm",
+          "architect",
+          "tech-lead",
+          "maker"
+        ],
+        "edit": [
+          "po",
+          "pm",
+          "architect",
+          "tech-lead",
+          "maker"
+        ]
+      }
+    },
+    "resolve_label_en": "Stories",
+    "resolve_label_pt": "Histórias"
+  },
+  "storage": {
+    "pattern": "yaml",
+    "container": "stories",
+    "marker": null,
+    "body_field": null,
+    "body_as": null
+  },
+  "dep_filters": {
+    "feature": "sdlc-feature",
+    "owner": "helix-actor",
+    "dependencies": "sdlc-story",
+    "spec_refs": "sdlc-spec"
+  },
+  "dependencies": {
+    "feature": "sdlc-feature",
+    "owner": "helix-actor",
+    "dependencies": "sdlc-story",
+    "spec_refs": "sdlc-spec"
+  },
+  "schema": {
+    "type": "object",
+    "required": [
+      "description",
+      "status"
+    ],
+    "properties": {
+      "title": {
+        "type": "string",
+        "description": "Human-readable display name (Jira 'summary')."
+      },
+      "description": {
+        "type": "string"
+      },
+      "as_a": {
+        "type": "string",
+        "description": "Role: 'As a <role>'. INVEST/user-story format slot."
+      },
+      "i_want": {
+        "type": "string",
+        "description": "Goal: 'I want <goal>'. INVEST/user-story format slot."
+      },
+      "so_that": {
+        "type": "string",
+        "description": "Benefit: 'so that <benefit>'. INVEST/user-story format slot."
+      },
+      "status": {
+        "type": "string",
+        "enum": [
+          "needs-triage",
+          "todo",
+          "in-progress",
+          "review",
+          "done",
+          "blocked",
+          "deferred",
+          "cancelled"
+        ]
+      },
+      "feature": {
+        "type": "string",
+        "description": "Parent Feature name",
+        "x-dna-ref": "Feature"
+      },
+      "owner": {
+        "type": "string",
+        "description": "Actor name"
+      },
+      "estimate": {
+        "type": "number",
+        "description": "Fibonacci story points (1, 2, 3, 5, 8, 13, 21)"
+      },
+      "acceptance_criteria": {
+        "type": "array",
+        "items": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "object",
+              "required": [
+                "text"
+              ],
+              "properties": {
+                "text": {
+                  "type": "string"
+                },
+                "done": {
+                  "type": "boolean"
+                },
+                "done_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "done_by": {
+                  "type": "string"
+                }
+              }
+            }
+          ]
+        },
+        "description": "Acceptance criteria. Legacy: list[str]. New (s-ac-dod-checklist-state): list[{text, done?, done_at?, done_by?}] for per-item state tracking."
+      },
+      "dependencies": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Other Story names that must land first",
+        "x-dna-ref": "Story"
+      },
+      "spec_refs": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Spec docs (kind=Spec) this Story implements. M:N linkage between the planning axis (Story) and the design axis (Spec) — Jira/Confluence-shaped.",
+        "x-dna-ref": "Spec"
+      },
+      "closed_at": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "blocked_reason": {
+        "type": "string"
+      },
+      "priority": {
+        "type": "string",
+        "enum": [
+          "highest",
+          "high",
+          "medium",
+          "low",
+          "lowest"
+        ],
+        "description": "Board priority. Jira-aligned."
+      },
+      "labels": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Free-form tags for swim lanes / filters."
+      },
+      "reporter": {
+        "type": "string",
+        "description": "Actor who filed it (vs `owner` who works on it)."
+      },
+      "watchers": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Actor names subscribed to changes."
+      },
+      "journey_phase": {
+        "type": "string",
+        "enum": [
+          "discover",
+          "specify",
+          "plan",
+          "build",
+          "verify",
+          "reflect"
+        ],
+        "description": "Universal journey phase (discover → specify → plan → build → reflect). Additive layer over Story/Feature/Epic status, Spec phase, etc. Lets the journey ledger pin this doc to one of five universal phases compatible with Superpowers / BMAD / Spec Kit / Kiro."
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "sprint_ref": {
+        "type": "string",
+        "description": "Sprint identifier (free-form, e.g. '2026-Q2-S2')."
+      },
+      "time_tracking": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "logged_h": {
+            "type": "number",
+            "minimum": 0
+          },
+          "remaining_h": {
+            "type": "number",
+            "minimum": 0
+          },
+          "original_estimate_h": {
+            "type": "number",
+            "minimum": 0
+          }
+        }
+      },
+      "definition_of_done": {
+        "type": "array",
+        "items": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "object",
+              "required": [
+                "text"
+              ],
+              "properties": {
+                "text": {
+                  "type": "string"
+                },
+                "done": {
+                  "type": "boolean"
+                },
+                "done_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "done_by": {
+                  "type": "string"
+                }
+              }
+            }
+          ]
+        },
+        "description": "Per-Story DoD. Same union shape as acceptance_criteria — legacy list[str] OR list[{text, done?, done_at?, done_by?}]."
+      },
+      "business_value": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1000,
+        "description": "WSJF-style scalar for relative prioritization."
+      },
+      "mockups": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "URLs/paths to design artifacts."
+      },
+      "release_target": {
+        "type": "string",
+        "description": "Epic name OR 'owner/pkg@semver' identifying the release this Story unblocks."
+      },
+      "produces": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": [
+            "kind",
+            "name"
+          ],
+          "additionalProperties": true,
+          "properties": {
+            "kind": {
+              "type": "string",
+              "description": "Artifact Kind (any)."
+            },
+            "name": {
+              "type": "string",
+              "description": "Artifact doc name."
+            },
+            "role": {
+              "type": "string",
+              "description": "Optional role hint (e.g. visual-spec, plan, investigation)."
+            },
+            "at": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        },
+        "description": "Artifacts this work item produced — any Kind (hub)."
+      },
+      "timeline": {
+        "type": "array",
+        "description": "Append-only activity log. Auto-stamped by the CLI on every status flip / groom / artifact write; populated by AgentSession capture for decision + artifact_produced events. Render in Studio as activity stream.",
+        "items": {
+          "type": "object",
+          "required": [
+            "at",
+            "actor",
+            "type"
+          ],
+          "properties": {
+            "at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "actor": {
+              "type": "string",
+              "description": "Who triggered the event (Actor name or 'claude-code')."
+            },
+            "type": {
+              "type": "string",
+              "description": "Event type. Recognized: status_change, groom, comment, decision, artifact_produced (open vocabulary — new types are additive, e.g. pr_opened)."
+            },
+            "source": {
+              "type": "string",
+              "enum": [
+                "cli",
+                "studio",
+                "mcp",
+                "agent-session-extracted",
+                "system"
+              ]
+            },
+            "from": {
+              "type": "string",
+              "description": "status_change: previous status."
+            },
+            "to": {
+              "type": "string",
+              "description": "status_change: new status."
+            },
+            "fields": {
+              "type": "object",
+              "description": "groom: which fields changed and to what."
+            },
+            "summary": {
+              "type": "string",
+              "description": "comment/decision: short human-readable text."
+            },
+            "excerpt": {
+              "type": "string",
+              "description": "decision: snippet from the source transcript."
+            },
+            "paths": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "artifact_produced: file paths touched."
+            },
+            "commit_ref": {
+              "type": "string",
+              "description": "Git SHA associated with this event (when relevant)."
+            },
+            "session_ref": {
+              "type": "string",
+              "description": "Back-link to a AgentSession that produced this event."
+            }
+          },
+          "additionalProperties": true
+        }
+      }
+    },
+    "additionalProperties": true
+  },
+  "prompt_template": null,
+  "docs_attr": "A Story is a granular task: one developer, one PR, one estimate. Lists acceptance criteria, dependencies (other Stories that must land first), and rolls up to a Feature.",
+  "cases": [
+    {
+      "label": ".dna/dna/stories/s-blessed-query-surface.yaml",
+      "spec": {
+        "title": "Decide and enforce the blessed public query surface before 1.0: mi.documents (wa",
+        "description": "Decide and enforce the blessed public query surface before 1.0: mi.documents (warning-free) vs deprecated mi.all()/mi.one() still shown in docs. One canonical surface, docs aligned, deprecations with clear timelines.",
+        "status": "done",
+        "feature": "f-dna-1.0-readiness",
+        "priority": "medium",
+        "labels": [
+          "sdk",
+          "docs"
+        ],
+        "reporter": "claude-code",
+        "business_value": 400,
+        "acceptance_criteria": [
+          {
+            "text": "Docs show only the blessed surface; deprecated methods emit guidance; parity Py/TS",
+            "done": true,
+            "done_at": "2026-07-08T21:05:02+00:00",
+            "done_by": "story-done-auto"
+          }
+        ],
+        "acceptance_criteria_source": "cli-create",
+        "definition_of_done": [
+          {
+            "text": "PR merged",
+            "done": true,
+            "done_at": "2026-07-08T21:05:02+00:00",
+            "done_by": "story-done-auto"
+          }
+        ],
+        "definition_of_done_source": "cli-create",
+        "created_at": "2026-07-08T18:27:49+00:00",
+        "updated_at": "2026-07-08T21:05:03+00:00",
+        "timeline": [
+          {
+            "at": "2026-07-08T18:27:49+00:00",
+            "actor": "claude-code",
+            "type": "status_change",
+            "source": "cli",
+            "to": "todo"
+          },
+          {
+            "at": "2026-07-08T19:47:00+00:00",
+            "actor": "claude-code",
+            "type": "status_change",
+            "source": "cli",
+            "from": "todo",
+            "to": "in-progress"
+          },
+          {
+            "at": "2026-07-08T19:53:18+00:00",
+            "actor": "claude-code",
+            "type": "comment",
+            "source": "cli",
+            "summary": "Inventário fechado. Py: mi.all/one JÁ deprecated (warnings herdados do projeto-mãe, mensagens apontam s-mi-class-death/all_async — vou reescrever p/ guidance DNA '1.0'); mi.documents/root/default_agent/find_agent/build_prompt(_async)/resolve(_async)/all_async/one_async + kernel.query/count/get_document(+sync wrappers). TS: all/one SEM deprecation; sem async twins; kernel.query/count existem, SEM getDocument. Docs: KIND-AUTHORING/KINDS-GUIDE/KIND-DATA-ACCESS/PORT-CONTRACT/READERS-WRITERS ensinam mi.all/one; QUICK-START/READMEs/hello-genome já ensinam mi.documents; demo.ts usa mi.all x3. Testes: ~133 callsites Py + ~47 TS. Decisão blessed: mi.documents + kernel.query/count + mi.build_prompt + mi.root/default_agent/find_agent + mi.resolve (Py-only justificados: *_async, kernel.get_document, *_sync wrappers). Deprecated: mi.all/one nos 2 lados, msg 'will be removed in 1.0' + substituição exata. Plano: (1) Py _all/_one internos sem warning + reword msgs; (2) TS @deprecated JSDoc + console.warn once + _all/_one internos (reports/evidence-capture/index/applyHooks migram); (3) docs 100% blessed + demo.ts; (4) migrar testes (comprehensions) exceto suites que TESTAM o deprecated (pytest.warns); (5) fixture port-surface-parity.json ganha seção blessed_query_surface + executor test nos 2 lados; (6) ratchet pytest filterwarnings error:ManifestInstance.",
+            "commit_ref": "3ab6f0b1e8b77623195248396df8f6f3076260ab"
+          },
+          {
+            "at": "2026-07-08T20:28:03+00:00",
+            "actor": "claude-code",
+            "type": "comment",
+            "source": "cli",
+            "summary": "BUILD done + PR: https://github.com/ruinosus/dna/pull/3 — 6/6 checks do CI real VERDES (brand-guard, cli, gitleaks, postgres, sdk-py, sdk-ts). Shims Py/TS com guidance 1.0, gêmeos _all/_one, colaboradores migrados (bônus: enforcer LayerPolicy tinha fail-soft engolindo AttributeError→OPEN, pego por teste), docs 100% blessed (tabela canônica em KIND-DATA-ACCESS), ~133+47 callsites de teste migrados, ratchet filterwarnings=error:ManifestInstance, fixture § blessed_query_surface (blessed/deprecated/public_surface 55/55) + executores nos 2 lados. Re-runs locais instáveis por disco 100% cheio (ENOSPC da máquina, alheio à story) — validação autoritativa é o CI verde. NÃO mergeado.",
+            "commit_ref": "3ab6f0b1e8b77623195248396df8f6f3076260ab"
+          },
+          {
+            "at": "2026-07-08T20:28:26+00:00",
+            "actor": "claude-code",
+            "type": "status_change",
+            "source": "cli",
+            "from": "in-progress",
+            "to": "review"
+          },
+          {
+            "at": "2026-07-08T21:05:01+00:00",
+            "actor": "claude-code",
+            "type": "artifact_produced",
+            "source": "cli",
+            "kind": "TestGuide",
+            "name": "tg-s-blessed-query-surface",
+            "summary": "TestGuide tg-s-blessed-query-surface (smoke)"
+          },
+          {
+            "at": "2026-07-08T21:05:02+00:00",
+            "actor": "claude-code",
+            "type": "artifact_produced",
+            "source": "cli",
+            "kind": "TestRun",
+            "name": "tr-tg-s-blessed-query-surface-20260708-210502",
+            "summary": "TestRun tr-tg-s-blessed-query-surface-20260708-210502 → pass",
+            "outcome": "pass"
+          },
+          {
+            "at": "2026-07-08T21:05:03+00:00",
+            "actor": "claude-code",
+            "type": "comment",
+            "source": "cli",
+            "summary": "PR #3 merged (6/6 CI real em 2 heads). Superfície blessed decidida e travada na fixture (55 membros públicos pinados por lado); mi.all/one deprecated nos 2 SDKs com substituição na mensagem + ratchet filterwarnings=error; docs 100% blessed; bug real de LayerPolicy fail-soft achado e corrigido de brinde."
+          },
+          {
+            "at": "2026-07-08T21:05:03+00:00",
+            "actor": "claude-code",
+            "type": "status_change",
+            "source": "cli",
+            "from": "review",
+            "to": "done",
+            "commit_ref": "386266b704d6e5b7ef04a9fb6364b0167d102e6e"
+          }
+        ],
+        "produces": [
+          {
+            "kind": "Plan",
+            "name": "plan-s-blessed-query-surface",
+            "role": "implementation",
+            "at": "2026-07-08T19:47:00+00:00"
+          },
+          {
+            "kind": "TestGuide",
+            "name": "tg-s-blessed-query-surface",
+            "role": "test-guide",
+            "at": "2026-07-08T21:05:01+00:00"
+          },
+          {
+            "kind": "TestRun",
+            "name": "tr-tg-s-blessed-query-surface-20260708-210502",
+            "role": "test-run",
+            "at": "2026-07-08T21:05:02+00:00"
+          }
+        ],
+        "closed_at": "2026-07-08T21:05:02+00:00"
+      },
+      "name": "s-blessed-query-surface",
+      "summary": {
+        "status": "done",
+        "feature": "f-dna-1.0-readiness",
+        "owner": "",
+        "estimate": null,
+        "spec_refs": 0,
+        "priority": "medium",
+        "labels": [
+          "sdk",
+          "docs"
+        ],
+        "sprint_ref": "",
+        "business_value": 400
+      },
+      "describe": null,
+      "default_agent": null,
+      "layer_policies": null,
+      "canonical_digest": "559cda29fb7871ef0adcdeed51a196b454d731576aca8b465e7e7855801965a1",
+      "parse_roundtrip": true
+    },
+    {
+      "label": ".dna/dna/stories/s-cite-any-citable-kind.yaml",
+      "spec": {
+        "title": "dna sdlc cite aceita qualquer Kind citável (não só Reference)",
+        "description": "Generaliza o resolvedor de citação: cite <Kind>/<name> --from <Kind>/<name>. Mantém bidirecionalidade (o citado ganha cited_by). Semântica: produces=output autorado, cite=fonte que fundamenta.",
+        "status": "done",
+        "feature": "f-dna-sdlc-expressiveness",
+        "acceptance_criteria": [
+          {
+            "text": "dna sdlc cite Research/<name> --from ADR/<name> (ou Epic) funciona e o vínculo aparece nos dois lados",
+            "done": true,
+            "done_at": "2026-07-11T13:56:46+00:00",
+            "done_by": "story-done-auto"
+          },
+          {
+            "text": "citação de bare-name continua defaultando pra Reference (backwards-compat)",
+            "done": true,
+            "done_at": "2026-07-11T13:56:46+00:00",
+            "done_by": "story-done-auto"
+          }
+        ],
+        "acceptance_criteria_source": "cli-create",
+        "definition_of_done": [
+          {
+            "text": "Teste automatizado travando cite cross-Kind + bidirecionalidade; Research ganha campo cited_by (Py+TS parity); docs/help atualizados; suites verdes",
+            "done": true,
+            "done_at": "2026-07-11T13:56:46+00:00",
+            "done_by": "story-done-auto"
+          }
+        ],
+        "definition_of_done_source": "cli-create",
+        "created_at": "2026-07-11T13:33:03+00:00",
+        "updated_at": "2026-07-11T13:56:55+00:00",
+        "timeline": [
+          {
+            "at": "2026-07-11T13:33:03+00:00",
+            "actor": "claude-code",
+            "type": "status_change",
+            "source": "cli",
+            "to": "todo"
+          },
+          {
+            "at": "2026-07-11T13:33:20+00:00",
+            "actor": "claude-code",
+            "type": "status_change",
+            "source": "cli",
+            "from": "todo",
+            "to": "in-progress"
+          },
+          {
+            "at": "2026-07-11T13:46:21+00:00",
+            "actor": "claude-code",
+            "type": "comment",
+            "source": "cli",
+            "summary": "Implementei: generalizei cmd_cite/cmd_uncite pra aceitar <Kind>/<name> no alvo citado (bare-name → Reference, compat). Bidirecionalidade preservada: o citado ganha spec.cited_by, o caller ganha spec.references (qualificado pra cross-Kind, bare pra Reference). Semântica gravada no help: cite=fonte que fundamenta, produces=output autorado. Research ganhou campo cited_by (Py+TS parity).",
+            "commit_ref": "f0aa9c7c3ba9eb8142fd4f5b5789f95313771a5e"
+          },
+          {
+            "at": "2026-07-11T13:46:24+00:00",
+            "actor": "claude-code",
+            "type": "comment",
+            "source": "cli",
+            "summary": "Provado ao vivo: 'dna sdlc cite Research/research-cite-smoke --from ADR/adr-cite-smoke' → ADR.references=[Research/...] e Research.cited_by=[ADR/...]. Bare-name 'cite ref-smoke --from ADR/...' → Reference default, ref bare no caller. Teste automatizado em test_sdlc_correctness.py (4 casos).",
+            "commit_ref": "f0aa9c7c3ba9eb8142fd4f5b5789f95313771a5e"
+          },
+          {
+            "at": "2026-07-11T13:46:50+00:00",
+            "actor": "claude-code",
+            "type": "artifact_produced",
+            "source": "cli",
+            "kind": "TestGuide",
+            "name": "tg-cite-any-citable-kind",
+            "summary": "TestGuide tg-cite-any-citable-kind (smoke)"
+          },
+          {
+            "at": "2026-07-11T13:47:21+00:00",
+            "actor": "claude-code",
+            "type": "artifact_produced",
+            "source": "cli",
+            "kind": "TestRun",
+            "name": "tr-tg-cite-any-citable-kind-20260711-134719",
+            "summary": "TestRun tr-tg-cite-any-citable-kind-20260711-134719 → pass",
+            "outcome": "pass"
+          },
+          {
+            "at": "2026-07-11T13:49:18+00:00",
+            "actor": "claude-code",
+            "type": "pr_opened",
+            "source": "cli",
+            "summary": "PR aberto: https://github.com/ruinosus/dna/pull/58",
+            "pr_url": "https://github.com/ruinosus/dna/pull/58"
+          },
+          {
+            "at": "2026-07-11T13:49:57+00:00",
+            "actor": "claude-code",
+            "type": "status_change",
+            "source": "cli",
+            "from": "in-progress",
+            "to": "review"
+          },
+          {
+            "at": "2026-07-11T13:56:39+00:00",
+            "actor": "claude-code",
+            "type": "artifact_produced",
+            "source": "cli",
+            "kind": "TestGuide",
+            "name": "tg-s-cite-any-citable-kind-c",
+            "summary": "TestGuide tg-s-cite-any-citable-kind-c (smoke)"
+          },
+          {
+            "at": "2026-07-11T13:56:45+00:00",
+            "actor": "claude-code",
+            "type": "artifact_produced",
+            "source": "cli",
+            "kind": "TestRun",
+            "name": "tr-tg-s-cite-any-citable-kind-c-20260711-135642",
+            "summary": "TestRun tr-tg-s-cite-any-citable-kind-c-20260711-135642 → pass",
+            "outcome": "pass"
+          },
+          {
+            "at": "2026-07-11T13:56:50+00:00",
+            "actor": "claude-code",
+            "type": "comment",
+            "source": "cli",
+            "summary": "PR #58 merged"
+          },
+          {
+            "at": "2026-07-11T13:56:55+00:00",
+            "actor": "claude-code",
+            "type": "status_change",
+            "source": "cli",
+            "from": "review",
+            "to": "done",
+            "commit_ref": "b4094134e80e53443c9b1ae682b15e7de8fcdf49"
+          }
+        ],
+        "produces": [
+          {
+            "kind": "Plan",
+            "name": "plan-s-cite-any-citable-kind",
+            "role": "implementation",
+            "at": "2026-07-11T13:33:20+00:00"
+          },
+          {
+            "kind": "TestGuide",
+            "name": "tg-cite-any-citable-kind",
+            "role": "test-guide",
+            "at": "2026-07-11T13:46:50+00:00"
+          },
+          {
+            "kind": "TestRun",
+            "name": "tr-tg-cite-any-citable-kind-20260711-134719",
+            "role": "test-run",
+            "at": "2026-07-11T13:47:21+00:00"
+          },
+          {
+            "kind": "TestGuide",
+            "name": "tg-s-cite-any-citable-kind-c",
+            "role": "test-guide",
+            "at": "2026-07-11T13:56:39+00:00"
+          },
+          {
+            "kind": "TestRun",
+            "name": "tr-tg-s-cite-any-citable-kind-c-20260711-135642",
+            "role": "test-run",
+            "at": "2026-07-11T13:56:45+00:00"
+          }
+        ],
+        "closed_at": "2026-07-11T13:56:46+00:00"
+      },
+      "name": "s-cite-any-citable-kind",
+      "summary": {
+        "status": "done",
+        "feature": "f-dna-sdlc-expressiveness",
+        "owner": "",
+        "estimate": null,
+        "spec_refs": 0,
+        "priority": "medium",
+        "labels": [],
+        "sprint_ref": "",
+        "business_value": null
+      },
+      "describe": null,
+      "default_agent": null,
+      "layer_policies": null,
+      "canonical_digest": "09c2291ed3ba1987f3fa274faa55df69e585e2be1a9259509a5360f778d36a0d",
+      "parse_roundtrip": true
+    },
+    {
+      "label": ".dna/dna/stories/s-mif-passthrough-kind.yaml",
+      "spec": {
+        "title": "Registrar mif-spec.dev/v1 . Memory como Kind de passthrough (plano record), apli",
+        "description": "Registrar mif-spec.dev/v1 . Memory como Kind de passthrough (plano record), aplicando a regra normativa #3: um Kind que o DNA nao inventou viaja sob o namespace do dono, inalterado. Base ja rascunhada em docs/design/mif-memory.kind.yaml.",
+        "status": "in-progress",
+        "feature": "f-portable-memory",
+        "priority": "high",
+        "labels": [
+          "memory",
+          "kinds",
+          "interchange"
+        ],
+        "reporter": "claude-code",
+        "acceptance_criteria": [
+          "Dado o descritor movido de docs/design para o path de extensao real, quando registrado, entao registra mif-spec.dev/v1 . Memory no plano record, com espelho TS e golden de hash-parity",
+          "Dado um .memory.json de exemplo do MIF (Level 1 e 2), quando validado, entao passa sem deformacao",
+          "Dado o bloco extensions, entao aceita additionalProperties (o cofre onde x-dna.* viaja)"
+        ],
+        "acceptance_criteria_source": "cli-create",
+        "definition_of_done": [
+          "Golden de hash-parity Py<->TS verde; validacao do exemplo MIF verde; nenhum campo DNA-flavored injetado no schema do MIF"
+        ],
+        "definition_of_done_source": "cli-create",
+        "created_at": "2026-07-19T14:25:33+00:00",
+        "updated_at": "2026-07-19T19:19:37+00:00",
+        "timeline": [
+          {
+            "at": "2026-07-19T14:25:33+00:00",
+            "actor": "claude-code",
+            "type": "status_change",
+            "source": "cli",
+            "to": "todo"
+          },
+          {
+            "at": "2026-07-19T18:34:42+00:00",
+            "actor": "claude-code",
+            "type": "status_change",
+            "source": "cli",
+            "from": "todo",
+            "to": "in-progress"
+          },
+          {
+            "at": "2026-07-19T19:19:21+00:00",
+            "actor": "claude-code",
+            "type": "decision",
+            "source": "cli",
+            "summary": "A story buscou a spec REAL do MIF v1.0.0 ao vivo em vez de confiar no descritor rascunhado, e achou o rascunho substancialmente errado: o campo temporal e validUntil (nao validTo); relationships[].type e string kebab-case aberta (nao enum fechado) e 4 dos 9 valores do rascunho nao existem (related-to, caused-by, documents, references — os reais incluem relates-to, uses, created-by, mentioned-in); o id do perfil Markdown e UUID puro (o urn:mif: e o @id do JSON-LD, outra coisa); e o naming .memory.md era convencao do draft 0.1.0, nao da v1.0. Consequencia que passou perto: a tabela de mapeamento secao 2 do design — que e a BASE da story s-memory-interchange-verbs — usava validTo e related-to. Seguir o design teria produzido MIF invalido. A tabela foi corrigida na fonte e ganhou um aviso no topo mandando conferir contra o descritor real, nao contra ela.",
+            "commit_ref": "983afe16f90784936911addc2632c0b99bc42fdd"
+          },
+          {
+            "at": "2026-07-19T19:19:28+00:00",
+            "actor": "claude-code",
+            "type": "artifact_produced",
+            "source": "cli",
+            "kind": "TestGuide",
+            "name": "tg-mif-passthrough-kind",
+            "summary": "TestGuide tg-mif-passthrough-kind (manual)"
+          },
+          {
+            "at": "2026-07-19T19:19:37+00:00",
+            "actor": "claude-code",
+            "type": "artifact_produced",
+            "source": "cli",
+            "kind": "TestRun",
+            "name": "tr-tg-mif-passthrough-kind-20260719-191933",
+            "summary": "TestRun tr-tg-mif-passthrough-kind-20260719-191933 → pass",
+            "outcome": "pass"
+          },
+          {
+            "at": "2026-07-19T19:19:48+00:00",
+            "actor": "claude-code",
+            "type": "pr_opened",
+            "source": "cli",
+            "summary": "PR aberto: https://github.com/ruinosus/dna/pull/167",
+            "pr_url": "https://github.com/ruinosus/dna/pull/167"
+          }
+        ],
+        "produces": [
+          {
+            "kind": "Plan",
+            "name": "plan-s-mif-passthrough-kind",
+            "role": "implementation",
+            "at": "2026-07-19T18:34:42+00:00"
+          },
+          {
+            "kind": "TestGuide",
+            "name": "tg-mif-passthrough-kind",
+            "role": "test-guide",
+            "at": "2026-07-19T19:19:28+00:00"
+          },
+          {
+            "kind": "TestRun",
+            "name": "tr-tg-mif-passthrough-kind-20260719-191933",
+            "role": "test-run",
+            "at": "2026-07-19T19:19:37+00:00"
+          }
+        ]
+      },
+      "name": "s-mif-passthrough-kind",
+      "summary": {
+        "status": "in-progress",
+        "feature": "f-portable-memory",
+        "owner": "",
+        "estimate": null,
+        "spec_refs": 0,
+        "priority": "high",
+        "labels": [
+          "memory",
+          "kinds",
+          "interchange"
+        ],
+        "sprint_ref": "",
+        "business_value": null
+      },
+      "describe": null,
+      "default_agent": null,
+      "layer_policies": null,
+      "canonical_digest": "b449d0ab2531cfba7308d91c370d6ec7f0498df76d778f7dce0907339440d037",
+      "parse_roundtrip": true
+    },
+    {
+      "label": "fixture:story-empty-spec",
+      "spec": {},
+      "name": "story-empty",
+      "summary": {
+        "status": "todo",
+        "feature": "",
+        "owner": "",
+        "estimate": null,
+        "spec_refs": 0,
+        "priority": "medium",
+        "labels": [],
+        "sprint_ref": "",
+        "business_value": null
+      },
+      "describe": null,
+      "default_agent": null,
+      "layer_policies": null,
+      "canonical_digest": "04c99b4c3087b3c33196b3928de99f527500a947658031bf6e3783dfd755dd08",
+      "parse_roundtrip": true
+    }
+  ]
+}

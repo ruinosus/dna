@@ -1,0 +1,172 @@
+{
+  "identity": {
+    "api_version": "github.com/ruinosus/dna/collab/v1",
+    "kind": "Comment",
+    "alias": "collab-comment",
+    "origin": "github.com/ruinosus/dna/collab",
+    "model": "dict",
+    "display_label": "Comments",
+    "ascii_icon": "💬",
+    "graph_style": {
+      "fill": "#F59E0B",
+      "stroke": "#D97706",
+      "text_color": "#fff"
+    },
+    "docs": ""
+  },
+  "flags": {
+    "plane": "composition",
+    "scope": null,
+    "scope_declared": false,
+    "is_prompt_target": false,
+    "flatten_in_context": false,
+    "prompt_target_priority": 0,
+    "is_root": false,
+    "is_runtime_artifact": false,
+    "is_schema_affecting": false,
+    "is_overlayable": true,
+    "scope_inheritable": true,
+    "is_catalog_identity": false,
+    "visible_in_backend": null,
+    "embed_fields": null,
+    "description_fallback_field": null,
+    "ui_schema": null,
+    "volatile_spec_fields": [
+      "created_at",
+      "updated_at",
+      "version"
+    ],
+    "marker_shared_allowed": false
+  },
+  "ui": null,
+  "storage": {
+    "pattern": "yaml",
+    "container": "comments",
+    "marker": null,
+    "body_field": null,
+    "body_as": null
+  },
+  "dep_filters": {},
+  "dependencies": {},
+  "schema": {
+    "type": "object",
+    "required": [
+      "target_ref",
+      "author",
+      "body",
+      "type",
+      "created_at"
+    ],
+    "properties": {
+      "target_ref": {
+        "type": "string",
+        "description": "Kind:name of the target document"
+      },
+      "author": {
+        "type": "string"
+      },
+      "body": {
+        "type": "string"
+      },
+      "type": {
+        "type": "string",
+        "enum": [
+          "note",
+          "status_change",
+          "assignment",
+          "system"
+        ],
+        "default": "note"
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "from_status": {
+        "type": "string"
+      },
+      "to_status": {
+        "type": "string"
+      },
+      "assignee": {
+        "type": "string"
+      },
+      "edited_at": {
+        "type": "string"
+      },
+      "attachments": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "additionalProperties": true
+  },
+  "prompt_template": null,
+  "docs_attr": "",
+  "cases": [
+    {
+      "label": "fixture:comment-note",
+      "spec": {
+        "target_ref": "Story:s-descriptor-conversion-pattern",
+        "author": "claude-code",
+        "body": "A body long enough to exercise the 80-char preview truncation that the class implements by slicing the string.",
+        "type": "note",
+        "created_at": "2026-07-25T00:00:00+00:00"
+      },
+      "name": "c-0001",
+      "summary": {
+        "target_ref": "Story:s-descriptor-conversion-pattern",
+        "author": "claude-code",
+        "type": "note",
+        "body_preview": "A body long enough to exercise the 80-char preview truncation that the class imp"
+      },
+      "describe": null,
+      "default_agent": null,
+      "layer_policies": null,
+      "canonical_digest": "e18654c18b2c0cdc94376e4f4273b94f1576a5618fbb37ed8956a5ee497c1c53",
+      "parse_roundtrip": true
+    },
+    {
+      "label": "fixture:comment-status-change",
+      "spec": {
+        "target_ref": "Story:s-x",
+        "author": "barna",
+        "body": "",
+        "type": "status_change",
+        "created_at": "2026-07-25T00:00:00+00:00",
+        "from_status": "todo",
+        "to_status": "in-progress"
+      },
+      "name": "c-0002",
+      "summary": {
+        "target_ref": "Story:s-x",
+        "author": "barna",
+        "type": "status_change",
+        "body_preview": ""
+      },
+      "describe": null,
+      "default_agent": null,
+      "layer_policies": null,
+      "canonical_digest": "8d96a21a6b0b3b9829f8f874c0a5679abf60cd08929dfcc17dfcf676dfe2592e",
+      "parse_roundtrip": true
+    },
+    {
+      "label": "fixture:comment-empty-spec",
+      "spec": {},
+      "name": "c-0003",
+      "summary": {
+        "target_ref": "",
+        "author": "",
+        "type": "note",
+        "body_preview": ""
+      },
+      "describe": null,
+      "default_agent": null,
+      "layer_policies": null,
+      "canonical_digest": "f7df5f071be40a43d0dbe93f76970123c23a0b6e119d0041c71fa564f654c856",
+      "parse_roundtrip": true
+    }
+  ]
+}
