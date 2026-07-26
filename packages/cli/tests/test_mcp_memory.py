@@ -449,7 +449,8 @@ def test_forget_deletes_own_memory(dna_dir):
         return name, res, before, after, recalled
 
     name, res, before, after, recalled = asyncio.run(scenario())
-    assert res == {"kind": "Engram", "name": name, "forgotten": True}
+    assert res == {"kind": "Engram", "name": name, "forgotten": True,
+                   "outcome": "forgotten"}
     assert name in {m["name"] for m in before["memories"]}
     assert name not in {m["name"] for m in after["memories"]}
     assert name not in {h["name"] for h in recalled["hits"]}
@@ -457,7 +458,7 @@ def test_forget_deletes_own_memory(dna_dir):
 
 def test_forget_nonexistent_is_clean_noop(dna_dir):
     """Forgetting a name that doesn't exist is a clean no-op (``forgotten:
-    False``), never a crash/500."""
+    False`` + ``outcome: not_found``), never a crash/500."""
     from dna_cli import _mcp_server as M
 
     async def scenario():
@@ -466,8 +467,10 @@ def test_forget_nonexistent_is_clean_noop(dna_dir):
             live, "rem-does-not-exist-0000000000", scope=_SCOPE, tenant="acme")
 
     res = asyncio.run(scenario())
+    # `outcome` splits the two `forgotten: False` endings that used to be one:
+    # this name exists in NO layer (not "already forgotten" — see forget_impl).
     assert res == {"kind": "Engram", "name": "rem-does-not-exist-0000000000",
-                   "forgotten": False}
+                   "forgotten": False, "outcome": "not_found"}
 
 
 def test_forget_never_hard_deletes_base_nor_touches_other_tenant(dna_dir):
@@ -478,7 +481,7 @@ def test_forget_never_hard_deletes_base_nor_touches_other_tenant(dna_dir):
     the no-tenant/base view AND still inherited by globex), and globex's own
     private memory is untouched. And acme forgetting globex's PRIVATE overlay doc
     is a clean no-op — acme cannot see, let alone forget, another tenant's
-    overlay memory (KeyError → ``forgotten: False``)."""
+    overlay memory (KeyError → ``forgotten: False`` / ``outcome: not_found``)."""
     from dna_cli import _mcp_server as M
 
     async def scenario():
@@ -504,6 +507,7 @@ def test_forget_never_hard_deletes_base_nor_touches_other_tenant(dna_dir):
     # acme CANNOT reach globex's private overlay doc → clean no-op, and globex
     # still sees its own memory untouched.
     assert r_other["forgotten"] is False
+    assert r_other["outcome"] == "not_found"   # unreachable, not already-forgotten
     assert other["name"] in {m["name"] for m in globex_ls["memories"]}
 
 
@@ -582,7 +586,8 @@ def test_forget_allowed_on_write_tier(dna_dir, http_server):
             name = out.structured_content["name"]
             res = await client.call_tool("forget", {"name": name, "scope": _SCOPE})
             assert res.structured_content == {
-                "kind": "Engram", "name": name, "forgotten": True}
+                "kind": "Engram", "name": name, "forgotten": True,
+                "outcome": "forgotten"}
 
     with http_server(server) as url:
         asyncio.run(go(url))

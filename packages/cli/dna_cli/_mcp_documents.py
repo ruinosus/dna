@@ -35,6 +35,21 @@ from __future__ import annotations
 from typing import Any, Awaitable, Callable
 
 from dna.application import documents as D
+from dna.kernel.errors import KernelRefusal
+
+#: Everything a write may legitimately be REFUSED with, as one tuple.
+#:
+#: ``KernelRefusal`` is the kernel's own marker base for a deliberate verdict
+#: (schema veto, LayerPolicy veto, tenancy rule, read-only source, retired Kind)
+#: — it exists precisely because this tuple used to be a hand-enumeration that
+#: MISSED the LayerPolicy veto and every tenancy rule (they are plain
+#: ``Exception``; ``NotWritableError`` is a ``RuntimeError``), so the likeliest
+#: refusal on a tenant write escaped as an unexplained failure. The three
+#: builtins stay for the application-layer refusals raised beside it
+#: (``BootstrapKindWriteRefused``, ``ConcurrentWriteError``, an unknown Kind).
+WRITE_REFUSALS: tuple[type[BaseException], ...] = (
+    KernelRefusal, ValueError, LookupError, PermissionError,
+)
 
 #: The signature ``_mcp_server`` injects: ``guard(family, scope=…, family_op=…)``
 #: → the resolved workspace (or None). Raises the face's ``ToolError`` on denial.
@@ -118,17 +133,47 @@ def register_document_tools(
     async def list_documents(
         kind: str, scope: str | None = None, api_version: str | None = None,
         limit: int = 50, offset: int = 0,
+        fields: list[str] | None = None, filter: dict[str, Any] | None = None,
+        order_by: list[str] | None = None,
     ) -> dict[str, Any]:
-        """List the documents of one Kind in a scope (name only — read one with
-        ``get_document``). Pass ``api_version`` when a Kind NAME is registered
-        under more than one (the tool says so rather than guessing). Paged:
-        ``limit`` (max 500) + ``offset``, with an honest ``has_more``."""
+        """List the documents of one Kind in a scope, optionally PROJECTED and
+        FILTERED — one call instead of one per document.
+
+        Without ``fields`` you get names only, and answering "show me the open
+        issues" then costs 1 + N calls: a list, then a ``get_document`` per
+        document, most of them discarded. Both arguments push down into the
+        kernel's own query:
+
+        * ``fields`` — dotted spec paths to include per row
+          (``["spec.title", "spec.status"]``; unprefixed paths resolve under
+          ``spec.``, and ``name`` is always present). Omit for names only.
+        * ``filter`` — field → value, ANDed. ``{"status": "open"}``, or an
+          operator: ``{"status": {"in": ["todo", "in-progress"]}}``,
+          ``{"updated_at": {"gt": "2026-07-01"}}``, ``{"title": {"like": "%mcp%"}}``.
+          Operators: eq / neq / in / like / gt / gte / lt / lte.
+        * ``order_by`` — dotted paths, ``-`` prefix for descending
+          (``["-spec.updated_at"]``).
+
+        Pass ``api_version`` when a Kind NAME is registered under more than one
+        (the tool says so rather than guessing). Paged: ``limit`` (max 500) +
+        ``offset``, with an honest ``has_more``.
+
+        Metering is unchanged — one call, one unit, gated by the TARGET Kind's
+        family exactly as ``get_document`` is. A projection reaches nothing your
+        plan does not already let you read one document at a time; what it changes
+        is how many round trips it takes."""
         port, tenant = await _guard_for(
             kind, api_version, scope=scope, family_op="read")
-        return await D.list_documents_impl(
-            await live(), kind=port.kind, api_version=port.api_version,
-            scope=scope, tenant=tenant, limit=limit, offset=offset,
-        )
+        try:
+            return await D.list_documents_impl(
+                await live(), kind=port.kind, api_version=port.api_version,
+                scope=scope, tenant=tenant, limit=limit, offset=offset,
+                fields=fields, filter=filter, order_by=order_by,
+            )
+        except (ValueError, LookupError) as exc:
+            # A bad operator / unresolvable field path is the caller's mistake —
+            # say which, instead of a masked 500.
+            raise ToolError(f"{type(exc).__name__}: {exc}") from None
 
     @server.tool(run_in_thread=False)
     async def get_document(
@@ -138,7 +183,11 @@ def register_document_tools(
         """Read one document verbatim (``apiVersion`` / ``kind`` / ``metadata``
         / ``spec``), as your layer sees it — the per-tenant overlay wins over the
         inherited base, live, with no redeploy. Works for EVERY registered Kind,
-        including the bootstrap ones the generic write refuses."""
+        including the bootstrap ones the generic write refuses.
+
+        The result also carries an ``etag``: pass it to ``write_document`` as
+        ``if_match`` and your update is refused rather than silently overwriting a
+        change somebody made in between."""
         port, tenant = await _guard_for(
             kind, api_version, scope=scope, family_op="read")
         try:
@@ -153,15 +202,32 @@ def register_document_tools(
     async def write_document(
         kind: str, name: str, spec: dict[str, Any],
         scope: str | None = None, api_version: str | None = None,
+        merge: bool = True, if_match: str | None = None,
     ) -> dict[str, Any]:
-        """Create or update one document of any Kind — ``spec`` is the document
+        """Create or UPDATE one document of any Kind — ``spec`` is the document
         body (the ``apiVersion``/``kind``/``metadata`` envelope is built from the
         registered Kind, so you cannot write into another Kind's namespace).
+
+        **An update MERGES.** Send only the fields you are changing: everything
+        else in the stored document — its ``timeline`` above all, which is an
+        append-only history you cannot reconstruct — is preserved. To REMOVE a
+        field, send it as ``null``. ``merge=false`` REPLACES the whole spec and
+        drops anything you did not send; use it only when you mean exactly that.
+
+        Board Kinds are stamped with the dates their read surfaces need
+        (``created_at`` on create, ``updated_at`` on every write), so a document
+        filed here is visible to ``sdlc_digest``.
+
+        ``if_match`` (optional): the ``etag`` from ``get_document``. With it, the
+        write is REFUSED if the document changed since you read it, instead of
+        overwriting the other change. The result returns the new ``etag``, so a
+        chain of updates needs no re-read.
 
         The write goes through the kernel's own pipeline: the Kind's JSON Schema
         validates it, the operator's LayerPolicy (and the Kind's overlayable-field
         allowlist) may veto it, references are checked and the ``pre_save`` hooks
-        can refuse it — identical to every hand-written write tool.
+        can refuse it — identical to every hand-written write tool. Every one of
+        those refusals reaches you by name, with its reason.
 
         Two refusals are this tool's own, and both fail CLOSED: a BOOTSTRAP Kind
         (Genome / LayerPolicy / KindDefinition — see ``list_kinds``) is never
@@ -174,12 +240,13 @@ def register_document_tools(
             return await D.write_document_impl(
                 await live(), kind=port.kind, api_version=port.api_version,
                 name=name, spec=spec, scope=scope, tenant=tenant,
+                merge=merge, if_match=if_match,
             )
         except D.BootstrapKindWriteRefused as exc:
             raise ToolError(str(exc)) from None
-        except (ValueError, LookupError, PermissionError) as exc:
-            # Schema violation / LayerPolicy veto / tenancy rule — the kernel's
-            # own refusals, surfaced verbatim instead of masked as a 500.
+        except WRITE_REFUSALS as exc:
+            # Schema violation / LayerPolicy veto / tenancy rule / read-only
+            # source / stale if_match — surfaced verbatim, never masked as a 500.
             raise ToolError(f"{type(exc).__name__}: {exc}") from None
 
     return ["list_kinds", "list_documents", "get_document", "write_document"]

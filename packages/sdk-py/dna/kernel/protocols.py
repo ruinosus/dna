@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, Protocol, runtime_checkable
 
 from dna.kernel.bundle.handle import BundleHandle  # noqa: F401  re-exported for typing
+from dna.kernel.errors import KernelRefusal
 
 if TYPE_CHECKING:
     from dna.kernel.capabilities import SourceCapabilities
@@ -382,7 +383,7 @@ DEFAULT_BASE_SCOPE = "_lib"
 SYSTEM_SCOPE = "_lib"
 
 
-class TenantRequired(Exception):
+class TenantRequired(KernelRefusal):
     """Raised when a TENANTED kind is written without a tenant arg.
 
     Bind a tenant on construction (``Kernel(tenant=X)``) or per-call
@@ -390,7 +391,7 @@ class TenantRequired(Exception):
     """
 
 
-class TenantNotAllowed(Exception):
+class TenantNotAllowed(KernelRefusal):
     """Raised when a GLOBAL kind is written with a tenant arg.
 
     Global kinds (Doc, KindDefinition, ...) are shared across
@@ -398,7 +399,7 @@ class TenantNotAllowed(Exception):
     """
 
 
-class SpecValidationError(ValueError):
+class SpecValidationError(ValueError, KernelRefusal):
     """Raised when ``write_document`` vetoes a doc whose ``spec`` violates
     the Kind's declared JSON Schema (``KindPort.schema()``).
 
@@ -414,7 +415,7 @@ class SpecValidationError(ValueError):
     """
 
 
-class VersionAlreadyPublished(Exception):
+class VersionAlreadyPublished(KernelRefusal):
     """Raised when a Module is published at an existing semver version.
 
     Phase 10 — releases are immutable (npm/Cargo/Helm convention). To
@@ -424,7 +425,7 @@ class VersionAlreadyPublished(Exception):
     """
 
 
-class InvalidTenantSlug(Exception):
+class InvalidTenantSlug(KernelRefusal):
     """Raised when a tenant slug is empty, reserved (_global, _legacy,
     _system), or contains invalid characters (anything other than
     [a-z0-9-]). Slug rules align with k8s namespace + DNS label.
@@ -473,7 +474,7 @@ def validate_tenant_slug(tenant: str | None, *, allow_personal: bool = False) ->
         )
 
 
-class LayerPolicyViolationError(Exception):
+class LayerPolicyViolationError(KernelRefusal):
     """Raised when a write to a layer violates the declared LayerPolicy
     in ``Module.spec.layers``.
 

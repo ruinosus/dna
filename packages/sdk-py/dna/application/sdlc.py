@@ -120,6 +120,20 @@ _TERMINAL_STATUS: frozenset[str] = frozenset(
 _WRITABLE_KINDS: frozenset[str] = frozenset(_STATUS_ENUMS)
 
 
+class DocumentExists(ValueError):
+    """A ``create_*`` verb was pointed at a name that is already taken.
+
+    ``kernel.write_document`` is an UPSERT keyed on the document name, so a
+    create with no existence check is a silent destroyer: an agent guessing a
+    name (or retrying, or working from a stale board) replaced the live
+    document's status, timeline, acceptance_criteria and definition_of_done and
+    got a success back. "Create" is the one verb that must never be an update.
+
+    The message NAMES the existing document and its current status, and points at
+    the verbs that DO update (``set_status`` / ``comment`` / ``write_document``) —
+    a refusal that does not say what to do instead just buys another guess."""
+
+
 class InvalidTransition(ValueError):
     """A requested ``set_status`` target is not a valid status for the Kind.
 
@@ -268,6 +282,65 @@ def plan_date_repair(
         # was last updated when it was created.
         fields["updated_at"] = latest_timeline_at(spec) or git_touched_at or created
     return fields, provenance
+
+
+async def existing_or_none(
+    kernel: Any, scope: str, kind: str, name: str,
+) -> dict[str, Any] | None:
+    """``kernel.get_document`` treating an ABSENT SCOPE as an absent document.
+
+    A create is very often the FIRST write into a scope — a brand-new
+    per-workspace board under Model B — and a source may signal "this scope holds
+    nothing yet" by raising rather than returning ``None`` (the filesystem adapter
+    raises ``FileNotFoundError`` for a directory that does not exist). An empty
+    scope contains nothing to overwrite, so that is an absent document.
+
+    ``FileNotFoundError`` ONLY: every other read failure propagates. Treating a
+    transient read error as "nothing there" would hand the overwrite hole straight
+    back — one flaky read would license the destruction the check exists to stop."""
+    try:
+        return await kernel.get_document(scope, kind, name)
+    except FileNotFoundError:
+        return None
+
+
+async def refuse_if_exists(
+    kernel: Any, scope: str, kind: str, name: str, *, overwrite: bool = False,
+) -> None:
+    """Raise :class:`DocumentExists` when ``(scope, kind, name)`` is already taken.
+
+    The one existence check every ``create_*`` core runs before it writes. It uses
+    ``kernel.get_document`` — the same read the update verbs use — so a document
+    the caller could read is a document the create refuses to bury.
+
+    ``overwrite=True`` skips it. That door exists because a backfill / migration
+    genuinely means "replace this", and refusing outright would only push such a
+    caller into hand-rolling ``kernel.write_document`` — which is how a document
+    ends up with no timeline at all. It is off by default and no MCP tool exposes
+    it: over the wire, the update verbs cover every legitimate case.
+
+    NOT a transaction. Two creates racing on the same name can both find it free;
+    the kernel has no unique-name constraint to lean on, and inventing a lock here
+    would be a distributed-systems claim this function cannot honour. What it does
+    remove is the entire class of NON-concurrent overwrites — the guessed name, the
+    retry, the stale board — which is what actually destroyed documents."""
+    if overwrite:
+        return
+    existing = await existing_or_none(kernel, scope, kind, name)
+    if existing is None:
+        return
+    spec = existing.get("spec") if isinstance(existing, dict) else None
+    status = (spec or {}).get("status") if isinstance(spec, dict) else None
+    title = (spec or {}).get("title") if isinstance(spec, dict) else None
+    raise DocumentExists(
+        f"{kind} {name!r} already exists in scope {scope!r}"
+        + (f" (status: {status})" if status else "")
+        + (f" — {title!r}" if title else "")
+        + ". Refusing to create over it: that would replace its status, timeline "
+          "and exit criteria. To CHANGE it use set_status (status), comment "
+          "(narration) or write_document (any field, merged); to file something "
+          "new, pick a name that is free."
+    )
 
 
 def next_issue_number(existing_names: list[str]) -> int:
@@ -443,11 +516,15 @@ async def create_story(
     acceptance_criteria: list[str] | None = None,
     definition_of_done: list[str] | None = None,
     actor: str = "mcp", source: str = "mcp",
-    now: datetime | None = None,
+    now: datetime | None = None, overwrite: bool = False,
 ) -> dict[str, Any]:
     """Create a Story doc — the shared core behind ``dna sdlc story create`` + the
     MCP ``create_story`` tool. Routes through ``kernel.write_document`` (hooks +
-    cache fire) into the resolved (per-workspace) ``scope``."""
+    cache fire) into the resolved (per-workspace) ``scope``.
+
+    Refuses an existing ``name`` (:func:`refuse_if_exists`) — a create is never
+    an update."""
+    await refuse_if_exists(kernel, scope, "Story", name, overwrite=overwrite)
     ni = now_iso(now)
     spec = build_story_spec(
         title=title, description=description, feature=feature, status=status,
@@ -467,17 +544,46 @@ async def create_issue(
     title: str | None = None,
     related_feature: str | None = None, owner: str | None = None,
     actor: str = "mcp", source: str = "mcp",
-    now: datetime | None = None,
+    now: datetime | None = None, overwrite: bool = False,
 ) -> dict[str, Any]:
     """File an Issue with an auto-incremented ``i-NNN-<slug>`` name — the shared
-    core behind ``dna sdlc issue file`` + the MCP ``create_issue`` tool."""
+    core behind ``dna sdlc issue file`` + the MCP ``create_issue`` tool.
+
+    **The numbering is a hint, the probe is the guarantee.** ``max(i-NNN) + 1`` is
+    only correct if the enumeration saw every Issue; a concurrent writer or a
+    replica that has not caught up yields a number that is already taken, and the
+    write then lands ON TOP of a live Issue. So the computed number is a starting
+    point and each candidate name is probed (``kernel.get_document``) until one is
+    free. The enumeration itself stays O(N) rows — that is documented rather than
+    hidden — but it now pushes a ``projection`` down, so it moves N names instead
+    of N full Issue specs. What remains is the genuinely concurrent race: two
+    ``create_issue`` calls can still probe the same free name in the same instant
+    and one will overwrite the other. Closing THAT needs a unique constraint or a
+    lock in the kernel's write path, which is a kernel change, not a change
+    here."""
     names: list[str] = []
-    async for row in kernel.query(scope, "Issue"):
+    async for row in kernel.query(scope, "Issue", projection=["name"]):
         meta = row.get("metadata") if isinstance(row, dict) else None
         nm = (meta or {}).get("name") if isinstance(meta, dict) else None
         names.append(nm or (row.get("name") if isinstance(row, dict) else "") or "")
     n = next_issue_number(names)
     name = f"i-{n:03d}-{slug}"
+    if not overwrite:
+        # Step past any name the enumeration missed. Bounded so a pathological
+        # source can never spin: 1000 consecutive taken names means something is
+        # wrong that a 1001st probe will not fix.
+        for candidate_n in range(n, n + 1000):
+            candidate = f"i-{candidate_n:03d}-{slug}"
+            if await existing_or_none(
+                    kernel, scope, "Issue", candidate) is None:
+                name = candidate
+                break
+        else:  # pragma: no cover — 1000 consecutive collisions
+            raise DocumentExists(
+                f"no free Issue name found for slug {slug!r} in scope {scope!r} "
+                f"after 1000 probes from i-{n:03d} — the source is reporting "
+                f"every candidate as taken."
+            )
     ni = now_iso(now)
     spec = build_issue_spec(
         description=description, issue_type=issue_type, severity=severity,
@@ -495,10 +601,13 @@ async def create_feature(
     priority: str | None = None, labels: list[str] | None = None,
     reporter: str | None = None, owner: str | None = None,
     actor: str = "mcp", source: str = "mcp",
-    now: datetime | None = None,
+    now: datetime | None = None, overwrite: bool = False,
 ) -> dict[str, Any]:
     """Create a Feature doc — the shared core behind ``dna sdlc feature create`` +
-    the MCP ``create_feature`` tool."""
+    the MCP ``create_feature`` tool.
+
+    Refuses an existing ``name`` (:func:`refuse_if_exists`)."""
+    await refuse_if_exists(kernel, scope, "Feature", name, overwrite=overwrite)
     ni = now_iso(now)
     spec = build_feature_spec(
         title=title, description=description, status=status, epic=epic,

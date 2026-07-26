@@ -856,6 +856,69 @@ def identity_from_context() -> Any:
     return identity_from_token(claims)
 
 
+#: What a board write records as its ``actor`` when the request carries NO
+#: verified identity — an unauthenticated local (stdio / ``auth=None``) call.
+#:
+#: Not ``"mcp"``: that is the CHANNEL, and recording it as the identity is the
+#: conflation this constant exists to end (every board write ever made over MCP
+#: was attributed to the literal actor ``"mcp"``, so the timeline could not tell
+#: the founder from an agent from a customer). ``source: "mcp"`` still carries the
+#: channel, where it belongs. The ``:local`` suffix makes the honest claim — "this
+#: came through MCP from a caller this server could not identify" — and is
+#: distinguishable at a glance from the historical ``"mcp"`` rows.
+UNIDENTIFIED_LOCAL_ACTOR = "mcp:local"
+
+#: …and when a token IS present but carries no identity claim at all. Verified,
+#: yet anonymous — a different fact from "local", and worth its own label rather
+#: than being pooled with it.
+UNIDENTIFIED_TOKEN_ACTOR = "mcp:unidentified"
+
+
+def actor_from_context() -> str:
+    """WHO the current MCP request is, as the ``actor`` a board timeline records.
+
+    The identity axis, kept separate from the channel: ``source`` stays ``"mcp"``
+    (how the write arrived), ``actor`` becomes who made it. Resolved SERVER-SIDE
+    from the verified token — never a tool argument, for the same reason the
+    personal ``oid`` never is: attribution a caller can forge is not attribution.
+
+    Preference order, most useful first:
+
+    1. the verified ``email`` / ``preferred_username`` — what a human reading the
+       board actually wants to see;
+    2. the durable subject (:class:`~dna.tenancy.resolution.Identity` ``oid``) —
+       the same key a WorkspaceMembership binds, so the row joins to a real grant;
+    3. the token's raw ``sub`` — verified, though only issuer-scoped, which is
+       still an identity where the two above are absent (a service token);
+    4. :data:`UNIDENTIFIED_TOKEN_ACTOR` — a verified token carrying no identity.
+
+    With NO token (stdio / local / ``auth=None``) it records ``DNA_PERSONAL_ID``
+    when the operator declared one — that env var is already how an offline caller
+    names itself for personal memory, so honoring it here means a self-hosted
+    user's board rows carry their name with no new knob — and
+    :data:`UNIDENTIFIED_LOCAL_ACTOR` otherwise. It NEVER raises: an unattributable
+    write is still a write worth recording, and failing it would turn attribution
+    into a new way to lose work."""
+    try:
+        from fastmcp.server.dependencies import get_access_token
+    except ModuleNotFoundError:  # pragma: no cover — no fastmcp ⇒ no auth
+        return personal_id_from_env() or UNIDENTIFIED_LOCAL_ACTOR
+
+    token = get_access_token()
+    if token is None:
+        return personal_id_from_env() or UNIDENTIFIED_LOCAL_ACTOR
+    claims = getattr(token, "claims", None) or {}
+    identity = identity_from_context()
+    for candidate in (
+        getattr(identity, "email", None),
+        getattr(identity, "oid", None),
+        claims.get("sub"),
+    ):
+        if isinstance(candidate, str) and candidate.strip():
+            return candidate.strip()
+    return UNIDENTIFIED_TOKEN_ACTOR
+
+
 def workspace_from_mcp_path(path: str | None) -> str | None:
     """Extract the workspace SELECTOR from a per-workspace MCP URL path — pure.
 

@@ -13,8 +13,8 @@ if TYPE_CHECKING:  # typed hook-name vocabulary (s-dna-typed-hook-names)
 
 from dna.kernel.document import Document
 from dna.kernel.errors import (
-    ExtensionLoadError, KindRegistrationError, ReaderRegistrationError,
-    WriterRegistrationError,
+    ExtensionLoadError, KernelRefusal, KindRegistrationError,
+    ReaderRegistrationError, WriterRegistrationError,
 )
 from dna.kernel.kinds.registry import (
     # _load_kind_docs moved into the KindRegistry module with the registration
@@ -38,12 +38,12 @@ from dna.kernel.compose.templates import OnConflict
 logger = logging.getLogger(__name__)
 
 
-class NotWritableError(RuntimeError):
+class NotWritableError(RuntimeError, KernelRefusal):
     """Raised when write_document / delete_document is called but no
     WritableSourcePort is registered on the Kernel."""
 
 
-class KindRetiredError(ValueError):
+class KindRetiredError(ValueError, KernelRefusal):
     """Raised when write_document targets a Kind listed in
     ``Kernel._REMOVED_KINDS``. Reads of legacy docs still succeed
     (parsed as untyped Document), but new writes are blocked so the
@@ -68,7 +68,7 @@ class PreviewResult:
     exists_already: bool
 
 
-__all__ = ["NotWritableError", "PreviewResult"]
+__all__ = ["KernelRefusal", "NotWritableError", "PreviewResult"]
 
 
 def _run_sync_helper(coro_or_value, *, loop: asyncio.AbstractEventLoop | None = None):

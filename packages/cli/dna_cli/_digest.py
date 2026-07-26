@@ -193,6 +193,8 @@ def build_digest(
     scope: str = "",
     open_prs: list[dict] | None = None,
     tags: list[dict] | None = None,
+    absent: list[str] | None = None,
+    unreadable: list[dict[str, str]] | None = None,
 ) -> dict[str, Any]:
     """Aggregate work-item timelines into a retrospective digest.
 
@@ -210,6 +212,23 @@ def build_digest(
       * ``releases``   — git tags dated in window
       * ``attention``  — CURRENT outstanding state (not windowed): what the
                          delegator must act on now
+
+    **Coverage — how much of the board this digest actually saw.** The caller
+    reports what it could not collect, and the consequences are decided HERE so
+    every caller inherits the same policy:
+
+      * ``absent`` — Kind names the source does not register. A fact about the
+        source, not a failure: nothing to read, so nothing is missing.
+      * ``unreadable`` — ``{"kind", "error"}`` per Kind whose READ raised. This
+        is the one the caller has to be told about. The MCP digest used to
+        ``except Exception: continue`` over exactly this case, with a comment
+        claiming it meant "kind absent in this source" — so a dropped connection
+        or a statement timeout produced ``rag_status: green`` and the verdict
+        "nada precisa da sua atenção" on a board nobody had read.
+
+    A digest with anything ``unreadable`` reports ``partial: true``, says so in
+    its ``verdict``, and is never ``green`` — an unread board is not a clean one.
+    ``red`` still wins: partial DEGRADES the signal rather than overwriting it.
     """
     completed: list[dict] = []
     decided: list[dict] = []
@@ -365,9 +384,17 @@ def build_digest(
         "attention": attention_total,
     }
 
+    unread = [
+        {"kind": str(u.get("kind") or "?"), "error": str(u.get("error") or "?")}
+        for u in (unreadable or [])
+    ]
+    partial = bool(unread)
+
     if attention_blocked:
         rag = "red"
-    elif attention_total:
+    elif attention_total or partial:
+        # A Kind nobody could read is an open question about the board, which is
+        # exactly what amber means. Reporting green here was the bug.
         rag = "amber"
     else:
         rag = "green"
@@ -386,13 +413,24 @@ def build_digest(
         "attention": attention,
         "counts": counts,
         "rag_status": rag,
-        "verdict": _verdict_line(counts),
+        "partial": partial,
+        "sources": {
+            "absent": [str(k) for k in (absent or [])],
+            "unreadable": unread,
+        },
+        "verdict": _verdict_line(counts, unreadable=unread),
     }
 
 
-def _verdict_line(counts: dict[str, int]) -> str:
+def _verdict_line(
+    counts: dict[str, int], unreadable: list[dict[str, str]] | None = None,
+) -> str:
     """One-sentence pt-BR summary — the ``StatusReport.verdict`` (embedded for
-    semantic recall) and the digest's headline."""
+    semantic recall) and the digest's headline.
+
+    When a Kind could not be read the sentence LEADS with that. The verdict is
+    what a delegator reads first and often all they read, so a caveat buried in a
+    sibling field is a caveat nobody sees."""
     parts = [
         f"{counts['completed']} concluído(s)",
         f"{counts['decided']} decisão(ões)",
@@ -402,5 +440,13 @@ def _verdict_line(counts: dict[str, int]) -> str:
         parts.append(f"{counts['releases']} release(s)")
     head = " · ".join(parts)
     if counts["attention"]:
-        return f"{head} — {counts['attention']} precisa(m) da sua atenção."
-    return f"{head} — nada precisa da sua atenção."
+        line = f"{head} — {counts['attention']} precisa(m) da sua atenção."
+    else:
+        line = f"{head} — nada precisa da sua atenção."
+    if unreadable:
+        kinds = ", ".join(sorted({u["kind"] for u in unreadable}))
+        line = (
+            f"DIGEST INCOMPLETO — não foi possível ler: {kinds}. "
+            f"O que deu pra ler: {line}"
+        )
+    return line
