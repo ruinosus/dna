@@ -1330,7 +1330,7 @@ A WorkspaceScopeGrant records that one workspace may READ one scope that is not 
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `access` | string |  | What the grant permits. READ only, and the enum has one member so widening it is a deliberate schema change with a reviewer - a cross-workspace WRITE is a different decision than a cross-workspace read and must not arrive as a value nobody noticed. |
+| `access` | string |  | What the grant permits, and the binder ENFORCES it - a request carries a read/write axis and this value is what answers it, so the grant that opens a second scope for reading refuses a write to it. READ only, and the enum has one member so widening it is a deliberate schema change with a reviewer - a cross-workspace WRITE is a different decision than a cross-workspace read and must not arrive as a value nobody noticed. |
 | `granted_at` | string \| null |  | ISO-8601 timestamp, stamped by the writer. |
 | `granted_by` | string \| null |  | Identity (email / oid) of whoever created the grant. |
 | `reason` | string \| null |  | Why this workspace may reach that scope. Free text, for the human reading the audit six months later. |

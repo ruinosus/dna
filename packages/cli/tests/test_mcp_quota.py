@@ -200,6 +200,66 @@ def test_over_rate_per_sec_raises():
         Q.enforce_quota(caps=caps, tenant="acme", tier="free", family="memory", store=store)
 
 
+# ── i-055: the rate limiter must not punish the retry it asks for ──────────
+#
+# `note_call` ran BEFORE the check, so a DENIED call still filled the 1-second
+# window — and the refusal tells the caller to "retry shortly". Retry-on-429 is
+# the default behaviour of every MCP client, so an agent under load kept its own
+# window permanently full while being instructed to keep doing exactly that:
+# throughput → 0, by design, on the axis that exists to protect throughput. The
+# daily axis was already honest (a denied call is not counted, i-050); this is
+# the same policy on the rate axis.
+
+
+def test_a_denied_rate_limited_call_never_enters_the_window():
+    store = _store()
+    caps = dict(_free_spec())
+    caps["rate_per_sec"] = 2
+    caps["calls_per_day"] = None  # isolate the rate limit
+    key = Q.quota_key("acme", "free")
+
+    def call():
+        Q.enforce_quota(caps=caps, tenant="acme", tier="free", family="memory",
+                        store=store)
+
+    call()
+    call()
+    for _ in range(8):  # the client does what the refusal told it to do
+        with pytest.raises(Q.OverQuotaError, match="rate"):
+            call()
+    assert store.rate_count(key, 1.0) == 2, (
+        "a DENIED call entered the rate window — retrying, which the refusal "
+        "explicitly asks for, would then hold the window shut indefinitely"
+    )
+
+
+def test_the_window_reopens_one_second_after_the_last_ADMITTED_call(monkeypatch):
+    """The throughput property, on a fake clock so it is exact rather than flaky:
+    the window is a record of what the tenant SPENT, so it clears one second
+    after the last call that actually ran — not one second after the last call
+    that was refused."""
+    now = [1_000.0]
+    monkeypatch.setattr(Q.time, "time", lambda: now[0])
+    store = _store()
+    caps = dict(_free_spec())
+    caps["rate_per_sec"] = 2
+    caps["calls_per_day"] = None
+
+    def call():
+        Q.enforce_quota(caps=caps, tenant="acme", tier="free", family="memory",
+                        store=store)
+
+    call()
+    call()  # t=1000.000 — the second's worth of budget is spent.
+    for _ in range(50):  # a 500ms retry storm, the client behaving as instructed
+        now[0] += 0.01
+        with pytest.raises(Q.OverQuotaError, match="rate"):
+            call()
+
+    now[0] = 1_001.001  # just past 1s after the last ADMITTED call.
+    call()  # ...and the tenant is serving again, on schedule.
+
+
 def test_null_caps_are_unlimited():
     store = _store()
     caps = {"feature_families": [], "calls_per_day": None, "rate_per_sec": None}

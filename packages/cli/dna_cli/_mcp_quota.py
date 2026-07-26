@@ -781,8 +781,11 @@ def enforce_quota(
 
     1. **family gate** — if ``caps['feature_families']`` is a non-empty list and
        ``family`` is not in it → :class:`FeatureNotInPlanError`.
-    2. **rate** — if ``caps['rate_per_sec']`` is set, record the call and if the
-       1-second window now exceeds it → :class:`OverQuotaError`.
+    2. **rate** — if ``caps['rate_per_sec']`` is set, admit the call only while
+       the 1-second window is under the cap, and record it ONLY if admitted; at
+       the cap → :class:`OverQuotaError` and the denied call does not extend the
+       window (i-055: the refusal says "retry shortly", so the retry must not be
+       what keeps the window shut).
     3. **daily quota** — if ``caps['calls_per_day']`` is set, count this call
        ONLY if the day's counter stays within the cap (one atomic conditional
        increment — :meth:`QuotaStore.try_incr_day`); at the cap →
@@ -803,15 +806,25 @@ def enforce_quota(
 
     key = quota_key(tenant, tier)
 
-    # 2. rate limit (calls-per-second window).
+    # 2. rate limit (calls-per-second window). Policy: the window records what
+    # the tenant SPENT, so a denied call never enters it (i-055 — the rate
+    # twin of i-050's billing honesty on the daily axis below). It used to
+    # `note_call` BEFORE checking, which made the refusal self-defeating: the
+    # message says "retry shortly", retry-on-429 is the default behaviour of
+    # every MCP client, and each retry re-filled the window it was waiting on —
+    # so a client under load drove its own throughput toward zero by obeying the
+    # instruction. Checking first means the window clears one second after the
+    # last ADMITTED call, which is the only reading under which "retry shortly"
+    # is true. Admission is unchanged: `rate` calls per window still pass, the
+    # (rate + 1)-th still does not.
     rate = caps.get("rate_per_sec")
     if rate is not None:
-        store.note_call(key)
-        if store.rate_count(key, 1.0) > rate:
+        if store.rate_count(key, 1.0) >= rate:
             raise OverQuotaError(
                 f"tier {tier!r} rate limit exceeded ({rate}/s) — slow down "
-                f"(retry shortly)."
+                f"(retry shortly; this denied call did NOT extend the window)."
             )
+        store.note_call(key)
 
     # 3. daily quota (calls-per-day counter). Policy: HARD cap — a denied call
     # is NOT counted (i-050). The overage job bills SUM(calls) - included off

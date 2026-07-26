@@ -109,22 +109,20 @@ def test_an_unauthenticated_caller_is_unaffected():
 @pytest.mark.asyncio
 async def test_grant_then_read_then_revoke():
     live = _live(_Kernel())
-    assert await workspace_granted_scopes(live, "ws-a") == frozenset()
+    assert await workspace_granted_scopes(live, "ws-a") == {}
 
     out = await grant_workspace_scope_impl(
         live, workspace_id="ws-a", scope="dna-development",
         reason="the founder's own board", granted_by="founder@example.test",
     )
     assert out["status"] == "active"
-    assert await workspace_granted_scopes(live, "ws-a") == frozenset(
-        {"dna-development"}
-    )
+    assert await workspace_granted_scopes(live, "ws-a") == {"dna-development": "read"}
     # ...and it grants NOBODY else.
-    assert await workspace_granted_scopes(live, "ws-b") == frozenset()
+    assert await workspace_granted_scopes(live, "ws-b") == {}
 
     await revoke_workspace_scope_impl(
         live, workspace_id="ws-a", scope="dna-development")
-    assert await workspace_granted_scopes(live, "ws-a") == frozenset()
+    assert await workspace_granted_scopes(live, "ws-a") == {}
 
     # The row SURVIVES the revoke — the evidence that access once existed is
     # the half of an audit trail that matters after an incident.
@@ -165,7 +163,7 @@ async def test_an_unreadable_grant_store_grants_nothing():
     """Fail CLOSED: a grant that cannot be read is not a grant. The caller still
     has its own scope, so nothing is lost by refusing to guess."""
     live = _live(_Kernel(fail_query=True))
-    assert await workspace_granted_scopes(live, "ws-a") == frozenset()
+    assert await workspace_granted_scopes(live, "ws-a") == {}
 
 
 @pytest.mark.asyncio
@@ -184,6 +182,106 @@ async def test_end_to_end_the_grant_is_what_flips_the_binder():
         "dna-development", "ws-a", authenticated=True,
         workspace_grants=await workspace_granted_scopes(live, "ws-a"),
     ) is True
+
+
+# ── the access axis: a READ grant is a read grant (i-082) ───────────────────
+#
+# The Kind pins ``access`` to a one-member enum (``read``) and says so in the
+# schema: widening it must be a deliberate schema change with a reviewer. That
+# promise was a comment — the binder had no read/write axis at all, so a row an
+# operator wrote believing it was read-only authorized cross-scope board WRITES
+# just as happily as reads. These tests are the promise, executable.
+
+
+def test_a_read_grant_does_not_authorize_a_write():
+    """THE security property: the same grant, the same scope, two answers."""
+    live = _live(_Kernel())
+    grants = {"dna-development": "read"}
+    assert live.scope_is_bound(
+        "dna-development", "ws-a", authenticated=True, workspace_grants=grants,
+        access="read",
+    ) is True
+    assert live.scope_is_bound(
+        "dna-development", "ws-a", authenticated=True, workspace_grants=grants,
+        access="write",
+    ) is False
+
+
+def test_a_workspace_still_writes_its_own_scope():
+    """The access axis constrains the GRANT, never the workspace's own scope —
+    a workspace was always free to write what is its own."""
+    live = _live(_Kernel())
+    assert live.scope_is_bound(
+        "tenant-ws-a", "ws-a", authenticated=True, access="write",
+    ) is True
+    assert live.scope_is_bound(None, "ws-a", authenticated=True, access="write") is True
+
+
+def test_a_grant_shape_that_carries_no_access_reads_as_read_only():
+    """A bare set of scope names records no access level, and the only safe
+    reading of "no level recorded" is the narrowest one. Keeps a caller still
+    passing the 0.30.0 shape fail-CLOSED rather than silently write-capable."""
+    live = _live(_Kernel())
+    bare = frozenset({"dna-development"})
+    assert live.scope_is_bound(
+        "dna-development", "ws-a", authenticated=True, workspace_grants=bare,
+    ) is True
+    assert live.scope_is_bound(
+        "dna-development", "ws-a", authenticated=True, workspace_grants=bare,
+        access="write",
+    ) is False
+
+
+def test_an_unrecognised_access_level_grants_nothing():
+    """Fail-closed on both sides of the comparison: a row carrying a level this
+    build does not know, and a call asking for one, are both denials — never a
+    default-to-permissive."""
+    live = _live(_Kernel())
+    assert live.scope_is_bound(
+        "dna-development", "ws-a", authenticated=True,
+        workspace_grants={"dna-development": "admin"}, access="read",
+    ) is False
+    assert live.scope_is_bound(
+        "dna-development", "ws-a", authenticated=True,
+        workspace_grants={"dna-development": "read"}, access="delete",
+    ) is False
+
+
+@pytest.mark.asyncio
+async def test_the_rows_carry_their_access_to_the_binder():
+    """End-to-end through the DATA: the level the row records is the level the
+    binder enforces — nothing re-derives it from the workspace or the scope."""
+    live = _live(_Kernel())
+    await grant_workspace_scope_impl(
+        live, workspace_id="ws-a", scope="dna-development")
+
+    grants = await workspace_granted_scopes(live, "ws-a")
+    assert grants == {"dna-development": "read"}
+    assert live.scope_is_bound(
+        "dna-development", "ws-a", authenticated=True, workspace_grants=grants,
+        access="read",
+    ) is True
+    assert live.scope_is_bound(
+        "dna-development", "ws-a", authenticated=True, workspace_grants=grants,
+        access="write",
+    ) is False
+
+
+@pytest.mark.asyncio
+async def test_a_row_with_no_access_field_is_read():
+    """The Kind defaults ``access`` to ``read``; a row written before the field
+    existed (or by a writer that omitted it) must land on that default, not on
+    "unknown" — and certainly not on write."""
+    kernel = _Kernel()
+    live = _live(kernel)
+    kernel.docs["legacy"] = {
+        "apiVersion": "github.com/ruinosus/dna/tenant/v1",
+        "kind": "WorkspaceScopeGrant",
+        "metadata": {"name": "legacy"},
+        "spec": {"workspace_id": "ws-a", "scope": "dna-development",
+                 "status": "active"},
+    }
+    assert await workspace_granted_scopes(live, "ws-a") == {"dna-development": "read"}
 
 
 def test_a_credential_grant_never_widens_a_resolved_workspace():

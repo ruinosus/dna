@@ -44,6 +44,8 @@ _AUDIENCE = "dna-mcp"
 # bob's OWN workspace scope (default_scope(ws-outside) with prefix `tenant-`).
 _OUTSIDE_SCOPE = f"tenant-{_WS_OUTSIDE}"
 _BOB_AGENT = "outside-bot"
+# The story a cross-workspace write would plant in the vendor's scope (i-082).
+_PLANTED = "s-planted-by-a-neighbour"
 
 
 def _seed(dna_dir):
@@ -247,3 +249,93 @@ def test_no_membership_denied(dna_dir, http_server, monkeypatch):
 
     with http_server(server) as url:
         asyncio.run(go(url))
+
+
+# ── i-082: a READ grant is a read grant, over the wire ──────────────────────
+#
+# `WorkspaceScopeGrant` lets bob's workspace reach the vendor's scope, and its
+# Kind schema pins `access` to a one-member enum (`read`) with a comment saying
+# widening it must be a deliberate schema change. Nothing enforced it: the binder
+# had no read/write axis, so the row an operator wrote believing it was read-only
+# also authorized cross-scope BOARD WRITES. These two tests are the promise the
+# schema makes, executed end-to-end over real JWT + HTTP — the same grant, the
+# same scope, admitting the read and refusing the write.
+
+
+def _grant_bob_the_vendor_scope(dna_dir, monkeypatch):
+    """One ACTIVE WorkspaceScopeGrant row: ws-outside may reach the vendor scope.
+
+    Engages Model B FIRST (`_build` does it too, but this runs earlier): without
+    it `default_scope("ws-outside")` is the base scope, and the impl rightly
+    refuses to record a grant for a scope the workspace already owns."""
+    monkeypatch.setenv("DNA_VENDOR_WORKSPACE", _WS_VENDOR)
+
+    async def go():
+        live = await M.boot_live(scope=_SCOPE, base_dir=str(dna_dir))
+        from dna.application.runtime import grant_workspace_scope_impl
+
+        await grant_workspace_scope_impl(
+            live, workspace_id=_WS_OUTSIDE, scope=_SCOPE,
+            reason="the founder reads both boards", granted_by="ops@example.test",
+        )
+
+    asyncio.run(go())
+
+
+def test_a_granted_workspace_reads_the_other_scope(dna_dir, http_server, monkeypatch):
+    """The grant WORKS: bob, denied the vendor scope a moment ago, now reads it."""
+    _seed(dna_dir)
+    _grant_bob_the_vendor_scope(dna_dir, monkeypatch)
+    verifier, mint = _verifier_and_identity_tokens()
+    server = _build(dna_dir, monkeypatch, verifier)
+    bob = mint("oid-bob", "bob@b.com")
+
+    with http_server(server) as url:
+        out = asyncio.run(_list_agents(url, bob, scope=_SCOPE))
+        assert out["scope"] == _SCOPE
+        assert _AGENT in [a["name"] for a in out["agents"]]  # the vendor's data.
+
+
+def test_a_granted_workspace_is_refused_a_write_to_that_scope(
+    dna_dir, http_server, monkeypatch,
+):
+    """...and it works ONLY as far as the row says. The same bob, the same grant,
+    the same scope: a board WRITE is refused, and the refusal names the level."""
+    _seed(dna_dir)
+    _grant_bob_the_vendor_scope(dna_dir, monkeypatch)
+    verifier, mint = _verifier_and_identity_tokens()
+    server = _build(dna_dir, monkeypatch, verifier)
+    bob = mint("oid-bob", "bob@b.com")
+
+    async def go(url):
+        from fastmcp import Client
+        from fastmcp.client.auth import BearerAuth
+
+        async with Client(url, auth=BearerAuth(bob)) as client:
+            with pytest.raises(Exception) as ei:  # noqa: PT011
+                # A FULLY VALID story — exit criteria and all. Without the access
+                # axis this call succeeds and the row lands in the vendor's
+                # scope; the refusal has to come from the binder, not from the
+                # board core rejecting a malformed document for its own reasons.
+                await client.call_tool("create_story", {
+                    "name": _PLANTED,
+                    "feature": "f-whatever",
+                    "description": "a cross-workspace write nobody granted",
+                    "ac": ["Given a read grant / When a write arrives / Then no"],
+                    "dod": ["it never reaches the board"],
+                    "scope": _SCOPE,
+                })
+            msg = str(ei.value).lower()
+            assert "'read' access only" in msg  # the level the row records.
+            assert "'write'" in msg             # what this call asked for.
+
+    with http_server(server) as url:
+        asyncio.run(go(url))
+
+    # ...and nothing was written. The denial is the point, but the ABSENCE of the
+    # document is the property — a refusal that still wrote would be worse.
+    async def check():
+        live = await M.boot_live(scope=_SCOPE, base_dir=str(dna_dir))
+        assert await live.kernel.get_document(_SCOPE, "Story", _PLANTED) is None
+
+    asyncio.run(check())

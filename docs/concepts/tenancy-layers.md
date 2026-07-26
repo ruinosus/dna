@@ -95,8 +95,14 @@ spec:
   granted_by: ana@example.com
 ```
 
-Two properties are load-bearing:
+Three properties are load-bearing:
 
+* **A read grant is a read grant.** `access` is enforced, not merely written
+  down: the scope binder carries a read/write axis and asks the row what it
+  permits, so the grant that opens a second scope for *reading* refuses a
+  *write* to it and names the level the row records. The enum has one member on
+  purpose — a cross-workspace write is a different decision from a
+  cross-workspace read and must not arrive as a value nobody noticed.
 * **Nothing is derived.** The scope binder checks *membership* against the
   rows — no prefix rule, no "same account" inference, and deliberately **no
   wildcard**. A leak is therefore always a row somebody wrote, which can be
