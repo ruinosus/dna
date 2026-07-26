@@ -293,10 +293,18 @@ class RegistryHost(Protocol):
     ``_loading_ext_owner`` (the per-``load()`` alias-owner context) is a LAZY
     member — set only inside ``kernel.load()`` and read via
     ``getattr(host, "_loading_ext_owner", None)`` — so it is intentionally NOT a
-    required Protocol attribute (a kernel outside a load() call lacks it)."""
+    required Protocol attribute (a kernel outside a load() call lacks it).
+
+    ``_writers`` joined this contract with the UNregistration path (i-080 item
+    3): a Kind that is dropped must take its auto-synthesized
+    ``GenericBundleWriter`` with it, or the next registration of the same Kind
+    name is skipped by the "already has a writer" check in
+    ``_ensure_generic_readers_writers`` and the stale writer keeps claiming it.
+    It is the exact mirror of the ``_readers`` membership already here."""
 
     hooks: Any
     _readers: list
+    _writers: list
     _generics_resolved: bool
 
     def _ensure_generic_readers_writers(self) -> None: ...

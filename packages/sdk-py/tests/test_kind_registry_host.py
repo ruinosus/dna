@@ -45,6 +45,11 @@ def _registry_host_fake(**over) -> types.SimpleNamespace:
     base = dict(
         _generics_resolved=True,
         _readers=[],
+        # i-080 item 3 widened RegistryHost with ``_writers``: unregistering a
+        # Kind must take its auto-synthesized GenericBundleWriter with it, or
+        # the next registration of that Kind name is skipped by the
+        # "already has a writer" wiring check.
+        _writers=[],
         _ensure_generic_readers_writers=lambda: None,
         hooks=types.SimpleNamespace(
             has=lambda name: False,

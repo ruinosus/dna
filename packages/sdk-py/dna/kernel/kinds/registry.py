@@ -183,10 +183,53 @@ EXPLICIT_ALIAS_ALLOWLIST: frozenset[str] = frozenset({
 # ambiguous the moment two api_versions share a kind name).
 KIND_NAME_COLLISION_ALLOWLIST: frozenset[str] = frozenset({"Reference"})
 
-# warn-once cache for ambiguous bare-name lookups (module-level on the
-# instance would be fine too, but keep parity with
-# _GLOBAL_KINDDEF_CONFLICT_WARNED's process-wide semantics).
-_AMBIGUOUS_LOOKUP_WARNED: set[str] = set()
+# warn-once cache for ambiguous lookups (module-level on the instance would be
+# fine too, but keep parity with _GLOBAL_KINDDEF_CONFLICT_WARNED's process-wide
+# semantics).
+#
+# i-080 item 5: the key is the AMBIGUITY, not the name. Keyed by name alone,
+# the first ``Deal`` collision warned and every later, DIFFERENT ``Deal``
+# collision was silent for the life of the process — which in a long-lived
+# container is forever, and is exactly when a second tenant arrives. Keying on
+# the resolved match set keeps the noise bounded (a stable ambiguity still
+# warns once) while making a NEW collision audible.
+_AMBIGUOUS_LOOKUP_WARNED: set[tuple[Any, ...]] = set()
+
+
+def _deterministic_order(ports: "list[KindPort]") -> "list[KindPort]":
+    """Total, process-independent order over colliding ports (i-080 item 5).
+
+    Two rules, in order:
+
+    1. extension classes and BUILTIN descriptors beat per-scope declarative
+       ports — the pre-existing i-195 preference, which is what stops a tenant
+       Kind from shadowing a system Kind by lookup;
+    2. then ``(api_version, kind)`` — the registry's own key.
+
+    Registration order is deliberately NOT a tiebreak. It is an accident of
+    which scope loaded first, so between two TENANT ports it made the answer
+    depend on traffic; the same two Kinds must resolve the same way in every
+    process, or a document validates against one tenant's schema on one node
+    and another's on the next."""
+    return sorted(
+        ports,
+        key=lambda kp: (
+            bool(getattr(kp, "__declarative__", False))
+            and not bool(getattr(kp, "__builtin_descriptor__", False)),
+            kp.api_version,
+            kp.kind,
+        ),
+    )
+
+
+def _warn_ambiguity_once(key: tuple[Any, ...], message: str, *args: Any) -> None:
+    """Log ``message`` the first time this exact ambiguity is seen in this
+    process. See ``_AMBIGUOUS_LOOKUP_WARNED`` for why the key is the ambiguity
+    and not the name."""
+    if key in _AMBIGUOUS_LOOKUP_WARNED:
+        return
+    _AMBIGUOUS_LOOKUP_WARNED.add(key)
+    logger.warning(message, *args)
 
 
 class KindRegistry:
@@ -221,39 +264,31 @@ class KindRegistry:
 
         With ``api_version`` the lookup is EXACT on ``(api_version, kind)``.
         Bare lookups on an ambiguous name (two api_versions sharing a kind
-        name — the allowlisted ``Reference`` pair, or per-scope
-        KindDefinitions shadowing builtins like the demo scopes' local
-        Doc/EvalCase) resolve deterministically: extension/builtin ports
-        beat per-scope declarative ones, then registration order — and a
-        warning fires once per process per name (i-195).
+        name — the allowlisted ``Reference`` pair, or two tenants each
+        declaring the same Kind name in their own namespace) resolve
+        DETERMINISTICALLY through :func:`_deterministic_order`: extension /
+        builtin ports beat per-scope declarative ones, then ``(api_version,
+        kind)``. Registration order is not consulted (i-080 item 5); a warning
+        fires once per process per distinct ambiguity (i-195).
         """
         if api_version is not None:
             return self._kinds.get((api_version, kind))
         matches = [kp for kp in self._kinds.values() if kp.kind == kind]
         if not matches:
             return None
-        if len(matches) > 1:
-            if kind not in _AMBIGUOUS_LOOKUP_WARNED:
-                _AMBIGUOUS_LOOKUP_WARNED.add(kind)
-                logger.warning(
-                    "Ambiguous bare kind-name lookup %r: %d ports share the "
-                    "name (%s). Resolving extension-first then registration "
-                    "order; pass api_version= for exact resolution. "
-                    "(warned once per process — i-195)",
-                    kind, len(matches),
-                    ", ".join(kp.api_version for kp in matches),
-                )
-            # per-scope DeclarativeKindPorts carry __declarative__ WITHOUT
-            # __builtin_descriptor__; extension classes + builtin
-            # descriptors must win the bare name.
-            extension_first = [
-                kp for kp in matches
-                if not getattr(kp, "__declarative__", False)
-                or getattr(kp, "__builtin_descriptor__", False)
-            ]
-            if extension_first:
-                return extension_first[0]
-        return matches[0]
+        if len(matches) == 1:
+            return matches[0]
+        ordered = _deterministic_order(matches)
+        versions = tuple(kp.api_version for kp in ordered)
+        _warn_ambiguity_once(
+            ("kind-name", kind, versions),
+            "Ambiguous bare kind-name lookup %r: %d ports share the name "
+            "(%s). Resolving %r (extension/builtin first, then api_version); "
+            "pass api_version= for exact resolution. (warned once per process "
+            "per distinct set of colliding api_versions — i-195 / i-080)",
+            kind, len(ordered), ", ".join(versions), ordered[0].api_version,
+        )
+        return ordered[0]
 
     def all_ports(self) -> list["KindPort"]:
         """All registered KindPorts. Order matches registration."""
@@ -287,14 +322,38 @@ class KindRegistry:
 
     def by_container(self, container: str) -> "str | None":
         """Return the kind name whose StorageDescriptor.container matches.
-        None for empty container (ROOT kinds) or unregistered containers."""
+        None for empty container (ROOT kinds) or unregistered containers.
+
+        i-080 item 5: two Kinds may declare the same container — namespacing
+        ``api_version`` does not namespace a directory name, so two tenants
+        both storing in ``deals/`` land in the same place. This used to return
+        whichever registered first, silently. It now resolves through the SAME
+        :func:`_deterministic_order` as :meth:`port_for` (so the two surfaces
+        cannot disagree) and says so once per process per distinct collision.
+        Making the collision AUDIBLE is the fix available here; making it
+        impossible is a storage-layout decision, not a registry one."""
         if not container:
             return None
-        for kp in self._kinds.values():
-            sd = getattr(kp, "storage", None)
-            if sd is not None and sd.container == container:
-                return kp.kind
-        return None
+        matches = [
+            kp for kp in self._kinds.values()
+            if getattr(getattr(kp, "storage", None), "container", None) == container
+        ]
+        if not matches:
+            return None
+        if len(matches) == 1:
+            return matches[0].kind
+        ordered = _deterministic_order(matches)
+        owners = tuple(f"{kp.api_version}/{kp.kind}" for kp in ordered)
+        _warn_ambiguity_once(
+            ("container", container, owners),
+            "Ambiguous storage container %r: %d Kinds declare it (%s). "
+            "Resolving %r; their documents share one directory, so this is a "
+            "STORAGE collision, not only a lookup one — give one of them a "
+            "distinct container. (warned once per process per distinct set — "
+            "i-080)",
+            container, len(ordered), ", ".join(owners), ordered[0].kind,
+        )
+        return ordered[0].kind
 
     def resolve_dep_filter_target(self, value: str) -> "KindPort | None":
         """Canonical dep_filter target resolution (s-alias-generated-not-typed).
@@ -599,6 +658,70 @@ class KindRegistry:
             logger.debug("Failed to resolve docs for %s: %s", k.kind, e)
             k._resolved_docs = getattr(k, "docs", None)
 
+    def unregister_kind(self, api_version: str, kind: str) -> "KindPort | None":
+        """Drop a registered Kind, returning the port that was removed (or
+        ``None`` if the key was never registered — idempotent).
+
+        i-080 item 3: the per-scope funnel's own comment told callers to "clear
+        ``self._kinds[key]`` via the explicit unregister path" before
+        re-running, and grep proved no such path existed. The consequence was
+        not cosmetic: CREATING a Kind was hot, but EDITING one required
+        restarting the process, which makes a tenant-facing schema editor a
+        demo rather than a feature.
+
+        Removing the port is not enough on its own. A BUNDLE Kind gets a
+        ``GenericBundleReader`` / ``GenericBundleWriter`` synthesized for it by
+        :meth:`_ensure_generic_readers_writers`, keyed by marker and Kind name;
+        left behind, a stale reader keeps claiming the old marker and the
+        re-registered Kind never gets a fresh one (the wiring is
+        skip-if-present). So the generics belonging to THIS port go with it,
+        and ``_generics_resolved`` is cleared so the next registration rewires.
+
+        Deliberately NOT public on the kernel as a general "delete a Kind"
+        verb for extension Kinds: nothing prevents it, but a builtin's port is
+        also referenced by its own extension's readers/writers, which this does
+        not (and must not) unpick."""
+        port = self._kinds.pop((api_version, kind), None)
+        if port is None:
+            return None
+        host = self._host
+        if host is not None:
+            self._drop_generic_rw(port)
+            host._generics_resolved = False
+        return port
+
+    def _drop_generic_rw(self, port: "KindPort") -> None:
+        """Remove the auto-synthesized reader/writer that belonged to ``port``.
+
+        Matched on the generic classes ONLY — a hand-written Reader shipped by
+        an extension is that extension's property and is never unwired here."""
+        from dna.kernel.source.generic_rw import (
+            GenericBundleReader, GenericBundleWriter,
+        )
+
+        host = self._host
+        readers = getattr(host, "_readers", None)
+        if readers is not None:
+            for r in list(readers):
+                if (
+                    isinstance(r, GenericBundleReader)
+                    and getattr(r, "_api_version", None) == port.api_version
+                    and getattr(r, "_kind", None) == port.kind
+                ):
+                    readers.remove(r)
+        writers = getattr(host, "_writers", None)
+        if writers is not None:
+            still_claimed = any(
+                kp.kind == port.kind for kp in self._kinds.values()
+            )
+            if not still_claimed:
+                for w in list(writers):
+                    if (
+                        isinstance(w, GenericBundleWriter)
+                        and getattr(w, "_kind", None) == port.kind
+                    ):
+                        writers.remove(w)
+
     @staticmethod
     def _lint_plane(k: "KindPort") -> None:
         """Two-planes lint (spec 2026-06-09, D1) — plane is explicit and
@@ -681,6 +804,7 @@ class KindRegistry:
         """
         from dna.kernel.meta import DeclarativeKindPort
         from dna.kernel.models import TypedKindDefinition
+        from dna.sync.hash import document_hash
 
         host = self._host
         reader_count_before = len(host._readers)
@@ -705,6 +829,7 @@ class KindRegistry:
                 continue
 
             key = (typed.spec.target_api_version, typed.spec.target_kind)
+            digest = document_hash(raw.get("spec") or {})
             if key in self._kinds:
                 existing = self._kinds[key]
                 is_builtin_descriptor = getattr(
@@ -750,17 +875,33 @@ class KindRegistry:
                         },
                     ))
                     continue
-                # Same declarative port already registered — silent
-                # no-op. The 2-phase load path used to re-register here
-                # but that produced log spam (3 lines × N scopes per
-                # Temporal activity call) AND added 3-5s per case
-                # rebuilding the resolved-docs cache. Idempotent
-                # re-registration is unnecessary because the kernel's
-                # `_kinds` dict already holds the synthesized port from
-                # the prior pass. To pick up a NEW version of a
-                # KindDefinition, callers should clear `self._kinds[key]`
-                # via the explicit unregister path before re-running.
-                continue
+                # Same declarative KEY already registered. Whether this is a
+                # no-op or an EDIT is decided by the descriptor digest — the
+                # same identity ``register_kind`` uses for declarative ports
+                # (F3 spec D3), because every declarative port is the same
+                # class and so ``type(existing) is type(k)`` cannot tell two
+                # different descriptors apart.
+                #
+                # Same digest → the historical silent no-op, kept for the
+                # reason it was introduced: re-registering produced log spam
+                # (3 lines × N scopes per activity call) and 3-5s rebuilding
+                # the resolved-docs cache on every MI build.
+                #
+                # DIFFERENT digest → the author EDITED the Kind (i-080 item 3).
+                # This used to be indistinguishable from the no-op, so the new
+                # schema was ignored until the process restarted. Now the old
+                # port is unregistered and the new one goes through the full
+                # funnel below.
+                if getattr(existing, "__descriptor_digest__", None) == digest:
+                    continue
+                logger.info(
+                    "KindDefinition %s/%s changed (descriptor digest %s → %s) "
+                    "— replacing the registered port in place.",
+                    key[0], key[1],
+                    str(getattr(existing, "__descriptor_digest__", None))[:12],
+                    digest[:12],
+                )
+                self.unregister_kind(*key)
 
             try:
                 port = DeclarativeKindPort.from_typed(typed)
@@ -770,17 +911,26 @@ class KindRegistry:
                     key[0], key[1], e,
                 )
                 continue
-            # F3 (spec D3): the per-scope funnel writes straight into
-            # self._kinds (bypassing register_kind()), so the F1 plane lint
-            # never ran here. Run the SAME helper — but warn + skip instead of
-            # raising: per-scope docs never take the boot down (same
-            # contract as the parse_error path above).
+            port.__descriptor_digest__ = digest
+            # i-080 item 2: this used to be ``self._kinds[key] = port`` — a
+            # direct write that bypassed ``register_kind()`` entirely, so the
+            # duplicate-ALIAS guard, the BUNDLE ``(container, marker)``
+            # collision guard and the i-195 NAME-collision guard never ran for
+            # a Kind that came from the store. Only the plane lint did, and
+            # only because F3 had extracted it as a helper for exactly this
+            # call site. A tenant Kind therefore faced a fraction of what a
+            # builtin faces, on the one path where the author is untrusted.
+            #
+            # It now goes through the SAME funnel, with the SAME outcome
+            # translation the plane lint already had: ``register_kind`` raises,
+            # the per-scope funnel warns + skips + emits ``parse_error``.
+            # Per-scope docs never take the boot down.
             try:
-                self._lint_plane(port)
+                self.register_kind(port)
             except KindRegistrationError as e:
                 logger.warning(
-                    "KindDefinition %s/%s failed the plane lint: %s — "
-                    "skipping registration.",
+                    "KindDefinition %s/%s was refused by the registration "
+                    "guards: %s — skipping registration.",
                     key[0], key[1], e,
                 )
                 if host.hooks.has("parse_error"):
@@ -791,19 +941,7 @@ class KindRegistry:
                         data={"error": str(e)},
                     ))
                 continue
-            self._kinds[key] = port
-            host._generics_resolved = False
             registered_any = True
-            try:
-                port._resolved_docs = _load_kind_docs(port)
-            except Exception as e:  # pragma: no cover — defensive
-                # fail-soft: docs are cosmetic metadata — mirror the
-                # register_kind() path (logs at debug, falls back to class attr).
-                logger.debug(
-                    "Failed to resolve docs for declarative kind %s: %s",
-                    port.kind, e,
-                )
-                port._resolved_docs = getattr(port, "docs", None)
             logger.info(
                 "Registered declarative kind: %s/%s (alias: %s)",
                 key[0], key[1], typed.spec.alias,

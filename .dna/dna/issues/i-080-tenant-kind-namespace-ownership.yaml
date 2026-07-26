@@ -1,0 +1,41 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-080-tenant-kind-namespace-ownership
+spec:
+  description: Kind de tenant identificado por (apiVersion, kind) com o apiVersion sendo um namespace POSSUIDO — reivindicado e validado na escrita — em vez de conter o id do workspace
+  type: task
+  severity: high
+  status: open
+  created_at: '2026-07-26T14:58:53+00:00'
+  updated_at: '2026-07-26T14:58:53+00:00'
+  timeline:
+  - at: '2026-07-26T14:58:53+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
+  - at: '2026-07-26T14:59:25+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: |-
+      DECISAO DO FOUNDER, 26/07/2026: forma (b) — o apiVersion e um namespace POSSUIDO, nao o id do workspace embutido.
+
+      Insight que originou: a identidade de um Kind ja e DOIS campos — a chave do registro e (api_version, kind) (registry.py:449,671,707,829). Namespacear o apiVersion por tenant resolve a colisao principal por construcao: tenant A com 'acme.com/v1 + Deal' e tenant B com 'globex.com/v1 + Deal' sao chaves distintas, e o descarte silencioso (registry.py:751-761, onde o segundo declarante e engolido e passa a ser validado contra o schema do primeiro) deixa de ser possivel.
+
+      GANHO GRATIS: o alias e declarado globalmente unico com a convencao '<owner>-<kind>' (alias_for, registry.py:262-269) — o dono vem do namespace. Se o apiVersion carrega o tenant, o ALIAS se namespaceia sozinho. E o alias e a chave de fio para dep_filters e LayerPolicy. Uma decisao, duas colisoes resolvidas.
+
+      POR QUE (b) E NAO (a): a forma (a) — apiVersion contendo o id do workspace, tipo 'tenant.ws-253fpm3.../v1' — e livre de colisao e nao custa infraestrutura. Mas assa um id de banco na identidade de TODO documento, e o apiVersion participa da chave. Renomear, migrar ou consolidar um workspace mudaria a identidade de cada documento dele. Identidade churn e barato agora e catastrofico depois. (b) e o que todo esquema de versionamento de API faz: o namespace e a identidade da organizacao, nao o id dela no banco.
+
+      O QUE (b) EXIGE E NAO EXISTE:
+      - Um registro de posse: namespace -> workspace. E um Kind.
+      - Validacao na escrita de que o namespace do apiVersion pertence a quem escreve — no mesmo ponto onde o LayerPolicy ja e consultado. Sem isso eu declaro 'github.com/ruinosus/dna/helix/v1 + Agent' e sequestro o Kind do sistema.
+
+      FUROS QUE SOBRAM depois de namespacear, medidos:
+      1. port_for com nome NU (registry.py:217-255): builtin ganha de per-scope (bom — tenant nao sequestra Kind do sistema por lookup), mas entre DOIS tenants cai em matches[0], ordem de registro. E o aviso dispara UMA VEZ POR PROCESSO — num container de vida longa a segunda colisao e silenciosa.
+      2. by_container (registry.py:288-296) itera e devolve o primeiro que casa. Dois tenants guardando em 'deals/' colidem no armazenamento, independente do apiVersion.
+
+      POLITICA A DECIDIR (nao resolvida aqui): quem pode reivindicar um namespace, o que acontece com namespace abandonado, se um tenant pode possuir varios, e se ha namespaces reservados (o do proprio DNA obviamente).
+
+      Depende de / relacionado: o registro per-scope hoje escreve direto em self._kinds[key] (registry.py:792) sem passar pelo register_kind(), entao as guardas de alias duplicado, colisao de marcador BUNDLE e colisao de nome nao rodam para Kind vindo do store. E nao existe caminho de desregistro, entao EDITAR um Kind exige reiniciar o processo.

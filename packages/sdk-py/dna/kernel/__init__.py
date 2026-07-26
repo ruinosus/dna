@@ -1480,6 +1480,17 @@ class Kernel:
         KindRegistry collaborator (s-kernel-decomp-f3-kindregistry)."""
         self._kindreg.register_kind(k)
 
+    def unregister_kind(self, api_version: str, kind: str) -> "KindPort | None":
+        """Drop a registered Kind by its ``(api_version, kind)`` key, returning
+        the removed port (``None`` if it was never registered).
+
+        The counterpart to :meth:`kind` that the per-scope KindDefinition funnel
+        always assumed existed and never had (i-080 item 3): without it,
+        creating a tenant Kind was hot but EDITING one required restarting the
+        process. See ``KindRegistry.unregister_kind`` for what goes with the
+        port (its auto-synthesized generic reader/writer)."""
+        return self._kindreg.unregister_kind(api_version, kind)
+
     def kind_from_descriptor(self, raw: dict[str, Any]) -> KindPort:
         """Register a BUILTIN Kind from a ``kinds/*.kind.yaml`` descriptor
         (KindDefinition package data). Thin facade over the KindRegistry funnel
