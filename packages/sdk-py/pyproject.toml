@@ -111,7 +111,21 @@ runtime = [
 # the maf adapter imports it (deferred import inside the adapter's build()).
 # Install to use the MAF backend: pip install "dna-sdk[maf]".
 maf = ["agent-framework==1.12.1", "agent-framework-ag-ui==1.0.0"]
-all = ["dna-sdk[postgres,sqlite,sql]"]
+# i-081 / decision C — the LINEAR-TIME regex engine. RE2 compiles a pattern to
+# an automaton and matches in time linear in the input, so a tenant-authored
+# `pattern` in a KindDefinition schema CANNOT be a denial of service; installed,
+# it both VALIDATES (author time) and APPLIES (write time) every authored
+# pattern, and the measured heuristic in kinds/schema_guard.py stands down.
+#
+# An EXTRA, not a core dep, for two measured reasons: google-re2 publishes no
+# musllinux wheels (an Alpine image would build from source, which needs the RE2
+# C++ library plus Abseil) and its manylinux wheels are manylinux_2_28, so an
+# older-glibc base image is also a source build. Neither has anything to do with
+# regex safety, and `pip install dna-sdk` must not become "works unless".
+# Without it, everything falls back to the #244 heuristic + Python `re`,
+# unchanged. Install: pip install "dna-sdk[re2]".
+re2 = ["google-re2>=1.1"]
+all = ["dna-sdk[postgres,sqlite,sql,re2]"]
 dev = [
     "pytest>=7.0",
     "pytest-asyncio>=0.23",

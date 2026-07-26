@@ -51,9 +51,39 @@ from dna.memory.semantic import (
 
 logger = logging.getLogger(__name__)
 
-#: The record Kinds that carry memory. Engram is the rich, affective,
-#: bi-temporal engram; Research + Evidence are recall-able knowledge artifacts.
+#: The KERNEL-LESS fallback for the record Kinds that carry memory. Engram is
+#: the rich, affective, bi-temporal engram; Research + Evidence are recall-able
+#: knowledge artifacts.
+#:
+#: The live answer is :func:`recallable_kinds`, derived from the
+#: ``memory.recallable`` trait — because "is this Kind searchable by recall?"
+#: and "which of its fields carry an embeddable payload?" are two questions and
+#: ``embed:`` was answering both. They disagree by construction: ``embed:`` is
+#: declared on 7 Kinds and this list holds 3, and they intersect in exactly ONE.
+#: An ADR should be findable by semantic search WITHOUT being decay-ranked as a
+#: memory — retention, affect and reconsolidation are properties of a memory,
+#: not of a document that happens to have embeddable text. Overloading ``embed:``
+#: to mean both would have made every embeddable Kind a memory the moment
+#: somebody declared a field.
 MEMORY_KINDS: tuple[str, ...] = ("Engram", "Research", "Evidence")
+
+#: The trait a Kind declares to participate in ``recall`` / ``remember``.
+TRAIT_RECALLABLE = "memory.recallable"
+
+
+def recallable_kinds(kernel: Any) -> tuple[str, ...]:
+    """The memory Kinds this kernel knows — those declaring ``memory.recallable``.
+
+    Falls back to :data:`MEMORY_KINDS` for a kernel with no trait registry (a
+    narrow test double), so the pre-trait behavior is exactly preserved."""
+    ask = getattr(kernel, "kinds_with_trait", None)
+    if ask is None:
+        return MEMORY_KINDS
+    try:
+        found = frozenset(ask(TRAIT_RECALLABLE))
+    except Exception:  # noqa: BLE001 — a registry that cannot answer says nothing
+        return MEMORY_KINDS
+    return tuple(sorted(found)) if found else MEMORY_KINDS
 
 
 def _now_iso(now: datetime | None = None) -> str:
@@ -117,8 +147,9 @@ async def remember(
     and — when a search provider is registered — index the doc so ``recall``
     finds it. Returns ``{kind, name, spec, indexed}``.
     """
-    if kind not in MEMORY_KINDS:
-        raise ValueError(f"remember: {kind!r} is not a memory Kind {MEMORY_KINDS}")
+    allowed = recallable_kinds(kernel)
+    if kind not in allowed:
+        raise ValueError(f"remember: {kind!r} is not a memory Kind {allowed}")
     spec = dict(spec)  # never mutate the caller's dict
     now_iso = _now_iso(now)
     spec.setdefault("created_at", now_iso)
@@ -152,7 +183,7 @@ async def backfill_index(
     kernel: Any,
     scope: str,
     *,
-    kinds: tuple[str, ...] | list[str] = MEMORY_KINDS,
+    kinds: tuple[str, ...] | list[str] | None = None,
     tenant: str | None = None,
 ) -> int:
     """Lazy-backfill the search index for memories that predate the provider.
@@ -171,6 +202,7 @@ async def backfill_index(
         return 0
     from dna.adapters.search.sqlite_vec import document_text
 
+    kinds = kinds if kinds is not None else recallable_kinds(kernel)
     records: list[dict[str, Any]] = []
     for kind in kinds:
         async for raw in kernel.query(scope, kind, tenant=tenant):
@@ -283,7 +315,7 @@ async def recall(
     scope: str,
     query: str,
     *,
-    kinds: tuple[str, ...] | list[str] = MEMORY_KINDS,
+    kinds: tuple[str, ...] | list[str] | None = None,
     tenant: str | None = None,
     k: int = 5,
     reconsolidate: bool = True,
@@ -326,6 +358,7 @@ async def recall(
     partition rather than the shared base it is unioned with.
     """
     now_dt = now or datetime.now(timezone.utc)
+    kinds = kinds if kinds is not None else recallable_kinds(kernel)
     overfetch = max(k * 3, 10)
     degraded = False
     merged: list[dict[str, Any]] = []

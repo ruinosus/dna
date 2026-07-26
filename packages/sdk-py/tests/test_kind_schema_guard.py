@@ -26,10 +26,26 @@ import time
 
 import pytest
 
+from dna.kernel.kinds import regex_engine as R
 from dna.kernel.kinds.schema_guard import (
     SchemaGuardError,
     validate_authored_schema,
 )
+
+#: The ReDoS half of this file describes the HEURISTIC regime (#244): a
+#: hand-written reader that refuses the shapes it can recognise. With
+#: `dna-sdk[re2]` installed those same shapes are matched by an engine that
+#: cannot backtrack, so refusing them would be refusing a pattern that is
+#: provably safe — the guard relaxes and `test_regex_engine.py` takes over.
+#:
+#: These tests FORCE the heuristic rather than skipping when RE2 is present.
+#: Skipping would have quietly deleted #244's coverage from CI the moment the
+#: extra landed in the `dev` install — and the heuristic is what protects every
+#: deployment that cannot take the extra (Alpine, older glibc). It has to stay
+#: tested on the machine that has RE2 too.
+@pytest.fixture
+def heuristic(monkeypatch):
+    monkeypatch.setattr(R, "accepts_any_linear_pattern", lambda: False)
 
 
 # ── the schema must actually be a schema ────────────────────────────────────
@@ -110,7 +126,7 @@ def test_a_remote_ref_would_escape_the_write_paths_handler():
     "^(a|aa)+$",          # ambiguous alternation: one branch prefixes the other
     "^(?:x+)+$",          # non-capturing groups are not an escape hatch
 ])
-def test_catastrophic_patterns_are_refused(pattern):
+def test_catastrophic_patterns_are_refused(pattern, heuristic):
     with pytest.raises(SchemaGuardError) as e:
         validate_authored_schema(
             {"type": "object", "properties": {"x": {"type": "string",
@@ -141,7 +157,7 @@ def test_uncompilable_pattern_is_refused():
     assert "pattern" in str(e.value)
 
 
-def test_absurdly_long_pattern_is_refused():
+def test_absurdly_long_pattern_is_refused(heuristic):
     with pytest.raises(SchemaGuardError) as e:
         validate_authored_schema(
             {"type": "object",
@@ -150,7 +166,7 @@ def test_absurdly_long_pattern_is_refused():
     assert "pattern" in str(e.value)
 
 
-def test_pattern_is_checked_everywhere_it_can_appear():
+def test_pattern_is_checked_everywhere_it_can_appear(heuristic):
     for schema in (
         {"type": "string", "pattern": "^(a+)+$"},
         {"type": "object", "patternProperties": {"^(a+)+$": {"type": "string"}}},
@@ -246,7 +262,7 @@ def test_from_raw_refuses_a_malformed_authored_schema():
     assert "spec.schema" in str(e.value)
 
 
-def test_from_raw_refuses_a_catastrophic_pattern():
+def test_from_raw_refuses_a_catastrophic_pattern(heuristic):
     from dna.kernel.models import TypedKindDefinition
 
     with pytest.raises(ValueError) as e:

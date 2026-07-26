@@ -1,0 +1,114 @@
+# WorkspaceScopeGrant — a workspace may READ a scope that is not its own.
+#
+# `LiveDna.scope_is_bound` allowed an authenticated, workspace-resolved request
+# exactly ONE scope: `default_scope(workspace)`. That is the right default and it
+# stays the default — but it made a legitimate case unreachable. A person whose
+# hosted door binds them to workspace A cannot name workspace B's scope even when
+# both boards are theirs, because the binder had no way to be TOLD otherwise. The
+# only lever was a process-wide env var (`DNA_TOKEN_SCOPES`), which applies to the
+# credential rather than the workspace and is invisible from inside the system.
+#
+# So the permission became DATA, exactly like WorkspaceMembership: a row, in a
+# scope, with an author and a timestamp, that an operator can list, diff, revoke
+# and audit. `scope_is_bound` VALIDATES against the rows; it never DERIVES a
+# grant from the workspace id, the scope's name, a prefix, or anything else. That
+# is the load-bearing property: a leak has to be a wrong row somebody wrote, not
+# a logic bug nobody can see. A wrong row is greppable; a wrong inference is not.
+#
+# Deliberately NOT supported here: the `*` wildcard that `DNA_TOKEN_SCOPES`
+# honours for a workspace-LESS service credential (see `SCOPE_GRANT_ALL`). That
+# sentinel is an operator's conscious, process-level opt-out. A wildcard in a
+# DATA row would make one typo unbounded, and "every scope in the deployment" is
+# not a claim a per-workspace record should be able to make. Enumerate.
+#
+# GLOBAL and NOT inheritable, in `_lib` alongside Workspace / WorkspaceMembership:
+# a rule ABOUT the boundary cannot live inside the thing it bounds.
+apiVersion: github.com/ruinosus/dna/core/v1
+kind: KindDefinition
+metadata:
+  name: workspace-scope-grant
+spec:
+  target_api_version: github.com/ruinosus/dna/tenant/v1
+  target_kind: WorkspaceScopeGrant
+  alias: tenant-workspace-scope-grant
+  origin: github.com/ruinosus/dna/tenant
+  tenant_scope: global
+  plane: record
+  scope_inheritable: false
+  prompt_target: false
+  flatten_in_context: false
+  prompt_target_priority: 0
+  storage:
+    type: yaml
+    container: workspace-scope-grants
+  schema:
+    type: object
+    additionalProperties: false
+    required:
+    - workspace_id
+    - scope
+    - status
+    properties:
+      workspace_id:
+        type: string
+        minLength: 1
+        description: The workspace this grant is FOR — the caller's resolved
+          workspace_id (matches a Workspace.workspace_id / the tenant key).
+      scope:
+        type: string
+        minLength: 1
+        description: The single scope name this row grants. One scope per row on
+          purpose - granting and revoking are then one document each, so an audit
+          reads as a list of facts rather than a diff inside a list.
+      status:
+        type: string
+        enum:
+        - active
+        - revoked
+        default: active
+        description: Only `active` grants anything. Revoking keeps the row (and
+          its history) instead of deleting the evidence that access once existed.
+      access:
+        type: string
+        enum:
+        - read
+        default: read
+        description: What the grant permits. READ only, and the enum has one
+          member so widening it is a deliberate schema change with a reviewer -
+          a cross-workspace WRITE is a different decision than a cross-workspace
+          read and must not arrive as a value nobody noticed.
+      reason:
+        type:
+        - string
+        - 'null'
+        description: Why this workspace may reach that scope. Free text, for the
+          human reading the audit six months later.
+      granted_by:
+        type:
+        - string
+        - 'null'
+        description: Identity (email / oid) of whoever created the grant.
+      granted_at:
+        type:
+        - string
+        - 'null'
+        description: ISO-8601 timestamp, stamped by the writer.
+      revoked_at:
+        type:
+        - string
+        - 'null'
+        description: ISO-8601 timestamp when status flipped to `revoked`.
+  describe: '{workspace_id} -> {scope} ({status})'
+  summary:
+    workspace_id: ''
+    scope: ''
+    status: active
+    access: read
+  ascii_icon: "\U0001F511"
+  display_label: Workspace Scope Grants
+  docs: A WorkspaceScopeGrant records that one workspace may READ one scope that
+    is not its own. It exists so a multi-scope reach is an auditable row rather
+    than a process-wide env var or an inference - the binder validates against
+    the rows and derives nothing, so a leak is always a wrong row somebody wrote.
+    No wildcard - enumerate. GLOBAL declarative data in `_lib`, alongside
+    Workspace and WorkspaceMembership.

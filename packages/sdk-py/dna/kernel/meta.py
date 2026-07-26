@@ -385,7 +385,13 @@ class DeclarativeKindPort:
             subschema = props[key]
             if isinstance(subschema, dict):
                 try:
-                    jsonschema.validate(instance=value, schema=subschema)
+                    # Linear-time engine when available (decision C): a
+                    # spec_default is checked against the SAME authored
+                    # subschema — including its `pattern` — that will validate
+                    # every document, so it must run on the same engine.
+                    from dna.kernel.kinds.regex_engine import validate_instance
+
+                    validate_instance(value, subschema)
                 except jsonschema.ValidationError as e:
                     raise ValueError(
                         f"KindDefinition spec_defaults[{key!r}]={value!r} fails "
@@ -434,8 +440,11 @@ class DeclarativeKindPort:
                     "jsonschema is required to validate declarative kinds; "
                     "install with `pip install jsonschema>=4.0`"
                 ) from e
+            # Applied through the linear-time engine when `dna-sdk[re2]` is
+            # present (decision C) — same engine that accepted the pattern.
+            from dna.kernel.kinds.regex_engine import validate_instance
             try:
-                jsonschema.validate(instance=spec, schema=self._json_schema)
+                validate_instance(spec, self._json_schema)
             except jsonschema.ValidationError as e:
                 raise ValueError(
                     f"DeclarativeKind {self.kind!r} spec validation failed: {e.message} "

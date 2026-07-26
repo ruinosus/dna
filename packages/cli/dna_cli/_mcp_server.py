@@ -89,7 +89,10 @@ from dna.application import (  # noqa: F401 — re-exported for the faces + test
     set_status_impl,
 )
 from dna.application.live import parse_scope_grants
-from dna.application.runtime import _collect  # sdlc_digest_impl (below) uses it
+from dna.application.runtime import (  # sdlc_digest_impl / the scope-grant binder
+    _collect,
+    workspace_granted_scopes,
+)
 from dna.tenancy.enforcement import enforcement_boot_message
 
 
@@ -490,15 +493,32 @@ def build_server(
         # ANY scope precisely because it had no workspace to be bound to; it is now
         # limited to the scopes explicitly granted to it (`DNA_TOKEN_SCOPES`,
         # defaulting to the server's own base scope).
+        #
+        # A resolved workspace ALSO reaches any scope a ``WorkspaceScopeGrant``
+        # row grants it (decision B). The grant is DATA — read here, per request,
+        # from ``_lib`` — and the binder only ever checks MEMBERSHIP against it:
+        # nothing infers a grant from the workspace id, the scope's name or a
+        # prefix, so a leak is a row somebody wrote and can revoke. Only looked
+        # up when a cross-scope read is actually being attempted, so the common
+        # path (no ``scope``, or your own) costs nothing.
+        granted: frozenset[str] | None = None
+        if tenant and scope and scope != live.default_scope(tenant):
+            granted = await workspace_granted_scopes(live, tenant)
         if not live.scope_is_bound(
             scope, tenant, authenticated=True,
-            granted_scopes=parse_scope_grants(os.environ.get("DNA_TOKEN_SCOPES")),
+            granted_scopes=(
+                granted if tenant
+                else parse_scope_grants(os.environ.get("DNA_TOKEN_SCOPES"))
+            ),
         ):
             if tenant:
                 raise ToolError(
                     f"request is bound to workspace {tenant!r} (scope "
-                    f"{live.default_scope(tenant)!r}); cross-workspace access to "
-                    f"scope {scope!r} is denied"
+                    f"{live.default_scope(tenant)!r}); scope {scope!r} is not "
+                    f"granted to it. A workspace reaches another scope only "
+                    f"through an active WorkspaceScopeGrant row"
+                    + (f" (granted: {sorted(granted)})" if granted else
+                       " (this workspace has none)")
                 )
             raise ToolError(
                 f"scope {scope!r} is not granted to this credential; a request that "
@@ -923,11 +943,21 @@ def build_server(
         base defaults — never any workspace's memory. The default (``false``)
         recalls the workspace's shared memory, unchanged.
 
+        **``scope`` is IGNORED when ``personal=true``.** Personal memory has ONE
+        home — the server's base scope — because that is where every personal
+        WRITE lands; honouring a workspace scope here would search a place
+        nothing writes to and return an empty result that looks like an answer.
+        The response's ``scope`` field always reports the scope actually read,
+        so the drop is visible rather than documented-and-forgotten.
+
         The result reports its own mode: ``degraded: true`` + ``semantic:
         false`` means the search was a LITERAL token match, not semantic
         similarity — an empty result in that mode only proves no stored memory
         shares a word with the query. When relaying such an empty result, say
-        the search was literal-only; never assert that no memories exist."""
+        the search was literal-only; never assert that no memories exist.
+        ``index_refreshed: false`` (with ``index_error``) means the search index
+        could not be refreshed, so anything written recently is INVISIBLE to
+        this result — it is not read-your-writes, and ``degraded`` is set."""
         if personal:
             oid, family = await _personal_guard("read")
             async with _refusing():

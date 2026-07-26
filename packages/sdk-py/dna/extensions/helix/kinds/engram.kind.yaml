@@ -281,7 +281,16 @@ spec:
     summary: ''
     surface_count: 0
     owner: null
+  # The INDEX-side embedding fields. They must equal the CUE-side
+  # `dna.memory.semantic.ENGRAM_TEXT_FIELDS`: recall embeds the query from
+  # those four planes and compares it against the vector built from these.
+  # They disagreed (4 vs 2) — `area` and `title` carried meaning into the
+  # cue that the index had never seen, so every cosine was computed between
+  # two different notions of what the memory says. Guarded by
+  # test_embeddable_is_not_recallable.py::test_engram_cue_and_index_agree.
   embed:
+  - area
+  - title
   - summary
   - body
   graph_style:

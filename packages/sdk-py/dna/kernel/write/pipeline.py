@@ -111,8 +111,14 @@ class WritePipeline:
         if isinstance(defaults, dict) and defaults:
             spec = {**defaults, **spec}
         import jsonschema  # local import — core dep (pyproject: jsonschema>=4.0)
+
+        # Applied through the linear-time engine when `dna-sdk[re2]` is present
+        # (decision C): the author-time guard accepts a `pattern` because RE2
+        # proves it cannot backtrack, so the engine that RUNS it at write time
+        # must be the same one. Falls back to plain jsonschema otherwise.
+        from dna.kernel.kinds.regex_engine import validate_instance
         try:
-            jsonschema.validate(spec, schema)
+            validate_instance(spec, schema)
         except jsonschema.ValidationError as e:
             path = ".".join(str(p) for p in e.absolute_path)
             loc = f"spec.{path}" if path else "spec"

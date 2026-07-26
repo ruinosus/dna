@@ -260,15 +260,45 @@ def _scan(group: _Group) -> str | None:
 def redos_risk(pattern: str) -> str | None:
     """A human reason why ``pattern`` is refused, or ``None`` if it is accepted.
 
-    See the module docstring for what this recognises and what it does not."""
+    **Two regimes, and which one is in force is a fact about the install.**
+
+    With ``dna-sdk[re2]`` present, RE2 both validates and applies the pattern
+    (``dna.kernel.kinds.regex_engine``): it compiles to an automaton and matches
+    in time linear in the input, so there is no backtracking to be catastrophic
+    and no shape to recognise. A pattern RE2 compiles is accepted — including the
+    long ones and the exotic ones the heuristic below refuses because it cannot
+    reason about them. What RE2 refuses (backreferences, lookaround) it refuses
+    for the same reason the heuristic exists: those are the constructs whose cost
+    cannot be bounded.
+
+    Without it, the measured heuristic from #244 applies unchanged: the three
+    shapes known to explode, plus a length bound on anything too large to vouch
+    for. See the module docstring for exactly what that does and does not claim.
+
+    The regimes are never mixed. Accepting a pattern because RE2 finds it linear
+    and then running it on Python's backtracking ``re`` would be a safety
+    certificate issued for the wrong engine — so the relaxation is gated on
+    :func:`~dna.kernel.kinds.regex_engine.accepts_any_linear_pattern`, which is
+    true only when the applying engine is RE2 too."""
     import re
 
     if not isinstance(pattern, str):
         return f"must be a string, got {type(pattern).__name__}"
+
+    from dna.kernel.kinds.regex_engine import (
+        accepts_any_linear_pattern,
+        re2_rejection,
+    )
+
+    if accepts_any_linear_pattern():
+        return re2_rejection(pattern)
+
     if len(pattern) > MAX_PATTERN_LENGTH:
         return (
             f"is {len(pattern)} characters long (limit {MAX_PATTERN_LENGTH}) — "
-            f"too large for the backtracking check below to vouch for"
+            f"too large for the backtracking check below to vouch for. Install "
+            f"`dna-sdk[re2]` and a linear-time engine decides this instead of a "
+            f"length bound"
         )
     try:
         re.compile(pattern)

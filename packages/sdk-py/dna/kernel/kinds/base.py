@@ -251,12 +251,14 @@ class KindBase:
         schema = self.schema()
         if schema is None:
             return
-        import jsonschema  # local import — only loaded when a Kind opts in
+        # Applied through the linear-time engine when `dna-sdk[re2]` is present
+        # (decision C) — same engine that accepted the pattern at author time.
+        from dna.kernel.kinds.regex_engine import validate_instance
         if isinstance(raw, dict) and "apiVersion" in raw and isinstance(raw.get("spec"), dict):
             spec = raw["spec"]
         else:
             spec = raw or {}
-        jsonschema.validate(spec, schema)
+        validate_instance(spec, schema)
 
     def describe(self, doc: Any) -> str | None:
         """One-liner human description for tree views and lists."""
