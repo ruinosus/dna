@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-stamp-dated-spec-fields
+spec:
+  title: 'Plano: s-stamp-dated-spec-fields'
+  date: '2026-07-26'
+  status: accepted
+  story_ref: s-stamp-dated-spec-fields
+  journey_phase: plan
+  body: '1) RED: sdk-py test that build_issue_spec stamps created_at/updated_at/title; CLI test that ''issue file'' persists them and that a digest window finds the Issue. 2) Fix build_issue_spec (+title param), route cmd_issue_file through it, add title to the MCP create_issue tool. 3) Audit every board builder against the read surfaces; declare DATED_SPEC_FIELDS in dna.application.sdlc and make _digest consume it. 4) Guard: parametrized test over every ''dna sdlc <group> create'' + the pure builders, asserting the declared field is stamped; prove it bites by removing a stamp. 5) Backfill CLI verb deriving created_at from the first timeline event, else the file''s first git-commit date. Run it on .dna/dna and on dna-cloud''s board (separate PR).'
+  created_at: '2026-07-26T12:03:57+00:00'
+  updated_at: '2026-07-26T12:03:57+00:00'

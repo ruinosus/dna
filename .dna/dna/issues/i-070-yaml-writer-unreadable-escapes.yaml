@@ -22,3 +22,5 @@ spec:
     summary: 'Writer do filesystem agora usa _dump_yaml (allow_unicode=True + width=4096 + bloco literal | pra multi-linha) nos 5 call sites; 3 testes novos (unicode verbatim, sem barra de continuacao, bloco literal round-trip). Board re-serializado: 526 docs, 0 unsafe (round-trip guard verificou dado identico). Zero barras de continuacao restantes. Commits 3a8e370 + 1020381.'
   closed_at: '2026-07-25T08:44:07+00:00'
   resolution: 'Writer do filesystem agora usa _dump_yaml (allow_unicode=True + width=4096 + bloco literal | pra multi-linha) nos 5 call sites; 3 testes novos (unicode verbatim, sem barra de continuacao, bloco literal round-trip). Board re-serializado: 526 docs, 0 unsafe (round-trip guard verificou dado identico). Zero barras de continuacao restantes. Commits 3a8e370 + 1020381.'
+  created_at: '2026-07-25T08:38:31+00:00'
+  updated_at: '2026-07-25T08:44:07+00:00'

@@ -26,3 +26,5 @@ spec:
   - kind: TestRun
     name: tr-tg-raw-to-sa-swap-20260710-132225
     at: '2026-07-10T13:23:29+00:00'
+  created_at: '2026-07-08T19:35:17+00:00'
+  updated_at: '2026-07-10T13:23:15+00:00'

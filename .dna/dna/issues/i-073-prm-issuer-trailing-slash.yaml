@@ -40,3 +40,5 @@ spec:
       Nao ha workaround por configuracao: qualquer URL de host puro recebe a barra na coercao de tipo. O conserto e no SDK (serializar o identificador verbatim, ou pos-processar a rota do PRM) ou upstream no FastMCP.
 
       Honestidade sobre causalidade: isto e uma violacao de spec real e comprovada do nosso lado, mas NAO esta provado que e a causa do loop do VS Code — falta o log do cliente. Vale consertar de qualquer forma.
+  created_at: '2026-07-25T19:03:08+00:00'
+  updated_at: '2026-07-25T19:03:32+00:00'

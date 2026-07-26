@@ -1,0 +1,40 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-079-source-to-source-sync
+spec:
+  description: Sincronizacao generica source->source sobre o SourcePort — nao um export Postgres->FS pontual, mas qualquer adaptador para qualquer adaptador
+  type: task
+  severity: high
+  status: open
+  timeline:
+  - at: '2026-07-26T11:48:24+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
+  - at: '2026-07-26T11:48:51+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: |-
+      Ideia do founder, 26/07/2026, e o enquadramento e dele: nao um export Postgres->FS pontual, mas sincronizacao SOURCE -> SOURCE generica, porque o SourcePort ja e a abstracao.
+
+      De onde veio: existem hoje dois boards com o mesmo nome de escopo e conteudos diferentes — .dna/dna-cloud no git (51 issues, 92 stories) e o mesmo escopo no Postgres de producao (3 documentos, criados por um cliente MCP). 'dna publish' so vai FS -> Postgres. Nao ha volta.
+
+      Por que vale como capacidade do SDK, e nao como script:
+      - Espelho de leitura: o board pode viver no Postgres (caminho unico de escrita) e continuar versionado no git — revisavel, diffavel, offline, sobrevive ao banco. Hoje escolher um significa perder o outro.
+      - Promocao entre ambientes: dev -> staging -> prod e o mesmo problema, com adaptadores diferentes.
+      - Migracao de adaptador: quem sai de FS para Postgres (ou para outro) hoje nao tem caminho.
+      - Backup e restauracao com semantica de documento, nao de linha de banco.
+
+      O que precisa ser decidido no desenho (nao resolver aqui):
+      - Direcao e autoridade: espelho unidirecional, ou bidirecional com resolucao de conflito? Unidirecional resolve o caso do git-como-replica e e muito menor.
+      - Granularidade: escopo inteiro, por Kind, ou por documento? E o que fazer com documentos que existem no destino e nao na origem — apagar, manter, reportar?
+      - Versoes e tenant: o esquema carrega version e camada de tenant. Um espelho que achata camadas produz um destino que nao volta.
+      - Identidade: os digests canonicos precisam sobreviver a travessia, senao espelhar vira migracao.
+      - Incremental: varredura completa a cada vez nao escala; existe outbox no adaptador SQL que pode alimentar isso.
+
+      Vale como item de SDK porque e vendor-neutro por construcao — qualquer self-hoster que troque de adaptador precisa disso, nao so o DNA Cloud.
+  created_at: '2026-07-26T11:48:24+00:00'
+  updated_at: '2026-07-26T11:48:51+00:00'

@@ -12,3 +12,5 @@ spec:
   reporter: claude-code
   spec_refs:
   - speckit-mcp-apps-memory-card
+  created_at: '2026-07-25T11:56:13+00:00'
+  updated_at: '2026-07-25T11:56:13+00:00'

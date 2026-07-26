@@ -14,3 +14,5 @@ spec:
     type: status_change
     source: cli
     to: open
+  created_at: '2026-07-26T07:20:00+00:00'
+  updated_at: '2026-07-26T07:20:00+00:00'

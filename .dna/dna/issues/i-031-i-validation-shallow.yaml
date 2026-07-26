@@ -30,3 +30,5 @@ spec:
     type: comment
     source: cli
     summary: 'PR aberto: https://github.com/ruinosus/dna/pull/101 (branch fix/validation-depth). Aguardando review/merge — resolve no merge.'
+  created_at: '2026-07-13T11:18:30+00:00'
+  updated_at: '2026-07-13T11:21:56+00:00'

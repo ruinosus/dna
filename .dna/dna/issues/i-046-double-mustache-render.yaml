@@ -22,3 +22,5 @@ spec:
     summary: 'PR #197, v0.22.0. So a instruction do proprio agente mantem delimitadores vivos; todo outro valor protegido por sentinelas na passada 1 e restaurado na 2. O caso legitimo (open-swe, ref dentro de instruction) verificado ANTES e pinado. {{ literal em Skill sobrevive intacto, provado unit + fim-a-fim. 3 mutantes mortos.'
   closed_at: '2026-07-21T14:05:59+00:00'
   resolution: 'PR #197, v0.22.0. So a instruction do proprio agente mantem delimitadores vivos; todo outro valor protegido por sentinelas na passada 1 e restaurado na 2. O caso legitimo (open-swe, ref dentro de instruction) verificado ANTES e pinado. {{ literal em Skill sobrevive intacto, provado unit + fim-a-fim. 3 mutantes mortos.'
+  created_at: '2026-07-21T12:17:43+00:00'
+  updated_at: '2026-07-21T14:05:59+00:00'
