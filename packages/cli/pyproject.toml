@@ -24,7 +24,7 @@ dependencies = [
     # replaces the registry lookup with the workspace path source below
     # ([tool.uv.sources] — editable ../sdk-py), so dev installs keep tracking
     # the sibling package live; the constraint only bites consumers.
-    "dna-sdk>=0.29,<0.30",
+    "dna-sdk>=0.30,<0.31",
 ]
 
 [project.scripts]
