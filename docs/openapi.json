@@ -5359,7 +5359,7 @@
     },
     "/v1/kinds": {
       "get": {
-        "description": "List the scope's authored Kinds with their approval state — the\naudit view. Reads DOCUMENTS, not the registry: an unapproved Kind is\nprecisely the one the registry does not have, and it is the one a\nreviewer came here for.",
+        "description": "List the CALLER's authored Kinds with their approval state — the\naudit view. Reads DOCUMENTS, not the registry: an unapproved Kind is\nprecisely the one the registry does not have, and it is the one a\nreviewer came here for.\n\nFILTERED to what the caller owns (plus inherited and non-namespaced\nrows), because a scope is shared by default and this route otherwise\nhanded a caller its neighbours' Kind names, namespaces and\n``proposed_by``/``approved_by`` — identity strings, i.e. the very fact\nthe approval door's 404 exists to withhold. A request that resolves NO\nworkspace (``--auth none`` self-host, an explicit operator ``scope=``)\nis not filtered — the same hinge the namespace gate uses for an\nunattributed write. 403 for a namespace two claims give to different\nowners, 503 when the claim registry cannot be read: neither degrades to\nthe unfiltered list.",
         "operationId": "list_authored_kinds_v1_kinds_get",
         "parameters": [
           {

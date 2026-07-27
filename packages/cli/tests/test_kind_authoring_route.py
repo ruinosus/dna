@@ -437,6 +437,28 @@ def test_a_shared_secret_deployment_does_not_call_its_caller_local(
     assert _stored_spec(dna_dir, name)["proposed_by"] == "rest:unidentified"
 
 
+def test_the_local_sentinel_is_reserved_for_the_lane_that_verifies_nothing():
+    """The branch keys on the FACT, not on one lane's configuration name.
+
+    ``--auth none`` is the only lane that requires no credential, so it is the
+    only one whose nameless caller is local. Every other lane verified something
+    before the route ran, and a caller that got past verification and still
+    names nobody is verified-and-anonymous. The branch used to select the LOCAL
+    sentinel for everything that was not the literal string ``"token"`` — so
+    ``--auth config`` reaching here with no claims recorded ``rest:local``, the
+    same mislabel the sibling branch exists to end, one lane over.
+
+    Asserted on the helper rather than through HTTP because the config lane's
+    middleware stashes claims for every request it lets through: the branch is
+    unreachable over the wire today, and an unreachable branch nothing can
+    assert on is exactly how the wrong sentinel survives the next rename."""
+    assert R._unidentified_actor("none") == R._UNIDENTIFIED_LOCAL_ACTOR
+    assert R._unidentified_actor("token") == R._UNIDENTIFIED_TOKEN_ACTOR
+    assert R._unidentified_actor("config") == R._UNIDENTIFIED_TOKEN_ACTOR, (
+        "a VERIFIED lane's nameless caller is not a laptop"
+    )
+
+
 # ── 6. a first author on a store with no registry scope ───────────────────
 
 

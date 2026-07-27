@@ -348,10 +348,21 @@ export interface paths {
         };
         /**
          * List Authored Kinds
-         * @description List the scope's authored Kinds with their approval state — the
+         * @description List the CALLER's authored Kinds with their approval state — the
          *     audit view. Reads DOCUMENTS, not the registry: an unapproved Kind is
          *     precisely the one the registry does not have, and it is the one a
          *     reviewer came here for.
+         *
+         *     FILTERED to what the caller owns (plus inherited and non-namespaced
+         *     rows), because a scope is shared by default and this route otherwise
+         *     handed a caller its neighbours' Kind names, namespaces and
+         *     ``proposed_by``/``approved_by`` — identity strings, i.e. the very fact
+         *     the approval door's 404 exists to withhold. A request that resolves NO
+         *     workspace (``--auth none`` self-host, an explicit operator ``scope=``)
+         *     is not filtered — the same hinge the namespace gate uses for an
+         *     unattributed write. 403 for a namespace two claims give to different
+         *     owners, 503 when the claim registry cannot be read: neither degrades to
+         *     the unfiltered list.
          */
         get: operations["list_authored_kinds_v1_kinds_get"];
         put?: never;
@@ -398,9 +409,14 @@ export interface paths {
          *     forge is not attribution. The document's ``proposed_by`` is preserved
          *     untouched, so the audit names both acts and neither wears the other's
          *     name. 404 when no such Kind was authored in this scope (approval acts on
-         *     an existing document and creates none), 400 for a missing tenant / a
-         *     malformed Kind name / a Kind declared under two namespaces at once, 403
-         *     when the namespace gate refuses the write.
+         *     an existing document and creates none — and a Kind authored by ANOTHER
+         *     workspace in a shared scope is a 404 too: it is not the caller's to
+         *     approve, and saying "it exists but is not yours" would hand a stranger
+         *     a probe for what its neighbours are authoring), 400 for a missing
+         *     tenant / a malformed Kind name / a Kind the caller declared under two
+         *     of its own namespaces at once, 403 when the namespace gate refuses the
+         *     write, 503 when the namespace registry scope has not been provisioned
+         *     in this store.
          */
         post: operations["approve_kind_v1_kinds__kind__approve_post"];
         delete?: never;

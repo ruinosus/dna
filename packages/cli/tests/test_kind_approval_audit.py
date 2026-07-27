@@ -406,6 +406,33 @@ def test_the_owner_still_approves_its_own_kind_in_a_shared_scope(dna_dir):
     assert _stored_spec(dna_dir, mine.json()["name"])["approved_by"] == _HUMAN["email"]
 
 
+def _claim_namespace(dna_dir, *, namespace: str, owner: str,
+                     name: str | None = None) -> None:
+    """Write ONE ``KindNamespace`` claim into the registry scope.
+
+    ``name`` defaults to the namespace (the ordinary one-claim-per-namespace
+    shape); passing a different document name is how a SECOND, conflicting
+    claim for the same namespace is seeded — the doubly-claimed record
+    ``owner_of`` refuses to resolve."""
+    from dna.application.namespace_assignment import TENANT_API_VERSION
+    from dna.kernel.protocols import SYSTEM_SCOPE
+
+    doc = name or namespace
+
+    async def claim(live):
+        await live.kernel.write_document(
+            SYSTEM_SCOPE, "KindNamespace", doc,
+            {"apiVersion": TENANT_API_VERSION, "kind": "KindNamespace",
+             "metadata": {"name": doc},
+             "spec": {"owner": owner, "namespace": namespace,
+                      "claimed_at": "2099-01-01T00:00:00+00:00",
+                      "notes": "test seed"}},
+            invalidate_mode="doc",
+        )
+
+    _on_fresh_kernel(dna_dir, claim)
+
+
 def _seed_second_namespace(dna_dir, *, owner: str, namespace: str,
                            kind: str = "Contrato") -> str:
     """Give ``owner`` a SECOND namespace and a Kind of the same name under it.
@@ -420,21 +447,10 @@ def _seed_second_namespace(dna_dir, *, owner: str, namespace: str,
     ``acme.example`` deliberately lacks the ``.dna.local`` suffix, so
     ``assign_namespace`` filters it out and authoring keeps landing under the
     assigned namespace. Returns the seeded document's name."""
-    from dna.application.namespace_assignment import TENANT_API_VERSION
-    from dna.kernel.protocols import SYSTEM_SCOPE
-
     name = f"{namespace}--{kind}"
+    _claim_namespace(dna_dir, namespace=namespace, owner=owner)
 
     async def seed(live):
-        await live.kernel.write_document(
-            SYSTEM_SCOPE, "KindNamespace", namespace,
-            {"apiVersion": TENANT_API_VERSION, "kind": "KindNamespace",
-             "metadata": {"name": namespace},
-             "spec": {"owner": owner, "namespace": namespace,
-                      "claimed_at": "2099-01-01T00:00:00+00:00",
-                      "notes": "proven public claim (test seed)"}},
-            invalidate_mode="doc",
-        )
         await live.kernel.write_document(
             _SCOPE, "KindDefinition", name,
             {"apiVersion": "github.com/ruinosus/dna/core/v1",
@@ -479,6 +495,43 @@ def test_one_kind_under_two_namespaces_the_caller_owns_is_an_ambiguity(dna_dir):
 
     for name in (seeded, assigned.json()["name"]):
         assert not _stored_spec(dna_dir, name).get("approved_by"), name
+    assert _registered_port(dna_dir, "Contrato") is None
+
+
+def test_a_doubly_claimed_namespace_refuses_the_approval(dna_dir):
+    """The third control path out of ``_authored_document_name``, and the only
+    one that had no test — its two siblings (404 for a stranger's Kind, 400 for
+    a Kind the caller declared twice) are both covered above.
+
+    ``owner_of`` REFUSES to resolve a namespace two ``KindNamespace`` claims
+    give to different owners, rather than picking a winner — so ``owns()``
+    raises mid-iteration and the approval never happens. That is the right
+    answer: an ambiguous authorization record is not a tie to break, and
+    breaking it either way would let one of the two workspaces confer effect
+    inside a namespace the registry also says belongs to somebody else. The
+    refusal is a ``NamespaceOwnershipError`` (a ``LayerPolicyViolationError``),
+    so the face answers 403 — and it must NAME both claimants, or the operator
+    cannot find the row to delete."""
+    with _client(dna_dir) as c:
+        mine = _author(c, "agent", tenant=_WID)
+        assert mine.status_code == 201, mine.text
+        namespace = mine.json()["namespace"]
+
+    # The conflicting claim lands AFTER authoring — authoring itself resolves
+    # the same registry, so seeding first would refuse the setup instead.
+    intruder = "ws-intruder0000000000001"
+    _claim_namespace(dna_dir, namespace=namespace, owner=intruder,
+                     name=f"{namespace}-conflict")
+
+    with _client(dna_dir, raise_server_exceptions=False) as c:
+        r = c.post(f"/v1/kinds/Contrato/approve", params={"tenant": _WID},
+                   headers={"Authorization": "Bearer human"})
+        assert r.status_code == 403, r.text
+        detail = r.json()["detail"]
+        assert namespace in detail, detail
+        assert _WID in detail and intruder in detail, detail
+
+    assert not _stored_spec(dna_dir, mine.json()["name"]).get("approved_by")
     assert _registered_port(dna_dir, "Contrato") is None
 
 
@@ -531,6 +584,257 @@ def test_approving_without_a_registry_scope_refuses_actionably(dna_dir):
         detail = r.json()["detail"]
         assert "_lib" in detail, detail
         assert re.search(r"provision", detail, re.I), detail
+
+
+# ── 7. the listing must withhold what the approval door already withholds ──
+#
+# ``GET /v1/kinds`` is the sibling of the approval door and reads the SAME
+# shared scope. Approval answers 404 for a neighbour's Kind on the stated
+# ground that "it exists but is not yours" hands a stranger a probe for what
+# its neighbours are authoring — and then the listing handed over the whole
+# roster: the neighbour's Kind names, its namespace, and ``proposed_by`` /
+# ``approved_by``, which are identity strings (emails).
+#
+# The counter-argument — "the listing is also the operator's audit view" — is
+# the conflation this section refuses: an operator view needs a different
+# authorization and a different result set (every workspace), and serving it by
+# leaving the TENANT route unfiltered makes the tenant's default the operator's
+# power.
+#
+# Three things the filter must NOT break, all load-bearing:
+#   * the unattributed lane (``--auth none`` self-host, an explicit operator
+#     ``scope=`` call) resolves no tenant — filtering it would answer every
+#     self-hoster with an empty list. Same hinge ``NamespaceOwnershipGate`` uses
+#     for an unattributed write: no resolved tenant ⇒ not filtered.
+#   * NON-NAMESPACED documents. A name without ``--`` has no namespace half to
+#     test at all — an operator-seeded ``KindDefinition`` is the ordinary case.
+#   * INHERITED rows — a curated base Kind a workspace consumes through
+#     ``parent_scope`` is nobody's to own, so "owned by the caller" alone would
+#     delete it from the roster. MEASURED, and the reason the seed below lives
+#     in the caller's own scope rather than in ``_lib``: no inherited row can
+#     reach this listing TODAY. ``KindDefinition`` is a BOOTSTRAP Kind, and
+#     ``Kernel._NON_INHERITABLE_KINDS`` unions ``_BOOTSTRAP_KINDS``, so
+#     ``kernel.query``'s catalog and parent passes are both skipped for it and
+#     ``origin="all"`` is exactly ``origin="local"``. A ``KindDefinition``
+#     written into ``_lib`` (the ``DEFAULT_BASE_SCOPE`` parent) does NOT appear
+#     in the ``concierge`` listing even UNFILTERED — verified. The rule is
+#     implemented anyway, because it costs one pass and because the day
+#     ``scope_inheritable`` flips is not the day to discover the listing eats
+#     the base catalogue; :func:`test_an_inherited_row_survives_the_filter`
+#     pins the branch directly against the use-case.
+
+
+def _seed_unnamespaced_kind_document(dna_dir, *, name: str = "operatorseeded") -> str:
+    """A ``KindDefinition`` in the CALLER's scope whose document name carries no
+    ``--`` — so there is no namespace half for the ownership test to read.
+
+    Not an exotic shape: every ``KindDefinition`` that predates the authoring
+    door, and every one an operator writes by hand, looks like this. A filter
+    that split the name unconditionally would drop the whole class."""
+
+    async def seed(live):
+        await live.kernel.write_document(
+            _SCOPE, "KindDefinition", name,
+            {"apiVersion": "github.com/ruinosus/dna/core/v1",
+             "kind": "KindDefinition", "metadata": {"name": name},
+             "spec": {"target_api_version": "curated.example/v1",
+                      "target_kind": "Curada",
+                      "alias": "curated-example-curada",
+                      "origin": "curated.example",
+                      "schema": _SCHEMA,
+                      "storage": {"type": "yaml", "container": "curadas"}}},
+        )
+        return name
+
+    return _on_fresh_kernel(dna_dir, seed)
+
+
+def test_the_listing_does_not_hand_a_workspace_its_neighbours_kinds(dna_dir):
+    """RED against the pre-filter code: A's listing carried B's document name,
+    B's namespace AND ``proposed_by: agent@tenant.example`` — the neighbour's
+    identity string, which is the very fact the approval door's 404 withholds.
+
+    A authors one Kind of its own and an operator-seeded, non-namespaced one
+    sits beside it, so a filter that over-corrected (empty list, or a blind
+    ``rsplit`` on every name) fails here too."""
+    curated = _seed_unnamespaced_kind_document(dna_dir)
+    with _client(dna_dir) as c:
+        # B — the neighbour. Proposed by the AGENT identity, so the leak is
+        # attributable to a specific email and not merely to "a row appeared".
+        b = _author(c, "agent", kind="Contrato", tenant=_OTHER_WID)
+        assert b.status_code == 201, b.text
+        neighbours_document = b.json()["name"]
+
+        # A — the caller. A Kind of its own, under a different Kind name so the
+        # two rows can never be confused for one another.
+        mine = _author(c, "human", kind="Proposta", tenant=_WID)
+        assert mine.status_code == 201, mine.text
+        my_document = mine.json()["name"]
+
+        listed = c.get("/v1/kinds", params={"tenant": _WID},
+                       headers={"Authorization": "Bearer human"})
+        assert listed.status_code == 200, listed.text
+        rows = listed.json()["kinds"]
+
+    by_name = {r["name"]: r for r in rows}
+    # The sanity half FIRST: if the seeds did not land, every assertion below
+    # would pass on an empty listing for the wrong reason.
+    assert my_document in by_name, rows
+    assert curated in by_name, (
+        f"the non-namespaced Kind {curated!r} is not in the listing — the "
+        f"filter deleted a document with no namespace half to test: "
+        f"{sorted(by_name)}"
+    )
+
+    leaked = by_name.get(neighbours_document)
+    assert leaked is None, (
+        f"workspace {_WID}'s listing carries workspace {_OTHER_WID}'s authored "
+        f"Kind: {leaked!r}"
+    )
+    # …and the identity half, named on its own: `proposed_by` is an email, and
+    # a projection that dropped `name` while keeping the actors would satisfy
+    # the assertion above while still leaking the thing that matters.
+    assert not [r for r in rows if r.get("proposed_by") == _AGENT["email"]], rows
+    assert not [r for r in rows if r.get("namespace") == b.json()["namespace"]], rows
+
+
+def test_an_inherited_row_survives_the_filter():
+    """"Owned by the caller OR inherited from the parent" — the second half,
+    pinned against the use-case with a stub kernel.
+
+    It cannot be reached through the store today (see the section comment: a
+    BOOTSTRAP Kind never runs ``kernel.query``'s parent pass), and a rule with
+    no test is a rule the next refactor deletes. The stub answers ``origin=
+    "local"`` with the caller's own document only, and the default
+    ``origin="all"`` with that document plus one the caller does not own — which
+    is exactly the shape an inherited curated Kind arrives in."""
+    from dna.application.kind_authoring import list_authored_kinds_impl
+
+    mine = "ws-1a2b3c.dna.local--Proposta"
+    inherited = "curated.example--Curada"
+
+    def _doc(name, *, proposed_by):
+        return {"metadata": {"name": name},
+                "spec": {"target_kind": name.split("--")[1],
+                         "target_api_version": f"{name.split('--')[0]}/v1",
+                         "origin": name.split("--")[0],
+                         "proposed_by": proposed_by}}
+
+    class _Kernel:
+        async def kind_namespaces(self):
+            return [{"spec": {"namespace": "ws-1a2b3c.dna.local",
+                              "owner": "ws-caller"}}]
+
+        async def query(self, scope, kind, *, tenant=None, origin="all", **kw):
+            yield _doc(mine, proposed_by="me@tenant.example")
+            if origin != "local":
+                yield _doc(inherited, proposed_by="curator@base.example")
+
+    class _Live:
+        kernel = _Kernel()
+
+        def default_scope(self, tenant):
+            return "concierge"
+
+    out = asyncio.run(list_authored_kinds_impl(_Live(), tenant="ws-caller"))
+    names = {k["name"] for k in out["kinds"]}
+    assert names == {mine, inherited}, names
+
+
+def test_an_unattributed_listing_is_not_filtered(dna_dir):
+    """No resolved tenant ⇒ no filter — the ``--auth none`` self-host and the
+    explicit operator ``scope=`` call.
+
+    A filter that unconditionally demands ownership answers every self-hoster
+    with an empty list, because there is no workspace to own anything. The hinge
+    is the one ``NamespaceOwnershipGate`` already uses for an unattributed
+    write, and it rests on the same standing invariant: a hosted face never
+    issues an unattributed request on a user's behalf."""
+    with _client(dna_dir) as c:
+        a = _author(c, "agent", kind="Contrato", tenant=_WID)
+        b = _author(c, "agent", kind="Acordo", tenant=_OTHER_WID)
+        assert (a.status_code, b.status_code) == (201, 201), (a.text, b.text)
+
+        listed = c.get("/v1/kinds", params={"scope": _SCOPE},
+                       headers={"Authorization": "Bearer human"})
+        assert listed.status_code == 200, listed.text
+        names = {k["name"] for k in listed.json()["kinds"]}
+
+    assert {a.json()["name"], b.json()["name"]} <= names, sorted(names)
+
+
+def test_an_ambiguous_ownership_record_refuses_the_listing(dna_dir):
+    """Fail CLOSED, never silently unfiltered.
+
+    Two ``KindNamespace`` claims naming different owners for one namespace make
+    ``owner_of`` raise rather than pick a winner, and the listing must not
+    answer that by falling back to the unfiltered roster — the one outcome that
+    is not acceptable, because it turns an unreadable authorization record into
+    a grant.
+
+    The second claim needs its own DOCUMENT name: reusing the namespace as the
+    document name overwrites the first claim instead of contradicting it, and
+    the listing then answers a perfectly well-formed 200 with the caller's row
+    filtered out — a test that would have asserted the wrong mechanism."""
+    with _client(dna_dir) as c:
+        mine = _author(c, "agent", kind="Contrato", tenant=_WID)
+        assert mine.status_code == 201, mine.text
+        namespace = mine.json()["namespace"]
+
+    intruder = "ws-intruder0000000000001"
+    _claim_namespace(dna_dir, namespace=namespace, owner=intruder,
+                     name=f"{namespace}-conflict")
+
+    with _client(dna_dir, raise_server_exceptions=False) as c:
+        r = c.get("/v1/kinds", params={"tenant": _WID},
+                  headers={"Authorization": "Bearer human"})
+        assert r.status_code == 403, r.text
+        detail = r.json()["detail"]
+        assert namespace in detail, detail
+        assert _WID in detail and intruder in detail, detail
+
+
+def test_a_registry_read_error_that_is_not_a_missing_file_still_refuses(
+    dna_dir, monkeypatch,
+):
+    """The gap ``FileNotFoundError``-only mapping left, on BOTH read doors.
+
+    The write path's ``NamespaceOwnershipGate`` catches a BROAD ``Exception`` on
+    the registry read and converts it to an honest refusal; the read doors
+    caught only ``FileNotFoundError``. On a filesystem store the two coincide (a
+    missing ``_lib`` DIRECTORY is exactly a ``FileNotFoundError``), which is why
+    ``test_approving_without_a_registry_scope_refuses_actionably`` could not see
+    this — on Postgres a transient registry read error is a driver exception,
+    and it 500'd on approval while the identical failure refused honestly one
+    path over.
+
+    Simulated at the seam rather than by standing up Postgres: the failure being
+    tested is "``kind_namespaces()`` raised something that is not a missing
+    file", and that is precisely what is injected. 503 because it is a
+    deployment PRECONDITION, not the caller's fault — and never a silent
+    success, which for the LISTING would mean the unfiltered roster."""
+    from dna.kernel import Kernel
+
+    async def boom(self, *a, **kw):
+        raise RuntimeError("connection reset by peer")
+
+    with _client(dna_dir) as c:
+        assert _author(c, "agent").status_code == 201
+
+    monkeypatch.setattr(Kernel, "kind_namespaces", boom, raising=True)
+
+    with _client(dna_dir, raise_server_exceptions=False) as c:
+        approved = _approve(c, "human")
+        assert approved.status_code == 503, approved.text
+        assert "connection reset by peer" in approved.json()["detail"], approved.text
+
+        listed = c.get("/v1/kinds", params={"tenant": _WID},
+                       headers={"Authorization": "Bearer human"})
+        assert listed.status_code == 503, (
+            f"an unreadable registry made the listing answer "
+            f"{listed.status_code}; the one outcome that is not acceptable is "
+            f"the unfiltered list: {listed.text}"
+        )
 
 
 def test_approving_a_kind_that_was_never_authored_is_a_404(dna_dir):

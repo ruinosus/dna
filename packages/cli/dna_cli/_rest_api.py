@@ -78,6 +78,36 @@ _UNIDENTIFIED_LOCAL_ACTOR = "rest:local"
 #: yet anonymous — a different fact from "local", and worth its own label.
 _UNIDENTIFIED_TOKEN_ACTOR = "rest:unidentified"
 
+
+def _unidentified_actor(auth: str) -> str:
+    """Which sentinel a request with NO identity claim is recorded as.
+
+    Keyed on the FACT the two labels actually distinguish — was this request
+    verified at all? — and ``auth="none"`` is that fact stated exactly: it is
+    the one lane that requires no credential, so its caller is the local/OSS
+    self-host operator and nobody else. Every other lane put a credential
+    through verification before the route ran; a caller that got past it and
+    still names nobody is verified-and-anonymous, which is what
+    ``rest:unidentified`` means.
+
+    It used to key on ``auth == "token"``, i.e. on ONE lane of "verified"
+    spelled as a configuration name. Under ``--auth config`` a request that
+    reached a route with no claims was therefore recorded as ``rest:local`` —
+    the same mislabel that branch was written to end, one lane over, telling a
+    reviewer that a remote federated caller was somebody at a laptop.
+    Unreachable while ``guarded`` requires a verified token and the config
+    middleware stashes claims for every request it lets through, so this is the
+    branch being made honest rather than a live bug — but the next lane added
+    inherits whichever rule is written here.
+
+    Module-level and not a closure so it is testable on its own: the value is a
+    string that lands in a PERSISTED audit field, and an unreachable branch that
+    nothing can assert on is how the wrong sentinel survives a rename."""
+    return (
+        _UNIDENTIFIED_LOCAL_ACTOR if auth == "none" else _UNIDENTIFIED_TOKEN_ACTOR
+    )
+
+
 # ── MIF import bounds ───────────────────────────────────────────────────────
 #
 # The import route buffers and parses the whole bundle (dedupe + validation are
@@ -291,6 +321,7 @@ def build_app(
         BoardItemNotFound,
         MemberForbidden,
         MemberNotFound,
+        NamespaceRegistryUnreadable,
         ProjectNotFound,
         WorkspaceForbidden,
         WorkspaceLastOwner,
@@ -681,18 +712,21 @@ def build_app(
         (an unattributable write is still a write worth recording, and failing it
         turns attribution into a new way to lose work):
 
-        * a VERIFIED token carrying no identity claim at all →
-          :data:`_UNIDENTIFIED_TOKEN_ACTOR`. ``--auth token`` — a REMOTE
-          deployment behind a shared secret — is this case, not the local one:
-          the bearer IS verified (against ``DNA_API_TOKEN``), it simply names
-          nobody. Calling that caller ``rest:local`` was a mislabel inherited
-          from the MCP precedent, where the two lanes were lumped together as
-          "no token at all"; ``DNA_PERSONAL_ID`` still outranks it, because an
-          operator who declared a name has said more than the sentinel can.
+        * a request that carries no claims at all → the sentinel
+          :func:`_unidentified_actor` picks for this lane. ``--auth token`` — a
+          REMOTE deployment behind a shared secret — is the verified-and-nameless
+          case, not the local one: the bearer IS verified (against
+          ``DNA_API_TOKEN``), it simply names nobody. Calling that caller
+          ``rest:local`` was a mislabel inherited from the MCP precedent, where
+          the two lanes were lumped together as "no token at all";
+          ``DNA_PERSONAL_ID`` still outranks either sentinel, because an
+          operator who declared a name has said more than a sentinel can.
         * no token at all (``--auth none``, i.e. local or OSS self-host) →
           ``DNA_PERSONAL_ID`` if the operator declared one — the env var that
           already names an offline caller for personal memory — and
-          :data:`_UNIDENTIFIED_LOCAL_ACTOR` otherwise.
+          :data:`_UNIDENTIFIED_LOCAL_ACTOR` otherwise. That lane is the ONLY one
+          the local sentinel belongs to, which is the whole content of
+          :func:`_unidentified_actor`.
 
         The two labels name the CHANNEL this face is (``rest:``), not the
         identity: recording a channel as an identity is the conflation the MCP
@@ -705,12 +739,10 @@ def build_app(
         claims = _actor_claims_from_state(request)
         if claims is None:
             # ``--auth token`` stashes no claims (there are none to stash), but
-            # it is not the local lane — see the docstring.
-            unidentified = (
-                _UNIDENTIFIED_TOKEN_ACTOR if auth == "token"
-                else _UNIDENTIFIED_LOCAL_ACTOR
-            )
-            return personal_id_from_env() or unidentified
+            # it is not the local lane — see :func:`_unidentified_actor` for why
+            # the choice keys on "did this lane verify anything at all" rather
+            # than on one lane's configuration name.
+            return personal_id_from_env() or _unidentified_actor(auth)
         identity = _identity_from_token(claims)
         for candidate in (identity.email, identity.oid, claims.get("sub")):
             if isinstance(candidate, str) and candidate.strip():
@@ -1052,12 +1084,20 @@ def build_app(
             raise HTTPException(status_code=403, detail=str(exc)) from exc
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from None
-        except FileNotFoundError as exc:
+        except (NamespaceRegistryUnreadable, FileNotFoundError) as exc:
             # The sibling door has mapped this since it shipped; this one did
             # not, so the same missing directory answered 503 on one route and
             # an unmapped 500 on the other. Approval resolves the KindNamespace
             # registry to check the caller owns the namespace the Kind was
             # authored under — same read, same precondition, same honest answer.
+            #
+            # BOTH exceptions, because ``FileNotFoundError`` alone was only the
+            # filesystem store's spelling of the failure: the core now refuses
+            # broadly (``NamespaceRegistryUnreadable``, mirroring the write
+            # gate's broad catch), so a transient Postgres registry error
+            # refuses here as honestly as a missing `_lib` directory does —
+            # instead of 500ing on this door while the write path answered
+            # properly.
             raise HTTPException(
                 status_code=503,
                 detail=_no_registry_scope_detail(
@@ -1075,13 +1115,37 @@ def build_app(
         scope: str | None = Query(default=None),
         tenant: str | None = Query(default=None),
     ) -> dict[str, Any]:
-        """List the scope's authored Kinds with their approval state — the
+        """List the CALLER's authored Kinds with their approval state — the
         audit view. Reads DOCUMENTS, not the registry: an unapproved Kind is
         precisely the one the registry does not have, and it is the one a
-        reviewer came here for."""
-        return await list_authored_kinds_impl(
-            await _live(), tenant=tenant, scope=scope,
-        )
+        reviewer came here for.
+
+        FILTERED to what the caller owns (plus inherited and non-namespaced
+        rows), because a scope is shared by default and this route otherwise
+        handed a caller its neighbours' Kind names, namespaces and
+        ``proposed_by``/``approved_by`` — identity strings, i.e. the very fact
+        the approval door's 404 exists to withhold. A request that resolves NO
+        workspace (``--auth none`` self-host, an explicit operator ``scope=``)
+        is not filtered — the same hinge the namespace gate uses for an
+        unattributed write. 403 for a namespace two claims give to different
+        owners, 503 when the claim registry cannot be read: neither degrades to
+        the unfiltered list."""
+        try:
+            return await list_authored_kinds_impl(
+                await _live(), tenant=tenant, scope=scope,
+            )
+        except LayerPolicyViolationError as exc:
+            raise HTTPException(status_code=403, detail=str(exc)) from exc
+        except (NamespaceRegistryUnreadable, FileNotFoundError) as exc:
+            raise HTTPException(
+                status_code=503,
+                detail=_no_registry_scope_detail(
+                    "listed: the listing resolves the KindNamespace registry to "
+                    "decide which authored Kinds belong to the caller, and an "
+                    "unreadable authorization record is not a granted one",
+                    exc,
+                ),
+            ) from exc
 
     # -- bundle entries (list/read/write/revert a bundle-file fork, plane B) -
     # A bundle-pattern Kind (Skill, and any future bundle Kind) stores MULTIPLE

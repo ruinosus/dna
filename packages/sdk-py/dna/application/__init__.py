@@ -57,6 +57,7 @@ from dna.application.documents import (
 )
 from dna.application.kind_authoring import (
     AuthoredKindNotFound,
+    NamespaceRegistryUnreadable,
     approve_kind_impl,
     author_kind_impl,
     list_authored_kinds_impl,
@@ -184,6 +185,7 @@ __all__ = [
     "UnknownKindError",
     # Kind authoring — the dedicated door (writes an INERT KindDefinition)
     "AuthoredKindNotFound",
+    "NamespaceRegistryUnreadable",
     "approve_kind_impl",
     "author_kind_impl",
     "list_authored_kinds_impl",

@@ -38,6 +38,7 @@ from dna.application.namespace_assignment import assign_namespace
 
 __all__ = [
     "AuthoredKindNotFound",
+    "NamespaceRegistryUnreadable",
     "approve_kind_impl",
     "author_kind_impl",
     "kind_document_name",
@@ -61,6 +62,25 @@ class AuthoredKindNotFound(LookupError):
     400 every other refusal here carries: an approval door that quietly CREATED
     the document it was asked to approve would be an authoring door with an
     approval marker on it — precisely the thing that must not exist."""
+
+
+class NamespaceRegistryUnreadable(RuntimeError):
+    """The ``KindNamespace`` claim registry could not be read, so who owns a
+    namespace cannot be decided — mapped to **503**, never to 400/403/500.
+
+    Its own exception because it is a deployment PRECONDITION and not the
+    caller's fault, and because the alternative — letting the underlying store
+    error out of the use-case raw — is what made the two doors disagree. The
+    write path's :class:`~dna.kernel.write.namespace_gate.NamespaceOwnershipGate`
+    catches a BROAD ``Exception`` on the same read and converts it to an honest
+    refusal; the read doors caught only ``FileNotFoundError``. On a filesystem
+    store the two coincide (a missing ``_lib`` directory), so the gap was
+    invisible — on Postgres a transient registry read error would 500 on
+    approval while the identical failure refused honestly one path over.
+
+    Fail-CLOSED is the whole content of it: without the registry we cannot tell
+    an owner from a stranger, and "no rows" is not the same fact as "the read
+    failed"."""
 
 
 #: What a Kind name is allowed to be — a CamelCase identifier, exactly as the
@@ -209,6 +229,27 @@ async def author_kind_impl(
     # would carry `approved_by` forward too, and an edit must withdraw the
     # approval it invalidated. A missing document reads as None here (the
     # ordinary first-author case), so `created_at` falls back to `now`.
+    #
+    # NOT a plain local existence check, and the difference is accepted here
+    # EXPLICITLY rather than left for the next reader to discover. `get_document`
+    # answers through a bounded cache (2000 entries / 60s TTL) and through the
+    # parent-scope inheritance fallback, so "there is no document" is really
+    # "no document is VISIBLE from here right now". Two consequences, both
+    # measured and both narrow:
+    #
+    #   * a stale birth date needs an out-of-band deletion INSIDE the TTL. It
+    #     cannot be reached through any API path: the generic delete refuses
+    #     BOOTSTRAP Kinds and `KindDefinition` is one of them, so nothing a
+    #     caller can invoke removes the document that seeds `born_at`.
+    #   * a same-named document in the PARENT scope would be read instead — and
+    #     writing one there requires owning the same namespace in that scope,
+    #     i.e. being the same workspace. It carries forward its own birth date,
+    #     which is the honest answer for a Kind the workspace is re-authoring
+    #     locally, not a foreign value.
+    #
+    # A fresh read (cache bypass, local-only) would be the exact measurement,
+    # but it costs a store round-trip on every author call to close a window
+    # only an operator with shell access can open on their own documents.
     existing = await live.kernel.get_document(scope, _KIND, name)
     prior = existing.get("spec") if isinstance(existing, dict) else None
     born_at = prior.get("created_at") if isinstance(prior, dict) else None
@@ -273,18 +314,34 @@ async def _owns(live: Any, tenant: str) -> Any:
     """A predicate ``(namespace) -> bool``: does ``tenant`` own that namespace?
 
     Answered from the ``KindNamespace`` claim registry — the SAME rows and the
-    SAME resolver (:func:`~dna.kernel.kinds.namespaces.owner_of`, prefix-aware,
-    most-specific claim first) the write-path gate decides with, so ownership
-    cannot mean one thing to the gate and another to this door.
+    SAME resolver (:func:`~dna.kernel.kinds.namespaces.owner_of`) the write-path
+    gate decides with. PARITY WITH THE GATE is the entire reason, and it is not
+    a coverage argument: ``owner_of``'s prefix walk is inert on this path,
+    because a document name cannot contain ``/`` and so a sub-namespace claim
+    can never appear as the namespace half of one. What using it buys is that
+    ownership cannot mean one thing to the gate that decides the WRITE and
+    another to the doors that decide who may approve and who may see — including
+    its refusal to resolve a doubly-claimed namespace, which is a verdict this
+    door must inherit rather than re-derive.
 
     Read once per call and closed over: the registry is a single ``_lib`` read
-    and a per-candidate read would turn one query into N. An unreadable registry
-    is left to raise, exactly as the gate leaves it — we cannot tell an owner
-    from a stranger without it, and "no rows" is not the same fact as "the read
-    failed"."""
+    and a per-candidate read would turn one query into N.
+
+    An unreadable registry REFUSES, as :class:`NamespaceRegistryUnreadable`, on
+    the same broad ``except Exception`` the gate uses — see that class for why
+    the narrower ``FileNotFoundError``-only shape was a real gap and not a
+    tidiness point."""
     from dna.kernel.kinds.namespaces import owner_of
 
-    claims = await live.kernel.kind_namespaces()
+    try:
+        claims = await live.kernel.kind_namespaces()
+    except Exception as exc:  # noqa: BLE001 — mirror NamespaceOwnershipGate.
+        raise NamespaceRegistryUnreadable(
+            f"cannot verify which namespaces workspace {tenant!r} owns: the "
+            f"KindNamespace registry is unreadable. Refusing rather than "
+            f"assuming — a namespace claim is an authorization record, and an "
+            f"unreadable one is not a granted one. Underlying: {exc}"
+        ) from exc
 
     def owns(namespace: str) -> bool:
         return owner_of(namespace, claims).owner == tenant
@@ -439,26 +496,116 @@ async def approve_kind_impl(
     }
 
 
+async def _authored_kind_visibility(
+    live: Any, *, scope: str, tenant: str | None,
+) -> Any:
+    """A predicate ``(document_name) -> bool``: may this caller see that row?
+
+    **No resolved tenant ⇒ no filter.** The same hinge
+    :class:`~dna.kernel.write.namespace_gate.NamespaceOwnershipGate` uses for an
+    unattributed write, and for the same reason: ``--auth none`` self-host and an
+    explicit operator ``scope=`` call resolve no workspace, so there is nobody to
+    own anything and a filter that demanded ownership would answer every
+    self-hoster with an empty list. It rests on the same standing invariant — a
+    hosted face never issues an unattributed request on a user's behalf.
+
+    Otherwise a row is visible when it is **owned by the caller OR inherited
+    from the parent**, never "owned by the caller" alone:
+
+    * an INHERITED row is nobody in this scope's to own — a curated base Kind a
+      workspace legitimately consumes through ``parent_scope`` — so dropping it
+      would delete the base catalogue from the workspace's own listing. It is
+      identified as "not among the LOCAL names", which costs one extra
+      ``origin="local"`` pass because :meth:`Kernel.query` does not tag a row
+      with the scope it came from. MEASURED and recorded rather than assumed:
+      the pass is inert TODAY — ``KindDefinition`` is a BOOTSTRAP Kind and
+      ``Kernel._NON_INHERITABLE_KINDS`` unions ``_BOOTSTRAP_KINDS``, so the
+      catalog and parent passes are both skipped for it and ``origin="all"`` is
+      exactly ``origin="local"``. The rule is written anyway: it costs one
+      bounded pass over the Kinds of one scope, and the day
+      ``scope_inheritable`` flips is not the day to discover that the listing
+      eats the base catalogue.
+    * a name with no ``--`` has no namespace half to test at all (every
+      ``KindDefinition`` predating the authoring door, and every hand-written
+      one, looks like this), so it is kept rather than split blindly.
+
+    NEVER degrades to unfiltered: an unreadable registry raises
+    :class:`NamespaceRegistryUnreadable` out of :func:`_owns` and an ambiguous
+    one raises out of ``owns()`` — both refuse the whole listing, because a
+    visibility decision made without the authorization record is not a
+    decision."""
+    if not (tenant or "").strip():
+        return lambda name: True
+
+    # Resolved FIRST: a registry we cannot read must refuse before the extra
+    # store pass, not after it.
+    owns = await _owns(live, tenant)
+
+    local: set[str] = set()
+    async for raw in live.kernel.query(scope, _KIND, tenant=tenant, origin="local"):
+        if not isinstance(raw, dict):
+            continue
+        name = str((raw.get("metadata") or {}).get("name")
+                   or raw.get("name") or "")
+        if name:
+            local.add(name)
+
+    def visible(name: str) -> bool:
+        if name not in local:
+            return True  # inherited / catalog — see the docstring.
+        if _NAME_SEP not in name:
+            return True  # no namespace half to test.
+        namespace, _kind_half = name.rsplit(_NAME_SEP, 1)
+        return bool(namespace) and owns(namespace)
+
+    return visible
+
+
 async def list_authored_kinds_impl(
     live: Any, *, tenant: str | None = None, scope: str | None = None,
 ) -> dict[str, Any]:
-    """Every ``KindDefinition`` document in the caller's scope, with its
-    approval state — the audit surface the authoring door exists to produce.
+    """The ``KindDefinition`` documents in the caller's scope that the CALLER
+    may see, with their approval state — the audit surface the authoring door
+    exists to produce.
 
     Reads DOCUMENTS, not the registry: an unapproved Kind is precisely the one
     the registry does not have, so a registry-backed listing would show every
     Kind except the ones a reviewer needs to see.
+
+    **Filtered to the caller** (:func:`_authored_kind_visibility`). A scope is
+    SHARED by default — with multi-workspace off ``LiveDna.default_scope`` hands
+    every workspace the same ``base_scope`` — and unfiltered this route handed a
+    caller its neighbours' Kind names, their namespaces and their
+    ``proposed_by``/``approved_by``, which are identity strings. That
+    contradicted its own sibling: the approval door answers 404 for a
+    neighbour's Kind precisely so that "it exists but is not yours" cannot
+    become a probe for what the neighbours are authoring, and the listing gave
+    away more than that 404 withheld.
+
+    The "but this is also the operator's audit view" objection is the
+    conflation, not the counter-argument: an operator view needs different
+    authorization, a different result set (every workspace) and probably a
+    different shape. Serving it by leaving the TENANT route unfiltered makes the
+    tenant's default the operator's power.
+
+    Raises :class:`NamespaceRegistryUnreadable` (→ 503) when ownership cannot be
+    resolved, and ``NamespaceOwnershipError`` (→ 403) for a doubly-claimed
+    namespace. Neither degrades to an unfiltered list.
     """
     sc = scope or live.default_scope(tenant)
+    visible = await _authored_kind_visibility(live, scope=sc, tenant=tenant)
     kinds: list[dict[str, Any]] = []
     async for raw in live.kernel.query(sc, _KIND, tenant=tenant):
         if not isinstance(raw, dict):
             continue
         spec = raw.get("spec") or {}
         meta = raw.get("metadata") or {}
+        name = meta.get("name") or raw.get("name")
+        if not visible(str(name or "")):
+            continue
         approved_by = str(spec.get("approved_by") or "").strip()
         kinds.append({
-            "name": meta.get("name") or raw.get("name"),
+            "name": name,
             "kind": spec.get("target_kind"),
             "api_version": spec.get("target_api_version"),
             "namespace": spec.get("origin"),
