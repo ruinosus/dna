@@ -363,6 +363,14 @@ export interface paths {
          *     unattributed write. 403 for a namespace two claims give to different
          *     owners, 503 when the claim registry cannot be read: neither degrades to
          *     the unfiltered list.
+         *
+         *     **Not mounted under ``--auth token``.** The filter is what makes this
+         *     route the CALLER's roster rather than the scope's, and it is computed
+         *     from ``tenant``. On the shared-secret lane "filtered to what the
+         *     caller owns" would mean "filtered to whatever the caller typed", with
+         *     other workspaces in the same store to type. The unfiltered self-host
+         *     answer is not that: there, no neighbour's rows exist to be handed
+         *     over.
          */
         get: operations["list_authored_kinds_v1_kinds_get"];
         put?: never;
@@ -382,6 +390,13 @@ export interface paths {
          *     not a CamelCase identifier, 403 when the namespace gate refuses the
          *     write (the workspace does not own the target namespace), 503 when the
          *     namespace registry scope has not been provisioned in this store.
+         *
+         *     **Not mounted under ``--auth token``**, and only there. The namespace
+         *     gate above decides from ``tenant``: under ``--auth config`` that is
+         *     bound to the caller's VERIFIED identity, and under ``--auth none``
+         *     there is no second tenant to take it from. The shared-secret lane is
+         *     the one where ``tenant`` is a string any holder of one credential can
+         *     pick with neighbours to pick from — see the section comment above.
          */
         post: operations["author_kind_v1_kinds_post"];
         delete?: never;
@@ -419,6 +434,14 @@ export interface paths {
          *     once; 403 for a namespace two claims give to different owners; 503 when
          *     the claim registry cannot be read. None of them degrades to answering
          *     with the document.
+         *
+         *     **Not mounted under ``--auth token``**, and this route is why the
+         *     exclusion has no exception for reads: it hands over the workspace's
+         *     JSON Schema — its data model. The 404 that keeps a neighbour's Kind
+         *     invisible is decided from ``tenant``, so on the shared-secret lane it
+         *     is a formality anyone can step around by typing a different workspace
+         *     id. On ``--auth none`` there is no neighbour whose data model could be
+         *     reached that way.
          */
         get: operations["get_authored_kind_v1_kinds__kind__get"];
         put?: never;
@@ -456,6 +479,17 @@ export interface paths {
          *     of its own namespaces at once, 403 when the namespace gate refuses the
          *     write, 503 when the namespace registry scope has not been provisioned
          *     in this store.
+         *
+         *     **Not mounted under ``--auth token``** — the sharpest case for that
+         *     exclusion, and the reason the line falls where it does. This route is
+         *     the human act that confers effect, and the whole value of the record
+         *     it writes is naming WHO made it. On the shared-secret lane the
+         *     approver is a vendor credential that names nobody: the audit would
+         *     read ``rest:unidentified`` in the field that sells "two distinct
+         *     verified actors", and the 404 that hides a neighbour's Kind would
+         *     rest on a ``tenant`` the caller typed. On ``--auth none`` there is no
+         *     vendor and no neighbour — a self-hoster approving in their own store
+         *     is honestly recorded, so that lane keeps the route.
          */
         post: operations["approve_kind_v1_kinds__kind__approve_post"];
         delete?: never;

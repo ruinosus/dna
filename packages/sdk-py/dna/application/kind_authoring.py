@@ -367,6 +367,7 @@ _NOT_FOUND_TAIL = {
 
 async def _authored_document_name(
     live: Any, *, scope: str, kind: str, tenant: str | None,
+    allow_unattributed: bool,
     verb: str = "approve",
 ) -> tuple[str, str]:
     """Find the CALLER's authored document for ``kind`` in ``scope`` →
@@ -400,16 +401,28 @@ async def _authored_document_name(
     Kind is simply not there, and a distinct "it exists but is not yours" would
     hand a stranger a probe for what its neighbours are authoring.
 
-    **No resolved tenant ⇒ no filter**, the same hinge
+    **No resolved tenant ⇒ no filter — but only for a caller that ASKED for
+    that.** ``allow_unattributed`` is a required keyword with no default, and it
+    is the whole precondition made structural. The two doors that call this
+    function have OPPOSITE tenancy preconditions: the read passes ``None``
+    through on purpose (``allow_unattributed=True``), because ``--auth none``
+    self-host and an explicit operator ``scope=`` call resolve no workspace, and
+    a filter that demanded ownership would answer every self-hoster "not found"
+    for a document sitting in their own store — the same hinge
     :class:`~dna.kernel.write.namespace_gate.NamespaceOwnershipGate` uses for an
     unattributed write and :func:`_authored_kind_visibility` uses for the
-    listing: ``--auth none`` self-host and an explicit operator ``scope=`` call
-    resolve no workspace, so there is nobody to own anything and a filter that
-    demanded ownership would answer every self-hoster "not found" for a document
-    sitting in their own store. It rests on the same standing invariant — a
-    hosted face never issues an unattributed request on a user's behalf. The
-    APPROVAL caller never reaches this branch: ``approve_kind_impl`` refuses a
-    missing tenant before it calls here.
+    listing, resting on the same standing invariant that a hosted face never
+    issues an unattributed request on a user's behalf. Approval passes
+    ``allow_unattributed=False``, because an approval nobody can attribute is
+    not an approval.
+
+    That difference used to be a paragraph of prose and an ordering promise —
+    ``approve_kind_impl`` refuses a missing tenant BEFORE it calls here — which
+    held for the two callers that existed and would have failed silently for a
+    third: forget the check and you get an unfiltered search across every
+    workspace sharing the scope, with no error anywhere. Now the parameter has
+    no default, so a third caller cannot forget to answer the question; and
+    answering ``False`` with an empty ``tenant`` raises rather than searching.
 
     ``verb`` selects only the tail of the not-found message
     (:data:`_NOT_FOUND_TAIL`) — which ACT was refused. It must never encode
@@ -419,9 +432,19 @@ async def _authored_document_name(
     Raises :class:`AuthoredKindNotFound` when nothing the caller owns matches,
     and ``ValueError`` when the CALLER owns two namespaces that both declare the
     Kind — an ambiguity a reviewer must resolve by name, never one this function
-    may pick a winner for.
+    may pick a winner for — or when ``allow_unattributed`` is ``False`` and the
+    request resolves no workspace.
     """
     attributed = bool((tenant or "").strip())
+    if not attributed and not allow_unattributed:
+        # The precondition, ENFORCED. The caller said this act needs an owner;
+        # searching the shared scope unfiltered would answer it with whichever
+        # workspace's document happens to carry the Kind name.
+        raise ValueError(
+            f"a workspace is required to address the authored Kind {kind!r}: "
+            f"this act is filtered to the namespaces the CALLER owns, and an "
+            f"unattributed request has no owner to filter by"
+        )
     owns = await _owns(live, tenant) if attributed else None
     matches: list[tuple[str, str]] = []
     async for raw in live.kernel.query(scope, _KIND, tenant=tenant):
@@ -497,7 +520,7 @@ async def approve_kind_impl(
 
     scope = live.default_scope(tenant)
     name, namespace = await _authored_document_name(
-        live, scope=scope, kind=kind, tenant=tenant,
+        live, scope=scope, kind=kind, tenant=tenant, allow_unattributed=False,
     )
     raw = await live.kernel.get_document(scope, _KIND, name)
     if not isinstance(raw, dict) or not raw:
@@ -720,6 +743,12 @@ async def get_authored_kind_impl(
     sc = scope or live.default_scope(tenant)
     name, _namespace = await _authored_document_name(
         live, scope=sc, kind=kind, tenant=tenant, verb="read",
+        # The read is the door that WANTS the unfiltered lane when nothing
+        # resolves: an operator ``scope=`` call and a self-host have no
+        # workspace, and answering them "not found" for their own document
+        # would be a filter with nobody to filter for. Stated here rather than
+        # inherited from a default — the sibling door's answer is the opposite.
+        allow_unattributed=True,
     )
     raw = await live.kernel.get_document(sc, _KIND, name)
     if not isinstance(raw, dict) or not raw:

@@ -145,7 +145,11 @@ even runs.
 Approval is the act that confers effect, so an agent able to call it could
 approve its own proposal and the review would be decorative. Approving is a human
 act on the portal (`POST /v1/kinds/{kind}/approve` on the REST face), made with a
-reviewer's own credential. Both tools meter as `definitions`; authoring is a
+reviewer's own credential — and that route is not served by a REST deployment
+running on a shared secret (`--auth token`), because a credential one vendor
+holds for every tenant cannot sign an approval (see
+[The REST read-API](rest-api.md)). Both tools meter as
+`definitions`; authoring is a
 write, so over an authenticated server it needs the plan to grant
 `definitions_mode: write`.
 

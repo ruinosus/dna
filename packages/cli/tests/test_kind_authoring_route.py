@@ -23,9 +23,20 @@ break if it regressed:
    ``approved_by`` is dropped on the floor, verified on the STORED document, not
    merely in the response body.
 
+And a fourth, which the other three now rest on and which section 0 covers on
+its own: **the doors are not mounted under ``--auth token``** — and are mounted
+under ``--auth config`` and ``--auth none``. Every ownership property here is
+decided from ``tenant``; the config lane binds it to a verified identity, the
+self-host lane has no second tenant to take it from, and only the shared-secret
+lane combines "anyone with the one credential picks ``tenant``" with neighbours
+to pick. Section 0 asserts the route table in all three modes.
+
 The routes are auth-guarded (``dependencies=guarded`` — bearer verification
-only) and not plan-gated, so ``--auth none`` exercises the exact same handler
-code the token/config lanes would; mirrors ``test_definitions_rest.py``.
+only) and not plan-gated, so ``--auth none`` — this suite's default client —
+exercises the exact same handler code the config lane would; mirrors
+``test_definitions_rest.py``. The two tests that need a VERIFIED caller use
+``_config_client`` (a ``_FakeVerifier`` keyed by bearer string, the
+``test_kind_approval_audit.py`` shape).
 """
 from __future__ import annotations
 
@@ -114,10 +125,60 @@ def dna_dir_without_lib(tmp_path, monkeypatch):
     return dst
 
 
+class _FakeAccess:
+    def __init__(self, claims):
+        self.claims = claims
+
+
+class _FakeVerifier:
+    """The bearer string is a KEY into a claims table; an unknown token → None
+    (→ 401), mirroring the composite N-provider verifier's contract. Same shape
+    as ``test_kind_approval_audit.py``'s — this suite needs it only for the
+    identity-bound lane's half of section 0 and the two attribution tests in
+    section 5; everything else runs on ``--auth none``, which serves these doors
+    too."""
+
+    def __init__(self, table):
+        self._table = table
+
+    async def verify_token(self, token):
+        claims = self._table.get(token)
+        return _FakeAccess(claims) if claims is not None else None
+
+
+#: The one verified identity this suite needs. Attribution by two DISTINCT
+#: actors — one proposing, one approving — is ``test_kind_approval_audit.py``'s
+#: subject, not this file's.
+_AUTHOR = {"oid": "oid-author", "email": "author@tenant.example"}
+_TOKEN = "author"
+
+
+def _config_app(dna_dir, **app):
+    """The app on the IDENTITY-BOUND lane (``--auth config``): a bearer verified
+    into claims the middleware binds the request to."""
+    return R.build_app(
+        base_dir=str(dna_dir), scope=_SCOPE, auth="config",
+        verifier=_FakeVerifier({_TOKEN: _AUTHOR}),
+        **app,
+    )
+
+
 def _client(dna_dir, *, raise_server_exceptions: bool = True, **app) -> TestClient:
+    """The suite's default client: ``--auth none``, the local / OSS self-host
+    lane — which serves these doors (section 0) and is where the unattributed
+    behaviour they document is the correct one."""
     return TestClient(
         R.build_app(base_dir=str(dna_dir), scope=_SCOPE, **app),
         raise_server_exceptions=raise_server_exceptions,
+    )
+
+
+def _config_client(dna_dir, *, raise_server_exceptions: bool = True) -> TestClient:
+    """…and a client on the identity-bound lane, bearer pre-attached."""
+    return TestClient(
+        _config_app(dna_dir),
+        raise_server_exceptions=raise_server_exceptions,
+        headers={"Authorization": f"Bearer {_TOKEN}"},
     )
 
 
@@ -148,6 +209,164 @@ def _stored_spec(dna_dir, name: str) -> dict:
         return dict((raw or {}).get("spec") or {})
 
     return _on_fresh_kernel(dna_dir, probe)
+
+
+# ── 0. the LANE — every mode but the shared-secret one ────────────────────
+#
+# The four doors are mounted under ``--auth config`` and ``--auth none``, and
+# NOT under ``--auth token``. That reads backwards — the door is open to the
+# mode with no authentication at all and shut to the mode behind a secret — so
+# the reason is stated here and asserted in all three modes below.
+#
+# Every ownership property in this suite is decided from ``tenant``. What makes
+# ``tenant`` trustworthy is not "did the lane verify something" but "is there
+# anybody to impersonate":
+#
+#   * ``--auth config`` — the middleware resolves the workspace from the
+#     VERIFIED identity's membership and OVERWRITES the query param with it
+#     (``CrossWorkspaceError`` on a mismatch). Ownership is real. MOUNTED.
+#   * ``--auth none`` — local / OSS self-host, and the container default. No
+#     shared secret, no second tenant, no neighbours: the caller is the operator
+#     of their own store, and the unattributed lane (no resolved tenant ⇒ the
+#     ownership filter does not apply) is the documented, correct behaviour
+#     there. Withholding the doors here would delete the feature for everyone
+#     running locally rather than close a hole. MOUNTED — which is why the rest
+#     of this file still runs on it.
+#   * ``--auth token`` — remote, multi-tenant, ONE shared vendor secret, no
+#     identity at all. ``tenant`` is a raw query param any holder of that one
+#     credential picks, and there ARE neighbours to pick: it reads, and
+#     APPROVES, any workspace's Kinds. NOT MOUNTED.
+#
+# Not mounted rather than mounted-and-403: a property that holds on one door and
+# not another is a property nobody can rely on, and a door that answers
+# "forbidden" still tells a stranger it is there and still advertises itself in
+# that lane's OpenAPI. Approval is the decisive case — it is the human act that
+# confers effect and the audit's entire value is naming WHO, so a vendor secret
+# approving on a tenant's behalf would stamp ``rest:unidentified`` into the
+# field that sells "two distinct verified actors". The same sentinel's sibling
+# on ``--auth none`` (``rest:local``, §5) is an honest record of a self-hoster
+# approving in their own store — a different fact.
+#
+# ASSERTED ON THE ROUTE TABLE, deliberately. Starlette answers an unrouted path
+# with ``{"detail": "Not Found"}``, byte-identical to a handler's own 404 shape —
+# so a status-only "it is absent" assertion is satisfiable by an unrelated 404
+# and would keep passing if the routes came back guarded by something that
+# happened to refuse. The router's own table cannot be satisfied that way, and
+# each wire test below carries a discriminator a mounted route would fail.
+
+#: The four operations, keyed the way the OpenAPI document keys them.
+_KIND_OPERATIONS = frozenset({
+    ("POST", "/v1/kinds"),
+    ("GET", "/v1/kinds"),
+    ("GET", "/v1/kinds/{kind}"),
+    ("POST", "/v1/kinds/{kind}/approve"),
+})
+
+#: The same four, as OpenAPI paths.
+_KIND_PATHS = {"/v1/kinds", "/v1/kinds/{kind}", "/v1/kinds/{kind}/approve"}
+
+
+def _routed_operations(app) -> set[tuple[str, str]]:
+    """Every ``(METHOD, path)`` the app's ROUTER will match — read off the
+    route table itself, never inferred from a response."""
+    return {
+        (method, route.path)
+        for route in app.routes
+        for method in (getattr(route, "methods", None) or ())
+        if getattr(route, "path", None)
+    }
+
+
+def _documented_kind_paths(app) -> set[str]:
+    return {p for p in app.openapi()["paths"] if p.startswith("/v1/kinds")}
+
+
+def test_the_shared_secret_lane_routes_none_of_the_four(dna_dir):
+    """Absent from the ROUTE TABLE, and absent from the OpenAPI that lane
+    publishes — an operator door must not advertise an act it cannot
+    attribute."""
+    app = R.build_app(base_dir=str(dna_dir), scope=_SCOPE,
+                      auth="token", token="s3cret")
+
+    assert _routed_operations(app) & _KIND_OPERATIONS == set(), (
+        "the Kind doors are routable on the lane where one shared secret picks "
+        "`tenant` and there are neighbours to pick"
+    )
+    assert _documented_kind_paths(app) == set(), app.openapi()["paths"].keys()
+
+
+@pytest.mark.parametrize(
+    "lane",
+    [
+        pytest.param("none", id="none"),
+        pytest.param("config", id="config"),
+    ],
+)
+def test_both_other_lanes_route_and_document_all_four(dna_dir, lane):
+    """The other half, and the one that keeps the exclusion honest: this is a
+    line drawn around ONE mode, not a feature deletion. Asserted in both modes
+    explicitly — the third mode's absence means nothing unless these two are
+    checked to be present."""
+    app = _config_app(dna_dir) if lane == "config" else R.build_app(
+        base_dir=str(dna_dir), scope=_SCOPE,
+    )
+
+    assert _KIND_OPERATIONS <= _routed_operations(app)
+    assert _documented_kind_paths(app) == _KIND_PATHS
+
+
+def test_the_shared_secret_lane_404s_before_it_ever_asks_for_the_bearer(dna_dir):
+    """The wire half, with a discriminator a mounted route could not survive: NO
+    ``Authorization`` header is sent. Every Kind route carries
+    ``dependencies=guarded``, so a mounted one would answer 401 here — and the
+    control line proves that guard is live on this very app. A 404 can therefore
+    only mean the router never found the path.
+
+    This is also where ``--auth token``'s old authoring test went. It used to
+    assert that a shared-secret deployment recorded its caller as
+    ``rest:unidentified`` rather than ``rest:local``; the honest conclusion of
+    that finding is that the lane should not be authoring at all, so the
+    property is now enforced one level up, by absence."""
+    app = R.build_app(base_dir=str(dna_dir), scope=_SCOPE,
+                      auth="token", token="s3cret")
+    with TestClient(app) as c:
+        assert c.get("/v1/agents").status_code == 401, (
+            "the control route stopped 401-ing — this test's discriminator is gone"
+        )
+        for method, path in (
+            ("post", "/v1/kinds"),
+            ("get", "/v1/kinds"),
+            ("get", "/v1/kinds/Contrato"),
+            ("post", "/v1/kinds/Contrato/approve"),
+        ):
+            r = getattr(c, method)(path, params={"tenant": _WID})
+            assert r.status_code == 404, (method, path, r.status_code, r.text)
+
+
+def test_the_shared_secret_lane_authors_nothing_even_with_a_valid_bearer(dna_dir):
+    """And with the RIGHT credential too — the discriminator being that the
+    identical request is a 201 on the lane below. A caller holding the vendor
+    secret is exactly the caller this exclusion is about, so "it 404s when you
+    forget the header" would be the wrong thing to have proven."""
+    body = {"kind": "Contrato", "schema": _SCHEMA}
+    app = R.build_app(base_dir=str(dna_dir), scope=_SCOPE,
+                      auth="token", token="s3cret")
+    with TestClient(app) as c:
+        absent = c.post("/v1/kinds", params={"tenant": _WID}, json=body,
+                        headers={"Authorization": "Bearer s3cret"})
+    assert absent.status_code == 404, absent.text
+
+    with _client(dna_dir) as c:
+        present = c.post("/v1/kinds", params={"tenant": _WID}, json=body)
+    assert present.status_code == 201, present.text
+    assert present.json()["approved"] is False
+
+    # …and nothing the token lane touched reached the store: the ONLY document
+    # here is the one the self-host lane wrote.
+    assert _stored_spec(dna_dir, present.json()["name"])["proposed_by"], (
+        "the self-host write is the control; without it the assertion above "
+        "could pass against a store nothing can write to at all"
+    )
 
 
 # ── 1. it exists, and it has no effect ────────────────────────────────────
@@ -379,15 +598,24 @@ def test_a_traversing_kind_name_writes_no_file_outside_the_store(
     assert not strayed, f"paths created outside the store root: {strayed}"
 
 
-# ── 5. WHO an unauthenticated door records as the proposer ────────────────
+# ── 5. WHO the door records as the proposer ───────────────────────────────
 #
-# This suite runs under ``--auth none``, so every author call above already
+# The default client here is ``--auth none``, so every author call above already
 # executes the "no verified identity" branch of ``_actor_from_state`` and
-# persists whatever it returns into ``proposed_by``. Until now nothing asserted
-# the value. A brand-new string that lands in a persisted audit field is a
-# contract with every future reader of the store, and it is exactly the kind of
-# value a rename would change silently — so it is pinned as a LITERAL here,
-# not merely as "whatever the constant happens to say".
+# persists whatever it returns into ``proposed_by``. A string that lands in a
+# persisted audit field is a contract with every future reader of the store, and
+# it is exactly the kind of value a rename would change silently — so it is
+# pinned as a LITERAL here, not merely as "whatever the constant happens to say".
+#
+# One test used to live here and no longer can: it authored under ``--auth
+# token`` to pin that a shared-secret deployment records ``rest:unidentified``
+# and not ``rest:local``. The honest conclusion of that finding is that the lane
+# should not be authoring at all — so the property is now enforced one level up,
+# by absence (§0,
+# ``test_the_shared_secret_lane_404s_before_it_ever_asks_for_the_bearer``), and
+# the ``rest:unidentified`` literal is pinned on a STORED document by
+# ``test_kind_approval_audit.py`` §6, which reaches it the way that lane still
+# can: a VERIFIED token that names nobody, on ``--auth config``.
 
 
 def test_a_local_unauthenticated_author_is_recorded_as_rest_local(
@@ -421,28 +649,26 @@ def test_a_declared_personal_id_outranks_the_local_sentinel(dna_dir, monkeypatch
     assert _stored_spec(dna_dir, name)["proposed_by"] == "barna@example.com"
 
 
-def test_a_shared_secret_deployment_does_not_call_its_caller_local(
+def test_a_declared_personal_id_does_not_outrank_a_verified_identity(
     dna_dir, monkeypatch,
 ):
-    """``--auth token`` is a REMOTE deployment behind a shared secret, and its
-    caller is neither local nor a person.
+    """…and it stops outranking the moment there is something to outrank.
 
-    The bearer IS verified — against ``DNA_API_TOKEN`` — it simply carries no
-    identity claim, which is precisely what ``rest:unidentified`` names. Before
-    this, the branch fell through to ``rest:local`` (a mislabel inherited from
-    the MCP precedent, where ``--auth token`` and ``--auth none`` were lumped
-    together as "no token at all"), so every Kind proposed through a
-    shared-secret deployment was audited as if somebody had typed it on the
-    operator's laptop."""
-    monkeypatch.delenv("DNA_PERSONAL_ID", raising=False)
-    with _client(dna_dir, auth="token", token="s3cret") as c:
+    ``DNA_PERSONAL_ID`` names the OFFLINE caller — the operator at a laptop with
+    nothing to verify. On the identity-bound lane there IS a verified name, and
+    an env var that could overwrite it would be a forged attribution with an
+    extra step: whoever can set the environment would sign every proposal in the
+    deployment as somebody else. The env var is consulted only on the branch
+    that has no claims at all, which is the fact the test above depends on and
+    this one bounds."""
+    monkeypatch.setenv("DNA_PERSONAL_ID", "barna@example.com")
+    with _config_client(dna_dir) as c:
         r = c.post("/v1/kinds", params={"tenant": _WID},
-                   headers={"Authorization": "Bearer s3cret"},
                    json={"kind": "Contrato", "schema": _SCHEMA})
         assert r.status_code == 201, r.text
         name = r.json()["name"]
 
-    assert _stored_spec(dna_dir, name)["proposed_by"] == "rest:unidentified"
+    assert _stored_spec(dna_dir, name)["proposed_by"] == _AUTHOR["email"]
 
 
 def test_the_local_sentinel_is_reserved_for_the_lane_that_verifies_nothing():
@@ -456,10 +682,17 @@ def test_the_local_sentinel_is_reserved_for_the_lane_that_verifies_nothing():
     ``--auth config`` reaching here with no claims recorded ``rest:local``, the
     same mislabel the sibling branch exists to end, one lane over.
 
+    ``_unidentified_actor("token")`` is asserted even though these doors are no
+    longer mounted on that lane: the helper is shared, the mapping is what would
+    silently rot, and a table with a hole in it is how the wrong sentinel comes
+    back if the lane ever regains a route.
+
     Asserted on the helper rather than through HTTP because the config lane's
-    middleware stashes claims for every request it lets through: the branch is
+    middleware stashes claims for every request it lets through: that branch is
     unreachable over the wire today, and an unreachable branch nothing can
     assert on is exactly how the wrong sentinel survives the next rename."""
+    assert R._UNIDENTIFIED_LOCAL_ACTOR == "rest:local"
+    assert R._UNIDENTIFIED_TOKEN_ACTOR == "rest:unidentified"
     assert R._unidentified_actor("none") == R._UNIDENTIFIED_LOCAL_ACTOR
     assert R._unidentified_actor("token") == R._UNIDENTIFIED_TOKEN_ACTOR
     assert R._unidentified_actor("config") == R._UNIDENTIFIED_TOKEN_ACTOR, (

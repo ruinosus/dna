@@ -46,6 +46,52 @@ overlay only — never another tenant's data):
 The definitions + search endpoints call the **same** `*_impl` functions the MCP
 server uses — one core, two faces, zero duplicated logic.
 
+## Kind authoring — not served on the shared-secret lane
+
+Four more endpoints let a workspace declare its **own** Kind and put it into
+effect. They are mounted under `--auth config` and `--auth none`, and **not
+under `--auth token`**: a shared-secret deployment does not route them and does
+not list them in its own `/openapi.json`.
+
+- `POST /v1/kinds` — author a `KindDefinition` **without** an approval marker. It
+  has no effect: registration is what confers schema validation and storage
+  routing, and the registry withholds it until someone approves.
+- `POST /v1/kinds/{kind}/approve` — the human act that **confers effect**.
+- `GET /v1/kinds` — the audit roster (approval state + both actors).
+- `GET /v1/kinds/{kind}` — one authored Kind in full, schema included, so a
+  reviewer can see what they would be approving.
+
+All four enforce **namespace ownership**: a caller may only touch Kinds in
+namespaces its workspace owns, resolved against the same `KindNamespace` claims
+the write gate decides with, and a stranger's Kind answers `404` — exactly what a
+Kind nobody authored answers, so the door is not a probe for what neighbours are
+authoring.
+
+That property is decided from the effective workspace, so what matters is not
+"did the lane verify anything" but **"is there anybody to impersonate"**:
+
+- `--auth config` — the middleware resolves the workspace from the verified
+  identity and overwrites the `tenant` query param with it. Ownership is real.
+  **Served.**
+- `--auth none` — local / self-host. No shared secret, no second tenant, no
+  neighbours: the caller is the operator of their own store, and the unattributed
+  behaviour above (no resolved workspace ⇒ no filter) is the correct one there.
+  **Served.**
+- `--auth token` — remote, multi-tenant, one shared secret, no identity. `tenant`
+  is a string any holder of that credential picks, and there are neighbours to
+  pick: it would read — and approve — any workspace's Kinds. **Not served.**
+
+Approval is the decisive case for that exclusion: its whole value is the record
+of *who*, and a shared vendor secret signs it as nobody. The lane that cannot
+name the actor does not carry the routes at all, rather than carrying them and
+refusing — a route that 403s still advertises itself. Read-only operator access
+is unaffected; an operator who needs to act for a workspace does it with
+identity, which is what makes the act auditable.
+
+`docs/openapi.json` — the generation source for both clients — is dumped from the
+default (`none`) lane and therefore documents the full surface; a `token`
+deployment serves the subset it mounts.
+
 ## Workspace tenancy (Model B)
 
 The identity→workspace boundary writes (see

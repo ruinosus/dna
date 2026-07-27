@@ -492,6 +492,14 @@ def test_one_kind_under_two_namespaces_the_caller_owns_is_an_ambiguity(dna_dir):
         # cannot do that from a refusal that hides which two it means.
         assert "acme.example" in detail, detail
         assert assigned.json()["namespace"] in detail, detail
+        # …and it must tell them WHAT to do. The instruction is the whole point
+        # of refusing instead of guessing, and nothing pinned it: the verb
+        # silently changed from "approve it" to "address it" when
+        # ``_authored_document_name`` became shared with the READ door — where
+        # "approve it" would have been wrong advice. "address it" is the one
+        # that is true on both doors, and it is pinned here as a literal so the
+        # next caller cannot narrow it back without saying so.
+        assert "address it by document name, not by Kind name" in detail, detail
 
     for name in (seeded, assigned.json()["name"]):
         assert not _stored_spec(dna_dir, name).get("approved_by"), name
@@ -533,6 +541,78 @@ def test_a_doubly_claimed_namespace_refuses_the_approval(dna_dir):
 
     assert not _stored_spec(dna_dir, mine.json()["name"]).get("approved_by")
     assert _registered_port(dna_dir, "Contrato") is None
+
+
+# ── 5b. the shared lookup's precondition is structural, not documentary ────
+#
+# ``_authored_document_name`` is reached by two doors with OPPOSITE tenancy
+# preconditions: approval refuses a missing tenant before it calls, while the
+# read passes ``None`` straight through to the deliberately UNFILTERED lane
+# (the operator ``scope=`` call, the self-host). That difference used to live
+# in a docstring and in the ORDER the approval impl does its checks — which is
+# a promise, not a mechanism: a third caller that forgot it would get a search
+# across every workspace sharing the scope, silently, with the Kind half of a
+# document name as the only key.
+
+
+def test_the_unfiltered_lane_must_be_asked_for_by_name(dna_dir):
+    """The parameter has NO default, so nobody can reach the unfiltered lane by
+    omission — the question has to be answered at every call site.
+
+    Asserted on the signature because that is where the property lives: a
+    behavioural test alone would keep passing the day somebody adds
+    ``allow_unattributed=True`` as a default, which is exactly the regression
+    this pins."""
+    import inspect
+
+    from dna.application import kind_authoring as K
+
+    param = inspect.signature(K._authored_document_name).parameters[
+        "allow_unattributed"
+    ]
+    assert param.default is inspect.Parameter.empty, (
+        "`allow_unattributed` grew a default — the precondition is documentary "
+        "again, and a caller that forgets it gets an unfiltered search over "
+        "every workspace sharing the scope"
+    )
+    assert param.kind is inspect.Parameter.KEYWORD_ONLY, param.kind
+
+
+def test_the_filtered_lane_refuses_an_unattributed_call_rather_than_searching(
+    dna_dir,
+):
+    """And the enforcement half — with the discriminator that makes it mean
+    something: the SAME call on the unfiltered lane finds the document. So the
+    refusal is the precondition firing, not an empty store."""
+    from dna.application import kind_authoring as K
+
+    with _client(dna_dir) as c:
+        # Authored by a workspace the unattributed caller is emphatically not.
+        authored = _author(c, "agent", tenant=_OTHER_WID)
+        assert authored.status_code == 201, authored.text
+
+    async def probe(live):
+        with pytest.raises(ValueError) as refused:
+            await K._authored_document_name(
+                live, scope=_SCOPE, kind="Contrato", tenant=None,
+                allow_unattributed=False,
+            )
+        found, _namespace = await K._authored_document_name(
+            live, scope=_SCOPE, kind="Contrato", tenant=None,
+            allow_unattributed=True,
+        )
+        return type(refused.value), str(refused.value), found
+
+    raised, message, found = _on_fresh_kernel(dna_dir, probe)
+
+    assert found == authored.json()["name"], found
+    # A ValueError proper — the face maps that to 400 ("this request is
+    # malformed"), which is what an unattributed call to a filtered act IS.
+    # ``AuthoredKindNotFound`` is a ``LookupError`` and would be a 404, i.e.
+    # "no such Kind", sending the caller after the wrong bug entirely.
+    assert raised is ValueError, raised
+    assert "Contrato" in message, message
+    assert "workspace is required" in message, message
 
 
 # ── 6. the sentinel a token with no identity leaves behind ────────────────
