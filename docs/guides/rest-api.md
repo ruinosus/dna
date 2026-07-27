@@ -46,12 +46,11 @@ overlay only — never another tenant's data):
 The definitions + search endpoints call the **same** `*_impl` functions the MCP
 server uses — one core, two faces, zero duplicated logic.
 
-## Kind authoring — not served on the shared-secret lane
+## Kind authoring
 
 Four more endpoints let a workspace declare its **own** Kind and put it into
-effect. They are mounted under `--auth config` and `--auth none`, and **not
-under `--auth token`**: a shared-secret deployment does not route them and does
-not list them in its own `/openapi.json`.
+effect. They are served on **every** auth mode — `config`, `none` and `token`
+alike — and appear in every lane's `/openapi.json`.
 
 - `POST /v1/kinds` — author a `KindDefinition` **without** an approval marker. It
   has no effect: registration is what confers schema validation and storage
@@ -67,30 +66,37 @@ the write gate decides with, and a stranger's Kind answers `404` — exactly wha
 Kind nobody authored answers, so the door is not a probe for what neighbours are
 authoring.
 
-That property is decided from the effective workspace, so what matters is not
-"did the lane verify anything" but **"is there anybody to impersonate"**:
+That property is decided from the effective workspace, and **where the effective
+workspace comes from differs per lane**:
 
 - `--auth config` — the middleware resolves the workspace from the verified
-  identity and overwrites the `tenant` query param with it. Ownership is real.
-  **Served.**
-- `--auth none` — local / self-host. No shared secret, no second tenant, no
-  neighbours: the caller is the operator of their own store, and the unattributed
-  behaviour above (no resolved workspace ⇒ no filter) is the correct one there.
-  **Served.**
-- `--auth token` — remote, multi-tenant, one shared secret, no identity. `tenant`
-  is a string any holder of that credential picks, and there are neighbours to
-  pick: it would read — and approve — any workspace's Kinds. **Not served.**
+  identity and overwrites the `tenant` query param with it. `tenant` is a fact
+  about the request, and the ownership filter keys on that fact.
+- `--auth none` — local / self-host. No credential, no second tenant: the caller
+  is the operator of their own store, and the unattributed behaviour above (no
+  resolved workspace ⇒ no filter) is the correct one there.
+- `--auth token` — a **trusted server-to-server** lane. There is no identity at
+  the HTTP layer, `tenant` is caller-supplied, and **the caller is responsible
+  for having resolved and verified it** — a trusted caller resolves the workspace
+  from its own verified session before it calls.
 
-Approval is the decisive case for that exclusion: its whole value is the record
-of *who*, and a shared vendor secret signs it as nobody. The lane that cannot
-name the actor does not carry the routes at all, rather than carrying them and
-refusing — a route that 403s still advertises itself. Read-only operator access
-is unaffected; an operator who needs to act for a workspace does it with
-identity, which is what makes the act auditable.
+So on the token lane the ownership property the handlers enforce is only as
+strong as the caller. That is a **deliberate, documented trust boundary**, not an
+oversight: a door cannot re-derive an identity nobody sent it, and the lane's
+credential belongs to the operator of the deployment rather than to its tenants.
+The `# TODO(hosted)` seam above — swap the shared-token gate for a
+verified-token → tenant bridge, the same tenancy model the MCP server uses — is
+the work that removes the caveat; after it lands, `tenant` is bound to the
+verified token here too.
+
+The audit records that lane honestly in the meantime: a token-lane caller with no
+identity claim is stamped `rest:unidentified` (verified against the configured
+secret, naming nobody), which is a different fact from `--auth none`'s
+`rest:local`. A later reader of the store can therefore tell that *who* was
+decided by the caller, not by the door.
 
 `docs/openapi.json` — the generation source for both clients — is dumped from the
-default (`none`) lane and therefore documents the full surface; a `token`
-deployment serves the subset it mounts.
+default (`none`) lane, and every lane now serves the same Kind surface.
 
 ## Workspace tenancy (Model B)
 
