@@ -38,6 +38,7 @@ from dna.application.runtime import (
     provision_workspace_owner_impl,
 )
 from dna.kernel import Kernel
+from dna.kernel.kinds.namespaces import owner_of
 
 _BASE_SCOPE = "dna-development"
 _VENDOR_WS = "ws-vendor00000000000000000"
@@ -99,7 +100,8 @@ async def test_create_births_the_scope_with_the_declared_parent(
     surfaces the curated definitions. No seed script, no redeploy."""
     live = _live(kernel, _BASE_SCOPE)
     out = await create_workspace_impl(live, "Acme", _CLAIMS)
-    ws_scope = live.default_scope(out["workspace_id"])
+    wid = out["workspace_id"]
+    ws_scope = live.default_scope(wid)
 
     genome = await kernel.get_document(ws_scope, "Genome", ws_scope)
     assert genome is not None
@@ -107,6 +109,25 @@ async def test_create_births_the_scope_with_the_declared_parent(
 
     listed = await list_agents_impl(live, scope=ws_scope)
     assert "assistant" in {a["name"] for a in listed["agents"]}
+
+    # i-080 — and the workspace is born OWNING an apiVersion namespace. The
+    # POSITIVE assertion the fail-soft policy needs: `create_workspace_impl`
+    # deliberately swallows an assignment failure so a workspace is never lost
+    # over it, which means without this line a broken assignment is invisible —
+    # every workspace born namespace-less, one WARNING each, suite green.
+    #
+    # Through the REAL resolution path, not by reading the document back: a claim
+    # stored in a shape `owner_of` cannot resolve (the whole `…/v1` apiVersion
+    # instead of the prefix) exists as a document and still refuses the first
+    # Kind the workspace authors.
+    claims = await kernel.kind_namespaces()
+    mine = [c for c in claims if (c.get("spec") or {}).get("owner") == wid]
+    assert len(mine) == 1, f"expected exactly one namespace claim for {wid}, got {mine}"
+    assigned = mine[0]["spec"]["namespace"]
+    assert owner_of(assigned, claims).owner == wid, (
+        f"the newborn workspace does not resolve as the owner of {assigned!r} — "
+        "its first authored Kind would be refused"
+    )
 
 
 @pytest.mark.asyncio

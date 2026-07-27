@@ -23,6 +23,14 @@ from datetime import datetime, timezone
 from typing import Any
 
 from dna.application.live import SCOPE_ACCESS_DEFAULT, LiveDna
+# Top-level ON PURPOSE. `create_workspace_impl` guards the CALL to
+# `assign_namespace` (fail-soft — see the comment there); guarding the IMPORT too
+# would let a renamed symbol or a broken module degrade into every workspace
+# being born with no namespace, one WARNING each and a green suite.
+from dna.application.namespace_assignment import (
+    TENANT_API_VERSION as _TENANT_API,
+    assign_namespace,
+)
 from dna.kernel.protocols import LayerPolicyViolationError  # noqa: F401  (re-exported for the face)
 
 logger = logging.getLogger(__name__)
@@ -1907,7 +1915,8 @@ async def set_account_plan_impl(
 # a sign-in may bind) is the pure `dna.tenancy` policy — these impls only
 # authorize + persist through the SAME `kernel.write_document` funnel the seed uses.
 
-_TENANT_API = "github.com/ruinosus/dna/tenant/v1"
+# `_TENANT_API` — the apiVersion these records are declared under — is imported
+# at the top of this module; `namespace_assignment` holds the one definition.
 _WORKSPACE_SCOPE = "_lib"
 # The workspace-level role ladder (the WorkspaceMembership descriptor enum).
 _WS_ROLES = ("owner", "admin", "member", "guest")
@@ -2786,25 +2795,25 @@ async def create_workspace_impl(
     #     workspace that does not exist — exactly the "grant pointing at a
     #     workspace that does not exist" shape the ordering above calls the
     #     strictly worse one, and worse here than for a membership, because the
-    #     claim is GLOBAL: `owner_of` refuses a namespace claimed twice, so an
-    #     orphan under a name a later mint could collide with is a refusal
-    #     waiting for a stranger. Last means the only surviving failure state is
-    #     an intact workspace with no claim — nothing dangling, nothing global.
+    #     claim is GLOBAL. Last means the only surviving failure state is an
+    #     intact workspace with no claim — nothing dangling, nothing global.
     #
     # Not silently permanent: `assign_namespace` is idempotent and keyed on the
     # OWNER, so the next call for this workspace — the Kind-authoring route calls
     # it before declaring — finds nothing stored and mints exactly once. The hole
     # closes on first use rather than needing a repair job.
+    # Only the CALL is guarded — `assign_namespace` is imported at module top, so
+    # the import itself still fails loudly. And `exc_info`, not `%s`: this line is
+    # only ever read in a production log, where "which line refused" is the whole
+    # question and a stringified exception has already thrown the answer away.
     try:
-        from dna.application.namespace_assignment import assign_namespace
-
         await assign_namespace(live.kernel, workspace_id, now=now)
-    except Exception as e:  # noqa: BLE001 — see (a) above.
+    except Exception:  # noqa: BLE001 — see (a) above.
         logger.warning(
             "workspace %r was created but its apiVersion namespace could not be "
             "assigned (i-080). The workspace is usable; it cannot author its own "
-            "Kind until an assignment succeeds, which the next call retries: %s",
-            workspace_id, e,
+            "Kind until an assignment succeeds, which the next call retries.",
+            workspace_id, exc_info=True,
         )
 
     return {

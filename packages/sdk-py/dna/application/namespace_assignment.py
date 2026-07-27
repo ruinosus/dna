@@ -2,9 +2,9 @@
 
 ASSIGNED and stored, never derived. ``apiVersion`` participates in a document's
 identity key, so a derived namespace would make renaming or migrating a
-workspace change the identity of every document in it. The workspace id is used
-only as the SEED for the first assignment; nothing reads it back out, and the
-stored value survives any later change to the workspace.
+workspace change the identity of every document in it. Nothing reads the
+workspace id back out of the namespace, and the stored value survives any later
+change to the workspace.
 
 **What is assigned is a PREFIX, not an apiVersion.** ``KindNamespace``'s
 descriptor says ``namespace`` never contains a version and never ends in ``/``,
@@ -36,15 +36,20 @@ from typing import Any
 
 from dna.kernel.protocols import SYSTEM_SCOPE
 
-__all__ = ["assign_namespace"]
+__all__ = ["TENANT_API_VERSION", "assign_namespace"]
 
 logger = logging.getLogger(__name__)
 
 _KIND = "KindNamespace"
-_API_VERSION = "github.com/ruinosus/dna/tenant/v1"
+
+#: The apiVersion of the TENANT plane — the one every tenancy record is declared
+#: under: ``KindNamespace`` here, ``Workspace``/``WorkspaceMembership`` in
+#: :mod:`dna.application.runtime`, which imports this name. Defined ONCE: it is a
+#: wire value, and two constants for one wire value drift.
+TENANT_API_VERSION = "github.com/ruinosus/dna/tenant/v1"
 
 #: The non-routable suffix every assigned namespace carries. Kept OUT of the
-#: seed so the whole value stays opaque.
+#: random token so the whole value stays opaque.
 _SUFFIX = ".dna.local"
 
 #: How many times a mint may lose a name race before giving up. A 12-hex-digit
@@ -54,11 +59,23 @@ _MINT_ATTEMPTS = 4
 
 
 async def assign_namespace(kernel: Any, workspace_id: str, *, now: str) -> str:
-    """Return this workspace's namespace, minting and storing one on first call.
+    """Return the namespace THIS FUNCTION ASSIGNED to the workspace, minting and
+    storing one on first call.
 
     Idempotent: a second call returns the stored value, never a second mint.
     The returned value is an apiVersion PREFIX (``ws-1a2b3c.dna.local``) — see
     the module docstring for why it is not the full apiVersion.
+
+    NOT "the workspace's namespace". A workspace MAY OWN SEVERAL — the
+    ``KindNamespace`` descriptor says nothing constrains the count — so no
+    function can return *the* one, and a function that returned whichever claim
+    the registry yielded first would let two authoring sessions land Kinds under
+    two different apiVersions, which participate in document identity. So the
+    contract is narrower and stable: candidates are filtered to the ASSIGNED
+    shape (the ``.dna.local`` suffix) and reduced to a fixed choice. A workspace
+    that later proves ownership of a public namespace (``acme.example``) does
+    not silently change what this answers — authoring under that other claim is
+    a CALLER's explicit decision, never a side effect of a second row appearing.
     """
     if not workspace_id:
         raise ValueError("workspace_id is required to assign a namespace")
@@ -74,7 +91,7 @@ async def assign_namespace(kernel: Any, workspace_id: str, *, now: str) -> str:
         # anyone (including us) to parse a workspace out of it later.
         namespace = f"ws-{secrets.token_hex(6)}{_SUFFIX}"
         raw = {
-            "apiVersion": _API_VERSION,
+            "apiVersion": TENANT_API_VERSION,
             "kind": _KIND,
             "metadata": {"name": namespace},
             "spec": {
@@ -117,13 +134,32 @@ async def assign_namespace(kernel: Any, workspace_id: str, *, now: str) -> str:
 
 
 async def _stored_for(kernel: Any, workspace_id: str) -> str | None:
-    """The namespace already assigned to ``workspace_id``, or None.
+    """The namespace already ASSIGNED to ``workspace_id``, or None.
+
+    Filtered to the assigned shape and reduced with ``min``, never "the first row
+    that matched". A workspace may own several claims, so the unfiltered answer
+    would depend on query order and could flip between two calls — see
+    :func:`assign_namespace`'s docstring for why a flipping apiVersion is a
+    document-identity problem, not a cosmetic one. ``min`` makes the answer a
+    function of the SET of assigned rows, not of the order they arrive in.
+
+    READ-THEN-WRITE, deliberately unlocked: two simultaneous FIRST calls both
+    read nothing and both mint, leaving the workspace owning two assigned
+    namespaces. Unreachable from ``create_workspace_impl`` (one call per
+    creation), and unfixable without a deterministic — i.e. DERIVED — name, which
+    is the one thing this module exists to refuse. It is also the same edge as
+    the paragraph above seen from the other side: even with two assigned rows,
+    the answer is still one namespace and still the same one every time.
 
     Reads ``_lib``-direct: ``KindNamespace`` is GLOBAL and not inheritable, so a
     per-scope query would silently return nothing and mint a duplicate.
     """
+    assigned: list[str] = []
     async for doc in kernel.query(SYSTEM_SCOPE, _KIND):
         spec = (doc.get("spec") or {}) if isinstance(doc, dict) else {}
-        if spec.get("owner") == workspace_id and spec.get("namespace"):
-            return str(spec["namespace"])
-    return None
+        namespace = spec.get("namespace")
+        if spec.get("owner") != workspace_id or not namespace:
+            continue
+        if str(namespace).endswith(_SUFFIX):
+            assigned.append(str(namespace))
+    return min(assigned) if assigned else None

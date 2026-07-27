@@ -17,7 +17,7 @@ import pytest
 
 from dna.adapters.filesystem import FilesystemCache
 from dna.adapters.filesystem.writable import FilesystemWritableSource
-from dna.application.namespace_assignment import assign_namespace
+from dna.application.namespace_assignment import TENANT_API_VERSION, assign_namespace
 from dna.extensions.helix import HelixExtension
 from dna.extensions.kinddef import KindDefinitionExtension
 from dna.extensions.tenant import TenantExtension
@@ -48,6 +48,53 @@ def live_kernel(tmp_path):
     return k
 
 
+async def _store_claim(live_kernel, *, namespace: str, owner: str, notes: str) -> None:
+    """Write a ``KindNamespace`` claim directly — a claim that was already there
+    before ``assign_namespace`` ever ran, in exactly the shape it must find."""
+    await live_kernel.write_document(
+        SYSTEM_SCOPE, "KindNamespace", namespace,
+        {
+            "apiVersion": TENANT_API_VERSION,
+            "kind": "KindNamespace",
+            "metadata": {"name": namespace},
+            "spec": {
+                "owner": owner,
+                "namespace": namespace,
+                "claimed_at": "2026-07-25T00:00:00Z",
+                "notes": notes,
+            },
+        },
+        invalidate_mode="doc",
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_pre_existing_assignment_is_returned_verbatim(live_kernel):
+    """The one test in this module NO DERIVATION CAN PASS.
+
+    Every other test here is satisfied by an implementation that computes the
+    namespace from the workspace id and stores the result: such a value exists as
+    a document, is deterministic across calls, and resolves through the ownership
+    gate. It is also precisely the defect — consolidate or migrate a workspace to
+    a new id and its namespace silently changes, taking the identity of every
+    document it owns with it.
+
+    So: pre-store a namespace nothing about ``ws-abc`` could produce, and require
+    it back. A derivation returns its own hash and fails here."""
+    stored = "ws-deadbeefcafe.dna.local"
+    await _store_claim(live_kernel, namespace=stored, owner="ws-abc",
+                       notes="assigned before this call ever ran")
+
+    got = await assign_namespace(live_kernel, "ws-abc", now="2026-07-26T00:00:00Z")
+
+    assert got == stored, (
+        f"assign_namespace returned {got!r}, not the STORED assignment {stored!r}"
+        " — a value it could have computed from 'ws-abc' means the namespace is"
+        " DERIVED, and renaming or migrating the workspace would then change the"
+        " apiVersion, and so the identity, of every document it owns"
+    )
+
+
 @pytest.mark.asyncio
 async def test_assignment_is_stored_not_derived(live_kernel):
     ns = await assign_namespace(live_kernel, "ws-abc", now="2026-07-26T00:00:00Z")
@@ -56,8 +103,11 @@ async def test_assignment_is_stored_not_derived(live_kernel):
     # Renaming the workspace must not change the namespace.
     doc = await live_kernel.get_document(SYSTEM_SCOPE, "KindNamespace", ns)
     assert doc["spec"]["namespace"] == ns
-    assert "ws-abc" not in ns or doc["spec"].get("assigned") is True, (
-        "if the id appears it must be a stored assignment, never a derivation"
+    assert "ws-abc" not in ns, (
+        "the workspace id must not appear in the namespace: a stored assignment "
+        "is opaque, and an id visible in the value is the shape a derivation "
+        "leaves behind (nothing in the schema could mark it as assigned — it is "
+        "`additionalProperties: false` with no such field)"
     )
 
 
@@ -88,4 +138,42 @@ async def test_the_assignment_is_a_claim_the_ownership_gate_resolves(live_kernel
         "the workspace must own the namespace of the apiVersion it will declare "
         f"its Kinds under ({api_version!r}) — otherwise the namespace was "
         "assigned in a shape the write path cannot resolve"
+    )
+
+
+@pytest.mark.asyncio
+async def test_the_answer_is_the_assigned_claim_and_never_flips(live_kernel):
+    """A workspace MAY own several namespaces — the ``KindNamespace`` descriptor
+    says nothing constrains the count — so "the workspace's namespace" is not a
+    function of the workspace. ``assign_namespace`` answers with the ASSIGNED one
+    and only that.
+
+    Both halves matter, and both are about apiVersion participating in document
+    identity: a workspace that proves ownership of a public domain must not have
+    its assigned namespace silently swapped out from under Kinds already declared
+    under it (authoring under the proven claim is a caller's explicit choice), and
+    an extra assigned row must not flip the answer either — the choice is over the
+    SET of assigned claims, not over the order the registry yields them in."""
+    assigned = "ws-0000deadbeef.dna.local"
+    await _store_claim(live_kernel, namespace="acme.example", owner="ws-abc",
+                       notes="proven ownership of a public domain")
+    await _store_claim(live_kernel, namespace=assigned, owner="ws-abc",
+                       notes="assigned automatically at workspace creation")
+
+    first = await assign_namespace(live_kernel, "ws-abc", now="2026-07-26T00:00:00Z")
+    assert first == assigned, (
+        f"got {first!r}: a differently-shaped PROVEN claim must never become what "
+        "the workspace's assigned namespace is"
+    )
+
+    # A second ASSIGNED row — the double-mint two simultaneous first calls could
+    # leave behind — must not move the answer either.
+    await _store_claim(live_kernel, namespace="ws-ffff00000000.dna.local",
+                       owner="ws-abc", notes="assigned automatically at workspace creation")
+
+    again = await assign_namespace(live_kernel, "ws-abc", now="2026-07-27T00:00:00Z")
+    assert again == first, (
+        f"the assigned namespace flipped from {first!r} to {again!r} when a second "
+        "claim appeared — a caller authoring across two sessions would land its "
+        "Kinds under two different apiVersions"
     )
