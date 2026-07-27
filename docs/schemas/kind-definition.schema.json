@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "kind-definition.schema.json",
   "title": "KindDefinition",
-  "description": "Declarative Kind descriptor — the format of builtin `kinds/*.kind.yaml` package descriptors AND per-scope `kinds/<name>/KIND.yaml` documents (one format, one funnel). Canonical copy: docs/schemas/kind-definition.schema.json; a byte-identical runtime copy ships as sdk-py package data (dna/kernel/schemas/) and backs the validation in TypedKindDefinition.from_raw. Parity-critical: the Python hand-rolled validators (models.py KindDefinitionSpec.from_raw) and the TS Zod schema (models.ts KindDefinitionSpecSchema) must accept exactly what this schema accepts (guarded by test_kind_definition_schema.py / kind-definition-schema.test.ts). Editor autocomplete: put `# yaml-language-server: $schema=<path-to-this-file>` on the first line of a .kind.yaml.",
+  "description": "Declarative Kind descriptor — the format of builtin `kinds/*.kind.yaml` package descriptors AND per-scope `kinds/<name>/KIND.yaml` documents (one format, one funnel). Canonical copy: docs/schemas/kind-definition.schema.json; a byte-identical runtime copy ships as sdk-py package data (dna/kernel/schemas/) and backs the validation in TypedKindDefinition.from_raw. Parity-critical: the Python hand-rolled validator (models.py KindDefinitionSpec.from_raw) must accept exactly what this schema accepts (guarded by packages/sdk-py/tests/test_kind_definition_schema.py). There is NO TypeScript twin — packages/ holds cli, client-py, client-ts and sdk-py, and neither a models.ts KindDefinitionSpecSchema nor a kind-definition-schema.test.ts exists anywhere in the tree. The claim that one guarded this file was stale; a false 'guarded by' sitting next to newly-added fields invites the next author to trust it. Editor autocomplete: put `# yaml-language-server: $schema=<path-to-this-file>` on the first line of a .kind.yaml.",
   "type": "object",
   "required": ["apiVersion", "kind", "metadata", "spec"],
   "properties": {
@@ -277,11 +277,11 @@
         },
         "proposed_by": {
           "type": ["string", "null"],
-          "description": "Who PROPOSED this Kind — the verified identity at the authoring door, stamped THERE because a proposer cannot be back-filled onto a document that never recorded one. Audit metadata only: the registration gate reads approved_by. It is legal for this to name the same identity as approved_by (a solo author who approves their own proposal is two credentials, and refusing on identity equality would block the commonest user for no security gain) — a coincidence the audit REPORTS, not an error. What must never happen is one act wearing the other's name: each field is stamped from the verified identity of ITS OWN act, never from the request body."
+          "description": "Who PROPOSED this Kind — the verified identity at the authoring door, stamped THERE because a proposer cannot be back-filled onto a document that never recorded one. Tracks the CURRENT proposal: an edit (a second author call for an existing name) RE-STAMPS it to the editor, because the question this field answers is who proposed the shape that is pending or approved right now. The original proposer stays recoverable through the kernel's version history. Audit metadata only: the registration gate reads approved_by. It is legal for this to name the same identity as approved_by (a solo author who approves their own proposal is two credentials, and refusing on identity equality would block the commonest user for no security gain) — a coincidence the audit REPORTS, not an error. What must never happen is one act wearing the other's name: each field is stamped from the verified identity of ITS OWN act, never from the request body."
         },
         "proposed_at": {
           "type": ["string", "null"],
-          "description": "When the proposal recorded in proposed_by was made (ISO-8601) — the same instant the authoring door stamps created_at. Audit metadata only."
+          "description": "When the proposal recorded in proposed_by was made (ISO-8601). Equal to created_at on a FIRST author and later than it on every edit — created_at is the document's birth and is carried forward, while this pair moves with the current proposal. Audit metadata only."
         },
         "approved_by": {
           "type": ["string", "null"],
@@ -297,7 +297,7 @@
         },
         "created_at": {
           "type": "string",
-          "description": "When the document was created (ISO-8601). VOLATILE means excluded from canonical_digest, NOT supplied by the runtime — nothing in the write path stamps it, so a document written without it comes back with no created_at at all. The Kind-authoring door therefore stamps it deliberately, and the audit view projects it so a reviewer can see when a Kind was proposed. A write-time stamp, if one ever lands, wins."
+          "description": "When the document was created (ISO-8601). VOLATILE means excluded from canonical_digest, NOT supplied by the runtime — nothing in the write path stamps it, so a document written without it comes back with no created_at at all. The Kind-authoring door therefore stamps it deliberately, and the audit view projects it. It means the BIRTH of the document and is PRESERVED across edits — the authoring door rebuilds the spec from scratch and persists it, so it carries the existing value forward and stamps `now` only when the document does not yet exist; 'when the document was created' has to stay true after the first edit. For when the pending shape was proposed, read proposed_at. A write-time stamp, if one ever lands, wins."
         },
         "version": {
           "type": ["string", "integer"],

@@ -106,9 +106,9 @@ def dna_dir_without_lib(tmp_path, monkeypatch):
     return dst
 
 
-def _client(dna_dir, *, raise_server_exceptions: bool = True) -> TestClient:
+def _client(dna_dir, *, raise_server_exceptions: bool = True, **app) -> TestClient:
     return TestClient(
-        R.build_app(base_dir=str(dna_dir), scope=_SCOPE),
+        R.build_app(base_dir=str(dna_dir), scope=_SCOPE, **app),
         raise_server_exceptions=raise_server_exceptions,
     )
 
@@ -371,7 +371,73 @@ def test_a_traversing_kind_name_writes_no_file_outside_the_store(
     assert not strayed, f"paths created outside the store root: {strayed}"
 
 
-# ── 5. a first author on a store with no registry scope ───────────────────
+# ── 5. WHO an unauthenticated door records as the proposer ────────────────
+#
+# This suite runs under ``--auth none``, so every author call above already
+# executes the "no verified identity" branch of ``_actor_from_state`` and
+# persists whatever it returns into ``proposed_by``. Until now nothing asserted
+# the value. A brand-new string that lands in a persisted audit field is a
+# contract with every future reader of the store, and it is exactly the kind of
+# value a rename would change silently — so it is pinned as a LITERAL here,
+# not merely as "whatever the constant happens to say".
+
+
+def test_a_local_unauthenticated_author_is_recorded_as_rest_local(
+    dna_dir, monkeypatch,
+):
+    monkeypatch.delenv("DNA_PERSONAL_ID", raising=False)
+    with _client(dna_dir) as c:
+        r = c.post("/v1/kinds", params={"tenant": _WID},
+                   json={"kind": "Contrato", "schema": _SCHEMA})
+        assert r.status_code == 201, r.text
+        name = r.json()["name"]
+
+    assert _stored_spec(dna_dir, name)["proposed_by"] == "rest:local"
+    # The prefix names the CHANNEL, and it must be this face's own: reusing
+    # ``mcp:local`` here would re-make, one layer over, the very conflation the
+    # MCP constants exist to end.
+    assert R._UNIDENTIFIED_LOCAL_ACTOR == "rest:local"
+
+
+def test_a_declared_personal_id_outranks_the_local_sentinel(dna_dir, monkeypatch):
+    """The sentinel is the FALLBACK, not the policy. An operator who declared
+    ``DNA_PERSONAL_ID`` has named the offline caller, and a proposal recorded
+    as ``rest:local`` when a real name was available is a worse audit."""
+    monkeypatch.setenv("DNA_PERSONAL_ID", "barna@example.com")
+    with _client(dna_dir) as c:
+        r = c.post("/v1/kinds", params={"tenant": _WID},
+                   json={"kind": "Contrato", "schema": _SCHEMA})
+        assert r.status_code == 201, r.text
+        name = r.json()["name"]
+
+    assert _stored_spec(dna_dir, name)["proposed_by"] == "barna@example.com"
+
+
+def test_a_shared_secret_deployment_does_not_call_its_caller_local(
+    dna_dir, monkeypatch,
+):
+    """``--auth token`` is a REMOTE deployment behind a shared secret, and its
+    caller is neither local nor a person.
+
+    The bearer IS verified — against ``DNA_API_TOKEN`` — it simply carries no
+    identity claim, which is precisely what ``rest:unidentified`` names. Before
+    this, the branch fell through to ``rest:local`` (a mislabel inherited from
+    the MCP precedent, where ``--auth token`` and ``--auth none`` were lumped
+    together as "no token at all"), so every Kind proposed through a
+    shared-secret deployment was audited as if somebody had typed it on the
+    operator's laptop."""
+    monkeypatch.delenv("DNA_PERSONAL_ID", raising=False)
+    with _client(dna_dir, auth="token", token="s3cret") as c:
+        r = c.post("/v1/kinds", params={"tenant": _WID},
+                   headers={"Authorization": "Bearer s3cret"},
+                   json={"kind": "Contrato", "schema": _SCHEMA})
+        assert r.status_code == 201, r.text
+        name = r.json()["name"]
+
+    assert _stored_spec(dna_dir, name)["proposed_by"] == "rest:unidentified"
+
+
+# ── 6. a first author on a store with no registry scope ───────────────────
 
 
 def test_authoring_without_a_registry_scope_refuses_actionably(dna_dir_without_lib):

@@ -90,6 +90,26 @@ _UNIDENTIFIED_TOKEN_ACTOR = "rest:unidentified"
 # non-numeric/absent env keeps the default.
 
 
+def _no_registry_scope_detail(why: str, exc: Exception) -> str:
+    """The 503 body for a store whose namespace-registry scope was never
+    provisioned — shared by BOTH Kind doors.
+
+    Authoring READS the ``KindNamespace`` registry before it mints; approval
+    reads it to check the caller owns the namespace the Kind was authored
+    under. On a filesystem-backed source a missing scope directory raises
+    ``FileNotFoundError``, so either door can meet this — and unmapped it
+    surfaces as a 500 with a bare path in the log. It is a deployment
+    PRECONDITION, not a bad request and not the caller's fault: 503, naming
+    what is missing and how to satisfy it. One helper because two copies of an
+    operator-facing message drift, and the half that drifts is the one the
+    operator happens to hit."""
+    return (
+        f"the namespace registry scope (`_lib`) is not provisioned in this "
+        f"store, so no Kind can be {why}. Provision the `_lib` scope (a Genome "
+        f"manifest at <base>/_lib/manifest.yaml) and retry. Underlying: {exc}"
+    )
+
+
 def _int_env(name: str, default: int) -> int:
     raw = os.environ.get(name)
     try:
@@ -662,10 +682,16 @@ def build_app(
         turns attribution into a new way to lose work):
 
         * a VERIFIED token carrying no identity claim at all →
-          :data:`_UNIDENTIFIED_TOKEN_ACTOR`;
-        * no token at all (``--auth none`` / ``--auth token``, i.e. local or OSS
-          self-host) → ``DNA_PERSONAL_ID`` if the operator declared one — the
-          env var that already names an offline caller for personal memory — and
+          :data:`_UNIDENTIFIED_TOKEN_ACTOR`. ``--auth token`` — a REMOTE
+          deployment behind a shared secret — is this case, not the local one:
+          the bearer IS verified (against ``DNA_API_TOKEN``), it simply names
+          nobody. Calling that caller ``rest:local`` was a mislabel inherited
+          from the MCP precedent, where the two lanes were lumped together as
+          "no token at all"; ``DNA_PERSONAL_ID`` still outranks it, because an
+          operator who declared a name has said more than the sentinel can.
+        * no token at all (``--auth none``, i.e. local or OSS self-host) →
+          ``DNA_PERSONAL_ID`` if the operator declared one — the env var that
+          already names an offline caller for personal memory — and
           :data:`_UNIDENTIFIED_LOCAL_ACTOR` otherwise.
 
         The two labels name the CHANNEL this face is (``rest:``), not the
@@ -678,7 +704,13 @@ def build_app(
 
         claims = _actor_claims_from_state(request)
         if claims is None:
-            return personal_id_from_env() or _UNIDENTIFIED_LOCAL_ACTOR
+            # ``--auth token`` stashes no claims (there are none to stash), but
+            # it is not the local lane — see the docstring.
+            unidentified = (
+                _UNIDENTIFIED_TOKEN_ACTOR if auth == "token"
+                else _UNIDENTIFIED_LOCAL_ACTOR
+            )
+            return personal_id_from_env() or unidentified
         identity = _identity_from_token(claims)
         for candidate in (identity.email, identity.oid, claims.get("sub")):
             if isinstance(candidate, str) and candidate.strip():
@@ -959,12 +991,7 @@ def build_app(
             raise HTTPException(status_code=400, detail=str(exc)) from None
         except FileNotFoundError as exc:
             # A FIRST author on a store whose namespace-registry scope was never
-            # provisioned. Authoring READS that registry before it mints, and a
-            # filesystem-backed source raises for a scope directory that is not
-            # there — so what the operator actually met was an unmapped 500 with
-            # a bare path in the log. This is a deployment PRECONDITION, not a
-            # bad request and not the caller's fault: 503, and the message names
-            # what is missing and how to satisfy it.
+            # provisioned — see _no_registry_scope_detail.
             #
             # This is the face's half only. The deeper fix — reading a missing
             # registry scope as "no claims yet" rather than raising — belongs to
@@ -972,12 +999,10 @@ def build_app(
             # mapping is what stands between the operator and a 500.
             raise HTTPException(
                 status_code=503,
-                detail=(
-                    "the namespace registry scope (`_lib`) is not provisioned "
-                    "in this store, so no Kind can be authored yet: authoring "
-                    "reads the KindNamespace registry before it mints a "
-                    "namespace. Provision the `_lib` scope (a Genome manifest "
-                    f"at <base>/_lib/manifest.yaml) and retry. Underlying: {exc}"
+                detail=_no_registry_scope_detail(
+                    "authored yet: authoring reads the KindNamespace registry "
+                    "before it mints a namespace",
+                    exc,
                 ),
             ) from exc
 
@@ -1006,9 +1031,14 @@ def build_app(
         forge is not attribution. The document's ``proposed_by`` is preserved
         untouched, so the audit names both acts and neither wears the other's
         name. 404 when no such Kind was authored in this scope (approval acts on
-        an existing document and creates none), 400 for a missing tenant / a
-        malformed Kind name / a Kind declared under two namespaces at once, 403
-        when the namespace gate refuses the write."""
+        an existing document and creates none — and a Kind authored by ANOTHER
+        workspace in a shared scope is a 404 too: it is not the caller's to
+        approve, and saying "it exists but is not yours" would hand a stranger
+        a probe for what its neighbours are authoring), 400 for a missing
+        tenant / a malformed Kind name / a Kind the caller declared under two
+        of its own namespaces at once, 403 when the namespace gate refuses the
+        write, 503 when the namespace registry scope has not been provisioned
+        in this store."""
         from dna.application.sdlc import now_iso
 
         try:
@@ -1022,6 +1052,22 @@ def build_app(
             raise HTTPException(status_code=403, detail=str(exc)) from exc
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from None
+        except FileNotFoundError as exc:
+            # The sibling door has mapped this since it shipped; this one did
+            # not, so the same missing directory answered 503 on one route and
+            # an unmapped 500 on the other. Approval resolves the KindNamespace
+            # registry to check the caller owns the namespace the Kind was
+            # authored under — same read, same precondition, same honest answer.
+            raise HTTPException(
+                status_code=503,
+                detail=_no_registry_scope_detail(
+                    "approved: approval resolves the KindNamespace registry to "
+                    "check that the caller owns the namespace the Kind was "
+                    "authored under, and an unreadable authorization record is "
+                    "not a granted one",
+                    exc,
+                ),
+            ) from exc
 
     @app.get("/v1/kinds", dependencies=guarded,
              response_model=m.AuthoredKindsResponse)

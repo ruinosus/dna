@@ -93,6 +93,14 @@ class AuthoredKindNotFound(LookupError):
 #: lands in the SAME ``kinds/<name>/`` directory as the first and silently
 #: replaces it, with a 201 in reply. Requiring the initial capital removes the
 #: pair.
+#:
+#: It gates the APPROVAL url too (both doors share :func:`_checked_kind_name`),
+#: so a Kind authored under the looser form would be permanently unapprovable
+#: with no migration path. VERIFIED to affect nothing: this door first appeared
+#: in ``71f8aa8`` and the tightening landed in ``7299a26`` the same day on the
+#: same unmerged branch — ``git tag --contains`` names no release for either —
+#: and a tree-wide scan of stored ``target_kind`` values found no non-CamelCase
+#: declaration. No migration is owed.
 _KIND_NAME_RE = re.compile(r"[A-Z][A-Za-z0-9]{0,63}")
 
 
@@ -162,6 +170,23 @@ async def author_kind_impl(
     here, at the moment of the proposal, because it cannot be back-filled later:
     a document that never recorded who proposed it has lost that fact for good.
 
+    **This is also the EDIT path**, and the spec below is rebuilt from scratch
+    and PERSISTED (``write_document`` does not merge), so what an edit does to
+    each audit field is decided by what this function carries forward:
+
+    * ``created_at`` — the BIRTH of the document, carried forward. Only a
+      document that does not exist yet gets ``now``. The schema calls it "when
+      the document was created" and an unconditional re-stamp made that false
+      from the first edit onward.
+    * ``proposed_by``/``proposed_at`` — the CURRENT proposal, re-stamped every
+      time. They answer "who proposed the shape that is pending or approved
+      right now", and after an edit that is the editor, not whoever went first.
+      The original proposer stays recoverable through the kernel's version
+      history; the live document answers the live question.
+    * ``approved_by``/``approved_at`` — dropped, by never being written. An edit
+      changes the shape a human approved, so the approval no longer applies to
+      it and the Kind loses its effect until the new shape is approved.
+
     Raises ``ValueError`` for a missing tenant, or for a Kind name that is not a
     CamelCase identifier (the face maps it to 400) — see :data:`_KIND_NAME_RE`,
     which is a security boundary and not a tidiness check. Every policy refusal
@@ -179,6 +204,14 @@ async def author_kind_impl(
 
     namespace = await assign_namespace(live.kernel, tenant, now=now)
     name = kind_document_name(namespace, kind)
+    scope = live.default_scope(tenant)
+    # The ONE thing read back off an existing document. Not a merge — a merge
+    # would carry `approved_by` forward too, and an edit must withdraw the
+    # approval it invalidated. A missing document reads as None here (the
+    # ordinary first-author case), so `created_at` falls back to `now`.
+    existing = await live.kernel.get_document(scope, _KIND, name)
+    prior = existing.get("spec") if isinstance(existing, dict) else None
+    born_at = prior.get("created_at") if isinstance(prior, dict) else None
     raw = {
         "apiVersion": _API_VERSION,
         "kind": _KIND,
@@ -205,11 +238,20 @@ async def author_kind_impl(
             # proposed. Unauthored, every row would read `created_at: null`.
             # If a write-time stamp ever lands, it wins and this line becomes a
             # no-op — which is the harmless direction.
-            "created_at": now,
+            #
+            # CARRIED FORWARD on an edit (`born_at`), never re-stamped: this is
+            # the document's birth, and the schema says so in those words.
+            "created_at": born_at or now,
             # WHO proposed, and WHEN — the first half of the audit. The value is
             # the face's VERIFIED identity for this request, passed in as
             # `actor`; a `proposed_by` in the request body reaches nothing,
             # because this spec is built field by field and never merged.
+            #
+            # RE-STAMPED on an edit, unlike `created_at` above, and the asymmetry
+            # is the point: these two answer "who proposed the shape that is
+            # pending or approved RIGHT NOW", which after an edit is the editor.
+            # The first proposer is not lost — the kernel keeps the version
+            # history — but the live document answers the live question.
             "proposed_by": proposed_by,
             "proposed_at": now if proposed_by else None,
             # Deliberately absent: approved_by / approved_at. This path CANNOT
@@ -220,19 +262,41 @@ async def author_kind_impl(
             # there is no key an author can smuggle through.
         },
     }
-    version = await live.kernel.write_document(
-        live.default_scope(tenant), _KIND, name, raw,
-    )
+    version = await live.kernel.write_document(scope, _KIND, name, raw)
     return {
         "namespace": namespace, "kind": kind, "name": name,
         "approved": False, "proposed_by": proposed_by, "version": version,
     }
 
 
+async def _owns(live: Any, tenant: str) -> Any:
+    """A predicate ``(namespace) -> bool``: does ``tenant`` own that namespace?
+
+    Answered from the ``KindNamespace`` claim registry — the SAME rows and the
+    SAME resolver (:func:`~dna.kernel.kinds.namespaces.owner_of`, prefix-aware,
+    most-specific claim first) the write-path gate decides with, so ownership
+    cannot mean one thing to the gate and another to this door.
+
+    Read once per call and closed over: the registry is a single ``_lib`` read
+    and a per-candidate read would turn one query into N. An unreadable registry
+    is left to raise, exactly as the gate leaves it — we cannot tell an owner
+    from a stranger without it, and "no rows" is not the same fact as "the read
+    failed"."""
+    from dna.kernel.kinds.namespaces import owner_of
+
+    claims = await live.kernel.kind_namespaces()
+
+    def owns(namespace: str) -> bool:
+        return owner_of(namespace, claims).owner == tenant
+
+    return owns
+
+
 async def _authored_document_name(
-    live: Any, *, scope: str, kind: str, tenant: str | None,
+    live: Any, *, scope: str, kind: str, tenant: str,
 ) -> tuple[str, str]:
-    """Find the authored document for ``kind`` in ``scope`` → ``(name, namespace)``.
+    """Find the CALLER's authored document for ``kind`` in ``scope`` →
+    ``(name, namespace)``.
 
     Addresses the document by SEARCH, not by re-deriving the namespace. Calling
     :func:`assign_namespace` here would read better and be wrong twice over: it
@@ -246,10 +310,28 @@ async def _authored_document_name(
     unambiguously — even for a hand-written namespace claim that contains ``--``
     itself. Left-splitting would mis-address exactly that case.
 
-    Raises :class:`AuthoredKindNotFound` when nothing matches, and ``ValueError``
-    when two namespaces in one scope both declare the Kind — an ambiguity a
-    reviewer must resolve by name, never one this function may pick a winner for.
+    **The ownership filter is a security boundary, not a nicety.** A scope holds
+    the authored Kinds of every workspace that shares it — and with
+    multi-workspace off, ``LiveDna.default_scope`` hands EVERY workspace the same
+    ``base_scope``, so sharing is the default configuration and not an exotic
+    one. The Kind half of the name is all the approval URL carries, so an
+    unfiltered search lets workspace A approve the ``…--Contrato`` that belongs
+    to B: one match, no refusal, and effect conferred on a document A never
+    wrote. Nothing downstream catches it — the approval write passes no
+    ``tenant=`` (``KindDefinition`` is non-overlayable), so the namespace gate
+    attributes it to the SCOPE's owner rather than to the caller. Filtering here,
+    against the claim registry, is where the caller is still known.
+
+    A match the caller does not own is dropped, not refused: to this caller the
+    Kind is simply not there, and a distinct "it exists but is not yours" would
+    hand a stranger a probe for what its neighbours are authoring.
+
+    Raises :class:`AuthoredKindNotFound` when nothing the caller owns matches,
+    and ``ValueError`` when the CALLER owns two namespaces that both declare the
+    Kind — an ambiguity a reviewer must resolve by name, never one this function
+    may pick a winner for.
     """
+    owns = await _owns(live, tenant)
     matches: list[tuple[str, str]] = []
     async for raw in live.kernel.query(scope, _KIND, tenant=tenant):
         if not isinstance(raw, dict):
@@ -258,17 +340,19 @@ async def _authored_document_name(
         if _NAME_SEP not in name:
             continue
         namespace, kind_half = name.rsplit(_NAME_SEP, 1)
-        if kind_half == kind and namespace:
+        if kind_half == kind and namespace and owns(namespace):
             matches.append((name, namespace))
     if not matches:
         raise AuthoredKindNotFound(
-            f"no authored Kind {kind!r} in scope {scope!r} — approval acts on a "
-            f"document that already exists, and creates none"
+            f"no authored Kind {kind!r} in scope {scope!r} under a namespace "
+            f"workspace {tenant!r} owns — approval acts on a document that "
+            f"already exists, and creates none"
         )
     if len(matches) > 1:
         raise ValueError(
-            f"Kind {kind!r} is declared under {len(matches)} namespaces in scope "
-            f"{scope!r} ({', '.join(sorted(n for _, n in matches))}) — approve it "
+            f"Kind {kind!r} is declared under {len(matches)} namespaces that "
+            f"workspace {tenant!r} owns in scope {scope!r} "
+            f"({', '.join(sorted(n for _, n in matches))}) — approve it "
             f"by document name, not by Kind name"
         )
     return matches[0]
@@ -292,10 +376,18 @@ async def approve_kind_impl(
     all, so approval already requires a second call to a different route). What
     this function must never do is let one act wear the other's name.
 
-    Raises :class:`AuthoredKindNotFound` (→ 404) when no such document exists,
-    and ``ValueError`` (→ 400) for a missing tenant/actor or a malformed Kind
-    name. Idempotent in shape but not in fact: a second approval re-stamps the
-    approver and the timestamp, which is the honest record of what happened.
+    ``tenant`` is not decoration on the lookup: it is what scopes the search to
+    the caller's OWN namespaces (see :func:`_authored_document_name`). A scope is
+    shared by default, and the approval URL carries only the Kind half of the
+    document name.
+
+    Raises :class:`AuthoredKindNotFound` (→ 404) when no document the CALLER
+    owns exists under that Kind name — including when a neighbour's does — and
+    ``ValueError`` (→ 400) for a missing tenant/actor or a malformed Kind name.
+    Idempotent in shape but not in fact: a second approval re-stamps the
+    approver and the timestamp, which is the honest record of what happened —
+    and it is the ordinary path, because an EDIT drops the approval (see
+    :func:`author_kind_impl`) and the re-approval is what restores effect.
     """
     kind = _checked_kind_name(kind, verb="approve")
     if not (tenant or "").strip():
