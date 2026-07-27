@@ -265,11 +265,17 @@ class TestCustomKinds:
         from dna.kernel import Kernel
         k = Kernel()
 
-        # Simulate _register_custom_kinds
+        # Simulate _register_custom_kinds.
+        # ``approved_by`` is required for the entry to register at all — a
+        # custom_kinds entry is a store-loaded Kind declaration and goes through
+        # the same approval gate as a KindDefinition. Without it this test would
+        # pass vacuously in the wrong direction: nothing would be registered, so
+        # the assertions below would simply fail rather than checking anything.
         manifest = {
             "spec": {
                 "custom_kinds": [
-                    {"apiVersion": "myco.io/v1", "kind": "Pipeline", "alias": "myco-pipeline"},
+                    {"apiVersion": "myco.io/v1", "kind": "Pipeline", "alias": "myco-pipeline",
+                     "approved_by": "approver@example.com"},
                 ]
             }
         }
@@ -286,7 +292,12 @@ class TestCustomKinds:
         from dna.kernel.instance import ManifestInstance
 
         k = Kernel()
-        manifest = {"spec": {"custom_kinds": [{"apiVersion": "x/v1", "kind": "Pipeline", "alias": "x-pipeline"}]}}
+        # ``approved_by`` declared for the same reason as above: an unapproved
+        # custom_kinds entry never registers, so mi.list_kinds() would not see
+        # "Pipeline" at all and this test would assert nothing about querying.
+        manifest = {"spec": {"custom_kinds": [{"apiVersion": "x/v1", "kind": "Pipeline",
+                                               "alias": "x-pipeline",
+                                               "approved_by": "approver@example.com"}]}}
         k._register_custom_kinds(manifest)
 
         doc = Document.from_raw({"apiVersion": "x/v1", "kind": "Pipeline", "metadata": {"name": "etl"}, "spec": {"stages": 3}})

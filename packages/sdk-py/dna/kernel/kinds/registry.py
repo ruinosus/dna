@@ -1143,6 +1143,13 @@ class KindRegistry:
         effect, with no second gate to keep in sync. An unapproved
         KindDefinition is parsed, warn-skipped, and stays an inert document.
 
+        Approval is therefore a gate on ENTRY, not a live permission: clearing
+        ``approved_by`` on a Kind that ALREADY registered does not unregister
+        it. The gate runs before the already-registered branch below, and the
+        registry is per-kernel and outlives any single ``instance_async`` call,
+        so the live port keeps governing until the process restarts. Revocation
+        is not a mechanism here — do not build a UI on the assumption that it is.
+
         Extension-registered kinds win on conflict: if a port with the same
         (target_api_version, target_kind) is already registered, the
         declarative one is skipped and a warning is emitted via the
@@ -1344,7 +1351,22 @@ class KindRegistry:
         Creates a minimal KindPort so mi.all("Pipeline") works.
 
         Store-loaded like ``KindDefinition``, so ``scope`` binds them the same
-        way (i-081) — the root document they come from belongs to one scope.
+        way (i-081) — the root document they come from belongs to one scope —
+        and so the SAME approval gate applies: an entry only reaches the
+        registry once its ``approved_by`` names someone. This is the second door
+        onto the same registry, and the one that needs no new document: whoever
+        may write a scope's root document declares Kinds here. Ungated, the
+        claim that an unapproved Kind has no effect would be false process-wide,
+        since an author could simply use this door instead.
+
+        The gate is PER ENTRY, not per document: the entry *is* the Kind
+        declaration, so a partly-approved manifest registers exactly its
+        approved entries and warn-skips the rest. It runs BEFORE both the scope
+        binding and the already-registered early-return, for the reason the
+        KindDefinition funnel runs it first (see
+        :meth:`register_kind_definitions`): binding IS registration for a scope
+        that had none, so an unapproved entry must not acquire another scope's
+        Kind that way.
         """
         custom_kinds = manifest.get("spec", {}).get("custom_kinds", [])
         for ck in custom_kinds:
@@ -1352,6 +1374,23 @@ class KindRegistry:
             kn = ck.get("kind", "")
             alias = ck.get("alias", kn.lower())
             if not kn:
+                continue
+            approved_by = (ck.get("approved_by") or "").strip()
+            if not approved_by:
+                # Same refusal as the KindDefinition funnel, same reason: an
+                # authored-but-unapproved Kind is a legitimate state, it stays
+                # an inert part of the document and simply never becomes real.
+                # Registration is what confers schema enforcement and storage
+                # routing, so withholding it IS the absence of effect.
+                #
+                # The gate READS approved_by and never writes it — who may set
+                # it is decided where the writer is authenticated, not here.
+                logger.warning(
+                    "Custom kind %r in scope %r is declared but not approved — "
+                    "parsed, not registered. It has no effect until a human "
+                    "approves it (approved_by is empty).",
+                    kn, scope,
+                )
                 continue
             key = (av, kn)
             if key in self._kinds:

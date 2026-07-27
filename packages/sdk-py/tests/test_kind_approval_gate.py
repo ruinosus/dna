@@ -111,3 +111,136 @@ async def test_the_refusal_is_logged_not_silent(kernel_with_scope, caplog):
         "the skip must name the Kind and the reason — the author has to be able "
         "to find out why their Kind does nothing"
     )
+
+
+def test_the_scopeless_funnel_is_not_exempt():
+    """Pins a decision that would otherwise be silently reversible.
+
+    Exempting ``scope=None`` from the gate looks harmless — it reads like "the
+    in-process caller owns the whole process, so it may register what it likes".
+    It is not: ``scope=None`` is the funnel every in-process caller reaches, so
+    the exemption would be a real bypass, and one nothing else here would catch,
+    because every OTHER test in this file hands the funnel a real scope. This
+    test is the fence: it drives the scope-less funnel directly and asserts the
+    unapproved Kind still does not register."""
+    k = Kernel()
+    k.load(HelixExtension())
+    k.load(KindDefinitionExtension())
+
+    raw = {
+        "apiVersion": "github.com/ruinosus/dna/core/v1",
+        "kind": "KindDefinition",
+        "metadata": {"name": "widget"},
+        "spec": {
+            "target_api_version": "example.com/v1",
+            "target_kind": "Widget",
+            "alias": "example-widget",
+            "origin": "example.com",
+            "schema": {"type": "object", "additionalProperties": True},
+        },
+    }
+    k._register_kind_definitions([raw])  # scope=None — the in-process funnel
+
+    assert k.kind_port_for("Widget") is None, (
+        "the gate must not be scoped-only: an unapproved Kind handed straight "
+        "to the scope-less funnel registers nothing either"
+    )
+
+
+# ── The same gate on the OTHER store-loaded registration path ──
+#
+# ``Module.spec.custom_kinds`` is the second way a Kind arrives from a store:
+# whoever can write a scope's ROOT document declares Kinds there, and the
+# entries go through ``register_custom_kinds`` instead of the KindDefinition
+# funnel. Ungated, the feature's central claim ("não aprovado não tem efeito,
+# mecanicamente") would be false process-wide — the gate would only cover the
+# door the author did not have to use.
+
+
+def _manifest(*entries: dict[str, Any]) -> dict[str, Any]:
+    """A root document declaring ``custom_kinds`` — the shape
+    ``instance_builder`` hands ``_register_custom_kinds`` on every build."""
+    return {
+        "apiVersion": "github.com/ruinosus/dna/v1",
+        "kind": "Genome",
+        "metadata": {"name": "root"},
+        "spec": {"custom_kinds": list(entries)},
+    }
+
+
+def _entry(kind: str, *, approved: bool) -> dict[str, Any]:
+    e: dict[str, Any] = {
+        "apiVersion": "myco.io/v1",
+        "kind": kind,
+        "alias": f"myco-{kind.lower()}",
+    }
+    if approved:
+        e["approved_by"] = "reviewer@example.com"
+        e["approved_at"] = "2026-07-25T12:00:00Z"
+    return e
+
+
+def test_an_unapproved_custom_kind_entry_is_not_registered():
+    k = Kernel()
+    k._register_custom_kinds(_manifest(_entry("Pipeline", approved=False)),
+                             scope="test-scope")
+
+    assert ("myco.io/v1", "Pipeline") not in k._kinds, (
+        "a custom_kinds entry is a Kind declaration loaded from a store — it "
+        "needs the same approval as a KindDefinition, or the root document is "
+        "an ungated door onto the same registry"
+    )
+    assert k.kind_port_for("Pipeline", scope="test-scope") is None
+
+
+def test_an_approved_custom_kind_entry_registers():
+    k = Kernel()
+    k._register_custom_kinds(_manifest(_entry("Pipeline", approved=True)),
+                             scope="test-scope")
+
+    port = k.kind_port_for("Pipeline", scope="test-scope")
+    assert port is not None, "an approved custom kind registers normally"
+    assert port.alias == "myco-pipeline"
+
+
+def test_a_partly_approved_manifest_registers_exactly_the_approved_entries():
+    """The gate is PER ENTRY: the entry is the Kind declaration, so one
+    unapproved sibling must not hold back the approved ones (nor the reverse)."""
+    k = Kernel()
+    k._register_custom_kinds(
+        _manifest(_entry("Pipeline", approved=True),
+                  _entry("Stage", approved=False)),
+        scope="test-scope",
+    )
+
+    assert k.kind_port_for("Pipeline", scope="test-scope") is not None
+    assert k.kind_port_for("Stage", scope="test-scope") is None
+
+
+def test_an_unapproved_entry_does_not_widen_an_existing_binding():
+    """The gate runs BEFORE the already-registered early-return, or an
+    unapproved entry would still scope-bind a Kind another scope approved —
+    conferring that Kind's schema enforcement and storage routing here."""
+    k = Kernel()
+    k._register_custom_kinds(_manifest(_entry("Pipeline", approved=True)),
+                             scope="scope-a")
+    k._register_custom_kinds(_manifest(_entry("Pipeline", approved=False)),
+                             scope="scope-b")
+
+    assert k.kind_port_for("Pipeline", scope="scope-a") is not None
+    assert k.kind_port_for("Pipeline", scope="scope-b") is None, (
+        "binding is registration for a scope that had none — an unapproved "
+        "entry must not acquire it via the conflict early-return"
+    )
+
+
+def test_the_custom_kind_refusal_is_logged_not_silent(caplog):
+    k = Kernel()
+    k._register_custom_kinds(_manifest(_entry("Pipeline", approved=False)),
+                             scope="test-scope")
+
+    assert any("Pipeline" in r.message and "approv" in r.message.lower()
+               for r in caplog.records), (
+        "same reason as the KindDefinition refusal: a Kind that does nothing "
+        "has to be explainable to its author"
+    )
