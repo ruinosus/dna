@@ -65,6 +65,130 @@ class DocumentNameTaken(KernelRefusal, FileExistsError):
     """
 
 
+class InvalidDocumentName(KernelRefusal, ValueError):
+    """A document ``name`` is not a single, safe path component.
+
+    A document reaches a source adapter as a PATH COMPONENT — it is stored at
+    ``<scope>/<container>/<name>/…`` or ``<container>/<name>.yaml`` — and
+    nothing on the kernel write path used to say so. A caller-supplied
+    ``"../../../../ESCAPED"`` was accepted end to end and wrote a file two
+    levels ABOVE the store root, with the store itself left empty. The
+    tenant-facing route it was measured on was never the bug: ``create_story``
+    and every other application-layer writer take a raw caller ``name`` exactly
+    the same way, so the guard belongs at the kernel facade every door
+    inherits — beside the retired-Kind block and the tenant-slug check.
+
+    The rule is "cannot escape or address a directory", NOT "looks like an
+    identifier". No charset is imposed, because legitimate names in the wild
+    include ``s-foo-bar``, ``i-065-layerpolicy-missing``,
+    ``ws-1a2b3c.dna.local`` and ``ws-1a2b3c.dna.local--Contrato`` — ``.``,
+    ``-`` and ``--`` are all legal. See :func:`validate_document_name`.
+
+    A ``KernelRefusal`` so every face relays it as an honest denial, and ALSO a
+    ``ValueError`` — deliberately, for a security refusal — so a face that
+    predates the marker base and still catches
+    ``(ValueError, LookupError, PermissionError)`` reports it instead of
+    letting it escape as a masked failure.
+    """
+
+
+class InvalidScopeName(KernelRefusal, ValueError):
+    """A ``scope`` is not a single, safe path component.
+
+    The twin of :class:`InvalidDocumentName`, and for the same reason: the
+    filesystem adapter builds ``base_dir / scope`` (and
+    ``base_dir / "tenants" / <t> / "scopes" / scope``) with no validation at
+    all, and ``scope`` IS caller-supplied on the generic write door whenever
+    the deployment's scope-binding regime is the permissive one — an
+    unauthenticated/local caller, a single-workspace deployment, or a token
+    carrying the ``*`` grant. Those regimes intend "any scope you like"; they
+    do not intend "any directory you like".
+
+    ``kind`` needs no such guard and deliberately has none: it never reaches a
+    path. The adapter routes it through ``Kernel.storage_for_kind`` →
+    ``StorageDescriptor.container``, a registry-DECLARED value, and an
+    unregistered kind resolves to ``None`` (write at the scope root) rather
+    than to the caller's string.
+    """
+
+
+#: Longest path component the kernel will hand an adapter, in UTF-8 BYTES.
+#:
+#: ``NAME_MAX`` is 255 bytes on every filesystem DNA writes to, and the
+#: adapters append to the component they are given (``.yaml``, ``.md``, bundle
+#: entry paths), so a bound at the ceiling would still produce ENAMETOOLONG
+#: deep inside the adapter. 200 leaves that headroom and is ~3x the longest
+#: name that exists in any DNA scope measured (68 bytes — a slugified insight
+#: title; ``dna.extensions.intel.engine._slug`` caps its own output at 48+24).
+#: Bytes, not characters, because the filesystem limit is a byte limit.
+MAX_PATH_COMPONENT_BYTES = 200
+
+#: Characters that make a string stop being ONE path component. ``/`` and
+#: ``\`` split it (POSIX and Windows/UNC respectively); a NUL truncates the C
+#: string the OS is eventually handed, so what gets created is not what was
+#: validated.
+_PATH_COMPONENT_SEPARATORS = (("/", "'/'"), ("\\", "'\\'"), ("\x00", "a NUL byte"))
+
+
+def _path_component_fault(value: object) -> str | None:
+    """Return why ``value`` is not a single, safe path component, or ``None``.
+
+    Split out from the two public validators so the RULE is written once and
+    the two refusals cannot drift apart.
+    """
+    if not isinstance(value, str):
+        return f"is not a str (got {type(value).__name__})"
+    if not value.strip():
+        return "is empty or whitespace-only"
+    for char, label in _PATH_COMPONENT_SEPARATORS:
+        if char in value:
+            return f"contains {label}"
+    if value in (".", ".."):
+        return "addresses a directory instead of naming a document"
+    size = len(value.encode("utf-8", "surrogatepass"))
+    if size > MAX_PATH_COMPONENT_BYTES:
+        return f"is {size} bytes (max {MAX_PATH_COMPONENT_BYTES})"
+    return None
+
+
+_COMPONENT_RULE = (
+    "a single, safe path component: not empty or whitespace-only, no '/', "
+    "'\\' or NUL, not '.' or '..', at most "
+    f"{MAX_PATH_COMPONENT_BYTES} bytes. Dots, hyphens and double hyphens are "
+    "fine — the rule is that it cannot escape or address a directory, not "
+    "that it looks like an identifier"
+)
+
+
+def validate_document_name(name: object) -> None:
+    """Raise :class:`InvalidDocumentName` unless ``name`` is a safe component.
+
+    Called by ``Kernel.write_document`` / ``Kernel.delete_document`` before any
+    adapter is touched, so every writer — the SDLC verbs, the generic MCP write
+    tool, the REST routes, an extension — inherits it without knowing it exists.
+    """
+    fault = _path_component_fault(name)
+    if fault is not None:
+        raise InvalidDocumentName(
+            f"document name {name!r} {fault} — a document name must be "
+            f"{_COMPONENT_RULE}. It is written to disk as a path component "
+            f"(<scope>/<container>/<name>), so a name that traverses would "
+            f"place the document outside the store."
+        )
+
+
+def validate_scope_name(scope: object) -> None:
+    """Raise :class:`InvalidScopeName` unless ``scope`` is a safe component."""
+    fault = _path_component_fault(scope)
+    if fault is not None:
+        raise InvalidScopeName(
+            f"scope {scope!r} {fault} — a scope must be {_COMPONENT_RULE}. "
+            f"It is written to disk as a path component "
+            f"(<base>/<scope>, <base>/tenants/<tenant>/scopes/<scope>), so a "
+            f"scope that traverses would place the write outside the store."
+        )
+
+
 class KernelRegistrationError(ValueError):
     """Base class for kernel registration validation failures."""
 

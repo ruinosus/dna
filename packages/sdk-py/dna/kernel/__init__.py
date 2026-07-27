@@ -15,6 +15,7 @@ from dna.kernel.document import Document
 from dna.kernel.errors import (
     ExtensionLoadError, KernelRefusal, KindRegistrationError,
     ReaderRegistrationError, WriterRegistrationError,
+    validate_document_name, validate_scope_name,
 )
 from dna.kernel.kinds.registry import (
     # _load_kind_docs moved into the KindRegistry module with the registration
@@ -1376,10 +1377,31 @@ class Kernel:
             TenantRequired — TENANTED kind without a tenant.
             TenantNotAllowed — GLOBAL kind with a tenant.
             InvalidTenantSlug — tenant has invalid characters or is reserved.
+            InvalidDocumentName — name is not a single, safe path component.
+            InvalidScopeName — scope is not a single, safe path component.
             LayerPolicyViolationError — declared policy forbids the write.
             ValueError — invalidate_mode not in {scope, doc, none}.
             KindRetiredError — Kind is in _REMOVED_KINDS (writes blocked).
         """
+        # Path-component safety, FIRST — before the OTel span, the Kind lookup
+        # and any adapter contact. ``name`` and ``scope`` both reach a source
+        # adapter as PATH COMPONENTS (the filesystem adapter builds
+        # ``base_dir / scope / <container> / f"{name}.yaml"``), and neither was
+        # validated anywhere on this path: a caller-supplied
+        # ``name="../../../../ESCAPED"`` was accepted end to end and wrote a
+        # file ABOVE the store root. It was measured on one tenant-facing
+        # route, but the route was never the bug — ``create_story`` and every
+        # other application-layer writer take a raw caller ``name`` the same
+        # way, so the check belongs HERE, where every door inherits it,
+        # alongside the tenant slug's own guard.
+        #
+        # ``kind`` deliberately gets no such check: it never becomes a path
+        # component. The adapter routes it through ``storage_for_kind`` →
+        # ``StorageDescriptor.container`` (registry-declared), and an
+        # unregistered kind resolves to None — the caller's string is never
+        # joined onto a path.
+        validate_scope_name(scope)
+        validate_document_name(name)
         if invalidate_mode not in ("scope", "doc", "none"):
             raise ValueError(
                 f"invalidate_mode must be 'scope', 'doc', or 'none'; "
@@ -1486,7 +1508,15 @@ class Kernel:
         Tenant resolution mirrors ``write_document``. See its docstring
         for the full contract — ``invalidate_mode`` also follows the same
         semantics (scope | doc | none, default scope).
+
+        Raises ``InvalidDocumentName`` / ``InvalidScopeName`` on the same
+        path-component rule as ``write_document``, and for a sharper reason:
+        the filesystem adapter ``unlink``s — or ``rmtree``s, for a bundle —
+        ``<scope_dir>/<container>/<name>``, so a traversing name here removes
+        a file outside the store instead of merely creating one.
         """
+        validate_scope_name(scope)
+        validate_document_name(name)
         if invalidate_mode not in ("scope", "doc", "none"):
             raise ValueError(
                 f"invalidate_mode must be 'scope', 'doc', or 'none'; "
@@ -1935,6 +1965,17 @@ class Kernel:
 
         Delegates to ``self._bundleio`` (s-kernel-decompose-god-object).
         """
+        # The SECOND write door that takes a name into a path — and it is live
+        # on ``PUT /v1/definitions/{kind}/{name}/entries/{entry:path}``, where
+        # ``name`` is a raw URL path parameter. The adapter's existing
+        # traversal guard checks ``entry`` RELATIVE TO the bundle root, but
+        # ``scope`` and ``name`` are what BUILD that root
+        # (``<base>/…/<container>/<name>``), so a traversing name simply moves
+        # the anchor and the entry check still passes. ``entry`` itself is left
+        # to that guard: it is a path INSIDE the bundle and legitimately
+        # contains ``/``.
+        validate_scope_name(scope)
+        validate_document_name(name)
         await self._bundleio.write_async(scope, kind, name, entry, content, tenant=tenant)
 
     def list_bundle_entries(
@@ -2004,6 +2045,8 @@ class Kernel:
 
         Delegates to ``self._bundleio`` (s-kernel-decompose-god-object).
         """
+        validate_scope_name(scope)
+        validate_document_name(name)
         return self._bundleio.delete_sync(scope, kind, name, entry, tenant=tenant)
 
     async def delete_bundle_entry_async(
@@ -2017,6 +2060,8 @@ class Kernel:
     ) -> bool:
         """Async variant of `delete_bundle_entry`. Delegates to
         ``self._bundleio`` (s-kernel-decompose-god-object)."""
+        validate_scope_name(scope)
+        validate_document_name(name)
         return await self._bundleio.delete_async(scope, kind, name, entry, tenant=tenant)
 
     async def digest_manifest(
