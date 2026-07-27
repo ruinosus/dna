@@ -53,17 +53,24 @@ wrote the document, so probing effect in the writing process can be true for the
 wrong reason. :func:`_on_fresh_kernel` is the neighbouring suites' helper, kept
 identical on purpose.
 
-MEASURED AND REPORTED, not worked around: the MCP face's *generic document*
-tools (``write_document`` / ``list_kinds``) cannot use a per-scope declarative
-Kind at all — approved or not. The MCP server boots its kernel through a LAZY
-manifest instance, and the lazy path parses bootstrap documents without
-registering their ports. That is a boot-path gap and NOT the approval gate;
+**And then the agent can use it.** The mechanism above is the kernel's; the
+DELIVERY is that the agent reaches its new Kind through the same generic MCP
+tools it uses for every other one —
+:func:`test_the_kind_the_agent_authored_is_usable_by_the_agent_that_authored_it`
+discovers it in ``list_kinds``, writes a conforming document through
+``write_document`` into the container the Kind declares, and is refused a
+violating one by the Kind's own schema.
+
+That last part did not work when this file was first written, and the reason is
+recorded because it is the kind of thing that regrows: the MCP server boots its
+kernel through a LAZY manifest instance, and the lazy path used to parse the
+bootstrap documents without ever running the registration pass over them — so
+NO per-scope declarative Kind was reachable from those tools. It was a boot-path
+gap and NOT the approval gate, which is what
 :func:`test_the_generic_mcp_document_face_does_not_discriminate_on_approval`
-pins the discriminator (an operator-seeded, already-approved ``KindDefinition``
-that never touched the authoring door is equally invisible), so the day somebody
-investigates it they are not sent after the wrong mechanism. It does not weaken
-the proof: effect is a property of the kernel, and the kernel face asserts it
-directly.
+pins: whatever that face does with a per-scope Kind, approval is not what
+decides it. That discriminator held while both Kinds were refused and holds now
+that both are accepted, which is what a discriminator is for.
 """
 from __future__ import annotations
 
@@ -501,7 +508,87 @@ def test_approval_is_what_gives_the_kind_schema_validation_and_storage_routing(
     assert routed.parent.parent == dna_dir / _SCOPE, routed
 
 
-# ── 3. the gap that is NOT the approval gate ──────────────────────────────
+# ── 3. …and the agent can then USE it, on the face it authored it from ────
+
+
+def _mcp_write(dna_dir, kind: str, name: str, spec: dict) -> dict:
+    """``write_document`` over MCP, unmasked — for the half that must SUCCEED."""
+    return _mcp(dna_dir, "write_document", {
+        "kind": kind, "name": name, "spec": dict(spec), "scope": _SCOPE,
+    })
+
+
+def _mcp_generic_write_of(
+    dna_dir, kind: str, name: str, spec: dict,
+) -> tuple[str, str]:
+    """``write_document`` over MCP → ``(outcome, message)``, no masking."""
+    from fastmcp.exceptions import ToolError
+
+    try:
+        _mcp_write(dna_dir, kind, name, spec)
+    except ToolError as exc:
+        return ("refused", str(exc))
+    return ("accepted", "")
+
+
+def test_the_kind_the_agent_authored_is_usable_by_the_agent_that_authored_it(
+    dna_dir,
+):
+    """The point of the whole feature, on the face the agent actually holds.
+
+    The kernel face already proves that approval confers schema validation and
+    storage routing. That is the mechanism; this is the DELIVERY. An agent
+    authors a Kind over MCP, a human approves it, and the agent then reaches
+    for it through the SAME generic tools it uses for every other Kind —
+    ``list_kinds`` to find it, ``write_document`` to use it. If those tools
+    cannot see it, the feature has a working engine and no wheels.
+
+    Three assertions, none of which stands in for another:
+
+    * the CATALOG carries it, under the apiVersion the authoring call minted —
+      an agent that cannot discover a Kind cannot use it, and a catalog entry
+      under the wrong apiVersion would send every later exact-resolution call
+      to nothing;
+    * a CONFORMING document is written and lands in the container the approved
+      ``KindDefinition`` declares (read off the filesystem — routing is
+      invisible in the response);
+    * a VIOLATING one is REFUSED, by the schema. Acceptance alone would also be
+      produced by a tool that resolved no port at all and skipped validation,
+      which is exactly the failure mode this file's ``_violating_document``
+      docstring records; the refusal is what proves the port was resolved and
+      the agent's own declared shape is what enforced it."""
+    authored = _author_over_mcp(dna_dir)
+    api_version = f"{authored['namespace']}/v1"
+    assert _approve_over_rest(dna_dir).status_code == 200
+
+    catalog = {k["kind"]: k for k in
+               _mcp(dna_dir, "list_kinds", {"scope": _SCOPE})["kinds"]}
+    assert _KIND in catalog, (
+        f"the agent cannot discover the Kind it authored and a human approved: "
+        f"{sorted(catalog)}"
+    )
+    assert catalog[_KIND]["api_version"] == api_version, catalog[_KIND]
+
+    before = _scope_files(dna_dir)
+    written = _mcp_write(dna_dir, _KIND, _CONFORMING_DOC, _CONFORMING)
+    assert written["api_version"] == api_version, written
+
+    routed = _written_document_file(dna_dir, before)
+    assert routed.parent.name == _CONTAINER, (
+        f"an MCP-written document of the approved Kind did not land in the "
+        f"container its own KindDefinition declares ({_CONTAINER!r}): {routed}"
+    )
+
+    outcome, message = _mcp_generic_write_of(dna_dir, _KIND, _VIOLATING_DOC, _VIOLATING)
+    assert outcome == "refused", (
+        "the generic MCP write accepted a document its Kind's own schema "
+        "forbids — the tool resolved the Kind but nothing validated against it"
+    )
+    assert "schema validation failed" in message, message
+    assert "titulo" in message, message
+
+
+# ── 4. the discriminator: whatever that face does, approval does not decide it ──
 
 
 def _seed_approved_kind_document(dna_dir, *, kind: str, namespace: str) -> str:
@@ -549,22 +636,21 @@ def _mcp_generic_write(dna_dir, kind: str) -> tuple[str, str]:
 
 
 def test_the_generic_mcp_document_face_does_not_discriminate_on_approval(dna_dir):
-    """A DISCRIMINATOR, not a bug pinned as behaviour — and it survives the fix.
+    """A DISCRIMINATOR, not a bug pinned as behaviour — and it survived the fix.
 
-    MEASURED: the MCP face's generic ``write_document`` cannot use the approved
-    tenant Kind. The tempting conclusion is that the approval gate did not
-    finish its job, and it is wrong. The MCP server boots its kernel through a
-    LAZY manifest instance, which parses bootstrap documents without registering
-    their ports, so NO per-scope declarative Kind is reachable from those tools —
-    including one an operator seeded already-approved, which never met the
-    authoring door or the gate.
+    When this was written the MCP face's generic ``write_document`` could not
+    use the approved tenant Kind, and the tempting conclusion — that the
+    approval gate had not finished its job — was wrong: the lazy boot path
+    registered no per-scope declarative Kind at all, including one an operator
+    seeded already-approved, which never met the authoring door or the gate.
 
-    So the property asserted is the comparison: whatever that face does with a
-    per-scope Kind, approval is not what decides it. Both outcomes agree today
-    (both refused) and would still agree the day the boot path is fixed (both
-    accepted) — which is what keeps this from being a bug written down as a
-    requirement. If they ever DIVERGE, the approval gate has grown a second,
-    unintended meaning on a face that is not supposed to have one."""
+    So the property asserted is the comparison, never the outcome: whatever that
+    face does with a per-scope Kind, approval is not what decides it. Both
+    outcomes agreed when both were refused and agree now that both are accepted
+    — this test did not change when the boot path was fixed, which is precisely
+    what keeps it from having written a bug down as a requirement. If they ever
+    DIVERGE, the approval gate has grown a second, unintended meaning on a face
+    that is not supposed to have one."""
     _author_over_mcp(dna_dir)
     assert _approve_over_rest(dna_dir).status_code == 200
 

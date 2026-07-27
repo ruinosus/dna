@@ -296,7 +296,12 @@ class InstanceBuilder:
     ) -> "ManifestInstance":
         """Async-native MI construction. Phase 9 tenant binding auto-promotes
         into layers; ``lazy`` opts into bootstrap-only MI (mi.all/one delegate
-        to kernel.query). Default honors DNA_LAZY_MI."""
+        to kernel.query). Default honors DNA_LAZY_MI.
+
+        ``lazy`` trades away the DOCUMENT materialization, never the Kind
+        registry: both branches run Phase 1 (register the Kinds this scope's
+        store declares) so a lazily-booted kernel enforces the same schemas and
+        routes to the same containers an eagerly-booted one does."""
         k = self._k
         k._ensure_generic_readers_writers()
         assert k._source, "No source registered. Call kernel.source() first."
@@ -377,6 +382,52 @@ class InstanceBuilder:
             )
         if _lazy_enabled:
             from dna.kernel.instance import ManifestInstance
+            # Phase 1, on the lazy path too — the bootstrap load exists FOR
+            # this. ``BOOTSTRAP_KIND_NAMES`` puts ``KindDefinition`` first
+            # precisely so a scope's own declared Kinds are registered before
+            # anything parses against them; this branch was loading those
+            # documents and parsing them while never running the registration
+            # pass, so no store-declared Kind ever reached the registry. Since
+            # registration is what confers schema validation and storage
+            # routing, on a lazy boot an APPROVED Kind governed nothing and
+            # every registry consumer — the write pipeline, the generic
+            # document use-cases, the MI's own kinds map two lines below —
+            # answered "that Kind is not registered on this source".
+            #
+            # ``lazy`` is a trade about DOCUMENTS (the MI holds bootstrap only
+            # and delegates ``all``/``one`` to ``kernel.query``), not about
+            # KINDS. The documents this pass reads are already in hand, so the
+            # cost is a parse over the bootstrap slice and nothing else.
+            #
+            # ``scope=`` binds the resulting Kinds to the scope whose store
+            # declared them, exactly as the eager path does (i-081); the
+            # approval gate lives inside the funnel, so an unapproved
+            # KindDefinition is parsed and warn-skipped here as everywhere.
+            #
+            # What is deliberately NOT done: the declarative-kind RESCAN the
+            # eager path runs when registration added a bundle reader
+            # (``_rescan_after_kinddef_register_async``). That rescan re-reads
+            # every document in the scope to enrich a document list a lazy MI
+            # does not hold — it is exactly the cost ``lazy`` exists to avoid,
+            # and the reader it would use was installed on the kernel by the
+            # registration call itself, so the on-demand reads a lazy MI
+            # delegates to ``kernel.query`` pick those documents up anyway.
+            k._register_kind_definitions(bootstrap_docs, scope=scope)
+            # The second door onto the same registry (``custom_kinds`` on the
+            # scope's root document, same approval gate) — wired here too, or
+            # "lazy and eager agree on the registry" would hold for one door
+            # and not the other.
+            lazy_root_raw = next(
+                (r for r in bootstrap_docs
+                 if any(
+                     getattr(kp, "is_root", False)
+                     for (_, kn), kp in k.kinds_for_scope(scope).items()
+                     if kn == r.get("kind")
+                 )),
+                None,
+            )
+            if lazy_root_raw:
+                k._register_custom_kinds(lazy_root_raw, scope=scope)
             parsed_bootstrap: list[Document] = []
             for raw in bootstrap_docs:
                 doc = k._parse_doc(raw, origin="local")
