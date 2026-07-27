@@ -145,10 +145,10 @@ even runs.
 Approval is the act that confers effect, so an agent able to call it could
 approve its own proposal and the review would be decorative. Approving is a human
 act on the portal (`POST /v1/kinds/{kind}/approve` on the REST face), made with a
-reviewer's own credential — and that route is not served by a REST deployment
-running on a shared secret (`--auth token`), because a credential one vendor
-holds for every tenant cannot sign an approval (see
-[The REST read-API](rest-api.md)). Both tools meter as
+reviewer's own credential. That route is served on every REST auth mode; on a
+shared-secret deployment (`--auth token`) the lane is trusted server-to-server
+and the calling app is what resolves and verifies the workspace — a documented
+trust boundary, spelled out in [The REST read-API](rest-api.md). Both tools meter as
 `definitions`; authoring is a
 write, so over an authenticated server it needs the plan to grant
 `definitions_mode: write`.

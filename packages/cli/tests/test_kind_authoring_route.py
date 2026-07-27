@@ -23,13 +23,14 @@ break if it regressed:
    ``approved_by`` is dropped on the floor, verified on the STORED document, not
    merely in the response body.
 
-And a fourth, which the other three now rest on and which section 0 covers on
-its own: **the doors are not mounted under ``--auth token``** — and are mounted
-under ``--auth config`` and ``--auth none``. Every ownership property here is
-decided from ``tenant``; the config lane binds it to a verified identity, the
-self-host lane has no second tenant to take it from, and only the shared-secret
-lane combines "anyone with the one credential picks ``tenant``" with neighbours
-to pick. Section 0 asserts the route table in all three modes.
+And a fourth, which section 0 covers on its own: **the doors are mounted on
+every lane** — ``--auth config``, ``--auth none`` and ``--auth token`` alike.
+Every ownership property here is decided from ``tenant``: the config lane binds
+it to a verified identity, the self-host lane has no second tenant to take it
+from, and the shared-secret lane is a trusted server-to-server lane where the
+CALLER has already resolved and verified it before calling. Section 0 asserts
+the route table in all three modes, and states that last lane's trust boundary
+explicitly rather than leaving it implied.
 
 The routes are auth-guarded (``dependencies=guarded`` — bearer verification
 only) and not plan-gated, so ``--auth none`` — this suite's default client —
@@ -211,48 +212,50 @@ def _stored_spec(dna_dir, name: str) -> dict:
     return _on_fresh_kernel(dna_dir, probe)
 
 
-# ── 0. the LANE — every mode but the shared-secret one ────────────────────
+# ── 0. the LANE — all four doors, on EVERY mode ───────────────────────────
 #
-# The four doors are mounted under ``--auth config`` and ``--auth none``, and
-# NOT under ``--auth token``. That reads backwards — the door is open to the
-# mode with no authentication at all and shut to the mode behind a secret — so
-# the reason is stated here and asserted in all three modes below.
+# The four doors are mounted under ``--auth config``, ``--auth none`` AND
+# ``--auth token``. For one release they were not: 0.31.0 shipped them excluded
+# from the shared-secret lane, on the argument that ``tenant`` is a raw query
+# param there, so a single credential could read — and approve — any
+# workspace's Kinds.
 #
-# Every ownership property in this suite is decided from ``tenant``. What makes
-# ``tenant`` trustworthy is not "did the lane verify something" but "is there
-# anybody to impersonate":
+# That argument left out WHO holds the secret. The shared-secret lane is a
+# TRUSTED SERVER-TO-SERVER lane: the credential belongs to the operator of the
+# deployment, never to its tenants, and the caller that holds it resolves the
+# tenant from a verified session BEFORE it calls, then passes it as ``tenant``.
+# The identity check happens one layer up, in the caller. The scenario the
+# exclusion defended against needs the operator's secret in a tenant's hands,
+# which is not the deployment. What the exclusion actually did was break the
+# only caller that lane has: an audit screen asked a door that no longer
+# existed and rendered an empty roster while the Kind sat in the store,
+# authored and inert.
 #
-#   * ``--auth config`` — the middleware resolves the workspace from the
-#     VERIFIED identity's membership and OVERWRITES the query param with it
-#     (``CrossWorkspaceError`` on a mismatch). Ownership is real. MOUNTED.
+# So, per lane, and without hedging:
+#
+#   * ``--auth config`` — IDENTITY-BOUND. The middleware resolves the workspace
+#     from the VERIFIED identity's membership and OVERWRITES the query param
+#     with it (``CrossWorkspaceError`` on a mismatch). ``tenant`` is a fact
+#     about the request, and the ownership filter keys on it.
 #   * ``--auth none`` — local / OSS self-host, and the container default. No
-#     shared secret, no second tenant, no neighbours: the caller is the operator
-#     of their own store, and the unattributed lane (no resolved tenant ⇒ the
-#     ownership filter does not apply) is the documented, correct behaviour
-#     there. Withholding the doors here would delete the feature for everyone
-#     running locally rather than close a hole. MOUNTED — which is why the rest
-#     of this file still runs on it.
-#   * ``--auth token`` — remote, multi-tenant, ONE shared vendor secret, no
-#     identity at all. ``tenant`` is a raw query param any holder of that one
-#     credential picks, and there ARE neighbours to pick: it reads, and
-#     APPROVES, any workspace's Kinds. NOT MOUNTED.
+#     credential, no second tenant: the unattributed lane (no resolved tenant ⇒
+#     the ownership filter does not apply) is the documented, correct behaviour
+#     there, and it is why the rest of this file can run on it.
+#   * ``--auth token`` — TRUSTED SERVER-TO-SERVER. There is no identity at the
+#     HTTP layer, ``tenant`` is caller-supplied, and THE CALLER is responsible
+#     for having resolved and verified it. The ownership property the handlers
+#     enforce is therefore only as strong as the caller on this lane. That is a
+#     deliberate, documented trust boundary, not an oversight — and the standing
+#     ``TODO(hosted)`` in ``_rest_api.py`` (swap the shared-token gate for a
+#     verified-token → tenant bridge, so ``tenant`` becomes bound to the token)
+#     is the work that removes the caveat.
 #
-# Not mounted rather than mounted-and-403: a property that holds on one door and
-# not another is a property nobody can rely on, and a door that answers
-# "forbidden" still tells a stranger it is there and still advertises itself in
-# that lane's OpenAPI. Approval is the decisive case — it is the human act that
-# confers effect and the audit's entire value is naming WHO, so a vendor secret
-# approving on a tenant's behalf would stamp ``rest:unidentified`` into the
-# field that sells "two distinct verified actors". The same sentinel's sibling
-# on ``--auth none`` (``rest:local``, §5) is an honest record of a self-hoster
-# approving in their own store — a different fact.
-#
-# ASSERTED ON THE ROUTE TABLE, deliberately. Starlette answers an unrouted path
-# with ``{"detail": "Not Found"}``, byte-identical to a handler's own 404 shape —
-# so a status-only "it is absent" assertion is satisfiable by an unrelated 404
-# and would keep passing if the routes came back guarded by something that
-# happened to refuse. The router's own table cannot be satisfied that way, and
-# each wire test below carries a discriminator a mounted route would fail.
+# ASSERTED ON THE ROUTE TABLE, deliberately, and kept that way now that the
+# assertion has flipped to presence. Starlette answers an unrouted path with
+# ``{"detail": "Not Found"}``, byte-identical to a handler's own 404 shape — so
+# a status-only claim about a route's existence is satisfiable by an unrelated
+# 404 in either direction. The router's own table cannot be satisfied that way,
+# and the wire tests below carry discriminators of their own.
 
 #: The four operations, keyed the way the OpenAPI document keys them.
 _KIND_OPERATIONS = frozenset({
@@ -281,18 +284,10 @@ def _documented_kind_paths(app) -> set[str]:
     return {p for p in app.openapi()["paths"] if p.startswith("/v1/kinds")}
 
 
-def test_the_shared_secret_lane_routes_none_of_the_four(dna_dir):
-    """Absent from the ROUTE TABLE, and absent from the OpenAPI that lane
-    publishes — an operator door must not advertise an act it cannot
-    attribute."""
-    app = R.build_app(base_dir=str(dna_dir), scope=_SCOPE,
-                      auth="token", token="s3cret")
-
-    assert _routed_operations(app) & _KIND_OPERATIONS == set(), (
-        "the Kind doors are routable on the lane where one shared secret picks "
-        "`tenant` and there are neighbours to pick"
-    )
-    assert _documented_kind_paths(app) == set(), app.openapi()["paths"].keys()
+def _token_app(dna_dir):
+    """The app on the TRUSTED SERVER-TO-SERVER lane (``--auth token``)."""
+    return R.build_app(base_dir=str(dna_dir), scope=_SCOPE,
+                       auth="token", token="s3cret")
 
 
 @pytest.mark.parametrize(
@@ -300,73 +295,83 @@ def test_the_shared_secret_lane_routes_none_of_the_four(dna_dir):
     [
         pytest.param("none", id="none"),
         pytest.param("config", id="config"),
+        pytest.param("token", id="token"),
     ],
 )
-def test_both_other_lanes_route_and_document_all_four(dna_dir, lane):
-    """The other half, and the one that keeps the exclusion honest: this is a
-    line drawn around ONE mode, not a feature deletion. Asserted in both modes
-    explicitly — the third mode's absence means nothing unless these two are
-    checked to be present."""
-    app = _config_app(dna_dir) if lane == "config" else R.build_app(
-        base_dir=str(dna_dir), scope=_SCOPE,
+def test_every_lane_routes_and_documents_all_four(dna_dir, lane):
+    """Present in the ROUTE TABLE, and present in the OpenAPI each lane
+    publishes — in ALL THREE modes, the shared-secret one included.
+
+    Asserted mode by mode rather than on one app: the regression this pins was
+    exactly a lane-conditional mount, so a single-app assertion is the shape
+    that cannot see it."""
+    app = {
+        "config": lambda: _config_app(dna_dir),
+        "none": lambda: R.build_app(base_dir=str(dna_dir), scope=_SCOPE),
+        "token": lambda: _token_app(dna_dir),
+    }[lane]()
+
+    assert _KIND_OPERATIONS <= _routed_operations(app), (
+        f"the Kind doors are missing from the {lane} lane's ROUTE TABLE — "
+        f"a caller on that lane gets Starlette's routing 404, which is "
+        f"byte-identical to the handler's own 'no such Kind'"
     )
-
-    assert _KIND_OPERATIONS <= _routed_operations(app)
-    assert _documented_kind_paths(app) == _KIND_PATHS
+    assert _documented_kind_paths(app) == _KIND_PATHS, app.openapi()["paths"].keys()
 
 
-def test_the_shared_secret_lane_404s_before_it_ever_asks_for_the_bearer(dna_dir):
-    """The wire half, with a discriminator a mounted route could not survive: NO
-    ``Authorization`` header is sent. Every Kind route carries
-    ``dependencies=guarded``, so a mounted one would answer 401 here — and the
-    control line proves that guard is live on this very app. A 404 can therefore
-    only mean the router never found the path.
+def test_the_shared_secret_lane_still_demands_the_bearer(dna_dir):
+    """Mounted is not unguarded. Every Kind route carries
+    ``dependencies=guarded``, so on this lane a request with NO
+    ``Authorization`` header must be refused as 401 — and the control line
+    proves the guard is live on this very app.
 
-    This is also where ``--auth token``'s old authoring test went. It used to
-    assert that a shared-secret deployment recorded its caller as
-    ``rest:unidentified`` rather than ``rest:local``; the honest conclusion of
-    that finding is that the lane should not be authoring at all, so the
-    property is now enforced one level up, by absence."""
-    app = R.build_app(base_dir=str(dna_dir), scope=_SCOPE,
-                      auth="token", token="s3cret")
-    with TestClient(app) as c:
+    The discriminator matters in both directions now: a 404 here would mean the
+    router never found the path (the regression), and a 200/201 would mean the
+    routes came back with the bearer check dropped."""
+    with TestClient(_token_app(dna_dir)) as c:
         assert c.get("/v1/agents").status_code == 401, (
             "the control route stopped 401-ing — this test's discriminator is gone"
         )
-        for method, path in (
-            ("post", "/v1/kinds"),
-            ("get", "/v1/kinds"),
-            ("get", "/v1/kinds/Contrato"),
-            ("post", "/v1/kinds/Contrato/approve"),
+        for method, path, kw in (
+            ("post", "/v1/kinds", {"json": {"kind": "Contrato", "schema": _SCHEMA}}),
+            ("get", "/v1/kinds", {}),
+            ("get", "/v1/kinds/Contrato", {}),
+            ("post", "/v1/kinds/Contrato/approve", {}),
         ):
-            r = getattr(c, method)(path, params={"tenant": _WID})
-            assert r.status_code == 404, (method, path, r.status_code, r.text)
+            r = getattr(c, method)(path, params={"tenant": _WID}, **kw)
+            assert r.status_code == 401, (method, path, r.status_code, r.text)
 
 
-def test_the_shared_secret_lane_authors_nothing_even_with_a_valid_bearer(dna_dir):
-    """And with the RIGHT credential too — the discriminator being that the
-    identical request is a 201 on the lane below. A caller holding the vendor
-    secret is exactly the caller this exclusion is about, so "it 404s when you
-    forget the header" would be the wrong thing to have proven."""
-    body = {"kind": "Contrato", "schema": _SCHEMA}
-    app = R.build_app(base_dir=str(dna_dir), scope=_SCOPE,
-                      auth="token", token="s3cret")
-    with TestClient(app) as c:
-        absent = c.post("/v1/kinds", params={"tenant": _WID}, json=body,
-                        headers={"Authorization": "Bearer s3cret"})
-    assert absent.status_code == 404, absent.text
+def test_the_shared_secret_lane_authors_and_lists_with_the_right_bearer(
+    dna_dir, monkeypatch,
+):
+    """The behaviour the 0.31.0 exclusion broke, pinned on the wire.
 
-    with _client(dna_dir) as c:
-        present = c.post("/v1/kinds", params={"tenant": _WID}, json=body)
-    assert present.status_code == 201, present.text
-    assert present.json()["approved"] is False
+    A trusted caller that has already resolved ``tenant`` from a verified
+    session authors here and reads its own roster back — the two calls the audit
+    screen makes, in order. Both were 404s while the routes were lane-excluded,
+    which is how a Kind ended up correctly stored and invisible.
 
-    # …and nothing the token lane touched reached the store: the ONLY document
-    # here is the one the self-host lane wrote.
-    assert _stored_spec(dna_dir, present.json()["name"])["proposed_by"], (
-        "the self-host write is the control; without it the assertion above "
-        "could pass against a store nothing can write to at all"
-    )
+    The stored ``proposed_by`` is asserted too, and it is the honest record of
+    this lane: the bearer IS verified (against the configured secret) and simply
+    names nobody, so the audit says ``rest:unidentified`` — verified-and-
+    anonymous, not ``rest:local``. That string is the trust boundary made
+    legible in the data: a reader of this store can tell that WHO was decided by
+    the caller, not by this door."""
+    monkeypatch.delenv("DNA_PERSONAL_ID", raising=False)
+    bearer = {"Authorization": "Bearer s3cret"}
+    with TestClient(_token_app(dna_dir)) as c:
+        authored = c.post("/v1/kinds", params={"tenant": _WID}, headers=bearer,
+                          json={"kind": "Contrato", "schema": _SCHEMA})
+        assert authored.status_code == 201, authored.text
+        assert authored.json()["approved"] is False
+        name = authored.json()["name"]
+
+        listed = c.get("/v1/kinds", params={"tenant": _WID}, headers=bearer)
+        assert listed.status_code == 200, listed.text
+        assert name in {row["name"] for row in listed.json()["kinds"]}, listed.text
+
+    assert _stored_spec(dna_dir, name)["proposed_by"] == "rest:unidentified"
 
 
 # ── 1. it exists, and it has no effect ────────────────────────────────────
@@ -607,15 +612,13 @@ def test_a_traversing_kind_name_writes_no_file_outside_the_store(
 # it is exactly the kind of value a rename would change silently — so it is
 # pinned as a LITERAL here, not merely as "whatever the constant happens to say".
 #
-# One test used to live here and no longer can: it authored under ``--auth
-# token`` to pin that a shared-secret deployment records ``rest:unidentified``
-# and not ``rest:local``. The honest conclusion of that finding is that the lane
-# should not be authoring at all — so the property is now enforced one level up,
-# by absence (§0,
-# ``test_the_shared_secret_lane_404s_before_it_ever_asks_for_the_bearer``), and
-# the ``rest:unidentified`` literal is pinned on a STORED document by
-# ``test_kind_approval_audit.py`` §6, which reaches it the way that lane still
-# can: a VERIFIED token that names nobody, on ``--auth config``.
+# The sibling fact — that a shared-secret deployment records
+# ``rest:unidentified`` and not ``rest:local`` — is pinned on a STORED document
+# in §0 (``test_the_shared_secret_lane_authors_and_lists_with_the_right_bearer``),
+# authored over the wire on that very lane, and again by
+# ``test_kind_approval_audit.py`` §6 from a VERIFIED token that names nobody on
+# ``--auth config``. Two lanes, one literal: the label tracks "was this request
+# verified at all", not one lane's configuration name.
 
 
 def test_a_local_unauthenticated_author_is_recorded_as_rest_local(
@@ -682,10 +685,11 @@ def test_the_local_sentinel_is_reserved_for_the_lane_that_verifies_nothing():
     ``--auth config`` reaching here with no claims recorded ``rest:local``, the
     same mislabel the sibling branch exists to end, one lane over.
 
-    ``_unidentified_actor("token")`` is asserted even though these doors are no
-    longer mounted on that lane: the helper is shared, the mapping is what would
-    silently rot, and a table with a hole in it is how the wrong sentinel comes
-    back if the lane ever regains a route.
+    ``_unidentified_actor("token")`` is asserted as the whole table's third row:
+    the helper is shared across every route on this face, the mapping is what
+    would silently rot under a rename, and §0 exercises that row end to end by
+    authoring on the token lane and reading ``rest:unidentified`` back off the
+    STORED document.
 
     Asserted on the helper rather than through HTTP because the config lane's
     middleware stashes claims for every request it lets through: that branch is

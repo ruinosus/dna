@@ -987,322 +987,324 @@ def build_app(
     # effect" is the absence of a mechanism, not a promise. Approval is the
     # SECOND route below, and it is the act that confers effect.
     #
-    # ── THE LANE — mounted on `config` and `none`, NEVER on `token` ─────────
-    # The exclusion is ONE lane, and it looks backwards until you read why, so:
-    # the door is open to the mode with NO authentication at all and shut to the
-    # mode behind a shared secret. That is not an oversight.
+    # ── THE LANE — all four routes mount on EVERY auth mode ────────────────
+    # ``config``, ``none`` and ``token`` alike. For one release they did not:
+    # 0.31.0 wrapped these four decorators in ``if auth != "token":``, and the
+    # argument was that on the shared-secret lane there is no identity, so
+    # ``tenant`` is a raw query param a caller can forge and anyone holding the
+    # secret could read and approve any workspace's Kinds.
+    #
+    # That argument left out WHO holds the secret. The shared-secret lane is a
+    # TRUSTED SERVER-TO-SERVER lane: the credential belongs to the operator of
+    # the deployment, not to its tenants. The caller holding it resolves the
+    # tenant from a verified session BEFORE it calls and passes it as ``tenant``
+    # — the identity check happens one layer up, in the caller. The breach the
+    # exclusion imagined requires the operator's secret in a tenant's hands,
+    # which is not the deployment. The cost of the exclusion, by contrast, was
+    # concrete: the caller's audit screen asked a door that no longer existed and
+    # rendered an empty roster while the Kind sat in the store, authored and
+    # inert.
     #
     # All four routes enforce namespace ownership — a caller may touch only Kinds
     # in namespaces its ``tenant`` owns, resolved through ``owner_of`` against the
-    # same ``KindNamespace`` claims the write gate decides with. The property
-    # therefore rests entirely on ``tenant``, and what decides whether ``tenant``
-    # can be trusted is NOT "did this lane verify anything" but "is there anyone
-    # to impersonate":
+    # same ``KindNamespace`` claims the write gate decides with. That property
+    # rests entirely on ``tenant``, and where ``tenant`` comes from differs per
+    # lane. Stated plainly, because the difference is real:
     #
     #   * ``--auth config`` — IDENTITY-BOUND. The middleware above resolves the
     #     workspace from the verified token's membership and OVERWRITES the query
     #     param with it (``CrossWorkspaceError`` on a mismatch). ``tenant`` is a
-    #     fact about the request. Ownership is real. MOUNTED.
-    #   * ``--auth none`` — LOCAL / OSS SELF-HOST, and the Dockerfile default.
-    #     No shared secret, no other tenant, no neighbours: the caller is the
-    #     operator of their own store. The unattributed lane (no resolved tenant
-    #     ⇒ the ownership filter does not apply) is the DOCUMENTED, correct
-    #     behaviour there, and it is the same hinge ``NamespaceOwnershipGate``
-    #     uses for an unattributed write. Withholding the routes here would not
-    #     close a hole; it would delete the feature for everyone running locally.
-    #     MOUNTED.
-    #   * ``--auth token`` — REMOTE, MULTI-TENANT, ONE SHARED VENDOR SECRET, and
-    #     no identity whatsoever. Here ``tenant`` is a raw query param that anyone
-    #     holding the secret picks, and there ARE neighbours to pick: a caller
-    #     reads, and APPROVES, any workspace's Kinds. NOT MOUNTED.
+    #     fact about the request, and the ownership filter keys on that fact.
+    #   * ``--auth none`` — LOCAL / OSS SELF-HOST, and the Dockerfile default. No
+    #     credential, no second tenant: the caller is the operator of their own
+    #     store, and the unattributed lane (no resolved tenant ⇒ the ownership
+    #     filter does not apply) is the DOCUMENTED, correct behaviour there — the
+    #     same hinge ``NamespaceOwnershipGate`` uses for an unattributed write.
+    #   * ``--auth token`` — TRUSTED SERVER-TO-SERVER. There is NO identity at
+    #     the HTTP layer, ``tenant`` is CALLER-SUPPLIED, and THE CALLER IS
+    #     RESPONSIBLE FOR HAVING RESOLVED AND VERIFIED IT — a trusted caller
+    #     resolves the tenant itself, from its own verified session, before it
+    #     reaches this door.
     #
-    # That is the whole line: the danger was never "no verified identity", it was
-    # "no verified identity AND neighbours to leak between", which describes
-    # exactly one of the three modes.
+    # So the ownership property the handlers below enforce is, on that last lane,
+    # only as strong as the caller. That is a DELIBERATE, DOCUMENTED TRUST
+    # BOUNDARY rather than an oversight, and it is where the boundary belongs
+    # while the lane's credential is a single shared secret: a door cannot
+    # re-derive an identity nobody sent it. The standing ``TODO(hosted)`` above
+    # (swap the shared-token gate for a verified-token → tenant bridge, the same
+    # tenancy model ``dna_cli._mcp_auth`` uses, so ``tenant`` becomes bound to
+    # the verified token instead of supplied alongside it) is exactly the work
+    # that would remove the caveat — after it lands, this lane reads like the
+    # config one and this paragraph goes away.
     #
-    # Approval is the decisive case for excluding it. Approval is the human act
-    # that confers effect and the audit's entire value is naming WHO; a shared
-    # vendor secret approving on a tenant's behalf stamps an unidentified
-    # sentinel (``rest:unidentified``) into the very field that sells "two
-    # distinct verified actors" — the audit would lie precisely where it is sold.
-    # On ``--auth none`` the same sentinel (``rest:local``) is an honest record
-    # of a self-hoster approving in their own store, which is a different fact.
+    # The audit records the lane honestly in the meantime. A ``--auth token``
+    # caller with no identity claim is stamped ``rest:unidentified`` — VERIFIED
+    # (against the configured secret) yet naming nobody, a different fact from
+    # ``--auth none``'s ``rest:local`` — so a later reader of the store can see
+    # that WHO was decided by the caller and not by this door.
     #
-    # NOT MOUNTED, rather than mounted-and-403: a property that holds on one door
-    # and not another is a property nobody can rely on, and this repo already
-    # settled that question once by giving each door exactly one identity
-    # authority. A route that exists and refuses still tells a stranger it is
-    # there, and still advertises itself in that lane's OpenAPI — an operator
-    # door must not advertise an act it cannot attribute.
+    # Pinned by tests/test_kind_authoring_route.py §0, which asserts on the ROUTE
+    # TABLE in all three modes (a status-only assertion cannot tell an unrouted
+    # path from a handler's own 404: Starlette answers both with ``{"detail":
+    # "Not Found"}``).
+
+    @app.post("/v1/kinds", dependencies=guarded, status_code=201,
+              response_model=m.AuthorKindResponse)
+    async def author_kind(
+        request: Request,
+        kind: str = Body(..., embed=True),
+        schema: dict[str, Any] = Body(..., embed=True),
+        traits: list[str] | None = Body(default=None, embed=True),
+        tenant: str | None = Query(default=None),
+    ) -> dict[str, Any]:
+        """Author a Kind for the calling workspace — a ``KindDefinition``
+        document written WITHOUT an approval marker, under the workspace's own
+        assigned apiVersion namespace (minted on first use, then stable).
+
+        The response's ``approved`` is always ``false``. An ``approved_by`` in
+        the body is ignored, not honoured and not rejected: a caller that could
+        approve its own proposal would make the gate decorative. The document
+        records ``proposed_by`` — the caller's VERIFIED identity, resolved
+        server-side (``_actor_from_state``) and never read from the body, and
+        stamped here because a proposer cannot be back-filled onto a document
+        that never recorded one. 400 for a missing tenant / a Kind name that is
+        not a CamelCase identifier, 403 when the namespace gate refuses the
+        write (the workspace does not own the target namespace), 503 when the
+        namespace registry scope has not been provisioned in this store.
+
+        **Mounted on every auth mode.** The namespace gate decides from
+        ``tenant``: under ``--auth config`` that is bound to the caller's
+        VERIFIED identity, under ``--auth none`` there is no second tenant to
+        take it from, and under ``--auth token`` — a trusted server-to-server
+        lane — it is caller-supplied and the CALLER is responsible for having
+        resolved and verified it. See the section comment above for that
+        boundary in full."""
+        from dna.application.sdlc import now_iso
+
+        live = await _live()
+        try:
+            return await author_kind_impl(
+                live, kind=kind, schema=schema, tenant=tenant or "",
+                now=now_iso(), actor=_actor_from_state(request), traits=traits,
+            )
+        except LayerPolicyViolationError as exc:
+            raise HTTPException(status_code=403, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from None
+        except FileNotFoundError as exc:
+            # A FIRST author on a store whose namespace-registry scope was never
+            # provisioned — see _no_registry_scope_detail.
+            #
+            # This is the face's half only. The deeper fix — reading a missing
+            # registry scope as "no claims yet" rather than raising — belongs to
+            # dna.application.namespace_assignment, and until it lands this
+            # mapping is what stands between the operator and a 500.
+            raise HTTPException(
+                status_code=503,
+                detail=_no_registry_scope_detail(
+                    "authored yet: authoring reads the KindNamespace registry "
+                    "before it mints a namespace",
+                    exc,
+                ),
+            ) from exc
+
+    # THE ACT THAT CONFERS EFFECT. Registration is what gives a Kind schema
+    # validation and storage routing, and the registry's gate withholds it until
+    # ``approved_by`` names someone — so this route is not a flag flip with a
+    # promise attached, it is the only thing that lets the next load take the
+    # Kind at all. A SEPARATE route from authoring by construction: the authoring
+    # door builds its spec field by field and cannot write ``approved_by``, so
+    # approval necessarily costs a second call, made with whatever identity the
+    # second caller holds. Whether that identity must DIFFER from the proposer's
+    # is a workspace policy (four-eyes), not a kernel rule — see the impl.
+
+    @app.post("/v1/kinds/{kind}/approve", dependencies=guarded,
+              response_model=m.ApproveKindResponse)
+    async def approve_kind(
+        request: Request,
+        kind: str,
+        tenant: str | None = Query(default=None),
+    ) -> dict[str, Any]:
+        """Approve an authored Kind — the act that puts it INTO EFFECT.
+
+        The approver is the caller's VERIFIED identity, resolved server-side
+        (``_actor_from_state``: email → durable oid → ``sub``). An
+        ``approved_by`` in the body reaches nothing: attribution a caller can
+        forge is not attribution. The document's ``proposed_by`` is preserved
+        untouched, so the audit names both acts and neither wears the other's
+        name. 404 when no such Kind was authored in this scope (approval acts on
+        an existing document and creates none — and a Kind authored by ANOTHER
+        workspace in a shared scope is a 404 too: it is not the caller's to
+        approve, and saying "it exists but is not yours" would hand a stranger
+        a probe for what its neighbours are authoring), 400 for a missing
+        tenant / a malformed Kind name / a Kind the caller declared under two
+        of its own namespaces at once, 403 when the namespace gate refuses the
+        write, 503 when the namespace registry scope has not been provisioned
+        in this store.
+
+        **Mounted on every auth mode**, this one included, and it is the route
+        where the ``--auth token`` boundary is worth naming: the whole value of
+        the record this act writes is naming WHO made it, and on that lane the
+        HTTP layer knows nobody. It records ``rest:unidentified`` — verified
+        against the configured secret, naming no person — and the 404 that hides
+        a neighbour's Kind rests on the ``tenant`` the caller supplied. That is
+        sound exactly insofar as the caller is trusted and resolved the tenant
+        from its own verified session first, which is what that lane is for; it
+        is the documented trust boundary in the section comment above, and the
+        ``TODO(hosted)`` bridge is what would move the check into this door."""
+        from dna.application.sdlc import now_iso
+
+        try:
+            return await approve_kind_impl(
+                await _live(), kind=kind, tenant=tenant or "",
+                actor=_actor_from_state(request), now=now_iso(),
+            )
+        except AuthoredKindNotFound as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from None
+        except LayerPolicyViolationError as exc:
+            raise HTTPException(status_code=403, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from None
+        except (NamespaceRegistryUnreadable, FileNotFoundError) as exc:
+            # The sibling door has mapped this since it shipped; this one did
+            # not, so the same missing directory answered 503 on one route and
+            # an unmapped 500 on the other. Approval resolves the KindNamespace
+            # registry to check the caller owns the namespace the Kind was
+            # authored under — same read, same precondition, same honest answer.
+            #
+            # BOTH exceptions, because ``FileNotFoundError`` alone was only the
+            # filesystem store's spelling of the failure: the core now refuses
+            # broadly (``NamespaceRegistryUnreadable``, mirroring the write
+            # gate's broad catch), so a transient Postgres registry error
+            # refuses here as honestly as a missing `_lib` directory does —
+            # instead of 500ing on this door while the write path answered
+            # properly.
+            raise HTTPException(
+                status_code=503,
+                detail=_no_registry_scope_detail(
+                    "approved: approval resolves the KindNamespace registry to "
+                    "check that the caller owns the namespace the Kind was "
+                    "authored under, and an unreadable authorization record is "
+                    "not a granted one",
+                    exc,
+                ),
+            ) from exc
+
+    @app.get("/v1/kinds", dependencies=guarded,
+             response_model=m.AuthoredKindsResponse)
+    async def list_authored_kinds(
+        scope: str | None = Query(default=None),
+        tenant: str | None = Query(default=None),
+    ) -> dict[str, Any]:
+        """List the CALLER's authored Kinds with their approval state — the
+        audit view. Reads DOCUMENTS, not the registry: an unapproved Kind is
+        precisely the one the registry does not have, and it is the one a
+        reviewer came here for.
+
+        FILTERED to what the caller owns (plus inherited and non-namespaced
+        rows), because a scope is shared by default and this route otherwise
+        handed a caller its neighbours' Kind names, namespaces and
+        ``proposed_by``/``approved_by`` — identity strings, i.e. the very fact
+        the approval door's 404 exists to withhold. A request that resolves NO
+        workspace (``--auth none`` self-host, an explicit operator ``scope=``)
+        is not filtered — the same hinge the namespace gate uses for an
+        unattributed write. 403 for a namespace two claims give to different
+        owners, 503 when the claim registry cannot be read: neither degrades to
+        the unfiltered list.
+
+        **Mounted on every auth mode.** The filter is what makes this route the
+        CALLER's roster rather than the scope's, and it is computed from
+        ``tenant``. Under ``--auth config`` that is the verified identity's
+        workspace; under ``--auth token`` it is whatever the trusted caller
+        supplied, having resolved it from its own verified session first — so
+        the roster is the caller's to the exact extent the caller is. See the
+        section comment above."""
+        try:
+            return await list_authored_kinds_impl(
+                await _live(), tenant=tenant, scope=scope,
+            )
+        except LayerPolicyViolationError as exc:
+            raise HTTPException(status_code=403, detail=str(exc)) from exc
+        except (NamespaceRegistryUnreadable, FileNotFoundError) as exc:
+            raise HTTPException(
+                status_code=503,
+                detail=_no_registry_scope_detail(
+                    "listed: the listing resolves the KindNamespace registry to "
+                    "decide which authored Kinds belong to the caller, and an "
+                    "unreadable authorization record is not a granted one",
+                    exc,
+                ),
+            ) from exc
+
+    # ONE authored Kind, IN FULL — the audit screen's read. The listing above
+    # projects ten summary fields and deliberately not ``spec.schema`` (a roster
+    # that inlined every JSON Schema would be unreadable), which left a reviewer
+    # unable to see what they would be conferring effect ON. Registration is what
+    # gives a Kind schema validation and storage routing, so "should this take
+    # effect?" is a question about the schema; this route is the answer.
     #
-    # Read-only OPERATOR access is unaffected: nothing else on the token lane
-    # moved. An operator who genuinely needs to act for a tenant does it with
-    # identity, which is what makes the act auditable rather than anonymous.
-    #
-    # The absence is TOTAL by construction — the decorators below never run, so
-    # there is no handler to reach and no path in ``app.openapi()``. Pinned by
-    # tests/test_kind_authoring_route.py §0, which asserts on the ROUTE TABLE in
-    # all three modes (a status-only assertion cannot tell an unrouted path from
-    # a handler's own 404: Starlette answers both with ``{"detail": "Not
-    # Found"}``).
-    if auth != "token":
+    # It therefore hands over strictly MORE than the listing, and inherits every
+    # decision the listing and the approval door already made: the same
+    # ``owner_of`` ownership walk, the same 404-not-403 for a neighbour's Kind,
+    # the same shared Kind-name validator on the path segment, and the same
+    # refusal to degrade to an unfiltered answer.
 
-        @app.post("/v1/kinds", dependencies=guarded, status_code=201,
-                  response_model=m.AuthorKindResponse)
-        async def author_kind(
-            request: Request,
-            kind: str = Body(..., embed=True),
-            schema: dict[str, Any] = Body(..., embed=True),
-            traits: list[str] | None = Body(default=None, embed=True),
-            tenant: str | None = Query(default=None),
-        ) -> dict[str, Any]:
-            """Author a Kind for the calling workspace — a ``KindDefinition``
-            document written WITHOUT an approval marker, under the workspace's own
-            assigned apiVersion namespace (minted on first use, then stable).
+    @app.get("/v1/kinds/{kind}", dependencies=guarded,
+             response_model=m.AuthoredKindDetail)
+    async def get_authored_kind(
+        kind: str,
+        scope: str | None = Query(default=None),
+        tenant: str | None = Query(default=None),
+    ) -> dict[str, Any]:
+        """Read ONE authored Kind in full — the listing's row PLUS the
+        ``schema`` and the ``traits``, i.e. everything a human needs to answer
+        "should this take effect?".
 
-            The response's ``approved`` is always ``false``. An ``approved_by`` in
-            the body is ignored, not honoured and not rejected: a caller that could
-            approve its own proposal would make the gate decorative. The document
-            records ``proposed_by`` — the caller's VERIFIED identity, resolved
-            server-side (``_actor_from_state``) and never read from the body, and
-            stamped here because a proposer cannot be back-filled onto a document
-            that never recorded one. 400 for a missing tenant / a Kind name that is
-            not a CamelCase identifier, 403 when the namespace gate refuses the
-            write (the workspace does not own the target namespace), 503 when the
-            namespace registry scope has not been provisioned in this store.
+        Filtered to the CALLER exactly as the listing is, and harder-edged
+        because it carries more: a Kind authored by another workspace in a
+        shared scope is a **404**, the same answer a Kind nobody ever authored
+        gets — "it exists but is not yours" would hand a stranger a probe for
+        what its neighbours are authoring, and this door would answer that probe
+        with their data model. A request that resolves NO workspace
+        (``--auth none`` self-host, an explicit operator ``scope=``) is not
+        filtered, the same hinge the namespace gate uses for an unattributed
+        write.
 
-            **Not mounted under ``--auth token``**, and only there. The namespace
-            gate above decides from ``tenant``: under ``--auth config`` that is
-            bound to the caller's VERIFIED identity, and under ``--auth none``
-            there is no second tenant to take it from. The shared-secret lane is
-            the one where ``tenant`` is a string any holder of one credential can
-            pick with neighbours to pick from — see the section comment above."""
-            from dna.application.sdlc import now_iso
+        400 for a ``kind`` that is not a CamelCase identifier (the same shared
+        guard the authoring and approval doors use — it is a path segment here)
+        or for a Kind the caller declared under two of its own namespaces at
+        once; 403 for a namespace two claims give to different owners; 503 when
+        the claim registry cannot be read. None of them degrades to answering
+        with the document.
 
-            live = await _live()
-            try:
-                return await author_kind_impl(
-                    live, kind=kind, schema=schema, tenant=tenant or "",
-                    now=now_iso(), actor=_actor_from_state(request), traits=traits,
-                )
-            except LayerPolicyViolationError as exc:
-                raise HTTPException(status_code=403, detail=str(exc)) from exc
-            except ValueError as exc:
-                raise HTTPException(status_code=400, detail=str(exc)) from None
-            except FileNotFoundError as exc:
-                # A FIRST author on a store whose namespace-registry scope was never
-                # provisioned — see _no_registry_scope_detail.
-                #
-                # This is the face's half only. The deeper fix — reading a missing
-                # registry scope as "no claims yet" rather than raising — belongs to
-                # dna.application.namespace_assignment, and until it lands this
-                # mapping is what stands between the operator and a 500.
-                raise HTTPException(
-                    status_code=503,
-                    detail=_no_registry_scope_detail(
-                        "authored yet: authoring reads the KindNamespace registry "
-                        "before it mints a namespace",
-                        exc,
-                    ),
-                ) from exc
-
-        # THE ACT THAT CONFERS EFFECT. Registration is what gives a Kind schema
-        # validation and storage routing, and the registry's gate withholds it until
-        # ``approved_by`` names someone — so this route is not a flag flip with a
-        # promise attached, it is the only thing that lets the next load take the
-        # Kind at all. A SEPARATE route from authoring by construction: the authoring
-        # door builds its spec field by field and cannot write ``approved_by``, so
-        # approval necessarily costs a second call, made with whatever identity the
-        # second caller holds. Whether that identity must DIFFER from the proposer's
-        # is a workspace policy (four-eyes), not a kernel rule — see the impl.
-
-        @app.post("/v1/kinds/{kind}/approve", dependencies=guarded,
-                  response_model=m.ApproveKindResponse)
-        async def approve_kind(
-            request: Request,
-            kind: str,
-            tenant: str | None = Query(default=None),
-        ) -> dict[str, Any]:
-            """Approve an authored Kind — the act that puts it INTO EFFECT.
-
-            The approver is the caller's VERIFIED identity, resolved server-side
-            (``_actor_from_state``: email → durable oid → ``sub``). An
-            ``approved_by`` in the body reaches nothing: attribution a caller can
-            forge is not attribution. The document's ``proposed_by`` is preserved
-            untouched, so the audit names both acts and neither wears the other's
-            name. 404 when no such Kind was authored in this scope (approval acts on
-            an existing document and creates none — and a Kind authored by ANOTHER
-            workspace in a shared scope is a 404 too: it is not the caller's to
-            approve, and saying "it exists but is not yours" would hand a stranger
-            a probe for what its neighbours are authoring), 400 for a missing
-            tenant / a malformed Kind name / a Kind the caller declared under two
-            of its own namespaces at once, 403 when the namespace gate refuses the
-            write, 503 when the namespace registry scope has not been provisioned
-            in this store.
-
-            **Not mounted under ``--auth token``** — the sharpest case for that
-            exclusion, and the reason the line falls where it does. This route is
-            the human act that confers effect, and the whole value of the record
-            it writes is naming WHO made it. On the shared-secret lane the
-            approver is a vendor credential that names nobody: the audit would
-            read ``rest:unidentified`` in the field that sells "two distinct
-            verified actors", and the 404 that hides a neighbour's Kind would
-            rest on a ``tenant`` the caller typed. On ``--auth none`` there is no
-            vendor and no neighbour — a self-hoster approving in their own store
-            is honestly recorded, so that lane keeps the route."""
-            from dna.application.sdlc import now_iso
-
-            try:
-                return await approve_kind_impl(
-                    await _live(), kind=kind, tenant=tenant or "",
-                    actor=_actor_from_state(request), now=now_iso(),
-                )
-            except AuthoredKindNotFound as exc:
-                raise HTTPException(status_code=404, detail=str(exc)) from None
-            except LayerPolicyViolationError as exc:
-                raise HTTPException(status_code=403, detail=str(exc)) from exc
-            except ValueError as exc:
-                raise HTTPException(status_code=400, detail=str(exc)) from None
-            except (NamespaceRegistryUnreadable, FileNotFoundError) as exc:
-                # The sibling door has mapped this since it shipped; this one did
-                # not, so the same missing directory answered 503 on one route and
-                # an unmapped 500 on the other. Approval resolves the KindNamespace
-                # registry to check the caller owns the namespace the Kind was
-                # authored under — same read, same precondition, same honest answer.
-                #
-                # BOTH exceptions, because ``FileNotFoundError`` alone was only the
-                # filesystem store's spelling of the failure: the core now refuses
-                # broadly (``NamespaceRegistryUnreadable``, mirroring the write
-                # gate's broad catch), so a transient Postgres registry error
-                # refuses here as honestly as a missing `_lib` directory does —
-                # instead of 500ing on this door while the write path answered
-                # properly.
-                raise HTTPException(
-                    status_code=503,
-                    detail=_no_registry_scope_detail(
-                        "approved: approval resolves the KindNamespace registry to "
-                        "check that the caller owns the namespace the Kind was "
-                        "authored under, and an unreadable authorization record is "
-                        "not a granted one",
-                        exc,
-                    ),
-                ) from exc
-
-        @app.get("/v1/kinds", dependencies=guarded,
-                 response_model=m.AuthoredKindsResponse)
-        async def list_authored_kinds(
-            scope: str | None = Query(default=None),
-            tenant: str | None = Query(default=None),
-        ) -> dict[str, Any]:
-            """List the CALLER's authored Kinds with their approval state — the
-            audit view. Reads DOCUMENTS, not the registry: an unapproved Kind is
-            precisely the one the registry does not have, and it is the one a
-            reviewer came here for.
-
-            FILTERED to what the caller owns (plus inherited and non-namespaced
-            rows), because a scope is shared by default and this route otherwise
-            handed a caller its neighbours' Kind names, namespaces and
-            ``proposed_by``/``approved_by`` — identity strings, i.e. the very fact
-            the approval door's 404 exists to withhold. A request that resolves NO
-            workspace (``--auth none`` self-host, an explicit operator ``scope=``)
-            is not filtered — the same hinge the namespace gate uses for an
-            unattributed write. 403 for a namespace two claims give to different
-            owners, 503 when the claim registry cannot be read: neither degrades to
-            the unfiltered list.
-
-            **Not mounted under ``--auth token``.** The filter is what makes this
-            route the CALLER's roster rather than the scope's, and it is computed
-            from ``tenant``. On the shared-secret lane "filtered to what the
-            caller owns" would mean "filtered to whatever the caller typed", with
-            other workspaces in the same store to type. The unfiltered self-host
-            answer is not that: there, no neighbour's rows exist to be handed
-            over."""
-            try:
-                return await list_authored_kinds_impl(
-                    await _live(), tenant=tenant, scope=scope,
-                )
-            except LayerPolicyViolationError as exc:
-                raise HTTPException(status_code=403, detail=str(exc)) from exc
-            except (NamespaceRegistryUnreadable, FileNotFoundError) as exc:
-                raise HTTPException(
-                    status_code=503,
-                    detail=_no_registry_scope_detail(
-                        "listed: the listing resolves the KindNamespace registry to "
-                        "decide which authored Kinds belong to the caller, and an "
-                        "unreadable authorization record is not a granted one",
-                        exc,
-                    ),
-                ) from exc
-
-        # ONE authored Kind, IN FULL — the audit screen's read. The listing above
-        # projects ten summary fields and deliberately not ``spec.schema`` (a roster
-        # that inlined every JSON Schema would be unreadable), which left a reviewer
-        # unable to see what they would be conferring effect ON. Registration is what
-        # gives a Kind schema validation and storage routing, so "should this take
-        # effect?" is a question about the schema; this route is the answer.
-        #
-        # It therefore hands over strictly MORE than the listing, and inherits every
-        # decision the listing and the approval door already made: the same
-        # ``owner_of`` ownership walk, the same 404-not-403 for a neighbour's Kind,
-        # the same shared Kind-name validator on the path segment, and the same
-        # refusal to degrade to an unfiltered answer.
-
-        @app.get("/v1/kinds/{kind}", dependencies=guarded,
-                 response_model=m.AuthoredKindDetail)
-        async def get_authored_kind(
-            kind: str,
-            scope: str | None = Query(default=None),
-            tenant: str | None = Query(default=None),
-        ) -> dict[str, Any]:
-            """Read ONE authored Kind in full — the listing's row PLUS the
-            ``schema`` and the ``traits``, i.e. everything a human needs to answer
-            "should this take effect?".
-
-            Filtered to the CALLER exactly as the listing is, and harder-edged
-            because it carries more: a Kind authored by another workspace in a
-            shared scope is a **404**, the same answer a Kind nobody ever authored
-            gets — "it exists but is not yours" would hand a stranger a probe for
-            what its neighbours are authoring, and this door would answer that probe
-            with their data model. A request that resolves NO workspace
-            (``--auth none`` self-host, an explicit operator ``scope=``) is not
-            filtered, the same hinge the namespace gate uses for an unattributed
-            write.
-
-            400 for a ``kind`` that is not a CamelCase identifier (the same shared
-            guard the authoring and approval doors use — it is a path segment here)
-            or for a Kind the caller declared under two of its own namespaces at
-            once; 403 for a namespace two claims give to different owners; 503 when
-            the claim registry cannot be read. None of them degrades to answering
-            with the document.
-
-            **Not mounted under ``--auth token``**, and this route is why the
-            exclusion has no exception for reads: it hands over the workspace's
-            JSON Schema — its data model. The 404 that keeps a neighbour's Kind
-            invisible is decided from ``tenant``, so on the shared-secret lane it
-            is a formality anyone can step around by typing a different workspace
-            id. On ``--auth none`` there is no neighbour whose data model could be
-            reached that way."""
-            try:
-                return await get_authored_kind_impl(
-                    await _live(), kind=kind, tenant=tenant, scope=scope,
-                )
-            except AuthoredKindNotFound as exc:
-                raise HTTPException(status_code=404, detail=str(exc)) from None
-            except LayerPolicyViolationError as exc:
-                raise HTTPException(status_code=403, detail=str(exc)) from exc
-            except ValueError as exc:
-                raise HTTPException(status_code=400, detail=str(exc)) from None
-            except (NamespaceRegistryUnreadable, FileNotFoundError) as exc:
-                raise HTTPException(
-                    status_code=503,
-                    detail=_no_registry_scope_detail(
-                        "read: the read resolves the KindNamespace registry to "
-                        "decide whether the authored Kind belongs to the caller, "
-                        "and an unreadable authorization record is not a granted "
-                        "one",
-                        exc,
-                    ),
-                ) from exc
+        **Mounted on every auth mode**, and this route carries the most: the
+        workspace's JSON Schema, i.e. its data model. The 404 that keeps a
+        neighbour's Kind invisible is decided from ``tenant``, so under
+        ``--auth config`` it is enforced against a verified identity and under
+        ``--auth token`` it is enforced against what the trusted caller
+        resolved and supplied. See the section comment above for that
+        boundary."""
+        try:
+            return await get_authored_kind_impl(
+                await _live(), kind=kind, tenant=tenant, scope=scope,
+            )
+        except AuthoredKindNotFound as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from None
+        except LayerPolicyViolationError as exc:
+            raise HTTPException(status_code=403, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from None
+        except (NamespaceRegistryUnreadable, FileNotFoundError) as exc:
+            raise HTTPException(
+                status_code=503,
+                detail=_no_registry_scope_detail(
+                    "read: the read resolves the KindNamespace registry to "
+                    "decide whether the authored Kind belongs to the caller, "
+                    "and an unreadable authorization record is not a granted "
+                    "one",
+                    exc,
+                ),
+            ) from exc
 
     # -- bundle entries (list/read/write/revert a bundle-file fork, plane B) -
     # A bundle-pattern Kind (Skill, and any future bundle Kind) stores MULTIPLE

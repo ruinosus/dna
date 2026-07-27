@@ -11,6 +11,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 🐛 Correções
+
+- **As quatro rotas `/v1/kinds*` voltam a montar em `--auth token`** (revert de
+  uma decisão do 0.31.0). O 0.31.0 as excluiu da lane de segredo compartilhado
+  argumentando que, sem identidade no HTTP, `tenant` é um query param forjável e
+  qualquer portador do segredo leria — e aprovaria — os Kinds de qualquer
+  workspace. O argumento esqueceu **quem** detém o segredo: essa lane é
+  **server-to-server confiável**, a credencial é do operador do deployment (não
+  dos seus tenants) e o chamador resolve o tenant a partir de uma sessão
+  verificada *antes* de chamar. A checagem de identidade acontece uma camada
+  acima, no chamador. A exclusão não fechou buraco nenhum — quebrou o único
+  chamador que a lane tem: uma tela de auditoria batia numa porta que deixara de
+  existir e mostrava lista vazia enquanto o Kind estava corretamente gravado,
+  autorado e inerte. A propriedade de ownership que os handlers aplicam continua
+  valendo, e nessa lane vale **na medida em que o chamador vale** — fronteira de
+  confiança deliberada e documentada, que o `TODO(hosted)` (ponte token
+  verificado → tenant) é o trabalho que remove.
+
 ### ✨ Novidades
 
 - **`DNA_WORKSPACE_ENFORCEMENT` — desligamento explícito da fronteira de
