@@ -119,7 +119,56 @@ class GenomeLockfile:
 
 
 def _lock_path(base_dir: Path, tenant: str) -> Path:
-    return base_dir / "tenants" / tenant / ".dna.lock"
+    """``<base>/tenants/<tenant>/.dna.lock``, refused unless it stays under
+    ``<base>/tenants``.
+
+    THE CLOSING LAYER for the tenant slug, and it belongs here rather than only
+    at the validator because this is where the path is BUILT and it is the one
+    place both halves — ``load_lockfile`` and ``write_lockfile`` — pass
+    through. ``validate_tenant_slug`` is the named early door (it says WHICH
+    input was wrong), but nothing on THIS path calls it: ``load_lockfile`` is
+    reached from ``_compute_catalog_scopes`` with a ``tenant`` that arrived via
+    the COMPOSE and QUERY hot paths (``compose/resolver.py`` and
+    ``query/engine.py``, both → ``Kernel._catalog_scopes``), never through the
+    write pipeline that validates slugs. Two layers, two reasons — keep both.
+
+    Reproduced before this check existed, with a real caller rather than a
+    hypothesis: ``tenant='../../outside'`` made ``load_lockfile`` read a
+    ``.dna.lock`` from OUTSIDE the store, and ``_compute_catalog_scopes``
+    returned ``[('INJECTED-FROM-OUTSIDE-THE-STORE', 'acme')]`` — attacker-
+    supplied content reshaping the installed-package list on the resolve path.
+
+    THE GEOMETRY, because two earlier attempts looked negative and concluded
+    there was nothing here: ``<base>/tenants`` must EXIST for the OS to resolve
+    ``..`` through it. A sandbox without that directory makes the probe return
+    "not found", which reads as safe. Every deployment that has ever had a
+    tenant has the directory.
+
+    Blast radius, stated because it is bounded and should not be overstated:
+    read-only in practice (``write_lockfile`` has no production caller), only
+    files literally named ``.dna.lock`` that parse as YAML, and the content
+    only reshapes the installed-package list. Bounded — not nothing.
+    """
+    from dna.kernel.errors import PathEscapesStoreRoot
+
+    root = Path(base_dir) / "tenants"
+    p = root / tenant / ".dna.lock"
+    # Check the RESOLVED forms; return the UNRESOLVED path, so callers that
+    # compare against a ``base_dir``-relative path are unaffected (on macOS a
+    # resolve would also rewrite /var → /private/var).
+    resolved_root = root.resolve()
+    resolved = p.resolve()
+    if resolved != resolved_root and resolved_root not in resolved.parents:
+        raise PathEscapesStoreRoot(
+            f"tenant lockfile path for tenant={tenant!r} resolves to "
+            f"{str(resolved)!r}, which is outside {str(resolved_root)!r}. A "
+            f"tenant slug is a PATH COMPONENT here "
+            f"(<base>/tenants/<tenant>/.dna.lock), so one that traverses — or "
+            f"is absolute, which makes a pathlib join DISCARD the left operand "
+            f"— reads or writes a lockfile outside the store. Fix the caller's "
+            f"slug; do not widen this check."
+        )
+    return p
 
 
 def resolve_lockfile_root(source_base_dir: object | None = None) -> Path:

@@ -59,6 +59,10 @@ def _full_kinddef_spec() -> dict[str, Any]:
             "body_field": "description",
         },
         "dep_filters": {"example-recipe": "include"},
+        # A KindDefinition that arrives from a store registers only once it is
+        # approved (test_kind_approval_gate.py). Every assertion below is about
+        # what a REGISTERED declarative Kind does, so the fixture is approved.
+        "approved_by": "approver@example.com",
     }
 
 
@@ -300,6 +304,9 @@ class TestConflictResolution:
                     "container": "fake-souls",
                     "marker": "FAKE.md",
                 },
+                # Approved: what must refuse it here is the extension-wins
+                # branch, not the approval gate that runs before it.
+                "approved_by": "approver@example.com",
             },
         }
         bundle = scope_dir / "kinds" / "soul-override"

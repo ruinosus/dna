@@ -54,7 +54,10 @@ def _clear_process_wide_warn_caches():
 def _kinddef(*, namespace: str, kind: str, alias: str, container: str) -> dict:
     """A per-scope ``KindDefinition``, with a schema that REQUIRES ``title`` —
     so "was this document validated against somebody else's Kind?" has a
-    yes/no answer."""
+    yes/no answer.
+
+    APPROVED: an unapproved store-loaded Kind never registers at all, so every
+    isolation assertion below would hold for the wrong reason."""
     return {
         "apiVersion": "github.com/ruinosus/dna/core/v1",
         "kind": "KindDefinition",
@@ -71,6 +74,7 @@ def _kinddef(*, namespace: str, kind: str, alias: str, container: str) -> dict:
                 "properties": {"title": {"type": "string"}},
                 "additionalProperties": False,
             },
+            "approved_by": "approver@example.com",
         },
     }
 

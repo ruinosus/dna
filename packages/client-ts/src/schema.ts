@@ -339,6 +339,165 @@ export interface paths {
         patch: operations["set_insight_state_v1_insights__name__state_patch"];
         trace?: never;
     };
+    "/v1/kinds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Authored Kinds
+         * @description List the CALLER's authored Kinds with their approval state — the
+         *     audit view. Reads DOCUMENTS, not the registry: an unapproved Kind is
+         *     precisely the one the registry does not have, and it is the one a
+         *     reviewer came here for.
+         *
+         *     FILTERED to what the caller owns (plus inherited and non-namespaced
+         *     rows), because a scope is shared by default and this route otherwise
+         *     handed a caller its neighbours' Kind names, namespaces and
+         *     ``proposed_by``/``approved_by`` — identity strings, i.e. the very fact
+         *     the approval door's 404 exists to withhold. A request that resolves NO
+         *     workspace (``--auth none`` self-host, an explicit operator ``scope=``)
+         *     is not filtered — the same hinge the namespace gate uses for an
+         *     unattributed write. 403 for a namespace two claims give to different
+         *     owners, 503 when the claim registry cannot be read: neither degrades to
+         *     the unfiltered list.
+         *
+         *     **Not mounted under ``--auth token``.** The filter is what makes this
+         *     route the CALLER's roster rather than the scope's, and it is computed
+         *     from ``tenant``. On the shared-secret lane "filtered to what the
+         *     caller owns" would mean "filtered to whatever the caller typed", with
+         *     other workspaces in the same store to type. The unfiltered self-host
+         *     answer is not that: there, no neighbour's rows exist to be handed
+         *     over.
+         */
+        get: operations["list_authored_kinds_v1_kinds_get"];
+        put?: never;
+        /**
+         * Author Kind
+         * @description Author a Kind for the calling workspace — a ``KindDefinition``
+         *     document written WITHOUT an approval marker, under the workspace's own
+         *     assigned apiVersion namespace (minted on first use, then stable).
+         *
+         *     The response's ``approved`` is always ``false``. An ``approved_by`` in
+         *     the body is ignored, not honoured and not rejected: a caller that could
+         *     approve its own proposal would make the gate decorative. The document
+         *     records ``proposed_by`` — the caller's VERIFIED identity, resolved
+         *     server-side (``_actor_from_state``) and never read from the body, and
+         *     stamped here because a proposer cannot be back-filled onto a document
+         *     that never recorded one. 400 for a missing tenant / a Kind name that is
+         *     not a CamelCase identifier, 403 when the namespace gate refuses the
+         *     write (the workspace does not own the target namespace), 503 when the
+         *     namespace registry scope has not been provisioned in this store.
+         *
+         *     **Not mounted under ``--auth token``**, and only there. The namespace
+         *     gate above decides from ``tenant``: under ``--auth config`` that is
+         *     bound to the caller's VERIFIED identity, and under ``--auth none``
+         *     there is no second tenant to take it from. The shared-secret lane is
+         *     the one where ``tenant`` is a string any holder of one credential can
+         *     pick with neighbours to pick from — see the section comment above.
+         */
+        post: operations["author_kind_v1_kinds_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/kinds/{kind}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Authored Kind
+         * @description Read ONE authored Kind in full — the listing's row PLUS the
+         *     ``schema`` and the ``traits``, i.e. everything a human needs to answer
+         *     "should this take effect?".
+         *
+         *     Filtered to the CALLER exactly as the listing is, and harder-edged
+         *     because it carries more: a Kind authored by another workspace in a
+         *     shared scope is a **404**, the same answer a Kind nobody ever authored
+         *     gets — "it exists but is not yours" would hand a stranger a probe for
+         *     what its neighbours are authoring, and this door would answer that probe
+         *     with their data model. A request that resolves NO workspace
+         *     (``--auth none`` self-host, an explicit operator ``scope=``) is not
+         *     filtered, the same hinge the namespace gate uses for an unattributed
+         *     write.
+         *
+         *     400 for a ``kind`` that is not a CamelCase identifier (the same shared
+         *     guard the authoring and approval doors use — it is a path segment here)
+         *     or for a Kind the caller declared under two of its own namespaces at
+         *     once; 403 for a namespace two claims give to different owners; 503 when
+         *     the claim registry cannot be read. None of them degrades to answering
+         *     with the document.
+         *
+         *     **Not mounted under ``--auth token``**, and this route is why the
+         *     exclusion has no exception for reads: it hands over the workspace's
+         *     JSON Schema — its data model. The 404 that keeps a neighbour's Kind
+         *     invisible is decided from ``tenant``, so on the shared-secret lane it
+         *     is a formality anyone can step around by typing a different workspace
+         *     id. On ``--auth none`` there is no neighbour whose data model could be
+         *     reached that way.
+         */
+        get: operations["get_authored_kind_v1_kinds__kind__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/kinds/{kind}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve Kind
+         * @description Approve an authored Kind — the act that puts it INTO EFFECT.
+         *
+         *     The approver is the caller's VERIFIED identity, resolved server-side
+         *     (``_actor_from_state``: email → durable oid → ``sub``). An
+         *     ``approved_by`` in the body reaches nothing: attribution a caller can
+         *     forge is not attribution. The document's ``proposed_by`` is preserved
+         *     untouched, so the audit names both acts and neither wears the other's
+         *     name. 404 when no such Kind was authored in this scope (approval acts on
+         *     an existing document and creates none — and a Kind authored by ANOTHER
+         *     workspace in a shared scope is a 404 too: it is not the caller's to
+         *     approve, and saying "it exists but is not yours" would hand a stranger
+         *     a probe for what its neighbours are authoring), 400 for a missing
+         *     tenant / a malformed Kind name / a Kind the caller declared under two
+         *     of its own namespaces at once, 403 when the namespace gate refuses the
+         *     write, 503 when the namespace registry scope has not been provisioned
+         *     in this store.
+         *
+         *     **Not mounted under ``--auth token``** — the sharpest case for that
+         *     exclusion, and the reason the line falls where it does. This route is
+         *     the human act that confers effect, and the whole value of the record
+         *     it writes is naming WHO made it. On the shared-secret lane the
+         *     approver is a vendor credential that names nobody: the audit would
+         *     read ``rest:unidentified`` in the field that sells "two distinct
+         *     verified actors", and the 404 that hides a neighbour's Kind would
+         *     rest on a ``tenant`` the caller typed. On ``--auth none`` there is no
+         *     vendor and no neighbour — a self-hoster approving in their own store
+         *     is honestly recorded, so that lane keeps the route.
+         */
+        post: operations["approve_kind_v1_kinds__kind__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/memories": {
         parameters: {
             query?: never;
@@ -955,6 +1114,149 @@ export interface components {
             scope: string;
         };
         /**
+         * ApproveKindResponse
+         * @description ``POST /v1/kinds/{kind}/approve`` — the act that CONFERS effect.
+         *
+         *     Carries BOTH actors: a reviewer who must make a second call to learn who
+         *     proposed is a reviewer who will not make it. ``proposed_by`` may equal
+         *     ``approved_by`` (a solo author approving their own proposal) — a fact this
+         *     response reports, not an error it withholds.
+         */
+        ApproveKindResponse: {
+            /** Approved */
+            approved: boolean;
+            /** Approved At */
+            approved_at: string;
+            /** Approved By */
+            approved_by: string;
+            /** Kind */
+            kind: string;
+            /** Name */
+            name: string;
+            /** Namespace */
+            namespace: string;
+            /** Proposed At */
+            proposed_at?: string | null;
+            /** Proposed By */
+            proposed_by?: string | null;
+            /** Version */
+            version?: string | null;
+        };
+        /**
+         * AuthorKindResponse
+         * @description ``POST /v1/kinds`` — the authored Kind. ``approved`` is ALWAYS false
+         *     here: this door cannot approve, so the field states the document's actual
+         *     state rather than echoing anything the caller sent.
+         */
+        AuthorKindResponse: {
+            /** Approved */
+            approved: boolean;
+            /** Kind */
+            kind: string;
+            /** Name */
+            name: string;
+            /** Namespace */
+            namespace: string;
+            /** Proposed By */
+            proposed_by?: string | null;
+            /** Version */
+            version?: string | null;
+        };
+        /**
+         * AuthoredKindDetail
+         * @description ``GET /v1/kinds/{kind}`` — one authored Kind, in full.
+         *
+         *     SUBCLASSES the summary rather than restating it: the roster and the single
+         *     read describe the SAME document, and two independent field lists are two
+         *     vocabularies for one thing — the kind of drift that reads, to the human
+         *     doing the review, as two different documents.
+         *
+         *     What it adds is what the roster deliberately withholds. ``schema`` is the
+         *     reason the route exists: registration is what confers schema validation and
+         *     storage routing, so "should this take effect?" is a question ABOUT the
+         *     schema, and a reviewer who cannot see it is not reviewing anything.
+         *     ``traits`` travels with it because it is the other half of what the
+         *     authoring door stored and the other half of what would take effect.
+         *
+         *     ``schema`` is ``null``, never ``{}``, for a document that stored none —
+         *     "there is no schema here" and "the schema is the empty object" are
+         *     different facts about what would be conferred.
+         */
+        AuthoredKindDetail: {
+            /** Api Version */
+            api_version?: string | null;
+            /**
+             * Approved
+             * @default false
+             */
+            approved: boolean;
+            /** Approved At */
+            approved_at?: string | null;
+            /** Approved By */
+            approved_by?: string | null;
+            /** Created At */
+            created_at?: string | null;
+            /** Kind */
+            kind?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Namespace */
+            namespace?: string | null;
+            /** Proposed At */
+            proposed_at?: string | null;
+            /** Proposed By */
+            proposed_by?: string | null;
+            /** Schema */
+            schema?: {
+                [key: string]: unknown;
+            } | null;
+            /** Traits */
+            traits?: string[];
+        };
+        /**
+         * AuthoredKindSummary
+         * @description One ``KindDefinition`` document as the audit surface sees it — BOTH
+         *     actors, so the reviewer deciding whether to confer effect can see who asked
+         *     for it without leaving the list.
+         */
+        AuthoredKindSummary: {
+            /** Api Version */
+            api_version?: string | null;
+            /**
+             * Approved
+             * @default false
+             */
+            approved: boolean;
+            /** Approved At */
+            approved_at?: string | null;
+            /** Approved By */
+            approved_by?: string | null;
+            /** Created At */
+            created_at?: string | null;
+            /** Kind */
+            kind?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Namespace */
+            namespace?: string | null;
+            /** Proposed At */
+            proposed_at?: string | null;
+            /** Proposed By */
+            proposed_by?: string | null;
+        };
+        /**
+         * AuthoredKindsResponse
+         * @description ``GET /v1/kinds`` — every authored Kind in the scope, approved or not.
+         *     Documents, not registry entries: an UNAPPROVED Kind is exactly the one the
+         *     registry does not have, and it is the one a reviewer came here for.
+         */
+        AuthoredKindsResponse: {
+            /** Kinds */
+            kinds?: components["schemas"]["AuthoredKindSummary"][];
+            /** Scope */
+            scope: string;
+        };
+        /**
          * BoardCounts
          * @description Status→count maps (dynamic keys — a status label is data).
          */
@@ -1095,6 +1397,17 @@ export interface components {
             claims?: {
                 [key: string]: unknown;
             } | null;
+        };
+        /** Body_author_kind_v1_kinds_post */
+        Body_author_kind_v1_kinds_post: {
+            /** Kind */
+            kind: string;
+            /** Schema */
+            schema: {
+                [key: string]: unknown;
+            };
+            /** Traits */
+            traits?: string[] | null;
         };
         /** Body_create_invite_v1_workspaces__workspace_id__invites_post */
         Body_create_invite_v1_workspaces__workspace_id__invites_post: {
@@ -2830,6 +3143,148 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["InsightStateResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_authored_kinds_v1_kinds_get: {
+        parameters: {
+            query?: {
+                scope?: string | null;
+                tenant?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthoredKindsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    author_kind_v1_kinds_post: {
+        parameters: {
+            query?: {
+                tenant?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Body_author_kind_v1_kinds_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthorKindResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_authored_kind_v1_kinds__kind__get: {
+        parameters: {
+            query?: {
+                scope?: string | null;
+                tenant?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                kind: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthoredKindDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_kind_v1_kinds__kind__approve_post: {
+        parameters: {
+            query?: {
+                tenant?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                kind: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApproveKindResponse"];
                 };
             };
             /** @description Validation Error */

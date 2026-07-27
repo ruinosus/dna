@@ -221,6 +221,391 @@
         "title": "AgentsResponse",
         "type": "object"
       },
+      "ApproveKindResponse": {
+        "description": "``POST /v1/kinds/{kind}/approve`` — the act that CONFERS effect.\n\nCarries BOTH actors: a reviewer who must make a second call to learn who\nproposed is a reviewer who will not make it. ``proposed_by`` may equal\n``approved_by`` (a solo author approving their own proposal) — a fact this\nresponse reports, not an error it withholds.",
+        "properties": {
+          "approved": {
+            "title": "Approved",
+            "type": "boolean"
+          },
+          "approved_at": {
+            "title": "Approved At",
+            "type": "string"
+          },
+          "approved_by": {
+            "title": "Approved By",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "namespace": {
+            "title": "Namespace",
+            "type": "string"
+          },
+          "proposed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposed At"
+          },
+          "proposed_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposed By"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          }
+        },
+        "required": [
+          "approved",
+          "kind",
+          "name",
+          "namespace",
+          "approved_by",
+          "approved_at"
+        ],
+        "title": "ApproveKindResponse",
+        "type": "object"
+      },
+      "AuthorKindResponse": {
+        "description": "``POST /v1/kinds`` — the authored Kind. ``approved`` is ALWAYS false\nhere: this door cannot approve, so the field states the document's actual\nstate rather than echoing anything the caller sent.",
+        "properties": {
+          "approved": {
+            "title": "Approved",
+            "type": "boolean"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "namespace": {
+            "title": "Namespace",
+            "type": "string"
+          },
+          "proposed_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposed By"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          }
+        },
+        "required": [
+          "namespace",
+          "kind",
+          "name",
+          "approved"
+        ],
+        "title": "AuthorKindResponse",
+        "type": "object"
+      },
+      "AuthoredKindDetail": {
+        "description": "``GET /v1/kinds/{kind}`` — one authored Kind, in full.\n\nSUBCLASSES the summary rather than restating it: the roster and the single\nread describe the SAME document, and two independent field lists are two\nvocabularies for one thing — the kind of drift that reads, to the human\ndoing the review, as two different documents.\n\nWhat it adds is what the roster deliberately withholds. ``schema`` is the\nreason the route exists: registration is what confers schema validation and\nstorage routing, so \"should this take effect?\" is a question ABOUT the\nschema, and a reviewer who cannot see it is not reviewing anything.\n``traits`` travels with it because it is the other half of what the\nauthoring door stored and the other half of what would take effect.\n\n``schema`` is ``null``, never ``{}``, for a document that stored none —\n\"there is no schema here\" and \"the schema is the empty object\" are\ndifferent facts about what would be conferred.",
+        "properties": {
+          "api_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Api Version"
+          },
+          "approved": {
+            "default": false,
+            "title": "Approved",
+            "type": "boolean"
+          },
+          "approved_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "approved_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved By"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "namespace": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Namespace"
+          },
+          "proposed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposed At"
+          },
+          "proposed_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposed By"
+          },
+          "schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Schema"
+          },
+          "traits": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Traits",
+            "type": "array"
+          }
+        },
+        "title": "AuthoredKindDetail",
+        "type": "object"
+      },
+      "AuthoredKindSummary": {
+        "description": "One ``KindDefinition`` document as the audit surface sees it — BOTH\nactors, so the reviewer deciding whether to confer effect can see who asked\nfor it without leaving the list.",
+        "properties": {
+          "api_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Api Version"
+          },
+          "approved": {
+            "default": false,
+            "title": "Approved",
+            "type": "boolean"
+          },
+          "approved_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "approved_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved By"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "namespace": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Namespace"
+          },
+          "proposed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposed At"
+          },
+          "proposed_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposed By"
+          }
+        },
+        "title": "AuthoredKindSummary",
+        "type": "object"
+      },
+      "AuthoredKindsResponse": {
+        "description": "``GET /v1/kinds`` — every authored Kind in the scope, approved or not.\nDocuments, not registry entries: an UNAPPROVED Kind is exactly the one the\nregistry does not have, and it is the one a reviewer came here for.",
+        "properties": {
+          "kinds": {
+            "items": {
+              "$ref": "#/components/schemas/AuthoredKindSummary"
+            },
+            "title": "Kinds",
+            "type": "array"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scope"
+        ],
+        "title": "AuthoredKindsResponse",
+        "type": "object"
+      },
       "BoardCounts": {
         "description": "Status→count maps (dynamic keys — a status label is data).",
         "properties": {
@@ -575,6 +960,39 @@
           }
         },
         "title": "Body_accept_invites_v1_workspaces_accept_post",
+        "type": "object"
+      },
+      "Body_author_kind_v1_kinds_post": {
+        "properties": {
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "schema": {
+            "additionalProperties": true,
+            "title": "Schema",
+            "type": "object"
+          },
+          "traits": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Traits"
+          }
+        },
+        "required": [
+          "kind",
+          "schema"
+        ],
+        "title": "Body_author_kind_v1_kinds_post",
         "type": "object"
       },
       "Body_create_invite_v1_workspaces__workspace_id__invites_post": {
@@ -5067,6 +5485,316 @@
           }
         },
         "summary": "Set Insight State"
+      }
+    },
+    "/v1/kinds": {
+      "get": {
+        "description": "List the CALLER's authored Kinds with their approval state — the\naudit view. Reads DOCUMENTS, not the registry: an unapproved Kind is\nprecisely the one the registry does not have, and it is the one a\nreviewer came here for.\n\nFILTERED to what the caller owns (plus inherited and non-namespaced\nrows), because a scope is shared by default and this route otherwise\nhanded a caller its neighbours' Kind names, namespaces and\n``proposed_by``/``approved_by`` — identity strings, i.e. the very fact\nthe approval door's 404 exists to withhold. A request that resolves NO\nworkspace (``--auth none`` self-host, an explicit operator ``scope=``)\nis not filtered — the same hinge the namespace gate uses for an\nunattributed write. 403 for a namespace two claims give to different\nowners, 503 when the claim registry cannot be read: neither degrades to\nthe unfiltered list.\n\n**Not mounted under ``--auth token``.** The filter is what makes this\nroute the CALLER's roster rather than the scope's, and it is computed\nfrom ``tenant``. On the shared-secret lane \"filtered to what the\ncaller owns\" would mean \"filtered to whatever the caller typed\", with\nother workspaces in the same store to type. The unfiltered self-host\nanswer is not that: there, no neighbour's rows exist to be handed\nover.",
+        "operationId": "list_authored_kinds_v1_kinds_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scope"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tenant"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthoredKindsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Authored Kinds"
+      },
+      "post": {
+        "description": "Author a Kind for the calling workspace — a ``KindDefinition``\ndocument written WITHOUT an approval marker, under the workspace's own\nassigned apiVersion namespace (minted on first use, then stable).\n\nThe response's ``approved`` is always ``false``. An ``approved_by`` in\nthe body is ignored, not honoured and not rejected: a caller that could\napprove its own proposal would make the gate decorative. The document\nrecords ``proposed_by`` — the caller's VERIFIED identity, resolved\nserver-side (``_actor_from_state``) and never read from the body, and\nstamped here because a proposer cannot be back-filled onto a document\nthat never recorded one. 400 for a missing tenant / a Kind name that is\nnot a CamelCase identifier, 403 when the namespace gate refuses the\nwrite (the workspace does not own the target namespace), 503 when the\nnamespace registry scope has not been provisioned in this store.\n\n**Not mounted under ``--auth token``**, and only there. The namespace\ngate above decides from ``tenant``: under ``--auth config`` that is\nbound to the caller's VERIFIED identity, and under ``--auth none``\nthere is no second tenant to take it from. The shared-secret lane is\nthe one where ``tenant`` is a string any holder of one credential can\npick with neighbours to pick from — see the section comment above.",
+        "operationId": "author_kind_v1_kinds_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tenant"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_author_kind_v1_kinds_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthorKindResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Author Kind"
+      }
+    },
+    "/v1/kinds/{kind}": {
+      "get": {
+        "description": "Read ONE authored Kind in full — the listing's row PLUS the\n``schema`` and the ``traits``, i.e. everything a human needs to answer\n\"should this take effect?\".\n\nFiltered to the CALLER exactly as the listing is, and harder-edged\nbecause it carries more: a Kind authored by another workspace in a\nshared scope is a **404**, the same answer a Kind nobody ever authored\ngets — \"it exists but is not yours\" would hand a stranger a probe for\nwhat its neighbours are authoring, and this door would answer that probe\nwith their data model. A request that resolves NO workspace\n(``--auth none`` self-host, an explicit operator ``scope=``) is not\nfiltered, the same hinge the namespace gate uses for an unattributed\nwrite.\n\n400 for a ``kind`` that is not a CamelCase identifier (the same shared\nguard the authoring and approval doors use — it is a path segment here)\nor for a Kind the caller declared under two of its own namespaces at\nonce; 403 for a namespace two claims give to different owners; 503 when\nthe claim registry cannot be read. None of them degrades to answering\nwith the document.\n\n**Not mounted under ``--auth token``**, and this route is why the\nexclusion has no exception for reads: it hands over the workspace's\nJSON Schema — its data model. The 404 that keeps a neighbour's Kind\ninvisible is decided from ``tenant``, so on the shared-secret lane it\nis a formality anyone can step around by typing a different workspace\nid. On ``--auth none`` there is no neighbour whose data model could be\nreached that way.",
+        "operationId": "get_authored_kind_v1_kinds__kind__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scope"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tenant"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthoredKindDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Authored Kind"
+      }
+    },
+    "/v1/kinds/{kind}/approve": {
+      "post": {
+        "description": "Approve an authored Kind — the act that puts it INTO EFFECT.\n\nThe approver is the caller's VERIFIED identity, resolved server-side\n(``_actor_from_state``: email → durable oid → ``sub``). An\n``approved_by`` in the body reaches nothing: attribution a caller can\nforge is not attribution. The document's ``proposed_by`` is preserved\nuntouched, so the audit names both acts and neither wears the other's\nname. 404 when no such Kind was authored in this scope (approval acts on\nan existing document and creates none — and a Kind authored by ANOTHER\nworkspace in a shared scope is a 404 too: it is not the caller's to\napprove, and saying \"it exists but is not yours\" would hand a stranger\na probe for what its neighbours are authoring), 400 for a missing\ntenant / a malformed Kind name / a Kind the caller declared under two\nof its own namespaces at once, 403 when the namespace gate refuses the\nwrite, 503 when the namespace registry scope has not been provisioned\nin this store.\n\n**Not mounted under ``--auth token``** — the sharpest case for that\nexclusion, and the reason the line falls where it does. This route is\nthe human act that confers effect, and the whole value of the record\nit writes is naming WHO made it. On the shared-secret lane the\napprover is a vendor credential that names nobody: the audit would\nread ``rest:unidentified`` in the field that sells \"two distinct\nverified actors\", and the 404 that hides a neighbour's Kind would\nrest on a ``tenant`` the caller typed. On ``--auth none`` there is no\nvendor and no neighbour — a self-hoster approving in their own store\nis honestly recorded, so that lane keeps the route.",
+        "operationId": "approve_kind_v1_kinds__kind__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tenant"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApproveKindResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Approve Kind"
       }
     },
     "/v1/memories": {

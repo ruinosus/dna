@@ -76,16 +76,31 @@ async def test_write_bundle_entry_traversal_blocked(kernel: Kernel, tmp_path: Pa
 
     bundle_root for (scope, "Skill", "greeter") is `<base>/test-bundle/skills
     /greeter`; `../../victim/SKILL.md` resolves to `<base>/test-bundle/victim
-    /SKILL.md` — a sibling bundle dir, which must remain untouched."""
+    /SKILL.md` — a sibling bundle dir, which must remain untouched.
+
+    THE REFUSAL TYPE CHANGED, on purpose. This used to assert
+    ``FileNotFoundError`` — what the adapter's ad-hoc ``resolve() +
+    relative_to`` guard raised. The security property was always held (nothing
+    escaped), but the VOCABULARY was wrong: ``FileNotFoundError`` is not a
+    ``KernelRefusal``, so a face relays a security refusal as **404, not a
+    denial**, and an operator reads "typo in the path" where the truth is "this
+    input was refused". The primitives now route through
+    ``validate_bundle_entry``, the same door ``FilesystemBundleHandle`` uses, so
+    both doors share ONE rule and ONE refusal type."""
+    from dna.kernel.errors import InvalidBundleEntry, KernelRefusal
+
     victim_dir = tmp_path / ".dna" / _SCOPE / "victim"
     victim_dir.mkdir(parents=True)
     victim_file = victim_dir / "SKILL.md"
     victim_file.write_text("original\n")
 
     traversal_entry = "../../victim/SKILL.md"
-    with pytest.raises(FileNotFoundError):
+    with pytest.raises(InvalidBundleEntry) as exc:
         await kernel.write_bundle_entry_async(
             _SCOPE, "Skill", "greeter", traversal_entry, "pwned\n")
+    assert isinstance(exc.value, KernelRefusal)
+    assert not isinstance(exc.value, FileNotFoundError), "a denial, not a 404"
+    # The property itself, unchanged and still asserted on the FILESYSTEM.
     assert victim_file.read_text() == "original\n"
     assert not (tmp_path / ".dna" / _SCOPE / "victim" / "SKILL.md.tmp").exists()
 
@@ -93,14 +108,21 @@ async def test_write_bundle_entry_traversal_blocked(kernel: Kernel, tmp_path: Pa
 @pytest.mark.asyncio
 async def test_delete_bundle_entry_traversal_blocked(kernel: Kernel, tmp_path: Path) -> None:
     """Same guard, delete side: a traversal `entry` must raise rather than
-    deleting a file outside the bundle root."""
+    deleting a file outside the bundle root.
+
+    Same vocabulary change as the write side above — ``InvalidBundleEntry``
+    (a ``KernelRefusal``) rather than ``FileNotFoundError``."""
+    from dna.kernel.errors import InvalidBundleEntry, KernelRefusal
+
     victim_dir = tmp_path / ".dna" / _SCOPE / "victim"
     victim_dir.mkdir(parents=True)
     victim_file = victim_dir / "SKILL.md"
     victim_file.write_text("original\n")
 
     traversal_entry = "../../victim/SKILL.md"
-    with pytest.raises(FileNotFoundError):
+    with pytest.raises(InvalidBundleEntry) as exc:
         kernel.delete_bundle_entry(_SCOPE, "Skill", "greeter", traversal_entry)
+    assert isinstance(exc.value, KernelRefusal)
+    assert not isinstance(exc.value, FileNotFoundError), "a denial, not a 404"
     assert victim_file.exists()
     assert victim_file.read_text() == "original\n"

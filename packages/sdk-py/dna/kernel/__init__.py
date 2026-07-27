@@ -15,6 +15,7 @@ from dna.kernel.document import Document
 from dna.kernel.errors import (
     ExtensionLoadError, KernelRefusal, KindRegistrationError,
     ReaderRegistrationError, WriterRegistrationError,
+    validate_bundle_entry, validate_document_name, validate_scope_name,
 )
 from dna.kernel.kinds.registry import (
     # _load_kind_docs moved into the KindRegistry module with the registration
@@ -1312,9 +1313,16 @@ class Kernel:
     ) -> PreviewResult:
         """Pure preview — returns target, serialized files, exists_already.
 
-        Does NOT touch disk. ``exists_already`` is a UI hint so callers
-        can render "create" vs "overwrite" affordances.
+        Writes nothing. ``exists_already`` is a UI hint so callers can render
+        "create" vs "overwrite" affordances — but it is a real ``Path.exists()``
+        probe at ``<base_dir>/<scope>/<container>/<name>``, so an unguarded
+        traversing name would answer "does this arbitrary path exist?" and
+        would render a ``target`` outside the store that ``write_document``
+        would then refuse. Preview is the dry run of the write; it refuses what
+        the write refuses (``InvalidDocumentName`` / ``InvalidScopeName``).
         """
+        validate_scope_name(scope)
+        validate_document_name(name)
         payload = self.serialize_document(scope, kind, name, raw)
         _api_version = raw.get("apiVersion") if isinstance(raw, dict) else None
         target = self._target_locator(scope, kind, name, api_version=_api_version)
@@ -1376,10 +1384,31 @@ class Kernel:
             TenantRequired — TENANTED kind without a tenant.
             TenantNotAllowed — GLOBAL kind with a tenant.
             InvalidTenantSlug — tenant has invalid characters or is reserved.
+            InvalidDocumentName — name is not a single, safe path component.
+            InvalidScopeName — scope is not a single, safe path component.
             LayerPolicyViolationError — declared policy forbids the write.
             ValueError — invalidate_mode not in {scope, doc, none}.
             KindRetiredError — Kind is in _REMOVED_KINDS (writes blocked).
         """
+        # Path-component safety, FIRST — before the OTel span, the Kind lookup
+        # and any adapter contact. ``name`` and ``scope`` both reach a source
+        # adapter as PATH COMPONENTS (the filesystem adapter builds
+        # ``base_dir / scope / <container> / f"{name}.yaml"``), and neither was
+        # validated anywhere on this path: a caller-supplied
+        # ``name="../../../../ESCAPED"`` was accepted end to end and wrote a
+        # file ABOVE the store root. It was measured on one tenant-facing
+        # route, but the route was never the bug — ``create_story`` and every
+        # other application-layer writer take a raw caller ``name`` the same
+        # way, so the check belongs HERE, where every door inherits it,
+        # alongside the tenant slug's own guard.
+        #
+        # ``kind`` deliberately gets no such check: it never becomes a path
+        # component. The adapter routes it through ``storage_for_kind`` →
+        # ``StorageDescriptor.container`` (registry-declared), and an
+        # unregistered kind resolves to None — the caller's string is never
+        # joined onto a path.
+        validate_scope_name(scope)
+        validate_document_name(name)
         if invalidate_mode not in ("scope", "doc", "none"):
             raise ValueError(
                 f"invalidate_mode must be 'scope', 'doc', or 'none'; "
@@ -1486,7 +1515,15 @@ class Kernel:
         Tenant resolution mirrors ``write_document``. See its docstring
         for the full contract — ``invalidate_mode`` also follows the same
         semantics (scope | doc | none, default scope).
+
+        Raises ``InvalidDocumentName`` / ``InvalidScopeName`` on the same
+        path-component rule as ``write_document``, and for a sharper reason:
+        the filesystem adapter ``unlink``s — or ``rmtree``s, for a bundle —
+        ``<scope_dir>/<container>/<name>``, so a traversing name here removes
+        a file outside the store instead of merely creating one.
         """
+        validate_scope_name(scope)
+        validate_document_name(name)
         if invalidate_mode not in ("scope", "doc", "none"):
             raise ValueError(
                 f"invalidate_mode must be 'scope', 'doc', or 'none'; "
@@ -1879,9 +1916,20 @@ class Kernel:
             implement bundle entry fetch (acceptable until SQL adapters
             ship the method).
           - ``FileNotFoundError`` if the bundle or entry is absent.
+          - ``InvalidDocumentName`` — name is not a single, safe path component.
+          - ``InvalidScopeName`` — scope is not a single, safe path component.
 
         Delegates to ``self._bundleio`` (s-kernel-decompose-god-object).
         """
+        # The READ half of the same door the write guard closed, and it is live
+        # on ``GET /v1/definitions/{kind}/{name}/entries/{entry:path}`` with
+        # ``name`` as a raw URL path parameter. The adapter guards ``entry``
+        # RELATIVE TO the bundle root — but ``scope``/``name`` are what BUILD
+        # that root, so a traversing name moves the anchor and the entry check
+        # still passes. Measured before the guard: a real read of a file two
+        # levels ABOVE the store root, and a listing of everything beside it.
+        validate_scope_name(scope)
+        validate_document_name(name)
         return self._bundleio.fetch_sync(scope, kind, name, entry, tenant=tenant)
 
     async def fetch_bundle_entry_async(
@@ -1895,6 +1943,8 @@ class Kernel:
     ) -> bytes:
         """Async variant of `fetch_bundle_entry`. Delegates to
         ``self._bundleio`` (s-kernel-decompose-god-object)."""
+        validate_scope_name(scope)
+        validate_document_name(name)
         return await self._bundleio.fetch_async(scope, kind, name, entry, tenant=tenant)
 
     async def write_bundle_entry_async(
@@ -1935,6 +1985,17 @@ class Kernel:
 
         Delegates to ``self._bundleio`` (s-kernel-decompose-god-object).
         """
+        # The SECOND write door that takes a name into a path — and it is live
+        # on ``PUT /v1/definitions/{kind}/{name}/entries/{entry:path}``, where
+        # ``name`` is a raw URL path parameter. The adapter's existing
+        # traversal guard checks ``entry`` RELATIVE TO the bundle root, but
+        # ``scope`` and ``name`` are what BUILD that root
+        # (``<base>/…/<container>/<name>``), so a traversing name simply moves
+        # the anchor and the entry check still passes. ``entry`` itself is left
+        # to that guard: it is a path INSIDE the bundle and legitimately
+        # contains ``/``.
+        validate_scope_name(scope)
+        validate_document_name(name)
         await self._bundleio.write_async(scope, kind, name, entry, content, tenant=tenant)
 
     def list_bundle_entries(
@@ -1959,9 +2020,16 @@ class Kernel:
           - ``ValueError`` if the kind is not registered.
           - ``NotImplementedError`` if the source adapter doesn't
             implement ``BundleEntryReadable.list_bundle_entries``.
+          - ``InvalidDocumentName`` — name is not a single, safe path component.
+          - ``InvalidScopeName`` — scope is not a single, safe path component.
 
         Delegates to ``self._bundleio`` (s-kernel-decompose-god-object).
         """
+        # Same anchor, same escape as ``fetch_bundle_entry`` — a traversing
+        # name enumerated every file under an arbitrary directory outside the
+        # store. A smaller leak than a read, and still a leak.
+        validate_scope_name(scope)
+        validate_document_name(name)
         return self._bundleio.list_sync(
             scope, kind, name, tenant=tenant, only_tenant=only_tenant,
         )
@@ -1977,6 +2045,8 @@ class Kernel:
     ) -> list[str]:
         """Async variant of `list_bundle_entries`. Delegates to
         ``self._bundleio`` (s-kernel-decompose-god-object)."""
+        validate_scope_name(scope)
+        validate_document_name(name)
         return await self._bundleio.list_async(
             scope, kind, name, tenant=tenant, only_tenant=only_tenant,
         )
@@ -2004,6 +2074,8 @@ class Kernel:
 
         Delegates to ``self._bundleio`` (s-kernel-decompose-god-object).
         """
+        validate_scope_name(scope)
+        validate_document_name(name)
         return self._bundleio.delete_sync(scope, kind, name, entry, tenant=tenant)
 
     async def delete_bundle_entry_async(
@@ -2017,6 +2089,8 @@ class Kernel:
     ) -> bool:
         """Async variant of `delete_bundle_entry`. Delegates to
         ``self._bundleio`` (s-kernel-decompose-god-object)."""
+        validate_scope_name(scope)
+        validate_document_name(name)
         return await self._bundleio.delete_async(scope, kind, name, entry, tenant=tenant)
 
     async def digest_manifest(
@@ -2091,8 +2165,33 @@ class Kernel:
 
     def serialize_document(self, scope: str, kind: str, name: str, raw: dict) -> dict:
         """Serialize a document to files without writing. Delegates to
-        ``self._bundleio`` (s-kernel-decompose-god-object)."""
-        return self._bundleio.serialize(scope, kind, name, raw)
+        ``self._bundleio`` (s-kernel-decompose-god-object).
+
+        Raises ``InvalidDocumentName`` / ``InvalidScopeName``: it writes no
+        bytes itself, but every ``relativePath`` it returns is BUILT from
+        ``name`` (``<container>/<name>.yaml``, ``<container>/<name>/<entry>``),
+        and the whole point of the payload is that a caller writes those paths
+        out. Handing back a relative path that traverses would move the escape
+        one frame up the stack instead of closing it.
+
+        Which is what it did. Guarding ``scope`` and ``name`` made the CLAIM
+        above true only for the half of the path they build: the ``<entry>``
+        half comes from document CONTENT, and with an Agent or Skill carrying
+        ``root_files`` this returned
+        ``['skills/x/SKILL.md', 'skills/x/../../../etc/cron.d/pwn']`` — a
+        traversing ``relativePath``, handed to a caller whose job is to write
+        it. The property is now enforced rather than asserted: every returned
+        entry path is validated (``InvalidBundleEntry``), so the payload cannot
+        describe a file outside the document's own directory.
+        """
+        validate_scope_name(scope)
+        validate_document_name(name)
+        result = self._bundleio.serialize(scope, kind, name, raw)
+        for f in result.get("files") or []:
+            validate_bundle_entry(
+                f.get("relativePath"), where="serialized relativePath",
+            )
+        return result
 
     # -- Instance creation ----------------------------------------------------
 

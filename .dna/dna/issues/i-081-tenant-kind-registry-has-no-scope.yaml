@@ -1,0 +1,76 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-081-tenant-kind-registry-has-no-scope
+spec:
+  description: 'Um KindDefinition de tenant registra no processo inteiro: outro tenant ve, usa, e e validado contra o schema alheio — a chave do registro nao tem escopo'
+  type: bug
+  severity: high
+  status: resolved
+  created_at: '2026-07-27T01:15:20+00:00'
+  updated_at: '2026-07-27T01:15:20+00:00'
+  timeline:
+  - at: '2026-07-27T01:15:20+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
+  - at: '2026-07-27T01:15:53+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: |-
+      MEDIDO em 26/07/2026 com script descartavel, nao inferido. Nao e explorável hoje porque nao existe porta de autoria — mas bloqueia entregar uma.
+
+      O QUE FOI MEDIDO (dois escopos FS, KindDefinition 'Widget' presente SO no scope-a):
+        [2] apos compor scope-a          -> Widget registrado: True
+            chaves do registro           = [('acme.example/v1','Widget')]   <- SEM escopo
+        [3] apos compor scope-b, MESMO processo -> Widget AINDA registrado: True
+        [4] escrever Widget valido no scope-b   -> OK
+        [5] escrever Widget invalido no scope-b -> RECUSADO pelo schema de A
+        [6] escrever Kind desconhecido no scope-b -> ACEITO (controle)
+        [7] gravado em scope-b/widgets/w1.yaml  <- container declarado por A
+        [8] with_tenant -> mesmo objeto de registro
+
+      O [5] contra o [6] e o ponto: registrar e o que CONFERE validacao e roteamento de storage. O vazamento nao e cosmetico, muda o comportamento de B.
+
+      CAUSA: o escopo decide quais KindDefinition sao CARREGADOS (load_bootstrap_docs filtra por scope); NADA decide a que escopo um Kind carregado se APLICA. A chave e (api_version, kind) — registry.py:983. O comentario em registry.py:27-28 ('Kinds sao globais, registrados uma vez no boot') e uma premissa que Kinds vindos do banco violam em silencio.
+
+      ALCANCE: um kernel longevo por processo serve TODOS os workspaces (LiveDna memoizado em _mcp_server.py:691-695; with_tenant compartilha _kindreg por desenho, kernel/__init__.py:400-402). Entao o vazamento e por replica e nao-determinista: o Kind de A existe numa replica depois que ela serviu A uma vez.
+
+      SEGUNDO DEFEITO, mesma causa: a guarda de colisao de nome do i-195 ISENTA portas declarativas por escopo (registry.py:729-737). Dois tenants declarando 'Widget' fazem toda busca por nome NU virar AmbiguousKindError para ambos naquela replica. E alias e namespace globalmente unico (registry.py:706-716) — alias colidido faz o segundo Kind ser warn-and-skip silencioso.
+
+      O QUE O i-080 (#244) DE FATO COBRE: so declaracao. namespace_gate.py:23-27 diz explicitamente 'declarar um Kind e o que REIVINDICA um namespace; USAR um nao e'. Medido: um write atribuido do workspace-b USANDO o Kind de A passa limpo.
+
+      CONSEQUENCIA DE PRODUTO: os tres mecanismos candidatos para 'rascunho sem efeito' estao mortos — estado de documento (save_document auto-publica incondicionalmente), camada de tenant (KindDefinition e nao-sobreponivel + bootstrap), e isolamento por escopo (isto aqui). Autoria de Kind por tenant nao pode ser entregue antes disto.
+
+      CAMINHOS (do relatorio):
+      1. Chave do registro ganha escopo — (scope, api_version, kind) com fallback para o nivel global. Resolve isolamento.
+      2. Kernel por escopo em vez de por processo. Maior.
+      Ambos sao grandes. O defeito de ambiguidade por nome nu e argumento independente de que isto e bug real, nao so pre-requisito de feature.
+  - at: '2026-07-27T20:28:18+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: open
+    to: triaged
+  - at: '2026-07-27T20:28:34+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: triaged
+    to: in-progress
+  - at: '2026-07-27T20:28:40+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'Filed AFTER the fix had already shipped: 556b2fa ''fix(kernel): a store-loaded Kind applies only to the scope that declared it (i-081)'' (PR #250) is an ancestor of this branch''s base. The document was created on 2026-07-27 during the branch review, was never committed, and stood at status: open while the code it describes was already corrected — so the board contradicted the tree. Resolving through the CLI (never by hand-editing the YAML) and committing it, rather than discarding: the fix commit and PR title both cite i-081 by name, so deleting the document would leave those references dangling, and the timeline above holds the ONLY written record of the measurement that identified the bug (the [5]-vs-[6] write test proving cross-scope schema validation and storage routing).'
+  - at: '2026-07-27T20:28:51+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: resolved
+    summary: 'Shipped at 556b2fa (PR #250): the Kind registry key is scoped, so a store-loaded KindDefinition applies only to the scope that declared it. Verified an ancestor of this branch''s base with ''git merge-base --is-ancestor 556b2fa HEAD''.'
+  closed_at: '2026-07-27T20:28:51+00:00'
+  resolution: 'Shipped at 556b2fa (PR #250): the Kind registry key is scoped, so a store-loaded KindDefinition applies only to the scope that declared it. Verified an ancestor of this branch''s base with ''git merge-base --is-ancestor 556b2fa HEAD''.'

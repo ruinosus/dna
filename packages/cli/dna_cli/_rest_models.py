@@ -191,6 +191,99 @@ class DefinitionWriteResponse(BaseModel):
     overridden: bool
 
 
+# ── Kind authoring (the dedicated door — writes an INERT KindDefinition) ────
+
+
+class AuthorKindResponse(BaseModel):
+    """``POST /v1/kinds`` — the authored Kind. ``approved`` is ALWAYS false
+    here: this door cannot approve, so the field states the document's actual
+    state rather than echoing anything the caller sent."""
+
+    namespace: str
+    kind: str
+    name: str
+    approved: bool
+    #: The caller's VERIFIED identity as the document recorded it. ECHOED, never
+    #: accepted — there is no request field it could have come from.
+    proposed_by: str | None = None
+    version: str | None = None
+
+
+class ApproveKindResponse(BaseModel):
+    """``POST /v1/kinds/{kind}/approve`` — the act that CONFERS effect.
+
+    Carries BOTH actors: a reviewer who must make a second call to learn who
+    proposed is a reviewer who will not make it. ``proposed_by`` may equal
+    ``approved_by`` (a solo author approving their own proposal) — a fact this
+    response reports, not an error it withholds."""
+
+    approved: bool
+    kind: str
+    name: str
+    namespace: str
+    approved_by: str
+    approved_at: str
+    proposed_by: str | None = None
+    proposed_at: str | None = None
+    version: str | None = None
+
+
+class AuthoredKindSummary(BaseModel):
+    """One ``KindDefinition`` document as the audit surface sees it — BOTH
+    actors, so the reviewer deciding whether to confer effect can see who asked
+    for it without leaving the list."""
+
+    name: str | None = None
+    kind: str | None = None
+    api_version: str | None = None
+    namespace: str | None = None
+    approved: bool = False
+    proposed_by: str | None = None
+    proposed_at: str | None = None
+    approved_by: str | None = None
+    approved_at: str | None = None
+    created_at: str | None = None
+
+
+class AuthoredKindDetail(AuthoredKindSummary):
+    """``GET /v1/kinds/{kind}`` — one authored Kind, in full.
+
+    SUBCLASSES the summary rather than restating it: the roster and the single
+    read describe the SAME document, and two independent field lists are two
+    vocabularies for one thing — the kind of drift that reads, to the human
+    doing the review, as two different documents.
+
+    What it adds is what the roster deliberately withholds. ``schema`` is the
+    reason the route exists: registration is what confers schema validation and
+    storage routing, so "should this take effect?" is a question ABOUT the
+    schema, and a reviewer who cannot see it is not reviewing anything.
+    ``traits`` travels with it because it is the other half of what the
+    authoring door stored and the other half of what would take effect.
+
+    ``schema`` is ``null``, never ``{}``, for a document that stored none —
+    "there is no schema here" and "the schema is the empty object" are
+    different facts about what would be conferred."""
+
+    #: The WIRE name, and not ours to rename: a JSON Schema field is called
+    #: ``schema``, and ``POST /v1/kinds`` already takes it under that name.
+    #: Pydantic warns because ``BaseModel.schema`` is a deprecated attribute
+    #: (it names the nearest parent, ``AuthoredKindSummary``, in the message);
+    #: the warning is silenced narrowly — this exact model, this exact field —
+    #: in the cli ``pyproject.toml``, beside the twin entry the request body
+    #: needed.
+    schema: dict[str, Any] | None = None
+    traits: list[str] = Field(default_factory=list)
+
+
+class AuthoredKindsResponse(BaseModel):
+    """``GET /v1/kinds`` — every authored Kind in the scope, approved or not.
+    Documents, not registry entries: an UNAPPROVED Kind is exactly the one the
+    registry does not have, and it is the one a reviewer came here for."""
+
+    scope: str
+    kinds: list[AuthoredKindSummary] = Field(default_factory=list)
+
+
 # ── bundle entries (list/read/write/revert a bundle-file fork — plane B) ────
 #
 # A bundle-pattern Kind (Skill, and any future bundle Kind) stores MULTIPLE

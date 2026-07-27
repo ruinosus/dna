@@ -41,6 +41,9 @@ def kinddef(
     *, namespace: str, kind: str, alias: str, container: str | None = None,
     schema: dict | None = None, storage: dict | None = None,
 ) -> dict:
+    """An APPROVED per-scope ``KindDefinition`` — approval is the precondition
+    for reaching the scope binding this suite is about (an unapproved Kind
+    never registers, so it binds to no scope at all)."""
     return {
         "apiVersion": "github.com/ruinosus/dna/core/v1",
         "kind": "KindDefinition",
@@ -54,6 +57,7 @@ def kinddef(
                 "type": "yaml", "container": container or alias + "s",
             },
             "schema": schema or {"type": "object"},
+            "approved_by": "approver@example.com",
         },
     }
 
@@ -186,6 +190,9 @@ def test_a_store_loaded_kind_still_loses_a_builtin_descriptors_key():
             "origin": "acme.example",
             "storage": {"type": "yaml", "container": "hijacked"},
             "schema": {"type": "object"},
+            # Approved, so the builtin-wins branch is what refuses it — not
+            # the approval gate (which would make this pass vacuously).
+            "approved_by": "approver@example.com",
         },
     }], scope=_A)
     assert k.kind_port_for("Doc", scope=_A) is builtin

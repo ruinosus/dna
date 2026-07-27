@@ -1135,6 +1135,21 @@ class KindRegistry:
         """Phase 1 of 2-phase loading: parse KindDefinition docs + register
         synthetic DeclarativeKindPorts on the kernel.
 
+        A document only reaches registration once it is APPROVED — its
+        ``spec.approved_by`` names someone. Authoring a Kind and putting it into
+        effect are two acts by two actors, and this funnel is where the second
+        one is enforced, because registration is what confers schema
+        enforcement and storage routing: withholding it IS the absence of
+        effect, with no second gate to keep in sync. An unapproved
+        KindDefinition is parsed, warn-skipped, and stays an inert document.
+
+        Approval is therefore a gate on ENTRY, not a live permission: clearing
+        ``approved_by`` on a Kind that ALREADY registered does not unregister
+        it. The gate runs before the already-registered branch below, and the
+        registry is per-kernel and outlives any single ``instance_async`` call,
+        so the live port keeps governing until the process restarts. Revocation
+        is not a mechanism here — do not build a UI on the assumption that it is.
+
         Extension-registered kinds win on conflict: if a port with the same
         (target_api_version, target_kind) is already registered, the
         declarative one is skipped and a warning is emitted via the
@@ -1170,6 +1185,31 @@ class KindRegistry:
                         name=(raw.get("metadata") or {}).get("name", ""),
                         data={"error": str(e)},
                     ))
+                continue
+
+            approved_by = (typed.spec.approved_by or "").strip()
+            if not approved_by:
+                # NOT an error: an authored-but-unapproved Kind is a legitimate
+                # state. It stays a document — auditable, listable, diffable —
+                # and simply never becomes real. Registration is what confers
+                # schema enforcement and storage routing, so withholding it IS
+                # the absence of effect; there is no second gate to keep in
+                # sync. Logged at WARNING like every other per-Kind refusal in
+                # this funnel: the author has to be able to find out why their
+                # Kind does nothing.
+                #
+                # The gate READS spec.approved_by and never writes it. Whoever
+                # may set it is decided where the writer is authenticated, not
+                # here — the kernel does not know what an approver is.
+                #
+                # It runs BEFORE the scope binding (i-081) for the same reason:
+                # a Kind that never registers binds to no scope at all.
+                logger.warning(
+                    "Kind %r in scope %r is authored but not approved — "
+                    "parsed, not registered. It has no effect until a human "
+                    "approves it (spec.approved_by is empty).",
+                    typed.spec.target_kind, scope,
+                )
                 continue
 
             key = (typed.spec.target_api_version, typed.spec.target_kind)
@@ -1311,7 +1351,32 @@ class KindRegistry:
         Creates a minimal KindPort so mi.all("Pipeline") works.
 
         Store-loaded like ``KindDefinition``, so ``scope`` binds them the same
-        way (i-081) — the root document they come from belongs to one scope.
+        way (i-081) — the root document they come from belongs to one scope —
+        and so the SAME approval gate applies: an entry only reaches the
+        registry once its ``approved_by`` names someone. This is the second door
+        onto the same registry, and the one that needs no new document: whoever
+        may write a scope's root document declares Kinds here. Ungated, the
+        claim that an unapproved Kind has no effect would be false process-wide,
+        since an author could simply use this door instead.
+
+        The gate is PER ENTRY, not per document: the entry *is* the Kind
+        declaration, so a partly-approved manifest registers exactly its
+        approved entries and warn-skips the rest. It runs BEFORE both the scope
+        binding and the already-registered early-return, for the reason the
+        KindDefinition funnel runs it first (see
+        :meth:`register_kind_definitions`): binding IS registration for a scope
+        that had none, so an unapproved entry must not acquire another scope's
+        Kind that way.
+
+        The two doors fail closed identically but do not fail LOUD identically.
+        A ``KindDefinition`` is schema-validated with ``additionalProperties:
+        false``, so a typo like ``approvedBy`` produces a parse error naming the
+        offending key — the author finds out immediately, from the store. A
+        ``custom_kinds`` entry has no such schema: an unknown key here is
+        silently ignored, so the same typo just leaves the entry looking
+        declared while it quietly stays inert, discoverable only via the
+        approval-refusal log line above. Both doors are fail-closed; only one
+        of them tells you why.
         """
         custom_kinds = manifest.get("spec", {}).get("custom_kinds", [])
         for ck in custom_kinds:
@@ -1319,6 +1384,26 @@ class KindRegistry:
             kn = ck.get("kind", "")
             alias = ck.get("alias", kn.lower())
             if not kn:
+                continue
+            _raw_approver = ck.get("approved_by")
+            approved_by = (
+                _raw_approver.strip() if isinstance(_raw_approver, str) else ""
+            )
+            if not approved_by:
+                # Same refusal as the KindDefinition funnel, same reason: an
+                # authored-but-unapproved Kind is a legitimate state, it stays
+                # an inert part of the document and simply never becomes real.
+                # Registration is what confers schema enforcement and storage
+                # routing, so withholding it IS the absence of effect.
+                #
+                # The gate READS approved_by and never writes it — who may set
+                # it is decided where the writer is authenticated, not here.
+                logger.warning(
+                    "Custom kind %r in scope %r is declared but not approved — "
+                    "parsed, not registered. It has no effect until a human "
+                    "approves it (approved_by is empty).",
+                    kn, scope,
+                )
                 continue
             key = (av, kn)
             if key in self._kinds:

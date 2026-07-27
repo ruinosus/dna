@@ -55,6 +55,14 @@ from dna.application.documents import (
     spec_etag,
     write_document_impl,
 )
+from dna.application.kind_authoring import (
+    AuthoredKindNotFound,
+    NamespaceRegistryUnreadable,
+    approve_kind_impl,
+    author_kind_impl,
+    get_authored_kind_impl,
+    list_authored_kinds_impl,
+)
 from dna.application.sdlc import (
     DocumentExists,
     InvalidTransition,
@@ -176,6 +184,13 @@ __all__ = [
     "BootstrapKindWriteRefused",
     "ConcurrentWriteError",
     "UnknownKindError",
+    # Kind authoring — the dedicated door (writes an INERT KindDefinition)
+    "AuthoredKindNotFound",
+    "NamespaceRegistryUnreadable",
+    "approve_kind_impl",
+    "author_kind_impl",
+    "get_authored_kind_impl",
+    "list_authored_kinds_impl",
     # SDLC write core (shared by the CLI + the MCP write tools)
     "DocumentExists",
     "InvalidTransition",

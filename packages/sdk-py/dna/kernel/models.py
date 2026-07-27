@@ -1057,6 +1057,26 @@ class KindDefinitionSpec:
     # ``layout_names``: the prompt layouts this Kind's documents may name
     # (``UnknownLayout`` lists them). Empty = no layouts, today's default.
     layout_names: list[str] | None = None
+    # ---- Approval (the registration gate) + the audit's other half ----------
+    # Who PROPOSED this Kind, who APPROVED it, and when each happened. A
+    # KindDefinition that arrives from a STORE only reaches the registry once
+    # ``approved_by`` names someone — authoring a Kind and putting it into
+    # effect are two acts, and the audit is worth something only if each field
+    # carries the verified identity of ITS OWN act.
+    #
+    # ``proposed_by`` is stamped where the proposal happens (the authoring
+    # door), because it cannot be back-filled later onto a document that never
+    # recorded one. It is NOT a second gate: the registry reads ``approved_by``
+    # and nothing else, and the two naming the same identity is legal (see the
+    # schema's note — coincidence is a fact the audit reports, not an error).
+    #
+    # All four are pure data here: the registry writes none of them, so the
+    # privileged path that may set them is a decision made where the writer is
+    # authenticated, not in the kernel.
+    proposed_by: str | None = None
+    proposed_at: str | None = None
+    approved_by: str | None = None
+    approved_at: str | None = None
 
     @classmethod
     def from_raw(cls, raw: dict[str, Any]) -> KindDefinitionSpec:
@@ -1232,6 +1252,10 @@ class KindDefinitionSpec:
             visible_in_backend=visible_in_backend,
             version_retention=version_retention,
             layout_names=layout_names,
+            proposed_by=raw.get("proposed_by"),
+            proposed_at=raw.get("proposed_at"),
+            approved_by=raw.get("approved_by"),
+            approved_at=raw.get("approved_at"),
         )
 
     @staticmethod

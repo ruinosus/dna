@@ -242,7 +242,9 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
         layer arg (path-traversal sanitization happens there, not here).
         Tenant slug is path-safe because the kernel rejects reserved + non
         slug-shaped strings via ``validate_tenant_slug`` before reaching
-        the adapter.
+        the adapter. Every return is ALSO run through ``_contained`` — belt and
+        braces on top of both of those, because ``scope`` had no check of any
+        kind here and this method is the anchor every write path is built on.
         """
         # Back-compat: layer=("tenant", X) reroutes to new tenant layout
         effective_tenant = tenant
@@ -257,7 +259,7 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
             )
         elif residual_layer is None:
             # Legacy layout — preserved for reads of pre-migration data
-            return self.base_dir / scope
+            return self._contained(self.base_dir / scope)
         else:
             # Layer overlay without tenant (rare: branch/region/user with
             # no tenant binding) — keep legacy layers/<id>/<val> path so
@@ -265,9 +267,9 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
             scope_dir = self.base_dir / scope
 
         if residual_layer is None:
-            return scope_dir
+            return self._contained(scope_dir)
         layer_id, layer_value = residual_layer
-        return scope_dir / "overlays" / layer_id / layer_value
+        return self._contained(scope_dir / "overlays" / layer_id / layer_value)
 
     async def save_document(
         self, scope: str, kind: str, name: str, raw: dict,
@@ -318,7 +320,11 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
             scope_dir.mkdir(parents=True, exist_ok=True)
             spec_version = (raw.get("spec") or {}).get("version")
             if spec_version:
-                versions_dir = scope_dir / "versions" / str(spec_version)
+                # ``spec.version`` is caller data and lands in a path segment
+                # too — contained for the same reason ``name`` is.
+                versions_dir = self._contained(
+                    scope_dir / "versions" / str(spec_version)
+                )
                 versioned_path = versions_dir / "manifest.yaml"
                 if versioned_path.exists():
                     from dna.kernel.protocols import (
@@ -346,10 +352,13 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
         # Try registered writers (for bundle kinds like Skill, Soul)
         for w in self._writers:
             if w.can_write(raw):
+                # ``name`` is a PATH COMPONENT here — the second layer under
+                # the kernel's ``validate_document_name``. See
+                # ``FilesystemSource._contained``: neither layer is redundant.
                 if subdir:
-                    dest = scope_dir / subdir / name
+                    dest = self._contained(scope_dir / subdir / name)
                 else:
-                    dest = scope_dir / name
+                    dest = self._contained(scope_dir / name)
                 if if_absent:
                     # ``mkdir`` without ``exist_ok`` is the atomic claim for a
                     # bundle: the directory IS the document's identity, and the
@@ -365,8 +374,8 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
             parent = scope_dir / subdir
         else:
             parent = scope_dir
+        path = self._contained(parent / f"{name}.yaml")
         parent.mkdir(parents=True, exist_ok=True)
-        path = parent / f"{name}.yaml"
         content = _dump_yaml(raw)
         if if_absent:
             # O_CREAT|O_EXCL — one syscall that both tests and creates. A
@@ -477,10 +486,13 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
         else:
             parent = scope_dir
 
-        # Try directory first (bundle), then .yaml, then .md
-        bundle_path = parent / name
-        yaml_path = parent / f"{name}.yaml"
-        md_path = parent / f"{name}.md"
+        # Try directory first (bundle), then .yaml, then .md. Contained BEFORE
+        # any of them is touched: this door ``rmtree``s / ``unlink``s what it
+        # resolves to, so an escaping name here is strictly worse than on the
+        # write side. (Second layer — the kernel refuses it first.)
+        bundle_path = self._contained(parent / name)
+        yaml_path = self._contained(parent / f"{name}.yaml")
+        md_path = self._contained(parent / f"{name}.md")
 
         if bundle_path.is_dir():
             shutil.rmtree(bundle_path)
@@ -492,7 +504,7 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
             raise ValueError("not_found")
 
     async def save_manifest(self, scope: str, manifest: dict[str, Any]) -> str:
-        path = self.base_dir / scope / "manifest.yaml"
+        path = self._contained(self.base_dir / scope / "manifest.yaml")
         path.parent.mkdir(parents=True, exist_ok=True)
         content = _dump_yaml(manifest, sort_keys=True)
         async with aiofiles.open(path, "w", encoding="utf-8") as f:
@@ -561,7 +573,7 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
 
     async def list_layer_values(self, scope: str, layer_key: str) -> list[str]:
         """Discover overlay values under <base_dir>/<scope>/layers/<layer_key>/."""
-        layers_dir = self.base_dir / scope / "layers" / layer_key
+        layers_dir = self._contained(self.base_dir / scope / "layers" / layer_key)
         if not layers_dir.is_dir():
             return []
         return sorted(
@@ -596,8 +608,11 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
 
     def _module_dir(self, scope: str, tenant: str | None) -> Path:
         if tenant:
-            return self.base_dir / "tenants" / fs_tenant_segment(tenant) / "scopes" / scope
-        return self.base_dir / scope
+            return self._contained(
+                self.base_dir / "tenants" / fs_tenant_segment(tenant)
+                / "scopes" / scope
+            )
+        return self._contained(self.base_dir / scope)
 
     async def list_module_versions(
         self, scope: str, *, tenant: str | None = None,
@@ -636,7 +651,9 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
         self, scope: str, version: str, *, tenant: str | None = None,
     ) -> dict[str, Any] | None:
         scope_dir = self._module_dir(scope, tenant)
-        vm = scope_dir / "versions" / version / "manifest.yaml"
+        # ``version`` is a caller-supplied path segment (the REST module
+        # catalog takes it from the URL) — contained like every other one.
+        vm = self._contained(scope_dir / "versions" / version / "manifest.yaml")
         if not vm.is_file():
             return None
         try:
@@ -649,7 +666,9 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
         tenant: str | None = None, message: str | None = None,
     ) -> bool:
         scope_dir = self._module_dir(scope, tenant)
-        vm = scope_dir / "versions" / version / "manifest.yaml"
+        # ``version`` is a caller-supplied path segment (the REST module
+        # catalog takes it from the URL) — contained like every other one.
+        vm = self._contained(scope_dir / "versions" / version / "manifest.yaml")
         if not vm.is_file():
             return False
         try:

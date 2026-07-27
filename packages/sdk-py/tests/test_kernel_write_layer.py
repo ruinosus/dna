@@ -117,6 +117,27 @@ def test_path_traversal_rejected_in_layer_id(tmp_path):
 
 
 def test_path_traversal_rejected_in_layer_value(tmp_path):
+    """The tenant traversal is now refused EARLIER — at the kernel boundary.
+
+    ``layer=("tenant", X)`` is rewritten to ``tenant=X``, and the write
+    pipeline calls ``validate_tenant_slug`` before the adapter is touched. That
+    validator used to disclaim path safety ("path-traversal safety lives in the
+    adapter") and now enforces the traversal rule itself, because ``tenant``
+    ALSO becomes ``<base>/tenants/<tenant>/.dna.lock`` in
+    ``dna.kernel.lock.module`` — which is not an adapter and had no
+    containment. So the refusal type and message changed on purpose:
+    ``InvalidTenantSlug`` from the kernel, not the adapter's
+    ``ValueError("Invalid layer segment: …")``.
+
+    Still a ``ValueError`` — ``InvalidTenantSlug`` gained that base in the same
+    change, precisely so moving the refusal earlier could not stop a face that
+    enumerates ``(ValueError, LookupError, PermissionError)`` from relaying it.
+    Both assertions below are deliberate: the marker base is what faces catch,
+    the ``ValueError`` base is what the older faces catch.
+    """
+    from dna.kernel.errors import KernelRefusal
+    from dna.kernel.protocols import InvalidTenantSlug
+
     k = _make_kernel(tmp_path)
     (tmp_path / "s").mkdir()
     raw = {
@@ -125,8 +146,15 @@ def test_path_traversal_rejected_in_layer_value(tmp_path):
         "metadata": {"name": "x"},
         "spec": {},
     }
-    with pytest.raises(ValueError, match="Invalid layer segment"):
+    before = {p for p in tmp_path.rglob("*") if p.is_file()}
+    with pytest.raises(InvalidTenantSlug, match="cannot escape") as exc:
         asyncio.run(k.write_document("s", "Agent", "x", raw, layer=("tenant", "../evil")))
+    assert isinstance(exc.value, KernelRefusal)
+    assert isinstance(exc.value, ValueError)
+    # The property, asserted on the FILESYSTEM rather than on the exception:
+    # nothing was written anywhere under the sandbox, inside the store or out.
+    assert {p for p in tmp_path.rglob("*") if p.is_file()} == before
+    assert not (tmp_path.parent / "evil").exists()
 
 
 def test_path_traversal_rejected_slashes(tmp_path):
