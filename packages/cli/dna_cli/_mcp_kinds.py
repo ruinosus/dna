@@ -67,7 +67,10 @@ def register_kind_tools(
 ) -> list[str]:
     """Register ``author_kind`` + ``list_my_kinds`` on ``server``.
 
-    Returns their names (the boot log prints them, like the graph tools).
+    Returns their names. Nothing reads them today — ``build_server`` discards
+    the return, exactly as it does for ``register_document_tools`` — so the list
+    is there for a caller that wants to report what it mounted, not because
+    anything prints it.
     """
     from fastmcp.exceptions import ToolError
 
@@ -99,7 +102,14 @@ def register_kind_tools(
         is deliberately outside :data:`AUTHORING_REFUSALS`; without this mapping
         the operator's missing directory would reach the agent as an unexplained
         failure. The REST face answers 503 for exactly this, and this is the
-        same sentence over a transport that has no status codes."""
+        same sentence over a transport that has no status codes.
+
+        Raised ``from exc``, unlike :func:`_refuse`. Suppressing the chain is
+        right for a policy REFUSAL — the verdict is the whole story and the
+        traceback would only leak the shape of the machine that reached it. This
+        is not a verdict, it is an operator's missing directory, and ``from
+        None`` discards the one detail that says WHICH. The agent reads the same
+        sentence either way; the operator keeps the server-side cause."""
         return ToolError(
             "the namespace registry scope is not provisioned in this store, so "
             "no Kind can be authored yet: authoring reads the KindNamespace "
@@ -155,7 +165,7 @@ def register_kind_tools(
                 now=now_iso(), actor=actor_from_context(), traits=traits,
             )
         except FileNotFoundError as exc:
-            raise _no_registry(exc) from None
+            raise _no_registry(exc) from exc
         except AUTHORING_REFUSALS as exc:
             raise _refuse(exc) from None
 
@@ -177,7 +187,7 @@ def register_kind_tools(
                 await live(), tenant=tenant, scope=scope,
             )
         except FileNotFoundError as exc:
-            raise _no_registry(exc) from None
+            raise _no_registry(exc) from exc
         except AUTHORING_REFUSALS as exc:
             raise _refuse(exc) from None
 

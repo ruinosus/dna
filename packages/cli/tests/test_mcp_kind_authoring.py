@@ -11,10 +11,20 @@ What is deliberately ABSENT is the load-bearing part. There is **no approval
 tool**, and there must never be one: approval is what confers effect (the
 registry withholds registration until ``spec.approved_by`` names someone), so a
 tool that approved would let the agent approve its own proposal and the gate
-this whole branch exists to make mechanical would be decorative. The second
-test below is a *negative* assertion over the whole advertised tool surface, not
-over a name we happen to remember — an ``approve_kind`` added anywhere on this
-server fails it (verified by adding one; see the task report).
+this whole branch exists to make mechanical would be decorative. That absence is
+asserted TWICE, because each half covers what the other cannot:
+
+* over the whole advertised tool SURFACE — an ``approve_kind`` registered
+  anywhere on this server fails it (verified by adding one; see the task
+  report). The broad half, but it discriminates on the substring ``"approve"``,
+  and ``grant_approval`` / ``ratify_kind`` / ``bless_kind`` all sail past a rule
+  written as a spelling.
+* over the CAPABILITY — no module the MCP face is built from may reach
+  ``approve_kind_impl``, the only function that writes ``spec.approved_by``.
+  Whatever a tool is named, it cannot confer effect without importing it.
+  Deliberately not package-wide: ``_rest_api.py`` imports it on purpose, because
+  the REST approve route, reached with a reviewer's own credential, IS the human
+  act this design routes approval through.
 
 The other three properties each pin something that would silently rot:
 
@@ -39,7 +49,14 @@ import pytest
 
 pytest.importorskip("fastmcp")
 
+#: The face's own refusal type. Asserting on it rather than on ``Exception``
+#: matters: a bare ``pytest.raises(Exception)`` also passes on a ``TypeError``
+#: from a typo'd call, so the test would go on "passing" while never reaching
+#: the refusal it claims to pin.
+from fastmcp.exceptions import ToolError  # noqa: E402 — after the importorskip
+
 _ROOT = pathlib.Path(__file__).resolve().parents[3]
+_DNA_CLI = pathlib.Path(__file__).resolve().parents[1] / "dna_cli"
 _BASE = _ROOT / "examples" / "emitting-to-a-runtime" / ".dna"
 _SCOPE = "concierge"
 #: The workspace the fixture's client speaks for. Same shape as the REST
@@ -90,6 +107,11 @@ class _Face:
     def __init__(self, dna_dir: pathlib.Path) -> None:
         from dna_cli import _mcp_server as M
 
+        # Assigned HERE, not bolted on by the fixture from outside. `stored_spec`
+        # reads it, so a `_Face(dna_dir)` built anywhere else used to raise
+        # AttributeError on an attribute `__init__` never set — the class was
+        # only whole by accident of one fixture.
+        self._dna_dir = dna_dir
         self._server = M.build_server(scope=_SCOPE, base_dir=str(dna_dir))
         # Only the workspace. NOT the scope: ``author_kind`` deliberately takes
         # none (the Kind lands at the base of the scope the workspace owns, which
@@ -146,9 +168,7 @@ class _Face:
 
 @pytest.fixture
 def mcp_client(dna_dir):
-    face = _Face(dna_dir)
-    face._dna_dir = dna_dir
-    return face
+    return _Face(dna_dir)
 
 
 # ── the two properties the brief names ──────────────────────────────────────
@@ -167,6 +187,50 @@ def test_there_is_no_approval_tool(mcp_client):
     assert not any("approve" in n for n in names), (
         "approval is the human act — exposing it as a tool would let "
         "the agent approve its own proposal, which is the whole point of the gate"
+    )
+
+
+#: The modules the MCP face is BUILT from — ``build_server`` and everything it
+#: registers tools from. Deliberately NOT all of ``dna_cli``: ``_rest_api.py``
+#: imports ``approve_kind_impl`` **on purpose**, because
+#: ``POST /v1/kinds/{kind}/approve``, reached with a reviewer's own credential,
+#: IS the human act this whole design routes approval through. A guard that
+#: forbade the import package-wide would be red on an untouched tree, and the
+#: obvious way to "fix" it would be to delete the approval route itself.
+_MCP_FACE = sorted(
+    [
+        *_DNA_CLI.glob("_mcp_*.py"),
+        *(_DNA_CLI / "graph").rglob("*.py"),
+        *(_DNA_CLI / "act_on_behalf").rglob("*.py"),
+    ]
+)
+
+
+def test_the_mcp_face_cannot_reach_the_approval_capability():
+    """The same rule as above, pinned on the CAPABILITY instead of the spelling.
+
+    ``test_there_is_no_approval_tool`` reads the live tool surface, which is the
+    important half — it catches an approval tool registered by any path. But it
+    discriminates on the substring ``"approve"``, and ``grant_approval`` /
+    ``ratify_kind`` / ``confer_effect`` / ``bless_kind`` all sail through it
+    (``"approval"`` does not even contain ``"approve"``). Renaming is not an
+    exotic risk; it is the ordinary way a rule expressed as a string decays.
+
+    What actually enforces the rule is that the MCP face never reaches the
+    function that confers effect. ``approve_kind_impl`` is the only thing that
+    writes ``spec.approved_by``, and the registry withholds registration until
+    that key names someone — so a tool cannot approve under ANY name without
+    importing it. That absence is the real fence; assert on it directly.
+    """
+    assert _MCP_FACE, "found no MCP face modules — did the package layout change?"
+    offenders = [
+        p for p in _MCP_FACE
+        if "approve_kind_impl" in p.read_text(encoding="utf-8")
+    ]
+    assert not offenders, (
+        "the MCP face reaches approve_kind_impl — an agent-facing module can now "
+        "confer effect on its own proposal, whatever the tool is called:\n  "
+        + "\n  ".join(str(p) for p in offenders)
     )
 
 
@@ -205,7 +269,7 @@ def test_a_forged_proposer_reaches_nothing(mcp_client):
     from dna_cli._mcp_auth import UNIDENTIFIED_LOCAL_ACTOR
 
     for forged in ("proposed_by", "approved_by", "proposed_at", "approved_at"):
-        with pytest.raises(Exception) as ei:  # noqa: PT011 — FastMCP ToolError
+        with pytest.raises(ToolError) as ei:
             mcp_client.call_tool_raw("author_kind", {
                 "tenant": _WID, "kind": "Forjado", "schema": _SCHEMA,
                 forged: "attacker@example.com",
@@ -228,7 +292,7 @@ def test_a_traversing_kind_name_is_refused_in_words_the_agent_can_read(mcp_clien
     """``kind`` becomes a path component, so it is validated as a CamelCase
     identifier. Over a conversational face the refusal has to arrive as a
     sentence: an agent that gets an opaque failure retries the same call."""
-    with pytest.raises(Exception) as ei:  # noqa: PT011 — FastMCP ToolError
+    with pytest.raises(ToolError) as ei:
         mcp_client.call_tool("author_kind", {
             "kind": "../../../etc/pwned", "schema": _SCHEMA,
         })
