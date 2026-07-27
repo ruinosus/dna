@@ -221,6 +221,156 @@
         "title": "AgentsResponse",
         "type": "object"
       },
+      "AuthorKindResponse": {
+        "description": "``POST /v1/kinds`` — the authored Kind. ``approved`` is ALWAYS false\nhere: this door cannot approve, so the field states the document's actual\nstate rather than echoing anything the caller sent.",
+        "properties": {
+          "approved": {
+            "title": "Approved",
+            "type": "boolean"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "namespace": {
+            "title": "Namespace",
+            "type": "string"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          }
+        },
+        "required": [
+          "namespace",
+          "kind",
+          "name",
+          "approved"
+        ],
+        "title": "AuthorKindResponse",
+        "type": "object"
+      },
+      "AuthoredKindSummary": {
+        "description": "One ``KindDefinition`` document as the audit surface sees it.",
+        "properties": {
+          "api_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Api Version"
+          },
+          "approved": {
+            "default": false,
+            "title": "Approved",
+            "type": "boolean"
+          },
+          "approved_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "approved_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved By"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "namespace": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Namespace"
+          }
+        },
+        "title": "AuthoredKindSummary",
+        "type": "object"
+      },
+      "AuthoredKindsResponse": {
+        "description": "``GET /v1/kinds`` — every authored Kind in the scope, approved or not.\nDocuments, not registry entries: an UNAPPROVED Kind is exactly the one the\nregistry does not have, and it is the one a reviewer came here for.",
+        "properties": {
+          "kinds": {
+            "items": {
+              "$ref": "#/components/schemas/AuthoredKindSummary"
+            },
+            "title": "Kinds",
+            "type": "array"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scope"
+        ],
+        "title": "AuthoredKindsResponse",
+        "type": "object"
+      },
       "BoardCounts": {
         "description": "Status→count maps (dynamic keys — a status label is data).",
         "properties": {
@@ -575,6 +725,39 @@
           }
         },
         "title": "Body_accept_invites_v1_workspaces_accept_post",
+        "type": "object"
+      },
+      "Body_author_kind_v1_kinds_post": {
+        "properties": {
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "schema": {
+            "additionalProperties": true,
+            "title": "Schema",
+            "type": "object"
+          },
+          "traits": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Traits"
+          }
+        },
+        "required": [
+          "kind",
+          "schema"
+        ],
+        "title": "Body_author_kind_v1_kinds_post",
         "type": "object"
       },
       "Body_create_invite_v1_workspaces__workspace_id__invites_post": {
@@ -5067,6 +5250,156 @@
           }
         },
         "summary": "Set Insight State"
+      }
+    },
+    "/v1/kinds": {
+      "get": {
+        "description": "List the scope's authored Kinds with their approval state — the\naudit view. Reads DOCUMENTS, not the registry: an unapproved Kind is\nprecisely the one the registry does not have, and it is the one a\nreviewer came here for.",
+        "operationId": "list_authored_kinds_v1_kinds_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scope"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tenant"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthoredKindsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Authored Kinds"
+      },
+      "post": {
+        "description": "Author a Kind for the calling workspace — a ``KindDefinition``\ndocument written WITHOUT an approval marker, under the workspace's own\nassigned apiVersion namespace (minted on first use, then stable).\n\nThe response's ``approved`` is always ``false``. An ``approved_by`` in\nthe body is ignored, not honoured and not rejected: a caller that could\napprove its own proposal would make the gate decorative. 400 for a\nmissing tenant/kind, 403 when the namespace gate refuses the write (the\nworkspace does not own the target namespace).",
+        "operationId": "author_kind_v1_kinds_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tenant"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_author_kind_v1_kinds_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthorKindResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Author Kind"
       }
     },
     "/v1/memories": {

@@ -339,6 +339,41 @@ export interface paths {
         patch: operations["set_insight_state_v1_insights__name__state_patch"];
         trace?: never;
     };
+    "/v1/kinds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Authored Kinds
+         * @description List the scope's authored Kinds with their approval state — the
+         *     audit view. Reads DOCUMENTS, not the registry: an unapproved Kind is
+         *     precisely the one the registry does not have, and it is the one a
+         *     reviewer came here for.
+         */
+        get: operations["list_authored_kinds_v1_kinds_get"];
+        put?: never;
+        /**
+         * Author Kind
+         * @description Author a Kind for the calling workspace — a ``KindDefinition``
+         *     document written WITHOUT an approval marker, under the workspace's own
+         *     assigned apiVersion namespace (minted on first use, then stable).
+         *
+         *     The response's ``approved`` is always ``false``. An ``approved_by`` in
+         *     the body is ignored, not honoured and not rejected: a caller that could
+         *     approve its own proposal would make the gate decorative. 400 for a
+         *     missing tenant/kind, 403 when the namespace gate refuses the write (the
+         *     workspace does not own the target namespace).
+         */
+        post: operations["author_kind_v1_kinds_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/memories": {
         parameters: {
             query?: never;
@@ -955,6 +990,61 @@ export interface components {
             scope: string;
         };
         /**
+         * AuthorKindResponse
+         * @description ``POST /v1/kinds`` — the authored Kind. ``approved`` is ALWAYS false
+         *     here: this door cannot approve, so the field states the document's actual
+         *     state rather than echoing anything the caller sent.
+         */
+        AuthorKindResponse: {
+            /** Approved */
+            approved: boolean;
+            /** Kind */
+            kind: string;
+            /** Name */
+            name: string;
+            /** Namespace */
+            namespace: string;
+            /** Version */
+            version?: string | null;
+        };
+        /**
+         * AuthoredKindSummary
+         * @description One ``KindDefinition`` document as the audit surface sees it.
+         */
+        AuthoredKindSummary: {
+            /** Api Version */
+            api_version?: string | null;
+            /**
+             * Approved
+             * @default false
+             */
+            approved: boolean;
+            /** Approved At */
+            approved_at?: string | null;
+            /** Approved By */
+            approved_by?: string | null;
+            /** Created At */
+            created_at?: string | null;
+            /** Kind */
+            kind?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Namespace */
+            namespace?: string | null;
+        };
+        /**
+         * AuthoredKindsResponse
+         * @description ``GET /v1/kinds`` — every authored Kind in the scope, approved or not.
+         *     Documents, not registry entries: an UNAPPROVED Kind is exactly the one the
+         *     registry does not have, and it is the one a reviewer came here for.
+         */
+        AuthoredKindsResponse: {
+            /** Kinds */
+            kinds?: components["schemas"]["AuthoredKindSummary"][];
+            /** Scope */
+            scope: string;
+        };
+        /**
          * BoardCounts
          * @description Status→count maps (dynamic keys — a status label is data).
          */
@@ -1095,6 +1185,17 @@ export interface components {
             claims?: {
                 [key: string]: unknown;
             } | null;
+        };
+        /** Body_author_kind_v1_kinds_post */
+        Body_author_kind_v1_kinds_post: {
+            /** Kind */
+            kind: string;
+            /** Schema */
+            schema: {
+                [key: string]: unknown;
+            };
+            /** Traits */
+            traits?: string[] | null;
         };
         /** Body_create_invite_v1_workspaces__workspace_id__invites_post */
         Body_create_invite_v1_workspaces__workspace_id__invites_post: {
@@ -2830,6 +2931,77 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["InsightStateResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_authored_kinds_v1_kinds_get: {
+        parameters: {
+            query?: {
+                scope?: string | null;
+                tenant?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthoredKindsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    author_kind_v1_kinds_post: {
+        parameters: {
+            query?: {
+                tenant?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Body_author_kind_v1_kinds_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthorKindResponse"];
                 };
             };
             /** @description Validation Error */

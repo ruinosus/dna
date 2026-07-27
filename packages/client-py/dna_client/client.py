@@ -242,6 +242,37 @@ class DnaClient:
             params={"scope": scope, "tenant": tenant},
         )
 
+    # -- Kind authoring (a workspace declares its OWN Kind) ------------------
+
+    def author_kind(
+        self, kind: str, schema: dict[str, Any], *,
+        traits: list[str] | None = None, tenant: str | None = None,
+    ) -> JsonObject:
+        """Author a Kind for the calling workspace — a ``KindDefinition``
+        document written WITHOUT an approval marker, under the workspace's own
+        assigned apiVersion namespace.
+
+        What comes back is INERT: ``approved`` is always ``false``, and an
+        unapproved Kind never enters the registry, so it neither validates
+        documents nor routes their storage. Approval is a separate act by a
+        different actor — this call cannot perform it, and an ``approved_by``
+        supplied here would be ignored (there is no parameter for it on
+        purpose). 400 for a missing tenant/kind; 403 when the workspace does
+        not own the target namespace."""
+        return self._write(
+            "POST", "/v1/kinds",
+            {"kind": kind, "schema": schema, "traits": traits},
+            tenant=tenant,
+        )
+
+    def list_authored_kinds(
+        self, *, scope: str | None = None, tenant: str | None = None,
+    ) -> JsonObject:
+        """List the scope's authored Kinds with their approval state — the
+        audit view. Reads DOCUMENTS, not the registry: an unapproved Kind is
+        precisely the one the registry does not have."""
+        return self._get("/v1/kinds", scope=scope, tenant=tenant)
+
     # -- definitions (bundle entries — fork a bundle-file, plane B) ----------
 
     def list_bundle_entries(

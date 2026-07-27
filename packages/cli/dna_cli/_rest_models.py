@@ -191,6 +191,43 @@ class DefinitionWriteResponse(BaseModel):
     overridden: bool
 
 
+# ── Kind authoring (the dedicated door — writes an INERT KindDefinition) ────
+
+
+class AuthorKindResponse(BaseModel):
+    """``POST /v1/kinds`` — the authored Kind. ``approved`` is ALWAYS false
+    here: this door cannot approve, so the field states the document's actual
+    state rather than echoing anything the caller sent."""
+
+    namespace: str
+    kind: str
+    name: str
+    approved: bool
+    version: str | None = None
+
+
+class AuthoredKindSummary(BaseModel):
+    """One ``KindDefinition`` document as the audit surface sees it."""
+
+    name: str | None = None
+    kind: str | None = None
+    api_version: str | None = None
+    namespace: str | None = None
+    approved: bool = False
+    approved_by: str | None = None
+    approved_at: str | None = None
+    created_at: str | None = None
+
+
+class AuthoredKindsResponse(BaseModel):
+    """``GET /v1/kinds`` — every authored Kind in the scope, approved or not.
+    Documents, not registry entries: an UNAPPROVED Kind is exactly the one the
+    registry does not have, and it is the one a reviewer came here for."""
+
+    scope: str
+    kinds: list[AuthoredKindSummary] = Field(default_factory=list)
+
+
 # ── bundle entries (list/read/write/revert a bundle-file fork — plane B) ────
 #
 # A bundle-pattern Kind (Skill, and any future bundle Kind) stores MULTIPLE

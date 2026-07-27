@@ -210,6 +210,45 @@ export class DnaClient {
     );
   }
 
+  // ── Kind authoring (a workspace declares its OWN Kind) ───────────────────
+
+  /**
+   * Author a Kind for the calling workspace — a `KindDefinition` document
+   * written WITHOUT an approval marker, under the workspace's own assigned
+   * apiVersion namespace.
+   *
+   * What comes back is INERT: `approved` is always `false`, and an unapproved
+   * Kind never enters the registry, so it neither validates documents nor
+   * routes their storage. Approval is a separate act by a different actor —
+   * this call cannot perform it, and there is deliberately no parameter for
+   * an approver. 400 for a missing tenant/kind; 403 when the workspace does
+   * not own the target namespace.
+   */
+  async authorKind(
+    kind: string,
+    schema: Record<string, unknown>,
+    traits?: string[],
+    query?: ScopeTenant,
+  ) {
+    return this.unwrap(
+      await this.raw.POST("/v1/kinds", {
+        params: { query: this.q(query) },
+        body: { kind, schema, traits },
+      }),
+    );
+  }
+
+  /**
+   * List the scope's authored Kinds with their approval state — the audit
+   * view. Reads DOCUMENTS, not the registry: an unapproved Kind is precisely
+   * the one the registry does not have.
+   */
+  async listAuthoredKinds(query?: ScopeTenant) {
+    return this.unwrap(
+      await this.raw.GET("/v1/kinds", { params: { query: this.q(query) } }),
+    );
+  }
+
   // ── definitions (bundle entries — fork a bundle-file, plane B) ───────────
 
   /**

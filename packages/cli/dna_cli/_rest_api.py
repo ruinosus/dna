@@ -261,6 +261,7 @@ def build_app(
         accept_invites_impl,
         adopt_workspace_scope_on_access,
         apply_definition_impl,
+        author_kind_impl,
         board_item_impl,
         board_summary_impl,
         compose_prompt_impl,
@@ -271,6 +272,7 @@ def build_app(
         import_memories_impl,
         invite_member_impl,
         list_agents_impl,
+        list_authored_kinds_impl,
         list_bundle_entries_impl,
         list_members_impl,
         list_orgs_impl,
@@ -848,6 +850,66 @@ def build_app(
             )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from None
+
+    # -- Kind authoring (a tenant declares its OWN Kind, inert until approved) -
+    # A DEDICATED door, deliberately not a relaxation of the generic one. The
+    # generic write (``write_document_impl``) refuses every BOOTSTRAP Kind —
+    # KindDefinition and Genome among them — because a tool that can write any
+    # document must not be the tool that rewrites the frame every other document
+    # is validated against; that refusal is untouched here and is pinned by
+    # tests/test_kind_authoring_route.py.
+    #
+    # What this door writes is INERT: the spec is built field by field and never
+    # merged from the request body, so it carries no ``approved_by`` and there is
+    # no key an author can smuggle one through. Registration is what confers
+    # schema validation and storage routing, and the registry's approval gate
+    # withholds it until a DIFFERENT actor approves — so "not approved has no
+    # effect" is the absence of a mechanism, not a promise. Approval is not a
+    # route here; it arrives with the portal's review surface.
+
+    @app.post("/v1/kinds", dependencies=guarded, status_code=201,
+              response_model=m.AuthorKindResponse)
+    async def author_kind(
+        kind: str = Body(..., embed=True),
+        schema: dict[str, Any] = Body(..., embed=True),
+        traits: list[str] | None = Body(default=None, embed=True),
+        tenant: str | None = Query(default=None),
+    ) -> dict[str, Any]:
+        """Author a Kind for the calling workspace — a ``KindDefinition``
+        document written WITHOUT an approval marker, under the workspace's own
+        assigned apiVersion namespace (minted on first use, then stable).
+
+        The response's ``approved`` is always ``false``. An ``approved_by`` in
+        the body is ignored, not honoured and not rejected: a caller that could
+        approve its own proposal would make the gate decorative. 400 for a
+        missing tenant/kind, 403 when the namespace gate refuses the write (the
+        workspace does not own the target namespace)."""
+        from dna.application.sdlc import now_iso
+
+        live = await _live()
+        try:
+            return await author_kind_impl(
+                live, kind=kind, schema=schema, tenant=tenant or "",
+                now=now_iso(), traits=traits,
+            )
+        except LayerPolicyViolationError as exc:
+            raise HTTPException(status_code=403, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from None
+
+    @app.get("/v1/kinds", dependencies=guarded,
+             response_model=m.AuthoredKindsResponse)
+    async def list_authored_kinds(
+        scope: str | None = Query(default=None),
+        tenant: str | None = Query(default=None),
+    ) -> dict[str, Any]:
+        """List the scope's authored Kinds with their approval state — the
+        audit view. Reads DOCUMENTS, not the registry: an unapproved Kind is
+        precisely the one the registry does not have, and it is the one a
+        reviewer came here for."""
+        return await list_authored_kinds_impl(
+            await _live(), tenant=tenant, scope=scope,
+        )
 
     # -- bundle entries (list/read/write/revert a bundle-file fork, plane B) -
     # A bundle-pattern Kind (Skill, and any future bundle Kind) stores MULTIPLE
