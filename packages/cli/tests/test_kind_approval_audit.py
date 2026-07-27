@@ -57,6 +57,26 @@ _SCHEMA = {
     "required": ["titulo"],
 }
 
+#: Vocabulary a "no such Kind here" refusal may NEVER use — the words with which
+#: a 404 stops being a 404 and becomes "it is there, it is simply not yours".
+#: See :func:`test_a_stranger_gets_the_same_answer_as_a_nonexistent_kind` for why
+#: this is asserted POSITIVELY and not only by comparing the two refusals.
+#:
+#: Kept in step with the copy in ``test_kind_authoring_route.py``: the read door
+#: and this one raise from ONE place, so a leak reworded there surfaces on both
+#: and each file has to be able to see it on its own.
+#:
+#: What is deliberately absent matters as much: the refusal legitimately says
+#: "under a namespace workspace X owns", naming the CALLER's own workspace, so a
+#: blanket ban on the word "own" would forbid the true sentence.
+_OWNERSHIP_TELL = re.compile(
+    r"not\s+yours|not\s+your\b|belongs\s+to|owned\s+by|"
+    r"(?:an|other|another|different)\s+workspace(?:'s)?\s+(?:kind|document|namespace)|"
+    r"someone\s+else|exists?\s+but|but\s+it\s+(?:is|does)|"
+    r"forbidden|unauthori[sz]ed|not\s+authori[sz]ed|permission|access\s+denied",
+    re.I,
+)
+
 #: The two actors. The AGENT proposes (that is the product: a tenant authors a
 #: Kind through an agent); the HUMAN approves.
 _AGENT = {"oid": "oid-agent", "email": "agent@tenant.example"}
@@ -404,6 +424,80 @@ def test_the_owner_still_approves_its_own_kind_in_a_shared_scope(dna_dir):
         assert r.json()["name"] == mine.json()["name"], r.json()
 
     assert _stored_spec(dna_dir, mine.json()["name"])["approved_by"] == _HUMAN["email"]
+
+
+def test_a_stranger_gets_the_same_answer_as_a_nonexistent_kind(dna_dir):
+    """404, never 403 — and the SENTENCE must not say which of the two it is.
+
+    The test above proves the neighbour's Kind is not approved. It says nothing
+    about what the caller LEARNS from being refused, and that is the second half
+    of the same boundary: "it exists but is not yours" is a probe. A workspace
+    that can tell the two refusals apart can enumerate what its neighbours are
+    authoring, one Kind name at a time, without ever reading a document — and it
+    needs no 403 to do it, one distinguishing word in a 404 body is enough.
+
+    Until this test existed, NOTHING compared the approval door's two 404s. The
+    door had (and has) exactly one ``raise`` for both facts, which is why the
+    property held; but a fence that is only a property of today's code shape is
+    not a fence. Two assertions, failing on two different mutations:
+
+    1. neither refusal uses ownership vocabulary (:data:`_OWNERSHIP_TELL`) —
+       the only thing that catches a REWORDED refusal, since a rewrite reaches
+       both refusals equally and leaves any comparison green;
+    2. the stranger's 404 equals the OWNER's own wrong-name 404 — same caller,
+       holding a namespace claim of its own, naming a Kind it owns nothing by.
+       That catches a handler that grows a SECOND refusal on the "found it,
+       dropped it for ownership" path.
+
+    The caller authors a Kind of its own first, on purpose: a workspace that has
+    authored nothing owns no namespace, and its two refusals would match for the
+    uninteresting reason that it is a stranger to the entire scope."""
+    with _client(dna_dir) as c:
+        neighbour = _author(c, "agent", tenant=_OTHER_WID)
+        assert neighbour.status_code == 201, neighbour.text
+        # The caller is an author too — it owns a namespace, and a Kind under
+        # it, and still must not be able to feel its neighbour's.
+        mine = _author(c, "agent", kind="Acordo", tenant=_WID)
+        assert mine.status_code == 201, mine.text
+
+        stranger = _approve(c, "human", kind="Contrato", tenant=_WID)
+        owners_wrong_name = _approve(c, "human", kind="NuncaExistiu", tenant=_WID)
+        # …and the door still works for what the caller does own: a door that
+        # 404'd for everybody would satisfy every assertion below.
+        assert _approve(c, "human", kind="Acordo", tenant=_WID).status_code == 200
+
+    assert (stranger.status_code, owners_wrong_name.status_code) == (404, 404), (
+        stranger.text, owners_wrong_name.text,
+    )
+    # The anti-tautology: FastAPI's own routing 404 is ``{"detail": "Not Found"}``
+    # for both, and two identical strings are trivially indistinguishable. Each
+    # refusal naming the Kind it could not find is what makes the comparison
+    # below a statement about the handler.
+    assert "Contrato" in stranger.json()["detail"], stranger.text
+    assert "NuncaExistiu" in owners_wrong_name.json()["detail"], owners_wrong_name.text
+
+    # (1) The refusal must not TELL.
+    for label, r in (("stranger", stranger), ("absent", owners_wrong_name)):
+        tell = _OWNERSHIP_TELL.search(r.json()["detail"])
+        assert tell is None, (
+            f"the {label} refusal says {tell.group(0)!r} — a refusal that speaks "
+            f"of ownership at all is the probe this door exists to close, "
+            f"whether or not the two refusals happen to match:\n  "
+            f"{r.json()['detail']}"
+        )
+    # …nor name the neighbour: the workspace id, or the namespace it authored
+    # under, is the same fact by another spelling.
+    assert _OTHER_WID not in stranger.text, stranger.text
+    assert neighbour.json()["namespace"] not in stranger.text, stranger.text
+
+    # (2) Modulo the Kind name the caller itself supplied, one string.
+    assert (stranger.json()["detail"].replace("Contrato", "<kind>")
+            == owners_wrong_name.json()["detail"].replace("NuncaExistiu", "<kind>")), (
+        f"the approval refusal distinguishes a neighbour's Kind from a "
+        f"nonexistent one, which is the probe:\n"
+        f"  stranger: {stranger.json()['detail']}\n"
+        f"  absent:   {owners_wrong_name.json()['detail']}"
+    )
 
 
 def _claim_namespace(dna_dir, *, namespace: str, owner: str,

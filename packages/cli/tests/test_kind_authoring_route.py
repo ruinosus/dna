@@ -756,6 +756,30 @@ _OTHER_SCHEMA = {
     "required": [_SECRET],
 }
 
+#: Vocabulary a "no such Kind here" refusal may NEVER use — the words with
+#: which a 404 stops being a 404 and becomes "it is there, it is simply not
+#: yours". The one bit the door withholds is *which of the two facts* caused
+#: the refusal, and it is leaked by phrasing long before it is leaked by a
+#: status code, so this is asserted on the sentence itself.
+#:
+#: Written as a POSITIVE assertion because comparing the two refusals cannot
+#: catch a reworded tail: both doors raise from one place, so a rewrite lands
+#: identically on both sides and the comparison stays green. (Duplicated,
+#: deliberately, in ``test_kind_approval_audit.py`` — the two doors share the
+#: raise, and a constant that lived in only one file would leave the other
+#: fenced by nothing the day the files diverge.)
+#:
+#: What is NOT here matters as much: the refusal legitimately says "under a
+#: namespace workspace X owns" — naming the CALLER's own workspace is not a
+#: leak, and a blanket ban on the word "own" would forbid the true sentence.
+_OWNERSHIP_TELL = re.compile(
+    r"not\s+yours|not\s+your\b|belongs\s+to|owned\s+by|"
+    r"(?:an|other|another|different)\s+workspace(?:'s)?\s+(?:kind|document|namespace)|"
+    r"someone\s+else|exists?\s+but|but\s+it\s+(?:is|does)|"
+    r"forbidden|unauthori[sz]ed|not\s+authori[sz]ed|permission|access\s+denied",
+    re.I,
+)
+
 
 def _author(c, *, kind: str = "Contrato", tenant: str = _WID, **body):
     return c.post("/v1/kinds", params={"tenant": tenant},
@@ -850,18 +874,50 @@ def test_a_stranger_gets_the_same_answer_as_a_nonexistent_kind(dna_dir):
 
     "It exists but is not yours" IS the probe — a workspace could enumerate
     what its neighbours are authoring one Kind name at a time without ever
-    reading a document. So the two answers must be indistinguishable, and this
-    compares the whole refusal rather than the status alone: a 404 whose detail
-    said "not yours" would satisfy a status-only test and give the game away in
-    the body."""
+    reading a document. So the two answers must be indistinguishable.
+
+    **The comparison alone cannot say that.** Both refusals leave the handler
+    through the SAME ``raise AuthoredKindNotFound``, reached by two calls that
+    differ in the ``kind`` token and in nothing else — same scope, same tenant,
+    same verb, therefore the same sentence around the one token this test
+    masks. String-equality modulo the mask is true by construction: rewriting
+    the ``read`` tail to "— it may exist but it is NOT YOURS, or it may not
+    exist at all" left every test in this file and in
+    ``test_kind_approval_audit.py`` green while the wire handed a stranger the
+    exact probe this docstring says is closed.
+
+    So indistinguishability is pinned two ways, and the two fail on different
+    mutations:
+
+    1. the refusal SAYS nothing about ownership (:data:`_OWNERSHIP_TELL`) —
+       this is what catches a reworded tail, which no comparison can see
+       because the rewording lands on both sides of it;
+    2. the stranger's 404 equals **the OWNER's own wrong-name 404** — same
+       caller, holding a real namespace claim of its own, asking by a Kind
+       name it owns nothing by. That is the pair that encodes the property:
+       it catches a handler that grows a second, distinct refusal on the
+       "found it, dropped it for ownership" path.
+
+    The caller therefore authors a Kind of its own here. A caller that has
+    authored NOTHING owns no namespace, so its two refusals are indistinguish-
+    able for the uninteresting reason that it is a stranger to the whole
+    scope — which is not the case the door has to survive.
+    """
     with _client(dna_dir) as c:
         assert _author(c, tenant=_OTHER_WID, schema=_OTHER_SCHEMA).status_code == 201
+        # The caller is an AUTHOR, not a passer-by: it owns a namespace, and a
+        # Kind under it, and still must not be able to feel its neighbour's.
+        mine = _author(c, kind="Acordo", tenant=_WID)
+        assert mine.status_code == 201, mine.text
 
         stranger = _detail(c, "Contrato", tenant=_WID)
-        absent = _detail(c, "NuncaExistiu", tenant=_WID)
+        owners_wrong_name = _detail(c, "NuncaExistiu", tenant=_WID)
+        # …and the caller really can read what it owns: a door that 404'd for
+        # everyone would satisfy every assertion below.
+        assert _detail(c, "Acordo", tenant=_WID).status_code == 200
 
-    assert (stranger.status_code, absent.status_code) == (404, 404), (
-        stranger.text, absent.text,
+    assert (stranger.status_code, owners_wrong_name.status_code) == (404, 404), (
+        stranger.text, owners_wrong_name.text,
     )
     # FIRST, the anti-tautology. Without these two lines this test PASSED
     # before the route existed at all: both calls got Starlette's routing 404,
@@ -869,14 +925,30 @@ def test_a_stranger_gets_the_same_answer_as_a_nonexistent_kind(dna_dir):
     # indistinguishable. Requiring each refusal to name the Kind it could not
     # find is what makes the comparison below a statement about the handler.
     assert "Contrato" in stranger.json()["detail"], stranger.text
-    assert "NuncaExistiu" in absent.json()["detail"], absent.text
-    # Modulo the Kind name the caller itself supplied, the two refusals must be
-    # the same string.
+    assert "NuncaExistiu" in owners_wrong_name.json()["detail"], owners_wrong_name.text
+
+    # (1) The refusal must not TELL. Positive, and independent of any pairing:
+    # a tail rewritten to "it may exist but it is NOT YOURS" is identical on
+    # both sides of the comparison below and only this assertion sees it.
+    for label, r in (("stranger", stranger), ("absent", owners_wrong_name)):
+        tell = _OWNERSHIP_TELL.search(r.json()["detail"])
+        assert tell is None, (
+            f"the {label} refusal says {tell.group(0)!r} — a refusal that "
+            f"speaks of ownership at all is the probe this door exists to "
+            f"close, whether or not the two refusals happen to match:\n  "
+            f"{r.json()['detail']}"
+        )
+    # …and it must not name the neighbour either — the workspace, or the
+    # namespace it authored under, is the same fact by another spelling.
+    assert _OTHER_WID not in stranger.text, stranger.text
+
+    # (2) Modulo the Kind name the caller itself supplied, the two refusals
+    # must be the same string.
     assert (stranger.json()["detail"].replace("Contrato", "<kind>")
-            == absent.json()["detail"].replace("NuncaExistiu", "<kind>")), (
+            == owners_wrong_name.json()["detail"].replace("NuncaExistiu", "<kind>")), (
         f"the refusal distinguishes a neighbour's Kind from a nonexistent one, "
         f"which is the probe:\n  stranger: {stranger.json()['detail']}\n"
-        f"  absent:   {absent.json()['detail']}"
+        f"  absent:   {owners_wrong_name.json()['detail']}"
     )
 
 

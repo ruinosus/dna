@@ -157,19 +157,36 @@ def test_every_tool_taking_a_scope_binds_it() -> None:
         signature = body.split(") ->")[0]
         if not re.search(r"\bscope\s*:", signature):
             continue
-        # It does. Every seam CALL inside it must carry scope= — see _SEAM_CALL
-        # for which spellings count and what is deliberately left out.
-        for m in _SEAM_CALL.finditer(body):
-            line_start = body.rfind("\n", 0, m.start()) + 1
-            if body[line_start:m.start()].lstrip().startswith(("def ", "async def ")):
-                continue
+        # It does. Collect the seam CALLS inside it — a nested helper's own
+        # `def` line is a signature, not a call (see _SEAM_CALL).
+        calls = [
+            m for m in _SEAM_CALL.finditer(body)
+            if not body[body.rfind("\n", 0, m.start()) + 1:m.start()]
+            .lstrip().startswith(("def ", "async def "))
+        ]
+        # NO seam call at all is the worst case, not the clean one — and it read
+        # as clean here until this branch existed. The loop below only inspects
+        # matches, so zero matches meant zero offenders meant a pass: deleting
+        # the `_guard(...)` line outright from `list_my_kinds` left this file
+        # reporting 6 passed. That is the same "covered in name only" shape the
+        # comment on _SEAM_CALL records for _mcp_documents.py, one level up — a
+        # tool that reads a caller-supplied `scope` and never reaches the seam
+        # is not passing the scope-binding check, it is skipping it entirely.
+        if not calls:
+            offenders.append(
+                f"{name}: accepts a `scope` and calls NO guard seam at all"
+            )
+            continue
+        # Every one of them must carry scope=.
+        for m in calls:
             if "scope=" not in m.group(1):
                 offenders.append(
                     f"{name}: {m.group(0).split('(')[0]}({m.group(1).strip()[:60]}…)"
                 )
 
     assert not offenders, (
-        "these tools accept a `scope` but call _guard without passing it, so "
+        "these tools accept a `scope` but do not hand it to the guard seam — "
+        "either they call it without `scope=` or they never call it at all, so "
         "the cross-workspace scope-binding check never runs for them:\n  "
         + "\n  ".join(offenders)
     )
