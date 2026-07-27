@@ -73,12 +73,33 @@ def _kernel_modules() -> tuple:
     package), and an import failure PROPAGATES rather than being skipped — a
     module the ratchet cannot import is a module it cannot scan, which is the
     failure mode this test exists to refuse.
+
+    THE PRICE OF THE DERIVATION, stated because the paragraph above frames only
+    its upside. Force-importing every module in the package makes the ratchet
+    take an IMPORT-SIDE-EFFECT dependency on all of them: whatever any kernel
+    submodule does at import time, this test now does too. It showed up
+    immediately — ``dna.kernel.compose.composition`` is a deprecated shim that
+    warns on import, so the file ran ``18 passed, 1 warning`` and the warning
+    had nothing to do with what was being tested. Test output that carries
+    unrelated noise stops being read.
+
+    The warning is SUPPRESSED HERE, at the derivation, and nowhere else. It is
+    scoped to this loop and to ``DeprecationWarning``, so a deprecation warning
+    raised by the code under test still surfaces normally; only the cost of
+    walking the package is silenced. The shim is not modified and the module
+    stays in scope — a refusal declared inside a deprecated module is still a
+    refusal, and dropping it from the walk to dodge the warning would put a
+    hole back in the ratchet.
     """
+    import warnings
+
     import dna.kernel
 
     modules = [dna.kernel]
-    for info in pkgutil.walk_packages(dna.kernel.__path__, "dna.kernel."):
-        modules.append(importlib.import_module(info.name))
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", DeprecationWarning)
+        for info in pkgutil.walk_packages(dna.kernel.__path__, "dna.kernel."):
+            modules.append(importlib.import_module(info.name))
     return tuple(modules)
 
 
