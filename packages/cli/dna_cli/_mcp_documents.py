@@ -93,16 +93,27 @@ def register_document_tools(
         The single seam every generic tool goes through. When the Kind name did
         not resolve, the call is still metered as ``definitions`` and then the
         real resolution error is re-raised as a clean ToolError."""
+        # The pre-resolution is for METERING only — it is unscoped because the
+        # caller's effective scope is not known until the guard has yielded a
+        # tenant, and the family a Kind name implies does not depend on where
+        # the Kind lives.
         port = await _resolved(kind, api_version)
         tenant = await guard(
             D.family_for_kind(port), scope=scope, family_op=family_op,
         )
-        if port is None:  # metered, now say why it cannot proceed.
-            try:
-                port = D.resolve_kind_port(
-                    (await live()).kernel, kind, api_version)
-            except (D.UnknownKindError, D.AmbiguousKindError) as exc:
-                raise ToolError(str(exc)) from None
+        # i-081: with the tenant known, resolve AUTHORITATIVELY inside the scope
+        # this call targets. A Kind another workspace declared does not resolve
+        # here, and the ``api_version`` pinned from this port travels down to the
+        # adapter — resolving it unscoped is how a caller could be pinned to
+        # somebody else's Kind.
+        ld = await live()
+        try:
+            port = D.resolve_kind_port(
+                ld.kernel, kind, api_version,
+                scope=scope or ld.default_scope(tenant),
+            )
+        except (D.UnknownKindError, D.AmbiguousKindError) as exc:
+            raise ToolError(str(exc)) from None
         return port, tenant
 
     @server.tool(run_in_thread=False)

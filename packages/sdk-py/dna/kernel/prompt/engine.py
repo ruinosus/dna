@@ -30,6 +30,7 @@ import logging
 import re
 from typing import Any
 
+from dna.kernel.kinds.registry import kinds_in_scope
 from dna.kernel._text import strip_prompt_block
 from dna.kernel.document import Document
 
@@ -166,7 +167,7 @@ async def build_prompt_async(
     agent_doc = kernel._parse_doc(agent_raw, origin="local")
     if agent_doc is None:
         return f"Agent '{agent_name}' parse failed"
-    agent_kp = kernel._kinds.get((agent_doc.api_version, agent_doc.kind))
+    agent_kp = kinds_in_scope(kernel, scope).get((agent_doc.api_version, agent_doc.kind))
 
     # --- 2. Fetch root Genome --------------------------------------------
     root_doc: Document | None = None
@@ -192,7 +193,7 @@ async def build_prompt_async(
     referenced_scalars = _referenced_scalars(template) if template else set()
 
     # Build alias → KindPort map for lookup.
-    alias_to_kp: dict[str, Any] = {kp.alias: kp for kp in kernel._kinds.values()}
+    alias_to_kp: dict[str, Any] = {kp.alias: kp for kp in kinds_in_scope(kernel, scope).values()}
 
     # Slot filter merge: backwards-compat params into enabled_slots.
     slots = dict(enabled_slots or {})
@@ -297,7 +298,7 @@ async def build_prompt_async(
     # Story s-flatten-explicit-opt-in (proposed follow-up): tighten to
     # only flatten kinds the agent explicitly references. Out-of-scope here.
     _reserved = {"agent", "metadata", "spec", "agentId"}
-    flatten_kps = [kp for kp in kernel._kinds.values() if kp.flatten_in_context]
+    flatten_kps = [kp for kp in kinds_in_scope(kernel, scope).values() if kp.flatten_in_context]
     for kp in flatten_kps:
         async for raw in kernel.query(scope, kp.kind, tenant=tenant):
             doc = kernel._parse_doc(raw, origin="local")

@@ -68,7 +68,9 @@ class SourceSync:
                 # Scope absent in this source (e.g. diffing against an empty
                 # replica) — an empty manifest, so everything diffs as added.
                 raws = []
-        kp_by_kind = {kp.kind: kp for kp in k._kinds.values()}
+        kp_by_kind = {
+            kp.kind: kp for kp in k.kinds_for_scope(scope).values()
+        }
         _fallback = KindBase()
         entry_loader = getattr(src, "_load_bundle_entries", None)
         manifest: dict[tuple[str, str], str] = {}
@@ -92,7 +94,7 @@ class SourceSync:
             # the NON-marker entries (the marker's content is the doc spec,
             # already in spec_digest). Catches binary-asset divergence.
             bundle_digest = ""
-            sd = k.storage_for_kind(kind)
+            sd = k.storage_for_kind(kind, scope=scope)
             if (
                 entry_loader is not None and sd is not None
                 and getattr(sd, "pattern", None) == StoragePattern.BUNDLE
@@ -187,7 +189,7 @@ class SourceSync:
                 continue
             # Carry non-marker bundle entries so the target's save_document net
             # re-persists them atomically (the s-sync-s3 fix).
-            sd = k.storage_for_kind(kind)
+            sd = k.storage_for_kind(kind, scope=scope)
             if (
                 loader is not None and sd is not None
                 and getattr(sd, "pattern", None) == StoragePattern.BUNDLE

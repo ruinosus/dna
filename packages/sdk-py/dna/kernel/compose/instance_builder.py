@@ -55,13 +55,13 @@ class InstanceBuilder:
             (r for r in raw_docs
              if any(
                  getattr(kp, "is_root", False)
-                 for (_, kn), kp in k._kinds.items()
+                 for (_, kn), kp in k.kinds_for_scope(scope).items()
                  if kn == r.get("kind")
              )),
             None,
         )
         if manifest_raw:
-            k._register_custom_kinds(manifest_raw)
+            k._register_custom_kinds(manifest_raw, scope=scope)
 
         # Merge source docs + dep docs
         all_raws: list[dict[str, Any]] = list(raw_docs)
@@ -79,7 +79,7 @@ class InstanceBuilder:
             # resolver matches policies by DECLARATION instead of inferring
             # the doc→policy relation from name shape (i-044).
             kind_aliases: dict[str, str] = {}
-            for (_av, _kname), _kp in k._kinds.items():
+            for (_av, _kname), _kp in k.kinds_for_scope(scope).items():
                 _alias = getattr(_kp, "alias", None)
                 if _alias:
                     kind_aliases.setdefault(_kname, _alias)
@@ -117,7 +117,7 @@ class InstanceBuilder:
                 import warnings as _warnings
                 known_keys: set[str] = set()
                 kind_tails: set[str] = set()
-                for (_av, _kname), _kp in k._kinds.items():
+                for (_av, _kname), _kp in k.kinds_for_scope(scope).items():
                     known_keys.add(_kname)
                     known_keys.add(_kname.lower())
                     kind_tails.add(_kname.lower())
@@ -171,7 +171,9 @@ class InstanceBuilder:
             all_raws = resolver.resolve(all_raws, layers, _DirectSource(), scope, policies)
 
         # ── Phase 1: parse + register KindDefinitions ──
-        added_readers = k._register_kind_definitions(all_raws)
+        # i-081: these documents came from THIS scope's store, and the Kinds
+        # they declare govern this scope and no other.
+        added_readers = k._register_kind_definitions(all_raws, scope=scope)
 
         # If new declarative kinds introduced readers/markers, re-scan the source
         # so instance docs of those kinds are picked up. Async callers pass
@@ -187,6 +189,12 @@ class InstanceBuilder:
                 logger.debug("Declarative-kind rescan failed: %s", e)
 
         # ── Phase 2: parse all docs via KindPorts ──
+        # i-081: from here on the MI is built against the Kinds that GOVERN this
+        # scope — the globals plus the ones this scope's own store declared.
+        # Another scope's store-loaded Kind is not in this map, so it cannot
+        # route this scope's storage, validate its documents or compose into
+        # its prompts.
+        _scoped_kinds = k.kinds_for_scope(scope)
         documents: list[Document] = []
         _resolve_errors: list[str] = resolve_errors or []
         for raw in all_raws:
@@ -204,11 +212,13 @@ class InstanceBuilder:
             # Follow-up (fora deste plano): push-down do filtro de plane pro
             # load_all pra poupar também o I/O.
             # Perf note: fallback by-name é ~20ms/14.7k docs — memoize name→plane se o registry crescer.
-            kp = k._kinds.get((raw.get("apiVersion", ""), raw.get("kind", "")))
+            kp = _scoped_kinds.get(
+                (raw.get("apiVersion", ""), raw.get("kind", "")),
+            )
             plane = (
                 getattr(kp, "plane", "composition")
                 if kp is not None
-                else k.kind_plane(raw.get("kind", ""))
+                else k.kind_plane(raw.get("kind", ""), scope=scope)
             )
             if plane == "record":
                 continue
@@ -233,7 +243,7 @@ class InstanceBuilder:
         mi = ManifestInstance(
             scope=scope,
             documents=documents,
-            kinds=k._kinds,
+            kinds=_scoped_kinds,
             source=k._source,
             resolve_errors=_resolve_errors,
             kernel=k,
@@ -375,7 +385,7 @@ class InstanceBuilder:
             mi = ManifestInstance(
                 scope=scope,
                 documents=parsed_bootstrap,
-                kinds=k._kinds,
+                kinds=k.kinds_for_scope(scope),
                 source=k._source,
                 resolve_errors=resolve_errors,
                 kernel=k,
@@ -484,7 +494,9 @@ class InstanceBuilder:
         all_raws_for_rescan = list(raw_docs)
         if dep_docs:
             all_raws_for_rescan.extend(dep_docs)
-        added_readers = k._register_kind_definitions(all_raws_for_rescan)
+        added_readers = k._register_kind_definitions(
+            all_raws_for_rescan, scope=scope,
+        )
         await self._rescan_after_kinddef_register_async(
             scope, all_raws_for_rescan, added_readers,
         )

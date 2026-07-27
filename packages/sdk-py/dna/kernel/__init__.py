@@ -445,14 +445,29 @@ class Kernel:
         (s-kernel-decompose-god-object)."""
         return self._kindreg._kinds
 
+    def kinds_for_scope(
+        self, scope: str | None,
+    ) -> dict[tuple[str, str], KindPort]:
+        """The ``(api_version, kind) → port`` map as ``scope`` sees it: the
+        GLOBAL Kinds (extensions + builtin descriptors) plus the ones this
+        scope's own store declared.
+
+        The scoped counterpart of the ``_kinds`` property. A store-loaded Kind
+        governs one scope (i-081), so anything that decides behaviour FOR a
+        scope — the kinds map a ``ManifestInstance`` is built with, the digest
+        of a scope's documents — reads this instead of ``_kinds``."""
+        return self._kindreg.kinds_for(scope)
+
     def _kind_port_for(
         self, kind: str, *, api_version: str | None = None,
+        scope: str | None = None,
     ) -> KindPort | None:
         """Lookup a registered KindPort by kind name. Delegates to _kindreg."""
-        return self._kindreg.port_for(kind, api_version=api_version)
+        return self._kindreg.port_for(kind, api_version=api_version, scope=scope)
 
     def kind_port_for(
         self, kind: str, *, api_version: str | None = None,
+        scope: str | None = None,
     ) -> KindPort | None:
         """Public lookup for a registered KindPort by kind name.
 
@@ -461,8 +476,12 @@ class Kernel:
         reaching into Kernel internals. Returns ``None`` if the kind
         isn't registered. Pass ``api_version=`` for exact resolution when
         the kind name is ambiguous (i-195 — e.g. the Reference pair).
+
+        Pass ``scope=`` whenever the answer will DECIDE something for that
+        scope — a store-loaded Kind governs only the scope whose store declared
+        it (i-081), and an unscoped lookup sees every scope's Kinds.
         """
-        return self._kindreg.port_for(kind, api_version=api_version)
+        return self._kindreg.port_for(kind, api_version=api_version, scope=scope)
 
     def validate_document(
         self, scope: str, kind: str, name: str, raw: dict,
@@ -479,7 +498,7 @@ class Kernel:
         ``WritePipeline._validate_spec_schema`` so dry-run and apply can never
         drift."""
         _api = api_version or (raw.get("apiVersion") if isinstance(raw, dict) else None)
-        port = self.kind_port_for(kind, api_version=_api)
+        port = self.kind_port_for(kind, api_version=_api, scope=scope)
         self._write_pipeline._validate_spec_schema(scope, kind, name, raw, port)
 
     def _validate_one_kind_writer_entry(
@@ -502,17 +521,21 @@ class Kernel:
         ``WritePipeline.validate_kind_writer`` (Fase 2)."""
         self._write_pipeline.validate_kind_writer(spec)
 
-    def kind_plane(self, kind: str, *, api_version: str | None = None) -> str:
+    def kind_plane(
+        self, kind: str, *, api_version: str | None = None,
+        scope: str | None = None,
+    ) -> str:
         """Two-planes (spec 2026-06-09): the declared plane of a Kind by
         name — 'record' or 'composition'. Unknown Kinds default to
         'composition' (fail-safe: behaves exactly as today). Pass
         ``api_version=`` for exact resolution on ambiguous names (i-195)."""
-        kp = self.kind_port_for(kind, api_version=api_version)
+        kp = self.kind_port_for(kind, api_version=api_version, scope=scope)
         return getattr(kp, "plane", "composition") if kp is not None else "composition"
 
-    def kind_ports(self) -> list[KindPort]:
-        """All registered KindPorts. Order matches registration."""
-        return self._kindreg.all_ports()
+    def kind_ports(self, *, scope: str | None = None) -> list[KindPort]:
+        """All registered KindPorts. Order matches registration. ``scope``
+        narrows to the Kinds that govern that scope (i-081)."""
+        return self._kindreg.all_ports(scope=scope)
 
     def embeddable_kinds(self) -> frozenset[str]:
         """F3 D4 (spec 2026-06-10-kinds-descriptor-f3): kind names whose
@@ -566,7 +589,10 @@ class Kernel:
         kp = self.kind_port_for(kind, api_version=api_version)
         return port_traits(kp) if kp is not None else frozenset()
 
-    def _kind_scope(self, kind: str, *, api_version: str | None = None):
+    def _kind_scope(
+        self, kind: str, *, api_version: str | None = None,
+        scope: str | None = None,
+    ):
         """Return the TenantScope for a registered kind, or None if unset.
 
         Returning None preserves Phase 1 back-compat: existing KindPorts
@@ -576,7 +602,7 @@ class Kernel:
         to set ``scope = TENANTED`` (or ``GLOBAL`` for Doc etc.)
         explicitly, flipping enforcement on per-Kind.
         """
-        kp = self._kind_port_for(kind, api_version=api_version)
+        kp = self._kind_port_for(kind, api_version=api_version, scope=scope)
         if kp is None:
             return None
         return getattr(kp, "scope", None)
@@ -924,7 +950,9 @@ class Kernel:
 
         src = self._source
         if isinstance(src, FilesystemSource):
-            sd = self.storage_for_kind(kind, api_version=api_version)
+            sd = self.storage_for_kind(
+                 kind, api_version=api_version, scope=scope,
+             )
             subdir = sd.container if sd and sd.container else (kind.lower() + "s")
             return src.base_dir / scope / subdir / name
         scheme = getattr(src, "url_scheme", None) \
@@ -1376,7 +1404,7 @@ class Kernel:
         # pair resolved the composition port and skipped this demotion).
         _raw_api_version = raw.get("apiVersion") if isinstance(raw, dict) else None
         if invalidate_mode == "scope" and self.kind_plane(
-            kind, api_version=_raw_api_version,
+            kind, api_version=_raw_api_version, scope=scope,
         ) == "record":
             invalidate_mode = "doc"
         # B6 OTel span (2026-05-16) — every write through the kernel
@@ -1469,7 +1497,7 @@ class Kernel:
         # falls back to the deterministic first-match — conservative:
         # over-invalidates, never under-invalidates).
         if invalidate_mode == "scope" and self.kind_plane(
-            kind, api_version=api_version,
+            kind, api_version=api_version, scope=scope,
         ) == "record":
             invalidate_mode = "doc"
         # Fat delete body (tenant resolve, capability kwargs, persist, the
@@ -1554,7 +1582,9 @@ class Kernel:
         KindRegistry collaborator (s-kernel-decomp-f3-kindregistry)."""
         self._kindreg.register_kind(k)
 
-    def unregister_kind(self, api_version: str, kind: str) -> "KindPort | None":
+    def unregister_kind(
+        self, api_version: str, kind: str, *, scope: str | None = None,
+    ) -> "KindPort | None":
         """Drop a registered Kind by its ``(api_version, kind)`` key, returning
         the removed port (``None`` if it was never registered).
 
@@ -1563,7 +1593,7 @@ class Kernel:
         creating a tenant Kind was hot but EDITING one required restarting the
         process. See ``KindRegistry.unregister_kind`` for what goes with the
         port (its auto-synthesized generic reader/writer)."""
-        return self._kindreg.unregister_kind(api_version, kind)
+        return self._kindreg.unregister_kind(api_version, kind, scope=scope)
 
     def kind_from_descriptor(self, raw: dict[str, Any]) -> KindPort:
         """Register a BUILTIN Kind from a ``kinds/*.kind.yaml`` descriptor
@@ -1608,22 +1638,24 @@ class Kernel:
         """Reverse-build {group: [tool_names...]} from the registry."""
         return self._toolreg.groups()
 
-    def describe_kind(self, kind_name: str) -> dict[str, Any] | None:
+    def describe_kind(
+        self, kind_name: str, *, scope: str | None = None,
+    ) -> dict[str, Any] | None:
         """Return a summary dict for a registered kind, including resolved docs.
         Delegates to ``self._kindreg``."""
-        return self._kindreg.describe(kind_name)
+        return self._kindreg.describe(kind_name, scope=scope)
 
     def composition_profile(self, profile) -> None:
         """Register a composition profile that declares how an orchestrator
         kind connects to other kinds."""
         self._profiles.append(profile)
 
-    def resolve_dep_filter_target(self, value: str):
+    def resolve_dep_filter_target(self, value: str, *, scope: str | None = None):
         """Canonical dep_filter target resolution — alias contract +
         deprecated legacy ``kind=`` shim. Delegates to ``self._kindreg``
         (s-unify-composition-subsystems; TS twin:
         ``Kernel.resolveDepFilterTarget``)."""
-        return self._kindreg.resolve_dep_filter_target(value)
+        return self._kindreg.resolve_dep_filter_target(value, scope=scope)
 
     def validate_dep_filters(self) -> None:
         """s-alias-generated-not-typed — every dep_filter target of an
@@ -1789,6 +1821,7 @@ class Kernel:
 
     def container_for_kind(
         self, kind_name: str, *, api_version: str | None = None,
+        scope: str | None = None,
     ) -> "str | None":
         """Return the storage container directory for a kind, or None. Delegates
         to ``self._kindreg``.
@@ -1800,15 +1833,21 @@ class Kernel:
         documents are written into the directory of the other's Kind. Every
         caller holding the document (which carries its own apiVersion) should
         pass it."""
-        return self._kindreg.container_for(kind_name, api_version=api_version)
+        return self._kindreg.container_for(
+            kind_name, api_version=api_version, scope=scope,
+        )
 
     def storage_for_kind(
         self, kind_name: str, *, api_version: str | None = None,
+        scope: str | None = None,
     ) -> "StorageDescriptor | None":
         """Return the StorageDescriptor for a kind, or None. Delegates to
         ``self._kindreg``. See :meth:`container_for_kind` for why a caller with
-        the document in hand must pass ``api_version``."""
-        return self._kindreg.storage_for(kind_name, api_version=api_version)
+        the document in hand must pass ``api_version`` — and ``scope``, since a
+        store-loaded Kind routes storage only for its own scope (i-081)."""
+        return self._kindreg.storage_for(
+            kind_name, api_version=api_version, scope=scope,
+        )
 
     def fetch_bundle_entry(
         self,
@@ -2043,10 +2082,12 @@ class Kernel:
             dry_run=dry_run, prune=prune,
         )
 
-    def kind_by_container(self, container: str) -> "str | None":
+    def kind_by_container(
+        self, container: str, *, scope: str | None = None,
+    ) -> "str | None":
         """Return the kind name whose StorageDescriptor.container matches.
         Delegates to ``self._kindreg`` (None for empty/unregistered)."""
-        return self._kindreg.by_container(container)
+        return self._kindreg.by_container(container, scope=scope)
 
     def serialize_document(self, scope: str, kind: str, name: str, raw: dict) -> dict:
         """Serialize a document to files without writing. Delegates to
@@ -2592,17 +2633,24 @@ class Kernel:
         through ``self._builder`` (s-kernel-decompose-god-object)."""
         return await self._builder.resolve_layers_async(mi, layers)
 
-    def _register_kind_definitions(self, all_raws: list[dict[str, Any]]) -> bool:
+    def _register_kind_definitions(
+        self, all_raws: list[dict[str, Any]], *, scope: str | None = None,
+    ) -> bool:
         """2-phase load Phase 1 — parse per-scope KindDefinition docs + register
         synthetic DeclarativeKindPorts (warn+skip on conflict). Thin facade over
         the KindRegistry funnel (s-kernel-decomp-f3-kindregistry). Returns True
-        iff a NEW BUNDLE reader was added (the rescan gate)."""
-        return self._kindreg.register_kind_definitions(all_raws)
+        iff a NEW BUNDLE reader was added (the rescan gate).
 
-    def _register_custom_kinds(self, manifest: dict[str, Any]) -> None:
+        ``scope`` binds the resulting Kinds to the scope whose store the
+        documents came from (i-081)."""
+        return self._kindreg.register_kind_definitions(all_raws, scope=scope)
+
+    def _register_custom_kinds(
+        self, manifest: dict[str, Any], *, scope: str | None = None,
+    ) -> None:
         """Register dynamic Module.spec.custom_kinds. Thin facade over the
         KindRegistry funnel (s-kernel-decomp-f3-kindregistry)."""
-        self._kindreg.register_custom_kinds(manifest)
+        self._kindreg.register_custom_kinds(manifest, scope=scope)
 
     @staticmethod
     def _fill_derived_description(raw: dict[str, Any], kind_port: Any) -> None:

@@ -24,8 +24,44 @@ context — route through a NARROW ``RegistryHost`` back-ref (the anti-cosmetic
 rule, spec §3.1): the kernel satisfies it structurally. View-only registries
 (CompositionEngine / nav_kernel wrapping a kinds map for lookups) pass no host.
 
-One registry per kernel, shared across ``with_tenant`` shallow copies (Kinds are
-global — registered once at boot on the base kernel).
+One registry per kernel, shared across ``with_tenant`` shallow copies — and
+across every SCOPE the process serves. Kinds registered from CODE (extension
+classes, builtin ``*.kind.yaml`` descriptors) are global: registered once at
+boot, they apply everywhere. Kinds loaded from a STORE (per-scope
+``KindDefinition`` documents, ``Module.spec.custom_kinds``) are **scope-bound**
+— see :func:`port_scopes` and the i-081 section below.
+
+i-081 — a store-loaded Kind applies only where it belongs
+---------------------------------------------------------
+``load_bootstrap_docs`` decides which ``KindDefinition`` documents are LOADED
+(by scope); nothing decided which scope a loaded Kind APPLIED to. The key here
+is ``(api_version, kind)`` and carries no scope, so the first scope composed in
+a process registered its Kind for the whole process. Registration is what
+confers **schema enforcement** and **storage routing**, so a leaked Kind changed
+another scope's behaviour: a document written there was validated against the
+foreign schema and stored in the foreign container, while a genuinely unknown
+Kind was accepted and stored at the scope root.
+
+The fix keeps ONE registry and ONE key shape (so every existing reader of the
+``(api_version, kind)`` map is untouched) and adds **provenance + a filter**:
+
+* a store-loaded port carries ``__scopes__`` — the frozenset of scopes whose
+  store declared it. A port registered from code carries ``None``, meaning
+  *global: applies everywhere*;
+* every lookup takes ``scope=``. A port not visible in that scope does not
+  exist for that caller — not for ``port_for``, not for storage routing, not
+  for the bare-name path;
+* the registration guards (duplicate alias, BUNDLE ``(container, marker)``,
+  i-195 name collision) compare a new port only against the ports VISIBLE in
+  its own scope. Two workspaces each declaring ``Widget`` in their own
+  namespace is not a collision — that is what namespacing an apiVersion is
+  for — so neither is refused, and neither sees the other's.
+
+``scope=None`` means *no scope context* and keeps the unfiltered view. It is
+for genuinely scope-free introspection (the Kind catalogue, ``kind_ports()``,
+dep_filter validation at boot); the behaviour-conferring paths — the write
+pipeline, storage routing and the kinds map handed to a ``ManifestInstance`` —
+all pass a scope.
 """
 from __future__ import annotations
 
@@ -311,6 +347,67 @@ def alias_namespace_violation(port: "KindPort") -> str | None:
 _AMBIGUOUS_LOOKUP_WARNED: set[tuple[Any, ...]] = set()
 
 
+def port_scopes(port: "KindPort") -> "frozenset[str] | None":
+    """The scopes a Kind applies to — ``None`` for a GLOBAL Kind (i-081).
+
+    ``None`` is not "no scopes", it is "every scope": a Kind registered from
+    code (an extension class, a builtin ``*.kind.yaml`` descriptor) ships in the
+    distribution, is reviewed, and applies everywhere. A frozenset is the
+    store-loaded case — the scopes whose store declared this exact descriptor,
+    and the only scopes the Kind may govern."""
+    return getattr(port, "__scopes__", None)
+
+
+def applies_to(port: "KindPort", scope: str | None) -> bool:
+    """Whether ``port`` governs documents in ``scope``.
+
+    ``scope=None`` is *no scope context* — the caller is not acting on behalf of
+    one scope (a catalogue listing, boot-time dep_filter validation), so nothing
+    is filtered out. Every path where registration confers BEHAVIOUR passes a
+    real scope."""
+    if scope is None:
+        return True
+    scopes = port_scopes(port)
+    return scopes is None or scope in scopes
+
+
+def _bind_scope(port: "KindPort", scope: str | None) -> None:
+    """Stamp ``port`` with the scope it was loaded from (no-op when global)."""
+    if scope is None:
+        return
+    existing = port_scopes(port)
+    port.__scopes__ = (
+        frozenset({scope}) if existing is None else existing | {scope}
+    )
+
+
+def kinds_in_scope(kernel: Any, scope: str | None) -> dict[tuple[str, str], "KindPort"]:
+    """The Kind map ``scope`` sees, for the duck-typed ``kernel: Any`` helpers.
+
+    The nav / prompt / report helpers accept anything kernel-shaped, including
+    test doubles and embedders that expose ``_kinds`` and nothing else. Those
+    have no store, so they have no scope-bound Kind to hide — falling back to
+    the whole map is the same answer, not a weaker one."""
+    fn = getattr(kernel, "kinds_for_scope", None)
+    if fn is not None:
+        return fn(scope)
+    return getattr(kernel, "_kinds", {})
+
+
+def ports_in_scope(kernel: Any, scope: str | None) -> list["KindPort"]:
+    """The Kind PORTS ``scope`` sees — :func:`kinds_in_scope` as a list, with the
+    long-standing ``kernel.kind_ports()`` duck-type as the fallback.
+
+    The generic document use-cases have always accepted anything exposing
+    ``kind_ports()``; keeping that door open means a kernel-like that predates
+    the scoped registry keeps working (unfiltered, as it always was) instead of
+    failing on an attribute it was never asked for."""
+    fn = getattr(kernel, "kinds_for_scope", None)
+    if fn is not None:
+        return list(fn(scope).values())
+    return list(kernel.kind_ports())
+
+
 def _deterministic_order(ports: "list[KindPort]") -> "list[KindPort]":
     """Total, process-independent order over colliding ports (i-080 item 5).
 
@@ -372,23 +469,45 @@ class KindRegistry:
         # ``None`` and never call the register_* methods.
         self._host: "RegistryHost | None" = host
 
+    def kinds_for(self, scope: str | None) -> dict[tuple[str, str], "KindPort"]:
+        """The ``(api_version, kind) → port`` map as ``scope`` sees it.
+
+        A store-loaded Kind belonging to a DIFFERENT scope is absent (i-081).
+        This is what a ``ManifestInstance`` is handed, so plane routing, parsing
+        and prompt composition inside one scope cannot reach another's Kind."""
+        if scope is None:
+            return self._kinds
+        return {
+            key: kp for key, kp in self._kinds.items() if applies_to(kp, scope)
+        }
+
     def port_for(
         self, kind: str, *, api_version: str | None = None,
+        scope: str | None = None,
     ) -> "KindPort | None":
         """Lookup a registered KindPort by kind name (case-sensitive).
 
         With ``api_version`` the lookup is EXACT on ``(api_version, kind)``.
         Bare lookups on an ambiguous name (two api_versions sharing a kind
-        name — the allowlisted ``Reference`` pair, or two tenants each
-        declaring the same Kind name in their own namespace) resolve
-        DETERMINISTICALLY through :func:`_deterministic_order`: extension /
-        builtin ports beat per-scope declarative ones, then ``(api_version,
-        kind)``. Registration order is not consulted (i-080 item 5); a warning
-        fires once per process per distinct ambiguity (i-195).
+        name — the allowlisted ``Reference`` pair) resolve DETERMINISTICALLY
+        through :func:`_deterministic_order`: extension / builtin ports beat
+        per-scope declarative ones, then ``(api_version, kind)``. Registration
+        order is not consulted (i-080 item 5); a warning fires once per process
+        per distinct ambiguity (i-195).
+
+        ``scope`` restricts the search to the Kinds that GOVERN that scope —
+        globals plus the ones its own store declared (i-081). Two workspaces
+        each declaring ``Widget`` therefore stop making each other's bare-name
+        lookups ambiguous: within a scope there is one ``Widget``, and it is the
+        caller's own.
         """
         if api_version is not None:
-            return self._kinds.get((api_version, kind))
-        matches = [kp for kp in self._kinds.values() if kp.kind == kind]
+            kp = self._kinds.get((api_version, kind))
+            return kp if kp is not None and applies_to(kp, scope) else None
+        matches = [
+            kp for kp in self._kinds.values()
+            if kp.kind == kind and applies_to(kp, scope)
+        ]
         if not matches:
             return None
         if len(matches) == 1:
@@ -405,21 +524,26 @@ class KindRegistry:
         )
         return ordered[0]
 
-    def all_ports(self) -> list["KindPort"]:
-        """All registered KindPorts. Order matches registration."""
-        return list(self._kinds.values())
+    def all_ports(self, *, scope: str | None = None) -> list["KindPort"]:
+        """All registered KindPorts. Order matches registration. ``scope``
+        narrows to the Kinds that govern that scope (i-081)."""
+        return list(self.kinds_for(scope).values())
 
-    def alias_for(self, kind: str, *, api_version: str | None = None) -> str:
+    def alias_for(
+        self, kind: str, *, api_version: str | None = None,
+        scope: str | None = None,
+    ) -> str:
         """Resolve a kind name to its globally-unique alias (``<owner>-<kind>``).
         Falls back to ``kind.lower()`` when no registered port provides one.
         Routes through ``port_for`` so ambiguous names resolve with the same
-        deterministic preference (i-195)."""
-        port = self.port_for(kind, api_version=api_version)
+        deterministic preference (i-195) and the same scope filter (i-081)."""
+        port = self.port_for(kind, api_version=api_version, scope=scope)
         alias = getattr(port, "alias", None) if port is not None else None
         return alias if alias else kind.lower()
 
     def _storage_port(
         self, kind_name: str, api_version: str | None,
+        scope: str | None = None,
     ) -> "KindPort | None":
         """The port to route STORAGE by: exact on ``(api_version, kind)``, then
         the bare-name lookup as a fallback.
@@ -438,20 +562,22 @@ class KindRegistry:
           outcome than the ambiguity the exact step is there to avoid."""
         if api_version is not None:
             exact = self._kinds.get((api_version, kind_name))
-            if exact is not None:
+            if exact is not None and applies_to(exact, scope):
                 return exact
             logger.debug(
-                "storage routing: no Kind registered for (%r, %r) — falling "
-                "back to the bare-name lookup (legacy apiVersion variant).",
-                api_version, kind_name,
+                "storage routing: no Kind registered for (%r, %r) in scope %r "
+                "— falling back to the bare-name lookup (legacy apiVersion "
+                "variant).",
+                api_version, kind_name, scope,
             )
-        return self.port_for(kind_name)
+        return self.port_for(kind_name, scope=scope)
 
     def container_for(
         self, kind_name: str, *, api_version: str | None = None,
+        scope: str | None = None,
     ) -> "str | None":
         """Return the storage container directory for a kind, or None."""
-        kp = self._storage_port(kind_name, api_version)
+        kp = self._storage_port(kind_name, api_version, scope)
         if kp is None:
             return None
         sd = getattr(kp, "storage", None)
@@ -459,12 +585,15 @@ class KindRegistry:
 
     def storage_for(
         self, kind_name: str, *, api_version: str | None = None,
+        scope: str | None = None,
     ) -> "StorageDescriptor | None":
         """Return the StorageDescriptor for a kind, or None if unknown."""
-        kp = self._storage_port(kind_name, api_version)
+        kp = self._storage_port(kind_name, api_version, scope)
         return getattr(kp, "storage", None) if kp is not None else None
 
-    def by_container(self, container: str) -> "str | None":
+    def by_container(
+        self, container: str, *, scope: str | None = None,
+    ) -> "str | None":
         """Return the kind name whose StorageDescriptor.container matches.
         None for empty container (ROOT kinds) or unregistered containers.
 
@@ -481,6 +610,7 @@ class KindRegistry:
         matches = [
             kp for kp in self._kinds.values()
             if getattr(getattr(kp, "storage", None), "container", None) == container
+            and applies_to(kp, scope)
         ]
         if not matches:
             return None
@@ -499,7 +629,9 @@ class KindRegistry:
         )
         return ordered[0].kind
 
-    def resolve_dep_filter_target(self, value: str) -> "KindPort | None":
+    def resolve_dep_filter_target(
+        self, value: str, *, scope: str | None = None,
+    ) -> "KindPort | None":
         """Canonical dep_filter target resolution (s-alias-generated-not-typed).
 
         The CONTRACT is alias-valued dep_filters (``"soulspec-soul"``).
@@ -519,9 +651,9 @@ class KindRegistry:
                 DeprecationWarning,
                 stacklevel=3,
             )
-            return self.port_for(value[len("kind="):])
+            return self.port_for(value[len("kind="):], scope=scope)
         for kp in self._kinds.values():
-            if getattr(kp, "alias", None) == value:
+            if getattr(kp, "alias", None) == value and applies_to(kp, scope):
                 return kp
         return None
 
@@ -595,9 +727,10 @@ class KindRegistry:
 
     def describe(
         self, kind_name: str, *, api_version: str | None = None,
+        scope: str | None = None,
     ) -> dict[str, Any] | None:
         """Summary dict for a registered kind, including resolved docs."""
-        kp = self.port_for(kind_name, api_version=api_version)
+        kp = self.port_for(kind_name, api_version=api_version, scope=scope)
         if kp is None:
             return None
         return {
@@ -616,7 +749,15 @@ class KindRegistry:
     # The kernel keeps thin facades delegating here.
     # ─────────────────────────────────────────────────────────────────────
 
-    def register_kind(self, k: "KindPort") -> None:
+    def register_kind(self, k: "KindPort", *, scope: str | None = None) -> None:
+        """Register ``k``. ``scope`` binds a STORE-LOADED Kind to the scope whose
+        store declared it (i-081); ``None`` registers a GLOBAL Kind — an
+        extension class or a builtin descriptor, which applies everywhere.
+
+        Every uniqueness guard below compares the new port only against the
+        ports VISIBLE in ``scope``: two workspaces each declaring ``Widget`` in
+        their own namespace is not a collision, and refusing the second would
+        make one workspace's authoring depend on another's."""
         # H1 — Boot-time validation (Protocol + uniqueness + marker collision).
         # Catches the failure modes that previously surfaced at runtime as
         # silent overwrites or first-match-wins scanner bugs:
@@ -668,10 +809,32 @@ class KindRegistry:
                     logger.debug(
                         "[kernel] Declarative kind (%r, %r) re-registered "
                         "with identical descriptor digest — idempotent "
-                        "no-op.",
-                        k.api_version, k.kind,
+                        "no-op (now also governing scope %r).",
+                        k.api_version, k.kind, scope,
                     )
+                    # i-081: the SAME descriptor arriving from a second scope
+                    # is one Kind governing both — widen the binding rather
+                    # than register a duplicate port for an identical schema.
+                    _bind_scope(existing, scope)
                     return
+                if scope is not None and not applies_to(existing, scope):
+                    # Two scopes claim the same (api_version, kind) with
+                    # DIFFERENT content. The namespace gate (i-080) makes this
+                    # rare — a namespace has one owner — so it means one owner
+                    # published divergent versions of a Kind into two scopes.
+                    # Refusing binds NOTHING to this scope, which is the safe
+                    # outcome: the requesting scope gets no port at all rather
+                    # than the other scope's schema.
+                    raise KindRegistrationError(
+                        f"Kind ({k.api_version!r}, {k.kind!r}) is already "
+                        f"registered from a DIFFERENT descriptor declared by "
+                        f"scope(s) {sorted(port_scopes(existing) or ())!r}; "
+                        f"scope {scope!r} cannot claim the same "
+                        f"(api_version, kind) key with different content. "
+                        f"One apiVersion namespace has one owner (i-080) — "
+                        f"publish the same descriptor to both scopes, or give "
+                        f"this one its own api_version namespace."
+                    )
                 raise KindRegistrationError(
                     f"Kind ({k.api_version!r}, {k.kind!r}) already "
                     f"registered from a DIFFERENT descriptor (existing "
@@ -701,8 +864,13 @@ class KindRegistry:
                 f"(api_version, kind) pair — pick distinct api_version "
                 f"namespaces (e.g. {k.api_version}-v2)."
             )
+        # i-081: every cross-port guard below asks "is this name/alias/marker
+        # already taken WHERE THIS KIND WILL APPLY?" — a Kind bound to another
+        # scope is not a competitor, and treating it as one would let one
+        # workspace's authoring refuse another's.
+        visible = self.kinds_for(scope)
         if k.alias:
-            for existing_key, existing_kind in self._kinds.items():
+            for existing_key, existing_kind in visible.items():
                 if getattr(existing_kind, "alias", None) == k.alias:
                     raise KindRegistrationError(
                         f"Kind alias {k.alias!r} already registered by "
@@ -722,7 +890,7 @@ class KindRegistry:
         # a per-scope declarative shadow (demo scopes' local Doc/EvalCase)
         # don't block the extension from claiming its canonical name.
         if k.kind not in KIND_NAME_COLLISION_ALLOWLIST:
-            for (existing_api, existing_name), existing_kind in self._kinds.items():
+            for (existing_api, existing_name), existing_kind in visible.items():
                 if (
                     existing_name == k.kind
                     and existing_api != k.api_version
@@ -757,7 +925,7 @@ class KindRegistry:
         if sd is not None and getattr(sd, "pattern", None) == StoragePattern.BUNDLE:
             new_pair = (sd.container, sd.marker)
             new_shared_ok = bool(getattr(k, "marker_shared_allowed", False))
-            for existing_key, existing_kind in self._kinds.items():
+            for existing_key, existing_kind in visible.items():
                 existing_sd = getattr(existing_kind, "storage", None)
                 if existing_sd is None:
                     continue
@@ -802,6 +970,7 @@ class KindRegistry:
                     f"disambiguate at read time (e.g. by frontmatter "
                     f"``dialect`` field)."
                 )
+        _bind_scope(k, scope)
         self._kinds[key] = k
         if self._host is not None:
             self._host._generics_resolved = False
@@ -812,9 +981,16 @@ class KindRegistry:
             logger.debug("Failed to resolve docs for %s: %s", k.kind, e)
             k._resolved_docs = getattr(k, "docs", None)
 
-    def unregister_kind(self, api_version: str, kind: str) -> "KindPort | None":
+    def unregister_kind(
+        self, api_version: str, kind: str, *, scope: str | None = None,
+    ) -> "KindPort | None":
         """Drop a registered Kind, returning the port that was removed (or
         ``None`` if the key was never registered — idempotent).
+
+        ``scope`` UNBINDS rather than drops when the same descriptor also
+        governs other scopes (i-081): removing the port outright would revoke a
+        Kind from scopes that never asked for it. The port is dropped only once
+        no scope is left bound to it.
 
         i-080 item 3: the per-scope funnel's own comment told callers to "clear
         ``self._kinds[key]`` via the explicit unregister path" before
@@ -835,6 +1011,12 @@ class KindRegistry:
         verb for extension Kinds: nothing prevents it, but a builtin's port is
         also referenced by its own extension's readers/writers, which this does
         not (and must not) unpick."""
+        existing = self._kinds.get((api_version, kind))
+        if existing is not None and scope is not None:
+            bound = port_scopes(existing)
+            if bound is not None and bound - {scope}:
+                existing.__scopes__ = bound - {scope}
+                return existing
         port = self._kinds.pop((api_version, kind), None)
         if port is None:
             return None
@@ -947,7 +1129,9 @@ class KindRegistry:
         # whatever is actually registered for the key.
         return self._kinds[(port.api_version, port.kind)]
 
-    def register_kind_definitions(self, all_raws: list[dict[str, Any]]) -> bool:
+    def register_kind_definitions(
+        self, all_raws: list[dict[str, Any]], *, scope: str | None = None,
+    ) -> bool:
         """Phase 1 of 2-phase loading: parse KindDefinition docs + register
         synthetic DeclarativeKindPorts on the kernel.
 
@@ -955,6 +1139,12 @@ class KindRegistry:
         (target_api_version, target_kind) is already registered, the
         declarative one is skipped and a warning is emitted via the
         HookRegistry event ``kinddef_conflict``.
+
+        ``scope`` is the scope whose store these documents came from, and the
+        ONLY scope the resulting Kinds will govern (i-081). ``None`` registers
+        them globally — the pre-i-081 behaviour, kept for callers that own the
+        whole process (in-process tests that hand the funnel raw documents
+        directly); every path that loads from a store passes its scope.
         """
         from dna.kernel.meta import DeclarativeKindPort
         from dna.kernel.models import TypedKindDefinition
@@ -1047,6 +1237,9 @@ class KindRegistry:
                 # port is unregistered and the new one goes through the full
                 # funnel below.
                 if getattr(existing, "__descriptor_digest__", None) == digest:
+                    # i-081: the same descriptor arriving from a second scope
+                    # widens the binding instead of registering a twin.
+                    _bind_scope(existing, scope)
                     continue
                 logger.info(
                     "KindDefinition %s/%s changed (descriptor digest %s → %s) "
@@ -1055,7 +1248,11 @@ class KindRegistry:
                     str(getattr(existing, "__descriptor_digest__", None))[:12],
                     digest[:12],
                 )
-                self.unregister_kind(*key)
+                # ``scope=`` unbinds instead of dropping when OTHER scopes still
+                # run the old descriptor — one key cannot hold two ports, so the
+                # divergent scope is left with no Kind (refused below by
+                # ``register_kind``) rather than governed by a stale one.
+                self.unregister_kind(*key, scope=scope)
 
             try:
                 port = DeclarativeKindPort.from_typed(typed)
@@ -1080,7 +1277,7 @@ class KindRegistry:
             # the per-scope funnel warns + skips + emits ``parse_error``.
             # Per-scope docs never take the boot down.
             try:
-                self.register_kind(port)
+                self.register_kind(port, scope=scope)
             except KindRegistrationError as e:
                 logger.warning(
                     "KindDefinition %s/%s was refused by the registration "
@@ -1105,11 +1302,16 @@ class KindRegistry:
         host._ensure_generic_readers_writers()
         return registered_any and len(host._readers) > reader_count_before
 
-    def register_custom_kinds(self, manifest: dict[str, Any]) -> None:
+    def register_custom_kinds(
+        self, manifest: dict[str, Any], *, scope: str | None = None,
+    ) -> None:
         """Register dynamic kinds from Module.spec.custom_kinds.
 
         Each entry: {apiVersion, kind, alias, fields: {name: {type, required?, default?}}}
         Creates a minimal KindPort so mi.all("Pipeline") works.
+
+        Store-loaded like ``KindDefinition``, so ``scope`` binds them the same
+        way (i-081) — the root document they come from belongs to one scope.
         """
         custom_kinds = manifest.get("spec", {}).get("custom_kinds", [])
         for ck in custom_kinds:
@@ -1120,10 +1322,15 @@ class KindRegistry:
                 continue
             key = (av, kn)
             if key in self._kinds:
-                continue  # Already registered (by extension or previous call)
+                # Already registered (by extension or previous call) — but a
+                # SECOND scope declaring the same custom Kind must be governed
+                # by it too, or its own documents would go unregistered.
+                _bind_scope(self._kinds[key], scope)
+                continue
 
             # Create a dynamic KindPort (use _make_dynamic_kind to avoid closure issues)
             dk = self._make_dynamic_kind(av, kn, alias)
+            _bind_scope(dk, scope)
             self._kinds[key] = dk
             logger.info("Registered custom kind: %s/%s (alias: %s)", av, kn, alias)
 

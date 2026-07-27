@@ -668,7 +668,7 @@ class CompositionResolver:
         await k.write_document(target_scope, kind, name, cloned_raw, tenant=tenant)
 
         # Clone bundle entries (binary payload) when the Kind is bundle-based.
-        sd = k.storage_for_kind(kind)
+        sd = k.storage_for_kind(kind, scope=target_scope)
         if sd is not None and k._source is not None:
             try:
                 from dna.kernel.protocols import StoragePattern
