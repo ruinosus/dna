@@ -8,7 +8,7 @@ Free functions taking ``(kernel, scope, ...)`` that compute:
   - scope_describe: per-doc description
   - validate_composition: cross-kind dep validation
 
-Implementation strategy: iterate ``kernel._kinds`` (registry, cheap)
+Implementation strategy: iterate ``kinds_in_scope(kernel, scope)`` (registry, cheap)
 and use ``kernel.query(scope, kind, tenant=...)`` per Kind. The
 ``kernel.list_documents`` granular L1 method is used when only
 ``(kind, name)`` refs are needed (avoids materializing doc bodies).
@@ -22,6 +22,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from dna.kernel.kinds.registry import kinds_in_scope
 from dna.kernel.preview import PreviewBlock, generic_spec_dump
 from dna.kernel.protocols import CompositionResult
 
@@ -42,7 +43,7 @@ async def _docs_by_kind(
     """
     out: dict[str, list[Any]] = {}
     seen_kinds: set[str] = set()
-    for kp in kernel._kinds.values():
+    for kp in kinds_in_scope(kernel, scope).values():
         if kp.kind in seen_kinds:
             continue
         seen_kinds.add(kp.kind)
@@ -63,7 +64,7 @@ async def _doc_index(
     """
     out: set[tuple[str, str]] = set()
     seen_kinds: set[str] = set()
-    for kp in kernel._kinds.values():
+    for kp in kinds_in_scope(kernel, scope).values():
         if kp.kind in seen_kinds:
             continue
         seen_kinds.add(kp.kind)
@@ -105,7 +106,7 @@ async def validate_composition_async(
     all_docs = [d for docs in docs_by_kind.values() for d in docs]
     doc_index = {(d.kind, d.name) for d in all_docs}
     return validate_refs(
-        all_docs, doc_index, kernel._kinds, KindRegistry(kernel._kinds),
+        all_docs, doc_index, kinds_in_scope(kernel, scope), KindRegistry(kinds_in_scope(kernel, scope)),
     )
 
 
@@ -117,7 +118,7 @@ async def scope_summary_async(
 ) -> str:
     """Human-readable summary (Kind: count + names list)."""
     seen: set[str] = set()
-    kinds = [kp.kind for kp in kernel._kinds.values() if kp.kind not in seen and not seen.add(kp.kind)]
+    kinds = [kp.kind for kp in kinds_in_scope(kernel, scope).values() if kp.kind not in seen and not seen.add(kp.kind)]
     lines = [f"Scope: {scope}", f"Kinds: {len(kinds)}"]
     for k in kinds:
         try:
@@ -152,7 +153,7 @@ async def scope_inventory_async(
             doc_index[(d.kind, d.name)] = True
 
     from dna.kernel.kinds.registry import KindRegistry
-    registry = KindRegistry(kernel._kinds)
+    registry = KindRegistry(kinds_in_scope(kernel, scope))
 
     def _resolve_kind(filter_value: str) -> str | None:
         """Resolve a dep_filter value (alias or legacy ``kind=``) to a kind
@@ -186,7 +187,7 @@ async def scope_inventory_async(
                 "name": doc.name,
                 "description": doc.metadata.get("description", ""),
             }
-            kp = kernel._kinds.get((doc.api_version, doc.kind))
+            kp = kinds_in_scope(kernel, scope).get((doc.api_version, doc.kind))
             if kp:
                 filters = kp.dep_filters() or {}
                 if filters:
@@ -237,7 +238,7 @@ async def scope_describe_async(
     doc = kernel._parse_doc(raw, origin="local")
     if doc is None:
         return f"{kind}/{name} not found"
-    kp = kernel._kinds.get((doc.api_version, doc.kind))
+    kp = kinds_in_scope(kernel, scope).get((doc.api_version, doc.kind))
     if kp:
         custom = kp.describe(doc)
         if custom:
@@ -264,7 +265,7 @@ async def render_doc_async(
     doc = kernel._parse_doc(raw, origin="local")
     if doc is None:
         return []
-    kp = kernel._kinds.get((doc.api_version, doc.kind))
+    kp = kinds_in_scope(kernel, scope).get((doc.api_version, doc.kind))
     # KindPresentation.preview — optional capability member, typed
     # access with default (absence/None result → generic fallback).
     preview_fn = getattr(kp, "preview", None)

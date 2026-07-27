@@ -32,7 +32,7 @@ class BundleIO:
         Raises ValueError (unknown kind / no container), NotImplementedError
         (adapter lacks BundleEntryReadable), or FileNotFoundError (absent)."""
         k = self._k
-        sd = k.storage_for_kind(kind)
+        sd = k.storage_for_kind(kind, scope=scope)
         if sd is None or not sd.container:
             raise ValueError(
                 f"Kind {kind!r} is not registered or has no bundle container."
@@ -64,7 +64,7 @@ class BundleIO:
         """Async variant of ``fetch_sync`` — use inside an event loop so a
         Postgres source uses the loop's pool directly (no thread round-trip)."""
         k = self._k
-        sd = k.storage_for_kind(kind)
+        sd = k.storage_for_kind(kind, scope=scope)
         if sd is None or not sd.container:
             raise ValueError(
                 f"Kind {kind!r} is not registered or has no bundle container."
@@ -93,7 +93,7 @@ class BundleIO:
         Raises ValueError (unknown kind / no container) or NotImplementedError
         (adapter lacks BundleEntryWritable)."""
         k = self._k
-        sd = k.storage_for_kind(kind)
+        sd = k.storage_for_kind(kind, scope=scope)
         if sd is None or not sd.container:
             raise ValueError(
                 f"Kind {kind!r} is not registered or has no bundle container."
@@ -120,7 +120,7 @@ class BundleIO:
         """s-strain-bundle-fork B1 — list entry paths for a bundle (sync).
         Mirrors ``fetch_sync``'s dispatch shape."""
         k = self._k
-        sd = k.storage_for_kind(kind)
+        sd = k.storage_for_kind(kind, scope=scope)
         if sd is None or not sd.container:
             raise ValueError(
                 f"Kind {kind!r} is not registered or has no bundle container."
@@ -150,7 +150,7 @@ class BundleIO:
         """Async variant of ``list_sync`` — use inside an event loop so a
         Postgres source uses the loop's pool directly (no thread round-trip)."""
         k = self._k
-        sd = k.storage_for_kind(kind)
+        sd = k.storage_for_kind(kind, scope=scope)
         if sd is None or not sd.container:
             raise ValueError(
                 f"Kind {kind!r} is not registered or has no bundle container."
@@ -177,7 +177,7 @@ class BundleIO:
         Mirrors ``fetch_sync``'s dispatch shape. Returns True if a row
         existed."""
         k = self._k
-        sd = k.storage_for_kind(kind)
+        sd = k.storage_for_kind(kind, scope=scope)
         if sd is None or not sd.container:
             raise ValueError(
                 f"Kind {kind!r} is not registered or has no bundle container."
@@ -205,7 +205,7 @@ class BundleIO:
     ) -> bool:
         """Async variant of ``delete_sync``."""
         k = self._k
-        sd = k.storage_for_kind(kind)
+        sd = k.storage_for_kind(kind, scope=scope)
         if sd is None or not sd.container:
             raise ValueError(
                 f"Kind {kind!r} is not registered or has no bundle container."

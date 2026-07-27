@@ -26,6 +26,7 @@ import hashlib
 import json
 from typing import Any
 
+from dna.kernel.kinds.registry import kinds_in_scope
 from dna.kernel.lock import LockEntry, Lockfile
 
 
@@ -254,7 +255,7 @@ async def generate_lock_async(
         all_kinds_in_scope.add(k)
     # Plus all registered kinds (in case some have docs the L1 doesn't
     # surface due to bundle overrides — covered by kernel.query slow path).
-    for kp in kernel._kinds.values():
+    for kp in kinds_in_scope(kernel, scope).values():
         all_kinds_in_scope.add(kp.kind)
 
     entries: list[LockEntry] = []

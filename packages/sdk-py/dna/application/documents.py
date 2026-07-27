@@ -52,6 +52,7 @@ import json
 from typing import Any, Iterable
 
 from dna.application.live import LiveDna
+from dna.kernel.kinds.registry import ports_in_scope
 from dna.memory.verbs import MEMORY_KINDS
 
 __all__ = [
@@ -121,7 +122,10 @@ class BootstrapKindWriteRefused(PermissionError):
 # ── the Kind registry, generically ──────────────────────────────────────────
 
 
-def resolve_kind_port(kernel: Any, kind: str, api_version: str | None = None) -> Any:
+def resolve_kind_port(
+    kernel: Any, kind: str, api_version: str | None = None, *,
+    scope: str | None = None,
+) -> Any:
     """The registered ``KindPort`` for ``kind`` — the ONE resolution every
     generic use-case goes through.
 
@@ -130,10 +134,16 @@ def resolve_kind_port(kernel: Any, kind: str, api_version: str | None = None) ->
     the right ergonomic for a CLI and the wrong one here — see the module
     docstring's "Refusal 2".
 
+    ``scope`` restricts resolution to the Kinds that GOVERN that scope (i-081).
+    Passing it is what keeps two workspaces apart on this surface: without it a
+    Kind another workspace declared is resolvable here, and two workspaces
+    declaring the same Kind NAME made this function raise
+    :class:`AmbiguousKindError` at both of them for a name neither shares.
+
     Raises :class:`UnknownKindError` when nothing matches and
     :class:`AmbiguousKindError` when a bare name matches several ports.
     """
-    ports = list(kernel.kind_ports())
+    ports = ports_in_scope(kernel, scope)
     if api_version is not None:
         exact = [
             p for p in ports
@@ -174,11 +184,13 @@ def is_bootstrap_kind(port: Any) -> bool:
     return port is not None and not bool(getattr(port, "is_overlayable", True))
 
 
-def bootstrap_kinds(kernel: Any) -> set[str]:
+def bootstrap_kinds(kernel: Any, *, scope: str | None = None) -> set[str]:
     """The bootstrap Kind names registered on ``kernel`` (see
     :func:`is_bootstrap_kind`). Exposed so a face can SHOW the refusal in its
     catalog instead of letting an agent discover it by being denied."""
-    return {p.kind for p in kernel.kind_ports() if is_bootstrap_kind(p)}
+    return {
+        p.kind for p in ports_in_scope(kernel, scope) if is_bootstrap_kind(p)
+    }
 
 
 def bootstrap_write_refusal(port: Any) -> str:
@@ -487,7 +499,11 @@ async def list_kinds_impl(
     allowed = frozenset(families) if families is not None else None
     entries: list[dict[str, Any]] = []
     filtered_out = 0
-    for port in live.kernel.kind_ports():
+    # i-081: the catalog answers "what can I act on HERE", so it lists the Kinds
+    # that govern this scope — the globals plus this scope's own. Another
+    # workspace's Kind is not actionable here and must not be advertised.
+    catalog_scope = scope or live.default_scope(tenant)
+    for port in ports_in_scope(live.kernel, catalog_scope):
         family = family_for_kind(port)
         if allowed is not None and family not in allowed:
             filtered_out += 1
@@ -556,8 +572,8 @@ async def list_documents_impl(
     ``has_more`` honestly instead of guessing from a full page. That extra row is
     only fully meaningful WITH an ``order_by``: without one, ``kernel.query``'s
     page is stable per adapter but not globally defined."""
-    port = resolve_kind_port(live.kernel, kind, api_version)
     sc = scope or live.default_scope(tenant)
+    port = resolve_kind_port(live.kernel, kind, api_version, scope=sc)
     limit = max(1, min(int(limit), 500))
     offset = max(0, int(offset))
     projection = [str(f) for f in fields] if fields else None
@@ -593,8 +609,8 @@ async def get_document_impl(
     tenant: str | None = None, api_version: str | None = None,
 ) -> dict[str, Any]:
     """Read one document verbatim, as the caller's layer sees it."""
-    port = resolve_kind_port(live.kernel, kind, api_version)
     sc = scope or live.default_scope(tenant)
+    port = resolve_kind_port(live.kernel, kind, api_version, scope=sc)
     raw = await live.kernel.get_document(sc, port.kind, name, tenant=tenant)
     if raw is None:
         raise LookupError(f"no {port.kind} named {name!r} in scope {sc!r}")
@@ -658,10 +674,10 @@ async def write_document_impl(
     an agent cannot smuggle a document into a different Kind's namespace."""
     from dna.application.sdlc import now_iso
 
-    port = resolve_kind_port(live.kernel, kind, api_version)
+    sc = scope or live.default_scope(tenant)
+    port = resolve_kind_port(live.kernel, kind, api_version, scope=sc)
     if is_bootstrap_kind(port):
         raise BootstrapKindWriteRefused(bootstrap_write_refusal(port))
-    sc = scope or live.default_scope(tenant)
     existing = await live.kernel.get_document(
         sc, port.kind, name, tenant=tenant)
     stored = (
@@ -743,11 +759,11 @@ async def delete_document_impl(
     namespace — so the caller states which Kind it means, and the pin travels
     all the way down to the adapter (:meth:`WritableSourcePort.delete_document`).
     """
-    port = resolve_kind_port(live.kernel, kind, api_version)
+    sc = scope or live.default_scope(tenant)
+    port = resolve_kind_port(live.kernel, kind, api_version, scope=sc)
     refusal = delete_refusal(port)
     if refusal is not None:
         raise DeleteRefused(refusal)
-    sc = scope or live.default_scope(tenant)
     write_tenant = _write_tenant(port, tenant)
     existing = await live.kernel.get_document(sc, port.kind, name)
     if existing is None:

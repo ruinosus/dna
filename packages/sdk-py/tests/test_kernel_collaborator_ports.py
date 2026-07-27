@@ -74,11 +74,15 @@ def _async_ret(value):
 # on the exercised path need real behavior; the rest satisfy the Protocol shape).
 
 def _kindlookup(**over):
+    _kinds = over.pop("_kinds", {})
     base = dict(
-        _kinds={},
-        kind_plane=lambda kind, *, api_version=None: "composition",
-        storage_for_kind=lambda kn: None,
-        kind_port_for=lambda kind, *, api_version=None: None,
+        _kinds=_kinds,
+        # i-081: the scoped view of the same map — the fake serves every scope
+        # the same Kinds, which is what a fake with no store should do.
+        kinds_for_scope=lambda scope: _kinds,
+        kind_plane=lambda kind, *, api_version=None, scope=None: "composition",
+        storage_for_kind=lambda kn, *, api_version=None, scope=None: None,
+        kind_port_for=lambda kind, *, api_version=None, scope=None: None,
         _alias_for=lambda k: k,
         _ensure_generic_readers_writers=lambda: None,
     )
@@ -128,8 +132,8 @@ def _buildctx(**over):
         _cache=None,
         _profiles=[],
         _resolvers={},
-        _register_kind_definitions=lambda raws: False,
-        _register_custom_kinds=lambda m: None,
+        _register_kind_definitions=lambda raws, *, scope=None: False,
+        _register_custom_kinds=lambda m, *, scope=None: None,
     )
     base.update(over)
     return base
@@ -276,8 +280,12 @@ def test_fake_is_a_slice_not_the_kernel():
     # instance_builder is the widest back-ref; still a small slice. Raising
     # this bound is the code-review event the collaborator-ports design asks
     # for — 24 → 25 for ``KindLookup.kind_port_for``, which LayerPolicyEnforcer
-    # needs to read a Kind's OVERLAYABLE_FIELDS allowlist (gate 3).
-    assert len(members) <= 25
+    # needs to read a Kind's OVERLAYABLE_FIELDS allowlist (gate 3); 25 → 26 for
+    # ``KindLookup.kinds_for_scope``, the SCOPED counterpart of ``_kinds``
+    # (i-081) — the MI must be built from the Kinds that govern its own scope,
+    # and reaching into ``k._kindreg`` from a collaborator would have widened
+    # the back-ref invisibly instead.
+    assert len(members) <= 26
     # It is NOT a Kernel and lacks the god-object surface a Kernel exposes.
     assert not isinstance(fake, Kernel)
     for god in ("hooks", "_toolreg", "load", "write_document", "search", "auto"):

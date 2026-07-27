@@ -331,6 +331,26 @@ kernel.instance(scope)
             └── mi.build_prompt()        ← Template composition
 ```
 
+### Where a Kind applies
+
+A Kind registered from CODE — an extension class, or a builtin
+`kinds/*.kind.yaml` descriptor — is **global**: registered once at boot, it
+applies to every scope the process serves.
+
+A Kind loaded from a STORE — a per-scope `KindDefinition` document, or a root
+document's `custom_kinds` — is **bound to the scope that declared it**. That
+scope's documents are validated against its schema and routed to its container;
+another scope does not see it at all, and a document of that Kind written there
+is simply an unregistered Kind.
+
+The binding matters because registration is what *confers* schema enforcement
+and storage routing. Without it, the first scope composed in a long-lived
+process would define a Kind for every scope that process later served — so two
+scopes could each declare a `Widget` and one would silently be validated
+against the other's schema (`i-081`). It also means two scopes may reuse a Kind
+name, an alias or a storage container freely: within one scope those are still
+unique, and across scopes they never meet.
+
 ## Summary
 
 | Concept | What it does |

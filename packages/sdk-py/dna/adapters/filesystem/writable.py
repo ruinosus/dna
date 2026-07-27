@@ -180,6 +180,7 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
 
     def _subdir_for(
         self, kind: str, *, api_version: str | None = None,
+        scope: str | None = None,
     ) -> str | None:
         """Resolve the on-disk subdirectory for a kind via the kernel's
         registered StorageDescriptor.
@@ -197,6 +198,10 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
         ``None`` keeps the old bare behaviour for callers that genuinely have
         no document in hand.
 
+        ``scope`` narrows the registry to the Kinds that GOVERN this scope
+        (i-081). Without it a Kind another scope declared still routed this
+        scope's writes into the container that Kind declared.
+
         Raises ``RuntimeError`` when no kernel has been bound yet: the
         adapter cannot route kinds without a StorageDescriptor registry.
         """
@@ -206,7 +211,9 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
                 "kernel= at construction or call set_kernel(k) before "
                 "save_document/delete_document."
             )
-        sd = self._kernel.storage_for_kind(kind, api_version=api_version)
+        sd = self._kernel.storage_for_kind(
+            kind, api_version=api_version, scope=scope,
+        )
         if sd is None:
             return None
         return sd.container or None
@@ -282,7 +289,9 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
         _validate_tenant_path(tenant)
         # i-080: route by the DOCUMENT's own apiVersion, not by the bare Kind
         # name — two workspaces may each own a Kind called `Deal`.
-        subdir = self._subdir_for(kind, api_version=raw.get("apiVersion"))
+        subdir = self._subdir_for(
+            kind, api_version=raw.get("apiVersion"), scope=scope,
+        )
         scope_dir = self._target_dir(scope, layer, tenant=tenant)
 
         # Phase 9c — root kinds (Module today) live at <scope_dir>/manifest.yaml
@@ -295,7 +304,7 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
         # manifest.yaml continues to mirror the latest stable (npm dist-tags
         # 'latest' convention). Republish of an existing version raises so
         # the harness can surface 409 version_already_published.
-        is_root = self._kind_is_root(kind)
+        is_root = self._kind_is_root(kind, scope=scope)
         if is_root and if_absent:
             # A root Kind's document IS the scope's manifest, written through a
             # versioned/mirrored path with its own already-published refusal.
@@ -414,7 +423,7 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
         except FileExistsError:
             raise self._taken(scope, kind, name) from None
 
-    def _kind_is_root(self, kind: str) -> bool:
+    def _kind_is_root(self, kind: str, *, scope: str | None = None) -> bool:
         """True iff the registered KindPort for ``kind`` is a "root-shaped"
         single-file Kind (Module, Genome).
 
@@ -430,7 +439,7 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
 
         if self._kernel is None:
             return False
-        for kp in self._kernel._kinds.values():
+        for kp in self._kernel.kinds_for_scope(scope).values():
             if kp.kind != kind:
                 continue
             if getattr(kp, "is_root", False):
@@ -460,7 +469,7 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
         # resolves the Kind exactly, mirroring ``save_document`` (which has
         # always had it, because it holds the document). ``None`` keeps the old
         # bare behaviour for a caller that genuinely does not know.
-        subdir = self._subdir_for(kind, api_version=api_version)
+        subdir = self._subdir_for(kind, api_version=api_version, scope=scope)
         scope_dir = self._target_dir(scope, layer, tenant=tenant)
 
         if subdir:

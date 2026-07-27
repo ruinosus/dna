@@ -368,7 +368,7 @@ class WritePipeline:
 
     def _resolve_tenant_arg(
         self, kind: str, tenant: str | None, layer: tuple[str, str] | None,
-        *, api_version: str | None = None,
+        *, api_version: str | None = None, scope: str | None = None,
     ) -> tuple[str | None, tuple[str, str] | None]:
         """Reconcile tenant + layer args + Kernel.tenant + KindPort.scope.
 
@@ -413,7 +413,9 @@ class WritePipeline:
 
         # Validate against KindPort.scope when EXPLICITLY declared.
         # Phase 1 keeps undeclared kinds permissive (back-compat).
-        scope_decl = host._kind_scope(kind, api_version=api_version)
+        scope_decl = host._kind_scope(
+            kind, api_version=api_version, scope=scope,
+        )
         if scope_decl == TenantScope.TENANTED and effective is None:
             raise TenantRequired(
                 f"Kind {kind!r} is TENANTED — pass tenant=<slug> to "
@@ -476,10 +478,17 @@ class WritePipeline:
         # i-195: colliding kind names resolve their port by the doc's own
         # apiVersion wherever we consult Kind metadata below.
         _api_version = raw.get("apiVersion") if isinstance(raw, dict) else None
-        _kind_port = host.kind_port_for(kind, api_version=_api_version)
+        # i-081: resolve the Kind AS THIS SCOPE SEES IT. A store-loaded Kind
+        # governs only the scope whose store declared it, and this port is what
+        # decides schema enforcement, tenancy and storage routing for the write
+        # — resolving it unscoped is how another scope's schema came to veto
+        # this one's documents.
+        _kind_port = host.kind_port_for(
+            kind, api_version=_api_version, scope=scope,
+        )
         # Resolve tenant + validate against KindPort.scope
         effective_tenant, residual_layer = self._resolve_tenant_arg(
-            kind, tenant, layer, api_version=_api_version,
+            kind, tenant, layer, api_version=_api_version, scope=scope,
         )
         # Phase 2a: pass tenant as a first-class kwarg to the adapter
         # if supported. Adapters that don't support tenant yet fall back
@@ -661,7 +670,7 @@ class WritePipeline:
         # Resolve tenant + validate against KindPort.scope (back-compat for
         # layer=("tenant", X) → tenant=X with DeprecationWarning)
         effective_tenant, residual_layer = self._resolve_tenant_arg(
-            kind, tenant, layer, api_version=api_version,
+            kind, tenant, layer, api_version=api_version, scope=scope,
         )
         # s-kernel-capability-protocols — memoized kwarg probe (see write_document).
         ws = write_kwarg_support(src)

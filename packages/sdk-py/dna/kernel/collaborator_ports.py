@@ -65,14 +65,23 @@ class KindLookup(Protocol):
 
     _kinds: "dict[tuple[str, str], KindPort]"
 
-    def kind_plane(self, kind: str, *, api_version: str | None = None) -> str: ...
+    def kinds_for_scope(
+        self, scope: str | None,
+    ) -> "dict[tuple[str, str], KindPort]": ...
+
+    def kind_plane(
+        self, kind: str, *, api_version: str | None = None,
+        scope: str | None = ...,
+    ) -> str: ...
 
     def kind_port_for(
         self, kind: str, *, api_version: str | None = None,
+        scope: str | None = ...,
     ) -> "KindPort | None": ...
 
     def storage_for_kind(
         self, kind_name: str, *, api_version: str | None = ...,
+        scope: str | None = ...,
     ) -> "StorageDescriptor | None": ...
 
     def _alias_for(self, kind: str) -> str: ...
@@ -167,9 +176,13 @@ class InstanceBuildCtx(Protocol):
     _profiles: list
     _resolvers: "dict[str, ResolverPort]"
 
-    def _register_kind_definitions(self, all_raws: list[dict[str, Any]]) -> bool: ...
+    def _register_kind_definitions(
+        self, all_raws: list[dict[str, Any]], *, scope: str | None = ...,
+    ) -> bool: ...
 
-    def _register_custom_kinds(self, manifest: dict[str, Any]) -> None: ...
+    def _register_custom_kinds(
+        self, manifest: dict[str, Any], *, scope: str | None = ...,
+    ) -> None: ...
 
 
 @runtime_checkable
@@ -325,10 +338,12 @@ class WriteHost(Protocol):
 
     def _kind_scope(
         self, kind: str, *, api_version: str | None = ...,
+        scope: str | None = ...,
     ) -> "TenantScope | None": ...
 
     def kind_port_for(
         self, kind: str, *, api_version: str | None = ...,
+        scope: str | None = ...,
     ) -> "KindPort | None": ...
 
     def _require_writable_source(self) -> "WritableSourcePort": ...
