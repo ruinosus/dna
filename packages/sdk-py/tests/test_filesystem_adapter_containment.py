@@ -17,11 +17,22 @@ adapters on purpose, and a path-building adapter that trusts its inputs is one
 refactor away from re-opening the hole the write guard closed. The redundancy
 is the design; see ``dna.kernel.errors.PathEscapesStoreRoot``.
 
-Geometry is measured, not assumed. ``<sandbox>/outer/store`` puts the store
-root two levels under the sandbox, so from ``<store>/<scope>/<container>`` it
-takes FOUR ``..`` to land on the sandbox — a shorter traversal is absorbed by
-the leading segments and stays INSIDE the store, which would prove nothing.
-Every escaping fixture below asserts its own geometry first.
+Geometry is measured, not assumed — and the earlier version of this note was
+OFF BY ONE, which is worth writing down because an off-by-one here is what
+makes a path-safety test pass against vulnerable code. Counting from
+``<sandbox>/outer/store/<scope>/<container>``:
+
+    1 ``..`` → ``<store>/<scope>``   inside
+    2 ``..`` → ``<store>``           inside, AT the root
+    3 ``..`` → ``<sandbox>/outer``   ALREADY OUTSIDE the store
+    4 ``..`` → ``<sandbox>``         outside
+
+So only ``..`` counts of TWO OR FEWER are absorbed by the leading segments; the
+old claim that "a shorter traversal … stays INSIDE the store" holds for 1–2 and
+is false for 3. The fixtures below use FOUR and are correct as written — it was
+the explanation that was wrong, not the tests. Every escaping fixture asserts
+its own geometry first regardless, which is the only reason the error stayed
+harmless.
 """
 from __future__ import annotations
 
@@ -281,3 +292,81 @@ def test_a_tenant_scoped_write_is_still_contained(tmp_path):
     written = [p for p in store.rglob("*") if p.is_file()]
     assert written and all(store in p.parents for p in written)
     assert any("tenants" in p.parts for p in written)
+
+
+# ── the cache adapter, found by the corrected sweep ─────────────────────────
+#
+# The previous sweep was anchored on ``grep "base_dir /"``. Every finding it
+# produced was right, but the grep is structurally blind to a join on a DERIVED
+# root — ``self._base / scope / key`` never mentions ``base_dir``, and neither
+# does ``self._root / entry``, which is how the content-derived bundle-entry
+# escape was missed entirely. Re-run as "every ``Path.__truediv__`` /
+# ``os.path.join`` whose right operand is not a literal", ``FilesystemCache``
+# is the one remaining adapter that joins caller-influenced segments with no
+# containment at all — and its segments arrive from further away than the
+# source adapter's do.
+
+def _cache(tmp_path):
+    from dna.adapters.filesystem.cache import FilesystemCache
+
+    base = tmp_path / "outer" / "store"
+    base.mkdir(parents=True)
+    cache = FilesystemCache(str(base))
+    return cache, tmp_path / "outer" / ".dna-cache"
+
+
+def test_the_cache_refuses_a_remote_derived_item_name_that_escapes(tmp_path):
+    """``item.name`` and ``item.kind`` are read STRAIGHT OUT OF REMOTE JSON by
+    ``HttpResolver`` (``raw["metadata"]["name"]``, ``raw["kind"]``) and land in
+    a ``shutil.copytree`` destination — after an ``rmtree`` of that same
+    destination, which is the worse half. Nothing abuses it today; this is the
+    layer that means nothing can."""
+    from dna.kernel.protocols import CacheItem
+
+    cache, cache_root = _cache(tmp_path)
+    payload = tmp_path / "payload"
+    payload.mkdir()
+    (payload / "AGENT.md").write_text("x")
+    victim = tmp_path / "victim"
+    victim.mkdir()
+    (victim / "KEEP.md").write_text("must survive")
+
+    item = CacheItem(name="../../../../victim", kind="", content_path=payload)
+    with pytest.raises(PathEscapesStoreRoot):
+        asyncio.run(cache.store("test-mod", "http-abc", [item]))
+
+    assert (victim / "KEEP.md").read_text() == "must survive", (
+        "the rmtree ran before containment did"
+    )
+    del cache_root
+
+
+def test_the_cache_refuses_an_escaping_scope_on_read_and_write(tmp_path):
+    cache, _ = _cache(tmp_path)
+    for call in (
+        lambda: asyncio.run(cache.has("../../ESCAPED", "k")),
+        lambda: asyncio.run(cache.load_all("../../ESCAPED")),
+        lambda: asyncio.run(cache.load_key("../../ESCAPED", "k")),
+        lambda: asyncio.run(cache.store("../../ESCAPED", "k", [])),
+    ):
+        with pytest.raises(PathEscapesStoreRoot):
+            call()
+
+
+def test_the_cache_still_stores_and_reads_an_ordinary_item(tmp_path):
+    """The control — the cache is on the dependency-resolution hot path and
+    must keep working for every real key shape (``http-…``, ``github-…``,
+    ``local-…``, all sanitised to ``[a-zA-Z0-9_-]`` by ``cache_key``)."""
+    from dna.kernel.protocols import CacheItem
+
+    cache, cache_root = _cache(tmp_path)
+    payload = tmp_path / "payload" / "a-agent"
+    payload.mkdir(parents=True)
+    (payload / "AGENT.md").write_text("---\nname: a-agent\n---\nbody")
+
+    item = CacheItem(name="a-agent", kind="Agent", content_path=payload)
+    asyncio.run(cache.store("test-mod", "github-ruinosus-dna", [item]))
+
+    assert asyncio.run(cache.has("test-mod", "github-ruinosus-dna"))
+    stored = cache_root / "test-mod" / "github-ruinosus-dna" / "agents" / "a-agent"
+    assert (stored / "AGENT.md").read_text().endswith("body")

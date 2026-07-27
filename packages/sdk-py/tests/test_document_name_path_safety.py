@@ -37,6 +37,7 @@ import pytest
 
 from dna.kernel.errors import (
     MAX_PATH_COMPONENT_BYTES,
+    InvalidBundleEntry,
     InvalidDocumentName,
     InvalidScopeName,
     KernelRefusal,
@@ -442,9 +443,15 @@ async def test_a_safe_bundle_entry_write_still_lands_inside(tmp_path):
 #
 # i.e. an actual READ of a file two levels above the store root, plus a
 # directory listing of it. The geometry matters and is asserted below rather
-# than assumed: `<store>/<scope>/agents` is three levels under the sandbox, so
-# four ``..`` land ON the sandbox — a shorter traversal would be absorbed by
-# the leading segments and stay INSIDE the store, proving nothing.
+# than assumed. Counting from `<sandbox>/outer/store/<scope>/agents`:
+#   1 `..` → `<store>/<scope>`  inside      3 `..` → `<sandbox>/outer`  OUTSIDE
+#   2 `..` → `<store>`          inside      4 `..` → `<sandbox>`        outside
+# So only TWO OR FEWER are absorbed by the leading segments — an earlier
+# version of this note said "a shorter traversal … stays INSIDE the store",
+# which is off by one: three is already out. The fixture uses four and is
+# right; the explanation was not. Getting this wrong is exactly how a draft
+# test in an earlier wave passed against vulnerable code, which is why the
+# geometry is asserted in the fixture and not merely described here.
 
 def _escape_fixture(tmp_path):
     """A store with a secret file OUTSIDE its root, and the traversing name
@@ -594,3 +601,49 @@ def test_serialize_document_refuses_a_traversing_name(tmp_path):
     files = k.serialize_document("test-mod", "Agent", "a-agent", raw)["files"]
     assert files, "the control must still serialize"
     assert all(".." not in f["relativePath"] for f in files)
+
+
+def test_serialize_document_refuses_a_traversing_CONTENT_derived_path(tmp_path):
+    """The assertion above was VACUOUS, and this is what it should have been.
+
+    ``all(".." not in f["relativePath"] …)`` ran against a ``raw`` carrying no
+    content-derived files at all — the only ``relativePath`` in the payload was
+    built from ``name``, which the two ``pytest.raises`` above had already
+    proven safe. It could not fail on the property it names.
+
+    And the property did not hold. The other half of every ``relativePath``
+    comes from the document's own ``spec`` — ``root_files``, ``source_files``,
+    ``scripts|references|assets``, ``extras``, ``instruction_file`` — so with an
+    Agent carrying ``root_files`` this returned
+    ``['agents/a-agent/AGENT.md', 'agents/a-agent/../../../etc/cron.d/pwn']``:
+    a traversing path handed back to a caller whose entire job is to write it.
+    The escape had moved one frame up the stack, which is exactly what
+    ``serialize_document``'s docstring claimed to have closed.
+
+    Exercised with a raw that ACTUALLY carries entries, and the property is now
+    enforced rather than asserted."""
+    k, _ = _fs_kernel(tmp_path)
+    hostile = {"apiVersion": "helix.dna.dev/v1", "kind": "Agent",
+               "metadata": {"name": "x"},
+               "spec": {"model": "gpt-4o",
+                        "root_files": {"../../../etc/cron.d/pwn": "pwned"}}}
+
+    with pytest.raises(InvalidBundleEntry):
+        k.serialize_document("test-mod", "Agent", "a-agent", hostile)
+
+    # The control, and it is the one that makes the assertion non-vacuous: a
+    # raw that carries real content-derived entries still serializes, and every
+    # path it hands back stays inside the document's own directory.
+    benign = {"apiVersion": "helix.dna.dev/v1", "kind": "Agent",
+              "metadata": {"name": "x"},
+              "spec": {"model": "gpt-4o",
+                       "root_files": {"skills/foo/SKILL.md": "legit"},
+                       "scripts": {"run.py": "print(1)"}}}
+    files = k.serialize_document("test-mod", "Agent", "a-agent", benign)["files"]
+    rels = [f["relativePath"] for f in files]
+    assert any(r.endswith("skills/foo/SKILL.md") for r in rels), rels
+    assert any(r.endswith("scripts/run.py") for r in rels), rels
+    for r in rels:
+        assert ".." not in Path(r).parts, r
+        assert not Path(r).is_absolute(), r
+        assert r.startswith("agents/a-agent/"), r

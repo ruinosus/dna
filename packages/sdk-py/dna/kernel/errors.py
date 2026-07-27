@@ -112,6 +112,51 @@ class InvalidScopeName(KernelRefusal, ValueError):
     """
 
 
+class InvalidBundleEntry(KernelRefusal, ValueError):
+    """A bundle ``entry`` is not a safe RELATIVE path inside its bundle.
+
+    The third member of the family, and the one the first two did not cover.
+    ``name`` and ``scope`` are single path COMPONENTS; an ``entry`` is a
+    relative PATH — see the ``entry`` vs ``name`` note on
+    ``FilesystemSource._bundle_root``. Same concept, two doors, and for a while
+    only one of them was guarded.
+
+    The hole this closes was NOT a caller passing a crafted ``entry`` to a
+    bundle-entry door — ``606812c`` guarded those. It was that a bundle entry
+    path is ALSO derived from document CONTENT. ``spec.source_files``,
+    ``spec.root_files``, ``spec.scripts|references|assets``, ``spec.extras`` and
+    ``spec.instruction_file`` are all turned into ``relativePath`` values by the
+    registered writers, and ``spec`` is copied verbatim from the caller by
+    ``apply_definition_impl`` and taken as an untyped body by
+    ``PUT /v1/definitions/{kind}/{name}``. Measured at HEAD through
+    ``Kernel.write_document`` on the default ``Agent`` Kind: each of those five
+    fields wrote a file OUTSIDE the store root, on the base lane and on the
+    tenant lane alike, and an ABSOLUTE entry wrote to an arbitrary absolute path
+    (``pathlib`` joins discard the anchor when the right operand is absolute).
+    An arbitrary-file-write through the kernel's own documented write facade.
+
+    ``spec.source_files`` is a kind-AGNOSTIC documented convention
+    (``pop_source_files_as_entries``, used by Tenant and TenantMembership too),
+    so this was never one Kind's quirk — which is why the closing guard lives on
+    the HANDLE every writer must go through (``FilesystemBundleHandle``) rather
+    than on each writer. Eight of the in-repo writers call
+    ``bundle.write_text(f["relativePath"], …)`` directly instead of the shared
+    ``write_entries_to_handle`` sink; guarding the sink alone would have
+    repeated the enumeration mistake that caused the miss.
+
+    The rule is measured, not felt: 492 distinct real bundle entry paths across
+    both repos' ``.dna/`` trees and fixtures — 482 of them carry a ``/``, the
+    deepest is 8 segments, the longest 96 bytes, every one of them carries a
+    dot, and ZERO have a ``..`` or ``.`` segment, are absolute, carry a
+    backslash or a NUL, or exceed the bound. Subdirectories and dots stay legal
+    (``skills/foo/SKILL.md`` must round-trip); escaping and directory-addressing
+    do not. See :func:`validate_bundle_entry`.
+
+    A ``KernelRefusal`` + ``ValueError`` for the same two reasons as its
+    siblings.
+    """
+
+
 class PathEscapesStoreRoot(KernelRefusal, ValueError):
     """A path a store adapter built from caller-supplied segments resolved
     OUTSIDE that adapter's base directory.
@@ -205,7 +250,20 @@ def validate_document_name(name: object) -> None:
 
 
 def validate_scope_name(scope: object) -> None:
-    """Raise :class:`InvalidScopeName` unless ``scope`` is a safe component."""
+    """Raise :class:`InvalidScopeName` unless ``scope`` is a safe component.
+
+    A NOTE ON THE ASYMMETRY, so the next reader does not mistake it for a bug:
+    the WRITE and BUNDLE facades refuse ``scope=""``, ``"."`` and ``"a/b"``
+    through this validator, but the READ path never calls it — reads are held to
+    CONTAINMENT only (``FilesystemSource._contained``), which fires on a genuine
+    escape and lets those three through. So ``list_documents(scope="a/b")``
+    works today while ``write_document(scope="a/b")`` refuses. Deliberate and
+    measured, not overlooked: 12 on-disk scopes exist across both repos and not
+    one contains a slash, so nothing real depends on either behaviour, and
+    tightening the read path would be a change in what a scope IS rather than a
+    security fix. Left as-is on purpose; if it is ever unified, unify it toward
+    this validator, not away from it.
+    """
     fault = _path_component_fault(scope)
     if fault is not None:
         raise InvalidScopeName(
@@ -213,6 +271,89 @@ def validate_scope_name(scope: object) -> None:
             f"It is written to disk as a path component "
             f"(<base>/<scope>, <base>/tenants/<tenant>/scopes/<scope>), so a "
             f"scope that traverses would place the write outside the store."
+        )
+
+
+#: Longest whole bundle ENTRY path the kernel will hand a handle, in UTF-8
+#: BYTES. An entry is a relative PATH, not a component, so it has its own bound:
+#: each SEGMENT is still held to ``MAX_PATH_COMPONENT_BYTES`` (the ``NAME_MAX``
+#: argument), and the assembled path to this. 1000 leaves headroom under the
+#: smallest ``PATH_MAX`` DNA writes to (1024 on macOS) once the bundle root
+#: prefix is counted, and is ~10x the longest entry that exists anywhere
+#: measured (96 bytes — an XSD buried in a Skill's ``scripts/`` tree).
+MAX_BUNDLE_ENTRY_BYTES = 1000
+
+_ENTRY_RULE = (
+    "a RELATIVE path inside the bundle: not empty or whitespace-only, not "
+    "absolute, no '\\' or NUL, no '.' or '..' segment, no empty segment (a "
+    "leading, trailing or doubled '/'), each segment at most "
+    f"{MAX_PATH_COMPONENT_BYTES} bytes and the whole path at most "
+    f"{MAX_BUNDLE_ENTRY_BYTES}. Subdirectories and dots are FINE — "
+    "'skills/foo/SKILL.md' and 'scripts/office/schemas/opc-digSig.xsd' are "
+    "real entries; the rule is that it cannot escape the bundle or address a "
+    "directory"
+)
+
+
+def _bundle_entry_fault(value: object) -> str | None:
+    """Return why ``value`` is not a safe relative bundle path, or ``None``.
+
+    Split out from :func:`validate_bundle_entry` for symmetry with
+    :func:`_path_component_fault`, so the two RULES stay visibly different
+    things: a ``name``/``scope`` is ONE component, an ``entry`` is a PATH.
+    """
+    if not isinstance(value, str):
+        return f"is not a str (got {type(value).__name__})"
+    if not value.strip():
+        return "is empty or whitespace-only"
+    if "\x00" in value:
+        return "contains a NUL byte"
+    if "\\" in value:
+        return "contains '\\' (a path separator on Windows/UNC)"
+    if value.startswith("/"):
+        return "is an absolute path"
+    if len(value) > 1 and value[1] == ":":
+        return "carries a Windows drive prefix"
+    size = len(value.encode("utf-8", "surrogatepass"))
+    if size > MAX_BUNDLE_ENTRY_BYTES:
+        return f"is {size} bytes (max {MAX_BUNDLE_ENTRY_BYTES})"
+    for segment in value.split("/"):
+        if segment == "":
+            return "has an empty path segment (a leading, trailing or doubled '/')"
+        if segment == ".":
+            return "has a '.' segment — it addresses a directory, not a file"
+        if segment == "..":
+            return "has a '..' segment — it escapes the bundle"
+        seg_size = len(segment.encode("utf-8", "surrogatepass"))
+        if seg_size > MAX_PATH_COMPONENT_BYTES:
+            return (
+                f"has a segment {segment!r} of {seg_size} bytes "
+                f"(max {MAX_PATH_COMPONENT_BYTES} per segment)"
+            )
+    return None
+
+
+def validate_bundle_entry(entry: object, *, where: str = "bundle entry") -> None:
+    """Raise :class:`InvalidBundleEntry` unless ``entry`` is a safe relative path.
+
+    ``where`` names the door for the message — ``"bundle entry"`` at the handle,
+    a writer's field name (``"spec.root_files key"``) when the caller knows it.
+
+    Called by ``FilesystemBundleHandle`` on EVERY method that builds a path from
+    an entry, by ``write_entries_to_handle`` before any writer's output reaches
+    a handle, and by ``Kernel.serialize_document`` on every ``relativePath`` it
+    hands back. The handle is the closing layer — it is the one door every
+    writer must pass — and the other two are the named, early ones that can say
+    WHICH field was wrong.
+    """
+    fault = _bundle_entry_fault(entry)
+    if fault is not None:
+        raise InvalidBundleEntry(
+            f"{where} {entry!r} {fault} — an entry must be {_ENTRY_RULE}. "
+            f"It is joined onto the bundle root (<scope>/<container>/<name>/"
+            f"<entry>), so an entry that traverses — or is absolute, which "
+            f"makes a pathlib join DISCARD the bundle root entirely — would "
+            f"place the write outside the bundle and outside the store."
         )
 
 

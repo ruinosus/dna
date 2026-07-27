@@ -22,13 +22,25 @@ direction: the refusal LIST here must stay complete. Without it, a refusal that
 is simply never added just shrinks a ``parametrize`` and everything stays green
 — which is exactly what happened to the path-safety refusals.
 
-Both halves scan ``_MODULES``, and ``dna.kernel.errors`` was missing from that
-tuple: an entire module of exception types was invisible, so the ratchet had
-quietly stopped ratcheting while still reading as coverage.
+Both halves scan ``_MODULES``, and that tuple was the ratchet's own blind spot
+— TWICE. First ``dna.kernel.errors`` was missing from it, so an entire module
+of exception types was invisible and the ratchet had quietly stopped ratcheting
+while still reading as coverage. Adding the module fixed the instance and left
+the CAUSE: a hand-maintained list of three modules cannot see a fourth, and
+``NamespaceOwnershipError`` (``dna.kernel.kinds.namespaces``) — a genuine
+refusal, via ``LayerPolicyViolationError`` — sat outside all three with nothing
+red. The exact failure mode the previous commit set out to fix, reproduced one
+level out.
+
+``_MODULES`` is therefore DERIVED now (``pkgutil.walk_packages`` over
+``dna.kernel``), not listed. The reach of a ratchet must not itself be
+something somebody has to remember to update.
 """
 from __future__ import annotations
 
+import importlib
 import inspect
+import pkgutil
 
 import pytest
 
@@ -37,22 +49,53 @@ import dna.kernel.errors as E
 import dna.kernel.protocols as P
 from dna.kernel.errors import KernelRefusal
 
-#: The kernel's public exception modules, in lookup order. ``dna.kernel.errors``
-#: was MISSING here, and that was not cosmetic: the ratchet below scans exactly
-#: these, so an entire module's worth of exception types — every path-safety
-#: refusal and every registration failure — was invisible to it. A ratchet that
-#: cannot see a module silently stops ratcheting, which is worse than not
-#: having one, because it reads as coverage.
-_MODULES = (P, K, E)
+
+def _kernel_modules() -> tuple:
+    """Every module in the ``dna.kernel`` PACKAGE, DERIVED by walking it.
+
+    This replaced a hand-maintained ``_MODULES = (P, K, E)`` tuple, and the
+    replacement is the point rather than a tidy-up. The previous wave fixed
+    exactly this bug one level in — ``dna.kernel.errors`` was missing from the
+    tuple, so a whole module of exception types was invisible while the ratchet
+    still read as coverage — and then REPRODUCED it one level out, because a
+    tuple of three modules cannot see a fourth.
+
+    It really was blind. ``NamespaceOwnershipError``
+    (``dna.kernel.kinds.namespaces``) IS a ``KernelRefusal`` — it subclasses
+    ``LayerPolicyViolationError`` — and lives outside all three modules, so
+    ``test_every_refusal_is_enumerated`` could not see it and nothing was red.
+    A ratchet whose SCOPE is hand-written ratchets only as far as somebody
+    remembered to point it.
+
+    Derived, therefore, not listed: a refusal declared in a new submodule
+    tomorrow is in scope the moment the file exists. ``dna.kernel`` itself is
+    included explicitly (``walk_packages`` yields a package's children, not the
+    package), and an import failure PROPAGATES rather than being skipped — a
+    module the ratchet cannot import is a module it cannot scan, which is the
+    failure mode this test exists to refuse.
+    """
+    import dna.kernel
+
+    modules = [dna.kernel]
+    for info in pkgutil.walk_packages(dna.kernel.__path__, "dna.kernel."):
+        modules.append(importlib.import_module(info.name))
+    return tuple(modules)
+
+
+#: Every module the ratchet scans. ``P``, ``K`` and ``E`` are listed first only
+#: so ``_refusal`` resolves the three historically-public modules before any
+#: re-export; the SET is derived, not maintained.
+_MODULES = (P, K, E, *(m for m in _kernel_modules() if m not in (P, K, E)))
 
 
 def _refusal(name: str) -> type:
-    """Resolve a refusal by name across the kernel's public error modules.
+    """Resolve a refusal by name across the kernel's error modules.
 
     ``getattr(P, name)`` alone was enough while every refusal lived in
-    ``protocols``; the path-safety refusals live in ``dna.kernel.errors`` and
-    are NOT re-exported from ``dna.kernel``, so the lookup has to span all
-    three or the list below cannot name them."""
+    ``protocols``; the path-safety refusals live in ``dna.kernel.errors``, the
+    namespace-ownership one in ``dna.kernel.kinds.namespaces``, and none of
+    them is re-exported from ``dna.kernel`` — so the lookup has to span the
+    whole package or the list below cannot name them."""
     for module in _MODULES:
         cls = getattr(module, name, None)
         if cls is not None and cls.__module__ == module.__name__:
@@ -71,9 +114,18 @@ _WRITE_REFUSALS = (
     # and ``InvalidScopeName`` guard ``write_document`` / ``delete_document`` /
     # the four bundle-entry doors / ``preview_document`` / ``serialize_document``;
     # ``PathEscapesStoreRoot`` is the filesystem adapter's own second layer;
+    # ``InvalidBundleEntry`` closes the third door of the same family — a
+    # bundle ENTRY, which is a relative PATH rather than a component, and which
+    # writers derive from document CONTENT (``spec.source_files`` et al);
     # ``DocumentNameTaken`` is the atomic ``if_absent`` claim losing the race.
     "DocumentNameTaken", "InvalidDocumentName", "InvalidScopeName",
-    "PathEscapesStoreRoot",
+    "PathEscapesStoreRoot", "InvalidBundleEntry",
+    # dna.kernel.kinds.namespaces — a write declaring a Kind in a namespace its
+    # author does not own. It IS a refusal and always was (a subclass of
+    # ``LayerPolicyViolationError``, so every face already relays it); it was
+    # simply invisible to a ratchet whose module list was hand-written. That it
+    # appears here now is the derivation working.
+    "NamespaceOwnershipError",
 )
 
 #: The two that live on ``dna.kernel`` itself.
@@ -105,7 +157,7 @@ def test_the_historical_bases_are_kept():
     # predates the marker base and still catches ``(ValueError, LookupError,
     # PermissionError)`` must report a security refusal, not mask it as a 500.
     for name in ("InvalidDocumentName", "InvalidScopeName",
-                 "PathEscapesStoreRoot"):
+                 "PathEscapesStoreRoot", "InvalidBundleEntry"):
         assert issubclass(_refusal(name), ValueError), name
     # ``DocumentNameTaken`` is a ``FileExistsError`` so a caller allocating a
     # name (``create_issue``) can catch the standard exception and try the next.
@@ -115,7 +167,9 @@ def test_the_historical_bases_are_kept():
 def test_one_except_clause_catches_every_write_refusal():
     """The property a face actually depends on."""
     for name in (*_WRITE_REFUSALS, *_KERNEL_REFUSALS):
-        cls = _refusal(name) if not hasattr(K, name) else getattr(K, name)
+        # ``_refusal`` already spans ``K`` — the ``hasattr(K, name)`` fork this
+        # replaced was a second lookup for the same answer.
+        cls = _refusal(name)
         try:
             raise cls("nope")
         except KernelRefusal as exc:
@@ -151,6 +205,33 @@ _NOT_REFUSALS = {
     # A typo'd `layout:` — an authoring error in the document, surfaced loudly
     # so it cannot silently fall through to the Kind default.
     "UnknownLayout",
+    # ── newly in scope once the module list became DERIVED ────────────────
+    # Each of these was always in ``dna.kernel``; none of them was ever
+    # scanned, because the scan's reach was a hand-written tuple of three
+    # modules. Classified now, one reason each, rather than left to default.
+    #
+    # WARNINGS, not exceptions on any control-flow path. A caller never
+    # catches them; a bad hook name and a malformed frontmatter block are
+    # surfaced so an author fixes them while loading continues.
+    "UnknownHookNameWarning", "FrontmatterParseWarning",
+    # A CORRUPT DOCUMENT on the read path, opt-in via ``strict=True``. The
+    # SQL source catches it and falls back to the canonical row — a recovery
+    # signal between an adapter and itself, not a verdict for a client.
+    "FrontmatterParseError",
+    # PARSE failures of a pure value type (a malformed semver string or
+    # range). No I/O, no policy, no request — the caller handed in text that
+    # is not a version.
+    "InvalidConstraint", "InvalidVersion",
+    # AUTHOR-TIME schema validation of a KindDefinition's own JSON Schema,
+    # raised through the same funnels as the boot-time registration errors
+    # above (raise at boot for builtins, warn-and-skip per scope). It refuses
+    # a descriptor, not somebody's write.
+    "SchemaGuardError",
+    # A COMPOSITION-time budget: the assembled instruction is larger than the
+    # target model's own declared cap. Not a policy denial the caller may
+    # appeal — an arithmetic fact about the prompt, raised on the read/compose
+    # path where there is no write to refuse.
+    "PromptBudgetExceededError",
 }
 
 

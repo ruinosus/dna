@@ -15,7 +15,7 @@ from dna.kernel.document import Document
 from dna.kernel.errors import (
     ExtensionLoadError, KernelRefusal, KindRegistrationError,
     ReaderRegistrationError, WriterRegistrationError,
-    validate_document_name, validate_scope_name,
+    validate_bundle_entry, validate_document_name, validate_scope_name,
 )
 from dna.kernel.kinds.registry import (
     # _load_kind_docs moved into the KindRegistry module with the registration
@@ -2173,10 +2173,25 @@ class Kernel:
         and the whole point of the payload is that a caller writes those paths
         out. Handing back a relative path that traverses would move the escape
         one frame up the stack instead of closing it.
+
+        Which is what it did. Guarding ``scope`` and ``name`` made the CLAIM
+        above true only for the half of the path they build: the ``<entry>``
+        half comes from document CONTENT, and with an Agent or Skill carrying
+        ``root_files`` this returned
+        ``['skills/x/SKILL.md', 'skills/x/../../../etc/cron.d/pwn']`` — a
+        traversing ``relativePath``, handed to a caller whose job is to write
+        it. The property is now enforced rather than asserted: every returned
+        entry path is validated (``InvalidBundleEntry``), so the payload cannot
+        describe a file outside the document's own directory.
         """
         validate_scope_name(scope)
         validate_document_name(name)
-        return self._bundleio.serialize(scope, kind, name, raw)
+        result = self._bundleio.serialize(scope, kind, name, raw)
+        for f in result.get("files") or []:
+            validate_bundle_entry(
+                f.get("relativePath"), where="serialized relativePath",
+            )
+        return result
 
     # -- Instance creation ----------------------------------------------------
 

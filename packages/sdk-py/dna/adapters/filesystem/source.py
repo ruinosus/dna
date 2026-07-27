@@ -82,6 +82,23 @@ class FilesystemSource(SourcePort):
         either repo. Individual content files reached by a directory SCAN are
         not checked here (the repo's own root ``AGENTS.md`` is symlinked into a
         scope by ``tests/test_agents_md_root.py``, and still works).
+
+        COST, and where it is paid. ``Path.resolve()`` is a realpath: one lstat
+        per path component, plus link traversal. This method is called on
+        ``load_all``, which backs ``instance`` / ``list_documents`` /
+        ``get_document`` / ``query`` — so the syscalls land on the READ hot
+        path, not only on writes, and they scale with the DEPTH of the store
+        root rather than with the number of documents (once per facade call,
+        not once per document). It is a fixed handful of stats per call on a
+        path prefix the OS has in its dentry cache; the alternative,
+        ``os.path.normpath``, is pure string work and would cost nothing — and
+        is rejected anyway, deliberately, because it is TEXTUAL: it cannot see
+        a scope directory that is a symlink out of the store, and a containment
+        check a symlink defeats is not a containment check. If this ever shows
+        up in a profile, cache the resolved ``base_dir`` (it is fixed for the
+        adapter's life) before weakening the check. The same trade-off, with
+        the same reasoning, is made in
+        ``dna.kernel.bundle.handle.FilesystemBundleHandle._entry_path``.
         """
         resolved = Path(path).resolve()
         try:
@@ -499,6 +516,30 @@ class FilesystemSource(SourcePort):
         entry check is measured against — which is exactly how the read door
         escaped: the entry guard passed because the root it was anchored on had
         already been relocated outside the store.
+
+        ``entry`` VS ``name`` — WRITE THIS DOWN, because forgetting it is what
+        left the class open. Both are caller-influenced text that becomes a
+        location on disk; they are held to DIFFERENT rules because they are
+        different SHAPES:
+
+          ``scope`` / ``container`` / ``name``
+              ONE path component each. No ``/`` at all, never ``.`` or ``..``.
+              ``validate_scope_name`` / ``validate_document_name``.
+          ``entry``
+              A RELATIVE PATH, anchored at the root this method returns. ``/``
+              is legitimate and normal — 482 of the 492 real bundle entries
+              measured across both repos carry one, the deepest is 8 segments,
+              every single one contains a dot. ``validate_bundle_entry``.
+
+        Same concept, two doors, two rules — and for two commits only one door
+        was guarded. The consequence was not theoretical: a bundle entry path
+        is ALSO derived from document CONTENT by the registered writers
+        (``spec.source_files``, ``spec.root_files``,
+        ``spec.scripts|references|assets``, ``spec.extras``,
+        ``spec.instruction_file``), and every one of those wrote a file outside
+        the store root through ``Kernel.write_document`` itself, on the base
+        lane and the tenant lane alike. If you add a third shape here, decide
+        which of the two rules it is BEFORE you join it onto anything.
         """
         if tenant:
             return self._contained(

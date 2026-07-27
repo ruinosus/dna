@@ -61,7 +61,28 @@ def write_entries_to_handle(bundle: Any, entries: list[dict[str, Any]]) -> None:
     bundle.write_text(f["relativePath"], f["content"])`` that only
     handled text. Writers using ``pop_source_files_as_entries`` should
     call this in their ``.write()`` to dispatch correctly.
+
+    Every ``relativePath`` is validated FIRST, for the whole batch, before a
+    single byte is dispatched. Two deliberate properties:
+
+    - ALL-OR-NOTHING. A per-entry check that refused halfway would leave the
+      bundle carrying whichever entries happened to come first — a state no
+      caller asked for and no reader can interpret.
+    - THIS IS THE EARLY LAYER, NOT THE CLOSING ONE. It runs before the handle,
+      so it can fail in the writer's own vocabulary; but it does NOT close the
+      class on its own, because eight in-repo writers call
+      ``bundle.write_text(f["relativePath"], …)`` directly rather than coming
+      through here. The class closes at ``BundleHandle`` itself — see
+      ``FilesystemBundleHandle._entry_path``. Keep both: guarding only this
+      sink is precisely the enumeration mistake that let the content-derived
+      escape through in the first place.
     """
+    from dna.kernel.errors import validate_bundle_entry
+
+    for f in entries:
+        validate_bundle_entry(
+            f["relativePath"], where="bundle entry relativePath",
+        )
     for f in entries:
         if "content_bytes" in f:
             bundle.write_bytes(f["relativePath"], f["content_bytes"])
