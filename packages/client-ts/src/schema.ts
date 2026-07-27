@@ -390,6 +390,45 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/kinds/{kind}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Authored Kind
+         * @description Read ONE authored Kind in full — the listing's row PLUS the
+         *     ``schema`` and the ``traits``, i.e. everything a human needs to answer
+         *     "should this take effect?".
+         *
+         *     Filtered to the CALLER exactly as the listing is, and harder-edged
+         *     because it carries more: a Kind authored by another workspace in a
+         *     shared scope is a **404**, the same answer a Kind nobody ever authored
+         *     gets — "it exists but is not yours" would hand a stranger a probe for
+         *     what its neighbours are authoring, and this door would answer that probe
+         *     with their data model. A request that resolves NO workspace
+         *     (``--auth none`` self-host, an explicit operator ``scope=``) is not
+         *     filtered, the same hinge the namespace gate uses for an unattributed
+         *     write.
+         *
+         *     400 for a ``kind`` that is not a CamelCase identifier (the same shared
+         *     guard the authoring and approval doors use — it is a path segment here)
+         *     or for a Kind the caller declared under two of its own namespaces at
+         *     once; 403 for a namespace two claims give to different owners; 503 when
+         *     the claim registry cannot be read. None of them degrades to answering
+         *     with the document.
+         */
+        get: operations["get_authored_kind_v1_kinds__kind__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/kinds/{kind}/approve": {
         parameters: {
             query?: never;
@@ -1088,6 +1127,57 @@ export interface components {
             proposed_by?: string | null;
             /** Version */
             version?: string | null;
+        };
+        /**
+         * AuthoredKindDetail
+         * @description ``GET /v1/kinds/{kind}`` — one authored Kind, in full.
+         *
+         *     SUBCLASSES the summary rather than restating it: the roster and the single
+         *     read describe the SAME document, and two independent field lists are two
+         *     vocabularies for one thing — the kind of drift that reads, to the human
+         *     doing the review, as two different documents.
+         *
+         *     What it adds is what the roster deliberately withholds. ``schema`` is the
+         *     reason the route exists: registration is what confers schema validation and
+         *     storage routing, so "should this take effect?" is a question ABOUT the
+         *     schema, and a reviewer who cannot see it is not reviewing anything.
+         *     ``traits`` travels with it because it is the other half of what the
+         *     authoring door stored and the other half of what would take effect.
+         *
+         *     ``schema`` is ``null``, never ``{}``, for a document that stored none —
+         *     "there is no schema here" and "the schema is the empty object" are
+         *     different facts about what would be conferred.
+         */
+        AuthoredKindDetail: {
+            /** Api Version */
+            api_version?: string | null;
+            /**
+             * Approved
+             * @default false
+             */
+            approved: boolean;
+            /** Approved At */
+            approved_at?: string | null;
+            /** Approved By */
+            approved_by?: string | null;
+            /** Created At */
+            created_at?: string | null;
+            /** Kind */
+            kind?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Namespace */
+            namespace?: string | null;
+            /** Proposed At */
+            proposed_at?: string | null;
+            /** Proposed By */
+            proposed_by?: string | null;
+            /** Schema */
+            schema?: {
+                [key: string]: unknown;
+            } | null;
+            /** Traits */
+            traits?: string[];
         };
         /**
          * AuthoredKindSummary
@@ -3090,6 +3180,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AuthorKindResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_authored_kind_v1_kinds__kind__get: {
+        parameters: {
+            query?: {
+                scope?: string | null;
+                tenant?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                kind: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthoredKindDetail"];
                 };
             };
             /** @description Validation Error */

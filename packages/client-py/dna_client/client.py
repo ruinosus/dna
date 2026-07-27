@@ -310,6 +310,30 @@ class DnaClient:
         effect needs to see who asked for it without leaving the list."""
         return self._get("/v1/kinds", scope=scope, tenant=tenant)
 
+    def get_authored_kind(
+        self, kind: str, *, scope: str | None = None, tenant: str | None = None,
+    ) -> JsonObject:
+        """Read ONE authored Kind in full — the listing's row PLUS the
+        ``schema`` and the ``traits``.
+
+        The roster (:meth:`list_authored_kinds`) deliberately omits the schema,
+        which left a reviewer unable to see what they would be conferring effect
+        ON. Registration is what gives a Kind schema validation and storage
+        routing, so "should this take effect?" is a question about the schema;
+        this is the call that answers it.
+
+        Filtered to the CALLER: a Kind authored by another workspace in a shared
+        scope is a **404**, the same answer a Kind nobody ever authored gets —
+        "it exists but is not yours" would be a probe for what the neighbours
+        are authoring, and this call would answer that probe with their data
+        model.
+
+        400 for a ``kind`` that is not a CamelCase identifier, or a Kind
+        declared under two of the caller's own namespaces at once; 404 when no
+        such Kind is the caller's; 403 for a namespace two claims give to
+        different owners; 503 when the namespace registry cannot be read."""
+        return self._get(f"/v1/kinds/{kind}", scope=scope, tenant=tenant)
+
     # -- definitions (bundle entries — fork a bundle-file, plane B) ----------
 
     def list_bundle_entries(

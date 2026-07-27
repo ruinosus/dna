@@ -337,6 +337,7 @@ def build_app(
         create_project_impl,
         create_workspace_impl,
         genome_view_impl,
+        get_authored_kind_impl,
         get_project_impl,
         import_memories_impl,
         invite_member_impl,
@@ -1143,6 +1144,68 @@ def build_app(
                     "listed: the listing resolves the KindNamespace registry to "
                     "decide which authored Kinds belong to the caller, and an "
                     "unreadable authorization record is not a granted one",
+                    exc,
+                ),
+            ) from exc
+
+    # ONE authored Kind, IN FULL — the audit screen's read. The listing above
+    # projects ten summary fields and deliberately not ``spec.schema`` (a roster
+    # that inlined every JSON Schema would be unreadable), which left a reviewer
+    # unable to see what they would be conferring effect ON. Registration is what
+    # gives a Kind schema validation and storage routing, so "should this take
+    # effect?" is a question about the schema; this route is the answer.
+    #
+    # It therefore hands over strictly MORE than the listing, and inherits every
+    # decision the listing and the approval door already made: the same
+    # ``owner_of`` ownership walk, the same 404-not-403 for a neighbour's Kind,
+    # the same shared Kind-name validator on the path segment, and the same
+    # refusal to degrade to an unfiltered answer.
+
+    @app.get("/v1/kinds/{kind}", dependencies=guarded,
+             response_model=m.AuthoredKindDetail)
+    async def get_authored_kind(
+        kind: str,
+        scope: str | None = Query(default=None),
+        tenant: str | None = Query(default=None),
+    ) -> dict[str, Any]:
+        """Read ONE authored Kind in full — the listing's row PLUS the
+        ``schema`` and the ``traits``, i.e. everything a human needs to answer
+        "should this take effect?".
+
+        Filtered to the CALLER exactly as the listing is, and harder-edged
+        because it carries more: a Kind authored by another workspace in a
+        shared scope is a **404**, the same answer a Kind nobody ever authored
+        gets — "it exists but is not yours" would hand a stranger a probe for
+        what its neighbours are authoring, and this door would answer that probe
+        with their data model. A request that resolves NO workspace
+        (``--auth none`` self-host, an explicit operator ``scope=``) is not
+        filtered, the same hinge the namespace gate uses for an unattributed
+        write.
+
+        400 for a ``kind`` that is not a CamelCase identifier (the same shared
+        guard the authoring and approval doors use — it is a path segment here)
+        or for a Kind the caller declared under two of its own namespaces at
+        once; 403 for a namespace two claims give to different owners; 503 when
+        the claim registry cannot be read. None of them degrades to answering
+        with the document."""
+        try:
+            return await get_authored_kind_impl(
+                await _live(), kind=kind, tenant=tenant, scope=scope,
+            )
+        except AuthoredKindNotFound as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from None
+        except LayerPolicyViolationError as exc:
+            raise HTTPException(status_code=403, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from None
+        except (NamespaceRegistryUnreadable, FileNotFoundError) as exc:
+            raise HTTPException(
+                status_code=503,
+                detail=_no_registry_scope_detail(
+                    "read: the read resolves the KindNamespace registry to "
+                    "decide whether the authored Kind belongs to the caller, "
+                    "and an unreadable authorization record is not a granted "
+                    "one",
                     exc,
                 ),
             ) from exc

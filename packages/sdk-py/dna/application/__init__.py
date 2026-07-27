@@ -60,6 +60,7 @@ from dna.application.kind_authoring import (
     NamespaceRegistryUnreadable,
     approve_kind_impl,
     author_kind_impl,
+    get_authored_kind_impl,
     list_authored_kinds_impl,
 )
 from dna.application.sdlc import (
@@ -188,6 +189,7 @@ __all__ = [
     "NamespaceRegistryUnreadable",
     "approve_kind_impl",
     "author_kind_impl",
+    "get_authored_kind_impl",
     "list_authored_kinds_impl",
     # SDLC write core (shared by the CLI + the MCP write tools)
     "DocumentExists",

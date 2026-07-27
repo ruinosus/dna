@@ -245,6 +245,36 @@ class AuthoredKindSummary(BaseModel):
     created_at: str | None = None
 
 
+class AuthoredKindDetail(AuthoredKindSummary):
+    """``GET /v1/kinds/{kind}`` — one authored Kind, in full.
+
+    SUBCLASSES the summary rather than restating it: the roster and the single
+    read describe the SAME document, and two independent field lists are two
+    vocabularies for one thing — the kind of drift that reads, to the human
+    doing the review, as two different documents.
+
+    What it adds is what the roster deliberately withholds. ``schema`` is the
+    reason the route exists: registration is what confers schema validation and
+    storage routing, so "should this take effect?" is a question ABOUT the
+    schema, and a reviewer who cannot see it is not reviewing anything.
+    ``traits`` travels with it because it is the other half of what the
+    authoring door stored and the other half of what would take effect.
+
+    ``schema`` is ``null``, never ``{}``, for a document that stored none —
+    "there is no schema here" and "the schema is the empty object" are
+    different facts about what would be conferred."""
+
+    #: The WIRE name, and not ours to rename: a JSON Schema field is called
+    #: ``schema``, and ``POST /v1/kinds`` already takes it under that name.
+    #: Pydantic warns because ``BaseModel.schema`` is a deprecated attribute
+    #: (it names the nearest parent, ``AuthoredKindSummary``, in the message);
+    #: the warning is silenced narrowly — this exact model, this exact field —
+    #: in the cli ``pyproject.toml``, beside the twin entry the request body
+    #: needed.
+    schema: dict[str, Any] | None = None
+    traits: list[str] = Field(default_factory=list)
+
+
 class AuthoredKindsResponse(BaseModel):
     """``GET /v1/kinds`` — every authored Kind in the scope, approved or not.
     Documents, not registry entries: an UNAPPROVED Kind is exactly the one the

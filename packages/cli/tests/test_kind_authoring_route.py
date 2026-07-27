@@ -41,11 +41,19 @@ pytest.importorskip("fastapi", reason="the REST read-API needs the optional 'fas
 from fastapi.testclient import TestClient  # noqa: E402
 
 from dna_cli import _rest_api as R  # noqa: E402
+from dna_cli import _rest_models as RM  # noqa: E402
 
 _ROOT = pathlib.Path(__file__).resolve().parents[3]
 _BASE = _ROOT / "examples" / "emitting-to-a-runtime" / ".dna"
 _SCOPE = "concierge"
 _WID = "ws-authoring00000000000001"
+
+#: A SECOND workspace sharing the SAME scope. Not a fixture artefact: with
+#: multi-workspace off (``vendor_workspace`` unset) ``LiveDna.default_scope``
+#: answers ``base_scope`` for EVERY workspace, so one scope holding two
+#: workspaces' authored Kinds is the default configuration and the one an OSS
+#: self-host runs under.
+_OTHER_WID = "ws-authoring00000000000002"
 
 _SCHEMA = {
     "type": "object",
@@ -478,3 +486,247 @@ def test_authoring_without_a_registry_scope_refuses_actionably(dna_dir_without_l
         detail = r.json()["detail"]
         assert "_lib" in detail, detail
         assert re.search(r"provision|not (been )?(set up|created)", detail, re.I), detail
+
+
+# ── 7. reading ONE authored Kind, in full ─────────────────────────────────
+#
+# ``GET /v1/kinds`` deliberately projects ten SUMMARY fields and not
+# ``spec.schema`` — so a reviewer deciding whether to confer effect cannot see
+# what they would be approving. ``GET /v1/kinds/{kind}`` is that gap closed:
+# the same ten fields plus the schema and the traits.
+#
+# It therefore hands over strictly MORE than the listing, which is what makes
+# its three inherited decisions load-bearing rather than ceremonial — ownership
+# resolved through the same ``owner_of`` the write gate decides with, a
+# stranger's Kind answered exactly as a nonexistent one, and the shared Kind-name
+# validator on the path segment.
+#
+# MEASURED, and recorded so nobody writes the test that would pass for the wrong
+# reason: a URL-encoded traversal (``/v1/kinds/%2E%2E%2FESCAPED``) never reaches
+# the handler at all — the ASGI server decodes the path BEFORE routing, so the
+# ``/`` reappears, ``{kind}`` (``[^/]+``) does not match, and the answer is
+# Starlette's own routing 404. A "traversal is refused" test written against
+# this route would assert nothing about the guard. What the guard actually
+# defends here is every malformed name that IS a single path segment, and the
+# assertion below is that its refusal is byte-identical to the approval door's —
+# i.e. the same validator, not a second copy of it.
+
+
+#: The neighbour's schema, carrying a token that appears NOWHERE else in the
+#: tree. A leak is then greppable in the raw response body, which is stronger
+#: than comparing parsed fields: a route that leaked the schema under a
+#: different key, or inside an error message, would still be caught.
+_SECRET = "clausula_secreta"
+_OTHER_SCHEMA = {
+    "type": "object",
+    "properties": {_SECRET: {"type": "string"}},
+    "required": [_SECRET],
+}
+
+
+def _author(c, *, kind: str = "Contrato", tenant: str = _WID, **body):
+    return c.post("/v1/kinds", params={"tenant": tenant},
+                  json={"kind": kind, "schema": _SCHEMA, **body})
+
+
+def _detail(c, kind: str = "Contrato", **params):
+    return c.get(f"/v1/kinds/{kind}", params=params)
+
+
+def test_the_detail_route_carries_the_schema_the_listing_withholds(dna_dir):
+    """The whole reason the route exists — and the vocabulary is the LISTING's.
+
+    Two halves, and both matter. First: the ten summary fields must come back
+    IDENTICAL to the row ``GET /v1/kinds`` already publishes, so the audit
+    screen is not reading two different descriptions of one document. Second:
+    the schema and the traits — the fields the list does not carry — must be
+    there, because a reviewer who cannot see what they would be approving is
+    not reviewing anything.
+
+    The listing's silence is asserted too. If a later change adds ``schema`` to
+    the summary, this route stops being the answer to anything and the gap
+    assertion is what says so."""
+    with _client(dna_dir) as c:
+        assert _author(c, traits=["auditable"]).status_code == 201
+
+        listed = c.get("/v1/kinds", params={"tenant": _WID})
+        assert listed.status_code == 200, listed.text
+        rows = [k for k in listed.json()["kinds"] if k["kind"] == "Contrato"]
+        assert rows, listed.json()
+        row = rows[0]
+
+        r = _detail(c, tenant=_WID)
+        assert r.status_code == 200, r.text
+        body = r.json()
+
+    # The gap this route closes — stated as a fact about the LIST.
+    assert "schema" not in row, (
+        "the listing already carries the schema; this route has no gap to close"
+    )
+
+    # …and closed: the thing a reviewer is actually deciding about.
+    assert body["schema"] == _SCHEMA, body
+    assert body["traits"] == ["auditable"], body
+
+    # One vocabulary, not two: every summary field, same value, same name.
+    summary = set(RM.AuthoredKindSummary.model_fields)
+    assert {k: body[k] for k in summary} == {k: row[k] for k in summary}, body
+    # And the detail is exactly the summary plus those two — a third field here
+    # is a third vocabulary for the same document.
+    assert set(body) == summary | {"schema", "traits"}, sorted(body)
+
+    # The audit half is real, not defaulted: an authored document names its
+    # proposer and its birth, and a route that returned the model's defaults
+    # for everything would satisfy the equality above on two empty dicts.
+    assert body["kind"] == "Contrato", body
+    assert body["approved"] is False, body
+    assert body["proposed_by"] == "rest:local", body
+    assert body["created_at"], body
+
+
+def test_a_neighbours_kind_is_a_404_that_hands_over_no_schema(dna_dir):
+    """Strictly more data than the listing ⇒ at least as tight a filter.
+
+    B authors ``Contrato``; A authors NOTHING, so a refusal here cannot be an
+    accident of finding the caller's own document. Without the ownership filter
+    the scope holds exactly one ``…--Contrato``, the Kind half is all the URL
+    carries, and A gets back B's namespace AND B's JSON Schema — the design of
+    the workspace's data model, which is a great deal more than the identity
+    strings the listing leaked before it was filtered."""
+    with _client(dna_dir) as c:
+        b = _author(c, tenant=_OTHER_WID, schema=_OTHER_SCHEMA)
+        assert b.status_code == 201, b.text
+
+        r = _detail(c, tenant=_WID)
+        assert r.status_code == 404, (
+            f"workspace {_WID} read a Kind authored by {_OTHER_WID}: "
+            f"{r.status_code} {r.text}"
+        )
+        # Not Starlette's routing 404 — the handler's own, naming what it could
+        # not find. A bare status assertion here would have passed before the
+        # route existed at all.
+        assert "Contrato" in r.json()["detail"], r.text
+        # The payload, greppable in the RAW body: a leak through any key, or
+        # inside the refusal's own message, is still a leak.
+        assert _SECRET not in r.text, r.text
+        assert b.json()["namespace"] not in r.text, r.text
+
+
+def test_a_stranger_gets_the_same_answer_as_a_nonexistent_kind(dna_dir):
+    """The approval door's decision, inherited exactly: 404, never 403.
+
+    "It exists but is not yours" IS the probe — a workspace could enumerate
+    what its neighbours are authoring one Kind name at a time without ever
+    reading a document. So the two answers must be indistinguishable, and this
+    compares the whole refusal rather than the status alone: a 404 whose detail
+    said "not yours" would satisfy a status-only test and give the game away in
+    the body."""
+    with _client(dna_dir) as c:
+        assert _author(c, tenant=_OTHER_WID, schema=_OTHER_SCHEMA).status_code == 201
+
+        stranger = _detail(c, "Contrato", tenant=_WID)
+        absent = _detail(c, "NuncaExistiu", tenant=_WID)
+
+    assert (stranger.status_code, absent.status_code) == (404, 404), (
+        stranger.text, absent.text,
+    )
+    # FIRST, the anti-tautology. Without these two lines this test PASSED
+    # before the route existed at all: both calls got Starlette's routing 404,
+    # ``{"detail": "Not Found"}``, and two identical strings are trivially
+    # indistinguishable. Requiring each refusal to name the Kind it could not
+    # find is what makes the comparison below a statement about the handler.
+    assert "Contrato" in stranger.json()["detail"], stranger.text
+    assert "NuncaExistiu" in absent.json()["detail"], absent.text
+    # Modulo the Kind name the caller itself supplied, the two refusals must be
+    # the same string.
+    assert (stranger.json()["detail"].replace("Contrato", "<kind>")
+            == absent.json()["detail"].replace("NuncaExistiu", "<kind>")), (
+        f"the refusal distinguishes a neighbour's Kind from a nonexistent one, "
+        f"which is the probe:\n  stranger: {stranger.json()['detail']}\n"
+        f"  absent:   {absent.json()['detail']}"
+    )
+
+
+def test_an_unattributed_request_is_not_filtered(dna_dir):
+    """No resolved tenant ⇒ no filter — the ``--auth none`` self-host and the
+    explicit operator ``scope=`` call, the same hinge
+    ``NamespaceOwnershipGate`` uses for an unattributed write.
+
+    A filter that unconditionally demanded ownership would answer every
+    self-hoster 404 for a Kind sitting right there in their own store."""
+    with _client(dna_dir) as c:
+        authored = _author(c, tenant=_WID)
+        assert authored.status_code == 201, authored.text
+
+        r = _detail(c, scope=_SCOPE)
+        assert r.status_code == 200, r.text
+        assert r.json()["name"] == authored.json()["name"], r.json()
+        assert r.json()["schema"] == _SCHEMA, r.json()
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [
+        pytest.param("contrato", id="lowercase-initial"),
+        pytest.param("1Contrato", id="leading-digit"),
+        pytest.param("C" * 65, id="too-long"),
+        pytest.param("Contrato--Extra", id="ambiguous-name-separator"),
+        pytest.param("a.b", id="dotted"),
+    ],
+)
+def test_a_kind_name_that_is_not_an_identifier_is_refused_on_the_read_door(
+    dna_dir, bad,
+):
+    """``kind`` is a path-shaped input on this door too — and the guard has to
+    be the SHARED one, not a third copy that drifts from the other two.
+
+    Asserted by byte-equality with the approval door's refusal for the same
+    name: two independent implementations agreeing character for character is
+    not something a copy survives. (Only names that are a single path segment
+    appear here — see the section comment for why the encoded traversal never
+    reaches either handler.)"""
+    with _client(dna_dir) as c:
+        r = _detail(c, bad, tenant=_WID)
+        assert r.status_code == 400, r.text
+        assert "CamelCase" in r.json()["detail"], r.text
+
+        twin = c.post(f"/v1/kinds/{bad}/approve", params={"tenant": _WID})
+        assert twin.status_code == 400, twin.text
+        assert r.json()["detail"] == twin.json()["detail"], (
+            f"the read door refuses {bad!r} differently from the approval "
+            f"door — that is a second copy of the validator:\n"
+            f"  read:    {r.json()['detail']}\n  approve: {twin.json()['detail']}"
+        )
+
+
+def test_an_unreadable_registry_refuses_the_read_rather_than_answering(
+    dna_dir, monkeypatch,
+):
+    """Fail CLOSED — 503, never the unfiltered answer.
+
+    Ownership is decided from the ``KindNamespace`` claim registry, and without
+    it a stranger cannot be told from an owner. For a route that hands over the
+    schema, "degrade to answering anyway" is the one outcome that is not
+    acceptable. Injected at the seam (``kind_namespaces`` raising something
+    that is NOT a missing file) because on a filesystem store the honest
+    ``FileNotFoundError`` hides the gap that only Postgres shows."""
+    from dna.kernel import Kernel
+
+    async def boom(self, *a, **kw):
+        raise RuntimeError("connection reset by peer")
+
+    with _client(dna_dir) as c:
+        assert _author(c, tenant=_WID).status_code == 201
+
+    monkeypatch.setattr(Kernel, "kind_namespaces", boom, raising=True)
+
+    with _client(dna_dir, raise_server_exceptions=False) as c:
+        r = _detail(c, tenant=_WID)
+        assert r.status_code == 503, (
+            f"an unreadable registry answered {r.status_code}; the one outcome "
+            f"that is not acceptable is answering with the document: {r.text}"
+        )
+        detail = r.json()["detail"]
+        assert "connection reset by peer" in detail, detail
+        assert re.search(r"provision", detail, re.I), detail
+        assert "titulo" not in r.text, r.text

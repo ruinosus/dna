@@ -344,6 +344,136 @@
         "title": "AuthorKindResponse",
         "type": "object"
       },
+      "AuthoredKindDetail": {
+        "description": "``GET /v1/kinds/{kind}`` — one authored Kind, in full.\n\nSUBCLASSES the summary rather than restating it: the roster and the single\nread describe the SAME document, and two independent field lists are two\nvocabularies for one thing — the kind of drift that reads, to the human\ndoing the review, as two different documents.\n\nWhat it adds is what the roster deliberately withholds. ``schema`` is the\nreason the route exists: registration is what confers schema validation and\nstorage routing, so \"should this take effect?\" is a question ABOUT the\nschema, and a reviewer who cannot see it is not reviewing anything.\n``traits`` travels with it because it is the other half of what the\nauthoring door stored and the other half of what would take effect.\n\n``schema`` is ``null``, never ``{}``, for a document that stored none —\n\"there is no schema here\" and \"the schema is the empty object\" are\ndifferent facts about what would be conferred.",
+        "properties": {
+          "api_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Api Version"
+          },
+          "approved": {
+            "default": false,
+            "title": "Approved",
+            "type": "boolean"
+          },
+          "approved_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "approved_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved By"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "namespace": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Namespace"
+          },
+          "proposed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposed At"
+          },
+          "proposed_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposed By"
+          },
+          "schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Schema"
+          },
+          "traits": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Traits",
+            "type": "array"
+          }
+        },
+        "title": "AuthoredKindDetail",
+        "type": "object"
+      },
       "AuthoredKindSummary": {
         "description": "One ``KindDefinition`` document as the audit surface sees it — BOTH\nactors, so the reviewer deciding whether to confer effect can see who asked\nfor it without leaving the list.",
         "properties": {
@@ -5505,6 +5635,94 @@
           }
         },
         "summary": "Author Kind"
+      }
+    },
+    "/v1/kinds/{kind}": {
+      "get": {
+        "description": "Read ONE authored Kind in full — the listing's row PLUS the\n``schema`` and the ``traits``, i.e. everything a human needs to answer\n\"should this take effect?\".\n\nFiltered to the CALLER exactly as the listing is, and harder-edged\nbecause it carries more: a Kind authored by another workspace in a\nshared scope is a **404**, the same answer a Kind nobody ever authored\ngets — \"it exists but is not yours\" would hand a stranger a probe for\nwhat its neighbours are authoring, and this door would answer that probe\nwith their data model. A request that resolves NO workspace\n(``--auth none`` self-host, an explicit operator ``scope=``) is not\nfiltered, the same hinge the namespace gate uses for an unattributed\nwrite.\n\n400 for a ``kind`` that is not a CamelCase identifier (the same shared\nguard the authoring and approval doors use — it is a path segment here)\nor for a Kind the caller declared under two of its own namespaces at\nonce; 403 for a namespace two claims give to different owners; 503 when\nthe claim registry cannot be read. None of them degrades to answering\nwith the document.",
+        "operationId": "get_authored_kind_v1_kinds__kind__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scope"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tenant"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthoredKindDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Authored Kind"
       }
     },
     "/v1/kinds/{kind}/approve": {

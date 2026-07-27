@@ -292,6 +292,34 @@ export class DnaClient {
     );
   }
 
+  /**
+   * Read ONE authored Kind in full — the listing's row PLUS the `schema` and
+   * the `traits`.
+   *
+   * The roster (`listAuthoredKinds`) deliberately omits the schema, which left
+   * a reviewer unable to see what they would be conferring effect ON.
+   * Registration is what gives a Kind schema validation and storage routing, so
+   * "should this take effect?" is a question about the schema; this is the call
+   * that answers it.
+   *
+   * Filtered to the CALLER: a Kind authored by another workspace in a shared
+   * scope is a **404**, the same answer a Kind nobody ever authored gets — "it
+   * exists but is not yours" would be a probe for what the neighbours are
+   * authoring, and this call would answer that probe with their data model.
+   *
+   * 400 for a `kind` that is not a CamelCase identifier, or a Kind declared
+   * under two of the caller's own namespaces at once; 404 when no such Kind is
+   * the caller's; 403 for a namespace two claims give to different owners; 503
+   * when the namespace registry cannot be read.
+   */
+  async getAuthoredKind(kind: string, query?: ScopeTenant) {
+    return this.unwrap(
+      await this.raw.GET("/v1/kinds/{kind}", {
+        params: { path: { kind }, query: this.q(query) },
+      }),
+    );
+  }
+
   // ── definitions (bundle entries — fork a bundle-file, plane B) ───────────
 
   /**

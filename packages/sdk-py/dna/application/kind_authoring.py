@@ -41,6 +41,7 @@ __all__ = [
     "NamespaceRegistryUnreadable",
     "approve_kind_impl",
     "author_kind_impl",
+    "get_authored_kind_impl",
     "kind_document_name",
     "list_authored_kinds_impl",
 ]
@@ -349,8 +350,24 @@ async def _owns(live: Any, tenant: str) -> Any:
     return owns
 
 
+#: The verb-specific tail of the "no such Kind here" refusal. The refusal is
+#: the SAME sentence for a Kind that does not exist and for a neighbour's — see
+#: the ownership paragraph below — so the only thing that may vary is which act
+#: was refused, never which of the two facts caused it.
+_NOT_FOUND_TAIL = {
+    "approve": (
+        "— approval acts on a document that already exists, and creates none"
+    ),
+    "read": (
+        "— an authored Kind is readable by the workspace that authored it, and "
+        "the reader is not told which of the two it is"
+    ),
+}
+
+
 async def _authored_document_name(
-    live: Any, *, scope: str, kind: str, tenant: str,
+    live: Any, *, scope: str, kind: str, tenant: str | None,
+    verb: str = "approve",
 ) -> tuple[str, str]:
     """Find the CALLER's authored document for ``kind`` in ``scope`` →
     ``(name, namespace)``.
@@ -383,12 +400,29 @@ async def _authored_document_name(
     Kind is simply not there, and a distinct "it exists but is not yours" would
     hand a stranger a probe for what its neighbours are authoring.
 
+    **No resolved tenant ⇒ no filter**, the same hinge
+    :class:`~dna.kernel.write.namespace_gate.NamespaceOwnershipGate` uses for an
+    unattributed write and :func:`_authored_kind_visibility` uses for the
+    listing: ``--auth none`` self-host and an explicit operator ``scope=`` call
+    resolve no workspace, so there is nobody to own anything and a filter that
+    demanded ownership would answer every self-hoster "not found" for a document
+    sitting in their own store. It rests on the same standing invariant — a
+    hosted face never issues an unattributed request on a user's behalf. The
+    APPROVAL caller never reaches this branch: ``approve_kind_impl`` refuses a
+    missing tenant before it calls here.
+
+    ``verb`` selects only the tail of the not-found message
+    (:data:`_NOT_FOUND_TAIL`) — which ACT was refused. It must never encode
+    which FACT caused the refusal, or the message becomes the probe the drop
+    above exists to close.
+
     Raises :class:`AuthoredKindNotFound` when nothing the caller owns matches,
     and ``ValueError`` when the CALLER owns two namespaces that both declare the
     Kind — an ambiguity a reviewer must resolve by name, never one this function
     may pick a winner for.
     """
-    owns = await _owns(live, tenant)
+    attributed = bool((tenant or "").strip())
+    owns = await _owns(live, tenant) if attributed else None
     matches: list[tuple[str, str]] = []
     async for raw in live.kernel.query(scope, _KIND, tenant=tenant):
         if not isinstance(raw, dict):
@@ -397,19 +431,24 @@ async def _authored_document_name(
         if _NAME_SEP not in name:
             continue
         namespace, kind_half = name.rsplit(_NAME_SEP, 1)
-        if kind_half == kind and namespace and owns(namespace):
+        if kind_half == kind and namespace and (owns is None or owns(namespace)):
             matches.append((name, namespace))
+    under = (
+        f" under a namespace workspace {tenant!r} owns" if attributed else ""
+    )
     if not matches:
         raise AuthoredKindNotFound(
-            f"no authored Kind {kind!r} in scope {scope!r} under a namespace "
-            f"workspace {tenant!r} owns — approval acts on a document that "
-            f"already exists, and creates none"
+            f"no authored Kind {kind!r} in scope {scope!r}{under} "
+            f"{_NOT_FOUND_TAIL.get(verb, _NOT_FOUND_TAIL['approve'])}"
         )
     if len(matches) > 1:
+        owned = (
+            f"namespaces that workspace {tenant!r} owns in scope {scope!r}"
+            if attributed else f"namespaces in scope {scope!r}"
+        )
         raise ValueError(
-            f"Kind {kind!r} is declared under {len(matches)} namespaces that "
-            f"workspace {tenant!r} owns in scope {scope!r} "
-            f"({', '.join(sorted(n for _, n in matches))}) — approve it "
+            f"Kind {kind!r} is declared under {len(matches)} {owned} "
+            f"({', '.join(sorted(n for _, n in matches))}) — address it "
             f"by document name, not by Kind name"
         )
     return matches[0]
@@ -561,6 +600,36 @@ async def _authored_kind_visibility(
     return visible
 
 
+def _authored_kind_summary(name: Any, spec: dict[str, Any]) -> dict[str, Any]:
+    """The audit projection of one ``KindDefinition`` — ONE function, because
+    the listing and the single-Kind read describe the same document.
+
+    Two projections would be two vocabularies for one thing, and the drift
+    lands on the reviewer: a field renamed in the roster but not in the detail
+    (or given a different null convention) reads as two different documents.
+    The detail route adds ``schema``/``traits`` ON TOP of this — it does not
+    re-derive any field this returns."""
+    approved_by = str(spec.get("approved_by") or "").strip()
+    return {
+        "name": name,
+        "kind": spec.get("target_kind"),
+        "api_version": spec.get("target_api_version"),
+        "namespace": spec.get("origin"),
+        "approved": bool(approved_by),
+        # BOTH actors — a reviewer reading this is deciding whether to confer
+        # effect, and "who proposed this" is the first thing that decision
+        # needs. `proposed_by` is null for every document authored before the
+        # field existed, and for a door that could not identify its caller; null
+        # is the honest answer in both cases and is not the same fact as "the
+        # two actors coincide".
+        "proposed_by": (str(spec.get("proposed_by") or "").strip() or None),
+        "proposed_at": spec.get("proposed_at"),
+        "approved_by": approved_by or None,
+        "approved_at": spec.get("approved_at"),
+        "created_at": spec.get("created_at"),
+    }
+
+
 async def list_authored_kinds_impl(
     live: Any, *, tenant: str | None = None, scope: str | None = None,
 ) -> dict[str, Any]:
@@ -603,23 +672,77 @@ async def list_authored_kinds_impl(
         name = meta.get("name") or raw.get("name")
         if not visible(str(name or "")):
             continue
-        approved_by = str(spec.get("approved_by") or "").strip()
-        kinds.append({
-            "name": name,
-            "kind": spec.get("target_kind"),
-            "api_version": spec.get("target_api_version"),
-            "namespace": spec.get("origin"),
-            "approved": bool(approved_by),
-            # BOTH actors — a reviewer reading this list is deciding whether to
-            # confer effect, and "who proposed this" is the first thing that
-            # decision needs. `proposed_by` is null for every document authored
-            # before the field existed, and for a door that could not identify
-            # its caller; null is the honest answer in both cases and is not the
-            # same fact as "the two actors coincide".
-            "proposed_by": (str(spec.get("proposed_by") or "").strip() or None),
-            "proposed_at": spec.get("proposed_at"),
-            "approved_by": approved_by or None,
-            "approved_at": spec.get("approved_at"),
-            "created_at": spec.get("created_at"),
-        })
+        kinds.append(_authored_kind_summary(name, spec))
     return {"scope": sc, "kinds": kinds}
+
+
+async def get_authored_kind_impl(
+    live: Any, *, kind: str, tenant: str | None = None, scope: str | None = None,
+) -> dict[str, Any]:
+    """ONE authored Kind, in full — the summary the listing publishes PLUS the
+    ``schema`` and the ``traits``.
+
+    The listing deliberately projects ten summary fields and NOT ``spec.schema``
+    (it is a roster, and a roster that inlined every JSON Schema would be
+    unreadable), which left a reviewer deciding whether to confer effect unable
+    to see what they would be conferring it on. Registration is what gives a
+    Kind schema validation and storage routing, so "should this take effect?" is
+    a question about the schema; this is the route that answers it.
+
+    The shape is the listing's own (:func:`_authored_kind_summary`), literally
+    the same projection function, plus the two stored fields it omits. Nothing
+    is synthesized: ``schema`` and ``traits`` are read off the document exactly
+    as :func:`author_kind_impl` wrote them, and a document authored before
+    ``traits`` existed reads back ``[]`` rather than a guess.
+
+    **Strictly more data than the listing, so at least as tight a filter.**
+    Ownership is resolved by :func:`_authored_document_name` — the same
+    ``owner_of`` walk over the same ``KindNamespace`` claims that
+    :class:`~dna.kernel.write.namespace_gate.NamespaceOwnershipGate` decides
+    WRITES with — and a Kind the caller does not own is dropped, so a stranger's
+    Kind is a :class:`AuthoredKindNotFound` indistinguishable from a Kind nobody
+    ever authored. That is the approval door's decision, inherited rather than
+    re-argued: "it exists but is not yours" is a probe for what the neighbours
+    are authoring, and this door would answer that probe with their data model.
+
+    An unattributed request (no resolved tenant) is NOT filtered, for the same
+    reason the listing's is not — see :func:`_authored_document_name`.
+
+    Raises ``ValueError`` (→ 400) for a Kind name that is not a CamelCase
+    identifier — ``kind`` arrives from the URL PATH and the guard is the shared
+    :func:`_checked_kind_name`, not a copy — or for a Kind the caller declared
+    under two of its own namespaces; :class:`AuthoredKindNotFound` (→ 404);
+    :class:`NamespaceRegistryUnreadable` (→ 503) and ``NamespaceOwnershipError``
+    (→ 403) when ownership cannot be decided. None of them degrades to answering
+    with the document.
+    """
+    kind = _checked_kind_name(kind, verb="read")
+    sc = scope or live.default_scope(tenant)
+    name, _namespace = await _authored_document_name(
+        live, scope=sc, kind=kind, tenant=tenant, verb="read",
+    )
+    raw = await live.kernel.get_document(sc, _KIND, name)
+    if not isinstance(raw, dict) or not raw:
+        # The query above found the name, so this is a store that lost the
+        # document between two reads. Same verdict the approval door gives for
+        # the same race: there is nothing here to read.
+        raise AuthoredKindNotFound(
+            f"the authored Kind {kind!r} ({name!r}) is listed in scope {sc!r} "
+            f"but its document could not be read"
+        )
+    spec = raw.get("spec") or {}
+    schema = spec.get("schema")
+    return {
+        **_authored_kind_summary(name, spec),
+        # The point of the route. ``None`` rather than ``{}`` for a document
+        # that stored no schema (or stored a non-object where one belongs):
+        # "there is no schema here" and "the schema is the empty object" are
+        # different facts, and a reviewer must not be shown the second when the
+        # first is true.
+        "schema": schema if isinstance(schema, dict) else None,
+        # Stored as a list by the authoring door and read back as one. Absent on
+        # a document that predates the field — ``[]`` is what the authoring door
+        # itself writes for "no traits", so it is the document's own vocabulary
+        # for the fact, not an invention of this projection.
+        "traits": [str(t) for t in (spec.get("traits") or [])],
+    }
