@@ -112,6 +112,33 @@ class InvalidScopeName(KernelRefusal, ValueError):
     """
 
 
+class PathEscapesStoreRoot(KernelRefusal, ValueError):
+    """A path a store adapter built from caller-supplied segments resolved
+    OUTSIDE that adapter's base directory.
+
+    The SECOND layer, deliberately redundant with :class:`InvalidDocumentName`
+    / :class:`InvalidScopeName`. Those guard the kernel facade — the primary
+    seam, because it is the door every writer and reader goes through and it
+    can name WHICH input was wrong. This one guards the filesystem adapter
+    itself, which builds ``<base>/<scope>/<container>/<name>/<…>`` and until now
+    trusted every segment it was handed. The kernel guard cannot help a caller
+    that does not go through the kernel, and there already is one
+    (``dna.kernel.source.sync`` calls ``save_document`` directly — benignly
+    today, since its names come from the source being copied rather than from a
+    request), plus the public conformance kit, which drives adapters on purpose.
+
+    Both layers are load-bearing and NEITHER is dead code: delete the kernel
+    guard and a traversing name reaches disk-adjacent code before anything
+    notices; delete this one and the next writer that reaches the adapter
+    directly re-opens the hole. If a reviewer is about to remove one as
+    redundant — that redundancy IS the design.
+
+    Reported as a ``KernelRefusal`` (so every face relays it as an honest
+    denial) and a ``ValueError`` (so a face that predates the marker base still
+    reports it), exactly like its two kernel-side siblings.
+    """
+
+
 #: Longest path component the kernel will hand an adapter, in UTF-8 BYTES.
 #:
 #: ``NAME_MAX`` is 255 bytes on every filesystem DNA writes to, and the

@@ -31,6 +31,7 @@ stand-ins of the exact same shape — the kernel names no deployment.)
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
 
 import pytest
 
@@ -423,3 +424,173 @@ async def test_a_safe_bundle_entry_write_still_lands_inside(tmp_path):
     written = [p for p in store.rglob("AGENT.md")]
     assert written, "the safe bundle write must still land"
     assert all(store in p.parents for p in written)
+
+
+# ── the READ half of the same door ──────────────────────────────────────────
+#
+# ``GET /v1/definitions/{kind}/{name}/entries/{entry:path}`` reaches
+# ``fetch_bundle_entry``; ``list_bundle_entries`` backs the fork/reconcile
+# surfaces. Both take a caller ``name`` into ``_bundle_root`` exactly as the
+# write twin did, and the adapter's traversal guard checks ``entry`` RELATIVE
+# TO that root — so a traversing name moves the anchor and the entry check
+# passes. Measured before the guard existed, against a real filesystem source:
+#
+#     store root  : <sandbox>/outer/store
+#     bundle root : <sandbox>/ESCAPED           (name='../../../../ESCAPED')
+#     fetch_bundle_entry RETURNED 38 bytes — b'TOP SECRET \xe2\x80\xa6'
+#     list_bundle_entries RETURNED ['AGENT.md', 'nested/other.txt']
+#
+# i.e. an actual READ of a file two levels above the store root, plus a
+# directory listing of it. The geometry matters and is asserted below rather
+# than assumed: `<store>/<scope>/agents` is three levels under the sandbox, so
+# four ``..`` land ON the sandbox — a shorter traversal would be absorbed by
+# the leading segments and stay INSIDE the store, proving nothing.
+
+def _escape_fixture(tmp_path):
+    """A store with a secret file OUTSIDE its root, and the traversing name
+    that reaches it. Asserts the geometry actually escapes."""
+    k, store = _fs_kernel(tmp_path)
+    secret = tmp_path / "ESCAPED"
+    secret.mkdir()
+    (secret / "AGENT.md").write_text("TOP SECRET")
+    (secret / "nested").mkdir()
+    (secret / "nested" / "other.txt").write_text("also outside")
+
+    evil = "../../../../ESCAPED"
+    # Computed the way the adapter builds it — NOT via ``_bundle_root``, which
+    # now carries its own containment check (the second layer) and would refuse
+    # before it could show us the geometry.
+    root = (store / "test-mod" / "agents" / evil).resolve()
+    assert root == secret, (
+        f"the traversal must actually reach outside the store: {root} != {secret}"
+    )
+    with pytest.raises(ValueError):
+        root.relative_to(store)  # i.e. NOT under the store root
+    return k, store, secret, evil
+
+
+@pytest.mark.asyncio
+async def test_no_bundle_entry_read_escapes_the_store_root(tmp_path):
+    k, _store, secret, evil = _escape_fixture(tmp_path)
+
+    with pytest.raises(InvalidDocumentName):
+        k.fetch_bundle_entry("test-mod", "Agent", evil, "AGENT.md")
+    with pytest.raises(InvalidDocumentName):
+        await k.fetch_bundle_entry_async("test-mod", "Agent", evil, "AGENT.md")
+
+    # The refusal is not the proof — the bytes staying unread are. Before the
+    # guard both calls returned the file's content.
+    assert (secret / "AGENT.md").read_text() == "TOP SECRET"
+
+
+@pytest.mark.asyncio
+async def test_no_bundle_listing_escapes_the_store_root(tmp_path):
+    """A listing is a smaller leak than a read, and still a leak: it enumerated
+    every file under an arbitrary directory outside the store."""
+    k, _store, _secret, evil = _escape_fixture(tmp_path)
+
+    with pytest.raises(InvalidDocumentName):
+        k.list_bundle_entries("test-mod", "Agent", evil)
+    with pytest.raises(InvalidDocumentName):
+        await k.list_bundle_entries_async("test-mod", "Agent", evil)
+
+
+@pytest.mark.asyncio
+async def test_bundle_reads_refuse_an_unsafe_scope(tmp_path):
+    """``scope`` builds the same anchor and escapes the same way — measured at
+    ``<sandbox>/S2/agents/victim`` with ``scope='../../S2'``, which returned
+    13 bytes of content from outside the store."""
+    k, store = _fs_kernel(tmp_path)
+    # Populate the escape target, so that WITHOUT the guard this is a real read
+    # and not merely a FileNotFoundError that would mask a missing refusal.
+    victim = tmp_path / "S2" / "agents" / "victim"
+    victim.mkdir(parents=True)
+    (victim / "AGENT.md").write_text("SCOPE ESCAPE")
+    root = (store / "../../S2" / "agents" / "victim").resolve()
+    assert root == victim, f"the scope traversal must reach {victim}, got {root}"
+    with pytest.raises(ValueError):
+        root.relative_to(store)  # i.e. NOT under the store root
+
+    with pytest.raises(InvalidScopeName):
+        k.fetch_bundle_entry("../../S2", "Agent", "victim", "AGENT.md")
+    with pytest.raises(InvalidScopeName):
+        await k.fetch_bundle_entry_async("../../S2", "Agent", "victim", "AGENT.md")
+    with pytest.raises(InvalidScopeName):
+        k.list_bundle_entries("../../S2", "Agent", "victim")
+    with pytest.raises(InvalidScopeName):
+        await k.list_bundle_entries_async("../../S2", "Agent", "victim")
+
+
+@pytest.mark.asyncio
+async def test_a_safe_bundle_entry_read_still_returns_the_bytes(tmp_path):
+    """The control for the read door: refusing the escape must not refuse the
+    read. A guard that refused everything would pass every test above."""
+    k, store = _fs_kernel(tmp_path)
+    await k.write_bundle_entry_async(
+        "test-mod", "Agent", "t-1a2b3c.node.internal--Overlay", "AGENT.md", "# hello",
+    )
+    assert k.fetch_bundle_entry(
+        "test-mod", "Agent", "t-1a2b3c.node.internal--Overlay", "AGENT.md",
+    ) == b"# hello"
+    assert k.list_bundle_entries(
+        "test-mod", "Agent", "t-1a2b3c.node.internal--Overlay",
+    ) == ["AGENT.md"]
+    assert await k.fetch_bundle_entry_async(
+        "test-mod", "Agent", "t-1a2b3c.node.internal--Overlay", "AGENT.md",
+    ) == b"# hello"
+    assert await k.list_bundle_entries_async(
+        "test-mod", "Agent", "t-1a2b3c.node.internal--Overlay",
+    ) == ["AGENT.md"]
+    assert list(store.rglob("AGENT.md")), "the control must have written something"
+
+
+def test_the_bundle_read_facades_document_the_refusal():
+    from dna.kernel import Kernel
+
+    for method in (Kernel.fetch_bundle_entry, Kernel.list_bundle_entries):
+        doc = method.__doc__ or ""
+        assert "InvalidDocumentName" in doc, method.__name__
+        assert "InvalidScopeName" in doc, method.__name__
+
+
+# ── the two path-COMPUTING facades found by the sweep ───────────────────────
+#
+# Neither writes bytes, which is why the first wave left them alone. Both
+# nonetheless take the caller's ``name`` into a path:
+#   - ``preview_document`` → ``_target_locator`` → ``_target_exists`` runs a
+#     REAL ``Path.exists()`` at ``<base_dir>/<scope>/<container>/<name>``, and
+#     returns a ``target`` the caller renders.
+#   - ``serialize_document`` returns ``relativePath`` values BUILT from
+#     ``name``; the payload exists so a caller can write those paths out.
+# Preview is the dry run of the write, so it refuses what the write refuses —
+# otherwise it advertises a target ``write_document`` would reject.
+
+@pytest.mark.asyncio
+async def test_preview_document_refuses_a_traversing_name(tmp_path):
+    k, store = _fs_kernel(tmp_path)
+    raw = {"apiVersion": "helix.dna.dev/v1", "kind": "Agent",
+           "metadata": {"name": "x"}, "spec": {"model": "gpt-4o"}}
+
+    with pytest.raises(InvalidDocumentName):
+        await k.preview_document("test-mod", "Agent", "../../../../ESCAPED", raw)
+    with pytest.raises(InvalidScopeName):
+        await k.preview_document("../../evil", "Agent", "a-agent", raw)
+
+    # The control: the ordinary preview still resolves, and inside the store.
+    result = await k.preview_document("test-mod", "Agent", "a-agent", raw)
+    assert store in Path(result.target).parents
+
+
+def test_serialize_document_refuses_a_traversing_name(tmp_path):
+    k, _ = _fs_kernel(tmp_path)
+    raw = {"apiVersion": "helix.dna.dev/v1", "kind": "Agent",
+           "metadata": {"name": "x"}, "spec": {"model": "gpt-4o"}}
+
+    with pytest.raises(InvalidDocumentName):
+        k.serialize_document("test-mod", "Agent", "../../../../ESCAPED", raw)
+    with pytest.raises(InvalidScopeName):
+        k.serialize_document("../../evil", "Agent", "a-agent", raw)
+
+    files = k.serialize_document("test-mod", "Agent", "a-agent", raw)["files"]
+    assert files, "the control must still serialize"
+    assert all(".." not in f["relativePath"] for f in files)

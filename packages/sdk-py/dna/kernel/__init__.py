@@ -1313,9 +1313,16 @@ class Kernel:
     ) -> PreviewResult:
         """Pure preview — returns target, serialized files, exists_already.
 
-        Does NOT touch disk. ``exists_already`` is a UI hint so callers
-        can render "create" vs "overwrite" affordances.
+        Writes nothing. ``exists_already`` is a UI hint so callers can render
+        "create" vs "overwrite" affordances — but it is a real ``Path.exists()``
+        probe at ``<base_dir>/<scope>/<container>/<name>``, so an unguarded
+        traversing name would answer "does this arbitrary path exist?" and
+        would render a ``target`` outside the store that ``write_document``
+        would then refuse. Preview is the dry run of the write; it refuses what
+        the write refuses (``InvalidDocumentName`` / ``InvalidScopeName``).
         """
+        validate_scope_name(scope)
+        validate_document_name(name)
         payload = self.serialize_document(scope, kind, name, raw)
         _api_version = raw.get("apiVersion") if isinstance(raw, dict) else None
         target = self._target_locator(scope, kind, name, api_version=_api_version)
@@ -1909,9 +1916,20 @@ class Kernel:
             implement bundle entry fetch (acceptable until SQL adapters
             ship the method).
           - ``FileNotFoundError`` if the bundle or entry is absent.
+          - ``InvalidDocumentName`` — name is not a single, safe path component.
+          - ``InvalidScopeName`` — scope is not a single, safe path component.
 
         Delegates to ``self._bundleio`` (s-kernel-decompose-god-object).
         """
+        # The READ half of the same door the write guard closed, and it is live
+        # on ``GET /v1/definitions/{kind}/{name}/entries/{entry:path}`` with
+        # ``name`` as a raw URL path parameter. The adapter guards ``entry``
+        # RELATIVE TO the bundle root — but ``scope``/``name`` are what BUILD
+        # that root, so a traversing name moves the anchor and the entry check
+        # still passes. Measured before the guard: a real read of a file two
+        # levels ABOVE the store root, and a listing of everything beside it.
+        validate_scope_name(scope)
+        validate_document_name(name)
         return self._bundleio.fetch_sync(scope, kind, name, entry, tenant=tenant)
 
     async def fetch_bundle_entry_async(
@@ -1925,6 +1943,8 @@ class Kernel:
     ) -> bytes:
         """Async variant of `fetch_bundle_entry`. Delegates to
         ``self._bundleio`` (s-kernel-decompose-god-object)."""
+        validate_scope_name(scope)
+        validate_document_name(name)
         return await self._bundleio.fetch_async(scope, kind, name, entry, tenant=tenant)
 
     async def write_bundle_entry_async(
@@ -2000,9 +2020,16 @@ class Kernel:
           - ``ValueError`` if the kind is not registered.
           - ``NotImplementedError`` if the source adapter doesn't
             implement ``BundleEntryReadable.list_bundle_entries``.
+          - ``InvalidDocumentName`` — name is not a single, safe path component.
+          - ``InvalidScopeName`` — scope is not a single, safe path component.
 
         Delegates to ``self._bundleio`` (s-kernel-decompose-god-object).
         """
+        # Same anchor, same escape as ``fetch_bundle_entry`` — a traversing
+        # name enumerated every file under an arbitrary directory outside the
+        # store. A smaller leak than a read, and still a leak.
+        validate_scope_name(scope)
+        validate_document_name(name)
         return self._bundleio.list_sync(
             scope, kind, name, tenant=tenant, only_tenant=only_tenant,
         )
@@ -2018,6 +2045,8 @@ class Kernel:
     ) -> list[str]:
         """Async variant of `list_bundle_entries`. Delegates to
         ``self._bundleio`` (s-kernel-decompose-god-object)."""
+        validate_scope_name(scope)
+        validate_document_name(name)
         return await self._bundleio.list_async(
             scope, kind, name, tenant=tenant, only_tenant=only_tenant,
         )
@@ -2136,7 +2165,17 @@ class Kernel:
 
     def serialize_document(self, scope: str, kind: str, name: str, raw: dict) -> dict:
         """Serialize a document to files without writing. Delegates to
-        ``self._bundleio`` (s-kernel-decompose-god-object)."""
+        ``self._bundleio`` (s-kernel-decompose-god-object).
+
+        Raises ``InvalidDocumentName`` / ``InvalidScopeName``: it writes no
+        bytes itself, but every ``relativePath`` it returns is BUILT from
+        ``name`` (``<container>/<name>.yaml``, ``<container>/<name>/<entry>``),
+        and the whole point of the payload is that a caller writes those paths
+        out. Handing back a relative path that traverses would move the escape
+        one frame up the stack instead of closing it.
+        """
+        validate_scope_name(scope)
+        validate_document_name(name)
         return self._bundleio.serialize(scope, kind, name, raw)
 
     # -- Instance creation ----------------------------------------------------

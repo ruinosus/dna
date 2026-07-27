@@ -52,6 +52,54 @@ class FilesystemSource(SourcePort):
     def __init__(self, base_dir: str | Path) -> None:
         self.base_dir = Path(base_dir).resolve()
 
+    def _contained(self, path: Path) -> Path:
+        """Resolve ``path`` and refuse it unless it stays under ``base_dir``.
+
+        BELT AND BRACES — deliberately redundant with the kernel guard
+        (``validate_document_name`` / ``validate_scope_name`` at
+        ``Kernel.write_document`` / ``fetch_bundle_entry`` / …), and the
+        redundancy is the point. **Do not delete either layer as duplicated
+        work.** The kernel guard is the PRIMARY seam: it is the door every
+        application-layer writer goes through and it can name which input was
+        wrong. This one exists because the adapter is reachable WITHOUT the
+        kernel — ``dna.kernel.source.sync`` calls ``save_document`` directly
+        today (benignly: its names come from the source being copied, not from
+        a request), the public conformance kit drives adapters on purpose, and
+        an adapter that builds ``<base>/<scope>/<container>/<name>`` while
+        trusting every segment is one refactor away from re-opening the escape
+        that ``606812c`` closed.
+
+        It also covers what a per-facade validator cannot reach cheaply:
+        ``scope`` lands in a path on EVERY read (``load_all`` backs
+        ``instance`` / ``list_documents`` / ``get_document`` / ``query`` …),
+        and ``ref`` / ``layer_value`` / a module ``version`` are path segments
+        too. One check at the place the path is actually built covers all of
+        them, including the door somebody adds tomorrow.
+
+        Symlinks: ``resolve()`` follows them, so a scope or bundle DIRECTORY
+        that is itself a symlink out of the store is refused. Measured before
+        adopting this: zero symlinks under any ``.dna/`` tree or package tree in
+        either repo. Individual content files reached by a directory SCAN are
+        not checked here (the repo's own root ``AGENTS.md`` is symlinked into a
+        scope by ``tests/test_agents_md_root.py``, and still works).
+        """
+        resolved = Path(path).resolve()
+        try:
+            resolved.relative_to(self.base_dir)
+        except ValueError as exc:
+            from dna.kernel.errors import PathEscapesStoreRoot
+
+            raise PathEscapesStoreRoot(
+                f"{type(self).__name__} refused a path that leaves its store "
+                f"root: {str(resolved)!r} is not under {str(self.base_dir)!r}. "
+                f"Every segment this adapter joins — scope, container, document "
+                f"name, layer value, bundle entry, module version — is a PATH "
+                f"COMPONENT, so one that traverses ('..', '/', an absolute "
+                f"path) moves the anchor and puts the read or write outside the "
+                f"store. Fix the caller's segment; do not widen this check."
+            ) from exc
+        return resolved
+
     def capabilities(self) -> "SourceCapabilities":
         """Explicit contract declaration (s-sourceport-contract-cleanup).
 
@@ -114,7 +162,10 @@ class FilesystemSource(SourcePort):
             # Pull tenant-published Genome from
             # ``tenants/<t>/scopes/<s>/Genome.yaml`` and shadow the
             # platform Genome in the result.
-            tenant_pkg = self.base_dir / "tenants" / fs_tenant_segment(tenant) / "scopes" / scope / "Genome.yaml"
+            tenant_pkg = self._contained(
+                self.base_dir / "tenants" / fs_tenant_segment(tenant)
+                / "scopes" / scope / "Genome.yaml"
+            )
             if tenant_pkg.exists():
                 async with aiofiles.open(tenant_pkg, encoding="utf-8") as f:
                     tenant_doc = yaml.safe_load(await f.read())
@@ -126,7 +177,7 @@ class FilesystemSource(SourcePort):
     async def load_all(
         self, scope: str, readers: list | None = None,
     ) -> list[dict[str, Any]]:
-        scope_dir = self.base_dir / scope
+        scope_dir = self._contained(self.base_dir / scope)
         if not scope_dir.exists():
             raise FileNotFoundError(f"Scope not found: {scope_dir}")
         return await self._load_dir(scope_dir, readers or [], skip={"layers", "tenants"})
@@ -260,7 +311,10 @@ class FilesystemSource(SourcePort):
         return self._effective_readers()
 
     async def resolve_ref(self, scope: str, ref: str) -> str:
-        path = self.base_dir / scope / ref
+        # ``ref`` is a RELATIVE PATH by contract (``prompts/x.md``), so it
+        # cannot be validated as a single component — only containment bounds
+        # it. Same rule the bundle-entry guard applies to ``entry``.
+        path = self._contained(self.base_dir / scope / ref)
         if not path.exists():
             return ""
         async with aiofiles.open(path, encoding="utf-8") as f:
@@ -274,13 +328,18 @@ class FilesystemSource(SourcePort):
         # layers (branch, region, user) keep the legacy <scope>/layers/
         # path. Tenant reads check the new path first, falling back to
         # the legacy layers/tenant/<X>/ for pre-migration data.
+        # ``_validate_layer_segments`` guards the WRITE path only; this READ
+        # door never went through it, so containment is what bounds it here.
         if layer_id == "tenant":
-            new_dir = self.base_dir / "tenants" / fs_tenant_segment(layer_value) / "scopes" / scope
+            new_dir = self._contained(
+                self.base_dir / "tenants" / fs_tenant_segment(layer_value)
+                / "scopes" / scope
+            )
             if new_dir.exists():
                 return await self._load_dir(
                     new_dir, readers=readers or [], skip=set()
                 )
-            legacy_dir = (
+            legacy_dir = self._contained(
                 self.base_dir / scope / "layers" / "tenant" / layer_value
             )
             if legacy_dir.exists():
@@ -289,7 +348,9 @@ class FilesystemSource(SourcePort):
                 )
             return []
         # Non-tenant layers keep the legacy <scope>/layers/<id>/<val> path
-        layer_dir = self.base_dir / scope / "layers" / layer_id / layer_value
+        layer_dir = self._contained(
+            self.base_dir / scope / "layers" / layer_id / layer_value
+        )
         if not layer_dir.exists():
             return []
         return await self._load_dir(layer_dir, readers=readers or [], skip=set())
@@ -432,13 +493,19 @@ class FilesystemSource(SourcePort):
         crafted ``entry`` like ``"../../../../<other>/SKILL.md"`` escape a
         tenant's own bundle and clobber a DIFFERENT bundle's — including the
         shared base bundle other tenants inherit from).
+
+        Containment (``_contained``) is applied to the result, so a traversing
+        ``scope``/``container``/``name`` can no longer MOVE the anchor the
+        entry check is measured against — which is exactly how the read door
+        escaped: the entry guard passed because the root it was anchored on had
+        already been relocated outside the store.
         """
         if tenant:
-            return (
+            return self._contained(
                 self.base_dir / "tenants" / fs_tenant_segment(tenant) / "scopes" / scope
                 / container / name
-            ).resolve()
-        return (self.base_dir / scope / container / name).resolve()
+            )
+        return self._contained(self.base_dir / scope / container / name)
 
     def write_bundle_entry(
         self,
