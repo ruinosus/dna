@@ -1367,6 +1367,16 @@ class KindRegistry:
         :meth:`register_kind_definitions`): binding IS registration for a scope
         that had none, so an unapproved entry must not acquire another scope's
         Kind that way.
+
+        The two doors fail closed identically but do not fail LOUD identically.
+        A ``KindDefinition`` is schema-validated with ``additionalProperties:
+        false``, so a typo like ``approvedBy`` produces a parse error naming the
+        offending key — the author finds out immediately, from the store. A
+        ``custom_kinds`` entry has no such schema: an unknown key here is
+        silently ignored, so the same typo just leaves the entry looking
+        declared while it quietly stays inert, discoverable only via the
+        approval-refusal log line above. Both doors are fail-closed; only one
+        of them tells you why.
         """
         custom_kinds = manifest.get("spec", {}).get("custom_kinds", [])
         for ck in custom_kinds:
@@ -1375,7 +1385,7 @@ class KindRegistry:
             alias = ck.get("alias", kn.lower())
             if not kn:
                 continue
-            approved_by = (ck.get("approved_by") or "").strip()
+            approved_by = str(ck.get("approved_by") or "").strip()
             if not approved_by:
                 # Same refusal as the KindDefinition funnel, same reason: an
                 # authored-but-unapproved Kind is a legitimate state, it stays

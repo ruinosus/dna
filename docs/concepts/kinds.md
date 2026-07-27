@@ -351,6 +351,13 @@ against the other's schema (`i-081`). It also means two scopes may reuse a Kind
 name, an alias or a storage container freely: within one scope those are still
 unique, and across scopes they never meet.
 
+A Kind loaded from a store only reaches this binding once it is *approved*:
+both doors — the `KindDefinition` document and a root document's
+`custom_kinds` entry — require `approved_by` to name someone, or the document
+is parsed, logged, and left unregistered, with no schema enforcement or
+storage routing of its own. Registering from CODE carries no such gate; the
+approval requirement exists only for the store, where the author is untrusted.
+
 ## Summary
 
 | Concept | What it does |

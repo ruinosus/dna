@@ -268,9 +268,10 @@ class TestCustomKinds:
         # Simulate _register_custom_kinds.
         # ``approved_by`` is required for the entry to register at all — a
         # custom_kinds entry is a store-loaded Kind declaration and goes through
-        # the same approval gate as a KindDefinition. Without it this test would
-        # pass vacuously in the wrong direction: nothing would be registered, so
-        # the assertions below would simply fail rather than checking anything.
+        # the same approval gate as a KindDefinition. Without it, the entry
+        # would be gate-refused and never reach ``k._kinds``, so the assertions
+        # below would simply FAIL rather than checking anything — this comment
+        # documents why the fixture carries it, not a passing test to guard.
         manifest = {
             "spec": {
                 "custom_kinds": [

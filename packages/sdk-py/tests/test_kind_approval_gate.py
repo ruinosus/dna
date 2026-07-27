@@ -113,7 +113,7 @@ async def test_the_refusal_is_logged_not_silent(kernel_with_scope, caplog):
     )
 
 
-def test_the_scopeless_funnel_is_not_exempt():
+def test_the_scopeless_funnel_is_not_exempt(caplog):
     """Pins a decision that would otherwise be silently reversible.
 
     Exempting ``scope=None`` from the gate looks harmless — it reads like "the
@@ -122,7 +122,15 @@ def test_the_scopeless_funnel_is_not_exempt():
     the exemption would be a real bypass, and one nothing else here would catch,
     because every OTHER test in this file hands the funnel a real scope. This
     test is the fence: it drives the scope-less funnel directly and asserts the
-    unapproved Kind still does not register."""
+    unapproved Kind still does not register.
+
+    The raw document must be otherwise VALID (a real ``storage`` block, same
+    shape as ``_write_kinddef`` below) — if it isn't, ``TypedKindDefinition
+    .from_raw`` dies in the parse branch before the gate is ever reached, and
+    the outcome (``kind_port_for`` returns ``None``) is then true for the wrong
+    reason: a parse failure looks identical to an approval refusal from the
+    outside. So the test also asserts on the LOG, not just the outcome — the
+    only way to tell the two apart is the reason the refusal was logged for."""
     k = Kernel()
     k.load(HelixExtension())
     k.load(KindDefinitionExtension())
@@ -137,6 +145,11 @@ def test_the_scopeless_funnel_is_not_exempt():
             "alias": "example-widget",
             "origin": "example.com",
             "schema": {"type": "object", "additionalProperties": True},
+            "storage": {
+                "type": "bundle",
+                "container": "widgets",
+                "marker": "WIDGET.md",
+            },
         },
     }
     k._register_kind_definitions([raw])  # scope=None — the in-process funnel
@@ -144,6 +157,14 @@ def test_the_scopeless_funnel_is_not_exempt():
     assert k.kind_port_for("Widget") is None, (
         "the gate must not be scoped-only: an unapproved Kind handed straight "
         "to the scope-less funnel registers nothing either"
+    )
+    assert any("Widget" in r.message and "approv" in r.message.lower()
+               for r in caplog.records), (
+        "the outcome must come from the APPROVAL refusal, not a parse "
+        "failure — a missing/invalid 'storage' block would also leave "
+        "kind_port_for() returning None, but for an unrelated reason, and "
+        "this fence would then pass even if the scope=None exemption crept "
+        "back in"
     )
 
 
