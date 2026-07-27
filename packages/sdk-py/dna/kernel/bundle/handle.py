@@ -127,9 +127,16 @@ class FilesystemBundleHandle:
     def __init__(self, root: Path) -> None:
         self._root = root
 
-    def _entry_path(self, entry: str) -> Path:
+    def _entry_path(self, entry: str, *, resolve_leaf: bool = False) -> Path:
         """Validate ``entry``, join it onto the bundle root, and refuse the
         result unless it stays under that root.
+
+        ``resolve_leaf`` selects WHICH containment rule applies, and the
+        DIRECTION of the operation decides it — see "THE CARVE-OUT" below.
+        Mutating callers (``write_text`` / ``write_bytes``) pass ``True`` and
+        the whole path INCLUDING the leaf is resolved; read-only callers
+        (``read_text`` / ``read_bytes`` / ``exists`` / ``is_file``) leave it
+        ``False`` and only the parent chain is resolved.
 
         ``entry`` VS ``name`` — the divergence this method exists to close.
         A document ``name`` (and a ``scope``) is ONE path component; an
@@ -175,17 +182,39 @@ class FilesystemBundleHandle:
            ``FilesystemSource._contained`` has with ``validate_document_name``
            — do not delete either as duplicated work.
 
-        THE CARVE-OUT, and it is measured, not a concession. Only the entry's
-        PARENT CHAIN is resolved; a symlinked LEAF is followed and allowed.
-        That is the same line ``FilesystemSource._contained`` already draws in
-        its own docstring, and it is drawn around a real, supported pattern:
-        this repo's own root ``AGENTS.md`` is symlinked INTO a scope
-        (``tests/test_agents_md_root.py``) and is read through this handle.
-        Refusing a symlinked file would break it. A symlinked file is a
-        deliberate act by whoever owns the bundle directory and moves exactly
-        one file; a symlinked DIRECTORY silently relocates a whole subtree, and
-        anything written under it lands wherever the link points. So: leaf
-        links are content, directory links are an escape.
+        THE CARVE-OUT, and it is ASYMMETRIC — the first version applied it in
+        both directions and that was a live escape.
+
+        On a READ, only the entry's PARENT CHAIN is resolved: a symlinked LEAF
+        is followed and allowed. That is drawn around a real, supported
+        pattern — this repo's own root ``AGENTS.md`` is symlinked INTO a scope
+        (``tests/test_agents_md_root.py``) and is READ through this handle, so
+        refusing a symlinked file would break it. On a read, a symlinked file
+        is just content: following it discloses a file somebody with write
+        access to the bundle directory deliberately pointed at.
+
+        On a WRITE it is not content, it is an escape primitive. Measured
+        before this parameter existed: ``write_text`` through a symlinked leaf
+        was ACCEPTED, and the file OUTSIDE the bundle then read
+        ``'OVERWRITTEN FROM INSIDE THE BUNDLE'``; ``write_bytes`` the same. The
+        asymmetry is the whole point — planting a link costs an attacker one
+        file inside the bundle, and a SYNCED OR CLONED bundle can carry one it
+        did not author, so the write side must not trust it. Hence
+        ``resolve_leaf=True`` on every mutating method, which resolves the leaf
+        too and refuses when it lands outside.
+
+        A symlinked DIRECTORY is refused in BOTH directions — it silently
+        relocates a whole subtree, and anything written under it lands wherever
+        the link points.
+
+        NOT the same line as ``FilesystemSource._contained``, and an earlier
+        version of this docstring claimed it was. ``_contained``
+        (``adapters/filesystem/source.py``) resolves the WHOLE path including
+        the leaf, unconditionally — it has no carve-out. What is true is that
+        it never RUNS on the content files reached by a directory scan, so a
+        symlinked ``AGENTS.md`` survives it; that is a consequence of where it
+        is called, not a rule it deliberately relaxes. Two different things.
+        Do not "restore parity" by weakening either one.
 
         COST. ``Path.resolve()`` is a realpath — an lstat per component — and
         it is paid on every entry READ as well as every write, so it sits on
@@ -202,19 +231,31 @@ class FilesystemBundleHandle:
         validate_bundle_entry(entry)
         target = self._root / entry
         root = self._root.resolve()
-        # The PARENT chain only — see "THE CARVE-OUT" above. ``entry`` has
-        # already been proven free of ``..``/absolute segments, so the leaf is
-        # a plain component and cannot move the location by itself.
-        parent = target.parent.resolve()
-        if parent != root and root not in parent.parents:
+        if resolve_leaf:
+            # MUTATING call — resolve the LEAF too. ``Path.resolve()`` is
+            # non-strict, so an entry that does not exist yet resolves to its
+            # own literal location (the ordinary case); an entry that IS a
+            # symlink resolves to wherever it points, which is what this
+            # catches.
+            checked = target.resolve()
+        else:
+            # READ call — the PARENT chain only, so a symlinked leaf stays
+            # readable. ``entry`` has already been proven free of
+            # ``..``/absolute segments, so the leaf is a plain component and
+            # cannot move the location by itself.
+            checked = target.parent.resolve()
+        if checked != root and root not in checked.parents:
             raise PathEscapesStoreRoot(
-                f"bundle entry {entry!r} resolves under {str(parent)!r}, which "
+                f"bundle entry {entry!r} resolves to {str(checked)!r}, which "
                 f"is outside the bundle root {str(root)!r}. The entry passed "
-                f"the shape rule, so a DIRECTORY on its path is a link or a "
-                f"mount pointing out of the bundle — and everything written "
-                f"beneath it lands there. The bundle is the boundary: fix the "
-                f"link, do not widen this check. (A symlinked FILE is allowed "
-                f"on purpose; a symlinked directory is not.)"
+                f"the shape rule, so something ON ITS PATH is a link or a "
+                f"mount pointing out of the bundle. The bundle is the "
+                f"boundary: fix the link, do not widen this check. (A "
+                f"symlinked DIRECTORY is refused in both directions. A "
+                f"symlinked FILE is readable on purpose — this repo symlinks "
+                f"its root AGENTS.md into a scope — but is NOT writable "
+                f"through, because following it on a write puts the bytes "
+                f"outside the bundle.)"
             )
         return target
 
@@ -245,13 +286,17 @@ class FilesystemBundleHandle:
     def is_file(self, entry: str) -> bool:
         return self._entry_path(entry).is_file()
 
+    # The two MUTATING methods — ``resolve_leaf=True``. A symlinked leaf is
+    # content on a read and an escape primitive on a write; see the asymmetry
+    # in ``_entry_path``. If a third mutating method is ever added here, it
+    # passes ``resolve_leaf=True`` too.
     def write_text(self, entry: str, content: str, encoding: str = "utf-8") -> None:
-        target = self._entry_path(entry)
+        target = self._entry_path(entry, resolve_leaf=True)
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(content, encoding=encoding)
 
     def write_bytes(self, entry: str, content: bytes) -> None:
-        target = self._entry_path(entry)
+        target = self._entry_path(entry, resolve_leaf=True)
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(content)
 

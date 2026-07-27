@@ -31,15 +31,53 @@ def pop_source_files_as_entries(
     write_bytes — see PostgresWritableSource.save_document for the
     persistence side.
 
+    EVERY KEY IS VALIDATED HERE, and this is the layer that closes the SQL
+    lane. The obvious place to guard a content-derived entry is the handle
+    (``FilesystemBundleHandle._entry_path``) or ``DictBundleHandle._validate``,
+    and for the filesystem lane that is true. It is NOT true for the SQL lane:
+    ``SqlAlchemySource.save_document`` calls this function to pop
+    ``spec.source_files`` BEFORE any writer runs and merges the returned keys
+    straight into its ``bundle_text`` / ``bundle_bin`` dicts — no handle is
+    ever constructed for them, so no handle can refuse them. Measured before
+    this check existed: ``save_document`` on a SQLite-backed source returned
+    ``version='1'`` and the ``bundle_entries`` table held the rows
+    ``'../../../../etc/cron.d/pwn'`` and ``'/tmp/dna-ABSOLUTE-STORED.md'``
+    verbatim. That directly contradicts the property the previous wave claimed
+    — "refusing at the write keeps the escape from being STORED" — because on
+    a Postgres-backed deployment nothing else in the chain looks at the key.
+
+    So the guard goes HERE, not at the two adapters: this is the
+    kind-AGNOSTIC ``spec.source_files`` convention and the ONE place the FS
+    lane and the SQL lane both pass through. Guarding the adapters instead
+    would be the enumeration mistake again, one lane at a time.
+
+    A stored row is not a harmless row. ``dna_bundle_entries`` is what
+    materialises a bundle onto a filesystem later (sync, export, a cache
+    warm), so a traversing key is the same escape merely DEFERRED until
+    something writes it down.
+
     Raises:
-        TypeError: when a payload is neither str nor bytes.
+        InvalidBundleEntry: when a key is not a safe relative bundle path.
+        TypeError: when ``source_files`` or a payload has the wrong type.
     """
-    extra = spec.pop("source_files", None) or {}
+    from dna.kernel.errors import validate_bundle_entry
+
+    # Read BEFORE popping, so a refusal does not leave the caller's ``spec``
+    # stripped of the field it was refused for.
+    extra = spec.get("source_files") or {}
     if not isinstance(extra, dict):
         raise TypeError(
             f"{kind_name}.spec.source_files must be a dict[str, str|bytes], "
             f"got {type(extra).__name__}"
         )
+    # ALL keys first, before any conversion — same all-or-nothing property as
+    # ``write_entries_to_handle``: a half-converted batch is a state no caller
+    # asked for.
+    for rel_path in extra:
+        validate_bundle_entry(
+            rel_path, where=f"{kind_name}.spec.source_files key",
+        )
+    spec.pop("source_files", None)
     out: list[dict[str, Any]] = []
     for rel_path, payload in extra.items():
         if isinstance(payload, (bytes, bytearray)):

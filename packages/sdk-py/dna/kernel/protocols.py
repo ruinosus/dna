@@ -425,24 +425,58 @@ class VersionAlreadyPublished(KernelRefusal):
     """
 
 
-class InvalidTenantSlug(KernelRefusal):
+class InvalidTenantSlug(KernelRefusal, ValueError):
     """Raised when a tenant slug is empty, reserved (_global, _legacy,
-    _system), or contains invalid characters (anything other than
-    [a-z0-9-]). Slug rules align with k8s namespace + DNS label.
+    _system), TRAVERSING (contains ``/``, ``\\`` or NUL, or is ``.`` / ``..``),
+    or outside the length bound.
+
+    Also a ``ValueError``, for the same reason ``InvalidDocumentName`` and
+    ``InvalidScopeName`` are (``606812c``): a security refusal must be caught
+    by faces that still enumerate ``(ValueError, LookupError, PermissionError)``
+    as well as by those that catch the ``KernelRefusal`` marker. It matters
+    here specifically — moving the traversal refusal EARLIER, from the FS
+    adapter's plain ``ValueError("Invalid layer segment: …")``
+    (``_validate_tenant_path``) to this kernel-boundary validator, would
+    otherwise have made those faces STOP relaying it. A fix that quietly
+    regresses the reporting it set out to improve is not a fix.
     """
 
 
 def validate_tenant_slug(tenant: str | None, *, allow_personal: bool = False) -> None:
-    """Raise InvalidTenantSlug if tenant is not None and is reserved.
+    """Raise InvalidTenantSlug if tenant is reserved or is not a safe path
+    component.
 
-    Phase 1 only checks the reserved set + non-empty/length. Character
-    rules (DNS-label, lowercase) are NOT enforced at the kernel boundary
-    so existing tests/data using uppercase ("T1", "Acme") keep working.
-    Path-traversal safety lives in the adapter (e.g.
-    ``_validate_layer_segments`` in FilesystemWritableSource).
+    THE RULE IS "CANNOT ESCAPE", NEVER A CHARSET — the same rule the rest of
+    this family holds (``validate_document_name`` / ``validate_scope_name`` /
+    ``validate_bundle_entry``). Character rules (DNS-label, lowercase) are
+    still NOT enforced, so uppercase legacy slugs (``T1``, ``Acme``) and dotted
+    ones (``t-1a2b3c.node.internal``) keep working; what is refused is the
+    shape that MOVES A PATH: ``/``, ``\\``, NUL, and the directory names ``.``
+    and ``..``.
 
-    Phase 2 may tighten to k8s namespace rules (``[a-z0-9-]{1,63}``)
-    once the migration is complete.
+    WHY IT MOVED HERE. The previous docstring said "path-traversal safety lives
+    in the adapter (``_validate_layer_segments``)". That was true of the WRITE
+    lane and false everywhere else: ``tenant`` also becomes
+    ``<base>/tenants/<tenant>/.dna.lock`` in ``dna.kernel.lock.module``, which
+    is not an adapter and had no containment — and it is reached from the
+    COMPOSE and QUERY hot paths, where a traversing slug read a lockfile from
+    outside the store. Delegating a rule to "the adapter" only works if every
+    path goes through one. This one did not.
+
+    MEASURED BEFORE CONSTRAINING, the way the earlier waves measured 1139
+    document names and 492 bundle entries. **33 distinct real tenant slugs**
+    across both repos — 3 on-disk ``tenants/`` directories (``acme``, ``demo``,
+    ``personal%3Alocal-user``) plus 31 slug literals in ``.py`` / ``.yaml`` /
+    ``.json`` / ``.ts`` (``T1``, ``Acme``, ``ws-acme``, ``t-1a2b3c.node.internal``,
+    ``personal:google:sub-9``, …). **1 of 33 is refused, and it is
+    ``'../evil'``** — an attack literal in
+    ``tests/test_kernel_write_layer.py``, which exists to assert that exact
+    input is refused. Zero legitimate callers. Longest real slug 22 bytes;
+    the 253 bound is unchanged.
+
+    ``:`` stays legal (7 real slugs carry one — the ``personal:`` scheme); the
+    FS adapter percent-encodes it via ``fs_tenant_segment``. Length is still
+    the only bound, and the reserved-set / reserved-scheme checks are unchanged.
 
     Reserved-scheme (ADR-personal-memory §3.4): a slug whose scheme
     (``<scheme>:`` prefix) is in :data:`RESERVED_TENANT_SCHEMES` — today only
@@ -471,6 +505,26 @@ def validate_tenant_slug(tenant: str | None, *, allow_personal: bool = False) ->
     if not (1 <= len(tenant) <= 253):
         raise InvalidTenantSlug(
             f"tenant slug {tenant!r} must be 1-253 chars (got {len(tenant)})"
+        )
+    # The traversal rule. Deliberately NOT ``_path_component_fault`` from
+    # ``dna.kernel.errors``: that one also refuses whitespace-only and imposes
+    # the 200-byte NAME_MAX bound, and a tenant slug has its own 253 bound
+    # checked just above. Shared vocabulary, separate bounds.
+    for _char, _label in (("/", "'/'"), ("\\", "'\\'"), ("\x00", "a NUL byte")):
+        if _char in tenant:
+            raise InvalidTenantSlug(
+                f"tenant slug {tenant!r} contains {_label} — a tenant slug is "
+                f"written to disk as a single path component "
+                f"(<base>/tenants/<tenant>/…), so one that traverses would "
+                f"place the read or write outside the store. The rule is that "
+                f"it cannot escape, not that it looks like a DNS label: "
+                f"uppercase and dots stay legal."
+            )
+    if tenant in (".", ".."):
+        raise InvalidTenantSlug(
+            f"tenant slug {tenant!r} addresses a directory instead of naming a "
+            f"tenant — it is joined as <base>/tenants/<tenant>/…, so it would "
+            f"resolve to the tenants root or to the store root itself."
         )
 
 

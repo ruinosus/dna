@@ -548,6 +548,68 @@ class FilesystemSource(SourcePort):
             )
         return self._contained(self.base_dir / scope / container / name)
 
+    def _bundle_entry_target(
+        self, bundle_root: Path, entry: str, *, resolve_leaf: bool,
+    ) -> Path:
+        """Join ``entry`` onto ``bundle_root`` under the ONE bundle-entry rule.
+
+        WHY THIS EXISTS: ``entry`` had TWO DOORS WITH TWO RULES. The kernel
+        door (``FilesystemBundleHandle._entry_path``) validates the shape with
+        ``validate_bundle_entry`` and refuses with ``InvalidBundleEntry`` /
+        ``PathEscapesStoreRoot``; these three adapter primitives —
+        ``write_bundle_entry`` / ``fetch_bundle_entry`` /
+        ``delete_bundle_entry`` — built ``bundle_root / entry`` directly with
+        an ad-hoc ``resolve() + relative_to`` and never called the validator at
+        all. Measured on the SAME bundle and the SAME entry:
+
+            symlinked LEAF   adapter: FileNotFoundError | handle: ACCEPTED
+            absolute entry   adapter: FileNotFoundError | handle: InvalidBundleEntry
+            traversing entry adapter: FileNotFoundError | handle: InvalidBundleEntry
+            empty entry      adapter: IsADirectoryError | handle: InvalidBundleEntry
+
+        Security-wise the adapter door WAS closed — nothing escaped. The bug is
+        the VOCABULARY. ``FileNotFoundError`` is not a ``KernelRefusal``, so a
+        face relays a security refusal as **404, not a denial** — precisely the
+        masking ``KernelRefusal`` and ``tests/test_kernel_refusal_base.py``
+        exist to prevent. An operator reading a 404 concludes "typo in the
+        path"; the truth is "this input was refused". (The empty-entry case was
+        worse than cosmetic: it wrote a stray ``<name>.tmp`` beside the bundle
+        root before failing on the rename.)
+
+        THE ASYMMETRY IS DELIBERATE and is the same one the handle draws — see
+        ``FilesystemBundleHandle._entry_path``. On a WRITE or DELETE the LEAF is
+        resolved, because a symlinked leaf is an escape primitive: following it
+        puts the bytes (or the ``unlink``) outside the bundle, and a synced or
+        cloned bundle can carry a link it did not author. On a READ only the
+        PARENT CHAIN is resolved, because a symlinked FILE is content — this
+        repo symlinks its own root ``AGENTS.md`` into a scope on purpose
+        (``tests/test_agents_md_root.py``) and it is read through the handle.
+        Aligning the read door here is what makes the two doors agree: the same
+        entry previously scanned fine through the handle and 404'd through this
+        primitive. A symlinked DIRECTORY is refused in both directions.
+
+        TWO LAYERS, kept separate on purpose (do not collapse them): the shape
+        rule names WHICH input was wrong and is identical on every backend; the
+        containment check catches what no textual rule can see — a directory on
+        the path that is a link or a mount out of the bundle.
+        """
+        from dna.kernel.errors import PathEscapesStoreRoot, validate_bundle_entry
+
+        validate_bundle_entry(entry)
+        target = bundle_root / entry
+        checked = target.resolve() if resolve_leaf else target.parent.resolve()
+        if checked != bundle_root and bundle_root not in checked.parents:
+            raise PathEscapesStoreRoot(
+                f"bundle entry {entry!r} resolves to {str(checked)!r}, which is "
+                f"outside the bundle root {str(bundle_root)!r}. The entry passed "
+                f"the shape rule, so something on its path is a link or a mount "
+                f"pointing out of the bundle. The bundle is the boundary — not "
+                f"the store root: an entry that stayed inside the store but left "
+                f"THIS bundle would reach a different tenant's bundle, or the "
+                f"shared base bundle every tenant inherits from."
+            )
+        return target
+
     def write_bundle_entry(
         self,
         scope: str,
@@ -571,23 +633,16 @@ class FilesystemSource(SourcePort):
 
         ``kind`` is accepted for protocol parity but ignored — the
         filesystem layout namespaces bundles by ``container``.
+
+        Refuses with ``InvalidBundleEntry`` / ``PathEscapesStoreRoot`` (both
+        ``KernelRefusal``) — NOT ``FileNotFoundError``, which a face would
+        relay as a 404 instead of a denial. See ``_bundle_entry_target``.
         """
         del kind
         bundle_root = self._bundle_root(scope, container, name, tenant=tenant)
-        target = bundle_root / entry
-        # Path-traversal guard: the resolved path MUST stay under the
-        # BUNDLE ROOT (the <container>/<name> dir) — not merely under
-        # base_dir as a whole — matching fetch_bundle_entry's guard exactly,
-        # else `entry` could contain '..' segments that escape into a
-        # different tenant's or the shared base bundle.
-        try:
-            resolved = target.resolve()
-            resolved.relative_to(bundle_root)
-        except (OSError, ValueError) as e:
-            raise FileNotFoundError(
-                f"Bundle entry not found: scope={scope!r} container={container!r} "
-                f"name={name!r} entry={entry!r} tenant={tenant!r}"
-            ) from e
+        # MUTATING — the leaf is resolved too, so a symlinked entry cannot put
+        # the bytes outside the bundle.
+        target = self._bundle_entry_target(bundle_root, entry, resolve_leaf=True)
         target.parent.mkdir(parents=True, exist_ok=True)
         # Atomic write: tmp file + rename. Same dir to avoid cross-FS
         # rename issues.
@@ -635,14 +690,14 @@ class FilesystemSource(SourcePort):
             roots.append(self._bundle_root(scope, container, name, tenant=tenant))
         roots.append(self._bundle_root(scope, container, name, tenant=None))
         for bundle_root in roots:
-            cand = bundle_root / entry
-            try:
-                resolved = cand.resolve()
-                resolved.relative_to(bundle_root)  # path traversal guard
-            except (OSError, ValueError):
-                continue
-            if resolved.is_file():
-                return resolved.read_bytes()
+            # READ — the parent chain only, so a symlinked FILE stays readable
+            # (the root-AGENTS.md pattern). A refusal PROPAGATES rather than
+            # falling through to the next root: the shape is root-independent,
+            # and a containment failure means a link out of the bundle, which
+            # is a denial, not a miss.
+            cand = self._bundle_entry_target(bundle_root, entry, resolve_leaf=False)
+            if cand.is_file():
+                return cand.read_bytes()
         raise FileNotFoundError(
             f"Bundle entry not found: scope={scope!r} container={container!r} "
             f"name={name!r} entry={entry!r} tenant={tenant!r}"
@@ -707,18 +762,11 @@ class FilesystemSource(SourcePort):
         """
         del kind
         bundle_root = self._bundle_root(scope, container, name, tenant=tenant)
-        target = bundle_root / entry
-        # Path-traversal guard, same shape as write_bundle_entry /
-        # fetch_bundle_entry — confined to the bundle root, not base_dir.
-        try:
-            resolved = target.resolve()
-            resolved.relative_to(bundle_root)
-        except (OSError, ValueError) as e:
-            raise FileNotFoundError(
-                f"Bundle entry not found: scope={scope!r} container={container!r} "
-                f"name={name!r} entry={entry!r} tenant={tenant!r}"
-            ) from e
-        if not resolved.is_file():
+        # MUTATING — the leaf is resolved too. A symlinked entry would
+        # otherwise ``unlink`` a file outside the bundle, which is the delete
+        # twin of the symlinked-leaf write escape.
+        target = self._bundle_entry_target(bundle_root, entry, resolve_leaf=True)
+        if not target.is_file():
             return False
-        resolved.unlink()
+        target.unlink()
         return True
