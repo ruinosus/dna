@@ -203,17 +203,43 @@ class AuthorKindResponse(BaseModel):
     kind: str
     name: str
     approved: bool
+    #: The caller's VERIFIED identity as the document recorded it. ECHOED, never
+    #: accepted — there is no request field it could have come from.
+    proposed_by: str | None = None
+    version: str | None = None
+
+
+class ApproveKindResponse(BaseModel):
+    """``POST /v1/kinds/{kind}/approve`` — the act that CONFERS effect.
+
+    Carries BOTH actors: a reviewer who must make a second call to learn who
+    proposed is a reviewer who will not make it. ``proposed_by`` may equal
+    ``approved_by`` (a solo author approving their own proposal) — a fact this
+    response reports, not an error it withholds."""
+
+    approved: bool
+    kind: str
+    name: str
+    namespace: str
+    approved_by: str
+    approved_at: str
+    proposed_by: str | None = None
+    proposed_at: str | None = None
     version: str | None = None
 
 
 class AuthoredKindSummary(BaseModel):
-    """One ``KindDefinition`` document as the audit surface sees it."""
+    """One ``KindDefinition`` document as the audit surface sees it — BOTH
+    actors, so the reviewer deciding whether to confer effect can see who asked
+    for it without leaving the list."""
 
     name: str | None = None
     kind: str | None = None
     api_version: str | None = None
     namespace: str | None = None
     approved: bool = False
+    proposed_by: str | None = None
+    proposed_at: str | None = None
     approved_by: str | None = None
     approved_at: str | None = None
     created_at: str | None = None

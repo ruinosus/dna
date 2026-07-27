@@ -36,7 +36,13 @@ from typing import Any
 
 from dna.application.namespace_assignment import assign_namespace
 
-__all__ = ["author_kind_impl", "list_authored_kinds_impl"]
+__all__ = [
+    "AuthoredKindNotFound",
+    "approve_kind_impl",
+    "author_kind_impl",
+    "kind_document_name",
+    "list_authored_kinds_impl",
+]
 
 _KIND = "KindDefinition"
 _API_VERSION = "github.com/ruinosus/dna/core/v1"
@@ -46,6 +52,16 @@ _API_VERSION = "github.com/ruinosus/dna/core/v1"
 #: ``Contrato``, and the pair is what keeps their documents apart in a scope
 #: (the registry key is ``(api_version, kind)`` for the same reason).
 _NAME_SEP = "--"
+
+
+class AuthoredKindNotFound(LookupError):
+    """No authored ``KindDefinition`` in this scope answers to that Kind name.
+
+    Its own exception because the face must map it to **404** and never to the
+    400 every other refusal here carries: an approval door that quietly CREATED
+    the document it was asked to approve would be an authoring door with an
+    approval marker on it — precisely the thing that must not exist."""
+
 
 #: What a Kind name is allowed to be — a CamelCase identifier, exactly as the
 #: schema documents ``target_kind`` (``docs/schemas/kind-definition.schema.json``).
@@ -68,7 +84,16 @@ _NAME_SEP = "--"
 #: :func:`kind_document_name` is exported precisely so the APPROVAL act, a
 #: separate task by a different actor, can address these documents by name, and
 #: an ambiguous name is a trap laid for that task.
-_KIND_NAME_RE = re.compile(r"[A-Za-z][A-Za-z0-9]{0,63}")
+#:
+#: The leading class is ``[A-Z]``, not ``[A-Za-z]``: the error message says
+#: CamelCase and the guard must mean what its message says. MEASURED
+#: consequence of the looser form — ``Contrato`` and ``contrato`` produce the
+#: IDENTICAL alias (``generate_alias`` kebab-cases the Kind name), and on a
+#: case-insensitive filesystem (the macOS/Windows default) the second write
+#: lands in the SAME ``kinds/<name>/`` directory as the first and silently
+#: replaces it, with a 201 in reply. Requiring the initial capital removes the
+#: pair.
+_KIND_NAME_RE = re.compile(r"[A-Z][A-Za-z0-9]{0,63}")
 
 
 def _alias_owner(namespace: str) -> str:
@@ -106,11 +131,36 @@ def kind_document_name(namespace: str, kind: str) -> str:
     return f"{namespace}{_NAME_SEP}{kind}"
 
 
+def _checked_kind_name(kind: str, *, verb: str) -> str:
+    """The validated Kind name, or ``ValueError`` (the face maps it to 400).
+
+    Shared by BOTH doors deliberately. ``kind`` is the one caller-controlled
+    value that reaches a PATH, and the approval door takes it from the URL — a
+    guard on the authoring door alone would leave the second door open to the
+    same traversal it was written for."""
+    kind = (kind or "").strip()
+    if not kind:
+        raise ValueError(f"kind is required to {verb} a Kind")
+    if not _KIND_NAME_RE.fullmatch(kind):
+        # See _KIND_NAME_RE: this is the one body field that reaches a path.
+        raise ValueError(
+            f"kind must be a CamelCase identifier — a CAPITAL letter followed "
+            f"by up to 63 letters or digits, no '/', '.', '-' or path segments "
+            f"(got {kind!r})"
+        )
+    return kind
+
+
 async def author_kind_impl(
     live: Any, *, kind: str, schema: dict, tenant: str, now: str,
-    traits: list[str] | None = None,
+    actor: str | None = None, traits: list[str] | None = None,
 ) -> dict[str, Any]:
     """Write a tenant Kind, unapproved. It has no effect until approved.
+
+    ``actor`` is the PROPOSER — the verified identity of the caller, resolved by
+    the face from the token and NEVER read from the request body. It is stamped
+    here, at the moment of the proposal, because it cannot be back-filled later:
+    a document that never recorded who proposed it has lost that fact for good.
 
     Raises ``ValueError`` for a missing tenant, or for a Kind name that is not a
     CamelCase identifier (the face maps it to 400) — see :data:`_KIND_NAME_RE`,
@@ -118,20 +168,12 @@ async def author_kind_impl(
     below this — the namespace gate, the schema validation — surfaces from the
     kernel unchanged.
     """
-    kind = (kind or "").strip()
-    if not kind:
-        raise ValueError("kind is required to author a Kind")
-    if not _KIND_NAME_RE.fullmatch(kind):
-        # See _KIND_NAME_RE: this is the one body field that reaches a path.
-        raise ValueError(
-            f"kind must be a CamelCase identifier — a letter followed by up to "
-            f"63 letters or digits, no '/', '.', '-' or path segments "
-            f"(got {kind!r})"
-        )
+    kind = _checked_kind_name(kind, verb="author")
     if not (tenant or "").strip():
         raise ValueError("tenant is required to author a Kind")
     if not isinstance(schema, dict):
         raise ValueError("schema must be a JSON Schema object")
+    proposed_by = (actor or "").strip() or None
 
     from dna.kernel.kinds.registry import generate_alias
 
@@ -164,11 +206,18 @@ async def author_kind_impl(
             # If a write-time stamp ever lands, it wins and this line becomes a
             # no-op — which is the harmless direction.
             "created_at": now,
+            # WHO proposed, and WHEN — the first half of the audit. The value is
+            # the face's VERIFIED identity for this request, passed in as
+            # `actor`; a `proposed_by` in the request body reaches nothing,
+            # because this spec is built field by field and never merged.
+            "proposed_by": proposed_by,
+            "proposed_at": now if proposed_by else None,
             # Deliberately absent: approved_by / approved_at. This path CANNOT
-            # set them — approval is a separate, privileged act by a different
-            # actor. A caller-supplied value is dropped on the floor here: the
-            # spec is BUILT field by field, never merged from the request body,
-            # so there is no key an author can smuggle through.
+            # set them — approval is a separate, privileged act with its own
+            # verified actor. A caller-supplied value is dropped on the floor
+            # here for the same reason `proposed_by` cannot be forged: the spec
+            # is BUILT field by field, never merged from the request body, so
+            # there is no key an author can smuggle through.
         },
     }
     version = await live.kernel.write_document(
@@ -176,7 +225,125 @@ async def author_kind_impl(
     )
     return {
         "namespace": namespace, "kind": kind, "name": name,
-        "approved": False, "version": version,
+        "approved": False, "proposed_by": proposed_by, "version": version,
+    }
+
+
+async def _authored_document_name(
+    live: Any, *, scope: str, kind: str, tenant: str | None,
+) -> tuple[str, str]:
+    """Find the authored document for ``kind`` in ``scope`` → ``(name, namespace)``.
+
+    Addresses the document by SEARCH, not by re-deriving the namespace. Calling
+    :func:`assign_namespace` here would read better and be wrong twice over: it
+    MINTS on absence, so approving a Kind nobody authored would leave a namespace
+    claim behind as a side effect of a refusal; and a workspace may own several
+    namespaces, so the derived name would only ever find Kinds authored under the
+    first-assigned one.
+
+    Names are ``<namespace>--<kind>`` and :data:`_KIND_NAME_RE` forbids ``-`` in
+    the Kind half, so ``rsplit`` on the LAST separator recovers both halves
+    unambiguously — even for a hand-written namespace claim that contains ``--``
+    itself. Left-splitting would mis-address exactly that case.
+
+    Raises :class:`AuthoredKindNotFound` when nothing matches, and ``ValueError``
+    when two namespaces in one scope both declare the Kind — an ambiguity a
+    reviewer must resolve by name, never one this function may pick a winner for.
+    """
+    matches: list[tuple[str, str]] = []
+    async for raw in live.kernel.query(scope, _KIND, tenant=tenant):
+        if not isinstance(raw, dict):
+            continue
+        name = str((raw.get("metadata") or {}).get("name") or raw.get("name") or "")
+        if _NAME_SEP not in name:
+            continue
+        namespace, kind_half = name.rsplit(_NAME_SEP, 1)
+        if kind_half == kind and namespace:
+            matches.append((name, namespace))
+    if not matches:
+        raise AuthoredKindNotFound(
+            f"no authored Kind {kind!r} in scope {scope!r} — approval acts on a "
+            f"document that already exists, and creates none"
+        )
+    if len(matches) > 1:
+        raise ValueError(
+            f"Kind {kind!r} is declared under {len(matches)} namespaces in scope "
+            f"{scope!r} ({', '.join(sorted(n for _, n in matches))}) — approve it "
+            f"by document name, not by Kind name"
+        )
+    return matches[0]
+
+
+async def approve_kind_impl(
+    live: Any, *, kind: str, tenant: str, actor: str, now: str,
+) -> dict[str, Any]:
+    """Approve an authored Kind — the act that CONFERS effect.
+
+    Registration is what gives a Kind schema validation and storage routing, and
+    the registry's gate withholds registration until ``approved_by`` names
+    someone. So this write is not a flag flip with a promise attached: it is the
+    only thing that lets the next load take the Kind at all.
+
+    ``actor`` is the APPROVER — the face's verified identity for THIS request,
+    never a body field, and never the value stored in ``proposed_by``. The two
+    may legitimately coincide (a solo author approving their own proposal is two
+    credentials, and refusing on identity equality would block the commonest user
+    while stopping nothing: the authoring door cannot write ``approved_by`` at
+    all, so approval already requires a second call to a different route). What
+    this function must never do is let one act wear the other's name.
+
+    Raises :class:`AuthoredKindNotFound` (→ 404) when no such document exists,
+    and ``ValueError`` (→ 400) for a missing tenant/actor or a malformed Kind
+    name. Idempotent in shape but not in fact: a second approval re-stamps the
+    approver and the timestamp, which is the honest record of what happened.
+    """
+    kind = _checked_kind_name(kind, verb="approve")
+    if not (tenant or "").strip():
+        raise ValueError("tenant is required to approve a Kind")
+    actor = (actor or "").strip()
+    if not actor:
+        raise ValueError(
+            "approval records a verified identity and this request carries "
+            "none — an approval nobody signed is not an approval"
+        )
+
+    scope = live.default_scope(tenant)
+    name, namespace = await _authored_document_name(
+        live, scope=scope, kind=kind, tenant=tenant,
+    )
+    raw = await live.kernel.get_document(scope, _KIND, name)
+    if not isinstance(raw, dict) or not raw:
+        # The query above found the name, so this is a store that lost the
+        # document between two reads — not a caller error, but still a 404's
+        # worth of "there is nothing here to approve".
+        raise AuthoredKindNotFound(
+            f"the authored Kind {kind!r} ({name!r}) is listed in scope {scope!r} "
+            f"but its document could not be read"
+        )
+
+    spec = dict(raw.get("spec") or {})
+    # MERGE, unlike the authoring door — and deliberately: this preserves the
+    # proposal (proposed_by/proposed_at/created_at) that the other act recorded,
+    # which is the half of the audit this act must not overwrite. The two fields
+    # below are the ONLY ones it sets.
+    spec["approved_by"] = actor
+    spec["approved_at"] = now
+    version = await live.kernel.write_document(
+        scope, _KIND, name, {**raw, "spec": spec},
+    )
+    return {
+        "approved": True,
+        "kind": kind,
+        "name": name,
+        "namespace": namespace,
+        "approved_by": actor,
+        "approved_at": now,
+        # Echoed so the caller sees BOTH actors in one response — the audit is
+        # the point, and a reviewer who has to make a second call to learn who
+        # proposed is a reviewer who will not make it.
+        "proposed_by": spec.get("proposed_by"),
+        "proposed_at": spec.get("proposed_at"),
+        "version": version,
     }
 
 
@@ -204,6 +371,14 @@ async def list_authored_kinds_impl(
             "api_version": spec.get("target_api_version"),
             "namespace": spec.get("origin"),
             "approved": bool(approved_by),
+            # BOTH actors — a reviewer reading this list is deciding whether to
+            # confer effect, and "who proposed this" is the first thing that
+            # decision needs. `proposed_by` is null for every document authored
+            # before the field existed, and for a door that could not identify
+            # its caller; null is the honest answer in both cases and is not the
+            # same fact as "the two actors coincide".
+            "proposed_by": (str(spec.get("proposed_by") or "").strip() or None),
+            "proposed_at": spec.get("proposed_at"),
             "approved_by": approved_by or None,
             "approved_at": spec.get("approved_at"),
             "created_at": spec.get("created_at"),

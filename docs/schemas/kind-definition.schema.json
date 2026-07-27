@@ -275,6 +275,14 @@
           "items": { "type": "string", "minLength": 1 },
           "description": "The prompt layouts documents of this Kind may name; UnknownLayout lists them back to the author."
         },
+        "proposed_by": {
+          "type": ["string", "null"],
+          "description": "Who PROPOSED this Kind — the verified identity at the authoring door, stamped THERE because a proposer cannot be back-filled onto a document that never recorded one. Audit metadata only: the registration gate reads approved_by. It is legal for this to name the same identity as approved_by (a solo author who approves their own proposal is two credentials, and refusing on identity equality would block the commonest user for no security gain) — a coincidence the audit REPORTS, not an error. What must never happen is one act wearing the other's name: each field is stamped from the verified identity of ITS OWN act, never from the request body."
+        },
+        "proposed_at": {
+          "type": ["string", "null"],
+          "description": "When the proposal recorded in proposed_by was made (ISO-8601) — the same instant the authoring door stamps created_at. Audit metadata only."
+        },
         "approved_by": {
           "type": ["string", "null"],
           "description": "Who approved this Kind. A KindDefinition loaded from a STORE registers only once this names someone: registration is what confers schema enforcement and storage routing, so an unapproved Kind is parsed, logged and left inert — a document that is auditable, listable and diffable, and does nothing. Omit (null) while the Kind is authored but not yet approved."
@@ -289,7 +297,7 @@
         },
         "created_at": {
           "type": "string",
-          "description": "Runtime-stamped volatile field (never authored)."
+          "description": "When the document was created (ISO-8601). VOLATILE means excluded from canonical_digest, NOT supplied by the runtime — nothing in the write path stamps it, so a document written without it comes back with no created_at at all. The Kind-authoring door therefore stamps it deliberately, and the audit view projects it so a reviewer can see when a Kind was proposed. A write-time stamp, if one ever lands, wins."
         },
         "version": {
           "type": ["string", "integer"],

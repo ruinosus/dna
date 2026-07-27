@@ -363,13 +363,46 @@ export interface paths {
          *
          *     The response's ``approved`` is always ``false``. An ``approved_by`` in
          *     the body is ignored, not honoured and not rejected: a caller that could
-         *     approve its own proposal would make the gate decorative. 400 for a
-         *     missing tenant / a Kind name that is not a CamelCase identifier, 403
-         *     when the namespace gate refuses the write (the workspace does not own
-         *     the target namespace), 503 when the namespace registry scope has not
-         *     been provisioned in this store.
+         *     approve its own proposal would make the gate decorative. The document
+         *     records ``proposed_by`` — the caller's VERIFIED identity, resolved
+         *     server-side (``_actor_from_state``) and never read from the body, and
+         *     stamped here because a proposer cannot be back-filled onto a document
+         *     that never recorded one. 400 for a missing tenant / a Kind name that is
+         *     not a CamelCase identifier, 403 when the namespace gate refuses the
+         *     write (the workspace does not own the target namespace), 503 when the
+         *     namespace registry scope has not been provisioned in this store.
          */
         post: operations["author_kind_v1_kinds_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/kinds/{kind}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve Kind
+         * @description Approve an authored Kind — the act that puts it INTO EFFECT.
+         *
+         *     The approver is the caller's VERIFIED identity, resolved server-side
+         *     (``_actor_from_state``: email → durable oid → ``sub``). An
+         *     ``approved_by`` in the body reaches nothing: attribution a caller can
+         *     forge is not attribution. The document's ``proposed_by`` is preserved
+         *     untouched, so the audit names both acts and neither wears the other's
+         *     name. 404 when no such Kind was authored in this scope (approval acts on
+         *     an existing document and creates none), 400 for a missing tenant / a
+         *     malformed Kind name / a Kind declared under two namespaces at once, 403
+         *     when the namespace gate refuses the write.
+         */
+        post: operations["approve_kind_v1_kinds__kind__approve_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -992,6 +1025,35 @@ export interface components {
             scope: string;
         };
         /**
+         * ApproveKindResponse
+         * @description ``POST /v1/kinds/{kind}/approve`` — the act that CONFERS effect.
+         *
+         *     Carries BOTH actors: a reviewer who must make a second call to learn who
+         *     proposed is a reviewer who will not make it. ``proposed_by`` may equal
+         *     ``approved_by`` (a solo author approving their own proposal) — a fact this
+         *     response reports, not an error it withholds.
+         */
+        ApproveKindResponse: {
+            /** Approved */
+            approved: boolean;
+            /** Approved At */
+            approved_at: string;
+            /** Approved By */
+            approved_by: string;
+            /** Kind */
+            kind: string;
+            /** Name */
+            name: string;
+            /** Namespace */
+            namespace: string;
+            /** Proposed At */
+            proposed_at?: string | null;
+            /** Proposed By */
+            proposed_by?: string | null;
+            /** Version */
+            version?: string | null;
+        };
+        /**
          * AuthorKindResponse
          * @description ``POST /v1/kinds`` — the authored Kind. ``approved`` is ALWAYS false
          *     here: this door cannot approve, so the field states the document's actual
@@ -1006,12 +1068,16 @@ export interface components {
             name: string;
             /** Namespace */
             namespace: string;
+            /** Proposed By */
+            proposed_by?: string | null;
             /** Version */
             version?: string | null;
         };
         /**
          * AuthoredKindSummary
-         * @description One ``KindDefinition`` document as the audit surface sees it.
+         * @description One ``KindDefinition`` document as the audit surface sees it — BOTH
+         *     actors, so the reviewer deciding whether to confer effect can see who asked
+         *     for it without leaving the list.
          */
         AuthoredKindSummary: {
             /** Api Version */
@@ -1033,6 +1099,10 @@ export interface components {
             name?: string | null;
             /** Namespace */
             namespace?: string | null;
+            /** Proposed At */
+            proposed_at?: string | null;
+            /** Proposed By */
+            proposed_by?: string | null;
         };
         /**
          * AuthoredKindsResponse
@@ -3004,6 +3074,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AuthorKindResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_kind_v1_kinds__kind__approve_post: {
+        parameters: {
+            query?: {
+                tenant?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                kind: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApproveKindResponse"];
                 };
             };
             /** @description Validation Error */

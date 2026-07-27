@@ -252,6 +252,8 @@ A KindDefinition declaratively defines a brand-new kind without writing Python c
 | `plane` | string |  |  |
 | `prompt_target` | boolean |  |  |
 | `prompt_target_priority` | integer |  |  |
+| `proposed_at` | string |  |  |
+| `proposed_by` | string |  |  |
 | `schema` | object |  |  |
 | `schema_fragments` | array |  |  |
 | `scope_inheritable` | boolean |  |  |

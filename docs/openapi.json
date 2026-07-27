@@ -221,6 +221,78 @@
         "title": "AgentsResponse",
         "type": "object"
       },
+      "ApproveKindResponse": {
+        "description": "``POST /v1/kinds/{kind}/approve`` — the act that CONFERS effect.\n\nCarries BOTH actors: a reviewer who must make a second call to learn who\nproposed is a reviewer who will not make it. ``proposed_by`` may equal\n``approved_by`` (a solo author approving their own proposal) — a fact this\nresponse reports, not an error it withholds.",
+        "properties": {
+          "approved": {
+            "title": "Approved",
+            "type": "boolean"
+          },
+          "approved_at": {
+            "title": "Approved At",
+            "type": "string"
+          },
+          "approved_by": {
+            "title": "Approved By",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "namespace": {
+            "title": "Namespace",
+            "type": "string"
+          },
+          "proposed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposed At"
+          },
+          "proposed_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposed By"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          }
+        },
+        "required": [
+          "approved",
+          "kind",
+          "name",
+          "namespace",
+          "approved_by",
+          "approved_at"
+        ],
+        "title": "ApproveKindResponse",
+        "type": "object"
+      },
       "AuthorKindResponse": {
         "description": "``POST /v1/kinds`` — the authored Kind. ``approved`` is ALWAYS false\nhere: this door cannot approve, so the field states the document's actual\nstate rather than echoing anything the caller sent.",
         "properties": {
@@ -239,6 +311,17 @@
           "namespace": {
             "title": "Namespace",
             "type": "string"
+          },
+          "proposed_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposed By"
           },
           "version": {
             "anyOf": [
@@ -262,7 +345,7 @@
         "type": "object"
       },
       "AuthoredKindSummary": {
-        "description": "One ``KindDefinition`` document as the audit surface sees it.",
+        "description": "One ``KindDefinition`` document as the audit surface sees it — BOTH\nactors, so the reviewer deciding whether to confer effect can see who asked\nfor it without leaving the list.",
         "properties": {
           "api_version": {
             "anyOf": [
@@ -345,6 +428,28 @@
               }
             ],
             "title": "Namespace"
+          },
+          "proposed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposed At"
+          },
+          "proposed_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposed By"
           }
         },
         "title": "AuthoredKindSummary",
@@ -5331,7 +5436,7 @@
         "summary": "List Authored Kinds"
       },
       "post": {
-        "description": "Author a Kind for the calling workspace — a ``KindDefinition``\ndocument written WITHOUT an approval marker, under the workspace's own\nassigned apiVersion namespace (minted on first use, then stable).\n\nThe response's ``approved`` is always ``false``. An ``approved_by`` in\nthe body is ignored, not honoured and not rejected: a caller that could\napprove its own proposal would make the gate decorative. 400 for a\nmissing tenant / a Kind name that is not a CamelCase identifier, 403\nwhen the namespace gate refuses the write (the workspace does not own\nthe target namespace), 503 when the namespace registry scope has not\nbeen provisioned in this store.",
+        "description": "Author a Kind for the calling workspace — a ``KindDefinition``\ndocument written WITHOUT an approval marker, under the workspace's own\nassigned apiVersion namespace (minted on first use, then stable).\n\nThe response's ``approved`` is always ``false``. An ``approved_by`` in\nthe body is ignored, not honoured and not rejected: a caller that could\napprove its own proposal would make the gate decorative. The document\nrecords ``proposed_by`` — the caller's VERIFIED identity, resolved\nserver-side (``_actor_from_state``) and never read from the body, and\nstamped here because a proposer cannot be back-filled onto a document\nthat never recorded one. 400 for a missing tenant / a Kind name that is\nnot a CamelCase identifier, 403 when the namespace gate refuses the\nwrite (the workspace does not own the target namespace), 503 when the\nnamespace registry scope has not been provisioned in this store.",
         "operationId": "author_kind_v1_kinds_post",
         "parameters": [
           {
@@ -5400,6 +5505,78 @@
           }
         },
         "summary": "Author Kind"
+      }
+    },
+    "/v1/kinds/{kind}/approve": {
+      "post": {
+        "description": "Approve an authored Kind — the act that puts it INTO EFFECT.\n\nThe approver is the caller's VERIFIED identity, resolved server-side\n(``_actor_from_state``: email → durable oid → ``sub``). An\n``approved_by`` in the body reaches nothing: attribution a caller can\nforge is not attribution. The document's ``proposed_by`` is preserved\nuntouched, so the audit names both acts and neither wears the other's\nname. 404 when no such Kind was authored in this scope (approval acts on\nan existing document and creates none), 400 for a missing tenant / a\nmalformed Kind name / a Kind declared under two namespaces at once, 403\nwhen the namespace gate refuses the write.",
+        "operationId": "approve_kind_v1_kinds__kind__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tenant"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApproveKindResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Approve Kind"
       }
     },
     "/v1/memories": {

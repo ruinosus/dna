@@ -219,10 +219,21 @@ export class DnaClient {
    *
    * What comes back is INERT: `approved` is always `false`, and an unapproved
    * Kind never enters the registry, so it neither validates documents nor
-   * routes their storage. Approval is a separate act by a different actor —
-   * this call cannot perform it, and there is deliberately no parameter for
-   * an approver. 400 for a missing tenant/kind; 403 when the workspace does
-   * not own the target namespace.
+   * routes their storage. Approval is a separate act with its own verified
+   * actor (`approveKind`) — this call cannot perform it, and there is
+   * deliberately no parameter for an approver. The document records
+   * `proposed_by`: the server-verified identity of THIS call, stamped here
+   * because a proposer cannot be back-filled onto a document that never
+   * recorded one.
+   *
+   * `kind` must be a CamelCase identifier — a CAPITAL letter followed by up to
+   * 63 letters or digits, nothing else. It is the one value that reaches a
+   * path, and the initial capital is required so `Contrato` and `contrato`
+   * cannot collide on a case-insensitive filesystem.
+   *
+   * 400 for a missing tenant, or a `kind` that is not such an identifier; 403
+   * when the workspace does not own the target namespace; 503 when the store's
+   * namespace-registry scope has not been provisioned.
    */
   async authorKind(
     kind: string,
@@ -239,9 +250,41 @@ export class DnaClient {
   }
 
   /**
+   * Approve an authored Kind — the act that puts it INTO EFFECT.
+   *
+   * Registration is what confers schema validation and storage routing, and
+   * the registry withholds it until `approved_by` names someone, so this is
+   * not a flag with a promise attached: it is the only thing that lets the
+   * next load take the Kind at all.
+   *
+   * The approver is the caller's server-VERIFIED identity; there is
+   * deliberately no parameter for it, and an `approved_by` in the payload
+   * would reach nothing. The document's `proposed_by` is preserved, so the
+   * response names both acts. The two MAY be the same identity — a solo author
+   * approving their own proposal is two credentials, and the audit reports the
+   * coincidence rather than refusing it.
+   *
+   * 404 when no such Kind was authored in this scope (approval acts on an
+   * existing document and creates none); 400 for a missing tenant, a malformed
+   * `kind`, or a Kind declared under two namespaces at once; 403 when the
+   * namespace gate refuses the write.
+   */
+  async approveKind(kind: string, query?: ScopeTenant) {
+    return this.unwrap(
+      await this.raw.POST("/v1/kinds/{kind}/approve", {
+        params: { path: { kind }, query: this.q(query) },
+      }),
+    );
+  }
+
+  /**
    * List the scope's authored Kinds with their approval state — the audit
    * view. Reads DOCUMENTS, not the registry: an unapproved Kind is precisely
    * the one the registry does not have.
+   *
+   * Each row carries BOTH actors (`proposed_by`/`proposed_at` and
+   * `approved_by`/`approved_at`): a reviewer deciding whether to confer effect
+   * needs to see who asked for it without leaving the list.
    */
   async listAuthoredKinds(query?: ScopeTenant) {
     return this.unwrap(

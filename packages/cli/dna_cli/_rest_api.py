@@ -62,6 +62,22 @@ logger = logging.getLogger(__name__)
 
 _MEMORY_KIND = "Engram"
 
+# ── who an audited write is attributed to, when the token says nothing ──────
+#
+# The REST twins of ``_mcp_auth``'s UNIDENTIFIED_{LOCAL,TOKEN}_ACTOR, and they
+# carry THIS face's channel prefix for the reason those constants exist at all:
+# ``mcp`` was recorded as an identity for so long that the board could not tell
+# the founder from an agent, and reusing an ``mcp:`` label on the REST face
+# would re-make the same conflation one layer over. See ``_actor_from_state``.
+
+#: No token at all — a local / OSS self-host call (``--auth none``) whose
+#: operator declared no ``DNA_PERSONAL_ID``.
+_UNIDENTIFIED_LOCAL_ACTOR = "rest:local"
+
+#: A VERIFIED token that carries no identity claim (a service token). Verified
+#: yet anonymous — a different fact from "local", and worth its own label.
+_UNIDENTIFIED_TOKEN_ACTOR = "rest:unidentified"
+
 # ── MIF import bounds ───────────────────────────────────────────────────────
 #
 # The import route buffers and parses the whole bundle (dedupe + validation are
@@ -251,6 +267,7 @@ def build_app(
     # HTTP. ``boot_live`` is the CLI's composition root (it wires the CLI's own
     # source/provider boot path), so it stays in ``dna_cli._mcp_server``.
     from dna.application import (
+        AuthoredKindNotFound,
         BoardItemNotFound,
         MemberForbidden,
         MemberNotFound,
@@ -261,6 +278,7 @@ def build_app(
         accept_invites_impl,
         adopt_workspace_scope_on_access,
         apply_definition_impl,
+        approve_kind_impl,
         author_kind_impl,
         board_item_impl,
         board_summary_impl,
@@ -630,6 +648,43 @@ def build_app(
         actor for a `/v1/workspaces/*` write), or ``None`` under none/token auth."""
         return getattr(request.state, "claims", None)
 
+    def _actor_from_state(request: Request) -> str:
+        """WHO this request is, as an AUDIT field records it — a single string.
+
+        Resolved SERVER-SIDE from the verified token, in the same preference
+        order the MCP board writes use (``dna_cli._mcp_auth.actor_from_context``):
+        the verified email → the durable subject (``oid``) → the token's raw
+        ``sub``. Never a body or query value: attribution a caller can forge is
+        not attribution, which is the whole reason the approval gate exists.
+
+        Absence is honest rather than fatal, mirroring ``actor_from_context``
+        (an unattributable write is still a write worth recording, and failing it
+        turns attribution into a new way to lose work):
+
+        * a VERIFIED token carrying no identity claim at all →
+          :data:`_UNIDENTIFIED_TOKEN_ACTOR`;
+        * no token at all (``--auth none`` / ``--auth token``, i.e. local or OSS
+          self-host) → ``DNA_PERSONAL_ID`` if the operator declared one — the
+          env var that already names an offline caller for personal memory — and
+          :data:`_UNIDENTIFIED_LOCAL_ACTOR` otherwise.
+
+        The two labels name the CHANNEL this face is (``rest:``), not the
+        identity: recording a channel as an identity is the conflation the MCP
+        constants exist to end, and reusing ``mcp:local`` here would re-make it
+        one layer over.
+        """
+        from dna.tenancy import identity_from_token as _identity_from_token
+        from dna_cli._mcp_auth import personal_id_from_env
+
+        claims = _actor_claims_from_state(request)
+        if claims is None:
+            return personal_id_from_env() or _UNIDENTIFIED_LOCAL_ACTOR
+        identity = _identity_from_token(claims)
+        for candidate in (identity.email, identity.oid, claims.get("sub")):
+            if isinstance(candidate, str) and candidate.strip():
+                return candidate.strip()
+        return _UNIDENTIFIED_TOKEN_ACTOR
+
     # -- plan gates on the WRITE path (i-042) ---------------------------------
     # Before this, the REST face had ZERO metering: the axes the Pro plan sells
     # (memory_mode write, calls_per_day) were enforced ONLY on the MCP channel —
@@ -870,6 +925,7 @@ def build_app(
     @app.post("/v1/kinds", dependencies=guarded, status_code=201,
               response_model=m.AuthorKindResponse)
     async def author_kind(
+        request: Request,
         kind: str = Body(..., embed=True),
         schema: dict[str, Any] = Body(..., embed=True),
         traits: list[str] | None = Body(default=None, embed=True),
@@ -881,18 +937,21 @@ def build_app(
 
         The response's ``approved`` is always ``false``. An ``approved_by`` in
         the body is ignored, not honoured and not rejected: a caller that could
-        approve its own proposal would make the gate decorative. 400 for a
-        missing tenant / a Kind name that is not a CamelCase identifier, 403
-        when the namespace gate refuses the write (the workspace does not own
-        the target namespace), 503 when the namespace registry scope has not
-        been provisioned in this store."""
+        approve its own proposal would make the gate decorative. The document
+        records ``proposed_by`` — the caller's VERIFIED identity, resolved
+        server-side (``_actor_from_state``) and never read from the body, and
+        stamped here because a proposer cannot be back-filled onto a document
+        that never recorded one. 400 for a missing tenant / a Kind name that is
+        not a CamelCase identifier, 403 when the namespace gate refuses the
+        write (the workspace does not own the target namespace), 503 when the
+        namespace registry scope has not been provisioned in this store."""
         from dna.application.sdlc import now_iso
 
         live = await _live()
         try:
             return await author_kind_impl(
                 live, kind=kind, schema=schema, tenant=tenant or "",
-                now=now_iso(), traits=traits,
+                now=now_iso(), actor=_actor_from_state(request), traits=traits,
             )
         except LayerPolicyViolationError as exc:
             raise HTTPException(status_code=403, detail=str(exc)) from exc
@@ -921,6 +980,48 @@ def build_app(
                     f"at <base>/_lib/manifest.yaml) and retry. Underlying: {exc}"
                 ),
             ) from exc
+
+    # THE ACT THAT CONFERS EFFECT. Registration is what gives a Kind schema
+    # validation and storage routing, and the registry's gate withholds it until
+    # ``approved_by`` names someone — so this route is not a flag flip with a
+    # promise attached, it is the only thing that lets the next load take the
+    # Kind at all. A SEPARATE route from authoring by construction: the authoring
+    # door builds its spec field by field and cannot write ``approved_by``, so
+    # approval necessarily costs a second call, made with whatever identity the
+    # second caller holds. Whether that identity must DIFFER from the proposer's
+    # is a workspace policy (four-eyes), not a kernel rule — see the impl.
+
+    @app.post("/v1/kinds/{kind}/approve", dependencies=guarded,
+              response_model=m.ApproveKindResponse)
+    async def approve_kind(
+        request: Request,
+        kind: str,
+        tenant: str | None = Query(default=None),
+    ) -> dict[str, Any]:
+        """Approve an authored Kind — the act that puts it INTO EFFECT.
+
+        The approver is the caller's VERIFIED identity, resolved server-side
+        (``_actor_from_state``: email → durable oid → ``sub``). An
+        ``approved_by`` in the body reaches nothing: attribution a caller can
+        forge is not attribution. The document's ``proposed_by`` is preserved
+        untouched, so the audit names both acts and neither wears the other's
+        name. 404 when no such Kind was authored in this scope (approval acts on
+        an existing document and creates none), 400 for a missing tenant / a
+        malformed Kind name / a Kind declared under two namespaces at once, 403
+        when the namespace gate refuses the write."""
+        from dna.application.sdlc import now_iso
+
+        try:
+            return await approve_kind_impl(
+                await _live(), kind=kind, tenant=tenant or "",
+                actor=_actor_from_state(request), now=now_iso(),
+            )
+        except AuthoredKindNotFound as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from None
+        except LayerPolicyViolationError as exc:
+            raise HTTPException(status_code=403, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from None
 
     @app.get("/v1/kinds", dependencies=guarded,
              response_model=m.AuthoredKindsResponse)

@@ -296,6 +296,7 @@ _NEST = ("deep", "nested", "root")
         pytest.param("a/b", id="separator"),
         pytest.param("C" * 65, id="too-long"),
         pytest.param("1Contrato", id="leading-digit"),
+        pytest.param("contrato", id="lowercase-initial"),
         pytest.param("Contrato--Extra", id="ambiguous-name-separator"),
         pytest.param("", id="empty"),
         pytest.param("   ", id="whitespace"),
@@ -308,7 +309,14 @@ def test_a_kind_name_that_is_not_an_identifier_is_refused(dna_dir, bad):
     ``Contrato--Extra`` is in the list for a second reason: the document name
     joins namespace and Kind with ``--``, and only the namespace half is
     structurally free of it. An ambiguous name is a trap laid for the approval
-    act, which addresses these documents by name."""
+    act, which addresses these documents by name.
+
+    ``contrato`` is in it for a third: the guard's message says CamelCase and
+    the guard must mean what it says. MEASURED — ``Contrato`` and ``contrato``
+    generate the IDENTICAL alias, and on a case-insensitive filesystem (the
+    macOS/Windows default) the second write lands in the same
+    ``kinds/<name>/`` directory as the first and silently replaces it, with a
+    201 in reply."""
     with _client(dna_dir) as c:
         r = c.post("/v1/kinds", params={"tenant": _WID},
                    json={"kind": bad, "schema": _SCHEMA})
