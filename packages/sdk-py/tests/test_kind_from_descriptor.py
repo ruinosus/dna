@@ -38,8 +38,14 @@ def test_perscope_kinddef_loses_to_builtin_with_warning():
     builtin = k.kind_from_descriptor(RAW_FULL)
     events = []
     k.on("kinddef_conflict", lambda ctx: events.append(ctx))
-    # per-scope chega via _register_kind_definitions (fase 1 do load)
-    perscope_raw = {**RAW_FULL, "metadata": {"name": "kz-override"}}
+    # per-scope chega via _register_kind_definitions (fase 1 do load); um Kind
+    # vindo de store só alcança o funil de conflito depois de APROVADO — sem
+    # ``approved_by`` ele é recusado antes, e o conflito nunca chega a existir.
+    perscope_raw = {
+        **RAW_FULL,
+        "metadata": {"name": "kz-override"},
+        "spec": {**RAW_FULL["spec"], "approved_by": "approver@example.com"},
+    }
     k._register_kind_definitions([perscope_raw])
     assert k.kind_port_for("KaizenLike") is builtin  # builtin venceu
     assert k.kind_port_for("KaizenLike").__builtin_descriptor__ is True

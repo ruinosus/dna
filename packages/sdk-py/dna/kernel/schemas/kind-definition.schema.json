@@ -275,6 +275,14 @@
           "items": { "type": "string", "minLength": 1 },
           "description": "The prompt layouts documents of this Kind may name; UnknownLayout lists them back to the author."
         },
+        "approved_by": {
+          "type": ["string", "null"],
+          "description": "Who approved this Kind. A KindDefinition loaded from a STORE registers only once this names someone: registration is what confers schema enforcement and storage routing, so an unapproved Kind is parsed, logged and left inert — a document that is auditable, listable and diffable, and does nothing. Omit (null) while the Kind is authored but not yet approved."
+        },
+        "approved_at": {
+          "type": ["string", "null"],
+          "description": "When the approval recorded in approved_by was given (ISO-8601). Audit metadata only — the gate reads approved_by."
+        },
         "updated_at": {
           "type": "string",
           "description": "Runtime-stamped volatile field (never authored) — allowed so write-stamped documents keep validating."

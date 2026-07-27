@@ -11,6 +11,8 @@ Declarative Kind descriptor — the format of builtin `kinds/*.kind.yaml` packag
 | Field | Required | Description |
 | --- | --- | --- |
 | `alias` | yes | Globally unique alias, convention `<owner>-<kebab(kind)>` (e.g. `sdlc-kaizen`). Used in dep_filters, templates and cross-kind refs — never bare Kind names. |
+| `approved_at` |  | When the approval recorded in approved_by was given (ISO-8601). Audit metadata only — the gate reads approved_by. |
+| `approved_by` |  | Who approved this Kind. A KindDefinition loaded from a STORE registers only once this names someone: registration is what confers schema enforcement and storage routing, so an unapproved Kind is parsed, logged and left inert — a document that is auditable, listable and diffable, and does nothing. Omit (null) while the Kind is authored but not yet approved. |
 | `ascii_icon` |  | Single emoji or character for ASCII tree / compact views. |
 | `created_at` |  | Runtime-stamped volatile field (never authored). |
 | `default_agent` |  | Fixed Agent name returned by get_default_agent_name for every doc of this Kind. |

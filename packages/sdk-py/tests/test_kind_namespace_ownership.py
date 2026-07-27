@@ -158,6 +158,10 @@ def _kinddef_raw(api_version, kind, alias, schema, *, container=None):
             "origin": namespace_of(api_version),
             "storage": {"type": "yaml", "container": container or alias + "s"},
             "schema": schema,
+            # A registration gate this suite is not about: an unapproved
+            # store-loaded Kind never registers at all, so these namespace
+            # assertions would pass vacuously without it.
+            "approved_by": "approver@example.com",
         },
     }
 

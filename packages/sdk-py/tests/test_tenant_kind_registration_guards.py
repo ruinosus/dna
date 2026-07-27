@@ -43,7 +43,11 @@ def kinddef(
     *, namespace: str, kind: str, alias: str, container: str | None = None,
     schema: dict | None = None, storage: dict | None = None, name: str | None = None,
 ) -> dict:
-    """A per-scope ``KindDefinition`` document, as it arrives from the store."""
+    """A per-scope ``KindDefinition`` document, as it arrives from the store —
+    APPROVED, because that is the precondition for reaching the registration
+    guards this suite is about. An unapproved one is refused before them (see
+    ``test_kind_approval_gate.py``), which would make every assertion below
+    pass for the wrong reason."""
     return {
         "apiVersion": "github.com/ruinosus/dna/core/v1",
         "kind": "KindDefinition",
@@ -57,6 +61,7 @@ def kinddef(
                 "type": "yaml", "container": container or alias + "s",
             },
             "schema": schema or {"type": "object"},
+            "approved_by": "approver@example.com",
         },
     }
 

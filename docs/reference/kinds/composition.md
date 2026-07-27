@@ -227,6 +227,8 @@ A KindDefinition declaratively defines a brand-new kind without writing Python c
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `alias` | string |  |  |
+| `approved_at` | string |  |  |
+| `approved_by` | string |  |  |
 | `ascii_icon` | string |  |  |
 | `default_agent` | string |  |  |
 | `default_agent_field` | string |  |  |

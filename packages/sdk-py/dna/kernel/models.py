@@ -1057,6 +1057,15 @@ class KindDefinitionSpec:
     # ``layout_names``: the prompt layouts this Kind's documents may name
     # (``UnknownLayout`` lists them). Empty = no layouts, today's default.
     layout_names: list[str] | None = None
+    # ---- Approval (the registration gate) ----------------------------------
+    # Who approved this Kind, and when. A KindDefinition that arrives from a
+    # STORE only reaches the registry once ``approved_by`` names someone —
+    # authoring a Kind and putting it into effect are two acts by two actors.
+    # Both fields are pure data here: the registry READS ``approved_by`` and
+    # writes neither, so the privileged path that may set them is a decision
+    # made where the writer is authenticated, not in the kernel.
+    approved_by: str | None = None
+    approved_at: str | None = None
 
     @classmethod
     def from_raw(cls, raw: dict[str, Any]) -> KindDefinitionSpec:
@@ -1232,6 +1241,8 @@ class KindDefinitionSpec:
             visible_in_backend=visible_in_backend,
             version_retention=version_retention,
             layout_names=layout_names,
+            approved_by=raw.get("approved_by"),
+            approved_at=raw.get("approved_at"),
         )
 
     @staticmethod
