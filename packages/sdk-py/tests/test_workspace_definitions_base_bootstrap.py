@@ -38,7 +38,7 @@ from dna.application.runtime import (
     provision_workspace_owner_impl,
 )
 from dna.kernel import Kernel
-from dna.kernel.kinds.namespaces import owner_of
+from dna.kernel.kinds.namespaces import namespace_of, owner_of
 
 _BASE_SCOPE = "dna-development"
 _VENDOR_WS = "ws-vendor00000000000000000"
@@ -123,10 +123,25 @@ async def test_create_births_the_scope_with_the_declared_parent(
     claims = await kernel.kind_namespaces()
     mine = [c for c in claims if (c.get("spec") or {}).get("owner") == wid]
     assert len(mine) == 1, f"expected exactly one namespace claim for {wid}, got {mine}"
-    assigned = mine[0]["spec"]["namespace"]
-    assert owner_of(assigned, claims).owner == wid, (
-        f"the newborn workspace does not resolve as the owner of {assigned!r} — "
-        "its first authored Kind would be refused"
+    # `metadata.name`, not `spec.namespace`: the document's own key is what a
+    # correct `assign_namespace` mint sets from the SAME local variable it
+    # returns to the caller, so it stays the true prefix even if a bug ever
+    # made `spec.namespace` diverge from it. Reading `spec.namespace` here
+    # instead would be circular — `claims` is the very same list `mine` was
+    # drawn from, so `owner_of(namespace_of(f"{v}/v1"), claims)` for a `v`
+    # pulled out of one of `claims`'s own rows always resolves that row's
+    # owner, no matter what shape `v` is (`namespace_of` undoes exactly the
+    # `/v1` just appended, by construction) — it would never catch the
+    # near-miss no matter how `spec.namespace` was corrupted. `metadata.name`
+    # breaks that circularity: it is independent of whatever the bug did to
+    # `spec.namespace`, which is what lets this assertion actually resolve
+    # through `namespace_of` the way the write path really does, instead of
+    # tautologically matching the document it was read from.
+    assigned = mine[0]["metadata"]["name"]
+    api_version = f"{assigned}/v1"
+    assert owner_of(namespace_of(api_version), claims).owner == wid, (
+        f"the newborn workspace does not resolve as the owner of the namespace "
+        f"of {api_version!r} — its first authored Kind would be refused"
     )
 
 

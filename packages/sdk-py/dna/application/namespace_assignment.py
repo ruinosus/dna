@@ -46,6 +46,14 @@ _KIND = "KindNamespace"
 #: under: ``KindNamespace`` here, ``Workspace``/``WorkspaceMembership`` in
 #: :mod:`dna.application.runtime`, which imports this name. Defined ONCE: it is a
 #: wire value, and two constants for one wire value drift.
+#:
+#: Homed here backwards — a tenant-plane wire constant living in the
+#: namespace-assignment module — because moving the import to
+#: :mod:`dna.extensions.tenant` (its natural single home; the literal survives
+#: there too, as ``_API_VERSION`` in ``dna/extensions/tenant/__init__.py``)
+#: would cycle back into this module. Not a regression: this collapsed the
+#: literal from 3 copies to 2. Move it there deliberately, resolving the
+#: cycle, rather than leaving it here by default.
 TENANT_API_VERSION = "github.com/ruinosus/dna/tenant/v1"
 
 #: The non-routable suffix every assigned namespace carries. Kept OUT of the
@@ -72,10 +80,14 @@ async def assign_namespace(kernel: Any, workspace_id: str, *, now: str) -> str:
     the registry yielded first would let two authoring sessions land Kinds under
     two different apiVersions, which participate in document identity. So the
     contract is narrower and stable: candidates are filtered to the ASSIGNED
-    shape (the ``.dna.local`` suffix) and reduced to a fixed choice. A workspace
-    that later proves ownership of a public namespace (``acme.example``) does
-    not silently change what this answers — authoring under that other claim is
-    a CALLER's explicit decision, never a side effect of a second row appearing.
+    shape (the ``.dna.local`` suffix) and reduced to the EARLIEST by
+    ``claimed_at`` (namespace string as tiebreak) — literally "the namespace
+    this function assigned first", and monotone under insertion: a later
+    row, however it sorts as a string, can never displace an earlier one. A
+    workspace that later proves ownership of a public namespace
+    (``acme.example``) does not silently change what this answers — authoring
+    under that other claim is a CALLER's explicit decision, never a side
+    effect of a second row appearing.
     """
     if not workspace_id:
         raise ValueError("workspace_id is required to assign a namespace")
@@ -136,12 +148,23 @@ async def assign_namespace(kernel: Any, workspace_id: str, *, now: str) -> str:
 async def _stored_for(kernel: Any, workspace_id: str) -> str | None:
     """The namespace already ASSIGNED to ``workspace_id``, or None.
 
-    Filtered to the assigned shape and reduced with ``min``, never "the first row
-    that matched". A workspace may own several claims, so the unfiltered answer
-    would depend on query order and could flip between two calls — see
+    Filtered to the assigned shape and reduced to the row with the EARLIEST
+    ``claimed_at`` (namespace string as tiebreak — ``claimed_at`` is a
+    required field on every claim, so it is always present to sort by), never
+    "the first row that matched" and never ``min`` over the namespace string.
+    A workspace may own several claims, so the unfiltered answer would depend
+    on query order and could flip between two calls — see
     :func:`assign_namespace`'s docstring for why a flipping apiVersion is a
-    document-identity problem, not a cosmetic one. ``min`` makes the answer a
-    function of the SET of assigned rows, not of the order they arrive in.
+    document-identity problem, not a cosmetic one. Reducing by ``min`` over
+    the namespace string would make the answer a function of the SET of
+    assigned rows rather than of arrival order, which sounds like the same
+    guarantee, but it is not MONOTONE under insertion: a second assigned row
+    that happens to sort lower than the first would flip the answer the
+    moment it appears, which is exactly the flip this function exists to
+    prevent. Earliest-``claimed_at`` is monotone by construction — a row
+    inserted later cannot have an earlier ``claimed_at`` than one already
+    chosen — and it means what the contract says in words: the namespace this
+    function assigned FIRST.
 
     READ-THEN-WRITE, deliberately unlocked: two simultaneous FIRST calls both
     read nothing and both mint, leaving the workspace owning two assigned
@@ -154,12 +177,12 @@ async def _stored_for(kernel: Any, workspace_id: str) -> str | None:
     Reads ``_lib``-direct: ``KindNamespace`` is GLOBAL and not inheritable, so a
     per-scope query would silently return nothing and mint a duplicate.
     """
-    assigned: list[str] = []
+    assigned: list[tuple[str, str]] = []  # (claimed_at, namespace)
     async for doc in kernel.query(SYSTEM_SCOPE, _KIND):
         spec = (doc.get("spec") or {}) if isinstance(doc, dict) else {}
         namespace = spec.get("namespace")
         if spec.get("owner") != workspace_id or not namespace:
             continue
         if str(namespace).endswith(_SUFFIX):
-            assigned.append(str(namespace))
-    return min(assigned) if assigned else None
+            assigned.append((str(spec.get("claimed_at")), str(namespace)))
+    return min(assigned)[1] if assigned else None

@@ -48,7 +48,10 @@ def live_kernel(tmp_path):
     return k
 
 
-async def _store_claim(live_kernel, *, namespace: str, owner: str, notes: str) -> None:
+async def _store_claim(
+    live_kernel, *, namespace: str, owner: str, notes: str,
+    claimed_at: str = "2026-07-25T00:00:00Z",
+) -> None:
     """Write a ``KindNamespace`` claim directly — a claim that was already there
     before ``assign_namespace`` ever ran, in exactly the shape it must find."""
     await live_kernel.write_document(
@@ -60,7 +63,7 @@ async def _store_claim(live_kernel, *, namespace: str, owner: str, notes: str) -
             "spec": {
                 "owner": owner,
                 "namespace": namespace,
-                "claimed_at": "2026-07-25T00:00:00Z",
+                "claimed_at": claimed_at,
                 "notes": notes,
             },
         },
@@ -153,12 +156,17 @@ async def test_the_answer_is_the_assigned_claim_and_never_flips(live_kernel):
     its assigned namespace silently swapped out from under Kinds already declared
     under it (authoring under the proven claim is a caller's explicit choice), and
     an extra assigned row must not flip the answer either — the choice is over the
-    SET of assigned claims, not over the order the registry yields them in."""
+    EARLIEST-``claimed_at`` assigned claim, not over how the namespace strings
+    happen to sort or the order the registry yields them in. The second row
+    below is deliberately built to sort ALPHABETICALLY LOWER than the first
+    (``0000000000ff`` < ``0000deadbeef``) while being claimed LATER — the exact
+    case a ``min``-over-the-string reduction would get wrong."""
     assigned = "ws-0000deadbeef.dna.local"
     await _store_claim(live_kernel, namespace="acme.example", owner="ws-abc",
                        notes="proven ownership of a public domain")
     await _store_claim(live_kernel, namespace=assigned, owner="ws-abc",
-                       notes="assigned automatically at workspace creation")
+                       notes="assigned automatically at workspace creation",
+                       claimed_at="2026-07-25T00:00:00Z")
 
     first = await assign_namespace(live_kernel, "ws-abc", now="2026-07-26T00:00:00Z")
     assert first == assigned, (
@@ -166,10 +174,12 @@ async def test_the_answer_is_the_assigned_claim_and_never_flips(live_kernel):
         "the workspace's assigned namespace is"
     )
 
-    # A second ASSIGNED row — the double-mint two simultaneous first calls could
-    # leave behind — must not move the answer either.
-    await _store_claim(live_kernel, namespace="ws-ffff00000000.dna.local",
-                       owner="ws-abc", notes="assigned automatically at workspace creation")
+    # A second ASSIGNED row that sorts BELOW the first as a string but was
+    # claimed LATER — the double-mint two simultaneous first calls could leave
+    # behind — must not move the answer either.
+    await _store_claim(live_kernel, namespace="ws-0000000000ff.dna.local",
+                       owner="ws-abc", notes="assigned automatically at workspace creation",
+                       claimed_at="2026-07-26T12:00:00Z")
 
     again = await assign_namespace(live_kernel, "ws-abc", now="2026-07-27T00:00:00Z")
     assert again == first, (
