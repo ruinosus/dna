@@ -42,7 +42,6 @@ __all__ = [
     "approve_kind_impl",
     "author_kind_impl",
     "get_authored_kind_impl",
-    "kind_document_name",
     "list_authored_kinds_impl",
 ]
 
@@ -101,10 +100,11 @@ class NamespaceRegistryUnreadable(RuntimeError):
 #: The same check closes the other half of the ``--`` separator. An ASSIGNED
 #: namespace (``ws-<hex>.dna.local``) structurally cannot contain ``--``, but the
 #: Kind half is caller-controlled, so ``Contrato--Extra`` would yield a name no
-#: reader can split unambiguously. Nothing splits it today —
-#: :func:`kind_document_name` is exported precisely so the APPROVAL act, a
-#: separate task by a different actor, can address these documents by name, and
-#: an ambiguous name is a trap laid for that task.
+#: reader can split unambiguously. Something DOES split it:
+#: :func:`_authored_kind_visibility` decides who may see a row by taking the
+#: namespace half of its name (``rsplit(_NAME_SEP, 1)``) and asking whether the
+#: caller owns it — so an ambiguous name is not a trap laid for a future task,
+#: it is an ambiguity in a live authorization decision.
 #:
 #: The leading class is ``[A-Z]``, not ``[A-Za-z]``: the error message says
 #: CamelCase and the guard must mean what its message says. MEASURED
@@ -154,9 +154,14 @@ def _alias_owner(namespace: str) -> str:
 def kind_document_name(namespace: str, kind: str) -> str:
     """The document name an authored Kind is stored under.
 
-    Exposed because approval (a separate act by a different actor) has to be
-    able to address the very document this door wrote, and deriving that name in
-    two places is how the two halves drift apart."""
+    Module-private in practice, and deliberately NOT in ``__all__``. It was
+    exported on the rationale that approval — a separate act by a different
+    actor — would address the document by name; that rationale was never true.
+    :func:`approve_kind_impl` reaches the document through
+    :func:`_authored_document_name`, a SEARCH over the caller's own namespaces,
+    because the approval URL carries only the Kind half and the namespace half
+    is what the caller must be shown to own. One caller (:func:`author_kind_impl`,
+    which mints the name) is not an API."""
     return f"{namespace}{_NAME_SEP}{kind}"
 
 
@@ -505,8 +510,11 @@ async def approve_kind_impl(
     ``ValueError`` (→ 400) for a missing tenant/actor or a malformed Kind name.
     Idempotent in shape but not in fact: a second approval re-stamps the
     approver and the timestamp, which is the honest record of what happened —
-    and it is the ordinary path, because an EDIT drops the approval (see
-    :func:`author_kind_impl`) and the re-approval is what restores effect.
+    and it is the ordinary path, because an EDIT drops the approval marker (see
+    :func:`author_kind_impl`) and re-approving is what lets the NEW shape be
+    taken at the next load. Note what that does and does not say: the edit never
+    unregistered the previous shape, so this is the act that replaces it, not
+    one that restores an effect the edit removed.
     """
     kind = _checked_kind_name(kind, verb="approve")
     if not (tenant or "").strip():
@@ -579,14 +587,25 @@ async def _authored_kind_visibility(
       would delete the base catalogue from the workspace's own listing. It is
       identified as "not among the LOCAL names", which costs one extra
       ``origin="local"`` pass because :meth:`Kernel.query` does not tag a row
-      with the scope it came from. MEASURED and recorded rather than assumed:
-      the pass is inert TODAY — ``KindDefinition`` is a BOOTSTRAP Kind and
-      ``Kernel._NON_INHERITABLE_KINDS`` unions ``_BOOTSTRAP_KINDS``, so the
-      catalog and parent passes are both skipped for it and ``origin="all"`` is
-      exactly ``origin="local"``. The rule is written anyway: it costs one
-      bounded pass over the Kinds of one scope, and the day
-      ``scope_inheritable`` flips is not the day to discover that the listing
-      eats the base catalogue.
+      with the scope it came from.
+
+      RE-MEASURED (pre-merge, over a child scope that really declares a
+      ``parent_scope`` and a parent that really holds an approved
+      ``KindDefinition``): the pass is inert in production, and more completely
+      than "``origin='all'`` happens to equal ``origin='local'``" — the parent's
+      row appears in NEITHER pass, so ``default - local`` is empty and the
+      ``name not in local`` branch is never taken. ``KindDefinition`` is a
+      BOOTSTRAP Kind and ``Kernel._NON_INHERITABLE_KINDS`` unions
+      ``_BOOTSTRAP_KINDS``, so ``kernel.query``'s catalog and parent passes are
+      both skipped for it.
+
+      It is KEPT rather than deleted, and the reason is not the cost argument.
+      ``test_kind_approval_audit.py::test_an_inherited_row_survives_the_filter``
+      pins this branch directly against a stub kernel, so the pass and its test
+      are one two-file change; deleting the pass alone turns that suite red.
+      Whoever removes it removes both — and the condition that would make it
+      LOAD-BEARING again is exactly one: ``KindDefinition`` becoming
+      ``scope_inheritable``.
     * a name with no ``--`` has no namespace half to test at all (every
       ``KindDefinition`` predating the authoring door, and every hand-written
       one, looks like this), so it is kept rather than split blindly.

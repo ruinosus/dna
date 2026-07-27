@@ -317,3 +317,51 @@ def test_list_my_kinds_shows_the_proposal_and_its_approval_state(mcp_client):
         "name", "kind", "api_version", "namespace", "approved",
         "proposed_by", "proposed_at", "approved_by", "approved_at", "created_at",
     }, sorted(row)
+
+
+# ── an unreadable claim registry refuses in words, not as a bare failure ────
+
+
+def test_an_unreadable_registry_refuses_the_listing_in_words(
+    mcp_client, monkeypatch,
+):
+    """The MCP twin of the REST doors' 503 — the parity this module's docstring
+    already claims.
+
+    ``list_my_kinds`` filters to what the caller owns, and ownership comes from
+    the ``KindNamespace`` claim registry. When that read fails the core refuses
+    with :class:`~dna.application.kind_authoring.NamespaceRegistryUnreadable`
+    rather than degrading to the unfiltered roster — right, and pinned on the
+    REST side already.
+
+    What was NOT pinned is the last hop. ``NamespaceRegistryUnreadable`` is a
+    ``RuntimeError``, so it is outside ``AUTHORING_REFUSALS`` (deliberately: a
+    genuine bug must keep looking like a bug) AND outside the
+    ``FileNotFoundError`` branch that exists for exactly this condition. It
+    therefore escaped BOTH handlers and reached the agent as FastMCP's masked
+    "Error calling tool" — an unexplained failure, which over a conversational
+    face is the input to a retry loop, not to a fix. REST answers the same
+    condition with a sentence naming the missing precondition; this asserts the
+    sentence arrives here too.
+
+    Injected at the seam (``kind_namespaces`` raising something that is NOT a
+    missing file) because on a filesystem store the honest ``FileNotFoundError``
+    hides the gap that only a networked registry shows — the same injection the
+    REST tests use, for the same reason.
+    """
+    from dna.kernel import Kernel
+
+    mcp_client.call_tool("author_kind", {"kind": "Contrato", "schema": _SCHEMA})
+
+    async def boom(self, *a, **kw):
+        raise RuntimeError("connection reset by peer")
+
+    monkeypatch.setattr(Kernel, "kind_namespaces", boom, raising=True)
+
+    with pytest.raises(ToolError) as ei:
+        mcp_client.call_tool("list_my_kinds", {"scope": _SCOPE})
+    message = str(ei.value)
+    # Actionable: WHAT is missing, WHO can fix it, and the underlying cause.
+    assert "registry" in message.lower(), message
+    assert "operator" in message.lower(), message
+    assert "connection reset by peer" in message, message

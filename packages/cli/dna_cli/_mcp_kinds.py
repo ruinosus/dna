@@ -34,10 +34,27 @@ from __future__ import annotations
 from typing import Any, Awaitable, Callable
 
 from dna.application.kind_authoring import (
+    NamespaceRegistryUnreadable,
     author_kind_impl,
     list_authored_kinds_impl,
 )
 from dna.kernel.errors import KernelRefusal
+
+#: The store-side conditions that mean "the claim registry could not be read",
+#: as one tuple — the pair the REST doors map to **503**
+#: (``_rest_api.py``'s three ``except (NamespaceRegistryUnreadable,
+#: FileNotFoundError)`` arms), spelled once here so the two faces cannot drift.
+#:
+#: BOTH, because ``FileNotFoundError`` alone was only the filesystem store's
+#: spelling of the failure: a missing ``_lib`` directory. The core refuses
+#: broadly (:class:`NamespaceRegistryUnreadable`, mirroring the write gate), so
+#: a transient networked-registry error is the same fact — and being a
+#: ``RuntimeError`` it sits outside :data:`AUTHORING_REFUSALS` *by design*,
+#: which is precisely how it used to escape BOTH handlers and reach the agent as
+#: FastMCP's masked "Error calling tool".
+NO_REGISTRY: tuple[type[BaseException], ...] = (
+    NamespaceRegistryUnreadable, FileNotFoundError,
+)
 
 #: Everything an authoring call may legitimately be REFUSED with, as one tuple —
 #: the same shape ``_mcp_documents.WRITE_REFUSALS`` has, and for the same reason.
@@ -98,11 +115,13 @@ def register_kind_tools(
         """The store has no namespace-registry scope at all.
 
         Not a caller error and not a policy refusal — a store that was never
-        provisioned for authoring. ``FileNotFoundError`` is an ``OSError`` and so
-        is deliberately outside :data:`AUTHORING_REFUSALS`; without this mapping
-        the operator's missing directory would reach the agent as an unexplained
-        failure. The REST face answers 503 for exactly this, and this is the
-        same sentence over a transport that has no status codes.
+        provisioned for authoring, or one whose registry could not be read.
+        Neither member of :data:`NO_REGISTRY` is in :data:`AUTHORING_REFUSALS`,
+        deliberately (``FileNotFoundError`` is an ``OSError``;
+        ``NamespaceRegistryUnreadable`` is a ``RuntimeError``), so without this
+        mapping both reach the agent as an unexplained failure. The REST face
+        answers 503 for exactly this, and this is the same sentence over a
+        transport that has no status codes.
 
         Raised ``from exc``, unlike :func:`_refuse`. Suppressing the chain is
         right for a policy REFUSAL — the verdict is the whole story and the
@@ -142,9 +161,21 @@ def register_kind_tools(
         on this connection. There is no argument for it; a proposer a caller can
         name is not a proposer.
 
-        Calling it again for the same ``kind`` EDITS the declaration — and an
-        edit drops any approval it had, because the shape a human approved is no
-        longer the shape stored. It has to be approved again.
+        Calling it again for the same ``kind`` EDITS the declaration, and the
+        edit clears the approval marker on the document: ``list_my_kinds`` will
+        report it as ``approved: false`` again, and a human has to approve the
+        new shape.
+
+        **An edit does not take a Kind that is already in effect back out of
+        effect.** Approval is checked when a Kind is LOADED, so one that was
+        already approved and loaded keeps validating documents against the shape
+        it was loaded with until the server restarts — which may be a while, and
+        differs between servers. So after editing an approved Kind, expect
+        ``approved: false`` and your new schema here while writes are still
+        being checked against the OLD one. Do not tell the person you are
+        working with that editing withdrew the Kind; tell them the edit is
+        waiting for approval, and that the previous shape is still the one in
+        force.
 
         The Kind lands under your workspace's own apiVersion namespace, minted on
         first use and stable afterwards, so two workspaces can both author
@@ -164,7 +195,7 @@ def register_kind_tools(
                 await live(), kind=kind, schema=schema, tenant=tenant or "",
                 now=now_iso(), actor=actor_from_context(), traits=traits,
             )
-        except FileNotFoundError as exc:
+        except NO_REGISTRY as exc:
             raise _no_registry(exc) from exc
         except AUTHORING_REFUSALS as exc:
             raise _refuse(exc) from None
@@ -186,7 +217,7 @@ def register_kind_tools(
             return await list_authored_kinds_impl(
                 await live(), tenant=tenant, scope=scope,
             )
-        except FileNotFoundError as exc:
+        except NO_REGISTRY as exc:
             raise _no_registry(exc) from exc
         except AUTHORING_REFUSALS as exc:
             raise _refuse(exc) from None
