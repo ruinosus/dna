@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import asyncio
 import pathlib
+import re
 import shutil
 
 import pytest
@@ -53,34 +54,63 @@ _SCHEMA = {
 }
 
 
+def _store_at(dst: pathlib.Path, *, with_lib: bool = True) -> pathlib.Path:
+    """A writable copy of the concierge scope rooted at ``dst``."""
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(_BASE, dst)
+    if with_lib:
+        # The ``_lib`` registry — where a KindNamespace claim lives. Stood up the
+        # same way ``sdk-py/tests/test_namespace_assignment.py``'s fixture stands
+        # it up, because ``assign_namespace`` READS it before minting and a
+        # filesystem source raises ``FileNotFoundError`` for a scope directory
+        # that is not there. Every real deployment has it (a Postgres source has
+        # no such notion, and workspace provisioning writes the claim at birth);
+        # the example scope simply ships none.
+        lib = dst / "_lib"
+        lib.mkdir(parents=True, exist_ok=True)
+        (lib / "manifest.yaml").write_text(
+            "apiVersion: github.com/ruinosus/dna/v1\n"
+            "kind: Genome\n"
+            "metadata:\n  name: _lib\n"
+            "spec: {}\n"
+        )
+    return dst
+
+
 @pytest.fixture
 def dna_dir(tmp_path, monkeypatch):
     """A writable copy of the concierge scope, wired via DNA_BASE_DIR (same
     fixture shape as test_definitions_rest.py's ``dna_dir``)."""
-    dst = tmp_path / ".dna"
-    shutil.copytree(_BASE, dst)
-    # The ``_lib`` registry — where a KindNamespace claim lives. Stood up the
-    # same way ``sdk-py/tests/test_namespace_assignment.py``'s fixture stands it
-    # up, because ``assign_namespace`` READS it before minting and a filesystem
-    # source raises ``FileNotFoundError`` for a scope directory that is not
-    # there. Every real deployment has it (a Postgres source has no such
-    # notion, and workspace provisioning writes the claim at birth); the
-    # example scope simply ships none.
-    lib = dst / "_lib"
-    lib.mkdir(parents=True, exist_ok=True)
-    (lib / "manifest.yaml").write_text(
-        "apiVersion: github.com/ruinosus/dna/v1\n"
-        "kind: Genome\n"
-        "metadata:\n  name: _lib\n"
-        "spec: {}\n"
+    dst = _store_at(tmp_path / ".dna")
+    monkeypatch.setenv("DNA_BASE_DIR", str(dst))
+    monkeypatch.delenv("DNA_SOURCE_URL", raising=False)
+    return dst
+
+
+@pytest.fixture
+def dna_dir_without_lib(tmp_path, monkeypatch):
+    """The store as a FIRST author actually meets it — with no ``_lib``.
+
+    ``dna_dir`` manufactures the registry scope so the happy path can run, and
+    that manufacture is precisely what hides finding 2: on a filesystem source a
+    missing scope directory raises ``FileNotFoundError``, which the route mapped
+    to nothing and therefore surfaced as a 500. A fixture that stands the scope
+    up cannot see it, so this one refuses to."""
+    dst = _store_at(tmp_path / ".dna", with_lib=False)
+    assert not (dst / "_lib").exists(), (
+        "the shipped example scope is expected to ship NO _lib — if it starts "
+        "shipping one, this test stops testing the precondition it names"
     )
     monkeypatch.setenv("DNA_BASE_DIR", str(dst))
     monkeypatch.delenv("DNA_SOURCE_URL", raising=False)
     return dst
 
 
-def _client(dna_dir) -> TestClient:
-    return TestClient(R.build_app(base_dir=str(dna_dir), scope=_SCOPE))
+def _client(dna_dir, *, raise_server_exceptions: bool = True) -> TestClient:
+    return TestClient(
+        R.build_app(base_dir=str(dna_dir), scope=_SCOPE),
+        raise_server_exceptions=raise_server_exceptions,
+    )
 
 
 def _on_fresh_kernel(dna_dir, fn):
@@ -194,6 +224,11 @@ def test_the_generic_bootstrap_refusal_is_untouched(dna_dir):
             json={"spec": {}},
         )
         assert r.status_code == 403, r.text
+        # …and 403 for the RIGHT reason. A bare status assertion is satisfied by
+        # any 403 the stack happens to produce (an auth denial, a plan gate), so
+        # it would keep passing after the mechanism this docstring names had
+        # stopped being the one doing the refusing.
+        assert "non-overlayable" in r.text.lower(), r.text
 
 
 # ── 3. the door cannot approve its own write ──────────────────────────────
@@ -221,3 +256,129 @@ def test_the_route_cannot_approve_its_own_write(dna_dir):
     spec = _stored_spec(dna_dir, name)
     assert not spec.get("approved_by"), spec
     assert _registered_port(dna_dir, "Contrato") is None
+
+
+# ── 4. the Kind name is the one body field that reaches a PATH ────────────
+#
+# The document name becomes a DIRECTORY on a filesystem-backed source
+# (``<scope>/kinds/<name>/KIND.yaml``), and the caller supplies half of that
+# name. An unvalidated ``kind`` is therefore a create-directories-anywhere +
+# write-a-file primitive outside the store root, and a name aimed at another
+# scope's existing ``kinds/<x>/KIND.yaml`` overwrites an APPROVED KindDefinition
+# with an unapproved one — silently deregistering the victim's Kind on the next
+# load.
+
+#: The traversal, and its MEASURED landing point on the vulnerable code.
+#:
+#: Geometry matters here and guessing it produces a test that proves nothing.
+#: The stored name is ``<namespace>--<kind>``, so the FIRST path segment is the
+#: literal directory ``<namespace>--..`` — it absorbs one ``..``. Measured
+#: against a store at ``<root>/.dna``: three segments write inside the store,
+#: four land at ``<root>/.dna/ESCAPED``, five at ``<root>/ESCAPED``, and six —
+#: the reported string — at ``<root>/../ESCAPED``, two levels above the ``.dna``
+#: root. An earlier draft of this test used the three-segment form and passed
+#: against the vulnerable code; that is why the six-segment form is the one the
+#: filesystem assertion fires.
+_ESCAPE = "../../../../../../ESCAPED"
+
+#: How deep under ``tmp_path`` the escape test roots its store. The traversal
+#: climbs two levels above the ``.dna`` root, so the store needs at least that
+#: much headroom for the escape to land INSIDE ``tmp_path`` — which is what
+#: makes the assertion hermetic (a shared ancestor like pytest's session dir
+#: would couple this test to whatever else escaped during the run).
+_NEST = ("deep", "nested", "root")
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [
+        pytest.param(_ESCAPE, id="traversal"),
+        pytest.param("a/b", id="separator"),
+        pytest.param("C" * 65, id="too-long"),
+        pytest.param("1Contrato", id="leading-digit"),
+        pytest.param("Contrato--Extra", id="ambiguous-name-separator"),
+        pytest.param("", id="empty"),
+        pytest.param("   ", id="whitespace"),
+    ],
+)
+def test_a_kind_name_that_is_not_an_identifier_is_refused(dna_dir, bad):
+    """``target_kind`` is documented as a CamelCase identifier — so validate it
+    as one. An allow-list, not a deny-list of the characters we thought of.
+
+    ``Contrato--Extra`` is in the list for a second reason: the document name
+    joins namespace and Kind with ``--``, and only the namespace half is
+    structurally free of it. An ambiguous name is a trap laid for the approval
+    act, which addresses these documents by name."""
+    with _client(dna_dir) as c:
+        r = c.post("/v1/kinds", params={"tenant": _WID},
+                   json={"kind": bad, "schema": _SCHEMA})
+        assert r.status_code == 400, r.text
+
+
+def test_a_legitimate_camelcase_kind_still_authors(dna_dir):
+    """The guard above must refuse the escape without refusing the product."""
+    with _client(dna_dir) as c:
+        r = c.post("/v1/kinds", params={"tenant": _WID},
+                   json={"kind": "Contrato", "schema": _SCHEMA})
+        assert r.status_code == 201, r.text
+        assert r.json()["kind"] == "Contrato"
+
+
+def test_a_traversing_kind_name_writes_no_file_outside_the_store(
+    tmp_path, monkeypatch,
+):
+    """400 alone does not prove nothing was written — assert the FILESYSTEM.
+
+    A route that validated after the write, or that wrote and then failed, would
+    satisfy a status-only assertion while the directory it created is already
+    there. Uses its own DEEP store (see ``_NEST``) so the measured landing point
+    is inside this test's ``tmp_path`` and the assertion answers for this test
+    alone."""
+    dna_dir = _store_at(tmp_path.joinpath(*_NEST) / ".dna")
+    monkeypatch.setenv("DNA_BASE_DIR", str(dna_dir))
+    monkeypatch.delenv("DNA_SOURCE_URL", raising=False)
+
+    before = set(tmp_path.rglob("*"))
+    with _client(dna_dir) as c:
+        r = c.post("/v1/kinds", params={"tenant": _WID},
+                   json={"kind": _ESCAPE, "schema": _SCHEMA})
+        assert r.status_code == 400, r.text
+
+    # Sweep for the marker across the store root and EVERY ancestor up to
+    # tmp_path — no single directory is named, so the assertion survives a
+    # change in the store's internal layout.
+    probes, probe = [dna_dir], dna_dir
+    while probe != tmp_path:
+        probe = probe.parent
+        probes.append(probe)
+    landed = [str(p / "ESCAPED") for p in probes if (p / "ESCAPED").exists()]
+    assert not landed, f"the traversal created directories outside the store: {landed}"
+
+    # And the layout-independent half: nothing new appeared anywhere in the
+    # test's tree outside the store root at all.
+    strayed = sorted(
+        str(p) for p in (set(tmp_path.rglob("*")) - before)
+        if dna_dir not in p.parents and p != dna_dir
+    )
+    assert not strayed, f"paths created outside the store root: {strayed}"
+
+
+# ── 5. a first author on a store with no registry scope ───────────────────
+
+
+def test_authoring_without_a_registry_scope_refuses_actionably(dna_dir_without_lib):
+    """Not a 500. Authoring READS the namespace registry before it mints, and a
+    filesystem source raises ``FileNotFoundError`` for a scope directory that is
+    not there — which is the state of every store before anything provisioned
+    one. The operator needs to be told WHAT is missing.
+
+    (The deeper fix — reading a missing registry scope as "no claims yet"
+    instead of raising — lives in the namespace-assignment module and is owned
+    elsewhere. This asserts only the face's half: an actionable refusal.)"""
+    with _client(dna_dir_without_lib, raise_server_exceptions=False) as c:
+        r = c.post("/v1/kinds", params={"tenant": _WID},
+                   json={"kind": "Contrato", "schema": _SCHEMA})
+        assert r.status_code == 503, r.text
+        detail = r.json()["detail"]
+        assert "_lib" in detail, detail
+        assert re.search(r"provision|not (been )?(set up|created)", detail, re.I), detail

@@ -100,6 +100,16 @@ markers = [
     "requires_network: skip unless outbound network is available (tests/conftest.py; DNA_OFFLINE=1 forces the skip)",
     "requires_postgres: skip unless a Postgres DSN is set (DATABASE_URL / DNA_PG_TEST_URL / DNA_PG_TEST_DSN)",
 ]
+filterwarnings = [
+    # `POST /v1/kinds` takes a body field literally named `schema` — the WIRE
+    # name, which is what a JSON Schema field must be called and is therefore
+    # not ours to rename. FastAPI builds a pydantic model per body, and pydantic
+    # warns because `BaseModel.schema` is a (deprecated) attribute. Silenced
+    # narrowly, by the exact field and the exact generated model, so any OTHER
+    # shadowed field still shows up: building the app is the first thing every
+    # REST test does, so this fired once per test and drowned the real output.
+    'ignore:Field name "schema" in "Body_author_kind_v1_kinds_post" shadows an attribute in parent "BaseModel":UserWarning',
+]
 
 [build-system]
 requires = ["hatchling"]

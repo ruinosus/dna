@@ -364,8 +364,10 @@ export interface paths {
          *     The response's ``approved`` is always ``false``. An ``approved_by`` in
          *     the body is ignored, not honoured and not rejected: a caller that could
          *     approve its own proposal would make the gate decorative. 400 for a
-         *     missing tenant/kind, 403 when the namespace gate refuses the write (the
-         *     workspace does not own the target namespace).
+         *     missing tenant / a Kind name that is not a CamelCase identifier, 403
+         *     when the namespace gate refuses the write (the workspace does not own
+         *     the target namespace), 503 when the namespace registry scope has not
+         *     been provisioned in this store.
          */
         post: operations["author_kind_v1_kinds_post"];
         delete?: never;

@@ -882,8 +882,10 @@ def build_app(
         The response's ``approved`` is always ``false``. An ``approved_by`` in
         the body is ignored, not honoured and not rejected: a caller that could
         approve its own proposal would make the gate decorative. 400 for a
-        missing tenant/kind, 403 when the namespace gate refuses the write (the
-        workspace does not own the target namespace)."""
+        missing tenant / a Kind name that is not a CamelCase identifier, 403
+        when the namespace gate refuses the write (the workspace does not own
+        the target namespace), 503 when the namespace registry scope has not
+        been provisioned in this store."""
         from dna.application.sdlc import now_iso
 
         live = await _live()
@@ -896,6 +898,29 @@ def build_app(
             raise HTTPException(status_code=403, detail=str(exc)) from exc
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from None
+        except FileNotFoundError as exc:
+            # A FIRST author on a store whose namespace-registry scope was never
+            # provisioned. Authoring READS that registry before it mints, and a
+            # filesystem-backed source raises for a scope directory that is not
+            # there — so what the operator actually met was an unmapped 500 with
+            # a bare path in the log. This is a deployment PRECONDITION, not a
+            # bad request and not the caller's fault: 503, and the message names
+            # what is missing and how to satisfy it.
+            #
+            # This is the face's half only. The deeper fix — reading a missing
+            # registry scope as "no claims yet" rather than raising — belongs to
+            # dna.application.namespace_assignment, and until it lands this
+            # mapping is what stands between the operator and a 500.
+            raise HTTPException(
+                status_code=503,
+                detail=(
+                    "the namespace registry scope (`_lib`) is not provisioned "
+                    "in this store, so no Kind can be authored yet: authoring "
+                    "reads the KindNamespace registry before it mints a "
+                    "namespace. Provision the `_lib` scope (a Genome manifest "
+                    f"at <base>/_lib/manifest.yaml) and retry. Underlying: {exc}"
+                ),
+            ) from exc
 
     @app.get("/v1/kinds", dependencies=guarded,
              response_model=m.AuthoredKindsResponse)

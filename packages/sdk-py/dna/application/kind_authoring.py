@@ -31,6 +31,7 @@ write and be vetoed before the gate ever ran.
 """
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from dna.application.namespace_assignment import assign_namespace
@@ -46,6 +47,29 @@ _API_VERSION = "github.com/ruinosus/dna/core/v1"
 #: (the registry key is ``(api_version, kind)`` for the same reason).
 _NAME_SEP = "--"
 
+#: What a Kind name is allowed to be — a CamelCase identifier, exactly as the
+#: schema documents ``target_kind`` (``docs/schemas/kind-definition.schema.json``).
+#: An ALLOW-list, not a deny-list of the characters we happened to think of.
+#:
+#: ``kind`` is the ONLY field of the request body that reaches a PATH. The
+#: document name is ``<namespace>--<kind>``, and on a filesystem-backed source
+#: that name becomes a DIRECTORY (``<scope>/kinds/<name>/KIND.yaml``). Left
+#: unvalidated it is a create-directories-anywhere + write-a-``KIND.yaml``
+#: primitive OUTSIDE the store root (measured: six ``../`` segments land two
+#: levels above the ``.dna`` root), and a name aimed at another scope's existing
+#: ``kinds/<x>/KIND.yaml`` replaces an APPROVED KindDefinition with an
+#: unapproved one — which silently deregisters the victim's Kind on the next
+#: load. (It cannot forge an approval: the spec below is built field by field.)
+#:
+#: The same check closes the other half of the ``--`` separator. An ASSIGNED
+#: namespace (``ws-<hex>.dna.local``) structurally cannot contain ``--``, but the
+#: Kind half is caller-controlled, so ``Contrato--Extra`` would yield a name no
+#: reader can split unambiguously. Nothing splits it today —
+#: :func:`kind_document_name` is exported precisely so the APPROVAL act, a
+#: separate task by a different actor, can address these documents by name, and
+#: an ambiguous name is a trap laid for that task.
+_KIND_NAME_RE = re.compile(r"[A-Za-z][A-Za-z0-9]{0,63}")
+
 
 def _alias_owner(namespace: str) -> str:
     """The ``<owner>`` half of the alias convention, derived from the namespace.
@@ -53,7 +77,21 @@ def _alias_owner(namespace: str) -> str:
     The alias is declared GLOBALLY unique, so the owner half has to be the whole
     namespace and not a readable piece of it: ``acme.example`` and
     ``acme.other`` share a first label but are two different owners. Dots and
-    slashes collapse to ``-`` so the result stays a single kebab token."""
+    slashes collapse to ``-`` so the result stays a single kebab token.
+
+    KNOWN COLLISION, recorded rather than fixed. The collapse is not injective:
+    ``acme.example`` and ``acme-example`` are two different namespaces that
+    produce the SAME owner half, and therefore the same alias for the same Kind
+    name — against the schema's "globally unique" declaration for ``alias``.
+    Unreachable today, because every namespace this door sees is MINTED in the
+    ``ws-<hex>.dna.local`` shape and no two of those collapse together. It
+    becomes reachable the moment a workspace can prove ownership of a namespace
+    it chose — which
+    :mod:`dna.application.namespace_assignment` explicitly anticipates. There is
+    also no alias-uniqueness check at authoring time, so a collision would not
+    surface here at all: it would surface at APPROVAL, to a reviewer with no
+    context for it. The task that adds the proof-of-ownership flow owns both
+    halves — an injective owner encoding, and a uniqueness check at authoring."""
     return "-".join(
         part for part in namespace.replace("/", ".").split(".") if part
     )
@@ -74,13 +112,22 @@ async def author_kind_impl(
 ) -> dict[str, Any]:
     """Write a tenant Kind, unapproved. It has no effect until approved.
 
-    Raises ``ValueError`` for a missing tenant / Kind name (the face maps it to
-    400); every policy refusal below this — the namespace gate, the schema
-    validation — surfaces from the kernel unchanged.
+    Raises ``ValueError`` for a missing tenant, or for a Kind name that is not a
+    CamelCase identifier (the face maps it to 400) — see :data:`_KIND_NAME_RE`,
+    which is a security boundary and not a tidiness check. Every policy refusal
+    below this — the namespace gate, the schema validation — surfaces from the
+    kernel unchanged.
     """
     kind = (kind or "").strip()
     if not kind:
         raise ValueError("kind is required to author a Kind")
+    if not _KIND_NAME_RE.fullmatch(kind):
+        # See _KIND_NAME_RE: this is the one body field that reaches a path.
+        raise ValueError(
+            f"kind must be a CamelCase identifier — a letter followed by up to "
+            f"63 letters or digits, no '/', '.', '-' or path segments "
+            f"(got {kind!r})"
+        )
     if not (tenant or "").strip():
         raise ValueError("tenant is required to author a Kind")
     if not isinstance(schema, dict):
@@ -103,6 +150,19 @@ async def author_kind_impl(
             "schema": schema,
             "traits": list(traits or []),
             "storage": {"type": "yaml", "container": f"{kind.lower()}s"},
+            # `created_at` is documented as "Runtime-stamped volatile field
+            # (never authored)" and IS listed in KindPort.VOLATILE_SPEC_FIELDS
+            # — so authoring it looks wrong. It is authored anyway, on a
+            # MEASUREMENT: a KindDefinition written through this same kernel
+            # path with `created_at` omitted comes back from a fresh read with
+            # no `created_at` at all (the on-disk KIND.yaml has no such key —
+            # nothing in the write path stamps it; VOLATILE only means "excluded
+            # from canonical_digest", not "supplied by the runtime"). And this
+            # value IS load-bearing: `list_authored_kinds_impl` projects it into
+            # the audit view, which exists so a reviewer can see WHEN a Kind was
+            # proposed. Unauthored, every row would read `created_at: null`.
+            # If a write-time stamp ever lands, it wins and this line becomes a
+            # no-op — which is the harmless direction.
             "created_at": now,
             # Deliberately absent: approved_by / approved_at. This path CANNOT
             # set them — approval is a separate, privileged act by a different
@@ -139,8 +199,7 @@ async def list_authored_kinds_impl(
         meta = raw.get("metadata") or {}
         approved_by = str(spec.get("approved_by") or "").strip()
         kinds.append({
-            "name": (meta.get("name") if hasattr(meta, "get") else None)
-                    or raw.get("name"),
+            "name": meta.get("name") or raw.get("name"),
             "kind": spec.get("target_kind"),
             "api_version": spec.get("target_api_version"),
             "namespace": spec.get("origin"),

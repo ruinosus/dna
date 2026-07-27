@@ -5331,7 +5331,7 @@
         "summary": "List Authored Kinds"
       },
       "post": {
-        "description": "Author a Kind for the calling workspace — a ``KindDefinition``\ndocument written WITHOUT an approval marker, under the workspace's own\nassigned apiVersion namespace (minted on first use, then stable).\n\nThe response's ``approved`` is always ``false``. An ``approved_by`` in\nthe body is ignored, not honoured and not rejected: a caller that could\napprove its own proposal would make the gate decorative. 400 for a\nmissing tenant/kind, 403 when the namespace gate refuses the write (the\nworkspace does not own the target namespace).",
+        "description": "Author a Kind for the calling workspace — a ``KindDefinition``\ndocument written WITHOUT an approval marker, under the workspace's own\nassigned apiVersion namespace (minted on first use, then stable).\n\nThe response's ``approved`` is always ``false``. An ``approved_by`` in\nthe body is ignored, not honoured and not rejected: a caller that could\napprove its own proposal would make the gate decorative. 400 for a\nmissing tenant / a Kind name that is not a CamelCase identifier, 403\nwhen the namespace gate refuses the write (the workspace does not own\nthe target namespace), 503 when the namespace registry scope has not\nbeen provisioned in this store.",
         "operationId": "author_kind_v1_kinds_post",
         "parameters": [
           {
