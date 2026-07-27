@@ -255,6 +255,46 @@ def test_an_unapproved_entry_does_not_widen_an_existing_binding():
     )
 
 
+def test_a_non_string_approved_by_does_not_register():
+    """A truthy non-string ``approved_by`` must not approve the entry.
+
+    This door has no schema (unlike the ``KindDefinition`` funnel, where
+    ``spec.approved_by`` is typed ``["string", "null"]``), so it is the one
+    place a naive ``str(...)`` coercion around the read would fail OPEN:
+    ``str({'name': 'Jane'})`` and ``str(True)`` are both non-empty strings, so
+    ordinary — not adversarial — YAML like::
+
+        custom_kinds:
+          - kind: Pipeline
+            approved_by:
+              name: Jane
+              at: 2026-01-01
+
+    would register under a ``str()`` reading. It must not: only a real,
+    non-blank string names someone."""
+    k = Kernel()
+    dict_entry = _entry("PipelineDict", approved=False)
+    dict_entry["approved_by"] = {"name": "Jane", "at": "2026-01-01"}
+    bool_entry = _entry("PipelineBool", approved=False)
+    bool_entry["approved_by"] = True
+    int_entry = _entry("PipelineInt", approved=False)
+    int_entry["approved_by"] = 7
+
+    k._register_custom_kinds(
+        _manifest(dict_entry, bool_entry, int_entry), scope="test-scope",
+    )
+
+    assert k.kind_port_for("PipelineDict", scope="test-scope") is None, (
+        "a dict approved_by must not register — only a string names someone"
+    )
+    assert k.kind_port_for("PipelineBool", scope="test-scope") is None, (
+        "approved_by: true must not register — it names no one"
+    )
+    assert k.kind_port_for("PipelineInt", scope="test-scope") is None, (
+        "a numeric approved_by must not register — it names no one"
+    )
+
+
 def test_the_custom_kind_refusal_is_logged_not_silent(caplog):
     k = Kernel()
     k._register_custom_kinds(_manifest(_entry("Pipeline", approved=False)),

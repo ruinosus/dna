@@ -353,10 +353,18 @@ unique, and across scopes they never meet.
 
 A Kind loaded from a store only reaches this binding once it is *approved*:
 both doors — the `KindDefinition` document and a root document's
-`custom_kinds` entry — require `approved_by` to name someone, or the document
-is parsed, logged, and left unregistered, with no schema enforcement or
-storage routing of its own. Registering from CODE carries no such gate; the
-approval requirement exists only for the store, where the author is untrusted.
+`custom_kinds` entry — require `approved_by` to name someone, or the entry is
+parsed, logged, and left unregistered, with no schema enforcement or storage
+routing of its own. The `custom_kinds` gate is per entry, not per document: a
+root document may declare several, and only the ones whose `approved_by`
+names someone register — one unapproved entry does not hold back its
+approved siblings, nor the reverse. Approval does not buy the same thing at
+both doors, though: a `KindDefinition`'s own schema is enforced once
+registered, while an approved `custom_kinds` entry gets queryability and
+storage routing only — it registers as a schema-less Kind. Registering from
+CODE carries no such gate; the approval requirement exists only for the
+store, where the author is untrusted (`register_kind_definitions`,
+`register_custom_kinds` in `registry.py`).
 
 ## Summary
 

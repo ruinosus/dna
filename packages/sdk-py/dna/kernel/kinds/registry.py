@@ -1385,7 +1385,10 @@ class KindRegistry:
             alias = ck.get("alias", kn.lower())
             if not kn:
                 continue
-            approved_by = str(ck.get("approved_by") or "").strip()
+            _raw_approver = ck.get("approved_by")
+            approved_by = (
+                _raw_approver.strip() if isinstance(_raw_approver, str) else ""
+            )
             if not approved_by:
                 # Same refusal as the KindDefinition funnel, same reason: an
                 # authored-but-unapproved Kind is a legitimate state, it stays
