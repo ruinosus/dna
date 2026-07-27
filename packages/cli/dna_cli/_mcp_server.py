@@ -21,6 +21,9 @@ Copilot, agent-framework, Bedrock AgentCore) reaches it:
     documents    list_kinds · list_documents · get_document · write_document
                  · delete_document
                  (GENERIC — a loop over the Kind registry, not a per-Kind tool)
+    kinds        author_kind · list_my_kinds
+                 (a tenant declares its OWN Kind — INERT until a human approves;
+                  there is deliberately no approval tool, see _mcp_kinds)
     resources    dna://{scope}/manifest · dna://{scope}/agents
 
 DNA already *consumes* MCP (the ``MCPFederation`` Kind pulls external tools into
@@ -681,6 +684,12 @@ def build_server(
             "generically (list_kinds/list_documents/get_document/write_document), "
             "resolved from the Kind registry at call time — so a Kind that exists "
             "is a Kind you can use, without a hand-written tool for it. "
+            "A workspace can also declare a Kind OF ITS OWN "
+            "(author_kind/list_my_kinds): what that writes is INERT — it is "
+            "registered, and therefore has effect, only once a HUMAN approves it "
+            "in the portal. There is no approval tool and there will not be one, "
+            "so do not look for one: author the Kind and tell the person you are "
+            "working with that it is waiting for their approval. "
             "Unlike a static emit "
             "artifact, compose_prompt composes on demand — so per-tenant overlays "
             "and no-deploy changes are preserved."
@@ -1147,6 +1156,22 @@ def build_server(
     register_document_tools(
         server, live=_live, guard=_guard, plan_families=_plan_families,
     )
+
+    # -- Kind authoring (the tenant declares its OWN Kind, conversationally) --
+    #
+    # The third face of the same door: the portal and the REST API already write
+    # a tenant's `KindDefinition`, and a Kind born in one face and absent from
+    # the others is worth nothing. Same shared core (`dna.application.
+    # kind_authoring`), same `_guard` seam, metered as `definitions`.
+    #
+    # TWO tools, and the missing third is the point: there is no `approve_kind`.
+    # Approval is what CONFERS effect (the registry withholds registration until
+    # `spec.approved_by` names someone), so an agent able to call it could
+    # approve its own proposal and the gate would be decorative. Approving stays
+    # a human act on the portal, made with a reviewer's own credential.
+    from dna_cli._mcp_kinds import register_kind_tools
+
+    register_kind_tools(server, live=_live, guard=_guard)
 
     # -- resources (prove resources beyond tools) ----------------------------
 

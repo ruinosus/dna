@@ -114,6 +114,41 @@ families unlock (`filtered_by_plan: true`) — a short honest catalog beats a lo
 one whose entries answer 403. The stdio / local (no-token) path is unmetered and
 unrestricted, exactly like the rest of the face.
 
+**Kind authoring** — a tenant declares its own Kind, conversationally:
+
+The generic `write_document` above refuses every bootstrap Kind, `KindDefinition`
+included, and that refusal stays. Authoring gets its own door instead, with its
+own authorization — it writes exactly one Kind, always without an approval
+marker, always under the workspace's own assigned apiVersion namespace (minted on
+first use, then stable, so two workspaces can both author `Contrato`).
+
+- `author_kind(kind, schema, traits?, tenant?)` — write the declaration.
+  `kind` must be a **CamelCase identifier** (`[A-Z][A-Za-z0-9]{0,63}`): it
+  becomes a path component, so anything else is refused by name. Re-calling it
+  for the same `kind` **edits** the declaration, and an edit drops any approval
+  it had.
+- `list_my_kinds(scope?, tenant?)` — the audit view: every authored
+  `KindDefinition` with `approved` and **both** actors
+  (`proposed_by`/`proposed_at`, `approved_by`/`approved_at`). It reads
+  *documents*, not the registry — an unapproved Kind is precisely the one the
+  registry does not have, and it is the one a reviewer came for.
+
+**What an authored Kind does is nothing.** `approved` is always `false` here, and
+an unapproved Kind is never registered — registration is what confers schema
+validation and storage routing, so "not approved has no effect" is the absence of
+a mechanism, not a promise. `proposed_by` is the caller's **verified identity**,
+resolved server-side; there is no argument for it, and a `proposed_by` /
+`approved_by` in the call is refused as an unexpected argument before the tool
+even runs.
+
+**There is deliberately no `approve_kind` tool, and there will not be one.**
+Approval is the act that confers effect, so an agent able to call it could
+approve its own proposal and the review would be decorative. Approving is a human
+act on the portal (`POST /v1/kinds/{kind}/approve` on the REST face), made with a
+reviewer's own credential. Both tools meter as `definitions`; authoring is a
+write, so over an authenticated server it needs the plan to grant
+`definitions_mode: write`.
+
 **Resources** (beyond tools):
 
 - `dna://{scope}/manifest` — the scope's Kinds → document names.

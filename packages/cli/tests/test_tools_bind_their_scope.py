@@ -25,7 +25,22 @@ from pathlib import Path
 
 import pytest
 
-_SERVER = Path(__file__).resolve().parents[1] / "dna_cli" / "_mcp_server.py"
+_DNA_CLI = Path(__file__).resolve().parents[1] / "dna_cli"
+_SERVER = _DNA_CLI / "_mcp_server.py"
+
+#: EVERY module that declares ``@server.tool`` functions, not just the one the
+#: bug was found in. The face grew a second and third home for tools
+#: (``register_document_tools``, ``register_kind_tools``) after this guard was
+#: written, and a guard that reads one file while the tools live in three is a
+#: fence around an empty field: ``list_my_kinds`` declares a ``scope`` and was
+#: invisible here until this list existed. A module with no ``_guard(`` call in
+#: it contributes nothing and costs nothing, so listing a file is always safe;
+#: OMITTING one is what silently narrows the guard.
+_SOURCES = [
+    _SERVER,
+    _DNA_CLI / "_mcp_kinds.py",
+    _DNA_CLI / "_mcp_documents.py",
+]
 
 #: A tool body may legitimately omit ``scope=`` only if it takes no ``scope``.
 #: Nothing is allowlisted today — if you add an entry, write why here.
@@ -82,9 +97,18 @@ def _tool_bodies(src: str) -> dict[str, str]:
 
 
 def test_every_tool_taking_a_scope_binds_it() -> None:
-    src = _SERVER.read_text(encoding="utf-8")
-    bodies = _tool_bodies(src)
+    bodies: dict[str, str] = {}
+    for source in _SOURCES:
+        assert source.exists(), f"{source} is listed in _SOURCES but is not there"
+        bodies.update(_tool_bodies(source.read_text(encoding="utf-8")))
     assert bodies, "found no @server.tool functions — did the decorator change?"
+    # The tools that live OUTSIDE _mcp_server.py are the ones this guard used to
+    # miss entirely. Naming one pins that the list above is still reaching them:
+    # a body-count assertion would keep passing if `_SOURCES` silently lost an
+    # entry, because the other files still supply plenty of bodies.
+    assert "list_my_kinds" in bodies, (
+        "the Kind-authoring tools are no longer being read — check _SOURCES"
+    )
 
     offenders: list[str] = []
     for name, body in bodies.items():
