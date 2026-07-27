@@ -2632,7 +2632,11 @@ async def create_workspace_impl(
        i-058); if it fails, (1) is best-effort deleted and the error re-raised;
     3. then the owner ``WorkspaceMembership``;
     4. if (3) fails, (2) and (1) are best-effort DELETED and the error
-       re-raised.
+       re-raised;
+    5. LAST, and FAIL-SOFT, the workspace's own apiVersion namespace
+       (:func:`dna.application.namespace_assignment.assign_namespace`, i-080) —
+       see the comment at the call site for why it is last and why it does not
+       compensate.
 
     The ordering is chosen so the surviving failure state is the harmless one. A
     Workspace with no owner grant is INERT: no identity resolves to it, it never
@@ -2765,6 +2769,43 @@ async def create_workspace_impl(
         except Exception:  # noqa: BLE001
             pass
         raise
+
+    # i-080 — the workspace is born owning an apiVersion namespace, so the first
+    # Kind it authors waits for no provisioning step.
+    #
+    # LAST, and DELIBERATELY FAIL-SOFT, for two reasons that point the same way.
+    #
+    # (a) It must not be a reason a workspace cannot be created. A workspace with
+    #     no namespace is a workspace that cannot yet author its own Kind — a
+    #     REDUCED workspace, fully reachable by its owner and fully functional for
+    #     everything else. Refusing creation over it would trade a whole workspace
+    #     for a capability the owner may never use.
+    # (b) It must not run EARLIER, because a KindNamespace claim is an
+    #     authorization record naming `workspace_id` as its owner. Written before
+    #     (1)/(3), a later failure would leave a claim granting a namespace to a
+    #     workspace that does not exist — exactly the "grant pointing at a
+    #     workspace that does not exist" shape the ordering above calls the
+    #     strictly worse one, and worse here than for a membership, because the
+    #     claim is GLOBAL: `owner_of` refuses a namespace claimed twice, so an
+    #     orphan under a name a later mint could collide with is a refusal
+    #     waiting for a stranger. Last means the only surviving failure state is
+    #     an intact workspace with no claim — nothing dangling, nothing global.
+    #
+    # Not silently permanent: `assign_namespace` is idempotent and keyed on the
+    # OWNER, so the next call for this workspace — the Kind-authoring route calls
+    # it before declaring — finds nothing stored and mints exactly once. The hole
+    # closes on first use rather than needing a repair job.
+    try:
+        from dna.application.namespace_assignment import assign_namespace
+
+        await assign_namespace(live.kernel, workspace_id, now=now)
+    except Exception as e:  # noqa: BLE001 — see (a) above.
+        logger.warning(
+            "workspace %r was created but its apiVersion namespace could not be "
+            "assigned (i-080). The workspace is usable; it cannot author its own "
+            "Kind until an assignment succeeds, which the next call retries: %s",
+            workspace_id, e,
+        )
 
     return {
         "workspace_id": workspace_id,
