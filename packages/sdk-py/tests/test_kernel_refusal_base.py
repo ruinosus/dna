@@ -138,9 +138,15 @@ _WRITE_REFUSALS = (
     # ``InvalidBundleEntry`` closes the third door of the same family — a
     # bundle ENTRY, which is a relative PATH rather than a component, and which
     # writers derive from document CONTENT (``spec.source_files`` et al);
-    # ``DocumentNameTaken`` is the atomic ``if_absent`` claim losing the race.
-    "DocumentNameTaken", "InvalidDocumentName", "InvalidScopeName",
-    "PathEscapesStoreRoot", "InvalidBundleEntry",
+    # ``DocumentNameTaken`` is the atomic ``if_absent`` claim losing the race,
+    # and ``StaleDocumentWrite`` (i-083) is its UPDATE counterpart — a guarded
+    # ``if_match`` write refusing to land on a document that moved since the
+    # caller read it. Both are adjudicated by the ADAPTER against the store, and
+    # both have to reach the caller as a denial rather than a 500 because their
+    # remedies differ and only the refusal can say which: take another name, or
+    # re-read and re-apply to the fresh etag.
+    "DocumentNameTaken", "StaleDocumentWrite", "InvalidDocumentName",
+    "InvalidScopeName", "PathEscapesStoreRoot", "InvalidBundleEntry",
     # dna.kernel.kinds.namespaces — a write declaring a Kind in a namespace its
     # author does not own. It IS a refusal and always was (a subclass of
     # ``LayerPolicyViolationError``, so every face already relays it); it was

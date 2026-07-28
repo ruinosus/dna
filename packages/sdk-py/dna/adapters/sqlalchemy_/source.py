@@ -760,6 +760,34 @@ class SqlAlchemySource(WritableSourcePort):
         pin that matches nothing returns ``None`` rather than someone else's
         document. Omitting it keeps the pre-column behaviour exactly.
         """
+        async with self._engine.connect() as conn:
+            return await self._load_one_on(
+                conn, scope, kind, name,
+                readers=readers, tenant=tenant, api_version=api_version,
+            )
+
+    async def _load_one_on(
+        self, conn, scope: str, kind: str, name: str, *,
+        readers: list | None = None,
+        tenant: str | None = None,
+        api_version: str | None = None,
+    ) -> dict[str, Any] | None:
+        """:meth:`load_one`'s body, against a CALLER-SUPPLIED connection.
+
+        Extracted (i-083) so the ``if_match`` guard in :meth:`save_document` can
+        read the stored document INSIDE its own write transaction — which is
+        what makes the guard a real compare-and-swap on this adapter rather than
+        a narrowed race.
+
+        Sharing the body is not tidiness. The guard compares a digest of the
+        stored ``spec`` against a token the caller derived from a READ, so the
+        two must reconstruct the document identically. A bundle-format Kind
+        (KindDefinition, Agent, Skill) does not round-trip through the
+        ``content`` column alone — the readers re-assemble it from
+        ``bundle_entries`` — so a guard that hashed ``json.loads(row.content)``
+        would disagree with every read of those Kinds and refuse writes that were
+        perfectly honest. One body, one answer to "what is stored".
+        """
         effective_readers = list(self._readers)
         for r in (readers or []):
             if r not in effective_readers:
@@ -769,43 +797,42 @@ class SqlAlchemySource(WritableSourcePort):
         if self._is_pg:
             entry_cols.append(b.c.content_binary)  # [dialect]
         tenant_candidates: list[str | None] = [tenant, None] if tenant else [None]
-        async with self._engine.connect() as conn:
-            for t in tenant_candidates:
-                row = (await conn.execute(
-                    sa.select(d.c.content, d.c.api_version).where(
-                        d.c.scope == scope, d.c.kind == kind, d.c.name == name,
-                        *self._api_version_where(d.c.api_version, api_version),
-                        self._tenant_where(d.c.tenant, t),
-                    )
-                )).first()
-                if row is None:
-                    continue
-                # The entries belong to the document just found — key them on
-                # ITS apiVersion, never on the (possibly absent) argument.
-                erows = (await conn.execute(
-                    sa.select(*entry_cols).where(
-                        b.c.scope == scope, b.c.kind == kind, b.c.name == name,
-                        b.c.api_version == row.api_version,
-                        b.c.tenant == (t or ""),
-                    )
-                )).all()
-                entries: dict[str, str | bytes] = {}
-                for e in erows:
-                    cb = e.content_binary if self._is_pg else None
-                    entries[e.entry_path] = bytes(cb) if cb else e.content
-                if entries and effective_readers:
-                    from dna.kernel.bundle.handle import DictBundleHandle
-                    handle = DictBundleHandle(name, entries)
-                    for reader in effective_readers:
-                        try:
-                            if not reader.detect(handle):
-                                continue
-                            return self._read_with_frontmatter_net(
-                                reader, handle, row.content,
-                            )
-                        except Exception:  # noqa: BLE001
+        for t in tenant_candidates:
+            row = (await conn.execute(
+                sa.select(d.c.content, d.c.api_version).where(
+                    d.c.scope == scope, d.c.kind == kind, d.c.name == name,
+                    *self._api_version_where(d.c.api_version, api_version),
+                    self._tenant_where(d.c.tenant, t),
+                )
+            )).first()
+            if row is None:
+                continue
+            # The entries belong to the document just found — key them on
+            # ITS apiVersion, never on the (possibly absent) argument.
+            erows = (await conn.execute(
+                sa.select(*entry_cols).where(
+                    b.c.scope == scope, b.c.kind == kind, b.c.name == name,
+                    b.c.api_version == row.api_version,
+                    b.c.tenant == (t or ""),
+                )
+            )).all()
+            entries: dict[str, str | bytes] = {}
+            for e in erows:
+                cb = e.content_binary if self._is_pg else None
+                entries[e.entry_path] = bytes(cb) if cb else e.content
+            if entries and effective_readers:
+                from dna.kernel.bundle.handle import DictBundleHandle
+                handle = DictBundleHandle(name, entries)
+                for reader in effective_readers:
+                    try:
+                        if not reader.detect(handle):
                             continue
-                return json.loads(row.content)
+                        return self._read_with_frontmatter_net(
+                            reader, handle, row.content,
+                        )
+                    except Exception:  # noqa: BLE001
+                        continue
+            return json.loads(row.content)
         return None
 
     async def list_tenants(self, scope: str | None = None) -> list[str]:
@@ -1103,6 +1130,7 @@ class SqlAlchemySource(WritableSourcePort):
         write_class: str = "substantive",
         version_retention: int | None = None,
         if_absent: bool = False,
+        if_match: str | None = None,
     ) -> str:
         if layer is not None:
             if layer[0] == "tenant" and tenant is None:
@@ -1171,6 +1199,31 @@ class SqlAlchemySource(WritableSourcePort):
             spec_version = ((raw.get("spec") or {}).get("version")) or None
 
         async with self._engine.begin() as conn:
+            if if_match is not None:
+                # i-083 — the GUARDED update, and on this adapter it is a real
+                # compare-and-swap: the read happens on THIS connection, inside
+                # the transaction the write below commits, so nothing can slip
+                # between the check and the upsert. (The filesystem adapter has
+                # no transaction to hold across the pair and says so.)
+                #
+                # FIRST in the transaction, before the ``if_absent`` claim and
+                # before any version row is computed, so a refusal rolls back
+                # having touched nothing.
+                #
+                # Pinned to the document's OWN ``api_version``: this write
+                # upserts the row keyed on it, so that row is precisely the one
+                # the guard must ask about. Unpinned, a name shared by two
+                # namespaces could compare against a neighbour's document and
+                # pass — which is the class of confusion the apiVersion column
+                # exists to end.
+                from dna.kernel.etag import check_if_match
+                check_if_match(
+                    await self._load_one_on(
+                        conn, scope, kind, name,
+                        tenant=tenant, api_version=api_version,
+                    ),
+                    if_match, scope=scope, kind=kind, name=name, tenant=tenant,
+                )
             if if_absent:
                 # The ATOMIC claim: INSERT the documents row FIRST, inside this
                 # transaction, letting the composite primary key

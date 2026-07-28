@@ -442,6 +442,7 @@ class WritePipeline:
         invalidate_mode: str,
         write_class: str = "substantive",
         if_absent: bool = False,
+        if_match: str | None = None,
     ) -> str | None:
         """Real write_document body — the facade (``Kernel.write_document``) owns
         the OTel span + mode validation + record-plane demotion; the fat logic
@@ -529,6 +530,38 @@ class WritePipeline:
                     f"adapter that declares the kwarg."
                 )
             kwargs["if_absent"] = True
+        if if_match is not None:
+            # A GUARDED update (i-083) — the mirror of the block above, and
+            # refused for the same reason with one extra edge to it. ``if_match``
+            # is not asked for defensively: a caller passes it because it is
+            # about to REPLACE a document it read a moment ago, and the value of
+            # the token is that the replacement is refused if the document moved
+            # underneath. Degrading to an unguarded upsert would perform exactly
+            # the lost update the caller paid a round trip to prevent, and report
+            # success.
+            if not ws.if_match:
+                raise NotImplementedError(
+                    f"{type(src).__name__} does not support if_match writes "
+                    f"(it declares write_kwargs without 'if_match'), so this "
+                    f"kernel cannot promise your update will be refused if the "
+                    f"document changed since you read it. Re-read immediately "
+                    f"before writing and accept the race, or run against an "
+                    f"adapter that declares the kwarg."
+                )
+            if if_absent:
+                # Mutually exclusive by meaning, not by policy: one asserts the
+                # document is ABSENT, the other that it is PRESENT and unchanged.
+                # Together they can never both hold, so an adapter handed both
+                # would have to invent a precedence — and whichever it picked,
+                # one of the two guarantees the caller believes it holds would be
+                # silently untrue.
+                raise ValueError(
+                    "if_absent and if_match cannot be combined: if_absent "
+                    "asserts the document does not exist, if_match asserts it "
+                    "exists and still hashes to a token you read. Pick the one "
+                    "you mean."
+                )
+            kwargs["if_match"] = if_match
         # Compute effective layer for cache + hook tracking
         # (adapter receives tenant + residual_layer separately when supported)
         adapter_layer = residual_layer

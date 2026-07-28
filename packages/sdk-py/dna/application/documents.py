@@ -47,11 +47,10 @@ module only classifies.
 """
 from __future__ import annotations
 
-import hashlib
-import json
 from typing import Any, Iterable
 
 from dna.application.live import LiveDna
+from dna.kernel.etag import spec_etag
 from dna.kernel.kinds.registry import ports_in_scope
 from dna.memory.verbs import MEMORY_KINDS
 
@@ -353,24 +352,15 @@ def _enum_value(value: Any) -> str | None:
     return str(getattr(value, "value", value))
 
 
-def spec_etag(spec: Any) -> str:
-    """A content fingerprint of a document ``spec`` — the optimistic-concurrency
-    token ``get_document`` returns and ``write_document`` checks (``if_match``).
-
-    Deliberately NOT the adapter's version id: ``kernel.write_document`` returns
-    one, but nothing on the READ path exposes it (``get_document`` yields the raw
-    document and nothing else), and version support is per-adapter — the
-    filesystem source has none. A hash of the content the tool actually writes is
-    available on every adapter, is derivable by the caller from the very read it
-    already made, and answers the only question that matters here: *is the spec I
-    based my update on still the stored spec?*
-
-    Keyed on the ``spec`` alone because the ``spec`` is all a generic write can
-    change — the envelope is rebuilt from the resolved Kind port every time. Sorted
-    keys + ``default=str`` make it stable across processes and tolerant of
-    non-JSON scalars a Kind may store."""
-    payload = json.dumps(spec or {}, sort_keys=True, default=str)
-    return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:32]
+# ``spec_etag`` MOVED to :mod:`dna.kernel.etag` (i-083) and is re-exported here
+# unchanged, so every existing importer keeps working. It moved because the SAME
+# token now guards ``kernel.write_document`` itself, and that guard is evaluated
+# by the ADAPTER — which may import ``dna.kernel.*`` and nothing above it. The
+# alternative was a second copy of the hash one layer down, and two hashes that
+# disagreed by a sort order or a separator would refuse every honest write while
+# admitting the stale one, failing as flakiness rather than as a bug. See
+# ``dna.kernel.etag`` for why the token is a content digest and not the
+# adapter's version id.
 
 
 def _merged_spec(

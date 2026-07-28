@@ -367,6 +367,7 @@ def build_app(
         write_bundle_entry_impl,
     )
     from dna.application.live import parse_scope_grants
+    from dna.kernel.errors import StaleDocumentWrite
     from dna.kernel.protocols import LayerPolicyViolationError
     from dna.tenancy import Identity
     from dna_cli._mcp_server import boot_live
@@ -1161,6 +1162,19 @@ def build_app(
             )
         except AuthoredKindNotFound as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from None
+        except StaleDocumentWrite as exc:
+            # i-083 — the Kind was edited between the reviewer's read and this
+            # approval, so the write was REFUSED rather than allowed to stamp an
+            # approval onto a shape nobody saw. 409 and not 400: the request was
+            # perfectly well formed and it is the STATE that moved, which is also
+            # what tells the client that retrying the identical call is the wrong
+            # move and re-reading first is the right one.
+            #
+            # BEFORE the ``ValueError`` arm below, which it would otherwise fall
+            # into — ``StaleDocumentWrite`` is deliberately a ``ValueError`` so
+            # that faces which already relay write-path vetoes surface it at all
+            # — and be reported as the caller's own malformed request.
+            raise HTTPException(status_code=409, detail=str(exc)) from None
         except LayerPolicyViolationError as exc:
             raise HTTPException(status_code=403, detail=str(exc)) from exc
         except ValueError as exc:

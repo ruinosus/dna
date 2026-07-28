@@ -35,6 +35,7 @@ import re
 from typing import Any
 
 from dna.application.namespace_assignment import assign_namespace
+from dna.kernel.etag import spec_etag
 
 __all__ = [
     "AuthoredKindNotFound",
@@ -515,6 +516,26 @@ async def approve_kind_impl(
     taken at the next load. Note what that does and does not say: the edit never
     unregistered the previous shape, so this is the act that replaces it, not
     one that restores an effect the edit removed.
+
+    **The write is GUARDED** (i-083). This is a read-modify-write — it reads the
+    document, merges two keys and persists ``{**raw, "spec": spec}`` — so
+    everything it did not read, it overwrites. Unguarded, that lost an edit for
+    real: the reviewer opens the Kind on replica B (warming B's 60-second
+    document cache with v1), the author edits to v2 on replica A (invalidating
+    only A), and the approval on B reads v1 from cache, stamps the approver onto
+    it and writes it back. The edit is gone AND v1 is now marked approved — the
+    shape a human signed is not the shape in effect, which is the one thing this
+    act exists to make true.
+
+    So the read's ``etag`` rides along as ``if_match`` and the kernel refuses the
+    write if the stored document moved
+    (:class:`~dna.kernel.errors.StaleDocumentWrite` → 409). Note where the guard
+    is evaluated: at the ADAPTER, against the store. Re-reading and comparing
+    HERE would go through the same stale cache and match v1 against v1.
+
+    The refusal is the correct outcome, not a degradation — an approval that
+    cannot see the shape it is approving is not an approval — and it is
+    recoverable in one step: re-read the Kind and approve again.
     """
     kind = _checked_kind_name(kind, verb="approve")
     if not (tenant or "").strip():
@@ -541,6 +562,10 @@ async def approve_kind_impl(
         )
 
     spec = dict(raw.get("spec") or {})
+    # The token for the write below, taken from the spec AS READ — before the
+    # two merges, because what it has to identify is the document this approval
+    # is based on, not the one it is about to produce.
+    read_etag = spec_etag(spec)
     # MERGE, unlike the authoring door — and deliberately: this preserves the
     # proposal (proposed_by/proposed_at/created_at) that the other act recorded,
     # which is the half of the audit this act must not overwrite. The two fields
@@ -549,6 +574,10 @@ async def approve_kind_impl(
     spec["approved_at"] = now
     version = await live.kernel.write_document(
         scope, _KIND, name, {**raw, "spec": spec},
+        # i-083 — see the docstring. Everything this write does not carry it
+        # overwrites, so it must not land on a document that moved since the
+        # read above. Refused (StaleDocumentWrite) rather than clobbering.
+        if_match=read_etag,
     )
     return {
         "approved": True,

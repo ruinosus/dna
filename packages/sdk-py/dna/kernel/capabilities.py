@@ -288,8 +288,16 @@ class SourceCapabilities:
 # "create is never an update" true under concurrency instead of only under
 # read-then-write. Optional, so an adapter that has not adopted it is unaffected
 # and the kernel simply never asks for the guarantee.
+# ``if_match`` (i-083): the UPDATE counterpart — the write proceeds only if the
+# stored ``spec`` still hashes to the token the caller read
+# (:func:`dna.kernel.etag.spec_etag`), else ``StaleDocumentWrite``. It is a
+# SOURCE kwarg and not an application-layer check for one measured reason: the
+# read that a read-modify-write is built on may come from a cache, and a guard
+# that re-reads through that same cache compares a stale value against itself
+# and agrees. Only the adapter sees the store.
 SAVE_OPTIONAL_KWARGS = frozenset(
-    {"author", "tenant", "layer", "write_class", "version_retention", "if_absent"}
+    {"author", "tenant", "layer", "write_class", "version_retention",
+     "if_absent", "if_match"}
 )
 # ``api_version`` (i-081 / #244 follow-up): a DELETE carries no document, so
 # before this it had no apiVersion and routed by BARE Kind name. Two
@@ -518,6 +526,7 @@ class WriteKwargSupport:
     write_class: bool     # save_document accepts `write_class` (s-buswrite-class-substantive-cue)
     version_retention: bool  # save_document accepts `version_retention` (s-version-prune-record-plane-churn)
     if_absent: bool       # save_document accepts `if_absent` — an ATOMIC create (i-081)
+    if_match: bool        # save_document accepts `if_match` — a GUARDED update (i-083)
 
 
 _WRITE_KWARG_CACHE_ATTR = "_dna_write_kwarg_support"
@@ -549,6 +558,7 @@ def write_kwarg_support(source: object) -> WriteKwargSupport:
         write_class="write_class" in caps.write_kwargs,
         version_retention="version_retention" in caps.write_kwargs,
         if_absent="if_absent" in caps.write_kwargs,
+        if_match="if_match" in caps.write_kwargs,
     )
     try:
         setattr(source, _WRITE_KWARG_CACHE_ATTR, support)

@@ -65,6 +65,31 @@ class DocumentNameTaken(KernelRefusal, FileExistsError):
     """
 
 
+class StaleDocumentWrite(KernelRefusal, ValueError):
+    """An ``if_match`` write lost the race: the stored document is no longer the
+    one the caller read, so the write would have been a LOST UPDATE.
+
+    The UPDATE half of what :class:`DocumentNameTaken` is for creates.
+    ``if_absent`` answers "this create must not become an update"; this answers
+    "this update must not become somebody else's erasure". Both are arbitrated
+    by the adapter against the STORE, which is the only thing that makes either
+    of them true: a read-modify-write guarded in application code re-reads
+    through the very cache that made the read stale (i-083 — a reviewer's 60s
+    granular document cache on one replica, an author's edit on another), and
+    so compares a stale value against itself and agrees.
+
+    The token is the ``spec`` content digest :func:`dna.kernel.etag.spec_etag`
+    computes — see that function for why it is a content hash and not the
+    adapter's version id.
+
+    A ``KernelRefusal`` so every face relays it as an honest denial rather than
+    a 500, and a ``ValueError`` so the doors that already map write-path vetoes
+    to a client refusal surface it with no new wiring. The remedy is always the
+    same and the message says it: re-read the document and re-apply the change
+    to the fresh etag.
+    """
+
+
 class InvalidDocumentName(KernelRefusal, ValueError):
     """A document ``name`` is not a single, safe path component.
 

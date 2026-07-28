@@ -32,6 +32,7 @@ import re
 import shutil
 
 import pytest
+import yaml
 
 pytest.importorskip("fastapi", reason="the REST read-API needs the optional 'fastapi' extra")
 
@@ -979,3 +980,63 @@ def test_approving_a_kind_that_was_never_authored_is_a_404(dna_dir):
         assert r.status_code == 404, r.text
         assert "NuncaExistiu" in r.json()["detail"], r.text
     assert _registered_port(dna_dir, "NuncaExistiu") is None
+
+
+def test_an_approval_built_on_a_stale_read_is_a_409_and_writes_nothing(dna_dir):
+    """i-083 — the door relays the lost-update refusal honestly.
+
+    THE SCENARIO, one replica short of the real thing: a reviewer opens the
+    Kind (warming this app's 60-second granular document cache with v1), the
+    document is edited to v2 by somebody this app never hears from, and the
+    reviewer approves off the read they already had. The write is refused at the
+    adapter, and the route must say **409** — the request was well formed and it
+    is the STATE that moved, so retrying the identical call is the wrong move and
+    re-reading first is the right one.
+
+    The out-of-band edit stands in for the OTHER REPLICA. That is exactly what
+    makes the read stale in production and it is the only part a single-process
+    test cannot spawn: a second container writing to the shared store, which
+    invalidates its own caches and not this one's.
+
+    Asserted beyond the status code, because a 409 alone would also be produced
+    by a door that refused every approval: the stored document must still carry
+    the edit and must NOT carry an approver.
+    """
+    with _client(dna_dir, raise_server_exceptions=False) as c:
+        assert _author(c, "agent").status_code == 201
+
+        # The reviewer OPENS the Kind — this is what warms the cache.
+        opened = c.get("/v1/kinds/Contrato", params={"tenant": _WID},
+                       headers={"Authorization": "Bearer human"})
+        assert opened.status_code == 200, opened.text
+
+        # Somebody else edits it. Written straight to the store so THIS app's
+        # cache is never invalidated — the replica it stands for has its own.
+        doc = next(
+            (dna_dir / _SCOPE / "kinds").glob("*--Contrato/KIND.yaml"))
+        raw = yaml.safe_load(doc.read_text())
+        raw["spec"]["schema"] = {
+            "type": "object",
+            "properties": {"titulo": {"type": "string"},
+                           "valor": {"type": "number"}},
+            "required": ["valor"],
+        }
+        doc.write_text(yaml.dump(raw))
+
+        r = _approve(c, "human")
+        assert r.status_code == 409, (
+            f"an approval built on a stale read answered {r.status_code}; "
+            f"400 would blame the caller for a well-formed request and 500 "
+            f"would hide it: {r.text}"
+        )
+        assert "Contrato" in r.json()["detail"], r.text
+
+    after = yaml.safe_load(doc.read_text())
+    assert "valor" in after["spec"]["schema"]["properties"], (
+        "the refused approval clobbered the edit"
+    )
+    assert not after["spec"].get("approved_by"), (
+        "the refused approval stamped an approver onto a shape nobody reviewed"
+    )
+    # And it conferred no effect: the Kind is still unregistered.
+    assert _registered_port(dna_dir, "Contrato") is None

@@ -1355,6 +1355,7 @@ class Kernel:
         invalidate_mode: str = "scope",
         write_class: str = "substantive",
         if_absent: bool = False,
+        if_match: str | None = None,
     ) -> str | None:
         """Persist a document through the registered WritableSourcePort.
 
@@ -1364,6 +1365,26 @@ class Kernel:
         gets a :class:`NotImplementedError` rather than a silently ordinary
         upsert, because a caller asking for the guarantee must not be told it
         got one it did not.
+
+        ``if_match`` requests a GUARDED UPDATE (i-083), held to that same
+        standard: the write proceeds only if the STORED document's ``spec``
+        still hashes to the token (:func:`dna.kernel.etag.spec_etag` — the same
+        ``etag`` :func:`~dna.application.documents.get_document_impl` hands
+        back), else :class:`dna.kernel.errors.StaleDocumentWrite`, and nothing is
+        written. An adapter that does not declare the kwarg gets a
+        :class:`NotImplementedError`, never an unguarded upsert. Combining it
+        with ``if_absent`` is a ``ValueError`` — the two assert opposite things.
+
+        It lives HERE rather than in the read-modify-write callers that want it,
+        and the reason is what the guard must compare against. Those callers read
+        through :meth:`get_document`, served by a 60-second granular cache that
+        only the WRITING replica invalidates — so a reviewer's read on replica B
+        still answers v1 after an author's edit on replica A, and an
+        application-level "re-read and compare" fetches v1 from that same cache,
+        matches v1 against v1 and lets the clobber through. Pushed down to the
+        adapter, the comparison is against the STORE: the row the SQL adapter
+        reads inside the write transaction, or the bytes the filesystem adapter
+        reads off disk.
 
         Public facade (Fase 2, s-kernel-decomp-f2-writepipeline): this method
         owns the guardrails — ``invalidate_mode`` validation, the
@@ -1387,8 +1408,11 @@ class Kernel:
             InvalidDocumentName — name is not a single, safe path component.
             InvalidScopeName — scope is not a single, safe path component.
             LayerPolicyViolationError — declared policy forbids the write.
-            ValueError — invalidate_mode not in {scope, doc, none}.
+            ValueError — invalidate_mode not in {scope, doc, none}; or
+                if_absent and if_match passed together.
             KindRetiredError — Kind is in _REMOVED_KINDS (writes blocked).
+            DocumentNameTaken — if_absent lost the race (the name is taken).
+            StaleDocumentWrite — if_match lost the race (the document moved).
         """
         # Path-component safety, FIRST — before the OTel span, the Kind lookup
         # and any adapter contact. ``name`` and ``scope`` both reach a source
@@ -1472,6 +1496,7 @@ class Kernel:
                 invalidate_mode=invalidate_mode,
                 write_class=write_class,
                 if_absent=if_absent,
+                if_match=if_match,
             )
 
     async def _write_document_inner(
@@ -1484,6 +1509,7 @@ class Kernel:
         invalidate_mode: str,
         write_class: str = "substantive",
         if_absent: bool = False,
+        if_match: str | None = None,
     ) -> str | None:
         """Real write_document body — thin delegator to ``WritePipeline.write``
         (Fase 2, s-kernel-decomp-f2-writepipeline). The outer ``write_document``
@@ -1498,6 +1524,7 @@ class Kernel:
             invalidate_mode=invalidate_mode,
             write_class=write_class,
             if_absent=if_absent,
+            if_match=if_match,
         )
 
     async def delete_document(
