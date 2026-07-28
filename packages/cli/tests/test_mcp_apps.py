@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import pathlib
 import shutil
 
@@ -452,6 +453,93 @@ def test_an_unknown_client_keeps_the_inert_pointer(dna_dir):
 
     tools = asyncio.run(middleware.on_list_tools(_Context(), call_next))
     assert tools[0].meta == {"ui": {"resourceUri": "ui://dna/memory-list"}}
+
+
+def _list_tools_under(declared, caplog, monkeypatch):
+    """Drive the middleware once with a client whose declaration is ``declared``,
+    returning the log lines it emitted."""
+    middleware = M._ui_capability_middleware()
+
+    class _Fake:
+        """Enough of a FastMCP tool for the middleware: a ``meta`` to read and
+        the ``model_copy`` the strip path uses (it copies, never mutates)."""
+
+        def __init__(self, name, meta):
+            self.name, self.meta = name, meta
+
+        def model_copy(self, *, update):
+            return _Fake(self.name, update.get("meta"))
+
+    def _Tool():
+        return _Fake(
+            "approve_kind",
+            {"ui": {"resourceUri": "ui://dna/prefab", "visibility": ["app"]}},
+        )
+
+    def _Plain():
+        return _Fake("recall", {"ui": {"resourceUri": "ui://dna/memory-list"}})
+
+    class _Context:
+        fastmcp_context = object()
+
+    async def call_next(_context):
+        return [_Tool(), _Plain()]
+
+    with caplog.at_level(logging.INFO, logger=M.logger.name):
+        monkeypatch.setattr(
+            M, "client_ui_extension_from_context", lambda _ctx: declared
+        )
+        asyncio.run(middleware.on_list_tools(_Context(), call_next))
+        asyncio.run(middleware.on_list_tools(_Context(), call_next))
+    return [r.getMessage() for r in caplog.records], middleware
+
+
+@pytest.mark.parametrize("declared", [True, False, None])
+def test_the_negotiation_reading_is_logged_not_discarded(
+    declared, caplog, monkeypatch
+):
+    """The tri-state decides the filter and must also be READABLE.
+
+    Without this line the answer to "did the host declare MCP Apps?" is
+    computed and thrown away, and from outside the server all three readings
+    look identical — no card rendered. Delete the ``_report`` call and this
+    dies."""
+    lines, _ = _list_tools_under(declared, caplog, monkeypatch)
+    said = [ln for ln in lines if "MCP Apps" in ln]
+    assert len(said) == 1, (
+        f"expected exactly one line for declared={declared!r}, got {said}"
+    )
+
+
+def test_each_reading_is_told_apart_from_the_other_two(caplog, monkeypatch):
+    """A line that says the same thing for True, False and None would satisfy
+    "something was logged" while answering nothing — the whole point is that a
+    reader can tell WHICH of the three happened, and the tool count that
+    implies. Collapse the three branches into one message and this dies."""
+    said = {}
+    for declared in (True, False, None):
+        caplog.clear()
+        lines, _ = _list_tools_under(declared, caplog, monkeypatch)
+        said[declared] = next(ln for ln in lines if "MCP Apps" in ln)
+
+    assert len(set(said.values())) == 3, f"readings not distinguishable: {said}"
+    assert "DECLARED" in said[True]
+    assert "WITHOUT" in said[False]
+    assert "NOTHING readable" in said[None]
+    # The count is the field a reader compares against the client's own list:
+    # 2 tools offered when we advertise, 1 when we withhold the app-only one.
+    assert " 2 tools" in said[True] and "1 app-only" in said[True]
+    assert " 1 tools" in said[False]
+    assert " 2 tools" in said[None]
+
+
+def test_a_chatty_client_does_not_flood_the_log(caplog, monkeypatch):
+    """``tools/list`` is called on every reconnect. The reading is a fact about
+    the client, not an event — report it once per distinct value. Drop the
+    dedup and this dies (the helper lists twice)."""
+    lines, middleware = _list_tools_under(None, caplog, monkeypatch)
+    assert len([ln for ln in lines if "MCP Apps" in ln]) == 1
+    assert middleware._reported == {None}
 
 
 def test_withholding_for_one_client_does_not_poison_the_next(dna_dir, monkeypatch):
