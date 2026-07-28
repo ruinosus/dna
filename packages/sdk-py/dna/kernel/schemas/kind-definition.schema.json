@@ -289,7 +289,15 @@
         },
         "approved_at": {
           "type": ["string", "null"],
-          "description": "When the approval recorded in approved_by was given (ISO-8601). Audit metadata only — the gate reads approved_by."
+          "description": "When the approval recorded in approved_by was given (ISO-8601). Audit metadata only — the gate reads the STATE, of which approved_by is one input."
+        },
+        "revoked_by": {
+          "type": ["string", "null"],
+          "description": "Who REVOKED this Kind — the THIRD state, and deliberately not the absence of the second. Clearing approved_by is indistinguishable from never having approved, and never-approved means UNREGISTERED, which means documents are accepted with no validation at all — so a revocation implemented as a plain un-approval loosens instead of tightening. The revoked fact is therefore persisted here; the Kind stays REGISTERED (being known is what stops revocation meaning 'accepts anything'); new documents of it are REFUSED; and existing ones read back MARKED invalid — never deleted, never an error, because the data did nothing wrong and the audit needs to see what existed. Reversible: approving again clears this pair and validity returns, because validity follows the Kind's CURRENT state and is never a stamp on the document. approved_by is deliberately left standing beside it — the audit must keep who conferred effect in the first place."
+        },
+        "revoked_at": {
+          "type": ["string", "null"],
+          "description": "When the revocation recorded in revoked_by was made (ISO-8601). Audit metadata only — and NOT a tie-break against approved_at: which state is current is decided by the two acts (approving clears the revocation, revoking stamps it), never by comparing caller-supplied timestamps from possibly-skewed clocks in possibly-different formats."
         },
         "updated_at": {
           "type": "string",

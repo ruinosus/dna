@@ -39,6 +39,8 @@ import os
 from pathlib import Path  # noqa: F401 — kept for parity with prior inline imports
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
+from dna.kernel.validity import strip_derived_status
+
 if TYPE_CHECKING:  # pragma: no cover
     from dna.kernel.protocols import (
         KindPort,
@@ -58,6 +60,46 @@ class WritePipeline:
 
     def __init__(self, host: WriteHost) -> None:
         self._host = host
+
+    # -- the REVOKED Kind refusal (i-085) ------------------------------------
+
+    @staticmethod
+    def _refuse_revoked_kind(
+        scope: str, kind: str, name: str, port: Any,
+    ) -> None:
+        """Refuse the write outright when ``port`` is a REVOKED Kind.
+
+        This is the "new documents" column of i-085's table, and it is checked
+        HERE — one call site, on the port the write already resolved — rather
+        than by any caller remembering to ask. The state travels on the port
+        precisely so that it cannot be forgotten.
+
+        Note what it refuses: EVERY document of that Kind, conforming or not. A
+        revoked Kind is not a stricter schema, it is a withdrawn Kind, so there
+        is no shape that would pass and nothing for the author to fix. And note
+        what it does NOT touch — deletes. Refusing those would trap the very
+        documents the workspace may now want to clear out, and revocation
+        already refuses to destroy anything on its own.
+
+        No ``DNA_WRITE_VALIDATION`` escape hatch, unlike its schema-validating
+        neighbour: that knob exists so an operator can bulk-load legacy data
+        past a shape check, and this is not a shape check — it is a workspace's
+        decision about its own Kind, which an environment variable must not be
+        able to overrule.
+        """
+        from dna.kernel.kinds.registry import port_revoked
+
+        if not port_revoked(port):
+            return
+        from dna.kernel.errors import RevokedKindWrite
+
+        raise RevokedKindWrite(
+            f"write refused for {scope}/{kind}/{name}: the Kind {kind!r} has "
+            f"been revoked, so no new documents of it are accepted — this is "
+            f"not about the document's shape, and editing it will not help. "
+            f"Existing documents are untouched and still readable (marked "
+            f"invalid). Approve the Kind again to accept writes."
+        )
 
     # -- generic write-time spec↔schema validation (s-write-path-validation,
     #    i-008) ----------------------------------------------------------------
@@ -487,6 +529,12 @@ class WritePipeline:
         _kind_port = host.kind_port_for(
             kind, api_version=_api_version, scope=scope,
         )
+        # i-085 — the REVOKED-Kind refusal, and the ``status`` strip that keeps
+        # validity DERIVED. Both run first, before hooks, tenancy and schema
+        # validation, because both are about whether this write may exist at all
+        # rather than about the shape it has.
+        self._refuse_revoked_kind(scope, kind, name, _kind_port)
+        raw = strip_derived_status(raw)
         # Resolve tenant + validate against KindPort.scope
         effective_tenant, residual_layer = self._resolve_tenant_arg(
             kind, tenant, layer, api_version=_api_version, scope=scope,

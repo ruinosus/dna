@@ -153,6 +153,14 @@ _WRITE_REFUSALS = (
     # simply invisible to a ratchet whose module list was hand-written. That it
     # appears here now is the derivation working.
     "NamespaceOwnershipError",
+    # dna.kernel.errors — a write whose Kind has been REVOKED (i-085). It is a
+    # refusal in the strictest sense of this file: the kernel DECIDED, on a
+    # workspace's own instruction, and the caller can act on it — but only if it
+    # arrives with its reason intact. Told "validation failed" instead, an author
+    # would edit a document that no edit can save; told nothing, they would
+    # retry forever. It also carries the one piece of reassurance the moment
+    # needs: existing documents were not deleted.
+    "RevokedKindWrite",
 )
 
 #: The two that live on ``dna.kernel`` itself.

@@ -2281,8 +2281,15 @@ class Kernel:
         """Carrega UM doc por (scope, kind, name). Retorna raw dict ou None.
         Delegado ao ``self._query`` (s-kernel-decompose-god-object). Cache
         bounded 2000/TTL 60s + V1 ``_INHERITABLE_KINDS`` parent fallback vivem
-        lá; a API pública (Studio reads, agent routes, deps) é intacta."""
-        return await self._query.get_document(scope, kind, name, tenant=tenant)
+        lá; a API pública (Studio reads, agent routes, deps) é intacta.
+
+        i-085 — a document whose Kind was REVOKED comes back MARKED
+        (``status.valid == false``), never as an error and never missing. The
+        document did nothing wrong; the workspace changed its mind about the
+        Kind, and refusing the read would destroy the ability to audit what
+        existed. See :func:`~dna.kernel.validity.mark_invalid`."""
+        raw = await self._query.get_document(scope, kind, name, tenant=tenant)
+        return self._mark_validity(scope, raw)
 
     # ────────────────────────────────────────────────────────────────
     # Composition Engine V2 (Phase 17, Story s-comp-f2-resolver,
@@ -2495,6 +2502,10 @@ class Kernel:
         ``scopes`` ganha do ``scope`` posicional) vivem lá. Mantido como
         async generator aqui pra preservar a assinatura exata (callers
         fazem ``async for`` + ``inspect.isasyncgenfunction``). API intacta.
+
+        i-085 — rows of a REVOKED Kind are yielded MARKED
+        (``status.valid == false``), never dropped. See :meth:`_mark_validity`
+        for why hiding them is not something this path can express honestly.
         """
         async for row in self._query.query(
             scope, kind,
@@ -2502,7 +2513,7 @@ class Kernel:
             limit=limit, offset=offset, order_by=order_by,
             tenant=tenant, origin=origin, scopes=scopes,
         ):
-            yield row
+            yield self._mark_validity(scope, row)
 
     async def count(
         self, scope: str, kind: str, *,
@@ -2794,6 +2805,55 @@ class Kernel:
         if derived:
             meta["description"] = derived
 
+    def _mark_validity(self, scope: str, raw: Any) -> Any:
+        """``raw``, marked invalid if its Kind is REVOKED (i-085).
+
+        The read half of the third state. It answers the two questions the
+        design had to settle, and the answers are in the code rather than only
+        in prose because both are reversible by accident:
+
+        **A read returns the DOCUMENT, marked.** Not an error, not ``None``, not
+        a deletion. Erasing or refusing the read would destroy the ability to
+        audit what existed, and the data did nothing wrong — the workspace
+        changed its mind about the Kind. Reversible in one act, because the mark
+        is computed HERE, from the registry, every time: approve the Kind again
+        and the next read is clean, with nothing to migrate.
+
+        **In a QUERY the rows APPEAR, marked — they never vanish.** That is a
+        deliberate choice with a consequence, and it was made by measuring what
+        the query path can express rather than by taste. ``limit``/``offset``
+        are pushed DOWN to the source, and ``count()`` is a separate push-down;
+        the revoked fact lives in the registry, not in any column, so it cannot
+        be pushed with them. Filtering rows out after the push-down would
+        therefore hand back a page of 20 that renders 14 while ``count()`` still
+        says 20 — "vanish" is not implementable honestly here, only
+        approximately. And a third option, "it depends who is asking", needs an
+        authorization concept this kernel does not have and must not grow: it
+        knows nothing about approvers, reviewers or roles.
+
+        The consequence, stated plainly: **every listing surface has to learn to
+        render the mark**, and one that does not will show a revoked Kind's
+        documents as though nothing happened. That failure mode is the status
+        quo — less alarming than the truth, never less data — whereas the
+        alternative would have made revocation into a way to hide documents
+        without deleting them. Given a choice between a surface that
+        under-reports and a mechanism that can be used to disappear data,
+        this takes the first.
+        """
+        if not isinstance(raw, dict):
+            return raw
+        from dna.kernel.kinds.registry import port_revoked
+        from dna.kernel.validity import mark_invalid, revoked_kind_status
+
+        av = raw.get("apiVersion") or None
+        kn = raw.get("kind") or ""
+        if not kn:
+            return raw
+        port = self.kind_port_for(kn, api_version=av, scope=scope)
+        if not port_revoked(port):
+            return raw
+        return mark_invalid(raw, revoked_kind_status(kn, av))
+
     def _parse_doc(self, raw: dict[str, Any], origin: str = "local") -> Document:
         av = raw.get("apiVersion", "")
         kn = raw.get("kind", "")
@@ -2801,6 +2861,15 @@ class Kernel:
         kind_port = self._kinds.get((av, kn))
         typed = None
         if kind_port:
+            # i-085 — the SAME mark the raw-dict reads carry, so the three read
+            # shapes (raw dict, Document, ResolvedDocument) cannot disagree
+            # about whether a document is valid. Applied before ``from_raw`` so
+            # it rides in ``doc.raw`` and reads back through ``doc.status``.
+            from dna.kernel.kinds.registry import port_revoked
+            from dna.kernel.validity import mark_invalid, revoked_kind_status
+
+            if port_revoked(kind_port):
+                raw = mark_invalid(raw, revoked_kind_status(kn, av or None))
             try:
                 self._fill_derived_description(raw, kind_port)
                 typed = kind_port.parse(raw)

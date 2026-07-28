@@ -209,6 +209,49 @@ class PathEscapesStoreRoot(KernelRefusal, ValueError):
     """
 
 
+class RevokedKindWrite(KernelRefusal, ValueError):
+    """A write was refused because its Kind has been REVOKED (i-085).
+
+    The third state of the registration gate, and the reason it had to BE a
+    state rather than the absence of approval. Approval is what confers schema
+    validation and storage routing, so withdrawing it looks like it should
+    simply un-register the Kind — but an unregistered Kind's documents are
+    accepted with NO validation at all (measured), so un-registering LOOSENS the
+    gate instead of closing it. A revoked Kind therefore stays registered,
+    marked, and refuses new documents outright:
+
+        state            existing documents      new documents
+        ---------------- ---------------------- ---------------------------
+        never approved   —                       accepted WITHOUT validation
+        approved         valid, routed           validated against the schema
+        revoked          INVALID                 REFUSED
+
+    Refused, not "vetoed for its shape": a CONFORMING document is refused too,
+    because what was withdrawn is the Kind, not a schema. That is also why this
+    is its own type and not a
+    :class:`~dna.kernel.protocols.SpecValidationError` — a caller told its
+    document failed validation would go and fix the document, and no document
+    passes.
+
+    Deliberately NOT governed by ``DNA_WRITE_VALIDATION``. That knob trades
+    strictness for the ability to load legacy data; this refusal is a
+    workspace's decision about its own Kind, and an environment variable must
+    not be able to overrule it.
+
+    Existing documents are untouched — never deleted, never unreadable. They
+    read back MARKED invalid (``status.valid == false``), because erasing them
+    or refusing the read would destroy the ability to audit what existed, and
+    the data did nothing wrong: the workspace changed its mind. Reversible in
+    one act — approving again restores validity, since validity follows the
+    Kind's CURRENT state and is never a stamp on the document.
+
+    A ``KernelRefusal`` so every face relays it as an honest denial, and a
+    ``ValueError`` so a face that predates the marker base and still catches
+    ``(ValueError, LookupError, PermissionError)`` reports it rather than
+    letting it escape as a masked failure.
+    """
+
+
 #: Longest path component the kernel will hand an adapter, in UTF-8 BYTES.
 #:
 #: ``NAME_MAX`` is 255 bytes on every filesystem DNA writes to, and the

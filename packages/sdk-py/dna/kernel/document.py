@@ -122,6 +122,31 @@ class Document(Generic[SpecT]):
             return _to_spec_dict(self.typed.spec, self._spec_raw)
         return SpecDict(self._spec_raw)
 
+    @property
+    def status(self) -> dict[str, Any] | None:
+        """The DERIVED status block, or ``None`` when there is nothing to report.
+
+        Never authored and never stored (the write path strips it): the kernel
+        computes it at read time from the Kind's current state. Today it says
+        exactly one thing — that this document's Kind was REVOKED, so the
+        document is no longer valid (i-085). See :mod:`dna.kernel.validity`."""
+        from dna.kernel.validity import STATUS_KEY
+
+        value = self.raw.get(STATUS_KEY)
+        return value if isinstance(value, dict) else None
+
+    @property
+    def is_valid(self) -> bool:
+        """Whether the kernel has anything AGAINST this document.
+
+        ``True`` is "nothing to report", not "verified" — absence of a status is
+        the ordinary case for every document of every Kind. It goes ``False``
+        when the Kind has been revoked, and back to ``True`` the moment it is
+        approved again, because validity follows the Kind's CURRENT state and
+        is never a stamp on the document."""
+        status = self.status
+        return not (status is not None and status.get("valid") is False)
+
     @classmethod
     def from_raw(cls, raw: dict[str, Any], typed: Any | None = None) -> Document[Any]:
         """Create a Document from a raw dict.
