@@ -1,0 +1,18 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-084-portao-aprovacao-warning-sem-dedup
+spec:
+  title: O WARNING do portao de aprovacao nao tem dedup, para um estado estavel
+  description: 'Os DOIS portoes (register_kind_definitions e register_custom_kinds) emitem WARNING sem dedup para um Kind nao aprovado. Depois da rota de autoria, ''nao aprovado'' passa a ser criado POR DESIGN — vira estado estavel, um warning por rebuild de MI por escopo, para sempre. E o commit 44cce61 poe isso no caminho quente ao registrar Kinds no boot lazy. Decidir: demover para info (+ caplog.set_level nos testes) OU dedup por (scope, target_kind). Os dois call sites se movem juntos, e dois testes de log dependem da escolha.'
+  type: task
+  severity: low
+  status: open
+  created_at: '2026-07-28T01:27:15+00:00'
+  updated_at: '2026-07-28T01:27:15+00:00'
+  timeline:
+  - at: '2026-07-28T01:27:15+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

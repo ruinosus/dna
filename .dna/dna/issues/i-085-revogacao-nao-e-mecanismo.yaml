@@ -1,0 +1,18 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-085-revogacao-nao-e-mecanismo
+spec:
+  title: Limpar approved_by nao retira efeito ate reiniciar o processo
+  description: 'O portao roda ANTES do ramo ''ja registrado'', e o registro e por-kernel e sobrevive a uma chamada instance_async. Entao limpar approved_by de um Kind ja registrado nao tem efeito ate o processo reiniciar — e qual resposta se obtem depende de quando a replica bootou. Esta DOCUMENTADO em registry.py (e as docstrings que afirmavam o contrario foram corrigidas), mas nao construido. GATILHO: alguem construir um botao de revogar no portal assumindo que funciona.'
+  type: task
+  severity: medium
+  status: open
+  created_at: '2026-07-28T01:27:42+00:00'
+  updated_at: '2026-07-28T01:27:42+00:00'
+  timeline:
+  - at: '2026-07-28T01:27:42+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
