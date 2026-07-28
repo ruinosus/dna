@@ -668,8 +668,21 @@ async def write_document_impl(
     port = resolve_kind_port(live.kernel, kind, api_version, scope=sc)
     if is_bootstrap_kind(port):
         raise BootstrapKindWriteRefused(bootstrap_write_refusal(port))
+    # Read at the coordinates the write will act on — ``write_tenant``, not the
+    # caller's ``tenant`` (i-088, the same family as the delete path below).
+    # The two differ only for a GLOBAL Kind, where ``_write_tenant`` returns
+    # None; this never broke, and the measurement of WHY is in
+    # ``test_delete_document_tenant_coordinates.py``: a GLOBAL Kind can have no
+    # tenant row at all (the write pipeline raises ``TenantNotAllowed`` for any
+    # effective tenant), and ``get_document(tenant=X)`` falls back to the base
+    # layer, so both readings returned byte-identical documents on every store.
+    # It is aligned anyway because the equality is a property of TODAY's
+    # declarations, not of this code: a Kind whose declared scope changes from
+    # tenanted to GLOBAL leaves real overlay rows behind, and the old reading
+    # would have merged one into the shared base that every tenant inherits.
+    write_tenant = _write_tenant(port, tenant)
     existing = await live.kernel.get_document(
-        sc, port.kind, name, tenant=tenant)
+        sc, port.kind, name, tenant=write_tenant)
     stored = (
         dict(existing.get("spec") or {})
         if isinstance(existing, dict) and isinstance(existing.get("spec"), dict)
@@ -703,7 +716,6 @@ async def write_document_impl(
         "metadata": {"name": name},
         "spec": new_spec,
     }
-    write_tenant = _write_tenant(port, tenant)
     version = await live.kernel.write_document(
         sc, port.kind, name, raw, tenant=write_tenant,
     )
@@ -755,7 +767,18 @@ async def delete_document_impl(
     if refusal is not None:
         raise DeleteRefused(refusal)
     write_tenant = _write_tenant(port, tenant)
-    existing = await live.kernel.get_document(sc, port.kind, name)
+    # THE SAME COORDINATES THE DELETE WILL ACT ON (i-088). This check used to
+    # read with no tenant while the delete below targeted ``write_tenant``, and
+    # the write that created the row had used ``write_tenant`` too. ``tenant``
+    # participates in the lookup key of every store — it is in the WHERE clause
+    # of both SQL dialects (and in the Postgres primary key), and it selects the
+    # overlay directory on the filesystem — so a tenant's document was reported
+    # as "not found" by the one operation that could remove it, while write,
+    # list and get all resolved it perfectly. An existence check asked at other
+    # coordinates is a check of a different question; its answer says nothing
+    # about the operation that follows it.
+    existing = await live.kernel.get_document(
+        sc, port.kind, name, tenant=write_tenant)
     if existing is None:
         raise UnknownDocumentError(
             f"{port.kind} {name!r} not found in scope {sc!r} — nothing to delete"
