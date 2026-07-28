@@ -280,12 +280,17 @@ def test_the_shared_renderer_is_served_bundled_and_self_contained(dna_dir):
 # looser way of asking the same question — is exactly what the memory card's
 # conversion was told not to introduce.
 
-#: The MCP Apps host design-token vocabulary. Every name the bridge reads must
-#: be one a host actually sets; a private ``--dna-*`` property is one no host
-#: will ever provide.
-_HOST_TOKEN_FAMILIES = (
-    "--color-", "--font-", "--border-radius-", "--border-width-", "--shadow-",
-)
+#: The MCP Apps host design-token vocabulary is NOT redeclared here: it is the
+#: spec's own key union, imported from the SDK (which holds it against the
+#: vendored ``@modelcontextprotocol/ext-apps`` lib), so the two faces cannot
+#: disagree about what a host may send.
+#:
+#: And it is exact membership, never a prefix allowance. A prefix cannot tell a
+#: real token from a name that merely resembles one, and the difference is
+#: invisible: a fallback makes a wrong name look fine in every host, forever.
+#: That is not hypothetical — ``--text-sm``/``--text-xs`` shipped on the memory
+#: card under exactly such an allowance.
+from dna.emit.mcp_ui import HOST_DESIGN_TOKENS  # noqa: E402
 
 
 def _var_calls(css: str) -> list[tuple[str, str | None]]:
@@ -384,12 +389,25 @@ def test_every_host_token_reference_carries_a_fallback():
 
 
 def test_the_bridge_targets_the_host_token_vocabulary():
-    """The tokens are the host's documented names, not names we invented."""
+    """The tokens are the host's DOCUMENTED names, checked by exact membership
+    in the spec's key union — not by prefix, and not against a list this file
+    keeps for itself.
+
+    A name no host sets is a name whose fallback applies forever: the card
+    reads it, nothing provides it, nothing looks broken, and that part of the
+    host's theme is silently ignored. Invent a plausible-looking token and this
+    dies."""
     names = {name for name, _ in _var_calls(C.host_theme_css())}
-    unknown = [n for n in names if not n.startswith(_HOST_TOKEN_FAMILIES)]
-    assert not unknown, f"not host design tokens: {unknown}"
+    unknown = sorted(n for n in names if n not in HOST_DESIGN_TOKENS)
+    assert not unknown, (
+        f"not MCP Apps host design tokens: {unknown} — no host sets these, so "
+        "their fallbacks apply forever and the card ignores the host's theme"
+    )
     assert names == set(C.HOST_TOKENS), (
         "HOST_TOKENS and the stylesheet disagree about what the card reads"
+    )
+    assert not set(C.HOST_TOKENS) - set(HOST_DESIGN_TOKENS), (
+        "HOST_TOKENS names something outside the spec's key union"
     )
     for required in (
         "--color-background-primary",
@@ -397,6 +415,8 @@ def test_the_bridge_targets_the_host_token_vocabulary():
         "--color-text-secondary",
         "--color-border-primary",
         "--font-sans",
+        "--font-text-sm-size",
+        "--font-text-xs-size",
     ):
         assert required in names, f"the bridge does not read {required}"
 
@@ -542,6 +562,34 @@ def test_the_kinds_card_shows_the_one_fact_the_roster_exists_for():
     assert wire["state"]["pending"] == 1
     assert wire["state"]["pending_variant"] == "warning"
     assert C._pending_variant(0) == "success"
+
+
+def test_no_card_forces_a_colour_mode():
+    """Setting ``mode`` on a card would silently kill the host theme on EVERY
+    card, which is why it is pinned here rather than left to a comment.
+
+    Read from the renderer's own source: the host-context handler is
+    ``s.current ? ZN(s.current) : osr(f)``. ``s.current`` is the ``mode`` the
+    wire carried, and ``osr`` is the ONLY function that injects the host's
+    ``styles.variables`` (and sets ``colorScheme``). So a card that declares a
+    mode takes the branch that merely toggles a dark class and NEVER receives
+    the host's design tokens — the theme bridge would resolve every one of its
+    fallbacks and the card would ignore the host completely.
+
+    A plausible future "just force dark on this card" is therefore a
+    theme-wide regression that nothing else would catch: it breaks no layout,
+    raises nothing, and looks deliberate. Add ``mode=`` to any ``PrefabApp``
+    and this dies."""
+    for tool in _CARD_TOOLS:
+        wire = _wire(tool)
+        assert "mode" not in wire, (
+            f"{tool} declares a colour mode — the renderer would then skip the "
+            "host-context handler that injects styles.variables, and the card "
+            "would never see the host's tokens at all"
+        )
+        # The same trap through the other door: a `theme` with a mode on it is
+        # serialized to the same top-level `mode` key.
+        assert "theme" not in wire
 
 
 def test_no_card_wires_an_action():
