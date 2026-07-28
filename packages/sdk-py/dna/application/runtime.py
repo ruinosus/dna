@@ -447,6 +447,14 @@ async def apply_definition_impl(
     written back at its inherited value is not a change."""
     if not (tenant or "").strip():
         raise ValueError("tenant is required to write a definition override")
+    # i-090 — the REST document-write seam. Its sibling read
+    # (``read_definition_impl``) goes through ``live.mi`` and is fresh by
+    # construction; this one resolves the Kind straight off the registry, so it
+    # takes the same TTL'd refresh the generic document tools take. Without it a
+    # replica that did not serve the approval writes an override against a Kind
+    # whose registered shape (schema, storage routing, revoked mark) it has not
+    # seen.
+    await live.ensure_kinds(scope)
     api_version = _api_version_for_kind(live, kind)
     raw = {"apiVersion": api_version, "kind": kind,
            "metadata": {"name": name}, "spec": dict(spec or {})}
@@ -461,6 +469,7 @@ async def revert_definition_impl(
     """Remove the tenant override → reads fall back to the inherited base."""
     if not (tenant or "").strip():
         raise ValueError("tenant is required to revert a definition override")
+    await live.ensure_kinds(scope)   # i-090, as in apply_definition_impl.
     await live.kernel.delete_document(scope, kind, name, tenant=tenant)
     return {"kind": kind, "name": name, "overridden": False}
 

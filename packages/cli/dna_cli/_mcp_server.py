@@ -92,7 +92,7 @@ from dna.application import (  # noqa: F401 — re-exported for the faces + test
     remember_impl,
     set_status_impl,
 )
-from dna.application.live import parse_scope_grants
+from dna.application.live import KIND_REFRESH_TTL_ENV, parse_scope_grants
 from dna.application.runtime import (  # sdlc_digest_impl / the scope-grant binder
     _collect,
     workspace_granted_scopes,
@@ -135,7 +135,7 @@ async def boot_live(scope: str | None = None, base_dir: str | None = None) -> Li
     workspace_definitions_base = (
         os.environ.get("DNA_WORKSPACE_DEFINITIONS_BASE") or ""
     ).strip() or None
-    return LiveDna(
+    live = LiveDna(
         base_scope=holder.scope,
         kernel=holder.kernel,
         provider=provider,
@@ -143,6 +143,25 @@ async def boot_live(scope: str | None = None, base_dir: str | None = None) -> Li
         workspace_scope_prefix=workspace_scope_prefix,
         workspace_definitions_base=workspace_definitions_base,
     )
+    # i-090 — SAY THE NUMBER AT BOOT. This window is not a performance knob: it
+    # is the worst case between one replica approving (or revoking) a Kind and
+    # THIS replica honouring it, which makes it the SLA an operator publishes.
+    # The value actually in force has to be findable without reading source.
+    if live.kind_refresh_ttl > 0:
+        logger.info(
+            "Kind-registry refresh window: %.0fs (%s) — a Kind approved or "
+            "revoked on another replica takes effect here within that window; "
+            "the replica that serves the act honours it immediately.",
+            live.kind_refresh_ttl, KIND_REFRESH_TTL_ENV,
+        )
+    else:
+        logger.warning(
+            "Kind-registry refresh window DISABLED (%s=0) — a Kind approved or "
+            "revoked on ANOTHER replica does not take effect on this one until "
+            "something else rebuilds that scope. Intended only for a "
+            "single-replica deployment.", KIND_REFRESH_TTL_ENV,
+        )
+    return live
 
 
 # ── SDLC digest (lives here by design; see note) ───────────────────────────

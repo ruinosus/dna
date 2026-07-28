@@ -561,6 +561,25 @@ async def approve_kind_impl(
     The refusal is the correct outcome, not a degradation — an approval that
     cannot see the shape it is approving is not an approval — and it is
     recoverable in one step: re-read the Kind and approve again.
+
+    **The effect is conferred synchronously (i-090).** Registration happens only
+    inside a Manifest Instance build, and NOTHING used to schedule one: the write
+    below correctly invalidated the scope so the next build would be fresh, and
+    then no build was ever asked for. The measured consequence was the sequence a
+    human actually performs — approve, then immediately use the Kind — answering
+    ``UnknownKindError: Kind 'Deal' is not registered on this source``, with the
+    Kind becoming real at whatever later moment somebody happened to call a
+    ``definitions``-family route on that replica. So this function now ends by
+    calling :meth:`~dna.application.live.LiveDna.refresh_kinds`, roughly 60 ms,
+    once per approval.
+
+    Be precise about what that buys: it closes the case on **the replica that
+    served the approval**, and only that one. Sibling replicas hold their own
+    registries and are closed by the second mechanism —
+    :meth:`~dna.application.live.LiveDna.ensure_kinds`, the TTL'd refresh the
+    document routes go through — which bounds their lag at
+    :data:`~dna.application.live.KIND_REFRESH_TTL_DEFAULT` seconds rather than
+    leaving it indeterminate.
     """
     kind = _checked_kind_name(kind, verb="approve")
     if not (tenant or "").strip():
@@ -618,6 +637,10 @@ async def approve_kind_impl(
         # read above. Refused (StaleDocumentWrite) rather than clobbering.
         if_match=read_etag,
     )
+    # i-090 — CONFER THE EFFECT, in the act. See the docstring's closing
+    # paragraph: without this the approval landed in the store and changed
+    # nothing until some unrelated call happened to rebuild this scope.
+    await live.refresh_kinds(scope)
     return {
         "approved": True,
         "kind": kind,
@@ -685,6 +708,16 @@ async def revoke_kind_impl(
     Idempotent in shape but not in fact: a second revocation re-stamps the
     revoker and the timestamp, which is the honest record of what happened.
 
+    **The door closes synchronously (i-090), and this is the dangerous half.**
+    The revoked mark reaches the port only through a Manifest Instance build,
+    and nothing used to schedule one — so a revocation landed in the store and
+    the Kind went on accepting documents until some unrelated call rebuilt that
+    scope, on each replica independently. Slow to TIGHTEN is the failure mode
+    i-085 exists to prevent, so this function ends by calling
+    :meth:`~dna.application.live.LiveDna.refresh_kinds`. As with approval that
+    closes the serving replica only; the siblings are bounded by
+    :meth:`~dna.application.live.LiveDna.ensure_kinds`' window.
+
     Raises :class:`AuthoredKindNotFound` (→ 404) when no document the CALLER
     owns exists under that Kind name, and ``ValueError`` (→ 400) for a missing
     tenant/actor or a malformed Kind name.
@@ -723,6 +756,10 @@ async def revoke_kind_impl(
         scope, _KIND, name, {**raw, "spec": spec},
         if_match=read_etag,
     )
+    # i-090 — CLOSE THE DOOR, in the act, and this is the half that matters
+    # most: a revocation that takes effect "eventually" keeps accepting
+    # documents of a Kind the workspace has just withdrawn.
+    await live.refresh_kinds(scope)
     return {
         "revoked": True,
         "kind": kind,

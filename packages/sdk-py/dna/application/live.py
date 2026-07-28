@@ -9,9 +9,70 @@ hands it to the shared use-cases.
 """
 from __future__ import annotations
 
+import logging
+import os
+import time
+
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from typing import Any
+
+logger = logging.getLogger(__name__)
+
+#: The clock the Kind-refresh window is measured on. MONOTONIC, not wall clock:
+#: an NTP step backwards would freeze the window for the size of the step and a
+#: step forwards would expire it on every request. Aliased at module level so a
+#: test can drive the window deterministically instead of sleeping through it.
+_monotonic = time.monotonic
+
+#: How long (seconds) a replica may keep serving a scope's Kind registry without
+#: re-reading the store — and therefore the WORST-CASE lag between one replica
+#: approving/revoking a Kind and every OTHER replica honouring it (i-090).
+#:
+#: This number is the SLA. It is not a performance knob that happens to have a
+#: correctness side effect: registration is what confers schema validation,
+#: storage routing and the revocation refusal, and registration only happens
+#: inside a Manifest Instance build. Nothing else in the process schedules that
+#: build for a scope, so without this window the moment an approval starts to
+#: hold is indeterminate and differs per replica.
+#:
+#: 30 s mirrors the kernel's granular list TTL
+#: (``dna.kernel.boot.cache._GRANULAR_LIST_TTL``) so an operator has one number
+#: to reason about rather than two.
+KIND_REFRESH_TTL_DEFAULT = 30.0
+
+#: The operator's knob for :data:`KIND_REFRESH_TTL_DEFAULT`. Lower it for a
+#: deployment that wants approvals to land faster (at one extra bootstrap read
+#: per scope per window per replica); ``0`` disables the seam entirely, which
+#: returns the deployment to "the approving replica only" — Layer 1 — and is a
+#: choice an operator may legitimately make for a single-replica self-host.
+KIND_REFRESH_TTL_ENV = "DNA_KIND_REFRESH_TTL"
+
+
+def default_kind_refresh_ttl() -> float:
+    """The configured Kind-refresh window, in seconds.
+
+    Unparseable or negative input falls back to the default rather than
+    disabling the seam: ``0`` switches it off and that has to stay a DELIBERATE
+    act, not something a typo in an env var can do silently."""
+    raw = os.environ.get(KIND_REFRESH_TTL_ENV)
+    if raw is None or not raw.strip():
+        return KIND_REFRESH_TTL_DEFAULT
+    try:
+        ttl = float(raw)
+    except ValueError:
+        logger.warning(
+            "%s=%r is not a number — falling back to the %.0fs default",
+            KIND_REFRESH_TTL_ENV, raw, KIND_REFRESH_TTL_DEFAULT,
+        )
+        return KIND_REFRESH_TTL_DEFAULT
+    if ttl < 0:
+        logger.warning(
+            "%s=%r is negative — falling back to the %.0fs default",
+            KIND_REFRESH_TTL_ENV, raw, KIND_REFRESH_TTL_DEFAULT,
+        )
+        return KIND_REFRESH_TTL_DEFAULT
+    return ttl
 
 #: The access levels a ``WorkspaceScopeGrant`` row can carry, weakest first, and
 #: the ONLY vocabulary the binder understands. The Kind's ``access`` enum
@@ -90,6 +151,12 @@ class LiveDna:
     # ("declare only the difference") finally has a REST to inherit. ``None``
     # (the OSS / self-host default) writes nothing — behavior unchanged.
     workspace_definitions_base: str | None = None
+    # ── the Kind-refresh window (i-090) ─────────────────────────────────────────
+    # See :func:`default_kind_refresh_ttl`. Read from the environment at
+    # construction so a face gets the operator's number with no wiring, and it is
+    # a FIELD rather than a module lookup so a test — or a face with its own
+    # configuration — can set it per handle.
+    kind_refresh_ttl: float = field(default_factory=default_kind_refresh_ttl)
     # ── adopt-on-access probe cache (the i-058 hardening) ────────────────────────
     # Scopes this PROCESS has already probed/adopted via
     # ``dna.application.runtime.adopt_workspace_scope_on_access`` — the memo that
@@ -101,6 +168,14 @@ class LiveDna:
     # cache is an implementation detail of the live handle, not configuration.
     adoption_probed: set = field(default_factory=set, init=False, repr=False, compare=False)
     adoption_lock: Any = field(default=None, init=False, repr=False, compare=False)
+    # ── Kind-refresh bookkeeping (i-090) ────────────────────────────────────────
+    # ``{scope: monotonic timestamp of the last registry refresh}`` plus the lock
+    # that single-flights concurrent refreshes. ``init=False``: faces never pass
+    # these — they are an implementation detail of the live handle, exactly like
+    # the adoption cache above.
+    _kinds_refreshed: dict = field(
+        default_factory=dict, init=False, repr=False, compare=False)
+    _kinds_lock: Any = field(default=None, init=False, repr=False, compare=False)
 
     def default_scope(self, workspace: str | None = None) -> str:
         """The scope a request DEFAULTS to when it names none — workspace-aware.
@@ -269,6 +344,100 @@ class LiveDna:
         if SCOPE_GRANT_ALL in grants:
             return True
         return requested in grants
+
+    # ── the Kind-registry rebuild trigger (i-090) ───────────────────────────
+
+    async def refresh_kinds(
+        self, scope: str | None = None, *, tenant: str | None = None,
+    ) -> bool:
+        """Re-register ``scope``'s Kinds from the store, NOW, and reset its
+        window. Returns whether the refresh actually ran.
+
+        The narrowest act that makes an approval or a revocation real. What
+        confers effect on a Kind is REGISTRATION — the registry's approval gate
+        withholds it until ``approved_by`` names somebody, and marks the port
+        revoked when ``revoked_by`` does — and registration happens only inside a
+        Manifest Instance build (``instance_builder``'s Phase 1). The approval
+        write already invalidates the scope's base MI, so the next build is
+        fresh; what was missing (i-090) is anything that SCHEDULES a next build.
+        This is that thing.
+
+        ``lazy=True`` is the point, not an optimisation: it loads the bootstrap
+        slice only (Genome + KindDefinition + LayerPolicy) and runs the same
+        Phase 1 registration the eager path runs, so it buys the whole effect for
+        a fraction of the cost — measured at roughly a quarter of an eager build
+        on a filesystem store. It also deliberately bypasses the base-MI cache
+        (which has no TTL and would hand back the very stale registry this call
+        exists to replace).
+
+        **Fail-soft.** A store hiccup here must not turn a request that would
+        have worked into an error: the caller proceeds against the registry the
+        replica already has, the window is NOT stamped, and the next call
+        retries. This is a freshness mechanism layered onto a path that already
+        functioned; making it a new failure mode would be a bad trade.
+        """
+        sc = scope or self.default_scope(tenant)
+        try:
+            await self.kernel.instance_async(sc, None, lazy=True)
+        except Exception as exc:  # noqa: BLE001 — fail-soft, retry next call.
+            logger.warning(
+                "Kind-registry refresh failed for scope %r — the call proceeds "
+                "against the registry this replica already holds and the next "
+                "one retries: %s", sc, exc,
+            )
+            return False
+        self._kinds_refreshed[sc] = _monotonic()
+        return True
+
+    async def ensure_kinds(
+        self, scope: str | None = None, *, tenant: str | None = None,
+    ) -> bool:
+        """Make sure ``scope``'s Kind registry is no older than
+        :attr:`kind_refresh_ttl`. Returns whether a refresh ran.
+
+        The seam the DOCUMENT routes go through, and the reason an approval now
+        has a publishable bound instead of an indeterminate one. Document routes
+        (``write_document`` / ``get_document`` / ``list_documents`` /
+        ``list_kinds`` / the generic delete) resolve their Kind straight off the
+        registry; they never built a Manifest Instance, so on any replica that
+        did not itself serve the approval the Kind stayed unregistered until
+        somebody happened to call a ``definitions``-family route for that scope.
+        "Happened to" is not a guarantee, and for a REVOCATION it is a door that
+        is slow to close.
+
+        With this in place the guarantee is a number: **an approval or a
+        revocation is honoured by every replica within
+        :attr:`kind_refresh_ttl` seconds** (immediately on the replica that
+        served the act — see :meth:`refresh_kinds`). The cost of the guarantee is
+        one bootstrap-slice read per scope per window per replica, so a hot scope
+        under 30 s costs two reads a minute regardless of request rate.
+
+        ``kind_refresh_ttl <= 0`` disables it — a deliberate operator choice
+        (:data:`KIND_REFRESH_TTL_ENV`), which returns the deployment to
+        "the approving replica honours it, the others on their next definitions
+        call".
+
+        Single-flighted: a burst over a cold scope yields ONE rebuild, not one
+        per concurrent request. The refresh is idempotent, so the lock is about
+        cost, not correctness.
+        """
+        ttl = float(self.kind_refresh_ttl or 0.0)
+        if ttl <= 0:
+            return False
+        sc = scope or self.default_scope(tenant)
+        last = self._kinds_refreshed.get(sc)
+        if last is not None and (_monotonic() - last) < ttl:
+            return False   # steady state: one dict lookup, zero store reads.
+
+        import asyncio
+
+        if self._kinds_lock is None:
+            self._kinds_lock = asyncio.Lock()
+        async with self._kinds_lock:
+            last = self._kinds_refreshed.get(sc)
+            if last is not None and (_monotonic() - last) < ttl:
+                return False   # lost the race to the first flight.
+            return await self.refresh_kinds(sc)
 
     async def mi(self, scope: str | None = None, tenant: str | None = None) -> Any:
         """Build a (optionally tenant-resolved) ManifestInstance for ``scope``.

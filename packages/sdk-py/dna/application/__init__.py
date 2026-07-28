@@ -52,6 +52,7 @@ from dna.application.documents import (
     list_documents_impl,
     list_kinds_impl,
     resolve_kind_port,
+    resolve_kind_port_live,
     spec_etag,
     write_document_impl,
 )
@@ -149,6 +150,7 @@ __all__ = [
     "get_document_impl",
     "write_document_impl",
     "resolve_kind_port",
+    "resolve_kind_port_live",
     "spec_etag",
     "DeleteRefused",
     "UnknownDocumentError",
