@@ -87,6 +87,32 @@ logger = logging.getLogger(__name__)
 # fired on every MI rebuild, flooding logs.
 _GLOBAL_KINDDEF_CONFLICT_WARNED: set[tuple[str, str]] = set()
 
+# i-084: process-wide set of (scope, apiVersion, kind) triples already warned
+# about by the APPROVAL gate — shared by BOTH store-loaded doors
+# (``register_kind_definitions`` and ``register_custom_kinds``) so a Kind cannot
+# be silent at one door and loud at the other.
+#
+# Deduped, not demoted. Once a tenant can author a Kind conversationally,
+# "authored but not approved" is a state created BY DESIGN — a steady state, not
+# an anomaly — so the undeduped line is one WARNING per MI rebuild per scope,
+# forever, per tenant, on the hot path the lazy boot walks (44cce61). Demoting
+# it to info would not reduce that volume at all, only its level, and it would
+# make the approval refusal the one per-Kind refusal in the funnel quieter than
+# its neighbours — the refusal an AUTHOR most needs to find. Warn once, at the
+# level the author will actually see, then stay quiet.
+#
+# (The parse-failure warning in the same funnel stays undeduped on purpose: a
+# malformed document is an anomaly someone must fix, not a designed resting
+# state. Same shape of line, different class of event.)
+#
+# Keyed like _AMBIGUOUS_LOOKUP_WARNED and for the same reason (i-080 item 5):
+# the key is the EVENT, not the name. Scope is in the key so a second tenant's
+# unapproved Kind is still audible after the first tenant's warned; apiVersion
+# is in it because (apiVersion, kind) is what identifies a Kind everywhere else
+# in this module, and two same-named Kinds from different namespaces are two
+# different refusals.
+_GLOBAL_UNAPPROVED_KIND_WARNED: set[tuple[str | None, str, str]] = set()
+
 
 def _load_kind_docs(kind_port: Any) -> str | None:
     """Resolve kind documentation prose.
@@ -1204,12 +1230,26 @@ class KindRegistry:
                 #
                 # It runs BEFORE the scope binding (i-081) for the same reason:
                 # a Kind that never registers binds to no scope at all.
-                logger.warning(
-                    "Kind %r in scope %r is authored but not approved — "
-                    "parsed, not registered. It has no effect until a human "
-                    "approves it (spec.approved_by is empty).",
-                    typed.spec.target_kind, scope,
+                #
+                # Warned ONCE per (scope, apiVersion, kind) per process (i-084):
+                # unapproved is a resting state after the authoring route, so
+                # without the cache this fires on every MI rebuild forever. See
+                # _GLOBAL_UNAPPROVED_KIND_WARNED.
+                _warn_key = (
+                    scope,
+                    typed.spec.target_api_version,
+                    typed.spec.target_kind,
                 )
+                if _warn_key not in _GLOBAL_UNAPPROVED_KIND_WARNED:
+                    _GLOBAL_UNAPPROVED_KIND_WARNED.add(_warn_key)
+                    logger.warning(
+                        "Kind %r in scope %r is authored but not approved — "
+                        "parsed, not registered. It has no effect until a human "
+                        "approves it (spec.approved_by is empty). (further "
+                        "occurrences for this Kind in this scope are suppressed "
+                        "process-wide)",
+                        typed.spec.target_kind, scope,
+                    )
                 continue
 
             key = (typed.spec.target_api_version, typed.spec.target_kind)
@@ -1398,12 +1438,22 @@ class KindRegistry:
                 #
                 # The gate READS approved_by and never writes it — who may set
                 # it is decided where the writer is authenticated, not here.
-                logger.warning(
-                    "Custom kind %r in scope %r is declared but not approved — "
-                    "parsed, not registered. It has no effect until a human "
-                    "approves it (approved_by is empty).",
-                    kn, scope,
-                )
+                #
+                # Deduped through the SAME process-wide cache as the
+                # KindDefinition door (i-084), so the two doors stay as alike in
+                # VOLUME as they already are in outcome — a Kind that is silent
+                # at one door and loud at the other is worse than either.
+                _warn_key = (scope, av, kn)
+                if _warn_key not in _GLOBAL_UNAPPROVED_KIND_WARNED:
+                    _GLOBAL_UNAPPROVED_KIND_WARNED.add(_warn_key)
+                    logger.warning(
+                        "Custom kind %r in scope %r is declared but not "
+                        "approved — parsed, not registered. It has no effect "
+                        "until a human approves it (approved_by is empty). "
+                        "(further occurrences for this Kind in this scope are "
+                        "suppressed process-wide)",
+                        kn, scope,
+                    )
                 continue
             key = (av, kn)
             if key in self._kinds:

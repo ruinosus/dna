@@ -566,9 +566,7 @@ async def approve_kind_impl(
     }
 
 
-async def _authored_kind_visibility(
-    live: Any, *, scope: str, tenant: str | None,
-) -> Any:
+async def _authored_kind_visibility(live: Any, *, tenant: str | None) -> Any:
     """A predicate ``(document_name) -> bool``: may this caller see that row?
 
     **No resolved tenant ⇒ no filter.** The same hinge
@@ -579,36 +577,22 @@ async def _authored_kind_visibility(
     self-hoster with an empty list. It rests on the same standing invariant — a
     hosted face never issues an unattributed request on a user's behalf.
 
-    Otherwise a row is visible when it is **owned by the caller OR inherited
-    from the parent**, never "owned by the caller" alone:
+    Otherwise a row is visible when the caller **owns the namespace half of its
+    name** — except that a name with no ``--`` has no namespace half to test at
+    all (every ``KindDefinition`` predating the authoring door, and every
+    hand-written one, looks like this), so it is kept rather than split blindly.
 
-    * an INHERITED row is nobody in this scope's to own — a curated base Kind a
-      workspace legitimately consumes through ``parent_scope`` — so dropping it
-      would delete the base catalogue from the workspace's own listing. It is
-      identified as "not among the LOCAL names", which costs one extra
-      ``origin="local"`` pass because :meth:`Kernel.query` does not tag a row
-      with the scope it came from.
-
-      RE-MEASURED (pre-merge, over a child scope that really declares a
-      ``parent_scope`` and a parent that really holds an approved
-      ``KindDefinition``): the pass is inert in production, and more completely
-      than "``origin='all'`` happens to equal ``origin='local'``" — the parent's
-      row appears in NEITHER pass, so ``default - local`` is empty and the
-      ``name not in local`` branch is never taken. ``KindDefinition`` is a
-      BOOTSTRAP Kind and ``Kernel._NON_INHERITABLE_KINDS`` unions
-      ``_BOOTSTRAP_KINDS``, so ``kernel.query``'s catalog and parent passes are
-      both skipped for it.
-
-      It is KEPT rather than deleted, and the reason is not the cost argument.
-      ``test_kind_approval_audit.py::test_an_inherited_row_survives_the_filter``
-      pins this branch directly against a stub kernel, so the pass and its test
-      are one two-file change; deleting the pass alone turns that suite red.
-      Whoever removes it removes both — and the condition that would make it
-      LOAD-BEARING again is exactly one: ``KindDefinition`` becoming
-      ``scope_inheritable``.
-    * a name with no ``--`` has no namespace half to test at all (every
-      ``KindDefinition`` predating the authoring door, and every hand-written
-      one, looks like this), so it is kept rather than split blindly.
+    This used to carry a second, ``origin="local"`` pass whose only job was to
+    spare INHERITED rows the ownership test — a curated base Kind consumed
+    through ``parent_scope`` is nobody in this scope's to own. It was DEAD, and
+    measured so twice (i-087): ``KindDefinition`` is a BOOTSTRAP Kind and
+    ``Kernel._NON_INHERITABLE_KINDS`` unions ``_BOOTSTRAP_KINDS``, so
+    :meth:`Kernel.query` skips both its catalog and its parent pass — over a
+    child scope that really declares ``parent_scope`` and a parent that really
+    holds an approved ``KindDefinition``, the parent's row appears in NONE of
+    the three passes, so ``default - local`` is always empty and the exemption
+    never fired. ONE condition would make it load-bearing again, and it is the
+    one to restore it under: ``KindDefinition`` becoming ``scope_inheritable``.
 
     NEVER degrades to unfiltered: an unreadable registry raises
     :class:`NamespaceRegistryUnreadable` out of :func:`_owns` and an ambiguous
@@ -618,22 +602,9 @@ async def _authored_kind_visibility(
     if not (tenant or "").strip():
         return lambda name: True
 
-    # Resolved FIRST: a registry we cannot read must refuse before the extra
-    # store pass, not after it.
     owns = await _owns(live, tenant)
 
-    local: set[str] = set()
-    async for raw in live.kernel.query(scope, _KIND, tenant=tenant, origin="local"):
-        if not isinstance(raw, dict):
-            continue
-        name = str((raw.get("metadata") or {}).get("name")
-                   or raw.get("name") or "")
-        if name:
-            local.add(name)
-
     def visible(name: str) -> bool:
-        if name not in local:
-            return True  # inherited / catalog — see the docstring.
         if _NAME_SEP not in name:
             return True  # no namespace half to test.
         namespace, _kind_half = name.rsplit(_NAME_SEP, 1)
@@ -704,7 +675,7 @@ async def list_authored_kinds_impl(
     namespace. Neither degrades to an unfiltered list.
     """
     sc = scope or live.default_scope(tenant)
-    visible = await _authored_kind_visibility(live, scope=sc, tenant=tenant)
+    visible = await _authored_kind_visibility(live, tenant=tenant)
     kinds: list[dict[str, Any]] = []
     async for raw in live.kernel.query(sc, _KIND, tenant=tenant):
         if not isinstance(raw, dict):

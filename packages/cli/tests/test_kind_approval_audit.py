@@ -775,27 +775,24 @@ def test_approving_without_a_registry_scope_refuses_actionably(dna_dir):
 # leaving the TENANT route unfiltered makes the tenant's default the operator's
 # power.
 #
-# Three things the filter must NOT break, all load-bearing:
+# Two things the filter must NOT break, both load-bearing:
 #   * the unattributed lane (``--auth none`` self-host, an explicit operator
 #     ``scope=`` call) resolves no tenant — filtering it would answer every
 #     self-hoster with an empty list. Same hinge ``NamespaceOwnershipGate`` uses
 #     for an unattributed write: no resolved tenant ⇒ not filtered.
 #   * NON-NAMESPACED documents. A name without ``--`` has no namespace half to
-#     test at all — an operator-seeded ``KindDefinition`` is the ordinary case.
-#   * INHERITED rows — a curated base Kind a workspace consumes through
-#     ``parent_scope`` is nobody's to own, so "owned by the caller" alone would
-#     delete it from the roster. MEASURED, and the reason the seed below lives
-#     in the caller's own scope rather than in ``_lib``: no inherited row can
-#     reach this listing TODAY. ``KindDefinition`` is a BOOTSTRAP Kind, and
-#     ``Kernel._NON_INHERITABLE_KINDS`` unions ``_BOOTSTRAP_KINDS``, so
-#     ``kernel.query``'s catalog and parent passes are both skipped for it and
-#     ``origin="all"`` is exactly ``origin="local"``. A ``KindDefinition``
-#     written into ``_lib`` (the ``DEFAULT_BASE_SCOPE`` parent) does NOT appear
-#     in the ``concierge`` listing even UNFILTERED — verified. The rule is
-#     implemented anyway, because it costs one pass and because the day
-#     ``scope_inheritable`` flips is not the day to discover the listing eats
-#     the base catalogue; :func:`test_an_inherited_row_survives_the_filter`
-#     pins the branch directly against the use-case.
+#     test at all — an operator-seeded ``KindDefinition`` is the ordinary case,
+#     and it is why the seed below lives in the caller's own scope.
+#
+# There was a THIRD, for INHERITED rows, and it is gone (i-087): no inherited
+# row can reach this listing. ``KindDefinition`` is a BOOTSTRAP Kind and
+# ``Kernel._NON_INHERITABLE_KINDS`` unions ``_BOOTSTRAP_KINDS``, so
+# ``kernel.query`` skips both its catalog and its parent pass — a
+# ``KindDefinition`` written into the parent scope does not appear here even
+# UNFILTERED (measured twice, the second time against a real ``parent_scope``
+# chain with an approved seed in the parent). The exemption it protected, and
+# the stub-kernel test that pinned it, were both deleted; restore them if
+# ``KindDefinition`` ever becomes ``scope_inheritable``.
 
 
 def _seed_unnamespaced_kind_document(dna_dir, *, name: str = "operatorseeded") -> str:
@@ -870,49 +867,6 @@ def test_the_listing_does_not_hand_a_workspace_its_neighbours_kinds(dna_dir):
     # the assertion above while still leaking the thing that matters.
     assert not [r for r in rows if r.get("proposed_by") == _AGENT["email"]], rows
     assert not [r for r in rows if r.get("namespace") == b.json()["namespace"]], rows
-
-
-def test_an_inherited_row_survives_the_filter():
-    """"Owned by the caller OR inherited from the parent" — the second half,
-    pinned against the use-case with a stub kernel.
-
-    It cannot be reached through the store today (see the section comment: a
-    BOOTSTRAP Kind never runs ``kernel.query``'s parent pass), and a rule with
-    no test is a rule the next refactor deletes. The stub answers ``origin=
-    "local"`` with the caller's own document only, and the default
-    ``origin="all"`` with that document plus one the caller does not own — which
-    is exactly the shape an inherited curated Kind arrives in."""
-    from dna.application.kind_authoring import list_authored_kinds_impl
-
-    mine = "ws-1a2b3c.dna.local--Proposta"
-    inherited = "curated.example--Curada"
-
-    def _doc(name, *, proposed_by):
-        return {"metadata": {"name": name},
-                "spec": {"target_kind": name.split("--")[1],
-                         "target_api_version": f"{name.split('--')[0]}/v1",
-                         "origin": name.split("--")[0],
-                         "proposed_by": proposed_by}}
-
-    class _Kernel:
-        async def kind_namespaces(self):
-            return [{"spec": {"namespace": "ws-1a2b3c.dna.local",
-                              "owner": "ws-caller"}}]
-
-        async def query(self, scope, kind, *, tenant=None, origin="all", **kw):
-            yield _doc(mine, proposed_by="me@tenant.example")
-            if origin != "local":
-                yield _doc(inherited, proposed_by="curator@base.example")
-
-    class _Live:
-        kernel = _Kernel()
-
-        def default_scope(self, tenant):
-            return "concierge"
-
-    out = asyncio.run(list_authored_kinds_impl(_Live(), tenant="ws-caller"))
-    names = {k["name"] for k in out["kinds"]}
-    assert names == {mine, inherited}, names
 
 
 def test_an_unattributed_listing_is_not_filtered(dna_dir):
