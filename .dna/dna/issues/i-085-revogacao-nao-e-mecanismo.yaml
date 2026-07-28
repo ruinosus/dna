@@ -34,3 +34,23 @@ spec:
       (3) Logo, aprovar numa superficie conversacional so e defensavel se DESFAZER funcionar. Hoje limpar approved_by de um Kind ja registrado nao tem efeito ate o processo reiniciar, e isso esta documentado em registry.py como nao-construido.
 
       ORDEM ACORDADA: tema com tokens do host -> card do pendente mostrando o schema (sem botao) -> ESTA ISSUE -> so entao o botao Aprovar com visibility: ['app']. Inverter as duas ultimas entrega um botao que aprova sem ter como desaprovar.
+  - at: '2026-07-28T14:47:52+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: |-
+      SEMANTICA DECIDIDA pelo founder em 28/07. A implementacao deve sair disto, e nao de instinto — mas com pesquisa propria na hora, porque nada aqui foi validado contra implementacao real.
+
+      A DESCOBERTA QUE MOTIVA O RESTO: revogar NAO e o inverso de aprovar. Tirar a aprovacao devolve o Kind ao estado 'nao registrado', e nao-registrado significa DOCUMENTOS ACEITOS SEM VALIDACAO — medido e provado em 27/07. Ou seja, a revogacao ingenua AFROUXA em vez de apertar: desliga o portao em vez de fechar. Revogado precisa ser um TERCEIRO estado, nao a ausencia do segundo, e isso obriga a PERSISTIR que foi revogado — limpar approved_by e indistinguivel de nunca ter aprovado.
+
+        estado          | documentos existentes | documentos novos
+        ----------------|-----------------------|---------------------------
+        nunca aprovado  | —                     | aceitos SEM validacao
+        aprovado        | validos, roteados     | validados contra o schema
+        revogado        | INVALIDOS             | recusados
+
+      DECISAO 1 — documentos existentes ficam INVALIDOS, e a leitura devolve O DOCUMENTO MARCADO como invalido, nunca erro nem apagamento. Motivo: apagar ou recusar a leitura destroi a capacidade de auditar o que existia, e o dado nao fez nada errado — quem mudou de ideia foi o workspace.
+
+      DECISAO 2 — REVERSIVEL. Re-aprovar devolve a validade. A validade segue o ESTADO CORRENTE do Kind, nao um carimbo no documento. Barato, e escolhido de proposito e nao por acidente.
+
+      PONTAS PARA A IMPLEMENTACAO PESQUISAR: como o estado revogado se persiste sem virar mais um campo que alguem esquece de ler; se a marcacao de invalido cabe no envelope de leitura que ja existe ou pede superficie nova; e o que acontece com documento invalido numa consulta — some, aparece marcado, ou depende de quem pergunta.
