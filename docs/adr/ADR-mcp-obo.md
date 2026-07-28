@@ -7,13 +7,6 @@
 - **Tracking**: `f-mcp-obo` (board `dna-development`, under epic `e-dna-portability`)
 - **Relates to**: `f-dna-hosting` (the MCP server on ACA + Entra), `f-dna-mcp-server`,
   `f-dna-tools-as-data`, `MCPFederation` Kind (DNA-consumes-MCP, the inverse)
-- **Generalized by**: `ADR-act-on-behalf-port` (`f-act-on-behalf-port`). As of the
-  ActOnBehalfPort PoC, **the Microsoft OBO exchange here is the reference implementation
-  of the provider-agnostic `ActOnBehalfPort`** (`MicrosoftOboProvider`, wrapping the
-  unchanged `graph._obo.exchange_on_behalf_of`). Nothing in this ADR changed — its
-  security model, config gating, and tool set are the port's reference. The neutral
-  `calendar_list` tool now dispatches to this exchanger for a Microsoft identity;
-  `ms_calendar_list` remains its Microsoft binding/alias.
 
 > **DESIGN ONLY.** This ADR proposes the shape. No app-registration change, no
 > `az` change, no code, no deploy has been made. Barna reviews before any build.
@@ -229,8 +222,8 @@ DNA tenant. Clean alignment: the DNA-tenant boundary and the Graph boundary are 
 
 | Inbound identity | `tid` | OBO target | Graph reached |
 |---|---|---|---|
-| **partner-org member** (Entra) | partner tenant GUID | partner tenant endpoint | that org's M365 (their calendar/files) ✅ |
-| **Google/Clerk sign-in** (non-Entra) | — no Entra token | **N/A** | **OBO not available** — honest capability gap ⚠️ |
+| **@avanade member** (Entra) | Avanade tenant GUID | Avanade tenant endpoint | Avanade M365 (their calendar/files) ✅ |
+| **@gmail via Google/Clerk** (non-Entra) | — no Entra token | **N/A** | **OBO not available** — honest capability gap ⚠️ |
 | **Personal Microsoft acct** (`@outlook`, MSA) | `consumers`/`9188…` | consumers endpoint | Personal Outlook/OneDrive (app must enable personal accounts) |
 | **Guest (B2B)** in tenant A, home tenant B | A (resource tenant that issued the token) | tenant A endpoint | The **guest** identity's access *in tenant A* — limited/varies ⚠️ |
 
