@@ -19,6 +19,13 @@ renders each tool result's ``structured_content``. The template is public and
 cacheable by URI: zero tenant data, zero secret/token in the HTML — data
 reaches the card only via the authenticated session's push, and only ever
 lands in the DOM through ``textContent`` (escaped by construction).
+
+The card wears the HOST's theme, never its own. Colour, type and shape read
+the host's injected design tokens, whose values change when the user switches
+theme; every reference carries a fallback because a host may provide any
+subset of them. The DNA identity survives as the accent only — a card that
+paints its own ground and ink inside someone else's chat reads as an
+advertisement rather than as part of the product.
 """
 from __future__ import annotations
 
@@ -40,16 +47,50 @@ UI_MEMORY_LIST_URI = "ui://dna/memory-list"
 #: a bare HTML blob.
 MCP_APP_MIME = "text/html;profile=mcp-app"
 
-# DNA brand tokens — dark ink ground, teal + amber accents. Kept inline (no
-# external asset) because MCP hosts render the card in a sandboxed iframe that
-# cannot reach the network.
-_INK = "#12161c"
-_INK_RAISED = "#1a2029"
-_TEAL = "#2f8570"
-_AMBER = "#e0a838"
-_TEXT = "#e6eaef"
-_MUTED = "#8b95a3"
-_LINE = "#252c37"
+# ── the host's design tokens, every one of them optional ───────────────────
+#
+# An MCP Apps host injects a design-token system into the app iframe as CSS
+# custom properties, and changes their VALUES when the user switches theme —
+# so the card is themed by reading them, not by declaring a theme of its own.
+# There is no media query and no data attribute to watch here; the values
+# simply change underneath us.
+#
+# EVERY reference carries its own fallback, because a host may provide any
+# subset of the vocabulary: a card that only looks right when all the tokens
+# exist is not portable, it is merely lucky in the host it was built against.
+# The fallbacks are the UA's own system colours (`Canvas` / `CanvasText`),
+# which are a contrasting pair by definition and follow the user's light/dark
+# preference through the `color-scheme` declared on `:root` below.
+
+#: Ground, raised ground, ink, muted ink, hairline — the host's business.
+_BG = "var(--color-background-primary, Canvas)"
+_BG_RAISED = "var(--color-background-secondary, Canvas)"
+_FG = "var(--color-text-primary, CanvasText)"
+_FG_MUTED = "var(--color-text-secondary, color-mix(in srgb, CanvasText 68%, Canvas))"
+_BORDER = "var(--color-border-primary, color-mix(in srgb, CanvasText 22%, Canvas))"
+
+#: Type, weight and shape — same rule, same fallbacks.
+_FONT = (
+    "var(--font-sans, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', "
+    "Roboto, Helvetica, Arial, sans-serif)"
+)
+_TEXT_SM = "var(--text-sm, 14px)"
+_TEXT_XS = "var(--text-xs, 12px)"
+_WEIGHT_SEMIBOLD = "var(--font-weight-semibold, 600)"
+_WEIGHT_BOLD = "var(--font-weight-bold, 700)"
+_RADIUS = "var(--border-radius-lg, 14px)"
+_RADIUS_FULL = "var(--border-radius-full, 999px)"
+
+# The ONE brand colour the card keeps: the genome teal, on the wordmark and the
+# tag chips. A host themes its own surfaces and has no opinion about an accent,
+# so this is where the DNA identity lives now. It is mixed toward the host's
+# own ink so it darkens on a light ground and lightens on a dark one — at 80%
+# it stays unmistakably teal and clears 4.5:1 either way (measured: 6.4:1 on a
+# white ground, 5.7:1 on a near-black one). The chip's fill and edge are the
+# same teal at low alpha, which composites correctly over any ground.
+_ACCENT = f"color-mix(in srgb, #2f8570 80%, {_FG})"
+_ACCENT_FILL = "rgba(47,133,112,.12)"
+_ACCENT_EDGE = "rgba(47,133,112,.35)"
 
 # Sentinels delimiting the vendored third-party lib inside the template — the
 # §3 grep-guard and the no-external-URL test treat the region between them as
@@ -73,34 +114,40 @@ def _ext_apps_js() -> str:
     )
 
 
-# The brand stylesheet of the card, inlined into the template.
+# The card's stylesheet, inlined into the template. Colour, type and shape all
+# read the host's tokens; only the accent is ours. Borders are declared as a
+# separate `border-color` after the shorthand so that a host token AND its
+# fallback both failing leaves a visible hairline (`currentColor`) rather than
+# no border at all.
 _CARD_CSS = (
+    ":root{color-scheme:light dark}"
     "*{box-sizing:border-box;margin:0;padding:0}"
-    "body{font:14px/1.5 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,"
-    "Helvetica,Arial,sans-serif;"
-    f"background:{_INK};color:{_TEXT};padding:16px}}"
-    f".dna-card{{max-width:640px;margin:0 auto;background:{_INK_RAISED};"
-    f"border:1px solid {_LINE};border-radius:14px;overflow:hidden}}"
+    f"body{{font-family:{_FONT};font-size:{_TEXT_SM};line-height:1.5;"
+    f"background:{_BG};color:{_FG};padding:16px}}"
+    f".dna-card{{max-width:640px;margin:0 auto;background:{_BG_RAISED};"
+    f"border:1px solid;border-color:{_BORDER};border-radius:{_RADIUS};"
+    "overflow:hidden}"
     ".dna-head{display:flex;align-items:center;gap:10px;padding:14px 18px;"
-    f"border-bottom:1px solid {_LINE}}}"
-    f".dna-mark{{font-weight:700;letter-spacing:.14em;color:{_TEAL}}}"
-    ".dna-htitle{font-weight:600}"
-    f".dna-scope{{margin-left:auto;font-size:12px;color:{_MUTED};"
-    f"border:1px solid {_LINE};padding:2px 8px;border-radius:999px}}"
+    f"border-bottom:1px solid;border-bottom-color:{_BORDER}}}"
+    f".dna-mark{{font-weight:{_WEIGHT_BOLD};letter-spacing:.14em;color:{_ACCENT}}}"
+    f".dna-htitle{{font-weight:{_WEIGHT_SEMIBOLD}}}"
+    f".dna-scope{{margin-left:auto;font-size:{_TEXT_XS};color:{_FG_MUTED};"
+    f"border:1px solid;border-color:{_BORDER};padding:2px 8px;"
+    f"border-radius:{_RADIUS_FULL}}}"
     ".dna-list{list-style:none}"
-    f".dna-item{{padding:14px 18px;border-bottom:1px solid {_LINE}}}"
+    f".dna-item{{padding:14px 18px;border-bottom:1px solid;"
+    f"border-bottom-color:{_BORDER}}}"
     ".dna-item:last-child{border-bottom:0}"
-    ".dna-summary{font-weight:600;color:" + _TEXT + "}"
+    f".dna-summary{{font-weight:{_WEIGHT_SEMIBOLD};color:{_FG}}}"
     ".dna-meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:5px;"
-    f"font-size:12px;color:{_MUTED}}}"
-    f".dna-when{{color:{_AMBER}}}"
+    f"font-size:{_TEXT_XS};color:{_FG_MUTED}}}"
     ".dna-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}"
-    f".dna-tag{{font-size:11px;color:{_TEAL};background:rgba(47,133,112,.12);"
-    f"border:1px solid rgba(47,133,112,.35);padding:2px 8px;"
-    "border-radius:999px}"
-    f".dna-empty{{padding:22px 18px;color:{_MUTED}}}"
-    f".dna-foot{{padding:12px 18px;font-size:11px;color:{_MUTED};"
-    f"border-top:1px solid {_LINE}}}"
+    f".dna-tag{{font-size:{_TEXT_XS};color:{_ACCENT};background:{_ACCENT_FILL};"
+    f"border:1px solid;border-color:{_ACCENT_EDGE};padding:2px 8px;"
+    f"border-radius:{_RADIUS_FULL}}}"
+    f".dna-empty{{padding:22px 18px;color:{_FG_MUTED}}}"
+    f".dna-foot{{padding:12px 18px;font-size:{_TEXT_XS};color:{_FG_MUTED};"
+    f"border-top:1px solid;border-top-color:{_BORDER}}}"
 )
 
 # The card app — everything DNA wrote in the template's inline JS. Data only
