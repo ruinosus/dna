@@ -34,6 +34,28 @@ class _Kernel:
         yield  # pragma: no cover — an empty async generator
 
 
+class _KernelWithOneUnindexedMemory(_Kernel):
+    """A kernel whose scope holds a memory the index has never seen — so the
+    refresh has real work to do and MUST reach the provider."""
+
+    def __init__(self, provider):
+        super().__init__()
+        self._search_provider = provider  # what dna.memory._provider() reads
+
+    async def query(self, scope, kind, **kw):
+        yield {"kind": kind, "metadata": {"name": "m1"},
+               "spec": {"summary": "the memory written a moment ago"}}
+
+
+class _UnreachableProvider:
+    """A provider whose store cannot be reached — i-091's shape: the pool could
+    not be opened because the DSN's ``ssl`` param reached Postgres as a server
+    setting."""
+
+    async def index(self, records):
+        raise ConnectionError('parameter "ssl" cannot be changed now')
+
+
 def _live(kernel, provider):
     return LiveDna(base_scope="sc", kernel=kernel, provider=provider)
 
@@ -99,3 +121,25 @@ async def test_the_result_reports_the_scope_it_actually_read():
     assert res["scope"] == "sc", "personal memory reads its one home"
     plain = await recall_impl(live, "anything", "some-other-scope")
     assert plain["scope"] == "some-other-scope"
+
+
+@pytest.mark.asyncio
+async def test_a_refresh_that_cannot_reach_its_store_is_reported_not_swallowed():
+    """i-091 — the honest degradation, pinned through the REAL ``backfill_index``.
+
+    The other cases here monkeypatch the refresh; this one does not, so the pin
+    covers the whole path: ``backfill_index`` must not absorb a provider error
+    into a ``0 records`` success, and ``recall_impl`` must not report a result
+    the caller's last write cannot be in as clean. i-091 fixed the *cause* of
+    one such failure (an ``ssl=`` DSN param handed to asyncpg as a server
+    setting); the reporting of any remaining one may not be traded for a green
+    path along the way.
+    """
+    prov = _UnreachableProvider()
+    live = _live(_KernelWithOneUnindexedMemory(prov), provider=prov)
+
+    res = await recall_impl(live, "anything")
+
+    assert res["index_refreshed"] is False
+    assert res["degraded"] is True
+    assert 'parameter "ssl" cannot be changed now' in res["index_error"]
