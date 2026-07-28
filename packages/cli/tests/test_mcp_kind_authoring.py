@@ -311,11 +311,17 @@ def test_list_my_kinds_shows_the_proposal_and_its_approval_state(mcp_client):
     assert rows, listed
     row = rows[0]
     assert row["approved"] is False
+    # `state` says WHICH not-approved this is (i-085). The boolean cannot carry
+    # three values, and the two it collapses behave in OPPOSITE ways: a Kind
+    # that was never approved accepts documents unvalidated, a REVOKED one
+    # refuses them and marks every existing document invalid.
+    assert row["state"] == "unapproved"
     # The audit fields `list_authored_kinds_impl` projects — reused, not
     # re-invented. A tool that shaped its own rows would drift from the portal's.
     assert set(row) == {
-        "name", "kind", "api_version", "namespace", "approved",
-        "proposed_by", "proposed_at", "approved_by", "approved_at", "created_at",
+        "name", "kind", "api_version", "namespace", "approved", "state",
+        "proposed_by", "proposed_at", "approved_by", "approved_at",
+        "revoked_by", "revoked_at", "created_at",
     }, sorted(row)
 
 

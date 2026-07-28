@@ -36,6 +36,7 @@ from typing import Any
 
 from dna.application.namespace_assignment import assign_namespace
 from dna.kernel.etag import spec_etag
+from dna.kernel.kinds.approval import approval_state
 
 __all__ = [
     "AuthoredKindNotFound",
@@ -44,6 +45,7 @@ __all__ = [
     "author_kind_impl",
     "get_authored_kind_impl",
     "list_authored_kinds_impl",
+    "revoke_kind_impl",
 ]
 
 _KIND = "KindDefinition"
@@ -260,6 +262,21 @@ async def author_kind_impl(
     existing = await live.kernel.get_document(scope, _KIND, name)
     prior = existing.get("spec") if isinstance(existing, dict) else None
     born_at = prior.get("created_at") if isinstance(prior, dict) else None
+    # i-085 — the REVOCATION is carried forward, unlike the approval. The
+    # symmetry is tempting and it is the loosening trap in a second door: this
+    # function rebuilds the spec from scratch and PERSISTS it, so a dropped
+    # ``revoked_by`` would land the Kind in *never approved*, where documents
+    # are accepted with NO validation at all. An edit withdraws the approval it
+    # invalidated; it cannot grant itself the effect of an un-revocation, and
+    # only the approval door can undo one.
+    # Carried as KEYS-IF-PRESENT (never as explicit nulls): the KindDefinition
+    # port's schema derives ``str | None`` to ``{"type": "string"}``, so a null
+    # here would veto every edit of a Kind that was never revoked.
+    was_revoked = {
+        k: prior[k]
+        for k in ("revoked_by", "revoked_at")
+        if isinstance(prior, dict) and prior.get(k)
+    }
     raw = {
         "apiVersion": _API_VERSION,
         "kind": _KIND,
@@ -308,6 +325,11 @@ async def author_kind_impl(
             # here for the same reason `proposed_by` cannot be forged: the spec
             # is BUILT field by field, never merged from the request body, so
             # there is no key an author can smuggle through.
+            #
+            # `revoked_by`/`revoked_at` are NOT in that group — see `was_revoked`
+            # above. They are carried forward from the stored document (and, by
+            # being spread LAST, cannot be supplied by the caller either).
+            **was_revoked,
         },
     }
     version = await live.kernel.write_document(scope, _KIND, name, raw)
@@ -363,6 +385,9 @@ async def _owns(live: Any, tenant: str) -> Any:
 _NOT_FOUND_TAIL = {
     "approve": (
         "— approval acts on a document that already exists, and creates none"
+    ),
+    "revoke": (
+        "— revocation acts on a document that already exists, and creates none"
     ),
     "read": (
         "— an authored Kind is readable by the workspace that authored it, and "
@@ -563,15 +588,29 @@ async def approve_kind_impl(
 
     spec = dict(raw.get("spec") or {})
     # The token for the write below, taken from the spec AS READ — before the
-    # two merges, because what it has to identify is the document this approval
+    # merges, because what it has to identify is the document this approval
     # is based on, not the one it is about to produce.
     read_etag = spec_etag(spec)
     # MERGE, unlike the authoring door — and deliberately: this preserves the
     # proposal (proposed_by/proposed_at/created_at) that the other act recorded,
-    # which is the half of the audit this act must not overwrite. The two fields
-    # below are the ONLY ones it sets.
+    # which is the half of the audit this act must not overwrite. The fields
+    # below are the ONLY ones it touches.
     spec["approved_by"] = actor
     spec["approved_at"] = now
+    # i-085 — approving CLEARS the revocation, and this is the only act that
+    # does. It is what makes "reversible" a mechanism rather than a claim, and
+    # it is why ``approval_state`` never has to arbitrate between two
+    # caller-supplied timestamps: the two acts keep each other exclusive.
+    #
+    # REMOVED, not set to None. Measured: the KindDefinition port's schema is
+    # derived from the typed spec dataclass, and ``str | None`` derives to
+    # ``{"type": "string"}`` — so writing an explicit null vetoes the approval
+    # at the write path (``spec.revoked_by: None is not of type 'string'``).
+    # Absence is also the honester encoding: "this Kind is not revoked" and
+    # "this Kind was never revoked" are the same fact, and ``approval_state``
+    # reads both the same way.
+    spec.pop("revoked_by", None)
+    spec.pop("revoked_at", None)
     version = await live.kernel.write_document(
         scope, _KIND, name, {**raw, "spec": spec},
         # i-083 — see the docstring. Everything this write does not carry it
@@ -591,6 +630,112 @@ async def approve_kind_impl(
         # proposed is a reviewer who will not make it.
         "proposed_by": spec.get("proposed_by"),
         "proposed_at": spec.get("proposed_at"),
+        "version": version,
+    }
+
+
+async def revoke_kind_impl(
+    live: Any, *, kind: str, tenant: str, actor: str, now: str,
+) -> dict[str, Any]:
+    """Revoke an authored Kind — the act that WITHDRAWS effect (i-085).
+
+    The counterpart of :func:`approve_kind_impl`, and deliberately not its
+    inverse. Un-approving would return the Kind to *never approved*, and a Kind
+    that never registered is the PERMISSIVE state: its documents are accepted
+    with no validation at all. So revoking by clearing the approval would switch
+    the gate off rather than close it. Revoked is a THIRD state, recorded as its
+    own fact:
+
+        state            existing documents      new documents
+        ---------------- ---------------------- ---------------------------
+        never approved   —                       accepted WITHOUT validation
+        approved         valid, routed           validated against the schema
+        revoked          INVALID                 REFUSED
+
+    What it does to documents that already exist: nothing. They are not deleted
+    and not made unreadable — a read returns THE DOCUMENT, marked invalid
+    (``status.valid == false``). Erasing them or refusing the read would destroy
+    the ability to audit what existed, and the data did nothing wrong; the
+    workspace changed its mind. In a LISTING they appear, marked, and never
+    vanish, so revocation cannot be used to hide data without deleting it.
+
+    **Reversible in one act.** Validity follows the Kind's CURRENT state, never
+    a stamp on the document, so :func:`approve_kind_impl` clears the markers this
+    sets and every existing document is valid again with nothing to migrate.
+
+    ``approved_by`` is deliberately LEFT STANDING. Revoking is a third act, not
+    an erasure of the second, and a record saying only "revoked by X" has lost
+    the fact that somebody approved this Kind and it governed real documents for
+    a while.
+
+    ``actor`` is the REVOKER — the face's verified identity for THIS request,
+    never a body field. ``tenant`` scopes the search to the caller's OWN
+    namespaces exactly as approval does, so a neighbour's Kind answers 404 and
+    "it exists but is not yours" cannot become a probe.
+
+    **The write is GUARDED** (i-083), for the same reason approval is: this is a
+    read-modify-write that persists ``{**raw, "spec": spec}``, so everything it
+    did not read it overwrites. Unguarded, a revocation issued from a replica
+    holding a stale cache would resurrect the shape that replica last saw AND
+    mark it revoked. The read's ``etag`` rides along as ``if_match`` and the
+    kernel refuses the write if the stored document moved
+    (:class:`~dna.kernel.errors.StaleDocumentWrite` → 409); the remedy is one
+    step — re-read and revoke again.
+
+    Idempotent in shape but not in fact: a second revocation re-stamps the
+    revoker and the timestamp, which is the honest record of what happened.
+
+    Raises :class:`AuthoredKindNotFound` (→ 404) when no document the CALLER
+    owns exists under that Kind name, and ``ValueError`` (→ 400) for a missing
+    tenant/actor or a malformed Kind name.
+    """
+    kind = _checked_kind_name(kind, verb="revoke")
+    if not (tenant or "").strip():
+        raise ValueError("tenant is required to revoke a Kind")
+    actor = (actor or "").strip()
+    if not actor:
+        raise ValueError(
+            "revocation records a verified identity and this request carries "
+            "none — withdrawing a Kind marks every existing document of it "
+            "invalid, and an act nobody signed cannot be audited"
+        )
+
+    scope = live.default_scope(tenant)
+    name, namespace = await _authored_document_name(
+        live, scope=scope, kind=kind, tenant=tenant, allow_unattributed=False,
+        verb="revoke",
+    )
+    raw = await live.kernel.get_document(scope, _KIND, name)
+    if not isinstance(raw, dict) or not raw:
+        raise AuthoredKindNotFound(
+            f"the authored Kind {kind!r} ({name!r}) is listed in scope {scope!r} "
+            f"but its document could not be read"
+        )
+
+    spec = dict(raw.get("spec") or {})
+    read_etag = spec_etag(spec)
+    # MERGE, like the approval door and for the same reason — the proposal and
+    # the approval are the other acts' halves of the audit, and this act must
+    # not overwrite either.
+    spec["revoked_by"] = actor
+    spec["revoked_at"] = now
+    version = await live.kernel.write_document(
+        scope, _KIND, name, {**raw, "spec": spec},
+        if_match=read_etag,
+    )
+    return {
+        "revoked": True,
+        "kind": kind,
+        "name": name,
+        "namespace": namespace,
+        "revoked_by": actor,
+        "revoked_at": now,
+        # Echoed so the caller sees the whole chain of acts in one response —
+        # who proposed the shape, who conferred effect on it, and who has just
+        # withdrawn it.
+        "proposed_by": spec.get("proposed_by"),
+        "approved_by": spec.get("approved_by"),
+        "approved_at": spec.get("approved_at"),
         "version": version,
     }
 
@@ -652,12 +797,23 @@ def _authored_kind_summary(name: Any, spec: dict[str, Any]) -> dict[str, Any]:
     The detail route adds ``schema``/``traits`` ON TOP of this — it does not
     re-derive any field this returns."""
     approved_by = str(spec.get("approved_by") or "").strip()
+    revoked_by = str(spec.get("revoked_by") or "").strip()
     return {
         "name": name,
         "kind": spec.get("target_kind"),
         "api_version": spec.get("target_api_version"),
         "namespace": spec.get("origin"),
-        "approved": bool(approved_by),
+        # i-085 — the STATE, because the boolean below cannot carry three
+        # values and the two it collapses behave in OPPOSITE ways: a Kind that
+        # was never approved accepts documents unvalidated, a revoked one
+        # refuses them and marks the existing ones invalid. A reviewer reading
+        # ``approved: false`` on both rows would be reading the same word for
+        # the loosest and the tightest states in the system.
+        "state": approval_state(spec),
+        # Kept, and kept meaning exactly what it always meant: "is this Kind
+        # currently conferring effect". A revoked Kind is not, so it is false
+        # here too — the field did not change, the vocabulary grew beside it.
+        "approved": bool(approved_by) and not revoked_by,
         # BOTH actors — a reviewer reading this is deciding whether to confer
         # effect, and "who proposed this" is the first thing that decision
         # needs. `proposed_by` is null for every document authored before the
@@ -668,6 +824,11 @@ def _authored_kind_summary(name: Any, spec: dict[str, Any]) -> dict[str, Any]:
         "proposed_at": spec.get("proposed_at"),
         "approved_by": approved_by or None,
         "approved_at": spec.get("approved_at"),
+        # The third act, projected beside the other two. Null on every document
+        # that was never revoked — the honest answer, and not the same fact as
+        # "revoked by nobody".
+        "revoked_by": revoked_by or None,
+        "revoked_at": spec.get("revoked_at"),
         "created_at": spec.get("created_at"),
     }
 
