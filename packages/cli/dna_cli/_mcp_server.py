@@ -502,6 +502,16 @@ def build_server(
 
     memory_card_app = AppConfig(resource_uri=UI_MEMORY_LIST_URI)
 
+    # The same mechanism for the READ tools whose answer is a table or a
+    # dashboard rather than a paragraph (`dna_cli._mcp_cards`). Those cards are
+    # Prefab views, so they share ONE renderer resource — `resource_uri` is
+    # overridden precisely to stop FastMCP synthesising
+    # `ui://prefab/tool/<hash>/renderer.html` per tool, which in bundled mode
+    # is a separate 6.6 MB document each. `with_card` merges rather than
+    # replaces: `content` stays byte-identical for every client that renders
+    # nothing.
+    from dna_cli._mcp_cards import UI_PREFAB_URI, prefab_renderer_html
+
     # The auth↔tenancy bridge: resolve the effective tenant from the current
     # token (identity when there is no token / no auth). CrossTenantError → a
     # clean MCP ToolError so the client sees the denial, not a masked 500.
@@ -1367,6 +1377,19 @@ def build_server(
     async def agents_resource(scope: str) -> dict[str, Any]:
         """The scope's agent roster as a resource."""
         return await list_agents_impl(await _live(), scope, await _guard("definitions", scope=scope))
+
+    @server.resource(UI_PREFAB_URI, mime_type=MCP_APP_MIME)
+    def prefab_card_renderer() -> str:
+        """The ONE MCP Apps renderer every Prefab card on this face points at
+        (SEP-1865) — Prefab's bundled single-file renderer with the host-theme
+        bridge appended to its ``<head>``.
+
+        Shared on purpose: the default mints one renderer resource per tool,
+        and in bundled mode that is a separate 6.6 MB document each. Static,
+        public and data-free (cacheable by URI): the host pushes each tool
+        result's ``structured_content`` into it over the authenticated
+        session."""
+        return prefab_renderer_html()
 
     @server.resource(UI_MEMORY_LIST_URI, mime_type=MCP_APP_MIME)
     def memory_list_card() -> str:

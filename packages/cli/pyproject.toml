@@ -41,7 +41,18 @@ dna = "dna_cli:main"
 # The >=3.2 floor is the MCP Apps (SEP-1865) surface: `fastmcp.apps.AppConfig`
 # lets `list_memories`/`recall` point the `ui://dna/memory-list` template in the
 # tool DECLARATION, and `@server.resource` serves the template itself.
-mcp = ["fastmcp>=3.2"]
+#
+# The `apps` EXTRA raises the floor to >=3.4 and brings `prefab-ui` — the
+# renderer behind the Prefab cards on `list_stories` / `sdlc_digest` /
+# `list_my_kinds` (`dna_cli._mcp_cards`). It belongs to THIS extra rather than
+# one of its own: a face that declares `ui://dna/prefab` on three tool
+# declarations and then cannot serve the resource is worse than one that never
+# declared it — the host prefetches, gets a miss, and the card becomes a broken
+# promise instead of an absent one. The renderer is served BUNDLED
+# (self-contained, no CDN, nothing to allow through the MCP Apps
+# deny-by-default CSP), which is what the wheel's ~6.6 MB renderer asset buys:
+# a deliberate, accepted cost, and the reason a `dna-cli[mcp]` image grew.
+mcp = ["fastmcp[apps]>=3.4"]
 # The REST read-API face (`dna api serve`) — the correct HTTP boundary for a WEB
 # app (the DNA Cloud portal): a normal request/response REST API over the SAME
 # DNA kernel + the SAME `*_impl` cores the MCP server uses (zero logic
@@ -80,10 +91,12 @@ dev = [
     # (tests/test_recall_cmd.py) run the real provider offline in CI, instead of
     # importorskip. Resolves against the path-installed dna-sdk.
     "dna-sdk[search-sqlite]",
-    # `fastmcp` so tests/test_mcp_server.py + tests/test_mcp_apps.py run the MCP
-    # server (and the MCP Apps memory-card surface) for real in CI — the base
-    # install keeps it optional, see the `mcp` extra above.
-    "fastmcp>=3.2",
+    # `fastmcp[apps]` so tests/test_mcp_server.py + tests/test_mcp_apps.py +
+    # tests/test_mcp_cards.py run the MCP server, the memory-card surface AND
+    # the Prefab cards for real in CI — the base install keeps it optional, see
+    # the `mcp` extra above. The `apps` extra is what pulls `prefab-ui`; without
+    # it test_mcp_cards.py importorskips and the cards ship unproven.
+    "fastmcp[apps]>=3.4",
     # `fastapi` + `httpx` so tests/test_rest_api.py drives the REST read-API for
     # real via FastAPI's TestClient (httpx-backed). The base install keeps FastAPI
     # optional — see the `api` extra above.

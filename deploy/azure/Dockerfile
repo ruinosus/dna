@@ -12,7 +12,13 @@
 #   docker build -f deploy/azure/Dockerfile -t dna-mcp .
 #
 # The `mcp` extra (FastMCP) is imported lazily by the CLI, so it is pulled in
-# here explicitly — the base `dna` install never carries it.
+# here explicitly — the base `dna` install never carries it. Since the MCP Apps
+# cards landed, that extra is `fastmcp[apps]`, which brings `prefab-ui` and its
+# self-contained ~6.6 MB renderer asset: the image grew by roughly that much,
+# deliberately. There is nothing to add to this recipe — the extra carries it,
+# and the renderer is served from the package rather than fetched at runtime,
+# so the container needs no egress for it — but the size jump is named here so
+# it is not a mystery on the next build.
 #
 # Published alternative: instead of the two COPY+install lines below you can
 # `RUN pip install --no-cache-dir "dna-cli[mcp]"` once dna-cli is on PyPI. The
