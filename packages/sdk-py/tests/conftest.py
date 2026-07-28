@@ -47,21 +47,43 @@ _NETWORK_CACHE: bool | None = None
 
 
 def _network_available() -> bool:
-    """Real outbound network (probe github.com:443 once, cached).
+    """Real outbound network (probe github.com:443, cached per process).
 
     ``DNA_OFFLINE=1`` forces False regardless of real connectivity — CI runners
     DO have network, but CI must never clone external repos (s-public-ci), so
     the workflows export DNA_OFFLINE=1 and ``requires_network`` tests skip with
-    an explicit reason."""
+    an explicit reason.
+
+    The probe RETRIES before it is willing to cache a negative
+    (perf/testes-em-paralelo). It used to be a single 2 s connect whose result —
+    positive or negative — was cached for the life of the process. Under xdist
+    that became a correctness bug, not just flake: every worker runs its own
+    probe, a dozen TLS handshakes to github.com go out at once, and any one of
+    them that loses the race to a 2 s deadline poisons that whole worker into
+    "offline". The tests it then skipped were REAL tests, and a skip is green —
+    so the suite quietly stopped checking things while still reporting success.
+    Observed directly: two `requires_network` tests flipped pass/fail -> skip
+    between a serial and a parallel run of the same code.
+
+    A false negative is therefore the expensive direction and a false positive
+    is the cheap one (the test runs and fails honestly), so: cache True on the
+    first success, but only cache False after several attempts on a longer
+    deadline. When the machine is genuinely offline the connect fails on DNS
+    almost immediately, so the retries cost nothing in the case they don't
+    help."""
     if os.environ.get("DNA_OFFLINE"):
         return False
     global _NETWORK_CACHE
     if _NETWORK_CACHE is None:
-        try:
-            conn = socket.create_connection(("github.com", 443), timeout=2)
-            conn.close()
-            _NETWORK_CACHE = True
-        except OSError:
+        for timeout in (5, 5, 10):
+            try:
+                conn = socket.create_connection(("github.com", 443), timeout=timeout)
+                conn.close()
+                _NETWORK_CACHE = True
+                break
+            except OSError:
+                continue
+        else:
             _NETWORK_CACHE = False
     return _NETWORK_CACHE
 

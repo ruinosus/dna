@@ -148,5 +148,26 @@ jobs:
         run: |
           uv venv
           uv pip install -e ".[dev]"
+      # `-n 0` — this job OPTS OUT of the suite-wide `-n auto`
+      # (packages/sdk-py/pyproject.toml addopts), deliberately.
+      #
+      # Every other job benefits: sdk-py went 292 s -> 67 s and cli 482 s -> 96 s
+      # locally, with a byte-identical outcome set. This one does not, because
+      # these tests share ONE database. Most isolate themselves with a
+      # uuid-suffixed schema and would be fine, but some take a FIXED schema name
+      # (tests/test_postgres_source_count.py `dna_test_f2_count`,
+      # tests/test_eventbus.py `dna_test_eventbus`) — and xdist's default
+      # `--dist load` hands out individual TESTS, not files, so two workers can
+      # land inside the same fixed-name schema and race CREATE against DROP.
+      #
+      # This is ~24 tests against a service container; there is nothing to win
+      # and an intermittent, hard-to-read CI failure to lose. Not verified either
+      # way — no Postgres was available where this was measured — and an
+      # unverified guess is not a good reason to turn concurrency on against a
+      # shared database.
+      #
+      # Upgrade path, if someone wants it later and can test against a live
+      # Postgres: `--dist loadfile` (keeps each file whole on one worker, which
+      # is enough for the fixed-name schemas above) rather than plain `-n auto`.
       - name: Test (requires_postgres only)
-        run: uv run --no-project pytest tests -q --timeout=120 -p no:cacheprovider -m requires_postgres
+        run: uv run --no-project pytest tests -q --timeout=120 -p no:cacheprovider -n 0 -m requires_postgres

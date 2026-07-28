@@ -181,6 +181,23 @@ packages = ["dna"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Run the suite across every core by default (perf/testes-em-paralelo).
+# pytest-xdist was already a [dev] dependency and simply never switched on: the
+# suite ran in ONE process on a 12-core machine. Turning it on took sdk-py from
+# 343 s to ~76 s wall with a byte-identical outcome set (4362 passed / 256
+# skipped / 4 xfailed), verified by diffing the per-test-id outcomes of a serial
+# run against three parallel runs at two different worker counts.
+#
+# ESCAPE HATCH: `pytest -n 0` restores a single-process, in-order run — needed
+# for `--pdb`, for `-x` with a meaningful stop point, and for reading
+# `--durations` as one aggregate instead of per-worker. A command-line `-n`
+# overrides this one.
+#
+# NOTE for anyone adding tests: the suite is now order-independent by contract.
+# If a new test only passes when a sibling ran first, that is the test's bug,
+# not xdist's. See the three process-wide warn caches in
+# dna/kernel/kinds/registry.py and the autouse fixtures that clear them.
+addopts = ["-n", "auto"]
 # Default wall-clock cap so a hung test fails fast instead of running to the CI
 # job limit. Heavy-but-real tests override with @pytest.mark.timeout(N). The CI
 # workflow also passes --timeout=120 as a backstop. See tests/conftest.py.

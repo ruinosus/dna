@@ -44,11 +44,20 @@ _B = "scope-b"
 
 @pytest.fixture(autouse=True)
 def _clear_process_wide_warn_caches():
+    # All THREE process-wide warn caches, not two. _GLOBAL_UNAPPROVED_KIND_WARNED
+    # arrived later (i-084) and only test_kind_approval_gate.py's copy of this
+    # fixture was updated for it, which left every other file here able to burn
+    # an approval-warning key that nothing in the file clears. No assertion
+    # depends on that today, but it is precisely the shape of coupling that
+    # makes a suite order-dependent — and under xdist "which file ran first"
+    # stops being a property of the file listing (perf/testes-em-paralelo).
     registry_mod._AMBIGUOUS_LOOKUP_WARNED.clear()
     registry_mod._GLOBAL_KINDDEF_CONFLICT_WARNED.clear()
+    registry_mod._GLOBAL_UNAPPROVED_KIND_WARNED.clear()
     yield
     registry_mod._AMBIGUOUS_LOOKUP_WARNED.clear()
     registry_mod._GLOBAL_KINDDEF_CONFLICT_WARNED.clear()
+    registry_mod._GLOBAL_UNAPPROVED_KIND_WARNED.clear()
 
 
 def _kinddef(*, namespace: str, kind: str, alias: str, container: str) -> dict:

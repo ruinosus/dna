@@ -31,15 +31,28 @@ _NETWORK_CACHE: bool | None = None
 
 
 def _network_available() -> bool:
+    """Mirror of packages/sdk-py/tests/conftest.py::_network_available, including
+    its retry — see the full rationale there (perf/testes-em-paralelo).
+
+    Short version: one 2 s connect whose negative result was cached for the life
+    of the process is not safe under xdist. Every worker probes, a dozen
+    handshakes race, and one that misses the deadline turns that worker's real
+    ``requires_network`` tests into SKIPS — which are green. A false negative is
+    the expensive direction, so cache True on the first success and only cache
+    False once the retries are exhausted."""
     if os.environ.get("DNA_OFFLINE"):
         return False
     global _NETWORK_CACHE
     if _NETWORK_CACHE is None:
-        try:
-            conn = socket.create_connection(("github.com", 443), timeout=2)
-            conn.close()
-            _NETWORK_CACHE = True
-        except OSError:
+        for timeout in (5, 5, 10):
+            try:
+                conn = socket.create_connection(("github.com", 443), timeout=timeout)
+                conn.close()
+                _NETWORK_CACHE = True
+                break
+            except OSError:
+                continue
+        else:
             _NETWORK_CACHE = False
     return _NETWORK_CACHE
 

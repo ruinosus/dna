@@ -31,7 +31,11 @@ _BASE = str(_ROOT / "examples" / "emitting-to-a-runtime" / ".dna")
 _SCOPE = "concierge"
 
 
-@pytest.fixture()
+# Module-scoped for the same reason, and under the same read-only proof, as
+# tests/test_copilot_emit.py::mi — see the comment there. This file never
+# touches the MI directly at all; it only feeds it to `build_copilot_context`,
+# which reads. `hosted_ctx` stays function-scoped.
+@pytest.fixture(scope="module")
 def mi():
     from dna.kernel import Kernel
 

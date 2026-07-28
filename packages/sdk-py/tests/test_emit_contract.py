@@ -39,7 +39,11 @@ _SCOPE = "concierge"
 _AGENT = "concierge"
 
 
-@pytest.fixture()
+# Module-scoped for the same reason, and under the same read-only proof, as
+# tests/test_copilot_emit.py::mi — see the comment there. The byte-equal
+# invariant this file asserts is a pure read of the MI (`mi.build_prompt`)
+# compared against emitted artifacts, so one boot serves every target.
+@pytest.fixture(scope="module")
 def mi():
     return Kernel.quick(_SCOPE, base_dir=_BASE)
 
