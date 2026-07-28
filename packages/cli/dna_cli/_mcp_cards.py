@@ -81,6 +81,7 @@ __all__ = [
     "host_theme_css",
     "prefab_renderer_html",
     "with_card",
+    "documents_app",
     "stories_app",
     "digest_app",
     "kinds_app",
@@ -304,14 +305,74 @@ def _text(value: Any) -> str:
     return "—" if value is None or value == "" else str(value)
 
 
-def stories_app(data: dict[str, Any]) -> Any:
-    """The ``list_stories`` card: the board as a sortable, searchable roster.
+def _card_columns(
+    presentation: Any, rows: list[dict[str, Any]],
+) -> list[tuple[str, str]]:
+    """``[(key, header)]`` for a roster — the Kind's declaration when it made
+    one, the rows' own keys when it did not.
 
-    A Story list is a table — name, title, status, feature, priority across N
-    rows — and a table is the one shape JSON text reads worst. Status is left
-    as plain text rather than a coloured badge: the vocabulary is open (any
-    workflow may define its own), so a colour map would either be incomplete
-    or invented."""
+    The declaration is the source: which fields a document shows, in what
+    order, and what a human calls each of them is a fact about the DATA, so it
+    lives on the Kind and every surface reads the same answer. What this card
+    decides — and does not ask the Kind — is that the roster is a table at all,
+    that every column sorts, that it paginates at ten and offers a search box.
+    That is the line: the Kind says what its fields MEAN, the surface says what
+    that looks like here.
+
+    The fallback is not a lesser answer for a Kind that declares nothing; it is
+    the honest one. It derives the columns from the rows themselves, labelled
+    by the SAME derivation the kernel uses (``spec_refs`` → ``Spec refs``), so
+    an undeclared Kind, or a payload from a server that predates the
+    declaration, still renders every field it carries instead of a blank
+    table."""
+    from dna.kernel.kinds.presentation import derive_label
+
+    fields = presentation.get("fields") if isinstance(presentation, dict) else None
+    if isinstance(fields, list) and fields:
+        out: list[tuple[str, str]] = []
+        for f in fields:
+            if not isinstance(f, dict):
+                continue
+            key = f.get("field")
+            if not isinstance(key, str) or not key:
+                continue
+            header = f.get("label")
+            out.append((key, header if isinstance(header, str) and header
+                        else derive_label(key)))
+        if out:
+            return out
+    seen: dict[str, str] = {}
+    for r in rows:
+        for key in r:
+            if key not in seen:
+                seen[key] = derive_label(key)
+    return list(seen.items())
+
+
+def documents_app(
+    data: dict[str, Any], *, items_key: str,
+    fallback_label: str = "Documents",
+    empty_hint: str = "anything of this Kind will appear here.",
+) -> Any:
+    """A roster card for ANY Kind — the generic builder the per-tool ones are.
+
+    This is the measure the whole declaration exists for: a Kind nobody wrote
+    card code for — a tenant's own ``Contrato``, in its own language — arrives
+    here as rows plus a ``presentation``, and comes out a legible card with its
+    own headings, its own column order and its own heading. Nothing in this
+    function knows any Kind's name.
+
+    The presentation travels IN the payload rather than being fetched, because
+    a card is a pure function of the result it is pushed: it runs in a
+    sandboxed iframe in someone else's host and can ask the server nothing.
+    That is also why the same envelope is what ``GET /v1/kinds/{kind}``
+    publishes — one declaration, two consumers that share no runtime.
+
+    ``status`` is rendered as text, not as a coloured badge, even when the Kind
+    names the field: the status VALUE vocabulary is open (any workflow defines
+    its own words), so a colour map would be either incomplete or invented.
+    The Kind saying "this field is my state" does not oblige a surface to paint
+    it, and this one declines."""
     from prefab_ui.app import PrefabApp
     from prefab_ui.components import (
         Card,
@@ -326,51 +387,69 @@ def stories_app(data: dict[str, Any]) -> Any:
     )
     from prefab_ui.components.control_flow import Else, If
 
-    stories = data.get("stories")
-    rows = [
-        {
-            "name": _text(s.get("name")),
-            "title": _text(s.get("title")),
-            "status": _text(s.get("status")),
-            "feature": _text(s.get("feature")),
-            "priority": _text(s.get("priority")),
-        }
-        for s in (stories if isinstance(stories, list) else [])
-        if isinstance(s, dict)
-    ]
+    presentation = data.get("presentation")
+    presentation = presentation if isinstance(presentation, dict) else None
+    raw = data.get(items_key)
+    source = [r for r in (raw if isinstance(raw, list) else []) if isinstance(r, dict)]
+    columns = _card_columns(presentation, source)
+    rows = [{key: _text(r.get(key)) for key, _ in columns} for r in source]
+    label = (presentation or {}).get("label")
+    label = label if isinstance(label, str) and label else fallback_label
+    icon = (presentation or {}).get("icon")
     state = {
         "scope": _text(data.get("scope")),
         "count": len(rows),
-        "stories": rows,
+        "label": label,
+        "icon": icon if isinstance(icon, str) else "",
+        items_key: rows,
+        # Composed here so the view holds no grammar, and named for the Kind
+        # rather than for the tool — an empty roster that says "No Documents"
+        # under a heading that says "Contratos" reads as a bug.
+        "empty": f"No {label} in this scope yet — {empty_hint}",
     }
     with Card() as view:
         with CardHeader():
             with Row(gap=3, align="center"):
                 Text("DNA", css_class="dna-mark")
-                CardTitle("Stories")
+                with If("icon"):
+                    Text("{{ icon }}")
+                CardTitle("{{ label }}")
             CardDescription("{{ count }} in {{ scope }}")
         with CardContent():
             with If("count > 0"):
                 DataTable(
                     columns=[
-                        DataTableColumn(key="name", header="Story", sortable=True),
-                        DataTableColumn(key="title", header="Title"),
-                        DataTableColumn(key="status", header="Status", sortable=True),
-                        DataTableColumn(key="feature", header="Feature", sortable=True),
-                        DataTableColumn(key="priority", header="Priority", sortable=True),
+                        DataTableColumn(key=key, header=header, sortable=True)
+                        for key, header in columns
                     ],
-                    rows="{{ stories }}",
+                    rows="{{ " + items_key + " }}",
                     search=True,
                     paginated=True,
                     page_size=10,
                 )
             with Else():
-                Text(
-                    "No Stories in this scope yet — anything the board records "
-                    "will appear here.",
-                    css_class="text-muted-foreground",
-                )
+                Text("{{ empty }}", css_class="text-muted-foreground")
     return PrefabApp(view=view, state=state)
+
+
+def stories_app(data: dict[str, Any]) -> Any:
+    """The ``list_stories`` card: the board as a sortable, searchable roster.
+
+    A Story list is a table and a table is the one shape JSON text reads worst.
+    What it is a table OF is no longer decided here: the columns, their order
+    and their headings come from the Story Kind's own ``spec.presentation``,
+    the same declaration ``list_stories_impl`` projects the rows with and the
+    portal roster reads. They used to be spelled out in both places, and had
+    drifted — this builder headed the identifier column "Story" while the impl
+    called the field "name", and nothing reconciled them.
+
+    The two literals left here are this SURFACE's, not the Kind's: the label to
+    fall back on when a payload carries no declaration (a server older than the
+    feature), and the sentence that says what an empty board means."""
+    return documents_app(
+        data, items_key="stories", fallback_label="Stories",
+        empty_hint="anything the board records will appear here.",
+    )
 
 
 #: RAG → the renderer's badge variant. The digest's own three-value vocabulary
@@ -707,6 +786,8 @@ def kind_review_app(data: dict[str, Any]) -> Any:
         CardHeader,
         CardTitle,
         Code,
+        DataTable,
+        DataTableColumn,
         Row,
         Text,
     )
@@ -716,6 +797,29 @@ def kind_review_app(data: dict[str, Any]) -> Any:
     schema = data.get("schema")
     traits = data.get("traits")
     traits = [str(t) for t in traits] if isinstance(traits, list) else []
+    # What the Kind declares about how its documents will READ — the third
+    # thing this approval would confer, beside the schema and the traits. The
+    # schema says what a document may CONTAIN; this says what a person will see
+    # of it, in what order, under what names, on every surface the workspace
+    # has. A reviewer deciding whether to put the Kind into effect is deciding
+    # about both, and only one of them was visible here.
+    #
+    # The rows below are the KIND's declaration. The three column headings are
+    # this card's own, and legitimately so: they describe the declaration
+    # itself, not the Kind's data.
+    presentation = data.get("presentation")
+    presentation = presentation if isinstance(presentation, dict) else None
+    pfields = (presentation or {}).get("fields")
+    presentation_rows = [
+        {
+            "field": _text(f.get("field")),
+            "label": _text(f.get("label")),
+            "role": _text(f.get("role")),
+        }
+        for f in (pfields if isinstance(pfields, list) else [])
+        if isinstance(f, dict)
+    ]
+    phidden = (presentation or {}).get("hidden")
     state = {
         "kind": _text(data.get("kind")),
         "name": _text(data.get("name")),
@@ -740,6 +844,16 @@ def kind_review_app(data: dict[str, Any]) -> Any:
         # projection already distinguishes them (None vs a dict) and the card
         # must not flatten them into an empty code block.
         "has_schema": isinstance(schema, dict),
+        # Same rule as the schema above it: "declares no presentation" and
+        # "declares an empty one" are different facts, and an empty field table
+        # would silently assert the second.
+        "has_presentation": presentation is not None and bool(presentation_rows),
+        "presentation_rows": presentation_rows,
+        "presentation_label": _text((presentation or {}).get("label")),
+        "presentation_hidden": ", ".join(
+            str(h) for h in (phidden if isinstance(phidden, list) else [])
+        ),
+        "has_hidden": bool(phidden),
         "traits": ", ".join(traits) if traits else "—",
         "proposed": f"{_text(data.get('proposed_by'))} · {_text(data.get('proposed_at'))}",
         "approved": f"{_text(data.get('approved_by'))} · {_text(data.get('approved_at'))}",
@@ -769,6 +883,25 @@ def kind_review_app(data: dict[str, Any]) -> Any:
             with If("was_revoked"):
                 Text("Revoked by {{ revoked }}", css_class="text-muted-foreground")
             Text("Traits: {{ traits }}", css_class="text-muted-foreground")
+            with If("has_presentation"):
+                Text(
+                    "Documents of this Kind will read as “{{ presentation_label }}”, "
+                    "in this order:",
+                    css_class="text-muted-foreground",
+                )
+                DataTable(
+                    columns=[
+                        DataTableColumn(key="label", header="Reads as"),
+                        DataTableColumn(key="field", header="Field"),
+                        DataTableColumn(key="role", header="Means"),
+                    ],
+                    rows="{{ presentation_rows }}",
+                )
+                with If("has_hidden"):
+                    Text(
+                        "Hidden from a human read: {{ presentation_hidden }}",
+                        css_class="text-muted-foreground",
+                    )
             with If("has_schema"):
                 Code("{{ schema }}", language="json")
             with Else():

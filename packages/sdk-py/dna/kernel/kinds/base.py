@@ -173,6 +173,14 @@ class KindBase:
     ascii_icon: str | None = None
     display_label: str | None = None
     ui_schema: dict | None = None
+    # How this Kind's DATA reads — an ordered field list with human labels and
+    # semantic roles, plus the fields to hide. Declared once, consumed by every
+    # surface (an MCP Apps card, a portal screen); see
+    # ``dna.kernel.kinds.presentation`` for the vocabulary and, importantly,
+    # for what deliberately is NOT in it. ``None`` = this Kind declares no
+    # reading and a surface falls back to its own generic renderer, which is
+    # not the same fact as declaring an empty one.
+    presentation: Any = None
     # Explicit backend-visibility override; None → the storage-pattern
     # default (see protocols.resolve_visible_in_backend).
     visible_in_backend: bool | None = None

@@ -191,8 +191,18 @@ def _checked_kind_name(kind: str, *, verb: str) -> str:
 async def author_kind_impl(
     live: Any, *, kind: str, schema: dict, tenant: str, now: str,
     actor: str | None = None, traits: list[str] | None = None,
+    presentation: Any = None,
 ) -> dict[str, Any]:
     """Write a tenant Kind, unapproved. It has no effect until approved.
+
+    ``presentation`` (optional) declares how the Kind's documents READ — the
+    ordered fields, their human labels, their semantic roles. It is the SAME
+    block a builtin descriptor declares, validated by the SAME normalizer
+    (``dna.kernel.kinds.presentation``), which is the whole point: a
+    presentation only a builtin could declare would leave tenant Kinds
+    second-class. A malformed one raises ``ValueError`` here — at the door,
+    where the author can be told which key is wrong — rather than on whichever
+    surface renders it first.
 
     ``actor`` is the PROPOSER — the verified identity of the caller, resolved by
     the face from the token and NEVER read from the request body. It is stamped
@@ -227,6 +237,14 @@ async def author_kind_impl(
         raise ValueError("tenant is required to author a Kind")
     if not isinstance(schema, dict):
         raise ValueError("schema must be a JSON Schema object")
+    from dna.kernel.kinds.presentation import normalize_presentation
+
+    try:
+        declared_presentation = normalize_presentation(presentation)
+    except ValueError as exc:
+        # Re-raised with the field named: the caller sent a document of their
+        # own and has to be told which key of it the door refused.
+        raise ValueError(f"presentation — {exc}") from None
     proposed_by = (actor or "").strip() or None
 
     from dna.kernel.kinds.registry import generate_alias
@@ -289,6 +307,18 @@ async def author_kind_impl(
             "origin": namespace,
             "schema": schema,
             "traits": list(traits or []),
+            # How documents of this Kind READ. Stored as a KEY-IF-PRESENT, like
+            # the revocation pair below and for the same mechanical reason: the
+            # port's derived schema is permissive here, but "declared nothing"
+            # and "declared an empty reading" are different facts and a stored
+            # null would flatten them. Stored in the DECLARATION shape, never
+            # the wire one — the wire form carries `label`/`icon`, which are
+            # this document's own separate fields and must not be duplicated
+            # into a nested copy that can drift from them.
+            **(
+                {"presentation": declared_presentation.to_declaration()}
+                if declared_presentation is not None else {}
+            ),
             "storage": {"type": "yaml", "container": f"{kind.lower()}s"},
             # `created_at` is documented as "Runtime-stamped volatile field
             # (never authored)" and IS listed in KindPort.VOLATILE_SPEC_FIELDS
@@ -824,6 +854,44 @@ async def _authored_kind_visibility(live: Any, *, tenant: str | None) -> Any:
     return visible
 
 
+def authored_kind_presentation(spec: dict[str, Any]) -> dict[str, Any] | None:
+    """The presentation an authored ``KindDefinition`` declares, in wire form —
+    or ``None`` when it declares none.
+
+    This is the TENANT half of the single declaration, and the reason the
+    constraint mattered: a presentation only a builtin extension could declare
+    would leave every tenant Kind second-class and the feature serving nobody
+    but its author. The block a tenant writes is the same block a builtin
+    descriptor writes, through the same validator, into the same wire envelope
+    — composed here with the document's own ``display_label``/``ascii_icon``
+    exactly as a registered port composes its own.
+
+    It belongs beside ``schema`` and ``traits`` on the review surfaces for the
+    reason those two are there: it is part of what a reviewer would be
+    conferring effect on, and it is what the portal has to render for the Kind
+    the moment it exists.
+
+    A stored declaration that no longer normalizes reads as ``None``. The audit
+    view must keep answering — a document written before a validation tightened
+    is a Kind whose presentation cannot be read, which is precisely what
+    ``None`` says, and a strictly better answer than a 500 on the screen a
+    reviewer uses to decide whether the Kind takes effect at all."""
+    from dna.kernel.kinds.presentation import normalize_presentation
+
+    try:
+        p = normalize_presentation(spec.get("presentation"))
+    except ValueError:
+        return None
+    if p is None:
+        return None
+    label = spec.get("display_label")
+    icon = spec.get("ascii_icon")
+    return p.to_wire(
+        label=label if isinstance(label, str) and label else None,
+        icon=icon if isinstance(icon, str) and icon else None,
+    )
+
+
 def _authored_kind_summary(name: Any, spec: dict[str, Any]) -> dict[str, Any]:
     """The audit projection of one ``KindDefinition`` — ONE function, because
     the listing and the single-Kind read describe the same document.
@@ -991,4 +1059,11 @@ async def get_authored_kind_impl(
         # itself writes for "no traits", so it is the document's own vocabulary
         # for the fact, not an invention of this projection.
         "traits": [str(t) for t in (spec.get("traits") or [])],
+        # The third thing that would take effect. ``schema`` says what documents
+        # of this Kind may CONTAIN; this says how they will READ — which fields
+        # a person sees, in what order, under what names — on every surface the
+        # workspace has. A reviewer deciding whether to confer effect is
+        # deciding about both, and the portal needs it the moment the Kind
+        # exists. ``None``, never ``{}``, for a Kind that declares none.
+        "presentation": authored_kind_presentation(spec),
     }

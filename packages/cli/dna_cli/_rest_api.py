@@ -1048,11 +1048,22 @@ def build_app(
         kind: str = Body(..., embed=True),
         schema: dict[str, Any] = Body(..., embed=True),
         traits: list[str] | None = Body(default=None, embed=True),
+        presentation: dict[str, Any] | list[str] | None = Body(
+            default=None, embed=True),
         tenant: str | None = Query(default=None),
     ) -> dict[str, Any]:
         """Author a Kind for the calling workspace — a ``KindDefinition``
         document written WITHOUT an approval marker, under the workspace's own
         assigned apiVersion namespace (minted on first use, then stable).
+
+        ``presentation`` (optional) declares how documents of this Kind READ —
+        the ordered fields, their human labels, their semantic roles, and what
+        to hide from a human. It is the SAME block a builtin Kind descriptor
+        declares, through the same normalizer, and it is what keeps a
+        tenant-authored Kind from being second-class: without it, only Kinds
+        shipped inside the SDK could tell a surface how to render them. A
+        malformed declaration is a 400 naming the offending key — never a card
+        that breaks later, in front of a user, with nothing to say.
 
         The response's ``approved`` is always ``false``. An ``approved_by`` in
         the body is ignored, not honoured and not rejected: a caller that could
@@ -1079,6 +1090,7 @@ def build_app(
             return await author_kind_impl(
                 live, kind=kind, schema=schema, tenant=tenant or "",
                 now=now_iso(), actor=_actor_from_state(request), traits=traits,
+                presentation=presentation,
             )
         except LayerPolicyViolationError as exc:
             raise HTTPException(status_code=403, detail=str(exc)) from exc

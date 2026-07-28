@@ -309,6 +309,23 @@ class AuthoredKindDetail(AuthoredKindSummary):
     #: needed.
     schema: dict[str, Any] | None = None
     traits: list[str] = Field(default_factory=list)
+    #: How documents of this Kind will READ — the ordered fields, their human
+    #: labels, their semantic roles, and what is hidden — composed with the
+    #: Kind's own ``display_label``/``ascii_icon``.
+    #:
+    #: It travels here for the same reason ``schema`` does: this approval
+    #: confers it. ``schema`` says what a document may CONTAIN; this says what
+    #: a person will SEE of it, in what order and under what names, on every
+    #: surface the workspace has. That is the half a reviewer could not see,
+    #: and the half a portal needs the moment the Kind exists — one
+    #: declaration, read by a React screen and by a sandboxed prefab card that
+    #: share no runtime and never will.
+    #:
+    #: ``null``, never ``{}``, for a Kind that declares none — and also for one
+    #: whose stored declaration no longer normalizes: "this Kind declares no
+    #: reading I can read" is the honest answer, and a 500 on the screen a
+    #: reviewer uses to decide whether the Kind takes effect is not.
+    presentation: dict[str, Any] | None = None
 
 
 class AuthoredKindsResponse(BaseModel):

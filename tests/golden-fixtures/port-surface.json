@@ -214,6 +214,9 @@
           "py": "display_label"
         },
         {
+          "py": "presentation"
+        },
+        {
           "py": "visible_in_backend"
         },
         {

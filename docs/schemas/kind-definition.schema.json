@@ -240,6 +240,41 @@
           "type": ["string", "null"],
           "description": "Human-friendly plural label (e.g. \"Kaizens\")."
         },
+        "presentation": {
+          "type": ["object", "array", "null"],
+          "description": "How this Kind's DATA reads, declared ONCE for every surface (an MCP Apps card, a portal screen, a CLI table). Deliberately NOT a layout language: there is no column, width, section, colour, variant or widget anywhere in the vocabulary, and unknown keys are refused — the Kind says what a field MEANS, and each surface decides what that becomes on it. Sibling of `ui_schema`, not its twin: that one hints how a human EDITS a field, this one says what the value means when a human READS it. The bare-list shorthand `presentation: [name, title, status]` is equivalent to `{fields: [...]}`, exactly as `summary` accepts a list. Normalized + enforced by dna.kernel.kinds.presentation (the role enum below is the SAME closed set that validator holds); exposed on the port as `presentation` and on the wire, composed with `display_label`/`ascii_icon`, by `presentation_wire`.",
+          "items": { "type": "string", "minLength": 1 },
+          "additionalProperties": false,
+          "properties": {
+            "fields": {
+              "type": "array",
+              "description": "The ORDERED fields a human reads. The order IS the declaration. `name` resolves to the document's envelope identity (metadata.name); every other entry resolves under `spec`.",
+              "items": {
+                "anyOf": [
+                  { "type": "string", "minLength": 1 },
+                  {
+                    "type": "object",
+                    "required": ["field"],
+                    "additionalProperties": false,
+                    "properties": {
+                      "field": { "type": "string", "minLength": 1, "description": "Spec field name, or `name` for the document's envelope identity." },
+                      "label": { "type": "string", "minLength": 1, "description": "What a human calls this field. Omit to derive it from the field name (`spec_refs` -> `Spec refs`)." },
+                      "role": {
+                        "enum": ["identifier", "title", "subtitle", "status", "owner", "parent", "rank", "tag", "timestamp", "metric", "body"],
+                        "description": "What the VALUE means, never what to paint. identifier = the handle a human names this document by · title = the headline · subtitle = one line elaborating it · status = the document's own lifecycle state (OPEN value vocabulary — which is why no colour map belongs here) · owner = the responsible actor · parent = the document this belongs to · rank = relative importance among siblings · tag = free-form categorical labels · timestamp = a moment in time · metric = a measured quantity · body = long prose, not a cell. identifier/title/subtitle/status may each be declared at most once."
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            "hidden": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 },
+              "description": "Spec fields that are machinery, not information for a human (runtime stamps, internal bookkeeping). A field may not be both listed in `fields` and hidden."
+            }
+          }
+        },
         "traits": {
           "type": ["array", "null"],
           "items": { "type": "string", "minLength": 1 },

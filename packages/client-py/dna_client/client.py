@@ -246,7 +246,9 @@ class DnaClient:
 
     def author_kind(
         self, kind: str, schema: dict[str, Any], *,
-        traits: list[str] | None = None, tenant: str | None = None,
+        traits: list[str] | None = None,
+        presentation: dict[str, Any] | list[str] | None = None,
+        tenant: str | None = None,
     ) -> JsonObject:
         """Author a Kind for the calling workspace — a ``KindDefinition``
         document written WITHOUT an approval marker, under the workspace's own
@@ -266,12 +268,28 @@ class DnaClient:
         reaches a path, and the initial capital is required so ``Contrato`` and
         ``contrato`` cannot collide on a case-insensitive filesystem.
 
-        400 for a missing tenant, or a ``kind`` that is not such an identifier;
+        ``presentation`` (optional) declares how documents of this Kind READ —
+        the ordered fields, their human labels and their semantic roles, plus
+        what to hide. It is the SAME declaration a Kind shipped inside the SDK
+        makes, which is the point: without it, only builtin Kinds could tell a
+        surface how to render them and every tenant Kind would be
+        second-class. Shortest form is the field order (``["name", "titulo"]``);
+        the full form is ``{"fields": [{"field": …, "label": …, "role": …}],
+        "hidden": [...]}``, where ``role`` is a closed vocabulary of MEANING
+        (``identifier``/``title``/``status``/``owner``/…) and there is
+        deliberately no way to declare a colour, a column or a width — how a
+        field LOOKS is each surface's own business.
+
+        400 for a missing tenant, a ``kind`` that is not such an identifier, or
+        a malformed ``presentation`` (the response names the offending key);
         403 when the workspace does not own the target namespace; 503 when the
         store's namespace-registry scope has not been provisioned."""
         return self._write(
             "POST", "/v1/kinds",
-            {"kind": kind, "schema": schema, "traits": traits},
+            {
+                "kind": kind, "schema": schema, "traits": traits,
+                "presentation": presentation,
+            },
             tenant=tenant,
         )
 
@@ -355,13 +373,19 @@ class DnaClient:
         self, kind: str, *, scope: str | None = None, tenant: str | None = None,
     ) -> JsonObject:
         """Read ONE authored Kind in full — the listing's row PLUS the
-        ``schema`` and the ``traits``.
+        ``schema``, the ``traits`` and the ``presentation``.
 
         The roster (:meth:`list_authored_kinds`) deliberately omits the schema,
         which left a reviewer unable to see what they would be conferring effect
         ON. Registration is what gives a Kind schema validation and storage
         routing, so "should this take effect?" is a question about the schema;
         this is the call that answers it.
+
+        ``presentation`` is the other half of that answer, and the one a UI
+        needs: ``schema`` says what a document may CONTAIN, ``presentation``
+        says what a person will SEE of it — which fields, in what order, under
+        what names — on every surface the workspace has. It is ``null`` for a
+        Kind that declares none.
 
         Filtered to the CALLER: a Kind authored by another workspace in a shared
         scope is a **404**, the same answer a Kind nobody ever authored gets —

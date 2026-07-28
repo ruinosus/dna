@@ -229,6 +229,17 @@ class DeclarativeKindPort:
         self.description_fallback_field: str | None = getattr(
             spec, "description_fallback_field", None
         )
+        # ``presentation``: how this Kind's DATA reads. Same attribute name as
+        # ``KindBase.presentation``, so ``presentation_of`` reads a descriptor
+        # Kind and a hand-written one through ONE getattr. Normalized again
+        # here rather than trusted: specs are duck-typed in tests
+        # (``SimpleNamespace``), and a raw mapping reaching a rendering surface
+        # unvalidated is exactly the failure this field exists to prevent.
+        from dna.kernel.kinds.presentation import normalize_presentation
+
+        self.presentation = normalize_presentation(
+            getattr(spec, "presentation", None)
+        )
         # ``overlayable_fields`` → ``OVERLAYABLE_FIELDS``, the KindBase
         # attribute name, so both policy ports read a descriptor Kind and a
         # hand-written Kind identically. Undeclared stays None = no per-field

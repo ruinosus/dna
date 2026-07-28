@@ -206,6 +206,7 @@ def register_kind_tools(
     @server.tool(run_in_thread=False)
     async def author_kind(
         kind: str, schema: dict[str, Any], traits: list[str] | None = None,
+        presentation: dict[str, Any] | list[str] | None = None,
         tenant: str | None = None,
     ) -> dict[str, Any]:
         """Author a Kind for your workspace — a typed document shape of your own.
@@ -215,6 +216,31 @@ def register_kind_tools(
         the document's path, so anything else is refused, by name.
         ``schema`` is a JSON Schema object describing the Kind's ``spec``.
         ``traits`` (optional) are the behavioural traits the Kind opts into.
+
+        ``presentation`` (optional) says how documents of this Kind should
+        READ, so that every surface — a card in this chat, a screen in the
+        portal — shows the same fields under the same names without anyone
+        writing rendering code for your Kind. Declare it and your Kind is a
+        first-class citizen; omit it and surfaces fall back to their generic
+        rendering.
+
+        Its shortest form is the field order: ``["name", "titulo", "situacao"]``.
+        The full form adds a human label and what each field MEANS::
+
+            {"fields": [{"field": "name", "label": "Contrato",
+                         "role": "identifier"},
+                        {"field": "situacao", "label": "Situação",
+                         "role": "status"}],
+             "hidden": ["assinado_em"]}
+
+        ``role`` is a closed vocabulary — ``identifier``, ``title``,
+        ``subtitle``, ``status``, ``owner``, ``parent``, ``rank``, ``tag``,
+        ``timestamp``, ``metric``, ``body`` — and each word says what the VALUE
+        MEANS, never how it should look. There is deliberately no way to
+        declare a colour, a column, a width or a widget: how a status LOOKS is
+        the surface's business, and a Kind that tried to say would be wrong on
+        the next surface that rendered it. ``name`` refers to the document's
+        own name; every other entry is a field of your ``spec``.
 
         **What you get back is INERT.** ``approved`` is always ``false``, and an
         unapproved Kind is not registered — so it validates nothing and routes
@@ -261,6 +287,7 @@ def register_kind_tools(
             return await author_kind_impl(
                 await live(), kind=kind, schema=schema, tenant=tenant or "",
                 now=now_iso(), actor=actor_from_context(), traits=traits,
+                presentation=presentation,
             )
         except NO_REGISTRY as exc:
             raise _no_registry(exc) from exc
@@ -301,7 +328,10 @@ def register_kind_tools(
         kind: str, scope: str | None = None, tenant: str | None = None,
     ) -> dict[str, Any]:
         """Show ONE authored Kind in full, so a human can decide about it — the
-        summary ``list_my_kinds`` gives PLUS the **schema** and the traits.
+        summary ``list_my_kinds`` gives PLUS the **schema**, the traits and the
+        **presentation** (how documents of this Kind will read: which fields a
+        person sees, in what order, under what names). The approval confers all
+        three, so all three are here.
 
         This is the tool to reach for when somebody asks what there is to
         approve, or what a proposed Kind actually declares. The roster answers

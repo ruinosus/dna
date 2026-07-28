@@ -214,6 +214,48 @@ Expose the Kind through your own service/UI layer — the kernel's
 JSON-Schema introspection gives form generators everything they
 need (see the schema helpers on the kernel surface).
 
+### Declare how the Kind READS — `presentation`
+
+The schema says what a document may *contain*. It does not say which of
+those fields a person is looking for, in what order, or what to call them
+— so every surface that renders your Kind decides that for itself, and the
+decisions drift. `presentation` is where you say it once:
+
+```yaml
+presentation:
+  fields:
+  - field: name          # the document's own name (metadata.name)
+    label: Contract
+    role: identifier
+  - field: titulo
+    label: Title
+    role: title
+  - field: situacao
+    label: Status
+    role: status
+  hidden: [assinado_em]  # machinery, not information
+```
+
+Or, when the order is all you need: `presentation: [name, titulo, situacao]`
+— labels are derived (`spec_refs` → `Spec refs`) and overridable per field.
+
+`role` is a **closed vocabulary of meaning**: `identifier`, `title`,
+`subtitle`, `status`, `owner`, `parent`, `rank`, `tag`, `timestamp`,
+`metric`, `body`. The first four may each be declared at most once.
+
+There is deliberately **no way to declare a colour, a column, a width or a
+widget**. A role says what the value *means*; what that becomes — a table
+column, a state line, a badge — is the surface's decision, and a Kind that
+tried to answer it would be wrong on the next surface that rendered it.
+`ui_schema` is the sibling for the other direction: how a human *edits* a
+field. A malformed declaration fails at **load**, not at render.
+
+**Tenant-authored Kinds declare the identical block.** A `KindDefinition`
+carries `spec.presentation` in the same words, through the same validator,
+and `GET /v1/kinds/{kind}` publishes it beside `schema` and `traits` — so a
+workspace's own Kind gets a legible card and a legible screen without
+anyone writing rendering code for it.
+
 ## Step 8 — Type-safe spec access (recommended)
 
 `Document.spec` is a `SpecDict` (dict + attribute access). Without

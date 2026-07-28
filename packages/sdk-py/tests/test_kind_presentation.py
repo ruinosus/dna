@@ -31,6 +31,11 @@ _PRESENTATION_MEMBERS = {
     "graph_style",
     "ascii_icon",
     "display_label",
+    # How the Kind's DATA reads — the ordered fields, their human labels and
+    # their semantic roles. Optional exactly like its neighbours: a Kind that
+    # declares none is still a perfectly valid KindPort, and the H1 gate must
+    # never learn to ask for it.
+    "presentation",
     "visible_in_backend",
     "preview",
     "graph_meta",

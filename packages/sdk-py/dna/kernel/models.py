@@ -1009,6 +1009,15 @@ class KindDefinitionSpec:
     # D7 ``description_fallback_field``: pass-through string attr telling Studio
     # which spec field acts as the card description fallback.
     description_fallback_field: str | None = None
+    # ``presentation``: how this Kind's DATA reads — the ordered field list,
+    # each entry's human label and semantic role, plus the fields to hide. NOT
+    # a layout; see ``dna.kernel.kinds.presentation`` for the line and why it
+    # is held there. Stored NORMALIZED (a ``Presentation``): ``from_raw`` runs
+    # the same validator a builtin descriptor goes through, so a
+    # TENANT-authored Kind declaring it is neither second-class nor a second
+    # code path — and a malformed declaration fails at LOAD rather than in
+    # front of a user, on whichever surface happens to render it first.
+    presentation: Any = None
     # ``overlayable_fields``: the per-FIELD refinement of ``is_overlayable`` —
     # which top-level spec keys a layer (a tenant overlay, a branch) may
     # CHANGE. Enforced by BOTH policy ports (the write port raises, the merge
@@ -1181,6 +1190,18 @@ class KindDefinitionSpec:
                 "KindDefinition spec.overlayable_fields must be a list of "
                 f"spec field names, got {type(overlayable_fields).__name__}"
             )
+        # ``presentation`` — normalized THROUGH the shared validator, never
+        # copied through. One reading of the declaration for a builtin
+        # descriptor and a tenant document alike; a second, laxer parse here
+        # would be exactly the drift this whole field exists to end. The error
+        # is re-raised naming the field so a tenant reads which key of their
+        # own document is wrong.
+        from dna.kernel.kinds.presentation import normalize_presentation
+
+        try:
+            presentation = normalize_presentation(raw.get("presentation"))
+        except ValueError as e:
+            raise ValueError(f"KindDefinition spec.presentation — {e}") from e
         from dna.kernel.kinds.traits import normalize_traits
 
         try:
@@ -1253,6 +1274,7 @@ class KindDefinitionSpec:
             spec_defaults=spec_defaults,
             default_agent_field=raw.get("default_agent_field"),
             description_fallback_field=raw.get("description_fallback_field"),
+            presentation=presentation,
             overlayable_fields=overlayable_fields,
             # Traits + class-parity fields (i-081)
             traits=traits or None,
