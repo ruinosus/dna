@@ -15,7 +15,7 @@ from __future__ import annotations
 from importlib.resources import files as _pkg_files
 from typing import Any
 
-import yaml
+from dna._yaml import safe_load
 
 _SUFFIX = ".kind.yaml"
 
@@ -44,7 +44,7 @@ def load_descriptors(package: str) -> list[dict[str, Any]]:
     for entry in sorted(entries, key=lambda e: e.name):
         if not entry.name.endswith(_SUFFIX):
             continue
-        raw = yaml.safe_load(entry.read_text(encoding="utf-8"))
+        raw = safe_load(entry.read_text(encoding="utf-8"))
         if not isinstance(raw, dict):
             raise ValueError(
                 f"descriptor {package}/kinds/{entry.name} must be a YAML "

@@ -45,6 +45,7 @@ from pathlib import Path
 import click
 import yaml
 
+from dna._yaml import safe_load
 from dna_cli._ctx import dna_session, fail, print_json
 
 # Names must be plain slugs: no separators, no traversal, no dotfiles.
@@ -128,7 +129,7 @@ def _scan_tree(root: Path, readers: list, writers: list | None = None) -> list[S
             if yf.name in consumed:
                 continue  # part of the claimed bundle, not a standalone doc
             try:
-                content = yaml.safe_load(yf.read_text(encoding="utf-8"))
+                content = safe_load(yf.read_text(encoding="utf-8"))
             except (yaml.YAMLError, UnicodeDecodeError):
                 continue
             if (

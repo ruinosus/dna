@@ -36,8 +36,8 @@ from pathlib import Path
 from typing import Any
 
 import click
-import yaml
 
+from dna._yaml import safe_load
 from dna_cli._ctx import dna_session, fail, print_json
 from dna_cli.specify_cmd import (
     CORE_API_VERSION,
@@ -89,7 +89,7 @@ def split_frontmatter(content: str) -> tuple[dict[str, Any], str, str]:
     inner = re.sub(r"^---\n", "", inner)
     inner = re.sub(r"\n?---\n?$", "", inner)
     try:
-        meta = yaml.safe_load(inner) or {}
+        meta = safe_load(inner) or {}
         if not isinstance(meta, dict):
             meta = {}
     except Exception:  # noqa: BLE001 — malformed frontmatter → no metadata

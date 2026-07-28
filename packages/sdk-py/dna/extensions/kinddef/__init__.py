@@ -13,6 +13,7 @@ from typing import Any
 
 import yaml
 
+from dna._yaml import safe_load
 from dna.kernel.models import TypedKindDefinition
 from dna.kernel.kinds.base import KindBase
 from dna.kernel.preview import PreviewBlock
@@ -114,7 +115,7 @@ class KindDefinitionReader(ReaderPort):
         return bundle.exists("KIND.yaml")
 
     def read(self, bundle: BundleHandle) -> dict[str, Any]:
-        doc = yaml.safe_load(bundle.read_text("KIND.yaml"))
+        doc = safe_load(bundle.read_text("KIND.yaml"))
         if not isinstance(doc, dict):
             raise ValueError(f"KIND.yaml in bundle '{bundle.name}' did not parse into a mapping")
         doc.setdefault("apiVersion", TypedKindDefinition.API_VERSION)

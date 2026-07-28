@@ -222,7 +222,7 @@ class VertexEmitter:
         ADK Agent Config YAML — the leading ``# yaml-language-server`` header is a
         comment PyYAML skips (see
         :meth:`~dna.emit.EmitterPort.extract_instructions`)."""
-        import yaml
+        from dna._yaml import safe_load
 
-        config = yaml.safe_load(artifact)
+        config = safe_load(artifact)
         return config.get("instruction") if isinstance(config, dict) else None

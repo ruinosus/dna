@@ -43,12 +43,12 @@ GraphCall = Callable[..., Awaitable[dict[str, Any]]]
 
 @functools.lru_cache(maxsize=None)
 def _load_doc(name: str) -> dict[str, Any]:
-    import yaml
+    from dna._yaml import safe_load
 
     path = _TOOLS_DIR / f"{name}.yaml"
     if not path.is_file():
         raise FileNotFoundError(f"graph Tool doc not found: {path}")
-    return yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    return safe_load(path.read_text(encoding="utf-8")) or {}
 
 
 def tool_surface(name: str) -> ToolSurface:

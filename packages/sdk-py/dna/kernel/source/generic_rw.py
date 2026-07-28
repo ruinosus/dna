@@ -12,6 +12,7 @@ from typing import Any
 
 import yaml
 
+from dna._yaml import safe_load
 from dna.kernel.protocols import (
     BodyMode,
     ReaderPort,
@@ -158,7 +159,7 @@ def _parse_frontmatter(
         return {}, text
 
     try:
-        parsed = yaml.safe_load(match.group(1))
+        parsed = safe_load(match.group(1))
         fm = parsed if isinstance(parsed, dict) else {}
     except yaml.YAMLError as e:
         where = f" in {source}" if source else ""
@@ -412,7 +413,7 @@ def _parse_marker_envelope(text: str) -> tuple[dict[str, Any], str]:
     if not match:
         return {}, text
     try:
-        parsed = yaml.safe_load(match.group(1)) or {}
+        parsed = safe_load(match.group(1)) or {}
         if isinstance(parsed, dict):
             return parsed, match.group(2).lstrip("\n")
     except yaml.YAMLError:

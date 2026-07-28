@@ -9,6 +9,7 @@ from typing import Any
 import aiofiles
 import yaml
 
+from dna._yaml import safe_load
 from dna.kernel.protocols import CacheItem
 from dna.kernel.bundle.handle import FilesystemBundleHandle
 
@@ -128,7 +129,7 @@ class FilesystemCache:
                 try:
                     async with aiofiles.open(yf, "r") as f:
                         raw = await f.read()
-                    content = yaml.safe_load(raw)
+                    content = safe_load(raw)
                     if isinstance(content, dict) and "kind" in content:
                         documents.append(content)
                         has_yaml = True

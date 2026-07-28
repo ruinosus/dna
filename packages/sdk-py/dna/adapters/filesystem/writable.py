@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any
 import aiofiles
 import yaml
 
+from dna._yaml import safe_load
 from dna.adapters.filesystem.source import FilesystemSource, fs_tenant_segment
 from dna.kernel.bundle.handle import FilesystemBundleHandle
 from dna.kernel.protocols import WritableSourcePort
@@ -675,7 +676,7 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
             if not vm.is_file():
                 continue
             try:
-                spec = (yaml.safe_load(vm.read_text()) or {}).get("spec") or {}
+                spec = (safe_load(vm.read_text()) or {}).get("spec") or {}
             except Exception:
                 spec = {}
             out.append({
@@ -698,7 +699,7 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
         if not vm.is_file():
             return None
         try:
-            return yaml.safe_load(vm.read_text())
+            return safe_load(vm.read_text())
         except Exception:
             return None
 
@@ -713,7 +714,7 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
         if not vm.is_file():
             return False
         try:
-            raw = yaml.safe_load(vm.read_text())
+            raw = safe_load(vm.read_text())
         except Exception:
             return False
         spec = (raw or {}).setdefault("spec", {})
@@ -726,7 +727,7 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
         latest = scope_dir / "manifest.yaml"
         if latest.is_file():
             try:
-                cur = yaml.safe_load(latest.read_text())
+                cur = safe_load(latest.read_text())
                 if (cur or {}).get("spec", {}).get("version") == version:
                     latest.write_text(new_text)
             except Exception:

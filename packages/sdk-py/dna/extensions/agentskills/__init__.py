@@ -7,6 +7,7 @@ from pathlib import Path
 import yaml
 from typing import Any
 
+from dna._yaml import safe_load
 from dna.kernel.kinds.base import KindBase
 from dna.kernel.models import TypedSkill
 from dna.kernel.preview import PreviewBlock
@@ -219,7 +220,7 @@ class SkillReader(ReaderPort):
         if not match:
             return {}
         try:
-            parsed = yaml.safe_load(match.group(1))
+            parsed = safe_load(match.group(1))
             if isinstance(parsed, dict):
                 return parsed
         except Exception:

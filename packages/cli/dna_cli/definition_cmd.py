@@ -13,8 +13,8 @@ from __future__ import annotations
 import json
 
 import click
-import yaml
 
+from dna._yaml import safe_load
 from dna_cli._ctx import dna_client, fail, print_json, run_async
 
 
@@ -53,7 +53,7 @@ def get(kind: str, name: str, scope: str | None, tenant: str | None, as_json: bo
 @click.option("--tenant", required=True, help="Write as this tenant's overlay.")
 def set_(kind: str, name: str, spec_file, scope: str | None, tenant: str) -> None:
     """Write the tenant override for KIND/NAME from a spec file."""
-    loaded = yaml.safe_load(spec_file.read()) or {}
+    loaded = safe_load(spec_file.read()) or {}
     spec = loaded.get("spec", loaded) if isinstance(loaded, dict) else loaded
     with dna_client() as dna:
         try:

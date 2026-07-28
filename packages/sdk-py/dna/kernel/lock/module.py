@@ -31,6 +31,8 @@ from typing import Any
 
 import yaml
 
+from dna._yaml import safe_load
+
 # Phase 16 — Genome replaces Module as the lockfile entity.
 LOCKFILE_VERSION = 6
 
@@ -201,7 +203,7 @@ def load_lockfile(base_dir: Path, tenant: str) -> GenomeLockfile:
     if not p.is_file():
         return GenomeLockfile(tenant=tenant)
     try:
-        data = yaml.safe_load(p.read_text()) or {}
+        data = safe_load(p.read_text()) or {}
     except yaml.YAMLError:
         return GenomeLockfile(tenant=tenant)
     if data.get("lockVersion", 0) > LOCKFILE_VERSION:
