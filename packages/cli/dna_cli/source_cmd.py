@@ -56,14 +56,14 @@ def _default_config_path() -> Path:
 
 
 def _load_or_init(path: Path) -> dict[str, Any]:
-    import yaml
+    from dna._yaml import safe_load
     if not path.exists():
         return {
             "apiVersion": "dna.io/v1",
             "kind": "ReplicaConfig",
             "replicas": [],
         }
-    raw = yaml.safe_load(path.read_text()) or {}
+    raw = safe_load(path.read_text()) or {}
     if not isinstance(raw, dict):
         raise click.ClickException(f"{path}: top-level must be a mapping")
     raw.setdefault("apiVersion", "dna.io/v1")

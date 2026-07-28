@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 import aiofiles
 import yaml
 
+from dna._yaml import safe_load
 from dna.kernel.bundle.handle import FilesystemBundleHandle
 from dna.kernel.protocols import SourcePort
 
@@ -185,7 +186,7 @@ class FilesystemSource(SourcePort):
             )
             if tenant_pkg.exists():
                 async with aiofiles.open(tenant_pkg, encoding="utf-8") as f:
-                    tenant_doc = yaml.safe_load(await f.read())
+                    tenant_doc = safe_load(await f.read())
                 if isinstance(tenant_doc, dict) and tenant_doc.get("kind") == "Genome":
                     out = [d for d in out if d.get("kind") != "Genome"]
                     out.append(tenant_doc)
@@ -409,7 +410,7 @@ class FilesystemSource(SourcePort):
                 continue
             try:
                 async with aiofiles.open(yaml_file, encoding="utf-8") as f:
-                    content = yaml.safe_load(await f.read())
+                    content = safe_load(await f.read())
                 if isinstance(content, dict) and "kind" in content:
                     documents.append(content)
             except yaml.YAMLError as e:

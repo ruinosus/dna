@@ -16,6 +16,7 @@ from __future__ import annotations
 import yaml
 from typing import Any
 
+from dna._yaml import safe_load
 from dna.kernel.models import TypedHook
 from dna.kernel.kinds.base import KindBase
 from dna.kernel.preview import PreviewBlock
@@ -93,7 +94,7 @@ class HookKind(KindBase):
         body = spec.get("body", "").strip()
         if action == "inject_fields" and body and not spec.get("fields"):
             try:
-                parsed = yaml.safe_load(body)
+                parsed = safe_load(body)
                 if isinstance(parsed, dict):
                     spec["fields"] = parsed
             except yaml.YAMLError:

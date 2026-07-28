@@ -9,6 +9,7 @@ from typing import Any
 
 import yaml
 
+from dna._yaml import safe_load
 from dna.kernel.source.descriptor_loader import load_descriptors
 from dna.kernel.kinds.base import KindBase
 from dna.kernel.models import (
@@ -889,7 +890,7 @@ class AgentReader(ReaderPort):
         match = re.match(r"^---\n(.*?)---\n?", text, re.DOTALL)
         if not match:
             return {}
-        return yaml.safe_load(match.group(1)) or {}
+        return safe_load(match.group(1)) or {}
 
 
 class AgentWriter(WriterPort):

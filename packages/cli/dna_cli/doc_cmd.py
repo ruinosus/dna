@@ -496,6 +496,7 @@ def _collect_bundle_files(
 def _load_apply_input(path: str, kernel) -> dict:
     """Load `dna doc apply` input — bundle dir, marker file, or YAML/JSON."""
     import yaml as _yaml
+    from dna._yaml import safe_load
     from pathlib import Path as _Path
     from dna.kernel.source.generic_rw import _parse_frontmatter, _parse_body  # noqa: F401
     p = _Path(path)
@@ -537,7 +538,7 @@ def _load_apply_input(path: str, kernel) -> dict:
         with open(path, encoding="utf-8") as f:
             raw_text = f.read()
         try:
-            raw = _yaml.safe_load(raw_text)
+            raw = safe_load(raw_text)
         except _yaml.YAMLError as e:
             raise fail(f"Invalid YAML/JSON in {path}: {e}")
         if not isinstance(raw, dict):
@@ -685,11 +686,12 @@ def _load_apply_inputs(path: str, kernel) -> list[dict]:
         return [_load_apply_input(path, kernel)]
 
     import yaml as _yaml
+    from dna._yaml import safe_load_all
 
     with open(path, encoding="utf-8") as f:
         raw_text = f.read()
     try:
-        docs = [d for d in _yaml.safe_load_all(raw_text) if d is not None]
+        docs = [d for d in safe_load_all(raw_text) if d is not None]
     except _yaml.YAMLError as e:
         raise fail(f"Invalid YAML/JSON in {path}: {e}")
     if not docs:

@@ -255,8 +255,10 @@ class AgentFrameworkEmitter:
 
         import yaml
 
+        from dna._yaml import safe_load
+
         try:
-            doc = yaml.safe_load(artifact)
+            doc = safe_load(artifact)
         except yaml.YAMLError:
             return None
         return doc.get("instructions") if isinstance(doc, dict) else None

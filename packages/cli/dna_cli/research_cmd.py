@@ -32,6 +32,7 @@ import click
 
 import yaml as _yaml
 
+from dna._yaml import safe_load
 from dna_cli._ctx import dna_session, fail, print_json
 
 
@@ -226,7 +227,7 @@ def cmd_create(path: str, scope: str | None, tenant: str | None, status: str | N
     if not p.exists():
         raise fail(f"File not found: {path}")
     try:
-        raw = _yaml.safe_load(p.read_text(encoding="utf-8"))
+        raw = safe_load(p.read_text(encoding="utf-8"))
     except _yaml.YAMLError as e:
         raise fail(f"Invalid YAML/JSON in {path}: {e}")
     if not isinstance(raw, dict):

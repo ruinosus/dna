@@ -9,6 +9,7 @@ from typing import Any
 
 import yaml
 
+from dna._yaml import safe_load
 from dna.kernel.document import Document
 
 
@@ -68,7 +69,7 @@ def write_lockfile(lock: Lockfile, path: Path) -> None:
 def read_lockfile(path: Path) -> Lockfile:
     if not path.exists():
         return Lockfile()
-    data = yaml.safe_load(path.read_text())
+    data = safe_load(path.read_text())
     if not data or "documents" not in data:
         return Lockfile()
     documents = [

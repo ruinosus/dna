@@ -18,6 +18,7 @@ from importlib.resources import files as _pkg_files
 from pathlib import Path as _Path
 from typing import Any
 
+from dna._yaml import safe_load
 from dna.kernel.models import TypedSafetyPolicy
 from dna.kernel.kinds.base import KindBase
 from dna.kernel.preview import PreviewBlock
@@ -155,7 +156,7 @@ class SafetyPolicyKind(KindBase):
         body = spec.get("rules", "")
         if isinstance(body, str) and body.strip():
             try:
-                parsed = yaml.safe_load(body)
+                parsed = safe_load(body)
                 if isinstance(parsed, list):
                     spec["rules"] = parsed
                 else:

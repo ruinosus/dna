@@ -97,9 +97,9 @@ def load_config(path: str | Path | None = None) -> DnaConfig | None:
         if resolved is None:
             return None
 
-    import yaml  # PyYAML ships with the SDK
+    from dna._yaml import safe_load  # PyYAML ships with the SDK
 
-    raw: Any = yaml.safe_load(resolved.read_text(encoding="utf-8"))
+    raw: Any = safe_load(resolved.read_text(encoding="utf-8"))
     return _parse(raw, resolved)
 
 
