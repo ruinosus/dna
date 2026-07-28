@@ -68,9 +68,25 @@ def test_the_refusals_are_derived_not_listed():
 
 
 class _Kernel:
+    """A fake store keyed the way every real one is — INCLUDING the tenant.
+
+    It used to key on ``(scope, kind, name)`` and take no ``tenant`` kwarg at
+    all, which is exactly the coordinate mismatch of i-088: the delete's
+    existence check read at a tenant the row was never stored under, and nothing
+    in this file could tell, because the fake had no tenant to disagree about. A
+    fake blind to a coordinate cannot fail when the code confuses it. The
+    end-to-end proof, against the real filesystem and SQL stores, is in
+    ``test_delete_document_tenant_coordinates.py``."""
+
     def __init__(self, real, docs=None):
         self._real = real
-        self.docs = dict(docs or {})
+        # {(scope, kind, name, tenant): raw}. The Kinds exercised here are
+        # GLOBAL, so their tenant is None — which is what ``_write_tenant``
+        # resolves for them, and therefore where the checks must read.
+        self.docs = {
+            (k if len(k) == 4 else (*k, None)): v
+            for k, v in dict(docs or {}).items()
+        }
         self.deleted: list[tuple] = []
 
     def kind_ports(self):
@@ -82,12 +98,12 @@ class _Kernel:
     def kinds_with_trait(self, trait):
         return self._real.kinds_with_trait(trait)
 
-    async def get_document(self, scope, kind, name):
-        return self.docs.get((scope, kind, name))
+    async def get_document(self, scope, kind, name, *, tenant=None):
+        return self.docs.get((scope, kind, name, tenant))
 
     async def delete_document(self, scope, kind, name, **kw):
         self.deleted.append((scope, kind, name, kw))
-        self.docs.pop((scope, kind, name), None)
+        self.docs.pop((scope, kind, name, kw.get("tenant")), None)
 
 
 def _live(kernel):
