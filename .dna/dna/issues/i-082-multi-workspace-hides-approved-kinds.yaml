@@ -1,0 +1,18 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-082-multi-workspace-hides-approved-kinds
+spec:
+  title: Multi-workspace ligado esconde Kind aprovado de outro escopo
+  description: 'GATILHO: ligar multi-workspace. Hoje inofensivo porque todos compartilham base_scope. `_ctx.py` monta UMA manifest instance, a do escopo do boot; um Kind aprovado no escopo do workspace B fica invisivel (UnknownKindError na escrita, ausente do list_kinds) ate algo construir a MI de B. Nao e regressao — o caminho eager tem o mesmo limite. Fechar ANTES de habilitar multi-workspace, senao a autoria de Kind por tenant quebra em silencio para todo mundo menos o workspace do boot.'
+  type: bug
+  severity: high
+  status: open
+  created_at: '2026-07-28T01:27:03+00:00'
+  updated_at: '2026-07-28T01:27:03+00:00'
+  timeline:
+  - at: '2026-07-28T01:27:03+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

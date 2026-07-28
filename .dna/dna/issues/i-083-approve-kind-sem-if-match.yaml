@@ -1,0 +1,18 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-083-approve-kind-sem-if-match
+spec:
+  title: approve_kind_impl faz read-modify-write sem if_match
+  description: 'GATILHO: duas replicas + uma edicao concorrente. Cenario medido pelo revisor: revisor abre GET /v1/kinds/{kind} na replica B (aquece o cache de documento de 60s); autor edita para v2 na replica A, que invalida so A; revisor aprova em B, que le v1 do cache e escreve {**raw, ''spec'': spec} — a edicao some e a v1 e carimbada como aprovada. NAO e one-liner: kernel.write_document nao tem parametro if_match; so write_document_impl tem. E tarefa de desenho.'
+  type: bug
+  severity: medium
+  status: open
+  created_at: '2026-07-28T01:27:09+00:00'
+  updated_at: '2026-07-28T01:27:09+00:00'
+  timeline:
+  - at: '2026-07-28T01:27:09+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

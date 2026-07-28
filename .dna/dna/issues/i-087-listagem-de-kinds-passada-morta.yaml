@@ -1,0 +1,18 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-087-listagem-de-kinds-passada-morta
+spec:
+  title: Passada local morta em _authored_kind_visibility, acoplada a um teste
+  description: 'KindDefinition e bootstrap, logo nao herdavel, logo origin=''all'' E origin=''local'' — a passada extra por listagem provavelmente nao faz nada. Medido duas vezes: sobre um escopo filho com parent_scope real e um KindDefinition aprovado semeado no pai, a linha nao aparece em NENHUMA das tres passadas. NAO foi deletada porque apagar quebra test_an_inherited_row_survives_the_filter, que estava num arquivo que outro agente detinha na hora. Deletar junto: a passada, o ramo ''name not in local'', o parametro scope= agora sem uso, o teste e o comentario de secao. Volta a ser necessaria so se KindDefinition virar scope_inheritable.'
+  type: task
+  severity: low
+  status: open
+  created_at: '2026-07-28T01:27:54+00:00'
+  updated_at: '2026-07-28T01:27:54+00:00'
+  timeline:
+  - at: '2026-07-28T01:27:54+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
