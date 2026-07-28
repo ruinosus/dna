@@ -277,5 +277,38 @@ spec:
     text_color: '#fff'
   ascii_icon: 📖
   display_label: Stories
+  # How a Story READS — the five facts a person scanning a board needs, in the
+  # order they need them, and what each one MEANS. This is the single source
+  # the MCP Apps card and the portal roster both consume; before it, the same
+  # five columns were spelled out in `list_stories_impl` AND again in the card
+  # builder, and they had already drifted (the card labelled the identifier
+  # column "Story", the impl called it "name").
+  #
+  # It is not a layout: nothing here says table, column, width or colour. A
+  # card renders `status` as a cell today and could render it as a badge
+  # tomorrow without this file changing — the Kind's claim is only that
+  # `status` IS the Story's lifecycle state.
+  #
+  # `name` is the envelope identity (metadata.name), labelled with the SINGULAR
+  # noun on purpose: `display_label` above is the plural for the roster's
+  # heading, and a column headed "Stories" listing one Story per row reads
+  # wrong.
+  presentation:
+    fields:
+    - field: name
+      label: Story
+      role: identifier
+    - field: title
+      role: title
+    - field: status
+      role: status
+    - field: feature
+      label: Feature
+      role: parent
+    - field: priority
+      role: rank
+    # Write-stamped bookkeeping. Real fields of the schema, and not information
+    # a person reading a board is looking for.
+    hidden: [created_at, updated_at, closed_at]
   docs: 'A Story is a granular task: one developer, one PR, one estimate. Lists acceptance criteria, dependencies
     (other Stories that must land first), and rolls up to a Feature.'

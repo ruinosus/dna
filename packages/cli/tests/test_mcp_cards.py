@@ -830,3 +830,185 @@ def test_the_card_button_targets_a_tool_the_model_cannot_see(dna_dir, monkeypatc
         f"{C.APPROVE_TOOL} is offered to the MODEL — the button is no longer "
         "the only thing that can press it"
     )
+
+
+# ── 5. the card's columns are the KIND's, not the card's ───────────────────
+#
+# The false green this section is shaped against: asserting that the Story card
+# renders a "Status" header passes whether that header came from the Story Kind
+# or from a literal in the builder — which is exactly what it WAS. So every
+# test below changes the DECLARATION and requires the card to change with it.
+# A hardcoded column list cannot pass any of them.
+
+
+def _columns(wire: dict) -> list[dict]:
+    """The ONE DataTable's columns, found by walking the view tree — read off
+    the wire the host would actually receive, never from the builder's locals."""
+    found: list[list[dict]] = []
+
+    def walk(node):
+        if isinstance(node, dict):
+            if node.get("type") == "DataTable":
+                found.append(node.get("columns") or [])
+            for v in node.values():
+                walk(v)
+        elif isinstance(node, list):
+            for v in node:
+                walk(v)
+
+    walk(wire["view"])
+    assert len(found) == 1, f"expected exactly one DataTable, got {len(found)}"
+    return found[0]
+
+
+def _headers(wire: dict) -> list[str]:
+    return [c["header"] for c in _columns(wire)]
+
+
+def _stories_payload(presentation):
+    """The pinned Story payload plus a presentation. The rows are untouched —
+    what varies is only how the Kind says they read."""
+    return dict(
+        json.loads(json.dumps(_PAYLOADS["list_stories"])),
+        presentation=presentation,
+    )
+
+
+def test_the_story_cards_columns_come_from_the_kind():
+    """PROVENANCE. Same rows, two different declarations, two different
+    cards — headers, order and heading all follow the Kind."""
+    first = C.stories_app(_stories_payload({
+        "label": "Stories",
+        "icon": "B",
+        "fields": [
+            {"field": "name", "label": "Story", "role": "identifier"},
+            {"field": "status", "label": "Status", "role": "status"},
+        ],
+        "hidden": [],
+    })).to_json()
+    assert _headers(first) == ["Story", "Status"]
+    assert first["state"]["label"] == "Stories"
+
+    second = C.stories_app(_stories_payload({
+        "label": "Histórias",
+        "icon": "H",
+        "fields": [
+            {"field": "priority", "label": "Prioridade", "role": "rank"},
+            {"field": "title", "label": "Título", "role": "title"},
+            {"field": "name", "label": "Ficha", "role": "identifier"},
+        ],
+        "hidden": [],
+    })).to_json()
+    assert _headers(second) == ["Prioridade", "Título", "Ficha"], (
+        "the columns did not follow the Kind — they are still hardcoded"
+    )
+    assert [c["key"] for c in _columns(second)] == ["priority", "title", "name"]
+    assert second["state"]["label"] == "Histórias"
+    assert "Histórias" in json.dumps(second, ensure_ascii=False), (
+        "the heading is not the Kind's"
+    )
+
+
+def test_a_payload_with_no_presentation_still_renders_every_column():
+    """A server that predates the declaration — or a Kind that declares none —
+    must still produce a usable card. The fallback derives the columns from the
+    rows themselves; it never blanks the table and never invents a field."""
+    wire = C.stories_app(_PAYLOADS["list_stories"]).to_json()
+    assert [c["key"] for c in _columns(wire)] == [
+        "name", "title", "status", "feature", "priority",
+    ]
+    assert _headers(wire) == ["Name", "Title", "Status", "Feature", "Priority"]
+    assert wire["state"]["count"] == 3
+
+
+def test_a_new_kind_gets_a_usable_card_with_no_new_card_code():
+    """THE measure. A Kind nothing in this repo has ever heard of — a tenant's
+    own, in its own language — renders through the SAME generic builder, with
+    its own labels, its own order and its own heading. No branch here knows the
+    word ``Contrato``."""
+    wire = C.documents_app(
+        {
+            "scope": "acme",
+            "count": 1,
+            "documents": [
+                {"name": "c-001", "parte": "Acme Ltda", "situacao": "vigente"},
+            ],
+            "presentation": {
+                "label": "Contratos",
+                "icon": "C",
+                "fields": [
+                    {"field": "name", "label": "Contrato", "role": "identifier"},
+                    {"field": "parte", "label": "Parte", "role": "owner"},
+                    {"field": "situacao", "label": "Situação", "role": "status"},
+                ],
+                "hidden": [],
+            },
+        },
+        items_key="documents",
+    ).to_json()
+    assert _headers(wire) == ["Contrato", "Parte", "Situação"]
+    assert wire["state"]["label"] == "Contratos"
+    assert wire["state"]["documents"][0]["situacao"] == "vigente"
+    assert "No Contratos" in json.dumps(wire), (
+        "the empty state names some other Kind — it is not derived"
+    )
+
+
+def test_the_card_prints_no_python_repr_for_a_missing_value():
+    """The em dash rule survives the generalisation: a field the document does
+    not carry is absent, and a card that printed ``None`` would have invented a
+    value."""
+    wire = C.documents_app(
+        {
+            "count": 1,
+            "documents": [{"name": "c-001", "parte": None}],
+            "presentation": {
+                "label": "Contratos", "icon": None,
+                "fields": [{"field": "name", "label": "Contrato", "role": None},
+                           {"field": "parte", "label": "Parte", "role": None}],
+                "hidden": [],
+            },
+        },
+        items_key="documents",
+    ).to_json()
+    assert wire["state"]["documents"][0]["parte"] == "—"
+    assert "None" not in json.dumps(wire["state"])
+
+
+def test_the_review_card_shows_how_the_kinds_documents_will_read():
+    """``schema`` says what a document may CONTAIN; the presentation says how
+    it will READ, on every surface the workspace has. Both are conferred by the
+    same approval, so a reviewer sees both — and the rows here are the Kind's
+    declaration, not a shape this card knows."""
+    declaration = dict(
+        _PAYLOADS["review_kind"]["declaration"],
+        presentation={
+            "label": "Contratos",
+            "icon": "C",
+            "fields": [
+                {"field": "name", "label": "Contrato", "role": "identifier"},
+                {"field": "titulo", "label": "Título", "role": "title"},
+                {"field": "valor", "label": "Valor", "role": "metric"},
+            ],
+            "hidden": ["assinado_em"],
+        },
+    )
+    state = C.kind_review_app(declaration).to_json()["state"]
+    assert state["has_presentation"] is True
+    assert [r["label"] for r in state["presentation_rows"]] == [
+        "Contrato", "Título", "Valor",
+    ]
+    assert [r["role"] for r in state["presentation_rows"]] == [
+        "identifier", "title", "metric",
+    ]
+    assert state["presentation_label"] == "Contratos"
+    assert state["presentation_hidden"] == "assinado_em"
+
+
+def test_the_review_card_does_not_invent_a_presentation_it_does_not_have():
+    """Same rule as the schema beside it: ``None`` is a fact, and an empty
+    field table would read as "this Kind declares nothing about how it reads",
+    which is a claim the card is not entitled to make silently."""
+    state = C.kind_review_app(_PAYLOADS["review_kind"]["declaration"]).to_json()["state"]
+    assert state["has_presentation"] is False
+    assert state["presentation_rows"] == []

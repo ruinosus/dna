@@ -380,6 +380,15 @@ export interface paths {
          *     document written WITHOUT an approval marker, under the workspace's own
          *     assigned apiVersion namespace (minted on first use, then stable).
          *
+         *     ``presentation`` (optional) declares how documents of this Kind READ —
+         *     the ordered fields, their human labels, their semantic roles, and what
+         *     to hide from a human. It is the SAME block a builtin Kind descriptor
+         *     declares, through the same normalizer, and it is what keeps a
+         *     tenant-authored Kind from being second-class: without it, only Kinds
+         *     shipped inside the SDK could tell a surface how to render them. A
+         *     malformed declaration is a 400 naming the offending key — never a card
+         *     that breaks later, in front of a user, with nothing to say.
+         *
          *     The response's ``approved`` is always ``false``. An ``approved_by`` in
          *     the body is ignored, not honoured and not rejected: a caller that could
          *     approve its own proposal would make the gate decorative. The document
@@ -1273,6 +1282,10 @@ export interface components {
             name?: string | null;
             /** Namespace */
             namespace?: string | null;
+            /** Presentation */
+            presentation?: {
+                [key: string]: unknown;
+            } | null;
             /** Proposed At */
             proposed_at?: string | null;
             /** Proposed By */
@@ -1492,6 +1505,10 @@ export interface components {
         Body_author_kind_v1_kinds_post: {
             /** Kind */
             kind: string;
+            /** Presentation */
+            presentation?: {
+                [key: string]: unknown;
+            } | string[] | null;
             /** Schema */
             schema: {
                 [key: string]: unknown;

@@ -840,9 +840,16 @@ def test_the_detail_route_carries_the_schema_the_listing_withholds(dna_dir):
     # One vocabulary, not two: every summary field, same value, same name.
     summary = set(RM.AuthoredKindSummary.model_fields)
     assert {k: body[k] for k in summary} == {k: row[k] for k in summary}, body
-    # And the detail is exactly the summary plus those two — a third field here
-    # is a third vocabulary for the same document.
-    assert set(body) == summary | {"schema", "traits"}, sorted(body)
+    # And the detail is exactly the summary plus what this APPROVAL confers — a
+    # field here that is neither is a second vocabulary for the same document.
+    # ``presentation`` joined that group deliberately: the approval confers how
+    # documents of the Kind READ exactly as it confers what they may CONTAIN,
+    # and a reviewer who cannot see the first is reviewing half of it.
+    assert set(body) == summary | {"schema", "traits", "presentation"}, sorted(body)
+    assert body["presentation"] is None, (
+        "this Kind was authored without a presentation — it must not read as "
+        "declaring an empty one"
+    )
 
     # The audit half is real, not defaulted: an authored document names its
     # proposer and its birth, and a route that returned the model's defaults
@@ -1047,3 +1054,77 @@ def test_an_unreadable_registry_refuses_the_read_rather_than_answering(
         assert "connection reset by peer" in detail, detail
         assert re.search(r"provision", detail, re.I), detail
         assert "titulo" not in r.text, r.text
+
+
+def test_a_tenant_authors_a_presentation_and_reads_it_back(dna_dir):
+    """THE tenant constraint, end to end over the REST face.
+
+    A presentation only a builtin extension could declare would leave every
+    tenant-authored Kind second-class and the feature serving nobody but its
+    author. So a tenant declares it in the SAME words a packaged
+    ``*.kind.yaml`` uses, through the SAME normalizer, and reads it back
+    beside the schema — the portal's consumer, and (through ``review_kind``)
+    the card's.
+
+    The bare-list SHORTHAND is what is sent, deliberately: it is the form an
+    agent will actually produce, and it must come back fully normalized — with
+    the labels derived and the role slot present — rather than echoed."""
+    with _client(dna_dir) as c:
+        assert _author(c, presentation=["name", "titulo"]).status_code == 201
+        body = _detail(c, tenant=_WID).json()
+
+    assert body["presentation"] == {
+        # The document's own ``display_label`` — unset here, so honestly null
+        # rather than a plural invented from the Kind name.
+        "label": None,
+        "icon": None,
+        "fields": [
+            {"field": "name", "label": "Name", "role": None},
+            {"field": "titulo", "label": "Titulo", "role": None},
+        ],
+        "hidden": [],
+    }, body["presentation"]
+
+
+def test_a_tenants_full_declaration_survives_the_round_trip(dna_dir):
+    """Labels, roles and hidden fields all persist — the parts a card and a
+    portal screen each need, and the parts that would silently be dropped if
+    the door stored a hand-copied subset instead of the normalizer's own."""
+    with _client(dna_dir) as c:
+        assert _author(c, presentation={
+            "fields": [
+                {"field": "name", "label": "Contrato", "role": "identifier"},
+                {"field": "situacao", "label": "Situação", "role": "status"},
+            ],
+            "hidden": ["assinado_em"],
+        }).status_code == 201
+        body = _detail(c, tenant=_WID).json()
+
+    assert body["presentation"]["fields"] == [
+        {"field": "name", "label": "Contrato", "role": "identifier"},
+        {"field": "situacao", "label": "Situação", "role": "status"},
+    ]
+    assert body["presentation"]["hidden"] == ["assinado_em"]
+
+
+def test_a_layout_word_in_a_tenants_presentation_is_a_400_not_a_broken_card(dna_dir):
+    """The refusal is at the DOOR, naming the key. A declaration that only
+    fails when something renders it fails in front of a user, on a surface with
+    no way to say what was wrong with it — and the words being refused here are
+    exactly the ones that would turn this into a layout language."""
+    with _client(dna_dir) as c:
+        bad = _author(c, presentation={
+            "fields": [{"field": "situacao", "width": 200}],
+        })
+        assert bad.status_code == 400, bad.text
+        assert "width" in bad.json()["detail"], bad.json()
+
+        unknown_role = _author(c, presentation={
+            "fields": [{"field": "situacao", "role": "badge"}],
+        })
+        assert unknown_role.status_code == 400, unknown_role.text
+        assert "badge" in unknown_role.json()["detail"], unknown_role.json()
+
+        # …and nothing was written: a refused declaration must not leave half a
+        # Kind behind.
+        assert _detail(c, tenant=_WID).status_code == 404

@@ -1212,7 +1212,7 @@ class KindPort(Protocol):
     (``kernel.kind`` → ``isinstance(k, KindPort)``) enforces.
 
     The optional presentation/UX surface (``docs``, ``ui_schema``,
-    ``graph_style``, ``ascii_icon``, ``display_label``,
+    ``graph_style``, ``ascii_icon``, ``display_label``, ``presentation``,
     ``description_fallback_field``, ``visible_in_backend``,
     ``preview()``, ``graph_meta()``) lives on the separate
     ``KindPresentation`` capability Protocol below — declared there so
@@ -1329,6 +1329,19 @@ class KindPresentation(Protocol):
       "text_color": "#fff"}`` colors for mermaid/graph visualizations.
     - ``ascii_icon`` — single emoji/char for ASCII tree views.
     - ``display_label`` — human-friendly plural label (e.g. "Agents").
+    - ``presentation`` — how this Kind's DATA reads, declared ONCE for every
+      surface: an ordered field list, each entry carrying a human ``label``
+      and an optional semantic ``role`` (``identifier``/``title``/``status``/
+      ``owner``/``parent``/… — a closed vocabulary), plus the fields to keep
+      ``hidden``. Deliberately NOT a layout — it says what a field MEANS, and
+      each surface decides what that becomes on it (a table column, a state
+      line, a badge). ``ui_schema`` is its sibling and NOT its twin: that one
+      hints how a human EDITS a field (widget, help, height); this one says
+      what the value means when a human READS it. Normalized + validated by
+      ``dna.kernel.kinds.presentation`` (``presentation_of`` and the
+      ``presentation_wire`` envelope, which composes it with ``display_label``
+      and ``ascii_icon``). A TENANT Kind declares it in the very same words,
+      as ``KindDefinition.spec.presentation``.
     - ``visible_in_backend`` — explicit backend-visibility override;
       ``None`` falls back to ``default_visible_in_backend(storage)``
       (see ``resolve_visible_in_backend``).
@@ -1344,6 +1357,11 @@ class KindPresentation(Protocol):
     graph_style: dict[str, str] | None
     ascii_icon: str | None
     display_label: str | None
+    #: ``Presentation | dict | list | None`` — typed loosely on purpose:
+    #: protocols.py must not import the concrete normalizer at runtime, and a
+    #: descriptor hands over the raw mapping until it is normalized. Read it
+    #: through ``dna.kernel.kinds.presentation.presentation_of``.
+    presentation: Any
     visible_in_backend: bool | None
 
     def preview(self, doc: Any) -> "list[PreviewBlock] | None": ...

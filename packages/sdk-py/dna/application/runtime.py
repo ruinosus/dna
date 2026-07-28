@@ -780,29 +780,66 @@ async def _collect(
     return out
 
 
+#: The projection ``list_stories`` published before the Story Kind declared how
+#: it reads. Kept ONLY as the fallback for a Kind that declares nothing, so a
+#: deployment whose Story descriptor predates ``presentation`` keeps answering
+#: exactly as it did. It is not the source of truth — the descriptor is.
+_STORY_FALLBACK_FIELDS = ("name", "title", "status", "feature", "priority")
+
+
 async def list_stories_impl(
     live: LiveDna, status: str | None = None, scope: str | None = None,
     tenant: str | None = None,
 ) -> dict[str, Any]:
-    """List Stories, optionally filtered by ``status`` (todo/in-progress/…)."""
+    """List Stories, optionally filtered by ``status`` (todo/in-progress/…).
+
+    **The fields are the KIND's, not this function's.** Which fields a Story
+    shows, in what order, and what a human calls each of them is declared once
+    on the Story Kind (``spec.presentation``) and read here — the same
+    declaration the MCP Apps card and the portal roster consume. They used to
+    be spelled out here AND again in the card builder: two descriptions of one
+    thing, which had already drifted (the card headed the identifier column
+    "Story", this function called it "name" and nothing reconciled them).
+
+    ``presentation`` travels IN the payload rather than being looked up by each
+    consumer, because one of the consumers is a sandboxed card that is a pure
+    function of the result it is handed and can ask the server nothing. It is
+    ``None`` for a Kind that declares no reading — absence is meaningful, and a
+    surface falls back to its own generic rendering rather than to an empty
+    declaration that looks authored."""
+    from dna.kernel.kinds.presentation import (
+        normalize_presentation,
+        presentation_of,
+        presentation_wire,
+        project_row,
+    )
+
     sc = scope or live.default_scope(tenant)
+    port = live.kernel.kind_port_for("Story", scope=sc)
+    declared = presentation_of(port) if port is not None else None
+    shape = declared or normalize_presentation(list(_STORY_FALLBACK_FIELDS))
     stories: list[dict[str, Any]] = []
     for d in await _collect(live, sc, "Story", tenant):
         spec = d["spec"]
-        st = spec.get("status")
-        if status and st != status:
+        if status and spec.get("status") != status:
             continue
-        stories.append(
-            {
-                "name": d["name"],
-                "title": spec.get("title"),
-                "status": st,
-                "feature": spec.get("feature"),
-                "priority": spec.get("priority"),
-            }
-        )
-    stories.sort(key=lambda s: (s.get("status") or "", s.get("name") or ""))
-    return {"scope": sc, "count": len(stories), "stories": stories}
+        stories.append(project_row(shape, name=d["name"], spec=spec))
+    # Grouped by the field the Kind CALLS its status and broken by the one it
+    # calls its identifier — so a Kind that renames either is still sorted by
+    # its own vocabulary instead of by a key this function assumed. Both fall
+    # back to the historical names, and a projection carrying neither sorts on
+    # the empty string rather than raising.
+    st_field = shape.field_with_role("status")
+    id_field = shape.field_with_role("identifier")
+    st_key = st_field.field if st_field is not None else "status"
+    id_key = id_field.field if id_field is not None else "name"
+    stories.sort(key=lambda s: (str(s.get(st_key) or ""), str(s.get(id_key) or "")))
+    return {
+        "scope": sc,
+        "count": len(stories),
+        "stories": stories,
+        "presentation": presentation_wire(port) if port is not None else None,
+    }
 
 
 async def get_adr_impl(

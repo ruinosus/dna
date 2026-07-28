@@ -429,6 +429,18 @@
             ],
             "title": "Namespace"
           },
+          "presentation": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Presentation"
+          },
           "proposed_at": {
             "anyOf": [
               {
@@ -1021,6 +1033,24 @@
           "kind": {
             "title": "Kind",
             "type": "string"
+          },
+          "presentation": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Presentation"
           },
           "schema": {
             "additionalProperties": true,
@@ -5720,7 +5750,7 @@
         "summary": "List Authored Kinds"
       },
       "post": {
-        "description": "Author a Kind for the calling workspace — a ``KindDefinition``\ndocument written WITHOUT an approval marker, under the workspace's own\nassigned apiVersion namespace (minted on first use, then stable).\n\nThe response's ``approved`` is always ``false``. An ``approved_by`` in\nthe body is ignored, not honoured and not rejected: a caller that could\napprove its own proposal would make the gate decorative. The document\nrecords ``proposed_by`` — the caller's VERIFIED identity, resolved\nserver-side (``_actor_from_state``) and never read from the body, and\nstamped here because a proposer cannot be back-filled onto a document\nthat never recorded one. 400 for a missing tenant / a Kind name that is\nnot a CamelCase identifier, 403 when the namespace gate refuses the\nwrite (the workspace does not own the target namespace), 503 when the\nnamespace registry scope has not been provisioned in this store.\n\n**Mounted on every auth mode.** The namespace gate decides from\n``tenant``: under ``--auth config`` that is bound to the caller's\nVERIFIED identity, under ``--auth none`` there is no second tenant to\ntake it from, and under ``--auth token`` — a trusted server-to-server\nlane — it is caller-supplied and the CALLER is responsible for having\nresolved and verified it. See the section comment above for that\nboundary in full.",
+        "description": "Author a Kind for the calling workspace — a ``KindDefinition``\ndocument written WITHOUT an approval marker, under the workspace's own\nassigned apiVersion namespace (minted on first use, then stable).\n\n``presentation`` (optional) declares how documents of this Kind READ —\nthe ordered fields, their human labels, their semantic roles, and what\nto hide from a human. It is the SAME block a builtin Kind descriptor\ndeclares, through the same normalizer, and it is what keeps a\ntenant-authored Kind from being second-class: without it, only Kinds\nshipped inside the SDK could tell a surface how to render them. A\nmalformed declaration is a 400 naming the offending key — never a card\nthat breaks later, in front of a user, with nothing to say.\n\nThe response's ``approved`` is always ``false``. An ``approved_by`` in\nthe body is ignored, not honoured and not rejected: a caller that could\napprove its own proposal would make the gate decorative. The document\nrecords ``proposed_by`` — the caller's VERIFIED identity, resolved\nserver-side (``_actor_from_state``) and never read from the body, and\nstamped here because a proposer cannot be back-filled onto a document\nthat never recorded one. 400 for a missing tenant / a Kind name that is\nnot a CamelCase identifier, 403 when the namespace gate refuses the\nwrite (the workspace does not own the target namespace), 503 when the\nnamespace registry scope has not been provisioned in this store.\n\n**Mounted on every auth mode.** The namespace gate decides from\n``tenant``: under ``--auth config`` that is bound to the caller's\nVERIFIED identity, under ``--auth none`` there is no second tenant to\ntake it from, and under ``--auth token`` — a trusted server-to-server\nlane — it is caller-supplied and the CALLER is responsible for having\nresolved and verified it. See the section comment above for that\nboundary in full.",
         "operationId": "author_kind_v1_kinds_post",
         "parameters": [
           {

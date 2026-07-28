@@ -250,6 +250,7 @@ A KindDefinition declaratively defines a brand-new kind without writing Python c
 | `origin` | string |  |  |
 | `overlayable_fields` | array |  |  |
 | `plane` | string |  |  |
+| `presentation` | any |  |  |
 | `prompt_target` | boolean |  |  |
 | `prompt_target_priority` | integer |  |  |
 | `proposed_at` | string |  |  |
