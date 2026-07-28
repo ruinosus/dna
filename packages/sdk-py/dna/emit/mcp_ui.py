@@ -6,7 +6,7 @@ registered ``EmitterPort``: it carries no byte-equal ``build_prompt``
 instruction and is governed by its own byte-stable golden renders. Everything
 here is a pure function of its inputs, so every render is byte-golden.
 
-Two renders live here, one per delivery channel of the memory card:
+One render lives here — the memory card's single delivery channel:
 
 ``memory_list_card_html()`` — the **static MCP Apps template** the runtime
 face (``dna_cli._mcp_server``) registers at ``ui://dna/memory-list`` and
@@ -19,26 +19,16 @@ renders each tool result's ``structured_content``. The template is public and
 cacheable by URI: zero tenant data, zero secret/token in the HTML — data
 reaches the card only via the authenticated session's push, and only ever
 lands in the DOM through ``textContent`` (escaped by construction).
-
-``memory_canvas_card_html(memories)`` — the **data-populated card** for the
-AG-UI shared-state canvas: the emitted LangGraph copilot projects a memory
-read-tool result into the ``memory_card_html`` state key and the DNA console's
-Memória canvas renders it as an ``<iframe srcDoc>``. Data flows inside the
-authenticated AG-UI session state, never a public URI. Every value is
-HTML-escaped — memory content is user data.
 """
 from __future__ import annotations
 
-import html
 from functools import cache
 from importlib import resources
-from typing import Any
 
 __all__ = [
     "UI_MEMORY_LIST_URI",
     "MCP_APP_MIME",
     "memory_list_card_html",
-    "memory_canvas_card_html",
 ]
 
 #: The ``ui://`` scheme resource id for the memory-list card template. Stable —
@@ -69,11 +59,6 @@ _EXT_APPS_BEGIN = "/*! begin vendored @modelcontextprotocol/ext-apps */"
 _EXT_APPS_END = "/*! end vendored @modelcontextprotocol/ext-apps */"
 
 
-def _esc(value: Any) -> str:
-    """HTML-escape any scalar (``None`` → empty string)."""
-    return html.escape("" if value is None else str(value), quote=True)
-
-
 # ── the static MCP Apps template (ui://dna/memory-list) ─────────────────────
 
 
@@ -88,8 +73,7 @@ def _ext_apps_js() -> str:
     )
 
 
-# The shared brand stylesheet of the card (template + canvas render the same
-# visual system; the template adds the states only the live card has).
+# The brand stylesheet of the card, inlined into the template.
 _CARD_CSS = (
     "*{box-sizing:border-box;margin:0;padding:0}"
     "body{font:14px/1.5 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,"
@@ -246,91 +230,3 @@ def memory_list_card_html() -> str:
         "</body></html>"
     )
 
-
-# ── the canvas card (AG-UI shared state → console Memória canvas) ───────────
-
-
-def _item_html(memory: dict[str, Any]) -> str:
-    """One memory → one ``<li>`` card row. The main line is the summary (falling
-    back to the slug ``name``); a meta row carries the timestamp + area + affect;
-    tags render as chips. Everything is escaped — memory content is user data."""
-    title = memory.get("summary") or memory.get("name") or "(untitled memory)"
-    created = memory.get("created_at")
-    area = memory.get("area")
-    affect = memory.get("affect")
-    tags = memory.get("tags") or []
-
-    meta_bits: list[str] = []
-    if created:
-        meta_bits.append(f'<time class="dna-when">{_esc(created)}</time>')
-    if area:
-        meta_bits.append(f'<span class="dna-area">{_esc(area)}</span>')
-    if affect:
-        meta_bits.append(f'<span class="dna-affect">{_esc(affect)}</span>')
-    meta_row = (
-        f'<div class="dna-meta">{"".join(meta_bits)}</div>' if meta_bits else ""
-    )
-
-    chips = "".join(
-        f'<span class="dna-tag">{_esc(t)}</span>' for t in tags if str(t).strip()
-    )
-    tag_row = f'<div class="dna-tags">{chips}</div>' if chips else ""
-
-    return (
-        '<li class="dna-item">'
-        f'<div class="dna-summary">{_esc(title)}</div>'
-        f"{meta_row}"
-        f"{tag_row}"
-        "</li>"
-    )
-
-
-def memory_canvas_card_html(
-    memories: list[dict[str, Any]], *, scope: str | None = None
-) -> str:
-    """Render the memory card **populated with data** as a self-contained HTML
-    document — the AG-UI shared-state canvas render.
-
-    The emitted LangGraph copilot projects a memory read-tool result into the
-    ``memory_card_html`` state key with this function, and the DNA console's
-    Memória canvas renders it as an ``<iframe srcDoc>`` — data flows inside the
-    authenticated AG-UI session state, never a public URI. Fully inline (CSS in
-    a ``<style>`` block, no external assets). Each memory shows its summary,
-    timestamp, area/affect, and tag chips; an empty list renders an honest empty
-    state. Deterministic — the output is a pure function of ``memories`` (+
-    ``scope``), so it is byte-golden. DNA-branded (dark ink ground, teal + amber
-    accents)."""
-    scope_badge = (
-        f'<span class="dna-scope">{_esc(scope)}</span>' if scope else ""
-    )
-    count = len(memories)
-    if memories:
-        body = (
-            '<ul class="dna-list">'
-            + "".join(_item_html(m) for m in memories)
-            + "</ul>"
-        )
-    else:
-        body = (
-            '<p class="dna-empty">No memories yet — anything you ask DNA to '
-            "remember will appear here, and follow you across every client.</p>"
-        )
-    foot = (
-        f'<footer class="dna-foot">{count} '
-        f'{"memory" if count == 1 else "memories"} · '
-        "your context, portable across every AI client</footer>"
-    )
-    return (
-        "<!doctype html>"
-        '<html lang="en"><head><meta charset="utf-8">'
-        '<meta name="viewport" content="width=device-width, initial-scale=1">'
-        "<title>DNA · Memory</title><style>"
-        + _CARD_CSS
-        + "</style></head><body>"
-        '<div class="dna-card">'
-        '<div class="dna-head"><span class="dna-mark">DNA</span>'
-        '<span class="dna-htitle">Memory</span>'
-        f"{scope_badge}</div>"
-        f"{body}{foot}"
-        "</div></body></html>"
-    )
