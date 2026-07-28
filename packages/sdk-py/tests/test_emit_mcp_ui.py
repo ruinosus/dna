@@ -1,6 +1,6 @@
 """``dna.emit.mcp_ui`` — the MCP Apps memory-card surface (SEP-1865).
 
-Two byte-golden renders, one per delivery channel of the memory card:
+One byte-golden render — the memory card's single delivery channel:
 
 ``memory_list_card_html()`` — the STATIC template registered at
 ``ui://dna/memory-list`` and pointed from the ``list_memories``/``recall``
@@ -9,12 +9,8 @@ lib vendored + embedded inline — no CDN, no external URL), data-free
 (the host pushes each tool result's ``structured_content`` into it via
 ``ontoolresult``), public and cacheable by URI.
 
-``memory_canvas_card_html(memories)`` — the data-populated card the emitted
-LangGraph copilot projects into the ``memory_card_html`` AG-UI shared-state
-key (the console's Memória canvas renders it as an ``<iframe srcDoc>``).
-
 Proven here, with the design's mutation discipline:
-1. both renders are byte-equal to frozen goldens;
+1. the render is byte-equal to the frozen golden;
 2. the template contains NO memory data (data baked back in → dies) and NO
    external URL (a CDN planted → dies) — outside the delimited vendored-lib
    region it contains no ``http(s)://`` at all, and the vendored region is
@@ -24,7 +20,13 @@ Proven here, with the design's mutation discipline:
 4. the §3 grep-guard: ``TODO`` / ``deferred`` / ``follow-up`` / ``coming
    soon`` in ``mcp_ui.py`` or in the delivered template surface breaks the
    test (a TODO planted → dies);
-5. canvas-card memory content is HTML-escaped (user data never injects).
+5. the module's public surface is the template and ONLY the template — the
+   retired shared-state canvas render stays retired (re-add it → dies);
+6. the card is themed by the HOST: every design-token reference carries a
+   fallback (strip one → dies), the token names are the host's vocabulary,
+   the surface colours we used to impose are gone, and the zero-token render
+   — the one that proves portability — still has a ground and an ink that
+   differ, with no text rendering onto its own colour.
 """
 from __future__ import annotations
 
@@ -38,39 +40,8 @@ from dna.emit.mcp_ui import (
     UI_MEMORY_LIST_URI,
     _EXT_APPS_BEGIN,
     _EXT_APPS_END,
-    memory_canvas_card_html,
     memory_list_card_html,
 )
-
-# The deterministic fixture the canvas goldens were rendered from — newest-first,
-# as ``list_memories_impl`` returns. The last item omits summary/area/affect/tags
-# to exercise the fallback (summary → slug name) and the meta/tag-row suppression.
-_MEMORIES = [
-    {
-        "name": "prefers-tea",
-        "summary": "Barna prefers tea over coffee in the afternoon",
-        "area": "preferences",
-        "tags": ["drink", "routine"],
-        "affect": "triumph",
-        "created_at": "2026-07-10T14:20:00Z",
-    },
-    {
-        "name": "ships-on-green",
-        "summary": "Ship only on a green CI; the pipeline is the gate",
-        "area": "process",
-        "tags": ["ci", "discipline"],
-        "affect": "resolve",
-        "created_at": "2026-07-08T09:00:00Z",
-    },
-    {
-        "name": "no-summary-item",
-        "summary": None,
-        "area": None,
-        "tags": [],
-        "affect": None,
-        "created_at": None,
-    },
-]
 
 _GOLDENS = pathlib.Path(__file__).parent / "goldens" / "mcp_ui"
 _VENDOR = (
@@ -174,36 +145,192 @@ def test_grep_guard_rule_3():
     assert hit is None, f"rule-3 banned token {hit.group(0)!r} in the template"
 
 
-# ── the canvas card (AG-UI shared state → console Memória canvas) ──────────
+# ── the module's public surface is the MCP Apps template, and ONLY that ─────
 
 
-def test_canvas_card_html_matches_golden():
-    """The populated canvas card is byte-equal to the frozen golden."""
-    assert memory_canvas_card_html(_MEMORIES, scope="concierge") == _golden(
-        "memory_list_card.html"
+def test_module_exposes_only_the_mcp_apps_template_surface():
+    """``mcp_ui`` renders the ``ui://dna/memory-list`` template and nothing else.
+
+    A second, data-populated render used to live here for a shared-state canvas
+    that no console ever consumed, and it cost a full HTML render on EVERY
+    memory read-tool call. It is gone; this guard keeps it gone (re-add it and
+    this dies). ``__all__`` is the whole contract — no private render survives
+    behind it either."""
+    assert mcp_ui_module.__all__ == [
+        "UI_MEMORY_LIST_URI",
+        "MCP_APP_MIME",
+        "memory_list_card_html",
+    ]
+    for retired in ("memory_canvas_card_html", "_item_html", "_esc"):
+        assert not hasattr(mcp_ui_module, retired), (
+            f"{retired!r} is back — the dead canvas renderer must stay deleted"
+        )
+
+
+# ── the card wears the HOST's theme, not ours ──────────────────────────────
+#
+# MCP App hosts inject a design-token system as CSS custom properties into the
+# app iframe and change the VALUES when the user switches theme. Every one of
+# them is optional — "hosts may provide any subset" — so a card that only looks
+# right when every token exists is not portable. These tests hold the card to
+# the zero-token case, which is the one that proves it.
+
+_HOST_TOKEN_FAMILIES = ("--color-", "--font-", "--text-", "--border-radius-", "--shadow-")
+
+#: The brand values the card used to paint its own surface with. They are the
+#: host's business now: ink ground, raised panel, hairline, ink-on-dark text,
+#: muted text — and the amber that was legible on our dark ground only.
+_RETIRED_SURFACE_COLOURS = ("#12161c", "#1a2029", "#252c37", "#e6eaef", "#8b95a3", "#e0a838")
+
+#: The one brand colour that stays, because a host has no opinion about an
+#: accent — the genome teal, on the wordmark and the tag chips.
+_ACCENT = "#2f8570"
+
+
+def _card_css() -> str:
+    """The stylesheet DNA wrote, lifted out of the delivered template."""
+    template = _template_without_vendor(memory_list_card_html())
+    start = template.index("<style>") + len("<style>")
+    return template[start:template.index("</style>", start)]
+
+
+def _var_calls(css: str) -> list[tuple[str, str | None]]:
+    """Every ``var()`` in ``css`` as ``(custom-property, fallback-or-None)``,
+    scanned with paren balancing so a nested ``var()`` inside a fallback is
+    read as part of that fallback rather than truncating it."""
+    calls: list[tuple[str, str | None]] = []
+    i = 0
+    while (i := css.find("var(", i)) != -1:
+        depth, j = 0, i + len("var(") - 1
+        while j < len(css):
+            if css[j] == "(":
+                depth += 1
+            elif css[j] == ")":
+                depth -= 1
+                if depth == 0:
+                    break
+            j += 1
+        inner = css[i + len("var("):j]
+        name, sep, fallback = inner.partition(",")
+        calls.append((name.strip(), fallback.strip() if sep else None))
+        i += len("var(")
+    return calls
+
+
+def _resolve_without_host_tokens(css: str) -> str:
+    """The card as a host that provides NO design tokens renders it: every
+    ``var()`` collapses to its fallback (innermost first, so nested fallbacks
+    resolve too). A reference with no fallback collapses to nothing — which is
+    exactly what the browser does, and what makes the card disappear."""
+    while "var(" in css:
+        before = css
+        for name, fallback in _var_calls(css):
+            call = f"var({name}" + (f", {fallback})" if fallback is not None else ")")
+            if call in css:
+                css = css.replace(call, fallback if fallback is not None else "", 1)
+        if css == before:  # pragma: no cover — a shape the scanner cannot reduce
+            raise AssertionError(f"could not resolve the var() calls in: {css[:200]}")
+    return css
+
+
+def _declarations(css: str, selector: str) -> dict[str, str]:
+    """The property→value map of one rule."""
+    start = css.index(selector + "{") + len(selector) + 1
+    body = css[start:css.index("}", start)]
+    out: dict[str, str] = {}
+    depth = 0
+    prop = ""
+    buf: list[str] = []
+    for ch in body:
+        if ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+        if ch == ":" and depth == 0 and not prop:
+            prop, buf = "".join(buf).strip(), []
+            continue
+        if ch == ";" and depth == 0:
+            if prop:
+                out[prop] = "".join(buf).strip()
+            prop, buf = "", []
+            continue
+        buf.append(ch)
+    if prop:
+        out[prop] = "".join(buf).strip()
+    return out
+
+
+def test_every_host_token_reference_carries_a_fallback():
+    """The rule that decides portability: all host variables are optional and a
+    host may provide any subset, so every reference needs its own fallback.
+    Strip one fallback and this dies — which is the whole point, because that
+    is the bug you cannot see in the host you happen to be testing in."""
+    calls = _var_calls(_card_css())
+    assert calls, "the card references no host design token at all"
+    missing = [name for name, fallback in calls if not fallback]
+    assert not missing, f"host tokens referenced with no fallback: {missing}"
+
+
+def test_the_card_targets_the_host_token_vocabulary():
+    """The tokens are the host's documented names, not names we invented — a
+    private ``--dna-*`` property is one no host will ever set."""
+    names = {name for name, _ in _var_calls(_card_css())}
+    unknown = [n for n in names if not n.startswith(_HOST_TOKEN_FAMILIES)]
+    assert not unknown, f"not host design tokens: {unknown}"
+    # The load-bearing ones: ground, ink and hairline all come from the host.
+    for required in (
+        "--color-background-primary",
+        "--color-text-primary",
+        "--color-text-secondary",
+        "--color-border-primary",
+        "--font-sans",
+    ):
+        assert required in names, f"the card does not read {required}"
+
+
+def test_the_card_no_longer_paints_its_own_surface():
+    """A card that paints its own ground and ink inside someone else's chat
+    reads as an advertisement, not as part of the product. The surface colours
+    are gone; the accent — which a host has no opinion about — stays."""
+    template = memory_list_card_html().lower()
+    for retired in _RETIRED_SURFACE_COLOURS:
+        assert retired not in template, f"the card still hardcodes {retired}"
+    assert _ACCENT in template, "the brand accent was thrown out with the surface"
+
+
+def test_zero_token_render_stays_legible():
+    """The acceptance criterion, computed rather than eyeballed: with NOT ONE
+    host variable set, the card still has a ground and an ink that differ.
+
+    Every fallback resolves, nothing collapses to empty, and each rule's text
+    colour differs from the surface it sits on — so no text can render onto
+    its own colour. The ground/ink pair falls back to the UA's own system
+    colours, which are contrasting by definition and follow the user's light
+    or dark preference through ``color-scheme``."""
+    css = _resolve_without_host_tokens(_card_css())
+
+    assert ":" in css and "var(" not in css
+    body = _declarations(css, "body")
+    assert body["background"] == "Canvas"
+    assert body["color"] == "CanvasText"
+    assert body["background"] != body["color"], "ground and ink resolve to the same value"
+    assert "light dark" in _declarations(css, ":root")["color-scheme"], (
+        "without color-scheme the system-colour fallback is locked to light"
     )
 
-
-def test_empty_canvas_card_matches_golden():
-    """An empty memory list renders the honest empty-state golden."""
-    assert memory_canvas_card_html([], scope=None) == _golden("memory_list_empty.html")
-
-
-def test_canvas_card_is_self_contained_and_branded():
-    """No external asset (the console renders it in an ``<iframe srcDoc>``) and
-    DNA-branded ink/teal/amber."""
-    html = memory_canvas_card_html(_MEMORIES, scope="concierge")
-    assert "http://" not in html and "https://" not in html  # no external fetch.
-    assert "src=" not in html  # no external image/script.
-    assert "#12161c" in html and "#2f8570" in html and "#e0a838" in html  # brand.
-
-
-def test_canvas_memory_content_is_escaped():
-    """User memory content is HTML-escaped — it cannot break markup or inject."""
-    hostile = [
-        {"summary": "<script>alert(1)</script>", "tags": ["<b>x</b>"], "created_at": "t"}
-    ]
-    html = memory_canvas_card_html(hostile, scope="s&s")
-    assert "<script>alert(1)</script>" not in html
-    assert "&lt;script&gt;alert(1)&lt;/script&gt;" in html
-    assert "s&amp;s" in html  # the scope badge is escaped too.
+    # No text renders onto its own surface: for every rule that sets a colour,
+    # that colour differs from the nearest ground behind it.
+    grounds = {
+        "body": body["background"],
+        ".dna-card": _declarations(css, ".dna-card")["background"],
+    }
+    for selector in (
+        ".dna-mark", ".dna-scope", ".dna-summary", ".dna-meta", ".dna-tag",
+        ".dna-empty", ".dna-foot",
+    ):
+        rule = _declarations(css, selector)
+        colour = rule.get("color")
+        assert colour, f"{selector} sets no colour"
+        assert colour.strip(), f"{selector} resolves its colour to nothing — invisible"
+        ground = rule.get("background", grounds[".dna-card"])
+        assert colour != ground, f"{selector} renders its text onto its own colour"

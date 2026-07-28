@@ -21,7 +21,15 @@ Proven end-to-end through the REAL FastMCP protocol (in-memory ``Client``):
 4. **no pre-spec residue** — the tool RESULT carries no UI metadata (the card
    rides the declaration, not the result);
 5. **no secret in the surface** — the returned payload and the served
-   template carry no bearer / token / tenant header.
+   template carry no bearer / token / tenant header;
+6. **the extension negotiation** — the server DECLARES the MCP Apps extension
+   with the mimeType it actually serves, and it CHECKS the client's own
+   declaration per call before advertising a UI-enabled tool. The check is
+   tri-state and honest: a client that declared support keeps the pointer, a
+   client that spoke and did NOT declare loses it, and a runtime that tells us
+   nothing leaves the (inert) pointer alone rather than guessing. In every
+   case the textual ``content`` is byte-identical — the UI declaration can
+   never degrade the text answer.
 """
 from __future__ import annotations
 
@@ -212,11 +220,35 @@ def test_list_memories_result_mirrors_data_and_carries_no_ui_meta(dna_dir):
 # ── 3. the declaration carries the template pointer (SEP-1865) ─────────────
 
 
-def test_memory_tool_declarations_point_the_template(dna_dir):
+def _declare_ui_extension(monkeypatch):
+    """Make the in-memory client announce the MCP Apps extension.
+
+    The MCP client SDK hard-codes its ``ClientCapabilities`` at ``initialize``
+    with no seam for an extension, so the test injects the ``extensions`` extra
+    the same way a UI-capable host sends it on the wire."""
+    import mcp.types as mt
+
+    original = mt.ClientCapabilities
+
+    def with_ui(**kwargs):
+        return original(
+            **kwargs,
+            extensions={M.UI_EXTENSION_ID: {"mimeTypes": [M.MCP_APP_MIME]}},
+        )
+
+    monkeypatch.setattr(mt, "ClientCapabilities", with_ui)
+
+
+def test_memory_tool_declarations_point_the_template(dna_dir, monkeypatch):
     """``tools/list`` shows ``list_memories`` AND ``recall`` pointing the
     ``ui://dna/memory-list`` template in their own declaration — the pointer a
-    host follows to prefetch the card. Pointer removed → this dies."""
+    host follows to prefetch the card. Pointer removed → this dies.
+
+    The client here DECLARES the MCP Apps extension, which is what earns it the
+    pointer (SEP-1865: check the client before advertising a UI-enabled tool)."""
     from fastmcp import Client
+
+    _declare_ui_extension(monkeypatch)
 
     async def scenario():
         server = M.build_server(base_dir=str(dna_dir))
@@ -233,10 +265,12 @@ def test_memory_tool_declarations_point_the_template(dna_dir):
     asyncio.run(scenario())
 
 
-def test_non_memory_tools_do_not_point_the_template(dna_dir):
+def test_non_memory_tools_do_not_point_the_template(dna_dir, monkeypatch):
     """The pointer is deliberate, not a blanket: a non-memory tool (``remember``,
-    a write) declares NO UI template."""
+    a write) declares NO UI template even to a UI-capable client."""
     from fastmcp import Client
+
+    _declare_ui_extension(monkeypatch)
 
     async def scenario():
         server = M.build_server(base_dir=str(dna_dir))
@@ -273,3 +307,172 @@ def test_memory_list_template_resource_is_served(dna_dir):
             assert forbidden not in lowered, f"{forbidden!r} leaked into the template"
 
     asyncio.run(scenario())
+
+
+# ── 5. the extension negotiation (SEP-1865, final) ─────────────────────────
+
+
+def test_server_declares_the_ui_extension_with_the_mimetype_it_serves():
+    """The server's own capabilities announce MCP Apps support in the
+    ``extensions`` map, carrying the profile mimeType it actually serves.
+
+    FastMCP announces the extension id with an EMPTY config; the final spec's
+    shape is ``{"mimeTypes": ["text/html;profile=mcp-app"]}``, and a host that
+    filters on the advertised mimeTypes would never prefetch our card without
+    it. Drop the enrichment → this dies."""
+    from mcp.server.lowlevel.server import NotificationOptions
+
+    server = M.build_server(base_dir=str(_BASE))
+    caps = server._mcp_server.get_capabilities(NotificationOptions(), {})
+    extensions = (caps.model_extra or {}).get("extensions") or {}
+
+    assert M.UI_EXTENSION_ID in extensions, "the MCP Apps extension is not declared"
+    assert extensions[M.UI_EXTENSION_ID] == {"mimeTypes": [M.MCP_APP_MIME]}
+
+
+def test_client_ui_extension_reads_the_per_request_meta_first():
+    """The 2026-07-28 core removed ``initialize`` and sessions: protocol
+    version, client info and capabilities travel in ``_meta`` on EVERY request.
+    The resolver reads that first, so a session-less client is still heard —
+    and it wins over a stale handshake."""
+    meta = {"capabilities": {"extensions": {M.UI_EXTENSION_ID: {}}}}
+    assert M.client_ui_extension(request_meta=meta, session_capabilities=None) is True
+
+    # Same shape, extension absent → a definite NO, not a shrug.
+    meta_without = {"capabilities": {"extensions": {"io.example/other": {}}}}
+    assert M.client_ui_extension(
+        request_meta=meta_without, session_capabilities=None) is False
+
+    # The per-request map is authoritative over the handshake.
+    assert M.client_ui_extension(
+        request_meta=meta_without,
+        session_capabilities={"extensions": {M.UI_EXTENSION_ID: {}}},
+    ) is False
+
+
+def test_client_ui_extension_falls_back_to_the_initialize_handshake():
+    """On the protocol the installed runtime still speaks (2025-11-25) the
+    capability map arrives once, at ``initialize``. With no per-request ``_meta``
+    the resolver reads the handshake."""
+    assert M.client_ui_extension(
+        request_meta=None,
+        session_capabilities={"extensions": {M.UI_EXTENSION_ID: {}}},
+    ) is True
+    assert M.client_ui_extension(
+        request_meta=None, session_capabilities={"roots": {}}) is False
+
+
+def test_client_ui_extension_says_unknown_rather_than_guessing():
+    """The honest third answer. When neither channel carries a capability map
+    the resolver returns ``None`` — it does NOT answer "yes", which would be a
+    fake check that merely looks conformant, and it does not answer "no", which
+    would silently blind a capable host."""
+    assert M.client_ui_extension(request_meta=None, session_capabilities=None) is None
+    assert M.client_ui_extension(
+        request_meta={"progressToken": 1}, session_capabilities=None) is None
+
+
+def test_a_client_that_declares_nothing_is_not_offered_the_ui_pointer(dna_dir):
+    """The SEP-1865 SHOULD, applied per call: a client that completes the
+    handshake WITHOUT the MCP Apps extension is a client that cannot render,
+    so ``tools/list`` does not advertise a UI-enabled tool to it.
+
+    (The stock MCP client SDK sends no ``extensions`` — this is the real,
+    unpatched wire behaviour of every host that has not adopted the extension.)
+    Remove the check → this dies."""
+    from fastmcp import Client
+
+    async def scenario():
+        server = M.build_server(base_dir=str(dna_dir))
+        async with Client(server) as client:
+            tools = {t.name: t for t in await client.list_tools()}
+
+        for name in ("list_memories", "recall"):
+            meta = tools[name].meta or {}
+            assert not (meta.get("ui") or {}).get("resourceUri"), (
+                f"{name} advertised its UI template to a client that cannot render it"
+            )
+            # The tool itself is still there — we withhold the CARD, never the tool.
+            assert tools[name].description
+
+    asyncio.run(scenario())
+
+
+def test_withholding_the_pointer_never_degrades_the_text_answer(dna_dir, monkeypatch):
+    """The non-negotiable: ``content`` is REQUIRED and ``structuredContent`` is
+    OPTIONAL, so the capability check may only ever touch the DECLARATION. The
+    same call to a UI-blind client returns bytes identical to the frozen
+    pre-feature baseline, with the data mirrored in ``structured_content``."""
+    for tool, args, fixture in (
+        ("list_memories", {"scope": _SCOPE}, "list_memories.content.txt"),
+        ("recall", {"query": "tea", "scope": _SCOPE}, "recall.content.txt"),
+    ):
+        result = _call_with_pinned_data(dna_dir, monkeypatch, tool, args)
+        text_blocks = [b for b in result.content if getattr(b, "text", None)]
+        assert len(text_blocks) == 1, (
+            "the UI declaration replaced the content with a placeholder — "
+            "the house rule is merge, never replace"
+        )
+        assert text_blocks[0].text.encode("utf-8") == (_FIXTURES / fixture).read_bytes()
+        assert json.loads(text_blocks[0].text) == result.structured_content
+
+
+def test_the_template_is_served_to_any_client(dna_dir):
+    """The capability check gates the DECLARATION only. The ``ui://`` resource
+    stays readable by anyone who asks — it is public, data-free and cacheable,
+    and gating it would break a host that prefetches before it declares."""
+    from fastmcp import Client
+
+    async def scenario():
+        server = M.build_server(base_dir=str(dna_dir))
+        async with Client(server) as client:  # declares no extension
+            contents = await client.read_resource("ui://dna/memory-list")
+        assert contents and contents[0].mimeType == M.MCP_APP_MIME
+
+    asyncio.run(scenario())
+
+
+def test_an_unknown_client_keeps_the_inert_pointer(dna_dir):
+    """The stated gap, pinned as behaviour. When the runtime surfaces no
+    capability map at all the middleware leaves the pointer alone: it is inert
+    metadata a non-supporting host ignores, and stripping on a shrug would
+    break every host whose declaration this runtime cannot yet surface.
+
+    Flip the middleware to strip on ``None`` and this dies."""
+    middleware = M._ui_capability_middleware()
+
+    class _Tool:
+        meta = {"ui": {"resourceUri": "ui://dna/memory-list"}}
+
+    class _Context:
+        fastmcp_context = None  # no session, no request — nothing to read.
+
+    async def call_next(_context):
+        return [_Tool()]
+
+    tools = asyncio.run(middleware.on_list_tools(_Context(), call_next))
+    assert tools[0].meta == {"ui": {"resourceUri": "ui://dna/memory-list"}}
+
+
+def test_withholding_for_one_client_does_not_poison_the_next(dna_dir, monkeypatch):
+    """The tool objects live in the server's registry and are shared by every
+    connected client. Withholding the card from a UI-blind client must copy,
+    never mutate — otherwise the FIRST such client permanently strips the
+    pointer for everyone after it. Strip in place and this dies."""
+    from fastmcp import Client
+
+    server = M.build_server(base_dir=str(dna_dir))
+
+    async def list_tools():
+        async with Client(server) as client:
+            return {t.name: t for t in await client.list_tools()}
+
+    blind = asyncio.run(list_tools())
+    assert not ((blind["list_memories"].meta or {}).get("ui") or {}).get("resourceUri")
+
+    _declare_ui_extension(monkeypatch)
+    capable = asyncio.run(list_tools())
+    ui = (capable["list_memories"].meta or {}).get("ui") or {}
+    assert ui.get("resourceUri") == "ui://dna/memory-list", (
+        "the UI-blind listing stripped the shared registry, not its own copy"
+    )

@@ -97,6 +97,7 @@ from dna.application.runtime import (  # sdlc_digest_impl / the scope-grant bind
     _collect,
     workspace_granted_scopes,
 )
+from dna.emit.mcp_ui import MCP_APP_MIME  # the MCP Apps profile mimeType we serve
 from dna.tenancy.enforcement import enforcement_boot_message
 
 
@@ -237,6 +238,184 @@ def _with_memory_card(data: dict[str, Any]) -> Any:
     )
 
 
+# ── MCP Apps: the extension negotiation (SEP-1865) ─────────────────────────
+#
+# The extension is negotiated in TWO directions and this section owns both.
+#
+# OUTBOUND — what WE declare. A server announces MCP Apps support in the
+# `extensions` capability map, and the entry carries the mimeTypes it can
+# serve. The runtime declares the extension id with an EMPTY config, so we
+# enrich it with the one profile mimeType this server actually serves.
+#
+# INBOUND — what the CLIENT declared. The spec says a server SHOULD check the
+# client's capability before registering UI-enabled tools. WHERE that
+# declaration lives changed with the 2026-07-28 core, which removed
+# `initialize` and sessions: protocol version, client info and capabilities
+# now travel in `_meta` on EVERY request, so the check is per-call, not
+# per-boot. The runtime this build pins still speaks the older handshake,
+# where the same map arrives once at `initialize`. We read BOTH, per call,
+# newest first — and we answer `None` when neither channel says anything,
+# because a check that cannot see the client must say so rather than assume.
+#
+# The check gates the DECLARATION only. `content` is REQUIRED by the spec and
+# `structuredContent` is OPTIONAL, so withholding the card never touches the
+# textual answer — a client that cannot render still reads the same bytes.
+
+#: The MCP Apps extension id, as it appears in the capability map.
+UI_EXTENSION_ID = "io.modelcontextprotocol/ui"
+
+
+def ui_extension_capability() -> dict[str, Any]:
+    """The server's OWN entry in the ``extensions`` capability map: MCP Apps
+    support, qualified by the profile mimeType we actually serve.
+
+    ``MCP_APP_MIME`` is imported from the SDK surface that RENDERS those
+    resources, so the mimeType we DECLARE and the one we SERVE cannot drift."""
+    return {"mimeTypes": [MCP_APP_MIME]}
+
+
+def _as_mapping(value: Any) -> dict[str, Any] | None:
+    """A plain dict view of a mapping OR of a pydantic model (extras included).
+
+    Both channels hand us models whose schema predates the fields we are
+    reading — `_meta` and `ClientCapabilities` are both `extra="allow"` — so a
+    field the installed models do not know still arrives, in `model_extra`."""
+    if value is None:
+        return None
+    if isinstance(value, dict):
+        return value
+    dump = getattr(value, "model_dump", None)
+    if callable(dump):
+        try:
+            return dump(by_alias=True, exclude_none=True)
+        except Exception:  # noqa: BLE001 — a model we cannot read is "no answer"
+            return None
+    return None
+
+
+def _ui_in_extension_map(capabilities: dict[str, Any]) -> bool:
+    """Does this capability map declare the MCP Apps extension?"""
+    extensions = capabilities.get("extensions")
+    return isinstance(extensions, dict) and UI_EXTENSION_ID in extensions
+
+
+def client_ui_extension(
+    *, request_meta: Any = None, session_capabilities: Any = None
+) -> bool | None:
+    """Did the client declare the MCP Apps extension? Tri-state, on purpose.
+
+    ``True``  — it declared the extension: advertise the card.
+    ``False`` — it sent its capability map and the extension is NOT in it: it
+                cannot render, so do not advertise.
+    ``None``  — neither channel carried a capability map. We do not know, and
+                we say so; answering "yes" here would be a fake check that
+                merely looks conformant, and answering "no" would silently
+                blind a host that can in fact render.
+
+    ``request_meta`` is the per-request ``_meta`` (the 2026-07-28 shape, where
+    capabilities ride every request); ``session_capabilities`` is the map from
+    the ``initialize`` handshake (the shape the pinned runtime still speaks).
+    The per-request map WINS — it is the fresher statement of the same fact."""
+    meta = _as_mapping(request_meta)
+    if meta is not None:
+        caps = _as_mapping(meta.get("capabilities"))
+        if caps is not None:
+            return _ui_in_extension_map(caps)
+        if isinstance(meta.get("extensions"), dict):
+            return _ui_in_extension_map(meta)
+
+    caps = _as_mapping(session_capabilities)
+    if caps is not None:
+        return _ui_in_extension_map(caps)
+    return None
+
+
+def client_ui_extension_from_context(ctx: Any) -> bool | None:
+    """:func:`client_ui_extension`, sourced from a live FastMCP context.
+
+    Never raises: a shape we cannot read is "no answer" (``None``), which is
+    the reading that leaves the client's experience unchanged."""
+    if ctx is None:
+        return None
+    request_meta = None
+    session_capabilities = None
+    try:
+        rc = ctx.request_context
+    except Exception:  # noqa: BLE001 — outside a request there is nothing to read
+        rc = None
+    if rc is not None:
+        request_meta = getattr(rc, "meta", None)
+        params = getattr(getattr(rc, "session", None), "_client_params", None)
+        session_capabilities = getattr(params, "capabilities", None)
+    return client_ui_extension(
+        request_meta=request_meta, session_capabilities=session_capabilities,
+    )
+
+
+def _tool_without_ui_meta(tool: Any) -> Any:
+    """A COPY of ``tool`` with the ``ui`` block dropped from its meta.
+
+    A copy, never a mutation: the tool objects belong to the server's registry
+    and are shared by every connected client — stripping in place would
+    withhold the card from a UI-capable client because a UI-blind one asked
+    first."""
+    meta = getattr(tool, "meta", None)
+    if not isinstance(meta, dict) or "ui" not in meta:
+        return tool
+    trimmed = {k: v for k, v in meta.items() if k != "ui"}
+    return tool.model_copy(update={"meta": trimmed or None})
+
+
+def _ui_capability_middleware() -> Any:
+    """Middleware applying the inbound half of the negotiation at ``tools/list``.
+
+    FastMCP registers tools at build time, so "check before registering a
+    UI-enabled tool" lands, for this runtime, on the listing: a client that
+    told us it cannot render is not offered the pointer. THE GAP, stated
+    plainly: when the client tells us nothing (``None``) we leave the pointer
+    in place — it is inert metadata a non-supporting host ignores, and
+    stripping on a shrug would break every host whose declaration this runtime
+    cannot yet surface."""
+    from fastmcp.server.middleware import Middleware
+
+    class UiCapabilityMiddleware(Middleware):
+        async def on_list_tools(self, context: Any, call_next: Any) -> Any:
+            tools = await call_next(context)
+            declared = client_ui_extension_from_context(context.fastmcp_context)
+            if declared is not False:
+                return tools
+            return [_tool_without_ui_meta(t) for t in tools]
+
+    return UiCapabilityMiddleware()
+
+
+def _declare_ui_extension(server: Any) -> None:
+    """Enrich the server's declared MCP Apps extension with our mimeTypes.
+
+    The runtime already puts ``{UI_EXTENSION_ID: {}}`` in the capability map;
+    the spec's shape names the mimeTypes, and a host that filters on them
+    would never prefetch a card from a server that declared none. Wrapping the
+    capability builder keeps every other capability the runtime computes."""
+    low_level = getattr(server, "_mcp_server", None)
+    build = getattr(low_level, "get_capabilities", None)
+    if build is None:  # pragma: no cover — a runtime without the seam
+        logger.warning(
+            "MCP Apps: cannot declare the %s extension mimeTypes — this "
+            "runtime exposes no capability seam", UI_EXTENSION_ID,
+        )
+        return
+
+    def get_capabilities(*args: Any, **kwargs: Any) -> Any:
+        caps = build(*args, **kwargs)
+        extensions = dict((caps.model_extra or {}).get("extensions") or {})
+        extensions[UI_EXTENSION_ID] = {
+            **(extensions.get(UI_EXTENSION_ID) or {}), **ui_extension_capability(),
+        }
+        return caps.model_copy(update={"extensions": extensions})
+
+    low_level.get_capabilities = get_capabilities
+
+
 # ── FastMCP wiring ─────────────────────────────────────────────────────────
 
 
@@ -319,7 +498,7 @@ def build_server(
     # the data, byte-identical.
     from fastmcp.apps import AppConfig
 
-    from dna.emit.mcp_ui import MCP_APP_MIME, UI_MEMORY_LIST_URI, memory_list_card_html
+    from dna.emit.mcp_ui import UI_MEMORY_LIST_URI, memory_list_card_html
 
     memory_card_app = AppConfig(resource_uri=UI_MEMORY_LIST_URI)
 
@@ -1227,6 +1406,12 @@ def build_server(
             server, graph_config, guard=_graph_guard,
         ):
             print(f"[dna-mcp] capability tool wired: {n}")  # noqa: T201 — boot log
+
+    # MCP Apps negotiation (SEP-1865), both directions — see the section above:
+    # we DECLARE the extension with the mimeType we serve, and we CHECK the
+    # client's own declaration per call before advertising a UI-enabled tool.
+    _declare_ui_extension(server)
+    server.add_middleware(_ui_capability_middleware())
 
     return server
 
