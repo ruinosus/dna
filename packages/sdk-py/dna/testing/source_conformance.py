@@ -378,6 +378,67 @@ async def _case_if_absent_is_an_atomic_create(ctx: _Ctx) -> None:
     )
 
 
+async def _case_if_match_refuses_a_stale_update(ctx: _Ctx) -> None:
+    """An ``if_match`` save UPDATES the document the caller read, or raises — it
+    never lands on a document that moved underneath (i-083).
+
+    A conformance case and not an adapter test for the same reason ``if_absent``
+    is one: the guarantee is what ``approve_kind_impl`` leans on so an approval
+    cannot be stamped onto a shape nobody reviewed. An adapter that declared
+    ``if_match`` and upserted anyway would hand back a promise it does not keep,
+    silently, on exactly the path whose whole job is to be trustworthy.
+
+    Three things are asserted, and the last two are what stop this passing for
+    the wrong reason: a MATCHING token must go through (an adapter that refused
+    everything would satisfy the first assertion alone), and the refused write
+    must have changed NOTHING (an adapter that raised after writing would too).
+    """
+    from dna.kernel.errors import StaleDocumentWrite
+    from dna.kernel.etag import spec_etag
+
+    await ctx.seed_fixture()
+    raw = {
+        "apiVersion": "github.com/ruinosus/dna/sdlc/v1", "kind": "Story",
+        "metadata": {"name": "s-kit-guard"},
+        "spec": {"title": "as read", "priority": 0},
+    }
+    await _aw(ctx.source.save_document(
+        FIXTURE_SCOPE, "Story", "s-kit-guard", raw))
+    await ctx.publish("Story", "s-kit-guard")
+    token = spec_etag(raw["spec"])
+
+    # 1. the token still matches → the update goes through.
+    moved = {**raw, "spec": {"title": "second writer", "priority": 1}}
+    await _aw(ctx.source.save_document(
+        FIXTURE_SCOPE, "Story", "s-kit-guard", moved, if_match=token))
+    await ctx.publish("Story", "s-kit-guard")
+
+    # 2. the same (now stale) token → refused. This is the lost update: a
+    #    caller still holding the first read is about to erase writer two.
+    stale = {**raw, "spec": {"title": "the lost update", "priority": 2}}
+    try:
+        await _aw(ctx.source.save_document(
+            FIXTURE_SCOPE, "Story", "s-kit-guard", stale, if_match=token))
+    except StaleDocumentWrite:
+        pass
+    else:  # pragma: no cover — the failure being tested
+        raise AssertionError(
+            "if_match save against a stale token did NOT raise "
+            "StaleDocumentWrite — the adapter declares a guarded update it "
+            "does not perform"
+        )
+
+    # 3. the refused write wrote nothing.
+    docs = await _aw(ctx.source.load_all(FIXTURE_SCOPE, None))
+    kept = [d for d in docs if _doc_name(d) == "s-kit-guard"]
+    assert kept, "the guarded document vanished"
+    spec = (kept[0].get("spec") if isinstance(kept[0], dict) else {}) or {}
+    assert spec.get("title") == "second writer", (
+        "the refused if_match write overwrote the document it was refusing to "
+        f"replace (title is {spec.get('title')!r})"
+    )
+
+
 async def _case_delete_removes(ctx: _Ctx) -> None:
     await ctx.seed_fixture()
     await _aw(ctx.source.delete_document(FIXTURE_SCOPE, "Story", "s-alpha"))
@@ -496,6 +557,11 @@ async def _case_declared_write_kwargs_accepted(ctx: _Ctx) -> None:
         # False, not True: this case proves the kwarg is ACCEPTED, and the
         # atomic behaviour has its own case above.
         "if_absent": False,
+        # ``None``, for that same reason and one more: any other value IS the
+        # guard, and the document below does not exist yet — so a real token
+        # would be refused as stale and this case would report an accepted
+        # kwarg as a rejected one. The behaviour has its own case below.
+        "if_match": None,
     }
     save_kwargs = {k: values[k] for k in ctx.caps.write_kwargs}
     raw = {
@@ -731,6 +797,9 @@ _CASES: list[tuple[str, str, Callable[[_Ctx], Any], Callable[[_Ctx], bool]]] = [
     ("if_absent_is_an_atomic_create", "writable",
      _case_if_absent_is_an_atomic_create,
      lambda c: c.writable and "if_absent" in c.caps.write_kwargs),
+    ("if_match_refuses_a_stale_update", "writable",
+     _case_if_match_refuses_a_stale_update,
+     lambda c: c.writable and "if_match" in c.caps.write_kwargs),
     ("delete_removes", "writable", _case_delete_removes, _writable),
     ("delete_by_api_version_removes", "writable",
      _case_delete_by_api_version_removes,

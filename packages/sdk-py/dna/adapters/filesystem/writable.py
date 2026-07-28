@@ -280,6 +280,7 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
         write_class: str = "substantive",
         version_retention: int | None = None,
         if_absent: bool = False,
+        if_match: str | None = None,
     ) -> str:
         # version_retention rides the WritableSourcePort contract for parity; the FS
         # adapter has no version-history table (each write replaces the file in
@@ -289,6 +290,46 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
         # emits no events, so it accepts and ignores it. (s-buswrite-class-substantive-cue)
         _validate_layer_segments(layer)
         _validate_tenant_path(tenant)
+        if if_match is not None:
+            # i-083 — the GUARDED update. Read the document back FROM DISK and
+            # refuse if it is no longer the one the caller read.
+            #
+            # Through ``load_one`` deliberately: it is the adapter's own read
+            # path, so it resolves all three storage shapes this method can
+            # write (the root manifest, a writer-backed bundle DIRECTORY, a
+            # plain YAML file) with no second copy of the layout to keep in
+            # step — and it touches the filesystem every time, with no cache
+            # between it and the bytes. That last part is the entire reason the
+            # guard is evaluated here and not in the calling use-case.
+            #
+            # ``_query_readers()`` and NOT ``_effective_readers()``: the latter
+            # is the reader snapshot taken at ``attach_kernel`` time, BEFORE
+            # extensions register their generic bundle readers, so it cannot see
+            # a bundle-format Kind at all. With it, every guarded write to a
+            # KindDefinition / Agent / Skill would read ``None``, be judged
+            # "deleted" and be refused — a guard that refuses everything is not
+            # a guard, and it would have refused i-083's own approval path.
+            #
+            # HONEST LIMIT: read-then-write, not an atomic compare-and-swap. It
+            # closes the scenario i-083 measured — a STALE READ, seconds wide,
+            # the width of a cache TTL — and it narrows without shutting the
+            # true simultaneity window between this check and the write below.
+            # The filesystem offers no transaction to hold across the pair; the
+            # SQL adapter, which does, runs the same check INSIDE its write
+            # transaction. This is the dev-mode store.
+            #
+            # Cost: ``load_one`` projects from ``load_all``, so a guarded write
+            # is O(scope) — the same complexity every other granular read on
+            # this adapter already pays, and only on writes that ask for the
+            # guarantee.
+            from dna.kernel.etag import check_if_match
+            check_if_match(
+                await self.load_one(
+                    scope, kind, name,
+                    readers=self._query_readers(), tenant=tenant,
+                ),
+                if_match, scope=scope, kind=kind, name=name, tenant=tenant,
+            )
         # i-080: route by the DOCUMENT's own apiVersion, not by the bare Kind
         # name — two workspaces may each own a Kind called `Deal`.
         subdir = self._subdir_for(

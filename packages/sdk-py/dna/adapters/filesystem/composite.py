@@ -292,15 +292,23 @@ class CompositeFilesystemSource(WritableSourcePort):
         write_class: str = "substantive",
         version_retention: int | None = None,
         if_absent: bool = False,
+        if_match: str | None = None,
     ) -> str:
         # write_class + version_retention ride the WritableSourcePort
         # contract (F2 T7 conformance) — delegated to the child,
         # which (FS) accepts and ignores them (no version-history table).
+        #
+        # ``if_match`` (i-083) forwards rather than being re-implemented here:
+        # this source routes per SCOPE, and a guard has to compare against the
+        # document as the STORE holds it — which is whatever the routed child
+        # holds. Comparing here would mean this composite reading through its own
+        # read path while the child writes through another, i.e. two answers to
+        # "what is stored". The child that owns the scope owns the verdict.
         return await self._route(scope).save_document(
             scope, kind, name, raw,
             author=author, tenant=tenant, layer=layer,
             write_class=write_class, version_retention=version_retention,
-            if_absent=if_absent,
+            if_absent=if_absent, if_match=if_match,
         )
 
     async def delete_document(

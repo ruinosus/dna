@@ -157,36 +157,27 @@ _MAX_IMPORT_BYTES = _int_env("DNA_API_MAX_IMPORT_BYTES", 10 * 1024 * 1024)
 _MAX_IMPORT_DOCS = _int_env("DNA_API_MAX_IMPORT_DOCS", 5000)
 
 
-async def list_memories_impl(
-    live: Any, scope: str | None = None, tenant: str | None = None
-) -> dict[str, Any]:
-    """List the tenant's memory (``Engram``) — base + the tenant's OWN
-    overlay, per the #83 isolation. Tenant-aware ``kernel.query`` returns exactly
-    that set (never another tenant's overlay). Projects each to the portal card
-    surface (name/summary/area/tags/created_at)."""
-    sc = scope or live.base_scope
-    memories: list[dict[str, Any]] = []
-    async for raw in live.kernel.query(sc, _MEMORY_KIND, tenant=tenant):
-        if not isinstance(raw, dict):
-            continue
-        meta = raw.get("metadata") or {}
-        spec = raw.get("spec") or {}
-        name = (meta.get("name") if hasattr(meta, "get") else None) or raw.get("name")
-        # Bi-temporal courtesy: a forgotten (valid_to in the past) memory is a
-        # tombstone — hide it from the roster the same way recall drops it.
-        if spec.get("valid_to"):
-            continue
-        memories.append(
-            {
-                "name": name,
-                "summary": spec.get("summary"),
-                "area": spec.get("area"),
-                "tags": list(spec.get("tags") or []),
-                "created_at": spec.get("created_at"),
-            }
-        )
-    memories.sort(key=lambda m: m["name"] or "")
-    return {"scope": sc, "tenant": tenant, "memories": memories}
+# ``list_memories_impl`` DELETED here (i-079) — this face now delegates to
+# ``dna.application.list_memories_impl``, the one every other memory surface
+# already used.
+#
+# It was a copy of the core's, and it had drifted in the way copies do. The
+# measured divergence: the copy dropped a memory carrying ANY ``valid_to``,
+# while the core and ``recall`` decide with ``currently_valid``, which KEEPS a
+# memory whose expiry has not arrived. So a memory with a future expiry showed
+# up under ``GET /v1/memories/personal`` — a sibling route of this same app,
+# which already delegated — and was missing from ``GET /v1/memories``. One
+# screen, two answers, and neither of them wrong on its own terms.
+#
+# Reachable today rather than in principle: ``dna.memory.interchange`` writes an
+# imported ``temporal.validUntil`` through verbatim as ``spec.valid_to``, and
+# ``import_memories_impl`` defaults to ``memory_scope="workspace"``.
+#
+# Three adjacent drifts go with it, each invisible until you looked for it: no
+# ``affect`` (stored on every Engram, and what a memory card renders), no
+# per-item ``personal`` flag (i-068), and a sort by NAME — which for a
+# hash-prefixed slug is arbitrary — where every other memory surface answers
+# newest-first.
 
 
 class MemoryNotFound(Exception):
@@ -367,6 +358,7 @@ def build_app(
         write_bundle_entry_impl,
     )
     from dna.application.live import parse_scope_grants
+    from dna.kernel.errors import StaleDocumentWrite
     from dna.kernel.protocols import LayerPolicyViolationError
     from dna.tenancy import Identity
     from dna_cli._mcp_server import boot_live
@@ -1161,6 +1153,19 @@ def build_app(
             )
         except AuthoredKindNotFound as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from None
+        except StaleDocumentWrite as exc:
+            # i-083 — the Kind was edited between the reviewer's read and this
+            # approval, so the write was REFUSED rather than allowed to stamp an
+            # approval onto a shape nobody saw. 409 and not 400: the request was
+            # perfectly well formed and it is the STATE that moved, which is also
+            # what tells the client that retrying the identical call is the wrong
+            # move and re-reading first is the right one.
+            #
+            # BEFORE the ``ValueError`` arm below, which it would otherwise fall
+            # into — ``StaleDocumentWrite`` is deliberately a ``ValueError`` so
+            # that faces which already relay write-path vetoes surface it at all
+            # — and be reported as the caller's own malformed request.
+            raise HTTPException(status_code=409, detail=str(exc)) from None
         except LayerPolicyViolationError as exc:
             raise HTTPException(status_code=403, detail=str(exc)) from exc
         except ValueError as exc:
@@ -1437,8 +1442,33 @@ def build_app(
         tenant: str | None = Query(default=None),
     ) -> dict[str, Any]:
         """List the tenant's memory — base + the tenant's OWN overlay (per the #83
-        isolation), never another tenant's."""
-        return await list_memories_impl(await _live(), scope, tenant)
+        isolation), never another tenant's.
+
+        Delegates to the CORE ``list_memories_impl`` (i-079). This route used to
+        carry its own copy, which had drifted into answering a different
+        question: it hid a memory carrying ANY ``valid_to``, where the core and
+        ``recall`` both use ``currently_valid`` and keep one whose expiry has not
+        arrived. The sibling ``/v1/memories/personal`` already delegated, so the
+        same memory was listed there and missing here — on one screen.
+
+        Delegating also changes WHICH SCOPE is read, and that is the least
+        visible half of the same bug. The copy resolved ``scope or
+        live.base_scope``; ``remember``, ``recall`` and ``forget`` all resolve
+        ``default_scope(tenant)`` — under multi-workspace, ``tenant-<ws>`` for a
+        non-vendor workspace. The list was therefore reading a scope that
+        workspace never writes to, so a memory it had just stored and could
+        still recall was missing from its own list. It now reads the same home
+        its writes land in, like every sibling route on this face.
+
+        ``tenant`` is echoed back from the REQUEST rather than taken from the
+        core's result, which does not return it. Dropping it would have silently
+        removed a field from a published response shape while fixing a different
+        bug, and a caller cannot tell "the field is gone" from "the value is
+        null"."""
+        from dna.application import list_memories_impl
+
+        out = await list_memories_impl(await _live(), scope, tenant=tenant)
+        return {**out, "tenant": tenant}
 
     @app.get("/v1/memories/personal", dependencies=guarded,
              response_model=m.PersonalMemoriesResponse)

@@ -1522,6 +1522,7 @@ class WritableSourcePort(SourcePort, Protocol):
         write_class: str = "substantive",
         version_retention: int | None = None,
         if_absent: bool = False,
+        if_match: str | None = None,
     ) -> str:
         """Persist one document (an UPSERT by default).
 
@@ -1531,7 +1532,18 @@ class WritableSourcePort(SourcePort, Protocol):
         "free" in the same instant — and the two shipped adapters can: a
         composite primary key on the SQL side, ``O_CREAT|O_EXCL`` (files) or
         ``mkdir`` (bundles) on the filesystem. Optional, declared through
-        ``SourceCapabilities.write_kwargs``."""
+        ``SourceCapabilities.write_kwargs``.
+
+        ``if_match`` is the same guarantee for an UPDATE (i-083): the write
+        proceeds only if the STORED document's ``spec`` still hashes to the
+        given token (:func:`dna.kernel.etag.spec_etag`), else
+        :class:`dna.kernel.errors.StaleDocumentWrite`, and nothing is written.
+        The adapter must read the stored document ITSELF — reading it back
+        through a cache the caller already consulted would compare a stale value
+        against itself and agree, which is exactly the lost update i-083
+        measured. Also optional and declared the same way. ``if_absent`` and
+        ``if_match`` are mutually exclusive: one asserts the document is absent,
+        the other that it is present and unchanged."""
         ...
 
     async def delete_document(
