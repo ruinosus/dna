@@ -1,12 +1,13 @@
 # Prefab cards on the MCP read tools — SEP-1865
 
-Branch `feat/mcp-apps-prefab`, off `origin/main` (`44a9373`). Two commits, one
-per part. No PR, no version bump.
+Branch `feat/mcp-apps-prefab`, off `origin/main` (`44a9373`). No PR, no version
+bump.
 
 | Part | SHA | What |
 |---|---|---|
 | A | `952a812` | the `apps` extra, the shared renderer resource, the merge helper, the host-theme bridge |
 | B | `6e264d7` | the three cards + the tool declarations |
+| C | `a7fa3d2` | the memory card's two wrong token names, the prefix hole that hid them, and the `mode` guard |
 
 ---
 
@@ -319,13 +320,101 @@ only we write.
 
 ---
 
+## Part C — the wrong token names, and the guard that blessed them
+
+Reported as concern 1 and fixed on the same branch once the golden was free.
+
+### The defect
+
+`dna/emit/mcp_ui.py` read `--text-sm` / `--text-xs`. Those are **Tailwind**
+names; the MCP Apps ones are `--font-text-sm-size` / `--font-text-xs-size`. So
+since the host-theme conversion shipped, the memory card had been reading two
+properties no host sets — the 14px/12px fallbacks applied in every host,
+forever, and the card pinned its own type scale while advertising that it
+followed the host's.
+
+### Why it was invisible, which is the part that mattered
+
+A wrong token name cannot be seen **by construction**. Every reference carries a
+fallback — that *is* the portability rule — so a name no host sets renders
+identically to a name every host happens not to set. Nothing looks broken and
+nothing raises. The only thing that can catch it is the vocabulary check, and
+that check admitted any name starting `--color-` / `--font-` / `--text-` /
+`--border-radius-` / `--shadow-`. A prefix cannot tell a real token from one
+that resembles it, so the guard blessed the defect it existed to prevent.
+
+### The vocabulary is now committed, and derived
+
+`HOST_DESIGN_TOKENS` in `dna/emit/mcp_ui.py` — all **76** names, transcribed
+from the `@modelcontextprotocol/ext-apps` lib **already vendored in this
+package**, where the union is declared as *"CSS variable keys available to MCP
+apps for theming"* and its record documented with the exact sentence the whole
+fallback rule rests on: *"Individual style keys are optional - hosts may provide
+any subset of these values."* So the vocabulary did not need to come from my
+report — it was already in the repo, unread.
+
+Both faces now check **exact membership** against that one constant: the SDK's
+memory card and the CLI's Prefab cards import it, so they cannot disagree about
+what a host may send. `_HOST_TOKEN_FAMILIES` is gone from both suites.
+
+Committed as data rather than parsed at import — a regex over 374 KB on every
+import, to produce a constant, is a cost with no reader — and held to the lib by
+`test_the_host_token_vocabulary_matches_the_vendored_lib`. That test extracts
+from the **one** union the lib describes as the theming keys (asserting there is
+exactly one such marker first), not by grepping the bundle for things shaped
+like custom properties, which would sweep up any CSS it happens to carry. A
+vendor bump that changes the vocabulary now fails the build.
+
+### RED first, without the golden's help
+
+The obvious trap here is a guard that only *looks* like it caught the defect
+because the golden also changed. So the mutant restored the old names **and
+regenerated the golden to match**, leaving the vocabulary check as the only
+thing that could object:
+
+```
+AssertionError: not MCP Apps host design tokens: ['--text-sm', '--text-xs']
+  — no host sets these, so their fallbacks apply forever and the card
+    ignores the host's theme
+FAILED test_the_card_targets_the_host_token_vocabulary
+1 failed, 11 passed
+```
+
+Golden regenerated after the fix: **+50 bytes**, the two names, nothing else.
+
+### The `mode` guard (concern 2, closed)
+
+`test_no_card_forces_a_colour_mode` pins `mode` as unset on every card. Read
+from the renderer's source, the host-context handler is
+`s.current ? ZN(s.current) : osr(f)` — `s.current` is the mode the wire carried,
+and `osr` is the **only** function that injects the host's `styles.variables`.
+A card that declares a mode therefore never receives the host's tokens at all.
+A future "just force dark on this card" would be a theme-wide regression that
+breaks no layout, raises nothing, and looks deliberate.
+
+### Part C mutants — 6 planted, 6 killed
+
+| # | Mutation | Killed by |
+|---|---|---|
+| N1 | the old `--text-sm`/`--text-xs` restored, **golden regenerated to match** | vocabulary check, alone |
+| N2 | a name dropped from `HOST_DESIGN_TOKENS` | drift test (`At index 43 diff`) |
+| N3 | a plausible `--color-surface-primary` added to it | drift test (`Left contains one more item`) |
+| N4 | the CLI bridge reads an invented `--color-surface-subtle` | CLI vocabulary check |
+| N5 | a card sets `mode="dark"` | `test_no_card_forces_a_colour_mode` |
+| N6 | the same via `theme=Theme(mode="dark")` (serializes to the same key) | same test |
+
+---
+
 ## Suites
 
-Run in full, from the worktree venvs, at the Part B state.
+Run in full, from the worktree venvs, at the final state.
 
-- **`packages/cli/tests`** — **1 344 passed**, 19 skipped, **0 failed** (95 s).
-- **`packages/sdk-py/tests`** — **4 426 passed**, 234 skipped, 4 xfailed,
-  **2 failed** (229 s).
+- **`packages/cli/tests`** — **1 345 passed**, 19 skipped, **0 failed** (92 s).
+- **`packages/sdk-py/tests`** — **4 427 passed**, 234 skipped, 4 xfailed,
+  **2 failed** (173 s).
+
+(At Part B these were 1 344 and 4 426; Part C adds the `mode` guard and the
+vocabulary drift test. The two sdk-py failures are unchanged throughout.)
 
 ### The two sdk-py failures are pre-existing, and provably not mine
 
@@ -345,8 +434,8 @@ at all (verified with `importlib.util.find_spec`).
 
 - `brand_guard` clean; `docs_coverage_guard` clean (100 public items);
   `data_model_guard` clean.
-- No test under `packages/sdk-py/tests/` imports `dna_cli` — nothing there was
-  touched.
+- No test under `packages/sdk-py/tests/` imports `dna_cli` (Part C edits its
+  suite but adds no such import; the CLI suite imports FROM the SDK, which is the allowed direction).
 - No YAML was touched, so no `yaml.safe_load` ratchet applies; grep confirms
   neither new file contains one.
 - No rule-3 token (`TODO` / `deferred` / `follow-up` / `coming soon`) in either
@@ -360,41 +449,54 @@ at all (verified with `importlib.util.find_spec`).
 
 ## Concerns
 
-1. **`--text-sm` / `--text-xs` in the existing memory card are not host tokens.**
-   The real MCP Apps names are `--font-text-sm-size` / `--font-text-xs-size` —
-   I extracted the full 76-name vocabulary from the renderer's own zod schema.
-   `dna/emit/mcp_ui.py` reads `--text-sm`/`--text-xs`, which no host sets, so
-   those two fallbacks (14px/12px) always apply and the card silently ignores
-   the host's type scale. The sdk test's `_HOST_TOKEN_FAMILIES` allows
-   `--text-` so it does not catch it. **Not fixed here** — it changes a frozen
-   golden another agent may be mid-flight on, and it is outside this task. The
-   fix is two constants plus a golden regeneration. The new cards use the
-   correct names.
-2. **`prefab-ui` is pre-1.0 (0.20.2) and the wire protocol is `0.3`.** The
+**Closed in Part C** (`a7fa3d2`), both reported in the first pass:
+
+- ~~the memory card's `--text-sm`/`--text-xs`~~ — corrected, golden regenerated,
+  and the prefix allowance that hid them replaced in **both** suites by exact
+  membership in the vendored spec lib's key union.
+- ~~nothing forbids setting `mode`~~ — pinned by
+  `test_no_card_forces_a_colour_mode`, with the renderer's own branch quoted in
+  the docstring.
+
+Still open:
+
+1. **`prefab-ui` is pre-1.0 (0.20.2) and the wire protocol is `0.3`.** The
    renderer warns on an unrecognized version. We emit whatever the installed
    `PROTOCOL_VERSION` is, so a `prefab-ui` bump could change the wire without
-   any change here. Nothing pins the protocol version we emit; a floor on the
+   any change here. Nothing pins the protocol version we emit; the floor on the
    *feature* is `fastmcp[apps]>=3.4`, which does not constrain `prefab-ui`.
-3. **`mode` is deliberately never set on a `PrefabApp`.** Reading the renderer:
-   if `mode` is set, the host-context handler takes the branch that only toggles
-   the dark class and **skips `osr()`**, which is the function that injects the
-   host's `styles.variables` and sets `colorScheme`. Setting `mode` would
-   therefore silently discard the host's design tokens. Nothing in the code
-   sets it and no test forbids it — a plausible future "let me force dark"
-   would break the theme without failing anything.
-4. **The `state` projection duplicates data on the wire** (×2.15 at realistic
+   Note this is now a **narrower** worry than it was: the host-token vocabulary,
+   the other thing a vendor bump could move under us, is drift-guarded.
+2. **The `state` projection duplicates data on the wire** (×2.15 at realistic
    volume). That is inherent to a bindable view: the renderer resolves
    `{{ … }}` against `state` only, and `content` must stay byte-identical, so
    the data appears at the top level *and* under `state`. Baking rows into the
    view instead would cost the same bytes. Worth revisiting only if a very large
    `list_stories` result becomes common.
-5. **The cards are unrendered.** Everything here is verified against the
+3. **The cards are unrendered.** Everything here is verified against the
    renderer's source, its CSP contract and computed contrast — no browser was
    driven. The cascade reasoning (`:root:root` beating both `:root` and `.dark`,
    unlayered beating layered) and the `light-dark()`/`color-mix()` degradation
    paths are argued from the spec, not observed. First host render is the place
-   a wrong assumption would show up.
-6. **`test_mcp_cards.py` duplicates ~70 lines of CSS-scanner** from
+   a wrong assumption would show up. *(Left as reported, on instruction.)*
+4. **Two card tests and the five theme tests were mutation-proven, not
+   RED-observed** — I had built a throwaway API prototype before writing them.
+   Recorded in the RED/GREEN section above rather than dressed up. *(Left as
+   reported, on instruction.)*
+5. **`test_mcp_cards.py` duplicates ~70 lines of CSS-scanner** from
    `packages/sdk-py/tests/test_emit_mcp_ui.py`. Copied verbatim rather than
    reimplemented, but the constraint that a cli test cannot import from the
-   sdk-py suite means the two can drift.
+   sdk-py suite means the two can drift. Note the *vocabulary* half of that
+   duplication is now gone — both import `HOST_DESIGN_TOKENS` from the SDK —
+   so what remains is only the `var()`/rule scanners.
+
+### A note on the class of bug this turned out to be
+
+The two wrong token names were not a typo that slipped a review; they were
+**unfalsifiable by the design of the feature**. The portability rule — every
+reference carries a fallback — is exactly what makes a wrong name render
+identically to a right one. So the only possible detector is the vocabulary
+check, and a prefix-shaped vocabulary check is not one. Worth carrying forward:
+wherever a fallback exists to make something optional, the name of the thing
+being fallen back from needs an independent source of truth, or the fallback
+silently becomes the implementation.
