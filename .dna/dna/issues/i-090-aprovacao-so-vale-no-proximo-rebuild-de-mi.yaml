@@ -1,0 +1,33 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-090-aprovacao-so-vale-no-proximo-rebuild-de-mi
+spec:
+  title: Aprovar um Kind nao passa a valer — nada dispara a reconstrucao da MI
+  description: |-
+    MEDIDO em 28/07. Aprovar um Kind NAO precisa de restart de pod (isso eu afirmei errado antes), mas NADA dispara o rebuild que faz a aprovacao valer.
+
+    O efeito chega no proximo rebuild da Manifest Instance daquele escopo, dentro do mesmo processo — e esse rebuild so acontece se alguem chamar uma rota da familia definitions (list_agents / compose_prompt / list_tools / genome_view). As rotas de DOCUMENTO nao disparam: write_document, list_kinds e get_document leem o registry direto.
+
+    Reproducao: aprovar e chamar write_document do Kind em seguida devolve UnknownKindError: Kind 'Deal' is not registered on this source. E cada replica tem a propria janela.
+
+    REVOGACAO E IDENTICA, e e a metade perigosa — demora a FECHAR a porta.
+
+    DOIS DIAGNOSTICOS ANTERIORES DESCARTADOS por medicao: (a) nao e falta de claim de KindNamespace — a sonda anterior falhava por uma guarda de ALIAS ('alias does not carry its namespace owner'); (b) a invalidacao da escrita JA ESTA CORRETA — KindDefinition e is_schema_affecting e o base_drop acontece. O que falta nao e invalidar, e um GATILHO DE RECONSTRUCAO.
+
+    VIAVEL PARA SAAS? Em arquitetura sim, como esta nao: o momento em que a aprovacao vale e indeterminado e varia por replica. Bug de produto, nao de fundacao.
+
+    CORRECAO EM DUAS CAMADAS, acordada com o founder: (1) re-registrar no proprio ato — instance_async(scope, lazy=True) ao fim de approve_kind_impl/revoke_kind_impl, ~60ms medidos, uma vez por aprovacao, so na replica que aprovou; (2) ensure_kinds(scope) atras de um TTL de 30s no seam de resolucao de Kind das rotas de documento — fecha todas as replicas e transforma 'indeterminado' num SLA publicavel.
+
+    NAO e pre-requisito: ligar o KernelEventBus, cuja maquina existe completa e desconectada (PostgresEventBus nunca instanciado, register_holder nunca chamado). E evolucao — kernel.invalidate so derruba caches, nunca re-registra.
+  type: bug
+  severity: critical
+  status: open
+  created_at: '2026-07-28T18:50:42+00:00'
+  updated_at: '2026-07-28T18:50:42+00:00'
+  timeline:
+  - at: '2026-07-28T18:50:42+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

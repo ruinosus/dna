@@ -1,0 +1,27 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-088-delete-document-checa-existencia-sem-tenant
+spec:
+  title: delete_document nao acha documento de Kind autorado — checa existencia sem tenant
+  description: |-
+    REPORTADO do Claude Desktop em 28/07: um doc de Kind autorado pelo tenant (McpToolCheck, namespace ws-*.dna.local/v1) e escrito com sucesso, aparece em list_documents e e legivel por get_document — mas delete_document devolve UnknownDocumentError 'not found in scope dna-cloud — nothing to delete'. Todos reportando o MESMO escopo.
+
+    CAUSA, localizada: documents.py:758 chama get_document(sc, port.kind, name) SEM tenant, enquanto o delete logo abaixo apaga com tenant=write_tenant e a escrita gravou com tenant=write_tenant. A chave do adaptador SQL inclui tenant, entao a checagem de existencia le a linha errada e conclui que nao existe. Compare com o caminho de leitura em :604, que passa tenant=tenant.
+
+    SEGUNDA INCONSISTENCIA DA MESMA FAMILIA, latente: a escrita em :671 checa com tenant=tenant mas grava com tenant=write_tenant, e _write_tenant devolve None para Kind global. Para um Kind global a checagem e a escrita usam coordenadas diferentes. Nao foi observado quebrando, mas e a mesma classe.
+
+    O guard esta certo — 'nao achou = erro, nao sucesso silencioso'. O problema e o lookup apontar para o lugar errado.
+
+    DOIS ARTEFATOS PRESOS em producao por causa disto: check-review-kind e check-index-refresh, ambos Kind McpToolCheck.
+  type: bug
+  severity: high
+  status: open
+  created_at: '2026-07-28T18:07:16+00:00'
+  updated_at: '2026-07-28T18:07:16+00:00'
+  timeline:
+  - at: '2026-07-28T18:07:16+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

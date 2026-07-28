@@ -1,0 +1,25 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-089-gate-no-approval-received-intermitente
+spec:
+  title: No approval received intermitente e nao uniforme nas tools de board
+  description: |-
+    REPORTADO do Claude Desktop em 26/07, ainda aberto. Tools de board que passavam sem aprovacao no inicio da sessao passaram a devolver 'No approval received' no meio dela, de forma NAO uniforme.
+
+    Sequencia observada: create_feature, create_story, create_issue, comment e quatro set_status forward TODOS passaram. Depois, na mesma sessao: write_document, delete_document, set_status para valor invalido, set_status backward e create_story novo TODOS falharam com 'No approval received' — enquanto comment CONTINUOU passando.
+
+    TRES HIPOTESES, nenhuma confirmada: (a) gate de HITL ativou mid-session por deploy ou flip de config — mas comment escapar enfraquece a versao global; (b) aprovacao por CLASSE de operacao (forward e comment 'seguras', backward/invalido/create 'sensiveis') — plausivel, mas comment passar e create_story nao e inconsistente com regra simples; (c) erro MAL-MAPEADO mascarando a razao real — set_status para 'banana' deveria dizer 'status invalido', nao 'sem aprovacao'. Ha precedente: o handler de mutacao ja mascarou access-denied como 'Error occurred during tool execution'.
+
+    O QUE PRECISA SER RESPONDIDO: e gate de aprovacao real ou fallback de erro? Se real, qual politica decide? Padronizar para propagar a razao especifica — invalid status, missing approval, quota — como os reads ja fazem.
+  type: bug
+  severity: high
+  status: open
+  created_at: '2026-07-28T18:07:19+00:00'
+  updated_at: '2026-07-28T18:07:19+00:00'
+  timeline:
+  - at: '2026-07-28T18:07:19+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
