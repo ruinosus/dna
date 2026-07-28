@@ -1,0 +1,37 @@
+{
+  "list_stories": {
+    "scope": "concierge",
+    "count": 3,
+    "stories": [
+      {"name": "s-cards", "title": "Prefab cards for the read tools", "status": "in-progress", "feature": "f-mcp-apps", "priority": "high"},
+      {"name": "s-negotiation", "title": "Extension negotiation", "status": "done", "feature": "f-mcp-apps", "priority": null},
+      {"name": "s-bare", "title": null, "status": "todo", "feature": null, "priority": null}
+    ]
+  },
+  "sdlc_digest": {
+    "scope": "concierge",
+    "since": "2026-07-21T00:00:00+00:00",
+    "since_label": "7d",
+    "until": "2026-07-28T00:00:00+00:00",
+    "completed": [{"kind": "Story", "name": "s-negotiation", "title": "Extension negotiation", "at": "2026-07-26T09:00:00+00:00"}],
+    "decided": [], "found": [], "parents_progressed": [], "progressed": [],
+    "artifacts": [], "releases": [],
+    "attention": {
+      "blocked": [{"kind": "Story", "name": "s-cards", "title": "Prefab cards", "reason": "waiting on the renderer decision"}],
+      "review_awaiting": [], "owner_decisions": [],
+      "open_questions": [{"kind": "Spike", "name": "sp-render", "title": "Which renderer", "question": "prefab or hand-written?"}]
+    },
+    "counts": {"completed": 1, "decided": 0, "found": 0, "parents_progressed": 0, "progressed": 0, "artifacts": 0, "releases": 0, "attention": 2},
+    "rag_status": "red",
+    "partial": true,
+    "sources": {"absent": ["Kaizen"], "unreadable": [{"kind": "Spike", "error": "TimeoutError: read timed out"}]},
+    "verdict": "1 item concluido; 2 pontos de atencao; leitura parcial."
+  },
+  "list_my_kinds": {
+    "scope": "concierge",
+    "kinds": [
+      {"name": "kd-contrato", "kind": "Contrato", "api_version": "acme/v1", "namespace": "acme", "approved": false, "proposed_by": "agent-7", "proposed_at": "2026-07-20T10:00:00Z", "approved_by": null, "approved_at": null, "created_at": "2026-07-20T10:00:00Z"},
+      {"name": "kd-apolice", "kind": "Apolice", "api_version": "acme/v1", "namespace": "acme", "approved": true, "proposed_by": "agent-7", "proposed_at": "2026-07-11T08:00:00Z", "approved_by": "barna", "approved_at": "2026-07-12T09:30:00Z", "created_at": "2026-07-11T08:00:00Z"}
+    ]
+  }
+}

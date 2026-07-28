@@ -36,6 +36,7 @@ import re
 
 from dna.emit import mcp_ui as mcp_ui_module
 from dna.emit.mcp_ui import (
+    HOST_DESIGN_TOKENS,
     MCP_APP_MIME,
     UI_MEMORY_LIST_URI,
     _EXT_APPS_BEGIN,
@@ -159,6 +160,7 @@ def test_module_exposes_only_the_mcp_apps_template_surface():
     assert mcp_ui_module.__all__ == [
         "UI_MEMORY_LIST_URI",
         "MCP_APP_MIME",
+        "HOST_DESIGN_TOKENS",
         "memory_list_card_html",
     ]
     for retired in ("memory_canvas_card_html", "_item_html", "_esc"):
@@ -175,7 +177,15 @@ def test_module_exposes_only_the_mcp_apps_template_surface():
 # right when every token exists is not portable. These tests hold the card to
 # the zero-token case, which is the one that proves it.
 
-_HOST_TOKEN_FAMILIES = ("--color-", "--font-", "--text-", "--border-radius-", "--shadow-")
+#: A PREFIX allowance is what let a non-existent token look legitimate. The
+#: guard used to admit anything starting ``--color-``/``--font-``/``--text-``/
+#: ``--border-radius-``/``--shadow-``, so ``--text-sm`` — a Tailwind name, not
+#: an MCP Apps one — passed as a host token and the card silently ignored the
+#: host's type scale for as long as it shipped. The check is now EXACT
+#: membership in the vendored spec lib's own key union
+#: (:data:`~dna.emit.mcp_ui.HOST_DESIGN_TOKENS`), because "looks like a host
+#: token" and "is one" are the same thing to a prefix and opposite things to a
+#: host.
 
 #: The brand values the card used to paint its own surface with. They are the
 #: host's business now: ink ground, raised panel, hairline, ink-on-dark text,
@@ -271,19 +281,58 @@ def test_every_host_token_reference_carries_a_fallback():
     assert not missing, f"host tokens referenced with no fallback: {missing}"
 
 
+def test_the_host_token_vocabulary_matches_the_vendored_lib():
+    """``HOST_DESIGN_TOKENS`` is the vendored spec lib's own key union, not a
+    list somebody typed. The lib is committed in this package, so the two can
+    be compared and the constant can never drift from what a host is actually
+    told it may send.
+
+    Extracted from the ONE union the lib describes as *"CSS variable keys
+    available to MCP apps for theming"* — not by grepping the whole 374 KB for
+    things that look like custom properties, which would sweep up any CSS the
+    bundle happens to contain. Bump the vendor and change the vocabulary, and
+    this fails instead of silently blessing a stale name."""
+    lib = _VENDOR.read_text(encoding="utf-8")
+    marker = '.describe("CSS variable keys available to MCP apps for theming.")'
+    assert lib.count(marker) == 1, (
+        "the vendored lib no longer declares exactly one theming-key union — "
+        "re-derive the extraction before trusting it"
+    )
+    end = lib.index(marker)
+    union = lib[lib.rindex("u.union(", 0, end):end]
+    declared = re.findall(r'u\.literal\("(--[a-z0-9-]+)"\)', union)
+
+    assert declared, "no token literals found — the extraction broke, not the vocabulary"
+    assert len(set(declared)) == len(declared), "the lib declares a token twice"
+    assert list(HOST_DESIGN_TOKENS) == declared, (
+        "HOST_DESIGN_TOKENS drifted from the vendored lib's key union"
+    )
+
+
 def test_the_card_targets_the_host_token_vocabulary():
-    """The tokens are the host's documented names, not names we invented — a
-    private ``--dna-*`` property is one no host will ever set."""
+    """The tokens are the host's DOCUMENTED names, checked by exact membership
+    in the spec's key union — not by prefix.
+
+    A prefix allowance cannot tell a real token from one that merely resembles
+    it, and the difference is invisible: a name no host sets is a name whose
+    fallback silently applies forever, so the card looks fine in every host and
+    honours none of them. ``--text-sm``/``--text-xs`` shipped here for exactly
+    that reason. Reintroduce a plausible-looking name and this dies."""
     names = {name for name, _ in _var_calls(_card_css())}
-    unknown = [n for n in names if not n.startswith(_HOST_TOKEN_FAMILIES)]
-    assert not unknown, f"not host design tokens: {unknown}"
-    # The load-bearing ones: ground, ink and hairline all come from the host.
+    unknown = sorted(n for n in names if n not in HOST_DESIGN_TOKENS)
+    assert not unknown, (
+        f"not MCP Apps host design tokens: {unknown} — no host sets these, so "
+        "their fallbacks apply forever and the card ignores the host's theme"
+    )
+    # The load-bearing ones: ground, ink, hairline and type all come from the host.
     for required in (
         "--color-background-primary",
         "--color-text-primary",
         "--color-text-secondary",
         "--color-border-primary",
         "--font-sans",
+        "--font-text-sm-size",
+        "--font-text-xs-size",
     ):
         assert required in names, f"the card does not read {required}"
 

@@ -502,6 +502,24 @@ def build_server(
 
     memory_card_app = AppConfig(resource_uri=UI_MEMORY_LIST_URI)
 
+    # The same mechanism for the READ tools whose answer is a table or a
+    # dashboard rather than a paragraph (`dna_cli._mcp_cards`). Those cards are
+    # Prefab views, so they share ONE renderer resource — `resource_uri` is
+    # overridden precisely to stop FastMCP synthesising
+    # `ui://prefab/tool/<hash>/renderer.html` per tool, which in bundled mode
+    # is a separate 6.6 MB document each. `with_card` merges rather than
+    # replaces: `content` stays byte-identical for every client that renders
+    # nothing.
+    from dna_cli._mcp_cards import (
+        UI_PREFAB_URI,
+        digest_app,
+        prefab_renderer_html,
+        stories_app,
+        with_card,
+    )
+
+    prefab_card_app = AppConfig(resource_uri=UI_PREFAB_URI)
+
     # The auth↔tenancy bridge: resolve the effective tenant from the current
     # token (identity when there is no token / no auth). CrossTenantError → a
     # clean MCP ToolError so the client sees the denial, not a masked 500.
@@ -960,20 +978,33 @@ def build_server(
 
     # -- SDLC ----------------------------------------------------------------
 
-    @server.tool(run_in_thread=False)
+    @server.tool(run_in_thread=False, app=prefab_card_app)
     async def sdlc_digest(
         since: str | None = None, scope: str | None = None
     ) -> dict[str, Any]:
         """Retrospective board digest — what happened in a window (default 24h).
-        ``since`` accepts a span (``90m``/``24h``/``3d``/``2w``) or ISO time."""
-        return await sdlc_digest_impl(await _live(), since, scope, await _guard("sdlc", scope=scope))
+        ``since`` accepts a span (``90m``/``24h``/``3d``/``2w``) or ISO time.
 
-    @server.tool(run_in_thread=False)
+        The declaration points the shared ``ui://dna/prefab`` card (read-only):
+        a host that renders MCP Apps shows the RAG verdict, the counts and what
+        needs a person as a dashboard; every other host reads the full digest
+        from the textual result, unchanged."""
+        data = await sdlc_digest_impl(
+            await _live(), since, scope, await _guard("sdlc", scope=scope))
+        return with_card(data, digest_app(data))
+
+    @server.tool(run_in_thread=False, app=prefab_card_app)
     async def list_stories(
         status: str | None = None, scope: str | None = None
     ) -> dict[str, Any]:
-        """List SDLC Stories, optionally filtered by status."""
-        return await list_stories_impl(await _live(), status, scope, await _guard("sdlc", scope=scope))
+        """List SDLC Stories, optionally filtered by status.
+
+        The declaration points the shared ``ui://dna/prefab`` card (read-only):
+        a host that renders MCP Apps shows the roster as a sortable, searchable
+        table; every other host reads the same textual result, unchanged."""
+        data = await list_stories_impl(
+            await _live(), status, scope, await _guard("sdlc", scope=scope))
+        return with_card(data, stories_app(data))
 
     @server.tool(run_in_thread=False)
     async def get_adr(name: str, scope: str | None = None) -> dict[str, Any]:
@@ -1367,6 +1398,19 @@ def build_server(
     async def agents_resource(scope: str) -> dict[str, Any]:
         """The scope's agent roster as a resource."""
         return await list_agents_impl(await _live(), scope, await _guard("definitions", scope=scope))
+
+    @server.resource(UI_PREFAB_URI, mime_type=MCP_APP_MIME)
+    def prefab_card_renderer() -> str:
+        """The ONE MCP Apps renderer every Prefab card on this face points at
+        (SEP-1865) — Prefab's bundled single-file renderer with the host-theme
+        bridge appended to its ``<head>``.
+
+        Shared on purpose: the default mints one renderer resource per tool,
+        and in bundled mode that is a separate 6.6 MB document each. Static,
+        public and data-free (cacheable by URI): the host pushes each tool
+        result's ``structured_content`` into it over the authenticated
+        session."""
+        return prefab_renderer_html()
 
     @server.resource(UI_MEMORY_LIST_URI, mime_type=MCP_APP_MIME)
     def memory_list_card() -> str:

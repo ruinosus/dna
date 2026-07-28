@@ -35,6 +35,7 @@ from importlib import resources
 __all__ = [
     "UI_MEMORY_LIST_URI",
     "MCP_APP_MIME",
+    "HOST_DESIGN_TOKENS",
     "memory_list_card_html",
 ]
 
@@ -46,6 +47,106 @@ UI_MEMORY_LIST_URI = "ui://dna/memory-list"
 #: resource is served with — what marks it a first-class MCP App template, not
 #: a bare HTML blob.
 MCP_APP_MIME = "text/html;profile=mcp-app"
+
+#: EVERY design token an MCP Apps host may inject, and the ONLY names a card
+#: may read — the ``styleVariables`` key union, transcribed from the
+#: ``@modelcontextprotocol/ext-apps`` lib vendored in this package
+#: (``_vendor/ext-apps.iife.js``), where it is declared as *"CSS variable keys
+#: available to MCP apps for theming"*. Committed as data rather than parsed at
+#: import time — a regex over 374 KB on every import to produce a constant is a
+#: cost with no reader — and held to the vendored lib by
+#: ``tests/test_emit_mcp_ui.py::test_the_host_token_vocabulary_matches_the_vendored_lib``,
+#: so a vendor bump that changes the vocabulary fails the build instead of
+#: silently blessing a name no host sets.
+#:
+#: This list exists because a name that merely LOOKS like a host token is
+#: indistinguishable from one at a glance, and the failure is silent: the card
+#: reads it, no host provides it, the fallback applies forever, and the card
+#: quietly ignores that part of the host's theme. That is not hypothetical —
+#: ``--text-sm``/``--text-xs`` shipped here and did exactly that; the real names
+#: are ``--font-text-sm-size``/``--font-text-xs-size``.
+#:
+#: Declaration order is the lib's own (grouped by family), so a drift diff reads
+#: as a change to a family rather than as an alphabetical reshuffle.
+HOST_DESIGN_TOKENS: tuple[str, ...] = (
+    "--color-background-primary",
+    "--color-background-secondary",
+    "--color-background-tertiary",
+    "--color-background-inverse",
+    "--color-background-ghost",
+    "--color-background-info",
+    "--color-background-danger",
+    "--color-background-success",
+    "--color-background-warning",
+    "--color-background-disabled",
+    "--color-text-primary",
+    "--color-text-secondary",
+    "--color-text-tertiary",
+    "--color-text-inverse",
+    "--color-text-ghost",
+    "--color-text-info",
+    "--color-text-danger",
+    "--color-text-success",
+    "--color-text-warning",
+    "--color-text-disabled",
+    "--color-border-primary",
+    "--color-border-secondary",
+    "--color-border-tertiary",
+    "--color-border-inverse",
+    "--color-border-ghost",
+    "--color-border-info",
+    "--color-border-danger",
+    "--color-border-success",
+    "--color-border-warning",
+    "--color-border-disabled",
+    "--color-ring-primary",
+    "--color-ring-secondary",
+    "--color-ring-inverse",
+    "--color-ring-info",
+    "--color-ring-danger",
+    "--color-ring-success",
+    "--color-ring-warning",
+    "--font-sans",
+    "--font-mono",
+    "--font-weight-normal",
+    "--font-weight-medium",
+    "--font-weight-semibold",
+    "--font-weight-bold",
+    "--font-text-xs-size",
+    "--font-text-sm-size",
+    "--font-text-md-size",
+    "--font-text-lg-size",
+    "--font-heading-xs-size",
+    "--font-heading-sm-size",
+    "--font-heading-md-size",
+    "--font-heading-lg-size",
+    "--font-heading-xl-size",
+    "--font-heading-2xl-size",
+    "--font-heading-3xl-size",
+    "--font-text-xs-line-height",
+    "--font-text-sm-line-height",
+    "--font-text-md-line-height",
+    "--font-text-lg-line-height",
+    "--font-heading-xs-line-height",
+    "--font-heading-sm-line-height",
+    "--font-heading-md-line-height",
+    "--font-heading-lg-line-height",
+    "--font-heading-xl-line-height",
+    "--font-heading-2xl-line-height",
+    "--font-heading-3xl-line-height",
+    "--border-radius-xs",
+    "--border-radius-sm",
+    "--border-radius-md",
+    "--border-radius-lg",
+    "--border-radius-xl",
+    "--border-radius-full",
+    "--border-width-regular",
+    "--shadow-hairline",
+    "--shadow-sm",
+    "--shadow-md",
+    "--shadow-lg",
+)
+
 
 # ── the host's design tokens, every one of them optional ───────────────────
 #
@@ -61,6 +162,13 @@ MCP_APP_MIME = "text/html;profile=mcp-app"
 # The fallbacks are the UA's own system colours (`Canvas` / `CanvasText`),
 # which are a contrasting pair by definition and follow the user's light/dark
 # preference through the `color-scheme` declared on `:root` below.
+#
+# And every NAME is checked against `HOST_DESIGN_TOKENS` above, because a
+# fallback makes a wrong name INVISIBLE: the card reads a property no host
+# sets, the fallback applies in every host forever, and nothing looks broken.
+# The type scale shipped that way — `--text-sm`/`--text-xs` are Tailwind's
+# names, not MCP Apps', so the card pinned 14px/12px while advertising that it
+# followed the host. The real names are `--font-text-sm-size`/`-xs-size`.
 
 #: Ground, raised ground, ink, muted ink, hairline — the host's business.
 _BG = "var(--color-background-primary, Canvas)"
@@ -74,8 +182,8 @@ _FONT = (
     "var(--font-sans, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', "
     "Roboto, Helvetica, Arial, sans-serif)"
 )
-_TEXT_SM = "var(--text-sm, 14px)"
-_TEXT_XS = "var(--text-xs, 12px)"
+_TEXT_SM = "var(--font-text-sm-size, 14px)"
+_TEXT_XS = "var(--font-text-xs-size, 12px)"
 _WEIGHT_SEMIBOLD = "var(--font-weight-semibold, 600)"
 _WEIGHT_BOLD = "var(--font-weight-bold, 700)"
 _RADIUS = "var(--border-radius-lg, 14px)"
