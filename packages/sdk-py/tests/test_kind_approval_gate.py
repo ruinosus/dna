@@ -16,6 +16,23 @@ from dna.adapters.filesystem.writable import FilesystemWritableSource
 from dna.extensions.helix import HelixExtension
 from dna.extensions.kinddef import KindDefinitionExtension
 from dna.kernel import Kernel
+from dna.kernel.kinds import registry as registry_mod
+
+
+@pytest.fixture(autouse=True)
+def _clear_process_wide_warn_caches():
+    """The approval refusal is warned ONCE per (scope, apiVersion, kind) per
+    PROCESS (i-084), and a pytest session is one process — so without this the
+    log tests below would depend on which sibling test ran first and burned the
+    key. Same fixture, same reason, as ``test_tenant_kind_scope_isolation.py``.
+    """
+    registry_mod._GLOBAL_UNAPPROVED_KIND_WARNED.clear()
+    registry_mod._GLOBAL_KINDDEF_CONFLICT_WARNED.clear()
+    registry_mod._AMBIGUOUS_LOOKUP_WARNED.clear()
+    yield
+    registry_mod._GLOBAL_UNAPPROVED_KIND_WARNED.clear()
+    registry_mod._GLOBAL_KINDDEF_CONFLICT_WARNED.clear()
+    registry_mod._AMBIGUOUS_LOOKUP_WARNED.clear()
 
 
 @pytest.fixture
@@ -165,6 +182,126 @@ def test_the_scopeless_funnel_is_not_exempt(caplog):
         "kind_port_for() returning None, but for an unrelated reason, and "
         "this fence would then pass even if the scope=None exemption crept "
         "back in"
+    )
+
+
+# ── The refusal is loud ONCE, not loud forever (i-084) ──
+#
+# The three tests above pin that the refusal is AUDIBLE. These pin that it is
+# BOUNDED, which after the authoring route is the other half of the same
+# requirement: "authored but not approved" is a state a tenant creates by
+# design, so it is a resting state, and an undeduped line about a resting state
+# is one WARNING per MI rebuild per scope, forever, per tenant — on the hot path
+# the lazy boot walks. Neither half may be traded for the other: a suppression
+# that also silences the FIRST occurrence, or a NEW refusal, breaks the tests
+# above or the two below respectively.
+
+
+def _raw_kinddef(kind: str, *, api_version: str = "example.com/v1") -> dict[str, Any]:
+    """An unapproved ``KindDefinition`` raw doc — otherwise valid, so the funnel
+    reaches the approval gate rather than dying in the parse branch."""
+    return {
+        "apiVersion": "github.com/ruinosus/dna/core/v1",
+        "kind": "KindDefinition",
+        "metadata": {"name": kind.lower()},
+        "spec": {
+            "target_api_version": api_version,
+            "target_kind": kind,
+            "alias": f"example-{kind.lower()}",
+            "origin": "example.com",
+            "schema": {"type": "object", "additionalProperties": True},
+            "storage": {
+                "type": "bundle",
+                "container": f"{kind.lower()}s",
+                "marker": f"{kind.upper()}.md",
+            },
+        },
+    }
+
+
+def _refusals(caplog, needle: str) -> list[str]:
+    return [r.message for r in caplog.records
+            if needle in r.message and "approv" in r.message.lower()]
+
+
+def test_the_refusal_is_warned_once_per_process_not_once_per_rebuild(caplog):
+    """Ten rebuilds, one line. Every MI build re-runs this funnel over the same
+    documents, so an undeduped refusal scales with UPTIME rather than with
+    events — and the event here (a Kind waiting for approval) does not recur, it
+    persists."""
+    k = Kernel()
+    k.load(HelixExtension())
+    k.load(KindDefinitionExtension())
+
+    for _ in range(10):
+        k._register_kind_definitions([_raw_kinddef("Widget")], scope="scope-a")
+
+    assert k.kind_port_for("Widget", scope="scope-a") is None, (
+        "the suppression is about the LOG only — the gate itself still refuses "
+        "every time, or a second pass would register what the first refused"
+    )
+    assert len(_refusals(caplog, "Widget")) == 1, (
+        "the refusal must be warned once per process, not once per MI rebuild"
+    )
+
+
+def test_a_second_scopes_refusal_is_still_audible(caplog):
+    """The key is the EVENT, not the Kind name (the i-080 item 5 lesson that
+    shaped ``_AMBIGUOUS_LOOKUP_WARNED``). Keyed by name alone, the first
+    tenant's unapproved ``Widget`` would silence every LATER tenant's for the
+    life of a long-lived container — which is precisely when a second tenant
+    arrives, and precisely the author who cannot then find out why their Kind
+    does nothing."""
+    k = Kernel()
+    k.load(HelixExtension())
+    k.load(KindDefinitionExtension())
+
+    k._register_kind_definitions([_raw_kinddef("Widget")], scope="scope-a")
+    k._register_kind_definitions([_raw_kinddef("Widget")], scope="scope-b")
+    k._register_kind_definitions(
+        [_raw_kinddef("Widget", api_version="other.com/v1")], scope="scope-a",
+    )
+
+    messages = _refusals(caplog, "Widget")
+    assert len(messages) == 3, (
+        "a different scope — and a same-named Kind from a different apiVersion "
+        "— are DIFFERENT refusals and must each be heard once"
+    )
+    assert any("'scope-b'" in m for m in messages), (
+        "the second tenant's refusal must name the second tenant's scope"
+    )
+
+
+def test_both_doors_share_one_suppression(caplog):
+    """The two store-loaded doors move together. They already fail closed
+    identically; if only one of them deduped, the same Kind would be silent at
+    one door and repeat forever at the other — a difference in the log that
+    reflects nothing about the Kind, only about which door its author used."""
+    k = Kernel()
+    k.load(HelixExtension())
+    k.load(KindDefinitionExtension())
+
+    k._register_kind_definitions([_raw_kinddef("Widget")], scope="scope-a")
+    k._register_custom_kinds(
+        {
+            "apiVersion": "github.com/ruinosus/dna/v1",
+            "kind": "Genome",
+            "metadata": {"name": "root"},
+            "spec": {"custom_kinds": [
+                {"apiVersion": "example.com/v1", "kind": "Widget",
+                 "alias": "example-widget"},
+            ]},
+        },
+        scope="scope-a",
+    )
+
+    assert len(_refusals(caplog, "Widget")) == 1, (
+        "one Kind, one scope, one refusal — the door it arrived through is not "
+        "part of the event"
+    )
+    assert ("example.com/v1", "Widget") not in k._kinds, (
+        "and the second door still refuses it — sharing the cache must not "
+        "share an exemption"
     )
 
 
