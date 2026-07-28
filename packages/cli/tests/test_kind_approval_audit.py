@@ -1040,3 +1040,108 @@ def test_an_approval_built_on_a_stale_read_is_a_409_and_writes_nothing(dna_dir):
     )
     # And it conferred no effect: the Kind is still unregistered.
     assert _registered_port(dna_dir, "Contrato") is None
+
+
+# ── 4. revocation over the wire — the UNDO, on a fresh kernel ─────────────
+#
+# i-085. Approving where consent can be misread is only defensible if undoing
+# works, so the revoke door exists BEFORE any approve button reaches a
+# conversational surface. The properties below are the ones a portal button
+# would be built on, checked the way the approval ones are: against a kernel
+# booted fresh over the store, because the registry is per-kernel and outlives
+# the ``instance_async`` of the process that wrote the document.
+
+
+def _revoke(c, token, kind="Contrato", tenant=_WID, **body):
+    return c.post(f"/v1/kinds/{kind}/revoke", params={"tenant": tenant},
+                  headers={"Authorization": f"Bearer {token}"},
+                  json=body or None)
+
+
+def test_revocation_withdraws_effect_without_forgetting_the_kind(dna_dir):
+    """The one property a naive implementation gets backwards.
+
+    Un-approving would return the Kind to *never approved*, and an unregistered
+    Kind is the PERMISSIVE state — its documents are accepted with no validation
+    at all. So the port must still be there after a revocation, and it must be
+    MARKED. "No port" would look like a working undo and be a loosening."""
+    with _client(dna_dir) as c:
+        assert _author(c, "agent").status_code == 201
+        assert _approve(c, "human").status_code == 200
+        assert _registered_port(dna_dir, "Contrato") is not None
+
+        r = _revoke(c, "human")
+        assert r.status_code == 200, r.text
+        body = r.json()
+        assert body["revoked"] is True
+        assert body["revoked_by"] == _HUMAN["email"]
+        # The whole chain of acts in one response — the approval it withdraws
+        # included, because revoking is a third act and not an erasure.
+        assert body["approved_by"] == _HUMAN["email"]
+        assert body["proposed_by"] == _AGENT["email"]
+
+        row = _row(c, "human")
+
+    port = _registered_port(dna_dir, "Contrato")
+    assert port is not None, (
+        "a revoked Kind must stay REGISTERED — dropping it returns the Kind to "
+        "'never approved', where documents are accepted with no validation at "
+        "all, so forgetting it would loosen the gate instead of closing it"
+    )
+    assert getattr(port, "__revoked__", False) is True
+
+    assert row["state"] == "revoked", row
+    assert row["approved"] is False, row
+    assert row["revoked_by"] == _HUMAN["email"], row
+    assert row["approved_by"] == _HUMAN["email"], (
+        "the approval must survive in the audit — it is the record of an act "
+        "that really happened"
+    )
+
+
+def test_approving_again_over_the_wire_restores_effect(dna_dir):
+    """Reversible in one call, with nothing to migrate."""
+    with _client(dna_dir) as c:
+        assert _author(c, "agent").status_code == 201
+        assert _approve(c, "human").status_code == 200
+        assert _revoke(c, "human").status_code == 200
+        assert getattr(
+            _registered_port(dna_dir, "Contrato"), "__revoked__", False
+        ) is True
+
+        assert _approve(c, "human").status_code == 200
+        row = _row(c, "human")
+
+    port = _registered_port(dna_dir, "Contrato")
+    assert port is not None and getattr(port, "__revoked__", False) is False
+    assert row["state"] == "approved" and row["approved"] is True
+    assert row["revoked_by"] is None, (
+        "the revocation markers must be CLEARED — a leftover revoked_by is a "
+        "fact about the present that is no longer true"
+    )
+
+
+def test_revoking_a_kind_nobody_authored_is_a_404_and_creates_nothing(dna_dir):
+    """A revocation door that CREATED the document it was asked to revoke would
+    be an authoring door with a revocation marker on it."""
+    with _client(dna_dir) as c:
+        r = _revoke(c, "human", kind="Ghost")
+        assert r.status_code == 404, r.text
+    assert _registered_port(dna_dir, "Ghost") is None
+
+
+def test_a_neighbours_kind_cannot_be_revoked(dna_dir):
+    """Inherited from the approval door, deliberately: answering anything other
+    than 404 would hand a stranger a probe for what its neighbours author — and
+    here the act itself would mark another workspace's documents invalid."""
+    with _client(dna_dir) as c:
+        assert _author(c, "agent").status_code == 201
+        assert _approve(c, "human").status_code == 200
+        r = _revoke(c, "human", tenant=_OTHER_WID)
+        assert r.status_code == 404, r.text
+
+    port = _registered_port(dna_dir, "Contrato")
+    assert port is not None and getattr(port, "__revoked__", False) is False, (
+        "the neighbour's refusal must leave the Kind alone — a 404 that "
+        "revoked anyway would be the worst of both"
+    )

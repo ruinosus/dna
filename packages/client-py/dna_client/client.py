@@ -295,8 +295,49 @@ class DnaClient:
         404 when no such Kind was authored in this scope (approval acts on an
         existing document and creates none); 400 for a missing tenant, a
         malformed ``kind``, or a Kind declared under two namespaces at once;
-        403 when the namespace gate refuses the write."""
+        403 when the namespace gate refuses the write; 409 when the Kind was
+        edited between the read and this call (re-read, then approve again).
+
+        It is also the UNDO of :meth:`revoke_kind`: approving again clears the
+        revocation, and every existing document is valid once more with nothing
+        to migrate."""
         return self._write("POST", f"/v1/kinds/{kind}/approve", {}, tenant=tenant)
+
+    def revoke_kind(
+        self, kind: str, *, tenant: str | None = None,
+    ) -> JsonObject:
+        """Revoke an authored Kind — the act that WITHDRAWS its effect.
+
+        Deliberately NOT the inverse of :meth:`approve_kind`. Un-approving would
+        return the Kind to *never approved*, and a Kind that never registered is
+        the PERMISSIVE state — its documents are accepted with no validation at
+        all — so clearing the approval would switch the gate off rather than
+        close it. Revoked is a THIRD state::
+
+            state            existing documents   new documents
+            ---------------  -------------------  --------------------------
+            never approved   —                    accepted WITHOUT validation
+            approved         valid, routed        validated against the schema
+            revoked          INVALID              REFUSED
+
+        Nothing is deleted. Existing documents stay readable and come back
+        MARKED (``status.valid`` is ``false``), and in a listing they appear
+        marked rather than vanishing — so this can never be used to hide data
+        without deleting it. New documents of the Kind are refused outright,
+        conforming ones included: what was withdrawn is the Kind, not a schema.
+
+        Reversible in one call — :meth:`approve_kind` clears the revocation.
+        ``approved_by`` survives here, because revoking is a third act and not
+        an erasure of the second.
+
+        The revoker is the caller's server-VERIFIED identity; there is
+        deliberately no parameter for it.
+
+        404 when no such Kind was authored in this scope, and equally when it
+        belongs to another workspace; 400 for a missing tenant or a malformed
+        ``kind``; 409 when the document moved since it was read; 403 when the
+        namespace gate refuses the write."""
+        return self._write("POST", f"/v1/kinds/{kind}/revoke", {}, tenant=tenant)
 
     def list_authored_kinds(
         self, *, scope: str | None = None, tenant: str | None = None,

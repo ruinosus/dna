@@ -212,9 +212,9 @@ def _stored_spec(dna_dir, name: str) -> dict:
     return _on_fresh_kernel(dna_dir, probe)
 
 
-# ── 0. the LANE — all four doors, on EVERY mode ───────────────────────────
+# ── 0. the LANE — all five doors, on EVERY mode ───────────────────────────
 #
-# The four doors are mounted under ``--auth config``, ``--auth none`` AND
+# The five doors are mounted under ``--auth config``, ``--auth none`` AND
 # ``--auth token``. For one release they were not: 0.31.0 shipped them excluded
 # from the shared-secret lane, on the argument that ``tenant`` is a raw query
 # param there, so a single credential could read — and approve — any
@@ -257,16 +257,24 @@ def _stored_spec(dna_dir, name: str) -> dict:
 # 404 in either direction. The router's own table cannot be satisfied that way,
 # and the wire tests below carry discriminators of their own.
 
-#: The four operations, keyed the way the OpenAPI document keys them.
+#: The five operations, keyed the way the OpenAPI document keys them.
+#:
+#: ``revoke`` joined them for i-085, and it belongs on this list for the reason
+#: the list exists: it is the UNDO of the act one line above it, and an approve
+#: door reachable on a lane where its undo is not would be worse than neither.
 _KIND_OPERATIONS = frozenset({
     ("POST", "/v1/kinds"),
     ("GET", "/v1/kinds"),
     ("GET", "/v1/kinds/{kind}"),
     ("POST", "/v1/kinds/{kind}/approve"),
+    ("POST", "/v1/kinds/{kind}/revoke"),
 })
 
-#: The same four, as OpenAPI paths.
-_KIND_PATHS = {"/v1/kinds", "/v1/kinds/{kind}", "/v1/kinds/{kind}/approve"}
+#: The same five, as OpenAPI paths (approve and revoke share neither path).
+_KIND_PATHS = {
+    "/v1/kinds", "/v1/kinds/{kind}",
+    "/v1/kinds/{kind}/approve", "/v1/kinds/{kind}/revoke",
+}
 
 
 def _routed_operations(app) -> set[tuple[str, str]]:
@@ -298,7 +306,7 @@ def _token_app(dna_dir):
         pytest.param("token", id="token"),
     ],
 )
-def test_every_lane_routes_and_documents_all_four(dna_dir, lane):
+def test_every_lane_routes_and_documents_all_five(dna_dir, lane):
     """Present in the ROUTE TABLE, and present in the OpenAPI each lane
     publishes — in ALL THREE modes, the shared-secret one included.
 

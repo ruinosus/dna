@@ -351,6 +351,8 @@ against the other's schema (`i-081`). It also means two scopes may reuse a Kind
 name, an alias or a storage container freely: within one scope those are still
 unique, and across scopes they never meet.
 
+### Approval and revocation: three states, not a boolean
+
 A Kind loaded from a store only reaches this binding once it is *approved*:
 both doors — the `KindDefinition` document and a root document's
 `custom_kinds` entry — require `approved_by` to name someone, or the entry is
@@ -365,6 +367,44 @@ storage routing only — it registers as a schema-less Kind. Registering from
 CODE carries no such gate; the approval requirement exists only for the
 store, where the author is untrusted (`register_kind_definitions`,
 `register_custom_kinds` in `registry.py`).
+
+Taking an approval back is a **third state**, not the absence of the second,
+and the reason is worth stating plainly because the obvious implementation is
+backwards. Look at what "unapproved" actually means in the table below: a Kind
+that never registered validates nothing, so its documents are accepted *as
+they come*. Clearing `approved_by` would land a withdrawn Kind exactly there —
+switching the gate **off** rather than closing it.
+
+| state | existing documents | new documents |
+|---|---|---|
+| never approved | — | accepted **without validation** |
+| approved | valid, routed | validated against the schema |
+| **revoked** | **invalid** | **refused** |
+
+So `revoked_by` is stored beside `approved_by` (which survives — revoking is a
+third act, not an erasure of the second), and a revoked Kind stays
+**registered**, marked. Being *known* is the mechanism; forgetting it is the
+loosening.
+
+What that does to data already in the store:
+
+- **Nothing is deleted, and no read fails.** A document of a revoked Kind comes
+  back as itself, carrying a derived `status: {valid: false, reason:
+  "kind_revoked", …}`. Erasing it or refusing the read would destroy the
+  ability to audit what existed, and the data did nothing wrong — the workspace
+  changed its mind.
+- **In a listing it appears, marked — it never vanishes.** Rows are not filtered
+  out, so revocation cannot be used to hide documents without deleting them.
+  The consequence is real: every listing surface has to learn to render the
+  mark, and one that has not yet shows what it always showed.
+- **It is reversible in one act.** Approving again clears the revocation and
+  every existing document is valid once more. Validity follows the Kind's
+  *current* state and is never written onto the document — the write path
+  strips `status` — so there is nothing to migrate in either direction.
+
+`status` is the derived half of a document, in the Kubernetes sense that DNA's
+notation already borrows: `spec` is what an author declared, `status` is what
+the system observed. It is never authored and never stored.
 
 ## Summary
 

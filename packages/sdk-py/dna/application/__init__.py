@@ -62,6 +62,7 @@ from dna.application.kind_authoring import (
     author_kind_impl,
     get_authored_kind_impl,
     list_authored_kinds_impl,
+    revoke_kind_impl,
 )
 from dna.application.sdlc import (
     DocumentExists,
@@ -191,6 +192,7 @@ __all__ = [
     "author_kind_impl",
     "get_authored_kind_impl",
     "list_authored_kinds_impl",
+    "revoke_kind_impl",
     # SDLC write core (shared by the CLI + the MCP write tools)
     "DocumentExists",
     "InvalidTransition",

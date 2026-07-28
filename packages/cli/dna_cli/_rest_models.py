@@ -228,20 +228,56 @@ class ApproveKindResponse(BaseModel):
     version: str | None = None
 
 
+class RevokeKindResponse(BaseModel):
+    """``POST /v1/kinds/{kind}/revoke`` — the act that WITHDRAWS effect (i-085).
+
+    Carries the whole chain of acts, not only the last one: who proposed the
+    shape, who conferred effect on it, and who has just withdrawn it.
+    ``approved_by`` is present on purpose — revoking is a third act, not an
+    erasure of the second, and a record saying only "revoked by X" has lost the
+    fact that this Kind governed real documents for a while."""
+
+    revoked: bool
+    kind: str
+    name: str
+    namespace: str
+    revoked_by: str
+    revoked_at: str
+    proposed_by: str | None = None
+    approved_by: str | None = None
+    approved_at: str | None = None
+    version: str | None = None
+
+
 class AuthoredKindSummary(BaseModel):
-    """One ``KindDefinition`` document as the audit surface sees it — BOTH
+    """One ``KindDefinition`` document as the audit surface sees it — ALL THREE
     actors, so the reviewer deciding whether to confer effect can see who asked
-    for it without leaving the list."""
+    for it, and whether anyone has since taken it away, without leaving the
+    list."""
 
     name: str | None = None
     kind: str | None = None
     api_version: str | None = None
     namespace: str | None = None
+    #: "Is this Kind currently conferring effect." False for a REVOKED Kind as
+    #: well as for one nobody ever approved — which is why ``state`` exists.
     approved: bool = False
+    #: WHICH not-approved this is: ``unapproved`` | ``approved`` | ``revoked``
+    #: (i-085). The boolean above cannot carry three values, and the two it
+    #: collapses behave in OPPOSITE ways — a Kind that was never approved
+    #: accepts documents with no validation at all, a revoked one refuses them
+    #: and marks every existing document invalid. Reporting the loosest and the
+    #: tightest states in the system with the same word is how a reviewer ends
+    #: up believing a revocation did nothing.
+    state: str = "unapproved"
     proposed_by: str | None = None
     proposed_at: str | None = None
     approved_by: str | None = None
     approved_at: str | None = None
+    #: Null on every Kind that was never revoked — the honest answer, and not
+    #: the same fact as "revoked by nobody".
+    revoked_by: str | None = None
+    revoked_at: str | None = None
     created_at: str | None = None
 
 
