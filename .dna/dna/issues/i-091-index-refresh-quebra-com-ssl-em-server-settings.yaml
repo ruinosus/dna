@@ -1,0 +1,27 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-091-index-refresh-quebra-com-ssl-em-server-settings
+spec:
+  title: recall nao garante read-your-writes — refresh do indice quebra com CantChangeRuntimeParamError ssl
+  description: |-
+    REPORTADO do Claude Desktop em 28/07, ultimo bug aberto da bateria. recall devolve index_refreshed:false com index_error 'CantChangeRuntimeParamError: parameter "ssl" cannot be changed now'. O degraded:true e setado corretamente — a honestidade funciona — mas READ-YOUR-WRITES NAO E GARANTIDO: o que foi escrito desde o ultimo refresh bem-sucedido nao pode estar no resultado. Na sessao o recall achou a memoria recem-escrita por sorte (semantic 0.89), nao por garantia.
+
+    ONDE: dna/application/runtime.py:1642 chama backfill_index dentro de um try que nunca quebra a leitura — o comportamento de nao derrubar o read esta certo, e o envelope diz a verdade. O defeito e a falha em si.
+
+    HIPOTESE, NAO MEDIDA: a DSN de producao termina em '?ssl=require'. No asyncpg, ssl e argumento de CONEXAO, nao parametro de servidor. Se o dialeto propagar query params desconhecidos para server_settings, o driver emite SET ssl='require' e o Postgres recusa em runtime — que e exatamente esse erro. O que a hipotese NAO explica: por que so o backfill quebra e as consultas normais nao. Provavelmente o backfill abre conexao/engine por caminho diferente. MEDIR isso antes de consertar.
+
+    Tambem candidato: pgbouncer em transaction mode, onde SET de parametro nao e permitido.
+
+    IMPACTO: e o ultimo bug aberto do relatorio, e o unico de infra. Enquanto durar, recall e best-effort e nao garante ler o que acabou de escrever.
+  type: bug
+  severity: high
+  status: open
+  created_at: '2026-07-28T20:26:09+00:00'
+  updated_at: '2026-07-28T20:26:09+00:00'
+  timeline:
+  - at: '2026-07-28T20:26:09+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
