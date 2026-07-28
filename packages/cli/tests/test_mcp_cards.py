@@ -1,8 +1,9 @@
-"""MCP Apps (SEP-1865) — the Prefab card SURFACE: one renderer, one resource.
+"""MCP Apps (SEP-1865) — the **Prefab cards** on the read tools.
 
-The setup every card is built on, proven before any tool declares one: the
-shared ``ui://dna/prefab`` renderer resource, the merge helper that keeps a
-card purely additive, and the host-theme bridge.
+Three reading tools carry a card: ``list_stories``, ``sdlc_digest`` and
+``list_my_kinds``. All three point ONE shared renderer resource
+(``ui://dna/prefab``), and all three return a result whose ``content`` is
+byte-identical to the pre-card baseline.
 
 The two rules this file exists to pin, both from measurement:
 
@@ -10,11 +11,12 @@ The two rules this file exists to pin, both from measurement:
    placeholder ``"[Rendered Prefab UI]"``. The spec makes ``content`` REQUIRED
    and ``structuredContent`` OPTIONAL, so that placeholder would blind every
    agent that consumes DNA over MCP without rendering. The result is built by
-   hand instead, and a wire key that would shadow a tool's own field raises.
+   hand instead: ``content`` byte-identical to the frozen pre-card fixtures,
+   ``structured_content`` a strict SUPERSET of the same data.
 2. **One shared resource URI.** The default synthesises
    ``ui://prefab/tool/<hash>/renderer.html`` per tool — a separate 6.6 MB
-   document per card in bundled mode. One URI is registered, served bundled,
-   and no per-tool renderer is ever listed.
+   document per card in bundled mode. Every card points the same URI, and no
+   per-tool renderer is ever listed or served.
 
 And the requirement that is not a polish pass: the card wears the HOST's
 theme. Every design-token reference carries its own fallback (a host may
@@ -25,6 +27,7 @@ an ink that differ.
 from __future__ import annotations
 
 import asyncio
+import json
 import pathlib
 import shutil
 
@@ -34,10 +37,24 @@ pytest.importorskip("fastmcp", reason="the MCP runtime face needs the optional '
 pytest.importorskip("prefab_ui", reason="the card renderer needs the optional 'apps' extra")
 
 from dna_cli import _mcp_cards as C  # noqa: E402
+from dna_cli import _mcp_kinds as K  # noqa: E402
 from dna_cli import _mcp_server as M  # noqa: E402
 
 _ROOT = pathlib.Path(__file__).resolve().parents[3]
 _BASE = _ROOT / "examples" / "emitting-to-a-runtime" / ".dna"
+_FIXTURES = pathlib.Path(__file__).parent / "fixtures" / "mcp_cards"
+_SCOPE = "concierge"
+
+#: The tools that carry a card, with the impl seam each one is pinned through.
+_CARD_TOOLS = ("list_stories", "sdlc_digest", "list_my_kinds")
+
+#: Canonical payloads for the byte-stability tests. Byte-identity is a property
+#: of the WIRE SERIALIZATION of a given payload (a live store's contents vary by
+#: clock), so the payload is pinned in the fixture directory and the serialized
+#: bytes are compared against the ``*.content.txt`` files captured BEFORE any
+#: card existed. Do not edit the payloads together with the fixtures — that
+#: would defeat the regression net.
+_PAYLOADS = json.loads((_FIXTURES / "payloads.json").read_text(encoding="utf-8"))
 
 
 @pytest.fixture
@@ -49,7 +66,88 @@ def dna_dir(tmp_path, monkeypatch):
     return dst
 
 
+def _pin_impls(monkeypatch):
+    """Pin the three tools to their canonical payloads, at the seam each tool
+    actually calls — the serialization path (tool fn + result shaping + FastMCP
+    framing) is what is under test, never the store."""
+    def _fixed(key):
+        async def impl(*a, **k):
+            return json.loads(json.dumps(_PAYLOADS[key]))
+        return impl
+
+    monkeypatch.setattr(M, "list_stories_impl", _fixed("list_stories"))
+    monkeypatch.setattr(M, "sdlc_digest_impl", _fixed("sdlc_digest"))
+    monkeypatch.setattr(K, "list_authored_kinds_impl", _fixed("list_my_kinds"))
+
+
+def _declare_ui_extension(monkeypatch):
+    """Make the in-memory client announce the MCP Apps extension, the way a
+    UI-capable host does on the wire (the client SDK hard-codes its
+    ``ClientCapabilities`` with no seam for one)."""
+    import mcp.types as mt
+
+    original = mt.ClientCapabilities
+
+    def with_ui(**kwargs):
+        return original(
+            **kwargs,
+            extensions={M.UI_EXTENSION_ID: {"mimeTypes": [M.MCP_APP_MIME]}},
+        )
+
+    monkeypatch.setattr(mt, "ClientCapabilities", with_ui)
+
+
+def _call(dna_dir, tool: str):
+    from fastmcp import Client
+
+    async def scenario():
+        server = M.build_server(base_dir=str(dna_dir))
+        async with Client(server) as client:
+            return await client.call_tool(tool, {"scope": _SCOPE})
+
+    return asyncio.run(scenario())
+
+
 # ── 1. merge, never replace ────────────────────────────────────────────────
+
+
+def test_content_is_byte_identical_to_the_pre_card_baseline(dna_dir, monkeypatch):
+    """The non-negotiable. A client that renders nothing reads the exact bytes
+    it read before any card existed — one textual block, byte-equal to the
+    fixture frozen from the un-carded tool.
+
+    Adopt ``app=True`` (or hand-roll the serialization with anything but
+    FastMCP's own converter) and this dies."""
+    _pin_impls(monkeypatch)
+    for tool in _CARD_TOOLS:
+        result = _call(dna_dir, tool)
+        blocks = [b for b in result.content if getattr(b, "text", None)]
+        assert len(blocks) == 1, (
+            f"{tool}: expected exactly one textual (data) content block — a UI "
+            "declaration replaced or padded the text answer"
+        )
+        baseline = (_FIXTURES / f"{tool}.content.txt").read_bytes()
+        assert blocks[0].text.encode("utf-8") == baseline, (
+            f"{tool}: the card changed the bytes a UI-blind client reads"
+        )
+
+
+def test_the_card_rides_along_as_a_strict_superset(dna_dir, monkeypatch):
+    """``structured_content`` carries the tool's own data UNCHANGED plus the
+    Prefab wire keys. Not a replacement, not a reshaping: every key the tool
+    returned is present with the identical value, and the card is what is
+    added on top."""
+    _pin_impls(monkeypatch)
+    for tool in _CARD_TOOLS:
+        result = _call(dna_dir, tool)
+        data = json.loads([b for b in result.content if getattr(b, "text", None)][0].text)
+        structured = result.structured_content or {}
+        for key, value in data.items():
+            assert key in structured, f"{tool}: the card dropped {key!r} from the data"
+            assert structured[key] == value, f"{tool}: the card rewrote {key!r}"
+        for wire_key in ("$prefab", "view", "state"):
+            assert wire_key in structured, f"{tool}: no {wire_key!r} — no card at all"
+        assert structured["$prefab"]["version"], f"{tool}: the card declares no protocol version"
 
 
 def test_a_card_that_would_shadow_a_tool_field_raises(monkeypatch):
@@ -67,6 +165,48 @@ def test_a_card_that_would_shadow_a_tool_field_raises(monkeypatch):
 
 
 # ── 2. one shared renderer resource ────────────────────────────────────────
+
+
+def test_every_card_tool_points_the_one_shared_renderer(dna_dir, monkeypatch):
+    """All three declarations point the SAME ``ui://`` resource. The default
+    would mint ``ui://prefab/tool/<hash>/renderer.html`` per tool — a separate
+    6.6 MB document each, in a mode where every host prefetches them."""
+    from fastmcp import Client
+
+    _declare_ui_extension(monkeypatch)
+
+    async def scenario():
+        server = M.build_server(base_dir=str(dna_dir))
+        async with Client(server) as client:
+            return {t.name: t for t in await client.list_tools()}
+
+    tools = asyncio.run(scenario())
+    pointed = set()
+    for tool in _CARD_TOOLS:
+        uri = ((tools[tool].meta or {}).get("ui") or {}).get("resourceUri")
+        assert uri, f"{tool} declares no card template"
+        pointed.add(uri)
+    assert pointed == {C.UI_PREFAB_URI}, f"the cards do not share one renderer: {pointed}"
+
+
+def test_a_ui_blind_client_is_not_offered_the_card_pointer(dna_dir):
+    """The SEP-1865 capability check reaches the new tools too, not only the
+    memory pair it was written for: a client that completes the handshake
+    without the MCP Apps extension is not advertised a UI-enabled tool. The
+    TOOL is still listed — we withhold the card, never the capability."""
+    from fastmcp import Client
+
+    async def scenario():
+        server = M.build_server(base_dir=str(dna_dir))
+        async with Client(server) as client:  # declares no extension
+            return {t.name: t for t in await client.list_tools()}
+
+    tools = asyncio.run(scenario())
+    for tool in _CARD_TOOLS:
+        assert not ((tools[tool].meta or {}).get("ui") or {}).get("resourceUri"), (
+            f"{tool} advertised its card to a client that cannot render it"
+        )
+        assert tools[tool].description
 
 
 def test_no_per_tool_renderer_is_ever_listed_or_served(dna_dir):
@@ -344,3 +484,75 @@ _BUILDERS = {
 }
 
 
+def _wire(tool: str) -> dict:
+    return getattr(C, _BUILDERS[tool])(_PAYLOADS[tool]).to_json()
+
+
+def test_the_stories_card_binds_the_rows_and_carries_an_empty_state():
+    """The Story roster is a table bound to state, with an honest empty state
+    for a scope that has none."""
+    wire = _wire("list_stories")
+    assert wire["state"]["count"] == 3
+    assert [s["name"] for s in wire["state"]["stories"]] == [
+        "s-cards", "s-negotiation", "s-bare",
+    ]
+    # A missing field renders as an em dash, never as the string "None".
+    bare = wire["state"]["stories"][2]
+    assert bare["title"] == "—" and bare["feature"] == "—"
+    blob = json.dumps(wire)
+    assert '"DataTable"' in blob
+    assert "None" not in json.dumps(wire["state"])
+    assert "No Stories in this scope yet" in blob, "no empty state"
+
+
+def test_the_digest_card_maps_rag_to_a_measured_badge_variant():
+    """The digest's own three-value RAG vocabulary maps to the renderer's
+    semantic variants — the only place a colour carries meaning on these
+    cards, and the reason the semantic fallbacks were measured."""
+    wire = _wire("sdlc_digest")
+    assert wire["state"]["rag"] == "red"
+    assert wire["state"]["rag_variant"] == "destructive"
+    assert C._RAG_VARIANT == {
+        "red": "destructive", "amber": "warning", "green": "success",
+    }
+    # Every attention bucket reaches the table, with the field that says WHY.
+    rows = wire["state"]["attention_rows"]
+    assert [r["bucket"] for r in rows] == ["Blocked", "Open question"]
+    assert rows[0]["why"] == "waiting on the renderer decision"
+    assert rows[1]["why"] == "prefab or hand-written?"
+    # A partial read is stated on the card, not only in the text answer.
+    assert wire["state"]["partial"] is True
+    assert "partial" in wire["state"]["partial_note"]
+
+
+def test_the_kinds_card_shows_the_one_fact_the_roster_exists_for():
+    """``approved`` is the fact this route exists to publish — an unapproved
+    Kind is inert — and it is one boolean among ten fields in the text answer.
+    The card promotes it to a badge and keeps both actors visible."""
+    wire = _wire("list_my_kinds")
+    rows = wire["state"]["kinds"]
+    assert [r["name"] for r in rows] == ["kd-contrato", "kd-apolice"]
+    assert rows[0]["status"] == "proposed", "an unapproved Kind must not read as approved"
+    assert rows[1]["status"] == "approved"
+    # BOTH actors survive: the reviewer's first question is who proposed it.
+    assert rows[0]["proposed_by"] == "agent-7"
+    assert rows[1]["approved_by"] == "barna"
+    # The headline is the count that is still inert, and it wears the measured
+    # warning colour only while something is actually waiting on a person.
+    assert wire["state"]["pending"] == 1
+    assert wire["state"]["pending_variant"] == "warning"
+    assert C._pending_variant(0) == "success"
+
+
+def test_no_card_wires_an_action():
+    """Display only, deliberately. What a card can DO is gated behind
+    revocation work that does not exist yet, and a button that acts without a
+    way to take the grant back is the wrong thing to ship first. Add one and
+    this dies."""
+    for tool in _CARD_TOOLS:
+        blob = json.dumps(_wire(tool))
+        for forbidden in (
+            "CallTool", "SendMessage", "OpenLink", "onClick", "onRowClick",
+            '"action"', '"actions"', '"onSubmit"',
+        ):
+            assert forbidden not in blob, f"{tool} wires {forbidden} — cards are read-only here"

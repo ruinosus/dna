@@ -1,0 +1,1 @@
+{"scope":"concierge","count":3,"stories":[{"name":"s-cards","title":"Prefab cards for the read tools","status":"in-progress","feature":"f-mcp-apps","priority":"high"},{"name":"s-negotiation","title":"Extension negotiation","status":"done","feature":"f-mcp-apps","priority":null},{"name":"s-bare","title":null,"status":"todo","feature":null,"priority":null}]}

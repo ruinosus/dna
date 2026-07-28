@@ -64,6 +64,9 @@ __all__ = [
     "host_theme_css",
     "prefab_renderer_html",
     "with_card",
+    "stories_app",
+    "digest_app",
+    "kinds_app",
 ]
 
 #: The ONE ``ui://`` resource every Prefab card in this face points at. Stable —
@@ -264,3 +267,302 @@ def with_card(data: dict[str, Any], app: Any) -> Any:
             )
         merged[key] = value
     return ToolResult(content=data, structured_content=merged)
+
+
+# ── the cards ──────────────────────────────────────────────────────────────
+
+
+def _text(value: Any) -> str:
+    """A cell the card can print. ``None`` renders as an em dash rather than
+    as the string ``"None"`` — the data says "not set", and a card that prints
+    a Python repr has invented a value."""
+    return "—" if value is None or value == "" else str(value)
+
+
+def stories_app(data: dict[str, Any]) -> Any:
+    """The ``list_stories`` card: the board as a sortable, searchable roster.
+
+    A Story list is a table — name, title, status, feature, priority across N
+    rows — and a table is the one shape JSON text reads worst. Status is left
+    as plain text rather than a coloured badge: the vocabulary is open (any
+    workflow may define its own), so a colour map would either be incomplete
+    or invented."""
+    from prefab_ui.app import PrefabApp
+    from prefab_ui.components import (
+        Card,
+        CardContent,
+        CardDescription,
+        CardHeader,
+        CardTitle,
+        DataTable,
+        DataTableColumn,
+        Row,
+        Text,
+    )
+    from prefab_ui.components.control_flow import Else, If
+
+    stories = data.get("stories")
+    rows = [
+        {
+            "name": _text(s.get("name")),
+            "title": _text(s.get("title")),
+            "status": _text(s.get("status")),
+            "feature": _text(s.get("feature")),
+            "priority": _text(s.get("priority")),
+        }
+        for s in (stories if isinstance(stories, list) else [])
+        if isinstance(s, dict)
+    ]
+    state = {
+        "scope": _text(data.get("scope")),
+        "count": len(rows),
+        "stories": rows,
+    }
+    with Card() as view:
+        with CardHeader():
+            with Row(gap=3, align="center"):
+                Text("DNA", css_class="dna-mark")
+                CardTitle("Stories")
+            CardDescription("{{ count }} in {{ scope }}")
+        with CardContent():
+            with If("count > 0"):
+                DataTable(
+                    columns=[
+                        DataTableColumn(key="name", header="Story", sortable=True),
+                        DataTableColumn(key="title", header="Title"),
+                        DataTableColumn(key="status", header="Status", sortable=True),
+                        DataTableColumn(key="feature", header="Feature", sortable=True),
+                        DataTableColumn(key="priority", header="Priority", sortable=True),
+                    ],
+                    rows="{{ stories }}",
+                    search=True,
+                    paginated=True,
+                    page_size=10,
+                )
+            with Else():
+                Text(
+                    "No Stories in this scope yet — anything the board records "
+                    "will appear here.",
+                    css_class="text-muted-foreground",
+                )
+    return PrefabApp(view=view, state=state)
+
+
+#: RAG → the renderer's badge variant. The digest's own three-value vocabulary
+#: (``_digest.build_digest``), mapped ONCE here so the view carries no colour
+#: logic: red is a stop, amber is an open question, green is clear.
+_RAG_VARIANT = {"red": "destructive", "amber": "warning", "green": "success"}
+
+#: The attention buckets, in the order a delegator should read them, with the
+#: field each one puts the reason in. Declared rather than inferred: the buckets
+#: are heterogeneous (``reason`` / ``question`` / ``owner``) and a card that
+#: guessed would silently drop the one column that says WHY.
+_ATTENTION = (
+    ("blocked", "Blocked", "reason"),
+    ("review_awaiting", "Awaiting review", "owner"),
+    ("owner_decisions", "Owner decision", "owner"),
+    ("open_questions", "Open question", "question"),
+)
+
+
+def digest_app(data: dict[str, Any]) -> Any:
+    """The ``sdlc_digest`` card: the retrospective as a dashboard.
+
+    The digest is the one read on this face that is genuinely dashboard-shaped
+    — a RAG verdict, a row of counts, and a list of things needing a person —
+    and all three are buried in a deeply nested JSON object that a reader has
+    to reassemble in their head.
+
+    The card SUMMARISES; it does not replace. The full buckets (every completed
+    item, every decision, every artifact) stay in ``content``, which the same
+    result carries unchanged, so nothing is lost by rendering less."""
+    from prefab_ui.app import PrefabApp
+    from prefab_ui.components import (
+        Badge,
+        Card,
+        CardContent,
+        CardDescription,
+        CardHeader,
+        CardTitle,
+        DataTable,
+        DataTableColumn,
+        Grid,
+        Metric,
+        Row,
+        Text,
+    )
+    from prefab_ui.components.control_flow import If
+
+    counts = data.get("counts")
+    counts = counts if isinstance(counts, dict) else {}
+    attention = data.get("attention")
+    attention = attention if isinstance(attention, dict) else {}
+
+    rows: list[dict[str, str]] = []
+    for bucket, label, why in _ATTENTION:
+        for item in attention.get(bucket) or []:
+            if not isinstance(item, dict):
+                continue
+            rows.append(
+                {
+                    "bucket": label,
+                    "item": " ".join(
+                        p for p in (item.get("kind"), item.get("name")) if p
+                    )
+                    or "—",
+                    "title": _text(item.get("title")),
+                    "why": _text(item.get(why)),
+                }
+            )
+
+    unreadable = ((data.get("sources") or {}) if isinstance(data.get("sources"), dict)
+                  else {}).get("unreadable") or []
+    rag = _text(data.get("rag_status"))
+    state = {
+        "scope": _text(data.get("scope")),
+        "since_label": _text(data.get("since_label")),
+        "verdict": _text(data.get("verdict")),
+        "rag": rag,
+        "rag_variant": _RAG_VARIANT.get(rag, "secondary"),
+        "completed": int(counts.get("completed") or 0),
+        "decided": int(counts.get("decided") or 0),
+        "found": int(counts.get("found") or 0),
+        "attention_count": len(rows),
+        "attention_rows": rows,
+        "partial": bool(data.get("partial")),
+        # The coverage sentence, composed here so the view holds no grammar.
+        "partial_note": (
+            f"{len(unreadable)} Kind(s) could not be read, so this digest is "
+            "partial — the board it reports on is not the whole board."
+        ),
+    }
+
+    with Card() as view:
+        with CardHeader():
+            with Row(gap=3, align="center"):
+                Text("DNA", css_class="dna-mark")
+                CardTitle("Board digest")
+                Badge("{{ rag }}", variant="{{ rag_variant }}")
+            CardDescription("{{ scope }} · since {{ since_label }}")
+        with CardContent():
+            Text("{{ verdict }}")
+            with If("partial"):
+                Text("{{ partial_note }}", css_class="text-warning")
+            with Grid(columns=4, gap=4):
+                Metric(label="Completed", value="{{ completed }}")
+                Metric(label="Decided", value="{{ decided }}")
+                Metric(label="Found", value="{{ found }}")
+                Metric(label="Needs attention", value="{{ attention_count }}")
+            with If("attention_count > 0"):
+                DataTable(
+                    columns=[
+                        DataTableColumn(key="bucket", header="Needs", sortable=True),
+                        DataTableColumn(key="item", header="Item"),
+                        DataTableColumn(key="title", header="Title"),
+                        DataTableColumn(key="why", header="Why"),
+                    ],
+                    rows="{{ attention_rows }}",
+                )
+    return PrefabApp(view=view, state=state)
+
+
+def _pending_variant(pending: int) -> str:
+    """The headline badge's colour. Amber only while something is genuinely
+    waiting on a person; a roster with nothing inert is a clean one, and a
+    permanent warning colour is a warning nobody reads."""
+    return "warning" if pending else "success"
+
+
+def kinds_app(data: dict[str, Any]) -> Any:
+    """The ``list_my_kinds`` card: the authoring audit roster.
+
+    ``approved`` is the one fact this route exists to publish — an unapproved
+    Kind exists and has NO effect, because registration is what confers schema
+    validation and storage routing — and in the text answer it is one boolean
+    among ten fields, per row. The card promotes the count still inert to the
+    headline and gives the boolean its own column, while keeping both actors
+    and both timestamps visible: a reviewer deciding whether to confer effect
+    needs to see who proposed it, and when.
+
+    No approve affordance, here or anywhere: approval is the act that confers
+    effect, and an agent able to call it could approve its own proposal. The
+    human act lives on the REST face, reached by a reviewer's own credential.
+    This card is a mirror, not a door."""
+    from prefab_ui.app import PrefabApp
+    from prefab_ui.components import (
+        Badge,
+        Card,
+        CardContent,
+        CardDescription,
+        CardHeader,
+        CardTitle,
+        DataTable,
+        DataTableColumn,
+        Row,
+        Text,
+    )
+    from prefab_ui.components.control_flow import Else, If
+
+    raw = data.get("kinds")
+    rows = [
+        {
+            "name": _text(k.get("name")),
+            "kind": _text(k.get("kind")),
+            "api_version": _text(k.get("api_version")),
+            "namespace": _text(k.get("namespace")),
+            "status": "approved" if k.get("approved") else "proposed",
+            "proposed_by": _text(k.get("proposed_by")),
+            "proposed_at": _text(k.get("proposed_at")),
+            "approved_by": _text(k.get("approved_by")),
+            "approved_at": _text(k.get("approved_at")),
+        }
+        for k in (raw if isinstance(raw, list) else [])
+        if isinstance(k, dict)
+    ]
+    pending = sum(1 for r in rows if r["status"] == "proposed")
+    state = {
+        "scope": _text(data.get("scope")),
+        "count": len(rows),
+        "pending": pending,
+        "pending_label": (
+            f"{pending} awaiting approval" if pending else "all approved"
+        ),
+        "pending_variant": _pending_variant(pending),
+        "kinds": rows,
+    }
+    with Card() as view:
+        with CardHeader():
+            with Row(gap=3, align="center"):
+                Text("DNA", css_class="dna-mark")
+                CardTitle("Kinds you have authored")
+                Badge("{{ pending_label }}", variant="{{ pending_variant }}")
+            CardDescription(
+                "{{ count }} in {{ scope }} · a Kind awaiting approval exists "
+                "and has no effect yet"
+            )
+        with CardContent():
+            with If("count > 0"):
+                DataTable(
+                    columns=[
+                        DataTableColumn(key="name", header="Document", sortable=True),
+                        DataTableColumn(key="kind", header="Kind", sortable=True),
+                        DataTableColumn(key="api_version", header="apiVersion"),
+                        DataTableColumn(key="namespace", header="Namespace", sortable=True),
+                        DataTableColumn(key="status", header="Status", sortable=True),
+                        DataTableColumn(key="proposed_by", header="Proposed by"),
+                        DataTableColumn(key="proposed_at", header="Proposed at", sortable=True),
+                        DataTableColumn(key="approved_by", header="Approved by"),
+                        DataTableColumn(key="approved_at", header="Approved at", sortable=True),
+                    ],
+                    rows="{{ kinds }}",
+                    search=True,
+                    paginated=True,
+                    page_size=10,
+                )
+            with Else():
+                Text(
+                    "Your workspace has authored no Kinds yet — author one and "
+                    "it will appear here, inert, until a human approves it.",
+                    css_class="text-muted-foreground",
+                )
+    return PrefabApp(view=view, state=state)

@@ -89,9 +89,17 @@ def register_kind_tools(
     is there for a caller that wants to report what it mounted, not because
     anything prints it.
     """
+    from fastmcp.apps import AppConfig
     from fastmcp.exceptions import ToolError
 
     from dna_cli._mcp_auth import actor_from_context
+    from dna_cli._mcp_cards import UI_PREFAB_URI, kinds_app, with_card
+
+    # The SHARED card renderer (`dna_cli._mcp_cards`) — the same resource the
+    # board reads point, never a per-tool one. Built here rather than passed in
+    # because this module owns its own registration, exactly as it owns its own
+    # refusal mapping.
+    prefab_card_app = AppConfig(resource_uri=UI_PREFAB_URI)
 
     # Bound to the name the source guard ``tests/test_tools_bind_their_scope.py``
     # looks for. That guard fails on a tool that DECLARES a ``scope`` and then
@@ -200,7 +208,7 @@ def register_kind_tools(
         except AUTHORING_REFUSALS as exc:
             raise _refuse(exc) from None
 
-    @server.tool(run_in_thread=False)
+    @server.tool(run_in_thread=False, app=prefab_card_app)
     async def list_my_kinds(
         scope: str | None = None, tenant: str | None = None,
     ) -> dict[str, Any]:
@@ -211,15 +219,22 @@ def register_kind_tools(
         Reads DOCUMENTS, not the registry: an unapproved Kind is precisely the
         one the registry does not have, so this is the only surface that shows a
         proposal still waiting for a human. ``approved: false`` means the Kind
-        exists and has no effect yet."""
+        exists and has no effect yet.
+
+        The declaration points the shared ``ui://dna/prefab`` card (read-only,
+        and read-only is the whole point — approval is not an act an agent may
+        take): a host that renders MCP Apps shows the roster with the count
+        still inert in the headline. Every other host reads the same textual
+        result, unchanged."""
         tenant = await _guard("definitions", tenant, scope=scope, family_op="read")
         try:
-            return await list_authored_kinds_impl(
+            data = await list_authored_kinds_impl(
                 await live(), tenant=tenant, scope=scope,
             )
         except NO_REGISTRY as exc:
             raise _no_registry(exc) from exc
         except AUTHORING_REFUSALS as exc:
             raise _refuse(exc) from None
+        return with_card(data, kinds_app(data))
 
     return ["author_kind", "list_my_kinds"]

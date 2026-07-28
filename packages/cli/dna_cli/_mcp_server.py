@@ -510,7 +510,15 @@ def build_server(
     # is a separate 6.6 MB document each. `with_card` merges rather than
     # replaces: `content` stays byte-identical for every client that renders
     # nothing.
-    from dna_cli._mcp_cards import UI_PREFAB_URI, prefab_renderer_html
+    from dna_cli._mcp_cards import (
+        UI_PREFAB_URI,
+        digest_app,
+        prefab_renderer_html,
+        stories_app,
+        with_card,
+    )
+
+    prefab_card_app = AppConfig(resource_uri=UI_PREFAB_URI)
 
     # The auth↔tenancy bridge: resolve the effective tenant from the current
     # token (identity when there is no token / no auth). CrossTenantError → a
@@ -970,20 +978,33 @@ def build_server(
 
     # -- SDLC ----------------------------------------------------------------
 
-    @server.tool(run_in_thread=False)
+    @server.tool(run_in_thread=False, app=prefab_card_app)
     async def sdlc_digest(
         since: str | None = None, scope: str | None = None
     ) -> dict[str, Any]:
         """Retrospective board digest — what happened in a window (default 24h).
-        ``since`` accepts a span (``90m``/``24h``/``3d``/``2w``) or ISO time."""
-        return await sdlc_digest_impl(await _live(), since, scope, await _guard("sdlc", scope=scope))
+        ``since`` accepts a span (``90m``/``24h``/``3d``/``2w``) or ISO time.
 
-    @server.tool(run_in_thread=False)
+        The declaration points the shared ``ui://dna/prefab`` card (read-only):
+        a host that renders MCP Apps shows the RAG verdict, the counts and what
+        needs a person as a dashboard; every other host reads the full digest
+        from the textual result, unchanged."""
+        data = await sdlc_digest_impl(
+            await _live(), since, scope, await _guard("sdlc", scope=scope))
+        return with_card(data, digest_app(data))
+
+    @server.tool(run_in_thread=False, app=prefab_card_app)
     async def list_stories(
         status: str | None = None, scope: str | None = None
     ) -> dict[str, Any]:
-        """List SDLC Stories, optionally filtered by status."""
-        return await list_stories_impl(await _live(), status, scope, await _guard("sdlc", scope=scope))
+        """List SDLC Stories, optionally filtered by status.
+
+        The declaration points the shared ``ui://dna/prefab`` card (read-only):
+        a host that renders MCP Apps shows the roster as a sortable, searchable
+        table; every other host reads the same textual result, unchanged."""
+        data = await list_stories_impl(
+            await _live(), status, scope, await _guard("sdlc", scope=scope))
+        return with_card(data, stories_app(data))
 
     @server.tool(run_in_thread=False)
     async def get_adr(name: str, scope: str | None = None) -> dict[str, Any]:
