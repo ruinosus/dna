@@ -16,3 +16,21 @@ spec:
     type: status_change
     source: cli
     to: open
+  - at: '2026-07-28T14:41:09+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: |-
+      PROMOVIDA de divida a REQUISITO em 28/07, por decisao do founder — e o gatilho mudou.
+
+      Contexto novo: o MCP Apps foi finalizado hoje e traz visibility: ['app'], que permite uma tool ser chamavel SO pelo card renderizado, com o host obrigado a NAO inclui-la na lista do modelo. Isso destrava o cenario que motiva tudo: num workspace com mais de uma pessoa, quem CRIA o Kind nao e quem APROVA — e a aprovadora poderia perguntar 'o que tem para aprovar?' e resolver dentro do Claude Desktop, sem entrar no portal.
+
+      Por que isso torna a revogacao requisito, e nao mais divida:
+
+      (1) A spec diz EXPLICITAMENTE que o servidor NAO consegue distinguir uma chamada vinda da UI de uma vinda do modelo — as duas chegam como JSON-RPC igual, e quem faz valer a visibilidade e o HOST, antes de encaminhar. Nao e mecanismo nosso; e confianca num terceiro.
+
+      (2) Host malicioso nao e o medo (ele ja tem o token da pessoa). O medo e host INCOMPLETO: um cliente MCP que ainda nao implementou visibility deixa a tool vazar para a lista do modelo, e volta a forja de CONSENTIMENTO — o registro diria que a pessoa aprovou, e ela nunca decidiu.
+
+      (3) Logo, aprovar numa superficie conversacional so e defensavel se DESFAZER funcionar. Hoje limpar approved_by de um Kind ja registrado nao tem efeito ate o processo reiniciar, e isso esta documentado em registry.py como nao-construido.
+
+      ORDEM ACORDADA: tema com tokens do host -> card do pendente mostrando o schema (sem botao) -> ESTA ISSUE -> so entao o botao Aprovar com visibility: ['app']. Inverter as duas ultimas entrega um botao que aprova sem ter como desaprovar.
