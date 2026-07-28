@@ -149,7 +149,17 @@ class PgVecRecordSearchProvider:
                     "PgVecRecordSearchProvider needs the 'search-pgvector' extra: "
                     "pip install 'dna-sdk[search-pgvector]'"
                 ) from exc
-            self._pool = await asyncpg.create_pool(self._dsn)
+            from dna.adapters.asyncpg_dsn import asyncpg_connect_args
+
+            # The DSN arrives from the source's engine URL (``pg_search_binding``)
+            # or straight from config, so its query params are CONNECT arguments
+            # in SQLAlchemy's dialect. asyncpg's own parser forwards the ones it
+            # does not recognise as SERVER SETTINGS — i-091: ``?ssl=require``
+            # became ``SET ssl`` and every pool connection died with
+            # ``CantChangeRuntimeParamError``, so no index refresh could run and
+            # ``recall`` quietly stopped being read-your-writes.
+            dsn, connect_kwargs = asyncpg_connect_args(self._dsn)
+            self._pool = await asyncpg.create_pool(dsn, **connect_kwargs)
         return self._pool
 
     async def _ensure_ready(self) -> None:

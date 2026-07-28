@@ -385,3 +385,46 @@ class TestPostgresEventBus:
             )
         finally:
             await bus.stop()
+
+    async def test_connects_on_a_dsn_carrying_an_ssl_query_param(self, pg_setup):
+        """i-091 — the bus opens its OWN asyncpg connection from the configured
+        DSN, so it met the same trap the search pool did: a connection argument
+        in the URL (``ssl=``) is not part of asyncpg's DSN vocabulary and was
+        forwarded as a SERVER SETTING, killing every connect with
+        ``CantChangeRuntimeParamError``. The bus's reconnect loop swallows that
+        forever, so the symptom is silence — hence the assertion is a DELIVERED
+        invalidation, not the absence of an exception.
+
+        ``ssl=prefer`` rather than ``require`` so the case runs against any
+        Postgres: as a server setting it fails identically either way.
+        """
+        from dna.kernel import Kernel
+        from dna.adapters.postgres.eventbus import PostgresEventBus
+
+        kernel = Kernel()
+        h = _StubHolder("evbus-test")
+        kernel.register_holder(h)
+
+        dsn = pg_setup["dsn"] + ("&" if "?" in pg_setup["dsn"] else "?") + "ssl=prefer"
+        bus = PostgresEventBus(dsn, schema=pg_setup["schema"])
+        await bus.start(kernel)
+        try:
+            await asyncio.sleep(0.2)        # let LISTEN attach
+
+            agent_raw = {
+                "apiVersion": "github.com/ruinosus/dna/v1", "kind": "Agent",
+                "metadata": {"name": "tls-shaped-dsn"}, "spec": {},
+            }
+            await pg_setup["source"].save_document(
+                "evbus-test", "Agent", "tls-shaped-dsn", agent_raw,
+            )
+
+            for _ in range(20):
+                await asyncio.sleep(0.1)
+                if h.reloads >= 1:
+                    break
+            assert h.reloads >= 1, (
+                "the bus never delivered — it could not connect on an ssl= DSN"
+            )
+        finally:
+            await bus.stop()

@@ -161,7 +161,15 @@ class PostgresEventBus(KernelEventBus):
         """
         import asyncpg  # local — avoid hard dep at import time
 
-        self._conn = await asyncpg.connect(self._dsn)
+        from dna.adapters.asyncpg_dsn import asyncpg_connect_args
+
+        # Same DSN the source is configured with, so its query params are
+        # CONNECT arguments — asyncpg would forward the ones it does not
+        # recognise as server settings (i-091). Without the split, a
+        # ``?ssl=require`` deployment gets a bus that can never connect and
+        # only ever logs reconnect attempts.
+        dsn, connect_kwargs = asyncpg_connect_args(self._dsn)
+        self._conn = await asyncpg.connect(dsn, **connect_kwargs)
         # Termination listener: fires when Postgres closes the conn
         # (pg_terminate_backend, server restart, network drop). We use
         # this to wake the parked coroutine and force `_run` to retry.
