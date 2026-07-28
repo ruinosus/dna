@@ -1475,6 +1475,18 @@ def build_server(
 
     register_kind_tools(server, live=_live, guard=_guard)
 
+    # -- the portfolio door: workspaces / projects / repos / orgs ------------
+    #
+    # These Kinds were always reachable through the generic document door, and
+    # the application seams already served the REST face. What was missing was
+    # a NAME — and a catalog of 78 Kinds with no named tool is discoverable
+    # only by luck. `list_projects` also carries the one sentence that joins
+    # the halves: a project's `board_scope` IS its board's scope, which is how
+    # a caller gets from the roster to `board_summary`.
+    from dna_cli._mcp_portfolio import register_portfolio_tools
+
+    register_portfolio_tools(server, live=_live, guard=_guard)
+
     # -- resources (prove resources beyond tools) ----------------------------
 
     @server.resource("dna://{scope}/manifest")

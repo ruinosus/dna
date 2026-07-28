@@ -47,6 +47,7 @@ _SOURCES = [
     _SERVER,
     _DNA_CLI / "_mcp_kinds.py",
     _DNA_CLI / "_mcp_documents.py",
+    _DNA_CLI / "_mcp_portfolio.py",
     _DNA_CLI / "graph" / "_tools.py",
     _DNA_CLI / "act_on_behalf" / "_server.py",
 ]
