@@ -14,7 +14,7 @@ spec:
     O QUE PRECISA SER RESPONDIDO: e gate de aprovacao real ou fallback de erro? Se real, qual politica decide? Padronizar para propagar a razao especifica — invalid status, missing approval, quota — como os reads ja fazem.
   type: bug
   severity: high
-  status: open
+  status: resolved
   created_at: '2026-07-28T18:07:19+00:00'
   updated_at: '2026-07-28T18:07:19+00:00'
   timeline:
@@ -23,3 +23,24 @@ spec:
     type: status_change
     source: cli
     to: open
+  - at: '2026-07-28T21:07:22+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: |-
+      RESOLVIDO, e nunca foi gate de aprovacao. A bateria 3 do Claude Desktop (28/07, pos-update) confirmou a hipotese (c) do relatorio original: era MethodologyRefusal MASCARADO pelo handler de mutacao.
+
+      Medido na re-bateria: create_story sem ac/dod devolve MethodologyRefusal limpo listando os exit criteria faltantes — era exatamente isto que a test-gate-probe batia como 'No approval received', porque ela nao tinha ac/dod. E set_status para done sem evidencia devolve MethodologyRefusal explicando o test-gate (sdlc.test-gated exige TestRun product-lane com outcome=pass), com comandos e escapes listados. Os escapes funcionam: no_code=true + gate_reason efetiva o close, grava gate_exception na timeline e devolve warnings nao-bloqueantes.
+
+      Isso explica a nao-uniformidade que parecia impossivel: comment passava porque comment nao tem exit criteria; set_status FORWARD passava porque as transicoes iniciais nao batiam no test-gate; create_story e set_status backward/invalido falhavam porque cada um batia numa regra de metodologia DIFERENTE. Nunca houve gate de HITL — havia tres recusas distintas com a mesma mensagem errada.
+
+      Segundo membro da familia 'o sistema sabia a verdade e reportava outra coisa', junto com i-088, i-090 e i-092.
+  - at: '2026-07-28T21:07:24+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: open
+    to: resolved
+    summary: Era MethodologyRefusal mascarado pelo handler de mutacao, nao gate de aprovacao. Corrigido por trabalho anterior; confirmado em producao pela bateria 3 do Claude Desktop.
+  closed_at: '2026-07-28T21:07:24+00:00'
+  resolution: Era MethodologyRefusal mascarado pelo handler de mutacao, nao gate de aprovacao. Corrigido por trabalho anterior; confirmado em producao pela bateria 3 do Claude Desktop.
