@@ -73,6 +73,7 @@ __all__ = [
     "list_documents_impl",
     "list_kinds_impl",
     "resolve_kind_port",
+    "resolve_kind_port_live",
     "spec_etag",
     "write_document_impl",
 ]
@@ -169,6 +170,36 @@ def resolve_kind_port(
             f"written and how the call is metered."
         )
     return matches[0]
+
+
+async def resolve_kind_port_live(
+    live: LiveDna, kind: str, api_version: str | None = None, *,
+    scope: str | None = None,
+) -> Any:
+    """:func:`resolve_kind_port`, preceded by the document routes' REBUILD
+    TRIGGER — the seam that lets an approval take effect on THIS replica (i-090).
+
+    The document routes resolve their Kind straight off the registry, and the
+    registry is only ever (re)populated inside a Manifest Instance build. No
+    document route builds one, so on a replica that did not itself serve the
+    approval a freshly approved Kind stayed unregistered until somebody happened
+    to call a ``definitions``-family route for that scope — indeterminate, per
+    replica, and for a REVOCATION a door that is slow to close.
+
+    :meth:`~dna.application.live.LiveDna.ensure_kinds` is the answer, and it is
+    TTL'd (:data:`~dna.application.live.KIND_REFRESH_TTL_DEFAULT`), so the cost
+    is one bootstrap-slice read per scope per window per replica — not one per
+    request — and what it buys is a number an operator can publish rather than a
+    hope.
+
+    Every generic use-case below resolves through HERE rather than through the
+    bare :func:`resolve_kind_port`, precisely so a new route cannot forget the
+    trigger: it is attached to the resolution, the one thing a document route
+    cannot skip. The bare function stays exported for callers that hold a kernel
+    and no live handle.
+    """
+    await live.ensure_kinds(scope)
+    return resolve_kind_port(live.kernel, kind, api_version, scope=scope)
 
 
 def is_bootstrap_kind(port: Any) -> bool:
@@ -493,6 +524,12 @@ async def list_kinds_impl(
     # that govern this scope — the globals plus this scope's own. Another
     # workspace's Kind is not actionable here and must not be advertised.
     catalog_scope = scope or live.default_scope(tenant)
+    # i-090 — the catalog is a document route too: it reads the registry
+    # directly and never built a Manifest Instance, so without this it kept
+    # answering "no such Kind" for a Kind that had just been approved (and kept
+    # advertising one that had just been revoked). Same TTL'd seam as
+    # :func:`resolve_kind_port_live`.
+    await live.ensure_kinds(catalog_scope)
     for port in ports_in_scope(live.kernel, catalog_scope):
         family = family_for_kind(port)
         if allowed is not None and family not in allowed:
@@ -563,7 +600,7 @@ async def list_documents_impl(
     only fully meaningful WITH an ``order_by``: without one, ``kernel.query``'s
     page is stable per adapter but not globally defined."""
     sc = scope or live.default_scope(tenant)
-    port = resolve_kind_port(live.kernel, kind, api_version, scope=sc)
+    port = await resolve_kind_port_live(live, kind, api_version, scope=sc)
     limit = max(1, min(int(limit), 500))
     offset = max(0, int(offset))
     projection = [str(f) for f in fields] if fields else None
@@ -600,7 +637,7 @@ async def get_document_impl(
 ) -> dict[str, Any]:
     """Read one document verbatim, as the caller's layer sees it."""
     sc = scope or live.default_scope(tenant)
-    port = resolve_kind_port(live.kernel, kind, api_version, scope=sc)
+    port = await resolve_kind_port_live(live, kind, api_version, scope=sc)
     raw = await live.kernel.get_document(sc, port.kind, name, tenant=tenant)
     if raw is None:
         raise LookupError(f"no {port.kind} named {name!r} in scope {sc!r}")
@@ -665,7 +702,7 @@ async def write_document_impl(
     from dna.application.sdlc import now_iso
 
     sc = scope or live.default_scope(tenant)
-    port = resolve_kind_port(live.kernel, kind, api_version, scope=sc)
+    port = await resolve_kind_port_live(live, kind, api_version, scope=sc)
     if is_bootstrap_kind(port):
         raise BootstrapKindWriteRefused(bootstrap_write_refusal(port))
     # Read at the coordinates the write will act on — ``write_tenant``, not the
@@ -762,7 +799,7 @@ async def delete_document_impl(
     all the way down to the adapter (:meth:`WritableSourcePort.delete_document`).
     """
     sc = scope or live.default_scope(tenant)
-    port = resolve_kind_port(live.kernel, kind, api_version, scope=sc)
+    port = await resolve_kind_port_live(live, kind, api_version, scope=sc)
     refusal = delete_refusal(port)
     if refusal is not None:
         raise DeleteRefused(refusal)

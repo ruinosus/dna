@@ -406,6 +406,44 @@ What that does to data already in the store:
 notation already borrows: `spec` is what an author declared, `status` is what
 the system observed. It is never authored and never stored.
 
+### When an approval starts to hold
+
+Registration happens inside a **Manifest Instance build**, and the document
+routes (`write_document`, `get_document`, `list_documents`, `list_kinds`) read
+the Kind registry directly rather than building one. That combination used to
+leave the moment an approval took effect *indeterminate*: the approval landed
+in the store, and the Kind became real only when some unrelated call happened
+to rebuild that scope in that process — with every replica of a served
+deployment keeping its own window (`i-090`).
+
+Two mechanisms make it a guarantee instead, and they answer different halves:
+
+- **The replica that serves the act honours it immediately.** Approving or
+  revoking ends by re-registering that scope from the store — the bootstrap
+  slice only (Genome + `KindDefinition` + LayerPolicy), measured at ~55 ms on
+  a filesystem store holding 300 documents, once per act. So *approve, then
+  use the Kind* works on the very next call, which is the sequence a human
+  actually performs.
+- **Every other replica honours it within a bounded window.** The document
+  routes refresh the scope's registry when it is older than
+  `DNA_KIND_REFRESH_TTL` seconds (default **30**), so the guarantee is a
+  number you can publish: **an approval or a revocation is in force everywhere
+  within that window.** The cost is one bootstrap-slice read per scope per
+  window per replica — *not* one per request; inside the window the check is a
+  dictionary lookup (sub-microsecond). A burst over a cold scope is
+  single-flighted into one rebuild, and a refresh that fails is logged and
+  skipped rather than turned into a request error.
+
+Lower `DNA_KIND_REFRESH_TTL` to shorten the window (at proportionally more
+bootstrap reads), or set it to `0` to switch the second mechanism off — which
+returns the deployment to "the approving replica only", and is sensible solely
+for a single-replica self-host. Each served process logs the value in force at
+boot.
+
+Revocation matters more than approval here, and gets the same window in the
+other direction: a Kind that is slow to *close* keeps accepting documents of a
+Kind the workspace has already withdrawn.
+
 ## Summary
 
 | Concept | What it does |

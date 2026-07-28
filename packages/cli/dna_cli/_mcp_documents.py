@@ -97,6 +97,14 @@ def register_document_tools(
         # caller's effective scope is not known until the guard has yielded a
         # tenant, and the family a Kind name implies does not depend on where
         # the Kind lives.
+        #
+        # It is also, deliberately, NOT refreshed (i-090): a refresh needs a
+        # scope and there is none yet. The consequence is bounded and worth
+        # naming — the FIRST call on a replica that has not yet seen a newly
+        # approved Kind meters that one call under the default family instead of
+        # the Kind's own. The authoritative resolution below IS refreshed, so
+        # the read/write itself is correct; only the family this single call is
+        # counted under can lag, and by the next call it cannot.
         port = await _resolved(kind, api_version)
         tenant = await guard(
             D.family_for_kind(port), scope=scope, family_op=family_op,
@@ -106,10 +114,18 @@ def register_document_tools(
         # here, and the ``api_version`` pinned from this port travels down to the
         # adapter — resolving it unscoped is how a caller could be pinned to
         # somebody else's Kind.
+        #
+        # i-090: and it resolves through ``resolve_kind_port_live``, which
+        # refreshes this scope's Kind registry once its window has expired.
+        # Without that, a generic document tool answered "Kind not registered"
+        # for a Kind the workspace had just approved on ANOTHER replica — the
+        # registry is only ever repopulated inside a Manifest Instance build and
+        # no document route builds one. The same seam closes a REVOCATION in the
+        # other direction, which is the half that must not lag.
         ld = await live()
         try:
-            port = D.resolve_kind_port(
-                ld.kernel, kind, api_version,
+            port = await D.resolve_kind_port_live(
+                ld, kind, api_version,
                 scope=scope or ld.default_scope(tenant),
             )
         except (D.UnknownKindError, D.AmbiguousKindError) as exc:
