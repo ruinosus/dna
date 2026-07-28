@@ -231,7 +231,27 @@ _BASE = str(_ROOT / "examples" / "emitting-to-a-runtime" / ".dna")
 _SCOPE = "concierge"
 
 
-@pytest.fixture()
+# Module-scoped ON PURPOSE (perf/testes-em-paralelo): booting this kernel costs
+# ~350 ms and 88 tests in this file each wanted their own, which made this the
+# single most expensive `setup` in the sdk-py suite (44 s of the 271 s total).
+#
+# Widening is safe here and ONLY here because this file treats the MI as
+# read-only: the sole direct use is `mi.build_prompt(...)`, and every other use
+# goes through `build_copilot_context(mi, ...)` / `build_emit_context(mi, ...)`,
+# which read the MI (`_one` / `find_agent` / compose) and return a FRESH
+# EmitContext — they never write to it. The scope itself
+# (`examples/emitting-to-a-runtime/.dna`) is a checked-in read-only fixture
+# directory, not a tmp_path anyone writes into.
+#
+# The derived `copilot_ctx` / `maf_ctx` / `fe_ctx` / `maf_workflow_ctx` fixtures
+# stay FUNCTION-scoped: tests do mutate the EmitContext they get, so each test
+# still gets its own. Only the expensive, immutable half is shared.
+#
+# Counter-example, so the reasoning is not copied blindly: `tests/test_kernel.py`
+# has the same-looking `mi` fixture and must STAY function-scoped — it mutates
+# (`del mi.__dict__["composition_result"]`, `mi._kernel.hooks.on(...)`), so a
+# shared instance would leak hooks and cache state between tests.
+@pytest.fixture(scope="module")
 def mi():
     from dna.kernel import Kernel
 

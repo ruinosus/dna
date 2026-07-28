@@ -42,7 +42,12 @@ def _compiles(source: str) -> bool:
         return False
 
 
-@pytest.fixture()
+# Module-scoped for the same reason, and under the same read-only proof, as
+# tests/test_copilot_emit.py::mi — see the comment there. This file's only
+# direct uses of the MI are `mi.build_prompt(...)` and passing it to
+# `build_copilot_context(...)`, both read-only; the derived `helpdesk` / `rfp`
+# fixtures stay function-scoped because tests mutate the ctx they return.
+@pytest.fixture(scope="module")
 def mi():
     from dna.kernel import Kernel
 

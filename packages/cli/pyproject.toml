@@ -70,6 +70,12 @@ graph = ["msal>=1.28", "httpx>=0.27"]
 quota = ["sqlalchemy>=2", "psycopg2-binary>=2.9"]
 dev = [
     "pytest>=8.0",
+    # pytest-xdist — REQUIRED, not optional: [tool.pytest.ini_options] below sets
+    # `addopts = ["-n", "auto"]`, so without this a plain `pytest` dies on an
+    # unrecognized argument rather than merely running serially. sdk-py has
+    # carried it in [dev] for a while; the cli never did, because the cli never
+    # used it. (perf/testes-em-paralelo)
+    "pytest-xdist>=3.6",
     # search-sqlite extra so `dna recall`/`dna research recall` end-to-end tests
     # (tests/test_recall_cmd.py) run the real provider offline in CI, instead of
     # importorskip. Resolves against the path-installed dna-sdk.
@@ -96,6 +102,18 @@ dev = [
 
 [tool.pytest.ini_options]
 pythonpath = ["tests"]
+# Run the suite across every core by default (perf/testes-em-paralelo) — same
+# switch, same reasoning, as packages/sdk-py/pyproject.toml. This suite went
+# from 483 s to ~106 s wall with an identical outcome set (1303 passed / 24
+# skipped / 1 pre-existing failure, failing for the same reason), verified by
+# diffing per-test-id outcomes serial-vs-parallel at two worker counts.
+#
+# Unlike sdk-py this suite is `call`-dominated, not `setup`-dominated (566 s in
+# test bodies vs 56 s in fixtures), so parallelism is the ONLY lever here —
+# there is no fixture-scope win to take.
+#
+# ESCAPE HATCH: `pytest -n 0` restores the single-process, in-order run.
+addopts = ["-n", "auto"]
 markers = [
     "requires_network: skip unless outbound network is available (tests/conftest.py; DNA_OFFLINE=1 forces the skip)",
     "requires_postgres: skip unless a Postgres DSN is set (DATABASE_URL / DNA_PG_TEST_URL / DNA_PG_TEST_DSN)",
