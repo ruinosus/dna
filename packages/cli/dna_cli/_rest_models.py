@@ -369,11 +369,29 @@ class ReconcileView(BaseModel):
 
 
 class MemorySummary(BaseModel):
+    """One memory as the WORKSPACE list surface projects it.
+
+    ``affect`` and ``personal`` were added by i-079, when this route stopped
+    carrying its own copy of ``list_memories_impl`` and delegated to the core.
+    They are not decoration: ``affect`` is stored on every Engram and is what a
+    memory card renders, and ``personal`` (i-068) is the per-item flag that
+    tells the caller's own memory from a shared one. The core had always
+    projected both — only this face's copy did not, so the two list surfaces of
+    one app were two different SHAPES as well as two different answers.
+
+    Both are additive and defaulted, so a client written against the older
+    response keeps parsing. ``personal`` is always ``False`` here: a workspace
+    read never resolves the caller's private partition. It is carried anyway so
+    the item shape matches :class:`PersonalMemorySummary` field for field — a
+    UI that renders one list must not need two renderers."""
+
     name: str | None = None
     summary: str | None = None
     area: str | None = None
     tags: list[str] = []
+    affect: str | None = None
     created_at: str | None = None
+    personal: bool = False
 
 
 class MemoriesResponse(BaseModel):

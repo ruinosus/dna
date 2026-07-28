@@ -2297,7 +2297,19 @@
         "type": "object"
       },
       "MemorySummary": {
+        "description": "One memory as the WORKSPACE list surface projects it.\n\n``affect`` and ``personal`` were added by i-079, when this route stopped\ncarrying its own copy of ``list_memories_impl`` and delegated to the core.\nThey are not decoration: ``affect`` is stored on every Engram and is what a\nmemory card renders, and ``personal`` (i-068) is the per-item flag that\ntells the caller's own memory from a shared one. The core had always\nprojected both — only this face's copy did not, so the two list surfaces of\none app were two different SHAPES as well as two different answers.\n\nBoth are additive and defaulted, so a client written against the older\nresponse keeps parsing. ``personal`` is always ``False`` here: a workspace\nread never resolves the caller's private partition. It is carried anyway so\nthe item shape matches :class:`PersonalMemorySummary` field for field — a\nUI that renders one list must not need two renderers.",
         "properties": {
+          "affect": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Affect"
+          },
           "area": {
             "anyOf": [
               {
@@ -2330,6 +2342,11 @@
               }
             ],
             "title": "Name"
+          },
+          "personal": {
+            "default": false,
+            "title": "Personal",
+            "type": "boolean"
           },
           "summary": {
             "anyOf": [
@@ -5799,7 +5816,7 @@
     },
     "/v1/memories": {
       "get": {
-        "description": "List the tenant's memory — base + the tenant's OWN overlay (per the #83\nisolation), never another tenant's.",
+        "description": "List the tenant's memory — base + the tenant's OWN overlay (per the #83\nisolation), never another tenant's.\n\nDelegates to the CORE ``list_memories_impl`` (i-079). This route used to\ncarry its own copy, which had drifted into answering a different\nquestion: it hid a memory carrying ANY ``valid_to``, where the core and\n``recall`` both use ``currently_valid`` and keep one whose expiry has not\narrived. The sibling ``/v1/memories/personal`` already delegated, so the\nsame memory was listed there and missing here — on one screen.\n\nDelegating also changes WHICH SCOPE is read, and that is the least\nvisible half of the same bug. The copy resolved ``scope or\nlive.base_scope``; ``remember``, ``recall`` and ``forget`` all resolve\n``default_scope(tenant)`` — under multi-workspace, ``tenant-<ws>`` for a\nnon-vendor workspace. The list was therefore reading a scope that\nworkspace never writes to, so a memory it had just stored and could\nstill recall was missing from its own list. It now reads the same home\nits writes land in, like every sibling route on this face.\n\n``tenant`` is echoed back from the REQUEST rather than taken from the\ncore's result, which does not return it. Dropping it would have silently\nremoved a field from a published response shape while fixing a different\nbug, and a caller cannot tell \"the field is gone\" from \"the value is\nnull\".",
         "operationId": "memories_v1_memories_get",
         "parameters": [
           {
