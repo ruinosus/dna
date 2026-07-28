@@ -499,6 +499,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/kinds/{kind}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revoke Kind
+         * @description Revoke an authored Kind — the act that WITHDRAWS its effect.
+         *
+         *     Every existing document of the Kind becomes invalid: it is NOT deleted
+         *     and NOT made unreadable, it reads back MARKED (``status.valid ==
+         *     false``), and in a listing it appears marked rather than vanishing — so
+         *     revocation can never be used to hide data without deleting it. New
+         *     documents of the Kind are refused outright, conforming ones included:
+         *     what was withdrawn is the Kind, not a schema.
+         *
+         *     The revoker is the caller's VERIFIED identity, resolved server-side, on
+         *     exactly the terms the approval route documents above — including the
+         *     ``--auth token`` caveat, which matters here for the same reason: the
+         *     value of the record this act writes is naming WHO made it.
+         *
+         *     ``approved_by`` survives untouched, because revoking is a third act and
+         *     not an erasure of the second. To undo, call the approve route — it is
+         *     the only thing that clears a revocation, and an EDIT deliberately does
+         *     not (an edit that un-revoked would be the loosening through a third
+         *     door).
+         *
+         *     Same refusals as its sibling and for the same reasons: 404 when no such
+         *     Kind was authored in this scope — or when it belongs to a neighbour,
+         *     because "it exists but is not yours" would hand a stranger a probe; 400
+         *     for a missing tenant / a malformed Kind name / a Kind the caller
+         *     declared under two of its own namespaces; 409 when the document moved
+         *     since it was read (i-083 — a revocation is a read-modify-write too, and
+         *     unguarded it would resurrect a stale replica's shape AND mark it
+         *     revoked); 403 from the namespace gate; 503 when the namespace registry
+         *     scope has not been provisioned in this store.
+         */
+        post: operations["revoke_kind_v1_kinds__kind__revoke_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/memories": {
         parameters: {
             query?: never;
@@ -1229,18 +1277,28 @@ export interface components {
             proposed_at?: string | null;
             /** Proposed By */
             proposed_by?: string | null;
+            /** Revoked At */
+            revoked_at?: string | null;
+            /** Revoked By */
+            revoked_by?: string | null;
             /** Schema */
             schema?: {
                 [key: string]: unknown;
             } | null;
+            /**
+             * State
+             * @default unapproved
+             */
+            state: string;
             /** Traits */
             traits?: string[];
         };
         /**
          * AuthoredKindSummary
-         * @description One ``KindDefinition`` document as the audit surface sees it — BOTH
+         * @description One ``KindDefinition`` document as the audit surface sees it — ALL THREE
          *     actors, so the reviewer deciding whether to confer effect can see who asked
-         *     for it without leaving the list.
+         *     for it, and whether anyone has since taken it away, without leaving the
+         *     list.
          */
         AuthoredKindSummary: {
             /** Api Version */
@@ -1266,6 +1324,15 @@ export interface components {
             proposed_at?: string | null;
             /** Proposed By */
             proposed_by?: string | null;
+            /** Revoked At */
+            revoked_at?: string | null;
+            /** Revoked By */
+            revoked_by?: string | null;
+            /**
+             * State
+             * @default unapproved
+             */
+            state: string;
         };
         /**
          * AuthoredKindsResponse
@@ -2374,6 +2441,38 @@ export interface components {
             /** Tenant */
             tenant?: string | null;
         };
+        /**
+         * RevokeKindResponse
+         * @description ``POST /v1/kinds/{kind}/revoke`` — the act that WITHDRAWS effect (i-085).
+         *
+         *     Carries the whole chain of acts, not only the last one: who proposed the
+         *     shape, who conferred effect on it, and who has just withdrawn it.
+         *     ``approved_by`` is present on purpose — revoking is a third act, not an
+         *     erasure of the second, and a record saying only "revoked by X" has lost the
+         *     fact that this Kind governed real documents for a while.
+         */
+        RevokeKindResponse: {
+            /** Approved At */
+            approved_at?: string | null;
+            /** Approved By */
+            approved_by?: string | null;
+            /** Kind */
+            kind: string;
+            /** Name */
+            name: string;
+            /** Namespace */
+            namespace: string;
+            /** Proposed By */
+            proposed_by?: string | null;
+            /** Revoked */
+            revoked: boolean;
+            /** Revoked At */
+            revoked_at: string;
+            /** Revoked By */
+            revoked_by: string;
+            /** Version */
+            version?: string | null;
+        };
         /** RevokeWorkspaceMemberResponse */
         RevokeWorkspaceMemberResponse: {
             /** Revoked */
@@ -3332,6 +3431,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApproveKindResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_kind_v1_kinds__kind__revoke_post: {
+        parameters: {
+            query?: {
+                tenant?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                kind: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RevokeKindResponse"];
                 };
             };
             /** @description Validation Error */

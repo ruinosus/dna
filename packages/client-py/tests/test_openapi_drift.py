@@ -107,6 +107,7 @@ _COVERED: dict[tuple[str, str], str] = {
     ("DELETE", "/v1/definitions/{kind}/{name}/entries/{entry}"): "revert_bundle_entry",
     ("POST", "/v1/kinds"): "author_kind",
     ("POST", "/v1/kinds/{kind}/approve"): "approve_kind",
+    ("POST", "/v1/kinds/{kind}/revoke"): "revoke_kind",
     ("POST", "/v1/memories"): "remember_memory",
     ("POST", "/v1/memories/import"): "import_memories",
     ("DELETE", "/v1/memories/{name}"): "delete_memory",

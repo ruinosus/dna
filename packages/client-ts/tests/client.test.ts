@@ -254,6 +254,7 @@ const COVERED: Record<string, string> = {
   "DELETE /v1/definitions/{kind}/{name}/entries/{entry}": "revertBundleEntry",
   "POST /v1/kinds": "authorKind",
   "POST /v1/kinds/{kind}/approve": "approveKind",
+  "POST /v1/kinds/{kind}/revoke": "revokeKind",
   "POST /v1/memories": "rememberMemory",
   "POST /v1/memories/import": "importMemories",
   "DELETE /v1/memories/{name}": "deleteMemory",

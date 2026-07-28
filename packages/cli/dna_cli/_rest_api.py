@@ -352,6 +352,7 @@ def build_app(
         remove_member_impl,
         revert_bundle_entry_impl,
         revert_definition_impl,
+        revoke_kind_impl,
         revoke_workspace_member_impl,
         set_member_impl,
         set_account_plan_impl,
@@ -1188,6 +1189,85 @@ def build_app(
                 status_code=503,
                 detail=_no_registry_scope_detail(
                     "approved: approval resolves the KindNamespace registry to "
+                    "check that the caller owns the namespace the Kind was "
+                    "authored under, and an unreadable authorization record is "
+                    "not a granted one",
+                    exc,
+                ),
+            ) from exc
+
+    # THE ACT THAT WITHDRAWS EFFECT (i-085), and deliberately not the inverse of
+    # the one above. Un-approving would return the Kind to *never approved*, and
+    # an unregistered Kind is the PERMISSIVE state — its documents are accepted
+    # with no validation at all — so revoking by clearing the approval would
+    # switch the gate off instead of closing it. Revoked is a THIRD state:
+    # existing documents stay readable and are MARKED invalid, new ones are
+    # refused, and approving again restores validity with nothing to migrate.
+    #
+    # It exists BEFORE any approve button reaches a conversational surface, and
+    # that order is the point: approving where consent can be misread is only
+    # defensible if undoing works.
+
+    @app.post("/v1/kinds/{kind}/revoke", dependencies=guarded,
+              response_model=m.RevokeKindResponse)
+    async def revoke_kind(
+        request: Request,
+        kind: str,
+        tenant: str | None = Query(default=None),
+    ) -> dict[str, Any]:
+        """Revoke an authored Kind — the act that WITHDRAWS its effect.
+
+        Every existing document of the Kind becomes invalid: it is NOT deleted
+        and NOT made unreadable, it reads back MARKED (``status.valid ==
+        false``), and in a listing it appears marked rather than vanishing — so
+        revocation can never be used to hide data without deleting it. New
+        documents of the Kind are refused outright, conforming ones included:
+        what was withdrawn is the Kind, not a schema.
+
+        The revoker is the caller's VERIFIED identity, resolved server-side, on
+        exactly the terms the approval route documents above — including the
+        ``--auth token`` caveat, which matters here for the same reason: the
+        value of the record this act writes is naming WHO made it.
+
+        ``approved_by`` survives untouched, because revoking is a third act and
+        not an erasure of the second. To undo, call the approve route — it is
+        the only thing that clears a revocation, and an EDIT deliberately does
+        not (an edit that un-revoked would be the loosening through a third
+        door).
+
+        Same refusals as its sibling and for the same reasons: 404 when no such
+        Kind was authored in this scope — or when it belongs to a neighbour,
+        because "it exists but is not yours" would hand a stranger a probe; 400
+        for a missing tenant / a malformed Kind name / a Kind the caller
+        declared under two of its own namespaces; 409 when the document moved
+        since it was read (i-083 — a revocation is a read-modify-write too, and
+        unguarded it would resurrect a stale replica's shape AND mark it
+        revoked); 403 from the namespace gate; 503 when the namespace registry
+        scope has not been provisioned in this store."""
+        from dna.application.sdlc import now_iso
+
+        try:
+            return await revoke_kind_impl(
+                await _live(), kind=kind, tenant=tenant or "",
+                actor=_actor_from_state(request), now=now_iso(),
+            )
+        except AuthoredKindNotFound as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from None
+        except StaleDocumentWrite as exc:
+            # BEFORE the ``ValueError`` arm — see the approval route: it is
+            # deliberately a ``ValueError`` so faces that predate the refusal
+            # base surface it at all, and 409 rather than 400 is what tells the
+            # client to re-read instead of retrying the identical call.
+            raise HTTPException(status_code=409, detail=str(exc)) from None
+        except LayerPolicyViolationError as exc:
+            raise HTTPException(status_code=403, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from None
+        except (NamespaceRegistryUnreadable, FileNotFoundError) as exc:
+            raise HTTPException(
+                status_code=503,
+                detail=_no_registry_scope_detail(
+                    "revoked: revocation resolves the KindNamespace registry to "
                     "check that the caller owns the namespace the Kind was "
                     "authored under, and an unreadable authorization record is "
                     "not a granted one",

@@ -48,19 +48,22 @@ server uses — one core, two faces, zero duplicated logic.
 
 ## Kind authoring
 
-Four more endpoints let a workspace declare its **own** Kind and put it into
-effect. They are served on **every** auth mode — `config`, `none` and `token`
-alike — and appear in every lane's `/openapi.json`.
+Five more endpoints let a workspace declare its **own** Kind, put it into
+effect, and take it back. They are served on **every** auth mode — `config`,
+`none` and `token` alike — and appear in every lane's `/openapi.json`.
 
 - `POST /v1/kinds` — author a `KindDefinition` **without** an approval marker. It
   has no effect: registration is what confers schema validation and storage
   routing, and the registry withholds it until someone approves.
-- `POST /v1/kinds/{kind}/approve` — the human act that **confers effect**.
-- `GET /v1/kinds` — the audit roster (approval state + both actors).
+- `POST /v1/kinds/{kind}/approve` — the human act that **confers effect**. It is
+  also the undo of the next one.
+- `POST /v1/kinds/{kind}/revoke` — the act that **withdraws effect**. Not the
+  inverse of approving: see [the three states](../concepts/kinds.md#approval-and-revocation-three-states-not-a-boolean).
+- `GET /v1/kinds` — the audit roster (`state` + all three actors).
 - `GET /v1/kinds/{kind}` — one authored Kind in full, schema included, so a
   reviewer can see what they would be approving.
 
-All four enforce **namespace ownership**: a caller may only touch Kinds in
+All five enforce **namespace ownership**: a caller may only touch Kinds in
 namespaces its workspace owns, resolved against the same `KindNamespace` claims
 the write gate decides with, and a stranger's Kind answers `404` — exactly what a
 Kind nobody authored answers, so the door is not a probe for what neighbours are

@@ -1058,25 +1058,36 @@ class KindDefinitionSpec:
     # (``UnknownLayout`` lists them). Empty = no layouts, today's default.
     layout_names: list[str] | None = None
     # ---- Approval (the registration gate) + the audit's other half ----------
-    # Who PROPOSED this Kind, who APPROVED it, and when each happened. A
-    # KindDefinition that arrives from a STORE only reaches the registry once
-    # ``approved_by`` names someone — authoring a Kind and putting it into
-    # effect are two acts, and the audit is worth something only if each field
-    # carries the verified identity of ITS OWN act.
+    # Who PROPOSED this Kind, who APPROVED it, who REVOKED it, and when each
+    # happened. A KindDefinition that arrives from a STORE reaches the registry
+    # according to its STATE (:func:`dna.kernel.kinds.approval.approval_state`)
+    # — authoring a Kind, putting it into effect and withdrawing it are three
+    # acts, and the audit is worth something only if each field carries the
+    # verified identity of ITS OWN act.
     #
     # ``proposed_by`` is stamped where the proposal happens (the authoring
     # door), because it cannot be back-filled later onto a document that never
-    # recorded one. It is NOT a second gate: the registry reads ``approved_by``
-    # and nothing else, and the two naming the same identity is legal (see the
-    # schema's note — coincidence is a fact the audit reports, not an error).
+    # recorded one. It is NOT a gate: the registry reads the state, and two
+    # fields naming the same identity is legal (see the schema's note —
+    # coincidence is a fact the audit reports, not an error).
     #
-    # All four are pure data here: the registry writes none of them, so the
+    # ``revoked_by`` is i-085's third state, and it is a stored field for a
+    # measured reason: clearing ``approved_by`` is indistinguishable from never
+    # having approved, and never-approved means UNREGISTERED, which means
+    # documents are accepted with NO validation. Revoking must tighten, so the
+    # fact has to persist. It is deliberately NOT read directly anywhere —
+    # ``approval_state`` is the one reader, so no future caller can check
+    # ``approved_by`` alone and treat a revoked Kind as approved.
+    #
+    # All six are pure data here: the registry writes none of them, so the
     # privileged path that may set them is a decision made where the writer is
     # authenticated, not in the kernel.
     proposed_by: str | None = None
     proposed_at: str | None = None
     approved_by: str | None = None
     approved_at: str | None = None
+    revoked_by: str | None = None
+    revoked_at: str | None = None
 
     @classmethod
     def from_raw(cls, raw: dict[str, Any]) -> KindDefinitionSpec:
@@ -1256,6 +1267,8 @@ class KindDefinitionSpec:
             proposed_at=raw.get("proposed_at"),
             approved_by=raw.get("approved_by"),
             approved_at=raw.get("approved_at"),
+            revoked_by=raw.get("revoked_by"),
+            revoked_at=raw.get("revoked_at"),
         )
 
     @staticmethod

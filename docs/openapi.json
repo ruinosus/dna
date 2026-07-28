@@ -451,6 +451,28 @@
             ],
             "title": "Proposed By"
           },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked At"
+          },
+          "revoked_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked By"
+          },
           "schema": {
             "anyOf": [
               {
@@ -462,6 +484,11 @@
               }
             ],
             "title": "Schema"
+          },
+          "state": {
+            "default": "unapproved",
+            "title": "State",
+            "type": "string"
           },
           "traits": {
             "items": {
@@ -475,7 +502,7 @@
         "type": "object"
       },
       "AuthoredKindSummary": {
-        "description": "One ``KindDefinition`` document as the audit surface sees it — BOTH\nactors, so the reviewer deciding whether to confer effect can see who asked\nfor it without leaving the list.",
+        "description": "One ``KindDefinition`` document as the audit surface sees it — ALL THREE\nactors, so the reviewer deciding whether to confer effect can see who asked\nfor it, and whether anyone has since taken it away, without leaving the\nlist.",
         "properties": {
           "api_version": {
             "anyOf": [
@@ -580,6 +607,33 @@
               }
             ],
             "title": "Proposed By"
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked At"
+          },
+          "revoked_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked By"
+          },
+          "state": {
+            "default": "unapproved",
+            "title": "State",
+            "type": "string"
           }
         },
         "title": "AuthoredKindSummary",
@@ -3310,6 +3364,89 @@
         "title": "ReposResponse",
         "type": "object"
       },
+      "RevokeKindResponse": {
+        "description": "``POST /v1/kinds/{kind}/revoke`` — the act that WITHDRAWS effect (i-085).\n\nCarries the whole chain of acts, not only the last one: who proposed the\nshape, who conferred effect on it, and who has just withdrawn it.\n``approved_by`` is present on purpose — revoking is a third act, not an\nerasure of the second, and a record saying only \"revoked by X\" has lost the\nfact that this Kind governed real documents for a while.",
+        "properties": {
+          "approved_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "approved_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved By"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "namespace": {
+            "title": "Namespace",
+            "type": "string"
+          },
+          "proposed_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposed By"
+          },
+          "revoked": {
+            "title": "Revoked",
+            "type": "boolean"
+          },
+          "revoked_at": {
+            "title": "Revoked At",
+            "type": "string"
+          },
+          "revoked_by": {
+            "title": "Revoked By",
+            "type": "string"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          }
+        },
+        "required": [
+          "revoked",
+          "kind",
+          "name",
+          "namespace",
+          "revoked_by",
+          "revoked_at"
+        ],
+        "title": "RevokeKindResponse",
+        "type": "object"
+      },
       "RevokeWorkspaceMemberResponse": {
         "properties": {
           "revoked": {
@@ -5812,6 +5949,78 @@
           }
         },
         "summary": "Approve Kind"
+      }
+    },
+    "/v1/kinds/{kind}/revoke": {
+      "post": {
+        "description": "Revoke an authored Kind — the act that WITHDRAWS its effect.\n\nEvery existing document of the Kind becomes invalid: it is NOT deleted\nand NOT made unreadable, it reads back MARKED (``status.valid ==\nfalse``), and in a listing it appears marked rather than vanishing — so\nrevocation can never be used to hide data without deleting it. New\ndocuments of the Kind are refused outright, conforming ones included:\nwhat was withdrawn is the Kind, not a schema.\n\nThe revoker is the caller's VERIFIED identity, resolved server-side, on\nexactly the terms the approval route documents above — including the\n``--auth token`` caveat, which matters here for the same reason: the\nvalue of the record this act writes is naming WHO made it.\n\n``approved_by`` survives untouched, because revoking is a third act and\nnot an erasure of the second. To undo, call the approve route — it is\nthe only thing that clears a revocation, and an EDIT deliberately does\nnot (an edit that un-revoked would be the loosening through a third\ndoor).\n\nSame refusals as its sibling and for the same reasons: 404 when no such\nKind was authored in this scope — or when it belongs to a neighbour,\nbecause \"it exists but is not yours\" would hand a stranger a probe; 400\nfor a missing tenant / a malformed Kind name / a Kind the caller\ndeclared under two of its own namespaces; 409 when the document moved\nsince it was read (i-083 — a revocation is a read-modify-write too, and\nunguarded it would resurrect a stale replica's shape AND mark it\nrevoked); 403 from the namespace gate; 503 when the namespace registry\nscope has not been provisioned in this store.",
+        "operationId": "revoke_kind_v1_kinds__kind__revoke_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tenant"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevokeKindResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Revoke Kind"
       }
     },
     "/v1/memories": {

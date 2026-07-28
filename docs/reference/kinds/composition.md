@@ -254,6 +254,8 @@ A KindDefinition declaratively defines a brand-new kind without writing Python c
 | `prompt_target_priority` | integer |  |  |
 | `proposed_at` | string |  |  |
 | `proposed_by` | string |  |  |
+| `revoked_at` | string |  |  |
+| `revoked_by` | string |  |  |
 | `schema` | object |  |  |
 | `schema_fragments` | array |  |  |
 | `scope_inheritable` | boolean |  |  |

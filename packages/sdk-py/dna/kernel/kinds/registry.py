@@ -71,6 +71,7 @@ import warnings
 from typing import TYPE_CHECKING, Any
 
 from dna.kernel.errors import KindRegistrationError
+from dna.kernel.kinds.approval import REVOKED, UNAPPROVED, approval_state
 from dna.kernel.protocols import KindPort, StoragePattern
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -395,6 +396,23 @@ def applies_to(port: "KindPort", scope: str | None) -> bool:
         return True
     scopes = port_scopes(port)
     return scopes is None or scope in scopes
+
+
+def port_revoked(port: "KindPort | None") -> bool:
+    """Whether ``port`` is a REVOKED Kind (i-085) — registered, but withdrawn.
+
+    The sibling of :func:`applies_to`, and read the same way: the registry is
+    where a Kind's current state lives, so every path that already resolves a
+    port is one call away from knowing. A revoked Kind is deliberately still IN
+    the registry — an unregistered Kind is the permissive one, whose documents
+    are accepted with no validation at all, so dropping the port would make
+    revocation loosen instead of tighten.
+
+    ``None`` (nothing registered) is ``False``, and that is not a revoked Kind
+    reading as fine: it is the UNAPPROVED/unknown row of the table, which has
+    its own behaviour (accepted, unvalidated, unrouted). The two are different
+    states and this function answers only about the third."""
+    return bool(getattr(port, "__revoked__", False)) if port is not None else False
 
 
 def _bind_scope(port: "KindPort", scope: str | None) -> None:
@@ -1161,20 +1179,35 @@ class KindRegistry:
         """Phase 1 of 2-phase loading: parse KindDefinition docs + register
         synthetic DeclarativeKindPorts on the kernel.
 
-        A document only reaches registration once it is APPROVED — its
-        ``spec.approved_by`` names someone. Authoring a Kind and putting it into
-        effect are two acts by two actors, and this funnel is where the second
-        one is enforced, because registration is what confers schema
-        enforcement and storage routing: withholding it IS the absence of
-        effect, with no second gate to keep in sync. An unapproved
-        KindDefinition is parsed, warn-skipped, and stays an inert document.
+        The funnel routes on the document's STATE
+        (:func:`~dna.kernel.kinds.approval.approval_state`), because i-085 made
+        it three states rather than a boolean:
 
-        Approval is therefore a gate on ENTRY, not a live permission: clearing
-        ``approved_by`` on a Kind that ALREADY registered does not unregister
-        it. The gate runs before the already-registered branch below, and the
-        registry is per-kernel and outlives any single ``instance_async`` call,
-        so the live port keeps governing until the process restarts. Revocation
-        is not a mechanism here — do not build a UI on the assumption that it is.
+        * :data:`~dna.kernel.kinds.approval.UNAPPROVED` — parsed, warn-skipped,
+          NOT registered. Authoring a Kind and putting it into effect are two
+          acts by two actors, and this funnel is where the second one is
+          enforced: registration is what confers schema enforcement and storage
+          routing, so withholding it IS the absence of effect, with no second
+          gate to keep in sync. The Kind stays an inert document — auditable,
+          listable, diffable — and its documents are accepted UNVALIDATED.
+        * :data:`~dna.kernel.kinds.approval.APPROVED` — registered normally.
+        * :data:`~dna.kernel.kinds.approval.REVOKED` — **registered, and marked
+          revoked** (``port.__revoked__``). The counter-intuitive half, and the
+          whole point of i-085: revoking must TIGHTEN. Dropping the port instead
+          would return the Kind to the UNAPPROVED row above, where documents are
+          accepted with no validation at all — so un-registering is how
+          revocation turns into "accepts anything". Being KNOWN is the
+          mechanism; the mark is what makes new documents refused
+          (:class:`~dna.kernel.errors.RevokedKindWrite`) and existing ones read
+          back marked invalid.
+
+        Revocation reaches an ALREADY-REGISTERED Kind without a restart, and by
+        the mechanism that was already here rather than a new one: the revoked
+        markers live in ``spec``, so they change the descriptor digest, and the
+        "different digest → replace the port in place" branch below (i-080 item
+        3) swaps the approved port for the revoked one on the next load. The old
+        docstring's warning that revocation "is not a mechanism here" is what
+        this change retires.
 
         Extension-registered kinds win on conflict: if a port with the same
         (target_api_version, target_kind) is already registered, the
@@ -1213,8 +1246,8 @@ class KindRegistry:
                     ))
                 continue
 
-            approved_by = (typed.spec.approved_by or "").strip()
-            if not approved_by:
+            state = approval_state(typed.spec)
+            if state == UNAPPROVED:
                 # NOT an error: an authored-but-unapproved Kind is a legitimate
                 # state. It stays a document — auditable, listable, diffable —
                 # and simply never becomes real. Registration is what confers
@@ -1224,9 +1257,14 @@ class KindRegistry:
                 # this funnel: the author has to be able to find out why their
                 # Kind does nothing.
                 #
-                # The gate READS spec.approved_by and never writes it. Whoever
-                # may set it is decided where the writer is authenticated, not
-                # here — the kernel does not know what an approver is.
+                # This is the PERMISSIVE row of the table — documents of an
+                # unregistered Kind are accepted with no validation — which is
+                # exactly why REVOKED must not land here. See the docstring.
+                #
+                # The gate READS the state and never writes it. Whoever may set
+                # the underlying fields is decided where the writer is
+                # authenticated, not here — the kernel does not know what an
+                # approver is.
                 #
                 # It runs BEFORE the scope binding (i-081) for the same reason:
                 # a Kind that never registers binds to no scope at all.
@@ -1343,6 +1381,12 @@ class KindRegistry:
                 )
                 continue
             port.__descriptor_digest__ = digest
+            # i-085 — the state travels ON THE PORT from here on. The registry
+            # is the surface every behaviour-conferring path already consults
+            # (the write pipeline, storage routing, parsing, the kinds map an MI
+            # is built with), so a revoked Kind is one attribute away for all of
+            # them and nobody has to remember to re-read a document field.
+            port.__revoked__ = state == REVOKED
             # i-080 item 2: this used to be ``self._kinds[key] = port`` — a
             # direct write that bypassed ``register_kind()`` entirely, so the
             # duplicate-ALIAS guard, the BUNDLE ``(container, marker)``
@@ -1373,10 +1417,26 @@ class KindRegistry:
                     ))
                 continue
             registered_any = True
-            logger.info(
-                "Registered declarative kind: %s/%s (alias: %s)",
-                key[0], key[1], typed.spec.alias,
-            )
+            if state == REVOKED:
+                # WARNING, not info, and undeduped: unlike "authored but not
+                # approved", a revoked Kind that still has documents in the
+                # store is not a resting state somebody chose and forgot — it is
+                # a scope whose data has just been marked invalid, and the line
+                # is how an operator reading logs finds out that is why.
+                logger.warning(
+                    "Registered declarative kind %s/%s (alias: %s) as REVOKED "
+                    "— new documents of it are refused and existing ones read "
+                    "back marked invalid. It stays registered deliberately: an "
+                    "unregistered Kind accepts documents unvalidated, so "
+                    "dropping it would loosen the gate instead of closing it. "
+                    "Approving it again restores validity.",
+                    key[0], key[1], typed.spec.alias,
+                )
+            else:
+                logger.info(
+                    "Registered declarative kind: %s/%s (alias: %s)",
+                    key[0], key[1], typed.spec.alias,
+                )
 
         # Re-resolve generic readers/writers now that we may have new BUNDLE kinds
         host._ensure_generic_readers_writers()
@@ -1392,12 +1452,24 @@ class KindRegistry:
 
         Store-loaded like ``KindDefinition``, so ``scope`` binds them the same
         way (i-081) — the root document they come from belongs to one scope —
-        and so the SAME approval gate applies: an entry only reaches the
-        registry once its ``approved_by`` names someone. This is the second door
-        onto the same registry, and the one that needs no new document: whoever
-        may write a scope's root document declares Kinds here. Ungated, the
-        claim that an unapproved Kind has no effect would be false process-wide,
-        since an author could simply use this door instead.
+        and so the SAME three-state gate applies
+        (:func:`~dna.kernel.kinds.approval.approval_state`): unapproved entries
+        are warn-skipped, approved ones register, and REVOKED ones register
+        MARKED. This is the second door onto the same registry, and the one that
+        needs no new document: whoever may write a scope's root document
+        declares Kinds here. Ungated, the claim that an unapproved Kind has no
+        effect would be false process-wide, since an author could simply use
+        this door instead — and, since i-085, so would the claim that a revoked
+        Kind refuses new documents.
+
+        **Where this door is weaker than the ``KindDefinition`` one, by
+        construction.** Its ports are keyed ``(apiVersion, kind)`` with no
+        per-scope port — ``_bind_scope`` widens ONE port to several scopes — so
+        two scopes declaring the same custom Kind with different states cannot
+        both be honoured, and the state of the last one loaded governs. That is
+        the door's pre-existing shape (one port, many scopes), not a new
+        compromise; a workspace that needs its own answer authors a
+        ``KindDefinition``, which is per-scope all the way down.
 
         The gate is PER ENTRY, not per document: the entry *is* the Kind
         declaration, so a partly-approved manifest registers exactly its
@@ -1425,19 +1497,17 @@ class KindRegistry:
             alias = ck.get("alias", kn.lower())
             if not kn:
                 continue
-            _raw_approver = ck.get("approved_by")
-            approved_by = (
-                _raw_approver.strip() if isinstance(_raw_approver, str) else ""
-            )
-            if not approved_by:
+            state = approval_state(ck)
+            if state == UNAPPROVED:
                 # Same refusal as the KindDefinition funnel, same reason: an
                 # authored-but-unapproved Kind is a legitimate state, it stays
                 # an inert part of the document and simply never becomes real.
                 # Registration is what confers schema enforcement and storage
                 # routing, so withholding it IS the absence of effect.
                 #
-                # The gate READS approved_by and never writes it — who may set
-                # it is decided where the writer is authenticated, not here.
+                # The gate READS the state and never writes it — who may set the
+                # underlying fields is decided where the writer is
+                # authenticated, not here.
                 #
                 # Deduped through the SAME process-wide cache as the
                 # KindDefinition door (i-084), so the two doors stay as alike in
@@ -1460,14 +1530,37 @@ class KindRegistry:
                 # Already registered (by extension or previous call) — but a
                 # SECOND scope declaring the same custom Kind must be governed
                 # by it too, or its own documents would go unregistered.
-                _bind_scope(self._kinds[key], scope)
+                existing = self._kinds[key]
+                _bind_scope(existing, scope)
+                # i-085: re-declaring an entry restates its state, so a
+                # revocation (or a re-approval) applies without a restart —
+                # otherwise this early-return would swallow exactly the change
+                # the issue is about. Only for ports THIS door made
+                # (``origin == "custom"``): an extension-registered Kind is code,
+                # and a manifest entry must not be able to revoke one.
+                if getattr(existing, "origin", None) == "custom":
+                    existing.__revoked__ = state == REVOKED
                 continue
 
             # Create a dynamic KindPort (use _make_dynamic_kind to avoid closure issues)
             dk = self._make_dynamic_kind(av, kn, alias)
             _bind_scope(dk, scope)
+            # i-085 — REGISTERED even when revoked, for the reason spelled out
+            # in ``register_kind_definitions``: an unregistered Kind is the
+            # permissive one, so dropping the port would loosen the gate.
+            dk.__revoked__ = state == REVOKED
             self._kinds[key] = dk
-            logger.info("Registered custom kind: %s/%s (alias: %s)", av, kn, alias)
+            if state == REVOKED:
+                logger.warning(
+                    "Registered custom kind %s/%s (alias: %s) as REVOKED — new "
+                    "documents of it are refused and existing ones read back "
+                    "marked invalid. Approving it again restores validity.",
+                    av, kn, alias,
+                )
+            else:
+                logger.info(
+                    "Registered custom kind: %s/%s (alias: %s)", av, kn, alias,
+                )
 
     @staticmethod
     def _make_dynamic_kind(av: str, kn: str, al: str) -> Any:
