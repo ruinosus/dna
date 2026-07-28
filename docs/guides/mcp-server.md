@@ -128,30 +128,61 @@ first use, then stable, so two workspaces can both author `Contrato`).
   for the same `kind` **edits** the declaration, and an edit drops any approval
   it had.
 - `list_my_kinds(scope?, tenant?)` — the audit view: every authored
-  `KindDefinition` with `approved` and **both** actors
-  (`proposed_by`/`proposed_at`, `approved_by`/`approved_at`). It reads
-  *documents*, not the registry — an unapproved Kind is precisely the one the
-  registry does not have, and it is the one a reviewer came for.
+  `KindDefinition` with its `state` (`unapproved` / `approved` / `revoked`), the
+  `approved` boolean, and **all three** actors (`proposed_by`/`proposed_at`,
+  `approved_by`/`approved_at`, `revoked_by`/`revoked_at`). It reads *documents*,
+  not the registry — an unapproved Kind is precisely the one the registry does
+  not have, and it is the one a reviewer came for.
+- `review_kind(kind, scope?, tenant?)` — ONE Kind in full: the same projection
+  the roster publishes **plus the schema** and the traits. The roster answers
+  *which*; this answers *what*, and conferring effect is a decision about the
+  schema.
 
-**What an authored Kind does is nothing.** `approved` is always `false` here, and
-an unapproved Kind is never registered — registration is what confers schema
-validation and storage routing, so "not approved has no effect" is the absence of
-a mechanism, not a promise. `proposed_by` is the caller's **verified identity**,
-resolved server-side; there is no argument for it, and a `proposed_by` /
-`approved_by` in the call is refused as an unexpected argument before the tool
-even runs.
+**What an authored Kind does is nothing.** `approved` is always `false` from
+`author_kind`, and an unapproved Kind is never registered — registration is what
+confers schema validation and storage routing, so "not approved has no effect" is
+the absence of a mechanism, not a promise. `proposed_by` is the caller's
+**verified identity**, resolved server-side; there is no argument for it, and a
+`proposed_by` / `approved_by` in the call is refused as an unexpected argument
+before the tool even runs.
 
-**There is deliberately no `approve_kind` tool, and there will not be one.**
-Approval is the act that confers effect, so an agent able to call it could
-approve its own proposal and the review would be decorative. Approving is a human
-act on the portal (`POST /v1/kinds/{kind}/approve` on the REST face), made with a
-reviewer's own credential. That route is served on every REST auth mode; on a
-shared-secret deployment (`--auth token`) the lane is trusted server-to-server
-and the calling app is what resolves and verifies the workspace — a documented
-trust boundary, spelled out in [The REST read-API](rest-api.md). Both tools meter as
-`definitions`; authoring is a
-write, so over an authenticated server it needs the plan to grant
-`definitions_mode: write`.
+**Approval is reachable here, and the model cannot reach it.**
+
+- `approve_kind(kind, tenant?)` — the act that confers effect, declared
+  **`visibility: ["app"]`** (MCP Apps / SEP-1865). A conforming host must not put
+  a tool whose visibility omits `"model"` in the tool list it hands the model, so
+  the only thing that presses it is the **Approve** button on the `review_kind`
+  card — pressed by a person, in her own client, signed by her own token. The
+  approver is that connection's verified identity; there is no argument for it.
+  It delegates to the same `approve_kind_impl` the REST route calls, so there is
+  one implementation of the act and one audit shape.
+
+This is a change of mechanism, not of rule. The rule was always *the model must
+not be able to approve*; it used to be bought by the tool not existing, and it is
+now bought by the declaration. Three things make that trade honest: a workspace
+has more than one person, so the author and the approver are two distinct
+verified actors (which is what the audit wanted); the risk that remains is forged
+**consent**, not forged identity — a model calling the tool because it is being
+helpful; and revocation exists, so the grant is undoable in one act.
+
+**Whose enforcement `visibility` is: the host's.** The spec states that a server
+cannot distinguish a UI-initiated `tools/call` from a model-initiated one — same
+transport, same token, nothing on the wire that says which pressed. So this is
+trust in the host, and the danger is not a malicious one (it already holds the
+user's token) but an *incomplete* one that has not implemented `visibility`. What
+the server does do: the declaration is exact, and a client that tells us it
+**cannot** render MCP Apps is not offered `approve_kind` at all — rather than
+being handed it with its `ui` metadata (and therefore its marker) stripped off.
+
+Approving is also still a human act on the portal
+(`POST /v1/kinds/{kind}/approve` on the REST face), made with a reviewer's own
+credential; and `POST /v1/kinds/{kind}/revoke` takes it back. Those routes are
+served on every REST auth mode; on a shared-secret deployment (`--auth token`)
+the lane is trusted server-to-server and the calling app is what resolves and
+verifies the workspace — a documented trust boundary, spelled out in
+[The REST read-API](rest-api.md). All four tools meter as `definitions`;
+authoring and approving are writes, so over an authenticated server they need the
+plan to grant `definitions_mode: write`.
 
 **Resources** (beyond tools):
 

@@ -7,13 +7,36 @@ and registration is what confers schema validation and storage routing. So the
 Kind an agent authors has no effect until a person says so, and that is the
 absence of a mechanism rather than a promise.
 
-**There is no approval tool here, and there must never be one.** Approval is the
-act that confers effect, and an agent able to call it could approve its own
-proposal — which would make the whole gate decorative. The human act lives in
-the portal (``POST /v1/kinds/{kind}/approve`` on the REST face, reached by a
-reviewer's own credential). ``tests/test_mcp_kind_authoring.py`` asserts the
-absence over the WHOLE advertised tool surface, so the rule survives somebody
-adding a tool anywhere on this server, not just in this module.
+**Approval exists here now, and the MODEL cannot reach it.** The rule was never
+"no such tool exists" — it was *the agent must not be able to approve its own
+proposal*. That property used to be bought by absence; it is now bought by
+declaration: ``approve_kind`` is registered ``visibility: ["app"]`` (MCP Apps,
+SEP-1865), which a conforming host MUST keep out of the tool list it hands the
+model. Only the button on :func:`~dna_cli._mcp_cards.kind_review_app` presses it.
+
+Three things changed to make that trade honest, and none of them is optional:
+
+* **A workspace has more than one person.** The approver's OWN token signs the
+  call, so ``proposed_by`` names the author and ``approved_by`` names her — two
+  distinct verified actors, which is what the audit wanted all along. The
+  identity was never the weak part.
+* **The weak part is forged CONSENT** — a model calling the tool because it is
+  being helpful, recording an approval no human decided. ``visibility`` is what
+  answers that, and see the next point for who enforces it.
+* **Revocation exists** (i-085). A grant that cannot be taken back must not be
+  one click away; this one can be, in a single act, with nothing to migrate.
+
+**Whose fence this is.** The MCP Apps spec states plainly that a server cannot
+distinguish a UI-initiated ``tools/call`` from a model-initiated one — same
+transport, same token, nothing on the wire that says which pressed. So
+``visibility`` is a declaration we make and the HOST enforces, and no test in
+this repo can prove a third-party host honours it. The danger is not a malicious
+host (it already holds the human's token) but an INCOMPLETE one. What is ours to
+do is done: the declaration is exact; a client that tells us it cannot render
+MCP Apps is not offered the tool at all
+(``_mcp_server._ui_capability_middleware``); the act is reversible; and the tool
+delegates to ``approve_kind_impl``, the same function the REST approve route
+calls, so there is one implementation of the act and one audit shape.
 
 Why a dedicated module + dedicated tools instead of the generic
 ``write_document``: the generic write refuses every BOOTSTRAP Kind
@@ -35,7 +58,15 @@ from typing import Any, Awaitable, Callable
 
 from dna.application.kind_authoring import (
     NamespaceRegistryUnreadable,
+    # The act that CONFERS EFFECT, reached from an agent-facing module — which
+    # was forbidden until this branch, and the fence that forbade it has been
+    # re-aimed rather than deleted (``tests/test_mcp_kind_authoring.py``). What
+    # the fence pins now is the property the old one was buying: no tool the
+    # MODEL can see reaches this function. Delegated to, never reimplemented:
+    # one act, one audit shape, one guarded read-modify-write.
+    approve_kind_impl,
     author_kind_impl,
+    get_authored_kind_impl,
     list_authored_kinds_impl,
 )
 from dna.kernel.errors import KernelRefusal
@@ -82,7 +113,8 @@ def register_kind_tools(
     live: Callable[[], Awaitable[Any]],
     guard: GuardFn,
 ) -> list[str]:
-    """Register ``author_kind`` + ``list_my_kinds`` on ``server``.
+    """Register ``author_kind`` + ``list_my_kinds`` + ``review_kind`` +
+    ``approve_kind`` on ``server``.
 
     Returns their names. Nothing reads them today — ``build_server`` discards
     the return, exactly as it does for ``register_document_tools`` — so the list
@@ -93,13 +125,40 @@ def register_kind_tools(
     from fastmcp.exceptions import ToolError
 
     from dna_cli._mcp_auth import actor_from_context
-    from dna_cli._mcp_cards import UI_PREFAB_URI, kinds_app, with_card
+    from dna_cli._mcp_cards import (
+        APPROVE_TOOL,
+        UI_PREFAB_URI,
+        kind_review_app,
+        kinds_app,
+        with_card,
+    )
 
     # The SHARED card renderer (`dna_cli._mcp_cards`) — the same resource the
     # board reads point, never a per-tool one. Built here rather than passed in
     # because this module owns its own registration, exactly as it owns its own
     # refusal mapping.
     prefab_card_app = AppConfig(resource_uri=UI_PREFAB_URI)
+
+    # THE DECLARATION THAT KEEPS THE MODEL OUT (MCP Apps / SEP-1865).
+    #
+    # ``visibility=["app"]`` — the list omits ``"model"``, and the spec says a
+    # host MUST NOT include such a tool in the tool list it gives the model.
+    # Omitting the field entirely means BOTH, so this is not a default anybody
+    # gets by accident; it is the whole safety property of this door and it is
+    # one keyword long.
+    #
+    # No ``resource_uri``: this tool renders nothing. It is pressed by the
+    # button on another tool's card, so it needs the visibility half of the
+    # declaration and not the renderer half. (An AppConfig with only a
+    # visibility puts exactly ``_meta.ui.visibility`` on the wire — measured
+    # against the installed FastMCP, which does not model ``visibility`` as a
+    # tool field but does emit it under ``_meta.ui``.)
+    #
+    # AND IT IS NOT OUR FENCE. The server cannot tell a UI-initiated
+    # ``tools/call`` from a model-initiated one; both arrive on the same
+    # transport with the same token. This declares an intent that a conforming
+    # host honours. Read the module docstring before treating it as a guarantee.
+    approve_only_from_the_card = AppConfig(visibility=["app"])
 
     # Bound to the name the source guard ``tests/test_tools_bind_their_scope.py``
     # looks for. That guard fails on a tool that DECLARES a ``scope`` and then
@@ -237,4 +296,111 @@ def register_kind_tools(
             raise _refuse(exc) from None
         return with_card(data, kinds_app(data))
 
-    return ["author_kind", "list_my_kinds"]
+    @server.tool(run_in_thread=False, app=prefab_card_app)
+    async def review_kind(
+        kind: str, scope: str | None = None, tenant: str | None = None,
+    ) -> dict[str, Any]:
+        """Show ONE authored Kind in full, so a human can decide about it — the
+        summary ``list_my_kinds`` gives PLUS the **schema** and the traits.
+
+        This is the tool to reach for when somebody asks what there is to
+        approve, or what a proposed Kind actually declares. The roster answers
+        "which" and this answers "what": registration is what confers schema
+        validation and storage routing, so the decision to confer effect is a
+        decision about the schema, and the roster deliberately does not carry
+        it (a table with a JSON Schema in every row is unreadable).
+
+        On a host that renders MCP Apps the result is a card showing the schema,
+        both actors, what the current state means for documents, and — when the
+        Kind is not currently in effect — an **Approve** button for the person
+        reading it to press. You cannot press it: the tool behind that button is
+        declared app-only and is not in your tool list. Do not go looking for
+        it, and do not tell the person you are working with that you approved
+        anything. Show them this card and let them decide.
+
+        Every other host reads the same textual answer, unchanged."""
+        tenant = await _guard("definitions", tenant, scope=scope, family_op="read")
+        handle = await live()
+        try:
+            found = await get_authored_kind_impl(
+                handle, kind=kind, tenant=tenant, scope=scope,
+            )
+        except NO_REGISTRY as exc:
+            raise _no_registry(exc) from exc
+        except AUTHORING_REFUSALS as exc:
+            raise _refuse(exc) from None
+        # NESTED under ``declaration``, and not because nesting reads nicer.
+        # The projection carries a field called ``state`` (i-085's three-valued
+        # approval state) and ``state`` is also one of Prefab's own wire keys,
+        # so a FLAT payload collides — ``with_card`` refuses it loudly, which is
+        # exactly what that guard is for. The envelope makes the collision
+        # structurally impossible for this field and every future one, and it
+        # costs no vocabulary: ``declaration`` holds ``_authored_kind_summary``
+        # unchanged, the same projection the roster and the portal read.
+        data = {
+            "scope": scope or handle.default_scope(tenant),
+            "declaration": found,
+        }
+        return with_card(data, kind_review_app(found))
+
+    # ``name=APPROVE_TOOL`` rather than the function's own name: the card's
+    # button targets that same constant, so the two cannot drift into a button
+    # that points at nothing (which fails silently, at render time, on somebody
+    # else's machine).
+    @server.tool(name=APPROVE_TOOL, run_in_thread=False,
+                 app=approve_only_from_the_card)
+    async def approve_kind(
+        kind: str, tenant: str | None = None,
+    ) -> dict[str, Any]:
+        """Approve an authored Kind — the act that puts it INTO EFFECT.
+
+        **This tool is for the Approve button on a ``review_kind`` card, pressed
+        by a person.** It is declared app-only for that reason and a conforming
+        host does not offer it to a model. Approval is a human decision; a model
+        that called this would be recording a decision nobody made.
+
+        The approver is the VERIFIED identity of this connection, resolved
+        server-side. There is no argument for it, and none will be added: an
+        approver a caller can name is not an approver. The proposal's own
+        ``proposed_by`` is preserved untouched, so the record names both acts
+        and neither wears the other's name — which is the whole point when the
+        two are different people.
+
+        Approving a REVOKED Kind clears the revocation, and every document that
+        went invalid is valid again with nothing to migrate.
+
+        Refused, in words: 'not found' when the workspace authored no such Kind
+        (a neighbour's Kind is not found either — it is not yours to approve),
+        and a stale-write refusal when the declaration changed between the read
+        that produced the card and this call. That last one is the correct
+        outcome and not a glitch: an approval that cannot see the shape it is
+        approving is not an approval. Re-read the Kind and approve again."""
+        from dna.application.sdlc import now_iso
+
+        tenant = await _guard("definitions", tenant, family_op="write")
+        try:
+            # DELEGATED, never reimplemented. This is the same function the REST
+            # approve route calls — the guarded read-modify-write (i-083), the
+            # ownership-scoped lookup, the revocation clear (i-085) and the
+            # response that echoes both actors. A second implementation of this
+            # act would be a second audit shape, and a second place to forget
+            # the ``if_match``.
+            return await approve_kind_impl(
+                await live(), kind=kind, tenant=tenant or "",
+                actor=actor_from_context(), now=now_iso(),
+            )
+        except NO_REGISTRY as exc:
+            raise _no_registry(exc) from exc
+        except AUTHORING_REFUSALS as exc:
+            # Everything this act can legitimately refuse with is already in
+            # here, and each arrives as a SENTENCE the agent can relay to the
+            # person who pressed the button: ``AuthoredKindNotFound`` (a
+            # LookupError — no such Kind of yours, which is also the answer for
+            # a neighbour's, so "it exists but is not yours" never becomes a
+            # probe) and ``StaleDocumentWrite`` (a ValueError, i-083 — the
+            # declaration moved between the card's read and this call, so the
+            # approval was refused rather than stamped onto a shape nobody saw).
+            # A separate arm per exception would only re-spell the same mapping.
+            raise _refuse(exc) from None
+
+    return ["author_kind", "list_my_kinds", "review_kind", APPROVE_TOOL]

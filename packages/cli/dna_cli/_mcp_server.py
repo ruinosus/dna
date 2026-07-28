@@ -366,6 +366,27 @@ def _tool_without_ui_meta(tool: Any) -> Any:
     return tool.model_copy(update={"meta": trimmed or None})
 
 
+def app_only(tool: Any) -> bool:
+    """Is this tool declared for the APP and not for the model? (SEP-1865)
+
+    ``_meta.ui.visibility`` lists the surfaces a tool is offered on. A list that
+    omits ``"model"`` means a conforming host must not put the tool in the tool
+    list it hands the model. An ABSENT ``visibility`` means BOTH — so the
+    reading here is "declared, and omits model", never "does not say model".
+
+    Stated once because two places need the same answer: the listing filter
+    below, and the test that reads the tool list the way a model would see it. A
+    second spelling of this predicate would be a second answer to the one
+    question that keeps the approval tool away from the model."""
+    ui = (getattr(tool, "meta", None) or {}).get("ui")
+    if not isinstance(ui, dict):
+        return False
+    visibility = ui.get("visibility")
+    if not isinstance(visibility, list):
+        return False
+    return "model" not in visibility
+
+
 def _ui_capability_middleware() -> Any:
     """Middleware applying the inbound half of the negotiation at ``tools/list``.
 
@@ -375,7 +396,15 @@ def _ui_capability_middleware() -> Any:
     plainly: when the client tells us nothing (``None``) we leave the pointer
     in place — it is inert metadata a non-supporting host ignores, and
     stripping on a shrug would break every host whose declaration this runtime
-    cannot yet surface."""
+    cannot yet surface.
+
+    An APP-ONLY tool is WITHHELD ENTIRELY from a client that told us it cannot
+    render, not merely stripped — and this is a correctness fix, not a tidiness
+    one. The whole safety of ``approve_kind`` is the ``visibility`` marker that
+    lives inside the ``ui`` block; handing a UI-blind client the tool with that
+    block removed would deliver an approval tool wearing no marker at all,
+    straight into the model's list. There is also nothing to lose: a client that
+    cannot render MCP Apps has no button to press it with."""
     from fastmcp.server.middleware import Middleware
 
     class UiCapabilityMiddleware(Middleware):
@@ -384,7 +413,9 @@ def _ui_capability_middleware() -> Any:
             declared = client_ui_extension_from_context(context.fastmcp_context)
             if declared is not False:
                 return tools
-            return [_tool_without_ui_meta(t) for t in tools]
+            return [
+                _tool_without_ui_meta(t) for t in tools if not app_only(t)
+            ]
 
     return UiCapabilityMiddleware()
 

@@ -42,10 +42,26 @@ declares the base CSP and not ``get_generative_renderer_csp``'s. Grepping the
 document for a CDN hostname therefore proves nothing either way; the test asks
 the question structurally instead.
 
-**Display only.** No card here wires an action — no ``CallTool``, no approve
-affordance. What a card can DO is gated behind revocation work that does not
-exist yet, and a button that acts without a way to take the grant back is the
-wrong thing to ship first.
+**One card acts, and it is the approval one.** Every other card here is a
+mirror. :func:`kind_review_app` carries a single button that calls
+:data:`APPROVE_TOOL` — the act that confers effect — and it ships now because
+the thing that was missing when these cards were written exists: revocation
+(i-085). A grant you cannot take back is the one that must not be one click
+away; an undoable one may be.
+
+**The trust boundary, stated where it is easy to mistake for a mechanism.**
+The approval tool is declared ``visibility: ["app"]`` (MCP Apps, SEP-1865), and
+the spec is explicit that a host MUST NOT put a tool in the model's tool list
+when its visibility omits ``"model"``. It is equally explicit that **the server
+cannot tell a UI-initiated ``tools/call`` from a model-initiated one** — the
+call arrives on the same transport, with the same token, carrying nothing that
+says which one pressed. So ``visibility`` is a declaration we make and the HOST
+enforces. It is not our fence, and nothing here can make it one. What we can do
+we do: the declaration is exact, a client that tells us it cannot render MCP
+Apps is not offered the tool at all (``_mcp_server._ui_capability_middleware``),
+and the act is reversible. The residual — an incomplete host that ignores
+``visibility`` — is a third party's bug that our tests cannot catch, and saying
+so here is worth more than a comment that implies a guarantee.
 
 **The host's theme, with a fallback on every reference.** See
 :func:`host_theme_css`.
@@ -60,6 +76,7 @@ from dna.emit.mcp_ui import MCP_APP_MIME as MCP_APP_MIME
 __all__ = [
     "UI_PREFAB_URI",
     "MCP_APP_MIME",
+    "APPROVE_TOOL",
     "HOST_TOKENS",
     "host_theme_css",
     "prefab_renderer_html",
@@ -67,12 +84,20 @@ __all__ = [
     "stories_app",
     "digest_app",
     "kinds_app",
+    "kind_review_app",
 ]
 
 #: The ONE ``ui://`` resource every Prefab card in this face points at. Stable —
 #: hosts key their prefetch/render cache on it, and sharing it is the difference
 #: between one cached renderer and one per tool.
 UI_PREFAB_URI = "ui://dna/prefab"
+
+#: The tool the review card's button calls — the ONLY action wired anywhere on
+#: this surface. Named here rather than spelled inline so the test that proves
+#: the target is registered ``visibility: ["app"]`` has one string to follow,
+#: and so a button pointed at a model-visible tool cannot be introduced by a
+#: typo that merely fails to render.
+APPROVE_TOOL = "approve_kind"
 
 #: The host design tokens this surface reads, in the host's own vocabulary
 #: (the MCP Apps host-context ``styles.variables`` names). Named here so the
@@ -473,6 +498,59 @@ def _pending_variant(pending: int) -> str:
     return "warning" if pending else "success"
 
 
+#: The three approval states → the renderer's semantic badge variants. The
+#: vocabulary is the core's own (``dna.kernel.kinds.approval``), which is why
+#: this map is exhaustive and closed rather than a default-carrying lookup:
+#: a fourth state must fail visibly here, not paint itself grey and read as
+#: "nothing special".
+#:
+#: The colours are NOT a gradient from bad to good — they are three different
+#: kinds of fact, and the pair that must never look alike is amber/red. An
+#: UNAPPROVED Kind is the LOOSEST state in the system (never registered, so its
+#: documents are accepted with no validation at all); a REVOKED one is the
+#: TIGHTEST (new documents refused, existing ones read back invalid). Rendering
+#: both as "not approved" — which the boolean did — reads the loosest and the
+#: tightest as the same word.
+_STATE_VARIANT = {
+    "unapproved": "warning",
+    "approved": "success",
+    "revoked": "destructive",
+}
+
+#: What each state MEANS for documents, in one sentence — the thing a reviewer
+#: is actually deciding about. Kept beside the variant map so a new state cannot
+#: acquire a colour without acquiring an explanation.
+_STATE_MEANING = {
+    "unapproved": (
+        "Not approved: this Kind is not registered, so documents of it are "
+        "accepted with NO schema validation and no storage routing."
+    ),
+    "approved": (
+        "Approved: documents of this Kind are validated against the schema "
+        "below and routed as it declares."
+    ),
+    "revoked": (
+        "REVOKED: new documents of this Kind are refused and existing ones "
+        "read back invalid. Nothing was deleted, and approving again restores "
+        "every one of them."
+    ),
+}
+
+
+def _state_of(row: Any) -> str:
+    """The row's approval state, taken from the projection and NEVER derived.
+
+    No fallback, deliberately. ``_authored_kind_summary`` always emits
+    ``state``, so its absence means the payload did not come from the audit
+    projection — and the obvious "fall back to the ``approved`` boolean" would
+    make a REVOKED row (``approved: false``) render identically to one that was
+    never approved, which is precisely the two-facts-one-word bug this column
+    exists to end. An unknown state renders as the em dash: the data did not
+    say, and the card must not say for it."""
+    state = row.get("state") if isinstance(row, dict) else None
+    return state if state in _STATE_VARIANT else ""
+
+
 def kinds_app(data: dict[str, Any]) -> Any:
     """The ``list_my_kinds`` card: the authoring audit roster.
 
@@ -484,10 +562,18 @@ def kinds_app(data: dict[str, Any]) -> Any:
     and both timestamps visible: a reviewer deciding whether to confer effect
     needs to see who proposed it, and when.
 
-    No approve affordance, here or anywhere: approval is the act that confers
-    effect, and an agent able to call it could approve its own proposal. The
-    human act lives on the REST face, reached by a reviewer's own credential.
-    This card is a mirror, not a door."""
+    THREE states, not a boolean (i-085). ``approved: false`` collapses the two
+    states that behave in OPPOSITE ways — never approved accepts documents
+    unvalidated, revoked refuses them and marks the existing ones invalid — so
+    the roster renders ``state`` from the projection and counts the revoked rows
+    into their own headline badge. A listing surface that shows a revoked Kind
+    as merely unapproved under-reports the tightest state in the system as the
+    loosest one.
+
+    No approve affordance HERE: this is the roster, and a button on a row is a
+    button pressed against a schema the reviewer has not seen. The act lives on
+    :func:`kind_review_app`, which shows the schema it would confer effect on —
+    the same hole the portal closed in i-076, not reopened on this face."""
     from prefab_ui.app import PrefabApp
     from prefab_ui.components import (
         Badge,
@@ -510,24 +596,33 @@ def kinds_app(data: dict[str, Any]) -> Any:
             "kind": _text(k.get("kind")),
             "api_version": _text(k.get("api_version")),
             "namespace": _text(k.get("namespace")),
-            "status": "approved" if k.get("approved") else "proposed",
+            "state": _text(_state_of(k)),
             "proposed_by": _text(k.get("proposed_by")),
             "proposed_at": _text(k.get("proposed_at")),
             "approved_by": _text(k.get("approved_by")),
             "approved_at": _text(k.get("approved_at")),
+            "revoked_by": _text(k.get("revoked_by")),
+            "revoked_at": _text(k.get("revoked_at")),
         }
         for k in (raw if isinstance(raw, list) else [])
         if isinstance(k, dict)
     ]
-    pending = sum(1 for r in rows if r["status"] == "proposed")
+    pending = sum(1 for r in rows if r["state"] == "unapproved")
+    revoked = sum(1 for r in rows if r["state"] == "revoked")
     state = {
         "scope": _text(data.get("scope")),
         "count": len(rows),
         "pending": pending,
         "pending_label": (
-            f"{pending} awaiting approval" if pending else "all approved"
+            f"{pending} awaiting approval" if pending else "none awaiting approval"
         ),
         "pending_variant": _pending_variant(pending),
+        # The revoked count gets its OWN badge rather than sharing the amber
+        # one. Two facts in one counter would be the boolean's mistake again,
+        # one level up: "3 not approved" is true of a roster where one Kind is
+        # refusing every write and two are accepting anything.
+        "revoked": revoked,
+        "revoked_label": f"{revoked} revoked",
         "kinds": rows,
     }
     with Card() as view:
@@ -536,9 +631,11 @@ def kinds_app(data: dict[str, Any]) -> Any:
                 Text("DNA", css_class="dna-mark")
                 CardTitle("Kinds you have authored")
                 Badge("{{ pending_label }}", variant="{{ pending_variant }}")
+                with If("revoked > 0"):
+                    Badge("{{ revoked_label }}", variant="destructive")
             CardDescription(
                 "{{ count }} in {{ scope }} · a Kind awaiting approval exists "
-                "and has no effect yet"
+                "and has no effect yet; a revoked one refuses new documents"
             )
         with CardContent():
             with If("count > 0"):
@@ -548,11 +645,13 @@ def kinds_app(data: dict[str, Any]) -> Any:
                         DataTableColumn(key="kind", header="Kind", sortable=True),
                         DataTableColumn(key="api_version", header="apiVersion"),
                         DataTableColumn(key="namespace", header="Namespace", sortable=True),
-                        DataTableColumn(key="status", header="Status", sortable=True),
+                        DataTableColumn(key="state", header="State", sortable=True),
                         DataTableColumn(key="proposed_by", header="Proposed by"),
                         DataTableColumn(key="proposed_at", header="Proposed at", sortable=True),
                         DataTableColumn(key="approved_by", header="Approved by"),
                         DataTableColumn(key="approved_at", header="Approved at", sortable=True),
+                        DataTableColumn(key="revoked_by", header="Revoked by"),
+                        DataTableColumn(key="revoked_at", header="Revoked at", sortable=True),
                     ],
                     rows="{{ kinds }}",
                     search=True,
@@ -564,5 +663,140 @@ def kinds_app(data: dict[str, Any]) -> Any:
                     "Your workspace has authored no Kinds yet — author one and "
                     "it will appear here, inert, until a human approves it.",
                     css_class="text-muted-foreground",
+                )
+    return PrefabApp(view=view, state=state)
+
+
+def kind_review_app(data: dict[str, Any]) -> Any:
+    """The ``review_kind`` card: ONE authored Kind, with the act attached.
+
+    This is the surface the whole feature exists for. A workspace has more than
+    one person: the author's agent proposes a Kind, and the person who has to
+    confer effect on it wants to answer "what is there to approve?" where she
+    already is. So the card shows what she is deciding about — the SCHEMA, both
+    actors, and what the current state means for documents — and carries the
+    button that decides it.
+
+    **The schema is not optional decoration.** A roster inlining every JSON
+    Schema is unreadable, which is why the listing omits it; but approving what
+    you cannot see is not approving, and it is exactly the hole the portal
+    closed (i-076). A button without the schema beside it would reopen it here.
+
+    **The button is app-only.** It calls :data:`APPROVE_TOOL`, which is declared
+    ``visibility: ["app"]`` so a conforming host never offers it to the model —
+    see the module docstring for what that does and does not guarantee. It is
+    shown only while the Kind is NOT currently in effect: on an approved Kind
+    there is nothing to confer, and a live button that re-stamps the approver
+    invites a click that means nothing.
+
+    On a REVOKED Kind the button is shown and says so. Approving again is the
+    documented one-act undo — it clears the revocation and every existing
+    document is valid again — and hiding it would leave the reviewer looking
+    for a route that does not exist on this face."""
+    import json
+
+    from prefab_ui.actions import CallTool, ShowToast
+    from prefab_ui.app import PrefabApp
+    from prefab_ui.components import (
+        Badge,
+        Button,
+        Card,
+        CardContent,
+        CardDescription,
+        CardFooter,
+        CardHeader,
+        CardTitle,
+        Code,
+        Row,
+        Text,
+    )
+    from prefab_ui.components.control_flow import Else, If
+
+    current = _state_of(data)
+    schema = data.get("schema")
+    traits = data.get("traits")
+    traits = [str(t) for t in traits] if isinstance(traits, list) else []
+    state = {
+        "kind": _text(data.get("kind")),
+        "name": _text(data.get("name")),
+        "api_version": _text(data.get("api_version")),
+        "namespace": _text(data.get("namespace")),
+        "state": _text(current),
+        "state_variant": _STATE_VARIANT.get(current, "secondary"),
+        "meaning": _STATE_MEANING.get(
+            current,
+            "This Kind's approval state could not be read, so what it does to "
+            "documents is unknown — do not act on this card.",
+        ),
+        # Pretty-printed HERE so the view holds no formatting logic and a host
+        # that renders nothing still reads the same schema in `content`.
+        # `ensure_ascii=False` because a tenant's own field names are routinely
+        # not ASCII and `á` is not a schema anyone can review.
+        "schema": (
+            json.dumps(schema, indent=2, ensure_ascii=False, sort_keys=True)
+            if isinstance(schema, dict) else ""
+        ),
+        # "There is no schema" and "the schema is {}" are different facts; the
+        # projection already distinguishes them (None vs a dict) and the card
+        # must not flatten them into an empty code block.
+        "has_schema": isinstance(schema, dict),
+        "traits": ", ".join(traits) if traits else "—",
+        "proposed": f"{_text(data.get('proposed_by'))} · {_text(data.get('proposed_at'))}",
+        "approved": f"{_text(data.get('approved_by'))} · {_text(data.get('approved_at'))}",
+        "revoked": f"{_text(data.get('revoked_by'))} · {_text(data.get('revoked_at'))}",
+        "was_approved": bool(data.get("approved_by")),
+        "was_revoked": current == "revoked",
+        # The act is offered exactly when it would change something.
+        "can_approve": current in ("unapproved", "revoked"),
+        "approve_label": (
+            "Approve again — restore this Kind" if current == "revoked"
+            else "Approve — put this Kind into effect"
+        ),
+    }
+
+    with Card() as view:
+        with CardHeader():
+            with Row(gap=3, align="center"):
+                Text("DNA", css_class="dna-mark")
+                CardTitle("{{ kind }}")
+                Badge("{{ state }}", variant="{{ state_variant }}")
+            CardDescription("{{ api_version }} · namespace {{ namespace }} · {{ name }}")
+        with CardContent():
+            Text("{{ meaning }}")
+            Text("Proposed by {{ proposed }}", css_class="text-muted-foreground")
+            with If("was_approved"):
+                Text("Approved by {{ approved }}", css_class="text-muted-foreground")
+            with If("was_revoked"):
+                Text("Revoked by {{ revoked }}", css_class="text-muted-foreground")
+            Text("Traits: {{ traits }}", css_class="text-muted-foreground")
+            with If("has_schema"):
+                Code("{{ schema }}", language="json")
+            with Else():
+                Text(
+                    "This declaration stores no schema — approving it would "
+                    "confer effect on a shape nobody can read.",
+                    css_class="text-destructive",
+                )
+        with If("can_approve"):
+            with CardFooter():
+                Button(
+                    "{{ approve_label }}",
+                    on_click=CallTool(
+                        APPROVE_TOOL,
+                        # ONLY the Kind. The workspace is resolved server-side
+                        # from the verified identity of the connection, exactly
+                        # as every other tool on this face resolves it — a
+                        # tenant a card can name is not a tenant — and the
+                        # approver is likewise never an argument.
+                        arguments={"kind": "{{ kind }}"},
+                        on_success=ShowToast(
+                            "Approved — {{ kind }} is now in effect",
+                            variant="success",
+                        ),
+                        on_error=ShowToast(
+                            "{{ kind }} was NOT approved",
+                            variant="error",
+                        ),
+                    ),
                 )
     return PrefabApp(view=view, state=state)

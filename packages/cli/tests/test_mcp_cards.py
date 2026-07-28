@@ -1,9 +1,9 @@
 """MCP Apps (SEP-1865) — the **Prefab cards** on the read tools.
 
-Three reading tools carry a card: ``list_stories``, ``sdlc_digest`` and
-``list_my_kinds``. All three point ONE shared renderer resource
-(``ui://dna/prefab``), and all three return a result whose ``content`` is
-byte-identical to the pre-card baseline.
+Four reading tools carry a card: ``list_stories``, ``sdlc_digest``,
+``list_my_kinds`` and ``review_kind``. All four point ONE shared renderer
+resource (``ui://dna/prefab``), and all four return a result whose ``content``
+is byte-identical to the pre-card baseline.
 
 The two rules this file exists to pin, both from measurement:
 
@@ -46,7 +46,7 @@ _FIXTURES = pathlib.Path(__file__).parent / "fixtures" / "mcp_cards"
 _SCOPE = "concierge"
 
 #: The tools that carry a card, with the impl seam each one is pinned through.
-_CARD_TOOLS = ("list_stories", "sdlc_digest", "list_my_kinds")
+_CARD_TOOLS = ("list_stories", "sdlc_digest", "list_my_kinds", "review_kind")
 
 #: Canonical payloads for the byte-stability tests. Byte-identity is a property
 #: of the WIRE SERIALIZATION of a given payload (a live store's contents vary by
@@ -54,6 +54,18 @@ _CARD_TOOLS = ("list_stories", "sdlc_digest", "list_my_kinds")
 #: bytes are compared against the ``*.content.txt`` files captured BEFORE any
 #: card existed. Do not edit the payloads together with the fixtures — that
 #: would defeat the regression net.
+#:
+#: Two of them WERE re-frozen, once, and the procedure is written down because
+#: "we regenerated it" is exactly what the sentence above forbids. The
+#: ``list_my_kinds`` payload had drifted from its own impl — i-085 added
+#: ``state``/``revoked_by``/``revoked_at`` to ``_authored_kind_summary`` and the
+#: fixture never grew them, so the card was being proven against a shape the
+#: tool can no longer return — and ``review_kind`` is new. Both were re-frozen
+#: by running the payload through a BARE FastMCP tool (no ``app=``, no
+#: ``with_card``), which is the pre-card path itself and not the path under
+#: test; the procedure was validated by reproducing the two UNTOUCHED baselines
+#: (``list_stories``, ``sdlc_digest``) byte for byte first. Re-freezing through
+#: ``with_card`` would have made this test tautological.
 _PAYLOADS = json.loads((_FIXTURES / "payloads.json").read_text(encoding="utf-8"))
 
 
@@ -79,6 +91,15 @@ def _pin_impls(monkeypatch):
     monkeypatch.setattr(M, "sdlc_digest_impl", _fixed("sdlc_digest"))
     monkeypatch.setattr(K, "list_authored_kinds_impl", _fixed("list_my_kinds"))
 
+    # `review_kind` wraps its projection in an envelope (`declaration`) because
+    # the projection's own `state` field collides with a Prefab wire key, so the
+    # seam returns the INNER half and the tool builds the envelope. Pinning the
+    # seam rather than the tool keeps the envelope itself under test.
+    async def _one_kind(*a, **k):
+        return json.loads(json.dumps(_PAYLOADS["review_kind"]["declaration"]))
+
+    monkeypatch.setattr(K, "get_authored_kind_impl", _one_kind)
+
 
 def _declare_ui_extension(monkeypatch):
     """Make the in-memory client announce the MCP Apps extension, the way a
@@ -97,13 +118,21 @@ def _declare_ui_extension(monkeypatch):
     monkeypatch.setattr(mt, "ClientCapabilities", with_ui)
 
 
+#: The extra argument each card tool needs beyond ``scope``. ``review_kind``
+#: addresses ONE Kind, so it takes a name; the value is irrelevant (the seam is
+#: pinned) but its presence is not — the tool refuses without it.
+_EXTRA_ARGS = {"review_kind": {"kind": "Contrato"}}
+
+
 def _call(dna_dir, tool: str):
     from fastmcp import Client
 
     async def scenario():
         server = M.build_server(base_dir=str(dna_dir))
         async with Client(server) as client:
-            return await client.call_tool(tool, {"scope": _SCOPE})
+            return await client.call_tool(
+                tool, {"scope": _SCOPE, **_EXTRA_ARGS.get(tool, {})},
+            )
 
     return asyncio.run(scenario())
 
@@ -501,11 +530,19 @@ _BUILDERS = {
     "list_stories": "stories_app",
     "sdlc_digest": "digest_app",
     "list_my_kinds": "kinds_app",
+    "review_kind": "kind_review_app",
 }
+
+#: The card builders that are handed the INNER projection rather than the whole
+#: tool payload — see ``_pin_impls`` for why ``review_kind`` has an envelope.
+_INNER = {"review_kind": "declaration"}
 
 
 def _wire(tool: str) -> dict:
-    return getattr(C, _BUILDERS[tool])(_PAYLOADS[tool]).to_json()
+    payload = _PAYLOADS[tool]
+    if tool in _INNER:
+        payload = payload[_INNER[tool]]
+    return getattr(C, _BUILDERS[tool])(payload).to_json()
 
 
 def test_the_stories_card_binds_the_rows_and_carries_an_empty_state():
@@ -546,14 +583,15 @@ def test_the_digest_card_maps_rag_to_a_measured_badge_variant():
 
 
 def test_the_kinds_card_shows_the_one_fact_the_roster_exists_for():
-    """``approved`` is the fact this route exists to publish — an unapproved
-    Kind is inert — and it is one boolean among ten fields in the text answer.
-    The card promotes it to a badge and keeps both actors visible."""
+    """The approval state is the fact this route exists to publish — an
+    unapproved Kind is inert — and it is one field among thirteen in the text
+    answer. The card promotes the counts to badges and keeps both actors
+    visible."""
     wire = _wire("list_my_kinds")
     rows = wire["state"]["kinds"]
-    assert [r["name"] for r in rows] == ["kd-contrato", "kd-apolice"]
-    assert rows[0]["status"] == "proposed", "an unapproved Kind must not read as approved"
-    assert rows[1]["status"] == "approved"
+    assert [r["name"] for r in rows] == ["kd-contrato", "kd-apolice", "kd-recibo"]
+    assert rows[0]["state"] == "unapproved", "an unapproved Kind must not read as approved"
+    assert rows[1]["state"] == "approved"
     # BOTH actors survive: the reviewer's first question is who proposed it.
     assert rows[0]["proposed_by"] == "agent-7"
     assert rows[1]["approved_by"] == "barna"
@@ -562,6 +600,130 @@ def test_the_kinds_card_shows_the_one_fact_the_roster_exists_for():
     assert wire["state"]["pending"] == 1
     assert wire["state"]["pending_variant"] == "warning"
     assert C._pending_variant(0) == "success"
+
+
+def test_a_revoked_kind_reads_as_revoked_and_not_as_merely_unapproved():
+    """i-085 shipped revocation as a THIRD state and accepted, explicitly, that
+    every listing surface has to learn to render it. This is one of them.
+
+    The two states the boolean collapsed behave in OPPOSITE ways: a Kind that
+    was never approved is never registered, so its documents are accepted with
+    NO validation; a REVOKED one refuses new documents and marks every existing
+    one invalid. Showing both as "not approved" reports the tightest state in
+    the system as the loosest.
+
+    So the row carries the core's own word, the revoker is visible beside the
+    proposer and the approver (revoking deliberately leaves ``approved_by``
+    standing — the audit keeps who conferred effect in the first place), and the
+    count gets its own badge in the danger hue rather than being folded into the
+    amber "awaiting approval" one."""
+    wire = _wire("list_my_kinds")
+    state = wire["state"]
+    revoked = next(r for r in state["kinds"] if r["name"] == "kd-recibo")
+
+    assert revoked["state"] == "revoked", (
+        "a revoked Kind reads as something else — and every other value here "
+        "means the opposite thing about what its documents may do"
+    )
+    assert revoked["revoked_by"] == "ana" and revoked["revoked_at"]
+    # The approval is NOT erased by the revocation: somebody conferred effect on
+    # this Kind and it governed real documents for a while.
+    assert revoked["approved_by"] == "barna"
+
+    # Its own headline badge, in its own hue. Folded into the amber counter it
+    # would be invisible: "1 awaiting approval" is a true sentence about a
+    # roster where nothing is awaiting anything and one Kind is refusing writes.
+    assert state["revoked"] == 1 and state["pending"] == 1
+    assert "1 revoked" in state["revoked_label"]
+    assert C._STATE_VARIANT["revoked"] == "destructive"
+    assert C._STATE_VARIANT["unapproved"] != C._STATE_VARIANT["revoked"], (
+        "the loosest and the tightest state paint the same colour"
+    )
+    blob = json.dumps(wire)
+    assert '"revoked_by"' in blob and '"Revoked by"' in blob, (
+        "the revoker never reaches the table"
+    )
+
+
+def test_the_state_cell_is_never_derived_from_the_boolean():
+    """The fallback that would make a wrong value render identically to a right
+    one, refused at the source.
+
+    ``approved: false`` is true of BOTH an unapproved and a revoked Kind, so
+    "no ``state``? derive it from ``approved``" silently prints ``unapproved``
+    over a revoked row — and it would look completely fine. A row with no
+    ``state`` therefore renders the em dash: the data did not say, and the card
+    does not say for it."""
+    assert C._state_of({"approved": False, "revoked_by": "ana"}) == ""
+    assert C._state_of({"approved": True}) == ""
+    assert C._state_of({"state": "revoked"}) == "revoked"
+    assert C._state_of({"state": "whatever-comes-next"}) == "", (
+        "an unknown state was accepted — a fourth state must fail visibly"
+    )
+    wire = C.kinds_app({"scope": "s", "kinds": [{"name": "x", "approved": False}]})
+    row = wire.to_json()["state"]["kinds"][0]
+    assert row["state"] == "—", row
+
+
+def test_the_review_card_shows_what_would_be_approved():
+    """The hole the portal closed in i-076, not reopened on this face.
+
+    A reviewer conferring effect is deciding about the SCHEMA — registration is
+    what gives a Kind validation and routing — and the roster deliberately does
+    not carry it. So the single-Kind card does: the schema, both actors, and a
+    sentence saying what the current state means for documents."""
+    wire = _wire("review_kind")
+    state = wire["state"]
+    assert state["kind"] == "Contrato"
+    assert state["state"] == "unapproved"
+    assert state["state_variant"] == "warning"
+    # The schema is really there, and it is the one from the document.
+    assert state["has_schema"] is True
+    schema = json.loads(state["schema"])
+    assert schema == _PAYLOADS["review_kind"]["declaration"]["schema"]
+    assert '"Code"' in json.dumps(wire), "the schema is not rendered as a block"
+    # Both actors, and the sentence that says what "unapproved" costs.
+    assert "agent-7" in state["proposed"]
+    assert "NO schema validation" in state["meaning"]
+    assert state["traits"] == "searchable"
+
+
+def test_the_review_card_does_not_invent_a_schema_it_does_not_have():
+    """``None`` and ``{}`` are different facts and the projection keeps them
+    apart, so the card must too. An empty code block reads as "this Kind
+    declares nothing", which is a claim; "no schema is stored" is the fact."""
+    declaration = dict(_PAYLOADS["review_kind"]["declaration"], schema=None)
+    state = C.kind_review_app(declaration).to_json()["state"]
+    assert state["has_schema"] is False
+    assert state["schema"] == ""
+
+
+def test_the_review_card_offers_the_act_only_where_it_would_change_something():
+    """The button is shown on an unapproved Kind and on a REVOKED one — the
+    second because approving again is the documented one-act undo, and hiding it
+    would leave the reviewer hunting for a route this face does not have. It is
+    NOT shown on an approved Kind: there is nothing to confer, and a live button
+    that only re-stamps the approver invites a click that means nothing."""
+    base = _PAYLOADS["review_kind"]["declaration"]
+
+    unapproved = C.kind_review_app(base).to_json()["state"]
+    assert unapproved["can_approve"] is True
+    assert "put this Kind into effect" in unapproved["approve_label"]
+
+    revoked = C.kind_review_app(
+        dict(base, state="revoked", approved_by="barna", revoked_by="ana")
+    ).to_json()["state"]
+    assert revoked["can_approve"] is True
+    assert "restore" in revoked["approve_label"], (
+        "a revoked Kind's button must say what pressing it does — approving "
+        "again is an undo, not a first approval"
+    )
+    assert revoked["was_revoked"] is True and revoked["was_approved"] is True
+
+    approved = C.kind_review_app(
+        dict(base, state="approved", approved=True, approved_by="barna")
+    ).to_json()["state"]
+    assert approved["can_approve"] is False
 
 
 def test_no_card_forces_a_colour_mode():
@@ -592,15 +754,79 @@ def test_no_card_forces_a_colour_mode():
         assert "theme" not in wire
 
 
-def test_no_card_wires_an_action():
-    """Display only, deliberately. What a card can DO is gated behind
-    revocation work that does not exist yet, and a button that acts without a
-    way to take the grant back is the wrong thing to ship first. Add one and
-    this dies."""
+def _tool_calls(node: object) -> list[dict]:
+    """Every ``toolCall`` action anywhere in a serialized card, at any depth."""
+    found: list[dict] = []
+    if isinstance(node, dict):
+        if node.get("action") == "toolCall":
+            found.append(node)
+        for value in node.values():
+            found += _tool_calls(value)
+    elif isinstance(node, list):
+        for value in node:
+            found += _tool_calls(value)
+    return found
+
+
+def test_exactly_one_card_acts_and_it_is_the_approval_one():
+    """Every card here was display-only, and the reason was named: a button
+    that acts without a way to take the grant back is the wrong thing to ship
+    first. Revocation shipped (i-085), so ONE button ships with it — and the
+    rule is now "one", not "none", which is a weaker rule and therefore needs
+    to be pinned in both directions.
+
+    Both directions: no OTHER card may grow an action (a roster button is
+    pressed against a schema the reviewer has not seen), and the review card's
+    action must be the approval call and nothing else."""
     for tool in _CARD_TOOLS:
         blob = json.dumps(_wire(tool))
+        if tool == "review_kind":
+            continue
         for forbidden in (
             "CallTool", "SendMessage", "OpenLink", "onClick", "onRowClick",
-            '"action"', '"actions"', '"onSubmit"',
+            '"action"', '"actions"', '"onSubmit"', "toolCall",
         ):
-            assert forbidden not in blob, f"{tool} wires {forbidden} — cards are read-only here"
+            assert forbidden not in blob, f"{tool} wires {forbidden} — a mirror, not a door"
+
+    calls = _tool_calls(_wire("review_kind"))
+    assert len(calls) == 1, f"the review card wires {len(calls)} tool calls, not one"
+    assert calls[0]["tool"] == C.APPROVE_TOOL, calls[0]
+    # The button names the Kind and NOTHING else. A workspace or an approver a
+    # card could name would be a workspace or an approver a caller can name.
+    assert set(calls[0].get("arguments") or {}) == {"kind"}, calls[0]
+
+
+def test_the_card_button_targets_a_tool_the_model_cannot_see(dna_dir, monkeypatch):
+    """The card half of the visibility guard, and the one that closes the loop.
+
+    ``_mcp_kinds`` declares the tool app-only; ``_mcp_cards`` points a button at
+    a NAME. Nothing else makes those the same tool, and a button aimed at a
+    model-visible tool is the exact outcome this feature must not ship — it
+    would not fail to render, it would work perfectly, for the model too.
+
+    So the target name is resolved against the LIVE server: it must be a
+    registered tool, and it must be declared app-only. Point the button at
+    ``author_kind``, or drop ``visibility`` from the approval tool, and this
+    dies."""
+    from fastmcp import Client
+
+    # As a UI-CAPABLE host: a client that cannot render is not offered the tool
+    # at all (see the sibling test), and the question here is what the host that
+    # WILL show the button receives.
+    _declare_ui_extension(monkeypatch)
+
+    async def scenario():
+        server = M.build_server(base_dir=str(dna_dir))
+        async with Client(server) as client:
+            return {t.name: t for t in await client.list_tools()}
+
+    tools = asyncio.run(scenario())
+    target = tools.get(C.APPROVE_TOOL)
+    assert target is not None, (
+        f"the review card's button calls {C.APPROVE_TOOL!r}, which this server "
+        f"does not register — it would fail at click time, on a user's machine"
+    )
+    assert M.app_only(target), (
+        f"{C.APPROVE_TOOL} is offered to the MODEL — the button is no longer "
+        "the only thing that can press it"
+    )
