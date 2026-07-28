@@ -856,6 +856,29 @@ def identity_from_context() -> Any:
     return identity_from_token(claims)
 
 
+def claims_from_context() -> dict[str, Any] | None:
+    """The VERIFIED claims of the CURRENT MCP request, or ``None`` with no token.
+
+    :func:`identity_from_context` distills these same claims into an
+    :class:`~dna.tenancy.resolution.Identity`; this hands back the claims
+    themselves, for the application seams that take ``claims`` and do the
+    distillation on their own (``create_project_impl``, ``list_workspaces_impl``
+    — the same shape the REST face passes as ``request.state.claims``).
+
+    Both readings come from the same place, so neither can be forged: the token
+    FastMCP verified for this request. A ``claims`` argument on a tool would be a
+    caller-supplied identity, which is not an identity at all."""
+    try:
+        from fastmcp.server.dependencies import get_access_token
+    except ModuleNotFoundError:  # pragma: no cover — no fastmcp ⇒ no auth
+        return None
+
+    token = get_access_token()
+    if token is None:
+        return None
+    return getattr(token, "claims", None) or {}
+
+
 #: What a board write records as its ``actor`` when the request carries NO
 #: verified identity — an unauthenticated local (stdio / ``auth=None``) call.
 #:

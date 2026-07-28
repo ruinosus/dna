@@ -427,14 +427,56 @@ def _ui_capability_middleware() -> Any:
     from fastmcp.server.middleware import Middleware
 
     class UiCapabilityMiddleware(Middleware):
+        #: Values already reported, so a chatty client does not flood the log.
+        #: Per-process and deliberately unbounded: the set has three members.
+        _reported: set[bool | None] = set()
+
         async def on_list_tools(self, context: Any, call_next: Any) -> Any:
             tools = await call_next(context)
             declared = client_ui_extension_from_context(context.fastmcp_context)
+            self._report(declared, tools)
             if declared is not False:
                 return tools
             return [
                 _tool_without_ui_meta(t) for t in tools if not app_only(t)
             ]
+
+        def _report(self, declared: bool | None, tools: Any) -> None:
+            """Log the tri-state ONCE per value. Without this the answer to
+            "did the host declare MCP Apps?" is computed and discarded, and the
+            question can only be argued from the outside — where all three
+            readings look alike (no card rendered). Each value implies a
+            different tool count, so the line names it: whoever reads the log
+            can compare it against what the client actually offered."""
+            if declared in self._reported:
+                return
+            self._reported.add(declared)
+            total = len(tools) if isinstance(tools, list) else -1
+            app = (
+                sum(1 for t in tools if app_only(t))
+                if isinstance(tools, list) else -1
+            )
+            if declared is True:
+                logger.info(
+                    "MCP Apps: client DECLARED %s — advertising cards; "
+                    "sending %d tools (%d app-only, which a conforming host "
+                    "hides from the model)", UI_EXTENSION_ID, total, app,
+                )
+            elif declared is False:
+                logger.info(
+                    "MCP Apps: client sent capabilities WITHOUT %s — it "
+                    "cannot render; withholding %d app-only tool(s) and "
+                    "stripping ui metadata, sending %d tools",
+                    UI_EXTENSION_ID, app, total - app,
+                )
+            else:
+                logger.info(
+                    "MCP Apps: client declared NOTHING readable about %s — "
+                    "leaving the pointer in place; sending %d tools (%d "
+                    "app-only). A card that does not render here is the host "
+                    "ignoring inert metadata, not a refusal we made",
+                    UI_EXTENSION_ID, total, app,
+                )
 
     return UiCapabilityMiddleware()
 
@@ -1432,6 +1474,18 @@ def build_server(
     from dna_cli._mcp_kinds import register_kind_tools
 
     register_kind_tools(server, live=_live, guard=_guard)
+
+    # -- the portfolio door: workspaces / projects / repos / orgs ------------
+    #
+    # These Kinds were always reachable through the generic document door, and
+    # the application seams already served the REST face. What was missing was
+    # a NAME — and a catalog of 78 Kinds with no named tool is discoverable
+    # only by luck. `list_projects` also carries the one sentence that joins
+    # the halves: a project's `board_scope` IS its board's scope, which is how
+    # a caller gets from the roster to `board_summary`.
+    from dna_cli._mcp_portfolio import register_portfolio_tools
+
+    register_portfolio_tools(server, live=_live, guard=_guard)
 
     # -- resources (prove resources beyond tools) ----------------------------
 
