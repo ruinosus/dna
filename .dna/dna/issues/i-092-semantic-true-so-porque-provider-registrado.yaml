@@ -1,0 +1,25 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-092-semantic-true-so-porque-provider-registrado
+spec:
+  title: recall afirma semantic:true so porque um provider esta registrado
+  description: |-
+    ACHADO durante o conserto do i-091. O campo semantic do recall e setado porque um provider esta REGISTRADO, nao porque a busca semantica de fato respondeu. Durante a indisponibilidade do indice (i-091), o recall afirmou resultado semantico sobre hits LEXICOS re-pontuados pelo rerank baseado em embedding — ou seja, disse 'semantic' quando o caminho semantico estava fora.
+
+    MESMA FAMILIA dos outros tres defeitos que a bateria de producao achou: o sistema sabia a verdade e reportava outra coisa. O i-089 mascarava MethodologyRefusal como 'No approval received'; o i-088 respondia 'nao existe' sobre documento que existia; este afirma um modo de busca que nao foi usado.
+
+    Nao consertado junto com o i-091 de proposito: o i-091 era conexao, este e semantica de envelope, e misturar os dois teria escondido qual mudanca resolveu o que.
+
+    O QUE PRECISA: semantic deve refletir o que a busca REALMENTE fez naquela chamada, nao a configuracao. Se o caminho caiu para lexico, o envelope tem de dizer lexico — pelo mesmo motivo que degraded e index_error existem.
+  type: bug
+  severity: medium
+  status: open
+  created_at: '2026-07-28T20:53:11+00:00'
+  updated_at: '2026-07-28T20:53:11+00:00'
+  timeline:
+  - at: '2026-07-28T20:53:11+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
