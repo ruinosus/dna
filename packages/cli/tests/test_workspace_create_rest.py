@@ -358,3 +358,107 @@ def test_config_auth_creates_for_the_verified_identity_not_the_body(dna_dir):
         rows = c.get("/v1/workspaces", headers={"Authorization": "Bearer bob"}
                      ).json()["workspaces"]
         assert rows == []
+
+
+# ── POST /v1/artifacts (the projection's original) ──────────────────────────
+
+_SHA = "b" * 64
+
+
+def test_registering_an_artifact_binds_it_to_the_workspace(dna_dir):
+    """The record and the bytes are written by the SAME operation.
+
+    The tempting split — host stores the blob, agent writes the record later —
+    leaves a failure mode with no owner: bytes nothing points at, that no
+    listing shows and no cleanup can safely delete (nothing tells an orphan
+    apart from an upload still in flight)."""
+    with _client(dna_dir) as c:
+        wid = c.post("/v1/workspaces",
+                     json={"name": "Acme Labs", "claims": _ALICE}).json()["workspace_id"]
+        r = c.post("/v1/artifacts", json={
+            "workspace_id": wid, "sha256": _SHA, "uri": f"blob://{wid}/{_SHA}",
+            "filename": "nota.pdf", "mime": "application/pdf", "size_bytes": 1234,
+            "claims": _ALICE,
+        })
+        assert r.status_code == 201, r.text
+        body = r.json()
+        assert body["workspace_id"] == wid
+        a = body["artifact"]
+        assert a["sha256"] == _SHA
+        assert a["name"] == f"sha256-{_SHA}"     # the name IS the content address
+        assert a["derived_refs"] == []           # stored, nothing read out yet
+        # The scope is derived from the workspace, never caller-supplied.
+        assert body["scope"] == "concierge"
+
+
+def test_the_uploader_is_taken_from_the_verified_identity(dna_dir):
+    """``uploaded_by`` is resolved server-side. A caller-supplied uploader is
+    not an uploader — it is a claim about someone else."""
+    with _client(dna_dir) as c:
+        wid = c.post("/v1/workspaces",
+                     json={"name": "Acme Labs", "claims": _ALICE}).json()["workspace_id"]
+        a = c.post("/v1/artifacts", json={
+            "workspace_id": wid, "sha256": _SHA, "uri": "blob://x",
+            "uploaded_by": "oid-somebody-else", "claims": _ALICE,
+        }).json()["artifact"]
+        assert a["uploaded_by"] == _ALICE["oid"]
+
+
+def test_re_registering_the_same_bytes_is_one_artifact_not_two(dna_dir):
+    """Idempotent by content address, so a retried upload leaves no litter."""
+    with _client(dna_dir) as c:
+        wid = c.post("/v1/workspaces",
+                     json={"name": "Acme Labs", "claims": _ALICE}).json()["workspace_id"]
+        payload = {"workspace_id": wid, "sha256": _SHA, "uri": "blob://x",
+                   "claims": _ALICE}
+        first = c.post("/v1/artifacts", json=payload).json()["artifact"]["name"]
+        second = c.post("/v1/artifacts", json=payload).json()["artifact"]["name"]
+        assert first == second
+
+
+def test_a_retry_does_not_blank_what_was_already_extracted(dna_dir):
+    """The nastiest way idempotency goes wrong: the retry succeeds AND silently
+    erases the projection it was supposed to leave alone.
+
+    Drop the ``derived_refs`` carry-over in ``register_artifact_impl`` and this
+    dies — quietly, in production, long after the upload."""
+    import asyncio
+
+    from dna.application.runtime import artifact_name
+
+    with _client(dna_dir) as c:
+        wid = c.post("/v1/workspaces",
+                     json={"name": "Acme Labs", "claims": _ALICE}).json()["workspace_id"]
+        payload = {"workspace_id": wid, "sha256": _SHA, "uri": "blob://x",
+                   "claims": _ALICE}
+        c.post("/v1/artifacts", json=payload)
+
+        # Something reads twelve invoices out of it (as the agent would).
+        async def extract():
+            live = await M.boot_live(scope=_SCOPE, base_dir=str(dna_dir))
+            name = artifact_name(_SHA)
+            doc = await live.kernel.get_document(
+                _SCOPE, "SourceArtifact", name, tenant=wid
+            )
+            doc["spec"]["derived_refs"] = [{"kind": "Invoice", "name": "inv-1"}]
+            await live.kernel.with_tenant(wid).write_document(
+                _SCOPE, "SourceArtifact", name, doc, invalidate_mode="doc"
+            )
+
+        asyncio.run(extract())
+
+        again = c.post("/v1/artifacts", json=payload).json()["artifact"]
+        assert again["derived_refs"] == [{"kind": "Invoice", "name": "inv-1"}], (
+            "the retry erased the projection already extracted from this artifact"
+        )
+
+
+def test_registering_without_membership_is_403(dna_dir):
+    """Same one rule as everywhere else in Model B."""
+    with _client(dna_dir) as c:
+        wid = c.post("/v1/workspaces",
+                     json={"name": "Acme Labs", "claims": _ALICE}).json()["workspace_id"]
+        r = c.post("/v1/artifacts", json={
+            "workspace_id": wid, "sha256": _SHA, "uri": "blob://x", "claims": _BOB,
+        })
+        assert r.status_code == 403, r.text

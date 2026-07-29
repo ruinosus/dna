@@ -86,6 +86,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/artifacts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Register Artifact
+         * @description Record the ORIGINAL a projection will be derived from.
+         *
+         *     The caller must hold an ACTIVE WorkspaceMembership in ``workspace_id``,
+         *     else **403**. The write scope is DERIVED from the workspace and is
+         *     deliberately not accepted from the caller.
+         *
+         *     IDEMPOTENT by content address: the same ``sha256`` updates the same
+         *     document, so a retried upload leaves no second artifact behind — and an
+         *     existing ``derived_refs`` survives the retry rather than being blanked.
+         *
+         *     ``uri`` names where the bytes live and must NOT be a signed URL: a
+         *     stored credential would make the document itself the access to its own
+         *     original. 400 on a blank workspace_id / sha256 / uri.
+         */
+        post: operations["register_artifact_v1_artifacts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/board": {
         parameters: {
             query?: never;
@@ -1223,6 +1255,35 @@ export interface components {
             version?: string | null;
         };
         /**
+         * ArtifactSummary
+         * @description One ``SourceArtifact`` — the original a projection derives from.
+         */
+        ArtifactSummary: {
+            /**
+             * Derived Refs
+             * @default []
+             */
+            derived_refs: {
+                [key: string]: unknown;
+            }[];
+            /** Filename */
+            filename?: string | null;
+            /** Mime */
+            mime?: string | null;
+            /** Name */
+            name: string;
+            /** Sha256 */
+            sha256: string;
+            /** Size Bytes */
+            size_bytes?: number | null;
+            /** Uploaded At */
+            uploaded_at?: string | null;
+            /** Uploaded By */
+            uploaded_by?: string | null;
+            /** Uri */
+            uri: string;
+        };
+        /**
          * AuthorKindResponse
          * @description ``POST /v1/kinds`` — the authored Kind. ``approved`` is ALWAYS false
          *     here: this door cannot approve, so the field states the document's actual
@@ -1590,6 +1651,25 @@ export interface components {
             spec: {
                 [key: string]: unknown;
             };
+        };
+        /** Body_register_artifact_v1_artifacts_post */
+        Body_register_artifact_v1_artifacts_post: {
+            /** Claims */
+            claims?: {
+                [key: string]: unknown;
+            } | null;
+            /** Filename */
+            filename?: string | null;
+            /** Mime */
+            mime?: string | null;
+            /** Sha256 */
+            sha256: string;
+            /** Size Bytes */
+            size_bytes?: number | null;
+            /** Uri */
+            uri: string;
+            /** Workspace Id */
+            workspace_id: string;
         };
         /** Body_remember_memory_v1_memories_post */
         Body_remember_memory_v1_memories_post: {
@@ -2417,6 +2497,18 @@ export interface components {
             /** Name */
             name: string;
         };
+        /**
+         * RegisterArtifactResponse
+         * @description ``POST /v1/artifacts`` — the registered artifact. ``scope`` is DERIVED
+         *     from the workspace (never caller-supplied).
+         */
+        RegisterArtifactResponse: {
+            artifact: components["schemas"]["ArtifactSummary"];
+            /** Scope */
+            scope: string;
+            /** Workspace Id */
+            workspace_id: string;
+        };
         /** RememberResponse */
         RememberResponse: {
             /** Indexed */
@@ -2777,6 +2869,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AgentPromptResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    register_artifact_v1_artifacts_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Body_register_artifact_v1_artifacts_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegisterArtifactResponse"];
                 };
             };
             /** @description Validation Error */

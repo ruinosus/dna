@@ -629,6 +629,36 @@ class DnaClient:
 
     # -- portfolio (writes) --------------------------------------------------
 
+    def register_artifact(
+        self, workspace_id: str, sha256: str, uri: str, *,
+        filename: str | None = None, mime: str | None = None,
+        size_bytes: int | None = None,
+        claims: dict[str, Any] | None = None,
+    ) -> JsonObject:
+        """Record the ORIGINAL a projection will be derived from.
+
+        SECURITY: the caller must hold an ACTIVE ``WorkspaceMembership`` in
+        ``workspace_id`` — without one it is **403**. The write scope is DERIVED
+        from the workspace and the route refuses to accept one.
+
+        ``uri`` names WHERE the bytes live and is stored verbatim. It must not
+        be a signed URL: a document carrying one would BE the access to its own
+        original, and would hand that access to anyone the document reaches.
+
+        IDEMPOTENT by content address — the same ``sha256`` updates the same
+        artifact, and any ``derived_refs`` already extracted from it survive the
+        call. A retried upload leaves no second row and erases no projection.
+
+        ``claims`` is the caller's identity for a trusted server-side call under
+        ``--auth none``/``--auth token``. Under ``--auth config`` the VERIFIED
+        token claims always win and this argument is ignored."""
+        return self._write(
+            "POST", "/v1/artifacts",
+            {"workspace_id": workspace_id, "sha256": sha256, "uri": uri,
+             "filename": filename, "mime": mime, "size_bytes": size_bytes,
+             "claims": claims},
+        )
+
     def create_project(
         self, workspace_id: str, name: str, *, slug: str | None = None,
         claims: dict[str, Any] | None = None,
