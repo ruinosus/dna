@@ -326,6 +326,7 @@ def build_app(
         board_summary_impl,
         compose_prompt_impl,
         create_project_impl,
+        register_artifact_impl,
         create_workspace_impl,
         genome_view_impl,
         get_authored_kind_impl,
@@ -2252,6 +2253,42 @@ def build_app(
         try:
             return await create_project_impl(
                 await _live(), workspace_id, name, effective, slug=slug
+            )
+        except WorkspaceForbidden as exc:
+            raise HTTPException(status_code=403, detail=str(exc)) from None
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from None
+
+    @app.post("/v1/artifacts", dependencies=guarded, status_code=201,
+              response_model=m.RegisterArtifactResponse)
+    async def register_artifact(
+        request: Request,
+        workspace_id: str = Body(..., embed=True),
+        sha256: str = Body(..., embed=True),
+        uri: str = Body(..., embed=True),
+        filename: str | None = Body(default=None, embed=True),
+        mime: str | None = Body(default=None, embed=True),
+        size_bytes: int | None = Body(default=None, embed=True),
+        claims: dict[str, Any] | None = Body(default=None, embed=True),
+    ) -> dict[str, Any]:
+        """Record the ORIGINAL a projection will be derived from.
+
+        The caller must hold an ACTIVE WorkspaceMembership in ``workspace_id``,
+        else **403**. The write scope is DERIVED from the workspace and is
+        deliberately not accepted from the caller.
+
+        IDEMPOTENT by content address: the same ``sha256`` updates the same
+        document, so a retried upload leaves no second artifact behind — and an
+        existing ``derived_refs`` survives the retry rather than being blanked.
+
+        ``uri`` names where the bytes live and must NOT be a signed URL: a
+        stored credential would make the document itself the access to its own
+        original. 400 on a blank workspace_id / sha256 / uri."""
+        effective = _actor_claims_from_state(request) or claims or {}
+        try:
+            return await register_artifact_impl(
+                await _live(), workspace_id, sha256, uri, effective,
+                filename=filename, mime=mime, size_bytes=size_bytes,
             )
         except WorkspaceForbidden as exc:
             raise HTTPException(status_code=403, detail=str(exc)) from None

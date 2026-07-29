@@ -120,6 +120,7 @@ from dna.application.runtime import (
     list_tools_impl,
     adopt_workspace_scope_on_access,
     create_project_impl,
+    register_artifact_impl,
     create_workspace_impl,
     ensure_workspace_scope_genome,
     provision_tenant_owner_impl,
@@ -259,6 +260,7 @@ __all__ = [
     "adopt_workspace_scope_on_access",
     "list_workspaces_impl",
     "create_project_impl",
+    "register_artifact_impl",
     # workspace owner bootstrap + revoke (Model B, f-ws-owner-provision)
     "provision_workspace_owner_impl",
     "revoke_workspace_member_impl",

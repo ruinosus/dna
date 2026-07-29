@@ -3057,6 +3057,123 @@ async def create_project_impl(
     }
 
 
+_ARTIFACT_API = "github.com/ruinosus/dna/artifact/v1"
+
+#: The document name of a SourceArtifact IS its content address. Two uploads of
+#: identical bytes are ONE artifact, and registering the same bytes twice is an
+#: idempotent no-op rather than a second row — which is the property that lets
+#: a caller retry an interrupted upload without leaving litter behind.
+def artifact_name(sha256: str) -> str:
+    """The document name for an artifact with this content address."""
+    return f"sha256-{(sha256 or '').strip().lower()}"
+
+
+async def register_artifact_impl(
+    live: LiveDna,
+    workspace_id: str,
+    sha256: str,
+    uri: str,
+    claims: dict[str, Any] | None,
+    *,
+    filename: str | None = None,
+    mime: str | None = None,
+    size_bytes: int | None = None,
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    """**Record the ORIGINAL a projection will be derived from** — the write
+    half of ``SourceArtifact``.
+
+    A narrow door on purpose. The obvious alternative was a generic
+    "write any document over REST" route, and it would have traded one concrete
+    need for a wide surface with its own authorization, plan and validation
+    decisions to defend. This route knows exactly one Kind and can therefore
+    state exactly one rule.
+
+    **Why the record and the bytes must not be written by different callers.**
+    The tempting split is: the host stores the blob, the agent writes the
+    record later. It leaves a failure mode with no owner — bytes in the store
+    that nothing points at, which no listing shows, no one can find and no
+    cleanup can safely delete (nothing distinguishes an orphan from an upload
+    still in flight). Registering here, in the same operation that has just
+    stored the bytes, means a blob without a record is not a state the system
+    can reach.
+
+    Authorization is the one rule Model B uses everywhere: the VERIFIED
+    identity must hold an ACTIVE :class:`WorkspaceMembership` in
+    ``workspace_id``, else :class:`WorkspaceForbidden` (403).
+
+    **The scope is DERIVED, never supplied** — ``live.default_scope(workspace_id)``
+    — for the same reason it is on ``create_project``: a caller-chosen scope is
+    a cross-workspace write vector.
+
+    IDEMPOTENT by content address: the document name is ``sha256-<hex>``, so
+    re-registering identical bytes updates the same row instead of creating a
+    second artifact. A retried upload leaves no litter.
+
+    ``uri`` is stored verbatim and is treated as an IDENTITY — where the bytes
+    live, never how to reach them. Callers must not pass a signed URL: see the
+    Kind descriptor for why a document that carries its own access is the
+    failure this design exists to avoid.
+    """
+    from dna.tenancy import identity_from_token
+
+    ws = (workspace_id or "").strip()
+    digest = (sha256 or "").strip().lower()
+    location = (uri or "").strip()
+    if not ws:
+        raise ValueError("workspace_id is required")
+    if not digest:
+        raise ValueError("sha256 is required")
+    if not location:
+        raise ValueError("uri is required")
+
+    identity = identity_from_token(claims or {})
+    _, memberships = await _workspace_grants(live)
+    _require_workspace_membership(
+        identity, ws, memberships, "register a source artifact"
+    )
+
+    sc = live.default_scope(ws)
+    name = artifact_name(digest)
+    stamp = (now or datetime.now(timezone.utc)).isoformat(timespec="seconds")
+    spec = {
+        "sha256": digest,
+        "uri": location,
+        "filename": filename or None,
+        "mime": mime or None,
+        "size_bytes": size_bytes,
+        "uploaded_by": getattr(identity, "oid", None),
+        "uploaded_at": stamp,
+        # Nothing has been read out of it yet. An honest empty state — the one
+        # every artifact passes through between upload and extraction.
+        "derived_refs": [],
+    }
+
+    # Re-registering the SAME bytes must not erase what has already been read
+    # out of them. Without this, an idempotent retry would silently blank the
+    # projection it was supposed to leave alone.
+    existing = await live.kernel.get_document(
+        sc, "SourceArtifact", name, tenant=ws
+    )
+    if isinstance(existing, dict):
+        prior = (existing.get("spec") or {}).get("derived_refs")
+        if isinstance(prior, list) and prior:
+            spec["derived_refs"] = prior
+
+    write_kernel = live.kernel.with_tenant(ws)
+    await write_kernel.write_document(
+        sc, "SourceArtifact", name,
+        {
+            "apiVersion": _ARTIFACT_API,
+            "kind": "SourceArtifact",
+            "metadata": {"name": name},
+            "spec": spec,
+        },
+        invalidate_mode="doc",
+    )
+    return {"scope": sc, "workspace_id": ws, "artifact": {"name": name, **spec}}
+
+
 async def revoke_workspace_member_impl(
     live: LiveDna,
     workspace_id: str,

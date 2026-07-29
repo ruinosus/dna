@@ -894,6 +894,29 @@ class CreateProjectResponse(BaseModel):
     project: ProjectSummary
 
 
+class ArtifactSummary(BaseModel):
+    """One ``SourceArtifact`` — the original a projection derives from."""
+
+    name: str
+    sha256: str
+    uri: str
+    filename: str | None = None
+    mime: str | None = None
+    size_bytes: int | None = None
+    uploaded_by: str | None = None
+    uploaded_at: str | None = None
+    derived_refs: list[dict[str, Any]] = []
+
+
+class RegisterArtifactResponse(BaseModel):
+    """``POST /v1/artifacts`` — the registered artifact. ``scope`` is DERIVED
+    from the workspace (never caller-supplied)."""
+
+    scope: str
+    workspace_id: str
+    artifact: ArtifactSummary
+
+
 class ProvisionWorkspaceOwnerResponse(BaseModel):
     workspace_id: str
     provisioned: bool
