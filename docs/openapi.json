@@ -293,6 +293,94 @@
         "title": "ApproveKindResponse",
         "type": "object"
       },
+      "ArtifactSummary": {
+        "description": "One ``SourceArtifact`` — the original a projection derives from.",
+        "properties": {
+          "derived_refs": {
+            "default": [],
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Derived Refs",
+            "type": "array"
+          },
+          "filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filename"
+          },
+          "mime": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mime"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "sha256": {
+            "title": "Sha256",
+            "type": "string"
+          },
+          "size_bytes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Size Bytes"
+          },
+          "uploaded_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Uploaded At"
+          },
+          "uploaded_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Uploaded By"
+          },
+          "uri": {
+            "title": "Uri",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "sha256",
+          "uri"
+        ],
+        "title": "ArtifactSummary",
+        "type": "object"
+      },
       "AuthorKindResponse": {
         "description": "``POST /v1/kinds`` — the authored Kind. ``approved`` is ALWAYS false\nhere: this door cannot approve, so the field states the document's actual\nstate rather than echoing anything the caller sent.",
         "properties": {
@@ -1285,6 +1373,74 @@
           "spec"
         ],
         "title": "Body_put_definition_v1_definitions__kind___name__put",
+        "type": "object"
+      },
+      "Body_register_artifact_v1_artifacts_post": {
+        "properties": {
+          "claims": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claims"
+          },
+          "filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filename"
+          },
+          "mime": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mime"
+          },
+          "sha256": {
+            "title": "Sha256",
+            "type": "string"
+          },
+          "size_bytes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Size Bytes"
+          },
+          "uri": {
+            "title": "Uri",
+            "type": "string"
+          },
+          "workspace_id": {
+            "title": "Workspace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspace_id",
+          "sha256",
+          "uri"
+        ],
+        "title": "Body_register_artifact_v1_artifacts_post",
         "type": "object"
       },
       "Body_remember_memory_v1_memories_post": {
@@ -3266,6 +3422,29 @@
         "title": "ReconcileView",
         "type": "object"
       },
+      "RegisterArtifactResponse": {
+        "description": "``POST /v1/artifacts`` — the registered artifact. ``scope`` is DERIVED\nfrom the workspace (never caller-supplied).",
+        "properties": {
+          "artifact": {
+            "$ref": "#/components/schemas/ArtifactSummary"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "workspace_id": {
+            "title": "Workspace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scope",
+          "workspace_id",
+          "artifact"
+        ],
+        "title": "RegisterArtifactResponse",
+        "type": "object"
+      },
       "RememberResponse": {
         "properties": {
           "indexed": {
@@ -4264,6 +4443,63 @@
           }
         },
         "summary": "Agent Prompt"
+      }
+    },
+    "/v1/artifacts": {
+      "post": {
+        "description": "Record the ORIGINAL a projection will be derived from.\n\nThe caller must hold an ACTIVE WorkspaceMembership in ``workspace_id``,\nelse **403**. The write scope is DERIVED from the workspace and is\ndeliberately not accepted from the caller.\n\nIDEMPOTENT by content address: the same ``sha256`` updates the same\ndocument, so a retried upload leaves no second artifact behind — and an\nexisting ``derived_refs`` survives the retry rather than being blanked.\n\n``uri`` names where the bytes live and must NOT be a signed URL: a\nstored credential would make the document itself the access to its own\noriginal. 400 on a blank workspace_id / sha256 / uri.",
+        "operationId": "register_artifact_v1_artifacts_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_register_artifact_v1_artifacts_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegisterArtifactResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Register Artifact"
       }
     },
     "/v1/board": {
