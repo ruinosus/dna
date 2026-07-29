@@ -658,6 +658,33 @@ export class DnaClient {
   }
 
   /**
+   * Record the ORIGINAL a projection will be derived from.
+   *
+   * SECURITY: the caller must hold an ACTIVE `WorkspaceMembership` in
+   * `workspace_id` — without one it is **403**. The write scope is DERIVED from
+   * the workspace; the route refuses to accept one.
+   *
+   * `uri` names WHERE the bytes live and is stored verbatim. It must NOT be a
+   * signed URL: a document carrying one would BE the access to its own
+   * original, and would hand that access to anyone the document reaches.
+   *
+   * IDEMPOTENT by content address — the same `sha256` updates the same
+   * artifact, and any `derived_refs` already extracted from it survive the
+   * call. A retried upload leaves no second row and erases no projection.
+   */
+  async registerArtifact(body: {
+    workspace_id: string;
+    sha256: string;
+    uri: string;
+    filename?: string | null;
+    mime?: string | null;
+    size_bytes?: number | null;
+    claims?: Record<string, unknown> | null;
+  }) {
+    return this.unwrap(await this.raw.POST("/v1/artifacts", { body }));
+  }
+
+  /**
    * Invite / set a user's PROJECT-scope role (upserts one Membership doc).
    *
    * SECURITY: `actor` must be Owner/Admin of the project or its org, and only an
