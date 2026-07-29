@@ -345,3 +345,84 @@ def test_the_log_level_is_overridable(monkeypatch):
         ours.handlers[:] = saved_handlers
         ours.setLevel(saved_level)
         ours.propagate = saved_propagate
+
+
+# ── 6. the two doors meter the same entity the same way ───────────────────
+
+
+def test_the_portfolio_door_meters_the_family_the_kind_derives(dna_dir, monkeypatch):
+    """The defect this pins, measured in production on the first battery.
+
+    ``create_project`` refused with *"tier 'free' does not include the 'write'
+    tool family"* while ``write_document(kind="Project")`` — the SAME entity,
+    the other door — succeeded. The generic door DERIVES the family from the
+    Kind; this one NAMED ``"read"`` / ``"write"``, two strings no tier unlocks.
+    Two doors disagreeing about one entity is not a policy.
+
+    Driven through the module's real registration with the guard spied on, so
+    what is asserted is the family the guard ACTUALLY receives. Hardcode a
+    family string again and this dies."""
+    from dna.application import documents as D
+
+    from dna_cli import _mcp_portfolio as P
+
+    class _Port:
+        """Stands in for Project's registered port: the two fields
+        ``family_for_kind`` reads, carrying Project's real apiVersion."""
+
+        kind = "Project"
+        api_version = "github.com/ruinosus/dna/portfolio/v1"
+
+    monkeypatch.setattr(D, "resolve_kind_port", lambda *a, **k: _Port())
+
+    seen: list[tuple[str, str]] = []
+
+    async def spy_guard(family, tenant=None, *, scope=None, family_op="read"):
+        seen.append((family, family_op))
+        return tenant
+
+    registered: dict[str, Any] = {}
+
+    class _Server:
+        def tool(self, **_kw):
+            def deco(fn):
+                registered[fn.__name__] = fn
+                return fn
+
+            return deco
+
+    async def live():
+        class _L:
+            kernel = object()
+
+        return _L()
+
+    P.register_portfolio_tools(_Server(), live=live, guard=spy_guard)
+
+    expected = D.family_for_kind(_Port())
+    assert expected == "definitions", (
+        f"the Kind → family mapping now says {expected!r}; the premise of this "
+        "test moved and the door must move with it — which is the whole point"
+    )
+
+    # The guard runs BEFORE the impl, and the impl is not what this test
+    # claims — a stubbed store failing afterwards is expected and irrelevant.
+    for call in (
+        lambda: registered["list_projects"](),
+        lambda: registered["create_project"](workspace_id="ws-a", name="Atlas"),
+    ):
+        try:
+            asyncio.run(call())
+        except Exception:  # noqa: BLE001 — see above
+            pass
+
+    assert seen, "the guard was never called"
+    for family, _op in seen:
+        assert family == expected, (
+            f"the door metered {family!r} where the Kind derives {expected!r} — "
+            "the generic door and this one would disagree about Project"
+        )
+    assert ("definitions", "write") in seen, (
+        "creating a project must still meter as a WRITE operation; only the "
+        "FAMILY is derived, never the read/write distinction"
+    )

@@ -69,7 +69,43 @@ _SOURCES = [
 #:    whose tools take no ``scope`` either.
 #:  • a ``def`` / ``async def`` line — a nested helper's own signature is not a
 #:    call, and matching it made this guard cry wolf on ``forget``.
+#:  • the argument capture is NON-greedy, so it stops at the FIRST ``)``. That
+#:    is a hole, not a nuance: in ``_guard(helper(scope=scope), tenant)`` the
+#:    captured text is ``helper(scope=scope`` — it CONTAINS ``scope=`` and the
+#:    check passes, while ``scope`` never reached the seam at all. Use
+#:    :func:`_seam_args` instead of the raw group, which balances parentheses
+#:    and returns the seam's OWN arguments.
 _SEAM_CALL = re.compile(r"(?<![\w])_?guard(?:_for)?\((.*?)\)", re.S)
+
+
+def _seam_args(body: str, match: "re.Match[str]") -> str:
+    """The seam call's OWN arguments, with nested calls removed.
+
+    ``_SEAM_CALL``'s non-greedy group stops at the first ``)``, which both
+    truncates a call whose family is computed inline and — worse — can be
+    satisfied by a ``scope=`` belonging to a NESTED call that never reaches the
+    seam. This walks from the opening parenthesis to its true partner, then
+    strips anything inside deeper parentheses, so what is searched for
+    ``scope=`` is the argument list of the seam itself."""
+    start = body.index("(", match.start())
+    depth, end = 0, len(body)
+    for i in range(start, len(body)):
+        if body[i] == "(":
+            depth += 1
+        elif body[i] == ")":
+            depth -= 1
+            if depth == 0:
+                end = i
+                break
+    inner, depth = [], 0
+    for ch in body[start + 1:end]:
+        if ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+        elif depth == 0:
+            inner.append(ch)
+    return "".join(inner)
 
 #: A tool body may legitimately omit ``scope=`` only if it takes no ``scope``.
 #: Nothing is allowlisted today — if you add an entry, write why here.
@@ -178,11 +214,14 @@ def test_every_tool_taking_a_scope_binds_it() -> None:
                 f"{name}: accepts a `scope` and calls NO guard seam at all"
             )
             continue
-        # Every one of them must carry scope=.
+        # Every one of them must carry scope= — read from the seam's OWN
+        # arguments (`_seam_args`), never from the raw non-greedy group, which
+        # a nested call can both truncate and satisfy.
         for m in calls:
-            if "scope=" not in m.group(1):
+            if "scope=" not in _seam_args(body, m):
                 offenders.append(
-                    f"{name}: {m.group(0).split('(')[0]}({m.group(1).strip()[:60]}…)"
+                    f"{name}: {m.group(0).split('(')[0]}"
+                    f"({_seam_args(body, m).strip()[:60]}…)"
                 )
 
     assert not offenders, (
@@ -227,4 +266,29 @@ def test_the_four_that_were_broken_stay_fixed(tool: str) -> None:
     assert all("scope=" in g for g in guards), (
         f"{tool} calls _guard without scope= — it reads a caller-supplied scope "
         f"and would not check it against the caller's workspace"
+    )
+
+
+def test_a_nested_call_cannot_satisfy_the_scope_check_for_the_seam() -> None:
+    """The hole the paren-balanced reader closes.
+
+    ``_SEAM_CALL`` captures non-greedily, so it stops at the FIRST ``)``. In
+    ``_guard(helper(scope=scope), tenant)`` the captured text is
+    ``helper(scope=scope`` — it CONTAINS ``scope=``, so the raw check passes
+    while ``scope`` never reached the seam at all. A fence that a nested call
+    can satisfy on someone else's behalf is not a fence.
+
+    Read the raw group instead of ``_seam_args`` and this dies."""
+    body = (
+        "async def some_tool(scope: str | None = None) -> dict:\n"
+        "    tenant = await _guard(_family(scope=scope), tenant)\n"
+    )
+    match = _SEAM_CALL.search(body)
+    assert match is not None
+    assert "scope=" in match.group(1), (
+        "premise moved: the raw group no longer swallows the nested scope="
+    )
+    assert "scope=" not in _seam_args(body, match), (
+        "the seam's own arguments carry no scope= — the nested call's must not "
+        "be mistaken for it"
     )
