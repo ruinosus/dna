@@ -65,7 +65,39 @@ def register_portfolio_tools(
         list_workspaces_impl,
     )
 
+    from dna.application import documents as D
+
     from dna_cli._mcp_auth import claims_from_context
+
+    async def _family_of(kind: str) -> str:
+        """The quota family this door meters under — DERIVED from the Kind.
+
+        The first version NAMED families: ``"read"`` for the listings and
+        ``"write"`` for the create. Two strings I chose, and the choice was
+        wrong twice over.
+
+        Wrong once because no plan unlocks them: the free tier unlocks
+        ``definitions`` / ``sdlc`` / ``memory``, so naming ``read`` locked the
+        entire portfolio door behind a family that does not exist in any tier.
+        Measured in production — every portfolio tool answered *"tier 'free'
+        does not include the 'read' tool family"*.
+
+        Wrong twice because the GENERIC document door meters the very same
+        entity by deriving it (``family_for_kind``), so ``Project`` was
+        ``definitions`` through one door and ``write`` through the other. Two
+        doors disagreeing about one entity is not a policy, and the gap was
+        immediately visible from outside: ``write_document(kind="Project")``
+        succeeded exactly where ``create_project`` refused.
+
+        Deriving makes them agree BY CONSTRUCTION, and leaves one place to
+        change if portfolio should ever become a paid family: the Kind →
+        family mapping, which moves both doors at once.
+        """
+        try:
+            port = D.resolve_kind_port((await live()).kernel, kind, None)
+        except Exception:  # noqa: BLE001 — an unresolved Kind meters as default
+            port = None
+        return D.family_for_kind(port)
 
     # Bound to the name the source guard `tests/test_tools_bind_their_scope.py`
     # looks for: it fails a tool that DECLARES a `scope` and then calls the seam
@@ -123,7 +155,8 @@ def register_portfolio_tools(
         name is not, and inventing one would be fabricating data.
 
         ``workspace_id`` from here is what ``create_project`` takes."""
-        await _guard("read", None)
+        family = await _family_of("Workspace")
+        await _guard(family, None)
         try:
             return await list_workspaces_impl(await live(), claims_from_context())
         except REFUSALS as exc:
@@ -143,7 +176,8 @@ def register_portfolio_tools(
 
         Also reported per project: ``slug``, ``workspace_id``, ``org_ref``,
         ``repo_refs`` (resolve them with ``get_project``), ``visibility``."""
-        tenant = await _guard("read", tenant, scope=scope)
+        family = await _family_of("Project")
+        tenant = await _guard(family, tenant, scope=scope)
         try:
             return await list_projects_impl(await live(), scope, tenant)
         except REFUSALS as exc:
@@ -161,7 +195,8 @@ def register_portfolio_tools(
         fabricated row.
 
         Its ``board_scope`` is that project's board (see ``list_projects``)."""
-        tenant = await _guard("read", tenant, scope=scope)
+        family = await _family_of("Project")
+        tenant = await _guard(family, tenant, scope=scope)
         try:
             return await get_project_impl(await live(), slug, scope, tenant)
         except REFUSALS as exc:
@@ -187,7 +222,8 @@ def register_portfolio_tools(
 
         The new project's ``board_scope`` is immediately usable with
         ``board_summary`` — a project and its board are created together."""
-        await _guard("write", None)
+        family = await _family_of("Project")
+        await _guard(family, None, family_op="write")
         try:
             return await create_project_impl(
                 await live(), workspace_id, name,
@@ -205,7 +241,8 @@ def register_portfolio_tools(
         Repos are shared N—N across projects, so this is the whole roster, not
         one project's slice — for that, read ``repo_refs`` from
         ``get_project``."""
-        tenant = await _guard("read", tenant, scope=scope)
+        family = await _family_of("Repo")
+        tenant = await _guard(family, tenant, scope=scope)
         try:
             return await list_repos_impl(await live(), scope, tenant)
         except REFUSALS as exc:
@@ -219,7 +256,8 @@ def register_portfolio_tools(
 
         The portfolio model is Organization → Project → N repos, so an org is
         the top of that tree and a project's ``org_ref`` points back here."""
-        tenant = await _guard("read", tenant, scope=scope)
+        family = await _family_of("Organization")
+        tenant = await _guard(family, tenant, scope=scope)
         try:
             return await list_orgs_impl(await live(), scope, tenant)
         except REFUSALS as exc:
