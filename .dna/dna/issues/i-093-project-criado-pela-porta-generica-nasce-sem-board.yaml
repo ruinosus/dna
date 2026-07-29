@@ -1,0 +1,62 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-093-project-criado-pela-porta-generica-nasce-sem-board
+spec:
+  description: write_document(kind=Project) cria um Project sem board_scope — projeto sem board, invisivel a ponte list_projects -> board_summary
+  type: bug
+  severity: medium
+  status: open
+  created_at: '2026-07-29T10:11:52+00:00'
+  updated_at: '2026-07-29T10:11:52+00:00'
+  timeline:
+  - at: '2026-07-29T10:11:52+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
+  - at: '2026-07-29T10:12:29+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: |-
+      Achado pela bateria do Barna no Claude Desktop (Adendo 7, 28/07), com o sistema verde.
+
+      O QUE ACONTECE
+      write_document(kind='Project', ...) devolve created:true e grava o documento
+      cru: name / slug / visibility. Sem board_scope, sem org_ref, sem derivacao de
+      workspace. O create_project purpose-built deriva board_scope de (workspace,
+      slug) e o board nasce junto; a porta generica so grava.
+
+      Resultado: um Project que existe e nao tem board. Ele nao aparece pela ponte
+      list_projects -> board_summary(scope=board_scope) porque nao ha scope para
+      passar. Um projeto sem board nao e um projeto parcial — para o modelo do
+      portfolio (o Project E o container do board), e um projeto invalido.
+
+      POR QUE E REPRESENTAVEL HOJE
+      O schema em extensions/portfolio/kinds/project.kind.yaml exige apenas name e
+      slug. board_scope e opcional, e o proprio comentario do slug diz que serve
+      'to derive the board_scope by convention'. Ou seja: a derivacao existe como
+      convencao documentada e nao como invariante imposta.
+
+      TRES SAIDAS, com custo diferente
+      (a) Tornar board_scope obrigatorio no schema. Torna o estado invalido
+          irrepresentavel — a porta generica passa a RECUSAR em vez de criar algo
+          quebrado, e create_project continua funcionando porque ele deriva. Custo:
+          migracao. Qualquer Project ja gravado sem board_scope falha na proxima
+          escrita. Precisa medir quantos existem em producao antes.
+      (b) Derivar no caminho de escrita (pre_save do Kind Project), para que
+          qualquer via produza um projeto completo. Mais gentil com o existente,
+          mas mete regra de negocio no caminho de escrita do kernel — e a
+          derivacao precisa do workspace, que o write generico nao resolve.
+      (c) Tirar Project da porta generica. Rejeitado de saida: quebraria edicao
+          legitima de projetos e trocaria um problema por outro maior.
+
+      RECOMENDACAO: (a), depois de contar os Projects sem board_scope em producao.
+      E a unica que fecha o buraco em vez de remendar cada via.
+
+      NAO CONFUNDIR com o defeito de familia de quota (PR #274). Aquele era meu e
+      ja esta consertado: eu tinha nomeado familias 'read'/'write' que nenhum
+      plano libera, enquanto a porta generica derivava. Este aqui sobrevive aquele
+      conserto — as duas portas agora concordam sobre a PERMISSAO e continuam
+      discordando sobre o RESULTADO.
