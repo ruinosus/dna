@@ -1048,6 +1048,25 @@ A Role is one rung of the RBAC ladder expressed as data — its role_id, display
 | `rank` | integer | yes | Ladder rank — higher = more access. highest-role-wins compares this across a user's memberships. |
 | `role_id` | string | yes | Canonical role id, e.g. owner / admin / member / guest. The doc name SHOULD equal this; Membership.role references it. |
 
+## SourceArtifact
+
+- **Alias:** `artifact-source`
+- **apiVersion:** `github.com/ruinosus/dna/artifact/v1`
+- **Plane:** record
+
+**Spec fields**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `derived_refs` | array |  | The typed documents extracted from this artifact — the projection. The edge lives HERE, on the artifact, so one upload that yields twelve documents states that fact once, and so no derived Kind has to carry a field for it. Grows as more is extracted; an empty list means the file is stored and nothing has been read out of it yet, which is an honest state and not an error. |
+| `filename` | string \| null |  | The name the file arrived with, when one did. Display only — never a path to open, and never trusted as one. |
+| `mime` | string \| null |  | The declared content type, e.g. application/pdf. What the uploader SAID it is; not proof of what it is. |
+| `sha256` | string | yes | Lowercase hex SHA-256 of the ORIGINAL bytes. The content address: it is what lets anyone holding the file verify that this record and those bytes belong together, and what makes a re-upload of identical content the same artifact rather than a second one. |
+| `size_bytes` | integer \| null |  | Size of the original in bytes, when known. |
+| `uploaded_at` | string \| null |  | ISO-8601 timestamp of the upload. |
+| `uploaded_by` | string \| null |  | The verified identity that uploaded it, resolved server-side from the request. Never a caller-supplied field. |
+| `uri` | string | yes | Where the bytes live — an IDENTITY, never a credential. Never a signed URL or SAS token: a document carrying one would BE the access to its own original, and would grant it to anyone the document reaches. Reading goes through an authenticated route that checks membership. |
+
 ## Spec
 
 - **Alias:** `sdlc-spec`
