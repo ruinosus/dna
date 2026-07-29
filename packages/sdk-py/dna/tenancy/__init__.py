@@ -79,7 +79,28 @@ def workspace_membership_name(workspace_id: str, email: str) -> str:
     Format ``{workspace_id}--{email-slugified}`` — the SAME key the F1 seed
     (``scripts/seed_workspace_one.py``) uses, so an invite of an already-seeded
     identity, a re-invite, and the accept-bind all converge on the ONE doc
-    (idempotent upsert, never a duplicate)."""
+    (idempotent upsert, never a duplicate).
+
+    **The handle MUST be an email, and that is now enforced.** The name IS the
+    uniqueness key, so a caller passing anything else does not get a rejected
+    write — it gets a SECOND grant for the same person, silently, and the
+    convergence promised above quietly stops being true.
+
+    Found in production: a grant named ``…--workos-user-01kxv762…``, built from
+    an ACCOUNT id (``workos-user:<sub>``) rather than an email. One human ended
+    up holding two active ``owner`` grants in one workspace, and nothing
+    complained. The cost surfaced far from the cause — revoking that person
+    removed one grant and left the other, so "removed" removed nothing.
+
+    Refusing here turns that into an error at the moment it happens, where the
+    stack still names who did it, instead of a discovery three months later."""
+    if "@" not in (email or ""):
+        raise ValueError(
+            f"workspace_membership_name expects an EMAIL, got {email!r}. The "
+            f"document name is the uniqueness key for a (workspace, identity) "
+            f"grant — a non-email handle does not fail, it mints a SECOND "
+            f"grant for the same person and breaks revocation."
+        )
     email_part = email.strip().lower().replace("@", "-at-").replace(".", "-")
     email_part = re.sub(r"[^a-z0-9-]", "-", email_part).strip("-")
     return f"{workspace_id}--{email_part}"

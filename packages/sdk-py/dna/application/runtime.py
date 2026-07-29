@@ -3030,7 +3030,7 @@ async def create_project_impl(
         await grant_workspace_scope_impl(
             live, workspace_id=workspace_id, scope=spec["board_scope"],
             reason=f"board of project {slug_value!r}",
-            granted_by=getattr(identity, "oid", None),
+            granted_by=actor_label(identity),
         )
     except Exception as exc:  # noqa: BLE001 — see above
         logger.warning(
@@ -3055,6 +3055,33 @@ async def create_project_impl(
             "visibility": "private",
         },
     }
+
+
+def actor_label(identity: Any) -> str | None:
+    """WHO an action is recorded as, from a verified identity.
+
+    EMAIL first, then the durable subject. Not an arbitrary order: it is the one
+    this repo already settled on (``invite_member_impl`` records ``invited_by``
+    the same way, and the MCP face's ``actor_from_context`` documents the
+    reasoning — what a human reading a record actually wants to see is a person,
+    not a subject id).
+
+    Reading ONLY ``oid`` looks equivalent and is not. The portal's session
+    carries a verified email and no ``oid``, so an ``oid``-only read yields
+    ``None`` — which is how a provenance field meant to say WHO ended up empty
+    on every upload while every other check passed. Membership had already
+    matched on the same identity, so nothing failed loudly; the record was
+    simply anonymous.
+
+    ``None`` only when the identity carries neither, which is a verified but
+    anonymous caller — a real state, and better left empty than filled with a
+    channel name.
+    """
+    return (
+        getattr(identity, "email", None)
+        or getattr(identity, "oid", None)
+        or None
+    )
 
 
 _ARTIFACT_API = "github.com/ruinosus/dna/artifact/v1"
@@ -3142,7 +3169,7 @@ async def register_artifact_impl(
         "filename": filename or None,
         "mime": mime or None,
         "size_bytes": size_bytes,
-        "uploaded_by": getattr(identity, "oid", None),
+        "uploaded_by": actor_label(identity),
         "uploaded_at": stamp,
         # Nothing has been read out of it yet. An honest empty state — the one
         # every artifact passes through between upload and extraction.
@@ -3221,20 +3248,43 @@ async def revoke_workspace_member_impl(
     raw_grants, memberships = await _workspace_grants(live)
     actor_role = role_in_workspace(actor, workspace_id, memberships)
 
-    # Locate the target grant in THIS workspace (oid wins when provided).
+    # Locate EVERY grant this person holds in THIS workspace.
+    #
+    # Revoking used to find ONE row and delete ONE document, and both halves
+    # were wrong once a person held more than one grant — which production does
+    # today: the same human has an email-named grant and an account-id-named
+    # one, both `owner`, both `active`.
+    #
+    #   • Deleting one left the other, so "removed" removed nothing. The UI
+    #     said it worked and the person kept getting in.
+    #   • The name to delete was REBUILT from the row's `identity_email`, but a
+    #     grant whose document is named from an account id does not answer to
+    #     that name — so the call deleted a DIFFERENT grant than the one it had
+    #     decided on, and reported the intended one.
+    #
+    # So: match on either coordinate, collect all of them, and delete each by
+    # its OWN document name. Revoking is about a person, not a row.
     target_spec: dict[str, Any] | None = None
     target_m: Any = None
+    targets: list[tuple[str, dict[str, Any]]] = []
     for g, m in zip(raw_grants, memberships):
         spec = g.get("spec") or {}
         if (spec.get("workspace_id") or "") != workspace_id:
             continue
-        if target_oid:
-            if (spec.get("identity_oid") or "") == target_oid:
-                target_spec, target_m = spec, m
-                break
-        elif normalize_email(spec.get("identity_email")) == target_email:
+        by_oid = bool(target_oid) and (spec.get("identity_oid") or "") == target_oid
+        by_email = bool(target_email) and (
+            normalize_email(spec.get("identity_email")) == target_email
+        )
+        if not (by_oid or by_email):
+            continue
+        doc_name = _row_name(g) or workspace_membership_name(
+            workspace_id, spec.get("identity_email") or ""
+        )
+        targets.append((doc_name, spec))
+        if target_spec is None:
+            # The primary target carries the authorization decision; the rest
+            # are the same person's other grants.
             target_spec, target_m = spec, m
-            break
 
     decision = plan_revoke(actor_role, target_m, workspace_id, memberships)
     if decision.reason == "not_authorized":
@@ -3256,13 +3306,36 @@ async def revoke_workspace_member_impl(
         )
 
     assert target_spec is not None  # reason=='ok' ⇒ a target was located.
-    name = workspace_membership_name(workspace_id, target_spec.get("identity_email") or "")
-    await live.kernel.delete_document(
-        _WORKSPACE_SCOPE, "WorkspaceMembership", name, invalidate_mode="doc"
-    )
+
+    # The last-owner guard counts GRANTS, not people, so two owner grants held
+    # by one human read as two owners and `plan_revoke` allows removing one.
+    # That was safe while a revoke removed one row; removing the person's whole
+    # set can empty the workspace while the per-row guard still says yes. Ask
+    # the question that now matters: after this, does any active owner REMAIN
+    # who is not the person being revoked?
+    revoking = {name for name, _ in targets}
+    survivors = [
+        g for g in raw_grants
+        if ((g.get("spec") or {}).get("workspace_id") or "") == workspace_id
+        and ((g.get("spec") or {}).get("role") or "") == "owner"
+        and ((g.get("spec") or {}).get("status") or "") == "active"
+        and (_row_name(g) or "") not in revoking
+    ]
+    if (target_spec.get("role") or "") == "owner" and not survivors:
+        raise WorkspaceLastOwner(
+            f"cannot revoke the last remaining owner of workspace "
+            f"{workspace_id!r} — the workspace would be orphaned (the target "
+            f"holds {len(targets)} grant(s) here and no other owner remains)"
+        )
+
+    for name, _spec in targets:
+        await live.kernel.delete_document(
+            _WORKSPACE_SCOPE, "WorkspaceMembership", name, invalidate_mode="doc"
+        )
     return {
         "workspace_id": workspace_id,
         "revoked": True,
+        "grants_removed": len(targets),
         "target": _ws_member_surface(target_spec),
     }
 
