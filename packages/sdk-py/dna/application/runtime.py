@@ -3030,7 +3030,7 @@ async def create_project_impl(
         await grant_workspace_scope_impl(
             live, workspace_id=workspace_id, scope=spec["board_scope"],
             reason=f"board of project {slug_value!r}",
-            granted_by=getattr(identity, "oid", None),
+            granted_by=actor_label(identity),
         )
     except Exception as exc:  # noqa: BLE001 — see above
         logger.warning(
@@ -3055,6 +3055,33 @@ async def create_project_impl(
             "visibility": "private",
         },
     }
+
+
+def actor_label(identity: Any) -> str | None:
+    """WHO an action is recorded as, from a verified identity.
+
+    EMAIL first, then the durable subject. Not an arbitrary order: it is the one
+    this repo already settled on (``invite_member_impl`` records ``invited_by``
+    the same way, and the MCP face's ``actor_from_context`` documents the
+    reasoning — what a human reading a record actually wants to see is a person,
+    not a subject id).
+
+    Reading ONLY ``oid`` looks equivalent and is not. The portal's session
+    carries a verified email and no ``oid``, so an ``oid``-only read yields
+    ``None`` — which is how a provenance field meant to say WHO ended up empty
+    on every upload while every other check passed. Membership had already
+    matched on the same identity, so nothing failed loudly; the record was
+    simply anonymous.
+
+    ``None`` only when the identity carries neither, which is a verified but
+    anonymous caller — a real state, and better left empty than filled with a
+    channel name.
+    """
+    return (
+        getattr(identity, "email", None)
+        or getattr(identity, "oid", None)
+        or None
+    )
 
 
 _ARTIFACT_API = "github.com/ruinosus/dna/artifact/v1"
@@ -3142,7 +3169,7 @@ async def register_artifact_impl(
         "filename": filename or None,
         "mime": mime or None,
         "size_bytes": size_bytes,
-        "uploaded_by": getattr(identity, "oid", None),
+        "uploaded_by": actor_label(identity),
         "uploaded_at": stamp,
         # Nothing has been read out of it yet. An honest empty state — the one
         # every artifact passes through between upload and extraction.

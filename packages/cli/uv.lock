@@ -276,7 +276,7 @@ wheels = [
 
 [[package]]
 name = "dna-cli"
-version = "0.36.0"
+version = "0.37.0"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
@@ -340,7 +340,7 @@ provides-extras = ["mcp", "api", "graph", "quota", "dev"]
 
 [[package]]
 name = "dna-sdk"
-version = "0.36.0"
+version = "0.37.0"
 source = { editable = "../sdk-py" }
 dependencies = [
     { name = "aiofiles" },
