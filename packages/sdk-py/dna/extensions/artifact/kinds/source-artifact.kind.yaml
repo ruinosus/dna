@@ -1,0 +1,145 @@
+# SourceArtifact — the ORIGINAL a typed document was derived FROM (record plane).
+#
+# The projection contract. A file arrives (a PDF, a spreadsheet, a scan), an
+# agent reads it and writes typed documents from what it found. Those documents
+# are a PROJECTION: lossy, interpreted, and — without this Kind — unfalsifiable.
+# You could not ask "does this still match its source?", because the source was
+# gone and nothing recorded what it had been.
+#
+# ⭐ WHY THE LINK LIVES HERE AND NOT ON THE DERIVED DOCUMENT
+#
+# The tempting shape is a `source_ref` field on whatever was extracted. It is
+# wrong, and quietly:
+#
+#   • the agent composes the schema of every Kind it authors, so it would have
+#     to remember to add that field EVERY time — and a Kind authored by hand,
+#     or any of the builtin Kinds, would have no place to put it;
+#   • one upload commonly yields MANY documents (a PDF with twelve invoices).
+#     A single field on each of them expresses the edge twelve times and
+#     the "these came from one file" fact zero times.
+#
+# So the artifact points at its derivations (`derived_refs`), not the reverse.
+# Every converted Kind stays clean, Kinds nobody authored still participate,
+# and the one-to-many case is the natural one instead of the awkward one.
+#
+# ⭐ `uri` IS AN IDENTITY, NOT A CREDENTIAL
+#
+# It names where the bytes live; it does not grant access to them. A signed URL
+# stored here would make the document itself the capability — copy the doc,
+# copy the access — which is exactly the failure this repo keeps meeting: a
+# value that looks inert and confers effect. Reading an artifact goes through an
+# authenticated route that checks the caller's membership and streams the bytes.
+# Hosts MUST NOT put SAS tokens, signed URLs or bearer material in this field.
+#
+# ⭐ `sha256` IS WHAT MAKES "PROJECTION" A CHECKABLE CLAIM
+#
+# Without it, "this document was derived from that file" is an assertion no one
+# can test — and an untestable provenance claim is worth less than none, because
+# it invites trust it has not earned. With it, anyone holding the bytes can
+# verify the pairing, and a re-upload of identical content is recognisably the
+# same artifact rather than a second one.
+#
+# TENANTED — an uploaded file is the workspace's own data, never a shared `_lib`
+# default, and deliberately NOT inheritable.
+apiVersion: github.com/ruinosus/dna/core/v1
+kind: KindDefinition
+metadata:
+  name: source-artifact
+spec:
+  target_api_version: github.com/ruinosus/dna/artifact/v1
+  target_kind: SourceArtifact
+  alias: artifact-source
+  origin: github.com/ruinosus/dna/artifact
+  tenant_scope: tenanted
+  plane: record
+  prompt_target: false
+  flatten_in_context: false
+  prompt_target_priority: 0
+  storage:
+    type: yaml
+    container: source-artifacts
+  schema:
+    type: object
+    additionalProperties: false
+    required:
+    - sha256
+    - uri
+    properties:
+      sha256:
+        type: string
+        pattern: '^[a-f0-9]{64}$'
+        description: >-
+          Lowercase hex SHA-256 of the ORIGINAL bytes. The content address:
+          it is what lets anyone holding the file verify that this record and
+          those bytes belong together, and what makes a re-upload of identical
+          content the same artifact rather than a second one.
+      uri:
+        type: string
+        description: >-
+          Where the bytes live — an IDENTITY, never a credential. Never a signed
+          URL or SAS token: a document carrying one would BE the access to its
+          own original, and would grant it to anyone the document reaches.
+          Reading goes through an authenticated route that checks membership.
+      filename:
+        type:
+        - string
+        - 'null'
+        description: The name the file arrived with, when one did. Display only —
+          never a path to open, and never trusted as one.
+      mime:
+        type:
+        - string
+        - 'null'
+        description: The declared content type, e.g. application/pdf. What the
+          uploader SAID it is; not proof of what it is.
+      size_bytes:
+        type:
+        - integer
+        - 'null'
+        minimum: 0
+        description: Size of the original in bytes, when known.
+      uploaded_by:
+        type:
+        - string
+        - 'null'
+        description: The verified identity that uploaded it, resolved server-side
+          from the request. Never a caller-supplied field.
+      uploaded_at:
+        type:
+        - string
+        - 'null'
+        description: ISO-8601 timestamp of the upload.
+      derived_refs:
+        type: array
+        default: []
+        description: >-
+          The typed documents extracted from this artifact — the projection.
+          The edge lives HERE, on the artifact, so one upload that yields twelve
+          documents states that fact once, and so no derived Kind has to carry a
+          field for it. Grows as more is extracted; an empty list means the file
+          is stored and nothing has been read out of it yet, which is an honest
+          state and not an error.
+        items:
+          type: object
+          additionalProperties: false
+          required:
+          - kind
+          - name
+          properties:
+            kind:
+              type: string
+              description: The derived document's Kind.
+            name:
+              type: string
+              description: The derived document's name within that Kind.
+            scope:
+              type:
+              - string
+              - 'null'
+              description: The scope it was written to, when it differs from the
+                artifact's own.
+            extracted_at:
+              type:
+              - string
+              - 'null'
+              description: ISO-8601 timestamp of the extraction.

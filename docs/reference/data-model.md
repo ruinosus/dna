@@ -46,7 +46,7 @@ readable, so it is reproduced from source rather than asserted:
 
 ## Logical model — Kinds and their references
 
-78 Kinds are registered. Each is a document, not a table: a
+79 Kinds are registered. Each is a document, not a table: a
 Kind costs a YAML descriptor and zero migrations, which is the point
 of an open type system. The cost is that references between Kinds are
 not database foreign keys — they are fields holding a name.
@@ -65,7 +65,7 @@ would be the whole problem. Four tiers, strongest first:
 
 `*` on a label marks a polymorphic reference (several possible target Kinds).
 
-**112 edges: 15 declared, 66 composition-only, 31 inferred** — plus 20 reference-shaped fields left unresolved and 6 known-undeclarable ones.
+**108 edges: 15 declared, 66 composition-only, 27 inferred** — plus 23 reference-shaped fields left unresolved and 6 known-undeclarable ones.
 
 !!! warning "Only the declared tier cannot dangle"
 
@@ -85,7 +85,6 @@ self-references are omitted here and shown in the detail diagrams.
 flowchart LR
     agentskills["agentskills (1 Kind)"]
     audit["audit (2 Kinds)"]
-    cloud["cloud (2 Kinds)"]
     dna["dna (2 Kinds)"]
     eval["eval (4 Kinds)"]
     evidence["evidence (2 Kinds)"]
@@ -104,19 +103,16 @@ flowchart LR
     testkit["testkit (2 Kinds)"]
     agentskills -->|1| sdlc
     audit -->|2| portfolio
-    cloud -->|1| intel
     evidence -->|1| eval
     evidence -->|1| sdlc
     helix -->|2| agentskills
     helix -->|2| guardrails
-    helix -->|1| intel
     helix -->|1| portfolio
     helix -->|1| presidio
     helix -->|1| sdlc
     helix -->|2| soulspec
     kinddef -->|1| dna
     lesson -->|1| agentskills
-    research -->|1| intel
     sdlc -->|1| evidence
     sdlc -->|13| helix
     sdlc -->|1| intel
@@ -128,7 +124,7 @@ flowchart LR
 
 ### Detail by group
 
-All 78 Kinds in one diagram is an unreadable hairball, so
+All 79 Kinds in one diagram is an unreadable hairball, so
 each group with at least 2 edges gets its
 own. A group carrying more than 20 edges is
 split again by tier, which keeps the enforced edges legible instead
@@ -171,15 +167,13 @@ erDiagram
     EvidencePolicy }o..}o WorkflowEvent : "events (inferred)"
 ```
 
-#### `helix` (16 edges)
+#### `helix` (15 edges)
 
 ```mermaid
 erDiagram
     Actor
     Agent
-    Engram
     Guardrail
-    IntelSource
     PromptTemplate
     Recognizer
     Role
@@ -195,7 +189,6 @@ erDiagram
     Agent }o--}o Skill : "skills (dep)"
     Agent }o--|| Soul : "soul (dep)"
     Agent }o--}o Tool : "tools (dep)"
-    Engram }o..}o IntelSource : "source_refs (inferred)"
     SafetyPolicy }o--}o Recognizer : "recognizers (dep)"
     UseCase }o--}o Agent : "agents (dep)"
     UseCase }o--}o Guardrail : "guardrails (dep)"
@@ -381,7 +374,7 @@ erDiagram
     TestRun }o..|| TestGuide : "guide_ref (inferred)"
 ```
 
-Groups with fewer than 2 edges (listed, not drawn): `agentskills`, `cloud`, `intel`, `kinddef`, `lesson`, `research`.
+Groups with fewer than 2 edges (listed, not drawn): `agentskills`, `kinddef`, `lesson`.
 
 ### Declared edges (`x-dna-ref`)
 
@@ -491,19 +484,15 @@ name against the Kind registry — useful, and fallible.
 | `Agent` | `promptTemplate` | `PromptTemplate` | one | yes |
 | `AuditLog` | `roles` | `Role` | many | yes |
 | `CognitivePolicy` | `memory` | `Memory` | one | yes |
-| `Engram` | `source_refs` | `IntelSource` | many | yes |
 | `EvalBaseline` | `suite` | `EvalSuite` | one |  |
 | `EvalRun` | `suite` | `EvalSuite` | one |  |
 | `Evidence` | `suite` | `EvalSuite` | one | yes |
 | `EvidencePolicy` | `events` | `WorkflowEvent` | many | yes |
 | `Initiative` | `theme_ref` | `Theme` | one | yes |
-| `IntelInsight` | `source_ref` | `IntelSource` | one |  |
 | `Kaizen` | `actor` | `Actor` | one | yes |
 | `KindDefinition` | `docs` | `Doc` | one | yes |
 | `Lesson` | `skill` | `Skill` | one | yes |
 | `Narrative` | `actor` | `Actor` | one | yes |
-| `PlanBinding` | `source` | `IntelSource` | one | yes |
-| `Research` | `sources` | `IntelSource` | many | yes |
 | `Retrospective` | `actor` | `Actor` | one | yes |
 | `Skill` | `references` | `Reference` | one | yes |
 | `Spike` | `research_refs` | `Research` | many | yes |
@@ -551,8 +540,10 @@ cleverer.
 | --- | --- | --- |
 | `AuditLog` | `request_id` | reference-shaped, but `request` matches no registered Kind |
 | `Engram` | `affect_evidence_refs` | reference-shaped, but `affect_evidence` matches no registered Kind |
+| `Engram` | `source_refs` | reference-shaped, but `source` matches no registered Kind |
 | `Evidence` | `document_ref` | reference-shaped, but `document` matches no registered Kind |
 | `Feature` | `sprint_ref` | reference-shaped, but `sprint` matches no registered Kind |
+| `IntelInsight` | `source_ref` | reference-shaped, but `source` matches no registered Kind |
 | `LayerPolicy` | `layer_id` | reference-shaped, but `layer` matches no registered Kind |
 | `ModelProfile` | `model_id` | reference-shaped, but `model` matches no registered Kind |
 | `PlanBinding` | `account_id` | reference-shaped, but `account` matches no registered Kind |
@@ -562,6 +553,7 @@ cleverer.
 | `PricingPlan` | `tier_id` | reference-shaped, but `tier` matches no registered Kind |
 | `Project` | `intel_source_refs` | reference-shaped, but `intel_source` matches no registered Kind |
 | `Research` | `scope_ref` | reference-shaped, but `scope` matches no registered Kind |
+| `SourceArtifact` | `derived_refs` | reference-shaped, but `derived` matches no registered Kind |
 | `Story` | `sprint_ref` | reference-shaped, but `sprint` matches no registered Kind |
 | `TenantMembership` | `user_id` | reference-shaped, but `user` matches no registered Kind |
 | `UserProfile` | `user_id` | reference-shaped, but `user` matches no registered Kind |
@@ -585,12 +577,12 @@ rather than silently dropped, so the suppression is auditable.
 | `Tenant` | `plan` | billing/feature tier (a Tier `tier_id`), not the SDLC `Plan` Kind |
 | `Workspace` | `plan_ref` | DEPRECATED and never read — billing is per ACCOUNT (workspace → account_id → AccountPlan); also not the SDLC `Plan` Kind |
 
-### Kinds with no reference edge (17)
+### Kinds with no reference edge (21)
 
 Standalone documents — configuration, composition-plane behaviour, or
 record Kinds whose links are simply not modelled yet.
 
-`AgentDefinition`, `Automation`, `Canvas`, `Changelog`, `Comment`, `Copilot`, `Genome`, `Hook`, `HtmlArtifact`, `KindNamespace`, `LayerPolicy`, `MCPFederation`, `ModelProfile`, `PricingPlan`, `Setting`, `UserProfile`, `WorkspaceMembership`
+`AgentDefinition`, `Automation`, `Canvas`, `Changelog`, `Comment`, `Copilot`, `Engram`, `Genome`, `Hook`, `HtmlArtifact`, `IntelSource`, `KindNamespace`, `LayerPolicy`, `MCPFederation`, `ModelProfile`, `PlanBinding`, `PricingPlan`, `Setting`, `SourceArtifact`, `UserProfile`, `WorkspaceMembership`
 
 ## Physical model — the real tables
 

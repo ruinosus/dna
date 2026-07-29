@@ -522,6 +522,48 @@ simply compares `rank`. The four standard rungs (owner / admin / member /
 guest) ship as per-tenant seed docs under
 `examples/dna-cloud/.dna/.../roles/`.
 
+## Provenance — the original behind a derived document
+
+Some documents are not authored, they are **extracted**. A file arrives, an
+agent reads it, and writes typed documents from what it found. Those documents
+are a *projection*: lossy, interpreted, and — on their own — an assertion
+nobody can check. `SourceArtifact` is what makes the claim testable.
+
+### SourceArtifact
+
+A [`SourceArtifact`](../reference/kinds/record.md#sourceartifact)
+(`artifact-source`) records the original a projection came from: the `sha256`
+of its bytes, a `uri` naming where they live, and `derived_refs` — the typed
+documents extracted from it.
+
+Three properties are worth understanding before you use it, because each is a
+deliberate choice rather than an obvious one.
+
+**The `sha256` is the point, not bookkeeping.** Without a content address,
+"this document was derived from that file" is unfalsifiable — and an
+unfalsifiable provenance claim is worth less than no claim at all, because it
+invites a trust it has not earned. With one, anyone holding the bytes can
+verify the pairing, and re-uploading identical content is recognisably the
+*same* artifact rather than a second one.
+
+**The edge points from the artifact to its derivations**, never the reverse.
+The obvious shape would be a `source_ref` field on each extracted document, and
+it fails twice: an agent composing schemas would have to remember that field
+every time (and Kinds nobody authored have nowhere to put it), and one upload
+commonly yields many documents — a PDF holding twelve invoices should state
+"these came from one file" once, not twelve times.
+
+**The `uri` is an identity, never a credential.** It names where the bytes
+live; it does not grant access to them. A signed URL stored here would make the
+document itself the capability — copy the document, copy the access. The schema
+is closed (`additionalProperties: false`) precisely so a token cannot be
+attached beside it, and a host is expected to serve artifact reads through an
+authenticated route that checks the caller's membership first.
+
+The Kind is deliberately vendor-neutral: where the bytes actually live is a
+deployment's own concern (a blob store in a hosted product, a directory in a
+self-host), and the kernel treats `uri` as opaque so that stays true.
+
 ---
 
 Run `dna kind list` for the live registry in your install, and `dna kind
