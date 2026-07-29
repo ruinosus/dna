@@ -191,3 +191,157 @@ def test_create_project_does_not_expose_identity_or_scope(dna_dir, forbidden):
     )
     # …and the parameters it DOES take are the intended three.
     assert set(properties) == {"workspace_id", "name", "slug"}
+
+
+# ── 4. a refusal reaches the agent NAMED (the regression that shipped) ─────
+
+
+class _MembershipRefusal(Exception):
+    """Shaped like the real ``WorkspaceForbidden``: a bare ``Exception``.
+
+    That is the whole point. The first version of this door enumerated
+    ``(ValueError, LookupError, PermissionError)`` on a comment asserting
+    ``WorkspaceForbidden`` was a ``PermissionError``. It is not — and the most
+    likely refusal the door can produce escaped unmapped."""
+
+
+def test_a_refusal_that_is_not_in_any_enumeration_still_arrives_named(
+    dna_dir, monkeypatch,
+):
+    """Measured against production: ``create_project`` refused a caller with no
+    membership and the agent read ``Error calling tool 'create_project'`` — no
+    type, no reason, nothing to act on. Same defect as ``i-088``…``i-092``.
+
+    Restore the enumeration and this dies, because ``_MembershipRefusal``
+    subclasses neither ``ValueError``, ``LookupError`` nor ``PermissionError``
+    — exactly like the real one."""
+    from dna.application import runtime
+
+    async def refuse(*a, **k):
+        raise _MembershipRefusal(
+            "identity '<anonymous>' holds no active WorkspaceMembership"
+        )
+
+    monkeypatch.setattr(runtime, "create_project_impl", refuse)
+
+    async def body(client):
+        try:
+            await client.call_tool(
+                "create_project", {"workspace_id": "ws-x", "name": "Atlas"},
+            )
+        except Exception as exc:  # noqa: BLE001 — the message IS the assertion
+            return str(exc)
+        return ""
+
+    message = _run(dna_dir, body)
+    assert "_MembershipRefusal" in message, (
+        f"the refusal reached the agent unnamed: {message!r}"
+    )
+    assert "no active WorkspaceMembership" in message, (
+        f"the reason did not survive: {message!r}"
+    )
+
+
+# ── 5. the diagnostic is audible ──────────────────────────────────────────
+
+
+def test_our_own_loggers_are_configured_so_info_is_readable(monkeypatch):
+    """``uvicorn.run(log_level="info")`` configures uvicorn's loggers and
+    nothing else, so ``dna_cli``'s reach the root logger — which has no handler,
+    so Python's handler of last resort emits WARNING and above ONLY.
+
+    Every ``logger.info`` in the package was therefore dropped in production
+    with no sign: no error, just a line that never appears. It was measured on
+    the MCP Apps negotiation log, which recorded the answer to "did the host
+    declare the extension?" and never once reached a reader.
+
+    Drop the ``_configure_our_own_logging()`` call and this dies."""
+    import logging
+
+    from dna_cli import mcp_cmd
+
+    ours = logging.getLogger("dna_cli")
+    saved_handlers, saved_level, saved_propagate = (
+        list(ours.handlers), ours.level, ours.propagate,
+    )
+    ours.handlers.clear()
+    try:
+        mcp_cmd._configure_our_own_logging()
+        assert ours.handlers, "no handler — INFO would fall to the last resort"
+        assert logging.getLogger("dna_cli._mcp_server").isEnabledFor(logging.INFO)
+    finally:
+        ours.handlers[:] = saved_handlers
+        ours.setLevel(saved_level)
+        ours.propagate = saved_propagate
+
+
+def test_serve_actually_configures_logging_before_it_serves(dna_dir, monkeypatch):
+    """The function being CORRECT is not the property that failed — the property
+    that failed is that nobody called it.
+
+    A first version of this test called ``_configure_our_own_logging()`` itself
+    and then asserted the loggers were configured. It passed with the call
+    REMOVED from ``serve``, which is the exact shape of the production bug it
+    was meant to prevent: a diagnostic that is perfect and unreachable.
+
+    So this drives the real command with ``uvicorn.run`` stubbed, and asserts
+    the configuration happened by the time serving would have begun."""
+    import logging
+
+    from click.testing import CliRunner
+
+    from dna_cli import mcp_cmd
+
+    seen: dict[str, object] = {}
+
+    def fake_run(app, **kwargs):
+        ours = logging.getLogger("dna_cli")
+        seen["handlers"] = list(ours.handlers)
+        seen["info_enabled"] = logging.getLogger(
+            "dna_cli._mcp_server"
+        ).isEnabledFor(logging.INFO)
+
+    # `uvicorn` is imported INSIDE serve(), so patch the module itself.
+    import uvicorn
+
+    monkeypatch.setattr(uvicorn, "run", fake_run)
+
+    ours = logging.getLogger("dna_cli")
+    saved = (list(ours.handlers), ours.level, ours.propagate)
+    ours.handlers.clear()
+    try:
+        result = CliRunner().invoke(
+            mcp_cmd.mcp,
+            ["serve", "--transport", "http", "--base-dir", str(dna_dir)],
+        )
+        assert result.exit_code == 0, result.output
+        assert seen.get("handlers"), (
+            "serve reached uvicorn.run with our loggers unconfigured — every "
+            "logger.info in the package would be dropped, exactly as in prod"
+        )
+        assert seen.get("info_enabled") is True
+    finally:
+        ours.handlers[:] = saved[0]
+        ours.setLevel(saved[1])
+        ours.propagate = saved[2]
+
+
+def test_the_log_level_is_overridable(monkeypatch):
+    """An operator who wants less can say so. Hard-code the level and this
+    dies."""
+    import logging
+
+    from dna_cli import mcp_cmd
+
+    ours = logging.getLogger("dna_cli")
+    saved_handlers, saved_level, saved_propagate = (
+        list(ours.handlers), ours.level, ours.propagate,
+    )
+    try:
+        monkeypatch.setenv("DNA_LOG_LEVEL", "WARNING")
+        mcp_cmd._configure_our_own_logging()
+        assert not logging.getLogger("dna_cli._mcp_server").isEnabledFor(logging.INFO)
+    finally:
+        ours.handlers[:] = saved_handlers
+        ours.setLevel(saved_level)
+        ours.propagate = saved_propagate

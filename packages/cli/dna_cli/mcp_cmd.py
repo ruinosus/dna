@@ -15,7 +15,46 @@ imported lazily so the base ``dna`` install never requires it.
 """
 from __future__ import annotations
 
+import logging
+import os
+import sys
+
 import click
+
+
+def _configure_our_own_logging() -> None:
+    """Give ``dna_cli``'s own loggers a handler, so ``logger.info`` is readable.
+
+    ``uvicorn.run(log_level="info")`` configures UVICORN's loggers and nothing
+    else. Our modules log to ``logging.getLogger("dna_cli.…")``, which reaches
+    the root logger — and the root logger has no handler, so Python's handler
+    of last resort takes over and it emits **WARNING and above only**.
+
+    The effect in production was quiet and total: ``logger.warning`` lines
+    appeared in the container log and every ``logger.info`` was dropped on the
+    floor. A diagnostic added at INFO was therefore born mute — measured on the
+    MCP Apps negotiation line, which logged the answer to "did the host declare
+    the extension?" and never once reached a reader. A log nobody can read is
+    not a log, and the failure gives no sign: no error, no warning, just a line
+    that never appears.
+
+    ``DNA_LOG_LEVEL`` overrides; the default is INFO because this process is a
+    server an operator is expected to be able to watch.
+    """
+    level_name = (os.environ.get("DNA_LOG_LEVEL") or "INFO").upper()
+    level = getattr(logging, level_name, logging.INFO)
+    ours = logging.getLogger("dna_cli")
+    if not ours.handlers:
+        handler = logging.StreamHandler(sys.stderr)
+        handler.setFormatter(
+            logging.Formatter("%(levelname)s %(name)s — %(message)s")
+        )
+        ours.addHandler(handler)
+    ours.setLevel(level)
+    # Ours alone: attaching to the ROOT logger would also un-mute every
+    # dependency at INFO, which is a different (and much noisier) decision than
+    # the one being made here.
+    ours.propagate = False
 
 
 @click.group(name="mcp")
@@ -200,4 +239,5 @@ def serve(scope: str | None, base_dir: str | None, transport: str,
             f"(ADR Model B) on {host}:{port}",
             err=True,
         )
+        _configure_our_own_logging()
         uvicorn.run(app, host=host, port=port, log_level="info")

@@ -36,7 +36,10 @@ vector; the impl refuses to take one and this door does not offer it.
 """
 from __future__ import annotations
 
+import logging
 from typing import Any, Awaitable, Callable
+
+logger = logging.getLogger(__name__)
 
 #: The signature ``_mcp_server`` injects: ``guard(family, tenant, scope=…,
 #: family_op=…)`` → the resolved workspace (or None). Raises ``ToolError`` on
@@ -54,7 +57,6 @@ def register_portfolio_tools(
     from fastmcp.exceptions import ToolError
 
     from dna.application.runtime import (
-        ProjectNotFound,
         create_project_impl,
         get_project_impl,
         list_orgs_impl,
@@ -78,14 +80,36 @@ def register_portfolio_tools(
         The type name is load-bearing over a conversational face. An agent that
         reads ``WorkspaceForbidden: …`` can change what it does; one that gets
         an unexplained failure retries the same call forever."""
+        # The operator keeps the traceback; the agent gets the sentence. Without
+        # this the server side of an unexpected failure is as blind as the
+        # client side was.
+        logger.warning("portfolio tool refused", exc_info=exc)
         return ToolError(f"{type(exc).__name__}: {exc}")
 
-    #: What a portfolio write can refuse with. ``create_project_impl`` raises
-    #: ``ValueError`` for a missing field and ``WorkspaceForbidden`` (a
-    #: ``PermissionError``) for a caller with no active grant.
-    REFUSALS: tuple[type[BaseException], ...] = (
-        ValueError, LookupError, PermissionError,
-    )
+    #: EVERY exception, on purpose — this used to be an ENUMERATION and the
+    #: enumeration was wrong on its first contact with production.
+    #:
+    #: It read ``(ValueError, LookupError, PermissionError)`` with a comment
+    #: asserting that ``WorkspaceForbidden`` was a ``PermissionError``. It is
+    #: not: it subclasses bare ``Exception``. So the single most likely refusal
+    #: this door can produce — "you hold no membership there" — escaped
+    #: unmapped and reached the agent as ``Error calling tool 'create_project'``
+    #: with no reason at all. That is the exact defect four production bugs in
+    #: this repo already were (``i-088`` … ``i-092``): the system knew the
+    #: truth and reported something else.
+    #:
+    #: A list of exception types is a claim about a hierarchy someone else
+    #: owns, and it goes stale silently — the failure mode is not a crash, it
+    #: is a good message becoming a blank one. Naming ``type(exc).__name__``
+    #: derives the answer instead of remembering it, and cannot go stale: a
+    #: refusal type added upstream tomorrow arrives named, for free.
+    #:
+    #: The cost is that a genuine BUG (``AttributeError``, ``TypeError``) is
+    #: also reported by name rather than crashing. That is the better trade
+    #: over a conversational face — ``AttributeError: 'NoneType' …`` reads as a
+    #: bug to anyone who sees it, and it is strictly more than the unexplained
+    #: failure it replaces. The traceback is not lost; it goes to the log above.
+    REFUSALS: tuple[type[BaseException], ...] = (Exception,)
 
     @server.tool(run_in_thread=False)
     async def list_workspaces() -> dict[str, Any]:
@@ -140,9 +164,9 @@ def register_portfolio_tools(
         tenant = await _guard("read", tenant, scope=scope)
         try:
             return await get_project_impl(await live(), slug, scope, tenant)
-        except ProjectNotFound as exc:
-            raise _refuse(exc) from None
         except REFUSALS as exc:
+            # ProjectNotFound included: it arrives NAMED, which is what lets an
+            # agent tell "no such project" from "I could not reach the store".
             raise _refuse(exc) from None
 
     @server.tool(run_in_thread=False)
