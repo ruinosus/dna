@@ -233,6 +233,43 @@ def test_create_project_binds_it_to_the_workspace_and_derives_the_scope(dna_dir)
         assert listed[0]["workspace_id"] == wid
 
 
+def test_create_project_grants_its_board_scope_to_the_creating_workspace(dna_dir):
+    """Deriving ``board_scope`` NAMES a scope; it does not grant it.
+
+    Measured in production the day the portfolio door opened: the creator made
+    a project and then could not read its board —
+    ``board_summary(scope=<board_scope>)`` answered *"cross-workspace access is
+    denied — this workspace has none"*. The bridge ``list_projects`` promises in
+    its own published description was broken for every NEW project, which is the
+    worst case: the only projects a user has just been told about.
+
+    Drop the ``grant_workspace_scope_impl`` call from ``create_project_impl``
+    and this dies."""
+    from dna.application.runtime import list_workspace_scope_grants_impl
+
+    with _client(dna_dir) as c:
+        wid = c.post("/v1/workspaces",
+                     json={"name": "Acme Labs", "claims": _ALICE}).json()["workspace_id"]
+        board = c.post("/v1/projects",
+                       json={"workspace_id": wid, "name": "Copiloto Médico",
+                             "claims": _ALICE}).json()["project"]["board_scope"]
+        assert board == "copiloto-medico-development"
+
+        async def grants_for():
+            live = await M.boot_live(scope=_SCOPE, base_dir=str(dna_dir))
+            return await list_workspace_scope_grants_impl(live, workspace_id=wid)
+
+        grants = asyncio.run(grants_for())["grants"]
+        reachable = {
+            g["scope"] for g in grants if (g.get("status") or "active") == "active"
+        }
+        assert board in reachable, (
+            f"the derived board scope {board!r} is not granted to the workspace "
+            f"that created the project — its own board reads as cross-workspace "
+            f"denied. Active grants: {sorted(reachable)}"
+        )
+
+
 def test_create_project_without_active_membership_is_403(dna_dir):
     with _client(dna_dir) as c:
         wid = c.post("/v1/workspaces",

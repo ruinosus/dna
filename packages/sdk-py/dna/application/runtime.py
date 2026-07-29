@@ -3006,6 +3006,41 @@ async def create_project_impl(
         },
         invalidate_mode="doc",
     )
+
+    # …AND THE GRANT THAT MAKES THE DERIVED BOARD REACHABLE.
+    #
+    # Deriving ``board_scope`` NAMES a scope; it does not grant it. Without this
+    # row the creator cannot read the board of the project they just made:
+    # ``board_summary(scope=<board_scope>)`` answered *"cross-workspace access
+    # … is denied — this workspace has none"*. Measured in production the day
+    # the portfolio door opened.
+    #
+    # Worse than a missing feature, because ``list_projects`` PROMISES the
+    # bridge in its own published description ("pass ``board_scope`` to
+    # ``board_summary``"). A description the system does not honour is the same
+    # defect this repo keeps meeting in other clothes: the artifact asserting
+    # something about itself that is not true.
+    #
+    # A failure here does NOT fail the create. The project exists and is
+    # correct; an ungranted board is a reachability problem an operator repairs
+    # with ``grant_workspace_scope``, and unwinding a successful, already
+    # visible write to report it would trade a small problem for a larger one.
+    # It is logged loudly rather than swallowed.
+    try:
+        await grant_workspace_scope_impl(
+            live, workspace_id=workspace_id, scope=spec["board_scope"],
+            reason=f"board of project {slug_value!r}",
+            granted_by=getattr(identity, "oid", None),
+        )
+    except Exception as exc:  # noqa: BLE001 — see above
+        logger.warning(
+            "project %r was created but its board scope %r could not be "
+            "granted to workspace %r (%s: %s) — the board will read as "
+            "cross-workspace denied until a grant exists",
+            slug_value, spec["board_scope"], workspace_id,
+            type(exc).__name__, exc,
+        )
+
     return {
         "scope": sc,
         "workspace_id": workspace_id,
