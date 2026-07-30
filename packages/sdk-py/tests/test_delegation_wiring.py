@@ -256,14 +256,19 @@ def _capture_run_local_middleware(monkeypatch):
     return captured
 
 
-async def _tool_names_after_the_chain(middleware) -> set[str]:
+async def _tool_names_after_the_chain(middleware, already_registered=()) -> set[str]:
+    """`already_registered` are the tools `create_agent(tools=…)` put on the
+    agent — in a real run the model request ALREADY carries them when the
+    middleware chain sees it. Starting the double empty would measure only the
+    MCP-injected half and quietly prove nothing about the host's tools."""
     mcp_mw, allowlist_mw = middleware
 
     async def terminal(request):
         return [t.name for t in (request.tools or [])]
 
     names = await mcp_mw.awrap_model_call(
-        _FakeSubModelRequest(), lambda req: allowlist_mw.awrap_model_call(req, terminal)
+        _FakeSubModelRequest(tools=list(already_registered)),
+        lambda req: allowlist_mw.awrap_model_call(req, terminal),
     )
     return set(names)
 
@@ -327,3 +332,125 @@ def test_run_local_reuses_the_same_mcp_auth_hook_object_not_a_new_one(tmp_path, 
     asyncio.run(run_local("conv", "x"))
     mcp_mw = captured["middleware"][0]
     assert mcp_mw._mcp_auth is sentinel_auth
+
+
+# ── the sub-run gets the HOST's tools and middleware ───────────────────────
+# The half the tests above cannot see: in the fixture `update_document_draft`
+# is an MCP tool, so the target's own federation serves it. In a real host it
+# is a LOCAL tool the host registers through `hooks.extensions["tools"]` —
+# and until this change the sub-run got NONE of those, nor any host
+# middleware. An agent whose whole job runs on a host tool therefore reached
+# the model without it and narrated the work instead of doing it; and every
+# host policy expressed as middleware (auth-graceful, attachment extraction,
+# post-tool projections) silently did not apply on the delegated path.
+
+
+class _FakeHostTool:
+    def __init__(self, name):
+        self.name = name
+
+
+class _FakeHostMiddleware:
+    """Stands in for a host middleware. Only identity is asserted — what it
+    does is the host's business, that it RUNS is the SDK's."""
+
+
+def _capture_run_local_build(monkeypatch):
+    """Like `_capture_run_local_middleware`, but keeps `tools=` too — the host
+    tools never appear in the middleware chain, they are registered
+    statically."""
+    captured = {}
+
+    def fake_create_agent(model, tools=None, middleware=None, **kwargs):
+        captured["tools"] = list(tools or [])
+        captured["middleware"] = list(middleware or [])
+        return _FakeSubAgentGraph()
+
+    monkeypatch.setattr("langchain.agents.create_agent", fake_create_agent)
+    return captured
+
+
+def _run_local_with(tmp_path, monkeypatch, *, tools=None, middleware=None, target="conv"):
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test-not-a-real-key")
+    _stub_federation_tools(monkeypatch)
+    captured = _capture_run_local_build(monkeypatch)
+    mi = _mi(tmp_path)
+    hooks = RuntimeHooks(
+        mcp_auth=lambda: {},
+        compose=_compose,
+        extensions={"tools": tools or [], "middleware": middleware or []},
+    )
+    run_local = _make_run_local(mi, hooks)
+    asyncio.run(run_local(target, "converta isto"))
+    return captured, hooks
+
+
+def test_a_host_tool_reaches_the_sub_run(tmp_path, monkeypatch):
+    """The defect this change exists to fix: a delegate whose job runs on a
+    host tool used to reach the model without it. No error — the model simply
+    could not do the work, and said it had."""
+    tool = _FakeHostTool("update_document_draft_local")
+    captured, _ = _run_local_with(tmp_path, monkeypatch, tools=[tool])
+    assert tool in captured["tools"], "the sub-agent was built without the host's tools"
+
+
+def test_host_middleware_reaches_the_sub_run(tmp_path, monkeypatch):
+    """A sub-run outside host policy is not isolation — it is a hole in policy
+    that only opens on the delegated path."""
+    mw = _FakeHostMiddleware()
+    captured, _ = _run_local_with(tmp_path, monkeypatch, middleware=[mw])
+    assert mw in captured["middleware"], "host middleware did not apply to the sub-run"
+
+
+def test_host_middleware_runs_AFTER_the_dna_disciplines(tmp_path, monkeypatch):
+    """Same order the LangChain adapter builds for the mounted agent: the DNA
+    middlewares first, host extras last. Order is load-bearing there (the MCP
+    schema injection must precede the allowlist filter), and a sub-run that
+    ordered them differently would be a second, divergent pipeline."""
+    mw = _FakeHostMiddleware()
+    captured, _ = _run_local_with(tmp_path, monkeypatch, middleware=[mw])
+    assert captured["middleware"][-1] is mw
+    assert len(captured["middleware"]) > 1, "the DNA disciplines vanished"
+
+
+def test_a_host_tool_is_NOT_filtered_out_by_the_targets_mcp_allowlist(
+    tmp_path, monkeypatch
+):
+    """`conv` restricts its MCP allowlist to two of the federation's four. A
+    host tool is not an MCP tool and must survive that filter — otherwise
+    registering it would be pointless, which is exactly what happens without
+    `extra_allowed`. This is the same treatment the adapter already gives the
+    mounted agent's host tools."""
+    tool = _FakeHostTool("host_only_tool")
+    captured, _ = _run_local_with(tmp_path, monkeypatch, tools=[tool])
+    names = asyncio.run(
+        _tool_names_after_the_chain(captured["middleware"][:2], already_registered=[tool])
+    )
+    assert "host_only_tool" in names
+    # and the target's OWN restriction is untouched by the addition
+    assert "list_my_kinds" not in names
+
+
+def test_the_sub_run_can_NOT_delegate_onward(tmp_path, monkeypatch):
+    """Load-bearing, and invisible in the code: `_make_run_local` captures
+    `hooks` BEFORE `build_runtime` appends `delegate_to` to a REPLACED hooks
+    object, so the sub-agent never sees the tool. A delegation cycle would
+    recurse until the stack died — and now that host tools DO cross into the
+    sub-run, nothing but this capture order stops `delegate_to` from crossing
+    with them."""
+    from dataclasses import replace as _replace
+
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test-not-a-real-key")
+    _stub_federation_tools(monkeypatch)
+    captured = _capture_run_local_build(monkeypatch)
+    mi = _mi(tmp_path)
+    hooks = RuntimeHooks(mcp_auth=lambda: {}, compose=_compose, extensions={"tools": []})
+    run_local = _make_run_local(mi, hooks)
+
+    # Exactly what build_runtime does after building run_local.
+    delegate_to = _FakeHostTool("delegate_to")
+    _replace(hooks, extensions={"tools": [delegate_to]})
+
+    asyncio.run(run_local("conv", "x"))
+    assert delegate_to not in captured["tools"]
+    assert "delegate_to" not in [getattr(t, "name", None) for t in captured["tools"]]
