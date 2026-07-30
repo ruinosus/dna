@@ -11,19 +11,25 @@ compiled LangGraph graph keeps working unchanged.
 
 `dna.application.delegation_tool.make_delegate_tool` builds the tool; this is
 where it gets HANDED to an agent, because this is where both halves of what
-`run_local` needs meet: `mi` (to compose+run ANOTHER named agent) and the
-composed `ctx` (to know the delegator's own name + declaration). The adapter
-layer (`dna.runtime.adapters.langchain_rt`) never sees `mi` — only `ctx` +
+`run_local` needs meet: `mi` (to compose+run ANOTHER named agent, and to read
+THAT target's own `mcp_servers`) and the composed `ctx` (to know the
+delegator's own name + declaration). The adapter layer
+(`dna.runtime.adapters.langchain_rt`) never sees `mi` — only `ctx` +
 `RuntimeHooks` (verified by reading `RuntimePort.build`'s signature) — so
 building `run_local` there would need `mi` threaded through a new port-wide
 field every adapter would have to carry. Instead this module drops the tool
 into `hooks.extensions["tools"]`, the SAME escape hatch
 `LangChainRuntime.build` already merges into `create_agent(tools=...)`
-(`extra_tools = extensions.get("tools") or []`) — zero changes needed to the
-adapter. A future non-LangChain runtime that wants delegation would need its
-own `run_local` (this one builds a LangChain sub-agent); noted, not solved
-here — `[runtime]` is the only backend this ships against today (CLAUDE.md's
-pinned floor).
+(`extra_tools = extensions.get("tools") or []`) — no change needed to how a
+tool ATTACHES to an agent. `run_local`'s sub-agent DOES reuse one adapter
+seam directly: `dna.runtime.adapters.langchain_rt.mcp_tool_stack` (factored
+out of `LangChainRuntime.build` for exactly this reuse) resolves the
+target's tools from ITS OWN `mcp_servers`/`allowed_tools` — never the
+delegator's, and never a hand-rolled second implementation of that
+resolution. A future non-LangChain runtime that wants delegation would need
+its own `run_local` (this one builds a LangChain sub-agent); noted, not
+solved here — `[runtime]` is the only backend this ships against today
+(CLAUDE.md's pinned floor).
 
 The gate is `AgentSpec.team_members` read straight from the parsed spec — no
 hand-kept name list, and no dependency on the roster resolving non-empty
@@ -67,16 +73,47 @@ def _team_members_and_documents(mi: Any, delegator: str) -> tuple[list[str], lis
     return team_members, documents
 
 
-def _make_run_local(mi: Any) -> Callable[[str, str], Awaitable[str]]:
+def _target_mcp_servers(mi: Any, target_name: str) -> list[Any]:
+    """The delegation target's OWN `mcp_servers` projection — sync, offloaded
+    via `asyncio.to_thread` alongside `build_emit_context` (same discipline).
+    `build_emit_context` alone never fills `EmitContext.mcp_servers` (that
+    projection is copilot-only, per its docstring); a delegation target is a
+    plain `Agent` doc, never itself a Copilot, so it is read straight off the
+    target's own spec via the SAME seam `build_copilot_context` uses for the
+    mounted agent (`dna.emit.project_agent_mcp_servers`) — never
+    reimplemented, and never the DELEGATOR's `mcp_servers`."""
+    from dna.emit import project_agent_mcp_servers
+
+    doc = mi.find_agent(target_name)
+    spec = getattr(doc, "spec", None) if doc is not None else None
+    if spec is None:
+        return []
+    return project_agent_mcp_servers(mi, spec)
+
+
+def _make_run_local(mi: Any, hooks: RuntimeHooks) -> Callable[[str, str], Awaitable[str]]:
     """`run_local(target_name, request) -> str` — compose `target_name`
-    through the SAME `mi` (so a target's own model/instructions/tools resolve
-    exactly as they would if it were built directly) and run ONE turn with
-    `request` as the sole human message.
+    through the SAME `mi` (so a target's own model/instructions resolve
+    exactly as they would if it were built directly), give it the tools ITS
+    OWN `mcp_servers` declares (via `mcp_tool_stack` — the SAME
+    discover-then-allowlist seam `LangChainRuntime.build` wires for the
+    mounted agent, reused rather than reimplemented, and fail-closed to the
+    TARGET's own `allowed_tools` — a delegate reaches no more than it would
+    reach mounted directly), and run ONE turn with `request` as the sole
+    human message.
 
     Isolation of context (the stated reason for the market pattern this
     follows — LangChain subagents, current recommendation since March/2026):
     no checkpointer, no store, no prior messages — a fresh graph per call, so
     the sub-run has its own state and never sees the delegator's history.
+    Gaining tools is not gaining the delegator's context: the task is still
+    the ONLY thing that crosses into the sub-run.
+
+    `hooks.mcp_auth` is reused VERBATIM for the target's own
+    `DnaMcpToolsMiddleware` — see `mcp_tool_stack`'s docstring for why that is
+    not a fabricated credential: it is the same per-request hook, re-read at
+    call time, exactly as its own contract already documents.
+
     Heavy imports deferred to call time, same discipline as
     `LangChainRuntime.build`.
     """
@@ -87,13 +124,21 @@ def _make_run_local(mi: Any) -> Callable[[str, str], Awaitable[str]]:
         from langchain_core.messages import HumanMessage
 
         from dna.emit import build_emit_context
+        from dna.runtime.adapters.langchain_rt import mcp_tool_stack
 
-        target_ctx = await asyncio.to_thread(build_emit_context, mi, target_name)
+        target_ctx, mcp_servers = await asyncio.to_thread(
+            lambda: (
+                build_emit_context(mi, target_name),
+                _target_mcp_servers(mi, target_name),
+            )
+        )
+        middleware, _allowed = mcp_tool_stack(mcp_servers, hooks.mcp_auth)
         model = target_ctx.model or "gpt-5-mini"
         graph = create_agent(
             model=init_chat_model(f"openai:{model}"),
             tools=[],
             system_prompt=target_ctx.instructions or "",
+            middleware=middleware,
         )
         result = await graph.ainvoke({"messages": [HumanMessage(content=request)]})
         final_message = result["messages"][-1]
@@ -144,7 +189,7 @@ def _maybe_build_delegate_tool(
     return make_delegate_tool(
         delegator=delegator,
         documents=documents,
-        run_local=_make_run_local(mi),
+        run_local=_make_run_local(mi, hooks),
         call_remote=_make_call_remote(hooks),
     )
 

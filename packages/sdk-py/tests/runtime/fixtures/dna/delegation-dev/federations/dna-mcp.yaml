@@ -2,14 +2,20 @@ apiVersion: github.com/ruinosus/dna/federation/v1
 kind: MCPFederation
 metadata:
   name: dna-mcp
-  description: Minimal federation — only present so LangChainRuntime.build's
-    mcp_servers requirement is satisfied. Not exercised by the delegation
-    wiring tests themselves.
+  description: Declares a real allowed_tools surface so the delegation
+    fixture's targets (conv/wide-conv) can prove the tool-projection
+    properties — a RESTRICTED target's effective allowlist is the
+    intersection with its own declaration; an UNRESTRICTED one inherits this
+    full federation list.
 spec:
   transport: streamable_http
   url: https://mcp.dna-cloud.example/mcp
   auth:
     kind: bearer_env
     env: DNA_MCP_TOKEN
-  allowed_tools: []
+  allowed_tools:
+  - list_kinds
+  - list_my_kinds
+  - author_kind
+  - update_document_draft
   propagate_tenant: false

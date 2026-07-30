@@ -88,6 +88,7 @@ __all__ = [
     "available_targets",
     "build_emit_context",
     "build_copilot_context",
+    "project_agent_mcp_servers",
     "emit_agent",
     "emit_agent_from_scope",
 ]
@@ -697,6 +698,24 @@ def _spec_get(obj: Any, key: str) -> Any:
     if hasattr(obj, "get"):
         return obj.get(key)
     return getattr(obj, key, None)
+
+
+def project_agent_mcp_servers(mi: Any, agent_spec: Any) -> list["EmitMcpServer"]:
+    """Public seam over :func:`_project_mcp_servers` — the SAME projection
+    :func:`build_copilot_context` uses for a Copilot's mounted agent, exposed
+    for ANY agent's raw spec, mounted or not.
+
+    Added for ``dna.runtime.builder``'s delegation wiring (A.1,
+    s-close-the-two-doors): a delegation TARGET is a plain ``Agent`` doc, never
+    itself a Copilot, so ``build_emit_context`` alone never populates
+    ``mcp_servers`` for it. Its sub-run still must resolve tools through the
+    SAME seam the mounted agent uses — reusing this function (not
+    reimplementing the ref → ``MCPFederation`` → effective-allowlist
+    resolution) is what keeps a delegate's tool surface fail-closed to
+    whatever ITS OWN ``mcp_servers``/``allowed_tools`` declares, exactly as if
+    it were mounted directly.
+    """
+    return _project_mcp_servers(mi, agent_spec)
 
 
 def _project_mcp_servers(mi: Any, agent_spec: Any) -> list["EmitMcpServer"]:

@@ -23,6 +23,20 @@ from dna.runtime.middleware.mcp_tools_mw import DnaMcpToolsMiddleware
 from dna.runtime.port import RuntimeHooks
 
 
+def _allowed_tools_set(mcp_servers: Any) -> frozenset[str]:
+    """The tool names `mcp_servers` collectively allow. Factored out of
+    `_project_config` so `mcp_tool_stack` (a delegation target's isolated
+    sub-run, `dna.runtime.builder`) computes the SAME allowlist from ITS OWN
+    `mcp_servers` rather than a second, drifting copy of this rule."""
+    allowed = {
+        t for s in (mcp_servers or []) for t in (getattr(s, "allowed_tools", None) or [])
+    }
+    # The Tool-doc alias `list` runs as `list_memories` (federation doc note).
+    if "list" in allowed:
+        allowed.add("list_memories")
+    return frozenset(allowed)
+
+
 def _project_config(ctx: Any) -> tuple[str, str | None, frozenset[str], tuple[str, ...]]:
     """Project the narrow (instructions, model, allowed_tools, confirm_tools)
     tuple `build_copilot` used to get from `copilot_config` — but FROM an
@@ -30,22 +44,58 @@ def _project_config(ctx: Any) -> tuple[str, str | None, frozenset[str], tuple[st
     a second time now that `build_runtime` composes ctx once up front. Same
     projection rule as `dna.runtime.config.copilot_config` (kept in lockstep;
     that function still serves callers who only want the narrow config)."""
-    allowed = {
-        t
-        for s in (getattr(ctx, "mcp_servers", None) or [])
-        for t in (getattr(s, "allowed_tools", None) or [])
-    }
-    # The Tool-doc alias `list` runs as `list_memories` (federation doc note).
-    if "list" in allowed:
-        allowed.add("list_memories")
+    allowed = _allowed_tools_set(getattr(ctx, "mcp_servers", None) or [])
     confirm_tools = tuple(
         sorted(getattr(ctx, "tools_requiring_confirmation", None) or [])
     )
     return (
         ctx.instructions or "",
         ctx.model,
-        frozenset(allowed),
+        allowed,
         confirm_tools,
+    )
+
+
+def mcp_tool_stack(
+    mcp_servers: Any,
+    mcp_auth: Any,
+    *,
+    extra_allowed: frozenset[str] = frozenset(),
+) -> tuple[list[Any], frozenset[str]]:
+    """The `(middleware, allowed_tools)` pair that gives an agent its MCP tool
+    surface: `DnaMcpToolsMiddleware` (lazy discovery + schema injection) THEN
+    `DnaAllowlistMiddleware` (fail-closed filter to what `mcp_servers`
+    collectively allow) — the SAME two middleware, in the SAME order,
+    `LangChainRuntime.build` wires for the mounted agent (order is
+    load-bearing: the allowlist must see only what discovery injected).
+
+    Public so `dna.runtime.builder`'s `run_local` reuses this SEAM for a
+    delegation target's isolated sub-run, resolving tools from THAT TARGET's
+    OWN `mcp_servers` — never the delegator's — so a delegate reaches no more
+    than it would reach mounted directly (s-close-the-two-doors A.1's
+    allowlist-preserving property: delegation is not privilege escalation).
+
+    `mcp_auth` is threaded through VERBATIM — the exact per-request hook
+    object the caller already holds, never wrapped, cloned, or cached into a
+    new credential. Reusing it here relies on nothing more than what
+    `dna.runtime.mcp_tools.load_mcp_tools` already documents: the hook is
+    re-read on every outgoing HTTP request, not snapshotted once — so calling
+    it again, later, for a second `DnaMcpToolsMiddleware` instance within the
+    SAME inbound request is exactly its documented contract, not a new
+    assumption this function introduces.
+
+    Empty `mcp_servers` → `([], allowed)` (no MCP middleware at all) — honest
+    about "this agent declared no MCP surface", never silently permissive.
+    """
+    allowed = _allowed_tools_set(mcp_servers) | extra_allowed
+    if not mcp_servers:
+        return [], allowed
+    import os
+
+    mcp_url = os.environ.get("DNA_MCP_URL") or mcp_servers[0].url
+    return (
+        [DnaMcpToolsMiddleware(mcp_url, mcp_auth), DnaAllowlistMiddleware(allowed)],
+        allowed,
     )
 
 
@@ -87,7 +137,10 @@ class LangChainRuntime:
         from langchain.agents import create_agent
         from langchain.chat_models import init_chat_model
 
-        instructions, model_hint, allowed_tools, confirm_tools = _project_config(ctx)
+        # `allowed_tools` is recomputed inside `mcp_tool_stack` below (from the
+        # SAME `ctx.mcp_servers` — one rule, `_allowed_tools_set`, not a second
+        # copy of it here).
+        instructions, model_hint, _allowed_tools, confirm_tools = _project_config(ctx)
 
         extensions = hooks.extensions or {}
         extra_middleware = extensions.get("middleware") or []
@@ -100,16 +153,6 @@ class LangChainRuntime:
                 "LangChainRuntime requires the mounted agent to federate at "
                 "least one MCP server"
             )
-        # The MCP ENDPOINT is a deployment concern (like a DSN), not declarative
-        # policy: the federation def carries a neutral placeholder url, and the
-        # real endpoint is injected per-environment via DNA_MCP_URL (the same
-        # env-adapter pattern the auth token `auth.env: DNA_MCP_TOKEN` uses). So
-        # env wins; the def's url is only the declarative default when no
-        # endpoint override is set. (Corrects a C0 over-reach that read the
-        # placeholder literally and dialed an unresolvable host.)
-        import os
-
-        mcp_url = os.environ.get("DNA_MCP_URL") or mcp_servers[0].url
 
         # MCP tool discovery is LAZY — deferred to DnaMcpToolsMiddleware's
         # first authenticated model call (the per-request bearer is only
@@ -124,10 +167,16 @@ class LangChainRuntime:
 
         # DnaMcpToolsMiddleware is OUTERMOST so its schema injection in
         # wrap_model_call runs BEFORE DnaAllowlistMiddleware filters — the
-        # allowlist sees (and vets) the injected MCP tools.
+        # allowlist sees (and vets) the injected MCP tools. `mcp_tool_stack`
+        # is the SAME seam `dna.runtime.builder`'s delegation `run_local`
+        # reuses for a target's isolated sub-run (mcp_url resolution —
+        # DNA_MCP_URL env override over the federation's declarative
+        # placeholder — lives there now, once, not copy-pasted per caller).
+        mcp_middleware, _allowed = mcp_tool_stack(
+            mcp_servers, hooks.mcp_auth, extra_allowed=frozenset(extra_confirm)
+        )
         middleware = [
-            DnaMcpToolsMiddleware(mcp_url, hooks.mcp_auth),
-            DnaAllowlistMiddleware(allowed_tools | frozenset(extra_confirm)),
+            *mcp_middleware,
             DnaComposePromptMiddleware(hooks.compose, fallback=instructions),
             dna_hitl_middleware(confirm_tools, extra_confirm=extra_confirm),
             *extra_middleware,

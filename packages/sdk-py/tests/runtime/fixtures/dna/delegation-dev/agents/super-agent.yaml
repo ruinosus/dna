@@ -3,12 +3,15 @@ kind: Agent
 metadata:
   name: super-agent
   description: An agent that DECLARES team_members — the positive side of
-    A.1's central property (test_delegation_wiring.py). Delegates to `conv`.
+    A.1's central property (test_delegation_wiring.py). Delegates to `conv`
+    and `wide-conv`.
 spec:
-  instruction: You supervise. Delegate conversion work to `conv` when asked.
+  instruction: You supervise. Delegate conversion work to `conv` or `wide-conv`
+    when asked.
   model: gpt-5-mini
   team_members:
   - conv
+  - wide-conv
   mcp_servers:
   - ref: dna-mcp
     allowed_tools: []

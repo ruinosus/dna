@@ -1,0 +1,19 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: Agent
+metadata:
+  name: wide-conv
+  description: A SECOND delegation target — declares mcp_servers with NO
+    allowed_tools override, so it inherits the federation's FULL list. Proves
+    the positive side of the tool-projection property (a target's own
+    declared tools actually reach its sub-run) alongside conv's negative
+    (restricted) side.
+spec:
+  instruction: You handle anything the federation allows.
+  model: gpt-5-mini
+  mcp_servers:
+  - ref: dna-mcp
+  delegation_target_for:
+    agents:
+    - super-agent
+    format: text
+    use_when: quando precisar de qualquer tool que o federation permita

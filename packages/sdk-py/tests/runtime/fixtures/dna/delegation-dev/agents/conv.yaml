@@ -8,6 +8,14 @@ metadata:
 spec:
   instruction: You convert documents on request.
   model: gpt-5-mini
+  # RESTRICTED: only these two of the federation's four allowed_tools reach
+  # this target's sub-run — the negative side of the allowlist property
+  # (test_delegation_wiring.py's tool-projection tests).
+  mcp_servers:
+  - ref: dna-mcp
+    allowed_tools:
+    - list_kinds
+    - author_kind
   delegation_target_for:
     agents:
     - super-agent
