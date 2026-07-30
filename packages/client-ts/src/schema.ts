@@ -540,6 +540,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/kinds/{kind}/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Write Kind Document
+         * @description Write one document of ``{kind}`` — the generic door, kubernetes-shaped.
+         *
+         *     The body is exactly ``{metadata, spec}`` (plus the optional
+         *     ``source_sha256`` provenance citation). ``metadata.name`` is
+         *     REQUIRED — 400 when blank or absent. A ``kind`` in the body that
+         *     DIFFERS from the path is refused (400); one that matches is a no-op
+         *     (redundant, not wrong).
+         *
+         *     The write goes through the kernel's own pipeline exactly as the MCP
+         *     ``write_document`` tool's does: the Kind's JSON Schema validates
+         *     ``spec`` and names the offending field on refusal (400), a BOOTSTRAP
+         *     Kind (Genome / LayerPolicy / KindDefinition) is refused (403, the
+         *     generic write's own gate — untouched, not relaxed here), an authored
+         *     Kind nobody has approved yet resolves to nothing in the registry and
+         *     is a 404 naming it (the SAME answer a Kind that was never authored at
+         *     all gets — there is no third state visible from here), an unknown
+         *     Kind is a 404 naming it, and a stale ``if_match`` is a 409.
+         *
+         *     ``source_sha256`` (optional) cites the ``SourceArtifact`` this
+         *     document was extracted from (by content address); the runtime closes
+         *     the ``derived_refs`` provenance edge server-side, preserving every
+         *     OTHER document already recorded there and updating THIS document's
+         *     own entry in place on a re-write — never accreting a duplicate. A
+         *     ``source_sha256`` that names no registered artifact under ``tenant``
+         *     is refused (400).
+         */
+        post: operations["write_kind_document_v1_kinds__kind__documents_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/kinds/{kind}/revoke": {
         parameters: {
             query?: never;
@@ -2746,6 +2790,65 @@ export interface components {
             /** Content */
             content: string;
         };
+        /**
+         * WriteKindDocumentRequest
+         * @description ``POST /v1/kinds/{kind}/documents`` — the document to write.
+         *
+         *     Deliberately narrow: no ``scope``, no ``claims`` anywhere on this model —
+         *     neither is reachable through this route's body (identity/scope are never
+         *     caller input here; see the route for the full reasoning).
+         *
+         *     ``kind`` is OPTIONAL and, when given, MUST equal the path's ``{kind}`` —
+         *     a caller naming a DIFFERENT Kind in the body is refused (400) rather than
+         *     the path or the body silently winning. Two sources stating one fact is
+         *     exactly the defect this route exists to close.
+         *
+         *     ``source_sha256``, when given, cites the ``SourceArtifact`` (by content
+         *     address) this document was extracted from — the runtime closes the
+         *     provenance edge (``derived_refs``) server-side.
+         */
+        WriteKindDocumentRequest: {
+            /** Kind */
+            kind?: string | null;
+            /** Metadata */
+            metadata: {
+                [key: string]: unknown;
+            };
+            /** Source Sha256 */
+            source_sha256?: string | null;
+            /** Spec */
+            spec: {
+                [key: string]: unknown;
+            };
+        };
+        /**
+         * WriteKindDocumentResponse
+         * @description ``POST /v1/kinds/{kind}/documents`` — the written document. ``scope``
+         *     is DERIVED (there is no ``scope`` field on the request to have supplied
+         *     one from).
+         */
+        WriteKindDocumentResponse: {
+            /** Api Version */
+            api_version: string;
+            /** Created */
+            created: boolean;
+            /** Etag */
+            etag?: string | null;
+            /** Kind */
+            kind: string;
+            /** Merged */
+            merged: boolean;
+            /** Name */
+            name: string;
+            /** Scope */
+            scope: string;
+            /** Source Sha256 */
+            source_sha256?: string | null;
+            /** Tenant */
+            tenant?: string | null;
+            /** Version */
+            version?: string | null;
+        };
     };
     responses: never;
     parameters: never;
@@ -3575,6 +3678,48 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApproveKindResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    write_kind_document_v1_kinds__kind__documents_post: {
+        parameters: {
+            query?: {
+                api_version?: string | null;
+                tenant?: string | null;
+                merge?: boolean;
+                if_match?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                kind: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WriteKindDocumentRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WriteKindDocumentResponse"];
                 };
             };
             /** @description Validation Error */

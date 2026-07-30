@@ -308,12 +308,16 @@ def build_app(
     # HTTP. ``boot_live`` is the CLI's composition root (it wires the CLI's own
     # source/provider boot path), so it stays in ``dna_cli._mcp_server``.
     from dna.application import (
+        AmbiguousKindError,
         AuthoredKindNotFound,
         BoardItemNotFound,
+        BootstrapKindWriteRefused,
+        ConcurrentWriteError,
         MemberForbidden,
         MemberNotFound,
         NamespaceRegistryUnreadable,
         ProjectNotFound,
+        UnknownKindError,
         WorkspaceForbidden,
         WorkspaceLastOwner,
         WorkspaceMemberNotFound,
@@ -327,6 +331,7 @@ def build_app(
         compose_prompt_impl,
         create_project_impl,
         register_artifact_impl,
+        write_document_impl,
         create_workspace_impl,
         genome_view_impl,
         get_authored_kind_impl,
@@ -1403,6 +1408,128 @@ def build_app(
                     exc,
                 ),
             ) from exc
+
+    # -- the generic, kubernetes-shaped document write ------------------------
+    #
+    # POST /v1/kinds/{kind}/documents. The gap this closes: every write route
+    # above is PER-KIND (memories, artifacts, the Kind-authoring doors,
+    # projects, workspaces, tenants) — a document of an ARBITRARY Kind,
+    # including one a tenant just authored and had approved, had no REST door
+    # at all. Without it, a proposer (e.g. a document-converter agent) that
+    # authors a Kind and matches a typed document to it has nowhere to write
+    # the document through the shared REST lane the portal calls.
+    #
+    # THE SHAPE IS KUBERNETES', DELIBERATELY (the plan cites it verbatim):
+    # applying a CRD CREATES an endpoint that serves that type; "kind is a
+    # string representing the REST resource — servers can infer it from the
+    # endpoint the client submits to"; and since 1.25 the API server VALIDATES
+    # every create/update against the registered schema before persisting.
+    # Hence the route: the PATH carries the Kind (the k8s convention), the
+    # body carries only what k8s calls ``metadata``/``spec``, and the SERVER
+    # validates — never a portal-side schema check reasoning from a belief
+    # formed turns earlier.
+    #
+    # ZERO business logic here: this is a thin delegate to the SAME
+    # ``write_document_impl`` the MCP ``write_document`` tool already calls —
+    # the bootstrap refusal, the LayerPolicy gate, the schema validation and
+    # the merge semantics are the kernel's, inherited for free.
+    #
+    # THE KIND COMES FROM THE PATH, NEVER THE BODY. A body that names a
+    # DIFFERENT kind is refused (400) below, explicitly — neither "the path
+    # wins silently" nor "the body wins": two sources stating one fact is the
+    # exact defect this project spent a day fixing elsewhere, and this route
+    # does not reintroduce it.
+    #
+    # IDENTITY AND SCOPE ARE NOT CALLER INPUT. Unlike the Model-B routes above
+    # (``register_artifact`` / ``create_project``, which take a ``claims``
+    # body field because a TRUSTED portal vouches an already-verified session
+    # under none/token auth), this route takes NEITHER a ``claims`` field NOR
+    # a ``scope`` query param — it follows the Kind-authoring doors' shape
+    # instead: only ``tenant`` as a query param, on the SAME trust boundary
+    # those doors document at length (config-bound / no second tenant under
+    # none / a trusted caller's own resolved value under token). The write
+    # scope is always DERIVED from ``tenant`` (``live.default_scope``),
+    # exactly as the artifact/project routes derive theirs — there is simply
+    # no second field here a caller could use to name a scope directly.
+    # Pinned against the PUBLISHED OpenAPI schema by
+    # ``tests/test_rest_documents.py`` (the REST analogue of
+    # ``test_tools_bind_their_scope.py``'s source-pattern guard for the MCP
+    # tools), not against this function's Python signature.
+    #
+    # MOUNTED ON EVERY AUTH MODE, like the Kind-authoring doors it depends on
+    # (a document under a freshly-approved Kind is unreachable if this route
+    # were lane-conditional while authoring/approval are not).
+
+    @app.post("/v1/kinds/{kind}/documents", dependencies=guarded, status_code=201,
+              response_model=m.WriteKindDocumentResponse)
+    async def write_kind_document(
+        kind: str,
+        body: m.WriteKindDocumentRequest,
+        api_version: str | None = Query(default=None),
+        tenant: str | None = Query(default=None),
+        merge: bool = Query(default=True),
+        if_match: str | None = Query(default=None),
+    ) -> dict[str, Any]:
+        """Write one document of ``{kind}`` — the generic door, kubernetes-shaped.
+
+        The body is exactly ``{metadata, spec}`` (plus the optional
+        ``source_sha256`` provenance citation). ``metadata.name`` is
+        REQUIRED — 400 when blank or absent. A ``kind`` in the body that
+        DIFFERS from the path is refused (400); one that matches is a no-op
+        (redundant, not wrong).
+
+        The write goes through the kernel's own pipeline exactly as the MCP
+        ``write_document`` tool's does: the Kind's JSON Schema validates
+        ``spec`` and names the offending field on refusal (400), a BOOTSTRAP
+        Kind (Genome / LayerPolicy / KindDefinition) is refused (403, the
+        generic write's own gate — untouched, not relaxed here), an authored
+        Kind nobody has approved yet resolves to nothing in the registry and
+        is a 404 naming it (the SAME answer a Kind that was never authored at
+        all gets — there is no third state visible from here), an unknown
+        Kind is a 404 naming it, and a stale ``if_match`` is a 409.
+
+        ``source_sha256`` (optional) cites the ``SourceArtifact`` this
+        document was extracted from (by content address); the runtime closes
+        the ``derived_refs`` provenance edge server-side, preserving every
+        OTHER document already recorded there and updating THIS document's
+        own entry in place on a re-write — never accreting a duplicate. A
+        ``source_sha256`` that names no registered artifact under ``tenant``
+        is refused (400)."""
+        if body.kind is not None and body.kind != kind:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"the body names kind {body.kind!r}, the path names "
+                    f"{kind!r} — refusing rather than picking one silently. "
+                    f"The path is the single source of truth for which Kind "
+                    f"is written here: omit `kind` from the body, or make it "
+                    f"match the path."
+                ),
+            )
+        name = (body.metadata or {}).get("name")
+        name = name.strip() if isinstance(name, str) else ""
+        if not name:
+            raise HTTPException(
+                status_code=400, detail="metadata.name is required",
+            )
+        try:
+            return await write_document_impl(
+                await _live(), kind=kind, name=name, spec=body.spec,
+                tenant=tenant, api_version=api_version, merge=merge,
+                if_match=if_match, source_sha256=body.source_sha256,
+            )
+        except BootstrapKindWriteRefused as exc:
+            raise HTTPException(status_code=403, detail=str(exc)) from exc
+        except LayerPolicyViolationError as exc:
+            raise HTTPException(status_code=403, detail=str(exc)) from exc
+        except UnknownKindError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from None
+        except ConcurrentWriteError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from None
+        except (AmbiguousKindError, ValueError, LookupError) as exc:
+            raise HTTPException(
+                status_code=400, detail=f"{type(exc).__name__}: {exc}"
+            ) from None
 
     # -- bundle entries (list/read/write/revert a bundle-file fork, plane B) -
     # A bundle-pattern Kind (Skill, and any future bundle Kind) stores MULTIPLE
