@@ -175,3 +175,60 @@ def test_the_queued_answer_does_NOT_pretend_to_have_a_result():
     assert touched == ["queued"]
     assert "result" not in out, "um Run enfileirado não tem resultado para relatar"
     assert out["run_id"] == "run-abc123"
+
+
+# ── a costura de ponta a ponta ──────────────────────────────────────────────
+#
+# Estes dois testes existem porque o buraco EXISTIU: o `delegate()` aceitava
+# `enqueue` desde o release 0.40.0, e nem `make_delegate_tool` nem o `builder` o
+# repassavam — o host não tinha por onde injetar. Parâmetro sem caminho até ele é
+# o mesmo padrão que esta feature inteira nasceu para consertar, e ele reapareceu
+# DENTRO dela pela terceira vez.
+#
+# O que faltava não era código: era um teste que atravessasse a costura em vez de
+# verificar cada ponta isoladamente.
+
+
+def test_make_delegate_tool_PASSES_the_enqueue_through():
+    """Da fábrica da tool até o `delegate()`. Sem isto, o host injeta e nada usa."""
+    from dna.application.delegation_tool import make_delegate_tool
+
+    tocado: list[str] = []
+
+    async def run_local(name, request):
+        tocado.append("local")
+        return "in-process"
+
+    async def call_remote(target, request):  # pragma: no cover
+        raise AssertionError("alvo local não deve tocar a rede")
+
+    async def enqueue(target, request):
+        tocado.append("queued")
+        return "run-do-host"
+
+    tool = make_delegate_tool(
+        delegator="sup",
+        documents=_docs(typical_seconds=120),
+        run_local=run_local,
+        call_remote=call_remote,
+        enqueue=enqueue,
+    )
+    out = asyncio.run(tool.coroutine(target="conv", task="converta"))
+    assert tocado == ["queued"], f"o enqueue não chegou ao delegate() — tocou {tocado}"
+    assert "run-do-host" in str(out)
+
+
+def test_the_builder_reads_the_enqueue_from_the_host_extension():
+    """O nome da extensão é contrato entre SDK e host — se ele mudar de um lado
+    só, a fila para de ser alimentada e NADA dá erro: o alvo longo volta a rodar
+    in-process, que é exatamente a degradação silenciosa."""
+    import inspect
+
+    from dna.runtime import builder
+
+    fonte = inspect.getsource(builder)
+    assert "delegation_enqueue" in fonte, (
+        "o builder não lê a extensão `delegation_enqueue` — o host não tem por "
+        "onde fornecer a fila"
+    )
+    assert "enqueue=" in fonte, "o builder não repassa o enqueue à tool"

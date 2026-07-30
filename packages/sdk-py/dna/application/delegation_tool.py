@@ -74,6 +74,7 @@ def make_delegate_tool(
     run_local: Callable[[str, str], Awaitable[str]],
     call_remote: Callable[..., Awaitable[str]],
     credential_for: Callable[[str], str | None] | None = None,
+    enqueue: Callable[..., Awaitable[str]] | None = None,
 ) -> Any:
     """Build the ``delegate_to`` ``StructuredTool`` for ``delegator``.
 
@@ -84,6 +85,13 @@ def make_delegate_tool(
     tool's description) and again, independently, inside ``delegate()`` at
     call time (the source of truth for authorization stays
     ``dna.application.delegation`` — this module never shortcuts it).
+
+    ``enqueue``, when given, is the THIRD transport: a target that declares
+    ``typical_seconds`` above the threshold is recorded as work to do and the
+    supervisor answers immediately with a run id, instead of holding the
+    connection open for minutes. Absent, a long target simply runs in-process
+    as before — a deployment without a worker keeps working, which is why this
+    is optional rather than required.
 
     ``credential_for``, when given, completes a ``call_remote`` that still
     expects it as a keyword — e.g. a
@@ -124,6 +132,7 @@ def make_delegate_tool(
                 documents=documents,
                 run_local=run_local,
                 call_remote=effective_call_remote,
+                enqueue=enqueue,
             )
         except DelegationRefused as exc:
             # Recusa nomeada, nunca silêncio: o supervisor recebe a razão
@@ -132,6 +141,20 @@ def make_delegate_tool(
             return f"delegate_to refused: {exc}"
         except Exception as exc:  # noqa: BLE001 — o subagente quebrou; ver acima
             return f"delegate_to to {target!r} failed: {exc}"
+        if outcome.get("transport") == "queued":
+            # Um Run enfileirado NÃO tem resultado — e a tool não pode fingir
+            # que tem. O supervisor precisa saber que o trabalho foi ACEITO e
+            # ainda não feito, para dizer "estou convertendo, aviso quando
+            # terminar" em vez de narrar uma conclusão que não aconteceu.
+            #
+            # Narrar sucesso sobre trabalho pendente é o pior modo de falha
+            # desta feature: o usuário vai embora acreditando que existe um
+            # documento que ainda não existe.
+            return (
+                f"accepted: {outcome['target']} is working on this in the "
+                f"background (run {outcome['run_id']}). Tell the user you have "
+                f"started it and will report back — do NOT claim it is done."
+            )
         return str(outcome["result"])
 
     description = _tool_description(_roster(delegator, documents))
