@@ -1,0 +1,12 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: Copilot
+metadata:
+  name: solo-copilot
+  description: Mounts solo-agent (no team_members) — the negative case.
+spec:
+  mounts:
+  - id: solo
+    agent: solo-agent
+    path: /agui
+  serving:
+    transport: ag-ui
