@@ -109,6 +109,37 @@ def _make_run_local(mi: Any, hooks: RuntimeHooks) -> Callable[[str, str], Awaita
     Gaining tools is not gaining the delegator's context: the task is still
     the ONLY thing that crosses into the sub-run.
 
+    ── The host's tools and middleware DO cross ─────────────────────────────
+
+    They did not, and that was a defect with two faces.
+
+    The visible one: an agent whose whole job runs on a host tool could not do
+    its job when delegated to. `create_agent(tools=[])` meant the sub-run got
+    the target's MCP tools and NOTHING the host registered — so a converter
+    agent that writes its proposal through a host `update_document_draft`
+    reached the model with that tool absent, and the model, having no way to
+    do the work, narrated it instead. Nothing errored.
+
+    The quieter one: the sub-run escaped every host MIDDLEWARE — the
+    auth-graceful wrapper, the attachment extraction, every post-tool
+    projection. A sub-run outside host policy is not isolation; it is a hole
+    in policy that only appears on the delegated path.
+
+    Both are fixed by passing `hooks.extensions` through. This is not a
+    loosening: host tools are host-wide in this runtime BY CONSTRUCTION — the
+    LangChain adapter registers them for the mounted agent without consulting
+    its allowlist, and passes their names to `mcp_tool_stack` as
+    `extra_allowed` precisely so the per-agent MCP allowlist does not filter
+    them out. The sub-run now sees the same host surface the mounted agent
+    sees. What stays per-agent and fail-closed is exactly what already was:
+    the MCP tools, resolved from the TARGET's own `mcp_servers`.
+
+    `delegate_to` itself is NOT among them, and that needs no filtering: this
+    closure captures `hooks` BEFORE `build_runtime` appends the tool to a
+    REPLACED hooks object, so the sub-agent cannot delegate onward. That is
+    load-bearing (a delegation cycle would recurse until the stack died), so
+    it is asserted by a test rather than left to the reader.
+
     `hooks.mcp_auth` is reused VERBATIM for the target's own
     `DnaMcpToolsMiddleware` — see `mcp_tool_stack`'s docstring for why that is
     not a fabricated credential: it is the same per-request hook, re-read at
@@ -132,13 +163,25 @@ def _make_run_local(mi: Any, hooks: RuntimeHooks) -> Callable[[str, str], Awaita
                 _target_mcp_servers(mi, target_name),
             )
         )
-        middleware, _allowed = mcp_tool_stack(mcp_servers, hooks.mcp_auth)
+        extensions = hooks.extensions or {}
+        host_tools = list(extensions.get("tools") or [])
+        host_middleware = list(extensions.get("middleware") or [])
+
+        # The host tools' names ride into `extra_allowed` for the same reason
+        # the adapter does it for the mounted agent: they are not MCP tools, so
+        # the per-agent MCP allowlist would filter them out of the model call.
+        extra_allowed = frozenset(
+            n for n in (getattr(t, "name", None) for t in host_tools) if n
+        )
+        middleware, _allowed = mcp_tool_stack(
+            mcp_servers, hooks.mcp_auth, extra_allowed=extra_allowed
+        )
         model = target_ctx.model or "gpt-5-mini"
         graph = create_agent(
             model=init_chat_model(f"openai:{model}"),
-            tools=[],
+            tools=host_tools,
             system_prompt=target_ctx.instructions or "",
-            middleware=middleware,
+            middleware=[*middleware, *host_middleware],
         )
         result = await graph.ainvoke({"messages": [HumanMessage(content=request)]})
         final_message = result["messages"][-1]
