@@ -1,0 +1,23 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: Agent
+metadata:
+  name: conv
+  description: The delegation TARGET `super-agent` reaches — never mounted by
+    any Copilot itself; it only needs to exist as a document in scope for
+    `targets_for` to find it.
+spec:
+  instruction: You convert documents on request.
+  model: gpt-5-mini
+  # RESTRICTED: only these two of the federation's four allowed_tools reach
+  # this target's sub-run — the negative side of the allowlist property
+  # (test_delegation_wiring.py's tool-projection tests).
+  mcp_servers:
+  - ref: dna-mcp
+    allowed_tools:
+    - list_kinds
+    - author_kind
+  delegation_target_for:
+    agents:
+    - super-agent
+    format: text
+    use_when: quando precisar converter um documento

@@ -257,23 +257,29 @@ def _stored_spec(dna_dir, name: str) -> dict:
 # 404 in either direction. The router's own table cannot be satisfied that way,
 # and the wire tests below carry discriminators of their own.
 
-#: The five operations, keyed the way the OpenAPI document keys them.
+#: The six operations, keyed the way the OpenAPI document keys them.
 #:
 #: ``revoke`` joined them for i-085, and it belongs on this list for the reason
 #: the list exists: it is the UNDO of the act one line above it, and an approve
 #: door reachable on a lane where its undo is not would be worse than neither.
+#: ``POST .../documents`` (the generic, kubernetes-shaped document write —
+#: s-close-the-two-doors Peça B) joined for the SAME reason: a document under
+#: a Kind these doors just approved is unreachable if that route were mounted
+#: on a narrower set of lanes than authoring/approval are.
 _KIND_OPERATIONS = frozenset({
     ("POST", "/v1/kinds"),
     ("GET", "/v1/kinds"),
     ("GET", "/v1/kinds/{kind}"),
     ("POST", "/v1/kinds/{kind}/approve"),
     ("POST", "/v1/kinds/{kind}/revoke"),
+    ("POST", "/v1/kinds/{kind}/documents"),
 })
 
-#: The same five, as OpenAPI paths (approve and revoke share neither path).
+#: The same six, as OpenAPI paths (approve/revoke/documents share no path).
 _KIND_PATHS = {
     "/v1/kinds", "/v1/kinds/{kind}",
     "/v1/kinds/{kind}/approve", "/v1/kinds/{kind}/revoke",
+    "/v1/kinds/{kind}/documents",
 }
 
 

@@ -1,0 +1,12 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: Copilot
+metadata:
+  name: super-copilot
+  description: Mounts super-agent (declares team_members) — the positive case.
+spec:
+  mounts:
+  - id: super
+    agent: super-agent
+    path: /agui
+  serving:
+    transport: ag-ui

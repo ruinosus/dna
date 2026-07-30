@@ -917,6 +917,52 @@ class RegisterArtifactResponse(BaseModel):
     artifact: ArtifactSummary
 
 
+# ── the generic, kubernetes-shaped document write ───────────────────────────
+#
+# POST /v1/kinds/{kind}/documents — the path names the Kind (the k8s
+# convention this route follows: "kind is inferred from the endpoint the
+# client submits to"), the body carries only what k8s calls `metadata`/`spec`.
+
+
+class WriteKindDocumentRequest(BaseModel):
+    """``POST /v1/kinds/{kind}/documents`` — the document to write.
+
+    Deliberately narrow: no ``scope``, no ``claims`` anywhere on this model —
+    neither is reachable through this route's body (identity/scope are never
+    caller input here; see the route for the full reasoning).
+
+    ``kind`` is OPTIONAL and, when given, MUST equal the path's ``{kind}`` —
+    a caller naming a DIFFERENT Kind in the body is refused (400) rather than
+    the path or the body silently winning. Two sources stating one fact is
+    exactly the defect this route exists to close.
+
+    ``source_sha256``, when given, cites the ``SourceArtifact`` (by content
+    address) this document was extracted from — the runtime closes the
+    provenance edge (``derived_refs``) server-side."""
+
+    metadata: dict[str, Any]
+    spec: dict[str, Any]
+    kind: str | None = None
+    source_sha256: str | None = None
+
+
+class WriteKindDocumentResponse(BaseModel):
+    """``POST /v1/kinds/{kind}/documents`` — the written document. ``scope``
+    is DERIVED (there is no ``scope`` field on the request to have supplied
+    one from)."""
+
+    scope: str
+    kind: str
+    api_version: str
+    name: str
+    tenant: str | None = None
+    version: str | None = None
+    created: bool
+    merged: bool
+    etag: str | None = None
+    source_sha256: str | None = None
+
+
 class ProvisionWorkspaceOwnerResponse(BaseModel):
     workspace_id: str
     provisioned: bool

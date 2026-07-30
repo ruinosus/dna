@@ -399,6 +399,48 @@ class DnaClient:
         different owners; 503 when the namespace registry cannot be read."""
         return self._get(f"/v1/kinds/{kind}", scope=scope, tenant=tenant)
 
+    # -- the generic, kubernetes-shaped document write -----------------------
+
+    def write_kind_document(
+        self, kind: str, metadata: dict[str, Any], spec: dict[str, Any], *,
+        source_sha256: str | None = None,
+        api_version: str | None = None, tenant: str | None = None,
+        merge: bool = True, if_match: str | None = None,
+    ) -> JsonObject:
+        """Write one document of ``kind`` — the generic door, kubernetes-shaped:
+        the endpoint names the Kind (applying a CRD creates the endpoint that
+        serves it; ``kind`` is inferred from where the client submits, never
+        re-stated ambiguously), the body is exactly ``{metadata, spec}`` plus
+        an optional provenance citation.
+
+        ``metadata["name"]`` is REQUIRED — a blank/absent one is 400. The
+        server validates ``spec`` against the Kind's REGISTERED JSON Schema
+        before writing (like the Kubernetes API server since 1.25), and names
+        the offending field on refusal (400 — unknown property, or a missing
+        required one). A BOOTSTRAP Kind (Genome / LayerPolicy /
+        KindDefinition) is refused (403) — the generic write's own gate,
+        untouched here. An authored-but-unapproved Kind and a Kind nobody
+        ever authored answer the SAME 404 naming it: there is no third,
+        more-specific answer visible from this door. A stale ``if_match`` is
+        409.
+
+        ``source_sha256`` (optional) cites the ``SourceArtifact`` (by content
+        address) this document was extracted from; the server closes the
+        ``derived_refs`` provenance edge, preserving every OTHER document
+        already recorded there and updating THIS one's own entry in place on
+        a re-write rather than duplicating it. A citation naming no
+        registered artifact under ``tenant`` is 400.
+
+        There is deliberately no ``scope`` parameter and no ``claims``
+        parameter here — identity and scope are never caller input on this
+        route (see the server route's docstring)."""
+        return self._write(
+            "POST", f"/v1/kinds/{kind}/documents",
+            {"metadata": metadata, "spec": spec, "source_sha256": source_sha256},
+            tenant=tenant, api_version=api_version, merge=merge,
+            if_match=if_match,
+        )
+
     # -- definitions (bundle entries — fork a bundle-file, plane B) ----------
 
     def list_bundle_entries(

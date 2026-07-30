@@ -189,6 +189,29 @@ def test_write_body_carries_explicit_values():
     }
 
 
+def test_write_kind_document_path_body_and_query():
+    """POST /v1/kinds/{kind}/documents — the Kind lives in the PATH (never
+    restated in the body unless the caller chooses to, which the server then
+    checks against the path), the body is ``{metadata, spec, source_sha256}``,
+    and ``tenant``/``api_version``/``merge``/``if_match`` are query params."""
+    transport, calls = _recorder({"ok": 1})
+    with DnaClient(BASE, transport=transport) as dna:
+        dna.write_kind_document(
+            "Contrato", {"name": "c1"}, {"titulo": "Foo"},
+            source_sha256="a" * 64, tenant="w1", if_match="etag-1",
+        )
+    assert calls[0].method == "POST"
+    assert calls[0].url.path == "/v1/kinds/Contrato/documents"
+    assert calls[0].url.params["tenant"] == "w1"
+    assert calls[0].url.params["if_match"] == "etag-1"
+    assert "scope" not in calls[0].url.params
+    body = json.loads(calls[0].content)
+    assert body == {
+        "metadata": {"name": "c1"}, "spec": {"titulo": "Foo"},
+        "source_sha256": "a" * 64,
+    }
+
+
 def test_workspace_boundary_writes_get_no_scope_tenant_default():
     # The workspace boundary is resolved from the caller's VERIFIED identity, so a
     # client-level tenant default must never leak onto these routes and imply the
