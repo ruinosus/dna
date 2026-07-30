@@ -191,6 +191,10 @@ def _maybe_build_delegate_tool(
         documents=documents,
         run_local=_make_run_local(mi, hooks),
         call_remote=_make_call_remote(hooks),
+        # O terceiro transporte. O host o fornece por extensão — sem ele um
+        # alvo longo roda in-process como sempre, que é a degradação
+        # deliberada: um deployment sem worker continua funcionando.
+        enqueue=(hooks.extensions or {}).get("delegation_enqueue"),
     )
 
 
