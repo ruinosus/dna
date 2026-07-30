@@ -244,11 +244,21 @@ def test_signature_state_is_tri_state(port):
 
 - [ ] **Step 2: Rodar e confirmar que falha**
 
-Run: `cd packages/sdk-py && python -m pytest tests/test_remote_agent_kind.py -q`
+Run: `cd packages/sdk-py && uv run python -m pytest tests/test_remote_agent_kind.py -q`
 Expected: FAIL na fixture — `load_descriptors("dna.extensions.a2a")` não resolve
 (módulo inexistente).
 
 - [ ] **Step 3: Escrever o descritor**
+
+⚠️ **CORREÇÃO aplicada durante a execução — o envelope abaixo estava ERRADO.**
+O YAML deste plano foi escrito na forma ACHATADA (`apiVersion`/`kind: RemoteAgent`/
+`tenant_scope`/`plane`/`container`/`schema` no topo). Essa forma **não existe** no
+codebase: `TypedKindDefinition.from_raw` exige o envelope
+`apiVersion: github.com/ruinosus/dna/core/v1` + `kind: KindDefinition` + tudo sob
+`spec:` (com `spec.target_api_version`, `spec.target_kind`, `spec.storage.container`,
+`spec.schema`, `spec.presentation`). Veja `source-artifact.kind.yaml` — é o molde
+exato. O conteúdo abaixo (nomes de campo, enums, prosa) está correto; **só o
+envelope precisa ser o de KindDefinition.**
 
 `packages/sdk-py/dna/extensions/a2a/kinds/remote-agent.kind.yaml`:
 
@@ -456,7 +466,7 @@ a2a = "dna.extensions.a2a:A2AExtension"
 
 - [ ] **Step 4: Rodar e confirmar que passa**
 
-Run: `cd packages/sdk-py && python -m pytest tests/test_remote_agent_kind.py -q`
+Run: `cd packages/sdk-py && uv run python -m pytest tests/test_remote_agent_kind.py -q`
 Expected: PASS (todos).
 
 - [ ] **Step 5: Rodar as guardas derivadas de docs**
@@ -656,7 +666,7 @@ def test_the_default_format_is_text():
 
 - [ ] **Step 2: Rodar e confirmar que falha**
 
-Run: `cd packages/sdk-py && python -m pytest tests/test_delegation_policy.py -q`
+Run: `cd packages/sdk-py && uv run python -m pytest tests/test_delegation_policy.py -q`
 Expected: FAIL — `ModuleNotFoundError: dna.application.delegation`.
 
 - [ ] **Step 3: Implementar a política**
@@ -802,7 +812,7 @@ ter arestas ensina a confiar nele sem ler.
 
 - [ ] **Step 4: Rodar e confirmar que passa**
 
-Run: `cd packages/sdk-py && python -m pytest tests/test_delegation_policy.py -q`
+Run: `cd packages/sdk-py && uv run python -m pytest tests/test_delegation_policy.py -q`
 Expected: PASS (todos), depois do ajuste de assinatura da nota.
 
 - [ ] **Step 5: Matar os mutantes da fronteira de autorização**
@@ -994,7 +1004,7 @@ def test_an_unknown_format_is_REFUSED():
 
 - [ ] **Step 2: Rodar e confirmar que falha**
 
-Run: `cd packages/sdk-py && python -m pytest tests/test_delegation_exec_local.py -q`
+Run: `cd packages/sdk-py && uv run python -m pytest tests/test_delegation_exec_local.py -q`
 Expected: FAIL — `ModuleNotFoundError: dna.application.delegation_exec`.
 
 - [ ] **Step 3: Implementar o executor (caminho local + parse)**
@@ -1118,7 +1128,7 @@ async def delegate(
 
 - [ ] **Step 4: Rodar e confirmar que passa**
 
-Run: `cd packages/sdk-py && python -m pytest tests/test_delegation_exec_local.py -q`
+Run: `cd packages/sdk-py && uv run python -m pytest tests/test_delegation_exec_local.py -q`
 Expected: PASS (todos).
 
 - [ ] **Step 5: Commit**
@@ -1315,7 +1325,7 @@ def test_only_https_is_dialed():
 
 - [ ] **Step 2: Rodar e confirmar que falha**
 
-Run: `cd packages/sdk-py && python -m pytest tests/test_a2a_transport.py -q`
+Run: `cd packages/sdk-py && uv run python -m pytest tests/test_a2a_transport.py -q`
 Expected: FAIL — `ModuleNotFoundError: dna.application.a2a_transport`.
 
 - [ ] **Step 3: Implementar o transporte**
@@ -1438,7 +1448,7 @@ async def call_remote(
 
 - [ ] **Step 4: Rodar e confirmar que passa**
 
-Run: `cd packages/sdk-py && python -m pytest tests/test_a2a_transport.py -q`
+Run: `cd packages/sdk-py && uv run python -m pytest tests/test_a2a_transport.py -q`
 Expected: PASS (todos).
 
 - [ ] **Step 5: Matar os mutantes de segurança**
@@ -1590,7 +1600,7 @@ def test_ingest_writes_an_INERT_document():
 
 - [ ] **Step 2: Rodar e confirmar que falha**
 
-Run: `cd packages/sdk-py && python -m pytest tests/test_a2a_ingest.py -q`
+Run: `cd packages/sdk-py && uv run python -m pytest tests/test_a2a_ingest.py -q`
 Expected: FAIL — módulo inexistente.
 
 - [ ] **Step 3: Implementar a entrada**
@@ -1605,7 +1615,7 @@ tem permissão de receber do nosso workspace.
 
 - [ ] **Step 4: Rodar e confirmar que passa**
 
-Run: `cd packages/sdk-py && python -m pytest tests/test_a2a_ingest.py -q`
+Run: `cd packages/sdk-py && uv run python -m pytest tests/test_a2a_ingest.py -q`
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
@@ -1716,7 +1726,7 @@ def test_no_credential_is_ever_projected():
 
 - [ ] **Step 2–5: falhar, implementar, passar, commitar**
 
-Run (falha): `cd packages/sdk-py && python -m pytest tests/test_agent_card_emit.py -q`
+Run (falha): `cd packages/sdk-py && uv run python -m pytest tests/test_agent_card_emit.py -q`
 Implementar `dna/emit/agent_card.py`: `skills` derivados de `tools`;
 `description` preferindo `delegation_target_for.purpose` e caindo para
 `metadata.description`; `capabilities.streaming: True`;
@@ -1745,7 +1755,7 @@ SDK."
 
 ```bash
 cd /Users/jefferson.barnabe/projects/dna
-python -m pytest -q                                  # a suíte
+uv run python -m pytest -q                                  # a suíte
 python scripts/gen_kinds_docs.py                     # referência de Kinds
 python scripts/data_model_guard.py --write           # o MER
 python scripts/docs_coverage_guard.py                # cobertura de prosa

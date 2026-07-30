@@ -564,6 +564,65 @@ The Kind is deliberately vendor-neutral: where the bytes actually live is a
 deployment's own concern (a blob store in a hosted product, a directory in a
 self-host), and the kernel treats `uri` as opaque so that stays true.
 
+## Delegation — the Agent Card of a remote agent
+
+[A2A](https://a2a-protocol.org/) (Agent2Agent, governed by the Linux
+Foundation) standardized exactly the thing DNA already treats as a document: a
+self-describing capability descriptor. The A2A *protocol* — the JSON-RPC/gRPC
+call, the task lifecycle — is transport, not a document, and stays out of the
+Kind system entirely. What A2A calls the **Agent Card** — the descriptor a
+server publishes at `/.well-known/agent-card.json` naming who it is, what it
+can do, and where to reach it — is exactly document-shaped, and `RemoteAgent`
+is it.
+
+### RemoteAgent
+
+A [`RemoteAgent`](../reference/kinds/record.md#remoteagent)
+(`a2a-remote-agent`) is the Agent Card of a third-party A2A agent, held as a
+DNA document: `name`, `description` and `supported_interfaces` (the A2A 1.0
+transport list — `jsonrpc` / `grpc` / `http+json`, each with its own `url`)
+come straight from the A2A spec in snake_case; `skills`, `capabilities` and
+`security_schemes` describe what it can do and how to authenticate to it.
+
+It is deliberately a **separate** Kind from `Agent` rather than a mode of it.
+The two Kinds' fields are disjoint: `Agent` declares *behaviour* (instruction,
+model, tools) that DNA composes and executes; `RemoteAgent` *describes and
+points* (interfaces, skills, security schemes) at something DNA locates and
+calls over the network. A single Kind carrying both would let a local agent
+declare `security_schemes` and a remote one declare `instruction`, which is
+exactly the kind of nonsense a closed schema cannot express as "these fields OR
+those." What the two Kinds *share* is `delegation_target_for` — the block that
+lets a supervisor's roster of delegation targets span both a local `Agent` and
+a remote `RemoteAgent` by asking "who declared this block, and does their
+allowlist include me?" rather than by enumerating Kinds.
+
+Three properties are worth understanding before you register one:
+
+**`data_scope` is required, and it is DNA's own field, not A2A's.** A
+`RemoteAgent` is, by construction, an exfiltration channel: registering one
+means DNA will send workspace data to a URL the tenant chose. A2A has no
+opinion on that — it is transport protocol. So the scope of what may be sent
+is ours, mandatory, and explicit: `data_scope.kinds` names which Kinds'
+documents this endpoint may receive. An implicit scope would mean "everything,"
+and nobody approves that knowingly — an empty list is the honest "registered,
+but permitted to receive nothing," not an error.
+
+**The schema is closed.** `additionalProperties: false` exists so a credential
+— a bearer token, an API key — cannot be smuggled into the document alongside
+`security_schemes` (which only says *how* to authenticate, never *with what*).
+A document that could carry its own access token would let anyone who can read
+it also call the endpoint with it, the same reasoning that keeps
+`SourceArtifact` closed.
+
+**`signature_state` is tri-state on purpose.** A Card that arrives unsigned is
+`unsigned`; one that carries an A2A `signatures` block is `present_unverified`
+— cryptographic verification of that signature is out of scope for this
+version, because it requires deciding a trust chain (whose signatures count?),
+which is a product decision, not a schema one. `verified` is reserved for when
+that lands. A plain boolean `signed` would make "we didn't check" look
+identical to "there was nothing to check," and those are different states a
+reviewer needs to be able to tell apart.
+
 ---
 
 Run `dna kind list` for the live registry in your install, and `dna kind

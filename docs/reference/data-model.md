@@ -46,7 +46,7 @@ readable, so it is reproduced from source rather than asserted:
 
 ## Logical model — Kinds and their references
 
-79 Kinds are registered. Each is a document, not a table: a
+80 Kinds are registered. Each is a document, not a table: a
 Kind costs a YAML descriptor and zero migrations, which is the point
 of an open type system. The cost is that references between Kinds are
 not database foreign keys — they are fields holding a name.
@@ -124,7 +124,7 @@ flowchart LR
 
 ### Detail by group
 
-All 79 Kinds in one diagram is an unreadable hairball, so
+All 80 Kinds in one diagram is an unreadable hairball, so
 each group with at least 2 edges gets its
 own. A group carrying more than 20 edges is
 split again by tier, which keeps the enforced edges legible instead
@@ -574,15 +574,16 @@ rather than silently dropped, so the suppression is auditable.
 | `Copilot` | `tenant` | inbound-tenant handling mode for the emitted serving layer, not a reference to a `Tenant` document |
 | `Memory` | `namespace` | MIF's hierarchical memory scope path (`_semantic/decisions`, §10) — a string axis inside the document, not the `KindNamespace` Kind, whose alias `tenant-kind-namespace` merely ends in the same token |
 | `Organization` | `plan_ref` | the DNA Cloud Tier this org is on, not the SDLC `Plan` Kind |
+| `RemoteAgent` | `skills` | the A2A Card's own `skills[]` (id/name/description/tags/examples) — structured self-description of what the remote agent can do, not a reference to the `Skill` Kind (agentskills), which merely shares the singular of the field name |
 | `Tenant` | `plan` | billing/feature tier (a Tier `tier_id`), not the SDLC `Plan` Kind |
 | `Workspace` | `plan_ref` | DEPRECATED and never read — billing is per ACCOUNT (workspace → account_id → AccountPlan); also not the SDLC `Plan` Kind |
 
-### Kinds with no reference edge (21)
+### Kinds with no reference edge (22)
 
 Standalone documents — configuration, composition-plane behaviour, or
 record Kinds whose links are simply not modelled yet.
 
-`AgentDefinition`, `Automation`, `Canvas`, `Changelog`, `Comment`, `Copilot`, `Engram`, `Genome`, `Hook`, `HtmlArtifact`, `IntelSource`, `KindNamespace`, `LayerPolicy`, `MCPFederation`, `ModelProfile`, `PlanBinding`, `PricingPlan`, `Setting`, `SourceArtifact`, `UserProfile`, `WorkspaceMembership`
+`AgentDefinition`, `Automation`, `Canvas`, `Changelog`, `Comment`, `Copilot`, `Engram`, `Genome`, `Hook`, `HtmlArtifact`, `IntelSource`, `KindNamespace`, `LayerPolicy`, `MCPFederation`, `ModelProfile`, `PlanBinding`, `PricingPlan`, `RemoteAgent`, `Setting`, `SourceArtifact`, `UserProfile`, `WorkspaceMembership`
 
 ## Physical model — the real tables
 

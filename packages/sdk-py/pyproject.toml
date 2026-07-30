@@ -172,6 +172,7 @@ intel = "dna.extensions.intel:IntelExtension"
 portfolio = "dna.extensions.portfolio:PortfolioExtension"
 artifact = "dna.extensions.artifact:ArtifactExtension"
 mif = "dna.extensions.mif:MifExtension"
+a2a = "dna.extensions.a2a:A2AExtension"
 
 [build-system]
 requires = ["hatchling"]

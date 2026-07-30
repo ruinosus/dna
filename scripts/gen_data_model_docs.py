@@ -117,6 +117,12 @@ INFERENCE_DENYLIST: dict[tuple[str, str], str] = {
         "string axis inside the document, not the `KindNamespace` Kind, whose "
         "alias `tenant-kind-namespace` merely ends in the same token"
     ),
+    ("RemoteAgent", "skills"): (
+        "the A2A Card's own `skills[]` (id/name/description/tags/examples) — "
+        "structured self-description of what the remote agent can do, not a "
+        "reference to the `Skill` Kind (agentskills), which merely shares "
+        "the singular of the field name"
+    ),
 }
 
 # --- known-undeclarable references -------------------------------------------
