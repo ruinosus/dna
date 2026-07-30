@@ -62,7 +62,7 @@ Declarative Kind descriptor — the format of builtin `kinds/*.kind.yaml` packag
 | `volatile_spec_fields` |  | Extra write-/runtime-stamped spec fields excluded from the canonical digest, unioned with the base set {updated_at, version, created_at}. |
 | `workitem_common` |  | DEPRECATED back-compat shorthand for schema_fragments: ["sdlc/workitem-common"]. Python-only. |
 
-## Registered Kinds (79)
+## Registered Kinds (80)
 
 ### Composition plane
 
@@ -140,6 +140,7 @@ Declarative Kind descriptor — the format of builtin `kinds/*.kind.yaml` packag
 | [Project](record.md#project) | `portfolio-project` | `github.com/ruinosus/dna/portfolio/v1` |
 | [PromptTemplate](record.md#prompttemplate) | `sdlc-prompt-template` | `github.com/ruinosus/dna/sdlc/v1` |
 | [Reference](record.md#reference) | `sdlc-reference` | `github.com/ruinosus/dna/sdlc/v1` |
+| [RemoteAgent](record.md#remoteagent) | `a2a-remote-agent` | `github.com/ruinosus/dna/a2a/v1` |
 | [Repo](record.md#repo) | `portfolio-repo` | `github.com/ruinosus/dna/portfolio/v1` |
 | [Retrospective](record.md#retrospective) | `sdlc-retrospective` | `github.com/ruinosus/dna/sdlc/v1` |
 | [RiskRegister](record.md#riskregister) | `sdlc-risk-register` | `github.com/ruinosus/dna/sdlc/v1` |

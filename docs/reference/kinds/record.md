@@ -925,6 +925,32 @@ A PromptTemplate is a versioned, overlayable user-prompt template owned by the k
 | `updated_at` | string |  |  |
 | `url` | string |  |  |
 
+## RemoteAgent
+
+- **Alias:** `a2a-remote-agent`
+- **apiVersion:** `github.com/ruinosus/dna/a2a/v1`
+- **Plane:** record
+
+**Spec fields**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `capabilities` | object |  | A2A `capabilities` — flags booleanas, não operações nomeadas. |
+| `data_scope` | object | yes | O que este endpoint PODE receber. Obrigatório — ver o cabeçalho. |
+| `default_input_modes` | array |  |  |
+| `default_output_modes` | array |  |  |
+| `delegation_target_for` | object |  | O bloco COMPARTILHADO com `Agent` (kernel `DelegationTargetFor`). É o que o roster derivado lê para achar este alvo sem enumerar Kinds. |
+| `description` | string | yes | A2A `description`. Para que ele serve, nas palavras dele. |
+| `documentation_url` | string |  |  |
+| `icon_url` | string |  |  |
+| `name` | string | yes | A2A `name`. O nome pelo qual o agente se anuncia. |
+| `security_schemes` | object |  | A2A `securitySchemes` (forma do OpenAPI 3). Diz COMO autenticar. A credencial em si NUNCA vive aqui — o schema é fechado justamente para que um bearer não possa ser anexado ao documento. Quem guarda a credencial é o deployment, por remoto, e ela nunca é o token do usuário. |
+| `signature_state` | string |  | Tri-estado DE PROPÓSITO: um documento que não foi verificado tem de ser legível como tal. `unsigned` = o Card não trouxe assinatura; `present_unverified` = trouxe e não checamos; `verified` = checamos (não alcançável nesta versão). Um booleano `signed` faria "não verificado" parecer "não assinado", que são coisas diferentes. |
+| `signatures` | array |  | A2A `signatures`, preservadas como vieram. A VERIFICAÇÃO criptográfica está fora desta versão (exige decidir a cadeia de confiança, que é decisão de produto) — por isso `signature_state` existe e é tri-estado. |
+| `skills` | array |  | A2A `skills[]` — o que ele sabe fazer, item a item. |
+| `supported_interfaces` | array | yes | A2A `supportedInterfaces` (1.0 — substituiu o `url` único das versões anteriores). Cada entrada nomeia um transporte e onde alcançá-lo. |
+| `version` | string |  | A2A `version` — a versão QUE O AGENTE declara de si. |
+
 ## Repo
 
 - **Alias:** `portfolio-repo`
