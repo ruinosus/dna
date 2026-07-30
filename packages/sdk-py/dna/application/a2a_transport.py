@@ -71,7 +71,6 @@ async def call_remote(
     http: Any,
     payload_kinds: Iterable[str] = (),
     timeout_s: int = DEFAULT_TIMEOUT_S,
-    token: str | None = None,
 ) -> str:
     """Chamar `target` por A2A e devolver o texto cru (o parse é do executor).
 
