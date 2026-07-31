@@ -1,6 +1,6 @@
 [project]
 name = "dna-cli"
-version = "0.40.2"
+version = "0.41.0"
 description = "DNA command-line interface — the `dna` binary for the declarative SDLC + document CRUD (kernel-local, no service required)"
 readme = "README.md"
 license = "MIT"
@@ -24,7 +24,7 @@ dependencies = [
     # replaces the registry lookup with the workspace path source below
     # ([tool.uv.sources] — editable ../sdk-py), so dev installs keep tracking
     # the sibling package live; the constraint only bites consumers.
-    "dna-sdk>=0.40,<0.41",
+    "dna-sdk>=0.41,<0.42",
 ]
 
 [project.scripts]
@@ -66,7 +66,22 @@ dna = "dna_cli:main"
 #
 # Um import direto no código é uma dependência direta, mesmo quando alguma
 # cadeia de extras deveria trazê-la.
-mcp = ["fastmcp[apps]>=3.4", "prefab-ui>=0.18.0"]
+#
+# `mcp` DECLARADO, e não recebido por transitividade (medido em 31/07/2026).
+#
+# `fastmcp` não implementa o protocolo MCP: ele declara `mcp<2.0,>=1.24.0` e
+# importa `mcp.types` / `mcp.server`. O `LATEST_PROTOCOL_VERSION` que rodamos
+# vem do pacote `mcp`, não dele. E `_mcp_server.py` faz
+# `from mcp.types import TextContent` — um import DIRETO.
+#
+# Import direto é dependência direta, mesmo quando alguma cadeia deveria
+# trazê-la (a lição que o `prefab-ui`, três linhas abaixo, custou caro).
+#
+# O ganho concreto: a versão da SPEC passa a ser decisão nossa em vez de efeito
+# colateral do upgrade do `fastmcp`. Medido — `fastmcp[apps]>=3.4` resolve com
+# `mcp==1.29.0` sem conflito (85 pacotes), então subir a spec é bumpar este
+# piso, não trocar de camada.
+mcp = ["fastmcp[apps]>=3.4", "prefab-ui>=0.18.0", "mcp>=1.28"]
 # The REST read-API face (`dna api serve`) — the correct HTTP boundary for a WEB
 # app (the DNA Cloud portal): a normal request/response REST API over the SAME
 # DNA kernel + the SAME `*_impl` cores the MCP server uses (zero logic
@@ -190,7 +205,7 @@ packages = ["dna_cli"]
 # sibling package (editable), NOT from PyPI — the registry constraint above
 # is what published artifacts carry. Two paths, one name:
 #   dev  (this repo)  → ../sdk-py editable, always current
-#   user (pip/uv add) → PyPI dna-sdk>=0.40,<0.41
+#   user (pip/uv add) → PyPI dna-sdk>=0.41,<0.42
 [tool.uv.sources]
 dna-sdk = { path = "../sdk-py", editable = true }
 

@@ -11,6 +11,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+> ⚠️ **Dívida herdada, registrada em 31/07/2026.** O que está nesta seção
+> descreve trabalho **já publicado** entre a 0.27.0 e a 0.40.2: aquelas releases
+> foram cortadas sem mover `[Unreleased]` para seções de versão. Não faz parte da
+> 0.41.0. Reconciliar exige mapear cada item à sua tag, e isso NÃO foi feito aqui
+> — inventar a atribuição seria pior que deixá-la visível.
+
+### 🐛 Correções
+
+- **As quatro rotas `/v1/kinds*` voltam a montar em `--auth token`** (revert de
+  uma decisão do 0.31.0). O 0.31.0 as excluiu da lane de segredo compartilhado
+  argumentando que, sem identidade no HTTP, `tenant` é um query param forjável e
+  qualquer portador do segredo leria — e aprovaria — os Kinds de qualquer
+  workspace. O argumento esqueceu **quem** detém o segredo: essa lane é
+  **server-to-server confiável**, a credencial é do operador do deployment (não
+  dos seus tenants) e o chamador resolve o tenant a partir de uma sessão
+  verificada *antes* de chamar. A checagem de identidade acontece uma camada
+  acima, no chamador. A exclusão não fechou buraco nenhum — quebrou o único
+  chamador que a lane tem: uma tela de auditoria batia numa porta que deixara de
+  existir e mostrava lista vazia enquanto o Kind estava corretamente gravado,
+  autorado e inerte. A propriedade de ownership que os handlers aplicam continua
+  valendo, e nessa lane vale **na medida em que o chamador vale** — fronteira de
+  confiança deliberada e documentada, que o `TODO(hosted)` (ponte token
+  verificado → tenant) é o trabalho que remove.
+
+### ✨ Novidades
+
+- **`DNA_WORKSPACE_ENFORCEMENT` — desligamento explícito da fronteira de
+  workspace** (`i-074`, `s-workspace-enforcement-opt-out`). Um deployment de UM
+  operador ficava trancado do lado de fora: sem `WorkspaceMembership` própria,
+  toda a superfície com tenancy (memória compartilhada, o registry, o board
+  SDLC) era negada. A nova variável abre a fronteira de forma explícita —
+  **default é `enforce`** e o único literal que muda algo é `open`; `0`,
+  `false`, `off`, `1`, `true` e qualquer erro de digitação *enforçam* (não é
+  booleano, e um valor não reconhecido é ignorado com log). Com `open` a
+  resolução ainda RODA — só a negação é desarmada: as três negações de
+  membership (nenhuma ativa / não é membro do workspace pedido / pertence a
+  vários e não nomeou nenhum) viram passagem do seletor não verificado, nos
+  DOIS portões (MCP e REST `--auth config`). O resto continua de pé:
+  verificação do token, derivação da identidade durável por provider, o guard
+  de identidade pessoal, o scope binding e o plano/quota. **Toda chamada
+  continua medida**: uma chamada que não resolve workspace mede contra a
+  IDENTIDADE verificada do chamador (a partição reservada `personal:`), nunca
+  um balde compartilhado — e um token sem subject durável não é atribuível e
+  segue negado. Um portão rodando aberto avisa no boot (WARNING).
+
+## [0.41.0] — 2026-07-31
+
+
 ### ⚠️ Mudança com quebra
 
 - **A face A2A passa a ser o SDK oficial (`a2a-sdk`), e o Kind `RemoteAgent`
@@ -67,44 +115,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   cliente escolher entre `SendStreamingMessage` e `SendMessage`, e sem ele o
   `on_event` de `call_remote` existiria sem nunca disparar.
 
-### 🐛 Correções
+- **O extra `mcp` declara o SDK OFICIAL direto** (`mcp>=1.28`), em vez de
+  recebê-lo por transitividade do `fastmcp`. Medido em 31/07: o `fastmcp` **não
+  implementa** o protocolo — declara `mcp<2.0,>=1.24.0` e importa `mcp.types` /
+  `mcp.server`, e o `LATEST_PROTOCOL_VERSION` que rodamos vem do pacote `mcp`.
+  `_mcp_server.py` já fazia `from mcp.types import TextContent` — import direto.
+  Declarar torna a versão da SPEC decisão nossa em vez de efeito colateral do
+  upgrade do `fastmcp`; a mesma disciplina do `prefab-ui`.
+- **`build_app` expõe o kernel vivo** (`app.state.live`) — quem monta outra face
+  sobre o app REST deixa de precisar abrir um `boot_live` próprio. Dois kernels
+  sobre a mesma fonte são duas caches de Kind e duas janelas de refresh, e o
+  descompasso aparece longe da causa.
+- **`attach_a2a` repassa o `context_builder`** — é como a identidade verificada
+  na borda alcança o executor. O contorno por `contextvar` está quebrado para
+  streaming (um `BaseHTTPMiddleware` o reseta antes de o corpo streamar), então
+  a falha apareceria só no `SendStreamingMessage`.
+- **O extra `mcp` declara `prefab-ui` direto** (#291) — a cadeia
+  `fastmcp[apps]` → `fastmcp-slim[apps]` → `prefab-ui` falhou num ambiente real
+  e toda tool que renderiza card morria com `ModuleNotFoundError` no servidor.
 
-- **As quatro rotas `/v1/kinds*` voltam a montar em `--auth token`** (revert de
-  uma decisão do 0.31.0). O 0.31.0 as excluiu da lane de segredo compartilhado
-  argumentando que, sem identidade no HTTP, `tenant` é um query param forjável e
-  qualquer portador do segredo leria — e aprovaria — os Kinds de qualquer
-  workspace. O argumento esqueceu **quem** detém o segredo: essa lane é
-  **server-to-server confiável**, a credencial é do operador do deployment (não
-  dos seus tenants) e o chamador resolve o tenant a partir de uma sessão
-  verificada *antes* de chamar. A checagem de identidade acontece uma camada
-  acima, no chamador. A exclusão não fechou buraco nenhum — quebrou o único
-  chamador que a lane tem: uma tela de auditoria batia numa porta que deixara de
-  existir e mostrava lista vazia enquanto o Kind estava corretamente gravado,
-  autorado e inerte. A propriedade de ownership que os handlers aplicam continua
-  valendo, e nessa lane vale **na medida em que o chamador vale** — fronteira de
-  confiança deliberada e documentada, que o `TODO(hosted)` (ponte token
-  verificado → tenant) é o trabalho que remove.
+### 🔧 Guardas
 
-### ✨ Novidades
-
-- **`DNA_WORKSPACE_ENFORCEMENT` — desligamento explícito da fronteira de
-  workspace** (`i-074`, `s-workspace-enforcement-opt-out`). Um deployment de UM
-  operador ficava trancado do lado de fora: sem `WorkspaceMembership` própria,
-  toda a superfície com tenancy (memória compartilhada, o registry, o board
-  SDLC) era negada. A nova variável abre a fronteira de forma explícita —
-  **default é `enforce`** e o único literal que muda algo é `open`; `0`,
-  `false`, `off`, `1`, `true` e qualquer erro de digitação *enforçam* (não é
-  booleano, e um valor não reconhecido é ignorado com log). Com `open` a
-  resolução ainda RODA — só a negação é desarmada: as três negações de
-  membership (nenhuma ativa / não é membro do workspace pedido / pertence a
-  vários e não nomeou nenhum) viram passagem do seletor não verificado, nos
-  DOIS portões (MCP e REST `--auth config`). O resto continua de pé:
-  verificação do token, derivação da identidade durável por provider, o guard
-  de identidade pessoal, o scope binding e o plano/quota. **Toda chamada
-  continua medida**: uma chamada que não resolve workspace mede contra a
-  IDENTIDADE verificada do chamador (a partição reservada `personal:`), nunca
-  um balde compartilhado — e um token sem subject durável não é atribuível e
-  segue negado. Um portão rodando aberto avisa no boot (WARNING).
+- **A cadeia de release ganhou teste** (`packages/cli/tests/test_release_chain.py`):
+  a faixa `dna-sdk>=X,<Y` que o `dna-cli` publica precisa CONTER a própria versão
+  do cli. Este bump quase saiu com `dna-cli 0.41.0` exigindo `dna-sdk<0.41` — o
+  cli novo puxaria o SDK anterior, sem a face A2A, e quem instalasse receberia a
+  versão que anuncia a feature sem a feature. Invisível em dev, porque o
+  `[tool.uv.sources]` troca a faixa pelo caminho editável.
 
 ## [0.26.0] — 2026-07-22
 
@@ -2094,7 +2131,8 @@ registries: **PyPI** ([`dna-sdk`](https://pypi.org/project/dna-sdk/),
   source conformance kit now pins the contract: base content is served
   by `load_all`, never by a `load_layer` sentinel.
 
-[Unreleased]: https://github.com/ruinosus/dna/compare/v0.17.0...HEAD
+[Unreleased]: https://github.com/ruinosus/dna/compare/v0.41.0...HEAD
+[0.41.0]: https://github.com/ruinosus/dna/compare/v0.40.2...v0.41.0
 [0.17.0]: https://github.com/ruinosus/dna/compare/v0.16.0...v0.17.0
 [0.13.0]: https://github.com/ruinosus/dna/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/ruinosus/dna/compare/v0.11.0...v0.12.0
