@@ -49,10 +49,6 @@ __all__ = ["agent_card_for"]
 #: grows one.
 _CARD_VERSION = "0.1.0"
 
-#: The AG-UI backend already streams tokens; advertising it is honest, not
-#: aspirational — there is no separate "streaming implementation" to build.
-_CAPABILITIES = {"streaming": True}
-
 #: Every DNA agent talks plain text over the wire today (no multimodal
 #: input/output contract in `AgentSpec` yet).
 _DEFAULT_MODES = ["text/plain"]
@@ -96,6 +92,7 @@ def agent_card_for(
     *,
     tools: Iterable[str] = (),
     base_url: str,
+    streaming: bool = False,
 ) -> dict[str, Any]:
     """Project a DNA ``Agent`` document into an A2A 1.0 Agent Card (dict, JSON-ready).
 
@@ -104,8 +101,26 @@ def agent_card_for(
     derived from it. ``base_url`` is where the caller intends to serve this
     agent's A2A endpoint; ``supportedInterfaces`` is built from it.
 
+    ``streaming`` — o que o EXECUTOR daquele deployment implementa, não uma
+    constante. Fixo em ``True``, ``capabilities.streaming`` era uma promessa sem
+    nada atrás; quem monta a face sabe se há streaming e é quem responde por
+    isso (``dna.extensions.a2a.serve.attach_a2a`` deriva do executor montado).
+
+    O binding e a versão do protocolo vêm de ``a2a.utils.constants``, nunca de
+    literais daqui. O campo chamava-se ``transport`` numa leitura nossa da spec
+    e NÃO EXISTE: a 1.0 o chama ``protocolBinding``, com o valor em maiúsculas.
+    Enquanto divergia, o ``ClientFactory`` oficial encontrava zero interfaces
+    neste Card — ou seja, nenhum cliente conforme conseguia nos chamar, com
+    todos os testes verdes, porque eles herdavam a mesma leitura errada.
+
     No field here can carry a credential — the Card is safe to publish as-is.
     """
+    # Import DENTRO da função, deliberadamente: é o que mantém o extra `a2a`
+    # opcional (guarda: tests/test_a2a_import_isolation.py). Um import no topo
+    # faria este módulo — importado por quem só quer PROJETAR — exigir a árvore
+    # inteira do protobuf.
+    from a2a.utils.constants import PROTOCOL_VERSION_1_0, TransportProtocol
+
     metadata = _metadata(agent_doc)
     name = str(metadata.get("name") or "")
     url = str(base_url).rstrip("/")
@@ -114,8 +129,14 @@ def agent_card_for(
         "name": name,
         "description": _description(agent_doc),
         "version": _CARD_VERSION,
-        "supportedInterfaces": [{"transport": "jsonrpc", "url": url}],
-        "capabilities": dict(_CAPABILITIES),
+        "supportedInterfaces": [
+            {
+                "url": url,
+                "protocolBinding": TransportProtocol.JSONRPC.value,
+                "protocolVersion": PROTOCOL_VERSION_1_0,
+            }
+        ],
+        "capabilities": {"streaming": bool(streaming)},
         "defaultInputModes": list(_DEFAULT_MODES),
         "defaultOutputModes": list(_DEFAULT_MODES),
         "skills": _skills(tools),

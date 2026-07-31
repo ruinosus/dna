@@ -42,9 +42,16 @@ def test_the_required_a2a_fields_are_present():
         assert field in card, f"Card sem {field} não é um Card válido do A2A 1.0"
 
 
-def test_streaming_is_advertised_because_AG_UI_already_streams():
-    card = agent_card_for(_AGENT, base_url="https://dna.example")
-    assert card["capabilities"]["streaming"] is True
+def test_streaming_e_DERIVADO_do_que_o_executor_faz():
+    """Fixo em `True`, `capabilities.streaming` era promessa sem nada atrás — o
+    Card anunciava uma capacidade que ninguém tinha implementado. Quem monta a
+    face sabe o que o executor faz, e é quem responde por isso."""
+    assert agent_card_for(_AGENT, base_url="https://dna.example")["capabilities"] == {
+        "streaming": False
+    }
+    assert agent_card_for(_AGENT, base_url="https://dna.example", streaming=True)[
+        "capabilities"
+    ] == {"streaming": True}
 
 
 def test_the_skills_derive_from_the_agents_tools():
@@ -68,3 +75,53 @@ def test_no_credential_is_ever_projected():
     flat = repr(card).lower()
     for leak in ("bearer ", "sk-", "api_key", "password", "secret"):
         assert leak not in flat
+
+
+# ── conformidade: o Card é lido pelo PARSER OFICIAL ─────────────────────────
+#
+# O teste que a versão à mão não tinha. Um Card que nós mesmos validamos contra
+# a nossa leitura da spec é uma tautologia; um Card que o `a2a-sdk` faz o parse
+# é um fato. Foi exatamente aqui que a versão à mão falhou: emitia
+# `{"transport": "jsonrpc"}` e a 1.0 pede `protocolBinding: "JSONRPC"` — então o
+# `ClientFactory` oficial achava ZERO interfaces e não conseguia nos chamar.
+
+import pytest  # noqa: E402
+
+pytest.importorskip("a2a", reason="a conformidade se mede contra o SDK oficial")
+
+
+def test_o_card_projetado_e_lido_pelo_parser_oficial_sem_perda():
+    from google.protobuf import json_format
+
+    from a2a.types import AgentCard
+
+    card = agent_card_for(_AGENT, tools=["review_kind", "list_stories"],
+                          base_url="https://dna.example/a2a")
+
+    # ParseDict é ESTRITO: um campo desconhecido levanta. É essa severidade que
+    # transforma o teste numa medição de conformidade em vez de um smoke test.
+    proto = json_format.ParseDict(card, AgentCard())
+
+    assert proto.name == "converter-agent"
+    assert [s.id for s in proto.skills] == ["list_stories", "review_kind"]
+
+
+def test_a_interface_declara_o_binding_que_o_cliente_oficial_procura():
+    """O `ClientFactory` filtra por `protocol_binding`; um Card com o nome
+    errado do campo produz zero candidatos e um cliente que não nos alcança."""
+    from google.protobuf import json_format
+
+    from a2a.client.client_factory import ClientFactory
+    from a2a.types import AgentCard
+    from a2a.utils.constants import PROTOCOL_VERSION_1_0, TransportProtocol
+
+    card = agent_card_for(_AGENT, base_url="https://dna.example/a2a")
+    proto = json_format.ParseDict(card, AgentCard())
+
+    escolhida = ClientFactory._find_best_interface(
+        list(proto.supported_interfaces),
+        protocol_bindings=[TransportProtocol.JSONRPC],
+    )
+    assert escolhida is not None, "o cliente oficial não achou interface alguma"
+    assert escolhida.url == "https://dna.example/a2a"
+    assert escolhida.protocol_version == PROTOCOL_VERSION_1_0
