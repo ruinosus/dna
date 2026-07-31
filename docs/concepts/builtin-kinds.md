@@ -624,6 +624,51 @@ that lands. A plain boolean `signed` would make "we didn't check" look
 identical to "there was nothing to check," and those are different states a
 reviewer needs to be able to tell apart.
 
+### AgentGrant
+
+A [`AgentGrant`](../reference/kinds/record.md#agentgrant) (`a2a-agent-grant`) is
+the **inbound twin** of `RemoteAgent`, and the two only make sense as a pair:
+
+| | says |
+|---|---|
+| `RemoteAgent` | *we may send data over there* |
+| `AgentGrant` | *they may act on our behalf* |
+
+A third party's agent — Claude, an integration, a partner's automation — arrives
+holding a token of **one of your users**, and acts as that user. Whether it may
+is not a property of the token: a valid token only proves the user signed in.
+Without a grant, "the user authorized Acme" and "the user is logged in" are the
+same statement, and a permissions screen built on that would display a
+permission that does not exist.
+
+**Three properties carry the design.**
+
+**`state` is tri-state** — `pending`, `active`, `revoked` — for the same reason
+`RemoteAgent.signature_state` is. A boolean `granted` would make *"it asked and
+nobody decided"* look identical to *"denied"*, and those are different: the first
+needs to surface on a screen so a human can decide; the second was already
+decided and asks for nothing.
+
+**What was REQUESTED and what was GRANTED are separate fields.**
+`requested_scope_kinds` is what the agent asked for; `scope_kinds` is what a
+human allowed. One field would make asking equal to receiving. An agent that
+declares nothing leaves the request empty and nothing is pre-selected — silence
+never becomes permission, not even a suggestion of one.
+
+**Everything that is not `active` closes.** Absent, pending, revoked,
+malformed and *unrecognised* all deny. The allowed list has exactly one entry
+and the rest is the rest — a gate written the other way around (denying what it
+recognises) would open for whatever it does not, including a state some future
+version adds, and it would open silently.
+
+`scope_kinds` speaks the same vocabulary as `RemoteAgent.data_scope.kinds` on
+purpose: it is the same question in both directions, and answering it in two
+different shapes would be a trap for whoever reads them side by side.
+
+The document never carries a credential — the schema is closed precisely so a
+token cannot be attached to a grant. Who may act, and over what, lives here; the
+secret they authenticate with belongs to the deployment.
+
 ---
 
 Run `dna kind list` for the live registry in your install, and `dna kind
