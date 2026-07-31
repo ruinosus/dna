@@ -62,7 +62,7 @@ Declarative Kind descriptor — the format of builtin `kinds/*.kind.yaml` packag
 | `volatile_spec_fields` |  | Extra write-/runtime-stamped spec fields excluded from the canonical digest, unioned with the base set {updated_at, version, created_at}. |
 | `workitem_common` |  | DEPRECATED back-compat shorthand for schema_fragments: ["sdlc/workitem-common"]. Python-only. |
 
-## Registered Kinds (80)
+## Registered Kinds (81)
 
 ### Composition plane
 
@@ -105,6 +105,7 @@ Declarative Kind descriptor — the format of builtin `kinds/*.kind.yaml` packag
 | Kind | Alias | apiVersion |
 | --- | --- | --- |
 | [ADR](record.md#adr) | `sdlc-adr` | `github.com/ruinosus/dna/sdlc/v1` |
+| [AgentGrant](record.md#agentgrant) | `a2a-agent-grant` | `github.com/ruinosus/dna/a2a/v1` |
 | [AgentSession](record.md#agentsession) | `sdlc-agent-session` | `github.com/ruinosus/dna/sdlc/v1` |
 | [AuditLog](record.md#auditlog) | `audit-auditlog` | `github.com/ruinosus/dna/audit/v1` |
 | [Automation](record.md#automation) | `dna-automation` | `github.com/ruinosus/dna/automation/v1` |
