@@ -36,6 +36,27 @@ An ADR captures ONE architectural decision with its context, rationale, and cons
 | `title` | string | yes | Decision headline — start with imperative verb. |
 | `updated_at` | string |  |  |
 
+## AgentGrant
+
+- **Alias:** `a2a-agent-grant`
+- **apiVersion:** `github.com/ruinosus/dna/a2a/v1`
+- **Plane:** record
+
+**Spec fields**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `call_count` | integer |  | Quantas chamadas CONCEDIDAS. Só as concedidas, pela mesma razão que a quota não conta recusa: um número que mistura uso e tentativa não responde nem "quanto ele usou" nem "quanto ele tentou". |
+| `client_id` | string | yes | O identificador do app que pede — LIDO DO TOKEN verificado, nunca de um campo do pedido. O corpo é do chamador: um `client_id` vindo dali deixaria um agente se passar por outro e usar a concessão alheia, com o token continuando válido e a chamada continuando 200. |
+| `granted_at` | string |  | Quando um HUMANO concedeu. Ausente enquanto ninguém decidiu. |
+| `last_call_at` | string |  | A auditoria — quando este agente agiu pela última vez. |
+| `requested_at` | string |  | Quando o agente pediu — o pedido nasce da primeira recusa. |
+| `requested_scope_kinds` | array |  | O que o agente PEDIU — separado do que foi concedido, e essa separação é a regra inteira do consentimento: o agente pede, o usuário decide. Um campo só faria pedir ser igual a receber. Serve à tela, que pré-marca o pedido para o humano confirmar ou cortar. Um agente que não declara nada deixa isto vazio, e nada vem marcado: silêncio nunca vira permissão. |
+| `revoked_at` | string |  |  |
+| `scope_kinds` | array |  | Os Kinds cujos documentos este agente pode receber. Mesmo vocabulário do `RemoteAgent.data_scope.kinds`, de propósito: é a mesma pergunta nas duas direções, e responder diferente de cada lado seria uma armadilha para quem lê. AUSENTE ou VAZIO significa "nada pode". Ausência FECHA, nunca abre. |
+| `state` | string | yes | Tri-estado DE PROPÓSITO, como o `signature_state` do `RemoteAgent`. Um booleano `granted` faria "pediu e ninguém decidiu" parecer "negado", e são coisas diferentes: a primeira precisa APARECER numa tela para alguém decidir; a segunda já foi decidida e não pede nada. Um de: `pending`, `active`, `revoked`. |
+| `subject` | string | yes | O usuário que concede — o identificador DURÁVEL dele, não o da sessão. Durável porque a concessão sobrevive ao login: revogar um agente não é deslogar a pessoa, e as duas coisas precisam ser independentes. |
+
 ## AgentSession
 
 - **Alias:** `sdlc-agent-session`

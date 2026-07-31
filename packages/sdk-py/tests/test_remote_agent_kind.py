@@ -30,14 +30,28 @@ _KIND = "RemoteAgent"
 
 @pytest.fixture
 def port():
-    """O port registrado, pelo mesmo funil que o kernel usa."""
+    """O port do `RemoteAgent`, pelo mesmo funil que o kernel usa.
+
+    ⚠️ Este fixture asseria `len(registered) == 1` — "o pacote a2a tem UM
+    descritor". Era verdade, e deixou de ser quando o `AgentGrant` (o gêmeo de
+    entrada) nasceu ao lado. Treze testes quebraram de uma vez, todos apontando
+    para uma contagem que nunca foi o assunto de nenhum deles.
+
+    É a diferença entre asserir o fato INCIDENTAL (quantos existem) e o
+    RELEVANTE (qual é este). Selecionar pelo nome sobrevive ao terceiro Kind;
+    contar não sobreviveu nem ao segundo.
+    """
     registry = KindRegistry()
     registered = [
         registry.register_from_descriptor(raw)
         for raw in load_descriptors("dna.extensions.a2a")
     ]
-    assert len(registered) == 1, f"esperava um descritor, veio {len(registered)}"
-    return registered[0]
+    achado = [p for p in registered if getattr(p, "kind", None) == _KIND]
+    assert achado, (
+        f"o descritor de {_KIND!r} não foi registrado; vieram "
+        f"{[getattr(p, 'kind', None) for p in registered]}"
+    )
+    return achado[0]
 
 
 def _spec(**overrides):
