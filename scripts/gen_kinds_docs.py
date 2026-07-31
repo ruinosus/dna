@@ -55,23 +55,77 @@ def _first_para(text: str) -> str:
     return text.split("\n\n")[0].replace("\n", " ").strip()
 
 
-def _schema_table(schema: dict, out: io.StringIO) -> None:
-    props = (schema or {}).get("properties") or {}
-    if not props:
-        out.write("_No structured spec fields (free-form or body-only Kind)._\n\n")
+#: Até onde a tabela desce dentro de um schema aninhado.
+#:
+#: Três níveis cobrem tudo que os Kinds registrados declaram hoje, com folga. O
+#: limite não é economia — é o que garante que a geração TERMINA: um schema que
+#: se referencie (por `$ref` resolvido ou por engano de construção) penduraria o
+#: gerador, e uma referência que nunca termina de ser gerada é pior que uma
+#: incompleta.
+_MAX_DEPTH = 3
+
+
+def _type_of(spec: dict) -> str:
+    typ = spec.get("type")
+    if isinstance(typ, list):
+        typ = " \\| ".join(typ)
+    return typ or (
+        "enum" if "enum" in spec else spec.get("$ref", "").rsplit("/", 1)[-1] or "any"
+    )
+
+
+def _describe(spec: dict) -> str:
+    """A descrição do campo, mais os valores que ele aceita.
+
+    O enum entra na descrição porque saber o NOME de um campo sem saber o valor
+    deixa quem lê a um passo do erro: `protocol_binding` aceita `JSONRPC`, em
+    maiúsculas, e um `jsonrpc` minúsculo é recusado silenciosamente pelo
+    cliente A2A oficial (que filtra as interfaces por esse valor exato).
+    """
+    desc = _md(spec.get("description", ""))
+    enum = spec.get("enum")
+    if enum:
+        valores = ", ".join(f"`{_md(str(v))}`" for v in enum)
+        desc = f"{desc} Um de: {valores}." if desc else f"Um de: {valores}."
+    return desc.strip()
+
+
+def _rows(schema: dict, out: io.StringIO, prefix: str = "", depth: int = 0) -> None:
+    """Uma linha por campo, descendo nos aninhados.
+
+    Objeto → `pai.filho`; array de objetos → `pai[].filho`. É notação de
+    CAMINHO, e não de indentação, porque uma tabela markdown não tem hierarquia
+    visual: o caminho é o que diz onde o campo mora, e é copiável.
+
+    `required` é lido do nível DE CADA campo, nunca herdado do pai — herdar
+    marcaria como obrigatório um campo que só o é dentro do seu próprio objeto,
+    o que é pior que não marcar nada.
+    """
+    if depth > _MAX_DEPTH:
         return
+    props = (schema or {}).get("properties") or {}
     required = set((schema or {}).get("required") or [])
-    out.write("| Field | Type | Required | Description |\n")
-    out.write("| --- | --- | --- | --- |\n")
     for name in sorted(props):
         spec = props[name] or {}
-        typ = spec.get("type")
-        if isinstance(typ, list):
-            typ = " \\| ".join(typ)
-        typ = typ or ("enum" if "enum" in spec else spec.get("$ref", "").rsplit("/", 1)[-1] or "any")
+        caminho = f"{prefix}{name}"
         req = "yes" if name in required else ""
-        desc = _md(spec.get("description", ""))
-        out.write(f"| `{name}` | {typ} | {req} | {desc} |\n")
+        out.write(f"| `{caminho}` | {_type_of(spec)} | {req} | {_describe(spec)} |\n")
+
+        if spec.get("properties"):
+            _rows(spec, out, prefix=f"{caminho}.", depth=depth + 1)
+            continue
+        itens = spec.get("items")
+        if isinstance(itens, dict) and itens.get("properties"):
+            _rows(itens, out, prefix=f"{caminho}[].", depth=depth + 1)
+
+
+def _schema_table(schema: dict, out: io.StringIO) -> None:
+    if not ((schema or {}).get("properties") or {}):
+        out.write("_No structured spec fields (free-form or body-only Kind)._\n\n")
+        return
+    out.write("| Field | Type | Required | Description |\n")
+    out.write("| --- | --- | --- | --- |\n")
+    _rows(schema, out)
     out.write("\n")
 
 
