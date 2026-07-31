@@ -331,6 +331,7 @@ def build_app(
         compose_prompt_impl,
         create_project_impl,
         register_artifact_impl,
+        list_documents_impl,
         write_document_impl,
         create_workspace_impl,
         genome_view_impl,
@@ -1459,6 +1460,53 @@ def build_app(
     # MOUNTED ON EVERY AUTH MODE, like the Kind-authoring doors it depends on
     # (a document under a freshly-approved Kind is unreachable if this route
     # were lane-conditional while authoring/approval are not).
+
+    @app.get("/v1/kinds/{kind}/documents", dependencies=guarded,
+             response_model=m.ListKindDocumentsResponse)
+    async def list_kind_documents(
+        kind: str,
+        tenant: str | None = Query(default=None),
+        api_version: str | None = Query(default=None),
+        limit: int = Query(default=50, ge=1, le=500),
+        offset: int = Query(default=0, ge=0),
+        fields: str | None = Query(default=None),
+        order_by: str | None = Query(default=None),
+    ) -> dict[str, Any]:
+        """Listar os documentos de ``{kind}`` — a LEITURA da porta genérica.
+
+        A face escrevia qualquer documento por ``POST
+        /v1/kinds/{kind}/documents`` e só lia os Kinds para os quais alguém
+        escrevera uma rota à mão (``/v1/memories``, ``/v1/projects``, …). O
+        ``list_documents_impl`` já existia no SDK, completo, e não tinha porta:
+        quem gravava por aqui não conseguia ler de volta por lugar nenhum, e
+        descobria isso depois de gravar.
+
+        ``fields`` (CSV, caminhos pontuados; sem prefixo resolve sob ``spec.``)
+        empurra a PROJEÇÃO para o kernel. Sem ela, responder "quais estão
+        abertos" custa 1 + N chamadas — listar os nomes e ler cada um. No
+        Postgres a projeção vira SELECT e a linha viaja aparada.
+
+        Um Kind desconhecido é 404 **nomeando o Kind**, a mesma resposta que a
+        escrita dá. Uma lista vazia de um Kind que existe é 200 com
+        ``documents: []`` — "existe e não tem nada" é uma resposta, e confundi-la
+        com "não existe" faria uma tela dizer *erro* onde devia dizer *nenhum
+        ainda*.
+        """
+        live = await _live()
+        try:
+            return await list_documents_impl(
+                live, kind=kind, tenant=tenant,
+                api_version=api_version, limit=limit, offset=offset,
+                fields=[f.strip() for f in fields.split(",") if f.strip()] if fields else None,
+                order_by=[o.strip() for o in order_by.split(",") if o.strip()] if order_by else None,
+            )
+        except UnknownKindError as exc:
+            # 404 NOMEANDO o Kind — a mesma resposta que a escrita dá. Um leitor
+            # não pode descobrir que o Kind não existe por uma lista vazia, que é
+            # indistinguível de "existe e está vazio".
+            raise HTTPException(status_code=404, detail=str(exc)) from None
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from None
 
     @app.post("/v1/kinds/{kind}/documents", dependencies=guarded, status_code=201,
               response_model=m.WriteKindDocumentResponse)

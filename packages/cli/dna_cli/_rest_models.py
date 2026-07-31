@@ -946,6 +946,27 @@ class WriteKindDocumentRequest(BaseModel):
     source_sha256: str | None = None
 
 
+class ListKindDocumentsResponse(BaseModel):
+    """``GET /v1/kinds/{kind}/documents`` — uma página de documentos do Kind.
+
+    `documents` é a linha como o kernel a moldou: `{"name": …}` sem projeção, e
+    `{"name": …, "spec": {…}}` com `fields`. `projected` ecoa o que foi pedido,
+    para um leitor distinguir uma página de nomes de uma projetada — sem isso,
+    um `spec` ausente seria ambíguo entre "não pedi" e "não tem".
+
+    `has_more` é respondido buscando UMA linha a mais, não adivinhado a partir
+    de a página ter vindo cheia."""
+
+    scope: str
+    kind: str
+    api_version: str
+    documents: list[dict[str, Any]]
+    count: int
+    offset: int
+    has_more: bool
+    projected: list[str] | None = None
+
+
 class WriteKindDocumentResponse(BaseModel):
     """``POST /v1/kinds/{kind}/documents`` — the written document. ``scope``
     is DERIVED (there is no ``scope`` field on the request to have supplied
