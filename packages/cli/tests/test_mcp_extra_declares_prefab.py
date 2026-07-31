@@ -37,3 +37,31 @@ def test_o_codigo_que_importa_prefab_ui_e_servido_pelo_extra_mcp():
         pathlib.Path(__file__).resolve().parents[1] / "dna_cli" / "_mcp_cards.py"
     ).read_text(encoding="utf-8")
     assert "from prefab_ui" in fonte
+
+
+# ── e o `mcp` oficial, pela MESMA razão ──────────────────────────────────────
+
+
+def test_o_extra_mcp_declara_o_SDK_oficial_diretamente():
+    """`fastmcp` não implementa o protocolo — ele declara `mcp<2.0` e importa
+    `mcp.types` / `mcp.server`. A versão da SPEC que rodamos vem do pacote
+    `mcp`, não dele.
+
+    Declarar torna isso NOSSA decisão: subir a versão do protocolo passa a ser
+    bumpar este piso, em vez de esperar o `fastmcp` bumpar o dele. Medido em
+    31/07/2026 — `fastmcp[apps]>=3.4` resolve com `mcp==1.29.0` sem conflito.
+    """
+    mcp = " ".join(_extras()["mcp"])
+    assert '"mcp>' in f'"{mcp}"' or "mcp>" in mcp, (
+        "o extra `mcp` voltou a receber o SDK oficial só por transitividade do "
+        "`fastmcp` — e aí a versão da spec MCP deixa de ser decisão nossa"
+    )
+
+
+def test_o_codigo_que_importa_mcp_e_servido_pelo_extra_mcp():
+    """A mesma ligação que justifica a declaração do `prefab-ui`: o import é
+    DIRETO no código que este extra serve."""
+    fonte = (
+        pathlib.Path(__file__).resolve().parents[1] / "dna_cli" / "_mcp_server.py"
+    ).read_text(encoding="utf-8")
+    assert "from mcp." in fonte or "import mcp" in fonte
