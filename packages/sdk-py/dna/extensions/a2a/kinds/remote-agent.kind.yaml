@@ -63,18 +63,31 @@ spec:
       supported_interfaces:
         type: array
         description: >
-          A2A `supportedInterfaces` (1.0 — substituiu o `url` único das
-          versões anteriores). Cada entrada nomeia um transporte e onde
+          A2A `supportedInterfaces` (1.0 — substituiu o `url` único das versões
+          anteriores). Cada entrada nomeia um BINDING de protocolo e onde
           alcançá-lo.
+
+          O campo chamava-se `transport` numa leitura nossa da especificação, e
+          não existe: a 1.0 o chama `protocolBinding`, com os valores em
+          MAIÚSCULAS, e o cliente oficial filtra por ele. Enquanto o nome
+          divergia, NENHUM Agent Card conforme podia ser ingerido — e todos os
+          testes passavam, porque as fixtures herdavam o mesmo erro de leitura.
         minItems: 1
         items:
           type: object
           additionalProperties: false
-          required: [transport, url]
+          required: [protocol_binding, url]
           properties:
-            transport:
+            protocol_binding:
               type: string
-              enum: [jsonrpc, grpc, http+json]
+              # Os valores de `a2a.utils.constants.TransportProtocol`, verbatim.
+              enum: [JSONRPC, GRPC, HTTP+JSON]
+            protocol_version:
+              type: string
+              description: >
+                A2A `protocolVersion` da interface (`"1.0"`). Opcional: a 1.0
+                permite omiti-lo, e o cliente oficial trata a ausência como
+                "sem preferência" em vez de erro.
             url:
               type: string
               pattern: '^https://'

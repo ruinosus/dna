@@ -56,6 +56,16 @@ _CAPABILITY_FIELD_MAP = {
     "extendedAgentCard": "extended_agent_card",
 }
 
+#: O mesmo, mas DENTRO de cada `supportedInterfaces[]`. Separado do mapa raiz
+#: porque o kernel só converte o nível que declara: um dicionário aninhado que
+#: chega camelCase atravessa a tradução intocado e vira documento inválido —
+#: silenciosamente, porque `additionalProperties: false` acusa o sintoma
+#: (propriedade desconhecida) e não a causa (ninguém traduziu este nível).
+_INTERFACE_FIELD_MAP = {
+    "protocolBinding": "protocol_binding",
+    "protocolVersion": "protocol_version",
+}
+
 #: A2A 1.0 exige estes três; um Card sem eles não é um Card.
 _REQUIRED = ("name", "description", "supportedInterfaces")
 
@@ -85,7 +95,13 @@ def card_to_spec(card: Mapping[str, Any], *, data_scope_kinds: list[str]) -> dic
     for field in _PASSTHROUGH:
         if field in card:
             spec[field] = card[field]
-    spec["supported_interfaces"] = card["supportedInterfaces"]
+    spec["supported_interfaces"] = [
+        {
+            _INTERFACE_FIELD_MAP.get(chave, chave): valor
+            for chave, valor in (iface or {}).items()
+        }
+        for iface in card["supportedInterfaces"]
+    ]
 
     for camel, snake in _FIELD_MAP.items():
         if camel == "supportedInterfaces":

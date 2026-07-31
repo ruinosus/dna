@@ -580,7 +580,8 @@ is it.
 A [`RemoteAgent`](../reference/kinds/record.md#remoteagent)
 (`a2a-remote-agent`) is the Agent Card of a third-party A2A agent, held as a
 DNA document: `name`, `description` and `supported_interfaces` (the A2A 1.0
-transport list — `jsonrpc` / `grpc` / `http+json`, each with its own `url`)
+interface list — each entry a `protocol_binding` of `JSONRPC` / `GRPC` /
+`HTTP+JSON` with its own `url`, plus an optional `protocol_version`)
 come straight from the A2A spec in snake_case; `skills`, `capabilities` and
 `security_schemes` describe what it can do and how to authenticate to it.
 
