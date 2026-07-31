@@ -56,6 +56,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   um balde compartilhado — e um token sem subject durável não é atribuível e
   segue negado. Um portão rodando aberto avisa no boot (WARNING).
 
+## [0.42.0] — 2026-07-31
+
+### ✨ Novidades
+
+- **`AgentGrant`** — a concessão que deixa um TERCEIRO agir em nome de um
+  usuário. É o **gêmeo de entrada** do `RemoteAgent`: aquele diz *"podemos mandar
+  dado para lá"*, este diz *"eles podem agir por nós"*. Kind (`plane: record`,
+  `tenant_scope: tenanted`) + a regra pura em `dna.application.agent_grant`.
+
+  Ter só a metade de SAÍDA modelada é o que deixava uma porta A2A de entrada
+  inalcançável: ela aceita qualquer token válido do usuário, então *"autorizar a
+  Acme"* e *"ter um usuário logado"* são indistinguíveis.
+
+  Duas propriedades carregam o desenho. O `state` é **tri-estado**
+  (`pending`/`active`/`revoked`), como o `signature_state` — um booleano faria
+  *"pediu e ninguém decidiu"* parecer *"negado"*. E **tudo que não é `active`
+  fecha**: ausente, pendente, revogado, malformado e *desconhecido*. A lista é de
+  UM permitido; um portão escrito ao contrário abriria para um estado que alguém
+  acrescente depois, em silêncio.
+
+  `scope_kinds` (concedido) e `requested_scope_kinds` (pedido) são campos
+  **separados** — um campo só faria pedir ser igual a receber.
+
+### 🔧 Por que esta release existe agora
+
+O `AgentGrant` entrou no `main` depois da tag `v0.41.0`, e um consumidor que
+instala do PyPI (o CI do dna-cloud) não o encontrava:
+`ModuleNotFoundError: No module named 'dna.application.agent_grant'`. Em
+desenvolvimento o `[tool.uv.sources]` resolve o checkout editável e esconde
+exatamente essa diferença — é a mesma armadilha que a 0.41.0 documentou para a
+face A2A, e ela reapareceu no ciclo seguinte.
+
+
 ## [0.41.0] — 2026-07-31
 
 
@@ -2131,7 +2164,8 @@ registries: **PyPI** ([`dna-sdk`](https://pypi.org/project/dna-sdk/),
   source conformance kit now pins the contract: base content is served
   by `load_all`, never by a `load_layer` sentinel.
 
-[Unreleased]: https://github.com/ruinosus/dna/compare/v0.41.0...HEAD
+[Unreleased]: https://github.com/ruinosus/dna/compare/v0.42.0...HEAD
+[0.42.0]: https://github.com/ruinosus/dna/compare/v0.41.0...v0.42.0
 [0.41.0]: https://github.com/ruinosus/dna/compare/v0.40.2...v0.41.0
 [0.17.0]: https://github.com/ruinosus/dna/compare/v0.16.0...v0.17.0
 [0.13.0]: https://github.com/ruinosus/dna/compare/v0.12.0...v0.13.0
