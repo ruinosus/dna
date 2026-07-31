@@ -163,3 +163,45 @@ def test_um_card_que_diverge_da_1_0_falha_na_MONTAGEM_e_nao_no_ar():
                 ],
             },
         )
+
+
+def test_o_host_pode_injetar_o_seu_ServerCallContextBuilder():
+    """A lacuna que só aparece quando um host REAL monta a face.
+
+    A porta não autentica (a borda autentica), mas o executor precisa saber
+    QUEM chamou para ligar o workspace e cobrar do plano certo. O SDK tem a
+    costura para isso — `ServerCallContextBuilder`, que lê o `request` e popula
+    o contexto que o executor recebe — e `attach_a2a` não a repassava.
+
+    O caminho alternativo (copiar a identidade para um contextvar num
+    middleware) está QUEBRADO para streaming: um `BaseHTTPMiddleware` reseta o
+    contextvar quando o handler devolve a `StreamingResponse`, ou seja ANTES de
+    o corpo streamar — o dna-cloud já pagou por essa lição
+    (`mcp/request_ctx.py`). Para `SendStreamingMessage` a identidade sumiria no
+    meio do caminho, e só ali.
+    """
+    from a2a.server.context import ServerCallContext
+    from a2a.server.routes.common import ServerCallContextBuilder
+
+    vistos: list = []
+
+    class _Builder(ServerCallContextBuilder):
+        def build(self, request):
+            vistos.append(request.url.path)
+            return ServerCallContext(state={"quem": "a-acme"})
+
+    app = FastAPI()
+    attach_a2a(
+        app,
+        "/a2a",
+        executor=DnaAgentExecutor(run=_eco),
+        card=agent_card_for(AGENTE, base_url="https://x/a2a"),
+        context_builder=_Builder(),
+    )
+    TestClient(app).post("/a2a", json={
+        "jsonrpc": "2.0", "id": "1", "method": "SendMessage",
+        "params": {"message": {"messageId": "m1", "role": "ROLE_USER",
+                               "parts": [{"text": "ola"}]}},
+    }, headers=_VERSAO)
+
+    assert vistos == ["/a2a"], f"o builder do host não foi consultado: {vistos}"

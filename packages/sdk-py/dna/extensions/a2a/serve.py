@@ -67,6 +67,7 @@ def attach_a2a(
     card: Mapping[str, Any],
     card_path: str = AGENT_CARD_WELL_KNOWN_PATH,
     task_store: Any = None,
+    context_builder: Any = None,
 ) -> DefaultRequestHandler:
     """Montar a face A2A de ``executor`` em ``app``, e devolver o handler do SDK.
 
@@ -78,6 +79,19 @@ def attach_a2a(
     ``task_store`` default é o ``InMemoryTaskStore`` do SDK. O antecessor à mão
     tinha um armazém próprio com um teto de 256 inventado; o SDK traz este e um
     ``DatabaseTaskStore`` nos extras, para quem precisar de durabilidade.
+
+    ``context_builder`` é como a IDENTIDADE do chamador alcança o executor. Esta
+    porta não autentica — a borda autentica —, mas o executor precisa saber quem
+    chamou para ligar o tenant e cobrar do plano certo, e o
+    ``ServerCallContextBuilder`` do SDK é a costura que lê o ``request`` e
+    popula o ``ServerCallContext``.
+
+    Repassá-lo NÃO é conveniência: o caminho alternativo — copiar a identidade
+    para um ``contextvar`` num middleware — está quebrado para streaming. Um
+    ``BaseHTTPMiddleware`` reseta o contextvar quando o handler devolve a
+    ``StreamingResponse``, isto é ANTES de o corpo streamar; num
+    ``SendStreamingMessage`` a identidade sumiria no meio do caminho, e só ali.
+    (O dna-cloud já pagou por essa lição no seu ``mcp/request_ctx.py``.)
     """
     corpo = dict(card)
     capacidades = dict(corpo.get("capabilities") or {})
@@ -93,6 +107,8 @@ def attach_a2a(
     add_a2a_routes_to_fastapi(
         app,
         agent_card_routes=create_agent_card_routes(proto, card_url=card_path),
-        jsonrpc_routes=create_jsonrpc_routes(handler, rpc_url=path),
+        jsonrpc_routes=create_jsonrpc_routes(
+            handler, rpc_url=path, context_builder=context_builder
+        ),
     )
     return handler
