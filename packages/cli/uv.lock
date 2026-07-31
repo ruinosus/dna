@@ -276,7 +276,7 @@ wheels = [
 
 [[package]]
 name = "dna-cli"
-version = "0.38.0"
+version = "0.40.2"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
@@ -307,6 +307,7 @@ graph = [
 ]
 mcp = [
     { name = "fastmcp", extra = ["apps"] },
+    { name = "prefab-ui" },
 ]
 quota = [
     { name = "psycopg2-binary" },
@@ -326,6 +327,7 @@ requires-dist = [
     { name = "httpx", marker = "extra == 'graph'", specifier = ">=0.27" },
     { name = "msal", marker = "extra == 'dev'", specifier = ">=1.28" },
     { name = "msal", marker = "extra == 'graph'", specifier = ">=1.28" },
+    { name = "prefab-ui", marker = "extra == 'mcp'", specifier = ">=0.18.0" },
     { name = "psycopg2-binary", marker = "extra == 'dev'", specifier = ">=2.9" },
     { name = "psycopg2-binary", marker = "extra == 'quota'", specifier = ">=2.9" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
@@ -340,7 +342,7 @@ provides-extras = ["mcp", "api", "graph", "quota", "dev"]
 
 [[package]]
 name = "dna-sdk"
-version = "0.38.0"
+version = "0.40.2"
 source = { editable = "../sdk-py" }
 dependencies = [
     { name = "aiofiles" },

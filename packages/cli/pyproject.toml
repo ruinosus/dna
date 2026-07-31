@@ -52,7 +52,21 @@ dna = "dna_cli:main"
 # (self-contained, no CDN, nothing to allow through the MCP Apps
 # deny-by-default CSP), which is what the wheel's ~6.6 MB renderer asset buys:
 # a deliberate, accepted cost, and the reason a `dna-cli[mcp]` image grew.
-mcp = ["fastmcp[apps]>=3.4"]
+# `prefab-ui` DIRETO, e não só pelo extra-de-extra.
+#
+# A cadeia `fastmcp[apps]` -> `fastmcp-slim[apps]` -> `prefab-ui` é declarada em
+# todos os níveis, e MESMO ASSIM o pacote não foi instalado num ambiente real
+# (dna-cloud, 31/07): o resolvedor trouxe `fastmcp-slim` como dependência simples
+# e o extra dele se perdeu no caminho.
+#
+# O efeito foi o pior tipo de falha: `review_kind` e toda tool que renderiza card
+# morriam com `ModuleNotFoundError: No module named 'prefab_ui'` — no SERVIDOR,
+# devolvendo "erro interno" ao agente. Quem consumia gastou três rodadas
+# procurando o defeito no cliente, atrás de um dado que nunca foi produzido.
+#
+# Um import direto no código é uma dependência direta, mesmo quando alguma
+# cadeia de extras deveria trazê-la.
+mcp = ["fastmcp[apps]>=3.4", "prefab-ui>=0.18.0"]
 # The REST read-API face (`dna api serve`) — the correct HTTP boundary for a WEB
 # app (the DNA Cloud portal): a normal request/response REST API over the SAME
 # DNA kernel + the SAME `*_impl` cores the MCP server uses (zero logic
