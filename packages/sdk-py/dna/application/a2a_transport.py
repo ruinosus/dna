@@ -5,6 +5,13 @@ workspace para uma URL que o tenant escolheu. Isso não é defeito do A2A (que �
 protocolo de transporte e não tem opinião sobre o assunto) — é a natureza da
 coisa. As duas regras abaixo são o que separa isso de um vazamento.
 
+**O transporte é o `Client` do `a2a-sdk`**, nunca um POST à mão. A versão
+anterior montava o envelope JSON-RPC aqui e chamava o método `message/send` —
+que é o nome da A2A **0.3**. Contra um servidor 1.0 conforme, aquilo respondia
+`-32601 Method not found`, e nenhum teste pegava: eles foram escritos pela mesma
+leitura da especificação que o código. O que continua NOSSO são as duas regras
+abaixo, e elas correm ANTES de o cliente sequer ser construído.
+
 **1. O escopo é checado ANTES do envio.** `data_scope.kinds` diz o que aquele
 endpoint pode receber. A ordem é load-bearing: checar depois de postar é
 auditoria, não controle.
@@ -22,7 +29,8 @@ aceitar anônimo, e essa não é decisão que alguém tomou.
 from __future__ import annotations
 
 import logging
-from typing import Any, Callable, Iterable, Mapping
+import uuid
+from typing import Any, Callable, Iterable
 
 from dna.application.delegation import DelegationTarget
 from dna.application.delegation_exec import DelegationRefused
@@ -63,19 +71,75 @@ def _endpoint(target: DelegationTarget) -> str:
     )
 
 
+def _client_para(target: DelegationTarget, url: str, http: Any):
+    """O `Client` oficial, apontado a `url`.
+
+    Um Card MÍNIMO — só a interface que vamos usar — em vez de buscar o Card
+    remoto na hora: o documento `RemoteAgent` JÁ é o Card ingerido e aprovado
+    por um humano (`a2a_ingest`), e ir buscá-lo de novo trocaria a verdade
+    APROVADA pela verdade corrente do terceiro, sem que ninguém aprovasse a
+    troca.
+    """
+    from a2a.client import ClientConfig, ClientFactory
+    from a2a.types import AgentCard, AgentInterface
+    from a2a.utils.constants import PROTOCOL_VERSION_1_0, TransportProtocol
+
+    card = AgentCard(
+        name=target.name,
+        supported_interfaces=[
+            AgentInterface(
+                url=url,
+                protocol_binding=TransportProtocol.JSONRPC.value,
+                protocol_version=PROTOCOL_VERSION_1_0,
+            )
+        ],
+    )
+    fabrica = ClientFactory(ClientConfig(httpx_client=http, streaming=True))
+    return fabrica.create(card)
+
+
+def _texto_do_evento(evento: Any) -> str | None:
+    """O texto de um `StreamResponse`, ou `None` se ele não carrega resultado.
+
+    Lê os `artifacts` — o lugar que a 1.0 define para a SAÍDA de uma task. Um
+    evento de progresso não tem artifact e devolve `None`, e é isso que deixa
+    quem consome distinguir "andou" de "terminou" sem olhar o estado por fora.
+    """
+    qual = evento.WhichOneof("payload") if hasattr(evento, "WhichOneof") else None
+    if qual == "artifact_update":
+        partes = list(evento.artifact_update.artifact.parts)
+    elif qual == "task" and evento.task.artifacts:
+        partes = [p for art in evento.task.artifacts for p in art.parts]
+    else:
+        return None
+    pedacos = [p.text for p in partes if p.WhichOneof("content") == "text"]
+    return "\n".join(pedacos) if pedacos else None
+
+
 async def call_remote(
     target: DelegationTarget,
     request: str,
     *,
     credential_for: Callable[[str], str | None],
-    http: Any,
+    http: Any = None,
     payload_kinds: Iterable[str] = (),
     timeout_s: int = DEFAULT_TIMEOUT_S,
+    on_event: Callable[[Any], None] | None = None,
 ) -> str:
     """Chamar `target` por A2A e devolver o texto cru (o parse é do executor).
 
     Nenhum parâmetro aceita identidade de caller — ver a regra 2 no cabeçalho.
+
+    `on_event`, quando dado, recebe cada evento assim que chega: é o que
+    transforma a espera em progresso. Sem ele a chamada é silenciosa até o fim,
+    e para um alvo de vinte segundos isso é indistinguível de travado.
+
+    O retorno continua sendo TEXTO: `delegation_exec` faz o parse conforme o
+    `format` que o alvo declara, e devolver aqui uma estrutura obrigaria o
+    chamador a conhecer A2A — o ponto de `delegation_exec` é justamente que ele
+    não conhece transporte nenhum.
     """
+    # As duas recusas, ANTES de qualquer byte E antes de o cliente existir.
     if not scope_allows(target, payload_kinds):
         raise DelegationRefused(
             f"payload fora do data_scope de {target.name!r}: permitido "
@@ -91,21 +155,48 @@ async def call_remote(
             f"código pode tomar"
         )
 
-    body = {
-        "jsonrpc": "2.0",
-        "id": "1",
-        "method": "message/send",
-        "params": {"message": {"role": "user", "parts": [{"kind": "text", "text": request}]}},
-    }
-    res = await http.post(
-        url,
-        json=body,
-        headers={"authorization": f"Bearer {credential}", "content-type": "application/json"},
-        timeout=timeout_s,
+    import httpx
+    from a2a.client import ClientCallContext
+    from a2a.types import Message, Part, Role, SendMessageRequest
+
+    proprio = http is None
+    cliente_http = http if http is not None else httpx.AsyncClient()
+    cliente = _client_para(target, url, cliente_http)
+
+    # A credencial viaja pelo contexto DA CHAMADA, não gravada num cliente HTTP
+    # que pode ser compartilhado: `service_parameters` é a costura que o próprio
+    # SDK usa para isso (`a2a.client.auth.AuthInterceptor` escreve no mesmo
+    # lugar). Mutar os headers de um cliente do chamador vazaria a credencial
+    # deste remoto para toda chamada seguinte feita com ele.
+    contexto = ClientCallContext(
+        service_parameters={"Authorization": f"Bearer {credential}"},
+        timeout=float(timeout_s),
     )
-    if getattr(res, "status_code", 500) >= 400:
-        raise DelegationRefused(
-            f"o remoto {target.name!r} respondeu {res.status_code}"
+    pedido = SendMessageRequest(
+        message=Message(
+            message_id=str(uuid.uuid4()),
+            role=Role.ROLE_USER,
+            parts=[Part(text=request)],
         )
-    _LOGGER.info("a2a call ok", extra={"target": target.name})
-    return res.text
+    )
+
+    ultimo_texto: str | None = None
+    eventos = 0
+    try:
+        async for evento in cliente.send_message(pedido, context=contexto):
+            eventos += 1
+            if on_event is not None:
+                on_event(evento)
+            texto = _texto_do_evento(evento)
+            if texto is not None:
+                # O ÚLTIMO artifact vence: um stream pode reemitir o resultado
+                # crescendo, e o primeiro seria parcial.
+                ultimo_texto = texto
+    finally:
+        # Fechar só o que NÓS abrimos: `Client.close()` fecha o httpx por baixo,
+        # e fechar o do chamador o quebraria para a próxima chamada.
+        if proprio:
+            await cliente.close()
+
+    _LOGGER.info("a2a call ok", extra={"target": target.name, "events": eventos})
+    return ultimo_texto or ""
