@@ -292,3 +292,38 @@ def test_um_cliente_HTTP_do_CHAMADOR_nao_e_fechado_por_nos(monkeypatch):
             return falso.fechado
 
     assert asyncio.run(_corpo()) is False
+
+
+def test_o_streaming_declarado_pelo_remoto_chega_ao_alvo():
+    """`capabilities.streaming` do Card ingerido tem de sobreviver até o
+    `DelegationTarget` — é ele que faz o cliente escolher entre
+    `SendStreamingMessage` e `SendMessage`. Perdido no caminho, `on_event`
+    continuaria existindo e nunca dispararia, que é a pior forma de quebrar:
+    silenciosa."""
+    from dna.application.delegation import targets_for
+
+    docs = [
+        {
+            "kind": "Agent",
+            "metadata": {"name": "supervisor"},
+            "spec": {"team_members": ["stream-remoto", "mudo-remoto"]},
+        },
+        {
+            "kind": "RemoteAgent",
+            "metadata": {"name": "stream-remoto"},
+            "spec": {
+                "capabilities": {"streaming": True},
+                "delegation_target_for": {"agents": ["supervisor"]},
+            },
+        },
+        {
+            "kind": "RemoteAgent",
+            "metadata": {"name": "mudo-remoto"},
+            "spec": {"delegation_target_for": {"agents": ["supervisor"]}},
+        },
+    ]
+    alvos = {t.name: t for t in targets_for("supervisor", docs)}
+    assert alvos["stream-remoto"].streaming is True
+    # Não declarado é `None`, e não `False`: ausência de declaração não é uma
+    # declaração de ausência.
+    assert alvos["mudo-remoto"].streaming is None

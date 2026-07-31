@@ -79,11 +79,18 @@ def _client_para(target: DelegationTarget, url: str, http: Any):
     por um humano (`a2a_ingest`), e ir buscá-lo de novo trocaria a verdade
     APROVADA pela verdade corrente do terceiro, sem que ninguém aprovasse a
     troca.
+
+    `capabilities.streaming` vem do alvo, e não de um `True` conveniente: é o
+    Card ANUNCIADO que faz o cliente escolher entre `SendStreamingMessage` e
+    `SendMessage`. Afirmar streaming num remoto que não o faz quebraria a
+    chamada; omiti-lo num que faz mataria o progresso silenciosamente, que é
+    pior — o `on_event` continuaria existindo e nunca dispararia.
     """
     from a2a.client import ClientConfig, ClientFactory
-    from a2a.types import AgentCard, AgentInterface
+    from a2a.types import AgentCapabilities, AgentCard, AgentInterface
     from a2a.utils.constants import PROTOCOL_VERSION_1_0, TransportProtocol
 
+    streaming = bool(getattr(target, "streaming", None))
     card = AgentCard(
         name=target.name,
         supported_interfaces=[
@@ -93,8 +100,9 @@ def _client_para(target: DelegationTarget, url: str, http: Any):
                 protocol_version=PROTOCOL_VERSION_1_0,
             )
         ],
+        capabilities=AgentCapabilities(streaming=streaming),
     )
-    fabrica = ClientFactory(ClientConfig(httpx_client=http, streaming=True))
+    fabrica = ClientFactory(ClientConfig(httpx_client=http, streaming=streaming))
     return fabrica.create(card)
 
 

@@ -44,8 +44,14 @@ def _spec(**overrides):
     base = {
         "name": "invoice-reader",
         "description": "Reads invoices and returns structured fields",
+        # A forma REAL da A2A 1.0: `protocol_binding` (o `transport` que estava
+        # aqui não existe na especificação) com o valor em MAIÚSCULAS.
         "supported_interfaces": [
-            {"transport": "jsonrpc", "url": "https://vendor.example/a2a"}
+            {
+                "url": "https://vendor.example/a2a",
+                "protocol_binding": "JSONRPC",
+                "protocol_version": "1.0",
+            }
         ],
         "data_scope": {"kinds": ["SourceArtifact"]},
     }
