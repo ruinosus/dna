@@ -2568,4 +2568,20 @@ def build_app(
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from None
 
+    # O kernel vivo, alcançável por quem MONTA outra face sobre este app.
+    #
+    # `_live` já existia e era um closure — perfeito para as rotas daqui, e
+    # invisível para um host que monta mais coisa no mesmo `app`. O caso real: a
+    # porta A2A do dna-cloud faz `attach_a2a(app, …)` e precisa de um kernel
+    # para `enforce_plan` resolver plano e caps; sem este handle ela abria um
+    # SEGUNDO `boot_live`.
+    #
+    # Dois kernels sobre a mesma fonte não são só um pool de conexões a mais:
+    # são duas caches de Kind e duas janelas de refresh. Um documento reescrito
+    # fica visível numa e não na outra, e o sintoma aparece longe da causa.
+    #
+    # É a MESMA corrotina memoizada que as rotas usam — não um segundo boot com
+    # outro nome.
+    app.state.live = _live
+
     return app
