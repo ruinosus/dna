@@ -11,6 +11,7 @@ operation — of ANY HTTP method — with no named method here.
 """
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 
 import httpx
@@ -399,7 +400,46 @@ class DnaClient:
         different owners; 503 when the namespace registry cannot be read."""
         return self._get(f"/v1/kinds/{kind}", scope=scope, tenant=tenant)
 
-    # -- the generic, kubernetes-shaped document write -----------------------
+    # -- the generic, kubernetes-shaped document read/write -------------------
+
+    def list_kind_documents(
+        self, kind: str, *,
+        api_version: str | None = None, tenant: str | None = None,
+        limit: int = 50, offset: int = 0,
+        fields: Sequence[str] | None = None,
+        order_by: Sequence[str] | None = None,
+    ) -> JsonObject:
+        """List the documents of ``kind`` — the READ face of the generic door.
+
+        The write (:meth:`write_kind_document`) accepted any Kind, but reading
+        back only worked for the Kinds someone had hand-written a route for
+        (``/v1/memories``, ``/v1/projects``, …). Whoever wrote through the
+        generic door could not read through it, and found that out AFTER
+        writing.
+
+        ``fields`` (dotted paths; an unprefixed one resolves under ``spec.``)
+        pushes the PROJECTION down to the kernel. Without it, answering "which
+        ones are open" costs 1 + N calls — list the names, then read each. On
+        Postgres the projection becomes a SELECT and the row travels trimmed.
+
+        An unknown Kind is 404 NAMING it, the same answer the write gives. An
+        empty list from a Kind that exists is 200 with ``documents: []`` —
+        "exists and holds nothing" is an answer, and conflating it with "does
+        not exist" would make a screen say *error* where it should say *none
+        yet*.
+
+        Like the write, this route takes no ``scope`` parameter — identity and
+        scope are never caller input here (see the server route's docstring).
+        """
+        return self._get(
+            f"/v1/kinds/{kind}/documents",
+            tenant=tenant, api_version=api_version, limit=limit, offset=offset,
+            # CSV on the wire: the server splits on comma. `None` stays `None`
+            # so an omitted projection means "the whole document", not "no
+            # fields" — an empty CSV would read as the latter.
+            fields=",".join(fields) if fields else None,
+            order_by=",".join(order_by) if order_by else None,
+        )
 
     def write_kind_document(
         self, kind: str, metadata: dict[str, Any], spec: dict[str, Any], *,

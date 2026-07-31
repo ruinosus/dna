@@ -547,7 +547,29 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * List Kind Documents
+         * @description Listar os documentos de ``{kind}`` — a LEITURA da porta genérica.
+         *
+         *     A face escrevia qualquer documento por ``POST
+         *     /v1/kinds/{kind}/documents`` e só lia os Kinds para os quais alguém
+         *     escrevera uma rota à mão (``/v1/memories``, ``/v1/projects``, …). O
+         *     ``list_documents_impl`` já existia no SDK, completo, e não tinha porta:
+         *     quem gravava por aqui não conseguia ler de volta por lugar nenhum, e
+         *     descobria isso depois de gravar.
+         *
+         *     ``fields`` (CSV, caminhos pontuados; sem prefixo resolve sob ``spec.``)
+         *     empurra a PROJEÇÃO para o kernel. Sem ela, responder "quais estão
+         *     abertos" custa 1 + N chamadas — listar os nomes e ler cada um. No
+         *     Postgres a projeção vira SELECT e a linha viaja aparada.
+         *
+         *     Um Kind desconhecido é 404 **nomeando o Kind**, a mesma resposta que a
+         *     escrita dá. Uma lista vazia de um Kind que existe é 200 com
+         *     ``documents: []`` — "existe e não tem nada" é uma resposta, e confundi-la
+         *     com "não existe" faria uma tela dizer *erro* onde devia dizer *nenhum
+         *     ainda*.
+         */
+        get: operations["list_kind_documents_v1_kinds__kind__documents_get"];
         put?: never;
         /**
          * Write Kind Document
@@ -2160,6 +2182,38 @@ export interface components {
             /** Workspace Id */
             workspace_id: string;
         };
+        /**
+         * ListKindDocumentsResponse
+         * @description ``GET /v1/kinds/{kind}/documents`` — uma página de documentos do Kind.
+         *
+         *     `documents` é a linha como o kernel a moldou: `{"name": …}` sem projeção, e
+         *     `{"name": …, "spec": {…}}` com `fields`. `projected` ecoa o que foi pedido,
+         *     para um leitor distinguir uma página de nomes de uma projetada — sem isso,
+         *     um `spec` ausente seria ambíguo entre "não pedi" e "não tem".
+         *
+         *     `has_more` é respondido buscando UMA linha a mais, não adivinhado a partir
+         *     de a página ter vindo cheia.
+         */
+        ListKindDocumentsResponse: {
+            /** Api Version */
+            api_version: string;
+            /** Count */
+            count: number;
+            /** Documents */
+            documents: {
+                [key: string]: unknown;
+            }[];
+            /** Has More */
+            has_more: boolean;
+            /** Kind */
+            kind: string;
+            /** Offset */
+            offset: number;
+            /** Projected */
+            projected?: string[] | null;
+            /** Scope */
+            scope: string;
+        };
         /** MemoriesResponse */
         MemoriesResponse: {
             /** Memories */
@@ -3678,6 +3732,46 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApproveKindResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_kind_documents_v1_kinds__kind__documents_get: {
+        parameters: {
+            query?: {
+                tenant?: string | null;
+                api_version?: string | null;
+                limit?: number;
+                offset?: number;
+                fields?: string | null;
+                order_by?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                kind: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListKindDocumentsResponse"];
                 };
             };
             /** @description Validation Error */

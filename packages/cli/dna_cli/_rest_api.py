@@ -229,6 +229,27 @@ def _resolve_cors_origins(cors_origins: list[str] | None) -> list[str]:
     return ["http://localhost:3000"]
 
 
+#: Caminhos PÚBLICOS por definição — nunca exigem bearer.
+#:
+#: `/.well-known/*` é o espaço de descoberta reservado pela RFC 8615, e o que
+#: mora ali existe para ser lido por quem AINDA NÃO tem credencial: o Agent Card
+#: do A2A diz como alcançar o agente e como se autenticar a ele, e o documento
+#: de recurso protegido do OAuth diz onde fica o autorizador.
+#:
+#: Exigir bearer neles é um deadlock silencioso — o cliente precisa do documento
+#: para saber como obter o token, e do token para ler o documento. O sintoma não
+#: é "401" no lugar certo: é um terceiro que simplesmente não consegue começar, e
+#: nenhuma mensagem explicando por quê.
+#:
+#: Achado rodando a porta A2A do dna-cloud no lane de produto: o Card respondia
+#: 401 e a descoberta do cliente oficial morria antes da primeira mensagem.
+_PUBLICO = ("/health",)
+
+
+def _e_publico(path: str) -> bool:
+    return path in _PUBLICO or path.startswith("/.well-known/")
+
+
 def build_app(
     *,
     scope: str | None = None,
@@ -479,7 +500,7 @@ def build_app(
 
         @app.middleware("http")
         async def _token_scope_bind(request: Request, call_next):  # type: ignore[no-untyped-def]
-            if request.url.path == "/health":
+            if _e_publico(request.url.path):
                 return await call_next(request)
             req_scope = request.query_params.get("scope")
             req_tenant = request.query_params.get("tenant")
@@ -562,7 +583,7 @@ def build_app(
         @app.middleware("http")
         async def _config_auth(request: Request, call_next):  # type: ignore[no-untyped-def]
             path = request.url.path
-            if path == "/health":
+            if _e_publico(path):
                 return await call_next(request)
 
             authz = request.headers.get("authorization")
