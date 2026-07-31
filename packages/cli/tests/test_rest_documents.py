@@ -359,3 +359,70 @@ def test_an_unknown_kind_is_a_named_404(dna_dir):
         )
         assert r.status_code == 404, r.text
         assert "NoSuchKind" in r.text
+
+
+# ── a LEITURA da porta genérica ─────────────────────────────────────────────
+#
+# A face REST escrevia qualquer documento (`POST /v1/kinds/{kind}/documents`) e
+# só LIA os Kinds para os quais alguém escreveu uma rota à mão (`/v1/memories`,
+# `/v1/projects`, …). O `list_documents_impl` existia no SDK, completo — com
+# projeção, filtro, ordenação e paginação honesta — e não tinha porta.
+#
+# É a assimetria mais cara que uma API pode ter: quem escreve um documento por
+# esta porta não consegue lê-lo de volta por porta nenhuma, e descobre isso
+# depois de já ter gravado.
+
+
+def test_a_porta_generica_LE_o_que_ela_mesma_escreveu(dna_dir):
+    """A propriedade que a rota existe para garantir: escrever e ler pela mesma
+    porta, sem precisar de uma rota nova por Kind."""
+    with _client(dna_dir) as c:
+        _author_and_approve(c)
+        for nome in ("c1", "c2"):
+            r = c.post(
+                "/v1/kinds/Contrato/documents", params={"tenant": _WID},
+                json={"metadata": {"name": nome}, "spec": {"titulo": nome.upper()}},
+            )
+            assert r.status_code == 201, r.text
+
+        r = c.get("/v1/kinds/Contrato/documents", params={"tenant": _WID})
+        assert r.status_code == 200, r.text
+        nomes = sorted(d["name"] for d in r.json()["documents"])
+        assert nomes == ["c1", "c2"], r.json()
+
+
+def test_a_projecao_evita_o_1_mais_N(dna_dir):
+    """Sem `fields`, responder "quais contratos estão abertos" custa 1 + N
+    chamadas: listar os nomes e ler cada um. `fields` empurra a projeção para o
+    kernel — no Postgres ela vira SELECT, e a linha já viaja aparada."""
+    with _client(dna_dir) as c:
+        _author_and_approve(c)
+        c.post("/v1/kinds/Contrato/documents", params={"tenant": _WID},
+               json={"metadata": {"name": "c1"}, "spec": {"titulo": "Alfa"}})
+
+        r = c.get("/v1/kinds/Contrato/documents",
+                  params={"tenant": _WID, "fields": "titulo"})
+        assert r.status_code == 200, r.text
+        doc = r.json()["documents"][0]
+        assert doc["name"] == "c1"
+        assert doc["spec"]["titulo"] == "Alfa"
+
+
+def test_um_Kind_desconhecido_e_404_NOMEANDO_o_Kind(dna_dir):
+    """A mesma resposta que a escrita dá — um leitor não deve descobrir que o
+    Kind não existe por uma lista vazia, que é indistinguível de "existe e está
+    vazio"."""
+    with _client(dna_dir) as c:
+        r = c.get("/v1/kinds/NaoExiste/documents", params={"tenant": _WID})
+        assert r.status_code == 404, r.text
+        assert "NaoExiste" in r.text
+
+
+def test_a_lista_de_um_Kind_VAZIO_e_200_e_nao_404(dna_dir):
+    """"Existe e não tem nada" é uma resposta, e é diferente de "não existe".
+    Confundi-las faria a tela dizer "erro" quando devia dizer "nenhum ainda"."""
+    with _client(dna_dir) as c:
+        _author_and_approve(c)
+        r = c.get("/v1/kinds/Contrato/documents", params={"tenant": _WID})
+        assert r.status_code == 200, r.text
+        assert r.json()["documents"] == []

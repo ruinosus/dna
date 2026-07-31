@@ -229,6 +229,27 @@ def _resolve_cors_origins(cors_origins: list[str] | None) -> list[str]:
     return ["http://localhost:3000"]
 
 
+#: Caminhos PÚBLICOS por definição — nunca exigem bearer.
+#:
+#: `/.well-known/*` é o espaço de descoberta reservado pela RFC 8615, e o que
+#: mora ali existe para ser lido por quem AINDA NÃO tem credencial: o Agent Card
+#: do A2A diz como alcançar o agente e como se autenticar a ele, e o documento
+#: de recurso protegido do OAuth diz onde fica o autorizador.
+#:
+#: Exigir bearer neles é um deadlock silencioso — o cliente precisa do documento
+#: para saber como obter o token, e do token para ler o documento. O sintoma não
+#: é "401" no lugar certo: é um terceiro que simplesmente não consegue começar, e
+#: nenhuma mensagem explicando por quê.
+#:
+#: Achado rodando a porta A2A do dna-cloud no lane de produto: o Card respondia
+#: 401 e a descoberta do cliente oficial morria antes da primeira mensagem.
+_PUBLICO = ("/health",)
+
+
+def _e_publico(path: str) -> bool:
+    return path in _PUBLICO or path.startswith("/.well-known/")
+
+
 def build_app(
     *,
     scope: str | None = None,
@@ -331,6 +352,7 @@ def build_app(
         compose_prompt_impl,
         create_project_impl,
         register_artifact_impl,
+        list_documents_impl,
         write_document_impl,
         create_workspace_impl,
         genome_view_impl,
@@ -478,7 +500,7 @@ def build_app(
 
         @app.middleware("http")
         async def _token_scope_bind(request: Request, call_next):  # type: ignore[no-untyped-def]
-            if request.url.path == "/health":
+            if _e_publico(request.url.path):
                 return await call_next(request)
             req_scope = request.query_params.get("scope")
             req_tenant = request.query_params.get("tenant")
@@ -561,7 +583,7 @@ def build_app(
         @app.middleware("http")
         async def _config_auth(request: Request, call_next):  # type: ignore[no-untyped-def]
             path = request.url.path
-            if path == "/health":
+            if _e_publico(path):
                 return await call_next(request)
 
             authz = request.headers.get("authorization")
@@ -1459,6 +1481,53 @@ def build_app(
     # MOUNTED ON EVERY AUTH MODE, like the Kind-authoring doors it depends on
     # (a document under a freshly-approved Kind is unreachable if this route
     # were lane-conditional while authoring/approval are not).
+
+    @app.get("/v1/kinds/{kind}/documents", dependencies=guarded,
+             response_model=m.ListKindDocumentsResponse)
+    async def list_kind_documents(
+        kind: str,
+        tenant: str | None = Query(default=None),
+        api_version: str | None = Query(default=None),
+        limit: int = Query(default=50, ge=1, le=500),
+        offset: int = Query(default=0, ge=0),
+        fields: str | None = Query(default=None),
+        order_by: str | None = Query(default=None),
+    ) -> dict[str, Any]:
+        """Listar os documentos de ``{kind}`` — a LEITURA da porta genérica.
+
+        A face escrevia qualquer documento por ``POST
+        /v1/kinds/{kind}/documents`` e só lia os Kinds para os quais alguém
+        escrevera uma rota à mão (``/v1/memories``, ``/v1/projects``, …). O
+        ``list_documents_impl`` já existia no SDK, completo, e não tinha porta:
+        quem gravava por aqui não conseguia ler de volta por lugar nenhum, e
+        descobria isso depois de gravar.
+
+        ``fields`` (CSV, caminhos pontuados; sem prefixo resolve sob ``spec.``)
+        empurra a PROJEÇÃO para o kernel. Sem ela, responder "quais estão
+        abertos" custa 1 + N chamadas — listar os nomes e ler cada um. No
+        Postgres a projeção vira SELECT e a linha viaja aparada.
+
+        Um Kind desconhecido é 404 **nomeando o Kind**, a mesma resposta que a
+        escrita dá. Uma lista vazia de um Kind que existe é 200 com
+        ``documents: []`` — "existe e não tem nada" é uma resposta, e confundi-la
+        com "não existe" faria uma tela dizer *erro* onde devia dizer *nenhum
+        ainda*.
+        """
+        live = await _live()
+        try:
+            return await list_documents_impl(
+                live, kind=kind, tenant=tenant,
+                api_version=api_version, limit=limit, offset=offset,
+                fields=[f.strip() for f in fields.split(",") if f.strip()] if fields else None,
+                order_by=[o.strip() for o in order_by.split(",") if o.strip()] if order_by else None,
+            )
+        except UnknownKindError as exc:
+            # 404 NOMEANDO o Kind — a mesma resposta que a escrita dá. Um leitor
+            # não pode descobrir que o Kind não existe por uma lista vazia, que é
+            # indistinguível de "existe e está vazio".
+            raise HTTPException(status_code=404, detail=str(exc)) from None
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from None
 
     @app.post("/v1/kinds/{kind}/documents", dependencies=guarded, status_code=201,
               response_model=m.WriteKindDocumentResponse)

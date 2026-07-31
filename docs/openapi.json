@@ -2504,6 +2504,68 @@
         "title": "InviteResponse",
         "type": "object"
       },
+      "ListKindDocumentsResponse": {
+        "description": "``GET /v1/kinds/{kind}/documents`` — uma página de documentos do Kind.\n\n`documents` é a linha como o kernel a moldou: `{\"name\": …}` sem projeção, e\n`{\"name\": …, \"spec\": {…}}` com `fields`. `projected` ecoa o que foi pedido,\npara um leitor distinguir uma página de nomes de uma projetada — sem isso,\num `spec` ausente seria ambíguo entre \"não pedi\" e \"não tem\".\n\n`has_more` é respondido buscando UMA linha a mais, não adivinhado a partir\nde a página ter vindo cheia.",
+        "properties": {
+          "api_version": {
+            "title": "Api Version",
+            "type": "string"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "documents": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Documents",
+            "type": "array"
+          },
+          "has_more": {
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "projected": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Projected"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scope",
+          "kind",
+          "api_version",
+          "documents",
+          "count",
+          "offset",
+          "has_more"
+        ],
+        "title": "ListKindDocumentsResponse",
+        "type": "object"
+      },
       "MemoriesResponse": {
         "properties": {
           "memories": {
@@ -6344,6 +6406,147 @@
       }
     },
     "/v1/kinds/{kind}/documents": {
+      "get": {
+        "description": "Listar os documentos de ``{kind}`` — a LEITURA da porta genérica.\n\nA face escrevia qualquer documento por ``POST\n/v1/kinds/{kind}/documents`` e só lia os Kinds para os quais alguém\nescrevera uma rota à mão (``/v1/memories``, ``/v1/projects``, …). O\n``list_documents_impl`` já existia no SDK, completo, e não tinha porta:\nquem gravava por aqui não conseguia ler de volta por lugar nenhum, e\ndescobria isso depois de gravar.\n\n``fields`` (CSV, caminhos pontuados; sem prefixo resolve sob ``spec.``)\nempurra a PROJEÇÃO para o kernel. Sem ela, responder \"quais estão\nabertos\" custa 1 + N chamadas — listar os nomes e ler cada um. No\nPostgres a projeção vira SELECT e a linha viaja aparada.\n\nUm Kind desconhecido é 404 **nomeando o Kind**, a mesma resposta que a\nescrita dá. Uma lista vazia de um Kind que existe é 200 com\n``documents: []`` — \"existe e não tem nada\" é uma resposta, e confundi-la\ncom \"não existe\" faria uma tela dizer *erro* onde devia dizer *nenhum\nainda*.",
+        "operationId": "list_kind_documents_v1_kinds__kind__documents_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tenant"
+            }
+          },
+          {
+            "in": "query",
+            "name": "api_version",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Api Version"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "fields",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Fields"
+            }
+          },
+          {
+            "in": "query",
+            "name": "order_by",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Order By"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListKindDocumentsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Kind Documents"
+      },
       "post": {
         "description": "Write one document of ``{kind}`` — the generic door, kubernetes-shaped.\n\nThe body is exactly ``{metadata, spec}`` (plus the optional\n``source_sha256`` provenance citation). ``metadata.name`` is\nREQUIRED — 400 when blank or absent. A ``kind`` in the body that\nDIFFERS from the path is refused (400); one that matches is a no-op\n(redundant, not wrong).\n\nThe write goes through the kernel's own pipeline exactly as the MCP\n``write_document`` tool's does: the Kind's JSON Schema validates\n``spec`` and names the offending field on refusal (400), a BOOTSTRAP\nKind (Genome / LayerPolicy / KindDefinition) is refused (403, the\ngeneric write's own gate — untouched, not relaxed here), an authored\nKind nobody has approved yet resolves to nothing in the registry and\nis a 404 naming it (the SAME answer a Kind that was never authored at\nall gets — there is no third state visible from here), an unknown\nKind is a 404 naming it, and a stale ``if_match`` is a 409.\n\n``source_sha256`` (optional) cites the ``SourceArtifact`` this\ndocument was extracted from (by content address); the runtime closes\nthe ``derived_refs`` provenance edge server-side, preserving every\nOTHER document already recorded there and updating THIS document's\nown entry in place on a re-write — never accreting a duplicate. A\n``source_sha256`` that names no registered artifact under ``tenant``\nis refused (400).",
         "operationId": "write_kind_document_v1_kinds__kind__documents_post",

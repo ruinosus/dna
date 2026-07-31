@@ -1081,3 +1081,23 @@ def test_o_app_expoe_o_kernel_vivo_que_ele_ja_abre(dna_dir):
     a, b = asyncio.run(_duas_vezes())
     assert a is b, "cada chamada abriu um kernel novo — a memoização se perdeu"
     assert hasattr(a, "kernel"), "o handle não é o LiveDna que enforce_plan espera"
+
+
+def test_o_espaco_well_known_e_PUBLICO_mesmo_com_auth_ligada(dna_dir):
+    """`/.well-known/*` nunca exige bearer — RFC 8615, e o motivo é um deadlock.
+
+    O que mora ali existe para ser lido por quem AINDA NÃO tem credencial: o
+    Agent Card do A2A diz como alcançar o agente e como se autenticar a ele.
+    Exigir token para lê-lo é pedir o token para descobrir como obter o token.
+
+    O sintoma não é um 401 no lugar certo — é um terceiro que não consegue
+    COMEÇAR, sem mensagem que explique. Achado rodando a porta A2A do dna-cloud
+    no lane de produto: a descoberta do cliente oficial morria antes da primeira
+    mensagem.
+    """
+    app = R.build_app(base_dir=str(dna_dir), scope=_SCOPE, auth="token", token="segredo")
+    with TestClient(app) as c:
+        # sem bearer: guardado continua guardado…
+        assert c.get("/v1/agents").status_code == 401
+        # …e o espaço de descoberta, não.
+        assert c.get("/.well-known/qualquer-coisa.json").status_code != 401
