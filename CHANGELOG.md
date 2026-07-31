@@ -11,6 +11,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### ⚠️ Mudança com quebra
+
+- **A face A2A passa a ser o SDK oficial (`a2a-sdk`), e o Kind `RemoteAgent`
+  renomeia um campo.** `supported_interfaces[].transport` vira
+  `protocol_binding` (valores em MAIÚSCULAS — `JSONRPC` / `GRPC` / `HTTP+JSON`)
+  e o item ganha `protocol_version`. Documentos `RemoteAgent` gravados antes
+  precisam ser reescritos; não há caminho de compatibilidade, por decisão —
+  duas leituras do mesmo campo convivendo é o débito que esta troca existe para
+  não criar.
+
+  **Por quê.** A face anterior foi escrita a partir da especificação, tinha 49
+  testes verdes e mutação verde — e divergia da A2A 1.0 em **quatro** pontos,
+  todos medidos contra o `a2a-sdk` 1.1.2 instalado:
+
+  | | a versão à mão | a A2A 1.0 real |
+  |---|---|---|
+  | o campo do binding | `transport` | `protocolBinding` |
+  | o valor dele | `"jsonrpc"` | `"JSONRPC"` |
+  | uma `Part` | `{"kind": "text", "text": …}` | `{"text": …}` (é um `oneof`, sem `kind`) |
+  | os métodos JSON-RPC | `message/send`, `message/stream`, `tasks/get` | `SendMessage`, `SendStreamingMessage`, `GetTask` — os nomes com barra são da **0.3** |
+
+  Consequências: nenhum Agent Card A2A real podia ser ingerido (o schema fechado
+  recusava `protocolBinding` e exigia `transport`), nenhum cliente conforme
+  conseguia nos chamar (o `ClientFactory` filtra por `protocol_binding` e achava
+  zero interfaces), e a chamada de saída pedia um método que um servidor 1.0
+  responde com `-32601 Method not found`. As duas metades estavam erradas do
+  MESMO jeito, então conversavam entre si — e com mais ninguém.
+
+  Nenhum teste pegou, porque todos foram escritos pela mesma leitura da
+  especificação que o código. A conformidade agora é medida contra a
+  implementação de referência: `tests/test_a2a_conformance.py` sobe o servidor
+  numa porta real e deixa o cliente oficial descobrir o Card, escolher o binding
+  e conversar.
+
+### ✨ Novidades
+
+- **`dna-cli[a2a]`** — o extra da face A2A (`a2a-sdk[fastapi]>=1.1.2,<2`).
+  Próprio, ao lado de `mcp` e `api`: a árvore base do a2a-sdk traz protobuf +
+  google-api-core + googleapis-common-protos mesmo para quem só usa JSON-RPC, e
+  quem não serve A2A não paga por elas (guarda:
+  `tests/test_a2a_import_isolation.py`).
+- **`dna.extensions.a2a.executor.DnaAgentExecutor`** — adapta um agente DNA
+  (`run(text) -> str`) à interface `AgentExecutor` do SDK. É a única peça nova,
+  e é cola: o protocolo inteiro é do SDK.
+- **`dna.extensions.a2a.serve.attach_a2a`**, re-exportado por
+  **`dna_cli.serving.attach_a2a`** — monta as rotas do SDK no FastAPI que o host
+  já tem, servindo o Card da nossa projeção. Deliberadamente NÃO é uma flag de
+  `dna api serve`: os comandos `serve` são conveniência de dev e estão
+  depreciados para produção; quem serve A2A a sério monta no próprio app, com a
+  própria porta de identidade.
+- **`capabilities.streaming` do Card passa a ser DERIVADO** do executor montado,
+  em vez de um `True` fixo que prometia o que ninguém tinha implementado.
+  `DelegationTarget` ganha `streaming`, lido do Card do remoto: é ele que faz o
+  cliente escolher entre `SendStreamingMessage` e `SendMessage`, e sem ele o
+  `on_event` de `call_remote` existiria sem nunca disparar.
+
 ### 🐛 Correções
 
 - **As quatro rotas `/v1/kinds*` voltam a montar em `--auth token`** (revert de

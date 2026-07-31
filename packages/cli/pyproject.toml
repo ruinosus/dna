@@ -75,6 +75,23 @@ mcp = ["fastmcp[apps]>=3.4", "prefab-ui>=0.18.0"]
 # (dna_cli._rest_api imports `fastapi` only inside build_app), so the base
 # install never carries it.
 api = ["fastapi>=0.110", "uvicorn>=0.30"]
+# A face A2A (Agent2Agent, governado pela Linux Foundation) — servir e consumir
+# pelo SDK OFICIAL, `a2a-sdk`. Extra próprio, ao lado de `mcp` e `api`, por uma
+# razão medida: a árvore BASE do a2a-sdk traz protobuf, google-api-core e
+# googleapis-common-protos mesmo para quem só usa JSON-RPC (herança do
+# transporte gRPC). São oito dependências, três pesadas. Quem não serve A2A não
+# paga; quem serve paga o protobuf sem usar, e esse é o custo da conformidade —
+# que é o produto.
+#
+# `[fastapi]` porque é o que traz `a2a.server.routes.fastapi_routes`
+# (`add_a2a_routes_to_fastapi`) + sse-starlette, e a face servida monta num
+# FastAPI que o host já tem. Sem gRPC: o `dna` fala JSON-RPC, e o extra `grpc`
+# arrastaria grpcio/grpcio-tools por um transporte que não servimos.
+#
+# Teto `<2`: o 1.x já foi uma quebra grande (os tipos viraram protobuf, e
+# `AgentInterface.transport` virou `protocolBinding`). Subir de major é decisão,
+# não efeito colateral de um `pip install`.
+a2a = ["a2a-sdk[fastapi]>=1.1.2,<2"]
 # The Microsoft On-Behalf-Of (OBO) graph adapter — `graph.*` MCP tools that
 # exchange the verified inbound Entra token for a downstream Microsoft Graph
 # token and act on the signed-in user's M365 (feature f-mcp-obo, ADR-mcp-obo).

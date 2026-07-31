@@ -34,6 +34,32 @@ from dna_cli._rest_api import build_app as build_rest_app
 # this to keep multi-workspace routing — `build_mcp_server` alone is just /mcp.
 from dna_cli._mcp_server import build_http_app
 
+
+# A face A2A servida — as rotas do SDK OFICIAL (`a2a-sdk`) montadas no app que o
+# host já tem. Um HOST a compõe, e é essa a razão de ela NÃO ser uma flag de
+# `dna api serve`: este módulo diz, na primeira linha, que os comandos `serve`
+# são conveniência de dev e estão depreciados para produção. Quem serve A2A a
+# sério (dna-cloud) monta no seu próprio app, com a sua própria porta de
+# identidade — o A2A não autentica, a porta autentica.
+#
+#     from dna_cli.serving import attach_a2a
+#     app = build_rest_app(auth="config", verifier=meu_verifier)
+#     attach_a2a(app, "/a2a", executor=DnaAgentExecutor(run=…), card=…)
+#
+# Exige os extras `dna-cli[a2a]` (o SDK) e `[api]` (o FastAPI). O import é
+# PREGUIÇOSO pela mesma razão de sempre: importar `dna_cli.serving` não pode
+# exigir todo extra que ele exporta.
+def attach_a2a(*args, **kwargs):
+    """Montar a face A2A num app FastAPI do host.
+
+    Encaminha para :func:`dna.extensions.a2a.serve.attach_a2a` — ver lá a
+    assinatura e o que a montagem decide.
+    """
+    from dna.extensions.a2a.serve import attach_a2a as _attach
+
+    return _attach(*args, **kwargs)
+
+
 # The auth layer — TWO tiers a host composes with:
 #   • the FACTORIES that build a provider/auth object from env/config
 #     (`*_from_env`, `build_auth_from_config`), passed to the `auth=` PORT; and

@@ -142,6 +142,18 @@ dev = [
     # conformance suite runs for real in the CI postgres job (redundant with
     # [all] but explicit, mirroring search-sqlite).
     "dna-sdk[search-pgvector]",
+    # A face A2A é servida/consumida pelo SDK OFICIAL. O extra de PRODUÇÃO é
+    # `dna-cli[a2a]` (o código serve HTTP, e o dna-cli é quem declara faces);
+    # aqui ele entra em `dev` porque os testes moram neste pacote. Os testes que
+    # o exigem fazem `importorskip("a2a")`, então um ambiente sem ele coleta
+    # limpo — e tests/test_a2a_import_isolation.py garante que o import base do
+    # DNA continua sem tocá-lo.
+    "a2a-sdk[fastapi]>=1.1.2,<2",
+    # uvicorn: tests/test_a2a_conformance.py sobe o nosso servidor A2A de
+    # VERDADE (porta real) e deixa o cliente oficial julgá-lo. Um teste de
+    # conformidade que pula por falta de dependência é pior que nenhum — parece
+    # cobertura e não é.
+    "uvicorn>=0.30",
 ]
 
 [project.entry-points."dna.extensions"]
