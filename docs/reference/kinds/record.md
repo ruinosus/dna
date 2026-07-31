@@ -948,7 +948,7 @@ A PromptTemplate is a versioned, overlayable user-prompt template owned by the k
 | `signature_state` | string |  | Tri-estado DE PROPÓSITO: um documento que não foi verificado tem de ser legível como tal. `unsigned` = o Card não trouxe assinatura; `present_unverified` = trouxe e não checamos; `verified` = checamos (não alcançável nesta versão). Um booleano `signed` faria "não verificado" parecer "não assinado", que são coisas diferentes. |
 | `signatures` | array |  | A2A `signatures`, preservadas como vieram. A VERIFICAÇÃO criptográfica está fora desta versão (exige decidir a cadeia de confiança, que é decisão de produto) — por isso `signature_state` existe e é tri-estado. |
 | `skills` | array |  | A2A `skills[]` — o que ele sabe fazer, item a item. |
-| `supported_interfaces` | array | yes | A2A `supportedInterfaces` (1.0 — substituiu o `url` único das versões anteriores). Cada entrada nomeia um transporte e onde alcançá-lo. |
+| `supported_interfaces` | array | yes | A2A `supportedInterfaces` (1.0 — substituiu o `url` único das versões anteriores). Cada entrada nomeia um BINDING de protocolo e onde alcançá-lo. |
 | `version` | string |  | A2A `version` — a versão QUE O AGENTE declara de si. |
 
 ## Repo
