@@ -1765,3 +1765,33 @@ git commit -m "docs(a2a): a troca pelo SDK oficial, e os tres defeitos que ela r
 entrada). A spec não previa mexer no Kind `RemoteAgent` — mas o mesmo erro de
 leitura que quebrava a saída quebrava a entrada, e deixar metade consertada
 manteria o produto sem conseguir registrar um agente A2A real.
+
+---
+
+## O que a EXECUÇÃO descobriu além do plano (31/07)
+
+O plano previu três divergências. A execução achou mais duas, e ambas só
+apareceram porque o código real do SDK foi exercitado — nenhuma das duas é
+visível lendo a especificação.
+
+**4. Os nomes dos métodos JSON-RPC.** A 1.0 usa `SendMessage`,
+`SendStreamingMessage`, `GetTask`. Os nomes com barra que a versão à mão servia
+— `message/send`, `message/stream`, `tasks/get` — são da **0.3**; o SDK tem um
+flag `enable_v0_3_compat` justamente porque são protocolos diferentes. Ou seja:
+a face à mão implementava 0.3 e se anunciava como 1.0, nas DUAS pontas.
+Descoberto quando o primeiro teste de mount respondeu `-32601 Method not found`.
+Guarda: `test_a2a_serve.py::test_o_nome_de_metodo_da_versao_a_mao_era_da_0_3_e_e_recusado`.
+
+**5. O cabeçalho `A2A-Version`.** A 1.0 o exige; sem ele o handler assume 0.3 e
+recusa com `-32009 VERSION_NOT_SUPPORTED`. O cliente oficial o manda sozinho, o
+que é precisamente por que só um teste HTTP cru o revela.
+
+**Consequência de desenho não prevista:** `capabilities.streaming` do remoto
+precisou ser plumbado do documento `RemoteAgent` até o `DelegationTarget`
+(Task 6). O cliente A2A escolhe entre `SendStreamingMessage` e `SendMessage` a
+partir do que o Card ANUNCIA — sem esse fato, toda chamada caía no caminho não
+streaming e o `on_event` (a razão inteira do parâmetro) nunca disparava. O teste
+de conformidade pegou isso: recebeu 1 evento agregado onde esperava o progresso.
+
+**O passo 1 da spec custou zero linha**, como o plano previu: ramificar de
+`origin/main` bastou.
