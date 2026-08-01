@@ -56,6 +56,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   um balde compartilhado — e um token sem subject durável não é atribuível e
   segue negado. Um portão rodando aberto avisa no boot (WARNING).
 
+## [0.43.0] — 2026-08-01
+
+### ✨ Novidades
+
+- **`GET /v1/kinds/{kind}/documents` — a LEITURA da porta genérica.** A face
+  escrevia qualquer documento por `POST /v1/kinds/{kind}/documents` e só lia os
+  Kinds para os quais alguém escrevera uma rota à mão (`/v1/memories`,
+  `/v1/projects`, …). Quem gravava pela porta genérica **não conseguia ler de
+  volta por lugar nenhum**, e descobria isso depois de gravar. O
+  `list_documents_impl` já existia completo no SDK e não tinha porta.
+
+  `fields` (CSV de caminhos pontuados; sem prefixo resolve sob `spec.`) empurra
+  a **projeção** para o kernel: sem ela, responder "quais estão abertos" custa
+  1 + N chamadas. No Postgres a projeção vira `SELECT` e a linha viaja aparada.
+
+  Um Kind desconhecido é **404 nomeando o Kind**; um Kind que existe e está
+  vazio é **200 com `documents: []`**. A distinção é o que permite uma tela
+  dizer *"nenhum ainda"* onde diria *"erro"*.
+
+  Coberto nos **dois** clientes oficiais — `list_kind_documents` (Python) e
+  `listKindDocuments` (TypeScript).
+
+### 🐛 Correções
+
+- **`/.well-known/*` nunca exige bearer.** Era um deadlock silencioso: o cliente
+  precisa do documento para saber **como obter** o token, e do token para ler o
+  documento. O espaço `/.well-known/` é reservado pela RFC 8615 justamente para
+  quem ainda não tem credencial — o Agent Card do A2A diz como alcançar o agente
+  e como se autenticar a ele; o documento de recurso protegido do OAuth diz onde
+  fica o autorizador.
+
+  O sintoma não era um 401 no lugar certo: era um terceiro que simplesmente não
+  conseguia começar, sem mensagem explicando por quê. Achado rodando a porta A2A
+  do dna-cloud no lane de produto, com o cliente oficial do `a2a-sdk` — a
+  descoberta morria antes da primeira mensagem.
+
 ## [0.42.0] — 2026-07-31
 
 ### ✨ Novidades
