@@ -56,6 +56,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   um balde compartilhado — e um token sem subject durável não é atribuível e
   segue negado. Um portão rodando aberto avisa no boot (WARNING).
 
+## [0.44.0] — 2026-08-01
+
+### 🐛 Correções
+
+- **O JWKS vem da DESCOBERTA, não de uma convenção.** `_derive_jwks_uri` montava
+  `<issuer>/.well-known/jwks.json` para todo provedor que não fosse Entra. O
+  WorkOS AuthKit publica `<issuer>/oauth2/jwks` — caminho diferente, e o derivado
+  responde **404**.
+
+  O efeito é cruel de depurar: não há erro de configuração, nem de rede, nem
+  mensagem. O verificador simplesmente não encontra a chave de assinatura e
+  recusa **todo** token, e a porta responde `401` contra um token perfeito —
+  emissor certo, assinatura válida, `sub` e `client_id` presentes.
+
+  Agora o `jwks_uri` é lido dos metadados que o servidor publica (RFC 8414 e
+  descoberta OIDC; um provedor pode servir só uma das duas). A convenção fica
+  como último recurso, para um IdP sem metadados alcançáveis continuar subindo, e
+  um `jwks_uri` explícito na configuração vence os dois.
+
+  O `CLAUDE.md` já mandava: *"OIDC — descoberta, nunca issuer/JWKS à mão."* Este
+  código era anterior à regra e a contrariava.
+
+- **O verificador multi-provedor diz POR QUE recusa.** Ele devolvia `None` em
+  silêncio, e a porta respondia `401` sem uma linha em log nenhum: quem depura
+  não sabe qual checagem falhou — emissor? audiência? assinatura? expiração? — e
+  o único caminho que sobra é desligar checagens uma a uma. Foi assim que o
+  defeito acima foi localizado, e custou quatro aprovações interativas de um
+  humano. Registra o provedor, o emissor e a audiência; **nunca** o token.
+
 ## [0.43.0] — 2026-08-01
 
 ### ✨ Novidades
