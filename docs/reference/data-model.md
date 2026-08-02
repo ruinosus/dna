@@ -591,8 +591,8 @@ record Kinds whose links are simply not modelled yet.
 
 !!! note "This diagram carries little information, by design"
 
-    7 tables on Postgres (4 on SQLite) and
-    **0 foreign keys**. They are a generic document store:
+    10 tables on Postgres (4 on SQLite) and
+    **1 foreign keys**. They are a generic document store:
     `documents` holds every Kind, of every type, as JSON in a
     `content` column keyed by `(scope, kind, name, tenant)`. Adding a
     Kind adds rows, never a table — so the physical diagram cannot
@@ -603,6 +603,21 @@ record Kinds whose links are simply not modelled yet.
 
 ```mermaid
 erDiagram
+    dna_approval {
+        TEXT approval_id PK
+        TEXT turn_id
+        TEXT thread_id
+        TEXT workspace
+        TEXT oid
+        TEXT actor_email
+        TEXT tool
+        TEXT arguments
+        TEXT decision
+        TEXT edited_args
+        TEXT reason
+        DATETIME requested_at
+        DATETIME decided_at
+    }
     dna_bundle_entries {
         TEXT scope PK
         TEXT kind PK
@@ -651,6 +666,35 @@ erDiagram
         TEXT tier PK
         BIGINT calls
     }
+    dna_turn {
+        TEXT turn_id PK
+        TEXT trace_id
+        TEXT thread_id
+        TEXT workspace
+        TEXT oid
+        TEXT agent
+        TEXT model
+        TEXT input_text
+        TEXT output_text
+        INTEGER input_tokens
+        INTEGER output_tokens
+        TEXT status
+        TEXT error
+        DATETIME started_at
+        DATETIME ended_at
+        INTEGER duration_ms
+    }
+    dna_turn_step {
+        TEXT turn_id PK
+        INTEGER step_index PK
+        TEXT name
+        TEXT input
+        TEXT output
+        TEXT status
+        TEXT error
+        DATETIME started_at
+        INTEGER duration_ms
+    }
     dna_versions {
         INTEGER id PK
         TEXT scope
@@ -684,15 +728,36 @@ prefix, SQLite's do not, and Postgres has tables SQLite lacks.
 
 | Postgres | SQLite |
 | --- | --- |
+| `dna_approval` | — |
 | `dna_bundle_entries` | `bundle_entries` |
 | `dna_documents` | `documents` |
 | `dna_layer_documents` | `layer_documents` |
 | `dna_outbox` | — |
 | `dna_quota_counters` | — |
+| `dna_turn` | — |
+| `dna_turn_step` | — |
 | `dna_versions` | `versions` |
 | `dna_versions_seq` | — |
 
 ### Columns
+
+#### `dna_approval`
+
+| Column | Type | Key | Nullable |
+| --- | --- | --- | --- |
+| `approval_id` | `TEXT` | PK |  |
+| `turn_id` | `TEXT` |  |  |
+| `thread_id` | `TEXT` |  |  |
+| `workspace` | `TEXT` |  |  |
+| `oid` | `TEXT` |  |  |
+| `actor_email` | `TEXT` |  |  |
+| `tool` | `TEXT` |  |  |
+| `arguments` | `TEXT` |  |  |
+| `decision` | `TEXT` |  |  |
+| `edited_args` | `TEXT` |  |  |
+| `reason` | `TEXT` |  |  |
+| `requested_at` | `DATETIME` |  |  |
+| `decided_at` | `DATETIME` |  | yes |
 
 #### `dna_bundle_entries`
 
@@ -756,6 +821,41 @@ prefix, SQLite's do not, and Postgres has tables SQLite lacks.
 | `tenant` | `TEXT` | PK |  |
 | `tier` | `TEXT` | PK |  |
 | `calls` | `BIGINT` |  |  |
+
+#### `dna_turn`
+
+| Column | Type | Key | Nullable |
+| --- | --- | --- | --- |
+| `turn_id` | `TEXT` | PK |  |
+| `trace_id` | `TEXT` |  |  |
+| `thread_id` | `TEXT` |  |  |
+| `workspace` | `TEXT` |  |  |
+| `oid` | `TEXT` |  |  |
+| `agent` | `TEXT` |  |  |
+| `model` | `TEXT` |  |  |
+| `input_text` | `TEXT` |  | yes |
+| `output_text` | `TEXT` |  | yes |
+| `input_tokens` | `INTEGER` |  |  |
+| `output_tokens` | `INTEGER` |  |  |
+| `status` | `TEXT` |  |  |
+| `error` | `TEXT` |  | yes |
+| `started_at` | `DATETIME` |  |  |
+| `ended_at` | `DATETIME` |  | yes |
+| `duration_ms` | `INTEGER` |  |  |
+
+#### `dna_turn_step`
+
+| Column | Type | Key | Nullable |
+| --- | --- | --- | --- |
+| `turn_id` | `TEXT` | PK |  |
+| `step_index` | `INTEGER` | PK |  |
+| `name` | `TEXT` |  |  |
+| `input` | `TEXT` |  | yes |
+| `output` | `TEXT` |  | yes |
+| `status` | `TEXT` |  |  |
+| `error` | `TEXT` |  | yes |
+| `started_at` | `DATETIME` |  |  |
+| `duration_ms` | `INTEGER` |  |  |
 
 #### `dna_versions`
 
