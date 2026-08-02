@@ -39,6 +39,11 @@ class RuntimeHooks:
     #: Host-injected store, or None to let the adapter resolve one from
     #: ctx.persistence.
     store: Any = None
+    #: `Callable[[Turn], None]` — onde o registro de cada turno e GRAVADO.
+    #: `None` (o default) deixa a telemetria sem destino de produto; o OTLP,
+    #: se configurado, continua exportando. E o host que injeta porque e ele
+    #: quem tem a conexao — a mesma fronteira do `checkpointer`.
+    turn_sink: Any = None
 
 
 @runtime_checkable

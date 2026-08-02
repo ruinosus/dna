@@ -158,6 +158,12 @@ class Tables:
     # the search stores, whose DDL cannot live in a static revision). Written
     # by the MCP metering store (``dna_cli._mcp_quota.PostgresQuotaStore``).
     quota_counters: sa.Table | None = None
+    # [dialect] pg-only CONTROL-PLANE tables, same reasoning as
+    # quota_counters: nothing in the document path touches them, but the model
+    # is what autogenerate compares against. Written by the span processor in
+    # ``dna.runtime.telemetry``; read by the portal's console.
+    turn: sa.Table | None = None
+    turn_step: sa.Table | None = None
 
 
 def build_metadata(*, is_pg: bool, schema: str | None = None) -> Tables:
@@ -288,6 +294,7 @@ def build_metadata(*, is_pg: bool, schema: str | None = None) -> Tables:
     )
 
     outbox = versions_seq = quota_counters = None
+    turn = turn_step = None
     if is_pg:
         # [dialect] the DNA Cloud metering counter — the DURABLE half of the
         # MCP quota meter (``dna_cli._mcp_quota``). Postgres-only on purpose:
@@ -333,6 +340,63 @@ def build_metadata(*, is_pg: bool, schema: str | None = None) -> Tables:
             sa.Index(f"{p}outbox_scope_id_idx", "scope", "tenant", "id"),
             sa.Index(f"{p}outbox_occurred_at_idx", "occurred_at"),
         )
+        # [dialect] o REGISTRO do que um turno fez — a metade duravel da
+        # observabilidade (`dna.runtime.telemetry`). Postgres-only pelo mesmo
+        # motivo do quota_counters: e uma tabela de plano de controle, e um
+        # self-host de processo unico nao tem a pergunta que ela responde.
+        #
+        # `input_text`/`output_text` sao TRUNCADOS por quem escreve, nao pelo
+        # banco — ver a revisao 0004.
+        turn = sa.Table(
+            f"{p}turn", md,
+            sa.Column("turn_id", sa.Text, primary_key=True, nullable=False),
+            sa.Column("trace_id", sa.Text, nullable=False,
+                      server_default=sa.text("''")),
+            sa.Column("thread_id", sa.Text, nullable=False,
+                      server_default=sa.text("''")),
+            sa.Column("workspace", sa.Text, nullable=False,
+                      server_default=sa.text("''")),
+            sa.Column("oid", sa.Text, nullable=False,
+                      server_default=sa.text("''")),
+            sa.Column("agent", sa.Text, nullable=False,
+                      server_default=sa.text("''")),
+            sa.Column("model", sa.Text, nullable=False,
+                      server_default=sa.text("''")),
+            sa.Column("input_text", sa.Text, nullable=True),
+            sa.Column("output_text", sa.Text, nullable=True),
+            sa.Column("input_tokens", sa.Integer, nullable=False,
+                      server_default=sa.text("0")),
+            sa.Column("output_tokens", sa.Integer, nullable=False,
+                      server_default=sa.text("0")),
+            sa.Column("status", sa.Text, nullable=False,
+                      server_default=sa.text("'ok'")),
+            sa.Column("error", sa.Text, nullable=True),
+            sa.Column("started_at", sa.DateTime(timezone=True), nullable=False,
+                      server_default=sa.text("now()")),
+            sa.Column("ended_at", sa.DateTime(timezone=True), nullable=True),
+            sa.Column("duration_ms", sa.Integer, nullable=False,
+                      server_default=sa.text("0")),
+            sa.Index(f"{p}turn_thread_started_idx",
+                     "workspace", "thread_id", sa.text("started_at DESC")),
+        )
+        turn_step = sa.Table(
+            f"{p}turn_step", md,
+            sa.Column("turn_id", sa.Text,
+                      sa.ForeignKey(f"{md.schema + '.' if md.schema else ''}{p}turn.turn_id",
+                                    ondelete="CASCADE"),
+                      primary_key=True, nullable=False),
+            sa.Column("step_index", sa.Integer, primary_key=True, nullable=False),
+            sa.Column("name", sa.Text, nullable=False),
+            sa.Column("input", sa.Text, nullable=True),
+            sa.Column("output", sa.Text, nullable=True),
+            sa.Column("status", sa.Text, nullable=False,
+                      server_default=sa.text("'ok'")),
+            sa.Column("error", sa.Text, nullable=True),
+            sa.Column("started_at", sa.DateTime(timezone=True), nullable=False,
+                      server_default=sa.text("now()")),
+            sa.Column("duration_ms", sa.Integer, nullable=False,
+                      server_default=sa.text("0")),
+        )
         versions_seq = sa.Table(
             f"{p}versions_seq", md,
             sa.Column("scope", sa.Text, primary_key=True, nullable=False),
@@ -347,5 +411,5 @@ def build_metadata(*, is_pg: bool, schema: str | None = None) -> Tables:
         metadata=md, documents=documents, versions=versions,
         bundle_entries=bundle_entries, layer_documents=layer_documents,
         outbox=outbox, versions_seq=versions_seq,
-        quota_counters=quota_counters,
+        quota_counters=quota_counters, turn=turn, turn_step=turn_step,
     )
