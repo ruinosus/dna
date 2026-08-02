@@ -90,9 +90,15 @@ from typing import Any, Callable
 
 from dna.memory.memory_type import classify_memory_type
 
-#: CoALA taxonomy — identical enum on both sides (design §1: "identity, not
-#: conversion").
-_ALLOWED_MEMORY_TYPES = ("episodic", "semantic", "procedural")
+#: Os tres nomes CoALA — os que o runtime trata de forma especial e os que
+#: viram raiz de namespace MIF.
+#:
+#: ⚠️ NAO e mais a lista de tipos VALIDOS. O `Engram` abriu o campo, e um
+#: workspace pode declarar `preferencia`/`restricao`. Um tipo fora desta tripla
+#: continua valido: ele so nao ganha raiz de namespace propria no MIF, e cai na
+#: raiz generica — perder o namespace e aceitavel; perder a MEMORIA nao seria.
+_KNOWN_MEMORY_TYPES = ("episodic", "semantic", "procedural")
+_ALLOWED_MEMORY_TYPES = _KNOWN_MEMORY_TYPES
 
 #: Reserved MIF namespace roots (SPECIFICATION.md §10.2) that this module's
 #: reversible area<->namespace scheme keys off.

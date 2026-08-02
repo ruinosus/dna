@@ -240,3 +240,21 @@ def test_o_briefing_NAO_reordena_o_que_o_recall_ja_pontuou():
     ])
     linhas = [l for l in texto.splitlines() if l.startswith("- ")]
     assert [l.split("] ", 1)[1] for l in linhas] == ["primeira", "segunda", "terceira"]
+
+
+def test_um_tipo_DECLARADO_pelo_workspace_vence_a_heuristica():
+    """⚠️ O classificador comparava contra a tripla fechada.
+
+    Um workspace que declarasse `preferencia` tinha o proprio valor
+    SILENCIOSAMENTE substituido por `semantic` — o classificador reescrevia a
+    decisao de quem sabia mais que ele, e nada avisava.
+
+    A heuristica so opina quando NINGUEM opinou.
+    """
+    from dna.memory.memory_type import classify_memory_type
+
+    assert classify_memory_type({"memory_type": "preferencia"}) == "preferencia"
+    assert classify_memory_type({"memory_type": "  restricao  "}) == "restricao"
+    # sem declaracao, a heuristica continua valendo
+    assert classify_memory_type({"summary": "sempre confirme o CNPJ"}) == "procedural"
+    assert classify_memory_type({"summary": "o cliente e a ACME"}) == "semantic"
