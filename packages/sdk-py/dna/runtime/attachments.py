@@ -53,6 +53,7 @@ __all__ = [
     "extensao_para",
     "MOTIVOS_DE_RECUSA",
     "bloco_nativo",
+    "bloco_por_id",
     "estrategia_para",
     "ferramenta_sandbox",
 ]
@@ -180,6 +181,67 @@ def motivo_da_recusa(mime: str) -> str:
     if familia in MOTIVOS_DE_RECUSA:
         return MOTIVOS_DE_RECUSA[familia]
     return f"o formato {m or '(desconhecido)'} não é lido por este agente"
+
+
+def bloco_por_id(file_id: str) -> dict[str, Any]:
+    """O content block que REFERENCIA um arquivo já subido pela Files API.
+
+    ## Por que este é o caminho, e o inline é a exceção
+
+    MEDIDO em 02/08/2026, mesmo arquivo, mesma pergunta, mesma resposta e os
+    mesmos 34 tokens de contexto — a diferença está no que VIAJA e no que FICA:
+
+    ==================  =====================  ==========================
+    aspecto             ``file_id``            base64 inline
+    ==================  =====================  ==========================
+    sobe                uma vez                a cada turno
+    na requisição       só o identificador     o arquivo INTEIRO
+    no checkpoint       nada                   o arquivo inteiro
+    ==================  =====================  ==========================
+
+    O inline não é só mais caro: o anexo entra no estado da conversa e é
+    **reenviado em todo turno seguinte**. Medido no Postgres local: 14 blobs de
+    checkpoint carregando base64 de anexo. É a mesma falha que `generated.sem_bytes`
+    fecha na direção de SAÍDA, e que estava aberta na de entrada.
+
+    ⚠️ A forma `{"type": "file", "file": {...}}` não é chute: o `langchain-openai`
+    faz ``new_block = {"type": "input_file", **block["file"]}`` — ele ESPALHA o
+    que estiver em ``file``. Lido em `chat_models/base.py`, e medido depois.
+    """
+    return {"type": "file", "file": {"file_id": file_id}}
+
+
+def bloco_imagem_por_id(file_id: str) -> dict[str, Any]:
+    """A IMAGEM também por referência — e ela é a que mais se esquece.
+
+    Imagem "funciona" inline, então é fácil deixá-la passar: foi o que este
+    módulo fazia. Só que uma foto de 3 MB vira 4 MB de base64 no corpo E no
+    checkpoint, reenviados a cada turno.
+
+    O `langgraph-file-agent` monta ``{"type": "input_image", "file_id": …}`` e
+    NÃO usa data-URI — auditado em `src/agent/middleware.py:114-115`. A escolha
+    deles é deliberada, e a nossa era distração.
+
+    ## ⚠️ Esta forma é CRUA do provider, e o documento não é
+
+    Um documento vai como ``{"type": "file", "file": {...}}`` — o formato padrão
+    do LangChain, que ele traduz por provedor. Para IMAGEM não existe equivalente
+    padrão que carregue um ``file_id``: o conversor mapeia ``image_url`` para
+    ``input_image`` levando sempre uma URL, e não há caminho para o id.
+
+    Duas medições em 02/08/2026 fecham isso:
+
+    * ``{"type": "image", "image": {"file_id": …}}`` — inventado por mim, e o
+      modelo respondeu **"Não recebi a imagem"**;
+    * ``{"type": "file", "file": {"file_id": …}}`` numa imagem — **400**,
+      ``Expected context stuffing file type to be a supported…``.
+
+    Só a forma crua funciona, e o LangChain a repassa intacta (ele só converte
+    ``image_url`` e ``file``; o resto passa). É uma amarra a um provedor, aceita
+    porque a alternativa é mandar a imagem inteira no corpo a cada turno — e
+    registrada aqui para quem for portar para outro runtime saber onde olhar.
+    """
+    return {"type": "input_image", "file_id": file_id}
 
 
 def bloco_nativo(*, base64_data: str, mime: str, filename: str) -> dict[str, Any]:

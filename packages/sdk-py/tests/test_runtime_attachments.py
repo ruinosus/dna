@@ -101,14 +101,30 @@ def test_o_modulo_nao_faz_I_O():
 
     Uma regra que precisa de cliente HTTP para ser testada é uma regra cujos
     casos difíceis ninguém roda.
+
+    ⚠️ A checagem é por AST, e não por substring. A primeira versão procurava a
+    palavra `openai` no texto do arquivo — e disparou quando o docstring passou a
+    EXPLICAR por que a forma de bloco da imagem é crua do provider. Uma guarda
+    que acusa prosa é uma guarda que alguém afrouxa para calar, e aí ela deixa de
+    pegar o import de verdade.
     """
+    import ast
     import pathlib
 
     import dna.runtime.attachments as mod
 
-    fonte = pathlib.Path(mod.__file__).read_text()
-    for proibido in ("import httpx", "import requests", "urllib.request", "openai"):
-        assert proibido not in fonte, f"o roteamento passou a fazer I/O: {proibido}"
+    arvore = ast.parse(pathlib.Path(mod.__file__).read_text())
+    importados = set()
+    for no in ast.walk(arvore):
+        if isinstance(no, ast.Import):
+            importados.update(a.name.split(".")[0] for a in no.names)
+        elif isinstance(no, ast.ImportFrom) and no.module:
+            importados.add(no.module.split(".")[0])
+
+    for proibido in ("httpx", "requests", "urllib", "openai", "aiohttp"):
+        assert proibido not in importados, (
+            f"o roteamento passou a fazer I/O: importa {proibido!r}"
+        )
 
 
 # ── a extensão, que a Files API valida ─────────────────────────────────────
