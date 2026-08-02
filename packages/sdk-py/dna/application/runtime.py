@@ -3105,6 +3105,9 @@ async def register_artifact_impl(
     filename: str | None = None,
     mime: str | None = None,
     size_bytes: int | None = None,
+    detected_mime: str | None = None,
+    mime_mismatch: bool | None = None,
+    origin: str | None = None,
     now: datetime | None = None,
 ) -> dict[str, Any]:
     """**Record the ORIGINAL a projection will be derived from** — the write
@@ -3168,6 +3171,17 @@ async def register_artifact_impl(
         "uri": location,
         "filename": filename or None,
         "mime": mime or None,
+        # BESIDE the declared value, never instead of it: the pair IS the
+        # evidence. Overwriting `mime` would erase the fact that they ever
+        # disagreed — and that disagreement is the only thing either field is
+        # good for on its own.
+        "detected_mime": detected_mime or None,
+        "mime_mismatch": mime_mismatch,
+        # `uploaded` (a human attached it) vs `generated` (an agent produced
+        # it). Not cosmetic: a generated artifact is REPRODUCIBLE, and a
+        # retention policy may treat it very differently from an original
+        # nobody else holds a copy of.
+        "origin": origin or None,
         "size_bytes": size_bytes,
         "uploaded_by": actor_label(identity),
         "uploaded_at": stamp,

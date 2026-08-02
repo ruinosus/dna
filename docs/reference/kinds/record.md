@@ -1492,8 +1492,11 @@ A Role is one rung of the RBAC ladder expressed as data — its role_id, display
 | `derived_refs[].kind` | string | yes | The derived document's Kind. |
 | `derived_refs[].name` | string | yes | The derived document's name within that Kind. |
 | `derived_refs[].scope` | string \| null |  | The scope it was written to, when it differs from the artifact's own. |
+| `detected_mime` | string \| null |  | What the bytes ACTUALLY are, read from their magic bytes (`dna.runtime.mime.detect_mime`). Kept BESIDE `mime`, never instead of it: the pair is the evidence. Overwriting the declared value would erase the fact that they ever disagreed, and that disagreement is the only thing either field is good for on its own. |
 | `filename` | string \| null |  | The name the file arrived with, when one did. Display only — never a path to open, and never trusted as one. |
 | `mime` | string \| null |  | The declared content type, e.g. application/pdf. What the uploader SAID it is; not proof of what it is. |
+| `mime_mismatch` | boolean \| null |  | True when `detected_mime` and what the caller declared (or the filename implied) diverge in a way that matters. NOT an error and NOT a refusal — a `.pdf` that is really a ZIP may be an innocent mistake or an attempt, and a record that cannot tell you it happened cannot help you decide which. OOXML detected as its zip container and variation within text do NOT count; a signal that fires on half the uploads is a signal nobody reads. |
+| `origin` | string \| null |  | Where the bytes came from. `uploaded` — a human attached the file; `generated` — an agent produced it (an image, a chart, a converted file). The distinction is not cosmetic: a generated artifact is REPRODUCIBLE and a retention policy may treat it very differently from an original nobody else holds a copy of. Um de: `uploaded`, `generated`, `None`. |
 | `sha256` | string | yes | Lowercase hex SHA-256 of the ORIGINAL bytes. The content address: it is what lets anyone holding the file verify that this record and those bytes belong together, and what makes a re-upload of identical content the same artifact rather than a second one. |
 | `size_bytes` | integer \| null |  | Size of the original in bytes, when known. |
 | `uploaded_at` | string \| null |  | ISO-8601 timestamp of the upload. |
