@@ -109,3 +109,55 @@ def test_os_DOIS_caminhos_do_runtime_usam_este_construtor():
         assert "init_chat_model(f\"openai:" not in fonte, (
             f"{caminho.name} voltou a montar o modelo por conta própria"
         )
+
+
+# ── a coordenada do agente vs o deployment do ambiente ─────────────────────
+
+
+def test_sem_override_a_coordenada_do_agente_VENCE(monkeypatch):
+    monkeypatch.delenv("DNA_MODEL_DEPLOYMENT", raising=False)
+    from dna.runtime.model import deployment_para
+
+    assert deployment_para("gpt-5-mini") == "gpt-5-mini"
+
+
+def test_o_override_troca_o_deployment_sem_tocar_na_definicao(monkeypatch):
+    """⚠️ A separação que este par existe para guardar.
+
+    O documento do agente declara uma COORDENADA portátil, versionada com ele e
+    igual em todo ambiente. Qual deployment a atende é fato do AMBIENTE.
+
+    Sem isso a única saída seria editar a definição — que é COMPARTILHADA com
+    produção. Foi o que aconteceu em 02/08: o endpoint local passou a apontar
+    para um recurso com `gpt-5.4`, as definições seguiram pedindo `gpt-5-mini`,
+    e a chamada morreu com `DeploymentNotFound` — que chega ao navegador como
+    `terminated`, no meio do stream.
+    """
+    monkeypatch.setenv("DNA_MODEL_DEPLOYMENT", "gpt-5.4")
+    from dna.runtime.model import deployment_para
+
+    assert deployment_para("gpt-5-mini") == "gpt-5.4"
+
+
+def test_o_override_e_REGISTRADO_quando_difere(monkeypatch, caplog):
+    """Substituição silenciosa de modelo faria alguém depurar o comportamento de
+    um modelo que não está rodando — a depuração mais cara que existe."""
+    import logging
+
+    monkeypatch.setenv("DNA_MODEL_DEPLOYMENT", "gpt-5.4")
+    from dna.runtime.model import deployment_para
+
+    with caplog.at_level(logging.INFO, logger="dna.runtime.model"):
+        deployment_para("gpt-5-mini")
+    assert "gpt-5-mini" in caplog.text and "gpt-5.4" in caplog.text
+
+
+def test_override_IGUAL_a_coordenada_nao_polui_o_log(monkeypatch, caplog):
+    import logging
+
+    monkeypatch.setenv("DNA_MODEL_DEPLOYMENT", "gpt-5-mini")
+    from dna.runtime.model import deployment_para
+
+    with caplog.at_level(logging.INFO, logger="dna.runtime.model"):
+        assert deployment_para("gpt-5-mini") == "gpt-5-mini"
+    assert caplog.text == ""

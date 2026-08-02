@@ -109,3 +109,56 @@ def test_o_modulo_nao_faz_I_O():
     fonte = pathlib.Path(mod.__file__).read_text()
     for proibido in ("import httpx", "import requests", "urllib.request", "openai"):
         assert proibido not in fonte, f"o roteamento passou a fazer I/O: {proibido}"
+
+
+# ── a extensão, que a Files API valida ─────────────────────────────────────
+
+
+def test_a_extensao_do_XLSX_NAO_sai_de_recortar_o_mime():
+    """⚠️ O defeito medido em 02/08, e ele falha só no formato que mais importa.
+
+    `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`, cortado,
+    vira `vnd.openxmlf` — e a Files API responde `Invalid extension openxmlf`.
+
+    O sintoma é o pior tipo: o upload falha em silêncio, o sandbox fica vazio, e
+    o modelo PEDE o arquivo que ele acabou de ver anunciado na mensagem. O
+    usuário vê um agente confuso, não um erro.
+    """
+    from dna.runtime.attachments import extensao_para
+
+    assert extensao_para(XLSX) == ".xlsx"
+    assert extensao_para(XLSX) != f".{XLSX.split('/')[-1][:12]}"
+
+
+@pytest.mark.parametrize("mime,ext", [
+    (CSV, ".csv"), ("application/pdf", ".pdf"),
+    ("application/vnd.openxmlformats-officedocument.wordprocessingml.document", ".docx"),
+    ("application/vnd.ms-excel", ".xls"), ("image/jpeg", ".jpg"),
+])
+def test_a_extensao_vem_do_MAPA(mime, ext):
+    from dna.runtime.attachments import extensao_para
+
+    assert extensao_para(mime) == ext
+
+
+def test_mime_desconhecido_degrada_para_txt():
+    """O provider trata fluxo desconhecido como texto — degradação segura. O que
+    NÃO é seguro é inventar sufixo."""
+    from dna.runtime.attachments import extensao_para
+
+    assert extensao_para("x/inexistente") == ".txt"
+    assert extensao_para("") == ".txt"
+
+
+def test_TODO_formato_roteavel_tem_extensao():
+    """Guarda contra a lacuna: um MIME que o roteador aceita e o mapa não conhece
+    subiria como `.txt` e a Files API o recusaria — o mesmo defeito com outra
+    roupa."""
+    from dna.runtime.attachments import (
+        EXTENSAO_POR_MIME,
+        Estrategia,
+        estrategia_para,
+    )
+
+    for mime in EXTENSAO_POR_MIME:
+        assert estrategia_para(mime) is not Estrategia.RECUSADO

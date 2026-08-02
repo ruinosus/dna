@@ -48,7 +48,9 @@ from enum import Enum
 from typing import Any, Mapping
 
 __all__ = [
+    "EXTENSAO_POR_MIME",
     "Estrategia",
+    "extensao_para",
     "MOTIVOS_DE_RECUSA",
     "bloco_nativo",
     "estrategia_para",
@@ -105,6 +107,51 @@ MOTIVOS_DE_RECUSA: Mapping[str, str] = {
     "audio": "áudio precisa de transcrição, que é outro endpoint",
     "video": "vídeo precisa de extração de áudio e amostragem de quadros",
 }
+
+
+#: MIME → extensão. Não é conveniência: a Files API valida a EXTENSÃO do nome
+#: do arquivo, e recusa o que não conhece.
+#:
+#: ⚠️ Derivar o sufixo cortando o MIME não funciona, e falha exatamente nos
+#: formatos que mais importam. MEDIDO em 02/08/2026: um XLSX
+#: (`application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`) vira
+#: `anexo.vnd.openxmlf`, e a API responde
+#: `Invalid extension openxmlf`. O upload falha, o sandbox não recebe nada, e o
+#: modelo — que já viu a nota dizendo que a planilha está lá — PEDE o arquivo de
+#: novo. O usuário vê um agente confuso, não um erro.
+EXTENSAO_POR_MIME: Mapping[str, str] = {
+    "application/pdf": ".pdf",
+    "text/plain": ".txt",
+    "text/markdown": ".md",
+    "text/html": ".html",
+    "text/xml": ".xml",
+    "application/xml": ".xml",
+    "application/json": ".json",
+    "application/rtf": ".rtf",
+    "application/msword": ".doc",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+    "application/vnd.ms-powerpoint": ".ppt",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation": ".pptx",
+    "text/csv": ".csv",
+    "text/tab-separated-values": ".tsv",
+    "application/vnd.ms-excel": ".xls",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ".xlsx",
+    "image/png": ".png",
+    "image/jpeg": ".jpg",
+    "image/gif": ".gif",
+    "image/webp": ".webp",
+}
+
+
+def extensao_para(mime: str) -> str:
+    """A extensão que a Files API aceita para este MIME.
+
+    Default `.txt` — o provider trata fluxo desconhecido como texto, que é a
+    degradação segura. O que NÃO é seguro é inventar sufixo a partir do MIME:
+    ver o aviso em `EXTENSAO_POR_MIME`.
+    """
+    m = (mime or "").split(";")[0].strip().lower()
+    return EXTENSAO_POR_MIME.get(m, ".txt")
 
 
 def estrategia_para(mime: str) -> Estrategia:

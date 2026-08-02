@@ -46,7 +46,7 @@ from __future__ import annotations
 import os
 from typing import Any
 
-__all__ = ["build_chat_model", "responses_api_enabled"]
+__all__ = ["build_chat_model", "deployment_para", "responses_api_enabled"]
 
 
 def responses_api_enabled() -> bool:
@@ -60,6 +60,42 @@ def responses_api_enabled() -> bool:
     return bruto not in {"0", "false", "no", "off"}
 
 
+def deployment_para(model: str) -> str:
+    """Qual DEPLOYMENT serve a coordenada que o agente declarou.
+
+    ## A separação que isto torna explícita
+
+    O documento do agente declara ``model: gpt-5-mini`` — uma **coordenada
+    portátil**, parte da definição, versionada com ela e igual em todo ambiente.
+    Qual *deployment* atende essa coordenada é fato do **ambiente**: o mesmo
+    agente roda contra um recurso que tem ``gpt-5-mini`` e outro que só tem
+    ``gpt-5.4``.
+
+    Sem essa separação a única saída é editar a definição — que é COMPARTILHADA
+    com produção. Foi exatamente o que aconteceu em 02/08/2026: o endpoint local
+    passou a apontar para um recurso com ``gpt-5.4``, as definições continuaram
+    pedindo ``gpt-5-mini``, e a chamada morreu com ``DeploymentNotFound``. No
+    navegador isso chega como ``terminated`` — um erro opaco, no meio do stream.
+
+    ⚠️ O override é REGISTRADO em log quando difere. Uma substituição silenciosa
+    de modelo faria alguém depurar comportamento de um modelo que não está
+    rodando — e essa é a depuração mais cara que existe.
+    """
+    alvo = (os.environ.get("DNA_MODEL_DEPLOYMENT") or "").strip()
+    if not alvo or alvo == model:
+        return model
+
+    import logging
+
+    logging.getLogger("dna.runtime.model").info(
+        "deployment sobrepõe a coordenada do agente: %s → %s "
+        "(DNA_MODEL_DEPLOYMENT). A definição segue portátil; isto é ambiente.",
+        model,
+        alvo,
+    )
+    return alvo
+
+
 def build_chat_model(model: str, **extras: Any) -> Any:
     """O modelo de chat deste runtime, montado igual em todo lugar.
 
@@ -71,4 +107,4 @@ def build_chat_model(model: str, **extras: Any) -> Any:
 
     if responses_api_enabled():
         extras.setdefault("use_responses_api", True)
-    return init_chat_model(f"openai:{model}", **extras)
+    return init_chat_model(f"openai:{deployment_para(model)}", **extras)
