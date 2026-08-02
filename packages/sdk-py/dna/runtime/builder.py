@@ -261,6 +261,7 @@ async def build_runtime(
     # `build_copilot_context` to a worker thread: its kernel reads dispatch back
     # to this loop, so a Postgres connection stays on its owning loop.
     from dna.runtime.config import build_env_mi
+    from dna.runtime.telemetry import setup_telemetry
 
     mi = await build_env_mi(base_dir=base_dir, scope=scope)
     ctx = await asyncio.to_thread(_compose_ctx, mi, copilot)
@@ -276,6 +277,16 @@ async def build_runtime(
         extensions = dict(hooks.extensions or {})
         extensions["tools"] = [*(extensions.get("tools") or []), tool]
         hooks = replace(hooks, extensions=extensions)
+
+    # A observabilidade e ligada AQUI, no ponto unico por onde todo runtime
+    # passa — e por isso um agente novo ja nasce registrado, sem ninguem se
+    # lembrar de instrumenta-lo. Nunca levanta: sem o extra `otel` devolve None
+    # e o processo SERVE. Ver `dna/runtime/telemetry.py`.
+    setup_telemetry(
+        sink=getattr(hooks, "turn_sink", None),
+        service_name=f"dna-runtime/{ctx.name}",
+        resource_attributes={"dna.scope": scope, "dna.agent": ctx.name},
+    )
 
     framework = getattr(getattr(ctx, "serving", None), "framework", None) or "langchain"
     return await get_runtime(framework).build(ctx, hooks)
