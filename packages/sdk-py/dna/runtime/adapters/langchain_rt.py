@@ -135,7 +135,8 @@ class LangChainRuntime:
         # the real invariant is that the DNA KERNEL CORE never imports
         # dna.runtime at all.
         from langchain.agents import create_agent
-        from langchain.chat_models import init_chat_model
+
+        from dna.runtime.model import build_chat_model
 
         # `allowed_tools` is recomputed inside `mcp_tool_stack` below (from the
         # SAME `ctx.mcp_servers` — one rule, `_allowed_tools_set`, not a second
@@ -202,7 +203,7 @@ class LangChainRuntime:
             )
 
         graph = create_agent(
-            model=init_chat_model(f"openai:{model}"),
+            model=build_chat_model(model),
             tools=tools,
             middleware=middleware,
             checkpointer=checkpointer,
