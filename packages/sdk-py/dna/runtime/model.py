@@ -46,7 +46,7 @@ from __future__ import annotations
 import os
 from typing import Any
 
-__all__ = ["build_chat_model", "deployment_para", "responses_api_enabled"]
+__all__ = ["build_chat_model", "deployment_for", "responses_api_enabled"]
 
 
 def responses_api_enabled() -> bool:
@@ -56,11 +56,11 @@ def responses_api_enabled() -> bool:
     valor mantém o default, porque um typo numa variável de ambiente não pode
     desligar em silêncio a API que carrega o caminho de arquivo.
     """
-    bruto = (os.environ.get("DNA_MODEL_RESPONSES_API") or "").strip().lower()
-    return bruto not in {"0", "false", "no", "off"}
+    raw = (os.environ.get("DNA_MODEL_RESPONSES_API") or "").strip().lower()
+    return raw not in {"0", "false", "no", "off"}
 
 
-def deployment_para(model: str) -> str:
+def deployment_for(model: str) -> str:
     """Qual DEPLOYMENT serve a coordenada que o agente declarou.
 
     ## A separação que isto torna explícita
@@ -81,8 +81,8 @@ def deployment_para(model: str) -> str:
     de modelo faria alguém depurar comportamento de um modelo que não está
     rodando — e essa é a depuração mais cara que existe.
     """
-    alvo = (os.environ.get("DNA_MODEL_DEPLOYMENT") or "").strip()
-    if not alvo or alvo == model:
+    target = (os.environ.get("DNA_MODEL_DEPLOYMENT") or "").strip()
+    if not target or target == model:
         return model
 
     import logging
@@ -91,9 +91,9 @@ def deployment_para(model: str) -> str:
         "deployment sobrepõe a coordenada do agente: %s → %s "
         "(DNA_MODEL_DEPLOYMENT). A definição segue portátil; isto é ambiente.",
         model,
-        alvo,
+        target,
     )
-    return alvo
+    return target
 
 
 def build_chat_model(model: str, **extras: Any) -> Any:
@@ -107,4 +107,4 @@ def build_chat_model(model: str, **extras: Any) -> Any:
 
     if responses_api_enabled():
         extras.setdefault("use_responses_api", True)
-    return init_chat_model(f"openai:{deployment_para(model)}", **extras)
+    return init_chat_model(f"openai:{deployment_for(model)}", **extras)

@@ -116,9 +116,9 @@ def test_os_DOIS_caminhos_do_runtime_usam_este_construtor():
 
 def test_sem_override_a_coordenada_do_agente_VENCE(monkeypatch):
     monkeypatch.delenv("DNA_MODEL_DEPLOYMENT", raising=False)
-    from dna.runtime.model import deployment_para
+    from dna.runtime.model import deployment_for
 
-    assert deployment_para("gpt-5-mini") == "gpt-5-mini"
+    assert deployment_for("gpt-5-mini") == "gpt-5-mini"
 
 
 def test_o_override_troca_o_deployment_sem_tocar_na_definicao(monkeypatch):
@@ -134,9 +134,9 @@ def test_o_override_troca_o_deployment_sem_tocar_na_definicao(monkeypatch):
     `terminated`, no meio do stream.
     """
     monkeypatch.setenv("DNA_MODEL_DEPLOYMENT", "gpt-5.4")
-    from dna.runtime.model import deployment_para
+    from dna.runtime.model import deployment_for
 
-    assert deployment_para("gpt-5-mini") == "gpt-5.4"
+    assert deployment_for("gpt-5-mini") == "gpt-5.4"
 
 
 def test_o_override_e_REGISTRADO_quando_difere(monkeypatch, caplog):
@@ -145,10 +145,10 @@ def test_o_override_e_REGISTRADO_quando_difere(monkeypatch, caplog):
     import logging
 
     monkeypatch.setenv("DNA_MODEL_DEPLOYMENT", "gpt-5.4")
-    from dna.runtime.model import deployment_para
+    from dna.runtime.model import deployment_for
 
     with caplog.at_level(logging.INFO, logger="dna.runtime.model"):
-        deployment_para("gpt-5-mini")
+        deployment_for("gpt-5-mini")
     assert "gpt-5-mini" in caplog.text and "gpt-5.4" in caplog.text
 
 
@@ -156,8 +156,8 @@ def test_override_IGUAL_a_coordenada_nao_polui_o_log(monkeypatch, caplog):
     import logging
 
     monkeypatch.setenv("DNA_MODEL_DEPLOYMENT", "gpt-5-mini")
-    from dna.runtime.model import deployment_para
+    from dna.runtime.model import deployment_for
 
     with caplog.at_level(logging.INFO, logger="dna.runtime.model"):
-        assert deployment_para("gpt-5-mini") == "gpt-5-mini"
+        assert deployment_for("gpt-5-mini") == "gpt-5-mini"
     assert caplog.text == ""

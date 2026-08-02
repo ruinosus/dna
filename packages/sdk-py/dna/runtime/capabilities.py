@@ -102,7 +102,7 @@ class MissingCapability(RuntimeError):
         self.reasons = dict(reasons or {})
 
         detalhes = "; ".join(
-            f"{nome}: {self.reasons[nome]}" for nome in self.missing if self.reasons.get(nome)
+            f"{name}: {self.reasons[name]}" for name in self.missing if self.reasons.get(name)
         )
         super().__init__(
             f"o deployment {deployment!r} não oferece "
@@ -172,25 +172,25 @@ def require_capabilities(
     relatório, desconhecido fecha (mediu-se o resto, aquilo não apareceu); **sem
     relatório nenhum**, não há medição a interpretar.
     """
-    exigidas = {c for c in required if c}
-    if not exigidas:
+    required_set = {c for c in required if c}
+    if not required_set:
         return
 
-    desconhecidas = exigidas - CAPABILITIES
-    if desconhecidas:
+    unknown = required_set - CAPABILITIES
+    if unknown:
         raise ValueError(
             "capacidade desconhecida exigida: "
-            + ", ".join(sorted(desconhecidas))
+            + ", ".join(sorted(unknown))
             + f". Conhecidas: {', '.join(sorted(CAPABILITIES))}."
         )
 
     if report is None:
         return
 
-    faltando = [c for c in exigidas if not report.has(c)]
-    if faltando:
+    missing_ = [c for c in required_set if not report.has(c)]
+    if missing_:
         raise MissingCapability(
-            missing=faltando, deployment=report.deployment, reasons=report.reasons
+            missing=missing_, deployment=report.deployment, reasons=report.reasons
         )
 
 
@@ -204,19 +204,19 @@ def report_from_probe(
     I/O é de quem tem o cliente.
     """
     caps = payload.get("capacidades") or {}
-    suportado, motivos = {}, {}
-    for nome, r in caps.items():
-        if nome not in CAPABILITIES:
+    supported, reasons = {}, {}
+    for name, r in caps.items():
+        if name not in CAPABILITIES:
             # Uma capacidade que este SDK não conhece é IGNORADA, não é erro: a
             # sonda pode ser mais nova que o runtime que lê o resultado.
             continue
-        suportado[nome] = bool(r.get("ok"))
+        supported[name] = bool(r.get("ok"))
         if r.get("motivo"):
-            motivos[nome] = str(r["motivo"])
+            reasons[name] = str(r["motivo"])
     return CapabilityReport(
         endpoint=str(payload.get("endpoint") or ""),
         deployment=str(payload.get("modelo") or ""),
-        supported=suportado,
+        supported=supported,
         measured_at=measured_at,
-        reasons=motivos,
+        reasons=reasons,
     )

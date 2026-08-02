@@ -82,6 +82,10 @@ def _stub_create_agent(monkeypatch):
 
     def fake_create_agent(model, tools=None, **kwargs):
         captured["tools"] = list(tools or [])
+        # O stack de middleware é quem decide o que PARA para aprovação. Sem
+        # capturá-lo, um teste de portão humano só consegue afirmar que a tool
+        # existe — que é justamente a metade que nunca esteve quebrada.
+        captured["middleware"] = list(kwargs.get("middleware") or [])
         return _FakeGraph()
 
     monkeypatch.setattr("langchain.agents.create_agent", fake_create_agent)
@@ -454,3 +458,74 @@ def test_the_sub_run_can_NOT_delegate_onward(tmp_path, monkeypatch):
     asyncio.run(run_local("conv", "x"))
     assert delegate_to not in captured["tools"]
     assert "delegate_to" not in [getattr(t, "name", None) for t in captured["tools"]]
+
+
+# ── registrar uma tool local ≠ exigir aprovação dela ────────────────────────
+
+
+def _hitl_gated(captured) -> set[str]:
+    """Os nomes que o `HumanInTheLoopMiddleware` vai interromper."""
+    for m in captured["middleware"]:
+        gate = getattr(m, "interrupt_on", None)
+        if gate is not None:
+            return set(gate)
+    raise AssertionError("nenhum HumanInTheLoopMiddleware no stack")
+
+
+def test_uma_tool_local_de_LEITURA_nao_pede_aprovacao(tmp_path, monkeypatch):
+    """⚠️ MEDIDO no dna-cloud em 02/08/2026, e o sintoma era na cara do usuário.
+
+    `extra_confirm` era "todo nome de tool local", e alimentava DUAS coisas: a
+    allowlist e o portão humano. Enquanto as locais eram só escritas (os drafts
+    de memória e documento) as duas listas coincidiam — e a coincidência virou
+    regra sem ninguém decidir isso.
+
+    Aí chegou `analyze_spreadsheet`, que só LÊ a planilha que o usuário acabou de
+    anexar. O turno parava, e quem perguntou "quantas linhas tem?" recebia um
+    cartão de aprovação.
+    """
+    class _Leitura:
+        name = "le_planilha"
+        extras = {"requires_confirmation": False}
+
+    _app, captured, _hooks = _build(
+        "solo-copilot", tmp_path, monkeypatch, extra_tools=[_Leitura()]
+    )
+    assert "le_planilha" in _tool_names(captured["tools"]), "sumiu do agente"
+    assert "le_planilha" not in _hitl_gated(captured), "leitura pedindo aprovação"
+
+
+def test_uma_tool_local_SEM_declaracao_continua_gated(tmp_path, monkeypatch):
+    """O default é FECHADO, e de propósito.
+
+    Default aberto desgataria uma escrita futura em silêncio — o erro caro do
+    outro lado, e o único dos dois que ninguém percebe até ter acontecido.
+    """
+    class _Sem:
+        name = "escreve_algo"
+
+    _app, captured, _hooks = _build(
+        "solo-copilot", tmp_path, monkeypatch, extra_tools=[_Sem()]
+    )
+    assert "escreve_algo" in _hitl_gated(captured)
+
+
+def test_a_tool_de_leitura_continua_VISIVEL_para_a_allowlist(tmp_path, monkeypatch):
+    """A separação das duas listas não pode custar a primeira pergunta.
+
+    A allowlist filtra o que ela não conhece: uma tool local ausente dali é
+    descartada antes de o modelo poder chamá-la. Desgatear tinha de mudar SÓ o
+    portão humano.
+    """
+    class _Leitura:
+        name = "le_planilha"
+        extras = {"requires_confirmation": False}
+
+    _app, captured, _hooks = _build(
+        "solo-copilot", tmp_path, monkeypatch, extra_tools=[_Leitura()]
+    )
+    for m in captured["middleware"]:
+        allowed = getattr(m, "allowed", None) or getattr(m, "_allowed", None)
+        if allowed and "le_planilha" in allowed:
+            return
+    raise AssertionError("a allowlist não enxerga a tool de leitura")

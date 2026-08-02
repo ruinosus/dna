@@ -38,46 +38,46 @@ from dataclasses import dataclass
 from typing import Any, Iterable
 
 __all__ = [
-    "ArtefatoGerado",
-    "MARCA_DE_ARTEFATO",
-    "extrair_artefatos",
-    "sem_bytes",
+    "GeneratedArtifact",
+    "ARTIFACT_MARK",
+    "extract_artifacts",
+    "without_bytes",
 ]
 
 #: O que fica no lugar do Base64. Legível de propósito: quem lê o histórico
 #: precisa ver que houve uma imagem, e não um buraco.
-MARCA_DE_ARTEFATO = "[imagem gerada — entregue como artefato]"
+ARTIFACT_MARK = "[imagem gerada — entregue como artefato]"
 
 #: Chaves em que os providers costumam esconder Base64. Varridas por NOME e não
 #: por heurística de tamanho: um blob de 400 bytes é tão errado quanto um de
 #: 400 KB, só demora mais para doer.
-_CHAVES_DE_BYTES = ("result", "b64_json", "image_base64", "data")
+_BYTE_KEYS = ("result", "b64_json", "image_base64", "data")
 
 
 @dataclass(frozen=True)
-class ArtefatoGerado:
+class GeneratedArtifact:
     """Um arquivo que o modelo produziu — o descritor, nunca os bytes.
 
-    ``dados_b64`` é a exceção deliberada e temporária: para imagem o provider
+    ``data_b64`` é a exceção deliberada e temporária: para imagem o provider
     devolve o conteúdo inline, então ele passa por aqui a caminho do storage. É
-    justamente esse campo que ``sem_bytes`` remove da mensagem.
+    justamente esse campo que ``without_bytes`` remove da mensagem.
     """
 
-    tipo: str  # "sandbox" | "imagem"
+    kind: str  # "sandbox" | "imagem"
     filename: str
     mime: str | None = None
     container_id: str | None = None
     file_id: str | None = None
-    dados_b64: str | None = None
+    data_b64: str | None = None
 
 
-def _anotacoes(bloco: Any) -> Iterable[dict]:
-    for a in (bloco.get("annotations") or []) if isinstance(bloco, dict) else []:
+def _annotations_of(block: Any) -> Iterable[dict]:
+    for a in (block.get("annotations") or []) if isinstance(block, dict) else []:
         if isinstance(a, dict):
             yield a
 
 
-def extrair_artefatos(saida: Any) -> list[ArtefatoGerado]:
+def extract_artifacts(output: Any) -> list[GeneratedArtifact]:
     """Os artefatos desta resposta, na ordem em que aparecem.
 
     ``saida`` é a lista ``output`` do provider (ou o ``content`` já normalizado
@@ -85,45 +85,45 @@ def extrair_artefatos(saida: Any) -> list[ArtefatoGerado]:
     provider que muda a forma da resposta não pode derrubar uma execução que já
     produziu texto útil.
     """
-    if not isinstance(saida, (list, tuple)):
+    if not isinstance(output, (list, tuple)):
         return []
 
-    achados: list[ArtefatoGerado] = []
-    for item in saida:
+    found: list[GeneratedArtifact] = []
+    for item in output:
         if not isinstance(item, dict):
             continue
 
         if item.get("type") == "image_generation_call":
             b64 = next(
-                (item[c] for c in _CHAVES_DE_BYTES if isinstance(item.get(c), str)),
+                (item[c] for c in _BYTE_KEYS if isinstance(item.get(c), str)),
                 None,
             )
-            achados.append(
-                ArtefatoGerado(
-                    tipo="imagem",
+            found.append(
+                GeneratedArtifact(
+                    kind="imagem",
                     filename=str(item.get("output_format") and f"imagem.{item['output_format']}" or "imagem.png"),
                     mime="image/png",
-                    dados_b64=b64,
+                    data_b64=b64,
                 )
             )
             continue
 
-        for bloco in item.get("content") or []:
-            for a in _anotacoes(bloco):
+        for block in item.get("content") or []:
+            for a in _annotations_of(block):
                 if a.get("type") != "container_file_citation":
                     continue
-                achados.append(
-                    ArtefatoGerado(
-                        tipo="sandbox",
+                found.append(
+                    GeneratedArtifact(
+                        kind="sandbox",
                         filename=str(a.get("filename") or "arquivo"),
                         container_id=a.get("container_id"),
                         file_id=a.get("file_id"),
                     )
                 )
-    return achados
+    return found
 
 
-def sem_bytes(saida: Any) -> Any:
+def without_bytes(output: Any) -> Any:
     """A mesma saída, sem nenhum Base64 — o que pode subir para o state.
 
     ⚠️ Esta função é a guarda do checkpoint. O teste que a acompanha busca
@@ -133,18 +133,18 @@ def sem_bytes(saida: Any) -> Any:
     Substitui em vez de apagar: um bloco que some faria o histórico mentir sobre
     o que aconteceu, e quem lesse depois não saberia que houve uma imagem.
     """
-    if not isinstance(saida, (list, tuple)):
-        return saida
+    if not isinstance(output, (list, tuple)):
+        return output
 
-    limpa = []
-    for item in saida:
+    cleaned = []
+    for item in output:
         if not isinstance(item, dict):
-            limpa.append(item)
+            cleaned.append(item)
             continue
         if item.get("type") == "image_generation_call":
-            copia = {k: v for k, v in item.items() if k not in _CHAVES_DE_BYTES}
-            copia["marca"] = MARCA_DE_ARTEFATO
-            limpa.append(copia)
+            copy_ = {k: v for k, v in item.items() if k not in _BYTE_KEYS}
+            copy_["marca"] = ARTIFACT_MARK
+            cleaned.append(copy_)
             continue
-        limpa.append(item)
-    return limpa
+        cleaned.append(item)
+    return cleaned

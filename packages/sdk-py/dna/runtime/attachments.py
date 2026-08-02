@@ -6,8 +6,8 @@ Na Responses API existem três formas de um arquivo alcançar o modelo, e a
 escolha entre elas não é preferência:
 
 ======================  ====================================================
-``NATIVO``              o documento vai INTEIRO dentro da mensagem
-``IMAGEM``              a imagem vai como imagem
+``NATIVE``              o documento vai INTEIRO dentro da mensagem
+``IMAGE``              a imagem vai como imagem
 ``SANDBOX``             o tabular vai para o Code Interpreter, nunca na mensagem
 ======================  ====================================================
 
@@ -48,25 +48,25 @@ from enum import Enum
 from typing import Any, Mapping
 
 __all__ = [
-    "EXTENSAO_POR_MIME",
-    "Estrategia",
-    "extensao_para",
-    "MOTIVOS_DE_RECUSA",
-    "bloco_nativo",
-    "bloco_por_id",
-    "estrategia_para",
-    "ferramenta_sandbox",
+    "EXTENSION_BY_MIME",
+    "Strategy",
+    "extension_for",
+    "REFUSAL_REASONS",
+    "inline_file_block",
+    "file_block_by_id",
+    "strategy_for",
+    "sandbox_tool",
 ]
 
 
-class Estrategia(str, Enum):
+class Strategy(str, Enum):
     """Por onde este arquivo alcança o modelo."""
 
-    NATIVO = "nativo"
-    IMAGEM = "imagem"
+    NATIVE = "nativo"
+    IMAGE = "imagem"
     SANDBOX = "sandbox"
-    #: Reconhecido e recusado. Ver ``MOTIVOS_DE_RECUSA``.
-    RECUSADO = "recusado"
+    #: Reconhecido e recusado. Ver ``REFUSAL_REASONS``.
+    REFUSED = "recusado"
 
 
 #: Documentos que o provider lê por completo dentro da mensagem. Medidos um a
@@ -100,7 +100,7 @@ _TABULARES = {
 
 #: Formato reconhecido → por que ele não entra. A mensagem é para o usuário, e
 #: por isso diz o que FALTA, não que "não é suportado".
-MOTIVOS_DE_RECUSA: Mapping[str, str] = {
+REFUSAL_REASONS: Mapping[str, str] = {
     "application/zip": "arquivo compactado precisa ser aberto antes de ser lido",
     "application/x-7z-compressed": "arquivo compactado precisa ser aberto antes de ser lido",
     "application/x-rar-compressed": "arquivo compactado precisa ser aberto antes de ser lido",
@@ -120,7 +120,7 @@ MOTIVOS_DE_RECUSA: Mapping[str, str] = {
 #: `Invalid extension openxmlf`. O upload falha, o sandbox não recebe nada, e o
 #: modelo — que já viu a nota dizendo que a planilha está lá — PEDE o arquivo de
 #: novo. O usuário vê um agente confuso, não um erro.
-EXTENSAO_POR_MIME: Mapping[str, str] = {
+EXTENSION_BY_MIME: Mapping[str, str] = {
     "application/pdf": ".pdf",
     "text/plain": ".txt",
     "text/markdown": ".md",
@@ -144,46 +144,46 @@ EXTENSAO_POR_MIME: Mapping[str, str] = {
 }
 
 
-def extensao_para(mime: str) -> str:
+def extension_for(mime: str) -> str:
     """A extensão que a Files API aceita para este MIME.
 
     Default `.txt` — o provider trata fluxo desconhecido como texto, que é a
     degradação segura. O que NÃO é seguro é inventar sufixo a partir do MIME:
-    ver o aviso em `EXTENSAO_POR_MIME`.
+    ver o aviso em `EXTENSION_BY_MIME`.
     """
     m = (mime or "").split(";")[0].strip().lower()
-    return EXTENSAO_POR_MIME.get(m, ".txt")
+    return EXTENSION_BY_MIME.get(m, ".txt")
 
 
-def estrategia_para(mime: str) -> Estrategia:
+def strategy_for(mime: str) -> Strategy:
     """Por onde este MIME entra — determinístico, e sem caso default silencioso.
 
-    Um MIME desconhecido cai em ``RECUSADO``, e não em "tenta como texto": o
+    Um MIME desconhecido cai em ``REFUSED``, e não em "tenta como texto": o
     caminho otimista transformaria um binário qualquer num preview truncado, que
     é o modo de falha que este módulo existe para fechar.
     """
     m = (mime or "").split(";")[0].strip().lower()
     if m in _TABULARES:
-        return Estrategia.SANDBOX
+        return Strategy.SANDBOX
     if m in _IMAGENS:
-        return Estrategia.IMAGEM
+        return Strategy.IMAGE
     if m in _NATIVOS:
-        return Estrategia.NATIVO
-    return Estrategia.RECUSADO
+        return Strategy.NATIVE
+    return Strategy.REFUSED
 
 
-def motivo_da_recusa(mime: str) -> str:
-    """A frase que o usuário lê. Nunca "não suportado" — sempre o que falta."""
+def refusal_reason(mime: str) -> str:
+    """A frase que o usuário lê. Nunca "não supported" — sempre o que falta."""
     m = (mime or "").split(";")[0].strip().lower()
-    if m in MOTIVOS_DE_RECUSA:
-        return MOTIVOS_DE_RECUSA[m]
-    familia = m.split("/")[0]
-    if familia in MOTIVOS_DE_RECUSA:
-        return MOTIVOS_DE_RECUSA[familia]
+    if m in REFUSAL_REASONS:
+        return REFUSAL_REASONS[m]
+    family = m.split("/")[0]
+    if family in REFUSAL_REASONS:
+        return REFUSAL_REASONS[family]
     return f"o formato {m or '(desconhecido)'} não é lido por este agente"
 
 
-def bloco_por_id(file_id: str) -> dict[str, Any]:
+def file_block_by_id(file_id: str) -> dict[str, Any]:
     """O content block que REFERENCIA um arquivo já subido pela Files API.
 
     ## Por que este é o caminho, e o inline é a exceção
@@ -201,7 +201,7 @@ def bloco_por_id(file_id: str) -> dict[str, Any]:
 
     O inline não é só mais caro: o anexo entra no estado da conversa e é
     **reenviado em todo turno seguinte**. Medido no Postgres local: 14 blobs de
-    checkpoint carregando base64 de anexo. É a mesma falha que `generated.sem_bytes`
+    checkpoint carregando base64 de anexo. É a mesma falha que `generated.without_bytes`
     fecha na direção de SAÍDA, e que estava aberta na de entrada.
 
     ⚠️ A forma `{"type": "file", "file": {...}}` não é chute: o `langchain-openai`
@@ -211,8 +211,8 @@ def bloco_por_id(file_id: str) -> dict[str, Any]:
     return {"type": "file", "file": {"file_id": file_id}}
 
 
-def bloco_imagem_por_id(file_id: str) -> dict[str, Any]:
-    """A IMAGEM também por referência — e ela é a que mais se esquece.
+def image_block_by_id(file_id: str) -> dict[str, Any]:
+    """A IMAGE também por referência — e ela é a que mais se esquece.
 
     Imagem "funciona" inline, então é fácil deixá-la passar: foi o que este
     módulo fazia. Só que uma foto de 3 MB vira 4 MB de base64 no corpo E no
@@ -225,7 +225,7 @@ def bloco_imagem_por_id(file_id: str) -> dict[str, Any]:
     ## ⚠️ Esta forma é CRUA do provider, e o documento não é
 
     Um documento vai como ``{"type": "file", "file": {...}}`` — o formato padrão
-    do LangChain, que ele traduz por provedor. Para IMAGEM não existe equivalente
+    do LangChain, que ele traduz por provedor. Para IMAGE não existe equivalente
     padrão que carregue um ``file_id``: o conversor mapeia ``image_url`` para
     ``input_image`` levando sempre uma URL, e não há caminho para o id.
 
@@ -244,7 +244,7 @@ def bloco_imagem_por_id(file_id: str) -> dict[str, Any]:
     return {"type": "input_image", "file_id": file_id}
 
 
-def bloco_nativo(*, base64_data: str, mime: str, filename: str) -> dict[str, Any]:
+def inline_file_block(*, base64_data: str, mime: str, filename: str) -> dict[str, Any]:
     """O content block de ARQUIVO, no formato padrão do LangChain.
 
     ⚠️ ``{"type": "file", "source_type": "base64"}``, e **não** o
@@ -264,7 +264,7 @@ def bloco_nativo(*, base64_data: str, mime: str, filename: str) -> dict[str, Any
     }
 
 
-def ferramenta_sandbox(file_ids: list[str]) -> dict[str, Any]:
+def sandbox_tool(file_ids: list[str]) -> dict[str, Any]:
     """A tool nativa do Code Interpreter, com os arquivos montados no container.
 
     ``container.type = "auto"`` deixa o provider criar o sandbox; os ``file_ids``
