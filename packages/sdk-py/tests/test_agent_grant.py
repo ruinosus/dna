@@ -108,3 +108,46 @@ def test_a_recusa_carrega_os_dados_para_quem_a_TRATA():
     exc = GrantRefused(client_id="c-1", portal_url="https://p")
     assert exc.client_id == "c-1"
     assert exc.portal_url == "https://p"
+
+
+# ── o nome legível, e por que ele é OPCIONAL ────────────────────────────────
+
+
+def test_um_pedido_SEM_nome_nao_inventa_campo():
+    """Ausência é o caso NORMAL, não a falha.
+
+    Um `client_id` cru é ruim de ler e honesto; um nome fabricado é legível e
+    falso, e numa tela de autorização a segunda coisa é pior. Gravar a chave com
+    `None` faria a tela ter de distinguir "sem nome" de "nome nulo" — duas
+    formas da mesma ausência, e a segunda vaza para todo leitor do documento.
+    """
+    p = pending_grant(client_id="c", subject="u")
+    assert "client_name" not in p
+
+
+def test_o_nome_ancorado_entra_no_documento():
+    p = pending_grant(
+        client_id="https://acme.example/oauth/x",
+        subject="u",
+        client_name="Assistente de Sprint",
+    )
+    assert p["client_name"] == "Assistente de Sprint"
+
+
+@pytest.mark.parametrize("branco", ["", "   ", "\n\t"])
+def test_nome_em_branco_vira_AUSENCIA_e_nao_campo_vazio(branco):
+    """Uma string vazia no documento faria a tela desenhar uma linha muda no
+    lugar do `client_id` — pior que os dois estados honestos, porque não diz
+    nem o nome nem quem é."""
+    p = pending_grant(client_id="c", subject="u", client_name=branco)
+    assert "client_name" not in p
+
+
+def test_o_nome_nao_altera_o_estado_nem_o_escopo():
+    """Nomear não é permitir. Um nome bonito não pode ser um caminho para um
+    documento nascer menos inerte do que nasceria sem ele."""
+    com = pending_grant(client_id="c", subject="u", client_name="Acme")
+    sem = pending_grant(client_id="c", subject="u")
+    assert com["state"] == sem["state"] == "pending"
+    assert com["scope_kinds"] == sem["scope_kinds"] == []
+    assert {k: v for k, v in com.items() if k != "client_name"} == sem

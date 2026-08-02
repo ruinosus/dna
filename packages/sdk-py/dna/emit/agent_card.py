@@ -62,6 +62,33 @@ def _metadata(agent_doc: Mapping[str, Any]) -> Mapping[str, Any]:
     return agent_doc.get("metadata") or {}
 
 
+def _capabilities(
+    streaming: bool, data_scope_kinds: Iterable[str] | None
+) -> dict[str, Any]:
+    """``capabilities`` — e a extensão de escopo, quando o deployment a serve.
+
+    ``data_scope_kinds=None`` significa "este deployment não pede escopo", e a
+    chave ``extensions`` nem aparece. Uma lista VAZIA é diferente e também
+    legítima: anuncia a extensão dizendo *"existe, e o vocabulário não está
+    publicado aqui"* — o caso de um deployment cujos Kinds são do tenant e não
+    do Card público.
+
+    A distinção entre ``None`` e ``[]`` é carregada de propósito. Colapsá-las
+    faria um deployment sem vocabulário publicado parecer um que não suporta a
+    extensão, e aí o terceiro nunca pediria nada — que é exatamente o estado que
+    esta extensão existe para sair.
+    """
+    caps: dict[str, Any] = {"streaming": bool(streaming)}
+    if data_scope_kinds is None:
+        return caps
+
+    # Import DENTRO, como o resto deste módulo: mantém o extra `a2a` opcional.
+    from dna.extensions.a2a.data_scope import extension_declaration
+
+    caps["extensions"] = [extension_declaration(available_kinds=data_scope_kinds)]
+    return caps
+
+
 def _description(agent_doc: Mapping[str, Any]) -> str:
     """``delegation_target_for.purpose`` first — it exists so a delegator can
     choose a target, which is exactly what a Card communicates. Falls back to
@@ -93,6 +120,7 @@ def agent_card_for(
     tools: Iterable[str] = (),
     base_url: str,
     streaming: bool = False,
+    data_scope_kinds: Iterable[str] | None = None,
 ) -> dict[str, Any]:
     """Project a DNA ``Agent`` document into an A2A 1.0 Agent Card (dict, JSON-ready).
 
@@ -136,7 +164,7 @@ def agent_card_for(
                 "protocolVersion": PROTOCOL_VERSION_1_0,
             }
         ],
-        "capabilities": {"streaming": bool(streaming)},
+        "capabilities": _capabilities(streaming, data_scope_kinds),
         "defaultInputModes": list(_DEFAULT_MODES),
         "defaultOutputModes": list(_DEFAULT_MODES),
         "skills": _skills(tools),

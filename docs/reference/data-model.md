@@ -46,7 +46,7 @@ readable, so it is reproduced from source rather than asserted:
 
 ## Logical model — Kinds and their references
 
-81 Kinds are registered. Each is a document, not a table: a
+82 Kinds are registered. Each is a document, not a table: a
 Kind costs a YAML descriptor and zero migrations, which is the point
 of an open type system. The cost is that references between Kinds are
 not database foreign keys — they are fields holding a name.
@@ -65,7 +65,7 @@ would be the whole problem. Four tiers, strongest first:
 
 `*` on a label marks a polymorphic reference (several possible target Kinds).
 
-**108 edges: 15 declared, 66 composition-only, 27 inferred** — plus 24 reference-shaped fields left unresolved and 6 known-undeclarable ones.
+**108 edges: 15 declared, 66 composition-only, 27 inferred** — plus 25 reference-shaped fields left unresolved and 6 known-undeclarable ones.
 
 !!! warning "Only the declared tier cannot dangle"
 
@@ -124,7 +124,7 @@ flowchart LR
 
 ### Detail by group
 
-All 81 Kinds in one diagram is an unreadable hairball, so
+All 82 Kinds in one diagram is an unreadable hairball, so
 each group with at least 2 edges gets its
 own. A group carrying more than 20 edges is
 split again by tier, which keeps the enforced edges legible instead
@@ -538,6 +538,7 @@ cleverer.
 
 | Kind | Field | Why unresolved |
 | --- | --- | --- |
+| `AgentCatalogEntry` | `client_id` | reference-shaped, but `client` matches no registered Kind |
 | `AgentGrant` | `client_id` | reference-shaped, but `client` matches no registered Kind |
 | `AuditLog` | `request_id` | reference-shaped, but `request` matches no registered Kind |
 | `Engram` | `affect_evidence_refs` | reference-shaped, but `affect_evidence` matches no registered Kind |
@@ -579,12 +580,12 @@ rather than silently dropped, so the suppression is auditable.
 | `Tenant` | `plan` | billing/feature tier (a Tier `tier_id`), not the SDLC `Plan` Kind |
 | `Workspace` | `plan_ref` | DEPRECATED and never read — billing is per ACCOUNT (workspace → account_id → AccountPlan); also not the SDLC `Plan` Kind |
 
-### Kinds with no reference edge (23)
+### Kinds with no reference edge (24)
 
 Standalone documents — configuration, composition-plane behaviour, or
 record Kinds whose links are simply not modelled yet.
 
-`AgentDefinition`, `AgentGrant`, `Automation`, `Canvas`, `Changelog`, `Comment`, `Copilot`, `Engram`, `Genome`, `Hook`, `HtmlArtifact`, `IntelSource`, `KindNamespace`, `LayerPolicy`, `MCPFederation`, `ModelProfile`, `PlanBinding`, `PricingPlan`, `RemoteAgent`, `Setting`, `SourceArtifact`, `UserProfile`, `WorkspaceMembership`
+`AgentCatalogEntry`, `AgentDefinition`, `AgentGrant`, `Automation`, `Canvas`, `Changelog`, `Comment`, `Copilot`, `Engram`, `Genome`, `Hook`, `HtmlArtifact`, `IntelSource`, `KindNamespace`, `LayerPolicy`, `MCPFederation`, `ModelProfile`, `PlanBinding`, `PricingPlan`, `RemoteAgent`, `Setting`, `SourceArtifact`, `UserProfile`, `WorkspaceMembership`
 
 ## Physical model — the real tables
 

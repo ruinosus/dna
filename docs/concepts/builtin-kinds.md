@@ -669,6 +669,42 @@ The document never carries a credential — the schema is closed precisely so a
 token cannot be attached to a grant. Who may act, and over what, lives here; the
 secret they authenticate with belongs to the deployment.
 
+### AgentCatalogEntry
+
+An [`AgentCatalogEntry`](../reference/kinds/record.md#agentcatalogentry)
+(`a2a-agent-catalog-entry`) gives a **human-readable name to an agent whose
+`client_id` is opaque** — and it is deliberately the *lesser* half of agent
+identity.
+
+The primary mechanism is **CIMD** (Client ID Metadata Documents): the `client_id`
+IS an HTTPS URL serving the client's metadata, so the name can only be declared
+at `acme.com` by whoever controls `acme.com`, and DNS plus TLS already prove
+that. It is the browser padlock's mechanism — you do not trust the text, you
+trust where it came from.
+
+This Kind covers what CIMD cannot: legacy clients with opaque ids, which publish
+no metadata and which nothing can anchor.
+
+**Two rules keep the difference visible, and both are structural.**
+
+`client_id` **may not be an HTTPS URL** — the schema refuses it. A client that
+publishes metadata already has an anchored identity, and letting someone type a
+name over it would swap proof for typing. That swap is exactly the mistake an
+earlier design made without noticing: it said *"the name must come from whoever
+verified"* and then proposed that the verifier be a person filling in a form.
+Typing is not verification; it protects against the caller lying, not against
+the registrar being wrong or deceived.
+
+`registered_by` is **required**, because it is what makes the label possible. A
+consent screen can honestly say *"Sprint Assistant · registered by Maria"* — a
+sentence the user can weigh. *"Sprint Assistant"* alone, on an opaque id, is a
+claim nobody stands behind; sitting next to an anchored name, it teaches the
+reader to trust both the same way.
+
+The entry **names, it does not authorize**. There is no scope, no state, no
+grant field: authorization lives in `AgentGrant`, and registering an agent in a
+catalog must never be a path to granting it access.
+
 ---
 
 Run `dna kind list` for the live registry in your install, and `dna kind

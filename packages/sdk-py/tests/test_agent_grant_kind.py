@@ -95,3 +95,47 @@ def test_o_Kind_e_TENANTED_e_do_plano_de_REGISTRO():
     assert spec["tenant_scope"] == "tenanted"
     assert spec["plane"] == "record"
     assert spec["prompt_target"] is False
+
+
+def test_o_nome_LEGIVEL_cabe_no_documento():
+    """A tela pede uma decisão de segurança; um ULID não sustenta decisão
+    nenhuma. O nome existe para isso — e só para isso."""
+    assert not _erros(_spec(client_name="Assistente de Sprint"))
+
+
+def test_o_nome_e_OPCIONAL():
+    """Ausente é o default e o caso normal: sem `client_id` que sirva metadados
+    não há nome ancorado possível, e a tela cai para o id cru — que é feio e
+    honesto."""
+    assert "client_name" not in _schema().get("required", [])
+    assert not _erros(_spec())
+
+
+def test_o_nome_VAZIO_e_recusado_pelo_schema():
+    """`minLength: 1`. Um campo em branco faria a tela desenhar uma linha muda
+    no lugar do `client_id`: nem o nome, nem quem é."""
+    assert _erros(_spec(client_name=""))
+
+
+def test_NAO_ha_campo_de_dominio_ao_lado_do_nome():
+    """A origem se DERIVA do `client_id` — é o host da URL, e é o sinal em que a
+    tela pede ao usuário para confiar.
+
+    Um campo de domínio ao lado poderia divergir do `client_id`, e um domínio que
+    diverge da âncora é o nome auto-declarado com outra roupa: mais convincente,
+    porque pareceria verificado. A ausência deste campo é a garantia estrutural,
+    e é por isso que ela tem um teste.
+    """
+    propriedades = _schema()["properties"]
+    for proibido in ("client_domain", "domain", "origin", "issuer", "publisher"):
+        assert proibido not in propriedades, f"o Kind abriu um campo {proibido!r}"
+
+
+def test_NAO_ha_campo_dizendo_de_onde_veio_o_nome():
+    """A procedência também se deriva: com `client_id` opaco não existe nome
+    ancorado, então a forma do `client_id` já diz de onde o nome pode ter vindo.
+    Um campo `name_source` seria uma segunda fonte de verdade para um fato que a
+    primeira já determina — e duas fontes divergem."""
+    propriedades = _schema()["properties"]
+    for proibido in ("name_source", "client_name_source", "verified", "trusted"):
+        assert proibido not in propriedades, f"o Kind abriu um campo {proibido!r}"

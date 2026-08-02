@@ -55,6 +55,36 @@ spec:
           um campo do pedido. O corpo é do chamador: um `client_id` vindo dali
           deixaria um agente se passar por outro e usar a concessão alheia, com
           o token continuando válido e a chamada continuando 200.
+      client_name:
+        type: string
+        minLength: 1
+        description: >
+          O nome LEGÍVEL do agente, como a tela de consentimento o exibe. Ausente
+          quando não há nome confiável — e ausente é o default, porque um
+          `client_id` cru é feio e HONESTO, enquanto um nome fabricado é legível
+          e falso. Numa tela de autorização a segunda coisa é pior.
+
+          ⚠️ NÃO é auto-declarado. O host só grava aqui um nome que veio
+          ANCORADO: o `client_id` é uma URL HTTPS (CIMD,
+          draft-ietf-oauth-client-id-metadata-document) e o nome foi lido do
+          documento servido naquela origem. Quem controla `acme.com` é o único
+          que pode declarar um nome em `acme.com`, e disso o DNS e o TLS já dão
+          prova. Aceitar nome de um campo do pedido devolveria o ataque que este
+          desenho existe para fechar: a tela do provedor, com a marca dele, no
+          instante da autorização, exibindo a mentira com aparência oficial.
+
+          A ORIGEM não é campo: ela se DERIVA do `client_id` (o host da URL), e é
+          isso que a tela deve mostrar com o mesmo peso do nome. Um campo de
+          domínio ao lado poderia divergir do `client_id`, e um domínio que
+          diverge da âncora é exatamente o nome auto-declarado com outra roupa.
+          Pela mesma razão não há campo dizendo "de onde veio o nome": com
+          `client_id` opaco não há nome ancorado possível, então a procedência
+          já está dita pela forma do `client_id`.
+
+          CONGELADO no instante do pedido, de propósito: o registro guarda o que
+          o humano VIU quando decidiu. Se o terceiro se renomear depois, a tela
+          não troca por baixo de uma decisão já tomada — e a âncora, que se
+          deriva do `client_id`, nunca envelhece.
       subject:
         type: string
         minLength: 1
@@ -110,4 +140,7 @@ spec:
           quota não conta recusa: um número que mistura uso e tentativa não
           responde nem "quanto ele usou" nem "quanto ele tentou".
   presentation:
-    fields: [client_id, subject, state, scope_kinds, last_call_at, call_count]
+    # `client_name` vem ANTES de `client_id`: é a ordem em que a decisão é
+    # tomada. E `client_id` continua na lista — ele não é redundante com o nome,
+    # é a ÂNCORA dele, e some da tela junto com a razão para confiar no nome.
+    fields: [client_name, client_id, subject, state, scope_kinds, last_call_at, call_count]
