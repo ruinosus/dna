@@ -164,6 +164,7 @@ class Tables:
     # ``dna.runtime.telemetry``; read by the portal's console.
     turn: sa.Table | None = None
     turn_step: sa.Table | None = None
+    approval: sa.Table | None = None
 
 
 def build_metadata(*, is_pg: bool, schema: str | None = None) -> Tables:
@@ -294,7 +295,7 @@ def build_metadata(*, is_pg: bool, schema: str | None = None) -> Tables:
     )
 
     outbox = versions_seq = quota_counters = None
-    turn = turn_step = None
+    turn = turn_step = approval = None
     if is_pg:
         # [dialect] the DNA Cloud metering counter — the DURABLE half of the
         # MCP quota meter (``dna_cli._mcp_quota``). Postgres-only on purpose:
@@ -397,6 +398,28 @@ def build_metadata(*, is_pg: bool, schema: str | None = None) -> Tables:
             sa.Column("duration_ms", sa.Integer, nullable=False,
                       server_default=sa.text("0")),
         )
+        # [dialect] a TRILHA DE APROVACAO. Separada de `turn_step` de proposito:
+        # as garantias sao opostas (aquela descarta e trunca; esta nao pode
+        # perder nem cortar). Append-only, sem `updated_at`.
+        approval = sa.Table(
+            f"{p}approval", md,
+            sa.Column("approval_id", sa.Text, primary_key=True, nullable=False),
+            sa.Column("turn_id", sa.Text, nullable=False, server_default=sa.text("''")),
+            sa.Column("thread_id", sa.Text, nullable=False, server_default=sa.text("''")),
+            sa.Column("workspace", sa.Text, nullable=False, server_default=sa.text("''")),
+            sa.Column("oid", sa.Text, nullable=False, server_default=sa.text("''")),
+            sa.Column("actor_email", sa.Text, nullable=False, server_default=sa.text("''")),
+            sa.Column("tool", sa.Text, nullable=False),
+            sa.Column("arguments", sa.Text, nullable=False, server_default=sa.text("''")),
+            sa.Column("decision", sa.Text, nullable=False, server_default=sa.text("''")),
+            sa.Column("edited_args", sa.Text, nullable=False, server_default=sa.text("''")),
+            sa.Column("reason", sa.Text, nullable=False, server_default=sa.text("''")),
+            sa.Column("requested_at", sa.DateTime(timezone=True), nullable=False,
+                      server_default=sa.text("now()")),
+            sa.Column("decided_at", sa.DateTime(timezone=True), nullable=True),
+            sa.Index(f"{p}approval_thread_idx", "thread_id", sa.text("requested_at DESC")),
+            sa.Index(f"{p}approval_workspace_idx", "workspace", sa.text("requested_at DESC")),
+        )
         versions_seq = sa.Table(
             f"{p}versions_seq", md,
             sa.Column("scope", sa.Text, primary_key=True, nullable=False),
@@ -412,4 +435,5 @@ def build_metadata(*, is_pg: bool, schema: str | None = None) -> Tables:
         bundle_entries=bundle_entries, layer_documents=layer_documents,
         outbox=outbox, versions_seq=versions_seq,
         quota_counters=quota_counters, turn=turn, turn_step=turn_step,
+        approval=approval,
     )
