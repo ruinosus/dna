@@ -56,6 +56,9 @@ __all__ = [
     "DnaRecallMiddleware",
     "briefing",
     "worth_recalling",
+    "cues",
+    "CUE_WINDOW",
+    "STICKY_OVERLAP",
 ]
 
 #: Quantas memórias entram. Três é um teto escolhido para ser BAIXO: o objetivo é
@@ -69,6 +72,27 @@ MAX_CHARS = 2000
 #: Abaixo disto a mensagem não discrimina nada. `"ok"`, `"pode seguir"`,
 #: `"obrigado"` — a maioria dos turnos de uma conversa real.
 MIN_SIGNAL_CHARS = 12
+
+#: Quantas mensagens do usuário entram no cue. Três é o suficiente para dar
+#: assunto a um `"e o prazo?"` sem arrastar a conversa inteira.
+CUE_WINDOW = 3
+
+#: Teto do cue. Ele vira consulta de busca — uma consulta gigante não discrimina
+#: melhor, só custa mais.
+CUE_MAX_CHARS = 600
+
+#: ⚠️ HISTERESE (Schmitt). Quanto do conjunto anterior precisa sobreviver para
+#: que o bloco ANTIGO seja mantido.
+#:
+#: O ponto NÃO é economizar busca — é manter o prompt ESTÁVEL. Um bloco que muda
+#: a cada turno muda o prefixo do prompt a cada turno, e isso invalida o cache do
+#: provider: custo real, medível, e invisível até chegar na fatura.
+#:
+#: Vem do JARVIS (`aap-sdk-v3`): "re-injeta só quando o set muda + histerese".
+#: Lá a banda é sobre SCORE (θ_in/θ_out); aqui é sobre SOBREPOSIÇÃO, porque o
+#: `recall` não expõe o score ao chamador. Menos fino, mesma intenção — e a
+#: diferença está escrita para quem for refinar.
+STICKY_OVERLAP = 0.5
 
 #: Palavras que sozinhas não são pergunta. Uma mensagem feita só delas não vira
 #: busca, mesmo passando do tamanho mínimo.
@@ -195,23 +219,74 @@ def _texto_de_memoria(memoria: Any) -> str:
     return ""
 
 
-def _ultima_do_usuario(messages: Iterable[Any]) -> str:
-    """O texto da última mensagem HUMANA — o que se usa para buscar."""
+def _texto_da_mensagem(m: Any) -> str:
+    conteudo = getattr(m, "content", None)
+    if isinstance(conteudo, str):
+        return conteudo
+    if isinstance(conteudo, list):
+        return " ".join(
+            p.get("text", "")
+            for p in conteudo
+            if isinstance(p, dict) and p.get("type") == "text" and p.get("text")
+        )
+    return ""
+
+
+def cues(messages: Iterable[Any], *, window: int = CUE_WINDOW) -> str:
+    """Os CUES vivos — a janela recente do usuário, não só a última fala.
+
+    ⚠️ Buscar só com a última mensagem perde o assunto. Numa conversa real ela é
+    curta e dependente (`"e o prazo?"`), e o que dá sentido a ela está duas ou
+    três mensagens atrás. Uma busca por `"e o prazo?"` não recupera nada.
+
+    Vem do desenho do JARVIS (`aap-sdk-v3`, peça 1): os cues são "escopo ativo +
+    `recent_topics` extraídos do transcript + affect da sessão". Aqui está a
+    metade barata e determinística — a janela do transcript. Escopo e affect
+    dependem de estado que o host tem e o SDK não.
+
+    A mais RECENTE vem primeiro: se o corte por tamanho tiver de acontecer, ele
+    tira o contexto antigo, não a pergunta.
+    """
+    recentes: list[str] = []
     for m in reversed(list(messages or [])):
         tipo = getattr(m, "type", None) or getattr(m, "role", None)
         if tipo not in ("human", "user"):
             continue
-        conteudo = getattr(m, "content", None)
-        if isinstance(conteudo, str):
-            return conteudo
-        if isinstance(conteudo, list):
-            partes = [
-                p.get("text", "")
-                for p in conteudo
-                if isinstance(p, dict) and p.get("type") == "text"
-            ]
-            return " ".join(t for t in partes if t)
-        return ""
+        texto = _texto_da_mensagem(m).strip()
+        if texto:
+            recentes.append(texto)
+        if len(recentes) >= window:
+            break
+    return " ".join(recentes)[:CUE_MAX_CHARS]
+
+
+def _chave_de(memoria: Any) -> str:
+    """A identidade de uma memória para efeito de histerese.
+
+    Nome do documento quando há; o texto como último recurso — duas memórias com
+    o mesmo texto são a mesma para quem lê o prompt.
+    """
+    if isinstance(memoria, dict):
+        for chave in ("name", "id", "memory_id"):
+            valor = memoria.get(chave)
+            if isinstance(valor, str) and valor:
+                return valor
+        meta = memoria.get("metadata")
+        if isinstance(meta, dict) and isinstance(meta.get("name"), str):
+            return meta["name"]
+    else:
+        for chave in ("name", "id"):
+            valor = getattr(memoria, chave, None)
+            if isinstance(valor, str) and valor:
+                return valor
+    return _texto_de_memoria(memoria)[:120]
+
+
+def _thread_de(request: Any) -> str:
+    config = getattr(getattr(request, "runtime", None), "config", None) or {}
+    conf = config.get("configurable") if isinstance(config, dict) else None
+    if isinstance(conf, dict) and conf.get("thread_id"):
+        return str(conf["thread_id"])
     return ""
 
 
@@ -238,6 +313,10 @@ class DnaRecallMiddleware(_middleware_base()):  # type: ignore[misc]
         super().__init__()
         self._recall = recall
         self._limit = limit
+        #: `thread_id -> (chaves, bloco)`. Em processo e limitado: a histerese é
+        #: uma otimização de estabilidade, e perdê-la num restart custa um
+        #: prompt diferente, nunca uma resposta errada.
+        self._ultimo: dict[str, tuple[frozenset[str], str]] = {}
 
     async def awrap_model_call(self, request, handler):  # noqa: D102
         instrucao = await self._buscar(request)
@@ -253,7 +332,7 @@ class DnaRecallMiddleware(_middleware_base()):  # type: ignore[misc]
     async def _buscar(self, request) -> str:
         if self._recall is None:
             return ""
-        consulta = _ultima_do_usuario(getattr(request, "messages", None) or [])
+        consulta = cues(getattr(request, "messages", None) or [])
         if not worth_recalling(consulta):
             return ""
         try:
@@ -262,13 +341,39 @@ class DnaRecallMiddleware(_middleware_base()):  # type: ignore[misc]
             _LOGGER.warning("recall automático falhou", exc_info=True)
             return ""
 
-        texto = briefing(memorias or [])
+        texto = self._estavel(request, memorias or [])
         if texto:
             # ⚠️ Deixa rastro. Memória que entra no prompt sem aparecer é mágica
             # não auditável: o usuário vê o agente "saber" algo e não tem como
             # perguntar de onde veio.
             self._carimbar(len(list(memorias or [])[:MAX_MEMORIES]), consulta)
         return texto
+
+    def _estavel(self, request, memorias: Sequence[Any]) -> str:
+        """O bloco, preferindo o ANTERIOR quando o conjunto mal mudou.
+
+        ⚠️ Devolve o bloco velho, não "nada". Pular a injeção quando o set não
+        muda tiraria a memória do prompt exatamente nos turnos em que ela
+        continua valendo — o oposto do que a histerese quer.
+        """
+        thread = _thread_de(request)
+        novas = frozenset(_chave_de(m) for m in memorias if _chave_de(m))
+        anterior = self._ultimo.get(thread)
+
+        if anterior is not None and novas:
+            antigas, bloco_antigo = anterior
+            if antigas and len(novas & antigas) / len(antigas) >= STICKY_OVERLAP:
+                return bloco_antigo
+
+        bloco = briefing(memorias)
+        if bloco and thread:
+            # Teto bobo, e de propósito: um processo longo com muitas conversas
+            # não pode virar um vazamento de memória por causa de uma otimização
+            # de prompt.
+            if len(self._ultimo) > 500:
+                self._ultimo.clear()
+            self._ultimo[thread] = (novas, bloco)
+        return bloco
 
     @staticmethod
     def _carimbar(quantas: int, consulta: str) -> None:

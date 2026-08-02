@@ -167,9 +167,17 @@ def test_memoria_em_QUALQUER_forma_razoavel_e_lida():
     assert briefing([None, 42]) == ""
 
 
-def test_a_pergunta_lida_e_a_ULTIMA_do_usuario():
-    """Buscar com a primeira mensagem responderia à conversa de dez turnos
-    atrás."""
+def test_o_cue_e_uma_JANELA_e_nao_so_a_ultima_fala():
+    """⚠️ Reescrito: antes este teste afirmava "só a última mensagem", e a
+    afirmação é que estava errada.
+
+    Numa conversa real a última fala é curta e dependente — `"e o prazo?"` —, e
+    o que lhe dá sentido está duas mensagens atrás. Buscar memória com `"e o
+    prazo?"` não recupera nada.
+
+    Vem do desenho do JARVIS (`aap-sdk-v3`): cues são o transcript recente, não
+    o último turno.
+    """
     vistas = []
 
     async def _r(consulta, limite):
@@ -177,11 +185,23 @@ def test_a_pergunta_lida_e_a_ULTIMA_do_usuario():
         return [{"summary": "achou"}]
 
     _rodar(
-        [_Msg("primeira pergunta antiga"), _Msg("resposta", "ai"),
-         _Msg("qual e o prazo do contrato?")],
+        [_Msg("preciso revisar o contrato da ACME"), _Msg("qual deles?", "ai"),
+         _Msg("e o prazo de renovacao?")],
         _r,
     )
-    assert vistas == ["qual e o prazo do contrato?"]
+    assert "ACME" in vistas[0], "perdeu o assunto que dá sentido à pergunta"
+    # A mais RECENTE vem primeiro: se o corte por tamanho acontecer, ele tira o
+    # contexto antigo, nunca a pergunta.
+    assert vistas[0].startswith("e o prazo de renovacao?")
+
+
+def test_a_janela_NAO_arrasta_a_conversa_inteira():
+    """Uma consulta gigante não discrimina melhor — só custa mais."""
+    from dna.runtime.middleware.recall import CUE_WINDOW, cues
+
+    msgs = [_Msg(f"assunto numero {i}") for i in range(20)]
+    texto = cues(msgs)
+    assert texto.count("assunto numero") == CUE_WINDOW
 
 
 def test_worth_recalling_e_publico_e_testavel_sozinho():
@@ -258,3 +278,97 @@ def test_um_tipo_DECLARADO_pelo_workspace_vence_a_heuristica():
     # sem declaracao, a heuristica continua valendo
     assert classify_memory_type({"summary": "sempre confirme o CNPJ"}) == "procedural"
     assert classify_memory_type({"summary": "o cliente e a ACME"}) == "semantic"
+
+
+# ── histerese: o prompt precisa ficar ESTÁVEL ───────────────────────────────
+
+
+class _ReqThread(_Req):
+    def __init__(self, msgs, thread="th-1"):
+        super().__init__(msgs, "BASE")
+        self.runtime = type("_R", (), {"config": {"configurable": {"thread_id": thread}}})()
+
+
+def _injetar(mid, req):
+    visto = {}
+
+    async def _handler(r):
+        visto["p"] = getattr(r, "alterado", {}).get("system_prompt")
+        return "ok"
+
+    asyncio.run(mid.awrap_model_call(req, _handler))
+    return visto.get("p")
+
+
+def test_um_conjunto_QUASE_igual_mantem_o_bloco_ANTERIOR():
+    """⚠️ O ponto NÃO é economizar busca — é manter o prompt ESTÁVEL.
+
+    Um bloco que muda a cada turno muda o prefixo do prompt a cada turno, e isso
+    invalida o cache do provider: custo real, medível, e invisível até chegar na
+    fatura.
+
+    Vem do JARVIS (`aap-sdk-v3`): "re-injeta só quando o set muda + histerese".
+    """
+    chamadas = [
+        [{"name": "m1", "summary": "alfa"}, {"name": "m2", "summary": "beta"}],
+        # segunda busca: uma trocou, uma ficou → 50% de sobreposição
+        [{"name": "m1", "summary": "alfa"}, {"name": "m9", "summary": "gama"}],
+    ]
+
+    async def _r(consulta, limite):
+        return chamadas.pop(0)
+
+    mid = DnaRecallMiddleware(_r)
+    primeiro = _injetar(mid, _ReqThread([_Msg("fale do contrato da ACME")]))
+    segundo = _injetar(mid, _ReqThread([_Msg("e sobre o prazo dele?")]))
+    assert primeiro == segundo, "o prompt mudou por uma troca marginal"
+    assert "gama" not in segundo
+
+
+def test_um_conjunto_DIFERENTE_troca_o_bloco():
+    """Histerese não é congelamento: quando o assunto muda de verdade, a memória
+    tem de acompanhar — senão o middleware vira uma memória presa no passado."""
+    chamadas = [
+        [{"name": "m1", "summary": "alfa"}, {"name": "m2", "summary": "beta"}],
+        [{"name": "m8", "summary": "delta"}, {"name": "m9", "summary": "gama"}],
+    ]
+
+    async def _r(consulta, limite):
+        return chamadas.pop(0)
+
+    mid = DnaRecallMiddleware(_r)
+    _injetar(mid, _ReqThread([_Msg("fale do contrato da ACME")]))
+    segundo = _injetar(mid, _ReqThread([_Msg("agora fale da folha de pagamento")]))
+    assert "delta" in segundo and "alfa" not in segundo
+
+
+def test_threads_DIFERENTES_nao_compartilham_histerese():
+    """Duas conversas do mesmo processo são independentes. Sem isto, a memória
+    de uma vazaria para o prompt da outra — e num servidor com concorrência isso
+    é o caso NORMAL, não a exceção."""
+    chamadas = [
+        [{"name": "m1", "summary": "da conversa A"}],
+        [{"name": "m2", "summary": "da conversa B"}],
+    ]
+
+    async def _r(consulta, limite):
+        return chamadas.pop(0)
+
+    mid = DnaRecallMiddleware(_r)
+    a = _injetar(mid, _ReqThread([_Msg("fale do contrato da ACME")], "th-A"))
+    b = _injetar(mid, _ReqThread([_Msg("fale da folha de pagamento")], "th-B"))
+    assert "conversa A" in a and "conversa B" in b
+
+
+def test_a_histerese_devolve_o_bloco_ANTIGO_e_nao_NADA():
+    """Pular a injeção quando o set não muda tiraria a memória do prompt
+    exatamente nos turnos em que ela CONTINUA valendo — o oposto do que a
+    histerese quer."""
+    async def _r(consulta, limite):
+        return [{"name": "m1", "summary": "o contrato vence em marco"}]
+
+    mid = DnaRecallMiddleware(_r)
+    req = _ReqThread([_Msg("fale do contrato da ACME")])
+    _injetar(mid, req)
+    segundo = _injetar(mid, _ReqThread([_Msg("e o prazo de renovacao?")]))
+    assert "o contrato vence em marco" in segundo
