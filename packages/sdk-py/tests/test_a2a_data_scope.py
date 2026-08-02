@@ -162,3 +162,56 @@ def test_o_VOCABULARIO_publicado_nao_e_truncado():
 def test_mas_o_PEDIDO_continua_com_teto():
     """Os dois lados não compartilham o número, e é isso que este par prova."""
     assert len(requested_kinds(_msg([f"Kind{i:03d}" for i in range(200)]))) == 64
+
+
+def test_um_Mapping_REGISTRADO_sem_get_nao_estoura():
+    """⚠️ `isinstance(x, Mapping)` NÃO garante `x.get`.
+
+    `Mapping.register(C)` faz o `isinstance` responder `True` sem trazer um
+    único método do mixin. O `google.protobuf.Struct` é exatamente isso, e é o
+    que a porta recebe em `message.metadata`.
+
+    O rascunho deste módulo confiava no `isinstance` e devolvia o objeto cru; o
+    chamador estourava com `AttributeError: get`. Achado no uso REAL — os testes
+    passavam todos, porque o dublê deles era `dict`.
+
+    E o sintoma era pior que o defeito: o executor da porta transforma exceção
+    em Task `failed` com a razão dentro, então o terceiro recebia a string
+    "AttributeError: get" e o log do servidor não tinha traceback nenhum.
+    """
+    from collections.abc import Mapping
+
+    class _StructFalso:
+        """Como o protobuf: responde a `items`/`__getitem__`, não a `get`."""
+
+        def __init__(self, dados):
+            self._d = dados
+
+        def items(self):
+            return self._d.items()
+
+        def __getitem__(self, k):
+            return self._d[k]
+
+        def __iter__(self):
+            return iter(self._d)
+
+        def __len__(self):
+            return len(self._d)
+
+    class _MensagemFalsa:
+        """Como a mensagem do SDK: `metadata` é ATRIBUTO, e o valor é o Struct."""
+
+        def __init__(self, metadata):
+            self.metadata = metadata
+
+    Mapping.register(_StructFalso)
+    assert isinstance(_StructFalso({}), Mapping)
+    assert not hasattr(_StructFalso({}), "get"), "o dublê deixou de ser fiel"
+
+    msg = _MensagemFalsa(_StructFalso({EXTENSION_URI: ["Memory"]}))
+    assert requested_kinds(msg) == ["Memory"]
+
+    # E a forma aninhada, onde o `.get` seria chamado no valor interno.
+    aninhado = _MensagemFalsa(_StructFalso({EXTENSION_URI: {"kinds": ["Story"]}}))
+    assert requested_kinds(aninhado) == ["Story"]

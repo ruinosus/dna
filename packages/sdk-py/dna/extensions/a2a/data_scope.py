@@ -127,7 +127,7 @@ def requested_kinds(message: Any) -> list[str]:
     # que um cliente escreve por instinto (o mesmo instinto que fez a declaração
     # do Card ter `params`), e recusá-la seria pedantismo com custo de suporte.
     if isinstance(bruto, Mapping):
-        bruto = bruto.get("kinds")
+        bruto = bruto.get("kinds") if hasattr(bruto, "get") else None
     if not isinstance(bruto, (list, tuple)):
         return []
     return _limpar(bruto)
@@ -155,28 +155,40 @@ def _limpar(valores: Iterable[Any], *, limite: int | None = _MAX_ITENS) -> list[
 def _metadata(message: Any) -> Mapping[str, Any] | None:
     """O ``metadata`` da mensagem, como mapa Python.
 
-    O SDK entrega um ``google.protobuf.Struct``; ele não é um ``Mapping`` do
-    Python, mas responde a ``keys``/``__getitem__`` e converte com
-    ``MessageToDict``. Tentar a conversão e cair para o acesso direto cobre os
-    dois sem importar protobuf aqui — o que manteria o extra ``a2a`` opcional
-    (a mesma disciplina de ``emit.agent_card``).
+    ⚠️ **``isinstance(x, Mapping)`` NÃO garante ``x.get``.** O
+    ``google.protobuf.Struct`` é *registrado* como ``Mapping``
+    (``Mapping.register``), e registro não traz os métodos do mixin — só faz o
+    ``isinstance`` responder ``True``. Um rascunho deste código devolvia o
+    ``Struct`` cru por confiar nesse ``isinstance``, e o chamador estourava com
+    ``AttributeError: get``.
+
+    O sintoma foi caro de ler: o executor da porta transforma exceção em Task
+    ``failed`` com a razão dentro, então o terceiro recebia a string
+    ``AttributeError: get`` e o log do servidor não tinha traceback nenhum.
+
+    Por isso a checagem aqui é por CAPACIDADE (``hasattr(..., "get")``) e não
+    por tipo: o que se vai fazer com o objeto é chamar ``.get``, então é isso
+    que precisa ser verdade.
     """
     if message is None:
         return None
-    if isinstance(message, Mapping):
+    if isinstance(message, Mapping) and hasattr(message, "get"):
         bruto = message.get("metadata")
     else:
         bruto = getattr(message, "metadata", None)
     if bruto is None:
         return None
-    if isinstance(bruto, Mapping):
+    if isinstance(bruto, dict):
         return bruto
+    # Protobuf (ou qualquer coisa que se pareça com mapa sem ser dict): converter
+    # é mais seguro que usar direto.
     try:
         from google.protobuf.json_format import MessageToDict
 
         return MessageToDict(bruto)
     except Exception:  # noqa: BLE001 — não é protobuf, ou não converte
-        try:
-            return dict(bruto.items())
-        except Exception:  # noqa: BLE001
-            return None
+        pass
+    try:
+        return dict(bruto.items())
+    except Exception:  # noqa: BLE001
+        return bruto if hasattr(bruto, "get") else None
