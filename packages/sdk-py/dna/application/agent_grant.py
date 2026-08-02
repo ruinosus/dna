@@ -81,7 +81,11 @@ def grant_allows(grant: Mapping[str, Any] | None) -> bool:
 
 
 def pending_grant(
-    *, client_id: str, subject: str, requested_scope: Iterable[str] = ()
+    *,
+    client_id: str,
+    subject: str,
+    requested_scope: Iterable[str] = (),
+    client_name: str | None = None,
 ) -> dict[str, Any]:
     """O documento de um pedido recém-chegado — INERTE.
 
@@ -92,11 +96,33 @@ def pending_grant(
     Sem escopo declarado, ``requested_scope_kinds`` fica vazio e a tela não
     pré-marca nada. **Silêncio nunca vira permissão** — nem sequer uma sugestão
     dela.
+
+    ## ``client_name`` — quem pode passar um, e o que acontece sem ele
+
+    O nome que a tela exibe. É **opcional e ausente por default**, e a ausência é
+    o caso normal, não a falha: um ``client_id`` cru é ruim de ler e HONESTO,
+    enquanto um nome fabricado é legível e falso — numa tela de autorização a
+    segunda coisa é pior.
+
+    ⚠️ **A ancoragem é responsabilidade de quem CHAMA**, e esta função não tem
+    como verificá-la: ela recebe uma string. O contrato, escrito no Kind, é que
+    o host só passa um nome que veio de um documento CIMD servido pela própria
+    origem do ``client_id``. Passar aqui um nome vindo do corpo do pedido
+    devolveria inteiro o ataque que o desenho fecha — e passaria por este
+    código sem tropeçar em nada.
+
+    Vazio e só-espaço viram AUSÊNCIA em vez de virarem um campo em branco: um
+    nome vazio no documento faria a tela desenhar uma linha muda no lugar do
+    ``client_id``, que é pior que os dois estados honestos.
     """
-    return {
+    doc: dict[str, Any] = {
         "client_id": client_id,
         "subject": subject,
         "state": STATE_PENDING,
         "scope_kinds": [],
         "requested_scope_kinds": sorted(set(requested_scope or ())),
     }
+    nome = (client_name or "").strip()
+    if nome:
+        doc["client_name"] = nome
+    return doc
