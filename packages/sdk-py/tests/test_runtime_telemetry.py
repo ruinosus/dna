@@ -143,6 +143,23 @@ def test_os_passos_saem_na_ordem_em_que_COMECARAM():
 # ── o sintoma #3: tokens ────────────────────────────────────────────────────
 
 
+def test_os_tokens_do_vocabulario_do_OPENINFERENCE_sao_lidos():
+    """⚠️ MEDIDO em 02/08/2026, e o defeito era um ZERO plausível.
+
+    A spec mandava seguir `gen_ai.*` — certo para EXPORTAR, errado para LER:
+    quem produz os spans aqui é o OpenInference, e ele emite
+    `llm.token_count.prompt`. O primeiro turno gravado veio com
+    `input_tokens=0` e `model=''`, que parece um turno barato em vez de um
+    leitor cego.
+    """
+    llm = _Span(kind="LLM", attrs={"llm.token_count.prompt": 1200,
+                                   "llm.token_count.completion": 80,
+                                   "llm.model_name": "gpt-5.4"})
+    [turno] = _gravar(llm, _raiz())
+    assert (turno.input_tokens, turno.output_tokens) == (1200, 80)
+    assert turno.model == "gpt-5.4"
+
+
 def test_os_tokens_SOMAM_entre_as_chamadas_do_turno():
     """⚠️ Um turno com tool tem no mínimo DUAS chamadas ao modelo.
 
@@ -274,3 +291,85 @@ def test_setup_sem_os_pacotes_NAO_derruba_o_boot():
         assert telemetry.setup_telemetry(sink=lambda _t: None) is None
     finally:
         builtins.__import__ = real
+
+
+# ── contra o SDK DE VERDADE ─────────────────────────────────────────────────
+
+
+def test_um_span_REAL_do_SDK_chega_ao_sink():
+    """⚠️ A guarda que os 16 testes acima NÃO davam, e o defeito que provou isso.
+
+    MEDIDO em 02/08/2026: faltava `_on_ending` — um método PRIVADO que o
+    `Span.end()` do OpenTelemetry chama sem verificar se existe. Contra o
+    runtime real o resultado foi `AttributeError` a cada span e **zero** turnos
+    gravados; contra os dublês, quinze testes verdes.
+
+    O dublê tinha a FORMA de um span e não a SEQUÊNCIA de chamadas do SDK. É por
+    isso que este teste roda o `TracerProvider` de verdade: ele é o único aqui
+    que exerce a superfície inteira de `SpanProcessor`.
+    """
+    pytest = __import__("pytest")
+    trace = pytest.importorskip("opentelemetry.trace")
+    sdk = pytest.importorskip("opentelemetry.sdk.trace")
+
+    entregues = []
+    provider = sdk.TracerProvider()
+    provider.add_span_processor(TurnRecorder(entregues.append))
+    tracer = provider.get_tracer("teste")
+
+    with tracer.start_as_current_span("turno") as raiz:
+        raiz.set_attribute("openinference.span.kind", "CHAIN")
+        raiz.set_attribute("dna.thread_id", "th-real")
+        with tracer.start_as_current_span("ferramenta") as filho:
+            filho.set_attribute("openinference.span.kind", "TOOL")
+            filho.set_attribute("tool.name", "analyze_spreadsheet")
+
+    assert len(entregues) == 1, "nenhum turno chegou ao sink"
+    [turno] = entregues
+    assert turno.thread_id == "th-real"
+    assert [p.name for p in turno.steps] == ["analyze_spreadsheet"]
+
+
+def test_um_span_REAL_que_levanta_vira_turno_com_ERRO():
+    """O sintoma #1 contra o SDK real: a exceção precisa virar `status=error`.
+
+    O SDK grava o evento `exception` e marca o status; os dois caminhos que
+    `_status_of` lê existem de verdade aqui.
+    """
+    pytest = __import__("pytest")
+    sdk = pytest.importorskip("opentelemetry.sdk.trace")
+
+    entregues = []
+    provider = sdk.TracerProvider()
+    provider.add_span_processor(TurnRecorder(entregues.append))
+    tracer = provider.get_tracer("teste")
+
+    try:
+        with tracer.start_as_current_span("turno") as raiz:
+            raiz.set_attribute("openinference.span.kind", "CHAIN")
+            raise RuntimeError("aiohttp package is not installed")
+    except RuntimeError:
+        pass
+
+    [turno] = entregues
+    assert turno.status == "error"
+    assert "aiohttp" in turno.error
+
+
+def test_as_dimensoes_vem_de_QUALQUER_span_da_trace():
+    """⚠️ MEDIDO em 02/08/2026: o primeiro registro real gravou com `thread_id`,
+    `workspace` e `oid` VAZIOS.
+
+    Quem conhece essas dimensoes e o HOST, e ele as carimba de dentro do turno —
+    onde o span corrente e um FILHO, nao o raiz. Ler so o raiz encontrava um span
+    que ninguem carimbou, e o registro ficava orfao: existia, ocupava espaco, e a
+    tela filtrando por thread achava sempre vazio.
+
+    Um registro que nao se liga a nada e pior que nenhum, porque PARECE cobertura.
+    """
+    filho = _Span(kind="TOOL", attrs={
+        "tool.name": "analyze_spreadsheet",
+        "dna.thread_id": "th-42", "dna.workspace": "ws-1", "dna.oid": "user-1",
+    })
+    [turno] = _gravar(filho, _raiz())  # o raiz NAO carrega dimensao nenhuma
+    assert (turno.thread_id, turno.workspace, turno.oid) == ("th-42", "ws-1", "user-1")

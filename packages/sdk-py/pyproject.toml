@@ -142,7 +142,7 @@ maf = ["agent-framework==1.12.1", "agent-framework-ag-ui==1.0.0"]
 # Without it, everything falls back to the #244 heuristic + Python `re`,
 # unchanged. Install: pip install "dna-sdk[re2]".
 re2 = ["google-re2>=1.1"]
-all = ["dna-sdk[postgres,sqlite,sql,re2]"]
+all = ["dna-sdk[postgres,sqlite,sql,re2,otel]"]
 dev = [
     "pytest>=7.0",
     "pytest-asyncio>=0.23",

@@ -84,6 +84,7 @@ __all__ = [
     "clip",
     "otlp_endpoint",
     "setup_telemetry",
+    "stamp_turn",
 ]
 
 #: Teto de cada campo de texto gravado. O registro é para leitura HUMANA — uma
@@ -98,11 +99,31 @@ TRUNCATION_MARK = "\n…[truncado por dna.runtime.telemetry]"
 
 # ── convenção semântica ─────────────────────────────────────────────────────
 
-#: Da convenção do OpenTelemetry (`opentelemetry-util-genai`). Nomes de LÁ, não
-#: nossos, porque o APM do cliente já os entende.
-ATTR_INPUT_TOKENS = "gen_ai.usage.input_tokens"
-ATTR_OUTPUT_TOKENS = "gen_ai.usage.output_tokens"
-ATTR_MODEL = "gen_ai.request.model"
+# ⚠️ DOIS vocabulários, e ler só um custou uma medição.
+#
+# A convenção do OpenTelemetry (`gen_ai.*`) é a que o APM do cliente entende, e
+# é a certa para EXPORTAR. Mas quem PRODUZ os spans aqui é o OpenInference, e
+# ele emite o vocabulário dele.
+#
+# MEDIDO em 02/08/2026 contra o runtime real: o turno gravou com
+# `input_tokens=0`, `output_tokens=0` e `model=''` — corretamente, porque
+# `gen_ai.usage.input_tokens` simplesmente não existia no span. O que existia
+# era `llm.token_count.prompt`.
+#
+# Um leitor que aceita só um vocabulário não dá erro: dá ZERO, que parece um
+# turno barato. Por isso a ordem abaixo é "o que o produtor emite primeiro,
+# o padrão depois" — e não o contrário.
+ATTR_INPUT_TOKENS = ("llm.token_count.prompt", "gen_ai.usage.input_tokens")
+ATTR_OUTPUT_TOKENS = ("llm.token_count.completion", "gen_ai.usage.output_tokens")
+ATTR_MODEL = ("llm.model_name", "gen_ai.request.model")
+
+
+def _primeiro(atributos: Mapping[str, Any], nomes: Sequence[str]) -> Any:
+    """O primeiro nome presente, na ordem de preferência."""
+    for nome in nomes:
+        if nome in atributos:
+            return atributos[nome]
+    return None
 
 #: Nossos — o que a convenção não cobre porque é do produto.
 ATTR_WORKSPACE = "dna.workspace"
@@ -240,10 +261,34 @@ class TurnRecorder:
         self._sink = sink
         self._abertos: dict[str, Turn] = {}
 
-    # A interface de SpanProcessor. `on_start` não faz nada de propósito: um
-    # turno só é conhecido quando termina, e materializar no início criaria
-    # registros fantasma para todo processo que morre no meio.
+    # ── a interface de SpanProcessor ────────────────────────────────────────
+    #
+    # ⚠️ Implementada por INTEIRO, e `_on_ending` é a razão deste aviso.
+    #
+    # Esta classe não herda de `opentelemetry.sdk.trace.SpanProcessor` de
+    # propósito: herdar exigiria o pacote no import, e é justamente não exigi-lo
+    # que torna a regra exercitável sem OTEL instalado. O preço é que a
+    # superfície tem de ser mantida à mão.
+    #
+    # MEDIDO em 02/08/2026, contra o runtime real: faltava `_on_ending` — um
+    # método PRIVADO que o `Span.end()` do SDK chama — e o resultado foi
+    # `AttributeError: 'TurnRecorder' object has no attribute '_on_ending'`
+    # repetido a cada span, com ZERO turnos gravados. Os 16 testes estavam
+    # verdes: o dublê tinha a forma de um span, mas não a SEQUÊNCIA de chamadas
+    # do SDK. É a mesma cegueira de dublê que este produto já pagou antes.
+    #
+    # A guarda contra a repetição é `test_um_span_REAL_do_SDK_chega_ao_sink`,
+    # que roda o provider de verdade em vez de um dublê.
+
     def on_start(self, span: Any, parent_context: Any = None) -> None:  # noqa: D102
+        return None
+
+    def _on_ending(self, span: Any) -> None:
+        """Gancho do SDK, chamado ANTES de o span virar imutável.
+
+        No-op aqui: só lemos o span depois de pronto. Existe porque o SDK o
+        chama sem verificar, e a ausência vira `AttributeError` por span.
+        """
         return None
 
     def shutdown(self) -> None:  # noqa: D102
@@ -268,6 +313,17 @@ class TurnRecorder:
 
         turno = self._abertos.setdefault(trace_id, Turn(turn_id=trace_id, trace_id=trace_id))
 
+        # ⚠️ As dimensoes sao colhidas de QUALQUER span da trace, nao so do
+        # raiz. MEDIDO em 02/08/2026: o primeiro registro real gravou com
+        # thread_id, workspace e oid VAZIOS — quem as conhece e o host, e ele as
+        # carimba de dentro do turno (um middleware), onde o span corrente e um
+        # FILHO. Ler so o raiz encontrava um span que ninguem carimbou.
+        #
+        # O registro existia e nao podia ser ligado a nenhuma conversa: a tela
+        # filtraria por thread e acharia sempre vazio. Um registro orfao e pior
+        # que nenhum, porque ocupa espaco parecendo cobertura.
+        self._dimensoes(turno, atributos)
+
         if kind == "TOOL":
             self._passo(turno, span, atributos)
             return
@@ -281,6 +337,15 @@ class TurnRecorder:
         # pela metade, e sim registro nenhum.
         if getattr(span, "parent", None) is None:
             self._fechar(turno, span, atributos, trace_id)
+
+    def _dimensoes(self, turno: Turn, atributos: Mapping[str, Any]) -> None:
+        """As dimensoes do produto, de onde quer que venham. Primeiro valor vence."""
+        for campo, chave in (
+            ("thread_id", ATTR_THREAD), ("workspace", ATTR_WORKSPACE),
+            ("oid", ATTR_OID), ("agent", ATTR_AGENT),
+        ):
+            if not getattr(turno, campo) and atributos.get(chave):
+                setattr(turno, campo, str(atributos[chave]))
 
     def _passo(self, turno: Turn, span: Any, atributos: Mapping[str, Any]) -> None:
         status, erro = _status_of(span)
@@ -303,19 +368,19 @@ class TurnRecorder:
         # SOMA em vez de sobrescrever: um turno com tool tem no mínimo duas
         # chamadas ao modelo, e guardar só a última contaria menos da metade dos
         # tokens — um número errado é pior que nenhum, porque parece confiável.
-        turno.input_tokens += int(atributos.get(ATTR_INPUT_TOKENS) or 0)
-        turno.output_tokens += int(atributos.get(ATTR_OUTPUT_TOKENS) or 0)
+        turno.input_tokens += int(_primeiro(atributos, ATTR_INPUT_TOKENS) or 0)
+        turno.output_tokens += int(_primeiro(atributos, ATTR_OUTPUT_TOKENS) or 0)
         if not turno.model:
-            turno.model = str(atributos.get(ATTR_MODEL) or "")
+            turno.model = str(_primeiro(atributos, ATTR_MODEL) or "")
 
     def _fechar(
         self, turno: Turn, span: Any, atributos: Mapping[str, Any], trace_id: str
     ) -> None:
         status, erro = _status_of(span)
-        turno.thread_id = str(atributos.get(ATTR_THREAD) or turno.thread_id)
-        turno.workspace = str(atributos.get(ATTR_WORKSPACE) or turno.workspace)
-        turno.oid = str(atributos.get(ATTR_OID) or turno.oid)
-        turno.agent = str(atributos.get(ATTR_AGENT) or turno.agent)
+        self._dimensoes(turno, atributos)
+        # A `ContextVar` é a fonte que funciona sob o OpenInference; os
+        # atributos do span cobrem quem propaga contexto de verdade.
+        self._dimensoes(turno, _contexto().get() or {})
         turno.input_text = clip(atributos.get(OI_INPUT))
         turno.output_text = clip(atributos.get(OI_OUTPUT))
         turno.status = status
@@ -337,6 +402,68 @@ class TurnRecorder:
             self._sink(turno)
         except Exception:  # noqa: BLE001
             _LOGGER.warning("sink de telemetria falhou", exc_info=True)
+
+
+#: ⚠️ As dimensões viajam por `ContextVar`, e não pelo span corrente.
+#:
+#: MEDIDO em 02/08/2026: dentro de um nó do grafo, `trace.get_current_span()`
+#: devolve um `NonRecordingSpan`. O OpenInference instrumenta o LangChain por
+#: CALLBACKS e não propaga o contexto OTEL para o código do nó — então
+#: `span.set_attribute` ali não escreve em lugar nenhum, e não dá erro.
+#:
+#: `ContextVar` é por-task, então duas requisições concorrentes não se
+#: misturam; e o `on_end` do span raiz roda na mesma task que o turno, que é o
+#: que faz a leitura funcionar.
+_DIMENSOES: Any = None
+
+
+def _contexto():
+    global _DIMENSOES
+    if _DIMENSOES is None:
+        from contextvars import ContextVar
+
+        _DIMENSOES = ContextVar("dna_turn_dims", default=None)
+    return _DIMENSOES
+
+
+def stamp_turn(
+    *,
+    thread_id: str | None = None,
+    workspace: str | None = None,
+    oid: str | None = None,
+    agent: str | None = None,
+) -> None:
+    """Carimba as dimensoes do produto no span CORRENTE.
+
+    Quem as conhece e o host — elas chegam nos cabecalhos da requisicao, que o
+    SDK nao le. Chame de dentro do turno (um middleware `before_agent` serve);
+    o `TurnRecorder` as colhe de qualquer span da trace, entao nao importa se o
+    span corrente e o raiz ou um filho.
+
+    Silencioso sem OTEL: um deployment sem telemetria continua servindo.
+    """
+    dims = {
+        chave: str(valor)
+        for chave, valor in (
+            (ATTR_THREAD, thread_id), (ATTR_WORKSPACE, workspace),
+            (ATTR_OID, oid), (ATTR_AGENT, agent),
+        )
+        if valor
+    }
+    if not dims:
+        return
+    _contexto().set(dims)
+
+    # Também no span, quando houver um gravável: outras instrumentações
+    # propagam o contexto, e aí o atributo viaja junto para o APM do cliente.
+    try:
+        from opentelemetry import trace
+    except ImportError:
+        return
+    span = trace.get_current_span()
+    if span is not None and getattr(span, "is_recording", lambda: False)():
+        for chave, valor in dims.items():
+            span.set_attribute(chave, valor)
 
 
 # ── a ligação ───────────────────────────────────────────────────────────────
