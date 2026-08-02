@@ -1,0 +1,102 @@
+# AgentCatalogEntry — dar nome a um agente de `client_id` OPACO.
+#
+# ── O papel MENOR, e por que ele é menor ─────────────────────────────────────
+#
+# Este Kind nasceu grande, numa primeira versão da spec que o propunha como
+# mecanismo PRINCIPAL de identidade: um membro do workspace preenche nome e
+# fornecedor, e a tela de consentimento lê dali.
+#
+# Estava errado, e o erro vale escrito. O texto dizia "o nome tem de vir de quem
+# verificou" — e então propunha que quem "verifica" fosse alguém digitando um
+# formulário. Isso não é verificação, é digitação: protege contra o CHAMADOR
+# mentir, não contra quem cadastra errar ou ser enganado.
+#
+# O mecanismo principal é o CIMD (`client_id` é uma URL HTTPS que serve os
+# metadados, e o domínio é a âncora). Este Kind ficou com o resto: `client_id`
+# opaco legado, que não publica metadados e que ninguém consegue ancorar.
+#
+# ── A regra que o schema IMPÕE, e não apenas pede ────────────────────────────
+#
+# `client_id` não pode ser uma URL HTTPS. Um cliente que publica metadados JÁ TEM
+# identidade ancorada, e deixar alguém digitar um nome por cima seria substituir
+# prova por digitação — exatamente a troca que a primeira versão fazia sem
+# perceber. O `not: pattern` fecha isso estruturalmente, e não por convenção.
+#
+# ── A tela ROTULA a diferença, e este Kind existe para ela poder ─────────────
+#
+# `registered_by` é OBRIGATÓRIO. Sem ele a tela mostraria um nome sem dizer de
+# onde veio, e um nome sem procedência ao lado de um nome ancorado apaga
+# justamente a diferença que o usuário precisa pesar. "Assistente de Sprint ·
+# cadastrado por Maria" é uma frase honesta; "Assistente de Sprint" sozinho, num
+# id opaco, é uma afirmação que ninguém sustenta.
+#
+# ── O que este Kind NUNCA carrega ────────────────────────────────────────────
+#
+# Credencial, e permissão. Ele NOMEIA — não autoriza. Quem autoriza é o
+# `AgentGrant`, e são documentos separados de propósito: cadastrar um agente no
+# catálogo não pode ser um caminho para conceder acesso a ele.
+apiVersion: github.com/ruinosus/dna/core/v1
+kind: KindDefinition
+metadata:
+  name: agent-catalog-entry
+spec:
+  target_api_version: github.com/ruinosus/dna/a2a/v1
+  target_kind: AgentCatalogEntry
+  alias: a2a-agent-catalog-entry
+  origin: github.com/ruinosus/dna/a2a
+  # Um agente cadastrado pela Acme não nomeia nada no workspace da Beta. O nome
+  # é opinião de quem cadastrou, e opinião não atravessa fronteira de workspace.
+  tenant_scope: tenanted
+  plane: record
+  prompt_target: false
+  flatten_in_context: false
+  storage:
+    type: yaml
+    container: agent-catalog
+  schema:
+    type: object
+    additionalProperties: false
+    required: [client_id, client_name, registered_by]
+    properties:
+      client_id:
+        type: string
+        minLength: 1
+        # ⚠️ NÃO pode ser URL de metadados. Ver o cabeçalho: um cliente que
+        # publica metadados já tem identidade ancorada, e um nome digitado por
+        # cima trocaria prova por digitação.
+        not:
+          pattern: "^[Hh][Tt][Tt][Pp][Ss]?://"
+        description: >
+          O `client_id` OPACO que esta entrada nomeia. Um `client_id` que seja
+          URL é recusado pelo schema: aquele resolve por CIMD, e o nome dele vem
+          ancorado no domínio que o publica.
+      client_name:
+        type: string
+        minLength: 1
+        description: >
+          O nome legível — DIGITADO por alguém deste workspace, e a tela diz
+          isso. Não é equivalente ao nome de um documento CIMD, e apresentá-lo
+          como se fosse seria pior que mostrar o id cru: o id avisa que você não
+          sabe quem é; um nome sem procedência não avisa nada.
+      registered_by:
+        type: string
+        minLength: 1
+        description: >
+          QUEM cadastrou — o identificador durável da pessoa. Obrigatório porque
+          é ele que torna o rótulo possível: "cadastrado por Maria" é uma frase
+          que o usuário pode pesar; um nome sozinho, num id opaco, não é.
+      registered_at:
+        type: string
+        description: Quando foi cadastrado.
+      vendor:
+        type: string
+        description: >
+          A empresa por trás do agente, se quem cadastrou souber. Também
+          digitado, e também sem prova — pelo mesmo motivo do nome.
+      notes:
+        type: string
+        description: >
+          Por que este agente existe, para quem ler a lista depois. Um campo de
+          contexto humano, nunca de política: nada aqui é lido para decidir.
+  presentation:
+    fields: [client_name, client_id, registered_by, vendor, registered_at]

@@ -36,6 +36,23 @@ An ADR captures ONE architectural decision with its context, rationale, and cons
 | `title` | string | yes | Decision headline — start with imperative verb. |
 | `updated_at` | string |  |  |
 
+## AgentCatalogEntry
+
+- **Alias:** `a2a-agent-catalog-entry`
+- **apiVersion:** `github.com/ruinosus/dna/a2a/v1`
+- **Plane:** record
+
+**Spec fields**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `client_id` | string | yes | O `client_id` OPACO que esta entrada nomeia. Um `client_id` que seja URL é recusado pelo schema: aquele resolve por CIMD, e o nome dele vem ancorado no domínio que o publica. |
+| `client_name` | string | yes | O nome legível — DIGITADO por alguém deste workspace, e a tela diz isso. Não é equivalente ao nome de um documento CIMD, e apresentá-lo como se fosse seria pior que mostrar o id cru: o id avisa que você não sabe quem é; um nome sem procedência não avisa nada. |
+| `notes` | string |  | Por que este agente existe, para quem ler a lista depois. Um campo de contexto humano, nunca de política: nada aqui é lido para decidir. |
+| `registered_at` | string |  | Quando foi cadastrado. |
+| `registered_by` | string | yes | QUEM cadastrou — o identificador durável da pessoa. Obrigatório porque é ele que torna o rótulo possível: "cadastrado por Maria" é uma frase que o usuário pode pesar; um nome sozinho, num id opaco, não é. |
+| `vendor` | string |  | A empresa por trás do agente, se quem cadastrou souber. Também digitado, e também sem prova — pelo mesmo motivo do nome. |
+
 ## AgentGrant
 
 - **Alias:** `a2a-agent-grant`
@@ -48,6 +65,7 @@ An ADR captures ONE architectural decision with its context, rationale, and cons
 | --- | --- | --- | --- |
 | `call_count` | integer |  | Quantas chamadas CONCEDIDAS. Só as concedidas, pela mesma razão que a quota não conta recusa: um número que mistura uso e tentativa não responde nem "quanto ele usou" nem "quanto ele tentou". |
 | `client_id` | string | yes | O identificador do app que pede — LIDO DO TOKEN verificado, nunca de um campo do pedido. O corpo é do chamador: um `client_id` vindo dali deixaria um agente se passar por outro e usar a concessão alheia, com o token continuando válido e a chamada continuando 200. |
+| `client_name` | string |  | O nome LEGÍVEL do agente, como a tela de consentimento o exibe. Ausente quando não há nome confiável — e ausente é o default, porque um `client_id` cru é feio e HONESTO, enquanto um nome fabricado é legível e falso. Numa tela de autorização a segunda coisa é pior. ⚠️ NÃO é auto-declarado. O host só grava aqui um nome que veio ANCORADO: o `client_id` é uma URL HTTPS (CIMD, draft-ietf-oauth-client-id-metadata-document) e o nome foi lido do documento servido naquela origem. Quem controla `acme.com` é o único que pode declarar um nome em `acme.com`, e disso o DNS e o TLS já dão prova. Aceitar nome de um campo do pedido devolveria o ataque que este desenho existe para fechar: a tela do provedor, com a marca dele, no instante da autorização, exibindo a mentira com aparência oficial. A ORIGEM não é campo: ela se DERIVA do `client_id` (o host da URL), e é isso que a tela deve mostrar com o mesmo peso do nome. Um campo de domínio ao lado poderia divergir do `client_id`, e um domínio que diverge da âncora é exatamente o nome auto-declarado com outra roupa. Pela mesma razão não há campo dizendo "de onde veio o nome": com `client_id` opaco não há nome ancorado possível, então a procedência já está dita pela forma do `client_id`. CONGELADO no instante do pedido, de propósito: o registro guarda o que o humano VIU quando decidiu. Se o terceiro se renomear depois, a tela não troca por baixo de uma decisão já tomada — e a âncora, que se deriva do `client_id`, nunca envelhece. |
 | `granted_at` | string |  | Quando um HUMANO concedeu. Ausente enquanto ninguém decidiu. |
 | `last_call_at` | string |  | A auditoria — quando este agente agiu pela última vez. |
 | `requested_at` | string |  | Quando o agente pediu — o pedido nasce da primeira recusa. |
