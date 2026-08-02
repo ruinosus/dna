@@ -2465,6 +2465,9 @@ def build_app(
         filename: str | None = Body(default=None, embed=True),
         mime: str | None = Body(default=None, embed=True),
         size_bytes: int | None = Body(default=None, embed=True),
+        detected_mime: str | None = Body(default=None, embed=True),
+        mime_mismatch: bool | None = Body(default=None, embed=True),
+        origin: str | None = Body(default=None, embed=True),
         claims: dict[str, Any] | None = Body(default=None, embed=True),
     ) -> dict[str, Any]:
         """Record the ORIGINAL a projection will be derived from.
@@ -2485,6 +2488,8 @@ def build_app(
             return await register_artifact_impl(
                 await _live(), workspace_id, sha256, uri, effective,
                 filename=filename, mime=mime, size_bytes=size_bytes,
+                detected_mime=detected_mime, mime_mismatch=mime_mismatch,
+                origin=origin,
             )
         except WorkspaceForbidden as exc:
             raise HTTPException(status_code=403, detail=str(exc)) from None

@@ -1389,6 +1389,17 @@
             ],
             "title": "Claims"
           },
+          "detected_mime": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detected Mime"
+          },
           "filename": {
             "anyOf": [
               {
@@ -1410,6 +1421,28 @@
               }
             ],
             "title": "Mime"
+          },
+          "mime_mismatch": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mime Mismatch"
+          },
+          "origin": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Origin"
           },
           "sha256": {
             "title": "Sha256",

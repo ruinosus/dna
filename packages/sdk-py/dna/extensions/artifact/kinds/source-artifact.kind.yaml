@@ -92,6 +92,42 @@ spec:
         - 'null'
         description: The declared content type, e.g. application/pdf. What the
           uploader SAID it is; not proof of what it is.
+      detected_mime:
+        type:
+        - string
+        - 'null'
+        description: >-
+          What the bytes ACTUALLY are, read from their magic bytes
+          (`dna.runtime.mime.detect_mime`). Kept BESIDE `mime`, never instead of
+          it: the pair is the evidence. Overwriting the declared value would
+          erase the fact that they ever disagreed, and that disagreement is the
+          only thing either field is good for on its own.
+      mime_mismatch:
+        type:
+        - boolean
+        - 'null'
+        description: >-
+          True when `detected_mime` and what the caller declared (or the
+          filename implied) diverge in a way that matters. NOT an error and NOT
+          a refusal — a `.pdf` that is really a ZIP may be an innocent mistake
+          or an attempt, and a record that cannot tell you it happened cannot
+          help you decide which. OOXML detected as its zip container and
+          variation within text do NOT count; a signal that fires on half the
+          uploads is a signal nobody reads.
+      origin:
+        type:
+        - string
+        - 'null'
+        enum:
+        - uploaded
+        - generated
+        - null
+        description: >-
+          Where the bytes came from. `uploaded` — a human attached the file;
+          `generated` — an agent produced it (an image, a chart, a converted
+          file). The distinction is not cosmetic: a generated artifact is
+          REPRODUCIBLE and a retention policy may treat it very differently
+          from an original nobody else holds a copy of.
       size_bytes:
         type:
         - integer

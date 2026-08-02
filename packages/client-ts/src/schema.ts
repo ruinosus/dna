@@ -1724,10 +1724,16 @@ export interface components {
             claims?: {
                 [key: string]: unknown;
             } | null;
+            /** Detected Mime */
+            detected_mime?: string | null;
             /** Filename */
             filename?: string | null;
             /** Mime */
             mime?: string | null;
+            /** Mime Mismatch */
+            mime_mismatch?: boolean | null;
+            /** Origin */
+            origin?: string | null;
             /** Sha256 */
             sha256: string;
             /** Size Bytes */
