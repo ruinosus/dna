@@ -151,7 +151,8 @@ def _make_run_local(mi: Any, hooks: RuntimeHooks) -> Callable[[str, str], Awaita
 
     async def run_local(target_name: str, request: str) -> str:
         from langchain.agents import create_agent
-        from langchain.chat_models import init_chat_model
+
+        from dna.runtime.model import build_chat_model
         from langchain_core.messages import HumanMessage
 
         from dna.emit import build_emit_context
@@ -178,7 +179,7 @@ def _make_run_local(mi: Any, hooks: RuntimeHooks) -> Callable[[str, str], Awaita
         )
         model = target_ctx.model or "gpt-5-mini"
         graph = create_agent(
-            model=init_chat_model(f"openai:{model}"),
+            model=build_chat_model(model),
             tools=host_tools,
             system_prompt=target_ctx.instructions or "",
             middleware=[*middleware, *host_middleware],
