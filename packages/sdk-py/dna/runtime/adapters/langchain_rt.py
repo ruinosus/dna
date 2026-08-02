@@ -19,6 +19,7 @@ from typing import Any
 from dna.runtime.middleware.allowlist import DnaAllowlistMiddleware
 from dna.runtime.middleware.compose_prompt import DnaComposePromptMiddleware
 from dna.runtime.middleware.hitl import dna_hitl_middleware
+from dna.runtime.middleware.recall import DnaRecallMiddleware
 from dna.runtime.middleware.mcp_tools_mw import DnaMcpToolsMiddleware
 from dna.runtime.port import RuntimeHooks
 
@@ -221,9 +222,18 @@ class LangChainRuntime:
         mcp_middleware, _allowed = mcp_tool_stack(
             mcp_servers, hooks.mcp_auth, extra_allowed=frozenset(extra_names)
         )
+        # ⚠️ ANTES do compose, e a ordem importa: o recall acrescenta a mensagem
+        # de sistema que o compose acabou de montar. Depois dele, o bloco de
+        # memoria seria sobrescrito.
+        recalls = (
+            [DnaRecallMiddleware(hooks.recall)]
+            if getattr(hooks, "recall", None) is not None
+            else []
+        )
         middleware = [
             *mcp_middleware,
             DnaComposePromptMiddleware(hooks.compose, fallback=instructions),
+            *recalls,
             dna_hitl_middleware(confirm_tools, extra_confirm=extra_confirm),
             *extra_middleware,
         ]

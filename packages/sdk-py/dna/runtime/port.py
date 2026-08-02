@@ -44,6 +44,11 @@ class RuntimeHooks:
     #: se configurado, continua exportando. E o host que injeta porque e ele
     #: quem tem a conexao — a mesma fronteira do `checkpointer`.
     turn_sink: Any = None
+    #: `async (consulta, limite) -> Sequence` — a busca de memoria. O HOST a
+    #: fornece porque e ele que tem o cliente MCP, a credencial e o tenant.
+    #: `None` (o default) deixa o agente dependendo de CHAMAR `recall`, que e
+    #: exatamente o que ele esquece de fazer.
+    recall: Any = None
 
 
 @runtime_checkable
