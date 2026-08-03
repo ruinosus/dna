@@ -360,6 +360,15 @@ spec:
               because most turns of a real conversation are "ok" / "thanks" —
               extracting from them costs money and yields noise that later
               SURFACES on its own in the prompt.
+          neighbors:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 8
+            description: >-
+              How many existing memories the reconciliation compares each new
+              fact against (the recall k). More sees farther and costs more
+              tokens per turn; fewer is cheaper and can miss a conflict.
           require_approval:
             type: boolean
             default: false

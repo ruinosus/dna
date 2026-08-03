@@ -236,3 +236,12 @@ def test_template_vazio_ou_nao_string_e_ignorado():
 
     assert "FATOS DURÁVEIS" in extraction_prompt("x", template="   ")
     assert "FATOS DURÁVEIS" in extraction_prompt("x", template=None)
+
+
+def test_neighbors_vem_da_POLITICA_nao_do_codigo():
+    from dna.memory.ingestion import resolve_ingestion
+
+    assert resolve_ingestion({"ingestion": {"neighbors": 20}}).neighbors == 20
+    assert resolve_ingestion(None).neighbors == 8
+    # Zero seria reconciliar contra nada — gravaria duplicata sempre.
+    assert resolve_ingestion({"ingestion": {"neighbors": 0}}).neighbors == 1

@@ -110,6 +110,10 @@ class IngestionPolicy:
     trigger: str = "per_turn"
     min_signal_chars: int = 25
     require_approval: bool = False
+    #: Quantas memórias existentes entram na reconciliação (o k do recall).
+    #: Era constante do host — e "está fixo em 8" é exatamente o tipo de
+    #: escolha que pertence à política do workspace, não ao código.
+    neighbors: int = 8
     #: Assuntos que NUNCA viram memória, mesmo se o modelo os extrair.
     never: tuple[str, ...] = ()
     always: tuple[str, ...] = ()
@@ -145,6 +149,7 @@ def resolve_ingestion(policy: Mapping[str, Any] | None) -> IngestionPolicy:
         trigger=str(bruto.get("trigger") or padrao.trigger),
         min_signal_chars=int(bruto.get("min_signal_chars", padrao.min_signal_chars)),
         require_approval=bool(bruto.get("require_approval", padrao.require_approval)),
+        neighbors=max(1, int(bruto.get("neighbors", padrao.neighbors))),
         never=tuple(t for t in (lembrar.get("never") or []) if isinstance(t, str)),
         always=tuple(t for t in (lembrar.get("always") or []) if isinstance(t, str)),
     )
