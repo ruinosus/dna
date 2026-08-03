@@ -404,6 +404,11 @@ spec:
       allocation:
         type: object
         additionalProperties: false
+        # ⚠️ DECLARADO, AINDA SEM EFEITO (medição de 03/08/2026): o processo de
+        # merge-por-similaridade que estes parâmetros governariam não existe no
+        # core determinístico — só o consolidate por retenção. Data-honesty na
+        # fonte: quem declara isto hoje não muda comportamento nenhum. Vira
+        # efetivo quando o processo de alocação shippar (feature, não fio).
         description: Engram allocation (dedup/archival) knobs (ex-AllocationPolicy).
         properties:
           threshold:
@@ -453,6 +458,8 @@ spec:
       engram_strength:
         type: object
         additionalProperties: false
+        # ⚠️ DECLARADO, AINDA SEM EFEITO (03/08/2026) — mesmo caso da allocation:
+        # as regras de força inicial por gatilho não têm consumidor no core.
         description: Initial-strength rules per engraphy trigger
           (ex-EngramStrengthPolicy).
         required:
