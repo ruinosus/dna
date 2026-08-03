@@ -1396,6 +1396,10 @@ export interface components {
             namespace: string;
             /** Proposed By */
             proposed_by?: string | null;
+            /** Schema */
+            schema?: {
+                [key: string]: unknown;
+            } | null;
             /** Version */
             version?: string | null;
         };

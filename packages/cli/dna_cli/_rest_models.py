@@ -223,6 +223,11 @@ class AuthorKindResponse(BaseModel):
     #: accepted — there is no request field it could have come from.
     proposed_by: str | None = None
     version: str | None = None
+    #: The authored JSON Schema, ECHOED (wire name, like the two other doors —
+    #: shadow warning silenced narrowly in pyproject). The MCP Apps kind-draft
+    #: card renders its editable rows from this echo; dropping it here would
+    #: violate the fidelity contract (FastAPI silently strips unmodeled keys).
+    schema: dict[str, Any] | None = None
 
 
 class ApproveKindResponse(BaseModel):

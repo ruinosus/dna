@@ -196,6 +196,8 @@ filterwarnings = [
     # returns the REGISTERED Kind's JSON Schema under `schema` — same
     # reasoning, same narrow silence.
     'ignore:Field name "schema" in "RegisteredKindView" shadows an attribute in parent "BaseModel":UserWarning',
+    # O eco do schema autorado na resposta da porta (o card MCP Apps o lê).
+    'ignore:Field name "schema" in "AuthorKindResponse" shadows an attribute in parent "BaseModel":UserWarning',
 ]
 
 [build-system]

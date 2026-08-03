@@ -411,6 +411,18 @@
             ],
             "title": "Proposed By"
           },
+          "schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Schema"
+          },
           "version": {
             "anyOf": [
               {

@@ -377,6 +377,10 @@ async def author_kind_impl(
     return {
         "namespace": namespace, "kind": kind, "name": name,
         "approved": False, "proposed_by": proposed_by, "version": version,
+        # O eco do schema autorado: o card MCP Apps (ui://dna/kind-draft)
+        # renderiza as linhas a partir DELE — sem o eco, o card interativo
+        # não teria o que editar (Kind Studio F3).
+        "schema": schema,
     }
 
 

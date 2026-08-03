@@ -1524,6 +1524,16 @@ def build_server(
         ``structured_content`` into it over the authenticated session."""
         return memory_list_card_html()
 
+    from dna.emit.mcp_ui import UI_KIND_DRAFT_URI, kind_draft_card_html
+
+    @server.resource(UI_KIND_DRAFT_URI, mime_type=MCP_APP_MIME)
+    def kind_draft_card() -> str:
+        """O template MCP Apps do Kind autorado (Kind Studio F3) — o recurso
+        que a declaração de ``author_kind`` aponta. Estático, público e sem
+        dado; INTERATIVO: edita as linhas do schema e reautora via
+        ``callServerTool`` (aprovação continua humana, no portal)."""
+        return kind_draft_card_html()
+
     # -- graph.* (Microsoft On-Behalf-Of — opt-in, off by default) -----------
     #
     # Registered ONLY when the `graph:` config marks a tool-group active. The
