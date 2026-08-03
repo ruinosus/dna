@@ -115,11 +115,49 @@ def test_remembrance_required_fields():
     }
 
 
-def test_remembrance_affect_enum_is_evocative():
-    """Per Spec §15 decision: evocative palette, not neutral pos/neg/neutral/mixed."""
+def test_remembrance_affect_is_OPEN_and_the_palette_is_data():
+    """⚠️ ABERTO em 03/08, e esta assercao guarda a REVERSAO.
+
+    Era um enum de cinco (a paleta evocativa da Spec §15). Um enum fechado faz
+    do vocabulario EMOCIONAL do dominio uma constante do CODIGO — e o defeito
+    era concreto: `CognitivePolicy.affect.palette[]` ja permitia ao workspace
+    declarar tons proprios COM peso, e o schema do Engram recusava marcar
+    qualquer coisa com eles. A politica existia e o schema a bloqueava.
+
+    O que continua garantido: string NAO VAZIA. Aceitar "" trocaria um
+    vocabulario fechado demais por nenhum vocabulario.
+    """
     schema = _engram_port().schema()
-    affect_enum = schema["properties"]["affect"]["enum"]
-    assert set(affect_enum) == {"triumph", "regret", "surprise", "wistful", "ominous"}
+    affect = schema["properties"]["affect"]
+    assert "enum" not in affect, (
+        "affect voltou a ser enum fechado — a paleta do workspace seria recusada"
+    )
+    assert affect["type"] == "string"
+    assert affect.get("minLength") == 1
+
+
+def test_os_cinco_tons_padrao_continuam_PESANDO():
+    """Abrir o vocabulario nao pode custar o comportamento medido: um tom com
+    afeto RESISTE ao esquecimento, e os cinco tem multiplicador medido."""
+    from dna.memory.decay import affect_factor
+
+    assert affect_factor("surprise") > 1.0
+    assert affect_factor("regret") > 1.0
+    # Desconhecido e NEUTRO — honrado, nunca descartado, mas sem resistencia
+    # extra ate alguem lhe dar um peso.
+    assert affect_factor("urgente") == 1.0
+    assert affect_factor(None) == 1.0
+
+
+def test_a_paleta_do_WORKSPACE_vence_os_padroes():
+    """Um tom que o workspace definiu e um tom que ele entende melhor que este
+    modulo."""
+    from dna.memory.decay import affect_factor
+
+    palete = [{"id": "urgente", "semantics": "precisa agora", "affect_weight": 1.6},
+              {"id": "surprise", "semantics": "outro sentido aqui", "affect_weight": 1.1}]
+    assert affect_factor("urgente", palete) == 1.6
+    assert affect_factor("surprise", palete) == 1.1
 
 
 def test_remembrance_surface_when_enum():

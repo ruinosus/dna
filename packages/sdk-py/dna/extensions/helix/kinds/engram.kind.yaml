@@ -92,14 +92,24 @@ spec:
           etc.) that this memory derives from.
       affect:
         type: string
-        enum:
-        - triumph
-        - regret
-        - surprise
-        - wistful
-        - ominous
-        description: 'Emotional tone. Evocative palette (Spec §15 decision): triumph,
-          regret, surprise, wistful, ominous.'
+        minLength: 1
+        description: >-
+          Emotional tone. The five the runtime weights out of the box are
+          `triumph`, `regret`, `surprise`, `wistful` and `ominous` — an
+          affect-tagged memory RESISTS forgetting, and each of those has a
+          measured multiplier in `dna.memory.decay`.
+
+          ⭐ OPEN ON PURPOSE, in lockstep with `memory_type` (2026-08-03). A
+          closed palette makes the emotional vocabulary of the DOMAIN a constant
+          of the CODE: a workspace whose work has `urgent`, `contested` or
+          `relief` should be able to say so on the day it decides that, and to
+          give that tone a weight through `CognitivePolicy.affect`.
+
+          ⚠️ The consequence to accept: an unrecognised tone gets the NEUTRAL
+          multiplier (1.0) until a policy assigns one. It is honoured — never
+          dropped — but it does not resist forgetting more than an untagged
+          memory would. Inventing a weight for a name nobody defined would be
+          the system deciding how much a feeling matters.
       affect_reason:
         type: string
         minLength: 20
