@@ -163,3 +163,34 @@ def test_ha_TETO_de_fatos_por_turno():
     está inventando."""
     muitos = json.dumps({"facts": [f"fato {i}" for i in range(50)]})
     assert len(parse_facts(muitos)) == MAX_FACTS
+
+
+# ── a fonte sdlc ────────────────────────────────────────────────────────────
+
+
+def test_o_digest_do_board_e_TITULO_e_resultado_nao_o_yaml():
+    """⚠️ O fato durável de uma história entregue é o que ela MUDOU, não o
+    registro do processo. O documento inteiro faria o extrator achar fatos
+    sobre o board, não sobre o trabalho."""
+    from dna.memory.ingestion import sdlc_digest
+
+    d = sdlc_digest(
+        [
+            {"spec": {"title": "Billing por uso", "outcome": "Stripe metered ligado"}},
+            # O shape do digest retrospectivo: title no TOPO, sem spec.
+            {"kind": "Story", "name": "s-x", "title": "Sem resultado registrado"},
+            {"spec": {"outcome": "sem titulo, nao entra"}},
+        ],
+        decided=[{"kind": "ADR", "name": "adr-1", "title": "Postgres, nao Cosmos"}],
+    )
+    assert "entregue: Billing por uso — Stripe metered ligado" in d
+    assert "entregue: Sem resultado registrado" in d
+    assert "decidido: Postgres, nao Cosmos" in d
+    assert "nao entra" not in d
+
+
+def test_o_digest_tem_TETO():
+    from dna.memory.ingestion import SDLC_MAX_ITEMS, sdlc_digest
+
+    d = sdlc_digest([{"title": f"h{i}"} for i in range(50)])
+    assert d.count("entregue:") == SDLC_MAX_ITEMS

@@ -62,6 +62,7 @@ __all__ = [
     "parse_decisions",
     "reconciliation_prompt",
     "resolve_ingestion",
+    "sdlc_digest",
     "worth_extracting",
 ]
 
@@ -355,3 +356,48 @@ def parse_decisions(raw: Any) -> list[Decision]:
             Decision(op=op, text=texto, memory_id=mid, reason=str(d.get("reason") or ""))
         )
     return saida
+
+
+# ── a fonte `sdlc`: o board vira material de extração ───────────────────────
+
+#: Quantas historias entram num digest. O board de um mes nao produz cem fatos
+#: duraveis; um digest gigante so encarece a chamada.
+SDLC_MAX_ITEMS = 12
+
+
+def sdlc_digest(
+    completed: Sequence[Mapping[str, Any]],
+    decided: Sequence[Mapping[str, Any]] = (),
+    *,
+    max_items: int = SDLC_MAX_ITEMS,
+) -> str:
+    """O texto que a extração lê quando a fonte é o BOARD.
+
+    Recebe os buckets ``completed``/``decided`` do digest retrospectivo (a tool
+    `sdlc_digest` já os calcula — itens ``{"kind", "name", "title"}``) e produz
+    o mesmo formato de "transcript" que a extração de chat consome — o pipeline
+    das duas etapas é UM, e a fonte é só de onde o texto veio.
+
+    ⚠️ Por que título + resultado, e não o documento inteiro: o fato durável de
+    uma história entregue é o que ELA MUDOU ("o billing agora usa Stripe
+    metered"), não o registro do processo. Despejar o YAML inteiro faria o
+    extrator achar fatos sobre o board, não sobre o trabalho.
+    """
+    def _linha(rotulo: str, doc: Mapping[str, Any]) -> str | None:
+        spec = doc.get("spec") if isinstance(doc.get("spec"), Mapping) else doc
+        titulo = str(spec.get("title") or spec.get("summary") or "").strip()
+        if not titulo:
+            return None
+        resultado = str(
+            spec.get("outcome") or spec.get("resolution") or ""
+        ).strip()
+        return f"{rotulo}: {titulo}" + (f" — {resultado[:200]}" if resultado else "")
+
+    linhas: list[str] = []
+    for doc in list(completed):
+        if (l := _linha("entregue", doc)) is not None:
+            linhas.append(l)
+    for doc in list(decided):
+        if (l := _linha("decidido", doc)) is not None:
+            linhas.append(l)
+    return "\n".join(linhas[:max_items])
