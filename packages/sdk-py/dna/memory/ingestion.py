@@ -56,9 +56,11 @@ __all__ = [
     "NONE",
     "UPDATE",
     "Decision",
+    "ESCALATE",
     "IngestionPolicy",
     "extraction_prompt",
     "parse_facts",
+    "arbiter_prompt",
     "parse_decisions",
     "reconciliation_prompt",
     "EXTRACTION_TEMPLATE",
@@ -72,6 +74,10 @@ ADD = "add"
 UPDATE = "update"
 INVALIDATE = "invalidate"
 NONE = "none"
+#: A quinta operação — só existe no motor `pipeline-agent`: a reconciliação
+#: DECLARA incerteza em vez de chutar, e o fato vai ao árbitro. Nunca é
+#: caminho de escrita; fora do motor certo, degrada para NONE.
+ESCALATE = "escalate"
 
 #: As quatro operações. Fechado porque cada uma é um caminho de escrita REAL —
 #: uma quinta que ninguém implementou viraria um fato descartado em silêncio.
@@ -114,6 +120,13 @@ class IngestionPolicy:
     #: Era constante do host — e "está fixo em 8" é exatamente o tipo de
     #: escolha que pertence à política do workspace, não ao código.
     neighbors: int = 8
+    #: O motor: `pipeline` (2 chamadas fixas) | `pipeline-agent` (o híbrido —
+    #: a reconciliação pode escalar o fato INCERTO ao árbitro) | `agent`.
+    #: Valor desconhecido degrada para `pipeline`: o modo de falha de uma
+    #: política malformada é o comportamento barato e testado.
+    engine: str = "pipeline"
+    #: O doc Agent que arbitra as escalações. Vazio + escalate → NONE.
+    engine_agent: str = ""
     #: Assuntos que NUNCA viram memória, mesmo se o modelo os extrair.
     never: tuple[str, ...] = ()
     always: tuple[str, ...] = ()
@@ -150,6 +163,13 @@ def resolve_ingestion(policy: Mapping[str, Any] | None) -> IngestionPolicy:
         min_signal_chars=int(bruto.get("min_signal_chars", padrao.min_signal_chars)),
         require_approval=bool(bruto.get("require_approval", padrao.require_approval)),
         neighbors=max(1, int(bruto.get("neighbors", padrao.neighbors))),
+        engine=(
+            str(bruto.get("engine") or padrao.engine)
+            if str(bruto.get("engine") or padrao.engine)
+            in ("pipeline", "pipeline-agent", "agent")
+            else padrao.engine
+        ),
+        engine_agent=str(bruto.get("engine_agent") or ""),
         never=tuple(t for t in (lembrar.get("never") or []) if isinstance(t, str)),
         always=tuple(t for t in (lembrar.get("always") or []) if isinstance(t, str)),
     )
@@ -263,6 +283,7 @@ def reconciliation_prompt(
     existing: Sequence[Mapping[str, Any]],
     *,
     template: str | None = None,
+    allow_escalate: bool = False,
 ) -> str:
     """A etapa 2 — cada fato contra o que já existe.
 
@@ -281,6 +302,13 @@ def reconciliation_prompt(
         ensure_ascii=False,
     )
     fatos_json = json.dumps(list(facts), ensure_ascii=False)
+    escalate_op = (
+        f'''- "{ESCALATE}": você está INCERTO — conflito parcial, memórias ambíguas,
+  ou o fato toca mais de uma memória. Informe o fato em `text`. Prefira
+  escalar a chutar: o fato escalado será decidido com mais contexto.'''
+        if allow_escalate
+        else ""
+    )
     escolhido = _template_valido(
         template, ("facts", "memories"), RECONCILIATION_TEMPLATE
     )
@@ -295,7 +323,7 @@ def reconciliation_prompt(
   valer. Informe o `id`. (A memória não é apagada — é marcada como não mais
   válida, e continua auditável.)
 - "{NONE}": o fato já está na memória, ou não vale guardar.
-
+{escalate_op}
 Prefira "{UPDATE}" a "{ADD}" quando o assunto for o mesmo: duas memórias sobre a
 mesma coisa fazem o agente servir as duas versões e parecer confuso.
 
@@ -393,11 +421,61 @@ def parse_facts(raw: Any, policy: IngestionPolicy | None = None) -> list[str]:
     return limpos
 
 
-def parse_decisions(raw: Any) -> list[Decision]:
+def arbiter_prompt(
+    fact: str,
+    memories: Sequence[Mapping[str, Any]],
+    instruction: str = "",
+) -> str:
+    """A rodada do ÁRBITRO — um fato escalado, contexto mais largo, decisão FINAL.
+
+    O árbitro nunca pode escalar de novo (o teto é UMA rodada, e é o que
+    mantém o custo delimitado); a resposta dele passa pelo mesmo
+    `parse_decisions` SEM escalate, então qualquer tentativa degrada para
+    `{NONE}` — indecisão vira "não grave", nunca "grave assim mesmo".
+
+    `instruction` é a instrução do doc Agent configurado como `engine_agent` —
+    o texto que o workspace edita na tela de Agentes. Vazia, vale o papel
+    mínimo declarado aqui.
+    """
+    memorias = json.dumps(
+        [
+            {"id": str(m.get("id") or m.get("name") or i), "text": _texto(m)}
+            for i, m in enumerate(memories)
+        ],
+        ensure_ascii=False,
+    )
+    papel = instruction.strip() or (
+        "Você é o árbitro da memória: decide o destino de um fato que a "
+        "reconciliação rápida não soube classificar."
+    )
+    return f"""{papel}
+
+Um fato foi ESCALADO por incerteza. Decida a operação FINAL — escalar de novo
+não é opção; na dúvida, "{NONE}" (não gravar é reversível no próximo turno).
+
+- "{ADD}": informação nova. - "{UPDATE}": corrige uma memória (informe `id` e o
+texto final). - "{INVALIDATE}": contradiz uma memória (informe `id`).
+- "{NONE}": já coberto, ou não vale guardar.
+
+MEMÓRIA (contexto ampliado):
+{memorias}
+
+FATO ESCALADO:
+{json.dumps(fact, ensure_ascii=False)}
+
+Responda SOMENTE com JSON: {{"decisions": [{{"op": "...", ...}}]}}"""
+
+
+def parse_decisions(raw: Any, *, allow_escalate: bool = False) -> list[Decision]:
     """As operações da etapa 2.
 
     ⚠️ Operação desconhecida vira `none`, nunca `add`. O default FECHA: um
     modelo que invente `"merge"` não pode virar uma escrita que ninguém revisou.
+
+    `allow_escalate` (só o motor `pipeline-agent` liga): mantém `escalate`
+    como operação viva — o host a separa e envia ao árbitro. DESLIGADO,
+    escalate degrada para `none` como qualquer operação desconhecida: um
+    modelo que escala num motor sem árbitro não pode travar nem gravar.
     """
     dados = _json_de(raw)
     itens = dados.get("decisions") if isinstance(dados, Mapping) else dados
@@ -409,6 +487,14 @@ def parse_decisions(raw: Any) -> list[Decision]:
         if not isinstance(d, Mapping):
             continue
         op = str(d.get("op") or "").strip().lower()
+        if op == ESCALATE:
+            if allow_escalate:
+                texto = str(d.get("text") or "").strip()
+                if texto:
+                    saida.append(Decision(op=ESCALATE, text=texto,
+                                          reason=str(d.get("reason") or "")))
+                continue
+            op = NONE
         if op not in OPERATIONS:
             _LOGGER.info("operação desconhecida %r tratada como `none`", op)
             op = NONE

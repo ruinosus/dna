@@ -245,3 +245,49 @@ def test_neighbors_vem_da_POLITICA_nao_do_codigo():
     assert resolve_ingestion(None).neighbors == 8
     # Zero seria reconciliar contra nada — gravaria duplicata sempre.
     assert resolve_ingestion({"ingestion": {"neighbors": 0}}).neighbors == 1
+
+
+# ── o motor pipeline-agent ──────────────────────────────────────────────────
+
+
+def test_escalate_SO_vive_no_motor_certo():
+    """Fora do pipeline-agent, escalate degrada para none — um modelo que
+    escala num motor sem árbitro não pode travar nem gravar."""
+    from dna.memory.ingestion import ESCALATE, parse_decisions
+
+    cru = '{"decisions": [{"op": "escalate", "text": "prazo mudou?"}]}'
+    com = parse_decisions(cru, allow_escalate=True)
+    sem = parse_decisions(cru)
+    assert [d.op for d in com] == [ESCALATE]
+    assert all(d.op != ESCALATE for d in sem) and not any(
+        d.op == "add" for d in sem
+    )
+
+
+def test_o_prompt_so_OFERECE_escalate_quando_o_motor_permite():
+    from dna.memory.ingestion import reconciliation_prompt
+
+    assert "escalate" in reconciliation_prompt(["f"], [], allow_escalate=True)
+    assert "escalate" not in reconciliation_prompt(["f"], [])
+
+
+def test_o_arbitro_decide_e_nao_pode_escalar_de_novo():
+    """O teto é UMA rodada: a resposta do árbitro passa por parse_decisions
+    SEM escalate, então re-escalar degrada para none — indecisão vira 'não
+    grave', nunca loop."""
+    from dna.memory.ingestion import arbiter_prompt, parse_decisions
+
+    p = arbiter_prompt("o prazo é 60", [{"id": "m1", "summary": "prazo 30"}],
+                       instruction="Você cuida da memória do time juridico.")
+    assert "Você cuida da memória do time juridico." in p and '"m1"' in p
+    re_escala = parse_decisions('{"decisions": [{"op": "escalate", "text": "x"}]}')
+    assert all(d.op == "none" for d in re_escala) or re_escala == []
+
+
+def test_o_motor_vem_da_politica_e_desconhecido_degrada():
+    from dna.memory.ingestion import resolve_ingestion
+
+    assert resolve_ingestion({"ingestion": {"engine": "pipeline-agent",
+                                            "engine_agent": "memory-reconciler"}}).engine == "pipeline-agent"
+    assert resolve_ingestion({"ingestion": {"engine": "blockchain"}}).engine == "pipeline"
+    assert resolve_ingestion(None).engine == "pipeline"

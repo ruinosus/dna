@@ -360,6 +360,24 @@ spec:
               because most turns of a real conversation are "ok" / "thanks" —
               extracting from them costs money and yields noise that later
               SURFACES on its own in the prompt.
+          engine:
+            type: string
+            enum: [pipeline, pipeline-agent, agent]
+            default: pipeline
+            description: >-
+              The reconciliation engine. `pipeline` = two fixed model calls
+              (cheap, predictable). `pipeline-agent` = the hybrid: the fixed
+              skeleton, but the reconciliation may ESCALATE an uncertain fact
+              to the arbiter agent (one bounded round; the arbiter decides,
+              the pipeline applies). `agent` = the named agent reconciles
+              everything (reserved; not yet implemented).
+          engine_agent:
+            type: string
+            default: ""
+            description: >-
+              The Agent document that arbitrates escalations (its instruction
+              is the arbiter's role text). Empty + an escalation = the fact
+              degrades to `none` — uncertainty without a judge never writes.
           neighbors:
             type: integer
             minimum: 1
