@@ -175,7 +175,7 @@ def test_o_cue_e_uma_JANELA_e_nao_so_a_ultima_fala():
     o que lhe dá sentido está duas mensagens atrás. Buscar memória com `"e o
     prazo?"` não recupera nada.
 
-    Vem do desenho do JARVIS (`aap-sdk-v3`): cues são o transcript recente, não
+    Vem do desenho do JARVIS (prior art do fundador, projeto anterior): cues são o transcript recente, não
     o último turno.
     """
     vistas = []
@@ -307,7 +307,7 @@ def test_um_conjunto_QUASE_igual_mantem_o_bloco_ANTERIOR():
     invalida o cache do provider: custo real, medível, e invisível até chegar na
     fatura.
 
-    Vem do JARVIS (`aap-sdk-v3`): "re-injeta só quando o set muda + histerese".
+    Vem do JARVIS (prior art do fundador, projeto anterior): "re-injeta só quando o set muda + histerese".
     """
     chamadas = [
         [{"name": "m1", "summary": "alfa"}, {"name": "m2", "summary": "beta"}],

@@ -84,13 +84,7 @@ def preview(text: str, *, address: str | None = None) -> str:
     )
 
 
-def _middleware_base():
-    from langchain.agents.middleware import AgentMiddleware
-
-    return AgentMiddleware
-
-
-class DnaToolOffloadMiddleware(_middleware_base()):  # type: ignore[misc]
+class _DnaToolOffloadMiddlewareImpl:  # type: ignore[misc]
     """Troca saída grande de tool por uma janela com endereço.
 
     ``store`` é ``async (text: str, tool: str) -> str | None`` e devolve o
@@ -136,3 +130,27 @@ class DnaToolOffloadMiddleware(_middleware_base()):  # type: ignore[misc]
         except Exception:  # noqa: BLE001 — falhar em guardar não pode custar o turno
             _LOGGER.warning("descarga de saída de tool falhou", exc_info=True)
             return None
+
+
+# ⚠️ A classe é montada PREGUIÇOSAMENTE, e isso não é estilo.
+#
+# `class X(AgentMiddleware)` avalia a base no IMPORT — e faria este módulo
+# exigir `langchain` só para alguém ler `briefing()` ou `preview()`. O SDK tem
+# a disciplina oposta: a REGRA é importável sem o framework, e é isso que a
+# torna exercitável sem instalar meio mundo.
+#
+# MEDIDO em 03/08/2026: o job `postgres` do CI não tem langchain, e os testes
+# quebraram no COLLECT — não numa asserção, no import.
+_CLASSE = None
+
+
+def __getattr__(nome: str):
+    """Monta `DnaToolOffloadMiddleware` na primeira vez que alguém a pede."""
+    global _CLASSE
+    if nome != "DnaToolOffloadMiddleware":
+        raise AttributeError(nome)
+    if _CLASSE is None:
+        from langchain.agents.middleware import AgentMiddleware
+
+        _CLASSE = type("DnaToolOffloadMiddleware", (_DnaToolOffloadMiddlewareImpl, AgentMiddleware), {})
+    return _CLASSE

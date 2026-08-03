@@ -88,7 +88,7 @@ CUE_MAX_CHARS = 600
 #: a cada turno muda o prefixo do prompt a cada turno, e isso invalida o cache do
 #: provider: custo real, medível, e invisível até chegar na fatura.
 #:
-#: Vem do JARVIS (`aap-sdk-v3`): "re-injeta só quando o set muda + histerese".
+#: Vem do JARVIS (prior art do fundador, projeto anterior): "re-injeta só quando o set muda + histerese".
 #: Lá a banda é sobre SCORE (θ_in/θ_out); aqui é sobre SOBREPOSIÇÃO, porque o
 #: `recall` não expõe o score ao chamador. Menos fino, mesma intenção — e a
 #: diferença está escrita para quem for refinar.
@@ -239,7 +239,7 @@ def cues(messages: Iterable[Any], *, window: int = CUE_WINDOW) -> str:
     curta e dependente (`"e o prazo?"`), e o que dá sentido a ela está duas ou
     três mensagens atrás. Uma busca por `"e o prazo?"` não recupera nada.
 
-    Vem do desenho do JARVIS (`aap-sdk-v3`, peça 1): os cues são "escopo ativo +
+    Vem do desenho do JARVIS (prior art do fundador, projeto anterior): os cues são "escopo ativo +
     `recent_topics` extraídos do transcript + affect da sessão". Aqui está a
     metade barata e determinística — a janela do transcript. Escopo e affect
     dependem de estado que o host tem e o SDK não.
@@ -290,13 +290,7 @@ def _thread_de(request: Any) -> str:
     return ""
 
 
-def _middleware_base():
-    from langchain.agents.middleware import AgentMiddleware
-
-    return AgentMiddleware
-
-
-class DnaRecallMiddleware(_middleware_base()):  # type: ignore[misc]
+class _DnaRecallMiddlewareImpl:  # type: ignore[misc]
     """Injeta memória relevante no sistema, quando vale a pena.
 
     ``recall`` é ``async (consulta: str, limite: int) -> Sequence`` e é do HOST:
@@ -386,3 +380,27 @@ class DnaRecallMiddleware(_middleware_base()):  # type: ignore[misc]
                 span.set_attribute("dna.recall.query", consulta[:200])
         except Exception:  # noqa: BLE001 — telemetria nunca derruba o observado
             pass
+
+
+# ⚠️ A classe é montada PREGUIÇOSAMENTE, e isso não é estilo.
+#
+# `class X(AgentMiddleware)` avalia a base no IMPORT — e faria este módulo
+# exigir `langchain` só para alguém ler `briefing()` ou `preview()`. O SDK tem
+# a disciplina oposta: a REGRA é importável sem o framework, e é isso que a
+# torna exercitável sem instalar meio mundo.
+#
+# MEDIDO em 03/08/2026: o job `postgres` do CI não tem langchain, e os testes
+# quebraram no COLLECT — não numa asserção, no import.
+_CLASSE = None
+
+
+def __getattr__(nome: str):
+    """Monta `DnaRecallMiddleware` na primeira vez que alguém a pede."""
+    global _CLASSE
+    if nome != "DnaRecallMiddleware":
+        raise AttributeError(nome)
+    if _CLASSE is None:
+        from langchain.agents.middleware import AgentMiddleware
+
+        _CLASSE = type("DnaRecallMiddleware", (_DnaRecallMiddlewareImpl, AgentMiddleware), {})
+    return _CLASSE
