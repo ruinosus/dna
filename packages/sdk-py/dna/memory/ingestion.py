@@ -201,6 +201,12 @@ def worth_extracting(text: str | None, policy: IngestionPolicy | None = None) ->
 EXTRACTION_TEMPLATE = "memory-extraction"
 RECONCILIATION_TEMPLATE = "memory-reconciliation"
 
+#: A etapa 3 (árbitro do motor pipeline-agent). A ASSIMETRIA era medida: as
+#: etapas 1 e 2 tinham template e a 3 só metade (a instrução vinha do doc
+#: Agent; o SCAFFOLD ao redor era código). Variáveis: {instruction}, {fact},
+#: {memories}.
+ARBITRATION_TEMPLATE = "memory-arbitration"
+
 
 def _template_valido(template: Any, obrigatorias: Sequence[str], nome: str) -> str | None:
     """O texto do workspace, SE ele carrega toda variável obrigatória.
@@ -421,10 +427,30 @@ def parse_facts(raw: Any, policy: IngestionPolicy | None = None) -> list[str]:
     return limpos
 
 
+ARBITRATION_DEFAULT = f"""{{instruction}}
+
+Um fato foi ESCALADO por incerteza. Decida a operação FINAL — escalar de novo
+não é opção; na dúvida, "{NONE}" (não gravar é reversível no próximo turno).
+
+- "{ADD}": informação nova. - "{UPDATE}": corrige uma memória (informe `id` e o
+texto final). - "{INVALIDATE}": contradiz uma memória (informe `id`).
+- "{NONE}": já coberto, ou não vale guardar.
+
+MEMÓRIA (contexto ampliado):
+{{memories}}
+
+FATO ESCALADO:
+{{fact}}
+
+Responda SOMENTE com JSON: {{{{"decisions": [{{{{"op": "...", ...}}}}]}}}}"""
+
+
 def arbiter_prompt(
     fact: str,
     memories: Sequence[Mapping[str, Any]],
     instruction: str = "",
+    *,
+    template: str | None = None,
 ) -> str:
     """A rodada do ÁRBITRO — um fato escalado, contexto mais largo, decisão FINAL.
 
@@ -448,22 +474,16 @@ def arbiter_prompt(
         "Você é o árbitro da memória: decide o destino de um fato que a "
         "reconciliação rápida não soube classificar."
     )
-    return f"""{papel}
-
-Um fato foi ESCALADO por incerteza. Decida a operação FINAL — escalar de novo
-não é opção; na dúvida, "{NONE}" (não gravar é reversível no próximo turno).
-
-- "{ADD}": informação nova. - "{UPDATE}": corrige uma memória (informe `id` e o
-texto final). - "{INVALIDATE}": contradiz uma memória (informe `id`).
-- "{NONE}": já coberto, ou não vale guardar.
-
-MEMÓRIA (contexto ampliado):
-{memorias}
-
-FATO ESCALADO:
-{json.dumps(fact, ensure_ascii=False)}
-
-Responda SOMENTE com JSON: {{"decisions": [{{"op": "...", ...}}]}}"""
+    fato = json.dumps(fact, ensure_ascii=False)
+    corpo = (
+        _template_valido(template, ("instruction", "fact", "memories"), ARBITRATION_TEMPLATE)
+        or ARBITRATION_DEFAULT
+    )
+    return (
+        corpo.replace("{instruction}", papel)
+        .replace("{memories}", memorias)
+        .replace("{fact}", fato)
+    )
 
 
 def parse_decisions(raw: Any, *, allow_escalate: bool = False) -> list[Decision]:

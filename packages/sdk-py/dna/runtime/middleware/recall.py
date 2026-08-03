@@ -161,7 +161,21 @@ def _tipo_de(memoria: Any) -> Any:
     return getattr(memoria, "memory_type", None)
 
 
-def briefing(memories: Sequence[Any]) -> str:
+#: O NOME DE CATÁLOGO do briefing — a voz de MAIOR tráfego do produto (sobe
+#: em todo turno com recall, em todo agente). Editável como PromptTemplate
+#: (`{memories}` é a variável); o texto abaixo é só o default de fallback.
+BRIEFING_TEMPLATE = "memory-recall-briefing"
+
+BRIEFING_DEFAULT = (
+    "Memórias já registradas deste workspace, recuperadas para este turno:\n"
+    "{memories}\n"
+    "O que estiver marcado REGRA você DEVE seguir; o resto é contexto. "
+    "Diga quando usar algo que veio da memória. "
+    "Se precisar de mais, chame `recall` — isto é um resumo, não tudo."
+)
+
+
+def briefing(memories: Sequence[Any], *, template: str | None = None) -> str:
     """O bloco que entra na mensagem de SISTEMA — ou vazio.
 
     Vai para o sistema, e não para a conversa, pelo mesmo motivo que a instrução
@@ -186,13 +200,10 @@ def briefing(memories: Sequence[Any]) -> str:
         gasto += len(linha)
     if not linhas:
         return ""
-    return (
-        "Memórias já registradas deste workspace, recuperadas para este turno:\n"
-        + "\n".join(linhas)
-        + "\nO que estiver marcado REGRA você DEVE seguir; o resto é contexto. "
-        "Diga quando usar algo que veio da memória. "
-        "Se precisar de mais, chame `recall` — isto é um resumo, não tudo."
-    )
+    bloco = "\n".join(linhas)
+    if template and "{memories}" in template:
+        return template.replace("{memories}", bloco)
+    return BRIEFING_DEFAULT.replace("{memories}", bloco)
 
 
 def _texto_de_memoria(memoria: Any) -> str:
@@ -303,10 +314,14 @@ class _DnaRecallMiddlewareImpl:  # type: ignore[misc]
         recall: Callable[..., Awaitable[Sequence[Any]]] | None = None,
         *,
         limit: int = MAX_MEMORIES,
+        template_source: Callable[[str], Awaitable[str | None]] | None = None,
     ) -> None:
         super().__init__()
         self._recall = recall
         self._limit = limit
+        #: `async (nome) -> str|None` — o PromptTemplate do workspace (overlay
+        #: do tenant), injetado pelo host. Sem ele, vale o BRIEFING_DEFAULT.
+        self._template_source = template_source
         #: `thread_id -> (chaves, bloco)`. Em processo e limitado: a histerese é
         #: uma otimização de estabilidade, e perdê-la num restart custa um
         #: prompt diferente, nunca uma resposta errada.
@@ -335,7 +350,7 @@ class _DnaRecallMiddlewareImpl:  # type: ignore[misc]
             _LOGGER.warning("recall automático falhou", exc_info=True)
             return ""
 
-        texto = self._estavel(request, memorias or [])
+        texto = self._estavel(request, memorias or [], await self._template_vivo())
         if texto:
             # ⚠️ Deixa rastro. Memória que entra no prompt sem aparecer é mágica
             # não auditável: o usuário vê o agente "saber" algo e não tem como
@@ -343,7 +358,16 @@ class _DnaRecallMiddlewareImpl:  # type: ignore[misc]
             self._carimbar(len(list(memorias or [])[:MAX_MEMORIES]), consulta)
         return texto
 
-    def _estavel(self, request, memorias: Sequence[Any]) -> str:
+    async def _template_vivo(self) -> str | None:
+        if self._template_source is None:
+            return None
+        try:
+            corpo = await self._template_source(BRIEFING_TEMPLATE)
+            return corpo if isinstance(corpo, str) and "{memories}" in corpo else None
+        except Exception:  # noqa: BLE001 — template é refinamento, nunca custa o turno
+            return None
+
+    def _estavel(self, request, memorias: Sequence[Any], template: str | None = None) -> str:
         """O bloco, preferindo o ANTERIOR quando o conjunto mal mudou.
 
         ⚠️ Devolve o bloco velho, não "nada". Pular a injeção quando o set não
@@ -359,7 +383,7 @@ class _DnaRecallMiddlewareImpl:  # type: ignore[misc]
             if antigas and len(novas & antigas) / len(antigas) >= STICKY_OVERLAP:
                 return bloco_antigo
 
-        bloco = briefing(memorias)
+        bloco = briefing(memorias, template=template)
         if bloco and thread:
             # Teto bobo, e de propósito: um processo longo com muitas conversas
             # não pode virar um vazamento de memória por causa de uma otimização

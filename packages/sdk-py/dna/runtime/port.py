@@ -54,6 +54,12 @@ class RuntimeHooks:
     #: que nao guardou: um deployment sem storage prefere uma janela honesta a
     #: um contexto que cresce sem fim.
     offload_store: Any = None
+    #: `async (nome) -> str | None` — o corpo de um PromptTemplate do
+    #: workspace (overlay do tenant vence). O HOST fornece pela mesma razão do
+    #: `recall`: é ele que tem o cliente MCP, a credencial e o tenant. `None`
+    #: deixa cada voz no seu default de fallback — a voz é DADO, nunca código
+    #: (regra do fundador, 03/08/2026).
+    template_source: Any = None
 
 
 @runtime_checkable

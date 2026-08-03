@@ -227,7 +227,10 @@ class LangChainRuntime:
         # de sistema que o compose acabou de montar. Depois dele, o bloco de
         # memoria seria sobrescrito.
         recalls = (
-            [DnaRecallMiddleware(hooks.recall)]
+            [DnaRecallMiddleware(
+                hooks.recall,
+                template_source=getattr(hooks, "template_source", None),
+            )]
             if getattr(hooks, "recall", None) is not None
             else []
         )
