@@ -78,3 +78,39 @@ __all__ = [
     "DEFAULT_RECALL_POLICY",
     "DEFAULT_DECAY_POLICY",
 ]
+
+
+# ── E2 do épico das nove seções (spec 2026-08-03): os resolvers que a
+# docstring acima dizia "deliberadamente deixados para trás" — a metade PURA.
+# Quem tem o kernel busca o SPEC (com cache); aqui só se extrai, com os
+# defaults do dataclass como fallback campo a campo.
+
+
+def resolve_decay_policy(spec: dict | None) -> DecayPolicy:
+    """`CognitivePolicy.decay` → DecayPolicy. Campo ausente/lixo = default."""
+    d = ((spec or {}).get("decay") or {}) if isinstance(spec, dict) else {}
+    tiers = d.get("stability_tiers") or {}
+
+    def _num(v, fb):
+        return float(v) if isinstance(v, (int, float)) and v > 0 else fb
+
+    base = DecayPolicy()
+    return DecayPolicy(
+        tier_faint=_num(tiers.get("faint"), base.tier_faint),
+        tier_firm=_num(tiers.get("firm"), base.tier_firm),
+        tier_burning=_num(tiers.get("burning"), base.tier_burning),
+        default_stability_days=_num(
+            d.get("default_stability_days"), base.default_stability_days
+        ),
+        max_stability_days=_num(d.get("max_stability_days"), base.max_stability_days),
+    )
+
+
+def resolve_affect_palette(spec: dict | None) -> list | None:
+    """`CognitivePolicy.affect.palette` — o vocabulário emocional PRÓPRIO do
+    workspace (o Kind Engram abriu o campo de propósito em 03/08; esta é a
+    ponta que faltava para a paleta ALCANÇAR o scoring)."""
+    a = ((spec or {}).get("affect") or {}) if isinstance(spec, dict) else {}
+    palette = a.get("palette")
+    return palette if isinstance(palette, list) and palette else None
+
