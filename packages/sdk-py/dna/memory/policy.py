@@ -77,6 +77,8 @@ __all__ = [
     "DecayPolicy",
     "DEFAULT_RECALL_POLICY",
     "DEFAULT_DECAY_POLICY",
+    "RecallInjection",
+    "resolve_recall_injection",
 ]
 
 
@@ -140,3 +142,39 @@ def resolve_pagination(spec: dict | None) -> PaginationPolicy:
     default_limit = min(_int(d.get("default_limit"), base.default_limit), max_limit)
     return PaginationPolicy(default_limit=default_limit, max_limit=max_limit)
 
+
+
+@dataclass(frozen=True)
+class RecallInjection:
+    """`CognitivePolicy.recall.injection` — como o bloco lembrado ENTRA no
+    prompt (o lado do middleware; `retrieval` molda a busca, `injection` molda
+    o prompt). Defaults espelham as constantes que substituem (#36)."""
+
+    max_block_chars: int = 2000
+    min_signal_chars: int = 12
+    cue_window: int = 3
+    cue_max_chars: int = 600
+    sticky_overlap: float = 0.5
+
+
+def resolve_recall_injection(spec: dict | None) -> RecallInjection:
+    """`recall.injection` → RecallInjection. Lixo/ausente = default campo a
+    campo, com sanidade — política é dado de tenant e um teto absurdo não pode
+    custar a janela."""
+    r = ((spec or {}).get("recall") or {}) if isinstance(spec, dict) else {}
+    d = r.get("injection") or {} if isinstance(r, dict) else {}
+    base = RecallInjection()
+
+    def _int(v, fb, lo, hi):
+        return v if isinstance(v, int) and lo <= v <= hi else fb
+
+    overlap = d.get("sticky_overlap")
+    if not (isinstance(overlap, (int, float)) and 0.0 <= overlap <= 1.0):
+        overlap = base.sticky_overlap
+    return RecallInjection(
+        max_block_chars=_int(d.get("max_block_chars"), base.max_block_chars, 200, 50_000),
+        min_signal_chars=_int(d.get("min_signal_chars"), base.min_signal_chars, 0, 500),
+        cue_window=_int(d.get("cue_window"), base.cue_window, 1, 20),
+        cue_max_chars=_int(d.get("cue_max_chars"), base.cue_max_chars, 100, 5_000),
+        sticky_overlap=float(overlap),
+    )

@@ -61,6 +61,8 @@ __all__ = [
     "STICKY_OVERLAP",
 ]
 
+from dna.memory.policy import RecallInjection, resolve_recall_injection
+
 #: Quantas memórias entram. Três é um teto escolhido para ser BAIXO: o objetivo é
 #: lembrar o agente de que existe memória, não substituir a busca dele.
 MAX_MEMORIES = 3
@@ -103,7 +105,7 @@ _VAZIAS = {
 }
 
 
-def worth_recalling(text: str | None) -> bool:
+def worth_recalling(text: str | None, *, min_chars: int = MIN_SIGNAL_CHARS) -> bool:
     """Vale gastar uma busca com esta mensagem?
 
     ⚠️ O default aqui é **não**, ao contrário de quase todo portão deste SDK. A
@@ -112,7 +114,7 @@ def worth_recalling(text: str | None) -> bool:
     a tool `recall` continua lá para o caso raro.
     """
     limpo = (text or "").strip()
-    if len(limpo) < MIN_SIGNAL_CHARS:
+    if len(limpo) < min_chars:
         return False
     palavras = [p.strip(".,!?;:").lower() for p in limpo.split()]
     return any(p and p not in _VAZIAS for p in palavras)
@@ -175,7 +177,13 @@ BRIEFING_DEFAULT = (
 )
 
 
-def briefing(memories: Sequence[Any], *, template: str | None = None) -> str:
+def briefing(
+    memories: Sequence[Any],
+    *,
+    template: str | None = None,
+    max_memories: int = MAX_MEMORIES,
+    max_chars: int = MAX_CHARS,
+) -> str:
     """O bloco que entra na mensagem de SISTEMA — ou vazio.
 
     Vai para o sistema, e não para a conversa, pelo mesmo motivo que a instrução
@@ -189,12 +197,12 @@ def briefing(memories: Sequence[Any], *, template: str | None = None) -> str:
     """
     linhas: list[str] = []
     gasto = 0
-    for m in list(memories)[:MAX_MEMORIES]:
+    for m in list(memories)[:max_memories]:
         texto = _texto_de_memoria(m)
         if not texto:
             continue
         linha = f"- [{type_label(_tipo_de(m))}] {texto}"
-        if gasto + len(linha) > MAX_CHARS:
+        if gasto + len(linha) > max_chars:
             break
         linhas.append(linha)
         gasto += len(linha)
@@ -243,7 +251,9 @@ def _texto_da_mensagem(m: Any) -> str:
     return ""
 
 
-def cues(messages: Iterable[Any], *, window: int = CUE_WINDOW) -> str:
+def cues(
+    messages: Iterable[Any], *, window: int = CUE_WINDOW, max_chars: int = CUE_MAX_CHARS
+) -> str:
     """Os CUES vivos — a janela recente do usuário, não só a última fala.
 
     ⚠️ Buscar só com a última mensagem perde o assunto. Numa conversa real ela é
@@ -268,7 +278,7 @@ def cues(messages: Iterable[Any], *, window: int = CUE_WINDOW) -> str:
             recentes.append(texto)
         if len(recentes) >= window:
             break
-    return " ".join(recentes)[:CUE_MAX_CHARS]
+    return " ".join(recentes)[:max_chars]
 
 
 def _chave_de(memoria: Any) -> str:
@@ -347,23 +357,48 @@ class _DnaRecallMiddlewareImpl:  # type: ignore[misc]
     async def _buscar(self, request) -> str:
         if self._recall is None:
             return ""
-        consulta = cues(getattr(request, "messages", None) or [])
-        if not worth_recalling(consulta):
+        limite, inj = await self._politica_viva()
+        consulta = cues(
+            getattr(request, "messages", None) or [],
+            window=inj.cue_window,
+            max_chars=inj.cue_max_chars,
+        )
+        if not worth_recalling(consulta, min_chars=inj.min_signal_chars):
             return ""
-        limite = await self._k_vivo()
         try:
             memorias = await self._recall(consulta, limite)
         except Exception:  # noqa: BLE001 — memória indisponível NÃO derruba o turno
             _LOGGER.warning("recall automático falhou", exc_info=True)
             return ""
 
-        texto = self._estavel(request, memorias or [], await self._template_vivo())
+        texto = self._estavel(
+            request, memorias or [], await self._template_vivo(), limite=limite, inj=inj
+        )
         if texto:
             # ⚠️ Deixa rastro. Memória que entra no prompt sem aparecer é mágica
             # não auditável: o usuário vê o agente "saber" algo e não tem como
             # perguntar de onde veio.
-            self._carimbar(len(list(memorias or [])[:MAX_MEMORIES]), consulta)
+            self._carimbar(len(list(memorias or [])[:limite]), consulta)
         return texto
+
+    async def _politica_viva(self) -> "tuple[int, RecallInjection]":
+        """UMA leitura do spec por chamada: k (retrieval) + knobs de injeção.
+
+        ⚠️ Antes do #36 o k valia só na BUSCA e o `briefing` refatiava em
+        `MAX_MEMORIES` — um `k: 5` declarado buscava 5 e injetava 3. O defeito
+        morreu quando k e injeção passaram a sair da MESMA leitura.
+        """
+        spec = None
+        if self._policy_source is not None:
+            try:
+                spec = await self._policy_source()
+            except Exception:  # noqa: BLE001 — política é refinamento, nunca custa o turno
+                spec = None
+        k = self._limit
+        bruto = (((spec or {}).get("recall") or {}).get("retrieval") or {}).get("k")
+        if isinstance(bruto, int) and 1 <= bruto <= 50:
+            k = bruto
+        return k, resolve_recall_injection(spec)
 
     async def _k_vivo(self) -> int:
         """`recall.retrieval.k` do doc do workspace, ou o limit do construtor.
@@ -388,7 +423,15 @@ class _DnaRecallMiddlewareImpl:  # type: ignore[misc]
         except Exception:  # noqa: BLE001 — template é refinamento, nunca custa o turno
             return None
 
-    def _estavel(self, request, memorias: Sequence[Any], template: str | None = None) -> str:
+    def _estavel(
+        self,
+        request,
+        memorias: Sequence[Any],
+        template: str | None = None,
+        *,
+        limite: int = MAX_MEMORIES,
+        inj: RecallInjection | None = None,
+    ) -> str:
         """O bloco, preferindo o ANTERIOR quando o conjunto mal mudou.
 
         ⚠️ Devolve o bloco velho, não "nada". Pular a injeção quando o set não
@@ -399,12 +442,18 @@ class _DnaRecallMiddlewareImpl:  # type: ignore[misc]
         novas = frozenset(_chave_de(m) for m in memorias if _chave_de(m))
         anterior = self._ultimo.get(thread)
 
+        overlap = (inj or RecallInjection()).sticky_overlap
         if anterior is not None and novas:
             antigas, bloco_antigo = anterior
-            if antigas and len(novas & antigas) / len(antigas) >= STICKY_OVERLAP:
+            if antigas and len(novas & antigas) / len(antigas) >= overlap:
                 return bloco_antigo
 
-        bloco = briefing(memorias, template=template)
+        bloco = briefing(
+            memorias,
+            template=template,
+            max_memories=limite,
+            max_chars=(inj or RecallInjection()).max_block_chars,
+        )
         if bloco and thread:
             # Teto bobo, e de propósito: um processo longo com muitas conversas
             # não pode virar um vazamento de memória por causa de uma otimização

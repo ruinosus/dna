@@ -321,13 +321,23 @@ A Changelog records release notes per semver version per Keep a Changelog 1.1.0 
 | `generation.consolidation` | object |  | Episodic → semantic consolidation. |
 | `generation.consolidation.min_cluster_size` | integer |  | Min episodic engrams in an area before consolidating. |
 | `ingestion` | object |  | WHEN memory is fed, and from WHAT. The workspace's own answer to "how and when are memories created" — the half `recall` (how they are USED) already had. ⭐ WHY THIS IS DATA AND NOT A FLAG. Feeding memory automatically is a judgement about the customer's own material: a legal team may want every decision captured; a support team may want nothing from chat at all. Hard-coding either answer picks a side for people whose work we do not know. Absent, the built-in defaults apply and nothing changes. |
+| `ingestion.arbiter_neighbors_cap` | integer |  | Hard cap of the arbiter neighborhood. |
+| `ingestion.arbiter_neighbors_multiplier` | integer |  | The arbiter sees a WIDER neighborhood than the reconciliation — `neighbors × multiplier` (capped below). It is deciding a conflict, so it needs more context than the pass that raised it. |
 | `ingestion.enabled` | boolean |  | Master switch. `false` stops all automatic feeding — the agent still writes memory when explicitly asked, because that path is the user's own instruction, not a policy decision. |
 | `ingestion.engine` | string |  | The reconciliation engine. `pipeline` = two fixed model calls (cheap, predictable). `pipeline-agent` = the hybrid: the fixed skeleton, but the reconciliation may ESCALATE an uncertain fact to the arbiter agent (one bounded round; the arbiter decides, the pipeline applies). `agent` = the named agent reconciles everything (reserved; not yet implemented). Um de: `pipeline`, `pipeline-agent`, `agent`. |
 | `ingestion.engine_agent` | string |  | The Agent document that arbitrates escalations (its instruction is the arbiter's role text). Empty + an escalation = the fact degrades to `none` — uncertainty without a judge never writes. |
+| `ingestion.max_arbitrations` | integer |  | Ceiling of arbiter escalations per turn (`pipeline-agent` engine). Beyond it, facts degrade to `none` — uncertainty without budget never writes. |
+| `ingestion.max_facts_per_turn` | integer |  | Ceiling of facts extracted per turn. A real conversation does not produce ten durable facts; a model returning ten is inventing — the ceiling turns that into bounded noise. |
+| `ingestion.max_transcript_chars` | integer |  | How much transcript feeds the extraction. More does not improve the fact and worsens the bill. |
 | `ingestion.min_signal_chars` | integer |  | Below this the turn is skipped without a model call. It exists because most turns of a real conversation are "ok" / "thanks" — extracting from them costs money and yields noise that later SURFACES on its own in the prompt. |
 | `ingestion.neighbors` | integer |  | How many existing memories the reconciliation compares each new fact against (the recall k). More sees farther and costs more tokens per turn; fewer is cheaper and can miss a conflict. |
+| `ingestion.proposal_markers` | array |  | Regexes that mark a turn as containing a DURABLE assertion — the trigger for the "propose to remember" nudge. EMPTY means the built-in markers apply — and the built-ins are Portuguese-biased (decidimos/prefiro/prazo...), which is exactly why this is data: an English or Spanish workspace declares its own. |
 | `ingestion.require_approval` | boolean |  | Whether an automatically extracted memory goes through the human approval gate before being written. ⚠️ `false` is deliberate and is the founder's call (2026-08-03). With reconciliation (a later fact can UPDATE or invalidate an earlier one) a wrong memory costs "until contradicted" rather than "forever" — which is what made the automatic path defensible at all. Set `true` and every extracted fact becomes a card to click; the trail gains coverage and the feature gains friction. |
+| `ingestion.sdlc` | object |  | The `sdlc` source cadence — how often the board is read for extraction, and how much of it. |
+| `ingestion.sdlc.interval_seconds` | integer |  | Minimum interval between board reads per workspace (default 6h). |
+| `ingestion.sdlc.max_items` | integer |  | Stories per digest — a month of board does not hold a hundred durable facts. |
 | `ingestion.sources` | array |  | WHERE facts may be extracted from. `chat` = the conversation transcript; `sdlc` = board activity; `kind:<Name>` = documents of a given Kind as they are written. A source absent from this list is NEVER read — the list is an allowlist, not a preference. Widening it is the workspace's decision, and it is the decision that governs what the agent may learn about its people. |
+| `ingestion.transcript_messages` | integer |  | How many recent messages (user AND agent) form the extraction material — decisions often complete across the exchange ("pode ser 60 dias?" / "fechado, 60"). |
 | `ingestion.trigger` | string |  | `per_turn` extracts as the conversation happens (memory is immediate; costs a model call per qualifying turn). `batch` defers to a scheduled pass (cheap; memory arrives late). `off` disables extraction while leaving the rest of the policy in force. Um de: `per_turn`, `batch`, `False`. |
 | `memory` | object |  | Agent-memory governance (ex-MemoryPolicy). Each entry in `policies` keeps the old multi-doc matcher semantics — merged most-specific-wins by dna_shared.cognitive.memory_policy. |
 | `memory.policies` | array |  |  |
@@ -351,6 +361,12 @@ A Changelog records release notes per semver version per Keep a Changelog 1.1.0 
 | `recall.calibrated_for.dimensions` | integer |  |  |
 | `recall.calibrated_for.embedding_model` | string |  |  |
 | `recall.calibrated_for.language` | string |  |  |
+| `recall.injection` | object |  | How the recalled block ENTERS the prompt (the runtime middleware side). `retrieval` shapes the search; `injection` shapes the prompt. Defaults mirror the middleware constants they replace (varredura de valores, 03/08/2026). |
+| `recall.injection.cue_max_chars` | integer |  | Ceiling of the cue text — a giant query does not discriminate better, it only costs more. |
+| `recall.injection.cue_window` | integer |  | How many recent user messages form the search cue. |
+| `recall.injection.max_block_chars` | integer |  | Ceiling for the whole injected block — one long Engram must not eat the window. |
+| `recall.injection.min_signal_chars` | integer |  | Below this the user turn triggers no search ("ok", "thanks"). |
+| `recall.injection.sticky_overlap` | number |  | Hysteresis — fraction of the previous working set that must survive for the OLD block to be kept (prompt/cache stability, from the JARVIS prior art). |
 | `recall.retrieval` | object |  | Shape of retrieval — how many results, how to diversify and spread. Not coupled to the embedding model nor to memory theory. |
 | `recall.retrieval.k` | integer |  | Final working-set size injected per turn. |
 | `recall.retrieval.limit_direct` | integer |  | Max direct ecphory hits considered. |

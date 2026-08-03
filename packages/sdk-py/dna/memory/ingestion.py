@@ -92,6 +92,11 @@ MAX_FACTS = 5
 #: piora a conta.
 MAX_TRANSCRIPT = 4000
 
+#: Quantas historias entram num digest do board (fonte `sdlc`). Vive aqui em
+#: cima porque é default de campo da IngestionPolicy — definido abaixo dela
+#: daria NameError no import.
+SDLC_MAX_ITEMS = 12
+
 #: Palavras que sozinhas não afirmam nada.
 _VAZIAS = {
     "ok", "okay", "sim", "nao", "não", "certo", "beleza", "obrigado", "obrigada",
@@ -130,6 +135,38 @@ class IngestionPolicy:
     #: Assuntos que NUNCA viram memória, mesmo se o modelo os extrair.
     never: tuple[str, ...] = ()
     always: tuple[str, ...] = ()
+    #: ── campos de 03/08/2026 (fim da era dos literais no host) ──
+    #: Teto de fatos por turno — um modelo que devolve dez está inventando.
+    max_facts_per_turn: int = MAX_FACTS
+    #: Quanto transcript entra na extração.
+    max_transcript_chars: int = MAX_TRANSCRIPT
+    #: Quantas falas recentes (usuário E agente) viram material de extração.
+    transcript_messages: int = 6
+    #: Teto de escalações ao árbitro por turno (motor `pipeline-agent`).
+    max_arbitrations: int = 3
+    #: O árbitro vê vizinhança MAIOR que a reconciliação: neighbors × mult.
+    arbiter_neighbors_multiplier: int = 3
+    arbiter_neighbors_cap: int = 24
+    #: Regexes que marcam afirmação durável (gatilho do "propor lembrar").
+    #: VAZIO = os built-ins do host valem — que são pt-BR, e é exatamente por
+    #: isso que o campo existe: um workspace em inglês declara os seus.
+    proposal_markers: tuple[str, ...] = ()
+    #: Cadência da fonte `sdlc` — intervalo mínimo entre leituras do board.
+    sdlc_interval_seconds: int = 21600
+    sdlc_max_items: int = SDLC_MAX_ITEMS
+
+
+def _inteiro(bruto: Mapping[str, Any], chave: str, padrao: int, lo: int, hi: int) -> int:
+    """Um inteiro do doc, com sanidade [lo, hi] — lixo cai no default.
+
+    O clamp não é frescura: a política é DADO de tenant, e um `max_facts: 9999`
+    declarado por engano não pode virar uma fatura de modelo.
+    """
+    try:
+        v = int(bruto.get(chave, padrao))
+    except (TypeError, ValueError):
+        return padrao
+    return v if lo <= v <= hi else padrao
 
 
 def resolve_ingestion(policy: Mapping[str, Any] | None) -> IngestionPolicy:
@@ -154,6 +191,7 @@ def resolve_ingestion(policy: Mapping[str, Any] | None) -> IngestionPolicy:
 
     padrao = IngestionPolicy()
     fontes = bruto.get("sources")
+    sdlc = bruto.get("sdlc") if isinstance(bruto.get("sdlc"), Mapping) else {}
     return IngestionPolicy(
         enabled=bool(bruto.get("enabled", padrao.enabled)),
         sources=tuple(f for f in fontes if isinstance(f, str))
@@ -172,6 +210,27 @@ def resolve_ingestion(policy: Mapping[str, Any] | None) -> IngestionPolicy:
         engine_agent=str(bruto.get("engine_agent") or ""),
         never=tuple(t for t in (lembrar.get("never") or []) if isinstance(t, str)),
         always=tuple(t for t in (lembrar.get("always") or []) if isinstance(t, str)),
+        max_facts_per_turn=_inteiro(bruto, "max_facts_per_turn", padrao.max_facts_per_turn, 1, 50),
+        max_transcript_chars=_inteiro(
+            bruto, "max_transcript_chars", padrao.max_transcript_chars, 200, 100_000
+        ),
+        transcript_messages=_inteiro(bruto, "transcript_messages", padrao.transcript_messages, 1, 50),
+        max_arbitrations=_inteiro(bruto, "max_arbitrations", padrao.max_arbitrations, 0, 20),
+        arbiter_neighbors_multiplier=_inteiro(
+            bruto, "arbiter_neighbors_multiplier", padrao.arbiter_neighbors_multiplier, 1, 10
+        ),
+        arbiter_neighbors_cap=_inteiro(
+            bruto, "arbiter_neighbors_cap", padrao.arbiter_neighbors_cap, 1, 50
+        ),
+        proposal_markers=tuple(
+            m for m in (bruto.get("proposal_markers") or []) if isinstance(m, str) and m.strip()
+        )
+        if isinstance(bruto.get("proposal_markers"), list)
+        else padrao.proposal_markers,
+        sdlc_interval_seconds=_inteiro(
+            sdlc, "interval_seconds", padrao.sdlc_interval_seconds, 300, 7 * 86_400
+        ),
+        sdlc_max_items=_inteiro(sdlc, "max_items", padrao.sdlc_max_items, 1, 100),
     )
 
 
@@ -257,7 +316,7 @@ def extraction_prompt(
     p = policy or IngestionPolicy()
     escolhido = _template_valido(template, ("transcript",), EXTRACTION_TEMPLATE)
     if escolhido is not None:
-        return _preencher(escolhido, {"transcript": transcript[:MAX_TRANSCRIPT]})
+        return _preencher(escolhido, {"transcript": transcript[: p.max_transcript_chars]})
     nunca = (
         f"\nNUNCA extraia nada sobre: {', '.join(p.never)}.\n" if p.never else ""
     )
@@ -270,7 +329,7 @@ Um fato durável vale além desta conversa: uma decisão, uma preferência, uma
 restrição, um prazo, um dado do negócio. NÃO é fato durável: uma pergunta, uma
 saudação, um pedido pontual, ou algo que só vale neste turno.
 
-A resposta mais comum é uma lista VAZIA. Extraia no máximo {MAX_FACTS}.{nunca}{sempre}
+A resposta mais comum é uma lista VAZIA. Extraia no máximo {p.max_facts_per_turn}.{nunca}{sempre}
 Exemplos:
   "Oi, tudo bem?"                            -> {{"facts": []}}
   "me explica como funciona o portal"        -> {{"facts": []}}
@@ -281,7 +340,7 @@ Exemplos:
 Responda SOMENTE com JSON no formato {{"facts": ["...", "..."]}}.
 
 Conversa:
-{transcript[:MAX_TRANSCRIPT]}"""
+{transcript[: p.max_transcript_chars]}"""
 
 
 def reconciliation_prompt(
@@ -422,7 +481,7 @@ def parse_facts(raw: Any, policy: IngestionPolicy | None = None) -> list[str]:
             _LOGGER.info("fato descartado por política `never`")
             continue
         limpos.append(t)
-        if len(limpos) >= MAX_FACTS:
+        if len(limpos) >= p.max_facts_per_turn:
             break
     return limpos
 
@@ -535,11 +594,6 @@ def parse_decisions(raw: Any, *, allow_escalate: bool = False) -> list[Decision]
 
 
 # ── a fonte `sdlc`: o board vira material de extração ───────────────────────
-
-#: Quantas historias entram num digest. O board de um mes nao produz cem fatos
-#: duraveis; um digest gigante so encarece a chamada.
-SDLC_MAX_ITEMS = 12
-
 
 def sdlc_digest(
     completed: Sequence[Mapping[str, Any]],
