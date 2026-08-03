@@ -49,6 +49,11 @@ class RuntimeHooks:
     #: `None` (o default) deixa o agente dependendo de CHAMAR `recall`, que e
     #: exatamente o que ele esquece de fazer.
     recall: Any = None
+    #: `async (texto, nome_da_tool) -> str | None` — onde uma saida GRANDE de
+    #: tool e guardada, devolvendo o endereco. `None` corta mesmo assim e diz
+    #: que nao guardou: um deployment sem storage prefere uma janela honesta a
+    #: um contexto que cresce sem fim.
+    offload_store: Any = None
 
 
 @runtime_checkable
