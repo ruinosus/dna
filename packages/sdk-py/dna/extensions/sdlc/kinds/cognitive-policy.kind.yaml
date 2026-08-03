@@ -264,10 +264,12 @@ spec:
                       type: string
                     memory_type:
                       type: string
-                      enum:
-                      - episodic
-                      - semantic
-                      - procedural
+                      minLength: 1
+                      description: >-
+                        Any declared memory type. OPEN, in lockstep with the
+                        `Engram` field it matches: a closed enum here would let a
+                        workspace declare `preference` on the memory and then be
+                        unable to write a policy for it.
                 defaults:
                   type: object
                   additionalProperties: false
@@ -300,6 +302,78 @@ spec:
                       type: array
                       items:
                         type: string
+      ingestion:
+        type: object
+        additionalProperties: false
+        description: >-
+          WHEN memory is fed, and from WHAT. The workspace's own answer to "how
+          and when are memories created" — the half `recall` (how they are USED)
+          already had.
+
+          ⭐ WHY THIS IS DATA AND NOT A FLAG. Feeding memory automatically is a
+          judgement about the customer's own material: a legal team may want
+          every decision captured; a support team may want nothing from chat at
+          all. Hard-coding either answer picks a side for people whose work we
+          do not know. Absent, the built-in defaults apply and nothing changes.
+        properties:
+          enabled:
+            type: boolean
+            default: true
+            description: >-
+              Master switch. `false` stops all automatic feeding — the agent
+              still writes memory when explicitly asked, because that path is the
+              user's own instruction, not a policy decision.
+          sources:
+            type: array
+            default:
+            - chat
+            description: >-
+              WHERE facts may be extracted from. `chat` = the conversation
+              transcript; `sdlc` = board activity; `kind:<Name>` = documents of a
+              given Kind as they are written.
+
+              A source absent from this list is NEVER read — the list is an
+              allowlist, not a preference. Widening it is the workspace's
+              decision, and it is the decision that governs what the agent may
+              learn about its people.
+            items:
+              type: string
+              minLength: 1
+          trigger:
+            type: string
+            enum:
+            - per_turn
+            - batch
+            - off
+            default: per_turn
+            description: >-
+              `per_turn` extracts as the conversation happens (memory is
+              immediate; costs a model call per qualifying turn). `batch` defers
+              to a scheduled pass (cheap; memory arrives late). `off` disables
+              extraction while leaving the rest of the policy in force.
+          min_signal_chars:
+            type: integer
+            default: 25
+            minimum: 0
+            description: >-
+              Below this the turn is skipped without a model call. It exists
+              because most turns of a real conversation are "ok" / "thanks" —
+              extracting from them costs money and yields noise that later
+              SURFACES on its own in the prompt.
+          require_approval:
+            type: boolean
+            default: false
+            description: >-
+              Whether an automatically extracted memory goes through the human
+              approval gate before being written.
+
+              ⚠️ `false` is deliberate and is the founder's call (2026-08-03).
+              With reconciliation (a later fact can UPDATE or invalidate an
+              earlier one) a wrong memory costs "until contradicted" rather than
+              "forever" — which is what made the automatic path defensible at
+              all. Set `true` and every extracted fact becomes a card to click;
+              the trail gains coverage and the feature gains friction.
+
       allocation:
         type: object
         additionalProperties: false

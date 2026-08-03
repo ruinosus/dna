@@ -31,9 +31,35 @@ _AFFECT_WEIGHTS: dict[str, float] = {
 }
 
 
-def affect_factor(affect: str | None) -> float:
-    """Score multiplier for a memory's affect tag. 1.0 when untagged."""
-    return _AFFECT_WEIGHTS.get(affect or "", 1.0)
+def affect_factor(
+    affect: str | None, palette: Any | None = None
+) -> float:
+    """Score multiplier for a memory's affect tag. 1.0 when untagged.
+
+    ``palette`` is ``CognitivePolicy.affect.palette`` — the workspace's OWN
+    emotional vocabulary, each entry ``{id, semantics, affect_weight}``. It
+    WINS over the built-ins, because a tone the workspace defined is a tone it
+    understands better than this module does.
+
+    ⚠️ An unknown tone gets the NEUTRAL 1.0 — honoured, never dropped, but no
+    resistance to forgetting until someone assigns it a weight. Inventing a
+    number for a name nobody defined would be this module deciding how much a
+    feeling matters.
+
+    (The `Engram.affect` enum was opened on 2026-08-03; before that, a
+    workspace could declare a palette here and then be unable to TAG anything
+    with it — the policy existed and the schema refused it.)
+    """
+    tag = (affect or "").strip()
+    if not tag:
+        return 1.0
+    for entrada in palette or []:
+        if isinstance(entrada, dict) and str(entrada.get("id") or "") == tag:
+            peso = entrada.get("affect_weight")
+            if isinstance(peso, (int, float)):
+                return float(peso)
+            return 1.0
+    return _AFFECT_WEIGHTS.get(tag, 1.0)
 
 
 def _parse_iso(ts: Any) -> datetime | None:
