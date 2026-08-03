@@ -200,14 +200,32 @@ spec:
           != recall). Phase 0 (2026-06-02).'
       memory_type:
         type: string
-        enum:
-        - episodic
-        - semantic
-        - procedural
-        description: 'CoALA taxonomy — ORTHOGONAL to the Semon EngramState (type
-          vs state): episodic = what happened (instance/sequence); semantic = a
-          generalized fact about the world/user; procedural = how to act (a skill/rule).
-          Absent = untyped (legacy).'
+        minLength: 1
+        description: >-
+          What KIND of memory this is. The three CoALA names are the ones the
+          runtime treats specially — `episodic` (what happened), `semantic` (a
+          generalized fact), `procedural` (how to act; the runtime presents it
+          to the model as a RULE to follow, not as an anecdote to consider).
+
+          ⭐ OPEN ON PURPOSE, and this was a deliberate reversal. It was a closed
+          enum of exactly those three, and a closed enum makes the vocabulary of
+          the DOMAIN a constant of the CODE — which is the one thing this whole
+          system exists to avoid. A workspace whose work has `preference`,
+          `constraint` or `commitment` should be able to say so on the day it
+          decides that, not on the day someone remembers to edit a schema.
+
+          The runtime honours the distinction WITHOUT knowing the name: an
+          unrecognised type is presented to the model under its own name, because
+          the name IS the information — `[preference]` tells a model more than
+          `[fact]`, and far more than being dropped.
+
+          ⚠️ The consequence to accept: an unrecognised type gets no special
+          treatment. Only `procedural` is imperative. A workspace that invents
+          `regra_dura` gets `[regra_dura]`, not the RULE framing — because
+          promoting an unknown name to an obligation would put words in the
+          agent's mouth that nobody wrote.
+
+          Absent = untyped (legacy).
       valid_from:
         type: string
         format: date-time

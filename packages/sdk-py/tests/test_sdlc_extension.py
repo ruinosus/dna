@@ -417,7 +417,20 @@ def test_engram_coala_and_bitemporal_fields():
     from dna.kernel import Kernel
     k = Kernel(); k.load(HelixExtension())
     props = k.kind_port_for("Engram").schema()["properties"]
-    assert props["memory_type"]["enum"] == ["episodic", "semantic", "procedural"]
+    # ⚠️ ABERTO de proposito, e esta assercao guarda a REVERSAO.
+    #
+    # Era um enum dos tres nomes CoALA. Um enum fechado faz do vocabulario do
+    # DOMINIO uma constante do CODIGO — e o sintoma era um workspace declarar
+    # `preferencia` e ver o valor silenciosamente virar `semantic`.
+    #
+    # O que continua garantido: string NAO VAZIA. Aceitar "" seria trocar um
+    # vocabulario fechado demais por nenhum vocabulario.
+    assert "enum" not in props["memory_type"], (
+        "memory_type voltou a ser enum fechado — um tipo declarado pelo "
+        "workspace seria recusado"
+    )
+    assert props["memory_type"]["type"] == "string"
+    assert props["memory_type"].get("minLength") == 1
     for f in ("valid_from", "valid_to", "superseded_by_memory"):
         assert f in props, f"missing bi-temporal field {f}"
     # named superseded_by_memory (NOT superseded_by — that's an ADR dep token)
