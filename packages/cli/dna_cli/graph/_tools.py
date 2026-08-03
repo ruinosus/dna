@@ -9,9 +9,13 @@ shaped, token-free result.
 
 Two properties matter:
 
-* **The surface is DATA.** ``description`` + ``input_schema`` come from the governed
-  Tool docs ``tools/<name>.yaml`` (:func:`tool_surface`) — not hardcoded — so the
-  model's view is overlayable like any Tool.
+* **The surface is DATA — partially.** ``description`` comes from the governed
+  Tool docs ``tools/<name>.yaml`` (:func:`tool_surface`) — not hardcoded — so
+  that half of the model's view is overlayable like any Tool. ``input_schema``
+  do doc, porém, é IGNORADO aqui: o fastmcp deriva o ``inputSchema`` MCP da
+  ASSINATURA Python de cada tool (medido em 03/08/2026 — este docstring
+  afirmava o contrário). Se o doc e a assinatura divergirem, vale a
+  assinatura; alinhar os dois é responsabilidade de quem edita o doc.
 * **Token B never leaves.** The Graph token is acquired per request, used on the
   outbound Graph ``Authorization`` header, and dropped. The tools return domain
   fields only; the ``shape_*`` helpers copy named fields (never the token, never a

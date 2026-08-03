@@ -39,6 +39,7 @@ _KIND = "Agent"
 PRIORITY_FORK_GUARD = 10
 PRIORITY_PROMPT_BUDGET = 20
 PRIORITY_KIND_WRITER = 30
+PRIORITY_TOOL_SCHEMA = 40
 
 
 def platform_agent_fork_guard(ctx: PreSaveContext) -> None:
@@ -181,6 +182,42 @@ def kind_writer_contract_guard(ctx: PreSaveContext) -> None:
         ctx.kernel._validate_kind_writer(AgentSpec.from_raw(spec))
 
 
+def tool_schema_guard(ctx: PreSaveContext) -> None:
+    """Veto a Tool doc whose ``input_schema``/``output_schema`` is not a
+    valid JSON Schema.
+
+    O contrato do Kind só exige ``type: object`` — qualquer dict passava
+    (medido em 03/08/2026): ``{"tipo": "banana"}`` era gravado, servido pelo
+    ``get_tool`` e projetado como ``parameters`` para o modelo, onde o erro
+    finalmente nasce — no provedor de LLM, longe do autor (e no emissor
+    Bedrock nem isso: degrada calado para função sem argumentos). O conteúdo
+    É um contrato JSON Schema; a recusa pertence à escrita, NOMEANDO o campo.
+
+    Reusa o MESMO guard da porta de Kinds autorados
+    (``validate_authored_schema``: metaschema 2020-12 + ``$ref`` só local +
+    anti-ReDoS) — dois vocabulários de recusa para a mesma pergunta seriam
+    deriva.
+    """
+    if ctx.kind != "Tool" or not isinstance(ctx.raw, dict):
+        return
+    spec = ctx.raw.get("spec")
+    if not isinstance(spec, dict):
+        return
+    from dna.kernel.kinds.schema_guard import (  # noqa: PLC0415
+        SchemaGuardError,
+        validate_authored_schema,
+    )
+
+    for campo in ("input_schema", "output_schema"):
+        valor = spec.get(campo)
+        if not isinstance(valor, dict) or not valor:
+            continue  # ausente/vazio = permissivo, como o resto do write path
+        try:
+            validate_authored_schema(valor)
+        except SchemaGuardError as exc:
+            raise SchemaGuardError(f"spec.{campo}: {exc}") from None
+
+
 def register_write_guards(kernel: Any) -> None:
     """Wire the Helix write guards as ``pre_save`` veto hooks.
 
@@ -198,4 +235,8 @@ def register_write_guards(kernel: Any) -> None:
     kernel.hooks.on_veto(
         "pre_save", kind_writer_contract_guard,
         priority=PRIORITY_KIND_WRITER, key="helix.kind-writer-contract",
+    )
+    kernel.hooks.on_veto(
+        "pre_save", tool_schema_guard,
+        priority=PRIORITY_TOOL_SCHEMA, key="helix.tool-schema",
     )
