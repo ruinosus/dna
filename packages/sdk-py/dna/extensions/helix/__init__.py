@@ -467,6 +467,16 @@ class AgentKind(KindBase):
         "tool_groups": {"widget": "tags", "label": "Tool groups", "help": "Filter the manifest tools this agent receives. Values: 'all' (default), 'code', 'manifest', 'write', 'read'. Combine for unions, e.g. ['code', 'read'].", "order": 86},
         "mcp_servers": {"widget": "tags", "label": "MCP servers", "help": "MCPFederation doc names this agent consumes (e.g. 'drawio'). Remote tools load as first-class agent tools tagged mcp:<ref>. Entries may also be objects {ref, allowed_tools, timeout_s} for per-agent overrides.", "order": 87},
         "objective": {"widget": "textarea", "label": "Objective", "order": 15},
+        # kind-ref: o valor REFERENCIA um doc de outro Kind — a tela oferece o
+        # catálogo (tenant-aware) sem proibir as formas antigas (mustache
+        # inline / ref de arquivo), que continuam válidas no builder.
+        "promptTemplate": {
+            "widget": "kind-ref",
+            "ref_kind": "PromptTemplate",
+            "label": "Prompt template",
+            "help": "A PromptTemplate name from the catalog (resolved live, tenant overlay wins), inline Mustache text, or a bundle file ref. Overrides layout.",
+            "order": 22,
+        },
     }
     docs = (
         "A Agent is the primary prompt target: it's what actually runs "
