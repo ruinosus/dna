@@ -339,6 +339,22 @@ A Changelog records release notes per semver version per Keep a Changelog 1.1.0 
 | `ingestion.sources` | array |  | WHERE facts may be extracted from. `chat` = the conversation transcript; `sdlc` = board activity; `kind:<Name>` = documents of a given Kind as they are written. A source absent from this list is NEVER read — the list is an allowlist, not a preference. Widening it is the workspace's decision, and it is the decision that governs what the agent may learn about its people. |
 | `ingestion.transcript_messages` | integer |  | How many recent messages (user AND agent) form the extraction material — decisions often complete across the exchange ("pode ser 60 dias?" / "fechado, 60"). |
 | `ingestion.trigger` | string |  | `per_turn` extracts as the conversation happens (memory is immediate; costs a model call per qualifying turn). `batch` defers to a scheduled pass (cheap; memory arrives late). `off` disables extraction while leaving the rest of the policy in force. Um de: `per_turn`, `batch`, `False`. |
+| `intel` | object |  | Intel-engine tuning (#36 tail) — ranker weights, dedup threshold, feedback strengths and the portal action bar. Engine-wide per workspace; the per-SOURCE `threshold` stays on IntelSource. |
+| `intel.action_bar` | number |  | Score at or above which an insight "requires action" in the screens (product judgement, now declarable). |
+| `intel.dedup` | object |  |  |
+| `intel.dedup.cosine_threshold` | number |  | Above this cosine two insights are "the same". |
+| `intel.feedback` | object |  |  |
+| `intel.feedback.action_bonus` | number |  |  |
+| `intel.feedback.dismiss_penalty` | number |  |  |
+| `intel.feedback.sim_threshold` | number |  |  |
+| `intel.ranker` | object |  |  |
+| `intel.ranker.base` | number |  |  |
+| `intel.ranker.evidence_weights` | object |  |  |
+| `intel.ranker.evidence_weights.anecdotal` | number |  |  |
+| `intel.ranker.evidence_weights.evidence-based` | number |  |  |
+| `intel.ranker.evidence_weights.opinion-practice` | number |  |  |
+| `intel.ranker.has_action` | number |  |  |
+| `intel.ranker.pir_match` | number |  |  |
 | `memory` | object |  | Agent-memory governance (ex-MemoryPolicy). Each entry in `policies` keeps the old multi-doc matcher semantics — merged most-specific-wins by dna_shared.cognitive.memory_policy. |
 | `memory.policies` | array |  |  |
 | `memory.policies[].applies_to` | object |  | Matcher: any of scope/owner/memory_type (absent = wildcard). Most-specific wins. |

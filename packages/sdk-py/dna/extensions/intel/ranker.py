@@ -45,25 +45,39 @@ class Score(NamedTuple):
         return self.value
 
 
-def score(candidate: Candidate, source: dict[str, Any]) -> Score:
+def score(
+    candidate: Candidate,
+    source: dict[str, Any],
+    *,
+    scoring: "Any | None" = None,
+) -> Score:
     """Actionability score in ``0..1`` for ``candidate`` given its ``source``
     spec, with a rationale enumerating each contribution.
 
     Weights: base presence, a concrete ``action``, the ``evidence_rating``, and
-    a PIR match against ``source['pirs']``. Clamped to ``[0, 1]``."""
+    a PIR match against ``source['pirs']``. Clamped to ``[0, 1]``.
+
+    ``scoring`` (um ``IntelScoring`` — `CognitivePolicy.intel`) substitui as
+    constantes do módulo quando o workspace declara pesos próprios (#36).
+    Ausente, as constantes valem — paridade byte-igual com o de antes."""
+    base_w = scoring.ranker_base if scoring is not None else _BASE
+    action_w = scoring.ranker_has_action if scoring is not None else _HAS_ACTION
+    pir_w = scoring.ranker_pir_match if scoring is not None else _PIR_MATCH
+    ev_pesos = scoring.evidence_weights if scoring is not None else _EVIDENCE_WEIGHT
+
     parts: list[str] = []
-    total = _BASE
-    parts.append(f"base {_BASE:.2f}")
+    total = base_w
+    parts.append(f"base {base_w:.2f}")
 
     action = (candidate.get("action") or "").strip()
     if action:
-        total += _HAS_ACTION
-        parts.append(f"+{_HAS_ACTION:.2f} concrete action")
+        total += action_w
+        parts.append(f"+{action_w:.2f} concrete action")
     else:
         parts.append("+0.00 no action")
 
     rating = candidate.get("evidence_rating") or "anecdotal"
-    ev = _EVIDENCE_WEIGHT.get(rating, 0.0)
+    ev = ev_pesos.get(rating, 0.0)
     total += ev
     parts.append(f"+{ev:.2f} evidence={rating}")
 
@@ -71,8 +85,8 @@ def score(candidate: Candidate, source: dict[str, Any]) -> Score:
     cand_pirs = {p.lower() for p in (candidate.get("pirs") or [])}
     matched = source_pirs & cand_pirs
     if matched:
-        total += _PIR_MATCH
-        parts.append(f"+{_PIR_MATCH:.2f} PIR match ({', '.join(sorted(matched))})")
+        total += pir_w
+        parts.append(f"+{pir_w:.2f} PIR match ({', '.join(sorted(matched))})")
     else:
         parts.append("+0.00 no PIR match")
 

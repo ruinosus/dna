@@ -436,10 +436,18 @@ _DEFAULT_TEMPLATE = (
     "MUST have a concrete, single suggested action. Prefer the PIRs. When the "
     "material backs a fact with a URL, include it in citations. Respond with "
     "JSON only, shape:\n"
-    '{{"insights": [{{"title": str, "fact": str, "why": str, "action": str, '
-    '"pirs": [str], "citations": [{{"url": str, "title": str}}], '
-    '"evidence_rating": "evidence-based|opinion-practice|anecdotal"}}]}}'
+    '{"insights": [{"title": str, "fact": str, "why": str, "action": str, '
+    '"pirs": [str], "citations": [{"url": str, "title": str}], '
+    '"evidence_rating": "evidence-based|opinion-practice|anecdotal"}]}'
 )
+
+
+def _preencher(template: str, valores: dict[str, str]) -> str:
+    """Substituição literal de `{var}` — NUNCA `str.format`: o template carrega
+    exemplos JSON cheios de chaves (o mesmo racional da ingestão de memória)."""
+    for chave, valor in valores.items():
+        template = template.replace("{" + chave + "}", valor)
+    return template
 
 
 class LLMAnalyzer:
@@ -501,17 +509,32 @@ class LLMAnalyzer:
         try:
             client = self._ensure_client()
             material = _gather_material(source, context)
-            prompt = _DEFAULT_TEMPLATE.format(
-                name=name,
-                type=source.get("type", "?"),
-                pirs=", ".join(source.get("pirs") or []) or "none",
-                material=material,
-                k=self._k,
+            # A voz do workspace vence a do código (#33): o engine resolve os
+            # PromptTemplates `intel-analysis`/`intel-analysis-system` e os
+            # entrega em context['prompt_overrides'] — o analyzer continua sem
+            # kernel. O template do usuário só vale se carregar {material}:
+            # sem o material ele analisaria o nada, e a falha apareceria longe.
+            overrides = context.get("prompt_overrides") or {}
+            template = overrides.get("template")
+            if not (isinstance(template, str) and "{material}" in template):
+                template = _DEFAULT_TEMPLATE
+            system = overrides.get("system")
+            if not (isinstance(system, str) and system.strip()):
+                system = _DEFAULT_SYSTEM
+            prompt = _preencher(
+                template,
+                {
+                    "name": str(name),
+                    "type": str(source.get("type", "?")),
+                    "pirs": ", ".join(source.get("pirs") or []) or "none",
+                    "material": material,
+                    "k": str(self._k),
+                },
             )
             response = client.chat.completions.create(
                 model=self._model,
                 messages=[
-                    {"role": "system", "content": _DEFAULT_SYSTEM},
+                    {"role": "system", "content": system},
                     {"role": "user", "content": prompt},
                 ],
                 temperature=0.2,

@@ -672,6 +672,65 @@ spec:
                   items:
                     type: string
                   default: []
+      intel:
+        type: object
+        additionalProperties: false
+        description: Intel-engine tuning (#36 tail) — ranker weights, dedup
+          threshold, feedback strengths and the portal action bar. Engine-wide
+          per workspace; the per-SOURCE `threshold` stays on IntelSource.
+        properties:
+          action_bar:
+            type: number
+            default: 0.85
+            description: Score at or above which an insight "requires action"
+              in the screens (product judgement, now declarable).
+          ranker:
+            type: object
+            additionalProperties: false
+            properties:
+              base:
+                type: number
+                default: 0.3
+              has_action:
+                type: number
+                default: 0.3
+              pir_match:
+                type: number
+                default: 0.15
+              evidence_weights:
+                type: object
+                additionalProperties: false
+                properties:
+                  evidence-based:
+                    type: number
+                    default: 0.25
+                  opinion-practice:
+                    type: number
+                    default: 0.12
+                  anecdotal:
+                    type: number
+                    default: 0.0
+          dedup:
+            type: object
+            additionalProperties: false
+            properties:
+              cosine_threshold:
+                type: number
+                default: 0.97
+                description: Above this cosine two insights are "the same".
+          feedback:
+            type: object
+            additionalProperties: false
+            properties:
+              sim_threshold:
+                type: number
+                default: 0.8
+              dismiss_penalty:
+                type: number
+                default: 0.5
+              action_bonus:
+                type: number
+                default: 0.1
       owner:
         type: string
       created_at:

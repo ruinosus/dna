@@ -145,6 +145,9 @@ def tdd_gate(
 # ───── auditor_gate ──────────────────────────────────────────────────
 
 
+#: Fallbacks — os valores VIVOS podem vir de `CognitivePolicy.methodology`
+#: (#36), mas este módulo roda no CLI FS-git, SEM kernel: o chamador que
+#: tiver acesso à política passa `window`/`threshold`; o CLI usa os defaults.
 _AUDITOR_WINDOW = 5
 _AUDITOR_THRESHOLD = 3
 
@@ -153,6 +156,8 @@ def auditor_gate(
     *,
     recent_methodologies: list[str],
     next_methodology: str,
+    window: int = _AUDITOR_WINDOW,
+    threshold: int = _AUDITOR_THRESHOLD,
 ) -> GateResult:
     """Block ad-hoc streaks. Looks at the last 5 methodologies.
 
@@ -161,10 +166,10 @@ def auditor_gate(
     PASS when last 5 contain < 3 ad-hoc entries.
     FAIL when last 5 contain >= 3 ad-hoc AND next is not superpowers.
     """
-    if len(recent_methodologies) < 4:
+    if len(recent_methodologies) < max(2, window - 1):
         return GateResult.SKIP
-    window = recent_methodologies[-_AUDITOR_WINDOW:]
-    ad_hoc_count = sum(1 for m in window if m == "ad-hoc")
-    if ad_hoc_count >= _AUDITOR_THRESHOLD and next_methodology != "superpowers":
+    recorte = recent_methodologies[-window:]
+    ad_hoc_count = sum(1 for m in recorte if m == "ad-hoc")
+    if ad_hoc_count >= threshold and next_methodology != "superpowers":
         return GateResult.FAIL
     return GateResult.PASS
