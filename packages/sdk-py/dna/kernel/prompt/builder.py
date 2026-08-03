@@ -349,6 +349,46 @@ class PromptBuilder:
             slots["guardrails"] = enabled_guardrails
         return slots
 
+
+    # ── promptTemplate por NOME de catálogo (s-prompts-reutilizaveis) ───────
+    #
+    # O valor de `Agent.spec.promptTemplate` aceita três formas, resolvidas
+    # nesta ordem determinística:
+    #   1. ref de arquivo  — contém "/" ou termina em .mustache/.md (como antes);
+    #   2. NOME de um doc `PromptTemplate` — se o valor é um slug E um doc com
+    #      esse nome existe no scope (com o overlay do tenant que o MI já
+    #      carrega), o `body` dele é o template. É o que deixa um end user
+    #      criar o prompt na tela e o agent referenciá-lo sem YAML nem arquivo;
+    #   3. texto mustache inline — o fallback de sempre.
+    #
+    # ⚠️ Um slug sem doc correspondente cai na forma 3 (inline), nunca em erro:
+    # templates inline de uma palavra são legais hoje e continuam valendo.
+    _TEMPLATE_NAME_RE = __import__("re").compile(r"^[a-z0-9][a-z0-9-]{0,63}$")
+
+    def _named_template_body(self, tmpl: str) -> str | None:
+        if not self._TEMPLATE_NAME_RE.match(tmpl):
+            return None
+        for d in self._host.documents:
+            if d.kind == "PromptTemplate" and d.name == tmpl:
+                body = (d.spec or {}).get("body")
+                return body if isinstance(body, str) and body.strip() else None
+        return None
+
+    async def _named_template_body_async(self, tmpl: str) -> str | None:
+        """Lazy-MI-safe: enumera via ``all_async`` em vez de ``documents``
+        (que num MI preguiçoso re-entra o helper síncrono e levanta)."""
+        if not self._TEMPLATE_NAME_RE.match(tmpl):
+            return None
+        try:
+            docs = await self._host.all_async("PromptTemplate")
+        except Exception:  # noqa: BLE001 — catálogo indisponível = forma inline
+            return None
+        for d in docs:
+            if d.name == tmpl:
+                body = (d.spec or {}).get("body")
+                return body if isinstance(body, str) and body.strip() else None
+        return None
+
     def _effective_template(self, agent_doc: Document) -> str:
         """The template string the cascade will render (see _render_prompt).
 
@@ -369,6 +409,8 @@ class PromptBuilder:
             return ""
         if "/" in tmpl or tmpl.endswith((".mustache", ".md")):
             tmpl = self._host.ref(tmpl)
+        elif (corpo := self._named_template_body(tmpl)) is not None:
+            tmpl = corpo
         return tmpl or ""
 
     async def _effective_template_async(self, agent_doc: Document) -> str:
@@ -385,6 +427,8 @@ class PromptBuilder:
             return ""
         if "/" in tmpl or tmpl.endswith((".mustache", ".md")):
             tmpl = await self._host.ref_async(tmpl)
+        elif (corpo := await self._named_template_body_async(tmpl)) is not None:
+            tmpl = corpo
         return tmpl or ""
 
     def _kp_by_alias(self, alias: str) -> Any | None:
@@ -750,7 +794,8 @@ class PromptBuilder:
         agent_spec = agent_doc.spec
         agent_template = agent_spec.get("promptTemplate") or agent_spec.get("prompt_template")
         if agent_template:
-            return self._mustache_render(agent_template, ctx)
+            corpo = self._named_template_body(agent_template)
+            return self._mustache_render(corpo if corpo is not None else agent_template, ctx)
 
         agent_kp = self._host._kinds.get((agent_doc.api_version, agent_doc.kind))
 
@@ -882,7 +927,10 @@ class PromptBuilder:
         agent_spec = agent_doc.spec
         agent_template = agent_spec.get("promptTemplate") or agent_spec.get("prompt_template")
         if agent_template:
-            return await self._mustache_render_async(agent_template, ctx)
+            corpo = await self._named_template_body_async(agent_template)
+            return await self._mustache_render_async(
+                corpo if corpo is not None else agent_template, ctx
+            )
 
         agent_kp = self._host._kinds.get((agent_doc.api_version, agent_doc.kind))
 
