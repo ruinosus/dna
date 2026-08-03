@@ -3540,6 +3540,46 @@
         "title": "RegisterArtifactResponse",
         "type": "object"
       },
+      "RegisteredKindView": {
+        "description": "``GET /v1/kinds/registry/{kind}`` — the registered Kind's descriptor:\nthe JSON ``schema`` a form derives validation from and the ``ui_schema``\nwidget hints it renders with. Product data model, not tenant data — the\nsame answer for every caller (contrast: the authored-Kind door filters).",
+        "properties": {
+          "docs": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Docs"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "plane": {
+            "default": "composition",
+            "title": "Plane",
+            "type": "string"
+          },
+          "schema": {
+            "additionalProperties": true,
+            "title": "Schema",
+            "type": "object"
+          },
+          "ui_schema": {
+            "additionalProperties": true,
+            "title": "Ui Schema",
+            "type": "object"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "RegisteredKindView",
+        "type": "object"
+      },
       "RememberResponse": {
         "properties": {
           "indexed": {
@@ -6276,6 +6316,78 @@
           }
         },
         "summary": "Author Kind"
+      }
+    },
+    "/v1/kinds/registry/{kind}": {
+      "get": {
+        "description": "The descriptor of a REGISTERED Kind — its JSON ``schema`` plus the\n``ui_schema`` widget hints, so a form can DERIVE validation (min/max,\nenums, required) instead of hand-copying it and drifting.\n\nThe registry sibling of ``GET /v1/kinds/{kind}`` (which reads an\nAUTHORED Kind and filters by caller): a registered Kind is the\nPRODUCT's data model, identical for every tenant and holding nobody's\ncontent, so this door does not filter. Declared BEFORE the\n``/{kind}/documents`` routes so ``registry`` is matched as the literal\nsegment it is (a Kind is CamelCase and can never be named\n``registry``). 404 for a Kind the runtime does not register.",
+        "operationId": "get_registered_kind_v1_kinds_registry__kind__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scope"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegisteredKindView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Registered Kind"
       }
     },
     "/v1/kinds/{kind}": {

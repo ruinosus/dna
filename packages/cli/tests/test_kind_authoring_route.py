@@ -270,14 +270,18 @@ _KIND_OPERATIONS = frozenset({
     ("POST", "/v1/kinds"),
     ("GET", "/v1/kinds"),
     ("GET", "/v1/kinds/{kind}"),
+    # O descritor do Kind REGISTRADO (schema + ui_schema) — a porta que os
+    # formulários derivados consomem; montada em todos os lanes como as demais.
+    ("GET", "/v1/kinds/registry/{kind}"),
     ("POST", "/v1/kinds/{kind}/approve"),
     ("POST", "/v1/kinds/{kind}/revoke"),
     ("POST", "/v1/kinds/{kind}/documents"),
 })
 
-#: The same six, as OpenAPI paths (approve/revoke/documents share no path).
+#: The same doors, as OpenAPI paths (approve/revoke/documents share no path).
 _KIND_PATHS = {
     "/v1/kinds", "/v1/kinds/{kind}",
+    "/v1/kinds/registry/{kind}",
     "/v1/kinds/{kind}/approve", "/v1/kinds/{kind}/revoke",
     "/v1/kinds/{kind}/documents",
 }

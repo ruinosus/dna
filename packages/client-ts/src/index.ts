@@ -366,6 +366,26 @@ export class DnaClient {
     );
   }
 
+  /**
+   * The descriptor of a REGISTERED Kind — its JSON `schema` plus the
+   * `ui_schema` widget hints.
+   *
+   * The registry sibling of {@link getAuthoredKind}: a registered Kind is the
+   * PRODUCT's data model (the same for every caller, holding nobody's
+   * content), so this door does not filter. It exists so a form can DERIVE
+   * validation (min/max, enums, required) from the schema instead of
+   * hand-copying constraints that then drift from the kernel's.
+   *
+   * 404 for a Kind the runtime does not register.
+   */
+  async getRegisteredKind(kind: string, query?: { scope?: string }) {
+    return this.unwrap(
+      await this.raw.GET("/v1/kinds/registry/{kind}", {
+        params: { path: { kind }, query },
+      }),
+    );
+  }
+
   // ── the generic, kubernetes-shaped document write ────────────────────────
 
   /**

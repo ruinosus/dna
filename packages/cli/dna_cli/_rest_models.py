@@ -191,6 +191,22 @@ class DefinitionWriteResponse(BaseModel):
     overridden: bool
 
 
+class RegisteredKindView(BaseModel):
+    """``GET /v1/kinds/registry/{kind}`` — the registered Kind's descriptor:
+    the JSON ``schema`` a form derives validation from and the ``ui_schema``
+    widget hints it renders with. Product data model, not tenant data — the
+    same answer for every caller (contrast: the authored-Kind door filters)."""
+
+    kind: str
+    plane: str = "composition"
+    #: The WIRE name (see ``AuthoredKindDetail.schema``): a JSON Schema field
+    #: is called ``schema``. The pydantic shadow warning is silenced narrowly
+    #: in the cli ``pyproject.toml``, beside the two entries already there.
+    schema: dict[str, Any] = Field(default_factory=dict)
+    ui_schema: dict[str, Any] = Field(default_factory=dict)
+    docs: str | None = None
+
+
 # ── Kind authoring (the dedicated door — writes an INERT KindDefinition) ────
 
 

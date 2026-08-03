@@ -435,6 +435,41 @@ async def read_definition_impl(
     }
 
 
+async def read_registered_kind_impl(
+    live: LiveDna, *, kind: str, scope: str | None = None,
+) -> dict[str, Any]:
+    """The DESCRIPTOR of a registered Kind — its JSON Schema + ``ui_schema``.
+
+    O buraco que isto fecha (medido em 03/08/2026): nenhuma rota servia o
+    schema de um Kind REGISTRADO — ``GET /v1/kinds`` lista só os AUTORADOS, e
+    ``/v1/definitions/{kind}/{name}`` exige um documento existente e devolve o
+    ``ui_schema`` sem o schema. Resultado: todo formulário do portal copiava as
+    constraints à mão (min/max, enums, required), e cada cópia é uma deriva
+    esperando release. Com o descritor servido, o formulário DERIVA a validação
+    e o kernel continua a autoridade final na escrita.
+
+    Sem filtro por chamador, de propósito: um Kind registrado é o modelo de
+    dados do PRODUTO — o mesmo para todo tenant, sem conteúdo de ninguém. (O
+    contraste é o Kind AUTORADO, cujo schema é o modelo de dados do workspace
+    autor — aquele sai pela porta filtrada ``get_authored_kind_impl``.)
+    ``scope`` narrows the lookup to the Kinds governing that scope (i-081),
+    same hinge as ``kind_port_for``.
+
+    Raises ``ValueError`` for an unknown Kind (the face maps it to 404)."""
+    port = live.kernel.kind_port_for(kind, scope=scope)
+    if port is None:
+        raise ValueError(f"no registered Kind named {kind!r}")
+    schema_fn = getattr(port, "schema", None)
+    schema = schema_fn() if callable(schema_fn) else None
+    return {
+        "kind": getattr(port, "kind", kind),
+        "plane": getattr(port, "plane", "composition"),
+        "schema": schema or {},
+        "ui_schema": dict(getattr(port, "ui_schema", {}) or {}),
+        "docs": getattr(port, "docs", None),
+    }
+
+
 async def apply_definition_impl(
     live: LiveDna, *, scope: str, tenant: str, kind: str, name: str, spec: dict[str, Any],
 ) -> dict[str, Any]:

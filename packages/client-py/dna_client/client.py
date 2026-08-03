@@ -400,6 +400,19 @@ class DnaClient:
         different owners; 503 when the namespace registry cannot be read."""
         return self._get(f"/v1/kinds/{kind}", scope=scope, tenant=tenant)
 
+    def get_registered_kind(self, kind: str, *, scope: str | None = None) -> JsonObject:
+        """The descriptor of a REGISTERED Kind — its JSON ``schema`` plus the
+        ``ui_schema`` widget hints.
+
+        The registry sibling of :meth:`get_authored_kind`: a registered Kind is
+        the PRODUCT's data model (the same for every caller, holding nobody's
+        content), so this door does not filter. It exists so a form can DERIVE
+        validation (min/max, enums, required) from the schema instead of
+        hand-copying constraints that then drift from the kernel's.
+
+        404 for a Kind the runtime does not register."""
+        return self._get(f"/v1/kinds/registry/{kind}", scope=scope)
+
     # -- the generic, kubernetes-shaped document read/write -------------------
 
     def list_kind_documents(

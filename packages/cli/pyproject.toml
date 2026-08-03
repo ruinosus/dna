@@ -192,6 +192,10 @@ filterwarnings = [
     # would be a third vocabulary for one thing. Silenced by the exact model and
     # the exact field, as above.
     'ignore:Field name "schema" in "AuthoredKindDetail" shadows an attribute in parent "AuthoredKindSummary":UserWarning',
+    # The third door with the same wire name: `GET /v1/kinds/registry/{kind}`
+    # returns the REGISTERED Kind's JSON Schema under `schema` — same
+    # reasoning, same narrow silence.
+    'ignore:Field name "schema" in "RegisteredKindView" shadows an attribute in parent "BaseModel":UserWarning',
 ]
 
 [build-system]

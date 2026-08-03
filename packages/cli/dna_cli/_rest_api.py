@@ -374,6 +374,7 @@ def build_app(
         provision_workspace_owner_impl,
         read_bundle_entry_impl,
         read_definition_impl,
+        read_registered_kind_impl,
         recall_impl,
         reconcile_forks_impl,
         remember_impl,
@@ -1430,6 +1431,29 @@ def build_app(
                     exc,
                 ),
             ) from exc
+
+    @app.get("/v1/kinds/registry/{kind}", dependencies=guarded,
+             response_model=m.RegisteredKindView)
+    async def get_registered_kind(
+        kind: str,
+        scope: str | None = Query(default=None),
+    ) -> dict[str, Any]:
+        """The descriptor of a REGISTERED Kind — its JSON ``schema`` plus the
+        ``ui_schema`` widget hints, so a form can DERIVE validation (min/max,
+        enums, required) instead of hand-copying it and drifting.
+
+        The registry sibling of ``GET /v1/kinds/{kind}`` (which reads an
+        AUTHORED Kind and filters by caller): a registered Kind is the
+        PRODUCT's data model, identical for every tenant and holding nobody's
+        content, so this door does not filter. Declared BEFORE the
+        ``/{kind}/documents`` routes so ``registry`` is matched as the literal
+        segment it is (a Kind is CamelCase and can never be named
+        ``registry``). 404 for a Kind the runtime does not register."""
+        live = await _live()
+        try:
+            return await read_registered_kind_impl(live, kind=kind, scope=scope)
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from None
 
     # -- the generic, kubernetes-shaped document write ------------------------
     #

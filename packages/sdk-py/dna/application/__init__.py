@@ -129,6 +129,7 @@ from dna.application.runtime import (
     provision_workspace_owner_impl,
     read_bundle_entry_impl,
     read_definition_impl,
+    read_registered_kind_impl,
     recall_impl,
     reconcile_forks_impl,
     remember_impl,
@@ -224,6 +225,8 @@ __all__ = [
     "genome_view_impl",
     # definitions: read/apply/revert a tenant-layer override (s-strain-customization-ui)
     "read_definition_impl",
+    # o descritor do Kind REGISTRADO (schema + ui_schema) — formulários derivam
+    "read_registered_kind_impl",
     "apply_definition_impl",
     "revert_definition_impl",
     # bundle entries: list/read/write/revert a bundle-file fork (plane B — s-strain-bundle-fork)

@@ -447,6 +447,36 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/kinds/registry/{kind}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Registered Kind
+         * @description The descriptor of a REGISTERED Kind — its JSON ``schema`` plus the
+         *     ``ui_schema`` widget hints, so a form can DERIVE validation (min/max,
+         *     enums, required) instead of hand-copying it and drifting.
+         *
+         *     The registry sibling of ``GET /v1/kinds/{kind}`` (which reads an
+         *     AUTHORED Kind and filters by caller): a registered Kind is the
+         *     PRODUCT's data model, identical for every tenant and holding nobody's
+         *     content, so this door does not filter. Declared BEFORE the
+         *     ``/{kind}/documents`` routes so ``registry`` is matched as the literal
+         *     segment it is (a Kind is CamelCase and can never be named
+         *     ``registry``). 404 for a Kind the runtime does not register.
+         */
+        get: operations["get_registered_kind_v1_kinds_registry__kind__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/kinds/{kind}": {
         parameters: {
             query?: never;
@@ -2613,6 +2643,32 @@ export interface components {
             /** Workspace Id */
             workspace_id: string;
         };
+        /**
+         * RegisteredKindView
+         * @description ``GET /v1/kinds/registry/{kind}`` — the registered Kind's descriptor:
+         *     the JSON ``schema`` a form derives validation from and the ``ui_schema``
+         *     widget hints it renders with. Product data model, not tenant data — the
+         *     same answer for every caller (contrast: the authored-Kind door filters).
+         */
+        RegisteredKindView: {
+            /** Docs */
+            docs?: string | null;
+            /** Kind */
+            kind: string;
+            /**
+             * Plane
+             * @default composition
+             */
+            plane: string;
+            /** Schema */
+            schema?: {
+                [key: string]: unknown;
+            };
+            /** Ui Schema */
+            ui_schema?: {
+                [key: string]: unknown;
+            };
+        };
         /** RememberResponse */
         RememberResponse: {
             /** Indexed */
@@ -3667,6 +3723,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AuthorKindResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_registered_kind_v1_kinds_registry__kind__get: {
+        parameters: {
+            query?: {
+                scope?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                kind: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegisteredKindView"];
                 };
             };
             /** @description Validation Error */
