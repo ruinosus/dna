@@ -60,6 +60,11 @@ class RuntimeHooks:
     #: deixa cada voz no seu default de fallback — a voz é DADO, nunca código
     #: (regra do fundador, 03/08/2026).
     template_source: Any = None
+    #: `async () -> dict | None` — o SPEC do CognitivePolicy do workspace
+    #: (overlay do tenant). Mesma fronteira: o host tem o canal e o tenant.
+    #: `None` deixa cada knob no default de código (E1 do épico das nove
+    #: seções: `recall.retrieval.k` substitui o MAX_MEMORIES fixo).
+    policy_source: Any = None
 
 
 @runtime_checkable

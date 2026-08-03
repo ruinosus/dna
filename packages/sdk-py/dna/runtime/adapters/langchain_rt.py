@@ -230,6 +230,7 @@ class LangChainRuntime:
             [DnaRecallMiddleware(
                 hooks.recall,
                 template_source=getattr(hooks, "template_source", None),
+                policy_source=getattr(hooks, "policy_source", None),
             )]
             if getattr(hooks, "recall", None) is not None
             else []

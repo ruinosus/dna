@@ -315,10 +315,16 @@ class _DnaRecallMiddlewareImpl:  # type: ignore[misc]
         *,
         limit: int = MAX_MEMORIES,
         template_source: Callable[[str], Awaitable[str | None]] | None = None,
+        policy_source: Callable[[], Awaitable[dict | None]] | None = None,
     ) -> None:
         super().__init__()
         self._recall = recall
         self._limit = limit
+        #: O spec do CognitivePolicy do workspace (hook do host). Liga o fio
+        #: de `recall.retrieval.k` — que SEMPRE existiu no schema (default 5)
+        #: enquanto este middleware fixava 3: dois números para a mesma
+        #: pergunta (achado da varredura de 03/08). Sem doc, vale `limit`.
+        self._policy_source = policy_source
         #: `async (nome) -> str|None` — o PromptTemplate do workspace (overlay
         #: do tenant), injetado pelo host. Sem ele, vale o BRIEFING_DEFAULT.
         self._template_source = template_source
@@ -344,8 +350,9 @@ class _DnaRecallMiddlewareImpl:  # type: ignore[misc]
         consulta = cues(getattr(request, "messages", None) or [])
         if not worth_recalling(consulta):
             return ""
+        limite = await self._k_vivo()
         try:
-            memorias = await self._recall(consulta, self._limit)
+            memorias = await self._recall(consulta, limite)
         except Exception:  # noqa: BLE001 — memória indisponível NÃO derruba o turno
             _LOGGER.warning("recall automático falhou", exc_info=True)
             return ""
@@ -357,6 +364,20 @@ class _DnaRecallMiddlewareImpl:  # type: ignore[misc]
             # perguntar de onde veio.
             self._carimbar(len(list(memorias or [])[:MAX_MEMORIES]), consulta)
         return texto
+
+    async def _k_vivo(self) -> int:
+        """`recall.retrieval.k` do doc do workspace, ou o limit do construtor.
+        Sanidade [1, 50] — o mesmo racional do clamp de `neighbors`."""
+        if self._policy_source is None:
+            return self._limit
+        try:
+            spec = await self._policy_source()
+            k = (((spec or {}).get("recall") or {}).get("retrieval") or {}).get("k")
+            if isinstance(k, int) and 1 <= k <= 50:
+                return k
+        except Exception:  # noqa: BLE001 — política é refinamento, nunca custa o turno
+            pass
+        return self._limit
 
     async def _template_vivo(self) -> str | None:
         if self._template_source is None:
