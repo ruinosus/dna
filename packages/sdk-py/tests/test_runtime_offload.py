@@ -3,6 +3,15 @@ from __future__ import annotations
 
 import asyncio
 
+# `sdk-py` roda o arquivo inteiro.
+# subconjunto sem langchain; skipar la nao perde cobertura, porque o job
+# middleware nao — e estes testes a exercitam. O job `postgres` do CI roda um
+# O modulo e importavel sem langchain (a REGRA e pura), mas a CLASSE de
+
+import pytest
+
+pytest.importorskip("langchain")
+
 from dna.runtime.middleware.offload import (
     HEAD_CHARS,
     TAIL_CHARS,
