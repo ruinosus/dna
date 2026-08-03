@@ -114,3 +114,29 @@ def resolve_affect_palette(spec: dict | None) -> list | None:
     palette = a.get("palette")
     return palette if isinstance(palette, list) and palette else None
 
+
+@dataclass(frozen=True)
+class PaginationPolicy:
+    """`CognitivePolicy.pagination` — defaults/caps das listagens (E3).
+
+    O schema declarava e citava um leitor (`dna_shared.pagination_policy`)
+    que NUNCA existiu — o formulário-sem-fio em estado puro. Este é o fio.
+    """
+
+    default_limit: int = 50
+    max_limit: int = 500
+
+
+def resolve_pagination(spec: dict | None) -> PaginationPolicy:
+    """`CognitivePolicy.pagination` → PaginationPolicy. Lixo/ausente = default;
+    sanidade: 1 <= default <= max <= 5000 (teto duro anti-acidente)."""
+    d = ((spec or {}).get("pagination") or {}) if isinstance(spec, dict) else {}
+    base = PaginationPolicy()
+
+    def _int(v, fb):
+        return int(v) if isinstance(v, int) and v >= 1 else fb
+
+    max_limit = min(_int(d.get("max_limit"), base.max_limit), 5000)
+    default_limit = min(_int(d.get("default_limit"), base.default_limit), max_limit)
+    return PaginationPolicy(default_limit=default_limit, max_limit=max_limit)
+

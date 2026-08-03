@@ -3851,7 +3851,7 @@ export interface operations {
             query?: {
                 tenant?: string | null;
                 api_version?: string | null;
-                limit?: number;
+                limit?: number | null;
                 offset?: number;
                 fields?: string | null;
                 order_by?: string | null;

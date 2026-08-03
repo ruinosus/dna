@@ -317,7 +317,7 @@ def _policy_ttl() -> float:
         return _POLICY_TTL_S
 
 
-async def _cognitive_policy_spec(kernel: Any, scope: str, tenant: str | None) -> dict | None:
+async def cognitive_policy_spec(kernel: Any, scope: str, tenant: str | None) -> dict | None:
     """O spec da CognitivePolicy do workspace, cacheado. Falha/ausente = None
     (defaults de código — paridade byte-igual com o mundo sem doc)."""
     import time as _time
@@ -423,7 +423,7 @@ async def recall(
 
     # E2: a política do workspace alcança o scoring — decay resolvido e a
     # PALETA do tenant (o Kind abriu o vocabulário; isto liga o fio).
-    politica = await _cognitive_policy_spec(kernel, scope, tenant)
+    politica = await cognitive_policy_spec(kernel, scope, tenant)
     decay_policy = resolve_decay_policy(politica)
     palette = resolve_affect_palette(politica)
 

@@ -1512,7 +1512,9 @@ def build_app(
         kind: str,
         tenant: str | None = Query(default=None),
         api_version: str | None = Query(default=None),
-        limit: int = Query(default=50, ge=1, le=500),
+        # E3: sem default nem teto FIXOS — a CognitivePolicy do workspace
+        # decide (default_limit quando omitido; max_limit clampa o explícito).
+        limit: int | None = Query(default=None, ge=1),
         offset: int = Query(default=0, ge=0),
         fields: str | None = Query(default=None),
         order_by: str | None = Query(default=None),

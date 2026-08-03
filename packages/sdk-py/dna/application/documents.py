@@ -567,7 +567,7 @@ async def list_kinds_impl(
 async def list_documents_impl(
     live: LiveDna, *, kind: str, scope: str | None = None,
     tenant: str | None = None, api_version: str | None = None,
-    limit: int = 50, offset: int = 0,
+    limit: int | None = None, offset: int = 0,
     fields: Iterable[str] | None = None,
     filter: dict[str, Any] | None = None,  # noqa: A002 — the kernel's own kwarg
     order_by: Iterable[str] | None = None,
@@ -601,7 +601,19 @@ async def list_documents_impl(
     page is stable per adapter but not globally defined."""
     sc = scope or live.default_scope(tenant)
     port = await resolve_kind_port_live(live, kind, api_version, scope=sc)
-    limit = max(1, min(int(limit), 500))
+    # E3: default e teto vêm da CognitivePolicy do workspace (o leitor que o
+    # schema citava e nunca existiu). Sem doc, os números de sempre (50/500) —
+    # paridade byte-igual. `limit=None` = "o chamador não pediu" = default da
+    # política; explícito é clampado ao teto DELA.
+    from dna.memory.policy import resolve_pagination
+    from dna.memory.verbs import cognitive_policy_spec
+
+    paginacao = resolve_pagination(await cognitive_policy_spec(live.kernel, sc, tenant))
+    limit = (
+        paginacao.default_limit
+        if limit is None
+        else max(1, min(int(limit), paginacao.max_limit))
+    )
     offset = max(0, int(offset))
     projection = [str(f) for f in fields] if fields else None
     rows: list[dict[str, Any]] = []
