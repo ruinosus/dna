@@ -457,15 +457,20 @@ class AgentKind(KindBase):
             "help": "Named composition order — 'persona-first' puts the Soul before the instruction. Leave empty for the default. A raw promptTemplate, if set, overrides this.",
             "order": 25,
         },
-        "soul": {"widget": "text", "label": "Soul", "help": "Name of the Soul doc to flatten into the prompt.", "order": 30},
-        "skills": {"widget": "tags", "label": "Skills", "order": 40},
-        "actors": {"widget": "tags", "label": "Actors this agent serves", "order": 50},
-        "guardrails": {"widget": "tags", "label": "Guardrails", "order": 60},
-        "tools": {"widget": "tags", "label": "Tools", "order": 70},
-        "team_members": {"widget": "tags", "label": "Team members", "order": 80},
+        # ref_kind nos campos de REFERÊNCIA: cada um aponta docs de outro Kind,
+        # e sem o catálogo na tela o usuário tinha de ADIVINHAR os nomes
+        # (medido no editor do genome, 03/08). `widget` continua o mesmo —
+        # "tags" multi-valor ganha SUGESTÕES, não um select fechado: as formas
+        # antigas (mustache inline, ref de arquivo) continuam válidas.
+        "soul": {"widget": "kind-ref", "ref_kind": "Soul", "label": "Soul", "help": "Name of the Soul doc to flatten into the prompt.", "order": 30},
+        "skills": {"widget": "tags", "ref_kind": "Skill", "label": "Skills", "order": 40},
+        "actors": {"widget": "tags", "ref_kind": "Actor", "label": "Actors this agent serves", "order": 50},
+        "guardrails": {"widget": "tags", "ref_kind": "Guardrail", "label": "Guardrails", "order": 60},
+        "tools": {"widget": "tags", "ref_kind": "Tool", "label": "Tools", "order": 70},
+        "team_members": {"widget": "tags", "ref_kind": "Agent", "label": "Team members", "order": 80},
         "tags": {"widget": "tags", "label": "Tags", "order": 90},
         "tool_groups": {"widget": "tags", "label": "Tool groups", "help": "Filter the manifest tools this agent receives. Values: 'all' (default), 'code', 'manifest', 'write', 'read'. Combine for unions, e.g. ['code', 'read'].", "order": 86},
-        "mcp_servers": {"widget": "tags", "label": "MCP servers", "help": "MCPFederation doc names this agent consumes (e.g. 'drawio'). Remote tools load as first-class agent tools tagged mcp:<ref>. Entries may also be objects {ref, allowed_tools, timeout_s} for per-agent overrides.", "order": 87},
+        "mcp_servers": {"widget": "tags", "ref_kind": "MCPFederation", "label": "MCP servers", "help": "MCPFederation doc names this agent consumes (e.g. 'drawio'). Remote tools load as first-class agent tools tagged mcp:<ref>. Entries may also be objects {ref, allowed_tools, timeout_s} for per-agent overrides.", "order": 87},
         "objective": {"widget": "textarea", "label": "Objective", "order": 15},
         # kind-ref: o valor REFERENCIA um doc de outro Kind — a tela oferece o
         # catálogo (tenant-aware) sem proibir as formas antigas (mustache
