@@ -194,3 +194,45 @@ def test_o_digest_tem_TETO():
 
     d = sdlc_digest([{"title": f"h{i}"} for i in range(50)])
     assert d.count("entregue:") == SDLC_MAX_ITEMS
+
+
+# ── templates do workspace (PromptTemplate de nome bem conhecido) ───────────
+
+
+def test_o_template_do_workspace_VENCE_o_default():
+    from dna.memory.ingestion import extraction_prompt, reconciliation_prompt
+
+    p = extraction_prompt("a conversa", template="Extraia disto: {transcript}")
+    assert p == "Extraia disto: a conversa"
+    r = reconciliation_prompt(
+        ["fato"], [{"id": "m1", "summary": "velho"}],
+        template="NOVOS {facts} vs ATUAL {memories}",
+    )
+    assert '"fato"' in r and '"m1"' in r and r.startswith("NOVOS ")
+
+
+def test_template_SEM_variavel_obrigatoria_cai_no_default_nao_no_vazio():
+    """⚠️ Um template sem {transcript} extrairia de NADA, para sempre e em
+    silêncio. A recusa cai no default testado — nunca no texto quebrado."""
+    from dna.memory.ingestion import extraction_prompt, reconciliation_prompt
+
+    p = extraction_prompt("a conversa", template="sem variavel nenhuma")
+    assert "a conversa" in p and "FATOS DURÁVEIS" in p
+    r = reconciliation_prompt(["f"], [], template="so tem {facts}")
+    assert "MEMÓRIA ATUAL" in r
+
+
+def test_o_preenchimento_NAO_quebra_com_chaves_de_JSON_no_template():
+    """`str.format` quebraria em qualquer exemplo JSON do template; a
+    substituição é literal de propósito."""
+    from dna.memory.ingestion import extraction_prompt
+
+    t = 'Responda {"facts": []} apos ler: {transcript}'
+    assert extraction_prompt("x", template=t) == 'Responda {"facts": []} apos ler: x'
+
+
+def test_template_vazio_ou_nao_string_e_ignorado():
+    from dna.memory.ingestion import extraction_prompt
+
+    assert "FATOS DURÁVEIS" in extraction_prompt("x", template="   ")
+    assert "FATOS DURÁVEIS" in extraction_prompt("x", template=None)

@@ -61,6 +61,8 @@ __all__ = [
     "parse_facts",
     "parse_decisions",
     "reconciliation_prompt",
+    "EXTRACTION_TEMPLATE",
+    "RECONCILIATION_TEMPLATE",
     "resolve_ingestion",
     "sdlc_digest",
     "worth_extracting",
@@ -168,14 +170,63 @@ def worth_extracting(text: str | None, policy: IngestionPolicy | None = None) ->
     return any(w and w not in _VAZIAS for w in palavras)
 
 
-def extraction_prompt(transcript: str, policy: IngestionPolicy | None = None) -> str:
+#: Os NOMES BEM CONHECIDOS dos templates que um workspace pode sobrescrever —
+#: documentos `PromptTemplate` (o Kind que já existia; ver a spec
+#: prompts-como-dados). Ausentes, valem os defaults abaixo, testados.
+EXTRACTION_TEMPLATE = "memory-extraction"
+RECONCILIATION_TEMPLATE = "memory-reconciliation"
+
+
+def _template_valido(template: Any, obrigatorias: Sequence[str], nome: str) -> str | None:
+    """O texto do workspace, SE ele carrega toda variável obrigatória.
+
+    Um template sem `{transcript}` extrairia de nada — para sempre e em
+    silêncio. A recusa nomeia a variável faltante no log e cai no default:
+    o modo de falha de um template quebrado é o comportamento testado, nunca
+    o vazio.
+    """
+    if not isinstance(template, str) or not template.strip():
+        return None
+    faltam = [v for v in obrigatorias if ("{" + v + "}") not in template]
+    if faltam:
+        _LOGGER.warning(
+            "PromptTemplate %r ignorado: faltam as variáveis %s", nome, faltam
+        )
+        return None
+    return template
+
+
+def _preencher(template: str, valores: Mapping[str, str]) -> str:
+    """Substituição literal de `{var}` — NUNCA `str.format`.
+
+    Um template de prompt carrega exemplos JSON cheios de chaves; `format`
+    quebraria em qualquer um deles, e a quebra apareceria como "template do
+    workspace nunca é usado", longe da causa.
+    """
+    for chave, valor in valores.items():
+        template = template.replace("{" + chave + "}", valor)
+    return template
+
+
+def extraction_prompt(
+    transcript: str,
+    policy: IngestionPolicy | None = None,
+    *,
+    template: str | None = None,
+) -> str:
     """A etapa 1 — o transcript vira fatos discretos.
 
     O few-shot ensina o caso mais comum, que é **não extrair nada**. Sem ele o
     modelo produz um fato por turno porque foi o que se pediu, e a memória vira
     um diário.
+
+    `template` (o `PromptTemplate` de nome ``memory-extraction``, se o
+    workspace declarou um) VENCE o default — desde que carregue `{transcript}`.
     """
     p = policy or IngestionPolicy()
+    escolhido = _template_valido(template, ("transcript",), EXTRACTION_TEMPLATE)
+    if escolhido is not None:
+        return _preencher(escolhido, {"transcript": transcript[:MAX_TRANSCRIPT]})
     nunca = (
         f"\nNUNCA extraia nada sobre: {', '.join(p.never)}.\n" if p.never else ""
     )
@@ -202,12 +253,20 @@ Conversa:
 {transcript[:MAX_TRANSCRIPT]}"""
 
 
-def reconciliation_prompt(facts: Sequence[str], existing: Sequence[Mapping[str, Any]]) -> str:
+def reconciliation_prompt(
+    facts: Sequence[str],
+    existing: Sequence[Mapping[str, Any]],
+    *,
+    template: str | None = None,
+) -> str:
     """A etapa 2 — cada fato contra o que já existe.
 
     ⚠️ É esta etapa que torna a escrita automática defensável. Sem ela, cada
     conversa acrescenta e nada corrige: contradições convivem, duplicatas se
     somam, e o recall automático passa a servir as duas versões do mesmo assunto.
+
+    `template` (``memory-reconciliation``) VENCE o default se carregar
+    `{facts}` E `{memories}` — sem as duas, a decisão sairia sem um dos lados.
     """
     memorias = json.dumps(
         [
@@ -216,6 +275,12 @@ def reconciliation_prompt(facts: Sequence[str], existing: Sequence[Mapping[str, 
         ],
         ensure_ascii=False,
     )
+    fatos_json = json.dumps(list(facts), ensure_ascii=False)
+    escolhido = _template_valido(
+        template, ("facts", "memories"), RECONCILIATION_TEMPLATE
+    )
+    if escolhido is not None:
+        return _preencher(escolhido, {"facts": fatos_json, "memories": memorias})
     return f"""Você gerencia a memória de um sistema. Compare os FATOS NOVOS com a MEMÓRIA ATUAL e decida, para cada fato, uma operação:
 
 - "{ADD}": informação nova, não presente na memória.
@@ -233,7 +298,7 @@ MEMÓRIA ATUAL:
 {memorias}
 
 FATOS NOVOS:
-{json.dumps(list(facts), ensure_ascii=False)}
+{fatos_json}
 
 Responda SOMENTE com JSON:
 {{"decisions": [{{"op": "{ADD}", "text": "..."}},
