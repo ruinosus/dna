@@ -160,10 +160,30 @@ def test_a_paleta_do_WORKSPACE_vence_os_padroes():
     assert affect_factor("surprise", palete) == 1.1
 
 
-def test_remembrance_surface_when_enum():
+def test_remembrance_surface_when_is_OPEN():
+    """⚠️ ABERTO em 03/08, e este era o enum que BLOQUEAVA, nao so limitava.
+
+    Os quatro nomes sao todos eventos de SDLC — `feature_touched`,
+    `cycle_open`, `session_start`, `oracle_consult`. NENHUM descreve
+    honestamente uma memoria aprendida numa CONVERSA, e uma memoria extraida do
+    chat era recusada na escrita com erro de schema.
+
+    O vocabulario de gatilhos e de quem RODA o agente, nao da extensao que
+    precisou de quatro deles primeiro.
+
+    ⚠️ A consequencia aceita: um gatilho que nenhum motor conhece nunca dispara
+    sozinho. E gravado e honrado como dado — e o recall proativo acha a memoria
+    por RELEVANCIA de qualquer jeito — mas nada vai surfa-la por causa daquele
+    nome ate alguem ensinar algo a procura-lo.
+    """
     schema = _engram_port().schema()
     items = schema["properties"]["surface_when"]["items"]
-    assert set(items["enum"]) == {"feature_touched", "cycle_open", "session_start", "oracle_consult"}
+    assert "enum" not in items, (
+        "surface_when voltou a ser enum fechado — memoria de conversa seria "
+        "recusada na escrita"
+    )
+    assert items["type"] == "string" and items.get("minLength") == 1
+    assert schema["properties"]["surface_when"].get("minItems") == 1
 
 
 def test_remembrance_relevance_decay_seed_default():

@@ -203,18 +203,13 @@
         "type": "integer"
       },
       "surface_when": {
-        "description": "Triggers that surface this LessonLearned. Mirrors how human recall fires unbidden in context.",
+        "type": "array",
         "items": {
-          "enum": [
-            "feature_touched",
-            "cycle_open",
-            "session_start",
-            "oracle_consult"
-          ],
-          "type": "string"
+          "type": "string",
+          "minLength": 1
         },
         "minItems": 1,
-        "type": "array"
+        "description": "Triggers that surface this memory unbidden. The four the SDLC engines know are `feature_touched`, `cycle_open`, `session_start` and `oracle_consult`.\n⭐ OPEN ON PURPOSE (2026-08-03), and this one was BLOCKING a feature, not merely constraining it. The four names are all SDLC events — nothing in that list honestly describes a memory learned from a CONVERSATION, and a memory extracted from chat was refused at write time with a schema error. The vocabulary of triggers belongs to whoever runs the agent, not to the extension that first needed four of them.\n⚠️ The consequence to accept: a trigger no engine knows never fires on its own. It is recorded and honoured as data — and proactive recall finds the memory by RELEVANCE regardless — but nothing will surface it because of that name until something is taught to look for it."
       },
       "tags": {
         "default": [],
