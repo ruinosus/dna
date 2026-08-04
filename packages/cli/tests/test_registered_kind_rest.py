@@ -97,3 +97,26 @@ def test_registry_segment_is_not_swallowed_by_the_authored_kind_route(dna_dir):
         # A porta de AUTORADOS não conhece o Kind registrado Agent: 404 —
         # e é essa diferença que prova que são portas distintas.
         assert authored.status_code == 404
+
+
+def test_tenant_param_deriva_o_scope_como_as_rotas_de_documentos(dna_dir):
+    """i-094 (medido em 04/08 no wizard F4 do dna-cloud): o portal só conhece
+    o WORKSPACE, e a rota só aceitava ``scope`` cru — obrigando o chamador a
+    hardcodar a convenção ``tenant-<ws>``. Com ``tenant``, o scope é DERIVADO
+    server-side (``live.default_scope``), o mesmo contrato de toda rota de
+    documento. Aqui (single-workspace, sem vendor) default_scope devolve o
+    base scope — o Kind registrado responde igual ao caminho sem tenant."""
+    with _client(dna_dir) as c:
+        sem = c.get("/v1/kinds/registry/Agent")
+        com = c.get("/v1/kinds/registry/Agent", params={"tenant": "ws-qualquer"})
+        assert com.status_code == 200, com.text
+        assert com.json()["schema"] == sem.json()["schema"]
+        # O contrato antigo não regride: ``scope`` explícito continua aceito
+        # (Agent é Kind de EXTENSÃO — global — então qualquer filtro de scope
+        # o resolve; a PRECEDÊNCIA scope>tenant é código de 1 linha na rota,
+        # visível no teste de forma apenas indireta por este 200).
+        r = c.get(
+            "/v1/kinds/registry/Agent",
+            params={"scope": _SCOPE, "tenant": "ws-qualquer"},
+        )
+        assert r.status_code == 200

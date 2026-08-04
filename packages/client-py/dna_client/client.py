@@ -400,7 +400,9 @@ class DnaClient:
         different owners; 503 when the namespace registry cannot be read."""
         return self._get(f"/v1/kinds/{kind}", scope=scope, tenant=tenant)
 
-    def get_registered_kind(self, kind: str, *, scope: str | None = None) -> JsonObject:
+    def get_registered_kind(
+        self, kind: str, *, scope: str | None = None, tenant: str | None = None,
+    ) -> JsonObject:
         """The descriptor of a REGISTERED Kind — its JSON ``schema`` plus the
         ``ui_schema`` widget hints.
 
@@ -410,8 +412,13 @@ class DnaClient:
         validation (min/max, enums, required) from the schema instead of
         hand-copying constraints that then drift from the kernel's.
 
+        ``tenant`` (i-094) resolves the scope the way the document routes do
+        (``default_scope`` server-side) — a caller that only knows the
+        workspace id reaches that workspace's own registered Kinds without
+        hardcoding the scope-prefix convention. Explicit ``scope`` wins.
+
         404 for a Kind the runtime does not register."""
-        return self._get(f"/v1/kinds/registry/{kind}", scope=scope)
+        return self._get(f"/v1/kinds/registry/{kind}", scope=scope, tenant=tenant)
 
     # -- the generic, kubernetes-shaped document read/write -------------------
 

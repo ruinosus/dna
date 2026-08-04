@@ -467,6 +467,13 @@ export interface paths {
          *     ``/{kind}/documents`` routes so ``registry`` is matched as the literal
          *     segment it is (a Kind is CamelCase and can never be named
          *     ``registry``). 404 for a Kind the runtime does not register.
+         *
+         *     ``tenant`` (i-094) resolves the scope the way EVERY document route
+         *     does (``live.default_scope`` — under multi-workspace, ``tenant-<ws>``
+         *     for an outside workspace), so a portal that only knows the workspace
+         *     id reaches the workspace's OWN registered Kinds without hardcoding
+         *     the scope-prefix convention. An explicit ``scope`` still wins — it is
+         *     the older, narrower contract and existing callers keep it.
          */
         get: operations["get_registered_kind_v1_kinds_registry__kind__get"];
         put?: never;
@@ -3744,6 +3751,7 @@ export interface operations {
         parameters: {
             query?: {
                 scope?: string | null;
+                tenant?: string | null;
             };
             header?: {
                 authorization?: string | null;

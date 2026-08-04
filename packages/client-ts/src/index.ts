@@ -378,7 +378,7 @@ export class DnaClient {
    *
    * 404 for a Kind the runtime does not register.
    */
-  async getRegisteredKind(kind: string, query?: { scope?: string }) {
+  async getRegisteredKind(kind: string, query?: { scope?: string; tenant?: string }) {
     return this.unwrap(
       await this.raw.GET("/v1/kinds/registry/{kind}", {
         params: { path: { kind }, query },

@@ -1437,6 +1437,7 @@ def build_app(
     async def get_registered_kind(
         kind: str,
         scope: str | None = Query(default=None),
+        tenant: str | None = Query(default=None),
     ) -> dict[str, Any]:
         """The descriptor of a REGISTERED Kind — its JSON ``schema`` plus the
         ``ui_schema`` widget hints, so a form can DERIVE validation (min/max,
@@ -1448,8 +1449,17 @@ def build_app(
         content, so this door does not filter. Declared BEFORE the
         ``/{kind}/documents`` routes so ``registry`` is matched as the literal
         segment it is (a Kind is CamelCase and can never be named
-        ``registry``). 404 for a Kind the runtime does not register."""
+        ``registry``). 404 for a Kind the runtime does not register.
+
+        ``tenant`` (i-094) resolves the scope the way EVERY document route
+        does (``live.default_scope`` — under multi-workspace, ``tenant-<ws>``
+        for an outside workspace), so a portal that only knows the workspace
+        id reaches the workspace's OWN registered Kinds without hardcoding
+        the scope-prefix convention. An explicit ``scope`` still wins — it is
+        the older, narrower contract and existing callers keep it."""
         live = await _live()
+        if not (scope and scope.strip()) and tenant and tenant.strip():
+            scope = live.default_scope(tenant.strip())
         try:
             return await read_registered_kind_impl(live, kind=kind, scope=scope)
         except ValueError as exc:

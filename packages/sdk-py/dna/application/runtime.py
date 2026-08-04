@@ -456,6 +456,14 @@ async def read_registered_kind_impl(
     same hinge as ``kind_port_for``.
 
     Raises ``ValueError`` for an unknown Kind (the face maps it to 404)."""
+    # i-094 — the i-090 rebuild trigger, same seam as the document routes
+    # (``resolve_kind_port_live``): without it, a freshly-approved Kind of a
+    # tenant scope answered 404 HERE until some *other* route happened to
+    # warm that scope — indeterminate per replica, and measured on 04/08
+    # (the F4 wizard found an approved Kind that the registry said did not
+    # exist). TTL'd (KIND_REFRESH_TTL): one bootstrap-slice read per scope
+    # per window, not one per request.
+    await live.ensure_kinds(scope)
     port = live.kernel.kind_port_for(kind, scope=scope)
     if port is None:
         raise ValueError(f"no registered Kind named {kind!r}")

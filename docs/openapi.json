@@ -6332,7 +6332,7 @@
     },
     "/v1/kinds/registry/{kind}": {
       "get": {
-        "description": "The descriptor of a REGISTERED Kind — its JSON ``schema`` plus the\n``ui_schema`` widget hints, so a form can DERIVE validation (min/max,\nenums, required) instead of hand-copying it and drifting.\n\nThe registry sibling of ``GET /v1/kinds/{kind}`` (which reads an\nAUTHORED Kind and filters by caller): a registered Kind is the\nPRODUCT's data model, identical for every tenant and holding nobody's\ncontent, so this door does not filter. Declared BEFORE the\n``/{kind}/documents`` routes so ``registry`` is matched as the literal\nsegment it is (a Kind is CamelCase and can never be named\n``registry``). 404 for a Kind the runtime does not register.",
+        "description": "The descriptor of a REGISTERED Kind — its JSON ``schema`` plus the\n``ui_schema`` widget hints, so a form can DERIVE validation (min/max,\nenums, required) instead of hand-copying it and drifting.\n\nThe registry sibling of ``GET /v1/kinds/{kind}`` (which reads an\nAUTHORED Kind and filters by caller): a registered Kind is the\nPRODUCT's data model, identical for every tenant and holding nobody's\ncontent, so this door does not filter. Declared BEFORE the\n``/{kind}/documents`` routes so ``registry`` is matched as the literal\nsegment it is (a Kind is CamelCase and can never be named\n``registry``). 404 for a Kind the runtime does not register.\n\n``tenant`` (i-094) resolves the scope the way EVERY document route\ndoes (``live.default_scope`` — under multi-workspace, ``tenant-<ws>``\nfor an outside workspace), so a portal that only knows the workspace\nid reaches the workspace's OWN registered Kinds without hardcoding\nthe scope-prefix convention. An explicit ``scope`` still wins — it is\nthe older, narrower contract and existing callers keep it.",
         "operationId": "get_registered_kind_v1_kinds_registry__kind__get",
         "parameters": [
           {
@@ -6358,6 +6358,22 @@
                 }
               ],
               "title": "Scope"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tenant"
             }
           },
           {
