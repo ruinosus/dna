@@ -138,7 +138,9 @@ def test_middleware_sem_policy_source_usa_os_defaults():
     assert inj == RecallInjection()
 
 
-# ── #37: os "deliberadamente deixados" caem — rótulos e gates viram dado ────
+# ── #37: os "deliberadamente deixados" caem — os rótulos viram dado ─────────
+# (o teste do auditor_gate/_gates_da_politica mora na suíte do CLI, que é
+#  quem instala dna_cli — importá-lo AQUI quebrou o job sdk-py do CI em 04/08)
 
 
 def test_type_labels_do_workspace_vencem_com_merge():
@@ -171,24 +173,3 @@ def test_sem_type_labels_o_briefing_e_byte_igual_ao_de_antes():
     assert briefing(m) == briefing(m, type_labels=None)
     assert "[REGRA (siga)]" in briefing(m)
 
-
-def test_gates_da_politica_leem_o_doc_e_degradam_sem_ele():
-    from dna_cli.sdlc.journey import _gates_da_politica
-
-    class _Sessao:
-        def __init__(self, doc):
-            self._doc = doc
-
-        def get_doc(self, kind, name, **kw):
-            assert (kind, name) == ("CognitivePolicy", "cognitive-policy")
-            if isinstance(self._doc, Exception):
-                raise self._doc
-            return self._doc
-
-    ok = _Sessao({"spec": {"methodology": {"auditor_window": 7, "auditor_threshold": 4}}})
-    assert _gates_da_politica(ok) == (7, 4)
-    # lixo → default campo a campo; doc ausente/erro → defaults
-    parcial = _Sessao({"spec": {"methodology": {"auditor_window": 99}}})
-    assert _gates_da_politica(parcial) == (5, 3)
-    assert _gates_da_politica(_Sessao(None)) == (5, 3)
-    assert _gates_da_politica(_Sessao(RuntimeError("sem kernel"))) == (5, 3)
