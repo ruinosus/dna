@@ -1,0 +1,29 @@
+# O binder: monta o agente e declara a SURFACE do intake (F2:
+# Copilot.spec.surfaces[] — o contrato de co-edição da tela como dado).
+apiVersion: github.com/ruinosus/dna/v1
+kind: Copilot
+metadata:
+  name: contrato-copiloto
+spec:
+  mounts:
+  - id: principal
+    agent: contrato-agent
+    path: /agui
+  serving:
+    transport: ag-ui
+  surfaces:
+  - name: contrato-intake
+    state_key: document_draft
+    tool_name: update_document_draft
+    canvas_keys:
+    - document_draft
+    - document_kind
+    - document_schema
+    - document_source
+    blocked_persist_tools:
+    - remember
+    - forget
+    - consolidate
+    guidance_template: null
+    description: Intake de contrato — extração campo a campo para revisão
+      humana no canvas de documento.

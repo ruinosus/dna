@@ -1,0 +1,51 @@
+# O Kind do domínio — INERTE até um humano aprovar (spec.approved_by vazio;
+# `dna copilot install --approve` carimba o operador no self-host).
+apiVersion: github.com/ruinosus/dna/core/v1
+kind: KindDefinition
+metadata:
+  name: contrato-de-servico
+spec:
+  target_api_version: github.com/ruinosus/dna/kits/v1
+  target_kind: ContratoDeServico
+  origin: github.com/ruinosus/dna/kits/contrato-intake
+  plane: record
+  prompt_target: false
+  flatten_in_context: false
+  prompt_target_priority: 0
+  storage:
+    type: yaml
+    container: contratos-de-servico
+  schema:
+    type: object
+    additionalProperties: false
+    required:
+    - titulo
+    - contratante
+    - contratada
+    properties:
+      titulo:
+        type: string
+        description: O título do contrato, como aparece no documento.
+      contratante:
+        type: string
+        description: Quem contrata (razão social ou nome).
+      contratada:
+        type: string
+        description: Quem presta o serviço.
+      valor_mensal:
+        type: number
+        description: O valor mensal acordado, em reais.
+      prazo_meses:
+        type: integer
+        description: A vigência, em meses.
+      data_assinatura:
+        type: string
+        description: A data de assinatura (ISO-8601).
+      renovacao_automatica:
+        type: boolean
+        description: O contrato renova sozinho ao fim da vigência?
+      multa_rescisao:
+        type: string
+        description: A regra de multa por rescisão antecipada, resumida.
+  display_label: Contrato de Serviço
+  ascii_icon: "📄"

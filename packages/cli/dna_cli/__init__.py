@@ -36,6 +36,7 @@ from dna_cli import (
     scope_cmd,
     sdlc_cmd,
     source_cmd,
+    copilot_kit_cmd,
     specify_cmd,
 )
 
@@ -97,6 +98,7 @@ main.add_command(new_cmd.new)
 main.add_command(eval_cmd.eval_)
 main.add_command(emit_cmd.emit)
 main.add_command(specify_cmd.specify)
+main.add_command(copilot_kit_cmd.copilot)
 # Importing specify_toolkit registers `specify install-templates` +
 # `specify export-templates` on the specify group — the Layer 3 toolkit bridge
 # (serve .specify/ templates + slash-commands as DNA Kinds over MCP).

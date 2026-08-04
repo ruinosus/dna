@@ -19,6 +19,13 @@ _CLI_ROOT = Path(__file__).resolve().parents[1] / "dna_cli"
 
 
 ALLOWLIST: dict[str, str] = {
+    "copilot_kit_cmd.py::_ORDEM": (
+        "IRREDUCIBLE. Não é uma família de Kinds — é a ORDEM DE ESCRITA de um "
+        "kit (definições antes de quem as referencia: KindDefinition → "
+        "PromptTemplate → Agent → Copilot). Um trait não expressa ordem "
+        "topológica de referência; Kinds fora do mapa caem no fim, então a "
+        "lista não fecha o vocabulário — só ordena o conhecido."
+    ),
     "specify_toolkit.py::_BODY_FIELD": (
         "IRREDUCIBLE-for-now. Kind -> the spec field carrying the verbatim "
         "exported body (PromptTemplate.body / Skill.instruction / "
