@@ -175,3 +175,22 @@ async def test_a_provider_with_no_durable_subject_still_fails_closed(
             live, "Mystery Co",
             {"_dna_provider_type": "oidc", "sub": "s1", "email": "x@example.com"},
         )
+
+
+@pytest.mark.asyncio
+async def test_identity_email_vem_da_membership_quando_o_token_nao_traz(
+    live: LiveDna,
+) -> None:
+    """TICKET-6 da bateria (04/08): um access token DCR não carrega claim de
+    email e a resposta vinha `identity_email: null` com `created_by`
+    preenchido no MESMO payload. A membership que casou pelo oid REGISTRA o
+    email — dado que o store já afirma, não invenção."""
+    await create_workspace_impl(live, "Consumer Co", _CONSUMER_CLAIMS)
+
+    access_token_claims = {  # o que a porta vê — sem email nenhum.
+        "_dna_provider_type": "workos", "sub": _WORKOS_SUB,
+        "org_id": "org_01JQCONSUMERORG", "sid": "session_01JQ",
+    }
+    listed = await list_workspaces_impl(live, access_token_claims)
+    assert listed["workspaces"], "o oid casa a membership"
+    assert listed["identity_email"] == _CONSUMER_CLAIMS["email"]

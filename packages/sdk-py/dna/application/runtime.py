@@ -2965,12 +2965,15 @@ async def list_workspaces_impl(
 
     seen: set[str] = set()
     out: list[dict[str, Any]] = []
+    emails_da_membership: list[str] = []
     for m in memberships:
         if not m.workspace_id or m.workspace_id in seen:
             continue
         if not membership_matches_identity(m, identity):
             continue
         seen.add(m.workspace_id)
+        if m.identity_email:
+            emails_da_membership.append(m.identity_email)
         spec = docs.get(m.workspace_id) or {}
         out.append({
             "workspace_id": m.workspace_id,
@@ -2989,7 +2992,13 @@ async def list_workspaces_impl(
     out.sort(key=lambda w: ((w["name"] or "").lower(), w["workspace_id"]))
     return {
         "identity_oid": identity.oid,
-        "identity_email": identity.email,
+        # O token pode não carregar claim de email (um cliente DCR pede só os
+        # scopes que o PRM anuncia — medido na bateria de 04/08:
+        # `identity_email: null` com `created_by` preenchido no MESMO payload).
+        # A membership que casou pelo oid REGISTRA o email — é dado que o
+        # store já afirma sobre esta identidade, não invenção.
+        "identity_email": identity.email
+        or (emails_da_membership[0] if emails_da_membership else None),
         "workspaces": out,
     }
 
