@@ -1688,11 +1688,18 @@ def _provider_verifier(pc: ProviderConfig) -> Any:
     :func:`verifier_issuer`)."""
     from fastmcp.server.auth.providers.jwt import JWTVerifier
 
+    # `audience` aceita CSV — vira lista para o JWTVerifier (que já suporta
+    # `str | list[str]`). O caso real (04/08/2026): a porta dev precisa aceitar
+    # a audiência do app de produção E a do resource indicator local
+    # (RFC 8707 emite `aud` = o resource pedido), sem abrir mão do pin.
+    audience: "str | list[str] | None" = pc.audience
+    if isinstance(audience, str) and "," in audience:
+        audience = [a.strip() for a in audience.split(",") if a.strip()]
     return JWTVerifier(
         public_key=pc.public_key,
         jwks_uri=pc.jwks_uri,
         issuer=verifier_issuer(pc),
-        audience=pc.audience,
+        audience=audience,
         algorithm=pc.algorithm,
     )
 
