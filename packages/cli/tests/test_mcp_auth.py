@@ -467,7 +467,9 @@ def test_workos_lane_advertises_the_authkit_domain_verbatim(monkeypatch):
 
     meta = _prm_body(A.workos_provider_from_env(), mcp_path="/consumer")
     assert meta["authorization_servers"] == [domain]
-    assert meta["scopes_supported"] == ["openid", "profile", "email"]
+    # offline_access entrou por medição (04/08): sem refresh_token a sessão
+    # de cliente MCP morre nos 300s do access token do AuthKit.
+    assert meta["scopes_supported"] == ["openid", "profile", "email", "offline_access"]
 
 
 def test_build_auth_from_config_advertises_issuers_verbatim(monkeypatch):

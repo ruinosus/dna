@@ -808,9 +808,22 @@ def build_server(
         # forgot its op is already broken for metering, loudly, upstream of this.
         access = "write" if "write" in (memory_op, sdlc_op, family_op) else "read"
         granted: dict[str, str] | None = None
+        dono_do_board = False
         if tenant and scope and scope != live.default_scope(tenant):
-            granted = await workspace_granted_scopes(live, tenant)
-        if not live.scope_is_bound(
+            # POSSE antes de grant (bateria de 04/08): o board_scope de um
+            # Project do PRÓPRIO workspace é derivado de (workspace, slug) —
+            # decisão A1: "the scope is a rendering of that" — então escrever
+            # nele é a mesma decisão que criou o projeto, não uma travessia.
+            # O WorkspaceScopeGrant segue read-only por desenho: grant governa
+            # o CROSS-workspace; a posse deriva do doc Project, fail-closed.
+            # ⚠️ A posse NÃO retorna cedo: neutraliza só a negação de binding
+            # e segue para o metering — dono também é medido.
+            from dna.application import workspace_owns_board_scope
+
+            dono_do_board = await workspace_owns_board_scope(live, tenant, scope)
+            if not dono_do_board:
+                granted = await workspace_granted_scopes(live, tenant)
+        if not dono_do_board and not live.scope_is_bound(
             scope, tenant, authenticated=True,
             granted_scopes=parse_scope_grants(os.environ.get("DNA_TOKEN_SCOPES")),
             workspace_grants=granted, access=access,
@@ -1041,7 +1054,11 @@ def build_server(
         """List the PromptTemplates in a scope (name + description + variable
         count). The Spec Kit templates ingested by ``dna specify
         install-templates`` surface here — servable to any MCP client. Pass
-        ``tenant`` for the per-workspace/tenant view (the overlay wins, no redeploy)."""
+        ``tenant`` for the per-workspace/tenant view (the overlay wins, no redeploy).
+
+        Without ``scope`` this resolves in the server's BASE scope (the shared
+        catalog), NOT your workspace scope — templates are catalog, and the
+        tenant view is an OVERLAY on it. Intentional; not a resolution bug."""
         return await list_templates_impl(await _live(), scope, await _guard("definitions", tenant, scope=scope))
 
     @server.tool(run_in_thread=False)
@@ -1049,7 +1066,8 @@ def build_server(
         name: str, scope: str | None = None, tenant: str | None = None
     ) -> dict[str, Any]:
         """Fetch one PromptTemplate's full body + variables. With ``tenant`` the
-        per-workspace/tenant OVERLAY wins live — governance without redeploy."""
+        per-workspace/tenant OVERLAY wins live — governance without redeploy.
+        Without ``scope``, resolves in the BASE catalog scope (see list_templates)."""
         return await get_template_impl(await _live(), name, scope, await _guard("definitions", tenant, scope=scope))
 
     @server.tool(run_in_thread=False)
@@ -1057,7 +1075,11 @@ def build_server(
         scope: str | None = None, tenant: str | None = None
     ) -> dict[str, Any]:
         """List the Skills in a scope (name + description). The Spec Kit
-        slash-command definitions ingested as Skills surface here."""
+        slash-command definitions ingested as Skills surface here.
+
+        Without ``scope`` this resolves in the server's BASE scope (the shared
+        catalog), NOT your workspace scope — same catalog-with-overlay shape as
+        ``list_templates``. Intentional; not a resolution bug."""
         return await list_skills_impl(await _live(), scope, await _guard("definitions", tenant, scope=scope))
 
     @server.tool(run_in_thread=False)
@@ -1065,7 +1087,8 @@ def build_server(
         name: str, scope: str | None = None, tenant: str | None = None
     ) -> dict[str, Any]:
         """Fetch one Skill's full instruction body + metadata. With ``tenant``
-        the per-workspace/tenant OVERLAY wins live — no redeploy."""
+        the per-workspace/tenant OVERLAY wins live — no redeploy.
+        Without ``scope``, resolves in the BASE catalog scope (see list_skills)."""
         return await get_skill_impl(await _live(), name, scope, await _guard("definitions", tenant, scope=scope))
 
     # -- SDLC ----------------------------------------------------------------

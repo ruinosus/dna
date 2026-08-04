@@ -657,3 +657,45 @@ def test_an_unreadable_registry_refuses_the_listing_in_words(
     assert "registry" in message.lower(), message
     assert "operator" in message.lower(), message
     assert "connection reset by peer" in message, message
+
+
+# ── revoke_kind (bateria 04/08): o un-author que faltava, com a assimetria ──
+# deliberada — o modelo retira o que o modelo propôs; efeito só um humano tira.
+
+
+def test_o_modelo_descarta_a_propria_proposta_inerte(mcp_client):
+    """author → revoke, sem humano no meio: a proposta nunca teve efeito, e
+    descartá-la tem a MESMA gravidade de tê-la autorado."""
+    mcp_client.call_tool("author_kind", {
+        "kind": "PropostaDescartavel",
+        "schema": {"type": "object", "properties": {"x": {"type": "string"}}},
+    })
+    r = mcp_client.call_tool("revoke_kind", {"kind": "PropostaDescartavel"})
+    assert r.get("revoked_by")
+    # e a listagem mostra o estado, nunca esconde o fato
+    listado = mcp_client.call_tool("list_my_kinds", {})
+    linha = next(
+        k for k in listado["kinds"] if k["kind"] == "PropostaDescartavel"
+    )
+    assert linha["approved"] is False
+
+
+def test_kind_aprovado_nao_se_revoga_pelo_modelo(mcp_client, monkeypatch):
+    """A outra metade da assimetria: com efeito conferido, a retirada é decisão
+    humana — a tool recusa e aponta o portal, em vez de invalidar documentos
+    por iniciativa de um modelo."""
+    import pytest as _pytest
+
+    from dna_cli._mcp_cards import APPROVE_TOOL
+
+    mcp_client.call_tool("author_kind", {
+        "kind": "AprovadoIntocavel",
+        "schema": {"type": "object", "properties": {"x": {"type": "string"}}},
+    })
+    # O botão do card, apertado por gente — no teste, a chamada direta à tool
+    # app-only (o servidor não distingue; a visibilidade é contrato do host).
+    mcp_client.call_tool(APPROVE_TOOL, {"kind": "AprovadoIntocavel"})
+    with _pytest.raises(Exception) as ei:  # noqa: PT011
+        mcp_client.call_tool("revoke_kind", {"kind": "AprovadoIntocavel"})
+    msg = str(ei.value)
+    assert "APPROVED" in msg and "human decision" in msg

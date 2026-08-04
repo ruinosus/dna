@@ -55,7 +55,9 @@ def test_workos_scopes_ignore_entra_env(monkeypatch):
     )
     monkeypatch.delenv("DNA_MCP_WORKOS_SCOPES_SUPPORTED", raising=False)
     scopes = workos_scopes_supported_from_env()
-    assert scopes == ["openid", "profile", "email"], scopes
+    # offline_access entrou por medição (04/08): sem refresh_token a sessão
+    # de cliente MCP morre nos 300s do access token do AuthKit.
+    assert scopes == ["openid", "profile", "email", "offline_access"], scopes
     assert not any("user_impersonation" in s for s in scopes)
 
 

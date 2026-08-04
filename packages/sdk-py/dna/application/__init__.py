@@ -117,6 +117,7 @@ from dna.application.runtime import (
     list_memories_impl,
     list_orgs_impl,
     list_projects_impl,
+    workspace_owns_board_scope,
     list_repos_impl,
     list_stories_impl,
     list_tools_impl,
@@ -251,6 +252,7 @@ __all__ = [
     # portfolio (the DNA Cloud console read model)
     "list_orgs_impl",
     "list_projects_impl",
+    "workspace_owns_board_scope",
     "get_project_impl",
     "list_repos_impl",
     "board_summary_impl",

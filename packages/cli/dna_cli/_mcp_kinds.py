@@ -65,6 +65,7 @@ from dna.application.kind_authoring import (
     # MODEL can see reaches this function. Delegated to, never reimplemented:
     # one act, one audit shape, one guarded read-modify-write.
     approve_kind_impl,
+    revoke_kind_impl,
     author_kind_impl,
     get_authored_kind_impl,
     list_authored_kinds_impl,
@@ -441,4 +442,53 @@ def register_kind_tools(
             # A separate arm per exception would only re-spell the same mapping.
             raise _refuse(exc) from None
 
-    return ["author_kind", "list_my_kinds", "review_kind", APPROVE_TOOL]
+    @server.tool(run_in_thread=False)
+    async def revoke_kind(
+        kind: str, tenant: str | None = None,
+    ) -> dict[str, Any]:
+        """Withdraw an authored Kind of your workspace — the un-author.
+
+        The counterpart ``author_kind`` never had (measured in the 04/08 test
+        battery: a discarded experiment stayed as an orphan proposal with no
+        MCP path to withdraw it). Two cases, ONE deliberate asymmetry:
+
+        * proposal never approved (inert) → withdrawn. Nothing was in effect,
+          so a model may discard what a model proposed — the same gravity as
+          authoring it.
+        * Kind APPROVED → **refused here**. Withdrawing EFFECT invalidates the
+          documents that relied on it; that is a human decision, symmetrical
+          with approval (which is also human-only). Ask the person to revoke
+          in the portal / review card.
+
+        Revoked is a recorded third state, not an erasure: the declaration row
+        stays (audit), existing documents stay readable (marked invalid when
+        the Kind was approved), and ``approve_kind`` reverses it in one act.
+        Only YOUR workspace's Kinds answer — a neighbour's is 'not found'.
+        """
+        from dna.application.sdlc import now_iso
+
+        tenant = await _guard("definitions", tenant, family_op="write")
+        try:
+            atual = await get_authored_kind_impl(
+                await live(), kind=kind, tenant=tenant or "",
+            )
+            if atual.get("approved"):
+                raise ToolError(
+                    f"Kind {kind!r} is APPROVED and in effect — withdrawing "
+                    f"effect invalidates the documents that rely on it, and "
+                    f"that is a human decision (like approval). Ask the "
+                    f"workspace owner to revoke it in the portal."
+                )
+            return await revoke_kind_impl(
+                await live(), kind=kind, tenant=tenant or "",
+                actor=actor_from_context(), now=now_iso(),
+            )
+        except NO_REGISTRY as exc:
+            raise _no_registry(exc) from exc
+        except AUTHORING_REFUSALS as exc:
+            raise _refuse(exc) from None
+
+    return [
+        "author_kind", "list_my_kinds", "review_kind", APPROVE_TOOL,
+        "revoke_kind",
+    ]

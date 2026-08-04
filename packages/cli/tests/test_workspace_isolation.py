@@ -339,3 +339,101 @@ def test_a_granted_workspace_is_refused_a_write_to_that_scope(
         assert await live.kernel.get_document(_SCOPE, "Story", _PLANTED) is None
 
     asyncio.run(check())
+
+
+# ── posse do board (bateria 04/08): o DONO escreve no board do próprio ──────
+# projeto, sem grant e sem alargar o schema — a posse deriva do doc Project
+# ("the scope is a rendering of (workspace, slug)", decisão A1). O teste da
+# recusa cross-workspace acima CONTINUA valendo: o grant segue read-only.
+
+
+def _plant_bob_project(dna_dir, monkeypatch, board_scope):
+    """O Project do workspace do bob, com o ``board_scope`` derivado — o doc
+    de onde a posse deriva. Model B engajado ANTES (senão ``default_scope``
+    devolve o base scope e o doc nasce no lugar errado)."""
+    monkeypatch.setenv("DNA_VENDOR_WORKSPACE", _WS_VENDOR)
+
+    async def go():
+        live = await M.boot_live(scope=_SCOPE, base_dir=str(dna_dir))
+        sc = live.default_scope(_WS_OUTSIDE)
+        await live.kernel.with_tenant(_WS_OUTSIDE).write_document(
+            sc, "Project", "projeto-bob",
+            {
+                "apiVersion": "github.com/ruinosus/dna/portfolio/v1",
+                "kind": "Project",
+                "metadata": {"name": "projeto-bob"},
+                "spec": {
+                    "workspace_id": _WS_OUTSIDE,
+                    "name": "Projeto do Bob",
+                    "slug": "projeto-bob",
+                    "board_scope": board_scope,
+                },
+            },
+        )
+
+    asyncio.run(go())
+
+
+def test_o_dono_escreve_no_board_do_proprio_projeto(dna_dir, http_server, monkeypatch):
+    """A posse autoriza o write que o grant nunca poderia: mesmo binder, mesmo
+    eixo read/write — mas o scope é o board de um Project DESTE workspace."""
+    _seed(dna_dir)
+    board = "projeto-bob-development"
+    _plant_bob_project(dna_dir, monkeypatch, board)
+    verifier, mint = _verifier_and_identity_tokens()
+    server = _build(dna_dir, monkeypatch, verifier)
+    bob = mint("oid-bob", "bob@b.com")
+
+    async def go(url):
+        from fastmcp import Client
+        from fastmcp.client.auth import BearerAuth
+
+        async with Client(url, auth=BearerAuth(bob)) as client:
+            await client.call_tool("create_story", {
+                "name": "story-do-dono",
+                "feature": "f-do-dono",
+                "description": "o dono escreve no board que criou",
+                "ac": ["Given a posse / When o dono escreve / Then entra"],
+                "dod": ["o doc existe no board scope"],
+                "scope": board,
+            })
+
+    with http_server(server) as url:
+        asyncio.run(go(url))
+
+    async def check():
+        live = await M.boot_live(scope=_SCOPE, base_dir=str(dna_dir))
+        assert await live.kernel.get_document(board, "Story", "story-do-dono") is not None
+
+    asyncio.run(check())
+
+
+def test_a_posse_nao_vaza_para_o_board_de_outro_workspace(
+    dna_dir, http_server, monkeypatch,
+):
+    """O board do projeto do VENDOR continua negado ao bob: a posse deriva dos
+    Projects DELE, e o board alheio não está entre eles."""
+    _seed(dna_dir)
+    _plant_bob_project(dna_dir, monkeypatch, "projeto-bob-development")
+    verifier, mint = _verifier_and_identity_tokens()
+    server = _build(dna_dir, monkeypatch, verifier)
+    bob = mint("oid-bob", "bob@b.com")
+
+    async def go(url):
+        from fastmcp import Client
+        from fastmcp.client.auth import BearerAuth
+
+        async with Client(url, auth=BearerAuth(bob)) as client:
+            with pytest.raises(Exception) as ei:  # noqa: PT011
+                await client.call_tool("create_story", {
+                    "name": "story-invasora",
+                    "feature": "f-x",
+                    "description": "x",
+                    "ac": ["Given / When / Then"],
+                    "dod": ["nunca"],
+                    "scope": "projeto-do-vendor-development",
+                })
+            assert "denied" in str(ei.value).lower()
+
+    with http_server(server) as url:
+        asyncio.run(go(url))

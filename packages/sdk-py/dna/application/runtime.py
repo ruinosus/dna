@@ -976,6 +976,33 @@ async def list_projects_impl(
     return {"scope": sc, "tenant": tenant, "projects": projects}
 
 
+async def workspace_owns_board_scope(
+    live: LiveDna, workspace_id: str, scope: str
+) -> bool:
+    """O workspace é DONO de um Project cujo ``board_scope`` é ``scope``?
+
+    A derivação de POSSE que autoriza escrita no board do próprio projeto
+    (achado da bateria de 04/08/2026): ``create_project`` deriva o
+    ``board_scope`` de (workspace, slug) — "the scope is a rendering of
+    that" (decisão A1) — e portanto a escrita do DONO nesse scope é a mesma
+    decisão que criou o projeto, não uma travessia de workspace. O
+    ``WorkspaceScopeGrant`` continua read-only por desenho: o grant governa
+    o CROSS-workspace; a posse não passa por grant, deriva do doc Project.
+
+    Fail-closed: qualquer erro (workspace sem docs, kind ausente) responde
+    False e a negação de sempre prevalece.
+    """
+    if not workspace_id or not scope:
+        return False
+    try:
+        resultado = await list_projects_impl(live, tenant=workspace_id)
+        return any(
+            p.get("board_scope") == scope for p in resultado.get("projects", [])
+        )
+    except Exception:  # noqa: BLE001 — posse indeterminável = sem posse
+        return False
+
+
 async def list_repos_impl(
     live: LiveDna, scope: str | None = None, tenant: str | None = None
 ) -> dict[str, Any]:
