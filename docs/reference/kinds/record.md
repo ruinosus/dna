@@ -479,8 +479,15 @@ A Copilot is a declarative, servable AG-UI copilot backend — a binder that com
 | `surfaces[].canvas_keys` | array | yes | EVERY state key this surface projects/rehydrates. The console's rehydration allowlist derives from this — a key absent here does not survive a conversation reload. |
 | `surfaces[].description` | string \| null |  | What this surface is for — shown wherever surfaces are listed. |
 | `surfaces[].guidance_template` | string \| null |  | The PromptTemplate name whose body steers the model toward this surface's tool (directed guidance). The template is the voice-as-data catalog; this names the entry. |
+| `surfaces[].kind` | string \| null |  | The target Kind whose documents this surface composes (the wizard derives its fields from this Kind's schema; the review step writes a document of it). Null for surfaces not bound to one Kind (the memory composer). |
 | `surfaces[].name` | string | yes | The surface's identity (matches the runtime's built-in registry key when overriding one). |
 | `surfaces[].state_key` | string | yes | The graph-state key that MARKS a thread of this surface (the gate decides by STATE, never by route) and anchors canvas rehydration. Must appear in `canvas_keys`. |
+| `surfaces[].steps` | array |  | The surface's WIZARD, declared (F4 of adr-copiloto-como-dado — the visible half). Each step names which of the target Kind's fields it collects; the portal's generic renderer turns this into a stepped screen (stepper + typed inputs derived from the Kind schema + per-field AI affordances + the copilot dock). The concepts came measured from the three worlds: linear steps (all three), a human gate per step (aap-kb's aprovadoPeloUsuario / cockpit's checkpoints). Conditional steps and invalidation rules remain roadmap — declared here only when the renderer reads them. |
+| `surfaces[].steps[].description` | string \| null |  | One sentence under the title. |
+| `surfaces[].steps[].fields` | array |  | Which of the target Kind's schema properties this step collects, in render order. A name the Kind does not declare is IGNORED by the renderer (fail-soft) — the Kind is the authority. |
+| `surfaces[].steps[].gate` | boolean |  | A HUMAN checkpoint — the wizard only advances past this step by explicit user action (aap-kb's aprovadoPeloUsuario, as a flag). |
+| `surfaces[].steps[].id` | string | yes | Stable step identity (snake-case). |
+| `surfaces[].steps[].title` | string | yes | The step's human title, as rendered. |
 | `surfaces[].tool_name` | string | yes | The surface's single validate-and-echo tool — the model's ONLY door into the shared canvas. The tool itself is code (its argument schema is the surface's contract); this names it. |
 | `tenant` | object |  | Inbound-tenant handling. When propagate is true, the emitted serving layer derives tenant/oid from request headers into run-state for the mounted tools to read. |
 | `tenant.propagate` | boolean |  | Derive tenant from inbound request headers into run-state (default false). |

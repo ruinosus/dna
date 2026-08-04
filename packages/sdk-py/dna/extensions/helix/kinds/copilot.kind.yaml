@@ -344,6 +344,64 @@ spec:
               - 'null'
               description: What this surface is for — shown wherever
                 surfaces are listed.
+            steps:
+              type: array
+              default: []
+              description: >-
+                The surface's WIZARD, declared (F4 of adr-copiloto-como-dado
+                — the visible half). Each step names which of the target
+                Kind's fields it collects; the portal's generic renderer
+                turns this into a stepped screen (stepper + typed inputs
+                derived from the Kind schema + per-field AI affordances +
+                the copilot dock). The concepts came measured from the three
+                worlds: linear steps (all three), a human gate per step
+                (aap-kb's aprovadoPeloUsuario / cockpit's checkpoints).
+                Conditional steps and invalidation rules remain roadmap —
+                declared here only when the renderer reads them.
+              items:
+                type: object
+                additionalProperties: false
+                required:
+                - id
+                - title
+                properties:
+                  id:
+                    type: string
+                    minLength: 1
+                    description: Stable step identity (snake-case).
+                  title:
+                    type: string
+                    minLength: 1
+                    description: The step's human title, as rendered.
+                  description:
+                    type:
+                    - string
+                    - 'null'
+                    description: One sentence under the title.
+                  fields:
+                    type: array
+                    default: []
+                    items:
+                      type: string
+                      minLength: 1
+                    description: Which of the target Kind's schema
+                      properties this step collects, in render order. A
+                      name the Kind does not declare is IGNORED by the
+                      renderer (fail-soft) — the Kind is the authority.
+                  gate:
+                    type: boolean
+                    default: false
+                    description: A HUMAN checkpoint — the wizard only
+                      advances past this step by explicit user action
+                      (aap-kb's aprovadoPeloUsuario, as a flag).
+            kind:
+              type:
+              - string
+              - 'null'
+              description: The target Kind whose documents this surface
+                composes (the wizard derives its fields from this Kind's
+                schema; the review step writes a document of it). Null for
+                surfaces not bound to one Kind (the memory composer).
       frontend:
         type: object
         additionalProperties: false

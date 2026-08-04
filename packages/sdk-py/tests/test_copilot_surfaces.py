@@ -72,11 +72,12 @@ async def test_surface_sem_state_key_e_vetada_na_escrita(kernel):
 async def test_chave_fora_do_schema_e_vetada_data_honesty(kernel):
     from dna.kernel.protocols import SpecValidationError
 
-    # steps ainda NÃO existem — entram quando o renderer que os lê shippar.
+    # F4 criou steps[] (o renderer nasceu junto); uma chave que o schema
+    # NÃO declara segue vetada — a honestidade continua na porta.
     doc = _copilot([
         {
             "name": "x", "state_key": "x", "tool_name": "t",
-            "canvas_keys": ["x"], "steps": [{"id": "um"}],
+            "canvas_keys": ["x"], "invalidacoes": [{"quandoMuda": "x"}],
         }
     ])
     with pytest.raises(SpecValidationError):
@@ -96,3 +97,42 @@ async def test_o_tombstone_do_copilot_flow_aponta_o_caminho(kernel):
     with pytest.raises(KindRetiredError) as ei:
         await kernel.write_document("fluxos", "CopilotFlow", "qualquer", doc)
     assert "surfaces" in str(ei.value)
+
+
+@pytest.mark.asyncio
+async def test_surface_com_steps_declarados_grava_e_rele(kernel):
+    """F4: o wizard declarado — steps com campos do Kind e gate humano."""
+    doc = _copilot([
+        {
+            "name": "contrato-intake",
+            "state_key": "document_draft",
+            "tool_name": "update_document_draft",
+            "canvas_keys": ["document_draft"],
+            "kind": "ContratoDeServico",
+            "steps": [
+                {"id": "identificacao", "title": "Identificação",
+                 "fields": ["titulo", "contratante"]},
+                {"id": "condicoes", "title": "Condições",
+                 "fields": ["valor_mensal"], "gate": True},
+            ],
+        }
+    ])
+    await kernel.write_document("fluxos", "Copilot", "memory-copilot", doc)
+    lido = await kernel.get_document("fluxos", "Copilot", "memory-copilot")
+    steps = lido["spec"]["surfaces"][0]["steps"]
+    assert [s["id"] for s in steps] == ["identificacao", "condicoes"]
+    assert steps[1]["gate"] is True
+
+
+@pytest.mark.asyncio
+async def test_step_sem_titulo_e_vetado(kernel):
+    from dna.kernel.protocols import SpecValidationError
+
+    doc = _copilot([
+        {
+            "name": "x", "state_key": "x", "tool_name": "t",
+            "canvas_keys": ["x"], "steps": [{"id": "um"}],
+        }
+    ])
+    with pytest.raises(SpecValidationError):
+        await kernel.write_document("fluxos", "Copilot", "memory-copilot", doc)

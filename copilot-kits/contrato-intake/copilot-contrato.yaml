@@ -25,5 +25,20 @@ spec:
     - forget
     - consolidate
     guidance_template: null
+    kind: ContratoDeServico
     description: Intake de contrato — extração campo a campo para revisão
-      humana no canvas de documento.
+      humana, com o wizard nascendo desta declaração.
+    steps:
+    - id: identificacao
+      title: Identificação
+      description: Quem contrata, quem presta, e como o contrato se chama.
+      fields: [titulo, contratante, contratada]
+    - id: condicoes
+      title: Condições
+      description: Valor, prazo e renovação — o coração comercial.
+      fields: [valor_mensal, prazo_meses, renovacao_automatica, multa_rescisao]
+      gate: true
+    - id: formalizacao
+      title: Formalização
+      description: A assinatura, e a revisão final antes de gravar.
+      fields: [data_assinatura]
