@@ -24,6 +24,11 @@ first if you have never loaded a scope.
 - **[How to read document data](read-document-data.md)** — the blessed query
   surface: the one documented way to read manifest data in either SDK.
 
+- **[Copilot kits — a complete flow installed as documents](copilot-kits.md)** —
+  `dna copilot install <dir>`: the Kind, the Agent and the Copilot (with its
+  `surfaces[]` flow) written through the kernel door, with the human approval
+  gate intact (`--approve` stamps the operator).
+
 ## Adapters and formats
 
 - **[How to write a source adapter](write-a-source-adapter.md)** — implement
