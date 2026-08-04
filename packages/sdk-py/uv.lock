@@ -1454,7 +1454,7 @@ wheels = [
 
 [[package]]
 name = "dna-sdk"
-version = "0.58.0"
+version = "0.59.0"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },
