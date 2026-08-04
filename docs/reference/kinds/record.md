@@ -368,6 +368,9 @@ A Changelog records release notes per semver version per Keep a Changelog 1.1.0 
 | `memory.policies[].remember` | object |  | Topic steering (guidance; hard enforcement stays in the write path / Presidio). |
 | `memory.policies[].remember.always` | array |  |  |
 | `memory.policies[].remember.never` | array |  |  |
+| `methodology` | object |  | SDLC methodology gates. Read through the session kernel's document port (adapter-agnostic — filesystem, sqlite or Postgres per DNA_SOURCE_URL), so journey transitions honor it wherever the board lives. |
+| `methodology.auditor_threshold` | integer |  | Ad-hoc cycles within the window that trigger the "next phase requires superpowers" gate. |
+| `methodology.auditor_window` | integer |  | How many recent cycles the auditor looks at. |
 | `owner` | string |  |  |
 | `pagination` | object |  | REST list pagination defaults/caps (ex-PaginationPolicy). Data-plane ownership — read by dna_shared.pagination_policy, not the cognitive engines. |
 | `pagination.default_limit` | integer |  | Page size when the request omits ?limit=. |
@@ -383,6 +386,7 @@ A Changelog records release notes per semver version per Keep a Changelog 1.1.0 
 | `recall.injection.max_block_chars` | integer |  | Ceiling for the whole injected block — one long Engram must not eat the window. |
 | `recall.injection.min_signal_chars` | integer |  | Below this the user turn triggers no search ("ok", "thanks"). |
 | `recall.injection.sticky_overlap` | number |  | Hysteresis — fraction of the previous working set that must survive for the OLD block to be kept (prompt/cache stability, from the JARVIS prior art). |
+| `recall.injection.type_labels` | object |  | How each memory TYPE is labeled inside the injected block (`- [LABEL] text`). OPEN map (type → label), merged over the built-ins (procedural→"REGRA (siga)", episodic→"fato ocorrido", semantic→"fato") — open because memory types are open, and the label IS model-facing voice: a workspace in English declares its own. |
 | `recall.retrieval` | object |  | Shape of retrieval — how many results, how to diversify and spread. Not coupled to the embedding model nor to memory theory. |
 | `recall.retrieval.k` | integer |  | Final working-set size injected per turn. |
 | `recall.retrieval.limit_direct` | integer |  | Max direct ecphory hits considered. |

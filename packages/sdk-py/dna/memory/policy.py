@@ -155,6 +155,9 @@ class RecallInjection:
     cue_window: int = 3
     cue_max_chars: int = 600
     sticky_overlap: float = 0.5
+    #: type → rótulo no bloco injetado. VAZIO = os built-ins do middleware.
+    #: Aberto porque tipo de memória é aberto — e rótulo é voz para o modelo.
+    type_labels: tuple[tuple[str, str], ...] = ()
 
 
 def resolve_recall_injection(spec: dict | None) -> RecallInjection:
@@ -171,10 +174,19 @@ def resolve_recall_injection(spec: dict | None) -> RecallInjection:
     overlap = d.get("sticky_overlap")
     if not (isinstance(overlap, (int, float)) and 0.0 <= overlap <= 1.0):
         overlap = base.sticky_overlap
+    rotulos = d.get("type_labels")
+    pares: tuple[tuple[str, str], ...] = ()
+    if isinstance(rotulos, dict):
+        pares = tuple(
+            (str(k), str(v))
+            for k, v in rotulos.items()
+            if isinstance(k, str) and k and isinstance(v, str) and v.strip()
+        )
     return RecallInjection(
         max_block_chars=_int(d.get("max_block_chars"), base.max_block_chars, 200, 50_000),
         min_signal_chars=_int(d.get("min_signal_chars"), base.min_signal_chars, 0, 500),
         cue_window=_int(d.get("cue_window"), base.cue_window, 1, 20),
         cue_max_chars=_int(d.get("cue_max_chars"), base.cue_max_chars, 100, 5_000),
         sticky_overlap=float(overlap),
+        type_labels=pares,
     )

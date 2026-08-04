@@ -197,6 +197,18 @@ spec:
                 description: Hysteresis — fraction of the previous working set
                   that must survive for the OLD block to be kept (prompt/cache
                   stability, from the JARVIS prior art).
+              type_labels:
+                type: object
+                description: >-
+                  How each memory TYPE is labeled inside the injected block
+                  (`- [LABEL] text`). OPEN map (type → label), merged over the
+                  built-ins (procedural→"REGRA (siga)", episodic→"fato
+                  ocorrido", semantic→"fato") — open because memory types are
+                  open, and the label IS model-facing voice: a workspace in
+                  English declares its own.
+                additionalProperties:
+                  type: string
+                  minLength: 1
       decay:
         type: object
         additionalProperties: false
@@ -672,6 +684,27 @@ spec:
                   items:
                     type: string
                   default: []
+      methodology:
+        type: object
+        additionalProperties: false
+        description: SDLC methodology gates. Read through the session
+          kernel's document port (adapter-agnostic — filesystem, sqlite or
+          Postgres per DNA_SOURCE_URL), so journey transitions honor it
+          wherever the board lives.
+        properties:
+          auditor_window:
+            type: integer
+            minimum: 3
+            maximum: 20
+            default: 5
+            description: How many recent cycles the auditor looks at.
+          auditor_threshold:
+            type: integer
+            minimum: 2
+            maximum: 20
+            default: 3
+            description: Ad-hoc cycles within the window that trigger the
+              "next phase requires superpowers" gate.
       intel:
         type: object
         additionalProperties: false

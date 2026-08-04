@@ -144,16 +144,23 @@ KNOWN_TYPE_LABELS = {
 UNTYPED_LABEL = "fato"
 
 
-def type_label(memory_type: Any) -> str:
+def type_label(memory_type: Any, labels: "dict[str, str] | None" = None) -> str:
     """Como este tipo aparece no prompt. Aceita QUALQUER string não vazia.
 
     Um tipo que o SDK não conhece é mostrado com o próprio nome, porque o nome é
     a informação: `[preferencia]` diz mais ao modelo do que `[fato]`, e muito
     mais do que sumir.
+
+    ``labels`` (de `recall.injection.type_labels`) faz MERGE sobre os
+    built-ins: o rótulo é voz para o modelo, e a voz é do workspace — um
+    workspace em inglês declara `procedural: "RULE (follow)"` sem perder os
+    defaults dos tipos que não tocou.
     """
     t = (memory_type or "").strip() if isinstance(memory_type, str) else ""
     if not t:
         return UNTYPED_LABEL
+    if labels and t in labels:
+        return labels[t]
     return KNOWN_TYPE_LABELS.get(t, t)
 
 
@@ -183,6 +190,7 @@ def briefing(
     template: str | None = None,
     max_memories: int = MAX_MEMORIES,
     max_chars: int = MAX_CHARS,
+    type_labels: "dict[str, str] | None" = None,
 ) -> str:
     """O bloco que entra na mensagem de SISTEMA — ou vazio.
 
@@ -201,7 +209,7 @@ def briefing(
         texto = _texto_de_memoria(m)
         if not texto:
             continue
-        linha = f"- [{type_label(_tipo_de(m))}] {texto}"
+        linha = f"- [{type_label(_tipo_de(m), type_labels)}] {texto}"
         if gasto + len(linha) > max_chars:
             break
         linhas.append(linha)
@@ -448,11 +456,13 @@ class _DnaRecallMiddlewareImpl:  # type: ignore[misc]
             if antigas and len(novas & antigas) / len(antigas) >= overlap:
                 return bloco_antigo
 
+        vivo = inj or RecallInjection()
         bloco = briefing(
             memorias,
             template=template,
             max_memories=limite,
-            max_chars=(inj or RecallInjection()).max_block_chars,
+            max_chars=vivo.max_block_chars,
+            type_labels=dict(vivo.type_labels) or None,
         )
         if bloco and thread:
             # Teto bobo, e de propósito: um processo longo com muitas conversas
