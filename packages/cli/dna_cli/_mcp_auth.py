@@ -211,7 +211,12 @@ def scopes_supported_from_env() -> list[str] | None:
 # Entra lane sets to the Azure URI). Sharing that env made the /consumer PRM
 # advertise the Entra scope → an MCP client (Claude) requested it → WorkOS 400
 # `invalid_scope`, which the client surfaced as a failed auth callback.
-_WORKOS_DEFAULT_SCOPES = ["openid", "profile", "email"]
+#: `offline_access` entrou por medição (04/08/2026): o access token do
+#: AuthKit dura 300s, e um cliente MCP pede os scopes que o PRM anuncia —
+#: sem anunciar, ninguém pede, o AuthKit não emite refresh_token, e TODA
+#: sessão de cliente OAuth (Claude Desktop, mcp-remote, Inspector) morre em
+#: 5 minutos com 401 "token expired" que o cliente mostra como travamento.
+_WORKOS_DEFAULT_SCOPES = ["openid", "profile", "email", "offline_access"]
 
 
 def workos_scopes_supported_from_env() -> list[str]:
