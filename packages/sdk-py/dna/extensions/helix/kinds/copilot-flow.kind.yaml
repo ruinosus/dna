@@ -1,0 +1,118 @@
+# CopilotFlow — a declarative copilot+canvas flow (record plane; F2 of
+# ADR adr-copiloto-como-dado, dna-cloud).
+#
+# The archetype was measured three times before this Kind existed (spikes
+# spike-arquetipo-{composer-dna-cloud,aap-kb,cockpit-mcp-portal}): a wizard
+# screen whose form a copilot manipulates through ONE validate-and-echo tool,
+# a projection middleware, a per-thread scope gate and a shared state canvas.
+# The F1 runtime (dna-cloud `flow/` + `lib/flow/`) wrote that machine ONCE,
+# configured in code; THIS Kind is that configuration as a document — the
+# runtime resolves docs of this Kind over its built-in registry
+# (`FlowDef.from_document`), so a workspace can TUNE a flow (its guidance
+# template, its blocked persist tools) without a deploy, the same overlay
+# story every other declarative piece already has.
+#
+# ⚠️ DATA-HONESTY BOUNDARY (the lesson of the nine-sections epic): this
+# schema declares ONLY what the runtime CONSUMES today. Wizard steps, gates,
+# invalidation rules and knowledge slots — the concepts the three measured
+# worlds contributed — enter the schema WHEN the generic renderer that reads
+# them ships (they are recorded in the ADR as the roadmap). A field nobody
+# reads is a form without wires, and this family refuses to grow those.
+#
+# The lesson of aap-kb's Pilar 5 is baked into the ORDER of this design:
+# declarative types without a running renderer die. The runtime shipped
+# first (F1); this Kind is its second consumer, not its first draft.
+#
+# tenant_scope intentionally NOT declared — permissive (base flow + optional
+# per-tenant overlay), mirroring Copilot/Tool.
+#
+# SINGLE-SOURCE package data: this descriptor is the only definition of the
+# Kind — nothing mirrors this file and no test enforces byte-identity.
+apiVersion: github.com/ruinosus/dna/core/v1
+kind: KindDefinition
+metadata:
+  name: copilot-flow
+spec:
+  target_api_version: github.com/ruinosus/dna/v1
+  target_kind: CopilotFlow
+  # Alias nomeado pelo PRÓPRIO origin (a regra dos descriptors novos —
+  # DESCRIPTOR_ALIAS_NAMESPACE_ALLOWLIST é shrink-only): origin .../copilot
+  # → prefixo `copilot-`.
+  alias: copilot-flow
+  origin: github.com/ruinosus/dna/copilot
+  plane: record
+  prompt_target: false
+  flatten_in_context: false
+  prompt_target_priority: 0
+  storage:
+    type: yaml
+    container: copilot-flows
+  schema:
+    type: object
+    additionalProperties: false
+    required:
+    - state_key
+    - tool_name
+    - canvas_keys
+    properties:
+      state_key:
+        type: string
+        minLength: 1
+        description: The graph-state key that MARKS a thread of this flow
+          (the gate decides by STATE, never by route) and anchors canvas
+          rehydration. Must be listed in `canvas_keys`.
+      tool_name:
+        type: string
+        minLength: 1
+        description: The flow's single validate-and-echo tool — the model's
+          ONLY door into the shared canvas. The tool itself is code (its
+          argument schema is the flow's contract); this names it.
+      canvas_keys:
+        type: array
+        minItems: 1
+        items:
+          type: string
+          minLength: 1
+        description: EVERY state key this flow projects/rehydrates. The
+          console's rehydration allowlist derives from this — a key absent
+          here does not survive a conversation reload.
+      blocked_persist_tools:
+        type: array
+        default: []
+        items:
+          type: string
+          minLength: 1
+        description: Durable-write tools REMOVED from the model's list in a
+          thread of this flow (i-061 — "save" must not bypass the draft
+          door). Tenant-tunable via overlay.
+      guidance_template:
+        type:
+        - string
+        - 'null'
+        description: The PromptTemplate name whose body steers the model
+          toward this flow's tool (the directed-guidance pattern). The
+          template itself is the voice-as-data catalog; this names which
+          entry this flow reads.
+      description:
+        type:
+        - string
+        - 'null'
+        description: What this flow is for — shown wherever flows are listed.
+      owner:
+        type: string
+      created_at:
+        type: string
+        format: date-time
+      updated_at:
+        type: string
+        format: date-time
+  summary:
+    state_key: ''
+    tool_name: ''
+  describe: '{tool_name} -> {state_key}'
+  graph_style:
+    fill: '#5AB99D'
+    stroke: '#2F8570'
+    text_color: '#fff'
+  ascii_icon: "\U0001F9ED"
+  display_label: Fluxo de Copiloto

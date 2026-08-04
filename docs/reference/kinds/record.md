@@ -479,6 +479,26 @@ A Copilot is a declarative, servable AG-UI copilot backend — a binder that com
 | `workflow` | object |  | Optional multi-step workflow — agent-framework (MS Agent Framework) target only. When present the emitter emits a WorkflowBuilder chain of the named steps plus a workflow-level human-approval escalation node; absent, a plain single-agent app is emitted. A per-target advanced option (YAGNI for the core). |
 | `workflow.chain` | array |  | Ordered workflow step ids. Each becomes a chained agent-executor; the AG-UI adapter surfaces the id as the UI step name. |
 
+## CopilotFlow
+
+- **Alias:** `copilot-flow`
+- **apiVersion:** `github.com/ruinosus/dna/v1`
+- **Plane:** record
+
+**Spec fields**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `blocked_persist_tools` | array |  | Durable-write tools REMOVED from the model's list in a thread of this flow (i-061 — "save" must not bypass the draft door). Tenant-tunable via overlay. |
+| `canvas_keys` | array | yes | EVERY state key this flow projects/rehydrates. The console's rehydration allowlist derives from this — a key absent here does not survive a conversation reload. |
+| `created_at` | string |  |  |
+| `description` | string \| null |  | What this flow is for — shown wherever flows are listed. |
+| `guidance_template` | string \| null |  | The PromptTemplate name whose body steers the model toward this flow's tool (the directed-guidance pattern). The template itself is the voice-as-data catalog; this names which entry this flow reads. |
+| `owner` | string |  |  |
+| `state_key` | string | yes | The graph-state key that MARKS a thread of this flow (the gate decides by STATE, never by route) and anchors canvas rehydration. Must be listed in `canvas_keys`. |
+| `tool_name` | string | yes | The flow's single validate-and-echo tool — the model's ONLY door into the shared canvas. The tool itself is code (its argument schema is the flow's contract); this names it. |
+| `updated_at` | string |  |  |
+
 ## Doc
 
 - **Alias:** `dna-doc`
