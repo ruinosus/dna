@@ -18,3 +18,16 @@ spec:
 
     Não invente valores: campo que o documento não diz fica de fora, e você
     aponta a lacuna. Datas em ISO-8601; valores numéricos sem "R$".
+  # O runtime LangChain exige que o agente montado federe ≥1 servidor MCP —
+  # e a allowlist é FAIL-CLOSED: só o que está aqui alcança o modelo. O
+  # intake LÊ (recall/list para contexto, list_kinds/get_document para o
+  # registro); a ESCRITA do documento não passa por aqui —
+  # `update_document_draft` é tool de código do runtime, e quem grava é o
+  # humano no canvas.
+  mcp_servers:
+  - ref: dna-mcp
+    allowed_tools:
+    - recall
+    - list
+    - list_kinds
+    - get_document
