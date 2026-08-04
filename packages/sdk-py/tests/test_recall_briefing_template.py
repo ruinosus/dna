@@ -29,7 +29,14 @@ def test_nome_de_catalogo_e_o_contrato():
 
 import pytest
 
-from dna.runtime.middleware.recall import DnaRecallMiddleware
+# ⚠️ A classe DnaRecallMiddleware é montada preguiçosamente EXATAMENTE porque
+# o job `postgres` do CI não tem langchain — e o import de módulo daqui
+# derrotava isso, quebrando a suíte no COLLECT (a lição do próprio recall.py,
+# vigente até 04/08). O importorskip pula o ARQUIVO onde não há langchain; os
+# testes puros dele continuam rodando nos jobs sdk-py, que têm.
+pytest.importorskip("langchain")
+
+from dna.runtime.middleware.recall import DnaRecallMiddleware  # noqa: E402
 
 
 @pytest.mark.asyncio
