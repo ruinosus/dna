@@ -59,3 +59,30 @@ def test_approve_carimba_o_operador(tmp_path):
     kind_doc = next((tmp_path / "kitscope").rglob("KIND.yaml"))
     raw = yaml.safe_load(kind_doc.read_text())
     assert raw["spec"].get("approved_by")  # o ato humano, carimbado
+
+
+def test_kinddefinition_imparseavel_recusa_antes_de_escrever(tmp_path):
+    """O caso MEDIDO: um KindDefinition sem `alias` grava mas nunca registra —
+    o funil warn-skipa em outro processo e o autor vê um Kind fantasma. O
+    install valida com o MESMO parser do registro e recusa na mão do autor."""
+    import shutil
+
+    quebrado = tmp_path / "kit-quebrado"
+    shutil.copytree(_KIT, quebrado)
+    kind_file = quebrado / "kind-contrato.yaml"
+    texto = kind_file.read_text().replace("  alias: contrato-de-servico\n", "")
+    assert "\n  alias:" not in texto  # sanidade: o CAMPO saiu (o comentário fica)
+    kind_file.write_text(texto)
+
+    (tmp_path / "kitscope").mkdir(exist_ok=True)
+    runner = CliRunner()
+    out = runner.invoke(
+        main,
+        ["copilot", "install", str(quebrado), "--scope", "kitscope", "--approve"],
+        env={"DNA_BASE_DIR": str(tmp_path)},
+        catch_exceptions=False,
+    )
+    assert out.exit_code != 0
+    assert "alias" in out.output  # a recusa nomeia o campo que falta
+    # e NADA foi escrito — a recusa vem antes da primeira escrita
+    assert not [p for p in (tmp_path / "kitscope").rglob("*") if p.is_file()]

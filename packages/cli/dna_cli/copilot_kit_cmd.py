@@ -115,6 +115,24 @@ def install(path, scope, approve, dry_run, as_json) -> None:
                 click.echo(f"  {p['kind']}/{p['name']}  ←  {p['file']}")
         return
 
+    # O funil de REGISTRO parseia com TypedKindDefinition e warn-skipa o que
+    # não parseia — um Kind gravado mas imparseável fica escrito e nunca vira
+    # porta, e o autor só descobre num log de outro processo. Validar AQUI,
+    # com o MESMO parser e ANTES de qualquer escrita, transforma esse silêncio
+    # em recusa na mão de quem pode corrigir. (Medido: o kit de vitrine
+    # instalou sem `alias` e o wizard achou um Kind fantasma.)
+    from dna.kernel.models import TypedKindDefinition
+
+    for d in docs:
+        if d.kind != "KindDefinition":
+            continue
+        try:
+            TypedKindDefinition.from_raw(d.raw)
+        except Exception as exc:  # noqa: BLE001 — recusa didática
+            raise fail(
+                f"{d.path.name}: KindDefinition {d.name!r} não registraria — {exc}"
+            ) from exc
+
     kinds_inertes: list[str] = []
     written = 0
     with dna_session(scope) as s:

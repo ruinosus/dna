@@ -7,6 +7,10 @@ metadata:
 spec:
   target_api_version: github.com/ruinosus/dna/kits/v1
   target_kind: ContratoDeServico
+  # `alias` é OBRIGATÓRIO no registro (TypedKindDefinition): sem ele o Kind
+  # grava mas nunca vira porta — o funil warn-skipa no parse. O install valida
+  # isso ANTES de escrever, exatamente porque este arquivo já errou aqui.
+  alias: contrato-de-servico
   origin: github.com/ruinosus/dna/kits/contrato-intake
   plane: record
   prompt_target: false
@@ -40,6 +44,7 @@ spec:
         description: A vigência, em meses.
       data_assinatura:
         type: string
+        format: date
         description: A data de assinatura (ISO-8601).
       renovacao_automatica:
         type: boolean
