@@ -65,6 +65,12 @@ ALLOWLIST: dict[str, frozenset[str]] = {
     ".dna/dna/stories/s-pilot-foundry-assured.yaml": frozenset(
         {_BRAND2}
     ),
+    # Real standards fixture: the spec cites the IETF draft "Agent
+    # Authorization Profile for OAuth 2.0" by its acronym — the word is the
+    # DRAFT's name in the wild, not an internal brand token.
+    "docs/superpowers/specs/2026-07-30-agent-auth-standards-design.md": frozenset(
+        {_PFX}
+    ),
 }
 
 SKIP_DIRS = {".git", "node_modules", ".venv", "__pycache__", ".pytest_cache", "dist"}

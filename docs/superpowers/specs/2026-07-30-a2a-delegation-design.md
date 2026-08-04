@@ -158,6 +158,36 @@ runtime.
 Isto é o que faz *outro* sistema poder delegar **para** nós — o lado que
 transforma DNA Cloud em plataforma, não em produto com dois agentes.
 
+## 6.4 ⛔ O caminho que NÃO usamos, e por que — o middleware A2A do CopilotKit
+
+O CopilotKit **suporta A2A de verdade** (`docs.copilotkit.ai/agentic-protocols/a2a`):
+um middleware expõe agentes A2A através do AG-UI, "sem modificação do agente".
+Configura-se o endpoint e o remoto aparece no chat. É o caminho fácil, é padrão de
+mercado, e **não devemos usá-lo.**
+
+Não por preconceito contra a ferramenta — o middleware é correto para o que foi
+feito. Mas ele coloca a fronteira de confiança no lugar errado PARA NÓS, e a
+diferença é quem escolhe o endpoint:
+
+| | quem escolhe o remoto | o caminho certo |
+|---|---|---|
+| app single-tenant | o **desenvolvedor** | o middleware do CopilotKit é legítimo |
+| DNA Cloud | o **tenant** | só o executor desta spec |
+
+Usado aqui, o middleware alcançaria um remoto **sem documento `RemoteAgent`, sem
+passar pelo funil de aprovação, sem `data_scope`, sem a allowlist dupla, e com a
+credencial que o runtime tiver** — porque nada disso existe no vocabulário dele.
+Ou seja: as três regras do §6.2 seriam contornadas por CONFIGURAÇÃO, sem que
+ninguém escrevesse uma linha de código insegura.
+
+**A regra:** o A2A de entrada (consumir um remoto) atravessa o executor desta
+spec, sempre. O portal fala **AG-UI** com o nosso backend e nunca A2A — as
+camadas compõem exatamente assim (A2A liga agente↔agente; AG-UI liga agente↔UI).
+
+Isto está escrito porque o caminho errado é o MAIS FÁCIL: quem chegar aqui num dia
+apressado vai encontrar um middleware pronto e uma tentação de usá-lo. Uma regra
+que só existe na cabeça de quem desenhou é uma regra que já foi quebrada.
+
 ## 7. Fora desta spec
 
 - **Push notifications do A2A** (`capabilities.pushNotifications`): a v1 é
