@@ -1,0 +1,18 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-094-registry-rest-sem-ensure-kinds-nem-tenant
+spec:
+  title: registry REST sem ensure_kinds nem tenant
+  description: 'Medido em 04/08 no F4: GET /v1/kinds/registry/{kind} usa kind_port_for direto (read_registered_kind_impl) sem o rebuild-trigger i-090 (ensure_kinds) — um Kind recém-aprovado de tenant responde 404 até alguém chamar uma rota de documentos do mesmo scope. E a rota só aceita ''scope'' cru (tenant-ws-...), não ''tenant'' como as rotas de documentos — o portal (readRegisteredKind) chama sem scope e resolve pelo fallback determinístico, que pode cruzar tenants se dois kits divergirem de schema. Fix: aceitar tenant=, mapear para scope como as demais rotas, e chamar ensure_kinds(scope) antes de resolver.'
+  type: bug
+  severity: medium
+  status: open
+  created_at: '2026-08-04T20:06:57+00:00'
+  updated_at: '2026-08-04T20:06:57+00:00'
+  timeline:
+  - at: '2026-08-04T20:06:57+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
